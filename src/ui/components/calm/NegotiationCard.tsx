@@ -49,6 +49,11 @@ export function NegotiationCard({
   const expiresIn = Math.max(0, proposal.expiresAt - Date.now());
   const expiresMinutes = Math.ceil(expiresIn / 60000);
 
+  // Human-readable scope labels (avoids i18n namespace separator issue with ':')
+  const scopeLabels = t("negotiationCard.scopeLabels", { returnObjects: true }) as Record<string, string>;
+  const scopeLabel = (scope: string): string =>
+    (scopeLabels && scopeLabels[scope]) || scope;
+
   const toggleScope = (scope: string) => {
     setSelectedScopes((prev) =>
       prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope]
@@ -77,8 +82,7 @@ export function NegotiationCard({
       <Text style={styles.sectionTitle}>{t("negotiationCard.requestedAccess")}</Text>
       <View style={styles.scopes}>
         {proposal.requestedScopes.map((scope) => {
-          // Human-readable label, fallback to raw scope if no translation
-          const label = t(`negotiationCard.scopeLabels.${scope}`, { defaultValue: scope });
+          const label = scopeLabel(scope);
           return (
             <TouchableOpacity
               key={scope}
