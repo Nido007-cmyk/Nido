@@ -618,7 +618,8 @@
     "retryRefusedUserCancelled": "Não tentado novamente: você cancelou esta mensagem.",
     "resendCancelledTitle": "Enviar novamente como nova mensagem?",
     "resendCancelledMessage": "Você cancelou esta mensagem. Enviar novamente como NOVA mensagem? A mensagem cancelada continua cancelada.",
-    "errorLabel": "Erro"
+    "errorLabel": "Erro",
+    "tabPacks": "Packs"
   },
   "notifications": {
     "reminderChannel": "Lembretes do NIDO",
@@ -763,5 +764,33 @@
     "accept": "Aceitar",
     "cancel": "Cancelar",
     "sendCounter": "Enviar contraproposta"
+  },
+  "packshare": {
+    "availablePacks": "Packs disponíveis",
+    "noPacks": "Nenhum pack instalado para compartilhar.",
+    "noDescription": "Sem descrição",
+    "share": "Compartilhar",
+    "activeTransfers": "Transferências ativas",
+    "history": "Histórico",
+    "emptyTitle": "Sem transferências",
+    "emptyMessage": "Compartilhe um pack de conhecimento com outro NIDO.",
+    "sentOffer": "Oferta enviada",
+    "receivedOffer": "Oferta recebida",
+    "sending": "Enviando...",
+    "receiving": "Recebendo...",
+    "complete": "Concluído",
+    "declined": "Recusado",
+    "cancelled": "Cancelado",
+    "failed": "Falhou",
+    "toPeer": "Para {{peer}}",
+    "fromPeer": "De {{peer}}",
+    "accept": "Aceitar",
+    "decline": "Recusar",
+    "cancel": "Cancelar",
+    "retry": "Tentar novamente",
+    "noPeersTitle": "Sem contatos",
+    "noPeersMessage": "Você precisa de pelo menos um contato emparelhado para compartilhar packs.",
+    "offerFailedTitle": "Não foi possível enviar",
+    "offerFailedMessage": "Não foi possível criar a oferta. Verifique a conexão com o peer."
   }
 }

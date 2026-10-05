@@ -618,7 +618,8 @@
     "retryRefusedUserCancelled": "Not retried: you cancelled this message.",
     "resendCancelledTitle": "Send again as a new message?",
     "resendCancelledMessage": "You cancelled this message. Send it again as a NEW message? The cancelled message stays cancelled.",
-    "errorLabel": "Error"
+    "errorLabel": "Error",
+    "tabPacks": "Packs"
   },
   "notifications": {
     "reminderChannel": "NIDO Reminders",
@@ -763,5 +764,33 @@
     "accept": "Accept",
     "cancel": "Cancel",
     "sendCounter": "Send counter"
+  },
+  "packshare": {
+    "availablePacks": "Available packs",
+    "noPacks": "No installed packs to share.",
+    "noDescription": "No description",
+    "share": "Share",
+    "activeTransfers": "Active transfers",
+    "history": "History",
+    "emptyTitle": "No transfers",
+    "emptyMessage": "Share a knowledge pack with another NIDO.",
+    "sentOffer": "Offer sent",
+    "receivedOffer": "Offer received",
+    "sending": "Sending...",
+    "receiving": "Receiving...",
+    "complete": "Complete",
+    "declined": "Declined",
+    "cancelled": "Cancelled",
+    "failed": "Failed",
+    "toPeer": "To {{peer}}",
+    "fromPeer": "From {{peer}}",
+    "accept": "Accept",
+    "decline": "Decline",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "noPeersTitle": "No contacts",
+    "noPeersMessage": "You need at least one paired contact to share packs.",
+    "offerFailedTitle": "Could not send",
+    "offerFailedMessage": "Could not create the offer. Check the connection with the peer."
   }
 }

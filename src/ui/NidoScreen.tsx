@@ -25,6 +25,7 @@ import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 // second tap through before the re-render).
 import { SendGuard } from "./sendGuard";
 import { NegotiationsTab } from "./NegotiationsTab";
+import { PacksTab } from "./PacksTab";
 
 const ERROR_RED = "#F87171";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
@@ -48,7 +49,7 @@ import {
   routeIdentityBootstrapError,
 } from "./p2pIdentityRecovery";
 
-type Tab = "chats" | "contactos" | "enlace" | "negociaciones";
+type Tab = "chats" | "contactos" | "enlace" | "negociaciones" | "packs";
 
 /** QR dibujado con Views (qrcode es JS puro: sin dependencias nativas). */
 function QrGrid({ text, size = 216 }: { text: string; size?: number }) {
@@ -767,6 +768,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             ["contactos", t("nido.tabContacts")],
             ["enlace", t("nido.tabLink")],
             ["negociaciones", t("nido.tabNegotiations")],
+            ["packs", t("nido.tabPacks")],
           ] as Array<[Tab, string]>
         ).map(([key, label]) => (
           <Pressable
@@ -946,6 +948,15 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       )}
 
       {tab === "negociaciones" && <NegotiationsTab />}
+      {tab === "packs" && (
+        <PacksTab
+          peers={contacts.map((c) => ({ pkHex: c.pkHex, name: c.name }))}
+          getPeerName={(pkHex) => {
+            const contact = contacts.find((c) => c.pkHex.toLowerCase() === pkHex.toLowerCase());
+            return contact?.name ?? pkHex.slice(0, 8);
+          }}
+        />
+      )}
 
       {/* UNIT B (R2): desambiguación de emparejamiento — Replace /
           Different person / Cancel. Dismiss (backdrop, X, botón atrás) =
