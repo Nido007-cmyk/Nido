@@ -42,7 +42,6 @@ su contraparte.
 |---|---|
 | Ajustes y SQLite en claro | Cifrado (SQLCipher + Keystore) |
 | Backup de Google activado | `allowBackup=false` |
-| Voz del sistema (puede usar red) | STT on-device (whisper.cpp) |
 | Buscador de modelos (filtra intereses por red) | Eliminado |
 | URLs `resolve/main` sin fijar | Revisiones fijadas (`pinnedSourceUrl`) |
 | sha256 nunca verificado tras descargar | Verificación automática (≤256 MB) + bajo demanda |
