@@ -49,8 +49,11 @@ export function NegotiationCard({
   const expiresIn = Math.max(0, proposal.expiresAt - Date.now());
   const expiresMinutes = Math.ceil(expiresIn / 60000);
 
-  // Human-readable scope labels. Uses i18n where available, falls back to
-  // a built-in map (avoids i18n nesting issues with ':' in scope names).
+  // Human-readable scope labels. NOTE: these are intentionally NOT read via
+  // i18n returnObjects — i18next's default nsSeparator (":") corrupts the
+  // lookup for keys containing ":" (its returnObjects path re-translates each
+  // nested key, so "read:notes" is parsed as namespace "…read" + key "notes").
+  // The fixed technical scope set is mapped here directly, bilingual.
   const SCOPE_LABELS: Record<string, { es: string; en: string }> = {
     "read:notes": { es: "Leer notas", en: "Read notes" },
     "read:knowledge": { es: "Leer base de conocimiento", en: "Read knowledge base" },
@@ -61,12 +64,6 @@ export function NegotiationCard({
     "write:reminders": { es: "Crear recordatorios", en: "Create reminders" },
   };
   const scopeLabel = (scope: string): string => {
-    // Try i18n first
-    const labels = t("negotiationCard.scopeLabels", { returnObjects: true }) as unknown;
-    if (labels && typeof labels === "object" && (labels as Record<string, string>)[scope]) {
-      return (labels as Record<string, string>)[scope];
-    }
-    // Fallback to built-in map
     const entry = SCOPE_LABELS[scope];
     if (entry) {
       return i18n.language?.startsWith("es") ? entry.es : entry.en;
