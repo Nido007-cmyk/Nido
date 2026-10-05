@@ -99,7 +99,9 @@
     "stopGeneration": "Detener la generación",
     "stoppedByUser": "Detenido por el usuario",
     "stopping": "Deteniendo… (terminando el paso actual)",
-    "toneChanged": "Tono: {{tone}}"
+    "toneChanged": "Tono: {{tone}}",
+    "emptyTitle": "Hola, soy NIDO",
+    "emptySubtitle": "Tu agente privado. Todo queda en este dispositivo."
   },
   "common": {
     "back": "Atrás",

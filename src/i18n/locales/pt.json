@@ -361,7 +361,9 @@
     "rateHelpful": "Útil",
     "rateUnhelpful": "Não útil",
     "stageTimedOut": "Uma etapa da pesquisa demorou demais e foi interrompida",
-    "interruptedByBackground": "Pausado — o app foi para segundo plano. Pergunte novamente para continuar."
+    "interruptedByBackground": "Pausado — o app foi para segundo plano. Pergunte novamente para continuar.",
+    "emptyTitle": "Olá, sou NIDO",
+    "emptySubtitle": "Seu agente privado. Tudo fica neste dispositivo."
   },
   "aboutScreen": {
     "title": "Sobre o NIDO",

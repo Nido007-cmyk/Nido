@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Animated,
   AppState,
+  Image,
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native";
@@ -1472,6 +1473,21 @@ export function ChatScreen({
               </Pressable>
             );
           }}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Image
+                source={require("../../assets/mascot-nido.png")}
+                style={styles.emptyMascot}
+                resizeMode="contain"
+              />
+              <Text style={[styles.emptyTitle, { color: colors.text.heading }]}>
+                {t("chatScreen.emptyTitle", "Hola, soy NIDO")}
+              </Text>
+              <Text style={[styles.emptySubtitle, { color: colors.text.dim }]}>
+                {t("chatScreen.emptySubtitle", "Tu agente privado. Todo queda en este dispositivo.")}
+              </Text>
+            </View>
+          }
         />
 
         {/* Input Bar */}
@@ -1627,6 +1643,28 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.md,
     paddingBottom: spacing.lg,
+  },
+  // Calm Agent empty state: warm welcome with mascot
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: calmSpacing.generous,
+    paddingVertical: calmSpacing.spacious,
+    gap: calmSpacing.comfortable,
+  },
+  emptyMascot: {
+    width: 120,
+    height: 120,
+    borderRadius: calmRadii.gentle,
+  },
+  emptyTitle: {
+    ...calmType.hero,
+    textAlign: "center",
+  },
+  emptySubtitle: {
+    ...calmType.body,
+    textAlign: "center",
   },
   bubble: {
     paddingVertical: calmSpacing.cozy,
