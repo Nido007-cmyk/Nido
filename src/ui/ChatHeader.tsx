@@ -16,7 +16,6 @@ import { spacing, radii } from "./theme/spacing";
 interface Props {
   toneIcon: string;
   deepResearchActive: boolean;
-  liveTokPerSec: number | null;
   activeModelLabel?: string;
   onOpenDrawer: () => void;
   onCycleTone: () => void;
@@ -25,15 +24,12 @@ interface Props {
 }
 
 /**
- * ChatHeader: Polished Field Terminal & Frontier AI top bar.
- * Showcases NIDO mascot, offline local engine status,
- * dynamic frontier glow when Deep Research is engaged,
- * live tok/s telemetry, and quick-action controls.
+ * ChatHeader: Calm Agent top bar.
+ * NIDO mascot, offline status, deep research indicator, quick actions.
  */
 export function ChatHeader({
   toneIcon,
   deepResearchActive,
-  liveTokPerSec,
   activeModelLabel,
   onOpenDrawer,
   onCycleTone,
@@ -147,16 +143,6 @@ export function ChatHeader({
             </Text>
           </View>
         ) : null}
-
-        {/* Live Inference Telemetry Counter */}
-        {liveTokPerSec != null && (
-          <View style={styles.telemetryBadge}>
-            <Text style={styles.telemetryPulseDot}>●</Text>
-            <Text style={styles.telemetryText}>
-              {liveTokPerSec.toFixed(1)} <Text style={styles.telemetryUnit}>tok/s</Text>
-            </Text>
-          </View>
-        )}
       </View>
     </View>
   );

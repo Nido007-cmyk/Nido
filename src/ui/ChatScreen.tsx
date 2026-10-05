@@ -1170,7 +1170,6 @@ export function ChatScreen({
         <ChatHeader
           toneIcon={getPersonality(personalityId).icon}
           deepResearchActive={isDeepActive}
-          liveTokPerSec={liveTokPerSec}
           activeModelLabel={activeModel?.label}
           onOpenDrawer={() => {
             refreshSessions();
