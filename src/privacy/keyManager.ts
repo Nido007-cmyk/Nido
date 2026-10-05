@@ -265,6 +265,22 @@ async function resolveDatabaseKeyHex(backend: SecureBackend): Promise<string | n
   try {
     existing = await backend.getItemAsync(DB_KEY_ALIAS);
   } catch (e) {
+    // El almacén lanzó excepción al leer. Antes de fallar, verificar si hay
+    // bases cifradas existentes: si no hay (instalación fresca con almacén
+    // defectuoso), permitir generar clave nueva. Si hay bases, fail-closed.
+    if (keyLossProbe) {
+      try {
+        const present = await keyLossProbe();
+        if (present.length === 0) {
+          // Instalación fresca, sin datos que proteger: generar clave nueva
+          const fresh = await randomHex32Async();
+          await backend.setItemAsync(DB_KEY_ALIAS, fresh);
+          return fresh;
+        }
+      } catch {
+        // No se pudo verificar: fail-closed como antes
+      }
+    }
     throw new SecureStoreReadError(DB_KEY_ALIAS, keyStoreStrings().dbKeyReadFailed, e);
   }
   if (existing === null) {
