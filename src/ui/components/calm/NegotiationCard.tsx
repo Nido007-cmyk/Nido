@@ -19,7 +19,14 @@ import type { Colors } from "../../theme/colors";
 import { typography } from "../../theme/typography";
 import { spacing, radii } from "../../theme/spacing";
 import { NidoIcon } from "../icons/NidoIcon";
+import { NidoMascot } from "./NidoMascot";
 import type { TaskProposal } from "../../../p2p/negotiation";
+
+/** Respuesta pendiente de entrega (del servicio): estado honesto, no éxito. */
+export interface PendingSendInfo {
+  action: "ACCEPT" | "DECLINE" | "COUNTER";
+  attempts: number;
+}
 
 interface Props {
   proposal: TaskProposal;
@@ -28,6 +35,10 @@ interface Props {
   onAccept: () => void;
   onDecline: () => void;
   onCounter: (modifiedScopes: string[]) => void;
+  /** Reintento de una respuesta que no llegó al peer (mismos bytes firmados). */
+  onRetry?: () => void;
+  /** Si existe, la tarjeta muestra "No enviado / Reintentar" en vez de éxito. */
+  pendingSend?: PendingSendInfo | null;
   processing?: boolean;
 }
 
@@ -38,6 +49,8 @@ export function NegotiationCard({
   onAccept,
   onDecline,
   onCounter,
+  onRetry,
+  pendingSend = null,
   processing = false,
 }: Props) {
   const { colors } = useTheme();
@@ -131,8 +144,30 @@ export function NegotiationCard({
         </Text>
       </View>
 
-      {/* Actions */}
-      {!counterMode ? (
+      {/* Actions — o estado honesto "No enviado / Reintentar" si el envío falló.
+          El estado visible nunca afirma éxito sin entrega confirmada. */}
+      {pendingSend ? (
+        <View
+          style={styles.retryRow}
+          accessibilityRole="alert"
+          accessibilityLabel={t("negotiationCard.notSentTitle")}
+        >
+          <NidoMascot role="recovery" size={44} />
+          <View style={styles.retryTextCol}>
+            <Text style={styles.retryTitle}>{t("negotiationCard.notSentTitle")}</Text>
+            <Text style={styles.retryDesc}>{t("negotiationCard.notSentDesc")}</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.button, styles.retryButton]}
+            onPress={onRetry}
+            disabled={processing || !onRetry}
+            accessibilityRole="button"
+            accessibilityLabel={t("negotiationCard.retry")}
+          >
+            <Text style={styles.retryButtonText}>{t("negotiationCard.retry")}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : !counterMode ? (
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.button, styles.declineButton]}
@@ -306,6 +341,43 @@ const getStyles = (colors: Colors) =>
       backgroundColor: colors.emerald[400],
     },
     acceptText: {
+      ...typography.ui.body,
+      color: "#FFFFFF",
+      fontWeight: "600",
+    },
+    retryRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      backgroundColor: colors.bg.subtle,
+      borderWidth: 1,
+      borderColor: colors.border.default,
+      borderRadius: radii.md,
+      padding: spacing.sm,
+    },
+    retryTextCol: {
+      flex: 1,
+    },
+    retryTitle: {
+      ...typography.ui.body,
+      color: colors.text.primary,
+      fontWeight: "600",
+    },
+    retryDesc: {
+      ...typography.ui.subtext,
+      color: colors.text.secondary,
+    },
+    retryButton: {
+      backgroundColor: colors.emerald[400],
+      // OJO: no usar `flex: 0` aquí — react-native-web lo compila a
+      // `flex: 0 1 0%` y el botón colapsa al padding recortando el texto.
+      // Explícito = content-size en nativo y en web.
+      flexGrow: 0,
+      flexShrink: 0,
+      flexBasis: "auto",
+      paddingHorizontal: spacing.md,
+    },
+    retryButtonText: {
       ...typography.ui.body,
       color: "#FFFFFF",
       fontWeight: "600",

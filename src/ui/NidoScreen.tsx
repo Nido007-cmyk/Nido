@@ -9,7 +9,6 @@ import {
   TextInput,
   ActivityIndicator,
   Modal,
-  Image,
 } from "react-native";
 import { showSecureAlert } from "nido-secure-dialog";
 import * as Clipboard from "expo-clipboard";
@@ -19,6 +18,7 @@ import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import { typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
+import { NidoMascot } from "./components/calm/NidoMascot";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 // F-3 (2026-09-28): N3-style synchronous in-flight guard, now applied to
 // NidoScreen's send AND retry gesture paths (state-based `sending` let a
@@ -795,11 +795,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
         <ScrollView contentContainerStyle={styles.body}>
           {contacts.length === 0 ? (
             <View style={[styles.card, styles.emptyCard]}>
-              <Image
-                source={require("../../assets/mascot-nido.png")}
-                style={styles.emptyMascot}
-                resizeMode="contain"
-              />
+              <NidoMascot role="guide" size={100} />
               <Text style={styles.cardTitle}>{t("nido.noContactsTitle")}</Text>
               <Text style={styles.paragraph}>{t("nido.noContactsBody")}</Text>
             </View>
@@ -1136,11 +1132,6 @@ const getStyles = (colors: Colors) => StyleSheet.create({
   emptyCard: {
     paddingVertical: calmSpacing.spacious,
     gap: calmSpacing.comfortable,
-  },
-  emptyMascot: {
-    width: 100,
-    height: 100,
-    borderRadius: calmRadii.gentle,
   },
   cardTitle: { ...typography.ui.titleSm, color: colors.text.primary, alignSelf: "flex-start" },
   paragraph: { ...typography.ui.body, color: colors.text.secondary, alignSelf: "flex-start" },

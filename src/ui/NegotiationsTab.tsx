@@ -53,8 +53,9 @@ export function NegotiationsTab() {
     async (session: NegotiationSession) => {
       setProcessingId(session.negotiationId);
       try {
-        // Envía ACCEPT firmado al peer via negotiationService.
-        // Si no hay transporte, igual se actualiza el estado local.
+        // Modelo fail-closed: el estado visible solo cambia si el transporte
+        // acepta el ACCEPT firmado. Si falla, la sesión guarda pendingSend y
+        // la UI muestra "No enviado / Reintentar" (evento send_failed).
         await negotiationService.acceptSession(session.negotiationId);
       } finally {
         setProcessingId(null);
@@ -90,6 +91,21 @@ export function NegotiationsTab() {
     [refresh]
   );
 
+  const handleRetry = useCallback(
+    async (session: NegotiationSession) => {
+      setProcessingId(session.negotiationId);
+      try {
+        // Reintenta con los mismos bytes firmados (mismo nonce): el peer
+        // descarta duplicados por su protección anti-replay.
+        await negotiationService.retrySend(session.negotiationId);
+      } finally {
+        setProcessingId(null);
+        refresh();
+      }
+    },
+    [refresh]
+  );
+
   const activeSessions = sessions.filter(
     (s) => s.state === "PROPOSED" || s.state === "COUNTERED"
   );
@@ -100,6 +116,7 @@ export function NegotiationsTab() {
         <EmptyState
           title={t("negotiations.emptyTitle")}
           description={t("negotiations.emptyDescription")}
+          mascotRole="connection"
         />
       </View>
     );
@@ -116,6 +133,12 @@ export function NegotiationsTab() {
           onAccept={() => handleAccept(session)}
           onDecline={() => handleDecline(session)}
           onCounter={(scopes) => handleCounter(session, scopes)}
+          onRetry={() => handleRetry(session)}
+          pendingSend={
+            session.pendingSend
+              ? { action: session.pendingSend.action, attempts: session.pendingSend.attempts }
+              : null
+          }
           processing={processingId === session.negotiationId}
         />
       ))}

@@ -9,10 +9,10 @@ import {
   Modal,
   ActivityIndicator,
   Switch,
-  Image,
 } from "react-native";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType, setHapticsEnabledCache } from "../services/haptics";
 import { useTranslation } from "react-i18next";
+import { NidoMascot } from "./components/calm/NidoMascot";
 import { MODEL_CATALOG, CatalogModel, AssetKind, CORPUS_CATALOG, REQUIRED_MODELS } from "../models/manifest";
 import { llamaEngine } from "../inference/LlamaEngine";
 import { ModelManager } from "../models/ModelManager";
@@ -214,11 +214,7 @@ export function ModelSetupScreen(props: Props) {
       {/* Settings Top Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Image
-            source={require("../../assets/mascot-nido.png")}
-            style={{ width: 36, height: 36, borderRadius: 8 }}
-            resizeMode="contain"
-          />
+          <NidoMascot role="brand" size={36} />
           <View>
             <Text style={styles.title}>{t("modelSetupScreen.header.title")}</Text>
             <Text style={styles.subtitle}>{t("modelSetupScreen.header.subtitle")}</Text>

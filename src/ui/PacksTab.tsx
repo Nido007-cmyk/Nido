@@ -214,6 +214,7 @@ export function PacksTab({ peers, getPeerName }: Props) {
         <EmptyState
           title={t("packshare.emptyTitle")}
           description={t("packshare.emptyMessage")}
+          mascotRole="connection"
         />
       )}
     </ScrollView>

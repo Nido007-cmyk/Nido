@@ -773,7 +773,10 @@
       "write:reminder": "Create reminders",
       "write:reminders": "Create reminders"
     },
-    "verifiedPeer": "Verified identity"
+    "verifiedPeer": "Verified identity",
+    "notSentTitle": "Couldn't send",
+    "notSentDesc": "Your response didn't reach the other NIDO. You can retry.",
+    "retry": "Retry"
   },
   "packshare": {
     "availablePacks": "Available packs",

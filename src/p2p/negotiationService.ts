@@ -43,6 +43,47 @@ export interface NegotiationSession {
   state: NegotiationState;
   proposal: TaskProposal;
   updatedAt: number;
+  /**
+   * Respuesta firmada construida por acción del usuario pero aún NO confirmada
+   * como entregada al transporte. Mientras exista, la sesión NO ha cambiado
+   * de estado visible: el usuario ve "No enviado / Reintentar".
+   * Se reutilizan los mismos bytes firmados (mismo nonce) en cada reintento,
+   * así el receptor descarta duplicados por su protección anti-replay.
+   */
+  pendingSend?: PendingSend;
+  /**
+   * Guardia anti-doble-tap a nivel servicio: true mientras hay un intento
+   * de envío en vuelo para esta sesión. No se persiste.
+   */
+  sending?: boolean;
+}
+
+/** Respuesta firmada pendiente de confirmación de entrega. */
+export interface PendingSend {
+  action: "ACCEPT" | "DECLINE" | "COUNTER";
+  targetState: NegotiationState;
+  signed: SignedNegotiationMessage;
+  attempts: number;
+  lastError: RespondFailureReason;
+  updatedAt: number;
+}
+
+/** Motivos honestos por los que una respuesta no se marcó como enviada. */
+export type RespondFailureReason =
+  | "no_session"
+  | "invalid_transition"
+  | "expired"
+  | "no_send_function"
+  | "send_rejected"
+  | "send_threw"
+  | "already_sending"
+  | "no_pending_send";
+
+/** Resultado honesto de accept/decline/counter/retry. */
+export interface RespondResult {
+  /** true solo si el mensaje firmado fue aceptado por el transporte. */
+  sent: boolean;
+  reason?: RespondFailureReason;
 }
 
 /** Eventos que emite el servicio para la UI. */
@@ -52,7 +93,13 @@ export type NegotiationEvent =
   | { type: "accepted"; session: NegotiationSession }
   | { type: "declined"; session: NegotiationSession; reason?: string }
   | { type: "expired"; session: NegotiationSession }
-  | { type: "ask_required"; session: NegotiationSession; taskId: string };
+  | { type: "ask_required"; session: NegotiationSession; taskId: string }
+  | {
+      type: "send_failed";
+      session: NegotiationSession;
+      action: "ACCEPT" | "DECLINE" | "COUNTER";
+      reason: RespondFailureReason;
+    };
 
 type NegotiationEventHandler = (event: NegotiationEvent) => void;
 
@@ -90,7 +137,8 @@ class NegotiationService {
   /**
    * Inyecta la función de envío (típicamente conectada a
    * NidoMessenger.sendNegotiationResponse). Sin esto, accept/decline/counter
-   * actualizan el estado local pero no envían al peer.
+   * registran la respuesta como pendiente (evento `send_failed`) y NO cambian
+   * el estado visible: modelo fail-closed.
    */
   setSendFunction(fn: NegotiationSendFn): void {
     this.sendFn = fn;
@@ -122,128 +170,222 @@ class NegotiationService {
   }
 
   /**
-   * Acepta una negociación: crea un mensaje ACCEPT firmado y lo envía al peer.
-   * Actualiza el estado local a ACCEPTED. Retorna true si se envió al peer,
-   * false si solo se actualizó localmente (sin transporte).
+   * Modelo de entrega fail-closed (requisito del UI/UX gate):
+   *
+   *   acción del usuario → construir transición → firmar →
+   *   intentar envío → confirmar resultado → commit del estado visible
+   *
+   * El estado visible de la sesión SOLO cambia cuando el transporte acepta
+   * el mensaje firmado. Si el envío falla, la sesión conserva su estado
+   * anterior y guarda la respuesta firmada en `pendingSend` para reintentar
+   * de forma segura (mismos bytes, mismo nonce → sin duplicados en el peer).
+   * La UI muestra "No enviado / Reintentar" vía el evento `send_failed`.
+   *
+   * "sent: true" significa: el transporte P2P vivo aceptó el sobre para este
+   * peer. No es un ACK extremo a extremo del peer (eso requeriría protocolo
+   * adicional); es la afirmación honesta máxima en esta capa.
    */
-  async acceptSession(negotiationId: string): Promise<boolean> {
-    const session = this.sessions.get(negotiationId);
-    if (!session) return false;
-    if (!isValidTransition(session.state, "ACCEPTED")) return false;
-
-    let sent = false;
-    if (this.sendFn) {
-      try {
-        const kp = await getSigningKeypair();
-        const myPkHex = toHex(kp.publicKey);
-        const signed = signNegotiationMessage(
-          kp.secretKey,
-          myPkHex,
-          "ACCEPT",
-          session.proposalId,
-          session.proposal
-        );
-        sent = await this.sendFn(
-          session.peerPkHex,
-          "ACCEPT",
-          negotiationId,
-          signed as unknown as Record<string, unknown>
-        );
-      } catch {
-        sent = false;
-      }
-    }
-
-    session.state = "ACCEPTED";
-    session.updatedAt = Date.now();
-    this.emit({ type: "accepted", session });
-    return sent;
+  async acceptSession(negotiationId: string): Promise<RespondResult> {
+    return this.respond(negotiationId, "ACCEPT", "ACCEPTED", (session) => session.proposal);
   }
 
   /**
-   * Rechaza una negociación: crea un mensaje DECLINE firmado y lo envía al peer.
-   * Actualiza el estado local a DECLINED.
+   * Rechaza una negociación: construye el DECLINE firmado y solo commitea
+   * DECLINED si el transporte lo acepta.
    */
-  async declineSession(negotiationId: string, reason?: string): Promise<boolean> {
-    const session = this.sessions.get(negotiationId);
-    if (!session) return false;
-    if (!isValidTransition(session.state, "DECLINED")) return false;
-
-    let sent = false;
-    if (this.sendFn) {
-      try {
-        const kp = await getSigningKeypair();
-        const myPkHex = toHex(kp.publicKey);
-        const signed = signNegotiationMessage(
-          kp.secretKey,
-          myPkHex,
-          "DECLINE",
-          session.proposalId,
-          reason ? { reason } : {}
-        );
-        sent = await this.sendFn(
-          session.peerPkHex,
-          "DECLINE",
-          negotiationId,
-          signed as unknown as Record<string, unknown>
-        );
-      } catch {
-        sent = false;
-      }
-    }
-
-    session.state = "DECLINED";
-    session.updatedAt = Date.now();
-    this.emit({ type: "declined", session, reason });
-    return sent;
+  async declineSession(negotiationId: string, reason?: string): Promise<RespondResult> {
+    return this.respond(negotiationId, "DECLINE", "DECLINED", () =>
+      reason ? { reason } : {}
+    );
   }
 
   /**
-   * Contrapropone: crea una propuesta modificada con los scopes seleccionados,
-   * la firma y la envía al peer como COUNTER. Actualiza el estado local.
+   * Contrapropone: construye la propuesta modificada, la firma y solo
+   * commitea COUNTERED (y la propuesta modificada) si el transporte acepta.
    */
   async counterSession(
     negotiationId: string,
     modifiedScopes: string[]
-  ): Promise<boolean> {
-    const session = this.sessions.get(negotiationId);
-    if (!session) return false;
-    if (!isValidTransition(session.state, "COUNTERED")) return false;
-
-    let sent = false;
-    // Crear la contrapropuesta (misma propuesta pero con scopes modificados)
-    const counterProposal: TaskProposal = {
+  ): Promise<RespondResult> {
+    return this.respond(negotiationId, "COUNTER", "COUNTERED", (session) => ({
       ...session.proposal,
       requestedScopes: modifiedScopes,
-    };
+    }));
+  }
 
-    if (this.sendFn) {
+  /**
+   * Reintenta una respuesta pendiente con los mismos bytes firmados.
+   * Seguro contra duplicados: el receptor descarta el nonce ya visto.
+   */
+  async retrySend(negotiationId: string): Promise<RespondResult> {
+    const session = this.sessions.get(negotiationId);
+    const pending = session?.pendingSend;
+    if (!session || !pending) return { sent: false, reason: "no_pending_send" };
+    if (session.sending) return { sent: false, reason: "already_sending" };
+    if (isExpired(session.proposal)) {
+      session.pendingSend = undefined;
+      this.expireSession(session);
+      return { sent: false, reason: "expired" };
+    }
+    if (!isValidTransition(session.state, pending.targetState)) {
+      // El peer (o el tiempo) movió la sesión mientras el envío estaba
+      // pendiente: la respuesta ya no es significativa. No se envía nada
+      // y no se sobrescribe el estado terminal alcanzado.
+      session.pendingSend = undefined;
+      session.updatedAt = Date.now();
+      return { sent: false, reason: "invalid_transition" };
+    }
+    session.sending = true;
+    try {
+      const result = await this.attemptSend(session, pending);
+      if (result.sent) {
+        this.commitPending(session, pending);
+      } else {
+        pending.attempts += 1;
+        pending.lastError = result.reason as RespondFailureReason;
+        pending.updatedAt = Date.now();
+        this.emit({
+          type: "send_failed",
+          session,
+          action: pending.action,
+          reason: result.reason as RespondFailureReason,
+        });
+      }
+      return result;
+    } finally {
+      session.sending = false;
+    }
+  }
+
+  /**
+   * Núcleo del modelo fail-closed. Construye y firma la respuesta una sola
+   * vez; el commit del estado visible ocurre solo si el envío se confirma.
+   */
+  private async respond(
+    negotiationId: string,
+    action: "ACCEPT" | "DECLINE" | "COUNTER",
+    targetState: NegotiationState,
+    buildPayload: (session: NegotiationSession) => TaskProposal | { reason?: string }
+  ): Promise<RespondResult> {
+    const session = this.sessions.get(negotiationId);
+    if (!session) return { sent: false, reason: "no_session" };
+    if (session.sending) return { sent: false, reason: "already_sending" };
+    if (session.pendingSend) {
+      // Ya hay una respuesta pendiente: el camino honesto es reintentar,
+      // no apilar una segunda respuesta.
+      return { sent: false, reason: "already_sending" };
+    }
+    if (!isValidTransition(session.state, targetState)) {
+      return { sent: false, reason: "invalid_transition" };
+    }
+    if (isExpired(session.proposal)) {
+      this.expireSession(session);
+      return { sent: false, reason: "expired" };
+    }
+
+    session.sending = true;
+    try {
+      let signed: SignedNegotiationMessage;
       try {
         const kp = await getSigningKeypair();
         const myPkHex = toHex(kp.publicKey);
-        const signed = signNegotiationMessage(
+        signed = signNegotiationMessage(
           kp.secretKey,
           myPkHex,
-          "COUNTER",
+          action,
           session.proposalId,
-          counterProposal
-        );
-        sent = await this.sendFn(
-          session.peerPkHex,
-          "COUNTER",
-          negotiationId,
-          signed as unknown as Record<string, unknown>
+          buildPayload(session)
         );
       } catch {
-        sent = false;
+        return { sent: false, reason: "send_threw" };
       }
-    }
 
-    session.proposal = counterProposal;
-    session.state = "COUNTERED";
+      const pending: PendingSend = {
+        action,
+        targetState,
+        signed,
+        attempts: 0,
+        lastError: "send_rejected",
+        updatedAt: Date.now(),
+      };
+      const result = await this.attemptSend(session, pending);
+      if (result.sent) {
+        this.commitPending(session, pending);
+      } else {
+        pending.attempts = 1;
+        pending.lastError = result.reason as RespondFailureReason;
+        pending.updatedAt = Date.now();
+        session.pendingSend = pending;
+        session.updatedAt = Date.now();
+        this.emit({
+          type: "send_failed",
+          session,
+          action,
+          reason: result.reason as RespondFailureReason,
+        });
+      }
+      return result;
+    } finally {
+      session.sending = false;
+    }
+  }
+
+  /** Intenta entregar los bytes firmados al transporte. No muta estado. */
+  private async attemptSend(
+    session: NegotiationSession,
+    pending: PendingSend
+  ): Promise<RespondResult> {
+    if (!this.sendFn) return { sent: false, reason: "no_send_function" };
+    try {
+      const sent = await this.sendFn(
+        session.peerPkHex,
+        pending.action,
+        session.negotiationId,
+        pending.signed as unknown as Record<string, unknown>
+      );
+      return sent ? { sent: true } : { sent: false, reason: "send_rejected" };
+    } catch {
+      return { sent: false, reason: "send_threw" };
+    }
+  }
+
+  /**
+   * Commit del estado visible. Solo se llama con envío confirmado.
+   * Revalida la transición: si el peer movió la sesión a terminal mientras
+   * tanto, no se sobrescribe (el peer ignora respuestas tardías por diseño).
+   */
+  private commitPending(session: NegotiationSession, pending: PendingSend): void {
+    if (!isValidTransition(session.state, pending.targetState)) {
+      session.pendingSend = undefined;
+      session.updatedAt = Date.now();
+      return;
+    }
+    if (pending.action === "COUNTER") {
+      session.proposal = pending.signed.payload as TaskProposal;
+    }
+    session.state = pending.targetState;
+    session.pendingSend = undefined;
     session.updatedAt = Date.now();
-    this.emit({ type: "counter_received", session });
-    return sent;
+    if (pending.action === "ACCEPT") {
+      this.emit({ type: "accepted", session });
+    } else if (pending.action === "DECLINE") {
+      const payload = pending.signed.payload as { reason?: string };
+      this.emit({
+        type: "declined",
+        session,
+        reason: typeof payload?.reason === "string" ? payload.reason : undefined,
+      });
+    } else {
+      this.emit({ type: "counter_received", session });
+    }
+  }
+
+  /** Marca una sesión como expirada (determinista por tiempo). */
+  private expireSession(session: NegotiationSession): void {
+    session.pendingSend = undefined;
+    session.state = "EXPIRED";
+    session.updatedAt = Date.now();
+    this.emit({ type: "expired", session });
   }
 
   /**
@@ -365,6 +507,12 @@ class NegotiationService {
     const session = this.sessions.get(negotiationId);
     if (!session) return; // Sin sesión: se ignora
     if (session.state !== "PROPOSED" && session.state !== "COUNTERED") return;
+    // Una respuesta que llega tarde (propuesta ya expirada) no puede
+    // transicionar: la sesión expira en lugar de aceptar el COUNTER.
+    if (isExpired(session.proposal)) {
+      this.expireSession(session);
+      return;
+    }
 
     const signerBytes = fromHex(signed.signerPkHex);
     if (!verifyNegotiationMessage(signed, signerBytes)) return;
@@ -387,12 +535,18 @@ class NegotiationService {
     const session = this.sessions.get(negotiationId);
     if (!session) return;
     if (session.state !== "PROPOSED" && session.state !== "COUNTERED") return;
+    // Respuesta tardía sobre propuesta expirada: no transiciona.
+    if (isExpired(session.proposal)) {
+      this.expireSession(session);
+      return;
+    }
 
     const signerBytes = fromHex(signed.signerPkHex);
     if (!verifyNegotiationMessage(signed, signerBytes)) return;
     if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
 
     session.state = "ACCEPTED";
+    session.pendingSend = undefined; // defensa: nada pendiente al cerrar
     session.updatedAt = Date.now();
     this.emit({ type: "accepted", session });
   }
@@ -404,6 +558,11 @@ class NegotiationService {
   ): Promise<void> {
     const session = this.sessions.get(negotiationId);
     if (!session) return;
+    // DECLINE tardío sobre propuesta expirada: EXPIRED es el estado honesto.
+    if (isExpired(session.proposal)) {
+      this.expireSession(session);
+      return;
+    }
 
     const signerBytes = fromHex(signed.signerPkHex);
     if (!verifyNegotiationMessage(signed, signerBytes)) return;
@@ -411,6 +570,7 @@ class NegotiationService {
 
     const payload = signed.payload as { reason?: string };
     session.state = "DECLINED";
+    session.pendingSend = undefined; // defensa: nada pendiente al cerrar
     session.updatedAt = Date.now();
     this.emit({
       type: "declined",

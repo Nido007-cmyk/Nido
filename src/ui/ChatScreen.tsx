@@ -10,13 +10,13 @@ import {
   ActivityIndicator,
   Animated,
   AppState,
-  Image,
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType } from "../services/haptics";
 import { NidoIcon } from "./components/icons/NidoIcon";
+import { NidoMascot } from "./components/calm/NidoMascot";
 import * as Clipboard from "expo-clipboard";
 import { useTranslation } from "react-i18next";
 import { llamaEngine } from "../inference/LlamaEngine";
@@ -1536,11 +1536,7 @@ export function ChatScreen({
           }}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Image
-                source={require("../../assets/mascot-nido.png")}
-                style={styles.emptyMascot}
-                resizeMode="contain"
-              />
+              <NidoMascot role="guide" size={120} />
               <Text style={[styles.emptyTitle, { color: colors.text.heading }]}>
                 {t("chatScreen.emptyTitle", "Hola, soy NIDO")}
               </Text>
@@ -1712,11 +1708,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: calmSpacing.generous,
     paddingVertical: calmSpacing.spacious,
     gap: calmSpacing.comfortable,
-  },
-  emptyMascot: {
-    width: 120,
-    height: 120,
-    borderRadius: calmRadii.gentle,
   },
   emptyTitle: {
     ...calmType.hero,

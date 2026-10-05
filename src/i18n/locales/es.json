@@ -773,7 +773,10 @@
       "write:reminder": "Crear recordatorios",
       "write:reminders": "Crear recordatorios"
     },
-    "verifiedPeer": "Identidad verificada"
+    "verifiedPeer": "Identidad verificada",
+    "notSentTitle": "No se pudo enviar",
+    "notSentDesc": "Tu respuesta no llegó al otro NIDO. Puedes reintentarlo.",
+    "retry": "Reintentar"
   },
   "packshare": {
     "availablePacks": "Packs disponibles",

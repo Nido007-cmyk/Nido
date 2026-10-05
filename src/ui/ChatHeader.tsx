@@ -4,12 +4,13 @@
  * See LICENSE file for details.
  */
 import React, { useMemo } from "react";
-import { View, Text, Pressable, StyleSheet, Image } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import { NidoIcon } from "./components/icons/NidoIcon";
+import { NidoMascot } from "./components/calm/NidoMascot";
 import { typography } from "./theme/typography";
 import { spacing, radii } from "./theme/spacing";
 
@@ -63,13 +64,9 @@ export function ChatHeader({
           <NidoIcon name="menu" size={20} color={colors.text.heading} />
         </Pressable>
 
-        {/* Brand & Mascot */}
+        {/* Brand & Mascot (rol: brand — identidad, no mensaje) */}
         <View style={styles.brandContainer}>
-          <Image
-            source={require("../../assets/mascot-nido.png")}
-            style={styles.mascotImg}
-            resizeMode="contain"
-          />
+          <NidoMascot role="brand" />
           <View style={styles.titleColumn}>
             <View style={styles.titleRow}>
               <Text style={styles.titleText}>NIDO</Text>
@@ -183,11 +180,6 @@ const getStyles = (colors: Colors) => StyleSheet.create({
     gap: 8,
     flex: 1,
     marginLeft: 8,
-  },
-  mascotImg: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
   },
   titleColumn: {
     flex: 1,

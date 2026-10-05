@@ -25,11 +25,11 @@ import {
   ActivityIndicator,
   AppState,
   StatusBar,
-  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType } from "../services/haptics";
 import { useTranslation } from "react-i18next";
+import { NidoMascot } from "./components/calm/NidoMascot";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import * as FileSystem from "expo-file-system/legacy";
 import { getDeviceTotalRamBytes } from "ram-monitor";
@@ -98,30 +98,6 @@ function seedEtaSeconds(p: SeedProgress, start: { at: number; done: number } | n
   return ((p.total - p.done) * elapsed) / indexed;
 }
 
-/**
- * Mascot oficial NIDO 3D (aprobado por el dueño 2026-10-04).
- * Reemplaza el placeholder neutral de Tier 2.
- */
-function MascotSlot({ size = 120 }: { size?: number }) {
-  return (
-    <Image
-      source={require("../../assets/mascot-nido.png")}
-      style={{ width: size, height: size, borderRadius: Math.round(size * 0.2) }}
-      resizeMode="contain"
-      accessible={false}
-    />
-  );
-}
-
-const slotStyles = StyleSheet.create({
-  slot: {
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",
-  },
-});
 
 /**
  * Tier 2 segmented progress (mockup frame 01): four segments with plain-word
@@ -595,7 +571,7 @@ export function SetupWizardScreen({ onReady, onSkip }: Props) {
 
   const renderStep1 = () => (
     <ScrollView contentContainerStyle={styles.stepContent} showsVerticalScrollIndicator={false}>
-      <MascotSlot size={120} />
+      <NidoMascot role="welcome" size={120} />
       <Text style={[styles.h1, tp.ui.headline, styles.center]}>{t("setupWizard.step1.title")}</Text>
       <Text style={[styles.lead, tp.ui.bodyLg, styles.center]}>{t("setupWizard.step1.subtitle")}</Text>
 
@@ -831,7 +807,7 @@ export function SetupWizardScreen({ onReady, onSkip }: Props) {
       // Tier 2 frame 11 — the ready celebration. Frozen copy, do not reword.
       return (
         <ScrollView contentContainerStyle={[styles.stepContent, styles.readyContent]} showsVerticalScrollIndicator={false}>
-          <MascotSlot size={140} />
+          <NidoMascot role="success" size={140} />
           <Text style={[styles.h1, tp.ui.headline, styles.center]}>{t("setupWizard.step4.readyTitle")}</Text>
           <Text style={[styles.lead, tp.ui.bodyLg, styles.center]}>{t("setupWizard.step4.readyText")}</Text>
           <View style={styles.footer}>

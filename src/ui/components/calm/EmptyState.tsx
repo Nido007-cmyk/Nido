@@ -6,11 +6,12 @@
  */
 
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useTheme } from "../../theme";
 import type { Colors } from "../../theme/colors";
 import { typography } from "../../theme/typography";
 import { spacing, radii } from "../../theme/spacing";
+import { NidoMascot, type MascotRole } from "./NidoMascot";
 
 interface Props {
   /** Main heading, e.g. "Nothing here yet" */
@@ -22,6 +23,11 @@ interface Props {
   onAction?: () => void;
   /** Show mascot (default true for warmth) */
   showMascot?: boolean;
+  /**
+   * Rol de la mascota en este empty state. Por defecto "guide" (orientación).
+   * Usa "connection" para momentos NIDO↔NIDO y "recovery" para errores.
+   */
+  mascotRole?: MascotRole;
 }
 
 export function EmptyState({
@@ -30,6 +36,7 @@ export function EmptyState({
   actionLabel,
   onAction,
   showMascot = true,
+  mascotRole = "guide",
 }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -37,12 +44,9 @@ export function EmptyState({
   return (
     <View style={styles.container}>
       {showMascot && (
-        <Image
-          source={require("../../../assets/mascot-nido.png")}
-          style={styles.mascot}
-          resizeMode="contain"
-          accessibilityIgnoresInvertColors
-        />
+        <View style={styles.mascotWrap}>
+          <NidoMascot role={mascotRole} />
+        </View>
       )}
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
@@ -68,9 +72,7 @@ const getStyles = (colors: Colors) =>
       padding: spacing.xl,
       paddingVertical: spacing.xl * 1.5,
     },
-    mascot: {
-      width: 96,
-      height: 96,
+    mascotWrap: {
       marginBottom: spacing.md,
       opacity: 0.95,
     },
