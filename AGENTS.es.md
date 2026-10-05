@@ -76,8 +76,8 @@ cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 ```
 
 `plugins/withReleaseSigning.js` lo firma con la clave nombrada por
-`BOAR_UPLOAD_STORE_FILE`, `BOAR_UPLOAD_KEY_ALIAS`, `BOAR_UPLOAD_STORE_PASSWORD`
-y `BOAR_UPLOAD_KEY_PASSWORD` en `~/.gradle/gradle.properties` (nunca en el
+`NIDO_UPLOAD_STORE_FILE`, `NIDO_UPLOAD_KEY_ALIAS`, `NIDO_UPLOAD_STORE_PASSWORD`
+y `NIDO_UPLOAD_KEY_PASSWORD` en `~/.gradle/gradle.properties` (nunca en el
 repo). Sin ellas, el build release se firma en modo debug, lo cual está bien
 para tu propio teléfono. Un APK firmado con otra clave no puede instalarse
 sobre un BOAR existente: Android exige desinstalar primero, lo que borra los

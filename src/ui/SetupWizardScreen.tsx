@@ -1125,9 +1125,11 @@ function makeStyles(colors: Colors) {
       alignItems: "center",
       gap: calmSpacing.cozy,
       flex: 1,
+      flexWrap: "wrap",
     },
     tierName: {
       color: colors.text.primary,
+      flexShrink: 1,
     },
     recommendedPill: {
       backgroundColor: colors.emerald.bgSubtle,
@@ -1147,6 +1149,7 @@ function makeStyles(colors: Colors) {
       borderColor: colors.border.elevated,
       alignItems: "center",
       justifyContent: "center",
+      flexShrink: 0,
     },
     radioActive: {
       borderColor: colors.text.accentEmerald,
