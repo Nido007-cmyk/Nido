@@ -173,7 +173,7 @@ describe("NegotiationService: routing y state machine", () => {
         alicePkHex,
         "ACCEPT",
         proposal.proposalId,
-        { proposalId: proposal.proposalId }
+        proposal
       );
       await negotiationService.handleEnvelope(
         makeEnvelope("ACCEPT", "neg-4", signedAccept) as any
