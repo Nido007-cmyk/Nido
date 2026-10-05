@@ -254,7 +254,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     // mutable /resolve/main/ branch pointer.
     revision: "6d70da17e749a471ccb62ade694486011a75cda3",
     license: "MIT",
-    description: "3.8B dense. Most complete comparisons and syntheses in our device benchmark, but slow (~4 tok/s). ~2.4GB.",
+    description: "Powerful. Best for complex reasoning and detailed analysis. Slower, uses more storage (~2.4GB).",
     required: false,
     capabilities: { roles: ["general", "reasoning"] },
   },
@@ -288,7 +288,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     // match the sha256/sizeBytes above (LFS oid verified via the HF API).
     revision: "9eadc66189c7641e1ddd226b8267a9119b2ce2d4",
     license: "Apache-2.0",
-    description: "1.5B dense, fast (~11-18 tok/s) and light. ~1.0GB. Default: downloaded at first-run setup.",
+    description: "Fast. Perfect for daily tasks. Light and quick, stays on your device (~1.0GB).",
     required: true,
     // Real-device Phase 9 test ("whats up?" -> a long, rambling,
     // free-associated multi-question response) traced to the app's
@@ -310,7 +310,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     // match the sha256/sizeBytes above (LFS oid verified via the HF API).
     revision: "8911e8a47f92bac19d6f5c64a2e2095bd2f7d031",
     license: "Apache-2.0",
-    description: "7B dense, stronger reasoning, more RAM/storage/time. ~4.7GB.",
+    description: "Powerful. Strongest reasoning for complex tasks. Needs more resources (~4.7GB).",
     required: false,
     capabilities: { roles: ["reasoning", "verifier"] },
   },
@@ -346,7 +346,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     // match the sha256/sizeBytes above (LFS oid verified via the HF API).
     revision: "4b4a2c1d584be7264f87aac328a1bc739ce81b6c",
     license: "Apache-2.0",
-    description: "Google's on-device model, ~4B effective parameters, quantization-aware Q4_0. ~5.2GB.",
+    description: "Private Local. Google's on-device model. Balanced performance and privacy (~5.2GB).",
     required: false,
   },
   {

@@ -245,7 +245,7 @@ export function ModelSetupScreen(props: Props) {
           <Text style={styles.sectionHeading}>{t("modelSetupScreen.installedModels")}</Text>
           <FlatList
             data={[
-              ...MODEL_CATALOG.filter((m) => m.kind === "llm" || m.kind === "embedding"),
+              ...MODEL_CATALOG.filter((m) => m.kind === "llm"),
             ]}
             keyExtractor={(m) => m.id}
             scrollEnabled={false}
