@@ -1508,7 +1508,8 @@ export function ChatScreen({
               editable={ready && !generating}
               onSubmitEditing={handleSend}
               returnKeyType="send"
-              multiline={false}
+              multiline={true}
+              maxLength={4000}
             />
             {generating ? (
               <Pressable
@@ -1799,6 +1800,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     ...typography.ui.body,
     fontSize: 14,
+    maxHeight: 120,
+    textAlignVertical: "center",
   },
   sendBtn: {
     width: 42,
