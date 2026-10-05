@@ -407,19 +407,13 @@ export const MODEL_CATALOG: CatalogModel[] = [
     sizeBytes: 614084,
     sha256: "2aeff76db48098851e1304fb37dc8013d9facf9214395897e7e05f276f85d2ff",
     sourceUrl:
-      "https://raw.githubusercontent.com/rferrari/boar-app/main/assets/corpus/corpus-standard.json",
-    // TEMPORARY (2026-09-27): the NIDO-hosted mirror
-    // (raw.githubusercontent.com/arsrs91-png/NIDO @ 11b14ff…) returns 404
-    // without auth because the NIDO repo is private, so it is NOT a working
-    // runtime endpoint. Restored the upstream URL, whose file bytes are
-    // byte-identical to the sha256 above (verified via GitHub blob API).
+      "https://raw.githubusercontent.com/Nido007-cmyk/Nido/main/assets/packs/corpus-standard.json",
+    // NIDO-hosted (Fase 2, 2026-10-05): CC BY-SA 4.0 Wikipedia content,
+    // redistributed with attribution (assets/packs/ATTRIBUTION.txt).
+    // Pinned to the NIDO commit whose file bytes match the sha256 above.
     // Integrity does not depend on the host: ModelManager verifies sha256
-    // after download. TODO: replace with public immutable NIDO hosting,
-    // then set revision to the NIDO commit again.
-    // Q-2: pinned to the upstream commit whose file bytes match the sha256
-    // above (verified 2026-09-27). raw.githubusercontent.com serves the file
-    // at any commit; pinning keeps the URL immutable.
-    revision: "9898b35e92bf42984a62c62a1d5f4b5895372b27",
+    // after download.
+    revision: "d1e9cb7b1ba331c524cecdb85270e8f86954e814",
     license: "CC BY-SA 4.0 (Wikipedia)",
     description: "1,000 additional Wikipedia-derived topics for local RAG. ~600KB.",
     required: false,
@@ -432,19 +426,13 @@ export const MODEL_CATALOG: CatalogModel[] = [
     sizeBytes: 2530725,
     sha256: "6d602003bb9da59200e3e55b75b9e15bb073a4b9b1357da2c2d47b2803c570be",
     sourceUrl:
-      "https://raw.githubusercontent.com/rferrari/boar-app/main/assets/corpus/corpus-full.json",
-    // TEMPORARY (2026-09-27): the NIDO-hosted mirror
-    // (raw.githubusercontent.com/arsrs91-png/NIDO @ 11b14ff…) returns 404
-    // without auth because the NIDO repo is private, so it is NOT a working
-    // runtime endpoint. Restored the upstream URL, whose file bytes are
-    // byte-identical to the sha256 above (verified via GitHub blob API).
+      "https://raw.githubusercontent.com/Nido007-cmyk/Nido/main/assets/packs/corpus-full.json",
+    // NIDO-hosted (Fase 2, 2026-10-05): CC BY-SA 4.0 Wikipedia content,
+    // redistributed with attribution (assets/packs/ATTRIBUTION.txt).
+    // Pinned to the NIDO commit whose file bytes match the sha256 above.
     // Integrity does not depend on the host: ModelManager verifies sha256
-    // after download. TODO: replace with public immutable NIDO hosting,
-    // then set revision to the NIDO commit again.
-    // Q-2: pinned to the upstream commit whose file bytes match the sha256
-    // above (verified 2026-09-27). raw.githubusercontent.com serves the file
-    // at any commit; pinning keeps the URL immutable.
-    revision: "9898b35e92bf42984a62c62a1d5f4b5895372b27",
+    // after download.
+    revision: "d1e9cb7b1ba331c524cecdb85270e8f86954e814",
     license: "CC BY-SA 4.0 (Wikipedia)",
     description: "4,000 more Wikipedia-derived topics for local RAG. ~2.4MB.",
     required: false,
