@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Tests para el sender de Pack Sharing (v2.1).
  *
  * Cubre:

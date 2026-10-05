@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * negotiation.test.ts — Tests del protocolo de negociación NIDO-to-NIDO.
  *
  * Happy paths:

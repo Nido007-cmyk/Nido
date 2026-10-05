@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * capabilityDiscovery.ts — NIDO P2P: Descubrimiento selectivo de capabilities.
  *
  * Un NIDO puede anunciar qué capabilities ofrece, pero de forma selectiva:

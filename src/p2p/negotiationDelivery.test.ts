@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * negotiationDelivery.test.ts — Tests del modelo fail-closed de entrega.
  *
  * Requisito del UI/UX gate: accept/decline/counter SOLO commitean el estado

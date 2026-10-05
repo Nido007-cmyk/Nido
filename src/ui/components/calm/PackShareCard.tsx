@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * PackShareCard — Calm Agent UI for P2P pack sharing.
  *
  * Shows:

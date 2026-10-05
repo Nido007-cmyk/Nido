@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * NidoMascot — la mascota oficial de NIDO con roles consistentes.
  *
  * La mascota es identidad de producto, no decoración: cada aparición tiene

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * p2pApprovalBridge.ts — NIDO P2P: Puente entre negociación y Approval Inbox.
  *
  * Cuando una propuesta P2P (PROPOSE) llega y la evaluación local da ASK,

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * EmptyState — Calm Agent designed empty state.
  *
  * Spec §17: Every important surface needs a designed empty state.

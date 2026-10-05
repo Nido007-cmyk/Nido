@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * negotiationService.ts — NIDO P2P: Servicio de negociación en producción.
  *
  * Conecta el transporte P2P (NidoMessenger) con la UI (NegotiationCard,

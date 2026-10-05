@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * ApprovalCard — Calm Agent approval surface.
  *
  * When Nido wants to perform a sensitive action, the user must immediately

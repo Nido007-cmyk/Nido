@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * replayProtection.ts — NIDO P2P: Anti-replay y revocación.
  *
  * - Anti-replay: cache de nonces vistos con ventana temporal

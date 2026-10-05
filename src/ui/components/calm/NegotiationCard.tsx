@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * NegotiationCard — Calm Agent UI for P2P task negotiation.
  *
  * Shows:

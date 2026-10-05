@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * p2pAuthorization.ts — NIDO P2P: Integración con AUTO/ASK/DENY.
  *
  * Un peer remoto NUNCA otorga autoridad por sí mismo.

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * sessionManager.ts — NIDO P2P: Gestión de sesiones con disconnect/reconnect safety.
  *
  * Una sesión representa una conexión autenticada entre dos NIDOs.

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * PacksTab — UI para Pack Sharing NIDO↔NIDO en producción.
  *
  * Se suscribe a packShareService y renderiza:

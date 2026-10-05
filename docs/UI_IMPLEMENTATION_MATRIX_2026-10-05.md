@@ -1,3 +1,9 @@
+<!--
+MIT License
+Copyright (c) 2026 NIDO contributors
+See LICENSE file for details.
+-->
+
 # NIDO UI Implementation Matrix — UI MASTER SPEC
 
 **Fecha:** 2026-10-05

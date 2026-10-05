@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * manifestTrust.ts — signed release manifest (Meta suggestion #2: update integrity).
  *
  * Threat model (honest): the SHA-256 pins in manifest.ts are baked into the

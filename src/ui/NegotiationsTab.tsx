@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * NegotiationsTab — UI para negociaciones NIDO↔NIDO en producción.
  *
  * Se suscribe a negotiationService y renderiza NegotiationCard para

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * negotiation.e2e.test.ts — End-to-end protocol tests NIDO-to-NIDO.
  *
  * Flujos completos:

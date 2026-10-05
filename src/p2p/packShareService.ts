@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * packShareService.ts — NIDO P2P: Servicio de Pack Sharing en producción.
  *
  * Conecta el transporte P2P (NidoMessenger) con la UI. Es el router que

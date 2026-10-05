@@ -1,3 +1,9 @@
+<!--
+MIT License
+Copyright (c) 2026 NIDO contributors
+See LICENSE file for details.
+-->
+
 # Reconciliación Remote/Branch — NIDO Push Consolidado
 
 **Fecha:** 2026-10-05

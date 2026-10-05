@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * negotiation.ts — NIDO P2P: Negociación de tareas agent-to-agent.
  *
  * State machine: PROPOSE → COUNTER → ACCEPT | DECLINE | EXPIRE

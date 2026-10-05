@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * negotiationService.test.ts — Tests de production path para NIDO↔NIDO.
  *
  * Verifica:

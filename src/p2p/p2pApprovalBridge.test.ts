@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * p2pApprovalBridge.test.ts — Tests del puente negociación → approval inbox.
  */
 
