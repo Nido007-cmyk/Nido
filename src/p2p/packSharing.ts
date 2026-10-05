@@ -56,6 +56,73 @@ export interface PackChunk {
 /** Chunk size: 64KB (fits in P2P message limits) */
 export const PACK_CHUNK_SIZE = 64 * 1024;
 
+/** Maximum pack size: 100MB (prevents memory exhaustion attacks). */
+export const MAX_PACK_SIZE_BYTES = 100 * 1024 * 1024;
+
+/** Maximum chunks per pack (prevents index overflow). */
+export const MAX_CHUNKS = Math.ceil(MAX_PACK_SIZE_BYTES / PACK_CHUNK_SIZE);
+
+/**
+ * Split base64 pack data into chunks for sending.
+ * Pure function - testable. Returns chunks in order.
+ */
+export function chunkPackData(
+  packId: string,
+  base64Data: string
+): PackChunk[] {
+  const chunks: PackChunk[] = [];
+  const total = Math.ceil(base64Data.length / PACK_CHUNK_SIZE);
+
+  for (let i = 0; i < total; i++) {
+    const start = i * PACK_CHUNK_SIZE;
+    const end = Math.min(start + PACK_CHUNK_SIZE, base64Data.length);
+    const data = base64Data.slice(start, end);
+    chunks.push({
+      packId,
+      index: i,
+      total,
+      data,
+      // Hash is computed by sender; receiver verifies independently.
+      // This field is informational - receiver must verify via verifyChunk.
+      hash: "",
+    });
+  }
+
+  return chunks;
+}
+
+/**
+ * Compute SHA-256 hash of pack data (base64 string).
+ * Used for the advertisement and final verification.
+ */
+export async function hashPackData(base64Data: string): Promise<string> {
+  const hash = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    base64Data
+  );
+  return hash.toLowerCase();
+}
+
+/**
+ * Validate a pack advertisement before accepting.
+ * Fail-closed: returns false for any malformed advertisement.
+ */
+export function isValidAdvertisement(adv: PackAdvertisement): boolean {
+  if (!adv || typeof adv !== "object") return false;
+  if (typeof adv.id !== "string" || !adv.id) return false;
+  if (typeof adv.name !== "string" || !adv.name) return false;
+  if (typeof adv.sizeBytes !== "number" || adv.sizeBytes <= 0) return false;
+  if (adv.sizeBytes > MAX_PACK_SIZE_BYTES) return false;
+  if (typeof adv.hash !== "string" || !/^[0-9a-f]{64}$/i.test(adv.hash)) return false;
+  if (typeof adv.chunkCount !== "number" || adv.chunkCount <= 0) return false;
+  if (adv.chunkCount > MAX_CHUNKS) return false;
+  if (typeof adv.senderId !== "string" || !adv.senderId) return false;
+  // Chunk count must match size
+  const expectedChunks = chunkCountFor(adv.sizeBytes);
+  if (adv.chunkCount !== expectedChunks) return false;
+  return true;
+}
+
 /**
  * Calculate number of chunks needed for a pack.
  */
@@ -160,4 +227,131 @@ export function transferProgress(session: PackShareSession): number {
   const total = session.advertisement.chunkCount;
   if (total === 0) return 1;
   return session.received.size / total;
+}
+
+// ============================================================================
+// SENDER (v2.1 - 2026-10-05)
+// ============================================================================
+
+/** Estados de una sesión de envío. */
+export type SendSessionState =
+  | "OFFERED"      // Oferta enviada, esperando respuesta
+  | "ACCEPTED"     // Aceptada, transfiriendo chunks
+  | "DECLINED"     // Rechazada por el receiver
+  | "COMPLETE"     // Todos los chunks enviados y confirmados
+  | "CANCELLED"    // Cancelada por el sender o receiver
+  | "FAILED";      // Error (timeout, storage, etc.)
+
+export interface PackSendSession {
+  sessionId: string;
+  packId: string;
+  peerPkHex: string;
+  advertisement: PackAdvertisement;
+  /** Chunks to send (in order) */
+  chunks: PackChunk[];
+  /** Indices acknowledged by receiver */
+  acked: Set<number>;
+  /** Current state */
+  state: SendSessionState;
+  /** When the session started */
+  startedAt: number;
+  /** Last activity (for timeout) */
+  lastActivityAt: number;
+}
+
+/**
+ * Create a new send session.
+ * Validates the pack data before creating the session.
+ */
+export async function createSendSession(
+  sessionId: string,
+  packId: string,
+  packName: string,
+  packDescription: string,
+  base64Data: string,
+  senderId: string,
+  peerPkHex: string
+): Promise<PackSendSession | null> {
+  // Validate size
+  const sizeBytes = Math.ceil((base64Data.length * 3) / 4); // base64 → bytes
+  if (sizeBytes <= 0 || sizeBytes > MAX_PACK_SIZE_BYTES) return null;
+
+  // Compute hash
+  const hash = await hashPackData(base64Data);
+
+  // Create chunks
+  const chunks = chunkPackData(packId, base64Data);
+  if (chunks.length === 0 || chunks.length > MAX_CHUNKS) return null;
+
+  const advertisement: PackAdvertisement = {
+    id: packId,
+    name: packName,
+    description: packDescription,
+    sizeBytes,
+    hash,
+    chunkCount: chunks.length,
+    senderId,
+  };
+
+  if (!isValidAdvertisement(advertisement)) return null;
+
+  const now = Date.now();
+  return {
+    sessionId,
+    packId,
+    peerPkHex: peerPkHex.toLowerCase(),
+    advertisement,
+    chunks,
+    acked: new Set(),
+    state: "OFFERED",
+    startedAt: now,
+    lastActivityAt: now,
+  };
+}
+
+/**
+ * Get the next chunk to send (lowest unacked index).
+ * Returns null if all chunks are acked or session is not in ACCEPTED state.
+ */
+export function nextChunkToSend(session: PackSendSession): PackChunk | null {
+  if (session.state !== "ACCEPTED") return null;
+  for (const chunk of session.chunks) {
+    if (!session.acked.has(chunk.index)) {
+      return chunk;
+    }
+  }
+  return null;
+}
+
+/**
+ * Mark a chunk as acknowledged.
+ * Returns true if all chunks are now acked.
+ */
+export function markChunkAcked(
+  session: PackSendSession,
+  index: number
+): boolean {
+  if (index < 0 || index >= session.chunks.length) return false;
+  session.acked.add(index);
+  session.lastActivityAt = Date.now();
+  return session.acked.size === session.chunks.length;
+}
+
+/**
+ * Get send progress (0-1).
+ */
+export function sendProgress(session: PackSendSession): number {
+  if (session.chunks.length === 0) return 1;
+  return session.acked.size / session.chunks.length;
+}
+
+/**
+ * Check if a send session has timed out (no activity for 5 minutes).
+ */
+export function isSendSessionTimedOut(
+  session: PackSendSession,
+  nowMs: number = Date.now()
+): boolean {
+  const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+  return nowMs - session.lastActivityAt > TIMEOUT_MS;
 }

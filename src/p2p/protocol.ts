@@ -24,6 +24,12 @@ export const PROTOCOL_VERSION = 2;
  * NIDO↔NIDO (PROPOSE/COUNTER/ACCEPT/DECLINE/EXPIRE). No se reutiliza
  * "agent_task" para no confundir negotiation (acuerdo) con execution
  * (ejecución). Peers v1 rechazan envelopes v2 (fail-closed).
+ *
+ * v2.1 (2026-10-05): agregado "pack_share" para Pack Sharing NIDO↔NIDO
+ * (OFFER/ACCEPT/DECLINE/CHUNK/CHUNK_ACK/COMPLETE/CANCEL). Las transferencias
+ * de packs NUNCA van dentro de chat o agent_task: tienen su propio tipo
+ * con su propia state machine y garantías de integridad (SHA-256).
+ * Ver src/p2p/packSharing.ts para el protocolo completo.
  */
 
 /**
@@ -33,6 +39,10 @@ export const PROTOCOL_VERSION = 2;
  * v2: "negotiation" para mensajes del protocolo de negociación agent-to-agent.
  * El subtipo específico (PROPOSE/COUNTER/ACCEPT/DECLINE/EXPIRE) va en
  * `payload.action`. Ver src/p2p/negotiation.ts para la state machine.
+ *
+ * v2.1: "pack_share" para transferencia de knowledge packs NIDO↔NIDO.
+ * El subtipo (OFFER/ACCEPT/DECLINE/CHUNK/CHUNK_ACK/COMPLETE/CANCEL) va en
+ * `payload.action`. Ver src/p2p/packSharing.ts para el protocolo completo.
  */
 export type P2PMessageType =
   | "chat"
@@ -41,7 +51,8 @@ export type P2PMessageType =
   | "receipt"
   | "session_confirm"
   | "delivery_ack"
-  | "negotiation";
+  | "negotiation"
+  | "pack_share";
 
 export interface P2PEnvelope {
   v: number;
@@ -81,6 +92,29 @@ export interface NegotiationPayload {
   negotiationId: string;
   /** Mensaje de negociación firmado (serialización canónica + Ed25519). */
   signed: Record<string, unknown>;
+}
+
+/**
+ * v2.1: Payload para mensajes de Pack Sharing NIDO↔NIDO.
+ *
+ * El campo `action` indica el subtipo:
+ * - OFFER: sender → receiver. Ofrece un pack (advertisement firmado).
+ * - ACCEPT: receiver → sender. Acepta la oferta (inicia transferencia).
+ * - DECLINE: receiver → sender. Rechaza la oferta.
+ * - CHUNK: sender → receiver. Un chunk del pack.
+ * - CHUNK_ACK: receiver → sender. Confirma recepción de un chunk.
+ * - COMPLETE: sender → receiver. Todos los chunks enviados.
+ * - CANCEL: cualquiera → cualquiera. Cancela la transferencia.
+ *
+ * Ver src/p2p/packSharing.ts para la state machine y garantías.
+ */
+export interface PackSharePayload {
+  /** Subtipo de pack sharing */
+  action: "OFFER" | "ACCEPT" | "DECLINE" | "CHUNK" | "CHUNK_ACK" | "COMPLETE" | "CANCEL";
+  /** ID de la sesión de transferencia (para correlacionar mensajes). */
+  sessionId: string;
+  /** Datos específicos del subtipo (advertisement, chunk, etc.). */
+  data: Record<string, unknown>;
 }
 
 export interface AgentResultPayload {
@@ -355,7 +389,7 @@ export class FrameReassembler {
 function validateEnvelope(env: P2PEnvelope): void {
   if (typeof env !== "object" || env === null) throw new Error("Envelope inválido.");
   if (env.v !== PROTOCOL_VERSION) throw new Error("Versión de protocolo no soportada.");
-  const types: P2PMessageType[] = ["chat", "agent_task", "agent_result", "receipt", "session_confirm", "delivery_ack", "negotiation"];
+  const types: P2PMessageType[] = ["chat", "agent_task", "agent_result", "receipt", "session_confirm", "delivery_ack", "negotiation", "pack_share"];
   if (!types.includes(env.type)) throw new Error("Tipo de mensaje desconocido.");
   if (typeof env.id !== "string" || !env.id) throw new Error("Falta id.");
   if (typeof env.from !== "string" || typeof env.to !== "string") throw new Error("Falta from/to.");

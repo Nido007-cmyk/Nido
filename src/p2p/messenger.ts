@@ -1144,6 +1144,18 @@ export class NidoMessenger {
       await this.flushOutbox(key);
       return env;
     }
+    if (env.type === "pack_share") {
+      // v2.1 (2026-10-05): routing real de Pack Sharing NIDO↔NIDO.
+      // Antes packSharing.ts tenía cero callers fuera de tests; ahora el
+      // transporte lo invoca via PackShareService.
+      // No va al inbox de mensajes: tiene su propia state machine y UI.
+      this.assertLive();
+      const { packShareService } = await import("./packShareService");
+      await packShareService.handleEnvelope(env);
+      // Cualquier frame válido confirma la sesión.
+      await this.flushOutbox(key);
+      return env;
+    }
     const payload = env.payload as unknown as AgentTaskPayload & { message_id?: unknown; text?: unknown };
     if (N6_ACK_TYPES.has(env.type)) {
       // N6 §5.1: el message_id del payload (estable entre reintentos);
@@ -1375,6 +1387,47 @@ export class NidoMessenger {
   async pendingOutbox(): Promise<P2PStoredMessage[]> {
     this.assertLive();
     return getOutbox();
+  }
+
+  /**
+   * v2.1 (2026-10-05): Envía un envelope pack_share directamente via la
+   * sesión P2P (no pasa por el outbox: los chunks necesitan control de
+   * flujo propio y la sesión ya aplica anti-replay sobre el envelope id).
+   *
+   * Usado por PackShareService para OFFER/ACCEPT/DECLINE/CHUNK/CHUNK_ACK/
+   * COMPLETE/CANCEL. Si no hay sesión viva, el envío falla silenciosamente
+   * (el servicio maneja el reintento/timeout).
+   */
+  async sendPackShare(
+    peerPkHex: string,
+    action: "OFFER" | "ACCEPT" | "DECLINE" | "CHUNK" | "CHUNK_ACK" | "COMPLETE" | "CANCEL",
+    sessionId: string,
+    data: Record<string, unknown>
+  ): Promise<boolean> {
+    this.assertLive();
+    if (!this.myPk) {
+      const identity = await getIdentity();
+      this.assertLive();
+      if (!identity) return false;
+      this.myPk = identity.publicKey;
+    }
+    const key = peerPkHex.toLowerCase();
+    const session = this.sessions.get(key);
+    if (!session || !session.isPeerLive || !this.transport.available) return false;
+    try {
+      const envelope = makeEnvelope(
+        "pack_share",
+        newId(),
+        this.myPk,
+        key,
+        { action, sessionId, data }
+      );
+      this.assertLive();
+      await this.transport.sendFrame(key, session.pack(envelope));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private async flushOutbox(peerPkHex: string): Promise<void> {
