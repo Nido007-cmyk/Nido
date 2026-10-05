@@ -306,6 +306,36 @@ export function isExpired(proposal: TaskProposal, now: number = Date.now()): boo
 }
 
 /**
+ * Firma un mensaje de negociación (ACCEPT/DECLINE/COUNTER).
+ * Complementa verifyNegotiationMessage para el production path completo.
+ */
+export function signNegotiationMessage(
+  signerSecretKey: Uint8Array,
+  signerPkHex: string,
+  type: NegotiationMessageType,
+  proposalId: string,
+  payload: TaskProposal | { reason?: string }
+): SignedNegotiationMessage {
+  const unsigned = {
+    type,
+    proposalId,
+    payload,
+    signerPkHex,
+    timestamp: Date.now(),
+    nonce: bytesToHex(nacl.randomBytes(16)),
+  };
+  const message = canonicalSerialize(unsigned);
+  const signature = nacl.sign.detached(
+    new TextEncoder().encode(message),
+    signerSecretKey
+  );
+  return {
+    ...unsigned,
+    signatureHex: bytesToHex(signature),
+  };
+}
+
+/**
  * Transiciones válidas de la state machine.
  */
 const VALID_TRANSITIONS: Record<NegotiationState, NegotiationState[]> = {
