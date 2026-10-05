@@ -707,5 +707,17 @@
     "deny": "Cancelar",
     "approveOnce": "Permitir uma vez",
     "approving": "Aprovando..."
+  },
+  "negotiationCard": {
+    "title": "{{name}} quer colaborar",
+    "requestedAccess": "Acesso solicitado:",
+    "counterHint": "Toque para remover acessos que não deseja conceder.",
+    "expiresIn": "Expira em",
+    "minutes": "{{count}} min",
+    "decline": "Recusar",
+    "counter": "Contrapropor",
+    "accept": "Aceitar",
+    "cancel": "Cancelar",
+    "sendCounter": "Enviar contraproposta"
   }
 }

@@ -707,5 +707,17 @@
     "deny": "Cancel",
     "approveOnce": "Allow once",
     "approving": "Approving..."
+  },
+  "negotiationCard": {
+    "title": "{{name}} wants to collaborate",
+    "requestedAccess": "Requested access:",
+    "counterHint": "Tap to remove access you don't want to grant.",
+    "expiresIn": "Expires in",
+    "minutes": "{{count}} min",
+    "decline": "Decline",
+    "counter": "Counter",
+    "accept": "Accept",
+    "cancel": "Cancel",
+    "sendCounter": "Send counter"
   }
 }
