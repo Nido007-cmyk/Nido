@@ -17,6 +17,7 @@ import {
   REQUIRED_MODELS,
   STORAGE_BUDGET_BYTES,
 } from "./manifest";
+import { defaultLlmForDevice } from "./defaultModel";
 // The integrity trust decision lives in modelTrust.ts (single choke point
 // shared by the install UI, the download pipeline, and the inference load
 // path). ModelManager keeps thin wrappers + compat re-exports here.
@@ -1034,9 +1035,19 @@ export class ModelManager {
    * setup screen instead of the chat UI. This is the only place the app's
    * flow depends on network having been used at some point — once true, no
    * further network access is needed.
+   *
+   * The "default LLM" is RAM-aware (src/models/defaultModel.ts): on low-RAM
+   * devices the setup downloads the light model instead of the 1.5B, so the
+   * presence check must look for the same model the setup would install —
+   * not blindly for the catalog's `required` LLM.
    */
   async requiredModelsPresent(): Promise<boolean> {
-    const statuses = await Promise.all(REQUIRED_MODELS.map((a) => this.statusOf(a)));
+    const defaultLlm = defaultLlmForDevice();
+    const needed = [
+      defaultLlm,
+      ...REQUIRED_MODELS.filter((m) => m.kind !== "llm"),
+    ];
+    const statuses = await Promise.all(needed.map((a) => this.statusOf(a)));
     return statuses.every((s) => s.present && s.sizeOnDiskBytes === s.asset.sizeBytes);
   }
 }

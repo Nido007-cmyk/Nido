@@ -11,6 +11,7 @@
  */
 import { CatalogModel } from "../models/manifest";
 import { computeCompatibility, Compatibility } from "../models/compatibility";
+import { contextSpecForModel } from "../models/defaultModel";
 import { estimateContextBytes } from "../inference/ramBudget";
 import { ModelRole, RoutingPreset } from "./types";
 
@@ -134,9 +135,9 @@ function toProfile(
     userOverride,
     estimatedMemoryMb:
       model.capabilities?.estimatedMemoryMb ??
-      Math.round(estimateContextBytes({ fileSizeBytes: model.sizeBytes, nCtx: 4096 }).totalBytes / (1024 * 1024)),
+      Math.round(estimateContextBytes(contextSpecForModel(model)).totalBytes / (1024 * 1024)),
     estimatedTokensPerSecond: model.capabilities?.estimatedTokensPerSecond,
-    compatibilityStatus: computeCompatibility(model.sizeBytes, deviceRamBytes),
+    compatibilityStatus: computeCompatibility(model, deviceRamBytes),
   };
 }
 

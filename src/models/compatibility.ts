@@ -1,4 +1,6 @@
 import { estimateContextBytes } from "../inference/ramBudget";
+import { contextSpecForModel } from "./defaultModel";
+import type { CatalogModel } from "./manifest";
 
 /**
  * Rough RAM-fit estimate for a GGUF model on this device — shared between
@@ -12,9 +14,9 @@ import { estimateContextBytes } from "../inference/ramBudget";
  */
 export type Compatibility = "green" | "yellow" | "red" | "unknown";
 
-export function computeCompatibility(sizeBytes: number, deviceRamBytes: number): Compatibility {
+export function computeCompatibility(model: CatalogModel, deviceRamBytes: number): Compatibility {
   if (deviceRamBytes <= 0) return "unknown";
-  const estimatedRamBytes = estimateContextBytes({ fileSizeBytes: sizeBytes, nCtx: 4096 }).totalBytes;
+  const estimatedRamBytes = estimateContextBytes(contextSpecForModel(model)).totalBytes;
   if (estimatedRamBytes <= deviceRamBytes * 0.65) return "green";
   if (estimatedRamBytes <= deviceRamBytes * 0.9) return "yellow";
   return "red";

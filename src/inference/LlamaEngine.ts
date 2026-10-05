@@ -2,6 +2,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { initLlama, LlamaContext } from "llama.rn";
 import { checkRamBudget, readRamSnapshot, toGb } from "./ramBudget";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
+import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
 
 export interface ChatMessageInput {
   role: string;
@@ -87,7 +88,13 @@ export class LlamaEngine {
   }
 
   private async loadNow(modelFilename: string, opts?: { nCtx?: number; nThreads?: number }) {
-    const nCtx = opts?.nCtx ?? 4096;
+    // Per-model default context: smaller models declare a smaller defaultNCtx
+    // in the catalog (context is the second biggest RAM term after weights).
+    // An explicit opt always wins.
+    const catalogEntry: CatalogModel | undefined = MODEL_CATALOG.find(
+      (m) => m.filename === modelFilename
+    );
+    const nCtx = opts?.nCtx ?? catalogEntry?.defaultNCtx ?? 4096;
     const nThreads = opts?.nThreads ?? 4;
 
     // ChatScreen re-mounts (and calls load() again) every time Settings is
@@ -126,11 +133,19 @@ export class LlamaEngine {
     // Pre-flight check: a clear "this probably won't fit" message beats a
     // cryptic native failure or an outright OOM crash. The estimate comes
     // from src/inference/ramBudget.ts (weights + computed KV cache +
-    // compute buffers, not a flat multiplier). Best-effort — if the native
-    // RAM readouts aren't available, we skip the check rather than block
-    // loading on missing data.
+    // compute buffers, not a flat multiplier), using the model's cataloged
+    // architecture when known. Best-effort — if the native RAM readouts
+    // aren't available, we skip the check rather than block loading on
+    // missing data.
     const snapshot = readRamSnapshot();
-    const verdict = snapshot ? checkRamBudget({ fileSizeBytes, nCtx }, snapshot) : null;
+    const spec = {
+      fileSizeBytes,
+      nCtx,
+      nLayer: catalogEntry?.arch?.nLayer,
+      nKvHeads: catalogEntry?.arch?.nKvHeads,
+      headDim: catalogEntry?.arch?.headDim,
+    };
+    const verdict = snapshot ? checkRamBudget(spec, snapshot) : null;
     if (verdict && !verdict.fits) {
       throw new Error(
         `"${modelFilename}" needs roughly ${toGb(verdict.totalBytes)}GB of RAM, but this ` +

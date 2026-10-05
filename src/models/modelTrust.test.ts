@@ -21,6 +21,15 @@
  * non-empty checksum, size, and source URL").
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// ram-monitor is a native module: stub it so suites that reach the models
+// layer transitively (via ModelManager -> defaultModel -> ramBudget) don't
+// pull react-native's Flow sources into vitest. Same pattern as
+// src/inference/LlamaEngine.test.ts.
+vi.mock("ram-monitor", () => ({
+  getDeviceTotalRamBytes: () => 8 * 1024 ** 3,
+  getMemoryInfo: () => ({ rssBytes: 0 }),
+}));
 import { createHash } from "crypto";
 
 // ---------------------------------------------------------------------------

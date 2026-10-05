@@ -41,6 +41,7 @@ import {
   CatalogModel,
   totalManifestBytes,
 } from "../models/manifest";
+import { defaultLlmForRam } from "../models/defaultModel";
 import { ModelManager } from "../models/ModelManager";
 import {
   startDownload,
@@ -416,8 +417,15 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
 
   const activeTierConfig = TIERS.find((t) => t.id === selectedTier) ?? TIERS[0];
   const tierCorpusPackIds = activeTierConfig.corpusPackIds ?? [];
+  // RAM-aware setup set: the required non-LLM assets plus the default LLM
+  // for THIS device's RAM (0.5B on low-RAM phones) instead of blindly the
+  // catalog's `required` LLM. Matches ModelManager.requiredModelsPresent().
+  const setupLlmAssets = (totalRamBytes: number): CatalogModel[] => [
+    ...MODEL_CATALOG.filter((m) => m.required && m.kind !== "llm"),
+    defaultLlmForRam(totalRamBytes),
+  ];
   const tierAssets: CatalogModel[] = [
-    ...MODEL_CATALOG.filter((m) => m.required),
+    ...setupLlmAssets(hardware.totalRamBytes),
     ...CORPUS_CATALOG.filter((c) => tierCorpusPackIds.includes(c.id)),
   ];
 
@@ -685,7 +693,7 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
 
   const tierDownloadBytes = (corpusPackIds: string[]) =>
     totalManifestBytes([
-      ...MODEL_CATALOG.filter((m) => m.required),
+      ...setupLlmAssets(hardware.totalRamBytes),
       ...CORPUS_CATALOG.filter((c) => corpusPackIds.includes(c.id)),
     ]);
 

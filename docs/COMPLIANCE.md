@@ -58,11 +58,13 @@ Last reviewed: 2026-09-25. Test device: Xiaomi 2311DRK48G, MediaTek MT6897
   embedding engine, which previously had no pre-flight).
 
 ### 3. 50 GB storage — PASS
-- Default install: about 1 GB of models (Qwen2.5-1.5B 0.99 GB, bge-small
-  0.04 GB) plus a few MB of knowledge base.
-- Every optional catalog model (Phi-3.5-mini, Qwen2.5-7B, LFM2.5-8B-A1B,
-  Gemma 4 E4B) adds about 17.4 GB, and the Wikipedia Vital Articles knowledge
-  pack 0.16 GB, for about 18.6 GB in total.
+- Default install: about 1 GB of models on most phones (Qwen2.5-1.5B 0.99 GB,
+  bge-small 0.04 GB), or about 0.45 GB on low-RAM devices (Qwen2.5-0.5B
+  0.38 GB instead of the 1.5B — the default follows detected RAM, see
+  docs/MODELS.md), plus a few MB of knowledge base.
+- Every optional catalog model (Qwen2.5-0.5B, Phi-3.5-mini, Qwen2.5-7B, LFM2.5-8B-A1B,
+  Gemma 4 E4B) adds about 17.8 GB, and the Wikipedia Vital Articles knowledge
+  pack 0.16 GB, for about 19 GB in total.
 - Enforced before every download (`checkStorageForDownload`,
   `src/models/storageBudget.ts`, called from `ModelManager.downloadCatalogModel`):
   what BOAR already stores (models, knowledge packs, database) plus downloads in

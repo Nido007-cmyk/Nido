@@ -76,7 +76,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
     }
   }, []);
 
-  const compatibility = item.kind === "llm" ? computeCompatibility(item.sizeBytes, deviceRam) : "unknown";
+  const compatibility = item.kind === "llm" ? computeCompatibility(item, deviceRam) : "unknown";
   const calculating = t("catalogItemCard.calculating");
 
   // Models added from the Hugging Face browser can be dropped from the list even if never downloaded.

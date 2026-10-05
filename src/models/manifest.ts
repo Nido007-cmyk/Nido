@@ -63,6 +63,23 @@ export interface CatalogModel {
    */
   capabilities?: ModelCapabilities;
   /**
+   * Transformer architecture profile for the RAM pre-flight
+   * (src/inference/ramBudget.ts): layer count, GQA KV-head count and head
+   * dimension drive the KV-cache term. Verified against the model's
+   * config.json. When absent, the pre-flight falls back to the bundled
+   * default's profile — fine for the catalog's historical entries, but every
+   * model that can become the active default MUST declare it.
+   */
+  arch?: { nLayer: number; nKvHeads: number; headDim: number };
+  /**
+   * Recommended llama.cpp context length for this model. The engine uses it
+   * when the caller doesn't pass an explicit nCtx (see LlamaEngine.load).
+   * Smaller models ship with a smaller default: context is the second
+   * biggest RAM term after the weights, and short on-device chat doesn't
+   * need 4k.
+   */
+  defaultNCtx?: number;
+  /**
    * For kind "corpus": "json" (default) is a list of documents indexed on the
    * phone after download; "sqlite-pack" is a knowledge pack built on a computer
    * (scripts/build-knowledge-pack.mjs) with its own search index and
@@ -290,11 +307,44 @@ export const MODEL_CATALOG: CatalogModel[] = [
     license: "Apache-2.0",
     description: "Fast. Perfect for daily tasks. Light and quick, stays on your device (~1.0GB).",
     required: true,
+    // RAM pre-flight profile (verified against config.json): 28 layers,
+    // GQA with 2 KV heads, head dim 128. Declared so estimateContextBytes
+    // uses this model's real architecture instead of the fallback.
+    arch: { nLayer: 28, nKvHeads: 2, headDim: 128 },
     // Real-device Phase 9 test ("whats up?" -> a long, rambling,
     // free-associated multi-question response) traced to the app's
     // hand-built "Question: ...\n\nAnswer:" prompt shape being outside
     // Qwen2.5-Instruct's own fine-tuned ChatML template — see
     // routing/types.ts's ModelCapabilities.usesChatTemplate doc comment.
+    capabilities: { roles: ["fast"], usesChatTemplate: true },
+  },
+  {
+    id: "qwen2.5-0.5b-instruct-q4km",
+    kind: "llm",
+    label: "Qwen2.5-0.5B-Instruct (Q4_K_M)",
+    filename: "models/qwen2.5-0.5b-instruct-q4km.gguf",
+    sizeBytes: 397808192,
+    sha256: "6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653",
+    sourceUrl:
+      "https://huggingface.co/bartowski/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf",
+    // C/F2 (2026-10-05): pinned to the Hugging Face commit whose file bytes
+    // match the sha256/sizeBytes above (LFS oid verified via the HF API at
+    // that commit). The downloader fetches /resolve/<revision>/, never the
+    // mutable /resolve/main/ branch pointer.
+    revision: "41ba88dbac95fed2528c92514c131d73eb5a174b",
+    license: "Apache-2.0",
+    description:
+      "Light. The fastest on-device chat, for phones with less RAM (~0.4GB). Best for quick everyday questions; weaker at complex reasoning.",
+    required: false,
+    // RAM pre-flight profile (verified against config.json): 24 layers,
+    // GQA with 2 KV heads, head dim 64.
+    arch: { nLayer: 24, nKvHeads: 2, headDim: 64 },
+    // 2048 is plenty for short on-device chat and keeps the KV cache +
+    // compute terms small (24 MiB + 128 MiB) so the model fits low-RAM
+    // devices with margin.
+    defaultNCtx: 2048,
+    // Same Qwen2.5 family as the 1.5B default: same ChatML template and
+    // stop sequences, so the existing prompt engineering applies unchanged.
     capabilities: { roles: ["fast"], usesChatTemplate: true },
   },
   {

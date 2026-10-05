@@ -27,6 +27,7 @@ import { classifyTask, isRetrievalIrrelevant } from "../routing/classify";
 import type { TaskType } from "../routing/types";
 import { onSeedProgress, seedKnowledgeBaseIfEmpty } from "../rag/seedCorpus";
 import { MODEL_CATALOG, CORPUS_CATALOG, REQUIRED_MODELS, CatalogModel } from "../models/manifest";
+import { defaultLlmForDevice } from "../models/defaultModel";
 import { subscribeDownloads, listDownloadStates } from "../services/downloadManager";
 import {
   getActiveModelId,
@@ -128,7 +129,11 @@ function researchStageLabel(p: ResearchProgress, t: (key: string, opts?: Record<
 
 async function resolveActiveModel(kind: "llm" | "embedding"): Promise<CatalogModel> {
   const activeId = await getActiveModelId(kind);
-  const fallback = REQUIRED_MODELS.find((m) => m.kind === kind)!;
+  // RAM-aware default for the LLM kind (0.5B on low-RAM devices); the
+  // required embedding for the embedding kind. Matches what the setup
+  // wizard installs (see defaultLlmForDevice).
+  const fallback =
+    kind === "llm" ? defaultLlmForDevice() : REQUIRED_MODELS.find((m) => m.kind === kind)!;
   if (!activeId) return fallback;
   // NIDO: only curated-catalog models exist — the Hugging Face browser was
   // removed (it leaked search interests over the network).

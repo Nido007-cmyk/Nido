@@ -13,7 +13,8 @@ import {
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType, setHapticsEnabledCache } from "../services/haptics";
 import { useTranslation } from "react-i18next";
 import { NidoMascot } from "./components/calm/NidoMascot";
-import { MODEL_CATALOG, CatalogModel, AssetKind, CORPUS_CATALOG, REQUIRED_MODELS } from "../models/manifest";
+import { MODEL_CATALOG, CatalogModel, AssetKind, CORPUS_CATALOG } from "../models/manifest";
+import { defaultLlmForDevice } from "../models/defaultModel";
 import { llamaEngine } from "../inference/LlamaEngine";
 import { ModelManager } from "../models/ModelManager";
 import { getActiveModelId, setActiveModelId, getHapticsEnabled, setHapticsEnabled } from "../models/settings";
@@ -76,7 +77,12 @@ export function ModelSetupScreen(props: Props) {
     const next: Partial<Record<AssetKind, string>> = {};
     for (const kind of LLM_EMBEDDING_KINDS) {
       const active = await getActiveModelId(kind);
-      next[kind] = active ?? MODEL_CATALOG.find((m) => m.kind === kind && m.required)?.id;
+      // RAM-aware default for the LLM kind; required entry for the rest.
+      next[kind] =
+        active ??
+        (kind === "llm"
+          ? defaultLlmForDevice().id
+          : MODEL_CATALOG.find((m) => m.kind === kind && m.required)?.id);
     }
     setActiveIds(next);
 
@@ -169,7 +175,7 @@ export function ModelSetupScreen(props: Props) {
       // Load it here, so the chat is ready on return and a failure shows
       // next to the model that caused it.
       const previousId =
-        (await getActiveModelId("llm")) ?? REQUIRED_MODELS.find((m) => m.kind === "llm")!.id;
+        (await getActiveModelId("llm")) ?? defaultLlmForDevice().id;
       setActivatingId(model.id);
       await setActiveModelId("llm", model.id);
       try {

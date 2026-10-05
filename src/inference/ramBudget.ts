@@ -94,8 +94,12 @@ const COMPUTE_BUFFER_BYTES_AT_4K_CTX = 256 * MiB;
  * constant, not a measurement. Intentionally strict on small devices: an
  * OOM kill loses the user's session with no recovery path, so the check
  * errs toward refusing a load that would leave the system gasping.
+ *
+ * Exported so the RAM-based default-model selection (src/models/defaultModel.ts)
+ * uses the same policy number as the load-time pre-flight instead of
+ * hardcoding its own copy.
  */
-const SYSTEM_HEADROOM_BYTES = 2 * GiB;
+export const SYSTEM_HEADROOM_BYTES = 2 * GiB;
 
 /** Exact KV-cache footprint for one llama.cpp context. */
 export function estimateKvCacheBytes(

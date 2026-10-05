@@ -77,22 +77,40 @@ to match. Worth revisiting (e.g. a multilingual embedding model matched to the
 device's locale, paired with a multilingual LLM candidate and corpus) as future
 work, not in this version.
 
-## Default generation model: Qwen2.5-1.5B (required, downloaded at first-run setup)
+## Default generation model: Qwen2.5-1.5B, or Qwen2.5-0.5B on low-RAM devices
 
-**[Qwen2.5-1.5B-Instruct](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct)**
-(Alibaba, **Apache-2.0 license**), quantized GGUF from
-**[bartowski/Qwen2.5-1.5B-Instruct-GGUF](https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF)**,
-file `Qwen2.5-1.5B-Instruct-Q4_K_M.gguf` (~0.92GB, sha256 in `src/models/manifest.ts`).
+The default model is chosen by detected device RAM at first-run setup
+(`src/models/defaultModel.ts`, owner decision 2026-10-05):
 
-Downloaded alongside Phi-3.5-mini and the embedding model during mandatory
-first-run setup — `required: true`, same as the other two — rather than left
-as an optional Settings-screen download. This is deliberate: the adaptive
-routing work (`src/routing/`, see `docs/ADAPTIVE_ROUTING.md`) needs at least
-two real, actually-different-sized models to route between (a `fast` role and
-a `general`/`reasoning` role) from the moment the app is usable, not only
-after a user manually fetches a second model later. Curated as `fast` in
-`ModelCapabilities` (`src/models/manifest.ts`) — smallest/quickest of the
-three catalog LLMs.
+- **Qwen2.5-1.5B-Instruct**
+  ([Qwen/Qwen2.5-1.5B-Instruct](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct))
+  (Alibaba, **Apache-2.0 license**), quantized GGUF from
+  **[bartowski/Qwen2.5-1.5B-Instruct-GGUF](https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF)**,
+  file `Qwen2.5-1.5B-Instruct-Q4_K_M.gguf` (~0.92GB, sha256 in `src/models/manifest.ts`).
+  The default on devices where the RAM pre-flight says it fits (roughly
+  6 GB+ phones).
+- **Qwen2.5-0.5B-Instruct**
+  ([Qwen/Qwen2.5-0.5B-Instruct](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct))
+  (Alibaba, **Apache-2.0 license**), quantized GGUF from
+  **[bartowski/Qwen2.5-0.5B-Instruct-GGUF](https://huggingface.co/bartowski/Qwen2.5-0.5B-Instruct-GGUF)**,
+  file `Qwen2.5-0.5B-Instruct-Q4_K_M.gguf` (~0.38GB, sha256 in
+  `src/models/manifest.ts`). The default on low-RAM devices (e.g. 4 GB
+  phones/tablets): ~0.52 GiB working set at its default n_ctx 2048, same
+  Qwen2.5 ChatML template and stop sequences as the 1.5B, fastest
+  tokens/sec of the catalog — but noticeably weaker at complex reasoning
+  and instruction following (see the RAM/model audit of 2026-10-05).
+
+The threshold is not a magic number: it falls out of the pre-flight formula
+(`src/inference/ramBudget.ts`) — the 1.5B needs ~1.28 GiB working set, plus
+a 0.5 GiB app-baseline estimate and the 2 GiB system-headroom policy, so
+devices reporting >= ~3.8 GiB total RAM get the 1.5B and anything below gets
+the 0.5B. The user can always switch in Settings > Tone & Model.
+
+Downloaded alongside the embedding model during mandatory first-run setup —
+the 1.5B keeps `required: true`; the 0.5B is `required: false` because it is
+an *alternative* default, not an additional download (the setup installs
+exactly one default LLM: `ModelManager.requiredModelsPresent()` and the
+setup wizard both resolve it via `defaultLlmForDevice()`).
 
 ## Optional LLM catalog (choose your model)
 
@@ -102,6 +120,7 @@ phone (Xiaomi 2311DRK48G, Dimensity 8300, 11.6 GB RAM; see
 
 | Candidate | Params | Quant | Size | License | Measured on the phone |
 |---|---|---|---|---|---|
+| Qwen2.5-0.5B-Instruct | 0.5B dense | Q4_K_M | 0.38GB | Apache-2.0 | not benchmarked yet; the low-RAM default (n_ctx 2048) |
 | Phi-3.5-mini-instruct | 3.8B dense | Q4_K_M | 2.39GB | MIT | ~4 tok/s; most complete comparisons and syntheses |
 | Qwen2.5-7B-Instruct | 7B dense | Q4_K_M | 4.68GB | Apache-2.0 | ~2.7 tok/s; accurate, often too slow for the 120s step limit |
 | LFM2.5-8B-A1B | 8B MoE, ~1.5B active | Q4_K_M | 5.16GB | LFM Open License v1.0 | ~15 tok/s; best reasoning, but it thinks first and needs a larger answer budget |
