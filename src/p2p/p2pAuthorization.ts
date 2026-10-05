@@ -142,9 +142,9 @@ export function validateGrantForExecution(
   requiredScope: string,
   now: number = Date.now()
 ): { valid: boolean; reason?: string } {
-  // 1. Verificar firma, expiración y usos
+  // 1. Verificar firma, expiración y usos (usesConsumed del grant)
   const issuerBytes = fromHex(issuerPkHex);
-  const grantCheck = verifyGrant(grant, issuerBytes, now);
+  const grantCheck = verifyGrant(grant, issuerBytes, grant.usesConsumed, now);
   if (!grantCheck.valid) {
     return { valid: false, reason: grantCheck.reason };
   }

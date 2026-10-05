@@ -223,7 +223,7 @@ export function issueGrant(
   maxUses: number
 ): CapabilityGrant {
   const now = Date.now();
-  const grant: Omit<CapabilityGrant, "signatureHex" | "usesConsumed"> = {
+  const grant: Omit<CapabilityGrant, "signatureHex"> = {
     grantId: bytesToHex(nacl.randomBytes(16)),
     issuerPkHex,
     granteePkHex,
@@ -232,26 +232,33 @@ export function issueGrant(
     issuedAt: now,
     expiresAt: now + ttlMs,
     maxUses,
+    usesConsumed: 0, // Inicial, no parte de la firma
     nonce: bytesToHex(nacl.randomBytes(16)),
   };
-  const message = canonicalSerialize({ ...grant, usesConsumed: 0 });
+  // La firma cubre todo EXCEPTO usesConsumed (que cambia con el uso)
+  const { usesConsumed: _, ...toSign } = grant;
+  const message = canonicalSerialize(toSign);
   const signature = nacl.sign.detached(
     new TextEncoder().encode(message),
     issuerSecretKey
   );
-  return { ...grant, usesConsumed: 0, signatureHex: bytesToHex(signature) };
+  return { ...grant, signatureHex: bytesToHex(signature) };
 }
 
 /**
  * Verifica un grant: firma válida, no expirado, usos disponibles.
+ *
+ * Nota: usesConsumed se pasa por separado (no está en el payload firmado).
+ * El firmante firma los límites (maxUses), el verificador rastrea el consumo.
  */
 export function verifyGrant(
   grant: CapabilityGrant,
   issuerPkBytes: Uint8Array,
+  usesConsumed: number = 0,
   now: number = Date.now()
 ): { valid: boolean; reason?: string } {
-  // Verificar firma
-  const { signatureHex, ...unsigned } = grant;
+  // Verificar firma (sobre los límites, no el consumo actual)
+  const { signatureHex, usesConsumed: _, ...unsigned } = grant;
   const message = canonicalSerialize(unsigned);
   const signature = hexToBytes(signatureHex);
   const sigValid = nacl.sign.detached.verify(
@@ -266,8 +273,8 @@ export function verifyGrant(
   if (now > grant.expiresAt) {
     return { valid: false, reason: "expired" };
   }
-  // Verificar usos
-  if (grant.maxUses > 0 && grant.usesConsumed >= grant.maxUses) {
+  // Verificar usos (contra el contador externo)
+  if (grant.maxUses > 0 && usesConsumed >= grant.maxUses) {
     return { valid: false, reason: "uses_exhausted" };
   }
   return { valid: true };
