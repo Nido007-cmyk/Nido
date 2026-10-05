@@ -1,0 +1,23 @@
+NIDO knowledge packs — attribution and license
+================================================
+
+All three packs in this release contain text derived from Wikipedia
+(https://www.wikipedia.org), which is licensed under Creative Commons
+Attribution-ShareAlike 4.0 International (CC BY-SA 4.0,
+https://creativecommons.org/licenses/by-sa/4.0/).
+
+Every article/chunk in these packs carries its source Wikipedia URL, so
+credit to the original Wikipedia contributors is preserved per entry.
+
+These packs are shared under the same CC BY-SA 4.0 terms: you may copy and
+redistribute them provided you give appropriate credit to Wikipedia
+contributors, provide a link to the license, indicate if changes were made,
+and distribute any adaptations under the same license.
+
+Packs and verified SHA-256 (must match src/models/manifest.ts):
+- corpus-standard.json : 2aeff76db48098851e1304fb37dc8013d9facf9214395897e7e05f276f85d2ff
+- corpus-full.json      : 6d602003bb9da59200e3e55b75b9e15bb073a4b9b1357da2c2d47b2803c570be
+- wiki-vital5.sqlite    : d3b87d562baba3489f6878bf99783f50d504db94c347029771e53f6d1aecc666
+
+Hosted on NIDO infrastructure (github.com/Nido007-cmyk/Nido releases).
+Not affiliated with or endorsed by the Wikimedia Foundation.
