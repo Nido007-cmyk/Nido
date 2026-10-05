@@ -281,6 +281,24 @@ export function verifyGrant(
 }
 
 /**
+ * Verifica la firma de un mensaje de negociación (COUNTER/ACCEPT/DECLINE).
+ * Usa el mismo patrón que verifyProposal: serialización canónica + Ed25519.
+ */
+export function verifyNegotiationMessage(
+  msg: SignedNegotiationMessage,
+  signerPkBytes: Uint8Array
+): boolean {
+  const { signatureHex, ...unsigned } = msg;
+  const message = canonicalSerialize(unsigned);
+  const signature = hexToBytes(signatureHex);
+  return nacl.sign.detached.verify(
+    new TextEncoder().encode(message),
+    signature,
+    signerPkBytes
+  );
+}
+
+/**
  * Verifica si una propuesta ha expirado (determinista por tiempo).
  */
 export function isExpired(proposal: TaskProposal, now: number = Date.now()): boolean {

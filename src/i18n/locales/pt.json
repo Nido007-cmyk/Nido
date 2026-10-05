@@ -353,6 +353,10 @@
     "deleteMessage": "Eliminar este item da memória? Não pode ser desfeito.",
     "markDone": "Marcar como feito"
   },
+  "negotiations": {
+    "emptyTitle": "Sem negociações",
+    "emptyDescription": "Quando outro NIDO propuser colaboração, aparecerá aqui."
+  },
   "chatHeader": {
     "openDrawer": "Abrir menu de navegação",
     "offline": "Offline",
@@ -560,6 +564,7 @@
     "tabChats": "💬 Conversas",
     "tabContacts": "👥 Contatos",
     "tabLink": "🔗 Enlace",
+    "tabNegotiations": "Negociações",
     "noContactsTitle": "Sem contatos ainda",
     "noContactsBody": "Emparelhe seu primeiro contato na aba Contatos: mostre seu QR e escaneie o dele (ou cole como texto).",
     "howItWorksTitle": "Como funciona",

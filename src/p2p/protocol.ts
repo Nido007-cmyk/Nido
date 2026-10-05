@@ -17,13 +17,31 @@ import {
   HANDSHAKE_NONCE_BYTES,
 } from "./crypto";
 
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
+
+/**
+ * v2 (2026-10-05): agregado "negotiation" para el protocolo de negociación
+ * NIDO↔NIDO (PROPOSE/COUNTER/ACCEPT/DECLINE/EXPIRE). No se reutiliza
+ * "agent_task" para no confundir negotiation (acuerdo) con execution
+ * (ejecución). Peers v1 rechazan envelopes v2 (fail-closed).
+ */
 
 /**
  * N6: tipo nuevo para el ACK autenticado de entrega. "receipt" queda
  * intacto (read-receipts, garantía distinta, ortogonal).
+ *
+ * v2: "negotiation" para mensajes del protocolo de negociación agent-to-agent.
+ * El subtipo específico (PROPOSE/COUNTER/ACCEPT/DECLINE/EXPIRE) va en
+ * `payload.action`. Ver src/p2p/negotiation.ts para la state machine.
  */
-export type P2PMessageType = "chat" | "agent_task" | "agent_result" | "receipt" | "session_confirm" | "delivery_ack";
+export type P2PMessageType =
+  | "chat"
+  | "agent_task"
+  | "agent_result"
+  | "receipt"
+  | "session_confirm"
+  | "delivery_ack"
+  | "negotiation";
 
 export interface P2PEnvelope {
   v: number;
@@ -47,6 +65,22 @@ export interface AgentTaskPayload {
   kind: string;
   text: string;
   args?: Record<string, unknown>;
+}
+
+/**
+ * v2: Payload para mensajes de negociación NIDO↔NIDO.
+ *
+ * El campo `action` indica el subtipo: PROPOSE | COUNTER | ACCEPT | DECLINE | EXPIRE.
+ * El mensaje firmado completo (SignedNegotiationMessage) va en `signed`.
+ * Ver src/p2p/negotiation.ts para la state machine y garantías criptográficas.
+ */
+export interface NegotiationPayload {
+  /** Subtipo de negociación: PROPOSE | COUNTER | ACCEPT | DECLINE | EXPIRE */
+  action: "PROPOSE" | "COUNTER" | "ACCEPT" | "DECLINE" | "EXPIRE";
+  /** ID de la negociación (para correlacionar mensajes). */
+  negotiationId: string;
+  /** Mensaje de negociación firmado (serialización canónica + Ed25519). */
+  signed: Record<string, unknown>;
 }
 
 export interface AgentResultPayload {
@@ -321,7 +355,7 @@ export class FrameReassembler {
 function validateEnvelope(env: P2PEnvelope): void {
   if (typeof env !== "object" || env === null) throw new Error("Envelope inválido.");
   if (env.v !== PROTOCOL_VERSION) throw new Error("Versión de protocolo no soportada.");
-  const types: P2PMessageType[] = ["chat", "agent_task", "agent_result", "receipt", "session_confirm", "delivery_ack"];
+  const types: P2PMessageType[] = ["chat", "agent_task", "agent_result", "receipt", "session_confirm", "delivery_ack", "negotiation"];
   if (!types.includes(env.type)) throw new Error("Tipo de mensaje desconocido.");
   if (typeof env.id !== "string" || !env.id) throw new Error("Falta id.");
   if (typeof env.from !== "string" || typeof env.to !== "string") throw new Error("Falta from/to.");

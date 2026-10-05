@@ -353,6 +353,10 @@
     "deleteMessage": "Delete this item from memory? This cannot be undone.",
     "markDone": "Mark as done"
   },
+  "negotiations": {
+    "emptyTitle": "No negotiations",
+    "emptyDescription": "When another NIDO proposes collaboration, it will appear here."
+  },
   "chatHeader": {
     "openDrawer": "Open Navigation Drawer",
     "offline": "Offline",
@@ -560,6 +564,7 @@
     "tabChats": "💬 Chats",
     "tabContacts": "👥 Contacts",
     "tabLink": "🔗 Link",
+    "tabNegotiations": "Negotiations",
     "noContactsTitle": "No contacts yet",
     "noContactsBody": "Pair your first contact in the Contacts tab: show them your QR and scan theirs (or paste it as text).",
     "howItWorksTitle": "How it works",

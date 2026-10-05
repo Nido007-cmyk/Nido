@@ -24,6 +24,7 @@ import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 // NidoScreen's send AND retry gesture paths (state-based `sending` let a
 // second tap through before the re-render).
 import { SendGuard } from "./sendGuard";
+import { NegotiationsTab } from "./NegotiationsTab";
 
 const ERROR_RED = "#F87171";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
@@ -47,7 +48,7 @@ import {
   routeIdentityBootstrapError,
 } from "./p2pIdentityRecovery";
 
-type Tab = "chats" | "contactos" | "enlace";
+type Tab = "chats" | "contactos" | "enlace" | "negociaciones";
 
 /** QR dibujado con Views (qrcode es JS puro: sin dependencias nativas). */
 function QrGrid({ text, size = 216 }: { text: string; size?: number }) {
@@ -765,6 +766,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             ["chats", t("nido.tabChats")],
             ["contactos", t("nido.tabContacts")],
             ["enlace", t("nido.tabLink")],
+            ["negociaciones", t("nido.tabNegotiations")],
           ] as Array<[Tab, string]>
         ).map(([key, label]) => (
           <Pressable
@@ -942,6 +944,8 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           </View>
         </ScrollView>
       )}
+
+      {tab === "negociaciones" && <NegotiationsTab />}
 
       {/* UNIT B (R2): desambiguación de emparejamiento — Replace /
           Different person / Cancel. Dismiss (backdrop, X, botón atrás) =

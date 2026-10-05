@@ -256,6 +256,10 @@
     "deleteMessage": "¿Eliminar este elemento de la memoria? No se puede deshacer.",
     "markDone": "Marcar como hecho"
   },
+  "negotiations": {
+    "emptyTitle": "Sin negociaciones",
+    "emptyDescription": "Cuando otro NIDO te proponga colaborar, aparecerá aquí."
+  },
   "memorySettings": {
     "autoSummarizeLabel": "Resumen de contexto en segundo plano",
     "autoSummarizeValue": "Condensa los turnos antiguos para que los chats largos no pierdan contexto",
@@ -560,6 +564,7 @@
     "tabChats": "💬 Chats",
     "tabContacts": "👥 Contactos",
     "tabLink": "🔗 Enlace",
+    "tabNegotiations": "Negociaciones",
     "noContactsTitle": "Sin contactos todavía",
     "noContactsBody": "Empareja tu primer contacto en la pestaña Contactos: muéstrale tu QR y escanea el suyo (o pégalo como texto).",
     "howItWorksTitle": "Cómo funciona",

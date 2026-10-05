@@ -1,0 +1,298 @@
+/**
+ * negotiationService.ts — NIDO P2P: Servicio de negociación en producción.
+ *
+ * Conecta el transporte P2P (NidoMessenger) con la UI (NegotiationCard,
+ * ApprovalCard). Es el router real que faltaba: antes processIncomingProposal()
+ * tenía cero callers.
+ *
+ * Flujo:
+ * 1. NidoMessenger.handleFrame() recibe envelope type="negotiation"
+ * 2. Llama a NegotiationService.getInstance().handleEnvelope()
+ * 3. El servicio valida firma/replay/expiry via negotiation.ts
+ * 4. Actualiza la state machine
+ * 5. Emite eventos para la UI suscrita
+ *
+ * NO es un demo. Es el wiring de producción.
+ */
+
+import type { P2PEnvelope, NegotiationPayload } from "./protocol";
+import type {
+  TaskProposal,
+  SignedNegotiationMessage,
+  NegotiationState,
+} from "./negotiation";
+import {
+  verifyProposal,
+  verifyNegotiationMessage,
+  isExpired,
+} from "./negotiation";
+import { globalReplayProtection } from "./replayProtection";
+import { processIncomingProposal, type ProposalOutcome } from "./p2pApprovalBridge";
+import { fromHex } from "./crypto";
+
+/** Estados de una negociación activa. */
+export interface NegotiationSession {
+  negotiationId: string;
+  proposalId: string;
+  peerPkHex: string;
+  state: NegotiationState;
+  proposal: TaskProposal;
+  updatedAt: number;
+}
+
+/** Eventos que emite el servicio para la UI. */
+export type NegotiationEvent =
+  | { type: "proposal_received"; session: NegotiationSession }
+  | { type: "counter_received"; session: NegotiationSession }
+  | { type: "accepted"; session: NegotiationSession }
+  | { type: "declined"; session: NegotiationSession; reason?: string }
+  | { type: "expired"; session: NegotiationSession }
+  | { type: "ask_required"; session: NegotiationSession; taskId: string };
+
+type NegotiationEventHandler = (event: NegotiationEvent) => void;
+
+/**
+ * Servicio singleton de negociación.
+ * El messenger lo usa para routear mensajes; la UI se suscribe a eventos.
+ */
+class NegotiationService {
+  private static instance: NegotiationService | null = null;
+  private sessions = new Map<string, NegotiationSession>();
+  private handlers = new Set<NegotiationEventHandler>();
+  private myPkHex: string | null = null;
+
+  static getInstance(): NegotiationService {
+    if (!NegotiationService.instance) {
+      NegotiationService.instance = new NegotiationService();
+    }
+    return NegotiationService.instance;
+  }
+
+  /** Configura la identidad local (para verificar recipient). */
+  setLocalIdentity(pkHex: string): void {
+    this.myPkHex = pkHex.toLowerCase();
+  }
+
+  /** La UI se suscribe a eventos de negociación. */
+  subscribe(handler: NegotiationEventHandler): () => void {
+    this.handlers.add(handler);
+    return () => {
+      this.handlers.delete(handler);
+    };
+  }
+
+  private emit(event: NegotiationEvent): void {
+    for (const h of this.handlers) {
+      try {
+        h(event);
+      } catch {
+        // Un handler roto no debe tumbar el servicio
+      }
+    }
+  }
+
+  /** Lista las negociaciones activas (para la UI). */
+  listSessions(): NegotiationSession[] {
+    return Array.from(this.sessions.values()).sort(
+      (a, b) => b.updatedAt - a.updatedAt
+    );
+  }
+
+  /**
+   * Punto de entrada desde NidoMessenger.handleFrame().
+   * Routea por action y actualiza la state machine.
+   */
+  async handleEnvelope(env: P2PEnvelope): Promise<void> {
+    if (env.type !== "negotiation") return;
+
+    const payload = env.payload as unknown as NegotiationPayload;
+    if (!payload || typeof payload.action !== "string") return;
+
+    const { action, negotiationId, signed } = payload;
+    if (!negotiationId || !signed) return;
+
+    switch (action) {
+      case "PROPOSE":
+        await this.handlePropose(env, negotiationId, signed as unknown as SignedNegotiationMessage);
+        break;
+      case "COUNTER":
+        await this.handleCounter(env, negotiationId, signed as unknown as SignedNegotiationMessage);
+        break;
+      case "ACCEPT":
+        await this.handleAccept(env, negotiationId, signed as unknown as SignedNegotiationMessage);
+        break;
+      case "DECLINE":
+        await this.handleDecline(env, negotiationId, signed as unknown as SignedNegotiationMessage);
+        break;
+      case "EXPIRE":
+        this.handleExpire(negotiationId);
+        break;
+      default:
+        // Acción desconocida: se ignora (fail-closed)
+        break;
+    }
+  }
+
+  private async handlePropose(
+    env: P2PEnvelope,
+    negotiationId: string,
+    signed: SignedNegotiationMessage
+  ): Promise<void> {
+    // 1. Verificar que el mensaje es para nosotros
+    const proposal = signed.payload as TaskProposal;
+    if (!proposal || typeof proposal !== "object") return;
+    if (this.myPkHex && proposal.recipientPkHex.toLowerCase() !== this.myPkHex) {
+      return; // No somos el destinatario: se ignora
+    }
+
+    // 2. Verificar firma del mensaje
+    const signerBytes = fromHex(signed.signerPkHex);
+    if (!verifyNegotiationMessage(signed, signerBytes)) return;
+
+    // 3. Verificar que la propuesta interna también está firmada
+    const proposerBytes = fromHex(proposal.proposerPkHex);
+    if (!verifyProposal(proposal, proposerBytes)) return;
+
+    // 4. Anti-replay (nonce del mensaje)
+    if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
+
+    // 5. Expiry
+    if (isExpired(proposal)) {
+      // Ya expiró al llegar: se marca como expirada
+      const session: NegotiationSession = {
+        negotiationId,
+        proposalId: proposal.proposalId,
+        peerPkHex: proposal.proposerPkHex,
+        state: "EXPIRED",
+        proposal,
+        updatedAt: Date.now(),
+      };
+      this.sessions.set(negotiationId, session);
+      this.emit({ type: "expired", session });
+      return;
+    }
+
+    // 6. Procesar via el bridge (policy evaluation → AUTO/ASK/DENY)
+    const outcome: ProposalOutcome = await processIncomingProposal(
+      proposal,
+      proposerBytes,
+      async () => {
+        // queueFn: por ahora retorna un taskId sintético.
+        // La integración con el Approval Inbox real se hace en FASE 3.
+        return `p2p-${proposal.proposalId}`;
+      }
+    );
+
+    const session: NegotiationSession = {
+      negotiationId,
+      proposalId: proposal.proposalId,
+      peerPkHex: proposal.proposerPkHex,
+      state: "PROPOSED",
+      proposal,
+      updatedAt: Date.now(),
+    };
+    this.sessions.set(negotiationId, session);
+
+    if (outcome.action === "auto_accept") {
+      session.state = "ACCEPTED";
+      session.updatedAt = Date.now();
+      this.emit({ type: "accepted", session });
+    } else if (outcome.action === "queued_for_approval") {
+      // La UI debe mostrar ApprovalCard
+      this.emit({ type: "ask_required", session, taskId: outcome.taskId });
+      // También se emite proposal_received para que la UI muestre el contexto
+      this.emit({ type: "proposal_received", session });
+    } else {
+      session.state = "DECLINED";
+      session.updatedAt = Date.now();
+      this.emit({ type: "declined", session, reason: outcome.reason });
+    }
+  }
+
+  private async handleCounter(
+    env: P2PEnvelope,
+    negotiationId: string,
+    signed: SignedNegotiationMessage
+  ): Promise<void> {
+    const session = this.sessions.get(negotiationId);
+    if (!session) return; // Sin sesión: se ignora
+    if (session.state !== "PROPOSED" && session.state !== "COUNTERED") return;
+
+    const signerBytes = fromHex(signed.signerPkHex);
+    if (!verifyNegotiationMessage(signed, signerBytes)) return;
+    if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
+
+    const counterProposal = signed.payload as TaskProposal;
+    if (!counterProposal || typeof counterProposal !== "object") return;
+
+    session.proposal = counterProposal;
+    session.state = "COUNTERED";
+    session.updatedAt = Date.now();
+    this.emit({ type: "counter_received", session });
+  }
+
+  private async handleAccept(
+    env: P2PEnvelope,
+    negotiationId: string,
+    signed: SignedNegotiationMessage
+  ): Promise<void> {
+    const session = this.sessions.get(negotiationId);
+    if (!session) return;
+    if (session.state !== "PROPOSED" && session.state !== "COUNTERED") return;
+
+    const signerBytes = fromHex(signed.signerPkHex);
+    if (!verifyNegotiationMessage(signed, signerBytes)) return;
+    if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
+
+    session.state = "ACCEPTED";
+    session.updatedAt = Date.now();
+    this.emit({ type: "accepted", session });
+  }
+
+  private async handleDecline(
+    env: P2PEnvelope,
+    negotiationId: string,
+    signed: SignedNegotiationMessage
+  ): Promise<void> {
+    const session = this.sessions.get(negotiationId);
+    if (!session) return;
+
+    const signerBytes = fromHex(signed.signerPkHex);
+    if (!verifyNegotiationMessage(signed, signerBytes)) return;
+    if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
+
+    const payload = signed.payload as { reason?: string };
+    session.state = "DECLINED";
+    session.updatedAt = Date.now();
+    this.emit({
+      type: "declined",
+      session,
+      reason: typeof payload?.reason === "string" ? payload.reason : undefined,
+    });
+  }
+
+  private handleExpire(negotiationId: string): void {
+    const session = this.sessions.get(negotiationId);
+    if (!session) return;
+    // EXPIRE es determinista por tiempo: cualquiera puede notificarlo,
+    // pero solo se aplica si realmente expiró.
+    if (!isExpired(session.proposal)) return;
+    session.state = "EXPIRED";
+    session.updatedAt = Date.now();
+    this.emit({ type: "expired", session });
+  }
+
+  /** Limpia sesiones en estado terminal (para la UI). */
+  pruneTerminal(): void {
+    for (const [id, s] of this.sessions) {
+      if (s.state === "ACCEPTED" || s.state === "DECLINED" || s.state === "EXPIRED") {
+        // Se mantienen 1 hora para que la UI muestre el estado final
+        if (Date.now() - s.updatedAt > 3600000) {
+          this.sessions.delete(id);
+        }
+      }
+    }
+  }
+}
+
+export const negotiationService = NegotiationService.getInstance();

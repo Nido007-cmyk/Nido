@@ -1132,6 +1132,18 @@ export class NidoMessenger {
       await this.flushOutbox(key);
       return env;
     }
+    if (env.type === "negotiation") {
+      // v2 (2026-10-05): routing real de negociación NIDO↔NIDO.
+      // Antes processIncomingProposal() tenía cero callers; ahora el
+      // transporte lo invoca via NegotiationService.
+      // No va al inbox de mensajes: tiene su propia state machine y UI.
+      this.assertLive();
+      const { negotiationService } = await import("./negotiationService");
+      await negotiationService.handleEnvelope(env);
+      // Cualquier frame válido confirma la sesión.
+      await this.flushOutbox(key);
+      return env;
+    }
     const payload = env.payload as unknown as AgentTaskPayload & { message_id?: unknown; text?: unknown };
     if (N6_ACK_TYPES.has(env.type)) {
       // N6 §5.1: el message_id del payload (estable entre reintentos);
