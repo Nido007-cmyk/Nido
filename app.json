@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "NIDO",
+    "slug": "nido-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon-nido.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "team.nido.app",
+      "allowBackup": false,
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0E0A",
+        "foregroundImage": "./assets/android-icon-foreground-nido.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "./plugins/with-data-extraction-rules",
+      [
+        "expo-sqlite",
+        {
+          "useSQLCipher": true
+        }
+      ],
+      "expo-sharing",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon-nido.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#080C14"
+        }
+      ],
+      "./plugins/withReleaseSigning",
+      "./plugins/withFlagSecure",
+      "./plugins/with-bluetooth-never-for-location"
+    ],
+    "extra": {}
+  }
+}

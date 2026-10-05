@@ -1,0 +1,1 @@
+{"description":"Transporte Bluetooth RFCOMM de NIDO (módulo nativo Expo). Solo mueve bytes con framing; la cripto vive en src/p2p/.","license":"MIT","main":"src/index.ts","name":"nido-p2p","version":"0.1.0"}

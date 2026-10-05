@@ -1,0 +1,14 @@
+# NIDO gitleaks config — H-5 (supply-chain hardening).
+#
+# Baseline (2026-09-27): full-repo scan found 8 findings, ALL of them
+# deterministic test fixtures, zero real secrets:
+#   - conformance/vectors/v0/final/signatures.json (7): conformance test keys
+#   - src/security/sqlcipherReal.test.ts (1): "secreto_nido_fixture_*" test secret
+# These are allowlisted below by path. Any NEW finding fails CI.
+
+[allowlist]
+description = "deterministic test fixtures, not secrets (verified 2026-09-27)"
+paths = [
+  '''conformance/vectors/v0/final/signatures.json''',
+  '''src/security/sqlcipherReal.test.ts''',
+]

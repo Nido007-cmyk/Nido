@@ -1,0 +1,112 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "id": "gra-001",
+      "title": "aggregate within budget",
+      "category": "valid",
+      "kind": "graph",
+      "expected": {
+        "ok": true,
+        "total": 7
+      },
+      "input": {
+        "budget": 10,
+        "nodes": [
+          {
+            "disclosed_units": 3,
+            "id": "n1"
+          },
+          {
+            "disclosed_units": 4,
+            "id": "n2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gra-002",
+      "title": "individually-ok nodes exceeding budget in aggregate are denied",
+      "category": "invalid",
+      "kind": "graph",
+      "expected": {
+        "error": "GRAPH_BUDGET_EXCEEDED",
+        "ok": false
+      },
+      "input": {
+        "budget": 10,
+        "nodes": [
+          {
+            "disclosed_units": 4,
+            "id": "n1"
+          },
+          {
+            "disclosed_units": 4,
+            "id": "n2"
+          },
+          {
+            "disclosed_units": 4,
+            "id": "n3"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gra-003",
+      "title": "negative disclosure rejected",
+      "category": "invalid",
+      "kind": "graph",
+      "expected": {
+        "error": "GRAPH_INVALID",
+        "ok": false
+      },
+      "input": {
+        "budget": 10,
+        "nodes": [
+          {
+            "disclosed_units": -1,
+            "id": "n1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gra-004",
+      "title": "empty graph discloses zero",
+      "category": "valid",
+      "kind": "graph",
+      "expected": {
+        "ok": true,
+        "total": 0
+      },
+      "input": {
+        "budget": 10,
+        "nodes": []
+      }
+    },
+    {
+      "id": "gra-005",
+      "title": "boundary: aggregate exactly at budget",
+      "category": "boundary",
+      "kind": "graph",
+      "expected": {
+        "ok": true,
+        "total": 10
+      },
+      "input": {
+        "budget": 10,
+        "nodes": [
+          {
+            "disclosed_units": 5,
+            "id": "n1"
+          },
+          {
+            "disclosed_units": 5,
+            "id": "n2"
+          }
+        ]
+      }
+    }
+  ]
+}

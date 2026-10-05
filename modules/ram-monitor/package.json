@@ -1,0 +1,7 @@
+{
+  "name": "ram-monitor",
+  "version": "0.1.0",
+  "description": "Local Expo module reporting real process RSS/PSS memory, used by the system monitor bar to audit the 12GB RAM budget.",
+  "main": "index.ts",
+  "license": "MIT"
+}

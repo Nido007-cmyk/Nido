@@ -1,0 +1,240 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "category": "valid",
+      "expected": {
+        "ok": true,
+        "uses_left": 1
+      },
+      "id": "con-001",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1800086400000,
+          "max_uses": 3,
+          "parameters_hash": "phA",
+          "peer": "alias:idB",
+          "uses": 1
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters_hash": "phA",
+          "peer": "alias:idB"
+        }
+      },
+      "kind": "consent",
+      "title": "matching consent authorizes"
+    },
+    {
+      "category": "invalid",
+      "expected": {
+        "error": "POLICY_DENIED",
+        "ok": false
+      },
+      "id": "con-002",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1800086400000,
+          "max_uses": 3,
+          "parameters_hash": "phA",
+          "peer": "alias:idB",
+          "uses": 1
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters_hash": "phB",
+          "peer": "alias:idB"
+        }
+      },
+      "kind": "consent",
+      "title": "correct consent with modified parameters denied"
+    },
+    {
+      "category": "invalid",
+      "expected": {
+        "error": "CONSENT_EXPIRED",
+        "ok": false
+      },
+      "id": "con-003",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1799999999999,
+          "max_uses": 3,
+          "parameters_hash": "phA",
+          "peer": "alias:idB",
+          "uses": 0
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters_hash": "phA",
+          "peer": "alias:idB"
+        }
+      },
+      "kind": "consent",
+      "title": "expired consent denied"
+    },
+    {
+      "category": "invalid",
+      "expected": {
+        "error": "CONSENT_EXHAUSTED",
+        "ok": false
+      },
+      "id": "con-004",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1800086400000,
+          "max_uses": 2,
+          "parameters_hash": "phA",
+          "peer": "alias:idB",
+          "uses": 2
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters_hash": "phA",
+          "peer": "alias:idB"
+        }
+      },
+      "kind": "consent",
+      "title": "exhausted consent denied"
+    },
+    {
+      "category": "invalid",
+      "expected": {
+        "error": "POLICY_DENIED",
+        "ok": false
+      },
+      "id": "con-005",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1800086400000,
+          "max_uses": 3,
+          "parameters_hash": "phA",
+          "peer": "alias:idB",
+          "uses": 0
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters_hash": "phA",
+          "peer": "alias:idA"
+        }
+      },
+      "kind": "consent",
+      "title": "consent bound to another peer denied"
+    },
+    {
+      "category": "invalid",
+      "expected": {
+        "error": "POLICY_DENIED",
+        "ok": false
+      },
+      "id": "con-006",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1800086400000,
+          "max_uses": 3,
+          "parameters_hash": "phA",
+          "peer": "alias:idB",
+          "uses": 0
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v2",
+          "now": 1800000000000,
+          "parameters_hash": "phA",
+          "peer": "alias:idB"
+        }
+      },
+      "kind": "consent",
+      "title": "consent bound to another capability version denied"
+    },
+    {
+      "category": "boundary",
+      "expected": {
+        "ok": true,
+        "uses_left": 0
+      },
+      "id": "con-007",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1800086400000,
+          "max_uses": 3,
+          "parameters_hash": "phA",
+          "peer": "alias:idB",
+          "uses": 2
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters_hash": "phA",
+          "peer": "alias:idB"
+        }
+      },
+      "kind": "consent",
+      "title": "boundary: last use authorizes, next will exhaust"
+    },
+    {
+      "category": "boundary",
+      "expected": {
+        "error": "CONSENT_EXPIRED",
+        "ok": false
+      },
+      "id": "con-009",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c9",
+          "expires_at": 1800000000000,
+          "max_uses": 3,
+          "parameters": {},
+          "parameters_hash": "COMPUTE",
+          "peer": "alias:idB",
+          "uses": 0
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters": {},
+          "parameters_hash": "COMPUTE",
+          "peer": "alias:idB"
+        }
+      },
+      "kind": "consent",
+      "title": "boundary: now == expires_at is already expired (inclusive)"
+    }
+  ]
+}

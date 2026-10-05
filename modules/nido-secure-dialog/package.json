@@ -1,0 +1,1 @@
+{"description":"R3: native two-button confirmation dialog with FLAG_SECURE set on the dialog's own window. Used only for the agent-confirmation dialog and the pairing-fingerprint ceremony dialog.","license":"MIT","main":"index.ts","name":"nido-secure-dialog","version":"0.1.0"}

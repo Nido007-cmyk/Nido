@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Los permisos en tiempo de ejecución se piden desde el módulo;
+       las declaraciones en app.json los fusionan al manifiesto final. -->
+</manifest>

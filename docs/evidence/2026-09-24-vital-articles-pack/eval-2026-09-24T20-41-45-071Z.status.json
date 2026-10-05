@@ -1,0 +1,20 @@
+{
+  "requestId": "req-20260924t204140-2ejr",
+  "state": "done",
+  "configs": [
+    "model:qwen2.5-1.5b-instruct-q4km"
+  ],
+  "total": 6,
+  "completed": 6,
+  "runId": "eval-2026-09-24T20-41-45-071Z",
+  "resultPath": "files/eval/eval-2026-09-24T20-41-45-071Z.jsonl",
+  "stopped": false,
+  "installedModels": [
+    "phi-3.5-mini-instruct-q4km",
+    "qwen2.5-1.5b-instruct-q4km",
+    "qwen2.5-7b-instruct-q4km",
+    "lfm2.5-8b-a1b-q4km",
+    "gemma-4-e4b-it-q4_0"
+  ],
+  "updatedAt": 1790282569083
+}

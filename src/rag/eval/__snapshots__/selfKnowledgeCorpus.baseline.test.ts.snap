@@ -1,0 +1,13 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`D-cluster Phase A — adversarial corpus baseline (READ-ONLY) > prints the full baseline report 1`] = `
+{
+  "amb": 7,
+  "fn": 16,
+  "fp": 23,
+  "precision": 0.6805555555555556,
+  "recall": 0.7538461538461538,
+  "tn": 32,
+  "tp": 49,
+}
+`;

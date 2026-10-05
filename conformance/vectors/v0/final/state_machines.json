@@ -1,0 +1,320 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "id": "sm-001",
+      "title": "TASK happy path",
+      "category": "valid",
+      "kind": "state_machine",
+      "expected": {
+        "final": "RESULT",
+        "ok": true
+      },
+      "input": {
+        "events": [
+          "accept",
+          "start",
+          "progress",
+          "result"
+        ],
+        "machine": "TASK"
+      }
+    },
+    {
+      "id": "sm-002",
+      "title": "TASK reject path",
+      "category": "valid",
+      "kind": "state_machine",
+      "expected": {
+        "final": "REJECTED",
+        "ok": true
+      },
+      "input": {
+        "events": [
+          "reject"
+        ],
+        "machine": "TASK"
+      }
+    },
+    {
+      "id": "sm-003",
+      "title": "TASK cannot result before accept",
+      "category": "invalid",
+      "kind": "state_machine",
+      "expected": {
+        "at_event": 0,
+        "error": "INVALID_TRANSITION",
+        "ok": false
+      },
+      "input": {
+        "events": [
+          "result"
+        ],
+        "machine": "TASK"
+      }
+    },
+    {
+      "id": "sm-004",
+      "title": "TASK double accept rejected",
+      "category": "invalid",
+      "kind": "state_machine",
+      "expected": {
+        "at_event": 1,
+        "error": "INVALID_TRANSITION",
+        "ok": false
+      },
+      "input": {
+        "events": [
+          "accept",
+          "accept"
+        ],
+        "machine": "TASK"
+      }
+    },
+    {
+      "id": "sm-005",
+      "title": "TASK terminal state rejects events",
+      "category": "invalid",
+      "kind": "state_machine",
+      "expected": {
+        "at_event": 1,
+        "error": "TERMINAL_STATE",
+        "ok": false
+      },
+      "input": {
+        "events": [
+          "reject",
+          "accept"
+        ],
+        "machine": "TASK"
+      }
+    },
+    {
+      "id": "sm-006",
+      "title": "TASK cancel mid-flight",
+      "category": "valid",
+      "kind": "state_machine",
+      "expected": {
+        "final": "CANCELLED",
+        "ok": true
+      },
+      "input": {
+        "events": [
+          "accept",
+          "start",
+          "cancel"
+        ],
+        "machine": "TASK"
+      }
+    },
+    {
+      "id": "sm-007",
+      "title": "NEGOTIATION multi-round then accept",
+      "category": "valid",
+      "kind": "state_machine",
+      "expected": {
+        "final": "ACCEPTED",
+        "ok": true
+      },
+      "input": {
+        "events": [
+          "counter",
+          "counter",
+          "accept"
+        ],
+        "machine": "NEGOTIATION"
+      }
+    },
+    {
+      "id": "sm-008",
+      "title": "NEGOTIATION cannot accept after decline",
+      "category": "invalid",
+      "kind": "state_machine",
+      "expected": {
+        "at_event": 1,
+        "error": "TERMINAL_STATE",
+        "ok": false
+      },
+      "input": {
+        "events": [
+          "decline",
+          "accept"
+        ],
+        "machine": "NEGOTIATION"
+      }
+    },
+    {
+      "id": "sm-009",
+      "title": "CONSENT grant with repeated use",
+      "category": "valid",
+      "kind": "state_machine",
+      "expected": {
+        "final": "GRANTED",
+        "ok": true
+      },
+      "input": {
+        "events": [
+          "grant",
+          "use",
+          "use"
+        ],
+        "machine": "CONSENT"
+      }
+    },
+    {
+      "id": "sm-010",
+      "title": "CONSENT denied cannot be used",
+      "category": "invalid",
+      "kind": "state_machine",
+      "expected": {
+        "at_event": 1,
+        "error": "TERMINAL_STATE",
+        "ok": false
+      },
+      "input": {
+        "events": [
+          "deny",
+          "use"
+        ],
+        "machine": "CONSENT"
+      }
+    },
+    {
+      "id": "sm-011",
+      "title": "CONSENT revoke path",
+      "category": "valid",
+      "kind": "state_machine",
+      "expected": {
+        "final": "REVOKED",
+        "ok": true
+      },
+      "input": {
+        "events": [
+          "grant",
+          "revoke"
+        ],
+        "machine": "CONSENT"
+      }
+    },
+    {
+      "id": "sm-012",
+      "title": "DELEGATION active lifecycle",
+      "category": "valid",
+      "kind": "state_machine",
+      "expected": {
+        "final": "ACTIVE",
+        "ok": true
+      },
+      "input": {
+        "events": [
+          "activate",
+          "use",
+          "redelegate"
+        ],
+        "machine": "DELEGATION"
+      }
+    },
+    {
+      "id": "sm-013",
+      "title": "DELEGATION revoked cannot reactivate",
+      "category": "invalid",
+      "kind": "state_machine",
+      "expected": {
+        "at_event": 1,
+        "error": "TERMINAL_STATE",
+        "ok": false
+      },
+      "input": {
+        "events": [
+          "revoke",
+          "activate"
+        ],
+        "machine": "DELEGATION"
+      }
+    },
+    {
+      "id": "sm-014",
+      "title": "REVOCATION propagation",
+      "category": "valid",
+      "kind": "state_machine",
+      "expected": {
+        "final": "PROPAGATED",
+        "ok": true
+      },
+      "input": {
+        "events": [
+          "issue_revocation",
+          "acknowledge"
+        ],
+        "machine": "REVOCATION"
+      }
+    },
+    {
+      "id": "sm-015",
+      "title": "REVOCATION cannot acknowledge before issue",
+      "category": "invalid",
+      "kind": "state_machine",
+      "expected": {
+        "at_event": 0,
+        "error": "INVALID_TRANSITION",
+        "ok": false
+      },
+      "input": {
+        "events": [
+          "acknowledge"
+        ],
+        "machine": "REVOCATION"
+      }
+    },
+    {
+      "id": "sm-016",
+      "title": "unknown machine fails closed",
+      "category": "invalid",
+      "kind": "state_machine",
+      "expected": {
+        "error": "UNKNOWN_MACHINE",
+        "ok": false
+      },
+      "input": {
+        "events": [
+          "accept"
+        ],
+        "machine": "PAYMENT"
+      }
+    },
+    {
+      "id": "sm-017",
+      "title": "unknown event fails closed",
+      "category": "invalid",
+      "kind": "state_machine",
+      "expected": {
+        "at_event": 0,
+        "error": "INVALID_TRANSITION",
+        "ok": false
+      },
+      "input": {
+        "events": [
+          "fly"
+        ],
+        "machine": "TASK"
+      }
+    },
+    {
+      "id": "sm-018",
+      "title": "TASK expiry from requested",
+      "category": "valid",
+      "kind": "state_machine",
+      "expected": {
+        "final": "EXPIRED",
+        "ok": true
+      },
+      "input": {
+        "events": [
+          "expire"
+        ],
+        "machine": "TASK"
+      }
+    }
+  ]
+}

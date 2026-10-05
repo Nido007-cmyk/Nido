@@ -1,0 +1,23 @@
+{
+  "requestId": "req-20260924t031236-grn6",
+  "state": "done",
+  "configs": [
+    "model:phi-3.5-mini-instruct-q4km",
+    "model:qwen2.5-1.5b-instruct-q4km",
+    "model:qwen2.5-7b-instruct-q4km",
+    "model:hf-devquasar-amd-instella-moe-16b-a3b-think-gguf-q2-k-amd-instella-moe-16b-a3b-think-f16-gguf-q2-k-gguf",
+    "adaptive"
+  ],
+  "total": 85,
+  "completed": 85,
+  "runId": "eval-2026-09-24T03-12-53-754Z",
+  "resultPath": "files/eval/eval-2026-09-24T03-12-53-754Z.jsonl",
+  "stopped": false,
+  "installedModels": [
+    "phi-3.5-mini-instruct-q4km",
+    "qwen2.5-1.5b-instruct-q4km",
+    "qwen2.5-7b-instruct-q4km",
+    "hf-devquasar-amd-instella-moe-16b-a3b-think-gguf-q2-k-amd-instella-moe-16b-a3b-think-f16-gguf-q2-k-gguf"
+  ],
+  "updatedAt": 1790223544378
+}

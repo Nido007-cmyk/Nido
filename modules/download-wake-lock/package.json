@@ -1,0 +1,7 @@
+{
+  "name": "download-wake-lock",
+  "version": "0.1.0",
+  "description": "Local Expo module holding an Android PARTIAL_WAKE_LOCK while a model download runs.",
+  "main": "index.ts",
+  "license": "MIT"
+}

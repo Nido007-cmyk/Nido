@@ -1,0 +1,6 @@
+{
+  "impl": "/home/hatch/workspace/nido-app/conformance/reference-rs/target/debug/nido-conformance-rs",
+  "passed": 159,
+  "failed": 0,
+  "failures": []
+}

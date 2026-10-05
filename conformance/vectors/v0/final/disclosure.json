@@ -1,0 +1,154 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "id": "dis-001",
+      "title": "allowlist drops unlisted fields",
+      "category": "valid",
+      "kind": "disclosure",
+      "expected": {
+        "ok": true,
+        "projected": {
+          "a": 1,
+          "c": 3
+        }
+      },
+      "input": {
+        "allowed": [
+          "a",
+          "c"
+        ],
+        "value": {
+          "a": 1,
+          "b": 2,
+          "c": 3
+        }
+      }
+    },
+    {
+      "id": "dis-002",
+      "title": "nested path projection",
+      "category": "valid",
+      "kind": "disclosure",
+      "expected": {
+        "ok": true,
+        "projected": {
+          "free": {
+            "start": 1
+          }
+        }
+      },
+      "input": {
+        "allowed": [
+          "free.start"
+        ],
+        "value": {
+          "busy": [
+            1,
+            2
+          ],
+          "free": {
+            "end": 2,
+            "start": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "dis-003",
+      "title": "array element projection",
+      "category": "valid",
+      "kind": "disclosure",
+      "expected": {
+        "ok": true,
+        "projected": {
+          "intervals": [
+            {
+              "start": 1
+            },
+            {
+              "start": 3
+            }
+          ]
+        }
+      },
+      "input": {
+        "allowed": [
+          "intervals[].start"
+        ],
+        "value": {
+          "intervals": [
+            {
+              "end": 2,
+              "start": 1
+            },
+            {
+              "end": 4,
+              "start": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "dis-004",
+      "title": "empty allowlist discloses nothing",
+      "category": "valid",
+      "kind": "disclosure",
+      "expected": {
+        "ok": true,
+        "projected": null
+      },
+      "input": {
+        "allowed": [],
+        "value": {
+          "a": 1
+        }
+      }
+    },
+    {
+      "id": "dis-005",
+      "title": "unknown paths disclose nothing",
+      "category": "valid",
+      "kind": "disclosure",
+      "expected": {
+        "ok": true,
+        "projected": {}
+      },
+      "input": {
+        "allowed": [
+          "zzz"
+        ],
+        "value": {
+          "a": 1
+        }
+      }
+    },
+    {
+      "id": "dis-006",
+      "title": "adversarial: allowlist is subtree-granular, documents granularity limit",
+      "category": "adversarial",
+      "kind": "disclosure",
+      "expected": {
+        "ok": true,
+        "projected": {
+          "a": {
+            "secret": 1
+          }
+        }
+      },
+      "input": {
+        "allowed": [
+          "a"
+        ],
+        "value": {
+          "a": {
+            "secret": 1
+          },
+          "b": 2
+        }
+      }
+    }
+  ]
+}

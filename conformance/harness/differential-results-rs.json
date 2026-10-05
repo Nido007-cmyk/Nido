@@ -1,0 +1,6 @@
+{
+  "impl": "./reference-rs/target/debug/nido-conformance-rs",
+  "passed": 158,
+  "failed": 0,
+  "failures": []
+}

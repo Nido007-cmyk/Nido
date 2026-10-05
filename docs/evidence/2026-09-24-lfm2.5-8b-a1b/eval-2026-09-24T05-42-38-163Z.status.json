@@ -1,0 +1,19 @@
+{
+  "requestId": "req-20260924t054219-safr",
+  "state": "done",
+  "configs": [
+    "model:hf-liquidai-lfm2-5-8b-a1b-gguf-lfm2-5-8b-a1b-q4-k-m-gguf"
+  ],
+  "total": 17,
+  "completed": 17,
+  "runId": "eval-2026-09-24T05-42-38-163Z",
+  "resultPath": "files/eval/eval-2026-09-24T05-42-38-163Z.jsonl",
+  "stopped": false,
+  "installedModels": [
+    "phi-3.5-mini-instruct-q4km",
+    "qwen2.5-1.5b-instruct-q4km",
+    "qwen2.5-7b-instruct-q4km",
+    "hf-liquidai-lfm2-5-8b-a1b-gguf-lfm2-5-8b-a1b-q4-k-m-gguf"
+  ],
+  "updatedAt": 1790229462555
+}

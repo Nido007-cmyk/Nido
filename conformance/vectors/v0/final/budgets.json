@@ -1,0 +1,230 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "id": "bud-001",
+      "title": "sequential consumption tracks remaining",
+      "category": "valid",
+      "kind": "budget",
+      "expected": {
+        "ok": true,
+        "remaining": 3
+      },
+      "input": {
+        "opts": {
+          "budget": 10,
+          "now": 1800000000000,
+          "window_ms": 3600000
+        },
+        "state": {},
+        "steps": [
+          {
+            "identity": "idA",
+            "units": 3
+          },
+          {
+            "identity": "idA",
+            "units": 4
+          }
+        ]
+      }
+    },
+    {
+      "id": "bud-002",
+      "title": "exhaustion fails closed with step index",
+      "category": "invalid",
+      "kind": "budget",
+      "expected": {
+        "at_step": 1,
+        "error": "BUDGET_EXHAUSTED",
+        "ok": false
+      },
+      "input": {
+        "opts": {
+          "budget": 10,
+          "now": 1800000000000,
+          "window_ms": 3600000
+        },
+        "state": {},
+        "steps": [
+          {
+            "identity": "idA",
+            "units": 6
+          },
+          {
+            "identity": "idA",
+            "units": 5
+          }
+        ]
+      }
+    },
+    {
+      "id": "bud-003",
+      "title": "new window resets consumption",
+      "category": "valid",
+      "kind": "budget",
+      "expected": {
+        "ok": true,
+        "remaining": 8
+      },
+      "input": {
+        "opts": {
+          "budget": 10,
+          "now": 1800000000000,
+          "window_ms": 3600000
+        },
+        "state": {
+          "idA": {
+            "consumed": 10,
+            "window_start": 1799992000000
+          }
+        },
+        "steps": [
+          {
+            "identity": "idA",
+            "units": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "bud-004",
+      "title": "splitting across capabilities does not evade the identity budget",
+      "category": "invalid",
+      "kind": "budget",
+      "expected": {
+        "at_step": 2,
+        "error": "BUDGET_EXHAUSTED",
+        "ok": false
+      },
+      "input": {
+        "opts": {
+          "budget": 10,
+          "now": 1800000000000,
+          "window_ms": 3600000
+        },
+        "state": {},
+        "steps": [
+          {
+            "identity": "idA",
+            "units": 4
+          },
+          {
+            "identity": "idA",
+            "units": 4
+          },
+          {
+            "identity": "idA",
+            "units": 4
+          }
+        ]
+      }
+    },
+    {
+      "id": "bud-005",
+      "title": "budgets are per identity",
+      "category": "valid",
+      "kind": "budget",
+      "expected": {
+        "ok": true,
+        "remaining": 0
+      },
+      "input": {
+        "opts": {
+          "budget": 10,
+          "now": 1800000000000,
+          "window_ms": 3600000
+        },
+        "state": {},
+        "steps": [
+          {
+            "identity": "idA",
+            "units": 10
+          },
+          {
+            "identity": "idB",
+            "units": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "bud-006",
+      "title": "boundary: consuming exactly the budget leaves zero",
+      "category": "boundary",
+      "kind": "budget",
+      "expected": {
+        "ok": true,
+        "remaining": 0
+      },
+      "input": {
+        "opts": {
+          "budget": 10,
+          "now": 1800000000000,
+          "window_ms": 3600000
+        },
+        "state": {},
+        "steps": [
+          {
+            "identity": "idA",
+            "units": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "bud-007",
+      "title": "negative units rejected",
+      "category": "invalid",
+      "kind": "budget",
+      "expected": {
+        "at_step": 0,
+        "error": "BUDGET_INVALID",
+        "ok": false
+      },
+      "input": {
+        "opts": {
+          "budget": 10,
+          "now": 1800000000000,
+          "window_ms": 3600000
+        },
+        "state": {},
+        "steps": [
+          {
+            "identity": "idA",
+            "units": -1
+          }
+        ]
+      }
+    },
+    {
+      "id": "bud-008",
+      "title": "3+2 charges the same as 5: composition order cannot reduce consumption",
+      "category": "valid",
+      "kind": "budget",
+      "expected": {
+        "ok": true,
+        "remaining": 5
+      },
+      "input": {
+        "opts": {
+          "budget": 10,
+          "now": 1800000000000,
+          "window_ms": 3600000
+        },
+        "state": {},
+        "steps": [
+          {
+            "identity": "idA",
+            "units": 3
+          },
+          {
+            "identity": "idA",
+            "units": 2
+          }
+        ]
+      }
+    }
+  ]
+}

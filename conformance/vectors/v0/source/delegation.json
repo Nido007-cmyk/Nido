@@ -1,0 +1,218 @@
+{
+  "bases": {
+    "chain_base": [
+      {
+        "capability": "calendar.availability.query",
+        "capability_version": "v1",
+        "expires_at": 1800086400000,
+        "issued_at": 1799990000000,
+        "issuer_identity": "idA",
+        "scope": {
+          "max_uses": 3,
+          "peers": [
+            "idB"
+          ]
+        },
+        "sign_by": "idA",
+        "subject_identity": "devA1",
+        "v": "nido-delegation/1"
+      },
+      {
+        "capability": "calendar.availability.query",
+        "capability_version": "v1",
+        "expires_at": 1800080000000,
+        "issued_at": 1799991000000,
+        "issuer_identity": "devA1",
+        "scope": {
+          "max_uses": 2,
+          "peers": [
+            "idB"
+          ]
+        },
+        "sign_by": "devA1",
+        "subject_identity": "idB",
+        "v": "nido-delegation/1"
+      }
+    ],
+    "ctx_base": {
+      "now": 1800000000000,
+      "pubkeys": {
+        "devA1": "alias:devA1",
+        "idA": "alias:idA",
+        "idB": "alias:idB"
+      }
+    }
+  },
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "base": "chain_base",
+      "category": "valid",
+      "expected": {
+        "leaf_subject": "idB",
+        "max_uses": 2,
+        "ok": true
+      },
+      "id": "del-001",
+      "kind": "delegation",
+      "title": "valid two-level chain"
+    },
+    {
+      "base": "chain_base",
+      "category": "invalid",
+      "chain_patch": {
+        "1": {
+          "expires_at": 1800090000000
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      },
+      "id": "del-002",
+      "kind": "delegation",
+      "title": "child expiry beyond parent is not attenuation"
+    },
+    {
+      "base": "chain_base",
+      "category": "invalid",
+      "chain_patch": {
+        "1": {
+          "scope": {
+            "max_uses": 5,
+            "peers": [
+              "idB"
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      },
+      "id": "del-003",
+      "kind": "delegation",
+      "title": "child max_uses above parent is not attenuation"
+    },
+    {
+      "base": "chain_base",
+      "category": "invalid",
+      "chain_patch": {
+        "1": {
+          "issuer_identity": "idB",
+          "sign_by": "idB"
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      },
+      "id": "del-004",
+      "kind": "delegation",
+      "title": "broken linkage: issuer is not parent subject"
+    },
+    {
+      "base": "chain_base",
+      "category": "adversarial",
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      },
+      "id": "del-005",
+      "kind": "delegation",
+      "tamper_chain": [
+        {
+          "path": "signature",
+          "value": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "title": "adversarial: forged leaf signature"
+    },
+    {
+      "base": "chain_base",
+      "category": "invalid",
+      "chain_patch": {
+        "1": {
+          "capability": "calendar.contacts.read"
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      },
+      "id": "del-006",
+      "kind": "delegation",
+      "title": "capability change downstream rejected"
+    },
+    {
+      "base": "chain_base",
+      "category": "invalid",
+      "chain_patch": {
+        "1": {
+          "scope": {
+            "max_uses": 2,
+            "peers": [
+              "idA",
+              "idB"
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      },
+      "id": "del-007",
+      "kind": "delegation",
+      "title": "peer scope widening rejected"
+    },
+    {
+      "base": "chain_base",
+      "category": "invalid",
+      "chain_patch": {
+        "1": {
+          "expires_at": 1799999999999
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      },
+      "id": "del-008",
+      "kind": "delegation",
+      "title": "expired leaf rejected"
+    },
+    {
+      "category": "invalid",
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      },
+      "id": "del-009",
+      "input": {
+        "chain": [],
+        "now": 1800000000000,
+        "pubkeys": {
+          "idA": "alias:idA"
+        }
+      },
+      "kind": "delegation",
+      "title": "empty chain rejected"
+    },
+    {
+      "base": "chain_base",
+      "category": "invalid",
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      },
+      "id": "del-010",
+      "kind": "delegation",
+      "root_patch": {
+        "expires_at": 1799999999999
+      },
+      "title": "expired root rejected"
+    }
+  ]
+}

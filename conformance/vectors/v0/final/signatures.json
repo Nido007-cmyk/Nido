@@ -1,0 +1,124 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "id": "sig-001",
+      "title": "valid signature verifies",
+      "category": "valid",
+      "kind": "signature",
+      "input": {
+        "key": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+        "message": "{\"a\":1}",
+        "signature": "325003fd636be5c8c705ece915453f940a17b9cad3f58b99a57b825f96f9e62fd6a89b16deeccca008dec6223e9fee7581bfdb904b2c8f9160f9903c61265806"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "sig-002",
+      "title": "wrong key fails",
+      "category": "invalid",
+      "kind": "signature",
+      "input": {
+        "key": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+        "message": "{\"a\":1}",
+        "signature": "325003fd636be5c8c705ece915453f940a17b9cad3f58b99a57b825f96f9e62fd6a89b16deeccca008dec6223e9fee7581bfdb904b2c8f9160f9903c61265806"
+      },
+      "expected": {
+        "error": "BAD_SIGNATURE",
+        "ok": false
+      }
+    },
+    {
+      "id": "sig-003",
+      "title": "tampered message fails",
+      "category": "adversarial",
+      "kind": "signature",
+      "input": {
+        "key": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+        "message": "{\"a\":2}",
+        "signature": "325003fd636be5c8c705ece915453f940a17b9cad3f58b99a57b825f96f9e62fd6a89b16deeccca008dec6223e9fee7581bfdb904b2c8f9160f9903c61265806"
+      },
+      "expected": {
+        "error": "BAD_SIGNATURE",
+        "ok": false
+      }
+    },
+    {
+      "id": "sig-004",
+      "title": "truncated signature fails",
+      "category": "adversarial",
+      "kind": "signature",
+      "input": {
+        "key": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+        "message": "{\"a\":1}",
+        "signature": "325003fd636be5c8c705ece915453f940a17b9cad3f58b99a57b825f96f9e62f"
+      },
+      "expected": {
+        "error": "BAD_SIGNATURE",
+        "ok": false
+      }
+    },
+    {
+      "id": "sig-005",
+      "title": "non-hex signature fails",
+      "category": "invalid",
+      "kind": "signature",
+      "input": {
+        "key": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+        "message": "{\"a\":1}",
+        "signature": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+      },
+      "expected": {
+        "error": "BAD_SIGNATURE",
+        "ok": false
+      }
+    },
+    {
+      "id": "sig-006",
+      "title": "unknown key alias fails closed",
+      "category": "invalid",
+      "kind": "signature",
+      "input": {
+        "key": "not-a-key",
+        "message": "{\"a\":1}",
+        "signature": "00"
+      },
+      "expected": {
+        "error": "UNKNOWN_KEY",
+        "ok": false
+      }
+    },
+    {
+      "id": "sig-007",
+      "title": "valid signature over different representation does not transfer",
+      "category": "adversarial",
+      "kind": "signature",
+      "input": {
+        "key": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+        "message": "{\"a\":1,\"b\":2}",
+        "signature": "325003fd636be5c8c705ece915453f940a17b9cad3f58b99a57b825f96f9e62fd6a89b16deeccca008dec6223e9fee7581bfdb904b2c8f9160f9903c61265806"
+      },
+      "expected": {
+        "error": "BAD_SIGNATURE",
+        "ok": false
+      }
+    },
+    {
+      "id": "sig-008",
+      "title": "empty message signs and verifies",
+      "category": "boundary",
+      "kind": "signature",
+      "input": {
+        "key": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+        "message": "",
+        "signature": "9ca53579530654d5c3df77089ef45eda613e2fedf670e96bedac4639504e5845ef4b95d5793077233dd16817b2532e9c5525872a73a4ad74b759369a9e05c102"
+      },
+      "expected": {
+        "ok": true
+      }
+    }
+  ]
+}

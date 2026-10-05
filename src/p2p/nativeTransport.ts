@@ -1,0 +1,834 @@
+/**
+ * nativeTransport.ts — NIDO: transporte Bluetooth real sobre el módulo
+ * nativo `nido-p2p` (Kotlin RFCOMM).
+ *
+ * El módulo nativo solo mueve bytes con framing [u32 BE][payload] y emite
+ * frames completos en base64. Este adaptador implementa `P2PTransport`:
+ * direcciona conexiones por MAC, hace el handshake de presentación
+ * (HELLO v3 + CONFIRM v1) y entrega a `NidoMessenger` solo peers con
+ * sesión válida.
+ *
+ * Handshake v3 autenticado con context binding (R4; ver
+ * docs/HANDSHAKE_THREAT_MODEL.md y
+ * ~/workspace/audits/r4-hello-v2-design-packet-2026-09-28.md):
+ *  1. Al establecerse el socket (saliente o entrante), cada lado envía un
+ *     frame HELLO en claro: {"t":"nido-hello","v":3,"pk","eph","nonce","ts","sig"}.
+ *  2. `sig` es Ed25519 sobre ("nido-hello-v3"|pk|eph|nonce|ts) con la clave
+ *     de firma entregada en el QR de emparejamiento. Sin firma válida no
+ *     hay sesión: un MITM no puede sustituir el efímero ni "refrescar" el ts.
+ *  3. Tras validar el HELLO del peer (incluido el INSERT atómico anti-replay
+ *     en la cache persistente), cada lado envía CONFIRM v1:
+ *     {"t":"nido-confirm","v":1,"pk","cn","pn","sig"}, firmando AMBOS nonces
+ *     (el propio y el del peer) con su clave Ed25519. Esto liga la
+ *     confirmación al transcript vivo de ESTA conexión: un HELLO capturado
+ *     de otro contexto no puede producir el CONFIRM correspondiente.
+ *  4. INVARIANTE CENTRAL (R4): un HELLO solo NUNCA modifica pkToMac/macToPk.
+ *     La ruta y la sesión se establecen ÚNICAMENTE después de verificar un
+ *     CONFIRM válido ligado a ambos nonces de esa conexión.
+ *  5. Se notifica `onHandshakeComplete(pk, myEphSecret, theirEphPk,
+ *     myNonce, theirNonce)` para que el messenger derive la sesión ligada
+ *     a ambos nonces (un HELLO repetido no resucita sesiones).
+ *  6. Cooldown por peer: un segundo handshake con ruta viva dentro de 10 s
+ *     se rechaza (anti-spam de HELLO repetidos).
+ */
+import type {
+  P2PTransport,
+  P2PTransportEvents,
+  P2PPeerInfo,
+} from "./transport";
+import { NativeP2PTransport } from "./transport";
+import {
+  buildHelloSignMessageV3,
+  buildConfirmSignMessage,
+  fromHex,
+  generateEphemeral,
+  HANDSHAKE_NONCE_BYTES,
+  randomNonce,
+  signDetached,
+  toHex,
+  verifyDetached,
+} from "./crypto";
+import { getIdentity, getSigningKeypair, findContactByPk } from "./store";
+import { defaultHelloNonceCache, type HelloNonceCache } from "./nonceCache";
+import {
+  buildConfirmV1,
+  CONFIRM_WAIT_MS,
+  HELLO_TS_SKEW_S,
+  HELLO_TYPE_V3,
+  HELLO_VERSION,
+  NONCE_CACHE_WINDOW_S,
+  parseConfirm,
+  tieBreakKey,
+} from "./handshakeV3";
+import { encodeBase64, decodeBase64 } from "./base64";
+
+/** Subconjunto estructural de los bindings de `nido-p2p` (sin expo en tests). */
+export interface NidoP2PBindings {
+  isBluetoothEnabled(): boolean;
+  requestPermissions(): Promise<boolean>;
+  startDiscovery(): Promise<void>;
+  stopDiscovery(): Promise<void>;
+  startServer(): Promise<void>;
+  stopServer(): Promise<void>;
+  connect(address: string): Promise<{ address: string; name: string | null }>;
+  sendFrame(address: string, base64: string): Promise<void>;
+  disconnect(address: string): Promise<void>;
+  /**
+   * Apagado nativo total (B/F4): detiene discovery/servidor y CIERRA los
+   * sockets RFCOMM activos en el módulo Kotlin. Existe en
+   * `modules/nido-p2p/src/index.ts`; este binding estructural lo expone
+   * para que `NidoBluetoothTransport.shutdownNative()` pueda invocarlo
+   * desde la destrucción terminal del messenger.
+   */
+  shutdown(): Promise<void>;
+  addListener(event: "onDeviceFound", fn: (d: { address: string; name: string | null }) => void): () => void;
+  addListener(event: "onDiscoveryFinished", fn: () => void): () => void;
+  addListener(
+    event: "onConnected",
+    fn: (e: { address: string; name: string | null; incoming: boolean }) => void,
+  ): () => void;
+  addListener(event: "onFrame", fn: (e: { address: string; base64: string }) => void): () => void;
+  addListener(event: "onDisconnected", fn: (e: { address: string }) => void): () => void;
+  addListener(event: "onError", fn: (e: { message: string }) => void): () => void;
+}
+
+let bindingsCache: NidoP2PBindings | null | undefined;
+
+/** Carga perezosa de los bindings; null si el módulo nativo no está compilado. */
+export function loadNidoP2PBindings(): NidoP2PBindings | null {
+  if (bindingsCache !== undefined) return bindingsCache;
+  try {
+    // `require` perezoso: en tests/node (sin expo) esto lanza y se tolera.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    bindingsCache = require("nido-p2p") as NidoP2PBindings;
+  } catch {
+    bindingsCache = null;
+  }
+  return bindingsCache;
+}
+
+/** Mejor transporte disponible: Bluetooth real o stub que falla explícito. */
+export function createPlatformTransport(): P2PTransport {
+  const b = loadNidoP2PBindings();
+  return b ? new NidoBluetoothTransport(b) : new NativeP2PTransport();
+}
+
+const MAC_RE = /([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}/;
+const HELLO_TIMEOUT_MS = 15_000;
+/**
+ * Cooldown anti-spam: si ya hay una ruta viva con el peer y su handshake
+ * se completó hace menos de esto, un HELLO nuevo se rechaza. Un HELLO
+ * repetido (replay) nunca puede sustituir una sesión en uso.
+ */
+const HANDSHAKE_COOLDOWN_MS = 10_000;
+
+/**
+ * Handshake pendiente por MAC (R4: máquina de estados de dos fases).
+ * - "waiting-socket": connect() registrado, aún sin evento onConnected.
+ * - "hello-sent": nuestro HELLO v3 ya salió; esperamos el HELLO del peer.
+ * - "confirm-sent": HELLO del peer validado y nuestro CONFIRM v1 enviado;
+ *   esperamos el CONFIRM del peer. SOLO tras verificarlo se establece la
+ *   ruta (invariante central R4).
+ */
+interface PendingHello {
+  stage: "waiting-socket" | "hello-sent" | "confirm-sent";
+  myEphSecret: Uint8Array;
+  myNonce: Uint8Array;
+  myNonceHex: string;
+  /** Campos del peer (rellenados al validar su HELLO, fase confirm-sent). */
+  peerPk?: string;
+  peerEphPkHex?: string;
+  peerNonceHex?: string;
+  /** Clave de firma Ed25519 del contacto (capturada al validar su HELLO). */
+  peerSigPkHex?: string;
+  resolve?: (info: P2PPeerInfo) => void;
+  reject?: (err: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+
+export interface HelloPayload {
+  pk: string;
+  eph: string;
+  nonce: string;
+  /** Segundos Unix del reloj del remitente (firmado). */
+  ts: number;
+  sig: string;
+}
+
+/**
+ * Valida y parsea un frame HELLO v3 (cuerpo JSON en claro). Lanza si es
+ * inválido. El hard cut (§7.1 del packet): v:2 se rechaza en parse con
+ * mensaje accionable ("actualiza su app"); v:1 conserva su mensaje
+ * heredado. La frescura del `ts` se chequea en handleHello (necesita "now").
+ */
+export function parseHello(body: Uint8Array): HelloPayload {
+  let obj: Record<string, unknown>;
+  try {
+    obj = JSON.parse(new TextDecoder().decode(body)) as Record<string, unknown>;
+  } catch {
+    throw new Error("HELLO no es JSON.");
+  }
+  if (obj.t !== HELLO_TYPE_V3) throw new Error("HELLO de tipo desconocido.");
+  if (obj.v === 1) {
+    throw new Error(
+      "El otro NIDO usa el handshake antiguo sin firma (v1): actualiza su app para conectar.",
+    );
+  }
+  if (obj.v === 2) {
+    throw new Error(
+      "El otro NIDO usa el handshake v2 (sin confirmación anti-replay): actualiza su app para conectar.",
+    );
+  }
+  if (obj.v !== HELLO_VERSION) throw new Error("HELLO de versión desconocida.");
+  const pk = typeof obj.pk === "string" ? obj.pk : "";
+  const eph = typeof obj.eph === "string" ? obj.eph : "";
+  const nonce = typeof obj.nonce === "string" ? obj.nonce : "";
+  const sig = typeof obj.sig === "string" ? obj.sig : "";
+  const ts = obj.ts;
+  if (!/^[0-9a-fA-F]{64}$/.test(pk)) throw new Error("HELLO sin pk válida.");
+  if (!/^[0-9a-fA-F]{64}$/.test(eph)) throw new Error("HELLO sin efímera válida.");
+  if (!/^[0-9a-fA-F]{32}$/.test(nonce)) throw new Error("HELLO sin nonce válido.");
+  if (typeof ts !== "number" || !Number.isInteger(ts) || ts < 1 || ts >= 2 ** 40) {
+    throw new Error("HELLO sin timestamp válido.");
+  }
+  if (!/^[0-9a-fA-F]{128}$/.test(sig)) throw new Error("HELLO sin firma válida.");
+  return {
+    pk: pk.toLowerCase(),
+    eph: eph.toLowerCase(),
+    nonce: nonce.toLowerCase(),
+    ts,
+    sig: sig.toLowerCase(),
+  };
+}
+
+/** Construye el cuerpo de un HELLO propio (v3, firmado). */
+export function buildHello(
+  myPkHex: string,
+  myEphPkHex: string,
+  nonceHex: string,
+  tsSeconds: number,
+  sigHex: string,
+): Uint8Array {
+  return new TextEncoder().encode(
+    JSON.stringify({
+      t: HELLO_TYPE_V3,
+      v: HELLO_VERSION,
+      pk: myPkHex,
+      eph: myEphPkHex,
+      nonce: nonceHex,
+      ts: tsSeconds,
+      sig: sigHex,
+    }),
+  );
+}
+
+export function extractMac(alias: string): string | null {
+  return alias.match(MAC_RE)?.[0]?.toUpperCase() ?? null;
+}
+
+export interface NidoBluetoothTransportOpts {
+  /**
+   * Firma de identidad Ed25519 (HELLO y CONFIRM).
+   * Inyectable en tests; por defecto usa la clave del Keystore.
+   */
+  signHello?: (message: Uint8Array) => Promise<Uint8Array>;
+  /**
+   * Backend de la cache anti-replay de nonces (R4). Por defecto el
+   * persistente (SQLCipher); los tests inyectan uno en memoria.
+   */
+  nonceCache?: HelloNonceCache;
+}
+
+export class NidoBluetoothTransport implements P2PTransport {
+  readonly name = "nido-bluetooth";
+  readonly available: boolean;
+
+  private bindings: NidoP2PBindings | null;
+  private events: P2PTransportEvents | null = null;
+  private unsubs: Array<() => void> = [];
+  private myPkHex = "";
+  private macToPk = new Map<string, string>();
+  private pkToMac = new Map<string, string>();
+  private pending = new Map<string, PendingHello>(); // MAC -> HELLO en curso
+  /**
+   * B/F4: el apagado nativo es terminal y de un solo uso por instancia.
+   * Una vez invocado, no se vuelve a tocar el bridge: si el primer intento
+   * falló, la recuperación es una instancia fresca (post-wipe siempre se
+   * crea una), no reintentar sobre la instancia muerta.
+   */
+  private nativeShutdownDone = false;
+  /** Anti-spam de HELLO repetidos: pk -> timestamp del último handshake OK. */
+  private lastHandshakeAt = new Map<string, number>();
+  /**
+   * R4: cache anti-replay persistente de (pk, nonce). El claim es UN INSERT
+   * atómico: conflicto UNIQUE = replay -> reject. Sustituye al mapa en
+   * memoria de B/F1 (que moría con el proceso y permitía el PoC
+   * post-restart).
+   */
+  private nonceCache: HelloNonceCache;
+  /**
+   * Pares de nonces de las sesiones confirmadas, por MAC: necesarios para
+   * el tie-break determinista de simultaneous dial (§4.5 del packet).
+   * Solo vive en memoria: las sesiones no sobreviven a stopDiscovery().
+   */
+  private confirmedPair = new Map<string, { pkLower: string; nonceLocalHex: string; noncePeerHex: string }>();
+  private signHello: (message: Uint8Array) => Promise<Uint8Array>;
+  private linked = false;
+
+  /**
+   * @param bindings Si se omite, se cargan de forma perezosa; pasa `null`
+   * explícito para forzar no-disponible, o un doble para tests.
+   * @param opts.signHello Firma de identidad (inyectable en tests).
+   * @param opts.nonceCache Backend anti-replay (inyectable en tests).
+   */
+  constructor(bindings?: NidoP2PBindings | null, opts?: NidoBluetoothTransportOpts) {
+    this.bindings = bindings === undefined ? loadNidoP2PBindings() : bindings;
+    this.available = this.bindings !== null;
+    this.signHello =
+      opts?.signHello ??
+      (async (message: Uint8Array) => {
+        const kp = await getSigningKeypair();
+        return signDetached(message, kp.secretKey);
+      });
+    this.nonceCache = opts?.nonceCache ?? defaultHelloNonceCache;
+  }
+
+  private bt(): NidoP2PBindings {
+    if (!this.bindings) {
+      throw new Error(
+        "Transporte P2P nativo no disponible: compila el módulo nido-p2p " +
+          "(Bluetooth RFCOMM) con un dispositivo Android real. Los mensajes quedan en la cola cifrada.",
+      );
+    }
+    return this.bindings;
+  }
+
+  private async ensureMyPk(): Promise<string> {
+    if (this.myPkHex) return this.myPkHex;
+    const identity = await getIdentity();
+    if (!identity) throw new Error("Primero crea tu identidad NIDO.");
+    this.myPkHex = toHex(identity.publicKey).toLowerCase();
+    return this.myPkHex;
+  }
+
+  /**
+   * F-2: invalida la cache de identidad propia tras un recovery de pérdida
+   * de claves de identidad. Las sesiones establecidas bajo la identidad
+   * vieja están criptográficamente muertas; el próximo handshake deriva
+   * todo de la identidad nueva. Las rutas por MAC son de peers y no se
+   * tocan (nuestra identidad no las invalida).
+   */
+  resetMyIdentityCache(): void {
+    this.myPkHex = "";
+    this.confirmedPair.clear();
+    this.lastHandshakeAt.clear();
+  }
+
+  /** Conecta listeners nativos + servidor (sin discovery). Idempotente. */
+  private async ensureLinked(): Promise<void> {
+    if (this.linked) return;
+    const b = this.bt();
+    await this.ensureMyPk();
+    if (!b.isBluetoothEnabled()) throw new Error("El Bluetooth está apagado.");
+    const granted = await b.requestPermissions();
+    if (!granted) throw new Error("NIDO necesita permisos de Bluetooth para hablar con otro NIDO.");
+    // R4 §8.2: poda oportunista de la cache anti-replay al enlazar. Las
+    // filas viejas corresponden a HELLOs que el chequeo de frescura
+    // rechaza de todos modos (best-effort: nunca bloquea el enlace).
+    this.nonceCache.prune(Math.floor(Date.now() / 1000) - NONCE_CACHE_WINDOW_S).catch(() => {});
+    this.unsubs = [
+      b.addListener("onDeviceFound", (d) => {
+        this.events?.onPeerFound?.({
+          pkHex: "",
+          alias: d.name ? `${d.name} (${d.address})` : d.address,
+          transport: "bluetooth",
+        });
+      }),
+      b.addListener("onDiscoveryFinished", () => {
+        // v1: la UI no necesita este evento; el discovery sigue en segundo plano.
+      }),
+      b.addListener("onConnected", (e) => {
+        void this.beginHello(e.address).catch((err: unknown) =>
+          this.events?.onError?.(
+            `No se pudo iniciar el handshake: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+      }),
+      b.addListener("onFrame", (e) => {
+        void this.onNativeFrame(e.address, e.base64).catch((err: unknown) =>
+          this.events?.onError?.(
+            `Frame de ${e.address}: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+      }),
+      b.addListener("onDisconnected", (e) => this.onNativeDisconnected(e.address)),
+      b.addListener("onError", (e) => this.events?.onError?.(e.message)),
+    ];
+    await b.startServer();
+    this.linked = true;
+  }
+
+  async startDiscovery(events: P2PTransportEvents): Promise<void> {
+    this.events = events;
+    await this.ensureLinked();
+    await this.bt().startDiscovery();
+  }
+
+  async stopDiscovery(): Promise<void> {
+    const b = this.bindings;
+    for (const unsub of this.unsubs) {
+      try {
+        unsub();
+      } catch {
+        /* noop */
+      }
+    }
+    this.unsubs = [];
+    this.linked = false;
+    for (const [, p] of this.pending) {
+      clearTimeout(p.timer);
+      p.reject?.(new Error("Discovery detenido."));
+    }
+    this.pending.clear();
+    this.macToPk.clear();
+    this.pkToMac.clear();
+    this.confirmedPair.clear();
+    if (b) {
+      await b.stopDiscovery().catch(() => {});
+      await b.stopServer().catch(() => {});
+    }
+  }
+
+  /**
+   * B/F4 — terminación nativa terminal.
+   *
+   * Invoca `bindings.shutdown()`: el módulo Kotlin detiene discovery y
+   * servidor y CIERRA todos los sockets RFCOMM activos. Sin esto, destruir
+   * el messenger solo borraba el estado JS (rutas/sesiones) y detenía el
+   * discovery, pero los sockets nativos sobrevivían.
+   *
+   * Solo la llama la destrucción terminal (`NidoMessenger.destroy()`),
+   * NUNCA `stopLink()` (apagado temporal de UI): la cache anti-replay
+   * persistente (R4) vive en la base cifrada y sobrevive a `stopDiscovery()`
+   * a propósito; el apagado temporal no debe tocar el lado nativo.
+   *
+   * Comportamiento definido:
+   * - éxito: sockets cerrados, servidor detenido; resolver sin valor.
+   * - segunda llamada (misma instancia): no-op, no toca el bridge.
+   * - sin sockets activos / sin bindings: no-op exitoso.
+   * - el nativo lanza: la promesa rechaza; el llamante (destroy) lo trata
+   *   best-effort — la invalidación en memoria ya es efectiva y el estado
+   *   TS queda destruido igual. La recuperación es una instancia fresca.
+   */
+  async shutdownNative(): Promise<void> {
+    if (this.nativeShutdownDone) return;
+    this.nativeShutdownDone = true;
+    const b = this.bindings;
+    if (!b) return;
+    await b.shutdown();
+  }
+
+  /**
+   * Conecta por alias ("Nombre (AA:BB:CC:DD:EE:FF)") o MAC directa y hace el
+   * handshake. Resuelve con la identidad verificada del peer.
+   */
+  async connect(alias: string): Promise<P2PPeerInfo> {
+    const mac = extractMac(alias);
+    if (!mac) throw new Error(`No encontré una dirección Bluetooth en «${alias}».`);
+    const b = this.bt();
+    await this.ensureLinked();
+    const done = this.macToPk.get(mac);
+    if (done) {
+      const contact = await findContactByPk(done);
+      return { pkHex: done, alias: contact?.name ?? mac, transport: "bluetooth" };
+    }
+    const existing = this.pending.get(mac);
+    if (existing) {
+      // Handshake ya en curso (p. ej. conexión entrante simultánea): reutilizar.
+      return new Promise<P2PPeerInfo>((resolve, reject) => {
+        existing.resolve = resolve;
+        existing.reject = reject;
+      });
+    }
+    return new Promise<P2PPeerInfo>((resolve, reject) => {
+      const timer = this.armHelloTimeout(mac);
+      // Se registra ANTES de conectar: si onConnected llega primero,
+      // beginHello reutiliza este pendiente en vez de crear otro.
+      this.pending.set(mac, {
+        stage: "waiting-socket",
+        myEphSecret: new Uint8Array(0),
+        myNonce: new Uint8Array(0), // se rellena en beginHello al enviar el HELLO
+        myNonceHex: "", // se rellena en beginHello al enviar el HELLO
+        resolve: (info) => {
+          clearTimeout(timer);
+          resolve(info);
+        },
+        reject: (err) => {
+          clearTimeout(timer);
+          reject(err);
+        },
+        timer,
+      });
+      b.connect(mac).catch((e: unknown) => {
+        this.failHello(mac, e instanceof Error ? e : new Error(String(e)));
+      });
+    });
+  }
+
+  async sendFrame(peerPkHex: string, frame: Uint8Array): Promise<void> {
+    const mac = this.pkToMac.get(peerPkHex.toLowerCase());
+    if (!mac) throw new Error("Peer no conectado por Bluetooth.");
+    await this.bt().sendFrame(mac, encodeBase64(frame));
+  }
+
+  async disconnect(peerPkHex: string): Promise<void> {
+    const mac = this.pkToMac.get(peerPkHex.toLowerCase());
+    this.forgetRoute(peerPkHex);
+    if (mac) await this.bt().disconnect(mac).catch(() => {});
+  }
+
+  /**
+   * UNIT B (R5): desmonta la ruta hacia una identidad SUPERSEDED del peer.
+   * Implementado sobre el `disconnect` existente (forgetRoute + cierre del
+   * socket RFCOMM); idempotente y best-effort (nunca lanza: el messenger
+   * lo invoca post-commit en try/catch).
+   */
+  async teardownRouteForPeer(peerPkHex: string): Promise<void> {
+    try {
+      await this.disconnect(peerPkHex);
+    } catch {
+      /* post-commit: la muerte SQL ya es autoritativa; se registra en el llamador */
+    }
+  }
+
+  // ------------------------------------------------------------ handshake
+
+  private async beginHello(address: string): Promise<void> {
+    const mac = address.toUpperCase();
+    const existing = this.pending.get(mac);
+    // Idempotente: si ya hay un handshake en curso (más allá del registro
+    // de connect()) o la ruta ya existe, no se repite. Un pendiente
+    // "waiting-socket" (connect() se adelantó al evento) sí se reutiliza.
+    if (existing && existing.stage !== "waiting-socket") return;
+    if (!existing && this.macToPk.has(mac)) return;
+    const b = this.bt();
+    const eph = generateEphemeral();
+    const nonce = randomNonce(HANDSHAKE_NONCE_BYTES);
+    const nonceHex = toHex(nonce);
+    const ephPkHex = toHex(eph.publicKey);
+    const myPkHex = await this.ensureMyPk();
+    const ts = Math.floor(Date.now() / 1000);
+    const sig = await this.signHello(buildHelloSignMessageV3(myPkHex, ephPkHex, nonceHex, ts));
+    const hello = buildHello(myPkHex, ephPkHex, nonceHex, ts, toHex(sig));
+    if (existing) {
+      // connect() se adelantó al evento: se reutiliza su pendiente.
+      clearTimeout(existing.timer);
+      existing.stage = "hello-sent";
+      existing.myEphSecret = eph.secretKey;
+      existing.myNonce = nonce;
+      existing.myNonceHex = nonceHex;
+      existing.timer = this.armHelloTimeout(mac);
+    } else {
+      // Conexión entrante sin nadie esperando.
+      this.pending.set(mac, {
+        stage: "hello-sent",
+        myEphSecret: eph.secretKey,
+        myNonce: nonce,
+        myNonceHex: nonceHex,
+        timer: this.armHelloTimeout(mac),
+      });
+    }
+    try {
+      await b.sendFrame(mac, encodeBase64(hello));
+    } catch (e) {
+      this.failHello(mac, e instanceof Error ? e : new Error(String(e)));
+      throw e;
+    }
+  }
+
+  private armHelloTimeout(mac: string): ReturnType<typeof setTimeout> {
+    return setTimeout(
+      () =>
+        this.failHello(
+          mac,
+          new Error("Handshake agotado (15 s): el otro lado no respondió como NIDO."),
+        ),
+      HELLO_TIMEOUT_MS,
+    );
+  }
+
+  private armConfirmTimeout(mac: string): ReturnType<typeof setTimeout> {
+    return setTimeout(
+      () =>
+        this.failHello(
+          mac,
+          new Error(
+            "Handshake agotado esperando CONFIRM (10 s): el peer no demostró presencia viva en esta conexión.",
+          ),
+        ),
+      CONFIRM_WAIT_MS,
+    );
+  }
+
+  private failHello(mac: string, err: Error): void {
+    const pend = this.pending.get(mac);
+    if (!pend) return;
+    clearTimeout(pend.timer);
+    this.pending.delete(mac);
+    pend.reject?.(err);
+    this.events?.onError?.(`Handshake con ${mac}: ${err.message}`);
+    this.bt().disconnect(mac).catch(() => {});
+  }
+
+  private async onNativeFrame(address: string, b64: string): Promise<void> {
+    const mac = address.toUpperCase();
+    let body: Uint8Array;
+    try {
+      body = decodeBase64(b64);
+    } catch {
+      return; // basura: se ignora
+    }
+    const pend = this.pending.get(mac);
+    if (pend) {
+      // El handshake se parsea por fase (§4.5 del packet): hello-sent
+      // espera HELLO; confirm-sent espera CONFIRM; cualquier otra cosa
+      // se rechaza fail-closed.
+      if (pend.stage === "hello-sent") {
+        await this.handleHello(mac, pend, body);
+        return;
+      }
+      if (pend.stage === "confirm-sent") {
+        await this.handleConfirm(mac, pend, body);
+        return;
+      }
+      // waiting-socket: aún no salió nuestro HELLO; el frame se ignora
+      // (el timeout de beginHello lo limpiará si nunca conecta).
+      return;
+    }
+    const pk = this.macToPk.get(mac);
+    if (pk) this.events?.onFrame?.(pk, body);
+    // Frame de conexión sin handshake: se ignora (el timeout lo limpiará).
+  }
+
+  /**
+   * Fase 1 del handshake (R4): valida el HELLO v3 del peer según §3.3 del
+   * packet (parse, versión, formas, frescura del ts, contacto, no-self,
+   * firma, INSERT atómico anti-replay, cooldown) y, si todo pasa, envía
+   * nuestro CONFIRM v1 y pasa a la fase "confirm-sent".
+   *
+   * CRÍTICO: esta función NO muta pkToMac/macToPk. La ruta solo se
+   * establece en handleConfirm tras verificar el CONFIRM del peer.
+   */
+  private async handleHello(mac: string, pend: PendingHello, body: Uint8Array): Promise<void> {
+    try {
+      const hello = parseHello(body);
+      const myPkHex = await this.ensureMyPk();
+      if (hello.pk === myPkHex) throw new Error("Es mi propio dispositivo.");
+      // Frescura del timestamp (§3.3 paso 3): defensa secundaria que hace
+      // la evicción de la cache segura por construcción.
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (Math.abs(nowSec - hello.ts) > HELLO_TS_SKEW_S) {
+        throw new Error(
+          "Reloj del peer fuera del margen permitido (±10 min): revisa la hora de ambos dispositivos.",
+        );
+      }
+      const contact = await findContactByPk(hello.pk);
+      if (!contact) {
+        throw new Error(
+          "Dispositivo no emparejado: haz el intercambio de QR primero y reintenta.",
+        );
+      }
+      if (!contact.sigPkHex) {
+        throw new Error(
+          `Contacto sin clave de firma (QR antiguo): pídele a ${contact.name} que te pase su QR de nuevo y re-escanea.`,
+        );
+      }
+      // Autenticación del handshake: la firma liga el efímero y el ts a la
+      // identidad verificada por QR. Un MITM no puede sustituir `eph` ni
+      // "refrescar" `ts` sin la clave de firma del peer.
+      const msg = buildHelloSignMessageV3(hello.pk, hello.eph, hello.nonce, hello.ts);
+      const ok = verifyDetached(msg, fromHex(hello.sig), fromHex(contact.sigPkHex));
+      if (!ok) {
+        throw new Error(
+          "Firma del handshake inválida: posible ataque de intermediario. Conexión rechazada.",
+        );
+      }
+      // R4 §3.3 paso 7: decisión anti-replay ATÓMICA. Un solo INSERT:
+      // conflicto UNIQUE = replay -> reject, fail-closed, antes de enviar
+      // CONFIRM o mutar cualquier estado. Quemar el nonce al aceptar es
+      // seguro: un reintento legítimo siempre usa un nonce fresco.
+      const claimed = await this.nonceCache.claim(hello.pk, hello.nonce, nowSec);
+      if (!claimed) {
+        throw new Error(
+          "HELLO repetido (nonce ya usado): posible re-inyección de un handshake capturado. Conexión rechazada.",
+        );
+      }
+      // Anti-spam: si ya hay ruta viva y el handshake es muy reciente,
+      // un HELLO nuevo no sustituye la sesión en uso.
+      const pkLower = hello.pk.toLowerCase();
+      const last = this.lastHandshakeAt.get(pkLower) ?? 0;
+      if (this.pkToMac.has(pkLower) && Date.now() - last < HANDSHAKE_COOLDOWN_MS) {
+        throw new Error("Handshake duplicado: ya hay una sesión activa con este contacto.");
+      }
+      // HELLO válido: enviamos nuestro CONFIRM (cn = nuestro nonce,
+      // pn = el nonce del peer visto en ESTA conexión) y esperamos el suyo.
+      // La RUTA SIGUE SIN TOCARSE (invariante central R4).
+      const confirmSig = await this.signHello(
+        buildConfirmSignMessage(myPkHex, pend.myNonceHex, hello.nonce),
+      );
+      const confirm = buildConfirmV1(myPkHex, pend.myNonceHex, hello.nonce, toHex(confirmSig));
+      clearTimeout(pend.timer);
+      pend.stage = "confirm-sent";
+      pend.peerPk = pkLower;
+      pend.peerEphPkHex = hello.eph;
+      pend.peerNonceHex = hello.nonce;
+      pend.peerSigPkHex = contact.sigPkHex;
+      pend.timer = this.armConfirmTimeout(mac);
+      try {
+        await this.bt().sendFrame(mac, encodeBase64(confirm));
+      } catch (e) {
+        this.failHello(mac, e instanceof Error ? e : new Error(String(e)));
+        throw e;
+      }
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      this.events?.onError?.(`Handshake con ${mac}: ${err.message}`);
+      // failHello ya desconecta el socket; no hay ruta que limpiar porque
+      // handleHello nunca muta pkToMac/macToPk.
+      this.failHello(mac, err);
+    }
+  }
+
+  /**
+   * Fase 2 del handshake (R4): valida el CONFIRM v1 del peer según §4.4 del
+   * packet y, SOLO si todo verifica, establece la ruta y deriva la sesión.
+   *
+   * Este es el ÚNICO punto del transporte donde pkToMac/macToPk se mutan
+   * para un peer (además de su olvido en disconnect). Un HELLO solo —
+   * por genuino que sea — jamás llega aquí.
+   */
+  private async handleConfirm(mac: string, pend: PendingHello, body: Uint8Array): Promise<void> {
+    clearTimeout(pend.timer);
+    this.pending.delete(mac);
+    try {
+      const confirm = parseConfirm(body);
+      // §4.4 regla 2: el CONFIRM debe venir de la identidad cuyo HELLO
+      // abrió este pending (mata la reflexión: mi propio CONFIRM reflejado
+      // nombra MI pk, que nunca coincide con peerPk).
+      if (confirm.pk !== pend.peerPk) {
+        throw new Error(
+          "CONFIRM de identidad inesperada: no coincide con el HELLO de esta conexión. Conexión rechazada.",
+        );
+      }
+      // §4.4 reglas 3-4: el peer cita su propio nonce y MI nonce fresco,
+      // demostrando presencia viva en ESTA conexión.
+      if (confirm.cn !== pend.peerNonceHex) {
+        throw new Error(
+          "CONFIRM con nonce propio inesperado: no coincide con el HELLO del peer en esta conexión.",
+        );
+      }
+      if (confirm.pn !== pend.myNonceHex) {
+        throw new Error(
+          "CONFIRM con nonce ajeno inesperado: el peer no vio mi HELLO de esta conexión.",
+        );
+      }
+      // §4.4 regla 5: firma Ed25519 sobre (pk, cn, pn) con la clave del contacto.
+      const msg = buildConfirmSignMessage(confirm.pk, confirm.cn, confirm.pn);
+      const ok = verifyDetached(msg, fromHex(confirm.sig), fromHex(pend.peerSigPkHex!));
+      if (!ok) {
+        throw new Error(
+          "Firma del CONFIRM inválida: posible ataque de intermediario. Conexión rechazada.",
+        );
+      }
+      // CONFIRM válido: se establece la ruta (con tie-break si ya existe
+      // otra sesión confirmada con el mismo peer) y se deriva la sesión.
+      await this.establishRoute(mac, pend);
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      this.events?.onError?.(`Handshake con ${mac}: ${err.message}`);
+      pend.reject?.(err);
+      await this.bt().disconnect(mac).catch(() => {});
+    }
+  }
+
+  /**
+   * Establece la ruta tras un CONFIRM válido (R4 §4.4 "route establishment
+   * rule" + tie-break §4.5).
+   *
+   * Si ya existe una sesión confirmada con el mismo peer en otra MAC, ambas
+   * partes calculan independientemente la clave canónica
+   * K = min(nl,np)||max(nl,np) por sesión y conservan la de menor K: el
+   * ganador es el mismo en ambos lados sin importar el orden local.
+   */
+  private async establishRoute(mac: string, pend: PendingHello): Promise<void> {
+    const pkLower = pend.peerPk!;
+    const myK = tieBreakKey(pend.myNonceHex, pend.peerNonceHex!);
+    const existingMac = this.pkToMac.get(pkLower);
+    if (existingMac && existingMac !== mac) {
+      const existing = this.confirmedPair.get(existingMac);
+      if (existing) {
+        const existingK = tieBreakKey(existing.nonceLocalHex, existing.noncePeerHex);
+        if (myK > existingK) {
+          // Este socket pierde el tie-break: se cierra sin tocar la ruta.
+          // (El connect() pendiente de este socket se rechaza; la sesión
+          // ganadora sigue viva en existingMac.)
+          pend.reject?.(
+            new Error("Handshake simultáneo: la otra conexión con este contacto ganó el desempate."),
+          );
+          await this.bt().disconnect(mac).catch(() => {});
+          return;
+        }
+        // Ganamos: la sesión anterior se cierra con gracia.
+        this.forgetRoute(pkLower);
+        await this.bt().disconnect(existingMac).catch(() => {});
+      }
+    }
+    this.macToPk.set(mac, pkLower);
+    this.pkToMac.set(pkLower, mac);
+    this.lastHandshakeAt.set(pkLower, Date.now());
+    this.confirmedPair.set(mac, {
+      pkLower,
+      nonceLocalHex: pend.myNonceHex,
+      noncePeerHex: pend.peerNonceHex!,
+    });
+    const contact = await findContactByPk(pkLower);
+    const info: P2PPeerInfo = { pkHex: pkLower, alias: contact?.name ?? mac, transport: "bluetooth" };
+    // La sesión la deriva el messenger (ligada a ambos nonces).
+    this.events?.onHandshakeComplete?.(
+      pkLower,
+      pend.myEphSecret,
+      fromHex(pend.peerEphPkHex!),
+      pend.myNonce,
+      fromHex(pend.peerNonceHex!),
+    );
+    this.events?.onPeerFound?.(info);
+    pend.resolve?.(info);
+  }
+
+  private onNativeDisconnected(address: string): void {
+    const mac = address.toUpperCase();
+    const pend = this.pending.get(mac);
+    if (pend) {
+      clearTimeout(pend.timer);
+      this.pending.delete(mac);
+      pend.reject?.(new Error("Conexión cerrada durante el handshake."));
+    }
+    const pk = this.macToPk.get(mac);
+    if (pk) {
+      this.forgetRoute(pk);
+      this.events?.onPeerLost?.(pk);
+    } else {
+      this.events?.onPeerLost?.(mac);
+    }
+  }
+
+  private forgetRoute(peerPkHex: string): void {
+    const key = peerPkHex.toLowerCase();
+    const mac = this.pkToMac.get(key);
+    if (mac) {
+      this.macToPk.delete(mac);
+      this.confirmedPair.delete(mac);
+    }
+    this.pkToMac.delete(key);
+  }
+}

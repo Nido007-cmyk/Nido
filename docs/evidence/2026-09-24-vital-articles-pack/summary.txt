@@ -1,0 +1,15 @@
+BOAR Device Evaluation — eval-2026-09-24T20-41-45-071Z (set v1, 6 queries)
+────────────────────────────────────────────────────────────
+
+Qwen2.5-1.5B-Instruct (Q4_K_M)
+  Config:          model:qwen2.5-1.5b-instruct-q4km · prompt chat-template
+  Queries:         6 ok · 0 failed · 0 cancelled (of 6)
+  TTFT:            avg 6.4s · p50 6.1s
+  Model load:      none (already resident)
+  Generation:      avg 3.3s · p50 2.5s
+  Tokens/sec:      avg 17.5 · p50 16.8
+  Total per query: avg 10.6s · p50 9.8s
+  Peak RSS:        1.76 GB
+  Residency:       cold 0 · switched 0 · resident 6
+  Model switches:  0 within plans · 0 across messages
+  Retrieval:       used 6/6 · expected KB article found 3/3

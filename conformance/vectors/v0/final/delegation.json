@@ -1,0 +1,493 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "id": "del-001",
+      "title": "valid two-level chain",
+      "category": "valid",
+      "kind": "delegation",
+      "input": {
+        "chain": [
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800086400000,
+            "issued_at": 1799990000000,
+            "issuer_identity": "idA",
+            "scope": {
+              "max_uses": 3,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "devA1",
+            "v": "nido-delegation/1",
+            "signature": "816985ba99a48b68cf3cce4a0d4710a714e057a338698f9d64a5a6a42e7a96875bb22fdc2d53a2d91fee5eb8983cc899f5fab69ead2a2ec8566f8943e8ce4b07"
+          },
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800080000000,
+            "issued_at": 1799991000000,
+            "issuer_identity": "devA1",
+            "scope": {
+              "max_uses": 2,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "idB",
+            "v": "nido-delegation/1",
+            "signature": "8ff47806859688e028e05dbacf05424f9816d535553a67933f1360025cdc294b18c0440424df1d8534a4802fddeecda19224ef821d3fc0cc0b2aa81d88360c06"
+          }
+        ],
+        "now": 1800000000000,
+        "pubkeys": {
+          "devA1": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+          "idA": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+          "idB": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "leaf_subject": "idB",
+        "max_uses": 2,
+        "ok": true
+      }
+    },
+    {
+      "id": "del-002",
+      "title": "child expiry beyond parent is not attenuation",
+      "category": "invalid",
+      "kind": "delegation",
+      "input": {
+        "chain": [
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800086400000,
+            "issued_at": 1799990000000,
+            "issuer_identity": "idA",
+            "scope": {
+              "max_uses": 3,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "devA1",
+            "v": "nido-delegation/1",
+            "signature": "816985ba99a48b68cf3cce4a0d4710a714e057a338698f9d64a5a6a42e7a96875bb22fdc2d53a2d91fee5eb8983cc899f5fab69ead2a2ec8566f8943e8ce4b07"
+          },
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800090000000,
+            "issued_at": 1799991000000,
+            "issuer_identity": "devA1",
+            "scope": {
+              "max_uses": 2,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "idB",
+            "v": "nido-delegation/1",
+            "signature": "337f8a7438f50e900d1567430392397bb57e4739d23714d12ac9c8485823bc333db396f941d5b3f33c4a643e7daffcdb81745c45805a22e112d9176c36a19700"
+          }
+        ],
+        "now": 1800000000000,
+        "pubkeys": {
+          "devA1": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+          "idA": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+          "idB": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      }
+    },
+    {
+      "id": "del-003",
+      "title": "child max_uses above parent is not attenuation",
+      "category": "invalid",
+      "kind": "delegation",
+      "input": {
+        "chain": [
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800086400000,
+            "issued_at": 1799990000000,
+            "issuer_identity": "idA",
+            "scope": {
+              "max_uses": 3,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "devA1",
+            "v": "nido-delegation/1",
+            "signature": "816985ba99a48b68cf3cce4a0d4710a714e057a338698f9d64a5a6a42e7a96875bb22fdc2d53a2d91fee5eb8983cc899f5fab69ead2a2ec8566f8943e8ce4b07"
+          },
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800080000000,
+            "issued_at": 1799991000000,
+            "issuer_identity": "devA1",
+            "scope": {
+              "max_uses": 5,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "idB",
+            "v": "nido-delegation/1",
+            "signature": "65d0c6bd57b09ed126e2ccfbe4e9c3eb0ffddc30fe079e60cd5bed3d9c881db14f6e96fddbae74d7895a2c83e2a77f0d497e05f29c8aaf7f28b174f810a10d03"
+          }
+        ],
+        "now": 1800000000000,
+        "pubkeys": {
+          "devA1": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+          "idA": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+          "idB": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      }
+    },
+    {
+      "id": "del-004",
+      "title": "broken linkage: issuer is not parent subject",
+      "category": "invalid",
+      "kind": "delegation",
+      "input": {
+        "chain": [
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800086400000,
+            "issued_at": 1799990000000,
+            "issuer_identity": "idA",
+            "scope": {
+              "max_uses": 3,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "devA1",
+            "v": "nido-delegation/1",
+            "signature": "816985ba99a48b68cf3cce4a0d4710a714e057a338698f9d64a5a6a42e7a96875bb22fdc2d53a2d91fee5eb8983cc899f5fab69ead2a2ec8566f8943e8ce4b07"
+          },
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800080000000,
+            "issued_at": 1799991000000,
+            "issuer_identity": "idB",
+            "scope": {
+              "max_uses": 2,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "idB",
+            "v": "nido-delegation/1",
+            "signature": "1d446079808afef880798749c4516d3d4593ea88cef6bdf4366948bae7e674eea08cebf3542e062e2c59ea13b85a9ccd11019b38ab892b0fb4ebe3fe88cd4707"
+          }
+        ],
+        "now": 1800000000000,
+        "pubkeys": {
+          "devA1": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+          "idA": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+          "idB": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      }
+    },
+    {
+      "id": "del-005",
+      "title": "adversarial: forged leaf signature",
+      "category": "adversarial",
+      "kind": "delegation",
+      "input": {
+        "chain": [
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800086400000,
+            "issued_at": 1799990000000,
+            "issuer_identity": "idA",
+            "scope": {
+              "max_uses": 3,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "devA1",
+            "v": "nido-delegation/1",
+            "signature": "816985ba99a48b68cf3cce4a0d4710a714e057a338698f9d64a5a6a42e7a96875bb22fdc2d53a2d91fee5eb8983cc899f5fab69ead2a2ec8566f8943e8ce4b07"
+          },
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800080000000,
+            "issued_at": 1799991000000,
+            "issuer_identity": "devA1",
+            "scope": {
+              "max_uses": 2,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "idB",
+            "v": "nido-delegation/1",
+            "signature": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ],
+        "now": 1800000000000,
+        "pubkeys": {
+          "devA1": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+          "idA": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+          "idB": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      }
+    },
+    {
+      "id": "del-006",
+      "title": "capability change downstream rejected",
+      "category": "invalid",
+      "kind": "delegation",
+      "input": {
+        "chain": [
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800086400000,
+            "issued_at": 1799990000000,
+            "issuer_identity": "idA",
+            "scope": {
+              "max_uses": 3,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "devA1",
+            "v": "nido-delegation/1",
+            "signature": "816985ba99a48b68cf3cce4a0d4710a714e057a338698f9d64a5a6a42e7a96875bb22fdc2d53a2d91fee5eb8983cc899f5fab69ead2a2ec8566f8943e8ce4b07"
+          },
+          {
+            "capability": "calendar.contacts.read",
+            "capability_version": "v1",
+            "expires_at": 1800080000000,
+            "issued_at": 1799991000000,
+            "issuer_identity": "devA1",
+            "scope": {
+              "max_uses": 2,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "idB",
+            "v": "nido-delegation/1",
+            "signature": "9f78caea7393fe7e58dd3cae6b48875d7c926130e3c917e46e594c0c170ed4d9a933daf4ec3ad4c3cd75fdf5521e891a6fb63c250c2526a89417dd05a26dc90c"
+          }
+        ],
+        "now": 1800000000000,
+        "pubkeys": {
+          "devA1": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+          "idA": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+          "idB": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      }
+    },
+    {
+      "id": "del-007",
+      "title": "peer scope widening rejected",
+      "category": "invalid",
+      "kind": "delegation",
+      "input": {
+        "chain": [
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800086400000,
+            "issued_at": 1799990000000,
+            "issuer_identity": "idA",
+            "scope": {
+              "max_uses": 3,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "devA1",
+            "v": "nido-delegation/1",
+            "signature": "816985ba99a48b68cf3cce4a0d4710a714e057a338698f9d64a5a6a42e7a96875bb22fdc2d53a2d91fee5eb8983cc899f5fab69ead2a2ec8566f8943e8ce4b07"
+          },
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800080000000,
+            "issued_at": 1799991000000,
+            "issuer_identity": "devA1",
+            "scope": {
+              "max_uses": 2,
+              "peers": [
+                "idA",
+                "idB"
+              ]
+            },
+            "subject_identity": "idB",
+            "v": "nido-delegation/1",
+            "signature": "7b0330a5fc621b6202982491c6ecc81951949f25e508f14f37e45dc06d16bdd234ce42b9b01f812da63c5b96e97cdfc7339ffec2fbdedaa615acadb8f27bc40a"
+          }
+        ],
+        "now": 1800000000000,
+        "pubkeys": {
+          "devA1": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+          "idA": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+          "idB": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      }
+    },
+    {
+      "id": "del-008",
+      "title": "expired leaf rejected",
+      "category": "invalid",
+      "kind": "delegation",
+      "input": {
+        "chain": [
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800086400000,
+            "issued_at": 1799990000000,
+            "issuer_identity": "idA",
+            "scope": {
+              "max_uses": 3,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "devA1",
+            "v": "nido-delegation/1",
+            "signature": "816985ba99a48b68cf3cce4a0d4710a714e057a338698f9d64a5a6a42e7a96875bb22fdc2d53a2d91fee5eb8983cc899f5fab69ead2a2ec8566f8943e8ce4b07"
+          },
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1799999999999,
+            "issued_at": 1799991000000,
+            "issuer_identity": "devA1",
+            "scope": {
+              "max_uses": 2,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "idB",
+            "v": "nido-delegation/1",
+            "signature": "f0d07d369ac9c010f37be0ede614055ca2c684c83c0fb9cb7508cb7709dd71526f1038da7f803a30df0e0a8442e37c5e62f2d1fae8c528d0fdc0bfad0da4de0e"
+          }
+        ],
+        "now": 1800000000000,
+        "pubkeys": {
+          "devA1": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+          "idA": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+          "idB": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      }
+    },
+    {
+      "id": "del-009",
+      "title": "empty chain rejected",
+      "category": "invalid",
+      "kind": "delegation",
+      "input": {
+        "chain": [],
+        "now": 1800000000000,
+        "pubkeys": {
+          "idA": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8"
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      }
+    },
+    {
+      "id": "del-010",
+      "title": "expired root rejected",
+      "category": "invalid",
+      "kind": "delegation",
+      "input": {
+        "chain": [
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1799999999999,
+            "issued_at": 1799990000000,
+            "issuer_identity": "idA",
+            "scope": {
+              "max_uses": 3,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "devA1",
+            "v": "nido-delegation/1",
+            "signature": "cf259c517b62d8e5e6b8849d4db5f09063d636071e1085211c0caa8cfdef2c9988f3836b801ad8d82ef4b094c8d2e5e76bda9ceb8b184ed13a8a32e9be273e03"
+          },
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800080000000,
+            "issued_at": 1799991000000,
+            "issuer_identity": "devA1",
+            "scope": {
+              "max_uses": 2,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "idB",
+            "v": "nido-delegation/1",
+            "signature": "8ff47806859688e028e05dbacf05424f9816d535553a67933f1360025cdc294b18c0440424df1d8534a4802fddeecda19224ef821d3fc0cc0b2aa81d88360c06"
+          }
+        ],
+        "now": 1800000000000,
+        "pubkeys": {
+          "devA1": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+          "idA": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+          "idB": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "error": "DELEGATION_INVALID",
+        "ok": false
+      }
+    }
+  ]
+}

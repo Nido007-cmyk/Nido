@@ -1,0 +1,86 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "id": "ext-001",
+      "title": "extension shadowing a core capability is rejected",
+      "category": "invalid",
+      "kind": "extension",
+      "expected": {
+        "ok": true,
+        "results": [
+          "EXTENSION_SHADOWING"
+        ]
+      },
+      "input": {
+        "attempts": [
+          "calendar.availability.query"
+        ],
+        "core": [
+          "calendar.availability.query"
+        ]
+      }
+    },
+    {
+      "id": "ext-002",
+      "title": "non-colliding extension registers",
+      "category": "valid",
+      "kind": "extension",
+      "expected": {
+        "ok": true,
+        "results": [
+          "ok"
+        ]
+      },
+      "input": {
+        "attempts": [
+          "calendar.availability.export"
+        ],
+        "core": [
+          "calendar.availability.query"
+        ]
+      }
+    },
+    {
+      "id": "ext-003",
+      "title": "adversarial: lookalike name registers at the name layer, but no policy rule will ever pin it (policy vectors deny it)",
+      "category": "adversarial",
+      "kind": "extension",
+      "expected": {
+        "ok": true,
+        "results": [
+          "ok"
+        ]
+      },
+      "input": {
+        "attempts": [
+          "calendar.availability.querÿ"
+        ],
+        "core": [
+          "calendar.availability.query"
+        ]
+      }
+    },
+    {
+      "id": "ext-004",
+      "title": "duplicate extension registration rejected",
+      "category": "invalid",
+      "kind": "extension",
+      "expected": {
+        "ok": true,
+        "results": [
+          "ok",
+          "ALREADY_REGISTERED"
+        ]
+      },
+      "input": {
+        "attempts": [
+          "x.y",
+          "x.y"
+        ],
+        "core": []
+      }
+    }
+  ]
+}

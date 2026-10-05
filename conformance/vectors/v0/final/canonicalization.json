@@ -1,0 +1,309 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "id": "canon-001",
+      "title": "key sorting",
+      "category": "valid",
+      "kind": "canonicalization",
+      "input_raw": "{\"b\":2,\"a\":1}",
+      "expected": {
+        "canonical": "{\"a\":1,\"b\":2}",
+        "ok": true,
+        "sha256": "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777"
+      }
+    },
+    {
+      "id": "canon-002",
+      "title": "nested objects sorted recursively, arrays keep order",
+      "category": "valid",
+      "kind": "canonicalization",
+      "input_raw": "{\"z\":{\"b\":1,\"a\":[3,2,1]},\"a\":null}",
+      "expected": {
+        "canonical": "{\"a\":null,\"z\":{\"a\":[3,2,1],\"b\":1}}",
+        "ok": true,
+        "sha256": "792b4ddcddc9f5c8fc091aea226ee93ef4a03d0bd56a1c05c3313156bc878f78"
+      }
+    },
+    {
+      "id": "canon-003",
+      "title": "control chars use \\uXXXX, no short escapes",
+      "category": "valid",
+      "kind": "canonicalization",
+      "input_raw": "\"a\\nb\\t\\\"q\\\"\\\\c\\u0001\"",
+      "expected": {
+        "canonical": "\"a\\u000ab\\u0009\\\"q\\\"\\\\c\\u0001\"",
+        "ok": true,
+        "sha256": "0cfc120d4dbf614be1708a6ceefc3836531290b862d55b06559654c7eac497b0"
+      }
+    },
+    {
+      "id": "canon-004",
+      "title": "non-ASCII stays literal",
+      "category": "valid",
+      "kind": "canonicalization",
+      "input_raw": "{\"é\":\"😀\"}",
+      "expected": {
+        "canonical": "{\"é\":\"😀\"}",
+        "ok": true,
+        "sha256": "5b1d7df2c21dc54efccf82e1619e4bb36e2c98b777cccf238af48a4e11f36585"
+      }
+    },
+    {
+      "id": "canon-005",
+      "title": "numbers: -0, 1.0, 1e2, 0.5",
+      "category": "valid",
+      "kind": "canonicalization",
+      "input_raw": "[-0,1.0,1e2,0.5]",
+      "expected": {
+        "canonical": "[0,1,100,0.5]",
+        "ok": true,
+        "sha256": "f2bb0715308fe1d9c01c372ee340f6c6b67a1f7ff06b3ab713ed347e3060b6d5"
+      }
+    },
+    {
+      "id": "canon-006",
+      "title": "different key order, same canonical (determinism)",
+      "category": "valid",
+      "kind": "canonicalization",
+      "input_raw": "{\"b\":1,\"a\":2}",
+      "expected": {
+        "canonical": "{\"a\":2,\"b\":1}",
+        "ok": true,
+        "sha256": "d3626ac30a87e6f7a6428233b3c68299976865fa5508e4267c5415c76af7a772"
+      }
+    },
+    {
+      "id": "canon-007",
+      "title": "empty object and array",
+      "category": "valid",
+      "kind": "canonicalization",
+      "input_raw": "{\"o\":{},\"a\":[]}",
+      "expected": {
+        "canonical": "{\"a\":[],\"o\":{}}",
+        "ok": true,
+        "sha256": "9bee7ebfc94b459dacb8cbc72cb2900e61f0aa42189df18329f84f92568f4f89"
+      }
+    },
+    {
+      "id": "canon-008",
+      "title": "astral-plane key sorts by UTF-16 code units after ASCII",
+      "category": "valid",
+      "kind": "canonicalization",
+      "input_raw": "{\"😀\":\"x\",\"a\":\"y\"}",
+      "expected": {
+        "canonical": "{\"a\":\"y\",\"😀\":\"x\"}",
+        "ok": true,
+        "sha256": "6937fecad251d15ea02500f9f2bb1baf3b372638c934fc22ca0a649b36adcc60"
+      }
+    },
+    {
+      "id": "canon-009",
+      "title": "uppercase sorts before lowercase (UTF-16)",
+      "category": "valid",
+      "kind": "canonicalization",
+      "input_raw": "{\"b\":1,\"a\":2,\"A\":3}",
+      "expected": {
+        "canonical": "{\"A\":3,\"a\":2,\"b\":1}",
+        "ok": true,
+        "sha256": "e36823485c211bdf27aa7bb577fe79ba2ad122cfbb95023ae886736fd48e9b7c"
+      }
+    },
+    {
+      "id": "canon-b01",
+      "title": "boundary: max safe integer",
+      "category": "boundary",
+      "kind": "canonicalization",
+      "input_raw": "9007199254740991",
+      "expected": {
+        "canonical": "9007199254740991",
+        "ok": true,
+        "sha256": "f40b423c2dd95ff2b2f027e22208f438cf7242862e5e746860e697308c9add26"
+      }
+    },
+    {
+      "id": "canon-b02",
+      "title": "boundary: negative zero serializes as 0",
+      "category": "boundary",
+      "kind": "canonicalization",
+      "input_raw": "-0",
+      "expected": {
+        "canonical": "0",
+        "ok": true,
+        "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+      }
+    },
+    {
+      "id": "canon-b03",
+      "title": "boundary: shortest round-trip double",
+      "category": "boundary",
+      "kind": "canonicalization",
+      "input_raw": "0.30000000000000004",
+      "expected": {
+        "canonical": "0.30000000000000004",
+        "ok": true,
+        "sha256": "06bad31060c1212ae832de4c031f7b31e3b48aed57858294478cb19450cf34ca"
+      }
+    },
+    {
+      "id": "canon-b04",
+      "title": "boundary: large double uses exponent form",
+      "category": "boundary",
+      "kind": "canonicalization",
+      "input_raw": "1e21",
+      "expected": {
+        "canonical": "1e+21",
+        "ok": true,
+        "sha256": "241c4643fa70b1dcde1205b71be4e3bebb17e9f880c8e1a33d0ead6c27271d3c"
+      }
+    },
+    {
+      "id": "canon-b05",
+      "title": "boundary: DEL (0x7F) stays literal, not escaped",
+      "category": "boundary",
+      "kind": "canonicalization",
+      "input_raw": "\"\\u007f\"",
+      "expected": {
+        "canonical": "\"\"",
+        "ok": true,
+        "sha256": "6fe76740e12a93d5598fe685cb6ad3d3c94e44609065a56866b69647772026ec"
+      }
+    },
+    {
+      "id": "canon-e01",
+      "title": "invalid: duplicate key rejected",
+      "category": "invalid",
+      "kind": "canonicalization",
+      "input_raw": "{\"a\":1,\"a\":2}",
+      "expected": {
+        "error": "DUPLICATE_FIELD",
+        "ok": false
+      }
+    },
+    {
+      "id": "canon-e02",
+      "title": "invalid: trailing garbage",
+      "category": "invalid",
+      "kind": "canonicalization",
+      "input_raw": "{\"a\":1} x",
+      "expected": {
+        "error": "PARSE_ERROR",
+        "ok": false
+      }
+    },
+    {
+      "id": "canon-e03",
+      "title": "invalid: lone surrogate",
+      "category": "invalid",
+      "kind": "canonicalization",
+      "input_raw": "\"\\ud83d\"",
+      "expected": {
+        "error": "PARSE_ERROR",
+        "ok": false
+      }
+    },
+    {
+      "id": "canon-e04",
+      "title": "invalid: unescaped control character",
+      "category": "invalid",
+      "kind": "canonicalization",
+      "input_raw": "\"a\nb\"",
+      "expected": {
+        "error": "PARSE_ERROR",
+        "ok": false
+      }
+    },
+    {
+      "id": "canon-e05",
+      "title": "invalid: unsafe integer (>= 2^53)",
+      "category": "invalid",
+      "kind": "canonicalization",
+      "input_raw": "9007199254740993",
+      "expected": {
+        "error": "UNSAFE_INTEGER",
+        "ok": false
+      }
+    },
+    {
+      "id": "canon-e06",
+      "title": "invalid: NaN literal",
+      "category": "invalid",
+      "kind": "canonicalization",
+      "input_raw": "NaN",
+      "expected": {
+        "error": "PARSE_ERROR",
+        "ok": false
+      }
+    },
+    {
+      "id": "canon-e07",
+      "title": "invalid: trailing comma",
+      "category": "invalid",
+      "kind": "canonicalization",
+      "input_raw": "{\"a\":1,}",
+      "expected": {
+        "error": "PARSE_ERROR",
+        "ok": false
+      }
+    },
+    {
+      "id": "canon-a01",
+      "title": "adversarial: raw duplicate key, naive parsers keep last",
+      "category": "adversarial",
+      "kind": "canonicalization",
+      "input_raw": "{\"a\":1,\"b\":2,\"a\":3}",
+      "expected": {
+        "error": "DUPLICATE_FIELD",
+        "ok": false
+      }
+    },
+    {
+      "id": "canon-a02",
+      "title": "adversarial: escaped key normalizes to same key",
+      "category": "adversarial",
+      "kind": "canonicalization",
+      "input_raw": "{\"\\u0041\":1}",
+      "expected": {
+        "canonical": "{\"A\":1}",
+        "ok": true,
+        "sha256": "52dddc1755a9b3acadf12eab7f2ac1eb564a55de3a33822fa369f59923dddefc"
+      }
+    },
+    {
+      "id": "canon-a03",
+      "title": "adversarial: ambiguous number 1.00 normalizes to 1",
+      "category": "adversarial",
+      "kind": "canonicalization",
+      "input_raw": "1.00",
+      "expected": {
+        "canonical": "1",
+        "ok": true,
+        "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+      }
+    },
+    {
+      "id": "canon-a04",
+      "title": "adversarial: plus sign is not valid JSON",
+      "category": "adversarial",
+      "kind": "canonicalization",
+      "input_raw": "+1",
+      "expected": {
+        "error": "PARSE_ERROR",
+        "ok": false
+      }
+    },
+    {
+      "id": "canon-a05",
+      "title": "adversarial: __proto__ is data, never magic (null-prototype parse)",
+      "category": "adversarial",
+      "kind": "canonicalization",
+      "input_raw": "{\"__proto__\":{\"polluted\":true},\"a\":1}",
+      "expected": {
+        "canonical": "{\"__proto__\":{\"polluted\":true},\"a\":1}",
+        "ok": true,
+        "sha256": "acb9124c160bde29f1302ed9ea8d241871f4ee6f634b8368cc11c9d09afe837a"
+      }
+    }
+  ]
+}

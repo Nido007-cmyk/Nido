@@ -1,0 +1,240 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "id": "con-001",
+      "title": "matching consent authorizes",
+      "category": "valid",
+      "kind": "consent",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1800086400000,
+          "max_uses": 3,
+          "parameters_hash": "phA",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "uses": 1
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters_hash": "phA",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "ok": true,
+        "uses_left": 1
+      }
+    },
+    {
+      "id": "con-002",
+      "title": "correct consent with modified parameters denied",
+      "category": "invalid",
+      "kind": "consent",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1800086400000,
+          "max_uses": 3,
+          "parameters_hash": "phA",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "uses": 1
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters_hash": "phB",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "error": "POLICY_DENIED",
+        "ok": false
+      }
+    },
+    {
+      "id": "con-003",
+      "title": "expired consent denied",
+      "category": "invalid",
+      "kind": "consent",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1799999999999,
+          "max_uses": 3,
+          "parameters_hash": "phA",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "uses": 0
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters_hash": "phA",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "error": "CONSENT_EXPIRED",
+        "ok": false
+      }
+    },
+    {
+      "id": "con-004",
+      "title": "exhausted consent denied",
+      "category": "invalid",
+      "kind": "consent",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1800086400000,
+          "max_uses": 2,
+          "parameters_hash": "phA",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "uses": 2
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters_hash": "phA",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "error": "CONSENT_EXHAUSTED",
+        "ok": false
+      }
+    },
+    {
+      "id": "con-005",
+      "title": "consent bound to another peer denied",
+      "category": "invalid",
+      "kind": "consent",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1800086400000,
+          "max_uses": 3,
+          "parameters_hash": "phA",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "uses": 0
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters_hash": "phA",
+          "peer": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8"
+        }
+      },
+      "expected": {
+        "error": "POLICY_DENIED",
+        "ok": false
+      }
+    },
+    {
+      "id": "con-006",
+      "title": "consent bound to another capability version denied",
+      "category": "invalid",
+      "kind": "consent",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1800086400000,
+          "max_uses": 3,
+          "parameters_hash": "phA",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "uses": 0
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v2",
+          "now": 1800000000000,
+          "parameters_hash": "phA",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "error": "POLICY_DENIED",
+        "ok": false
+      }
+    },
+    {
+      "id": "con-007",
+      "title": "boundary: last use authorizes, next will exhaust",
+      "category": "boundary",
+      "kind": "consent",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1800086400000,
+          "max_uses": 3,
+          "parameters_hash": "phA",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "uses": 2
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters_hash": "phA",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "ok": true,
+        "uses_left": 0
+      }
+    },
+    {
+      "id": "con-009",
+      "title": "boundary: now == expires_at is already expired (inclusive)",
+      "category": "boundary",
+      "kind": "consent",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c9",
+          "expires_at": 1800000000000,
+          "max_uses": 3,
+          "parameters": {},
+          "parameters_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "uses": 0
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters": {},
+          "parameters_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "error": "CONSENT_EXPIRED",
+        "ok": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,327 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "id": "neg-001",
+      "title": "adversarial: raw key order shuffled after signing still verifies (signature is over canonical)",
+      "category": "adversarial",
+      "kind": "envelope",
+      "input_raw": "{\"signature\":\"d7db84c96e314322fa9dda04959eae222378c45119bca33bf8a46f74fe033a13a0b8368174c6ea5ad35673796163d2f87a41fecf6c209032cfe4fd43885c5908\",\"task_id\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"sender\":{\"device_id\":\"devA1\",\"identity_pubkey\":\"03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8\",\"device_cert\":{\"device_pubkey\":\"29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7\",\"identity_pubkey\":\"03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8\",\"issued_at\":1799990000000,\"expires_at\":1800086400000,\"signature\":\"337a8d581946f85e9a5bbd4d652c741b6f399e842332aef9ce4a498fb6f0cda6bfcf1970bb75736ae41ed7ada3bb822d8ffae2fe9220d6953dc40ea60d528b0f\"}},\"recipient_identity\":\"2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d\",\"protocol_version\":\"nido/1.0\",\"payload\":{\"capability\":\"calendar.availability.query\",\"capability_version\":\"v1\",\"parameters\":{\"granularity_ms\":900000,\"window_ms\":3600000},\"ttl_ms\":60000},\"nonce\":\"cccccccccccccccccccccccccccccccc\",\"message_type\":\"TASK_REQUEST\",\"message_id\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"expires_at\":1800003600000,\"crypto_suite\":\"ed25519-sha256-v1\",\"created_at\":1799999990000}",
+      "input": {
+        "ctx": {
+          "now_ms": 1800000000000,
+          "seen": [],
+          "skew_ms": 300000
+        }
+      },
+      "expected": {
+        "message_type": "TASK_REQUEST",
+        "ok": true,
+        "sender_device": "devA1",
+        "task_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    {
+      "id": "neg-002",
+      "title": "adversarial: null version never matches a pinned rule",
+      "category": "adversarial",
+      "kind": "policy",
+      "expected": {
+        "decision": "DENY",
+        "ok": true
+      },
+      "input": {
+        "request": {
+          "capability": "calendar.availability.query",
+          "now": 1800000000000,
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "subject": "peer:2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "version": null
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "mode": "AUTO",
+            "subject": "peer:2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+            "version": "v1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "neg-003",
+      "title": "adversarial: unknown token field is ignored and grants no authority",
+      "category": "adversarial",
+      "kind": "delegation",
+      "input": {
+        "chain": [
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800086400000,
+            "issued_at": 1799990000000,
+            "issuer_identity": "idA",
+            "scope": {
+              "max_uses": 3,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "devA1",
+            "v": "nido-delegation/1",
+            "note": "ignored-field",
+            "signature": "816985ba99a48b68cf3cce4a0d4710a714e057a338698f9d64a5a6a42e7a96875bb22fdc2d53a2d91fee5eb8983cc899f5fab69ead2a2ec8566f8943e8ce4b07"
+          },
+          {
+            "capability": "calendar.availability.query",
+            "capability_version": "v1",
+            "expires_at": 1800080000000,
+            "issued_at": 1799991000000,
+            "issuer_identity": "devA1",
+            "scope": {
+              "max_uses": 2,
+              "peers": [
+                "idB"
+              ]
+            },
+            "subject_identity": "idB",
+            "v": "nido-delegation/1",
+            "signature": "8ff47806859688e028e05dbacf05424f9816d535553a67933f1360025cdc294b18c0440424df1d8534a4802fddeecda19224ef821d3fc0cc0b2aa81d88360c06"
+          }
+        ],
+        "now": 1800000000000,
+        "pubkeys": {
+          "devA1": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+          "idA": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+          "idB": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "leaf_subject": "idB",
+        "max_uses": 2,
+        "ok": true
+      }
+    },
+    {
+      "id": "neg-004",
+      "title": "adversarial: switching transport does not reset the identity budget",
+      "category": "adversarial",
+      "kind": "budget",
+      "expected": {
+        "at_step": 1,
+        "error": "BUDGET_EXHAUSTED",
+        "ok": false
+      },
+      "input": {
+        "opts": {
+          "budget": 10,
+          "now": 1800000000000,
+          "window_ms": 3600000
+        },
+        "state": {},
+        "steps": [
+          {
+            "identity": "idA",
+            "units": 5,
+            "via": "bluetooth"
+          },
+          {
+            "identity": "idA",
+            "units": 6,
+            "via": "relay"
+          }
+        ]
+      }
+    },
+    {
+      "id": "neg-005",
+      "title": "adversarial: parameter key order does not change the binding hash",
+      "category": "adversarial",
+      "kind": "consent",
+      "input": {
+        "grant": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "consent_id": "c1",
+          "expires_at": 1800086400000,
+          "max_uses": 3,
+          "parameters": {
+            "granularity_ms": 900000,
+            "window_ms": 3600000
+          },
+          "parameters_hash": "8c257603454bf67c0208abb27aeb9766ccad3755fd4263c20230108a3d623067",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "uses": 0
+        },
+        "request": {
+          "capability": "calendar.availability.query",
+          "capability_version": "v1",
+          "now": 1800000000000,
+          "parameters": {
+            "granularity_ms": 900000,
+            "window_ms": 3600000
+          },
+          "parameters_hash": "8c257603454bf67c0208abb27aeb9766ccad3755fd4263c20230108a3d623067",
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d"
+        }
+      },
+      "expected": {
+        "ok": true,
+        "uses_left": 2
+      }
+    },
+    {
+      "id": "neg-006",
+      "title": "adversarial: version with trailing space never matches",
+      "category": "adversarial",
+      "kind": "policy",
+      "expected": {
+        "decision": "DENY",
+        "ok": true
+      },
+      "input": {
+        "request": {
+          "capability": "calendar.availability.query",
+          "now": 1800000000000,
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "subject": "peer:2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "version": "v1 "
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "mode": "AUTO",
+            "subject": "peer:2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+            "version": "v1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "neg-007",
+      "title": "adversarial: use after revoke is a defined terminal error",
+      "category": "invalid",
+      "kind": "state_machine",
+      "expected": {
+        "at_event": 2,
+        "error": "TERMINAL_STATE",
+        "ok": false
+      },
+      "input": {
+        "events": [
+          "grant",
+          "revoke",
+          "use"
+        ],
+        "machine": "CONSENT"
+      }
+    },
+    {
+      "id": "neg-008",
+      "title": "adversarial: local-only rule never authorizes a peer",
+      "category": "invalid",
+      "kind": "policy",
+      "expected": {
+        "decision": "DENY",
+        "ok": true
+      },
+      "input": {
+        "request": {
+          "capability": "calendar.availability.query",
+          "now": 1800000000000,
+          "peer": "2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "subject": "peer:2543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d",
+          "version": "v1"
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "mode": "AUTO",
+            "subject": "local",
+            "version": "v1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "neg-009",
+      "title": "adversarial: eleven tiny disclosures still exceed the budget in aggregate",
+      "category": "invalid",
+      "kind": "graph",
+      "expected": {
+        "error": "GRAPH_BUDGET_EXCEEDED",
+        "ok": false
+      },
+      "input": {
+        "budget": 10,
+        "nodes": [
+          {
+            "disclosed_units": 1,
+            "id": "n1"
+          },
+          {
+            "disclosed_units": 1,
+            "id": "n2"
+          },
+          {
+            "disclosed_units": 1,
+            "id": "n3"
+          },
+          {
+            "disclosed_units": 1,
+            "id": "n4"
+          },
+          {
+            "disclosed_units": 1,
+            "id": "n5"
+          },
+          {
+            "disclosed_units": 1,
+            "id": "n6"
+          },
+          {
+            "disclosed_units": 1,
+            "id": "n7"
+          },
+          {
+            "disclosed_units": 1,
+            "id": "n8"
+          },
+          {
+            "disclosed_units": 1,
+            "id": "n9"
+          },
+          {
+            "disclosed_units": 1,
+            "id": "n10"
+          },
+          {
+            "disclosed_units": 1,
+            "id": "n11"
+          }
+        ]
+      }
+    },
+    {
+      "id": "neg-010",
+      "title": "boundary: prefix of a core name is not shadowing (exact match only)",
+      "category": "valid",
+      "kind": "extension",
+      "expected": {
+        "ok": true,
+        "results": [
+          "ok"
+        ]
+      },
+      "input": {
+        "attempts": [
+          "calendar"
+        ],
+        "core": [
+          "calendar.availability.query"
+        ]
+      }
+    }
+  ]
+}

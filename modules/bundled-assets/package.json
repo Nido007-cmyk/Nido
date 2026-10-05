@@ -1,0 +1,7 @@
+{
+  "name": "bundled-assets",
+  "version": "0.1.0",
+  "description": "Local Expo module that copies model files baked into the APK's compiled assets out to the app's document directory, purely locally (no network), so the app works offline immediately after install.",
+  "main": "index.ts",
+  "license": "MIT"
+}

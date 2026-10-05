@@ -1,0 +1,373 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "category": "invalid",
+      "expected": {
+        "decision": "DENY",
+        "ok": true
+      },
+      "id": "pol-001",
+      "input": {
+        "request": {
+          "capability": "calendar.availability.query",
+          "now": 1800000000000,
+          "peer": "alias:idB",
+          "subject": "peer:alias:idB",
+          "version": "v1"
+        },
+        "rules": []
+      },
+      "kind": "policy",
+      "title": "unknown subject denies"
+    },
+    {
+      "category": "valid",
+      "expected": {
+        "decision": "ALLOW_FOR_CONTACT",
+        "ok": true
+      },
+      "id": "pol-002",
+      "input": {
+        "request": {
+          "capability": "calendar.availability.query",
+          "now": 1800000000000,
+          "peer": "alias:idB",
+          "subject": "peer:alias:idB",
+          "version": "v1"
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "mode": "AUTO",
+            "subject": "peer:alias:idB",
+            "version": "v1"
+          }
+        ]
+      },
+      "kind": "policy",
+      "title": "exact pinned rule allows"
+    },
+    {
+      "category": "invalid",
+      "expected": {
+        "decision": "DENY",
+        "ok": true
+      },
+      "id": "pol-003",
+      "input": {
+        "request": {
+          "capability": "calendar.availability.query",
+          "now": 1800000000000,
+          "peer": "alias:idB",
+          "subject": "peer:alias:idB",
+          "version": "v2"
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "mode": "AUTO",
+            "subject": "peer:alias:idB",
+            "version": "v1"
+          }
+        ]
+      },
+      "kind": "policy",
+      "title": "version mismatch denies: updates never widen authority (C-5)"
+    },
+    {
+      "category": "invalid",
+      "expected": {
+        "decision": "DENY",
+        "ok": true
+      },
+      "id": "pol-004",
+      "input": {
+        "request": {
+          "capability": "calendar.availability.query",
+          "now": 1800000000000,
+          "peer": "alias:idB",
+          "subject": "peer:alias:idB",
+          "version": "v1"
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "expires_at": 1799999999999,
+            "mode": "AUTO",
+            "subject": "peer:alias:idB",
+            "version": "v1"
+          }
+        ]
+      },
+      "kind": "policy",
+      "title": "expired rule denies"
+    },
+    {
+      "category": "valid",
+      "expected": {
+        "decision": "ASK_USER",
+        "ok": true
+      },
+      "id": "pol-005",
+      "input": {
+        "request": {
+          "capability": "calendar.availability.query",
+          "now": 1800000000000,
+          "peer": "alias:idB",
+          "subject": "peer:alias:idB",
+          "version": "v1"
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "mode": "ASK",
+            "subject": "peer:alias:idB",
+            "version": "v1"
+          }
+        ]
+      },
+      "kind": "policy",
+      "title": "ASK mode asks user"
+    },
+    {
+      "category": "invalid",
+      "expected": {
+        "decision": "DENY",
+        "ok": true
+      },
+      "id": "pol-006",
+      "input": {
+        "request": {
+          "capability": "calendar.availability.query",
+          "now": 1800000000000,
+          "peer": "alias:idB",
+          "subject": "peer:alias:idB",
+          "version": "v1"
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "mode": "AUTO",
+            "subject": "peer:alias:idB",
+            "version": "v1"
+          },
+          {
+            "capability": "calendar.availability.query",
+            "mode": "DENY",
+            "subject": "peer:alias:idB",
+            "version": "v1"
+          }
+        ]
+      },
+      "kind": "policy",
+      "title": "explicit DENY wins over AUTO"
+    },
+    {
+      "category": "invalid",
+      "expected": {
+        "decision": "DENY",
+        "ok": true
+      },
+      "id": "pol-007",
+      "input": {
+        "request": {
+          "capability": "calendar.availability.query",
+          "now": 1800000000000,
+          "peer": "alias:idB",
+          "subject": "peer:alias:idB",
+          "version": "v1",
+          "window_ms": 7200000
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "constraints": {
+              "max_window_ms": 3600000
+            },
+            "mode": "AUTO",
+            "subject": "peer:alias:idB",
+            "version": "v1"
+          }
+        ]
+      },
+      "kind": "policy",
+      "title": "constraint violation denies"
+    },
+    {
+      "category": "valid",
+      "expected": {
+        "decision": "ALLOW_UNDER_CONDITIONS",
+        "ok": true
+      },
+      "id": "pol-008",
+      "input": {
+        "request": {
+          "capability": "calendar.availability.query",
+          "granularity_ms": 900000,
+          "now": 1800000000000,
+          "peer": "alias:idB",
+          "subject": "peer:alias:idB",
+          "version": "v1",
+          "window_ms": 3600000
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "constraints": {
+              "max_window_ms": 3600000,
+              "min_granularity_ms": 900000
+            },
+            "mode": "AUTO",
+            "subject": "peer:alias:idB",
+            "version": "v1"
+          }
+        ]
+      },
+      "kind": "policy",
+      "title": "satisfied constraints allow under conditions"
+    },
+    {
+      "category": "invalid",
+      "expected": {
+        "decision": "DENY",
+        "ok": true
+      },
+      "id": "pol-009",
+      "input": {
+        "request": {
+          "capability": "calendar.availability.query",
+          "now": 1800000000000,
+          "peer": "alias:idB",
+          "subject": "peer:alias:idB",
+          "version": "v1"
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "constraints": {
+              "peers": [
+                "alias:idA"
+              ]
+            },
+            "mode": "AUTO",
+            "subject": "peer:alias:idB",
+            "version": "v1"
+          }
+        ]
+      },
+      "kind": "policy",
+      "title": "peer not in allowlist denies"
+    },
+    {
+      "category": "invalid",
+      "expected": {
+        "decision": "DENY",
+        "ok": true
+      },
+      "id": "pol-010",
+      "input": {
+        "request": {
+          "capability": "calendar.contacts.read",
+          "now": 1800000000000,
+          "peer": "alias:idB",
+          "subject": "peer:alias:idB",
+          "version": "v1"
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "mode": "AUTO",
+            "subject": "peer:alias:idB",
+            "version": "v1"
+          }
+        ]
+      },
+      "kind": "policy",
+      "title": "unknown capability denies"
+    },
+    {
+      "category": "valid",
+      "expected": {
+        "decision": "ALLOW_ONCE",
+        "ok": true
+      },
+      "id": "pol-011",
+      "input": {
+        "request": {
+          "capability": "calendar.availability.query",
+          "now": 1800000000000,
+          "peer": "",
+          "subject": "local",
+          "version": "v1"
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "mode": "AUTO",
+            "subject": "local",
+            "version": "v1"
+          }
+        ]
+      },
+      "kind": "policy",
+      "title": "local subject without constraints allows once"
+    },
+    {
+      "category": "adversarial",
+      "expected": {
+        "decision": "DENY",
+        "ok": true
+      },
+      "id": "pol-012",
+      "input": {
+        "request": {
+          "capability": "calendar.availability.quer\u00ff",
+          "now": 1800000000000,
+          "peer": "alias:idB",
+          "subject": "peer:alias:idB",
+          "version": "v1"
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "mode": "AUTO",
+            "subject": "peer:alias:idB",
+            "version": "v1"
+          }
+        ]
+      },
+      "kind": "policy",
+      "title": "adversarial: lookalike capability name never matches a pinned rule"
+    },
+    {
+      "category": "invalid",
+      "expected": {
+        "decision": "DENY",
+        "ok": true
+      },
+      "id": "pol-013",
+      "input": {
+        "request": {
+          "capability": "calendar.availability.query",
+          "now": 1800000000000,
+          "peer": "alias:idB",
+          "subject": "peer:alias:idB",
+          "version": "v1"
+        },
+        "rules": [
+          {
+            "capability": "calendar.availability.query",
+            "expires_at": 1800000000000,
+            "mode": "AUTO",
+            "subject": "peer:alias:idB",
+            "version": "v1"
+          }
+        ]
+      },
+      "kind": "policy",
+      "title": "rule dead exactly at expires_at boundary (AMB-06 pinning, TS_BUG #5 regression)"
+    }
+  ]
+}

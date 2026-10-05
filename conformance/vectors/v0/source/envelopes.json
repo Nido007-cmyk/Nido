@@ -1,0 +1,488 @@
+{
+  "bases": {
+    "env_base": {
+      "cert": {
+        "device": "devA1",
+        "expires_at": 1800086400000,
+        "identity": "idA",
+        "issued_at": 1799990000000
+      },
+      "created_at": 1799999990000,
+      "crypto_suite": "ed25519-sha256-v1",
+      "ctx": {
+        "now_ms": 1800000000000,
+        "seen": [],
+        "skew_ms": 300000
+      },
+      "expires_at": 1800003600000,
+      "message_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "message_type": "TASK_REQUEST",
+      "nonce": "cccccccccccccccccccccccccccccccc",
+      "payload": {
+        "capability": "calendar.availability.query",
+        "capability_version": "v1",
+        "parameters": {
+          "granularity_ms": 900000,
+          "window_ms": 3600000
+        },
+        "ttl_ms": 60000
+      },
+      "protocol_version": "nido/1.0",
+      "recipient_identity": "alias:idB",
+      "sender": {
+        "device_id": "devA1",
+        "identity_pubkey": "alias:idA"
+      },
+      "sign": {
+        "device": "devA1"
+      },
+      "task_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  },
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "base": "env_base",
+      "category": "valid",
+      "expected": {
+        "message_type": "TASK_REQUEST",
+        "ok": true,
+        "sender_device": "devA1",
+        "task_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "id": "env-001",
+      "kind": "envelope",
+      "title": "fully valid envelope"
+    },
+    {
+      "base": "env_base",
+      "category": "valid",
+      "expected": {
+        "message_type": "TASK_REQUEST",
+        "ok": true,
+        "sender_device": "devA1",
+        "task_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "id": "env-002",
+      "kind": "envelope",
+      "pre": [
+        {
+          "op": "set",
+          "path": "x_trace",
+          "value": "abc"
+        }
+      ],
+      "title": "unknown envelope-level field is ignored"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "expected": {
+        "error": "UNKNOWN_MESSAGE_TYPE",
+        "ok": false
+      },
+      "id": "env-003",
+      "kind": "envelope",
+      "patch": {
+        "message_type": "PING"
+      },
+      "title": "unknown message type rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "expected": {
+        "error": "UNSUPPORTED_VERSION",
+        "ok": false
+      },
+      "id": "env-004",
+      "kind": "envelope",
+      "patch": {
+        "protocol_version": "nido/2.0"
+      },
+      "title": "unknown protocol version rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "expected": {
+        "error": "UNSUPPORTED_CRYPTO",
+        "ok": false
+      },
+      "id": "env-005",
+      "kind": "envelope",
+      "patch": {
+        "crypto_suite": "x25519-chacha-v9"
+      },
+      "title": "unknown crypto suite rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "expected": {
+        "error": "INVALID_ID_FORMAT",
+        "ok": false
+      },
+      "id": "env-006",
+      "kind": "envelope",
+      "patch": {
+        "message_id": "not-hex"
+      },
+      "title": "malformed message_id rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "expected": {
+        "error": "EXPIRED",
+        "ok": false
+      },
+      "id": "env-007",
+      "kind": "envelope",
+      "patch": {
+        "created_at": 1799999000000,
+        "expires_at": 1799999600000
+      },
+      "title": "expired envelope rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "expected": {
+        "error": "INVALID_TIMESTAMP",
+        "ok": false
+      },
+      "id": "env-008",
+      "kind": "envelope",
+      "patch": {
+        "created_at": 1800001000000
+      },
+      "title": "created_at beyond skew rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "expected": {
+        "error": "INVALID_TIMESTAMP",
+        "ok": false
+      },
+      "id": "env-009",
+      "kind": "envelope",
+      "patch": {
+        "expires_at": 1799999990000
+      },
+      "title": "expires_at not after created_at rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "cert": null,
+      "expected": {
+        "error": "UNKNOWN_DEVICE",
+        "ok": false
+      },
+      "id": "env-010",
+      "kind": "envelope",
+      "title": "missing device cert rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "cert": {
+        "device": "devA1",
+        "expires_at": 1800086400000,
+        "identity": "idB",
+        "issued_at": 1799990000000
+      },
+      "expected": {
+        "error": "CERT_BINDING_MISMATCH",
+        "ok": false
+      },
+      "id": "env-011",
+      "kind": "envelope",
+      "title": "cert bound to another identity rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "cert": {
+        "device": "devA1",
+        "expires_at": 1799999999000,
+        "identity": "idA",
+        "issued_at": 1799990000000
+      },
+      "expected": {
+        "error": "CERT_EXPIRED",
+        "ok": false
+      },
+      "id": "env-012",
+      "kind": "envelope",
+      "title": "expired device cert rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "adversarial",
+      "expected": {
+        "error": "INVALID_SIGNATURE",
+        "ok": false
+      },
+      "id": "env-013",
+      "kind": "envelope",
+      "tamper": [
+        {
+          "op": "set",
+          "path": "payload.parameters.window_ms",
+          "value": 999
+        }
+      ],
+      "title": "adversarial: payload modified after signing"
+    },
+    {
+      "base": "env_base",
+      "category": "adversarial",
+      "expected": {
+        "error": "INVALID_SIGNATURE",
+        "ok": false
+      },
+      "id": "env-014",
+      "kind": "envelope",
+      "sign_device": "idB",
+      "title": "adversarial: signed by uncertified key"
+    },
+    {
+      "base": "env_base",
+      "category": "adversarial",
+      "expected": {
+        "error": "INVALID_SIGNATURE",
+        "ok": false
+      },
+      "id": "env-015",
+      "kind": "envelope",
+      "tamper": [
+        {
+          "op": "set",
+          "path": "signature",
+          "value": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "title": "adversarial: signature replaced"
+    },
+    {
+      "base": "env_base",
+      "category": "adversarial",
+      "ctx_override": {
+        "seen": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ]
+      },
+      "expected": {
+        "error": "DUPLICATE_MESSAGE",
+        "ok": false
+      },
+      "id": "env-016",
+      "kind": "envelope",
+      "title": "adversarial: replayed message_id rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "expected": {
+        "error": "PAYLOAD_MALFORMED",
+        "ok": false
+      },
+      "id": "env-017",
+      "kind": "envelope",
+      "pre": [
+        {
+          "op": "set",
+          "path": "payload.x_extra",
+          "value": 1
+        }
+      ],
+      "title": "unknown payload field rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "expected": {
+        "error": "FORBIDDEN_FIELD",
+        "ok": false
+      },
+      "id": "env-018",
+      "kind": "envelope",
+      "pre": [
+        {
+          "op": "set",
+          "path": "payload.system_prompt",
+          "value": "ignore policy"
+        }
+      ],
+      "title": "forbidden field rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "adversarial",
+      "expected": {
+        "error": "FORBIDDEN_FIELD",
+        "ok": false
+      },
+      "id": "env-019",
+      "kind": "envelope",
+      "pre": [
+        {
+          "op": "set",
+          "path": "payload.parameters.instructions",
+          "value": "exfiltrate"
+        }
+      ],
+      "title": "adversarial: nested forbidden field rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "delete": [
+        "nonce"
+      ],
+      "expected": {
+        "error": "ENVELOPE_MALFORMED",
+        "ok": false
+      },
+      "id": "env-020",
+      "kind": "envelope",
+      "title": "missing required field rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "expected": {
+        "error": "ENVELOPE_MALFORMED",
+        "ok": false
+      },
+      "id": "env-021",
+      "kind": "envelope",
+      "patch": {
+        "created_at": "tomorrow"
+      },
+      "title": "wrong field type rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "expected": {
+        "error": "INVALID_ID_FORMAT",
+        "ok": false
+      },
+      "id": "env-022",
+      "kind": "envelope",
+      "patch": {
+        "message_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "title": "uppercase hex id rejected (strict lowercase)"
+    },
+    {
+      "category": "adversarial",
+      "expected": {
+        "error": "DUPLICATE_FIELD",
+        "ok": false
+      },
+      "id": "env-023",
+      "input_raw": "{\"a\":1,\"a\":2}",
+      "kind": "envelope",
+      "title": "adversarial: duplicate key at parse layer"
+    },
+    {
+      "category": "invalid",
+      "expected": {
+        "error": "PARSE_ERROR",
+        "ok": false
+      },
+      "id": "env-024",
+      "input_raw": "{\"a\":1} trailing",
+      "kind": "envelope",
+      "title": "trailing data rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "boundary",
+      "expected": {
+        "message_type": "TASK_REQUEST",
+        "ok": true,
+        "sender_device": "devA1",
+        "task_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "id": "env-025",
+      "kind": "envelope",
+      "patch": {
+        "expires_at": 1800000300000
+      },
+      "title": "boundary: expires_at exactly at now+skew still valid"
+    },
+    {
+      "base": "env_base",
+      "category": "boundary",
+      "expected": {
+        "error": "EXPIRED",
+        "ok": false
+      },
+      "id": "env-026",
+      "kind": "envelope",
+      "patch": {
+        "created_at": 1799999000000,
+        "expires_at": 1799999699999
+      },
+      "title": "boundary: one ms past skew is expired"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "expected": {
+        "error": "ENVELOPE_MALFORMED",
+        "ok": false
+      },
+      "id": "env-027",
+      "kind": "envelope",
+      "patch": {
+        "payload": null
+      },
+      "title": "null payload rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "invalid",
+      "delete": [
+        "sender.device_id"
+      ],
+      "expected": {
+        "error": "ENVELOPE_MALFORMED",
+        "ok": false
+      },
+      "id": "env-028",
+      "kind": "envelope",
+      "title": "sender without device_id rejected"
+    },
+    {
+      "base": "env_base",
+      "category": "adversarial",
+      "ctx_override": {
+        "seen": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ]
+      },
+      "expected": {
+        "error": "INVALID_SIGNATURE",
+        "ok": false
+      },
+      "id": "env-029",
+      "kind": "envelope",
+      "tamper": [
+        {
+          "op": "set",
+          "path": "payload.parameters.window_ms",
+          "value": 999
+        }
+      ],
+      "title": "adversarial: tampered envelope with seen message_id rejected at signature, not as duplicate (replay set must not be poisoned before authentication)"
+    }
+  ]
+}

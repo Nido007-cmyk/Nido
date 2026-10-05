@@ -1,0 +1,69 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "files": [
+    {
+      "file": "budgets.json",
+      "vectors": 8
+    },
+    {
+      "file": "canonicalization.json",
+      "vectors": 26
+    },
+    {
+      "file": "consent.json",
+      "vectors": 8
+    },
+    {
+      "file": "delegation.json",
+      "vectors": 10
+    },
+    {
+      "file": "disclosure.json",
+      "vectors": 6
+    },
+    {
+      "file": "envelopes.json",
+      "vectors": 29
+    },
+    {
+      "file": "extensions.json",
+      "vectors": 4
+    },
+    {
+      "file": "graphs.json",
+      "vectors": 5
+    },
+    {
+      "file": "idempotency.json",
+      "vectors": 4
+    },
+    {
+      "file": "negative.json",
+      "vectors": 10
+    },
+    {
+      "file": "policy.json",
+      "vectors": 13
+    },
+    {
+      "file": "signatures.json",
+      "vectors": 8
+    },
+    {
+      "file": "state_machines.json",
+      "vectors": 18
+    },
+    {
+      "file": "versions.json",
+      "vectors": 10
+    }
+  ],
+  "totals": {
+    "valid": 45,
+    "invalid": 73,
+    "boundary": 13,
+    "adversarial": 28,
+    "total": 159
+  }
+}

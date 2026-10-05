@@ -1,0 +1,176 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "id": "ver-001",
+      "title": "exact overlap negotiates",
+      "category": "valid",
+      "kind": "protocol_version",
+      "expected": {
+        "ok": true,
+        "version": "nido/1.0"
+      },
+      "input": {
+        "localMax": "nido/1.0",
+        "localMin": "nido/1.0",
+        "peerMax": "nido/1.0",
+        "peerMin": "nido/1.0"
+      }
+    },
+    {
+      "id": "ver-002",
+      "title": "highest common version wins",
+      "category": "valid",
+      "kind": "protocol_version",
+      "expected": {
+        "ok": true,
+        "version": "nido/1.1"
+      },
+      "input": {
+        "localMax": "nido/1.2",
+        "localMin": "nido/1.0",
+        "peerMax": "nido/1.1",
+        "peerMin": "nido/1.0"
+      }
+    },
+    {
+      "id": "ver-003",
+      "title": "no overlap fails closed",
+      "category": "invalid",
+      "kind": "protocol_version",
+      "expected": {
+        "error": "UNSUPPORTED_VERSION",
+        "ok": false
+      },
+      "input": {
+        "localMax": "nido/1.0",
+        "localMin": "nido/1.0",
+        "peerMax": "nido/2.0",
+        "peerMin": "nido/2.0"
+      }
+    },
+    {
+      "id": "ver-004",
+      "title": "malformed version fails closed",
+      "category": "invalid",
+      "kind": "protocol_version",
+      "expected": {
+        "error": "VERSION_MALFORMED",
+        "ok": false
+      },
+      "input": {
+        "localMax": "nido/1.0",
+        "localMin": "nido/1.0",
+        "peerMax": "v1",
+        "peerMin": "nido/1.0"
+      }
+    },
+    {
+      "id": "ver-005",
+      "title": "adversarial: MITM lowering peer max cannot push us below true overlap",
+      "category": "adversarial",
+      "kind": "protocol_version",
+      "expected": {
+        "ok": true,
+        "version": "nido/1.0"
+      },
+      "input": {
+        "localMax": "nido/1.1",
+        "localMin": "nido/1.0",
+        "peerMax": "nido/1.0",
+        "peerMin": "nido/1.0"
+      }
+    },
+    {
+      "id": "ver-006",
+      "title": "inverted local range is malformed",
+      "category": "invalid",
+      "kind": "protocol_version",
+      "expected": {
+        "error": "VERSION_MALFORMED",
+        "ok": false
+      },
+      "input": {
+        "localMax": "nido/1.0",
+        "localMin": "nido/1.1",
+        "peerMax": "nido/1.1",
+        "peerMin": "nido/1.0"
+      }
+    },
+    {
+      "id": "cver-001",
+      "title": "capability: highest common version",
+      "category": "valid",
+      "kind": "capability_version",
+      "expected": {
+        "ok": true,
+        "version": "v2"
+      },
+      "input": {
+        "local": [
+          "v1",
+          "v2"
+        ],
+        "peer": [
+          "v2",
+          "v3"
+        ]
+      }
+    },
+    {
+      "id": "cver-002",
+      "title": "capability: no common version fails closed",
+      "category": "invalid",
+      "kind": "capability_version",
+      "expected": {
+        "error": "UNSUPPORTED_VERSION",
+        "ok": false
+      },
+      "input": {
+        "local": [
+          "v1"
+        ],
+        "peer": [
+          "v2"
+        ]
+      }
+    },
+    {
+      "id": "cver-003",
+      "title": "capability: malformed version fails closed",
+      "category": "invalid",
+      "kind": "capability_version",
+      "expected": {
+        "error": "VERSION_MALFORMED",
+        "ok": false
+      },
+      "input": {
+        "local": [
+          "v1"
+        ],
+        "peer": [
+          "2"
+        ]
+      }
+    },
+    {
+      "id": "cver-004",
+      "title": "adversarial: peer only speaks older version, no silent downgrade of local expectations",
+      "category": "adversarial",
+      "kind": "capability_version",
+      "expected": {
+        "error": "UNSUPPORTED_VERSION",
+        "ok": false
+      },
+      "input": {
+        "local": [
+          "v2"
+        ],
+        "peer": [
+          "v1"
+        ]
+      }
+    }
+  ]
+}

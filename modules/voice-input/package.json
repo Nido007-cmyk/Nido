@@ -1,0 +1,7 @@
+{
+  "name": "voice-input",
+  "version": "0.1.0",
+  "description": "Local Expo module: offline speech-to-text via Android's SpeechRecognizer (EXTRA_PREFER_OFFLINE). Consumed via src/voice/VoiceInput.ts, not this package directly.",
+  "main": "index.ts",
+  "license": "MIT"
+}

@@ -1,0 +1,157 @@
+# Real Android build (P1: ANDROID COMPILED) — STANDALONE private-alpha profile.
+#
+# Builds the REAL project with REAL Gradle on a GitHub-hosted runner —
+# an environment where the Gradle daemon's loopback IPC works.
+# This workflow exists because the dev sandbox intercepts JVM loopback
+# traffic, which makes any local Gradle invocation fail at daemon dispatch
+# (environmental, not a project bug). It does not modify app architecture.
+#
+# Trigger: manual (workflow_dispatch) or push to master touching build inputs.
+# Output: standalone release APK (JS bundle embedded, no Metro needed)
+# uploaded as a workflow artifact.
+#
+# Build-profile distinction (deliberate, 2026-09-27): the private-alpha
+# candidate is built with assembleRelease, NOT assembleDebug, so it does
+# not inherit development-only properties:
+# - the JS bundle is embedded (bundleInRelease) → cold-launch without Metro,
+#   adb reverse, or a dev server;
+# - __DEV__ is false → the production security paths are active
+#   (keyManager fail-closed when SecureStore is unavailable; no
+#   dev-plaintext database fallback);
+# - expo-dev-client was removed from app.json → no dev-launcher surfaces
+#   and no dev-injected usesCleartextTraffic.
+# Signing: withReleaseSigning uses BOAR_UPLOAD_* keys when present in
+# ~/.gradle/gradle.properties, otherwise Expo's default debug signing —
+# reported honestly in the artifact METADATA.md; never silently assumed.
+#
+# 2026-09-27: a completed/failed run died mid-Gradle-build with no logs at
+# all — consistent with the runner running out of disk (GitHub-hosted
+# ubuntu runners ship with limited free space and this build pulls a full
+# Android SDK + Gradle caches + native .so outputs). The first steps of the
+# job now report `df -h`, aggressively remove large preinstalled tooling we
+# do not need (dotnet, ghc, boost, swift, docker images), and report `df -h`
+# again, so a future disk-full failure is diagnosable instead of silent.
+# This touches ONLY the CI environment: no app code, no dependencies.
+#
+# 2026-09-27 (later): run 36324833967 STILL died of disk-full even with the
+# single-ABI build (26G free after the first cleanup was not enough — the
+# llama.cpp native build via :llama.rn:bundleDebugAar ate the rest). Added a
+# second, deeper cleanup AFTER the setup steps: hostedtoolcache languages we
+# never use (Python/PyPy/Go/Ruby), Android SDK pieces a Gradle APK build
+# never touches (emulator, system-images, extras), and the npm cache after
+# install. Also added `concurrency: cancel-in-progress` so a new push
+# cancels stale runs instead of piling up doomed 90-minute builds.
+
+name: Android APK
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - 'android/**'
+      - 'src/**'
+      - 'modules/**'
+      - 'app.json'
+      - 'eas.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/android-apk.yml'
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Disk space before cleanup
+        run: df -h
+
+      - name: Free disk space for Android build
+        run: |
+          # Remove large preinstalled toolchains this build never uses.
+          # Keep the Android SDK location (/usr/local/lib/android/sdk) intact:
+          # setup-android installs platform-tools there in the next step.
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY/CodeQL" || true
+          docker system prune -af || true
+          sudo apt-get clean || true
+
+      - name: Disk space after cleanup
+        run: df -h
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+        with:
+          # The action defaults to `packages: tools platform-tools`, but the
+          # obsolete `tools` package no longer exists in the SDK repository
+          # and makes sdkmanager exit 1. Install only what is needed here;
+          # Gradle downloads build-tools/platforms itself (licenses are
+          # pre-accepted by this action).
+          packages: platform-tools
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Verify dependency pins (F-8 build gate)
+        # The release/Hermes APK must be built from the exact native modules
+        # we reviewed: fail the build if any native/security-sensitive dep
+        # floats on a ^/~ range or diverges from the lockfile.
+        run: npm run verify:deps
+
+      - name: Deep-clean runner disk (after tool setup)
+        run: |
+          # setup-node/setup-java/setup-android have run: their tools live in
+          # /opt/hostedtoolcache and $ANDROID_SDK_ROOT — remove only what the
+          # Gradle APK build never touches.
+          echo "--- biggest dirs before deep clean ---"
+          sudo du -sh /opt/* /usr/local/* 2>/dev/null | sort -rh | head -12
+          # Hostedtoolcache languages this build never uses.
+          sudo rm -rf /opt/hostedtoolcache/Python /opt/hostedtoolcache/PyPy \
+                       /opt/hostedtoolcache/go /opt/hostedtoolcache/Ruby || true
+          # Android SDK pieces a pure Gradle APK build never touches.
+          for sdk in "$ANDROID_SDK_ROOT" /usr/local/lib/android/sdk; do
+            [ -n "$sdk" ] && [ -d "$sdk" ] && sudo rm -rf "$sdk/emulator" \
+              "$sdk/system-images" "$sdk/extras" || true
+          done
+          # npm cache is dead weight after `npm ci`.
+          npm cache clean --force || true
+          echo "--- disk after deep clean ---"
+          df -h
+
+      - name: Expo prebuild (Android, clean)
+        run: npx expo prebuild -p android --clean --non-interactive
+
+      - name: Assemble standalone release APK (real Gradle build)
+        working-directory: android
+        # Private-alpha APK targets physical phones (arm64-v8a). Building
+        # all 4 ABIs exhausts the runner disk (llama.cpp native outputs are
+        # huge); restrict to arm64-v8a to fit. Release builds can re-enable ABIs.
+        # assembleRelease (not assembleDebug): embeds the JS bundle so the app
+        # cold-launches without Metro, and __DEV__=false activates the
+        # production security paths (fail-closed key management).
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nido-standalone-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error

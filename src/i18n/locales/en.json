@@ -1,0 +1,699 @@
+{
+  "common": {
+    "done": "DONE",
+    "cancel": "Cancel",
+    "close": "Close",
+    "back": "Back",
+    "remove": "Remove",
+    "retry": "Retry",
+    "dismiss": "Dismiss",
+    "languageSection": "LANGUAGE",
+    "confirm": "Confirm"
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
+  },
+  "drawer": {
+    "subtitle": "Your agent. Your world.",
+    "newChat": "New chat",
+    "recentSessions": "Recent chats"
+  },
+  "catalogItemCard": {
+    "calculating": "Calculating…",
+    "removeFromListTitle": "Remove from list?",
+    "removeFromListMessage": "This model is not downloaded. It will be removed from your list.",
+    "removeCorpusTitle": "Remove Knowledge Base Pack?",
+    "removeModelTitle": "Remove Model Weights?",
+    "removeCorpusMessage": "This deletes the local dataset and frees {{size}}. Its topics will not be searchable offline until re-downloaded.",
+    "removeModelMessage": "This deletes the local weights file and frees {{size}}.",
+    "removeAssetButton": "Remove Asset",
+    "kind": {
+      "llm": "LLM",
+      "embedding": "Embedding",
+      "corpus": "Corpus"
+    },
+    "default": "Default",
+    "compat": {
+      "green": "Runs well on this device",
+      "yellow": "Needs a lot of memory",
+      "red": "Too heavy for this device"
+    },
+    "downloadingAsset": "Downloading",
+    "eta": "ETA: {{eta}}",
+    "retryDownload": "🔄 Retry Download",
+    "downloadAsset": "📥 Download Asset",
+    "loadingModel": "Loading model…",
+    "selectUse": "🔘 Select & Use",
+    "indexedNote": "In your knowledge base",
+    "activeNote": "Currently in use",
+    "deleteAccessibility": "Delete model asset",
+    "badge": {
+      "downloading": "Downloading",
+      "notOnDisk": "Not on disk",
+      "active": "Active",
+      "cached": "Downloaded"
+    }
+  },
+  "modelLoadErrorCard": {
+    "corrupt": {
+      "title": "Download failed its check",
+      "detail": "The downloaded file is incomplete or damaged — the download was probably interrupted.",
+      "recommendation": "Download it again, or switch to a model you already have in Settings."
+    },
+    "missing": {
+      "title": "Model file missing",
+      "detail": "The model file isn't on this device.",
+      "recommendation": "Re-run the setup wizard or pick an installed model."
+    },
+    "memory": {
+      "title": "Not enough memory",
+      "detail": "This device doesn't have enough free memory to load this model.",
+      "recommendation": "Close other apps or switch to a smaller model in Settings."
+    },
+    "storage": {
+      "title": "Not enough storage space",
+      "detail": "NIDO needs more free space on this phone to install the model.",
+      "recommendation": "Free up space — delete unused apps, photos, or files — then try again."
+    },
+    "general": {
+      "title": "The engine couldn't start",
+      "detailFallback": "The model engine couldn't start with the selected model.",
+      "recommendation": "Check your model settings or re-run the setup wizard."
+    },
+    "actionRequired": "Action required",
+    "settings": "Settings",
+    "setupWizard": "Setup Wizard"
+  },
+  "usageStatsScreen": {
+    "back": "‹ Back",
+    "title": "System telemetry",
+    "subtitle": "Hardware and usage",
+    "live": "LIVE"
+  },
+  "systemMonitor": {
+    "title": "Live status",
+    "diskLabel": "Disk Storage (Cap: 50GB)",
+    "ramLabel": "Process RSS Memory (Cap: 12GB)",
+    "exceeded": "⚠️ EXCEEDED",
+    "noRssNote": "Live memory readout isn't available in this build."
+  },
+  "drawerFooterStats": {
+    "ram": "RAM",
+    "disk": "DISK",
+    "lastQuery": "{{rate}} tok/s last query"
+  },
+  "modelSetupScreen": {
+    "header": {
+      "title": "Settings",
+      "subtitle": "NIDO — Your agent. Your world."
+    },
+    "sections": {
+      "tone": "Assistant Tone & Response Style",
+      "models": "Reasoning Models",
+      "knowledgeBase": "Offline knowledge base",
+      "memory": "Memory",
+      "telemetry": "Telemetry",
+      "displayTheme": "Display & Theme",
+      "language": "Language",
+      "voice": "Voice input",
+      "recovery": "Reset & recovery"
+    },
+    "installedModels": "Installed models",
+    "toasts": {
+      "indexed": "Indexed \"{{name}}\" in offline knowledge base",
+      "removed": "Removed \"{{name}}\"",
+      "activeSet": "Active {{kind}} model set to \"{{name}}\"",
+      "loadFailed": "Couldn't load \"{{name}}\": {{error}}",
+      "resetFailed": "Reset failed: {{error}}"
+    },
+    "recovery": {
+      "wizardTitle": "Setup wizard",
+      "wizardDesc": "Re-run the setup to check your device again or change your model.",
+      "wizardButton": "Reopen setup wizard →",
+      "dangerBadge": "Danger zone",
+      "dangerDesc": "Permanently deletes all downloaded models, your knowledge base, and your chats from this device.",
+      "dangerButton": "Delete all data & reset app"
+    },
+    "dangerModal": {
+      "title": "Confirm reset",
+      "subtitle": "This action is immediate, permanent, and cannot be undone.",
+      "consequencesHeader": "This will remove:",
+      "consequenceModels": "All downloaded models",
+      "consequenceEmbeddings": "All knowledge base documents",
+      "consequenceHistory": "All chats and summaries",
+      "confirmButton": "Delete all data"
+    },
+    "wipeRecovery": {
+      "recovering": "Finishing interrupted data deletion…",
+      "blockedTitle": "Data deletion incomplete",
+      "blockedBody": "Clear All Data was interrupted and could not be completed safely. The app will not start with partially deleted data. You can retry, or reinstall the app.",
+      "retry": "Retry deletion"
+    }
+  },
+  "setupWizard": {
+    "calculating": "Calculating…",
+    "estimating": "Estimating…",
+    "steps": {
+      "device": "Device",
+      "model": "Model",
+      "download": "Download",
+      "ready": "Ready"
+    },
+    "step1": {
+      "title": "Your device",
+      "subtitle": "Let's make sure this phone is ready for your assistant.",
+      "memoryTitle": "Memory",
+      "memoryOk": "Enough for the recommended model",
+      "memoryLow": "The recommended model may be slow on this device",
+      "storageTitle": "Storage",
+      "storageOk": "Plenty of room for models and knowledge",
+      "storageLow": "Storage is running low",
+      "freeOf": "{{free}} free",
+      "totalOf": "{{total}} total",
+      "privateTitle": "Private by design",
+      "privateText": "No account needed. NIDO only connects when you ask it to — for example, to download a model.",
+      "language": "Language",
+      "continue": "Continue"
+    },
+    "step2": {
+      "title": "Choose your setup",
+      "subtitle": "Start with the essentials, or add more knowledge now. You can always add more later.",
+      "recommended": "Recommended",
+      "downloadSize": "About {{size}} to download",
+      "startDownload": "Start download",
+      "back": "Back"
+    },
+    "step3": {
+      "title": "Getting things ready",
+      "subtitle": "Downloading what your assistant needs. NIDO only uses the internet when you ask it to.",
+      "downloading": "Downloading… {{done}} of {{total}}",
+      "timeLeft": "About {{time}} left",
+      "keepOpen": "You can leave the app open; it will continue.",
+      "assetCounter": "Model {{current}} of {{total}}",
+      "errorTitle": "The download was interrupted.",
+      "errorText": "Check your connection and try again. Nothing was installed yet.",
+      "tryAgain": "Try again",
+      "restartStuck": "Downloads stuck? Restart"
+    },
+    "step4": {
+      "settingUp": "Setting up your knowledge",
+      "counter": "{{done}} of {{total}} ready",
+      "readyTitle": "You’re all set.",
+      "readyText": "No account needed. NIDO only connects when you ask it to.",
+      "startChatting": "Start chatting",
+      "setupError": "Couldn't finish setup: {{error}}",
+      "continueAnyway": "Continue without knowledge"
+    }
+  },
+  "personalitySettings": {
+    "title": "Assistant tone & response style",
+    "customPromptPlaceholder": "Write your own system prompt…",
+    "maxOutputTokens": "Max output tokens",
+    "maxOutputTokensNote": "Caps how long a single response can be — lower is faster and more battery-friendly on phone hardware.",
+    "deepResearchTitle": "Deep Research Mode",
+    "deepResearchNote": "Breaks your question into sub-questions, researches each separately, then synthesizes one answer. Several sequential model calls on the same model — noticeably slower than a normal reply, not multiple AI models running at once. Independent from the response style above: it changes how much research goes into an answer, not its tone — the two combine (e.g. Deep Research + Succinct still synthesizes a short final answer).",
+    "adaptiveRoutingTitle": "Adaptive Routing",
+    "adaptiveRoutingNote": "Classifies each message and picks which downloaded model answers it (e.g. a lightweight model for small talk, a stronger one for research/comparison questions), switching between them as needed. On by default and independent from Deep Research — if it fails for any reason, chat falls back to your normal active model automatically, it never leaves you without a response."
+  },
+  "corpusSettingsTab": {
+    "downloadablePacks": "Downloadable knowledge packs",
+    "yourDocuments": "Your documents"
+  },
+  "personalDocumentsManager": {
+    "hint": "Import your own .txt, .md, .csv, .json, or .pdf notes — indexed on this device only, never uploaded anywhere. PDFs need selectable text (scanned/image-only pages won't extract — there's no OCR), and password-protected PDFs aren't supported.",
+    "nameRequiredTitle": "Name required",
+    "nameRequiredMessage": "Give this collection a name before importing.",
+    "importFailedTitle": "Import failed",
+    "exportFailedTitle": "Export failed",
+    "removeConfirmTitle": "Remove this collection?",
+    "removeConfirmMessage": "This deletes \"{{name}}\" ({{count}} chunks) from your local knowledge base. This can't be undone — export it first if you want to keep a copy.",
+    "namePlaceholder": "Collection name (e.g. Project Specs)",
+    "pickButton": "Pick Files & Import",
+    "stageReading": "Reading files…",
+    "stageChunking": "Splitting into chunks…",
+    "stageEmbedding": "Embedding {{current}}/{{total}}…",
+    "empty": "No custom collections yet.",
+    "docCount_one": "{{count}} doc",
+    "docCount_other": "{{count}} docs",
+    "chunkCount_one": "{{count}} chunk",
+    "chunkCount_other": "{{count}} chunks",
+    "exportButton": "Export / Share",
+    "exporting": "Exporting…"
+  },
+  "memorySettings": {
+    "title": "Chat history & memory",
+    "autoSummarizeLabel": "Background context summarization",
+    "autoSummarizeValue": "Condenses older turns so long chats don't lose context",
+    "turnsBeforeSummarizing": "Recent turns before summarizing",
+    "maxSavedSessions": "Max saved chat sessions",
+    "unlimited": "Unlimited",
+    "autoTitlesLabel": "Auto-generate chat titles",
+    "autoTitlesValue": "Names new chats from your first message",
+    "clearAllConfirmTitle": "Clear all chat history?",
+    "clearAllConfirmMessage": "This permanently deletes every saved chat session and message on this device. This can't be undone.",
+    "clearAllButton": "Clear All",
+    "clearAllChatHistory": "Clear All Chat History"
+  },
+  "voiceSettings": {
+    "title": "Voice Input",
+    "enabledLabel": "Voice input",
+    "enabledValue": "Show the microphone button in the chat to dictate messages.",
+    "speechEngineLabel": "Speech-to-text engine",
+    "checking": "Checking…",
+    "available": "Android SpeechRecognizer (on-device when available)",
+    "unavailable": "Unavailable on this device",
+    "unavailableNote": "No system speech-recognition service was found — common on GrapheneOS / de-Googled builds. An embedded whisper.cpp model would remove this dependency but is a separate project on the scale of the llama.rn integration itself; not implemented in this version."
+  },
+  "interfaceSettings": {
+    "hapticFeedbackLabel": "Haptic feedback",
+    "hapticFeedbackValue": "Vibrate on taps, sends, and responses finishing — app-wide, not just voice input."
+  },
+  "keyStore": {
+    "dbKeyCorrupt": "The stored database encryption key is damaged or has an unexpected format. Fail-closed: NIDO will not overwrite it or open the database without it. If this keeps happening, reinstalling is the only recovery (existing local data cannot be decrypted without the original key).",
+    "dbKeyReadFailed": "NIDO could not read the database encryption key from the secure store. Fail-closed: no new key will be created, because that would permanently lock your existing encrypted data. Restart the app and try again.",
+    "dbKeyLost": "NIDO's database encryption key is missing from the secure store, but encrypted databases still exist on this device. Fail-closed: NIDO will NOT generate a new key silently — that would strand your existing data behind an unreadable database. Your data has NOT been deleted. To use NIDO again you must explicitly choose recovery (existing encrypted data cannot be decrypted without the original key).",
+    "p2pKeyCorrupt": "This device's stored identity key is damaged or has an unexpected format. Fail-closed: NIDO will not replace it silently. Reset the identity to create a new one (you will need to re-pair your contacts).",
+    "p2pKeyReadFailed": "NIDO could not read this device's identity key from the secure store. Fail-closed: no new identity will be created, because that would silently break all your pairings. Restart the app and try again.",
+    "p2pSignKeyCorrupt": "This device's stored message-signing key is damaged or has an unexpected format. Fail-closed: NIDO will not replace it silently. Reset the identity to create a new one.",
+    "p2pSignKeyReadFailed": "NIDO could not read this device's message-signing key from the secure store. Fail-closed: no new signing key will be created. Restart the app and try again."
+  },
+  "p2pIdentityRecovery": {
+    "title": "Your identity keys were lost",
+    "whatHappened": "NIDO found your identity record, but the secret keys that prove it is you are gone from this phone's secure storage (keystore). This can happen after a system update, a security reset, or a failed restore.",
+    "consequence": "Your old identity cannot be used anymore. Your old peers will no longer recognize you — you must re-pair with every contact. Nothing was sent on your behalf.",
+    "archived": "Your old identity record was kept in the archive, so you can tell your contacts what happened.",
+    "recoverButton": "Create a new identity",
+    "confirmTitle": "Create a new identity?",
+    "confirmBody": "Your old peers will no longer recognize you. Re-pairing with every contact will be required. This cannot be undone.",
+    "secondTitle": "Are you absolutely sure?",
+    "secondBody": "Last chance: your old identity will be retired permanently and archived. Continue?",
+    "recovering": "Creating new identity…",
+    "recovered": "✓ New identity created. Re-pair with your contacts to talk again.",
+    "cancel": "Cancel",
+    "lostIdentityLabel": "Lost identity"
+  },
+  "keyRecovery": {
+    "title": "Encryption key lost",
+    "whatHappened": "NIDO's database encryption key is missing from this device's secure storage, but encrypted databases were found on the device. NIDO stopped here on purpose: creating a new key silently would lock your existing data behind a database it can never open again.",
+    "databasesFound": "Encrypted databases found — untouched:",
+    "notDeleted": "Your data has NOT been deleted. The encrypted databases are still on this device, exactly as they were.",
+    "cannotRecoverKey": "NIDO cannot recover the missing key, and nothing you do here will bring it back. Without the original key, the existing encrypted data cannot be decrypted — by you or by NIDO.",
+    "startRecovery": "I understand — start recovery",
+    "checkAgain": "Check again",
+    "confirmTitle": "Archive databases and start fresh?",
+    "confirmBody": "Recovery keeps the unreadable encrypted databases as archives (in case the original key ever reappears) and lets NIDO start as a new installation with a new key. The archived data cannot be read without the original key. This is the only way to use NIDO again.",
+    "confirmButton": "Yes — archive and start fresh",
+    "cancel": "Cancel",
+    "recovering": "Archiving databases…",
+    "recoveryFailed": "Recovery could not be completed safely. Nothing else was touched. You can try again."
+  },
+  "knowledgeBaseScreen": {
+    "title": "My documents"
+  },
+  "chatHeader": {
+    "openDrawer": "Open Navigation Drawer",
+    "offline": "Offline",
+    "localLlmCore": "Local model",
+    "cycleTone": "Cycle Assistant Tone",
+    "newChatSession": "New chat",
+    "deepResearch": "Deep Research",
+    "deepResearchActive": "Deep Research Active"
+  },
+  "chatScreen": {
+    "initializingCore": "Starting NIDO…",
+    "mountingWeights": "Loading the model…",
+    "indexingKnowledgeBase": "Preparing your knowledge…",
+    "reasoningElapsed": "💭 Reasoning… {{seconds}}s",
+    "reasoningUnfinished": "Reasoning didn't finish before the reply ended (stopped or out of tokens). Tap 💭 to read it.",
+    "showReasoning": "Show reasoning",
+    "hideReasoning": "Hide reasoning",
+    "messageReused": "Message copied to the input",
+    "stopping": "Stopping… (finishing the current step)",
+    "toneChanged": "Tone: {{tone}}",
+    "modelDownloadComplete": "✅ \"{{label}}\" download complete",
+    "drawerItems": {
+      "prompts": "Prompt Ideas",
+      "myDocuments": "My Documents",
+      "settings": "Settings",
+      "telemetry": "Execution Telemetry",
+      "about": "About & Info"
+    },
+    "inputPlaceholder": "Ask anything…",
+    "noRelevantOfflineSources": "No relevant offline sources found for this question.",
+    "stopGeneration": "Stop generation",
+    "sendMessage": "Send message",
+    "research": {
+      "decomposing": "🔬 Breaking question into sub-questions…",
+      "researching": "🔬 Researching sub-question {{index}}/{{count}}…",
+      "synthesizing": "🔬 Putting the answer together…"
+    },
+    "roleYou": "You",
+    "roleAssistant": "🎭 NIDO",
+    "stoppedByUser": "Stopped by user",
+    "deepResearchBanner": "Deep research · Breaking down → Searching offline → Synthesizing",
+    "copyResponse": "Copy response",
+    "copied": "Copied",
+    "rateUp": "Good response",
+    "rateDown": "Bad response",
+    "rateHelpful": "Helpful",
+    "rateUnhelpful": "Unhelpful",
+    "stageTimedOut": "A research step took too long and was cut short",
+    "interruptedByBackground": "Paused — app was backgrounded. Ask again to continue."
+  },
+  "aboutScreen": {
+    "title": "About NIDO",
+    "heroSubtitle": "Your agent. Your world.",
+    "versionBadge": "v{{version}} • {{build}}",
+    "buildDevelopment": "DEVELOPMENT BUILD",
+    "buildRelease": "RELEASE BUILD",
+    "airGappedTitle": "Private by design",
+    "airGappedBody": "NIDO is your personal AI assistant that runs entirely on your phone — no account, no cloud, no servers. Your questions, documents, and chats stay on this device.",
+    "hardwareTitle": "Built for your phone",
+    "hardwareBody": "NIDO is designed to run on a phone: it keeps memory use low and watches storage so the app stays fast and responsive.",
+    "benchmarkTitle": "Measure it yourself",
+    "benchmarkBody": "NIDO measures every answer on your own phone: model load time, time to first token, tokens/sec, peak memory and which sources were used. Run the built-in evaluation from Execution Telemetry → 🧪 Evaluate to compare any installed model on the same questions, or drive it from a computer with npm run eval:device.",
+    "repoTitle": "Open source",
+    "repoBody": "Forked from BOAR (MIT License).",
+    "repoUrl": "github.com/arsrs91-png/NIDO"
+  },
+  "sourceFootnotes": {
+    "title": "Offline sources · relevance-ranked",
+    "localIndex": "Local index",
+    "relevanceCaption": "Numbers are absolute match strength against the offline index — not confidence."
+  },
+  "promptIdeasCarousel": {
+    "title": "Try asking",
+    "prev": "Prev",
+    "usePrompt": "Use this prompt",
+    "next": "Next",
+    "dontShowAgain": "Don't show again",
+    "items": [
+      {
+        "category": "Off-Grid Preparedness",
+        "icon": "🏕️",
+        "prompt": "I'm putting together a 72-hour emergency kit for a power and cell outage. List the essentials in priority order and explain how to store drinking water safely for months."
+      },
+      {
+        "category": "Private Finance",
+        "icon": "💰",
+        "prompt": "Explain the envelope budgeting method for a monthly salary using only pen and paper — no apps, no bank sync, no cloud."
+      },
+      {
+        "category": "Home Resilience",
+        "icon": "🔧",
+        "prompt": "My fridge stopped cooling and no technician is available. Walk me through the safest way to diagnose the most common causes, step by step."
+      },
+      {
+        "category": "Learn Anything",
+        "icon": "📚",
+        "prompt": "Explain how the immune system works as if I were a curious teenager. Use everyday analogies and no jargon."
+      },
+      {
+        "category": "Travel Offline",
+        "icon": "🗺️",
+        "prompt": "I'm traveling somewhere with no data roaming. What should I prepare offline before I leave — maps, key phrases, documents?"
+      },
+      {
+        "category": "Digital Privacy",
+        "icon": "🔒",
+        "prompt": "What practical steps can a non-technical person take to reduce phone tracking? Cover settings and habits, and separate what actually matters from myths."
+      }
+    ]
+  },
+  "processingIndicator": {
+    "retrieving": "🔍 Searching your knowledge…",
+    "thinking": "🧠 Thinking…",
+    "generating": "⚡ Writing the answer…"
+  },
+  "personalities": {
+    "succinct": {
+      "label": "Succinct & Direct",
+      "description": "Fastest — 2–3 brief paragraphs or bullets, no preamble. Default for mobile."
+    },
+    "detailed": {
+      "label": "Thorough & Detailed",
+      "description": "Structured, thorough explanations with comparisons and reasoning."
+    },
+    "summary": {
+      "label": "Executive Summary",
+      "description": "One top-line takeaway, then 3 key bullet points."
+    },
+    "custom": {
+      "label": "Custom",
+      "description": "Write your own system prompt."
+    }
+  },
+  "executionTelemetry": {
+    "title": "Execution telemetry",
+    "subtitle": "{{count}} recent runs",
+    "exportJson": "⬇ JSON",
+    "exportCsv": "⬇ CSV",
+    "clear": "🗑 Clear",
+    "clearTitle": "Clear execution telemetry?",
+    "clearMessage": "Deletes all persisted execution records on this device. This cannot be undone.",
+    "clearConfirm": "Clear",
+    "exportFailedTitle": "Export failed",
+    "empty": "No executions recorded yet. Send a message to record your first run.",
+    "noModel": "no model",
+    "tokPerSec": "Speed",
+    "loadTime": "Load",
+    "ttft": "TTFT",
+    "totalTime": "Total",
+    "memory": "Peak Mem",
+    "tokens": "Tokens",
+    "runEvaluation": "🧪 Evaluate"
+  },
+  "evaluation": {
+    "title": "Evaluation",
+    "subtitle": "Set v{{version}} · {{count}} queries",
+    "configsTitle": "Configurations",
+    "adaptiveConfig": "Adaptive routing (preset: {{preset}})",
+    "noModels": "No language models installed.",
+    "summary": "{{queries}} queries × {{configs}} configs = {{total}} answers",
+    "keepScreenOn": "Keep the screen on and the app open while it runs.",
+    "chatBusy": "Wait for the current chat reply to finish before running an evaluation.",
+    "run": "▶ Run",
+    "stop": "■ Stop",
+    "stopping": "Stopping…",
+    "progress": "Config {{config}}/{{configs}} · Query {{query}}/{{queries}}",
+    "savedTo": "Saved to {{path}}",
+    "stoppedEarly": "Stopped early — partial results saved.",
+    "exportJsonl": "⬇ JSONL",
+    "exportCsv": "⬇ CSV",
+    "exportFailedTitle": "Export failed",
+    "runFailedTitle": "Evaluation failed",
+    "deviceRequest": "Started from a connected computer (request {{id}}).",
+    "noRetrieval": "no retrieval",
+    "pbkdf2Body": "Measures the NMB-1 KDF candidate cost on this device (PBKDF2-HMAC-SHA256, 600k iterations). Test-only data — touches no keys, databases, or network. Writes a JSON timing report.",
+    "pbkdf2FailedTitle": "Benchmark failed",
+    "pbkdf2Run": "▶ Run PBKDF2 benchmark",
+    "pbkdf2Running": "Running PBKDF2 benchmark…",
+    "pbkdf2Saved": "Saved to {{path}} · provisional: {{verdict}}",
+    "pbkdf2Title": "PBKDF2 benchmark (quarantine — not production crypto)"
+  },
+  "lockScreen": {
+    "title": "NIDO locked",
+    "subtitle": "Authenticate to access your data",
+    "unlock": "Unlock",
+    "unlocking": "Verifying…",
+    "cancelled": "Authentication cancelled.",
+    "failed": "Could not verify your identity. Try again.",
+    "noGate": "This device has no biometrics or PIN set up: the access gate cannot protect the app. Your data remains encrypted at rest.",
+    "continueWithoutGate": "Continue without gate",
+    "retry": "Retry"
+  },
+  "nido": {
+    "back": "‹ Back",
+    "online": "within reach",
+    "offline": "out of reach",
+    "offlineQueued": "out of reach · messages are queued encrypted",
+    "verifiedSuffix": " · ✓ verified",
+    "linkActive": "🟢 Link active",
+    "linkStopped": "⚪ Link stopped",
+    "tabChats": "💬 Chats",
+    "tabContacts": "👥 Contacts",
+    "tabLink": "🔗 Link",
+    "noContactsTitle": "No contacts yet",
+    "noContactsBody": "Pair your first contact in the Contacts tab: show them your QR and scan theirs (or paste it as text).",
+    "howItWorksTitle": "How it works",
+    "howItWorksBody": "Messages are encrypted on your phone and travel straight to the other NIDO over Bluetooth — no internet, no servers. If your contact isn’t within reach, the message stays in an encrypted queue and is sent only when they appear.",
+    "myCodeTitle": "My code",
+    "myCodeBody": "Show this QR to your contact to pair. Read the fingerprint aloud to each other before trusting it.",
+    "copyCode": "📋 Copy code as text",
+    "codeLabel": "Code",
+    "pairTitle": "Pair contact",
+    "pairBody": "Paste your contact’s code here (the text of their QR). No camera yet: use any QR app to read it, or ask for it over another secure channel.",
+    "pairPlaceholder": "nido1:…",
+    "pairButton": "Pair",
+    "pairedCount": "Paired contacts ({{count}})",
+    "nearbyTitle": "Nearby devices",
+    "nearbyBody": "You can only connect with devices that speak NIDO. The handshake verifies it’s a paired contact; a stranger is rejected automatically.",
+    "searching": "Searching… bring another NIDO with Bluetooth on closer.",
+    "connectButton": "Connect",
+    "privacyTitle": "Privacy",
+    "privacyBody": "NIDO uses no internet: discovery and messages use only classic Bluetooth between your devices and your contacts’. Nothing ever reaches a server.",
+    "messagePlaceholder": "Encrypted message…",
+    "queuedNotice": "⏳ Encrypted queue: will send when in reach.",
+    "sentNotice": "Sent · awaiting confirmation.",
+    "queuedSuffix": " · ⏳ queued",
+    "sentSuffix": " · ◷",
+    "deliveredSuffix": " · ✓",
+    "failedSuffix": " · ⚠",
+    "retryAction": "Retry",
+    "sendAgainAction": "Send again",
+    "sendMessage": "Send message",
+    "retryNotice": "Retrying delivery of the message…",
+    "sendAgainNotice": "Sending as a new message…",
+    "pairedNotice": "✓ {{name}} paired. Verify their fingerprint in person.",
+    "connectedNotice": "✓ Connected with {{alias}}.",
+    "copiedNotice": "✓ {{label}} copied.",
+    "pairBindingWasRetired": "Note: this identity (“{{name}}”) was retired before by a re-pair. Confirming will restore it as your contact — its previously failed messages stay failed and will not be resent on their own.",
+    "pairDisambiguationTitle": "Choose how to pair",
+    "pairDisambiguationBody": "“{{name}}” is already one of your contacts, but this code is a DIFFERENT identity (fingerprint {{fingerprint}}). Choose explicitly — nothing is replaced silently.",
+    "pairReplaceAction": "Replace",
+    "pairDifferentPersonAction": "Different person",
+    "pairReplaceConfirmTitle": "Replace identity?",
+    "pairReplaceConfirmMessage": "This permanently retires the old identity. Messages already failed stay failed and are never moved. This cannot be undone.",
+    "pairNewNameLabel": "Name for this person",
+    "pairNewNamePlaceholder": "e.g. Beto (work)",
+    "pairNameTaken": "“{{name}}” is already taken. Choose a unique name.",
+    "pairCancelledNotice": "Pairing cancelled. Nothing was changed.",
+    "resendToSuccessorTitle": "Resend as new message?",
+    "resendToSuccessorMessage": "The old identity is retired. Send this text as a NEW message to “{{name}}”? The previous failed message stays failed.",
+    "resentToSuccessorNotice": "Sent as a new message to the new identity.",
+    "retryRefusedSuperseded": "Not retried: this identity was retired by a re-pair. Resend it as a new message to the new identity instead.",
+    "retryRefusedOrphaned": "Not retried: the destination identity is unknown.",
+    "retryRefusedUserCancelled": "Not retried: you cancelled this message.",
+    "resendCancelledTitle": "Send again as a new message?",
+    "resendCancelledMessage": "You cancelled this message. Send it again as a NEW message? The cancelled message stays cancelled.",
+    "errorLabel": "Error"
+  },
+  "notifications": {
+    "reminderChannel": "NIDO Reminders",
+    "briefingChannel": "NIDO Daily Briefing",
+    "reminderTitle": "NIDO · Reminder",
+    "briefingTitle": "NIDO · Your day"
+  },
+  "agentConfirm": {
+    "createEventTitle": "Create event",
+    "createEventMessage": "Create “{{title}}” in your calendar on {{start}}?",
+    "createEventMessageWithEnd": "Create “{{title}}” in your calendar on {{start}} until {{end}}?",
+    "sendMessageTitle": "Send NIDO message",
+    "sendMessageMessage": "Send to “{{to}}” via NIDO (encrypted)?\n\n“{{text}}”",
+    "pairTitle": "Pair NIDO contact",
+    "pairMessage": "Pair with “{{name}}”?\nFingerprint: {{fingerprint}}\n\nOnly confirm if you scanned this code in person.",
+    "pairInvalidCode": "This code doesn't look like a valid NIDO pairing code.",
+    "pairBindingKnownSameName": "This identity is already paired as “{{known}}”.",
+    "pairBindingKnownOtherName": "This identity is already paired as “{{known}}” (not as “{{name}}”).",
+    "pairBindingNameConflict": "Warning: you already have a contact named “{{name}}” with a DIFFERENT identity. Only confirm if you scanned this code in person, from the real device.",
+    "approveTaskTitle": "Approve NIDO task",
+    "approveTaskMessage": "Approve this task from “{{sender}}”?\n\n{{action}}\n\nReceived: {{when}}.\nApproval only records your decision; the task is not executed automatically.",
+    "rejectTaskTitle": "Reject NIDO task",
+    "rejectTaskMessage": "Reject this task from “{{sender}}”?\n\n{{action}}",
+    "taskNotFound": "There is no pending task with that id (it may already have been decided).",
+    "confirmBlocked": "Blocked for security: “{{tool}}” requires explicit user confirmation, but the confirmation channel is not available. The action was NOT executed.",
+    "confirmCancelled": "Understood, I did nothing.",
+    "confirmPayloadChanged": "Blocked for security: the payload of “{{tool}}” changed after confirmation. The action was NOT executed.",
+    "openAppTitle": "Open external link",
+    "openAppMessage": "Open this link outside NIDO?\n\n{{target}}",
+    "openAppRejected": "NIDO can't open this link ({{reason}}). Allowed schemes: https, http, tel, sms, mailto.",
+    "openAppReason": {
+      "empty": "it's empty",
+      "no-scheme": "it doesn't start with a valid scheme",
+      "scheme-not-allowed": "its scheme isn't allowed",
+      "unsafe-chars": "it contains unsafe characters"
+    }
+  },
+  "downloadErrors": {
+    "checksumMismatch": "The integrity check failed (SHA-256 mismatch), so the file was deleted. Retrying downloads it again from the start.",
+    "sizeMismatch": "The download failed verification: received {{received}} of {{expected}}. The incomplete file was deleted, so retrying starts from the beginning.",
+    "notFound": "The file is no longer available on the server (HTTP {{status}}). Retrying won't fix this.",
+    "httpErrorTransient": "The server returned an error (HTTP {{status}}) after {{received}} of {{expected}}. You can retry — it may succeed later.",
+    "httpErrorPermanent": "The server returned an error (HTTP {{status}}) after {{received}} of {{expected}}. Retrying the same request won't help.",
+    "unpinnedSource": "This model entry is missing a pinned download revision, so no network request was made. Retrying won't help until the catalog entry is fixed.",
+    "unknownSourceContract": "This entry's download source is not a recognized safe source, so no network request was made. Retrying won't help until the catalog entry is fixed.",
+    "stalled": "The download stalled (no progress for {{seconds}}s). Your progress ({{received}} of {{expected}}) is kept — retrying resumes where it stopped.",
+    "interrupted": "The download was interrupted after {{received}} of {{expected}}. The partial file was discarded, so retrying starts from the beginning.",
+    "insufficientStorage": "There isn't enough free space on this phone for this download — it needs {{needed}} but only {{free}} is available. Free up space and try again.",
+    "cancelled": "Verification was cancelled after {{received}} of {{expected}}. Nothing was deleted — you can verify again."
+  },
+  "agentTasks": {
+    "reviewEmpty": "There are no NIDO tasks pending approval.",
+    "reviewHeader": "NIDO tasks pending your approval ({{count}}):",
+    "reviewItem": "• id {{id}}\n  From: {{sender}} (id {{pkShort}}…)\n  Asks: {{action}}\n  Received: {{when}}",
+    "reviewFooter": "To decide, use nido_approve_task or nido_reject_task with the id.",
+    "decideMissingId": "Error: provide the task id (see nido_review_tasks).",
+    "decideApproved": "Task {{id}} approved and recorded. Nothing was executed automatically.",
+    "decideRejected": "Task {{id}} rejected and recorded.",
+    "decideNotFound": "There is no pending task with id “{{id}}” (it may already have been decided).",
+    "unknownSender": "Unknown NIDO contact"
+  },
+  "p2p": {
+    "sendChatEmpty": "The message is empty.",
+    "sendChatTooLong": "Message too long (max 4000 characters).",
+    "sendChatContactNotFound": "You have no NIDO contact named “{{name}}”. Pair first by scanning their QR code.",
+    "sendChatContactAmbiguous": "There are {{count}} NIDO contacts named “{{name}}”. I don't know which one you mean; choose one:\n{{options}}"
+  },
+  "themeSelector": {
+    "paletteTitle": "Color theme",
+    "paletteSubtitle": "Daylight for day, Night Garden for low light.",
+    "textTitle": "Text size",
+    "textSubtitle": "Make text smaller or larger across the app.",
+    "previewTitle": "Preview",
+    "previewBody": "Everything runs on your phone — nothing is sent anywhere.",
+    "previewMeta": "Fast · Private · 100% offline"
+  },
+  "usageStats": {
+    "memTitle": "Memory",
+    "memOk": "Within limit",
+    "memOver": "Over limit",
+    "appMemory": "App memory",
+    "current": "Current",
+    "peakSession": "Peak this session",
+    "deviceRam": "Device RAM",
+    "headroom": "Headroom",
+    "detecting": "Detecting…",
+    "storageTitle": "Storage",
+    "segModels": "Models",
+    "segKnowledge": "Knowledge base",
+    "segAppData": "App data",
+    "segFree": "Free space",
+    "available": "Available",
+    "lastAnswer": "Last answer",
+    "speed": "Speed",
+    "firstToken": "First token",
+    "tokensOut": "Tokens",
+    "totalTime": "Total time",
+    "peakMemQuery": "Peak memory",
+    "emptyInfer": "Answer something first — stats will appear here.",
+    "routingTitle": "Last routing decision",
+    "modelUsed": "Model used",
+    "taskType": "Task type",
+    "retrievalUsed": "Knowledge used",
+    "switches": "Model switches",
+    "switchedSince": "Switched since last message",
+    "latency": "Latency",
+    "reasons": "Reasons",
+    "routingFailed": "Routing fell back to your normal model for the last message.",
+    "emptyRouting": "No routing decision recorded yet.",
+    "engineTitle": "Engine",
+    "engineModel": "Model",
+    "ctxWindow": "Context window",
+    "threads": "Threads",
+    "license": "License",
+    "inference": "Inference",
+    "emptyEngine": "No model loaded."
+  },
+  "calm": {
+    "model": "Model",
+    "speed": "Speed",
+    "time": "Time",
+    "policyChecks": "Policy checks",
+    "toolsUsed": "Tools used",
+    "showDetails": "Details",
+    "hideDetails": "Hide details"
+  }
+}

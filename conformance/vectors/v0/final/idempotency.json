@@ -1,0 +1,90 @@
+{
+  "suite": "nido-conformance",
+  "suite_version": "0",
+  "vectors": [
+    {
+      "id": "idem-001",
+      "title": "unique tasks each execute once",
+      "category": "valid",
+      "kind": "idempotency",
+      "expected": {
+        "duplicates_rejected": 0,
+        "executed_count": 3,
+        "log": [
+          "EXECUTED",
+          "EXECUTED",
+          "EXECUTED"
+        ],
+        "ok": true
+      },
+      "input": {
+        "task_ids": [
+          "t1",
+          "t2",
+          "t3"
+        ]
+      }
+    },
+    {
+      "id": "idem-002",
+      "title": "retried task_ids never re-execute side effects",
+      "category": "adversarial",
+      "kind": "idempotency",
+      "expected": {
+        "duplicates_rejected": 2,
+        "executed_count": 2,
+        "log": [
+          "EXECUTED",
+          "DUPLICATE",
+          "EXECUTED",
+          "DUPLICATE"
+        ],
+        "ok": true
+      },
+      "input": {
+        "task_ids": [
+          "t1",
+          "t1",
+          "t2",
+          "t2"
+        ]
+      }
+    },
+    {
+      "id": "idem-003",
+      "title": "empty sequence is a no-op",
+      "category": "valid",
+      "kind": "idempotency",
+      "expected": {
+        "duplicates_rejected": 0,
+        "executed_count": 0,
+        "log": [],
+        "ok": true
+      },
+      "input": {
+        "task_ids": []
+      }
+    },
+    {
+      "id": "idem-004",
+      "title": "boundary: immediate duplicate",
+      "category": "boundary",
+      "kind": "idempotency",
+      "expected": {
+        "duplicates_rejected": 1,
+        "executed_count": 1,
+        "log": [
+          "EXECUTED",
+          "DUPLICATE"
+        ],
+        "ok": true
+      },
+      "input": {
+        "task_ids": [
+          "t1",
+          "t1"
+        ]
+      }
+    }
+  ]
+}
