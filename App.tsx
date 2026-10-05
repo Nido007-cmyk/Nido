@@ -27,7 +27,7 @@ import {
 
 const modelManager = new ModelManager();
 
-type Screen = "checking" | "wipe-recovering" | "wipe-blocked" | "key-loss" | "locked" | "required-setup" | "chat";
+type Screen = "checking" | "wipe-recovering" | "wipe-blocked" | "startup-error" | "key-loss" | "locked" | "required-setup" | "chat";
 
 /**
  * Pantalla de bloqueo: gate biométrico/PIN del sistema antes de mostrar
@@ -123,9 +123,16 @@ function AppContent() {
     initHaptics();
     // Rutinas proactivas locales: notificaciones, vencidos, resumen diario.
     runStartupRoutines();
-    const ready = await modelManager.requiredModelsPresent();
-    setModelsReady(ready);
-    setScreen("locked"); // el gate biométrico va antes de mostrar datos
+    try {
+      const ready = await modelManager.requiredModelsPresent();
+      setModelsReady(ready);
+      setScreen("locked"); // el gate biométrico va antes de mostrar datos
+    } catch (e) {
+      // GAP-1 fix: si requiredModelsPresent() lanza (error de filesystem),
+      // no quedarse en spinner infinito — mostrar error honesto con retry.
+      setWipeError(e instanceof Error ? e.message : String(e));
+      setScreen("startup-error");
+    }
   };
 
   /**
@@ -195,12 +202,13 @@ function AppContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Background → bloquear; foreground → volver al gate si se estaba en chat.
+  // Background → bloquear; foreground → volver al gate si se estaba en chat o setup.
+  // GAP-2 fix: background durante required-setup también re-bloquea (antes solo chat).
   useEffect(() => {
     const sub = AppState.addEventListener("change", (s) => {
       if (s === "background" || s === "inactive") {
         lockNow();
-      } else if (s === "active" && screenRef.current === "chat") {
+      } else if (s === "active" && (screenRef.current === "chat" || screenRef.current === "required-setup")) {
         setScreen("locked");
       }
     });
@@ -241,6 +249,27 @@ function AppContent() {
             style={[styles.lockButton, { backgroundColor: colors.emerald[500] }]}
           >
             <Text style={styles.lockButtonText}>{t("wipeRecovery.retry")}</Text>
+          </Pressable>
+        </View>
+      )}
+      {/* GAP-1: error honesto si la comprobación de modelos falla (filesystem).
+          Nunca spinner infinito sin salida. */}
+      {screen === "startup-error" && (
+        <View style={styles.centered}>
+          <Text style={[styles.lockTitle, { color: colors.text.primary }]}>
+            {t("startupError.title")}
+          </Text>
+          <Text style={[styles.lockSubtitle, { color: colors.text.secondary }]}>
+            {t("startupError.body")}
+          </Text>
+          {wipeError && (
+            <Text style={[styles.lockWarning, { color: colors.crimson[400] }]}>{wipeError}</Text>
+          )}
+          <Pressable
+            onPress={runStartupGate}
+            style={[styles.lockButton, { backgroundColor: colors.emerald[500] }]}
+          >
+            <Text style={styles.lockButtonText}>{t("startupError.retry")}</Text>
           </Pressable>
         </View>
       )}

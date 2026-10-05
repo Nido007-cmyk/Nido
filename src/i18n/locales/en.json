@@ -151,6 +151,11 @@
       "blockedTitle": "Data deletion incomplete",
       "blockedBody": "Clear All Data was interrupted and could not be completed safely. The app will not start with partially deleted data. You can retry, or reinstall the app.",
       "retry": "Retry deletion"
+    },
+    "startupError": {
+      "title": "Startup error",
+      "body": "Could not check the model status. This may be a temporary storage issue. Retry, or reinstall the app if it persists.",
+      "retry": "Retry"
     }
   },
   "setupWizard": {
@@ -316,6 +321,38 @@
   "knowledgeBaseScreen": {
     "title": "My documents"
   },
+  "policyAsk": {
+    "title": "Confirm action",
+    "risk": "Risk"
+  },
+  "memoryManager": {
+    "title": "My memory",
+    "tabs": {
+      "facts": "Facts",
+      "notes": "Notes",
+      "people": "People",
+      "reminders": "Reminders"
+    },
+    "facts": {
+      "emptyTitle": "No saved facts",
+      "emptyDescription": "When you tell me something about yourself, I'll save it here."
+    },
+    "notes": {
+      "emptyTitle": "No notes",
+      "emptyDescription": "Ask me to save a note and it will appear here."
+    },
+    "people": {
+      "emptyTitle": "No people",
+      "emptyDescription": "People you mention will appear here."
+    },
+    "reminders": {
+      "emptyTitle": "No reminders",
+      "emptyDescription": "Ask me to remind you of something and you'll see it here."
+    },
+    "deleteTitle": "Delete",
+    "deleteMessage": "Delete this item from memory? This cannot be undone.",
+    "markDone": "Mark as done"
+  },
   "chatHeader": {
     "openDrawer": "Open Navigation Drawer",
     "offline": "Offline",
@@ -340,6 +377,7 @@
     "drawerItems": {
       "prompts": "Prompt Ideas",
       "myDocuments": "My Documents",
+      "memory": "My Memory",
       "settings": "Settings",
       "telemetry": "Execution Telemetry",
       "about": "About & Info"
@@ -356,6 +394,7 @@
     "roleYou": "You",
     "roleAssistant": "🎭 NIDO",
     "stoppedByUser": "Stopped by user",
+    "retry": "Retry",
     "deepResearchBanner": "Deep research · Breaking down → Searching offline → Synthesizing",
     "copyResponse": "Copy response",
     "copied": "Copied",

@@ -72,6 +72,7 @@ import { ProcessingIndicator, ProcessingStatus } from "./ProcessingIndicator";
 import { Drawer, DrawerItem } from "./Drawer";
 import { AboutScreen } from "./AboutScreen";
 import { KnowledgeBaseScreen } from "./KnowledgeBaseScreen";
+import { MemoryManagerScreen } from "./MemoryManagerScreen";
 import { NidoScreen } from "./NidoScreen";
 import { ExecutionTelemetryScreen } from "./ExecutionTelemetryScreen";
 import { ModelSetupScreen } from "./ModelSetupScreen";
@@ -153,6 +154,7 @@ export function ChatScreen({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
+  const [showMemoryManager, setShowMemoryManager] = useState(false);
   const [showExecutionTelemetry, setShowExecutionTelemetry] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showNido, setShowNido] = useState(false);
@@ -658,9 +660,24 @@ export function ChatScreen({
             cancelLabel: t("common.cancel"),
             confirmLabel: t("common.confirm"),
           });
+        // FASE D7: Wire Policy Engine ASK → UI. Si el Policy Engine decide
+        // que una acción requiere confirmación humana, mostrar diálogo real.
+        // Sin esto, las acciones ASK se bloqueaban silenciosamente (fail-closed
+        // correcto, pero sin surface para el usuario).
+        const onConfirmTool = async (decision: {
+          reason: string;
+          risk: string;
+        }): Promise<boolean> =>
+          showSecureAlert({
+            title: t("policyAsk.title"),
+            message: `${decision.reason}\n\n${t("policyAsk.risk")}: ${decision.risk}`,
+            cancelLabel: t("common.cancel"),
+            confirmLabel: t("common.confirm"),
+          });
         const agentResult = await runAgentLoop(query, {
           engine: llamaEngine,
           handlers: buildToolHandlers({ requestConfirm }),
+          onConfirmTool,
           loadMemory: () => loadMemorySnapshot().catch(() => null),
           maxSteps: 3,
           nPredict: agentMaxTokens,
@@ -1095,9 +1112,27 @@ export function ChatScreen({
     });
   }, [send, scrollToBottom]);
 
+  // FASE D6: Retry explícito para mensajes de error. Busca el último mensaje
+  // del usuario y lo reenvía sin que el usuario tenga que reescribirlo.
+  const retryLastMessage = useCallback(() => {
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+    if (lastUserMsg && !generating) {
+      setInput(lastUserMsg.text);
+      // Pequeño delay para que setInput se aplique antes de send()
+      setTimeout(() => {
+        followBottom.current = true;
+        scrollToBottom(true);
+        sendTaskRef.current = send().finally(() => {
+          sendTaskRef.current = null;
+        });
+      }, 50);
+    }
+  }, [messages, generating, send, scrollToBottom]);
+
   const drawerItems: DrawerItem[] = [
     { key: "prompts", icon: "ideas", label: t("chatScreen.drawerItems.prompts"), onPress: () => setShowPromptIdeas(true) },
     { key: "knowledge", icon: "knowledge", label: t("chatScreen.drawerItems.myDocuments"), onPress: () => setShowKnowledgeBase(true) },
+    { key: "memory", icon: "memory", label: t("chatScreen.drawerItems.memory"), onPress: () => setShowMemoryManager(true) },
     { key: "settings", icon: "settings", label: t("chatScreen.drawerItems.settings"), onPress: () => setShowSettings(true) },
     { key: "telemetry", icon: "telemetry", label: t("chatScreen.drawerItems.telemetry"), onPress: () => setShowExecutionTelemetry(true) },
     { key: "nido", icon: "pairing", label: "NIDO", onPress: () => setShowNido(true) },
@@ -1139,6 +1174,10 @@ export function ChatScreen({
 
   if (showKnowledgeBase) {
     return <KnowledgeBaseScreen onClose={() => setShowKnowledgeBase(false)} />;
+  }
+
+  if (showMemoryManager) {
+    return <MemoryManagerScreen onClose={() => setShowMemoryManager(false)} />;
   }
 
   if (showNido) {
@@ -1340,6 +1379,28 @@ export function ChatScreen({
                     <NidoIcon name="pause" size={12} color={colors.text.accentAmber} />
                     <Text style={[styles.stoppedTag, { color: colors.text.accentAmber }]}>{t("chatScreen.interruptedByBackground")}</Text>
                   </View>
+                )}
+
+                {/* FASE D6: Botón retry explícito para mensajes de error.
+                    El usuario no tiene que reescribir el mensaje. */}
+                {item.role === "assistant" && item.text.startsWith("Error:") && (
+                  <Pressable
+                    onPress={retryLastMessage}
+                    disabled={generating}
+                    hitSlop={8}
+                    style={[
+                      styles.retryBtn,
+                      { backgroundColor: colors.emerald.bgSubtle, borderColor: colors.emerald.border },
+                      generating && { opacity: 0.5 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("chatScreen.retry")}
+                  >
+                    <NidoIcon name="refresh" size={14} color={colors.emerald[600]} />
+                    <Text style={[styles.retryBtnText, { color: colors.emerald[600] }]}>
+                      {t("chatScreen.retry")}
+                    </Text>
+                  </Pressable>
                 )}
 
                 {item.role === "assistant" && item.text.length > 0 && (
@@ -1770,6 +1831,21 @@ const styles = StyleSheet.create({
   stoppedTag: {
     ...typography.ui.caption,
     color: colors.text.secondary,
+    fontWeight: "600",
+  },
+  retryBtn: {
+    marginTop: 8,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: radii.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  retryBtnText: {
+    ...typography.ui.body,
     fontWeight: "600",
   },
   stoppedBadgeRow: {

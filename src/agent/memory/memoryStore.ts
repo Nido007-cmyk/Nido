@@ -302,6 +302,13 @@ export async function getNote(id: string): Promise<AgentNote | null> {
   return row ?? null;
 }
 
+/** Elimina una nota por id. */
+export async function deleteNote(id: string): Promise<void> {
+  await writeMemoryTransaction(async (db) => {
+    await db.runAsync("DELETE FROM agent_notes WHERE id = ?;", [id]);
+  });
+}
+
 // ---------------------------------------------------------------- reminders
 
 export interface AgentReminder {
@@ -356,5 +363,12 @@ export async function getDueReminders(nowIso?: string): Promise<AgentReminder[]>
 export async function completeReminder(id: string): Promise<void> {
   await writeMemoryTransaction(async (db) => {
     await db.runAsync("UPDATE agent_reminders SET done = 1 WHERE id = ?;", [id]);
+  });
+}
+
+/** Elimina un recordatorio por id. */
+export async function deleteReminder(id: string): Promise<void> {
+  await writeMemoryTransaction(async (db) => {
+    await db.runAsync("DELETE FROM agent_reminders WHERE id = ?;", [id]);
   });
 }

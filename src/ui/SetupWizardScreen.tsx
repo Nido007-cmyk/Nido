@@ -797,6 +797,15 @@ export function SetupWizardScreen({ onReady, onSkip }: Props) {
         <View style={styles.errorCard}>
           <Text style={[styles.errorTitle, tp.ui.title]}>{t("setupWizard.step3.errorTitle")}</Text>
           <Text style={[styles.errorText, tp.ui.body]}>{t("setupWizard.step3.errorText")}</Text>
+          {/* GAP-4 fix: mostrar qué asset falló y por qué (el dato ya existía, no se renderizaba) */}
+          {failedAssets.map(({ asset, error }) => (
+            <View key={asset.id} style={styles.failedAssetRow}>
+              <Text style={[styles.failedAssetLabel, tp.ui.body]}>{asset.label}</Text>
+              <Text style={[styles.failedAssetError, tp.ui.caption]} numberOfLines={2}>
+                {error}
+              </Text>
+            </View>
+          ))}
           <Pressable style={styles.primaryBtn} onPress={retryFailedDownloads} accessibilityRole="button" accessibilityLabel={t("setupWizard.step3.tryAgain")}>
             <Text style={[styles.primaryBtnText, tp.ui.title]}>{t("setupWizard.step3.tryAgain")}</Text>
           </Pressable>
@@ -1089,6 +1098,19 @@ function makeStyles(colors: Colors) {
     },
     errorText: {
       color: colors.text.secondary,
+    },
+    failedAssetRow: {
+      backgroundColor: colors.bg.surface,
+      borderRadius: calmRadii.subtle,
+      padding: calmSpacing.cozy,
+      gap: 2,
+    },
+    failedAssetLabel: {
+      color: colors.text.primary,
+      fontWeight: "600",
+    },
+    failedAssetError: {
+      color: colors.text.muted,
     },
     footer: {
       marginTop: calmSpacing.cozy,

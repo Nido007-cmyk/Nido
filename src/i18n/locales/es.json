@@ -66,6 +66,7 @@
     "deepResearchBanner": "Investigación profunda · Descomponiendo → Buscando offline → Sintetizando",
     "drawerItems": {
       "about": "Acerca de e información",
+      "memory": "Mi memoria",
       "myDocuments": "Mis documentos",
       "prompts": "Ideas de prompts",
       "settings": "Ajustes",
@@ -98,6 +99,7 @@
     "stageTimedOut": "Un paso de la investigación tardó demasiado y se cortó",
     "stopGeneration": "Detener la generación",
     "stoppedByUser": "Detenido por el usuario",
+    "retry": "Reintentar",
     "stopping": "Deteniendo… (terminando el paso actual)",
     "toneChanged": "Tono: {{tone}}",
     "emptyTitle": "Hola, soy NIDO",
@@ -222,6 +224,38 @@
   "knowledgeBaseScreen": {
     "title": "Mis documentos"
   },
+  "policyAsk": {
+    "title": "Confirmar acción",
+    "risk": "Riesgo"
+  },
+  "memoryManager": {
+    "title": "Mi memoria",
+    "tabs": {
+      "facts": "Datos",
+      "notes": "Notas",
+      "people": "Personas",
+      "reminders": "Recordatorios"
+    },
+    "facts": {
+      "emptyTitle": "Sin datos guardados",
+      "emptyDescription": "Cuando me cuentes algo sobre ti, lo guardaré aquí."
+    },
+    "notes": {
+      "emptyTitle": "Sin notas",
+      "emptyDescription": "Pídeme que guarde una nota y aparecerá aquí."
+    },
+    "people": {
+      "emptyTitle": "Sin personas",
+      "emptyDescription": "Las personas que menciones aparecerán aquí."
+    },
+    "reminders": {
+      "emptyTitle": "Sin recordatorios",
+      "emptyDescription": "Pídeme que te recuerde algo y lo verás aquí."
+    },
+    "deleteTitle": "Eliminar",
+    "deleteMessage": "¿Eliminar este elemento de la memoria? No se puede deshacer.",
+    "markDone": "Marcar como hecho"
+  },
   "memorySettings": {
     "autoSummarizeLabel": "Resumen de contexto en segundo plano",
     "autoSummarizeValue": "Condensa los turnos antiguos para que los chats largos no pierdan contexto",
@@ -281,6 +315,11 @@
       "blockedTitle": "Borrado de datos incompleto",
       "blockedBody": "El borrado total de datos se interrumpió y no pudo completarse de forma segura. La app no se iniciará con datos parcialmente borrados. Puedes reintentarlo o reinstalar la app.",
       "retry": "Reintentar borrado"
+    },
+    "startupError": {
+      "title": "Error al iniciar",
+      "body": "No se pudo comprobar el estado de los modelos. Puede ser un problema temporal del almacenamiento. Reintenta o reinstala la app si persiste.",
+      "retry": "Reintentar"
     },
     "header": {
       "subtitle": "NIDO — Tu agente. Tu mundo.",

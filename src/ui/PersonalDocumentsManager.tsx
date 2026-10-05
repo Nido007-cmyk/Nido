@@ -146,7 +146,7 @@ export function PersonalDocumentsManager() {
           title={t("personalDocumentsManager.emptyTitle")}
           description={t("personalDocumentsManager.emptyDescription")}
           actionLabel={t("personalDocumentsManager.emptyAction")}
-          onAction={() => pickDocuments()}
+          onAction={handleImport}
         />
       )}
 

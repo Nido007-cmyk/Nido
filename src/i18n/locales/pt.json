@@ -151,6 +151,11 @@
       "blockedTitle": "Eliminação de dados incompleta",
       "blockedBody": "A eliminação total de dados foi interrompida e não pôde ser concluída com segurança. A app não será iniciada com dados parcialmente eliminados. Podes tentar novamente ou reinstalar a app.",
       "retry": "Tentar novamente"
+    },
+    "startupError": {
+      "title": "Erro ao iniciar",
+      "body": "Não foi possível verificar o estado dos modelos. Pode ser um problema temporário de armazenamento. Tenta novamente ou reinstala a app se persistir.",
+      "retry": "Tentar novamente"
     }
   },
   "setupWizard": {
@@ -316,6 +321,38 @@
   "knowledgeBaseScreen": {
     "title": "Meus documentos"
   },
+  "policyAsk": {
+    "title": "Confirmar ação",
+    "risk": "Risco"
+  },
+  "memoryManager": {
+    "title": "Minha memória",
+    "tabs": {
+      "facts": "Dados",
+      "notes": "Notas",
+      "people": "Pessoas",
+      "reminders": "Lembretes"
+    },
+    "facts": {
+      "emptyTitle": "Sem dados guardados",
+      "emptyDescription": "Quando me contares algo sobre ti, vou guardá-lo aqui."
+    },
+    "notes": {
+      "emptyTitle": "Sem notas",
+      "emptyDescription": "Pede-me para guardar uma nota e ela aparecerá aqui."
+    },
+    "people": {
+      "emptyTitle": "Sem pessoas",
+      "emptyDescription": "As pessoas que mencionares aparecerão aqui."
+    },
+    "reminders": {
+      "emptyTitle": "Sem lembretes",
+      "emptyDescription": "Pede-me para te lembrar de algo e vais vê-lo aqui."
+    },
+    "deleteTitle": "Eliminar",
+    "deleteMessage": "Eliminar este item da memória? Não pode ser desfeito.",
+    "markDone": "Marcar como feito"
+  },
   "chatHeader": {
     "openDrawer": "Abrir menu de navegação",
     "offline": "Offline",
@@ -340,6 +377,7 @@
     "drawerItems": {
       "prompts": "Ideias de Prompts",
       "myDocuments": "Meus Documentos",
+      "memory": "Minha Memória",
       "settings": "Configurações",
       "telemetry": "Telemetria de Execução",
       "about": "Sobre & Informações"
@@ -356,6 +394,7 @@
     "roleYou": "Você",
     "roleAssistant": "🎭 NIDO",
     "stoppedByUser": "Interrompido pelo usuário",
+    "retry": "Tentar novamente",
     "deepResearchBanner": "Pesquisa profunda · Dividindo → Buscando offline → Sintetizando",
     "copyResponse": "Copiar resposta",
     "copied": "Copiado",
