@@ -447,18 +447,11 @@ export const MODEL_CATALOG: CatalogModel[] = [
     filename: "corpus/wiki-vital5.sqlite",
     sizeBytes: 163647488,
     sha256: "d3b87d562baba3489f6878bf99783f50d504db94c347029771e53f6d1aecc666",
-    sourceUrl: "https://github.com/rferrari/boar-app/releases/download/knowledge-pack-v1/wiki-vital5.sqlite",
-    // TEMPORARY (2026-09-27): the NIDO release asset
-    // (releases/download/corpus-v1/wiki-vital5.sqlite.2) returns 404
-    // anonymously because the NIDO repo is private — verified 2026-09-27 by
-    // scripts/verify-manifest-pins.mjs (HEAD + ranged GET + full GET all 404).
-    // Restored the upstream release URL, whose file bytes are byte-identical
-    // to the sha256 above (verified after the owner upload). Integrity does
-    // not depend on the host: ModelManager verifies sha256 after download.
-    // TODO: replace with public immutable NIDO hosting.
-    // (NIDO-hosted copy preserved at docs/ci-evidence/corpus-migration/
-    //  and as release asset corpus-v1/wiki-vital5.sqlite.2 for the day the
-    //  repo/releases go public.)
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v1/wiki-vital5.sqlite",
+    // NIDO-hosted (Fase 2, 2026-10-05): CC BY-SA 4.0 Wikipedia content,
+    // redistributed with attribution (ATTRIBUTION.txt in release assets).
+    // Release assets are immutable per tag. Integrity does not depend on
+    // the host: ModelManager verifies sha256 after download.
     license: "CC BY-SA 4.0 (Wikipedia)",
     description: "Introductions of Wikipedia's ~50,000 Vital Articles (level 5), searchable offline. ~164MB.",
     required: false,
