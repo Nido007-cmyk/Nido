@@ -2,6 +2,7 @@ import { LlamaContext, initLlama } from "llama.rn";
 import * as FileSystem from "expo-file-system/legacy";
 import { checkRamBudget, readRamSnapshot, toGb } from "../inference/ramBudget";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
+import { withStage } from "../utils/stageError";
 
 /**
  * Wraps a small local embedding model (GGUF, <300MB) via llama.rn's
@@ -40,7 +41,7 @@ export class EmbeddingEngine {
     // embedding model is trusted only if it is a curated catalog asset
     // whose bytes are proven verified (see src/models/modelTrust.ts).
     // Existence at the expected path is never enough.
-    await assertTrustedModelFileByName(modelFilename);
+    await withStage("trust-check", () => assertTrustedModelFileByName(modelFilename));
     const info = await FileSystem.getInfoAsync(modelPath);
     if (!info.exists) {
       throw new Error(`Embedding model not found at ${modelPath}`);
@@ -59,12 +60,14 @@ export class EmbeddingEngine {
           `(of ${toGb(verdict.totalRamBytes)}GB total). Close background apps and retry.`
       );
     }
-    this.context = await initLlama({
-      model: modelPath,
-      embedding: true,
-      n_ctx: 512,
-      n_threads: 2,
-    });
+    this.context = await withStage("initLlama-embedding", () =>
+      initLlama({
+        model: modelPath,
+        embedding: true,
+        n_ctx: 512,
+        n_threads: 2,
+      })
+    );
     this.modelFilename = modelFilename;
   }
 

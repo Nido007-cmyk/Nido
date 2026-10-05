@@ -33,6 +33,7 @@ import { NidoMascot } from "./components/calm/NidoMascot";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import * as FileSystem from "expo-file-system/legacy";
 import { getDeviceTotalRamBytes } from "ram-monitor";
+import { withStage } from "../utils/stageError";
 import {
   TIERS,
   SetupTier,
@@ -480,7 +481,7 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
       setIndexingError(null);
       const emb = MODEL_CATALOG.find((m) => m.kind === "embedding" && m.required)!;
       await embeddingEngine.load(emb.filename);
-      await seedKnowledgeBaseIfEmpty();
+      await withStage("seed-knowledge-base", () => seedKnowledgeBaseIfEmpty());
       setIndexingPhase("ready");
       notification(NotificationFeedbackType.Success);
     } catch (e: unknown) {
@@ -716,11 +717,12 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
     </ScrollView>
   );
 
+  // NIDO UX (2026-10-05, physical device gate): the tier card shows ONLY the
+  // tier's EXTRA download (corpus packs). Including the model size here made
+  // every tier read "About 0.4 GB to download", looking like a second,
+  // separate 0.4 GB download on top of the model card above it.
   const tierDownloadBytes = (corpusPackIds: string[]) =>
-    totalManifestBytes([
-      ...setupLlmAssets,
-      ...CORPUS_CATALOG.filter((c) => corpusPackIds.includes(c.id)),
-    ]);
+    totalManifestBytes(CORPUS_CATALOG.filter((c) => corpusPackIds.includes(c.id)));
 
   // Model picker (2026-10-05): light vs preferred LLM, preselected for this
   // device's RAM. Honest per-model info: download size + estimated RAM.
@@ -809,11 +811,13 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
               </View>
             </View>
             <Text style={[styles.tierDesc, tp.ui.body]}>{tier.description}</Text>
-            <Text style={[styles.tierSize, tp.ui.subtext, styles.tabular]}>
-              {t("setupWizard.step2.downloadSize", {
-                size: formatGB(tierDownloadBytes(tier.corpusPackIds ?? [])),
-              })}
-            </Text>
+            {tierDownloadBytes(tier.corpusPackIds ?? []) > 0 && (
+              <Text style={[styles.tierSize, tp.ui.subtext, styles.tabular]}>
+                {t("setupWizard.step2.downloadSize", {
+                  size: formatGB(tierDownloadBytes(tier.corpusPackIds ?? [])),
+                })}
+              </Text>
+            )}
           </Pressable>
         );
       })}

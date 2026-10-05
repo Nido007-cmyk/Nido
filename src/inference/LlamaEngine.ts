@@ -3,6 +3,7 @@ import { initLlama, LlamaContext } from "llama.rn";
 import { checkRamBudget, readRamSnapshot, toGb } from "./ramBudget";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
+import { withStage } from "../utils/stageError";
 
 export interface ChatMessageInput {
   role: string;
@@ -117,7 +118,7 @@ export class LlamaEngine {
     // src/models/modelTrust.ts). A file merely existing at the expected
     // path is NEVER enough to reach initLlama. This runs before the
     // exists-check below so even the "not found" case reports honestly.
-    await assertTrustedModelFileByName(modelFilename);
+    await withStage("trust-check", () => assertTrustedModelFileByName(modelFilename));
     const info = await FileSystem.getInfoAsync(modelPath);
     if (!info.exists) {
       throw new Error(
@@ -155,13 +156,15 @@ export class LlamaEngine {
     }
 
     try {
-      this.context = await initLlama({
-        model: modelPath,
-        use_mlock: false, // avoid pinning full weights in RAM; rely on mmap streaming
-        n_ctx: nCtx,
-        n_threads: nThreads,
-        n_gpu_layers: 0, // CPU-only for broad device compatibility; adjust per-device
-      });
+      this.context = await withStage("initLlama", () =>
+        initLlama({
+          model: modelPath,
+          use_mlock: false, // avoid pinning full weights in RAM; rely on mmap streaming
+          n_ctx: nCtx,
+          n_threads: nThreads,
+          n_gpu_layers: 0, // CPU-only for broad device compatibility; adjust per-device
+        })
+      );
       this.modelInfo = { filename: modelFilename, nCtx, nThreads };
     } catch (e: any) {
       // The native error here (from llama.rn/llama.cpp) is often terse
