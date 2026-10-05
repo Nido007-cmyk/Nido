@@ -55,3 +55,4 @@ build/knowledge-pack/
 # Raw demo recording (31 MB); the compressed copy is docs/demo/boar_demo_small.mp4
 docs/demo/boar_demo.mp4
 __pycache__/
+apk/
