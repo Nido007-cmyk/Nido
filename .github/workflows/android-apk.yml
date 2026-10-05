@@ -20,9 +20,10 @@
 #   dev-plaintext database fallback);
 # - expo-dev-client was removed from app.json → no dev-launcher surfaces
 #   and no dev-injected usesCleartextTraffic.
-# Signing: withReleaseSigning uses BOAR_UPLOAD_* keys when present in
-# ~/.gradle/gradle.properties, otherwise Expo's default debug signing —
-# reported honestly in the artifact METADATA.md; never silently assumed.
+# Signing: withReleaseSigning uses NIDO_UPLOAD_* keys when present (injected
+# from the NIDO_UPLOAD_* GitHub Secrets into ~/.gradle/gradle.properties by
+# the "Set up release signing keystore" step), otherwise Expo's default debug
+# signing. See docs/SIGNING.md.
 #
 # 2026-09-27: a completed/failed run died mid-Gradle-build with no logs at
 # all — consistent with the runner running out of disk (GitHub-hosted
@@ -138,6 +139,31 @@ jobs:
 
       - name: Expo prebuild (Android, clean)
         run: npx expo prebuild -p android --clean --non-interactive
+
+      - name: Set up release signing keystore (NIDO identity)
+        # The release keystore lives ONLY in the NIDO_UPLOAD_* GitHub Secrets
+        # (never in git). Decodes it to a temp file and points Gradle at it
+        # via ~/.gradle/gradle.properties. If the secrets are absent, the
+        # build falls back to Expo's default debug signing.
+        env:
+          NIDO_UPLOAD_STORE_FILE_B64: ${{ secrets.NIDO_UPLOAD_STORE_FILE }}
+          NIDO_UPLOAD_STORE_PASSWORD: ${{ secrets.NIDO_UPLOAD_STORE_PASSWORD }}
+          NIDO_UPLOAD_KEY_ALIAS: ${{ secrets.NIDO_UPLOAD_KEY_ALIAS }}
+          NIDO_UPLOAD_KEY_PASSWORD: ${{ secrets.NIDO_UPLOAD_KEY_PASSWORD }}
+        run: |
+          if [ -z "$NIDO_UPLOAD_STORE_FILE_B64" ]; then
+            echo "No NIDO signing secrets configured; assembleRelease will use debug signing."
+            exit 0
+          fi
+          mkdir -p ~/.gradle
+          echo "$NIDO_UPLOAD_STORE_FILE_B64" | base64 -d > "$RUNNER_TEMP/nido-release.p12"
+          cat > ~/.gradle/gradle.properties <<EOF
+          NIDO_UPLOAD_STORE_FILE=$RUNNER_TEMP/nido-release.p12
+          NIDO_UPLOAD_STORE_PASSWORD=$NIDO_UPLOAD_STORE_PASSWORD
+          NIDO_UPLOAD_KEY_ALIAS=$NIDO_UPLOAD_KEY_ALIAS
+          NIDO_UPLOAD_KEY_PASSWORD=$NIDO_UPLOAD_KEY_PASSWORD
+          EOF
+          echo "Release signing configured (NIDO identity)."
 
       - name: Assemble standalone release APK (real Gradle build)
         working-directory: android

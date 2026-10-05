@@ -117,9 +117,10 @@ emulator, no physical device (verified: `which java javac adb` → empty).
    not set up either (`eas.json` exists with dev/preview/production profiles,
    but no login).
 5. **Release signing material absent** — `plugins/withReleaseSigning.js` reads
-   `BOAR_UPLOAD_STORE_FILE` / `BOAR_UPLOAD_KEY_ALIAS` /
-   `BOAR_UPLOAD_STORE_PASSWORD` / `BOAR_UPLOAD_KEY_PASSWORD` from
-   `~/.gradle/gradle.properties`; none exist. Debug builds don't need this;
+   `NIDO_UPLOAD_STORE_FILE` / `NIDO_UPLOAD_KEY_ALIAS` /
+   `NIDO_UPLOAD_STORE_PASSWORD` / `NIDO_UPLOAD_KEY_PASSWORD` from
+   `~/.gradle/gradle.properties` (or the NIDO_UPLOAD_* GitHub Secrets in CI;
+   see docs/SIGNING.md); none exist. Debug builds don't need this;
    release APKs do.
 6. **Native build risk (not a blocker, a warning)**: `llama.rn` ships heavy
    native binaries — historically the most likely build breaker

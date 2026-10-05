@@ -129,9 +129,10 @@ adb` → vacío). "READY" abajo significa *código/config listo*, nunca
    compilación en la nube tampoco está configurada (`eas.json` existe con
    perfiles dev/preview/production, pero sin login).
 5. **Material de firma release ausente** — `plugins/withReleaseSigning.js`
-   lee `BOAR_UPLOAD_STORE_FILE` / `BOAR_UPLOAD_KEY_ALIAS` /
-   `BOAR_UPLOAD_STORE_PASSWORD` / `BOAR_UPLOAD_KEY_PASSWORD` de
-   `~/.gradle/gradle.properties`; ninguno existe. Las compilaciones debug
+   lee `NIDO_UPLOAD_STORE_FILE` / `NIDO_UPLOAD_KEY_ALIAS` /
+   `NIDO_UPLOAD_STORE_PASSWORD` / `NIDO_UPLOAD_KEY_PASSWORD` de
+   `~/.gradle/gradle.properties` (o los Secrets NIDO_UPLOAD_* en CI;
+   ver docs/SIGNING.md); ninguno existe. Las compilaciones debug
    no necesitan esto; los APK release sí.
 6. **Riesgo de compilación nativa (no bloqueador, advertencia)**:
    `llama.rn` trae binarios nativos pesados — históricamente el rompedor

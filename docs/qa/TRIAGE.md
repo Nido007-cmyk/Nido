@@ -12,7 +12,7 @@ Primero se registra aquí con evidencia, se clasifica y se decide después.
 | ID | Hallazgo | Severidad | Estado |
 |----|----------|-----------|--------|
 | T-001 | Clases `DevLauncher*` muertas en el DEX: el paquete npm `expo-dev-client` sigue en `package.json` y se autovincula. Sin superficie en el manifest (inerte con `__DEV__=false`), pero es peso muerto y ruido. Acción propuesta: eliminar la dependencia npm. | Baja | Pendiente |
-| T-002 | El APK está firmado con certificado **Android Debug** (los secrets `BOAR_UPLOAD_*` no están configurados). Funciona para sideload, pero **antes de cualquier distribución más amplia se necesita una clave release estable** — rotar la clave obliga a desinstalar/reinstalar. | Media | Pendiente |
+| T-002 | El APK está firmado con certificado **Android Debug** (los secrets `NIDO_UPLOAD_*` no están configurados — ver docs/SIGNING.md, Fase 3 2026-10-05). Funciona para sideload, pero **antes de cualquier distribución más amplia se necesita una clave release estable** — rotar la clave obliga a desinstalar/reinstalar. | Media | Pendiente |
 
 ## Bugs encontrados durante la validación en tablet
 
