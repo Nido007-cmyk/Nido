@@ -8,8 +8,8 @@
  *   🐗 mascot, 🧊/🔀/♻️ model residency, ● recording/telemetry dots,
  *   language flags, theme sun/moon.
  * - INTEGRITY lane 2026-09-28: ⏹/⏸ in ChatScreen message badges replaced
- *   with frozen NidoIcon stop/pause; ⏱ classified as decorative text-only
- *   (no timer glyph in the frozen set — never invent one).
+ *   with frozen NidoIcon stop/pause; ⏱ mapped to frozen NidoIcon warning
+ *   (§4D glyph mapping closed 2026-10-05).
  * - Out of audited scope (owner to decide later): ▲▼ message feedback
  *   vote glyphs (ChatScreen), EvaluationScreen, SystemMonitor (dead UI),
  *   MarkdownMessage text buttons, dev-only screens.

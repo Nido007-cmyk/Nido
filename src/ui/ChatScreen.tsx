@@ -1367,9 +1367,10 @@ export function ChatScreen({
                 )}
 
                 {item.timedOut && (
-                  // No timer glyph in the frozen icon set: the timeout badge is
-                  // text-only (the amber badge styling already signals status).
-                  <View style={[styles.stoppedBadge, { backgroundColor: colors.amber.bgSubtle, borderColor: colors.amber.border }]}>
+                  // §4D glyph mapping (2026-10-05): ⏱ → NidoIcon "warning".
+                  // Amber attention tag; meaning preserved, no longer text-only.
+                  <View style={[styles.stoppedBadge, styles.stoppedBadgeRow, { backgroundColor: colors.amber.bgSubtle, borderColor: colors.amber.border }]}>
+                    <NidoIcon name="warning" size={12} color={colors.text.accentAmber} />
                     <Text style={[styles.stoppedTag, { color: colors.text.accentAmber }]}>{t("chatScreen.stageTimedOut")}</Text>
                   </View>
                 )}
