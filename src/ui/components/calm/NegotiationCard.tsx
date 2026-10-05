@@ -42,17 +42,37 @@ export function NegotiationCard({
 }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [counterMode, setCounterMode] = useState(false);
   const [selectedScopes, setSelectedScopes] = useState<string[]>(proposal.requestedScopes);
 
   const expiresIn = Math.max(0, proposal.expiresAt - Date.now());
   const expiresMinutes = Math.ceil(expiresIn / 60000);
 
-  // Human-readable scope labels (avoids i18n namespace separator issue with ':')
-  const scopeLabels = t("negotiationCard.scopeLabels", { returnObjects: true }) as Record<string, string>;
-  const scopeLabel = (scope: string): string =>
-    (scopeLabels && scopeLabels[scope]) || scope;
+  // Human-readable scope labels. Uses i18n where available, falls back to
+  // a built-in map (avoids i18n nesting issues with ':' in scope names).
+  const SCOPE_LABELS: Record<string, { es: string; en: string }> = {
+    "read:notes": { es: "Leer notas", en: "Read notes" },
+    "read:knowledge": { es: "Leer base de conocimiento", en: "Read knowledge base" },
+    "read:contacts": { es: "Leer contactos", en: "Read contacts" },
+    "read:reminders": { es: "Leer recordatorios", en: "Read reminders" },
+    "write:notes": { es: "Escribir notas", en: "Write notes" },
+    "write:reminder": { es: "Crear recordatorios", en: "Create reminders" },
+    "write:reminders": { es: "Crear recordatorios", en: "Create reminders" },
+  };
+  const scopeLabel = (scope: string): string => {
+    // Try i18n first
+    const labels = t("negotiationCard.scopeLabels", { returnObjects: true }) as unknown;
+    if (labels && typeof labels === "object" && (labels as Record<string, string>)[scope]) {
+      return (labels as Record<string, string>)[scope];
+    }
+    // Fallback to built-in map
+    const entry = SCOPE_LABELS[scope];
+    if (entry) {
+      return i18n.language?.startsWith("es") ? entry.es : entry.en;
+    }
+    return scope;
+  };
 
   const toggleScope = (scope: string) => {
     setSelectedScopes((prev) =>
