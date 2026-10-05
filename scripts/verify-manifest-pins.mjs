@@ -28,8 +28,8 @@
 import { createRequire } from "node:module";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { join, dirname } from "node:path";
+import { pathToFileURL, fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const ts = require("typescript");
@@ -72,8 +72,20 @@ async function loadManifest() {
   }
   const dir = mkdtempSync(join(tmpdir(), "nido-manifest-"));
   const file = join(dir, "manifest.mjs");
+  // manifest.ts imports ./downloadErrors (relative, no extension). Transpile
+  // and place it alongside, rewriting the import to include the .mjs extension
+  // so Node ESM can resolve it from the temp dir.
+  const depSource = readFileSync(join(dirname(fileURLToPath(MANIFEST_PATH)), "downloadErrors.ts"), "utf8");
+  const depOut = ts.transpileModule(depSource, {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 },
+  });
+  writeFileSync(join(dir, "downloadErrors.mjs"), depOut.outputText);
+  const fixedOutput = outputText.replace(
+    'from "./downloadErrors"',
+    'from "./downloadErrors.mjs"'
+  );
   try {
-    writeFileSync(file, outputText);
+    writeFileSync(file, fixedOutput);
     return await import(pathToFileURL(file).href);
   } finally {
     rmSync(dir, { recursive: true, force: true });
