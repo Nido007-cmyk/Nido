@@ -1430,6 +1430,44 @@ export class NidoMessenger {
     }
   }
 
+  /**
+   * Envía una respuesta de negociación firmada (ACCEPT/DECLINE/COUNTER) al peer.
+   * Crea el mensaje firmado con la identidad local, lo envuelve en un
+   * P2PEnvelope type="negotiation" y lo envía por el transporte.
+   * Retorna true si se envió, false si no hay sesión viva/transporte.
+   */
+  async sendNegotiationResponse(
+    peerPkHex: string,
+    action: "ACCEPT" | "DECLINE" | "COUNTER",
+    negotiationId: string,
+    signed: Record<string, unknown>
+  ): Promise<boolean> {
+    this.assertLive();
+    if (!this.myPk) {
+      const identity = await getIdentity();
+      this.assertLive();
+      if (!identity) return false;
+      this.myPk = identity.publicKey;
+    }
+    const key = peerPkHex.toLowerCase();
+    const session = this.sessions.get(key);
+    if (!session || !session.isPeerLive || !this.transport.available) return false;
+    try {
+      const envelope = makeEnvelope(
+        "negotiation",
+        newId(),
+        this.myPk,
+        key,
+        { action, negotiationId, signed }
+      );
+      this.assertLive();
+      await this.transport.sendFrame(key, session.pack(envelope));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private async flushOutbox(peerPkHex: string): Promise<void> {
     const key = peerPkHex.toLowerCase();
     const session = this.sessions.get(key);

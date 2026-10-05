@@ -20,15 +20,20 @@ import type {
   TaskProposal,
   SignedNegotiationMessage,
   NegotiationState,
+  NegotiationMessageType,
 } from "./negotiation";
 import {
   verifyProposal,
   verifyNegotiationMessage,
   isExpired,
+  signNegotiationMessage,
+  createCounter,
+  isValidTransition,
 } from "./negotiation";
 import { globalReplayProtection } from "./replayProtection";
 import { processIncomingProposal, type ProposalOutcome } from "./p2pApprovalBridge";
-import { fromHex } from "./crypto";
+import { fromHex, toHex } from "./crypto";
+import { getSigningKeypair } from "./store";
 
 /** Estados de una negociación activa. */
 export interface NegotiationSession {
@@ -51,6 +56,14 @@ export type NegotiationEvent =
 
 type NegotiationEventHandler = (event: NegotiationEvent) => void;
 
+/** Función de envío inyectada (normalmente NidoMessenger.sendNegotiationResponse). */
+export type NegotiationSendFn = (
+  peerPkHex: string,
+  action: "ACCEPT" | "DECLINE" | "COUNTER",
+  negotiationId: string,
+  signed: Record<string, unknown>
+) => Promise<boolean>;
+
 /**
  * Servicio singleton de negociación.
  * El messenger lo usa para routear mensajes; la UI se suscribe a eventos.
@@ -60,6 +73,7 @@ class NegotiationService {
   private sessions = new Map<string, NegotiationSession>();
   private handlers = new Set<NegotiationEventHandler>();
   private myPkHex: string | null = null;
+  private sendFn: NegotiationSendFn | null = null;
 
   static getInstance(): NegotiationService {
     if (!NegotiationService.instance) {
@@ -71,6 +85,15 @@ class NegotiationService {
   /** Configura la identidad local (para verificar recipient). */
   setLocalIdentity(pkHex: string): void {
     this.myPkHex = pkHex.toLowerCase();
+  }
+
+  /**
+   * Inyecta la función de envío (típicamente conectada a
+   * NidoMessenger.sendNegotiationResponse). Sin esto, accept/decline/counter
+   * actualizan el estado local pero no envían al peer.
+   */
+  setSendFunction(fn: NegotiationSendFn): void {
+    this.sendFn = fn;
   }
 
   /** La UI se suscribe a eventos de negociación. */
@@ -96,6 +119,131 @@ class NegotiationService {
     return Array.from(this.sessions.values()).sort(
       (a, b) => b.updatedAt - a.updatedAt
     );
+  }
+
+  /**
+   * Acepta una negociación: crea un mensaje ACCEPT firmado y lo envía al peer.
+   * Actualiza el estado local a ACCEPTED. Retorna true si se envió al peer,
+   * false si solo se actualizó localmente (sin transporte).
+   */
+  async acceptSession(negotiationId: string): Promise<boolean> {
+    const session = this.sessions.get(negotiationId);
+    if (!session) return false;
+    if (!isValidTransition(session.state, "ACCEPTED")) return false;
+
+    let sent = false;
+    if (this.sendFn) {
+      try {
+        const kp = await getSigningKeypair();
+        const myPkHex = toHex(kp.publicKey);
+        const signed = signNegotiationMessage(
+          kp.secretKey,
+          myPkHex,
+          "ACCEPT",
+          session.proposalId,
+          session.proposal
+        );
+        sent = await this.sendFn(
+          session.peerPkHex,
+          "ACCEPT",
+          negotiationId,
+          signed as unknown as Record<string, unknown>
+        );
+      } catch {
+        sent = false;
+      }
+    }
+
+    session.state = "ACCEPTED";
+    session.updatedAt = Date.now();
+    this.emit({ type: "accepted", session });
+    return sent;
+  }
+
+  /**
+   * Rechaza una negociación: crea un mensaje DECLINE firmado y lo envía al peer.
+   * Actualiza el estado local a DECLINED.
+   */
+  async declineSession(negotiationId: string, reason?: string): Promise<boolean> {
+    const session = this.sessions.get(negotiationId);
+    if (!session) return false;
+    if (!isValidTransition(session.state, "DECLINED")) return false;
+
+    let sent = false;
+    if (this.sendFn) {
+      try {
+        const kp = await getSigningKeypair();
+        const myPkHex = toHex(kp.publicKey);
+        const signed = signNegotiationMessage(
+          kp.secretKey,
+          myPkHex,
+          "DECLINE",
+          session.proposalId,
+          reason ? { reason } : {}
+        );
+        sent = await this.sendFn(
+          session.peerPkHex,
+          "DECLINE",
+          negotiationId,
+          signed as unknown as Record<string, unknown>
+        );
+      } catch {
+        sent = false;
+      }
+    }
+
+    session.state = "DECLINED";
+    session.updatedAt = Date.now();
+    this.emit({ type: "declined", session, reason });
+    return sent;
+  }
+
+  /**
+   * Contrapropone: crea una propuesta modificada con los scopes seleccionados,
+   * la firma y la envía al peer como COUNTER. Actualiza el estado local.
+   */
+  async counterSession(
+    negotiationId: string,
+    modifiedScopes: string[]
+  ): Promise<boolean> {
+    const session = this.sessions.get(negotiationId);
+    if (!session) return false;
+    if (!isValidTransition(session.state, "COUNTERED")) return false;
+
+    let sent = false;
+    // Crear la contrapropuesta (misma propuesta pero con scopes modificados)
+    const counterProposal: TaskProposal = {
+      ...session.proposal,
+      requestedScopes: modifiedScopes,
+    };
+
+    if (this.sendFn) {
+      try {
+        const kp = await getSigningKeypair();
+        const myPkHex = toHex(kp.publicKey);
+        const signed = signNegotiationMessage(
+          kp.secretKey,
+          myPkHex,
+          "COUNTER",
+          session.proposalId,
+          counterProposal
+        );
+        sent = await this.sendFn(
+          session.peerPkHex,
+          "COUNTER",
+          negotiationId,
+          signed as unknown as Record<string, unknown>
+        );
+      } catch {
+        sent = false;
+      }
+    }
+
+    session.proposal = counterProposal;
+    session.state = "COUNTERED";
+    session.updatedAt = Date.now();
+    this.emit({ type: "counter_received", session });
+    return sent;
   }
 
   /**

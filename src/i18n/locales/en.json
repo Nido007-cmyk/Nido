@@ -763,7 +763,17 @@
     "counter": "Counter",
     "accept": "Accept",
     "cancel": "Cancel",
-    "sendCounter": "Send counter"
+    "sendCounter": "Send counter",
+    "scopeLabels": {
+      "read:notes": "Read notes",
+      "read:knowledge": "Read knowledge base",
+      "read:contacts": "Read contacts",
+      "read:reminders": "Read reminders",
+      "write:notes": "Write notes",
+      "write:reminder": "Create reminders",
+      "write:reminders": "Create reminders"
+    },
+    "verifiedPeer": "Verified identity"
   },
   "packshare": {
     "availablePacks": "Available packs",

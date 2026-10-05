@@ -175,6 +175,14 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
         setFingerprint(id.fingerprint);
         setMyCode(await m.myPairingCode());
         await loadContacts();
+        // Wire negotiationService send function to the shared messenger.
+        // This enables Accept/Decline/Counter to send signed responses to peers.
+        const { negotiationService } = await import("../p2p/negotiationService");
+        negotiationService.setLocalIdentity(id.pkHex);
+        negotiationService.setSendFunction(
+          (peerPkHex, action, negotiationId, signed) =>
+            m.sendNegotiationResponse(peerPkHex, action, negotiationId, signed)
+        );
       } catch (e) {
         // F-2: pérdida de claves de identidad → recovery honesto, no
         // first-run falso ni regeneración silenciosa.

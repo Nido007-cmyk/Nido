@@ -64,32 +64,39 @@ export function NegotiationCard({
           <Text style={styles.title}>
             {t("negotiationCard.title", { name: peerName })}
           </Text>
-          <Text style={styles.peerKey}>{peerPkShort}</Text>
+          <Text style={styles.verifiedLabel}>
+            {t("negotiationCard.verifiedPeer")}
+          </Text>
         </View>
       </View>
 
       {/* Task description */}
       <Text style={styles.taskDescription}>{proposal.taskDescription}</Text>
 
-      {/* Requested capabilities */}
+      {/* Requested capabilities - human-readable labels */}
       <Text style={styles.sectionTitle}>{t("negotiationCard.requestedAccess")}</Text>
       <View style={styles.scopes}>
-        {proposal.requestedScopes.map((scope) => (
-          <TouchableOpacity
-            key={scope}
-            style={[
-              styles.scopeChip,
-              counterMode && selectedScopes.includes(scope) && styles.scopeChipSelected,
-              counterMode && !selectedScopes.includes(scope) && styles.scopeChipDeselected,
-            ]}
-            onPress={() => counterMode && toggleScope(scope)}
-            disabled={!counterMode || processing}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: selectedScopes.includes(scope) }}
-          >
-            <Text style={styles.scopeText}>{scope}</Text>
-          </TouchableOpacity>
-        ))}
+        {proposal.requestedScopes.map((scope) => {
+          // Human-readable label, fallback to raw scope if no translation
+          const label = t(`negotiationCard.scopeLabels.${scope}`, { defaultValue: scope });
+          return (
+            <TouchableOpacity
+              key={scope}
+              style={[
+                styles.scopeChip,
+                counterMode && selectedScopes.includes(scope) && styles.scopeChipSelected,
+                counterMode && !selectedScopes.includes(scope) && styles.scopeChipDeselected,
+              ]}
+              onPress={() => counterMode && toggleScope(scope)}
+              disabled={!counterMode || processing}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: selectedScopes.includes(scope) }}
+              accessibilityLabel={label}
+            >
+              <Text style={styles.scopeText}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
       {counterMode && (
         <Text style={styles.counterHint}>{t("negotiationCard.counterHint")}</Text>
@@ -186,6 +193,11 @@ const getStyles = (colors: Colors) =>
       ...typography.ui.caption,
       color: colors.text.dim,
       fontFamily: "monospace",
+    },
+    verifiedLabel: {
+      ...typography.ui.caption,
+      color: colors.text.accentEmerald,
+      fontWeight: "600",
     },
     taskDescription: {
       ...typography.ui.subtext,

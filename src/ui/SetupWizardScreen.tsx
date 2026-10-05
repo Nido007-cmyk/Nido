@@ -77,7 +77,7 @@ const RAM_COMFORT_BYTES = 4 * 1024 * 1024 * 1024;
 const STORAGE_COMFORT_BYTES = 3 * 1024 * 1024 * 1024;
 
 function formatGB(bytes: number): string {
-  if (bytes <= 0) return "0.0 GB";
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0.0 GB";
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 

@@ -763,7 +763,17 @@
     "counter": "Contraproponer",
     "accept": "Aceptar",
     "cancel": "Cancelar",
-    "sendCounter": "Enviar contrapropuesta"
+    "sendCounter": "Enviar contrapropuesta",
+    "scopeLabels": {
+      "read:notes": "Leer notas",
+      "read:knowledge": "Leer base de conocimiento",
+      "read:contacts": "Leer contactos",
+      "read:reminders": "Leer recordatorios",
+      "write:notes": "Escribir notas",
+      "write:reminder": "Crear recordatorios",
+      "write:reminders": "Crear recordatorios"
+    },
+    "verifiedPeer": "Identidad verificada"
   },
   "packshare": {
     "availablePacks": "Packs disponibles",

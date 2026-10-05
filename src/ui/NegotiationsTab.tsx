@@ -53,10 +53,9 @@ export function NegotiationsTab() {
     async (session: NegotiationSession) => {
       setProcessingId(session.negotiationId);
       try {
-        // TODO: Enviar ACCEPT firmado al peer via transporte.
-        // Por ahora se marca localmente; el envío real requiere
-        // acceso al NidoMessenger desde la UI (FASE 3b).
-        console.log("[Negotiations] Accept:", session.negotiationId);
+        // Envía ACCEPT firmado al peer via negotiationService.
+        // Si no hay transporte, igual se actualiza el estado local.
+        await negotiationService.acceptSession(session.negotiationId);
       } finally {
         setProcessingId(null);
         refresh();
@@ -69,7 +68,7 @@ export function NegotiationsTab() {
     async (session: NegotiationSession) => {
       setProcessingId(session.negotiationId);
       try {
-        console.log("[Negotiations] Decline:", session.negotiationId);
+        await negotiationService.declineSession(session.negotiationId);
       } finally {
         setProcessingId(null);
         refresh();
@@ -82,7 +81,7 @@ export function NegotiationsTab() {
     async (session: NegotiationSession, modifiedScopes: string[]) => {
       setProcessingId(session.negotiationId);
       try {
-        console.log("[Negotiations] Counter:", session.negotiationId, modifiedScopes);
+        await negotiationService.counterSession(session.negotiationId, modifiedScopes);
       } finally {
         setProcessingId(null);
         refresh();

@@ -1,6 +1,8 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable, TextInput, Switch, Alert, ActivityIndicator } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "./theme";
+import type { Colors } from "./theme/colors";
 import {
   pickDocuments,
   importDocuments,
@@ -15,6 +17,7 @@ import { NidoIcon } from "./components/icons/NidoIcon";
 import { EmptyState } from "./components/calm/EmptyState";
 
 function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return "0KB";
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${(bytes / 1024).toFixed(0)}KB`;
 }
 
@@ -27,6 +30,8 @@ function formatBytes(bytes: number): string {
  */
 export function PersonalDocumentsManager() {
   const { t } = useTranslation();
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [collections, setCollections] = useState<CustomCollection[]>([]);
   const [newName, setNewName] = useState("");
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
@@ -183,54 +188,57 @@ export function PersonalDocumentsManager() {
   );
 }
 
-const styles = StyleSheet.create({
-  hint: { color: "#888", fontSize: 11, marginHorizontal: 12, marginTop: 4, lineHeight: 16 },
-  list: { padding: 12, gap: 10 },
-  importCard: {
-    marginHorizontal: 12,
-    marginTop: 10,
-    backgroundColor: "#111",
-    borderRadius: 10,
-    padding: 12,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
-  },
-  nameInput: {
-    backgroundColor: "#1a1a1a",
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    color: "#eee",
-    fontSize: 13,
-  },
-  importBtn: {
-    backgroundColor: "#2a5f3a",
-    borderRadius: 6,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  importBtnDisabled: { backgroundColor: "#333" },
-  importBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
-  importBtnRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  exportBtnRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  progressText: { color: "#8f8", fontSize: 11, textAlign: "center" },
-  empty: { color: "#666", fontSize: 12, marginHorizontal: 12, marginTop: 8 },
-  collectionCard: {
-    backgroundColor: "#111",
-    borderRadius: 10,
-    padding: 12,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
-  },
-  collectionCardInactive: { opacity: 0.55 },
-  collectionHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  collectionName: { color: "#eee", fontSize: 14, fontWeight: "600", flex: 1 },
-  collectionMeta: { color: "#8f8", fontSize: 11 },
-  collectionActions: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 },
-  exportBtn: { backgroundColor: "rgba(59,130,246,0.2)", borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6 },
-  exportBtnText: { color: "#9cc4ff", fontSize: 12, fontWeight: "600" },
-  trashBtn: { marginLeft: "auto", padding: 4 },
-  trashIcon: { fontSize: 15 },
-});
+const getStyles = (colors: Colors) =>
+  StyleSheet.create({
+    hint: { color: colors.text.muted, fontSize: 11, marginHorizontal: 12, marginTop: 4, lineHeight: 16 },
+    list: { padding: 12, gap: 10 },
+    importCard: {
+      marginHorizontal: 12,
+      marginTop: 10,
+      backgroundColor: colors.bg.card,
+      borderRadius: 10,
+      padding: 12,
+      gap: 8,
+      borderWidth: 1,
+      borderColor: colors.border.default,
+    },
+    nameInput: {
+      backgroundColor: colors.bg.surface,
+      borderRadius: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      color: colors.text.primary,
+      fontSize: 13,
+      borderWidth: 1,
+      borderColor: colors.border.default,
+    },
+    importBtn: {
+      backgroundColor: colors.text.accentEmerald,
+      borderRadius: 6,
+      paddingVertical: 10,
+      alignItems: "center",
+    },
+    importBtnDisabled: { backgroundColor: colors.border.default },
+    importBtnText: { color: colors.text.inverse, fontWeight: "700", fontSize: 13 },
+    importBtnRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+    exportBtnRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+    progressText: { color: colors.text.accentEmerald, fontSize: 11, textAlign: "center" },
+    empty: { color: colors.text.muted, fontSize: 12, marginHorizontal: 12, marginTop: 8 },
+    collectionCard: {
+      backgroundColor: colors.bg.card,
+      borderRadius: 10,
+      padding: 12,
+      gap: 6,
+      borderWidth: 1,
+      borderColor: colors.border.default,
+    },
+    collectionCardInactive: { opacity: 0.55 },
+    collectionHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    collectionName: { color: colors.text.primary, fontSize: 14, fontWeight: "600", flex: 1 },
+    collectionMeta: { color: colors.text.accentEmerald, fontSize: 11 },
+    collectionActions: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 },
+    exportBtn: { backgroundColor: colors.emerald.bgSubtle, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6 },
+    exportBtnText: { color: colors.text.accentEmerald, fontSize: 12, fontWeight: "600" },
+    trashBtn: { marginLeft: "auto", padding: 4 },
+    trashIcon: { fontSize: 15 },
+  });

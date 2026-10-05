@@ -63,16 +63,16 @@ export function EmptyState({
 const getStyles = (colors: Colors) =>
   StyleSheet.create({
     container: {
-      flex: 1,
       alignItems: "center",
       justifyContent: "center",
       padding: spacing.xl,
+      paddingVertical: spacing.xl * 1.5,
     },
     mascot: {
-      width: 120,
-      height: 120,
-      marginBottom: spacing.lg,
-      opacity: 0.9,
+      width: 96,
+      height: 96,
+      marginBottom: spacing.md,
+      opacity: 0.95,
     },
     title: {
       ...typography.ui.body,
