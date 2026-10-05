@@ -703,5 +703,12 @@
     "toolsUsed": "Ferramentas usadas",
     "showDetails": "Detalhes",
     "hideDetails": "Ocultar detalhes"
+  },
+  "approvalCard": {
+    "title": "Nido quer {{action}}",
+    "dataLeaving": "Dados que saem do dispositivo:",
+    "deny": "Cancelar",
+    "approveOnce": "Permitir uma vez",
+    "approving": "Aprovando..."
   }
 }

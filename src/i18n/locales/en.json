@@ -703,5 +703,12 @@
     "toolsUsed": "Tools used",
     "showDetails": "Details",
     "hideDetails": "Hide details"
+  },
+  "approvalCard": {
+    "title": "Nido wants to {{action}}",
+    "dataLeaving": "Data leaving this device:",
+    "deny": "Cancel",
+    "approveOnce": "Allow once",
+    "approving": "Approving..."
   }
 }
