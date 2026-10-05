@@ -172,7 +172,7 @@ describe("Pack Sharing E2E: dos NIDO", () => {
       from: SENDER_PK,
       to: RECEIVER_PK,
       ts: Date.now(),
-      payload: { action, sessionId, data } as PackSharePayload,
+      payload: { action, sessionId, data } as unknown as Record<string, unknown>,
     });
 
     await senderService.handleEnvelope(makeEnv("OFFER", "e2e-1", { advertisement: adv }));
@@ -221,7 +221,7 @@ describe("Pack Sharing E2E: dos NIDO", () => {
       from: SENDER_PK,
       to: RECEIVER_PK,
       ts: Date.now(),
-      payload: { action, sessionId, data } as PackSharePayload,
+      payload: { action, sessionId, data } as unknown as Record<string, unknown>,
     });
 
     await senderService.handleEnvelope(makeEnv("OFFER", "e2e-2", { advertisement: adv }));
