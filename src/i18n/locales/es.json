@@ -333,7 +333,10 @@
     "removeConfirmTitle": "¿Eliminar esta colección?",
     "stageChunking": "Dividiendo en fragmentos…",
     "stageEmbedding": "Generando embeddings {{current}}/{{total}}…",
-    "stageReading": "Leyendo archivos…"
+    "stageReading": "Leyendo archivos…",
+    "emptyTitle": "Tu biblioteca está vacía",
+    "emptyDescription": "Agrega tus documentos y Nido podrá buscar en ellos sin conexión. Todo queda en tu dispositivo.",
+    "emptyAction": "Agregar documentos"
   },
   "personalities": {
     "custom": {

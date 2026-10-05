@@ -241,7 +241,10 @@
     "chunkCount_one": "{{count}} chunk",
     "chunkCount_other": "{{count}} chunks",
     "exportButton": "Export / Share",
-    "exporting": "Exporting…"
+    "exporting": "Exporting…",
+    "emptyTitle": "Your library is empty",
+    "emptyDescription": "Add your documents and Nido will search them offline. Everything stays on your device.",
+    "emptyAction": "Add documents"
   },
   "memorySettings": {
     "title": "Chat history & memory",

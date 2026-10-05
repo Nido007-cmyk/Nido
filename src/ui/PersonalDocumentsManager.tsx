@@ -12,6 +12,7 @@ import {
 } from "../services/documentImporter";
 import { CustomCollection } from "../rag/db";
 import { NidoIcon } from "./components/icons/NidoIcon";
+import { EmptyState } from "./components/calm/EmptyState";
 
 function formatBytes(bytes: number): string {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${(bytes / 1024).toFixed(0)}KB`;
@@ -141,7 +142,12 @@ export function PersonalDocumentsManager() {
       </View>
 
       {collections.length === 0 && !importProgress && (
-        <Text style={styles.empty}>{t("personalDocumentsManager.empty")}</Text>
+        <EmptyState
+          title={t("personalDocumentsManager.emptyTitle")}
+          description={t("personalDocumentsManager.emptyDescription")}
+          actionLabel={t("personalDocumentsManager.emptyAction")}
+          onAction={() => pickDocuments()}
+        />
       )}
 
       <View style={styles.list}>

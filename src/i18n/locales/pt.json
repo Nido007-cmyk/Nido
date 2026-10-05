@@ -241,7 +241,10 @@
     "chunkCount_one": "{{count}} trecho",
     "chunkCount_other": "{{count}} trechos",
     "exportButton": "Exportar / Compartilhar",
-    "exporting": "Exportando…"
+    "exporting": "Exportando…",
+    "emptyTitle": "Sua biblioteca está vazia",
+    "emptyDescription": "Adicione seus documentos e o Nido poderá pesquisá-los offline. Tudo fica no seu dispositivo.",
+    "emptyAction": "Adicionar documentos"
   },
   "memorySettings": {
     "title": "Histórico de conversas e memória",
