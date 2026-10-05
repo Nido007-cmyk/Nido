@@ -9,7 +9,7 @@
     "hardwareBody": "NIDO está diseñado para funcionar en un teléfono: mantiene bajo el uso de memoria y vigila el almacenamiento para que la app sea rápida y responda bien.",
     "hardwareTitle": "Hecho para tu teléfono",
     "heroSubtitle": "Tu agente. Tu mundo.",
-    "repoBody": "Derivado de BOAR (Licencia MIT).",
+    "repoBody": "Código abierto (Licencia MIT).",
     "repoTitle": "Código abierto",
     "title": "Acerca de NIDO",
     "versionBadge": "v{{version}} • {{build}}",
