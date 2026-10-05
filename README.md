@@ -105,10 +105,21 @@ communication. This is NIDO technology, not inherited from BOAR.
 - Pack/chunk sharing with SHA-256 integrity verification (`src/p2p/packSharing.ts`)
 - Human approval inbox for incoming agent tasks (`src/p2p/approvalInbox.ts`)
 
-**Not yet implemented:**
-- Task negotiation protocol (PROPOSE / COUNTER / ACCEPT / DECLINE / EXPIRE)
-- Capability discovery
-- Key revocation
+**Now implemented (2026-10-05):**
+- Task negotiation: PROPOSE / COUNTER / ACCEPT / DECLINE / EXPIRE
+  (`src/p2p/negotiation.ts`)
+- Selective capability discovery (`src/p2p/capabilityDiscovery.ts`)
+- Capability grants with scope/peer/task/time/uses limits
+- Grant revocation, session revocation, peer revocation
+  (`src/p2p/replayProtection.ts`)
+- Anti-replay with nonce cache
+- Signed state transitions (Ed25519)
+- Canonical serialization for deterministic signatures
+- Session manager with disconnect/reconnect safety
+  (`src/p2p/sessionManager.ts`)
+- Integration with AUTO/ASK/DENY + Policy Engine
+  (`src/p2p/p2pAuthorization.ts`)
+- UI: NegotiationCard, ApprovalCard (`src/ui/components/calm/`)
 
 **Important distinction:** The protocol exists and is tested. The end-to-end
 Nido-to-Nido product experience has **not** been validated on two physical
@@ -126,7 +137,9 @@ These features are live and used by the product:
 - Local tools (notes, reminders, time, app launching)
 - Policy Engine with AUTO/ASK/DENY
 - Network audit log
-- P2P protocol (Ed25519, handshake v3, liveness, pack sharing with SHA-256)
+- P2P protocol: Ed25519/X25519, handshake v3, liveness, task negotiation
+  (PROPOSE/COUNTER/ACCEPT/DECLINE/EXPIRE), capability grants, anti-replay,
+  revocation, pack sharing with SHA-256
 - Model catalog with pinned revisions and SHA-256 verification
 
 ### Implemented but not runtime-integrated
