@@ -1153,7 +1153,7 @@ export function ChatScreen({
 
   return (
     <LinearGradient
-      colors={isDeepActive ? [colors.frontier.gradientStart, colors.bg.terminal] : [colors.bg.terminal, colors.bg.surface]}
+      colors={[colors.bg.surface, colors.bg.surface]}
       style={styles.container}
     >
       {/* Ambient background glows */}
@@ -1617,11 +1617,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   deepBannerText: {
-    ...typography.mono.xs,
-    fontSize: 9,
-    color: colors.frontier.text,
-    fontWeight: "700",
-    letterSpacing: 0.4,
+    ...typography.ui.caption,
+    fontSize: 11,
+    color: colors.text.secondary,
   },
   loadingBanner: {
     flexDirection: "row",
@@ -1634,9 +1632,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.emerald.border,
   },
   loadingBannerText: {
-    ...typography.mono.xs,
-    color: colors.text.accentEmerald,
-    fontWeight: "600",
+    ...typography.ui.caption,
+    color: colors.text.secondary,
+    fontWeight: "500",
   },
   list: {
     padding: spacing.md,
@@ -1705,15 +1703,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   bubbleRoleLabel: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     fontWeight: "600",
     letterSpacing: 0.5,
   },
   userRoleLabel: {
-    color: colors.text.accentCyan,
+    color: colors.text.secondary,
   },
   assistantRoleLabel: {
-    color: colors.text.accentEmerald,
+    color: colors.text.secondary,
   },
   copyIcon: {
     fontSize: 14,
@@ -1769,9 +1767,9 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   stoppedTag: {
-    ...typography.mono.xs,
-    color: colors.text.accentAmber,
-    fontWeight: "700",
+    ...typography.ui.caption,
+    color: colors.text.secondary,
+    fontWeight: "600",
   },
   stoppedBadgeRow: {
     flexDirection: "row",

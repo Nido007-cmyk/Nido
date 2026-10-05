@@ -84,7 +84,7 @@ export function KeyLossRecoveryScreen({
   return (
     <ScrollView
       contentContainerStyle={styles.centered}
-      style={{ backgroundColor: colors.bg.terminal }}
+      style={{ backgroundColor: colors.bg.surface }}
     >
       <Text style={[styles.title, { color: colors.text.primary }]}>
         {t(vm.copy.title)}

@@ -237,7 +237,7 @@ export function ModelSetupScreen(props: Props) {
       </View>
 
       <ScrollView contentContainerStyle={styles.accordionScroll}>
-        <AccordionSection icon="🎭" title={t("modelSetupScreen.sections.tone")}>
+        <AccordionSection icon="chat" title={t("modelSetupScreen.sections.tone")}>
           <PersonalitySettings />
         </AccordionSection>
 
@@ -279,7 +279,7 @@ export function ModelSetupScreen(props: Props) {
           <MemorySettings />
         </AccordionSection>
 
-        <AccordionSection icon="⚡" title={t("modelSetupScreen.sections.telemetry")}>
+        <AccordionSection icon="activity" title={t("modelSetupScreen.sections.telemetry")}>
           <UsageStatsContent />
         </AccordionSection>
 
