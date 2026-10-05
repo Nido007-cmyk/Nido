@@ -395,32 +395,26 @@
     "items": [
       {
         "category": "Private memory",
-        "icon": "🧠",
         "prompt": "Remember that my mom's birthday is March 15th and she loves orchids. Save it so you can remind me in time."
       },
       {
         "category": "No internet",
-        "icon": "📴",
         "prompt": "Explain how you work without internet. Where is my data stored and who can see it?"
       },
       {
         "category": "Learn with me",
-        "icon": "📚",
         "prompt": "I want to understand how photosynthesis works. Explain it step by step with examples of plants I know."
       },
       {
         "category": "Organize my day",
-        "icon": "📋",
         "prompt": "Help me plan my week: I work 9 to 6, want to exercise 3 times and spend time with family. Suggest a realistic schedule."
       },
       {
         "category": "Creative cooking",
-        "icon": "🍳",
         "prompt": "I have rice, beans, onion, tomato and cheese. What can I cook with this? Give me 3 ideas with instructions."
       },
       {
         "category": "Total privacy",
-        "icon": "🔒",
         "prompt": "What does it mean that you're 100% offline? Does my conversation ever leave this device?"
       }
     ]

@@ -383,32 +383,26 @@
     "items": [
       {
         "category": "Memoria privada",
-        "icon": "🧠",
         "prompt": "Recuérdame que el cumpleaños de mi mamá es el 15 de marzo y que le gustan las orquídeas. Guárdalo en tu memoria para que me avises con tiempo."
       },
       {
         "category": "Sin internet",
-        "icon": "📴",
         "prompt": "Explícame cómo funcionas sin internet. ¿Dónde se guardan mis datos y quién puede verlos?"
       },
       {
         "category": "Aprende conmigo",
-        "icon": "📚",
         "prompt": "Quiero entender cómo funciona la fotosíntesis. Explícamelo paso a paso con ejemplos de plantas que conozco."
       },
       {
         "category": "Organiza mi día",
-        "icon": "📋",
         "prompt": "Ayúdame a planear mi semana: trabajo de 9 a 6, quiero hacer ejercicio 3 veces y pasar tiempo con mi familia. Sugiere un horario realista."
       },
       {
         "category": "Cocina creativa",
-        "icon": "🍳",
         "prompt": "Tengo arroz, frijoles, cebolla, tomate y queso. ¿Qué puedo cocinar con esto? Dame 3 ideas con instrucciones."
       },
       {
         "category": "Privacidad total",
-        "icon": "🔒",
         "prompt": "¿Qué significa que seas 100% offline? ¿Mis conversaciones salen de este dispositivo en algún momento?"
       }
     ]
