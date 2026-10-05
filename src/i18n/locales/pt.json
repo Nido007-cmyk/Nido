@@ -428,7 +428,13 @@
   "processingIndicator": {
     "retrieving": "🔍 Buscando no seu conhecimento…",
     "thinking": "🧠 Pensando…",
-    "generating": "⚡ Escrevendo a resposta…"
+    "generating": "⚡ Escrevendo a resposta…",
+    "working": "Trabalhando...",
+    "waitingApproval": "Aguardando sua aprovação",
+    "completed": "Concluído",
+    "failed": "Algo deu errado",
+    "offline": "Offline - trabalhando localmente",
+    "stopped": "Interrompido por você"
   },
   "personalities": {
     "succinct": {

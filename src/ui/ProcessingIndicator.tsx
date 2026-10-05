@@ -6,7 +6,17 @@ import type { Colors } from "./theme/colors";
 import { typography } from "./theme/typography";
 import { radii } from "./theme/spacing";
 
-export type ProcessingStatus = "idle" | "retrieving" | "thinking" | "generating";
+export type ProcessingStatus =
+  | "idle"
+  | "retrieving"
+  | "thinking"
+  | "generating"
+  | "working"
+  | "waiting_approval"
+  | "completed"
+  | "failed"
+  | "offline"
+  | "stopped";
 
 function BouncingDot({ delay }: { delay: number }) {
   const { colors } = useTheme();
@@ -43,6 +53,12 @@ export function ProcessingIndicator({
     retrieving: t("processingIndicator.retrieving"),
     thinking: t("processingIndicator.thinking"),
     generating: t("processingIndicator.generating"),
+    working: t("processingIndicator.working"),
+    waiting_approval: t("processingIndicator.waitingApproval"),
+    completed: t("processingIndicator.completed"),
+    failed: t("processingIndicator.failed"),
+    offline: t("processingIndicator.offline"),
+    stopped: t("processingIndicator.stopped"),
   };
   const pulse = useRef(new Animated.Value(0.4)).current;
 
@@ -59,13 +75,22 @@ export function ProcessingIndicator({
 
   const isDeep = label?.includes("🔬") || status === "thinking";
 
+  // Terminal states (completed/failed/stopped/offline) don't animate
+  // Active states (thinking/working/generating/retrieving/waiting_approval) pulse
+  const isTerminal = ["completed", "failed", "stopped", "offline"].includes(status);
+  const isWaiting = status === "waiting_approval";
+
   return (
     <View style={styles.row}>
       <Animated.View
         style={[
           styles.statusDot,
           isDeep ? styles.statusDotFrontier : styles.statusDotEmerald,
-          { opacity: pulse },
+          isWaiting && styles.statusDotWaiting,
+          status === "failed" && styles.statusDotFailed,
+          status === "completed" && styles.statusDotCompleted,
+          (status === "stopped" || status === "offline") && styles.statusDotNeutral,
+          !isTerminal && { opacity: pulse },
         ]}
       />
       <Text
@@ -76,11 +101,13 @@ export function ProcessingIndicator({
       >
         {label ?? STATUS_LABEL[status]}
       </Text>
-      <View style={styles.dots}>
-        <BouncingDot delay={0} />
-        <BouncingDot delay={130} />
-        <BouncingDot delay={260} />
-      </View>
+      {!isTerminal && (
+        <View style={styles.dots}>
+          <BouncingDot delay={0} />
+          <BouncingDot delay={130} />
+          <BouncingDot delay={260} />
+        </View>
+      )}
     </View>
   );
 }
@@ -102,6 +129,18 @@ const getStyles = (colors: Colors) => StyleSheet.create({
   },
   statusDotFrontier: {
     backgroundColor: colors.frontier.glow,
+  },
+  statusDotWaiting: {
+    backgroundColor: colors.text.accentAmber,
+  },
+  statusDotFailed: {
+    backgroundColor: "#C0392B",
+  },
+  statusDotCompleted: {
+    backgroundColor: colors.emerald[400],
+  },
+  statusDotNeutral: {
+    backgroundColor: colors.text.dim,
   },
   label: {
     ...typography.ui.body,

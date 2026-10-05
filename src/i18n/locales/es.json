@@ -366,7 +366,13 @@
   "processingIndicator": {
     "generating": "⚡ Escribiendo la respuesta…",
     "retrieving": "🔍 Buscando en tu conocimiento…",
-    "thinking": "🧠 Pensando…"
+    "thinking": "🧠 Pensando…",
+    "working": "Trabajando...",
+    "waitingApproval": "Esperando tu aprobación",
+    "completed": "Completado",
+    "failed": "Algo falló",
+    "offline": "Sin conexión - trabajando local",
+    "stopped": "Detenido por ti"
   },
   "promptIdeasCarousel": {
     "dontShowAgain": "No mostrar de nuevo",
