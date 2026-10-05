@@ -2,7 +2,19 @@
  * Tests for P2P Pack Sharing (DR-7)
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import { createHash } from "crypto";
+
+// Mock expo-crypto with Node's native crypto (Vitest cannot parse the
+// React Native version of expo-crypto). The pack sharing logic is what's
+// under test, not expo-crypto itself.
+vi.mock("expo-crypto", () => ({
+  CryptoDigestAlgorithm: { SHA256: "SHA256" },
+  digestStringAsync: async (algorithm: string, data: string) => {
+    return createHash("sha256").update(data, "utf8").digest("hex");
+  },
+}));
+
 import {
   chunkCountFor,
   reassembleChunks,
@@ -74,7 +86,7 @@ describe("pack sharing session", () => {
     expect(transferProgress(session)).toBe(0);
   });
 
-  it("tracks progress", () => {
+  it("tracks progress", async () => {
     const session = createReceiveSession(adv, "device2");
     const chunk1: PackChunk = {
       packId: "pack1",
@@ -83,7 +95,7 @@ describe("pack sharing session", () => {
       data: "aaa",
       hash: "h0",
     };
-    const complete = addChunk(session, chunk1);
+    const complete = await addChunk(session, chunk1);
     expect(complete).toBe(false);
     expect(transferProgress(session)).toBe(0.5);
 
@@ -94,12 +106,12 @@ describe("pack sharing session", () => {
       data: "bbb",
       hash: "h1",
     };
-    const complete2 = addChunk(session, chunk2);
+    const complete2 = await addChunk(session, chunk2);
     expect(complete2).toBe(true);
     expect(transferProgress(session)).toBe(1);
   });
 
-  it("rejects wrong pack ID", () => {
+  it("rejects wrong pack ID", async () => {
     const session = createReceiveSession(adv, "device2");
     const chunk: PackChunk = {
       packId: "wrong",
@@ -108,6 +120,6 @@ describe("pack sharing session", () => {
       data: "aaa",
       hash: "h0",
     };
-    expect(addChunk(session, chunk)).toBe(false);
+    expect(await addChunk(session, chunk)).toBe(false);
   });
 });
