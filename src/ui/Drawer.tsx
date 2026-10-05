@@ -88,7 +88,7 @@ export function Drawer({
           {/* Brand Row */}
           <View style={styles.brandRow}>
             <Image source={require("../../assets/icon-nido.png")} style={styles.brandMascot} />
-            <View>
+            <View style={styles.brandText}>
               <Text style={styles.title}>NIDO</Text>
               <Text style={styles.subtitle}>{t("drawer.subtitle")}</Text>
             </View>
@@ -200,6 +200,7 @@ const getStyles = (colors: Colors) => StyleSheet.create({
   },
   scrollArea: { flex: 1 },
   brandRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 },
+  brandText: { flex: 1, flexShrink: 1 },
   brandMascot: { width: 36, height: 36, borderRadius: radii.md },
   title: {
     ...typography.ui.title,
