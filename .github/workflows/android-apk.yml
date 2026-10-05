@@ -6,7 +6,7 @@
 # traffic, which makes any local Gradle invocation fail at daemon dispatch
 # (environmental, not a project bug). It does not modify app architecture.
 #
-# Trigger: manual (workflow_dispatch) or push to master touching build inputs.
+# Trigger: manual (workflow_dispatch) or push to main touching build inputs.
 # Output: standalone release APK (JS bundle embedded, no Metro needed)
 # uploaded as a workflow artifact.
 #
@@ -51,7 +51,7 @@ concurrency:
 on:
   workflow_dispatch:
   push:
-    branches: [master]
+    branches: [main]
     paths:
       - 'android/**'
       - 'src/**'

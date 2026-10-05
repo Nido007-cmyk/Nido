@@ -189,7 +189,11 @@
       "recommended": "Recommended",
       "downloadSize": "About {{size}} to download",
       "startDownload": "Start download",
-      "back": "Back"
+      "back": "Back",
+      "modelTitle": "Choose your model",
+      "modelSubtitle": "The default is picked for your phone's RAM. You can switch later in Settings.",
+      "modelRecommendedForDevice": "Recommended for this device",
+      "modelRam": "needs ~{{ram}} GB RAM"
     },
     "step3": {
       "title": "Getting things ready",

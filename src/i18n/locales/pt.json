@@ -189,7 +189,11 @@
       "recommended": "Recomendado",
       "downloadSize": "Cerca de {{size}} para baixar",
       "startDownload": "Iniciar download",
-      "back": "Voltar"
+      "back": "Voltar",
+      "modelTitle": "Escolha seu modelo",
+      "modelSubtitle": "O modelo inicial é escolhido conforme a RAM do seu telefone. Você pode mudar depois em Ajustes.",
+      "modelRecommendedForDevice": "Recomendado para este dispositivo",
+      "modelRam": "precisa de ~{{ram}} GB de RAM"
     },
     "step3": {
       "title": "Preparando tudo",

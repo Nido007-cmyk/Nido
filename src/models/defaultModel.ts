@@ -90,3 +90,23 @@ export function defaultLlmForDevice(): CatalogModel {
   }
   return MODEL_CATALOG.find((m) => m.id === PREFERRED_LLM_ID)!;
 }
+
+/**
+ * Models offered in the setup wizard's model picker: the light and the
+ * preferred LLM. The bigger catalog models (7B/8B MoE, Gemma, Phi) stay
+ * available later in Settings for capable devices — offering them at
+ * first-run would invite downloads that fail the load-time pre-flight.
+ */
+export function setupLlmChoices(): CatalogModel[] {
+  const light = MODEL_CATALOG.find((m) => m.id === LIGHT_LLM_ID)!;
+  const preferred = MODEL_CATALOG.find((m) => m.id === PREFERRED_LLM_ID)!;
+  return [light, preferred];
+}
+
+/**
+ * Which model id the setup picker preselects for a device with
+ * `totalRamBytes` of total RAM. Pure and testable.
+ */
+export function preselectLlmId(totalRamBytes: number): string {
+  return defaultLlmForRam(totalRamBytes).id;
+}

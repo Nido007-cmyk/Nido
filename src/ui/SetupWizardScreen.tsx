@@ -41,7 +41,9 @@ import {
   CatalogModel,
   totalManifestBytes,
 } from "../models/manifest";
-import { defaultLlmForRam } from "../models/defaultModel";
+import { defaultLlmForRam, setupLlmChoices, preselectLlmId, contextSpecForModel } from "../models/defaultModel";
+import { estimateContextBytes, toGb } from "../inference/ramBudget";
+import { setActiveModelId } from "../models/settings";
 import { ModelManager } from "../models/ModelManager";
 import {
   startDownload,
@@ -353,6 +355,10 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
   const { t } = useTranslation();
   const [step, setStep] = useState<WizardStep>(1);
   const [selectedTier, setSelectedTier] = useState<SetupTier>("standard");
+  // Model picker (2026-10-05): the user chooses which LLM to download in
+  // step 2, preselected for their device's RAM. Persisted to settings on
+  // download start so ChatScreen's resolveActiveModel honors the choice.
+  const [selectedLlmId, setSelectedLlmId] = useState<string | null>(null);
   const [presence, setPresence] = useState<Record<string, boolean>>({});
   const [hardware, setHardware] = useState<HardwareScan>({
     totalRamBytes: 0,
@@ -401,6 +407,9 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
         freeStorageBytes: freeStorage,
         scanned: true,
       });
+      // Preselect the model picker for this device's RAM (owner decision
+      // 2026-10-05); the user can still pick the other one in step 2.
+      setSelectedLlmId((prev) => prev ?? preselectLlmId(ram));
     })();
   }, []);
 
@@ -417,15 +426,18 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
 
   const activeTierConfig = TIERS.find((t) => t.id === selectedTier) ?? TIERS[0];
   const tierCorpusPackIds = activeTierConfig.corpusPackIds ?? [];
-  // RAM-aware setup set: the required non-LLM assets plus the default LLM
-  // for THIS device's RAM (0.5B on low-RAM phones) instead of blindly the
-  // catalog's `required` LLM. Matches ModelManager.requiredModelsPresent().
-  const setupLlmAssets = (totalRamBytes: number): CatalogModel[] => [
+  // RAM-aware setup set: the required non-LLM assets plus the LLM the user
+  // picked in step 2 (preselected for this device's RAM), instead of blindly
+  // the catalog's `required` LLM. Falls back to the RAM default before the
+  // hardware scan completes.
+  const setupLlm: CatalogModel =
+    MODEL_CATALOG.find((m) => m.id === selectedLlmId) ?? defaultLlmForRam(hardware.totalRamBytes);
+  const setupLlmAssets: CatalogModel[] = [
     ...MODEL_CATALOG.filter((m) => m.required && m.kind !== "llm"),
-    defaultLlmForRam(totalRamBytes),
+    setupLlm,
   ];
   const tierAssets: CatalogModel[] = [
-    ...setupLlmAssets(hardware.totalRamBytes),
+    ...setupLlmAssets,
     ...CORPUS_CATALOG.filter((c) => tierCorpusPackIds.includes(c.id)),
   ];
 
@@ -433,6 +445,13 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
 
   const handleStartDownloads = useCallback(async () => {
     impact(ImpactFeedbackStyle.Medium);
+    // Persist the user's model pick so ChatScreen's resolveActiveModel (and
+    // the Settings picker) honor it instead of silently re-defaulting.
+    try {
+      await setActiveModelId("llm", setupLlm.id);
+    } catch {
+      // Non-fatal: the download set below is already built from setupLlm.
+    }
     setStep(3);
     const presMap = await refreshPresence();
 
@@ -693,14 +712,67 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
 
   const tierDownloadBytes = (corpusPackIds: string[]) =>
     totalManifestBytes([
-      ...setupLlmAssets(hardware.totalRamBytes),
+      ...setupLlmAssets,
       ...CORPUS_CATALOG.filter((c) => corpusPackIds.includes(c.id)),
     ]);
+
+  // Model picker (2026-10-05): light vs preferred LLM, preselected for this
+  // device's RAM. Honest per-model info: download size + estimated RAM.
+  const renderModelPicker = () => {
+    const recommendedId = hardware.scanned ? preselectLlmId(hardware.totalRamBytes) : null;
+    return (
+      <View style={styles.modelSection}>
+        <Text style={[styles.sectionTitle, tp.ui.title]}>{t("setupWizard.step2.modelTitle")}</Text>
+        <Text style={[styles.sectionSub, tp.ui.body]}>{t("setupWizard.step2.modelSubtitle")}</Text>
+        {setupLlmChoices().map((m) => {
+          const isSelected = setupLlm.id === m.id;
+          const isRecommended = recommendedId !== null && recommendedId === m.id;
+          const ramNeeded = toGb(estimateContextBytes(contextSpecForModel(m)).totalBytes);
+          return (
+            <Pressable
+              key={m.id}
+              style={[styles.card, isSelected && styles.tierCardActive]}
+              onPress={() => {
+                impact(ImpactFeedbackStyle.Light);
+                setSelectedLlmId(m.id);
+              }}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: isSelected }}
+            >
+              <View style={styles.tierHeader}>
+                <View style={styles.tierTitleRow}>
+                  <Text style={[styles.tierName, tp.ui.title]}>{m.label}</Text>
+                  {isRecommended && (
+                    <View style={styles.recommendedPill}>
+                      <Text style={[styles.recommendedText, tp.ui.caption]}>
+                        {t("setupWizard.step2.modelRecommendedForDevice")}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <View style={[styles.radio, isSelected && styles.radioActive]}>
+                  {isSelected && <View style={styles.radioDot} />}
+                </View>
+              </View>
+              <Text style={[styles.tierDesc, tp.ui.body]}>{m.description}</Text>
+              <Text style={[styles.tierSize, tp.ui.subtext, styles.tabular]}>
+                {t("setupWizard.step2.downloadSize", { size: formatGB(m.sizeBytes) })}
+                {" · "}
+                {t("setupWizard.step2.modelRam", { ram: ramNeeded })}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  };
 
   const renderStep2 = () => (
     <ScrollView contentContainerStyle={styles.stepContent} showsVerticalScrollIndicator={false}>
       <Text style={[styles.h1, tp.ui.headline]}>{t("setupWizard.step2.title")}</Text>
       <Text style={[styles.lead, tp.ui.bodyLg]}>{t("setupWizard.step2.subtitle")}</Text>
+
+      {renderModelPicker()}
 
       {TIERS.map((tier) => {
         const isSelected = selectedTier === tier.id;
@@ -962,6 +1034,17 @@ function makeStyles(colors: Colors) {
       color: colors.text.secondary,
       marginTop: -calmSpacing.cozy,
       marginBottom: calmSpacing.tight,
+    },
+    modelSection: {
+      gap: calmSpacing.comfortable,
+      marginTop: calmSpacing.tight,
+    },
+    sectionTitle: {
+      color: colors.text.primary,
+    },
+    sectionSub: {
+      color: colors.text.secondary,
+      marginTop: -calmSpacing.cozy,
     },
     center: {
       textAlign: "center",
