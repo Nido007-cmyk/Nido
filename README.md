@@ -83,10 +83,36 @@ the current codebase.
 | Policy enforcement | Not present | Policy Engine + validateTask (`src/agent/policy/`) |
 | Untrusted content | Direct use | `wrapUntrusted` labeling (`src/agent/policy/policyEngine.ts`) |
 | P2P integrity | Verify upstream | SHA-256 chunk verification (`src/p2p/packSharing.ts`) |
+| P2P identity | Verify upstream | Ed25519 signing keys + X25519 encryption (`src/p2p/crypto.ts`) |
+| P2P handshake | Verify upstream | Handshake v3 protocol (`src/p2p/handshakeV3.ts`) |
+| P2P liveness | Verify upstream | Heartbeat/keepalive (`src/p2p/messenger.ts`) |
+| P2P human approval | Verify upstream | Approval inbox for agent tasks (`src/p2p/approvalInbox.ts`) |
 
 **Note:** BOAR upstream claims marked "verify upstream" could not be
 independently verified from the fork point. They represent the understood
 differences at fork time.
+
+## NIDO-to-NIDO communication
+
+NIDO includes an original peer-to-peer protocol for Nido-to-Nido
+communication. This is NIDO technology, not inherited from BOAR.
+
+**Protocol implemented and tested:**
+- Ed25519 identity keys for signing, X25519 for encryption (`src/p2p/crypto.ts`)
+- Handshake v3 for secure session establishment (`src/p2p/handshakeV3.ts`)
+- Liveness via heartbeat (`src/p2p/messenger.ts`)
+- Signed messages
+- Pack/chunk sharing with SHA-256 integrity verification (`src/p2p/packSharing.ts`)
+- Human approval inbox for incoming agent tasks (`src/p2p/approvalInbox.ts`)
+
+**Not yet implemented:**
+- Task negotiation protocol (PROPOSE / COUNTER / ACCEPT / DECLINE / EXPIRE)
+- Capability discovery
+- Key revocation
+
+**Important distinction:** The protocol exists and is tested. The end-to-end
+Nido-to-Nido product experience has **not** been validated on two physical
+devices. Do not confuse protocol implementation with product validation.
 
 ## Current status
 
@@ -100,7 +126,7 @@ These features are live and used by the product:
 - Local tools (notes, reminders, time, app launching)
 - Policy Engine with AUTO/ASK/DENY
 - Network audit log
-- P2P messaging (basic)
+- P2P protocol (Ed25519, handshake v3, liveness, pack sharing with SHA-256)
 - Model catalog with pinned revisions and SHA-256 verification
 
 ### Implemented but not runtime-integrated
