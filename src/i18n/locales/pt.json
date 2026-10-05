@@ -111,15 +111,15 @@
       "subtitle": "NIDO — Seu agente. Seu mundo."
     },
     "sections": {
-      "tone": "Tom do Assistente & Estilo de Resposta",
-      "models": "Modelos de Raciocínio",
-      "knowledgeBase": "Base de conhecimento offline",
-      "memory": "Memória",
-      "telemetry": "Telemetria",
-      "displayTheme": "Exibição & Tema",
+      "tone": "Como falo com você",
+      "models": "Modelos de IA",
+      "knowledgeBase": "Sua biblioteca",
+      "memory": "O que lembro",
+      "telemetry": "Medições",
+      "displayTheme": "Aparência",
       "language": "Idioma",
-      "voice": "Entrada de voz",
-      "recovery": "Redefinir e recuperação"
+      "voice": "Voz",
+      "recovery": "Backups e recuperação"
     },
     "installedModels": "Modelos instalados",
     "toasts": {

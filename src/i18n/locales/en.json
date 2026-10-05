@@ -111,15 +111,15 @@
       "subtitle": "NIDO — Your agent. Your world."
     },
     "sections": {
-      "tone": "Assistant Tone & Response Style",
-      "models": "Reasoning Models",
-      "knowledgeBase": "Offline knowledge base",
-      "memory": "Memory",
-      "telemetry": "Telemetry",
-      "displayTheme": "Display & Theme",
+      "tone": "How I talk to you",
+      "models": "AI Models",
+      "knowledgeBase": "Your library",
+      "memory": "What I remember",
+      "telemetry": "Measurements",
+      "displayTheme": "Appearance",
       "language": "Language",
-      "voice": "Voice input",
-      "recovery": "Reset & recovery"
+      "voice": "Voice",
+      "recovery": "Backups & recovery"
     },
     "installedModels": "Installed models",
     "toasts": {

@@ -296,15 +296,15 @@
       "wizardTitle": "Asistente de configuración"
     },
     "sections": {
-      "displayTheme": "Pantalla y tema",
-      "knowledgeBase": "Base de conocimiento offline",
+      "displayTheme": "Apariencia",
+      "knowledgeBase": "Tu biblioteca",
       "language": "Idioma",
-      "memory": "Memoria",
-      "models": "Modelos de razonamiento",
-      "recovery": "Restablecer y recuperación",
-      "telemetry": "Telemetría",
-      "tone": "Tono del asistente y estilo de respuesta",
-      "voice": "Entrada de voz"
+      "memory": "Lo que recuerdo",
+      "models": "Modelos de IA",
+      "recovery": "Respaldos y recuperación",
+      "telemetry": "Mediciones",
+      "tone": "Cómo te hablo",
+      "voice": "Voz"
     },
     "toasts": {
       "activeSet": "Modelo {{kind}} activo: «{{name}}»",
