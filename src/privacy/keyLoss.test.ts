@@ -17,6 +17,7 @@ import {
   createMemorySecureBackend,
   getDatabaseKeyHex,
   KeyLossError,
+  registerKeyLossProbe,
   SecureStoreReadError,
   setTestRandomBytes,
   setTestSecureBackend,
@@ -27,6 +28,7 @@ import {
 // y rag/db importan secureDatabase antes de resolver la DEK).
 import {
   ensureEncryptedDatabase,
+  findManagedDatabases,
   recoverFromKeyLoss,
   setSecureDbTestDriver,
   type SecureDbDriver,
@@ -94,6 +96,113 @@ beforeEach(() => {
     const b = new Uint8Array(len);
     b[0] = n;
     return b;
+  });
+});
+
+/** Backend que puede fallar al leer y/o al escribir (defectos del keystore). */
+function backendDefective(opts: {
+  seed?: Record<string, string>;
+  readThrows?: boolean;
+  writeThrows?: boolean;
+}): SecureBackend {
+  const m = new Map(Object.entries(opts.seed ?? {}));
+  map = m;
+  return {
+    getItemAsync: async (k: string) => {
+      if (opts.readThrows) throw new Error("keystore: fallo de lectura");
+      return m.has(k) ? m.get(k)! : null;
+    },
+    setItemAsync: async (k: string, v: string) => {
+      if (opts.writeThrows) throw new Error("keystore: fallo de escritura");
+      m.set(k, v);
+    },
+    deleteItemAsync: async (k: string) => {
+      m.delete(k);
+    },
+  };
+}
+
+describe("N4b: ramas del resolvedor con etiqueta de diagnóstico (branch)", () => {
+  it("lectura lanza + instalación fresca → genera y persiste la DEK (sin regresión)", async () => {
+    // Instalación limpia con almacén que falla al leer: la sonda no ve
+    // bases → generar es legítimo. Este es el caso del hallazgo físico
+    // 2026-10-05 (antes: fail-closed muerto sin etiqueta).
+    setTestSecureBackend(backendDefective({ readThrows: true }));
+    const k = await getDatabaseKeyHex();
+    expect(k).toMatch(/^[0-9a-f]{64}$/);
+    expect(map.get("nido_db_key")).toBe(k);
+  });
+
+  it("lectura lanza + DBs presentes → KeyLossError (consistencia con rama null)", async () => {
+    // Antes del fix, esta rama lanzaba SecureStoreReadError (callejón sin
+    // salida en la UI). Ahora aplica el mismo recovery documentado que la
+    // rama de lectura-null.
+    setTestSecureBackend(backendDefective({ readThrows: true }));
+    driver.seedDb("nido_memory.db");
+    const err = await getDatabaseKeyHex().catch((e) => e);
+    expect(err).toBeInstanceOf(KeyLossError);
+    expect((err as KeyLossError).code).toBe("NIDO_KEY_LOST");
+    expect((err as KeyLossError).databases).toContain("nido_memory.db");
+    // CRÍTICO: ninguna DEK nueva fue generada ni persistida en silencio.
+    expect(map.has("nido_db_key")).toBe(false);
+  });
+
+  it("lectura lanza + sonda lanza → SecureStoreReadError con rama db/read-throw/probe-threw", async () => {
+    setTestSecureBackend(backendDefective({ readThrows: true }));
+    driver.failExists = true;
+    const err = await getDatabaseKeyHex().catch((e) => e);
+    expect(err).toBeInstanceOf(SecureStoreReadError);
+    expect((err as SecureStoreReadError).branch).toBe("db/read-throw/probe-threw");
+    expect(map.has("nido_db_key")).toBe(false);
+  });
+
+  it("lectura lanza + sin sonda registrada → rama db/read-throw/no-probe", async () => {
+    setTestSecureBackend(backendDefective({ readThrows: true }));
+    registerKeyLossProbe(null);
+    try {
+      const err = await getDatabaseKeyHex().catch((e) => e);
+      expect(err).toBeInstanceOf(SecureStoreReadError);
+      expect((err as SecureStoreReadError).branch).toBe("db/read-throw/no-probe");
+      expect(map.has("nido_db_key")).toBe(false);
+    } finally {
+      // Restaurar la sonda real (la registra secureDatabase al importarse).
+      registerKeyLossProbe(() => findManagedDatabases());
+    }
+  });
+
+  it("lectura null + sonda lanza → rama db/read-null/probe-threw", async () => {
+    driver.failExists = true;
+    const err = await getDatabaseKeyHex().catch((e) => e);
+    expect(err).toBeInstanceOf(SecureStoreReadError);
+    expect((err as SecureStoreReadError).branch).toBe("db/read-null/probe-threw");
+    expect(map.has("nido_db_key")).toBe(false);
+  });
+
+  it("instalación fresca + escritura falla → error EXPLÍCITO db/write-failed, nada persistido", async () => {
+    setTestSecureBackend(backendDefective({ writeThrows: true }));
+    const err = await getDatabaseKeyHex().catch((e) => e);
+    expect(err).toBeInstanceOf(SecureStoreReadError);
+    expect((err as SecureStoreReadError).branch).toBe("db/write-failed");
+    // El mensaje dice explícitamente que la escritura falló (ES/EN/PT).
+    expect(String(err.message)).toMatch(/guardarla|save it|salv/i);
+    // La clave no guardada se descartó: no se devuelve ni se persiste.
+    expect(map.has("nido_db_key")).toBe(false);
+  });
+
+  it("lectura lanza + instalación fresca + escritura falla → db/write-failed", async () => {
+    setTestSecureBackend(backendDefective({ readThrows: true, writeThrows: true }));
+    const err = await getDatabaseKeyHex().catch((e) => e);
+    expect(err).toBeInstanceOf(SecureStoreReadError);
+    expect((err as SecureStoreReadError).branch).toBe("db/write-failed");
+    expect(map.has("nido_db_key")).toBe(false);
+  });
+
+  it("valor corrupto → rama db/read-corrupt, sin sobrescribir (M-1 intacto)", async () => {
+    setTestSecureBackend(backendDefective({ seed: { nido_db_key: "basura" } }));
+    const err = await getDatabaseKeyHex().catch((e) => e);
+    expect(err).toBeInstanceOf(SecureStoreReadError);
+    expect((err as SecureStoreReadError).branch).toBe("db/read-corrupt");
+    expect(map.get("nido_db_key")).toBe("basura");
   });
 });
 

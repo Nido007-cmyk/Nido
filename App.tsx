@@ -286,7 +286,17 @@ function AppContent() {
         />
       )}
       {screen === "required-setup" && (
-        <ModelSetupScreen mode="required" onReady={() => setScreen("chat")} />
+        <ModelSetupScreen
+          mode="required"
+          onReady={() => setScreen("chat")}
+          onKeyLossError={(e) => {
+            // N4: el indexado del wizard detectó pérdida de clave — la misma
+            // pantalla honesta de recuperación que usa el gate de arranque.
+            // Tras recuperar, runStartupGate reintenta y vuelve al wizard.
+            setKeyLossError(e);
+            setScreen("key-loss");
+          }}
+        />
       )}
       {screen === "chat" && !devPreview && (
         <ChatScreen onRelaunchWizard={() => setScreen("required-setup")} />

@@ -49,6 +49,7 @@ import {
   subscribeDownloads,
 } from "../services/downloadManager";
 import { onSeedProgress, seedKnowledgeBaseIfEmpty, SeedProgress } from "../rag/seedCorpus";
+import { KeyLossError } from "../privacy/keyManager";
 import { embeddingEngine } from "../rag/embed";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
@@ -60,6 +61,12 @@ const modelManager = new ModelManager();
 interface Props {
   onReady: () => void;
   onSkip?: () => void;
+  /**
+   * N4: si el indexado falla con KeyLossError (bases cifradas presentes, DEK
+   * ausente), no se muestra el "Reintentar" genérico: se delega a la
+   * pantalla honesta de recuperación. Opcional para no romper otros usos.
+   */
+  onKeyLossError?: (e: KeyLossError) => void;
 }
 
 type WizardStep = 1 | 2 | 3 | 4;
@@ -340,7 +347,7 @@ const verdictStyles = StyleSheet.create({
   },
 });
 
-export function SetupWizardScreen({ onReady, onSkip }: Props) {
+export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
   const { colors, typography: tp, themeId } = useTheme();
   const { t } = useTranslation();
   const [step, setStep] = useState<WizardStep>(1);
@@ -449,11 +456,20 @@ export function SetupWizardScreen({ onReady, onSkip }: Props) {
       await seedKnowledgeBaseIfEmpty();
       setIndexingPhase("ready");
       notification(NotificationFeedbackType.Success);
-    } catch (e: any) {
-      setIndexingError(e?.message ?? String(e));
+    } catch (e: unknown) {
+      // N4: KeyLossError no es un error reintentable — significa "bases
+      // cifradas presentes, DEK ausente". Va a la pantalla honesta de
+      // recuperación (archivar y empezar de cero con confirmación explícita)
+      // en vez de a un "Reintentar" muerto. Sin handler, se conserva la
+      // tarjeta de error genérica (comportamiento previo).
+      if (e instanceof KeyLossError && onKeyLossError) {
+        onKeyLossError(e);
+        return;
+      }
+      setIndexingError(e instanceof Error ? e.message : String(e));
       setIndexingPhase("error");
     }
-  }, []);
+  }, [onKeyLossError]);
 
   useEffect(() => {
     if (step === 4) {

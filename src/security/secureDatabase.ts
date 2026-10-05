@@ -156,17 +156,84 @@ export function isDatabaseNotFoundError(err: unknown): boolean {
   return /database\s+'.+'\s+not found/i.test(message);
 }
 
+/**
+ * Driver de producción: expo-sqlite + expo-file-system con require perezoso
+ * (lo que promete el docstring del módulo). El require estático rompería el
+ * análisis de tests en Node/vitest, donde los módulos nativos no existen.
+ *
+ * La inyección vía `globalThis.__NIDO_PROD_DRIVER__` se conserva como punto
+ * de extensión (si alguien la define, gana); el fallback real es este.
+ *
+ * Hallazgo 2026-10-05 (instalación limpia en tablet física): nada inyectaba
+ * el driver, así que la sonda N4 (`findManagedDatabases`) lanzaba SIEMPRE en
+ * producción y `getDatabaseKeyHex()` caía en fail-closed incluso en primer
+ * arranque genuino — la generación de la DEK era inalcanzable.
+ */
 function prodDriver(): SecureDbDriver {
   if (testDriver) return testDriver;
-  // En producción, el driver nativo se inyecta vía globalThis.__NIDO_PROD_DRIVER__.
-  // Esto evita require() estáticos que rompen el análisis de tests.
-  const prod = (globalThis as unknown as { __NIDO_PROD_DRIVER__?: () => SecureDbDriver })
-    .__NIDO_PROD_DRIVER__;
-  if (prod) return prod();
-  throw new Error(
-    "secureDatabase: driver de producción no disponible. " +
-    "En tests usa setSecureDbTestDriver(); en producción inyecta globalThis.__NIDO_PROD_DRIVER__."
-  );
+  const injected = (
+    globalThis as unknown as { __NIDO_PROD_DRIVER__?: () => SecureDbDriver }
+  ).__NIDO_PROD_DRIVER__;
+  if (injected) return injected();
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const SQLite = require("expo-sqlite") as {
+      openDatabaseAsync(
+        name: string,
+        options?: { useNewConnection?: boolean },
+        directory?: string,
+      ): Promise<{
+        execAsync(sql: string): Promise<void>;
+        getAllAsync<T>(sql: string): Promise<T[]>;
+        getFirstAsync<T>(sql: string): Promise<T | null>;
+        closeAsync(): Promise<void>;
+      }>;
+    };
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const FileSystem = require("expo-file-system/legacy") as {
+      documentDirectory: string | null;
+      getInfoAsync(path: string): Promise<{ exists: boolean }>;
+      deleteAsync(path: string, opts?: { idempotent?: boolean }): Promise<void>;
+      moveAsync(opts: { from: string; to: string }): Promise<void>;
+      writeAsStringAsync(path: string, content: string): Promise<void>;
+    };
+    const baseDir = `${(FileSystem.documentDirectory ?? "").replace(/\/$/, "")}/SQLite/`;
+    return {
+      dbDir: () => baseDir,
+      exists: async (path: string) =>
+        (await FileSystem.getInfoAsync(path)).exists === true,
+      remove: async (path: string) => {
+        await FileSystem.deleteAsync(path, { idempotent: true });
+      },
+      rename: async (from: string, to: string) => {
+        await FileSystem.moveAsync({ from, to });
+      },
+      writeFile: async (path: string, content: string) => {
+        await FileSystem.writeAsStringAsync(path, content);
+      },
+      openDb: async (path: string): Promise<SecureDbHandle> => {
+        const slash = path.lastIndexOf("/");
+        const db = await SQLite.openDatabaseAsync(
+          path.slice(slash + 1),
+          { useNewConnection: true },
+          path.slice(0, slash),
+        );
+        return {
+          execAsync: (sql) => db.execAsync(sql),
+          getAllAsync: <T,>(sql: string) => db.getAllAsync<T>(sql),
+          getFirstAsync: <T,>(sql: string) => db.getFirstAsync<T>(sql),
+          closeAsync: () => db.closeAsync(),
+        };
+      },
+    };
+  } catch (e) {
+    throw new Error(
+      "secureDatabase: driver de producción no disponible " +
+        "(expo-sqlite/expo-file-system no cargaron). En tests usa " +
+        "setSecureDbTestDriver().",
+      { cause: e },
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

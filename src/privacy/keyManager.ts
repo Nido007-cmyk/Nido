@@ -81,13 +81,21 @@ function isDev(): boolean {
  * "absent" and generate replacement keys — doing so would silently
  * overwrite the real DEK or the P2P identity. The `alias` identifies which
  * key could not be read; the human-readable message is localized.
+ *
+ * `branch` is a stable diagnostic tag naming the exact resolver branch
+ * that threw (e.g. "db/read-null/probe-threw"). It carries NO key material —
+ * only the alias and the branch are safe to log or surface. Added after the
+ * 2026-10-05 physical-device finding where a first-run install fail-closed
+ * with no way to tell which branch fired.
  */
 export class SecureStoreReadError extends Error {
   readonly alias: string;
-  constructor(alias: string, message: string, cause?: unknown) {
+  readonly branch: string;
+  constructor(alias: string, message: string, branch = "unspecified", cause?: unknown) {
     super(message);
     this.name = "SecureStoreReadError";
     this.alias = alias;
+    this.branch = branch;
     if (cause !== undefined) (this as { cause?: unknown }).cause = cause;
   }
 }
@@ -144,6 +152,7 @@ interface KeyStoreStrings {
   dbKeyReadFailed: string;
   dbKeyCorrupt: string;
   dbKeyLost: string;
+  dbKeyWriteFailed: string;
   p2pKeyReadFailed: string;
   p2pKeyCorrupt: string;
   p2pSignKeyReadFailed: string;
@@ -167,6 +176,11 @@ const EN_KEYSTORE_STRINGS: KeyStoreStrings = {
     "an unreadable database. Your data has NOT been deleted. To use NIDO again " +
     "you must explicitly choose recovery (existing encrypted data cannot be " +
     "decrypted without the original key).",
+  dbKeyWriteFailed:
+    "NIDO generated a new database encryption key but could not save it to " +
+    "the secure store. Fail-closed: the unsaved key was discarded and will " +
+    "not be used. Restart the app and try again — if this keeps happening, " +
+    "the device's secure storage may be damaged.",
   p2pKeyReadFailed:
     "NIDO could not read this device's identity key from the secure store. " +
     "Fail-closed: no new identity will be created, because that would silently " +
@@ -191,6 +205,7 @@ function keyStoreStrings(): KeyStoreStrings {
       dbKeyReadFailed: i18n.t("keyStore.dbKeyReadFailed"),
       dbKeyCorrupt: i18n.t("keyStore.dbKeyCorrupt"),
       dbKeyLost: i18n.t("keyStore.dbKeyLost"),
+      dbKeyWriteFailed: i18n.t("keyStore.dbKeyWriteFailed"),
       p2pKeyReadFailed: i18n.t("keyStore.p2pKeyReadFailed"),
       p2pKeyCorrupt: i18n.t("keyStore.p2pKeyCorrupt"),
       p2pSignKeyReadFailed: i18n.t("keyStore.p2pSignKeyReadFailed"),
@@ -243,6 +258,31 @@ async function randomHex32Async(): Promise<string> {
  */
 let dekInFlight: Promise<string | null> | null = null;
 
+/**
+ * Lanza un SecureStoreReadError con etiqueta de rama de diagnóstico.
+ * El log solo lleva la rama y el alias — NUNCA material de claves.
+ */
+function failClosed(alias: string, message: string, branch: string, cause?: unknown): never {
+  console.warn(`[keyManager] fail-closed (branch=${branch}, alias=${alias})`);
+  throw new SecureStoreReadError(alias, message, branch, cause);
+}
+
+/**
+ * Genera una DEK fresca y la persiste en el Keystore. Si la escritura
+ * falla, el error es EXPLÍCITO (mensaje dbKeyWriteFailed, rama
+ * "db/write-failed"): la clave recién generada nunca se devuelve sin estar
+ * guardada, y el fallo no se disfraza de error nativo crudo.
+ */
+async function generateAndPersistFreshKey(backend: SecureBackend): Promise<string> {
+  const fresh = await randomHex32Async();
+  try {
+    await backend.setItemAsync(DB_KEY_ALIAS, fresh);
+  } catch (e) {
+    failClosed(DB_KEY_ALIAS, keyStoreStrings().dbKeyWriteFailed, "db/write-failed", e);
+  }
+  return fresh;
+}
+
 export async function getDatabaseKeyHex(): Promise<string | null> {
   const backend = realBackend();
   if (!backend) {
@@ -265,23 +305,32 @@ async function resolveDatabaseKeyHex(backend: SecureBackend): Promise<string | n
   try {
     existing = await backend.getItemAsync(DB_KEY_ALIAS);
   } catch (e) {
-    // El almacén lanzó excepción al leer. Antes de fallar, verificar si hay
-    // bases cifradas existentes: si no hay (instalación fresca con almacén
-    // defectuoso), permitir generar clave nueva. Si hay bases, fail-closed.
+    // El almacén lanzó excepción al leer. La sonda N4 distingue instalación
+    // fresca (sin bases → generar) de posible pérdida de clave.
     if (keyLossProbe) {
+      let present: string[];
       try {
-        const present = await keyLossProbe();
-        if (present.length === 0) {
-          // Instalación fresca, sin datos que proteger: generar clave nueva
-          const fresh = await randomHex32Async();
-          await backend.setItemAsync(DB_KEY_ALIAS, fresh);
-          return fresh;
-        }
-      } catch {
-        // No se pudo verificar: fail-closed como antes
+        present = await keyLossProbe();
+      } catch (probeErr) {
+        // La sonda no pudo verificar el sistema de ficheros: estado ambiguo
+        // (¿nuevo o pérdida?). Fail-closed: no generar.
+        failClosed(DB_KEY_ALIAS, keyStoreStrings().dbKeyReadFailed, "db/read-throw/probe-threw", probeErr);
       }
+      if (present.length > 0) {
+        // Consistencia con la rama de lectura-null: bases cifradas presentes
+        // + clave ilegible = pérdida de clave → estado de RECOVERY explícito
+        // (KeyLossError), nunca un callejón sin salida genérico. La UI
+        // existente lo enruta a la pantalla honesta de recuperación.
+        const names = present.join(", ");
+        throw new KeyLossError(
+          present,
+          `${keyStoreStrings().dbKeyLost} (${names})`,
+        );
+      }
+      // Instalación fresca, sin datos que proteger: generar clave nueva.
+      return generateAndPersistFreshKey(backend);
     }
-    throw new SecureStoreReadError(DB_KEY_ALIAS, keyStoreStrings().dbKeyReadFailed, e);
+    failClosed(DB_KEY_ALIAS, keyStoreStrings().dbKeyReadFailed, "db/read-throw/no-probe", e);
   }
   if (existing === null) {
     // N4: la lectura tuvo éxito y devolvió null → "ausente de verdad". ANTES
@@ -298,7 +347,7 @@ async function resolveDatabaseKeyHex(backend: SecureBackend): Promise<string | n
       } catch (e) {
         // La sonda no pudo leer el sistema de ficheros: estado ambiguo
         // (¿nuevo o pérdida?). Fail-closed: no generar.
-        throw new SecureStoreReadError(DB_KEY_ALIAS, keyStoreStrings().dbKeyReadFailed, e);
+        failClosed(DB_KEY_ALIAS, keyStoreStrings().dbKeyReadFailed, "db/read-null/probe-threw", e);
       }
       if (present.length > 0) {
         const names = present.join(", ");
@@ -308,15 +357,12 @@ async function resolveDatabaseKeyHex(backend: SecureBackend): Promise<string | n
         );
       }
     }
-    // Primera vez genuina: generar y persistir. Si la escritura falla, el
-    // error se propaga y la clave recién generada nunca se devuelve sin
-    // estar guardada.
-    const fresh = await randomHex32Async();
-    await backend.setItemAsync(DB_KEY_ALIAS, fresh);
-    return fresh;
+    // Primera vez genuina: generar y persistir (el fallo de escritura es
+    // explícito dentro de generateAndPersistFreshKey).
+    return generateAndPersistFreshKey(backend);
   }
   if (!/^[0-9a-f]{64}$/i.test(existing)) {
-    throw new SecureStoreReadError(DB_KEY_ALIAS, keyStoreStrings().dbKeyCorrupt);
+    failClosed(DB_KEY_ALIAS, keyStoreStrings().dbKeyCorrupt, "db/read-corrupt");
   }
   return existing.toLowerCase();
 }
@@ -344,10 +390,10 @@ export async function loadP2PPrivateKey(): Promise<string | null> {
   try {
     v = await backend.getItemAsync(P2P_SK_ALIAS);
   } catch (e) {
-    throw new SecureStoreReadError(P2P_SK_ALIAS, keyStoreStrings().p2pKeyReadFailed, e);
+    failClosed(P2P_SK_ALIAS, keyStoreStrings().p2pKeyReadFailed, "p2p/read-throw", e);
   }
   if (v !== null && !/^[0-9a-f]{64}$/i.test(v)) {
-    throw new SecureStoreReadError(P2P_SK_ALIAS, keyStoreStrings().p2pKeyCorrupt);
+    failClosed(P2P_SK_ALIAS, keyStoreStrings().p2pKeyCorrupt, "p2p/read-corrupt");
   }
   return v ? v.toLowerCase() : null;
 }
@@ -384,10 +430,10 @@ export async function loadP2PSigningKey(): Promise<string | null> {
   try {
     v = await backend.getItemAsync(P2P_SIGN_SK_ALIAS);
   } catch (e) {
-    throw new SecureStoreReadError(P2P_SIGN_SK_ALIAS, keyStoreStrings().p2pSignKeyReadFailed, e);
+    failClosed(P2P_SIGN_SK_ALIAS, keyStoreStrings().p2pSignKeyReadFailed, "p2p-sign/read-throw", e);
   }
   if (v !== null && !/^[0-9a-f]{64}$/i.test(v)) {
-    throw new SecureStoreReadError(P2P_SIGN_SK_ALIAS, keyStoreStrings().p2pSignKeyCorrupt);
+    failClosed(P2P_SIGN_SK_ALIAS, keyStoreStrings().p2pSignKeyCorrupt, "p2p-sign/read-corrupt");
   }
   return v ? v.toLowerCase() : null;
 }
@@ -431,10 +477,10 @@ export async function peekDatabaseKey(): Promise<string | null> {
   try {
     v = await backend.getItemAsync(DB_KEY_ALIAS);
   } catch (e) {
-    throw new SecureStoreReadError(DB_KEY_ALIAS, keyStoreStrings().dbKeyReadFailed, e);
+    failClosed(DB_KEY_ALIAS, keyStoreStrings().dbKeyReadFailed, "db/peek/read-throw", e);
   }
   if (v !== null && !/^[0-9a-f]{64}$/i.test(v)) {
-    throw new SecureStoreReadError(DB_KEY_ALIAS, keyStoreStrings().dbKeyCorrupt);
+    failClosed(DB_KEY_ALIAS, keyStoreStrings().dbKeyCorrupt, "db/peek/read-corrupt");
   }
   return v ? v.toLowerCase() : null;
 }

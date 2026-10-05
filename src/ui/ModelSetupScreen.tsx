@@ -19,6 +19,7 @@ import { ModelManager } from "../models/ModelManager";
 import { getActiveModelId, setActiveModelId, getHapticsEnabled, setHapticsEnabled } from "../models/settings";
 import { seedKnowledgeBaseIfEmpty } from "../rag/seedCorpus";
 import { DbLifecycleEndedError } from "../security/secureDatabase";
+import type { KeyLossError } from "../privacy/keyManager";
 import { closePack } from "../rag/packs";
 import {
   startDownload,
@@ -46,7 +47,7 @@ const modelManager = new ModelManager();
 const LLM_EMBEDDING_KINDS: AssetKind[] = ["llm", "embedding"];
 
 type Props =
-  | { mode: "required"; onReady: () => void }
+  | { mode: "required"; onReady: () => void; onKeyLossError?: (e: KeyLossError) => void }
   | { mode: "optional"; onClose: () => void; onRelaunchWizard?: () => void };
 
 /**
@@ -205,7 +206,8 @@ export function ModelSetupScreen(props: Props) {
 
   // If required on first run, display the 3-step Setup Wizard!
   if (requiredMode) {
-    return <SetupWizardScreen onReady={(props as { onReady: () => void }).onReady} />;
+    const p = props as { onReady: () => void; onKeyLossError?: (e: KeyLossError) => void };
+    return <SetupWizardScreen onReady={p.onReady} onKeyLossError={p.onKeyLossError} />;
   }
 
   // Optional mode: Settings Screen
