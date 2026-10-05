@@ -205,6 +205,7 @@
       "errorTitle": "O download foi interrompido.",
       "errorText": "Verifique sua conexão e tente novamente. Nada foi instalado ainda.",
       "tryAgain": "Tentar novamente",
+      "autoRetrying": "Tentando novamente automaticamente em {{seconds}}s (tentativa {{attempt}} de {{max}})…",
       "restartStuck": "Downloads travados? Reiniciar"
     },
     "step4": {

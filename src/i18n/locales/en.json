@@ -205,6 +205,7 @@
       "errorTitle": "The download was interrupted.",
       "errorText": "Check your connection and try again. Nothing was installed yet.",
       "tryAgain": "Try again",
+      "autoRetrying": "Retrying automatically in {{seconds}}s (attempt {{attempt}} of {{max}})…",
       "restartStuck": "Downloads stuck? Restart"
     },
     "step4": {

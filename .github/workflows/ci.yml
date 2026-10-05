@@ -30,3 +30,4 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run verify:pins
+      - run: npm run verify:manifest-sig

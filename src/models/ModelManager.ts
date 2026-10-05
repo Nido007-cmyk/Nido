@@ -531,6 +531,54 @@ export class ModelManager {
     // Reconstruct honest state after a crash BEFORE touching anything.
     await this.ensureReconciled();
 
+    // Meta #1 (blast radius / rollback): snapshot the pre-download journal.
+    // A failed (re-)download must never clobber a previously valid install:
+    // the final file is only ever replaced by the atomic promote AFTER
+    // verification, so on any failure path the previous bytes are provably
+    // untouched — the failure recorder below restores the "installed"
+    // record instead of writing "failed".
+    const previousRecord = await getInstallRecord(asset.id);
+    const previousInstall =
+      previousRecord?.status === "installed" &&
+      previousRecord.sizeBytes === asset.sizeBytes &&
+      sameSha(previousRecord.sha256 ?? "", asset.sha256 ?? "")
+        ? previousRecord
+        : null;
+
+    /**
+     * Records a download failure — with rollback. If this download was a
+     * re-attempt over a previously verified install, the final file was
+     * never touched (only staging), so the honest journal state is still
+     * "installed": restore it instead of writing "failed". Without this, a
+     * single failed re-download would make the app forget a perfectly good
+     * multi-GB install and force a full re-hash on the next trust check.
+     */
+    const recordFailedWithRollback = async (failure: DownloadFailure) => {
+      if (previousInstall) {
+        dlog(
+          asset.id,
+          `download failed (${failure.code}) but a previous verified install exists — ` +
+            `restoring journal (rollback), final file untouched`
+        );
+        await recordInstall(asset.id, {
+          status: "installed",
+          sizeBytes: previousInstall.sizeBytes,
+          sha256: previousInstall.sha256,
+          mtimeMs: previousInstall.mtimeMs,
+          bytesWritten: previousInstall.bytesWritten,
+        });
+        return;
+      }
+      await recordInstall(asset.id, {
+        status: "failed",
+        sizeBytes: asset.sizeBytes,
+        sha256: asset.sha256,
+        failureCode: failure.code,
+        failureKind: failure.kind,
+        bytesWritten: failure.bytesReceived,
+      });
+    };
+
     // R1 (2026-09-28): the immutable-source gate is contract-aware — see
     // sourceContractOf()/assertImmutableSourcePreDownload() in manifest.ts.
     // A Hugging Face / raw.githubusercontent branch-pointer URL without a
@@ -556,14 +604,7 @@ export class ModelManager {
               bytesExpected: asset.sizeBytes,
               detail: `source gate threw non-DownloadFailure: ${String(e)}`,
             });
-      await recordInstall(asset.id, {
-        status: "failed",
-        sizeBytes: asset.sizeBytes,
-        sha256: asset.sha256,
-        failureCode: failure.code,
-        failureKind: failure.kind,
-        bytesWritten: 0,
-      });
+      await recordFailedWithRollback(failure);
       networkAudit.log({
         kind: "download_failed",
         endpoint: sanitizeEndpoint(asset.sourceUrl),
@@ -618,14 +659,7 @@ export class ModelManager {
         },
         detail: `pre-flight storage check failed (${storage.reason}): ${storage.message}`,
       });
-      await recordInstall(asset.id, {
-        status: "failed",
-        sizeBytes: asset.sizeBytes,
-        sha256: asset.sha256,
-        failureCode: failure.code,
-        failureKind: failure.kind,
-        bytesWritten: stagedBytes,
-      });
+      await recordFailedWithRollback(failure);
       networkAudit.log({
         kind: "download_failed",
         endpoint: sanitizeEndpoint(source.fetchUrl),
@@ -721,15 +755,9 @@ export class ModelManager {
         bytesReceived,
         error,
       });
-    const recordFailed = (failure: DownloadFailure) =>
-      recordInstall(asset.id, {
-        status: "failed",
-        sizeBytes: asset.sizeBytes,
-        sha256: asset.sha256,
-        failureCode: failure.code,
-        failureKind: failure.kind,
-        bytesWritten: failure.bytesReceived,
-      });
+    // Meta #1: every failure in the download body rolls back to the previous
+    // verified install when one exists (see recordFailedWithRollback).
+    const recordFailed = (failure: DownloadFailure) => recordFailedWithRollback(failure);
     networkAudit.log({
       kind: "download_start",
       endpoint,

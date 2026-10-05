@@ -45,6 +45,48 @@ export interface DownloadState {
   bytesExpected?: number;
   speedBytesPerSec?: number;
   etaSeconds?: number;
+  /**
+   * Meta #3 ("hope is not a strategy"): automatic retry state. When a
+   * TRANSIENT failure occurs and auto-retries remain, the manager waits
+   * `nextRetryInSeconds` (counted down live) then retries by itself —
+   * the user just watches. Never for permanent/resource failures, never
+   * infinite: MAX_AUTO_RETRIES attempts, then the final error surfaces.
+   */
+  autoRetrying?: boolean;
+  retryAttempt?: number;
+  maxAutoRetries?: number;
+  nextRetryInSeconds?: number;
+}
+
+/**
+ * Meta #3: bounded automatic retry for transient failures only.
+ * Exponential backoff (2s, 8s, 32s) with ±25% jitter so a fleet of
+ * devices doesn't thundering-herd the server at the same instant.
+ * Permanent and resource failures are never retried automatically —
+ * retrying them cannot help (permanent) or needs the user to act (disk).
+ */
+export const MAX_AUTO_RETRIES = 3;
+const RETRY_BASE_DELAY_MS = 2000;
+const RETRY_BACKOFF_FACTOR = 4;
+
+export function retryDelayMs(attempt: number): number {
+  const base = RETRY_BASE_DELAY_MS * Math.pow(RETRY_BACKOFF_FACTOR, attempt - 1);
+  const jitter = base * 0.25 * (Math.random() * 2 - 1);
+  return Math.max(500, Math.round(base + jitter));
+}
+
+const autoRetryAttempts = new Map<string, number>();
+const autoRetryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const autoRetryCountdowns = new Map<string, ReturnType<typeof setInterval>>();
+
+function clearAutoRetry(assetId: string) {
+  const t = autoRetryTimers.get(assetId);
+  if (t) clearTimeout(t);
+  autoRetryTimers.delete(assetId);
+  const c = autoRetryCountdowns.get(assetId);
+  if (c) clearInterval(c);
+  autoRetryCountdowns.delete(assetId);
+  autoRetryAttempts.delete(assetId);
 }
 
 const modelManager = new ModelManager();
@@ -91,6 +133,7 @@ export function listDownloadStates(): Array<{ assetId: string; state: DownloadSt
  * file that no longer exists.
  */
 export function resetDownloadState(): void {
+  for (const id of Array.from(autoRetryTimers.keys())) clearAutoRetry(id);
   state.clear();
   inFlight.clear();
   downloadTimestamps.clear();
@@ -132,6 +175,14 @@ export async function restartDownload(asset: CatalogModel): Promise<void> {
 
 /** Starts a download if one isn't already running for this asset; otherwise no-ops. */
 export function startDownload(asset: CatalogModel): Promise<void> {
+  // Manual start (user tapped Retry/Download): any pending auto-retry chain
+  // is superseded — clear it and start the counter fresh.
+  clearAutoRetry(asset.id);
+  return startDownloadInternal(asset);
+}
+
+/** Automatic retry path: keeps the attempt counter so the chain stays bounded. */
+function startDownloadInternal(asset: CatalogModel): Promise<void> {
   const existing = inFlight.get(asset.id);
   if (existing) return existing;
 
@@ -188,6 +239,7 @@ export function startDownload(asset: CatalogModel): Promise<void> {
       notify();
     })
     .then(() => {
+      clearAutoRetry(asset.id);
       state.set(asset.id, {
         downloading: false,
         progress: 1,
@@ -196,11 +248,65 @@ export function startDownload(asset: CatalogModel): Promise<void> {
         bytesExpected: asset.sizeBytes,
         speedBytesPerSec: 0,
         etaSeconds: 0,
+        autoRetrying: false,
       });
       downloadTimestamps.delete(asset.id);
     })
     .catch((e: any) => {
       const failure = e instanceof DownloadFailure ? e : null;
+      const attempts = autoRetryAttempts.get(asset.id) ?? 0;
+      // Meta #3: transient failures get bounded automatic retries with
+      // backoff+jitter. Permanent/resource failures surface immediately —
+      // retrying them automatically cannot help.
+      if (failure && failure.kind === "transient" && attempts < MAX_AUTO_RETRIES) {
+        const nextAttempt = attempts + 1;
+        autoRetryAttempts.set(asset.id, nextAttempt);
+        const delayMs = retryDelayMs(nextAttempt);
+        let remainingSec = Math.ceil(delayMs / 1000);
+        state.set(asset.id, {
+          downloading: false,
+          progress: 0,
+          error: null, // not a final error yet — we're retrying
+          errorCode: failure.code,
+          canResume: failure.canResume,
+          bytesWritten: failure.bytesReceived,
+          bytesExpected: asset.sizeBytes,
+          autoRetrying: true,
+          retryAttempt: nextAttempt,
+          maxAutoRetries: MAX_AUTO_RETRIES,
+          nextRetryInSeconds: remainingSec,
+        });
+        notify();
+        autoRetryCountdowns.set(
+          asset.id,
+          setInterval(() => {
+            remainingSec = Math.max(0, remainingSec - 1);
+            const s = state.get(asset.id);
+            if (s?.autoRetrying) {
+              state.set(asset.id, { ...s, nextRetryInSeconds: remainingSec });
+              notify();
+            }
+          }, 1000)
+        );
+        autoRetryTimers.set(
+          asset.id,
+          setTimeout(() => {
+            // Fire the retry: clear only the timer handles, KEEP the attempt
+            // counter so the chain stays bounded across attempts.
+            const t = autoRetryTimers.get(asset.id);
+            if (t) clearTimeout(t);
+            autoRetryTimers.delete(asset.id);
+            const c = autoRetryCountdowns.get(asset.id);
+            if (c) clearInterval(c);
+            autoRetryCountdowns.delete(asset.id);
+            startDownloadInternal(asset);
+          }, delayMs)
+        );
+        downloadTimestamps.delete(asset.id);
+        return;
+      }
+      // Final failure: retries exhausted, non-transient, or unknown error.
+      clearAutoRetry(asset.id);
       state.set(asset.id, {
         downloading: false,
         progress: 0,
@@ -213,6 +319,7 @@ export function startDownload(asset: CatalogModel): Promise<void> {
         // retry decision need the honest byte count, not a blank.
         bytesWritten: failure?.bytesReceived,
         bytesExpected: asset.sizeBytes,
+        autoRetrying: false,
       });
       downloadTimestamps.delete(asset.id);
     })

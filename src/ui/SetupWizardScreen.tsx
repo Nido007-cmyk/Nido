@@ -519,6 +519,10 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
   // generation timeouts did). failedAssets makes the error visible and
   // retriable instead.
   const failedAssets: { asset: CatalogModel; error: string }[] = [];
+  // Meta #3: assets waiting for an automatic retry (transient failure,
+  // backoff countdown running). Shown distinctly from final failures so
+  // the user sees the app is working on it, not stuck.
+  const retryingAssets: { asset: CatalogModel; dl: NonNullable<ReturnType<typeof getDownloadState>> }[] = [];
 
   for (const asset of tierAssets) {
     const dl = getDownloadState(asset.id);
@@ -528,7 +532,9 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
       completedCount++;
     } else if (dl) {
       totalBytesWritten += dl.bytesWritten ?? 0;
-      if (dl.downloading) {
+      if (dl.autoRetrying) {
+        retryingAssets.push({ asset, dl });
+      } else if (dl.downloading) {
         isAnyDownloading = true;
         // Assets download concurrently, but on a typical connection only
         // one actually makes visible progress at a time — surfacing which
@@ -862,6 +868,20 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
                   total: tierAssets.length,
                 })}
           </Text>
+        </View>
+      )}
+
+      {retryingAssets.length > 0 && (
+        <View style={styles.noteCard}>
+          {retryingAssets.map(({ asset, dl }) => (
+            <Text key={asset.id} style={[styles.noteText, tp.ui.body]}>
+              {t("setupWizard.step3.autoRetrying", {
+                seconds: dl.nextRetryInSeconds ?? 0,
+                attempt: dl.retryAttempt ?? 1,
+                max: dl.maxAutoRetries ?? 3,
+              })}
+            </Text>
+          ))}
         </View>
       )}
 

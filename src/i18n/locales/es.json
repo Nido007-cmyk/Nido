@@ -501,6 +501,7 @@
       "errorTitle": "La descarga se interrumpió.",
       "errorText": "Revisa tu conexión e inténtalo de nuevo. Aún no se instaló nada.",
       "tryAgain": "Reintentar",
+      "autoRetrying": "Reintentando automáticamente en {{seconds}}s (intento {{attempt}} de {{max}})…",
       "restartStuck": "¿Descargas atascadas? Reiniciar"
     },
     "step4": {

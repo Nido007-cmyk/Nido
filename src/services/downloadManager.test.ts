@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const acquireMock = vi.fn(() => true);
 const releaseMock = vi.fn();
@@ -121,47 +121,70 @@ describe("download wake lock", () => {
 });
 
 describe("honest download failures", () => {
+  // Meta #3: transient failures now auto-retry (bounded) before surfacing.
+  // These tests exhaust the retry chain with fake timers, then assert the
+  // final error is still honest.
   it("surfaces a DownloadFailure with its code, canResume flag, and honest byte count", async () => {
-    downloadMock.mockImplementationOnce(async () => {
-      throw new DownloadFailure({
-        code: "interrupted",
-        kind: "transient",
-        canResume: false, // partial was deleted — retry restarts at zero
-        assetId: "a",
-        bytesReceived: 1234567,
-        bytesExpected: 100,
+    vi.useFakeTimers();
+    try {
+      downloadMock.mockImplementation(async () => {
+        throw new DownloadFailure({
+          code: "interrupted",
+          kind: "transient",
+          canResume: false, // partial was deleted — retry restarts at zero
+          assetId: "a",
+          bytesReceived: 1234567,
+          bytesExpected: 100,
+        });
       });
-    });
-    await startDownload(asset("a"));
-    const s = getDownloadState("a");
-    expect(s?.errorCode).toBe("interrupted");
-    expect(s?.canResume).toBe(false);
-    expect(s?.bytesWritten).toBe(1234567);
-    expect(s?.bytesExpected).toBe(100);
-    // User message is English (i18n unavailable in tests → EN fallback)
-    // and must say the retry starts from the beginning, never "resume".
-    expect(s?.error).toMatch(/starts from the beginning/i);
-    expect(s?.error).not.toMatch(/resume/i);
+      startDownload(asset("a"));
+      for (let i = 0; i < 4; i++) {
+        await vi.advanceTimersByTimeAsync(0);
+        await vi.advanceTimersByTimeAsync(120_000);
+      }
+      await vi.advanceTimersByTimeAsync(0);
+      const s = getDownloadState("a");
+      expect(s?.errorCode).toBe("interrupted");
+      expect(s?.canResume).toBe(false);
+      expect(s?.bytesWritten).toBe(1234567);
+      expect(s?.bytesExpected).toBe(100);
+      // User message is English (i18n unavailable in tests → EN fallback)
+      // and must say the retry starts from the beginning, never "resume".
+      expect(s?.error).toMatch(/starts from the beginning/i);
+      expect(s?.error).not.toMatch(/resume/i);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("marks a stalled failure as resumable", async () => {
-    downloadMock.mockImplementationOnce(async () => {
-      throw new DownloadFailure({
-        code: "stalled",
-        kind: "transient",
-        canResume: true, // partial + resume token kept
-        assetId: "a",
-        bytesReceived: 50,
-        bytesExpected: 100,
-        extraVars: { seconds: 60 },
+    vi.useFakeTimers();
+    try {
+      downloadMock.mockImplementation(async () => {
+        throw new DownloadFailure({
+          code: "stalled",
+          kind: "transient",
+          canResume: true, // partial + resume token kept
+          assetId: "a",
+          bytesReceived: 50,
+          bytesExpected: 100,
+          extraVars: { seconds: 60 },
+        });
       });
-    });
-    await startDownload(asset("a"));
-    const s = getDownloadState("a");
-    expect(s?.errorCode).toBe("stalled");
-    expect(s?.canResume).toBe(true);
-    expect(s?.bytesWritten).toBe(50);
-    expect(s?.error).toMatch(/resumes where it stopped/i);
+      startDownload(asset("a"));
+      for (let i = 0; i < 4; i++) {
+        await vi.advanceTimersByTimeAsync(0);
+        await vi.advanceTimersByTimeAsync(120_000);
+      }
+      await vi.advanceTimersByTimeAsync(0);
+      const s = getDownloadState("a");
+      expect(s?.errorCode).toBe("stalled");
+      expect(s?.canResume).toBe(true);
+      expect(s?.bytesWritten).toBe(50);
+      expect(s?.error).toMatch(/resumes where it stopped/i);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("keeps plain Error messages untouched (non-taxonomy path)", async () => {
@@ -173,5 +196,117 @@ describe("honest download failures", () => {
     expect(s?.error).toBe("custom boom");
     expect(s?.errorCode).toBeUndefined();
     expect(s?.canResume).toBe(false);
+  });
+});
+
+describe("automatic retry with backoff (Meta #3)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const transient = (id: string) =>
+    new DownloadFailure({
+      code: "stalled",
+      kind: "transient",
+      canResume: true,
+      assetId: id,
+      bytesReceived: 10,
+      bytesExpected: 100,
+      extraVars: { seconds: 60 },
+    });
+  const permanent = (id: string) =>
+    new DownloadFailure({
+      code: "checksumMismatch",
+      kind: "permanent",
+      canResume: false,
+      assetId: id,
+      bytesReceived: 100,
+      bytesExpected: 100,
+    });
+
+  it("retries a transient failure automatically with backoff, then succeeds", async () => {
+    downloadMock
+      .mockImplementationOnce(async () => {
+        throw transient("a");
+      })
+      .mockImplementationOnce(async () => {});
+    const p = startDownload(asset("a"));
+    await vi.advanceTimersByTimeAsync(0);
+    // First failure -> waiting for auto-retry, not a final error.
+    let s = getDownloadState("a");
+    expect(s?.autoRetrying).toBe(true);
+    expect(s?.retryAttempt).toBe(1);
+    expect(s?.error).toBeNull();
+    expect(s?.nextRetryInSeconds).toBeGreaterThan(0);
+    // Fire the retry timer -> second attempt succeeds.
+    await vi.advanceTimersByTimeAsync(60_000);
+    await p.catch(() => {});
+    await vi.advanceTimersByTimeAsync(0);
+    s = getDownloadState("a");
+    expect(s?.autoRetrying).toBe(false);
+    expect(s?.error).toBeNull();
+    expect(downloadMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up after MAX_AUTO_RETRIES and surfaces the final error", async () => {
+    downloadMock.mockImplementation(async () => {
+      throw transient("a");
+    });
+    startDownload(asset("a"));
+    // Exhaust all retries: each cycle needs the failure + the backoff wait.
+    for (let i = 0; i < 4; i++) {
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(120_000);
+    }
+    await vi.advanceTimersByTimeAsync(0);
+    const s = getDownloadState("a");
+    expect(s?.autoRetrying).toBe(false);
+    expect(s?.errorCode).toBe("stalled");
+    expect(s?.error).toMatch(/resumes where it stopped/i);
+    // 1 initial + 3 auto-retries, never more.
+    expect(downloadMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("never auto-retries permanent failures", async () => {
+    downloadMock.mockImplementationOnce(async () => {
+      throw permanent("a");
+    });
+    await startDownload(asset("a"));
+    await vi.advanceTimersByTimeAsync(120_000);
+    const s = getDownloadState("a");
+    expect(s?.autoRetrying).toBe(false);
+    expect(s?.errorCode).toBe("checksumMismatch");
+    expect(downloadMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("a manual startDownload resets the retry chain", async () => {
+    downloadMock.mockImplementation(async () => {
+      throw transient("a");
+    });
+    startDownload(asset("a"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getDownloadState("a")?.retryAttempt).toBe(1);
+    // User taps retry manually: counter resets, next failure is attempt 1 again.
+    startDownload(asset("a"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getDownloadState("a")?.retryAttempt).toBe(1);
+    expect(downloadMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("retryDelayMs grows exponentially with jitter bounds", async () => {
+    const { retryDelayMs } = await import("./downloadManager");
+    const d1 = retryDelayMs(1);
+    const d2 = retryDelayMs(2);
+    const d3 = retryDelayMs(3);
+    // base 2000 * 4^(n-1), ±25% jitter
+    expect(d1).toBeGreaterThanOrEqual(1500);
+    expect(d1).toBeLessThanOrEqual(2500);
+    expect(d2).toBeGreaterThanOrEqual(6000);
+    expect(d2).toBeLessThanOrEqual(10000);
+    expect(d3).toBeGreaterThanOrEqual(24000);
+    expect(d3).toBeLessThanOrEqual(40000);
   });
 });

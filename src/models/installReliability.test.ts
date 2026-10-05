@@ -792,3 +792,72 @@ describe("journal transitions", () => {
     expect(resumeTokenPathFor(asset)).toBe(`${DOC}models/dl-paths.gguf.resume.json`);
   });
 });
+
+describe("rollback: failed re-download never destroys a valid install (Meta #1)", () => {
+  it("re-download fails checksum → previous install intact, still trusted, journal untouched", async () => {
+    const asset = makeAsset("rb-a", 2048);
+    serverSize = 2048;
+    const mgr = newManager([asset]);
+    // First install succeeds.
+    await mgr.downloadCatalogModel(asset);
+    expect(shaOf(files.get(finalPath("rb-a"))!)).toBe(asset.sha256);
+    expect((await getInstallRecord(asset.id))?.status).toBe("installed");
+
+    // Re-download serves corrupt bytes (right size, wrong content).
+    behavior = { kind: "wrongBytes" };
+    const f = await expectDownloadFailure(mgr.downloadCatalogModel(asset));
+    expect(f.code).toBe("checksumMismatch");
+    // Rollback: the previous valid install is byte-identical and trusted.
+    expect(shaOf(files.get(finalPath("rb-a"))!)).toBe(asset.sha256);
+    expect((await getInstallRecord(asset.id))?.status).toBe("installed");
+    expect((await mgr.statusOf(asset)).present).toBe(true);
+    // No staging left behind.
+    expect(files.has(stagingPathFor(asset))).toBe(false);
+  });
+
+  it("re-download truncated → previous install intact, never replaced by partial bytes", async () => {
+    const asset = makeAsset("rb-b", 2048);
+    serverSize = 2048;
+    const mgr = newManager([asset]);
+    await mgr.downloadCatalogModel(asset);
+    const originalBytes = files.get(finalPath("rb-b"))!;
+
+    behavior = { kind: "truncate", atBytes: 512 };
+    const f = await expectDownloadFailure(mgr.downloadCatalogModel(asset));
+    expect(f.code).toBe("sizeMismatch");
+    // The final path still holds the ORIGINAL verified bytes, not 512.
+    const after = files.get(finalPath("rb-b"))!;
+    expect(after.length).toBe(2048);
+    expect(shaOf(after)).toBe(shaOf(originalBytes));
+    expect((await mgr.statusOf(asset)).present).toBe(true);
+  });
+
+  it("failed pack download never affects an installed model's trust (failure-domain isolation)", async () => {
+    const model = makeAsset("iso-model", 1024);
+    const pack: CatalogModel = {
+      ...makeAsset("iso-pack", 2048),
+      kind: "corpus",
+      filename: "corpus/iso-pack.sqlite",
+      sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v1/iso-pack.sqlite",
+      revision: undefined,
+    };
+    // Corpus needs its own final path helper: reuse makeAsset shape.
+    const packFinal = `${DOC}corpus/iso-pack.sqlite`;
+    serverSize = 1024;
+    const mgr = newManager([model, pack]);
+
+    await mgr.downloadCatalogModel(model);
+    expect((await mgr.statusOf(model)).present).toBe(true);
+
+    // The pack download fails hard (corrupt bytes).
+    behaviorFor = (fileUri) => (fileUri.includes("iso-pack") ? { kind: "wrongBytes" } : { kind: "ok" });
+    sizeFor = (fileUri) => (fileUri.includes("iso-pack") ? 2048 : 1024);
+    const f = await expectDownloadFailure(mgr.downloadCatalogModel(pack));
+    expect(f.code).toBe("checksumMismatch");
+    // The model is untouched and still trusted; the pack left nothing.
+    expect(shaOf(files.get(finalPath("iso-model"))!)).toBe(model.sha256);
+    expect((await mgr.statusOf(model)).present).toBe(true);
+    expect(files.has(packFinal)).toBe(false);
+    expect(files.has(stagingPathFor(pack))).toBe(false);
+  });
+});

@@ -59,6 +59,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "verify:pins": "node scripts/verify-manifest-pins.mjs",
+    "verify:manifest-sig": "node scripts/sign-manifest.mjs --verify",
     "verify:deps": "node scripts/verify-dep-pins.mjs",
     "test": "vitest run",
     "eval:device": "node scripts/eval-device.mjs",

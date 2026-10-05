@@ -11,6 +11,12 @@ import { ModelSetupScreen } from "./src/ui/ModelSetupScreen";
 // src/ui/dev/ + assets/poc/ and the __DEV__ block below.
 import { CharacterPreviewScreen } from "./src/ui/dev/CharacterPreviewScreen";
 import { ModelManager } from "./src/models/ModelManager";
+import {
+  verifyCatalogSignature,
+  ManifestTrustError,
+} from "./src/models/manifestTrust";
+import { MODEL_CATALOG } from "./src/models/manifest";
+import { MANIFEST_SIGNATURE_BASE64 } from "./src/models/manifestSignature";
 import { ThemeProvider, useTheme } from "./src/ui/theme";
 import { initHaptics } from "./src/services/haptics";
 import { runStartupRoutines } from "./src/routines/startup";
@@ -124,12 +130,17 @@ function AppContent() {
     // Rutinas proactivas locales: notificaciones, vencidos, resumen diario.
     runStartupRoutines();
     try {
+      // Meta #2 (update integrity): el catálogo de descargas debe estar
+      // firmado por la clave de manifiestos de NIDO antes de confiar en sus
+      // URLs/pins. Fail-closed con mensaje claro — nunca crash silencioso.
+      verifyCatalogSignature(MODEL_CATALOG, MANIFEST_SIGNATURE_BASE64);
       const ready = await modelManager.requiredModelsPresent();
       setModelsReady(ready);
       setScreen("locked"); // el gate biométrico va antes de mostrar datos
     } catch (e) {
       // GAP-1 fix: si requiredModelsPresent() lanza (error de filesystem),
       // no quedarse en spinner infinito — mostrar error honesto con retry.
+      // ManifestTrustError cae aquí también: mensaje claro, sin bypass.
       setWipeError(e instanceof Error ? e.message : String(e));
       setScreen("startup-error");
     }
