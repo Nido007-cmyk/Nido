@@ -379,7 +379,7 @@
     "benchmarkBody": "NIDO measures every answer on your own phone: model load time, time to first token, tokens/sec, peak memory and which sources were used. Run the built-in evaluation from Execution Telemetry → 🧪 Evaluate to compare any installed model on the same questions, or drive it from a computer with npm run eval:device.",
     "repoTitle": "Open source",
     "repoBody": "Forked from BOAR (MIT License).",
-    "repoUrl": "github.com/arsrs91-png/NIDO"
+    "repoUrl": "github.com/Nido007-cmyk/Nido"
   },
   "sourceFootnotes": {
     "title": "Offline sources · relevance-ranked",

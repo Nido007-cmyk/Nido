@@ -379,7 +379,7 @@
     "benchmarkBody": "O NIDO mede cada resposta no seu próprio celular: tempo de carregamento do modelo, tempo até o primeiro token, tokens/s, pico de memória e quais fontes foram usadas. Rode a avaliação embutida em Telemetria de Execução → 🧪 Avaliar para comparar qualquer modelo instalado nas mesmas perguntas, ou comande pelo computador com npm run eval:device.",
     "repoTitle": "Código aberto",
     "repoBody": "Derivado do BOAR (Licença MIT).",
-    "repoUrl": "github.com/arsrs91-png/NIDO"
+    "repoUrl": "github.com/Nido007-cmyk/Nido"
   },
   "sourceFootnotes": {
     "title": "Fontes offline · ordenadas por relevância",

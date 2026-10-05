@@ -9,6 +9,7 @@ import {
   TextInput,
   ActivityIndicator,
   Modal,
+  Image,
 } from "react-native";
 import { showSecureAlert } from "nido-secure-dialog";
 import * as Clipboard from "expo-clipboard";
@@ -781,7 +782,12 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       {tab === "chats" && (
         <ScrollView contentContainerStyle={styles.body}>
           {contacts.length === 0 ? (
-            <View style={styles.card}>
+            <View style={[styles.card, styles.emptyCard]}>
+              <Image
+                source={require("../../assets/mascot-nido.png")}
+                style={styles.emptyMascot}
+                resizeMode="contain"
+              />
               <Text style={styles.cardTitle}>{t("nido.noContactsTitle")}</Text>
               <Text style={styles.paragraph}>{t("nido.noContactsBody")}</Text>
             </View>
@@ -1102,6 +1108,16 @@ const getStyles = (colors: Colors) => StyleSheet.create({
     padding: calmSpacing.comfortable,
     gap: calmSpacing.cozy,
     alignItems: "center",
+  },
+  // Calm Agent: empty state card with mascot, centered content
+  emptyCard: {
+    paddingVertical: calmSpacing.spacious,
+    gap: calmSpacing.comfortable,
+  },
+  emptyMascot: {
+    width: 100,
+    height: 100,
+    borderRadius: calmRadii.gentle,
   },
   cardTitle: { ...typography.ui.titleSm, color: colors.text.primary, alignSelf: "flex-start" },
   paragraph: { ...typography.ui.body, color: colors.text.secondary, alignSelf: "flex-start" },
