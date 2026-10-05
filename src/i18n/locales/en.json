@@ -392,34 +392,34 @@
     "dontShowAgain": "Don't show again",
     "items": [
       {
-        "category": "Off-Grid Preparedness",
-        "icon": "🏕️",
-        "prompt": "I'm putting together a 72-hour emergency kit for a power and cell outage. List the essentials in priority order and explain how to store drinking water safely for months."
+        "category": "Private memory",
+        "icon": "🧠",
+        "prompt": "Remember that my mom's birthday is March 15th and she loves orchids. Save it so you can remind me in time."
       },
       {
-        "category": "Private Finance",
-        "icon": "💰",
-        "prompt": "Explain the envelope budgeting method for a monthly salary using only pen and paper — no apps, no bank sync, no cloud."
+        "category": "No internet",
+        "icon": "📴",
+        "prompt": "Explain how you work without internet. Where is my data stored and who can see it?"
       },
       {
-        "category": "Home Resilience",
-        "icon": "🔧",
-        "prompt": "My fridge stopped cooling and no technician is available. Walk me through the safest way to diagnose the most common causes, step by step."
-      },
-      {
-        "category": "Learn Anything",
+        "category": "Learn with me",
         "icon": "📚",
-        "prompt": "Explain how the immune system works as if I were a curious teenager. Use everyday analogies and no jargon."
+        "prompt": "I want to understand how photosynthesis works. Explain it step by step with examples of plants I know."
       },
       {
-        "category": "Travel Offline",
-        "icon": "🗺️",
-        "prompt": "I'm traveling somewhere with no data roaming. What should I prepare offline before I leave — maps, key phrases, documents?"
+        "category": "Organize my day",
+        "icon": "📋",
+        "prompt": "Help me plan my week: I work 9 to 6, want to exercise 3 times and spend time with family. Suggest a realistic schedule."
       },
       {
-        "category": "Digital Privacy",
+        "category": "Creative cooking",
+        "icon": "🍳",
+        "prompt": "I have rice, beans, onion, tomato and cheese. What can I cook with this? Give me 3 ideas with instructions."
+      },
+      {
+        "category": "Total privacy",
         "icon": "🔒",
-        "prompt": "What practical steps can a non-technical person take to reduce phone tracking? Cover settings and habits, and separate what actually matters from myths."
+        "prompt": "What does it mean that you're 100% offline? Does my conversation ever leave this device?"
       }
     ]
   },

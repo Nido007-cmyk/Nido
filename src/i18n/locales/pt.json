@@ -392,34 +392,34 @@
     "dontShowAgain": "Não mostrar novamente",
     "items": [
       {
-        "category": "Preparação off-grid",
-        "icon": "🏕️",
-        "prompt": "Estou montando um kit de emergência de 72 horas para um apagão de energia e celular. Liste o essencial por prioridade e explique como armazenar água potável com segurança por meses."
+        "category": "Memória privada",
+        "icon": "🧠",
+        "prompt": "Lembre-se de que o aniversário da minha mãe é 15 de março e ela adora orquídeas. Guarde para me avisar com antecedência."
       },
       {
-        "category": "Finanças privadas",
-        "icon": "💰",
-        "prompt": "Explique o método de orçamento por envelopes para um salário mensal usando só papel e caneta — sem apps, sem sincronizar o banco, sem nuvem."
+        "category": "Sem internet",
+        "icon": "📴",
+        "prompt": "Explique como você funciona sem internet. Onde meus dados são armazenados e quem pode vê-los?"
       },
       {
-        "category": "Lar resiliente",
-        "icon": "🔧",
-        "prompt": "Minha geladeira parou de gelar e não há técnico disponível. Guie-me passo a passo pela forma mais segura de diagnosticar as causas mais comuns."
-      },
-      {
-        "category": "Aprenda de tudo",
+        "category": "Aprenda comigo",
         "icon": "📚",
-        "prompt": "Explique como o sistema imunológico funciona como se eu fosse um adolescente curioso. Use analogias do dia a dia e nada de jargão."
+        "prompt": "Quero entender como funciona a fotossíntese. Explique passo a passo com exemplos de plantas que conheço."
       },
       {
-        "category": "Viaje offline",
-        "icon": "🗺️",
-        "prompt": "Vou viajar para um lugar sem roaming de dados. O que devo preparar offline antes de sair — mapas, frases-chave, documentos?"
+        "category": "Organize meu dia",
+        "icon": "📋",
+        "prompt": "Ajude-me a planejar minha semana: trabalho das 9 às 18, quero me exercitar 3 vezes e passar tempo com a família. Sugira um horário realista."
       },
       {
-        "category": "Privacidade digital",
+        "category": "Cozinha criativa",
+        "icon": "🍳",
+        "prompt": "Tenho arroz, feijão, cebola, tomate e queijo. O que posso cozinhar com isso? Dê-me 3 ideias com instruções."
+      },
+      {
+        "category": "Privacidade total",
         "icon": "🔒",
-        "prompt": "Quais passos práticos uma pessoa não técnica pode tomar para reduzir o rastreamento do celular? Cubra ajustes e hábitos, e separe o que realmente importa dos mitos."
+        "prompt": "O que significa ser 100% offline? Minha conversa sai deste dispositivo em algum momento?"
       }
     ]
   },

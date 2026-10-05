@@ -1,3 +1,8 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
 import React, { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, Image } from "react-native";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
@@ -65,7 +70,7 @@ export function ChatHeader({
         {/* Brand & Mascot */}
         <View style={styles.brandContainer}>
           <Image
-            source={require("../../assets/icon-nido.png")}
+            source={require("../../assets/mascot-nido.png")}
             style={styles.mascotImg}
             resizeMode="contain"
           />

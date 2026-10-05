@@ -9,6 +9,7 @@ import {
   Modal,
   ActivityIndicator,
   Switch,
+  Image,
 } from "react-native";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType, setHapticsEnabledCache } from "../services/haptics";
 import { useTranslation } from "react-i18next";
@@ -213,7 +214,11 @@ export function ModelSetupScreen(props: Props) {
       {/* Settings Top Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.mascotIcon}>🐗</Text>
+          <Image
+            source={require("../../assets/mascot-nido.png")}
+            style={{ width: 36, height: 36, borderRadius: 8 }}
+            resizeMode="contain"
+          />
           <View>
             <Text style={styles.title}>{t("modelSetupScreen.header.title")}</Text>
             <Text style={styles.subtitle}>{t("modelSetupScreen.header.subtitle")}</Text>

@@ -1,4 +1,8 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ *
  * SetupWizardScreen — first-run onboarding, Tier 2 visual direction.
  *
  * Frozen baseline: Tier 1.1 + Tier 2 (2026-09-27). Daylight is the primary
@@ -21,6 +25,7 @@ import {
   ActivityIndicator,
   AppState,
   StatusBar,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType } from "../services/haptics";
@@ -94,38 +99,17 @@ function seedEtaSeconds(p: SeedProgress, start: { at: number; done: number } | n
 }
 
 /**
- * Neutral mascot slot (Tier 2, frozen). A dashed rounded square with a thin
- * accent ring — an intentional abstract placeholder, not mascot art. The
- * real character goes here only after BASE_MASTER V2 approval.
+ * Mascot oficial NIDO 3D (aprobado por el dueño 2026-10-04).
+ * Reemplaza el placeholder neutral de Tier 2.
  */
 function MascotSlot({ size = 120 }: { size?: number }) {
-  const { colors } = useTheme();
-  const ring = Math.round(size * 0.44);
   return (
-    <View
+    <Image
+      source={require("../../assets/mascot-nido.png")}
+      style={{ width: size, height: size, borderRadius: Math.round(size * 0.2) }}
+      resizeMode="contain"
       accessible={false}
-      importantForAccessibility="no-hide-descendants"
-      style={[
-        slotStyles.slot,
-        {
-          width: size,
-          height: size,
-          borderRadius: Math.round(size * 0.2),
-          borderColor: colors.border.default,
-          backgroundColor: colors.bg.card,
-        },
-      ]}
-    >
-      <View
-        style={{
-          width: ring,
-          height: ring,
-          borderRadius: ring / 2,
-          borderWidth: Math.max(3, Math.round(size * 0.03)),
-          borderColor: colors.text.accentEmerald,
-        }}
-      />
-    </View>
+    />
   );
 }
 
