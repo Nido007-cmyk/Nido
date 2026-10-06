@@ -211,6 +211,31 @@ export function finalizeResponse(text: string): string | null {
   return cleaned.length > 0 ? cleaned : null;
 }
 
+/**
+ * H12-2026-10-06: confirmación determinística tras herramientas mutantes.
+ * Si el modelo no evidenció el guardado en su respuesta (prosa vacía u
+ * otro bloque), agregar una línea de confirmación para que el usuario
+ * siempre vea que la mutación ocurrió.
+ */
+const MUTATING_TOOLS: Record<string, string> = {
+  remember_fact: "Guardado en memoria.",
+};
+
+export function appendMutationConfirmation(
+  response: string,
+  toolUses: AgentToolUse[]
+): string {
+  const used = new Set(toolUses.map((t) => t.name));
+  const confirmations: string[] = [];
+  for (const [tool, msg] of Object.entries(MUTATING_TOOLS)) {
+    if (used.has(tool) && !response.toLowerCase().includes("guardado")) {
+      confirmations.push(msg);
+    }
+  }
+  if (confirmations.length === 0) return response;
+  return response ? `${response}\n\n${confirmations.join(" ")}` : confirmations.join(" ");
+}
+
 function buildSystemPrompt(
   intent: AgentIntent,
   memoryText: string
@@ -378,12 +403,12 @@ export async function runAgentLoop(
     const calls = parseToolCalls(text);
     if (calls.length === 0) {
       const final = finalizeResponse(text);
-      if (final !== null) return { response: final, intent, toolUses };
+      if (final !== null) return { response: appendMutationConfirmation(final, toolUses), intent, toolUses };
       // T-echo-2026-10-06: el modelo solo repitió la directiva interna.
       // Un único reintento con instrucción mínima; si falla, respuesta segura.
       messages.push({ role: "user", content: REPAIR_DIRECTIVE });
       const retry = await generateOnce();
-      return { response: finalizeResponse(retry) ?? SAFE_FALLBACK_RESPONSE, intent, toolUses };
+      return { response: appendMutationConfirmation(finalizeResponse(retry) ?? SAFE_FALLBACK_RESPONSE, toolUses), intent, toolUses };
     }
 
     const observations: string[] = [];
@@ -414,5 +439,5 @@ export async function runAgentLoop(
   }
 
   // Se agotaron los pasos con herramientas pendientes: devolver lo último limpio.
-  return { response: finalizeResponse(lastText) ?? SAFE_FALLBACK_RESPONSE, intent, toolUses };
+  return { response: appendMutationConfirmation(finalizeResponse(lastText) ?? SAFE_FALLBACK_RESPONSE, toolUses), intent, toolUses };
 }

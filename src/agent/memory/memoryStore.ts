@@ -20,6 +20,14 @@ interface SQLiteDatabase {
   closeAsync(): Promise<void>;
 }
 import type { Fact, Preference, Person, DailyLogEntry, MemorySnapshot } from "./types";
+
+/**
+ * H6-2026-10-06: tope de longitud por ítem de memoria (~125 tokens).
+ * Un fact gigante ya no hace que se descarte toda la memoria.
+ */
+export const MAX_FACT_CONTENT_CHARS = 500;
+export const MAX_PREFERENCE_VALUE_CHARS = 500;
+export const MAX_PERSON_NOTES_CHARS = 500;
 import {
   getDatabase,
   writeTransaction,
@@ -93,9 +101,12 @@ export async function saveFact(input: {
   confidence?: number;
   source?: Fact["source"];
 }): Promise<Fact> {
+  // H6-2026-10-06: cap por ítem para que un fact gigante no rompa el
+  // presupuesto de contexto (antes: se descartaba TODA la memoria).
+  const content = (input.content ?? "").slice(0, MAX_FACT_CONTENT_CHARS);
   const fact: Fact = {
     id: newId(),
-    content: input.content,
+    content,
     category: input.category ?? "general",
     confidence: input.confidence ?? 1.0,
     source: input.source ?? "user",
@@ -129,11 +140,13 @@ export async function deleteFact(id: string): Promise<void> {
 // ---------------------------------------------------------- preferences
 
 export async function setPreference(key: string, value: string): Promise<void> {
+  // H6-2026-10-06: cap por ítem.
+  const cappedValue = (value ?? "").slice(0, MAX_PREFERENCE_VALUE_CHARS);
   await writeMemoryTransaction(async (db) => {
     await db.runAsync(
       "INSERT INTO preferences (key, value, updated_at) VALUES (?, ?, datetime('now')) " +
         "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now');",
-      [key, value]
+      [key, cappedValue]
     );
   });
 }
@@ -166,7 +179,8 @@ export async function savePerson(input: {
     id: newId(),
     name: input.name,
     relationship: input.relationship,
-    notes: input.notes,
+    // H6-2026-10-06: cap por ítem.
+    notes: input.notes?.slice(0, MAX_PERSON_NOTES_CHARS),
     updatedAt: new Date().toISOString(),
   };
   await writeMemoryTransaction(async (db) => {
