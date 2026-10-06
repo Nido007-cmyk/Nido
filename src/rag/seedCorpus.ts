@@ -168,14 +168,28 @@ export function seedKnowledgeBaseIfEmpty(): Promise<void> {
 }
 
 async function seedNow(): Promise<void> {
+  // DIAGNOSTIC INSTRUMENTATION (2026-10-05): "undefined is not a function"
+  // persists even with embedding code fully removed (build 60046a0).
+  // Each stage is wrapped to identify the exact failing operation.
+  // TODO: remove instrumentation once root cause is found and fixed.
+  const stage = async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
+    try {
+      return await fn();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`[seed-stage:${name}] ${msg}`);
+    }
+  };
+
   // Token de ciclo de vida de ESTA corrida: cada insert lo propaga. Si
   // Clear All Data avanza el ciclo a mitad del seed (p. ej. durante un
   // embedding lento), los inserts pendientes fallan con
   // DbLifecycleEndedError en vez de repoblar la base nueva con el corpus
   // del ciclo anterior.
-  const runEpoch = getDbEpoch();
-  const db = await getDb();
-  const allDocs = [...APP_TOPIC_DOCS, ...MINIMUM_CORPUS_DOCS, ...(await loadDownloadedCorpusPacks())];
+  const runEpoch = await stage("getDbEpoch", async () => getDbEpoch());
+  const db = await stage("getDb", async () => getDb());
+  const packs = await stage("loadDownloadedCorpusPacks", async () => loadDownloadedCorpusPacks());
+  const allDocs = [...APP_TOPIC_DOCS, ...MINIMUM_CORPUS_DOCS, ...packs];
 
   // This runs on every ChatScreen mount — including every time Settings
   // closes and the user returns to chat, not just on first app launch —
@@ -192,9 +206,9 @@ async function seedNow(): Promise<void> {
   // the same `chunks` table with a non-null collection_id, and counting
   // those too would make this check permanently mismatch (always fall
   // through to the full loop) for anyone who's imported personal docs.
-  const { count } = (await db.getFirstAsync<{ count: number }>(
+  const { count } = (await stage("countQuery", async () => db.getFirstAsync<{ count: number }>(
     `SELECT COUNT(*) as count FROM chunks WHERE collection_id IS NULL`
-  )) ?? { count: 0 };
+  ))) ?? { count: 0 };
   if (count === allDocs.length) return;
 
   let lastReport = 0;
@@ -206,10 +220,10 @@ async function seedNow(): Promise<void> {
       listeners.forEach((l) => l({ done: i + 1, total: allDocs.length, title: doc.title }));
     }
 
-    const existing = await db.getFirstAsync<{ chunk_id: string }>(
+    const existing = await stage("existenceCheck", async () => db.getFirstAsync<{ chunk_id: string }>(
       `SELECT chunk_id FROM chunks WHERE chunk_id = ?`,
       [doc.id]
-    );
+    ));
     if (existing) continue;
 
     const chunk: ChunkRecord = {
@@ -219,10 +233,10 @@ async function seedNow(): Promise<void> {
       body: doc.body,
       source: doc.source,
     };
-    // TEMPORARY: native embedding JSI is broken in this build ("undefined is
-    // not a function" even with try/catch). Seed FTS-only to unblock setup.
-    // The chat LLM is unaffected; only semantic vector search is degraded.
-    // TODO: re-enable embeddings once the llama.rn binding is fixed.
-    await insertChunkWithoutEmbedding(chunk, { lifecycleEpoch: runEpoch });
+    // DIAGNOSTIC: FTS-only insert (embedding bypassed). If this stage fails,
+    // the error is in writeTransaction/db.withTransactionAsync/txn.runAsync.
+    await stage("insertChunk", async () =>
+      insertChunkWithoutEmbedding(chunk, { lifecycleEpoch: runEpoch })
+    );
   }
 }
