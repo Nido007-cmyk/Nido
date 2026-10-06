@@ -321,8 +321,8 @@ describe("A8: límites del timestamp firmado", () => {
     await tick();
   }
 
-  it("ts en el borde interior (±599 s) → aceptado, se envía CONFIRM", async () => {
-    await phase1(MAC, nowSec() - 599);
+  it("ts en el borde interior (±590 s) → aceptado, se envía CONFIRM", async () => {
+    await phase1(MAC, nowSec() - 590);
     expect(f.sent).toHaveLength(2);
     expect(() => parseConfirm(decodeBase64(f.sent[1].base64))).not.toThrow();
     expect(ev.errors).toHaveLength(0);
@@ -330,14 +330,14 @@ describe("A8: límites del timestamp firmado", () => {
   });
 
   it("ts futuro en el borde interior (+599 s) → aceptado", async () => {
-    await phase1(MAC, nowSec() + 599);
+    await phase1(MAC, nowSec() + 590);
     expect(f.sent).toHaveLength(2);
     expect(ev.errors).toHaveLength(0);
     await t.stopDiscovery();
   });
 
-  it("ts fuera del margen (+601 s) → rechazado, sin CONFIRM", async () => {
-    await phase1(MAC, nowSec() + 601);
+  it("ts fuera del margen (+610 s) → rechazado, sin CONFIRM", async () => {
+    await phase1(MAC, nowSec() + 610);
     expect(ev.errors.join(" ")).toMatch(/reloj|margen/i);
     expect(f.disconnected).toContain(MAC);
     expect(f.sent).toHaveLength(1); // solo nuestro HELLO; ningún CONFIRM

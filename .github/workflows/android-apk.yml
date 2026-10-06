@@ -57,6 +57,7 @@ on:
       - 'android/**'
       - 'src/**'
       - 'modules/**'
+      - 'plugins/**'
       - 'app.json'
       - 'eas.json'
       - 'package.json'
@@ -117,6 +118,17 @@ jobs:
         # floats on a ^/~ range or diverges from the lockfile.
         run: npm run verify:deps
 
+      - name: Typecheck (CICD-01 gate)
+        # Never ship an APK from code that doesn't typecheck.
+        run: npm run typecheck
+
+      - name: Unit tests (CICD-01 gate)
+        # Never ship an APK from code with failing tests.
+        run: npm test
+
+      - name: Verify manifest signature (CICD-01 gate)
+        run: npm run verify:manifest-sig
+
       - name: Deep-clean runner disk (after tool setup)
         run: |
           # setup-node/setup-java/setup-android have run: their tools live in
@@ -152,8 +164,8 @@ jobs:
           NIDO_UPLOAD_KEY_PASSWORD: ${{ secrets.NIDO_UPLOAD_KEY_PASSWORD }}
         run: |
           if [ -z "$NIDO_UPLOAD_STORE_FILE_B64" ]; then
-            echo "No NIDO signing secrets configured; assembleRelease will use debug signing."
-            exit 0
+            echo "FATAL (CICD-02): NIDO signing secrets are missing. Refusing to produce a debug-signed 'release' APK under the release artifact name."
+            exit 1
           fi
           mkdir -p ~/.gradle
           echo "$NIDO_UPLOAD_STORE_FILE_B64" | base64 -d > "$RUNNER_TEMP/nido-release.p12"
