@@ -305,12 +305,13 @@ function formatMemoryText(mem: MemoryFactsLike): string {
 }
 
 /**
- * Estimación barata de tokens para el presupuesto de prompt (~4 chars por
- * token en estos modelos). Pura y testeable. Es una cota conservadora
- * aproximada, no un conteo exacto del tokenizador.
+ * Estimación de tokens para el presupuesto de prompt.
+ * M1-2026-10-06: heurística más segura — ÷3 en vez de ÷4, más overhead
+ * fijo de plantilla ChatML (~50 tokens). La versión anterior era optimista
+ * y el guard podía pasar con el nativo fallando igual.
  */
 export function estimatePromptTokens(text: string): number {
-  return Math.ceil(text.length / 4);
+  return Math.ceil(text.length / 3) + 50;
 }
 
 /**
@@ -438,9 +439,12 @@ export async function runAgentLoop(
       toolUses.push({ name: call.name, result });
       // Wrap tool results as untrusted content (defense in depth).
       // The system prompt instructs the model to treat <untrusted> blocks as DATA ONLY.
+      // M2-2026-10-06: truncar observaciones a ~2000 chars para que un
+      // read_note gigante no rompa el presupuesto a mitad de loop.
+      const truncatedResult = result.length > 2000 ? result.slice(0, 2000) + "…[truncado]" : result;
       observations.push(wrapUntrusted({
         source: "tool_result",
-        content: `[${call.name}] ${result}`,
+        content: `[${call.name}] ${truncatedResult}`,
         origin: call.name,
       }));
       // El resultado de la herramienta es contenido no confiable:

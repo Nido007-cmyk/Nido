@@ -45,7 +45,7 @@ function isGreeting(trimmed: string): boolean {
 }
 
 const CONVERSATION_RE =
-  /\b(tell me a joke|make me laugh|another joke|who are you|what are you|your name|how old are you|where are you from|what time is it|what(?:'s| is) the (time|date|day))\b/i;
+  /\b(tell me a joke|make me laugh|another joke|who are you|what are you|your name|how old are you|where are you from|what time is it|what(?:'s| is) the (time|date|day)|cu[eé]ntame un chiste|hazme re[ií]r|otro chiste|qui[eé]n eres|qu[eé] eres|c[oó]mo te llamas|cu[aá]ntos a[ñn]os tienes|de d[oó]nde eres|qu[eé] hora es|qu[eé] fecha es|qu[eé] d[ií]a es hoy)\b/i;
 
 /**
  * A query counts as conversation (chit-chat) if it matches conversational

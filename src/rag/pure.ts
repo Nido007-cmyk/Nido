@@ -98,6 +98,18 @@ const LEXICAL_STOPWORDS = new Set([
   "was", "we", "were", "what", "when", "where", "which", "while", "who", "whom", "whose",
   "why", "will", "with", "work", "works", "would", "you", "your", "happen", "happened",
   "happens", "cause", "caused", "causes",
+  // M7-2026-10-06: stopwords en español (misma familia que C4).
+  "el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del", "en", "y", "o",
+  "que", "qué", "como", "cómo", "por", "para", "con", "sin", "sobre", "entre", "hacia",
+  "hasta", "desde", "durante", "mediante", "según", "contra", "ante", "bajo", "tras",
+  "es", "son", "está", "están", "fue", "fueron", "ser", "estar", "tiene", "tienen",
+  "hay", "esto", "esta", "estos", "estas", "ese", "esa", "esos", "esas", "aquel",
+  "mi", "mis", "tu", "tus", "su", "sus", "nuestro", "nuestra", "se", "me", "te",
+  "le", "les", "nos", "lo", "los", "la", "las", "al", "más", "menos", "muy", "tan",
+  "tanto", "todo", "toda", "todos", "todas", "cada", "otro", "otra", "otros", "otras",
+  "mismo", "misma", "donde", "dónde", "cuando", "cuándo", "cual", "cuál", "cuales",
+  "quien", "quién", "porque", "porqué", "pues", "pero", "sino", "aunque", "si",
+  "también", "tampoco", "ya", "todavía", "aún", "siempre", "nunca", "jamás",
 ]);
 
 const MAX_LEXICAL_TERMS = 12;
