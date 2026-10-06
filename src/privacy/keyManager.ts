@@ -233,7 +233,7 @@ async function randomHex32Async(): Promise<string> {
       getRandomBytesAsync(n: number): Promise<Uint8Array>;
     };
     // T5-12-2026-10-06: verificar forma del módulo en runtime.
-    const { assertExpoCryptoShape } = require("./secureDatabase") as {
+    const { assertExpoCryptoShape } = require("../security/secureDatabase") as {
       assertExpoCryptoShape(mod: unknown, caller: string): void;
     };
     assertExpoCryptoShape(Crypto, "keyManager.randomHex32Async");
