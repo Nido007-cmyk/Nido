@@ -94,7 +94,9 @@ const DOWNLOAD_INACTIVITY_TIMEOUT_MS = 60_000;
 // always logged, since those are the rare, high-signal moments.
 const DOWNLOAD_PROGRESS_LOG_INTERVAL_MS = 5_000;
 function dlog(assetId: string, message: string): void {
-  console.log(`[ModelManager:download:${assetId}] ${message}`);
+  // T5-11-2026-10-06: console.debug en vez de console.log — en release
+  // los logs de progreso de descarga no deben ensuciar logcat.
+  console.debug(`[ModelManager:download:${assetId}] ${message}`);
 }
 
 // Module-level, not per-instance: many screens each construct their own

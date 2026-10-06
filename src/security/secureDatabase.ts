@@ -235,6 +235,32 @@ export function assertFileSystemShape(mod: unknown): void {
 }
 
 /**
+ * T5-12-2026-10-06: verificación explícita de forma en runtime del módulo
+ * expo-crypto. Tres sitios lo cargan con require() diferido (keyManager,
+ * p2p/crypto, diagnostics/security); expo-crypto es ESM puro y solo
+ * funciona vía interop de Metro — la misma clase de bug que bbfe047.
+ * Si la forma del export cambia, falla en claro aquí en vez de un
+ * "undefined is not a function" críptico en el call-site.
+ */
+export function assertExpoCryptoShape(mod: unknown, caller: string): void {
+  const m = mod as Record<string, unknown> | null | undefined;
+  // expo-crypto expone getRandomBytes (sync) y getRandomBytesAsync.
+  const syncFn = m?.["getRandomBytes"];
+  const asyncFn = m?.["getRandomBytesAsync"];
+  if (typeof syncFn !== "function" && typeof asyncFn !== "function") {
+    const keys = m ? Object.keys(m).slice(0, 16).join(",") : String(m);
+    const hasDefault =
+      m && typeof (m as Record<string, unknown>)["default"] !== "undefined";
+    throw new Error(
+      `expo-crypto shape mismatch en ${caller} — ` +
+        `getRandomBytes/getRandomBytesAsync no son funciones. ` +
+        `Module keys: [${keys}]. Has .default: ${hasDefault}. ` +
+        "The bundler resolved an unexpected module shape; secure randomness unavailable.",
+    );
+  }
+}
+
+/**
  * Verificación explícita de forma en runtime del handle devuelto por
  * openDatabaseAsync (2026-10-06). Se llama en openDb() ANTES de envolver
  * el handle: si el objeto nativo no expone las APIs que NIDO utiliza,

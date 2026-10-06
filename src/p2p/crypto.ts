@@ -54,9 +54,15 @@ export function installSecurePrng(): void {
     // resuelve en el dispositivo (ver nota arriba). Mismo patrón probado
     // en src/diagnostics/security.ts defaultRandomHex().
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getRandomBytes } = require("expo-crypto") as {
+    const cryptoMod = require("expo-crypto") as {
       getRandomBytes(n: number): Uint8Array;
     };
+    // T5-12-2026-10-06: verificar forma del módulo en runtime.
+    const { assertExpoCryptoShape } = require("../security/secureDatabase") as {
+      assertExpoCryptoShape(mod: unknown, caller: string): void;
+    };
+    assertExpoCryptoShape(cryptoMod, "p2p/crypto.installSecurePrng");
+    const { getRandomBytes } = cryptoMod;
     setPRNG((x, n) => {
       x.set(getRandomBytes(n));
     });

@@ -232,6 +232,11 @@ async function randomHex32Async(): Promise<string> {
     const Crypto = require("expo-crypto") as {
       getRandomBytesAsync(n: number): Promise<Uint8Array>;
     };
+    // T5-12-2026-10-06: verificar forma del módulo en runtime.
+    const { assertExpoCryptoShape } = require("./secureDatabase") as {
+      assertExpoCryptoShape(mod: unknown, caller: string): void;
+    };
+    assertExpoCryptoShape(Crypto, "keyManager.randomHex32Async");
     bytes = await Crypto.getRandomBytesAsync(32);
   }
   if (bytes.length !== 32) throw new Error("keyManager: fuente aleatoria inválida.");

@@ -89,9 +89,15 @@ function defaultRandomHex(bytes: number): string {
     // getRandomBytes síncrono respaldado por CSPRNG. Import diferido para
     // no romper entornos sin el módulo (tests puros).
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getRandomBytes } = require("expo-crypto") as {
+    const cryptoMod = require("expo-crypto") as {
       getRandomBytes(n: number): Uint8Array;
     };
+    // T5-12-2026-10-06: verificar forma del módulo en runtime.
+    const { assertExpoCryptoShape } = require("../security/secureDatabase") as {
+      assertExpoCryptoShape(mod: unknown, caller: string): void;
+    };
+    assertExpoCryptoShape(cryptoMod, "diagnostics/security.defaultRandomHex");
+    const { getRandomBytes } = cryptoMod;
     arr.set(getRandomBytes(bytes));
   }
   return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
