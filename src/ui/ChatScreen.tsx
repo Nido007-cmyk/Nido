@@ -50,7 +50,7 @@ import { speakAloud } from "../voice/tts";
 import { showSecureAlert } from "nido-secure-dialog";
 // NIDO agent: loop agéntico local con herramientas (Fase A).
 import { classifyIntent } from "../agent/loop/intent";
-import { runAgentLoop } from "../agent/loop/agentLoop";
+import { runAgentLoop, assertPromptBudget, estimatePromptTokens } from "../agent/loop/agentLoop";
 import { buildToolHandlers } from "../agent/tools/handlers";
 import { snapshot as loadMemorySnapshot } from "../agent/memory/memoryStore";
 import { getPersonality, PersonalityId, PERSONALITIES } from "../constants/personalities";
@@ -872,11 +872,30 @@ export function ChatScreen({
           // Use the model's own chat template when its file ships one; the
           // plain prompt is only a fallback. Off-template, models ramble,
           // echo instructions, and reasoning models never open <think>.
-          await llamaEngine.generate(
-            llamaEngine.hasEmbeddedChatTemplate()
-              ? { messages: assembleChatMessages(query, c, systemPrompt, history, styleReminder, noSources), nPredict: maxTokens, onToken }
-              : { prompt: assemblePrompt(query, c, systemPrompt, history, styleReminder, noSources), nPredict: maxTokens, onToken }
-          );
+          // C2-2026-10-06: verificar el presupuesto de contexto ANTES de
+          // generar (la ruta del agent loop ya lo hace; esta ruta directa no).
+          const useChatTemplate = llamaEngine.hasEmbeddedChatTemplate();
+          const genInput = useChatTemplate
+            ? { messages: assembleChatMessages(query, c, systemPrompt, history, styleReminder, noSources), nPredict: maxTokens, onToken }
+            : { prompt: assemblePrompt(query, c, systemPrompt, history, styleReminder, noSources), nPredict: maxTokens, onToken };
+          {
+            const nCtx = llamaEngine.getModelInfo()?.nCtx ?? 4096;
+            let promptText: string;
+            if (useChatTemplate && "messages" in genInput && genInput.messages) {
+              promptText = genInput.messages.map((m: { content: string }) => m.content).join("\n");
+            } else if (!useChatTemplate && "prompt" in genInput && genInput.prompt) {
+              promptText = genInput.prompt;
+            } else {
+              promptText = query;
+            }
+            assertPromptBudget(
+              [{ role: "user", content: promptText }],
+              nCtx,
+              maxTokens,
+              "chat-directo"
+            );
+          }
+          await llamaEngine.generate(genInput);
           return { chunks: c, noSourcesFound: noSources };
         };
 

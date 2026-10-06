@@ -607,6 +607,8 @@
     "copiedNotice": "✓ {{label}} copied.",
     "pairBindingWasRetired": "Note: this identity (“{{name}}”) was retired before by a re-pair. Confirming will restore it as your contact — its previously failed messages stay failed and will not be resent on their own.",
     "pairDisambiguationTitle": "Choose how to pair",
+    "pairAmbiguousAsk": "This code is for “{{name}}” (fingerprint {{fingerprint}}), but you already have {{count}} live contact(s) with that name under a DIFFERENT identity: {{candidates}}. A name is not an identity — I cannot assume this is the same person.\n\nTell me explicitly (in chat):\n• “replace” — the same person with a new device: retire the old identity everywhere (destructive);\n• “different person” — a different person: give me a unique name for the new contact;\n• “cancel” — do nothing.\n\nIf you don't choose, I cancel. Nothing has been paired yet.",
+    "pairInvalidChoice": "Invalid disambiguation “{{choice}}”: use replace, different_person or cancel.",
     "pairDisambiguationBody": "“{{name}}” is already one of your contacts, but this code is a DIFFERENT identity (fingerprint {{fingerprint}}). Choose explicitly — nothing is replaced silently.",
     "pairReplaceAction": "Replace",
     "pairDifferentPersonAction": "Different person",

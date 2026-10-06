@@ -16,7 +16,8 @@ const REMEMBER_PATTERNS: RegExp[] = [
   /recuerda( que|te)?/i,
   /acu[eé]rdate/i,
   /no (olvides|te olvides)/i,
-  /guarda (esto |eso )?en (tu |la )?memoria/i,
+  // Tolerante a enclíticos y acentos: "guárdalo/guardala en tu memoria"
+  /gu[aá]rda\w* (esto |eso )?en (tu |la )?memoria/i,
   /memoriza/i,
   /apunta (esto|eso) para (siempre|despu[eé]s)/i,
   /a partir de ahora/i,
@@ -90,13 +91,24 @@ const ACT_PATTERNS: RegExp[] = [
 ];
 
 /**
- * Orden: actuar > recordar > conversar. Los patrones de actuar con
- * infinitivo ("recuerda comprar pan") se evalúan antes que los de
- * memoria ("recuerda que…"), resolviendo la ambigüedad del español.
+ * C5-2026-10-06: "recuérdame que [cláusula]" es petición de MEMORIA
+ * ("recuerda que mi cumple es en mayo"), no de acción. Se evalúa ANTES
+ * que el ACT genérico /recu[eé]rdame/ para no caer en la rama equivocada.
+ */
+const REMEMBER_BEFORE_ACT_PATTERNS: RegExp[] = [
+  /recu[eé]rdame que\b/i,
+];
+
+/**
+ * Orden: recordar-específico > actuar > recordar > conversar. Los patrones
+ * de actuar con infinitivo ("recuerda comprar pan") se evalúan antes que
+ * los de memoria genéricos ("recuerda que…"), resolviendo la ambigüedad
+ * del español; pero "recuérdame que + cláusula" va primero (memoria).
  */
 export function classifyIntent(text: string): AgentIntent {
   const t = (text ?? "").trim();
   if (!t) return "conversar";
+  if (REMEMBER_BEFORE_ACT_PATTERNS.some((re) => re.test(t))) return "recordar";
   if (ACT_PATTERNS.some((re) => re.test(t))) return "actuar";
   if (REMEMBER_PATTERNS.some((re) => re.test(t))) return "recordar";
   return "conversar";

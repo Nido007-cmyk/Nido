@@ -34,6 +34,14 @@ import { isPermissionFlowActive } from "./src/p2p/permissionGuard";
 
 const modelManager = new ModelManager();
 
+/**
+ * C1-2026-10-06: ventana de gracia para "inactive" transitorio del sistema
+ * (diálogos de permiso, llamadas entrantes, PiP...). Si la app vuelve a
+ * "active" dentro de este plazo, no se re-bloquea. "background" real
+ * siempre bloquea de inmediato.
+ */
+const TRANSIENT_INACTIVE_GRACE_MS = 3_000;
+
 type Screen = "checking" | "wipe-recovering" | "wipe-blocked" | "startup-error" | "key-loss" | "locked" | "required-setup" | "chat";
 
 /**
@@ -124,6 +132,9 @@ function AppContent() {
   const { colors } = useTheme();
   const screenRef = useRef(screen);
   screenRef.current = screen;
+  // C1-2026-10-06: timestamp del último "inactive" para la ventana de gracia
+  // de overlays transitorios del sistema.
+  const lastInactiveAtRef = useRef(0);
 
   /** Arranque normal: rutinas, modelos y gate biométrico. */
   const finishStartup = async () => {
@@ -219,13 +230,31 @@ function AppContent() {
   // T-permiso-2026-10-06: un diálogo de permiso del sistema (p. ej.
   // Bluetooth) pausa la Activity ("inactive") sin que el usuario haya
   // salido de la app. No re-bloquear mientras ese flujo está activo.
+  // C1-2026-10-06: generalizar a CUALQUIER "inactive" transitorio (no solo
+  // permisos): otros overlays del sistema (llamadas, PiP, etc.) también
+  // producen "inactive" breve. Si la app vuelve a "active" dentro de la
+  // ventana de gracia, no se bloquea. "background" real siempre bloquea.
   useEffect(() => {
     const sub = AppState.addEventListener("change", (s) => {
       if (isPermissionFlowActive()) return;
-      if (s === "background" || s === "inactive") {
+      if (s === "background") {
         lockNow();
-      } else if (s === "active" && (screenRef.current === "chat" || screenRef.current === "required-setup")) {
-        setScreen("locked");
+        lastInactiveAtRef.current = 0;
+      } else if (s === "inactive") {
+        // Posible overlay transitorio: registrar el momento, decidir al volver.
+        lastInactiveAtRef.current = Date.now();
+      } else if (s === "active") {
+        const inactiveAt = lastInactiveAtRef.current;
+        lastInactiveAtRef.current = 0;
+        // Si venimos de un "inactive" breve, fue un overlay transitorio del
+        // sistema: no re-bloquear ni resetear la navegación.
+        if (inactiveAt && Date.now() - inactiveAt < TRANSIENT_INACTIVE_GRACE_MS) {
+          return;
+        }
+        lockNow();
+        if (screenRef.current === "chat" || screenRef.current === "required-setup") {
+          setScreen("locked");
+        }
       }
     });
     return () => sub.remove();

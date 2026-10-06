@@ -23,9 +23,19 @@ export async function summarizeConversation(
   turns: ConversationTurn[],
   previousSummary?: string | null
 ): Promise<string> {
-  const transcript = turns
+  // C3-2026-10-06: truncar el transcript a un presupuesto antes de resumir.
+  // En sesiones largas son decenas de miles de tokens → throw determinístico
+  // desperdiciando batería. Se conservan los turnos más recientes.
+  const MAX_TRANSCRIPT_CHARS = 6000; // ~1500 tokens
+  let transcript = turns
     .map((t) => `${t.role === "user" ? "User" : "Assistant"}: ${t.text}`)
     .join("\n");
+  if (transcript.length > MAX_TRANSCRIPT_CHARS) {
+    transcript = transcript.slice(-MAX_TRANSCRIPT_CHARS);
+    // Evitar empezar a mitad de una línea.
+    const nl = transcript.indexOf("\n");
+    if (nl > 0) transcript = transcript.slice(nl + 1);
+  }
   const prompt =
     `${previousSummary ? `Existing summary:\n${previousSummary}\n\n` : ""}` +
     `Summarize the key facts, constraints, and user preferences from this ` +

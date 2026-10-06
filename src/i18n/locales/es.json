@@ -608,6 +608,8 @@
     "copiedNotice": "✓ {{label}} copiado.",
     "pairBindingWasRetired": "Nota: esta identidad (“{{name}}”) fue retirada antes por un re-emparejamiento. Confirmar la restaurará como tu contacto — sus mensajes fallidos anteriores siguen fallidos y no se reenviarán solos.",
     "pairDisambiguationTitle": "Elige cómo emparejar",
+    "pairAmbiguousAsk": "Este código es para “{{name}}” (huella {{fingerprint}}), pero ya tienes {{count}} contacto(s) activo(s) con ese nombre bajo una identidad DISTINTA: {{candidates}}. Un nombre no es una identidad — no puedo asumir que es la misma persona.\n\nDime explícitamente (en el chat):\n• “reemplazar” — la misma persona con un dispositivo nuevo: retira la identidad anterior en todas partes (destructivo);\n• “otra persona” — una persona distinta: dame un nombre único para el nuevo contacto;\n• “cancelar” — no hacer nada.\n\nSi no eliges, cancelo. Nada se ha emparejado aún.",
+    "pairInvalidChoice": "Desambiguación inválida “{{choice}}”: usa reemplazar, otra_persona o cancelar.",
     "pairDisambiguationBody": "“{{name}}” ya es uno de tus contactos, pero este código es una identidad DISTINTA (huella {{fingerprint}}). Elige explícitamente — nada se reemplaza en silencio.",
     "pairReplaceAction": "Reemplazar",
     "pairDifferentPersonAction": "Otra persona",

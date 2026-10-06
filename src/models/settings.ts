@@ -58,6 +58,8 @@ export const DEFAULT_MEMORY_SETTINGS: MemorySettings = {
 const SETTINGS_PATH = `${FileSystem.documentDirectory}settings.json`;
 const DEFAULT_SETTINGS: Settings = { activeModelId: {} };
 export const DEFAULT_MAX_TOKENS = 512;
+/** C2-2026-10-06: tope del prompt de sistema personalizado (~500 tokens). */
+export const MAX_CUSTOM_SYSTEM_PROMPT_CHARS = 2000;
 
 async function readSettings(): Promise<Settings> {
   let raw: unknown;
@@ -141,7 +143,9 @@ export async function getCustomSystemPrompt(): Promise<string> {
 
 export async function setCustomSystemPrompt(prompt: string): Promise<void> {
   const s = await readSettings();
-  s.customSystemPrompt = prompt;
+  // C2-2026-10-06: cap para que un prompt personalizado gigante no rompa el
+  // presupuesto de contexto del modelo.
+  s.customSystemPrompt = (prompt ?? "").slice(0, MAX_CUSTOM_SYSTEM_PROMPT_CHARS);
   await writeSettings(s);
 }
 

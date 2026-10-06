@@ -16,7 +16,11 @@ describe("classifyIntent", () => {
     expect(classifyIntent("recuérdame comprar pan")).toBe("actuar");
     expect(classifyIntent("no olvides llamar al banco")).toBe("actuar");
     expect(classifyIntent("acuérdate de pagar la luz")).toBe("actuar");
-    expect(classifyIntent("recuérdame que tengo dentista mañana")).toBe("actuar");
+    // C5-2026-10-06: "recuérdame que + cláusula" es MEMORIA, no acción
+    expect(classifyIntent("recuérdame que tengo dentista mañana")).toBe("recordar");
+    expect(classifyIntent("recuérdame que el cumpleaños de mi mamá es el 15 de marzo")).toBe("recordar");
+    // Enclíticos: "guárdalo en tu memoria"
+    expect(classifyIntent("guárdalo en tu memoria para que me avises")).toBe("recordar");
   });
 
   it("detecta acciones locales", () => {

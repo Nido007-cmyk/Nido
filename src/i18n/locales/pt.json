@@ -607,6 +607,8 @@
     "copiedNotice": "✓ {{label}} copiado.",
     "pairBindingWasRetired": "Nota: esta identidade (“{{name}}”) foi aposentada antes por um re-emparelhamento. Confirmar a restaurará como seu contato — suas mensagens falhadas anteriores continuam falhadas e não serão reenviadas sozinhas.",
     "pairDisambiguationTitle": "Escolha como emparelhar",
+    "pairAmbiguousAsk": "Este código é para “{{name}}” (impressão digital {{fingerprint}}), mas você já tem {{count}} contato(s) ativo(s) com esse nome sob uma identidade DIFERENTE: {{candidates}}. Um nome não é uma identidade — não posso presumir que seja a mesma pessoa.\n\nDiga-me explicitamente (no chat):\n• “substituir” — a mesma pessoa com um dispositivo novo: aposenta a identidade anterior em todos os lugares (destrutivo);\n• “outra pessoa” — uma pessoa diferente: dê-me um nome único para o novo contato;\n• “cancelar” — não fazer nada.\n\nSe você não escolher, cancelo. Nada foi emparelhado ainda.",
+    "pairInvalidChoice": "Desambiguação inválida “{{choice}}”: use substituir, outra_pessoa ou cancelar.",
     "pairDisambiguationBody": "“{{name}}” já é um dos seus contatos, mas este código é uma identidade DIFERENTE (impressão digital {{fingerprint}}). Escolha explicitamente — nada é substituído em silêncio.",
     "pairReplaceAction": "Substituir",
     "pairDifferentPersonAction": "Outra pessoa",
