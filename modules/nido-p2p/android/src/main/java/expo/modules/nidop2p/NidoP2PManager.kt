@@ -71,6 +71,11 @@ class NidoP2PManager(private val context: Context) {
   private var serverSocket: BluetoothServerSocket? = null
   private var acceptThread: Thread? = null
   private var discoveryReceiver: BroadcastReceiver? = null
+  // F4-2026-10-06: contador de generación. connect() hace socket.connect()
+  // bloqueante (~10-20s) fuera de lock; si shutdown() corre en medio, el
+  // onSocketAccepted tardío debe descartar el socket en vez de resucitar
+  // la conexión después del apagado.
+  @Volatile private var shutdownGeneration = 0
 
   // ------------------------------------------------------------ estado
 
@@ -104,6 +109,10 @@ class NidoP2PManager(private val context: Context) {
 
   // ------------------------------------------------------------ discovery
 
+  // F5-2026-10-06: @Synchronized — dos startDiscovery() concurrentes
+  // sobrescribían discoveryReceiver, fugando el receiver anterior (nunca
+  // se desregistraba). El lock serializa el check-and-set.
+  @Synchronized
   fun startDiscovery(): Boolean {
     val bt = adapter ?: run {
       listener?.onError("Bluetooth no disponible en este dispositivo.")
@@ -151,6 +160,7 @@ class NidoP2PManager(private val context: Context) {
     }
   }
 
+  @Synchronized
   fun stopDiscovery() {
     try {
       adapter?.cancelDiscovery()
@@ -223,6 +233,10 @@ class NidoP2PManager(private val context: Context) {
   /** Conecta con un dispositivo por MAC. Bloqueante: llamar fuera del hilo principal. */
   @Throws(IOException::class)
   fun connect(address: String): Map<String, String?> {
+    // F4-2026-10-06: capturar la generación al inicio; si shutdown()
+    // incrementa el contador durante el connect bloqueante, el socket se
+    // descarta en vez de insertarse.
+    val generation = shutdownGeneration
     val bt = adapter ?: throw IOException("Bluetooth no disponible.")
     if (!bt.isEnabled) throw IOException("El Bluetooth está apagado.")
     if (!hasConnectPermission()) throw IOException("Falta el permiso BLUETOOTH_CONNECT.")
@@ -248,7 +262,7 @@ class NidoP2PManager(private val context: Context) {
       }
       throw IOException("No se pudo conectar con $address: ${e.message}")
     }
-    onSocketAccepted(socket, incoming = false)
+    onSocketAccepted(socket, incoming = false, generation)
     return mapOf("address" to device.address, "name" to device.name)
   }
 
@@ -262,7 +276,16 @@ class NidoP2PManager(private val context: Context) {
    * desmontar la ruta viva del reemplazo.
    */
   @Synchronized
-  private fun onSocketAccepted(socket: BluetoothSocket, incoming: Boolean) {
+  private fun onSocketAccepted(socket: BluetoothSocket, incoming: Boolean, generation: Int = shutdownGeneration) {
+    // F4-2026-10-06: si shutdown() corrió durante el connect bloqueante,
+    // descartar el socket en vez de resucitar la conexión.
+    if (generation != shutdownGeneration) {
+      try {
+        socket.close()
+      } catch (_: Exception) {
+      }
+      return
+    }
     val address = try {
       socket.remoteDevice.address
     } catch (e: Exception) {
@@ -329,6 +352,10 @@ class NidoP2PManager(private val context: Context) {
    * conexiones el bucle no hace nada.
    */
   fun shutdown() {
+    // F4-2026-10-06: invalidar connects en vuelo ANTES de cerrar: un
+    // onSocketAccepted tardío (connect bloqueante) ve la generación
+    // cambiada y descarta el socket en vez de resucitar la conexión.
+    shutdownGeneration++
     stopDiscovery()
     stopServer()
     // F-7: retirar por dirección con remove() atómico por entrada: si el

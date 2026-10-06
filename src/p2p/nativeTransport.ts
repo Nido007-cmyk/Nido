@@ -277,6 +277,11 @@ export class NidoBluetoothTransport implements P2PTransport {
   private confirmedPair = new Map<string, { pkLower: string; nonceLocalHex: string; noncePeerHex: string }>();
   private signHello: (message: Uint8Array) => Promise<Uint8Array>;
   private linked = false;
+  // F3-2026-10-06: memo de la promesa de enlace. Dos startDiscovery()
+  // concurrentes pasaban el guard `if (this.linked)` antes de los awaits
+  // y registraban listeners duplicados (el segundo sobrescribía unsubs,
+  // fugando el primero). Ahora comparten la misma promesa en vuelo.
+  private linkPromise: Promise<void> | null = null;
 
   /**
    * @param bindings Si se omite, se cargan de forma perezosa; pasa `null`
@@ -330,6 +335,21 @@ export class NidoBluetoothTransport implements P2PTransport {
   /** Conecta listeners nativos + servidor (sin discovery). Idempotente. */
   private async ensureLinked(): Promise<void> {
     if (this.linked) return;
+    // F3-2026-10-06: si ya hay un enlace en curso, esperar esa promesa en
+    // vez de registrar listeners duplicados.
+    if (this.linkPromise) {
+      await this.linkPromise;
+      return;
+    }
+    this.linkPromise = this.doLink();
+    try {
+      await this.linkPromise;
+    } finally {
+      this.linkPromise = null;
+    }
+  }
+
+  private async doLink(): Promise<void> {
     const b = this.bt();
     await this.ensureMyPk();
     if (!b.isBluetoothEnabled()) throw new Error("El Bluetooth está apagado.");

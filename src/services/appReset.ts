@@ -5,7 +5,7 @@ import { embeddingEngine } from "../rag/embed";
 import { closeAllPacks } from "../rag/packs";
 import { resetDatabase, KNOWLEDGE_DB_NAME, LEGACY_KNOWLEDGE_DB_NAME } from "../rag/db";
 import { clearMemoryDb, resetMemoryKeyCache, MEMORY_DB_NAME } from "../agent/memory/memoryStore";
-import { resetDownloadState } from "./downloadManager";
+import { resetDownloadState, cancelAllDownloads } from "./downloadManager";
 import { clearSettings } from "../models/settings";
 import { installStatePath } from "../models/installState";
 import { beginP2PDataReset, completeP2PDataReset } from "./nidoMessenger";
@@ -172,6 +172,10 @@ async function resetAllAppDataInner(): Promise<void> {
   await beginP2PDataReset();
 
   await Promise.all([llamaEngine.unload(), embeddingEngine.unload(), closeAllPacks()]);
+  // F7-2026-10-06: cancelar descargas en vuelo ANTES de borrar archivos.
+  // Un DownloadResumable nativo que sigue escribiendo tras el wipe recrea
+  // el journal de instalación después de la verificación checkGone().
+  await cancelAllDownloads();
   resetDownloadState();
 
   // 0. Notificaciones programadas y ya entregadas del SO: su contenido

@@ -98,6 +98,10 @@ function clearAutoRetry(assetId: string) {
 const modelManager = new ModelManager();
 const state = new Map<string, DownloadState>();
 const inFlight = new Map<string, Promise<void>>();
+// F7-2026-10-06: rastrea el asset por id para poder cancelar en
+// cancelAllDownloads() (el wipe necesita el CatalogModel para
+// signalCancelDownload/deletePartialDownload).
+const inFlightAssets = new Map<string, CatalogModel>();
 const downloadTimestamps = new Map<string, { lastBytes: number; lastTime: number; startTime: number }>();
 type Listener = () => void;
 const listeners = new Set<Listener>();
@@ -142,8 +146,43 @@ export function resetDownloadState(): void {
   for (const id of Array.from(autoRetryTimers.keys())) clearAutoRetry(id);
   state.clear();
   inFlight.clear();
+  inFlightAssets.clear();
   downloadTimestamps.clear();
   notify();
+}
+
+/**
+ * F7-2026-10-06: cancela todas las descargas en vuelo ANTES de que el wipe
+ * borre archivos. Sin esto, un DownloadResumable nativo seguía escribiendo
+ * tras el borrado y recreaba el journal de instalación después de que
+ * checkGone() lo verificara ausente — violando la garantía del wipe.
+ * Reutiliza la secuencia cancelar-esperar-borrar de restartDownload().
+ */
+export async function cancelAllDownloads(): Promise<void> {
+  for (const id of Array.from(autoRetryTimers.keys())) clearAutoRetry(id);
+  const ids = Array.from(inFlight.keys());
+  for (const id of ids) {
+    const asset = inFlightAssets.get(id);
+    const stale = inFlight.get(id);
+    try {
+      if (asset) {
+        await modelManager.signalCancelDownload(asset);
+      }
+    } catch {
+      /* mejor esfuerzo; el settle de abajo limpia de todos modos */
+    }
+    if (stale) {
+      await stale.catch(() => {});
+    }
+    try {
+      if (asset) {
+        await modelManager.deletePartialDownload(asset);
+      }
+    } catch {
+      /* mejor esfuerzo */
+    }
+  }
+  inFlightAssets.clear();
 }
 
 /**
@@ -173,6 +212,7 @@ export async function restartDownload(asset: CatalogModel): Promise<void> {
   }
   await modelManager.deletePartialDownload(asset);
   inFlight.delete(asset.id);
+  inFlightAssets.delete(asset.id);
   state.delete(asset.id);
   downloadTimestamps.delete(asset.id);
   notify();
@@ -332,9 +372,11 @@ function startDownloadInternal(asset: CatalogModel): Promise<void> {
     .finally(() => {
       releaseWakeLock();
       inFlight.delete(asset.id);
+      inFlightAssets.delete(asset.id);
       notify();
     });
 
   inFlight.set(asset.id, promise);
+  inFlightAssets.set(asset.id, asset);
   return promise;
 }
