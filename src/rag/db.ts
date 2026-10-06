@@ -497,6 +497,30 @@ async function openAndMigrate(): Promise<SecureDbHandle> {
       ErrorClass: KnowledgeDbVersionError,
     });
   }
+
+  // R1-2026-10-06: verificar identidad del modelo de embeddings. Si cambió
+  // el modelo, los vectores almacenados son inválidos (dim distinta o
+  // pesos distintos → scores basura silenciosos). Fail-closed con mensaje
+  // claro en vez de degradación silenciosa.
+  const { MODEL_CATALOG } = await import("../models/manifest");
+  const embeddingModel = MODEL_CATALOG.find((m) => m.kind === "embedding" && m.required);
+  const expectedSha = embeddingModel?.sha256 ?? "unknown";
+  const storedModel = await db.getFirstAsync<{ value: string }>(
+    "SELECT value FROM meta WHERE key = 'embedding_model_sha256';"
+  );
+  if (!storedModel) {
+    await db.runAsync("INSERT INTO meta (key, value) VALUES ('embedding_model_sha256', ?);", [expectedSha]);
+  } else if (storedModel.value !== expectedSha) {
+    try {
+      await db.closeAsync();
+    } catch {
+      /* el error original es lo que importa */
+    }
+    throw new KnowledgeDbVersionError(
+      storedModel.value,
+      `modelo de embeddings cambió (actual: ${expectedSha.slice(0, 12)}…). Se requiere re-indexar la base de conocimiento.`
+    );
+  }
   } catch (err) {
     try {
       await db.closeAsync();

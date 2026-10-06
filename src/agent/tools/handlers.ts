@@ -227,7 +227,13 @@ export function containsDatePattern(text: string): boolean {
 const rememberFactHandler: ToolHandler = async (args) => {
   const content = String(args.content ?? "").trim();
   if (!content) return "Error: falta el contenido del hecho.";
-  const category = String(args.category ?? "general").trim() || "general";
+  // M1-2026-10-06 (track 2): allowlist de categorías. El LLM puede enviar
+  // cualquier string; sin validación se almacenan categorías bogus.
+  const VALID_CATEGORIES = ["general", "preference", "goal", "event"] as const;
+  const rawCategory = String(args.category ?? "general").trim() || "general";
+  const category = (VALID_CATEGORIES as readonly string[]).includes(rawCategory)
+    ? rawCategory
+    : "general";
   await saveFact({ content, category: category as "general", source: "user" });
   let result = `Guardado en mi memoria: «${content}» (categoría: ${category}).`;
   // H11: puente memoria→notificación. Si hay una fecha, sugerir recordatorio.

@@ -99,11 +99,12 @@ export async function listEntities(): Promise<Entity[]> {
 
 /** Elimina una entidad y sus relaciones. */
 export async function deleteEntity(id: string): Promise<void> {
+  // D2-2026-10-06: sin withTransactionAsync anidado — writeTransaction ya
+  // abre la transacción; expo-sqlite no soporta savepoints y el anidado
+  // lanzaba "cannot start a transaction within a transaction".
   await writeTransaction(async (database) => {
-    await database.withTransactionAsync(async () => {
-      await database.runAsync("DELETE FROM kg_relations WHERE from_id = ? OR to_id = ?", [id, id]);
-      await database.runAsync("DELETE FROM kg_entities WHERE id = ?", [id]);
-    });
+    await database.runAsync("DELETE FROM kg_relations WHERE from_id = ? OR to_id = ?", [id, id]);
+    await database.runAsync("DELETE FROM kg_entities WHERE id = ?", [id]);
   });
 }
 
