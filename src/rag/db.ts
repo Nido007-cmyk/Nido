@@ -8,6 +8,7 @@ import {
   ensureEncryptedDatabase,
   getWipeGate,
   isDatabaseNotFoundError,
+  SecureDbHandle,
 } from "../security/secureDatabase";
 import {
   KNOWLEDGE_DB_SCHEMA_VERSION,
@@ -72,7 +73,7 @@ export async function migrateLegacyKnowledgeDb(): Promise<void> {
   }
 }
 
-let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+let dbPromise: Promise<SecureDbHandle> | null = null;
 
 /**
  * Epoch del ciclo de vida de la base de conocimiento. resetDatabase() lo
@@ -126,7 +127,7 @@ export interface WriteOptions {
  * de la llamada. Las escrituras deben pasar por writeTransaction (guard de
  * ciclo de vida + serialización); ver getDbForEpoch.
  */
-export function getDb(): Promise<SQLite.SQLiteDatabase> {
+export function getDb(): Promise<SecureDbHandle> {
   return getDbForEpoch(dbEpoch);
 }
 
@@ -146,7 +147,7 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
  * Invariante: un writer planificado bajo el epoch N no puede adquirir un
  * handle usable después de que reset avance el ciclo de vida a N+1.
  */
-async function getDbForEpoch(epoch: number): Promise<SQLite.SQLiteDatabase> {
+async function getDbForEpoch(epoch: number): Promise<SecureDbHandle> {
   // DIAGNOSTIC (2026-10-05): fine-grained stages to find "undefined is not
   // a function" inside getDb(). TODO: remove once root cause fixed.
   const dstage = async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
@@ -202,7 +203,7 @@ let writeChain: Promise<unknown> = Promise.resolve();
  * which crashed expo-sqlite natively after a few thousand inserts.
  */
 export function writeTransaction(
-  work: (db: SQLite.SQLiteDatabase) => Promise<void>,
+  work: (db: SecureDbHandle) => Promise<void>,
   opts?: WriteOptions
 ): Promise<void> {
   // Epoch de la operación origen (seed/import lo capturan al inicio) o, por
@@ -305,7 +306,7 @@ export async function resetDatabase(): Promise<void> {
   }
 }
 
-async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
+async function openAndMigrate(): Promise<SecureDbHandle> {
   // Misma clave Keystore que la base de memoria (ver keyManager).
   // En prod sin SecureStore lanza: fail-closed.
   // DIAGNOSTIC (2026-10-05): wrap each step to find "undefined is not a function".
@@ -327,9 +328,12 @@ async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
   // conservar el índice sin re-embedding.
   await ostage("migrateLegacyKnowledgeDb", async () => migrateLegacyKnowledgeDb());
   // Apertura cifrada con migración plaintext→SQLCipher fail-closed.
+  // H9-2026-10-06: tipar como SecureDbHandle (los 6 métodos reales), no
+  // como SQLiteDatabase completo (~20 métodos): el cast amplio permitía
+  // compilar llamadas a métodos que no existen en runtime.
   const db = (await ostage("ensureEncryptedDatabase", async () => ensureEncryptedDatabase(DB_NAME, "rag/db", {
     dekHex: keyHex,
-  }))) as unknown as SQLite.SQLiteDatabase;
+  }))) as unknown as SecureDbHandle;
 
   // DIAGNOSTIC (2026-10-06): verificación explícita de que el handle
   // devuelto expone TODOS los métodos que openAndMigrate y el resto del
