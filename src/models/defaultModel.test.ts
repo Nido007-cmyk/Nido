@@ -54,7 +54,9 @@ describe("0.5B catalog entry", () => {
   it("declares its RAM profile and default context", () => {
     const m = MODEL_CATALOG.find((e) => e.id === LIGHT_LLM_ID)!;
     expect(m.arch).toEqual({ nLayer: 24, nKvHeads: 2, headDim: 64 });
-    expect(m.defaultNCtx).toBe(2048);
+    // T-contexto-2026-10-06: 4096 (antes 2048) — el system prompt del
+    // agent-loop (~2k tokens) desbordaba n_ctx=2048 ("Context is full").
+    expect(m.defaultNCtx).toBe(4096);
     expect(m.capabilities?.usesChatTemplate).toBe(true);
     expect(m.capabilities?.roles).toContain("fast");
   });
@@ -72,14 +74,14 @@ describe("contextSpecForModel", () => {
     const spec = contextSpecForModel(m);
     expect(spec).toMatchObject({
       fileSizeBytes: 397808192,
-      nCtx: 2048,
+      nCtx: 4096,
       nLayer: 24,
       nKvHeads: 2,
       headDim: 64,
     });
-    // ~0.52 GiB working set: 379.4 MiB weights + 24 MiB KV + 128 MiB compute
+    // ~0.67 GiB working set: 379.4 MiB weights + ~48 MiB KV (n_ctx 4096) + compute/overhead
     const est = estimateContextBytes(spec);
-    expect(est.totalBytes).toBeLessThan(0.6 * GiB);
+    expect(est.totalBytes).toBeLessThan(0.75 * GiB);
     expect(est.totalBytes).toBeGreaterThan(0.45 * GiB);
   });
 

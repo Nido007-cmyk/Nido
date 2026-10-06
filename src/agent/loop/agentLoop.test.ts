@@ -136,3 +136,70 @@ describe("runAgentLoop", () => {
     expect(result.response).toBe("Hola.");
   });
 });
+
+describe("presupuesto de contexto (T-contexto-2026-10-06)", () => {
+  it("estimatePromptTokens aproxima ~4 chars por token", async () => {
+    const { estimatePromptTokens } = await import("./agentLoop");
+    expect(estimatePromptTokens("a".repeat(400))).toBe(100);
+    expect(estimatePromptTokens("")).toBe(0);
+  });
+
+  it("assertPromptBudget pasa cuando cabe", async () => {
+    const { assertPromptBudget } = await import("./agentLoop");
+    expect(() =>
+      assertPromptBudget(
+        [{ role: "user", content: "hola" }],
+        4096,
+        512,
+        "test"
+      )
+    ).not.toThrow();
+  });
+
+  it("assertPromptBudget falla con error accionable (no 'Context is full' nativo)", async () => {
+    const { assertPromptBudget } = await import("./agentLoop");
+    const big = "x".repeat(20000); // ~5000 tokens
+    expect(() =>
+      assertPromptBudget([{ role: "user", content: big }], 2048, 512, "test")
+    ).toThrow(/excede el contexto/);
+    try {
+      assertPromptBudget([{ role: "user", content: big }], 2048, 512, "test");
+      expect.unreachable();
+    } catch (e) {
+      expect((e as Error).message).not.toMatch(/Context is full/);
+    }
+  });
+
+  it("runAgentLoop degrada sin memoria cuando el prompt completo no cabe", async () => {
+    const engine = fakeEngine(["Hola."]);
+    const memText = "DATO ".repeat(5000); // memoria enorme a propósito
+    // nCtx: cabe sin memoria (~2k tokens del system) pero no con ella.
+    const result = await runAgentLoop("hola", {
+      engine,
+      handlers: {},
+      nCtx: 4096,
+      loadMemory: async () => ({
+        facts: [{ category: "general", content: memText }],
+        preferences: [],
+        people: [],
+        recentLog: [],
+      }),
+    });
+    expect(result.response).toBe("Hola.");
+    // El engine sí fue llamado: la degradación evitó el fallo.
+    expect(engine.calls.length).toBeGreaterThan(0);
+  });
+
+  it("runAgentLoop falla claro cuando ni sin memoria cabe", async () => {
+    const engine = fakeEngine(["Hola."]);
+    await expect(
+      runAgentLoop("hola", {
+        engine,
+        handlers: {},
+        nCtx: 10, // absurdamente pequeño: ni el system prompt cabe
+        loadMemory: async () => null,
+      })
+    ).rejects.toThrow(/excede el contexto/);
+    expect(engine.calls).toHaveLength(0);
+  });
+});

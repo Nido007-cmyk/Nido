@@ -686,6 +686,9 @@ export function ChatScreen({
           loadMemory: () => loadMemorySnapshot().catch(() => null),
           maxSteps: 3,
           nPredict: agentMaxTokens,
+          // Presupuesto de prompt contra el n_ctx real del modelo cargado
+          // (T-contexto-2026-10-06).
+          nCtx: llamaEngine.getModelInfo()?.nCtx,
         });
         assistantText = agentResult.response;
         setMessages((prev) =>

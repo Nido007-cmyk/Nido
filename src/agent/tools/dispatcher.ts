@@ -139,12 +139,22 @@ export async function dispatchToolCall(
   }
 }
 
-/** Describe las herramientas para el system prompt (compacto, en español). */
+/** Describe las herramientas para el system prompt (compacto, en español).
+ *
+ * Formato por herramienta: `- nombre: descripción (param*:tipo: hint; ...)`.
+ * El `*` marca parámetros requeridos. Se conserva TODA la información
+ * necesaria para construir llamadas correctas (nombre, descripción,
+ * parámetros, tipos, requeridos y hints de formato); solo se comprime la
+ * estructura (sin la etiqueta "Parámetros:" ni "(requerido)" verboso).
+ * El prompt del sistema con las 24 herramientas debe mantenerse acotado:
+ * con n_ctx pequeños el prompt desbordaba antes de generar
+ * ("Context is full", T-contexto-2026-10-06).
+ */
 export function describeToolsForPrompt(): string {
   return LOCAL_TOOLS.map((t) => {
     const params = Object.entries(t.parameters)
-      .map(([n, p]) => `${n}: ${p.type}${p.required ? " (requerido)" : ""} - ${p.description}`)
+      .map(([n, p]) => `${n}${p.required ? "*" : ""}:${p.type}: ${p.description}`)
       .join("; ");
-    return `- ${t.name}: ${t.description}${params ? ` Parámetros: ${params}` : ""}`;
+    return `- ${t.name}: ${t.description}${params ? ` (${params})` : ""}`;
   }).join("\n");
 }

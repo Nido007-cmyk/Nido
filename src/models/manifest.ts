@@ -339,10 +339,14 @@ export const MODEL_CATALOG: CatalogModel[] = [
     // RAM pre-flight profile (verified against config.json): 24 layers,
     // GQA with 2 KV heads, head dim 64.
     arch: { nLayer: 24, nKvHeads: 2, headDim: 64 },
-    // 2048 is plenty for short on-device chat and keeps the KV cache +
-    // compute terms small (24 MiB + 128 MiB) so the model fits low-RAM
-    // devices with margin.
-    defaultNCtx: 2048,
+    // 4096 para el agent-loop: el system prompt con las 24 herramientas ocupa
+    // ~2k tokens, y con n_ctx=2048 el prompt desbordaba antes de generar
+    // ("Context is full" en dispositivo, T-contexto-2026-10-06). KV cache:
+    // 2*24 capas*2 KV heads*64 head dim*2 bytes*4096 ≈ 48 MiB (+128 MiB de
+    // cómputo); sigue cabiendo en teléfonos de gama baja con margen.
+    // Qwen2.5 soporta nativamente hasta 32K, así que 4096 no es problema
+    // para el modelo ni para llama.cpp/llama.rn.
+    defaultNCtx: 4096,
     // Same Qwen2.5 family as the 1.5B default: same ChatML template and
     // stop sequences, so the existing prompt engineering applies unchanged.
     capabilities: { roles: ["fast"], usesChatTemplate: true },

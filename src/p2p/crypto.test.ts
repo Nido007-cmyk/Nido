@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   deriveSessionKeyV2,
   fingerprint,
@@ -111,5 +111,38 @@ describe("crypto P2P", () => {
   it("utf8 ida y vuelta con emoji y eñes", () => {
     const s = "niño 🔒 cañón — «cita»";
     expect(utf8Decode(utf8Encode(s))).toBe(s);
+  });
+});
+
+describe("PRNG installation (T-PRNG-2026-10-06)", () => {
+  it("installSecurePrng está exportada y es re-ejecutable", async () => {
+    const mod = await import("./crypto");
+    expect(typeof mod.installSecurePrng).toBe("function");
+    expect(() => mod.installSecurePrng()).not.toThrow();
+  });
+
+  it("NO usa globalThis.require (Metro/Hermes no lo define: era el bug 'no PRNG')", async () => {
+    const { installSecurePrng } = await import("./crypto");
+    const src = installSecurePrng.toString();
+    // El bug: (globalThis as {...}).require("expo-crypto") nunca se ejecutaba
+    // en el dispositivo porque Metro inyecta require como parámetro de ámbito
+    // de módulo, no en globalThis. Si alguien lo reintroduce, esto falla.
+    // (globalThis.crypto sí es legítimo: es la primera fuente intentada.)
+    expect(src).not.toMatch(/globalThis[\s\S]{0,80}\.require\s*\(/);
+    // En su lugar debe usar require() directo a nivel de módulo.
+    expect(src).toContain('require("expo-crypto")');
+  });
+
+  it("fail-closed: sin WebCrypto y sin expo-crypto resoluble no instala nada silencioso", async () => {
+    // En vitest, require("expo-crypto") no resuelve (módulo nativo) → la rama
+    // cae en el catch y no se instala PRNG. La verificación real de la rama
+    // expo-crypto es en dispositivo físico (desaparece el "⚠ no PRNG").
+    vi.stubGlobal("crypto", undefined);
+    try {
+      const { installSecurePrng } = await import("./crypto");
+      expect(() => installSecurePrng()).not.toThrow();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

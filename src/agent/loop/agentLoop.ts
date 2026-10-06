@@ -71,6 +71,14 @@ export interface AgentLoopOptions {
   temperature?: number;
   onToken?: (token: string) => void;
   timeoutMs?: number;
+  /**
+   * Tamaño de contexto del modelo cargado (n_ctx). La app lo pasa desde
+   * `engine.getModelInfo()?.nCtx`; por defecto 4096. Se usa para el
+   * presupuesto de prompt (T-contexto-2026-10-06): sin esto, un system
+   * prompt grande + n_ctx pequeño hacía que llama.cpp fallara con
+   * "Context is full" en el primer generate.
+   */
+  nCtx?: number;
 }
 
 export interface AgentToolUse {
@@ -190,19 +198,62 @@ function formatMemoryText(mem: MemoryFactsLike): string {
   return parts.join("\n\n");
 }
 
+/**
+ * Estimación barata de tokens para el presupuesto de prompt (~4 chars por
+ * token en estos modelos). Pura y testeable. Es una cota conservadora
+ * aproximada, no un conteo exacto del tokenizador.
+ */
+export function estimatePromptTokens(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+/**
+ * Falla con un error accionable (no el "Context is full" nativo de
+ * llama.cpp) si el prompt estimado + lo que se quiere generar no cabe en
+ * el contexto del modelo. T-contexto-2026-10-06.
+ */
+export function assertPromptBudget(
+  messages: ChatMessageInput[],
+  nCtx: number,
+  nPredict: number,
+  stage: string
+): void {
+  const used = estimatePromptTokens(messages.map((m) => m.content).join("\n"));
+  if (used + nPredict > nCtx) {
+    throw new Error(
+      `NIDO: prompt excede el contexto del modelo (estimado ${used} tokens + ` +
+        `${nPredict} a generar > nCtx ${nCtx}) en ${stage}. Reduce la memoria ` +
+        "o usa un modelo con más contexto."
+    );
+  }
+}
+
 export async function runAgentLoop(
   userText: string,
   options: AgentLoopOptions
 ): Promise<AgentLoopResult> {
   const { engine, handlers, maxSteps = DEFAULT_MAX_STEPS } = options;
+  const nCtx = options.nCtx ?? 4096;
+  const nPredict = options.nPredict ?? 512;
   const intent = classifyIntent(userText);
   const mem = await options.loadMemory?.().catch(() => null);
-  const system = buildSystemPrompt(intent, mem ? formatMemoryText(mem) : "");
 
-  const messages: ChatMessageInput[] = [
-    { role: "system", content: system },
+  const buildMessages = (memoryText: string): ChatMessageInput[] => [
+    { role: "system", content: buildSystemPrompt(intent, memoryText) },
     { role: "user", content: userText },
   ];
+
+  // Presupuesto de contexto con degradación elegante: si el prompt completo
+  // (con memoria) no cabe, se reintenta sin el texto de memoria antes de
+  // fallar con un error claro. Sin esto, llama.cpp fallaba en el primer
+  // generate con "Context is full" (T-contexto-2026-10-06).
+  let messages = buildMessages(mem ? formatMemoryText(mem) : "");
+  try {
+    assertPromptBudget(messages, nCtx, nPredict, "inicio");
+  } catch {
+    messages = buildMessages("");
+    assertPromptBudget(messages, nCtx, nPredict, "inicio (sin memoria)");
+  }
 
   const toolUses: AgentToolUse[] = [];
   let lastText = "";
@@ -218,11 +269,15 @@ export async function runAgentLoop(
   };
 
   for (let step = 0; step < maxSteps; step++) {
+    // El loop acumula texto del asistente + observaciones en cada paso;
+    // verificar el presupuesto antes de cada generate para fallar con un
+    // error claro en vez del "Context is full" nativo (T-contexto-2026-10-06).
+    assertPromptBudget(messages, nCtx, nPredict, `paso ${step + 1}`);
     let text: string;
     try {
       text = await engine.generate({
         messages,
-        nPredict: options.nPredict ?? 512,
+        nPredict,
         temperature: options.temperature ?? 0.7,
         timeoutMs: options.timeoutMs,
         // Nota: los pasos intermedios también stremean (incluyen los

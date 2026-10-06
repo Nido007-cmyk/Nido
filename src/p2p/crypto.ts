@@ -26,31 +26,40 @@ import nacl from "tweetnacl";
  *  1) WebCrypto (`globalThis.crypto.getRandomValues`) — Node >= 19,
  *     navegadores y RN con polyfill. Mantiene los tests unitarios en Node
  *     sin arrastrar módulos nativos.
- *  2) `expo-crypto` nativo vía `require` diferido — Hermes en el dispositivo.
- *     Diferido (no import estático) para no romper los tests de Node, donde
- *     expo-crypto arrastra `react-native` (sintaxis Flow).
+ *  2) `expo-crypto` nativo vía `require` directo a nivel de módulo —
+ *     Hermes en el dispositivo. OJO: debe ser require() directo, NO
+ *     `globalThis.require`: Metro lo inyecta como parámetro de ámbito de
+ *     módulo, no en globalThis, así que `globalThis.require` es undefined
+ *     en el dispositivo y esa rama nunca se ejecutaba (T-PRNG-2026-10-06,
+ *     "no PRNG" en pantalla). Diferido (no import estático) para no romper
+ *     los tests de Node, donde expo-crypto arrastra `react-native`
+ *     (sintaxis Flow).
  *  3) Sin fuente disponible no se instala nada: `nacl.randomBytes()`
  *     lanzará su "no PRNG" explícito al usarse — fail-closed, nunca
- *     silencioso ni con aleatoriedad débil.
+ *     silencioso ni con aleatoriedad débil. NO se introduce fallback
+ *     inseguro ni pseudoaleatoriedad propia.
  */
-function installSecurePrng(): void {
+export function installSecurePrng(): void {
   const setPRNG = (nacl as unknown as { setPRNG?: (fn: (x: Uint8Array, n: number) => void) => void }).setPRNG;
   if (!setPRNG) return;
   const webCrypto = (globalThis as { crypto?: { getRandomValues?: (a: Uint8Array) => void } }).crypto;
-  if (webCrypto?.getRandomValues) {
+  if (typeof webCrypto?.getRandomValues === "function") {
     setPRNG((x, n) => {
       webCrypto.getRandomValues!(x.subarray(0, n));
     });
     return;
   }
   try {
-    const req = (globalThis as { require?: (id: string) => unknown }).require;
-    const Crypto = (req ? req("expo-crypto") : null) as { getRandomBytes?: (n: number) => Uint8Array } | null;
-    if (Crypto?.getRandomBytes) {
-      setPRNG((x, n) => {
-        x.set(Crypto.getRandomBytes!(n));
-      });
-    }
+    // require() directo a nivel de módulo: el único que Metro/Hermes
+    // resuelve en el dispositivo (ver nota arriba). Mismo patrón probado
+    // en src/diagnostics/security.ts defaultRandomHex().
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getRandomBytes } = require("expo-crypto") as {
+      getRandomBytes(n: number): Uint8Array;
+    };
+    setPRNG((x, n) => {
+      x.set(getRandomBytes(n));
+    });
   } catch {
     /* sin PRNG: queda el error explícito de TweetNaCl (fail-closed) */
   }

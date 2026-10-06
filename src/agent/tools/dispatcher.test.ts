@@ -133,3 +133,38 @@ describe("dispatchToolCall con Policy Engine", () => {
     expect(out).toBe("2026-09-26T12:00:00");
   });
 });
+
+describe("describeToolsForPrompt (T-contexto-2026-10-06)", () => {
+  it("se mantiene acotada: el prompt del sistema no debe desbordar n_ctx pequeños", async () => {
+    const { describeToolsForPrompt } = await import("./dispatcher");
+    const { LOCAL_TOOLS } = await import("./manifest");
+    const text = describeToolsForPrompt();
+    // Presupuesto: con 24 herramientas, el bloque no debe superar ~6.2k
+    // chars (~1.7k tokens). Si alguien agrega herramientas verbosas y esto
+    // falla, hay que comprimir el formato, no subir el límite a ciegas.
+    expect(text.length).toBeLessThan(6200);
+    // Pero sigue describiendo TODAS las herramientas...
+    for (const t of LOCAL_TOOLS) {
+      expect(text).toContain(t.name);
+    }
+  });
+
+  it("conserva la información necesaria para llamadas correctas", async () => {
+    const { describeToolsForPrompt } = await import("./dispatcher");
+    const { LOCAL_TOOLS } = await import("./manifest");
+    const text = describeToolsForPrompt();
+    for (const t of LOCAL_TOOLS) {
+      // Descripción de qué hace.
+      expect(text).toContain(t.description.slice(0, 20));
+      for (const [n, p] of Object.entries(t.parameters)) {
+        // Nombre del parámetro, tipo y marca de requerido.
+        expect(text).toContain(n);
+        expect(text).toContain(p.type);
+        if (p.required) {
+          const line = text.split("\n").find((l) => l.includes(t.name))!;
+          expect(line).toContain(`${n}*`);
+        }
+      }
+    }
+  });
+});
