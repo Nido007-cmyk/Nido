@@ -140,10 +140,11 @@ describe("runAgentLoop", () => {
 });
 
 describe("presupuesto de contexto (T-contexto-2026-10-06)", () => {
-  it("estimatePromptTokens aproxima ~4 chars por token", async () => {
+  it("estimatePromptTokens aproxima ~3 chars por token + overhead (M1)", async () => {
     const { estimatePromptTokens } = await import("./agentLoop");
-    expect(estimatePromptTokens("a".repeat(400))).toBe(100);
-    expect(estimatePromptTokens("")).toBe(0);
+    // M1-2026-10-06: heurística más segura — ÷3 + 50 de overhead ChatML.
+    expect(estimatePromptTokens("a".repeat(300))).toBe(150); // 100 + 50
+    expect(estimatePromptTokens("")).toBe(50); // solo overhead
   });
 
   it("assertPromptBudget pasa cuando cabe", async () => {
