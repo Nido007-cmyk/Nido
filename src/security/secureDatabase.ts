@@ -48,8 +48,13 @@ import { applyDatabaseKey, getDatabaseKeyHex, registerKeyLossProbe } from "../pr
 
 export interface SecureDbHandle {
   execAsync(sql: string): Promise<void>;
-  getAllAsync<T = Record<string, unknown>>(sql: string): Promise<T[]>;
-  getFirstAsync<T = Record<string, unknown>>(sql: string): Promise<T | null>;
+  // 2026-10-06 (bug 3, "datatype mismatch" en dispositivo físico): los
+  // params SON parte de la firma. La versión anterior los omitía
+  // (getAllAsync: (sql) => ...) y el wrapper los descartaba en silencio:
+  // toda query con `?` (p. ej. `... LIMIT ?`) corría con params sin bindear
+  // (= NULL) y SQLite lanzaba SQLITE_MISMATCH ("datatype mismatch").
+  getAllAsync<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]>;
+  getFirstAsync<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T | null>;
   closeAsync(): Promise<void>;
   // 2026-10-06: el wrapper DEBE exponer todo lo que el código llama sobre el
   // handle devuelto por ensureEncryptedDatabase/openEncryptedDatabase.
@@ -292,8 +297,16 @@ export function wrapSecureDbHandle(
   // antes de envolverlo (ver openDb en prodDriver).
   return {
     execAsync: (sql) => db.execAsync(sql),
-    getAllAsync: <T,>(sql: string) => db.getAllAsync<T>(sql),
-    getFirstAsync: <T,>(sql: string) => db.getFirstAsync<T>(sql),
+    // 2026-10-06 (bug 3): reenviar params. Sin esto, `getAllAsync("... LIMIT ?", [n])`
+    // ejecutaba `LIMIT NULL` → SQLite "datatype mismatch" en el dispositivo.
+    getAllAsync: <T,>(sql: string, params?: unknown[]) =>
+      params === undefined
+        ? db.getAllAsync<T>(sql)
+        : db.getAllAsync<T>(sql, params as SQLite.SQLiteBindParams),
+    getFirstAsync: <T,>(sql: string, params?: unknown[]) =>
+      params === undefined
+        ? db.getFirstAsync<T>(sql)
+        : db.getFirstAsync<T>(sql, params as SQLite.SQLiteBindParams),
     closeAsync: () => db.closeAsync(),
     runAsync: (sql, params) =>
       params === undefined

@@ -817,4 +817,54 @@ describe("wrapSecureDbHandle delega al handle nativo (regresión 2026-10-06)", (
       assertDbHandleShape(wrapped, "wrapSecureDbHandle"),
     ).not.toThrow();
   });
+
+  // Bug 3 (2026-10-06, "datatype mismatch" en dispositivo físico al enviar
+  // "Hola"): getAllAsync/getFirstAsync descartaban los params en silencio.
+  // `SELECT ... LIMIT ?` corría con `?` sin bindear (= NULL) y SQLite
+  // lanzaba SQLITE_MISMATCH. Estos tests fijan el reenvío.
+  it("getAllAsync reenvía sql y params al nativo", async () => {
+    const native = makeNative();
+    const wrapped = wrapSecureDbHandle(native);
+    const rows = await wrapped.getAllAsync<{ n: number }>(
+      "SELECT n FROM t LIMIT ?;",
+      [50],
+    );
+    expect(native.getAllAsync).toHaveBeenCalledTimes(1);
+    expect(native.getAllAsync).toHaveBeenCalledWith(
+      "SELECT n FROM t LIMIT ?;",
+      [50],
+    );
+    expect(rows).toEqual([{ n: 1 }]);
+  });
+
+  it("getAllAsync sin params llama al nativo sin params", async () => {
+    const native = makeNative();
+    const wrapped = wrapSecureDbHandle(native);
+    await wrapped.getAllAsync("SELECT n FROM t;");
+    expect(native.getAllAsync).toHaveBeenCalledTimes(1);
+    expect(native.getAllAsync).toHaveBeenCalledWith("SELECT n FROM t;");
+  });
+
+  it("getFirstAsync reenvía sql y params al nativo", async () => {
+    const native = makeNative();
+    const wrapped = wrapSecureDbHandle(native);
+    const row = await wrapped.getFirstAsync<{ n: number }>(
+      "SELECT n FROM t WHERE id = ?;",
+      ["abc"],
+    );
+    expect(native.getFirstAsync).toHaveBeenCalledTimes(1);
+    expect(native.getFirstAsync).toHaveBeenCalledWith(
+      "SELECT n FROM t WHERE id = ?;",
+      ["abc"],
+    );
+    expect(row).toEqual({ n: 1 });
+  });
+
+  it("getFirstAsync sin params llama al nativo sin params", async () => {
+    const native = makeNative();
+    const wrapped = wrapSecureDbHandle(native);
+    await wrapped.getFirstAsync("SELECT n FROM t;");
+    expect(native.getFirstAsync).toHaveBeenCalledTimes(1);
+    expect(native.getFirstAsync).toHaveBeenCalledWith("SELECT n FROM t;");
+  });
 });
