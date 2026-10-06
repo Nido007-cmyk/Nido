@@ -508,8 +508,10 @@ async function openAndMigrate(): Promise<SecureDbHandle> {
   const storedModel = await db.getFirstAsync<{ value: string }>(
     "SELECT value FROM meta WHERE key = 'embedding_model_sha256';"
   );
-  if (!storedModel) {
-    await db.runAsync("INSERT INTO meta (key, value) VALUES ('embedding_model_sha256', ?);", [expectedSha]);
+  // R1-2026-10-06: si no hay stamp (base nueva o fixture de test sin el
+  // campo), se estampa sin fallar. Solo se falla si hay un valor distinto.
+  if (!storedModel?.value) {
+    await db.runAsync("INSERT OR REPLACE INTO meta (key, value) VALUES ('embedding_model_sha256', ?);", [expectedSha]);
   } else if (storedModel.value !== expectedSha) {
     try {
       await db.closeAsync();

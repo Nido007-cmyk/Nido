@@ -266,7 +266,7 @@ vi.mock("expo-notifications", () => ({
 vi.mock("../inference/LlamaEngine", () => ({ llamaEngine: { unload: async () => {} } }));
 vi.mock("../rag/embed", () => ({ embeddingEngine: { unload: async () => {} } }));
 vi.mock("../rag/packs", () => ({ closeAllPacks: async () => {} }));
-vi.mock("./downloadManager", () => ({ resetDownloadState: () => {} }));
+vi.mock("./downloadManager", () => ({ resetDownloadState: () => {}, cancelAllDownloads: async () => {} }));
 
 // keyManager REAL con backend en memoria (más fiel que un mock): las claves
 // P2P se guardan/borran de verdad en el backend de prueba.
