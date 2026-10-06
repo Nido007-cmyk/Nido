@@ -567,7 +567,7 @@ export function buildToolHandlers(opts?: {
       },
     ),
   };
-  if (__DEV__) {
+  if (typeof __DEV__ !== "undefined" && __DEV__) {
     // Contrato manifiesto <-> handlers: ninguna herramienta declarada
     // debe quedarse sin implementación real.
     for (const tool of LOCAL_TOOLS) {

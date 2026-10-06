@@ -47,10 +47,8 @@ export class EmbeddingEngine {
       throw new Error(`Embedding model not found at ${modelPath}`);
     }
     const fileSizeBytes = (info as { size?: number }).size ?? 0;
-    await this.unloadNow();
-    // Same RAM pre-flight as the main LLM (src/inference/ramBudget.ts): a
-    // clear "this won't fit" message beats a native OOM crash. Best-effort —
-    // skipped when the native RAM readouts are unavailable.
+    // F2-2026-10-06: pre-flight ANTES de liberar el modelo actual (igual
+    // que LlamaEngine). Si el chequeo falla, se conserva el modelo en uso.
     const snapshot = readRamSnapshot();
     const verdict = snapshot ? checkRamBudget({ fileSizeBytes, nCtx: 512 }, snapshot) : null;
     if (verdict && !verdict.fits) {
@@ -60,6 +58,7 @@ export class EmbeddingEngine {
           `(of ${toGb(verdict.totalRamBytes)}GB total). Close background apps and retry.`
       );
     }
+    await this.unloadNow();
     this.context = await withStage("initLlama-embedding", () =>
       initLlama({
         model: modelPath,

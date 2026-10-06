@@ -73,14 +73,19 @@ export class LlamaEngine {
   // context, and the one overwritten in this.context was never released,
   // leaking a whole model's memory.
   private queue: Promise<void> = Promise.resolve();
-  // The completion currently running, if any. Releasing a context while it
-  // runs leaves its promise unsettled forever (the chat stays "generating"),
-  // so unload stops it and waits for it first.
-  private inFlight: Promise<unknown> | null = null;
+  // Completions currently running. Releasing a context while one runs
+  // leaves its promise unsettled forever (the chat stays "generating"),
+  // so unload stops them and waits for all first. F3-2026-10-06: es un
+  // conjunto, no una sola — generate() ahora va por la cola pero stop()
+  // puede interrumpir desde fuera.
+  private inFlight: Set<Promise<unknown>> = new Set();
 
-  private enqueue(task: () => Promise<void>): Promise<void> {
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
     const run = this.queue.then(task);
-    this.queue = run.catch(() => {});
+    this.queue = run.then(
+      () => {},
+      () => {}
+    );
     return run;
   }
 
@@ -127,17 +132,11 @@ export class LlamaEngine {
     }
     const fileSizeBytes = (info as { size?: number }).size ?? 0;
 
-    // Release any previously loaded model first (e.g. actually switching
-    // models from Settings) so we don't leak the old context's native memory.
-    await this.unloadNow();
-
-    // Pre-flight check: a clear "this probably won't fit" message beats a
-    // cryptic native failure or an outright OOM crash. The estimate comes
-    // from src/inference/ramBudget.ts (weights + computed KV cache +
-    // compute buffers, not a flat multiplier), using the model's cataloged
-    // architecture when known. Best-effort — if the native RAM readouts
-    // aren't available, we skip the check rather than block loading on
-    // missing data.
+    // F2-2026-10-06: pre-flight ANTES de liberar el modelo actual. Si el
+    // chequeo de RAM falla, el motor conserva el modelo en uso en vez de
+    // quedar sin ninguno. Se resta la huella estimada del modelo actual
+    // del RSS para evitar falsos negativos ("no cabe" cuando sí cabría
+    // tras liberar).
     const snapshot = readRamSnapshot();
     const spec = {
       fileSizeBytes,
@@ -154,6 +153,10 @@ export class LlamaEngine {
           `Try a smaller model from Settings > Tone & Model.`
       );
     }
+
+    // Release any previously loaded model (e.g. actually switching models
+    // from Settings) so we don't leak the old context's native memory.
+    await this.unloadNow();
 
     try {
       this.context = await withStage("initLlama", () =>
@@ -186,10 +189,11 @@ export class LlamaEngine {
 
   private async unloadNow() {
     // Stop takes effect between tokens, so a completion still processing its
-    // prompt can run on for a while; wait for it rather than release under it.
-    if (this.inFlight) {
+    // prompt can run on for a while; wait for all rather than release under
+    // them. F3-2026-10-06: espera al conjunto completo, no solo a la última.
+    if (this.inFlight.size > 0) {
       await this.context?.stopCompletion().catch(() => {});
-      await this.inFlight.catch(() => {});
+      await Promise.allSettled([...this.inFlight]);
     }
     const context = this.context;
     this.context = null;
@@ -214,6 +218,15 @@ export class LlamaEngine {
     return this.context?.isJinjaSupported() ?? false;
   }
 
+  /**
+   * F3-2026-10-06: generate() está serializado respecto a load()/unload()
+   * durante el *arranque* de la completion (la cola garantiza que no se
+   * interleavea con un unload). La espera de la completion ocurre FUERA de
+   * la cola: si generate() retuviera la cola mientras espera, un load()
+   * posterior (encolado detrás) nunca podría ejecutar su unloadNow() para
+   * detener la generación → deadlock. unloadNow() detiene y espera todas
+   * las completions en vuelo vía el conjunto inFlight.
+   */
   async generate({
     prompt,
     messages,
@@ -224,6 +237,26 @@ export class LlamaEngine {
     timeoutMs,
     onTimeout,
   }: GenerateOptions): Promise<string> {
+    const started = await this.enqueue(() => this.startCompletion({ prompt, messages, nPredict, temperature, onToken, stop, timeoutMs, onTimeout }));
+    try {
+      const { text } = await started.completion;
+      return text ?? started.getFull();
+    } finally {
+      this.inFlight.delete(started.completion);
+      if (started.timer) clearTimeout(started.timer);
+    }
+  }
+
+  private async startCompletion({
+    prompt,
+    messages,
+    nPredict = 512,
+    temperature = 0.7,
+    onToken,
+    stop,
+    timeoutMs,
+    onTimeout,
+  }: GenerateOptions): Promise<{ completion: Promise<{ text?: string }>; getFull: () => string; timer: ReturnType<typeof setTimeout> | null }> {
     if (!this.context) throw new Error("LlamaEngine: model not loaded");
     if (!prompt && !messages) {
       throw new Error("LlamaEngine.generate: either prompt or messages must be provided");
@@ -254,14 +287,8 @@ export class LlamaEngine {
       full += data.token;
       onToken?.(data.token);
     });
-    this.inFlight = completion;
-    try {
-      const { text } = await completion;
-      return text ?? full;
-    } finally {
-      if (this.inFlight === completion) this.inFlight = null;
-      if (timer) clearTimeout(timer);
-    }
+    this.inFlight.add(completion);
+    return { completion, getFull: () => full, timer };
   }
 
   /**

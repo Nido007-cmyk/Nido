@@ -99,7 +99,7 @@ type PackRow = { id: number; title: string; body: string; vec: Uint8Array; rank:
 /** Lexical and semantic candidates from every installed pack, scored like the built-in ones. */
 export async function searchPacks(
   query: string,
-  queryVec: Float32Array,
+  queryVec: Float32Array | null,
   limit: number
 ): Promise<{ lexical: RetrievedChunk[]; semantic: RetrievedChunk[] }> {
   const lexicalQuery = buildLexicalQuery(query);
@@ -126,14 +126,18 @@ export async function searchPacks(
         matchType,
       });
       lexical.push(...filterByTermCoverage(rows, lexicalQuery.terms).slice(0, limit).map((r) => toChunk(r, -r.rank, "lexical")));
-      const scored = rows.map((r) => toChunk(r, cosineSimilarityInt8(queryVec, r.vec), "semantic"));
-      scored.sort((a, b) => b.score - a.score);
-      // H1-2026-10-06: umbral más alto para queries de un solo término.
-      // "hola" (1 token, fuera del idioma del corpus) puntuaba 0.56 y pasaba
-      // el 0.45. Un solo término necesita evidencia más fuerte.
-      const termCount = lexicalQuery.terms.length;
-      const threshold = termCount <= 1 ? MIN_SEMANTIC_SIMILARITY_SINGLE_TERM : MIN_SEMANTIC_SIMILARITY;
-      semantic.push(...filterByMinScore(scored, threshold).slice(0, limit));
+      // F4-2026-10-06: sin queryVec (JSI de embedding ausente) se omite
+      // la parte semántica; solo resultados léxicos.
+      if (queryVec) {
+        const scored = rows.map((r) => toChunk(r, cosineSimilarityInt8(queryVec, r.vec), "semantic"));
+        scored.sort((a, b) => b.score - a.score);
+        // H1-2026-10-06: umbral más alto para queries de un solo término.
+        // "hola" (1 token, fuera del idioma del corpus) puntuaba 0.56 y pasaba
+        // el 0.45. Un solo término necesita evidencia más fuerte.
+        const termCount = lexicalQuery.terms.length;
+        const threshold = termCount <= 1 ? MIN_SEMANTIC_SIMILARITY_SINGLE_TERM : MIN_SEMANTIC_SIMILARITY;
+        semantic.push(...filterByMinScore(scored, threshold).slice(0, limit));
+      }
     } catch (e: any) {
       console.warn(`[packs] search failed in ${pack.id}:`, e?.message ?? e);
     }

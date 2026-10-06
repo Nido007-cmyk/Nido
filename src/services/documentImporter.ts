@@ -6,6 +6,7 @@ import { embeddingEngine } from "../rag/embed";
 import {
   getDbEpoch,
   insertChunk,
+  insertChunkWithoutEmbedding,
   createCustomCollection,
   deleteCustomCollection,
   setCustomCollectionActive,
@@ -197,8 +198,16 @@ export async function importDocuments(
   for (let i = 0; i < chunks.length; i++) {
     onProgress?.({ stage: "embedding", chunkIndex: i, chunkCount: chunks.length });
     const chunk = chunks[i];
-    const embedding = await embeddingEngine.embed(`${chunk.title}\n${chunk.body}`);
-    await insertChunk({ ...chunk, collectionId }, embedding, { lifecycleEpoch: runEpoch });
+    // F4-2026-10-06: si el JSI de embedding no está disponible, insertar
+    // sin embedding (FTS-only) en vez de fallar en duro.
+    try {
+      const embedding = await embeddingEngine.embed(`${chunk.title}\n${chunk.body}`);
+      await insertChunk({ ...chunk, collectionId }, embedding, { lifecycleEpoch: runEpoch });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!/native embedding unavailable/i.test(msg)) throw err;
+      await insertChunkWithoutEmbedding({ ...chunk, collectionId }, { lifecycleEpoch: runEpoch });
+    }
   }
 
   const collection: Omit<CustomCollection, "active" | "createdAt" | "lastAccessed"> = {

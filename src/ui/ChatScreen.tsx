@@ -402,7 +402,7 @@ export function ChatScreen({
   // until models are loaded, and leaves the request pending while a chat
   // reply is still generating.
   useEffect(() => {
-    if (!__DEV__ || !ready || deviceEvalRequest) return;
+    if (typeof __DEV__ === "undefined" || !__DEV__ || !ready || deviceEvalRequest) return;
     let cancelled = false;
     const check = async () => {
       if (cancelled || generatingRef.current) return;

@@ -41,11 +41,13 @@ interface SQLiteDatabase {
 }
 import { getDatabaseKeyHex } from "../privacy/keyManager";
 import {
+  assertDbHandleShape,
   DbLifecycleEndedError,
   deleteManagedDatabase,
   ensureEncryptedDatabase,
   getCurrentDriver,
   getWipeGate,
+  type SecureDbHandle,
 } from "./secureDatabase";
 import {
   MEMORY_DB_SCHEMA_VERSION,
@@ -229,12 +231,17 @@ async function openAndMigrate(): Promise<SQLiteDatabase> {
   // NO hay fallback a plaintext (corregido en commit ad1f82c).
   const encryptionKeyHex = await getDatabaseKeyHex();
 
-  const db = (await ensureEncryptedDatabase(DB_NAME, "databaseManager", {
+  // F1b-2026-10-06: tipar como SecureDbHandle + assertDbHandleShape en vez
+  // del cast amplio `as unknown as SQLiteDatabase` (el compilador no
+  // detectaría una deriva futura de la interfaz con el cast).
+  const rawDb = await ensureEncryptedDatabase(DB_NAME, "databaseManager", {
     dekHex: encryptionKeyHex ?? undefined,
     driver: getCurrentDriver(),
-  })) as unknown as SQLiteDatabase;
+  });
+  assertDbHandleShape(rawDb, "databaseManager.openAndMigrate");
+  const db = rawDb as SecureDbHandle;
 
-  if (!encryptionKeyHex && __DEV__) {
+  if (!encryptionKeyHex && typeof __DEV__ !== "undefined" && __DEV__) {
     console.warn(
       "[databaseManager] Sin clave de cifrado: la base vive en claro (solo dev)."
     );

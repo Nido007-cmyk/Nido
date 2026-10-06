@@ -18,7 +18,7 @@ vi.mock("llama.rn", () => ({
     maxConcurrentInits = Math.max(maxConcurrentInits, inFlightInits);
     await new Promise((r) => setTimeout(r, 5));
     inFlightInits--;
-    let finish: (() => void) | null = null;
+    const finishes: Array<() => void> = [];
     let generating = false;
     const ctx: FakeContext = {
       model,
@@ -33,14 +33,15 @@ vi.mock("llama.rn", () => ({
         new Promise((resolve) => {
           generating = true;
           onToken({ token: "Hi" });
-          finish = () =>
+          finishes.push(() =>
             setTimeout(() => {
               generating = false;
               resolve({ text: "Hi" });
-            }, 20);
+            }, 20)
+          );
         }),
       stopCompletion: async () => {
-        finish?.();
+        finishes.splice(0).forEach((f) => f());
       },
     };
     created.push(ctx);
@@ -118,6 +119,21 @@ describe("LlamaEngine load/unload", () => {
     expect(created[0].released).toBe(true);
     expect(created[0].releasedWhileGenerating).toBe(false);
     expect(engine.getModelInfo()?.filename).toBe("models/b.gguf");
+  });
+
+  it("F3-2026-10-06: two concurrent generate() calls both settle; unload waits for both", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    // Two generations started without awaiting — both must resolve (no hang),
+    // and unload must wait for both (no release while generating).
+    const r1 = engine.generate({ prompt: "one" });
+    const r2 = engine.generate({ prompt: "two" });
+    await engine.unload();
+    await expect(r1).resolves.toBe("Hi");
+    await expect(r2).resolves.toBe("Hi");
+    expect(created[0].released).toBe(true);
+    expect(created[0].releasedWhileGenerating).toBe(false);
+    expect(engine.isLoaded).toBe(false);
   });
 
   it("refuses to load with a clear RAM error when the model does not fit", async () => {

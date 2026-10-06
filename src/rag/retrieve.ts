@@ -106,10 +106,20 @@ async function semanticSearch(query: string, queryVec: Float32Array, limit: numb
  * whatever happened to be least-irrelevant.
  */
 export async function retrieve(query: string, topK = 6): Promise<RetrievedChunk[]> {
-  const queryVec = await embeddingEngine.embed(query);
+  // F4-2026-10-06: degradación graceful a FTS-only cuando el JSI de
+  // embedding no está disponible. seedCorpus ya soporta indexar sin
+  // embeddings; retrieve() no debe fallar en duro en ese mismo build.
+  let queryVec: Float32Array | null = null;
+  try {
+    queryVec = await embeddingEngine.embed(query);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!/native embedding unavailable/i.test(msg)) throw err;
+    // Sin embeddings: solo búsqueda léxica (built-in + packs).
+  }
   const [lexical, semantic, packs] = await Promise.all([
     lexicalSearch(query, topK * 2),
-    semanticSearch(query, queryVec, topK * 2),
+    queryVec ? semanticSearch(query, queryVec, topK * 2) : [],
     // Downloaded knowledge packs (src/rag/packs.ts); a failing pack is skipped, never fatal.
     searchPacks(query, queryVec, topK * 2).catch(() => ({ lexical: [], semantic: [] })),
   ]);
