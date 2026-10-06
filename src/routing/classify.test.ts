@@ -44,6 +44,45 @@ describe("classifyTask", () => {
     expect(classifyTask("turn on the lights")).not.toBe("greeting");
   });
 
+  // T-saludo-2026-10-06: la app es español-primero; "Hola" caía a "chat"
+  // y disparaba retrieval contra el índice offline ("Dol, Krško" 56% para
+  // un simple saludo). Los saludos en español deben clasificar "greeting".
+  it("detects Spanish greetings (T-saludo-2026-10-06)", () => {
+    expect(classifyTask("Hola")).toBe("greeting");
+    expect(classifyTask("¡Hola!")).toBe("greeting");
+    expect(classifyTask("hola")).toBe("greeting");
+    expect(classifyTask("hola, ¿qué tal?")).toBe("greeting");
+    expect(classifyTask("buenos días")).toBe("greeting");
+    expect(classifyTask("buen día")).toBe("greeting");
+    expect(classifyTask("buenas tardes")).toBe("greeting");
+    expect(classifyTask("buenas noches")).toBe("greeting");
+    expect(classifyTask("buenas")).toBe("greeting");
+    expect(classifyTask("¿cómo estás?")).toBe("greeting");
+    expect(classifyTask("qué pasa")).toBe("greeting");
+    expect(classifyTask("saludos")).toBe("greeting");
+    expect(classifyTask("gracias")).toBe("greeting");
+    expect(classifyTask("muchas gracias")).toBe("greeting");
+    expect(classifyTask("mil gracias")).toBe("greeting");
+    expect(classifyTask("de nada")).toBe("greeting");
+    expect(classifyTask("adiós")).toBe("greeting");
+    expect(classifyTask("adios")).toBe("greeting");
+    expect(classifyTask("hasta luego")).toBe("greeting");
+    expect(classifyTask("nos vemos")).toBe("greeting");
+    expect(classifyTask("hasta pronto")).toBe("greeting");
+    expect(classifyTask("hola y gracias")).toBe("greeting");
+  });
+
+  it("does not misclassify Spanish informational queries as greetings", () => {
+    expect(classifyTask("hola, ¿qué hora es?")).not.toBe("greeting");
+    expect(classifyTask("gracias por la información sobre Roma")).not.toBe("greeting");
+    expect(classifyTask("hola, explícame la fotosíntesis")).not.toBe("greeting");
+  });
+
+  it("Spanish greetings skip knowledge retrieval", () => {
+    expect(isRetrievalIrrelevant(classifyTask("Hola"))).toBe(true);
+    expect(isRetrievalIrrelevant(classifyTask("buenos días"))).toBe(true);
+  });
+
   // Regression: "hey, what's up?" (real device report, post-ad96592) was
   // classified as "chat" - the single-literal-phrase greeting regex never
   // matched a COMPOUND greeting (two phrases joined by a comma) - so

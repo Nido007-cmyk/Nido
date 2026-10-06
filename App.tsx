@@ -30,6 +30,7 @@ import {
   ensureUnlocked,
   lockNow,
 } from "./src/security/biometricGate";
+import { isPermissionFlowActive } from "./src/p2p/permissionGuard";
 
 const modelManager = new ModelManager();
 
@@ -215,8 +216,12 @@ function AppContent() {
 
   // Background → bloquear; foreground → volver al gate si se estaba en chat o setup.
   // GAP-2 fix: background durante required-setup también re-bloquea (antes solo chat).
+  // T-permiso-2026-10-06: un diálogo de permiso del sistema (p. ej.
+  // Bluetooth) pausa la Activity ("inactive") sin que el usuario haya
+  // salido de la app. No re-bloquear mientras ese flujo está activo.
   useEffect(() => {
     const sub = AppState.addEventListener("change", (s) => {
+      if (isPermissionFlowActive()) return;
       if (s === "background" || s === "inactive") {
         lockNow();
       } else if (s === "active" && (screenRef.current === "chat" || screenRef.current === "required-setup")) {

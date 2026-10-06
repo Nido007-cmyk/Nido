@@ -61,6 +61,7 @@ import {
   tieBreakKey,
 } from "./handshakeV3";
 import { encodeBase64, decodeBase64 } from "./base64";
+import { withPermissionRequest } from "./permissionGuard";
 
 /** Subconjunto estructural de los bindings de `nido-p2p` (sin expo en tests). */
 export interface NidoP2PBindings {
@@ -330,7 +331,10 @@ export class NidoBluetoothTransport implements P2PTransport {
     const b = this.bt();
     await this.ensureMyPk();
     if (!b.isBluetoothEnabled()) throw new Error("El Bluetooth está apagado.");
-    const granted = await b.requestPermissions();
+    // T-permiso-2026-10-06: el diálogo del sistema pausa la Activity; la
+    // bandera evita que el gate de App.tsx re-bloquee por esa pausa
+    // transitoria.
+    const granted = await withPermissionRequest(() => b.requestPermissions());
     if (!granted) throw new Error("NIDO necesita permisos de Bluetooth para hablar con otro NIDO.");
     // R4 §8.2: poda oportunista de la cache anti-replay al enlazar. Las
     // filas viejas corresponden a HELLOs que el chequeo de frescura

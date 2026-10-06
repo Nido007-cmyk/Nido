@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import {
   parseToolCalls,
   stripToolBlocks,
+  stripEchoedInstruction,
+  finalizeResponse,
   runAgentLoop,
   type AgentEngine,
 } from "./agentLoop";
@@ -201,5 +203,97 @@ describe("presupuesto de contexto (T-contexto-2026-10-06)", () => {
       })
     ).rejects.toThrow(/excede el contexto/);
     expect(engine.calls).toHaveLength(0);
+  });
+});
+
+describe("T-echo-2026-10-06: eco de la directiva interna", () => {
+  it("stripEchoedInstruction deja intacta una respuesta normal", () => {
+    expect(stripEchoedInstruction("Hola, ¿cómo estás?")).toBe("Hola, ¿cómo estás?");
+    expect(
+      stripEchoedInstruction("Listo, guardé el cumpleaños de tu mamá en mi memoria.")
+    ).toBe("Listo, guardé el cumpleaños de tu mamá en mi memoria.");
+  });
+
+  it("stripEchoedInstruction elimina el eco exacto (fuga vista en dispositivo)", () => {
+    const echo =
+      "Si ya tienes lo necesario, responde al usuario en español sin más bloques de herramienta.";
+    expect(stripEchoedInstruction(echo)).toBe("");
+  });
+
+  it("stripEchoedInstruction elimina el eco aunque cambie capitalización/puntuación", () => {
+    const echo =
+      "CONTINÚA: si ya tienes lo necesario responde al usuario en español, sin más bloques de herramienta!!!";
+    expect(stripEchoedInstruction(echo)).toBe("");
+  });
+
+  it("stripEchoedInstruction conserva la prosa y quita solo la oración eco", () => {
+    const mixed =
+      "Listo, lo guardé. Si ya tienes lo necesario, responde al usuario en español sin más bloques de herramienta.";
+    expect(stripEchoedInstruction(mixed)).toBe("Listo, lo guardé.");
+  });
+
+  it("stripEchoedInstruction elimina el eco de la directiva nueva entre corchetes", () => {
+    const echo =
+      "[directiva de formato: genera tu respuesta final al usuario en español; no emitas bloques de herramienta]";
+    expect(stripEchoedInstruction(echo)).toBe("");
+  });
+
+  it("finalizeResponse combina stripToolBlocks + stripEchoedInstruction", () => {
+    expect(finalizeResponse("Hola.")).toBe("Hola.");
+    expect(
+      finalizeResponse(
+        "Si ya tienes lo necesario, responde al usuario en español sin más bloques de herramienta."
+      )
+    ).toBeNull();
+    expect(finalizeResponse("   ")).toBeNull();
+  });
+
+  it("runAgentLoop reintenta una vez si el modelo solo repite la directiva", async () => {
+    const engine = fakeEngine([
+      "Si ya tienes lo necesario, responde al usuario en español sin más bloques de herramienta.",
+      "¡Hola! ¿Cómo estás?",
+    ]);
+    const result = await runAgentLoop("hola", {
+      engine,
+      handlers: {},
+      loadMemory: async () => null,
+    });
+    expect(result.response).toBe("¡Hola! ¿Cómo estás?");
+    expect(engine.calls).toHaveLength(2);
+    // El reintento lleva una instrucción mínima de reparación.
+    const repairMessages = (engine.calls[1][0] as { messages: { content: string }[] }).messages;
+    expect(repairMessages[repairMessages.length - 1].content).toContain("tu respuesta al usuario");
+  });
+
+  it("runAgentLoop usa la respuesta segura si el reintento también es eco", async () => {
+    const engine = fakeEngine([
+      "si ya tienes lo necesario, responde al usuario en español sin más bloques de herramienta",
+      "[directiva de formato: genera tu respuesta final al usuario en español; no emitas bloques de herramienta]",
+    ]);
+    const result = await runAgentLoop("hola", {
+      engine,
+      handlers: {},
+      loadMemory: async () => null,
+    });
+    expect(result.response).toBe("Listo.");
+    expect(engine.calls).toHaveLength(2);
+  });
+
+  it("la directiva inyectada tras herramientas ya no es una oración repetible", async () => {
+    const engine = fakeEngine([
+      '```tool\n{"name": "device_time", "arguments": {}}\n```',
+      "Son las 10:30.",
+    ]);
+    await runAgentLoop("¿qué hora es?", {
+      engine,
+      handlers: { device_time: async () => "2026-09-26T10:30:00" },
+      loadMemory: async () => null,
+    });
+    const secondCallMessages = (engine.calls[1][0] as { messages: { content: string }[] }).messages;
+    const injected = secondCallMessages[secondCallMessages.length - 1].content;
+    expect(injected).toContain("Observación de herramientas");
+    // La directiva nueva es meta-lingüística entre corchetes, no imperativo conversacional.
+    expect(injected).toContain("[directiva de formato:");
+    expect(injected).not.toMatch(/Continúa: si ya tienes lo necesario/);
   });
 });

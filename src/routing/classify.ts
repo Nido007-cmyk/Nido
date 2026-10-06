@@ -20,9 +20,11 @@ const PATTERNS: Array<{ type: TaskType; test: RegExp }> = [
 // Matches ONE greeting phrase, trailing punctuation only - not the whole
 // query. Anchored per-segment (see isGreeting below), not per-query: "hi,
 // can you compare X and Y" must NOT classify as greeting overall, but a
-// literal single phrase like "hi" must.
+// literal single phrase like "hi" must. Bilingual EN/ES: the app UI is
+// Spanish-first and "Hola" must not fall through to knowledge retrieval
+// (T-saludo-2026-10-06). Leading ¡/¿ allowed for Spanish usage ("¡Hola!").
 const GREETING_PHRASE_RE =
-  /^(hi|hello|hey|hey there|yo|sup|wake up|good (morning|afternoon|evening|night)|how(?:'s| is| are) it going|how are you|what'?s up|thanks?( you)?|thank you|bye|goodbye|see ya|see you|ok(ay)?|cool|nice)[!.?~]*$/i;
+  /^[¡¿]?(hi|hello|hey|hey there|yo|sup|wake up|good (morning|afternoon|evening|night)|how(?:'s| is| are) it going|how are you|what'?s up|thanks?( you)?|thank you|bye|goodbye|see ya|see you|ok(ay)?|cool|nice|hola|buen(os|as) d[ií]as|buen d[ií]a|buenas (tardes|noches)|buenas|qu[eé] tal|c[oó]mo (est[aá]s|est[aá]|vas?|te va)|qu[eé] (pasa|hay|cuentas)|saludos|adi[oó]s|hasta luego|nos vemos|hasta pronto|gracias|muchas gracias|mil gracias|de nada)[!.?~]*$/i;
 
 /**
  * A query counts as a pure greeting if it's made up ENTIRELY of greeting
@@ -36,7 +38,7 @@ const GREETING_PHRASE_RE =
  */
 function isGreeting(trimmed: string): boolean {
   const segments = trimmed
-    .split(/[,;]|\band\b/i)
+    .split(/[,;]|\band\b|\by\b/i)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
   return segments.length > 0 && segments.every((seg) => GREETING_PHRASE_RE.test(seg));

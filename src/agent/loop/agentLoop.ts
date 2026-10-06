@@ -130,6 +130,81 @@ export function stripToolBlocks(text: string): string {
   return text.replace(TOOL_CALL_RE, "").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+/**
+ * T-echo-2026-10-06: directiva de continuación tras observaciones de
+ * herramientas, en formato NO conversacional. La versión anterior era una
+ * oración imperativa natural ("Continúa: si ya tienes lo necesario,
+ * responde al usuario en español sin más bloques de herramienta") y el
+ * modelo pequeño (QWEN2.5-0.5B) la repetía como loro en su respuesta,
+ * fugándose al chat visible. El formato entre corchetes, terso y
+ * meta-lingüístico, reduce drásticamente esa probabilidad; la guardia
+ * `stripEchoedInstruction` (abajo) la elimina si aun así aparece.
+ */
+const CONTINUATION_DIRECTIVE =
+  "[directiva de formato: genera tu respuesta final al usuario en español; no emitas bloques de herramienta]";
+
+/** Instrucción mínima para el reintento de reparación (T-echo). */
+const REPAIR_DIRECTIVE = "[tu respuesta al usuario, en español]";
+
+/** Respuesta segura cuando el modelo no produce nada aprovechable. */
+const SAFE_FALLBACK_RESPONSE = "Listo.";
+
+/**
+ * Frases clave (normalizadas) que identifican un eco de la directiva
+ * interna de continuación. Puras y testeables.
+ */
+const ECHO_KEY_PHRASES = [
+  "bloques de herramienta",
+  "ya tienes lo necesario",
+  "directiva de formato",
+  "tu respuesta al usuario",
+];
+
+function normalizeForEcho(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * T-echo-2026-10-06: elimina ecos de la directiva interna de
+ * continuación. El modelo pequeño a veces repite la instrucción
+ * ("si ya tienes lo necesario, responde al usuario en español sin más
+ * bloques de herramienta") como si fuera su respuesta. Detección difusa:
+ * normaliza (minúsculas, sin diacríticos ni puntuación) y busca las
+ * frases clave; elimina las oraciones que las contengan. Devuelve el
+ * texto limpio, o "" si no queda nada aprovechable. Pura y testeable.
+ */
+export function stripEchoedInstruction(text: string): string {
+  if (!ECHO_KEY_PHRASES.some((p) => normalizeForEcho(text).includes(p))) {
+    return text.trim();
+  }
+  // Parte en oraciones conservando su puntuación final.
+  const sentences = text.match(/[^.!?\n]+[.!?]+|[^.!?\n]+/g) ?? [];
+  const kept = sentences
+    .map((s) => s.trim())
+    .filter((s) => {
+      if (!s) return false;
+      const n = normalizeForEcho(s);
+      return !ECHO_KEY_PHRASES.some((p) => n.includes(p));
+    });
+  return kept.join(" ").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Limpieza final de una respuesta del modelo: quita bloques de
+ * herramienta y ecos de la directiva interna. Devuelve null si no queda
+ * nada aprovechable. Pura y testeable.
+ */
+export function finalizeResponse(text: string): string | null {
+  const cleaned = stripEchoedInstruction(stripToolBlocks(text));
+  return cleaned.length > 0 ? cleaned : null;
+}
+
 function buildSystemPrompt(
   intent: AgentIntent,
   memoryText: string
@@ -268,14 +343,11 @@ export async function runAgentLoop(
     onConfirm: options.onConfirmTool,
   };
 
-  for (let step = 0; step < maxSteps; step++) {
-    // El loop acumula texto del asistente + observaciones en cada paso;
-    // verificar el presupuesto antes de cada generate para fallar con un
-    // error claro en vez del "Context is full" nativo (T-contexto-2026-10-06).
-    assertPromptBudget(messages, nCtx, nPredict, `paso ${step + 1}`);
-    let text: string;
+  // Generación con el error ya envuelto para la UI (reutilizada en el
+  // reintento de reparación T-echo).
+  const generateOnce = async (): Promise<string> => {
     try {
-      text = await engine.generate({
+      return await engine.generate({
         messages,
         nPredict,
         temperature: options.temperature ?? 0.7,
@@ -287,11 +359,25 @@ export async function runAgentLoop(
     } catch (e: unknown) {
       throw new Error(`NIDO: el modelo no pudo generar (${e instanceof Error ? e.message : String(e)})`);
     }
+  };
+
+  for (let step = 0; step < maxSteps; step++) {
+    // El loop acumula texto del asistente + observaciones en cada paso;
+    // verificar el presupuesto antes de cada generate para fallar con un
+    // error claro en vez del "Context is full" nativo (T-contexto-2026-10-06).
+    assertPromptBudget(messages, nCtx, nPredict, `paso ${step + 1}`);
+    const text = await generateOnce();
     lastText = text;
 
     const calls = parseToolCalls(text);
     if (calls.length === 0) {
-      return { response: stripToolBlocks(text), intent, toolUses };
+      const final = finalizeResponse(text);
+      if (final !== null) return { response: final, intent, toolUses };
+      // T-echo-2026-10-06: el modelo solo repitió la directiva interna.
+      // Un único reintento con instrucción mínima; si falla, respuesta segura.
+      messages.push({ role: "user", content: REPAIR_DIRECTIVE });
+      const retry = await generateOnce();
+      return { response: finalizeResponse(retry) ?? SAFE_FALLBACK_RESPONSE, intent, toolUses };
     }
 
     const observations: string[] = [];
@@ -317,10 +403,10 @@ export async function runAgentLoop(
     messages.push({ role: "assistant", content: text });
     messages.push({
       role: "user",
-      content: `Observación de herramientas:\n${observations.join("\n")}\n\nContinúa: si ya tienes lo necesario, responde al usuario en español sin más bloques de herramienta.`,
+      content: `Observación de herramientas:\n${observations.join("\n")}\n\n${CONTINUATION_DIRECTIVE}`,
     });
   }
 
   // Se agotaron los pasos con herramientas pendientes: devolver lo último limpio.
-  return { response: stripToolBlocks(lastText), intent, toolUses };
+  return { response: finalizeResponse(lastText) ?? SAFE_FALLBACK_RESPONSE, intent, toolUses };
 }
