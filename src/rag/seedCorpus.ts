@@ -176,8 +176,13 @@ async function seedNow(): Promise<void> {
     try {
       return await fn();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      throw new Error(`[seed-stage:${name}] ${msg}`);
+      // Preserve original error type (instanceof checks) — only prepend
+      // the stage tag to the message.
+      if (e instanceof Error) {
+        e.message = `[seed-stage:${name}] ${e.message}`;
+        throw e;
+      }
+      throw new Error(`[seed-stage:${name}] ${String(e)}`);
     }
   };
 

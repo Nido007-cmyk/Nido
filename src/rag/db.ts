@@ -152,8 +152,13 @@ async function getDbForEpoch(epoch: number): Promise<SQLite.SQLiteDatabase> {
     try {
       return await fn();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      throw new Error(`[seed-stage:getDb:${name}] ${msg}`);
+      // Preserve original error type (instanceof checks in tests) — only
+      // prepend the stage tag to the message.
+      if (e instanceof Error) {
+        e.message = `[seed-stage:getDb:${name}] ${e.message}`;
+        throw e;
+      }
+      throw new Error(`[seed-stage:getDb:${name}] ${String(e)}`);
     }
   };
   // Barrera de wipe (ver secureDatabase.getWipeGate): ni lecturas, ni
@@ -307,8 +312,13 @@ async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
     try {
       return await fn();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      throw new Error(`[seed-stage:getDb:openAndMigrate:${name}] ${msg}`);
+      // Preserve original error type (instanceof checks in tests) — only
+      // prepend the stage tag to the message.
+      if (e instanceof Error) {
+        e.message = `[seed-stage:getDb:openAndMigrate:${name}] ${e.message}`;
+        throw e;
+      }
+      throw new Error(`[seed-stage:getDb:openAndMigrate:${name}] ${String(e)}`);
     }
   };
   const keyHex = await ostage("getDatabaseKeyHex", async () => getDatabaseKeyHex());
