@@ -63,6 +63,7 @@ const fx = vi.hoisted(() => {
       },
       runAsync: async (sql: string, params?: unknown[]) => {
         runLog.push(`RUN ${sql} :: ${JSON.stringify(params ?? [])}`);
+        return { lastInsertRowId: 0, changes: 0 };
       },
       withTransactionAsync: async (fn: () => Promise<void>) => {
         await fn();

@@ -2,6 +2,7 @@ import * as SQLite from "expo-sqlite";
 import * as FileSystem from "expo-file-system/legacy";
 import { getDatabaseKeyHex } from "../privacy/keyManager";
 import {
+  assertDbHandleShape,
   DbLifecycleEndedError,
   deleteManagedDatabase,
   ensureEncryptedDatabase,
@@ -331,20 +332,18 @@ async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
   }))) as unknown as SQLite.SQLiteDatabase;
 
   // DIAGNOSTIC (2026-10-06): verificación explícita de que el handle
-  // devuelto expone execAsync ANTES de usarlo. El build d830374 falló aquí
+  // devuelto expone TODOS los métodos que openAndMigrate y el resto del
+  // código llaman sobre él ANTES de usarlo. El build d830374 falló aquí
   // en el dispositivo físico con "undefined is not a function" sin etiqueta
-  // de sub-stage (esta llamada está fuera de los ostage). Cadena a confirmar
-  // en Android: ensureEncryptedDatabase → DB handle → execAsync available
+  // de sub-stage (esta llamada está fuera de los ostage); el build bbfe047
+  // pasó el check parcial de execAsync y luego falló en db.runAsync(:486),
+  // que el wrapper SecureDbHandle no exponía. assertDbHandleShape verifica
+  // los 6 métodos de la interfaz (execAsync, getAllAsync, getFirstAsync,
+  // closeAsync, runAsync, withTransactionAsync). Cadena a confirmar en
+  // Android: ensureEncryptedDatabase → DB handle → all methods available
   // → openAndMigrate → schema created.
-  await ostage("execAsyncCheck", async () => {
-    const h = db as unknown as Record<string, unknown>;
-    if (typeof h["execAsync"] !== "function") {
-      throw new Error(
-        "db.execAsync is not a function — SecureDbHandle from " +
-          "ensureEncryptedDatabase lacks execAsync at runtime " +
-          "(expo-sqlite API shape mismatch on this build)",
-      );
-    }
+  await ostage("handleShapeCheck", async () => {
+    assertDbHandleShape(db, "ensureEncryptedDatabase (SecureDbHandle wrapper)");
   });
 
   // GOAL 2: si la inicialización del esquema falla (disco lleno, base

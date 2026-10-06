@@ -105,6 +105,7 @@ const fx = vi.hoisted(() => {
           signalEngaged?.();
           await writeHold;
         }
+        return { lastInsertRowId: 0, changes: 0 };
       },
       withTransactionAsync: async (fn: () => Promise<void>) => {
         await fn();

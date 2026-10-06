@@ -51,6 +51,16 @@ export interface SecureDbHandle {
   getAllAsync<T = Record<string, unknown>>(sql: string): Promise<T[]>;
   getFirstAsync<T = Record<string, unknown>>(sql: string): Promise<T | null>;
   closeAsync(): Promise<void>;
+  // 2026-10-06: el wrapper DEBE exponer todo lo que el código llama sobre el
+  // handle devuelto por ensureEncryptedDatabase/openEncryptedDatabase.
+  // Antes solo tenía los 4 métodos de arriba y db.ts:486 llamaba
+  // db.runAsync(...) → "undefined is not a function" en el dispositivo físico
+  // (el cast a SQLiteDatabase no agrega métodos que no existen).
+  runAsync(
+    sql: string,
+    params?: unknown[],
+  ): Promise<{ lastInsertRowId: number; changes: number }>;
+  withTransactionAsync(task: () => Promise<void>): Promise<void>;
 }
 
 export interface SecureDbDriver {
@@ -224,10 +234,31 @@ export function assertFileSystemShape(mod: unknown): void {
  * openDatabaseAsync (2026-10-06). Se llama en openDb() ANTES de envolver
  * el handle: si el objeto nativo no expone las APIs que NIDO utiliza,
  * falla aquí con un mensaje claro.
+ *
+ * Fuente única de verdad de los métodos que SecureDbHandle expone:
+ * SECURE_DB_HANDLE_METHODS (abajo). assertDbHandleShape y los regression
+ * tests la usan: si el código consumidor empieza a llamar un método nuevo,
+ * se agrega ahí (y a la interfaz y al wrapper) o la aserción/tests lo delatan.
+ * 2026-10-06: runAsync y withTransactionAsync se agregaron tras el fallo
+ * del build bbfe047 en el dispositivo físico ("undefined is not a
+ * function" en db.ts:486 — el wrapper no exponía runAsync).
  */
+export const SECURE_DB_HANDLE_METHODS = [
+  "execAsync",
+  "getAllAsync",
+  "getFirstAsync",
+  "closeAsync",
+  "runAsync",
+  "withTransactionAsync",
+] as const;
+
 export function assertDbHandleShape(db: unknown, where: string): void {
   const h = db as Record<string, unknown> | null | undefined;
-  const missing = ["execAsync", "getAllAsync", "getFirstAsync", "closeAsync"].filter(
+  // 2026-10-06: TODOS los métodos de SecureDbHandle, no solo los 4
+  // originales. El fallo bbfe047 en el dispositivo físico fue exactamente
+  // este: el check solo verificaba execAsync y el código luego llamaba
+  // runAsync (inexistente en el wrapper) → "undefined is not a function".
+  const missing = SECURE_DB_HANDLE_METHODS.filter(
     (k) => typeof h?.[k] !== "function",
   );
   if (missing.length > 0) {
@@ -237,6 +268,44 @@ export function assertDbHandleShape(db: unknown, where: string): void {
     );
   }
 }
+
+/**
+ * Envuelve el handle nativo de expo-sqlite en un SecureDbHandle.
+ * 2026-10-06: el wrapper DEBE exponer los 6 métodos de la interfaz —
+ * el build bbfe047 falló en el dispositivo físico porque faltaban
+ * runAsync y withTransactionAsync ("undefined is not a function" en
+ * db.ts:486). Exportada para que los regression tests verifiquen la
+ * delegación (argumentos, retorno y comportamiento transaccional).
+ */
+export function wrapSecureDbHandle(
+  db: Pick<
+    SQLite.SQLiteDatabase,
+    | "execAsync"
+    | "getAllAsync"
+    | "getFirstAsync"
+    | "closeAsync"
+    | "runAsync"
+    | "withTransactionAsync"
+  >,
+): SecureDbHandle {
+  // La forma del handle nativo ya se verificó con assertDbHandleShape
+  // antes de envolverlo (ver openDb en prodDriver).
+  return {
+    execAsync: (sql) => db.execAsync(sql),
+    getAllAsync: <T,>(sql: string) => db.getAllAsync<T>(sql),
+    getFirstAsync: <T,>(sql: string) => db.getFirstAsync<T>(sql),
+    closeAsync: () => db.closeAsync(),
+    runAsync: (sql, params) =>
+      params === undefined
+        ? db.runAsync(sql)
+        : db.runAsync(sql, params as SQLite.SQLiteBindParams),
+    withTransactionAsync: (task) => db.withTransactionAsync(task),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Driver de producción
+// ---------------------------------------------------------------------------
 
 /**
  * Driver de producción: expo-sqlite + expo-file-system vía import ES de
@@ -295,12 +364,7 @@ function prodDriver(): SecureDbDriver {
         // en openAndMigrate() con "undefined is not a function" porque el
         // handle no tenía execAsync en runtime.
         assertDbHandleShape(db, "expo-sqlite openDatabaseAsync");
-        return {
-          execAsync: (sql) => db.execAsync(sql),
-          getAllAsync: <T,>(sql: string) => db.getAllAsync<T>(sql),
-          getFirstAsync: <T,>(sql: string) => db.getFirstAsync<T>(sql),
-          closeAsync: () => db.closeAsync(),
-        };
+        return wrapSecureDbHandle(db);
       },
     };
   } catch (e) {

@@ -129,10 +129,16 @@ function makeHandle(dbPath: string) {
     },
     runAsync: async (sql: string, params?: unknown[]) => {
       if (params && params.length > 0) {
-        (sqlite.prepare(sql).run as (...a: unknown[]) => void)(...params);
-      } else {
-        sqlite.exec(sql);
+        const info = (
+          sqlite.prepare(sql).run as (...a: unknown[]) => {
+            changes: number;
+            lastInsertRowid: number;
+          }
+        )(...params);
+        return { lastInsertRowId: info.lastInsertRowid, changes: info.changes };
       }
+      sqlite.exec(sql);
+      return { lastInsertRowId: 0, changes: 0 };
     },
     withTransactionAsync: async (fn: () => Promise<void>) => {
       await fn();

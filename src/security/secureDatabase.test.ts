@@ -7,7 +7,8 @@
  * operaciones fail-closed y la recuperación. La semántica criptográfica REAL
  * se verifica en sqlcipherReal.test.ts contra SQLCipher 4.12 de verdad.
  */
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { SQLiteBindParams } from "expo-sqlite";
 import {
   assertDbHandleShape,
   assertFileSystemShape,
@@ -19,8 +20,10 @@ import {
   migratePlaintextToEncrypted,
   openEncryptedDatabase,
   recoverInterruptedMigration,
+  wrapSecureDbHandle,
   INTEGRITY_CHECK_SQL,
   SCHEMA_SQL,
+  SECURE_DB_HANDLE_METHODS,
   SQLCIPHER_EXPORT_SQL,
   VERIFY_READ_SQL,
   WAL_CHECKPOINT_SQL,
@@ -233,6 +236,21 @@ class FakeHandle implements SecureDbHandle {
 
   async closeAsync(): Promise<void> {
     this.closed = true;
+  }
+
+  // 2026-10-06: el wrapper real expone runAsync y withTransactionAsync;
+  // el fake debe implementarlos para seguir siendo un SecureDbHandle válido.
+  async runAsync(
+    _sql: string,
+    _params?: unknown[],
+  ): Promise<{ lastInsertRowId: number; changes: number }> {
+    if (this.closed) throw new Error("closed");
+    return { lastInsertRowId: 0, changes: 0 };
+  }
+
+  async withTransactionAsync(task: () => Promise<void>): Promise<void> {
+    if (this.closed) throw new Error("closed");
+    await task();
   }
 }
 
@@ -602,6 +620,14 @@ describe("verificación de forma del módulo SQLite en runtime (regresión 2026-
     getAllAsync: async (_sql: string) => [],
     getFirstAsync: async (_sql: string) => null,
     closeAsync: async () => {},
+    // 2026-10-06: el wrapper debe exponer TODO lo que el código llama.
+    // El build bbfe047 falló en el dispositivo físico porque runAsync
+    // no estaba en el wrapper ("undefined is not a function" en db.ts:486).
+    runAsync: async (_sql: string, _params?: unknown[]) => ({
+      lastInsertRowId: 0,
+      changes: 0,
+    }),
+    withTransactionAsync: async (_task: () => Promise<void>) => {},
   };
   const goodFs = {
     documentDirectory: "file:///docs/",
@@ -643,7 +669,7 @@ describe("verificación de forma del módulo SQLite en runtime (regresión 2026-
     expect(() => assertFileSystemShape(rest)).toThrow(/missing functions: moveAsync/);
   });
 
-  it("assertDbHandleShape acepta un handle con las 4 funciones", () => {
+  it("assertDbHandleShape acepta un handle con las 6 funciones", () => {
     expect(() => assertDbHandleShape(goodHandle, "test")).not.toThrow();
   });
 
@@ -656,11 +682,139 @@ describe("verificación de forma del módulo SQLite en runtime (regresión 2026-
 
   it("assertDbHandleShape lista todas las funciones faltantes", () => {
     expect(() => assertDbHandleShape({}, "test")).toThrow(
-      /missing functions: execAsync, getAllAsync, getFirstAsync, closeAsync/,
+      /missing functions: execAsync, getAllAsync, getFirstAsync, closeAsync, runAsync, withTransactionAsync/,
+    );
+  });
+
+  it("assertDbHandleShape rechaza un handle sin runAsync (el caso bbfe047)", () => {
+    // MODO DE FALLO EXACTO del build bbfe047 en el dispositivo físico:
+    // el check parcial solo verificaba execAsync, pasaba, y luego
+    // openAndMigrate() llamaba db.runAsync(...) (db.ts:486) sobre un
+    // wrapper que no lo exponía → "undefined is not a function" sin
+    // etiqueta de sub-stage. La aserción debe nombrar runAsync.
+    const { runAsync: _dropped, ...rest } = goodHandle;
+    expect(() => assertDbHandleShape(rest, "test")).toThrow(
+      /missing functions:.*runAsync/,
+    );
+  });
+
+  it("assertDbHandleShape rechaza un handle sin withTransactionAsync", () => {
+    // withTransactionAsync lo usan db.ts (writeTransaction) y
+    // databaseManager.ts; también faltaba en el wrapper.
+    const { withTransactionAsync: _dropped, ...rest } = goodHandle;
+    expect(() => assertDbHandleShape(rest, "test")).toThrow(
+      /missing functions:.*withTransactionAsync/,
     );
   });
 
   it("assertDbHandleShape rechaza null/undefined", () => {
     expect(() => assertDbHandleShape(null, "test")).toThrow(/missing functions/);
+  });
+
+  it("SECURE_DB_HANDLE_METHODS cubre cada método faltante (guardia anti-desincronía)", () => {
+    // Si el código consumidor empieza a llamar un método nuevo y alguien
+    // lo agrega a la interfaz + wrapper pero olvida la lista (o viceversa),
+    // este test lo delata: cada método de la lista, al faltar, debe hacer
+    // fallar la aserción nombrándolo.
+    expect(SECURE_DB_HANDLE_METHODS).toHaveLength(6);
+    for (const method of SECURE_DB_HANDLE_METHODS) {
+      const { [method]: _dropped, ...rest } = goodHandle;
+      expect(() => assertDbHandleShape(rest, "test")).toThrow(
+        new RegExp(`missing functions:.*${method}`),
+      );
+    }
+  });
+});
+
+describe("wrapSecureDbHandle delega al handle nativo (regresión 2026-10-06)", () => {
+  // Estos tests fijan que el wrapper preserve argumentos, retorno y
+  // comportamiento transaccional al delegar a la implementación SQLite
+  // subyacente. Si el wrapper vuelve a quedar fuera de sincronía con las
+  // operaciones que openAndMigrate/RAG usan, aquí se rompe primero.
+
+  // Mock con la forma del handle nativo (el cast es solo para salvar
+  // los overloads estrictos de bind-params de expo-sqlite en tipos; en
+  // runtime el objeto tiene exactamente los 6 métodos).
+  type NativeHandle = Parameters<typeof wrapSecureDbHandle>[0];
+  const makeNative = () =>
+    ({
+      execAsync: vi.fn(async (_sql: string) => {}),
+      getAllAsync: vi.fn(async (_sql: string) => [{ n: 1 }]),
+      getFirstAsync: vi.fn(async (_sql: string) => ({ n: 1 })),
+      closeAsync: vi.fn(async () => {}),
+      runAsync: vi.fn(async (_sql: string, _params?: unknown[]) => ({
+        lastInsertRowId: 7,
+        changes: 3,
+      })),
+      withTransactionAsync: vi.fn(async (task: () => Promise<void>) => {
+        await task();
+      }),
+    }) as unknown as NativeHandle & {
+      execAsync: ReturnType<typeof vi.fn>;
+      getAllAsync: ReturnType<typeof vi.fn>;
+      getFirstAsync: ReturnType<typeof vi.fn>;
+      closeAsync: ReturnType<typeof vi.fn>;
+      runAsync: ReturnType<typeof vi.fn>;
+      withTransactionAsync: ReturnType<typeof vi.fn>;
+    };
+
+  it("runAsync preserva sql, params y el retorno nativo", async () => {
+    const native = makeNative();
+    const wrapped = wrapSecureDbHandle(native);
+    const res = await wrapped.runAsync(
+      "INSERT INTO meta (key, value) VALUES (?, ?);",
+      ["schema_version", "1"],
+    );
+    expect(native.runAsync).toHaveBeenCalledTimes(1);
+    expect(native.runAsync).toHaveBeenCalledWith(
+      "INSERT INTO meta (key, value) VALUES (?, ?);",
+      ["schema_version", "1"],
+    );
+    expect(res).toEqual({ lastInsertRowId: 7, changes: 3 });
+  });
+
+  it("runAsync sin params llama al nativo sin params", async () => {
+    const native = makeNative();
+    const wrapped = wrapSecureDbHandle(native);
+    await wrapped.runAsync("DELETE FROM facts;");
+    expect(native.runAsync).toHaveBeenCalledTimes(1);
+    expect(native.runAsync).toHaveBeenCalledWith("DELETE FROM facts;");
+  });
+
+  it("withTransactionAsync ejecuta la tarea dentro de la transacción nativa", async () => {
+    const native = makeNative();
+    const wrapped = wrapSecureDbHandle(native);
+    const order: string[] = [];
+    await wrapped.withTransactionAsync(async () => {
+      order.push("task");
+    });
+    expect(native.withTransactionAsync).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(["task"]);
+  });
+
+  it("withTransactionAsync propaga el error de la tarea", async () => {
+    const native = makeNative();
+    native.withTransactionAsync = vi.fn(async (_task: () => Promise<void>) => {
+      throw new Error("tx falló");
+    });
+    const wrapped = wrapSecureDbHandle(native);
+    await expect(wrapped.withTransactionAsync(async () => {})).rejects.toThrow(
+      "tx falló",
+    );
+  });
+
+  it("el wrapper expone exactamente los métodos de SECURE_DB_HANDLE_METHODS", () => {
+    const native = makeNative();
+    const wrapped = wrapSecureDbHandle(native);
+    for (const method of SECURE_DB_HANDLE_METHODS) {
+      expect(
+        typeof (wrapped as unknown as Record<string, unknown>)[method],
+        `wrapper sin ${method}`,
+      ).toBe("function");
+    }
+    // Y la aserción acepta el wrapper resultante.
+    expect(() =>
+      assertDbHandleShape(wrapped, "wrapSecureDbHandle"),
+    ).not.toThrow();
   });
 });
