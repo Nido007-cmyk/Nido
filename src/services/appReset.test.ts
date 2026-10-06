@@ -94,7 +94,7 @@ const dbx = vi.hoisted(() => ({ failDeleteUnexpected: false }));
 vi.mock("../inference/LlamaEngine", () => ({ llamaEngine: { unload: async () => {} } }));
 vi.mock("../rag/embed", () => ({ embeddingEngine: { unload: async () => {} } }));
 vi.mock("../rag/packs", () => ({ closeAllPacks: async () => {} }));
-vi.mock("./downloadManager", () => ({ resetDownloadState: () => {} }));
+vi.mock("./downloadManager", () => ({ resetDownloadState: () => {}, cancelAllDownloads: async () => {} }));
 // R6/R13: se usa el nidoMessenger REAL (sin mocks): begin/completeP2PDataReset
 // son JS puro y el transporte por defecto en tests es el stub que falla
 // explícito; destroy() lo tolera (best-effort). Así se prueba el bloqueo
