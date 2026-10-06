@@ -251,6 +251,8 @@ export class NidoBluetoothTransport implements P2PTransport {
   private macToPk = new Map<string, string>();
   private pkToMac = new Map<string, string>();
   private pending = new Map<string, PendingHello>(); // MAC -> HELLO en curso
+  // H3-2026-10-06: flag para detener los reinicios de discovery.
+  private stopped = false;
   /**
    * B/F4: el apagado nativo es terminal y de un solo uso por instancia.
    * Una vez invocado, no se vuelve a tocar el bridge: si el primer intento
@@ -349,7 +351,10 @@ export class NidoBluetoothTransport implements P2PTransport {
         });
       }),
       b.addListener("onDiscoveryFinished", () => {
-        // v1: la UI no necesita este evento; el discovery sigue en segundo plano.
+        // H3-2026-10-06: el discovery nativo es one-shot (~12s). Reiniciar
+        // con backoff para que la lista de cercanos no se congele.
+        // El comentario anterior ("sigue en segundo plano") era falso.
+        this.scheduleDiscoveryRestart();
       }),
       b.addListener("onConnected", (e) => {
         void this.beginHello(e.address).catch((err: unknown) =>
@@ -374,11 +379,41 @@ export class NidoBluetoothTransport implements P2PTransport {
 
   async startDiscovery(events: P2PTransportEvents): Promise<void> {
     this.events = events;
+    this.stopped = false;
+    this.discoveryRestartCount = 0;
     await this.ensureLinked();
     await this.bt().startDiscovery();
   }
 
+  /**
+   * H3-2026-10-06: reinicia el discovery tras cada ciclo (~12s) con backoff
+   * exponencial (máx 30s) para no drenar la batería. Se detiene si el
+   * usuario llamó a stopDiscovery() explícitamente.
+   */
+  private discoveryRestartCount = 0;
+  private discoveryRestartTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private scheduleDiscoveryRestart(): void {
+    if (this.stopped) return;
+    this.discoveryRestartCount++;
+    const delayMs = Math.min(2000 * Math.pow(1.5, this.discoveryRestartCount - 1), 30000);
+    if (this.discoveryRestartTimer) clearTimeout(this.discoveryRestartTimer);
+    this.discoveryRestartTimer = setTimeout(() => {
+      this.discoveryRestartTimer = null;
+      if (this.stopped) return;
+      this.bt().startDiscovery().catch(() => {
+        // Si falla, reintentar en el próximo ciclo.
+      });
+    }, delayMs);
+  }
+
   async stopDiscovery(): Promise<void> {
+    // H3: detener los reinicios programados.
+    this.stopped = true;
+    if (this.discoveryRestartTimer) {
+      clearTimeout(this.discoveryRestartTimer);
+      this.discoveryRestartTimer = null;
+    }
     const b = this.bindings;
     for (const unsub of this.unsubs) {
       try {
