@@ -146,17 +146,27 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
  * handle usable después de que reset avance el ciclo de vida a N+1.
  */
 async function getDbForEpoch(epoch: number): Promise<SQLite.SQLiteDatabase> {
+  // DIAGNOSTIC (2026-10-05): fine-grained stages to find "undefined is not
+  // a function" inside getDb(). TODO: remove once root cause fixed.
+  const dstage = async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
+    try {
+      return await fn();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`[seed-stage:getDb:${name}] ${msg}`);
+    }
+  };
   // Barrera de wipe (ver secureDatabase.getWipeGate): ni lecturas, ni
   // aperturas, ni DDL atraviesan un Clear All Data en curso; esperan a que
   // termine y actúan ya en el ciclo nuevo (o fallan si el wipe falló).
-  const gate = getWipeGate();
+  const gate = await dstage("getWipeGate", async () => getWipeGate());
   if (gate) await gate;
   if (epoch !== dbEpoch) {
     throw new DbLifecycleEndedError(DB_NAME);
   }
   if (!dbPromise) {
     dbOpenEpoch = epoch;
-    const fresh = openAndMigrate();
+    const fresh = dstage("openAndMigrate", async () => openAndMigrate());
     dbPromise = fresh;
     // No cachear un rechazo para siempre: si esta apertura falla, se limpia
     // el slot para que la próxima llamada reintente en vez de recibir una
@@ -292,14 +302,23 @@ export async function resetDatabase(): Promise<void> {
 async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
   // Misma clave Keystore que la base de memoria (ver keyManager).
   // En prod sin SecureStore lanza: fail-closed.
-  const keyHex = await getDatabaseKeyHex();
+  // DIAGNOSTIC (2026-10-05): wrap each step to find "undefined is not a function".
+  const ostage = async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
+    try {
+      return await fn();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`[seed-stage:getDb:openAndMigrate:${name}] ${msg}`);
+    }
+  };
+  const keyHex = await ostage("getDatabaseKeyHex", async () => getDatabaseKeyHex());
   // Antes de abrir: mueve el fichero heredado pre-rebrand si existe, para
   // conservar el índice sin re-embedding.
-  await migrateLegacyKnowledgeDb();
+  await ostage("migrateLegacyKnowledgeDb", async () => migrateLegacyKnowledgeDb());
   // Apertura cifrada con migración plaintext→SQLCipher fail-closed.
-  const db = (await ensureEncryptedDatabase(DB_NAME, "rag/db", {
+  const db = (await ostage("ensureEncryptedDatabase", async () => ensureEncryptedDatabase(DB_NAME, "rag/db", {
     dekHex: keyHex,
-  })) as unknown as SQLite.SQLiteDatabase;
+  }))) as unknown as SQLite.SQLiteDatabase;
 
   // GOAL 2: si la inicialización del esquema falla (disco lleno, base
   // corrupta), no filtrar el handle nativo y no dejar la promesa cacheada
