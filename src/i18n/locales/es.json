@@ -114,7 +114,9 @@
     "remove": "Eliminar",
     "retry": "Reintentar",
     "languageSection": "IDIOMA",
-    "confirm": "Confirmar"
+    "confirm": "Confirmar",
+    "yes": "Sí",
+    "no": "No"
   },
   "corpusSettingsTab": {
     "downloadablePacks": "Paquetes de conocimiento descargables",
@@ -627,7 +629,8 @@
     "retryRefusedUserCancelled": "No reintentado: cancelaste este mensaje.",
     "resendCancelledTitle": "¿Enviar de nuevo como mensaje nuevo?",
     "resendCancelledMessage": "Cancelaste este mensaje. ¿Enviarlo de nuevo como mensaje NUEVO? El mensaje cancelado sigue cancelado.",
-    "errorLabel": "Error"
+    "errorLabel": "Error",
+    "identityError": "No se pudo crear la identidad: {{error}}"
   },
   "notifications": {
     "reminderChannel": "Recordatorios de NIDO",
@@ -813,5 +816,9 @@
     "noPeersMessage": "Necesitas al menos un contacto emparejado para compartir packs.",
     "offerFailedTitle": "No se pudo enviar",
     "offerFailedMessage": "No se pudo crear la oferta. Verifica la conexión con el peer."
+  },
+  "voiceInputAlert": {
+    "unavailableTitle": "Entrada de voz no disponible",
+    "unavailableMessage": "No se encontró un servicio de reconocimiento de voz en este dispositivo (común en GrapheneOS / builds sin Google). Escribe tu pregunta en su lugar."
   }
 }

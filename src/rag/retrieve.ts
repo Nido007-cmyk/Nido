@@ -7,6 +7,7 @@ import {
   filterByTermCoverage,
   fuseRetrievalResults,
   MIN_SEMANTIC_SIMILARITY,
+  MIN_SEMANTIC_SIMILARITY_SINGLE_TERM,
 } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
 import { searchPacks } from "./packs";
@@ -55,7 +56,7 @@ async function lexicalSearch(query: string, limit: number): Promise<RetrievedChu
 }
 
 /** Brute-force cosine search over stored embeddings; fine at knowledge-base scale on-device. */
-async function semanticSearch(queryVec: Float32Array, limit: number): Promise<RetrievedChunk[]> {
+async function semanticSearch(query: string, queryVec: Float32Array, limit: number): Promise<RetrievedChunk[]> {
   const db = await getDb();
 
   const rows = await db.getAllAsync<{
@@ -89,7 +90,10 @@ async function semanticSearch(queryVec: Float32Array, limit: number): Promise<Re
   });
 
   scored.sort((a, b) => b.score - a.score);
-  return filterByMinScore(scored, MIN_SEMANTIC_SIMILARITY).slice(0, limit);
+  // H1-2026-10-06: umbral más alto para queries de un solo término.
+  const termCount = query.trim().split(/\s+/).filter(Boolean).length;
+  const threshold = termCount <= 1 ? MIN_SEMANTIC_SIMILARITY_SINGLE_TERM : MIN_SEMANTIC_SIMILARITY;
+  return filterByMinScore(scored, threshold).slice(0, limit);
 }
 
 /**
@@ -105,7 +109,7 @@ export async function retrieve(query: string, topK = 6): Promise<RetrievedChunk[
   const queryVec = await embeddingEngine.embed(query);
   const [lexical, semantic, packs] = await Promise.all([
     lexicalSearch(query, topK * 2),
-    semanticSearch(queryVec, topK * 2),
+    semanticSearch(query, queryVec, topK * 2),
     // Downloaded knowledge packs (src/rag/packs.ts); a failing pack is skipped, never fatal.
     searchPacks(query, queryVec, topK * 2).catch(() => ({ lexical: [], semantic: [] })),
   ]);

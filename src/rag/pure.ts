@@ -52,6 +52,13 @@ export function cosineSimilarityInt8(query: Float32Array, bytes: Uint8Array): nu
 export const MIN_SEMANTIC_SIMILARITY = 0.45;
 
 /**
+ * H1-2026-10-06: umbral para queries de un solo término. Un solo token
+ * fuera del idioma del corpus puede puntuar 0.56 por azar ("hola" →
+ * pueblo esloveno); exigir más evidencia en ese caso.
+ */
+export const MIN_SEMANTIC_SIMILARITY_SINGLE_TERM = 0.70;
+
+/**
  * Chunks given to the model for a chat answer. Each chunk adds prompt
  * processing before the first token (the main wait on a phone). In the
  * 2026-09-24 device benchmark every expected article was retrieved at rank

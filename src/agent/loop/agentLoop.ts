@@ -127,7 +127,13 @@ export function parseToolCalls(text: string): ParsedToolCall[] {
 
 /** Quita los bloques ```tool del texto visible para el usuario. Puro. */
 export function stripToolBlocks(text: string): string {
-  return text.replace(TOOL_CALL_RE, "").replace(/\n{3,}/g, "\n\n").trim();
+  // H10-2026-10-06: también quitar bloques sin cerrar (generación cortada
+  // a mitad de bloque) — antes se renderizaban visibles.
+  return text
+    .replace(TOOL_CALL_RE, "")
+    .replace(/```tool[\s\S]*$/, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /**

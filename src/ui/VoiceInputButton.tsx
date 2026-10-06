@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, Text, StyleSheet, Animated, Alert, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { NidoIcon } from "./components/icons/NidoIcon";
@@ -63,6 +64,7 @@ function AuraRing({ active, delay }: { active: boolean; delay: number }) {
  * pretending to listen.
  */
 export function VoiceInputButton({ disabled, onTranscript }: Props) {
+  const { t } = useTranslation();
   const [available, setAvailable] = useState<boolean | null>(null);
   const [listening, setListening] = useState(false);
   const pulse = useRef(new Animated.Value(1)).current;
@@ -89,9 +91,8 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
   const handlePress = async () => {
     if (available === false) {
       Alert.alert(
-        "Voice input unavailable",
-        "No on-device speech recognition service was found on this device " +
-          "(common on GrapheneOS / de-Googled builds). Type your question instead."
+        t("voiceInputAlert.unavailableTitle"),
+        t("voiceInputAlert.unavailableMessage")
       );
       return;
     }

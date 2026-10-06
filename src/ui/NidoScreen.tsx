@@ -107,6 +107,9 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("chats");
   const [myCode, setMyCode] = useState("");
   const [fingerprint, setFingerprint] = useState("");
+  // H4-2026-10-06: error visible si la identidad falla por algo que no sea
+  // pérdida de claves (antes: spinner eterno con myCode === "").
+  const [identityError, setIdentityError] = useState<string | null>(null);
   const [contacts, setContacts] = useState<P2PContact[]>([]);
   const [online, setOnline] = useState<Set<string>>(new Set());
   const [nearby, setNearby] = useState<string[]>([]);
@@ -167,32 +170,39 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   }, []);
 
   // Identidad + código de emparejamiento (una vez).
-  useEffect(() => {
-    (async () => {
-      try {
-        const m = mRef.current;
-        const id = await m.ensureIdentity();
-        setFingerprint(id.fingerprint);
-        setMyCode(await m.myPairingCode());
-        await loadContacts();
-        // Wire negotiationService send function to the shared messenger.
-        // This enables Accept/Decline/Counter to send signed responses to peers.
-        const { negotiationService } = await import("../p2p/negotiationService");
-        negotiationService.setLocalIdentity(id.pkHex);
-        negotiationService.setSendFunction(
-          (peerPkHex, action, negotiationId, signed) =>
-            m.sendNegotiationResponse(peerPkHex, action, negotiationId, signed)
-        );
-      } catch (e) {
-        // F-2: pérdida de claves de identidad → recovery honesto, no
-        // first-run falso ni regeneración silenciosa.
-        if (routeIdentityBootstrapError(e) === "p2p-identity-loss") {
-          setIdentityKeyLoss(e as P2PIdentityKeyLossError);
-        }
-        /* otros errores: comportamiento previo (sin identidad, sin código) */
+  // H4: extraído a función para permitir reintento desde la UI.
+  const bootstrapIdentity = useCallback(async () => {
+    setIdentityError(null);
+    try {
+      const m = mRef.current;
+      const id = await m.ensureIdentity();
+      setFingerprint(id.fingerprint);
+      setMyCode(await m.myPairingCode());
+      await loadContacts();
+      // Wire negotiationService send function to the shared messenger.
+      // This enables Accept/Decline/Counter to send signed responses to peers.
+      const { negotiationService } = await import("../p2p/negotiationService");
+      negotiationService.setLocalIdentity(id.pkHex);
+      negotiationService.setSendFunction(
+        (peerPkHex, action, negotiationId, signed) =>
+          m.sendNegotiationResponse(peerPkHex, action, negotiationId, signed)
+      );
+    } catch (e) {
+      // F-2: pérdida de claves de identidad → recovery honesto, no
+      // first-run falso ni regeneración silenciosa.
+      if (routeIdentityBootstrapError(e) === "p2p-identity-loss") {
+        setIdentityKeyLoss(e as P2PIdentityKeyLossError);
+      } else {
+        // H4-2026-10-06: cualquier otro error → estado visible con reintento,
+        // no spinner eterno.
+        setIdentityError(e instanceof Error ? e.message : String(e));
       }
-    })();
+    }
   }, [loadContacts]);
+
+  useEffect(() => {
+    void bootstrapIdentity();
+  }, [bootstrapIdentity]);
 
   // Enlace P2P activo mientras la pantalla está abierta.
   useEffect(() => {
@@ -841,7 +851,23 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{t("nido.myCodeTitle")}</Text>
             <Text style={styles.paragraph}>{t("nido.myCodeBody")}</Text>
-            {myCode ? <QrGrid text={myCode} /> : <ActivityIndicator />}
+            {myCode ? (
+              <QrGrid text={myCode} />
+            ) : identityError ? (
+              <View>
+                <Text style={styles.paragraph}>{t("nido.identityError", { error: identityError })}</Text>
+                <Pressable
+                  onPress={() => void bootstrapIdentity()}
+                  style={styles.secondaryBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("common.retry")}
+                >
+                  <Text>{t("common.retry")}</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <ActivityIndicator />
+            )}
             <Text style={styles.fingerprint}>{fingerprint}</Text>
             <Pressable
               onPress={() => void copy(myCode, t("nido.codeLabel"))}

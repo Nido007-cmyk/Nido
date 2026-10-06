@@ -11,7 +11,7 @@
 import * as SQLite from "expo-sqlite";
 import * as FileSystem from "expo-file-system/legacy";
 import { CORPUS_CATALOG, MODEL_CATALOG, CatalogModel } from "../models/manifest";
-import { buildLexicalQuery, cosineSimilarityInt8, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY } from "./pure";
+import { buildLexicalQuery, cosineSimilarityInt8, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
 
 const PACK_CANDIDATES = 400;
@@ -128,7 +128,12 @@ export async function searchPacks(
       lexical.push(...filterByTermCoverage(rows, lexicalQuery.terms).slice(0, limit).map((r) => toChunk(r, -r.rank, "lexical")));
       const scored = rows.map((r) => toChunk(r, cosineSimilarityInt8(queryVec, r.vec), "semantic"));
       scored.sort((a, b) => b.score - a.score);
-      semantic.push(...filterByMinScore(scored, MIN_SEMANTIC_SIMILARITY).slice(0, limit));
+      // H1-2026-10-06: umbral más alto para queries de un solo término.
+      // "hola" (1 token, fuera del idioma del corpus) puntuaba 0.56 y pasaba
+      // el 0.45. Un solo término necesita evidencia más fuerte.
+      const termCount = lexicalQuery.terms.length;
+      const threshold = termCount <= 1 ? MIN_SEMANTIC_SIMILARITY_SINGLE_TERM : MIN_SEMANTIC_SIMILARITY;
+      semantic.push(...filterByMinScore(scored, threshold).slice(0, limit));
     } catch (e: any) {
       console.warn(`[packs] search failed in ${pack.id}:`, e?.message ?? e);
     }

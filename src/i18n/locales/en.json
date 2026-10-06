@@ -8,7 +8,9 @@
     "retry": "Retry",
     "dismiss": "Dismiss",
     "languageSection": "LANGUAGE",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No"
   },
   "time": {
     "justNow": "just now",
@@ -627,7 +629,8 @@
     "resendCancelledTitle": "Send again as a new message?",
     "resendCancelledMessage": "You cancelled this message. Send it again as a NEW message? The cancelled message stays cancelled.",
     "errorLabel": "Error",
-    "tabPacks": "Packs"
+    "tabPacks": "Packs",
+    "identityError": "Could not create identity: {{error}}"
   },
   "notifications": {
     "reminderChannel": "NIDO Reminders",
@@ -813,5 +816,9 @@
     "noPeersMessage": "You need at least one paired contact to share packs.",
     "offerFailedTitle": "Could not send",
     "offerFailedMessage": "Could not create the offer. Check the connection with the peer."
+  },
+  "voiceInputAlert": {
+    "unavailableTitle": "Voice input unavailable",
+    "unavailableMessage": "No on-device speech recognition service was found on this device (common on GrapheneOS / de-Googled builds). Type your question instead."
   }
 }

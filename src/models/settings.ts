@@ -258,12 +258,19 @@ export async function setFontScale(scale: FontScale): Promise<void> {
 }
 
 /**
- * Language used when the user hasn't picked one explicitly: English.
- * NIDO is English-first — the device locale does not change the default.
- * Spanish and Portuguese remain fully user-selectable via Settings →
- * Language, and the choice is persisted. No network involved.
+ * Language used when the user hasn't picked one explicitly.
+ * H7-2026-10-06: detect the device locale via Intl (no native dependency);
+ * default to Spanish on es-* devices, Portuguese on pt-*, English otherwise.
+ * The user can still override via Settings → Language (persisted).
  */
 export function deviceDefaultLanguage(): LanguageId {
+  try {
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale.toLowerCase();
+    if (locale.startsWith("es")) return "es";
+    if (locale.startsWith("pt")) return "pt";
+  } catch {
+    // Intl unavailable: fall through to English default.
+  }
   return "en";
 }
 

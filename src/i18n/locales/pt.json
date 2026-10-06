@@ -8,7 +8,9 @@
     "retry": "Tentar novamente",
     "dismiss": "Dispensar",
     "languageSection": "IDIOMA",
-    "confirm": "Confirmar"
+    "confirm": "Confirmar",
+    "yes": "Sim",
+    "no": "Não"
   },
   "time": {
     "justNow": "agora mesmo",
@@ -627,7 +629,8 @@
     "resendCancelledTitle": "Enviar novamente como nova mensagem?",
     "resendCancelledMessage": "Você cancelou esta mensagem. Enviar novamente como NOVA mensagem? A mensagem cancelada continua cancelada.",
     "errorLabel": "Erro",
-    "tabPacks": "Packs"
+    "tabPacks": "Packs",
+    "identityError": "Não foi possível criar a identidade: {{error}}"
   },
   "notifications": {
     "reminderChannel": "Lembretes do NIDO",
@@ -800,5 +803,9 @@
     "noPeersMessage": "Você precisa de pelo menos um contato emparelhado para compartilhar packs.",
     "offerFailedTitle": "Não foi possível enviar",
     "offerFailedMessage": "Não foi possível criar a oferta. Verifique a conexão com o peer."
+  },
+  "voiceInputAlert": {
+    "unavailableTitle": "Entrada de voz indisponível",
+    "unavailableMessage": "Nenhum serviço de reconhecimento de voz foi encontrado neste dispositivo (comum em GrapheneOS / builds sem Google). Digite sua pergunta."
   }
 }

@@ -382,7 +382,7 @@ export function UsageStatsContent() {
               <TelemetryRow label={t("usageStats.taskType")} value={stats.taskType ?? "—"} />
               <TelemetryRow
                 label={t("usageStats.retrievalUsed")}
-                value={stats.retrievalUsed ? "Yes" : "No"}
+                value={stats.retrievalUsed ? t("common.yes") : t("common.no")}
               />
               <TelemetryRow
                 label={t("usageStats.switches")}
@@ -390,7 +390,7 @@ export function UsageStatsContent() {
               />
               <TelemetryRow
                 label={t("usageStats.switchedSince")}
-                value={stats.crossMessageModelSwitch ? "Yes" : "No"}
+                value={stats.crossMessageModelSwitch ? t("common.yes") : t("common.no")}
                 highlight={stats.crossMessageModelSwitch ? colors.text.accentCyan : undefined}
               />
               {stats.generationLatencyMs != null && (
