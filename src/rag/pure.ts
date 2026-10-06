@@ -249,7 +249,10 @@ export function fuseRetrievalResults(
     out.push(c);
     if (out.length >= topK) break;
   }
-  return out;
+  // H2-2026-10-06: gate absoluto post-fusión. La fusión es re-ranking
+  // relativo; un chunk semántico con rawScore bajo (pero "mejor de un mal
+  // lote") no debe llegar al prompt del modelo.
+  return out.filter((c) => c.rawScore === undefined || c.rawScore >= MIN_SEMANTIC_SIMILARITY);
 }
 
 export const MAX_CHUNKS_PER_ARTICLE = 2;

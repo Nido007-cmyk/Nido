@@ -334,13 +334,32 @@ export function assertPromptBudget(
   }
 }
 
+/**
+ * H5-2026-10-06: nPredict adaptativo según el contexto disponible.
+ * Reserva un mínimo para el prompt ya acumulado; nunca pide más de lo
+ * que cabe. Mínimo 64 tokens para que el modelo pueda responder algo útil.
+ */
+export function adaptiveNPredict(
+  messages: ChatMessageInput[],
+  nCtx: number,
+  maxNPredict: number
+): number {
+  const used = estimatePromptTokens(messages.map((m) => m.content).join("\n"));
+  const available = nCtx - used;
+  // Dejar margen de 64 tokens para no pegarse al límite exacto.
+  return Math.max(64, Math.min(maxNPredict, available - 64));
+}
+
 export async function runAgentLoop(
   userText: string,
   options: AgentLoopOptions
 ): Promise<AgentLoopResult> {
   const { engine, handlers, maxSteps = DEFAULT_MAX_STEPS } = options;
   const nCtx = options.nCtx ?? 4096;
-  const nPredict = options.nPredict ?? 512;
+  // H5-2026-10-06: nPredict adaptativo. Con un sistema de ~1790 tokens y
+  // nPredict=2048, solo quedan ~258 tokens para memoria+query+herramientas
+  // (acantilado de presupuesto). Se calcula por paso según lo disponible.
+  const maxNPredict = options.nPredict ?? 512;
   const intent = classifyIntent(userText);
   const mem = await options.loadMemory?.().catch(() => null);
 
@@ -355,10 +374,10 @@ export async function runAgentLoop(
   // generate con "Context is full" (T-contexto-2026-10-06).
   let messages = buildMessages(mem ? formatMemoryText(mem) : "");
   try {
-    assertPromptBudget(messages, nCtx, nPredict, "inicio");
+    assertPromptBudget(messages, nCtx, adaptiveNPredict(messages, nCtx, maxNPredict), "inicio");
   } catch {
     messages = buildMessages("");
-    assertPromptBudget(messages, nCtx, nPredict, "inicio (sin memoria)");
+    assertPromptBudget(messages, nCtx, adaptiveNPredict(messages, nCtx, maxNPredict), "inicio (sin memoria)");
   }
 
   const toolUses: AgentToolUse[] = [];
@@ -380,7 +399,8 @@ export async function runAgentLoop(
     try {
       return await engine.generate({
         messages,
-        nPredict,
+        // H5: nPredict adaptativo por paso (el prompt crece con observaciones).
+        nPredict: adaptiveNPredict(messages, nCtx, maxNPredict),
         temperature: options.temperature ?? 0.7,
         timeoutMs: options.timeoutMs,
         // Nota: los pasos intermedios también stremean (incluyen los
@@ -396,7 +416,8 @@ export async function runAgentLoop(
     // El loop acumula texto del asistente + observaciones en cada paso;
     // verificar el presupuesto antes de cada generate para fallar con un
     // error claro en vez del "Context is full" nativo (T-contexto-2026-10-06).
-    assertPromptBudget(messages, nCtx, nPredict, `paso ${step + 1}`);
+    // H5: con nPredict adaptativo.
+    assertPromptBudget(messages, nCtx, adaptiveNPredict(messages, nCtx, maxNPredict), `paso ${step + 1}`);
     const text = await generateOnce();
     lastText = text;
 
