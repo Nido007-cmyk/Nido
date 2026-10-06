@@ -1,5 +1,5 @@
 import * as FileSystem from "expo-file-system/legacy";
-import { getDb, getDbEpoch, insertChunk, ChunkRecord } from "./db";
+import { getDb, getDbEpoch, insertChunk, insertChunkWithoutEmbedding, ChunkRecord } from "./db";
 import { embeddingEngine } from "./embed";
 import minimumCorpus from "../../assets/corpus/corpus.json";
 import { CORPUS_CATALOG } from "../models/manifest";
@@ -219,7 +219,23 @@ async function seedNow(): Promise<void> {
       body: doc.body,
       source: doc.source,
     };
-    const embedding = await embeddingEngine.embed(`${doc.title}\n${doc.body}`);
-    await insertChunk(chunk, embedding, { lifecycleEpoch: runEpoch });
+    const embedding = await (async () => {
+      // If the native embedding engine is unavailable in this build, seed
+      // the document FTS-only (no vector) rather than blocking setup. The
+      // chat LLM is unaffected; only semantic vector search is degraded.
+      try {
+        return await embeddingEngine.embed(`${doc.title}\n${doc.body}`);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes("native embedding unavailable")) {
+          await insertChunkWithoutEmbedding(chunk, { lifecycleEpoch: runEpoch });
+          return null;
+        }
+        throw e;
+      }
+    })();
+    if (embedding) {
+      await insertChunk(chunk, embedding, { lifecycleEpoch: runEpoch });
+    }
   }
 }

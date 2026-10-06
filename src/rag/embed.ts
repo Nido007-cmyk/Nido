@@ -74,8 +74,23 @@ export class EmbeddingEngine {
   embed(text: string): Promise<Float32Array> {
     return this.enqueue(async () => {
       if (!this.context) throw new Error("EmbeddingEngine: model not loaded");
-      const result = await this.context.embedding(text);
-      return Float32Array.from(result.embedding);
+      try {
+        const result = await this.context.embedding(text);
+        return Float32Array.from(result.embedding);
+      } catch (e) {
+        // The native llamaEmbedding JSI binding may be missing from the
+        // build, surfacing as the cryptic "undefined is not a function".
+        // Translate it to a descriptive error so callers can degrade
+        // gracefully (seed without vectors) instead of blocking setup.
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes("undefined is not a function")) {
+          throw new Error(
+            "EmbeddingEngine: native embedding unavailable in this build " +
+              "(llama.rn JSI 'llamaEmbedding' missing or failed to install)"
+          );
+        }
+        throw e;
+      }
     });
   }
 

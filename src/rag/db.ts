@@ -491,6 +491,29 @@ export async function insertChunk(
   }, opts);
 }
 
+/**
+ * Inserts a chunk WITHOUT a vector embedding (FTS-only). Used when the
+ * native embedding engine is unavailable in the build — the document is
+ * still searchable via full-text search; only semantic vector search is
+ * degraded. This keeps setup from blocking on a native JSI issue.
+ */
+export async function insertChunkWithoutEmbedding(
+  chunk: ChunkRecord,
+  opts?: WriteOptions
+): Promise<void> {
+  await writeTransaction(async (txn) => {
+    await txn.runAsync(
+      `INSERT OR REPLACE INTO chunks (chunk_id, doc_id, title, body, source, collection_id) VALUES (?, ?, ?, ?, ?, ?)`,
+      [chunk.chunkId, chunk.docId, chunk.title, chunk.body, chunk.source ?? null, chunk.collectionId ?? null]
+    );
+    await txn.runAsync(
+      `INSERT OR REPLACE INTO chunks_fts (chunk_id, doc_id, title, body) VALUES (?, ?, ?, ?)`,
+      [chunk.chunkId, chunk.docId, chunk.title, chunk.body]
+    );
+    // Deliberately no chunk_embeddings row — vector search will skip it.
+  }, opts);
+}
+
 export interface CustomCollection {
   id: string;
   name: string;
