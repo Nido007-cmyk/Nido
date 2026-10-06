@@ -330,6 +330,23 @@ async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
     dekHex: keyHex,
   }))) as unknown as SQLite.SQLiteDatabase;
 
+  // DIAGNOSTIC (2026-10-06): verificación explícita de que el handle
+  // devuelto expone execAsync ANTES de usarlo. El build d830374 falló aquí
+  // en el dispositivo físico con "undefined is not a function" sin etiqueta
+  // de sub-stage (esta llamada está fuera de los ostage). Cadena a confirmar
+  // en Android: ensureEncryptedDatabase → DB handle → execAsync available
+  // → openAndMigrate → schema created.
+  await ostage("execAsyncCheck", async () => {
+    const h = db as unknown as Record<string, unknown>;
+    if (typeof h["execAsync"] !== "function") {
+      throw new Error(
+        "db.execAsync is not a function — SecureDbHandle from " +
+          "ensureEncryptedDatabase lacks execAsync at runtime " +
+          "(expo-sqlite API shape mismatch on this build)",
+      );
+    }
+  });
+
   // GOAL 2: si la inicialización del esquema falla (disco lleno, base
   // corrupta), no filtrar el handle nativo y no dejar la promesa cacheada
   // envenenada: getDb() la limpia al rechazar para que el próximo intento

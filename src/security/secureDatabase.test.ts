@@ -9,6 +9,9 @@
  */
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  assertDbHandleShape,
+  assertFileSystemShape,
+  assertSqliteModuleShape,
   buildAttachEncryptedSql,
   buildKeyPragmaSql,
   ensureEncryptedDatabase,
@@ -579,5 +582,85 @@ describe("constructores de SQL", () => {
     expect(INTEGRITY_CHECK_SQL).toBe("PRAGMA integrity_check;");
     expect(WAL_CHECKPOINT_SQL).toBe("PRAGMA wal_checkpoint(TRUNCATE);");
     expect(SCHEMA_SQL).toContain("sqlite_master");
+  });
+});
+
+describe("verificación de forma del módulo SQLite en runtime (regresión 2026-10-06)", () => {
+  // El build diagnóstico d830374 mostró en el dispositivo físico
+  // "[seed-stage:getDb:openAndMigrate] undefined is not a function":
+  // ensureEncryptedDatabase() terminaba pero el handle devuelto no exponía
+  // execAsync en runtime. Estas pruebas fijan que una forma de módulo o de
+  // handle incorrecta falle con un mensaje claro en las aserciones, en vez
+  // de "undefined is not a function" tres llamadas más tarde.
+
+  const goodModule = {
+    openDatabaseAsync: async () => ({}),
+    openDatabaseSync: () => ({}),
+  };
+  const goodHandle = {
+    execAsync: async (_sql: string) => {},
+    getAllAsync: async (_sql: string) => [],
+    getFirstAsync: async (_sql: string) => null,
+    closeAsync: async () => {},
+  };
+  const goodFs = {
+    documentDirectory: "file:///docs/",
+    getInfoAsync: async (_p: string) => ({ exists: false }),
+    deleteAsync: async (_p: string) => {},
+    moveAsync: async (_o: { from: string; to: string }) => {},
+    writeAsStringAsync: async (_p: string, _c: string) => {},
+  };
+
+  it("assertSqliteModuleShape acepta un módulo con openDatabaseAsync", () => {
+    expect(() => assertSqliteModuleShape(goodModule)).not.toThrow();
+  });
+
+  it("assertSqliteModuleShape rechaza un módulo sin openDatabaseAsync", () => {
+    expect(() => assertSqliteModuleShape({})).toThrow(
+      /openDatabaseAsync is undefined/,
+    );
+  });
+
+  it("assertSqliteModuleShape rechaza el wrapper { default } de interop rota", () => {
+    // Si el bundler resolviera ESM/CJS mal y dejara los exports bajo
+    // .default, openDatabaseAsync no estaría en el primer nivel.
+    expect(() =>
+      assertSqliteModuleShape({ default: goodModule, __esModule: true }),
+    ).toThrow(/Has \.default: true/);
+  });
+
+  it("assertSqliteModuleShape rechaza null/undefined", () => {
+    expect(() => assertSqliteModuleShape(null)).toThrow(/shape mismatch/);
+    expect(() => assertSqliteModuleShape(undefined)).toThrow(/shape mismatch/);
+  });
+
+  it("assertFileSystemShape acepta el módulo legacy completo", () => {
+    expect(() => assertFileSystemShape(goodFs)).not.toThrow();
+  });
+
+  it("assertFileSystemShape rechaza funciones faltantes", () => {
+    const { moveAsync: _dropped, ...rest } = goodFs;
+    expect(() => assertFileSystemShape(rest)).toThrow(/missing functions: moveAsync/);
+  });
+
+  it("assertDbHandleShape acepta un handle con las 4 funciones", () => {
+    expect(() => assertDbHandleShape(goodHandle, "test")).not.toThrow();
+  });
+
+  it("assertDbHandleShape rechaza un handle sin execAsync (el caso d830374)", () => {
+    const { execAsync: _dropped, ...rest } = goodHandle;
+    expect(() => assertDbHandleShape(rest, "test")).toThrow(
+      /missing functions: execAsync/,
+    );
+  });
+
+  it("assertDbHandleShape lista todas las funciones faltantes", () => {
+    expect(() => assertDbHandleShape({}, "test")).toThrow(
+      /missing functions: execAsync, getAllAsync, getFirstAsync, closeAsync/,
+    );
+  });
+
+  it("assertDbHandleShape rechaza null/undefined", () => {
+    expect(() => assertDbHandleShape(null, "test")).toThrow(/missing functions/);
   });
 });

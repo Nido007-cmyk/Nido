@@ -26,9 +26,20 @@
  *
  * Diseño testeable: el acceso a SQLite y al sistema de ficheros va tras
  * `SecureDbDriver`, inyectable en tests. En producción es expo-sqlite +
- * expo-file-system (require perezoso).
+ * expo-file-system (import ES de primer nivel).
+ *
+ * NOTA DE INTEROP (2026-10-06): antes se usaba require("expo-sqlite")
+ * dinámico dentro de prodDriver(). El build diagnóstico d830374 mostró
+ * "[seed-stage:getDb:openAndMigrate] undefined is not a function" en el
+ * dispositivo físico: ensureEncryptedDatabase() terminaba pero el handle
+ * devuelto no exponía execAsync en runtime. Se cambió a import ES (mismo
+ * patrón que src/rag/db.ts) más verificación explícita de forma en
+ * runtime (assertSqliteModuleShape / assertDbHandleShape). No basta con
+ * que TypeScript compile: la forma real se confirma en el dispositivo.
  */
 
+import * as SQLite from "expo-sqlite";
+import * as FileSystem from "expo-file-system/legacy";
 import { applyDatabaseKey, getDatabaseKeyHex, registerKeyLossProbe } from "../privacy/keyManager";
 
 // ---------------------------------------------------------------------------
@@ -157,9 +168,84 @@ export function isDatabaseNotFoundError(err: unknown): boolean {
 }
 
 /**
- * Driver de producción: expo-sqlite + expo-file-system con require perezoso
- * (lo que promete el docstring del módulo). El require estático rompería el
- * análisis de tests en Node/vitest, donde los módulos nativos no existen.
+ * Verificación explícita de forma en runtime del módulo expo-sqlite
+ * (2026-10-06). El build diagnóstico d830374 mostró en el dispositivo
+ * físico "[seed-stage:getDb:openAndMigrate] undefined is not a function":
+ * ensureEncryptedDatabase() terminaba, pero el handle devuelto no exponía
+ * execAsync. La causa hipotetizada es interop ESM/CJS rota en el require()
+ * dinámico que se usaba antes. Estas aserciones hacen que una forma
+ * incorrecta falle AQUÍ con un mensaje claro, en vez de tres llamadas
+ * más tarde con "undefined is not a function".
+ *
+ * No basta con que TypeScript compile: la forma real se confirma en el
+ * dispositivo físico mediante la instrumentación de seedCorpus/db.
+ */
+export function assertSqliteModuleShape(mod: unknown): void {
+  const m = mod as Record<string, unknown> | null | undefined;
+  const fn = m?.["openDatabaseAsync"];
+  if (typeof fn !== "function") {
+    const keys = m ? Object.keys(m).slice(0, 16).join(",") : String(m);
+    const hasDefault =
+      m && typeof (m as Record<string, unknown>)["default"] !== "undefined";
+    throw new Error(
+      "secureDatabase: expo-sqlite module shape mismatch — " +
+        `openDatabaseAsync is ${typeof fn} (expected function). ` +
+        `Module keys: [${keys}]. Has .default: ${hasDefault}. ` +
+        "The bundler resolved an unexpected module shape; DB open cannot proceed.",
+    );
+  }
+}
+
+/**
+ * Verificación explícita de forma en runtime del módulo expo-file-system/legacy.
+ */
+export function assertFileSystemShape(mod: unknown): void {
+  const m = mod as Record<string, unknown> | null | undefined;
+  const missing = ["getInfoAsync", "deleteAsync", "moveAsync", "writeAsStringAsync"].filter(
+    (k) => typeof m?.[k] !== "function",
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      "secureDatabase: expo-file-system/legacy shape mismatch — " +
+        `missing functions: ${missing.join(", ")}. ` +
+        "The bundler resolved an unexpected module shape.",
+    );
+  }
+  if (typeof m?.["documentDirectory"] === "undefined") {
+    throw new Error(
+      "secureDatabase: expo-file-system/legacy shape mismatch — " +
+        "documentDirectory is undefined.",
+    );
+  }
+}
+
+/**
+ * Verificación explícita de forma en runtime del handle devuelto por
+ * openDatabaseAsync (2026-10-06). Se llama en openDb() ANTES de envolver
+ * el handle: si el objeto nativo no expone las APIs que NIDO utiliza,
+ * falla aquí con un mensaje claro.
+ */
+export function assertDbHandleShape(db: unknown, where: string): void {
+  const h = db as Record<string, unknown> | null | undefined;
+  const missing = ["execAsync", "getAllAsync", "getFirstAsync", "closeAsync"].filter(
+    (k) => typeof h?.[k] !== "function",
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `secureDatabase: DB handle from ${where} missing functions: ${missing.join(", ")} ` +
+        "(expo-sqlite API shape mismatch on this build).",
+    );
+  }
+}
+
+/**
+ * Driver de producción: expo-sqlite + expo-file-system vía import ES de
+ * primer nivel (mismo patrón que src/rag/db.ts). La forma real de ambos
+ * módulos se verifica en runtime con assertSqliteModuleShape /
+ * assertFileSystemShape; la forma del handle, con assertDbHandleShape en
+ * openDb(). En tests se usa setSecureDbTestDriver() y prodDriver() nunca
+ * se toca, así que los módulos nativos no se cargan en Node/vitest
+ * (los tests hacen vi.mock de expo-sqlite / expo-file-system/legacy).
  *
  * La inyección vía `globalThis.__NIDO_PROD_DRIVER__` se conserva como punto
  * de extensión (si alguien la define, gana); el fallback real es este.
@@ -176,27 +262,13 @@ function prodDriver(): SecureDbDriver {
   ).__NIDO_PROD_DRIVER__;
   if (injected) return injected();
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const SQLite = require("expo-sqlite") as {
-      openDatabaseAsync(
-        name: string,
-        options?: { useNewConnection?: boolean },
-        directory?: string,
-      ): Promise<{
-        execAsync(sql: string): Promise<void>;
-        getAllAsync<T>(sql: string): Promise<T[]>;
-        getFirstAsync<T>(sql: string): Promise<T | null>;
-        closeAsync(): Promise<void>;
-      }>;
-    };
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const FileSystem = require("expo-file-system/legacy") as {
-      documentDirectory: string | null;
-      getInfoAsync(path: string): Promise<{ exists: boolean }>;
-      deleteAsync(path: string, opts?: { idempotent?: boolean }): Promise<void>;
-      moveAsync(opts: { from: string; to: string }): Promise<void>;
-      writeAsStringAsync(path: string, content: string): Promise<void>;
-    };
+    // Verificación explícita de forma del módulo en runtime (2026-10-06):
+    // el import ES debe exponer openDatabaseAsync como función. Si el
+    // bundler resolviera una forma distinta (p. ej. interop ESM/CJS rota),
+    // esto falla con un mensaje claro en vez de "undefined is not a function"
+    // tres llamadas más tarde.
+    assertSqliteModuleShape(SQLite);
+    assertFileSystemShape(FileSystem);
     const baseDir = `${(FileSystem.documentDirectory ?? "").replace(/\/$/, "")}/SQLite/`;
     return {
       dbDir: () => baseDir,
@@ -218,6 +290,11 @@ function prodDriver(): SecureDbDriver {
           { useNewConnection: true },
           path.slice(0, slash),
         );
+        // DIAGNOSTIC (2026-10-06): verificación explícita de que el objeto
+        // devuelto expone las APIs que NIDO utiliza. El build d830374 falló
+        // en openAndMigrate() con "undefined is not a function" porque el
+        // handle no tenía execAsync en runtime.
+        assertDbHandleShape(db, "expo-sqlite openDatabaseAsync");
         return {
           execAsync: (sql) => db.execAsync(sql),
           getAllAsync: <T,>(sql: string) => db.getAllAsync<T>(sql),

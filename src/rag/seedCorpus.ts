@@ -238,10 +238,34 @@ async function seedNow(): Promise<void> {
       body: doc.body,
       source: doc.source,
     };
-    // DIAGNOSTIC: FTS-only insert (embedding bypassed). If this stage fails,
-    // the error is in writeTransaction/db.withTransactionAsync/txn.runAsync.
-    await stage("insertChunk", async () =>
-      insertChunkWithoutEmbedding(chunk, { lifecycleEpoch: runEpoch })
-    );
+    // RESTORED 2026-10-06: revert of diagnostic bypass 60046a0. The bypass
+    // was only an A/B experiment; the d830374 device log proved the
+    // "undefined is not a function" is NOT in embeddings (it is in
+    // openAndMigrate()/execAsync). Embeddings are back with the original
+    // graceful-degradation behavior.
+    const embedding = await stage("embedChunk", async () => {
+      // If the native embedding engine is unavailable in this build, seed
+      // the document FTS-only (no vector) rather than blocking setup. The
+      // chat LLM is unaffected; only semantic vector search is degraded.
+      try {
+        return await embeddingEngine.embed(`${doc.title}\n${doc.body}`);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes("native embedding unavailable")) {
+          return null;
+        }
+        throw e;
+      }
+    });
+    if (embedding) {
+      await stage("insertChunk", async () =>
+        insertChunk(chunk, embedding, { lifecycleEpoch: runEpoch })
+      );
+    } else {
+      // Native embedding unavailable: FTS-only fallback (graceful degradation).
+      await stage("insertChunk", async () =>
+        insertChunkWithoutEmbedding(chunk, { lifecycleEpoch: runEpoch })
+      );
+    }
   }
 }
