@@ -11,12 +11,13 @@
  */
 
 // Tipo local para evitar importar expo-sqlite (paquete roto en entorno de tests).
+// H8-2026-10-06: debe coincidir con SecureDbHandle (ver databaseManager.ts).
 interface SQLiteDatabase {
-  execAsync(sql: string, params?: unknown[]): Promise<void>;
+  execAsync(sql: string): Promise<void>;
   getAllAsync<T = unknown>(sql: string, params?: unknown[]): Promise<T[]>;
   getFirstAsync<T = unknown>(sql: string, params?: unknown[]): Promise<T | null>;
   runAsync(sql: string, params?: unknown[]): Promise<{ lastInsertRowId: number; changes: number }>;
-  withTransactionAsync<T>(fn: () => Promise<T>): Promise<T>;
+  withTransactionAsync(task: () => Promise<void>): Promise<void>;
   closeAsync(): Promise<void>;
 }
 import type { Fact, Preference, Person, DailyLogEntry, MemorySnapshot } from "./types";

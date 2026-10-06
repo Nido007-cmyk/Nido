@@ -208,12 +208,33 @@ const createReminderHandler: ToolHandler = async (args) => {
   return `Recordatorio guardado${cuando}: «${reminder.text}». ${aviso}`;
 };
 
+/**
+ * H11-2026-10-06: detector simple de fechas en texto (ES/EN).
+ * Si un fact contiene una fecha, el resultado sugiere crear un recordatorio.
+ * No intenta NLP completo; solo patrones comunes de fechas.
+ */
+const DATE_PATTERNS: RegExp[] = [
+  /\b\d{1,2} de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b/i,
+  /\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre) \d{1,2}\b/i,
+  /\b(january|february|march|april|may|june|july|august|september|october|november|december) \d{1,2}\b/i,
+  /\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/,
+];
+
+export function containsDatePattern(text: string): boolean {
+  return DATE_PATTERNS.some((re) => re.test(text));
+}
+
 const rememberFactHandler: ToolHandler = async (args) => {
   const content = String(args.content ?? "").trim();
   if (!content) return "Error: falta el contenido del hecho.";
   const category = String(args.category ?? "general").trim() || "general";
   await saveFact({ content, category: category as "general", source: "user" });
-  return `Guardado en mi memoria: «${content}» (categoría: ${category}).`;
+  let result = `Guardado en mi memoria: «${content}» (categoría: ${category}).`;
+  // H11: puente memoria→notificación. Si hay una fecha, sugerir recordatorio.
+  if (containsDatePattern(content)) {
+    result += ` Veo que menciona una fecha — si quieres que te avise con tiempo, pídeme "créame un recordatorio para..."`;
+  }
+  return result;
 };
 
 const openAppHandler: ToolHandler = async (args) => {

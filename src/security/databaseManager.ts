@@ -24,12 +24,19 @@
 
 // Tipo local para evitar importar expo-sqlite (paquete roto en entorno de tests).
 // En producción, la forma real viene de secureDatabase.
+/**
+ * H8-2026-10-06: esta interfaz DEBE coincidir con SecureDbHandle
+ * (src/security/secureDatabase.ts). La versión anterior declaraba
+ * `execAsync(sql, params?)` (el wrapper real IGNORA params — la misma
+ * clase del bug `LIMIT ?`) y `withTransactionAsync<T>` con retorno T
+ * que el runtime no entrega. El cast `as unknown as` ocultaba el desajuste.
+ */
 interface SQLiteDatabase {
-  execAsync(sql: string, params?: unknown[]): Promise<void>;
+  execAsync(sql: string): Promise<void>;
   getAllAsync<T = unknown>(sql: string, params?: unknown[]): Promise<T[]>;
   getFirstAsync<T = unknown>(sql: string, params?: unknown[]): Promise<T | null>;
   runAsync(sql: string, params?: unknown[]): Promise<{ lastInsertRowId: number; changes: number }>;
-  withTransactionAsync<T>(fn: () => Promise<T>): Promise<T>;
+  withTransactionAsync(task: () => Promise<void>): Promise<void>;
   closeAsync(): Promise<void>;
 }
 import { getDatabaseKeyHex } from "../privacy/keyManager";
