@@ -510,12 +510,35 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       setConnecting(`paired:${target}`);
       setLinkError(null);
       try {
+        // BRIAR-2026-10-06: rol de dial determinístico. Solo el lado con el
+        // pkHex menor inicia la conexión; el otro solo escucha. Esto elimina
+        // la colisión de dial simultáneo en la fuente (ambas tablets tocando
+        // Connect al mismo tiempo creaba carreras de sockets RFCOMM).
+        const shouldDial = await mRef.current.shouldDialPeer(target);
+        if (!shouldDial) {
+          // Soy el listener: no barro, solo espero. El servidor ya está
+          // corriendo (startLink al abrir la pantalla P2P).
+          setNotice(t("nido.waitingForPeer", { name }));
+          return;
+        }
         const candidates = nearby;
         if (candidates.length === 0) {
           throw new Error(t("nido.noNearbyForPaired"));
         }
+        // P2P-2026-10-06: jitter aleatorio 0-2s antes del barrido para evitar
+        // choque simultáneo si ambas tablets tocan Connect al mismo tiempo.
+        // El research mostró que el dial simultáneo crea condiciones de carrera
+        // en los sockets que rompen el handshake.
+        await new Promise((r) => setTimeout(r, Math.random() * 2000));
         let lastError: string = "";
-        for (const alias of candidates) {
+        for (let i = 0; i < candidates.length; i++) {
+          const alias = candidates[i];
+          // P2P-2026-10-06: pausa entre intentos. El research mostró que el
+          // socket anterior necesita ~500ms para cerrarse del todo antes de
+          // intentar el siguiente, o el connect falla con "read failed".
+          if (i > 0) {
+            await new Promise((r) => setTimeout(r, 750));
+          }
           try {
             const info = await mRef.current.connectPeer(alias);
             if (info.pkHex.toLowerCase() === target) {

@@ -11,7 +11,7 @@
 import * as SQLite from "expo-sqlite";
 import * as FileSystem from "expo-file-system/legacy";
 import { CORPUS_CATALOG, MODEL_CATALOG, CatalogModel } from "../models/manifest";
-import { buildLexicalQuery, cosineSimilarityInt8, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM } from "./pure";
+import { buildLexicalQuery, cosineSimilarityInt8, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM, pruneSemanticByMargin } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
 
 const PACK_CANDIDATES = 400;
@@ -136,7 +136,9 @@ export async function searchPacks(
         // el 0.45. Un solo término necesita evidencia más fuerte.
         const termCount = lexicalQuery.terms.length;
         const threshold = termCount <= 1 ? MIN_SEMANTIC_SIMILARITY_SINGLE_TERM : MIN_SEMANTIC_SIMILARITY;
-        semantic.push(...filterByMinScore(scored, threshold).slice(0, limit));
+        // BUG-2-2026-10-06: poda por margen sobre cosenos crudos.
+        const gated = filterByMinScore(scored, threshold);
+        semantic.push(...pruneSemanticByMargin(gated).slice(0, limit));
       }
     } catch (e: any) {
       console.warn(`[packs] search failed in ${pack.id}:`, e?.message ?? e);

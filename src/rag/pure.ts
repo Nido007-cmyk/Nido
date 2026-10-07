@@ -271,7 +271,63 @@ export function fuseRetrievalResults(
   return out.filter((c) => c.rawScore === undefined || c.rawScore >= MIN_SEMANTIC_SIMILARITY);
 }
 
+/**
+ * BUG-2-2026-10-06: poda por margen aplicada a candidatos semánticos
+ * ANTES de la fusión. El gap en scores coseno crudos predice relevancia
+ * mejor que el valor absoluto ("The Magnitude Mirage").
+ *
+ * Se usa en retrieve.ts sobre los resultados de semanticSearch antes de
+ * fusionar con los léxicos.
+ */
+export function pruneSemanticByMargin<T extends { score: number }>(
+  chunks: T[],
+  margin = 0.4,
+  minKeep = 1
+): T[] {
+  return pruneByScoreMargin(chunks, margin, minKeep);
+}
+
 export const MAX_CHUNKS_PER_ARTICLE = 2;
+
+/**
+ * BUG-2-2026-10-06 (structural fix): poda por margen de score.
+ *
+ * El research externo ("The Magnitude Mirage", arXiv 2609.15578) demostró
+ * que el GAP entre el mejor score y los siguientes predice relevancia
+ * mejor que el valor absoluto (AUROC 0.724 vs 0.583). Los docs de BAAI
+ * confirman que BGE concentra similitud en [0.6, 1.0], así que un piso
+ * absoluto solo es un instrumento burdo.
+ *
+ * Esta función descarta candidatos que caen más de `margin` (fracción del
+ * rango max-min) por debajo del mejor score. Se aplica DESPUÉS del piso
+ * absoluto, como señal estructural adicional.
+ *
+ * Ejemplo: scores [0.85, 0.82, 0.55, 0.52], margin=0.4:
+ *   rango = 0.85-0.52 = 0.33, umbral = 0.85 - 0.4*0.33 = 0.718
+ *   → conserva [0.85, 0.82], descarta [0.55, 0.52]
+ *
+ * @param chunks Ordenados por score descendente (como sale de la fusión).
+ * @param margin Fracción del rango a tolerar bajo el top (0-1). Default 0.4.
+ * @param minKeep Mínimo a conservar aunque caigan fuera del margen. Default 1.
+ */
+export function pruneByScoreMargin<T extends { score: number }>(
+  chunks: T[],
+  margin = 0.4,
+  minKeep = 1
+): T[] {
+  if (chunks.length <= minKeep) return chunks;
+  const scores = chunks.map((c) => c.score);
+  const max = Math.max(...scores);
+  const min = Math.min(...scores);
+  const range = max - min;
+  // Si todos puntúan igual, no hay señal de gap: conservar todo.
+  if (range <= 1e-9) return chunks;
+  const cutoff = max - margin * range;
+  const kept = chunks.filter((c) => c.score >= cutoff);
+  // minKeep: nunca devolver menos de lo pedido (el top siempre sobrevive
+  // porque max >= cutoff por construcción).
+  return kept.length >= minKeep ? kept : chunks.slice(0, minKeep);
+}
 
 export interface ConversationTurn {
   role: "user" | "assistant";

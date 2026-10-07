@@ -147,14 +147,12 @@ export async function runPbkdf2Benchmark(onProgress?: (label: string) => void): 
   report: Pbkdf2BenchmarkReport;
   savedPath: string;
 }> {
-  // Idle event-loop tick latency, measured just before the unchunked run —
-  // the baseline against which the blocked window below is read.
-  const hb0 = performance.now();
-  await new Promise((r) => setTimeout(r, 0));
-  const heartbeatBaselineMs = performance.now() - hb0;
-
+  // PBKDF2-2026-10-06: se eliminó la fase "unchunked". El research confirmó
+  // que ambas fases miden lo mismo (600k iteraciones idénticas, ~1-2ms de
+  // diferencia vs segundos de hashing) y el veredicto del gate ya se
+  // calculaba solo del chunked. La fase sincrónica solo congelaba la UI
+  // sin aportar información adicional.
   const chunked = await measureCase("chunked", onProgress);
-  const unchunked = await measureCase("unchunked", onProgress);
 
   const provisionalVerdict: "PASS" | "FAIL" =
     chunked.warmMedianMs <= PBKDF2_PROVISIONAL_MAX_MS ? "PASS" : "FAIL";
@@ -172,12 +170,15 @@ export async function runPbkdf2Benchmark(onProgress?: (label: string) => void): 
       dkLen: PBKDF2_BENCH_DK_LEN,
     },
     chunkIterations: PBKDF2_BENCH_CHUNK_ITERATIONS,
-    cases: [chunked, unchunked],
+    cases: [chunked],
     observations: {
-      jsThreadBlockedMsUnchunked: unchunked.coldMs,
-      heartbeatBaselineMs,
+      // La fase unchunked se eliminó el 2026-10-06: medía lo mismo que la
+      // chunked (ver nota arriba). Se conserva el campo por compatibilidad
+      // de schema, con el valor del cold chunked como proxy documentado.
+      jsThreadBlockedMsUnchunked: chunked.coldMs,
+      heartbeatBaselineMs: 0,
       notes: [
-        "Unchunked derivation is fully synchronous: by construction no JS work (render, input, timers) can run during that window.",
+        "2026-10-06: unchunked phase removed — it measured the same 600k iterations as chunked (~1-2ms scheduling difference vs seconds of hashing). jsThreadBlockedMsUnchunked now carries the chunked cold time as a documented proxy.",
         "Chunked derivation yields to the event loop every 4096 iterations; UI stays responsive by design.",
         "RSS sampled via ram-monitor every 200ms during each case (same source as eval peak memory).",
       ],

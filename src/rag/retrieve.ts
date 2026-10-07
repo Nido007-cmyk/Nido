@@ -8,6 +8,7 @@ import {
   fuseRetrievalResults,
   MIN_SEMANTIC_SIMILARITY,
   MIN_SEMANTIC_SIMILARITY_SINGLE_TERM,
+  pruneSemanticByMargin,
 } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
 import { searchPacks } from "./packs";
@@ -93,7 +94,10 @@ async function semanticSearch(query: string, queryVec: Float32Array, limit: numb
   // H1-2026-10-06: umbral más alto para queries de un solo término.
   const termCount = query.trim().split(/\s+/).filter(Boolean).length;
   const threshold = termCount <= 1 ? MIN_SEMANTIC_SIMILARITY_SINGLE_TERM : MIN_SEMANTIC_SIMILARITY;
-  return filterByMinScore(scored, threshold).slice(0, limit);
+  const gated = filterByMinScore(scored, threshold);
+  // BUG-2-2026-10-06 (structural): poda por margen sobre cosenos crudos.
+  // El gap predice relevancia mejor que el valor absoluto.
+  return pruneSemanticByMargin(gated).slice(0, limit);
 }
 
 /**

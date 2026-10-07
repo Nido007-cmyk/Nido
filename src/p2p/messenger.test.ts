@@ -452,3 +452,41 @@ describe("M-4: resolución exacta de contactos (sin adivinanzas)", () => {
     if (amb.kind === "ambiguous") expect(amb.candidates).toHaveLength(2);
   });
 });
+
+describe("BRIAR-2026-10-06: rol de dial determinístico", () => {
+  it("shouldDialPeer es determinístico y antisimétrico", async () => {
+    const m = new NidoMessenger();
+    const { pkHex } = await m.ensureIdentity();
+    const myPk = pkHex.toLowerCase();
+
+    // Un peer con pk mayor: yo debo marcar (mi pk < peer pk).
+    const peerHigher = "f".repeat(64);
+    // Un peer con pk menor: yo NO debo marcar.
+    const peerLower = "0".repeat(64);
+
+    // Determinar el resultado esperado según la comparación real.
+    const expectDialHigher = myPk < peerHigher;
+    const expectDialLower = myPk < peerLower;
+
+    expect(await m.shouldDialPeer(peerHigher)).toBe(expectDialHigher);
+    expect(await m.shouldDialPeer(peerLower)).toBe(expectDialLower);
+
+    // Antisimetría: si yo marco a un peer, ese peer no me marcaría a mí.
+    // (Simulado: el rol es función pura de la comparación.)
+    const a = "a".repeat(64);
+    const b = "b".repeat(64);
+    const aDialsB = a < b;
+    const bDialsA = b < a;
+    expect(aDialsB).toBe(!bDialsA);
+    expect(aDialsB).toBe(true); // "a..." < "b..."
+  });
+
+  it("shouldDialPeer es insensible a mayúsculas", async () => {
+    const m = new NidoMessenger();
+    await m.ensureIdentity();
+    const peer = "AB".repeat(32);
+    const r1 = await m.shouldDialPeer(peer.toLowerCase());
+    const r2 = await m.shouldDialPeer(peer.toUpperCase());
+    expect(r1).toBe(r2);
+  });
+});

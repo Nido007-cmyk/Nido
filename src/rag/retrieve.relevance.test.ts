@@ -145,3 +145,38 @@ describe("fuseRetrievalResults rawScore honesty (2026-09-28)", () => {
     expect(byId.get("b")!.rawScore).toBe(0.65);
   });
 });
+
+describe("pruneByScoreMargin", () => {
+  it("descarta candidatos muy por debajo del top", async () => {
+    const { pruneByScoreMargin } = await import("./pure");
+    const chunks = [chunk("a", 0.85), chunk("b", 0.82), chunk("c", 0.55), chunk("d", 0.52)];
+    const kept = pruneByScoreMargin(chunks, 0.4, 1);
+    expect(kept.map((c) => c.chunkId)).toEqual(["a", "b"]);
+  });
+
+  it("conserva el cluster cuando todo está cerca", async () => {
+    const { pruneByScoreMargin } = await import("./pure");
+    const chunks = [chunk("a", 0.68), chunk("b", 0.66), chunk("c", 0.64), chunk("d", 0.62)];
+    const kept = pruneByScoreMargin(chunks, 0.4, 1);
+    // Rango = 0.06, cutoff = 0.68 - 0.4*0.06 = 0.656 → a, b sobreviven.
+    // c (0.64) y d (0.62) caen fuera: el gap es real aunque los valores
+    // absolutos estén todos sobre el piso.
+    expect(kept.map((c) => c.chunkId)).toEqual(["a", "b"]);
+  });
+
+  it("respeta minKeep aunque todo caiga fuera del margen", async () => {
+    const { pruneByScoreMargin } = await import("./pure");
+    const chunks = [chunk("a", 0.9), chunk("b", 0.1)];
+    const kept = pruneByScoreMargin(chunks, 0.4, 1);
+    expect(kept.map((c) => c.chunkId)).toEqual(["a"]);
+  });
+
+  it("no toca listas pequeñas o uniformes", async () => {
+    const { pruneByScoreMargin } = await import("./pure");
+    expect(pruneByScoreMargin([], 0.4, 1)).toEqual([]);
+    expect(pruneByScoreMargin([chunk("a", 0.7)], 0.4, 1)).toEqual([chunk("a", 0.7)]);
+    // Todos iguales: sin señal de gap, conservar todo.
+    const uniform = [chunk("a", 0.7), chunk("b", 0.7), chunk("c", 0.7)];
+    expect(pruneByScoreMargin(uniform, 0.4, 1)).toHaveLength(3);
+  });
+});

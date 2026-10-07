@@ -398,6 +398,32 @@ export class NidoMessenger {
   }
 
   /**
+   * BRIAR-2026-10-06: rol de dial determinístico para evitar colisiones
+   * de dial simultáneo en la fuente.
+   *
+   * Briar (briarproject.org) resolvió este problema con commitment-ordering:
+   * ambos lados acuerdan independientemente quién marca y quién escucha,
+   * sin coordinación extra. Adaptado a NIDO: al momento del pairing QR
+   * ambos ya intercambian pkHex, así que la regla es determinística:
+   *
+   *   dialer = (myPkHex < peerPkHex) ? yo : peer
+   *
+   * Solo el dialer inicia connect(); el otro solo mantiene su servidor
+   * escuchando. Esto elimina la condición de carrera de sockets RFCOMM
+   * cuando ambas tablets tocan Connect al mismo tiempo.
+   *
+   * @returns true si este dispositivo debe iniciar la conexión saliente.
+   */
+  async shouldDialPeer(peerPkHex: string): Promise<boolean> {
+    this.assertLive();
+    const identity = await getIdentity();
+    if (!identity) throw new Error("No hay identidad P2P.");
+    const myPkHex = toHex(identity.publicKey).toLowerCase();
+    const target = peerPkHex.toLowerCase();
+    return myPkHex < target;
+  }
+
+  /**
    * Crea la identidad si no existe y la deja en memoria.
    *
    * M-2 (fail-closed): si el Keystore falla al leer, getIdentity() lanza y
