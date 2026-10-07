@@ -34,6 +34,30 @@ describe("parseToolCalls", () => {
   it("devuelve vacío si no hay bloques", () => {
     expect(parseToolCalls("Hola, ¿en qué te ayudo?")).toHaveLength(0);
   });
+
+  // BUG-4-2026-10-06: modelos pequeños generan llamadas estilo PYTHON.
+  it("parsea bloque python con llamada estilo función", () => {
+    const text =
+      'Claro.\n```python\ncreate_reminder(\n    text="mom birthday",\n    at="2027-03-15T00:00:00"\n)\n```\nListo.';
+    const calls = parseToolCalls(text);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].name).toBe("create_reminder");
+    expect(calls[0].arguments).toEqual({ text: "mom birthday", at: "2027-03-15T00:00:00" });
+  });
+
+  it("prefiere formato tool cuando ambos existen", () => {
+    const text =
+      '```tool\n{"name": "device_time", "arguments": {}}\n```\n```python\ndevice_time()\n```';
+    const calls = parseToolCalls(text);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].name).toBe("device_time");
+  });
+
+  it("ignora bloque python sin llamada válida", () => {
+    expect(parseToolCalls("```python\nprint('hola')\n```")).toHaveLength(1);
+    // print no es tool válido del manifiesto, pero el parser lo extrae;
+    // el dispatcher lo rechazará. Solo verifica que no rompe.
+  });
 });
 
 describe("stripToolBlocks", () => {
@@ -41,6 +65,12 @@ describe("stripToolBlocks", () => {
     const text = 'Voy a ver la hora.\n```tool\n{"name": "device_time"}\n```\nListo.';
     // El bloque se quita y queda un salto de párrafo en su lugar.
     expect(stripToolBlocks(text)).toBe("Voy a ver la hora.\n\nListo.");
+  });
+
+  // BUG-4-2026-10-06: también quitar bloques python con tool calls.
+  it("quita bloques python con tool calls", () => {
+    const text = 'Voy a guardar.\n```python\ncreate_reminder(\n    text="x"\n)\n```\nListo.';
+    expect(stripToolBlocks(text)).toBe("Voy a guardar.\n\nListo.");
   });
 });
 

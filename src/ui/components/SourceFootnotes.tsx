@@ -138,7 +138,9 @@ const getStyles = (colors: Colors) => StyleSheet.create({
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(15, 23, 42, 0.8)",
+    // BUG-3-2026-10-06: antes rgba(15,23,42,0.8) hardcodeado, demasiado oscuro.
+    // Usar color de superficie del tema para legibilidad en ambos modos.
+    backgroundColor: colors.bg.cardElevated,
     borderColor: colors.border.default,
     borderWidth: 1,
     borderRadius: radii.sm,

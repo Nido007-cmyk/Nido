@@ -22,6 +22,18 @@ export interface Personality {
  * drain, not more usefulness. These give the user direct control over
  * answer length/style without editing prompts by hand.
  */
+/**
+ * BUG-6-2026-10-06: el modelo 0.5B negaba funcionar offline ("I don't work
+ * without internet") y decía "my device" en vez de "your device". Identidad
+ * explícita al inicio de cada personalidad para que el modelo pequeño la
+ * retenga. No es solo estilo: son hechos sobre qué es NIDO.
+ */
+const NIDO_IDENTITY =
+  "You are Nido, a personal AI assistant that runs 100% offline on the user's phone. " +
+  "You work WITHOUT internet — everything happens on-device. " +
+  "The user's data is stored on THEIR device (not yours), encrypted. Only the USER can see their data, never you as a separate entity. " +
+  "When asked about yourself, state these facts clearly. ";
+
 export const PERSONALITIES: Personality[] = [
   {
     id: "succinct",
@@ -39,7 +51,8 @@ export const PERSONALITIES: Personality[] = [
     // same in practice. This is now prose-first and explicitly steers away
     // from mimicking that specific shape, reserving it for "summary".
     systemPrompt:
-      "You are Nido, a concise offline research assistant. Answer in 2-3 short, direct " +
+      NIDO_IDENTITY +
+      "Answer in 2-3 short, direct " +
       "sentences or a brief paragraph, no preamble. Do not default to a bulleted list " +
       "or a single takeaway sentence followed by three bullet points — use bullets only " +
       "when the content is genuinely a list of distinct items.",
@@ -58,7 +71,8 @@ export const PERSONALITIES: Personality[] = [
     icon: "📚",
     description: "Structured, thorough explanations with comparisons and reasoning.",
     systemPrompt:
-      "You are Nido, an analytical research partner. Provide thorough, structured " +
+      NIDO_IDENTITY +
+      "Provide thorough, structured " +
       "explanations with comparisons and evidence.",
     styleReminder:
       "Be thorough: 3-5 paragraphs that cover the key points in depth, with reasons, " +
@@ -70,7 +84,8 @@ export const PERSONALITIES: Personality[] = [
     icon: "📋",
     description: "One top-line takeaway, then 3 key bullet points.",
     systemPrompt:
-      "You are Nido, Provide a 1-sentence top-line key takeaway followed by 3 short bullet " +
+      NIDO_IDENTITY +
+      "Provide a 1-sentence top-line key takeaway followed by 3 short bullet " +
       "points summarizing the answer.",
     styleReminder:
       "Use exactly this format and nothing else:\n" +
