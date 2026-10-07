@@ -20,6 +20,18 @@ import {
 export const PROTOCOL_VERSION = 2;
 
 /**
+ * REBRAND-2026-10-07: Identificadores del protocolo wire (handshake).
+ * Son INMUTABLES por diseño: cambiar estos strings rompería la comunicación
+ * entre dispositivos con builds de diferente marca. Un rebrand de nombre
+ * comercial NUNCA debe tocar estas constantes.
+ */
+export const PROTOCOL_HELLO_TYPE = "nido-hello";
+export const PROTOCOL_CONFIRM_TYPE = "nido-confirm";
+export const PROTOCOL_SERVICE_NAME = "nido-p2p";
+/** Dominio de derivación del session_tag (N6 §3.3, D3). */
+export const ACK_SESSION_TAG_DOMAIN = "nido-ack-session-v1";
+
+/**
  * v2 (2026-10-05): agregado "negotiation" para el protocolo de negociación
  * NIDO↔NIDO (PROPOSE/COUNTER/ACCEPT/DECLINE/EXPIRE). No se reutiliza
  * "agent_task" para no confundir negotiation (acuerdo) con execution
@@ -148,9 +160,6 @@ export interface DeliveryAckPayload {
   /** literal fijo; punto de extensión futuro. */
   attest: "persisted";
 }
-
-/** Dominio de derivación del session_tag (N6 §3.3, D3). */
-export const ACK_SESSION_TAG_DOMAIN = "nido-ack-session-v1";
 
 /**
  * N6 §3.3 (D3) — deriva el session_tag desde pares canónicos
