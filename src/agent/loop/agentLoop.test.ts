@@ -125,7 +125,10 @@ describe("runAgentLoop", () => {
 
   it("inyecta la memoria en el system prompt", async () => {
     const engine = fakeEngine(["Listo."]);
-    await runAgentLoop("recuérdame algo", {
+    // Nota: "recuérdame algo" ahora activa la extracción determinística
+    // (patrón recuérdame que X), así que usamos un input que no matchea
+    // para probar la inyección de memoria en el system prompt.
+    await runAgentLoop("cuéntame un chiste", {
       engine,
       handlers: {},
       loadMemory: async () => ({
