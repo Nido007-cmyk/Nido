@@ -30,12 +30,16 @@ export interface RememberExtraction {
 const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
   // "recuerda que el cumpleaños de mi mamá es el 15 de marzo"
   { re: /recuerda( que|te que)?[:\s]+(.+)/i, group: 2 },
+  // "recuérdame que X" / "recuerdame que X" (con pronombre "me")
+  { re: /recu[eé]rdame( que)?[:\s]+(.+)/i, group: 2 },
   // "acuérdate de que X" / "acuérdate que X"
   { re: /acu[eé]rdate( de)?( que)?[:\s]+(.+)/i, group: 3 },
   // "no olvides que X" / "no te olvides de que X"
   { re: /no (te )?olvides( de)?( que)?[:\s]+(.+)/i, group: 4 },
   // "guarda en tu memoria que X" / "guarda en memoria: X"
-  { re: /gu[aá]rda\w*( esto| eso)? en (tu |la )?memoria( que)?[:\s]+(.+)/i, group: 4 },
+  // NOTA: solo captura si hay "que" explícito después de "memoria",
+  // para evitar capturar cláusulas de propósito como "para que me avises".
+  { re: /gu[aá]rda\w*( esto| eso|lo|la)? en (tu |la )?memoria que[:\s]+(.+)/i, group: 3 },
   // "memoriza que X" / "memoriza: X"
   { re: /memoriza[:\s]+(.+)/i, group: 1 },
   // "apunta esto para siempre: X"

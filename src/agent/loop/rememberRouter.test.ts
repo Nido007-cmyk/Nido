@@ -9,6 +9,17 @@ describe("rememberRouter: extracción determinística", () => {
     expect(r!.category).toBe("event");
   });
 
+  it("extrae 'recuérdame que X' (con pronombre me)", () => {
+    const r = extractRememberFact(
+      "Recuérdame que el cumpleaños de mi mamá es el 15 de marzo y que le gustan las orquídeas. Guárdalo en tu memoria para que me avises con tiempo."
+    );
+    expect(r).not.toBeNull();
+    // Debe capturar el HECHO (cumpleaños/orquídeas), NO la cláusula de propósito.
+    expect(r!.content).toContain("cumpleaños de mi mamá");
+    expect(r!.content).toContain("orquídeas");
+    expect(r!.content).not.toBe("para que me avises con tiempo.");
+  });
+
   it("extrae 'acuérdate de que X'", () => {
     const r = extractRememberFact("acuérdate de que tengo cita con el doctor mañana");
     expect(r).not.toBeNull();
