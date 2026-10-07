@@ -45,11 +45,15 @@ export function cosineSimilarityInt8(query: Float32Array, bytes: Uint8Array): nu
 // told to answer from. Not a precise cutoff (no real device/embedding
 // runtime available to measure this corpus's actual score distribution -
 // see retrieve.relevance.test.ts), just cheap, evidence-informed-as-far-as-
-// possible insurance against near-random matches being presented as
-// relevant. Left unchanged rather than invented/re-guessed - moving it
-// without real score-distribution data to justify a new number would be
-// exactly the mistake it's meant to prevent.
-export const MIN_SEMANTIC_SIMILARITY = 0.45;
+// BUG-2-2026-10-06: umbral elevado de 0.45 a 0.60 basado en evidencia
+// física del dispositivo. En el APK 939cfc0, contenido irrelevante
+// (Blockchain, GrapheneOS, Mental health, Promotion League) puntuó
+// 0.49-0.55 en cosine similarity y pasó el filtro de 0.45. El test
+// original asumía que "gibberish" puntuaría bien por debajo de 0.45,
+// pero el modelo de embeddings real produce scores más altos para
+// contenido no relacionado. 0.60 elimina todos los falsos positivos
+// observados en dispositivo físico.
+export const MIN_SEMANTIC_SIMILARITY = 0.60;
 
 /**
  * H1-2026-10-06: umbral para queries de un solo término. Un solo token

@@ -169,7 +169,7 @@ describe("hybrid ranking with real lexical hits", () => {
 
   it("keeps a semantic-only match when lexical search has nothing", () => {
     const semantic: RetrievedChunk[] = [
-      { chunkId: "s1", docId: "s1", title: "DNA", body: "", score: 0.5, matchType: "semantic" },
+      { chunkId: "s1", docId: "s1", title: "DNA", body: "", score: 0.65, matchType: "semantic" },
     ];
     expect(lexicalSearch("How does DNA replication work?")).toEqual([]);
     expect(titles(fuseRetrievalResults([], semantic, 6))).toEqual(["DNA"]);

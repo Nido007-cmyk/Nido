@@ -23,18 +23,20 @@ function chunk(id: string, score: number, matchType: RetrievedChunk["matchType"]
 
 describe("filterByMinScore", () => {
   it("excludes scores below the floor and keeps scores at or above it", () => {
-    const chunks = [chunk("a", 0.9), chunk("b", 0.44), chunk("c", 0.45), chunk("d", 0.1)];
+    const chunks = [chunk("a", 0.9), chunk("b", 0.59), chunk("c", 0.60), chunk("d", 0.1)];
     const kept = filterByMinScore(chunks, MIN_SEMANTIC_SIMILARITY);
     expect(kept.map((c) => c.chunkId)).toEqual(["a", "c"]);
   });
 
   it("returns empty when every score is below the floor — the 'gibberish query' case", () => {
     // Simulates "asdfghjkl qwerty": semanticSearch's real cosine scores
-    // against genuine gibberish should all land well below 0.45 (a
+    // against genuine gibberish should all land well below 0.60 (a
     // meaningful embedding needs some actual semantic content to match
     // against) — this test proves the floor mechanics themselves correctly
     // produce zero results when that's what upstream scoring reports,
     // regardless of what the real numbers turn out to be.
+    // BUG-2-2026-10-06: device evidence showed irrelevant content scoring
+    // 0.49-0.55, so the floor was raised from 0.45 to 0.60.
     const chunks = [chunk("a", 0.2), chunk("b", 0.1), chunk("c", 0.05)];
     expect(filterByMinScore(chunks, MIN_SEMANTIC_SIMILARITY)).toEqual([]);
   });
@@ -43,8 +45,8 @@ describe("filterByMinScore", () => {
     // "a legitimate query with weak/partial wording" — a chunk barely
     // above the floor must still survive, not be treated as noise just
     // because it's not a strong match.
-    const chunks = [chunk("a", 0.46)];
-    expect(filterByMinScore(chunks, MIN_SEMANTIC_SIMILARITY)).toEqual([chunk("a", 0.46)]);
+    const chunks = [chunk("a", 0.61)];
+    expect(filterByMinScore(chunks, MIN_SEMANTIC_SIMILARITY)).toEqual([chunk("a", 0.61)]);
   });
 });
 
@@ -112,9 +114,9 @@ describe("fuseRetrievalResults rawScore honesty (2026-09-28)", () => {
   // score. The UI now renders rawScore (the pre-fusion cosine), so a weak
   // match displays its weak absolute strength, never the constant.
   it("carries the raw cosine for a semantic-only chunk — not the fused 0.5", () => {
-    const semanticOnly = [chunk("a", 0.46, "semantic")];
+    const semanticOnly = [chunk("a", 0.66, "semantic")];
     const [result] = fuseRetrievalResults([], semanticOnly, 6);
-    expect(result.rawScore).toBe(0.46);
+    expect(result.rawScore).toBe(0.66);
     // The fused relative score (sorting only) still normalizes to the
     // weight constant — the contract is that the UI never renders it.
     expect(result.score).toBe(0.5);
@@ -134,12 +136,12 @@ describe("fuseRetrievalResults rawScore honesty (2026-09-28)", () => {
   });
 
   it("rawScore is monotonic with real match strength across a set", () => {
-    const semantic = [chunk("a", 0.92, "semantic"), chunk("b", 0.51, "semantic")];
+    const semantic = [chunk("a", 0.92, "semantic"), chunk("b", 0.65, "semantic")];
     const results = fuseRetrievalResults([], semantic, 6);
     const byId = new Map(results.map((r) => [r.chunkId, r]));
     expect(byId.get("a")!.rawScore).toBeGreaterThan(byId.get("b")!.rawScore!);
     // The displayed values are absolute, not re-normalized to the top of the set.
     expect(byId.get("a")!.rawScore).toBe(0.92);
-    expect(byId.get("b")!.rawScore).toBe(0.51);
+    expect(byId.get("b")!.rawScore).toBe(0.65);
   });
 });

@@ -386,6 +386,18 @@ export class NidoMessenger {
   }
 
   /**
+   * BUG-5-2026-10-06: desconecta un peer por su pkHex. Necesario para el
+   * barrido de MACs en NidoScreen: si el handshake tiene éxito pero es
+   * otro peer (no el contacto paired objetivo), hay que cerrar esa
+   * conexión antes de probar la siguiente MAC. Sin esto, las conexiones
+   * con peers equivocados quedan abiertas acumulándose.
+   */
+  async disconnectPeer(peerPkHex: string): Promise<void> {
+    this.assertLive();
+    await this.transport.disconnect(peerPkHex);
+  }
+
+  /**
    * Crea la identidad si no existe y la deja en memoria.
    *
    * M-2 (fail-closed): si el Keystore falla al leer, getIdentity() lanza y

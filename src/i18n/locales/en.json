@@ -548,7 +548,9 @@
     "pbkdf2Run": "▶ Run PBKDF2 benchmark",
     "pbkdf2Running": "Running PBKDF2 benchmark…",
     "pbkdf2Saved": "Saved to {{path}} · provisional: {{verdict}}",
-    "pbkdf2Title": "PBKDF2 benchmark (quarantine — not production crypto)"
+    "pbkdf2Title": "PBKDF2 benchmark (quarantine — not production crypto)",
+    "pbkdf2WarnTitle": "PBKDF2 benchmark",
+    "pbkdf2WarnMsg": "This benchmark will freeze the app for a while during the unchunked phase (by design, it measures the real blocking cost). Do not touch the app until it finishes."
   },
   "lockScreen": {
     "title": "NIDO locked",

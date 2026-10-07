@@ -524,8 +524,9 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
               await loadContacts();
               return;
             }
-            // Handshake OK pero es otro peer: seguir con el siguiente.
-            // (No hay disconnectPeer expuesto; la conexión ociosa expira sola.)
+            // Handshake OK pero es otro peer: desconectar y seguir con el siguiente.
+            // BUG-5-2026-10-06: antes no se desconectaba, dejando conexiones basura abiertas.
+            await mRef.current.disconnectPeer(info.pkHex).catch(() => {});
           } catch (e) {
             lastError = e instanceof Error ? e.message : String(e);
             // Seguir con la siguiente MAC.

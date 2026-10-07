@@ -136,19 +136,35 @@ export function EvaluationScreen({ onClose, chatBusy, deviceRequest }: Props) {
    */
   const handlePbkdf2Bench = async () => {
     if (benchRunning || running) return;
-    impact(ImpactFeedbackStyle.Medium);
-    setBenchRunning(true);
-    setBenchProgress(null);
-    setBenchResult(null);
-    try {
-      const { report, savedPath } = await runPbkdf2Benchmark(setBenchProgress);
-      setBenchResult({ savedPath, provisionalVerdict: report.provisionalVerdict });
-    } catch (e: any) {
-      Alert.alert(t("evaluation.pbkdf2FailedTitle"), e?.message ?? String(e));
-    } finally {
-      setBenchRunning(false);
-      setBenchProgress(null);
-    }
+    // BUG-2026-10-06: el benchmark incluye una fase "unchunked" que bloquea
+    // el hilo JS por diseño (mide el costo real). Sin aviso, el usuario
+    // piensa que el app se colgó. Advertir antes de ejecutar.
+    Alert.alert(
+      t("evaluation.pbkdf2WarnTitle") || "Benchmark PBKDF2",
+      t("evaluation.pbkdf2WarnMsg") ||
+        "This benchmark will freeze the app for a while during the unchunked phase (by design, it measures the real blocking cost). Do not touch the app until it finishes.",
+      [
+        { text: t("common.cancel") || "Cancel", style: "cancel" },
+        {
+          text: t("common.run") || "Run",
+          onPress: async () => {
+            impact(ImpactFeedbackStyle.Medium);
+            setBenchRunning(true);
+            setBenchProgress(null);
+            setBenchResult(null);
+            try {
+              const { report, savedPath } = await runPbkdf2Benchmark(setBenchProgress);
+              setBenchResult({ savedPath, provisionalVerdict: report.provisionalVerdict });
+            } catch (e: any) {
+              Alert.alert(t("evaluation.pbkdf2FailedTitle"), e?.message ?? String(e));
+            } finally {
+              setBenchRunning(false);
+              setBenchProgress(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const canRun = !running && !chatBusy && chosen.length > 0 && models !== null;

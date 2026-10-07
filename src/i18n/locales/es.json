@@ -149,6 +149,8 @@
     "pbkdf2Running": "Ejecutando benchmark PBKDF2…",
     "pbkdf2Saved": "Guardado en {{path}} · provisional: {{verdict}}",
     "pbkdf2Title": "Benchmark PBKDF2 (cuarentena — no es cripto de producción)",
+    "pbkdf2WarnTitle": "Benchmark PBKDF2",
+    "pbkdf2WarnMsg": "Este benchmark congelará el app por un rato durante la fase sin fragmentar (por diseño, mide el costo real de bloqueo). No toques el app hasta que termine.",
     "progress": "Config. {{config}}/{{configs}} · Consulta {{query}}/{{queries}}",
     "run": "▶ Ejecutar",
     "runFailedTitle": "Falló la evaluación",

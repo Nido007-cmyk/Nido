@@ -480,6 +480,53 @@ export async function runAgentLoop(
 
     const calls = parseToolCalls(text);
     if (calls.length === 0) {
+      // BUG-4-2026-10-06: el modelo 0.5B a veces responde "Listo" sin generar
+      // ningún tool call. Si la intención requiere herramientas (recordar/actuar)
+      // pero no se llamó ninguna, es una alucinación: no aceptar la respuesta.
+      const needsTools = intent === "recordar" || intent === "actuar";
+      if (needsTools && toolUses.length === 0) {
+        // Reintento con instrucción explícita de usar la herramienta.
+        messages.push({
+          role: "user",
+          content:
+            "No has usado ninguna herramienta. Debes emitir el bloque ```tool " +
+            "con la llamada correspondiente. No respondas solo con texto.",
+        });
+        const retry = await generateOnce();
+        const retryCalls = parseToolCalls(retry);
+        if (retryCalls.length === 0) {
+          // El modelo sigue sin generar tool calls: fallo explícito en vez
+          // de fingir éxito con un "Listo".
+          return {
+            response:
+              "No pude guardar eso automáticamente. El modelo no generó la " +
+              "acción necesaria. Inténtalo de nuevo o usa la pantalla de memoria directamente.",
+            intent,
+            toolUses,
+          };
+        }
+        // Si el reintento sí trajo calls, procesarlos abajo.
+        // (Caer al flujo normal: asignar text y continuar el loop.)
+        lastText = retry;
+        const retryObservations: string[] = [];
+        for (const call of retryCalls) {
+          const result = await dispatchToolCall(call, handlers, dispatchOptions);
+          toolUses.push({ name: call.name, result });
+          const truncatedResult = result.length > 2000 ? result.slice(0, 2000) + "…[truncado]" : result;
+          retryObservations.push(wrapUntrusted({
+            source: "tool_result",
+            content: `[${call.name}] ${truncatedResult}`,
+            origin: call.name,
+          }));
+          untrustedContext.push({ source: "tool_result", content: result, origin: call.name });
+        }
+        messages.push({ role: "assistant", content: retry });
+        messages.push({
+          role: "user",
+          content: `Observación de herramientas:\n${retryObservations.join("\n")}\n\n${CONTINUATION_DIRECTIVE}`,
+        });
+        continue;
+      }
       const final = finalizeResponse(text);
       if (final !== null) return { response: appendMutationConfirmation(final, toolUses), intent, toolUses };
       // T-echo-2026-10-06: el modelo solo repitió la directiva interna.
