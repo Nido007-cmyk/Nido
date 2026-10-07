@@ -148,7 +148,16 @@ class NidoP2PManager(private val context: Context) {
       addAction(BluetoothDevice.ACTION_FOUND)
       addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
     }
-    context.registerReceiver(receiver, filter)
+    // FIX-BRIAR-1.5.15: En Android 13+ (API 33), registerReceiver() exige
+    // especificar RECEIVER_EXPORTED o RECEIVER_NOT_EXPORTED. Los broadcasts
+    // de Bluetooth (ACTION_FOUND, ACTION_DISCOVERY_FINISHED) los envía el
+    // SISTEMA, no la app, así que el receptor debe ser EXPORTED. Sin esto,
+    // el discovery falla silenciosamente y las tablets no se ven entre sí.
+    if (Build.VERSION.SDK_INT >= 33) {
+      context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+    } else {
+      context.registerReceiver(receiver, filter)
+    }
     return try {
       bt.startDiscovery()
     } catch (e: Exception) {

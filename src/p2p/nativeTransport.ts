@@ -69,6 +69,7 @@ export interface NidoP2PBindings {
   requestPermissions(): Promise<boolean>;
   startDiscovery(): Promise<void>;
   stopDiscovery(): Promise<void>;
+  requestDiscoverable?(): Promise<void>;
   startServer(): Promise<void>;
   stopServer(): Promise<void>;
   connect(address: string): Promise<{ address: string; name: string | null }>;
@@ -403,6 +404,17 @@ export class NidoBluetoothTransport implements P2PTransport {
     this.discoveryRestartCount = 0;
     await this.ensureLinked();
     await this.bt().startDiscovery();
+  }
+
+  /**
+   * Solicita que el dispositivo sea visible (discoverable) para otros
+   * dispositivos Bluetooth. Muestra el diálogo del sistema.
+   */
+  async requestDiscoverable(): Promise<void> {
+    const b = this.bindings;
+    if (b?.requestDiscoverable) {
+      await b.requestDiscoverable().catch(() => {});
+    }
   }
 
   /**

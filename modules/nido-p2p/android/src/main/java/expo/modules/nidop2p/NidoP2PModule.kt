@@ -153,6 +153,25 @@ class NidoP2PModule : Module() {
       }
     }
 
+    /**
+     * Solicita que el dispositivo sea visible (discoverable) para otros
+     * dispositivos Bluetooth. Muestra el diálogo del sistema. Necesario
+     * para que dos tablets NIDO se encuentren durante el emparejamiento.
+     */
+    AsyncFunction("requestDiscoverable") { promise: Promise ->
+      try {
+        val intent = android.content.Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE).apply {
+          putExtra(android.bluetooth.BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300)
+          addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val ctx = appContext.reactContext ?: throw IllegalStateException("Sin reactContext")
+        ctx.startActivity(intent)
+        promise.resolve(null)
+      } catch (e: Exception) {
+        promise.reject("BT_ERROR", e.message, e)
+      }
+    }
+
     AsyncFunction("startServer") { promise: Promise ->
       io.execute {
         try {

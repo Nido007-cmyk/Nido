@@ -498,6 +498,20 @@ function normalizeSigPk(sigPkHex?: string | null): string | null {
   return toHex(raw);
 }
 
+/**
+ * Elimina un contacto pareado por su pk. También limpia sus mensajes
+ * (inbox/outbox/conversación) y nonces. Usado desde la UI para "desparear".
+ */
+export async function deleteContact(pkHex: string): Promise<void> {
+  const pk = toHex(fromHex(pkHex)); // valida y normaliza
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    await db.runAsync("DELETE FROM p2p_contacts WHERE pk_hex = ?", [pk]);
+    await db.runAsync("DELETE FROM p2p_messages WHERE peer_pk = ?", [pk]);
+    await db.runAsync("DELETE FROM hello_nonce_cache WHERE pk_lower = ?", [pk.toLowerCase()]);
+  });
+}
+
 export interface RepairCommit {
   /** Pks retiradas (conjunto confirmado por el usuario en la desambiguación; puede ser vacío). */
   oldPkHexes: string[];

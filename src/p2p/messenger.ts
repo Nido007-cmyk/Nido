@@ -32,6 +32,7 @@ import {
   archiveAndClearP2PIdentity,
   clearRepairIntent,
   commitRepair,
+  deleteContact,
   resolveContactByName,
   failAllOutbox,
   findContactByPk,
@@ -684,6 +685,20 @@ export class NidoMessenger {
   async contacts(): Promise<P2PContact[]> {
     this.assertLive();
     return listContacts();
+  }
+
+  /**
+   * Elimina un contacto pareado (desparear). Limpia sus mensajes y nonces.
+   */
+  async removeContact(pkHex: string): Promise<void> {
+    this.assertLive();
+    // Desconectar si hay una conexión activa con este peer.
+    try {
+      await this.transport.disconnect?.(pkHex).catch(() => {});
+    } catch {
+      /* best-effort */
+    }
+    await deleteContact(pkHex);
   }
 
   /**
