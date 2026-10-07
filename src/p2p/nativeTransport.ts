@@ -454,7 +454,13 @@ export class NidoBluetoothTransport implements P2PTransport {
     this.confirmedPair.clear();
     if (b) {
       await b.stopDiscovery().catch(() => {});
-      await b.stopServer().catch(() => {});
+      // P2P-ALWAYS-ON 2026-10-07: NO detener el servidor aquí. El servidor
+      // Bluetooth y su foreground service se mantienen corriendo todo el
+      // tiempo que la app esté viva (como Briar), no solo mientras la
+      // pantalla P2P está abierta. Esto permite recibir conexiones y
+      // mensajes aunque el usuario esté en otra pantalla. El servidor solo
+      // se detiene en shutdownNative() (destrucción terminal del messenger)
+      // o cuando el proceso muere.
     }
   }
 

@@ -225,6 +225,11 @@ class NidoP2PModule : Module() {
       io.execute {
         try {
           manager.shutdown()
+          // Detener el foreground service en el apagado terminal.
+          val ctx = appContext.reactContext
+          if (ctx != null) {
+            NidoP2PService.stop(ctx)
+          }
           promise.resolve(null)
         } catch (e: Exception) {
           promise.reject("BT_ERROR", e.message, e)

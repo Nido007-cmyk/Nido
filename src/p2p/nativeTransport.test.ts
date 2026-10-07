@@ -1196,11 +1196,13 @@ describe("B/F4: apagado nativo en la destrucción terminal", () => {
     await m.destroy();
     // Orden: stopDiscovery() desuscribe y limpia primero; el apagado nativo
     // (cierre de sockets RFCOMM) va después, nunca antes.
+    // P2P-ALWAYS-ON 2026-10-07: stopDiscovery() ya NO detiene el servidor;
+    // el servidor se mantiene corriendo (foreground service) hasta el
+    // shutdown terminal. Por eso "stopServer" ya no aparece aquí.
     expect(f.calls).toEqual([
       "startServer",
       "startDiscovery",
       "stopDiscovery",
-      "stopServer",
       "shutdown",
     ]);
     // El messenger quedó invalidado: operar falla explícito (fail closed).
