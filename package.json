@@ -26,7 +26,7 @@
     "expo-sharing": "57.0.22",
     "expo-speech": "57.0.3",
     "expo-splash-screen": "57.0.9",
-    "expo-sqlite": "57.0.3",
+    "expo-sqlite": "57.0.4",
     "expo-status-bar": "57.0.1",
     "i18next": "26.4.2",
     "llama.rn": "0.13.0-rc.6",

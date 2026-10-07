@@ -71,6 +71,13 @@ class NidoP2PManager(private val context: Context) {
   private var serverSocket: BluetoothServerSocket? = null
   private var acceptThread: Thread? = null
   private var discoveryReceiver: BroadcastReceiver? = null
+  /**
+   * BOND-LOSS-2026-10-07 (Android 16/API 36): receptor para detectar pérdida
+   * de bond remota. En API 36+, el sistema emite ACTION_KEY_MISSING cuando
+   * detecta que el peer perdió el bond; antes removía el bond silenciosamente.
+   * Sin este receptor, un bond perdido causa "Handshake agotado" sin diagnóstico.
+   */
+  private var bondLossReceiver: BroadcastReceiver? = null
 
   // ------------------------------------------------------------ estado
 
@@ -185,6 +192,65 @@ class NidoP2PManager(private val context: Context) {
     }
   }
 
+  /**
+   * BOND-LOSS-2026-10-07: registra receptor para ACTION_KEY_MISSING (API 36+)
+   * y ACTION_BOND_STATE_CHANGED. Cuando el sistema detecta bond perdido,
+   * se notifica al listener para que el transporte marque la ruta como
+   * sospechosa en vez de reintentar el handshake ciegamente.
+   */
+  private fun registerBondLossReceiver() {
+    if (bondLossReceiver != null) return
+    val receiver = object : BroadcastReceiver() {
+      override fun onReceive(ctx: Context?, intent: Intent?) {
+        if (intent == null) return
+        val device: BluetoothDevice? = if (Build.VERSION.SDK_INT >= 33) {
+          intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+        } else {
+          @Suppress("DEPRECATION")
+          intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+        }
+        val addr = device?.address ?: return
+        when (intent.action) {
+          // API 36+: el sistema retiene el bond local y avisa.
+          "android.bluetooth.device.action.KEY_MISSING" -> {
+            listener?.onError("Bond perdido con $addr: re-pairea en Ajustes Bluetooth.")
+            // Cierra cualquier conexión stale con este dispositivo.
+            connections.remove(addr)?.close()
+          }
+          BluetoothDevice.ACTION_BOND_STATE_CHANGED -> {
+            val state = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, -1)
+            if (state == BluetoothDevice.BOND_NONE) {
+              listener?.onError("Dispositivo $addr desvinculado.")
+              connections.remove(addr)?.close()
+            }
+          }
+        }
+      }
+    }
+    bondLossReceiver = receiver
+    val filter = IntentFilter().apply {
+      addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
+      // ACTION_KEY_MISSING solo existe en API 36+; agregarlo en versiones
+      // anteriores es inofensivo (nunca se emite).
+      addAction("android.bluetooth.device.action.KEY_MISSING")
+    }
+    if (Build.VERSION.SDK_INT >= 33) {
+      context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+    } else {
+      context.registerReceiver(receiver, filter)
+    }
+  }
+
+  private fun unregisterBondLossReceiver() {
+    val receiver = bondLossReceiver ?: return
+    bondLossReceiver = null
+    try {
+      context.unregisterReceiver(receiver)
+    } catch (_: Exception) {
+      // Ya desregistrado; no pasa nada.
+    }
+  }
+
   fun bondedDevices(): List<Map<String, String?>> {
     if (!hasConnectPermission()) return emptyList()
     return try {
@@ -206,6 +272,7 @@ class NidoP2PManager(private val context: Context) {
     val bt = adapter ?: throw IOException("Bluetooth no disponible.")
     if (!bt.isEnabled) throw IOException("El Bluetooth está apagado.")
     if (!hasConnectPermission()) throw IOException("Falta el permiso BLUETOOTH_CONNECT.")
+    registerBondLossReceiver()
     val server = bt.listenUsingInsecureRfcommWithServiceRecord(SERVICE_NAME, SERVICE_UUID)
     serverSocket = server
     acceptThread = Thread({
@@ -227,6 +294,7 @@ class NidoP2PManager(private val context: Context) {
   fun stopServer() {
     acceptThread?.interrupt()
     acceptThread = null
+    unregisterBondLossReceiver()
     try {
       serverSocket?.close()
     } catch (_: Exception) {
@@ -275,6 +343,15 @@ class NidoP2PManager(private val context: Context) {
     watchdog.start()
     try {
       socket.connect() // bloqueante (watchdog de 7s arriba)
+    } catch (e: NullPointerException) {
+      // GUARD-BRIAR-2026-10-07: Briar documenta NPE dentro de
+      // BluetoothSocket.connect() en ciertos stacks (Huawei). Se envuelve
+      // en IOException para manejo uniforme.
+      try {
+        socket.close()
+      } catch (_: Exception) {
+      }
+      throw IOException("NPE interno en connect() con $address (stack del OEM).")
     } catch (e: IOException) {
       try {
         socket.close()
@@ -433,7 +510,13 @@ class NidoP2PManager(private val context: Context) {
     @Synchronized
     fun writeFrame(payload: ByteArray) {
       if (closed) throw IOException("Conexión cerrada ($address).")
-      val out = socket.outputStream
+      // GUARD-BRIAR-2026-10-07: los streams pueden ser null o lanzar si el
+      // socket se cerró concurrentemente. Briar hace null-check explícito.
+      val out = try {
+        socket.outputStream
+      } catch (e: Exception) {
+        throw IOException("Stream de escritura no disponible ($address): ${e.message}")
+      } ?: throw IOException("Stream de escritura null ($address).")
       val header = ByteArray(4)
       header[0] = (payload.size ushr 24).toByte()
       header[1] = (payload.size ushr 16).toByte()

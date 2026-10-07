@@ -192,7 +192,11 @@ export class LlamaEngine {
     // prompt can run on for a while; wait for all rather than release under
     // them. F3-2026-10-06: espera al conjunto completo, no solo a la última.
     if (this.inFlight.size > 0) {
-      await this.context?.stopCompletion().catch(() => {});
+      // FIX-2026-10-07 (llama.rn rc.6): `stopCompletion()` ahora retorna
+      // `undefined` en vez de una promesa (cambio de comportamiento en rc.6,
+      // confirmado por BOAR). El `.catch()` directo crashearía con TypeError.
+      // Se envuelve en Promise.resolve() para manejar ambos casos.
+      await Promise.resolve(this.context?.stopCompletion()).catch(() => {});
       await Promise.allSettled([...this.inFlight]);
     }
     const context = this.context;
