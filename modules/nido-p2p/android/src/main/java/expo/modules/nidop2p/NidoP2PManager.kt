@@ -255,14 +255,49 @@ class NidoP2PManager(private val context: Context) {
     // Cierra una conexión previa con el mismo dispositivo, si la hay.
     connections.remove(address)?.close()
     val socket = device.createInsecureRfcommSocketToServiceRecord(SERVICE_UUID)
+    // WATCHDOG-2026-10-07: `socket.connect()` es bloqueante sin timeout
+    // configurable; el SO tarda 10-20s en fallar. Un watchdog de 7s cierra
+    // el socket desde otro hilo para fallar rápido y permitir reintento
+    // con backoff (ver fdittgen-png/tankstellen#3348: el canal RFCOMM puede
+    // quedar ocupado por una sesión caída).
+    val watchdog = Thread {
+      try {
+        Thread.sleep(7000)
+        try {
+          socket.close()
+        } catch (_: Exception) {
+        }
+      } catch (_: InterruptedException) {
+        // connect() terminó antes: el watchdog se cancela.
+      }
+    }
+    watchdog.isDaemon = true
+    watchdog.start()
     try {
-      socket.connect() // bloqueante (timeout interno del SO, ~10-20 s)
+      socket.connect() // bloqueante (watchdog de 7s arriba)
     } catch (e: IOException) {
       try {
         socket.close()
       } catch (_: Exception) {
       }
-      throw IOException("No se pudo conectar con $address: ${e.message}")
+      // Diagnóstico: incluir estado del bond y del adaptador para triage.
+      // "read failed" es genérico por diseño; sin este contexto no se puede
+      // distinguir peer apagado vs socket stale vs fallo SDP.
+      val bondState = try {
+        when (device.bondState) {
+          BluetoothDevice.BOND_BONDED -> "bonded"
+          BluetoothDevice.BOND_BONDING -> "bonding"
+          else -> "none"
+        }
+      } catch (_: SecurityException) {
+        "unknown(no-perm)"
+      }
+      throw IOException(
+        "No se pudo conectar con $address: ${e.message} " +
+          "[bond=$bondState, discovering=${bt.isDiscovering}]",
+      )
+    } finally {
+      watchdog.interrupt()
     }
     onSocketAccepted(socket, incoming = false)
     return mapOf("address" to device.address, "name" to device.name)

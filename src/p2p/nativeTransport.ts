@@ -546,10 +546,41 @@ export class NidoBluetoothTransport implements P2PTransport {
         },
         timer,
       });
-      b.connect(mac).catch((e: unknown) => {
-        this.failHello(mac, e instanceof Error ? e : new Error(String(e)));
-      });
+      // RETRY-2026-10-07: reintento con backoff exponencial. El error
+      // "read failed, socket might closed" es ambiental (peer no escuchando,
+      // canal RFCOMM ocupado por sesión caída, carrera SDP); un solo intento
+      // no basta. Cada intento usa un socket fresco (el nativo cierra el
+      // anterior); nunca se reusa un socket fallido (androidaps: 579 fallos
+      // medidos por reusar sockets).
+      void this.connectWithBackoff(b, mac, 0);
     });
+  }
+
+  /**
+   * Intenta conectar con backoff exponencial (máx 3 intentos).
+   * Cada intento crea un socket fresco en el lado nativo.
+   */
+  private async connectWithBackoff(
+    b: NidoP2PBindings,
+    mac: string,
+    attempt: number,
+  ): Promise<void> {
+    const MAX_ATTEMPTS = 3;
+    try {
+      await b.connect(mac);
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      if (attempt + 1 >= MAX_ATTEMPTS) {
+        this.failHello(mac, err);
+        return;
+      }
+      // Backoff: 1s, 2s, 4s... (el watchdog nativo ya falló a los 7s)
+      const delayMs = 1000 * Math.pow(2, attempt);
+      await new Promise((r) => setTimeout(r, delayMs));
+      // Si el handshake ya se resolvió/canceló, no reintentar.
+      if (!this.pending.has(mac)) return;
+      await this.connectWithBackoff(b, mac, attempt + 1);
+    }
   }
 
   async sendFrame(peerPkHex: string, frame: Uint8Array): Promise<void> {
