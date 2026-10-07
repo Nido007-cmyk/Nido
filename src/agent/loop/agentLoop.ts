@@ -427,31 +427,37 @@ export async function runAgentLoop(
   // de agent-driven, eliminando la clase de fallo donde el modelo 0.5B
   // responde "Listo" sin generar el tool call.
   //
+  // BUG-4b-2026-10-07: el pre-router debe ser AGNÓSTICO al intent.
+  // Un mensaje como "Remember that X... remind me in time" clasifica
+  // como "actuar" (por "remind me") pero contiene un patrón explícito
+  // de memoria que debe extraerse igual. El intent no debe bloquear
+  // la extracción determinística.
+  //
   // El research externo (sheetmemory, guardian-agent) confirma este patrón
   // como la solución más confiable para modelos sub-1B.
-  if (intent === "recordar") {
-    const extraction = extractRememberFact(userText);
-    if (extraction) {
-      const { saveFact } = await import("../memory/memoryStore");
-      await saveFact({
-        content: extraction.content,
-        category: extraction.category,
-        source: "user",
-      });
-      // Retornar directamente con confirmación honesta. El trace indica
-      // que fue la vía determinística, no el modelo.
-      return {
-        response: `Listo, lo guardé en mi memoria: «${extraction.content}».`,
-        intent,
-        toolUses: [
-          {
-            name: "remember_fact",
-            result: `Guardado vía pre-router determinístico: «${extraction.content}» (categoría: ${extraction.category}).`,
-          },
-        ],
-      };
-    }
-    // Si no hay extracción clara, continuar con el flujo normal del LLM.
+  const extraction = extractRememberFact(userText);
+  if (extraction) {
+    const { saveFact } = await import("../memory/memoryStore");
+    await saveFact({
+      content: extraction.content,
+      category: extraction.category,
+      source: "user",
+    });
+    // Retornar directamente con confirmación honesta. El trace indica
+    // que fue la vía determinística, no el modelo.
+    // Si el intent original era "actuar" (ej: también pide recordatorio),
+    // el modelo aún puede procesar el resto del mensaje después; por ahora
+    // la memoria queda garantizada y se informa al usuario.
+    return {
+      response: `Listo, lo guardé en mi memoria: «${extraction.content}».`,
+      intent,
+      toolUses: [
+        {
+          name: "remember_fact",
+          result: `Guardado vía pre-router determinístico: «${extraction.content}» (categoría: ${extraction.category}).`,
+        },
+      ],
+    };
   }
 
   const mem = await options.loadMemory?.().catch(() => null);

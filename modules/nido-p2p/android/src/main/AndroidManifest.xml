@@ -2,4 +2,24 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <!-- Los permisos en tiempo de ejecución se piden desde el módulo;
        las declaraciones en app.json los fusionan al manifiesto final. -->
+
+  <!-- Foreground service para el servidor P2P: mantiene el proceso vivo
+       (exento del freezer de Android) mientras el servidor Bluetooth está
+       activo. Sin esto, accept() deja de responder ~30s después del
+       background aunque el kernel siga aceptando conexiones. -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+  <!-- POST_NOTIFICATIONS es necesario en Android 13+ para mostrar la
+       notificación persistente del foreground service. Se pide en tiempo
+       de ejecución junto con los permisos Bluetooth. -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <!-- WAKE_LOCK para el wake lock parcial que protege el handshake de Doze. -->
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+  <application>
+    <service
+      android:name=".NidoP2PService"
+      android:exported="false"
+      android:foregroundServiceType="connectedDevice" />
+  </application>
 </manifest>

@@ -647,7 +647,20 @@ export class NidoBluetoothTransport implements P2PTransport {
     } catch {
       return; // basura: se ignora
     }
-    const pend = this.pending.get(mac);
+    let pend = this.pending.get(mac);
+    // RACE-FIX 2026-10-06: si el HELLO del peer llega ANTES de que
+    // onConnected dispare beginHello (el evento nativo puede tardar),
+    // el frame se ignoraba silenciosamente y el handshake moría por
+    // timeout en ambos lados. Si no hay pend, iniciar el handshake
+    // ahora (beginHello es idempotente) y reprocesar el frame.
+    if (!pend) {
+      try {
+        await this.beginHello(mac);
+      } catch {
+        return; // beginHello falló (ej. sin identidad); se ignora el frame
+      }
+      pend = this.pending.get(mac);
+    }
     if (pend) {
       // El handshake se parsea por fase (§4.5 del packet): hello-sent
       // espera HELLO; confirm-sent espera CONFIRM; cualquier otra cosa

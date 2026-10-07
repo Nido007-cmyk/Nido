@@ -33,6 +33,7 @@ import { NidoMascot } from "./components/calm/NidoMascot";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import * as FileSystem from "expo-file-system/legacy";
 import { getDeviceTotalRamBytes } from "ram-monitor";
+import { activateKeepAwake, deactivateKeepAwake } from "expo-keep-awake";
 import { withStage } from "../utils/stageError";
 import {
   TIERS,
@@ -1018,6 +1019,22 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
       </ScrollView>
     );
   };
+
+  // DOWNLOAD-KEEP-AWAKE 2026-10-07: mantener la pantalla encendida mientras
+  // hay descargas activas. Sin esto, Android Doze corta la red al apagarse
+  // la pantalla y la descarga se congela hasta reabrir la app. expo-keep-awake
+  // evita que Doze se active (requiere pantalla encendida).
+  useEffect(() => {
+    if (isAnyDownloading) {
+      activateKeepAwake("nido-model-download");
+    } else {
+      deactivateKeepAwake("nido-model-download");
+    }
+    // Limpiar al desmontar.
+    return () => {
+      deactivateKeepAwake("nido-model-download");
+    };
+  }, [isAnyDownloading]);
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: colors.bg.black }]} edges={["top", "bottom"]}>

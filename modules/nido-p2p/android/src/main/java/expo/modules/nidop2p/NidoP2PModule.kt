@@ -156,6 +156,12 @@ class NidoP2PModule : Module() {
     AsyncFunction("startServer") { promise: Promise ->
       io.execute {
         try {
+          // Foreground service PRIMERO: mantiene el proceso vivo (exento del
+          // freezer de Android) mientras el servidor está activo. Sin esto,
+          // accept() deja de responder ~30s después del background aunque el
+          // kernel siga aceptando conexiones en el backlog.
+          val ctx = appContext.reactContext ?: throw IllegalStateException("Sin reactContext")
+          NidoP2PService.start(ctx)
           manager.startServer()
           promise.resolve(null)
         } catch (e: Exception) {
@@ -168,6 +174,12 @@ class NidoP2PModule : Module() {
       io.execute {
         try {
           manager.stopServer()
+          // Detener el foreground service: ya no necesitamos mantener el
+          // proceso vivo solo por P2P.
+          val ctx = appContext.reactContext
+          if (ctx != null) {
+            NidoP2PService.stop(ctx)
+          }
           promise.resolve(null)
         } catch (e: Exception) {
           promise.reject("BT_ERROR", e.message, e)

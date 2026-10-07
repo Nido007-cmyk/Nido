@@ -82,11 +82,18 @@ class NidoP2PManager(private val context: Context) {
 
   /** Permisos que faltan para operar (según nivel de API). */
   fun missingPermissions(): List<String> {
-    val needed = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-      listOf(Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN)
+    val needed = mutableListOf<String>()
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      needed.add(Manifest.permission.BLUETOOTH_CONNECT)
+      needed.add(Manifest.permission.BLUETOOTH_SCAN)
     } else {
       // En API < 31 el discovery exige permiso de ubicación.
-      listOf(Manifest.permission.ACCESS_FINE_LOCATION)
+      needed.add(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+    // Android 13+ (API 33): el foreground service necesita mostrar su
+    // notificación persistente.
+    if (Build.VERSION.SDK_INT >= 33) {
+      needed.add(Manifest.permission.POST_NOTIFICATIONS)
     }
     return needed.filter {
       ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
