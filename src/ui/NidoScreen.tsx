@@ -497,6 +497,52 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
     [connecting, loadContacts],
   );
 
+  /**
+   * BUG-5-2026-10-06: conectar a un contacto paired probando las MACs
+   * descubiertas. El pairing QR intercambia pk pero el discovery BT solo
+   * da MACs; sin esto el usuario no sabe qué MAC tocar entre ~20.
+   * Prueba cada nearby hasta que el handshake devuelva el pk esperado.
+   */
+  const handleConnectPaired = useCallback(
+    async (pkHex: string, name: string) => {
+      if (connecting) return;
+      const target = pkHex.toLowerCase();
+      setConnecting(`paired:${target}`);
+      setLinkError(null);
+      try {
+        const candidates = nearby;
+        if (candidates.length === 0) {
+          throw new Error(t("nido.noNearbyForPaired"));
+        }
+        let lastError: string = "";
+        for (const alias of candidates) {
+          try {
+            const info = await mRef.current.connectPeer(alias);
+            if (info.pkHex.toLowerCase() === target) {
+              setNotice(t("nido.connectedNotice", { alias: name }));
+              setNearby((prev) => prev.filter((a) => a !== alias));
+              await loadContacts();
+              return;
+            }
+            // Handshake OK pero es otro peer: seguir con el siguiente.
+            // (No hay disconnectPeer expuesto; la conexión ociosa expira sola.)
+          } catch (e) {
+            lastError = e instanceof Error ? e.message : String(e);
+            // Seguir con la siguiente MAC.
+          }
+        }
+        throw new Error(
+          lastError || t("nido.pairedNotFound", { name })
+        );
+      } catch (e) {
+        setLinkError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setConnecting(null);
+      }
+    },
+    [connecting, loadContacts, nearby, t],
+  );
+
   const copy = useCallback(
     async (value: string, label: string) => {
       await Clipboard.setStringAsync(value);
@@ -915,27 +961,53 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             <Text style={styles.cardTitle}>
               {t("nido.pairedCount", { count: contacts.length })}
             </Text>
-            {contacts.map((c) => (
-              <View key={c.pkHex} style={styles.contactRowStatic}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    {
-                      backgroundColor: online.has(c.pkHex.toLowerCase())
-                        ? colors.emerald[500]
-                        : colors.text.dim,
-                    },
-                  ]}
-                />
-                <View style={styles.contactInfo}>
-                  <Text style={styles.contactName}>{c.name}</Text>
-                  <Text style={styles.contactSub} selectable>
-                    {c.pkHex.slice(0, 16)}… ·{" "}
-                    {online.has(c.pkHex.toLowerCase()) ? t("nido.online") : t("nido.offline")}
-                  </Text>
+            {contacts.map((c) => {
+              const isOnline = online.has(c.pkHex.toLowerCase());
+              const isConnectingThis =
+                connecting === `paired:${c.pkHex.toLowerCase()}`;
+              return (
+                <View key={c.pkHex} style={styles.contactRowStatic}>
+                  <View
+                    style={[
+                      styles.statusDot,
+                      {
+                        backgroundColor: isOnline
+                          ? colors.emerald[500]
+                          : colors.text.dim,
+                      },
+                    ]}
+                  />
+                  <View style={styles.contactInfo}>
+                    <Text style={styles.contactName}>{c.name}</Text>
+                    <Text style={styles.contactSub} selectable>
+                      {c.pkHex.slice(0, 16)}… ·{" "}
+                      {isOnline ? t("nido.online") : t("nido.offline")}
+                    </Text>
+                  </View>
+                  {/* BUG-5-2026-10-06: botón para conectar probando MACs */}
+                  {!isOnline && (
+                    <Pressable
+                      onPress={() => void handleConnectPaired(c.pkHex, c.name)}
+                      disabled={connecting !== null}
+                      style={[
+                        styles.smallBtn,
+                        connecting !== null && styles.btnDisabled,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("nido.connectPaired", {
+                        name: c.name,
+                      })}
+                    >
+                      <Text style={styles.smallBtnText}>
+                        {isConnectingThis
+                          ? t("nido.connecting")
+                          : t("nido.connect")}
+                      </Text>
+                    </Pressable>
+                  )}
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </ScrollView>
       )}

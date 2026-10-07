@@ -176,6 +176,9 @@ const getStyles = (colors: Colors) => StyleSheet.create({
     ...typography.mono.xs,
     color: colors.text.accentEmerald,
     fontWeight: "600",
+    // BUG-7-2026-10-06: sin flexShrink:0 el porcentaje se deforma/apreta
+    // cuando el título es largo.
+    flexShrink: 0,
   },
   expandChevron: {
     fontSize: 8,
