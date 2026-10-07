@@ -56,3 +56,6 @@ build/knowledge-pack/
 docs/demo/boar_demo.mp4
 __pycache__/
 apk/
+
+# CI evidence artifacts (APKs, zips) — never commit binaries
+docs/ci-evidence/artifacts/
