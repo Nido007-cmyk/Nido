@@ -262,14 +262,40 @@ const CAPABILITY_PATTERNS: RegExp[] = [
   /\blist\s+your\s+(features|capabilities|tools)\b/,
   /\btell\s+me\s+about\s+your\s+(features|capabilities|tools)\b/,
   /\bwhat\s+can\s+(this|the)\s+app\s+do\b/,
+  // How it works offline / without internet
+  /\bhow\s+do\s+you\s+work\s+without\s+internet\b/,
+  /\bhow\s+does\s+(this|the)\s+app\s+work\s+offline\b/,
+  /\bdo\s+you\s+work\s+offline\b/,
+  /\bdo\s+you\s+need\s+internet\b/,
   // Spanish
   /\bque\s+puedes\s+hacer\b/,
   /\bque\s+sabes\s+hacer\b/,
   /\bcuales\s+son\s+tus\s+(funciones|caracteristicas|capacidades)\b/,
+  /\bcomo\s+funcionas\s+sin\s+internet\b/,
+  /\bfuncionas\s+sin\s+internet\b/,
   // Portuguese
   /\bo\s+que\s+voce\s+pode\s+fazer\b/,
   /\bo\s+que\s+voce\s+sabe\s+fazer\b/,
   /\bquais\s+sao\s+(seus\s+)?(recursos|funcionalidades|capacidades)\b/,
+];
+
+/** Privacy questions: where data is stored, who can see it. */
+const PRIVACY_PATTERNS: RegExp[] = [
+  // English
+  /\bwhere\s+is\s+my\s+data\s+stored\b/,
+  /\bwho\s+can\s+see\s+my\s+data\b/,
+  /\bwho\s+can\s+access\s+my\s+(data|information|chats)\b/,
+  /\bis\s+my\s+data\s+private\b/,
+  /\bdo\s+you\s+send\s+my\s+data\b/,
+  /\bis\s+my\s+(data|information)\s+sent\s+to\b/,
+  // Spanish
+  /\bdonde\s+se\s+guardan\s+mis\s+datos\b/,
+  /\bquien\s+puede\s+ver\s+mis\s+datos\b/,
+  /\bmis\s+datos\s+son\s+privados\b/,
+  /\benvias\s+mis\s+datos\b/,
+  // Portuguese
+  /\bonde\s+meus\s+dados\s+(sao|ficam)\b/,
+  /\bquem\s+pode\s+ver\s+meus\s+dados\b/,
 ];
 
 /** Advantage questions: why use NIDO over a cloud assistant. */
@@ -295,7 +321,7 @@ const CATEGORY_PATTERNS: Array<{ category: KnowledgeCategory; patterns: RegExp[]
   { category: "usage", patterns: USAGE_PATTERNS },
   { category: "roadmap", patterns: ROADMAP_PATTERNS },
   { category: "capabilities", patterns: CAPABILITY_PATTERNS },
-  { category: "advantages", patterns: ADVANTAGE_PATTERNS },
+  { category: "advantages", patterns: [...ADVANTAGE_PATTERNS, ...PRIVACY_PATTERNS] },
 ];
 
 /** Max edit distance for brand-typo tolerance (Design 2). Frozen at 1. */
