@@ -59,10 +59,12 @@ export function extractReminderAction(userText: string): ReminderAction | null {
 
   // "agrégame cita con el doctor el viernes a las 10"
   // "créame un recordatorio para comprar leche mañana"
-  const m = /(?:agr[ée]game|cr[ée]ame|ponme|crea)\s+(una?\s+)?(cita|recordatorio)\s+(.+)/i.exec(trimmed);
+  // LOOP-1 FIX 2026-10-07: también "recuérdame comprar pan" / "remember me to call mom"
+  // El intent clasificador ya marca estos como "actuar", pero el router no los capturaba.
+  const m = /(?:agr[ée]game|cr[ée]ame|ponme|crea|recu[ée]rdame|remember me to)\s+(?:una?\s+)?(?:cita|recordatorio)?\s*(.+)/i.exec(trimmed);
   if (!m) return null;
 
-  let text = m[3].trim();
+  let text = m[1].trim();
   if (text.length < 3) return null;
 
   // CALENDAR-FIX 2026-10-07: parsear fecha/hora del texto.

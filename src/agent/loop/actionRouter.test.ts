@@ -109,4 +109,16 @@ describe("CALENDAR-FIX 2026-10-07: parseo de fechas", () => {
     // "algo" no es fecha
     expect(r!.dueAt).toBeNull();
   });
+
+  it("LOOP-1 FIX: 'recuérdame comprar pan' se captura como recordatorio", () => {
+    const r = extractReminderAction("recuérdame comprar pan");
+    expect(r).not.toBeNull();
+    expect(r!.text.toLowerCase()).toContain("comprar pan");
+  });
+
+  it("LOOP-1 FIX: 'remember me to call mom' se captura como recordatorio", () => {
+    const r = extractReminderAction("remember me to call mom");
+    expect(r).not.toBeNull();
+    expect(r!.text.toLowerCase()).toContain("call mom");
+  });
 });

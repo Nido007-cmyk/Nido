@@ -214,7 +214,7 @@ class NegotiationService {
   async proposeTo(
     recipientPkHex: string,
     taskDescription: string,
-    requestedScopes: string[] = ["chat"]
+    requestedScopes: string[] = ["send:message"]
   ): Promise<{ sent: boolean; proposalId?: string; reason?: string }> {
     if (!this.sendFn) {
       return { sent: false, reason: "no_send_fn" };
@@ -229,7 +229,7 @@ class NegotiationService {
     try {
       const kp = await getSigningKeypair();
       const myPkHex = toHex(kp.publicKey);
-      const { createProposal } = await import("./negotiation");
+      const { createProposal, signNegotiationMessage } = await import("./negotiation");
       const proposal = createProposal(
         kp.secretKey,
         myPkHex,
@@ -237,6 +237,16 @@ class NegotiationService {
         desc,
         requestedScopes,
         {}
+      );
+      // P2P-1 FIX 2026-10-07: envolver la propuesta en SignedNegotiationMessage
+      // vía signNegotiationMessage, como hace respond() para ACCEPT/DECLINE/COUNTER.
+      // Antes se pasaba la TaskProposal cruda y handlePropose la descartaba en silencio.
+      const signed = signNegotiationMessage(
+        kp.secretKey,
+        myPkHex,
+        "PROPOSE",
+        proposal.proposalId,
+        proposal
       );
       // Registrar la sesión local como PROPOSED (saliente).
       const session: NegotiationSession = {
@@ -249,13 +259,12 @@ class NegotiationService {
         sending: true,
       };
       this.sessions.set(proposal.proposalId, session);
-      // Enviar vía el transporte. Nota: el sendFn actual solo soporta
-      // ACCEPT/DECLINE/COUNTER; extendemos el tipo para PROPOSE.
+      // Enviar vía el transporte.
       const sent = await this.sendFn(
         recipientPkHex.toLowerCase(),
-        "PROPOSE" as any,
+        "PROPOSE",
         proposal.proposalId,
-        proposal as unknown as Record<string, unknown>
+        signed as unknown as Record<string, unknown>
       );
       session.sending = false;
       if (!sent) {
@@ -519,10 +528,13 @@ class NegotiationService {
     // 5. Expiry
     if (isExpired(proposal)) {
       // Ya expiró al llegar: se marca como expirada
+      // P2P-2 FIX 2026-10-07: usar env.from (clave de identidad X25519 del transporte)
+      // en vez de proposal.proposerPkHex (clave de firma Ed25519). Las sesiones de
+      // transporte están indexadas por clave de identidad.
       const session: NegotiationSession = {
         negotiationId,
         proposalId: proposal.proposalId,
-        peerPkHex: proposal.proposerPkHex,
+        peerPkHex: env.from.toLowerCase(),
         state: "EXPIRED",
         proposal,
         updatedAt: Date.now(),
@@ -546,7 +558,8 @@ class NegotiationService {
     const session: NegotiationSession = {
       negotiationId,
       proposalId: proposal.proposalId,
-      peerPkHex: proposal.proposerPkHex,
+      // P2P-2 FIX: clave de identidad del transporte (env.from), no la de firma.
+      peerPkHex: env.from.toLowerCase(),
       state: "PROPOSED",
       proposal,
       updatedAt: Date.now(),

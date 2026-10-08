@@ -498,15 +498,32 @@ export async function runAgentLoop(
   const { extractPerson } = await import("./rememberRouter");
   const personExtraction = extractPerson(userText);
   if (personExtraction) {
-    const { savePerson } = await import("../memory/memoryStore");
+    const { savePerson, saveFact, saveReminder } = await import("../memory/memoryStore");
+    const { extractDateISO } = await import("./rememberRouter");
     const person = await savePerson({
       name: personExtraction.name,
       relationship: personExtraction.relationship,
       notes: personExtraction.notes,
     });
     const rel = person.relationship ? ` (${person.relationship})` : "";
+    // LOOP-2 FIX 2026-10-07: si el texto también contiene una fecha (ej: cumpleaños),
+    // guardarla como hecho + recordatorio. Antes se perdía al retornar early.
+    let extraNote = "";
+    const dueAt = extractDateISO(userText);
+    if (dueAt) {
+      await saveFact({
+        content: userText.trim(),
+        category: "general",
+        source: "user",
+      });
+      await saveReminder({
+        text: `${person.name}: ${userText.trim()}`,
+        dueAt,
+      });
+      extraNote = " También guardé la fecha como recordatorio.";
+    }
     return {
-      response: `Listo, guardé a ${person.name}${rel} en mis contactos.`,
+      response: `Listo, guardé a ${person.name}${rel} en mis contactos.${extraNote}`,
       intent,
       toolUses: [
         {
