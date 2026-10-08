@@ -490,3 +490,25 @@ describe("BRIAR-2026-10-06: rol de dial determinístico", () => {
     expect(r1).toBe(r2);
   });
 });
+
+describe("DIAG-2026-10-07: serverStatus() del messenger", () => {
+  it("devuelve el estado del transporte cuando lo expone", async () => {
+    const { LoopbackTransport } = await import("./transport");
+    const transport = new LoopbackTransport();
+    (transport as unknown as Record<string, unknown>).readServerStatus = () => ({
+      alive: true,
+      acceptedCount: 2,
+      lastAcceptAt: 999,
+    });
+    const m = new NidoMessenger(transport);
+    expect(m.serverStatus()).toEqual({ alive: true, acceptedCount: 2, lastAcceptAt: 999 });
+    await m.destroy();
+  });
+
+  it("devuelve null cuando el transporte no expone el diagnóstico", async () => {
+    const { LoopbackTransport } = await import("./transport");
+    const m = new NidoMessenger(new LoopbackTransport());
+    expect(m.serverStatus()).toBeNull();
+    await m.destroy();
+  });
+});

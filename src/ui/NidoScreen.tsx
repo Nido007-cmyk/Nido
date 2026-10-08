@@ -116,6 +116,14 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   const [linking, setLinking] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState<string | null>(null);
+  // DIAG-2026-10-07: estado del servidor RFCOMM nativo (¿el accept loop está
+  // vivo?). Se sondea mientras la pantalla está abierta; es una llamada
+  // nativa síncrona barata.
+  const [serverStatus, setServerStatus] = useState<{
+    alive: boolean;
+    acceptedCount: number;
+    lastAcceptAt: number;
+  } | null>(null);
   const [peer, setPeer] = useState<P2PContact | null>(null);
   const [messages, setMessages] = useState<P2PStoredMessage[]>([]);
   const [draft, setDraft] = useState("");
@@ -261,6 +269,24 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       void m.stopLink().catch(() => {});
     };
   }, [linkAttempt]);
+
+  // DIAG-2026-10-07: sondeo del estado del servidor RFCOMM nativo mientras
+  // la pantalla está abierta. Responde la pregunta decisiva del diagnóstico
+  // P2P: ¿el accept loop está vivo? (La notificación del foreground service
+  // NO lo garantiza.)
+  useEffect(() => {
+    const m = mRef.current;
+    const poll = () => {
+      try {
+        setServerStatus(m.serverStatus());
+      } catch {
+        setServerStatus(null);
+      }
+    };
+    poll();
+    const id = setInterval(poll, 3000);
+    return () => clearInterval(id);
+  }, []);
 
   // Refresco de la conversación abierta: polling local barato. El messenger
   // guarda los frames entrantes al recibirlos; el polling los pinta.
@@ -1038,6 +1064,16 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
 
       {tab === "enlace" && (
         <ScrollView contentContainerStyle={styles.body}>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t("nido.serverTitle")}</Text>
+            <Text style={styles.paragraph}>
+              {serverStatus === null
+                ? t("nido.serverUnknown")
+                : serverStatus.alive
+                  ? t("nido.serverActive", { count: serverStatus.acceptedCount })
+                  : t("nido.serverInactive")}
+            </Text>
+          </View>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{t("nido.nearbyTitle")}</Text>
             <Text style={styles.paragraph}>{t("nido.nearbyBody")}</Text>

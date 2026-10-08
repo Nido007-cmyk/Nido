@@ -1290,3 +1290,54 @@ describe("B/F4: apagado nativo en la destrucción terminal", () => {
     await t2.stopDiscovery();
   });
 });
+
+describe("DIAG-2026-10-07: estado del servidor RFCOMM nativo", () => {
+  it("readServerStatus devuelve el estado nativo cuando el binding lo expone", () => {
+    const f = makeFake();
+    (f.fake as NidoP2PBindings).getServerStatus = () => ({
+      alive: true,
+      acceptedCount: 3,
+      lastAcceptAt: 1234567890,
+    });
+    const t = makeTransport(f.fake);
+    expect(t.readServerStatus()).toEqual({ alive: true, acceptedCount: 3, lastAcceptAt: 1234567890 });
+  });
+
+  it("readServerStatus devuelve null con bindings viejos (sin getServerStatus)", () => {
+    const f = makeFake();
+    const t = makeTransport(f.fake);
+    expect(t.readServerStatus()).toBeNull();
+  });
+
+  it("doLink falla con error visible si el servidor no quedó escuchando", async () => {
+    const f = makeFake();
+    (f.fake as NidoP2PBindings).getServerStatus = () => ({
+      alive: false,
+      acceptedCount: 0,
+      lastAcceptAt: 0,
+    });
+    const t = makeTransport(f.fake);
+    await expect(t.startDiscovery(makeEvents().events)).rejects.toThrow(/no quedó escuchando/);
+  });
+
+  it("doLink continúa normal si el servidor quedó escuchando", async () => {
+    const f = makeFake();
+    (f.fake as NidoP2PBindings).getServerStatus = () => ({
+      alive: true,
+      acceptedCount: 0,
+      lastAcceptAt: 0,
+    });
+    const t = makeTransport(f.fake);
+    await t.startDiscovery(makeEvents().events);
+    expect(f.calls).toContain("startServer");
+    await t.stopDiscovery();
+  });
+
+  it("doLink continúa normal con bindings viejos (sin diagnóstico)", async () => {
+    const f = makeFake();
+    const t = makeTransport(f.fake);
+    await t.startDiscovery(makeEvents().events);
+    expect(f.calls).toContain("startServer");
+    await t.stopDiscovery();
+  });
+});

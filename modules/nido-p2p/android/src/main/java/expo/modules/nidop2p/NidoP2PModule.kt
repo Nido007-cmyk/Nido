@@ -73,6 +73,19 @@ class NidoP2PModule : Module() {
 
     Function("getServiceUuid") { NidoP2PManager.SERVICE_UUID_STRING }
 
+    /**
+     * DIAG-2026-10-07: estado del servidor RFCOMM para diagnóstico.
+     * Síncrona: el hilo de JS la invoca para pintar "servidor activo/inactivo"
+     * sin esperar. Devuelve { alive, acceptedCount, lastAcceptAt }.
+     */
+    Function("getServerStatus") {
+      try {
+        manager.getServerStatus()
+      } catch (e: Exception) {
+        mapOf("alive" to false, "acceptedCount" to 0, "lastAcceptAt" to 0L)
+      }
+    }
+
     Function("isBluetoothEnabled") {
       try {
         manager.isBluetoothEnabled()

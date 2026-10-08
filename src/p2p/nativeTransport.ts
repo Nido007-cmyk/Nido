@@ -72,6 +72,13 @@ export interface NidoP2PBindings {
   requestDiscoverable?(): Promise<void>;
   startServer(): Promise<void>;
   stopServer(): Promise<void>;
+  /**
+   * DIAG-2026-10-07: estado del servidor RFCOMM nativo. Síncrona.
+   * { alive: el accept loop está vivo; acceptedCount: conexiones aceptadas;
+   *   lastAcceptAt: epoch ms del último accept (0 si ninguno). }
+   * Opcional: módulos viejos sin este diagnóstico devuelven undefined.
+   */
+  getServerStatus?(): { alive: boolean; acceptedCount: number; lastAcceptAt: number };
   connect(address: string): Promise<{ address: string; name: string | null }>;
   sendFrame(address: string, base64: string): Promise<void>;
   disconnect(address: string): Promise<void>;
@@ -395,7 +402,30 @@ export class NidoBluetoothTransport implements P2PTransport {
       b.addListener("onError", (e) => this.events?.onError?.(e.message)),
     ];
     await b.startServer();
+    // DIAG-2026-10-07: verificar que el servidor quedó realmente escuchando.
+    // La notificación del foreground service NO lo garantiza (el servicio
+    // puede estar en primer plano sin hilo en accept()). Si el servidor no
+    // está vivo, fallar con un error visible en vez de un "listo" mentiroso.
+    const status = this.readServerStatus();
+    if (status && !status.alive) {
+      throw new Error(
+        "El servidor Bluetooth no quedó escuchando (accept loop inactivo). Reabre la pantalla de enlace.",
+      );
+    }
     this.linked = true;
+  }
+
+  /**
+   * DIAG-2026-10-07: estado del servidor RFCOMM nativo, o null si el módulo
+   * no expone el diagnóstico (build vieja).
+   */
+  readServerStatus(): { alive: boolean; acceptedCount: number; lastAcceptAt: number } | null {
+    try {
+      const b = this.bt();
+      return b.getServerStatus ? b.getServerStatus() : null;
+    } catch {
+      return null;
+    }
   }
 
   async startDiscovery(events: P2PTransportEvents): Promise<void> {

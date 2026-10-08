@@ -13,6 +13,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Base64
+import android.util.Log
 import androidx.core.content.ContextCompat
 import java.io.IOException
 import java.util.UUID
@@ -58,6 +59,9 @@ class NidoP2PManager(private val context: Context) {
     const val MAX_FRAME_BYTES = 256 * 1024
 
     const val SERVICE_NAME = "NIDO-P2P"
+
+    /** Tag de logcat para el diagnóstico del accept loop. */
+    const val TAG = "NidoP2P"
   }
 
   var listener: Listener? = null
@@ -70,6 +74,14 @@ class NidoP2PManager(private val context: Context) {
   private val connections = ConcurrentHashMap<String, Connection>()
   private var serverSocket: BluetoothServerSocket? = null
   private var acceptThread: Thread? = null
+  /**
+   * DIAG-2026-10-07: telemetría del accept loop. El síntoma "el dialer conecta
+   * pero el listener no responde" corresponde a socket abierto sin hilo en
+   * accept() (el kernel completa connect() contra el backlog). Estos
+   * contadores permiten verificarlo desde la UI sin logcat.
+   */
+  private var acceptedCount: Int = 0
+  private var lastAcceptAt: Long = 0L
   private var discoveryReceiver: BroadcastReceiver? = null
   /**
    * BOND-LOSS-2026-10-07 (Android 16/API 36): receptor para detectar pérdida
@@ -268,24 +280,39 @@ class NidoP2PManager(private val context: Context) {
   /** Idempotente: si ya hay un servidor, no hace nada. */
   @Synchronized
   fun startServer() {
-    if (acceptThread?.isAlive == true) return
+    if (acceptThread?.isAlive == true) {
+      Log.d(TAG, "startServer: el accept loop ya está vivo; no se reinicia.")
+      return
+    }
     val bt = adapter ?: throw IOException("Bluetooth no disponible.")
     if (!bt.isEnabled) throw IOException("El Bluetooth está apagado.")
     if (!hasConnectPermission()) throw IOException("Falta el permiso BLUETOOTH_CONNECT.")
     registerBondLossReceiver()
     val server = bt.listenUsingInsecureRfcommWithServiceRecord(SERVICE_NAME, SERVICE_UUID)
     serverSocket = server
+    Log.i(TAG, "startServer: server socket abierto, iniciando accept loop.")
     acceptThread = Thread({
-      while (!Thread.currentThread().isInterrupted) {
-        try {
-          val socket = server.accept() // bloqueante
-          onSocketAccepted(socket, incoming = true)
-        } catch (e: IOException) {
-          // accept() lanza al cerrar el serverSocket en stopServer(): salida normal.
-          break
-        } catch (e: Exception) {
-          listener?.onError("Error aceptando conexión: ${e.message}")
+      Log.i(TAG, "accept loop: hilo iniciado, bloqueado en accept().")
+      try {
+        while (!Thread.currentThread().isInterrupted) {
+          try {
+            val socket = server.accept() // bloqueante
+            onSocketAccepted(socket, incoming = true)
+          } catch (e: IOException) {
+            // accept() lanza al cerrar el serverSocket en stopServer(): salida normal.
+            Log.i(TAG, "accept loop: salida por IOException (cierre normal).")
+            break
+          } catch (e: Exception) {
+            listener?.onError("Error aceptando conexión: ${e.message}")
+          }
         }
+      } catch (e: Throwable) {
+        // DIAG-2026-10-07: un Error (no Exception) mataría el hilo en
+        // silencio dejando el socket abierto sin nadie en accept(). Se
+        // registra para que el diagnóstico lo capture.
+        Log.e(TAG, "accept loop: muerte por Throwable no capturado.", e)
+      } finally {
+        Log.w(TAG, "accept loop: hilo terminado.")
       }
     }, "nido-p2p-accept").also { it.start() }
   }
@@ -300,7 +327,27 @@ class NidoP2PManager(private val context: Context) {
     } catch (_: Exception) {
     }
     serverSocket = null
+    Log.i(TAG, "stopServer: accept loop detenido y server socket cerrado.")
   }
+
+  /**
+   * DIAG-2026-10-07: ¿hay un hilo vivo bloqueado en accept()? La notificación
+   * del foreground service NO lo garantiza: solo prueba que el servicio está
+   * en primer plano, no que el servidor escucha.
+   */
+  @Synchronized
+  fun isServerAlive(): Boolean = acceptThread?.isAlive == true && serverSocket != null
+
+  /**
+   * DIAG-2026-10-07: estado del servidor para la UI de diagnóstico.
+   * Claves: alive (Boolean), acceptedCount (Int), lastAcceptAt (Long, epoch ms).
+   */
+  @Synchronized
+  fun getServerStatus(): Map<String, Any> = mapOf(
+    "alive" to isServerAlive(),
+    "acceptedCount" to acceptedCount,
+    "lastAcceptAt" to lastAcceptAt,
+  )
 
   // ------------------------------------------------------------ cliente
 
@@ -406,6 +453,10 @@ class NidoP2PManager(private val context: Context) {
     val conn = Connection(address, socket)
     connections[address] = conn
     conn.start()
+    // DIAG-2026-10-07: telemetría del accept.
+    acceptedCount++
+    lastAcceptAt = System.currentTimeMillis()
+    Log.i(TAG, "accept: conexión #$acceptedCount aceptada de $address (incoming=$incoming).")
     val name = try {
       socket.remoteDevice.name
     } catch (_: Exception) {

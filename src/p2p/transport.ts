@@ -61,6 +61,12 @@ export interface P2PTransport {
    * (NidoBluetoothTransport) la implementan.
    */
   resetMyIdentityCache?(): void;
+  /**
+   * DIAG-2026-10-07: estado del servidor RFCOMM nativo (opcional: solo los
+   * transportes con módulo nativo real lo implementan). Null si el módulo
+   * no expone el diagnóstico.
+   */
+  readServerStatus?(): { alive: boolean; acceptedCount: number; lastAcceptAt: number } | null;
   /** Conecta con un peer descubierto (por su alias/MAC) y hace el handshake. */
   connect(alias: string): Promise<P2PPeerInfo>;
   /** Envía un frame ya cifrado al peer conectado. */

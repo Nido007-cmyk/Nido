@@ -73,14 +73,24 @@ class NidoP2PService : Service() {
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-    when (intent?.action) {
+    return when (intent?.action) {
       ACTION_STOP -> {
         stopForegroundService()
-        return START_NOT_STICKY
+        START_NOT_STICKY
+      }
+      ACTION_START -> {
+        startForegroundService()
+        START_STICKY
       }
       else -> {
-        startForegroundService()
-        return START_STICKY
+        // DIAG-2026-10-07: reinicio del sistema (intent null tras muerte del
+        // proceso). El server socket y el accept loop vivían en el
+        // NidoP2PManager del módulo (JS-driven) y murieron con el proceso;
+        // sin runtime JS no se pueden reconstruir desde aquí, así que NO se
+        // publica la notificación "listo para recibir" (mentiría). La app
+        // reconstruye todo al abrir la pantalla P2P (startLink).
+        stopSelf()
+        START_NOT_STICKY
       }
     }
   }

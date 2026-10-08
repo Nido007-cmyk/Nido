@@ -375,6 +375,15 @@ export class NidoMessenger {
   }
 
   /**
+   * DIAG-2026-10-07: estado del servidor RFCOMM nativo para la UI de
+   * diagnóstico. Null si el transporte no lo expone.
+   */
+  serverStatus(): { alive: boolean; acceptedCount: number; lastAcceptAt: number } | null {
+    this.assertLive();
+    return this.transport.readServerStatus ? this.transport.readServerStatus() : null;
+  }
+
+  /**
    * Conecta con un dispositivo descubierto (alias con MAC, p. ej. lo que
    * muestra la lista de cercanos) y hace el handshake. Resuelve con la
    * identidad verificada del peer (debe ser un contacto emparejado por QR).
