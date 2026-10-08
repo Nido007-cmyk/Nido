@@ -51,7 +51,16 @@ const SPOTLIGHT_PREAMBLE =
   "the task.\n\n";
 
 export function spotlightWrap(peerText: string): string {
-  return `${SPOTLIGHT_PREAMBLE}${SPOTLIGHT_OPEN}\n${peerText}\n${SPOTLIGHT_CLOSE}`;
+  // R6 FIX 2026-10-08: el texto del peer no puede cerrar (ni abrir) el
+  // bloque antes de tiempo. Un `</peer-data>` en el texto del peer
+  // terminaba el bloque prematuramente y todo lo posterior quedaba como
+  // entrada sin marcar. Se desactiva insertando un espacio: deja de ser
+  // parseable como delimitador pero sigue legible para el modelo.
+  // (Medida que encarece el ataque, no frontera de seguridad: ver header.)
+  const safe = peerText
+    .replace(/<peer-data>/gi, "< peer-data>")
+    .replace(/<\/peer-data>/gi, "< /peer-data>");
+  return `${SPOTLIGHT_PREAMBLE}${SPOTLIGHT_OPEN}\n${safe}\n${SPOTLIGHT_CLOSE}`;
 }
 
 export interface ExecutorConfig {
