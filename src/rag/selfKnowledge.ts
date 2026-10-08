@@ -264,9 +264,13 @@ const CAPABILITY_PATTERNS: RegExp[] = [
   /\bwhat\s+can\s+(this|the)\s+app\s+do\b/,
   // How it works offline / without internet
   /\bhow\s+do\s+you\s+work\s+without\s+internet\b/,
+  /\bhow\s+you\s+work\s+without\s+internet\b/,
+  /\bexplain\s+how\s+you\s+work\s+without\s+internet\b/,
+  /\bhow\s+do\s+you\s+work\b/,
   /\bhow\s+does\s+(this|the)\s+app\s+work\s+offline\b/,
   /\bdo\s+you\s+work\s+offline\b/,
   /\bdo\s+you\s+need\s+internet\b/,
+  /\bwork\s+without\s+internet\b/,
   // Spanish
   /\bque\s+puedes\s+hacer\b/,
   /\bque\s+sabes\s+hacer\b/,
@@ -284,6 +288,8 @@ const PRIVACY_PATTERNS: RegExp[] = [
   // English
   /\bwhere\s+is\s+my\s+data\s+stored\b/,
   /\bwho\s+can\s+see\s+my\s+data\b/,
+  /\bwho\s+can\s+see\s+it\b/,
+  /\bwho\s+has\s+access\s+to\s+my\s+data\b/,
   /\bwho\s+can\s+access\s+my\s+(data|information|chats)\b/,
   /\bis\s+my\s+data\s+private\b/,
   /\bdo\s+you\s+send\s+my\s+data\b/,
@@ -415,6 +421,38 @@ export function debugClassify(query: string): ClassificationDebug | null {
         attributed: rest === "" || ATTRIBUTION_RE.test(rest),
         typoSubstituted: false,
       };
+    }
+  }
+  // COMPOUND-2026-10-08: "Explain how you work without internet. Where is my
+  // data stored and who can see it?" — no single pattern covers the whole
+  // query, so matchAnchored rejects every family and the question falls
+  // through to the model ungrounded. Split the RAW query into clauses on
+  // sentence boundaries first (normalizeQuery strips punctuation, so split
+  // before normalizing), then classify each clause independently; the first
+  // clause that matches wins. Each clause is still anchored within itself,
+  // so the false-positive guard of Design 1 is preserved per clause.
+  const rawClauses = query
+    .split(/[.?!\n]+/)
+    .map((c) => c.trim())
+    .filter((c) => c.length > 0);
+  if (rawClauses.length > 1) {
+    for (const rawClause of rawClauses) {
+      const clause = normalizeQuery(rawClause);
+      if (!clause) continue;
+      for (const { category, patterns } of CATEGORY_PATTERNS) {
+        const re = matchAnchored(patterns, clause);
+        if (re) {
+          const m = re.exec(clause) as RegExpExecArray;
+          return {
+            category,
+            pattern: re.source,
+            matchedText: m[0],
+            rest: "",
+            attributed: true,
+            typoSubstituted: false,
+          };
+        }
+      }
     }
   }
   return null;

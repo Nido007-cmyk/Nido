@@ -105,6 +105,22 @@ export async function saveFact(input: {
   // H6-2026-10-06: cap por ítem para que un fact gigante no rompa el
   // presupuesto de contexto (antes: se descartaba TODA la memoria).
   const content = (input.content ?? "").slice(0, MAX_FACT_CONTENT_CHARS);
+  // DEDUP-2026-10-08: si ya existe un fact casi idéntico, actualizarlo en
+  // vez de insertar un duplicado (el usuario repite el dato con otras palabras).
+  const existing = await findSimilarFact(content);
+  if (existing) {
+    // Conservar el contenido más completo de los dos.
+    const merged = content.length > existing.content.length ? content : existing.content;
+    const updatedAt = new Date().toISOString();
+    await writeMemoryTransaction(async (db) => {
+      await db.runAsync("UPDATE facts SET content = ?, updated_at = ? WHERE id = ?;", [
+        merged,
+        updatedAt,
+        existing.id,
+      ]);
+    });
+    return { ...existing, content: merged, updatedAt };
+  }
   const fact: Fact = {
     id: newId(),
     content,
@@ -121,6 +137,46 @@ export async function saveFact(input: {
     );
   });
   return fact;
+}
+
+/** Normaliza un texto para comparar facts: minúsculas, sin puntuación, espacios simples. */
+export function normalizeFactText(s: string): string {
+  return (s ?? "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Similitud Jaccard sobre palabras. 1 = idénticos, 0 = sin palabras en común.
+ */
+export function factSimilarity(a: string, b: string): number {
+  const wa = new Set(normalizeFactText(a).split(" ").filter(Boolean));
+  const wb = new Set(normalizeFactText(b).split(" ").filter(Boolean));
+  if (wa.size === 0 || wb.size === 0) return 0;
+  let inter = 0;
+  for (const w of wa) if (wb.has(w)) inter++;
+  return inter / (wa.size + wb.size - inter);
+}
+
+/**
+ * Busca un fact existente muy similar al contenido dado.
+ * Detecta: contenido idéntico normalizado, uno contenido en el otro,
+ * o similitud Jaccard >= 0.75.
+ */
+export async function findSimilarFact(content: string): Promise<Fact | null> {
+  const norm = normalizeFactText(content);
+  if (!norm) return null;
+  const facts = await getFacts(500);
+  for (const f of facts) {
+    const fn = normalizeFactText(f.content);
+    if (!fn) continue;
+    if (fn === norm) return f;
+    if (fn.includes(norm) || norm.includes(fn)) return f;
+    if (factSimilarity(content, f.content) >= 0.75) return f;
+  }
+  return null;
 }
 
 export async function getFacts(limit = 100): Promise<Fact[]> {
