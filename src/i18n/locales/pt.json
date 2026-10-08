@@ -364,7 +364,10 @@
   },
   "negotiations": {
     "emptyTitle": "Sem negociações",
-    "emptyDescription": "Quando outro NIDO propuser colaboração, aparecerá aqui."
+    "emptyDescription": "Quando outro NIDO propuser colaboração, aparecerá aqui.",
+    "outgoingTitle": "Proposta enviada para {{peer}}",
+    "outgoingSending": "Enviando...",
+    "outgoingWaiting": "Aguardando resposta"
   },
   "chatHeader": {
     "openDrawer": "Abrir menu de navegação",

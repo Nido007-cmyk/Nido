@@ -177,6 +177,17 @@ class NegotiationService {
   }
 
   /**
+   * OUTGOING-2026-10-08: true si la propuesta la creamos nosotros (saliente).
+   * La UI lo necesita para no renderizar nuestras propias propuestas como
+   * "X wants to collaborate" con botones Accept/Decline — bug reportado con
+   * screenshots: la propuesta se veía como entrante en ambas tablets.
+   */
+  isOutgoing(session: NegotiationSession): boolean {
+    if (!this.myPkHex) return false;
+    return session.proposal.proposerPkHex.toLowerCase() === this.myPkHex;
+  }
+
+  /**
    * Modelo de entrega fail-closed (requisito del UI/UX gate):
    *
    *   acción del usuario → construir transición → firmar →

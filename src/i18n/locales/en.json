@@ -368,7 +368,10 @@
     "selectContactAndDescribe": "Select a contact and write the proposal.",
     "sendFailed": "Could not send.",
     "peerOffline": "The contact is not online. Try when they're nearby with NIDO open.",
-    "proposeButton": "+ Propose collaboration"
+    "proposeButton": "+ Propose collaboration",
+    "outgoingTitle": "Proposal sent to {{peer}}",
+    "outgoingSending": "Sending...",
+    "outgoingWaiting": "Waiting for response"
   },
   "chatHeader": {
     "openDrawer": "Open Navigation Drawer",

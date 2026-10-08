@@ -200,24 +200,47 @@ export function NegotiationsTab() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.list}>
-      {activeSessions.map((session) => (
-        <NegotiationCard
-          key={session.negotiationId}
-          proposal={session.proposal}
-          peerName={contactNames.get(session.peerPkHex.toLowerCase()) ?? session.peerPkHex.slice(0, 8)}
-          peerPkShort={session.peerPkHex.slice(0, 16)}
-          onAccept={() => handleAccept(session)}
-          onDecline={() => handleDecline(session)}
-          onCounter={(scopes) => handleCounter(session, scopes)}
-          onRetry={() => handleRetry(session)}
-          pendingSend={
-            session.pendingSend
-              ? { action: session.pendingSend.action, attempts: session.pendingSend.attempts }
-              : null
-          }
-          processing={processingId === session.negotiationId}
-        />
-      ))}
+      {activeSessions.map((session) =>
+        // OUTGOING-2026-10-08: nuestras propias propuestas se muestran como
+        // "enviada, esperando respuesta" — nunca como entrante con
+        // Accept/Decline (bug: se veía igual en ambas tablets).
+        negotiationService.isOutgoing(session) ? (
+          <View key={session.negotiationId} style={styles.outgoingCard}>
+            <Text style={styles.outgoingTitle}>
+              {t("negotiations.outgoingTitle", {
+                peer:
+                  contactNames.get(session.peerPkHex.toLowerCase()) ??
+                  session.peerPkHex.slice(0, 8),
+              })}
+            </Text>
+            <Text style={styles.outgoingDesc} numberOfLines={3}>
+              {session.proposal.taskDescription}
+            </Text>
+            <Text style={styles.outgoingStatus}>
+              {session.sending
+                ? t("negotiations.outgoingSending")
+                : t("negotiations.outgoingWaiting")}
+            </Text>
+          </View>
+        ) : (
+          <NegotiationCard
+            key={session.negotiationId}
+            proposal={session.proposal}
+            peerName={contactNames.get(session.peerPkHex.toLowerCase()) ?? session.peerPkHex.slice(0, 8)}
+            peerPkShort={session.peerPkHex.slice(0, 16)}
+            onAccept={() => handleAccept(session)}
+            onDecline={() => handleDecline(session)}
+            onCounter={(scopes) => handleCounter(session, scopes)}
+            onRetry={() => handleRetry(session)}
+            pendingSend={
+              session.pendingSend
+                ? { action: session.pendingSend.action, attempts: session.pendingSend.attempts }
+                : null
+            }
+            processing={processingId === session.negotiationId}
+          />
+        )
+      )}
       {/* Sesiones en estado terminal (para visibilidad) */}
       {sessions
         .filter((s) => !["PROPOSED", "COUNTERED"].includes(s.state))
@@ -302,6 +325,29 @@ const getStyles = (colors: Colors) =>
     terminalText: {
       color: colors.text.secondary,
       fontSize: 13,
+    },
+    outgoingCard: {
+      backgroundColor: colors.bg.cardElevated,
+      borderRadius: 8,
+      padding: calmSpacing.cozy,
+      borderLeftWidth: 3,
+      borderLeftColor: "#4A6B4F",
+    },
+    outgoingTitle: {
+      color: colors.text.primary,
+      fontWeight: "600",
+      fontSize: 14,
+      marginBottom: 4,
+    },
+    outgoingDesc: {
+      color: colors.text.secondary,
+      fontSize: 13,
+      marginBottom: 6,
+    },
+    outgoingStatus: {
+      color: colors.text.muted,
+      fontSize: 12,
+      fontStyle: "italic",
     },
     proposeButton: {
       backgroundColor: "#4A6B4F",

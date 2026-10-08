@@ -268,7 +268,10 @@
     "selectContactAndDescribe": "Selecciona un contacto y escribe la propuesta.",
     "sendFailed": "No se pudo enviar.",
     "peerOffline": "El contacto no está en línea. Intenta cuando esté cerca con NIDO abierto.",
-    "proposeButton": "+ Proponer colaboración"
+    "proposeButton": "+ Proponer colaboración",
+    "outgoingTitle": "Propuesta enviada a {{peer}}",
+    "outgoingSending": "Enviando...",
+    "outgoingWaiting": "Esperando respuesta"
   },
   "memorySettings": {
     "autoSummarizeLabel": "Resumen de contexto en segundo plano",
