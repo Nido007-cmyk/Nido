@@ -31,6 +31,7 @@ import {
   type ToolHandler,
 } from "../tools/dispatcher";
 import { classifyIntent, type AgentIntent } from "./intent";
+import { matchCanned } from "./cannedResponses";
 import { validateStructuredOutput } from "./structuredOutput";
 import { extractRememberFact } from "./rememberRouter";
 import { listSkillNamesForPrompt } from "../skills/registry";
@@ -100,6 +101,12 @@ export interface AgentLoopResult {
   response: string;
   intent: AgentIntent;
   toolUses: AgentToolUse[];
+  /**
+   * P2.2: true when the response was served from a deterministic template
+   * (cannedResponses) instead of a model generation. Telemetry and evals
+   * must distinguish the two. Absent/false = model-generated.
+   */
+  deterministic?: boolean;
 }
 
 const DEFAULT_MAX_STEPS = 3;
@@ -449,6 +456,23 @@ export async function runAgentLoop(
   // (acantilado de presupuesto). Se calcula por paso según lo disponible.
   const maxNPredict = options.nPredict ?? 512;
   const intent = classifyIntent(userText);
+
+  // P2.2-2026-10-08: canned responses for high-confidence intents. Pure
+  // greetings, identity questions and capability questions have zero
+  // ambiguity — serving them from templates skips a full 0.5B generation
+  // (latency + battery) with exact bilingual quality. Anchored whole-message
+  // matching only, so "hola, recuérdame comprar pan" falls through to the
+  // normal pre-routers below. Marked deterministic: true (never presented
+  // as model output).
+  const canned = matchCanned(userText);
+  if (canned) {
+    return {
+      response: canned.text,
+      intent,
+      toolUses: [],
+      deterministic: true,
+    };
+  }
 
   // BUG-4-2026-10-06 (root cause fix): pre-router determinístico para
   // intents explícitos de memoria. Si el usuario dice "recuerda que X"

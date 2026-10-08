@@ -97,7 +97,7 @@ function fakeEngine(responses: string[]): AgentEngine & { calls: unknown[][] } {
 describe("runAgentLoop", () => {
   it("responde directo cuando el modelo no usa herramientas", async () => {
     const engine = fakeEngine(["Hola, ¿en qué te ayudo?"]);
-    const result = await runAgentLoop("hola", {
+    const result = await runAgentLoop("dime algo interesante", {
       engine,
       handlers: {},
       loadMemory: async () => null,
@@ -105,6 +105,30 @@ describe("runAgentLoop", () => {
     expect(result.response).toBe("Hola, ¿en qué te ayudo?");
     expect(result.intent).toBe("conversar");
     expect(result.toolUses).toHaveLength(0);
+  });
+
+  it("P2.2: saludo puro se sirve determinístico sin llamar al modelo", async () => {
+    const engine = fakeEngine(["NO DEBERÍA USARSE"]);
+    const result = await runAgentLoop("hola", {
+      engine,
+      handlers: {},
+      loadMemory: async () => null,
+    });
+    expect(result.response).toBe("¡Hola! Soy NIDO. ¿En qué te ayudo?");
+    expect(result.deterministic).toBe(true);
+    expect(engine.calls).toHaveLength(0);
+  });
+
+  it("P2.2: pregunta de identidad se sirve determinística", async () => {
+    const engine = fakeEngine(["NO DEBERÍA USARSE"]);
+    const result = await runAgentLoop("¿quién eres?", {
+      engine,
+      handlers: {},
+      loadMemory: async () => null,
+    });
+    expect(result.deterministic).toBe(true);
+    expect(result.response).toMatch(/sin internet/);
+    expect(engine.calls).toHaveLength(0);
   });
 
   it("ejecuta la herramienta y continúa con la observación", async () => {
@@ -169,7 +193,7 @@ describe("runAgentLoop", () => {
 
   it("si falla la memoria, el loop sigue sin ella", async () => {
     const engine = fakeEngine(["Hola."]);
-    const result = await runAgentLoop("hola", {
+    const result = await runAgentLoop("dime algo interesante", {
       engine,
       handlers: {},
       loadMemory: async () => {
@@ -218,7 +242,7 @@ describe("presupuesto de contexto (T-contexto-2026-10-06)", () => {
     const engine = fakeEngine(["Hola."]);
     const memText = "DATO ".repeat(5000); // memoria enorme a propósito
     // nCtx: cabe sin memoria (~2k tokens del system) pero no con ella.
-    const result = await runAgentLoop("hola", {
+    const result = await runAgentLoop("dime algo interesante", {
       engine,
       handlers: {},
       nCtx: 4096,
@@ -237,7 +261,7 @@ describe("presupuesto de contexto (T-contexto-2026-10-06)", () => {
   it("runAgentLoop falla claro cuando ni sin memoria cabe", async () => {
     const engine = fakeEngine(["Hola."]);
     await expect(
-      runAgentLoop("hola", {
+      runAgentLoop("dime algo interesante", {
         engine,
         handlers: {},
         nCtx: 10, // absurdamente pequeño: ni el system prompt cabe
@@ -295,7 +319,7 @@ describe("T-echo-2026-10-06: eco de la directiva interna", () => {
       "Si ya tienes lo necesario, responde al usuario en español sin más bloques de herramienta.",
       "¡Hola! ¿Cómo estás?",
     ]);
-    const result = await runAgentLoop("hola", {
+    const result = await runAgentLoop("dime algo interesante", {
       engine,
       handlers: {},
       loadMemory: async () => null,
@@ -312,7 +336,7 @@ describe("T-echo-2026-10-06: eco de la directiva interna", () => {
       "si ya tienes lo necesario, responde al usuario en español sin más bloques de herramienta",
       "[directiva de formato: genera tu respuesta final al usuario en español; no emitas bloques de herramienta]",
     ]);
-    const result = await runAgentLoop("hola", {
+    const result = await runAgentLoop("dime algo interesante", {
       engine,
       handlers: {},
       loadMemory: async () => null,
@@ -343,7 +367,7 @@ describe("T-echo-2026-10-06: eco de la directiva interna", () => {
 describe("P1.2 intent-based sampling presets", () => {
   it("conversar -> preset chat", async () => {
     const engine = fakeEngine(["Hola, ¿en qué te ayudo?"]);
-    await runAgentLoop("hola", { engine, handlers: {}, loadMemory: async () => null });
+    await runAgentLoop("dime algo interesante", { engine, handlers: {}, loadMemory: async () => null });
     const args = engine.calls[0][0] as { samplingPreset?: string; temperature?: number };
     expect(args.samplingPreset).toBe("chat");
     expect(args.temperature).toBeUndefined();
@@ -366,7 +390,7 @@ describe("P1.2 intent-based sampling presets", () => {
 
   it("temperatura explícita del llamador desactiva el preset", async () => {
     const engine = fakeEngine(["Hola"]);
-    await runAgentLoop("hola", { engine, handlers: {}, loadMemory: async () => null, temperature: 0.5 });
+    await runAgentLoop("dime algo interesante", { engine, handlers: {}, loadMemory: async () => null, temperature: 0.5 });
     const args = engine.calls[0][0] as { samplingPreset?: string; temperature?: number };
     expect(args.temperature).toBe(0.5);
     expect(args.samplingPreset).toBeUndefined();
