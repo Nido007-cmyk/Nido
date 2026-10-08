@@ -974,6 +974,12 @@ export class NidoBluetoothTransport implements P2PTransport {
       noncePeerHex: pend.peerNonceHex!,
     });
     const contact = await findContactByPk(pkLower);
+    // BUG-6 Plan B: guardar la MAC conocida para el barrido futuro.
+    // Si getBondedDevices() falla, el barrido prueba estas MACs primero.
+    try {
+      const { saveKnownMac } = await import("./store");
+      await saveKnownMac(pkLower, mac);
+    } catch { /* best-effort */ }
     const info: P2PPeerInfo = { pkHex: pkLower, alias: contact?.name ?? mac, transport: "bluetooth" };
     // La sesión la deriva el messenger (ligada a ambos nonces).
     this.events?.onHandshakeComplete?.(

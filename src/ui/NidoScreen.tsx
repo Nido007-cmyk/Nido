@@ -664,6 +664,18 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           // Las tablets sí están emparejadas a nivel OS, así que las MACs
           // emparejadas van PRIMERO (no requieren discovery) y las nearby
           // después, deduplicadas por MAC.
+          //
+          // BUG-6 Plan B (2026-10-07): las MACs conocidas de handshakes previos
+          // van ANTES que las bonded. Si getBondedDevices() sale vacía/stale,
+          // el barrido aún encuentra al peer por su MAC guardada.
+          const knownFirst: string[] = [];
+          try {
+            const { getKnownMacs } = await import("../p2p/store");
+            const known = await getKnownMacs();
+            for (const mac of known.values()) knownFirst.push(mac);
+          } catch {
+            /* best-effort */
+          }
           const bonded: string[] = [];
           try {
             const bondedMacs = await mRef.current.getBondedMacs();
@@ -671,8 +683,16 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           } catch {
             /* best-effort: seguir solo con nearby */
           }
-          const seen = new Set(bonded.map((m) => m.toUpperCase()));
-          const out: string[] = [...bonded];
+          const seen = new Set<string>();
+          const out: string[] = [];
+          for (const m of knownFirst) {
+            const up = m.toUpperCase();
+            if (!seen.has(up)) { seen.add(up); out.push(up); }
+          }
+          for (const m of bonded) {
+            const up = m.toUpperCase();
+            if (!seen.has(up)) { seen.add(up); out.push(m); }
+          }
           for (const alias of nearby) {
             const mac = extractMac(alias)?.toUpperCase();
             if (mac && !seen.has(mac)) {

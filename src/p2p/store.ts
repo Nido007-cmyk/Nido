@@ -215,6 +215,14 @@ async function migrateOn(db: Awaited<ReturnType<typeof getMemoryDb>>): Promise<v
   } catch (e) {
     if (!/duplicate column name/i.test(String((e as Error)?.message ?? e))) throw e;
   }
+  // Migración BUG-6 Plan B (2026-10-07): guarda la última MAC conocida por
+  // contacto. Si getBondedDevices() sale vacía/stale, el barrido prueba estas
+  // MACs primero sin depender del caché del BluetoothAdapter.
+  try {
+    await db.execAsync("ALTER TABLE p2p_contacts ADD COLUMN last_mac TEXT");
+  } catch (e) {
+    if (!/duplicate column name/i.test(String((e as Error)?.message ?? e))) throw e;
+  }
   await db.execAsync(
     "CREATE TABLE IF NOT EXISTS p2p_identity_archive(" +
       "pk_hex TEXT PRIMARY KEY, name TEXT NOT NULL, sign_pk_hex TEXT, " +
@@ -1522,4 +1530,38 @@ export async function deleteHelloNoncesForPeer(pkHex: string): Promise<void> {
     await migrateOn(db);
     await db.runAsync("DELETE FROM hello_nonce_cache WHERE pk_lower = ?", [pk]);
   });
+}
+
+/**
+ * BUG-6 Plan B (2026-10-07): guarda la MAC con la que se completó un handshake
+ * exitoso. Si getBondedDevices() sale vacía/stale, el barrido prueba estas MACs
+ * conocidas primero sin depender del caché del BluetoothAdapter.
+ */
+export async function saveKnownMac(pkHex: string, mac: string): Promise<void> {
+  const pk = pkHex.toLowerCase();
+  const macUpper = mac.toUpperCase();
+  if (!/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(macUpper)) return;
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    await db.runAsync(
+      "UPDATE p2p_contacts SET last_mac = ? WHERE pk_hex = ? AND superseded_by IS NULL",
+      [macUpper, pk]
+    );
+  });
+}
+
+/**
+ * BUG-6 Plan B: retorna mapa pkHex -> MAC conocida (solo contactos vivos con MAC guardada).
+ */
+export async function getKnownMacs(): Promise<Map<string, string>> {
+  await migrate();
+  const db = await getMemoryDb();
+  const rows = await db.getAllAsync<{ pk_hex: string; last_mac: string | null }>(
+    "SELECT pk_hex, last_mac FROM p2p_contacts WHERE superseded_by IS NULL AND last_mac IS NOT NULL"
+  );
+  const map = new Map<string, string>();
+  for (const r of rows) {
+    if (r.last_mac) map.set(r.pk_hex.toLowerCase(), r.last_mac.toUpperCase());
+  }
+  return map;
 }
