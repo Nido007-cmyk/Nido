@@ -10,7 +10,8 @@
     "languageSection": "IDIOMA",
     "confirm": "Confirmar",
     "yes": "Sim",
-    "no": "Não"
+    "no": "Não",
+    "delete": "Apagar"
   },
   "time": {
     "justNow": "agora mesmo",
@@ -634,7 +635,9 @@
     "resendCancelledMessage": "Você cancelou esta mensagem. Enviar novamente como NOVA mensagem? A mensagem cancelada continua cancelada.",
     "errorLabel": "Erro",
     "tabPacks": "Packs",
-    "identityError": "Não foi possível criar a identidade: {{error}}"
+    "identityError": "Não foi possível criar a identidade: {{error}}",
+    "deleteMessageTitle": "Apagar mensagem",
+    "deleteMessageConfirm": "Apagar esta mensagem? Será apagada apenas neste dispositivo."
   },
   "notifications": {
     "reminderChannel": "Lembretes do NIDO",

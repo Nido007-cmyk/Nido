@@ -35,6 +35,7 @@ import {
   listContacts,
   findContactRowAny,
   getConversation,
+  deleteMessage,
   P2PIdentityKeyLossError,
   type P2PContact,
   type P2PStoredMessage,
@@ -499,6 +500,31 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
     [peer, loadConversation, t],
   );
 
+  /**
+   * DELETE-MSG 2026-10-07: borra un mensaje del chat P2P (solo local).
+   * Se invoca con long-press sobre la burbuja; pide confirmación.
+   */
+  const handleDeleteMessage = useCallback(
+    async (item: P2PStoredMessage) => {
+      if (!peer) return;
+      const ok = await showSecureAlert({
+        title: t("nido.deleteMessageTitle"),
+        message: t("nido.deleteMessageConfirm"),
+        cancelLabel: t("common.cancel"),
+        confirmLabel: t("common.delete"),
+        cancelable: true,
+      });
+      if (!ok) return;
+      try {
+        await deleteMessage(item.id);
+        setMessages((prev) => prev.filter((m) => m.id !== item.id));
+      } catch (e) {
+        setNotice(`${t("nido.errorLabel")}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    },
+    [peer, t],
+  );
+
   const handlePair = useCallback(async () => {
     const text = pairText.trim();
     if (!text || pairBusy) return;
@@ -765,8 +791,13 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
     // §7). La decisión autoritativa la toma retryOutboundMessage al pulsar.
     const showRetry = out && item.status === "failed";
     const beyondHorizon = showRetry && Date.now() - item.ts > DEDUP_RETENTION_DAYS * 86_400_000;
+    // DELETE-MSG 2026-10-07: long-press sobre la burbuja para borrar (solo local).
     return (
-      <View style={[styles.bubble, out ? styles.bubbleOut : styles.bubbleIn]}>
+      <Pressable
+        onLongPress={() => void handleDeleteMessage(item)}
+        delayLongPress={500}
+        style={[styles.bubble, out ? styles.bubbleOut : styles.bubbleIn]}
+      >
         <Text style={[styles.bubbleText, out && styles.bubbleTextOut]}>{item.text}</Text>
         <Text style={[styles.bubbleMeta, out && styles.bubbleMetaOut]}>
           {fmtTime(item.ts)}
@@ -785,9 +816,9 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             </Text>
           </Pressable>
         ) : null}
-      </View>
+      </Pressable>
     );
-  }, [t, outStatusSuffix, handleRetry]);
+  }, [t, outStatusSuffix, handleRetry, handleDeleteMessage]);
 
   // ── F-2: recovery honesto de identidad P2P ─────────────────────────
   // Doble confirmación explícita con showSecureAlert (misma ceremonia que

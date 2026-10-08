@@ -116,7 +116,8 @@
     "languageSection": "IDIOMA",
     "confirm": "Confirmar",
     "yes": "Sí",
-    "no": "No"
+    "no": "No",
+    "delete": "Borrar"
   },
   "corpusSettingsTab": {
     "downloadablePacks": "Paquetes de conocimiento descargables",
@@ -642,7 +643,9 @@
     "resendCancelledTitle": "¿Enviar de nuevo como mensaje nuevo?",
     "resendCancelledMessage": "Cancelaste este mensaje. ¿Enviarlo de nuevo como mensaje NUEVO? El mensaje cancelado sigue cancelado.",
     "errorLabel": "Error",
-    "identityError": "No se pudo crear la identidad: {{error}}"
+    "identityError": "No se pudo crear la identidad: {{error}}",
+    "deleteMessageTitle": "Borrar mensaje",
+    "deleteMessageConfirm": "¿Borrar este mensaje? Solo se borra en este dispositivo."
   },
   "notifications": {
     "reminderChannel": "Recordatorios de NIDO",

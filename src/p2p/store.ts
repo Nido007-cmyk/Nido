@@ -1073,6 +1073,17 @@ export async function markMessageStatus(id: string, status: string): Promise<voi
 }
 
 /**
+ * DELETE-MSG 2026-10-07: borra un mensaje del chat P2P por id.
+ * Solo borra localmente (el peer conserva su copia — el borrado no se propaga).
+ */
+export async function deleteMessage(id: string): Promise<void> {
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    await db.runAsync("DELETE FROM p2p_messages WHERE id=?", [id]);
+  });
+}
+
+/**
  * F-1 remediation (full adversarial audit 2026-09-28): transición GUARDADA
  * a 'sent' para el outbox. El UPDATE solo tiene efecto si la fila sigue en
  * un estado PRE-TERMINAL ('queued'|'sent') — la base de datos decide la

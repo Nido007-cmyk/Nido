@@ -10,7 +10,8 @@
     "languageSection": "LANGUAGE",
     "confirm": "Confirm",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "delete": "Delete"
   },
   "time": {
     "justNow": "just now",
@@ -642,7 +643,9 @@
     "resendCancelledMessage": "You cancelled this message. Send it again as a NEW message? The cancelled message stays cancelled.",
     "errorLabel": "Error",
     "tabPacks": "Packs",
-    "identityError": "Could not create identity: {{error}}"
+    "identityError": "Could not create identity: {{error}}",
+    "deleteMessageTitle": "Delete message",
+    "deleteMessageConfirm": "Delete this message? It will only be deleted on this device."
   },
   "notifications": {
     "reminderChannel": "NIDO Reminders",
