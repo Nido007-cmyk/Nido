@@ -148,6 +148,23 @@ CREATE TABLE IF NOT EXISTS p2p_boot_repair_log(
   at     INTEGER NOT NULL,
   detail TEXT NOT NULL
 );
+-- TASK-AUDIT 2026-10-08: append-only log de tareas delegadas (ambos lados).
+-- Base de evidencia para el trust-gate (TEST-01). Nunca se borra por código.
+CREATE TABLE IF NOT EXISTS p2p_task_audit(
+  task_id       TEXT PRIMARY KEY,
+  negotiation_id TEXT NOT NULL,
+  direction     TEXT NOT NULL, -- 'in' (ejecutamos) | 'out' (pedimos)
+  peer_pk_hex   TEXT NOT NULL,
+  scopes        TEXT NOT NULL, -- JSON array
+  decided_by    TEXT,          -- 'owner' | 'auto' | NULL
+  decision      TEXT,          -- 'allowed' | 'denied' | 'timeout' | NULL
+  state         TEXT NOT NULL, -- lifecycle state
+  tool_calls    INTEGER NOT NULL DEFAULT 0,
+  result_hash   TEXT,          -- SHA-256 hex del resultado (no el resultado)
+  error_code    TEXT,
+  started_at    INTEGER NOT NULL,
+  finished_at   INTEGER
+);
 `;
 
 /**
@@ -1570,4 +1587,102 @@ export async function getKnownMacs(): Promise<Map<string, string>> {
     if (r.last_mac) map.set(r.pk_hex.toLowerCase(), r.last_mac.toUpperCase());
   }
   return map;
+}
+
+/**
+ * TASK-AUDIT 2026-10-08: registra un evento de tarea delegada (append-only).
+ * Se llama ANTES de la transición de estado que describe (threat model 6.4).
+ */
+export async function logTaskAudit(entry: {
+  taskId: string;
+  negotiationId: string;
+  direction: "in" | "out";
+  peerPkHex: string;
+  scopes: string[];
+  state: string;
+  decidedBy?: string | null;
+  decision?: string | null;
+  toolCalls?: number;
+  resultHash?: string | null;
+  errorCode?: string | null;
+}): Promise<void> {
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    const now = Date.now();
+    await db.runAsync(
+      `INSERT INTO p2p_task_audit
+        (task_id, negotiation_id, direction, peer_pk_hex, scopes, decided_by,
+         decision, state, tool_calls, result_hash, error_code, started_at, finished_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(task_id) DO UPDATE SET
+         state = excluded.state,
+         decided_by = COALESCE(excluded.decided_by, p2p_task_audit.decided_by),
+         decision = COALESCE(excluded.decision, p2p_task_audit.decision),
+         tool_calls = excluded.tool_calls,
+         result_hash = COALESCE(excluded.result_hash, p2p_task_audit.result_hash),
+         error_code = COALESCE(excluded.error_code, p2p_task_audit.error_code),
+         finished_at = excluded.finished_at`,
+      [
+        entry.taskId.toLowerCase(),
+        entry.negotiationId,
+        entry.direction,
+        entry.peerPkHex.toLowerCase(),
+        JSON.stringify(entry.scopes),
+        entry.decidedBy ?? null,
+        entry.decision ?? null,
+        entry.state,
+        entry.toolCalls ?? 0,
+        entry.resultHash ?? null,
+        entry.errorCode ?? null,
+        now,
+        ["COMPLETED", "FAILED", "REJECTED", "CANCELED", "EXPIRED"].includes(entry.state)
+          ? now
+          : null,
+      ]
+    );
+  });
+}
+
+/** Lee el historial de tareas delegadas (para la UI de Task history). */
+export async function getTaskAudit(limit = 50): Promise<
+  Array<{
+    taskId: string;
+    negotiationId: string;
+    direction: string;
+    peerPkHex: string;
+    scopes: string[];
+    state: string;
+    decidedBy: string | null;
+    decision: string | null;
+    toolCalls: number;
+    resultHash: string | null;
+    errorCode: string | null;
+    startedAt: number;
+    finishedAt: number | null;
+  }>
+> {
+  await migrate();
+  const db = await getMemoryDb();
+  const rows = await db.getAllAsync<any>(
+    `SELECT task_id, negotiation_id, direction, peer_pk_hex, scopes, state,
+            decided_by, decision, tool_calls, result_hash, error_code,
+            started_at, finished_at
+     FROM p2p_task_audit ORDER BY started_at DESC LIMIT ?`,
+    [limit]
+  );
+  return rows.map((r) => ({
+    taskId: r.task_id,
+    negotiationId: r.negotiation_id,
+    direction: r.direction,
+    peerPkHex: r.peer_pk_hex,
+    scopes: JSON.parse(r.scopes ?? "[]"),
+    state: r.state,
+    decidedBy: r.decided_by,
+    decision: r.decision,
+    toolCalls: r.tool_calls,
+    resultHash: r.result_hash,
+    errorCode: r.error_code,
+    startedAt: r.started_at,
+    finishedAt: r.finished_at,
+  }));
 }

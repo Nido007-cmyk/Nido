@@ -842,5 +842,17 @@
   "voiceInputAlert": {
     "unavailableTitle": "Voice input unavailable",
     "unavailableMessage": "No on-device speech recognition service was found on this device (common on GrapheneOS / de-Googled builds). Type your question instead."
+  },
+  "tasks": {
+    "approvalTitle": "Task request",
+    "fromPeer": "From {{name}} ({{pk}})",
+    "untrustedLabel": "Their message (untrusted):",
+    "scopesLabel": "It will be allowed to:",
+    "allowOnce": "Allow once",
+    "scope": {
+      "task:answer": "Answer a question using on-device knowledge",
+      "task:summarize": "Summarize an attached document",
+      "task:remember": "Save one fact in an isolated peer area"
+    }
   }
 }

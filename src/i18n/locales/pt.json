@@ -817,5 +817,17 @@
   "voiceInputAlert": {
     "unavailableTitle": "Entrada de voz indisponível",
     "unavailableMessage": "Nenhum serviço de reconhecimento de voz foi encontrado neste dispositivo (comum em GrapheneOS / builds sem Google). Digite sua pergunta."
+  },
+  "tasks": {
+    "approvalTitle": "Solicitação de tarefa",
+    "fromPeer": "De {{name}} ({{pk}})",
+    "untrustedLabel": "Mensagem deles (não confiável):",
+    "scopesLabel": "Será permitido:",
+    "allowOnce": "Permitir uma vez",
+    "scope": {
+      "task:answer": "Responder uma pergunta com conhecimento local",
+      "task:summarize": "Resumir um documento anexado",
+      "task:remember": "Salvar um fato em área isolada"
+    }
   }
 }

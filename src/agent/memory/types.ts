@@ -15,7 +15,9 @@ export interface Fact {
   content: string;
   category: "general" | "preference" | "goal" | "event";
   confidence: number; // 0..1 — 1.0 = lo dijo el usuario, menor = inferido
-  source: "user" | "inferred";
+  // TASK-DELEGATION 2026-10-08: "peer" = fact escrito por un NIDO par
+  // (namespaced peer:<pk>:), nunca se mezcla con facts del dueño.
+  source: "user" | "inferred" | "peer";
   createdAt: string;
   updatedAt: string;
 }

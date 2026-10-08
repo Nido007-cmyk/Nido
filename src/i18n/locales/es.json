@@ -842,5 +842,17 @@
   "voiceInputAlert": {
     "unavailableTitle": "Entrada de voz no disponible",
     "unavailableMessage": "No se encontró un servicio de reconocimiento de voz en este dispositivo (común en GrapheneOS / builds sin Google). Escribe tu pregunta en su lugar."
+  },
+  "tasks": {
+    "approvalTitle": "Solicitud de tarea",
+    "fromPeer": "De {{name}} ({{pk}})",
+    "untrustedLabel": "Su mensaje (no confiable):",
+    "scopesLabel": "Se le permitirá:",
+    "allowOnce": "Permitir una vez",
+    "scope": {
+      "task:answer": "Responder una pregunta con conocimiento local",
+      "task:summarize": "Resumir un documento adjunto",
+      "task:remember": "Guardar un dato en un área aislada"
+    }
   }
 }
