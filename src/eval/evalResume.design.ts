@@ -1,6 +1,7 @@
 /**
  * MIT License
- * Copyright (c) 2026 NIDO contributors
+ * Copyright (c) 2026 aoair contributors (original BOAR code)
+ * Copyright (c) 2026 NIDO contributors (modifications)
  * See LICENSE file for details.
  */
 

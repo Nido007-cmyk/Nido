@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * stageError.ts — diagnósticos accionables para fallos en el dispositivo.
  *
  * En release (Hermes minificado) un "undefined is not a function" sin
