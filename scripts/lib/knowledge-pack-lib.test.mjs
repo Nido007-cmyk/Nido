@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import { describe, it, expect } from "vitest";
 import { chunkIntro, cleanIntro, parseArgs, quantizeInt8, vitalListPages } from "./knowledge-pack-lib.mjs";
 import { cosineSimilarity, cosineSimilarityInt8 } from "../../src/rag/pure";

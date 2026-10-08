@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // Runs the NIDO evaluation set on a connected Android device and pulls the
 // results back: `npm run eval:device -- --help`. Transport only: the
 // evaluation itself runs inside the app (src/eval/), triggered by a request

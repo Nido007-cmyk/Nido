@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // Reading and summarizing evaluation result rows (see docs/EVAL_QUERIES.md).
 // Shared by scripts/eval-summary.mjs and scripts/eval-device.mjs.
 

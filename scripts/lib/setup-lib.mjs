@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // Pure helpers for scripts/setup.mjs (tested in setup-lib.test.mjs).
 
 /** Major Java version from `java -version` output (which goes to stderr), or null. */

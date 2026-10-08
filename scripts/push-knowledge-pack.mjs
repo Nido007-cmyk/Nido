@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // Copies a knowledge pack built by scripts/build-knowledge-pack.mjs onto a
 // USB-connected phone running a development build of NIDO, and verifies it.
 //

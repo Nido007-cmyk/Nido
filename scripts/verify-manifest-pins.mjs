@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // Verifies every download pin declared in src/models/manifest.ts.
 //
 // Why this exists: on 2026-09-27 two corpus entries pointed at

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * setup.no-boar.test.mjs — BOAR setup residue (INTEGRITY lane 2026-09-28).
  *
  * The guided setup wizard must NEVER fall back to downloading another

@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // Dev-machine-only, online script that builds a larger corpus pack for the
 // "standard"/"full" setup tiers, using MediaWiki's batched random-article
 // generator (20 articles/request) instead of one-by-one REST summary calls

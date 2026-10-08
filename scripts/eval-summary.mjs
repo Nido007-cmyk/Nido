@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // Summarizes NIDO evaluation results (see docs/EVAL_QUERIES.md).
 //
 //   node scripts/eval-summary.mjs results/*.jsonl            # one line per run + config

@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // F-8 build gate: npm dependency pins.
 //
 // Why this exists: package.json used to declare floating `^`/`~` ranges for

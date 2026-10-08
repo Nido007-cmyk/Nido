@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // Pure helpers for scripts/build-knowledge-pack.mjs (tested in knowledge-pack-lib.test.mjs).
 
 export const USAGE = `usage: node scripts/build-knowledge-pack.mjs [options]

@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // Builds an offline knowledge pack: Wikipedia article introductions, chunked,
 // embedded with the same bge-small model the app uses, in one SQLite file the
 // app opens directly (no indexing on the phone). See docs/KNOWLEDGE_PACKS.md.

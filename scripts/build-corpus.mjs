@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // Dev-machine-only, online script that builds the bundled offline knowledge
 // base (assets/corpus/corpus.json) from Wikipedia article summaries. Run
 // once when curating/updating the corpus; the app itself never runs this or

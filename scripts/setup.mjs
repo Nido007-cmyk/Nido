@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // Guided setup: `make setup` (or `node scripts/setup.mjs`). Asks what you want
 // and walks you through it: install the app on a phone, build it from source,
 // run developer mode over USB, or build a knowledge pack. Uses only Node's

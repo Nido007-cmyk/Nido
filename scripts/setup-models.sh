@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# MIT License
+# Copyright (c) 2026 NIDO contributors
+# See LICENSE file for details.
+
 # One-time, online setup step: downloads the bundled model weights declared
 # in src/models/manifest.ts into ./assets/models and verifies their sha256.
 # Run this BEFORE `expo prebuild` — the withBundledModels config plugin

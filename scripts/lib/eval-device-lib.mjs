@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // Pure helpers for scripts/eval-device.mjs: argument parsing, adb output
 // parsing and the exact adb commands, as data. Nothing here runs a
 // process, so --dry-run and the tests can use it without a phone.
