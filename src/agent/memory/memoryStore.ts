@@ -113,7 +113,11 @@ export async function saveFact(input: {
   const content = (input.content ?? "").slice(0, MAX_FACT_CONTENT_CHARS);
   // DEDUP-2026-10-08: si ya existe un fact casi idéntico, actualizarlo en
   // vez de insertar un duplicado (el usuario repite el dato con otras palabras).
-  const existing = await findSimilarFact(content);
+  // R1-2026-10-08: el dedup está acotado a la MISMA fuente. Sin esto, un fact
+  // de un peer ("peer:abc: mom birthday march 15") matcheaba por inclusión
+  // un fact del dueño ("mom birthday march 15") y SOBREESCRIBÍA su fila:
+  // corrupción ciega de la memoria del dueño por contenido remoto.
+  const existing = await findSimilarFact(content, input.source ?? "user");
   if (existing) {
     // Conservar el contenido más completo de los dos.
     const merged = content.length > existing.content.length ? content : existing.content;
@@ -170,12 +174,20 @@ export function factSimilarity(a: string, b: string): number {
  * Busca un fact existente muy similar al contenido dado.
  * Detecta: contenido idéntico normalizado, uno contenido en el otro,
  * o similitud Jaccard >= 0.75.
+ *
+ * R1-2026-10-08: `onlySource` acota la comparación a facts de la misma
+ * fuente. Un fact de un peer NUNCA debe matchear (y por tanto sobrescribir)
+ * un fact del dueño: el contenido remoto no es confiable.
  */
-export async function findSimilarFact(content: string): Promise<Fact | null> {
+export async function findSimilarFact(
+  content: string,
+  onlySource?: Fact["source"]
+): Promise<Fact | null> {
   const norm = normalizeFactText(content);
   if (!norm) return null;
   const facts = await getFacts(500);
   for (const f of facts) {
+    if (onlySource && f.source !== onlySource) continue;
     const fn = normalizeFactText(f.content);
     if (!fn) continue;
     if (fn === norm) return f;
@@ -189,6 +201,27 @@ export async function getFacts(limit = 100): Promise<Fact[]> {
   const db = await getMemoryDb();
   const rows = await db.getAllAsync<any>(
     "SELECT id, content, category, confidence, source, created_at AS createdAt, updated_at AS updatedAt FROM facts ORDER BY updated_at DESC LIMIT ?;",
+    [limit]
+  );
+  return rows as Fact[];
+}
+
+/**
+ * R1 FIX 2026-10-08: facts del PROPIETARIO solamente, para inyectar en el
+ * contexto de sus conversaciones. Los facts con source='peer' (escritos por
+ * un NIDO par vía task:remember) NUNCA entran aquí: son contenido remoto no
+ * confiable y permitirlos sería inyección de prompt persistente en el agente
+ * del dueño (sobrevive reboots: SQLite).
+ *
+ * Allowlist explícita ('user','inferred'), NO `!= 'peer'`: una fuente futura
+ * desconocida no entra al contexto por defecto (fail-closed). Si algún día
+ * se quiere consultar memoria de peers, debe ser por una vía separada y
+ * explícitamente marcada como no confiable, nunca por el snapshot ambiental.
+ */
+export async function getOwnerFacts(limit = 100): Promise<Fact[]> {
+  const db = await getMemoryDb();
+  const rows = await db.getAllAsync<any>(
+    "SELECT id, content, category, confidence, source, created_at AS createdAt, updated_at AS updatedAt FROM facts WHERE source IN ('user','inferred') ORDER BY updated_at DESC LIMIT ?;",
     [limit]
   );
   return rows as Fact[];
@@ -322,7 +355,9 @@ export async function getRecentLog(limit = 20): Promise<DailyLogEntry[]> {
 /** Todo lo que el agente inyecta en el contexto de cada conversación. */
 export async function snapshot(): Promise<MemorySnapshot> {
   const [facts, preferences, people, recentLog] = await Promise.all([
-    getFacts(50),
+    // R1: solo facts del propietario. Los facts de peers (source='peer')
+    // quedan fuera del contexto por diseño (ver getOwnerFacts).
+    getOwnerFacts(50),
     getAllPreferences(),
     getPeople(),
     getRecentLog(10),
