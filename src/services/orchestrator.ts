@@ -5,6 +5,7 @@
  */
 
 import { llamaEngine } from "../inference/LlamaEngine";
+import { withBoundedRepair } from "../agent/loop/structuredOutput";
 import { retrieve, assemblePrompt, RetrievedChunk, ConversationHistory } from "../rag/retrieve";
 import { assembleChatMessages } from "../rag/pure";
 
@@ -200,28 +201,47 @@ async function decompose(query: string, onTimeout: () => void): Promise<string[]
     `together cover it well (e.g. technical analysis, counter-arguments, ` +
     `practical implications — whichever fit this question). One per line, ` +
     `no numbering, no extra commentary.`;
-  const promptParams = llamaEngine.hasEmbeddedChatTemplate()
-    ? {
-        messages: [
-          { role: "system", content: instruction },
-          { role: "user", content: `Question: ${query}` },
-        ],
-      }
-    : {
-        prompt: `${instruction}\n\nQuestion: ${query}\n\nSub-questions:`,
-      };
-  const text = await llamaEngine.generate({
-    ...promptParams,
+  const useTemplate = llamaEngine.hasEmbeddedChatTemplate();
+  const buildParams = (repairError?: string) => {
+    const suffix = repairError
+      ? `\n\nYour previous output failed validation: ${repairError}. Output one sub-question per line, no numbering, no extra commentary.`
+      : "";
+    return useTemplate
+      ? {
+          messages: [
+            { role: "system", content: instruction },
+            { role: "user", content: `Question: ${query}${suffix}` },
+          ],
+        }
+      : {
+          prompt: `${instruction}\n\nQuestion: ${query}\n\nSub-questions:${suffix}`,
+        };
+  };
+  const parseLines = (text: string): string[] =>
+    text
+      .split("\n")
+      .map((l) => l.replace(/^[-*\d.)\s]+/, "").trim())
+      .filter((l) => l.length > 8)
+      .slice(0, 3);
+  const genOpts = {
     nPredict: 150,
     temperature: 0.4,
     timeoutMs: STAGE_TIMEOUT_MS,
     onTimeout,
+  };
+  // P1.5: one bounded repair retry on empty parse; falls back to the
+  // original query (pre-existing fail-closed behavior, unchanged).
+  return withBoundedRepair({
+    attempt: () => llamaEngine.generate({ ...buildParams(), ...genOpts }),
+    repair: (_bad, error) => llamaEngine.generate({ ...buildParams(error), ...genOpts }),
+    validate: (text) => {
+      const lines = parseLines(text);
+      return lines.length > 0
+        ? { ok: true as const, value: lines }
+        : { ok: false as const, error: "no sub-questions extracted (need 1-3 lines)" };
+    },
+    fallback: [query],
   });
-  const lines = text
-    .split("\n")
-    .map((l) => l.replace(/^[-*\d.)\s]+/, "").trim())
-    .filter((l) => l.length > 8);
-  return lines.slice(0, 3).length > 0 ? lines.slice(0, 3) : [query];
 }
 
 async function researchSubQuestion(

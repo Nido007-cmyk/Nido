@@ -260,3 +260,41 @@ describe("P1.4 chat template on all paths", () => {
     expect(str).toContain("sq1");
   });
 });
+
+describe("P1.5 decompose bounded repair", () => {
+  beforeEach(() => {
+    mockHasTemplate = false;
+  });
+
+  it("reintenta una vez si el parse queda vacío y acepta el reparo", async () => {
+    const calls: string[] = [];
+    generateMock.mockImplementation(async (opts: { prompt?: string }) => {
+      calls.push(opts.prompt ?? "");
+      const p = opts.prompt ?? "";
+      if (p.startsWith("Break this research question")) {
+        // Primer intento: basura sin líneas útiles. Reparo: 2 sub-preguntas.
+        return calls.length === 1 ? "ok" : "What are the benefits?\nWhat are the risks?";
+      }
+      return "mock answer";
+    });
+    retrieveMock.mockResolvedValue([chunk(1)]);
+    await runDeepResearch("query", undefined, undefined, 200);
+    const decomposeCalls = calls.filter((c) => c.startsWith("Break this research question"));
+    expect(decomposeCalls).toHaveLength(2);
+    expect(decomposeCalls[1]).toMatch(/failed validation/i);
+  });
+
+  it("fail closed: tras dos parses vacíos usa la query original", async () => {
+    generateMock.mockImplementation(async (opts: { prompt?: string }) => {
+      const p = opts.prompt ?? "";
+      if (p.startsWith("Break this research question")) {
+        return "ok"; // siempre vacío
+      }
+      return "mock answer";
+    });
+    retrieveMock.mockResolvedValue([chunk(1)]);
+    const result = await runDeepResearch("query", undefined, undefined, 200);
+    // Sin sub-preguntas válidas: research corre sobre la query original.
+    expect(result.answer).toBeDefined();
+  });
+});

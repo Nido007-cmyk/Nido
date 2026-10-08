@@ -31,6 +31,7 @@ import {
   type ToolHandler,
 } from "../tools/dispatcher";
 import { classifyIntent, type AgentIntent } from "./intent";
+import { validateStructuredOutput } from "./structuredOutput";
 import { extractRememberFact } from "./rememberRouter";
 import { listSkillNamesForPrompt } from "../skills/registry";
 import type { LabeledContent, PolicyDecision } from "../policy/policyEngine";
@@ -126,20 +127,22 @@ export function parseToolCalls(text: string): ParsedToolCall[] {
   TOOL_CALL_RE.lastIndex = 0;
   let m: RegExpExecArray | null;
   while ((m = TOOL_CALL_RE.exec(text)) !== null) {
-    try {
-      const parsed = JSON.parse(m[1]) as Partial<ParsedToolCall>;
-      if (parsed && typeof parsed.name === "string") {
-        calls.push({
-          name: parsed.name,
-          arguments:
-            parsed.arguments && typeof parsed.arguments === "object"
-              ? (parsed.arguments as Record<string, unknown>)
-              : {},
-        });
-      }
-    } catch {
-      // Bloque malformado: se ignora, el dispatcher no lo verá.
+    // P1.5: validación JSON centralizada (misma semántica que antes:
+    // bloque malformado o sin name → se ignora).
+    const v = validateStructuredOutput<Partial<ParsedToolCall>>(
+      { required: ["name"], properties: { name: "string" } },
+      m[1]
+    );
+    if (v.ok && v.value && typeof v.value.name === "string") {
+      calls.push({
+        name: v.value.name,
+        arguments:
+          v.value.arguments && typeof v.value.arguments === "object"
+            ? (v.value.arguments as Record<string, unknown>)
+            : {},
+      });
     }
+    // Bloque malformado: se ignora, el dispatcher no lo verá.
   }
   // BUG-4-2026-10-06: fallback para bloques ```python con llamadas estilo
   // función (modelos pequeños que no siguen el formato ```tool).

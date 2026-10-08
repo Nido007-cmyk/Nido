@@ -462,3 +462,56 @@ describe("P1.4 verify step chat template", () => {
     expect(joined).toContain("SUPPORTED");
   });
 });
+
+describe("P1.5 verify bounded repair", () => {
+  const verifyPlan = () =>
+    plan({
+      steps: [
+        { id: "retrieve-0", type: "retrieve", required: false },
+        { id: "generate-1", type: "generate", modelId: "phi", required: true },
+        { id: "verify-2", type: "verify", modelId: "qwen-1.5b", required: false },
+      ],
+    });
+  const chunks = [{ chunkId: "c1", docId: "d1", title: "T", body: "B", score: 1, matchType: "hybrid" as const }];
+
+  beforeEach(() => {
+    mockEmbeddedTemplate = false;
+    hasEmbeddedChatTemplateMock.mockClear();
+    retrieveMock.mockResolvedValue(chunks);
+  });
+
+  it("reintenta una vez ante formato inválido y acepta el reparo", async () => {
+    generateMock
+      .mockResolvedValueOnce("mock answer")
+      .mockResolvedValueOnce("Hmm, maybe the evidence sort of agrees?")
+      .mockResolvedValueOnce("SUPPORTED. The claim matches the evidence.");
+    const result = await executeRoutingPlan(verifyPlan(), { query: "hi" }, resolveModel);
+    expect(result.verification.status).toBe("passed");
+    // generate + 2 verify attempts = 3 llamadas.
+    expect(generateMock).toHaveBeenCalledTimes(3);
+    // El reparo incluye el error de validación específico.
+    const repairCall = generateMock.mock.calls[2][0];
+    expect(repairCall.prompt).toMatch(/failed validation/i);
+    expect(repairCall.prompt).toMatch(/SUPPORTED, PARTIAL, or UNSUPPORTED/);
+  });
+
+  it("fail closed: tras dos formatos inválidos queda uncertain (nunca más de 2 intentos)", async () => {
+    generateMock
+      .mockResolvedValueOnce("mock answer")
+      .mockResolvedValueOnce("garbage one")
+      .mockResolvedValueOnce("garbage two");
+    const result = await executeRoutingPlan(verifyPlan(), { query: "hi" }, resolveModel);
+    expect(result.verification.status).toBe("uncertain");
+    expect(generateMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("NO reintenta ante un veredicto PARTIAL legítimo", async () => {
+    generateMock
+      .mockResolvedValueOnce("mock answer")
+      .mockResolvedValueOnce("PARTIAL. Only partly supported.");
+    const result = await executeRoutingPlan(verifyPlan(), { query: "hi" }, resolveModel);
+    expect(result.verification.status).toBe("uncertain");
+    // Solo 1 intento de verify: PARTIAL es un veredicto válido, no un fallo de formato.
+    expect(generateMock).toHaveBeenCalledTimes(2);
+  });
+});

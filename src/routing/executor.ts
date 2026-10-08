@@ -25,6 +25,7 @@
  * alongside it, not a replacement.
  */
 import { llamaEngine } from "../inference/LlamaEngine";
+import { withBoundedRepair } from "../agent/loop/structuredOutput";
 import { retrieve } from "../rag/retrieve";
 import { assemblePrompt, assembleChatMessages, ConversationHistory, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
 import type { RetrievedChunk } from "../rag/retrieve.types";
@@ -319,19 +320,48 @@ export async function executeRoutingPlan(
           break;
         }
         const verifyPrompt = buildVerificationPrompt(input.query, answer, citations);
-        // P1.4: messages+jinja when the model ships a template; the
-        // hand-built string is the fallback. Same content either way.
-        const verifyParams = llamaEngine.hasEmbeddedChatTemplate()
-          ? { messages: buildVerificationMessages(input.query, answer, citations) }
-          : { prompt: verifyPrompt };
-        const verdictText = await llamaEngine.generate({
-          ...verifyParams,
-          nPredict: step.maxTokens ?? 200,
-          temperature: 0.2,
-          timeoutMs: step.timeoutMs ?? STEP_TIMEOUT_MS,
-          onTimeout: markTimedOut,
+        const verifyMessages = buildVerificationMessages(input.query, answer, citations);
+        const useTemplate = llamaEngine.hasEmbeddedChatTemplate();
+        // P1.5: one bounded repair retry on verdict *format* failure. A
+        // legitimate PARTIAL verdict is not a failure — only retry when
+        // the text doesn't start with any valid keyword.
+        const isFormatFailure = (text: string): boolean => {
+          const upper = text.trim().toUpperCase();
+          return (
+            !upper.startsWith("SUPPORTED") &&
+            !upper.startsWith("UNSUPPORTED") &&
+            !upper.startsWith("PARTIAL")
+          );
+        };
+        const generateVerdict = (repairError?: string): Promise<string> => {
+          const suffix = repairError
+            ? `\n\nYour previous output failed validation: ${repairError}. Respond with exactly one word first: SUPPORTED, PARTIAL, or UNSUPPORTED, then a single sentence.`
+            : "";
+          const params = useTemplate
+            ? {
+                messages: [
+                  verifyMessages[0],
+                  { role: "user", content: verifyMessages[1].content + suffix },
+                ],
+              }
+            : { prompt: verifyPrompt + suffix };
+          return llamaEngine.generate({
+            ...params,
+            nPredict: step.maxTokens ?? 200,
+            temperature: 0.2,
+            timeoutMs: step.timeoutMs ?? STEP_TIMEOUT_MS,
+            onTimeout: markTimedOut,
+          });
+        };
+        verification = await withBoundedRepair({
+          attempt: () => generateVerdict(),
+          repair: (_bad, error) => generateVerdict(error),
+          validate: (text) =>
+            isFormatFailure(text)
+              ? { ok: false as const, error: "verdict must start with SUPPORTED, PARTIAL, or UNSUPPORTED" }
+              : { ok: true as const, value: parseVerificationVerdict(text) },
+          fallback: { status: "uncertain" as const, note: "verifier output failed validation twice" },
         });
-        verification = parseVerificationVerdict(verdictText);
         stepsExecuted++;
         break;
       }
