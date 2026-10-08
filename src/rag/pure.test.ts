@@ -293,6 +293,43 @@ describe("assembleChatMessages", () => {
     expect(messages[0].content).toContain("Summary of earlier conversation:");
     expect(messages[0].content).toContain("User is planning a trip to Japan.");
   });
+
+  it("P2.3: without a budget, long history is appended unbounded (legacy behavior)", () => {
+    const big = "x".repeat(5000);
+    const history = {
+      turns: [
+        { role: "user" as const, text: big },
+        { role: "assistant" as const, text: big },
+        { role: "user" as const, text: big },
+      ],
+    };
+    const messages = assembleChatMessages("q", [], "sys", history);
+    // system + 3 history + current = 5 messages, nothing cut.
+    expect(messages).toHaveLength(5);
+  });
+
+  it("P2.3: with a budget, history is cut recent-first and the invariant holds", () => {
+    const big = "x".repeat(5000); // ~1716 tokens each by the conservative counter
+    const history = {
+      turns: [
+        { role: "user" as const, text: big },
+        { role: "assistant" as const, text: big },
+        { role: "user" as const, text: big },
+        { role: "assistant" as const, text: big },
+      ],
+    };
+    const messages = assembleChatMessages("q", [], "sys", history, undefined, false, {
+      nCtx: 4096,
+      reserveGeneration: 512,
+    });
+    // Fewer than the unbounded 6 messages; system first, current query last.
+    expect(messages.length).toBeLessThan(6);
+    expect(messages[0].role).toBe("system");
+    expect(messages[messages.length - 1]).toEqual({ role: "user", content: "q" });
+    // No orphaned assistant turn at the start of the kept history.
+    const firstHistory = messages[1];
+    if (messages.length > 2) expect(firstHistory.role).not.toBe("assistant");
+  });
 });
 
 describe("serializeEmbedding/deserializeEmbedding", () => {

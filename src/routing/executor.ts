@@ -55,6 +55,11 @@ export interface ExecutableModel {
    * measured in its own instruction format.
    */
   usesChatTemplate?: boolean | "if-embedded";
+  /**
+   * P2.3: the model's context window, for the context budget manager.
+   * Absent → callers fall back to 4096.
+   */
+  defaultNCtx?: number;
 }
 
 export type PromptFormat = "chat-template" | "plain";
@@ -279,7 +284,20 @@ export async function executeRoutingPlan(
 
         answer = useTemplate
           ? await llamaEngine.generate({
-              messages: assembleChatMessages(input.query, citations, input.systemPrompt, input.history, input.styleReminder, noSourcesFoundNote),
+              messages: assembleChatMessages(
+                input.query,
+                citations,
+                input.systemPrompt,
+                input.history,
+                input.styleReminder,
+                noSourcesFoundNote,
+                // P2.3: budget history against the model's context window instead
+                // of hoping it fits; reserves the step's generation headroom.
+                {
+                  nCtx: generateModel?.defaultNCtx ?? 4096,
+                  reserveGeneration: step.maxTokens ?? 512,
+                }
+              ),
               nPredict: step.maxTokens ?? 512,
               onToken: timedOnToken,
               timeoutMs: step.timeoutMs ?? STEP_TIMEOUT_MS,

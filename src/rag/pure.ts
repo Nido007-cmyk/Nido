@@ -11,6 +11,8 @@
  * Node/vitest without an RN runtime.
  */
 import type { RetrievedChunk } from "./retrieve.types";
+// P2.3: pure context-budget manager (no native deps — safe for this module).
+import { applyContextBudget, budgetConfigFor } from "../agent/loop/contextBudget";
 
 export function cosineSimilarity(a: Float32Array, b: Float32Array): number {
   let dot = 0;
@@ -450,7 +452,11 @@ export function assembleChatMessages(
   systemPrompt?: string,
   history?: ConversationHistory,
   styleReminder?: string,
-  noSourcesFoundNote: boolean = false
+  noSourcesFoundNote: boolean = false,
+  // P2.3-2026-10-08: optional context budget. When provided, history turns
+  // are cut recent-first (never silently overflowing the native context);
+  // when absent, behavior is exactly as before (all turns appended).
+  budget?: { nCtx: number; reserveGeneration: number }
 ): ChatMessage[] {
   const instruction =
     systemPrompt && systemPrompt.trim().length > 0
@@ -487,7 +493,22 @@ export function assembleChatMessages(
     content: t.text,
   }));
 
-  return [systemMessage, ...historyMessages, { role: "user", content: userQuery + styleSection(styleReminder) }];
+  const currentUser: ChatMessage = { role: "user", content: userQuery + styleSection(styleReminder) };
+
+  // P2.3: when a budget is provided, cut history recent-first instead of
+  // hoping it fits. System stays pinned; generation headroom is reserved.
+  let keptHistory = historyMessages;
+  if (budget) {
+    const budgeted = applyContextBudget(
+      systemMessage,
+      historyMessages,
+      currentUser,
+      budgetConfigFor(budget.nCtx, budget.reserveGeneration)
+    );
+    keptHistory = budgeted.history as ChatMessage[];
+  }
+
+  return [systemMessage, ...keptHistory, currentUser];
 }
 
 /**

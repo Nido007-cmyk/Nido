@@ -210,7 +210,7 @@ export async function runEvaluation({
   // flag, which is a live-chat setting (Phi and Qwen-7B are off there).
   const installed = await listInstalledEvalModels();
   const models = new Map<string, ExecutableModel>(
-    installed.map((m) => [m.id, { id: m.id, filename: m.filename, usesChatTemplate: "if-embedded" }])
+    installed.map((m) => [m.id, { id: m.id, filename: m.filename, usesChatTemplate: "if-embedded", defaultNCtx: m.defaultNCtx }])
   );
   const routingPreset = configs.some((c) => c.kind === "adaptive") ? await getRoutingPreset() : undefined;
 
