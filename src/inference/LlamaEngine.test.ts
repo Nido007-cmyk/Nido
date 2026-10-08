@@ -13,6 +13,7 @@ type FakeContext = {
   completion: (params: unknown, onToken: (d: { token: string }) => void) => Promise<{ text: string }>;
   stopCompletion: () => Promise<void>;
   releasedWhileGenerating: boolean;
+  lastParams: unknown;
 };
 const created: FakeContext[] = [];
 let inFlightInits = 0;
@@ -30,14 +31,16 @@ vi.mock("llama.rn", () => ({
       model,
       released: false,
       releasedWhileGenerating: false,
+      lastParams: undefined,
       release: async () => {
         if (generating) ctx.releasedWhileGenerating = true;
         ctx.released = true;
       },
       // Like llama.cpp: runs until stopped, and settles a moment after the stop (prompt still processing).
-      completion: (_params, onToken) =>
+      completion: (params, onToken) =>
         new Promise((resolve) => {
           generating = true;
+          ctx.lastParams = params;
           onToken({ token: "Hi" });
           finishes.push(() =>
             setTimeout(() => {
@@ -70,7 +73,7 @@ vi.mock("../models/modelTrust", () => ({
   assertTrustedModelFileByName: vi.fn(async () => {}),
 }));
 
-import { LlamaEngine } from "./LlamaEngine";
+import { LlamaEngine, resolveSampling, SAMPLING_PRESETS } from "./LlamaEngine";
 
 const live = () => created.filter((c) => !c.released);
 
@@ -165,5 +168,89 @@ describe("LlamaEngine load/unload", () => {
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
     expect(engine.isLoaded).toBe(true);
+  });
+});
+
+describe("P1.2 sampling presets", () => {
+  it("resolveSampling: no preset, no overrides -> old 0.7 default", () => {
+    expect(resolveSampling({})).toEqual({ temperature: 0.7, topK: undefined, topP: undefined, minP: undefined, repeatPenalty: undefined });
+  });
+
+  it("resolveSampling: preset fills unset values", () => {
+    const s = resolveSampling({ samplingPreset: "structured" });
+    expect(s.temperature).toBe(0.1);
+    expect(s.minP).toBe(0);
+    expect(s.repeatPenalty).toBeUndefined();
+    const c = resolveSampling({ samplingPreset: "chat" });
+    expect(c.temperature).toBe(0.7);
+    expect(c.repeatPenalty).toBe(1.1);
+    expect(c.minP).toBe(0);
+  });
+
+  it("resolveSampling: explicit values always win over the preset", () => {
+    const s = resolveSampling({ samplingPreset: "structured", temperature: 0.5, minP: 0.05, repeatPenalty: 1.2 });
+    expect(s.temperature).toBe(0.5);
+    expect(s.minP).toBe(0.05);
+    expect(s.repeatPenalty).toBe(1.2);
+  });
+
+  it("SAMPLING_PRESETS table matches the research calibration", () => {
+    expect(SAMPLING_PRESETS.structured.temperature).toBeLessThanOrEqual(0.2);
+    expect(SAMPLING_PRESETS.factual.temperature).toBeLessThanOrEqual(0.4);
+    // min_p pinned to 0 everywhere (llama.cpp default 0.05 breaks repetition-loop escape)
+    for (const p of Object.values(SAMPLING_PRESETS)) expect(p.minP).toBe(0);
+    // repeat penalty only on open chat, never on structured paths
+    expect(SAMPLING_PRESETS.structured.repeatPenalty).toBeUndefined();
+    expect(SAMPLING_PRESETS.chat.repeatPenalty).toBeGreaterThan(1);
+  });
+
+  it("generate() with no new options sends exactly the old params", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const reply = engine.generate({ prompt: "hi" });
+    await engine.unload(); // mock completion only settles on stop, like the existing tests
+    await expect(reply).resolves.toBe("Hi");
+    const params = created[0].lastParams as Record<string, unknown>;
+    expect(params.temperature).toBe(0.7);
+    expect("top_k" in params).toBe(false);
+    expect("min_p" in params).toBe(false);
+    expect("penalty_repeat" in params).toBe(false);
+    expect("response_format" in params).toBe(false);
+    expect("grammar" in params).toBe(false);
+  });
+
+  it("generate() forwards sampling tunables to the native call", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const reply = engine.generate({ prompt: "hi", samplingPreset: "structured", topK: 40 });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Hi");
+    const params = created[0].lastParams as Record<string, unknown>;
+    expect(params.temperature).toBe(0.1);
+    expect(params.min_p).toBe(0);
+    expect(params.top_k).toBe(40);
+    expect("penalty_repeat" in params).toBe(false);
+  });
+
+  it("generate() forwards response_format and grammar (P1.1)", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const schema = { type: "object", properties: { verdict: { type: "string" } }, required: ["verdict"] };
+    const reply = engine.generate({
+      messages: [{ role: "user", content: "x" }],
+      responseFormat: { type: "json_schema", json_schema: { schema } },
+    });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Hi");
+    const params = created[0].lastParams as Record<string, unknown>;
+    expect(params.response_format).toEqual({ type: "json_schema", json_schema: { schema } });
+    // grammar on the prompt path too
+    const engine2 = new LlamaEngine();
+    await engine2.load("models/a.gguf");
+    const reply2 = engine2.generate({ prompt: "y", grammar: "root ::= \"a\"" });
+    await engine2.unload();
+    await expect(reply2).resolves.toBe("Hi");
+    const params2 = created[1].lastParams as Record<string, unknown>;
+    expect(params2.grammar).toBe('root ::= "a"');
   });
 });

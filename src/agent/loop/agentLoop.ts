@@ -23,7 +23,7 @@
  * herramienta toca la red.
  */
 
-import type { ChatMessageInput } from "../../inference/LlamaEngine";
+import type { ChatMessageInput, SamplingPresetName } from "../../inference/LlamaEngine";
 import {
   describeToolsForPrompt,
   dispatchToolCall,
@@ -42,6 +42,8 @@ export interface AgentEngine {
     messages: ChatMessageInput[];
     nPredict?: number;
     temperature?: number;
+    /** P1.2-2026-10-08: preset de muestreo; solo se usa si temperature no viene fijada. */
+    samplingPreset?: SamplingPresetName;
     timeoutMs?: number;
     onToken?: (token: string) => void;
   }): Promise<string>;
@@ -631,13 +633,19 @@ export async function runAgentLoop(
 
   // Generación con el error ya envuelto para la UI (reutilizada en el
   // reintento de reparación T-echo).
+  // P1.2-2026-10-08: preset de muestreo por intent cuando el llamador no
+  // fija temperatura explícita — recordar/actuar son turnos factuales o
+  // con herramientas (más fiables casi-greedy), conversar conserva el 0.7
+  // anterior más control de repetición.
+  const intentPreset = intent === "actuar" ? "structured" : intent === "recordar" ? "factual" : "chat";
   const generateOnce = async (): Promise<string> => {
     try {
       return await engine.generate({
         messages,
         // H5: nPredict adaptativo por paso (el prompt crece con observaciones).
         nPredict: adaptiveNPredict(messages, nCtx, maxNPredict),
-        temperature: options.temperature ?? 0.7,
+        temperature: options.temperature,
+        samplingPreset: options.temperature === undefined ? intentPreset : undefined,
         timeoutMs: options.timeoutMs,
         // Nota: los pasos intermedios también stremean (incluyen los
         // bloques ```tool); la UI puede ocultar esos bloques en vivo.

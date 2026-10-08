@@ -337,3 +337,36 @@ describe("T-echo-2026-10-06: eco de la directiva interna", () => {
     expect(injected).not.toMatch(/Continúa: si ya tienes lo necesario/);
   });
 });
+
+describe("P1.2 intent-based sampling presets", () => {
+  it("conversar -> preset chat", async () => {
+    const engine = fakeEngine(["Hola, ¿en qué te ayudo?"]);
+    await runAgentLoop("hola", { engine, handlers: {}, loadMemory: async () => null });
+    const args = engine.calls[0][0] as { samplingPreset?: string; temperature?: number };
+    expect(args.samplingPreset).toBe("chat");
+    expect(args.temperature).toBeUndefined();
+  });
+
+  it("actuar -> preset structured", async () => {
+    const engine = fakeEngine([
+      'Voy a ver la hora.\n```tool\n{"name": "device_time", "arguments": {}}\n```',
+      "Son las 10:30.",
+    ]);
+    await runAgentLoop("¿qué hora es?", {
+      engine,
+      handlers: { device_time: async () => "2026-09-26T10:30:00" },
+      loadMemory: async () => null,
+    });
+    const args = engine.calls[0][0] as { samplingPreset?: string; temperature?: number };
+    expect(args.samplingPreset).toBe("structured");
+    expect(args.temperature).toBeUndefined();
+  });
+
+  it("temperatura explícita del llamador desactiva el preset", async () => {
+    const engine = fakeEngine(["Hola"]);
+    await runAgentLoop("hola", { engine, handlers: {}, loadMemory: async () => null, temperature: 0.5 });
+    const args = engine.calls[0][0] as { samplingPreset?: string; temperature?: number };
+    expect(args.temperature).toBe(0.5);
+    expect(args.samplingPreset).toBeUndefined();
+  });
+});

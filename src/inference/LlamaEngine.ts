@@ -5,7 +5,7 @@
  */
 
 import * as FileSystem from "expo-file-system/legacy";
-import { initLlama, LlamaContext } from "llama.rn";
+import { initLlama, LlamaContext, type CompletionResponseFormat } from "llama.rn";
 import { checkRamBudget, readRamSnapshot, toGb } from "./ramBudget";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
@@ -31,6 +31,38 @@ export interface GenerateOptions {
   messages?: ChatMessageInput[];
   nPredict?: number;
   temperature?: number;
+  /**
+   * P1.2-2026-10-08: sampling tunables passed straight to llama.cpp via
+   * llama.rn's completion params (top_k/top_p/min_p/penalty_repeat all
+   * exist on NativeCompletionParams). Unset = native defaults — callers
+   * that don't set these get byte-identical behavior to before.
+   */
+  topK?: number;
+  topP?: number;
+  minP?: number;
+  repeatPenalty?: number;
+  /**
+   * P1.2-2026-10-08: named sampling preset. Fills in any of
+   * temperature/topK/topP/minP/repeatPenalty the caller left unset;
+   * explicit values always win over the preset. Prefer this over raw
+   * temperature so sampling policy stays in one auditable table.
+   */
+  samplingPreset?: SamplingPresetName;
+  /**
+   * P1.1-2026-10-08: constrained decoding. `response_format` maps to
+   * llama.cpp's native json_schema grammar masking (schema-valid output
+   * by construction); `grammar` passes a raw GBNF grammar and overrides
+   * response_format when both are set (native behavior).
+   *
+   * HONESTY NOTE: whether the vendored llama.rn/llama.cpp build actually
+   * enforces the grammar can only be verified on-device (one ADR reported
+   * a build with the grammar path disabled). Treat this as a hint that
+   * makes valid output *likely*; code validators (P1.5) remain the
+   * enforcement layer. Never rely on schema-validity alone for
+   * correctness — validate values in code.
+   */
+  responseFormat?: CompletionResponseFormat;
+  grammar?: string;
   onToken?: (piece: string) => void;
   stop?: string[];
   /**
@@ -44,6 +76,51 @@ export interface GenerateOptions {
   timeoutMs?: number;
   /** Called once, right before the timeout triggers stop() — lets the caller distinguish a timeout from a natural finish or a user-initiated stop. */
   onTimeout?: () => void;
+}
+
+/**
+ * P1.2-2026-10-08: per-task sampling presets. The main loop used to run
+ * everything at a flat temperature 0.7 — factual/tool turns are more
+ * reliable near-greedy, and small models ramble/repeat at high temp.
+ * min_p is pinned to 0 everywhere (llama.cpp's default 0.05 discards the
+ * exact tokens needed to break out of repetition loops — MiniCPM docs).
+ * A mild repeat penalty applies only to open chat, never to structured
+ * paths where it could distort machine-readable output.
+ */
+export type SamplingPresetName = "structured" | "factual" | "chat";
+
+export interface SamplingPreset {
+  temperature: number;
+  minP?: number;
+  repeatPenalty?: number;
+}
+
+export const SAMPLING_PRESETS: Record<SamplingPresetName, SamplingPreset> = {
+  /** Tool calls, JSON, classifications — near-greedy, validity first. */
+  structured: { temperature: 0.1, minP: 0 },
+  /** Memory lookups, factual answers — low temp, still some flexibility. */
+  factual: { temperature: 0.3, minP: 0 },
+  /** Open conversation — the old 0.7 default, plus repetition control. */
+  chat: { temperature: 0.7, minP: 0, repeatPenalty: 1.1 },
+};
+
+/** Resolve preset + explicit overrides into concrete sampling params. Pure — unit tested. */
+export function resolveSampling(opts: {
+  temperature?: number;
+  topK?: number;
+  topP?: number;
+  minP?: number;
+  repeatPenalty?: number;
+  samplingPreset?: SamplingPresetName;
+}): { temperature: number; topK?: number; topP?: number; minP?: number; repeatPenalty?: number } {
+  const preset = opts.samplingPreset ? SAMPLING_PRESETS[opts.samplingPreset] : undefined;
+  return {
+    temperature: opts.temperature ?? preset?.temperature ?? 0.7,
+    topK: opts.topK,
+    topP: opts.topP,
+    minP: opts.minP ?? preset?.minP,
+    repeatPenalty: opts.repeatPenalty ?? preset?.repeatPenalty,
+  };
 }
 
 /**
@@ -241,13 +318,20 @@ export class LlamaEngine {
     prompt,
     messages,
     nPredict = 512,
-    temperature = 0.7,
+    temperature,
+    topK,
+    topP,
+    minP,
+    repeatPenalty,
+    samplingPreset,
+    responseFormat,
+    grammar,
     onToken,
     stop,
     timeoutMs,
     onTimeout,
   }: GenerateOptions): Promise<string> {
-    const started = await this.enqueue(() => this.startCompletion({ prompt, messages, nPredict, temperature, onToken, stop, timeoutMs, onTimeout }));
+    const started = await this.enqueue(() => this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, onToken, stop, timeoutMs, onTimeout }));
     try {
       const { text } = await started.completion;
       return text ?? started.getFull();
@@ -261,7 +345,14 @@ export class LlamaEngine {
     prompt,
     messages,
     nPredict = 512,
-    temperature = 0.7,
+    temperature,
+    topK,
+    topP,
+    minP,
+    repeatPenalty,
+    samplingPreset,
+    responseFormat,
+    grammar,
     onToken,
     stop,
     timeoutMs,
@@ -279,6 +370,18 @@ export class LlamaEngine {
         }, timeoutMs)
       : null;
 
+    // P1.1/P1.2: preset fills unset sampling values; explicit values win.
+    // Only defined values are added to the params so callers that don't
+    // use the new options get exactly the same native call as before.
+    const sampling = resolveSampling({ temperature, topK, topP, minP, repeatPenalty, samplingPreset });
+    const extraParams: Record<string, unknown> = {};
+    if (sampling.topK !== undefined) extraParams.top_k = sampling.topK;
+    if (sampling.topP !== undefined) extraParams.top_p = sampling.topP;
+    if (sampling.minP !== undefined) extraParams.min_p = sampling.minP;
+    if (sampling.repeatPenalty !== undefined) extraParams.penalty_repeat = sampling.repeatPenalty;
+    if (responseFormat !== undefined) extraParams.response_format = responseFormat;
+    if (grammar !== undefined) extraParams.grammar = grammar;
+
     // messages+jinja lets llama.cpp apply the loaded GGUF's own embedded
     // chat_template — DEFAULT_STOP_SEQUENCES exist specifically because
     // this app's hand-built "Question:/Answer:" prompt shape gives the
@@ -289,8 +392,8 @@ export class LlamaEngine {
     // could truncate genuine content that happens to contain "User:"/
     // "Question:". Only applied when the caller passes explicit `stop`.
     const completionParams = messages
-      ? { messages, jinja: true, n_predict: nPredict, temperature, stop: stop ?? [] }
-      : { prompt: prompt!, n_predict: nPredict, temperature, stop: stop ?? DEFAULT_STOP_SEQUENCES };
+      ? { messages, jinja: true, n_predict: nPredict, temperature: sampling.temperature, stop: stop ?? [], ...extraParams }
+      : { prompt: prompt!, n_predict: nPredict, temperature: sampling.temperature, stop: stop ?? DEFAULT_STOP_SEQUENCES, ...extraParams };
 
     let full = "";
     const completion = this.context.completion(completionParams, (data) => {
