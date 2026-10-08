@@ -6,6 +6,7 @@
 
 import { llamaEngine } from "../inference/LlamaEngine";
 import { retrieve, assemblePrompt, RetrievedChunk, ConversationHistory } from "../rag/retrieve";
+import { assembleChatMessages } from "../rag/pure";
 
 /**
  * "Deep Research Mode" — a sequential multi-pass pipeline over the SAME
@@ -112,11 +113,12 @@ export function renumberPerspectiveCitations(
  * (an empty "cite sources" instruction is exactly the dangling framing that
  * nudges a small model toward inventing content to fill it).
  */
-export function buildSynthesisPrompt(
+/** Shared content for buildSynthesisPrompt / buildSynthesisMessages (P1.4). */
+function synthesisParts(
   originalQuery: string,
   subResults: ResearchSubResult[],
   systemPrompt: string | undefined
-): string {
+): { system: string; user: string } {
   const anySources = subResults.some((r) => r.sourceCount > 0);
   // R2: cumulative global offset per perspective — footnote [n] in the UI
   // is allChunks[n-1], i.e. perspective i's chunk k sits at
@@ -150,12 +152,36 @@ export function buildSynthesisPrompt(
       `to general knowledge, or say the local index had nothing on that part.`
     : ` No perspective had any local sources, so write the answer without ` +
       `citations and without implying that local sources support it.`;
-  return (
-    `${instruction} You are synthesizing multiple research perspectives into one answer.\n\n` +
+  const system =
+    `${instruction} You are synthesizing multiple research perspectives into one answer.` +
+    citationInstruction;
+  const user =
     `Original question: ${originalQuery}\n\n${perspectives}\n\n` +
     `Compare these perspectives, reconcile any conflicts, and write one unified, ` +
-    `well-reasoned answer.${citationInstruction}\n\nAnswer:`
-  );
+    `well-reasoned answer.`;
+  return { system, user };
+}
+
+export function buildSynthesisPrompt(
+  originalQuery: string,
+  subResults: ResearchSubResult[],
+  systemPrompt: string | undefined
+): string {
+  const { system, user } = synthesisParts(originalQuery, subResults, systemPrompt);
+  return `${system}\n\n${user}\n\nAnswer:`;
+}
+
+/** P1.4: messages form of the synthesis prompt for models with a chat template. */
+export function buildSynthesisMessages(
+  originalQuery: string,
+  subResults: ResearchSubResult[],
+  systemPrompt: string | undefined
+): { role: string; content: string }[] {
+  const { system, user } = synthesisParts(originalQuery, subResults, systemPrompt);
+  return [
+    { role: "system", content: system },
+    { role: "user", content: user },
+  ];
 }
 
 // Safety net, not a performance target — before this, no stage of this
@@ -166,13 +192,26 @@ export function buildSynthesisPrompt(
 const STAGE_TIMEOUT_MS = 120_000;
 
 async function decompose(query: string, onTimeout: () => void): Promise<string[]> {
-  const prompt =
+  // P1.4-2026-10-08: real chat template when the GGUF ships one; the
+  // hand-built "Question:/Sub-questions:" shape is the fallback for
+  // models without an embedded template.
+  const instruction =
     `Break this research question into 2-3 focused sub-questions that ` +
     `together cover it well (e.g. technical analysis, counter-arguments, ` +
     `practical implications — whichever fit this question). One per line, ` +
-    `no numbering, no extra commentary.\n\nQuestion: ${query}\n\nSub-questions:`;
+    `no numbering, no extra commentary.`;
+  const promptParams = llamaEngine.hasEmbeddedChatTemplate()
+    ? {
+        messages: [
+          { role: "system", content: instruction },
+          { role: "user", content: `Question: ${query}` },
+        ],
+      }
+    : {
+        prompt: `${instruction}\n\nQuestion: ${query}\n\nSub-questions:`,
+      };
   const text = await llamaEngine.generate({
-    prompt,
+    ...promptParams,
     nPredict: 150,
     temperature: 0.4,
     timeoutMs: STAGE_TIMEOUT_MS,
@@ -195,9 +234,17 @@ async function researchSubQuestion(
   // Honest no-result: this sub-question's own retrieval pass found
   // nothing, so the model is told to say so briefly rather than answering
   // from general knowledge as if local sources backed it.
-  const prompt = assemblePrompt(subQuestion, chunks, systemPrompt, history, undefined, chunks.length === 0);
+  // P1.4: messages+jinja when the model ships a template, else the
+  // legacy hand-built prompt (same fallback pattern as executor.ts).
+  const promptParams = llamaEngine.hasEmbeddedChatTemplate()
+    ? {
+        messages: assembleChatMessages(subQuestion, chunks, systemPrompt, history, undefined, chunks.length === 0),
+      }
+    : {
+        prompt: assemblePrompt(subQuestion, chunks, systemPrompt, history, undefined, chunks.length === 0),
+      };
   const answer = await llamaEngine.generate({
-    prompt,
+    ...promptParams,
     nPredict: 300,
     temperature: 0.6,
     timeoutMs: STAGE_TIMEOUT_MS,
@@ -214,9 +261,13 @@ async function synthesize(
   onToken: (piece: string) => void,
   onTimeout: () => void
 ): Promise<string> {
-  const prompt = buildSynthesisPrompt(originalQuery, subResults, systemPrompt);
+  // P1.4: messages+jinja when the GGUF ships a template, else the legacy
+  // hand-built string.
+  const promptParams = llamaEngine.hasEmbeddedChatTemplate()
+    ? { messages: buildSynthesisMessages(originalQuery, subResults, systemPrompt) }
+    : { prompt: buildSynthesisPrompt(originalQuery, subResults, systemPrompt) };
   return llamaEngine.generate({
-    prompt,
+    ...promptParams,
     nPredict: maxTokens,
     temperature: 0.6,
     onToken,

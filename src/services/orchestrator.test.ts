@@ -19,10 +19,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const generateMock = vi.fn();
 const retrieveMock = vi.fn();
+let mockHasTemplate = false;
 
 vi.mock("../inference/LlamaEngine", () => ({
   llamaEngine: {
     generate: (opts: any) => generateMock(opts),
+    hasEmbeddedChatTemplate: () => mockHasTemplate,
   },
 }));
 
@@ -185,5 +187,76 @@ describe("D/F5 — buildSynthesisPrompt unit checks", () => {
     expect(a).toBe(b);
     expect(a).toMatch(/couldn't find any relevant sources/i);
     expect(a).not.toMatch(/\[\d+\]/);
+  });
+});
+
+describe("P1.4 chat template on all paths", () => {
+  beforeEach(() => {
+    mockHasTemplate = false;
+  });
+
+  it("sin template: usa prompt hand-built (fallback)", async () => {
+    const calls: unknown[] = [];
+    generateMock.mockImplementation(async (opts: unknown) => {
+      calls.push(opts);
+      const p = (opts as { prompt?: string }).prompt ?? "";
+      if (p.startsWith("Break this research question")) {
+        return "What are the benefits?\nWhat are the risks?";
+      }
+      return "mock answer";
+    });
+    retrieveMock.mockResolvedValue([chunk(1)]);
+    await runDeepResearch("query", undefined, undefined, 200);
+    expect(calls.length).toBeGreaterThan(0);
+    for (const c of calls) {
+      expect(c).toHaveProperty("prompt");
+      expect(c).not.toHaveProperty("messages");
+    }
+  });
+
+  it("con template: decompose/research/synthesize usan messages", async () => {
+    mockHasTemplate = true;
+    const calls: unknown[] = [];
+    generateMock.mockImplementation(async (opts: unknown) => {
+      calls.push(opts);
+      const m = (opts as { messages?: { content: string }[] }).messages;
+      const text = m ? m.map((x) => x.content).join("\n") : "";
+      if (text.includes("Break this research question")) {
+        return "What are the benefits?\nWhat are the risks?";
+      }
+      return "mock answer";
+    });
+    retrieveMock.mockResolvedValue([chunk(1)]);
+    await runDeepResearch("query", undefined, undefined, 200);
+    expect(calls.length).toBeGreaterThan(0);
+    for (const c of calls) {
+      expect(c).toHaveProperty("messages");
+      expect(c).not.toHaveProperty("prompt");
+    }
+    // Synthesis messages carry the perspectives and the question.
+    const synth = calls.find((c) =>
+      (c as { messages: { content: string }[] }).messages.some((m) =>
+        m.content.includes("Original question")
+      )
+    ) as { messages: { role: string; content: string }[] };
+    expect(synth.messages[0].role).toBe("system");
+    expect(synth.messages[1].role).toBe("user");
+  });
+
+  it("buildSynthesisMessages preserva el contenido de buildSynthesisPrompt", async () => {
+    const { buildSynthesisMessages } = await import("./orchestrator");
+    const subResults = [
+      { subQuestion: "sq1", answer: "a1 [1]", sourceCount: 1 },
+      { subQuestion: "sq2", answer: "a2", sourceCount: 0 },
+    ];
+    const str = buildSynthesisPrompt("q", subResults, undefined);
+    const msgs = buildSynthesisMessages("q", subResults, undefined);
+    const joined = msgs.map((m) => m.content).join("\n");
+    // Same key content in both forms.
+    expect(joined).toContain("sq1");
+    expect(joined).toContain("sq2");
+    expect(joined).toMatch(/sources:\s*none/i);
+    expect(joined).toMatch(/never present its claims as backed by local sources/i);
+    expect(str).toContain("sq1");
   });
 });

@@ -319,8 +319,13 @@ export async function executeRoutingPlan(
           break;
         }
         const verifyPrompt = buildVerificationPrompt(input.query, answer, citations);
+        // P1.4: messages+jinja when the model ships a template; the
+        // hand-built string is the fallback. Same content either way.
+        const verifyParams = llamaEngine.hasEmbeddedChatTemplate()
+          ? { messages: buildVerificationMessages(input.query, answer, citations) }
+          : { prompt: verifyPrompt };
         const verdictText = await llamaEngine.generate({
-          prompt: verifyPrompt,
+          ...verifyParams,
           nPredict: step.maxTokens ?? 200,
           temperature: 0.2,
           timeoutMs: step.timeoutMs ?? STEP_TIMEOUT_MS,
@@ -358,6 +363,29 @@ function buildVerificationPrompt(query: string, answer: string, citations: Retri
     `single sentence explaining why.\n\n` +
     `Question: ${query}\n\nEvidence:\n${evidence}\n\nAnswer to check:\n${answer}\n\nVerdict:`
   );
+}
+
+/** P1.4: messages form of the verification prompt for models with a chat template. */
+function buildVerificationMessages(
+  query: string,
+  answer: string,
+  citations: RetrievedChunk[]
+): { role: string; content: string }[] {
+  const evidence = citations.map((c, i) => `[${i + 1}] ${c.title}\n${c.body}`).join("\n\n");
+  return [
+    {
+      role: "system",
+      content:
+        `You are checking whether an answer is actually supported by the evidence below — ` +
+        `not whether it's well-written, not whether you personally agree with it. ` +
+        `Respond with exactly one word first: SUPPORTED, PARTIAL, or UNSUPPORTED, then a ` +
+        `single sentence explaining why.`,
+    },
+    {
+      role: "user",
+      content: `Question: ${query}\n\nEvidence:\n${evidence}\n\nAnswer to check:\n${answer}\n\nVerdict:`,
+    },
+  ];
 }
 
 function parseVerificationVerdict(text: string): { status: VerificationStatus; note?: string } {

@@ -421,3 +421,44 @@ describe("prompt format selection", () => {
     expect(hasEmbeddedChatTemplateMock).not.toHaveBeenCalled();
   });
 });
+
+describe("P1.4 verify step chat template", () => {
+  const verifyPlan = () =>
+    plan({
+      steps: [
+        { id: "retrieve-0", type: "retrieve", required: false },
+        { id: "generate-1", type: "generate", modelId: "phi", required: true },
+        { id: "verify-2", type: "verify", modelId: "qwen-1.5b", required: false },
+      ],
+    });
+  const chunks = [{ chunkId: "c1", docId: "d1", title: "T", body: "B", score: 1, matchType: "hybrid" as const }];
+
+  beforeEach(() => {
+    mockEmbeddedTemplate = false;
+    hasEmbeddedChatTemplateMock.mockClear();
+    retrieveMock.mockResolvedValue(chunks);
+  });
+
+  it("sin template: verify usa prompt hand-built", async () => {
+    generateMock.mockResolvedValueOnce("mock answer").mockResolvedValueOnce("SUPPORTED. Yes.");
+    const result = await executeRoutingPlan(verifyPlan(), { query: "hi" }, resolveModel);
+    expect(result.verification.status).toBe("passed");
+    const verifyCall = generateMock.mock.calls[1][0];
+    expect(verifyCall.prompt).toContain("SUPPORTED");
+    expect(verifyCall.messages).toBeUndefined();
+  });
+
+  it("con template: verify usa messages", async () => {
+    mockEmbeddedTemplate = true;
+    generateMock.mockResolvedValueOnce("mock answer").mockResolvedValueOnce("SUPPORTED. Yes.");
+    const result = await executeRoutingPlan(verifyPlan(), { query: "hi" }, resolveModel);
+    expect(result.verification.status).toBe("passed");
+    const verifyCall = generateMock.mock.calls[1][0];
+    expect(verifyCall.messages).toBeDefined();
+    expect(verifyCall.prompt).toBeUndefined();
+    const roles = verifyCall.messages.map((m: { role: string }) => m.role);
+    expect(roles).toEqual(["system", "user"]);
+    const joined = verifyCall.messages.map((m: { content: string }) => m.content).join("\n");
+    expect(joined).toContain("SUPPORTED");
+  });
+});

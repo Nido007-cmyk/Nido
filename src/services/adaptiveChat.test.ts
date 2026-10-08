@@ -23,6 +23,7 @@ vi.mock("../inference/LlamaEngine", () => ({
   llamaEngine: {
     load: (filename: string) => loadMock(filename),
     generate: (opts: any) => generateMock(opts),
+    hasEmbeddedChatTemplate: () => false,
     getModelInfo: () =>
       mockResidentFilename ? { filename: mockResidentFilename, nCtx: 4096, nThreads: 4 } : null,
   },

@@ -31,6 +31,7 @@ const retrieveMock = vi.fn();
 vi.mock("../inference/LlamaEngine", () => ({
   llamaEngine: {
     generate: (opts: any) => generateMock(opts),
+    hasEmbeddedChatTemplate: () => false,
   },
 }));
 
