@@ -82,6 +82,11 @@ describe("Negotiation delivery fail-closed", () => {
       sentPayloads.push(signed);
       return sendImpl(peer, action, id, signed);
     });
+    // R3: en estos tests la clave Ed25519 de Alice hace de identidad y de
+    // firma (el mock de ./store no provee findContactByPk).
+    negotiationService.setPeerSigPkResolver(async (peerPkHex) =>
+      peerPkHex.toLowerCase() === alicePkHex.toLowerCase() ? alicePkHex : null
+    );
     unsubscribe = negotiationService.subscribe((e) => events.push(e));
   });
 

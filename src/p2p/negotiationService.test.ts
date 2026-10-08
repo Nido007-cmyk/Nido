@@ -61,6 +61,11 @@ describe("NegotiationService: routing y state machine", () => {
     // pero cada test usa negotiationIds únicos.
     negotiationService.setLocalIdentity(bobPkHex);
     negotiationService.subscribe((e) => events.push(e));
+    // R3: anclar la firma a la identidad QR. En estos tests la clave Ed25519
+    // de Alice hace de identidad y de firma a la vez.
+    negotiationService.setPeerSigPkResolver(async (peerPkHex) =>
+      peerPkHex.toLowerCase() === alicePkHex.toLowerCase() ? alicePkHex : null
+    );
   });
 
   function makeProposal(recipientPkHex: string = bobPkHex): TaskProposal {
@@ -261,6 +266,161 @@ describe("NegotiationService: routing y state machine", () => {
 
     const sessions = negotiationService.listSessions();
     expect(sessions.some((s) => s.negotiationId === "neg-7")).toBe(true);
+  });
+
+  it("R2: re-PROPOSE con el mismo negotiationId NO reemplaza la propuesta (proposal swap)", async () => {
+    // v1 benigna: el usuario la está leyendo en la tarjeta.
+    const v1 = createProposal(
+      aliceKeys.secretKey,
+      alicePkHex,
+      bobPkHex,
+      "Ayúdame a organizar mis notas",
+      ["read:notes"],
+      {},
+      300000
+    );
+    const signedV1 = signNegotiationMessage(
+      aliceKeys.secretKey,
+      alicePkHex,
+      "PROPOSE",
+      v1.proposalId,
+      v1
+    );
+    await negotiationService.handleEnvelope(
+      makeEnvelope("PROPOSE", "neg-r2", signedV1) as any
+    );
+    const afterV1 = negotiationService
+      .listSessions()
+      .find((s) => s.negotiationId === "neg-r2");
+    expect(afterV1).toBeDefined();
+    const eventsAfterV1 = events.length;
+    expect(eventsAfterV1).toBeGreaterThan(0);
+
+    // v2 maliciosa: mismo negotiationId, nonce fresco, scopes escalados.
+    const v2 = createProposal(
+      aliceKeys.secretKey,
+      alicePkHex,
+      bobPkHex,
+      "Ejecuta lo que sea",
+      ["send:message"],
+      {},
+      300000
+    );
+    const signedV2 = signNegotiationMessage(
+      aliceKeys.secretKey,
+      alicePkHex,
+      "PROPOSE",
+      v2.proposalId,
+      v2
+    );
+    await negotiationService.handleEnvelope(
+      makeEnvelope("PROPOSE", "neg-r2", signedV2) as any
+    );
+
+    // La sesión conserva la v1: ni scopes ni descripción cambian, y no se
+    // emite ningún evento nuevo por el duplicado.
+    const session = negotiationService
+      .listSessions()
+      .find((s) => s.negotiationId === "neg-r2");
+    expect(session).toBeDefined();
+    expect(session!.proposal.requestedScopes).toEqual(["read:notes"]);
+    expect(session!.proposal.taskDescription).toBe(
+      "Ayúdame a organizar mis notas"
+    );
+    expect(events.length).toBe(eventsAfterV1);
+  });
+
+  it("R3: PROPOSE firmado con clave no anclada al QR se ignora", async () => {
+    // Atacante con la clave de sesión pero sin la Ed25519 del peer: firma
+    // con una clave fresca. La firma verifica contra la clave auto-declarada,
+    // pero el anclaje al QR debe rechazarla.
+    const malloryKeys = nacl.sign.keyPair();
+    const malloryPkHex = toHex(malloryKeys.publicKey);
+    const proposal = makeProposal();
+    const signed = signNegotiationMessage(
+      malloryKeys.secretKey,
+      malloryPkHex,
+      "PROPOSE",
+      proposal.proposalId,
+      proposal
+    );
+    // env.from sigue siendo Alice (identidad de transporte comprometida).
+    await negotiationService.handleEnvelope(
+      makeEnvelope("PROPOSE", "neg-r3a", signed) as any
+    );
+
+    expect(events.length).toBe(0);
+    expect(
+      negotiationService.listSessions().some((s) => s.negotiationId === "neg-r3a")
+    ).toBe(false);
+  });
+
+  it("R3: ACCEPT firmado con clave no anclada no cambia el estado", async () => {
+    // send:message → ASK: la sesión queda en PROPOSED (no auto-aceptada).
+    const proposal = createProposal(
+      aliceKeys.secretKey,
+      alicePkHex,
+      bobPkHex,
+      "Mándale un mensaje a mi contacto",
+      ["send:message"],
+      {},
+      300000
+    );
+    const signedPropose = signNegotiationMessage(
+      aliceKeys.secretKey,
+      alicePkHex,
+      "PROPOSE",
+      proposal.proposalId,
+      proposal
+    );
+    await negotiationService.handleEnvelope(
+      makeEnvelope("PROPOSE", "neg-r3b", signedPropose) as any
+    );
+    const session = negotiationService
+      .listSessions()
+      .find((s) => s.negotiationId === "neg-r3b");
+    expect(session).toBeDefined();
+    expect(session!.state).toBe("PROPOSED");
+
+    // ACCEPT forjado con clave fresca (firma válida contra la clave
+    // auto-declarada, pero no anclada al QR).
+    const malloryKeys = nacl.sign.keyPair();
+    const malloryPkHex = toHex(malloryKeys.publicKey);
+    const signedAccept = signNegotiationMessage(
+      malloryKeys.secretKey,
+      malloryPkHex,
+      "ACCEPT",
+      proposal.proposalId,
+      {}
+    );
+    await negotiationService.handleEnvelope(
+      makeEnvelope("ACCEPT", "neg-r3b", signedAccept) as any
+    );
+
+    const after = negotiationService
+      .listSessions()
+      .find((s) => s.negotiationId === "neg-r3b");
+    expect(after!.state).toBe("PROPOSED");
+  });
+
+  it("R3: sin contacto emparejado la negociación se rechaza (fail-closed)", async () => {
+    negotiationService.setPeerSigPkResolver(async () => null);
+    const proposal = makeProposal();
+    const signed = signNegotiationMessage(
+      aliceKeys.secretKey,
+      alicePkHex,
+      "PROPOSE",
+      proposal.proposalId,
+      proposal
+    );
+    await negotiationService.handleEnvelope(
+      makeEnvelope("PROPOSE", "neg-r3c", signed) as any
+    );
+
+    expect(events.length).toBe(0);
+    expect(
+      negotiationService.listSessions().some((s) => s.negotiationId === "neg-r3c")
+    ).toBe(false);
   });
 });
 

@@ -39,7 +39,17 @@ import {
 import { globalReplayProtection } from "./replayProtection";
 import { processIncomingProposal, type ProposalOutcome } from "./p2pApprovalBridge";
 import { fromHex, toHex } from "./crypto";
-import { getSigningKeypair } from "./store";
+import { getSigningKeypair, findContactByPk } from "./store";
+
+/**
+ * R3 FIX 2026-10-08: resuelve la clave de firma Ed25519 establecida por QR
+ * para un peer, dada su clave de identidad de transporte (X25519).
+ * Por defecto lee el contacto emparejado; inyectable en tests para no tocar
+ * SQLite.
+ */
+export type PeerSigPkResolver = (
+  peerIdentityPkHex: string
+) => Promise<string | null>;
 
 /** Estados de una negociación activa. */
 export interface NegotiationSession {
@@ -128,6 +138,10 @@ class NegotiationService {
   private handlers = new Set<NegotiationEventHandler>();
   private myPkHex: string | null = null;
   private sendFn: NegotiationSendFn | null = null;
+  private peerSigPkResolver: PeerSigPkResolver = async (peerIdentityPkHex) => {
+    const contact = await findContactByPk(peerIdentityPkHex);
+    return contact?.sigPkHex ?? null;
+  };
 
   static getInstance(): NegotiationService {
     if (!NegotiationService.instance) {
@@ -139,6 +153,37 @@ class NegotiationService {
   /** Configura la identidad local (para verificar recipient). */
   setLocalIdentity(pkHex: string): void {
     this.myPkHex = pkHex.toLowerCase();
+  }
+
+  /**
+   * R3: reemplaza el resolver de clave de firma del peer (tests).
+   * En producción siempre se usa el contacto emparejado por QR.
+   */
+  setPeerSigPkResolver(fn: PeerSigPkResolver): void {
+    this.peerSigPkResolver = fn;
+  }
+
+  /**
+   * R3 FIX 2026-10-08: verifica que la clave que firma el mensaje de
+   * negociación sea la identidad Ed25519 establecida por QR para este peer,
+   * no una clave auto-declarada. Sin este anclaje, la firma Ed25519 no aporta
+   * seguridad marginal sobre la clave de sesión: ante compromiso de la clave
+   * de sesión, un atacante forjaría PROPOSE/ACCEPT/COUNTER con una clave
+   * Ed25519 fresca y la firma "verificaría". Fail-closed: sin contacto o sin
+   * coincidencia → false.
+   */
+  private async isPinnedSigner(
+    peerIdentityPkHex: string,
+    claimedSignerPkHex: string
+  ): Promise<boolean> {
+    let pinned: string | null;
+    try {
+      pinned = await this.peerSigPkResolver(peerIdentityPkHex);
+    } catch {
+      return false;
+    }
+    if (!pinned) return false;
+    return pinned.toLowerCase() === claimedSignerPkHex.toLowerCase();
   }
 
   /**
@@ -556,6 +601,16 @@ class NegotiationService {
     // 4. Anti-replay (nonce del mensaje)
     if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
 
+    // R2 FIX 2026-10-08: el negotiationId lo elige el proponente. Sin este
+    // cheque, un segundo PROPOSE con el mismo ID (nonce fresco, firma válida)
+    // reemplazaría silenciosamente la propuesta que el usuario está revisando
+    // (proposal swap: aprueba la v1, se ejecuta la v2). Fail-closed: se
+    // rechaza el duplicado; un proponente legítimo usa un ID nuevo.
+    if (this.sessions.has(negotiationId)) return;
+
+    // R3: anclar la firma a la identidad verificada por QR (ver isPinnedSigner).
+    if (!(await this.isPinnedSigner(env.from, signed.signerPkHex))) return;
+
     // 5. Expiry
     if (isExpired(proposal)) {
       // Ya expiró al llegar: se marca como expirada
@@ -636,6 +691,9 @@ class NegotiationService {
     }
     if (!verifyNegotiationMessage(signed, signerBytes)) return;
     if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
+    // R3: anclar la firma a la identidad verificada por QR.
+    if (!(await this.isPinnedSigner(session.peerPkHex, signed.signerPkHex)))
+      return;
 
     const counterProposal = signed.payload as TaskProposal;
     if (!counterProposal || typeof counterProposal !== "object") return;
@@ -668,6 +726,9 @@ class NegotiationService {
     }
     if (!verifyNegotiationMessage(signed, signerBytes)) return;
     if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
+    // R3: anclar la firma a la identidad verificada por QR.
+    if (!(await this.isPinnedSigner(session.peerPkHex, signed.signerPkHex)))
+      return;
 
     session.state = "ACCEPTED";
     session.pendingSend = undefined; // defensa: nada pendiente al cerrar
@@ -696,6 +757,9 @@ class NegotiationService {
     }
     if (!verifyNegotiationMessage(signed, signerBytes)) return;
     if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
+    // R3: anclar la firma a la identidad verificada por QR.
+    if (!(await this.isPinnedSigner(session.peerPkHex, signed.signerPkHex)))
+      return;
 
     const payload = signed.payload as { reason?: string };
     session.state = "DECLINED";
