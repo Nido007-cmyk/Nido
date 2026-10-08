@@ -156,11 +156,16 @@ async function handshake(a: Peer, b: Peer): Promise<SessionViews> {
   const bEph = b.m.newHandshakeEphemeral();
   const aNonce = randomNonce(HANDSHAKE_NONCE_BYTES);
   const bNonce = randomNonce(HANDSHAKE_NONCE_BYTES);
+  // Copias para las vistas de test: completeHandshake borra los secretos
+  // efímeros in-place (higiene de forward-secrecy). Cada peer real
+  // conserva su propia copia; aquí la modelamos explícitamente.
+  const aSecView = aEph.secretKey.slice();
+  const bSecView = bEph.secretKey.slice();
   await a.as(() => a.m.completeHandshake(b.pk, aEph.secretKey, bEph.publicKey, aNonce, bNonce));
   await b.as(() => b.m.completeHandshake(a.pk, bEph.secretKey, aEph.publicKey, bNonce, aNonce));
   const tag = deriveAckSessionTag(a.pk, b.pk, aNonce, bNonce);
-  const toA = P2PSession.fromHandshakeV2(bEph.secretKey, aEph.publicKey, a.pk, bNonce, aNonce);
-  const toB = P2PSession.fromHandshakeV2(aEph.secretKey, bEph.publicKey, b.pk, aNonce, bNonce);
+  const toA = P2PSession.fromHandshakeV2(bSecView, aEph.publicKey, a.pk, bNonce, aNonce);
+  const toB = P2PSession.fromHandshakeV2(aSecView, bEph.publicKey, b.pk, aNonce, bNonce);
   // Vistas para empaquetar/leer frames artesanales en cada dirección.
   const [confirmA] = drain(a); // session_confirm real de Alice (H-8)
   const [confirmB] = drain(b); // session_confirm real de Bob
@@ -619,9 +624,11 @@ describe("N6 — session_tag y validación del ACK", () => {
     const nA = randomNonce(HANDSHAKE_NONCE_BYTES);
     const nB = randomNonce(HANDSHAKE_NONCE_BYTES);
     // Vista del emisor (a) y vista del receptor (b): mismo material R4.
+    // Cada fromHandshakeV2 consume (borra) su buffer de secreto: copias
+    // independientes, como en la realidad.
     const sender = P2PSession.fromHandshakeV2(aEph.secretKey, bEph.publicKey, toHex(b.publicKey), nA, nB);
-    const receiverPlain = P2PSession.fromHandshakeV2(bEph.secretKey, aEph.publicKey, toHex(a.publicKey), nB, nA);
-    const receiverTagged = P2PSession.fromHandshakeV2(bEph.secretKey, aEph.publicKey, toHex(a.publicKey), nB, nA);
+    const receiverPlain = P2PSession.fromHandshakeV2(bEph.secretKey.slice(), aEph.publicKey, toHex(a.publicKey), nB, nA);
+    const receiverTagged = P2PSession.fromHandshakeV2(bEph.secretKey.slice(), aEph.publicKey, toHex(a.publicKey), nB, nA);
     sender.setSessionTag(deriveAckSessionTag(toHex(a.publicKey), toHex(b.publicKey), nA, nB));
     const frame = sender.pack(makeEnvelope("chat", "e1", a.publicKey, toHex(b.publicKey), { text: "x" }));
     // Misma clave de sesión R4: el tag es aditivo, el receptor sin tag abre igual.
