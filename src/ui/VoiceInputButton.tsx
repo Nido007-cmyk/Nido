@@ -10,15 +10,14 @@ import { Pressable, Text, StyleSheet, Animated, Alert, View } from "react-native
 import { LinearGradient } from "expo-linear-gradient";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { isVoiceInputAvailable, startListening, stopListening, VoiceEvent } from "../voice/VoiceInput";
+import { useTheme } from "./theme/ThemeContext";
 
 interface Props {
   disabled?: boolean;
   onTranscript: (text: string) => void;
 }
 
-const AURA_COLORS = ["#22d3ee", "#3b82f6", "#8b5cf6", "#ec4899"] as const; // cyan -> blue -> violet -> pink
-
-function AuraRing({ active, delay }: { active: boolean; delay: number }) {
+function AuraRing({ active, delay, colors }: { active: boolean; delay: number; colors: [string, string] }) {
   const scale = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -49,7 +48,7 @@ function AuraRing({ active, delay }: { active: boolean; delay: number }) {
       pointerEvents="none"
     >
       <LinearGradient
-        colors={AURA_COLORS}
+        colors={colors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.ringGradient}
@@ -60,8 +59,8 @@ function AuraRing({ active, delay }: { active: boolean; delay: number }) {
 
 /**
  * Gemini-style glowing mic: idle is a sleek metallic-gradient circle;
- * listening expands multi-color aura rings (cyan -> blue -> violet ->
- * pink) that pulse outward. Built with core Animated + expo-linear-gradient
+ * listening expands garden-palette aura rings (emerald -> gold) that pulse
+ * outward. Built with core Animated + expo-linear-gradient
  * (no react-native-reanimated) — see docs/MODELS.md for why.
  *
  * Backed by Android's built-in SpeechRecognizer with EXTRA_PREFER_OFFLINE
@@ -71,6 +70,9 @@ function AuraRing({ active, delay }: { active: boolean; delay: number }) {
  */
 export function VoiceInputButton({ disabled, onTranscript }: Props) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
+  // Garden-palette aura: emerald -> gold (theme-aware, replaces the old neon rainbow).
+  const auraColors: [string, string] = [colors.emerald[400], colors.nidoIcon.gold];
   const [available, setAvailable] = useState<boolean | null>(null);
   const [listening, setListening] = useState(false);
   const pulse = useRef(new Animated.Value(1)).current;
@@ -121,7 +123,7 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
   return (
     <View style={styles.container}>
       {[0, 300, 600].map((delay) => (
-        <AuraRing key={delay} active={listening} delay={delay} />
+        <AuraRing key={delay} active={listening} delay={delay} colors={auraColors} />
       ))}
       <Animated.View style={{ transform: [{ scale: pulse }] }}>
         <Pressable
@@ -131,7 +133,7 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
           style={(disabled || available === false) && styles.btnDisabled}
         >
           <LinearGradient
-            colors={listening ? AURA_COLORS : ["#2a2a3a", "#16161f"]}
+            colors={listening ? auraColors : ["#2a2a3a", "#16161f"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.btn}
