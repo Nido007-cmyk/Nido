@@ -114,6 +114,11 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   // pérdida de claves (antes: spinner eterno con myCode === "").
   const [identityError, setIdentityError] = useState<string | null>(null);
   const [contacts, setContacts] = useState<P2PContact[]>([]);
+  /** Ref a contactos vigentes (para onPeerLost sin dependencia circular). */
+  const contactsRef = useRef<P2PContact[]>([]);
+  useEffect(() => {
+    contactsRef.current = contacts;
+  }, [contacts]);
   const [online, setOnline] = useState<Set<string>>(new Set());
   const [nearby, setNearby] = useState<string[]>([]);
   const [linking, setLinking] = useState(false);
@@ -131,6 +136,51 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   const [messages, setMessages] = useState<P2PStoredMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  /**
+   * AUTO-RECONNECT 2026-10-07: cuando se pierde un peer emparejado, reintentar
+   * automáticamente con backoff exponencial (5s, 10s, 20s, 40s, 60s; máx 5
+   * intentos). Usa handleConnectPaired (que ya prueba bonded MACs primero).
+   * Se cancela si el usuario conecta manualmente o sale de la pantalla.
+   */
+  const reconnectRef = useRef<Map<string, { attempts: number; timer: ReturnType<typeof setTimeout> | undefined }>>(new Map());
+  const cancelReconnect = useCallback((pkHex: string) => {
+    const key = pkHex.toLowerCase();
+    const entry = reconnectRef.current.get(key);
+    if (entry) {
+      if (entry.timer) clearTimeout(entry.timer);
+      reconnectRef.current.delete(key);
+    }
+  }, []);
+  /** Ref al handleConnectPaired vigente (evita dependencia circular con onPeerLost). */
+  const connectPairedRef = useRef<(pkHex: string, name: string) => Promise<void>>(async () => {});
+  /**
+   * AUTO-RECONNECT 2026-10-07: programa un reintento de conexión con backoff
+   * exponencial. Se usa cuando onPeerLost detecta que un contacto emparejado
+   * se desconectó.
+   */
+  const scheduleReconnect = useCallback((pkHex: string, name: string) => {
+    const key = pkHex.toLowerCase();
+    const existing = reconnectRef.current.get(key);
+    // No duplicar: si ya hay un timer activo, no hacer nada.
+    if (existing?.timer) return;
+    const attempts = existing?.attempts ?? 0;
+    if (attempts >= 5) {
+      reconnectRef.current.delete(key);
+      return;
+    }
+    // Backoff: 5s, 10s, 20s, 40s, 60s (tope).
+    const delayMs = Math.min(5000 * 2 ** attempts, 60000);
+    const timer = setTimeout(() => {
+      // Marcar timer como inactivo pero MANTENER attempts para el backoff.
+      const e = reconnectRef.current.get(key);
+      if (e) e.timer = undefined;
+      void connectPairedRef.current(pkHex, name).catch(() => {
+        // Si falló (y no se conectó por otro lado), programar siguiente intento.
+        scheduleReconnect(pkHex, name);
+      });
+    }, delayMs);
+    reconnectRef.current.set(key, { attempts: attempts + 1, timer });
+  }, []);
   const [pairText, setPairText] = useState("");
   const [pairBusy, setPairBusy] = useState(false);
   const [pairError, setPairError] = useState<string | null>(null);
@@ -264,6 +314,15 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
               return next;
             });
             setNearby((prev) => prev.filter((a) => a !== pkHex));
+            // AUTO-RECONNECT 2026-10-07: si el peer perdido es un contacto
+            // emparejado, programar reconexión automática con backoff.
+            // (El nombre se busca en contactos; si no está, no se reintenta.)
+            const contact = contactsRef.current.find(
+              (c) => c.pkHex.toLowerCase() === pkHex.toLowerCase(),
+            );
+            if (contact) {
+              scheduleReconnect(pkHex, contact.name);
+            }
           },
           onError: (msg) => {
             if (!cancelled) setLinkError(msg);
@@ -289,7 +348,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       cancelled = true;
       void m.stopLink().catch(() => {});
     };
-  }, [linkAttempt]);
+  }, [linkAttempt, scheduleReconnect]);
 
   // DIAG-2026-10-07: sondeo del estado del servidor RFCOMM nativo mientras
   // la pantalla está abierta. Responde la pregunta decisiva del diagnóstico
@@ -616,6 +675,8 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           try {
             const info = await mRef.current.connectPeer(alias);
             if (info.pkHex.toLowerCase() === target) {
+              // AUTO-RECONNECT 2026-10-07: conexión exitosa, cancelar reintentos.
+              cancelReconnect(target);
               setNotice(t("nido.connectedNotice", { alias: name }));
               setNearby((prev) => prev.filter((a) => a !== alias));
               await loadContacts();
@@ -640,6 +701,19 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
     },
     [connecting, loadContacts, nearby, t],
   );
+  // Mantener el ref actualizado para auto-reconnect.
+  useEffect(() => {
+    connectPairedRef.current = handleConnectPaired;
+  }, [handleConnectPaired]);
+  // Cancelar todos los reintentos al desmontar.
+  useEffect(() => {
+    return () => {
+      for (const [, entry] of reconnectRef.current) {
+        if (entry.timer) clearTimeout(entry.timer);
+      }
+      reconnectRef.current.clear();
+    };
+  }, []);
 
   const copy = useCallback(
     async (value: string, label: string) => {
