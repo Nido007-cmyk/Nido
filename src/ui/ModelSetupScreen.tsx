@@ -374,7 +374,7 @@ export function ModelSetupScreen(props: Props) {
                   try {
                     const { createBackup, exportDatabaseKey } = await import("../security/backup");
                     const { documentDirectory } = await import("expo-file-system/legacy");
-                    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
                     const dest = `${documentDirectory}nido-backup-${timestamp}.db`;
                     await createBackup(dest);
                     const key = await exportDatabaseKey();
@@ -391,6 +391,54 @@ export function ModelSetupScreen(props: Props) {
                 accessibilityRole="button"
               >
                 <Text style={styles.wizardBtnText}>Crear backup</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.wizardBtn, { marginTop: 8 }]}
+                onPress={async () => {
+                  try {
+                    const DocumentPicker = await import("expo-document-picker");
+                    const result = await DocumentPicker.getDocumentAsync({
+                      type: "*/*",
+                      copyToCacheDirectory: true,
+                    });
+                    if (result.canceled) return;
+                    const uri = result.assets[0].uri;
+                    const { validateBackup, restoreBackup } = await import("../security/backup");
+                    const v = await validateBackup(uri);
+                    if (!v.valid) {
+                      Alert.alert("Backup inválido", v.reason ?? "El archivo no es un backup válido.");
+                      return;
+                    }
+                    Alert.alert(
+                      "Restaurar backup",
+                      "Esto reemplazará TODOS tus datos actuales con el backup. ¿Continuar?",
+                      [
+                        { text: "Cancelar", style: "cancel" },
+                        {
+                          text: "Restaurar",
+                          style: "destructive",
+                          onPress: async () => {
+                            try {
+                              await restoreBackup(uri);
+                              Alert.alert(
+                                "Restaurado",
+                                "Backup restaurado. Reinicia la app para usar los datos restaurados.",
+                                [{ text: "OK" }]
+                              );
+                            } catch (e) {
+                              Alert.alert("Error", e instanceof Error ? e.message : "No se pudo restaurar.");
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  } catch (e) {
+                    Alert.alert("Error", e instanceof Error ? e.message : "No se pudo abrir el selector.");
+                  }
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={styles.wizardBtnText}>Restaurar backup</Text>
               </Pressable>
             </View>
           </View>
