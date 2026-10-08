@@ -99,11 +99,12 @@ export type NegotiationEvent =
   | { type: "accepted"; session: NegotiationSession }
   | { type: "declined"; session: NegotiationSession; reason?: string }
   | { type: "expired"; session: NegotiationSession }
+  | { type: "proposed"; session: NegotiationSession }
   | { type: "ask_required"; session: NegotiationSession; taskId: string }
   | {
       type: "send_failed";
       session: NegotiationSession;
-      action: "ACCEPT" | "DECLINE" | "COUNTER";
+      action: "ACCEPT" | "DECLINE" | "COUNTER" | "PROPOSE";
       reason: RespondFailureReason;
     };
 
@@ -112,7 +113,7 @@ type NegotiationEventHandler = (event: NegotiationEvent) => void;
 /** Función de envío inyectada (normalmente NidoMessenger.sendNegotiationResponse). */
 export type NegotiationSendFn = (
   peerPkHex: string,
-  action: "ACCEPT" | "DECLINE" | "COUNTER",
+  action: "ACCEPT" | "DECLINE" | "COUNTER" | "PROPOSE",
   negotiationId: string,
   signed: Record<string, unknown>
 ) => Promise<boolean>;
@@ -203,6 +204,69 @@ class NegotiationService {
     return this.respond(negotiationId, "DECLINE", "DECLINED", () =>
       reason ? { reason } : {}
     );
+  }
+
+  /**
+   * NEGOTIATION-INIT 2026-10-07: propone una colaboración a un peer.
+   * Crea la propuesta firmada y la envía vía el sendFn. El recipient la
+   * verá en su tab Negotiations para aceptar/rechazar.
+   */
+  async proposeTo(
+    recipientPkHex: string,
+    taskDescription: string,
+    requestedScopes: string[] = ["chat"]
+  ): Promise<{ sent: boolean; proposalId?: string; reason?: string }> {
+    if (!this.sendFn) {
+      return { sent: false, reason: "no_send_fn" };
+    }
+    if (!this.myPkHex) {
+      return { sent: false, reason: "no_identity" };
+    }
+    const desc = taskDescription.trim();
+    if (!desc) {
+      return { sent: false, reason: "empty_description" };
+    }
+    try {
+      const kp = await getSigningKeypair();
+      const myPkHex = toHex(kp.publicKey);
+      const { createProposal } = await import("./negotiation");
+      const proposal = createProposal(
+        kp.secretKey,
+        myPkHex,
+        recipientPkHex.toLowerCase(),
+        desc,
+        requestedScopes,
+        {}
+      );
+      // Registrar la sesión local como PROPOSED (saliente).
+      const session: NegotiationSession = {
+        negotiationId: proposal.proposalId,
+        proposalId: proposal.proposalId,
+        peerPkHex: recipientPkHex.toLowerCase(),
+        proposal,
+        state: "PROPOSED",
+        updatedAt: Date.now(),
+        sending: true,
+      };
+      this.sessions.set(proposal.proposalId, session);
+      // Enviar vía el transporte. Nota: el sendFn actual solo soporta
+      // ACCEPT/DECLINE/COUNTER; extendemos el tipo para PROPOSE.
+      const sent = await this.sendFn(
+        recipientPkHex.toLowerCase(),
+        "PROPOSE" as any,
+        proposal.proposalId,
+        proposal as unknown as Record<string, unknown>
+      );
+      session.sending = false;
+      if (!sent) {
+        this.sessions.delete(proposal.proposalId);
+        return { sent: false, reason: "send_failed" };
+      }
+      this.emit({ type: "proposed", session });
+      return { sent: true, proposalId: proposal.proposalId };
+    } catch {
+      return { sent: false, reason: "send_threw" };
+    }
   }
 
   /**

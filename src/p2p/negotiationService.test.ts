@@ -263,3 +263,14 @@ describe("NegotiationService: routing y state machine", () => {
     expect(sessions.some((s) => s.negotiationId === "neg-7")).toBe(true);
   });
 });
+
+describe("NEGOTIATION-INIT 2026-10-07: proposeTo", () => {
+  it("rechaza descripción vacía sin tocar el transporte", async () => {
+    negotiationService.setSendFunction(async () => {
+      throw new Error("no debería llamarse");
+    });
+    const result = await negotiationService.proposeTo("abc123", "   ");
+    expect(result.sent).toBe(false);
+    expect(result.reason).toBe("empty_description");
+  });
+});

@@ -44,6 +44,26 @@ export const BUILT_IN_SKILLS: Skill[] = [
     ].join("\n"),
   },
   {
+    name: "planifica-mi-semana",
+    description: "Armar el plan de la semana: distribuye tareas y ejercicio en 7 días sin traslapes.",
+    instructions: [
+      "# Skill: planifica-mi-semana",
+      "",
+      "Cuando el usuario te pida planificar u organizar su semana:",
+      "",
+      "1. Llama `device_time` para ubicarte en fecha y día de la semana.",
+      "2. Pregunta si no sabes: horario de trabajo (ej: 9-18), días de descanso, qué ejercicio prefiere.",
+      "3. REGLAS OBLIGATORIAS:",
+      "   - Cubre los 7 días (o 5 laborales + fin de semana diferenciado), NO solo un día.",
+      "   - Distribuye el ejercicio en varios días (ej: lun/mié/vie), NUNCA todo amontonado en uno.",
+      "   - Ningún bloque puede traslaparse con otro: cada actividad tiene inicio y fin claros.",
+      "   - Respeta el horario de trabajo completo (si trabaja 9-18, el plan muestra 9-18, no 9-12).",
+      "   - Incluye pausas y tiempo libre; no satures cada hora.",
+      "4. Presenta el plan día por día en español, con bloques horarios.",
+      "5. Cierra ofreciendo crear recordatorios con `create_reminder` si el usuario quiere.",
+    ].join("\n"),
+  },
+  {
     name: "resume-archivo",
     description: "Resumir un archivo que el usuario elija: de qué trata, puntos clave y acción sugerida.",
     instructions: [

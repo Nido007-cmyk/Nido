@@ -153,7 +153,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
     }
   }, []);
   /** Ref al handleConnectPaired vigente (evita dependencia circular con onPeerLost). */
-  const connectPairedRef = useRef<(pkHex: string, name: string) => Promise<void>>(async () => {});
+  const connectPairedRef = useRef<(pkHex: string, name: string) => Promise<boolean>>(async () => false);
   /**
    * AUTO-RECONNECT 2026-10-07: programa un reintento de conexión con backoff
    * exponencial. Se usa cuando onPeerLost detecta que un contacto emparejado
@@ -175,8 +175,11 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       // Marcar timer como inactivo pero MANTENER attempts para el backoff.
       const e = reconnectRef.current.get(key);
       if (e) e.timer = undefined;
-      void connectPairedRef.current(pkHex, name).catch(() => {
-        // Si falló (y no se conectó por otro lado), programar siguiente intento.
+      // FIX 2026-10-07: handleConnectPaired ahora devuelve boolean.
+      // Si devuelve false (falló), programar el siguiente intento.
+      void connectPairedRef.current(pkHex, name).then((ok) => {
+        if (!ok) scheduleReconnect(pkHex, name);
+      }).catch(() => {
         scheduleReconnect(pkHex, name);
       });
     }, delayMs);
@@ -636,8 +639,8 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
    * Prueba cada nearby hasta que el handshake devuelva el pk esperado.
    */
   const handleConnectPaired = useCallback(
-    async (pkHex: string, name: string) => {
-      if (connecting) return;
+    async (pkHex: string, name: string): Promise<boolean> => {
+      if (connecting) return false;
       const target = pkHex.toLowerCase();
       setConnecting(`paired:${target}`);
       setLinkError(null);
@@ -651,7 +654,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           // Soy el listener: no barro, solo espero. El servidor ya está
           // corriendo (startLink al abrir la pantalla P2P).
           setNotice(t("nido.waitingForPeer", { name }));
-          return;
+          return true;
         }
         const candidates = await (async () => {
           // BUG-6-2026-10-07: el barrido solo probaba MACs descubiertas, pero
@@ -706,7 +709,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
               setNotice(t("nido.connectedNotice", { alias: name }));
               setNearby((prev) => prev.filter((a) => a !== alias));
               await loadContacts();
-              return;
+              return true;
             }
             // Handshake OK pero es otro peer: desconectar y seguir con el siguiente.
             // BUG-5-2026-10-06: antes no se desconectaba, dejando conexiones basura abiertas.
@@ -721,6 +724,9 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
         );
       } catch (e) {
         setLinkError(e instanceof Error ? e.message : String(e));
+        // FIX 2026-10-07: devolver false en vez de tragar el error.
+        // El auto-reconnect necesita saber si falló para reintentar.
+        return false;
       } finally {
         setConnecting(null);
       }

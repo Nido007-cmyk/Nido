@@ -243,6 +243,37 @@ const rememberFactHandler: ToolHandler = async (args) => {
   return result;
 };
 
+/**
+ * PEOPLE-FIX 2026-10-07: handler para guardar personas. savePerson existía
+ * pero no tenía caller, herramienta ni flujo (reportado por el usuario).
+ */
+const savePersonHandler: ToolHandler = async (args) => {
+  const { savePerson } = await import("../memory/memoryStore");
+  const name = String(args.name ?? "").trim();
+  if (!name) return "Error: falta el nombre de la persona.";
+  const relationship = args.relationship ? String(args.relationship).trim() : undefined;
+  const notes = args.notes ? String(args.notes).trim() : undefined;
+  const person = await savePerson({ name, relationship, notes });
+  const rel = person.relationship ? ` (${person.relationship})` : "";
+  return `Persona guardada: «${person.name}»${rel}.`;
+};
+
+/**
+ * NEGOTIATION-INIT 2026-10-07: handler para proponer colaboración a un peer.
+ */
+const proposeNegotiationHandler: ToolHandler = async (args) => {
+  const { negotiationService } = await import("../../p2p/negotiationService");
+  const peerPkHex = String(args.peer ?? "").trim();
+  const description = String(args.description ?? "").trim();
+  if (!peerPkHex) return "Error: falta el peer (pkHex del contacto).";
+  if (!description) return "Error: falta la descripción de la propuesta.";
+  const result = await negotiationService.proposeTo(peerPkHex, description);
+  if (!result.sent) {
+    return `No se pudo enviar la propuesta: ${result.reason ?? "error desconocido"}.`;
+  }
+  return `Propuesta enviada (id ${result.proposalId}). El contacto la verá en su tab Negotiations.`;
+};
+
 const openAppHandler: ToolHandler = async (args) => {
   // P-F1: defensa en profundidad — se vuelve a clasificar aquí aunque el
   // diálogo de confirmación ya lo haya hecho; nunca se confía en el path.
@@ -285,6 +316,8 @@ export function buildToolHandlers(opts?: {
     read_note: readNoteHandler,
     create_reminder: createReminderHandler,
     remember_fact: rememberFactHandler,
+    save_person: savePersonHandler,
+    propose_negotiation: proposeNegotiationHandler,
     // P-F1: abrir un enlace externo es una acción con efectos fuera de
     // NIDO (cambia de app) → confirmación explícita + allowlist de
     // esquemas. Sin confirmación no se ejecuta; esquemas no permitidos

@@ -1512,7 +1512,7 @@ export class NidoMessenger {
    */
   async sendNegotiationResponse(
     peerPkHex: string,
-    action: "ACCEPT" | "DECLINE" | "COUNTER",
+    action: "ACCEPT" | "DECLINE" | "COUNTER" | "PROPOSE",
     negotiationId: string,
     signed: Record<string, unknown>
   ): Promise<boolean> {

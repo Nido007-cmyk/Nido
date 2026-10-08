@@ -13,7 +13,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
@@ -26,6 +26,11 @@ import {
   type NegotiationEvent,
 } from "../p2p/negotiationService";
 
+interface P2PContact {
+  pkHex: string;
+  name: string;
+}
+
 export function NegotiationsTab() {
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -34,6 +39,13 @@ export function NegotiationsTab() {
     negotiationService.listSessions()
   );
   const [processingId, setProcessingId] = useState<string | null>(null);
+  // NEGOTIATION-INIT 2026-10-07: UI para proponer.
+  const [showPropose, setShowPropose] = useState(false);
+  const [contacts, setContacts] = useState<P2PContact[]>([]);
+  const [selectedPk, setSelectedPk] = useState<string>("");
+  const [description, setDescription] = useState("");
+  const [proposeBusy, setProposeBusy] = useState(false);
+  const [proposeError, setProposeError] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     setSessions(negotiationService.listSessions());
@@ -116,7 +128,41 @@ export function NegotiationsTab() {
     (s) => s.state === "PROPOSED" || s.state === "COUNTERED"
   );
 
-  if (activeSessions.length === 0) {
+  const openPropose = useCallback(async () => {
+    setProposeError(null);
+    setDescription("");
+    setSelectedPk("");
+    try {
+      const { listContacts } = await import("../p2p/store");
+      const list = await listContacts();
+      setContacts(list.map((c: any) => ({ pkHex: c.pkHex, name: c.name })));
+    } catch {
+      setContacts([]);
+    }
+    setShowPropose(true);
+  }, []);
+
+  const handlePropose = useCallback(async () => {
+    if (!selectedPk || !description.trim()) {
+      setProposeError("Selecciona un contacto y escribe la propuesta.");
+      return;
+    }
+    setProposeBusy(true);
+    setProposeError(null);
+    try {
+      const result = await negotiationService.proposeTo(selectedPk, description.trim());
+      if (!result.sent) {
+        setProposeError(`No se pudo enviar: ${result.reason ?? "error"}`);
+        return;
+      }
+      setShowPropose(false);
+      refresh();
+    } finally {
+      setProposeBusy(false);
+    }
+  }, [selectedPk, description, refresh]);
+
+  if (activeSessions.length === 0 && !showPropose) {
     return (
       <View style={styles.container}>
         <EmptyState
@@ -124,6 +170,9 @@ export function NegotiationsTab() {
           description={t("negotiations.emptyDescription")}
           mascotRole="connection"
         />
+        <TouchableOpacity style={styles.proposeButton} onPress={openPropose}>
+          <Text style={styles.proposeButtonText}>+ Proponer colaboración</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -159,6 +208,56 @@ export function NegotiationsTab() {
             </Text>
           </View>
         ))}
+      <TouchableOpacity style={styles.proposeButton} onPress={openPropose}>
+        <Text style={styles.proposeButtonText}>+ Proponer colaboración</Text>
+      </TouchableOpacity>
+
+      <Modal visible={showPropose} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Proponer colaboración</Text>
+            <Text style={styles.modalLabel}>Contacto:</Text>
+            {contacts.map((c) => (
+              <TouchableOpacity
+                key={c.pkHex}
+                style={[
+                  styles.contactOption,
+                  selectedPk === c.pkHex && styles.contactSelected,
+                ]}
+                onPress={() => setSelectedPk(c.pkHex)}
+              >
+                <Text style={styles.contactName}>{c.name}</Text>
+              </TouchableOpacity>
+            ))}
+            <Text style={styles.modalLabel}>Propuesta:</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="¿Qué quieres proponer?"
+              multiline
+            />
+            {proposeError && <Text style={styles.modalError}>{proposeError}</Text>}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setShowPropose(false)}
+              >
+                <Text>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalSend}
+                onPress={handlePropose}
+                disabled={proposeBusy}
+              >
+                <Text style={styles.proposeButtonText}>
+                  {proposeBusy ? "Enviando..." : "Enviar"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -182,5 +281,82 @@ const getStyles = (colors: Colors) =>
     terminalText: {
       color: colors.text.secondary,
       fontSize: 13,
+    },
+    proposeButton: {
+      backgroundColor: "#4A6B4F",
+      borderRadius: 8,
+      padding: calmSpacing.cozy,
+      alignItems: "center",
+      marginTop: calmSpacing.comfortable,
+    },
+    proposeButtonText: {
+      color: "#fff",
+      fontWeight: "600",
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      padding: 20,
+    },
+    modalContent: {
+      backgroundColor: colors.bg.surface,
+      borderRadius: 12,
+      padding: calmSpacing.comfortable,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      marginBottom: 12,
+      color: colors.text.primary,
+    },
+    modalLabel: {
+      fontSize: 14,
+      fontWeight: "600",
+      marginTop: 8,
+      marginBottom: 4,
+      color: colors.text.primary,
+    },
+    contactOption: {
+      padding: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border?.default ?? "#ccc",
+      marginBottom: 6,
+    },
+    contactSelected: {
+      borderColor: "#4A6B4F",
+      borderWidth: 2,
+    },
+    contactName: {
+      color: colors.text.primary,
+    },
+    modalInput: {
+      borderWidth: 1,
+      borderColor: colors.border?.default ?? "#ccc",
+      borderRadius: 8,
+      padding: 10,
+      minHeight: 80,
+      color: colors.text.primary,
+      textAlignVertical: "top",
+    },
+    modalError: {
+      color: "red",
+      marginTop: 8,
+    },
+    modalButtons: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: 12,
+      marginTop: 16,
+    },
+    modalCancel: {
+      padding: 10,
+    },
+    modalSend: {
+      backgroundColor: "#4A6B4F",
+      borderRadius: 8,
+      padding: 10,
+      paddingHorizontal: 20,
     },
   });

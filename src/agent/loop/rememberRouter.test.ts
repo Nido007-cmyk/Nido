@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractRememberFact } from "./rememberRouter";
+import { extractRememberFact, isMemoryQuery, extractDateISO, extractPerson } from "./rememberRouter";
 
 describe("rememberRouter: extracción determinística", () => {
   it("extrae 'recuerda que X'", () => {
@@ -71,5 +71,58 @@ describe("rememberRouter: extracción determinística", () => {
     const r = extractRememberFact("RECUERDA QUE mi teléfono es 555-1234");
     expect(r).not.toBeNull();
     expect(r!.content).toBe("mi teléfono es 555-1234");
+  });
+});
+
+describe("rememberRouter: consultas vs guardados (FIX 2026-10-07)", () => {
+  it("isMemoryQuery detecta 'recuérdame la fecha de X'", () => {
+    expect(isMemoryQuery("recuérdame la fecha de cumpleaños de mi mamá")).toBe(true);
+    expect(isMemoryQuery("Recuérdame cuándo es el cumpleaños de mi mamá")).toBe(true);
+    expect(isMemoryQuery("¿cuándo es el cumpleaños de mi mamá?")).toBe(true);
+    expect(isMemoryQuery("dime la fecha de la reunión")).toBe(true);
+  });
+
+  it("isMemoryQuery retorna false para guardados", () => {
+    expect(isMemoryQuery("recuerda que mi mamá cumple el 15 de marzo")).toBe(false);
+    expect(isMemoryQuery("mi mamá cumple el 15 de marzo")).toBe(false);
+  });
+
+  it("extractRememberFact retorna null para consultas (no guarda preguntas)", () => {
+    // Bug 2026-10-07: guardaba "la fecha de cumpleaños de mi mamá" como hecho.
+    expect(extractRememberFact("recuérdame la fecha de cumpleaños de mi mamá")).toBeNull();
+    expect(extractRememberFact("¿cuándo es el cumpleaños de mi mamá?")).toBeNull();
+  });
+
+  it("extractDateISO parsea '15 de marzo'", () => {
+    const iso = extractDateISO("el cumpleaños de mi mamá es el 15 de marzo");
+    expect(iso).not.toBeNull();
+    const d = new Date(iso!);
+    expect(d.getMonth()).toBe(2); // marzo = 2
+    expect(d.getDate()).toBe(15);
+  });
+
+  it("extractDateISO retorna null sin fecha", () => {
+    expect(extractDateISO("me gustan las orquídeas")).toBeNull();
+  });
+});
+
+describe("rememberRouter: extracción de personas (PEOPLE-FIX 2026-10-07)", () => {
+  it("extrae 'mi mamá se llama María'", () => {
+    const r = extractPerson("mi mamá se llama María");
+    expect(r).not.toBeNull();
+    expect(r!.name).toBe("María");
+    expect(r!.relationship).toBe("mamá");
+  });
+
+  it("extrae 'mi hermano se llama Juan Pérez'", () => {
+    const r = extractPerson("mi hermano se llama Juan Pérez");
+    expect(r).not.toBeNull();
+    expect(r!.name).toBe("Juan Pérez");
+    expect(r!.relationship).toBe("hermano");
+  });
+
+  it("retorna null sin patrón de persona", () => {
+    expect(extractPerson("hola, ¿cómo estás?")).toBeNull();
+    expect(extractPerson("recuerda que debo comprar leche")).toBeNull();
   });
 });

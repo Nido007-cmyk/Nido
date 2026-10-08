@@ -326,6 +326,9 @@ function buildSystemPrompt(
     "Después de cada bloque recibirás su resultado como Observación y podrás continuar.",
     "Si no necesitas herramientas, responde directamente al usuario.",
     "",
+    "REGLA DE GROUNDING: Si recibes información de una fuente (documento, búsqueda local, memoria), basa tu respuesta ESTRICTAMENTE en esa información. No mezcles datos de diferentes partes, no inventes detalles que la fuente no menciona, y no dupliques elementos. Si la fuente no contiene la respuesta, dilo claramente en vez de improvisar.",
+    "EJEMPLO DE ERROR A EVITAR: Si la fuente dice 'la fotosíntesis ocurre en cloroplastos' y 'el ciclo de Calvin ocurre en el estroma', NO digas 'el ciclo de Calvin ocurre en tilacoides'. Lee cada dato de SU fuente específica, no los mezcles.",
+    "",
     `## Intención detectada: ${intent}`,
     intentHint,
   ].join("\n");
@@ -435,21 +438,112 @@ export async function runAgentLoop(
   //
   // El research externo (sheetmemory, guardian-agent) confirma este patrón
   // como la solución más confiable para modelos sub-1B.
+  // ACTION-ROUTER 2026-10-07: calculadora y recordatorios antes que memoria
+  // (el modelo 0.5B no siempre genera el tool call para acciones simples).
+  const { extractCalcAction, extractReminderAction, extractWeeklyPlanAction, generateWeeklyPlan } = await import("./actionRouter");
+  const calcAction = extractCalcAction(userText);
+  if (calcAction) {
+    const { formatNumber } = await import("../tools/calc");
+    return {
+      response: `${calcAction.expression} = ${formatNumber(calcAction.result)}`,
+      intent,
+      toolUses: [
+        {
+          name: "calc",
+          result: `Calculado vía pre-router determinístico: ${calcAction.expression} = ${calcAction.result}.`,
+        },
+      ],
+    };
+  }
+  const reminderAction = extractReminderAction(userText);
+  if (reminderAction) {
+    const { saveReminder } = await import("../memory/memoryStore");
+    const reminder = await saveReminder({
+      text: reminderAction.text,
+      dueAt: reminderAction.dueAt,
+    });
+    // CALENDAR-FIX 2026-10-07: mostrar fecha si se parseó, ser honesto si no.
+    const dateStr = reminderAction.dueAt
+      ? ` el ${new Date(reminderAction.dueAt).toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })} a las ${new Date(reminderAction.dueAt).toLocaleTimeString("es", { hour: "numeric", minute: "2-digit" })}`
+      : "";
+    return {
+      response: dateStr
+        ? `Listo, te recordaré${dateStr}: «${reminder.text}».`
+        : `Listo, guardé: «${reminder.text}». ¿Para cuándo quieres que te avise?`,
+      intent,
+      toolUses: [
+        {
+          name: "create_reminder",
+          result: `Recordatorio creado vía pre-router determinístico: «${reminder.text}».`,
+        },
+      ],
+    };
+  }
+  // WEEKLY-PLAN 2026-10-07: plantilla determinística, no dejar al modelo inventar.
+  const weeklyPlanAction = extractWeeklyPlanAction(userText);
+  if (weeklyPlanAction) {
+    const plan = generateWeeklyPlan(weeklyPlanAction);
+    return {
+      response: plan,
+      intent,
+      toolUses: [
+        {
+          name: "weekly_plan",
+          result: `Horario semanal generado vía plantilla determinística.`,
+        },
+      ],
+    };
+  }
+  // PEOPLE-FIX 2026-10-07: extraer persona ANTES que hecho (más específico).
+  const { extractPerson } = await import("./rememberRouter");
+  const personExtraction = extractPerson(userText);
+  if (personExtraction) {
+    const { savePerson } = await import("../memory/memoryStore");
+    const person = await savePerson({
+      name: personExtraction.name,
+      relationship: personExtraction.relationship,
+      notes: personExtraction.notes,
+    });
+    const rel = person.relationship ? ` (${person.relationship})` : "";
+    return {
+      response: `Listo, guardé a ${person.name}${rel} en mis contactos.`,
+      intent,
+      toolUses: [
+        {
+          name: "save_person",
+          result: `Guardado vía pre-router determinístico: «${person.name}»${rel}.`,
+        },
+      ],
+    };
+  }
   const extraction = extractRememberFact(userText);
   if (extraction) {
-    const { saveFact } = await import("../memory/memoryStore");
+    const { saveFact, saveReminder } = await import("../memory/memoryStore");
+    const { extractDateISO } = await import("./rememberRouter");
     await saveFact({
       content: extraction.content,
       category: extraction.category,
       source: "user",
     });
+    // FIX 2026-10-07: si el hecho contiene una fecha, crear recordatorio
+    // automáticamente. Antes solo se guardaba el texto y Reminders quedaba
+    // vacío (el usuario tenía que pedir el recordatorio por separado).
+    let reminderNote = "";
+    const dueAt = extractDateISO(extraction.content);
+    if (dueAt) {
+      await saveReminder({
+        text: extraction.content,
+        dueAt,
+      });
+      reminderNote = " También te crearé un recordatorio para esa fecha.";
+    }
     // Retornar directamente con confirmación honesta. El trace indica
     // que fue la vía determinística, no el modelo.
     // Si el intent original era "actuar" (ej: también pide recordatorio),
     // el modelo aún puede procesar el resto del mensaje después; por ahora
     // la memoria queda garantizada y se informa al usuario.
     return {
-      response: `Listo, lo guardé en mi memoria: «${extraction.content}».`,
+      response: `Listo, lo guardé en mi memoria: «${extraction.content}».${reminderNote}`,
       intent,
       toolUses: [
         {

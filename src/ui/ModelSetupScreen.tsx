@@ -9,6 +9,7 @@ import {
   Modal,
   ActivityIndicator,
   Switch,
+  Alert,
 } from "react-native";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType, setHapticsEnabledCache } from "../services/haptics";
 import { useTranslation } from "react-i18next";
@@ -355,6 +356,41 @@ export function ModelSetupScreen(props: Props) {
                 accessibilityHint={t("modelSetupScreen.recovery.dangerDesc")}
               >
                 <Text style={styles.dangerActionBtnText}>{t("modelSetupScreen.recovery.dangerButton")}</Text>
+              </Pressable>
+            </View>
+
+            {/* BACKUP 2026-10-07: respaldo y restauración de la base cifrada. */}
+            <View style={styles.recoveryCard}>
+              <View style={styles.recoveryHeader}>
+                <NidoIcon name="security" size={18} />
+                <Text style={styles.recoveryTitle}>Backup</Text>
+              </View>
+              <Text style={styles.recoveryDesc}>
+                Exporta tu base de datos cifrada. Guárdala junto con tu clave en un lugar seguro.
+              </Text>
+              <Pressable
+                style={styles.wizardBtn}
+                onPress={async () => {
+                  try {
+                    const { createBackup, exportDatabaseKey } = await import("../security/backup");
+                    const { documentDirectory } = await import("expo-file-system/legacy");
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+                    const dest = `${documentDirectory}nido-backup-${timestamp}.db`;
+                    await createBackup(dest);
+                    const key = await exportDatabaseKey();
+                    // Mostrar la clave para que el usuario la copie.
+                    Alert.alert(
+                      "Backup creado",
+                      `Archivo: ${dest}\n\nTu clave (guárdala separada):\n${key}`,
+                      [{ text: "OK" }]
+                    );
+                  } catch (e) {
+                    Alert.alert("Error", e instanceof Error ? e.message : "No se pudo crear el backup.");
+                  }
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={styles.wizardBtnText}>Crear backup</Text>
               </Pressable>
             </View>
           </View>

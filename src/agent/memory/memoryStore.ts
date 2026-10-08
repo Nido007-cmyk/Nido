@@ -176,6 +176,27 @@ export async function savePerson(input: {
   relationship?: string;
   notes?: string;
 }): Promise<Person> {
+  // DEDUP 2026-10-07: si ya existe una persona con el mismo nombre (case-insensitive),
+  // actualizar en vez de duplicar.
+  const existing = await getPeople();
+  const normalized = input.name.toLowerCase().trim();
+  const dup = existing.find((p) => p.name.toLowerCase().trim() === normalized);
+  if (dup) {
+    const updated: Person = {
+      ...dup,
+      relationship: input.relationship ?? dup.relationship,
+      notes: input.notes?.slice(0, MAX_PERSON_NOTES_CHARS) ?? dup.notes,
+      updatedAt: new Date().toISOString(),
+    };
+    await writeMemoryTransaction(async (db) => {
+      await db.runAsync(
+        "UPDATE people SET relationship = ?, notes = ?, updated_at = ? WHERE id = ?;",
+        [updated.relationship ?? null, updated.notes ?? null, updated.updatedAt, dup.id]
+      );
+    });
+    return updated;
+  }
+
   const person: Person = {
     id: newId(),
     name: input.name,
@@ -339,6 +360,14 @@ export async function saveReminder(input: {
   text: string;
   dueAt?: string | null;
 }): Promise<AgentReminder> {
+  // DEDUP 2026-10-07: no crear duplicado si ya existe uno pendiente similar.
+  const existing = await listReminders(50);
+  const normalized = input.text.toLowerCase().trim();
+  const dup = existing.find(
+    (r) => !r.done && r.text.toLowerCase().trim() === normalized
+  );
+  if (dup) return dup;
+
   const reminder: AgentReminder = {
     id: newId(),
     text: input.text,
