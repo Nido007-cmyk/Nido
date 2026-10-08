@@ -4,13 +4,75 @@
  * See LICENSE file for details.
  */
 
-import { describe, it, expect } from "vitest";
-import { validateBackup } from "./backup";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-describe("backup: validateBackup", () => {
+// Mock expo-file-system/legacy
+vi.mock("expo-file-system/legacy", () => ({
+  documentDirectory: "/mock/",
+  EncodingType: { UTF8: "utf8", Base64: "base64" },
+  getInfoAsync: vi.fn(),
+  copyAsync: vi.fn(),
+  writeAsStringAsync: vi.fn(),
+  readAsStringAsync: vi.fn(),
+  deleteAsync: vi.fn(),
+}));
+
+vi.mock("../privacy/keyManager", () => ({
+  getDatabaseKeyHex: vi.fn().mockResolvedValue("ab".repeat(32)),
+}));
+
+vi.mock("./secureDatabase", () => ({
+  WAL_CHECKPOINT_SQL: "PRAGMA wal_checkpoint(TRUNCATE);",
+}));
+
+vi.mock("./databaseManager", () => ({
+  getDatabase: vi.fn().mockResolvedValue({ execAsync: vi.fn() }),
+  closeDatabase: vi.fn().mockResolvedValue(undefined),
+}));
+
+import * as FileSystem from "expo-file-system/legacy";
+import { validateBackup, exportDatabaseKey } from "./backup";
+
+describe("backup.ts — validación (BK-4)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("rechaza archivo inexistente", async () => {
-    const result = await validateBackup("/ruta/que/no/existe.db");
-    expect(result.valid).toBe(false);
-    expect(result.reason).toBeDefined();
+    (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: false });
+    const r = await validateBackup("/no/existe.db");
+    expect(r.valid).toBe(false);
+    expect(r.reason).toContain("no existe");
+  });
+
+  it("rechaza archivo demasiado pequeño", async () => {
+    (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: true, size: 100 });
+    const r = await validateBackup("/pequeno.db");
+    expect(r.valid).toBe(false);
+    expect(r.reason).toContain("pequeño");
+  });
+
+  it("rechaza archivo sin magic header SQLite", async () => {
+    (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: true, size: 5000 });
+    (FileSystem.readAsStringAsync as any).mockResolvedValue("esto no es sqlite");
+    const r = await validateBackup("/falso.db");
+    expect(r.valid).toBe(false);
+    expect(r.reason).toContain("no parece ser");
+  });
+
+  it("acepta archivo con magic header válido", async () => {
+    (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: true, size: 5000 });
+    (FileSystem.readAsStringAsync as any).mockResolvedValue("SQLite format 3\0 resto...");
+    const r = await validateBackup("/valido.db");
+    expect(r.valid).toBe(true);
+    expect(r.sizeBytes).toBe(5000);
+  });
+});
+
+describe("backup.ts — exportDatabaseKey", () => {
+  it("retorna la clave en hex", async () => {
+    const key = await exportDatabaseKey();
+    expect(key).toBe("ab".repeat(32));
+    expect(key.length).toBe(64);
   });
 });
