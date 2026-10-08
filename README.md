@@ -64,6 +64,13 @@ automatically, sensitive actions ask you, dangerous actions are denied.
 
 See [docs/PRIVACY.md](docs/PRIVACY.md) for details.
 
+**Security audits (Oct 2026):** the P2P protocol and the delegation design
+went through a security review plus two adversarial audit rounds; every
+actionable finding was fixed and regression-tested. Public summary:
+[docs/security/AUDITS_2026-10.md](docs/security/AUDITS_2026-10.md).
+Crypto architecture: [docs/CRYPTO_ARCHITECTURE.md](docs/CRYPTO_ARCHITECTURE.md).
+To report a vulnerability: [SECURITY.md](SECURITY.md).
+
 ## How Nido differs from BOAR
 
 NIDO is a fork of BOAR. This table compares verified differences based on
@@ -125,7 +132,19 @@ communication. This is NIDO technology, not inherited from BOAR.
 Nido-to-Nido product experience has **not** been validated on two physical
 devices. Do not confuse protocol implementation with product validation.
 
+**Hardened (2026-10-08):** HKDF-SHA512 session key derivation, ephemeral
+secret wiping after handshake, negotiation signatures pinned to the paired
+identity key, delegation tokens bound to the transport session, a human
+approval gate bound to the exact approved bytes, and inbound handshake rate
+limiting. Details in
+[docs/security/AUDITS_2026-10.md](docs/security/AUDITS_2026-10.md).
+
 ## Current status
+
+**Alpha (Oct 2026):** 1985 automated tests passing, `tsc` clean. Physical
+two-device validation is still pending, delegated task execution ships with
+its feature flag OFF, and no external cryptographic audit has been performed
+yet. Prebuilt APKs are distributed directly for device testing for now.
 
 ### Runtime-integrated
 
@@ -174,6 +193,14 @@ functionality:
 
 Do not expect these in the current build.
 
+## Install
+
+Prebuilt, signed APKs are currently distributed directly for device testing.
+Install over the existing app: the release signature preserves identity,
+contacts, and downloaded models. Both devices must run the same build for
+P2P to work. Public GitHub Releases will follow once physical two-device
+validation completes.
+
 ## Building / Testing
 
 Doesn't work in Expo Go (native modules: llama.rn, SQLCipher, etc.).
@@ -196,7 +223,7 @@ Verification without a device (doesn't prove a real install):
 
 ```bash
 npm run typecheck   # tsc --noEmit
-npm test            # vitest, the pure logic (agent, privacy, routing, rag)
+npm test            # vitest — 1985 tests: agent, privacy, routing, rag, p2p
 ```
 
 Full build guide in [AGENTS.md](AGENTS.md).

@@ -50,6 +50,29 @@ su contraparte.
 
 Detalles en [docs/es/PRIVACY.md](docs/es/PRIVACY.md).
 
+**Auditorías de seguridad (oct 2026):** el protocolo P2P y el diseño de
+delegación pasaron por una revisión de seguridad y dos rondas de auditoría
+adversarial; todos los hallazgos accionables se corrigieron con tests de
+regresión. Resumen público:
+[docs/es/security/AUDITS_2026-10.md](docs/es/security/AUDITS_2026-10.md).
+Para reportar una vulnerabilidad: [SECURITY.md](SECURITY.md).
+
+## Estado actual
+
+**Alpha (oct 2026):** 1985 tests automatizados en verde, `tsc` limpio. La
+validación física en dos dispositivos está pendiente, la ejecución delegada
+de tareas viene con su feature flag apagado, y aún no hay auditoría
+criptográfica externa. Los APKs precompilados se distribuyen directamente
+por ahora para pruebas en dispositivo.
+
+## Instalación
+
+Los APKs firmados y precompilados se distribuyen directamente por ahora
+para pruebas en dispositivo (instala encima de la app existente: la firma
+release conserva identidad, contactos y modelos descargados; ambos
+dispositivos deben usar el mismo build para P2P). Habrá GitHub Releases
+públicos cuando se complete la validación física en dos dispositivos.
+
 ## Compilar e instalar
 
 No funciona en Expo Go (módulos nativos: llama.rn, SQLCipher, etc.).
@@ -72,7 +95,7 @@ Verificación sin dispositivo (no prueba la instalación real):
 
 ```bash
 npm run typecheck   # tsc --noEmit
-npm test            # vitest, la lógica pura (agente, privacy, routing, rag)
+npm test            # vitest — 1985 tests: agente, privacy, routing, rag, p2p
 ```
 
 Guía completa de build en [AGENTS.es.md](AGENTS.es.md).
