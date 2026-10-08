@@ -10,6 +10,7 @@ import { checkRamBudget, readRamSnapshot, toGb } from "./ramBudget";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
 import { withStage } from "../utils/stageError";
+import { recordInferenceEvent, type TelemetryStopReason } from "./telemetry";
 
 export interface ChatMessageInput {
   role: string;
@@ -65,6 +66,14 @@ export interface GenerateOptions {
   grammar?: string;
   onToken?: (piece: string) => void;
   stop?: string[];
+  /**
+   * P2.4-2026-10-08: optional telemetry context. When present (or even
+   * absent), generate() records an InferenceTelemetryEvent via
+   * recordInferenceEvent() — on-device only, fire-and-forget, never
+   * blocks or throws. taskType labels the caller ("agent-loop",
+   * "research-generate", ...).
+   */
+  telemetryContext?: { taskType?: string };
   /**
    * Safety-net budget, not a performance target — no per-generation timeout
    * existed anywhere in the app before this (see docs/ADAPTIVE_ROUTING.md
@@ -330,14 +339,66 @@ export class LlamaEngine {
     stop,
     timeoutMs,
     onTimeout,
+    telemetryContext,
   }: GenerateOptions): Promise<string> {
-    const started = await this.enqueue(() => this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, onToken, stop, timeoutMs, onTimeout }));
+    // P2.4: telemetry measurement. All local, fire-and-forget, never throws.
+    const tStart = Date.now();
+    let firstTokenAt: number | null = null;
+    let tokenCount = 0;
+    let timedOut = false;
+    const wrappedOnToken = onToken
+      ? (piece: string) => {
+          if (firstTokenAt === null) firstTokenAt = Date.now();
+          tokenCount += 1;
+          onToken(piece);
+        }
+      : (piece: string) => {
+          if (firstTokenAt === null) firstTokenAt = Date.now();
+          tokenCount += 1;
+        };
+    const wrappedOnTimeout = () => {
+      timedOut = true;
+      onTimeout?.();
+    };
+    const promptChars =
+      prompt !== undefined
+        ? prompt.length
+        : (messages ?? []).reduce((n, m) => n + (m.content?.length ?? 0), 0);
+    let stopReason: TelemetryStopReason = "completed";
     try {
-      const { text } = await started.completion;
-      return text ?? started.getFull();
+      const started = await this.enqueue(() =>
+        this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, onToken: wrappedOnToken, stop, timeoutMs, onTimeout: wrappedOnTimeout })
+      );
+      try {
+        const { text } = await started.completion;
+        return text ?? started.getFull();
+      } finally {
+        this.inFlight.delete(started.completion);
+        if (started.timer) clearTimeout(started.timer);
+      }
+    } catch (e) {
+      stopReason = "error";
+      throw e;
     } finally {
-      this.inFlight.delete(started.completion);
-      if (started.timer) clearTimeout(started.timer);
+      if (timedOut) stopReason = "timeout";
+      const totalMs = Date.now() - tStart;
+      const ttftMs = firstTokenAt === null ? null : firstTokenAt - tStart;
+      const genMs = totalMs - (ttftMs ?? 0);
+      recordInferenceEvent({
+        ts: tStart,
+        modelId: this.modelInfo?.filename ?? null,
+        taskType: telemetryContext?.taskType,
+        promptChars,
+        promptTokensEst: Math.ceil(promptChars / 3),
+        completionTokens: tokenCount,
+        ttftMs,
+        totalMs,
+        tokensPerSec: genMs > 0 && tokenCount > 0 ? (tokenCount / genMs) * 1000 : null,
+        stopReason,
+        samplingPreset,
+        temperature,
+        nPredict,
+      });
     }
   }
 

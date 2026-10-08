@@ -32,6 +32,7 @@ import {
 } from "../tools/dispatcher";
 import { classifyIntent, type AgentIntent } from "./intent";
 import { matchCanned } from "./cannedResponses";
+import { recordInferenceEvent } from "../../inference/telemetry";
 import { validateStructuredOutput } from "./structuredOutput";
 import { extractRememberFact } from "./rememberRouter";
 import { listSkillNamesForPrompt } from "../skills/registry";
@@ -48,6 +49,8 @@ export interface AgentEngine {
     samplingPreset?: SamplingPresetName;
     timeoutMs?: number;
     onToken?: (token: string) => void;
+    /** P2.4-2026-10-08: etiqueta para telemetría on-device (no bloquea, nunca lanza). */
+    telemetryContext?: { taskType?: string };
   }): Promise<string>;
 }
 
@@ -466,6 +469,22 @@ export async function runAgentLoop(
   // as model output).
   const canned = matchCanned(userText);
   if (canned) {
+    // P2.4: the canned path is still telemetry-visible (deterministic: true)
+    // so preset/coverage stats never confuse templates with generations.
+    recordInferenceEvent({
+      ts: Date.now(),
+      modelId: null,
+      taskType: "agent-loop",
+      deterministic: true,
+      promptChars: userText.length,
+      promptTokensEst: Math.ceil(userText.length / 3),
+      completionTokens: 0,
+      ttftMs: 0,
+      totalMs: 0,
+      tokensPerSec: null,
+      stopReason: "completed",
+      nPredict: 0,
+    });
     return {
       response: canned.text,
       intent,
@@ -690,6 +709,8 @@ export async function runAgentLoop(
         temperature: options.temperature,
         samplingPreset: options.temperature === undefined ? intentPreset : undefined,
         timeoutMs: options.timeoutMs,
+        // P2.4: label for on-device telemetry.
+        telemetryContext: { taskType: "agent-loop" },
         // Nota: los pasos intermedios también stremean (incluyen los
         // bloques ```tool); la UI puede ocultar esos bloques en vivo.
         onToken: options.onToken,

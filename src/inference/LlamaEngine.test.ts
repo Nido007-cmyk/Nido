@@ -254,3 +254,44 @@ describe("P1.2 sampling presets", () => {
     expect(params2.grammar).toBe('root ::= "a"');
   });
 });
+
+describe("P2.4 telemetry", () => {
+  it("records an event per generation with timings and counts", async () => {
+    const { clearTelemetry, getRecentTelemetry } = await import("./telemetry");
+    clearTelemetry();
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    // The mock completion only resolves after stopCompletion (via unload),
+    // like llama.cpp settling after a stop — same pattern as the P1.1 tests.
+    const reply = engine.generate({
+      messages: [{ role: "user", content: "hello" }],
+      telemetryContext: { taskType: "test-task" },
+    });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Hi");
+    const events = getRecentTelemetry(10);
+    expect(events).toHaveLength(1);
+    const e = events[0];
+    expect(e.taskType).toBe("test-task");
+    expect(e.completionTokens).toBe(1); // mock emits one token
+    expect(e.ttftMs).not.toBeNull();
+    expect(e.totalMs).toBeGreaterThanOrEqual(0);
+    expect(e.stopReason).toBe("completed");
+    expect(e.promptChars).toBeGreaterThan(0);
+    expect(e.nPredict).toBe(512);
+  });
+
+  it("records timeout stopReason when the timer fires", async () => {
+    const { clearTelemetry, getRecentTelemetry } = await import("./telemetry");
+    clearTelemetry();
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    // The mock completion only resolves after stopCompletion; a 1ms
+    // timeout forces the timeout path.
+    await engine.generate({ prompt: "x", timeoutMs: 1 }).catch(() => {});
+    await engine.unload();
+    const events = getRecentTelemetry(10);
+    expect(events).toHaveLength(1);
+    expect(events[0].stopReason).toBe("timeout");
+  });
+});

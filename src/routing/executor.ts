@@ -302,6 +302,8 @@ export async function executeRoutingPlan(
               onToken: timedOnToken,
               timeoutMs: step.timeoutMs ?? STEP_TIMEOUT_MS,
               onTimeout: markTimedOut,
+              // P2.4: label for on-device telemetry.
+              telemetryContext: { taskType: "research-generate" },
             })
           : await llamaEngine.generate({
               prompt: assemblePrompt(input.query, citations, input.systemPrompt, input.history, input.styleReminder, noSourcesFoundNote),
@@ -309,6 +311,8 @@ export async function executeRoutingPlan(
               onToken: timedOnToken,
               timeoutMs: step.timeoutMs ?? STEP_TIMEOUT_MS,
               onTimeout: markTimedOut,
+              // P2.4: label for on-device telemetry.
+              telemetryContext: { taskType: "research-generate" },
             });
 
         const genEnd = performance.now();
