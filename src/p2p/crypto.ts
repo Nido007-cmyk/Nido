@@ -326,7 +326,7 @@ export function hkdfSha512(
   // Expand: T(i) = HMAC(PRK, T(i-1) | info | i).
   const n = Math.ceil(length / 64);
   const okm = new Uint8Array(n * 64);
-  let prev = new Uint8Array(0);
+  let prev: Uint8Array = new Uint8Array(0);
   for (let i = 1; i <= n; i++) {
     const data = new Uint8Array(prev.length + info.length + 1);
     data.set(prev, 0);
