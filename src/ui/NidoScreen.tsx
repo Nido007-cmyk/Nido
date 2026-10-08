@@ -9,6 +9,7 @@ import {
   TextInput,
   ActivityIndicator,
   Modal,
+  Keyboard,
 } from "react-native";
 import { showSecureAlert } from "nido-secure-dialog";
 import * as Clipboard from "expo-clipboard";
@@ -134,6 +135,24 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   const [pairBusy, setPairBusy] = useState(false);
   const [pairError, setPairError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /**
+   * UI-2026-10-07: altura del teclado para que no tape el composer en la
+   * vista de conversación. Mismo patrón que ChatScreen (keyboardDidShow/
+   * keyboardDidHide → paddingBottom).
+   */
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   // UNIT B (R2): modal de desambiguación de emparejamiento (Replace /
   // Different person / Cancel). Dismiss = cancel. El rename para
   // "different_person" debe ser único entre los contactos vivos antes de
@@ -795,7 +814,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   if (peer) {
     const isOnline = online.has(peer.pkHex.toLowerCase());
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { paddingBottom: keyboardHeight }]}>
         <View style={styles.header}>
           <Pressable
             onPress={() => setPeer(null)}
