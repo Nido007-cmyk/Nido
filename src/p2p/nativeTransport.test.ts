@@ -1395,3 +1395,91 @@ describe("BUG-6-2026-10-07: MACs emparejadas a nivel OS en el barrido", () => {
     expect(typeof f.fake.getBondedDevices).toBe("function");
   });
 });
+
+describe("R7: higiene del secreto efímero + carrera de handshake", () => {
+  let f: ReturnType<typeof makeFake>;
+  let ev: ReturnType<typeof makeEvents>;
+  let t: NidoBluetoothTransport;
+
+  beforeEach(() => {
+    f = makeFake();
+    ev = makeEvents();
+    t = makeTransport(f.fake);
+  });
+
+  type PendingView = { myEphSecret: Uint8Array };
+  const pendingOf = (tt: NidoBluetoothTransport) =>
+    (tt as unknown as { pending: Map<string, PendingView> }).pending;
+
+  it("failHello borra el secreto efímero (no solo la ruta de éxito)", async () => {
+    await t.startDiscovery(ev.events);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    await tick();
+    expect(f.sent).toHaveLength(1); // nuestro HELLO salió
+    const pend = pendingOf(t).get(MAC);
+    expect(pend).toBeDefined();
+    const secret = pend!.myEphSecret;
+    expect(secret.some((b) => b !== 0)).toBe(true); // sanidad: no era cero
+
+    // HELLO malformado → handleHello falla → failHello.
+    f.emit("onFrame", {
+      address: MAC,
+      base64: encodeBase64(new Uint8Array([1, 2, 3])),
+    } as never);
+    await tick();
+
+    expect(secret.every((b) => b === 0)).toBe(true); // borrado
+    expect(pendingOf(t).has(MAC)).toBe(false);
+  });
+
+  it("desconexión a mitad del handshake borra el secreto efímero", async () => {
+    await t.startDiscovery(ev.events);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    await tick();
+    const pend = pendingOf(t).get(MAC);
+    expect(pend).toBeDefined();
+    const secret = pend!.myEphSecret;
+
+    f.emit("onDisconnected", { address: MAC } as never);
+    await tick();
+
+    expect(secret.every((b) => b === 0)).toBe(true);
+    expect(pendingOf(t).has(MAC)).toBe(false);
+  });
+
+  it("dos frames concurrentes generan un solo HELLO (sin efímero huérfano)", async () => {
+    await t.startDiscovery(ev.events);
+    const eph = toHex(generateEphemeral().publicKey);
+    const ph = peerHello(eph);
+    // Sin onConnected previo: el primer frame dispara beginHello (RACE-FIX);
+    // el segundo llega mientras el primero aún está en sus awaits.
+    f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
+    f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
+    await tick(100);
+
+    const hellos = f.sent.filter((s) => {
+      try {
+        parseHello(decodeBase64(s.base64));
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    // Antes del fix: dos beginHello concurrentes → dos HELLOs y un efímero
+    // huérfano sin borrar. Ahora: reserva síncrona → uno solo.
+    expect(hellos).toHaveLength(1);
+  });
+
+  it("un frame durante hello-starting se espera, no se pierde (sin deadlock)", async () => {
+    await t.startDiscovery(ev.events);
+    const eph = toHex(generateEphemeral().publicKey);
+    const ph = peerHello(eph);
+    // Solo UN frame, sin onConnected: el RACE-FIX inicia beginHello y luego
+    // reprocesa el frame. El handshake debe completar la fase 1.
+    f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
+    await tick(100);
+    // Nuestro HELLO + nuestro CONFIRM (fase 1 completa).
+    expect(f.sent).toHaveLength(2);
+    expect(ev.handshakes).toHaveLength(0); // la ruta aún no existe (R4)
+  });
+});

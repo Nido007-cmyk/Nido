@@ -148,16 +148,27 @@ const HANDSHAKE_COOLDOWN_MS = 10_000;
 /**
  * Handshake pendiente por MAC (R4: máquina de estados de dos fases).
  * - "waiting-socket": connect() registrado, aún sin evento onConnected.
+ * - "hello-starting": R7: slot reservado sincrónicamente por beginHello
+ *   antes del primer await; nuestro HELLO aún no salió. Un frame que llegue
+ *   en esta ventana espera a helloReady en vez de perderse (perder el HELLO
+ *   del peer = deadlock: él esperaría nuestro CONFIRM eternamente).
  * - "hello-sent": nuestro HELLO v3 ya salió; esperamos el HELLO del peer.
  * - "confirm-sent": HELLO del peer validado y nuestro CONFIRM v1 enviado;
  *   esperamos el CONFIRM del peer. SOLO tras verificarlo se establece la
  *   ruta (invariante central R4).
  */
 interface PendingHello {
-  stage: "waiting-socket" | "hello-sent" | "confirm-sent";
+  stage: "waiting-socket" | "hello-starting" | "hello-sent" | "confirm-sent";
   myEphSecret: Uint8Array;
   myNonce: Uint8Array;
   myNonceHex: string;
+  /**
+   * R7: promesa del beginHello en vuelo. onNativeFrame la espera cuando el
+   * stage es "hello-starting", en vez de ignorar el frame o iniciar un
+   * segundo handshake huérfano (carrera original: dos efímeros, uno huérfano
+   * sin borrar, dos HELLOs enviados).
+   */
+  helloReady?: Promise<void>;
   /** Campos del peer (rellenados al validar su HELLO, fase confirm-sent). */
   peerPk?: string;
   peerEphPkHex?: string;
@@ -684,40 +695,57 @@ export class NidoBluetoothTransport implements P2PTransport {
     // Idempotente: si ya hay un handshake en curso (más allá del registro
     // de connect()) o la ruta ya existe, no se repite. Un pendiente
     // "waiting-socket" (connect() se adelantó al evento) sí se reutiliza.
+    // Un "hello-starting" (beginHello en vuelo) también retorna: el frame
+    // que lo disparó espera a helloReady en onNativeFrame.
     if (existing && existing.stage !== "waiting-socket") return;
     if (!existing && this.macToPk.has(mac)) return;
-    const b = this.bt();
+    // R7 FIX: reservar el slot del pendiente de forma SÍNCRONA antes del
+    // primer await. Sin esto, dos onNativeFrame concurrentes veían `!pend`
+    // y ambos generaban un efímero: uno quedaba huérfano (secreto sin
+    // borrar, timer huérfano) y se enviaban dos HELLOs.
     const eph = generateEphemeral();
-    const nonce = randomNonce(HANDSHAKE_NONCE_BYTES);
-    const nonceHex = toHex(nonce);
-    const ephPkHex = toHex(eph.publicKey);
-    const myPkHex = await this.ensureMyPk();
-    const ts = Math.floor(Date.now() / 1000);
-    const sig = await this.signHello(buildHelloSignMessageV3(myPkHex, ephPkHex, nonceHex, ts));
-    const hello = buildHello(myPkHex, ephPkHex, nonceHex, ts, toHex(sig));
+    let resolveReady!: () => void;
+    const helloReady = new Promise<void>((res) => {
+      resolveReady = res;
+    });
+    const pend: PendingHello = existing ?? {
+      stage: "hello-starting",
+      myEphSecret: eph.secretKey,
+      myNonce: new Uint8Array(0),
+      myNonceHex: "",
+      timer: this.armHelloTimeout(mac),
+      helloReady,
+    };
     if (existing) {
-      // connect() se adelantó al evento: se reutiliza su pendiente.
+      // waiting-socket reutilizado: nace el secreto y se rearma el timeout.
       clearTimeout(existing.timer);
-      existing.stage = "hello-sent";
       existing.myEphSecret = eph.secretKey;
-      existing.myNonce = nonce;
-      existing.myNonceHex = nonceHex;
       existing.timer = this.armHelloTimeout(mac);
+      existing.helloReady = helloReady;
     } else {
-      // Conexión entrante sin nadie esperando.
-      this.pending.set(mac, {
-        stage: "hello-sent",
-        myEphSecret: eph.secretKey,
-        myNonce: nonce,
-        myNonceHex: nonceHex,
-        timer: this.armHelloTimeout(mac),
-      });
+      this.pending.set(mac, pend);
     }
     try {
+      const b = this.bt();
+      const nonce = randomNonce(HANDSHAKE_NONCE_BYTES);
+      const nonceHex = toHex(nonce);
+      const ephPkHex = toHex(eph.publicKey);
+      const myPkHex = await this.ensureMyPk();
+      const ts = Math.floor(Date.now() / 1000);
+      const sig = await this.signHello(
+        buildHelloSignMessageV3(myPkHex, ephPkHex, nonceHex, ts)
+      );
+      const hello = buildHello(myPkHex, ephPkHex, nonceHex, ts, toHex(sig));
+      pend.stage = "hello-sent";
+      pend.myNonce = nonce;
+      pend.myNonceHex = nonceHex;
+      pend.helloReady = undefined; // listo: nadie necesita esperar más
       await b.sendFrame(mac, encodeBase64(hello));
     } catch (e) {
       this.failHello(mac, e instanceof Error ? e : new Error(String(e)));
       throw e;
+    } finally {
+      resolveReady();
     }
   }
 
@@ -750,9 +778,18 @@ export class NidoBluetoothTransport implements P2PTransport {
     if (!pend) return;
     clearTimeout(pend.timer);
     this.pending.delete(mac);
+    // R7: borrar el secreto efímero en TODAS las salidas del handshake
+    // (timeout, firma inválida, desconexión, fallo de envío), no solo en
+    // la ruta de éxito donde deriveSessionKeyV2 lo borra al derivar.
+    pend.myEphSecret.fill(0);
     pend.reject?.(err);
     this.events?.onError?.(`Handshake con ${mac}: ${err.message}`);
-    this.bt().disconnect(mac).catch(() => {});
+    try {
+      this.bt().disconnect(mac).catch(() => {});
+    } catch {
+      // Sin enlace nativo (beginHello puede fallar antes de bt()): nada
+      // que desconectar.
+    }
   }
 
   private async onNativeFrame(address: string, b64: string): Promise<void> {
@@ -764,6 +801,19 @@ export class NidoBluetoothTransport implements P2PTransport {
       return; // basura: se ignora
     }
     let pend = this.pending.get(mac);
+    // R7: si beginHello está en vuelo (slot reservado sincrónicamente),
+    // esperar a que complete en vez de ignorar el frame o iniciar un
+    // segundo handshake huérfano. El frame no se puede procesar hasta que
+    // nuestro efímero/nonce existan, pero perder el HELLO del peer sería
+    // un deadlock (él esperaría nuestro CONFIRM eternamente).
+    if (pend && pend.stage === "hello-starting" && pend.helloReady) {
+      try {
+        await pend.helloReady;
+      } catch {
+        // beginHello falló; failHello ya limpió el slot.
+      }
+      pend = this.pending.get(mac);
+    }
     // RACE-FIX 2026-10-06: si el HELLO del peer llega ANTES de que
     // onConnected dispare beginHello (el evento nativo puede tardar),
     // el frame se ignoraba silenciosamente y el handshake moría por
@@ -934,6 +984,9 @@ export class NidoBluetoothTransport implements P2PTransport {
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
       this.events?.onError?.(`Handshake con ${mac}: ${err.message}`);
+      // R7: el pending ya se eliminó del mapa arriba; borrar el secreto
+      // efímero aquí (failHello no lo vería).
+      pend.myEphSecret.fill(0);
       pend.reject?.(err);
       await this.bt().disconnect(mac).catch(() => {});
     }
@@ -1005,6 +1058,9 @@ export class NidoBluetoothTransport implements P2PTransport {
     if (pend) {
       clearTimeout(pend.timer);
       this.pending.delete(mac);
+      // R7: borrar el secreto efímero también al desconectar a mitad del
+      // handshake.
+      pend.myEphSecret.fill(0);
       pend.reject?.(new Error("Conexión cerrada durante el handshake."));
     }
     const pk = this.macToPk.get(mac);
