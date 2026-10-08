@@ -8,4 +8,4 @@
  * (see canonicalCatalogJSON in manifestTrust.ts). Regenerate after any
  * manifest.ts change that touches a signed field.
  */
-export const MANIFEST_SIGNATURE_BASE64 = "ZaHVUY5TXrR12AWvKPPrkrABqy4gk49BfTdIbJSS0wi0GPz6Sw/+muYCgFRG3m3LuWoprEzoVjvoqir24MV4DQ==";
+export const MANIFEST_SIGNATURE_BASE64 = "X2cldqdR2Tdk13EmFKsEbTKJauVyfueYcw5uuzMOdvm75NIB24415aaF25W41bcUelTmPbMeAoVcvtof5b2vBg==";

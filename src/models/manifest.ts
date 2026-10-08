@@ -358,6 +358,32 @@ export const MODEL_CATALOG: CatalogModel[] = [
     capabilities: { roles: ["fast"], usesChatTemplate: true },
   },
   {
+    // P2.1 (2026-10-08): Q5_K_M variant of the 0.5B for the Q4-vs-Q5 A/B.
+    // A/B CANDIDATE ONLY — not the shipped default. The shipped default stays
+    // LIGHT_LLM_ID (Q4_K_M) until device evidence (npm run eval:device) shows
+    // a measurable quality gain worth ~22 MB. LFS oid verified via the HF
+    // API at the pinned commit below (same commit as the Q4 entry).
+    id: "qwen2.5-0.5b-instruct-q5km",
+    kind: "llm",
+    label: "Qwen2.5-0.5B-Instruct (Q5_K_M) [A/B]",
+    filename: "models/qwen2.5-0.5b-instruct-q5km.gguf",
+    sizeBytes: 420086336,
+    sha256: "a0a413dcbb4676f21d4c951b98a393324694edb1a20a4f9547d1de8d2919ff3b",
+    sourceUrl:
+      "https://huggingface.co/bartowski/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-0.5B-Instruct-Q5_K_M.gguf",
+    revision: "41ba88dbac95fed2528c92514c131d73eb5a174b",
+    license: "Apache-2.0",
+    description:
+      "A/B candidate only. Same 0.5B model at higher precision (~5-bit vs ~4-bit); +22 MB over Q4_K_M. Kept out of the default path until the device eval proves a quality gain.",
+    required: false,
+    // Same arch as the Q4 0.5B (verified against config.json): 24 layers,
+    // GQA with 2 KV heads, head dim 64.
+    arch: { nLayer: 24, nKvHeads: 2, headDim: 64 },
+    // Same n_ctx as the Q4 0.5B so the A/B compares quantization only.
+    defaultNCtx: 4096,
+    capabilities: { roles: ["fast"], usesChatTemplate: true },
+  },
+  {
     id: "qwen2.5-7b-instruct-q4km",
     kind: "llm",
     label: "Qwen2.5-7B-Instruct (Q4_K_M)",

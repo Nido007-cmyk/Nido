@@ -126,3 +126,35 @@ print the report
   model.
 - **Answers vary slightly between runs** (temperature 0.7). Timings compare
   well; for quality, look at more than one run.
+
+## Q4_K_M vs Q5_K_M A/B — Qwen2.5-0.5B (P2.1, device-gated)
+
+The 0.5B ships as Q4_K_M (`qwen2.5-0.5b-instruct-q4km`). A Q5_K_M variant
+(`qwen2.5-0.5b-instruct-q5km`, +22 MB) exists in the model catalog as an A/B
+candidate. **The shipped default does not change until this A/B shows a
+measurable quality gain** — evidence over theory.
+
+Procedure (same phone, same conditions, back-to-back):
+
+```bash
+# 1. In the app: Settings → Models → download BOTH
+#    "Qwen2.5-0.5B-Instruct (Q4_K_M)" and "Qwen2.5-0.5B-Instruct (Q5_K_M) [A/B]".
+# 2. Run the full eval set on both, model-pinned (no adaptive routing):
+npm run eval:device -- --models qwen2.5-0.5b-instruct-q4km,qwen2.5-0.5b-instruct-q5km
+# 3. Grade the answers side by side:
+npm run eval:summary -- --answers eval-results/<date>/<runId>.jsonl
+```
+
+Metrics to capture (all recorded per question in the JSONL):
+
+- **Quality:** manual grading from the side-by-side answers (grading notes in
+  EVAL_QUERIES.md). Focus on instruction-following and structured-output
+  reliability — the 0.5B's weak points — not trivia recall.
+- **Latency:** `totalLatencyMs` and tokens/sec per model (heat affects this;
+  run both in the same session and note battery temperature).
+- **Memory:** `peakRssBytes` per model (Q5's larger weights + same 4096 n_ctx
+  KV cache must still fit low-RAM phones).
+
+Decision rule: switch the default to Q5_K_M only if quality improves
+measurably with no latency/memory regression that breaks the low-RAM target.
+Otherwise stay on Q4_K_M and close the experiment.
