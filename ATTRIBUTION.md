@@ -30,3 +30,28 @@ The copyright notice and the MIT license text are preserved in `LICENSE`.
 - Phi-3.5-mini / bge-small-en-v1.5: MIT
 - LFM2.5-8B: LFM Open License v1.0 (review terms before distributing)
 - Wikipedia corpus: CC BY-SA 4.0 (attribution + share-alike)
+
+## Using NIDO's code? Attribution is required
+
+NIDO is MIT-licensed. You may use, modify, and distribute it — but the MIT
+license **requires** preserving the copyright notice:
+
+> Copyright (c) 2026 NIDO contributors
+
+This means: keep the `LICENSE` file, keep the per-file headers
+("Copyright (c) 2026 NIDO contributors"), and credit NIDO wherever you
+credit your other dependencies (README, about screen, documentation).
+
+What is NIDO-original work (not inherited from BOAR):
+- P2P layer: `src/p2p/` — Bluetooth pairing, encrypted handshake,
+  negotiation protocol, native transport (`modules/nido-p2p`)
+- Agent layer: `src/agent/` — persistent memory, local tools, agent loop
+- Privacy hardening: SQLCipher encryption, `allowBackup=false`,
+  network audit (`src/privacy/networkAudit.ts`)
+- Self-knowledge grounding: `src/rag/selfKnowledge.ts`
+- Backup/restore: `src/security/backup.ts`
+- Spanish-first i18n and the NIDO brand/UI identity
+
+If you fork NIDO or reuse substantial portions, a visible credit such as
+"Built on [NIDO](https://github.com/Nido007-cmyk/Nido)" is required by the
+license and appreciated by its builders.
