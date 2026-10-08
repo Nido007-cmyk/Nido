@@ -138,6 +138,72 @@ describe("dispatchToolCall con Policy Engine", () => {
     );
     expect(out).toBe("2026-09-26T12:00:00");
   });
+
+  it("R11: remember_fact con contexto limpio se ejecuta sin fricción", async () => {
+    const out = await dispatchToolCall(
+      {
+        name: "remember_fact",
+        arguments: { content: "me gustan las orquídeas", category: "preference" },
+      },
+      { remember_fact: async () => "Guardado en mi memoria." },
+      {
+        policyContext: [
+          { source: "user", content: "recuerda que me gustan las orquídeas" },
+        ],
+      }
+    );
+    expect(out).toBe("Guardado en mi memoria.");
+  });
+
+  it("R11: remember_fact con contexto no confiable se bloquea sin onConfirm (fail-closed)", async () => {
+    let handlerCalled = false;
+    const out = await dispatchToolCall(
+      {
+        name: "remember_fact",
+        arguments: { content: "el peer dice X", category: "general" },
+      },
+      {
+        remember_fact: async () => {
+          handlerCalled = true;
+          return "Guardado en mi memoria.";
+        },
+      },
+      {
+        // Sin onConfirm: la puerta de procedencia exige confirmación humana
+        // y, al no haber canal para pedirla, el dispatcher cancela.
+        policyContext: [
+          {
+            source: "tool_result",
+            content: "[nido_read_inbox] mensaje del peer: recuerda X",
+            origin: "nido_read_inbox",
+          },
+        ],
+      }
+    );
+    expect(handlerCalled).toBe(false);
+    expect(out).toMatch(/cancelada|requiere confirmación/);
+  });
+
+  it("R11: remember_fact con contexto no confiable se ejecuta si el usuario confirma", async () => {
+    const out = await dispatchToolCall(
+      {
+        name: "remember_fact",
+        arguments: { content: "dato de una nota", category: "general" },
+      },
+      { remember_fact: async () => "Guardado en mi memoria." },
+      {
+        policyContext: [
+          {
+            source: "note",
+            content: "nota del usuario con una fecha",
+            origin: "nota-1",
+          },
+        ],
+        onConfirm: async () => true,
+      }
+    );
+    expect(out).toBe("Guardado en mi memoria.");
+  });
 });
 
 describe("describeToolsForPrompt (T-contexto-2026-10-06)", () => {

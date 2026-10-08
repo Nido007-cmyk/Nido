@@ -130,6 +130,41 @@ export function evaluateAction(action: ToolAction): PolicyDecision {
     };
   }
 
+  // R11 FIX 2026-10-08: puerta de procedencia para escrituras de memoria.
+  // remember_fact estampa source='user' (el nivel más confiable) en todo lo
+  // que el modelo le pasa. Si el contexto del turno contiene contenido NO
+  // confiable (tool_result, retrieval, file, note), el fact podría derivar
+  // de datos influenciados por un peer — y la frontera de R1 (capa de
+  // almacenamiento, que filtra por source) no lo vería, porque el label ya
+  // dice 'user'. Sin esta puerta, contenido del peer quedaría blanqueado
+  // como memoria propia y entraría al contexto de TODAS las conversaciones
+  // futuras (inyección de prompt persistente).
+  // Con contexto no confiable se exige confirmación humana: la UI muestra el
+  // diálogo con el motivo y el usuario ve qué se va a guardar antes de
+  // aprobar. Si el llamador no tiene onConfirm cableado, el dispatcher
+  // bloquea (fail-closed: no se escribe nada).
+  //
+  // INVARIANTE para futuros callers: ningún código nuevo puede alimentar
+  // contenido de origen peer al loop de herramientas sin etiquetarlo como no
+  // confiable en policyContext. La etiqueta la pone el loop/dispatcher,
+  // nunca el modelo.
+  const MEMORY_WRITE_TOOLS = new Set(["remember_fact"]);
+  if (MEMORY_WRITE_TOOLS.has(action.tool)) {
+    const hasUntrusted = action.context.some(
+      (c) => !isTrustedSource(c.source)
+    );
+    if (hasUntrusted) {
+      return {
+        allowed: true,
+        risk: "medium",
+        reason:
+          "remember_fact con contenido no confiable en el contexto requiere " +
+          "confirmación humana: lo guardado quedará como memoria propia ('user').",
+        requiresConfirmation: true,
+      };
+    }
+  }
+
   // 3. Default: allow low-risk actions
   return {
     allowed: true,
