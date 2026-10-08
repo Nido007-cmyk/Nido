@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import * as FileSystem from "expo-file-system/legacy";
 import { copyBundledAssetToFile } from "bundled-assets";
 import { checkStorageForDownload } from "./storageBudget";

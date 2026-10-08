@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // @ts-nocheck
 // ChatScreen component tests: asymmetric message rendering.
 // Tests the professional UI direction: user bubble vs assistant full-width.

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Local, in-memory performance/memory telemetry for the live Usage Stats
  * display. Nothing here is persisted or transmitted anywhere — wiped on
  * every reload/restart, by design; it's for auditing THIS session's

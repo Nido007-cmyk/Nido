@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Cross-library retrieval dedupe - drops duplicate passages from retrieval results.
  *
  * Adapted from BOAR's dedupe.ts (MIT).

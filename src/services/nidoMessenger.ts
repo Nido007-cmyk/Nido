@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * nidoMessenger.ts — singleton compartido del messenger P2P.
  *
  * La UI (NidoScreen) y el agente (handlers) deben usar LA MISMA instancia:

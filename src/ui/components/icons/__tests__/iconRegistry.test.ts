@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * NIDO internal icon system v1 — registry & asset consistency tests.
  *
  * These tests deliberately do NOT import iconRegistry.ts: its static

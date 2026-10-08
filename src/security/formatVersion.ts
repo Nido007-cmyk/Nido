@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * formatVersion.ts — contrato de versionado de formatos persistentes (L1).
  *
  * NIDO guarda estado durable en varios formatos: bases SQLCipher

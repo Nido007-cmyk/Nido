@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * biometricGate.test.ts — NIDO: tests del gate biométrico (módulo mockeado).
  * Verifica la política: timeout, cancelación, fallo, ausencia de enrollment
  * y que nunca se "autentica" sin pasar por el SO.

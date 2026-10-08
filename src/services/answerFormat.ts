@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Small models asked for bullet points often write them inline on one line:
  * "Takeaway. - Point one. - Point two." Markdown shows that as one paragraph
  * with stray dashes, so this puts each point on its own line. It only acts on

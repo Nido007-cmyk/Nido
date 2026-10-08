@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * keyManager.ts — NIDO: gestión de claves con el Android Keystore.
  *
  * - La clave de la base (SQLCipher) se genera una vez (32 bytes aleatorios)

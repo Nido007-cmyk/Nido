@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * confirm.ts — NIDO: confirmación explícita antes de acciones sensibles.
  *
  * Regla: ninguna herramienta con efectos fuera de NIDO puede ejecutarse en

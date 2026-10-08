@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * tts.ts — NIDO: lectura en voz alta 100% offline.
  *
  * Usa el motor TTS del sistema Android (voces preinstaladas, sin red).

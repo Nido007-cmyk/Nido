@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * analyze.ts — NIDO: intérprete offline de datos tabulares (CSV/TSV).
  *
  * Puro, sin dependencias, testeable. Parsea texto delimitado, infiere

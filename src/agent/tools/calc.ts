@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * calc.ts — NIDO: evaluador determinista de expresiones aritméticas.
  *
  * Puro y testeable. NUNCA usa eval() ni Function(): un parser propio

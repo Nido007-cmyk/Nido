@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * secureDatabase.test.ts — NIDO: tests de la migración plaintext→SQLCipher.
  *
  * El FakeDriver simula la semántica de SQLCipher (clave incorrecta / sin

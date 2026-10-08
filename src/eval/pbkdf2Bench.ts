@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * QUARANTINED BENCHMARK TASK — NOT PRODUCTION CRYPTO.
  *
  * Runs the PBKDF2-HMAC-SHA256 candidate (scripts/benchmarks/pbkdf2-candidate/)

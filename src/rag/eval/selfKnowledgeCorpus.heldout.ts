@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * D-CLUSTER PHASE B — HELD-OUT eval set (frozen 2026-09-28, BEFORE tuning).
  *
  * Purpose: measure generalization of the Design 1 + Design 2 classifier

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Adaptive routing Phase 2 — model profiles and presets. Configuration layer
  * only, independent from the UI (per the build plan) and from execution
  * (Phase 3/4 aren't built yet) — this module answers "given what's actually

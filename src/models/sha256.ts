@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * sha256.ts — minimal incremental SHA-256 (FIPS 180-4), pure TypeScript,
  * zero dependencies.
  *

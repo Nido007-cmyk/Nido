@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Eval Resume with Restore Points - Design for NIDO
  *
  * Adapted from BOAR's eval-resume feature (MIT). BOAR's implementation:

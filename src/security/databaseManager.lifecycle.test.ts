@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * databaseManager.lifecycle.test.ts — Regresión específica del DatabaseManager.
  *
  * Cobertura explícita exigida:

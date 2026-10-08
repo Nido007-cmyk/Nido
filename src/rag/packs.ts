@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Knowledge packs: SQLite files built on a computer by
  * scripts/build-knowledge-pack.mjs (docs/KNOWLEDGE_PACKS.md), each with its
  * own FTS5 index and int8 embeddings made with the app's embedding model.

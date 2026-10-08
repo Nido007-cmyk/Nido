@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * knowledgeGraphStore.ts - NIDO: persistencia del knowledge graph en SQLCipher.
  *
  * Entidades y relaciones viven en `nido_memory.db`. Sigue el patrón de

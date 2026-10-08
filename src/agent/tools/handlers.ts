@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * handlers.ts — NIDO: implementaciones reales de las herramientas locales.
  *
  * Cada handler corre 100% en el dispositivo. Ninguno toca la red.

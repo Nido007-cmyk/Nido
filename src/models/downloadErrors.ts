@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * downloadErrors.ts — honest error taxonomy for model/corpus downloads.
  *
  * Two promises this module enforces, in code and in user-facing copy:

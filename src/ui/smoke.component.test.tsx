@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // @ts-nocheck
 // Smoke test: verifies Jest + @testing-library/react-native infrastructure.
 // v14 API: render is async, queries available on result.

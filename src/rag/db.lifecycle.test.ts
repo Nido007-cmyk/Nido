@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * db.lifecycle.test.ts — P0 DATABASE LIFECYCLE HARDENING.
  *
  * GOAL 1 (wipe terminal): un write encolado bajo un ciclo de vida anterior a

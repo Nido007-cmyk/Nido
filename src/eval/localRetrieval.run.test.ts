@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * NIDO local retrieval eval RUNNER (not a unit test — it performs the
  * evaluation). Run with: npm run eval:local
  *

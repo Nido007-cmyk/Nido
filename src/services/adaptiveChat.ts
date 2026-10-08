@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Adaptive routing Phase 9 — wires the router/executor (src/routing/,
  * Phases 3-4) into ordinary chat. This is the ONLY new integration point:
  * Deep Research Mode (src/services/orchestrator.ts) is completely

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * NIDO — tipos de la memoria persistente.
  * Modela lo mismo que la memoria de un asistente en la nube (hechos,
  * preferencias, personas, diario), pero todo vive cifrado en el teléfono.

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * N3 (2026-09-28): synchronous in-flight guard for ChatScreen.send().
  *
  * The audit finding: two rapid taps could both persist a message and start a

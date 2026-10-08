@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * types.ts — NIDO: definición de Skill.
  *
  * Una skill es un paquete reutilizable de instrucciones en español que le

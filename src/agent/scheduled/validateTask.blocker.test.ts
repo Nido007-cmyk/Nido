@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // BLOCKER regression: validateTask must block irreversible tools.
 // Original BLOCKER (2026-10-05): validateTask used obsolete tool names,
 // leaving send_sms, nido_send_message, place_call unblocked in scheduled tasks.

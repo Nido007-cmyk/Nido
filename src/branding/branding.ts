@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * branding.ts — Configuración central de marca NIDO.
  *
  * REBRAND-2026-10-07: Toda la marca visible al usuario vive aquí. Si en el

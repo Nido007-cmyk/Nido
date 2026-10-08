@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * The fixed evaluation set run by the in-app harness (src/eval/evalHarness.ts)
  * and documented in docs/EVAL_QUERIES.md. Bump EVAL_SET_VERSION whenever a
  * query is added, removed or reworded, so result files from different

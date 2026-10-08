@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Deterministic self-knowledge: questions about NIDO itself are answered
  * from a BUNDLED canonical knowledge base — never from retrieval, never
  * from model improvisation.

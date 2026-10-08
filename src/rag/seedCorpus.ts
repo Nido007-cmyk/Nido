@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import * as FileSystem from "expo-file-system/legacy";
 import { getDb, getDbEpoch, insertChunk, insertChunkWithoutEmbedding, ChunkRecord } from "./db";
 import { embeddingEngine } from "./embed";

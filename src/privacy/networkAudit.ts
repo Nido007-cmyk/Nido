@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * networkAudit.ts — NIDO privacy: every network request the app makes,
  * in one append-only log the user can inspect.
  *

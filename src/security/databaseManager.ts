@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * databaseManager.ts — NIDO: gestor centralizado de la base `nido_memory.db`.
  *
  * Unifica el acceso de los 4 stores (memory, tasks, skills, graph) a una

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * QUARANTINE TRIPWIRE — PBKDF2 benchmark candidate.
  *
  * The candidate (scripts/benchmarks/pbkdf2-candidate/) is a measurement

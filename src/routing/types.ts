@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Adaptive routing domain model - Phase 1 of docs/ADAPTIVE_ROUTING.md's build
  * plan. Pure types only, no behavior: the routing service (Phase 3) and
  * execution engine (Phase 4) build on these, but nothing here executes

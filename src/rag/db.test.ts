@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * db.test.ts — migración única del nombre de fichero pre-rebrand
  * (`aoair_knowledge.db` → `nido_knowledge.db`).
  *

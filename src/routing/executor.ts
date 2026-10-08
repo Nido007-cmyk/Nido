@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Adaptive routing Phase 4 — the execution engine. Runs a RoutingPlan
  * (Phase 3's output) step by step against the real inference/retrieval
  * services. Orchestration only — no low-level llama.cpp logic lives here,

@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import { describe, it, expect, vi } from "vitest";
 
 // __DEV__ es un global de React Native: se define para el entorno de test.

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * KeyLossRecoveryScreen.tsx — NIDO: N4-RECOVERY-UI.
  *
  * The user-visible face of a KeyLossError (code "NIDO_KEY_LOST"): the

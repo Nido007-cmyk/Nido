@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Tests for cross-library retrieval dedupe (BOAR item 20, adapted for NIDO).
  */
 

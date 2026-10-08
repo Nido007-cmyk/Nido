@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import React, { useEffect, useMemo, useRef } from "react";
 import { View, Text, StyleSheet, Pressable, Animated, Dimensions, ScrollView, Image } from "react-native";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";

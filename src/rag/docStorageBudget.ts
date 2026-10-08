@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Document storage budget - caps the on-device storage used by imported
  * documents (extracted text + chunks), evicting least-recently-used
  * collections when over budget.

@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // @ts-nocheck
 // Component tests for Calm-migrated screens.
 // Verifies: renders without crashing, has accessibility labels, uses Calm structure.

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * taskStore.ts - NIDO: persistencia de tareas programadas en SQLCipher.
  *
  * Usa el DatabaseManager centralizado (`src/security/databaseManager.ts`):

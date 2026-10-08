@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * security.ts — NIDO: observabilidad segura del estado de seguridad del dispositivo.
  *
  * Propósito: responder con evidencia (no con configuración) a:

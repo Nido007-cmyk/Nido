@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Calm Agent UI components
  *
  * NIDO UI Redesign (2026-10-05). "Calm Agent" direction.

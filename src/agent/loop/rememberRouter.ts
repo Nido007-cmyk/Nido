@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * rememberRouter.ts — NIDO: pre-router determinístico para intents de memoria.
  *
  * BUG-4-2026-10-06 (root cause): el modelo 0.5B a veces responde "Listo"

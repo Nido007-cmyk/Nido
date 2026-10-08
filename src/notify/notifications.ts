@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * notifications.ts — NIDO: rutinas proactivas 100% locales.
  *
  * Notificaciones programadas en el dispositivo (AlarmManager del sistema

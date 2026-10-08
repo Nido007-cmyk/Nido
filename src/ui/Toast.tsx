@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import React, { useEffect, useRef } from "react";
 import { Animated, Text, StyleSheet } from "react-native";
 

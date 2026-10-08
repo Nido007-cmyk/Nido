@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Model + corpus catalog. Every asset the app can use is declared here with
  * an expected sha256 so ModelManager can verify integrity and the total
  * footprint can be audited against the 50GB storage cap.

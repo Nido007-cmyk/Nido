@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * NIDO internal icon system v1 — registry.
  *
  * Maps the 40 frozen icon names (see ~/workspace/icon-system/frozen-v1/,

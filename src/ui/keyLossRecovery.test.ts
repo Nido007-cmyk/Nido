@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * keyLossRecovery.test.ts — NIDO: N4-RECOVERY-UI.
  *
  * INVARIANT: a KeyLossError always surfaces as the explicit honest recovery

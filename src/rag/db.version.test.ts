@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * db.version.test.ts — L1 FORMAT VERSIONING CONTRACT (bases de datos).
  *
  * - nido_knowledge.db: tabla meta(schema_version) — stamp v1 en la primera

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * authorization.ts — NIDO: fuente canónica de decisiones de autorización.
  *
  * Unifica los dos sistemas paralelos:

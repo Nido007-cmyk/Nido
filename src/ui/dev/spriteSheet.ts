@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Sprite-sheet frame math for the V42 idle character PoC (Option D).
  *
  * DEV-ONLY. Pure logic, no React Native dependency, so it is unit-testable

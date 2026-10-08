@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * intent.ts — NIDO: clasificación determinista de intención del agente.
  *
  * Tres intenciones, en español (con respaldo en inglés):

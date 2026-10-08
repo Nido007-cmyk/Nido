@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * actionRouter.ts — NIDO: pre-routers determinísticos para acciones.
  *
  * FIX 2026-10-07: el modelo 0.5B a veces no genera el tool call para

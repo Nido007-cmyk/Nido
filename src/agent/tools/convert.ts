@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * convert.ts — NIDO: conversión determinista de unidades.
  *
  * Puro y testeable. Sin red, sin tasas de cambio: solo magnitudes físicas

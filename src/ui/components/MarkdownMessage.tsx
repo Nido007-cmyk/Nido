@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable, Share } from "react-native";
 import { impact, ImpactFeedbackStyle } from "../../services/haptics";

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Scheduled Autonomous Tasks
  *
  * NIDO Scheduled Tasks (2026-10-05). From deep research DR-3.

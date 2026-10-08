@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * startup.ts — NIDO: rutinas proactivas que corren al abrir la app.
  *
  * Todo local: notificaciones del sistema, memoria cifrada en el

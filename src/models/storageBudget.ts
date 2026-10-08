@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Decides whether a download fits: within the bounty's 50GB total budget
  * for the app and all its offline assets, and within the phone's free
  * space. Pure, so it's testable; ModelManager supplies the measurements.

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Native-module-free half of execution telemetry — row (de)serialization
  * and export formatting, kept separate from executionTelemetry.ts (which
  * pulls in expo-sqlite/expo-file-system/expo-sharing) so this stays

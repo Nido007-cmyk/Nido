@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * D-CLUSTER PHASE B — HELD-OUT measurement (single execution).
  *
  * The held-out set (selfKnowledgeCorpus.heldout.ts) was authored and

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * learnedSkillStore.ts - NIDO: persistencia de learned skills en SQLCipher.
  *
  * Usa el DatabaseManager centralizado (`src/security/databaseManager.ts`):

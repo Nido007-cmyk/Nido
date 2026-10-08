@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * dualModel.pure.ts - NIDO: Dual-model architecture router (DR-8).
  *
  * Routes tasks between a tiny specialist (fast, low-power) and a

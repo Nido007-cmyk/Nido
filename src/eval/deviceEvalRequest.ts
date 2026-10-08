@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * The app side of the device evaluation CLI (scripts/eval-device.mjs). The
  * CLI writes a request to files/eval/requests/pending.json over
  * `adb ... run-as`; the app (development builds only, see ChatScreen.tsx)

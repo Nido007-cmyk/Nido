@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * p2pIdentityRecovery.ts — NIDO: F-2 — presentation logic for the honest
  * P2P-identity key-loss recovery screen.
  *

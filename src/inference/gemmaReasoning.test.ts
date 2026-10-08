@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Tests for Gemma reasoning parser (BOAR item 5, adapted for NIDO).
  */
 

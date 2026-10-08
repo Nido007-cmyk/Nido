@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Knowledge Graph - Entity/Relation Memory Layer
  *
  * NIDO Knowledge Graph (2026-10-05). From deep research DR-6.

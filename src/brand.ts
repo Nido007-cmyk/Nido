@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Brand module — the SINGLE SOURCE OF TRUTH for the user-facing product
  * identity. Owner directive 2026-09-28: the public product name is
  * UNDECIDED (NIDO is the internal codename and may not be usable

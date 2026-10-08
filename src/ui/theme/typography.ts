@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import { Platform, TextStyle } from "react-native";
 import { FontScale } from "../../models/settings";
 

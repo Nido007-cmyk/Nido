@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Local (no-device) retrieval evaluation — the lexical channel only.
  *
  * WHAT IT MEASURES

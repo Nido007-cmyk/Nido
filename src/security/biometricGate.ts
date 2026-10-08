@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * biometricGate.ts — NIDO: gate biométrico de acceso (capa UX, NO criptografía).
  *
  * La biometría/PIN del sistema autoriza el ACCESO a la app; no sustituye a la

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * sqlcipherReal.test.ts — NIDO: verificación contra SQLCipher REAL.
  *
  * Ejecuta NUESTRAS sentencias SQL (buildKeyPragmaSql, buildAttachEncryptedSql,

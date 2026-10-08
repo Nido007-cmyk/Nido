@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import { colors, getThemeColors, migrateLegacyThemeId, THEMES, daylightTheme, nightGardenTheme } from "./colors";
 import { typography, fontFamilies, getTypography, FONT_SCALES, Typography } from "./typography";
 import { spacing, radii, shadows } from "./spacing";

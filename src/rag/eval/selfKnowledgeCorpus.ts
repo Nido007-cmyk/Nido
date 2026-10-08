@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * D-CLUSTER PHASE A — adversarial corpus for the self-knowledge classifier
  * boundary (baseline 0728bae, 2026-09-28). READ-ONLY eval infrastructure:
  * this file never touches production behavior. It is consumed by

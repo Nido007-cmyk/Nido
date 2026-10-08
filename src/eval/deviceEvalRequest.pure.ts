@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Evaluation requests sent from a development machine (scripts/eval-device.mjs)
  * by writing a JSON file into the app's private storage over adb. Parsing
  * and resolution live here, native-module-free; the file handling is in

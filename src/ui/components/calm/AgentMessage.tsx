@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * AgentMessage — Calm Agent message bubble
  *
  * Redesigned for NIDO's "Calm Agent" UI (2026-10-05).

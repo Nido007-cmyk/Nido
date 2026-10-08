@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * NIDO internal icon system v1 — <NidoIcon> component.
  *
  * Renders one frozen icon (see iconRegistry.ts) as 1–2 tinted PNG layers:

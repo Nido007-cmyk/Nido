@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Adaptive routing Phase 3 — deterministic routing policy. Given a task and
  * what's actually available, decides an execution plan (a typed list of
  * steps) — it does NOT execute anything (that's Phase 4's executor.ts) and

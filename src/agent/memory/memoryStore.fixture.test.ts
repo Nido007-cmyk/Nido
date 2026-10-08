@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * memoryStore.fixture.test.ts — L2 HISTORICAL FIXTURE CORPUS + MIGRATION
  * HARNESS (nido_memory.db).
  *

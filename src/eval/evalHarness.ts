@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * On-device evaluation harness: runs the fixed EVAL_SET against one or
  * more configurations (a specific installed model, or adaptive routing)
  * and produces comparable structured results. See docs/EVAL_QUERIES.md

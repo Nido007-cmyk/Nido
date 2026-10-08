@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Phase 7 (docs/ADAPTIVE_ROUTING.md) — persistent, model-tagged execution
  * telemetry. Local/offline only (SQLite, same file as everything else in
  * rag/db.ts — never transmitted). This is the persistent source of truth;

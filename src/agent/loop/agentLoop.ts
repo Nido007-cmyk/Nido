@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * agentLoop.ts - NIDO: el bucle pensar → actuar → observar.
  *
  * Por cada mensaje del usuario:

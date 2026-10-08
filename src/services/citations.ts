@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Removes citations a model invented: the literal "[n]", numbers that don't
  * match a retrieved source, and a trailing "References:"/"Sources:" list
  * (the app shows the real sources under each answer). Display only; the

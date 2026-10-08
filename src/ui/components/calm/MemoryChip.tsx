@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * MemoryChip — shows what NIDO remembered
  *
  * Calm Agent UI (2026-10-05). Transparency of memory.

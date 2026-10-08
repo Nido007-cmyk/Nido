@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * F-3 UNIT A (2026-09-28): NidoScreen gesture guards.
  *
  * The N3 audit diagnosed the class: two rapid taps both saw a batched React

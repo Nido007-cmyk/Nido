@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * p2pIdentityRecovery.test.ts — NIDO: F-2.
  *
  * INVARIANT: un P2PIdentityKeyLossError siempre aflora como la pantalla de

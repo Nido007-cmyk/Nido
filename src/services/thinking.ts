@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Reasoning models put their thinking before the answer, marked in a
  * model-specific way: <think>...</think> (LFM2.5, Qwen3 and others) or
  * <|channel>thought ... <channel|> (Gemma 4). This separates the two so the

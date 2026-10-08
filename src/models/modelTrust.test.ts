@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * modelTrust.test.ts — integrity trust gate (NIDO INTEGRITY + RESIDUE lane).
  *
  * Proves the lane's core invariant:

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Learned Skills - Agent-created reusable procedures
  *
  * NIDO Learned Skills (2026-10-05). From deep research DR-4.

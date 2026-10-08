@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * appReset.test.ts — verificación del "Clear All Data" completo (TD-1).
  *
  * Estrategia: Filesystem en memoria (expo-file-system y

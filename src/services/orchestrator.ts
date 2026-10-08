@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import { llamaEngine } from "../inference/LlamaEngine";
 import { retrieve, assemblePrompt, RetrievedChunk, ConversationHistory } from "../rag/retrieve";
 

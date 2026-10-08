@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * evalResume.pure.ts - NIDO: Eval resume with restore points.
  *
  * Pure logic for saving/loading eval run restore points.

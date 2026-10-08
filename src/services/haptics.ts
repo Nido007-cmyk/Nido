@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * App-wide gate on haptic feedback, respecting the user's `hapticsEnabled`
  * setting (src/models/settings.ts, default true — no battery case for
  * defaulting it off; each pulse is milliseconds of vibration-motor draw,

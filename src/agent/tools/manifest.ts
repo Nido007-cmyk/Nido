@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * NIDO — manifiesto de herramientas LOCALES.
  * Regla de privacidad: ninguna herramienta de esta lista toca la red.
  * Si una herramienta futura necesitara red, no entra aquí: iría a un

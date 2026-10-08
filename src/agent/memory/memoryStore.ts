@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * memoryStore.ts — NIDO: memoria persistente del agente, 100% en el dispositivo.
  *
  * USA EL DatabaseManager centralizado (`src/security/databaseManager.ts`):

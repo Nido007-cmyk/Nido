@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * wipeTerminal.test.ts — WIPE TERMINAL COMPLETION (lane 2026-09-28).
  *
  * Criterio del propietario: AFTER CLEAR ALL DATA STARTS, THE OLD NIDO DATA

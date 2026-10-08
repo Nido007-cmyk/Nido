@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Pure, native-module-free RAG helpers, kept separate from db.ts/embed.ts
  * (which pull in expo-sqlite/llama.rn) so they're unit-testable under plain
  * Node/vitest without an RN runtime.

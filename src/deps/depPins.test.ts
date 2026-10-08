@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // F-8 build gate, wired into the unit suite.
 //
 // Runs scripts/verify-dep-pins.mjs against the REAL repo package.json +

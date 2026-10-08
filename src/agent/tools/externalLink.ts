@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * externalLink.ts — P-F1: safe classification of `open_app` targets.
  *
  * `open_app` is an external-effect tool: it hands a URL to the OS

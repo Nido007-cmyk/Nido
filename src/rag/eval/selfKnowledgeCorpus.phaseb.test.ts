@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * D-CLUSTER PHASE B — gate measurement for Design 1 + Design 2.
  *
  * Runs LIVE production (classifyKnowledgeQuery with brand-context

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * keyLossRecovery.ts — NIDO: N4-RECOVERY-UI — presentation logic for the
  * honest Keystore-loss recovery screen.
  *

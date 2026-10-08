@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import { LlamaContext, initLlama } from "llama.rn";
 import * as FileSystem from "expo-file-system/legacy";
 import { checkRamBudget, readRamSnapshot, toGb } from "../inference/ramBudget";

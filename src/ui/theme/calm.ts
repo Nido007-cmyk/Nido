@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Calm Agent Design Tokens
  *
  * Extension of the base theme for the NIDO UI redesign (2026-10-05).

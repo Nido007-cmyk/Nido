@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Native-module-free half of the evaluation harness (see evalHarness.ts and
  * docs/EVAL_QUERIES.md): configuration ids, the fixed-model plan, result
  * rows and export formatting. Unit-testable under plain vitest.

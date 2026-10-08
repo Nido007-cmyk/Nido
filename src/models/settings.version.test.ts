@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * settings.version.test.ts — L1 FORMAT VERSIONING CONTRACT (settings.json).
  *
  * - Cada escritura estampa format_version=1.

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * keyLoss.test.ts — NIDO: N4 — pérdida del Keystore / recovery honesto.
  *
  * REGLA CENTRAL: si existen bases cifradas y la DEK esperada falta o es

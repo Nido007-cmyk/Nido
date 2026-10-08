@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * dualModelIntegration.ts - NIDO: Integración del router dual-model con el agent loop.
  *
  * Usa `routeToModel` para elegir entre el modelo tiny (rápido) y el

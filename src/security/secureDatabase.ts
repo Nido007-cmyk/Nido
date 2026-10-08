@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * secureDatabase.ts — NIDO: apertura cifrada (SQLCipher) + migración
  * plaintext → encrypted con fail-closed.
  *

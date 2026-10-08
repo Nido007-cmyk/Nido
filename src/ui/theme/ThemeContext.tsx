@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
 import { impact, ImpactFeedbackStyle } from "../../services/haptics";
 import {

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * D-CLUSTER eval harness (NOT a test file — no describe/it here).
  *
  * Shared by:

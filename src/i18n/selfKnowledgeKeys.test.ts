@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import { describe, it, expect } from "vitest";
 import en from "./locales/en.json";
 import es from "./locales/es.json";

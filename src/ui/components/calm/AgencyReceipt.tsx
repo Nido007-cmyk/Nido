@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * AgencyReceipt — per-answer transparency receipt
  *
  * Calm Agent UI (2026-10-05). From deep research DR-1.

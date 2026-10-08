@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * settings.fixture.test.ts — L2 HISTORICAL FIXTURE CORPUS + MIGRATION HARNESS
  * (settings.json).
  *

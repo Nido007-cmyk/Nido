@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * dispatcher.ts - NIDO: validación y despacho puros de llamadas a herramientas.
  *
  * Un modelo pequeño (1.5B–8B) alucina argumentos: tipos mal, parámetros

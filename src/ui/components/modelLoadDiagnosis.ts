@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Pure error diagnosis for ModelLoadErrorCard.
  *
  * Kept dependency-free (no React Native imports) so it can be unit-tested

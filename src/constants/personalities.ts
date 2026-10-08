@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 export type PersonalityId = "succinct" | "detailed" | "summary" | "custom";
 
 export interface Personality {

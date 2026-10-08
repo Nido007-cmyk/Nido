@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * Tests for document storage budget (BOAR item 4, adapted for NIDO).
  *
  * Uses an in-memory SQLite database via the test fixture.

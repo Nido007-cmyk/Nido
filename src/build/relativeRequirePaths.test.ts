@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * relativeRequirePaths.test.ts — regression test for the 2026-10-06 APK
  * build failure.
  *

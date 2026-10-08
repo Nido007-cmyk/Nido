@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * modelTrust.ts — the single trust decision for model weight files.
  *
  * INTEGRITY TRUST MODEL (NIDO)

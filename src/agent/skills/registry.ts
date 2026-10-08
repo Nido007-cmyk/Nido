@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * registry.ts - NIDO: registro de skills.
  *
  * Puro, sin dependencias. El loop agéntico lista las descripciones en el
