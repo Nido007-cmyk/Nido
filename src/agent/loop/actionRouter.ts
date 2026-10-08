@@ -134,6 +134,9 @@ function parseReminderDateTime(text: string): string | null {
   if (timeMatch) {
     let hour = parseInt(timeMatch[1], 10);
     const minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+    // M1 FIX 2026-10-07: validar rangos. "a las 25" o "10:75" son inválidos,
+    // no hacer rollover silencioso que cambia el día.
+    if (hour > 23 || minute > 59) return null;
     const ampm = (timeMatch[3] || "").toLowerCase();
     if (ampm === "pm" && hour < 12) hour += 12;
     if (ampm === "am" && hour === 12) hour = 0;
@@ -143,6 +146,12 @@ function parseReminderDateTime(text: string): string | null {
   } else {
     // Sin hora: 9 AM por defecto.
     targetDate.setHours(9, 0, 0, 0);
+  }
+
+  // M2 FIX 2026-10-07: si la fecha resultante ya pasó, mover al día siguiente.
+  // "recuérdame hoy a las 6" a las 20:00 no debe crear recordatorio para las 18:00.
+  if (targetDate.getTime() <= now.getTime()) {
+    targetDate.setDate(targetDate.getDate() + 1);
   }
 
   return targetDate.toISOString();

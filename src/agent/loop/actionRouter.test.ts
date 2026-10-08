@@ -121,4 +121,17 @@ describe("CALENDAR-FIX 2026-10-07: parseo de fechas", () => {
     expect(r).not.toBeNull();
     expect(r!.text.toLowerCase()).toContain("call mom");
   });
+
+  it("M1 FIX: 'a las 25' es inválido (no rollover silencioso)", () => {
+    const r = extractReminderAction("recuérdame comprar pan mañana a las 25");
+    // Hora 25 inválida → dueAt null (no se inventa 01:00 del día siguiente)
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).toBeNull();
+  });
+
+  it("M1 FIX: '10:75' es inválido (no rollover silencioso)", () => {
+    const r = extractReminderAction("recuérdame llamar mañana a las 10:75");
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).toBeNull();
+  });
 });

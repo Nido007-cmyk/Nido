@@ -83,6 +83,54 @@ class NidoP2PManager(private val context: Context) {
   private var acceptedCount: Int = 0
   private var lastAcceptAt: Long = 0L
   private var discoveryReceiver: BroadcastReceiver? = null
+  private var adapterStateReceiver: BroadcastReceiver? = null
+
+  init {
+    // BUG-6 FIX: seed inicial del caché con la lista actual del adapter.
+    seedBondedCache()
+    registerAdapterStateReceiver()
+  }
+
+  /**
+   * BUG-6 FIX: siembra el caché local con los dispositivos vinculados actuales.
+   * Se llama al inicio y cuando Bluetooth se enciende (el stack re-sincroniza).
+   */
+  private fun seedBondedCache() {
+    if (!hasConnectPermission()) return
+    try {
+      val devices = adapter?.bondedDevices ?: return
+      synchronized(bondedMacCache) {
+        for (d in devices) {
+          val mac = d.address?.uppercase()
+          if (!mac.isNullOrEmpty()) bondedMacCache.add(mac)
+        }
+      }
+    } catch (_: Exception) { /* best-effort */ }
+  }
+
+  /**
+   * BUG-6 FIX: cuando Bluetooth se apaga/enciende, el stack re-sincroniza
+   * la lista de vinculados. Re-sembramos el caché en STATE_ON.
+   */
+  private fun registerAdapterStateReceiver() {
+    if (adapterStateReceiver != null) return
+    val receiver = object : BroadcastReceiver() {
+      override fun onReceive(ctx: Context?, intent: Intent?) {
+        if (intent?.action != BluetoothAdapter.ACTION_STATE_CHANGED) return
+        val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)
+        if (state == BluetoothAdapter.STATE_ON) {
+          seedBondedCache()
+        }
+      }
+    }
+    adapterStateReceiver = receiver
+    val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+    if (Build.VERSION.SDK_INT >= 33) {
+      context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+    } else {
+      context.registerReceiver(receiver, filter)
+    }
+  }
   /**
    * BOND-LOSS-2026-10-07 (Android 16/API 36): receptor para detectar pérdida
    * de bond remota. En API 36+, el sistema emite ACTION_KEY_MISSING cuando
@@ -90,6 +138,15 @@ class NidoP2PManager(private val context: Context) {
    * Sin este receptor, un bond perdido causa "Handshake agotado" sin diagnóstico.
    */
   private var bondLossReceiver: BroadcastReceiver? = null
+  /**
+   * BUG-6 FIX 2026-10-07: caché local de MACs vinculadas.
+   * `BluetoothAdapter.getBondedDevices()` devuelve el caché interno del adapter,
+   * que puede estar desactualizado (ej: bonds creados mientras la app no recibía
+   * broadcasts, o race en el inicio). El toggle de Bluetooth lo "arregla" porque
+   * fuerza al stack a re-sincronizar. Este caché se actualiza con broadcasts
+   * de BOND_BONDED/BOND_NONE y se fusiona con la lista del adapter en bondedDevices().
+   */
+  private val bondedMacCache: MutableSet<String> = mutableSetOf()
 
   // ------------------------------------------------------------ estado
 
@@ -234,6 +291,12 @@ class NidoP2PManager(private val context: Context) {
             if (state == BluetoothDevice.BOND_NONE) {
               listener?.onError("Dispositivo $addr desvinculado.")
               connections.remove(addr)?.close()
+              // BUG-6 FIX: remover del caché local.
+              synchronized(bondedMacCache) { bondedMacCache.remove(addr.uppercase()) }
+            } else if (state == BluetoothDevice.BOND_BONDED) {
+              // BUG-6 FIX: agregar al caché local. El adapter puede no
+              // reflejarlo inmediatamente en getBondedDevices().
+              synchronized(bondedMacCache) { bondedMacCache.add(addr.uppercase()) }
             }
           }
         }
@@ -266,9 +329,25 @@ class NidoP2PManager(private val context: Context) {
   fun bondedDevices(): List<Map<String, String?>> {
     if (!hasConnectPermission()) return emptyList()
     return try {
-      adapter?.bondedDevices?.map { device ->
+      val fromAdapter = adapter?.bondedDevices?.map { device ->
         mapOf("address" to device.address, "name" to device.name)
       } ?: emptyList()
+      // BUG-6 FIX: fusionar con el caché local (actualizado por broadcasts).
+      // Elimina duplicados por MAC (case-insensitive).
+      val seen = mutableSetOf<String>()
+      val merged = mutableListOf<Map<String, String?>>()
+      for (entry in fromAdapter) {
+        val mac = (entry["address"] ?: "").uppercase()
+        if (mac.isNotEmpty() && seen.add(mac)) merged.add(entry)
+      }
+      synchronized(bondedMacCache) {
+        for (mac in bondedMacCache) {
+          if (seen.add(mac)) {
+            merged.add(mapOf("address" to mac, "name" to null))
+          }
+        }
+      }
+      merged
     } catch (e: Exception) {
       listener?.onError("No se pudieron leer los dispositivos vinculados: ${e.message}")
       emptyList()
