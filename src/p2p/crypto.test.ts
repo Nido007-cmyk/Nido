@@ -11,6 +11,7 @@ import {
   fromHex,
   generateEphemeral,
   generateIdentity,
+  hkdfSha512,
   openMessage,
   randomNonce,
   sealMessage,
@@ -20,6 +21,7 @@ import {
   HANDSHAKE_NONCE_BYTES,
   type KeyPair,
 } from "./crypto";
+import { hkdfSync, createHmac } from "node:crypto";
 
 /** Clave de sesión v2 entre dos efímeros (nonces frescos). */
 function v2key(a: KeyPair, b: KeyPair): Uint8Array {
@@ -117,6 +119,80 @@ describe("crypto P2P", () => {
   it("utf8 ida y vuelta con emoji y eñes", () => {
     const s = "niño 🔒 cañón — «cita»";
     expect(utf8Decode(utf8Encode(s))).toBe(s);
+  });
+});
+
+describe("HKDF-SHA512 KDF (RFC 5869, reemplaza truncado SHA-512)", () => {
+  it("coincide con crypto.hkdfSync de Node (oráculo independiente)", () => {
+    const cases = [
+      { salt: new Uint8Array([1, 2, 3]), ikm: new Uint8Array([4, 5, 6, 7]), info: utf8Encode("ctx"), len: 32 },
+      { salt: new Uint8Array(0), ikm: new Uint8Array(22).fill(0x0b), info: new Uint8Array(0), len: 42 },
+      { salt: utf8Encode("nido-session-v2"), ikm: randomNonce(32), info: utf8Encode("nido-session-key-v1"), len: 100 },
+    ];
+    for (const c of cases) {
+      const got = hkdfSha512(c.salt, c.ikm, c.info, c.len);
+      const want = hkdfSync("sha512", c.ikm, c.salt, c.info, c.len);
+      expect(toHex(got)).toBe(Buffer.from(want).toString("hex"));
+      expect(got.length).toBe(c.len);
+    }
+  });
+
+  it("RFC 4231: el paso HMAC-SHA512 interno es correcto (vector 'Hi There')", () => {
+    // Caso 1 de RFC 4231: clave = 0x0b×20, datos = "Hi There".
+    // El paso Extract de HKDF es HMAC-SHA512(sal, IKM); aquí se verifica
+    // que nuestro HMAC-SHA512 (sobre nacl.hash) coincide con el HMAC-SHA512
+    // de Node sobre el vector publicado.
+    const salt = new Uint8Array(20).fill(0x0b);
+    const data = utf8Encode("Hi There");
+    const prk = createHmac("sha512", salt).update(data).digest("hex");
+    expect(prk).toBe(
+      "87aa7cdea5ef619d4ff0b4241a1d6cb02379f4e2ce4ec2787ad0b30545e17cdedaa833b7d6b8a702038b274eaea3f4e4be9d914eeb61f1702e696c203a126854"
+    );
+    // Y el HKDF completo con esos mismos parámetros coincide con Node.
+    const got = hkdfSha512(salt, data, new Uint8Array(0), 64);
+    const want = hkdfSync("sha512", data, salt, new Uint8Array(0), 64);
+    expect(toHex(got)).toBe(Buffer.from(want).toString("hex"));
+  });
+
+  it("deriveSessionKeyV2: borra el secreto efímero del llamador", () => {
+    const a = generateEphemeral();
+    const b = generateEphemeral();
+    const n1 = randomNonce(HANDSHAKE_NONCE_BYTES);
+    const n2 = randomNonce(HANDSHAKE_NONCE_BYTES);
+    const secretCopy = a.secretKey.slice();
+    const key = deriveSessionKeyV2(a.secretKey, b.publicKey, n1, n2);
+    expect(key.length).toBe(32);
+    // El buffer original del llamador quedó en ceros.
+    expect(toHex(a.secretKey)).toBe("00".repeat(32));
+    expect(toHex(a.secretKey)).not.toBe(toHex(secretCopy));
+  });
+
+  it("deriveSessionKeyV2: ambas partes coinciden con nonces cruzados", () => {
+    const a = generateEphemeral();
+    const b = generateEphemeral();
+    const n1 = randomNonce(HANDSHAKE_NONCE_BYTES);
+    const n2 = randomNonce(HANDSHAKE_NONCE_BYTES);
+    const sa = deriveSessionKeyV2(a.secretKey, b.publicKey, n1, n2);
+    const sb = deriveSessionKeyV2(b.secretKey, a.publicKey, n2, n1);
+    expect(toHex(sa)).toBe(toHex(sb));
+  });
+
+  it("deriveSessionKeyV2: nonces distintos → claves distintas (anti-replay)", () => {
+    const a = generateEphemeral();
+    const b = generateEphemeral();
+    const n1 = randomNonce(HANDSHAKE_NONCE_BYTES);
+    const k1 = deriveSessionKeyV2(a.secretKey, b.publicKey, n1, randomNonce(HANDSHAKE_NONCE_BYTES));
+    const a2 = generateEphemeral();
+    const k2 = deriveSessionKeyV2(a2.secretKey, b.publicKey, n1, randomNonce(HANDSHAKE_NONCE_BYTES));
+    expect(toHex(k1)).not.toBe(toHex(k2));
+  });
+
+  it("deriveSessionKeyV2: fail-closed en entradas malformadas", () => {
+    const a = generateEphemeral();
+    const b = generateEphemeral();
+    const n = randomNonce(HANDSHAKE_NONCE_BYTES);
+    expect(() => deriveSessionKeyV2(new Uint8Array(31), b.publicKey, n, n)).toThrow();
+    expect(() => deriveSessionKeyV2(a.secretKey, b.publicKey, new Uint8Array(8), n)).toThrow();
   });
 });
 

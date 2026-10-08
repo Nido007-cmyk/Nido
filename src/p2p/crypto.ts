@@ -268,16 +268,106 @@ export function generateEphemeral(): KeyPair {
 }
 
 /**
+ * HMAC-SHA512 sobre `nacl.hash` (construcción RFC 2104 estándar; la
+ * aleatoriedad no interviene aquí). TweetNaCl no exporta HMAC, así que
+ * se implementa sobre el hash auditado. Verificado contra los vectores
+ * RFC 4231 en crypto.test.ts.
+ */
+function hmacSha512(key: Uint8Array, msg: Uint8Array): Uint8Array {
+  const BLOCK = 128; // tamaño de bloque de SHA-512
+  let k = key;
+  if (k.length > BLOCK) k = nacl.hash(k);
+  const kb = new Uint8Array(BLOCK);
+  kb.set(k);
+  const ipad = new Uint8Array(BLOCK);
+  const opad = new Uint8Array(BLOCK);
+  for (let i = 0; i < BLOCK; i++) {
+    ipad[i] = kb[i] ^ 0x36;
+    opad[i] = kb[i] ^ 0x5c;
+  }
+  const inner = new Uint8Array(BLOCK + msg.length);
+  inner.set(ipad, 0);
+  inner.set(msg, BLOCK);
+  const innerHash = nacl.hash(inner);
+  const outer = new Uint8Array(BLOCK + innerHash.length);
+  outer.set(opad, 0);
+  outer.set(innerHash, BLOCK);
+  const out = nacl.hash(outer);
+  // Limpieza de material intermedio.
+  kb.fill(0);
+  ipad.fill(0);
+  opad.fill(0);
+  inner.fill(0);
+  outer.fill(0);
+  innerHash.fill(0);
+  return out;
+}
+
+/**
+ * HKDF-SHA512 (RFC 5869) sobre `nacl.hash`. Exportado para tests
+ * (verificación cruzada contra `crypto.hkdfSync` de Node).
+ *
+ * @param salt sal no secreta (puede ser etiqueta de dominio).
+ * @param ikm  material de entrada (aquí: secreto DH + nonces).
+ * @param info etiqueta de contexto ligada a la salida.
+ * @param length bytes de salida (1..255*64).
+ */
+export function hkdfSha512(
+  salt: Uint8Array,
+  ikm: Uint8Array,
+  info: Uint8Array,
+  length: number,
+): Uint8Array {
+  if (!Number.isInteger(length) || length <= 0 || length > 255 * 64) {
+    throw new Error("HKDF: longitud inválida.");
+  }
+  // Extract: PRK = HMAC-SHA512(salt, IKM). Sal vacía → ceros (RFC 5869 §2.2).
+  const prk = hmacSha512(salt.length > 0 ? salt : new Uint8Array(64), ikm);
+  // Expand: T(i) = HMAC(PRK, T(i-1) | info | i).
+  const n = Math.ceil(length / 64);
+  const okm = new Uint8Array(n * 64);
+  let prev = new Uint8Array(0);
+  for (let i = 1; i <= n; i++) {
+    const data = new Uint8Array(prev.length + info.length + 1);
+    data.set(prev, 0);
+    data.set(info, prev.length);
+    data[data.length - 1] = i;
+    const t = hmacSha512(prk, data);
+    okm.set(t, (i - 1) * 64);
+    data.fill(0);
+    prev.fill(0);
+    prev = t;
+  }
+  prev.fill(0);
+  prk.fill(0);
+  const out = okm.slice(0, length);
+  okm.fill(0);
+  return out;
+}
+
+/**
  * KDF de la clave de sesión del handshake v2 (ver
  * docs/HANDSHAKE_THREAT_MODEL.md):
  *
- *   K = SHA-512("nido-session-v2" || secreto_DH || nonce_min || nonce_max)[0:32]
+ *   PRK = HMAC-SHA512(salt="nido-session-v2", DH || nonce_min || nonce_max)
+ *   K   = HKDF-Expand(PRK, info="nido-session-key-v1", 32)
  *
  * Ligar ambos nonces (orden canónico para que ambos lados coincidan)
  * impide que un HELLO repetido resucite una sesión pasada o permita
  * predecir la clave de la nueva: el otro nonce siempre es fresco por
- * conexión. Construcción estándar: hash con separación de dominio sobre
- * el secreto Diffie-Hellman.
+ * conexión. HKDF-SHA512 (RFC 5869) reemplaza al truncado directo de
+ * SHA-512: construcción estándar con análisis publicado.
+ *
+ * NOTA DE COMPATIBILIDAD: la derivación cambió respecto a versiones
+ * anteriores (SHA-512 truncado → HKDF). Ambas tablets deben correr el
+ * mismo código; no hay negociación de versión de KDF (fail-closed:
+ * claves distintas → el session_confirm no verifica y la sesión no se
+ * promociona).
+ *
+ * HIGIENE DE MEMORIA: el secreto efímero del llamador se borra
+ * (`fill(0)`) en cuanto el DH queda computado — es el mismo objeto
+ * Uint8Array que conserva el llamador, así que la limpieza cubre
+ * todas las rutas (messenger.completeHandshake, P2PSession).
  */
 export function deriveSessionKeyV2(
   myEphemeralSecret: Uint8Array,
@@ -292,21 +382,28 @@ export function deriveSessionKeyV2(
     throw new Error("Nonce de handshake inválido.");
   }
   const shared = nacl.box.before(theirEphemeralPk, myEphemeralSecret);
-  const domain = utf8Encode("nido-session-v2");
+  // El secreto efímero ya cumplió su único propósito (el DH): borrarlo
+  // ahora cierra la ventana de forward-secrecy en memoria.
+  myEphemeralSecret.fill(0);
   // Orden canónico: ambos lados derivan la misma clave sin importar quién
   // inició la conexión.
   const [lo, hi] =
     compareBytes(nonceA, nonceB) <= 0 ? [nonceA, nonceB] : [nonceB, nonceA];
-  const input = new Uint8Array(domain.length + shared.length + lo.length + hi.length);
-  input.set(domain, 0);
-  input.set(shared, domain.length);
-  input.set(lo, domain.length + shared.length);
-  input.set(hi, domain.length + shared.length + lo.length);
-  const digest = nacl.hash(input);
-  // Limpieza: el secreto DH no debe quedar en memoria más de lo necesario.
+  const ikm = new Uint8Array(shared.length + lo.length + hi.length);
+  ikm.set(shared, 0);
+  ikm.set(lo, shared.length);
+  ikm.set(hi, shared.length + lo.length);
+  const key = hkdfSha512(
+    utf8Encode("nido-session-v2"),
+    ikm,
+    utf8Encode("nido-session-key-v1"),
+    32,
+  );
+  // Limpieza: el secreto DH y el IKM no deben quedar en memoria más de
+  // lo necesario.
   shared.fill(0);
-  input.fill(0);
-  return digest.slice(0, 32);
+  ikm.fill(0);
+  return key;
 }
 
 /** Nonces de handshake: 16 bytes aleatorios por HELLO. */

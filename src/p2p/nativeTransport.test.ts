@@ -862,15 +862,18 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
   });
 
   it("nonces distintos → claves de sesión distintas (replay no resucita sesión)", () => {
-    const a = generateEphemeral();
-    const b = generateEphemeral();
+    // Cada secreto efímero es de un solo uso: deriveSessionKeyV2 lo borra
+    // (higiene de forward-secrecy). Cada derivación usa un par fresco.
     const n1 = randomNonce(HANDSHAKE_NONCE_BYTES);
     const n2 = randomNonce(HANDSHAKE_NONCE_BYTES);
-    const k1 = deriveSessionKeyV2(a.secretKey, b.publicKey, n1, n2);
-    const k2 = deriveSessionKeyV2(a.secretKey, b.publicKey, n1, randomNonce(HANDSHAKE_NONCE_BYTES));
+    const a1 = generateEphemeral();
+    const b1 = generateEphemeral();
+    const k1 = deriveSessionKeyV2(a1.secretKey, b1.publicKey, n1, n2);
+    const a2 = generateEphemeral();
+    const k2 = deriveSessionKeyV2(a2.secretKey, b1.publicKey, n1, randomNonce(HANDSHAKE_NONCE_BYTES));
     expect(toHex(k1)).not.toBe(toHex(k2));
     // Mismos inputs → misma clave (ambos lados coinciden).
-    const k1b = deriveSessionKeyV2(b.secretKey, a.publicKey, n2, n1);
+    const k1b = deriveSessionKeyV2(b1.secretKey, a1.publicKey, n2, n1);
     expect(toHex(k1)).toBe(toHex(k1b));
   });
 });
@@ -1107,7 +1110,10 @@ describe("R4: anti-replay persistente de HELLO (nonce claim atómico)", () => {
     }> = [];
     await t.startDiscovery({
       onHandshakeComplete: (pk, sec, eph, myNonce, theirNonce) => {
-        handshakes.push({ sec, eph, myNonce, theirNonce });
+        // Copia antes de completeHandshake: la KDF borra el secreto
+        // efímero in-place (higiene de forward-secrecy); el espejo del
+        // peer modela su propia copia del secreto.
+        handshakes.push({ sec: sec.slice(), eph, myNonce, theirNonce });
         void m.completeHandshake(pk, sec, eph, myNonce, theirNonce).catch(() => {});
       },
       onFrame: (pk, frame) => {
@@ -1135,10 +1141,12 @@ describe("R4: anti-replay persistente de HELLO (nonce claim atómico)", () => {
     // 2) Sesión viva: el peer confirma con un frame válido bajo la clave del
     //    handshake (la candidata se promociona; isPeerLive = true).
     const hs = handshakes[0];
-    const mirror = P2PSession.fromHandshakeV2(hs.sec, hs.eph, PEER_PK_HEX, hs.myNonce, hs.theirNonce);
+    // Cada fromHandshakeV2 consume (borra) su buffer de secreto: el peer
+    // y nuestra vista usan copias independientes, como en la realidad.
+    const mirror = P2PSession.fromHandshakeV2(hs.sec.slice(), hs.eph, PEER_PK_HEX, hs.myNonce, hs.theirNonce);
     // Vista "lado Alice" de la misma sesión: misma clave, etiquetas invertidas,
     // para verificar los frames que NOSOTROS enviamos.
-    const aliceSide = P2PSession.fromHandshakeV2(hs.sec, hs.eph, MY_PK_HEX, hs.myNonce, hs.theirNonce);
+    const aliceSide = P2PSession.fromHandshakeV2(hs.sec.slice(), hs.eph, MY_PK_HEX, hs.myNonce, hs.theirNonce);
     aliceSide.expectRecipient(PEER_PK_HEX);
     const confirm = mirror.pack(
       makeEnvelope("session_confirm", "confirm-e2e-1", fromHex(PEER_PK_HEX), MY_PK_HEX, {}),
