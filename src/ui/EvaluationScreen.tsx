@@ -19,7 +19,7 @@ import type { EvalRequest } from "../eval/deviceEvalRequest.pure";
 import { runPbkdf2Benchmark } from "../eval/pbkdf2Bench";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
-import { typography } from "./theme/typography";
+import type { Typography } from "./theme/typography";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 
 interface Props {
@@ -47,8 +47,8 @@ function outcomeColor(colors: Colors, outcome: EvalResultRow["outcome"]): string
  * docs/EVAL_QUERIES.md for the workflow.
  */
 export function EvaluationScreen({ onClose, chatBusy, deviceRequest }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
   const [models, setModels] = useState<CatalogModel[] | null>(null);
   const [preset, setPreset] = useState<string>("");
@@ -365,7 +365,7 @@ export function EvaluationScreen({ onClose, chatBusy, deviceRequest }: Props) {
   );
 }
 
-const getStyles = (colors: Colors) => StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg.surface },
   header: {
     flexDirection: "row",

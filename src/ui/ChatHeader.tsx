@@ -11,7 +11,7 @@ import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { NidoMascot } from "./components/calm/NidoMascot";
-import { typography } from "./theme/typography";
+import type { Typography } from "./theme/typography";
 import { spacing, radii } from "./theme/spacing";
 
 interface Props {
@@ -38,8 +38,8 @@ export function ChatHeader({
   onToggleDeepResearch,
 }: Props) {
   const { t } = useTranslation();
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   const handlePress = (callback: () => void, feedback: ImpactFeedbackStyle = ImpactFeedbackStyle.Light) => {
     impact(feedback);
@@ -145,7 +145,7 @@ export function ChatHeader({
   );
 }
 
-const getStyles = (colors: Colors) => StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   headerContainer: {
     backgroundColor: colors.bg.surface,
     borderBottomWidth: 1,

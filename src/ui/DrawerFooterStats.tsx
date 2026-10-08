@@ -13,7 +13,7 @@ import { getMemoryInfo } from "ram-monitor";
 import { getLastQueryStats, subscribeQueryStats } from "../services/telemetry";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
-import { typography } from "./theme/typography";
+import type { Typography } from "./theme/typography";
 import { radii } from "./theme/spacing";
 
 const modelManager = new ModelManager();
@@ -32,8 +32,8 @@ function MiniBar({
   over: boolean;
   color: string;
 }) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   return (
     <View style={styles.track}>
@@ -49,8 +49,8 @@ function MiniBar({
 }
 
 export function DrawerFooterStats() {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   const { t } = useTranslation();
   const [storageBytes, setStorageBytes] = useState(0);
@@ -119,7 +119,7 @@ export function DrawerFooterStats() {
   );
 }
 
-const getStyles = (colors: Colors) => StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   container: {
     paddingTop: 10,
     paddingBottom: 16,

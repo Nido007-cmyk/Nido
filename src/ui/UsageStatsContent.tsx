@@ -20,7 +20,7 @@ import { ModelManager } from "../models/ModelManager";
 import { getMemoryInfo, getDeviceTotalRamBytes } from "ram-monitor";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
-import { typography } from "./theme/typography";
+import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { spacing, radii } from "./theme/spacing";
 
@@ -57,9 +57,9 @@ interface StorageBreakdown {
  * - Live inference speed, TTFT, token metrics, and engine configuration.
  */
 export function UsageStatsContent() {
-  const { colors } = useTheme();
+  const { colors, typography } = useTheme();
   const { t } = useTranslation();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const [stats, setStats] = useState<QueryStats | null>(getLastQueryStats());
   const [appRss, setAppRss] = useState(0);
   const [appPeakRss, setAppPeakRss] = useState(getAppPeakRssBytes());
@@ -451,8 +451,8 @@ function TelemetryRow({
   value: string;
   highlight?: string;
 }) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
@@ -461,7 +461,7 @@ function TelemetryRow({
   );
 }
 
-const getStyles = (colors: Colors) => StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   container: {
     gap: spacing.md,
     padding: spacing.md,

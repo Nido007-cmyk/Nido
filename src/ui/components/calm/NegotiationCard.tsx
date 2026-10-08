@@ -22,7 +22,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput } from "react-nativ
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../theme";
 import type { Colors } from "../../theme/colors";
-import { typography } from "../../theme/typography";
+import type { Typography } from "../../theme/typography";
 import { spacing, radii } from "../../theme/spacing";
 import { NidoIcon } from "../icons/NidoIcon";
 import { NidoMascot } from "./NidoMascot";
@@ -59,8 +59,8 @@ export function NegotiationCard({
   pendingSend = null,
   processing = false,
 }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t, i18n } = useTranslation();
   const [counterMode, setCounterMode] = useState(false);
   const [selectedScopes, setSelectedScopes] = useState<string[]>(proposal.requestedScopes);
@@ -227,7 +227,7 @@ export function NegotiationCard({
   );
 }
 
-const getStyles = (colors: Colors) =>
+const getStyles = (colors: Colors, typography: Typography) =>
   StyleSheet.create({
     container: {
       backgroundColor: colors.bg.card,

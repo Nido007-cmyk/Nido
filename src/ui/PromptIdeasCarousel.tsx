@@ -12,7 +12,7 @@ import { NidoIcon } from "./components/icons/NidoIcon";
 import { setHidePromptIdeas } from "../models/settings";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
-import { typography } from "./theme/typography";
+import type { Typography } from "./theme/typography";
 import { spacing, radii } from "./theme/spacing";
 
 export interface PromptIdea {
@@ -30,8 +30,8 @@ interface Props {
 }
 
 export function PromptIdeasCarousel({ onUsePrompt, onDismiss }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
   const PROMPT_IDEAS = t("promptIdeasCarousel.items", { returnObjects: true }) as PromptIdea[];
   const [index, setIndex] = useState(0);
@@ -139,7 +139,7 @@ export function PromptIdeasCarousel({ onUsePrompt, onDismiss }: Props) {
   );
 }
 
-const getStyles = (colors: Colors) => StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   overlay: {
     position: "absolute",
     top: 0,

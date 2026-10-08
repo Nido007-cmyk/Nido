@@ -9,7 +9,7 @@ import { View, Text, StyleSheet, Animated } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
-import { typography } from "./theme/typography";
+import type { Typography } from "./theme/typography";
 import { radii } from "./theme/spacing";
 
 export type ProcessingStatus =
@@ -25,8 +25,8 @@ export type ProcessingStatus =
   | "stopped";
 
 function BouncingDot({ delay }: { delay: number }) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const y = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -52,8 +52,8 @@ export function ProcessingIndicator({
   status: Exclude<ProcessingStatus, "idle">;
   label?: string;
 }) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
   const STATUS_LABEL: Record<Exclude<ProcessingStatus, "idle">, string> = {
     retrieving: t("processingIndicator.retrieving"),
@@ -118,7 +118,7 @@ export function ProcessingIndicator({
   );
 }
 
-const getStyles = (colors: Colors) => StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",

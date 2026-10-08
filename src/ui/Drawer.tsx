@@ -12,7 +12,7 @@ import { ChatSession } from "../services/chatHistory";
 import { DrawerFooterStats } from "./DrawerFooterStats";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
-import { typography } from "./theme/typography";
+import type { Typography } from "./theme/typography";
 import { NidoIcon, type IconName } from "./components/icons/NidoIcon";
 import { spacing, radii } from "./theme/spacing";
 
@@ -57,8 +57,8 @@ export function Drawer({
   onDeleteSession,
 }: Props) {
   const { t } = useTranslation();
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -183,7 +183,7 @@ export function Drawer({
   );
 }
 
-const getStyles = (colors: Colors) => StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   backdrop: {
     position: "absolute",
     top: 0,

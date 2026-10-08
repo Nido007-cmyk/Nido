@@ -21,7 +21,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../theme";
 import type { Colors } from "../../theme/colors";
-import { typography } from "../../theme/typography";
+import type { Typography } from "../../theme/typography";
 import { spacing, radii } from "../../theme/spacing";
 import { NidoIcon } from "../icons/NidoIcon";
 
@@ -46,8 +46,8 @@ interface Props {
 }
 
 export function ApprovalCard({ request, onApprove, onDeny, approving = false }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
 
   return (
@@ -114,7 +114,7 @@ export function ApprovalCard({ request, onApprove, onDeny, approving = false }: 
   );
 }
 
-const getStyles = (colors: Colors) =>
+const getStyles = (colors: Colors, typography: Typography) =>
   StyleSheet.create({
     container: {
       backgroundColor: colors.bg.card,

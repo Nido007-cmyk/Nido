@@ -23,7 +23,7 @@ import QRCode from "qrcode";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
-import { typography } from "./theme/typography";
+import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { NidoMascot } from "./components/calm/NidoMascot";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
@@ -64,8 +64,8 @@ type Tab = "chats" | "contactos" | "enlace" | "negociaciones" | "packs";
 
 /** QR dibujado con Views (qrcode es JS puro: sin dependencias nativas). */
 function QrGrid({ text, size = 216 }: { text: string; size?: number }) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const modules = useMemo(() => {
     try {
       const qr = QRCode.create(text, { errorCorrectionLevel: "M" });
@@ -111,8 +111,8 @@ function fmtTime(ts: number): string {
 }
 
 export function NidoScreen({ onClose }: { onClose: () => void }) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
   const mRef = useRef(getSharedNidoMessenger());
   const [tab, setTab] = useState<Tab>("chats");
@@ -1373,7 +1373,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   );
 }
 
-const getStyles = (colors: Colors) => StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg.surface },
   header: {
     flexDirection: "row",

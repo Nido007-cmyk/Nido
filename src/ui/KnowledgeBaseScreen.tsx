@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { PersonalDocumentsManager } from "./PersonalDocumentsManager";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
-import { typography } from "./theme/typography";
+import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 
@@ -23,8 +23,8 @@ import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
  * its own path too, alongside the downloadable corpus packs.
  */
 export function KnowledgeBaseScreen({ onClose }: { onClose: () => void }) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
   const handleClose = () => {
     impact(ImpactFeedbackStyle.Light);
@@ -51,7 +51,7 @@ export function KnowledgeBaseScreen({ onClose }: { onClose: () => void }) {
   );
 }
 
-const getStyles = (colors: Colors) => StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg.surface },
   header: {
     flexDirection: "row",

@@ -13,7 +13,7 @@ import { computeCompatibility } from "../models/compatibility";
 import { getDeviceTotalRamBytes } from "ram-monitor";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
-import { typography } from "./theme/typography";
+import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { spacing, radii } from "./theme/spacing";
 
@@ -65,8 +65,8 @@ interface Props {
 }
 
 export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemove, activating, busy }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   const { t } = useTranslation();
   const isCorpus = item.kind === "corpus";
@@ -294,8 +294,8 @@ function StatusBadge({
   active: boolean;
   downloading: boolean;
 }) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   const { t } = useTranslation();
   if (downloading) {
@@ -327,7 +327,7 @@ function StatusBadge({
   );
 }
 
-const getStyles = (colors: Colors) => StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   card: {
     backgroundColor: colors.bg.cardElevated,
     borderRadius: radii.lg,

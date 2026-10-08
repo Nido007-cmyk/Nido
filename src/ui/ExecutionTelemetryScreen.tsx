@@ -16,7 +16,7 @@ import {
 } from "../services/executionTelemetry";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
-import { typography } from "./theme/typography";
+import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 import { EvaluationScreen } from "./EvaluationScreen";
@@ -59,8 +59,8 @@ function outcomeColor(colors: Colors, outcome: ExecutionTelemetryRecord["outcome
  * recent executions plus export, no charts/analytics.
  */
 export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
   const [records, setRecords] = useState<ExecutionTelemetryRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -239,8 +239,8 @@ export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
 }
 
 function StatCell({ label, value }: { label: string; value: string }) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   return (
     <View style={styles.statCell}>
       <Text style={styles.statValue}>{value}</Text>
@@ -249,7 +249,7 @@ function StatCell({ label, value }: { label: string; value: string }) {
   );
 }
 
-const getStyles = (colors: Colors) => StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg.surface },
   header: {
     flexDirection: "row",

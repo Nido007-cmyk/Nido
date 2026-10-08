@@ -15,7 +15,7 @@ import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useTheme } from "../../theme";
 import type { Colors } from "../../theme/colors";
-import { typography } from "../../theme/typography";
+import type { Typography } from "../../theme/typography";
 import { spacing, radii } from "../../theme/spacing";
 import { NidoMascot, type MascotRole } from "./NidoMascot";
 
@@ -44,8 +44,8 @@ export function EmptyState({
   showMascot = true,
   mascotRole = "guide",
 }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   return (
     <View style={styles.container}>
@@ -70,7 +70,7 @@ export function EmptyState({
   );
 }
 
-const getStyles = (colors: Colors) =>
+const getStyles = (colors: Colors, typography: Typography) =>
   StyleSheet.create({
     container: {
       alignItems: "center",

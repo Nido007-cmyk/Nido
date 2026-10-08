@@ -19,7 +19,6 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "rea
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
-import { typography } from "./theme/typography";
 import { calmSpacing } from "./theme/calm";
 import { spacing, radii } from "./theme/spacing";
 import { EmptyState } from "./components/calm/EmptyState";
@@ -46,10 +45,9 @@ interface Props {
 }
 
 export function PacksTab({ peers, getPeerName }: Props) {
-  const { colors } = useTheme();
+  const { colors, typography: typo } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const { t } = useTranslation();
-  const typo = typography;
   const [transfers, setTransfers] = useState<PackTransferInfo[]>(() =>
     packShareService.listTransfers()
   );

@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { UsageStatsContent } from "./UsageStatsContent";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
-import { typography } from "./theme/typography";
+import type { Typography } from "./theme/typography";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 
 interface Props {
@@ -22,8 +22,8 @@ interface Props {
  * Fullscreen Hardware Telemetry & System Dashboard for field audit and compliance verification.
  */
 export function UsageStatsScreen({ onClose }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
   const handleClose = () => {
     impact(ImpactFeedbackStyle.Light);
@@ -66,7 +66,7 @@ export function UsageStatsScreen({ onClose }: Props) {
   );
 }
 
-const getStyles = (colors: Colors) => StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg.surface,

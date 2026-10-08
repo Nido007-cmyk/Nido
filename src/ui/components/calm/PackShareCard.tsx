@@ -22,7 +22,6 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../theme";
 import type { Colors } from "../../theme/colors";
-import { typography } from "../../theme/typography";
 import { spacing, radii } from "../../theme/spacing";
 import { NidoIcon } from "../icons/NidoIcon";
 import type { PackTransferInfo } from "../../../p2p/packShareService";
@@ -52,10 +51,9 @@ export function PackShareCard({
   onRetry,
   processing = false,
 }: Props) {
-  const { colors } = useTheme();
+  const { colors, typography: typo } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const { t } = useTranslation();
-  const typo = typography;
 
   const isSender = transfer.direction === "send";
   const progressPct = Math.round(transfer.progress * 100);

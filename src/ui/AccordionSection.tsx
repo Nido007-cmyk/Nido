@@ -9,7 +9,7 @@ import { View, Text, Pressable, StyleSheet, LayoutAnimation, Platform, UIManager
 import { impact } from "../services/haptics";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
-import { typography } from "./theme/typography";
+import type { Typography } from "./theme/typography";
 import { spacing, radii } from "./theme/spacing";
 import { NidoIcon, isIconName, type IconName } from "./components/icons/NidoIcon";
 
@@ -31,8 +31,8 @@ interface Props {
 
 /** Collapsible section for the Settings screen — styled with field terminal elevation */
 export function AccordionSection({ icon, title, defaultOpen = false, children }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   const [open, setOpen] = useState(defaultOpen);
 
@@ -58,7 +58,7 @@ export function AccordionSection({ icon, title, defaultOpen = false, children }:
   );
 }
 
-const getStyles = (colors: Colors) => StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   container: {
     marginHorizontal: spacing.md,
     marginTop: spacing.sm,

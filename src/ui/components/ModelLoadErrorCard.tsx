@@ -12,7 +12,7 @@ import { NidoIcon } from "./icons/NidoIcon";
 import { useTheme } from "../theme";
 import type { Colors } from "../theme/colors";
 import { diagnose } from "./modelLoadDiagnosis";
-import { typography } from "../theme/typography";
+import type { Typography } from "../theme/typography";
 import { spacing, radii } from "../theme/spacing";
 
 export interface ModelLoadErrorCardProps {
@@ -28,8 +28,8 @@ export function ModelLoadErrorCard({
   onRelaunchWizard,
   onRetry,
 }: ModelLoadErrorCardProps) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
   const diagnosis = diagnose(error, t);
 
@@ -112,7 +112,7 @@ export function ModelLoadErrorCard({
   );
 }
 
-const getStyles = (colors: Colors) => StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   container: {
     marginHorizontal: spacing.md,
     marginVertical: spacing.sm,
