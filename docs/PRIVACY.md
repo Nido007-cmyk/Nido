@@ -56,3 +56,21 @@ Real hashes are pinned during the release process
 - [ ] **Biometric lock** when opening the app.
 - [ ] **Audit screen** in Settings (list `networkAudit.list()`).
 - [ ] **"Verify integrity" button** in Settings → Models for large LLMs.
+
+## P2P transport security notes
+
+- NIDO's P2P crypto runs **above** the Bluetooth socket (X25519 ECDH +
+  Ed25519 + XSalsa20-Poly1305 in `src/p2p/crypto.ts`), so link-layer
+  Bluetooth attacks (KNOB, BIAS) cannot read NIDO traffic. The session
+  key is derived with HKDF-SHA512 (RFC 5869) bound to both sides'
+  fresh handshake nonces; ephemeral secrets are wiped from memory
+  after the handshake.
+- Residual risk below the app layer: pre-authentication RCE in the
+  Android Bluetooth stack (e.g. CVE-2025-0075 / CVE-2025-22403,
+  SDP use-after-free) can compromise the *device*, at which point no
+  app-layer guarantee holds. There is no in-app fix for this class.
+  **Operational minimum: keep both tablets on Android security patch
+  level ≥ 2025-03-05.**
+- Delegated-task tokens (feature-flagged OFF in v1) are bound to the
+  transport session tag when issued; a token captured at rest cannot be
+  replayed against a different session with the same peer.

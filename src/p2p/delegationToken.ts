@@ -15,6 +15,13 @@
  * - All crypto uses tweetnacl (existing audited primitive). No new crypto.
  * - Caveats are signed; tampering breaks the chain (fail-closed).
  * - No home-grown randomness: nonces via nacl.randomBytes.
+ * - Session binding: when issued with a sessionTag, the token verifies
+ *   ONLY against that transport session (strict match, fail-closed).
+ *   Prevents cross-session replay of a captured token within expiry.
+ * - attenuateToken verifies the chain before extending it: never signs
+ *   an extension of a token that does not verify.
+ * - Negotiation STATE is not in the token: any future TASK_REQUEST
+ *   handler must assert ACCEPTED state separately (see approvalGate).
  *
  * Token wire format (base64url of canonical JSON):
  *   { v: 1, chain: [ { payload, sig }, ... ] }

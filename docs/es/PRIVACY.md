@@ -56,3 +56,21 @@ Los hashes reales se fijan en el proceso de release
 - [ ] **Bloqueo biométrico** al abrir la app.
 - [ ] **Pantalla de auditoría** en Ajustes (listar `networkAudit.list()`).
 - [ ] **Botón "verificar integridad"** en Ajustes → Modelos para LLMs grandes.
+
+## Notas de seguridad del transporte P2P
+
+- La cripto P2P de NIDO corre **por encima** del socket Bluetooth
+  (X25519 ECDH + Ed25519 + XSalsa20-Poly1305 en `src/p2p/crypto.ts`),
+  así que los ataques Bluetooth a nivel de enlace (KNOB, BIAS) no pueden
+  leer el tráfico de NIDO. La clave de sesión se deriva con HKDF-SHA512
+  (RFC 5869) ligada a los nonces frescos del handshake de ambos lados;
+  los secretos efímeros se borran de memoria tras el handshake.
+- Riesgo residual debajo de la capa de la app: RCE pre-autenticación en
+  el stack Bluetooth de Android (p. ej. CVE-2025-0075 / CVE-2025-22403,
+  use-after-free en SDP) puede comprometer el *dispositivo*, y entonces
+  ninguna garantía de la app se sostiene. No hay fix en la app para esta
+  clase. **Mínimo operativo: mantener ambas tablets con nivel de parche
+  de seguridad de Android ≥ 2025-03-05.**
+- Los tokens de tareas delegadas (feature flag OFF en v1) se ligan al
+  tag de la sesión de transporte al emitirse; un token capturado en
+  reposo no puede reinyectarse en otra sesión con el mismo peer.
