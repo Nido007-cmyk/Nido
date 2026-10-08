@@ -131,6 +131,49 @@ describe("runAgentLoop", () => {
     expect(engine.calls).toHaveLength(0);
   });
 
+  it("P2.5: BUG-4 usa la vía constrained antes del retry legacy", async () => {
+    // "ten en cuenta que llueve": intent recordar, sin pre-router
+    // determinístico → llega al modelo.
+    const engine = fakeEngine([
+      "Listo", // el modelo no emite tool call (BUG-4)
+      '{"name": "remember_fact", "arguments": {"content": "llueve"}}', // vía constrained
+      "Guardado en memoria.", // turno tras la observación
+    ]);
+    const result = await runAgentLoop("ten en cuenta que llueve", {
+      engine,
+      handlers: {
+        remember_fact: async (args) => `guardado: ${String(args.content)}`,
+      },
+      loadMemory: async () => null,
+    });
+    expect(result.toolUses).toHaveLength(1);
+    expect(result.toolUses[0].name).toBe("remember_fact");
+    expect(result.toolUses[0].result).toContain("llueve");
+    // La 2ª llamada al engine fue la vía constrained (json_schema).
+    const constrainedParams = engine.calls[1][0] as Record<string, unknown>;
+    expect(constrainedParams.responseFormat).toMatchObject({ type: "json_schema" });
+    expect(constrainedParams.samplingPreset).toBe("structured");
+  });
+
+  it("P2.5: si la vía constrained falla, el retry legacy sigue como backstop", async () => {
+    const engine = fakeEngine([
+      "Listo", // sin tool call → BUG-4
+      "basura", // constrained attempt 1: inválido
+      "más basura", // constrained repair: inválido → null → backstop
+      '```tool\n{"name": "remember_fact", "arguments": {"content": "llueve"}}\n```', // retry legacy
+      "Guardado.",
+    ]);
+    const result = await runAgentLoop("ten en cuenta que llueve", {
+      engine,
+      handlers: {
+        remember_fact: async (args) => `guardado: ${String(args.content)}`,
+      },
+      loadMemory: async () => null,
+    });
+    expect(result.toolUses).toHaveLength(1);
+    expect(result.toolUses[0].name).toBe("remember_fact");
+  });
+
   it("ejecuta la herramienta y continúa con la observación", async () => {
     const engine = fakeEngine([
       'Voy a ver la hora.\n```tool\n{"name": "device_time", "arguments": {}}\n```',

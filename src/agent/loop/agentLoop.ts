@@ -33,6 +33,7 @@ import {
 import { classifyIntent, type AgentIntent } from "./intent";
 import { matchCanned } from "./cannedResponses";
 import { recordInferenceEvent } from "../../inference/telemetry";
+import { generateToolCallJson } from "./toolCallJson";
 import { validateStructuredOutput } from "./structuredOutput";
 import { extractRememberFact } from "./rememberRouter";
 import { listSkillNamesForPrompt } from "../skills/registry";
@@ -51,6 +52,11 @@ export interface AgentEngine {
     onToken?: (token: string) => void;
     /** P2.4-2026-10-08: etiqueta para telemetría on-device (no bloquea, nunca lanza). */
     telemetryContext?: { taskType?: string };
+    /**
+     * P2.5-2026-10-08: constrained decoding para tool calls (json_schema).
+     * Solo lo usa la vía constrained; el resto del loop no lo toca.
+     */
+    responseFormat?: { type: "json_object" | "json_schema"; json_schema?: { schema: object } };
   }): Promise<string>;
 }
 
@@ -736,15 +742,31 @@ export async function runAgentLoop(
       // pero no se llamó ninguna, es una alucinación: no aceptar la respuesta.
       const needsTools = intent === "recordar" || intent === "actuar";
       if (needsTools && toolUses.length === 0) {
-        // Reintento con instrucción explícita de usar la herramienta.
-        messages.push({
-          role: "user",
-          content:
-            "No has usado ninguna herramienta. Debes emitir el bloque ```tool " +
-            "con la llamada correspondiente. No respondas solo con texto.",
-        });
-        const retry = await generateOnce();
-        const retryCalls = parseToolCalls(retry);
+        // P2.5-2026-10-08: primero la vía constrained (json_schema +
+        // validación en código). Si produce un tool call válido, se
+        // procesa igual que el retry legacy. Si falla, el retry legacy
+        // sigue como backstop — el comportamiento anterior se conserva.
+        let retryCalls: ParsedToolCall[] = [];
+        let retryText: string;
+        const constrained = await generateToolCallJson(engine, {
+          userText,
+          toolNames: Object.keys(handlers),
+        }).catch(() => null);
+        if (constrained) {
+          retryCalls = [constrained];
+          retryText = JSON.stringify({ name: constrained.name, arguments: constrained.arguments });
+        } else {
+          // Reintento legacy con instrucción explícita de usar la herramienta.
+          messages.push({
+            role: "user",
+            content:
+              "No has usado ninguna herramienta. Debes emitir el bloque ```tool " +
+              "con la llamada correspondiente. No respondas solo con texto.",
+          });
+          const retry = await generateOnce();
+          retryText = retry;
+          retryCalls = parseToolCalls(retry);
+        }
         if (retryCalls.length === 0) {
           // El modelo sigue sin generar tool calls: fallo explícito en vez
           // de fingir éxito con un "Listo".
@@ -758,7 +780,7 @@ export async function runAgentLoop(
         }
         // Si el reintento sí trajo calls, procesarlos abajo.
         // (Caer al flujo normal: asignar text y continuar el loop.)
-        lastText = retry;
+        lastText = retryText;
         const retryObservations: string[] = [];
         for (const call of retryCalls) {
           const result = await dispatchToolCall(call, handlers, dispatchOptions);
@@ -771,7 +793,7 @@ export async function runAgentLoop(
           }));
           untrustedContext.push({ source: "tool_result", content: result, origin: call.name });
         }
-        messages.push({ role: "assistant", content: retry });
+        messages.push({ role: "assistant", content: retryText });
         messages.push({
           role: "user",
           content: `Observación de herramientas:\n${retryObservations.join("\n")}\n\n${CONTINUATION_DIRECTIVE}`,
