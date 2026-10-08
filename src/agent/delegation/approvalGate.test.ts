@@ -109,6 +109,107 @@ describe("ApprovalGate (anti-loopjacking)", () => {
     expect(() => gate.register(baseReq())).not.toThrow();
   });
 
+  it("R5: TASK_CANCEL durante la espera → approve niega (TOCTOU cerrado)", () => {
+    const gate = new ApprovalGate();
+    let live: "ACCEPTED" | "DECLINED" = "ACCEPTED";
+    gate.setNegotiationStateProvider(() => live);
+    const { requestId } = gate.register(baseReq());
+    // El peer cancela mientras el humano mira la tarjeta.
+    live = "DECLINED";
+    expect(gate.approve(requestId)).toBeNull();
+    expect(gate.pendingCount).toBe(0);
+  });
+
+  it("R5: provider que lanza → approve niega (fail-closed)", () => {
+    const gate = new ApprovalGate();
+    gate.setNegotiationStateProvider(() => {
+      throw new Error("store caído");
+    });
+    const { requestId } = gate.register(baseReq());
+    expect(gate.approve(requestId)).toBeNull();
+  });
+
+  it("R5: tope de pendientes por peer (DoS por documentos de 512 KB)", () => {
+    const gate = new ApprovalGate();
+    const ids = [
+      "323e4567-e89b-42d3-a456-426614174000",
+      "423e4567-e89b-42d3-a456-426614174000",
+      "523e4567-e89b-42d3-a456-426614174000",
+    ];
+    const reqIds = ids.map(
+      (taskId) => gate.register(baseReq({ taskId })).requestId
+    );
+    expect(gate.pendingCount).toBe(3);
+    // El cuarto del MISMO peer se rechaza.
+    expect(() =>
+      gate.register(baseReq({ taskId: "623e4567-e89b-42d3-a456-426614174000" }))
+    ).toThrow();
+    // Otro peer no está afectado.
+    expect(() =>
+      gate.register(
+        baseReq({
+          taskId: "723e4567-e89b-42d3-a456-426614174000",
+          peerPkShort: "otro-peer",
+        })
+      )
+    ).not.toThrow();
+    // Al decidir se libera el slot.
+    gate.deny(reqIds[0]);
+    expect(() =>
+      gate.register(baseReq({ taskId: "823e4567-e89b-42d3-a456-426614174000" }))
+    ).not.toThrow();
+  });
+
+  it("R5: register barre expirados y libera sus slots", async () => {
+    const gate = new ApprovalGate();
+    gate.register(baseReq({ taskId: "923e4567-e89b-42d3-a456-426614174000", timeoutMs: 30 }));
+    gate.register(baseReq({ taskId: "a23e4567-e89b-42d3-a456-426614174000", timeoutMs: 30 }));
+    gate.register(baseReq({ taskId: "b23e4567-e89b-42d3-a456-426614174000", timeoutMs: 30 }));
+    expect(gate.pendingCount).toBe(3);
+    await new Promise((r) => setTimeout(r, 60));
+    // El siguiente register barre los 3 expirados: el tope no se dispara
+    // y el mapa no acumula entradas muertas.
+    expect(() =>
+      gate.register(baseReq({ taskId: "c23e4567-e89b-42d3-a456-426614174000" }))
+    ).not.toThrow();
+    expect(gate.pendingCount).toBe(1);
+  });
+
+  it("R4: shown incluye huella, tamaño y extracto del documento", () => {
+    const gate = new ApprovalGate();
+    const docText = "Contenido secreto del documento. ".repeat(100);
+    const docB64 = Buffer.from(docText, "utf8").toString("base64");
+    const { shown } = gate.register(
+      baseReq({ documentBase64: docB64 })
+    );
+    expect(shown.document).toBeDefined();
+    expect(shown.document!.sizeBytes).toBe(Buffer.byteLength(docText, "utf8"));
+    expect(shown.document!.preview).toBe(docText.slice(0, 500));
+    expect(shown.document!.sha512Hex).toMatch(/^[0-9a-f]{128}$/);
+    // La huella corresponde a los bytes que ejecutará el executor.
+    const approved = gate.approve(
+      gate.register(baseReq({ taskId: "d23e4567-e89b-42d3-a456-426614174000", documentBase64: docB64 })).requestId
+    );
+    expect(approved!.documentBase64).toBe(docB64);
+  });
+
+  it("R4: sin documento no hay sección de documento en shown", () => {
+    const gate = new ApprovalGate();
+    const { shown } = gate.register(
+      baseReq({ documentBase64: undefined })
+    );
+    expect(shown.document).toBeUndefined();
+  });
+
+  it("R4: documento con charset no-base64 se rechaza (alinear con validateTaskRequest)", () => {
+    const gate = new ApprovalGate();
+    // '!' no es base64: Buffer.from lo descartaría en silencio y decodificaría
+    // bytes distintos de los "aprobados".
+    expect(() =>
+      gate.register(baseReq({ documentBase64: "aGVsbG8hIQ!!" }))
+    ).toThrow();
+  });
+
   it("fail-closed en entradas malformadas", () => {
     const gate = new ApprovalGate();
     expect(() => gate.register(baseReq({ description: "" }))).toThrow();

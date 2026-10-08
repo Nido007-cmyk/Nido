@@ -824,6 +824,8 @@
     "untrustedLabel": "Mensagem deles (não confiável):",
     "scopesLabel": "Será permitido:",
     "allowOnce": "Permitir uma vez",
+    "documentLabel": "Documento anexado (não confiável):",
+    "documentMeta": "{{bytes}} bytes · SHA-512 {{hash}}",
     "scope": {
       "task:answer": "Responder uma pergunta com conhecimento local",
       "task:summarize": "Resumir um documento anexado",

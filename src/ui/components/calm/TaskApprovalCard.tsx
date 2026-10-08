@@ -33,6 +33,16 @@ export interface TaskApprovalRequest {
   /** Verified token scopes (NOT peer free text). */
   scopes: TaskScope[];
   expiresAt: number;
+  /**
+   * R4: documento adjunto (task:summarize) que el modelo procesará.
+   * El aprobador debe verlo: huella, tamaño y extracto. Sin esto se
+   * aprobaría a ciegas el payload real.
+   */
+  document?: {
+    sha512Hex: string;
+    sizeBytes: number;
+    preview: string;
+  };
 }
 
 interface Props {
@@ -74,6 +84,23 @@ export function TaskApprovalCard({ request, onAllow, onDeny }: Props) {
           {t(`tasks.scope.${s}`, s)}
         </Text>
       ))}
+
+      {request.document && (
+        <>
+          <Text style={styles.untrustedLabel}>
+            {t("tasks.documentLabel", "Attached document (untrusted):")}
+          </Text>
+          <View style={styles.quoteBox}>
+            <Text style={styles.quote}>{request.document.preview}</Text>
+          </View>
+          <Text style={styles.docMeta}>
+            {t("tasks.documentMeta", "{{bytes}} bytes · SHA-512 {{hash}}", {
+              bytes: request.document.sizeBytes,
+              hash: `${request.document.sha512Hex.slice(0, 16)}…`,
+            })}
+          </Text>
+        </>
+      )}
 
       <View style={styles.buttons}>
         <TouchableOpacity
@@ -145,6 +172,12 @@ function getStyles(colors: Colors) {
       fontSize: 14,
       color: colors.text.primary,
       marginBottom: 2,
+    },
+    docMeta: {
+      fontSize: 12,
+      color: colors.text.dim,
+      fontFamily: "monospace",
+      marginBottom: 12,
     },
     buttons: {
       flexDirection: "row",

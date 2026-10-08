@@ -849,6 +849,8 @@
     "untrustedLabel": "Their message (untrusted):",
     "scopesLabel": "It will be allowed to:",
     "allowOnce": "Allow once",
+    "documentLabel": "Attached document (untrusted):",
+    "documentMeta": "{{bytes}} bytes · SHA-512 {{hash}}",
     "scope": {
       "task:answer": "Answer a question using on-device knowledge",
       "task:summarize": "Summarize an attached document",
