@@ -1,9 +1,10 @@
 > **Language:** English · [Español](es/CRYPTO_ARCHITECTURE.md)
 # CRYPTO_ARCHITECTURE.md — NIDO
 
-**Date:** September 28, 2026. **Current protocol: handshake v3 + CONFIRM (R4).**
-**Status:** IMPLEMENTED + AUTOMATED TESTED (1336 tests). **Not** ANDROID COMPILED,
-**not** PHYSICALLY TESTED, **not** EXTERNALLY AUDITED.
+**Date:** October 8, 2026 (updated; original September 28, 2026).
+**Current protocol: handshake v3 + CONFIRM v1, session KDF HKDF-SHA512.**
+**Status:** IMPLEMENTED + AUTOMATED TESTED (1985 tests). **Not** PHYSICALLY TESTED
+(two-device), **not** EXTERNALLY AUDITED.
 
 This document precisely describes the protocol as implemented today,
 its guarantees, its limits, and the migration path. No quantum resistance
@@ -18,7 +19,7 @@ are unchanged).
 | HELLO on the wire | `{t:"nido-hello", v:3}` (R4; §4bis) | `parseHello` rejects `v != 3` before mutating any state (hard cut, no v1/v2 compat). |
 | HELLO signature | `"nido-hello-v3"` (transcript prefix) | Ed25519 over the exact transcript of §4bis. |
 | CONFIRM on the wire | `{t:"nido-confirm", v:1}` (R4; §4bis) | Route/session are established ONLY after a valid CONFIRM. |
-| Session KDF | `"nido-session-v2"` (SHA-512 input prefix) | Derives the 32 B session key. |
+| Session KDF | `"nido-session-v2"` (salt), `"nido-session-key-v1"` (info) | HKDF-SHA512 (RFC 5869), 32 B output. Replaced raw SHA-512 truncation in October 2026 (see §12). |
 | Pairing QR | `"NIDO1:"` + `{v:2, app:"nido"}` | Physical root of trust. |
 | Session framing | `PROTOCOL_VERSION = 1` | `[u32 BE len][24 B nonce][secretbox(JSON)]`, max 256 KiB. |
 
@@ -88,14 +89,25 @@ the protocol doesn't distinguish).
      last handshake was <10 s ago, the duplicate HELLO is rejected
      without replacing the session.
 3. **B → A:** its own signed HELLO (same procedure). Both sides verify.
-4. **Session derivation (both sides):**
+4. **Session derivation (both sides), HKDF-SHA512 (RFC 5869)** —
+   `deriveSessionKeyV2` (`src/p2p/crypto.ts`):
    ```
-   DH = X25519(mi_eph_secret, su_eph_public)
-   K  = SHA-512( "nido-session-v2" || DH || nonce_min || nonce_max )[0:32]
+   DH   = X25519(mi_eph_secret, su_eph_public)
+   IKM  = DH || nonce_min || nonce_max      (canonical order by byte comparison:
+                                            both sides derive the same key
+                                            regardless of who initiated)
+   PRK  = HKDF-Extract(salt="nido-session-v2", IKM)
+   K    = HKDF-Expand(PRK, info="nido-session-key-v1", 32)
    ```
-   `nonce_min/max` in canonical order by byte comparison: both sides
-   derive the **same** key regardless of who initiated. Intermediate
-   secrets (`DH`, input) are wiped with `fill(0)` after deriving.
+   HMAC-SHA512 is implemented over the audited `nacl.hash` (TweetNaCl exports
+   no HMAC primitive). Intermediate secrets (`DH`, IKM input) are wiped with
+   `fill(0)` after deriving, and the caller's ephemeral secret is zeroed
+   in-place on **all** handshake exit paths (success, timeout, bad signature,
+   disconnect) — forward-secrecy hygiene in memory, verified by tests.
+   (Historical note: before October 2026 this step used raw
+   `SHA-512(domain || DH || nonces)[0:32]`; the KDF cut is clean — both
+   peers must run the same code, and a mismatch fails closed at
+   `session_confirm`, never insecurely.)
 5. **Session confirmation (liveness):** each side sends `session_confirm`
    (AEAD under K). The message queue is **only** drained toward sessions
    that produced at least one valid frame (liveness). A repeated HELLO
@@ -162,14 +174,14 @@ and framing (§5) are unchanged.
 |---|---|---|
 | Ed25519 identity seed | SecureStore (`nido_p2p_sign_sk`) | Yes (Keystore) |
 | X25519 identity private key | SecureStore | Yes (Keystore) |
-| Contacts `(pk, name, sig_pk)` | SQLite `p2p_contacts` | **No** — plaintext until C-1 |
-| Messages (inbox/outbox) | SQLite `p2p_messages` | **No** — plaintext until C-1 |
+| Contacts `(pk, name, sig_pk)` | SQLite `p2p_contacts` | **Yes** — SQLCipher, DEK in Android Keystore (alias `nido_db_key`), fail-closed |
+| Messages (inbox/outbox) | SQLite `p2p_messages` | **Yes** — SQLCipher, same DEK, fail-closed |
 | Sessions (key K) | RAM | n/a (never on disk) |
-| Handshake ephemerals and nonces | RAM | n/a (never on disk) |
+| Handshake ephemerals and nonces | RAM | n/a (never on disk; zeroed on all handshake exit paths) |
 | Anti-replay `seenIds` | RAM (+ DB for persistent duplicates) | Partial |
 
-**Consequence:** today, with access to the SQLite file the content is
-readable. C-1 (SQLCipher) is the milestone that closes this.
+**Consequence:** the app database is encrypted at rest (C-1 milestone complete).
+Without the Keystore-held DEK the database is indistinguishable from random.
 
 ## 7. Behavior on identity key change
 
@@ -246,3 +258,52 @@ confidentiality, or anti-replay of handshake v2 with the listed attacks.
 Items 9 and 10 require physical confirmation (P7). Migration to Noise_XX
 (X-2) remains future work with official vectors; the current v2 is the
 "simplest secure protocol" the research recommends keeping until then.
+
+## 12. October 2026 security hardening (protocol v3 + CONFIRM v1 era)
+
+Two adversarial red-team rounds (October 8, 2026; full summaries in
+`docs/security/AUDITS_2026-10.md`) attacked the handshake, KDF, token
+chain, negotiation layer, and delegation trust boundaries. All actionable
+findings were fixed; the cryptography itself was not dented in either
+round. Changes since §11:
+
+- **KDF:** raw SHA-512 truncation replaced by HKDF-SHA512 (RFC 5869)
+  (§4 step 4). Cross-version KDF confusion fails closed at
+  `session_confirm`.
+- **Ephemeral hygiene:** the ephemeral secret is zeroed on every
+  handshake exit path (success, timeout, bad signature, disconnect);
+  the handshake pending slot is reserved synchronously before the
+  first await (no orphaned ephemerals from concurrent frames).
+- **Negotiation hardening:** PROPOSE for an existing `negotiationId`
+  is rejected (fail-closed), with a **synchronous** ID reservation
+  before the first await so concurrent same-ID PROPOSEs cannot race
+  past the check; all negotiation signatures are pinned to the
+  QR-established `contact.sigPkHex` (the handshake already pinned
+  HELLOs; negotiation now matches).
+- **Delegation tokens (feature flag OFF):** tokens are bound to the
+  transport session (`sessionTag`, strict bidirectional matching —
+  kills cross-session replay within the expiry window);
+  `attenuateToken` verifies the chain before extending it.
+- **ApprovalGate:** the human approval is bound to the exact bytes
+  shown on the card (deep snapshot at registration, hash re-verified
+  at approve, timeout = deny, single consume); `approve()` re-checks
+  negotiation liveness synchronously (no TOCTOU); pending approvals
+  are capped per peer with lazy expiry sweep; the approval card shows
+  the document hash, size, and preview (marked untrusted) for
+  `task:summarize`.
+- **Memory trust boundary:** peer-origin facts are namespaced out of
+  the owner's conversation context (`getOwnerFacts()` allowlist);
+  `remember_fact` requires human confirmation when the tool context
+  contains untrusted-sourced content (fail-closed if no confirmation
+  UI is wired).
+- **Pre-auth rate limiting:** max 5 inbound handshake starts per MAC
+  per 60 s, checked before ephemeral generation/signing.
+- **Operational:** minimum Android security patch level **2025-03-05**
+  documented (below-app-layer Bluetooth SDP RCE class,
+  CVE-2025-0075/22403 — no in-app fix possible).
+
+**Honest status:** no external cryptographic audit exists; no
+two-device physical test has been run; adaptive prompt-injection
+testing against the on-device model has not been done. See
+`docs/security/AUDITS_2026-10.md` for the full verified-holding and
+not-covered lists.

@@ -2,7 +2,7 @@
 
 # SECURITY_ROADMAP.md — NIDO
 
-**Date:** 2026-09-27. **Status:** living document; updated with every change.
+**Date:** 2026-10-08 (updated; original 2026-09-27). **Status:** living document; updated with every change.
 **Principles:** privacy-first, zero-trust, local-first, offline-first, defense-in-depth.
 **Measurement rule:** progress is measured by verifiable reduction of attack surface
 and residual risk, not by number of features.
@@ -28,12 +28,12 @@ Nothing described here should be read as "audited", "quantum-proof" or "impossib
 | Anti-replay (per-handshake nonces, unique message ids, liveness) | IMPLEMENTED + AUTOMATED TESTED |
 | Bluetooth permissions per API (neverForLocation on 31+) | IMPLEMENTED (verified prebuild, commit `33bbc6b`) |
 | allowBackup=false | IMPLEMENTED |
-| SQLCipher | **NO** — plaintext SQLite |
+| SQLCipher | **YES** — IMPLEMENTED + AUTOMATED TESTED (DEK in Keystore, fail-closed) |
 | Biometrics as cryptographic gate | **NO** — pending only |
 | FLAG_SECURE / clipboard policy / content-less notifications | **NO** |
 | dataExtractionRules (device-transfer) | **NO** |
 | Migration tweetnacl → @noble/\* | **NO** |
-| HKDF (today: ad-hoc SHA-512 in KDF) | **NO** |
+| HKDF (today: ad-hoc SHA-512 in KDF) | **YES** — HKDF-SHA512 (RFC 5869), IMPLEMENTED + AUTOMATED TESTED (Oct 2026) |
 | XChaCha20-Poly1305 (today: XSalsa20-Poly1305) | **NO** |
 | Noise_XX | **NO** — documented as future migration |
 | PQ hybrid X25519+ML-KEM | **NO** — FUTURE, no audited implementation for RN |
@@ -51,7 +51,9 @@ Nothing described here should be read as "audited", "quantum-proof" or "impossib
   32 B master key in Keystore via SecureStore; plaintext→encrypted migration with
   `sqlcipher_export`; fail-closed opening (`PRAGMA key` + test `SELECT`; on failure,
   explicit error, never silent plaintext nor a fresh empty DB).
-- **Status:** pending. Requires a native build to verify (`PRAGMA cipher_version`).
+- **Status:** IMPLEMENTED + AUTOMATED TESTED (JS logic). SQLCipher opens the database
+  with `PRAGMA key` from a Keystore-held DEK (alias `nido_db_key`); plaintext→encrypted
+  migration is fail-closed. Requires a native build to verify (`PRAGMA cipher_version`).
 - **Done criteria:** IMPLEMENTED + AUTOMATED TESTED (JS logic) + ANDROID COMPILED +
   PHYSICALLY TESTED (opening, migration, rollback, wrong key).
 
@@ -83,11 +85,12 @@ Nothing described here should be read as "audited", "quantum-proof" or "impossib
 ## HIGH
 
 ### H-1. HKDF (RFC 5869) as the session KDF
-- **Today:** `SHA-512("nido-session-v2" || DH || nonce_min || nonce_max)[0:32]` — a
+- **Was:** `SHA-512("nido-session-v2" || DH || nonce_min || nonce_max)[0:32]` — a
   correct ad-hoc construction but non-standard; no per-purpose key separation.
-- **Action:** `HKDF-SHA-256(salt=hash_transcript, ikm=DH‖nonces, info="nido-sess-v1")` and
-  per-purpose separated keys (different `info` for send/receive/confirm).
-- **Done criteria:** IMPLEMENTED + AUTOMATED TESTED (RFC 5869 vectors).
+- **Now (October 2026):** `HKDF-SHA512(salt="nido-session-v2", ikm=DH‖nonces,
+  info="nido-session-key-v1")`, 32 B output — IMPLEMENTED + AUTOMATED TESTED
+  (commit `efc4b94`). Clean KDF cut: both peers must run the same code;
+  mismatched keys fail closed at `session_confirm`.
 
 ### H-2. XChaCha20-Poly1305 instead of XSalsa20-Poly1305
 - **Reason:** XSalsa20 has no AAD and no IETF standard; XChaCha20 (random 24 B

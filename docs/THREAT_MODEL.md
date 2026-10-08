@@ -2,7 +2,7 @@
 
 # THREAT_MODEL.md — NIDO
 
-**Date:** 2026-09-27. **Scope:** Android app (Expo SDK 57), 100% offline,
+**Date:** October 8, 2026 (updated; original September 27, 2026). **Scope:** Android app (Expo SDK 57), 100% offline,
 P2P messaging over Bluetooth RFCOMM, agent memory in local SQLite.
 **Out of scope:** security of the Android OS itself, of the hardware, and of the AI models
 (weights audit: see PRIVACY_MODEL.md).
@@ -15,8 +15,8 @@ Identifiers (T-01…) link to SECURITY_ROADMAP.md.
 1. The attacker does **not** have the victim's identity private key unless stated.
 2. The QR is exchanged **in person**; its physical integrity is the root of trust.
 3. Classic Bluetooth exposes a stable MAC and name during discovery to passive observers.
-4. Without SQLCipher (current state), everything in SQLite is **plaintext** to
-   file access.
+4. The app database is **SQLCipher-encrypted** (DEK in the Android Keystore, fail-closed):
+   file access alone no longer yields plaintext.
 
 ---
 
@@ -25,11 +25,12 @@ Identifiers (T-01…) link to SECURITY_ROADMAP.md.
 - **Asset:** messages, contacts, agent memory, identity keys.
 - **Capability:** physical access, no credentials; basic logical/forensic extraction.
 - **Attack:** connect via USB / forensic reader and copy the SQLite DB and files.
-- **Current mitigation:** `allowBackup=false`; keys in SecureStore (encrypted by Keystore).
-- **Gap:** without SQLCipher, the DB is plaintext → **the content is readable**.
-- **Planned mitigation:** C-1 (SQLCipher) + C-2 (hardware Keystore) + H-6 (biometrics).
-- **Residual risk (today):** **HIGH** — a lost phone exposes the content. After C-1/C-2/H-6: LOW
-  (the attacker needs to break the device lock or the hardware).
+- **Current mitigation:** `allowBackup=false`; keys in SecureStore (encrypted by Keystore);
+  the app database is SQLCipher-encrypted with a Keystore-held DEK (fail-closed:
+  without the DEK the database is indistinguishable from random).
+- **Gap:** no biometric gate on app open (H-6 pending).
+- **Residual risk (today):** **LOW-MEDIUM** — a lost locked phone no longer exposes
+  database content; identity keys remain hardware-protected. After H-6: LOW.
 
 ## T-02. Stolen unlocked phone
 
@@ -84,11 +85,16 @@ Identifiers (T-01…) link to SECURITY_ROADMAP.md.
 - **Capability:** active radio: intercept, modify, reinject frames; pose as the peer.
 - **Attack:** substitute the HELLO ephemeral to force a known session key;
   alter frames.
-- **Current mitigation:** signed v2 HELLO with Ed25519 bound to the QR (IMPLEMENTED + AUTOMATED TESTED);
-  the signature covers `(pk|eph|nonce)` — substituting the ephemeral invalidates the signature; frames under
-  XSalsa20-Poly1305 (AEAD) — tampering is silently discarded.
+- **Current mitigation:** signed HELLO v3 + CONFIRM v1 with Ed25519 bound to the QR
+  (IMPLEMENTED + AUTOMATED TESTED); the signature covers `(pk|eph|nonce|ts)` —
+  substituting the ephemeral invalidates the signature; session key via
+  HKDF-SHA512 (RFC 5869) over ephemeral-ephemeral DH + canonical nonces;
+  frames under XSalsa20-Poly1305 (AEAD) — tampering is silently discarded;
+  negotiation-layer signatures (PROPOSE/ACCEPT/COUNTER/DECLINE) are pinned to
+  the QR-established `contact.sigPkHex`, not the self-claimed key.
 - **Tests:** `nativeTransport.test.ts` (MITM: ephemeral substitution; forged signature),
-  `adversarial.test.ts` (corrupt, truncated, garbage ciphertext).
+  `adversarial.test.ts` (corrupt, truncated, garbage ciphertext),
+  negotiation pinning tests (unpinned-key PROPOSE/ACCEPT rejected, fail-closed).
 - **Residual risk:** LOW against network MITM. **Doesn't cover** a compromised endpoint or a
   physically substituted QR without fingerprint verification (see T-08).
 
@@ -107,7 +113,9 @@ Identifiers (T-01…) link to SECURITY_ROADMAP.md.
   different nonces → different keys, persistent duplicate.
 - **Note (red-team 2026-09-27):** a HELLO reinjected >10 s after the cooldown replaces
   the live session with a ghost one without liveness → availability DoS (real frames
-  fail the AEAD). No confidentiality impact. Mitigation: H-8.
+  fail the AEAD). No confidentiality impact. Mitigation: H-8 — **IMPLEMENTED**:
+  the route and session are established only after a valid CONFIRM proves liveness
+  in this connection (`session_confirm` under the derived key).
 - **Residual risk:** LOW.
 
 ## T-08. Malicious QR / physical QR substitution
@@ -236,16 +244,64 @@ Identifiers (T-01…) link to SECURITY_ROADMAP.md.
 - **Capability:** radio proximity.
 - **Attack:** flood HELLOs/garbage frames to drain the battery or block the handshake.
 - **Current mitigation:** handshake cooldown (10 s per peer), 15 s timeout, malformed
-  frames discarded without response, 256 KiB limit per frame.
+  frames discarded without response, 256 KiB limit per frame; **inbound handshake
+  rate limit: max 5 starts per MAC per 60 s, checked before ephemeral generation
+  and signing** (so a nearby device cannot burn victim CPU/crypto cheaply).
 - **Residual risk:** LOW-MEDIUM (Bluetooth is inherently jammable by radio;
   no battery is spent on expensive crypto before cheap validation: version/size first,
   the Ed25519 signature only after contact lookup).
 
-## Current residual risk matrix (without C-1/C-2/H-6)
+## T-19. Malicious paired peer (negotiation / delegation attacks)
+
+- **Asset:** the victim's authorizations (task grants, memory, scope-limited actions).
+- **Capability:** QR-paired; holds valid identity + signing keys; can send arbitrary
+  protocol-valid frames; signatures verify (the primary attacker in the October 2026
+  red-team rounds).
+- **Attack:** proposal swap (re-PROPOSE the same `negotiationId` with escalated
+  scopes while the victim reads the card); negotiation forgery with a fresh
+  self-generated key after a session-key compromise; cross-session replay of a
+  delegation token; peer memory poisoning (`task:remember` injecting persistent
+  instructions into the owner's agent context); loopjacking (swapping the
+  approved payload between approval and execution); memory-exhaustion via
+  unbounded pending approvals.
+- **Current mitigation (all IMPLEMENTED + AUTOMATED TESTED, October 2026):**
+  duplicate `negotiationId` PROPOSEs are rejected fail-closed with a **synchronous**
+  ID reservation before the first await (closes the concurrency bypass);
+  negotiation signatures pinned to the QR-established `contact.sigPkHex`;
+  delegation tokens bound to the transport session (strict bidirectional
+  `sessionTag` matching); ApprovalGate binds the human approval to the exact
+  bytes shown (hash re-verified at approve, timeout = deny, single consume,
+  liveness re-checked synchronously, per-peer pending cap with expiry sweep,
+  document hash/size/preview shown on the card); peer-origin facts are
+  namespaced out of the owner's conversation context and `remember_fact`
+  requires human confirmation when the tool context contains untrusted content
+  (fail-closed without a confirmation UI); scope firewall limits delegated
+  execution to the three v1 scopes structurally, not by prompting.
+- **Gap:** the delegation feature flag is OFF (these are latent hardening paths);
+  the human approval card remains the softest target — anything the card does
+  not show is trusted implicitly.
+- **Residual risk:** **MEDIUM** (protocol controls hold; the human factor is
+  irreducible).
+
+## T-20. Below-app-layer Bluetooth stack RCE (pre-auth, no user interaction)
+
+- **Asset:** the whole device (and with it, all app-layer guarantees).
+- **Capability:** nearby radio; exploits in `com.android.bluetooth`
+  (CVE-2025-0075 / CVE-2025-22403 / CVE-2025-22410: SDP use-after-free RCE).
+- **Attack:** compromise the Bluetooth stack before any pairing or handshake.
+- **Current mitigation:** none possible in-app — NIDO's app-layer E2E crypto
+  (independent X25519 session keys) makes link-layer key attacks (KNOB, BIAS)
+  irrelevant to confidentiality, but a stack RCE compromises the *device*,
+  at which point app-layer guarantees collapse.
+- **Operational mitigation:** documented minimum Android security patch level
+  **2025-03-05** (see `docs/PRIVACY.md` P2P transport security notes).
+- **Residual risk:** **MEDIUM** (accepted; mitigated operationally, not in code).
+
+## Current residual risk matrix
 
 | Threat | Risk today | After CRITICAL/HIGH roadmap |
 |---|---|---|
-| T-01 lost phone | HIGH | LOW |
+| T-01 lost phone | LOW-MEDIUM (C-1 done) | LOW (with H-6) |
 | T-02 stolen unlocked | HIGH | MEDIUM |
 | T-03 local malware | MEDIUM-HIGH | MEDIUM |
 | T-04 root/hooking | HIGH | HIGH (accepted, documented) |
@@ -259,12 +315,18 @@ Identifiers (T-01…) link to SECURITY_ROADMAP.md.
 | T-12 supply chain | MEDIUM | MEDIUM-LOW |
 | T-13 build machine | MEDIUM-HIGH | MEDIUM (with M-6) |
 | T-14 future quantum | MEDIUM | MEDIUM-LOW (with X-1) |
-| T-15 forensic | HIGH (without C-1) | MEDIUM |
+| T-15 forensic | MEDIUM (C-1 done) | MEDIUM |
 | T-16 shoulder surfing | MEDIUM | LOW-MEDIUM |
 | T-17 notif/clipboard | MEDIUM | LOW |
 | T-18 radio DoS | LOW-MEDIUM | LOW-MEDIUM |
+| T-19 malicious paired peer | MEDIUM | MEDIUM (human factor irreducible) |
+| T-20 BT stack RCE (below app layer) | MEDIUM | MEDIUM (operational: patch level) |
 
-**Executive read:** today's HIGH risks are all on the "physical device access" axis
-and are fixed by the same package: **C-1 + C-2 + H-6** (encryption at rest,
-hardware keys, biometrics). That's the next milestone that removes the most risk per
-effort invested.
+**Executive read:** the October 2026 hardening + two red-team rounds moved the
+protocol's residual risk decisively: T-06/T-07/T-18/T-19 protocol controls are
+IMPLEMENTED + AUTOMATED TESTED. Today's remaining HIGH is T-02 (stolen
+**unlocked** phone — fixed by H-6 biometrics, the next milestone that removes
+the most risk per effort). T-04 (root) stays HIGH by design and documented.
+T-20 is accepted operationally (device patch level). Nothing here is
+EXTERNALLY AUDITED — see `docs/security/AUDITS_2026-10.md` for what the two
+internal adversarial rounds covered and what they explicitly did not.

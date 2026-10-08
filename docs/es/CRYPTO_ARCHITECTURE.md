@@ -1,9 +1,10 @@
 > **Idioma:** [English](../CRYPTO_ARCHITECTURE.md) · Español
 # CRYPTO_ARCHITECTURE.md — NIDO
 
-**Fecha:** 28 de septiembre de 2026. **Protocolo vigente: handshake v3 + CONFIRM (R4).**
-**Estado:** IMPLEMENTED + AUTOMATED TESTED (1336 tests). **No** ANDROID COMPILED,
-**no** PHYSICALLY TESTED, **no** EXTERNALLY AUDITED.
+**Fecha:** 8 de octubre de 2026 (actualizado; original 28 de septiembre de 2026).
+**Protocolo vigente: handshake v3 + CONFIRM v1, KDF de sesión HKDF-SHA512.**
+**Estado:** IMPLEMENTED + AUTOMATED TESTED (1985 tests). **No** PHYSICALLY TESTED
+(dos dispositivos), **no** EXTERNALLY AUDITED.
 
 Este documento describe con precisión el protocolo implementado hoy,
 sus garantías, sus límites y la ruta de migración. No se afirma resistencia cuántica
@@ -17,7 +18,7 @@ describe el handshake R4 vigente (KDF, QR y framing sin cambios).
 | HELLO en el cable | `{t:"nido-hello", v:3}` (R4; §4bis) | `parseHello` rechaza `v != 3` antes de mutar ningún estado (corte duro, sin compat v1/v2). |
 | Firma del HELLO | `"nido-hello-v3"` (prefijo del transcript) | Ed25519 sobre el transcript exacto de §4bis. |
 | CONFIRM en el cable | `{t:"nido-confirm", v:1}` (R4; §4bis) | La ruta/sesión solo se establecen tras un CONFIRM válido. |
-| KDF de sesión | `"nido-session-v2"` (prefijo del input a SHA-512) | Deriva la clave de 32 B de la sesión. |
+| KDF de sesión | `"nido-session-v2"` (salt), `"nido-session-key-v1"` (info) | HKDF-SHA512 (RFC 5869), 32 B de salida. Reemplazó el truncado directo de SHA-512 en octubre de 2026 (ver §12). |
 | QR de emparejamiento | `"NIDO1:"` + `{v:2, app:"nido"}` | Raíz de confianza física. |
 | Framing de sesión | `PROTOCOL_VERSION = 1` | `[u32 BE len][nonce 24 B][secretbox(JSON)]`, máx. 256 KiB. |
 
@@ -79,12 +80,25 @@ el protocolo no distingue).
 3. **B → A:** su propio HELLO firmado (mismo procedimiento). Ambos lados verifican.
 4. **Derivación de sesión (ambos lados):**
    ```
-   DH = X25519(mi_eph_secret, su_eph_public)
-   K  = SHA-512( "nido-session-v2" || DH || nonce_min || nonce_max )[0:32]
+4. **Derivación de sesión (ambos lados), HKDF-SHA512 (RFC 5869)** —
+   `deriveSessionKeyV2` (`src/p2p/crypto.ts`):
    ```
-   `nonce_min/max` en orden canónico por comparación de bytes: ambos lados derivan la
-   **misma** clave sin importar quién inició. Los secretos intermedios (`DH`, input)
-   se limpian con `fill(0)` tras derivar.
+   DH   = X25519(mi_eph_secret, su_eph_public)
+   IKM  = DH || nonce_min || nonce_max      (orden canónico por comparación de
+                                            bytes: ambos lados derivan la misma
+                                            clave sin importar quién inició)
+   PRK  = HKDF-Extract(salt="nido-session-v2", IKM)
+   K    = HKDF-Expand(PRK, info="nido-session-key-v1", 32)
+   ```
+   HMAC-SHA512 se implementa sobre el auditado `nacl.hash` (TweetNaCl no exporta
+   primitiva HMAC). Los secretos intermedios (`DH`, input IKM) se limpian con
+   `fill(0)` tras derivar, y el secreto efímero del llamante se borra in-place en
+   **todas** las salidas del handshake (éxito, timeout, firma inválida,
+   desconexión) — higiene de forward secrecy en memoria, verificada por tests.
+   (Nota histórica: antes de octubre de 2026 este paso usaba
+   `SHA-512(dominio || DH || nonces)[0:32]`; el corte de KDF es limpio — ambos
+   peers deben correr el mismo código, y un mismatch falla cerrado en
+   `session_confirm`, nunca de forma insegura.)
 5. **Confirmación de sesión (liveness):** cada lado envía `session_confirm` (AEAD bajo K).
    La cola de mensajes **solo** se vacía hacia sesiones que produjeron al menos un frame
    válido (liveness). Un HELLO repetido por un atacante crea a lo sumo una sesión fantasma
@@ -147,14 +161,14 @@ el emparejamiento QR y el framing (§5) no cambian.
 |---|---|---|
 | Semilla Ed25519 identidad | SecureStore (`nido_p2p_sign_sk`) | Sí (Keystore) |
 | Clave privada X25519 identidad | SecureStore | Sí (Keystore) |
-| Contactos `(pk, name, sig_pk)` | SQLite `p2p_contacts` | **No** — plaintext hasta C-1 |
-| Mensajes (inbox/outbox) | SQLite `p2p_messages` | **No** — plaintext hasta C-1 |
+| Contactos `(pk, name, sig_pk)` | SQLite `p2p_contacts` | **Sí** — SQLCipher, DEK en Android Keystore (alias `nido_db_key`), fail-closed |
+| Mensajes (inbox/outbox) | SQLite `p2p_messages` | **Sí** — SQLCipher, misma DEK, fail-closed |
 | Sesiones (clave K) | RAM | n/a (nunca en disco) |
-| Efímeras y nonces de handshake | RAM | n/a (nunca en disco) |
+| Efímeras y nonces de handshake | RAM | n/a (nunca en disco; borrados en todas las salidas del handshake) |
 | `seenIds` anti-replay | RAM (+ DB para duplicados persistentes) | Parcial |
 
-**Consecuencia:** hoy, con acceso al fichero SQLite se lee el contenido. C-1 (SQLCipher)
-es el hito que cierra esto.
+**Consecuencia:** la base de datos de la app está cifrada en reposo (hito C-1
+completo). Sin la DEK del Keystore, la base es indistinguible de ruido.
 
 ## 7. Comportamiento ante cambio de identity key
 
@@ -224,3 +238,48 @@ confidencialidad ni el anti-replay del handshake v2 con los ataques de la lista.
 Los puntos 9 y 10 requieren confirmación física (P7). La migración a Noise_XX (X-2)
 queda como trabajo futuro con vectores oficiales; el v2 actual es el "protocolo seguro
 más sencillo" que la investigación recomienda mantener hasta entonces.
+
+## 12. Endurecimiento de seguridad de octubre 2026 (era del protocolo v3 + CONFIRM v1)
+
+Dos rondas red-team adversariales (8 de octubre de 2026; resúmenes en
+`docs/es/security/AUDITS_2026-10.md`) atacaron el handshake, el KDF, la cadena
+de tokens, la capa de negociación y las fronteras de confianza de la delegación.
+Todos los hallazgos accionables fueron corregidos; la criptografía en sí no fue
+vulnerada en ninguna ronda. Cambios desde §11:
+
+- **KDF:** el truncado directo de SHA-512 fue reemplazado por HKDF-SHA512
+  (RFC 5869) (§4 paso 4). La confusión de KDF entre versiones falla cerrada en
+  `session_confirm`.
+- **Higiene de efímeros:** el secreto efímero se borra en todas las salidas del
+  handshake (éxito, timeout, firma inválida, desconexión); el slot pendiente del
+  handshake se reserva sincrónicamente antes del primer await (sin efímeros
+  huérfanos por frames concurrentes).
+- **Endurecimiento de negociación:** los PROPOSE con `negotiationId` existente se
+  rechazan (fail-closed), con reserva **sincrónica** del ID antes del primer await
+  para que PROPOSEs concurrentes con el mismo ID no evadan el chequeo; todas las
+  firmas de negociación se anclan al `contact.sigPkHex` establecido por QR (el
+  handshake ya anclaba los HELLOs; la negociación ahora iguala).
+- **Tokens de delegación (feature flag OFF):** ligados a la sesión de transporte
+  (`sessionTag`, verificación bidireccional estricta — mata el replay entre
+  sesiones dentro de la ventana de expiración); `attenuateToken` verifica la
+  cadena antes de extenderla.
+- **ApprovalGate:** la aprobación humana queda ligada a los bytes exactos mostrados
+  en la tarjeta (snapshot profundo al registrar, hash re-verificado al aprobar,
+  timeout = denegar, un solo consumo); `approve()` re-verifica el estado de la
+  negociación sincrónicamente (sin TOCTOU); aprobaciones pendientes con tope por
+  peer y barrido de expirados; la tarjeta muestra hash, tamaño y preview del
+  documento (marcado como no confiable) para `task:summarize`.
+- **Frontera de confianza de memoria:** los facts de origen peer quedan fuera del
+  contexto de conversación del dueño (allowlist `getOwnerFacts()`); `remember_fact`
+  exige confirmación humana cuando el contexto de la herramienta contiene contenido
+  no confiable (fail-closed sin UI de confirmación).
+- **Rate limiting pre-autenticación:** máx. 5 inicios de handshake por MAC cada
+  60 s, verificado antes de generar el efímero y firmar.
+- **Operativo:** nivel mínimo de parche de seguridad Android **2025-03-05**
+  documentado (clase RCE SDP de Bluetooth bajo la capa de la app,
+  CVE-2025-0075/22403 — sin fix posible en la app).
+
+**Estado honesto:** no existe auditoría criptográfica externa; no se ha hecho
+prueba física con dos dispositivos; no se ha probado inyección de prompts
+adaptativa contra el modelo on-device. Ver `docs/es/security/AUDITS_2026-10.md`
+para las listas completas de verificado y no cubierto.

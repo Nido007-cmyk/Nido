@@ -3,6 +3,14 @@
 # NIDO — Threat model del handshake P2P
 
 > Decisión documentada ANTES de implementar (Fase Hardening, P2).
+>
+> **Nota histórica (2026-10-08):** este documento registra el diseño del
+> handshake **v2**. El protocolo vigente es HELLO v3 + CONFIRM v1 con
+> **HKDF-SHA512** como KDF de sesión (no la construcción SHA-512 directa que
+> se muestra abajo). Para el protocolo implementado, ver
+> `CRYPTO_ARCHITECTURE.md`; para las auditorías de octubre 2026, ver
+> `es/security/AUDITS_2026-10.md`. Este archivo se conserva como historia
+> de diseño.
 
 ## Actores y supuestos
 

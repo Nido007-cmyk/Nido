@@ -2,7 +2,7 @@
 
 # THREAT_MODEL.md — NIDO
 
-**Fecha:** 27 de septiembre de 2026. **Alcance:** app Android (Expo SDK 57), 100% offline,
+**Fecha:** 8 de octubre de 2026 (actualizado; original 27 de septiembre de 2026). **Alcance:** app Android (Expo SDK 57), 100% offline,
 mensajería P2P por Bluetooth RFCOMM, memoria del agente en SQLite local.
 **Fuera de alcance:** seguridad del OS Android en sí, del hardware, y de los modelos de IA
 (auditoría de pesos: ver PRIVACY_MODEL.md).
@@ -15,8 +15,8 @@ Los identificadores (T-01…) enlazan con SECURITY_ROADMAP.md.
 1. El atacante **no** tiene la clave privada de identidad de la víctima salvo que se indique.
 2. El QR se intercambia **en persona**; su integridad física es la raíz de confianza.
 3. Bluetooth clásico expone MAC estable y nombre durante el discovery a observadores pasivos.
-4. Sin SQLCipher (estado actual), todo lo que esté en SQLite está en **plaintext** ante
-   acceso al fichero.
+4. La base de datos de la app está **cifrada con SQLCipher** (DEK en el Android
+   Keystore, fail-closed): el acceso al fichero por sí solo ya no entrega plaintext.
 
 ---
 
@@ -25,11 +25,12 @@ Los identificadores (T-01…) enlazan con SECURITY_ROADMAP.md.
 - **Activo:** mensajes, contactos, memoria del agente, claves de identidad.
 - **Capacidad:** acceso físico, sin credenciales; extracción lógica/forense básica.
 - **Ataque:** conectar por USB / lector forense y copiar la base SQLite y ficheros.
-- **Mitigación actual:** `allowBackup=false`; claves en SecureStore (cifradas por Keystore).
-- **Gap:** sin SQLCipher, la base está en plaintext → **el contenido es legible**.
-- **Mitigación planificada:** C-1 (SQLCipher) + C-2 (Keystore hardware) + H-6 (biometría).
-- **Riesgo residual (hoy):** **ALTO** — un teléfono perdido expone el contenido. Tras C-1/C-2/H-6: BAJO
-  (el atacante necesita romper el bloqueo del dispositivo o el hardware).
+- **Mitigación actual:** `allowBackup=false`; claves en SecureStore (cifradas por Keystore);
+  la base de la app está cifrada con SQLCipher con DEK en el Keystore (fail-closed:
+  sin la DEK la base es indistinguible de ruido).
+- **Gap:** sin gate biométrico al abrir la app (H-6 pendiente).
+- **Riesgo residual (hoy):** **BAJO-MEDIO** — un teléfono perdido bloqueado ya no expone
+  el contenido de la base; las claves de identidad siguen protegidas por hardware. Tras H-6: BAJO.
 
 ## T-02. Teléfono robado desbloqueado
 
@@ -85,11 +86,16 @@ Los identificadores (T-01…) enlazan con SECURITY_ROADMAP.md.
 - **Capacidad:** radio activa: interceptar, modificar, reinyectar frames; presentarse como peer.
 - **Ataque:** sustituir la efímera del HELLO para forzar una clave de sesión conocida;
   alterar frames.
-- **Mitigación actual:** HELLO v2 firmado con Ed25519 ligada al QR (IMPLEMENTED + AUTOMATED TESTED);
-  la firma cubre `(pk|eph|nonce)` — sustituir el efímero invalida la firma; frames bajo
-  XSalsa20-Poly1305 (AEAD) — la manipulación se descarta en silencio.
+- **Mitigación actual:** HELLO v3 firmado + CONFIRM v1 con Ed25519 ligada al QR
+  (IMPLEMENTED + AUTOMATED TESTED); la firma cubre `(pk|eph|nonce|ts)` — sustituir
+  el efímero invalida la firma; clave de sesión vía HKDF-SHA512 (RFC 5869) sobre
+  DH efímero-efímero + nonces canónicos; frames bajo XSalsa20-Poly1305 (AEAD) —
+  la manipulación se descarta en silencio; las firmas de negociación
+  (PROPOSE/ACCEPT/COUNTER/DECLINE) se anclan al `contact.sigPkHex` establecido
+  por QR, no a la clave auto-declarada.
 - **Tests:** `nativeTransport.test.ts` (MITM: sustitución de efímero; firma forjada),
-  `adversarial.test.ts` (ciphertext corrupto, truncado, basura).
+  `adversarial.test.ts` (ciphertext corrupto, truncado, basura),
+  tests de anclaje de negociación (PROPOSE/ACCEPT con clave no anclada rechazados, fail-closed).
 - **Riesgo residual:** BAJO contra MITM de red. **No cubre** endpoint comprometido ni QR
   sustituido físicamente sin verificación de huella (ver T-08).
 
@@ -108,7 +114,9 @@ Los identificadores (T-01…) enlazan con SECURITY_ROADMAP.md.
   nonces distintos → claves distintas, duplicado persistente.
 - **Nota (red-team 2026-09-27):** un HELLO reinyectado >10 s después del cooldown sustituye
   la sesión viva por una fantasma sin liveness → DoS de disponibilidad (los frames reales
-  fallan el AEAD). Sin impacto en confidencialidad. Mitigación: H-8.
+  fallan el AEAD). Sin impacto en confidencialidad. Mitigación: H-8 — **IMPLEMENTADO**:
+  la ruta y la sesión se establecen solo tras un CONFIRM válido que prueba liveness
+  en esta conexión (`session_confirm` bajo la clave derivada).
 - **Riesgo residual:** BAJO.
 
 ## T-08. QR malicioso / sustitución física del QR
@@ -237,16 +245,66 @@ Los identificadores (T-01…) enlazan con SECURITY_ROADMAP.md.
 - **Capacidad:** proximidad radio.
 - **Ataque:** flood de HELLOs/frames basura para agotar batería o bloquear el handshake.
 - **Mitigación actual:** cooldown de handshake (10 s por peer), timeout de 15 s, frames
-  malformados descartados sin respuesta, límite de 256 KiB por frame.
+  malformados descartados sin respuesta, límite de 256 KiB por frame; **rate limit
+  de handshakes entrantes: máx. 5 inicios por MAC cada 60 s, verificado antes de
+  generar el efímero y firmar** (un dispositivo cercano no puede quemar CPU/crypto
+  de la víctima a bajo costo).
 - **Riesgo residual:** BAJO-MEDIO (el Bluetooth es inherentemente molestable por radio;
   no se gasta batería en crypto cara antes de validar barato: primero versión/tamaño,
   la firma Ed25519 solo tras lookup de contacto).
 
-## Matriz de riesgo residual actual (sin C-1/C-2/H-6)
+## T-19. Peer emparejado malicioso (ataques de negociación / delegación)
+
+- **Activo:** las autorizaciones de la víctima (grants de tareas, memoria, acciones
+  limitadas por scope).
+- **Capacidad:** emparejado por QR; claves válidas de identidad y firma; puede enviar
+  frames arbitrarios válidos a nivel protocolo; las firmas verifican (el atacante
+  principal en las rondas red-team de octubre 2026).
+- **Ataque:** swap de propuesta (re-PROPOSE del mismo `negotiationId` con scopes
+  escalados mientras la víctima lee la tarjeta); forja de negociación con clave
+  auto-generada tras compromiso de clave de sesión; replay de token de delegación
+  entre sesiones; envenenamiento de memoria del peer (`task:remember` inyectando
+  instrucciones persistentes en el contexto del agente del dueño); loopjacking
+  (sustituir el payload aprobado entre aprobación y ejecución); agotamiento de
+  memoria con aprobaciones pendientes ilimitadas.
+- **Mitigación actual (todo IMPLEMENTED + AUTOMATED TESTED, octubre 2026):**
+  PROPOSEs con `negotiationId` duplicado se rechazan fail-closed con reserva
+  **sincrónica** del ID antes del primer await (cierra el bypass por concurrencia);
+  firmas de negociación ancladas al `contact.sigPkHex` establecido por QR; tokens
+  de delegación ligados a la sesión de transporte (verificación bidireccional
+  estricta de `sessionTag`); ApprovalGate liga la aprobación humana a los bytes
+  exactos mostrados (hash re-verificado al aprobar, timeout = denegar, un solo
+  consumo, liveness re-verificado sincrónicamente, tope por peer con barrido de
+  expirados, hash/tamaño/preview del documento en la tarjeta); facts de origen
+  peer fuera del contexto de conversación del dueño y `remember_fact` exige
+  confirmación humana con contenido no confiable (fail-closed sin UI);
+  firewall de scopes limita la ejecución delegada a los tres scopes v1 de forma
+  estructural, no por prompting.
+- **Gap:** el feature flag de delegación está OFF (son rutas latentes endurecidas);
+  la tarjeta de aprobación humana sigue siendo el eslabón más débil — lo que la
+  tarjeta no muestra se confía implícitamente.
+- **Riesgo residual:** **MEDIO** (los controles del protocolo aguantan; el factor
+  humano es irreducible).
+
+## T-20. RCE en el stack Bluetooth bajo la capa de la app (pre-auth, sin interacción)
+
+- **Activo:** todo el dispositivo (y con él, todas las garantías de la capa de app).
+- **Capacidad:** radio cercana; exploits en `com.android.bluetooth`
+  (CVE-2025-0075 / CVE-2025-22403 / CVE-2025-22410: RCE use-after-free en SDP).
+- **Ataque:** comprometer el stack Bluetooth antes de cualquier emparejamiento o handshake.
+- **Mitigación actual:** ninguna posible en la app — la crypto E2E de la capa de app
+  (claves de sesión X25519 independientes) hace irrelevantes los ataques de clave
+  de enlace (KNOB, BIAS) para la confidencialidad, pero un RCE del stack compromete
+  el *dispositivo*, y ahí las garantías de la app colapsan.
+- **Mitigación operativa:** nivel mínimo de parche de seguridad Android **2025-03-05**
+  documentado (ver notas de seguridad del transporte P2P en `docs/PRIVACY.md`).
+- **Riesgo residual:** **MEDIO** (aceptado; mitigado operativamente, no en código).
+
+## Matriz de riesgo residual actual
 
 | Amenaza | Riesgo hoy | Tras roadmap CRITICAL/HIGH |
 |---|---|---|
-| T-01 teléfono perdido | ALTO | BAJO |
+| T-01 teléfono perdido | BAJO-MEDIO (C-1 hecho) | BAJO (con H-6) |
 | T-02 robado desbloqueado | ALTO | MEDIO |
 | T-03 malware local | MEDIO-ALTO | MEDIO |
 | T-04 root/hooking | ALTO | ALTO (aceptado, documentado) |
@@ -260,12 +318,19 @@ Los identificadores (T-01…) enlazan con SECURITY_ROADMAP.md.
 | T-12 supply chain | MEDIO | MEDIO-BAJO |
 | T-13 build machine | MEDIO-ALTO | MEDIO (con M-6) |
 | T-14 cuántico futuro | MEDIO | MEDIO-BAJO (con X-1) |
-| T-15 forense | ALTO (sin C-1) | MEDIO |
+| T-15 forense | MEDIO (C-1 hecho) | MEDIO |
 | T-16 shoulder surfing | MEDIO | BAJO-MEDIO |
 | T-17 notif/clipboard | MEDIO | BAJO |
 | T-18 DoS radio | BAJO-MEDIO | BAJO-MEDIO |
+| T-19 peer emparejado malicioso | MEDIO | MEDIO (factor humano irreducible) |
+| T-20 RCE stack BT (bajo la app) | MEDIO | MEDIO (operativo: nivel de parche) |
 
-**Lectura ejecutiva:** los riesgos ALTOS de hoy están todos en el eje "acceso físico al
-dispositivo" y se corrigen con el mismo paquete: **C-1 + C-2 + H-6** (cifrado en reposo,
-claves en hardware, biometría). Ese es el siguiente hito que más riesgo elimina por
-esfuerzo invertido.
+**Lectura ejecutiva:** el endurecimiento de octubre 2026 + dos rondas red-team
+movieron el riesgo residual del protocolo de forma decisiva: los controles de
+T-06/T-07/T-18/T-19 están IMPLEMENTED + AUTOMATED TESTED. El ALTO restante hoy
+es T-02 (teléfono robado **desbloqueado** — se corrige con H-6 biometría, el
+siguiente hito que más riesgo elimina por esfuerzo). T-04 (root) queda ALTO por
+diseño y documentado. T-20 se acepta operativamente (nivel de parche del
+dispositivo). Nada aquí está AUDITADO EXTERNAMENTE — ver
+`docs/es/security/AUDITS_2026-10.md` para qué cubrieron las dos rondas
+adversariales internas y qué excluyeron explícitamente.
