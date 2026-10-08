@@ -157,7 +157,14 @@ export function extractDateISO(text: string): string | null {
 }
 
 /** Calcula la próxima ocurrencia futura de un día/mes (para cumpleaños). */
-function nextOccurrence(month: number, day: number): string {
+/** M5 FIX 2026-10-07: valida que la fecha exista. "31 de febrero" retorna null
+ * en vez de hacer rollover silencioso a marzo. */
+function nextOccurrence(month: number, day: number): string | null {
+  // Validar que el día existe en ese mes (usar año bisiesto 2024 para febrero 29).
+  const testDate = new Date(2024, month, day);
+  if (testDate.getMonth() !== month || testDate.getDate() !== day) {
+    return null; // Fecha inexistente como "31 de febrero" o "32 de enero".
+  }
   const now = new Date();
   let year = now.getFullYear();
   const candidate = new Date(year, month, day, 9, 0, 0);

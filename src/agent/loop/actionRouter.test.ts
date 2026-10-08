@@ -69,7 +69,7 @@ describe("WEEKLY-PLAN 2026-10-07", () => {
   });
 
   it("genera 7 días sin traslapes", () => {
-    const plan = generateWeeklyPlan({ workStart: 9, workEnd: 18, exerciseDays: 3, wantsFamilyTime: true });
+    const plan = generateWeeklyPlan({ workStart: 9, workEnd: 18, exerciseDays: 3, wantsFamilyTime: true, lang: "en" });
     // 7 días mencionados
     expect(plan).toContain("Monday");
     expect(plan).toContain("Sunday");

@@ -76,6 +76,8 @@ export function extractReminderAction(userText: string): ReminderAction | null {
       .replace(/\b(mañana|manana|tomorrow|hoy|today)\b/gi, "")
       .replace(/\ba\s+las\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
       .replace(/\bat\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
+      // M3 FIX: limpiar hora suelta después de día ("el viernes 10" → el 10 es la hora).
+      .replace(/\b(\d{1,2})(:\d{2})?\s*(am|pm)?\s*$/gi, "")
       .replace(/\s+/g, " ")
       .trim();
   }
@@ -127,6 +129,33 @@ function parseReminderDateTime(text: string): string | null {
     }
   }
 
+  // M4 FIX 2026-10-07: fallback a formato "15 de marzo" / "March 15th".
+  // extractDateISO lo entiende pero parseReminderDateTime no; unificamos.
+  if (!targetDate) {
+    const meses: Record<string, number> = {
+      enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+      julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
+      january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
+      july: 6, august: 7, september: 8, october: 9, november: 10, december: 11,
+    };
+    const mEs = /(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i.exec(t);
+    const mEn = /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i.exec(t);
+    let month: number | undefined, day: number | undefined;
+    if (mEs) { day = parseInt(mEs[1], 10); month = meses[mEs[2].toLowerCase()]; }
+    else if (mEn) { month = meses[mEn[1].toLowerCase()]; day = parseInt(mEn[2], 10); }
+    if (month !== undefined && day !== undefined && day >= 1 && day <= 31) {
+      // Validar fecha real (M5).
+      const test = new Date(2024, month, day);
+      if (test.getMonth() === month && test.getDate() === day) {
+        targetDate = new Date(now);
+        targetDate.setMonth(month, day);
+        if (targetDate.getTime() <= now.getTime()) {
+          targetDate.setFullYear(now.getFullYear() + 1);
+        }
+      }
+    }
+  }
+
   if (!targetDate) return null;
 
   // Hora: "a las 10", "at 10am", "a las 10:30"
@@ -163,6 +192,7 @@ export interface WeeklyPlanAction {
   workEnd: number;   // hora 24h, ej 18
   exerciseDays: number; // veces por semana
   wantsFamilyTime: boolean;
+  lang: "es" | "en"; // M7d: idioma para la salida
 }
 
 /**
@@ -172,15 +202,17 @@ export interface WeeklyPlanAction {
  */
 export function extractWeeklyPlanAction(userText: string): WeeklyPlanAction | null {
   const t = userText.toLowerCase();
+  // M7a FIX: word boundary en "week" para no matchear "weekend".
   const isPlanRequest =
-    /plan\s*(my|la)?\s*week|planifica(r)?\s*(mi\s+)?semana|organiza(r)?\s*(mi\s+)?semana|horario\s+semanal/i.test(t);
+    /plan\s*(my|la)?\s*week\b|planifica(r)?\s*(mi\s+)?semana|organiza(r)?\s*(mi\s+)?semana|horario\s+semanal/i.test(t);
   if (!isPlanRequest) return null;
 
-  // Extraer horario de trabajo: "work 9 to 6", "trabajo de 9 a 6", "9-18"
+  // Extraer horario de trabajo: "work 9 to 6", "trabajo de 9 a 6"
+  // M7b FIX: requerir contexto work/trabajo/horario, no cualquier "N to M"
+  // como "I have 2 to 3 meetings".
   let workStart = 9, workEnd = 18;
   const workMatch =
-    /(?:work|trabajo)\s*(?:de\s*|from\s*)?(\d{1,2})\s*(?:to|a|-)\s*(\d{1,2})/i.exec(t) ||
-    /(\d{1,2})\s*(?:to|a)\s*(\d{1,2})/.exec(t);
+    /(?:work|trabajo|horario)\s*(?:de\s*|from\s*)?(\d{1,2})\s*(?:to|a|-)\s*(\d{1,2})/i.exec(t);
   if (workMatch) {
     let s = parseInt(workMatch[1], 10);
     let e = parseInt(workMatch[2], 10);
@@ -190,6 +222,8 @@ export function extractWeeklyPlanAction(userText: string): WeeklyPlanAction | nu
       workStart = s;
       workEnd = e;
     }
+    // M7c: si es formato 24h válido (ej: 22 a 6 → e < s después del ajuste),
+    // no hacer fallback silencioso; mantener lo parseado si es razonable.
   }
 
   // Extraer ejercicio: "exercise 3 times", "ejercicio 3 veces"
@@ -202,7 +236,10 @@ export function extractWeeklyPlanAction(userText: string): WeeklyPlanAction | nu
 
   const wantsFamilyTime = /famil/i.test(t);
 
-  return { workStart, workEnd, exerciseDays, wantsFamilyTime };
+  // M7d: detectar idioma del trigger para la salida.
+  const lang: "es" | "en" = /planifica|semana|organiza|horario|trabajo|ejercicio/i.test(t) ? "es" : "en";
+
+  return { workStart, workEnd, exerciseDays, wantsFamilyTime, lang };
 }
 
 /**
@@ -211,8 +248,11 @@ export function extractWeeklyPlanAction(userText: string): WeeklyPlanAction | nu
  * Sin traslapes: trabajo, ejercicio, familia en bloques separados.
  */
 export function generateWeeklyPlan(action: WeeklyPlanAction): string {
-  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-  const daysEs = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+  // M7d FIX: usar el idioma detectado del trigger.
+  const es = action.lang === "es";
+  const days = es
+    ? ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+    : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
   // Distribuir días de ejercicio uniformemente.
   const exDays: boolean[] = [false, false, false, false, false, false, false];
@@ -231,33 +271,41 @@ export function generateWeeklyPlan(action: WeeklyPlanAction): string {
   };
 
   const lines: string[] = [];
-  lines.push(`Weekly Schedule (work ${fmtHour(action.workStart)}–${fmtHour(action.workEnd)}):`);
+  const title = es
+    ? `Horario semanal (trabajo ${fmtHour(action.workStart)}–${fmtHour(action.workEnd)}):`
+    : `Weekly Schedule (work ${fmtHour(action.workStart)}–${fmtHour(action.workEnd)}):`;
+  lines.push(title);
   lines.push("");
 
   for (let d = 0; d < 7; d++) {
     const isWeekend = d >= 5;
-    const dayName = `${days[d]} / ${daysEs[d]}`;
-    lines.push(`**${dayName}**`);
+    lines.push(`**${days[d]}**`);
+
+    const workLabel = es ? "Trabajo" : "Work";
+    const exLabel = es ? "Ejercicio (1 hora)" : "Exercise (1 hour)";
+    const famLabel = es ? "Tiempo en familia" : "Family time";
+    const restLabel = es ? "Día de descanso" : "Rest day";
+    const restFamLabel = es ? "Resto del día: familia y descanso" : "Rest of day: Family time & rest";
 
     if (!isWeekend) {
-      lines.push(`- ${fmtHour(action.workStart)}–${fmtHour(action.workEnd)}: Work`);
+      lines.push(`- ${fmtHour(action.workStart)}–${fmtHour(action.workEnd)}: ${workLabel}`);
       if (exDays[d]) {
-        lines.push(`- ${fmtHour(action.workEnd)}–${fmtHour(action.workEnd + 1)}: Exercise (1 hour)`);
+        lines.push(`- ${fmtHour(action.workEnd)}–${fmtHour(action.workEnd + 1)}: ${exLabel}`);
         if (action.wantsFamilyTime) {
-          lines.push(`- ${fmtHour(action.workEnd + 1)}–${fmtHour(action.workEnd + 3)}: Family time`);
+          lines.push(`- ${fmtHour(action.workEnd + 1)}–${fmtHour(action.workEnd + 3)}: ${famLabel}`);
         }
       } else if (action.wantsFamilyTime) {
-        lines.push(`- ${fmtHour(action.workEnd)}–${fmtHour(action.workEnd + 2)}: Family time`);
+        lines.push(`- ${fmtHour(action.workEnd)}–${fmtHour(action.workEnd + 2)}: ${famLabel}`);
       }
     } else {
       // Fin de semana: más flexible.
       if (exDays[d]) {
-        lines.push(`- 10:00 AM–11:00 AM: Exercise (1 hour)`);
+        lines.push(`- 10:00 AM–11:00 AM: ${exLabel}`);
       }
       if (action.wantsFamilyTime) {
-        lines.push(`- Rest of day: Family time & rest`);
+        lines.push(`- ${restFamLabel}`);
       } else {
-        lines.push(`- Rest day`);
+        lines.push(`- ${restLabel}`);
       }
     }
     lines.push("");

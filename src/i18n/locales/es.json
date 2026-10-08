@@ -264,7 +264,11 @@
   },
   "negotiations": {
     "emptyTitle": "Sin negociaciones",
-    "emptyDescription": "Cuando otro NIDO te proponga colaborar, aparecerá aquí."
+    "emptyDescription": "Cuando otro NIDO te proponga colaborar, aparecerá aquí.",
+    "selectContactAndDescribe": "Selecciona un contacto y escribe la propuesta.",
+    "sendFailed": "No se pudo enviar.",
+    "peerOffline": "El contacto no está en línea. Intenta cuando esté cerca con NIDO abierto.",
+    "proposeButton": "+ Proponer colaboración"
   },
   "memorySettings": {
     "autoSummarizeLabel": "Resumen de contexto en segundo plano",

@@ -260,12 +260,20 @@ class NegotiationService {
       };
       this.sessions.set(proposal.proposalId, session);
       // Enviar vía el transporte.
-      const sent = await this.sendFn(
-        recipientPkHex.toLowerCase(),
-        "PROPOSE",
-        proposal.proposalId,
-        signed as unknown as Record<string, unknown>
-      );
+      let sent = false;
+      try {
+        sent = await this.sendFn(
+          recipientPkHex.toLowerCase(),
+          "PROPOSE",
+          proposal.proposalId,
+          signed as unknown as Record<string, unknown>
+        );
+      } catch {
+        // M2 FIX: si sendFn lanza, limpiar la sesión. Antes quedaba colgada
+        // en PROPOSED con sending:true para siempre.
+        this.sessions.delete(proposal.proposalId);
+        return { sent: false, reason: "send_threw" };
+      }
       session.sending = false;
       if (!sent) {
         this.sessions.delete(proposal.proposalId);
@@ -515,11 +523,23 @@ class NegotiationService {
     }
 
     // 2. Verificar firma del mensaje
-    const signerBytes = fromHex(signed.signerPkHex);
+    // M3 FIX: fromHex lanza ante hex malformado; descartar fail-closed en vez
+    // de propagar la excepción (que saltaría flushOutbox en el llamador).
+    let signerBytes: Uint8Array;
+    try {
+      signerBytes = fromHex(signed.signerPkHex);
+    } catch {
+      return;
+    }
     if (!verifyNegotiationMessage(signed, signerBytes)) return;
 
     // 3. Verificar que la propuesta interna también está firmada
-    const proposerBytes = fromHex(proposal.proposerPkHex);
+    let proposerBytes: Uint8Array;
+    try {
+      proposerBytes = fromHex(proposal.proposerPkHex);
+    } catch {
+      return;
+    }
     if (!verifyProposal(proposal, proposerBytes)) return;
 
     // 4. Anti-replay (nonce del mensaje)
@@ -597,7 +617,12 @@ class NegotiationService {
       return;
     }
 
-    const signerBytes = fromHex(signed.signerPkHex);
+    let signerBytes: Uint8Array;
+    try {
+      signerBytes = fromHex(signed.signerPkHex);
+    } catch {
+      return; // M3: hex malformado → descartar fail-closed
+    }
     if (!verifyNegotiationMessage(signed, signerBytes)) return;
     if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
 
@@ -624,7 +649,12 @@ class NegotiationService {
       return;
     }
 
-    const signerBytes = fromHex(signed.signerPkHex);
+    let signerBytes: Uint8Array;
+    try {
+      signerBytes = fromHex(signed.signerPkHex);
+    } catch {
+      return; // M3: hex malformado → descartar fail-closed
+    }
     if (!verifyNegotiationMessage(signed, signerBytes)) return;
     if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
 
@@ -647,7 +677,12 @@ class NegotiationService {
       return;
     }
 
-    const signerBytes = fromHex(signed.signerPkHex);
+    let signerBytes: Uint8Array;
+    try {
+      signerBytes = fromHex(signed.signerPkHex);
+    } catch {
+      return; // M3: hex malformado → descartar fail-closed
+    }
     if (!verifyNegotiationMessage(signed, signerBytes)) return;
     if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
 

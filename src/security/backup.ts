@@ -30,6 +30,7 @@ import { WAL_CHECKPOINT_SQL } from "./secureDatabase";
 import { getDatabase, closeDatabase } from "./databaseManager";
 
 const DB_NAME = "nido_memory.db";
+const KNOWLEDGE_DB_NAME = "nido_knowledge.db";
 const BACKUP_VERSION = 1;
 // SQLCipher magic header: "SQLite format 3\0" — los primeros 16 bytes
 const SQLITE_MAGIC = "SQLite format 3\0";
@@ -69,14 +70,19 @@ async function sha256File(uri: string): Promise<string | null> {
 }
 
 /**
- * Crea un backup: checkpoint WAL + copia la base cifrada + manifest.
+ * Crea un backup: checkpoint WAL + copia las bases cifradas + manifest.
  * Retorna la ruta del backup creado.
  *
  * BK-1 FIX: hace checkpoint WAL antes de copiar para que los commits
  * recientes (que viven en -wal) queden consolidados en el archivo principal.
+ * M3 FIX: incluye nido_knowledge.db además de nido_memory.db.
  */
 export async function createBackup(destinationUri: string): Promise<string> {
-  const dbPath = await getDbPath();
+  const dir = FileSystem.documentDirectory;
+  if (!dir) throw new Error("No se pudo acceder al almacenamiento.");
+  const dbPath = `${dir}SQLite/${DB_NAME}`;
+  const knowledgePath = `${dir}SQLite/${KNOWLEDGE_DB_NAME}`;
+
   const info = await FileSystem.getInfoAsync(dbPath);
   if (!info.exists) {
     throw new Error("Base de datos no encontrada.");
@@ -91,14 +97,29 @@ export async function createBackup(destinationUri: string): Promise<string> {
     // Log silencioso: el checkpoint es best-effort.
   }
 
-  // 2. Copiar la base.
+  // 2. Copiar la base principal.
   await FileSystem.copyAsync({ from: dbPath, to: destinationUri });
 
-  // 3. Crear manifest con metadata y checksum.
+  // 3. Copiar la base de conocimiento si existe (M3).
+  const knowledgeDest = destinationUri.replace(/\.db$/, ".knowledge.db");
+  let knowledgeBackedUp = false;
+  try {
+    const kInfo = await FileSystem.getInfoAsync(knowledgePath);
+    if (kInfo.exists) {
+      await FileSystem.copyAsync({ from: knowledgePath, to: knowledgeDest });
+      knowledgeBackedUp = true;
+    }
+  } catch {
+    // Best-effort: si no hay base de conocimiento, continuar.
+  }
+
+  // 4. Crear manifest con metadata y checksum.
   const manifest = {
     version: BACKUP_VERSION,
     createdAt: new Date().toISOString(),
     dbName: DB_NAME,
+    knowledgeDbName: knowledgeBackedUp ? KNOWLEDGE_DB_NAME : null,
+    knowledgeBackupPath: knowledgeBackedUp ? knowledgeDest : null,
     appVersion: "1.0.0", // TODO: leer de app.json dinámicamente
     sha256: await sha256File(destinationUri),
   };

@@ -361,10 +361,13 @@ export async function saveReminder(input: {
   dueAt?: string | null;
 }): Promise<AgentReminder> {
   // DEDUP 2026-10-07: no crear duplicado si ya existe uno pendiente similar.
+  // M6 FIX: también comparar dueAt. Si el texto coincide pero la fecha es
+  // diferente, no es duplicado (el usuario cambió la fecha).
   const existing = await listReminders(50);
   const normalized = input.text.toLowerCase().trim();
+  const dueAtNorm = input.dueAt ?? null;
   const dup = existing.find(
-    (r) => !r.done && r.text.toLowerCase().trim() === normalized
+    (r) => !r.done && r.text.toLowerCase().trim() === normalized && (r.due_at ?? null) === dueAtNorm
   );
   if (dup) return dup;
 

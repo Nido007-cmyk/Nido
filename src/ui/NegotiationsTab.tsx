@@ -161,7 +161,7 @@ export function NegotiationsTab() {
 
   const handlePropose = useCallback(async () => {
     if (!selectedPk || !description.trim()) {
-      setProposeError("Selecciona un contacto y escribe la propuesta.");
+      setProposeError(t("negotiations.selectContactAndDescribe"));
       return;
     }
     setProposeBusy(true);
@@ -169,7 +169,11 @@ export function NegotiationsTab() {
     try {
       const result = await negotiationService.proposeTo(selectedPk, description.trim());
       if (!result.sent) {
-        setProposeError(`No se pudo enviar: ${result.reason ?? "error"}`);
+        // M-U3 FIX: mensaje claro si el peer está offline, no "send_failed" críptico.
+        const msg = result.reason === "send_failed" || result.reason === "peer_offline"
+          ? t("negotiations.peerOffline")
+          : `${t("negotiations.sendFailed")} ${result.reason ?? ""}`.trim();
+        setProposeError(msg);
         return;
       }
       setShowPropose(false);
@@ -188,7 +192,7 @@ export function NegotiationsTab() {
           mascotRole="connection"
         />
         <TouchableOpacity style={styles.proposeButton} onPress={openPropose}>
-          <Text style={styles.proposeButtonText}>+ Proponer colaboración</Text>
+          <Text style={styles.proposeButtonText}>{t("negotiations.proposeButton")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -226,13 +230,13 @@ export function NegotiationsTab() {
           </View>
         ))}
       <TouchableOpacity style={styles.proposeButton} onPress={openPropose}>
-        <Text style={styles.proposeButtonText}>+ Proponer colaboración</Text>
+        <Text style={styles.proposeButtonText}>{t("negotiations.proposeButton")}</Text>
       </TouchableOpacity>
 
       <Modal visible={showPropose} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Proponer colaboración</Text>
+            <Text style={styles.modalTitle}>{t("negotiations.proposeButton").replace("+ ", "")}</Text>
             <Text style={styles.modalLabel}>Contacto:</Text>
             {contacts.map((c) => (
               <TouchableOpacity

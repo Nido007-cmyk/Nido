@@ -364,7 +364,11 @@
   },
   "negotiations": {
     "emptyTitle": "No negotiations",
-    "emptyDescription": "When another NIDO proposes collaboration, it will appear here."
+    "emptyDescription": "When another NIDO proposes collaboration, it will appear here.",
+    "selectContactAndDescribe": "Select a contact and write the proposal.",
+    "sendFailed": "Could not send.",
+    "peerOffline": "The contact is not online. Try when they're nearby with NIDO open.",
+    "proposeButton": "+ Propose collaboration"
   },
   "chatHeader": {
     "openDrawer": "Open Navigation Drawer",
