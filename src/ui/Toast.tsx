@@ -6,9 +6,13 @@
 
 import React, { useEffect, useRef } from "react";
 import { Animated, Text, StyleSheet } from "react-native";
+import { useTheme } from "./theme/ThemeContext";
+import type { Colors } from "./theme/colors";
 
 /** Simple auto-dismissing toast. Renders nothing when `message` is null. */
 export function Toast({ message, onHide }: { message: string | null; onHide: () => void }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -29,20 +33,22 @@ export function Toast({ message, onHide }: { message: string | null; onHide: () 
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    position: "absolute",
-    // Just below the screen headers (the chat header is the taller one).
-    top: 96,
-    alignSelf: "center",
-    zIndex: 10,
-    elevation: 10,
-    backgroundColor: "rgba(20,20,30,0.95)",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-  },
-  text: { color: "#eee", fontSize: 13, fontWeight: "600" },
-});
+const getStyles = (colors: Colors) =>
+  StyleSheet.create({
+    container: {
+      position: "absolute",
+      // Just below the screen headers (the chat header is the taller one).
+      top: 96,
+      alignSelf: "center",
+      zIndex: 10,
+      elevation: 10,
+      // Inverted pill: dark in daylight, light in night garden.
+      backgroundColor: colors.text.primary,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderWidth: 1,
+      borderColor: colors.border.subtle,
+    },
+    text: { color: colors.text.inverse, fontSize: 13, fontWeight: "600" },
+  });
