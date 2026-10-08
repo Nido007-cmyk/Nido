@@ -34,25 +34,4 @@ export const shadows = {
     shadowRadius: 8,
     elevation: 3,
   },
-  glowCyan: {
-    shadowColor: "#06B6D4",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  glowFrontier: {
-    shadowColor: "#8B5CF6",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  glowEmerald: {
-    shadowColor: "#10B981",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
-  },
 } as const;
