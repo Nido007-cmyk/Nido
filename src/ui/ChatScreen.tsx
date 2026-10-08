@@ -4,7 +4,7 @@
  * See LICENSE file for details.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -100,8 +100,10 @@ import { answerKnowledgeQueryWithCategory, toIdentityLocale, knowledgeSessionTit
 import { recordQueryStats, trackPeakRss, startAppMemoryTracking, QueryStats } from "../services/telemetry";
 import { recordExecution } from "../services/executionTelemetry";
 import { getMemoryInfo } from "ram-monitor";
-import { useTheme, colors, typography } from "./theme";
-import { spacing, radii, shadows } from "./theme/spacing";
+import { useTheme } from "./theme";
+import type { Colors } from "./theme/colors";
+import type { Typography } from "./theme/typography";
+import { spacing, radii } from "./theme/spacing";
 import { calmSpacing, calmRadii, calmType, calmShadows } from "./theme/calm";
 
 interface Message {
@@ -154,6 +156,7 @@ export function ChatScreen({
   onRelaunchWizard?: () => void;
 }) {
   const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -1658,7 +1661,7 @@ export function ChatScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -1760,9 +1763,8 @@ const styles = StyleSheet.create({
     ...calmShadows.none,
   },
   userBubble: {
-    backgroundColor: "#13213B",
+    // (backgroundColor/borderColor intentionally set inline at the usage site)
     borderWidth: 1,
-    borderColor: "rgba(6, 182, 212, 0.35)",
     alignSelf: "flex-end",
     borderBottomRightRadius: calmRadii.subtle,
   },
