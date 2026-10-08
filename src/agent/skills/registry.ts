@@ -66,6 +66,12 @@ export async function loadSkillAsync(name: string): Promise<Skill | null> {
   }
 }
 
+/** Nombres de skills en una línea, para el prompt con dieta (P1.3). */
+export function listSkillNamesForPrompt(): string {
+  const skills = listSkills();
+  return skills.length === 0 ? "(ninguna)" : skills.map((s) => s.name).join(", ");
+}
+
 /** Bloque para el prompt del sistema del agente (solo built-in, síncrono). */
 export function describeSkillsForPrompt(): string {
   const skills = listSkills();

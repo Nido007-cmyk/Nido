@@ -155,8 +155,34 @@ export async function dispatchToolCall(
  * El prompt del sistema con las 24 herramientas debe mantenerse acotado:
  * con n_ctx pequeños el prompt desbordaba antes de generar
  * ("Context is full", T-contexto-2026-10-06).
+ *
+ * P1.3-2026-10-08: intent-gated lists. The full list costs ~360 tokens
+ * every turn; most intents need only a few. Pass the agent intent to get
+ * the trimmed list; omit it for the full list (backwards compatible).
  */
-export function describeToolsForPrompt(): string {
+export function describeToolsForPrompt(intent?: "recordar" | "actuar" | "conversar"): string {
+  const tools = intent ? LOCAL_TOOLS.filter((t) => TOOLS_BY_INTENT[intent].includes(t.name)) : LOCAL_TOOLS;
+  return tools.map(describeToolCompact).join("\n");
+}
+
+/**
+ * P1.3-2026-10-08: compact one-line tool rendering for the system prompt.
+ * Keeps the full description (the model needs it to choose) plus param
+ * names, types and required markers (the T-contexto-2026-10-06 contract:
+ * "conserva la información necesaria para llamadas correctas") — but
+ * drops the verbose per-param prose descriptions, which were the bulk of
+ * the ~1,790-token old prompt. The dispatcher still validates full args
+ * at call time.
+ */
+function describeToolCompact(t: ToolDefinition): string {
+  const params = Object.entries(t.parameters)
+    .map(([n, p]) => `${n}${p.required ? "*" : ""}:${p.type}`)
+    .join(", ");
+  return `- ${t.name}${params ? `(${params})` : ""}: ${t.description}`;
+}
+
+/** Full rendering (with per-param docs) — kept for debugging/inspection, not the prompt. */
+export function describeToolsForPromptVerbose(): string {
   return LOCAL_TOOLS.map((t) => {
     const params = Object.entries(t.parameters)
       .map(([n, p]) => `${n}${p.required ? "*" : ""}:${p.type}: ${p.description}`)
@@ -164,3 +190,43 @@ export function describeToolsForPrompt(): string {
     return `- ${t.name}: ${t.description}${params ? ` (${params})` : ""}`;
   }).join("\n");
 }
+
+/**
+ * P1.3-2026-10-08: which tools each intent may use. Explicit allowlists
+ * (not denylists) so a new tool never leaks into a trimmed prompt by
+ * accident. If LOCAL_TOOLS gains a tool, add it here deliberately.
+ */
+const TOOLS_BY_INTENT: Record<"recordar" | "actuar" | "conversar", string[]> = {
+  // Memory intent: the hint already says "usa remember_fact".
+  recordar: ["remember_fact"],
+  // Action intent: everything that does something in the world or reads
+  // local data. remember_fact is reachable via conversar if needed.
+  actuar: [
+    "create_reminder",
+    "device_time",
+    "open_app",
+    "calculate",
+    "convert_units",
+    "create_calendar_event",
+    "list_calendar_events",
+    "find_contact",
+    "place_call",
+    "send_sms",
+    "read_picked_file",
+    "use_skill",
+    "analyze_table",
+    "save_note",
+    "list_notes",
+    "read_note",
+    "nido_send_message",
+    "nido_read_inbox",
+    "nido_my_code",
+    "nido_pair",
+    "nido_review_tasks",
+    "nido_approve_task",
+    "nido_reject_task",
+  ],
+  // Chat intent: the 3 most common tools; the hint says tools only "si
+  // aportan algo concreto".
+  conversar: ["device_time", "calculate", "remember_fact"],
+};

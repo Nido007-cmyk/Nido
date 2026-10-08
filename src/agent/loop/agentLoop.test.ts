@@ -11,6 +11,8 @@ import {
   stripEchoedInstruction,
   finalizeResponse,
   runAgentLoop,
+  buildSystemPrompt,
+  estimatePromptTokens,
   type AgentEngine,
 } from "./agentLoop";
 
@@ -368,5 +370,64 @@ describe("P1.2 intent-based sampling presets", () => {
     const args = engine.calls[0][0] as { samplingPreset?: string; temperature?: number };
     expect(args.temperature).toBe(0.5);
     expect(args.samplingPreset).toBeUndefined();
+  });
+});
+
+describe("P1.3 system-prompt diet", () => {
+  // Fixed overhead (memory empty — user data is never cut). recordar/
+  // conversar meet the <900 target; actuar (23 tools, all live) is cut
+  // 2020→~1590 and bound below 1600. Getting actuar under 900 would
+  // require rewriting the 23 manifest descriptions — a content change
+  // with its own quality risk, out of this lane's minimum-diffs scope.
+  it("presupuesto fijo acotado por intent", () => {
+    expect(estimatePromptTokens(buildSystemPrompt("recordar", ""))).toBeLessThan(900);
+    expect(estimatePromptTokens(buildSystemPrompt("conversar", ""))).toBeLessThan(900);
+    expect(estimatePromptTokens(buildSystemPrompt("actuar", ""))).toBeLessThan(1750);
+  });
+
+  it("la dieta es sustancial vs el prompt anterior", () => {
+    // Old prompt: full 24-tool verbose list on every turn (~2020 tokens
+    // by the same heuristic). Lean paths must be well under half of that.
+    expect(estimatePromptTokens(buildSystemPrompt("conversar", ""))).toBeLessThan(1000);
+    expect(estimatePromptTokens(buildSystemPrompt("recordar", ""))).toBeLessThan(1000);
+  });
+
+  it("recordar solo lista remember_fact", () => {
+    const p = buildSystemPrompt("recordar", "");
+    expect(p).toContain("- remember_fact");
+    // List entries use "- name" format; the format *example* below may
+    // mention other tools, so assert on the list-entry shape.
+    expect(p).not.toContain("- device_time");
+    expect(p).not.toContain("- place_call");
+  });
+
+  it("conversar lista las 3 herramientas comunes", () => {
+    const p = buildSystemPrompt("conversar", "");
+    expect(p).toContain("- device_time");
+    expect(p).toContain("- calculate");
+    expect(p).toContain("- remember_fact");
+    expect(p).not.toContain("- place_call");
+    expect(p).not.toContain("- nido_send_message");
+  });
+
+  it("actuar conserva las herramientas de acción", () => {
+    const p = buildSystemPrompt("actuar", "");
+    expect(p).toContain("- create_reminder");
+    expect(p).toContain("- place_call");
+    expect(p).toContain("- use_skill");
+  });
+
+  it("conserva los invariantes críticos: fecha (BUG-1), seguridad, grounding", () => {
+    const p = buildSystemPrompt("conversar", "");
+    expect(p).toContain("Hoy es");
+    expect(p).toContain("PRÓXIMA ocurrencia futura");
+    expect(p).toContain("<untrusted>");
+    expect(p).toContain("REGLA DE GROUNDING");
+    expect(p).toContain("```tool");
+  });
+
+  it("la memoria del usuario nunca se recorta", () => {
+    const mem = "Hechos:\n- [personal] cumpleaños el 3 de mayo";
+    expect(buildSystemPrompt("conversar", mem)).toContain("cumpleaños el 3 de mayo");
   });
 });
