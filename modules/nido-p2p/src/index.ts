@@ -38,6 +38,15 @@ interface NidoP2PNativeModule {
   sendFrame(address: string, base64: string): Promise<void>;
   disconnect(address: string): Promise<void>;
   shutdown(): Promise<void>;
+  /**
+   * DIAG-2026-10-07: estado del servidor RFCOMM (acept loop vivo/muerto,
+   * conexiones aceptadas). Síncrona en el lado nativo.
+   */
+  getServerStatus(): {
+    alive: boolean;
+    acceptedCount: number;
+    lastAcceptAt: number;
+  };
 }
 
 const native = requireNativeModule<NidoP2PNativeModule>("NidoP2P");
@@ -94,6 +103,19 @@ export function disconnect(address: string): Promise<void> {
 
 export function shutdown(): Promise<void> {
   return native.shutdown();
+}
+
+/**
+ * DIAG-2026-10-07: estado del servidor RFCOMM nativo (accept loop vivo/muerto,
+ * conexiones aceptadas, última aceptación). El nativo la expone como función
+ * síncrona; si algo falla del lado nativo, Kotlin devuelve {alive:false,...}.
+ */
+export function getServerStatus(): {
+  alive: boolean;
+  acceptedCount: number;
+  lastAcceptAt: number;
+} {
+  return native.getServerStatus();
 }
 
 /** Suscribe un listener a un evento nativo; devuelve la función para desuscribir. */
