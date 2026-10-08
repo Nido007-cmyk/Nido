@@ -51,11 +51,28 @@ export function NegotiationsTab() {
     setSessions(negotiationService.listSessions());
   }, []);
 
+  // M-U1 FIX 2026-10-07: mapa pkHex -> nombre para mostrar nombres en vez de hex.
+  const [contactNames, setContactNames] = useState<Map<string, string>>(new Map());
+
   useEffect(() => {
     const unsubscribe = negotiationService.subscribe((event: NegotiationEvent) => {
       // Cualquier evento refresca la lista
       refresh();
     });
+    // Cargar nombres de contactos para resolución pkHex -> nombre.
+    (async () => {
+      try {
+        const { listContacts } = await import("../p2p/store");
+        const list = await listContacts();
+        const map = new Map<string, string>();
+        for (const c of list) {
+          map.set(c.pkHex.toLowerCase(), c.name);
+          // También indexar por signing key por si acaso.
+          if ((c as any).sigPkHex) map.set((c as any).sigPkHex.toLowerCase(), c.name);
+        }
+        setContactNames(map);
+      } catch { /* best-effort */ }
+    })();
     // Limpieza periódica de sesiones terminales
     const interval = setInterval(() => {
       negotiationService.pruneTerminal();
@@ -183,7 +200,7 @@ export function NegotiationsTab() {
         <NegotiationCard
           key={session.negotiationId}
           proposal={session.proposal}
-          peerName={session.peerPkHex.slice(0, 8)}
+          peerName={contactNames.get(session.peerPkHex.toLowerCase()) ?? session.peerPkHex.slice(0, 8)}
           peerPkShort={session.peerPkHex.slice(0, 16)}
           onAccept={() => handleAccept(session)}
           onDecline={() => handleDecline(session)}

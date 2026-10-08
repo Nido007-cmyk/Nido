@@ -462,13 +462,23 @@ export async function runAgentLoop(
       text: reminderAction.text,
       dueAt: reminderAction.dueAt,
     });
+    // M10 FIX 2026-10-07: programar notificación del sistema (antes solo el tool
+    // create_reminder lo hacía; la vía determinística no avisaba).
+    let aviso = "";
+    if (reminderAction.dueAt) {
+      try {
+        const { scheduleReminderNotification } = await import("../../notify/notifications");
+        const ok = await scheduleReminderNotification(reminder.id, reminder.text, new Date(reminderAction.dueAt));
+        if (ok) aviso = " Te llegará un aviso aunque NIDO esté cerrado.";
+      } catch { /* sin notificaciones: el recordatorio sigue guardado */ }
+    }
     // CALENDAR-FIX 2026-10-07: mostrar fecha si se parseó, ser honesto si no.
     const dateStr = reminderAction.dueAt
       ? ` el ${new Date(reminderAction.dueAt).toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })} a las ${new Date(reminderAction.dueAt).toLocaleTimeString("es", { hour: "numeric", minute: "2-digit" })}`
       : "";
     return {
       response: dateStr
-        ? `Listo, te recordaré${dateStr}: «${reminder.text}».`
+        ? `Listo, te recordaré${dateStr}: «${reminder.text}».${aviso}`
         : `Listo, guardé: «${reminder.text}». ¿Para cuándo quieres que te avise?`,
       intent,
       toolUses: [
@@ -516,10 +526,15 @@ export async function runAgentLoop(
         category: "general",
         source: "user",
       });
-      await saveReminder({
+      const reminder = await saveReminder({
         text: `${person.name}: ${userText.trim()}`,
         dueAt,
       });
+      // M10 FIX: programar notificación del sistema.
+      try {
+        const { scheduleReminderNotification } = await import("../../notify/notifications");
+        await scheduleReminderNotification(reminder.id, reminder.text, new Date(dueAt));
+      } catch { /* best-effort */ }
       extraNote = " También guardé la fecha como recordatorio.";
     }
     return {
@@ -548,10 +563,15 @@ export async function runAgentLoop(
     let reminderNote = "";
     const dueAt = extractDateISO(extraction.content);
     if (dueAt) {
-      await saveReminder({
+      const reminder = await saveReminder({
         text: extraction.content,
         dueAt,
       });
+      // M10 FIX: programar notificación del sistema.
+      try {
+        const { scheduleReminderNotification } = await import("../../notify/notifications");
+        await scheduleReminderNotification(reminder.id, reminder.text, new Date(dueAt));
+      } catch { /* best-effort */ }
       reminderNote = " También te crearé un recordatorio para esa fecha.";
     }
     // Retornar directamente con confirmación honesta. El trace indica
