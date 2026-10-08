@@ -186,6 +186,10 @@ function makeFake() {
     shutdown: async () => {
       calls.push("shutdown");
     },
+    // BUG-6-2026-10-07: dispositivos emparejados a nivel OS.
+    getBondedDevices: async () => [
+      { address: "AA:BB:CC:DD:EE:FF", name: "Galaxy Tab A9+ 5G" },
+    ],
     addListener: ((event: string, fn: Listener) => {
       const arr = listeners.get(event) ?? [];
       arr.push(fn);
@@ -1339,5 +1343,41 @@ describe("DIAG-2026-10-07: estado del servidor RFCOMM nativo", () => {
     await t.startDiscovery(makeEvents().events);
     expect(f.calls).toContain("startServer");
     await t.stopDiscovery();
+  });
+});
+
+describe("BUG-6-2026-10-07: MACs emparejadas a nivel OS en el barrido", () => {
+  it("getBondedMacs devuelve las MACs normalizadas a mayúsculas", async () => {
+    const f = makeFake();
+    const t = makeTransport(f.fake);
+    expect(await t.getBondedMacs()).toEqual(["AA:BB:CC:DD:EE:FF"]);
+  });
+
+  it("getBondedMacs filtra entradas inválidas y deduplica", async () => {
+    const f = makeFake();
+    (f.fake as NidoP2PBindings).getBondedDevices = async () => [
+      { address: "aa:bb:cc:dd:ee:ff", name: "Tablet" },
+      { address: "AA:BB:CC:DD:EE:FF", name: "Duplicado" },
+      { address: "no-es-mac", name: "Basura" },
+      { address: "", name: null },
+    ];
+    const t = makeTransport(f.fake);
+    expect(await t.getBondedMacs()).toEqual(["AA:BB:CC:DD:EE:FF"]);
+  });
+
+  it("getBondedMacs devuelve [] si el binding falla (best-effort)", async () => {
+    const f = makeFake();
+    (f.fake as NidoP2PBindings).getBondedDevices = async () => {
+      throw new Error("BT apagado");
+    };
+    const t = makeTransport(f.fake);
+    expect(await t.getBondedMacs()).toEqual([]);
+  });
+
+  it("el fake sin getBondedDevices no compila: el binding es obligatorio (regression)", () => {
+    // Si alguien quita getBondedDevices del puente JS, este test falla en tsc
+    // porque NidoP2PBindings lo exige.
+    const f = makeFake();
+    expect(typeof f.fake.getBondedDevices).toBe("function");
   });
 });

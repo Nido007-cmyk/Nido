@@ -67,6 +67,11 @@ export interface P2PTransport {
    * no expone el diagnóstico.
    */
   readServerStatus?(): { alive: boolean; acceptedCount: number; lastAcceptAt: number } | null;
+  /**
+   * BUG-6-2026-10-07: MACs de dispositivos emparejados a nivel OS (opcional:
+   * solo transportes con módulo nativo real). [] si no disponible.
+   */
+  getBondedMacs?(): Promise<string[]>;
   /** Conecta con un peer descubierto (por su alias/MAC) y hace el handshake. */
   connect(alias: string): Promise<P2PPeerInfo>;
   /** Envía un frame ya cifrado al peer conectado. */

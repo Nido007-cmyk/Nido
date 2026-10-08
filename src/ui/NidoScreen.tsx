@@ -48,6 +48,8 @@ import {
   buildP2PIdentityRecoveryViewModel,
   routeIdentityBootstrapError,
 } from "./p2pIdentityRecovery";
+/** BUG-6-2026-10-07: extraer MAC de alias "nombre (MAC)" para deduplicar. */
+import { extractMac } from "../p2p/nativeTransport";
 
 type Tab = "chats" | "contactos" | "enlace" | "negociaciones" | "packs";
 
@@ -547,7 +549,34 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           setNotice(t("nido.waitingForPeer", { name }));
           return;
         }
-        const candidates = nearby;
+        const candidates = await (async () => {
+          // BUG-6-2026-10-07: el barrido solo probaba MACs descubiertas, pero
+          // la app nunca pide visibilidad Bluetooth, así que la tablet peer
+          // jamás aparecía en "nearby" y el barrido probaba ~20 aparatos
+          // ajenos sin llegar nunca a la receptora (silencio total en ella).
+          // Las tablets sí están emparejadas a nivel OS, así que las MACs
+          // emparejadas van PRIMERO (no requieren discovery) y las nearby
+          // después, deduplicadas por MAC.
+          const bonded: string[] = [];
+          try {
+            const bondedMacs = await mRef.current.getBondedMacs();
+            for (const m of bondedMacs) bonded.push(m);
+          } catch {
+            /* best-effort: seguir solo con nearby */
+          }
+          const seen = new Set(bonded.map((m) => m.toUpperCase()));
+          const out: string[] = [...bonded];
+          for (const alias of nearby) {
+            const mac = extractMac(alias)?.toUpperCase();
+            if (mac && !seen.has(mac)) {
+              seen.add(mac);
+              out.push(alias);
+            } else if (!mac) {
+              out.push(alias);
+            }
+          }
+          return out;
+        })();
         if (candidates.length === 0) {
           throw new Error(t("nido.noNearbyForPaired"));
         }

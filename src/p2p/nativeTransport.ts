@@ -90,6 +90,14 @@ export interface NidoP2PBindings {
    * desde la destrucción terminal del messenger.
    */
   shutdown(): Promise<void>;
+  /**
+   * BUG-6-2026-10-07: dispositivos emparejados a nivel OS (no requieren
+   * discovery). El barrido de handleConnectPaired solo probaba MACs
+   * descubiertas; como la app nunca pide visibilidad Bluetooth, la tablet
+   * peer jamás aparecía en "nearby" y el barrido probaba ~20 aparatos
+   * ajenos sin llegar nunca a la receptora (que no mostraba nada).
+   */
+  getBondedDevices(): Promise<Array<{ address: string; name: string | null }>>;
   addListener(event: "onDeviceFound", fn: (d: { address: string; name: string | null }) => void): () => void;
   addListener(event: "onDiscoveryFinished", fn: () => void): () => void;
   addListener(
@@ -617,6 +625,29 @@ export class NidoBluetoothTransport implements P2PTransport {
     const mac = this.pkToMac.get(peerPkHex.toLowerCase());
     if (!mac) throw new Error("Peer no conectado por Bluetooth.");
     await this.bt().sendFrame(mac, encodeBase64(frame));
+  }
+
+  /**
+   * BUG-6-2026-10-07: MACs de dispositivos emparejados a nivel OS.
+   * Best-effort: si el binding falla, devuelve [] (el barrido sigue
+   * funcionando solo con nearby). Normaliza a mayúsculas para deduplicar.
+   */
+  async getBondedMacs(): Promise<string[]> {
+    try {
+      const devices = await this.bt().getBondedDevices();
+      const seen = new Set<string>();
+      const out: string[] = [];
+      for (const d of devices ?? []) {
+        const mac = (d?.address ?? "").toUpperCase();
+        if (/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(mac) && !seen.has(mac)) {
+          seen.add(mac);
+          out.push(mac);
+        }
+      }
+      return out;
+    } catch {
+      return [];
+    }
   }
 
   async disconnect(peerPkHex: string): Promise<void> {

@@ -396,6 +396,18 @@ export class NidoMessenger {
   }
 
   /**
+   * BUG-6-2026-10-07: MACs emparejadas a nivel OS. [] si el transporte no
+   * lo soporta o falla (best-effort; el barrido sigue con nearby).
+   */
+  async getBondedMacs(): Promise<string[]> {
+    try {
+      return (await this.transport.getBondedMacs?.()) ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * BUG-5-2026-10-06: desconecta un peer por su pkHex. Necesario para el
    * barrido de MACs en NidoScreen: si el handshake tiene éxito pero es
    * otro peer (no el contacto paired objetivo), hay que cerrar esa

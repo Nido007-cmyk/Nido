@@ -98,6 +98,7 @@ function makeFake() {
     startDiscovery: async () => {},
     stopDiscovery: async () => {},
     startServer: async () => {},
+    getBondedDevices: async () => [],
     stopServer: async () => {},
     connect: async (address: string) => {
       emit("onConnected", { address, name: "Peer", incoming: false } as never);
