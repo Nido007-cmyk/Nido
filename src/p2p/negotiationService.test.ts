@@ -330,6 +330,84 @@ describe("NegotiationService: routing y state machine", () => {
     expect(events.length).toBe(eventsAfterV1);
   });
 
+  it("R10: dos PROPOSE concurrentes con el mismo negotiationId → solo uno se procesa (reserva sincrónica)", async () => {
+    // El pipeline real despacha frames con void (sin await entre frames):
+    // dos PROPOSE con el mismo ID llegan "a la vez". Con el chequeo-then-set
+    // anterior, ambos pasaban el has() antes de que cualquiera hiciera set().
+    // El resolver con delay real fuerza el yield entre chequeo y set, como el
+    // puente nativo de expo-sqlite en producción.
+    negotiationService.setPeerSigPkResolver(async (peerPkHex) => {
+      await new Promise((r) => setTimeout(r, 20));
+      return peerPkHex.toLowerCase() === alicePkHex.toLowerCase()
+        ? alicePkHex
+        : null;
+    });
+
+    const v1 = createProposal(
+      aliceKeys.secretKey,
+      alicePkHex,
+      bobPkHex,
+      "Ayúdame a organizar mis notas",
+      ["read:notes"],
+      {},
+      300000
+    );
+    const signedV1 = signNegotiationMessage(
+      aliceKeys.secretKey,
+      alicePkHex,
+      "PROPOSE",
+      v1.proposalId,
+      v1
+    );
+    // v2 maliciosa: mismo negotiationId, nonce fresco, scopes escalados.
+    const v2 = createProposal(
+      aliceKeys.secretKey,
+      alicePkHex,
+      bobPkHex,
+      "Ejecuta lo que sea",
+      ["send:message"],
+      {},
+      300000
+    );
+    const signedV2 = signNegotiationMessage(
+      aliceKeys.secretKey,
+      alicePkHex,
+      "PROPOSE",
+      v2.proposalId,
+      v2
+    );
+
+    // Disparo concurrente sin await intermedio (como el dispatch void real).
+    // Nota: el servicio es singleton y las suscripciones de tests previos se
+    // acumulan (ver beforeEach): cada evento se pushea N veces (mismo objeto).
+    // Se deduplica por identidad de objeto.
+    const seenBefore = new Set(events);
+    const p1 = negotiationService.handleEnvelope(
+      makeEnvelope("PROPOSE", "neg-r10", signedV1) as any
+    );
+    const p2 = negotiationService.handleEnvelope(
+      makeEnvelope("PROPOSE", "neg-r10", signedV2) as any
+    );
+    await Promise.all([p1, p2]);
+
+    // Solo una sesión y una sola evaluación de política para este ID: el
+    // segundo PROPOSE concurrente fue rechazado por la reserva sincrónica.
+    // (El tipo de evento depende del outcome del policy: accepted,
+    // ask_required, declined... todos llevan la sesión.)
+    const sessions = negotiationService
+      .listSessions()
+      .filter((s) => s.negotiationId === "neg-r10");
+    expect(sessions).toHaveLength(1);
+    const freshUnique = [
+      ...new Set(events.filter((e) => !seenBefore.has(e))),
+    ].filter(
+      (e) =>
+        (e as { session?: { negotiationId?: string } }).session
+          ?.negotiationId === "neg-r10"
+    );
+    expect(freshUnique).toHaveLength(1);
+  });
+
   it("R3: PROPOSE firmado con clave no anclada al QR se ignora", async () => {
     // Atacante con la clave de sesión pero sin la Ed25519 del peer: firma
     // con una clave fresca. La firma verifica contra la clave auto-declarada,

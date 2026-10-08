@@ -135,6 +135,14 @@ export type NegotiationSendFn = (
 class NegotiationService {
   private static instance: NegotiationService | null = null;
   private sessions = new Map<string, NegotiationSession>();
+  /**
+   * R10 FIX 2026-10-08: IDs de negociación con un PROPOSE en vuelo.
+   * La reserva es sincrónica (has/add sin await entre ambos) y se libera en
+   * finally. Sin esto, dos PROPOSE concurrentes con el mismo ID derrotaban
+   * deterministicamente el rechazo de duplicados de R2 (el pipeline de
+   * frames entrantes es concurrente y hay awaits entre el chequeo y el set).
+   */
+  private inflightProposals = new Set<string>();
   private handlers = new Set<NegotiationEventHandler>();
   private myPkHex: string | null = null;
   private sendFn: NegotiationSendFn | null = null;
@@ -601,70 +609,88 @@ class NegotiationService {
     // 4. Anti-replay (nonce del mensaje)
     if (!globalReplayProtection.checkAndRecord(signed.nonce)) return;
 
-    // R2 FIX 2026-10-08: el negotiationId lo elige el proponente. Sin este
-    // cheque, un segundo PROPOSE con el mismo ID (nonce fresco, firma válida)
-    // reemplazaría silenciosamente la propuesta que el usuario está revisando
-    // (proposal swap: aprueba la v1, se ejecuta la v2). Fail-closed: se
-    // rechaza el duplicado; un proponente legítimo usa un ID nuevo.
-    if (this.sessions.has(negotiationId)) return;
+    // R10 FIX 2026-10-08: reserva SINCRÓNICA del negotiationId ANTES del
+    // primer await (reemplaza el chequeo-then-set de R2). El chequeo anterior
+    // era deterministicamente derrotable: el pipeline de frames entrantes es
+    // concurrente (nativeTransport.ts y messenger.ts despachan con void, sin
+    // await) y entre el has() y el set() hay dos awaits (isPinnedSigner →
+    // puente nativo de expo-sqlite, y processIncomingProposal). Dos PROPOSE
+    // con el mismo ID enviados seguidos pasaban ambos el chequeo y el último
+    // en escribir ganaba. Entre has() y add() no hay ningún await: la
+    // reserva es atómica respecto al event loop, igual que el patrón
+    // "hello-starting" de R7. Fail-closed: duplicado (en mapa o en vuelo) →
+    // se ignora; un proponente legítimo usa un ID nuevo.
+    if (
+      this.sessions.has(negotiationId) ||
+      this.inflightProposals.has(negotiationId)
+    ) {
+      return;
+    }
+    this.inflightProposals.add(negotiationId);
+    try {
+      // R3: anclar la firma a la identidad verificada por QR (ver isPinnedSigner).
+      if (!(await this.isPinnedSigner(env.from, signed.signerPkHex))) return;
 
-    // R3: anclar la firma a la identidad verificada por QR (ver isPinnedSigner).
-    if (!(await this.isPinnedSigner(env.from, signed.signerPkHex))) return;
+      // 5. Expiry
+      if (isExpired(proposal)) {
+        // Ya expiró al llegar: se marca como expirada
+        // P2P-2 FIX 2026-10-07: usar env.from (clave de identidad X25519 del transporte)
+        // en vez de proposal.proposerPkHex (clave de firma Ed25519). Las sesiones de
+        // transporte están indexadas por clave de identidad.
+        const session: NegotiationSession = {
+          negotiationId,
+          proposalId: proposal.proposalId,
+          peerPkHex: env.from.toLowerCase(),
+          state: "EXPIRED",
+          proposal,
+          updatedAt: Date.now(),
+        };
+        this.sessions.set(negotiationId, session);
+        this.emit({ type: "expired", session });
+        return;
+      }
 
-    // 5. Expiry
-    if (isExpired(proposal)) {
-      // Ya expiró al llegar: se marca como expirada
-      // P2P-2 FIX 2026-10-07: usar env.from (clave de identidad X25519 del transporte)
-      // en vez de proposal.proposerPkHex (clave de firma Ed25519). Las sesiones de
-      // transporte están indexadas por clave de identidad.
+      // 6. Procesar via el bridge (policy evaluation → AUTO/ASK/DENY)
+      const outcome: ProposalOutcome = await processIncomingProposal(
+        proposal,
+        proposerBytes,
+        async () => {
+          // queueFn: por ahora retorna un taskId sintético.
+          // La integración con el Approval Inbox real se hace en FASE 3.
+          return `p2p-${proposal.proposalId}`;
+        }
+      );
+
       const session: NegotiationSession = {
         negotiationId,
         proposalId: proposal.proposalId,
+        // P2P-2 FIX: clave de identidad del transporte (env.from), no la de firma.
         peerPkHex: env.from.toLowerCase(),
-        state: "EXPIRED",
+        state: "PROPOSED",
         proposal,
         updatedAt: Date.now(),
       };
       this.sessions.set(negotiationId, session);
-      this.emit({ type: "expired", session });
-      return;
-    }
 
-    // 6. Procesar via el bridge (policy evaluation → AUTO/ASK/DENY)
-    const outcome: ProposalOutcome = await processIncomingProposal(
-      proposal,
-      proposerBytes,
-      async () => {
-        // queueFn: por ahora retorna un taskId sintético.
-        // La integración con el Approval Inbox real se hace en FASE 3.
-        return `p2p-${proposal.proposalId}`;
+      if (outcome.action === "auto_accept") {
+        session.state = "ACCEPTED";
+        session.updatedAt = Date.now();
+        this.emit({ type: "accepted", session });
+      } else if (outcome.action === "queued_for_approval") {
+        // La UI debe mostrar ApprovalCard
+        this.emit({ type: "ask_required", session, taskId: outcome.taskId });
+        // También se emite proposal_received para que la UI muestre el contexto
+        this.emit({ type: "proposal_received", session });
+      } else {
+        session.state = "DECLINED";
+        session.updatedAt = Date.now();
+        this.emit({ type: "declined", session, reason: outcome.reason });
       }
-    );
-
-    const session: NegotiationSession = {
-      negotiationId,
-      proposalId: proposal.proposalId,
-      // P2P-2 FIX: clave de identidad del transporte (env.from), no la de firma.
-      peerPkHex: env.from.toLowerCase(),
-      state: "PROPOSED",
-      proposal,
-      updatedAt: Date.now(),
-    };
-    this.sessions.set(negotiationId, session);
-
-    if (outcome.action === "auto_accept") {
-      session.state = "ACCEPTED";
-      session.updatedAt = Date.now();
-      this.emit({ type: "accepted", session });
-    } else if (outcome.action === "queued_for_approval") {
-      // La UI debe mostrar ApprovalCard
-      this.emit({ type: "ask_required", session, taskId: outcome.taskId });
-      // También se emite proposal_received para que la UI muestre el contexto
-      this.emit({ type: "proposal_received", session });
-    } else {
-      session.state = "DECLINED";
-      session.updatedAt = Date.now();
-      this.emit({ type: "declined", session, reason: outcome.reason });
+    } finally {
+      // Liberar la reserva. Si se guardó sesión, sessions.has() sigue
+      // rechazando duplicados; si la validación falló y no se guardó nada,
+      // el ID queda libre (no hay propuesta que proteger).
+      this.inflightProposals.delete(negotiationId);
     }
   }
 
