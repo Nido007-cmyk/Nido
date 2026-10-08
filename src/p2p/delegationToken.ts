@@ -39,6 +39,16 @@ export interface TokenRootPayload {
   scopes: TaskScope[];
   issuedAt: number; // unix ms
   expiresAt: number; // unix ms
+  /**
+   * Optional binding to the transport session that will carry the
+   * TASK_REQUEST (the `ackSessionTag` derived in the handshake, 128 hex
+   * chars). When present, the verifier MUST supply the tag of its live
+   * session and it must match, or verification fails closed. This
+   * prevents a token captured at rest from being replayed against a
+   * *different* session with the same peer inside its 15-minute window.
+   * (Security review 2026-10-08, §3.2: cross-session replay.)
+   */
+  sessionTag?: string;
 }
 
 export interface TokenCaveat {
@@ -61,6 +71,7 @@ interface WireToken {
 }
 
 const HEX64_RE = /^[0-9a-f]{64}$/i;
+const HEX128_RE = /^[0-9a-f]{128}$/i;
 const UUID_V4_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -135,6 +146,13 @@ export function issueDelegationToken(
     issuedAt: now,
     expiresAt: root.expiresAt,
   };
+  // Session binding is opt-in at issuance; when bound, the tag is part
+  // of the signed root payload (canonical JSON), so it cannot be
+  // stripped or swapped without breaking the chain.
+  if (root.sessionTag !== undefined) {
+    if (!HEX128_RE.test(root.sessionTag)) throw new Error("bad sessionTag");
+    clean.sessionTag = root.sessionTag.toLowerCase();
+  }
   const link = signLink(signerSecretKey, "GENESIS", clean);
   const wire: WireToken = { v: 1, chain: [link] };
   return b64urlEncode(canonical(wire));
@@ -143,6 +161,11 @@ export function issueDelegationToken(
 /**
  * Append an attenuation caveat. Called by NIDO-A before sending.
  * Caveats can only NARROW (smaller limits, later notBefore).
+ *
+ * Verify-first: the chain is verified against the signer's key BEFORE
+ * extending it. Without this, a caller passing an attacker-crafted (or
+ * corrupted) token would get back a "validly signed" extension of
+ * garbage. Fail-closed: any verification failure throws.
  */
 export function attenuateToken(
   signerSecretKey: Uint8Array,
@@ -151,6 +174,24 @@ export function attenuateToken(
 ): string {
   const wire = parseWire(token);
   if (!wire) throw new Error("unparseable token");
+  let issuerPk: Uint8Array;
+  try {
+    issuerPk = nacl.sign.keyPair.fromSecretKey(signerSecretKey).publicKey;
+  } catch {
+    throw new Error("bad signer key");
+  }
+  // Verify the existing chain (using the token's own claimed audience
+  // and session tag as expectations — the signature check itself
+  // authenticates them; a mismatch fails closed here).
+  const rootClaim = wire.chain[0].payload as TokenRootPayload;
+  const verified = verifyDelegationToken(
+    token,
+    bytesToHex(issuerPk),
+    typeof rootClaim.audience === "string" ? rootClaim.audience : "",
+    Date.now(),
+    typeof rootClaim.sessionTag === "string" ? rootClaim.sessionTag : undefined
+  );
+  if (!verified) throw new Error("token chain does not verify");
   if (caveat.notBefore !== undefined && !Number.isFinite(caveat.notBefore))
     throw new Error("bad notBefore");
   if (
@@ -199,12 +240,18 @@ const DEFAULT_MAX_TOOL_CALLS = 10;
 /**
  * Verify a token offline against A's known public key.
  * Returns the verified claims or null (fail-closed, no exceptions).
+ *
+ * @param expectedSessionTag when the verifier runs on a live transport
+ *   session, pass its `ackSessionTag`. Strict rule: if either side binds
+ *   a tag and the other does not (or the values differ), verification
+ *   fails. A bound token is only valid inside its session.
  */
 export function verifyDelegationToken(
   token: string,
   expectedIssuerPkHex: string,
   expectedAudiencePkHex: string,
-  nowMs: number = Date.now()
+  nowMs: number = Date.now(),
+  expectedSessionTag?: string
 ): VerifiedToken | null {
   const wire = parseWire(token);
   if (!wire) return null;
@@ -251,6 +298,17 @@ export function verifyDelegationToken(
   )
     return null;
 
+  // Session binding (strict, fail-closed): a token bound to a session
+  // tag is only valid when the verifier presents the SAME tag from its
+  // live session. If the verifier demands binding but the token has
+  // none (or vice versa), reject.
+  const tokenTag =
+    typeof root.sessionTag === "string" ? root.sessionTag.toLowerCase() : undefined;
+  if (tokenTag !== undefined && !HEX128_RE.test(tokenTag)) return null;
+  const wantTag =
+    expectedSessionTag !== undefined ? expectedSessionTag.toLowerCase() : undefined;
+  if (tokenTag !== wantTag) return null;
+
   // Expiry with clock-skew tolerance (fail-closed on the far side).
   if (root.expiresAt + TASK_LIMITS.clockSkewMs < nowMs) return null;
   if (root.issuedAt - TASK_LIMITS.clockSkewMs > nowMs) return null;
@@ -283,6 +341,7 @@ export function verifyDelegationToken(
       issuer: root.issuer.toLowerCase(),
       audience: root.audience.toLowerCase(),
       taskId: root.taskId.toLowerCase(),
+      ...(tokenTag !== undefined ? { sessionTag: tokenTag } : {}),
     },
     caveats,
     effective: { maxToolCalls, resultSizeLimit, notBefore },

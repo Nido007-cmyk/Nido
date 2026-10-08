@@ -192,3 +192,122 @@ describe("delegationToken (Biscuit-style Ed25519)", () => {
     expect(verifyDelegationToken(stripped, a.pk, b.pk)).not.toBeNull();
   });
 });
+
+describe("delegationToken: session binding (anti cross-session replay)", () => {
+  const TAG_A = "aa".repeat(64); // 128 hex chars, como ackSessionTag
+  const TAG_B = "bb".repeat(64);
+
+  function boundToken(a: { pk: string; sk: Uint8Array }, b: { pk: string }, tag: string) {
+    return issueDelegationToken(a.sk, {
+      issuer: a.pk,
+      audience: b.pk,
+      negotiationId: "neg-1",
+      taskId: TASK_ID,
+      scopes: ["task:answer"],
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 60000,
+      sessionTag: tag,
+    });
+  }
+
+  it("un token ligado verifica solo con el tag de su sesión", () => {
+    const a = keypair();
+    const b = keypair();
+    const tok = boundToken(a, b, TAG_A);
+    expect(verifyDelegationToken(tok, a.pk, b.pk, Date.now(), TAG_A)).not.toBeNull();
+  });
+
+  it("fail-closed: tag distinto → null (replay en otra sesión)", () => {
+    const a = keypair();
+    const b = keypair();
+    const tok = boundToken(a, b, TAG_A);
+    expect(verifyDelegationToken(tok, a.pk, b.pk, Date.now(), TAG_B)).toBeNull();
+  });
+
+  it("fail-closed: token ligado verificado sin tag → null", () => {
+    const a = keypair();
+    const b = keypair();
+    const tok = boundToken(a, b, TAG_A);
+    expect(verifyDelegationToken(tok, a.pk, b.pk)).toBeNull();
+  });
+
+  it("fail-closed: verificador exige tag pero el token no lo trae → null", () => {
+    const a = keypair();
+    const b = keypair();
+    const tok = issueDelegationToken(a.sk, {
+      issuer: a.pk,
+      audience: b.pk,
+      negotiationId: "neg-1",
+      taskId: TASK_ID,
+      scopes: ["task:answer"],
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 60000,
+    });
+    expect(verifyDelegationToken(tok, a.pk, b.pk, Date.now(), TAG_A)).toBeNull();
+  });
+
+  it("el tag ligado sobrevive a la atenuación y sigue verificando", () => {
+    const a = keypair();
+    const b = keypair();
+    const tok = boundToken(a, b, TAG_A);
+    const att = attenuateToken(a.sk, tok, { maxToolCalls: 2 });
+    const v = verifyDelegationToken(att, a.pk, b.pk, Date.now(), TAG_A);
+    expect(v).not.toBeNull();
+    expect(v!.root.sessionTag).toBe(TAG_A);
+    expect(v!.effective.maxToolCalls).toBe(2);
+    // Con otro tag sigue fallando.
+    expect(verifyDelegationToken(att, a.pk, b.pk, Date.now(), TAG_B)).toBeNull();
+  });
+
+  it("issuance rechaza sessionTag malformado", () => {
+    const a = keypair();
+    const b = keypair();
+    expect(() =>
+      issueDelegationToken(a.sk, {
+        issuer: a.pk,
+        audience: b.pk,
+        negotiationId: "neg-1",
+        taskId: TASK_ID,
+        scopes: ["task:answer"],
+        issuedAt: Date.now(),
+        expiresAt: Date.now() + 60000,
+        sessionTag: "corto",
+      })
+    ).toThrow();
+  });
+});
+
+describe("delegationToken: attenuateToken verifica antes de extender", () => {
+  it("attenuate rechaza un token manipulado (no extiende basura firmada)", () => {
+    const a = keypair();
+    const b = keypair();
+    const tok = issueDelegationToken(a.sk, {
+      issuer: a.pk,
+      audience: b.pk,
+      negotiationId: "neg-1",
+      taskId: TASK_ID,
+      scopes: ["task:answer"],
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 60000,
+    });
+    const tampered = tok.slice(0, 20) + (tok[20] === "A" ? "B" : "A") + tok.slice(21);
+    expect(() => attenuateToken(a.sk, tampered, { maxToolCalls: 1 })).toThrow();
+  });
+
+  it("attenuate rechaza extender con la clave equivocada", () => {
+    const a = keypair();
+    const evil = keypair();
+    const b = keypair();
+    const tok = issueDelegationToken(a.sk, {
+      issuer: a.pk,
+      audience: b.pk,
+      negotiationId: "neg-1",
+      taskId: TASK_ID,
+      scopes: ["task:answer"],
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 60000,
+    });
+    // evil.sk no es el firmante: la verificación previa falla.
+    expect(() => attenuateToken(evil.sk, tok, { maxToolCalls: 1 })).toThrow();
+  });
+});
