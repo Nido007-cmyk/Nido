@@ -1482,4 +1482,59 @@ describe("R7: higiene del secreto efímero + carrera de handshake", () => {
     expect(f.sent).toHaveLength(2);
     expect(ev.handshakes).toHaveLength(0); // la ruta aún no existe (R4)
   });
+
+  it("R8: más de 5 handshakes entrantes por MAC en 60s se limitan (sin cripto)", async () => {
+    await t.startDiscovery(ev.events);
+    const eph = toHex(generateEphemeral().publicKey);
+    const countHellos = () =>
+      f.sent.filter((s) => {
+        try {
+          parseHello(decodeBase64(s.base64));
+          return true;
+        } catch {
+          return false;
+        }
+      }).length;
+    // 5 intentos entrantes: cada uno genera su HELLO. Entre intentos se
+    // fuerza el fallo (frame basura) para liberar el pendiente.
+    for (let i = 0; i < 5; i++) {
+      const ph = peerHello(eph);
+      f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
+      await tick(30);
+      f.emit("onFrame", {
+        address: MAC,
+        base64: encodeBase64(new Uint8Array([9])),
+      } as never);
+      await tick(30);
+    }
+    expect(countHellos()).toBe(5);
+    // 6to intento dentro de la ventana: limitado antes de generar el
+    // efímero — sin HELLO nuevo y sin pendiente.
+    const ph6 = peerHello(eph);
+    f.emit("onFrame", { address: MAC, base64: ph6.b64 } as never);
+    await tick(30);
+    expect(countHellos()).toBe(5);
+    expect(pendingOf(t).has(MAC)).toBe(false);
+  });
+
+  it("R8: el límite es por MAC (otro dispositivo no se ve afectado)", async () => {
+    await t.startDiscovery(ev.events);
+    const eph = toHex(generateEphemeral().publicKey);
+    // Agotar la cuota de MAC con intentos fallidos rápidos.
+    for (let i = 0; i < 5; i++) {
+      const ph = peerHello(eph);
+      f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
+      await tick(30);
+      f.emit("onFrame", {
+        address: MAC,
+        base64: encodeBase64(new Uint8Array([9])),
+      } as never);
+      await tick(30);
+    }
+    // MAC2 (atacante distinto o peer legítimo) sigue pudiendo iniciar.
+    const ph2 = peerHello(eph);
+    f.emit("onFrame", { address: MAC2, base64: ph2.b64 } as never);
+    await tick(30);
+    expect(pendingOf(t).has(MAC2)).toBe(true);
+  });
 });

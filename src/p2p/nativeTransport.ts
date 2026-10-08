@@ -146,6 +146,18 @@ const HELLO_TIMEOUT_MS = 15_000;
 const HANDSHAKE_COOLDOWN_MS = 10_000;
 
 /**
+ * R8: cuota de handshakes ENTRANTES por MAC (defensa pre-autenticación).
+ * Sin esto, cualquier dispositivo cercano abre un socket RFCOMM, manda un
+ * byte y nos fuerza a generar un efímero + firmar (Ed25519), repitiéndolo
+ * sin cota: drenaje de batería/CPU, y cada socket vive hasta el timeout
+ * de 15 s. 5 intentos por MAC cada 60 s es holgado para uso legítimo (un
+ * handshake por conexión; reintentos con backoff) y convierte el abuso en
+ * un goteo acotado.
+ */
+const INBOUND_HANDSHAKE_WINDOW_MS = 60_000;
+const INBOUND_HANDSHAKE_MAX_PER_WINDOW = 5;
+
+/**
  * Handshake pendiente por MAC (R4: máquina de estados de dos fases).
  * - "waiting-socket": connect() registrado, aún sin evento onConnected.
  * - "hello-starting": R7: slot reservado sincrónicamente por beginHello
@@ -284,6 +296,8 @@ export class NidoBluetoothTransport implements P2PTransport {
   private macToPk = new Map<string, string>();
   private pkToMac = new Map<string, string>();
   private pending = new Map<string, PendingHello>(); // MAC -> HELLO en curso
+  /** R8: timestamps de inicios de handshake entrante por MAC (ventana deslizante). */
+  private readonly inboundHandshakeAt = new Map<string, number[]>();
   // H3-2026-10-06: flag para detener los reinicios de discovery.
   private stopped = false;
   /**
@@ -689,6 +703,32 @@ export class NidoBluetoothTransport implements P2PTransport {
 
   // ------------------------------------------------------------ handshake
 
+  /**
+   * R8: cuota de handshakes entrantes por MAC (ventana deslizante).
+   * Devuelve true si el MAC agotó su cuota → el llamador debe ignorar el
+   * intento sin generar cripto ni estado. Los timestamps viejos se podan y
+   * los MACs sin actividad reciente se eliminan: el mapa no crece sin cota.
+   */
+  private inboundHandshakeRateLimited(mac: string): boolean {
+    const now = Date.now();
+    const windowStart = now - INBOUND_HANDSHAKE_WINDOW_MS;
+    let stamps = this.inboundHandshakeAt.get(mac);
+    if (stamps) {
+      while (stamps.length > 0 && stamps[0]! <= windowStart) stamps.shift();
+      if (stamps.length === 0) {
+        this.inboundHandshakeAt.delete(mac);
+        stamps = undefined;
+      }
+    }
+    if (stamps && stamps.length >= INBOUND_HANDSHAKE_MAX_PER_WINDOW) {
+      return true;
+    }
+    const arr = stamps ?? [];
+    arr.push(now);
+    this.inboundHandshakeAt.set(mac, arr);
+    return false;
+  }
+
   private async beginHello(address: string): Promise<void> {
     const mac = address.toUpperCase();
     const existing = this.pending.get(mac);
@@ -699,6 +739,14 @@ export class NidoBluetoothTransport implements P2PTransport {
     // que lo disparó espera a helloReady en onNativeFrame.
     if (existing && existing.stage !== "waiting-socket") return;
     if (!existing && this.macToPk.has(mac)) return;
+    if (!existing) {
+      // R8: limitar handshakes entrantes por MAC ANTES de la cripto cara
+      // (generar efímero + firmar). Solo el path entrante nuevo se limita;
+      // nuestros reintentos salientes (waiting-socket) no se ven afectados.
+      // Fail-closed: el peer legítimo reintenta con backoff y entra en la
+      // siguiente ventana.
+      if (this.inboundHandshakeRateLimited(mac)) return;
+    }
     // R7 FIX: reservar el slot del pendiente de forma SÍNCRONA antes del
     // primer await. Sin esto, dos onNativeFrame concurrentes veían `!pend`
     // y ambos generaban un efímero: uno quedaba huérfano (secreto sin
