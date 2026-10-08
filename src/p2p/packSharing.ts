@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * P2P Knowledge Pack Sharing Protocol
  *
  * NIDO P2P Pack Sharing (2026-10-05). From deep research DR-7.

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * handshakeV3.test.ts — R4: vectores exactos crypto/wire del HELLO v3 y el
  * CONFIRM v1, a nivel de byte.
  *

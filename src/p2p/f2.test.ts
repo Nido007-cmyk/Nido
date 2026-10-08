@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * f2.test.ts — NIDO: F-2 (HIGH) — pérdida de claves de identidad P2P.
  *
  * Invariante central: identidad P2P durable (fila `p2p_identity`) +

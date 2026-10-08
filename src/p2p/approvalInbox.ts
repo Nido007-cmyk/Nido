@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * approvalInbox.ts — M-6: bandeja de aprobación para tareas remotas.
  *
  * Modelo de seguridad: una `agent_task` entrante NUNCA se auto-ejecuta.

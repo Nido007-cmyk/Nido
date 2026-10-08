@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * crypto.ts — NIDO P2P: criptografía de extremo a extremo (Fase E + Hardening).
  *
  * NaCl vía TweetNaCl (JS puro, auditado, sin código nativo):

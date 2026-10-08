@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * base64.ts — NIDO: base64 sin dependencias.
  *
  * React Native/Hermes no trae `Buffer` de Node; este helper cubre el

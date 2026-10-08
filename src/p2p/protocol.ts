@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * protocol.ts — NIDO P2P: protocolo de mensajes sobre el transporte (Fase E).
  *
  * Frame en el cable: [u32 big-endian: longitud][nonce 24 B][secretbox(JSON envelope)]

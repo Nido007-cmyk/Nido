@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * nonceCache.test.ts — R4: el backend en memoria de la cache anti-replay
  * implementa la misma semántica atómica que el backend persistente
  * (SQLCipher): un claim, un dueño; el segundo claim del mismo par es

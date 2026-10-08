@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * pairing.ts — NIDO P2P: emparejamiento por QR (Fase E + Hardening).
  *
  * El QR es el intercambio de claves fuera de banda: escanearlo en persona

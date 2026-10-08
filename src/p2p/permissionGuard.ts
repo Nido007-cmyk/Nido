@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * permissionGuard.ts — bandera de flujo de permiso del sistema.
  *
  * T-permiso-2026-10-06: cuando Android muestra el diálogo de permiso de

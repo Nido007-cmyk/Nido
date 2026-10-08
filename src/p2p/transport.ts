@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * transport.ts — NIDO P2P: abstracción de transporte (Fase E).
  *
  * El protocolo (protocol.ts) no sabe por dónde viajan los frames.

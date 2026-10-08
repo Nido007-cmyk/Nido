@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * unitB.test.ts — UNIT B (F-4/F-5/F-6): ciclo de vida de identidad superseded.
  *
  * Corre contra SQLite REAL (node:sqlite vía ./sqliteTestBridge), NO contra

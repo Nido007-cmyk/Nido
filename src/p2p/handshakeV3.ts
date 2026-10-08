@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * handshakeV3.ts — NIDO P2P: constantes y ayudantes puros del protocolo
  * HELLO v3 + CONFIRM v1 (R4).
  *

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * contactName.ts — normalización de nombres de contacto P2P (M-4, UNIT B).
  *
  * Módulo deliberadamente libre de dependencias nativas: la comparación

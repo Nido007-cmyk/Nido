@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * f1.test.ts — F-1 remediation (full adversarial audit 2026-09-28):
  * el write ciego `→sent` en attemptOutboundSend resucitaba filas
  * terminales. Invariante restaurada: una vez que una fila del outbox

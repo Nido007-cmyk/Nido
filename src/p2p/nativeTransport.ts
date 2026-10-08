@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * nativeTransport.ts — NIDO: transporte Bluetooth real sobre el módulo
  * nativo `nido-p2p` (Kotlin RFCOMM).
  *

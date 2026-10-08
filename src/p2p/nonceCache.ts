@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * nonceCache.ts — NIDO P2P: backend de la cache anti-replay de nonces de
  * HELLO (R4), inyectable para tests.
  *

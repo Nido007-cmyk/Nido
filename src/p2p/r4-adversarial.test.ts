@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * r4-adversarial.test.ts — R4: escenarios adversariales A1–A9 del packet
  * (§3.3, §4.4, §4.5, §8).
  *

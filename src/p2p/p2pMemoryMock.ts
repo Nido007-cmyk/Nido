@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * p2pMemoryMock.ts — mock COMPARTIDO de la base SQLite para los tests P2P.
  *
  * SOLO TESTS. Replica la semántica INSERT/SELECT/UPDATE/DELETE que

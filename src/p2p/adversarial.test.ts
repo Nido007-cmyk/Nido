@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMemorySecureBackend, setTestSecureBackend } from "../privacy/keyManager";
 import { resetP2PMem, type P2PMem } from "./p2pMemoryMock";

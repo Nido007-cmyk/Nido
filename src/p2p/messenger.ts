@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * messenger.ts — NIDO P2P: API de alto nivel (Fase E).
  *
  * - ensureIdentity(): crea o recupera la identidad del dispositivo.

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * r4-poc-repro.test.ts — R4 REGRESIÓN del PoC original (A1).
  *
  * Este archivo nació como reproducción del ataque contra el código SIN

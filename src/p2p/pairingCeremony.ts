@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * pairingCeremony.ts — NIDO P2P: ceremonia de emparejamiento compartida (B/F3).
  *
  * El path de UI emparejaba directo (sin mostrar huella ni pedir

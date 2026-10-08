@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * pairingCeremony.test.ts — B/F3: la ceremonia de emparejamiento de la UI
  * exige la misma política que el path del agente.
  *

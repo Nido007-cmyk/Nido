@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * n6.test.ts — N6 delivery acknowledgment: Traces A/B/C + batería adversarial.
  *
  * Cada NidoMessenger representa un DISPOSITIVO con su propia base SQLCipher:

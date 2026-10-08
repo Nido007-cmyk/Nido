@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * store.ts — NIDO P2P: persistencia (Fase E).
  *
  * Vive en la misma base cifrada que la memoria (`nido_memory.db`):

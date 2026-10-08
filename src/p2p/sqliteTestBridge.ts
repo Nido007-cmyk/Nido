@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * sqliteTestBridge.ts — SOLO TESTS (UNIT B, Q12).
  *
  * Puente entre `src/p2p/store.ts` y una SQLite REAL (`node:sqlite`,
