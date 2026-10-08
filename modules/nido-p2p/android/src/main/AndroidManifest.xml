@@ -18,7 +18,7 @@
 
   <application>
     <service
-      android:name=".NidoP2PService"
+      android:name="expo.modules.nidop2p.NidoP2PService"
       android:exported="false"
       android:foregroundServiceType="connectedDevice" />
   </application>

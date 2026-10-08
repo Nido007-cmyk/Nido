@@ -32,6 +32,7 @@ import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 // second tap through before the re-render).
 import { SendGuard } from "./sendGuard";
 import { NegotiationsTab } from "./NegotiationsTab";
+import { reconnectManager } from "../p2p/reconnectManager";
 import { PacksTab } from "./PacksTab";
 
 const ERROR_RED = "#F87171";
@@ -144,53 +145,11 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   /**
-   * AUTO-RECONNECT 2026-10-07: cuando se pierde un peer emparejado, reintentar
-   * automáticamente con backoff exponencial (5s, 10s, 20s, 40s, 60s; máx 5
-   * intentos). Usa handleConnectPaired (que ya prueba bonded MACs primero).
-   * Se cancela si el usuario conecta manualmente o sale de la pantalla.
+   * AUTO-RECONNECT 2026-10-08 (Option A): retry state machine moved to
+   * src/p2p/reconnectManager.ts (module singleton). It survives screen
+   * navigation and screen-off; no unmount cleanup here on purpose.
+   * Cancel on manual connect success or via reconnectManager.cancelAll().
    */
-  const reconnectRef = useRef<Map<string, { attempts: number; timer: ReturnType<typeof setTimeout> | undefined }>>(new Map());
-  const cancelReconnect = useCallback((pkHex: string) => {
-    const key = pkHex.toLowerCase();
-    const entry = reconnectRef.current.get(key);
-    if (entry) {
-      if (entry.timer) clearTimeout(entry.timer);
-      reconnectRef.current.delete(key);
-    }
-  }, []);
-  /** Ref al handleConnectPaired vigente (evita dependencia circular con onPeerLost). */
-  const connectPairedRef = useRef<(pkHex: string, name: string) => Promise<boolean>>(async () => false);
-  /**
-   * AUTO-RECONNECT 2026-10-07: programa un reintento de conexión con backoff
-   * exponencial. Se usa cuando onPeerLost detecta que un contacto emparejado
-   * se desconectó.
-   */
-  const scheduleReconnect = useCallback((pkHex: string, name: string) => {
-    const key = pkHex.toLowerCase();
-    const existing = reconnectRef.current.get(key);
-    // No duplicar: si ya hay un timer activo, no hacer nada.
-    if (existing?.timer) return;
-    const attempts = existing?.attempts ?? 0;
-    if (attempts >= 5) {
-      reconnectRef.current.delete(key);
-      return;
-    }
-    // Backoff: 5s, 10s, 20s, 40s, 60s (tope).
-    const delayMs = Math.min(5000 * 2 ** attempts, 60000);
-    const timer = setTimeout(() => {
-      // Marcar timer como inactivo pero MANTENER attempts para el backoff.
-      const e = reconnectRef.current.get(key);
-      if (e) e.timer = undefined;
-      // FIX 2026-10-07: handleConnectPaired ahora devuelve boolean.
-      // Si devuelve false (falló), programar el siguiente intento.
-      void connectPairedRef.current(pkHex, name).then((ok) => {
-        if (!ok) scheduleReconnect(pkHex, name);
-      }).catch(() => {
-        scheduleReconnect(pkHex, name);
-      });
-    }, delayMs);
-    reconnectRef.current.set(key, { attempts: attempts + 1, timer });
-  }, []);
   const [pairText, setPairText] = useState("");
   const [pairBusy, setPairBusy] = useState(false);
   const [pairError, setPairError] = useState<string | null>(null);
@@ -331,7 +290,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
               (c) => c.pkHex.toLowerCase() === pkHex.toLowerCase(),
             );
             if (contact) {
-              scheduleReconnect(pkHex, contact.name);
+              reconnectManager.schedule(pkHex, contact.name);
             }
           },
           onError: (msg) => {
@@ -356,9 +315,12 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
     })();
     return () => {
       cancelled = true;
+      // AUTO-RECONNECT 2026-10-08: si el link se detiene del todo,
+      // cancelar reintentos pendientes (ya no hay nada que reintentar).
+      reconnectManager.cancelAll();
       void m.stopLink().catch(() => {});
     };
-  }, [linkAttempt, scheduleReconnect]);
+  }, [linkAttempt]);
 
   // DIAG-2026-10-07: sondeo del estado del servidor RFCOMM nativo mientras
   // la pantalla está abierta. Responde la pregunta decisiva del diagnóstico
@@ -731,7 +693,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             const info = await mRef.current.connectPeer(alias);
             if (info.pkHex.toLowerCase() === target) {
               // AUTO-RECONNECT 2026-10-07: conexión exitosa, cancelar reintentos.
-              cancelReconnect(target);
+              reconnectManager.cancel(target);
               setNotice(t("nido.connectedNotice", { alias: name }));
               setNearby((prev) => prev.filter((a) => a !== alias));
               await loadContacts();
@@ -759,19 +721,11 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
     },
     [connecting, loadContacts, nearby, t],
   );
-  // Mantener el ref actualizado para auto-reconnect.
+  // AUTO-RECONNECT 2026-10-08: registrar el conector vigente en el manager.
+  // Sin cleanup al desmontar: los reintentos sobreviven a la navegación.
   useEffect(() => {
-    connectPairedRef.current = handleConnectPaired;
+    reconnectManager.setConnector(handleConnectPaired);
   }, [handleConnectPaired]);
-  // Cancelar todos los reintentos al desmontar.
-  useEffect(() => {
-    return () => {
-      for (const [, entry] of reconnectRef.current) {
-        if (entry.timer) clearTimeout(entry.timer);
-      }
-      reconnectRef.current.clear();
-    };
-  }, []);
 
   const copy = useCallback(
     async (value: string, label: string) => {
