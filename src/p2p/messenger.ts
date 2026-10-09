@@ -426,6 +426,31 @@ export class NidoMessenger {
   }
 
   /**
+   * FIX 2026-10-09 (CR-4): revoca un contacto. Delega al transporte nativo
+   * si soporta revocación; si no, falla explícitamente.
+   */
+  async revokePeer(peerPkHex: string): Promise<void> {
+    this.assertLive();
+    const t = this.transport as unknown as { revokePeer?: (pk: string) => Promise<void> };
+    if (typeof t.revokePeer !== "function") {
+      throw new Error("El transporte no soporta revocación");
+    }
+    await t.revokePeer(peerPkHex);
+  }
+
+  /**
+   * FIX 2026-10-09 (CR-4): levanta la revocación (solo vía re-pair explícito).
+   */
+  async unrevokePeer(peerPkHex: string): Promise<void> {
+    this.assertLive();
+    const t = this.transport as unknown as { unrevokePeer?: (pk: string) => Promise<void> };
+    if (typeof t.unrevokePeer !== "function") {
+      throw new Error("El transporte no soporta revocación");
+    }
+    await t.unrevokePeer(peerPkHex);
+  }
+
+  /**
    * BRIAR-2026-10-06: rol de dial determinístico para evitar colisiones
    * de dial simultáneo en la fuente.
    *

@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 import { useEffect, useRef, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { AppState, StyleSheet, ActivityIndicator, Pressable, Text, View } from "react-native";

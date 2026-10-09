@@ -35,10 +35,118 @@
 
 import { getDatabaseKeyHex } from "../privacy/keyManager";
 import { requireUnlock } from "./biometricGate";
+import { MANAGED_DB_NAMES, getCurrentDriver } from "./secureDatabase";
 
 export interface RekeyResult {
   ok: boolean;
   error?: string;
+}
+
+/**
+ * FIX 2026-10-09 (CR2-MULTIDB): rota la DEK de TODAS las bases gestionadas.
+ *
+ * Las 3 DBs de MANAGED_DB_NAMES comparten la misma DEK del Keystore, así que
+ * el rekey debe cubrirlas todas con el MISMO DEK nuevo. Si solo se rotara
+ * una, las otras quedarían inaccesibles (brick).
+ *
+ * El staging lista todas las rutas para que checkStaleRekeyStaging pueda
+ * verificar cada una en el recovery.
+ *
+ * @param openDb Función que abre una DB con un DEK hex (inyectable para tests)
+ * @param storeDek Función que guarda el DEK en Keystore (inyectable para tests)
+ * @param stagingPath Ruta del archivo de staging (inyectable para tests)
+ */
+export async function rotateAllDatabaseKeys(
+  openDb: (path: string, dekHex: string) => Promise<{ exec: (sql: string) => Promise<void>; close: () => Promise<void> }>,
+  storeDek: (dekHex: string) => Promise<void>,
+  stagingPath?: string
+): Promise<RekeyResult> {
+  // 1. Biométrico obligatorio (lanza si se cancela)
+  try {
+    await requireUnlock("Rotar clave de cifrado");
+  } catch {
+    return { ok: false, error: "Autenticación cancelada" };
+  }
+
+  // 2. Cargar DEK actual
+  const oldDekHex = await getDatabaseKeyHex();
+  if (!oldDekHex) {
+    return { ok: false, error: "No hay clave actual (fail-closed)" };
+  }
+
+  // 3. Derivar rutas canónicas de las DBs existentes (CR2-PATH: no hardcodear)
+  const driver = getCurrentDriver();
+  const dir = driver.dbDir().replace(/\/$/, "");
+  const dbPaths: string[] = [];
+  for (const name of MANAGED_DB_NAMES) {
+    const fullPath = `${dir}/${name}`;
+    if (await driver.exists(fullPath)) {
+      dbPaths.push(fullPath);
+    }
+  }
+  if (dbPaths.length === 0) {
+    return { ok: false, error: "No se encontraron bases de datos" };
+  }
+
+  // 4. Generar nuevo DEK (uno solo para todas las DBs)
+  const { getRandomBytesAsync } = await import("expo-crypto");
+  const newDekBytes = await getRandomBytesAsync(32);
+  const newDekHex = Array.from(newDekBytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  newDekBytes.fill(0);
+
+  // 5. Staging con TODAS las rutas (crash-safe, CR-3)
+  const FS = await import("expo-file-system/legacy");
+  const staging = stagingPath ?? `${FS.documentDirectory}rekey-staging.json`;
+  try {
+    await FS.writeAsStringAsync(staging, JSON.stringify({
+      newDekHex,
+      dbPaths,
+      at: Date.now(),
+    }));
+  } catch {
+    return { ok: false, error: "No se pudo crear el staging (fail-closed)" };
+  }
+
+  // 6. Rekey de cada DB con el DEK nuevo
+  const openedDbs: { exec: (sql: string) => Promise<void>; close: () => Promise<void> }[] = [];
+  try {
+    for (const dbPath of dbPaths) {
+      const db = await openDb(dbPath, oldDekHex);
+      openedDbs.push(db);
+      await db.exec(`PRAGMA rekey = "x'${newDekHex}'";`);
+    }
+
+    // 7. Guardar nuevo DEK en Keystore
+    try {
+      await storeDek(newDekHex);
+    } catch (storeErr) {
+      // Revertir TODAS las DBs al DEK viejo
+      for (const db of openedDbs) {
+        try {
+          await db.exec(`PRAGMA rekey = "x'${oldDekHex}'";`);
+        } catch { /* noop */ }
+      }
+      try {
+        await FS.deleteAsync(staging, { idempotent: true });
+      } catch { /* noop */ }
+      return { ok: false, error: "No se pudo guardar la nueva clave; se revirtió el cambio" };
+    }
+
+    // 8. Éxito: borrar staging
+    try {
+      await FS.deleteAsync(staging, { idempotent: true });
+    } catch { /* noop */ }
+
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Error desconocido" };
+  } finally {
+    for (const db of openedDbs) {
+      try { await db.close(); } catch { /* noop */ }
+    }
+  }
 }
 
 /**
@@ -149,27 +257,42 @@ export async function checkStaleRekeyStaging(
     if (!info.exists) return { recovered: false };
     
     const raw = await FS.readAsStringAsync(stagingPath);
-    const { newDekHex, dbPath } = JSON.parse(raw);
-    if (!newDekHex || typeof newDekHex !== "string") {
+    const parsed = JSON.parse(raw);
+    const newDekHex = parsed.newDekHex;
+    // FIX 2026-10-09 (CR2-MULTIDB): staging puede tener dbPaths (array) o
+    // dbPath (string, formato legacy de rotateDatabaseKey). Normalizar.
+    const dbPaths: string[] = Array.isArray(parsed.dbPaths)
+      ? parsed.dbPaths
+      : (typeof parsed.dbPath === "string" ? [parsed.dbPath] : []);
+    if (!newDekHex || typeof newDekHex !== "string" || dbPaths.length === 0) {
       await FS.deleteAsync(stagingPath, { idempotent: true }).catch(() => {});
       return { recovered: false, error: "Staging corrupto, eliminado" };
     }
     
     // FIX 2026-10-09 (CR3-NEW): probe-open antes de tocar el keystore.
-    let probeDb: { exec: (sql: string) => Promise<void>; close: () => Promise<void> } | null = null;
-    try {
-      probeDb = await openDb(dbPath, newDekHex);
-      // Si abre, el rekey ocurrió. Verificar que realmente abre con una query.
-      await probeDb.exec("SELECT 1;");
-    } catch {
-      // No abre con el DEK nuevo → el crash fue ANTES del rekey.
-      // La DB tiene el DEK viejo. Borrar staging, no tocar keystore.
+    // Verificar CADA DB: si alguna abre con el DEK nuevo, el rekey ocurrió.
+    // Si ninguna abre, el crash fue antes del rekey.
+    let anyOpened = false;
+    for (const dbPath of dbPaths) {
+      let probeDb: { exec: (sql: string) => Promise<void>; close: () => Promise<void> } | null = null;
+      try {
+        probeDb = await openDb(dbPath, newDekHex);
+        await probeDb.exec("SELECT 1;");
+        anyOpened = true;
+      } catch {
+        // Esta DB no abre con el DEK nuevo; continuar con las demás.
+      } finally {
+        if (probeDb) {
+          try { await probeDb.close(); } catch { /* noop */ }
+        }
+      }
+      if (anyOpened) break;
+    }
+    if (!anyOpened) {
+      // Ninguna DB abre con el DEK nuevo → el crash fue ANTES del rekey.
+      // Las DBs tienen el DEK viejo. Borrar staging, no tocar keystore.
       await FS.deleteAsync(stagingPath, { idempotent: true }).catch(() => {});
       return { recovered: false, error: "Crash antes del rekey; staging eliminado, keystore intacto" };
-    } finally {
-      if (probeDb) {
-        try { await probeDb.close(); } catch { /* noop */ }
-      }
     }
     
     // El rekey SÍ ocurrió. Ahora sí guardar en keystore.

@@ -1268,6 +1268,35 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
                       </Text>
                     </Pressable>
                   )}
+                  {/* FIX 2026-10-09 (CR-4): revocar contacto */}
+                  <Pressable
+                    onPress={async () => {
+                      const ok = await showSecureAlert({
+                        title: t("nido.revokeTitle", { name: c.name }),
+                        message: t("nido.revokeConfirm"),
+                        cancelLabel: t("common.cancel"),
+                        confirmLabel: t("nido.revoke"),
+                        cancelable: true,
+                      });
+                      if (ok) {
+                        try {
+                          await mRef.current.revokePeer(c.pkHex);
+                          setNotice(t("nido.revoked", { name: c.name }));
+                        } catch (e) {
+                          setNotice(
+                            e instanceof Error ? e.message : t("nido.revokeFailed")
+                          );
+                        }
+                      }
+                    }}
+                    style={[styles.smallBtn, styles.revokeBtn]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("nido.revokeContact", { name: c.name })}
+                  >
+                    <Text style={[styles.smallBtnText, styles.revokeBtnText]}>
+                      {t("nido.revoke")}
+                    </Text>
+                  </Pressable>
                 </View>
               );
             })}
@@ -1582,6 +1611,13 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   smallBtnText: { ...typography.ui.caption, color: colors.text.primary, fontWeight: "600" },
   btnDisabled: { opacity: 0.5 },
+  revokeBtn: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: colors.crimson[500],
+    marginLeft: calmSpacing.tight,
+  },
+  revokeBtnText: { color: colors.crimson[500] },
   input: {
     ...typography.ui.body,
     color: colors.text.primary,

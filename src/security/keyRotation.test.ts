@@ -15,6 +15,16 @@ vi.mock("./biometricGate", () => ({
 // Mock keyManager
 vi.mock("../privacy/keyManager", () => ({
   getDatabaseKeyHex: vi.fn(),
+  registerKeyLossProbe: vi.fn(),
+}));
+
+// Mock secureDatabase (evita ciclo con keyManager en tests)
+vi.mock("./secureDatabase", () => ({
+  MANAGED_DB_NAMES: ["nido_memory.db"],
+  getCurrentDriver: vi.fn().mockReturnValue({
+    dbDir: () => "/tmp/",
+    exists: vi.fn().mockResolvedValue(true),
+  }),
 }));
 
 // Mock expo-crypto

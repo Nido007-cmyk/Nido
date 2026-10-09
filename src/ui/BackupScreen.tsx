@@ -87,20 +87,16 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
           onPress: async () => {
             setBusy(true);
             try {
-              const { rotateDatabaseKey } = await import("../security/keyRotation");
+              const { rotateAllDatabaseKeys } = await import("../security/keyRotation");
               const { default: SecureStore } = await import("expo-secure-store");
               const SQLite = await import("expo-sqlite");
               const { applyDatabaseKey } = await import("../privacy/keyManager");
-              const FS = await import("expo-file-system/legacy");
-              
-              // Obtener path de la DB
-              const dbDir = FS.documentDirectory;
-              if (!dbDir) throw new Error("No se pudo acceder al almacenamiento.");
-              // La DB principal está en el directorio de documentos
-              const dbPath = `${dbDir}SQLite/nido.db`;
-              
-              const result = await rotateDatabaseKey(
-                dbPath,
+
+              // FIX 2026-10-09 (CR2-PATH, CR2-MULTIDB): no hardcodear el path.
+              // rotateAllDatabaseKeys deriva las rutas canónicas de
+              // MANAGED_DB_NAMES vía getCurrentDriver() y rota las 3 DBs
+              // con el mismo DEK nuevo.
+              const result = await rotateAllDatabaseKeys(
                 async (path: string, dekHex: string) => {
                   const slash = path.lastIndexOf("/");
                   const db = await SQLite.openDatabaseAsync(
