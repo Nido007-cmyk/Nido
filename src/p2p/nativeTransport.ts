@@ -292,6 +292,15 @@ export class NidoBluetoothTransport implements P2PTransport {
   private bindings: NidoP2PBindings | null;
   private events: P2PTransportEvents | null = null;
   private unsubs: Array<() => void> = [];
+  // FIX 2026-10-08 (nav-drop): los listeners nativos se separan en dos
+  // grupos. Los de ENLACE (onFrame/onConnected/onDisconnected/onError)
+  // deben SOBREVIVIR a stopDiscovery(): si se desuscriben al salir de la
+  // pantalla, el socket queda vivo pero sordo — los frames entrantes se
+  // pierden y la comunicación se corta aunque las rutas estén intactas.
+  // Solo los de DESCUBRIMIENTO (onDeviceFound/onDiscoveryFinished) se
+  // limpian al detener el discovery.
+  private linkUnsubs: Array<() => void> = [];
+  private discoveryUnsubs: Array<() => void> = [];
   private myPkHex = "";
   private macToPk = new Map<string, string>();
   private pkToMac = new Map<string, string>();
@@ -409,20 +418,9 @@ export class NidoBluetoothTransport implements P2PTransport {
     // filas viejas corresponden a HELLOs que el chequeo de frescura
     // rechaza de todos modos (best-effort: nunca bloquea el enlace).
     this.nonceCache.prune(Math.floor(Date.now() / 1000) - NONCE_CACHE_WINDOW_S).catch(() => {});
-    this.unsubs = [
-      b.addListener("onDeviceFound", (d) => {
-        this.events?.onPeerFound?.({
-          pkHex: "",
-          alias: d.name ? `${d.name} (${d.address})` : d.address,
-          transport: "bluetooth",
-        });
-      }),
-      b.addListener("onDiscoveryFinished", () => {
-        // H3-2026-10-06: el discovery nativo es one-shot (~12s). Reiniciar
-        // con backoff para que la lista de cercanos no se congele.
-        // El comentario anterior ("sigue en segundo plano") era falso.
-        this.scheduleDiscoveryRestart();
-      }),
+    // FIX 2026-10-08 (nav-drop): listeners de ENLACE (sobreviven a
+    // stopDiscovery) separados de los de DESCUBRIMIENTO.
+    this.linkUnsubs = [
       b.addListener("onConnected", (e) => {
         void this.beginHello(e.address).catch((err: unknown) =>
           this.events?.onError?.(
@@ -439,6 +437,21 @@ export class NidoBluetoothTransport implements P2PTransport {
       }),
       b.addListener("onDisconnected", (e) => this.onNativeDisconnected(e.address)),
       b.addListener("onError", (e) => this.events?.onError?.(e.message)),
+    ];
+    this.discoveryUnsubs = [
+      b.addListener("onDeviceFound", (d) => {
+        this.events?.onPeerFound?.({
+          pkHex: "",
+          alias: d.name ? `${d.name} (${d.address})` : d.address,
+          transport: "bluetooth",
+        });
+      }),
+      b.addListener("onDiscoveryFinished", () => {
+        // H3-2026-10-06: el discovery nativo es one-shot (~12s). Reiniciar
+        // con backoff para que la lista de cercanos no se congele.
+        // El comentario anterior ("sigue en segundo plano") era falso.
+        this.scheduleDiscoveryRestart();
+      }),
     ];
     await b.startServer();
     // DIAG-2026-10-07: verificar que el servidor quedó realmente escuchando.
@@ -516,15 +529,23 @@ export class NidoBluetoothTransport implements P2PTransport {
       this.discoveryRestartTimer = null;
     }
     const b = this.bindings;
-    for (const unsub of this.unsubs) {
+    // FIX 2026-10-08 (nav-drop): solo se desuscriben los listeners de
+    // DESCUBRIMIENTO. Los de ENLACE (onFrame, onConnected, onDisconnected,
+    // onError) se quedan activos para que la sesión viva siga recibiendo
+    // datos aunque la UI salga de la pantalla de enlace.
+    for (const unsub of this.discoveryUnsubs) {
       try {
         unsub();
       } catch {
         /* noop */
       }
     }
-    this.unsubs = [];
-    this.linked = false;
+    this.discoveryUnsubs = [];
+    // FIX 2026-10-08 (nav-drop): NO se pone linked=false. El enlace
+    // (listeners + servidor) sigue vivo; solo se detuvo el discovery.
+    // Si lo pusiéramos en false, el próximo startDiscovery() re-ejecutaría
+    // doLink() y registraría listeners DUPLICADOS (los viejos sobrevivieron).
+    // linked=false solo ocurre en shutdownNative() (destrucción terminal).
     for (const [, p] of this.pending) {
       clearTimeout(p.timer);
       p.reject?.(new Error("Discovery detenido."));
@@ -577,6 +598,25 @@ export class NidoBluetoothTransport implements P2PTransport {
   async shutdownNative(): Promise<void> {
     if (this.nativeShutdownDone) return;
     this.nativeShutdownDone = true;
+    // FIX 2026-10-08 (nav-drop): en la destrucción terminal sí se limpian
+    // los listeners de ENLACE (aquí no hay sesión que preservar).
+    for (const unsub of this.linkUnsubs) {
+      try {
+        unsub();
+      } catch {
+        /* noop */
+      }
+    }
+    this.linkUnsubs = [];
+    for (const unsub of this.discoveryUnsubs) {
+      try {
+        unsub();
+      } catch {
+        /* noop */
+      }
+    }
+    this.discoveryUnsubs = [];
+    this.linked = false;
     const b = this.bindings;
     if (!b) return;
     await b.shutdown();

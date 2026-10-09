@@ -1561,3 +1561,30 @@ describe("R7: higiene del secreto efímero + carrera de handshake", () => {
     expect(pendingOf(t).has(MAC2)).toBe(true);
   });
 });
+
+describe("nativeTransport: listeners de enlace sobreviven a stopDiscovery", () => {
+  let f: ReturnType<typeof makeFake>;
+  let ev: ReturnType<typeof makeEvents>;
+  let t: NidoBluetoothTransport;
+
+  beforeEach(() => {
+    f = makeFake();
+    ev = makeEvents();
+    t = makeTransport(f.fake);
+  });
+
+  it("onFrame sigue procesándose después de stopDiscovery (no queda sordo)", async () => {
+    await t.startDiscovery(ev.events);
+    // Salir de la pantalla: el unmount llama a stopDiscovery().
+    await t.stopDiscovery();
+    // Un HELLO válido del peer debe seguir siendo procesado: el listener
+    // de ENLACE (onFrame) no se desuscribió. Antes del fix, el socket
+    // quedaba vivo pero sordo y la comunicación se cortaba.
+    const eph = toHex(generateEphemeral().publicKey);
+    const ph = peerHello(eph);
+    f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
+    await tick(30);
+    const pendingMap = (t as unknown as { pending: Map<string, unknown> }).pending;
+    expect(pendingMap.has(MAC)).toBe(true);
+  });
+});

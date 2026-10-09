@@ -200,7 +200,10 @@ describe("A3: replay tras reinicio — la cache anti-replay sobrevive", () => {
     await tick();
     expect(ev.handshakes).toHaveLength(1);
     expect(sharedCache.size()).toBe(1);
-    await t1.stopDiscovery();
+    // Reinicio real = destrucción terminal (el proceso muere y la JS se
+    // destruye). shutdownNative() limpia los listeners de enlace; un mero
+    // stopDiscovery() los preserva a propósito (nav-drop fix).
+    await t1.shutdownNative();
 
     // --- "Reinicio": instancia fresca, MISMA cache persistente.
     const t2 = makeTransportWithSharedCache();
@@ -226,7 +229,7 @@ describe("A3: replay tras reinicio — la cache anti-replay sobrevive", () => {
     const old = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: MAC, base64: old.b64 } as never);
     await tick();
-    await t1.stopDiscovery();
+    await t1.shutdownNative();
 
     const t2 = makeTransportWithSharedCache();
     await t2.startDiscovery(ev.events);
