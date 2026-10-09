@@ -125,6 +125,7 @@ export function ModelSetupScreen(props: Props) {
   }, []);
 
   const toggleHaptics = useCallback(async (value: boolean) => {
+    const prev = !value;
     setHapticsEnabledState(value);
     // Cache update happens immediately, not just after the persisted
     // write resolves — a haptic tap could otherwise fire once more (or
@@ -132,7 +133,13 @@ export function ModelSetupScreen(props: Props) {
     // finishing, since src/services/haptics.ts reads from an in-memory
     // cache, not settings.ts, on every tap.
     setHapticsEnabledCache(value);
-    await setHapticsEnabled(value);
+    try {
+      await setHapticsEnabled(value);
+    } catch {
+      // FIX 2026-10-09 (UI-AUDIT/F4): revertir si no se pudo persistir.
+      setHapticsEnabledState(prev);
+      setHapticsEnabledCache(prev);
+    }
   }, []);
 
   const getRow = useCallback(
@@ -407,7 +414,7 @@ export function ModelSetupScreen(props: Props) {
                 <Text style={styles.recoveryTitle}>Backup</Text>
               </View>
               <Text style={styles.recoveryDesc}>
-                Exporta tu base de datos cifrada. Guárdala junto con tu clave en un lugar seguro.
+                {t("backup.sectionDesc")}
               </Text>
               <Pressable
                 style={styles.wizardBtn}
@@ -420,30 +427,30 @@ export function ModelSetupScreen(props: Props) {
                     const { path, key } = await createBackupFile();
                     // Mostrar la clave para que el usuario la copie.
                     Alert.alert(
-                      "Backup creado",
-                      `Archivo: ${path}\n\nTu clave (guárdala separada):\n${key}`,
+                      t("backup.dekTitle"),
+                      `${t("backup.dekSavedIn")} ${path}\n\n${t("backup.dekCopyPrompt")}\n${key}`,
                       [
                         {
-                          text: "Compartir",
+                          text: t("backup.shareButton"),
                           onPress: async () => {
                             try {
                               const { shareBackupFile } = await import("./backupShare");
                               await shareBackupFile(path);
                             } catch {
-                              Alert.alert("Error", "No se pudo compartir el backup.");
+                              Alert.alert(t("backup.errorTitle"), t("backup.shareFailed"));
                             }
                           },
                         },
-                        { text: "OK" },
+                        { text: t("backup.ok") },
                       ]
                     );
                   } catch (e) {
-                    Alert.alert("Error", e instanceof Error ? e.message : "No se pudo crear el backup.");
+                    Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.createFailed"));
                   }
                 }}
                 accessibilityRole="button"
               >
-                <Text style={styles.wizardBtnText}>Crear backup</Text>
+                <Text style={styles.wizardBtnText}>{t("backup.createButton")}</Text>
               </Pressable>
               <Pressable
                 style={[styles.wizardBtn, { marginTop: 8 }]}
@@ -452,19 +459,19 @@ export function ModelSetupScreen(props: Props) {
                     const { findLatestBackup, shareBackupFile } = await import("./backupShare");
                     const latest = await findLatestBackup();
                     if (!latest) {
-                      Alert.alert("Sin backups", "Aún no has creado ningún backup.");
+                      Alert.alert(t("backup.noBackupsTitle"), t("backup.noBackupsBody"));
                       return;
                     }
                     await shareBackupFile(latest);
                   } catch (e) {
-                    Alert.alert("Error", e instanceof Error && e.message === "sharing-unavailable"
-                      ? "Tu dispositivo no permite compartir archivos."
-                      : "No se pudo compartir el backup.");
+                    Alert.alert(t("backup.errorTitle"), e instanceof Error && e.message === "sharing-unavailable"
+                      ? t("backup.sharingUnavailable")
+                      : t("backup.shareFailed"));
                   }
                 }}
                 accessibilityRole="button"
               >
-                <Text style={styles.wizardBtnText}>Compartir backup</Text>
+                <Text style={styles.wizardBtnText}>{t("backup.shareButton")}</Text>
               </Pressable>
               <Pressable
                 style={[styles.wizardBtn, { marginTop: 8 }]}
@@ -480,16 +487,16 @@ export function ModelSetupScreen(props: Props) {
                     const { validateBackup, restoreBackup } = await import("../security/backup");
                     const v = await validateBackup(uri);
                     if (!v.valid) {
-                      Alert.alert("Backup inválido", v.reason ?? "El archivo no es un backup válido.");
+                      Alert.alert(t("backup.invalidTitle"), v.reason ?? t("backup.invalidBody"));
                       return;
                     }
                     Alert.alert(
-                      "Restaurar backup",
-                      "Esto reemplazará TODOS tus datos actuales con el backup. ¿Continuar?",
+                      t("backup.restoreTitle"),
+                      t("backup.restoreConfirm"),
                       [
-                        { text: "Cancelar", style: "cancel" },
+                        { text: t("backup.cancel"), style: "cancel" },
                         {
-                          text: "Restaurar",
+                          text: t("backup.restoreConfirmButton"),
                           style: "destructive",
                           onPress: async () => {
                             try {
@@ -497,27 +504,27 @@ export function ModelSetupScreen(props: Props) {
                               // destructiva (reemplaza todos los datos) → requiere
                               // autenticación biométrica.
                               const { requireUnlock } = await import("../security/biometricGate");
-                              await requireUnlock("Restaurar backup");
+                              await requireUnlock(t("backup.restoreTitle"));
                               await restoreBackup(uri);
                               Alert.alert(
-                                "Restaurado",
-                                "Backup restaurado. Reinicia la app para usar los datos restaurados.",
-                                [{ text: "OK" }]
+                                t("backup.restoreDoneTitle"),
+                                t("backup.restoreDoneBody"),
+                                [{ text: t("backup.ok") }]
                               );
                             } catch (e) {
-                              Alert.alert("Error", e instanceof Error ? e.message : "No se pudo restaurar.");
+                              Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.restoreFailed"));
                             }
                           },
                         },
                       ]
                     );
                   } catch (e) {
-                    Alert.alert("Error", e instanceof Error ? e.message : "No se pudo abrir el selector.");
+                    Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.pickerFailed"));
                   }
                 }}
                 accessibilityRole="button"
               >
-                <Text style={styles.wizardBtnText}>Restaurar backup</Text>
+                <Text style={styles.wizardBtnText}>{t("backup.restoreButton")}</Text>
               </Pressable>
             </View>
           </View>

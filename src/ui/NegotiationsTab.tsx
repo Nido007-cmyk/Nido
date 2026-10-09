@@ -205,8 +205,10 @@ export function NegotiationsTab() {
       const { listContacts } = await import("../p2p/store");
       const list = await listContacts();
       setContacts(list.map((c: any) => ({ pkHex: c.pkHex, name: c.name })));
-    } catch {
+    } catch (e) {
+      // FIX 2026-10-09 (UI-AUDIT/F4): error visible en vez de lista vacía silenciosa.
       setContacts([]);
+      setProposeError(e instanceof Error ? e.message : String(e));
     }
     setShowPropose(true);
   }, []);
@@ -446,7 +448,7 @@ export function NegotiationsTab() {
               style={styles.modalInput}
               value={description}
               onChangeText={setDescription}
-              placeholder="¿Qué quieres proponer?"
+              placeholder={t("negotiations.proposePlaceholder")}
               multiline
             />
             {proposeError && <Text style={styles.modalError}>{proposeError}</Text>}

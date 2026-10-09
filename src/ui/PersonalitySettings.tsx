@@ -47,13 +47,25 @@ export function PersonalitySettings() {
   }, []);
 
   const toggleDeepResearch = async (value: boolean) => {
+    const prev = !value;
     setDeepResearchState(value);
-    await setDeepResearchMode(value);
+    try {
+      await setDeepResearchMode(value);
+    } catch {
+      // FIX 2026-10-09 (UI-AUDIT/F4): revertir si no se pudo persistir.
+      setDeepResearchState(prev);
+    }
   };
 
   const toggleAdaptiveRouting = async (value: boolean) => {
+    const prev = !value;
     setAdaptiveRoutingState(value);
-    await setAdaptiveRoutingEnabled(value);
+    try {
+      await setAdaptiveRoutingEnabled(value);
+    } catch {
+      // FIX 2026-10-09 (UI-AUDIT/F4): revertir si no se pudo persistir.
+      setAdaptiveRoutingState(prev);
+    }
   };
 
   const selectPersonality = async (id: PersonalityId) => {

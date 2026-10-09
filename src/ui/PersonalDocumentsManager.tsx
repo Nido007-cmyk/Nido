@@ -74,7 +74,12 @@ export function PersonalDocumentsManager() {
 
   const handleToggle = useCallback(
     async (collection: CustomCollection, active: boolean) => {
-      await setCustomCollectionActive(collection.id, active);
+      try {
+        await setCustomCollectionActive(collection.id, active);
+      } catch {
+        // FIX 2026-10-09 (UI-AUDIT/F4): si falla la escritura, refresh()
+        // restaura el estado real desde la BD (no queda optimista falso).
+      }
       await refresh();
     },
     [refresh]

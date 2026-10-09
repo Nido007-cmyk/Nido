@@ -28,8 +28,15 @@ export function MemorySettings({ onCleared }: { onCleared?: () => void }) {
   }, []);
 
   const update = async (patch: Partial<MemorySettingsType>) => {
-    setSettings((prev) => (prev ? { ...prev, ...patch } : prev));
-    await setMemorySettings(patch);
+    // FIX 2026-10-09 (UI-AUDIT/F4): optimista con reversión — el switch
+    // nunca muestra un estado distinto del persistido.
+    const prev = settings;
+    setSettings((p) => (p ? { ...p, ...patch } : p));
+    try {
+      await setMemorySettings(patch);
+    } catch {
+      setSettings(prev);
+    }
   };
 
   const confirmClearAll = () => {

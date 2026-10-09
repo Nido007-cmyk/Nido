@@ -254,28 +254,44 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Backup & Recovery</Text>
+      <Text style={styles.title}>{t("backup.screenTitle")}</Text>
       <Text style={styles.desc}>
-        Tu base de datos está cifrada. El backup copia el archivo cifrado. Necesitas
-        guardar tu clave por separado — sin ella, el backup no se puede restaurar.
-        Ningún servidor ve tus datos en ningún momento.
+        {t("backup.screenDesc")}
       </Text>
 
-      <Pressable style={styles.button} onPress={handleCreateBackup} disabled={busy}>
+      <Pressable
+        style={styles.button}
+        onPress={handleCreateBackup}
+        disabled={busy}
+        accessibilityRole="button"
+        accessibilityLabel={t("backup.createNow")}
+      >
         {busy ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Crear backup ahora</Text>
+          <Text style={styles.buttonText}>{t("backup.createNow")}</Text>
         )}
       </Pressable>
 
-      <Pressable style={styles.buttonSecondary} onPress={handleShowKey} disabled={busy}>
-        <Text style={styles.buttonSecondaryText}>Ver mi clave de cifrado</Text>
+      <Pressable
+        style={styles.buttonSecondary}
+        onPress={handleShowKey}
+        disabled={busy}
+        accessibilityRole="button"
+        accessibilityLabel={t("backup.showKey")}
+      >
+        <Text style={styles.buttonSecondaryText}>{t("backup.showKey")}</Text>
       </Pressable>
 
       {/* FIX 2026-10-09 (CR-2): rotación de DEK (F-KEY-1). */}
-      <Pressable style={styles.buttonSecondary} onPress={handleRotateKey} disabled={busy}>
-        <Text style={styles.buttonSecondaryText}>Rotar clave de cifrado</Text>
+      <Pressable
+        style={styles.buttonSecondary}
+        onPress={handleRotateKey}
+        disabled={busy}
+        accessibilityRole="button"
+        accessibilityLabel={t("backup.rotateKey")}
+      >
+        <Text style={styles.buttonSecondaryText}>{t("backup.rotateKey")}</Text>
       </Pressable>
 
       {/* FIX 2026-10-09: guardar directo en Descargas vía SAF. */}
@@ -283,23 +299,29 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
         style={[styles.buttonSecondary, !lastBackup && { opacity: 0.5 }]}
         onPress={handleSaveToDownloads}
         disabled={busy || !lastBackup}
+        accessibilityRole="button"
+        accessibilityLabel={t("backup.saveToDownloads")}
       >
-        <Text style={styles.buttonSecondaryText}>Guardar en Descargas</Text>
+        <Text style={styles.buttonSecondaryText}>{t("backup.saveToDownloads")}</Text>
       </Pressable>
 
       {lastBackup && (
-        <Text style={styles.desc}>Último backup: {lastBackup}</Text>
+        <Text style={styles.desc}>{t("backup.lastBackup", { path: lastBackup })}</Text>
       )}
 
       <View style={styles.warning}>
         <Text style={styles.warningText}>
-          Importante: guarda el archivo de backup y tu clave en lugares diferentes.
-          Si pierdes la clave, nadie (ni NIDO) puede recuperar tus datos.
+          {t("backup.warning")}
         </Text>
       </View>
 
-      <Pressable style={styles.buttonSecondary} onPress={onClose}>
-        <Text style={styles.buttonSecondaryText}>Cerrar</Text>
+      <Pressable
+        style={styles.buttonSecondary}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel={t("backup.close")}
+      >
+        <Text style={styles.buttonSecondaryText}>{t("backup.close")}</Text>
       </Pressable>
 
       {/* FIX 2026-10-09 (K4): modal con clave copiable */}
@@ -326,10 +348,17 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
                 onPress={() => {
                   if (dekModal) void Clipboard.setStringAsync(dekModal.dek);
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={t("backup.copyKey")}
               >
                 <Text style={styles.buttonText}>{t("backup.copyKey")}</Text>
               </Pressable>
-              <Pressable style={styles.buttonSecondary} onPress={() => setDekModal(null)}>
+              <Pressable
+                style={styles.buttonSecondary}
+                onPress={() => setDekModal(null)}
+                accessibilityRole="button"
+                accessibilityLabel={t("backup.understood")}
+              >
                 <Text style={styles.buttonSecondaryText}>{t("backup.understood")}</Text>
               </Pressable>
             </View>
