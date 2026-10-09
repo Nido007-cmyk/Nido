@@ -168,7 +168,7 @@ async function validateBundle(bundleUri: string): Promise<{ valid: boolean; size
     return { valid: false, reason: "El archivo no existe." };
   }
   const size = (info as any).size ?? 0;
-  if (size > 500 * 1024 * 1024) {
+  if (size > 100 * 1024 * 1024) {
     return { valid: false, reason: "El bundle es demasiado grande." };
   }
   if (size < 100) {
@@ -245,7 +245,16 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
       const manifestInfo = await FileSystem.getInfoAsync(manifestUri);
       if (manifestInfo.exists) {
         const manifestRaw = await FileSystem.readAsStringAsync(manifestUri);
-        const manifest = JSON.parse(manifestRaw);
+        let manifest: any;
+        try {
+          manifest = JSON.parse(manifestRaw);
+        } catch {
+          return { valid: false, reason: "El manifest está corrupto (JSON inválido)." };
+        }
+        // FIX 2026-10-09 (NEW-H-2): validar forma del manifest en path .db crudo.
+        if (!manifest || typeof manifest !== "object") {
+          return { valid: false, reason: "El manifest no es un objeto válido." };
+        }
         // K2: verificar SHA-256.
         // FIX 2026-10-09 (H-5): fail-closed si no se puede calcular el SHA.
         if (manifest.sha256) {
@@ -351,8 +360,10 @@ export async function restoreBackup(backupUri: string): Promise<void> {
   // 5. FIX 2026-10-09 (K3): restaurar la DB de conocimiento también.
   // createBackup la guarda como <dest>.knowledge.db; si existe, restaurarla
   // junto a la principal para no dejarlas de épocas distintas.
+  // FIX 2026-10-09 (NEW3-H-1): usar actualUri (para bundles, el knowledge
+  // se extrajo junto al .db, no junto al .nidobackup.json).
   try {
-    const knowledgeBackupUri = `${backupUri}.knowledge.db`;
+    const knowledgeBackupUri = `${actualUri}.knowledge.db`;
     const kbInfo = await FileSystem.getInfoAsync(knowledgeBackupUri);
     if (kbInfo.exists) {
       // FIX 2026-10-09 (R3): usar KNOWLEDGE_DB_NAME, no derivar del nombre.
