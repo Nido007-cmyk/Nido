@@ -202,15 +202,16 @@ export async function notifyNow(title: string, body: string): Promise<void> {
 }
 
 /**
- * (Re)programa el resumen diario para las próximas 8:00 con el contenido
- * ya calculado. Se llama al abrir la app para que el contenido esté fresco.
+ * (Re)programa el resumen diario para las 8:00 con el contenido ya calculado.
+ * FIX 2026-10-09 (N3): usar trigger DAILY en vez de DATE one-shot. El DATE
+ * solo disparaba si la app abría para re-programar; si el usuario no abría
+ * por 3 días, no había briefing esos días. Con DAILY el SO lo dispara aunque
+ * la app no abra. El contenido se refresca en cada startup (híbrido).
+ * Se llama al abrir la app para que el contenido esté fresco.
  */
 export async function refreshBriefingNotification(body: string): Promise<void> {
   try {
     await Notifications.cancelScheduledNotificationAsync(BRIEFING_IDENTIFIER);
-    const next = new Date();
-    next.setHours(8, 0, 0, 0);
-    if (next.getTime() <= Date.now()) next.setDate(next.getDate() + 1);
     await Notifications.scheduleNotificationAsync({
       identifier: BRIEFING_IDENTIFIER,
       content: {
@@ -218,8 +219,9 @@ export async function refreshBriefingNotification(body: string): Promise<void> {
         body: body.slice(0, 4000),
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: next,
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour: 8,
+        minute: 0,
         channelId: "nido-briefing",
       },
     });
