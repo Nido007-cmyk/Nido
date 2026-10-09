@@ -199,9 +199,13 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
         const manifestRaw = await FileSystem.readAsStringAsync(manifestUri);
         const manifest = JSON.parse(manifestRaw);
         // K2: verificar SHA-256.
+        // FIX 2026-10-09 (H-5): fail-closed si no se puede calcular el SHA.
         if (manifest.sha256) {
           const actualSha = await sha256File(uri);
-          if (actualSha && actualSha.toLowerCase() !== manifest.sha256.toLowerCase()) {
+          if (!actualSha) {
+            return { valid: false, reason: "No se pudo verificar la integridad (SHA-256)." };
+          }
+          if (actualSha.toLowerCase() !== manifest.sha256.toLowerCase()) {
             return { valid: false, reason: "El backup está corrupto (SHA-256 no coincide)." };
           }
         }
@@ -240,8 +244,16 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
  * ADVERTENCIA: esto sobrescribe los datos actuales. La app debe reiniciarse después.
  */
 export async function restoreBackup(backupUri: string): Promise<void> {
+  // FIX 2026-10-09 (CR-1): si es un bundle portable, extraer primero.
+  let actualUri = backupUri;
+  if (backupUri.endsWith(".nidobackup.json")) {
+    const dir = FileSystem.documentDirectory;
+    if (!dir) throw new Error("No se pudo acceder al almacenamiento.");
+    actualUri = await extractPortableBundle(backupUri, dir);
+  }
+
   // 1. Validar ANTES de tocar nada (BK-3).
-  const validation = await validateBackup(backupUri);
+  const validation = await validateBackup(actualUri);
   if (!validation.valid) {
     throw new Error(`Backup inválido: ${validation.reason}`);
   }
@@ -277,7 +289,7 @@ export async function restoreBackup(backupUri: string): Promise<void> {
 
   // 4. Reemplazar el archivo. Si falla, rollback automático (BK-3).
   try {
-    await FileSystem.copyAsync({ from: backupUri, to: dbPath });
+    await FileSystem.copyAsync({ from: actualUri, to: dbPath });
   } catch (e) {
     // Rollback: restaurar la copia de seguridad.
     if (hasSafetyCopy) {
@@ -311,4 +323,72 @@ export async function restoreBackup(backupUri: string): Promise<void> {
   // 6. Limpiar la copia de seguridad solo si todo salió bien.
   // (Se conserva si hubo algún problema para recuperación manual.)
   // Nota: no reabrimos la base aquí; la app debe reiniciarse.
+}
+
+/**
+ * Crea un bundle portable (.nidobackup.json) con los 3 archivos en uno solo.
+ * FIX 2026-10-09 (CR-1): el share sheet solo maneja un archivo. El bundle
+ * JSON incluye db + manifest + knowledge en base64, así K1/K2/K3 protegen
+ * el flujo real de compartir.
+ */
+export async function createPortableBundle(backupUri: string): Promise<string> {
+  const manifestUri = `${backupUri}.manifest.json`;
+  const knowledgeUri = `${backupUri}.knowledge.db`;
+
+  const manifestRaw = await FileSystem.readAsStringAsync(manifestUri);
+  const dbBase64 = await FileSystem.readAsStringAsync(backupUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  let knowledgeBase64: string | null = null;
+  try {
+    const kInfo = await FileSystem.getInfoAsync(knowledgeUri);
+    if (kInfo.exists) {
+      knowledgeBase64 = await FileSystem.readAsStringAsync(knowledgeUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+    }
+  } catch { /* noop */ }
+
+  const bundle = {
+    format: "nidobackup",
+    version: 1,
+    manifest: JSON.parse(manifestRaw),
+    db: dbBase64,
+    knowledge: knowledgeBase64,
+  };
+
+  const bundleUri = backupUri.replace(/\.db$/, ".nidobackup.json");
+  await FileSystem.writeAsStringAsync(bundleUri, JSON.stringify(bundle));
+  return bundleUri;
+}
+
+/**
+ * Extrae un bundle portable a los 3 archivos separados.
+ * Retorna la URI del .db extraído.
+ */
+export async function extractPortableBundle(bundleUri: string, destDir: string): Promise<string> {
+  const raw = await FileSystem.readAsStringAsync(bundleUri);
+  const bundle = JSON.parse(raw);
+  if (bundle.format !== "nidobackup") {
+    throw new Error("Formato de bundle no reconocido");
+  }
+
+  const dbUri = `${destDir}/restored.db`;
+  await FileSystem.writeAsStringAsync(bundle.db, dbUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  await FileSystem.writeAsStringAsync(
+    `${dbUri}.manifest.json`,
+    JSON.stringify(bundle.manifest, null, 2)
+  );
+
+  if (bundle.knowledge) {
+    await FileSystem.writeAsStringAsync(`${dbUri}.knowledge.db`, bundle.knowledge, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+  }
+
+  return dbUri;
 }

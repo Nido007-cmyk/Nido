@@ -126,6 +126,13 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
   const handleShowKey = async () => {
     setBusy(true);
     try {
+      // FIX 2026-10-09 (H-3): biométrico obligatorio para ver la DEK.
+      try {
+        await requireUnlock("Ver clave de cifrado");
+      } catch {
+        Alert.alert("Cancelado", "No se mostró la clave.");
+        return;
+      }
       const key = await Backup.exportDatabaseKey();
       Alert.alert(
         "Tu clave de cifrado",

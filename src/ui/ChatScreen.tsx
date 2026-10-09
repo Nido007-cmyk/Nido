@@ -870,6 +870,8 @@ export function ChatScreen({
         // Deep Research always runs a retrieval pass per sub-question, so
         // "all passes returned nothing" is the honest signal here.
         noSourcesFound = result.noSourcesFound ?? result.citations.length === 0;
+        // FIX 2026-10-09 (H-1): flush del buffer de tokens en Deep Research.
+        flushTokenBuffer();
         if (result.timedOut) {
           setMessages((prev) =>
             prev.map((m) => (m.id === assistantId ? { ...m, timedOut: true } : m))

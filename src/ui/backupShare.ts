@@ -51,7 +51,9 @@ export async function findLatestBackup(): Promise<string | null> {
 }
 
 /**
- * Abre el share sheet del sistema con el archivo del backup.
+ * Abre el share sheet del sistema con el backup como bundle portable.
+ * FIX 2026-10-09 (CR-1): usa createPortableBundle para incluir db + manifest
+ * + knowledge en un solo archivo. Así K1/K2/K3 protegen el flujo real.
  * Lanza si el compartido no está disponible en el dispositivo.
  */
 export async function shareBackupFile(path: string): Promise<void> {
@@ -59,5 +61,9 @@ export async function shareBackupFile(path: string): Promise<void> {
   if (!available) {
     throw new Error("sharing-unavailable");
   }
-  await Sharing.shareAsync(path);
+  const { createPortableBundle } = await import("../security/backup");
+  const bundleUri = await createPortableBundle(path);
+  await Sharing.shareAsync(bundleUri);
 }
+
+

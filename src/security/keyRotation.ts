@@ -10,14 +10,18 @@
  * Permite al usuario rotar la clave de cifrado de la base de datos.
  * Usa SQLCipher `PRAGMA rekey` que es atómico.
  *
- * Flujo:
+ * Flujo (crash-safe, CR-3):
  * 1. Biométrico (obligatorio)
  * 2. Generar nuevo DEK (32 bytes aleatorios)
- * 3. Abrir DB con DEK viejo
- * 4. PRAGMA rekey = '<nuevo>'
- * 5. Guardar nuevo DEK en Keystore
- * 6. Si Keystore falla → la DB ya tiene la nueva clave pero el Keystore
- *    tiene la vieja → FAIL-CLOSED: revertir con rekey a la vieja
+ * 3. Guardar nuevo DEK en staging (archivo temporal) ANTES del rekey
+ * 4. Abrir DB con DEK viejo
+ * 5. PRAGMA rekey = '<nuevo>'
+ * 6. Guardar nuevo DEK en Keystore
+ * 7. Borrar staging
+ * 8. Si Keystore falla → revertir con rekey a la vieja
+ *
+ * Si la app crashea entre 5 y 6, el staging permite recuperar en el próximo
+ * arranque (checkStaleRekeyStaging).
  *
  * Seguridad:
  * - Nunca loggear DEKs

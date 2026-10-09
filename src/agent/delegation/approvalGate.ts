@@ -145,8 +145,11 @@ export class ApprovalGate {
    * FIX 2026-10-09 (F-DELEG-2): taskIds ya ejecutados. Un token rejugado
    * (mismo taskId después de completar) se rechaza aquí en vez de generar
    * una segunda tarjeta de aprobación.
+   * FIX 2026-10-09 (H-4): acotado a 1000 entradas (LRU). Sin límite, un
+   * atacante podría llenar memoria con taskIds falsos.
    */
   private readonly executed = new Set<string>();
+  private static readonly MAX_EXECUTED = 1000;
   private stateProvider: NegotiationStateProvider | null = null;
   private seq = 0;
   /**
@@ -339,6 +342,11 @@ export class ApprovalGate {
       out.documentBase64 = entry.snapshot.documentBase64;
     }
     // FIX 2026-10-09 (F-DELEG-2): marcar como ejecutado para anti-replay.
+    // FIX 2026-10-09 (H-4): acotar el set (evict oldest si excede).
+    if (this.executed.size >= ApprovalGate.MAX_EXECUTED) {
+      const oldest = this.executed.values().next().value;
+      if (oldest) this.executed.delete(oldest);
+    }
     this.executed.add(entry.snapshot.taskId);
     // FIX 2026-10-09: registrar timestamp para rate limit.
     this.approvalTimestamps.push(Date.now());
