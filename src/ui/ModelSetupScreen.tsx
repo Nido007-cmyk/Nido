@@ -378,17 +378,29 @@ export function ModelSetupScreen(props: Props) {
                 style={styles.wizardBtn}
                 onPress={async () => {
                   try {
-                    const { createBackup, exportDatabaseKey } = await import("../security/backup");
-                    const { documentDirectory } = await import("expo-file-system/legacy");
-                    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-                    const dest = `${documentDirectory}nido-backup-${timestamp}.db`;
-                    await createBackup(dest);
-                    const key = await exportDatabaseKey();
+                    // TESTFIX-2026-10-08 (Fix 6): lógica extraída a
+                    // backupShare.ts; la alerta ahora ofrece Compartir para
+                    // sacar el archivo de la carpeta privada del app.
+                    const { createBackupFile } = await import("./backupShare");
+                    const { path, key } = await createBackupFile();
                     // Mostrar la clave para que el usuario la copie.
                     Alert.alert(
                       "Backup creado",
-                      `Archivo: ${dest}\n\nTu clave (guárdala separada):\n${key}`,
-                      [{ text: "OK" }]
+                      `Archivo: ${path}\n\nTu clave (guárdala separada):\n${key}`,
+                      [
+                        {
+                          text: "Compartir",
+                          onPress: async () => {
+                            try {
+                              const { shareBackupFile } = await import("./backupShare");
+                              await shareBackupFile(path);
+                            } catch {
+                              Alert.alert("Error", "No se pudo compartir el backup.");
+                            }
+                          },
+                        },
+                        { text: "OK" },
+                      ]
                     );
                   } catch (e) {
                     Alert.alert("Error", e instanceof Error ? e.message : "No se pudo crear el backup.");
@@ -397,6 +409,27 @@ export function ModelSetupScreen(props: Props) {
                 accessibilityRole="button"
               >
                 <Text style={styles.wizardBtnText}>Crear backup</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.wizardBtn, { marginTop: 8 }]}
+                onPress={async () => {
+                  try {
+                    const { findLatestBackup, shareBackupFile } = await import("./backupShare");
+                    const latest = await findLatestBackup();
+                    if (!latest) {
+                      Alert.alert("Sin backups", "Aún no has creado ningún backup.");
+                      return;
+                    }
+                    await shareBackupFile(latest);
+                  } catch (e) {
+                    Alert.alert("Error", e instanceof Error && e.message === "sharing-unavailable"
+                      ? "Tu dispositivo no permite compartir archivos."
+                      : "No se pudo compartir el backup.");
+                  }
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={styles.wizardBtnText}>Compartir backup</Text>
               </Pressable>
               <Pressable
                 style={[styles.wizardBtn, { marginTop: 8 }]}
