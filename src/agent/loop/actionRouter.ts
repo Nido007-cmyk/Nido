@@ -83,10 +83,10 @@ export function extractReminderAction(userText: string): ReminderAction | null {
       .replace(/\ba\s+las\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
       .replace(/\bat\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
       // TESTFIX-2026-10-08: limpiar tiempo relativo ("en 2 minutos" no es
-      // parte del texto del recordatorio).
-      .replace(/\ben\s+\d+\s+(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
-      .replace(/\bin\s+\d+\s+(minutes?|min|hours?|hrs?|h|days?|d|weeks?|w)\b/gi, "")
-      .replace(/\ben\s+(uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s+(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
+      // parte del texto del recordatorio). FIX 2026-10-08: \s* para "1minuto".
+      .replace(/\ben\s+\d+\s*(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
+      .replace(/\bin\s+\d+\s*(minutes?|min|hours?|hrs?|h|days?|d|weeks?|w)\b/gi, "")
+      .replace(/\ben\s+(uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
       // M3 FIX: limpiar hora suelta después de día ("el viernes 10" → el 10 es la hora).
       .replace(/\b(\d{1,2})(:\d{2})?\s*(am|pm)?\s*$/gi, "")
       .replace(/\s+/g, " ")
@@ -112,7 +112,8 @@ const NUMBER_WORDS: Record<string, number> = {
  * Devuelve la fecha objetivo o null si no hay patrón relativo.
  */
 function parseRelativeTime(t: string, now: Date): Date | null {
-  const m = /\b(?:en|in)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s+(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/i.exec(t);
+  // FIX 2026-10-08: \s* entre número y unidad para "1minuto" (sin espacio).
+  const m = /\b(?:en|in)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/i.exec(t);
   if (!m) return null;
 
   const rawNum = m[1].toLowerCase();

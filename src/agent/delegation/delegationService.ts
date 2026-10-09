@@ -87,12 +87,25 @@ export class DelegationService {
   private readonly handlers = new Set<(e: DelegationEvent) => void>();
   /** Outbound tasks awaiting result/reject, by taskId. */
   private readonly outbound = new Map<string, { peerPkHex: string; negotiationId: string }>();
+  // FIX 2026-10-08: último resultado de tarea, sobrevive a la navegación.
+  // El singleton vive más que la pantalla, así al volver se muestra.
+  private lastTaskResult: { ok: boolean; text: string; at: number } | null = null;
 
   static getInstance(): DelegationService {
     if (!DelegationService.instance) {
       DelegationService.instance = new DelegationService();
     }
     return DelegationService.instance;
+  }
+
+  /** FIX 2026-10-08: devuelve el último resultado para restaurar la UI. */
+  getLastTaskResult(): { ok: boolean; text: string; at: number } | null {
+    return this.lastTaskResult;
+  }
+
+  /** FIX 2026-10-08: limpia el resultado mostrado. */
+  clearLastTaskResult(): void {
+    this.lastTaskResult = null;
   }
 
   /**
@@ -280,6 +293,12 @@ export class DelegationService {
         errorCode: r.ok ? null : r.error?.code ?? "unknown",
       });
       this.emit({ type: "task-result", taskId, ok: r.ok, result: r.result, error: r.error });
+      // FIX 2026-10-08: persistir para que sobreviva a la navegación.
+      this.lastTaskResult = {
+        ok: r.ok,
+        text: r.ok ? String(r.result ?? "") : `Error: ${r.error?.code ?? "unknown"}`,
+        at: Date.now(),
+      };
     } else if (taskType === "TASK_REJECT") {
       const r = body as { reasonCode: string };
       this.outbound.delete(taskId);

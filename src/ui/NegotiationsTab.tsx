@@ -100,6 +100,10 @@ export function NegotiationsTab() {
         const { delegationService } = await import("../agent/delegation/delegationService");
         const { isFeatureEnabled } = await import("../config/featureFlags");
         if (!isFeatureEnabled("delegation.enabled")) return;
+        // FIX 2026-10-08: restaurar el último resultado si la pantalla se
+        // desmontó (el singleton lo conserva).
+        const last = delegationService.getLastTaskResult();
+        if (last) setTaskResult(last.text);
         unsubDelegation = delegationService.subscribe((event) => {
           if (event.type === "approval-pending") {
             setTaskApprovals((prev) =>
@@ -266,6 +270,9 @@ export function NegotiationsTab() {
         return;
       }
       setTaskResult(t("tasks.taskSent"));
+      // FIX 2026-10-08: cerrar el modal al enviar exitosamente.
+      setShowTaskModal(false);
+      setTaskDescription("");
     } finally {
       setTaskBusy(false);
     }
