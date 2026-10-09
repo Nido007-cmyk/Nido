@@ -1,4 +1,7 @@
 #!/bin/bash
+# MIT License
+# Copyright (c) 2026 NIDO contributors
+# See LICENSE file for details.
 #
 # netstats-uid.sh - NIDO Offline Proof: Per-UID network counters
 #
