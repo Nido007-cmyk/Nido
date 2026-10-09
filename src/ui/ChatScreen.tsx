@@ -806,17 +806,35 @@ export function ChatScreen({
       const onToken = (piece: string) => {
         tokensGenerated += 1;
         assistantText += piece;
+        // FIX 2026-10-09 (5.1): buffer tokens, flush a React cada ~100ms.
+        // Antes cada token hacía setMessages → re-render de toda la lista.
+        tokenBuffer += piece;
+        const now = performance.now();
         if (firstToken) {
           firstToken = false;
-          firstTokenTime = performance.now();
+          firstTokenTime = now;
           ttftMs = firstTokenTime - startTime;
           setProcessing({ messageId: assistantId, status: "generating" });
+          // Primer token sí va inmediato (TTFT).
+          flushTokenBuffer();
         } else {
-          const elapsedSinceFirst = (performance.now() - firstTokenTime) / 1000;
+          const elapsedSinceFirst = (now - firstTokenTime) / 1000;
           if (elapsedSinceFirst > 0) setLiveTokPerSec(tokensGenerated / elapsedSinceFirst);
+          if (now - lastFlushTime >= 100) {
+            flushTokenBuffer();
+          }
         }
+      };
+      // Buffer de tokens para 5.1.
+      let tokenBuffer = "";
+      let lastFlushTime = 0;
+      const flushTokenBuffer = () => {
+        if (!tokenBuffer) return;
+        const chunk = tokenBuffer;
+        tokenBuffer = "";
+        lastFlushTime = performance.now();
         setMessages((prev) =>
-          prev.map((m) => (m.id === assistantId ? { ...m, text: m.text + piece } : m))
+          prev.map((m) => (m.id === assistantId ? { ...m, text: m.text + chunk } : m))
         );
       };
 
@@ -907,6 +925,8 @@ export function ChatScreen({
             );
           }
           await llamaEngine.generate(genInput);
+          // 5.1: flush final del buffer de tokens.
+          flushTokenBuffer();
           return { chunks: c, noSourcesFound: noSources };
         };
 
