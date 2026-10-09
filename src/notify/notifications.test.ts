@@ -40,10 +40,12 @@ import {
   scheduleReminderNotification,
   cancelReminderNotification,
   refreshBriefingNotification,
+  __resetNotificationsForTests,
 } from "./notifications";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  __resetNotificationsForTests();
   mocks.requestPermissionsAsync.mockResolvedValue({ status: "granted" });
 });
 

@@ -56,7 +56,15 @@ function notifyStrings(): NotifyStrings {
 }
 
 /** Permisos + canales. Llamar una vez al arrancar la app. */
+// FIX 2026-10-09 (N2): guard contra doble inicialización (Fast Refresh,
+// re-init). Sin esto se apilan listeners duplicados.
+let notificationsInitialized = false;
+/** Solo para tests: resetea el guard de inicialización. */
+export function __resetNotificationsForTests(): void {
+  notificationsInitialized = false;
+}
 export async function initNotifications(): Promise<boolean> {
+  if (notificationsInitialized) return true;
   try {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
@@ -103,6 +111,7 @@ export async function initNotifications(): Promise<boolean> {
         // Best-effort: si falla, el fallback de startup lo avisará.
       }
     });
+    notificationsInitialized = true;
     return true;
   } catch {
     return false;
