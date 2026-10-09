@@ -64,8 +64,11 @@ const HELP_RE =
 // evidence: the model echoed the question + "Te puedo ayudar con eso."
 // Deterministic answer eliminates the dodge and the hallucination risk
 // on a privacy-critical question.
+// FIX 2026-10-08: añadir variantes en tercera persona ("dónde guardan",
+// "dónde guarda") — evidencia física: "dónde guardan mis datos?" no
+// matcheaba y el modelo improvisó con mala gramática.
 const PRIVACY_RE =
-  /^[¡¿]?(d[oó]nde guardas mis datos|donde guardas mi informaci[oó]n|d[oó]nde est[aá]n mis datos|d[oó]nde se guardan mis datos|qui[eé]n puede ver mis datos|mis datos est[aá]n seguros|where do you store my data|where is my data stored|where are my data stored|who can see my data|is my data (safe|private))[?.!]*$/i;
+  /^[¡¿]?(d[oó]nde guardas mis datos|d[oó]nde guardan mis datos|d[oó]nde guarda mis datos|donde guardas mi informaci[oó]n|donde guardan mi informaci[oó]n|d[oó]nde est[aá]n mis datos|d[oó]nde se guardan mis datos|qui[eé]n puede ver mis datos|mis datos est[aá]n seguros|where do you store my data|where do they store my data|where does it store my data|where is my data stored|where are my data stored|who can see my data|is my data (safe|private))[?.!]*$/i;
 
 const TEMPLATES: Record<CannedKind, Record<CannedLang, string>> = {
   greeting: {
@@ -86,10 +89,41 @@ const TEMPLATES: Record<CannedKind, Record<CannedLang, string>> = {
   },
 };
 
-/** Detects the response language from the input. Spanish-first app: default 'es'. */
+/**
+ * Lee el idioma vigente de la UI, fresco en cada llamada (nunca cacheado).
+ * Lazy require: la cadena i18n/settings trae módulos nativos que los
+ * unit tests no pueden cargar. Exportada para tests.
+ */
+export function getUiLocale(): CannedLang | null {
+  try {
+    const i18n = require("../../i18n").default as {
+      resolvedLanguage?: string;
+      language?: string;
+    };
+    const tag = (i18n.resolvedLanguage ?? i18n.language ?? "").toLowerCase();
+    if (tag.startsWith("es")) return "es";
+    if (tag.startsWith("en")) return "en";
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Detects the response language for a canned hit.
+ * FIX 2026-10-08: prefer the UI locale (read fresh on every call via
+ * getUiLocale — never cached), so changing the language in Settings
+ * takes effect immediately even with the chat open. Physical evidence:
+ * the chat "stuck" to the input language because detectLang only looked
+ * at the text; menus (i18n.t) updated but canned answers didn't.
+ * Falls back to input-text heuristics when the i18n chain can't load
+ * (unit tests) or the UI language isn't es/en.
+ */
 function detectLang(text: string): CannedLang {
+  const uiLang = getUiLocale();
+  if (uiLang) return uiLang;
   // Explicit English markers → English. Everything else → Spanish (default).
-  if (/^(hi|hello|hey|yo|sup|who are you|who is nido|what are you|what is nido|your name|help|what can you do|how do you work|good (morning|afternoon|evening|night)|thanks|thank you|bye|goodbye|see ya|see you|okay|ok|cool|nice|wake up|where do you store|where is my data|where are my data|who can see my data|is my data)\b/i.test(text.trim())) {
+  if (/^(hi|hello|hey|yo|sup|who are you|who is nido|what are you|what is nido|your name|help|what can you do|how do you work|good (morning|afternoon|evening|night)|thanks|thank you|bye|goodbye|see ya|see you|okay|ok|cool|nice|wake up|where do you store|where do they store|where does it store|where is my data|where are my data|who can see my data|is my data)\b/i.test(text.trim())) {
     return "en";
   }
   return "es";

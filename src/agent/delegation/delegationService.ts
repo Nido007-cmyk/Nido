@@ -206,8 +206,12 @@ export class DelegationService {
         issuedAt: Date.now(),
         expiresAt,
       });
-    } catch {
-      return { ok: false, reason: "token_issue_failed" };
+    } catch (e) {
+      // FIX 2026-10-08: no tragar el motivo específico. Sigue siendo
+      // fail-closed (no se envía nada), pero el motivo llega a la UI para
+      // diagnóstico. Solo contiene la validación que falló, ningún secreto.
+      const detail = e instanceof Error ? e.message : String(e);
+      return { ok: false, reason: `token_issue_failed:${detail}` };
     }
 
     const body: TaskRequestBody = {

@@ -38,6 +38,7 @@
 
 import type { TaskScope } from "../../p2p/taskProtocol";
 import { TASK_LIMITS } from "../../p2p/taskProtocol";
+import { decodeBase64 } from "../../p2p/base64";
 
 /** Spotlight delimiters: peer content is DATA, never instructions. */
 export const SPOTLIGHT_OPEN = "<peer-data>";
@@ -213,7 +214,9 @@ export class DelegatedExecutor {
     }
     let document: string;
     try {
-      document = Buffer.from(input.documentBase64, "base64").toString("utf8");
+      // FIX 2026-10-08: Hermes no trae Buffer de Node (mismo bug que en
+      // delegationToken.ts). Usar TextDecoder + helper sin dependencias.
+      document = new TextDecoder().decode(decodeBase64(input.documentBase64));
     } catch {
       throw new Error("document is not valid base64");
     }

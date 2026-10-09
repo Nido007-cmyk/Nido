@@ -98,6 +98,14 @@ describe("matchCanned — privacy (TESTFIX-2026-10-08)", () => {
     "where do you store my data?",
     "where is my data stored",
     "who can see my data",
+    // FIX 2026-10-08: variantes en tercera persona (evidencia física:
+    // "dónde guardan mis datos?" no matcheaba).
+    "dónde guardan mis datos?",
+    "donde guardan mis datos",
+    "dónde guarda mis datos",
+    "donde guardan mi información",
+    "where do they store my data?",
+    "where does it store my data",
   ])("matches privacy question %p (was: model dodge)", (text) => {
     const hit = matchCanned(text);
     expect(hit).not.toBeNull();

@@ -84,6 +84,25 @@ export async function initNotifications(): Promise<boolean> {
       // memoria; oculto en la pantalla de bloqueo por defecto.
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.SECRET,
     });
+    // FIX 2026-10-08: marcar el recordatorio como completado cuando su
+    // notificación programada se entrega. Antes nada lo marcaba: al
+    // reiniciar la app, getDueReminders() lo encontraba pendiente+vencido
+    // y lo disparaba OTRA VEZ con notifyNow (duplicado reportado en
+    // pruebas físicas). El listener solo corre si la app está viva al
+    // entregarse; si no, el fallback de startup (getDueReminders) sigue
+    // funcionando igual.
+    Notifications.addNotificationReceivedListener(async (notification) => {
+      try {
+        const identifier = notification.request.identifier ?? "";
+        if (!identifier.startsWith(REMINDER_PREFIX)) return;
+        const reminderId = identifier.slice(REMINDER_PREFIX.length);
+        if (!reminderId) return;
+        const { completeReminder } = await import("../agent/memory/memoryStore");
+        await completeReminder(reminderId);
+      } catch {
+        // Best-effort: si falla, el fallback de startup lo avisará.
+      }
+    });
     return true;
   } catch {
     return false;

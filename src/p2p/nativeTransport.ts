@@ -530,9 +530,17 @@ export class NidoBluetoothTransport implements P2PTransport {
       p.reject?.(new Error("Discovery detenido."));
     }
     this.pending.clear();
-    this.macToPk.clear();
-    this.pkToMac.clear();
-    this.confirmedPair.clear();
+    // FIX 2026-10-08: NO borrar macToPk/pkToMac/confirmedPair aquí.
+    // Son estado de SESIÓN (rutas peer↔MAC de conexiones vivas), no de
+    // discovery. Borrarlas al salir de la pantalla NIDO cortaba la
+    // comunicación aunque el socket RFCOMM siguiera vivo: sendFrame()
+    // lanzaba "Peer no conectado por Bluetooth" (pkToMac vacío) y los
+    // frames entrantes se ignoraban (macToPk.get(mac) → undefined).
+    // Las rutas solo se desmontan en forgetRoute() (desconexión real del
+    // socket) o se reemplazan en establishRoute() (re-handshake con
+    // tie-break). La anti-replay vive en la cache persistente de nonces
+    // (base cifrada), no en estos mapas; y R4 establece que un HELLO
+    // solo nunca los muta, así que conservarlos es seguro.
     if (b) {
       await b.stopDiscovery().catch(() => {});
       // P2P-ALWAYS-ON 2026-10-07: NO detener el servidor aquí. El servidor

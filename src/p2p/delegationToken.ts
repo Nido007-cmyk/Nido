@@ -29,6 +29,8 @@
  * so links cannot be reordered or removed without breaking verification.
  */
 
+import { encodeBase64, decodeBase64 } from "./base64";
+
 import nacl from "tweetnacl";
 import { toHex as bytesToHex, fromHex as hexToBytes } from "./crypto";
 import {
@@ -100,8 +102,12 @@ function sortKeys(v: unknown): unknown {
 }
 
 function b64urlEncode(s: string): string {
-  return Buffer.from(s, "utf8")
-    .toString("base64")
+  // FIX 2026-10-08: Hermes (React Native) no trae Buffer de Node; usar
+  // TextEncoder + el helper base64 sin dependencias. El uso directo de
+  // Buffer hacía que issueDelegationToken lanzara en el dispositivo
+  // ("token_issue_failed") aunque pasaba todas las validaciones.
+  const bytes = new TextEncoder().encode(s);
+  return encodeBase64(bytes)
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
@@ -109,7 +115,9 @@ function b64urlEncode(s: string): string {
 
 function b64urlDecode(s: string): string {
   const b64 = s.replace(/-/g, "+").replace(/_/g, "/");
-  return Buffer.from(b64, "base64").toString("utf8");
+  const pad = b64.length % 4;
+  const padded = pad === 0 ? b64 : b64 + "=".repeat(4 - pad);
+  return new TextDecoder().decode(decodeBase64(padded));
 }
 
 function signLink(

@@ -749,6 +749,29 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
     await t.stopDiscovery();
   });
 
+  it("FIX 2026-10-08: stopDiscovery NO borra las rutas peer↔MAC (P2P-ALWAYS-ON)", async () => {
+    // Evidencia física: al salir de la pantalla NIDO (unmount → stopLink →
+    // stopDiscovery) la comunicación se cortaba aunque el socket RFCOMM
+    // siguiera vivo. Causa: stopDiscovery() borraba macToPk/pkToMac.
+    await completeHandshakeWithPeer();
+    // Salir de la pantalla.
+    await t.stopDiscovery();
+    // 1) La ruta de salida sobrevive: sendFrame no necesita re-handshake.
+    const before = f.sent.length;
+    await t.sendFrame(PEER_PK_HEX, new Uint8Array([10]));
+    expect(f.sent).toHaveLength(before + 1);
+    expect(f.sent[before].address).toBe(MAC);
+    // 2) Al volver a la pantalla, los frames entrantes se enrutan al peer.
+    await t.startDiscovery(ev.events);
+    const payload = new Uint8Array([11, 12]);
+    f.emit("onFrame", { address: MAC, base64: encodeBase64(payload) } as never);
+    await tick();
+    const last = ev.frames[ev.frames.length - 1];
+    expect(last.pk).toBe(PEER_PK_HEX);
+    expect(last.frame).toEqual(payload);
+    await t.stopDiscovery();
+  });
+
   it("onDisconnected limpia la ruta y avisa", async () => {
     await completeHandshakeWithPeer();
     f.emit("onDisconnected", { address: MAC } as never);

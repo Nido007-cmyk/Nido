@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   setNotificationChannelAsync: vi.fn(),
   scheduleNotificationAsync: vi.fn(),
   cancelScheduledNotificationAsync: vi.fn(),
+  addNotificationReceivedListener: vi.fn(),
 }));
 
 vi.mock("expo-notifications", () => ({
@@ -20,9 +21,18 @@ vi.mock("expo-notifications", () => ({
   setNotificationChannelAsync: mocks.setNotificationChannelAsync,
   scheduleNotificationAsync: mocks.scheduleNotificationAsync,
   cancelScheduledNotificationAsync: mocks.cancelScheduledNotificationAsync,
+  addNotificationReceivedListener: mocks.addNotificationReceivedListener,
   SchedulableTriggerInputTypes: { DATE: "date", DAILY: "daily" },
   AndroidImportance: { HIGH: 4, DEFAULT: 3 },
   AndroidNotificationVisibility: { UNKNOWN: 0, PUBLIC: 1, PRIVATE: 2, SECRET: 3 },
+}));
+
+const memMocks = vi.hoisted(() => ({
+  completeReminder: vi.fn(),
+}));
+
+vi.mock("../agent/memory/memoryStore", () => ({
+  completeReminder: memMocks.completeReminder,
 }));
 
 import {
@@ -106,5 +116,35 @@ describe("refreshBriefingNotification", () => {
         content: expect.objectContaining({ body: "Tu día: 2 eventos." }),
       })
     );
+  });
+});
+
+describe("FIX 2026-10-08: notificación entregada marca el recordatorio", () => {
+  it("registra un listener que completa el reminder al entregarse", async () => {
+    const ok = await initNotifications();
+    expect(ok).toBe(true);
+    expect(mocks.addNotificationReceivedListener).toHaveBeenCalledTimes(1);
+    const listener = mocks.addNotificationReceivedListener.mock.calls[0][0];
+    expect(typeof listener).toBe("function");
+  });
+
+  it("el listener ignora notificaciones que no son de recordatorio", async () => {
+    await initNotifications();
+    const listener = mocks.addNotificationReceivedListener.mock.calls[0][0];
+    // No debe lanzar aunque el identificador sea de otro tipo.
+    await expect(
+      listener({ request: { identifier: "nido-daily-briefing" } })
+    ).resolves.toBeUndefined();
+    await expect(
+      listener({ request: { identifier: "otro" } })
+    ).resolves.toBeUndefined();
+    expect(memMocks.completeReminder).not.toHaveBeenCalled();
+  });
+
+  it("el listener completa el recordatorio cuando se entrega su aviso", async () => {
+    await initNotifications();
+    const listener = mocks.addNotificationReceivedListener.mock.calls[0][0];
+    await listener({ request: { identifier: "nido-reminder-abc123" } });
+    expect(memMocks.completeReminder).toHaveBeenCalledWith("abc123");
   });
 });

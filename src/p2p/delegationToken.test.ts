@@ -311,3 +311,35 @@ describe("delegationToken: attenuateToken verifica antes de extender", () => {
     expect(() => attenuateToken(evil.sk, tok, { maxToolCalls: 1 })).toThrow();
   });
 });
+
+describe("delegationToken: sin Buffer de Node (Hermes)", () => {
+  it("FIX 2026-10-08: issue + verify funcionan sin global Buffer", () => {
+    // Evidencia física: en el dispositivo (Hermes, sin Buffer) el envío
+    // de tareas delegadas fallaba con "token_issue_failed" porque
+    // b64urlEncode/b64urlDecode usaban Buffer.from directamente.
+    const realBuffer = (globalThis as any).Buffer;
+    try {
+      // Simular Hermes: Buffer no existe.
+      delete (globalThis as any).Buffer;
+      const a = keypair();
+      const b = keypair();
+      const tok = issueDelegationToken(a.sk, {
+        issuer: a.pk,
+        audience: b.pk,
+        negotiationId: "neg-1",
+        taskId: TASK_ID,
+        scopes: ["task:answer"],
+        issuedAt: Date.now(),
+        expiresAt: Date.now() + 60000,
+      });
+      expect(typeof tok).toBe("string");
+      // base64url: sin +, / ni =.
+      expect(tok).not.toMatch(/[+/=]/);
+      const v = verifyDelegationToken(tok, a.pk, b.pk);
+      expect(v).not.toBeNull();
+      expect(v!.root.audience).toBe(b.pk.toLowerCase());
+    } finally {
+      (globalThis as any).Buffer = realBuffer;
+    }
+  });
+});
