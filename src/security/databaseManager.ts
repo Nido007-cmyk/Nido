@@ -58,8 +58,9 @@ import {
 import {
   MEMORY_DB_SCHEMA_VERSION,
   MemoryDbVersionError,
-  checkFormatVersion,
 } from "./formatVersion";
+import { applyMigrations } from "./dbMigrations";
+import { MEMORY_MIGRATIONS } from "./memoryMigrations";
 
 const DB_NAME = "nido_memory.db";
 const SCHEMA_VERSION = MEMORY_DB_SCHEMA_VERSION;
@@ -257,22 +258,17 @@ async function openAndMigrate(): Promise<SQLiteDatabase> {
     await db.execAsync("PRAGMA journal_mode = WAL;");
     await db.execAsync(UNIFIED_DDL);
 
-    const ver = await db.getFirstAsync<{ value: string }>(
-      "SELECT value FROM meta WHERE key = 'schema_version';"
-    );
-    if (!ver) {
-      await db.runAsync(
-        "INSERT INTO meta (key, value) VALUES ('schema_version', ?);",
-        [String(SCHEMA_VERSION)]
-      );
-    } else {
-      checkFormatVersion({
-        formatId: "nido_memory.db",
-        found: ver.value,
-        supportedMajor: SCHEMA_VERSION,
-        ErrorClass: MemoryDbVersionError,
-      });
-    }
+    // FASE 1 RISK-3 (2026-10-09): usar el framework de migraciones versionadas.
+    // Con MEMORY_MIGRATIONS vacío, el comportamiento es idéntico al anterior:
+    // - Sin schema_version → lo estampa con SCHEMA_VERSION (first-open)
+    // - Con versión actual → no-op
+    // - Con versión corrupta o futura → MemoryDbVersionError (fail-closed)
+    await applyMigrations(db, {
+      formatId: "nido_memory.db",
+      supportedMajor: SCHEMA_VERSION,
+      ErrorClass: MemoryDbVersionError,
+      migrations: MEMORY_MIGRATIONS,
+    });
   } catch (err) {
     try {
       await db.closeAsync();
