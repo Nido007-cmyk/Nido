@@ -110,6 +110,8 @@ export async function initNotifications(): Promise<boolean> {
 }
 
 /** Programa el aviso de un recordatorio. Devuelve false si no se pudo. */
+// FIX 2026-10-09 (N1): flag de sesión para el aviso de alarma exacta.
+let exactAlarmAlertShownThisSession = false;
 export async function scheduleReminderNotification(
   reminderId: string,
   text: string,
@@ -124,7 +126,8 @@ export async function scheduleReminderNotification(
         "exact-alarm"
       );
       const canExact = await canScheduleExactAlarms();
-      if (!canExact) {
+      if (!canExact && !exactAlarmAlertShownThisSession) {
+        exactAlarmAlertShownThisSession = true;
         const { Alert, Platform } = await import("react-native");
         if (Platform.OS === "android") {
           Alert.alert(

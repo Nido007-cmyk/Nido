@@ -196,7 +196,14 @@ const createReminderHandler: ToolHandler = async (args) => {
   const at = args.at != null ? String(args.at).trim() : "";
   if (at) {
     const d = new Date(at);
-    if (!Number.isNaN(d.getTime())) dueAt = d.toISOString();
+    if (!Number.isNaN(d.getTime())) {
+      // FIX 2026-10-09 (A2): rechazar fechas en el pasado. El path
+      // determinístico ya lo hace; el del modelo no.
+      if (d.getTime() < Date.now() - 60_000) {
+        return "Error: la fecha del recordatorio está en el pasado. Usa una fecha futura.";
+      }
+      dueAt = d.toISOString();
+    }
   }
   const reminder = await saveReminder({ text, dueAt });
   const cuando = dueAt ? ` para ${fmtDateTime(dueAt)}` : " (sin fecha)";

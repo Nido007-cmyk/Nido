@@ -114,6 +114,19 @@ export async function createBackup(destinationUri: string): Promise<string> {
   }
 
   // 4. Crear manifest con metadata y checksum.
+  const dekHex = await getDatabaseKeyHex().catch(() => null);
+  let dekFingerprint: string | null = null;
+  if (dekHex) {
+    try {
+      const { default: Crypto } = await import("expo-crypto");
+      // Fingerprint del DEK (no el DEK): permite detectar backups de otra instalación.
+      dekFingerprint = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        dekHex,
+        { encoding: Crypto.CryptoEncoding.HEX }
+      );
+    } catch { /* noop */ }
+  }
   const manifest = {
     version: BACKUP_VERSION,
     createdAt: new Date().toISOString(),
@@ -122,6 +135,8 @@ export async function createBackup(destinationUri: string): Promise<string> {
     knowledgeBackupPath: knowledgeBackedUp ? knowledgeDest : null,
     appVersion: "1.0.0", // TODO: leer de app.json dinámicamente
     sha256: await sha256File(destinationUri),
+    // FIX 2026-10-09 (K1): fingerprint del DEK para detectar key mismatch en restore.
+    dekFingerprint,
   };
   const manifestUri = `${destinationUri}.manifest.json`;
   await FileSystem.writeAsStringAsync(manifestUri, JSON.stringify(manifest, null, 2));
@@ -173,6 +188,41 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
       }
     } catch {
       // Si no podemos leer el header, continuamos con validación básica.
+    }
+    // FIX 2026-10-09 (K1/K2): verificar manifest — SHA-256 del archivo y
+    // fingerprint del DEK. Si el backup es de otra instalación (DEK distinto),
+    // se rechaza ANTES de sobrescribir la DB viva.
+    try {
+      const manifestUri = `${uri}.manifest.json`;
+      const manifestInfo = await FileSystem.getInfoAsync(manifestUri);
+      if (manifestInfo.exists) {
+        const manifestRaw = await FileSystem.readAsStringAsync(manifestUri);
+        const manifest = JSON.parse(manifestRaw);
+        // K2: verificar SHA-256.
+        if (manifest.sha256) {
+          const actualSha = await sha256File(uri);
+          if (actualSha && actualSha.toLowerCase() !== manifest.sha256.toLowerCase()) {
+            return { valid: false, reason: "El backup está corrupto (SHA-256 no coincide)." };
+          }
+        }
+        // K1: verificar DEK fingerprint.
+        if (manifest.dekFingerprint) {
+          const currentDek = await getDatabaseKeyHex().catch(() => null);
+          if (currentDek) {
+            const { default: Crypto } = await import("expo-crypto");
+            const currentFp = await Crypto.digestStringAsync(
+              Crypto.CryptoDigestAlgorithm.SHA256,
+              currentDek,
+              { encoding: Crypto.CryptoEncoding.HEX }
+            );
+            if (currentFp.toLowerCase() !== manifest.dekFingerprint.toLowerCase()) {
+              return { valid: false, reason: "Este backup es de otra instalación (clave distinta). No se puede restaurar." };
+            }
+          }
+        }
+      }
+    } catch {
+      // Sin manifest, continuar con validación básica (backups viejos).
     }
     return { valid: true, sizeBytes: size };
   } catch (e) {
@@ -238,7 +288,26 @@ export async function restoreBackup(backupUri: string): Promise<void> {
     throw new Error(`Falló la restauración y se revirtió: ${e instanceof Error ? e.message : "error desconocido"}`);
   }
 
-  // 5. Limpiar la copia de seguridad solo si todo salió bien.
+  // 5. FIX 2026-10-09 (K3): restaurar la DB de conocimiento también.
+  // createBackup la guarda como <dest>.knowledge.db; si existe, restaurarla
+  // junto a la principal para no dejarlas de épocas distintas.
+  try {
+    const knowledgeBackupUri = `${backupUri}.knowledge.db`;
+    const kbInfo = await FileSystem.getInfoAsync(knowledgeBackupUri);
+    if (kbInfo.exists) {
+      // Ruta de la knowledge DB: mismo directorio que la principal.
+      const knowledgeDbPath = dbPath.replace(/\.db$/, "_knowledge.db");
+      // Verificar que el nombre coincide con el esperado.
+      const kbValidation = await validateBackup(knowledgeBackupUri);
+      if (kbValidation.valid) {
+        await FileSystem.copyAsync({ from: knowledgeBackupUri, to: knowledgeDbPath });
+      }
+    }
+  } catch {
+    // Best-effort: si no hay knowledge backup, continuar.
+  }
+
+  // 6. Limpiar la copia de seguridad solo si todo salió bien.
   // (Se conserva si hubo algún problema para recuperación manual.)
   // Nota: no reabrimos la base aquí; la app debe reiniciarse.
 }

@@ -367,7 +367,13 @@
     "emptyDescription": "Quando outro NIDO propuser colaboração, aparecerá aqui.",
     "outgoingTitle": "Proposta enviada para {{peer}}",
     "outgoingSending": "Enviando...",
-    "outgoingWaiting": "Aguardando resposta"
+    "outgoingWaiting": "Aguardando resposta",
+    "acceptedOn": "Aceito em {{date}}",
+    "activeTitle": "Colaborações ativas",
+    "peerOffline": "O contato não está online. Tente quando estiver por perto com o NIDO aberto.",
+    "proposeButton": "+ Propor colaboração",
+    "selectContactAndDescribe": "Selecione um contato e escreva a proposta.",
+    "sendFailed": "Não foi possível enviar."
   },
   "chatHeader": {
     "openDrawer": "Abrir menu de navegação",
@@ -552,7 +558,9 @@
     "pbkdf2Run": "▶ Executar benchmark PBKDF2",
     "pbkdf2Running": "Executando benchmark PBKDF2…",
     "pbkdf2Saved": "Salvo em {{path}} · provisório: {{verdict}}",
-    "pbkdf2Title": "Benchmark PBKDF2 (quarentena — não é cripto de produção)"
+    "pbkdf2Title": "Benchmark PBKDF2 (quarentena — não é cripto de produção)",
+    "pbkdf2WarnMsg": "Este benchmark vai congelar o app por um tempo durante a derivação da chave. Não feche o app.",
+    "pbkdf2WarnTitle": "Benchmark PBKDF2"
   },
   "lockScreen": {
     "title": "NIDO bloqueado",
@@ -640,7 +648,13 @@
     "tabPacks": "Packs",
     "identityError": "Não foi possível criar a identidade: {{error}}",
     "deleteMessageTitle": "Apagar mensagem",
-    "deleteMessageConfirm": "Apagar esta mensagem? Será apagada apenas neste dispositivo."
+    "deleteMessageConfirm": "Apagar esta mensagem? Será apagada apenas neste dispositivo.",
+    "connect": "Conectar",
+    "connectPaired": "Conectar a {{name}}",
+    "connecting": "Conectando…",
+    "noNearbyForPaired": "Nenhum dispositivo próximo encontrado. Verifique se o Bluetooth está ligado.",
+    "pairedNotFound": "Não foi possível conectar a {{name}}. Verifique se o outro tablet tem o NIDO aberto.",
+    "waitingForPeer": "Aguardando {{name}} conectar. Mantenha o NIDO aberto nesta tela."
   },
   "notifications": {
     "reminderChannel": "Lembretes do NIDO",
@@ -784,7 +798,20 @@
     "counter": "Contrapropor",
     "accept": "Aceitar",
     "cancel": "Cancelar",
-    "sendCounter": "Enviar contraproposta"
+    "sendCounter": "Enviar contraproposta",
+    "notSentDesc": "Sua resposta não chegou ao outro NIDO. Você pode tentar de novo.",
+    "notSentTitle": "Não foi possível enviar",
+    "retry": "Tentar de novo",
+    "verifiedPeer": "Identidade verificada",
+    "scopeLabels": {
+      "read:contacts": "Ler contatos",
+      "read:knowledge": "Ler base de conhecimento",
+      "read:notes": "Ler notas",
+      "read:reminders": "Ler lembretes",
+      "write:notes": "Escrever notas",
+      "write:reminder": "Criar lembrete",
+      "write:reminders": "Criar lembretes"
+    }
   },
   "packshare": {
     "availablePacks": "Packs disponíveis",
@@ -830,6 +857,20 @@
       "task:answer": "Responder uma pergunta com conhecimento local",
       "task:summarize": "Resumir um documento anexado",
       "task:remember": "Salvar um fato em área isolada"
-    }
+    },
+    "deny": "Negar",
+    "requestTask": "Pedir tarefa",
+    "taskCancel": "Cancelar",
+    "taskDescriptionLabel": "Descreva a tarefa:",
+    "taskDescriptionPlaceholder": "O que o outro NIDO deve fazer?",
+    "taskDisabled": "Ative tarefas delegadas em Ajustes para usar este recurso.",
+    "taskScopeLabel": "Permissão:",
+    "taskSend": "Enviar pedido",
+    "taskSendFailed": "Não foi possível enviar: {{reason}}",
+    "taskSent": "Pedido enviado. Aguarde o resultado."
+  },
+  "settings": {
+    "delegationDesc": "Um NIDO pareado pode pedir para você executar tarefas. Cada tarefa requer sua aprovação.",
+    "delegationTitle": "Tarefas delegadas (experimental)"
   }
 }

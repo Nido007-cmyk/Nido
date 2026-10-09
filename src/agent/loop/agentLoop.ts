@@ -335,9 +335,13 @@ export function buildSystemPrompt(
 
   // BUG-1-2026-10-06: el modelo no sabe qué día es hoy y genera fechas
   // en años pasados (ej: 2023 para "March 15th"). Inyectar fecha actual.
+  // FIX 2026-10-09 (A1): usar fecha LOCAL, no UTC. toISOString() da la fecha
+  // en UTC, que para UTC-7 después de las 17:00 local ya es "mañana".
   const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10); // YYYY-MM-DD
-  const todayLong = today.toLocaleDateString("es-ES", {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  const locale = lang === "en" ? "en-US" : "es-ES";
+  const todayLong = today.toLocaleDateString(locale, {
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -560,8 +564,10 @@ export async function runAgentLoop(
       } catch { /* sin notificaciones: el recordatorio sigue guardado */ }
     }
     // CALENDAR-FIX 2026-10-07: mostrar fecha si se parseó, ser honesto si no.
+    // FIX 2026-10-09 (I2): usar el idioma actual, no "es" hardcodeado.
+    const dateLocale = (options.lang ?? "es") === "en" ? "en-US" : "es-ES";
     const dateStr = reminderAction.dueAt
-      ? ` el ${new Date(reminderAction.dueAt).toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })} a las ${new Date(reminderAction.dueAt).toLocaleTimeString("es", { hour: "numeric", minute: "2-digit" })}`
+      ? ` el ${new Date(reminderAction.dueAt).toLocaleDateString(dateLocale, { weekday: "long", day: "numeric", month: "long" })} a las ${new Date(reminderAction.dueAt).toLocaleTimeString(dateLocale, { hour: "numeric", minute: "2-digit" })}`
       : "";
     return {
       response: dateStr

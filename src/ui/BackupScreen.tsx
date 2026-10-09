@@ -22,14 +22,19 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  Modal,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { useTheme } from "./theme";
 import * as Backup from "../security/backup";
+import { requireUnlock } from "../security/biometricGate";
 
 export function BackupScreen({ onClose }: { onClose: () => void }) {
   const { colors } = useTheme();
   const [busy, setBusy] = useState(false);
   const [lastBackup, setLastBackup] = useState<string | null>(null);
+  // FIX 2026-10-09 (K4/K5): DEK en modal copiable con biométrico, no en Alert.
+  const [dekModal, setDekModal] = useState<{ dek: string; dest: string } | null>(null);
 
   const handleCreateBackup = async () => {
     setBusy(true);
@@ -40,11 +45,15 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
       await Backup.createBackup(dest);
       const key = await Backup.exportDatabaseKey();
       setLastBackup(dest);
-      Alert.alert(
-        "Backup creado",
-        `Guardado en:\n${dest}\n\nTU CLAVE (cópiala y guárdala separada del backup):\n\n${key}\n\nSin esta clave el backup es inútil.`,
-        [{ text: "Entendido" }]
-      );
+      // K5: biométrico antes de mostrar la clave.
+      try {
+        await requireUnlock("Ver tu clave de respaldo");
+      } catch {
+        Alert.alert("Cancelado", "No se mostró la clave.");
+        return;
+      }
+      // K4: modal copiable en vez de Alert (el texto de Alert no se puede copiar).
+      setDekModal({ dek: key, dest });
     } catch (e) {
       Alert.alert("Error", e instanceof Error ? e.message : "No se pudo crear el backup.");
     } finally {
@@ -130,6 +139,18 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
       marginTop: 16,
     },
     warningText: { fontSize: 13, color: "#856404", lineHeight: 18 },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    modalBox: { borderRadius: 12, padding: 20, width: "100%", maxWidth: 400 },
+    modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
+    modalText: { fontSize: 14, lineHeight: 20 },
+    dekText: { fontSize: 13, fontFamily: "monospace", lineHeight: 18 },
+    modalButtons: { flexDirection: "row", gap: 12, marginTop: 16 },
   });
 
   return (
@@ -176,6 +197,36 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
       <Pressable style={styles.buttonSecondary} onPress={onClose}>
         <Text style={styles.buttonSecondaryText}>Cerrar</Text>
       </Pressable>
+
+      {/* FIX 2026-10-09 (K4): modal con clave copiable */}
+      <Modal visible={dekModal !== null} transparent animationType="fade" onRequestClose={() => setDekModal(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, { backgroundColor: colors.bg.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.text.primary }]}>Backup creado</Text>
+            <Text style={[styles.modalText, { color: colors.text.primary }]}>
+              Guardado en:{"\n"}{dekModal?.dest}{"\n\n"}
+              TU CLAVE (cópiala y guárdala separada del backup):{"\n\n"}
+            </Text>
+            <Text selectable style={[styles.dekText, {"color": colors.text.primary}]}>{dekModal?.dek}</Text>
+            <Text style={[styles.modalText, {"color": colors.text.primary}]}>
+              {"\n"}Sin esta clave el backup es inútil.
+            </Text>
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={styles.button}
+                onPress={() => {
+                  if (dekModal) void Clipboard.setStringAsync(dekModal.dek);
+                }}
+              >
+                <Text style={styles.buttonText}>Copiar clave</Text>
+              </Pressable>
+              <Pressable style={styles.buttonSecondary} onPress={() => setDekModal(null)}>
+                <Text style={styles.buttonSecondaryText}>Entendido</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

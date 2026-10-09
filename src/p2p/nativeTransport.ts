@@ -1260,7 +1260,8 @@ export class NidoBluetoothTransport implements P2PTransport {
       // contactos emparejados (salvo desconexión manual explícita).
       this.scheduleReconnect(mac, pk);
     } else {
-      this.events?.onPeerLost?.(mac);
+      // FIX 2026-10-09 (B6): NO emitir onPeerLost con una MAC cruda. El
+      // contrato dice pkHex (64 hex chars). Sin ruta, no hay peer que perder.
     }
   }
 
