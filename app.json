@@ -55,7 +55,17 @@
       ],
       "./plugins/withReleaseSigning",
       "./plugins/withFlagSecure",
-      "./plugins/with-bluetooth-never-for-location"
+      "./plugins/with-bluetooth-never-for-location",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "buildToolsVersion": "36.0.0"
+          }
+        }
+      ]
     ],
     "extra": {}
   }
