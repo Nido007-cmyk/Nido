@@ -879,6 +879,7 @@
     "dekCopyPrompt": "SUA CHAVE (copie e guarde separada do backup):",
     "dekWarning": "Sem esta chave o backup é inútil.",
     "copyKey": "Copiar chave",
-    "understood": "Entendido"
+    "understood": "Entendido",
+    "dekFraudWarning": "NIDO nunca pedirá esta chave. Não a compartilhe com ninguém, nem mesmo com suposto suporte técnico."
   }
 }

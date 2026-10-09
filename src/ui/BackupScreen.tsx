@@ -239,6 +239,11 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
             <Text style={[styles.modalText, {"color": colors.text.primary}]}>
               {"\n"}{t("backup.dekWarning")}
             </Text>
+            {/* FIX 2026-10-09: advertencia anti-fraude (ataques reales documentados:
+                actores roban claves de backup con bots falsos de "soporte") */}
+            <Text style={[styles.modalText, {"color": "#ff6b6b", "fontWeight": "bold"}]}>
+              {"\n"}{t("backup.dekFraudWarning")}
+            </Text>
             <View style={styles.modalButtons}>
               <Pressable
                 style={styles.button}

@@ -310,6 +310,11 @@ export class NidoBluetoothTransport implements P2PTransport {
   private macToPk = new Map<string, string>();
   private pkToMac = new Map<string, string>();
   private pending = new Map<string, PendingHello>(); // MAC -> HELLO en curso
+  /**
+   * FIX 2026-10-09: pks revocados. Un contacto revocado no puede reconectar
+   * aunque aparezca en discovery. Se limpia solo con re-pair explícito.
+   */
+  private readonly revokedPks = new Set<string>();
   // FIX 2026-10-09 (BlueLib): ReconnectManager con estado. El retry antes se
   // disparaba por onPeerLost (presencia), no por la transición a DISCONNECTED.
   // Si el peer queda "visible pero muerto", nunca se reintentaba. Ahora el
@@ -797,6 +802,31 @@ export class NidoBluetoothTransport implements P2PTransport {
   }
 
   /**
+   * FIX 2026-10-09: revoca un contacto. Desconecta si está conectado,
+   * bloquea reconexiones futuras y limpia timers. El desbloqueo requiere
+   * re-pair explícito (unrevokePeer).
+   */
+  async revokePeer(peerPkHex: string): Promise<void> {
+    const pkLower = peerPkHex.toLowerCase();
+    this.revokedPks.add(pkLower);
+    await this.disconnect(peerPkHex);
+  }
+
+  /**
+   * FIX 2026-10-09: levanta la revocación (solo vía re-pair explícito).
+   */
+  unrevokePeer(peerPkHex: string): void {
+    this.revokedPks.delete(peerPkHex.toLowerCase());
+  }
+
+  /**
+   * FIX 2026-10-09: verifica si un pk está revocado.
+   */
+  isRevoked(peerPkHex: string): boolean {
+    return this.revokedPks.has(peerPkHex.toLowerCase());
+  }
+
+  /**
    * UNIT B (R5): desmonta la ruta hacia una identidad SUPERSEDED del peer.
    * Implementado sobre el `disconnect` existente (forgetRoute + cierre del
    * socket RFCOMM); idempotente y best-effort (nunca lanza: el messenger
@@ -1161,6 +1191,12 @@ export class NidoBluetoothTransport implements P2PTransport {
    */
   private async establishRoute(mac: string, pend: PendingHello): Promise<void> {
     const pkLower = pend.peerPk!;
+    // FIX 2026-10-09: si el peer está revocado, NO establecer la ruta.
+    if (this.revokedPks.has(pkLower)) {
+      this.rejectPending(pend, new Error("Contacto revocado."));
+      await this.bt().disconnect(mac).catch(() => {});
+      return;
+    }
     // FIX 2026-10-09 (B3/H1): si el usuario pidió desconectar durante el
     // handshake, NO establecer la ruta. Ignorar flags viejos (>30s) para no
     // bloquear reconexiones manuales tras un timeout (H1).

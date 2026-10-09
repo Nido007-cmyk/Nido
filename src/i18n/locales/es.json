@@ -880,6 +880,7 @@
     "dekCopyPrompt": "TU CLAVE (cópiala y guárdala separada del backup):",
     "dekWarning": "Sin esta clave el backup es inútil.",
     "copyKey": "Copiar clave",
-    "understood": "Entendido"
+    "understood": "Entendido",
+    "dekFraudWarning": "NIDO nunca te pedirá esta clave. No la compartas con nadie, ni siquiera con supuesto soporte técnico."
   }
 }

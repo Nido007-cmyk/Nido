@@ -273,3 +273,17 @@ describe("F-DELEG-4: fail-closed sin state provider", () => {
     expect(gate.approve(requestId)).toBeNull();
   });
 });
+
+describe("Rate limit anti-fatiga", () => {
+  it("más de 10 aprobaciones en 1h → la 11ª se niega", () => {
+    const gate = gateWithProvider();
+    // Aprobar 10 (cada una con taskId único por el anti-replay)
+    for (let i = 0; i < 10; i++) {
+      const { requestId } = gate.register(baseReq());
+      expect(gate.approve(requestId)).not.toBeNull();
+    }
+    // La 11ª debe fallar por rate limit
+    const { requestId } = gate.register(baseReq());
+    expect(gate.approve(requestId)).toBeNull();
+  });
+});

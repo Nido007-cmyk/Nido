@@ -880,6 +880,7 @@
     "dekCopyPrompt": "YOUR KEY (copy it and store it separately from the backup):",
     "dekWarning": "Without this key the backup is useless.",
     "copyKey": "Copy key",
-    "understood": "Got it"
+    "understood": "Got it",
+    "dekFraudWarning": "NIDO will never ask for this key. Don't share it with anyone, not even supposed tech support."
   }
 }

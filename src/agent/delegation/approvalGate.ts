@@ -149,6 +149,13 @@ export class ApprovalGate {
   private readonly executed = new Set<string>();
   private stateProvider: NegotiationStateProvider | null = null;
   private seq = 0;
+  /**
+   * FIX 2026-10-09: protección contra fatiga de aprobación. Si un peer
+   * malicioso inunda con solicitudes, el humano termina aprobando sin leer.
+   * Máximo 10 aprobaciones por hora (ventana deslizante).
+   */
+  private readonly approvalTimestamps: number[] = [];
+  private static readonly MAX_APPROVALS_PER_HOUR = 10;
 
   /**
    * R5: wires the live negotiation-state source. The future TASK_REQUEST
@@ -294,6 +301,15 @@ export class ApprovalGate {
   approve(requestId: string): ApprovedTask | null {
     const entry = this.pending.get(requestId);
     if (!entry) return null;
+    // FIX 2026-10-09: rate limit contra fatiga de aprobación.
+    const now = Date.now();
+    const hourAgo = now - 3600_000;
+    while (this.approvalTimestamps.length > 0 && this.approvalTimestamps[0] < hourAgo) {
+      this.approvalTimestamps.shift();
+    }
+    if (this.approvalTimestamps.length >= ApprovalGate.MAX_APPROVALS_PER_HOUR) {
+      return null; // demasiadas aprobaciones recientes → fail-closed
+    }
     this.releaseSlot(requestId, entry);
     if (Date.now() > entry.deadline) return null; // timeout = deny
     if (snapshotHash(entry.snapshot) !== entry.hash) return null; // tamper = abort
@@ -324,6 +340,8 @@ export class ApprovalGate {
     }
     // FIX 2026-10-09 (F-DELEG-2): marcar como ejecutado para anti-replay.
     this.executed.add(entry.snapshot.taskId);
+    // FIX 2026-10-09: registrar timestamp para rate limit.
+    this.approvalTimestamps.push(Date.now());
     return Object.freeze(out);
   }
 
