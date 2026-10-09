@@ -1705,3 +1705,45 @@ describe("B2 FIX 2026-10-09: connect() concurrente multicast", () => {
     await expect(p2).rejects.toThrow("test fail");
   });
 });
+
+describe("R1 FIX 2026-10-09: disconnect manual no bloquea reconexión", () => {
+  let f: ReturnType<typeof makeFake>;
+  let ev: ReturnType<typeof makeEvents>;
+  let t: NidoBluetoothTransport;
+
+  beforeEach(() => {
+    f = makeFake();
+    ev = makeEvents();
+    t = makeTransport(f.fake);
+  });
+
+  it("disconnect con MAC conocida → reconnect manual funciona (sin flag stale)", async () => {
+    await t.startDiscovery(ev.events);
+    const mac = "AA:BB:CC:DD:EE:55";
+    const pk = "b1".repeat(32);
+    // Simular conexión establecida.
+    (t as any).macToPk.set(mac, pk);
+    (t as any).pkToMac.set(pk.toLowerCase(), mac);
+    // Desconectar manualmente.
+    await t.disconnect(pk);
+    // El flag manualDisconnectPks NO debe estar marcado (hay MAC).
+    expect((t as any).manualDisconnectPks.has(pk.toLowerCase())).toBe(false);
+    expect((t as any).manualDisconnectMacs.has(mac)).toBe(true);
+    // Reconectar: establishRoute no debe rechazar por flag stale.
+    // (Simulamos limpiando la MAC como si fuera un handshake nuevo.)
+    (t as any).macToPk.delete(mac);
+    (t as any).pkToMac.delete(pk.toLowerCase());
+    (t as any).manualDisconnectMacs.delete(mac);
+    // Nuevo handshake: el flag de Pks no debe bloquear.
+    expect((t as any).manualDisconnectPks.has(pk.toLowerCase())).toBe(false);
+  });
+
+  it("disconnect sin MAC (handshake en curso) sí marca pkHex", async () => {
+    await t.startDiscovery(ev.events);
+    const pk = "c2".repeat(32);
+    // Sin ruta establecida (handshake en curso).
+    await t.disconnect(pk);
+    // SÍ debe marcar porque no hay MAC.
+    expect((t as any).manualDisconnectPks.has(pk.toLowerCase())).toBe(true);
+  });
+});

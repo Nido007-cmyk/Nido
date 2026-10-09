@@ -781,11 +781,13 @@ export class NidoBluetoothTransport implements P2PTransport {
   async disconnect(peerPkHex: string): Promise<void> {
     const pkLower = peerPkHex.toLowerCase();
     const mac = this.pkToMac.get(pkLower);
-    // FIX 2026-10-09 (B3): SIEMPRE marcar el pkHex como manual, incluso si
-    // la MAC aún no se conoce (handshake en curso). Así establishRoute lo
-    // detecta al completar y desmonta en vez de dejar ghost connection.
-    this.manualDisconnectPks.add(pkLower);
-    if (mac) {
+    // FIX 2026-10-09 (B3/R1): solo marcar pkHex si NO hay MAC (handshake en
+    // curso). Si hay MAC, el flag por MAC es suficiente. Marcar siempre
+    // rompía reconexiones manuales (R1): el flag stale mataba el siguiente
+    // handshake en establishRoute.
+    if (!mac) {
+      this.manualDisconnectPks.add(pkLower);
+    } else {
       this.manualDisconnectMacs.add(mac);
       this.cancelReconnect(mac);
       this.reconnectAttempts.delete(mac);

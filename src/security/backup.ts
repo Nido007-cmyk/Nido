@@ -295,9 +295,10 @@ export async function restoreBackup(backupUri: string): Promise<void> {
     const knowledgeBackupUri = `${backupUri}.knowledge.db`;
     const kbInfo = await FileSystem.getInfoAsync(knowledgeBackupUri);
     if (kbInfo.exists) {
-      // Ruta de la knowledge DB: mismo directorio que la principal.
-      const knowledgeDbPath = dbPath.replace(/\.db$/, "_knowledge.db");
-      // Verificar que el nombre coincide con el esperado.
+      // FIX 2026-10-09 (R3): usar KNOWLEDGE_DB_NAME, no derivar del nombre.
+      // dbPath.replace() producía "nido_memory_knowledge.db" (huérfano).
+      const dir = FileSystem.documentDirectory;
+      const knowledgeDbPath = `${dir}SQLite/${KNOWLEDGE_DB_NAME}`;
       const kbValidation = await validateBackup(knowledgeBackupUri);
       if (kbValidation.valid) {
         await FileSystem.copyAsync({ from: knowledgeBackupUri, to: knowledgeDbPath });

@@ -45,12 +45,21 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
       await Backup.createBackup(dest);
       const key = await Backup.exportDatabaseKey();
       setLastBackup(dest);
-      // K5: biométrico antes de mostrar la clave.
+      // K5/R2: biométrico antes de mostrar la clave. Si no hay biométrico
+      // configurado (tablets de prueba), advertir pero permitir continuar —
+      // bloquear por completo dejaba al usuario sin acceso a su DEK (R2).
       try {
         await requireUnlock("Ver tu clave de respaldo");
-      } catch {
-        Alert.alert("Cancelado", "No se mostró la clave.");
-        return;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "";
+        const isUnavailable = msg.includes("no tiene biometría") || msg.includes("no disponible");
+        if (!isUnavailable) {
+          // Usuario canceló: no mostrar.
+          Alert.alert("Cancelado", "No se mostró la clave.");
+          return;
+        }
+        // Sin biométrico: advertir y continuar bajo consentimiento.
+        // (El usuario ya creó el backup; negarle la clave es peor.)
       }
       // K4: modal copiable en vez de Alert (el texto de Alert no se puede copiar).
       setDekModal({ dek: key, dest });

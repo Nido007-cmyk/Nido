@@ -231,3 +231,22 @@ describe("delegationService: flag ON → golden flow", () => {
     expect(svc.pendingApprovals).toBe(0);
   });
 });
+
+describe("I2 FIX 2026-10-09: TASK_CANCEL inbound aborta executor", () => {
+  it("TASK_CANCEL para tarea inbound llega al abort (no se dropea)", async () => {
+    // Este test verifica que el branch TASK_CANCEL está ANTES del check
+    // de outbound. Si estuviera después, un cancel inbound se dropeaba.
+    resetFeatureFlagsForTests();
+    await setFeatureEnabled("delegation.enabled", true);
+    const svc = freshService();
+    await setFeatureEnabled("delegation.enabled", true);
+    // UUID v4 válido (validateTaskCancel lo exige).
+    const taskId = "123e4567-e89b-42d3-a456-426614174000";
+    // Simular executor en curso.
+    const fakeExecutor = { abort: vi.fn() };
+    (svc as any).runningExecutors.set(taskId.toLowerCase(), fakeExecutor);
+    // Enviar TASK_CANCEL (inbound: no está en outbound).
+    await (svc as any).handleTaskMessage("peerpk".repeat(8), "TASK_CANCEL", { taskId });
+    expect(fakeExecutor.abort).toHaveBeenCalled();
+  });
+});

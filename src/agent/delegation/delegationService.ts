@@ -276,6 +276,24 @@ export class DelegationService {
       await this.handleTaskRequest(fromPkHex.toLowerCase(), body as TaskRequestBody);
       return;
     }
+    // FIX 2026-10-09 (I2): TASK_CANCEL puede ser para una tarea INBOUND
+    // (el peer cancela lo que nos pidió). Manejarlo ANTES del check de
+    // outbound, si no se dropea y el abort() nunca se llama.
+    if (taskType === "TASK_CANCEL") {
+      const cancelTaskId = (body as { taskId: string }).taskId.toLowerCase();
+      // Cancelar aprobación pendiente si la hay.
+      for (const [requestId, ctx] of this.inboundIndex) {
+        if (ctx.taskId === cancelTaskId) {
+          await this.denyTask(requestId);
+        }
+      }
+      // Abortar executor en curso si lo hay (F-DELEG-3).
+      const running = this.runningExecutors.get(cancelTaskId);
+      if (running) {
+        running.abort();
+      }
+      return;
+    }
     // Responses reference an outbound task we track.
     const taskId = (body as { taskId: string }).taskId.toLowerCase();
     const tracked = this.outbound.get(taskId);
@@ -312,19 +330,6 @@ export class DelegationService {
         errorCode: r.reasonCode,
       });
       this.emit({ type: "task-rejected", taskId, reasonCode: r.reasonCode });
-    } else if (taskType === "TASK_CANCEL") {
-      // Peer cancelled: deny any pending approval for this task.
-      // (TOCTOU is also closed by the gate's liveness re-check.)
-      for (const [requestId, ctx] of this.inboundIndex) {
-        if (ctx.taskId === taskId) {
-          await this.denyTask(requestId);
-        }
-      }
-      // FIX 2026-10-09 (F-DELEG-3): abortar executor en curso si lo hay.
-      const running = this.runningExecutors.get(taskId.toLowerCase());
-      if (running) {
-        running.abort();
-      }
     }
     // TASK_STATUS: informational; v1 UI does not surface progress.
   }

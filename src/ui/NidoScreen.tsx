@@ -306,6 +306,10 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             if (cancelled) return;
             if (p.pkHex) {
               setOnline((prev) => new Set(prev).add(p.pkHex.toLowerCase()));
+              // FIX 2026-10-09 (I1): limpiar el flag de "perdido" al reconectar.
+              // Si no, un redescubrimiento posterior dispara un barrido
+              // redundante estando ya conectado.
+              reconnectManager.notifyPeerFound(p.pkHex, p.alias ?? "");
               // Refresca el alias si el dispositivo anuncia otro nombre.
               setContacts((prev) =>
                 prev.map((c) =>
