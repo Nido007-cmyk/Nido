@@ -1299,6 +1299,14 @@ export class NidoBluetoothTransport implements P2PTransport {
         this.reconnectAttempts.delete(mac);
         return;
       }
+      // FIX 2026-10-09 (B7): no gastar intentos si el Bluetooth está apagado.
+      try {
+        if (!this.bt().isBluetoothEnabled()) {
+          return;
+        }
+      } catch {
+        return;
+      }
       void this.connect(mac).catch(() => {
         // El backoff de connect() maneja sus reintentos; si falla del todo,
         // el próximo onNativeDisconnected (si hubo conexión parcial) o el

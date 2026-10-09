@@ -8,11 +8,22 @@ import { describe, expect, it, vi } from "vitest";
 import { ApprovalGate, type ApprovalRequest } from "./approvalGate";
 import { TASK_LIMITS } from "../../p2p/taskProtocol";
 
+/** Helper: gate con provider que siempre dice ACCEPTED (para tests que no prueban TOCTOU). */
+function gateWithProvider() {
+  const gate = new ApprovalGate();
+  gate.setNegotiationStateProvider(() => "ACCEPTED");
+  return gate;
+}
+
 const TASK_ID = "123e4567-e89b-42d3-a456-426614174000";
 
+let taskIdSeq = 0;
 function baseReq(over: Partial<ApprovalRequest> = {}): ApprovalRequest {
+  // FIX 2026-10-09 (F-DELEG-2): taskId único por test para no chocar con
+  // el anti-replay (un taskId aprobado no se puede re-registrar).
+  taskIdSeq++;
   return {
-    taskId: TASK_ID,
+    taskId: `123e4567-e89b-42d3-a456-426614174${String(taskIdSeq).padStart(3, "0")}`,
     peerPkShort: "abcd1234",
     description: "Resume este documento",
     documentBase64: Buffer.from("contenido").toString("base64"),
@@ -26,7 +37,7 @@ function baseReq(over: Partial<ApprovalRequest> = {}): ApprovalRequest {
 
 describe("ApprovalGate (anti-loopjacking)", () => {
   it("approve devuelve los bytes exactos registrados", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     const { requestId, shown } = gate.register(baseReq());
     expect(shown.description).toBe("Resume este documento");
     const approved = gate.approve(requestId);
@@ -37,7 +48,7 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("loopjacking: mutar el objeto del llamador tras registrar no cambia lo aprobado", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     const req = baseReq();
     const { requestId, shown } = gate.register(req);
     // El atacante (o un re-fetch defectuoso) muta el objeto original
@@ -53,7 +64,7 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("loopjacking: mutar el request almacenado entre approval y ejecución → aborta", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     const { requestId } = gate.register(baseReq());
     // Simula la mutación del estado interno (vía cast: no hay API pública
     // que lo permita; si algún día la hubiera, el hash la detecta).
@@ -66,7 +77,7 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("timeout = deny: aprobar tras el plazo devuelve null", async () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     const { requestId } = gate.register(baseReq({ timeoutMs: 30 }));
     await new Promise((r) => setTimeout(r, 60));
     expect(gate.approve(requestId)).toBeNull();
@@ -74,14 +85,14 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("doble approve: el segundo devuelve null (consumo único)", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     const { requestId } = gate.register(baseReq());
     expect(gate.approve(requestId)).not.toBeNull();
     expect(gate.approve(requestId)).toBeNull();
   });
 
   it("id desconocido → null; deny es no-op", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     expect(gate.approve("no-existe")).toBeNull();
     gate.deny("no-existe");
     const { requestId } = gate.register(baseReq());
@@ -91,7 +102,7 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("register exige negociación ACCEPTED (el token no cubre el estado)", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     for (const s of ["PROPOSED", "COUNTERED", "DECLINED", "EXPIRED"] as const) {
       expect(() => gate.register(baseReq({ negotiationState: s }))).toThrow();
     }
@@ -99,18 +110,20 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("segundo register con el mismo taskId pendiente → rechaza (no reemplaza bytes)", () => {
-    const gate = new ApprovalGate();
-    const { requestId } = gate.register(baseReq());
-    expect(() => gate.register(baseReq())).toThrow();
+    const gate = gateWithProvider();
+    const req = baseReq();
+    const { requestId } = gate.register(req);
+    // Mismo taskId (no un baseReq() nuevo con ID diferente).
+    expect(() => gate.register(req)).toThrow();
     // Lo original sigue intacto.
     expect(gate.approve(requestId)!.description).toBe("Resume este documento");
     // FIX 2026-10-09 (F-DELEG-2): tras APROBAR, el taskId queda bloqueado
     // (anti-replay). Un reintento con el mismo taskId se rechaza.
-    expect(() => gate.register(baseReq())).toThrow(/already executed/);
+    expect(() => gate.register(req)).toThrow(/already executed/);
   });
 
   it("F-DELEG-2: tras DENEGAR, el taskId queda libre (no es replay)", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     const { requestId } = gate.register(baseReq());
     gate.deny(requestId);
     // Denegado ≠ ejecutado: el peer puede reintentar con nueva negociación.
@@ -118,7 +131,7 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("R5: TASK_CANCEL durante la espera → approve niega (TOCTOU cerrado)", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     let live: "ACCEPTED" | "DECLINED" = "ACCEPTED";
     gate.setNegotiationStateProvider(() => live);
     const { requestId } = gate.register(baseReq());
@@ -129,7 +142,7 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("R5: provider que lanza → approve niega (fail-closed)", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     gate.setNegotiationStateProvider(() => {
       throw new Error("store caído");
     });
@@ -138,7 +151,7 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("R5: tope de pendientes por peer (DoS por documentos de 512 KB)", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     const ids = [
       "323e4567-e89b-42d3-a456-426614174000",
       "423e4567-e89b-42d3-a456-426614174000",
@@ -169,7 +182,7 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("R5: register barre expirados y libera sus slots", async () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     gate.register(baseReq({ taskId: "923e4567-e89b-42d3-a456-426614174000", timeoutMs: 30 }));
     gate.register(baseReq({ taskId: "a23e4567-e89b-42d3-a456-426614174000", timeoutMs: 30 }));
     gate.register(baseReq({ taskId: "b23e4567-e89b-42d3-a456-426614174000", timeoutMs: 30 }));
@@ -184,7 +197,7 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("R4: shown incluye huella, tamaño y extracto del documento", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     const docText = "Contenido secreto del documento. ".repeat(100);
     const docB64 = Buffer.from(docText, "utf8").toString("base64");
     const { shown } = gate.register(
@@ -202,7 +215,7 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("R4: sin documento no hay sección de documento en shown", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     const { shown } = gate.register(
       baseReq({ documentBase64: undefined })
     );
@@ -210,7 +223,7 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("R4: documento con charset no-base64 se rechaza (alinear con validateTaskRequest)", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     // '!' no es base64: Buffer.from lo descartaría en silencio y decodificaría
     // bytes distintos de los "aprobados".
     expect(() =>
@@ -219,7 +232,7 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("fail-closed en entradas malformadas", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     expect(() => gate.register(baseReq({ description: "" }))).toThrow();
     expect(() => gate.register(baseReq({ description: "x".repeat(TASK_LIMITS.descriptionMaxChars + 1) }))).toThrow();
     expect(() => gate.register(baseReq({ scopes: [] }))).toThrow();
@@ -228,7 +241,7 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   });
 
   it("lo aprobado está congelado (el executor no puede mutarlo)", () => {
-    const gate = new ApprovalGate();
+    const gate = gateWithProvider();
     const { requestId, shown } = gate.register(baseReq());
     expect(Object.isFrozen(shown)).toBe(true);
     const approved = gate.approve(requestId)!;
@@ -238,7 +251,7 @@ describe("ApprovalGate (anti-loopjacking)", () => {
   it("respeta el timeout por defecto de TASK_LIMITS", () => {
     vi.useFakeTimers();
     try {
-      const gate = new ApprovalGate();
+      const gate = gateWithProvider();
       const { requestId } = gate.register(baseReq());
       vi.advanceTimersByTime(TASK_LIMITS.approvalTimeoutMs - 1);
       expect(gate.approve(requestId)).not.toBeNull();
@@ -249,5 +262,14 @@ describe("ApprovalGate (anti-loopjacking)", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("F-DELEG-4: fail-closed sin state provider", () => {
+  it("approve sin provider retorna null (no es fail-open)", () => {
+    const gate = new ApprovalGate(); // sin setNegotiationStateProvider
+    const { requestId } = gate.register(baseReq());
+    // Sin provider no se puede verificar liveness → debe negar.
+    expect(gate.approve(requestId)).toBeNull();
   });
 });

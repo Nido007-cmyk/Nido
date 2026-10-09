@@ -300,15 +300,18 @@ export class ApprovalGate {
     // R5 TOCTOU close: re-verificar que la negociación sigue ACCEPTED.
     // Sin esto, un TASK_CANCEL del peer mientras el humano mira la tarjeta
     // se ignoraba y se ejecutaba una tarea cancelada.
-    if (this.stateProvider) {
-      let current: NegotiationState | undefined;
-      try {
-        current = this.stateProvider(entry.snapshot.taskId);
-      } catch {
-        return null; // fail-closed: si no se puede verificar, no se aprueba
-      }
-      if (current !== "ACCEPTED") return null;
+    // FIX 2026-10-09 (F-DELEG-4): fail-closed si no hay provider. Antes era
+    // fail-open silencioso.
+    if (!this.stateProvider) {
+      return null; // sin provider no se puede verificar → no se aprueba
     }
+    let current: NegotiationState | undefined;
+    try {
+      current = this.stateProvider(entry.snapshot.taskId);
+    } catch {
+      return null; // fail-closed: si no se puede verificar, no se aprueba
+    }
+    if (current !== "ACCEPTED") return null;
     const out: ApprovedTask = {
       description: entry.snapshot.description,
       resultSchema: JSON.parse(JSON.stringify(entry.snapshot.resultSchema)) as Record<
