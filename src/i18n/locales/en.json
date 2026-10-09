@@ -371,7 +371,9 @@
     "proposeButton": "+ Propose collaboration",
     "outgoingTitle": "Proposal sent to {{peer}}",
     "outgoingSending": "Sending...",
-    "outgoingWaiting": "Waiting for response"
+    "outgoingWaiting": "Waiting for response",
+    "activeTitle": "Active collaborations",
+    "acceptedOn": "Accepted on {{date}}"
   },
   "chatHeader": {
     "openDrawer": "Open Navigation Drawer",

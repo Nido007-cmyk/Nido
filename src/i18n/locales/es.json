@@ -271,7 +271,9 @@
     "proposeButton": "+ Proponer colaboración",
     "outgoingTitle": "Propuesta enviada a {{peer}}",
     "outgoingSending": "Enviando...",
-    "outgoingWaiting": "Esperando respuesta"
+    "outgoingWaiting": "Esperando respuesta",
+    "activeTitle": "Colaboraciones activas",
+    "acceptedOn": "Aceptada el {{date}}"
   },
   "memorySettings": {
     "autoSummarizeLabel": "Resumen de contexto en segundo plano",

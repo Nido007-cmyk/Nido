@@ -34,7 +34,7 @@ interface P2PContact {
 export function NegotiationsTab() {
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [sessions, setSessions] = useState<NegotiationSession[]>(() =>
     negotiationService.listSessions()
   );
@@ -144,6 +144,10 @@ export function NegotiationsTab() {
   const activeSessions = sessions.filter(
     (s) => s.state === "PROPOSED" || s.state === "COUNTERED"
   );
+  // TESTFIX-2026-10-08: las aceptadas cuentan como contenido — si no,
+  // el early return de "vacío" ocultaba la sección de colaboraciones
+  // activas justo cuando solo quedaban aceptadas (caso físico real).
+  const acceptedSessions = sessions.filter((s) => s.state === "ACCEPTED");
 
   const openPropose = useCallback(async () => {
     setProposeError(null);
@@ -183,7 +187,7 @@ export function NegotiationsTab() {
     }
   }, [selectedPk, description, refresh]);
 
-  if (activeSessions.length === 0 && !showPropose) {
+  if (activeSessions.length === 0 && acceptedSessions.length === 0 && !showPropose) {
     return (
       <View style={styles.container}>
         <EmptyState
@@ -241,9 +245,41 @@ export function NegotiationsTab() {
           />
         )
       )}
-      {/* Sesiones en estado terminal (para visibilidad) */}
+      {/* TESTFIX-2026-10-08: colaboraciones activas. Evidencia física:
+          al aceptar, la sesión "desaparecía" de ambas tablets — solo había
+          un volcado crudo del estado ("ACCEPTED: ..."). Ahora las sesiones
+          aceptadas tienen sección propia con peer, descripción y fecha. */}
+      {acceptedSessions.length > 0 && (
+        <View style={styles.activeSection}>
+          <Text style={styles.activeTitle}>{t("negotiations.activeTitle")}</Text>
+          {acceptedSessions.map((session) => {
+              const peerName =
+                contactNames.get(session.peerPkHex.toLowerCase()) ??
+                session.peerPkHex.slice(0, 8);
+              const locale = i18n.resolvedLanguage ?? i18n.language ?? "es";
+              const dateStr = new Date(session.updatedAt).toLocaleDateString(locale, {
+                day: "numeric",
+                month: "short",
+                hour: "numeric",
+                minute: "2-digit",
+              });
+              return (
+                <View key={session.negotiationId} style={styles.activeCard}>
+                  <Text style={styles.activePeer}>✓ {peerName}</Text>
+                  <Text style={styles.activeDesc} numberOfLines={3}>
+                    {session.proposal.taskDescription}
+                  </Text>
+                  <Text style={styles.activeDate}>
+                    {t("negotiations.acceptedOn", { date: dateStr })}
+                  </Text>
+                </View>
+              );
+            })}
+        </View>
+      )}
+      {/* Sesiones en estado terminal (declinadas/expiradas, para visibilidad) */}
       {sessions
-        .filter((s) => !["PROPOSED", "COUNTERED"].includes(s.state))
+        .filter((s) => s.state === "DECLINED" || s.state === "EXPIRED")
         .slice(0, 5)
         .map((session) => (
           <View key={session.negotiationId} style={styles.terminalCard}>
@@ -348,6 +384,37 @@ const getStyles = (colors: Colors) =>
       color: colors.text.muted,
       fontSize: 12,
       fontStyle: "italic",
+    },
+    // TESTFIX-2026-10-08: estilos de colaboraciones activas.
+    activeSection: {
+      gap: 8,
+    },
+    activeTitle: {
+      color: colors.text.primary,
+      fontWeight: "700",
+      fontSize: 14,
+    },
+    activeCard: {
+      backgroundColor: colors.bg.cardElevated,
+      borderRadius: 8,
+      padding: calmSpacing.cozy,
+      borderLeftWidth: 3,
+      borderLeftColor: "#4A6B4F",
+    },
+    activePeer: {
+      color: colors.text.primary,
+      fontWeight: "600",
+      fontSize: 14,
+      marginBottom: 4,
+    },
+    activeDesc: {
+      color: colors.text.secondary,
+      fontSize: 13,
+      marginBottom: 6,
+    },
+    activeDate: {
+      color: colors.text.muted,
+      fontSize: 12,
     },
     proposeButton: {
       backgroundColor: "#4A6B4F",
