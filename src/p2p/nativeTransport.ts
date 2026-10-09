@@ -438,21 +438,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       b.addListener("onDisconnected", (e) => this.onNativeDisconnected(e.address)),
       b.addListener("onError", (e) => this.events?.onError?.(e.message)),
     ];
-    this.discoveryUnsubs = [
-      b.addListener("onDeviceFound", (d) => {
-        this.events?.onPeerFound?.({
-          pkHex: "",
-          alias: d.name ? `${d.name} (${d.address})` : d.address,
-          transport: "bluetooth",
-        });
-      }),
-      b.addListener("onDiscoveryFinished", () => {
-        // H3-2026-10-06: el discovery nativo es one-shot (~12s). Reiniciar
-        // con backoff para que la lista de cercanos no se congele.
-        // El comentario anterior ("sigue en segundo plano") era falso.
-        this.scheduleDiscoveryRestart();
-      }),
-    ];
+    this.registerDiscoveryListeners();
     await b.startServer();
     // DIAG-2026-10-07: verificar que el servidor quedó realmente escuchando.
     // La notificación del foreground service NO lo garantiza (el servicio
@@ -485,7 +471,32 @@ export class NidoBluetoothTransport implements P2PTransport {
     this.stopped = false;
     this.discoveryRestartCount = 0;
     await this.ensureLinked();
+    // FIX 2026-10-08: re-registrar listeners de discovery si se limpiaron.
+    // Cuando linked=true (navegación), ensureLinked() retorna temprano y no
+    // re-ejecuta doLink(), pero los discoveryUnsubs se vaciaron en
+    // stopDiscovery(). Sin esto, onDeviceFound nunca se registra de nuevo
+    // y el discovery no encuentra peers.
+    if (this.discoveryUnsubs.length === 0) {
+      this.registerDiscoveryListeners();
+    }
     await this.bt().startDiscovery();
+  }
+
+  /** Registra solo los listeners de descubrimiento (re-utilizable). */
+  private registerDiscoveryListeners(): void {
+    const b = this.bt();
+    this.discoveryUnsubs = [
+      b.addListener("onDeviceFound", (d) => {
+        this.events?.onPeerFound?.({
+          pkHex: "",
+          alias: d.name ? `${d.name} (${d.address})` : d.address,
+          transport: "bluetooth",
+        });
+      }),
+      b.addListener("onDiscoveryFinished", () => {
+        this.scheduleDiscoveryRestart();
+      }),
+    ];
   }
 
   /**

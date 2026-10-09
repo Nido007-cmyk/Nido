@@ -1588,3 +1588,29 @@ describe("nativeTransport: listeners de enlace sobreviven a stopDiscovery", () =
     expect(pendingMap.has(MAC)).toBe(true);
   });
 });
+
+describe("nativeTransport: discovery listeners se re-registran al volver", () => {
+  let f: ReturnType<typeof makeFake>;
+  let ev: ReturnType<typeof makeEvents>;
+  let t: NidoBluetoothTransport;
+
+  beforeEach(() => {
+    f = makeFake();
+    ev = makeEvents();
+    t = makeTransport(f.fake);
+  });
+
+  it("onDeviceFound funciona después de stopDiscovery + startDiscovery", async () => {
+    await t.startDiscovery(ev.events);
+    await t.stopDiscovery();
+    // Volver a la pantalla: startDiscovery debe re-registrar los listeners
+    // de discovery aunque linked=true (si no, el peer nunca aparece).
+    await t.startDiscovery(ev.events);
+    const before = ev.found.length;
+    f.emit("onDeviceFound", { address: "AA:BB:CC:DD:EE:11", name: "Otro" } as never);
+    await tick(10);
+    // El evento debe llegar a onPeerFound (el listener está activo).
+    expect(ev.found.length).toBe(before + 1);
+    expect(ev.found[ev.found.length - 1].alias).toContain("AA:BB:CC:DD:EE:11");
+  });
+});
