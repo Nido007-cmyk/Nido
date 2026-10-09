@@ -463,6 +463,47 @@ export class NidoMessenger {
   }
 
   /**
+   * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): estado de salud del
+   * almacenamiento de revocaciones. La UI lo usa para mostrar advertencia
+   * cuando el store está corrupto y ofrecer recuperación explícita.
+   */
+  async getRevocationStoreStatus(): Promise<{
+    loaded: boolean;
+    healthy: boolean;
+    revokedCount: number;
+  }> {
+    this.assertLive();
+    const t = this.transport as unknown as {
+      getRevocationStoreStatus?: () => {
+        loaded: boolean;
+        healthy: boolean;
+        revokedCount: number;
+      };
+    };
+    if (typeof t.getRevocationStoreStatus !== "function") {
+      // Transporte sin soporte: asumir sano (sin persistencia).
+      return { loaded: true, healthy: true, revokedCount: 0 };
+    }
+    return t.getRevocationStoreStatus();
+  }
+
+  /**
+   * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): recuperación explícita
+   * del almacenamiento de revocaciones corrupto. Solo debe llamarse tras
+   * confirmación explícita del propietario en la UI.
+   */
+  async resetRevocationStore(): Promise<boolean> {
+    this.assertLive();
+    const t = this.transport as unknown as {
+      resetRevocationStore?: () => Promise<boolean>;
+    };
+    if (typeof t.resetRevocationStore !== "function") {
+      throw new Error("El transporte no soporta recuperación de revocaciones");
+    }
+    return t.resetRevocationStore();
+  }
+
+  /**
    * BRIAR-2026-10-06: rol de dial determinístico para evitar colisiones
    * de dial simultáneo en la fuente.
    *

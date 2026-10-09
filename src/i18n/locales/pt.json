@@ -281,7 +281,9 @@
     "checking": "Verificando…",
     "available": "Android SpeechRecognizer (no dispositivo quando disponível)",
     "unavailable": "Indisponível neste dispositivo",
-    "unavailableNote": "Nenhum serviço de reconhecimento de voz do sistema foi encontrado — comum em builds GrapheneOS / sem Google. Um modelo whisper.cpp embarcado eliminaria essa dependência, mas é um projeto separado do porte da própria integração com o llama.rn; não implementado nesta versão."
+    "unavailableNote": "Nenhum serviço de reconhecimento de voz do sistema foi encontrado — comum em builds GrapheneOS / sem Google. Um modelo whisper.cpp embarcado eliminaria essa dependência, mas é um projeto separado do porte da própria integração com o llama.rn; não implementado nesta versão.",
+    "readAloudLabel": "Leitura em voz alta",
+    "readAloudValue": "Lê as respostas do assistente usando a voz do sistema (sem internet)."
   },
   "interfaceSettings": {
     "hapticFeedbackLabel": "Feedback tátil",
@@ -373,7 +375,8 @@
     "peerOffline": "O contato não está online. Tente quando estiver por perto com o NIDO aberto.",
     "proposeButton": "+ Propor colaboração",
     "selectContactAndDescribe": "Selecione um contato e escreva a proposta.",
-    "sendFailed": "Não foi possível enviar."
+    "sendFailed": "Não foi possível enviar.",
+    "proposePlaceholder": "O que você quer propor?"
   },
   "chatHeader": {
     "openDrawer": "Abrir menu de navegação",
@@ -657,6 +660,14 @@
     "revokeContact": "Revogar contato {{name}}",
     "revoked": "{{name}} revogado.",
     "revokeFailed": "Não foi possível revogar o contato.",
+    "revocationStoreCorruptTitle": "Armazenamento de revogações corrompido",
+    "revocationStoreCorruptBody": "Não foi possível ler a lista de dispositivos revogados. Conexões P2P estão bloqueadas por segurança até que seja resolvido. Isso não restaura confiança a ninguém.",
+    "revocationRecoveryTitle": "Redefinir armazenamento de revogações",
+    "revocationRecoveryMessage": "Isso excluirá a lista de revogações corrompida e permitirá novas conexões. AVISO: revogações anteriores serão perdidas e você precisará revogar novamente onde apropriado. Isso não concede confiança automaticamente a ninguém.",
+    "revocationRecoveryConfirm": "Redefinir lista",
+    "revocationRecovering": "Redefinindo…",
+    "revocationRecoveryDone": "Lista de revogações redefinida. Revise seus contatos e revogue novamente onde apropriado.",
+    "revocationRecoveryFailed": "Não foi possível redefinir a lista. Tente novamente.",
     "connecting": "Conectando…",
     "noNearbyForPaired": "Nenhum dispositivo próximo encontrado. Verifique se o Bluetooth está ligado.",
     "pairedNotFound": "Não foi possível conectar a {{name}}. Verifique se o outro tablet tem o NIDO aberto.",
@@ -886,6 +897,36 @@
     "dekWarning": "Sem esta chave o backup é inútil.",
     "copyKey": "Copiar chave",
     "understood": "Entendido",
-    "dekFraudWarning": "NIDO nunca pedirá esta chave. Não a compartilhe com ninguém, nem mesmo com suposto suporte técnico."
+    "dekFraudWarning": "NIDO nunca pedirá esta chave. Não a compartilhe com ninguém, nem mesmo com suposto suporte técnico.",
+    "createButton": "Criar backup",
+    "shareButton": "Compartilhar backup",
+    "restoreButton": "Restaurar backup",
+    "errorTitle": "Erro",
+    "shareFailed": "Não foi possível compartilhar o backup.",
+    "sharingUnavailable": "Seu dispositivo não permite compartilhar arquivos.",
+    "noBackupsTitle": "Sem backups",
+    "noBackupsBody": "Você ainda não criou nenhum backup.",
+    "createFailed": "Não foi possível criar o backup.",
+    "invalidTitle": "Backup inválido",
+    "invalidBody": "O arquivo não é um backup válido.",
+    "restoreTitle": "Restaurar backup",
+    "restoreConfirm": "Isso substituirá TODOS os seus dados atuais pelo backup. Continuar?",
+    "restoreConfirmButton": "Restaurar",
+    "restoreDoneTitle": "Restaurado",
+    "restoreDoneBody": "Backup restaurado. Reinicie o app para usar os dados restaurados.",
+    "restoreFailed": "Não foi possível restaurar.",
+    "pickerFailed": "Não foi possível abrir o seletor.",
+    "cancel": "Cancelar",
+    "ok": "OK",
+    "sectionDesc": "Exporte seu banco de dados criptografado. Guarde-o com sua chave em um lugar seguro.",
+    "screenTitle": "Backup & Recovery",
+    "screenDesc": "Seu banco de dados está criptografado. O backup copia o arquivo criptografado. Você precisa guardar sua chave separadamente — sem ela, o backup não pode ser restaurado. Nenhum servidor vê seus dados.",
+    "createNow": "Criar backup agora",
+    "showKey": "Ver minha chave de criptografia",
+    "rotateKey": "Rotacionar chave de criptografia",
+    "saveToDownloads": "Salvar em Downloads",
+    "close": "Fechar",
+    "lastBackup": "Último backup: {{path}}",
+    "warning": "Importante: guarde o arquivo de backup e sua chave em lugares diferentes. Se perder a chave, ninguém (nem NIDO) pode recuperar seus dados."
   }
 }

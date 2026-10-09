@@ -124,6 +124,13 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   const [contacts, setContacts] = useState<P2PContact[]>([]);
   /** PKs revocados (para filtrar de la lista de contactos). */
   const [revokedPks, setRevokedPks] = useState<Set<string>>(new Set());
+  /**
+   * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): salud del almacenamiento
+   * de revocaciones. Si es false, el banner de recuperación se muestra
+   * y P2P permanece bloqueado hasta recuperación explícita.
+   */
+  const [revocationStoreHealthy, setRevocationStoreHealthy] = useState<boolean>(true);
+  const [revocationRecovering, setRevocationRecovering] = useState<boolean>(false);
   /** Ref a contactos vigentes (para onPeerLost sin dependencia circular). */
   const contactsRef = useRef<P2PContact[]>([]);
   useEffect(() => {
@@ -203,8 +210,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   const sendGuardRef = useRef<SendGuard>(new SendGuard());
   const retryGuardRef = useRef<SendGuard>(new SendGuard());
 
-  const loadContacts = useCallback(async () => {
-    try {
+  const loadContacts = useCallback(async () => {    try {
       const list = await listContacts();
       setContacts(list);
       // FIX 2026-10-09: filtrar revocados de la vista.
@@ -219,6 +225,15 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
         }
       }
       setRevokedPks(revoked);
+      // FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): verificar salud del
+      // almacenamiento de revocaciones para mostrar banner si está corrupto.
+      try {
+        const status = await mRef.current.getRevocationStoreStatus();
+        setRevocationStoreHealthy(status.healthy);
+      } catch {
+        // Si no se puede verificar, asumir sano (el transporte hace fail-closed
+        // por su cuenta en establishRoute).
+      }
     } catch {
       /* noop */
     }
@@ -227,10 +242,48 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   const loadConversation = useCallback(async (pkHex: string) => {
     try {
       setMessages(await getConversation(pkHex));
-    } catch {
-      /* noop */
+    } catch (e) {
+      // FIX 2026-10-09 (UI-AUDIT/F4): error visible en vez de silencio.
+      setNotice(
+        `${t("nido.errorLabel")}: ${e instanceof Error ? e.message : String(e)}`
+      );
     }
-  }, []);
+  }, [t]);
+
+  /**
+   * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): recuperación explícita del
+   * almacenamiento de revocaciones corrupto. Requiere confirmación explícita
+   * del propietario con advertencia clara de que se perderán las
+   * revocaciones anteriores. No restablece confianza automáticamente.
+   */
+  const handleRevocationStoreRecovery = useCallback(async () => {
+    const ok = await showSecureAlert({
+      title: t("nido.revocationRecoveryTitle"),
+      message: t("nido.revocationRecoveryMessage"),
+      cancelLabel: t("common.cancel"),
+      confirmLabel: t("nido.revocationRecoveryConfirm"),
+      cancelable: true,
+    });
+    if (!ok) return;
+    setRevocationRecovering(true);
+    try {
+      const recovered = await mRef.current.resetRevocationStore();
+      if (recovered) {
+        setRevocationStoreHealthy(true);
+        setNotice(t("nido.revocationRecoveryDone"));
+        // Recargar contactos para reflejar el estado limpio.
+        await loadContacts();
+      } else {
+        setNotice(t("nido.revocationRecoveryFailed"));
+      }
+    } catch (e) {
+      setNotice(
+        `${t("nido.errorLabel")}: ${e instanceof Error ? e.message : String(e)}`
+      );
+    } finally {
+      setRevocationRecovering(false);
+    }
+  }, [loadContacts, t]);
 
   // Identidad + código de emparejamiento (una vez).
   // H4: extraído a función para permitir reintento desde la UI.
@@ -1102,6 +1155,32 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           {notice}
         </Text>
       ) : null}
+      {/* FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): banner de recuperación
+          cuando el almacenamiento de revocaciones está corrupto. P2P permanece
+          bloqueado hasta recuperación explícita del propietario. */}
+      {!revocationStoreHealthy ? (
+        <View style={styles.revocationAlert}>
+          <Text style={styles.revocationAlertTitle}>
+            {t("nido.revocationStoreCorruptTitle")}
+          </Text>
+          <Text style={styles.revocationAlertBody}>
+            {t("nido.revocationStoreCorruptBody")}
+          </Text>
+          <Pressable
+            style={styles.revocationAlertButton}
+            onPress={handleRevocationStoreRecovery}
+            disabled={revocationRecovering}
+            accessibilityRole="button"
+            accessibilityLabel={t("nido.revocationRecoveryConfirm")}
+          >
+            <Text style={styles.revocationAlertButtonText}>
+              {revocationRecovering
+                ? t("nido.revocationRecovering")
+                : t("nido.revocationRecoveryConfirm")}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={styles.tabs}>
         {(
@@ -1527,6 +1606,39 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     backgroundColor: colors.bg.card,
     paddingHorizontal: calmSpacing.comfortable,
     paddingVertical: calmSpacing.cozy,
+  },
+  // FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): banner de alerta para
+  // almacenamiento de revocaciones corrupto.
+  revocationAlert: {
+    backgroundColor: "#3d1a1a",
+    borderLeftWidth: 4,
+    borderLeftColor: "#c0392b",
+    paddingHorizontal: calmSpacing.comfortable,
+    paddingVertical: calmSpacing.cozy,
+    gap: 8,
+  },
+  revocationAlertTitle: {
+    ...typography.ui.body,
+    fontWeight: "700",
+    color: "#f5c6c6",
+  },
+  revocationAlertBody: {
+    ...typography.ui.caption,
+    color: "#e8b4b4",
+  },
+  revocationAlertButton: {
+    backgroundColor: "#c0392b",
+    paddingHorizontal: calmSpacing.comfortable,
+    paddingVertical: calmSpacing.cozy,
+    borderRadius: 8,
+    alignItems: "center",
+    minHeight: 44,
+    justifyContent: "center",
+  },
+  revocationAlertButtonText: {
+    ...typography.ui.body,
+    fontWeight: "700",
+    color: "#ffffff",
   },
   tabs: {
     flexDirection: "row",
