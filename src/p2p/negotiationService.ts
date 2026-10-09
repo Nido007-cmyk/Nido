@@ -145,6 +145,16 @@ class NegotiationService {
   private inflightProposals = new Set<string>();
   private handlers = new Set<NegotiationEventHandler>();
   private myPkHex: string | null = null;
+  /**
+   * TESTFIX-2026-10-08: clave pública de firma Ed25519 local.
+   * ROOT CAUSE del bug "mi propuesta se ve como entrante": proposeTo()
+   * firma con la clave Ed25519 (proposerPkHex = signing key), pero
+   * isOutgoing() comparaba contra myPkHex = clave de identidad X25519
+   * (setLocalIdentity). Son keypairs distintos → la comparación nunca
+   * era true → las propuestas propias siempre se renderizaban como
+   * entrantes con Accept/Decline (evidencia física 2026-10-08).
+   */
+  private mySigningPkHex: string | null = null;
   private sendFn: NegotiationSendFn | null = null;
   private peerSigPkResolver: PeerSigPkResolver = async (peerIdentityPkHex) => {
     const contact = await findContactByPk(peerIdentityPkHex);
@@ -161,6 +171,15 @@ class NegotiationService {
   /** Configura la identidad local (para verificar recipient). */
   setLocalIdentity(pkHex: string): void {
     this.myPkHex = pkHex.toLowerCase();
+  }
+
+  /**
+   * TESTFIX-2026-10-08: configura la clave pública de firma local.
+   * isOutgoing() debe comparar proposerPkHex (firmada con Ed25519)
+   * contra ESTA clave, no contra la de identidad X25519.
+   */
+  setLocalSigningPk(pkHex: string): void {
+    this.mySigningPkHex = pkHex.toLowerCase();
   }
 
   /**
@@ -236,8 +255,12 @@ class NegotiationService {
    * screenshots: la propuesta se veía como entrante en ambas tablets.
    */
   isOutgoing(session: NegotiationSession): boolean {
-    if (!this.myPkHex) return false;
-    return session.proposal.proposerPkHex.toLowerCase() === this.myPkHex;
+    // TESTFIX-2026-10-08: comparar contra la clave de FIRMA, que es la que
+    // proposeTo() pone en proposerPkHex. Fallback a myPkHex solo para
+    // compatibilidad con tests que usan una sola clave para ambos roles.
+    const mine = this.mySigningPkHex ?? this.myPkHex;
+    if (!mine) return false;
+    return session.proposal.proposerPkHex.toLowerCase() === mine;
   }
 
   /**

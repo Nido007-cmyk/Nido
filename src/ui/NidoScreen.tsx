@@ -231,6 +231,20 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       // This enables Accept/Decline/Counter to send signed responses to peers.
       const { negotiationService } = await import("../p2p/negotiationService");
       negotiationService.setLocalIdentity(id.pkHex);
+      // TESTFIX-2026-10-08: isOutgoing() compara proposerPkHex (clave de
+      // firma Ed25519) — sin esto las propuestas propias se veían como
+      // entrantes en ambas tablets (evidencia física). Fail-open seguro:
+      // si la clave de firma no carga, isOutgoing usa fallback y las
+      // propuestas propias se ven como entrantes (comportamiento actual),
+      // nunca se acepta nada automáticamente.
+      try {
+        const { getSigningKeypair } = await import("../p2p/store");
+        const { toHex } = await import("../p2p/crypto");
+        const skp = await getSigningKeypair();
+        negotiationService.setLocalSigningPk(toHex(skp.publicKey));
+      } catch {
+        /* noop: isOutgoing degradado, sin cambio de seguridad */
+      }
       negotiationService.setSendFunction(
         (peerPkHex, action, negotiationId, signed) =>
           m.sendNegotiationResponse(peerPkHex, action, negotiationId, signed)

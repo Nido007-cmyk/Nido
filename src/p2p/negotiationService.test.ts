@@ -521,3 +521,36 @@ describe("NEGOTIATION-INIT 2026-10-07: proposeTo", () => {
     expect(true).toBe(true);
   });
 });
+
+describe("TESTFIX-2026-10-08: isOutgoing con claves separadas", () => {
+  it("propuesta propia es outgoing aunque identity key != signing key (root cause del bug físico)", () => {
+    // En producción: myPkHex = X25519 (identidad), proposerPkHex = Ed25519
+    // (firma). Antes del fix, isOutgoing comparaba firma contra identidad
+    // → siempre false → la propuesta propia se veía como entrante.
+    const identityKeys = nacl.sign.keyPair(); // simula X25519 (distinta)
+    const signingKeys = nacl.sign.keyPair(); // simula Ed25519 de firma
+    const identityHex = toHex(identityKeys.publicKey);
+    const signingHex = toHex(signingKeys.publicKey);
+
+    negotiationService.setLocalIdentity(identityHex);
+    negotiationService.setLocalSigningPk(signingHex);
+
+    const session = {
+      negotiationId: "test-outgoing-1",
+      proposal: {
+        proposerPkHex: signingHex,
+        recipientPkHex: "peer",
+      },
+    } as any;
+    expect(negotiationService.isOutgoing(session)).toBe(true);
+
+    const incoming = {
+      negotiationId: "test-incoming-1",
+      proposal: {
+        proposerPkHex: toHex(nacl.sign.keyPair().publicKey),
+        recipientPkHex: identityHex,
+      },
+    } as any;
+    expect(negotiationService.isOutgoing(incoming)).toBe(false);
+  });
+});
