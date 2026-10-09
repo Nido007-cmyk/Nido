@@ -271,6 +271,18 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
                     : c,
                 ),
               );
+              // REDISCOVERY 2026-10-08: si el peer redescubierto es un
+              // contacto emparejado que se había perdido, reiniciar su ciclo
+              // de reintentos (el presupuesto se agota mientras su pantalla
+              // está apagada; sin esto nada lo reactiva al volver).
+              // notifyPeerFound ignora descubrimientos frescos y ciclos
+              // activos: nunca auto-conecta por proximidad ni duplica.
+              const contact = contactsRef.current.find(
+                (c) => c.pkHex.toLowerCase() === p.pkHex.toLowerCase(),
+              );
+              if (contact) {
+                reconnectManager.notifyPeerFound(p.pkHex, contact.name);
+              }
             } else {
               setNearby((prev) => (prev.includes(p.alias) ? prev : [...prev, p.alias]));
             }
@@ -286,10 +298,13 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             // AUTO-RECONNECT 2026-10-07: si el peer perdido es un contacto
             // emparejado, programar reconexión automática con backoff.
             // (El nombre se busca en contactos; si no está, no se reintenta.)
+            // REDISCOVERY 2026-10-08: marcarlo como perdido para que un
+            // redescubrimiento posterior pueda reiniciar el ciclo.
             const contact = contactsRef.current.find(
               (c) => c.pkHex.toLowerCase() === pkHex.toLowerCase(),
             );
             if (contact) {
+              reconnectManager.notifyPeerLost(pkHex);
               reconnectManager.schedule(pkHex, contact.name);
             }
           },
@@ -315,9 +330,17 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
     })();
     return () => {
       cancelled = true;
-      // AUTO-RECONNECT 2026-10-08: si el link se detiene del todo,
-      // cancelar reintentos pendientes (ya no hay nada que reintentar).
-      reconnectManager.cancelAll();
+      // REDISCOVERY 2026-10-08: NO llamar a reconnectManager.cancelAll()
+      // aquí. El manager es un singleton deliberadamente independiente del
+      // ciclo de vida de la pantalla (su cabecera lo documenta) y los
+      // reintentos están acotados (5 intentos, fail-closed): matar los
+      // timers al desmontar la pantalla rompía el auto-reconnect en
+      // segundo plano y contradice la arquitectura P2P-ALWAYS-ON
+      // (el servidor nativo y su foreground service siguen vivos como
+      // Briar aunque esta pantalla se cierre). cancelAll() queda reservado
+      // para apagado terminal explícito (logout / Clear All Data).
+      // stopLink() solo detiene el discovery; los reintentos pendientes
+      // marcan por MAC conocida/bondeada sin necesitar discovery.
       void m.stopLink().catch(() => {});
     };
   }, [linkAttempt]);
