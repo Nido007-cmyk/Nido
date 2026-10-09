@@ -1,3 +1,7 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
 //! Strict JSON parser for the conformance harness.
 //!
 //! Rules (from SPEC_AMBIGUITIES.md and the official vectors):

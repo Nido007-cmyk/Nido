@@ -1,3 +1,7 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
 // Generates float_expected.jsonl from float_corpus.txt using the JS engine's
 // Number.prototype.toString as ground truth.
 //   node tests/gen_float_expected.mjs   (run from tests/ or repo root via path below)

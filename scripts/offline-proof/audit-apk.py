@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# MIT License
+# Copyright (c) 2026 NIDO contributors
+# See LICENSE file for details.
+
 """
 audit-apk.py - NIDO Offline Proof: Static APK network surface audit.
 

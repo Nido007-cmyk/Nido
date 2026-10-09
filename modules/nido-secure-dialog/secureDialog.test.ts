@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * R3 — FLAG_SECURE on the agent-confirmation and pairing-fingerprint
  * dialog windows (deterministic, no device).
  *

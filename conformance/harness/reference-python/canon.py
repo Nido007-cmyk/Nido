@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# MIT License
+# Copyright (c) 2026 NIDO contributors
+# See LICENSE file for details.
+
 """NIDO conformance: PARTIAL second implementation (Python).
 
 Implements ONLY canonicalization + SHA-256, independently from the TypeScript

@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# MIT License
+# Copyright (c) 2026 NIDO contributors
+# See LICENSE file for details.
+
 """Deterministic f64 corpus generator for the Rust/JS number-format differential.
 
 Writes one u64 bit pattern per line (16 lowercase hex chars) to

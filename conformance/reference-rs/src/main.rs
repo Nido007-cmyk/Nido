@@ -1,3 +1,7 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
 //! `nido-conformance-rs`: language-agnostic conformance harness adapter.
 //!
 //! Protocol (identical to `reference-ts`):

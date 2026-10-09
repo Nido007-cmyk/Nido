@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * nido-p2p — bindings TypeScript del módulo nativo (Kotlin).
  *
  * API mínima y explícita: el módulo solo mueve bytes con framing

@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
+/**
  * BENCHMARK CANDIDATE ONLY — NOT REVIEWED, NOT APPROVED FOR PRODUCTION.
  *
  * SHA-256 of pbkdf2.ts (this directory) as committed. The on-device

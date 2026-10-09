@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // NIDO Protocol Conformance Suite v0
 // Vector generator: source/ (hand-authored) -> final/ (official, committed).
 //

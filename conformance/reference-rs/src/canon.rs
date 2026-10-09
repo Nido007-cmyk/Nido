@@ -1,3 +1,7 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
 //! JSON Canonicalization Scheme implementation (NIDO v0 profile).
 //!
 //! Rules applied:

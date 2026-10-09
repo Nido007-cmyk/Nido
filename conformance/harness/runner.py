@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# MIT License
+# Copyright (c) 2026 NIDO contributors
+# See LICENSE file for details.
+
 """Differential harness for the NIDO protocol conformance suite.
 
 Runs an external implementation (IUT) against the official vectors using the

@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // NIDO Protocol Conformance Suite v0
 // Generic runner: every official vector in vectors/v0/final/*.json is fed to
 // the reference adapter, and the normalized result must deep-equal `expected`.

@@ -1,3 +1,7 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
 // Jest configuration for React Native component/widget tests.
 // Architecture decision (2026-10-05): Dual runner setup.
 // - Vitest: existing unit tests for pure logic (unchanged)

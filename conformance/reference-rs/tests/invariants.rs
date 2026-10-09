@@ -1,3 +1,7 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
 //! Explicit breaking attempts against the seven security invariants.
 //!
 //! Each test plays the attacker: it constructs the malicious input the

@@ -1,3 +1,7 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
 //! Evaluators for the 14 v0 conformance kinds.
 //!
 //! Each evaluator is written directly from the normative spec documents

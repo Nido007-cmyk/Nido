@@ -1,3 +1,7 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
 //! Deterministic property / fuzz tests for the Rust implementation.
 //!
 //! These are NOT vector replays: they assert structural properties that

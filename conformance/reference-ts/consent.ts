@@ -1,3 +1,9 @@
+/**
+ * MIT License
+ * Copyright (c) 2026 NIDO contributors
+ * See LICENSE file for details.
+ */
+
 // NIDO Protocol Conformance Suite v0 — reference-ts
 // Consent binding: a grant authorizes EXACTLY what was consented to.
 // Correct consent + modified parameters -> POLICY_DENIED.

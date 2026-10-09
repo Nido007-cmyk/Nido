@@ -1,3 +1,7 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
 //! `nido-conformance-rs`: independent Rust implementation of the NIDO v0
 //! conformance protocol (second implementation, written from the spec
 //! documents and the official vectors, not as a translation of the

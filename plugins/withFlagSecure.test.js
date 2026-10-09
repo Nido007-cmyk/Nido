@@ -1,3 +1,7 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
 /**
  * withFlagSecure.test.js — P-F2 FLAG_SECURE (deterministic, no device).
  *

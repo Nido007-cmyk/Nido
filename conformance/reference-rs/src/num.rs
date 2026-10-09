@@ -1,3 +1,7 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
 //! ECMAScript number formatting (for RFC 8785 canonicalization) and the
 //! unsafe-integer check.
 //!
