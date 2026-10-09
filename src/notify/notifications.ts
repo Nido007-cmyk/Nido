@@ -126,6 +126,11 @@ export async function scheduleReminderNotification(
   text: string,
   at: Date
 ): Promise<boolean> {
+  // FIX 2026-10-09 (N4): rechazar fechas pasadas. Un trigger DATE en el
+  // pasado tiene comportamiento indefinido según el backend.
+  if (at.getTime() < Date.now() - 60_000) {
+    return false;
+  }
   try {
     // FIX 2026-10-09: verificar alarma exacta (Android 12+). Sin el permiso,
     // expo-notifications cae a inexacta y el aviso llega minutos tarde.

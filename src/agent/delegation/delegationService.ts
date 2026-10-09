@@ -320,6 +320,11 @@ export class DelegationService {
           await this.denyTask(requestId);
         }
       }
+      // FIX 2026-10-09 (F-DELEG-3): abortar executor en curso si lo hay.
+      const running = this.runningExecutors.get(taskId.toLowerCase());
+      if (running) {
+        running.abort();
+      }
     }
     // TASK_STATUS: informational; v1 UI does not surface progress.
   }
@@ -434,11 +439,18 @@ export class DelegationService {
       resultSizeLimit: ctx.resultSizeLimit,
       modelInvoke: this.modelInvoke,
     });
-    const result = await executor.execute({
-      description: approved.description,
-      documentBase64: approved.documentBase64,
-      resultSchema: approved.resultSchema,
-    });
+    // F-DELEG-3: registrar para poder abortar en TASK_CANCEL.
+    this.runningExecutors.set(ctx.taskId, executor);
+    let result;
+    try {
+      result = await executor.execute({
+        description: approved.description,
+        documentBase64: approved.documentBase64,
+        resultSchema: approved.resultSchema,
+      });
+    } finally {
+      this.runningExecutors.delete(ctx.taskId);
+    }
     await this.audit({
       taskId: ctx.taskId,
       negotiationId: ctx.negotiationId,
@@ -501,6 +513,8 @@ export class DelegationService {
 
   /** taskId -> negotiationId (R5 liveness re-check at approve time). */
   private readonly taskNegotiation = new Map<string, string>();
+  // FIX 2026-10-09 (F-DELEG-3): executors en curso por taskId, para abortar en TASK_CANCEL.
+  private readonly runningExecutors = new Map<string, DelegatedExecutor>();
 
   /** Test/introspection: pending approvals. */
   get pendingApprovals(): number {

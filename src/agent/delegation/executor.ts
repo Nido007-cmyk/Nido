@@ -101,6 +101,8 @@ export class DelegatedExecutor {
   private readonly maxToolCalls: number;
   private readonly maxDurationMs: number;
   private readonly resultSizeLimit: number;
+  // FIX 2026-10-09 (F-DELEG-3): flag de aborto para TASK_CANCEL.
+  private aborted = false;
 
   constructor(private readonly config: ExecutorConfig) {
     this.maxToolCalls = Math.min(
@@ -124,10 +126,18 @@ export class DelegatedExecutor {
   }
 
   private checkBudget(): void {
+    if (this.aborted) {
+      throw new Error("task aborted by peer (TASK_CANCEL)");
+    }
     if (this.toolCalls >= this.maxToolCalls) {
       throw new Error("tool budget exhausted");
     }
     this.toolCalls++;
+  }
+
+  /** FIX 2026-10-09 (F-DELEG-3): aborta la ejecución en curso. */
+  abort(): void {
+    this.aborted = true;
   }
 
   /**
