@@ -79,18 +79,20 @@ describe("contextSpecForModel", () => {
       nKvHeads: 2,
       headDim: 64,
     });
-    // ~0.67 GiB working set: 379.4 MiB weights + ~48 MiB KV (n_ctx 4096) + compute/overhead
+    // FIX 2026-10-09: incluye logits (~297 MiB). Working set: 379.4 MiB
+    // weights + ~48 MiB KV + 256 MiB compute + ~297 MiB logits.
     const est = estimateContextBytes(spec);
-    expect(est.totalBytes).toBeLessThan(0.75 * GiB);
-    expect(est.totalBytes).toBeGreaterThan(0.45 * GiB);
+    expect(est.totalBytes).toBeLessThan(1.05 * GiB);
+    expect(est.totalBytes).toBeGreaterThan(0.75 * GiB);
   });
 
   it("1.5B estimate is unchanged vs the old DEFAULT_ARCH assumption", () => {
     const m = MODEL_CATALOG.find((e) => e.id === PREFERRED_LLM_ID)!;
     const est = estimateContextBytes(contextSpecForModel(m));
-    // 940.4 + 112 + 256 MiB ≈ 1308 MiB
-    expect(est.totalBytes).toBeGreaterThan(1300 * MiB);
-    expect(est.totalBytes).toBeLessThan(1320 * MiB);
+    // FIX 2026-10-09: incluye logits (~297 MiB).
+    // 940.4 + 112 + 256 + 297 MiB ≈ 1605 MiB
+    expect(est.totalBytes).toBeGreaterThan(1590 * MiB);
+    expect(est.totalBytes).toBeLessThan(1620 * MiB);
   });
 });
 

@@ -185,7 +185,9 @@ class NidoP2PService : Service() {
     return NotificationCompat.Builder(this, CHANNEL_ID)
       .setContentTitle("NIDO P2P activo")
       .setContentText("Listo para recibir mensajes de tus contactos")
-      .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
+      // FIX 2026-10-09: ícono propio de NIDO (letra N). Antes usaba
+      // android.R.drawable.stat_sys_data_bluetooth que se veía genérico.
+      .setSmallIcon(R.drawable.ic_stat_nido)
       .setContentIntent(pendingIntent)
       .setOngoing(true)
       .setShowWhen(false)

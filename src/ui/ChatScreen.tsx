@@ -695,6 +695,8 @@ export function ChatScreen({
           loadMemory: () => loadMemorySnapshot().catch(() => null),
           maxSteps: 3,
           nPredict: agentMaxTokens,
+          // FIX 2026-10-09: idioma vigente para el system prompt.
+          lang: i18n.language?.startsWith("en") ? "en" : "es",
           // Presupuesto de prompt contra el n_ctx real del modelo cargado
           // (T-contexto-2026-10-06).
           nCtx: llamaEngine.getModelInfo()?.nCtx,

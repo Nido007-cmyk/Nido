@@ -116,6 +116,33 @@ export async function scheduleReminderNotification(
   at: Date
 ): Promise<boolean> {
   try {
+    // FIX 2026-10-09: verificar alarma exacta (Android 12+). Sin el permiso,
+    // expo-notifications cae a inexacta y el aviso llega minutos tarde.
+    // Se avisa una vez por sesión; no se bloquea el recordatorio.
+    try {
+      const { canScheduleExactAlarms, openExactAlarmSettings } = await import(
+        "exact-alarm"
+      );
+      const canExact = await canScheduleExactAlarms();
+      if (!canExact) {
+        const { Alert, Platform } = await import("react-native");
+        if (Platform.OS === "android") {
+          Alert.alert(
+            "Permiso de alarmas",
+            "Para que los recordatorios suenen a la hora exacta, activa \"Alarmas y recordatorios\" para NIDO en Ajustes.",
+            [
+              { text: "Ahora no", style: "cancel" },
+              {
+                text: "Abrir ajustes",
+                onPress: () => void openExactAlarmSettings(),
+              },
+            ]
+          );
+        }
+      }
+    } catch {
+      /* el módulo puede no estar disponible en tests */
+    }
     await cancelReminderNotification(reminderId);
     await Notifications.scheduleNotificationAsync({
       identifier: REMINDER_PREFIX + reminderId,

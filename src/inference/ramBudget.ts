@@ -63,12 +63,17 @@ export interface ContextSpec {
   nLayer?: number;
   nKvHeads?: number;
   headDim?: number;
+  /** FIX 2026-10-09: para el término de logits (n_batch × n_vocab × 4B). */
+  nBatch?: number;
+  nVocab?: number;
 }
 
 export interface RamEstimate {
   weightsBytes: number;
   kvCacheBytes: number;
   computeBytes: number;
+  /** FIX 2026-10-09: buffer de logits (n_batch × n_vocab × 4B). */
+  logitsBytes: number;
   totalBytes: number;
 }
 
@@ -94,6 +99,16 @@ const DEFAULT_ARCH = { nLayer: 28, nKvHeads: 2, headDim: 128 };
  * a crash.
  */
 const COMPUTE_BUFFER_BYTES_AT_4K_CTX = 256 * MiB;
+
+/**
+ * FIX 2026-10-09: término de logits. llama.cpp aloca n_batch × n_vocab × 4B
+ * para los logits (float32). Con Qwen2.5 (vocab 152064) y n_batch 512:
+ * ~297 MiB que el estimador ignoraba. Sin esto, el pre-flight es optimista
+ * y Android puede matar el proceso por OOM en el 1.5B.
+ */
+function estimateLogitsBytes(nBatch: number, nVocab: number): number {
+  return Math.max(nBatch, 0) * Math.max(nVocab, 0) * 4;
+}
 
 /**
  * Headroom reserved for the Android system and background apps — a policy
@@ -124,11 +139,14 @@ export function estimateContextBytes(spec: ContextSpec): RamEstimate {
   const weightsBytes = Math.max(spec.fileSizeBytes, 0);
   const kvCacheBytes = estimateKvCacheBytes(nLayer, spec.nCtx, nKvHeads, headDim);
   const computeBytes = Math.ceil((COMPUTE_BUFFER_BYTES_AT_4K_CTX * Math.max(spec.nCtx, 0)) / 4096);
+  // FIX 2026-10-09: incluir logits. Defaults: n_batch 512, vocab Qwen2.5 152064.
+  const logitsBytes = estimateLogitsBytes(spec.nBatch ?? 512, spec.nVocab ?? 152064);
   return {
     weightsBytes,
     kvCacheBytes,
     computeBytes,
-    totalBytes: weightsBytes + kvCacheBytes + computeBytes,
+    logitsBytes,
+    totalBytes: weightsBytes + kvCacheBytes + computeBytes + logitsBytes,
   };
 }
 

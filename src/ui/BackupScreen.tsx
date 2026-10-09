@@ -52,6 +52,40 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const handleSaveToDownloads = async () => {
+    if (!lastBackup) {
+      Alert.alert("Sin backup", "Primero crea un backup con el botón de arriba.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const FS = await import("expo-file-system/legacy");
+      // SAF: pedir al usuario que elija dónde guardar (Descargas).
+      const perms = await FS.StorageAccessFramework.requestDirectoryPermissionsAsync();
+      if (!perms.granted) {
+        Alert.alert("Cancelado", "Sin permiso no se puede guardar.");
+        return;
+      }
+      const fileName = lastBackup.split("/").pop() ?? "nido-backup.db";
+      const destUri = await FS.StorageAccessFramework.createFileAsync(
+        perms.directoryUri,
+        fileName,
+        "application/octet-stream"
+      );
+      const content = await FS.readAsStringAsync(lastBackup, {
+        encoding: FS.EncodingType.Base64,
+      });
+      await FS.writeAsStringAsync(destUri, content, {
+        encoding: FS.EncodingType.Base64,
+      });
+      Alert.alert("Guardado", `Backup copiado a Descargas como:\n${fileName}`);
+    } catch (e) {
+      Alert.alert("Error", e instanceof Error ? e.message : "No se pudo guardar.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleShowKey = async () => {
     setBusy(true);
     try {
@@ -117,6 +151,15 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
 
       <Pressable style={styles.buttonSecondary} onPress={handleShowKey} disabled={busy}>
         <Text style={styles.buttonSecondaryText}>Ver mi clave de cifrado</Text>
+      </Pressable>
+
+      {/* FIX 2026-10-09: guardar directo en Descargas vía SAF. */}
+      <Pressable
+        style={[styles.buttonSecondary, !lastBackup && { opacity: 0.5 }]}
+        onPress={handleSaveToDownloads}
+        disabled={busy || !lastBackup}
+      >
+        <Text style={styles.buttonSecondaryText}>Guardar en Descargas</Text>
       </Pressable>
 
       {lastBackup && (

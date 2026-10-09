@@ -44,7 +44,9 @@ describe("estimateContextBytes", () => {
     expect(e.weightsBytes).toBe(986_048_768);
     expect(e.kvCacheBytes).toBe(117_440_512);
     expect(e.computeBytes).toBe(256 * MiB);
-    expect(e.totalBytes).toBe(e.weightsBytes + e.kvCacheBytes + e.computeBytes);
+    // FIX 2026-10-09: incluye término de logits (512 × 152064 × 4B).
+    expect(e.logitsBytes).toBe(512 * 152064 * 4);
+    expect(e.totalBytes).toBe(e.weightsBytes + e.kvCacheBytes + e.computeBytes + e.logitsBytes);
     // ~1.28 GiB ~= 1.40x the 0.92 GiB file — documents why the old flat
     // 1.15x factor under-estimated the real working set.
     expect(e.totalBytes / 986_048_768).toBeGreaterThan(1.3);
@@ -53,7 +55,7 @@ describe("estimateContextBytes", () => {
   it("degrades gracefully when the file size is unknown (0)", () => {
     const e = estimateContextBytes({ fileSizeBytes: 0, nCtx: 512 });
     expect(e.weightsBytes).toBe(0);
-    expect(e.totalBytes).toBe(e.kvCacheBytes + e.computeBytes);
+    expect(e.totalBytes).toBe(e.kvCacheBytes + e.computeBytes + e.logitsBytes);
     expect(e.totalBytes).toBeGreaterThan(0);
   });
 
@@ -106,10 +108,12 @@ describe("checkRamBudget", () => {
   });
 
   it("a small embedding context fits almost anywhere", () => {
-    const emb = { fileSizeBytes: 36_806_944, nCtx: 512 };
+    // FIX 2026-10-09: los embeddings usan vocab pequeño; pasar nVocab explícito
+    // para no aplicar el default de 152k (Qwen2.5).
+    const emb = { fileSizeBytes: 36_806_944, nCtx: 512, nVocab: 32000, nBatch: 512 };
     const v = checkRamBudget(emb, { totalRamBytes: 4 * GiB, rssBytes: 1 * GiB });
     expect(v!.fits).toBe(true);
-    expect(v!.totalBytes).toBeLessThan(100 * MiB);
+    expect(v!.totalBytes).toBeLessThan(200 * MiB);
   });
 });
 

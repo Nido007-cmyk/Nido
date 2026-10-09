@@ -34,6 +34,7 @@
     "nido-secure-dialog": "file:./modules/nido-secure-dialog",
     "qrcode": "1.5.4",
     "ram-monitor": "file:./modules/ram-monitor",
+    "exact-alarm": "file:./modules/exact-alarm",
     "react": "19.2.3",
     "react-i18next": "17.0.15",
     "react-native": "0.86.3",
