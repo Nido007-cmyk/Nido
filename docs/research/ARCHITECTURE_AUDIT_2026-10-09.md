@@ -203,9 +203,25 @@ Every fix carries a `FIX 2026-10-09 (ID)` tag with file:line traceability; error
 
 ## Recommended order
 
-1. **RISK-3** — versioned `up()` migrations before any public release (data-loss-class if skipped).
-2. **RISK-1** — `registerEnvelopeHandler` registry to break the p2p→agent dependency (small, mechanical).
-3. **RISK-2** — wire `checkStaleRekeyStaging` into `runStartupGate` when F-KEY-1 UI lands (already planned as CR-2).
+1. **RISK-3** — versioned `up()` migrations before any public release (data-loss-class if skipped). ✅ IMPLEMENTED 2026-10-09 (commits f374852a, df4b77e0).
+2. **RISK-1** — ⏸️ HOLD (decisión del dueño 2026-10-09). Clasificado como deuda técnica aceptada y documentada, NO como vulnerabilidad activa. Un intento de refactor rompió 73 tests (mayoría mocks); el beneficio no justifica el riesgo. Los 3 sitios permanecen documentados abajo. No reabrir salvo regresión real, incompatibilidad concreta o necesidad funcional demostrada.
+3. **RISK-2** — wire `checkStaleRekeyStaging` into `runStartupGate` when F-KEY-1 UI lands (already planned as CR-2). ✅ IMPLEMENTED 2026-10-09.
 4. **DEBT-3 / DEBT-11** — split ChatScreen + adopt a typed router before the next UI-heavy feature.
 5. **DEBT-10** — one-page `docs/architecture/OVERVIEW.md` (cheapest item on the list).
 6. The rest (DEBT-1, 2, 4–9) are track-and-fix as the relevant area is next touched.
+
+---
+
+## RISK-1 — Addendum 2026-10-09: Deuda técnica aceptada
+
+**Decisión:** No refactorizar. El dueño acepta la evaluación técnica que demuestra:
+- El cambio de modelos de IA es independiente de P2P (cero imports de modelo en `src/p2p/`)
+- Los 3 sitios de acoplamiento son estables y no bloquean capacidades futuras
+- El refactor intentó rompió 73 tests; el beneficio no justifica el riesgo
+
+**Los 3 sitios documentados (no modificar sin análisis):**
+1. `src/p2p/store.ts:14` → `../agent/memory/memoryStore` (wrapper deprecado a DatabaseManager)
+2. `src/p2p/p2pAuthorization.ts:24-25` → `../agent/policy/authorization` (función `authorize()`)
+3. `src/p2p/messenger.ts:1260` → `../agent/delegation/delegationService` (dynamic import, flag OFF)
+
+**Condición:** Mantener cobertura de regresión para autorización P2P, especialmente ante cambios en `agent/policy/authorization`. Tests existentes: `src/agent/policy/authorization.test.ts`, `src/p2p/negotiationService.test.ts`, `src/p2p/negotiation.e2e.test.ts`.
