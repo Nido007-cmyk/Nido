@@ -1614,3 +1614,46 @@ describe("nativeTransport: discovery listeners se re-registran al volver", () =>
     expect(ev.found[ev.found.length - 1].alias).toContain("AA:BB:CC:DD:EE:11");
   });
 });
+
+describe("nativeTransport: ReconnectManager (BlueLib)", () => {
+  let f: ReturnType<typeof makeFake>;
+  let ev: ReturnType<typeof makeEvents>;
+  let t: NidoBluetoothTransport;
+
+  beforeEach(() => {
+    f = makeFake();
+    ev = makeEvents();
+    t = makeTransport(f.fake);
+  });
+
+  it("onNativeDisconnected programa reconnect para peer con ruta", async () => {
+    await t.startDiscovery(ev.events);
+    // Simular ruta establecida: insertar directamente en los maps internos.
+    // (El handshake completo se prueba en otros tests; aquí solo el trigger.)
+    const mac = "AA:BB:CC:DD:EE:11";
+    (t as any).macToPk.set(mac, "deadbeef".repeat(8));
+    (t as any).pkToMac.set(("deadbeef".repeat(8)).toLowerCase(), mac);
+    // Disparar desconexión nativa.
+    f.emit("onDisconnected", { address: mac } as never);
+    await tick(10);
+    // Debe haber un timer de reconnect programado.
+    expect((t as any).reconnectTimers.has(mac)).toBe(true);
+    // La ruta se limpió (forgetRoute).
+    expect((t as any).macToPk.has(mac)).toBe(false);
+  });
+
+  it("disconnect manual cancela el reconnect", async () => {
+    await t.startDiscovery(ev.events);
+    const mac = "AA:BB:CC:DD:EE:22";
+    const pk = "cafebabe".repeat(8);
+    (t as any).macToPk.set(mac, pk);
+    (t as any).pkToMac.set(pk.toLowerCase(), mac);
+    // Desconexión manual primero.
+    await t.disconnect(pk);
+    // Luego el evento nativo (puede llegar tarde).
+    f.emit("onDisconnected", { address: mac } as never);
+    await tick(10);
+    // NO debe programar reconnect.
+    expect((t as any).reconnectTimers.has(mac)).toBe(false);
+  });
+});

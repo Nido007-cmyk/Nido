@@ -305,6 +305,15 @@ export class NidoBluetoothTransport implements P2PTransport {
   private macToPk = new Map<string, string>();
   private pkToMac = new Map<string, string>();
   private pending = new Map<string, PendingHello>(); // MAC -> HELLO en curso
+  // FIX 2026-10-09 (BlueLib): ReconnectManager con estado. El retry antes se
+  // disparaba por onPeerLost (presencia), no por la transición a DISCONNECTED.
+  // Si el peer queda "visible pero muerto", nunca se reintentaba. Ahora el
+  // retry es dirigido por estado: onNativeDisconnected programa reconexión
+  // con backoff para contactos emparejados.
+  private reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private reconnectAttempts = new Map<string, number>();
+  /** MACs con desconexión manual: no auto-reconectar. */
+  private manualDisconnectMacs = new Set<string>();
   /** R8: timestamps de inicios de handshake entrante por MAC (ventana deslizante). */
   private readonly inboundHandshakeAt = new Map<string, number[]>();
   // H3-2026-10-06: flag para detener los reinicios de discovery.
@@ -628,6 +637,11 @@ export class NidoBluetoothTransport implements P2PTransport {
     }
     this.discoveryUnsubs = [];
     this.linked = false;
+    // FIX 2026-10-09: limpiar reconnects pendientes en shutdown terminal.
+    for (const [, t] of this.reconnectTimers) clearTimeout(t);
+    this.reconnectTimers.clear();
+    this.reconnectAttempts.clear();
+    this.manualDisconnectMacs.clear();
     const b = this.bindings;
     if (!b) return;
     await b.shutdown();
@@ -695,6 +709,16 @@ export class NidoBluetoothTransport implements P2PTransport {
   ): Promise<void> {
     const MAX_ATTEMPTS = 3;
     try {
+      // FIX 2026-10-09 (BlueLib): detener el discovery antes de conectar.
+      // El discovery activo contiende por la radio Bluetooth y causa fallos
+      // de conexión intermitentes. Se reanuda solo vía scheduleDiscoveryRestart.
+      if (attempt === 0) {
+        try {
+          await b.stopDiscovery();
+        } catch {
+          /* best-effort */
+        }
+      }
       await b.connect(mac);
     } catch (e: unknown) {
       const err = e instanceof Error ? e : new Error(String(e));
@@ -742,6 +766,12 @@ export class NidoBluetoothTransport implements P2PTransport {
 
   async disconnect(peerPkHex: string): Promise<void> {
     const mac = this.pkToMac.get(peerPkHex.toLowerCase());
+    // FIX 2026-10-09: marcar como manual para no auto-reconectar.
+    if (mac) {
+      this.manualDisconnectMacs.add(mac);
+      this.cancelReconnect(mac);
+      this.reconnectAttempts.delete(mac);
+    }
     this.forgetRoute(peerPkHex);
     if (mac) await this.bt().disconnect(mac).catch(() => {});
   }
@@ -1174,8 +1204,58 @@ export class NidoBluetoothTransport implements P2PTransport {
     if (pk) {
       this.forgetRoute(pk);
       this.events?.onPeerLost?.(pk);
+      // FIX 2026-10-09 (BlueLib): retry dirigido por ESTADO, no por presencia.
+      // Antes solo se limpiaba; si el peer quedaba "visible pero muerto",
+      // nunca se reintentaba. Ahora se programa reconexión con backoff para
+      // contactos emparejados (salvo desconexión manual explícita).
+      this.scheduleReconnect(mac, pk);
     } else {
       this.events?.onPeerLost?.(mac);
+    }
+  }
+
+  /**
+   * FIX 2026-10-09 (BlueLib): programa reconexión automática con backoff
+   * exponencial tras una desconexión no solicitada. Solo para peers que
+   * tenían ruta establecida (contactos emparejados con handshake completo).
+   * Máximo 5 intentos; después se rinde hasta reconexión manual.
+   */
+  private scheduleReconnect(mac: string, pkHex: string): void {
+    if (this.manualDisconnectMacs.has(mac)) {
+      this.manualDisconnectMacs.delete(mac);
+      return;
+    }
+    if (this.stopped) return;
+    const attempts = this.reconnectAttempts.get(mac) ?? 0;
+    if (attempts >= 5) {
+      this.reconnectAttempts.delete(mac);
+      return;
+    }
+    this.cancelReconnect(mac);
+    const delayMs = Math.min(1000 * 2 ** attempts, 30000);
+    this.reconnectAttempts.set(mac, attempts + 1);
+    const timer = setTimeout(() => {
+      this.reconnectTimers.delete(mac);
+      // Solo reconectar si no hay ruta viva ni handshake en curso.
+      if (this.macToPk.has(mac) || this.pending.has(mac)) {
+        this.reconnectAttempts.delete(mac);
+        return;
+      }
+      void this.connect(mac).catch(() => {
+        // El backoff de connect() maneja sus reintentos; si falla del todo,
+        // el próximo onNativeDisconnected (si hubo conexión parcial) o el
+        // usuario reintentará manualmente.
+      });
+    }, delayMs);
+    this.reconnectTimers.set(mac, timer);
+  }
+
+  /** Cancela un reconnect programado (p. ej. al conectar manualmente). */
+  private cancelReconnect(mac: string): void {
+    const t = this.reconnectTimers.get(mac);
+    if (t) {
+      clearTimeout(t);
+      this.reconnectTimers.delete(mac);
     }
   }
 
