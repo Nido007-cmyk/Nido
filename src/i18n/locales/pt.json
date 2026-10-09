@@ -872,5 +872,13 @@
   "settings": {
     "delegationDesc": "Um NIDO pareado pode pedir para você executar tarefas. Cada tarefa requer sua aprovação.",
     "delegationTitle": "Tarefas delegadas (experimental)"
+  },
+  "backup": {
+    "dekTitle": "Backup criado",
+    "dekSavedIn": "Salvo em:",
+    "dekCopyPrompt": "SUA CHAVE (copie e guarde separada do backup):",
+    "dekWarning": "Sem esta chave o backup é inútil.",
+    "copyKey": "Copiar chave",
+    "understood": "Entendido"
   }
 }

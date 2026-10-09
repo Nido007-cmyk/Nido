@@ -873,5 +873,13 @@
   "settings": {
     "delegationTitle": "Delegated tasks (experimental)",
     "delegationDesc": "A paired NIDO can ask you to run tasks. Every task requires your explicit approval."
+  },
+  "backup": {
+    "dekTitle": "Backup created",
+    "dekSavedIn": "Saved to:",
+    "dekCopyPrompt": "YOUR KEY (copy it and store it separately from the backup):",
+    "dekWarning": "Without this key the backup is useless.",
+    "copyKey": "Copy key",
+    "understood": "Got it"
   }
 }

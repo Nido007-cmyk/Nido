@@ -873,5 +873,13 @@
   "settings": {
     "delegationTitle": "Tareas delegadas (experimental)",
     "delegationDesc": "Otro NIDO emparejado puede pedirte ejecutar tareas. Cada tarea requiere tu aprobación explícita."
+  },
+  "backup": {
+    "dekTitle": "Backup creado",
+    "dekSavedIn": "Guardado en:",
+    "dekCopyPrompt": "TU CLAVE (cópiala y guárdala separada del backup):",
+    "dekWarning": "Sin esta clave el backup es inútil.",
+    "copyKey": "Copiar clave",
+    "understood": "Entendido"
   }
 }

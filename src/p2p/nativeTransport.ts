@@ -320,12 +320,12 @@ export class NidoBluetoothTransport implements P2PTransport {
   /** MACs con desconexión manual: no auto-reconectar. */
   private manualDisconnectMacs = new Set<string>();
   /**
-   * FIX 2026-10-09 (B3): pkHex con desconexión manual durante un handshake
-   * en curso. disconnect() no puede resolver la MAC (pkToMac aún vacío),
-   * así que se marca el pkHex; cuando el handshake complete, establishRoute
-   * lo detecta y desmonta inmediatamente en vez de dejar una "ghost connection".
+   * FIX 2026-10-09 (B3/R1/H1): pkHex con desconexión manual durante un handshake
+   * en curso, con timestamp. Si el handshake falla (timeout), el flag quedaría
+   * stale y bloquearía una reconexión manual posterior (H1). Por eso se guarda
+   * con timestamp y establishRoute ignora flags viejos (>30s).
    */
-  private manualDisconnectPks = new Set<string>();
+  private manualDisconnectPks = new Map<string, number>();
   /** R8: timestamps de inicios de handshake entrante por MAC (ventana deslizante). */
   private readonly inboundHandshakeAt = new Map<string, number[]>();
   // H3-2026-10-06: flag para detener los reinicios de discovery.
@@ -786,7 +786,7 @@ export class NidoBluetoothTransport implements P2PTransport {
     // rompía reconexiones manuales (R1): el flag stale mataba el siguiente
     // handshake en establishRoute.
     if (!mac) {
-      this.manualDisconnectPks.add(pkLower);
+      this.manualDisconnectPks.set(pkLower, Date.now());
     } else {
       this.manualDisconnectMacs.add(mac);
       this.cancelReconnect(mac);
@@ -1161,13 +1161,18 @@ export class NidoBluetoothTransport implements P2PTransport {
    */
   private async establishRoute(mac: string, pend: PendingHello): Promise<void> {
     const pkLower = pend.peerPk!;
-    // FIX 2026-10-09 (B3): si el usuario pidió desconectar durante el
-    // handshake, NO establecer la ruta. Desmontar y rechazar a los waiters.
-    if (this.manualDisconnectPks.has(pkLower)) {
+    // FIX 2026-10-09 (B3/H1): si el usuario pidió desconectar durante el
+    // handshake, NO establecer la ruta. Ignorar flags viejos (>30s) para no
+    // bloquear reconexiones manuales tras un timeout (H1).
+    const manualAt = this.manualDisconnectPks.get(pkLower);
+    if (manualAt !== undefined) {
       this.manualDisconnectPks.delete(pkLower);
-      this.rejectPending(pend, new Error("Desconectado por el usuario durante el handshake."));
-      await this.bt().disconnect(mac).catch(() => {});
-      return;
+      if (Date.now() - manualAt < 30_000) {
+        this.rejectPending(pend, new Error("Desconectado por el usuario durante el handshake."));
+        await this.bt().disconnect(mac).catch(() => {});
+        return;
+      }
+      // Flag stale: continuar con el handshake normal.
     }
     const myK = tieBreakKey(pend.myNonceHex, pend.peerNonceHex!);
     const existingMac = this.pkToMac.get(pkLower);

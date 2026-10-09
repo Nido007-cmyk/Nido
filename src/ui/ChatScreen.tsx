@@ -1025,6 +1025,9 @@ export function ChatScreen({
           noSourcesFound = fixedPlain.noSourcesFound;
         }
       }
+      // FIX 2026-10-09 (C2): flush del buffer de tokens en el path adaptivo.
+      // runFixedModelChat ya lo hace, pero runAdaptiveChat no.
+      flushTokenBuffer();
 
       const wasStopped = stopRequestedRef.current;
       setMessages((prev) =>

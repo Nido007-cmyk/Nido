@@ -25,12 +25,14 @@ import {
   Modal,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import * as Backup from "../security/backup";
 import { requireUnlock } from "../security/biometricGate";
 
 export function BackupScreen({ onClose }: { onClose: () => void }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [lastBackup, setLastBackup] = useState<string | null>(null);
   // FIX 2026-10-09 (K4/K5): DEK en modal copiable con biométrico, no en Alert.
@@ -84,19 +86,36 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
         Alert.alert("Cancelado", "Sin permiso no se puede guardar.");
         return;
       }
-      const fileName = lastBackup.split("/").pop() ?? "nido-backup.db";
-      const destUri = await FS.StorageAccessFramework.createFileAsync(
-        perms.directoryUri,
-        fileName,
-        "application/octet-stream"
-      );
-      const content = await FS.readAsStringAsync(lastBackup, {
-        encoding: FS.EncodingType.Base64,
-      });
-      await FS.writeAsStringAsync(destUri, content, {
-        encoding: FS.EncodingType.Base64,
-      });
-      Alert.alert("Guardado", `Backup copiado a Descargas como:\n${fileName}`);
+      // FIX 2026-10-09 (C1): copiar los 3 archivos (db + manifest + knowledge).
+      // Si no, K1/K2/K3 no protegen el flujo de Descargas.
+      const filesToCopy = [lastBackup];
+      const manifestUri = `${lastBackup}.manifest.json`;
+      const knowledgeUri = `${lastBackup}.knowledge.db`;
+      try {
+        const mi = await FS.getInfoAsync(manifestUri);
+        if (mi.exists) filesToCopy.push(manifestUri);
+      } catch { /* noop */ }
+      try {
+        const ki = await FS.getInfoAsync(knowledgeUri);
+        if (ki.exists) filesToCopy.push(knowledgeUri);
+      } catch { /* noop */ }
+      const copied: string[] = [];
+      for (const srcUri of filesToCopy) {
+        const fileName = srcUri.split("/").pop() ?? "nido-backup.db";
+        const destUri = await FS.StorageAccessFramework.createFileAsync(
+          perms.directoryUri,
+          fileName,
+          "application/octet-stream"
+        );
+        const content = await FS.readAsStringAsync(srcUri, {
+          encoding: FS.EncodingType.Base64,
+        });
+        await FS.writeAsStringAsync(destUri, content, {
+          encoding: FS.EncodingType.Base64,
+        });
+        copied.push(fileName);
+      }
+      Alert.alert("Guardado", `Backup copiado a Descargas:\n${copied.join("\n")}`);
     } catch (e) {
       Alert.alert("Error", e instanceof Error ? e.message : "No se pudo guardar.");
     } finally {
@@ -211,14 +230,14 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
       <Modal visible={dekModal !== null} transparent animationType="fade" onRequestClose={() => setDekModal(null)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalBox, { backgroundColor: colors.bg.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.text.primary }]}>Backup creado</Text>
+            <Text style={[styles.modalTitle, { color: colors.text.primary }]}>{t("backup.dekTitle")}</Text>
             <Text style={[styles.modalText, { color: colors.text.primary }]}>
-              Guardado en:{"\n"}{dekModal?.dest}{"\n\n"}
-              TU CLAVE (cópiala y guárdala separada del backup):{"\n\n"}
+              {t("backup.dekSavedIn")}{"\n"}{dekModal?.dest}{"\n\n"}
+              {t("backup.dekCopyPrompt")}{"\n\n"}
             </Text>
             <Text selectable style={[styles.dekText, {"color": colors.text.primary}]}>{dekModal?.dek}</Text>
             <Text style={[styles.modalText, {"color": colors.text.primary}]}>
-              {"\n"}Sin esta clave el backup es inútil.
+              {"\n"}{t("backup.dekWarning")}
             </Text>
             <View style={styles.modalButtons}>
               <Pressable
@@ -227,10 +246,10 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
                   if (dekModal) void Clipboard.setStringAsync(dekModal.dek);
                 }}
               >
-                <Text style={styles.buttonText}>Copiar clave</Text>
+                <Text style={styles.buttonText}>{t("backup.copyKey")}</Text>
               </Pressable>
               <Pressable style={styles.buttonSecondary} onPress={() => setDekModal(null)}>
-                <Text style={styles.buttonSecondaryText}>Entendido</Text>
+                <Text style={styles.buttonSecondaryText}>{t("backup.understood")}</Text>
               </Pressable>
             </View>
           </View>
