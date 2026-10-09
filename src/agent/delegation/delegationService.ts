@@ -381,6 +381,10 @@ export class DelegationService {
       negotiationId: body.negotiationId,
       scopes: verified.root.scopes,
       maxDurationMs: Math.min(body.maxDurationMs, TASK_LIMITS.maxDurationMs),
+      // FIX 2026-10-09 (F-DELEG-1): pasar los límites del token al executor.
+      // Antes se calculaban pero se ignoraban (security theater).
+      maxToolCalls: verified.effective.maxToolCalls,
+      resultSizeLimit: verified.effective.resultSizeLimit,
     });
     this.taskNegotiation.set(body.taskId.toLowerCase(), body.negotiationId);
     await this.audit({
@@ -425,6 +429,9 @@ export class DelegationService {
       scopes: ctx.scopes,
       peerPkShort: ctx.peerPkHex.slice(0, 16),
       maxDurationMs: ctx.maxDurationMs,
+      // FIX 2026-10-09 (F-DELEG-1): respetar los límites del token.
+      maxToolCalls: ctx.maxToolCalls,
+      resultSizeLimit: ctx.resultSizeLimit,
       modelInvoke: this.modelInvoke,
     });
     const result = await executor.execute({
@@ -487,6 +494,8 @@ export class DelegationService {
       negotiationId: string;
       scopes: TaskScope[];
       maxDurationMs: number;
+      maxToolCalls?: number;
+      resultSizeLimit?: number;
     }
   >();
 

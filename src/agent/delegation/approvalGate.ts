@@ -141,6 +141,12 @@ export class ApprovalGate {
   private readonly pending = new Map<string, StoredEntry>();
   private readonly byTaskId = new Map<string, string>();
   private readonly pendingByPeer = new Map<string, number>();
+  /**
+   * FIX 2026-10-09 (F-DELEG-2): taskIds ya ejecutados. Un token rejugado
+   * (mismo taskId después de completar) se rechaza aquí en vez de generar
+   * una segunda tarjeta de aprobación.
+   */
+  private readonly executed = new Set<string>();
   private stateProvider: NegotiationStateProvider | null = null;
   private seq = 0;
 
@@ -230,6 +236,11 @@ export class ApprovalGate {
     if (existing !== undefined && this.pending.has(existing)) {
       throw new Error("approval gate: task already pending approval");
     }
+    // FIX 2026-10-09 (F-DELEG-2): anti-replay. Un taskId ya ejecutado no
+    // puede volver a pedir aprobación (el token rejugado se rechaza).
+    if (this.executed.has(req.taskId)) {
+      throw new Error("approval gate: task already executed (replay rejected)");
+    }
 
     // Deep snapshot: later mutations of the caller's object cannot reach
     // the stored bytes.
@@ -308,6 +319,8 @@ export class ApprovalGate {
     if (entry.snapshot.documentBase64 !== undefined) {
       out.documentBase64 = entry.snapshot.documentBase64;
     }
+    // FIX 2026-10-09 (F-DELEG-2): marcar como ejecutado para anti-replay.
+    this.executed.add(entry.snapshot.taskId);
     return Object.freeze(out);
   }
 

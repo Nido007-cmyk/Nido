@@ -104,8 +104,16 @@ describe("ApprovalGate (anti-loopjacking)", () => {
     expect(() => gate.register(baseReq())).toThrow();
     // Lo original sigue intacto.
     expect(gate.approve(requestId)!.description).toBe("Resume este documento");
-    // Tras decidir, el taskId queda libre.
+    // FIX 2026-10-09 (F-DELEG-2): tras APROBAR, el taskId queda bloqueado
+    // (anti-replay). Un reintento con el mismo taskId se rechaza.
+    expect(() => gate.register(baseReq())).toThrow(/already executed/);
+  });
+
+  it("F-DELEG-2: tras DENEGAR, el taskId queda libre (no es replay)", () => {
+    const gate = new ApprovalGate();
+    const { requestId } = gate.register(baseReq());
     gate.deny(requestId);
+    // Denegado ≠ ejecutado: el peer puede reintentar con nueva negociación.
     expect(() => gate.register(baseReq())).not.toThrow();
   });
 

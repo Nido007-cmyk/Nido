@@ -1657,3 +1657,51 @@ describe("nativeTransport: ReconnectManager (BlueLib)", () => {
     expect((t as any).reconnectTimers.has(mac)).toBe(false);
   });
 });
+
+describe("B2 FIX 2026-10-09: connect() concurrente multicast", () => {
+  let f: ReturnType<typeof makeFake>;
+  let ev: ReturnType<typeof makeEvents>;
+  let t: NidoBluetoothTransport;
+
+  beforeEach(() => {
+    f = makeFake();
+    ev = makeEvents();
+    t = makeTransport(f.fake);
+  });
+
+  it("dos connect() al mismo MAC resuelven AMBAS promises", async () => {
+    await t.startDiscovery(ev.events);
+    const mac = "AA:BB:CC:DD:EE:33";
+    // Dos llamadas concurrentes. connect() es async: hace await ensureLinked()
+    // antes de crear el pendiente, así que damos un tick para que p1 lo cree.
+    const p1 = t.connect(mac);
+    await new Promise((r) => setTimeout(r, 10));
+    const p2 = t.connect(mac);
+    await new Promise((r) => setTimeout(r, 10));
+    // Simular handshake exitoso: resolver el pendiente.
+    const pend = (t as any).pending.get(mac);
+    expect(pend).toBeDefined();
+    expect(pend.waiters.size).toBe(2);
+    const info = { pkHex: "aa".repeat(32), alias: mac, transport: "bluetooth" as const };
+    (t as any).resolvePending(pend, info);
+    // AMBAS deben resolver, ninguna colgada.
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1.pkHex).toBe(info.pkHex);
+    expect(r2.pkHex).toBe(info.pkHex);
+  });
+
+  it("dos connect() al mismo MAC rechazan AMBAS en error", async () => {
+    await t.startDiscovery(ev.events);
+    const mac = "AA:BB:CC:DD:EE:44";
+    const p1 = t.connect(mac);
+    await new Promise((r) => setTimeout(r, 10));
+    const p2 = t.connect(mac);
+    await new Promise((r) => setTimeout(r, 10));
+    const pend = (t as any).pending.get(mac);
+    expect(pend.waiters.size).toBe(2);
+    const err = new Error("test fail");
+    (t as any).rejectPending(pend, err);
+    await expect(p1).rejects.toThrow("test fail");
+    await expect(p2).rejects.toThrow("test fail");
+  });
+});

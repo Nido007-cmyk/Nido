@@ -343,12 +343,16 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             // (El nombre se busca en contactos; si no está, no se reintenta.)
             // REDISCOVERY 2026-10-08: marcarlo como perdido para que un
             // redescubrimiento posterior pueda reiniciar el ciclo.
+            // FIX 2026-10-09 (B1): NO programar aquí. El transporte ya tiene
+            // su propio ReconnectManager dirigido por estado
+            // (onNativeDisconnected → scheduleReconnect). Dos loops causaban
+            // tormentas de HELLO duplicados y contención de radio.
             const contact = contactsRef.current.find(
               (c) => c.pkHex.toLowerCase() === pkHex.toLowerCase(),
             );
             if (contact) {
               reconnectManager.notifyPeerLost(pkHex);
-              reconnectManager.schedule(pkHex, contact.name);
+              // reconnectManager.schedule() ELIMINADO — el transporte lo maneja.
             }
           },
           onError: (msg) => {

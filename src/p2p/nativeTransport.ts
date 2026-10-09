@@ -187,8 +187,13 @@ interface PendingHello {
   peerNonceHex?: string;
   /** Clave de firma Ed25519 del contacto (capturada al validar su HELLO). */
   peerSigPkHex?: string;
-  resolve?: (info: P2PPeerInfo) => void;
-  reject?: (err: Error) => void;
+  // FIX 2026-10-09 (B2): multicast en vez de resolve/reject único. Antes un
+  // segundo connect() SOBREESCRIBÍA estos y la primera promise quedaba
+  // colgada para siempre (spinner "Connecting…" eterno).
+  waiters: Set<{
+    resolve: (info: P2PPeerInfo) => void;
+    reject: (err: Error) => void;
+  }>;
   timer: ReturnType<typeof setTimeout>;
 }
 
@@ -314,6 +319,13 @@ export class NidoBluetoothTransport implements P2PTransport {
   private reconnectAttempts = new Map<string, number>();
   /** MACs con desconexión manual: no auto-reconectar. */
   private manualDisconnectMacs = new Set<string>();
+  /**
+   * FIX 2026-10-09 (B3): pkHex con desconexión manual durante un handshake
+   * en curso. disconnect() no puede resolver la MAC (pkToMac aún vacío),
+   * así que se marca el pkHex; cuando el handshake complete, establishRoute
+   * lo detecta y desmonta inmediatamente en vez de dejar una "ghost connection".
+   */
+  private manualDisconnectPks = new Set<string>();
   /** R8: timestamps de inicios de handshake entrante por MAC (ventana deslizante). */
   private readonly inboundHandshakeAt = new Map<string, number[]>();
   // H3-2026-10-06: flag para detener los reinicios de discovery.
@@ -567,8 +579,10 @@ export class NidoBluetoothTransport implements P2PTransport {
     // doLink() y registraría listeners DUPLICADOS (los viejos sobrevivieron).
     // linked=false solo ocurre en shutdownNative() (destrucción terminal).
     for (const [, p] of this.pending) {
-      clearTimeout(p.timer);
-      p.reject?.(new Error("Discovery detenido."));
+      // FIX 2026-10-09 (B4): borrar el secreto efímero (R7). Si beginHello
+      // está suspendido en un await, su failHello no lo encontrará en el map.
+      p.myEphSecret.fill(0);
+      this.rejectPending(p, new Error("Discovery detenido."));
     }
     this.pending.clear();
     // FIX 2026-10-08: NO borrar macToPk/pkToMac/confirmedPair aquí.
@@ -642,6 +656,7 @@ export class NidoBluetoothTransport implements P2PTransport {
     this.reconnectTimers.clear();
     this.reconnectAttempts.clear();
     this.manualDisconnectMacs.clear();
+    this.manualDisconnectPks.clear();
     const b = this.bindings;
     if (!b) return;
     await b.shutdown();
@@ -663,14 +678,20 @@ export class NidoBluetoothTransport implements P2PTransport {
     }
     const existing = this.pending.get(mac);
     if (existing) {
-      // Handshake ya en curso (p. ej. conexión entrante simultánea): reutilizar.
+      // FIX 2026-10-09 (B2): multicast. Antes se SOBREESCRIBÍA resolve/reject
+      // y la primera promise quedaba colgada. Ahora cada llamador se agrega
+      // al set y todos reciben el resultado.
       return new Promise<P2PPeerInfo>((resolve, reject) => {
-        existing.resolve = resolve;
-        existing.reject = reject;
+        existing.waiters.add({ resolve, reject });
       });
     }
     return new Promise<P2PPeerInfo>((resolve, reject) => {
       const timer = this.armHelloTimeout(mac);
+      const waiters = new Set<{
+        resolve: (info: P2PPeerInfo) => void;
+        reject: (err: Error) => void;
+      }>();
+      waiters.add({ resolve, reject });
       // Se registra ANTES de conectar: si onConnected llega primero,
       // beginHello reutiliza este pendiente en vez de crear otro.
       this.pending.set(mac, {
@@ -678,14 +699,7 @@ export class NidoBluetoothTransport implements P2PTransport {
         myEphSecret: new Uint8Array(0),
         myNonce: new Uint8Array(0), // se rellena en beginHello al enviar el HELLO
         myNonceHex: "", // se rellena en beginHello al enviar el HELLO
-        resolve: (info) => {
-          clearTimeout(timer);
-          resolve(info);
-        },
-        reject: (err) => {
-          clearTimeout(timer);
-          reject(err);
-        },
+        waiters,
         timer,
       });
       // RETRY-2026-10-07: reintento con backoff exponencial. El error
@@ -765,8 +779,12 @@ export class NidoBluetoothTransport implements P2PTransport {
   }
 
   async disconnect(peerPkHex: string): Promise<void> {
-    const mac = this.pkToMac.get(peerPkHex.toLowerCase());
-    // FIX 2026-10-09: marcar como manual para no auto-reconectar.
+    const pkLower = peerPkHex.toLowerCase();
+    const mac = this.pkToMac.get(pkLower);
+    // FIX 2026-10-09 (B3): SIEMPRE marcar el pkHex como manual, incluso si
+    // la MAC aún no se conoce (handshake en curso). Así establishRoute lo
+    // detecta al completar y desmonta en vez de dejar ghost connection.
+    this.manualDisconnectPks.add(pkLower);
     if (mac) {
       this.manualDisconnectMacs.add(mac);
       this.cancelReconnect(mac);
@@ -852,6 +870,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       myNonceHex: "",
       timer: this.armHelloTimeout(mac),
       helloReady,
+      waiters: new Set(), // entrante: sin llamadores connect()
     };
     if (existing) {
       // waiting-socket reutilizado: nace el secreto y se rearma el timeout.
@@ -919,7 +938,7 @@ export class NidoBluetoothTransport implements P2PTransport {
     // (timeout, firma inválida, desconexión, fallo de envío), no solo en
     // la ruta de éxito donde deriveSessionKeyV2 lo borra al derivar.
     pend.myEphSecret.fill(0);
-    pend.reject?.(err);
+    this.rejectPending(pend, err);
     this.events?.onError?.(`Handshake con ${mac}: ${err.message}`);
     try {
       this.bt().disconnect(mac).catch(() => {});
@@ -1124,7 +1143,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       // R7: el pending ya se eliminó del mapa arriba; borrar el secreto
       // efímero aquí (failHello no lo vería).
       pend.myEphSecret.fill(0);
-      pend.reject?.(err);
+      this.rejectPending(pend, err);
       await this.bt().disconnect(mac).catch(() => {});
     }
   }
@@ -1140,6 +1159,14 @@ export class NidoBluetoothTransport implements P2PTransport {
    */
   private async establishRoute(mac: string, pend: PendingHello): Promise<void> {
     const pkLower = pend.peerPk!;
+    // FIX 2026-10-09 (B3): si el usuario pidió desconectar durante el
+    // handshake, NO establecer la ruta. Desmontar y rechazar a los waiters.
+    if (this.manualDisconnectPks.has(pkLower)) {
+      this.manualDisconnectPks.delete(pkLower);
+      this.rejectPending(pend, new Error("Desconectado por el usuario durante el handshake."));
+      await this.bt().disconnect(mac).catch(() => {});
+      return;
+    }
     const myK = tieBreakKey(pend.myNonceHex, pend.peerNonceHex!);
     const existingMac = this.pkToMac.get(pkLower);
     if (existingMac && existingMac !== mac) {
@@ -1150,7 +1177,8 @@ export class NidoBluetoothTransport implements P2PTransport {
           // Este socket pierde el tie-break: se cierra sin tocar la ruta.
           // (El connect() pendiente de este socket se rechaza; la sesión
           // ganadora sigue viva en existingMac.)
-          pend.reject?.(
+          this.rejectPending(
+            pend,
             new Error("Handshake simultáneo: la otra conexión con este contacto ganó el desempate."),
           );
           await this.bt().disconnect(mac).catch(() => {});
@@ -1169,6 +1197,10 @@ export class NidoBluetoothTransport implements P2PTransport {
       nonceLocalHex: pend.myNonceHex,
       noncePeerHex: pend.peerNonceHex!,
     });
+    // FIX 2026-10-09 (B5): resetear el contador de reintentos al conectar.
+    // Si no, el próximo disconnect arranca con backoff inflado.
+    this.reconnectAttempts.delete(mac);
+    this.cancelReconnect(mac);
     const contact = await findContactByPk(pkLower);
     // BUG-6 Plan B: guardar la MAC conocida para el barrido futuro.
     // Si getBondedDevices() falla, el barrido prueba estas MACs primero.
@@ -1186,7 +1218,25 @@ export class NidoBluetoothTransport implements P2PTransport {
       fromHex(pend.peerNonceHex!),
     );
     this.events?.onPeerFound?.(info);
-    pend.resolve?.(info);
+    this.resolvePending(pend, info);
+  }
+
+  /** FIX 2026-10-09 (B2): resuelve TODOS los waiters de un pendiente. */
+  private resolvePending(pend: PendingHello, info: P2PPeerInfo): void {
+    clearTimeout(pend.timer);
+    for (const w of pend.waiters) {
+      try { w.resolve(info); } catch { /* noop */ }
+    }
+    pend.waiters.clear();
+  }
+
+  /** FIX 2026-10-09 (B2): rechaza TODOS los waiters de un pendiente. */
+  private rejectPending(pend: PendingHello, err: Error): void {
+    clearTimeout(pend.timer);
+    for (const w of pend.waiters) {
+      try { w.reject(err); } catch { /* noop */ }
+    }
+    pend.waiters.clear();
   }
 
   private onNativeDisconnected(address: string): void {
@@ -1198,7 +1248,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       // R7: borrar el secreto efímero también al desconectar a mitad del
       // handshake.
       pend.myEphSecret.fill(0);
-      pend.reject?.(new Error("Conexión cerrada durante el handshake."));
+      this.rejectPending(pend, new Error("Conexión cerrada durante el handshake."));
     }
     const pk = this.macToPk.get(mac);
     if (pk) {
