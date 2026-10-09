@@ -80,11 +80,16 @@ describe("rotateAllDatabaseKeys", () => {
 
     await rotateAllDatabaseKeys(openDb, storeDek, "/tmp/staging.json");
 
-    expect(mockWrite).toHaveBeenCalledTimes(1);
+    // 1 staging inicial + 3 actualizaciones de progreso (una por DB)
+    expect(mockWrite).toHaveBeenCalledTimes(4);
     const [, content] = mockWrite.mock.calls[0];
     const parsed = JSON.parse(content as string);
     expect(parsed.dbPaths).toHaveLength(3);
     expect(parsed.dbPaths[0]).toContain("nido_memory.db");
+    // El último staging debe listar las 3 como rekeyed
+    const [, lastContent] = mockWrite.mock.calls[3];
+    const lastParsed = JSON.parse(lastContent as string);
+    expect(lastParsed.rekeyed).toHaveLength(3);
   });
 
   it("si el keystore falla, revierte las 3 DBs", async () => {

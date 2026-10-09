@@ -96,26 +96,45 @@ export async function rotateAllDatabaseKeys(
     .join("");
   newDekBytes.fill(0);
 
-  // 5. Staging con TODAS las rutas (crash-safe, CR-3)
+  // 5. Staging con TODAS las rutas + DEK viejo (crash-safe, CR-3, PARTIAL-REKEY).
+  // FIX 2026-10-09 (PARTIAL-REKEY): guardar también oldDekHex para que el
+  // recovery pueda converger cada DB individualmente al DEK correcto,
+  // en vez de asumir que todas quedaron con el nuevo.
   const FS = await import("expo-file-system/legacy");
   const staging = stagingPath ?? `${FS.documentDirectory}rekey-staging.json`;
   try {
     await FS.writeAsStringAsync(staging, JSON.stringify({
       newDekHex,
+      oldDekHex,
       dbPaths,
+      rekeyed: [] as string[],
       at: Date.now(),
     }));
   } catch {
     return { ok: false, error: "No se pudo crear el staging (fail-closed)" };
   }
 
-  // 6. Rekey de cada DB con el DEK nuevo
+  // 6. Rekey de cada DB con el DEK nuevo.
+  // FIX 2026-10-09 (PARTIAL-REKEY): actualizar el staging tras cada DB
+  // para que el recovery sepa exactamente cuáles quedaron con el DEK nuevo.
   const openedDbs: { exec: (sql: string) => Promise<void>; close: () => Promise<void> }[] = [];
+  const rekeyedPaths: string[] = [];
   try {
     for (const dbPath of dbPaths) {
       const db = await openDb(dbPath, oldDekHex);
       openedDbs.push(db);
       await db.exec(`PRAGMA rekey = "x'${newDekHex}'";`);
+      rekeyedPaths.push(dbPath);
+      // Persistir progreso: si crashea aquí, el recovery sabe cuáles converger.
+      try {
+        await FS.writeAsStringAsync(staging, JSON.stringify({
+          newDekHex,
+          oldDekHex,
+          dbPaths,
+          rekeyed: rekeyedPaths,
+          at: Date.now(),
+        }));
+      } catch { /* noop: el staging original sigue válido */ }
     }
 
     // 7. Guardar nuevo DEK en Keystore
@@ -259,6 +278,7 @@ export async function checkStaleRekeyStaging(
     const raw = await FS.readAsStringAsync(stagingPath);
     const parsed = JSON.parse(raw);
     const newDekHex = parsed.newDekHex;
+    const oldDekHex: unknown = parsed.oldDekHex;
     // FIX 2026-10-09 (CR2-MULTIDB): staging puede tener dbPaths (array) o
     // dbPath (string, formato legacy de rotateDatabaseKey). Normalizar.
     const dbPaths: string[] = Array.isArray(parsed.dbPaths)
@@ -268,7 +288,51 @@ export async function checkStaleRekeyStaging(
       await FS.deleteAsync(stagingPath, { idempotent: true }).catch(() => {});
       return { recovered: false, error: "Staging corrupto, eliminado" };
     }
-    
+
+    // FIX 2026-10-09 (PARTIAL-REKEY): convergencia por DB cuando hay oldDekHex.
+    // Para cada DB: si abre con el nuevo → ya convergida; si abre con el
+    // viejo → completar su rekey ahora; si no abre con ninguno → fail-closed.
+    // Solo guardar en keystore cuando TODAS convergen.
+    if (typeof oldDekHex === "string" && oldDekHex.length > 0) {
+      for (const dbPath of dbPaths) {
+        let db: { exec: (sql: string) => Promise<void>; close: () => Promise<void> } | null = null;
+        try {
+          let opensWithNew = false;
+          let opensWithOld = false;
+          try {
+            db = await openDb(dbPath, newDekHex);
+            await db.exec("SELECT 1;");
+            opensWithNew = true;
+          } catch {
+            if (db) { try { await db.close(); } catch { /* noop */ } db = null; }
+            try {
+              db = await openDb(dbPath, oldDekHex);
+              await db.exec("SELECT 1;");
+              opensWithOld = true;
+            } catch {
+              // No abre con ninguno.
+            }
+          }
+          if (opensWithNew) {
+            // Ya convergida.
+          } else if (opensWithOld && db) {
+            await db.exec(`PRAGMA rekey = "x'${newDekHex}'";`);
+          } else {
+            await FS.deleteAsync(stagingPath, { idempotent: true }).catch(() => {});
+            return { recovered: false, error: `DB inaccesible: ${dbPath} (fail-closed)` };
+          }
+        } finally {
+          if (db) {
+            try { await db.close(); } catch { /* noop */ }
+          }
+        }
+      }
+      await storeDek(newDekHex);
+      await FS.deleteAsync(stagingPath, { idempotent: true }).catch(() => {});
+      return { recovered: true };
+    }
+
+    // Staging legacy sin oldDekHex: lógica anterior (CR3-NEW).
     // FIX 2026-10-09 (CR3-NEW): probe-open antes de tocar el keystore.
     // Verificar CADA DB: si alguna abre con el DEK nuevo, el rekey ocurrió.
     // Si ninguna abre, el crash fue antes del rekey.
@@ -294,7 +358,7 @@ export async function checkStaleRekeyStaging(
       await FS.deleteAsync(stagingPath, { idempotent: true }).catch(() => {});
       return { recovered: false, error: "Crash antes del rekey; staging eliminado, keystore intacto" };
     }
-    
+
     // El rekey SÍ ocurrió. Ahora sí guardar en keystore.
     await storeDek(newDekHex);
     await FS.deleteAsync(stagingPath, { idempotent: true }).catch(() => {});
