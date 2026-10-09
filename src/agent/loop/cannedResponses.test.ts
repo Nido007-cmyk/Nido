@@ -46,6 +46,21 @@ describe("matchCanned — identity", () => {
     }
   );
 
+  it.each(["¿Quién es nido?", "quien es nido", "qué es nido", "que es nido", "who is nido", "what is nido"])(
+    "TESTFIX-2026-10-08: matches third-person identity %p (was: 'termómetro de datos' hallucination)",
+    (text) => {
+      const hit = matchCanned(text);
+      expect(hit).not.toBeNull();
+      expect(hit!.kind).toBe("identity");
+      expect(hit!.deterministic).toBe(true);
+    }
+  );
+
+  it("third-person identity answers in Spanish by default", () => {
+    expect(matchCanned("¿Quién es nido?")!.lang).toBe("es");
+    expect(matchCanned("who is nido?")!.lang).toBe("en");
+  });
+
   it("does NOT match identity inside a longer message", () => {
     expect(matchCanned("dime quién eres y qué hora es")).toBeNull();
     expect(matchCanned("who are you and what can you do")).toBeNull();
@@ -70,6 +85,42 @@ describe("matchCanned — help", () => {
   it("does NOT match help inside a longer message", () => {
     expect(matchCanned("ayúdame a recordar esto")).toBeNull();
     expect(matchCanned("help me remember this")).toBeNull();
+  });
+});
+
+describe("matchCanned — privacy (TESTFIX-2026-10-08)", () => {
+  it.each([
+    "¿Dónde guardas mis datos?",
+    "donde guardas mis datos",
+    "dónde están mis datos",
+    "dónde se guardan mis datos",
+    "quién puede ver mis datos",
+    "where do you store my data?",
+    "where is my data stored",
+    "who can see my data",
+  ])("matches privacy question %p (was: model dodge)", (text) => {
+    const hit = matchCanned(text);
+    expect(hit).not.toBeNull();
+    expect(hit!.kind).toBe("privacy");
+    expect(hit!.deterministic).toBe(true);
+  });
+
+  it("privacy answer states on-device encrypted storage, no cloud", () => {
+    const es = matchCanned("¿Dónde guardas mis datos?")!;
+    expect(es.lang).toBe("es");
+    expect(es.text).toMatch(/este dispositivo/i);
+    expect(es.text).toMatch(/cifrada/i);
+    expect(es.text).toMatch(/nube/i);
+    const en = matchCanned("where is my data stored?")!;
+    expect(en.lang).toBe("en");
+    expect(en.text).toMatch(/this device/i);
+    expect(en.text).toMatch(/encrypted/i);
+    expect(en.text).toMatch(/cloud/i);
+  });
+
+  it("does NOT match privacy inside a longer message", () => {
+    expect(matchCanned("dime dónde guardas mis datos y cómo te llamas")).toBeNull();
+    expect(matchCanned("where do you store my data and what is your name")).toBeNull();
   });
 });
 

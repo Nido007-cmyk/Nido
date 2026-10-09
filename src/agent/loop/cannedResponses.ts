@@ -25,7 +25,7 @@
  * Pure, no dependencies, fully unit-tested.
  */
 
-export type CannedKind = "greeting" | "identity" | "help";
+export type CannedKind = "greeting" | "identity" | "help" | "privacy";
 export type CannedLang = "es" | "en";
 
 export interface CannedHit {
@@ -50,11 +50,22 @@ function isPureGreeting(trimmed: string): boolean {
 
 // Anchored: the whole message must BE the question, not contain it.
 // Leading ¡/¿ allowed for Spanish usage.
+// TESTFIX-2026-10-08: added Spanish third-person ("quien es nido",
+// "qué es nido") — physical evidence: "¿Quién es nido?" → model
+// hallucinated "Nido es un termómetro de datos".
 const IDENTITY_RE =
-  /^[¡¿]?(quién eres|quien eres|qu[eé] eres|c[oó]mo te llamas|como te llamas|cu[aá]l es tu nombre|who are you|what are you|your name|what'?s your name|who is nido)[?.!]*$/i;
+  /^[¡¿]?(quién eres|quien eres|qu[eé] eres|c[oó]mo te llamas|como te llamas|cu[aá]l es tu nombre|qui[eé]n es nido|qu[eé] es nido|who are you|what are you|your name|what'?s your name|who is nido|what is nido)[?.!]*$/i;
 
 const HELP_RE =
   /^[¡¿]?(ayuda|help|qu[eé] puedes hacer|que puedes hacer|cu[aá]les son tus funciones|c[oó]mo funcionas|what can you do|what do you do|how do you work)[?.!]*$/i;
+
+// TESTFIX-2026-10-08: "¿Dónde guardas mis datos?" has a fixed factual
+// answer (on-device SQLCipher, no cloud, only the user). Physical
+// evidence: the model echoed the question + "Te puedo ayudar con eso."
+// Deterministic answer eliminates the dodge and the hallucination risk
+// on a privacy-critical question.
+const PRIVACY_RE =
+  /^[¡¿]?(d[oó]nde guardas mis datos|donde guardas mi informaci[oó]n|d[oó]nde est[aá]n mis datos|d[oó]nde se guardan mis datos|qui[eé]n puede ver mis datos|mis datos est[aá]n seguros|where do you store my data|where is my data stored|where are my data stored|who can see my data|is my data (safe|private))[?.!]*$/i;
 
 const TEMPLATES: Record<CannedKind, Record<CannedLang, string>> = {
   greeting: {
@@ -69,12 +80,16 @@ const TEMPLATES: Record<CannedKind, Record<CannedLang, string>> = {
     es: "Puedo ayudarte con recordatorios, notas, cálculos, responder preguntas y recordar cosas por ti. Dime qué necesitas.",
     en: "I can help with reminders, notes, calculations, answering questions, and remembering things for you. Just tell me what you need.",
   },
+  privacy: {
+    es: "Tus datos se guardan solo en este dispositivo, en una base de datos cifrada. No van a ninguna nube y nadie más puede verlos.",
+    en: "Your data stays only on this device, in an encrypted database. It never goes to any cloud, and nobody else can see it.",
+  },
 };
 
 /** Detects the response language from the input. Spanish-first app: default 'es'. */
 function detectLang(text: string): CannedLang {
   // Explicit English markers → English. Everything else → Spanish (default).
-  if (/^(hi|hello|hey|yo|sup|who are you|what are you|your name|help|what can you do|how do you work|good (morning|afternoon|evening|night)|thanks|thank you|bye|goodbye|see ya|see you|okay|ok|cool|nice|wake up)\b/i.test(text.trim())) {
+  if (/^(hi|hello|hey|yo|sup|who are you|who is nido|what are you|what is nido|your name|help|what can you do|how do you work|good (morning|afternoon|evening|night)|thanks|thank you|bye|goodbye|see ya|see you|okay|ok|cool|nice|wake up|where do you store|where is my data|where are my data|who can see my data|is my data)\b/i.test(text.trim())) {
     return "en";
   }
   return "es";
@@ -91,6 +106,7 @@ export function matchCanned(userText: string): CannedHit | null {
   let kind: CannedKind | null = null;
   if (isPureGreeting(trimmed)) kind = "greeting";
   else if (IDENTITY_RE.test(trimmed)) kind = "identity";
+  else if (PRIVACY_RE.test(trimmed)) kind = "privacy";
   else if (HELP_RE.test(trimmed)) kind = "help";
   if (!kind) return null;
 
