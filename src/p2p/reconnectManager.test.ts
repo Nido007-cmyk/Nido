@@ -114,23 +114,13 @@ describe("reconnectManager", () => {
     expect(reconnectManager.pendingCount()).toBe(0);
   });
 
-  it("REDISCOVERY: notifyPeerFound restarts a cycle after exhaustion", async () => {
-    let n = 0;
-    reconnectManager.setConnector(async () => {
-      n++;
-      return false;
-    });
-    // Peer lost → cycle runs → all 5 fail → budget exhausted.
+  it("REDISCOVERY: notifyPeerFound clears lost state (H3: no auto-schedule)", async () => {
+    // FIX 2026-10-09 (H3): el manager ya no programa reconnects.
+    // Solo rastrea lostPeers; el transporte maneja la reconexión.
     reconnectManager.notifyPeerLost("R1");
-    reconnectManager.schedule("R1", "peer");
-    await vi.advanceTimersByTimeAsync(200000);
-    expect(n).toBe(5);
-    expect(reconnectManager.pendingCount()).toBe(0);
-    // Peer rediscovered → exactly one fresh cycle starts.
+    // Rediscovery limpia el estado pero NO programa nada.
     reconnectManager.notifyPeerFound("R1", "peer");
-    expect(reconnectManager.pendingCount()).toBe(1);
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(n).toBe(6); // first attempt of the new cycle
+    expect(reconnectManager.pendingCount()).toBe(0);
   });
 
   it("REDISCOVERY: notifyPeerFound ignores never-lost peers (no auto-connect on proximity)", async () => {
@@ -178,26 +168,13 @@ describe("reconnectManager", () => {
     expect(reconnectManager.pendingCount()).toBe(0);
   });
 
-  it("REDISCOVERY: flapping found/lost cannot spin an infinite loop", async () => {
-    let n = 0;
-    reconnectManager.setConnector(async () => {
-      n++;
-      return false;
-    });
-    // Each genuine loss→found pair yields exactly one bounded cycle.
-    for (let i = 0; i < 3; i++) {
-      reconnectManager.notifyPeerLost("R5");
-      reconnectManager.notifyPeerFound("R5", "peer");
-      // Extra found events during/after the cycle: ignored.
-      reconnectManager.notifyPeerFound("R5", "peer");
-      await vi.advanceTimersByTimeAsync(200000);
+  it("REDISCOVERY: flapping found/lost does not schedule (H3)", async () => {
+    // FIX 2026-10-09 (H3): flapping no puede crear loops porque no hay schedule.
+    for (let i = 0; i < 10; i++) {
+      reconnectManager.notifyPeerLost("F1");
+      reconnectManager.notifyPeerFound("F1", "peer");
     }
-    expect(n).toBe(15); // 3 bounded cycles, never more
     expect(reconnectManager.pendingCount()).toBe(0);
-    // Found without a new loss afterwards: ignored, no 4th cycle.
-    reconnectManager.notifyPeerFound("R5", "peer");
-    await vi.advanceTimersByTimeAsync(200000);
-    expect(n).toBe(15);
   });
 
   it("REDISCOVERY: resetAttempts clears the counter", async () => {

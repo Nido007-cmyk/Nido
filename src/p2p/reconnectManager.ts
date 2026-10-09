@@ -145,12 +145,16 @@ class ReconnectManager {
    * cases are ignored: fresh discoveries never auto-connect, and an active
    * cycle is never duplicated.
    */
+  /**
+   * FIX 2026-10-09 (H3): NO auto-schedule aquí. El transporte (nativeTransport)
+   * maneja la reconexión internamente. Este manager solo rastrea lostPeers
+   * para la UI; schedule() queda deshabilitado para evitar doble reconnect.
+   */
   notifyPeerFound(pkHex: string, name: string): void {
     const key = pkHex.toLowerCase();
     if (!this.lostPeers.has(key)) return;
-    if (this.entries.has(key)) return;
     this.lostPeers.delete(key);
-    this.schedule(pkHex, name);
+    // schedule() ELIMINADO — el transporte lo maneja (ver B1).
   }
 }
 
