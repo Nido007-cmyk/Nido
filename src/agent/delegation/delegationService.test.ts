@@ -132,6 +132,9 @@ describe("delegationService: flag ON → golden flow", () => {
     const svc = freshService();
     await setFeatureEnabled("delegation.enabled", true);
     svc.setModelInvoke(async () => "4");
+    // FIX 2026-10-09 (F-DELEG-4): el gate es fail-closed sin provider.
+    // El test debe cablear el lookup como lo hace NidoScreen en producción.
+    svc.setNegotiationStateLookup(() => "ACCEPTED");
 
     const sent: { type: TaskMessageType; body: TaskMessageBody }[] = [];
     svc.setSendFunction(async (_peer, type, body) => {
