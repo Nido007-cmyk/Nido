@@ -451,6 +451,18 @@ export class NidoMessenger {
   }
 
   /**
+   * FIX 2026-10-09: verifica si un contacto está revocado.
+   */
+  async isRevoked(peerPkHex: string): Promise<boolean> {
+    this.assertLive();
+    const t = this.transport as unknown as { isRevoked?: (pk: string) => Promise<boolean> };
+    if (typeof t.isRevoked !== "function") {
+      return false;
+    }
+    return t.isRevoked(peerPkHex);
+  }
+
+  /**
    * BRIAR-2026-10-06: rol de dial determinístico para evitar colisiones
    * de dial simultáneo en la fuente.
    *

@@ -857,7 +857,12 @@ export class NidoBluetoothTransport implements P2PTransport {
   }
 
   /**
-   * FIX 2026-10-09: levanta la revocación (solo vía re-pair explícito).
+   * FIX 2026-10-09: levanta la revocación de un contacto.
+   *
+   * Solo debe llamarse como parte de un re-pair explícito (nuevo QR scan).
+   * No reconecta automáticamente; el usuario debe iniciar el pairing de nuevo.
+   * La persistencia se actualiza inmediatamente para que el desbloqueo
+   * sobreviva reinicios.
    */
   async unrevokePeer(peerPkHex: string): Promise<void> {
     this.revokedPks.delete(peerPkHex.toLowerCase());

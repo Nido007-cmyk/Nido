@@ -122,6 +122,8 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   // pérdida de claves (antes: spinner eterno con myCode === "").
   const [identityError, setIdentityError] = useState<string | null>(null);
   const [contacts, setContacts] = useState<P2PContact[]>([]);
+  /** PKs revocados (para filtrar de la lista de contactos). */
+  const [revokedPks, setRevokedPks] = useState<Set<string>>(new Set());
   /** Ref a contactos vigentes (para onPeerLost sin dependencia circular). */
   const contactsRef = useRef<P2PContact[]>([]);
   useEffect(() => {
@@ -203,7 +205,20 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
 
   const loadContacts = useCallback(async () => {
     try {
-      setContacts(await listContacts());
+      const list = await listContacts();
+      setContacts(list);
+      // FIX 2026-10-09: filtrar revocados de la vista.
+      const revoked = new Set<string>();
+      for (const c of list) {
+        try {
+          if (await mRef.current.isRevoked(c.pkHex)) {
+            revoked.add(c.pkHex.toLowerCase());
+          }
+        } catch {
+          /* noop */
+        }
+      }
+      setRevokedPks(revoked);
     } catch {
       /* noop */
     }
@@ -1224,7 +1239,9 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             <Text style={styles.cardTitle}>
               {t("nido.pairedCount", { count: contacts.length })}
             </Text>
-            {contacts.map((c) => {
+            {contacts
+              .filter((c) => !revokedPks.has(c.pkHex.toLowerCase()))
+              .map((c) => {
               const isOnline = online.has(c.pkHex.toLowerCase());
               const isConnectingThis =
                 connecting === `paired:${c.pkHex.toLowerCase()}`;
@@ -1281,6 +1298,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
                       if (ok) {
                         try {
                           await mRef.current.revokePeer(c.pkHex);
+                          setRevokedPks((prev) => new Set(prev).add(c.pkHex.toLowerCase()));
                           setNotice(t("nido.revoked", { name: c.name }));
                         } catch (e) {
                           setNotice(

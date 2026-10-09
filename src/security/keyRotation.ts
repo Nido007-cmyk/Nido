@@ -61,11 +61,17 @@ export async function rotateAllDatabaseKeys(
   storeDek: (dekHex: string) => Promise<void>,
   stagingPath?: string
 ): Promise<RekeyResult> {
-  // 1. Biométrico obligatorio (lanza si se cancela)
+  // 1. Biométrico obligatorio.
+  // FIX 2026-10-09: distinguir cancelación de error real.
   try {
     await requireUnlock("Rotar clave de cifrado");
-  } catch {
-    return { ok: false, error: "Autenticación cancelada" };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    // El usuario canceló explícitamente vs. fallo del hardware/sistema.
+    if (/cancel|cancelled|dismissed|user_cancel/i.test(msg)) {
+      return { ok: false, error: "Autenticación cancelada" };
+    }
+    return { ok: false, error: `No se pudo autenticar: ${msg || "error desconocido"}` };
   }
 
   // 2. Cargar DEK actual
@@ -181,11 +187,16 @@ export async function rotateDatabaseKey(
   storeDek: (dekHex: string) => Promise<void>,
   stagingPath?: string
 ): Promise<RekeyResult> {
-  // 1. Biométrico obligatorio (lanza si se cancela)
+  // 1. Biométrico obligatorio.
+  // FIX 2026-10-09: distinguir cancelación de error real.
   try {
     await requireUnlock("Rotar clave de cifrado");
-  } catch {
-    return { ok: false, error: "Autenticación cancelada" };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    if (/cancel|cancelled|dismissed|user_cancel/i.test(msg)) {
+      return { ok: false, error: "Autenticación cancelada" };
+    }
+    return { ok: false, error: `No se pudo autenticar: ${msg || "error desconocido"}` };
   }
 
   // 2. Cargar DEK actual
