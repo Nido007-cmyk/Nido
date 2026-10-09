@@ -27,6 +27,10 @@
  * - Nunca loggear DEKs
  * - Borrar DEK viejo de memoria con fill(0)
  * - Biométrico obligatorio
+ * - TRADEOFF: el staging (rekey-staging.json) guarda el DEK nuevo en
+ *   plaintext (directorio privado de la app, vida corta). En dispositivo
+ *   rooteado es extraíble. Alternativa (cifrar staging con DEK viejo)
+ *   añade complejidad; documentado como riesgo aceptado.
  */
 
 import { getDatabaseKeyHex } from "../privacy/keyManager";

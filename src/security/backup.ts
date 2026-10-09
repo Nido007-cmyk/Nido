@@ -159,7 +159,8 @@ export async function exportDatabaseKey(): Promise<string> {
 
 /**
  * FIX 2026-10-09 (NEW-CR-1, NEW-H-1, NEW-H-2): valida un bundle portable.
- * - NEW-H-1: límite de 500MB para evitar OOM
+ * - NEW-H-1: límite de 100MB para evitar OOM (FIX 2026-10-09 S5: el comentario
+ *   decía 500MB pero el código siempre fue 100MB)
  * - NEW-H-2: valida la forma del manifest (no solo JSON.parse)
  */
 async function validateBundle(bundleUri: string): Promise<{ valid: boolean; sizeBytes?: number; reason?: string }> {
@@ -223,19 +224,35 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
     if (size < 1024) {
       return { valid: false, reason: "El archivo es demasiado pequeño para ser un backup válido." };
     }
-    // Verificar magic header: primeros 16 bytes deben ser "SQLite format 3\0"
-    // Nota: SQLCipher cifra el contenido pero el header se mantiene legible
-    // en las primeras páginas (el header no está cifrado en SQLCipher).
+    // FIX 2026-10-09 (B13): NO rechazar por magic header. SQLCipher cifra el
+    // header por defecto (default_plaintext_header_size=0), así que un backup
+    // real NO empieza con "SQLite format 3". En su lugar, hacer trial-open
+    // con el DEK actual: si abre, es un backup válido nuestro.
+    // (El check de header anterior rompía la restauración en producción.)
     try {
-      const header = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.UTF8,
-        length: 16,
-      });
-      if (!header.startsWith("SQLite format 3")) {
-        return { valid: false, reason: "El archivo no parece ser una base de datos SQLite válida." };
+      const { getDatabaseKeyHex, applyDatabaseKey } = await import("../privacy/keyManager");
+      const SQLite = await import("expo-sqlite");
+      const dekHex = await getDatabaseKeyHex().catch(() => null);
+      if (dekHex) {
+        const slash = uri.lastIndexOf("/");
+        const db = await SQLite.openDatabaseAsync(
+          uri.slice(slash + 1),
+          { useNewConnection: true },
+          uri.slice(0, slash)
+        );
+        try {
+          await applyDatabaseKey(db as any, dekHex, "backup-validate");
+          // Si llegamos aquí, el DEK abre la DB → backup válido.
+          await (db as any).closeAsync().catch(() => {});
+        } catch {
+          await (db as any).closeAsync().catch(() => {});
+          return { valid: false, reason: "El backup no se puede abrir con la clave actual (es de otra instalación o está corrupto)." };
+        }
       }
+      // Si no hay DEK (instalación fresca), no podemos hacer trial-open.
+      // Continuar con validación de manifest (K1/K2).
     } catch {
-      // Si no podemos leer el header, continuamos con validación básica.
+      // Si el trial-open falla por error técnico, continuar con validación básica.
     }
     // FIX 2026-10-09 (K1/K2): verificar manifest — SHA-256 del archivo y
     // fingerprint del DEK. Si el backup es de otra instalación (DEK distinto),
@@ -444,7 +461,9 @@ export async function extractPortableBundle(bundleUri: string, destDir: string):
   }
 
   const dbUri = `${destDir}/restored.db`;
-  await FileSystem.writeAsStringAsync(bundle.db, dbUri, {
+  // FIX 2026-10-09 (B1): argumentos en orden correcto (uri, contenido).
+  // Estaban invertidos: el blob base64 iba como URI y el path como contenido.
+  await FileSystem.writeAsStringAsync(dbUri, bundle.db, {
     encoding: FileSystem.EncodingType.Base64,
   });
 

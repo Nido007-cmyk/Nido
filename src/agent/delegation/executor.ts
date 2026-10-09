@@ -5,6 +5,19 @@
  */
 
 /**
+ * Error dedicado para abort por TASK_CANCEL.
+ * FIX 2026-10-09 (S1): usar clase en vez de string matching. El código
+ * "aborted" depende de detectar este error; si alguien reescribe el mensaje,
+ * el instanceof sigue funcionando.
+ */
+export class TaskAbortedError extends Error {
+  constructor() {
+    super("task aborted by peer (TASK_CANCEL)");
+    this.name = "TaskAbortedError";
+  }
+}
+
+/**
  * Sandboxed delegated-task executor (v1).
  *
  * Runs a peer-requested task under the scopes named in the verified
@@ -127,7 +140,7 @@ export class DelegatedExecutor {
 
   private checkBudget(): void {
     if (this.aborted) {
-      throw new Error("task aborted by peer (TASK_CANCEL)");
+      throw new TaskAbortedError();
     }
     if (this.toolCalls >= this.maxToolCalls) {
       throw new Error("tool budget exhausted");
@@ -208,9 +221,11 @@ export class DelegatedExecutor {
         return finish(false, undefined, timeoutError);
       }
       // FIX 2026-10-09 (H2-NEW): preservar código "aborted" dedicado.
+      // FIX 2026-10-09 (S1): instanceof primero (robusto), string matching
+      // como fallback (compatibilidad).
       // Si no, el abort se pliega en "executor_error" y el caller no puede
       // distinguir cancelación de error real → TASK_RESULT se envía igual.
-      if (msg.includes("aborted by peer") || msg.includes("TASK_CANCEL")) {
+      if (e instanceof TaskAbortedError || msg.includes("aborted by peer") || msg.includes("TASK_CANCEL")) {
         return finish(false, undefined, {
           code: "aborted",
           message: "Cancelado por el peer (TASK_CANCEL)",
