@@ -141,3 +141,73 @@ describe("CALENDAR-FIX 2026-10-07: parseo de fechas", () => {
     expect(r!.dueAt).toBeNull();
   });
 });
+
+describe("TESTFIX-2026-10-08: tiempos relativos y hora suelta", () => {
+  it("parsea 'Recuerdame en 2 minutes tengo que salir' (evidencia física)", () => {
+    const before = Date.now();
+    const r = extractReminderAction("Recuerdame en 2 minutes tengo que salir");
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).not.toBeNull();
+    const d = new Date(r!.dueAt!).getTime();
+    // ~2 minutos en el futuro (tolerancia 90s)
+    expect(d - before).toBeGreaterThan(30 * 1000);
+    expect(d - before).toBeLessThan(210 * 1000);
+    // El texto no debe contener el tiempo relativo
+    expect(r!.text.toLowerCase()).not.toContain("2 minutes");
+    expect(r!.text.toLowerCase()).toContain("tengo que salir");
+  });
+
+  it("parsea 'en dos minutos' con palabra numérica", () => {
+    const before = Date.now();
+    const r = extractReminderAction("recuérdame en dos minutos que tengo que salir");
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).not.toBeNull();
+    const d = new Date(r!.dueAt!).getTime();
+    expect(d - before).toBeGreaterThan(30 * 1000);
+    expect(d - before).toBeLessThan(210 * 1000);
+    expect(r!.text.toLowerCase()).not.toContain("dos minutos");
+  });
+
+  it("parsea 'en 1 hora' en inglés 'in 1 hour'", () => {
+    const before = Date.now();
+    const r = extractReminderAction("remember me to call mom in 1 hour");
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).not.toBeNull();
+    const d = new Date(r!.dueAt!).getTime();
+    expect(d - before).toBeGreaterThan(50 * 60 * 1000);
+    expect(d - before).toBeLessThan(70 * 60 * 1000);
+  });
+
+  it("parsea hora suelta 'a las 6:02' como hoy (evidencia física)", () => {
+    const r = extractReminderAction("recuérdame a las 23:59 que tengo que salir");
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).not.toBeNull();
+    const d = new Date(r!.dueAt!);
+    expect(d.getHours()).toBe(23);
+    expect(d.getMinutes()).toBe(59);
+    // Hoy o mañana (rollover M2 si ya pasó), nunca null
+    const now = new Date();
+    const diffDays = Math.floor((d.getTime() - now.getTime()) / 86400000);
+    expect(diffDays).toBeLessThanOrEqual(1);
+  });
+
+  it("hora suelta pasada → mañana (rollover M2)", () => {
+    const r = extractReminderAction("recuérdame a las 00:01 que es medianoche");
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).not.toBeNull();
+    const d = new Date(r!.dueAt!);
+    expect(d.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("'en 0 minutos' no crea recordatorio en el pasado", () => {
+    const r = extractReminderAction("recuérdame en 0 minutos algo");
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).toBeNull();
+  });
+
+  it("sin tiempo → dueAt null (pregunta de seguimiento honesta)", () => {
+    const r = extractReminderAction("recuérdame comprar pan");
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).toBeNull();
+  });
+});

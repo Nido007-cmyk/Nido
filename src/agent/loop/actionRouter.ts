@@ -82,6 +82,11 @@ export function extractReminderAction(userText: string): ReminderAction | null {
       .replace(/\b(mañana|manana|tomorrow|hoy|today)\b/gi, "")
       .replace(/\ba\s+las\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
       .replace(/\bat\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
+      // TESTFIX-2026-10-08: limpiar tiempo relativo ("en 2 minutos" no es
+      // parte del texto del recordatorio).
+      .replace(/\ben\s+\d+\s+(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
+      .replace(/\bin\s+\d+\s+(minutes?|min|hours?|hrs?|h|days?|d|weeks?|w)\b/gi, "")
+      .replace(/\ben\s+(uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s+(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
       // M3 FIX: limpiar hora suelta después de día ("el viernes 10" → el 10 es la hora).
       .replace(/\b(\d{1,2})(:\d{2})?\s*(am|pm)?\s*$/gi, "")
       .replace(/\s+/g, " ")
@@ -91,14 +96,63 @@ export function extractReminderAction(userText: string): ReminderAction | null {
   return { text, dueAt };
 }
 
+/** Palabras numéricas ES/EN para tiempos relativos ("en dos minutos"). */
+const NUMBER_WORDS: Record<string, number> = {
+  uno: 1, una: 1, one: 1, dos: 2, two: 2, tres: 3, three: 3,
+  cuatro: 4, four: 4, cinco: 5, five: 5, seis: 6, six: 6,
+  siete: 7, seven: 7, ocho: 8, eight: 8, nueve: 9, nine: 9,
+  diez: 10, ten: 10, once: 11, eleven: 11, doce: 12, twelve: 12,
+  quince: 15, fifteen: 15, veinte: 20, twenty: 20,
+  treinta: 30, thirty: 30, "media": 0.5, "half": 0.5,
+};
+
+/**
+ * TESTFIX-2026-10-08: parsea tiempos relativos ("en 2 minutos",
+ * "en dos minutos", "in 1 hour", "en media hora").
+ * Devuelve la fecha objetivo o null si no hay patrón relativo.
+ */
+function parseRelativeTime(t: string, now: Date): Date | null {
+  const m = /\b(?:en|in)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s+(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/i.exec(t);
+  if (!m) return null;
+
+  const rawNum = m[1].toLowerCase();
+  const n = /^\d+$/.test(rawNum) ? parseInt(rawNum, 10) : NUMBER_WORDS[rawNum];
+  if (n === undefined || n <= 0) return null;
+
+  const unit = m[2].toLowerCase();
+  const target = new Date(now);
+  if (/^min/.test(unit)) {
+    target.setMinutes(target.getMinutes() + n);
+  } else if (/^(h|hora|horas|hour|hours|hrs)$/.test(unit)) {
+    target.setHours(target.getHours() + n);
+  } else if (/^(d|d[ií]a|dias|días|day|days)$/.test(unit)) {
+    target.setDate(target.getDate() + n);
+  } else if (/^(w|semana|semanas|week|weeks)$/.test(unit)) {
+    target.setDate(target.getDate() + n * 7);
+  } else {
+    return null;
+  }
+  // "en 0 minutos" no tiene sentido; cantidades absurdas se rechazan.
+  if (target.getTime() <= now.getTime()) return null;
+  if (target.getTime() - now.getTime() > 366 * 24 * 3600 * 1000) return null;
+  return target;
+}
+
 /**
  * Parsea fecha/hora de un texto de recordatorio.
- * Soporta: días de semana (es/en), hoy/mañana, horas.
+ * Soporta: días de semana (es/en), hoy/mañana, horas, tiempos relativos
+ * ("en 2 minutos", "in 1 hour") y hora suelta ("a las 6:02" → hoy).
  * Devuelve ISO string o null si no hay fecha clara.
  */
 function parseReminderDateTime(text: string): string | null {
   const t = text.toLowerCase();
   const now = new Date();
+
+  // TESTFIX-2026-10-08: tiempos relativos ("en 2 minutos", "in 1 hour").
+  // Antes: no se soportaban → dueAt null → el recordatorio se guardaba
+  // como texto y se preguntaba "¿para cuándo?" en bucle (evidencia física).
+  const relative = parseRelativeTime(t, now);
+  if (relative) return relative.toISOString();
 
   // Días de la semana → próximo día futuro.
   const dayMap: Record<string, number> = {
@@ -162,10 +216,18 @@ function parseReminderDateTime(text: string): string | null {
     }
   }
 
+  // TESTFIX-2026-10-08: hora suelta sin día ("a las 6:02", "at 6:02pm").
+  // Antes: sin día → return null aunque hubiera hora explícita → mismo
+  // bucle de "¿para cuándo?" (evidencia física). Ahora se asume hoy;
+  // el rollover M2 la mueve a mañana si ya pasó.
+  const timeMatch = /(?:a\s+las|at)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.exec(t);
+  if (!targetDate && timeMatch) {
+    targetDate = new Date(now);
+  }
+
   if (!targetDate) return null;
 
   // Hora: "a las 10", "at 10am", "a las 10:30"
-  const timeMatch = /(?:a\s+las|at)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.exec(t);
   if (timeMatch) {
     let hour = parseInt(timeMatch[1], 10);
     const minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
