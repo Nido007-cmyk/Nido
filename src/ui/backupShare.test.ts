@@ -28,6 +28,7 @@ vi.mock("expo-file-system/legacy", () => ({
 vi.mock("../security/backup", () => ({
   createBackup: vi.fn(),
   exportDatabaseKey: vi.fn(async () => "test-key"),
+  createPortableBundle: vi.fn(async (uri: string) => uri.replace(/\.db$/, ".nidobackup.json")),
 }));
 
 import { shareBackupFile, findLatestBackup } from "./backupShare";
@@ -44,7 +45,8 @@ describe("backupShare (Fix 6)", () => {
     await shareBackupFile(path);
     expect(isAvailableAsync).toHaveBeenCalled();
     expect(shareAsync).toHaveBeenCalledTimes(1);
-    expect(shareAsync).toHaveBeenCalledWith(path);
+    // FIX 2026-10-09 (CR-1): ahora comparte el bundle, no el .db directo.
+    expect(shareAsync).toHaveBeenCalledWith(path.replace(/\.db$/, ".nidobackup.json"));
   });
 
   it("shareBackupFile lanza si el compartido no está disponible", async () => {
