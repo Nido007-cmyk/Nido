@@ -175,6 +175,43 @@ function AppContent() {
       return;
     }
     if (await enterKeyLossIfNeeded()) return;
+    // FIX 2026-10-09 (CR-2): verificar si hay un staging de rekey pendiente
+    // de un crash anterior. Si el rekey se interrumpió, completar la
+    // recuperación antes de abrir la DB.
+    try {
+      const { checkStaleRekeyStaging } = await import("./src/security/keyRotation");
+      const FS = await import("expo-file-system/legacy");
+      const stagingPath = `${FS.documentDirectory}rekey-staging.json`;
+      const { default: SecureStore } = await import("expo-secure-store");
+      const SQLite = await import("expo-sqlite");
+      const { applyDatabaseKey } = await import("./src/privacy/keyManager");
+      const result = await checkStaleRekeyStaging(
+        stagingPath,
+        async (dekHex: string) => {
+          await SecureStore.setItemAsync("nido_db_key", dekHex);
+        },
+        async (path: string, dekHex: string) => {
+          const slash = path.lastIndexOf("/");
+          const db = await SQLite.openDatabaseAsync(
+            path.slice(slash + 1),
+            { useNewConnection: true },
+            path.slice(0, slash)
+          );
+          await applyDatabaseKey(db as any, dekHex, "rekey-recovery");
+          return {
+            exec: async (sql: string) => { await (db as any).execAsync(sql); },
+            close: async () => { await (db as any).closeAsync(); },
+          };
+        }
+      );
+      if (result.recovered) {
+        console.log("[startup] Rekey interrumpido recuperado.");
+      }
+    } catch (e) {
+      // Si la recuperación falla, no bloquear el arranque — el usuario puede
+      // rotar manualmente desde BackupScreen. Log para diagnóstico.
+      console.warn("[startup] checkStaleRekeyStaging falló:", e instanceof Error ? e.message : e);
+    }
     await finishStartup();
   };
 

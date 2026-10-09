@@ -72,6 +72,74 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
     }
   };
 
+  // FIX 2026-10-09 (CR-2): rotación de DEK (F-KEY-1) con UI.
+  const handleRotateKey = async () => {
+    Alert.alert(
+      "Rotar clave de cifrado",
+      "Esto generará una nueva clave y re-cifrará tu base de datos. " +
+      "Los backups anteriores NO se podrán restaurar con la clave nueva. " +
+      "¿Continuar?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Rotar",
+          style: "destructive",
+          onPress: async () => {
+            setBusy(true);
+            try {
+              const { rotateDatabaseKey } = await import("../security/keyRotation");
+              const { default: SecureStore } = await import("expo-secure-store");
+              const SQLite = await import("expo-sqlite");
+              const { applyDatabaseKey } = await import("../privacy/keyManager");
+              const FS = await import("expo-file-system/legacy");
+              
+              // Obtener path de la DB
+              const dbDir = FS.documentDirectory;
+              if (!dbDir) throw new Error("No se pudo acceder al almacenamiento.");
+              // La DB principal está en el directorio de documentos
+              const dbPath = `${dbDir}SQLite/nido.db`;
+              
+              const result = await rotateDatabaseKey(
+                dbPath,
+                async (path: string, dekHex: string) => {
+                  const slash = path.lastIndexOf("/");
+                  const db = await SQLite.openDatabaseAsync(
+                    path.slice(slash + 1),
+                    { useNewConnection: true },
+                    path.slice(0, slash)
+                  );
+                  await applyDatabaseKey(db as any, dekHex, "rekey");
+                  return {
+                    exec: async (sql: string) => { await (db as any).execAsync(sql); },
+                    close: async () => { await (db as any).closeAsync(); },
+                  };
+                },
+                async (dekHex: string) => {
+                  await SecureStore.setItemAsync("nido_db_key", dekHex);
+                }
+              );
+              
+              if (result.ok) {
+                Alert.alert(
+                  "Clave rotada",
+                  "Tu base de datos ahora usa una nueva clave de cifrado. " +
+                  "Guarda la nueva clave desde 'Ver mi clave de cifrado'. " +
+                  "Los backups viejos necesitarán la clave anterior."
+                );
+              } else {
+                Alert.alert("Error", result.error ?? "No se pudo rotar la clave.");
+              }
+            } catch (e) {
+              Alert.alert("Error", e instanceof Error ? e.message : "No se pudo rotar la clave.");
+            } finally {
+              setBusy(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleSaveToDownloads = async () => {
     if (!lastBackup) {
       Alert.alert("Sin backup", "Primero crea un backup con el botón de arriba.");
@@ -207,6 +275,11 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
 
       <Pressable style={styles.buttonSecondary} onPress={handleShowKey} disabled={busy}>
         <Text style={styles.buttonSecondaryText}>Ver mi clave de cifrado</Text>
+      </Pressable>
+
+      {/* FIX 2026-10-09 (CR-2): rotación de DEK (F-KEY-1). */}
+      <Pressable style={styles.buttonSecondary} onPress={handleRotateKey} disabled={busy}>
+        <Text style={styles.buttonSecondaryText}>Rotar clave de cifrado</Text>
       </Pressable>
 
       {/* FIX 2026-10-09: guardar directo en Descargas vía SAF. */}

@@ -488,6 +488,9 @@ export class DelegationService {
     } finally {
       this.runningExecutors.delete(ctx.taskId);
       this.runningPeers.delete(ctx.taskId);
+      // FIX 2026-10-09 (B1): limpiar taskNegotiation para evitar crecimiento
+      // ilimitado del mapa.
+      this.taskNegotiation.delete(ctx.taskId);
     }
     // FIX 2026-10-09 (H2-NEW): execute() nunca lanza abort (lo convierte en
     // {ok:false, error:{code:"aborted"}}). Verificar el código, no try/catch.
@@ -540,6 +543,10 @@ export class DelegationService {
     this.gate.deny(requestId);
     const ctx = this.inboundIndex.get(requestId);
     this.inboundIndex.delete(requestId);
+    // FIX 2026-10-09 (B1): limpiar taskNegotiation.
+    if (ctx) {
+      this.taskNegotiation.delete(ctx.taskId);
+    }
     if (ctx) {
       await this.sendReject(ctx.peerPkHex, ctx.taskId, "denied");
       await this.audit({

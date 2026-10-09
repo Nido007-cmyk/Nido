@@ -315,6 +315,48 @@ export class NidoBluetoothTransport implements P2PTransport {
    * aunque aparezca en discovery. Se limpia solo con re-pair explícito.
    */
   private readonly revokedPks = new Set<string>();
+  // FIX 2026-10-09 (CR-4): persistencia de revocación. El Set en memoria se
+  // pierde al reiniciar; el archivo sobrevive.
+  private revokedPksLoaded = false;
+
+  /**
+   * FIX 2026-10-09 (CR-4): carga la lista de revocados desde disco.
+   * Debe llamarse al inicializar el transporte.
+   */
+  async loadRevokedPks(): Promise<void> {
+    if (this.revokedPksLoaded) return;
+    try {
+      const FS = await import("expo-file-system/legacy");
+      const path = `${FS.documentDirectory}revoked-peers.json`;
+      const info = await FS.getInfoAsync(path);
+      if (info.exists) {
+        const raw = await FS.readAsStringAsync(path);
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) {
+          for (const pk of arr) {
+            if (typeof pk === "string") this.revokedPks.add(pk.toLowerCase());
+          }
+        }
+      }
+    } catch {
+      // Si falla la carga, empezar vacío (fail-open en revocación es
+      // aceptable: el usuario puede revocar de nuevo).
+    }
+    this.revokedPksLoaded = true;
+  }
+
+  /**
+   * FIX 2026-10-09 (CR-4): guarda la lista de revocados en disco.
+   */
+  private async saveRevokedPks(): Promise<void> {
+    try {
+      const FS = await import("expo-file-system/legacy");
+      const path = `${FS.documentDirectory}revoked-peers.json`;
+      await FS.writeAsStringAsync(path, JSON.stringify([...this.revokedPks]));
+    } catch {
+      // Si falla el guardado, la revocación sigue en memoria para esta sesión.
+    }
+  }
   // FIX 2026-10-09 (BlueLib): ReconnectManager con estado. El retry antes se
   // disparaba por onPeerLost (presencia), no por la transición a DISCONNECTED.
   // Si el peer queda "visible pero muerto", nunca se reintentaba. Ahora el
@@ -809,20 +851,28 @@ export class NidoBluetoothTransport implements P2PTransport {
   async revokePeer(peerPkHex: string): Promise<void> {
     const pkLower = peerPkHex.toLowerCase();
     this.revokedPks.add(pkLower);
+    // FIX 2026-10-09 (CR-4): persistir.
+    await this.saveRevokedPks();
     await this.disconnect(peerPkHex);
   }
 
   /**
    * FIX 2026-10-09: levanta la revocación (solo vía re-pair explícito).
    */
-  unrevokePeer(peerPkHex: string): void {
+  async unrevokePeer(peerPkHex: string): Promise<void> {
     this.revokedPks.delete(peerPkHex.toLowerCase());
+    // FIX 2026-10-09 (CR-4): persistir.
+    await this.saveRevokedPks();
   }
 
   /**
    * FIX 2026-10-09: verifica si un pk está revocado.
+   * FIX 2026-10-09 (CR-4): carga perezosa desde disco si aún no se hizo.
    */
-  isRevoked(peerPkHex: string): boolean {
+  async isRevoked(peerPkHex: string): Promise<boolean> {
+    if (!this.revokedPksLoaded) {
+      await this.loadRevokedPks();
+    }
     return this.revokedPks.has(peerPkHex.toLowerCase());
   }
 
@@ -1192,6 +1242,10 @@ export class NidoBluetoothTransport implements P2PTransport {
   private async establishRoute(mac: string, pend: PendingHello): Promise<void> {
     const pkLower = pend.peerPk!;
     // FIX 2026-10-09: si el peer está revocado, NO establecer la ruta.
+    // FIX 2026-10-09 (CR-4): asegurar que la lista está cargada desde disco.
+    if (!this.revokedPksLoaded) {
+      await this.loadRevokedPks();
+    }
     if (this.revokedPks.has(pkLower)) {
       this.rejectPending(pend, new Error("Contacto revocado."));
       await this.bt().disconnect(mac).catch(() => {});
