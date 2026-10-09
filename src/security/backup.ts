@@ -257,14 +257,17 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
         }
         // K2: verificar SHA-256.
         // FIX 2026-10-09 (H-5): fail-closed si no se puede calcular el SHA.
-        if (manifest.sha256) {
-          const actualSha = await sha256File(uri);
-          if (!actualSha) {
-            return { valid: false, reason: "No se pudo verificar la integridad (SHA-256)." };
-          }
-          if (actualSha.toLowerCase() !== manifest.sha256.toLowerCase()) {
-            return { valid: false, reason: "El backup está corrupto (SHA-256 no coincide)." };
-          }
+        // FIX 2026-10-09 (K2-FAILOPEN): fail-closed si el manifest no trae SHA.
+        // Un backup con manifest pero sin SHA no se puede verificar → rechazar.
+        if (!manifest.sha256) {
+          return { valid: false, reason: "El manifest no incluye SHA-256 (no se puede verificar integridad)." };
+        }
+        const actualSha = await sha256File(uri);
+        if (!actualSha) {
+          return { valid: false, reason: "No se pudo verificar la integridad (SHA-256)." };
+        }
+        if (actualSha.toLowerCase() !== manifest.sha256.toLowerCase()) {
+          return { valid: false, reason: "El backup está corrupto (SHA-256 no coincide)." };
         }
         // K1: verificar DEK fingerprint.
         if (manifest.dekFingerprint) {

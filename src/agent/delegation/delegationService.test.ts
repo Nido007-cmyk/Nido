@@ -245,11 +245,18 @@ describe("I2 FIX 2026-10-09: TASK_CANCEL inbound aborta executor", () => {
     await setFeatureEnabled("delegation.enabled", true);
     // UUID v4 válido (validateTaskCancel lo exige).
     const taskId = "123e4567-e89b-42d3-a456-426614174000";
+    const peerPk = "peerpk".repeat(8).toLowerCase();
     // Simular executor en curso.
     const fakeExecutor = { abort: vi.fn() };
     (svc as any).runningExecutors.set(taskId.toLowerCase(), fakeExecutor);
+    // FIX 2026-10-09 (G4): registrar en inboundIndex con el peer correcto
+    // para que pase la verificación de ownership.
+    (svc as any).inboundIndex.set("req-1", {
+      taskId: taskId.toLowerCase(),
+      peerPkHex: peerPk,
+    });
     // Enviar TASK_CANCEL (inbound: no está en outbound).
-    await (svc as any).handleTaskMessage("peerpk".repeat(8), "TASK_CANCEL", { taskId });
+    await (svc as any).handleTaskMessage(peerPk, "TASK_CANCEL", { taskId });
     expect(fakeExecutor.abort).toHaveBeenCalled();
   });
 });

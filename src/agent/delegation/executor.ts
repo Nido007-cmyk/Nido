@@ -200,6 +200,15 @@ export class DelegatedExecutor {
       if ((e as { timeout?: boolean }).timeout || msg.includes("timed out")) {
         return finish(false, undefined, timeoutError);
       }
+      // FIX 2026-10-09 (H2-NEW): preservar código "aborted" dedicado.
+      // Si no, el abort se pliega en "executor_error" y el caller no puede
+      // distinguir cancelación de error real → TASK_RESULT se envía igual.
+      if (msg.includes("aborted by peer") || msg.includes("TASK_CANCEL")) {
+        return finish(false, undefined, {
+          code: "aborted",
+          message: "Cancelado por el peer (TASK_CANCEL)",
+        });
+      }
       return finish(false, undefined, {
         code: "executor_error",
         message: msg.slice(0, 200),

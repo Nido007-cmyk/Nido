@@ -98,6 +98,12 @@ export async function rotateDatabaseKey(
       try {
         await db.exec(`PRAGMA rekey = "x'${oldDekHex}'";`);
       } catch { /* noop */ }
+      // FIX 2026-10-09 (CR3-NEW2): borrar staging en el path de revert.
+      // Si no, un checkStaleRekeyStaging posterior escribiría el DEK nuevo
+      // en el keystore mientras la DB tiene el viejo → brick.
+      try {
+        await FS.deleteAsync(staging, { idempotent: true });
+      } catch { /* noop */ }
       return { ok: false, error: "No se pudo guardar la nueva clave; se revirtió el cambio" };
     }
 
@@ -117,14 +123,21 @@ export async function rotateDatabaseKey(
 }
 
 /**
- * FIX 2026-10-09 (CR-3): verifica si hay un staging pendiente de una
- * rotación interrumpida por crash. Si existe, intenta completar la
- * recuperación guardando el DEK del staging en el keystore.
+ * FIX 2026-10-09 (CR-3, CR3-NEW): verifica si hay un staging pendiente de una
+ * rotación interrumpida por crash.
+ *
+ * CRÍTICO: no escribe ciegamente el DEK del staging al keystore. Primero hace
+ * probe-open de la DB con el DEK del staging:
+ * - Si abre → el rekey SÍ ocurrió antes del crash → guardar en keystore.
+ * - Si NO abre → el crash fue ANTES del rekey (DB tiene DEK viejo) →
+ *   borrar staging y no tocar el keystore (si lo tocáramos, brick).
+ *
  * Debe llamarse al arranque de la app.
  */
 export async function checkStaleRekeyStaging(
   stagingPath: string,
-  storeDek: (dekHex: string) => Promise<void>
+  storeDek: (dekHex: string) => Promise<void>,
+  openDb: (path: string, dekHex: string) => Promise<{ exec: (sql: string) => Promise<void>; close: () => Promise<void> }>
 ): Promise<{ recovered: boolean; error?: string }> {
   try {
     const FS = await import("expo-file-system/legacy");
@@ -132,13 +145,30 @@ export async function checkStaleRekeyStaging(
     if (!info.exists) return { recovered: false };
     
     const raw = await FS.readAsStringAsync(stagingPath);
-    const { newDekHex } = JSON.parse(raw);
+    const { newDekHex, dbPath } = JSON.parse(raw);
     if (!newDekHex || typeof newDekHex !== "string") {
       await FS.deleteAsync(stagingPath, { idempotent: true }).catch(() => {});
       return { recovered: false, error: "Staging corrupto, eliminado" };
     }
     
-    // Intentar guardar el DEK del staging en el keystore
+    // FIX 2026-10-09 (CR3-NEW): probe-open antes de tocar el keystore.
+    let probeDb: { exec: (sql: string) => Promise<void>; close: () => Promise<void> } | null = null;
+    try {
+      probeDb = await openDb(dbPath, newDekHex);
+      // Si abre, el rekey ocurrió. Verificar que realmente abre con una query.
+      await probeDb.exec("SELECT 1;");
+    } catch {
+      // No abre con el DEK nuevo → el crash fue ANTES del rekey.
+      // La DB tiene el DEK viejo. Borrar staging, no tocar keystore.
+      await FS.deleteAsync(stagingPath, { idempotent: true }).catch(() => {});
+      return { recovered: false, error: "Crash antes del rekey; staging eliminado, keystore intacto" };
+    } finally {
+      if (probeDb) {
+        try { await probeDb.close(); } catch { /* noop */ }
+      }
+    }
+    
+    // El rekey SÍ ocurrió. Ahora sí guardar en keystore.
     await storeDek(newDekHex);
     await FS.deleteAsync(stagingPath, { idempotent: true }).catch(() => {});
     return { recovered: true };

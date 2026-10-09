@@ -281,6 +281,20 @@ export class DelegationService {
     // outbound, si no se dropea y el abort() nunca se llama.
     if (taskType === "TASK_CANCEL") {
       const cancelTaskId = (body as { taskId: string }).taskId.toLowerCase();
+      const senderPk = fromPkHex.toLowerCase();
+      // FIX 2026-10-09 (G4): verificar que el sender es el requester original.
+      // Si no, cualquier peer pareado podría cancelar tareas ajenas.
+      // Primero verificar ownership ANTES de denyTask (que borra el índice).
+      let ownerPeerPk: string | null = null;
+      for (const [, ctx] of this.inboundIndex) {
+        if (ctx.taskId === cancelTaskId && ctx.peerPkHex.toLowerCase() === senderPk) {
+          ownerPeerPk = ctx.peerPkHex;
+          break;
+        }
+      }
+      if (!ownerPeerPk) {
+        return; // no es el owner o tarea desconocida → drop (anti-spoofing)
+      }
       // Cancelar aprobación pendiente si la hay.
       for (const [requestId, ctx] of this.inboundIndex) {
         if (ctx.taskId === cancelTaskId) {
@@ -298,6 +312,11 @@ export class DelegationService {
     const taskId = (body as { taskId: string }).taskId.toLowerCase();
     const tracked = this.outbound.get(taskId);
     if (!tracked) return; // unknown task → drop
+    // FIX 2026-10-09 (G4): verificar que el sender es el peer original.
+    // Si no, cualquier peer pareado podría forjar resultados/rechazos.
+    if (tracked.peerPkHex.toLowerCase() !== fromPkHex.toLowerCase()) {
+      return; // spoofing → drop
+    }
     if (taskType === "TASK_RESULT") {
       const r = body as { ok: boolean; result?: unknown; error?: { code: string; message: string } };
       this.outbound.delete(taskId);
@@ -447,26 +466,31 @@ export class DelegationService {
     // F-DELEG-3: registrar para poder abortar en TASK_CANCEL.
     this.runningExecutors.set(ctx.taskId, executor);
     let result;
-    let wasAborted = false;
     try {
       result = await executor.execute({
         description: approved.description,
         documentBase64: approved.documentBase64,
         resultSchema: approved.resultSchema,
       });
-    } catch (e) {
-      // FIX 2026-10-09 (H-2): si fue abortado por TASK_CANCEL, no enviar resultado.
-      if (e instanceof Error && e.message.includes("abort")) {
-        wasAborted = true;
-        result = { ok: false, error: { code: "aborted", message: "Cancelado por el peer" } };
-      } else {
-        throw e;
-      }
     } finally {
       this.runningExecutors.delete(ctx.taskId);
     }
-    // FIX 2026-10-09 (H-2): no enviar TASK_RESULT si fue cancelado.
-    if (wasAborted) {
+    // FIX 2026-10-09 (H2-NEW): execute() nunca lanza abort (lo convierte en
+    // {ok:false, error:{code:"aborted"}}). Verificar el código, no try/catch.
+    // Si fue abortado por TASK_CANCEL, NO enviar TASK_RESULT.
+    if (!result.ok && result.error?.code === "aborted") {
+      await this.audit({
+        taskId: ctx.taskId,
+        negotiationId: ctx.negotiationId,
+        direction: "in",
+        peerPkHex: ctx.peerPkHex,
+        scopes: ctx.scopes,
+        state: "aborted",
+        decision: "approved",
+        decidedBy: "human",
+        toolCalls: result.toolCalls ?? 0,
+        errorCode: "aborted",
+      });
       return false;
     }
     await this.audit({

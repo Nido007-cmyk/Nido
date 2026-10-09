@@ -493,6 +493,11 @@ export function ModelSetupScreen(props: Props) {
                           style: "destructive",
                           onPress: async () => {
                             try {
+                              // FIX 2026-10-09 (RESTORE-BIOMETRIC): restauración es
+                              // destructiva (reemplaza todos los datos) → requiere
+                              // autenticación biométrica.
+                              const { requireUnlock } = await import("../security/biometricGate");
+                              await requireUnlock("Restaurar backup");
                               await restoreBackup(uri);
                               Alert.alert(
                                 "Restaurado",
