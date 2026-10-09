@@ -678,8 +678,13 @@ class NegotiationService {
         proposal,
         proposerBytes,
         async () => {
-          // queueFn: por ahora retorna un taskId sintético.
-          // La integración con el Approval Inbox real se hace en FASE 3.
+          // FIX 2026-10-09 (UI-AUDIT/F3): queueFn intencionalmente mínimo.
+          // El caso ASK NO se encola en un Approval Inbox separado: la sesión
+          // queda en estado PROPOSED y el propietario decide vía NegotiationCard
+          // (Aceptar/Rechazar/Contraproponer) en NegotiationsTab. Esa tarjeta ES
+          // la aprobación humana para propuestas P2P. La ceremonia extendida
+          // (toApprovalRequest/ApprovalCard con risk levels) queda documentada
+          // como trabajo pendiente; no se simula.
           return `p2p-${proposal.proposalId}`;
         }
       );
