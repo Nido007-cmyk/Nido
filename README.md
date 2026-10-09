@@ -141,7 +141,7 @@ limiting. Details in
 
 ## Current status
 
-**Alpha (Oct 2026):** 2133 automated tests passing, `tsc` clean. Physical
+**Alpha (Oct 2026):** 2149 automated tests passing, `tsc` clean. Physical
 two-device validation is still pending, delegated task execution ships with
 its feature flag OFF, and no external cryptographic audit has been performed
 yet. Prebuilt APKs are distributed directly for device testing for now.
@@ -223,7 +223,7 @@ Verification without a device (doesn't prove a real install):
 
 ```bash
 npm run typecheck   # tsc --noEmit
-npm test            # vitest — 2133 tests: agent, privacy, routing, rag, p2p
+npm test            # vitest — 2149 tests: agent, privacy, routing, rag, p2p
 ```
 
 Full build guide in [AGENTS.md](AGENTS.md).

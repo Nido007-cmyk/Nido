@@ -59,7 +59,7 @@ Para reportar una vulnerabilidad: [SECURITY.md](SECURITY.md).
 
 ## Estado actual
 
-**Alpha (oct 2026):** 1985 tests automatizados en verde, `tsc` limpio. La
+**Alpha (oct 2026):** 2149 tests automatizados en verde, `tsc` limpio. La
 validación física en dos dispositivos está pendiente, la ejecución delegada
 de tareas viene con su feature flag apagado, y aún no hay auditoría
 criptográfica externa. Los APKs precompilados se distribuyen directamente
@@ -95,7 +95,7 @@ Verificación sin dispositivo (no prueba la instalación real):
 
 ```bash
 npm run typecheck   # tsc --noEmit
-npm test            # vitest — 1985 tests: agente, privacy, routing, rag, p2p
+npm test            # vitest — 2149 tests: agente, privacy, routing, rag, p2p
 ```
 
 Guía completa de build en [AGENTS.es.md](AGENTS.es.md).
