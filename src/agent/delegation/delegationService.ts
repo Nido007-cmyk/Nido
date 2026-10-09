@@ -285,11 +285,21 @@ export class DelegationService {
       // FIX 2026-10-09 (G4): verificar que el sender es el requester original.
       // Si no, cualquier peer pareado podría cancelar tareas ajenas.
       // Primero verificar ownership ANTES de denyTask (que borra el índice).
+      // FIX 2026-10-09 (G4-REGRESSION): para tareas ya aprobadas (en ejecución),
+      // inboundIndex ya no tiene la entrada (se borra al aprobar). Consultar
+      // runningPeers como fallback.
       let ownerPeerPk: string | null = null;
       for (const [, ctx] of this.inboundIndex) {
         if (ctx.taskId === cancelTaskId && ctx.peerPkHex.toLowerCase() === senderPk) {
           ownerPeerPk = ctx.peerPkHex;
           break;
+        }
+      }
+      if (!ownerPeerPk) {
+        // Fallback: tarea en ejecución (ya aprobada).
+        const runningPeer = this.runningPeers.get(cancelTaskId);
+        if (runningPeer && runningPeer.toLowerCase() === senderPk) {
+          ownerPeerPk = runningPeer;
         }
       }
       if (!ownerPeerPk) {
@@ -465,6 +475,9 @@ export class DelegationService {
     });
     // F-DELEG-3: registrar para poder abortar en TASK_CANCEL.
     this.runningExecutors.set(ctx.taskId, executor);
+    // FIX 2026-10-09 (G4-REGRESSION): registrar peer para verificación de
+    // ownership de TASK_CANCEL (inboundIndex se borra al aprobar).
+    this.runningPeers.set(ctx.taskId, ctx.peerPkHex);
     let result;
     try {
       result = await executor.execute({
@@ -474,11 +487,15 @@ export class DelegationService {
       });
     } finally {
       this.runningExecutors.delete(ctx.taskId);
+      this.runningPeers.delete(ctx.taskId);
     }
     // FIX 2026-10-09 (H2-NEW): execute() nunca lanza abort (lo convierte en
     // {ok:false, error:{code:"aborted"}}). Verificar el código, no try/catch.
+    // FIX 2026-10-09 (H2-RESIDUAL): el abort puede llegar DURANTE modelInvoke
+    // (checkBudget ya pasó, execute retorna ok:true). Verificar isAborted()
+    // también, no solo el código de error.
     // Si fue abortado por TASK_CANCEL, NO enviar TASK_RESULT.
-    if (!result.ok && result.error?.code === "aborted") {
+    if ((!result.ok && result.error?.code === "aborted") || executor.isAborted()) {
       await this.audit({
         taskId: ctx.taskId,
         negotiationId: ctx.negotiationId,
@@ -557,6 +574,10 @@ export class DelegationService {
   private readonly taskNegotiation = new Map<string, string>();
   // FIX 2026-10-09 (F-DELEG-3): executors en curso por taskId, para abortar en TASK_CANCEL.
   private readonly runningExecutors = new Map<string, DelegatedExecutor>();
+  // FIX 2026-10-09 (G4-REGRESSION): mapa taskId → peerPkHex para verificar
+  // ownership de TASK_CANCEL en tareas ya aprobadas (inboundIndex se borra
+  // al aprobar, así que no sirve para tareas en ejecución).
+  private readonly runningPeers = new Map<string, string>();
 
   /** Test/introspection: pending approvals. */
   get pendingApprovals(): number {

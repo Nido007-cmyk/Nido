@@ -140,6 +140,13 @@ export class DelegatedExecutor {
     this.aborted = true;
   }
 
+  /** FIX 2026-10-09 (H2-RESIDUAL): permite al caller detectar si hubo abort
+   * durante execute(), incluso si el abort llegó durante modelInvoke (el
+   * flag no se re-chequea ahí, pero queda marcado). */
+  isAborted(): boolean {
+    return this.aborted;
+  }
+
   /**
    * Execute a task. Returns a typed result or a structured error.
    * Never throws for task-level failures (those become error results);

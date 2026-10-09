@@ -259,8 +259,11 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
         // FIX 2026-10-09 (H-5): fail-closed si no se puede calcular el SHA.
         // FIX 2026-10-09 (K2-FAILOPEN): fail-closed si el manifest no trae SHA.
         // Un backup con manifest pero sin SHA no se puede verificar → rechazar.
-        if (!manifest.sha256) {
-          return { valid: false, reason: "El manifest no incluye SHA-256 (no se puede verificar integridad)." };
+        // FIX 2026-10-09 (K2-TYPEFAIL): verificar tipo string. Un sha256 truthy
+        // no-string (ej. número) haría throw en .toLowerCase(), el catch externo
+        // lo tragaría y el check se saltaría (fail-open).
+        if (typeof manifest.sha256 !== "string" || !manifest.sha256) {
+          return { valid: false, reason: "El manifest no incluye SHA-256 válido (no se puede verificar integridad)." };
         }
         const actualSha = await sha256File(uri);
         if (!actualSha) {
@@ -270,7 +273,11 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
           return { valid: false, reason: "El backup está corrupto (SHA-256 no coincide)." };
         }
         // K1: verificar DEK fingerprint.
+        // FIX 2026-10-09 (K2-TYPEFAIL): mismo guard de tipo para dekFingerprint.
         if (manifest.dekFingerprint) {
+          if (typeof manifest.dekFingerprint !== "string") {
+            return { valid: false, reason: "El manifest tiene fingerprint inválido." };
+          }
           const currentDek = await getDatabaseKeyHex().catch(() => null);
           if (currentDek) {
             const { default: Crypto } = await import("expo-crypto");
