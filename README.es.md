@@ -59,7 +59,7 @@ Para reportar una vulnerabilidad: [SECURITY.md](SECURITY.md).
 
 ## Estado actual
 
-**Alpha (oct 2026):** 2149 tests automatizados en verde, `tsc` limpio. La
+**Alpha (oct 2026):** 2314 tests automatizados en verde, `tsc` limpio. La
 validación física en dos dispositivos está pendiente, la ejecución delegada
 de tareas viene con su feature flag apagado, y aún no hay auditoría
 criptográfica externa. Los APKs precompilados se distribuyen directamente
@@ -69,9 +69,10 @@ por ahora para pruebas en dispositivo.
 
 Los APKs firmados y precompilados se distribuyen directamente por ahora
 para pruebas en dispositivo (instala encima de la app existente: la firma
-release conserva identidad, contactos y modelos descargados; ambos
-dispositivos deben usar el mismo build para P2P). Habrá GitHub Releases
-públicos cuando se complete la validación física en dos dispositivos.
+release conserva identidad, contactos y modelos descargados; para una pasada
+de validación física se recomienda instalación limpia para descartar estado
+viejo; ambos dispositivos deben usar el mismo build para P2P). Habrá GitHub
+Releases públicos cuando se complete la validación física en dos dispositivos.
 
 ## Compilar e instalar
 
@@ -95,7 +96,7 @@ Verificación sin dispositivo (no prueba la instalación real):
 
 ```bash
 npm run typecheck   # tsc --noEmit
-npm test            # vitest — 2149 tests: agente, privacy, routing, rag, p2p
+npm test            # vitest — 2314 tests: agente, privacy, routing, rag, p2p
 ```
 
 Guía completa de build en [AGENTS.es.md](AGENTS.es.md).

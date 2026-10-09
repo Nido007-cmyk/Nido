@@ -126,7 +126,9 @@ communication. This is NIDO technology, not inherited from BOAR.
   (`src/p2p/sessionManager.ts`)
 - Integration with AUTO/ASK/DENY + Policy Engine
   (`src/p2p/p2pAuthorization.ts`)
-- UI: NegotiationCard, ApprovalCard (`src/ui/components/calm/`)
+- UI: NegotiationCard (`src/ui/components/calm/`) — the human decision
+  surface for P2P proposals. (ApprovalCard exists for local agent-tool
+  approvals; the P2P proposal Approval Inbox is pending, not simulated.)
 
 **Important distinction:** The protocol exists and is tested. The end-to-end
 Nido-to-Nido product experience has **not** been validated on two physical
@@ -141,7 +143,7 @@ limiting. Details in
 
 ## Current status
 
-**Alpha (Oct 2026):** 2149 automated tests passing, `tsc` clean. Physical
+**Alpha (Oct 2026):** 2314 automated tests passing, `tsc` clean. Physical
 two-device validation is still pending, delegated task execution ships with
 its feature flag OFF, and no external cryptographic audit has been performed
 yet. Prebuilt APKs are distributed directly for device testing for now.
@@ -197,9 +199,10 @@ Do not expect these in the current build.
 
 Prebuilt, signed APKs are currently distributed directly for device testing.
 Install over the existing app: the release signature preserves identity,
-contacts, and downloaded models. Both devices must run the same build for
-P2P to work. Public GitHub Releases will follow once physical two-device
-validation completes.
+contacts, and downloaded models. For a physical validation pass, a clean
+install (uninstall first) is recommended to rule out stale state. Both
+devices must run the same build for P2P to work. Public GitHub Releases
+will follow once physical two-device validation completes.
 
 ## Building / Testing
 
@@ -223,7 +226,7 @@ Verification without a device (doesn't prove a real install):
 
 ```bash
 npm run typecheck   # tsc --noEmit
-npm test            # vitest — 2149 tests: agent, privacy, routing, rag, p2p
+npm test            # vitest — 2314 tests: agent, privacy, routing, rag, p2p
 ```
 
 Full build guide in [AGENTS.md](AGENTS.md).
