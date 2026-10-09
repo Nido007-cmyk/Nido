@@ -61,7 +61,11 @@ describe("backup.ts — validación (BK-4)", () => {
   });
 
   it("acepta archivo con magic header válido", async () => {
-    (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: true, size: 5000 });
+    (FileSystem.getInfoAsync as any).mockImplementation(async (uri: string) => {
+      // El manifest no existe en este test (backup viejo sin manifest).
+      if (uri.endsWith(".manifest.json")) return { exists: false };
+      return { exists: true, size: 5000 };
+    });
     (FileSystem.readAsStringAsync as any).mockResolvedValue("SQLite format 3\0 resto...");
     const r = await validateBackup("/valido.db");
     expect(r.valid).toBe(true);
