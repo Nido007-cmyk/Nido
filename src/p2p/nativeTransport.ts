@@ -318,43 +318,216 @@ export class NidoBluetoothTransport implements P2PTransport {
   // FIX 2026-10-09 (CR-4): persistencia de revocación. El Set en memoria se
   // pierde al reiniciar; el archivo sobrevive.
   private revokedPksLoaded = false;
+  /**
+   * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): estado de salud del
+   * almacenamiento de revocaciones.
+   * - true: el archivo se cargó correctamente o no existía (instalación nueva).
+   * - false: el archivo existe pero está corrupto o no se pudo leer.
+   *   En este estado, TODAS las conexiones P2P nuevas se bloquean (fail-closed)
+   *   hasta que el propietario resuelva explícitamente via resetRevocationStore().
+   */
+  private revocationStoreHealthy = true;
+  /**
+   * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): promesa en curso de carga,
+   * para serializar llamadas concurrentes a loadRevokedPks y evitar
+   * condiciones de carrera.
+   */
+  private loadRevokedPksPromise: Promise<void> | null = null;
 
   /**
    * FIX 2026-10-09 (CR-4): carga la lista de revocados desde disco.
    * Debe llamarse al inicializar el transporte.
+   *
+   * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): distingue instalación nueva
+   * (archivo inexistente → lista vacía, sano) de archivo corrupto
+   * (existe pero no se puede leer/parsear → marca no-saludable, fail-closed).
+   * Nunca sustituye silenciosamente una lista corrupta por una vacía.
    */
   async loadRevokedPks(): Promise<void> {
     if (this.revokedPksLoaded) return;
+    // Serializar cargas concurrentes.
+    if (this.loadRevokedPksPromise) {
+      await this.loadRevokedPksPromise;
+      return;
+    }
+    this.loadRevokedPksPromise = this.doLoadRevokedPks();
     try {
-      const FS = await import("expo-file-system/legacy");
+      await this.loadRevokedPksPromise;
+    } finally {
+      this.loadRevokedPksPromise = null;
+    }
+  }
+
+  private async doLoadRevokedPks(): Promise<void> {
+    if (this.revokedPksLoaded) return;
+    let FS: typeof import("expo-file-system/legacy") | null = null;
+    try {
+      FS = await import("expo-file-system/legacy");
+    } catch {
+      // Módulo no disponible (p. ej. entorno de tests): sin persistencia,
+      // pero no es corrupción. Operar solo en memoria, sano.
+      this.revokedPksLoaded = true;
+      this.revocationStoreHealthy = true;
+      return;
+    }
+    // Verificar que el módulo es funcional (documentDirectory debe existir).
+    if (!FS.documentDirectory) {
+      this.revokedPksLoaded = true;
+      this.revocationStoreHealthy = true;
+      return;
+    }
+    let fileExists = false;
+    try {
       const path = `${FS.documentDirectory}revoked-peers.json`;
       const info = await FS.getInfoAsync(path);
-      if (info.exists) {
-        const raw = await FS.readAsStringAsync(path);
-        const arr = JSON.parse(raw);
-        if (Array.isArray(arr)) {
-          for (const pk of arr) {
-            if (typeof pk === "string") this.revokedPks.add(pk.toLowerCase());
-          }
-        }
-      }
+      fileExists = info.exists === true;
     } catch {
-      // Si falla la carga, empezar vacío (fail-open en revocación es
-      // aceptable: el usuario puede revocar de nuevo).
+      // No se puede verificar existencia: asumir instalación nueva.
+      // No bloquear por un error de infraestructura.
+      this.revokedPksLoaded = true;
+      this.revocationStoreHealthy = true;
+      return;
     }
-    this.revokedPksLoaded = true;
+    if (!fileExists) {
+      // Instalación nueva o nunca se revocó a nadie: lista vacía es correcta.
+      this.revokedPksLoaded = true;
+      this.revocationStoreHealthy = true;
+      return;
+    }
+    // El archivo existe: debe ser legible y válido. Solo aquí el fallo
+    // implica corrupción (fail-closed).
+    try {
+      const path = `${FS.documentDirectory}revoked-peers.json`;
+      const raw = await FS.readAsStringAsync(path);
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) {
+        throw new Error("revoked-peers.json: estructura inválida (no es array)");
+      }
+      for (const pk of arr) {
+        if (typeof pk === "string") this.revokedPks.add(pk.toLowerCase());
+      }
+      this.revokedPksLoaded = true;
+      this.revocationStoreHealthy = true;
+    } catch {
+      // Archivo corrupto o ilegible: FAIL-CLOSED.
+      this.revokedPksLoaded = true;
+      this.revocationStoreHealthy = false;
+    }
   }
 
   /**
-   * FIX 2026-10-09 (CR-4): guarda la lista de revocados en disco.
+   * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): promesa en curso de guardado,
+   * para serializar escrituras concurrentes y evitar que dos saveRevokedPks
+   * interfieran via el archivo temporal compartido.
    */
-  private async saveRevokedPks(): Promise<void> {
+  private saveRevokedPksPromise: Promise<boolean> | null = null;
+
+  /**
+   * FIX 2026-10-09 (CR-4): guarda la lista de revocados en disco.
+   *
+   * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): escritura atómica
+   * (temp + rename) para que una escritura interrumpida no destruya el
+   * estado válido anterior. Retorna true si persistió, false si falló.
+   * Nunca lanza: el llamante decide cómo reportar el fallo.
+   * Las escrituras concurrentes se serializan para evitar carreras en el
+   * archivo temporal.
+   */
+  private async saveRevokedPks(): Promise<boolean> {
+    if (this.saveRevokedPksPromise) {
+      await this.saveRevokedPksPromise;
+    }
+    this.saveRevokedPksPromise = this.doSaveRevokedPks();
     try {
-      const FS = await import("expo-file-system/legacy");
-      const path = `${FS.documentDirectory}revoked-peers.json`;
-      await FS.writeAsStringAsync(path, JSON.stringify([...this.revokedPks]));
+      return await this.saveRevokedPksPromise;
+    } finally {
+      this.saveRevokedPksPromise = null;
+    }
+  }
+
+  private async doSaveRevokedPks(): Promise<boolean> {
+    let FS: typeof import("expo-file-system/legacy") | null = null;
+    try {
+      FS = await import("expo-file-system/legacy");
     } catch {
-      // Si falla el guardado, la revocación sigue en memoria para esta sesión.
+      // Sin módulo FS: no hay persistencia posible, pero no es un fallo
+      // de escritura. Retornar true para no bloquear revocación en memoria
+      // en entornos sin filesystem (tests).
+      return true;
+    }
+    try {
+      const dir = FS.documentDirectory;
+      const path = `${dir}revoked-peers.json`;
+      const tmpPath = `${dir}revoked-peers.json.tmp`;
+      const payload = JSON.stringify([...this.revokedPks]);
+      // 1. Escribir a archivo temporal.
+      await FS.writeAsStringAsync(tmpPath, payload);
+      // 2. Verificar lo escrito (detectar escritura parcial).
+      const verify = await FS.readAsStringAsync(tmpPath);
+      if (verify !== payload) {
+        throw new Error("verificación de escritura falló");
+      }
+      // 3. Rename atómico: el archivo real solo se reemplaza si el tmp está completo.
+      await FS.moveAsync({ from: tmpPath, to: path });
+      return true;
+    } catch {
+      // Si falla el guardado, la revocación sigue en memoria para esta sesión,
+      // pero el llamante debe reportar el fallo (no éxito silencioso).
+      return false;
+    }
+  }
+
+  /**
+   * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): estado de salud del
+   * almacenamiento de revocaciones. La UI puede consultarlo para mostrar
+   * advertencia y ofrecer recuperación.
+   */
+  getRevocationStoreStatus(): {
+    loaded: boolean;
+    healthy: boolean;
+    revokedCount: number;
+  } {
+    return {
+      loaded: this.revokedPksLoaded,
+      healthy: this.revocationStoreHealthy,
+      revokedCount: this.revokedPks.size,
+    };
+  }
+
+  /**
+   * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): recuperación explícita
+   * cuando el almacenamiento está corrupto.
+   *
+   * Elimina el archivo corrupto y reinicia con lista vacía. Requiere
+   * confirmación explícita del propietario (la UI debe pedirla): esto
+   * NO restablece confianza automáticamente, solo permite que el
+   * transporte vuelva a operar; el usuario debe revocar de nuevo a
+   * quienes corresponda.
+   *
+   * Retorna true si la recuperación tuvo éxito.
+   */
+  async resetRevocationStore(): Promise<boolean> {
+    let FS: typeof import("expo-file-system/legacy") | null = null;
+    try {
+      FS = await import("expo-file-system/legacy");
+    } catch {
+      // Sin módulo FS: solo limpiar memoria.
+      this.revokedPks.clear();
+      this.revokedPksLoaded = true;
+      this.revocationStoreHealthy = true;
+      return true;
+    }
+    try {
+      const dir = FS.documentDirectory;
+      const path = `${dir}revoked-peers.json`;
+      const tmpPath = `${dir}revoked-peers.json.tmp`;
+      await FS.deleteAsync(path, { idempotent: true });
+      await FS.deleteAsync(tmpPath, { idempotent: true });
+      this.revokedPks.clear();
+      this.revokedPksLoaded = true;
+      this.revocationStoreHealthy = true;
+      return true;
+    } catch {
+      return false;
     }
   }
   // FIX 2026-10-09 (BlueLib): ReconnectManager con estado. El retry antes se
@@ -847,13 +1020,26 @@ export class NidoBluetoothTransport implements P2PTransport {
    * FIX 2026-10-09: revoca un contacto. Desconecta si está conectado,
    * bloquea reconexiones futuras y limpia timers. El desbloqueo requiere
    * re-pair explícito (unrevokePeer).
+   *
+   * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): si la persistencia falla,
+   * lanza un Error para que la UI NO reporte éxito silencioso. La revocación
+   * queda activa en memoria para esta sesión (el peer sigue bloqueado ahora),
+   * pero el llamante debe informar al usuario que no sobrevivirá reinicios.
    */
   async revokePeer(peerPkHex: string): Promise<void> {
     const pkLower = peerPkHex.toLowerCase();
     this.revokedPks.add(pkLower);
-    // FIX 2026-10-09 (CR-4): persistir.
-    await this.saveRevokedPks();
+    // FIX 2026-10-09 (CR-4/SEC): persistir; fallar visiblemente si no se puede.
+    const persisted = await this.saveRevokedPks();
+    // Desconectar siempre, incluso si la persistencia falló: el bloqueo
+    // en memoria protege esta sesión.
     await this.disconnect(peerPkHex);
+    if (!persisted) {
+      throw new Error(
+        "Revocación aplicada en esta sesión, pero NO se pudo guardar de forma persistente. " +
+          "Reiniciar el dispositivo podría permitir reconexión. Intente de nuevo."
+      );
+    }
   }
 
   /**
@@ -863,20 +1049,39 @@ export class NidoBluetoothTransport implements P2PTransport {
    * No reconecta automáticamente; el usuario debe iniciar el pairing de nuevo.
    * La persistencia se actualiza inmediatamente para que el desbloqueo
    * sobreviva reinicios.
+   *
+   * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): si la persistencia falla,
+   * lanza para no reportar éxito silencioso.
    */
   async unrevokePeer(peerPkHex: string): Promise<void> {
     this.revokedPks.delete(peerPkHex.toLowerCase());
-    // FIX 2026-10-09 (CR-4): persistir.
-    await this.saveRevokedPks();
+    // FIX 2026-10-09 (CR-4/SEC): persistir; fallar visiblemente si no se puede.
+    const persisted = await this.saveRevokedPks();
+    if (!persisted) {
+      throw new Error(
+        "No se pudo guardar el levantamiento de revocación. Intente de nuevo."
+      );
+    }
   }
 
   /**
    * FIX 2026-10-09: verifica si un pk está revocado.
    * FIX 2026-10-09 (CR-4): carga perezosa desde disco si aún no se hizo.
+   *
+   * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): si el almacenamiento está
+   * corrupto (no-saludable), retorna true (fail-closed: tratar como bloqueado)
+   * para que ninguna ruta que consulte isRevoked permita el acceso.
+   * La decisión de bloquear TODAS las conexiones nuevas se toma en
+   * establishRoute; aquí se garantiza que un peer individual nunca se
+   * considere "no revocado" cuando el estado es incierto.
    */
   async isRevoked(peerPkHex: string): Promise<boolean> {
     if (!this.revokedPksLoaded) {
       await this.loadRevokedPks();
+    }
+    if (!this.revocationStoreHealthy) {
+      // Estado incierto: fail-closed.
+      return true;
     }
     return this.revokedPks.has(peerPkHex.toLowerCase());
   }
@@ -1248,8 +1453,24 @@ export class NidoBluetoothTransport implements P2PTransport {
     const pkLower = pend.peerPk!;
     // FIX 2026-10-09: si el peer está revocado, NO establecer la ruta.
     // FIX 2026-10-09 (CR-4): asegurar que la lista está cargada desde disco.
+    // FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): si el almacenamiento de
+    // revocaciones está corrupto, BLOQUEAR TODAS las conexiones nuevas
+    // (fail-closed). No se puede distinguir un peer legítimo de uno revocado
+    // con el estado corrupto, así que ninguna conexión nueva procede hasta
+    // recuperación explícita via resetRevocationStore().
     if (!this.revokedPksLoaded) {
       await this.loadRevokedPks();
+    }
+    if (!this.revocationStoreHealthy) {
+      this.rejectPending(
+        pend,
+        new Error(
+          "Almacenamiento de revocaciones corrupto: conexiones P2P bloqueadas por seguridad. " +
+            "Use la opción de recuperación en la configuración."
+        )
+      );
+      await this.bt().disconnect(mac).catch(() => {});
+      return;
     }
     if (this.revokedPks.has(pkLower)) {
       this.rejectPending(pend, new Error("Contacto revocado."));
