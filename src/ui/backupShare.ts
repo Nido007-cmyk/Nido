@@ -30,6 +30,14 @@ export interface CreatedBackup {
 
 /** Crea el backup y devuelve ruta + clave. */
 export async function createBackupFile(): Promise<CreatedBackup> {
+  // FIX 2026-10-09 (NEW-CR-2): biométrico obligatorio antes de exponer la DEK.
+  // Antes se mostraba sin autenticación en el flujo real.
+  const { requireUnlock } = await import("../security/biometricGate");
+  try {
+    await requireUnlock("Crear backup");
+  } catch {
+    throw new Error("Autenticación cancelada");
+  }
   const timestamp = new Date()
     .toISOString()
     .replace(/[:.]/g, "-")

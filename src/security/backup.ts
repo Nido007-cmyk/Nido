@@ -158,6 +158,49 @@ export async function exportDatabaseKey(): Promise<string> {
 }
 
 /**
+ * FIX 2026-10-09 (NEW-CR-1, NEW-H-1, NEW-H-2): valida un bundle portable.
+ * - NEW-H-1: límite de 500MB para evitar OOM
+ * - NEW-H-2: valida la forma del manifest (no solo JSON.parse)
+ */
+async function validateBundle(bundleUri: string): Promise<{ valid: boolean; sizeBytes?: number; reason?: string }> {
+  const info = await FileSystem.getInfoAsync(bundleUri);
+  if (!info.exists) {
+    return { valid: false, reason: "El archivo no existe." };
+  }
+  const size = (info as any).size ?? 0;
+  if (size > 500 * 1024 * 1024) {
+    return { valid: false, reason: "El bundle es demasiado grande." };
+  }
+  if (size < 100) {
+    return { valid: false, reason: "El bundle es demasiado pequeño." };
+  }
+
+  let bundle: any;
+  try {
+    const raw = await FileSystem.readAsStringAsync(bundleUri);
+    bundle = JSON.parse(raw);
+  } catch {
+    return { valid: false, reason: "El bundle no es JSON válido." };
+  }
+
+  if (!bundle || typeof bundle !== "object" || bundle.format !== "nidobackup") {
+    return { valid: false, reason: "Formato de bundle no reconocido." };
+  }
+  if (!bundle.manifest || typeof bundle.manifest !== "object") {
+    return { valid: false, reason: "El bundle no tiene manifest válido." };
+  }
+  if (typeof bundle.db !== "string" || bundle.db.length < 100) {
+    return { valid: false, reason: "El bundle no tiene base de datos válida." };
+  }
+  const m = bundle.manifest;
+  if (typeof m.sha256 !== "string" || typeof m.dekFingerprint !== "string") {
+    return { valid: false, reason: "El manifest está incompleto (falta SHA o fingerprint)." };
+  }
+
+  return { valid: true, sizeBytes: size };
+}
+
+/**
  * Valida que un archivo sea un backup válido:
  * - Existe y tiene tamaño mínimo.
  * - Tiene el magic header de SQLite (no es un archivo de texto aleatorio).
@@ -167,6 +210,11 @@ export async function exportDatabaseKey(): Promise<string> {
  */
 export async function validateBackup(uri: string): Promise<{ valid: boolean; sizeBytes?: number; reason?: string }> {
   try {
+    // FIX 2026-10-09 (NEW-CR-1): si es un bundle, validar el contenido extraído.
+    // Antes rechazaba el bundle por no tener header SQLite.
+    if (uri.endsWith(".nidobackup.json")) {
+      return await validateBundle(uri);
+    }
     const info = await FileSystem.getInfoAsync(uri);
     if (!info.exists) {
       return { valid: false, reason: "El archivo no existe." };
