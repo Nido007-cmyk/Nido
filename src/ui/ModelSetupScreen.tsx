@@ -74,6 +74,8 @@ export function ModelSetupScreen(props: Props) {
   const [resetting, setResetting] = useState(false);
   const [, forceRender] = useState(0);
   const [hapticsEnabled, setHapticsEnabledState] = useState(true);
+  // TESTFIX-2026-10-08 (Fix 7): toggle de tareas delegadas (default OFF).
+  const [delegationEnabled, setDelegationEnabledState] = useState(false);
 
   useEffect(() => subscribeDownloads(() => forceRender((n) => n + 1)), []);
 
@@ -102,6 +104,24 @@ export function ModelSetupScreen(props: Props) {
 
   useEffect(() => {
     getHapticsEnabled().then(setHapticsEnabledState);
+  }, []);
+
+  // TESTFIX-2026-10-08 (Fix 7): cargar el flag persistido.
+  useEffect(() => {
+    import("../config/featureFlags").then(({ isFeatureEnabled }) =>
+      setDelegationEnabledState(isFeatureEnabled("delegation.enabled"))
+    ).catch(() => {});
+  }, []);
+
+  const toggleDelegation = useCallback(async (value: boolean) => {
+    setDelegationEnabledState(value);
+    try {
+      const { setFeatureEnabled } = await import("../config/featureFlags");
+      await setFeatureEnabled("delegation.enabled", value);
+    } catch {
+      // Si no se pudo persistir, revertir el switch.
+      setDelegationEnabledState(!value);
+    }
   }, []);
 
   const toggleHaptics = useCallback(async (value: boolean) => {
@@ -292,6 +312,21 @@ export function ModelSetupScreen(props: Props) {
 
         <AccordionSection icon="activity" title={t("modelSetupScreen.sections.telemetry")}>
           <UsageStatsContent />
+        </AccordionSection>
+
+        {/* TESTFIX-2026-10-08 (Fix 7): tareas delegadas, default OFF. */}
+        <AccordionSection icon="activity" title={t("settings.delegationTitle")}>
+          <View style={styles.hapticRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.hapticRowLabel}>{t("settings.delegationTitle")}</Text>
+              <Text style={styles.hapticRowValue}>{t("settings.delegationDesc")}</Text>
+            </View>
+            <Switch
+              value={delegationEnabled}
+              onValueChange={toggleDelegation}
+              trackColor={{ false: "#333", true: "#3a7a4a" }}
+            />
+          </View>
         </AccordionSection>
 
         <AccordionSection icon="appearance" title={t("modelSetupScreen.sections.displayTheme")}>

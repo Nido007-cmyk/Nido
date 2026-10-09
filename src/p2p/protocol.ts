@@ -70,7 +70,8 @@ export type P2PMessageType =
   | "session_confirm"
   | "delivery_ack"
   | "negotiation"
-  | "pack_share";
+  | "pack_share"
+  | "delegation";
 
 export interface P2PEnvelope {
   v: number;
@@ -404,7 +405,7 @@ export class FrameReassembler {
 function validateEnvelope(env: P2PEnvelope): void {
   if (typeof env !== "object" || env === null) throw new Error("Envelope inválido.");
   if (env.v !== PROTOCOL_VERSION) throw new Error("Versión de protocolo no soportada.");
-  const types: P2PMessageType[] = ["chat", "agent_task", "agent_result", "receipt", "session_confirm", "delivery_ack", "negotiation", "pack_share"];
+  const types: P2PMessageType[] = ["chat", "agent_task", "agent_result", "receipt", "session_confirm", "delivery_ack", "negotiation", "pack_share", "delegation"];
   if (!types.includes(env.type)) throw new Error("Tipo de mensaje desconocido.");
   if (typeof env.id !== "string" || !env.id) throw new Error("Falta id.");
   if (typeof env.from !== "string" || typeof env.to !== "string") throw new Error("Falta from/to.");

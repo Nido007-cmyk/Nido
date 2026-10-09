@@ -850,13 +850,27 @@
     "fromPeer": "From {{name}} ({{pk}})",
     "untrustedLabel": "Their message (untrusted):",
     "scopesLabel": "It will be allowed to:",
-    "allowOnce": "Allow once",
     "documentLabel": "Attached document (untrusted):",
     "documentMeta": "{{bytes}} bytes · SHA-512 {{hash}}",
+    "allowOnce": "Allow once",
+    "deny": "Deny",
     "scope": {
-      "task:answer": "Answer a question using on-device knowledge",
-      "task:summarize": "Summarize an attached document",
-      "task:remember": "Save one fact in an isolated peer area"
-    }
+      "task:answer": "Answer a question",
+      "task:summarize": "Summarize a document",
+      "task:remember": "Save a fact (isolated area)"
+    },
+    "requestTask": "Request task",
+    "taskDescriptionLabel": "Describe the task:",
+    "taskDescriptionPlaceholder": "What should the other NIDO do?",
+    "taskScopeLabel": "Permission:",
+    "taskSend": "Send request",
+    "taskCancel": "Cancel",
+    "taskSent": "Request sent. Wait for the result.",
+    "taskSendFailed": "Could not send: {{reason}}",
+    "taskDisabled": "Enable delegated tasks in Settings to use this feature."
+  },
+  "settings": {
+    "delegationTitle": "Delegated tasks (experimental)",
+    "delegationDesc": "A paired NIDO can ask you to run tasks. Every task requires your explicit approval."
   }
 }

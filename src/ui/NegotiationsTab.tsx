@@ -20,11 +20,14 @@ import type { Colors } from "./theme/colors";
 import { calmSpacing } from "./theme/calm";
 import { EmptyState } from "./components/calm/EmptyState";
 import { NegotiationCard } from "./components/calm/NegotiationCard";
+import { TaskApprovalCard } from "./components/calm/TaskApprovalCard";
 import {
   negotiationService,
   type NegotiationSession,
   type NegotiationEvent,
 } from "../p2p/negotiationService";
+import type { ShownRequest } from "../agent/delegation/approvalGate";
+import type { TaskScope } from "../p2p/taskProtocol";
 
 interface P2PContact {
   pkHex: string;
@@ -44,8 +47,20 @@ export function NegotiationsTab() {
   const [contacts, setContacts] = useState<P2PContact[]>([]);
   const [selectedPk, setSelectedPk] = useState<string>("");
   const [description, setDescription] = useState("");
+  // TESTFIX-2026-10-08 (Fix 7): tareas delegadas.
   const [proposeBusy, setProposeBusy] = useState(false);
   const [proposeError, setProposeError] = useState<string | null>(null);
+  const [taskApprovals, setTaskApprovals] = useState<
+    { requestId: string; shown: ShownRequest; peerName: string }[]
+  >([]);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [taskPeerPk, setTaskPeerPk] = useState("");
+  const [taskNegotiationId, setTaskNegotiationId] = useState("");
+  const [taskDescription, setTaskDescription] = useState("");
+  const [taskScope, setTaskScope] = useState<TaskScope>("task:answer");
+  const [taskBusy, setTaskBusy] = useState(false);
+  const [taskError, setTaskError] = useState<string | null>(null);
+  const [taskResult, setTaskResult] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     setSessions(negotiationService.listSessions());
@@ -78,9 +93,38 @@ export function NegotiationsTab() {
       negotiationService.pruneTerminal();
       refresh();
     }, 60000);
+    // TESTFIX-2026-10-08 (Fix 7): suscripción a tareas delegadas.
+    let unsubDelegation: (() => void) | undefined;
+    (async () => {
+      try {
+        const { delegationService } = await import("../agent/delegation/delegationService");
+        const { isFeatureEnabled } = await import("../config/featureFlags");
+        if (!isFeatureEnabled("delegation.enabled")) return;
+        unsubDelegation = delegationService.subscribe((event) => {
+          if (event.type === "approval-pending") {
+            setTaskApprovals((prev) =>
+              prev.some((a) => a.requestId === event.requestId)
+                ? prev
+                : [...prev, { requestId: event.requestId, shown: event.shown, peerName: event.peerName }]
+            );
+          } else if (event.type === "approval-resolved") {
+            setTaskApprovals((prev) => prev.filter((a) => a.requestId !== event.requestId));
+          } else if (event.type === "task-result") {
+            setTaskResult(
+              event.ok
+                ? String(event.result ?? "")
+                : `Error: ${event.error?.code ?? "unknown"}`
+            );
+          }
+        });
+      } catch {
+        /* delegación no disponible */
+      }
+    })();
     return () => {
       unsubscribe();
       clearInterval(interval);
+      unsubDelegation?.();
     };
   }, [refresh]);
 
@@ -187,6 +231,56 @@ export function NegotiationsTab() {
     }
   }, [selectedPk, description, refresh]);
 
+  // TESTFIX-2026-10-08 (Fix 7): handlers de tareas delegadas.
+  const openTaskModal = useCallback((peerPkHex: string, negotiationId: string) => {
+    setTaskPeerPk(peerPkHex);
+    setTaskNegotiationId(negotiationId);
+    setTaskDescription("");
+    setTaskScope("task:answer");
+    setTaskError(null);
+    setTaskResult(null);
+    setShowTaskModal(true);
+  }, []);
+
+  const handleRequestTask = useCallback(async () => {
+    if (!taskDescription.trim()) {
+      setTaskError(t("tasks.taskDescriptionLabel"));
+      return;
+    }
+    setTaskBusy(true);
+    setTaskError(null);
+    try {
+      const { delegationService } = await import("../agent/delegation/delegationService");
+      const result = await delegationService.requestTask({
+        peerPkHex: taskPeerPk,
+        negotiationId: taskNegotiationId,
+        description: taskDescription.trim(),
+        scope: taskScope,
+      });
+      if (!result.ok) {
+        setTaskError(
+          result.reason === "disabled"
+            ? t("tasks.taskDisabled")
+            : t("tasks.taskSendFailed", { reason: result.reason })
+        );
+        return;
+      }
+      setTaskResult(t("tasks.taskSent"));
+    } finally {
+      setTaskBusy(false);
+    }
+  }, [taskPeerPk, taskNegotiationId, taskDescription, taskScope, t]);
+
+  const handleTaskAllow = useCallback(async (requestId: string) => {
+    const { delegationService } = await import("../agent/delegation/delegationService");
+    await delegationService.approveTask(requestId);
+  }, []);
+
+  const handleTaskDeny = useCallback(async (requestId: string) => {
+    const { delegationService } = await import("../agent/delegation/delegationService");
+    await delegationService.denyTask(requestId);
+  }, []);
+
   if (activeSessions.length === 0 && acceptedSessions.length === 0 && !showPropose) {
     return (
       <View style={styles.container}>
@@ -272,6 +366,15 @@ export function NegotiationsTab() {
                   <Text style={styles.activeDate}>
                     {t("negotiations.acceptedOn", { date: dateStr })}
                   </Text>
+                  {/* TESTFIX-2026-10-08 (Fix 7): pedir tarea delegada. */}
+                  <TouchableOpacity
+                    style={styles.taskRequestButton}
+                    onPress={() => openTaskModal(session.peerPkHex, session.negotiationId)}
+                  >
+                    <Text style={styles.taskRequestButtonText}>
+                      {t("tasks.requestTask")}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               );
             })}
@@ -288,6 +391,28 @@ export function NegotiationsTab() {
             </Text>
           </View>
         ))}
+      {/* TESTFIX-2026-10-08 (Fix 7): aprobaciones de tareas pendientes. */}
+      {taskApprovals.map((a) => (
+        <TaskApprovalCard
+          key={a.requestId}
+          request={{
+            taskId: a.shown.taskId,
+            peerName: a.peerName,
+            peerPkShort: a.shown.peerPkShort,
+            description: a.shown.description,
+            scopes: a.shown.scopes,
+            expiresAt: a.shown.expiresAt,
+            document: a.shown.document,
+          }}
+          onAllow={() => handleTaskAllow(a.requestId)}
+          onDeny={() => handleTaskDeny(a.requestId)}
+        />
+      ))}
+      {taskResult && (
+        <View style={styles.taskResultCard}>
+          <Text style={styles.taskResultText}>{taskResult}</Text>
+        </View>
+      )}
       <TouchableOpacity style={styles.proposeButton} onPress={openPropose}>
         <Text style={styles.proposeButtonText}>{t("negotiations.proposeButton")}</Text>
       </TouchableOpacity>
@@ -332,6 +457,56 @@ export function NegotiationsTab() {
               >
                 <Text style={styles.proposeButtonText}>
                   {proposeBusy ? "Enviando..." : "Enviar"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* TESTFIX-2026-10-08 (Fix 7): modal para pedir tarea delegada. */}
+      <Modal visible={showTaskModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{t("tasks.requestTask")}</Text>
+            <Text style={styles.modalLabel}>{t("tasks.taskDescriptionLabel")}</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={taskDescription}
+              onChangeText={setTaskDescription}
+              placeholder={t("tasks.taskDescriptionPlaceholder")}
+              multiline
+            />
+            <Text style={styles.modalLabel}>{t("tasks.taskScopeLabel")}</Text>
+            {(["task:answer", "task:summarize", "task:remember"] as TaskScope[]).map(
+              (s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={[
+                    styles.contactOption,
+                    taskScope === s && styles.contactSelected,
+                  ]}
+                  onPress={() => setTaskScope(s)}
+                >
+                  <Text style={styles.contactName}>{t(`tasks.scope.${s}`, s)}</Text>
+                </TouchableOpacity>
+              )
+            )}
+            {taskError && <Text style={styles.modalError}>{taskError}</Text>}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setShowTaskModal(false)}
+              >
+                <Text>{t("tasks.taskCancel")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalSend}
+                onPress={handleRequestTask}
+                disabled={taskBusy}
+              >
+                <Text style={styles.proposeButtonText}>
+                  {taskBusy ? t("negotiations.outgoingSending") : t("tasks.taskSend")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -415,6 +590,30 @@ const getStyles = (colors: Colors) =>
     activeDate: {
       color: colors.text.muted,
       fontSize: 12,
+    },
+    // TESTFIX-2026-10-08 (Fix 7): estilos de tareas delegadas.
+    taskRequestButton: {
+      backgroundColor: "#4A6B4F",
+      borderRadius: 8,
+      padding: 10,
+      alignItems: "center",
+      marginTop: 8,
+    },
+    taskRequestButtonText: {
+      color: "#fff",
+      fontWeight: "600",
+      fontSize: 13,
+    },
+    taskResultCard: {
+      backgroundColor: colors.bg.cardElevated,
+      borderRadius: 8,
+      padding: calmSpacing.cozy,
+      borderLeftWidth: 3,
+      borderLeftColor: "#4A6B4F",
+    },
+    taskResultText: {
+      color: colors.text.secondary,
+      fontSize: 13,
     },
     proposeButton: {
       backgroundColor: "#4A6B4F",

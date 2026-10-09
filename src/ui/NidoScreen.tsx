@@ -245,6 +245,35 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       } catch {
         /* noop: isOutgoing degradado, sin cambio de seguridad */
       }
+      // TESTFIX-2026-10-08 (Fix 7): wiring de tareas delegadas.
+      // Todo gateado por el flag (default OFF): con el flag apagado,
+      // delegationService rechaza envíos y descarta mensajes entrantes.
+      try {
+        const { delegationService } = await import("../agent/delegation/delegationService");
+        const { loadFeatureFlags } = await import("../config/featureFlags");
+        await loadFeatureFlags();
+        delegationService.setSendFunction((peerPkHex, taskType, body) =>
+          m.sendDelegationMessage(peerPkHex, taskType, body as unknown as Record<string, unknown>)
+        );
+        // R5: liveness re-check — la negociación debe seguir ACCEPTED al aprobar.
+        delegationService.setNegotiationStateLookup(
+          (negotiationId) =>
+            negotiationService
+              .listSessions()
+              .find((s) => s.negotiationId === negotiationId)?.state
+        );
+        const { llamaEngine } = await import("../inference/LlamaEngine");
+        delegationService.setModelInvoke((prompt: string) =>
+          llamaEngine.generate({
+            prompt,
+            nPredict: 256,
+            samplingPreset: "factual",
+            telemetryContext: { taskType: "delegation" },
+          })
+        );
+      } catch {
+        /* noop: delegación no disponible, el resto del P2P no se afecta */
+      }
       negotiationService.setSendFunction(
         (peerPkHex, action, negotiationId, signed) =>
           m.sendNegotiationResponse(peerPkHex, action, negotiationId, signed)

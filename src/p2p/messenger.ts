@@ -1212,6 +1212,27 @@ export class NidoMessenger {
       await this.flushOutbox(key);
       return env;
     }
+    if (env.type === "delegation") {
+      // TESTFIX-2026-10-08 (Fix 7): routing de tareas delegadas.
+      // Doble gate: aquí y dentro de delegationService.handleTaskMessage.
+      // Con el flag OFF el mensaje se descarta en silencio y el resto
+      // del stack P2P nunca lo ve.
+      this.assertLive();
+      const { isFeatureEnabled } = await import("../config/featureFlags");
+      if (isFeatureEnabled("delegation.enabled")) {
+        const { delegationService } = await import("../agent/delegation/delegationService");
+        const payload = env.payload as { taskType?: unknown; body?: unknown };
+        if (typeof payload.taskType === "string") {
+          await delegationService.handleTaskMessage(
+            env.from,
+            payload.taskType as never,
+            payload.body
+          );
+        }
+      }
+      await this.flushOutbox(key);
+      return env;
+    }
     if (env.type === "negotiation") {
       // v2 (2026-10-05): routing real de negociación NIDO↔NIDO.
       // Antes processIncomingProposal() tenía cero callers; ahora el
@@ -1539,6 +1560,43 @@ export class NidoMessenger {
         this.myPk,
         key,
         { action, negotiationId, signed }
+      );
+      this.assertLive();
+      await this.transport.sendFrame(key, session.pack(envelope));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Envía un mensaje de tarea delegada (TASK_REQUEST/STATUS/RESULT/CANCEL/
+   * REJECT) al peer. Crea el envelope type="delegation" y lo envía por el
+   * transporte. TESTFIX-2026-10-08 (Fix 7).
+   * Retorna true si se envió, false si no hay sesión viva/transporte.
+   */
+  async sendDelegationMessage(
+    peerPkHex: string,
+    taskType: string,
+    body: Record<string, unknown>
+  ): Promise<boolean> {
+    this.assertLive();
+    if (!this.myPk) {
+      const identity = await getIdentity();
+      this.assertLive();
+      if (!identity) return false;
+      this.myPk = identity.publicKey;
+    }
+    const key = peerPkHex.toLowerCase();
+    const session = this.sessions.get(key);
+    if (!session || !session.isPeerLive || !this.transport.available) return false;
+    try {
+      const envelope = makeEnvelope(
+        "delegation",
+        newId(),
+        this.myPk,
+        key,
+        { taskType, body }
       );
       this.assertLive();
       await this.transport.sendFrame(key, session.pack(envelope));
