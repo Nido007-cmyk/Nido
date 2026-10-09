@@ -10,6 +10,10 @@ import { useTranslation } from "react-i18next";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { isVoiceInputAvailable } from "../voice/VoiceInput";
 import { getVoiceInputEnabled, setVoiceInputEnabled } from "../models/settings";
+import {
+  getReadAloudEnabled,
+  setReadAloudEnabled,
+} from "../models/settings";
 
 // Haptic feedback is an app-wide setting (src/services/haptics.ts), not
 // voice-specific — its toggle lives in the Display & Theme section now
@@ -19,15 +23,37 @@ export function VoiceSettings() {
   const { t } = useTranslation();
   const [voiceAvailable, setVoiceAvailable] = useState<boolean | null>(null);
   const [enabled, setEnabled] = useState(true);
+  // FIX 2026-10-09 (UI-AUDIT): exponer el switch de lectura en voz alta.
+  // El backend (src/voice/tts.ts, expo-speech offline) y los 3 call sites
+  // en ChatScreen ya existen; solo faltaba la superficie.
+  const [readAloud, setReadAloud] = useState(false);
 
   useEffect(() => {
     isVoiceInputAvailable().then(setVoiceAvailable).catch(() => setVoiceAvailable(false));
     getVoiceInputEnabled().then(setEnabled);
+    getReadAloudEnabled().then(setReadAloud);
   }, []);
 
   const toggle = async (value: boolean) => {
+    const prev = enabled;
     setEnabled(value);
-    await setVoiceInputEnabled(value);
+    try {
+      await setVoiceInputEnabled(value);
+    } catch {
+      // FIX 2026-10-09 (UI-AUDIT/F4): revertir si no se pudo persistir.
+      setEnabled(prev);
+    }
+  };
+
+  const toggleReadAloud = async (value: boolean) => {
+    // Optimista con reversión: si la persistencia falla, restaurar visual.
+    const prev = readAloud;
+    setReadAloud(value);
+    try {
+      await setReadAloudEnabled(value);
+    } catch {
+      setReadAloud(prev);
+    }
   };
 
   return (
@@ -60,6 +86,20 @@ export function VoiceSettings() {
       {voiceAvailable === false && (
         <Text style={styles.note}>{t("voiceSettings.unavailableNote")}</Text>
       )}
+
+      {/* FIX 2026-10-09 (UI-AUDIT): lectura en voz alta (TTS offline). */}
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.rowLabel}>{t("voiceSettings.readAloudLabel")}</Text>
+          <Text style={styles.rowValue}>{t("voiceSettings.readAloudValue")}</Text>
+        </View>
+        <Switch
+          value={readAloud}
+          onValueChange={toggleReadAloud}
+          trackColor={{ false: "#333", true: "#3a7a4a" }}
+          accessibilityLabel={t("voiceSettings.readAloudLabel")}
+        />
+      </View>
     </View>
   );
 }
