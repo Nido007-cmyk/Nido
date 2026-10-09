@@ -447,14 +447,27 @@ export class DelegationService {
     // F-DELEG-3: registrar para poder abortar en TASK_CANCEL.
     this.runningExecutors.set(ctx.taskId, executor);
     let result;
+    let wasAborted = false;
     try {
       result = await executor.execute({
         description: approved.description,
         documentBase64: approved.documentBase64,
         resultSchema: approved.resultSchema,
       });
+    } catch (e) {
+      // FIX 2026-10-09 (H-2): si fue abortado por TASK_CANCEL, no enviar resultado.
+      if (e instanceof Error && e.message.includes("abort")) {
+        wasAborted = true;
+        result = { ok: false, error: { code: "aborted", message: "Cancelado por el peer" } };
+      } else {
+        throw e;
+      }
     } finally {
       this.runningExecutors.delete(ctx.taskId);
+    }
+    // FIX 2026-10-09 (H-2): no enviar TASK_RESULT si fue cancelado.
+    if (wasAborted) {
+      return false;
     }
     await this.audit({
       taskId: ctx.taskId,

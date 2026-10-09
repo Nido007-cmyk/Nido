@@ -42,11 +42,13 @@ export interface RekeyResult {
  * @param dbPath Ruta a la base de datos
  * @param openDb Función que abre la DB con un DEK hex (inyectable para tests)
  * @param storeDek Función que guarda el DEK en Keystore (inyectable para tests)
+ * @param stagingPath Ruta del archivo de staging (inyectable para tests)
  */
 export async function rotateDatabaseKey(
   dbPath: string,
   openDb: (path: string, dekHex: string) => Promise<{ exec: (sql: string) => Promise<void>; close: () => Promise<void> }>,
-  storeDek: (dekHex: string) => Promise<void>
+  storeDek: (dekHex: string) => Promise<void>,
+  stagingPath?: string
 ): Promise<RekeyResult> {
   // 1. Biométrico obligatorio (lanza si se cancela)
   try {
@@ -67,42 +69,80 @@ export async function rotateDatabaseKey(
   const newDekHex = Array.from(newDekBytes)
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
-  // Borrar bytes originales de memoria
   newDekBytes.fill(0);
+
+  // FIX 2026-10-09 (CR-3): staging antes del rekey. Si la app crashea entre
+  // el rekey y el keystore write, el staging permite recuperar.
+  const FS = await import("expo-file-system/legacy");
+  const staging = stagingPath ?? `${FS.documentDirectory}rekey-staging.json`;
+  try {
+    await FS.writeAsStringAsync(staging, JSON.stringify({
+      newDekHex,
+      dbPath,
+      at: Date.now(),
+    }));
+  } catch {
+    return { ok: false, error: "No se pudo crear el staging (fail-closed)" };
+  }
 
   let db: { exec: (sql: string) => Promise<void>; close: () => Promise<void> } | null = null;
   try {
     // 4. Abrir con DEK viejo y hacer rekey
     db = await openDb(dbPath, oldDekHex);
-    // SQLCipher: PRAGMA rekey es atómico
     await db.exec(`PRAGMA rekey = "x'${newDekHex}'";`);
 
     // 5. Guardar nuevo DEK en Keystore
     try {
       await storeDek(newDekHex);
     } catch (storeErr) {
-      // FAIL-CLOSED: revertir la DB a la clave vieja
       try {
         await db.exec(`PRAGMA rekey = "x'${oldDekHex}'";`);
-      } catch {
-        // Si el revert falla, estamos en estado inconsistente.
-        // No hay nada más que hacer aquí; el usuario debe restaurar de backup.
-      }
+      } catch { /* noop */ }
       return { ok: false, error: "No se pudo guardar la nueva clave; se revirtió el cambio" };
     }
+
+    // 6. Éxito: borrar staging
+    try {
+      await FS.deleteAsync(staging, { idempotent: true });
+    } catch { /* noop */ }
 
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Error desconocido" };
   } finally {
     if (db) {
-      try {
-        await db.close();
-      } catch {
-        // noop
-      }
+      try { await db.close(); } catch { /* noop */ }
     }
-    // Borrar DEKs de memoria (los strings son inmutables en JS, pero
-    // al menos no los retenemos en variables accesibles)
+  }
+}
+
+/**
+ * FIX 2026-10-09 (CR-3): verifica si hay un staging pendiente de una
+ * rotación interrumpida por crash. Si existe, intenta completar la
+ * recuperación guardando el DEK del staging en el keystore.
+ * Debe llamarse al arranque de la app.
+ */
+export async function checkStaleRekeyStaging(
+  stagingPath: string,
+  storeDek: (dekHex: string) => Promise<void>
+): Promise<{ recovered: boolean; error?: string }> {
+  try {
+    const FS = await import("expo-file-system/legacy");
+    const info = await FS.getInfoAsync(stagingPath);
+    if (!info.exists) return { recovered: false };
+    
+    const raw = await FS.readAsStringAsync(stagingPath);
+    const { newDekHex } = JSON.parse(raw);
+    if (!newDekHex || typeof newDekHex !== "string") {
+      await FS.deleteAsync(stagingPath, { idempotent: true }).catch(() => {});
+      return { recovered: false, error: "Staging corrupto, eliminado" };
+    }
+    
+    // Intentar guardar el DEK del staging en el keystore
+    await storeDek(newDekHex);
+    await FS.deleteAsync(stagingPath, { idempotent: true }).catch(() => {});
+    return { recovered: true };
+  } catch (e) {
+    return { recovered: false, error: e instanceof Error ? e.message : "Error" };
   }
 }
