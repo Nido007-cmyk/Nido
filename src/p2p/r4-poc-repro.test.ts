@@ -153,7 +153,7 @@ describe("R4 REGRESIÓN (PoC A1): replay cross-context de HELLO genuino", () => 
     await t.startDiscovery(events);
 
     // 1) Sesión viva y legítima Alice↔Beto (dos fases).
-    emit("onConnected", { address: MAC, name: "Beto", incoming: true } as never);
+    emit("onConnected", { address: MAC, name: "Beto", incoming: false } as never);
     await tick();
     const legit = genuineCrossContextHello(); // Beto genuino también aquí
     emit("onFrame", { address: MAC, base64: legit.b64 } as never);
@@ -173,7 +173,7 @@ describe("R4 REGRESIÓN (PoC A1): replay cross-context de HELLO genuino", () => 
       Date.now() - 11_000,
     );
     const captured = genuineCrossContextHello();
-    emit("onConnected", { address: ATTACKER_MAC, name: "Atacante", incoming: true } as never);
+    emit("onConnected", { address: ATTACKER_MAC, name: "Atacante", incoming: false } as never);
     await tick();
     const sentBefore = sent.length;
     emit("onFrame", { address: ATTACKER_MAC, base64: captured.b64 } as never);
@@ -228,7 +228,7 @@ describe("R4 REGRESIÓN (PoC A1): replay cross-context de HELLO genuino", () => 
     });
 
     // Sesión legítima completa.
-    emit("onConnected", { address: MAC, name: "Beto", incoming: true } as never);
+    emit("onConnected", { address: MAC, name: "Beto", incoming: false } as never);
     await tick();
     const legit = genuineCrossContextHello();
     emit("onFrame", { address: MAC, base64: legit.b64 } as never);
@@ -247,7 +247,7 @@ describe("R4 REGRESIÓN (PoC A1): replay cross-context de HELLO genuino", () => 
       PEER_PK_HEX.toLowerCase(),
       Date.now() - 11_000,
     );
-    emit("onConnected", { address: ATTACKER_MAC, name: "Atacante", incoming: true } as never);
+    emit("onConnected", { address: ATTACKER_MAC, name: "Atacante", incoming: false } as never);
     await tick();
     const captured2 = genuineCrossContextHello();
     emit("onFrame", { address: ATTACKER_MAC, base64: captured2.b64 } as never);
