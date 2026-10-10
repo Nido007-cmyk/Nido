@@ -72,14 +72,3 @@ This is a code review by the project, not an external audit. Nothing here was ve
 | PRIVACY-2 No tracking | Met | No identifiers leave the device. |
 | PRIVACY-3 Transparency | Met | `PRIVACY.md`, in-app privacy summary, visible network log, in-app security check. |
 | PRIVACY-4 User control | Partial | Delete any chat, memory, document, contact, task or the action history; wipe everything; turn off any agent tool; undo notes and reminders the agent created. **Gap:** voice input uses the phone's speech service, which the app can ask to stay offline but cannot guarantee. |
-
-## Open gaps, in suggested order
-
-1. Flag clipboard copies of the encryption key and pairing code as sensitive and clear them after a timeout.
-2. Review the exported components and the 16 KB page-size support on a built APK.
-3. Move the custom system prompt out of plain `settings.json` into the encrypted database.
-4. Declare the minimum Android version explicitly.
-5. Pin GitHub Actions to commit hashes and publish an SBOM with each release.
-6. Add a linter and the component tests to CI.
-7. Offline-only voice recognition.
-8. Commission an external review of the P2P protocol before describing it as secure in public.
