@@ -1738,11 +1738,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     width: 280,
     height: 280,
     borderRadius: 140,
-    backgroundColor: "rgba(6, 182, 212, 0.12)",
+    backgroundColor: colors.cyan.bgSubtle,
     opacity: 0.6,
   },
   ambientGlowTopDeep: {
-    backgroundColor: "rgba(139, 92, 246, 0.25)",
+    backgroundColor: colors.bg.subtle,
     opacity: 0.85,
   },
   ambientGlowBottom: {
@@ -1752,11 +1752,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     width: 320,
     height: 320,
     borderRadius: 160,
-    backgroundColor: "rgba(16, 185, 129, 0.08)",
+    backgroundColor: colors.emerald.bgSubtle,
     opacity: 0.5,
   },
   ambientGlowBottomDeep: {
-    backgroundColor: "rgba(6, 182, 212, 0.18)",
+    backgroundColor: colors.cyan.bgSubtle,
     opacity: 0.7,
   },
   deepResearchBanner: {

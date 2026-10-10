@@ -114,7 +114,7 @@ function CodeBlockView({
         <Pressable accessibilityRole="button"
           style={[
             styles.copyBtn,
-            { backgroundColor: "rgba(255, 255, 255, 0.08)" },
+            { backgroundColor: colors.bg.subtle },
             copied && {
               backgroundColor: colors.emerald.bgSubtle,
               borderColor: colors.emerald.border,
@@ -168,7 +168,7 @@ export function MarkdownMessage({ content, isStreaming }: Props) {
               typography.mono.sm,
               styles.inlineCode,
               {
-                backgroundColor: "rgba(0, 0, 0, 0.45)",
+                backgroundColor: colors.bg.subtle,
                 color: colors.text.accentCyan,
                 borderColor: colors.cyan.border,
               },

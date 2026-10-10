@@ -125,7 +125,7 @@ export function PromptIdeasCarousel({ onUsePrompt, onDismiss }: Props) {
             <Switch
               value={dontShowAgain}
               onValueChange={setDontShowAgain}
-              trackColor={{ false: "#1E293B", true: colors.emerald[600] }}
+              trackColor={{ false: colors.border.elevated, true: colors.emerald[600] }}
               thumbColor={dontShowAgain ? colors.emerald[400] : colors.text.dim}
             />
             <Text style={styles.dismissLabel}>{t("promptIdeasCarousel.dontShowAgain")}</Text>
@@ -146,11 +146,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.8)",
+    backgroundColor: colors.bg.modalOverlay,
     justifyContent: "flex-end",
   },
   card: {
-    backgroundColor: colors.bg.cardElevated,
+    backgroundColor: colors.bg.card,
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,
     borderTopWidth: 1,
@@ -164,8 +164,6 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.subtle,
     paddingBottom: spacing.xs,
   },
   headerLeft: {
@@ -177,9 +175,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     fontSize: 14,
   },
   headerTitle: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     color: colors.text.heading,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   closeBtn: {
     padding: 4,
@@ -205,10 +203,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     paddingVertical: 2,
   },
   category: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     color: colors.text.accentCyan,
     fontWeight: "700",
-    fontSize: 9,
   },
   prompt: {
     ...typography.ui.bodyLg,
@@ -227,7 +224,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: colors.bg.subtle,
   },
   dotActive: {
     backgroundColor: colors.emerald[400],
@@ -241,23 +238,27 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   navBtn: {
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderRadius: radii.sm,
+    backgroundColor: colors.bg.subtle,
+    borderRadius: 9999,
+    minHeight: 44,
+    justifyContent: "center",
   },
   navBtnDisabled: {
     opacity: 0.25,
   },
   navBtnText: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     color: colors.text.accentCyan,
     fontWeight: "700",
   },
   useBtn: {
     flex: 1,
     backgroundColor: colors.emerald[600],
-    borderRadius: radii.md,
+    borderRadius: 9999,
     paddingVertical: 12,
     alignItems: "center",
+    minHeight: 44,
+    justifyContent: "center",
   },
   useBtnText: {
     ...typography.ui.titleSm,
@@ -284,8 +285,10 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     color: colors.text.dim,
   },
   dismissBtn: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     color: colors.crimson[400],
     fontWeight: "600",
+    minHeight: 44,
+    justifyContent: "center",
   },
 });

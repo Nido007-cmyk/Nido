@@ -530,14 +530,14 @@ const getStyles = (colors: Colors) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.bg.surface,
+      backgroundColor: colors.bg.black,
     },
     list: {
       padding: calmSpacing.comfortable,
       gap: calmSpacing.comfortable,
     },
     terminalCard: {
-      backgroundColor: colors.bg.cardElevated,
+      backgroundColor: colors.bg.card,
       borderRadius: 8,
       padding: calmSpacing.cozy,
       opacity: 0.7,
@@ -547,7 +547,7 @@ const getStyles = (colors: Colors) =>
       fontSize: 13,
     },
     outgoingCard: {
-      backgroundColor: colors.bg.cardElevated,
+      backgroundColor: colors.bg.card,
       borderRadius: 8,
       padding: calmSpacing.cozy,
       borderLeftWidth: 3,
@@ -579,7 +579,7 @@ const getStyles = (colors: Colors) =>
       fontSize: 14,
     },
     activeCard: {
-      backgroundColor: colors.bg.cardElevated,
+      backgroundColor: colors.bg.card,
       borderRadius: 8,
       padding: calmSpacing.cozy,
       borderLeftWidth: 3,
@@ -603,10 +603,12 @@ const getStyles = (colors: Colors) =>
     // TESTFIX-2026-10-08 (Fix 7): estilos de tareas delegadas.
     taskRequestButton: {
       backgroundColor: colors.emerald[500],
-      borderRadius: 8,
+      borderRadius: 9999,
       padding: 10,
       alignItems: "center",
       marginTop: 8,
+      minHeight: 44,
+      justifyContent: "center",
     },
     taskRequestButtonText: {
       color: colors.text.inverse,
@@ -614,7 +616,7 @@ const getStyles = (colors: Colors) =>
       fontSize: 13,
     },
     taskResultCard: {
-      backgroundColor: colors.bg.cardElevated,
+      backgroundColor: colors.bg.card,
       borderRadius: 8,
       padding: calmSpacing.cozy,
       borderLeftWidth: 3,
@@ -626,10 +628,12 @@ const getStyles = (colors: Colors) =>
     },
     proposeButton: {
       backgroundColor: colors.emerald[500],
-      borderRadius: 8,
+      borderRadius: 9999,
       padding: calmSpacing.cozy,
       alignItems: "center",
       marginTop: calmSpacing.comfortable,
+      minHeight: 44,
+      justifyContent: "center",
     },
     proposeButtonText: {
       color: colors.text.inverse,

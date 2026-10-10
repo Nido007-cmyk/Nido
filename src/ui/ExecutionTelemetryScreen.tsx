@@ -250,7 +250,7 @@ function StatCell({ label, value }: { label: string; value: string }) {
 }
 
 const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg.surface },
+  container: { flex: 1, backgroundColor: colors.bg.black },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -268,11 +268,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     paddingHorizontal: calmSpacing.cozy,
     paddingVertical: calmSpacing.tight,
     borderRadius: calmRadii.subtle,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: colors.bg.subtle,
   },
-  closeBtnText: { ...typography.mono.xs, color: colors.text.accentCyan, fontWeight: "800" },
+  closeBtnText: { ...typography.ui.caption, color: colors.emerald[600], fontWeight: "700" },
   headerTitle: { ...typography.ui.titleSm, color: colors.text.heading, letterSpacing: 0.5 },
-  headerSubtitle: { ...typography.mono.xs, fontSize: 9, color: colors.text.dim },
+  headerSubtitle: { ...typography.ui.caption, fontSize: 9, color: colors.text.dim },
   actionsRow: {
     flexDirection: "row",
     gap: calmSpacing.cozy,
@@ -284,14 +284,16 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   actionBtn: {
     flex: 1,
     paddingVertical: calmSpacing.cozy,
-    borderRadius: calmRadii.subtle,
+    borderRadius: 9999,
     backgroundColor: colors.bg.cardElevated,
     borderWidth: 1,
     borderColor: colors.border.default,
     alignItems: "center",
     ...calmShadows.none,
+    minHeight: 44,
+    justifyContent: "center",
   },
-  actionBtnText: { ...typography.mono.xs, color: colors.text.accentCyan, fontWeight: "700" },
+  actionBtnText: { ...typography.ui.caption, color: colors.text.accentCyan, fontWeight: "700" },
   clearBtn: { borderColor: colors.crimson.border, backgroundColor: colors.crimson.bgSubtle },
   clearBtnText: { color: colors.crimson[400] },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: calmSpacing.spacious },

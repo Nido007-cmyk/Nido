@@ -542,3 +542,106 @@ export async function extractPortableBundle(bundleUri: string, destDir: string):
 
   return dbUri;
 }
+
+/** Una clave de respaldo es exactamente 64 caracteres hexadecimales. */
+export function normalizeBackupKey(input: string): string | null {
+  const hex = input.replace(/\s+/g, "").toLowerCase();
+  return /^[0-9a-f]{64}$/.test(hex) ? hex : null;
+}
+
+/**
+ * A1 (auditoría 2026-10-10): restaurar un respaldo hecho con OTRA clave
+ * (otra instalación, otro teléfono, o antes de rotar la clave).
+ *
+ * Diseño conservador: nunca se toca la clave guardada en este teléfono ni la
+ * base viva hasta el final.
+ *   1. Se copia el respaldo a un archivo temporal.
+ *   2. La copia se abre con la clave que el usuario escribió. Si no abre,
+ *      se aborta sin haber cambiado nada.
+ *   3. La copia se vuelve a cifrar (PRAGMA rekey) con la clave de ESTE
+ *      teléfono.
+ *   4. La copia ya recifrada entra por restoreBackup(), con su validación,
+ *      su copia de seguridad previa y su reversión automática.
+ * Los temporales se borran siempre.
+ */
+export async function restoreBackupWithKey(backupUri: string, backupKeyInput: string): Promise<void> {
+  const backupKey = normalizeBackupKey(backupKeyInput);
+  if (!backupKey) {
+    throw new Error("La clave del respaldo debe tener 64 caracteres hexadecimales.");
+  }
+  const dir = FileSystem.documentDirectory;
+  if (!dir) throw new Error("No se pudo acceder al almacenamiento.");
+
+  const { getDatabaseKeyHex, applyDatabaseKey } = await import("../privacy/keyManager");
+  const currentKey = await getDatabaseKeyHex();
+  if (!currentKey || !/^[0-9a-f]{64}$/i.test(currentKey)) {
+    throw new Error("Este teléfono no tiene una clave de cifrado disponible.");
+  }
+
+  let sourceUri = backupUri;
+  const extracted: string[] = [];
+  if (backupUri.endsWith(".nidobackup.json")) {
+    const v = await validateBackup(backupUri);
+    if (!v.valid) throw new Error(`Backup inválido: ${v.reason}`);
+    sourceUri = await extractPortableBundle(backupUri, dir);
+    extracted.push(sourceUri, `${sourceUri}.manifest.json`, knowledgeBackupUriFor(sourceUri));
+  }
+
+  const stamp = Date.now();
+  const sqliteDir = `${dir}SQLite/`;
+  await FileSystem.makeDirectoryAsync(sqliteDir, { intermediates: true }).catch(() => {});
+  const tempMain = `${sqliteDir}nido-restore-${stamp}.db`;
+  const tempKnowledge = knowledgeBackupUriFor(tempMain);
+  const temps = [tempMain, tempKnowledge];
+
+  const SQLite = await import("expo-sqlite");
+  const rekeyCopy = async (from: string, to: string, label: string): Promise<void> => {
+    await FileSystem.copyAsync({ from, to });
+    const slash = to.lastIndexOf("/");
+    const db = await SQLite.openDatabaseAsync(
+      to.slice(slash + 1),
+      { useNewConnection: true },
+      to.slice(0, slash),
+    );
+    try {
+      // Lanza (y cierra) si la clave no abre el archivo.
+      await applyDatabaseKey(db as any, backupKey, label);
+      await (db as any).execAsync(`PRAGMA rekey = "x'${currentKey.toLowerCase()}'";`);
+    } finally {
+      await (db as any).closeAsync().catch(() => {});
+    }
+  };
+
+  try {
+    const info = await FileSystem.getInfoAsync(sourceUri);
+    if (!info.exists) throw new Error("El archivo no existe.");
+    try {
+      await rekeyCopy(sourceUri, tempMain, "restore-with-key");
+    } catch {
+      throw new Error("La clave no abre este respaldo. Revisa que sea la clave que guardaste al crearlo.");
+    }
+    // La base de conocimiento es opcional: si viene, se recifra igual.
+    let knowledgeSource = knowledgeBackupUriFor(sourceUri);
+    let kInfo = await FileSystem.getInfoAsync(knowledgeSource);
+    if (!kInfo.exists) {
+      knowledgeSource = `${sourceUri}.knowledge.db`;
+      kInfo = await FileSystem.getInfoAsync(knowledgeSource);
+    }
+    if (kInfo.exists) {
+      try {
+        await rekeyCopy(knowledgeSource, tempKnowledge, "restore-with-key-knowledge");
+      } catch {
+        // Si la base de conocimiento no abre con esa clave, se restaura
+        // solo la principal (los documentos se pueden volver a importar).
+        await FileSystem.deleteAsync(tempKnowledge, { idempotent: true }).catch(() => {});
+      }
+    }
+    await restoreBackup(tempMain);
+  } finally {
+    for (const f of [...temps, ...extracted]) {
+      for (const suffix of ["", "-wal", "-shm"]) {
+        await FileSystem.deleteAsync(`${f}${suffix}`, { idempotent: true }).catch(() => {});
+      }
+    }
+  }
+}

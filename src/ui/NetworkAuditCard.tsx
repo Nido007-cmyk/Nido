@@ -21,7 +21,8 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
-import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
+import { calmSpacing, calmRadii } from "./theme/calm";
+import { makeSurfaces } from "./theme/surfaces";
 import { networkAudit, type NetworkAuditEntry } from "../privacy/networkAudit";
 
 /** Entradas más recientes que se muestran. */
@@ -46,7 +47,8 @@ export function NetworkAuditCard() {
     return networkAudit.onEntry(() => setEntries(networkAudit.list()));
   }, []);
 
-  const recent = entries.slice(-MAX_ROWS).reverse();
+  // networkAudit.list() ya devuelve las más recientes primero.
+  const recent = entries.slice(0, MAX_ROWS);
 
   return (
     <View style={styles.card}>
@@ -78,38 +80,20 @@ export function NetworkAuditCard() {
   );
 }
 
-const getStyles = (colors: Colors, typography: Typography) =>
-  StyleSheet.create({
-    card: {
-      backgroundColor: colors.bg.cardElevated,
-      borderRadius: calmRadii.gentle,
-      borderWidth: 1,
-      borderColor: colors.border.default,
-      padding: calmSpacing.comfortable,
-      gap: calmSpacing.cozy,
-      ...calmShadows.none,
-    },
-    cardTitle: {
-      ...typography.mono.xs,
-      color: colors.text.accentCyan,
-      fontWeight: "800",
-      letterSpacing: 0.5,
-    },
-    paragraph: {
-      ...typography.ui.body,
-      color: colors.text.secondary,
-      lineHeight: 20,
-    },
+const getStyles = (colors: Colors, typography: Typography) => {
+  const ui = makeSurfaces(colors, typography);
+  return StyleSheet.create({
+    card: ui.card,
+    cardTitle: ui.sectionLabel,
+    paragraph: ui.body,
     count: {
       ...typography.ui.caption,
       color: colors.text.secondary,
     },
     row: {
-      backgroundColor: colors.bg.terminal,
-      borderRadius: calmRadii.subtle,
-      borderWidth: 1,
-      borderColor: colors.border.subtle,
-      padding: calmSpacing.cozy,
+      backgroundColor: colors.bg.cardElevated,
+      borderRadius: calmRadii.soft,
+      padding: 12,
       gap: 2,
     },
     rowKind: {
@@ -126,3 +110,4 @@ const getStyles = (colors: Colors, typography: Typography) =>
       color: colors.text.secondary,
     },
   });
+};

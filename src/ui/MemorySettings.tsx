@@ -4,9 +4,13 @@
  * See LICENSE file for details.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, Switch, Pressable, Alert } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "./theme";
+import type { Colors } from "./theme/colors";
+import type { Typography } from "./theme/typography";
+import { makeSurfaces, MIN_TOUCH } from "./theme/surfaces";
 import { getMemorySettings, setMemorySettings, MemorySettings as MemorySettingsType } from "../models/settings";
 import { clearAllHistory } from "../services/chatHistory";
 import { NidoIcon } from "./components/icons/NidoIcon";
@@ -21,6 +25,8 @@ const SESSION_OPTIONS = [
 
 export function MemorySettings({ onCleared }: { onCleared?: () => void }) {
   const { t } = useTranslation();
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const [settings, setSettings] = useState<MemorySettingsType | null>(null);
 
   useEffect(() => {
@@ -74,7 +80,8 @@ export function MemorySettings({ onCleared }: { onCleared?: () => void }) {
         <Switch
           value={settings.autoSummarize}
           onValueChange={(v) => update({ autoSummarize: v })}
-          trackColor={{ false: "#333", true: "#3a7a4a" }}
+          trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+            thumbColor={colors.bg.card}
         />
       </View>
 
@@ -118,13 +125,14 @@ export function MemorySettings({ onCleared }: { onCleared?: () => void }) {
         <Switch
           value={settings.autoGenerateTitles}
           onValueChange={(v) => update({ autoGenerateTitles: v })}
-          trackColor={{ false: "#333", true: "#3a7a4a" }}
+          trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+            thumbColor={colors.bg.card}
         />
       </View>
 
       <Pressable accessibilityRole="button" accessibilityLabel={t("memorySettings.clearAllChatHistory")} style={styles.clearBtn} onPress={confirmClearAll}>
         <View style={styles.clearBtnRow}>
-          <NidoIcon name="delete" size={14} color="#f88" />
+          <NidoIcon name="delete" size={14} color={colors.crimson[500]} />
           <Text style={styles.clearBtnText}>{t("memorySettings.clearAllChatHistory")}</Text>
         </View>
       </Pressable>
@@ -132,27 +140,35 @@ export function MemorySettings({ onCleared }: { onCleared?: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: { backgroundColor: "#111", borderRadius: 10, padding: 14, margin: 12, gap: 12 },
-  title: { color: "#fff", fontSize: 14, fontWeight: "600" },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  clearBtnRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
-  row: { flexDirection: "row", alignItems: "center", gap: 10 },
-  rowLabel: { color: "#eee", fontSize: 13, fontWeight: "600" },
-  rowValue: { color: "#999", fontSize: 11, marginTop: 2 },
-  subheading: { color: "#ccc", fontSize: 12, fontWeight: "600" },
-  pillRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  pill: { backgroundColor: "#1a1a1a", borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6 },
-  pillSelected: { backgroundColor: "#2a5f3a" },
-  pillText: { color: "#999", fontSize: 12 },
-  pillTextSelected: { color: "#fff", fontWeight: "600" },
-  clearBtn: {
-    backgroundColor: "rgba(122,42,42,0.3)",
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(122,42,42,0.5)",
-  },
-  clearBtnText: { color: "#f88", fontSize: 13, fontWeight: "700" },
-});
+const getStyles = (colors: Colors, typography: Typography) => {
+  const ui = makeSurfaces(colors, typography);
+  const pill = {
+    minHeight: 40,
+    minWidth: 48,
+    backgroundColor: colors.bg.cardElevated,
+    borderRadius: 9999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  };
+  return StyleSheet.create({
+    // Va dentro de una sección plegable que ya es la tarjeta: sin borde propio.
+    card: { paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
+    titleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    title: { ...typography.ui.body, color: colors.text.heading, fontWeight: "700" },
+    row: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: MIN_TOUCH },
+    rowLabel: { ...typography.ui.body, color: colors.text.primary, fontWeight: "600" },
+    rowValue: { ...typography.ui.caption, color: colors.text.secondary, marginTop: 2 },
+    subheading: { ...ui.sectionLabel, marginTop: 4 },
+    note: { ...typography.ui.caption, color: colors.text.muted },
+    clearBtnRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
+    pillRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+    pill,
+    pillSelected: { backgroundColor: colors.emerald[500] },
+    pillText: { ...typography.ui.caption, color: colors.text.secondary },
+    pillTextSelected: { color: colors.text.inverse, fontWeight: "700" },
+    clearBtn: ui.dangerButton,
+    clearBtnText: ui.dangerButtonText,
+  });
+};

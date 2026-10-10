@@ -27,11 +27,12 @@ import {
 import * as Clipboard from "expo-clipboard";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
+import { makeSurfaces } from "./theme/surfaces";
 import * as Backup from "../security/backup";
 import { requireUnlock, BiometricUnavailable } from "../security/biometricGate";
 
 export function BackupScreen({ onClose }: { onClose: () => void }) {
-  const { colors } = useTheme();
+  const { colors, typography } = useTheme();
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [lastBackup, setLastBackup] = useState<string | null>(null);
@@ -205,36 +206,18 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const ui = makeSurfaces(colors, typography);
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.bg.surface, padding: 20 },
-    title: { fontSize: 22, fontWeight: "700", color: colors.text.primary, marginBottom: 8 },
-    desc: { fontSize: 14, color: colors.text.secondary, marginBottom: 20, lineHeight: 20 },
-    button: {
-      backgroundColor: colors.emerald[500],
-      borderRadius: 10,
-      padding: 16,
-      alignItems: "center",
-      marginBottom: 12,
-    },
-    buttonText: { color: colors.text.inverse, fontWeight: "600", fontSize: 16 },
-    buttonSecondary: {
-      borderWidth: 1,
-      borderColor: colors.border.default,
-      borderRadius: 10,
-      padding: 16,
-      alignItems: "center",
-      marginBottom: 12,
-    },
-    buttonSecondaryText: { color: colors.text.primary, fontWeight: "600", fontSize: 16 },
-    warning: {
-      backgroundColor: colors.amber.bgSubtle,
-      borderWidth: 1,
-      borderColor: colors.amber.border,
-      borderRadius: 8,
-      padding: 12,
-      marginTop: 16,
-    },
-    warningText: { fontSize: 13, color: colors.amber[600], lineHeight: 18 },
+    container: ui.page,
+    content: { padding: 16, gap: 12, paddingBottom: 48 },
+    title: { ...ui.topBarTitle, marginTop: 8 },
+    desc: ui.body,
+    button: ui.primaryButton,
+    buttonText: ui.primaryButtonText,
+    buttonSecondary: ui.secondaryButton,
+    buttonSecondaryText: ui.secondaryButtonText,
+    warning: ui.warning,
+    warningText: ui.warningText,
     modalOverlay: {
       flex: 1,
       backgroundColor: colors.bg.modalOverlay,
@@ -242,15 +225,15 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
       alignItems: "center",
       padding: 24,
     },
-    modalBox: { borderRadius: 12, padding: 20, width: "100%", maxWidth: 400 },
-    modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
-    modalText: { fontSize: 14, lineHeight: 20 },
+    modalBox: { borderRadius: 20, padding: 20, width: "100%", maxWidth: 400, gap: 4 },
+    modalTitle: { ...typography.ui.title, fontWeight: "700", marginBottom: 8 },
+    modalText: { ...typography.ui.body },
     dekText: { fontSize: 13, fontFamily: "monospace", lineHeight: 18 },
-    modalButtons: { flexDirection: "row", gap: 12, marginTop: 16 },
+    modalButtons: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 16 },
   });
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>{t("backup.screenTitle")}</Text>
       <Text style={styles.desc}>
         {t("backup.screenDesc")}

@@ -994,7 +994,13 @@
     "savedBody": "Respaldo copiado a la carpeta que elegiste:\n{{files}}",
     "saveFailed": "No se pudo guardar el respaldo.",
     "keyFailed": "No se pudo leer la clave.",
-    "keyTitle": "Tu clave de cifrado"
+    "keyTitle": "Tu clave de cifrado",
+    "restoreWithKeyButton": "Restaurar con la clave del respaldo",
+    "restoreWithKeyTitle": "Restaurar un respaldo de otro teléfono",
+    "restoreWithKeyBody": "Úsalo cuando el respaldo se hizo en otro teléfono, en una instalación anterior o antes de rotar tu clave. Pega la clave que guardaste al crear ese respaldo y luego elige el archivo. Esto reemplaza TODOS tus datos actuales.",
+    "keyPlaceholder": "Clave del respaldo (64 caracteres)",
+    "keyInvalid": "La clave debe tener 64 caracteres, solo 0–9 y a–f.",
+    "chooseFile": "Elegir archivo"
   },
   "remoteTasks": {
     "title_one": "{{count}} tarea remota espera tu decisión",
@@ -1037,6 +1043,23 @@
       "failed": "Falló",
       "unavailable": "Sin configurar",
       "not-verifiable": "No se puede comprobar"
+    }
+  },
+  "agentPermissions": {
+    "historyTitle": "Qué hizo el agente",
+    "historyBody": "Cada herramienta que el agente usó o intentó usar desde que abriste la app. Solo se guarda el nombre de la herramienta y el resultado, nunca el contenido.",
+    "historyEmpty": "Todavía no hay acciones en esta sesión.",
+    "confirmed": "tú confirmaste",
+    "toolsTitle": "Permisos del agente",
+    "toolsBody": "Apaga cualquier herramienta que no quieras que el agente use. Las acciones que cambian algo te siguen preguntando primero; eso no se puede apagar.",
+    "toggleLabel": "Permitir que el agente use {{tool}}",
+    "outcome": {
+      "executed": "Hecho",
+      "blocked": "Bloqueado por la política de seguridad",
+      "disabled": "Apagada por ti",
+      "cancelled": "Sin confirmar",
+      "invalid": "Petición inválida",
+      "failed": "Falló"
     }
   }
 }

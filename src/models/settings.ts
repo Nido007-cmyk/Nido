@@ -45,6 +45,8 @@ interface Settings {
   routingPreset?: RoutingPreset;
   modelRoleAssignments?: Partial<Record<ModelRole, string>>;
   adaptiveRoutingEnabled?: boolean;
+  /** Herramientas del agente que el usuario apagó. */
+  disabledTools?: string[];
 }
 
 export interface MemorySettings {
@@ -355,5 +357,19 @@ export async function getAdaptiveRoutingEnabled(): Promise<boolean> {
 export async function setAdaptiveRoutingEnabled(enabled: boolean): Promise<void> {
   const s = await readSettings();
   s.adaptiveRoutingEnabled = enabled;
+  await writeSettings(s);
+}
+
+/** Herramientas del agente que el usuario apagó (permisos del agente). */
+export async function getDisabledToolNames(): Promise<string[]> {
+  const s = await readSettings();
+  return Array.isArray(s.disabledTools)
+    ? s.disabledTools.filter((n): n is string => typeof n === "string")
+    : [];
+}
+
+export async function setDisabledToolNames(names: string[]): Promise<void> {
+  const s = await readSettings();
+  s.disabledTools = [...new Set(names)].sort();
   await writeSettings(s);
 }

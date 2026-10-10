@@ -107,3 +107,23 @@ describe("backup.ts — nombre del backup de conocimiento (A2)", () => {
     expect(JSON.parse(written[1]).knowledge).toBe("KNOWLEDGE_BASE64");
   });
 });
+
+describe("backup.ts — restaurar con la clave del respaldo (A1)", () => {
+  it("normalizeBackupKey acepta 64 hex con espacios o mayúsculas y rechaza lo demás", async () => {
+    const { normalizeBackupKey } = await import("./backup");
+    const key = "ab".repeat(32);
+    expect(normalizeBackupKey(key)).toBe(key);
+    expect(normalizeBackupKey(` ${key.toUpperCase().slice(0, 32)} \n${key.slice(32)} `)).toBe(key);
+    expect(normalizeBackupKey(key.slice(1))).toBeNull();
+    expect(normalizeBackupKey(`${key}0`)).toBeNull();
+    expect(normalizeBackupKey("zz".repeat(32))).toBeNull();
+    expect(normalizeBackupKey("")).toBeNull();
+  });
+
+  it("una clave mal formada se rechaza antes de tocar ningún archivo", async () => {
+    const { restoreBackupWithKey } = await import("./backup");
+    vi.clearAllMocks();
+    await expect(restoreBackupWithKey("/mock/b.db", "no-es-una-clave")).rejects.toThrow(/64 caracteres/);
+    expect(FileSystem.copyAsync).not.toHaveBeenCalled();
+  });
+});

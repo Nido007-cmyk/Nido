@@ -296,7 +296,7 @@ export function MemoryManagerScreen({ onClose }: { onClose: () => void }) {
 
 const getStyles = (colors: Colors) =>
   StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.bg.surface },
+    container: { flex: 1, backgroundColor: colors.bg.black },
     header: {
       flexDirection: "row",
       justifyContent: "space-between",
@@ -361,8 +361,8 @@ const getStyles = (colors: Colors) =>
       gap: calmSpacing.cozy,
     },
     card: {
-      backgroundColor: colors.bg.cardElevated,
-      borderRadius: calmRadii.gentle,
+      backgroundColor: colors.bg.card,
+      borderRadius: 16,
       padding: calmSpacing.comfortable,
       borderWidth: 1,
       borderColor: colors.border.default,
@@ -399,11 +399,15 @@ const getStyles = (colors: Colors) =>
     },
     actionBtn: {
       padding: 8,
-      borderRadius: calmRadii.subtle,
+      borderRadius: 9999,
       backgroundColor: colors.emerald.bgSubtle,
+      minHeight: 44,
+      justifyContent: "center",
     },
     deleteBtn: {
       padding: 8,
-      borderRadius: calmRadii.subtle,
+      borderRadius: 9999,
+      minHeight: 44,
+      justifyContent: "center",
     },
   });

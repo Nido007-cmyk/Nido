@@ -467,7 +467,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     padding: spacing.md,
   },
   card: {
-    backgroundColor: colors.bg.cardElevated,
+    backgroundColor: colors.bg.card,
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border.default,
@@ -488,9 +488,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     fontSize: 14,
   },
   cardTitle: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     color: colors.text.heading,
-    fontWeight: "800",
+    fontWeight: "700",
     letterSpacing: 0.6,
   },
   statusPill: {
@@ -541,7 +541,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     justifyContent: "space-between",
   },
   gaugeLabel: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     color: colors.text.muted,
   },
   gaugeValue: {
@@ -564,7 +564,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     left: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: "rgba(6, 182, 212, 0.25)",
+    backgroundColor: colors.cyan.bgSubtle,
   },
   gaugeFill: {
     height: "100%",
@@ -579,8 +579,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     justifyContent: "space-between",
   },
   gaugeScaleText: {
-    ...typography.mono.xs,
-    fontSize: 9,
+    ...typography.ui.caption,
     color: colors.text.dim,
   },
   statsTable: {
@@ -597,7 +596,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     justifyContent: "space-between",
     paddingVertical: 7,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.04)",
+    borderBottomColor: colors.border.subtle,
   },
   rowLabel: {
     ...typography.ui.subtext,

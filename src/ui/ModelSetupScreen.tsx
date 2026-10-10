@@ -4,7 +4,7 @@
  * See LICENSE file for details.
  */
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Switch,
   Alert,
+  TextInput,
 } from "react-native";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType, setHapticsEnabledCache } from "../services/haptics";
 import { useTranslation } from "react-i18next";
@@ -48,7 +49,10 @@ import { SetupWizardScreen } from "./SetupWizardScreen";
 import { ThemeSelector } from "./components/ThemeSelector";
 import { LanguageSelector } from "./components/LanguageSelector";
 import { Toast } from "./Toast";
-import { useTheme, colors, typography } from "./theme";
+import { useTheme } from "./theme";
+import type { Colors } from "./theme/colors";
+import type { Typography } from "./theme/typography";
+import { makeSurfaces } from "./theme/surfaces";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 
 const modelManager = new ModelManager();
@@ -65,12 +69,43 @@ type Props =
  */
 export function ModelSetupScreen(props: Props) {
   const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
   const requiredMode = props.mode === "required";
   const [presence, setPresence] = useState<Record<string, boolean>>({});
   const [activeIds, setActiveIds] = useState<Partial<Record<AssetKind, string>>>({});
   const [toast, setToast] = useState<string | null>(null);
   const [dangerModalVisible, setDangerModalVisible] = useState(false);
+  // A1: restaurar un respaldo hecho con otra clave (otro teléfono o antes
+  // de rotar). El usuario escribe la clave que guardó al crear el respaldo.
+  const [restoreKeyVisible, setRestoreKeyVisible] = useState(false);
+  const [restoreKeyText, setRestoreKeyText] = useState("");
+  const [restoreKeyBusy, setRestoreKeyBusy] = useState(false);
+
+  const handleRestoreWithKey = async () => {
+    const { normalizeBackupKey, restoreBackupWithKey } = await import("../security/backup");
+    if (!normalizeBackupKey(restoreKeyText)) {
+      Alert.alert(t("backup.errorTitle"), t("backup.keyInvalid"));
+      return;
+    }
+    setRestoreKeyBusy(true);
+    try {
+      const DocumentPicker = await import("expo-document-picker");
+      const result = await DocumentPicker.getDocumentAsync({ type: "*/*", copyToCacheDirectory: true });
+      if (result.canceled) return;
+      const uri = result.assets[0].uri;
+      const { requireUnlock } = await import("../security/biometricGate");
+      await requireUnlock(t("backup.restoreTitle"));
+      await restoreBackupWithKey(uri, restoreKeyText);
+      setRestoreKeyVisible(false);
+      setRestoreKeyText("");
+      Alert.alert(t("backup.restoreDoneTitle"), t("backup.restoreDoneBody"), [{ text: t("backup.ok") }]);
+    } catch (e) {
+      Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.restoreFailed"));
+    } finally {
+      setRestoreKeyBusy(false);
+    }
+  };
   const [resetting, setResetting] = useState(false);
   const [, forceRender] = useState(0);
   const [hapticsEnabled, setHapticsEnabledState] = useState(true);
@@ -331,7 +366,8 @@ export function ModelSetupScreen(props: Props) {
             <Switch
               value={delegationEnabled}
               onValueChange={toggleDelegation}
-              trackColor={{ false: "#333", true: "#3a7a4a" }}
+              trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+              thumbColor={colors.bg.card}
             />
           </View>
         </AccordionSection>
@@ -348,7 +384,8 @@ export function ModelSetupScreen(props: Props) {
             <Switch
               value={hapticsEnabled}
               onValueChange={toggleHaptics}
-              trackColor={{ false: "#333", true: "#3a7a4a" }}
+              trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+              thumbColor={colors.bg.card}
             />
           </View>
         </AccordionSection>
@@ -526,10 +563,66 @@ export function ModelSetupScreen(props: Props) {
               >
                 <Text style={styles.wizardBtnText}>{t("backup.restoreButton")}</Text>
               </Pressable>
+              <Pressable
+                style={styles.wizardBtn}
+                onPress={() => setRestoreKeyVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t("backup.restoreWithKeyButton")}
+              >
+                <Text style={styles.wizardBtnText}>{t("backup.restoreWithKeyButton")}</Text>
+              </Pressable>
             </View>
           </View>
         </AccordionSection>
       </ScrollView>
+
+      {/* A1: restaurar con la clave del respaldo */}
+      <Modal
+        visible={restoreKeyVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRestoreKeyVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{t("backup.restoreWithKeyTitle")}</Text>
+            <Text style={styles.modalSubtitle}>{t("backup.restoreWithKeyBody")}</Text>
+            <TextInput
+              style={styles.restoreKeyInput}
+              value={restoreKeyText}
+              onChangeText={setRestoreKeyText}
+              placeholder={t("backup.keyPlaceholder")}
+              placeholderTextColor={colors.text.muted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              multiline
+              accessibilityLabel={t("backup.keyPlaceholder")}
+            />
+            <View style={styles.modalActions}>
+              <Pressable
+                style={styles.modalCancelBtn}
+                onPress={() => {
+                  setRestoreKeyVisible(false);
+                  setRestoreKeyText("");
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t("backup.cancel")}
+              >
+                <Text style={styles.modalCancelText}>{t("backup.cancel")}</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.restoreKeyConfirm, restoreKeyBusy && styles.modalConfirmBtnDisabled]}
+                onPress={handleRestoreWithKey}
+                disabled={restoreKeyBusy}
+                accessibilityRole="button"
+                accessibilityLabel={t("backup.chooseFile")}
+              >
+                <Text style={styles.modalConfirmText}>{t("backup.chooseFile")}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* High-Impact Danger Confirmation Modal */}
       <Modal
@@ -599,21 +692,11 @@ export function ModelSetupScreen(props: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg.surface,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: calmSpacing.comfortable,
-    paddingVertical: calmSpacing.comfortable,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.default,
-    backgroundColor: colors.bg.cardElevated,
-  },
+const getStyles = (colors: Colors, typography: Typography) => {
+  const ui = makeSurfaces(colors, typography);
+  return StyleSheet.create({
+  container: ui.page,
+  header: ui.topBar,
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
@@ -622,38 +705,18 @@ const styles = StyleSheet.create({
   mascotIcon: {
     fontSize: 22,
   },
-  title: {
-    ...typography.ui.titleSm,
-    color: colors.text.heading,
-    letterSpacing: 0.5,
-  },
-  subtitle: {
-    ...typography.mono.xs,
-    fontSize: 9,
-    color: colors.text.dim,
-  },
-  closeBtn: {
-    paddingHorizontal: calmSpacing.comfortable,
-    paddingVertical: calmSpacing.cozy,
-    borderRadius: calmRadii.subtle,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-  },
-  closeBtnText: {
-    ...typography.mono.xs,
-    color: colors.text.accentCyan,
-    fontWeight: "800",
-  },
+  title: ui.topBarTitle,
+  subtitle: { ...typography.ui.caption, color: colors.text.secondary },
+  closeBtn: ui.topBarAction,
+  closeBtnText: ui.topBarActionText,
   accordionScroll: {
     paddingBottom: calmSpacing.generous,
   },
   sectionHeading: {
-    ...typography.mono.xs,
-    color: colors.text.dim,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-    marginHorizontal: calmSpacing.comfortable,
-    marginTop: calmSpacing.comfortable,
-    marginBottom: calmSpacing.tight,
+    ...ui.sectionLabel,
+    marginHorizontal: calmSpacing.comfortable + 4,
+    marginTop: calmSpacing.airy,
+    marginBottom: calmSpacing.cozy,
   },
   list: {
     paddingHorizontal: calmSpacing.comfortable,
@@ -672,30 +735,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border.subtle,
   },
-  hapticRowLabel: {
-    ...typography.ui.subtext,
-    color: colors.text.heading,
-    fontWeight: "700",
-  },
-  hapticRowValue: {
-    ...typography.mono.xs,
-    fontSize: 10,
-    color: colors.text.dim,
-    marginTop: 2,
-  },
+  hapticRowLabel: { ...typography.ui.body, color: colors.text.primary, fontWeight: "600" },
+  hapticRowValue: { ...typography.ui.caption, color: colors.text.secondary, marginTop: 2 },
   recoveryContainer: {
     padding: calmSpacing.comfortable,
     gap: calmSpacing.comfortable,
   },
-  recoveryCard: {
-    ...calmShadows.none,
-    backgroundColor: colors.bg.cardElevated,
-    borderRadius: calmRadii.gentle,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-    padding: calmSpacing.comfortable,
-    gap: calmSpacing.cozy,
-  },
+  recoveryCard: ui.card,
   recoveryHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -704,88 +750,37 @@ const styles = StyleSheet.create({
   recoveryIcon: {
     fontSize: 14,
   },
-  recoveryTitle: {
-    ...typography.mono.xs,
-    color: colors.text.heading,
-    fontWeight: "800",
-  },
-  recoveryDesc: {
-    ...typography.ui.caption,
-    color: colors.text.secondary,
-    lineHeight: 18,
-  },
-  wizardBtn: {
-    backgroundColor: colors.cyan.bgSubtle,
-    borderColor: colors.cyan.border,
-    borderWidth: 1,
-    borderRadius: calmRadii.soft,
-    paddingVertical: calmSpacing.cozy,
-    alignItems: "center",
-  },
-  wizardBtnText: {
-    ...typography.ui.titleSm,
-    fontSize: 12,
-    color: colors.text.accentCyan,
-  },
-  dangerZoneCard: {
-    ...calmShadows.none,
-    backgroundColor: "rgba(239, 68, 68, 0.06)",
-    borderRadius: calmRadii.gentle,
-    borderWidth: 1,
-    borderColor: colors.crimson.border,
-    padding: calmSpacing.comfortable,
-    gap: calmSpacing.cozy,
-  },
+  recoveryTitle: { ...typography.ui.body, color: colors.text.heading, fontWeight: "700" },
+  recoveryDesc: ui.caption,
+  wizardBtn: ui.secondaryButton,
+  wizardBtnText: ui.secondaryButtonText,
+  dangerZoneCard: { ...ui.card, backgroundColor: colors.crimson.bgSubtle, borderColor: colors.crimson.border },
   dangerHeader: {
     flexDirection: "row",
     alignItems: "center",
   },
   dangerBadge: {
     backgroundColor: colors.crimson.bgSubtle,
-    borderColor: colors.crimson[500],
-    borderWidth: 1,
-    borderRadius: calmRadii.subtle,
-    paddingHorizontal: calmSpacing.cozy,
-    paddingVertical: calmSpacing.tight,
+    borderRadius: calmRadii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
-  dangerBadgeText: {
-    ...typography.mono.xs,
-    fontSize: 8,
-    color: colors.crimson[400],
-    fontWeight: "800",
-  },
-  dangerDesc: {
-    ...typography.ui.caption,
-    color: colors.text.secondary,
-    lineHeight: 18,
-  },
-  dangerActionBtn: {
-    backgroundColor: colors.crimson[600],
-    borderRadius: calmRadii.soft,
-    paddingVertical: calmSpacing.comfortable,
-    alignItems: "center",
-  },
-  dangerActionBtnText: {
-    ...typography.ui.titleSm,
-    fontSize: 13,
-    color: colors.text.inverse,
-    fontWeight: "800",
-  },
+  dangerBadgeText: { ...typography.ui.micro, color: colors.crimson[600], fontWeight: "700" },
+  dangerDesc: ui.caption,
+  dangerActionBtn: ui.dangerButton,
+  dangerActionBtnText: ui.dangerButtonText,
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.82)",
+    backgroundColor: colors.bg.modalOverlay,
     alignItems: "center",
     justifyContent: "center",
     padding: calmSpacing.airy,
   },
   modalCard: {
-    ...calmShadows.none,
     width: "100%",
     maxWidth: 380,
-    backgroundColor: colors.bg.cardElevated,
-    borderRadius: calmRadii.gentle,
-    borderWidth: 1,
-    borderColor: colors.crimson.border,
+    backgroundColor: colors.bg.card,
+    borderRadius: 20,
     padding: calmSpacing.airy,
     alignItems: "center",
     gap: calmSpacing.cozy,
@@ -795,8 +790,6 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: colors.crimson.bgSubtle,
-    borderWidth: 1,
-    borderColor: colors.crimson[500],
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,
@@ -804,77 +797,30 @@ const styles = StyleSheet.create({
   modalIconText: {
     fontSize: 22,
   },
-  modalTitle: {
-    ...typography.ui.title,
-    color: colors.crimson[400],
-    letterSpacing: 0.5,
-  },
-  modalSubtitle: {
-    ...typography.ui.caption,
-    color: colors.text.muted,
-    textAlign: "center",
-  },
-  consequencesBox: {
-    ...calmShadows.none,
-    width: "100%",
-    backgroundColor: colors.bg.terminal,
-    borderRadius: calmRadii.soft,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-    padding: calmSpacing.cozy,
-    gap: 6,
-    marginVertical: 4,
-  },
-  consequencesHeader: {
-    ...typography.mono.xs,
-    fontSize: 9,
-    color: colors.text.dim,
-    fontWeight: "700",
-  },
+  modalTitle: { ...typography.ui.title, color: colors.text.heading, fontWeight: "700", textAlign: "center" },
+  modalSubtitle: { ...typography.ui.caption, color: colors.text.secondary, textAlign: "center" },
+  consequencesBox: { ...ui.inset, width: "100%", gap: 6, marginVertical: 4 },
+  consequencesHeader: ui.sectionLabel,
   consequenceItem: {
     flexDirection: "row",
     gap: 6,
   },
-  consequenceBullet: {
-    color: colors.crimson[400],
-    fontWeight: "700",
-  },
-  consequenceText: {
-    ...typography.ui.caption,
-    color: colors.text.secondary,
-    flex: 1,
-    lineHeight: 16,
-  },
+  consequenceBullet: { color: colors.crimson[500], fontWeight: "700" },
+  consequenceText: { ...typography.ui.caption, color: colors.text.secondary, flex: 1 },
   modalActions: {
     flexDirection: "row",
     gap: calmSpacing.cozy,
     width: "100%",
     marginTop: calmSpacing.tight,
   },
-  modalCancelBtn: {
-    flex: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    borderRadius: calmRadii.soft,
-    paddingVertical: calmSpacing.comfortable,
-    alignItems: "center",
-  },
-  modalCancelText: {
-    ...typography.ui.titleSm,
-    color: colors.text.heading,
-  },
-  modalConfirmBtn: {
-    flex: 1,
-    backgroundColor: colors.crimson[600],
-    borderRadius: calmRadii.soft,
-    paddingVertical: calmSpacing.comfortable,
-    alignItems: "center",
-  },
+  modalCancelBtn: { ...ui.secondaryButton, flex: 1 },
+  modalCancelText: ui.secondaryButtonText,
+  modalConfirmBtn: { ...ui.primaryButton, flex: 1, backgroundColor: colors.crimson[500], borderColor: colors.crimson[500] },
+  restoreKeyInput: { ...ui.input, width: "100%", minHeight: 88, fontFamily: "monospace", textAlignVertical: "top" },
+  restoreKeyConfirm: { ...ui.primaryButton, flex: 1 },
   modalConfirmBtnDisabled: {
     opacity: 0.5,
   },
-  modalConfirmText: {
-    ...typography.ui.titleSm,
-    color: colors.text.inverse,
-    fontWeight: "800",
-  },
+  modalConfirmText: ui.primaryButtonText,
 });
+};

@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { StatusBar } from "expo-status-bar";
-import { AppState, StyleSheet, ActivityIndicator, Pressable, Text, View } from "react-native";
+import { AppState, Image, StyleSheet, ActivityIndicator, Pressable, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import "./src/i18n";
@@ -89,7 +89,13 @@ function LockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   }, []);
 
   return (
-    <View style={styles.centered}>
+    <View style={[styles.centered, { backgroundColor: colors.bg.black }]}>
+      <Image
+        source={require("./assets/mascot-nido.png")}
+        style={styles.lockMascot}
+        resizeMode="contain"
+        accessibilityIgnoresInvertColors
+      />
       <Text style={[styles.lockTitle, { color: colors.text.primary }]}>{t("lockScreen.title")}</Text>
       <Text style={[styles.lockSubtitle, { color: colors.text.secondary }]}>
         {t("lockScreen.subtitle")}
@@ -103,9 +109,10 @@ function LockScreen({ onUnlocked }: { onUnlocked: () => void }) {
       <Pressable
         onPress={noGate ? onUnlocked : tryUnlock}
         disabled={busy}
+        accessibilityRole="button"
         style={[styles.lockButton, { backgroundColor: colors.emerald[500] }, busy && { opacity: 0.6 }]}
       >
-        <Text style={styles.lockButtonText}>
+        <Text style={[styles.lockButtonText, { color: colors.text.inverse }]}>
           {busy
             ? t("lockScreen.unlocking")
             : noGate
@@ -145,6 +152,15 @@ function AppContent() {
   /** Arranque normal: rutinas, modelos y gate biométrico. */
   const finishStartup = async () => {
     initHaptics();
+    // Permisos del agente: cargar las herramientas que el usuario apagó.
+    // Si los ajustes no se pueden leer, se arranca con todas activas (las
+    // confirmaciones y la política de seguridad siguen aplicando igual).
+    void import("./src/models/settings")
+      .then(async (m) => {
+        const { setDisabledTools } = await import("./src/agent/tools/toolPermissions");
+        setDisabledTools(await m.getDisabledToolNames());
+      })
+      .catch(() => {});
     // Rutinas proactivas locales: notificaciones, vencidos, resumen diario.
     runStartupRoutines();
     try {
@@ -336,7 +352,7 @@ function AppContent() {
             onPress={runStartupGate}
             style={[styles.lockButton, { backgroundColor: colors.emerald[500] }]}
           >
-            <Text style={styles.lockButtonText}>{t("modelSetupScreen.wipeRecovery.retry")}</Text>
+            <Text style={[styles.lockButtonText, { color: colors.text.inverse }]}>{t("modelSetupScreen.wipeRecovery.retry")}</Text>
           </Pressable>
         </View>
       )}
@@ -357,7 +373,7 @@ function AppContent() {
             onPress={runStartupGate}
             style={[styles.lockButton, { backgroundColor: colors.emerald[500] }]}
           >
-            <Text style={styles.lockButtonText}>{t("modelSetupScreen.startupError.retry")}</Text>
+            <Text style={[styles.lockButtonText, { color: colors.text.inverse }]}>{t("modelSetupScreen.startupError.retry")}</Text>
           </Pressable>
         </View>
       )}
@@ -459,14 +475,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 16,
   },
+  lockMascot: {
+    width: 112,
+    height: 112,
+    marginBottom: 20,
+  },
   lockButton: {
+    minHeight: 48,
+    minWidth: 200,
     paddingHorizontal: 32,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 9999,
+    alignItems: "center",
+    justifyContent: "center",
   },
   lockButtonText: {
-    color: "#06110c",
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "600",
   },
 });

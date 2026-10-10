@@ -12,6 +12,12 @@ All notable changes to NIDO are recorded here. Versions follow
 - Security check card in About: verifies on the phone that the database is
   encrypted and that key storage and biometric lock work.
 - Agent skills list in About.
+- "What the agent did" history in About: every tool the agent used or tried
+  to use in the session, with the outcome. Content is never stored.
+- Agent permissions in About: turn any tool off. A disabled tool is never
+  run, and confirmations cannot be relaxed.
+- Restore a backup made with a different key (another phone, an earlier
+  install, or before rotating): Settings → Restore with the backup's key.
 - "Know its limits" notice and a privacy summary in About.
 - Privacy policy (`PRIVACY.md`) and terms of use (`TERMS.md`).
 - Test that keeps the three languages in sync and forbids untranslated
@@ -22,7 +28,13 @@ All notable changes to NIDO are recorded here. Versions follow
   (delete chat, delete collection, voice input) have spoken labels.
 - Backup dialogs are translated to English, Spanish and Portuguese, and the
   encryption key is shown in a dialog you can copy from.
-- More screens take their colors from the theme instead of fixed values.
+- All screens share one look with the chat: warm page background, light
+  rounded cards, pill buttons, sentence-case section titles.
+- Tone, memory and voice settings follow the light and dark themes (they
+  were fixed dark cards before), as does the whole Settings screen.
+- Button text on the lock and key-recovery screens has proper contrast.
+- The network log shows the newest connections first.
+- Screens take their colors from the theme instead of fixed values.
 - Dependabot groups minor and patch updates into one weekly pull request.
 
 ### Removed

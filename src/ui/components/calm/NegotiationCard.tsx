@@ -327,6 +327,8 @@ const getStyles = (colors: Colors, typography: Typography) =>
     },
     declineButton: {
       backgroundColor: colors.bg.subtle,
+      minHeight: 44,
+      justifyContent: "center",
     },
     declineText: {
       ...typography.ui.body,
@@ -337,6 +339,8 @@ const getStyles = (colors: Colors, typography: Typography) =>
       backgroundColor: colors.bg.subtle,
       borderWidth: 1,
       borderColor: colors.border.default,
+      minHeight: 44,
+      justifyContent: "center",
     },
     counterText: {
       ...typography.ui.body,
@@ -345,6 +349,8 @@ const getStyles = (colors: Colors, typography: Typography) =>
     },
     acceptButton: {
       backgroundColor: colors.emerald[400],
+      minHeight: 44,
+      justifyContent: "center",
     },
     acceptText: {
       ...typography.ui.body,
@@ -382,6 +388,8 @@ const getStyles = (colors: Colors, typography: Typography) =>
       flexShrink: 0,
       flexBasis: "auto",
       paddingHorizontal: spacing.md,
+      minHeight: 44,
+      justifyContent: "center",
     },
     retryButtonText: {
       ...typography.ui.body,

@@ -44,14 +44,22 @@ export function AccordionSection({ icon, title, defaultOpen = false, children }:
 
   return (
     <View style={styles.container}>
-      <Pressable accessibilityRole="button" style={styles.header} onPress={toggle}>
-        {isIconName(icon) ? (
-          <NidoIcon name={icon} size={20} />
-        ) : (
-          <Text style={styles.headerIcon}>{icon}</Text>
-        )}
-        <Text style={styles.headerTitle}>{title.toUpperCase()}</Text>
-        <NidoIcon name={open ? "chev-up" : "chev-down"} size={12} color={colors.text.dim} />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityState={{ expanded: open }}
+        style={styles.header}
+        onPress={toggle}
+      >
+        <View style={styles.iconBox}>
+          {isIconName(icon) ? (
+            <NidoIcon name={icon} size={20} />
+          ) : (
+            <Text style={styles.headerIcon}>{icon}</Text>
+          )}
+        </View>
+        <Text style={styles.headerTitle}>{title}</Text>
+        <NidoIcon name={open ? "chev-up" : "chev-down"} size={14} color={colors.text.dim} />
       </Pressable>
       {open && <View style={styles.body}>{children}</View>}
     </View>
@@ -62,8 +70,8 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   container: {
     marginHorizontal: spacing.md,
     marginTop: spacing.sm,
-    borderRadius: radii.lg,
-    backgroundColor: colors.bg.cardElevated,
+    borderRadius: 16,
+    backgroundColor: colors.bg.card,
     borderWidth: 1,
     borderColor: colors.border.default,
     overflow: "hidden",
@@ -71,24 +79,30 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-    backgroundColor: colors.bg.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.subtle,
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 56,
+  },
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.emerald.bgSubtle,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerIcon: { fontSize: 16 },
   headerTitle: {
-    ...typography.mono.xs,
-    fontSize: 11,
-    color: colors.text.heading,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+    ...typography.ui.body,
+    color: colors.text.primary,
+    fontWeight: "600",
     flex: 1,
   },
   chevron: { color: colors.text.dim, fontSize: 10 },
   body: {
-    paddingVertical: spacing.xs,
+    paddingBottom: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
   },
 });

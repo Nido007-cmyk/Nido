@@ -256,6 +256,8 @@ function getStyles(colors: Colors) {
     },
     acceptButton: {
       backgroundColor: colors.text.accentEmerald,
+      minHeight: 44,
+      justifyContent: "center",
     },
     acceptText: {
       color: colors.text.inverse,
@@ -265,6 +267,8 @@ function getStyles(colors: Colors) {
       backgroundColor: colors.bg.card,
       borderWidth: 1,
       borderColor: colors.border.default,
+      minHeight: 44,
+      justifyContent: "center",
     },
     declineText: {
       color: colors.text.primary,
@@ -273,12 +277,16 @@ function getStyles(colors: Colors) {
       backgroundColor: colors.bg.card,
       borderWidth: 1,
       borderColor: colors.border.default,
+      minHeight: 44,
+      justifyContent: "center",
     },
     cancelText: {
       color: colors.text.secondary,
     },
     retryButton: {
       backgroundColor: colors.text.accentEmerald,
+      minHeight: 44,
+      justifyContent: "center",
     },
     retryText: {
       color: colors.text.inverse,

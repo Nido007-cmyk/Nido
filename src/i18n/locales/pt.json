@@ -994,7 +994,13 @@
     "savedBody": "Backup copiado para a pasta escolhida:\n{{files}}",
     "saveFailed": "Não foi possível salvar o backup.",
     "keyFailed": "Não foi possível ler a chave.",
-    "keyTitle": "Sua chave de criptografia"
+    "keyTitle": "Sua chave de criptografia",
+    "restoreWithKeyButton": "Restaurar com a chave do backup",
+    "restoreWithKeyTitle": "Restaurar um backup de outro telefone",
+    "restoreWithKeyBody": "Use quando o backup foi feito em outro telefone, em uma instalação anterior ou antes de trocar sua chave. Cole a chave que você guardou ao criar esse backup e depois escolha o arquivo. Isto substitui TODOS os seus dados atuais.",
+    "keyPlaceholder": "Chave do backup (64 caracteres)",
+    "keyInvalid": "A chave deve ter 64 caracteres, apenas 0–9 e a–f.",
+    "chooseFile": "Escolher arquivo"
   },
   "remoteTasks": {
     "title_one": "{{count}} tarefa remota aguarda sua decisão",
@@ -1037,6 +1043,23 @@
       "failed": "Falhou",
       "unavailable": "Não configurado",
       "not-verifiable": "Não é possível verificar"
+    }
+  },
+  "agentPermissions": {
+    "historyTitle": "O que o agente fez",
+    "historyBody": "Cada ferramenta que o agente usou ou tentou usar desde que você abriu o app. Só ficam o nome da ferramenta e o resultado, nunca o conteúdo.",
+    "historyEmpty": "Ainda não há ações nesta sessão.",
+    "confirmed": "você confirmou",
+    "toolsTitle": "Permissões do agente",
+    "toolsBody": "Desligue qualquer ferramenta que você não queira que o agente use. Ações que mudam algo continuam perguntando antes; isso não pode ser desligado.",
+    "toggleLabel": "Permitir que o agente use {{tool}}",
+    "outcome": {
+      "executed": "Feito",
+      "blocked": "Bloqueado pela política de segurança",
+      "disabled": "Desligada por você",
+      "cancelled": "Não confirmado",
+      "invalid": "Pedido inválido",
+      "failed": "Falhou"
     }
   }
 }

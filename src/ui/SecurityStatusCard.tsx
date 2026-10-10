@@ -18,7 +18,8 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
-import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
+import { calmSpacing, calmRadii } from "./theme/calm";
+import { makeSurfaces } from "./theme/surfaces";
 import {
   collectSecurityDiagnostics,
   type SecurityDiagnostics,
@@ -131,38 +132,20 @@ export function SecurityStatusCard() {
   );
 }
 
-const getStyles = (colors: Colors, typography: Typography) =>
-  StyleSheet.create({
-    card: {
-      backgroundColor: colors.bg.cardElevated,
-      borderRadius: calmRadii.gentle,
-      borderWidth: 1,
-      borderColor: colors.border.default,
-      padding: calmSpacing.comfortable,
-      gap: calmSpacing.cozy,
-      ...calmShadows.none,
-    },
-    cardTitle: {
-      ...typography.mono.xs,
-      color: colors.text.accentCyan,
-      fontWeight: "800",
-      letterSpacing: 0.5,
-    },
-    paragraph: {
-      ...typography.ui.body,
-      color: colors.text.secondary,
-      lineHeight: 20,
-    },
+const getStyles = (colors: Colors, typography: Typography) => {
+  const ui = makeSurfaces(colors, typography);
+  return StyleSheet.create({
+    card: ui.card,
+    cardTitle: ui.sectionLabel,
+    paragraph: ui.body,
     row: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
       gap: calmSpacing.cozy,
-      backgroundColor: colors.bg.terminal,
-      borderRadius: calmRadii.subtle,
-      borderWidth: 1,
-      borderColor: colors.border.subtle,
-      padding: calmSpacing.cozy,
+      backgroundColor: colors.bg.cardElevated,
+      borderRadius: calmRadii.soft,
+      padding: 12,
     },
     rowLabel: {
       ...typography.ui.caption,
@@ -174,18 +157,7 @@ const getStyles = (colors: Colors, typography: Typography) =>
       ...typography.ui.caption,
       fontWeight: "700",
     },
-    button: {
-      minHeight: 48,
-      borderRadius: calmRadii.subtle,
-      borderWidth: 1,
-      borderColor: colors.border.emerald,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: calmSpacing.comfortable,
-    },
-    buttonText: {
-      ...typography.ui.body,
-      color: colors.text.accentEmerald,
-      fontWeight: "700",
-    },
+    button: ui.secondaryButton,
+    buttonText: ui.secondaryButtonText,
   });
+};

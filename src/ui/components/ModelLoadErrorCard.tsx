@@ -124,11 +124,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   amberBorder: {
     borderColor: colors.border.amber,
-    backgroundColor: "rgba(245, 158, 11, 0.06)",
+    backgroundColor: colors.amber.bgSubtle,
   },
   dangerBorder: {
     borderColor: colors.border.danger,
-    backgroundColor: "rgba(239, 68, 68, 0.06)",
+    backgroundColor: colors.crimson.bgSubtle,
   },
   header: {
     flexDirection: "row",
@@ -159,7 +159,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   codeTag: {
     ...typography.mono.xs,
     color: colors.text.dim,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: colors.bg.subtle,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: radii.xs,
@@ -173,7 +173,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     lineHeight: 20,
   },
   recommendationBox: {
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: colors.bg.subtle,
     borderRadius: radii.sm,
     padding: spacing.sm,
     borderLeftWidth: 2,
@@ -213,13 +213,14 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   actionBtn: {
     flex: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.07)",
+    backgroundColor: colors.bg.subtle,
     borderColor: colors.border.default,
     borderWidth: 1,
-    borderRadius: radii.md,
+    borderRadius: 9999,
     paddingVertical: 10,
     alignItems: "center",
     justifyContent: "center",
+    minHeight: 44,
   },
   actionBtnText: {
     ...typography.ui.titleSm,
@@ -228,6 +229,8 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   wizardBtn: {
     backgroundColor: colors.cyan.bgSubtle,
     borderColor: colors.cyan.border,
+    minHeight: 44,
+    justifyContent: "center",
   },
   wizardBtnText: {
     ...typography.ui.titleSm,

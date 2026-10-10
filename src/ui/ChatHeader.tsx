@@ -163,7 +163,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   statusRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 1 },
   statusText: { ...typography.ui.subtext, color: colors.text.secondary },
   headerContainerDeepResearch: {
-    backgroundColor: "#111028",
+    backgroundColor: colors.cyan.bgSubtle,
     borderBottomColor: colors.border.frontier,
   },
   topRow: {
@@ -273,7 +273,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   deepResearchPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: colors.bg.subtle,
     borderColor: colors.border.subtle,
     borderWidth: 1,
     borderRadius: radii.sm,
@@ -309,7 +309,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   telemetryBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(6, 182, 212, 0.12)",
+    backgroundColor: colors.cyan.bgSubtle,
     borderColor: colors.cyan.border,
     borderWidth: 1,
     borderRadius: radii.sm,

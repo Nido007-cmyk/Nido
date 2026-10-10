@@ -11,10 +11,12 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
-import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
+import { calmSpacing, calmRadii } from "./theme/calm";
+import { makeSurfaces } from "./theme/surfaces";
 import appConfig from "../../app.json";
 import { NetworkAuditCard } from "./NetworkAuditCard";
 import { SkillsCard } from "./SkillsCard";
+import { AgentPermissionsCard } from "./AgentPermissionsCard";
 import { SecurityStatusCard } from "./SecurityStatusCard";
 import { BackupScreen } from "./BackupScreen";
 
@@ -100,6 +102,9 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
         {/* U6: qué sabe hacer el agente. */}
         <SkillsCard />
 
+        {/* Historial de acciones y permisos por herramienta. */}
+        <AgentPermissionsCard />
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t("aboutScreen.limitsTitle")}</Text>
           <Text style={styles.paragraph}>{t("aboutScreen.limitsBody")}</Text>
@@ -132,122 +137,66 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
   );
 }
 
-const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg.surface },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: calmSpacing.comfortable,
-    paddingVertical: calmSpacing.cozy,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.default,
-    backgroundColor: colors.bg.cardElevated,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: calmSpacing.cozy,
-  },
-  headerIcon: {
-    fontSize: 18,
-  },
-  title: {
-    ...typography.ui.titleSm,
-    color: colors.text.heading,
-  },
-  closeBtn: {
-    paddingHorizontal: calmSpacing.cozy,
-    paddingVertical: calmSpacing.tight,
-    borderRadius: calmRadii.subtle,
-    backgroundColor: colors.bg.subtle,
-  },
-  closeBtnText: {
-    ...typography.mono.xs,
-    color: colors.text.accentCyan,
-    fontWeight: "800",
-  },
-  body: {
-    padding: calmSpacing.comfortable,
-    gap: calmSpacing.comfortable,
-    paddingBottom: calmSpacing.generous,
-  },
-  heroBox: {
-    alignItems: "center",
-    paddingVertical: calmSpacing.comfortable,
-    gap: calmSpacing.tight,
-  },
-  mascotImg: {
-    width: 64,
-    height: 64,
-    borderRadius: calmRadii.soft,
-    marginBottom: calmSpacing.tight,
-  },
-  heroTitle: {
-    ...typography.ui.headline,
-    color: colors.text.heading,
-  },
-  heroSubtitle: {
-    ...typography.mono.xs,
-    color: colors.text.accentEmerald,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  versionBadge: {
-    backgroundColor: colors.bg.subtle,
-    paddingHorizontal: calmSpacing.cozy,
-    paddingVertical: 2,
-    borderRadius: calmRadii.subtle,
-    marginTop: calmSpacing.tight,
-  },
-  versionText: {
-    ...typography.mono.xs,
-    fontSize: 9,
-    color: colors.text.dim,
-  },
-  card: {
-    backgroundColor: colors.bg.cardElevated,
-    borderRadius: calmRadii.gentle,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-    padding: calmSpacing.comfortable,
-    gap: calmSpacing.cozy,
-    ...calmShadows.none,
-  },
-  cardTitle: {
-    ...typography.mono.xs,
-    color: colors.text.accentCyan,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  paragraph: {
-    ...typography.ui.body,
-    color: colors.text.secondary,
-    lineHeight: 20,
-  },
-  repoBox: {
-    backgroundColor: colors.bg.terminal,
-    borderRadius: calmRadii.subtle,
-    padding: calmSpacing.cozy,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-  },
-  actionBtn: {
-    minHeight: 48,
-    borderRadius: calmRadii.subtle,
-    borderWidth: 1,
-    borderColor: colors.border.emerald,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: calmSpacing.comfortable,
-  },
-  actionBtnText: {
-    ...typography.ui.body,
-    color: colors.text.accentEmerald,
-    fontWeight: "700",
-  },
-  repoText: {
-    ...typography.mono.xs,
-    color: colors.text.accentEmerald,
-  },
-});
+const getStyles = (colors: Colors, typography: Typography) => {
+  const ui = makeSurfaces(colors, typography);
+  return StyleSheet.create({
+    container: ui.page,
+    header: ui.topBar,
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: calmSpacing.cozy,
+      flexShrink: 1,
+    },
+    title: ui.topBarTitle,
+    closeBtn: ui.topBarAction,
+    closeBtnText: ui.topBarActionText,
+    body: {
+      paddingHorizontal: calmSpacing.comfortable,
+      paddingTop: calmSpacing.cozy,
+      gap: 12,
+      paddingBottom: calmSpacing.generous,
+    },
+    heroBox: {
+      alignItems: "center",
+      paddingVertical: calmSpacing.comfortable,
+      gap: calmSpacing.tight,
+    },
+    mascotImg: {
+      width: 72,
+      height: 72,
+      borderRadius: calmRadii.round,
+      marginBottom: calmSpacing.tight,
+    },
+    heroTitle: {
+      ...typography.ui.headline,
+      color: colors.text.heading,
+    },
+    heroSubtitle: {
+      ...typography.ui.body,
+      color: colors.text.secondary,
+    },
+    versionBadge: {
+      backgroundColor: colors.emerald.bgSubtle,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: calmRadii.pill,
+      marginTop: calmSpacing.cozy,
+    },
+    versionText: {
+      ...typography.ui.micro,
+      color: colors.emerald[600],
+      fontWeight: "700",
+    },
+    card: ui.card,
+    cardTitle: ui.sectionLabel,
+    paragraph: ui.body,
+    repoBox: ui.inset,
+    actionBtn: ui.primaryButton,
+    actionBtnText: ui.primaryButtonText,
+    repoText: {
+      ...typography.mono.xs,
+      color: colors.text.accentEmerald,
+    },
+  });
+};

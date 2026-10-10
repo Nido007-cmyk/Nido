@@ -994,7 +994,13 @@
     "savedBody": "Backup copied to the folder you chose:\n{{files}}",
     "saveFailed": "The backup could not be saved.",
     "keyFailed": "The key could not be read.",
-    "keyTitle": "Your encryption key"
+    "keyTitle": "Your encryption key",
+    "restoreWithKeyButton": "Restore with the backup's key",
+    "restoreWithKeyTitle": "Restore a backup from another phone",
+    "restoreWithKeyBody": "Use this when the backup was made on another phone, on an earlier install, or before you rotated your key. Paste the key you saved when you created that backup, then choose the file. This replaces ALL your current data.",
+    "keyPlaceholder": "Backup key (64 characters)",
+    "keyInvalid": "The key must be 64 characters, using only 0–9 and a–f.",
+    "chooseFile": "Choose file"
   },
   "remoteTasks": {
     "title_one": "{{count}} remote task awaiting your decision",
@@ -1037,6 +1043,23 @@
       "failed": "Failed",
       "unavailable": "Not set up",
       "not-verifiable": "Cannot be checked"
+    }
+  },
+  "agentPermissions": {
+    "historyTitle": "What the agent did",
+    "historyBody": "Every tool the agent used or tried to use since you opened the app. Only the tool name and the result are kept, never the content.",
+    "historyEmpty": "No actions yet in this session.",
+    "confirmed": "you confirmed",
+    "toolsTitle": "Agent permissions",
+    "toolsBody": "Turn off any tool you do not want the agent to use. Actions that change something keep asking you first; that cannot be turned off.",
+    "toggleLabel": "Allow the agent to use {{tool}}",
+    "outcome": {
+      "executed": "Done",
+      "blocked": "Blocked by security policy",
+      "disabled": "Turned off by you",
+      "cancelled": "Not confirmed",
+      "invalid": "Invalid request",
+      "failed": "Failed"
     }
   }
 }

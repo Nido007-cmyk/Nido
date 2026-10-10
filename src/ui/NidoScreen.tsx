@@ -1627,7 +1627,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
 }
 
 const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg.surface },
+  container: { flex: 1, backgroundColor: colors.bg.black },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1663,9 +1663,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   // FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): banner de alerta para
   // almacenamiento de revocaciones corrupto.
   revocationAlert: {
-    backgroundColor: "#3d1a1a",
+    backgroundColor: colors.crimson.bgSubtle,
     borderLeftWidth: 4,
-    borderLeftColor: "#c0392b",
+    borderLeftColor: colors.crimson[500],
     paddingHorizontal: calmSpacing.comfortable,
     paddingVertical: calmSpacing.cozy,
     gap: 8,
@@ -1673,17 +1673,17 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   revocationAlertTitle: {
     ...typography.ui.body,
     fontWeight: "700",
-    color: "#f5c6c6",
+    color: colors.crimson[600],
   },
   revocationAlertBody: {
     ...typography.ui.caption,
-    color: "#e8b4b4",
+    color: colors.crimson[600],
   },
   revocationAlertButton: {
-    backgroundColor: "#c0392b",
+    backgroundColor: colors.crimson[500],
     paddingHorizontal: calmSpacing.comfortable,
     paddingVertical: calmSpacing.cozy,
-    borderRadius: 8,
+    borderRadius: 9999,
     alignItems: "center",
     minHeight: 44,
     justifyContent: "center",
@@ -1848,16 +1848,18 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   chatList: { padding: calmSpacing.comfortable, gap: calmSpacing.cozy },
   bubble: {
     maxWidth: "80%",
-    borderRadius: calmRadii.soft,
+    borderRadius: 9999,
     paddingHorizontal: calmSpacing.comfortable,
     paddingVertical: calmSpacing.cozy,
+    minHeight: 44,
+    justifyContent: "center",
   },
   bubbleIn: { alignSelf: "flex-start", backgroundColor: colors.bg.card },
   bubbleOut: { alignSelf: "flex-end", backgroundColor: colors.emerald[500] },
   bubbleText: { ...typography.ui.body, color: colors.text.primary },
   bubbleTextOut: { color: colors.text.inverse },
   bubbleMeta: { ...typography.ui.caption, color: colors.text.muted, marginTop: 2, textAlign: "right" },
-  bubbleMetaOut: { color: "rgba(255,255,255,0.8)" },
+  bubbleMetaOut: { color: colors.text.inverse, opacity: 0.8 },
   // N6 §10: acción explícita de reintento en mensajes 'failed'.
   retryAction: {
     marginTop: calmSpacing.tight,

@@ -7,6 +7,7 @@
 import React from "react";
 import { View, Text, StyleSheet, FlatList } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "./theme";
 import { CatalogModel } from "../models/manifest";
 import { CatalogItemCard, CatalogRowState } from "./CatalogItemCard";
 import { PersonalDocumentsManager } from "./PersonalDocumentsManager";
@@ -25,10 +26,11 @@ interface Props {
  * KnowledgeBaseScreen — same component, not duplicated).
  */
 export function CorpusSettingsTab({ corpusItems, getRow, download, remove }: Props) {
+  const { colors } = useTheme();
   const { t } = useTranslation();
   return (
     <View style={{ gap: 4 }}>
-      <Text style={styles.sectionHeading}>{t("corpusSettingsTab.downloadablePacks")}</Text>
+      <Text style={[styles.sectionHeading, { color: colors.text.dim }]}>{t("corpusSettingsTab.downloadablePacks")}</Text>
       <FlatList
         data={corpusItems}
         keyExtractor={(m) => m.id}
@@ -46,13 +48,20 @@ export function CorpusSettingsTab({ corpusItems, getRow, download, remove }: Pro
         )}
       />
 
-      <Text style={styles.sectionHeading}>{t("corpusSettingsTab.yourDocuments")}</Text>
+      <Text style={[styles.sectionHeading, { color: colors.text.dim }]}>{t("corpusSettingsTab.yourDocuments")}</Text>
       <PersonalDocumentsManager />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionHeading: { color: "#fff", fontSize: 13, fontWeight: "700", marginHorizontal: 12, marginTop: 10 },
+  sectionHeading: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    marginHorizontal: 16,
+    marginTop: 12,
+  },
   list: { padding: 12, gap: 10 },
 });

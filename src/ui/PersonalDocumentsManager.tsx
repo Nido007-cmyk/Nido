@@ -183,7 +183,7 @@ export function PersonalDocumentsManager() {
                   <Text style={styles.exportBtnText}>{t("personalDocumentsManager.exporting")}</Text>
                 ) : (
                   <View style={styles.exportBtnRow}>
-                    <NidoIcon name="external" size={13} color="#9cc4ff" />
+                    <NidoIcon name="external" size={13} color={colors.text.accentEmerald} />
                     <Text style={styles.exportBtnText}>{t("personalDocumentsManager.exportButton")}</Text>
                   </View>
                 )}
@@ -225,9 +225,11 @@ const getStyles = (colors: Colors) =>
     },
     importBtn: {
       backgroundColor: colors.text.accentEmerald,
-      borderRadius: 6,
+      borderRadius: 9999,
       paddingVertical: 10,
       alignItems: "center",
+      minHeight: 44,
+      justifyContent: "center",
     },
     importBtnDisabled: { backgroundColor: colors.border.default },
     importBtnText: { color: colors.text.inverse, fontWeight: "700", fontSize: 13 },

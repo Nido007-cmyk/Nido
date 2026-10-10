@@ -126,7 +126,7 @@ export function KeyLossRecoveryScreen({
             onPress={() => go("begin")}
             style={[styles.button, { backgroundColor: colors.emerald[500] }]}
           >
-            <Text style={styles.buttonText}>{t(vm.copy.startRecovery)}</Text>
+            <Text style={[styles.buttonText, { color: colors.text.inverse }]}>{t(vm.copy.startRecovery)}</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -156,7 +156,7 @@ export function KeyLossRecoveryScreen({
               onPress={runRecovery}
               style={[styles.button, { backgroundColor: colors.crimson[500] }]}
             >
-              <Text style={styles.buttonText}>{t(vm.copy.confirmButton)}</Text>
+              <Text style={[styles.buttonText, { color: colors.text.inverse }]}>{t(vm.copy.confirmButton)}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -195,7 +195,7 @@ export function KeyLossRecoveryScreen({
             onPress={() => go("retry")}
             style={[styles.button, { backgroundColor: colors.emerald[500] }]}
           >
-            <Text style={styles.buttonText}>{t(vm.copy.startRecovery)}</Text>
+            <Text style={[styles.buttonText, { color: colors.text.inverse }]}>{t(vm.copy.startRecovery)}</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -272,13 +272,13 @@ const styles = StyleSheet.create({
   },
   button: {
     paddingHorizontal: calmSpacing.spacious,
-    paddingVertical: calmSpacing.comfortable,
-    borderRadius: calmRadii.soft,
+    paddingVertical: 12,
+    minHeight: 48,
+    borderRadius: calmRadii.pill,
     alignItems: "center",
-    ...calmShadows.none,
+    justifyContent: "center",
   },
   buttonText: {
-    color: "#06110c",
     fontSize: 16,
     fontWeight: "700",
   },

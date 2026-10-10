@@ -1098,7 +1098,7 @@ function makeStyles(colors: Colors) {
       backgroundColor: colors.bg.card,
       borderWidth: 1,
       borderColor: colors.border.default,
-      borderRadius: calmRadii.gentle,
+      borderRadius: 16,
       padding: calmSpacing.comfortable,
       gap: calmSpacing.comfortable,
     },
@@ -1204,8 +1204,8 @@ function makeStyles(colors: Colors) {
     },
     noteCard: {
       ...calmShadows.none,
-      backgroundColor: colors.bg.cardElevated,
-      borderRadius: calmRadii.gentle,
+      backgroundColor: colors.bg.card,
+      borderRadius: 16,
       padding: calmSpacing.comfortable,
     },
     noteText: {
@@ -1254,7 +1254,7 @@ function makeStyles(colors: Colors) {
     },
     primaryBtn: {
       minHeight: 56,
-      borderRadius: calmRadii.pill,
+      borderRadius: 9999,
       backgroundColor: colors.text.accentEmerald,
       alignItems: "center",
       justifyContent: "center",

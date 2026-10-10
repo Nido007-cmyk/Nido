@@ -338,7 +338,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   cardActive: {
     borderColor: colors.emerald.border,
-    backgroundColor: "rgba(16, 185, 129, 0.06)",
+    backgroundColor: colors.emerald.bgSubtle,
   },
   headerRow: {
     flexDirection: "row",
@@ -360,7 +360,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: 5,
   },
   kindChip: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: colors.bg.subtle,
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: radii.xs,
@@ -532,9 +532,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     backgroundColor: colors.emerald.bgSubtle,
     borderColor: colors.emerald.border,
     borderWidth: 1,
-    borderRadius: radii.sm,
+    borderRadius: 9999,
     paddingHorizontal: 14,
     paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: "center",
   },
   downloadBtnText: {
     ...typography.ui.titleSm,
@@ -574,7 +576,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     marginLeft: "auto",
     padding: 6,
     borderRadius: radii.xs,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: colors.bg.subtle,
   },
   trashIcon: {
     fontSize: 14,
@@ -589,7 +591,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: 4,
   },
   badgeGrey: {
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: colors.bg.subtle,
     borderColor: colors.border.subtle,
   },
   badgeTextMuted: {
@@ -625,7 +627,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     fontWeight: "700",
   },
   badgeDownloading: {
-    backgroundColor: "rgba(6, 182, 212, 0.15)",
+    backgroundColor: colors.cyan.bgSubtle,
     borderColor: colors.cyan.border,
   },
   badgeTextCyan: {
