@@ -52,8 +52,6 @@ eval-results/
 # knowledge pack builds (scripts/build-knowledge-pack.mjs)
 build/knowledge-pack/
 
-# Raw demo recording (31 MB); the compressed copy is docs/demo/boar_demo_small.mp4
-docs/internal/demo/boar_demo.mp4
 __pycache__/
 apk/
 

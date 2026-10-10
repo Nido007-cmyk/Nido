@@ -14,7 +14,7 @@ Spanish translations mirror this tree under [`es/`](es/).
 - [Network audit](NETWORK_AUDIT.md) · [security audits](security/) · [security roadmap](SECURITY_ROADMAP.md)
 
 ## Design
-- [Principles](NIDO_PRINCIPLES.md) · [manifesto](MANIFESTO.md)
+- [Principles](NIDO_PRINCIPLES.md)
 - [Agent protocol](AGENT_PROTOCOL.md) · [autonomy model](AUTONOMY_MODEL.md) · [capability model](CAPABILITY_MODEL.md)
 - [Transport architecture](TRANSPORT_ARCHITECTURE.md) · [architecture notes](architecture/)
 - [Design language](NIDO_DESIGN_LANGUAGE.md) · [visual identity](NIDO_VISUAL_IDENTITY_SYSTEM.md) · [visual assets](visual/)
@@ -26,5 +26,5 @@ Spanish translations mirror this tree under [`es/`](es/).
 
 ## Internal working notes
 [`internal/`](internal/) holds dated working documents: research, design
-reviews, audit logs, QA evidence and material inherited from BOAR. They are
+reviews, audit logs and QA evidence. They are
 kept for the record and may be out of date.
