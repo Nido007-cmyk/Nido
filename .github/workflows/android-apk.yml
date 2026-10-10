@@ -108,7 +108,7 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
         with:
           # The action defaults to `packages: tools platform-tools`, but the
           # obsolete `tools` package no longer exists in the SDK repository
