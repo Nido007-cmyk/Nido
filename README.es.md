@@ -1,83 +1,98 @@
 > **Idioma:** [English](README.md) · Español
 
-# NIDO: tu agente, tu mundo
+<p align="center">
+  <img src="assets/mascot-nido.png" alt="Mascota de NIDO" width="120">
+</p>
 
-Asistente personal de IA que vive **100% en tu teléfono Android**. Privacidad
-total por diseño: cero red tras la instalación, memoria cifrada en el
-dispositivo, sin cuentas, sin nube, sin analítica.
+<h1 align="center">NIDO</h1>
 
-Derivado de [BOAR](https://github.com/rferrari/boar-app) (MIT), ver
-[ATTRIBUTION.es.md](ATTRIBUTION.es.md). NIDO se construye sobre la base
-offline de BOAR con una arquitectura de agente original, memoria persistente
-cifrada y privacidad por diseño.
+<p align="center"><b>Tu agente, tu mundo.</b><br>
+Un asistente de IA privado que funciona por completo en tu teléfono Android.</p>
 
-## Idiomas de la documentación
+<p align="center">
+  <a href="https://github.com/Nido007-cmyk/Nido/releases"><img alt="Última versión" src="https://img.shields.io/github/v/release/Nido007-cmyk/Nido?include_prereleases&label=descargar"></a>
+  <a href="https://github.com/Nido007-cmyk/Nido/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Nido007-cmyk/Nido/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="Licencia: MIT" src="https://img.shields.io/badge/licencia-MIT-green"></a>
+  <img alt="Plataforma: Android" src="https://img.shields.io/badge/plataforma-Android-3A563F">
+</p>
 
-El inglés es el idioma canónico de la documentación de este repositorio. Las
-traducciones al español viven en un árbol espejo con rutas relativas
-idénticas: `docs/X.md` → `docs/es/X.md`, `conformance/X` → `conformance/es/X`,
-y los archivos raíz usan el sufijo `.es.md` (la contraparte en inglés de este
-archivo es [README.md](README.md)).
+<p align="center">
+  <img src="docs/visual/ui-chat-design.png" alt="Chat de NIDO: pantalla inicial, una conversación y tema oscuro" width="820">
+</p>
+<p align="center"><sub>Maquetas de diseño del chat en v0.1.1-alpha. Las pantallas publicadas pueden diferir en detalles.</sub></p>
 
-Cada documento lleva una línea de navegación de idioma al inicio con enlace a
-su contraparte.
+## Qué es NIDO
 
-## Qué hace
+NIDO es un asistente personal que piensa en tu teléfono, no en el servidor
+de otra persona. El modelo de lenguaje, tu memoria y tus documentos se quedan
+en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
 
-- **Chat local** con un LLM en el dispositivo (llama.cpp vía llama.rn).
-- **Memoria persistente**: hechos, preferencias, personas y diario, cifrados
-  con SQLCipher, clave en el Android Keystore.
-- **Herramientas locales**: notas, recordatorios, hora del dispositivo, abrir
-  apps. Ninguna toca la red (manifiesto en `src/agent/tools/manifest.ts`).
-- **Bucle de agente** pensar → actuar → observar (`src/agent/loop/`), con
-  validación determinista de cada llamada a herramienta.
-- **RAG local**: tus documentos indexados en el teléfono (heredado de BOAR).
-- **Auditoría de red**: cada conexión que la app hace queda registrada y
-  visible en Ajustes (`src/privacy/networkAudit.ts`).
-- **Español** como idioma principal.
+> **Software en alfa.** NIDO es una alfa temprana para pruebas y comentarios.
+> No ha pasado una auditoría de seguridad independiente. Todavía no confíes
+> en él para secretos importantes. Consulta las
+> [limitaciones conocidas](docs/ALPHA_RELEASE_NOTES.md#known-limitations).
 
-## Privacidad: cómo NIDO difiere de BOAR
+## Qué hace hoy
 
-| Área | NIDO |
-|---|---|
-| Ajustes y SQLite en claro | Cifrado (SQLCipher + Keystore) |
-| Backup de Google activado | `allowBackup=false` |
-| Buscador de modelos (filtra intereses por red) | Eliminado |
-| URLs `resolve/main` sin fijar | Revisiones fijadas (`pinnedSourceUrl`) |
-| sha256 nunca verificado tras descargar | Verificación automática (≤256 MB) + bajo demanda |
-| Sin visibilidad de red | Registro de auditoría en Ajustes |
-| Telemetría persistente | Eliminada |
+- **Conversa sin conexión** con un modelo de lenguaje pequeño que corre en
+  el teléfono (llama.cpp mediante `llama.rn`).
+- **Recuerda por ti**: datos, notas y recordatorios, guardados en una base
+  cifrada con SQLCipher. La clave vive en el Keystore de Android.
+- **Actúa cuando se lo pides**: recordatorios, notas, eventos de calendario,
+  conversión de unidades, cálculos, abrir enlaces. Todo lo que tiene efecto
+  fuera de la app pide antes tu confirmación.
+- **Responde con tus documentos**: importa archivos `.txt`, `.md`, `.csv`,
+  `.json` o `.pdf` y NIDO los indexa en el teléfono.
+- **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
+  teléfonos emparejados, sin internet y sin servidor. El emparejamiento se
+  hace en persona con un código QR.
+- **Muestra su uso de red**: cada descarga que hace la app queda registrada
+  y visible en la pantalla Acerca de.
 
-Detalles en [docs/es/PRIVACY.md](docs/es/PRIVACY.md).
-
-**Auditorías de seguridad (oct 2026):** el protocolo P2P y el diseño de
-delegación pasaron por una revisión de seguridad y dos rondas de auditoría
-adversarial; todos los hallazgos accionables se corrigieron con tests de
-regresión. Resumen público:
-[docs/es/security/AUDITS_2026-10.md](docs/es/security/AUDITS_2026-10.md).
-Para reportar una vulnerabilidad: [SECURITY.md](SECURITY.md).
-
-## Estado actual
-
-**Alpha (oct 2026):** 2314 tests automatizados en verde, `tsc` limpio. La
-validación física en dos dispositivos está pendiente, la ejecución delegada
-de tareas viene con su feature flag apagado, y aún no hay auditoría
-criptográfica externa. Los APKs precompilados se distribuyen directamente
-por ahora para pruebas en dispositivo.
+La interfaz está disponible en español, inglés y portugués.
 
 ## Instalación
 
-Los APKs firmados y precompilados se distribuyen directamente por ahora
-para pruebas en dispositivo (instala encima de la app existente: la firma
-release conserva identidad, contactos y modelos descargados; para una pasada
-de validación física se recomienda instalación limpia para descartar estado
-viejo; ambos dispositivos deben usar el mismo build para P2P). Habrá GitHub
-Releases públicos cuando se complete la validación física en dos dispositivos.
+1. Descarga `app-release.apk` desde la
+   [última versión](https://github.com/Nido007-cmyk/Nido/releases).
+2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
+3. Instálalo en un teléfono Android (arm64).
+4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,5 y
+   1 GB según la memoria del teléfono. Es la única vez que necesita internet.
 
-## Compilar e instalar
+## Privacidad y seguridad
 
-No funciona en Expo Go (módulos nativos: llama.rn, SQLCipher, etc.).
-Necesitas Android SDK + NDK + JDK, o EAS.
+- Los datos guardados se cifran con SQLCipher; la clave la custodia el
+  Keystore de Android y la copia de seguridad en la nube de Android está
+  desactivada.
+- Si la clave no se puede leer, NIDO se detiene en lugar de abrir los datos
+  sin cifrar.
+- El contenido que viene de fuera (el mensaje de un contacto, un archivo,
+  una nota) se trata como datos, nunca como instrucciones, y las acciones
+  que escriben o envían algo después de leerlo piden confirmación.
+- Los mensajes por Bluetooth van cifrados de extremo a extremo con claves
+  intercambiadas por código QR (X25519, firmas Ed25519, XSalsa20-Poly1305).
+
+Más detalle: [privacidad](docs/es/PRIVACY.md) · [arquitectura criptográfica](docs/es/CRYPTO_ARCHITECTURE.md) ·
+[modelo de amenazas](docs/THREAT_MODEL_SUMMARY.md) · [reportar una vulnerabilidad](SECURITY.es.md)
+
+## Estado
+
+Alfa, octubre de 2026. El proyecto tiene más de 2300 pruebas automáticas y
+ejecuta la comprobación de tipos y la batería de pruebas en cada cambio. Lo
+que las pruebas automáticas no cubren es el comportamiento en hardware real:
+el Bluetooth en particular varía según el modelo de teléfono, y la
+validación con dos dispositivos sigue en curso.
+
+Las limitaciones conocidas de la versión actual, incluido qué puede y qué no
+puede restaurar un respaldo, están en las
+[notas de la versión](docs/ALPHA_RELEASE_NOTES.md). Los cambios por versión
+están en el [registro de cambios](CHANGELOG.md).
+
+## Compilar desde el código
+
+NIDO no funciona en Expo Go: usa módulos nativos. Necesitas el SDK y el NDK
+de Android y un JDK, o una compilación con EAS.
 
 ```bash
 npm install
@@ -85,36 +100,46 @@ npx expo prebuild -p android --clean
 npx expo run:android --device
 ```
 
-APK release:
+Comprobaciones que no necesitan un dispositivo:
 
 ```bash
-npx expo prebuild -p android --clean
-cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+npm run typecheck
+npm test
 ```
 
-Verificación sin dispositivo (no prueba la instalación real):
+La guía completa de compilación, con APK de release y firma, está en
+[AGENTS.es.md](AGENTS.es.md).
 
-```bash
-npm run typecheck   # tsc --noEmit
-npm test            # vitest — 2314 tests: agente, privacy, routing, rag, p2p
-```
-
-Guía completa de build en [AGENTS.es.md](AGENTS.es.md).
-
-## Estructura
+## Estructura del proyecto
 
 ```
 src/
-  agent/        Capa de agente NIDO: memoria, herramientas, bucle
-  privacy/      Auditoría de red
-  inference/    LlamaEngine (heredado de BOAR, sin cambios)
-  rag/          RAG híbrido local (heredado; db.ts → cifrado pendiente)
-  models/       Catálogo + descargas (endurecido: auditoría, sha256, pins)
-  services/     Descargas, documentos, resúmenes…
-  ui/           Chat, ajustes, pantallas
-  i18n/         locales/es.json ← idioma principal
+  agent/      Agente: memoria, herramientas, bucle, política de seguridad
+  p2p/        Mensajería NIDO a NIDO por Bluetooth
+  privacy/    Gestión de claves y registro de red
+  security/   Base cifrada, respaldo, bloqueo biométrico
+  inference/  Motor del modelo de lenguaje en el dispositivo
+  rag/        Indexado y búsqueda en documentos
+  models/     Catálogo de modelos y descargas verificadas
+  ui/         Pantallas y componentes
+  i18n/       Textos en inglés, español y portugués
+modules/      Módulos nativos de Android
+docs/         Documentación (ver docs/README.md)
 ```
 
-## Licencia
+## Contribuir
 
-MIT, ver [LICENSE](LICENSE) y [ATTRIBUTION.es.md](ATTRIBUTION.es.md).
+Lo más útil ahora mismo son los reportes de errores y los comentarios de
+quienes prueban la app. Usa las plantillas de issues. Para código, lee antes
+[CONTRIBUTING.md](CONTRIBUTING.md) y el
+[código de conducta](CODE_OF_CONDUCT.es.md).
+
+## Créditos y licencia
+
+NIDO se publica bajo la [Licencia MIT](LICENSE).
+
+Nació como un fork de [BOAR](https://github.com/rferrari/boar-app), de los
+contribuidores de aoair, también MIT. De BOAR se reutiliza la base de
+inferencia y búsqueda sin conexión; el agente, el almacenamiento cifrado, la
+política de seguridad y el protocolo Bluetooth son trabajo propio de NIDO.
+[ATTRIBUTION.es.md](ATTRIBUTION.es.md) detalla qué viene de dónde.

@@ -1,0 +1,15 @@
+# Avisos de actualizaciones de seguridad y de versión.
+# npm: las dependencias van fijadas a versión exacta (scripts/verify-dep-pins.mjs),
+# así que cada propuesta llega como un PR que cambia el pin y el lockfile juntos.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
