@@ -193,3 +193,15 @@ jobs:
           name: nido-standalone-apk
           path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
+
+      - name: Upload APK to release
+        # Auto-attaches the APK to the GitHub Release matching the commit,
+        # so it's publicly downloadable without login. Uses GITHUB_TOKEN
+        # (has release write permission) — no manual upload needed.
+        # Only runs on main branch pushes, not PRs.
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.1.0-alpha
+          files: android/app/build/outputs/apk/release/app-release.apk
+          fail_on_unmatched_files: true
