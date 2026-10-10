@@ -390,6 +390,16 @@ export class NidoMessenger {
   }
 
   /**
+   * FIX 2026-10-09: pkHex con ruta establecida (handshake completo).
+   * La UI lo usa para restaurar el estado "en línea" al remontar tras navegar,
+   * evitando que muestre "desconectado" cuando el socket sigue vivo.
+   */
+  connectedPeers(): string[] {
+    this.assertLive();
+    return this.transport.connectedPeers ? this.transport.connectedPeers() : [];
+  }
+
+  /**
    * Conecta con un dispositivo descubierto (alias con MAC, p. ej. lo que
    * muestra la lista de cercanos) y hace el handshake. Resuelve con la
    * identidad verificada del peer (debe ser un contacto emparejado por QR).
@@ -759,6 +769,19 @@ export class NidoMessenger {
     const contact = await findContactByPk(payload.pk);
     this.assertLive();
     if (!contact) throw new Error("No se pudo guardar el contacto.");
+    // FIX 2026-10-09: si esta identidad estaba revocada, el re-emparejamiento
+    // explícito (ceremonia QR con confirmación) la rehabilita. Sin esto, revocar
+    // y volver a emparejar el mismo dispositivo lo dejaba invisible para siempre:
+    // el contador mostraba el contacto pero el filtro de revocados ocultaba la fila.
+    try {
+      const t = this.transport as unknown as { unrevokePeer?: (pk: string) => Promise<void> };
+      if (typeof t.unrevokePeer === "function") {
+        await t.unrevokePeer(payload.pk);
+      }
+    } catch {
+      /* best-effort: el emparejamiento ya es válido sin esto */
+    }
+    this.assertLive();
     return contact;
   }
 

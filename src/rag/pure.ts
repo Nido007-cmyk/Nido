@@ -408,13 +408,16 @@ export function assemblePrompt(
       "If the context doesn't cover the question, say so and answer from general knowledge."
     : "";
   // Honest no-result behavior: retrieval ran and found nothing relevant.
-  // Tell the model to say so briefly rather than letting it answer from
-  // general knowledge while the UI implies sources backed it. (The UI also
-  // renders a deterministic "no sources" note - this is the prompt half.)
+  // FIX 2026-10-09 (Phase 3): the 0.5B model hallucinates confidently when
+  // permitted to answer from "general knowledge". Require honest "I don't
+  // know" for factual questions without sources instead.
   const noSourcesInstruction =
     noSourcesFoundNote && !hasContext
       ? " No relevant sources were found in the offline index for this question. " +
-        "If you answer from general knowledge, say so briefly instead of implying that local sources support your answer."
+        "Do NOT invent facts. If this is a factual question you cannot answer " +
+        "reliably without sources, say honestly that you don't know the answer " +
+        "and suggest what the user could check. Only answer from general knowledge " +
+        "for non-factual requests (opinions, creative writing, simple calculations)."
       : "";
   const contextSection = hasContext
     ? `Context:\n${chunks.map((c, i) => `[${i + 1}] ${c.title}\n${c.body}`).join("\n\n")}\n\n`
@@ -469,10 +472,16 @@ export function assembleChatMessages(
       "If the context doesn't cover the question, say so and answer from general knowledge."
     : "";
   // Honest no-result behavior - see assemblePrompt for the rationale.
+  // FIX 2026-10-09 (Phase 3): the 0.5B model hallucinates confidently when
+  // permitted to answer from "general knowledge". Instead of allowing it,
+  // require an honest "I don't know" for factual questions without sources.
   const noSourcesInstruction =
     noSourcesFoundNote && !hasContext
       ? " No relevant sources were found in the offline index for this question. " +
-        "If you answer from general knowledge, say so briefly instead of implying that local sources support your answer."
+        "Do NOT invent facts. If this is a factual question you cannot answer " +
+        "reliably without sources, say honestly that you don't know the answer " +
+        "and suggest what the user could check. Only answer from general knowledge " +
+        "for non-factual requests (opinions, creative writing, simple calculations)."
       : "";
   const contextSection = hasContext
     ? `\n\nContext:\n${chunks.map((c, i) => `[${i + 1}] ${c.title}\n${c.body}`).join("\n\n")}`

@@ -88,6 +88,31 @@ describe("classifyKnowledgeQuery", () => {
     expect(classifyKnowledgeQuery("¿Quién eres?")).toBe("identity");
     expect(classifyKnowledgeQuery("O QUE É O NIDO")).toBe("identity");
   });
+
+  // FIX 2026-10-09: privacy patterns were too narrow and missed common
+  // variations, letting privacy questions fall through to the general model
+  // which hallucinated false answers (live evidence: Tab A9+).
+  it.each([
+    ["donde se guardan mis datos", "advantages"],
+    ["¿dónde están mis datos?", "advantages"],
+    ["quien puede ver mis datos", "advantages"],
+    ["¿quién tiene acceso a mis datos?", "advantages"],
+    ["mis datos son privados", "advantages"],
+    ["¿mis datos están seguros?", "advantages"],
+    ["envias mis datos", "advantages"],
+    ["¿compartes mi información?", "advantages"],
+    ["qué haces con mis datos", "advantages"],
+    ["where is my data stored", "advantages"],
+    ["where are my chats stored", "advantages"],
+    ["who can see my data", "advantages"],
+    ["is my data private", "advantages"],
+    ["are my messages secure", "advantages"],
+    ["do you send my data", "advantages"],
+    ["do you share my information", "advantages"],
+    ["what do you do with my data", "advantages"],
+  ] as Array<[string, string]>)("classifies privacy %j as %s", (query, expected) => {
+    expect(classifyKnowledgeQuery(query)).toBe(expected);
+  });
 });
 
 describe("answerKnowledgeQuery", () => {

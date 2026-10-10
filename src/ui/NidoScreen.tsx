@@ -369,6 +369,20 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
     const m = mRef.current;
     (async () => {
       try {
+        // FIX 2026-10-09: restaurar el estado "en línea" desde las rutas
+        // vivas del transporte ANTES de arrancar discovery. Sin esto, al
+        // volver a la pantalla tras navegar, `online` (useState) arranca
+        // vacío y la UI muestra "desconectado" aunque el socket siga vivo,
+        // lo que provoca intentos de reconexión manual que chocan con la
+        // conexión existente (handshake timeout).
+        try {
+          const live = m.connectedPeers();
+          if (!cancelled && live.length > 0) {
+            setOnline(new Set(live.map((pk) => pk.toLowerCase())));
+          }
+        } catch {
+          /* best-effort: si falla, el discovery lo repoblará */
+        }
         await m.startLink({
           onPeerFound: (p) => {
             if (cancelled) return;

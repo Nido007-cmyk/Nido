@@ -55,6 +55,15 @@ export interface P2PTransport {
   startDiscovery(events: P2PTransportEvents): Promise<void>;
   stopDiscovery(): Promise<void>;
   /**
+   * FIX 2026-10-09: peers con ruta establecida (handshake completo).
+   * La UI lo usa para restaurar el estado "en línea" al volver a la
+   * pantalla NIDO tras navegar: sin esto, el `online` (useState) se pierde
+   * al desmontar y la UI muestra "desconectado" aunque el socket siga vivo,
+   * provocando intentos de reconexión manual que chocan con la conexión existente.
+   * Opcional: transportes sin este concepto devuelven [].
+   */
+  connectedPeers?(): string[];
+  /**
    * Terminación nativa terminal (B/F4). Opcional: solo los transportes con
    * un módulo nativo real la implementan. La invoca únicamente la
    * destrucción terminal (`NidoMessenger.destroy()`), nunca `stopLink()`.

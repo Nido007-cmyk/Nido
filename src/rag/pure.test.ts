@@ -97,7 +97,10 @@ describe("assemblePrompt", () => {
     it("adds the no-sources instruction when retrieval ran and found nothing", () => {
       const prompt = assemblePrompt("What is X?", [], undefined, undefined, undefined, true);
       expect(prompt).toContain("No relevant sources were found in the offline index");
-      expect(prompt).toMatch(/say so briefly/i);
+      // FIX 2026-10-09 (Phase 3): stronger instruction - do NOT invent facts,
+      // say honestly that you don't know for factual questions without sources.
+      expect(prompt).toMatch(/do NOT invent facts/i);
+      expect(prompt).toMatch(/say honestly that you don't know/i);
     });
 
     it("omits the no-sources instruction by default", () => {

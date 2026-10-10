@@ -142,20 +142,28 @@ export async function scheduleReminderNotification(
       const canExact = await canScheduleExactAlarms();
       if (!canExact && !exactAlarmAlertShownThisSession) {
         exactAlarmAlertShownThisSession = true;
-        const { Alert, Platform } = await import("react-native");
-        if (Platform.OS === "android") {
-          Alert.alert(
-            "Permiso de alarmas",
-            "Para que los recordatorios suenen a la hora exacta, activa \"Alarmas y recordatorios\" para NIDO en Ajustes.",
-            [
-              { text: "Ahora no", style: "cancel" },
-              {
-                text: "Abrir ajustes",
-                onPress: () => void openExactAlarmSettings(),
-              },
-            ]
-          );
-        }
+        // FIX 2026-10-09: diferir el Alert fuera del flujo de envío.
+        // Mostrar un diálogo nativo en medio del procesamiento del mensaje
+        // (agent loop) se correlacionó con cierres intermitentes del app
+        // al enviar recordatorios. El aviso sigue apareciendo, pero en el
+        // próximo tick, fuera del camino crítico.
+        setTimeout(() => {
+          import("react-native").then(({ Alert, Platform }) => {
+            if (Platform.OS === "android") {
+              Alert.alert(
+                "Permiso de alarmas",
+                "Para que los recordatorios suenen a la hora exacta, activa \"Alarmas y recordatorios\" para NIDO en Ajustes.",
+                [
+                  { text: "Ahora no", style: "cancel" },
+                  {
+                    text: "Abrir ajustes",
+                    onPress: () => void openExactAlarmSettings(),
+                  },
+                ]
+              );
+            }
+          }).catch(() => {});
+        }, 0);
       }
     } catch {
       /* el módulo puede no estar disponible en tests */

@@ -707,6 +707,14 @@ export class NidoBluetoothTransport implements P2PTransport {
     }
   }
 
+  /**
+   * FIX 2026-10-09: devuelve los pkHex con ruta establecida (handshake completo).
+   * La UI lo usa para restaurar el estado "en línea" al remontar tras navegar.
+   */
+  connectedPeers(): string[] {
+    return Array.from(this.macToPk.values());
+  }
+
   async startDiscovery(events: P2PTransportEvents): Promise<void> {
     this.events = events;
     this.stopped = false;

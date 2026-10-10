@@ -293,21 +293,35 @@ const CAPABILITY_PATTERNS: RegExp[] = [
 const PRIVACY_PATTERNS: RegExp[] = [
   // English
   /\bwhere\s+is\s+my\s+data\s+stored\b/,
+  /\bwhere\s+(are|is)\s+my\s+(data|chats|messages|information)\s+(stored|kept|saved)\b/,
   /\bwho\s+can\s+see\s+my\s+data\b/,
   /\bwho\s+can\s+see\s+it\b/,
   /\bwho\s+has\s+access\s+to\s+my\s+data\b/,
   /\bwho\s+can\s+access\s+my\s+(data|information|chats)\b/,
   /\bis\s+my\s+data\s+private\b/,
+  /\b(is|are)\s+my\s+(data|chats|messages|information)\s+(private|secure|safe)\b/,
   /\bdo\s+you\s+send\s+my\s+data\b/,
+  /\bdo\s+you\s+(send|share|upload)\s+my\s+(data|information|chats)\b/,
   /\bis\s+my\s+(data|information)\s+sent\s+to\b/,
-  // Spanish
+  /\bwhat\s+(do\s+you\s+do|happens)\s+with\s+my\s+(data|information)\b/,
+  // Spanish - broadened 2026-10-09: the original patterns were too narrow
+  // and missed common variations, letting privacy questions fall through
+  // to the general model which hallucinated false answers.
   /\bdonde\s+se\s+guardan\s+mis\s+datos\b/,
+  /\bdonde\s+(estan|están)\s+mis\s+datos\b/,
   /\bquien\s+puede\s+ver\s+mis\s+datos\b/,
+  /\bquien\s+tiene\s+acceso\s+a\s+mis\s+datos\b/,
   /\bmis\s+datos\s+son\s+privados\b/,
+  /\bmis\s+datos\s+est[aá]n\s+(seguros|protegidos|a\s+salvo)\b/,
   /\benvias\s+mis\s+datos\b/,
+  /\b(envias|compartes|subes)\s+mis\s+(datos|chats|mensajes|informacion|información)\b/,
+  /\b(compartes|envias)\s+mi\s+informaci[oó]n\b/,
+  /\bque\s+haces\s+con\s+mis\s+datos\b/,
+  /\bque\s+pasa\s+con\s+mis\s+datos\b/,
   // Portuguese
   /\bonde\s+meus\s+dados\s+(sao|ficam)\b/,
   /\bquem\s+pode\s+ver\s+meus\s+dados\b/,
+  /\bmeus\s+dados\s+sao\s+privados\b/,
 ];
 
 /** Advantage questions: why use NIDO over a cloud assistant. */
