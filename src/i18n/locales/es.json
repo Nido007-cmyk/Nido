@@ -58,7 +58,8 @@
     "localLlmCore": "Modelo local",
     "newChatSession": "Nuevo chat",
     "offline": "Offline",
-    "openDrawer": "Abrir el panel de navegación"
+    "openDrawer": "Abrir el panel de navegación",
+    "statusLine": "Sin conexión · privado"
   },
   "chatScreen": {
     "copied": "Copiado",
@@ -103,7 +104,30 @@
     "stopping": "Deteniendo… (terminando el paso actual)",
     "toneChanged": "Tono: {{tone}}",
     "emptyTitle": "Hola, soy NIDO",
-    "emptySubtitle": "Tu agente privado. Todo queda en este dispositivo."
+    "emptySubtitle": "Tu agente privado. Todo queda en este dispositivo.",
+    "privacyHint": "Privado · nada sale de este dispositivo",
+    "suggestions": {
+      "reminder": {
+        "title": "Recuérdame algo",
+        "hint": "«Llamar a mamá mañana a las 5»",
+        "prompt": "recuérdame "
+      },
+      "note": {
+        "title": "Guarda una nota",
+        "hint": "«Anota: comprar leche y pan»",
+        "prompt": "guarda una nota: "
+      },
+      "documents": {
+        "title": "Pregunta a tus documentos",
+        "hint": "Busca en lo que importaste",
+        "prompt": "¿Qué dicen mis documentos sobre "
+      },
+      "message": {
+        "title": "Mensaje a otro NIDO",
+        "hint": "Cifrado, por Bluetooth, sin internet",
+        "prompt": "manda un mensaje a "
+      }
+    }
   },
   "common": {
     "back": "Atrás",
@@ -586,9 +610,9 @@
     "verifiedSuffix": " · ✓ verificado",
     "linkActive": "🟢 Enlace activo",
     "linkStopped": "⚪ Enlace detenido",
-    "tabChats": "💬 Chats",
-    "tabContacts": "👥 Contactos",
-    "tabLink": "🔗 Enlace",
+    "tabChats": "Chats",
+    "tabContacts": "Contactos",
+    "tabLink": "Enlace",
     "tabNegotiations": "Negociaciones",
     "tabPacks": "Packs",
     "noContactsTitle": "Sin contactos todavía",

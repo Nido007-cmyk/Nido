@@ -387,7 +387,8 @@
     "cycleTone": "Alternar tom do assistente",
     "newChatSession": "Novo chat",
     "deepResearch": "Pesquisa Aprofundada",
-    "deepResearchActive": "Pesquisa Aprofundada Ativa"
+    "deepResearchActive": "Pesquisa Aprofundada Ativa",
+    "statusLine": "Sem conexão · privado"
   },
   "chatScreen": {
     "initializingCore": "Iniciando o NIDO…",
@@ -432,7 +433,30 @@
     "stageTimedOut": "Uma etapa da pesquisa demorou demais e foi interrompida",
     "interruptedByBackground": "Pausado — o app foi para segundo plano. Pergunte novamente para continuar.",
     "emptyTitle": "Olá, sou NIDO",
-    "emptySubtitle": "Seu agente privado. Tudo fica neste dispositivo."
+    "emptySubtitle": "Seu agente privado. Tudo fica neste dispositivo.",
+    "privacyHint": "Privado · nada sai deste dispositivo",
+    "suggestions": {
+      "reminder": {
+        "title": "Lembre-me de algo",
+        "hint": "“Ligar para a mãe amanhã às 5”",
+        "prompt": "lembra-me de "
+      },
+      "note": {
+        "title": "Guardar uma nota",
+        "hint": "“Anote: comprar leite e pão”",
+        "prompt": "guarda uma nota: "
+      },
+      "documents": {
+        "title": "Pergunte aos seus documentos",
+        "hint": "Busque no que você importou",
+        "prompt": "O que meus documentos dizem sobre "
+      },
+      "message": {
+        "title": "Mensagem para outro NIDO",
+        "hint": "Criptografada, por Bluetooth, sem internet",
+        "prompt": "envia uma mensagem ao "
+      }
+    }
   },
   "aboutScreen": {
     "title": "Sobre o NIDO",
@@ -586,9 +610,9 @@
     "verifiedSuffix": " · ✓ verificado",
     "linkActive": "🟢 Enlace ativo",
     "linkStopped": "⚪ Enlace parado",
-    "tabChats": "💬 Conversas",
-    "tabContacts": "👥 Contatos",
-    "tabLink": "🔗 Enlace",
+    "tabChats": "Conversas",
+    "tabContacts": "Contatos",
+    "tabLink": "Enlace",
     "tabNegotiations": "Negociações",
     "noContactsTitle": "Sem contatos ainda",
     "noContactsBody": "Emparelhe seu primeiro contato na aba Contatos: mostre seu QR e escaneie o dele (ou cole como texto).",

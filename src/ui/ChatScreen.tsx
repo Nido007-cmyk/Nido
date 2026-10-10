@@ -1261,18 +1261,11 @@ export function ChatScreen({
 
   return (
     <LinearGradient
-      colors={[colors.bg.surface, colors.bg.surface]}
+      colors={[colors.bg.black, colors.bg.black]}
       style={styles.container}
     >
-      {/* Ambient background glows */}
-      <View
-        style={[styles.ambientGlowTop, isDeepActive && styles.ambientGlowTopDeep]}
-        pointerEvents="none"
-      />
-      <View
-        style={[styles.ambientGlowBottom, isDeepActive && styles.ambientGlowBottomDeep]}
-        pointerEvents="none"
-      />
+      {/* Rediseño 2026-10-10: sin halos de fondo. Eran colores fijos
+          (cian/esmeralda de un diseño anterior) ajenos a la paleta del tema. */}
 
       <View style={[styles.flex, { paddingBottom: keyboardHeight }]}>
         <ChatHeader
@@ -1361,27 +1354,17 @@ export function ChatScreen({
                     ? [
                         styles.bubble,
                         styles.userBubble,
-                        { backgroundColor: colors.bg.cardElevated, borderColor: colors.border.focus },
+                        { backgroundColor: colors.emerald[500] },
                       ]
                     : [
                         styles.assistantContainer,
                       ],
                 ]}
               >
-                {/* Role label: only for user (assistant asymmetry speaks for itself) */}
-                {item.role === "user" && (
-                  <View style={styles.bubbleHeader}>
-                    <Text
-                      style={[
-                        styles.bubbleRoleLabel,
-                        styles.userRoleLabel,
-                        { color: colors.text.accentCyan },
-                      ]}
-                    >
-                      {t("chatScreen.roleYou")}
-                    </Text>
-                  </View>
-                )}
+                {/* Rediseño 2026-10-10: sin etiqueta «Tú» (la posición y el color
+                    ya dicen quién habla). NIDO lleva su mascota como avatar. */}
+                {item.role === "assistant" && <NidoMascot role="brand" size={26} />}
+                <View style={item.role === "assistant" ? styles.assistantBody : styles.userBody}>
 
                 {showProcessing ? (
                   <ProcessingIndicator
@@ -1410,7 +1393,11 @@ export function ChatScreen({
                         </Text>
                       </View>
                     ) : (
-                      <MarkdownMessage content={shownText} isStreaming={isStreamingThis} />
+                      item.role === "user" ? (
+                        <Text style={[styles.userText, { color: colors.text.inverse }]}>{shownText}</Text>
+                      ) : (
+                        <MarkdownMessage content={shownText} isStreaming={isStreamingThis} />
+                      )
                     )}
                   </>
                 )}
@@ -1600,6 +1587,7 @@ export function ChatScreen({
                     </Pressable>
                   </View>
                 )}
+                </View>
               </Pressable>
             );
           }}
@@ -1612,13 +1600,49 @@ export function ChatScreen({
               <Text style={[styles.emptySubtitle, { color: colors.text.dim }]}>
                 {t("chatScreen.emptySubtitle", "Tu agente privado. Todo queda en este dispositivo.")}
               </Text>
+              {/* Rediseño 2026-10-10: sugerencias tocables para que el
+                  usuario sepa qué puede pedir. Solo rellenan el campo. */}
+              <View style={styles.suggestions}>
+                {(
+                  [
+                    ["ideas", "reminder"],
+                    ["memory", "note"],
+                    ["knowledge", "documents"],
+                    ["pairing", "message"],
+                  ] as const
+                ).map(([icon, key]) => (
+                  <Pressable
+                    key={key}
+                    onPress={() => {
+                      setInput(t(`chatScreen.suggestions.${key}.prompt`));
+                      requestAnimationFrame(() => inputRef.current?.focus());
+                    }}
+                    style={[styles.suggestion, { backgroundColor: colors.bg.card, borderColor: colors.border.default }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(`chatScreen.suggestions.${key}.title`)}
+                  >
+                    <View style={[styles.suggestionIcon, { backgroundColor: colors.emerald.bgSubtle }]}>
+                      <NidoIcon name={icon} size={19} color={colors.text.accentEmerald} />
+                    </View>
+                    <View style={styles.suggestionText}>
+                      <Text style={[styles.suggestionTitle, { color: colors.text.primary }]}>
+                        {t(`chatScreen.suggestions.${key}.title`)}
+                      </Text>
+                      <Text style={[styles.suggestionHint, { color: colors.text.secondary }]} numberOfLines={1}>
+                        {t(`chatScreen.suggestions.${key}.hint`)}
+                      </Text>
+                    </View>
+                    <NidoIcon name="chev-right" size={14} color={colors.text.dim} />
+                  </Pressable>
+                ))}
+              </View>
             </View>
           }
         />
 
         {/* Input Bar */}
-        <View style={[styles.inputContainer, { backgroundColor: colors.bg.cardElevated, borderTopColor: colors.border.default }]}>
-          <View style={styles.inputRow}>
+        <View style={[styles.inputContainer, { backgroundColor: colors.bg.black, borderTopColor: "transparent" }]}>
+          <View style={[styles.inputRow, { backgroundColor: colors.bg.input, borderColor: colors.border.default }]}>
             {voiceInputEnabled && (
               <VoiceInputButton
                 disabled={!ready || generating}
@@ -1627,7 +1651,7 @@ export function ChatScreen({
             )}
             <TextInput
               ref={inputRef}
-              style={[styles.input, { backgroundColor: colors.bg.input, color: colors.text.primary, borderColor: colors.border.default }]}
+              style={[styles.input, { color: colors.text.primary }]}
               value={input}
               onChangeText={setInput}
               placeholder={t("chatScreen.inputPlaceholder")}
@@ -1660,9 +1684,15 @@ export function ChatScreen({
                 hitSlop={8}
                 accessibilityLabel={t("chatScreen.sendMessage")}
               >
-                <NidoIcon name="send" size={18} color="#FFFFFF" />
+                <NidoIcon name="send" size={18} color={colors.text.inverse} />
               </Pressable>
             )}
+          </View>
+          <View style={styles.privacyHint}>
+            <NidoIcon name="security" size={11} color={colors.text.dim} />
+            <Text style={[styles.privacyHintText, { color: colors.text.dim }]}>
+              {t("chatScreen.privacyHint")}
+            </Text>
           </View>
         </View>
 
@@ -1774,7 +1804,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: calmSpacing.generous,
+    paddingHorizontal: calmSpacing.comfortable,
     paddingVertical: calmSpacing.spacious,
     gap: calmSpacing.comfortable,
   },
@@ -1796,10 +1826,10 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     ...calmShadows.none,
   },
   userBubble: {
-    // (backgroundColor/borderColor intentionally set inline at the usage site)
-    borderWidth: 1,
+    // (backgroundColor set inline at the usage site)
     alignSelf: "flex-end",
-    borderBottomRightRadius: calmRadii.subtle,
+    borderBottomRightRadius: 6,
+    maxWidth: "78%",
   },
   assistantBubble: {
     backgroundColor: colors.bg.surface,
@@ -1813,11 +1843,33 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   // without a bubble (ChatGPT/Claude convention). Generous vertical
   // rhythm, no chrome.
   assistantContainer: {
-    paddingVertical: calmSpacing.comfortable,
-    paddingHorizontal: calmSpacing.cozy,
+    paddingVertical: calmSpacing.cozy,
+    paddingHorizontal: calmSpacing.tight,
     maxWidth: "100%",
     alignSelf: "stretch",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 9,
   },
+  assistantBody: { flex: 1, minWidth: 0 },
+  userBody: {},
+  userText: { ...typography.ui.bodyLg },
+  suggestions: { alignSelf: "stretch", gap: calmSpacing.cozy, marginTop: calmSpacing.comfortable },
+  suggestion: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  suggestionIcon: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  suggestionText: { flex: 1, minWidth: 0 },
+  suggestionTitle: { ...typography.ui.titleSm, fontWeight: "600" },
+  suggestionHint: { ...typography.ui.subtext },
+  privacyHint: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 6 },
+  privacyHintText: { ...typography.ui.micro, fontWeight: "400" },
   bubbleHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -1843,9 +1895,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 8,
-    paddingTop: 6,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 6,
+    paddingTop: 2,
+    borderTopWidth: 0,
   },
   footerBtn: {
     flexDirection: "row",
@@ -1923,33 +1975,37 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 26,
+    paddingVertical: 5,
+    paddingLeft: 6,
+    paddingRight: 5,
+    ...calmShadows.whisper,
   },
   input: {
     flex: 1,
-    backgroundColor: colors.bg.input,
     color: colors.text.primary,
-    borderColor: colors.border.default,
-    borderWidth: 1,
-    borderRadius: radii.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: "transparent",
+    borderWidth: 0,
+    backgroundColor: "transparent",
+    paddingHorizontal: 6,
+    paddingVertical: 8,
     ...typography.ui.body,
-    fontSize: 14,
+    fontSize: 15,
     maxHeight: 120,
     textAlignVertical: "center",
   },
   sendBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: radii.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.emerald[600],
     alignItems: "center",
     justifyContent: "center",
   },
   sendBtnDisabled: {
     opacity: 0.35,
-    backgroundColor: colors.border.elevated,
   },
   sendBtnText: {
     color: "#FFFFFF",
@@ -1958,9 +2014,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     marginLeft: 2,
   },
   stopBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: radii.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.crimson[600],
     alignItems: "center",
     justifyContent: "center",
