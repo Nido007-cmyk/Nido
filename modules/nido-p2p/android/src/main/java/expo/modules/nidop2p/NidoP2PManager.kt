@@ -438,6 +438,42 @@ class NidoP2PManager(private val context: Context) {
 
   /** Conecta con un dispositivo por MAC. Bloqueante: llamar fuera del hilo principal. */
   @Throws(IOException::class)
+  /**
+   * OEM-2026-10-10: escalera de creación de socket RFCOMM.
+   * Intenta en orden: seguro (SDP) → inseguro (SDP) → reflection canal 1.
+   * Devuelve el primer socket creado exitosamente (sin conectar aún).
+   * Lanza IOException si ningún método funciona.
+   */
+  private fun tryCreateSocketLadder(
+    device: BluetoothDevice,
+    address: String,
+  ): BluetoothSocket {
+    val errors = mutableListOf<String>()
+    // 1. Seguro con SDP (el estándar)
+    try {
+      return device.createRfcommSocketToServiceRecord(SERVICE_UUID)
+    } catch (e: Exception) {
+      errors.add("secure: ${e.message}")
+    }
+    // 2. Inseguro con SDP (el que usábamos)
+    try {
+      return device.createInsecureRfcommSocketToServiceRecord(SERVICE_UUID)
+    } catch (e: Exception) {
+      errors.add("insecure: ${e.message}")
+    }
+    // 3. Reflection canal 1 (salta SDP; último recurso)
+    try {
+      val m = device.javaClass.getMethod("createRfcommSocket", Int::class.javaPrimitiveType)
+      @Suppress("UNCHECKED_CAST")
+      return m.invoke(device, 1) as BluetoothSocket
+    } catch (e: Exception) {
+      errors.add("reflection: ${e.message}")
+    }
+    throw IOException(
+      "No se pudo crear socket RFCOMM para $address: ${errors.joinToString("; ")}"
+    )
+  }
+
   fun connect(address: String): Map<String, String?> {
     val bt = adapter ?: throw IOException("Bluetooth no disponible.")
     if (!bt.isEnabled) throw IOException("El Bluetooth está apagado.")
@@ -454,7 +490,27 @@ class NidoP2PManager(private val context: Context) {
     }
     // Cierra una conexión previa con el mismo dispositivo, si la hay.
     connections.remove(address)?.close()
-    val socket = device.createInsecureRfcommSocketToServiceRecord(SERVICE_UUID)
+    // OEM-2026-10-10: verificación de bond ANTES de conectar.
+    // En Samsung (y varios OEMs), createInsecureRfcommSocketToServiceRecord
+    // NO evita el emparejamiento del sistema: sin bond, connect() falla con
+    // timeout genérico. Mejor fallar rápido con mensaje accionable.
+    // Además Samsung pierde bonds tras reboot (bug documentado) — por eso
+    // se verifica cada vez, no se asume persistencia.
+    val bondStatePre = try {
+      device.bondState
+    } catch (_: SecurityException) {
+      BluetoothDevice.BOND_NONE // sin permiso: no podemos verificar, intentar igual
+    }
+    if (bondStatePre == BluetoothDevice.BOND_NONE) {
+      throw IOException(
+        "BOND_REQUIRED: $address no está emparejado en Ajustes de Android. " +
+          "Empareja las tablets en Ajustes → Bluetooth primero, luego conecta desde NIDO."
+      )
+    }
+    // OEM-2026-10-10: escalera de fallback para createRfcommSocket.
+    // Orden: seguro (SDP) → inseguro (SDP) → reflection canal 1 (salta SDP).
+    // Cada intento usa socket fresco y se cierra entre intentos.
+    val socket = tryCreateSocketLadder(device, address)
     // WATCHDOG-2026-10-07: `socket.connect()` es bloqueante sin timeout
     // configurable; el SO tarda 10-20s en fallar. Un watchdog de 7s cierra
     // el socket desde otro hilo para fallar rápido y permitir reintento

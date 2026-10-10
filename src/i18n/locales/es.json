@@ -594,6 +594,8 @@
     "noContactsBody": "Empareja tu primer contacto en la pestaña Contactos: muéstrale tu QR y escanea el suyo (o pégalo como texto).",
     "howItWorksTitle": "Cómo funciona",
     "howItWorksBody": "Los mensajes se cifran en tu teléfono y viajan directo al otro NIDO por Bluetooth, sin internet ni servidores. Si tu contacto no está al alcance, el mensaje queda en cola cifrada y se envía solo cuando aparezca.",
+    "troubleshootTitle": "¿Problemas para conectar?",
+    "troubleshootBody": "Si no conecta, prueba en este orden:\n\n1. Reinicia ambas tablets.\n2. Apaga el WiFi en ambas (el WiFi interfiere con el Bluetooth).\n3. En Ajustes de Android → Bluetooth, empareja las tablets entre sí.\n4. Abre NIDO y conecta desde aquí.\n5. Si se desconecta en segundo plano: Ajustes → Apps → NIDO → Batería → Sin restricciones.",
     "myCodeTitle": "Mi código",
     "myCodeBody": "Muestra este QR a tu contacto para emparejarse. Verifiquen la huella leyéndola en voz alta antes de confiar.",
     "copyCode": "📋 Copiar código como texto",

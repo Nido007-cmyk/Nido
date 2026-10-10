@@ -593,6 +593,8 @@
     "noContactsBody": "Pair your first contact in the Contacts tab: show them your QR and scan theirs (or paste it as text).",
     "howItWorksTitle": "How it works",
     "howItWorksBody": "Messages are encrypted on your phone and travel straight to the other NIDO over Bluetooth — no internet, no servers. If your contact isn’t within reach, the message stays in an encrypted queue and is sent only when they appear.",
+    "troubleshootTitle": "Trouble connecting?",
+    "troubleshootBody": "If it won’t connect, try in this order:\n\n1. Restart both tablets.\n2. Turn off WiFi on both (WiFi interferes with Bluetooth).\n3. In Android Settings → Bluetooth, pair the tablets with each other.\n4. Open NIDO and connect from here.\n5. If it disconnects in background: Settings → Apps → NIDO → Battery → Unrestricted.",
     "myCodeTitle": "My code",
     "myCodeBody": "Show this QR to your contact to pair. Read the fingerprint aloud to each other before trusting it.",
     "copyCode": "📋 Copy code as text",

@@ -1260,6 +1260,10 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             <Text style={styles.cardTitle}>{t("nido.howItWorksTitle")}</Text>
             <Text style={styles.paragraph}>{t("nido.howItWorksBody")}</Text>
           </View>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t("nido.troubleshootTitle")}</Text>
+            <Text style={styles.paragraph}>{t("nido.troubleshootBody")}</Text>
+          </View>
         </ScrollView>
       )}
 
