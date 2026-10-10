@@ -529,7 +529,13 @@ export function ChatScreen({
 
   const send = useCallback(async () => {
     const query = input.trim();
-    if (!query || generating) return;
+    // FIX 2026-10-09: no enviar antes de que los motores estén listos.
+    // El carrusel de sugerencias llena el input programáticamente (evade
+    // `editable={ready}`) y el teclado puede disparar onSubmitEditing
+    // antes de que llamaEngine/embeddingEngine terminen de cargar,
+    // lo que causaba cierre inmediato del app al enviar la sugerencia
+    // de recordatorio recién abierto el chat.
+    if (!query || generating || !ready) return;
     // N3 (2026-09-28): synchronous in-flight guard. `setGenerating(true)` is
     // batched, so two taps in the same tick both see stale `generating ===
     // false` through the closure. The ref is set synchronously here, before
@@ -1161,7 +1167,7 @@ export function ChatScreen({
       // here, so error/retry keeps working and the send button is never wedged.
       sendGuardRef.current.release();
     }
-  }, [input, generating, activeSessionId, cancelBackgroundTask, refreshSessions]);
+  }, [input, generating, ready, activeSessionId, cancelBackgroundTask, refreshSessions]);
 
   // send() itself isn't awaited by its callers (onPress/onSubmitEditing) —
   // stopAndAwaitGeneration needs a handle on the in-flight promise so a
