@@ -57,6 +57,8 @@ describe("i18n hygiene", () => {
       for (const m of src.matchAll(/\bt\(\s*"([\w.\-:]+)"/g)) {
         const key = m[1];
         if (enKeys.has(key) || enKeys.has(`${key}_one`) || enKeys.has(`${key}_other`)) continue;
+        // Clave padre leída entera (returnObjects): vale si tiene hijas.
+        if ([...enKeys].some((k) => k.startsWith(`${key}.`))) continue;
         missing.push(`${file.slice(ROOT.length + 1)}: ${key}`);
       }
     }
