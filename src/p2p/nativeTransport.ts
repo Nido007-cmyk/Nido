@@ -1372,10 +1372,12 @@ export class NidoBluetoothTransport implements P2PTransport {
     // el frame se ignoraba silenciosamente y el handshake moría por
     // timeout en ambos lados. Si no hay pend, iniciar el handshake
     // ahora (beginHello es idempotente) y reprocesar el frame.
-    if (!pend) {
-      // P3: sin handshake propio en curso, este frame viene de alguien que
-      // nos llamó (las conexiones salientes registran su pendiente antes de
-      // conectar). No se revela nada hasta verificar que es un contacto.
+    if (!pend && !this.macToPk.has(mac)) {
+      // P3: sin handshake propio en curso NI ruta establecida, este frame
+      // viene de alguien que nos llamó (las conexiones salientes registran
+      // su pendiente antes de conectar). No se revela nada hasta verificar
+      // que es un contacto. Con la ruta ya establecida el frame es tráfico
+      // normal y sigue hacia abajo.
       const admitted = await this.admitIncomingHello(mac, body);
       if (!admitted) return;
       try {
