@@ -1,6 +1,6 @@
 {
   "name": "nido-app",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "NIDO \u2014 your offline agent: 100% local personal AI assistant for Android with total privacy (zero network after install, encrypted on-device memory).",
   "license": "MIT",
   "main": "index.ts",

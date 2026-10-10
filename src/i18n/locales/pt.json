@@ -675,7 +675,12 @@
     "pairedNotFound": "Não foi possível conectar a {{name}}. Verifique se o outro tablet tem o NIDO aberto.",
     "waitingForPeer": "Aguardando {{name}} conectar. Mantenha o NIDO aberto nesta tela.",
     "troubleshootTitle": "Problemas para conectar?",
-    "troubleshootBody": "Se não conectar, tente nesta ordem:\n\n1. Reinicie os dois tablets.\n2. Desligue o WiFi nos dois (o WiFi interfere no Bluetooth).\n3. Em Configurações do Android → Bluetooth, emparelhe os tablets entre si.\n4. Abra o NIDO e conecte por aqui.\n5. Se desconectar em segundo plano: Configurações → Apps → NIDO → Bateria → Sem restrições."
+    "troubleshootBody": "Se não conectar, tente nesta ordem:\n\n1. Reinicie os dois tablets.\n2. Desligue o WiFi nos dois (o WiFi interfere no Bluetooth).\n3. Em Configurações do Android → Bluetooth, emparelhe os tablets entre si.\n4. Abra o NIDO e conecte por aqui.\n5. Se desconectar em segundo plano: Configurações → Apps → NIDO → Bateria → Sem restrições.",
+    "deleteContactTitle": "Excluir “{{name}}”?",
+    "deleteContactConfirm": "Isso remove o contato e toda a conversa com ele deste dispositivo. Para falar de novo será preciso emparelhar escaneando o código QR. Não pode ser desfeito.",
+    "deleteContactLabel": "Excluir o contato {{name}}",
+    "contactDeleted": "“{{name}}” foi excluído.",
+    "deleteContactFailed": "Não foi possível excluir o contato."
   },
   "notifications": {
     "reminderChannel": "Lembretes do NIDO",
@@ -939,5 +944,28 @@
     "close": "Fechar",
     "lastBackup": "Último backup: {{path}}",
     "warning": "Importante: guarde o arquivo de backup e sua chave em lugares diferentes. Se perder a chave, ninguém (nem NIDO) pode recuperar seus dados."
+  },
+  "remoteTasks": {
+    "title_one": "{{count}} tarefa remota aguarda sua decisão",
+    "title_other": "{{count}} tarefas remotas aguardam sua decisão",
+    "hint": "Um contato NIDO emparelhado pediu algo ao seu NIDO. Nada é executado até você decidir, e aprovar apenas registra sua decisão.",
+    "actionTitle": "aceitar uma tarefa de {{sender}}",
+    "from": "De",
+    "received": "Recebida",
+    "approved": "Tarefa de {{sender}} aprovada. Nada foi executado automaticamente.",
+    "rejected": "Tarefa de {{sender}} rejeitada.",
+    "alreadyDecided": "Essa tarefa já havia sido decidida.",
+    "failed": "Não foi possível registrar a decisão."
+  },
+  "networkLog": {
+    "title": "REGISTRO DE REDE",
+    "body": "Cada requisição de rede que o NIDO faz fica registrada aqui. As entradas nunca contêm seu conteúdo: apenas o servidor e o caminho, o tamanho, a hora e o resultado.",
+    "empty": "Nenhuma requisição de rede registrada.",
+    "showing": "Mostrando as últimas {{shown}} de {{total}}.",
+    "kind": {
+      "download_start": "Download iniciado",
+      "download_complete": "Download concluído",
+      "download_failed": "Download com falha"
+    }
   }
 }

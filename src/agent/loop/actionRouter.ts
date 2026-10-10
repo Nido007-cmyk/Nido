@@ -253,6 +253,22 @@ function parseReminderDateTime(text: string): string | null {
     targetDate.setHours(9, 0, 0, 0);
   }
 
+  // F6 (auditoría 2026-10-10): "hoy a las 8" dicho por la tarde. Sin am/pm
+  // la hora se leía como 8:00, ya pasada, y el rollover de abajo la movía a
+  // MAÑANA aunque el usuario dijo "hoy". Si la versión de la tarde todavía
+  // cae hoy en el futuro, es la lectura correcta.
+  if (
+    timeMatch &&
+    !(timeMatch[3] || "") &&
+    /\b(hoy|today)\b/.test(t) &&
+    targetDate.getTime() <= now.getTime() &&
+    targetDate.getHours() < 12
+  ) {
+    const evening = new Date(targetDate);
+    evening.setHours(targetDate.getHours() + 12);
+    if (evening.getTime() > now.getTime()) targetDate = evening;
+  }
+
   // M2 FIX 2026-10-07: si la fecha resultante ya pasó, mover al día siguiente.
   // "recuérdame hoy a las 6" a las 20:00 no debe crear recordatorio para las 18:00.
   if (targetDate.getTime() <= now.getTime()) {

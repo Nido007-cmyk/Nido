@@ -281,3 +281,47 @@ describe("F1 — peticiones habituales llegan a las herramientas", () => {
     }
   });
 });
+
+// ───────────────────────── Tercer lote ─────────────────────────
+describe("P5 — nombres que mezclan alfabetos parecidos", () => {
+  it("rechaza latín mezclado con cirílico o griego", () => {
+    expect(isSafeContactName("Bеto")).toBe(false); // «е» cirílica
+    expect(isSafeContactName("Вeto")).toBe(false); // «В» cirílica
+    expect(isSafeContactName("Betο")).toBe(false); // «ο» griega
+  });
+
+  it("acepta nombres escritos enteros en un alfabeto", () => {
+    for (const name of ["Beto", "José Ñandú", "Борис", "Αλέξης", "李雷", "Ana 📱"]) {
+      expect(isSafeContactName(name)).toBe(true);
+    }
+  });
+});
+
+describe("F6 — «hoy a las 8» dicho por la tarde", () => {
+  it("se programa para hoy a las 20:00, no para mañana", async () => {
+    const { vi } = await import("vitest");
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 9, 10, 13, 53, 0));
+      const r = extractReminderAction("recuérdame llamar a Ana hoy a las 8");
+      expect(r?.text).toBe("llamar a Ana");
+      const due = new Date(r!.dueAt!);
+      expect(due.getDate()).toBe(10);
+      expect(due.getHours()).toBe(20);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("si ya pasó también la versión de la tarde, pasa a mañana", async () => {
+    const { vi } = await import("vitest");
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 9, 10, 22, 0, 0));
+      const due = new Date(extractReminderAction("recuérdame llamar a Ana hoy a las 8")!.dueAt!);
+      expect(due.getDate()).toBe(11);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

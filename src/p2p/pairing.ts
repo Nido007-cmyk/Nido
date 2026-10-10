@@ -31,7 +31,14 @@ const UNSAFE_NAME_CHARS =
 
 /** true si el nombre es seguro para mostrarse y usarse como etiqueta. */
 export function isSafeContactName(name: string): boolean {
-  return !UNSAFE_NAME_CHARS.test(name);
+  if (UNSAFE_NAME_CHARS.test(name)) return false;
+  // Un nombre que mezcla letras latinas con cirílicas o griegas es casi
+  // siempre un homoglifo ("Bеto" con «е» cirílica se ve igual que "Beto").
+  // Un nombre escrito entero en cirílico o en griego sigue siendo válido.
+  // Rangos explícitos (no \p{Script}) para no depender del motor de regex.
+  const hasLatin = /[A-Za-z\u00c0-\u024f]/.test(name);
+  const hasLookalikeScript = /[\u0370-\u03ff\u0400-\u052f]/.test(name);
+  return !(hasLatin && hasLookalikeScript);
 }
 
 export interface PairingPayload {

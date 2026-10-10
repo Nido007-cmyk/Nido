@@ -13,6 +13,7 @@ import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 import appConfig from "../../app.json";
+import { NetworkAuditCard } from "./NetworkAuditCard";
 
 export function AboutScreen({ onClose }: { onClose: () => void }) {
   const { colors, typography } = useTheme();
@@ -63,6 +64,9 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
           <Text style={styles.cardTitle}>{t("aboutScreen.airGappedTitle")}</Text>
           <Text style={styles.paragraph}>{t("aboutScreen.airGappedBody")}</Text>
         </View>
+
+        {/* U3: el registro de red, visible para el usuario. */}
+        <NetworkAuditCard />
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t("aboutScreen.hardwareTitle")}</Text>

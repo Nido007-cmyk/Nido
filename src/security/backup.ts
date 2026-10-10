@@ -33,7 +33,7 @@ const DB_NAME = "nido_memory.db";
 const KNOWLEDGE_DB_NAME = "nido_knowledge.db";
 const BACKUP_VERSION = 1;
 // A14: misma versión que package.json y el tag del release.
-const APP_VERSION = "0.1.0";
+const APP_VERSION = "0.1.1";
 // SQLCipher magic header: "SQLite format 3\0" — los primeros 16 bytes
 const SQLITE_MAGIC = "SQLite format 3\0";
 
