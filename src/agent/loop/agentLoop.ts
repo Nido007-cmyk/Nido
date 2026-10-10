@@ -93,6 +93,12 @@ export interface AgentLoopOptions {
    * acciones se bloquean por defecto (fail-closed).
    */
   onConfirmTool?: (decision: PolicyDecision) => Promise<boolean>;
+  /**
+   * Tareas programadas: los atajos deterministas (recordatorio, persona,
+   * hecho) solo se usan si la herramienta correspondiente está entre los
+   * `handlers`. En el chat no se pasa y los atajos funcionan como siempre.
+   */
+  restrictFastPathsToHandlers?: boolean;
   maxSteps?: number;
   nPredict?: number;
   temperature?: number;
@@ -550,7 +556,9 @@ export async function runAgentLoop(
   }
   // Permisos del usuario: con la herramienta apagada no hay atajo; el turno
   // sigue al modelo y el despachador la rechaza.
-  const reminderAction = isToolDisabled("create_reminder") ? null : extractReminderAction(userText);
+  const fastPathAllowed = (tool: string): boolean =>
+    !isToolDisabled(tool) && (!options.restrictFastPathsToHandlers || tool in handlers);
+  const reminderAction = fastPathAllowed("create_reminder") ? extractReminderAction(userText) : null;
   if (reminderAction) {
     const { saveReminder } = await import("../memory/memoryStore");
     // FIX 2026-10-09: envolver saveReminder en try/catch. Un fallo de la base
@@ -623,7 +631,7 @@ export async function runAgentLoop(
   }
   // PEOPLE-FIX 2026-10-07: extraer persona ANTES que hecho (más específico).
   const { extractPerson } = await import("./rememberRouter");
-  const personExtraction = isToolDisabled("remember_fact") ? null : extractPerson(userText);
+  const personExtraction = fastPathAllowed("remember_fact") ? extractPerson(userText) : null;
   if (personExtraction) {
     const { savePerson, saveFact, saveReminder } = await import("../memory/memoryStore");
     const { extractDateISO } = await import("./rememberRouter");
@@ -665,7 +673,7 @@ export async function runAgentLoop(
       ],
     };
   }
-  const extraction = isToolDisabled("remember_fact") ? null : extractRememberFact(userText);
+  const extraction = fastPathAllowed("remember_fact") ? extractRememberFact(userText) : null;
   if (extraction) {
     const { saveFact, saveReminder } = await import("../memory/memoryStore");
     const { extractDateISO } = await import("./rememberRouter");

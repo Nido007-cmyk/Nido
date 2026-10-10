@@ -1,4 +1,4 @@
-# NIDO v0.1.2-alpha — Release Notes
+# NIDO v0.1.3-alpha — Release Notes
 
 ## What is this?
 
@@ -11,6 +11,13 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Reminders with local notifications
 - Encrypted on-device storage
 - Backup / restore
+
+## What changed in 0.1.3-alpha
+
+- **Scheduled tasks work.** About → Scheduled tasks → New task: give it a name, say what the agent should do, pick a time and the days. The agent runs it on its own; the result appears in the card and in a notification.
+- Tasks run while NIDO is open. If the app is closed at that time, your phone shows a notice and the task runs when you open the app.
+- A scheduled task can read your notes, calendar and inbox and save notes. It can never send messages, call, pair or open other apps.
+- Not yet tested on a physical device.
 
 ## What changed in 0.1.2-alpha
 

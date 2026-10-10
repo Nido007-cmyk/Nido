@@ -211,3 +211,42 @@ export async function refreshBriefingNotification(body: string): Promise<void> {
     // Sin permiso: el resumen seguirá disponible dentro del chat.
   }
 }
+
+const TASK_PREFIX = "nido-task-";
+
+/**
+ * Aviso a la hora de una tarea programada. La tarea corre dentro de NIDO,
+ * así que si la app está cerrada este aviso es lo que invita a abrirla.
+ * El texto es genérico a propósito: no revela la instrucción en la pantalla.
+ */
+export async function scheduleTaskNotification(
+  taskId: string,
+  title: string,
+  body: string,
+  at: Date | null,
+): Promise<boolean> {
+  try {
+    await Notifications.cancelScheduledNotificationAsync(TASK_PREFIX + taskId).catch(() => {});
+    if (!at || at.getTime() < Date.now() - 60_000) return false;
+    await Notifications.scheduleNotificationAsync({
+      identifier: TASK_PREFIX + taskId,
+      content: { title, body, sound: "default" },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: at,
+        channelId: "nido-reminders",
+      },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function cancelTaskNotification(taskId: string): Promise<void> {
+  try {
+    await Notifications.cancelScheduledNotificationAsync(TASK_PREFIX + taskId);
+  } catch {
+    // No estaba programado: nada que hacer.
+  }
+}

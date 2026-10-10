@@ -1061,5 +1061,56 @@
       "invalid": "Invalid request",
       "failed": "Failed"
     }
+  },
+  "scheduledTasks": {
+    "title": "Scheduled tasks",
+    "body": "Something the agent does on its own at a set time, like a morning summary of your notes. Tasks run while NIDO is open; if it is closed at that time, your phone shows a notice and the task runs when you open the app. A task can read your notes, calendar and inbox and save notes. It can never send messages, call, pair or open other apps.",
+    "empty": "You have no scheduled tasks yet.",
+    "loadFailed": "Your tasks could not be loaded.",
+    "add": "New task",
+    "save": "Save task",
+    "namePlaceholder": "Name (for example: Morning summary)",
+    "instructionPlaceholder": "What should the agent do? (for example: Summarize my notes from yesterday)",
+    "timeLabel": "Time (24 h)",
+    "daysLabel": "Days",
+    "everyDayAt": "Every day at {{time}}",
+    "daysAt": "{{days}} at {{time}}",
+    "nextRun": "Next: {{when}}",
+    "neverRan": "Has not run yet",
+    "lastOk": "Last run: done",
+    "lastFailed": "Last run: failed",
+    "toggleLabel": "Turn task {{name}} on or off",
+    "deleteLabel": "Delete task {{name}}",
+    "deleteTitle": "Delete task",
+    "deleteBody": "Delete “{{name}}” and its history?",
+    "errorTitle": "Check the task",
+    "badTime": "Write the time as hour:minute, for example 07:30.",
+    "missingFields": "Write a name and what the agent should do.",
+    "noDays": "Choose at least one day.",
+    "createFailed": "The task could not be saved.",
+    "limit": "You can have up to {{max}} tasks.",
+    "notifyDone": "NIDO · {{name}}",
+    "notifyFailed": "NIDO · {{name}} failed",
+    "notifyFailedBody": "The task could not be completed. Open NIDO to see it.",
+    "notifyDue": "NIDO · {{name}}",
+    "notifyDueBody": "A scheduled task is ready. Open NIDO to run it.",
+    "dayShort": {
+      "0": "Sun",
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu",
+      "5": "Fri",
+      "6": "Sat"
+    },
+    "dayLong": {
+      "0": "Sunday",
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday"
+    }
   }
 }
