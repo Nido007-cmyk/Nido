@@ -152,6 +152,10 @@ function AppContent() {
   /** Arranque normal: rutinas, modelos y gate biométrico. */
   const finishStartup = async () => {
     initHaptics();
+    // Historial de acciones del agente: guardarlo en la base cifrada.
+    void import("./src/agent/actionLogStore")
+      .then((m) => m.startActionLogPersistence())
+      .catch(() => {});
     // Permisos del agente: cargar las herramientas que el usuario apagó.
     // Si los ajustes no se pueden leer, se arranca con todas activas (las
     // confirmaciones y la política de seguridad siguen aplicando igual).

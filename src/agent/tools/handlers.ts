@@ -25,6 +25,7 @@ import {
 import { LOCAL_TOOLS } from "./manifest";
 import type { ToolHandler } from "./dispatcher";
 import { withConfirmation, type RequestConfirm } from "./confirm";
+import { actionLog } from "../actionLog";
 import {
   classifyOpenAppTarget,
   type OpenAppRejectReason,
@@ -168,6 +169,7 @@ const saveNoteHandler: ToolHandler = async (args) => {
   const body = String(args.body ?? "");
   if (!title) return "Error: falta el título de la nota.";
   const note = await saveNote({ title, body });
+  actionLog.noteUndo("save_note", { kind: "note", id: note.id });
   return `Nota guardada: «${note.title}» (id ${note.id}).`;
 };
 
@@ -206,6 +208,7 @@ const createReminderHandler: ToolHandler = async (args) => {
     }
   }
   const reminder = await saveReminder({ text, dueAt });
+  actionLog.noteUndo("create_reminder", { kind: "reminder", id: reminder.id });
   const cuando = dueAt ? ` para ${fmtDateTime(dueAt)}` : " (sin fecha)";
   let aviso = "Te avisaré al abrir NIDO cuando llegue la hora.";
   if (dueAt) {

@@ -1047,8 +1047,8 @@
   },
   "agentPermissions": {
     "historyTitle": "O que o agente fez",
-    "historyBody": "Cada ferramenta que o agente usou ou tentou usar desde que você abriu o app. Só ficam o nome da ferramenta e o resultado, nunca o conteúdo.",
-    "historyEmpty": "Ainda não há ações nesta sessão.",
+    "historyBody": "Cada ferramenta que o agente usou ou tentou usar. Só ficam o nome da ferramenta e o resultado, nunca o conteúdo. Fica criptografado neste telefone e você pode apagar.",
+    "historyEmpty": "Ainda não há ações.",
     "confirmed": "você confirmou",
     "toolsTitle": "Permissões do agente",
     "toolsBody": "Desligue qualquer ferramenta que você não queira que o agente use. Ações que mudam algo continuam perguntando antes; isso não pode ser desligado.",
@@ -1060,7 +1060,16 @@
       "cancelled": "Não confirmado",
       "invalid": "Pedido inválido",
       "failed": "Falhou"
-    }
+    },
+    "undo": "Desfazer",
+    "undone": "Desfeito",
+    "undoLabel": "Desfazer {{tool}}",
+    "undoTitle": "Desfazer esta ação",
+    "undoNoteBody": "A nota que o agente salvou será apagada.",
+    "undoReminderBody": "O lembrete que o agente criou será apagado.",
+    "undoFailed": "Não foi possível desfazer a ação.",
+    "clearTitle": "Apagar histórico",
+    "clearBody": "Apagar a lista de ações do agente? Suas notas e lembretes não são afetados."
   },
   "scheduledTasks": {
     "title": "Tarefas agendadas",

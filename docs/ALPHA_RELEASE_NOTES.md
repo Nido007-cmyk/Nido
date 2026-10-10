@@ -1,4 +1,4 @@
-# NIDO v0.1.3-alpha — Release Notes
+# NIDO v0.1.4-alpha — Release Notes
 
 ## What is this?
 
@@ -11,6 +11,12 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Reminders with local notifications
 - Encrypted on-device storage
 - Backup / restore
+
+## What changed in 0.1.4-alpha
+
+- **The agent history is kept** between sessions (encrypted, tool names and results only) and can be deleted from About.
+- **Undo**: a note or reminder the agent created can be undone from the history.
+- A security self-assessment against OWASP MASVS is in `docs/security/MASVS_CHECKLIST.md`.
 
 ## What changed in 0.1.3-alpha
 

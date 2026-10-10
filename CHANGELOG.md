@@ -4,6 +4,15 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.4-alpha — 2026-10-10
+
+### Added
+- The agent action history is kept (encrypted) between sessions, and you can
+  delete it.
+- Undo for notes and reminders the agent created, from the history.
+- `docs/security/MASVS_CHECKLIST.md`: self-assessment against OWASP MASVS,
+  with the open gaps listed.
+
 ## 0.1.3-alpha — 2026-10-10
 
 ### Added

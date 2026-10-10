@@ -571,7 +571,7 @@ export async function runAgentLoop(
         text: reminderAction.text,
         dueAt: reminderAction.dueAt,
       });
-      actionLog.record("create_reminder", "executed");
+      actionLog.record("create_reminder", "executed", false, { kind: "reminder", id: reminder.id });
     } catch (e) {
       actionLog.record("create_reminder", "failed");
       return {

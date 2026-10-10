@@ -85,6 +85,14 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
           text: t("backup.rotateConfirm"),
           style: "destructive",
           onPress: async () => {
+            // Rotar la clave es una operación sensible: pide desbloqueo.
+            // Sin bloqueo configurado en el teléfono se permite continuar,
+            // igual que al crear un respaldo.
+            try {
+              await requireUnlock(t("backup.rotateTitle"));
+            } catch (e) {
+              if (!(e instanceof BiometricUnavailable)) return;
+            }
             setBusy(true);
             try {
               const { rotateAllDatabaseKeys } = await import("../security/keyRotation");
