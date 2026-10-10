@@ -549,10 +549,28 @@ export async function runAgentLoop(
   const reminderAction = extractReminderAction(userText);
   if (reminderAction) {
     const { saveReminder } = await import("../memory/memoryStore");
-    const reminder = await saveReminder({
-      text: reminderAction.text,
-      dueAt: reminderAction.dueAt,
-    });
+    // FIX 2026-10-09: envolver saveReminder en try/catch. Un fallo de la base
+    // (SQLCipher) aquí no debe tumbar el app; el usuario ya vio "Listo" en
+    // el caso feliz, pero un crash nativo intermitente se correlacionó con
+    // este flujo. Si falla, se informa honestamente en vez de crashear.
+    let reminder;
+    try {
+      reminder = await saveReminder({
+        text: reminderAction.text,
+        dueAt: reminderAction.dueAt,
+      });
+    } catch (e) {
+      return {
+        response: "No pude guardar el recordatorio por un problema con la base de datos. Inténtalo de nuevo.",
+        intent,
+        toolUses: [
+          {
+            name: "create_reminder",
+            result: `Fallo al guardar recordatorio: ${e instanceof Error ? e.message : String(e)}`,
+          },
+        ],
+      };
+    }
     // M10 FIX 2026-10-07: programar notificación del sistema (antes solo el tool
     // create_reminder lo hacía; la vía determinística no avisaba).
     let aviso = "";
