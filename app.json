@@ -2,7 +2,7 @@
   "expo": {
     "name": "NIDO",
     "slug": "nido-app",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon-nido.png",
     "userInterfaceStyle": "light",

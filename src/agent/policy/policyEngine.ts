@@ -189,6 +189,29 @@ export function evaluateAction(action: ToolAction): PolicyDecision {
     }
   }
 
+  // P2 (auditoría 2026-10-10): la misma puerta para las demás herramientas
+  // que ESCRIBEN algo persistente. El detector de frases de arriba es solo
+  // una señal (se evade cambiando de idioma o de redacción); la defensa real
+  // es estructural: si en este turno el modelo vio contenido no confiable
+  // (mensaje de un peer, archivo, nota), guardar una nota o programar un
+  // recordatorio requiere que el usuario lo vea y lo apruebe.
+  const PERSISTENT_WRITE_TOOLS = new Set(["save_note", "create_reminder"]);
+  if (PERSISTENT_WRITE_TOOLS.has(action.tool)) {
+    const hasUntrusted = action.context.some(
+      (c) => !isTrustedSource(c.source)
+    );
+    if (hasUntrusted) {
+      return {
+        allowed: true,
+        risk: "medium",
+        reason:
+          `${action.tool} con contenido no confiable en el contexto requiere ` +
+          "confirmación humana: lo que se guarde puede venir de ese contenido.",
+        requiresConfirmation: true,
+      };
+    }
+  }
+
   // 3. Default: allow low-risk actions
   return {
     allowed: true,
@@ -205,19 +228,34 @@ export function evaluateAction(action: ToolAction): PolicyDecision {
 function detectInjectionAttempt(context: LabeledContent[]): string | null {
   const INJECTION_PATTERNS = [
     /ignore (all )?previous instructions/i,
-    /disregard (all )?previous/i,
+    /disregard (all )?(previous|the above)/i,
     /you are now/i,
     /new instructions:/i,
     /system prompt:/i,
     /override (the )?safety/i,
     /bypass (the )?restrictions/i,
+    // P2 (auditoría 2026-10-10): español y portugués, los otros idiomas de
+    // la app. Sigue siendo una señal, no la defensa (ver PERSISTENT_WRITE_TOOLS).
+    /ignora (todas )?(las )?instrucciones (anteriores|previas)/i,
+    /olvida (todo )?lo anterior/i,
+    /nuevas instrucciones:/i,
+    /a partir de ahora (eres|debes)/i,
+    /(ignore|esque[cç]a) (todas )?as instru[cç][oõ]es anteriores/i,
+    /novas instru[cç][oõ]es:/i,
   ];
 
   for (const item of context) {
     if (isTrustedSource(item.source)) continue;
 
+    // P2: normalizar antes de comparar. Sin esto bastaba un espacio doble,
+    // un carácter de ancho cero o letras de ancho completo para evadirlo.
+    const normalized = item.content
+      .normalize("NFKC")
+      .replace(/[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g, "")
+      .replace(/\s+/g, " ");
+
     for (const pattern of INJECTION_PATTERNS) {
-      if (pattern.test(item.content)) {
+      if (pattern.test(normalized)) {
         return `${item.source}${item.origin ? ` (${item.origin})` : ""}`;
       }
     }

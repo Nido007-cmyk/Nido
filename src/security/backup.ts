@@ -244,6 +244,13 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
     // real NO empieza con "SQLite format 3". En su lugar, hacer trial-open
     // con el DEK actual: si abre, es un backup válido nuestro.
     // (El check de header anterior rompía la restauración en producción.)
+    // A5 (auditoría 2026-10-10): un backup solo es válido si se VERIFICÓ por
+    // alguna vía: apertura de prueba con la clave, o manifest con SHA-256
+    // correcto. Antes, si la apertura fallaba por un error técnico y no
+    // había manifest, cualquier archivo de más de 1 KB se aceptaba y
+    // sobrescribía la base viva.
+    let trialOpenOk = false;
+    let manifestVerified = false;
     try {
       const { getDatabaseKeyHex, applyDatabaseKey } = await import("../privacy/keyManager");
       const SQLite = await import("expo-sqlite");
@@ -259,6 +266,7 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
           await applyDatabaseKey(db as any, dekHex, "backup-validate");
           // Si llegamos aquí, el DEK abre la DB → backup válido.
           await (db as any).closeAsync().catch(() => {});
+          trialOpenOk = true;
         } catch {
           await (db as any).closeAsync().catch(() => {});
           return { valid: false, reason: "El backup no se puede abrir con la clave actual (es de otra instalación o está corrupto)." };
@@ -323,9 +331,17 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
             }
           }
         }
+        manifestVerified = true;
       }
     } catch {
-      // Sin manifest, continuar con validación básica (backups viejos).
+      // Error al leer o verificar el manifest: no cuenta como verificado.
+    }
+    if (!trialOpenOk && !manifestVerified) {
+      return {
+        valid: false,
+        reason:
+          "No se pudo verificar el backup: no abre con la clave de este dispositivo y no trae un manifest válido.",
+      };
     }
     return { valid: true, sizeBytes: size };
   } catch (e) {

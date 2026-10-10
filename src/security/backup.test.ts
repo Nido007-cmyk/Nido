@@ -64,16 +64,19 @@ describe("backup.ts — validación (BK-4)", () => {
     // Ahora falla por manifest, no por header (el header ya no se verifica).
   });
 
-  it("acepta archivo con magic header válido", async () => {
+  it("A5: rechaza un archivo que no se pudo verificar por ninguna vía", async () => {
+    // Sin manifest, y la apertura de prueba no puede completarse en este
+    // entorno (módulos nativos simulados). Antes este caso se ACEPTABA
+    // (fail-open): cualquier archivo de más de 1 KB pasaba la validación y
+    // podía sobrescribir la base viva.
     (FileSystem.getInfoAsync as any).mockImplementation(async (uri: string) => {
-      // El manifest no existe en este test (backup viejo sin manifest).
       if (uri.endsWith(".manifest.json")) return { exists: false };
       return { exists: true, size: 5000 };
     });
     (FileSystem.readAsStringAsync as any).mockResolvedValue("SQLite format 3\0 resto...");
-    const r = await validateBackup("/valido.db");
-    expect(r.valid).toBe(true);
-    expect(r.sizeBytes).toBe(5000);
+    const r = await validateBackup("/sin-verificar.db");
+    expect(r.valid).toBe(false);
+    expect(r.reason).toContain("verificar");
   });
 });
 

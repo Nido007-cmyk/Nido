@@ -55,6 +55,23 @@ export type OpenAppClassification =
 /** ASCII control characters (plus DEL) — never appear in a safe target. */
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
 
+/**
+ * P10 (auditoría 2026-10-10): caracteres invisibles o de control
+ * bidireccional. No aportan nada a un enlace legítimo y sirven para que el
+ * diálogo de confirmación muestre algo distinto de lo que se abre.
+ */
+const INVISIBLE_OR_BIDI = /[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/;
+
+/**
+ * P10: un destino tel:/sms: solo puede ser un número. Se rechazan `*` y `#`
+ * (literales o codificados): los códigos de operador (USSD/MMI, p. ej.
+ * desvío de llamadas) no son algo que el agente deba preparar.
+ */
+const PHONE_TARGET = /^\+?[0-9(][0-9().\-]*$/;
+
+/** P10: `usuario@` en la autoridad de una URL web (https://banco.com@evil.example). */
+const WEB_USERINFO = /^https?:\/\/[^/?#]*@/i;
+
 /** Raw-whitespace anywhere inside the target (leading/trailing is trimmed first). */
 const INNER_WHITESPACE = /\s/;
 
@@ -81,7 +98,11 @@ export function classifyOpenAppTarget(
 ): OpenAppClassification {
   const target = typeof raw === "string" ? raw.trim() : "";
   if (!target) return { ok: false, reason: "empty" };
-  if (CONTROL_CHARS.test(target) || INNER_WHITESPACE.test(target)) {
+  if (
+    CONTROL_CHARS.test(target) ||
+    INNER_WHITESPACE.test(target) ||
+    INVISIBLE_OR_BIDI.test(target)
+  ) {
     return { ok: false, reason: "unsafe-chars" };
   }
   const m = SCHEME_RE.exec(target);
@@ -89,6 +110,15 @@ export function classifyOpenAppTarget(
   const scheme = m[1].toLowerCase();
   if (!(OPEN_APP_ALLOWED_SCHEMES as readonly string[]).includes(scheme)) {
     return { ok: false, reason: "scheme-not-allowed" };
+  }
+  const rest = target.slice(m[0].length);
+  if (scheme === "tel" || scheme === "sms") {
+    // El número es lo que precede a "?" (sms:+52...?body=...).
+    const number = rest.split("?")[0];
+    if (!PHONE_TARGET.test(number)) return { ok: false, reason: "unsafe-chars" };
+  }
+  if ((scheme === "http" || scheme === "https") && WEB_USERINFO.test(target)) {
+    return { ok: false, reason: "unsafe-chars" };
   }
   return {
     ok: true,
