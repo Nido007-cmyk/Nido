@@ -1,7 +1,7 @@
 > **Idioma:** [English](../DEVICE_EVALUATION.md) · Español
 # Benchmark de modelos en un teléfono real
 
-BOAR puede hacer benchmark de cualquier modelo instalado en un teléfono
+NIDO puede hacer benchmark de cualquier modelo instalado en un teléfono
 Android real, dirigido desde tu computadora con un comando. El teléfono
 corre las preguntas y muestra progreso en vivo en su pantalla de
 Evaluación, y la computadora recoge los resultados.
@@ -20,7 +20,7 @@ npm run eval:device -- --models lfm2.5
   [00:20] 0/17 — model:hf-liquidai-lfm2-5-8b-a1b-… / greeting-1
   [01:52] 3/17 — model:hf-liquidai-lfm2-5-8b-a1b-… / explanation-1
   …
-BOAR Device Evaluation — eval-2026-09-24T… (set v1, 17 queries)
+NIDO Device Evaluation — eval-2026-09-24T… (set v1, 17 queries)
   Queries:         17 ok · 0 failed · 0 cancelled (of 17)
   TTFT:            avg … · p50 …
   Tokens/sec:      avg … · p50 …
@@ -57,7 +57,7 @@ resultados son idénticos en forma y comparables.
 2. **En el teléfono:** Opciones de desarrollador → depuración USB on.
    Conecta el cable y acepta "Allow USB debugging". `adb devices` debe
    mostrarlo como `device`.
-3. **Una compilación de desarrollo de BOAR** instalada (`npx expo
+3. **Una compilación de desarrollo de NIDO** instalada (`npx expo
    run:android`, o `npm run eval:device -- --install` compila e instala
    una). Las compilaciones release no pueden dirigirse así a propósito: la
    recogida de peticiones solo existe en compilaciones de desarrollo, y
@@ -106,7 +106,7 @@ desarrollo recoge la petición, abre la pantalla de Evaluación y la corre;
 la app nunca llama a adb.
 
 ```
-computer                                    phone (BOAR, development build)
+computer                                    phone (NIDO, development build)
 ─────────                                   ───────────────────────────────
 adb devices, checks install and Metro
 write files/eval/requests/pending.json ───▶ picks up the request once models are loaded
@@ -119,7 +119,7 @@ print the report
 ## Tips
 
 - **Mantén la pantalla encendida y la app abierta.** Bloquear el teléfono
-  mueve BOAR al background, y algunos teléfonos cortan su conexión o lo
+  mueve NIDO al background, y algunos teléfonos cortan su conexión o lo
   limitan. Algunos teléfonos, como Xiaomi/HyperOS, bloquean cambiar "Stay
   awake" sobre adb. Si la pantalla se apagaría durante una corrida larga,
   envía una pulsación de tecla de vez en cuando:

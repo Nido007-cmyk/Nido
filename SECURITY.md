@@ -38,7 +38,7 @@ Out of scope:
 - Social engineering, phishing, or physical access to an unlocked device.
 - Vulnerabilities in third-party dependencies — report them to the upstream
   project (a heads-up to us is still appreciated).
-- The upstream BOAR repository — report to its own maintainers.
+- The upstream the upstream project repository — report to its own maintainers.
 
 ## Supported versions
 

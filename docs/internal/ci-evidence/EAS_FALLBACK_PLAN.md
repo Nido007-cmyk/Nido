@@ -13,11 +13,11 @@
 3. If ANY real code error appears instead → capture it, fix it first.
    **EAS must never be used to hide a genuine compile error.**
 
-## 2. Target architecture (BOAR's proven split)
+## 2. Target architecture (the upstream project's proven split)
 
 | Stage | Platform | Responsibility |
 |---|---|---|
-| Checks | GitHub Actions | `typecheck`, full test suite, security/quality checks (mirrors BOAR `ci.yml`) |
+| Checks | GitHub Actions | `typecheck`, full test suite, security/quality checks (mirrors the upstream project `ci.yml`) |
 | Native build | EAS Build (Expo cloud) | `llama.cpp` / `llama.rn` native compile, APK generation |
 | Distribution | GitHub Release | Approved APK + published SHA-256 checksum |
 
@@ -25,7 +25,7 @@
 
 1. **`app.json`** — add `extra.eas.projectId`. No projectId exists today; it
    requires `eas init` (one-time, needs an Expo account — maintainer action).
-2. **`eas.json`** — already present and byte-identical to BOAR's; the `preview`
+2. **`eas.json`** — already present and byte-identical to the upstream project's; the `preview`
    profile already yields an APK. For the first physical APK keep **arm64-v8a**:
    verify at migration time whether EAS needs a `gradleCommand` override or env
    var for `-PreactNativeArchitectures=arm64-v8a` (default EAS APK is universal,
@@ -52,7 +52,7 @@
 - **No NIDO code changes needed to make it compile:** the native modules
   (`bundled-assets`, `download-wake-lock`, `nido-p2p`, `ram-monitor`,
   `voice-input`, `llama.rn`) are Expo config-plugin compatible — the same set
-  BOAR already ships through EAS.
+  the upstream project already ships through EAS.
 - **Honest supply-chain note:** EAS uploads the source to Expo's build servers.
   That is a trust consideration for an offline-first project, not a code
   change; builds remain reproducible from the tagged source. Recorded here so

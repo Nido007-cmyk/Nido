@@ -69,29 +69,29 @@ SECURITY/PRIVACY IMPACT → STATE AFTER → REMAINING UNVERIFIED → NEXT BLOCKE
 The goal is not for the project to "look finished". The goal is for every
 thing marked as functional to have real evidence behind it.
 
-## AMENDMENTS FROM BOAR REVIEW (2026-09-27)
+## AMENDMENTS FROM the upstream project REVIEW (2026-09-27)
 
-Source: `docs/architecture/BOAR_REVIEW_2026-09-27.md`. BOAR repo unchanged
-since the 2026-09-26 deep-dive; NIDO `src/` is a strict superset of BOAR's
+Source: `docs/architecture/UPSTREAM_REVIEW_2026-09-27.md`. the upstream project repo unchanged
+since the 2026-09-26 deep-dive; NIDO `src/` is a strict superset of the upstream project's
 minus 4 deliberately discarded network files. No priority changes.
 
-1. TD-1 (Clear All Data) implementation must follow BOAR's ordered-deletion
+1. TD-1 (Clear All Data) implementation must follow the upstream project's ordered-deletion
    template (`appReset.ts`: unload native → resetDatabase → files → settings,
    best-effort) extended to the new surfaces (memory DB, Keystore keys, P2P
    identity). Extend the sequence, don't reinvent it.
 2. Add two zero-code doc tasks alongside the corrections, before the next CI
-   run: rewrite `AGENTS.md` for NIDO (currently byte-identical to BOAR's;
+   run: rewrite `AGENTS.md` for NIDO (currently byte-identical to the upstream project's;
    still documents the parked EAS path, says nothing about GitHub CI,
    nido-p2p, or SQLCipher verification) and extend `COMPLIANCE.md` (also
-   byte-identical to BOAR's; documents none of NIDO's new guarantees:
+   byte-identical to the upstream project's; documents none of NIDO's new guarantees:
    SQLCipher, Keystore, biometric gate, allowBackup=false, P2P E2E).
 3. Name `scripts/eval-device.mjs` + `DEVICE_EVALUATION.md` as the
    device-validation procedure in the plan's device-validation step.
 4. Adopt the `.pure.ts` naming convention for new code going forward
    (no retrofit of existing code).
-5. Confirmed NIDO improvements over BOAR — do not regress: SQLCipher on both
+5. Confirmed NIDO improvements over the upstream project — do not regress: SQLCipher on both
    DBs + Keystore DEK + fail-closed, allowBackup=false, biometric/PIN gate,
    HF browser removed, network-audit module, P2P E2E stack, agent loop +
    21 tools, notifications, offline TTS, locale infra (326 keys × 3).
-6. Two unfixed BOAR privacy gaps remain tracked: settings.json plaintext
+6. Two unfixed the upstream project privacy gaps remain tracked: settings.json plaintext
    (TD-4) and model-URL pinning.

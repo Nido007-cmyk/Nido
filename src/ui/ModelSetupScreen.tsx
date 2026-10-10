@@ -416,7 +416,7 @@ export function ModelSetupScreen(props: Props) {
               <Text style={styles.recoveryDesc}>
                 {t("backup.sectionDesc")}
               </Text>
-              <Pressable
+              <Pressable accessibilityLabel={t("backup.createButton")}
                 style={styles.wizardBtn}
                 onPress={async () => {
                   try {
@@ -452,7 +452,7 @@ export function ModelSetupScreen(props: Props) {
               >
                 <Text style={styles.wizardBtnText}>{t("backup.createButton")}</Text>
               </Pressable>
-              <Pressable
+              <Pressable accessibilityLabel={t("backup.shareButton")}
                 style={[styles.wizardBtn, { marginTop: 8 }]}
                 onPress={async () => {
                   try {
@@ -473,7 +473,7 @@ export function ModelSetupScreen(props: Props) {
               >
                 <Text style={styles.wizardBtnText}>{t("backup.shareButton")}</Text>
               </Pressable>
-              <Pressable
+              <Pressable accessibilityLabel={t("backup.restoreButton")}
                 style={[styles.wizardBtn, { marginTop: 8 }]}
                 onPress={async () => {
                   try {
@@ -584,7 +584,7 @@ export function ModelSetupScreen(props: Props) {
                 accessibilityState={{ disabled: resetting, busy: resetting }}
               >
                 {resetting ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
+                  <ActivityIndicator color={colors.text.inverse} size="small" />
                 ) : (
                   <Text style={styles.modalConfirmText}>{t("modelSetupScreen.dangerModal.confirmButton")}</Text>
                 )}
@@ -768,7 +768,7 @@ const styles = StyleSheet.create({
   dangerActionBtnText: {
     ...typography.ui.titleSm,
     fontSize: 13,
-    color: "#FFFFFF",
+    color: colors.text.inverse,
     fontWeight: "800",
   },
   modalBackdrop: {
@@ -874,7 +874,7 @@ const styles = StyleSheet.create({
   },
   modalConfirmText: {
     ...typography.ui.titleSm,
-    color: "#FFFFFF",
+    color: colors.text.inverse,
     fontWeight: "800",
   },
 });

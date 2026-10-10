@@ -89,7 +89,7 @@ export function PersonalitySettings() {
       <Text style={styles.title}>{t("personalitySettings.title")}</Text>
 
       {PERSONALITIES.map((p) => (
-        <Pressable
+        <Pressable accessibilityRole="button"
           key={p.id}
           style={[styles.option, personalityId === p.id && styles.optionSelected]}
           onPress={() => selectPersonality(p.id)}
@@ -120,7 +120,7 @@ export function PersonalitySettings() {
       <Text style={styles.subheading}>{t("personalitySettings.maxOutputTokens")}</Text>
       <View style={styles.tokenRow}>
         {MAX_TOKENS_OPTIONS.map((n) => (
-          <Pressable
+          <Pressable accessibilityRole="button"
             key={n}
             style={[styles.tokenPill, maxTokens === n && styles.tokenPillSelected]}
             onPress={() => selectMaxTokens(n)}

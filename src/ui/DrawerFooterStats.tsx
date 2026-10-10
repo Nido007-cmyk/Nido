@@ -139,7 +139,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     flex: 1,
     height: 5,
     borderRadius: radii.xs,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: colors.bg.modalOverlay,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: colors.border.default,

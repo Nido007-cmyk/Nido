@@ -410,7 +410,7 @@ file, so returning to the app meant restarting a multi-GB download from 0%.
   `AppState` returns to `"active"` and a failed/paused asset exists, so the
   user doesn't have to notice the error card and tap Retry manually after
   switching back to the app — it resumes on its own.
-- Explicit "keep BOAR open" notice added to Step 3 while a download is
+- Explicit "keep NIDO open" notice added to Step 3 while a download is
   active, since true background downloading would need a native Android
   Foreground Service — a disproportionate cost for a one-time setup
   download — so the honest fix is graceful pause/resume, not silently
@@ -466,7 +466,7 @@ actions traced and fixed (`rag/pure.ts`'s `assemblePrompt`): done.**
 
 With retrieval correctly skipped, real-device testing surfaced the deeper
 problem: "wake up" → *"morning alarm set to standard wake up / room
-temperature adjusted."* — a fabricated action; BOAR has no alarm or
+temperature adjusted."* — a fabricated action; NIDO has no alarm or
 smart-home capability at all. Traced the exact final prompt sent to Phi for
 this input (no chat template in use anywhere — see `LlamaEngine.ts`'s
 `DEFAULT_STOP_SEQUENCES` comment, `assemblePrompt` hand-builds a generic
@@ -480,7 +480,7 @@ casual talk should get a conversational reply rather than a "task" answer.
 
 Fix: a universal `GROUNDING_INSTRUCTION` in `assemblePrompt`, always
 appended regardless of persona/content — **not** a hardcoded response to
-any specific phrase. States BOAR can't control real-world devices or take
+any specific phrase. States NIDO can't control real-world devices or take
 physical actions, that casual small talk should get a brief conversational
 reply, and that it must never claim to have done something it can't
 actually do. `assemblePrompt` is shared with Deep Research's
@@ -859,7 +859,7 @@ there was no way to tell, and no way to compare runs after a reload since
 but remain "much slower and less effective at difficult questions." His
 thesis: *"local will be good enough for the common questions but lag behind
 at difficult ones, meaning we'll need ways to (verifiably?) send harder
-queries out to a global network."* One of the three apps he tested is BOAR —
+queries out to a global network."* One of the three apps he tested is the upstream project —
 the codebase NIDO is built on.
 
 **Status: ROADMAP ONLY — not designed in detail, not implemented.** This
@@ -905,7 +905,7 @@ must satisfy:
 - When `DEVICE_EVALUATION.md`'s on-device evals produce real numbers, they
   become the routing data source (per-model tok/s, TTFT, peak memory) and
   the basis for honest public benchmark tables (model, tok/s, first token,
-  peak memory, raw results linked) — the format BOAR now publishes at
+  peak memory, raw results linked) — the format NIDO now publishes at
   boarapp.com, which is the right transparency bar.
 - Speed is the other half of Vitalik's critique ("much slower" — one hard
   query took ~5 min in the tested apps). The common-question path must be

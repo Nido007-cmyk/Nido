@@ -4,7 +4,7 @@
  * See LICENSE file for details.
  */
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Image } from "react-native";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTranslation } from "react-i18next";
@@ -14,16 +14,25 @@ import type { Typography } from "./theme/typography";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 import appConfig from "../../app.json";
 import { NetworkAuditCard } from "./NetworkAuditCard";
+import { SkillsCard } from "./SkillsCard";
+import { SecurityStatusCard } from "./SecurityStatusCard";
+import { BackupScreen } from "./BackupScreen";
 
 export function AboutScreen({ onClose }: { onClose: () => void }) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   const { t } = useTranslation();
+  // U1: la pantalla de respaldo existía pero ningún menú llevaba a ella.
+  const [showBackup, setShowBackup] = useState(false);
   const handleClose = () => {
     impact(ImpactFeedbackStyle.Light);
     onClose();
   };
+
+  if (showBackup) {
+    return <BackupScreen onClose={() => setShowBackup(false)} />;
+  }
 
   return (
     <View style={styles.container}>
@@ -67,6 +76,39 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
 
         {/* U3: el registro de red, visible para el usuario. */}
         <NetworkAuditCard />
+
+        {/* U7: estado de seguridad comprobado en este teléfono. */}
+        <SecurityStatusCard />
+
+        {/* U1: acceso a respaldo, clave de cifrado y rotación de clave. */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{t("aboutScreen.backupTitle")}</Text>
+          <Text style={styles.paragraph}>{t("aboutScreen.backupBody")}</Text>
+          <Pressable
+            style={styles.actionBtn}
+            onPress={() => {
+              impact(ImpactFeedbackStyle.Light);
+              setShowBackup(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t("aboutScreen.backupOpen")}
+          >
+            <Text style={styles.actionBtnText}>{t("aboutScreen.backupOpen")}</Text>
+          </Pressable>
+        </View>
+
+        {/* U6: qué sabe hacer el agente. */}
+        <SkillsCard />
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{t("aboutScreen.limitsTitle")}</Text>
+          <Text style={styles.paragraph}>{t("aboutScreen.limitsBody")}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{t("aboutScreen.privacyTitle")}</Text>
+          <Text style={styles.paragraph}>{t("aboutScreen.privacyBody")}</Text>
+        </View>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t("aboutScreen.hardwareTitle")}</Text>
@@ -118,7 +160,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     paddingHorizontal: calmSpacing.cozy,
     paddingVertical: calmSpacing.tight,
     borderRadius: calmRadii.subtle,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: colors.bg.subtle,
   },
   closeBtnText: {
     ...typography.mono.xs,
@@ -152,7 +194,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     letterSpacing: 0.5,
   },
   versionBadge: {
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    backgroundColor: colors.bg.subtle,
     paddingHorizontal: calmSpacing.cozy,
     paddingVertical: 2,
     borderRadius: calmRadii.subtle,
@@ -189,6 +231,20 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     padding: calmSpacing.cozy,
     borderWidth: 1,
     borderColor: colors.border.subtle,
+  },
+  actionBtn: {
+    minHeight: 48,
+    borderRadius: calmRadii.subtle,
+    borderWidth: 1,
+    borderColor: colors.border.emerald,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: calmSpacing.comfortable,
+  },
+  actionBtnText: {
+    ...typography.ui.body,
+    color: colors.text.accentEmerald,
+    fontWeight: "700",
   },
   repoText: {
     ...typography.mono.xs,

@@ -227,7 +227,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
       {!row?.downloading && (
         <View style={styles.actionsRow}>
           {!present && (
-            <Pressable
+            <Pressable accessibilityRole="button"
               style={styles.downloadBtn}
               onPress={() => handleAction(() => onDownload(item))}
             >
@@ -245,7 +245,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
           )}
 
           {present && !isCorpus && !isActive && !activating && (
-            <Pressable
+            <Pressable accessibilityRole="button" accessibilityLabel={t("catalogItemCard.selectUse")}
               style={[styles.useBtn, busy && styles.disabled]}
               onPress={() => handleAction(() => onUse(item))}
               disabled={busy}
@@ -269,7 +269,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
           )}
 
           {(present || fromHuggingFace) && !item.required && (
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={confirmRemove}
               hitSlop={8}
               disabled={busy}
@@ -482,7 +482,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   progressTrack: {
     height: 8,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    backgroundColor: colors.bg.modalOverlay,
     borderRadius: radii.xs,
     overflow: "hidden",
   },

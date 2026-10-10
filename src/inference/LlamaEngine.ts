@@ -286,7 +286,7 @@ export class LlamaEngine {
     if (this.inFlight.size > 0) {
       // FIX-2026-10-07 (llama.rn rc.6): `stopCompletion()` ahora retorna
       // `undefined` en vez de una promesa (cambio de comportamiento en rc.6,
-      // confirmado por BOAR). El `.catch()` directo crashearía con TypeError.
+      // confirmado por el proyecto original). El `.catch()` directo crashearía con TypeError.
       // Se envuelve en Promise.resolve() para manejar ambos casos.
       await Promise.resolve(this.context?.stopCompletion()).catch(() => {});
       await Promise.allSettled([...this.inFlight]);

@@ -4,6 +4,32 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.2-alpha — 2026-10-10
+
+### Added
+- Backup screen is reachable from About: create an encrypted backup, view
+  and copy your encryption key, rotate the key.
+- Security check card in About: verifies on the phone that the database is
+  encrypted and that key storage and biometric lock work.
+- Agent skills list in About.
+- "Know its limits" notice and a privacy summary in About.
+- Privacy policy (`PRIVACY.md`) and terms of use (`TERMS.md`).
+- Test that keeps the three languages in sync and forbids untranslated
+  dialog text.
+
+### Changed
+- Every button declares its role for screen readers; icon-only buttons
+  (delete chat, delete collection, voice input) have spoken labels.
+- Backup dialogs are translated to English, Spanish and Portuguese, and the
+  encryption key is shown in a dialog you can copy from.
+- More screens take their colors from the theme instead of fixed values.
+- Dependabot groups minor and patch updates into one weekly pull request.
+
+### Removed
+- Unused usage-stats screen.
+- Remaining non-legal mentions of the upstream project in comments and
+  documents. Licence and attribution are unchanged.
+
 ## 0.1.1-alpha — 2026-10-10
 
 ### Added

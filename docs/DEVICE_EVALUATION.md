@@ -1,7 +1,7 @@
 > **Language:** English · [Español](es/DEVICE_EVALUATION.md)
 # Benchmark models on a real phone
 
-BOAR can benchmark any installed model on a real Android phone, driven from
+NIDO can benchmark any installed model on a real Android phone, driven from
 your computer with one command. The phone runs the questions and shows live
 progress on its Evaluation screen, and the computer collects the results.
 
@@ -19,7 +19,7 @@ npm run eval:device -- --models lfm2.5
   [00:20] 0/17 — model:hf-liquidai-lfm2-5-8b-a1b-… / greeting-1
   [01:52] 3/17 — model:hf-liquidai-lfm2-5-8b-a1b-… / explanation-1
   …
-BOAR Device Evaluation — eval-2026-09-24T… (set v1, 17 queries)
+NIDO Device Evaluation — eval-2026-09-24T… (set v1, 17 queries)
   Queries:         17 ok · 0 failed · 0 cancelled (of 17)
   TTFT:            avg … · p50 …
   Tokens/sec:      avg … · p50 …
@@ -53,7 +53,7 @@ shape and comparable.
    platform-tools) on your `PATH`.
 2. **On the phone:** Developer options → USB debugging on. Connect the cable
    and accept "Allow USB debugging". `adb devices` must show it as `device`.
-3. **A development build of BOAR** installed (`npx expo run:android`, or
+3. **A development build of NIDO** installed (`npx expo run:android`, or
    `npm run eval:device -- --install` builds and installs one). Release builds
    can't be driven this way on purpose: request pickup only exists in
    development builds, and reading results needs a debuggable app.
@@ -99,7 +99,7 @@ the same way. Inside the app, a development-only watcher picks up the request,
 opens the Evaluation screen and runs it; the app never calls adb.
 
 ```
-computer                                    phone (BOAR, development build)
+computer                                    phone (NIDO, development build)
 ─────────                                   ───────────────────────────────
 adb devices, checks install and Metro
 write files/eval/requests/pending.json ───▶ picks up the request once models are loaded
@@ -111,7 +111,7 @@ print the report
 
 ## Tips
 
-- **Keep the screen on and the app open.** Locking the phone moves BOAR to the
+- **Keep the screen on and the app open.** Locking the phone moves NIDO to the
   background, and some phones cut its connection or throttle it. Some phones,
   such as Xiaomi/HyperOS, block changing "Stay awake" over adb. If the screen
   would time out during a long run, send a keypress now and then:

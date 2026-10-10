@@ -102,7 +102,7 @@ export function Drawer({
 
           {/* New Chat Button */}
           {onNewChat && (
-            <Pressable
+            <Pressable accessibilityRole="button" accessibilityLabel={t("drawer.newChat")}
               style={styles.newChatBtn}
               onPress={() => {
                 handleAction(() => {
@@ -124,7 +124,7 @@ export function Drawer({
                 {sessions.map((s) => {
                   const active = s.id === activeSessionId;
                   return (
-                    <Pressable
+                    <Pressable accessibilityRole="button"
                       key={s.id}
                       style={[styles.sessionRow, active && styles.sessionRowActive]}
                       onPress={() => {
@@ -140,8 +140,9 @@ export function Drawer({
                         </Text>
                         <Text style={styles.sessionTime}>{formatTimestamp(s.updatedAt, t)}</Text>
                       </View>
-                      <Pressable
-                        hitSlop={8}
+                      <Pressable accessibilityRole="button"
+                        accessibilityLabel={t("drawer.deleteSession", { title: s.title })}
+                        hitSlop={12}
                         onPress={(e) => {
                           e.stopPropagation();
                           handleAction(() => onDeleteSession?.(s.id));
@@ -160,7 +161,7 @@ export function Drawer({
           {/* Navigation Items */}
           <View style={styles.itemList}>
             {items.map((item) => (
-              <Pressable
+              <Pressable accessibilityRole="button"
                 key={item.key}
                 style={styles.item}
                 onPress={() => {

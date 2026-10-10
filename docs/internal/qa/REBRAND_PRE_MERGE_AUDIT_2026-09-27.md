@@ -55,7 +55,7 @@ Single unique commit:
     Night Garden dark) across the app; replace the provisional mascot with
     the approved golden-ring+sprout launcher icon; rewrite UI copy in a
     plain-language NIDO voice with EN/ES/PT parity; replace six
-    BOAR-inherited benchmark prompt ideas with six NIDO-original
+    the upstream project-inherited benchmark prompt ideas with six NIDO-original
     offline-first prompts sourced from i18n.
   - Major surfaces: 18 `src/ui/**` screens/components, `src/ui/theme/`
     (colors.ts, index.ts), `src/models/settings.ts` (ThemeId), 3 locale
@@ -214,10 +214,10 @@ Inspected each named surface; branch touches none of them:
 - About screen: keeps the legally required factual attribution
   "Forked from BOAR (MIT License)." (now via i18n `aboutScreen.repoBody`);
   repo URL moved to i18n with unchanged value
-  `github.com/arsrs91-png/NIDO`. No BOAR runtime branding reintroduced;
-  no operational dependency on BOAR added.
-- BOAR references in `src/ui/`: identical counts branch vs master, except
-  the branch's PromptIdeasCarousel replaces six BOAR-inherited benchmark
+  `github.com/arsrs91-png/NIDO`. No the upstream project runtime branding reintroduced;
+  no operational dependency on the upstream project added.
+- the upstream project references in `src/ui/`: identical counts branch vs master, except
+  the branch's PromptIdeasCarousel replaces six the upstream project-inherited benchmark
   prompts with six NIDO-original offline-first prompts (i18n-sourced).
   Note: the "NIDO-original" claim is a code comment, not independently
   verified — informational only, no action needed.
@@ -250,7 +250,7 @@ Inspected each named surface; branch touches none of them:
 - **LOW** — `src/models/settings.ts` ThemeId narrowing + legacy migration:
   deliberate Tier 2 change; tsc clean proves no dangling palette
   references; settings tests pass; persisted old ids map to Night Garden.
-- **LOW** — PromptIdeasCarousel content swap (BOAR-inherited → NIDO
+- **LOW** — PromptIdeasCarousel content swap (the upstream project-inherited → NIDO
   prompts): no test depends on old prompt text; reduces brand
   contamination; prompts are i18n-sourced EN/ES/PT.
 - **LOW** — stale expo-dev-client mentions in docs (AGENTS.md,
@@ -285,7 +285,7 @@ Inspected each named surface; branch touches none of them:
   streaming SHA suites PASS; manifest/pin verification PASS — all
   included in the 829 run on the merged tree.
 - No applicationId regression (`team.nido.app` untouched).
-- No BOAR runtime branding regression (attribution preserved, no
+- No the upstream project runtime branding regression (attribution preserved, no
   operational dependency).
 - No unexplained dependency/native changes (branch changes none).
 - New test total: 829 (branch introduces no tests).

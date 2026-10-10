@@ -333,7 +333,7 @@ function VerdictMark({ ok }: { ok: boolean }) {
         { backgroundColor: ok ? colors.emerald[500] : colors.amber[500] },
       ]}
     >
-      <NidoIcon name={ok ? "check" : "warning"} size={12} color="#FFFFFF" />
+      <NidoIcon name={ok ? "check" : "warning"} size={12} color={colors.text.inverse} />
     </View>
   );
 }

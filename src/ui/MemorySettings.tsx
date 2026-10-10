@@ -81,7 +81,7 @@ export function MemorySettings({ onCleared }: { onCleared?: () => void }) {
       <Text style={styles.subheading}>{t("memorySettings.turnsBeforeSummarizing")}</Text>
       <View style={styles.pillRow}>
         {TURN_OPTIONS.map((n) => (
-          <Pressable
+          <Pressable accessibilityRole="button"
             key={n}
             style={[styles.pill, settings.historyTurnThreshold === n && styles.pillSelected]}
             onPress={() => update({ historyTurnThreshold: n })}
@@ -96,7 +96,7 @@ export function MemorySettings({ onCleared }: { onCleared?: () => void }) {
       <Text style={styles.subheading}>{t("memorySettings.maxSavedSessions")}</Text>
       <View style={styles.pillRow}>
         {SESSION_OPTIONS.map((opt) => (
-          <Pressable
+          <Pressable accessibilityRole="button"
             key={opt.value}
             style={[styles.pill, settings.maxSavedSessions === opt.value && styles.pillSelected]}
             onPress={() => update({ maxSavedSessions: opt.value })}
@@ -122,7 +122,7 @@ export function MemorySettings({ onCleared }: { onCleared?: () => void }) {
         />
       </View>
 
-      <Pressable style={styles.clearBtn} onPress={confirmClearAll}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t("memorySettings.clearAllChatHistory")} style={styles.clearBtn} onPress={confirmClearAll}>
         <View style={styles.clearBtnRow}>
           <NidoIcon name="delete" size={14} color="#f88" />
           <Text style={styles.clearBtnText}>{t("memorySettings.clearAllChatHistory")}</Text>

@@ -52,7 +52,7 @@ export function SourceFootnotes({ citations }: Props) {
           const isExpanded = expandedIndex === i;
           return (
             <View key={i} style={styles.cardWrapper}>
-              <Pressable
+              <Pressable accessibilityRole="button"
                 style={[styles.chip, isExpanded && styles.chipActive]}
                 onPress={() => toggle(i)}
                 hitSlop={4}

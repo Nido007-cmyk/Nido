@@ -73,7 +73,7 @@ La interfaz está disponible en español, inglés y portugués.
 - Los mensajes por Bluetooth van cifrados de extremo a extremo con claves
   intercambiadas por código QR (X25519, firmas Ed25519, XSalsa20-Poly1305).
 
-Más detalle: [privacidad](docs/es/PRIVACY.md) · [arquitectura criptográfica](docs/es/CRYPTO_ARCHITECTURE.md) ·
+[Política de privacidad](PRIVACY.md) · [términos de uso](TERMS.md). Más detalle: [endurecimiento de privacidad](docs/es/PRIVACY.md) · [arquitectura criptográfica](docs/es/CRYPTO_ARCHITECTURE.md) ·
 [modelo de amenazas](docs/THREAT_MODEL_SUMMARY.md) · [reportar una vulnerabilidad](SECURITY.es.md)
 
 ## Estado

@@ -111,7 +111,7 @@ function CodeBlockView({
             {(language || "plaintext").toUpperCase()}
           </Text>
         </View>
-        <Pressable
+        <Pressable accessibilityRole="button"
           style={[
             styles.copyBtn,
             { backgroundColor: "rgba(255, 255, 255, 0.08)" },

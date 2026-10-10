@@ -13,7 +13,14 @@
     "repoTitle": "Código abierto",
     "title": "Acerca de NIDO",
     "versionBadge": "v{{version}} • {{build}}",
-    "repoUrl": "github.com/Nido007-cmyk/Nido"
+    "repoUrl": "github.com/Nido007-cmyk/Nido",
+    "backupTitle": "Respaldo y clave de cifrado",
+    "backupBody": "Crea un respaldo cifrado, consulta tu clave de cifrado o rótala.",
+    "backupOpen": "Abrir respaldo",
+    "limitsTitle": "Conoce sus límites",
+    "limitsBody": "NIDO ejecuta modelos de IA dentro de tu teléfono. Pueden equivocarse o inventar datos, y los modelos más pequeños con más frecuencia. No dependas solo de NIDO para decisiones de salud, legales, financieras o de seguridad: consulta a un profesional o una fuente confiable.",
+    "privacyTitle": "Privacidad y términos",
+    "privacyBody": "NIDO no tiene cuentas, ni analítica, ni servidores propios. Las únicas conexiones que hace son las descargas que tú inicias (modelos y paquetes de conocimiento), y aparecen en el registro de red de arriba. La política de privacidad y los términos de uso completos están en PRIVACY.md y TERMS.md del repositorio."
   },
   "catalogItemCard": {
     "activeNote": "En uso actualmente",
@@ -142,7 +149,8 @@
     "confirm": "Confirmar",
     "yes": "Sí",
     "no": "No",
-    "delete": "Borrar"
+    "delete": "Borrar",
+    "send": "Enviar"
   },
   "corpusSettingsTab": {
     "downloadablePacks": "Paquetes de conocimiento descargables",
@@ -151,7 +159,8 @@
   "drawer": {
     "newChat": "Nuevo chat",
     "recentSessions": "Chats recientes",
-    "subtitle": "Tu agente. Tu mundo."
+    "subtitle": "Tu agente. Tu mundo.",
+    "deleteSession": "Borrar chat: {{title}}"
   },
   "drawerFooterStats": {
     "disk": "DISCO",
@@ -900,7 +909,9 @@
   },
   "voiceInputAlert": {
     "unavailableTitle": "Entrada de voz no disponible",
-    "unavailableMessage": "No se encontró un servicio de reconocimiento de voz en este dispositivo (común en GrapheneOS / builds sin Google). Escribe tu pregunta en su lugar."
+    "unavailableMessage": "No se encontró un servicio de reconocimiento de voz en este dispositivo (común en GrapheneOS / builds sin Google). Escribe tu pregunta en su lugar.",
+    "startLabel": "Dictar por voz",
+    "stopLabel": "Detener el dictado"
   },
   "tasks": {
     "approvalTitle": "Solicitud de tarea",
@@ -959,7 +970,7 @@
     "cancel": "Cancelar",
     "ok": "OK",
     "sectionDesc": "Exporta tu base de datos cifrada. Guárdala junto con tu clave en un lugar seguro.",
-    "screenTitle": "Backup & Recovery",
+    "screenTitle": "Respaldo y recuperación",
     "screenDesc": "Tu base de datos está cifrada. El backup copia el archivo cifrado. Necesitas guardar tu clave por separado — sin ella, el backup no se puede restaurar. Ningún servidor ve tus datos en ningún momento.",
     "createNow": "Crear backup ahora",
     "showKey": "Ver mi clave de cifrado",
@@ -967,7 +978,23 @@
     "saveToDownloads": "Guardar en Descargas",
     "close": "Cerrar",
     "lastBackup": "Último backup: {{path}}",
-    "warning": "Importante: guarda el archivo de backup y tu clave en lugares diferentes. Si pierdes la clave, nadie (ni NIDO) puede recuperar tus datos."
+    "warning": "Importante: guarda el archivo de backup y tu clave en lugares diferentes. Si pierdes la clave, nadie (ni NIDO) puede recuperar tus datos.",
+    "unlockReason": "Ver tu clave de cifrado",
+    "cancelledTitle": "Cancelado",
+    "keyNotShown": "No se mostró la clave.",
+    "rotateTitle": "Rotar clave de cifrado",
+    "rotateBody": "Esto genera una clave nueva y vuelve a cifrar tu base de datos. Los respaldos anteriores NO se podrán restaurar con la clave nueva. ¿Continuar?",
+    "rotateConfirm": "Rotar",
+    "rotatedTitle": "Clave rotada",
+    "rotatedBody": "Tu base de datos ahora usa una clave de cifrado nueva. Guarda la clave nueva desde «Ver mi clave de cifrado». Los respaldos viejos necesitarán la clave anterior.",
+    "rotateFailed": "No se pudo rotar la clave.",
+    "createFirst": "Primero crea un respaldo con el botón de arriba.",
+    "noPermission": "Sin permiso no se puede guardar el respaldo.",
+    "savedTitle": "Guardado",
+    "savedBody": "Respaldo copiado a la carpeta que elegiste:\n{{files}}",
+    "saveFailed": "No se pudo guardar el respaldo.",
+    "keyFailed": "No se pudo leer la clave.",
+    "keyTitle": "Tu clave de cifrado"
   },
   "remoteTasks": {
     "title_one": "{{count}} tarea remota espera tu decisión",
@@ -990,6 +1017,26 @@
       "download_start": "Descarga iniciada",
       "download_complete": "Descarga completada",
       "download_failed": "Descarga fallida"
+    }
+  },
+  "skillsCard": {
+    "title": "Qué sabe hacer el agente",
+    "body": "Habilidades que NIDO puede seguir paso a paso. Las acciones que cambian algo siempre te preguntan primero."
+  },
+  "securityStatus": {
+    "title": "Comprobación de seguridad",
+    "body": "Comprueba en este teléfono que tus datos están protegidos de verdad. Nunca muestra claves.",
+    "run": "Comprobar ahora",
+    "runFailed": "No se pudo hacer la comprobación.",
+    "database": "Base de datos cifrada",
+    "keystore": "Almacén de claves de Android",
+    "biometric": "Bloqueo con huella o rostro",
+    "hardwareBacked": "Clave protegida por hardware",
+    "state": {
+      "verified": "Comprobado",
+      "failed": "Falló",
+      "unavailable": "Sin configurar",
+      "not-verifiable": "No se puede comprobar"
     }
   }
 }

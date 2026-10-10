@@ -46,7 +46,7 @@ export function ThemeSelector({ compact = false }: Props) {
         {THEMES.map((t) => {
           const isSelected = themeId === t.id;
           return (
-            <Pressable
+            <Pressable accessibilityRole="button"
               key={t.id}
               style={[
                 styles.themeBtn,
@@ -95,7 +95,7 @@ export function ThemeSelector({ compact = false }: Props) {
         {FONT_SCALES.map((s) => {
           const isSelected = fontScale === s.id;
           return (
-            <Pressable
+            <Pressable accessibilityRole="button"
               key={s.id}
               style={[
                 styles.fontBtn,

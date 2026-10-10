@@ -5,7 +5,7 @@
  */
 
 /**
- * Tests for cross-library retrieval dedupe (BOAR item 20, adapted for NIDO).
+ * Tests for cross-library retrieval dedupe (upstream item 20, adapted for NIDO).
  */
 
 import { describe, it, expect } from "vitest";

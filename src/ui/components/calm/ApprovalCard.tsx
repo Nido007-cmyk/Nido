@@ -200,7 +200,7 @@ const getStyles = (colors: Colors, typography: Typography) =>
     },
     approveText: {
       ...typography.ui.body,
-      color: "#FFFFFF",
+      color: colors.text.inverse,
       fontWeight: "600",
     },
   });

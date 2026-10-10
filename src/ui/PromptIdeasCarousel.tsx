@@ -22,7 +22,7 @@ export interface PromptIdea {
 }
 
 // Prompt items are NIDO-original content in i18n (promptIdeasCarousel.items),
-// EN/ES/PT. The BOAR-inherited benchmark prompts were removed 2026-09-28.
+// EN/ES/PT. The inherited benchmark prompts were removed 2026-09-28.
 
 interface Props {
   onUsePrompt: (prompt: string) => void;
@@ -69,7 +69,7 @@ export function PromptIdeasCarousel({ onUsePrompt, onDismiss }: Props) {
             <NidoIcon name="ideas" size={20} />
             <Text style={styles.headerTitle}>{t("promptIdeasCarousel.title")}</Text>
           </View>
-          <Pressable
+          <Pressable accessibilityRole="button"
             onPress={dismiss}
             hitSlop={8}
             style={styles.closeBtn}
@@ -97,17 +97,17 @@ export function PromptIdeasCarousel({ onUsePrompt, onDismiss }: Props) {
         </View>
 
         <View style={styles.navRow}>
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel={t("promptIdeasCarousel.prev")}
             style={[styles.navBtn, isFirst && styles.navBtnDisabled]}
             disabled={isFirst}
             onPress={back}
           >
             <Text style={styles.navBtnText}>‹ {t("promptIdeasCarousel.prev")}</Text>
           </Pressable>
-          <Pressable style={styles.useBtn} onPress={use}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("promptIdeasCarousel.usePrompt")} style={styles.useBtn} onPress={use}>
             <Text style={styles.useBtnText}>{t("promptIdeasCarousel.usePrompt")}</Text>
           </Pressable>
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel={t("promptIdeasCarousel.next")}
             style={[styles.navBtn, isLast && styles.navBtnDisabled]}
             disabled={isLast}
             onPress={next}
@@ -117,7 +117,7 @@ export function PromptIdeasCarousel({ onUsePrompt, onDismiss }: Props) {
         </View>
 
         <View style={styles.dismissRow}>
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel={t("promptIdeasCarousel.dontShowAgain")}
             style={styles.checkboxRow}
             onPress={() => setDontShowAgain((v) => !v)}
             hitSlop={8}
@@ -130,7 +130,7 @@ export function PromptIdeasCarousel({ onUsePrompt, onDismiss }: Props) {
             />
             <Text style={styles.dismissLabel}>{t("promptIdeasCarousel.dontShowAgain")}</Text>
           </Pressable>
-          <Pressable onPress={dismiss} hitSlop={8}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("common.dismiss")} onPress={dismiss} hitSlop={8}>
             <Text style={styles.dismissBtn}>{t("common.dismiss")}</Text>
           </Pressable>
         </View>
@@ -262,7 +262,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   useBtnText: {
     ...typography.ui.titleSm,
     fontSize: 13,
-    color: "#FFFFFF",
+    color: colors.text.inverse,
     fontWeight: "800",
   },
   dismissRow: {

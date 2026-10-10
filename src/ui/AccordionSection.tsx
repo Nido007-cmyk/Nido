@@ -44,7 +44,7 @@ export function AccordionSection({ icon, title, defaultOpen = false, children }:
 
   return (
     <View style={styles.container}>
-      <Pressable style={styles.header} onPress={toggle}>
+      <Pressable accessibilityRole="button" style={styles.header} onPress={toggle}>
         {isIconName(icon) ? (
           <NidoIcon name={icon} size={20} />
         ) : (

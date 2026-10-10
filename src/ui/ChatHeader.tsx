@@ -55,7 +55,7 @@ export function ChatHeader({
     >
       <View style={styles.topRow}>
         {/* Drawer Hamburger */}
-        <Pressable
+        <Pressable accessibilityRole="button"
           style={styles.iconBtn}
           onPress={() => handlePress(onOpenDrawer)}
           hitSlop={10}
@@ -89,7 +89,7 @@ export function ChatHeader({
         {/* Right Action Controls */}
         <View style={styles.rightActions}>
           {/* Tone Selector Pill */}
-          <Pressable
+          <Pressable accessibilityRole="button"
             style={styles.tonePill}
             onPress={() => handlePress(onCycleTone)}
             hitSlop={6}
@@ -99,7 +99,7 @@ export function ChatHeader({
           </Pressable>
 
           {/* New Chat Button */}
-          <Pressable
+          <Pressable accessibilityRole="button"
             style={styles.newChatBtn}
             onPress={() => handlePress(onNewChat, ImpactFeedbackStyle.Medium)}
             hitSlop={6}
@@ -113,7 +113,7 @@ export function ChatHeader({
       {/* Sub-bar: Telemetry & Deep Research Indicator / Toggle */}
       <View style={styles.subBar}>
         {onToggleDeepResearch ? (
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel={t("chatHeader.deepResearch")}
             style={[
               styles.deepResearchPill,
               deepResearchActive && styles.deepResearchPillActive,

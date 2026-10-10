@@ -24,7 +24,7 @@ Full-`src` reference search for each component (imports + navigation registry).
 
 ### SystemMonitor → REMOVE
 - Zero imports, zero navigation entries: unreachable code, confirmed dead.
-- Original intent (BOAR-era): RAM/storage "budget" bars (`RAM_BUDGET_BYTES`,
+- Original intent (pre-rebrand): RAM/storage "budget" bars (`RAM_BUDGET_BYTES`,
   `STORAGE_BUDGET_BYTES` from the model manifest).
 - It is **superseded by design**: the Offline Center spec (`../specs/OFFLINE_CENTER_SCREEN.md`)
   covers storage with honest Tier 2 copy ("numbers, not gauges"). Two surfaces for

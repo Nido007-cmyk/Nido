@@ -12,7 +12,7 @@
  * Collapsible — tap "Details" on a message to reveal.
  *
  * This is NIDO's differentiator: visible proof of "user as authority."
- * BOAR has telemetry; NIDO shows policy decisions too.
+ * The upstream project has telemetry; NIDO shows policy decisions too.
  */
 
 import React from "react";

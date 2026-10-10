@@ -72,7 +72,7 @@ export function ModelLoadErrorCard({
       {/* Action Shortcuts */}
       <View style={styles.actionsRow}>
         {onRetry && (
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel={t("common.retry")}
             style={styles.retryBtn}
             onPress={() => handleAction(onRetry)}
             android_ripple={{ color: "rgba(255,255,255,0.1)" }}
@@ -84,7 +84,7 @@ export function ModelLoadErrorCard({
           </Pressable>
         )}
         {onOpenSettings && (
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel={t("modelLoadErrorCard.settings")}
             style={styles.actionBtn}
             onPress={() => handleAction(onOpenSettings)}
             android_ripple={{ color: "rgba(255,255,255,0.1)" }}
@@ -96,7 +96,7 @@ export function ModelLoadErrorCard({
           </Pressable>
         )}
         {onRelaunchWizard && (
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel={t("modelLoadErrorCard.setupWizard")}
             style={[styles.actionBtn, styles.wizardBtn]}
             onPress={() => handleAction(onRelaunchWizard)}
             android_ripple={{ color: "rgba(6,182,212,0.2)" }}

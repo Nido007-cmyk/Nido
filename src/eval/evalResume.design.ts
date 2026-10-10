@@ -46,7 +46,7 @@
  * 3. On resume: load restore point, skip completedIndices, continue
  * 4. On fresh: delete old restore points, start new runId
  *
- * ### Edge Cases (from BOAR's self-review)
+ * ### Edge Cases (from the upstream project's self-review)
  * - **Blocked models**: If the model used in the restore point is no longer
  *   available (deleted, corrupted), fail with clear message, don't silently
  *   switch models (would invalidate comparison)

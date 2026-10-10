@@ -1,6 +1,6 @@
 > **Language:** English · [Español](ARCHITECTURE.es.md)
 
-# BOAR — Adaptive Local Intelligence (Android)
+# the upstream project — Adaptive Local Intelligence (Android)
 
 An offline-first mobile AI system for Android exploring adaptive model routing, local
 retrieval, selective verification, and resource-aware inference. Originally built for

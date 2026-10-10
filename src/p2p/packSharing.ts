@@ -9,7 +9,7 @@
  *
  * NIDO P2P Pack Sharing (2026-10-05). From deep research DR-7.
  *
- * BOAR has this on their roadmap (not shipped). NIDO can ship first.
+ * The upstream project has this on their roadmap (not shipped). NIDO can ship first.
  * Zero-network-native: share knowledge packs phone-to-phone over
  * the existing P2P encrypted channel.
  *

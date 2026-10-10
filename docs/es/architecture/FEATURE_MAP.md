@@ -25,7 +25,7 @@ Drawer es un overlay `Animated` personalizado.
 | Pantalla | Propósito | Estado | Evidencia / notas |
 |---|---|---|---|
 | Raíz de App + LockScreen (`App.tsx`) | Puerta biométrica/PIN, enrutamiento required-setup vs chat | BUILT | `ensureUnlocked` (l.38–108); gating vía `ModelManager.requiredModelsPresent()`; 0 cadenas codificadas |
-| SetupWizardScreen | Obligatorio de 4 pasos en primer arranque: escaneo de hardware → selección de nivel → descargas de modelos → indexación offline | BUILT | Sondeo real de RAM/disco, descargas reanudables, carga de embeddings + siembra de KB; 1 codificada: título héroe "BOAR" |
+| SetupWizardScreen | Obligatorio de 4 pasos en primer arranque: escaneo de hardware → selección de nivel → descargas de modelos → indexación offline | BUILT | Sondeo real de RAM/disco, descargas reanudables, carga de embeddings + siembra de KB; 1 codificada: título héroe "el proyecto original" |
 | ModelSetupScreen (`mode="required"`) | UI de descarga de modelos en primer arranque | BUILT | `downloadManager` real + `llamaEngine.load()`; 0 codificadas |
 
 ## 2. Chat (núcleo)
@@ -33,8 +33,8 @@ Drawer es un overlay `Animated` personalizado.
 | Pantalla / componente | Propósito | Estado | Evidencia / notas |
 |---|---|---|---|
 | ChatScreen | Chat principal: inferencia streaming, RAG, sesiones, feedback, TTS, deep research, enrutamiento adaptativo, bucle de agente | BUILT | `llamaEngine`, `retrieve`/`assemblePrompt`, CRUD de `chatHistory`, `runAgentLoop`, `runAdaptiveChat`, `speakAloud` reales; 75 llamadas `t()`; 1 codificada: etiqueta del drawer `"NIDO"` |
-| ChatHeader | Barra superior: drawer, marca, píldora offline, etiqueta de modelo, tono/nuevo-chat, toggle de deep-research, tok/s en vivo | BUILT | Props conectadas; 2 codificadas: "BOAR", "tok/s" |
-| Drawer | Lista de sesiones + nuevo chat + nav (Prompts, Mis documentos, Ajustes, Telemetría, NIDO, About) + stats de pie | BUILT | Lista real de sesiones; 1 codificada: "BOAR" |
+| ChatHeader | Barra superior: drawer, marca, píldora offline, etiqueta de modelo, tono/nuevo-chat, toggle de deep-research, tok/s en vivo | BUILT | Props conectadas; 2 codificadas: "el proyecto original", "tok/s" |
+| Drawer | Lista de sesiones + nuevo chat + nav (Prompts, Mis documentos, Ajustes, Telemetría, NIDO, About) + stats de pie | BUILT | Lista real de sesiones; 1 codificada: "el proyecto original" |
 | DrawerFooterStats | Barras de RAM/disco en vivo + tok/s de la última consulta | BUILT | Sondea stats nativas reales; se degrada si el módulo no está enlazado; 0 codificadas |
 | PromptIdeasCarousel | Carrusel descartable de prompts demo | BUILT | Persiste el descarte; **12 cadenas en inglés codificadas** (no en i18n) |
 | ProcessingIndicator | Animación de estado recuperando/pensando/generando | BUILT | Presentacional; 0 codificadas |
@@ -89,7 +89,7 @@ con "Ajustes → Idioma".
 |---|---|---|---|
 | ExecutionTelemetryScreen | Explorar/exportar/borrar telemetría de ejecución persistida; lanza eval | BUILT | Lista/exporta/borra reales; 1 codificada: "🧭 adaptive" |
 | EvaluationScreen | Set fijo de eval vs modelos/adaptativo; progreso, resultados, exportación JSONL/CSV; auto-run de eval en dispositivo | BUILT | `evalHarness` real; 0 codificadas |
-| AboutScreen | Info estática de la app, versión, tarjetas air-gapped/hardware/benchmark | BUILT | Versión desde `app.json`; 2 codificadas: "BOAR", URL del repo |
+| AboutScreen | Info estática de la app, versión, tarjetas air-gapped/hardware/benchmark | BUILT | Versión desde `app.json`; 2 codificadas: "el proyecto original", URL del repo |
 | UsageStatsContent | Telemetría de hardware: auditoría RAM/12GB, desglose de almacenamiento, stats de inferencia | BUILT (hueco i18n) | Stats nativas reales; 16 cadenas en inglés codificadas |
 | UsageStatsScreen | Wrapper de pantalla completa de UsageStatsContent | **DEAD** | Cero referencias; inalcanzable |
 | SystemMonitor | Barras RAM/disco vs presupuestos (sondeo 4s) | **DEAD** | Cero referencias; inalcanzable (lógica real, nunca renderizada) |
@@ -118,15 +118,15 @@ comentarios planos (NidoScreen:412, comentarios del transporte p2p).
 ## 9. Columna de cobertura i18n (resumen)
 
 Totalmente con claves vía `t()`: raíz de App, ChatScreen (75 llamadas),
-ModelSetupScreen, SetupWizardScreen (excepto "BOAR"), KnowledgeBaseScreen,
+ModelSetupScreen, SetupWizardScreen (excepto "el proyecto original"), KnowledgeBaseScreen,
 ExecutionTelemetryScreen (excepto 1), EvaluationScreen, PersonalDocumentsManager,
 CorpusSettingsTab, PersonalitySettings, MemorySettings, VoiceSettings, Drawer
-(excepto "BOAR"), DrawerFooterStats, ProcessingIndicator, ReasoningPeek,
+(excepto "el proyecto original"), DrawerFooterStats, ProcessingIndicator, ReasoningPeek,
 SourceFootnotes, AccordionSection, CatalogItemCard, Toast.
 Huecos: NidoScreen (20 ES, sin `t()` en absoluto), UsageStatsContent (16 EN),
 PromptIdeasCarousel (12 EN), ThemeSelector (8+ EN), VoiceInputButton (2 EN),
 MarkdownMessage (2 EN), encabezado de LanguageSelector (1), varios de
-marca/técnicos ("BOAR" ×4 pantallas, "tok/s", "ERR_LOCAL_INIT", "🧭 adaptive").
+marca/técnicos ("el proyecto original" ×4 pantallas, "tok/s", "ERR_LOCAL_INIT", "🧭 adaptive").
 Notificaciones (`src/notify/notifications.ts`): nombres de canal y títulos en
 español codificados ("Recordatorios de NIDO", "NIDO · Recordatorio",
 "NIDO · Tu día") — deben pasar a claves.

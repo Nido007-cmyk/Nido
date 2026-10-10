@@ -71,7 +71,7 @@ The interface is available in English, Spanish and Portuguese.
 - Bluetooth messages are end-to-end encrypted with keys exchanged by QR code
   (X25519 key agreement, Ed25519 signatures, XSalsa20-Poly1305).
 
-More detail: [privacy](docs/PRIVACY.md) · [crypto architecture](docs/CRYPTO_ARCHITECTURE.md) ·
+[Privacy policy](PRIVACY.md) · [terms of use](TERMS.md). More detail: [privacy hardening](docs/PRIVACY.md) · [crypto architecture](docs/CRYPTO_ARCHITECTURE.md) ·
 [threat model](docs/THREAT_MODEL_SUMMARY.md) · [reporting a vulnerability](SECURITY.md)
 
 ## Status

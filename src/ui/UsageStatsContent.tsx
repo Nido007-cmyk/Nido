@@ -552,7 +552,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   gaugeTrack: {
     height: 10,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: colors.bg.modalOverlay,
     borderRadius: radii.xs,
     overflow: "hidden",
     position: "relative",
@@ -615,7 +615,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   segmentedBarTrack: {
     flexDirection: "row",
     height: 12,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    backgroundColor: colors.bg.modalOverlay,
     borderRadius: radii.xs,
     overflow: "hidden",
     borderWidth: 1,

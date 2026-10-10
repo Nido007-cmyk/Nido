@@ -2,9 +2,9 @@
 
 # PRIVACY.md — Endurecimiento de privacidad NIDO
 
-NIDO parte de BOAR, que ya era offline-first y sin analítica. Este documento
-registra cada brecha encontrada en la auditoría (ver `BOAR_DEEP_DIVE.md` §10)
-y su estado.
+Este documento registra cada brecha de privacidad encontrada durante el
+endurecimiento y su estado. La política para usuarios está en
+[`PRIVACY.md`](../../PRIVACY.md), en la raíz del repositorio.
 
 ## Implementado
 

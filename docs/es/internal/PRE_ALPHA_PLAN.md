@@ -71,33 +71,33 @@ SECURITY/PRIVACY IMPACT → STATE AFTER → REMAINING UNVERIFIED → NEXT BLOCKE
 La meta no es que el proyecto "parezca terminado". La meta es que cada cosa
 marcada como funcional tenga evidencia real detrás.
 
-## ENMIENDAS DE LA REVISIÓN DE BOAR (2026-09-27)
+## ENMIENDAS DE LA REVISIÓN DE el proyecto original (2026-09-27)
 
-Fuente: `docs/architecture/BOAR_REVIEW_2026-09-27.md`. Repo BOAR sin cambios
+Fuente: `docs/architecture/UPSTREAM_REVIEW_2026-09-27.md`. Repo el proyecto original sin cambios
 desde el deep-dive de 2026-09-26; `src/` de NIDO es un superconjunto estricto
-del de BOAR menos 4 archivos de red descartados deliberadamente. Sin cambios de
+del del proyecto original menos 4 archivos de red descartados deliberadamente. Sin cambios de
 prioridades.
 
 1. La implementación de TD-1 (Clear All Data) debe seguir la plantilla de
-   borrado ordenado de BOAR (`appReset.ts`: unload native → resetDatabase →
+   borrado ordenado del proyecto original (`appReset.ts`: unload native → resetDatabase →
    files → settings, best-effort) extendida a las nuevas superficies (DB de
    memoria, claves de Keystore, identidad P2P). Extender la secuencia, no
    reinventarla.
 2. Añadir dos tareas de docs sin código junto a las correcciones, antes de la
    próxima ejecución de CI: reescribir `AGENTS.md` para NIDO (actualmente
-   byte-idéntico al de BOAR; aún documenta la ruta EAS aparcada, no dice nada
+   byte-idéntico al del proyecto original; aún documenta la ruta EAS aparcada, no dice nada
    sobre GitHub CI, nido-p2p ni verificación SQLCipher) y extender `COMPLIANCE.md`
-   (también byte-idéntico al de BOAR; no documenta ninguna de las nuevas garantías
+   (también byte-idéntico al del proyecto original; no documenta ninguna de las nuevas garantías
    de NIDO: SQLCipher, Keystore, gate biométrico, allowBackup=false, P2P E2E).
 3. Nombrar `scripts/eval-device.mjs` + `DEVICE_EVALUATION.md` como el
    procedimiento de validación en dispositivo en el paso de validación en
    dispositivo del plan.
 4. Adoptar la convención de nombres `.pure.ts` para código nuevo en adelante
    (sin retrofit del código existente).
-5. Mejoras confirmadas de NIDO sobre BOAR — no hacer regresión: SQLCipher en
+5. Mejoras confirmadas de NIDO sobre el proyecto original — no hacer regresión: SQLCipher en
    ambas DBs + DEK en Keystore + fail-closed, allowBackup=false, gate
    biométrico/PIN, navegador HF eliminado, módulo de auditoría de red, stack
    P2P E2E, agent loop + 21 tools, notificaciones, TTS offline, infra de locale
    (326 keys × 3).
-6. Dos gaps de privacidad de BOAR sin arreglar siguen trackeados: settings.json
+6. Dos gaps de privacidad del proyecto original sin arreglar siguen trackeados: settings.json
    en plaintext (TD-4) y pinning de URLs de modelos.

@@ -171,7 +171,7 @@ export function PacksTab({ peers, getPeerName }: Props) {
                 {pack.description || t("packshare.noDescription")}
               </Text>
             </View>
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("packshare.share")}
               style={styles.shareButton}
               onPress={() => handleSharePack(pack.id)}
               disabled={processingId === pack.id}

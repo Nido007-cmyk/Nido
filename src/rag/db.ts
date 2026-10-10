@@ -22,7 +22,7 @@ import {
   checkFormatVersion,
 } from "../security/formatVersion";
 
-/** Nombre pre-rebrand del fichero (era BOAR-era "aoair"). Solo para migración y borrado. */
+/** Nombre pre-rebrand del fichero (era pre-rebrand "aoair"). Solo para migración y borrado. */
 const LEGACY_DB_NAME = "aoair_knowledge.db";
 const DB_NAME = "nido_knowledge.db";
 /** Nombre del fichero de la base de conocimiento (lo necesita appReset para verificar el borrado). */
@@ -477,7 +477,7 @@ async function openAndMigrate(): Promise<SecureDbHandle> {
     await db.execAsync(`ALTER TABLE chunks ADD COLUMN collection_id TEXT REFERENCES custom_collections(id)`);
   }
 
-  // Storage budget (BOAR item 4, adapted): track last access for LRU eviction.
+  // Storage budget (upstream item 4, adapted): track last access for LRU eviction.
   // New installs get the column via CREATE TABLE; existing DBs get ALTER.
   const collColumns = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(custom_collections)`);
   if (!collColumns.some((c) => c.name === "last_accessed")) {
