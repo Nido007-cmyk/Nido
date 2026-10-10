@@ -129,8 +129,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   row: { flexDirection: "row", alignItems: "center", gap: 6 },
   label: {
-    ...typography.mono.xs,
-    fontSize: 9,
+    ...typography.ui.caption,
     color: colors.text.dim,
     width: 28,
     fontWeight: "700",
@@ -139,7 +138,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     flex: 1,
     height: 5,
     borderRadius: radii.xs,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: colors.bg.modalOverlay,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: colors.border.default,
@@ -147,8 +146,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   fill: { height: "100%", borderRadius: radii.xs },
   fillOver: { backgroundColor: colors.crimson[500] },
   value: {
-    ...typography.mono.xs,
-    fontSize: 9,
+    ...typography.ui.caption,
     color: colors.text.muted,
     fontVariant: ["tabular-nums"],
   },

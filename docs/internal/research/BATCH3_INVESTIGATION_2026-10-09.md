@@ -83,16 +83,16 @@ generic white Bluetooth glyph.
 ```
 
 This is a framework drawable — Android tints it white and it reads as a generic
-system/BT icon. The user correctly identified it as looking "generic or BOAR".
+system/BT icon. The user correctly identified it as looking "generic or the upstream project".
 
 ### Existing asset assessment
 
 `assets/android-icon-monochrome.png` (432×432, grayscale+alpha) exists, but it is a
-**detailed 3D boar render** (BOAR legacy mascot), not a NIDO glyph. Android renders
+**detailed 3D boar render** (the upstream project legacy mascot), not a NIDO glyph. Android renders
 notification small icons as an **alpha mask**: every non-transparent pixel becomes
 solid white. A detailed grayscale render would collapse into an unrecognizable
 white blob. It is also off-brand (NIDO's mascot is the kawaii phantom-thief, and
-the boar is BOAR's mark). **Verdict: unusable — do not adapt it.**
+the boar is the upstream project's mark). **Verdict: unusable — do not adapt it.**
 
 ### What Android needs
 
@@ -200,7 +200,7 @@ regression-class issue the user notices.
 | # | Issue | Root cause | Fix | Risk | Effort | Verdict |
 |---|-------|-----------|-----|------|--------|---------|
 | 1 | Reminder 1 min late | `SCHEDULE_EXACT_ALARM` declared but never granted at runtime → expo-notifications falls back to inexact alarm (verified in `ExpoSchedulingDelegate.kt:106-117`) | Native `canScheduleExactAlarms()` check + Settings deep-link prompt | LOW | ½ day | YES |
-| 2 | Generic P2P notification icon | `android.R.drawable.stat_sys_data_bluetooth` at `NidoP2PService.kt:188`; existing monochrome asset is a BOAR boar render, unusable as alpha mask | New vector glyph `ic_stat_nido.xml` in module `res/drawable/`, 2-line wiring change | LOW | ½ day | YES |
+| 2 | Generic P2P notification icon | `android.R.drawable.stat_sys_data_bluetooth` at `NidoP2PService.kt:188`; existing monochrome asset is a the upstream project boar render, unusable as alpha mask | New vector glyph `ic_stat_nido.xml` in module `res/drawable/`, 2-line wiring change | LOW | ½ day | YES |
 | 3 | Language switch with open chat | System prompt hardcodes Spanish (`agentLoop.ts:348`); deterministic responses hardcoded Spanish (lines 559/617/659); no lang param in `runAgentLoop` | Thread `lang` through loop options, localize prompt + responses, tests | LOW-MED | 1 day | YES |
 
 Total: ~2 days for all three, each independently shippable. None requires a

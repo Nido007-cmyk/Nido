@@ -1,6 +1,6 @@
 > **Idioma:** [English](ARCHITECTURE.md) · Español
 
-# BOAR — Inteligencia Local Adaptativa (Android)
+# el proyecto original — Inteligencia Local Adaptativa (Android)
 
 Un sistema móvil de IA offline-first para Android que explora el enrutamiento
 adaptativo de modelos, la recuperación local, la verificación selectiva y la

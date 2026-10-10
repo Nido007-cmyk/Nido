@@ -123,8 +123,8 @@ previous literals (proven by `src/i18n/migratedStrings.test.ts`).
 
 ## LOW
 
-### TD-13 — "BOAR" branding remnants
-`AboutScreen.tsx`, `ChatHeader.tsx`, `Drawer.tsx` (×"BOAR"), `SetupWizardScreen.tsx`
+### TD-13 — "the upstream project" branding remnants
+`AboutScreen.tsx`, `ChatHeader.tsx`, `Drawer.tsx` (×"the upstream project"), `SetupWizardScreen.tsx`
 (hero title), repo URL `github.com/rferrari/boar-app` in About. Rebrand to
 NIDO incomplete — visible to users.
 

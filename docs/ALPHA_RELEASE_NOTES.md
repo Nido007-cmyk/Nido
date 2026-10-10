@@ -1,4 +1,4 @@
-# NIDO v0.1.1-alpha — Release Notes
+# NIDO v0.1.2-alpha — Release Notes
 
 ## What is this?
 
@@ -6,11 +6,24 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 
 ## What's working
 
-- Offline AI chat (Qwen 2.5 0.5B, runs 100% on-device)
+- Offline AI chat, 100% on-device, with a catalog of models from 0.4 GB to 5 GB (Qwen 2.5 0.5B / 1.5B / 7B, Phi-3.5 mini, LFM 2.5, Gemma) — pick what your phone can run
 - P2P device-to-device messaging over Bluetooth (no internet, no servers)
 - Reminders with local notifications
 - Encrypted on-device storage
 - Backup / restore
+
+## What changed in 0.1.2-alpha
+
+- **Backup is now reachable**: About → Open backup. Create an encrypted backup, view and copy your encryption key, or rotate it.
+- **New look on every screen**, matching the chat, in both the light and the dark theme. Tone, memory and voice settings no longer stay dark in the light theme.
+- **What the agent did**: About lists every tool the agent used or tried to use in the session and how it ended.
+- **Agent permissions**: turn off any tool you do not want the agent to use.
+- **Restore from another phone**: Settings → Restore with the backup's key, for backups made on another phone or before rotating your key. Not yet tested on a physical device — keep your original backup file.
+- **Security check** in About: confirms on your phone that the database is encrypted and that key storage and the biometric lock work.
+- About also lists what the agent can do, and includes a privacy summary and a notice about the limits of on-device AI.
+- Screen readers: every button announces itself as a button, and icon-only buttons have spoken labels.
+- Backup dialogs are fully translated (English, Spanish, Portuguese).
+- New privacy policy and terms of use in the repository.
 
 ## What changed in 0.1.1-alpha
 

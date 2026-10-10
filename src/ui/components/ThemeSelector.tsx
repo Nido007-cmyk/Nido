@@ -46,7 +46,7 @@ export function ThemeSelector({ compact = false }: Props) {
         {THEMES.map((t) => {
           const isSelected = themeId === t.id;
           return (
-            <Pressable
+            <Pressable accessibilityRole="button"
               key={t.id}
               style={[
                 styles.themeBtn,
@@ -95,7 +95,7 @@ export function ThemeSelector({ compact = false }: Props) {
         {FONT_SCALES.map((s) => {
           const isSelected = fontScale === s.id;
           return (
-            <Pressable
+            <Pressable accessibilityRole="button"
               key={s.id}
               style={[
                 styles.fontBtn,
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: "rgba(128,128,128,0.3)",
   },
   themeInfo: {
     flexDirection: "row",
@@ -299,6 +299,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
     paddingTop: 4,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.05)",
+    borderTopColor: "rgba(128,128,128,0.2)",
   },
 });

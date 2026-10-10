@@ -52,7 +52,7 @@ export function KnowledgeBaseScreen({ onClose }: { onClose: () => void }) {
 }
 
 const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg.surface },
+  container: { flex: 1, backgroundColor: colors.bg.black },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -73,19 +73,21 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     fontSize: 18,
   },
   title: {
-    ...typography.ui.titleSm,
+    ...typography.ui.title,
     color: colors.text.heading,
   },
   closeBtn: {
     paddingHorizontal: calmSpacing.cozy,
     paddingVertical: calmSpacing.tight,
-    borderRadius: calmRadii.subtle,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderRadius: 9999,
+    minHeight: 40,
+    justifyContent: "center",
+    backgroundColor: colors.emerald.bgSubtle,
   },
   closeBtnText: {
-    ...typography.mono.xs,
-    color: colors.text.accentCyan,
-    fontWeight: "800",
+    ...typography.ui.caption,
+    color: colors.emerald[600],
+    fontWeight: "700",
   },
   body: { paddingBottom: calmSpacing.generous },
 });

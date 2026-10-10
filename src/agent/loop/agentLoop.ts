@@ -36,6 +36,8 @@ import { recordInferenceEvent } from "../../inference/telemetry";
 import { generateToolCallJson } from "./toolCallJson";
 import { validateStructuredOutput } from "./structuredOutput";
 import { extractRememberFact } from "./rememberRouter";
+import { actionLog } from "../actionLog";
+import { isToolDisabled } from "../tools/toolPermissions";
 import { listSkillNamesForPrompt } from "../skills/registry";
 import type { LabeledContent, PolicyDecision } from "../policy/policyEngine";
 import { wrapUntrusted } from "../policy/policyEngine";
@@ -546,7 +548,9 @@ export async function runAgentLoop(
       ],
     };
   }
-  const reminderAction = extractReminderAction(userText);
+  // Permisos del usuario: con la herramienta apagada no hay atajo; el turno
+  // sigue al modelo y el despachador la rechaza.
+  const reminderAction = isToolDisabled("create_reminder") ? null : extractReminderAction(userText);
   if (reminderAction) {
     const { saveReminder } = await import("../memory/memoryStore");
     // FIX 2026-10-09: envolver saveReminder en try/catch. Un fallo de la base
@@ -559,7 +563,9 @@ export async function runAgentLoop(
         text: reminderAction.text,
         dueAt: reminderAction.dueAt,
       });
+      actionLog.record("create_reminder", "executed");
     } catch (e) {
+      actionLog.record("create_reminder", "failed");
       return {
         response: "No pude guardar el recordatorio por un problema con la base de datos. Inténtalo de nuevo.",
         intent,
@@ -617,7 +623,7 @@ export async function runAgentLoop(
   }
   // PEOPLE-FIX 2026-10-07: extraer persona ANTES que hecho (más específico).
   const { extractPerson } = await import("./rememberRouter");
-  const personExtraction = extractPerson(userText);
+  const personExtraction = isToolDisabled("remember_fact") ? null : extractPerson(userText);
   if (personExtraction) {
     const { savePerson, saveFact, saveReminder } = await import("../memory/memoryStore");
     const { extractDateISO } = await import("./rememberRouter");
@@ -659,7 +665,7 @@ export async function runAgentLoop(
       ],
     };
   }
-  const extraction = extractRememberFact(userText);
+  const extraction = isToolDisabled("remember_fact") ? null : extractRememberFact(userText);
   if (extraction) {
     const { saveFact, saveReminder } = await import("../memory/memoryStore");
     const { extractDateISO } = await import("./rememberRouter");

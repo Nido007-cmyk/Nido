@@ -186,6 +186,8 @@ const getStyles = (colors: Colors, typography: Typography) =>
     },
     denyButton: {
       backgroundColor: colors.bg.subtle,
+      minHeight: 44,
+      justifyContent: "center",
     },
     denyText: {
       ...typography.ui.body,
@@ -194,13 +196,15 @@ const getStyles = (colors: Colors, typography: Typography) =>
     },
     approveButton: {
       backgroundColor: colors.emerald[400],
+      minHeight: 44,
+      justifyContent: "center",
     },
     approveButtonHighRisk: {
-      backgroundColor: "#C0392B",
+      backgroundColor: colors.crimson[500],
     },
     approveText: {
       ...typography.ui.body,
-      color: "#FFFFFF",
+      color: colors.text.inverse,
       fontWeight: "600",
     },
   });

@@ -70,7 +70,7 @@ same identity.
 
 ## Migration note (2026-10-05)
 
-The signing properties were renamed from `BOAR_UPLOAD_*` to `NIDO_UPLOAD_*`
+The signing properties were renamed from `UPSTREAM_UPLOAD_*` to `NIDO_UPLOAD_*`
 in `plugins/withReleaseSigning.js`, `.github/workflows/android-apk.yml`,
 `AGENTS.md`, and `docs/ANDROID_READINESS.md` (EN/ES). No functional change
 besides the names; the old names no longer have any effect. Historical audit

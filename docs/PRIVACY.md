@@ -2,9 +2,8 @@
 
 # PRIVACY.md — NIDO privacy hardening
 
-NIDO builds on BOAR, which was already offline-first and analytics-free. This
-document records every gap found in the audit (see `BOAR_DEEP_DIVE.md` §10)
-and its status.
+This document records every privacy gap found during hardening and its
+status. The user-facing policy is in [`PRIVACY.md`](../PRIVACY.md) at the repository root.
 
 ## Implemented
 

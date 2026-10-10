@@ -8,7 +8,7 @@
  * Calm Agent UI components
  *
  * NIDO UI Redesign (2026-10-05). "Calm Agent" direction.
- * Professional, airy, distinct from BOAR.
+ * Professional, airy, distinct from the upstream project.
  */
 
 export { AgentMessage } from "./AgentMessage";

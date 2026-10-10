@@ -133,7 +133,7 @@ export function PackShareCard({
         <View style={styles.actions}>
           {showAcceptDecline && (
             <>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("packshare.accept")}
                 style={[styles.button, styles.acceptButton]}
                 onPress={onAccept}
                 disabled={processing}
@@ -141,7 +141,7 @@ export function PackShareCard({
               >
                 <Text style={[typo.ui.body, styles.acceptText]}>{t("packshare.accept")}</Text>
               </TouchableOpacity>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("packshare.decline")}
                 style={[styles.button, styles.declineButton]}
                 onPress={onDecline}
                 disabled={processing}
@@ -152,7 +152,7 @@ export function PackShareCard({
             </>
           )}
           {showCancel && onCancel && (
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("packshare.cancel")}
               style={[styles.button, styles.cancelButton]}
               onPress={onCancel}
               disabled={processing}
@@ -162,7 +162,7 @@ export function PackShareCard({
             </TouchableOpacity>
           )}
           {showRetry && (
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("packshare.retry")}
               style={[styles.button, styles.retryButton]}
               onPress={onRetry}
               disabled={processing}
@@ -256,6 +256,8 @@ function getStyles(colors: Colors) {
     },
     acceptButton: {
       backgroundColor: colors.text.accentEmerald,
+      minHeight: 44,
+      justifyContent: "center",
     },
     acceptText: {
       color: colors.text.inverse,
@@ -265,6 +267,8 @@ function getStyles(colors: Colors) {
       backgroundColor: colors.bg.card,
       borderWidth: 1,
       borderColor: colors.border.default,
+      minHeight: 44,
+      justifyContent: "center",
     },
     declineText: {
       color: colors.text.primary,
@@ -273,12 +277,16 @@ function getStyles(colors: Colors) {
       backgroundColor: colors.bg.card,
       borderWidth: 1,
       borderColor: colors.border.default,
+      minHeight: 44,
+      justifyContent: "center",
     },
     cancelText: {
       color: colors.text.secondary,
     },
     retryButton: {
       backgroundColor: colors.text.accentEmerald,
+      minHeight: 44,
+      justifyContent: "center",
     },
     retryText: {
       color: colors.text.inverse,

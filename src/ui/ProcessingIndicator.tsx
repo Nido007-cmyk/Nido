@@ -140,7 +140,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     backgroundColor: colors.text.accentAmber,
   },
   statusDotFailed: {
-    backgroundColor: "#C0392B",
+    backgroundColor: colors.crimson[500],
   },
   statusDotCompleted: {
     backgroundColor: colors.emerald[400],

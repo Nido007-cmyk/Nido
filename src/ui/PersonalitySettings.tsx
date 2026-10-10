@@ -4,9 +4,13 @@
  * See LICENSE file for details.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable, TextInput, Switch } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "./theme";
+import type { Colors } from "./theme/colors";
+import type { Typography } from "./theme/typography";
+import { makeSurfaces, MIN_TOUCH } from "./theme/surfaces";
 import { PERSONALITIES, PersonalityId, MAX_TOKENS_OPTIONS } from "../constants/personalities";
 import {
   getPersonalityId,
@@ -30,6 +34,8 @@ import { NidoIcon } from "./components/icons/NidoIcon";
  */
 export function PersonalitySettings() {
   const { t } = useTranslation();
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const [personalityId, setPersonalityIdState] = useState<PersonalityId>("succinct");
   const [customPrompt, setCustomPromptState] = useState("");
   const [maxTokens, setMaxTokensState] = useState(512);
@@ -89,7 +95,7 @@ export function PersonalitySettings() {
       <Text style={styles.title}>{t("personalitySettings.title")}</Text>
 
       {PERSONALITIES.map((p) => (
-        <Pressable
+        <Pressable accessibilityRole="button"
           key={p.id}
           style={[styles.option, personalityId === p.id && styles.optionSelected]}
           onPress={() => selectPersonality(p.id)}
@@ -112,7 +118,7 @@ export function PersonalitySettings() {
           value={customPrompt}
           onChangeText={updateCustomPrompt}
           placeholder={t("personalitySettings.customPromptPlaceholder")}
-          placeholderTextColor="#666"
+          placeholderTextColor={colors.text.muted}
           multiline
         />
       )}
@@ -120,7 +126,7 @@ export function PersonalitySettings() {
       <Text style={styles.subheading}>{t("personalitySettings.maxOutputTokens")}</Text>
       <View style={styles.tokenRow}>
         {MAX_TOKENS_OPTIONS.map((n) => (
-          <Pressable
+          <Pressable accessibilityRole="button"
             key={n}
             style={[styles.tokenPill, maxTokens === n && styles.tokenPillSelected]}
             onPress={() => selectMaxTokens(n)}
@@ -146,7 +152,8 @@ export function PersonalitySettings() {
           <Switch
             value={deepResearch}
             onValueChange={toggleDeepResearch}
-            trackColor={{ false: "#333", true: "#3a7a4a" }}
+            trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+            thumbColor={colors.bg.card}
           />
         </View>
       </View>
@@ -163,7 +170,8 @@ export function PersonalitySettings() {
           <Switch
             value={adaptiveRouting}
             onValueChange={toggleAdaptiveRouting}
-            trackColor={{ false: "#333", true: "#3a7a4a" }}
+            trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+            thumbColor={colors.bg.card}
           />
         </View>
     </View>
@@ -171,50 +179,55 @@ export function PersonalitySettings() {
   );
 }
 
-const styles = StyleSheet.create({
-  card: { backgroundColor: "#111", borderRadius: 10, padding: 14, margin: 12, gap: 10 },
-  deepResearchRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  title: { color: "#fff", fontSize: 14, fontWeight: "600" },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  option: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    padding: 8,
-    borderRadius: 8,
-  },
-  optionSelected: { backgroundColor: "#0e1a12" },
-  radio: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: "#555",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#3a7a4a" },
-  optionLabel: { color: "#eee", fontSize: 13, fontWeight: "600" },
-  optionDescription: { color: "#999", fontSize: 11, marginTop: 2 },
-  customInput: {
-    backgroundColor: "#1a1a1a",
-    color: "#fff",
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 13,
-    minHeight: 70,
-    textAlignVertical: "top",
-  },
-  subheading: { color: "#ccc", fontSize: 12, fontWeight: "600", marginTop: 4 },
-  tokenRow: { flexDirection: "row", gap: 8 },
-  tokenPill: {
-    backgroundColor: "#1a1a1a",
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  tokenPillSelected: { backgroundColor: "#2a5f3a" },
-  tokenPillText: { color: "#999", fontSize: 12 },
-  tokenPillTextSelected: { color: "#fff", fontWeight: "600" },
-  note: { color: "#666", fontSize: 11 },
-});
+const getStyles = (colors: Colors, typography: Typography) => {
+  const ui = makeSurfaces(colors, typography);
+  const pill = {
+    minHeight: 40,
+    minWidth: 48,
+    backgroundColor: colors.bg.cardElevated,
+    borderRadius: 9999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  };
+  return StyleSheet.create({
+    // Va dentro de una sección plegable que ya es la tarjeta: sin borde propio.
+    card: { paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
+    titleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    title: { ...typography.ui.body, color: colors.text.heading, fontWeight: "700" },
+    row: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: MIN_TOUCH },
+    rowLabel: { ...typography.ui.body, color: colors.text.primary, fontWeight: "600" },
+    rowValue: { ...typography.ui.caption, color: colors.text.secondary, marginTop: 2 },
+    subheading: { ...ui.sectionLabel, marginTop: 4 },
+    note: { ...typography.ui.caption, color: colors.text.muted },
+    deepResearchRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: MIN_TOUCH },
+    option: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      padding: 10,
+      borderRadius: 12,
+      minHeight: MIN_TOUCH,
+    },
+    optionSelected: { backgroundColor: colors.emerald.bgSubtle },
+    radio: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: colors.border.elevated,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.emerald[500] },
+    optionLabel: { ...typography.ui.body, color: colors.text.primary, fontWeight: "600" },
+    optionDescription: { ...typography.ui.caption, color: colors.text.secondary, marginTop: 2 },
+    customInput: { ...ui.input, minHeight: 80, textAlignVertical: "top" },
+    tokenRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+    tokenPill: pill,
+    tokenPillSelected: { backgroundColor: colors.emerald[500] },
+    tokenPillText: { ...typography.ui.caption, color: colors.text.secondary },
+    tokenPillTextSelected: { color: colors.text.inverse, fontWeight: "700" },
+  });
+};

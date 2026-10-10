@@ -34,7 +34,7 @@ export function LanguageSelector({ compact = false }: Props) {
         {LANGUAGES.map((lang) => {
           const isSelected = languageId === lang.id;
           return (
-            <Pressable
+            <Pressable accessibilityRole="button"
               key={lang.id}
               style={[
                 styles.btn,

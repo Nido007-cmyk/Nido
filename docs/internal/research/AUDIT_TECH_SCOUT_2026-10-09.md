@@ -235,7 +235,7 @@ Q4_0 A/B and Vulkan offload stay in the tuning doc's future list.
 - **License:** platform API (no code to copy). Verdict: **evaluated
   alternative — NOT recommended for NIDO.**
 - **Why deferred:** it requires **Google Play Services**, which conflicts
-  with NIDO's self-reliance principle ("si BOAR falla, nosotros no" extended
+  with NIDO's self-reliance principle ("si the upstream project falla, nosotros no" extended
   to infrastructure). NIDO's custom RFCOMM transport also keeps the
   QR-pairing trust ceremony and the zero-third-party-SDK posture intact.
   Revisit only if the custom transport proves unfixable on the physical gate.

@@ -42,7 +42,7 @@ Fuera del alcance:
 - Ingeniería social, phishing o acceso físico a un dispositivo desbloqueado.
 - Vulnerabilidades en dependencias de terceros — repórtalas al proyecto
   correspondiente (un aviso para nosotros también se agradece).
-- El repositorio original de BOAR — repórtalo a sus propios mantenedores.
+- El repositorio del proyecto original — repórtalo a sus propios mantenedores.
 
 ## Versiones soportadas
 

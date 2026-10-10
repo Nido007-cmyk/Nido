@@ -298,7 +298,7 @@ export function NegotiationsTab() {
           description={t("negotiations.emptyDescription")}
           mascotRole="connection"
         />
-        <TouchableOpacity style={styles.proposeButton} onPress={openPropose}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("negotiations.proposeButton")} style={styles.proposeButton} onPress={openPropose}>
           <Text style={styles.proposeButtonText}>{t("negotiations.proposeButton")}</Text>
         </TouchableOpacity>
       </View>
@@ -376,7 +376,7 @@ export function NegotiationsTab() {
                     {t("negotiations.acceptedOn", { date: dateStr })}
                   </Text>
                   {/* TESTFIX-2026-10-08 (Fix 7): pedir tarea delegada. */}
-                  <TouchableOpacity
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("tasks.requestTask")}
                     style={styles.taskRequestButton}
                     onPress={() => openTaskModal(session.peerPkHex, session.negotiationId)}
                   >
@@ -422,7 +422,7 @@ export function NegotiationsTab() {
           <Text style={styles.taskResultText}>{taskResult}</Text>
         </View>
       )}
-      <TouchableOpacity style={styles.proposeButton} onPress={openPropose}>
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("negotiations.proposeButton")} style={styles.proposeButton} onPress={openPropose}>
         <Text style={styles.proposeButtonText}>{t("negotiations.proposeButton")}</Text>
       </TouchableOpacity>
 
@@ -432,7 +432,7 @@ export function NegotiationsTab() {
             <Text style={styles.modalTitle}>{t("negotiations.proposeButton").replace("+ ", "")}</Text>
             <Text style={styles.modalLabel}>Contacto:</Text>
             {contacts.map((c) => (
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 key={c.pkHex}
                 style={[
                   styles.contactOption,
@@ -453,19 +453,19 @@ export function NegotiationsTab() {
             />
             {proposeError && <Text style={styles.modalError}>{proposeError}</Text>}
             <View style={styles.modalButtons}>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 style={styles.modalCancel}
                 onPress={() => setShowPropose(false)}
               >
-                <Text>Cancelar</Text>
+                <Text>{t("common.cancel")}</Text>
               </TouchableOpacity>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 style={styles.modalSend}
                 onPress={handlePropose}
                 disabled={proposeBusy}
               >
                 <Text style={styles.proposeButtonText}>
-                  {proposeBusy ? "Enviando..." : "Enviar"}
+                  {proposeBusy ? t("negotiations.outgoingSending") : t("common.send")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -489,7 +489,7 @@ export function NegotiationsTab() {
             <Text style={styles.modalLabel}>{t("tasks.taskScopeLabel")}</Text>
             {(["task:answer", "task:summarize", "task:remember"] as TaskScope[]).map(
               (s) => (
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button"
                   key={s}
                   style={[
                     styles.contactOption,
@@ -503,13 +503,13 @@ export function NegotiationsTab() {
             )}
             {taskError && <Text style={styles.modalError}>{taskError}</Text>}
             <View style={styles.modalButtons}>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("tasks.taskCancel")}
                 style={styles.modalCancel}
                 onPress={() => setShowTaskModal(false)}
               >
                 <Text>{t("tasks.taskCancel")}</Text>
               </TouchableOpacity>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 style={styles.modalSend}
                 onPress={handleRequestTask}
                 disabled={taskBusy}
@@ -530,14 +530,14 @@ const getStyles = (colors: Colors) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.bg.surface,
+      backgroundColor: colors.bg.black,
     },
     list: {
       padding: calmSpacing.comfortable,
       gap: calmSpacing.comfortable,
     },
     terminalCard: {
-      backgroundColor: colors.bg.cardElevated,
+      backgroundColor: colors.bg.card,
       borderRadius: 8,
       padding: calmSpacing.cozy,
       opacity: 0.7,
@@ -547,11 +547,11 @@ const getStyles = (colors: Colors) =>
       fontSize: 13,
     },
     outgoingCard: {
-      backgroundColor: colors.bg.cardElevated,
+      backgroundColor: colors.bg.card,
       borderRadius: 8,
       padding: calmSpacing.cozy,
       borderLeftWidth: 3,
-      borderLeftColor: "#4A6B4F",
+      borderLeftColor: colors.emerald[500],
     },
     outgoingTitle: {
       color: colors.text.primary,
@@ -579,11 +579,11 @@ const getStyles = (colors: Colors) =>
       fontSize: 14,
     },
     activeCard: {
-      backgroundColor: colors.bg.cardElevated,
+      backgroundColor: colors.bg.card,
       borderRadius: 8,
       padding: calmSpacing.cozy,
       borderLeftWidth: 3,
-      borderLeftColor: "#4A6B4F",
+      borderLeftColor: colors.emerald[500],
     },
     activePeer: {
       color: colors.text.primary,
@@ -602,42 +602,46 @@ const getStyles = (colors: Colors) =>
     },
     // TESTFIX-2026-10-08 (Fix 7): estilos de tareas delegadas.
     taskRequestButton: {
-      backgroundColor: "#4A6B4F",
-      borderRadius: 8,
+      backgroundColor: colors.emerald[500],
+      borderRadius: 9999,
       padding: 10,
       alignItems: "center",
       marginTop: 8,
+      minHeight: 44,
+      justifyContent: "center",
     },
     taskRequestButtonText: {
-      color: "#fff",
+      color: colors.text.inverse,
       fontWeight: "600",
       fontSize: 13,
     },
     taskResultCard: {
-      backgroundColor: colors.bg.cardElevated,
+      backgroundColor: colors.bg.card,
       borderRadius: 8,
       padding: calmSpacing.cozy,
       borderLeftWidth: 3,
-      borderLeftColor: "#4A6B4F",
+      borderLeftColor: colors.emerald[500],
     },
     taskResultText: {
       color: colors.text.secondary,
       fontSize: 13,
     },
     proposeButton: {
-      backgroundColor: "#4A6B4F",
-      borderRadius: 8,
+      backgroundColor: colors.emerald[500],
+      borderRadius: 9999,
       padding: calmSpacing.cozy,
       alignItems: "center",
       marginTop: calmSpacing.comfortable,
+      minHeight: 44,
+      justifyContent: "center",
     },
     proposeButtonText: {
-      color: "#fff",
+      color: colors.text.inverse,
       fontWeight: "600",
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: "rgba(0,0,0,0.5)",
+      backgroundColor: colors.bg.modalOverlay,
       justifyContent: "center",
       padding: 20,
     },
@@ -663,11 +667,11 @@ const getStyles = (colors: Colors) =>
       padding: 10,
       borderRadius: 8,
       borderWidth: 1,
-      borderColor: colors.border?.default ?? "#ccc",
+      borderColor: colors.border.default,
       marginBottom: 6,
     },
     contactSelected: {
-      borderColor: "#4A6B4F",
+      borderColor: colors.emerald[500],
       borderWidth: 2,
     },
     contactName: {
@@ -675,7 +679,7 @@ const getStyles = (colors: Colors) =>
     },
     modalInput: {
       borderWidth: 1,
-      borderColor: colors.border?.default ?? "#ccc",
+      borderColor: colors.border.default,
       borderRadius: 8,
       padding: 10,
       minHeight: 80,
@@ -696,7 +700,7 @@ const getStyles = (colors: Colors) =>
       padding: 10,
     },
     modalSend: {
-      backgroundColor: "#4A6B4F",
+      backgroundColor: colors.emerald[500],
       borderRadius: 8,
       padding: 10,
       paddingHorizontal: 20,

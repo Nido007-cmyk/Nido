@@ -2,7 +2,7 @@
 
 **Status:** RESEARCH ONLY (2026-09-27). No code changes. Decision needed before any
 implementation: model size vs accuracy vs download weight.
-**Why:** BOAR's voice path uses the system `SpeechRecognizer`, which may send audio
+**Why:** the upstream project's voice path uses the system `SpeechRecognizer`, which may send audio
 to the network when the offline pack is missing. NIDO requires voice that is
 provably on-device. This is also the "Voice" row of the Offline Center spec.
 

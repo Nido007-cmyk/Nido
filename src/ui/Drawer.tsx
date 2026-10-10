@@ -102,7 +102,7 @@ export function Drawer({
 
           {/* New Chat Button */}
           {onNewChat && (
-            <Pressable
+            <Pressable accessibilityRole="button" accessibilityLabel={t("drawer.newChat")}
               style={styles.newChatBtn}
               onPress={() => {
                 handleAction(() => {
@@ -111,7 +111,7 @@ export function Drawer({
                 });
               }}
             >
-              <NidoIcon name="new-chat" size={18} color={colors.text.accentEmerald} />
+              <NidoIcon name="new-chat" size={18} color={colors.text.inverse} />
               <Text style={styles.newChatLabel}>{t("drawer.newChat")}</Text>
             </Pressable>
           )}
@@ -124,7 +124,7 @@ export function Drawer({
                 {sessions.map((s) => {
                   const active = s.id === activeSessionId;
                   return (
-                    <Pressable
+                    <Pressable accessibilityRole="button"
                       key={s.id}
                       style={[styles.sessionRow, active && styles.sessionRowActive]}
                       onPress={() => {
@@ -140,8 +140,9 @@ export function Drawer({
                         </Text>
                         <Text style={styles.sessionTime}>{formatTimestamp(s.updatedAt, t)}</Text>
                       </View>
-                      <Pressable
-                        hitSlop={8}
+                      <Pressable accessibilityRole="button"
+                        accessibilityLabel={t("drawer.deleteSession", { title: s.title })}
+                        hitSlop={12}
                         onPress={(e) => {
                           e.stopPropagation();
                           handleAction(() => onDeleteSession?.(s.id));
@@ -160,7 +161,7 @@ export function Drawer({
           {/* Navigation Items */}
           <View style={styles.itemList}>
             {items.map((item) => (
-              <Pressable
+              <Pressable accessibilityRole="button"
                 key={item.key}
                 style={styles.item}
                 onPress={() => {
@@ -190,7 +191,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.72)",
+    backgroundColor: colors.bg.modalOverlay,
   },
   panel: {
     position: "absolute",
@@ -198,90 +199,68 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     bottom: 0,
     left: 0,
     width: DRAWER_WIDTH,
-    backgroundColor: colors.bg.cardElevated,
+    backgroundColor: colors.bg.black,
     paddingTop: 56,
     paddingHorizontal: 16,
-    borderRightWidth: 1,
-    borderRightColor: colors.border.default,
+    borderTopRightRadius: 24,
+    borderBottomRightRadius: 24,
   },
   scrollArea: { flex: 1 },
   brandRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 },
   brandText: { flex: 1, flexShrink: 1 },
-  brandMascot: { width: 36, height: 36, borderRadius: radii.md },
+  brandMascot: { width: 44, height: 44, borderRadius: 14 },
   title: {
     ...typography.ui.title,
     color: colors.text.heading,
   },
-  subtitle: {
-    ...typography.mono.xs,
-    fontSize: 9,
-    color: colors.text.accentEmerald,
-    marginTop: 1,
-  },
+  subtitle: { ...typography.ui.caption, color: colors.text.secondary, marginTop: 1 },
   newChatBtn: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: radii.md,
-    backgroundColor: colors.emerald.bgSubtle,
-    borderWidth: 1,
-    borderColor: colors.emerald.border,
-    marginBottom: 12,
+    minHeight: 48,
+    paddingHorizontal: 16,
+    borderRadius: 9999,
+    backgroundColor: colors.emerald[500],
+    marginBottom: 16,
   },
   newChatIcon: { color: colors.text.accentEmerald, fontSize: 16, fontWeight: "800" },
-  newChatLabel: {
-    ...typography.ui.titleSm,
-    color: colors.text.accentEmerald,
-    fontSize: 13,
-  },
+  newChatLabel: { ...typography.ui.body, color: colors.text.inverse, fontWeight: "600" },
   sectionHeading: {
-    ...typography.mono.xs,
+    ...typography.ui.micro,
     color: colors.text.dim,
     fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
     marginBottom: 6,
     marginTop: 4,
+    marginLeft: 4,
   },
   sessionList: { maxHeight: 220 },
   sessionRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingVertical: 9,
-    paddingHorizontal: 8,
-    borderRadius: radii.sm,
+    minHeight: 48,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
   },
-  sessionRowActive: {
-    backgroundColor: colors.cyan.bgSubtle,
-    borderColor: colors.cyan.border,
-    borderWidth: 1,
-  },
-  sessionTitle: {
-    ...typography.ui.caption,
-    color: colors.text.primary,
-    fontWeight: "500",
-  },
-  sessionTime: {
-    ...typography.mono.xs,
-    fontSize: 9,
-    color: colors.text.dim,
-    marginTop: 2,
-  },
+  sessionRowActive: { backgroundColor: colors.emerald.bgSubtle },
+  sessionTitle: { ...typography.ui.body, color: colors.text.primary, fontWeight: "500" },
+  sessionTime: { ...typography.ui.micro, color: colors.text.dim, marginTop: 2 },
   sessionTrash: { fontSize: 13, opacity: 0.7 },
   divider: { height: 1, backgroundColor: colors.border.subtle, marginVertical: 12 },
   itemList: { gap: 4 },
   item: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: radii.md,
+    gap: 14,
+    minHeight: 48,
+    paddingHorizontal: 12,
+    borderRadius: 12,
   },
   itemIcon: { fontSize: 18 },
-  itemLabel: {
-    ...typography.ui.titleSm,
-    color: colors.text.heading,
-  },
+  itemLabel: { ...typography.ui.body, color: colors.text.primary, fontWeight: "500" },
 });

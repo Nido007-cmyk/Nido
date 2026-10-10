@@ -99,7 +99,9 @@ const getStyles = (colors: Colors, typography: Typography) =>
       backgroundColor: colors.bg.subtle,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.sm,
-      borderRadius: radii.full,
+      borderRadius: 9999,
+      minHeight: 44,
+      justifyContent: "center",
     },
     actionText: {
       ...typography.ui.body,

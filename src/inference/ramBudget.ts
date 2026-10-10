@@ -11,7 +11,7 @@ import { getDeviceTotalRamBytes, getMemoryInfo } from "ram-monitor";
  *
  * Idea adopted from BOAR's `estimateFit` (fail with a clear message instead
  * of an OOM crash), but the estimate itself is ours, derived from the
- * transformer/llama.cpp memory model rather than BOAR's flat 1.15x factor:
+ * transformer/llama.cpp memory model rather than the upstream project's flat 1.15x factor:
  *
  *   working set = weights (mmap'd, hot) + KV cache (computed) + compute buffers
  *
@@ -31,7 +31,7 @@ import { getDeviceTotalRamBytes, getMemoryInfo } from "ram-monitor";
  * size. The old factor *under*-estimated by ~20% — the dangerous direction
  * for a pre-flight, which is why it was replaced.
  *
- * Validation against our own device benchmark (docs/COMPLIANCE.md §2):
+ * Validation against our own device benchmark (internal device benchmark, 2026-09):
  * Qwen2.5-1.5B measured ~1.6 GB steady-state process RSS on a physical
  * phone. This module estimates ~1.28 GiB for the model's own working set;
  * the gap is the app's baseline RSS, which the pre-flight subtracts live

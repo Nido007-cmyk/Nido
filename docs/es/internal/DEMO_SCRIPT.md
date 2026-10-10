@@ -81,7 +81,7 @@ pico. Luego About → "Benchmark it yourself".
 
 ## Borrador del post
 
-> BOAR: an offline AI research app for Android. No signal needed after a 1 GB
+> el proyecto original: an offline AI research app for Android. No signal needed after a 1 GB
 > first-run setup.
 >
 > Airplane mode on, and it still answers explanations, comparisons and multi-step

@@ -2,7 +2,7 @@
 
 # Knowledge packs
 
-BOAR answers from an offline knowledge base on the phone. It always has the small
+NIDO answers from an offline knowledge base on the phone. It always has the small
 built-in one (about 5,300 short Wikipedia-derived articles). A **knowledge pack**
 adds many more articles in one ready-made file: text, a keyword search index and
 embeddings, all built on a computer so the phone doesn't have to index anything.
@@ -61,13 +61,13 @@ Wikipedia text is CC BY-SA 4.0; keep the attribution if you share a pack.
 
 ## Putting a pack on your phone
 
-**For testing, over USB** (a development build of BOAR, USB debugging on):
+**For testing, over USB** (a development build of NIDO, USB debugging on):
 
 ```bash
 npm run pack:push -- build/knowledge-pack/<id>.sqlite
 ```
 
-It copies the file into the app's storage and verifies it. BOAR uses any valid
+It copies the file into the app's storage and verifies it. NIDO uses any valid
 pack in its `corpus/` folder from the next question on, no code changes needed.
 
 **For everyone who installs your build**, add it to the catalog so the app can

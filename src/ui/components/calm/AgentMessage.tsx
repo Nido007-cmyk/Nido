@@ -160,7 +160,7 @@ export function AgentMessage({
               </Text>
             )}
             {receipt && (
-              <Pressable onPress={() => setShowReceipt(!showReceipt)}>
+              <Pressable accessibilityRole="button" onPress={() => setShowReceipt(!showReceipt)}>
                 <Text style={styles.receiptToggle}>
                   {showReceipt ? t("calm.hideDetails") : t("calm.showDetails")}
                 </Text>

@@ -936,7 +936,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
     const beyondHorizon = showRetry && Date.now() - item.ts > DEDUP_RETENTION_DAYS * 86_400_000;
     // DELETE-MSG 2026-10-07: long-press sobre la burbuja para borrar (solo local).
     return (
-      <Pressable
+      <Pressable accessibilityRole="button"
         onLongPress={() => void handleDeleteMessage(item)}
         delayLongPress={500}
         style={[styles.bubble, out ? styles.bubbleOut : styles.bubbleIn]}
@@ -1047,7 +1047,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             accessibilityLabel={t(vm.copy.recoverButton)}
           >
             {recoveryBusy ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={colors.text.inverse} />
             ) : (
               <Text style={styles.keyLossButtonText}>{t(vm.copy.recoverButton)}</Text>
             )}
@@ -1123,7 +1123,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             {sending ? (
               <ActivityIndicator size="small" color={colors.text.primary} />
             ) : (
-              <NidoIcon name="send" size={20} color="#fff" />
+              <NidoIcon name="send" size={20} color={colors.text.inverse} />
             )}
           </Pressable>
         </View>
@@ -1527,7 +1527,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           accessibilityRole="button"
           accessibilityLabel={t("common.cancel")}
         >
-          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+          <Pressable accessibilityRole="button" style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>{t("nido.pairDisambiguationTitle")}</Text>
             {disamb ? (
               <>
@@ -1627,7 +1627,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
 }
 
 const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg.surface },
+  container: { flex: 1, backgroundColor: colors.bg.black },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1663,9 +1663,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   // FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): banner de alerta para
   // almacenamiento de revocaciones corrupto.
   revocationAlert: {
-    backgroundColor: "#3d1a1a",
+    backgroundColor: colors.crimson.bgSubtle,
     borderLeftWidth: 4,
-    borderLeftColor: "#c0392b",
+    borderLeftColor: colors.crimson[500],
     paddingHorizontal: calmSpacing.comfortable,
     paddingVertical: calmSpacing.cozy,
     gap: 8,
@@ -1673,17 +1673,17 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   revocationAlertTitle: {
     ...typography.ui.body,
     fontWeight: "700",
-    color: "#f5c6c6",
+    color: colors.crimson[600],
   },
   revocationAlertBody: {
     ...typography.ui.caption,
-    color: "#e8b4b4",
+    color: colors.crimson[600],
   },
   revocationAlertButton: {
-    backgroundColor: "#c0392b",
+    backgroundColor: colors.crimson[500],
     paddingHorizontal: calmSpacing.comfortable,
     paddingVertical: calmSpacing.cozy,
-    borderRadius: 8,
+    borderRadius: 9999,
     alignItems: "center",
     minHeight: 44,
     justifyContent: "center",
@@ -1691,7 +1691,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   revocationAlertButtonText: {
     ...typography.ui.body,
     fontWeight: "700",
-    color: "#ffffff",
+    color: colors.text.inverse,
   },
   // Rediseño 2026-10-10: control segmentado en vez de subrayado.
   tabs: {
@@ -1767,7 +1767,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     marginTop: calmSpacing.cozy,
   },
   keyLossButtonDisabled: { opacity: 0.6 },
-  keyLossButtonText: { ...typography.ui.body, color: "#fff", fontWeight: "600" },
+  keyLossButtonText: { ...typography.ui.body, color: colors.text.inverse, fontWeight: "600" },
   contactInfo: { flex: 1 },
   contactName: { ...typography.ui.body, color: colors.text.primary, fontWeight: "600" },
   contactSub: { ...typography.ui.caption, color: colors.text.muted },
@@ -1819,7 +1819,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   // UNIT B (R2): modal de desambiguación de emparejamiento.
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: colors.bg.modalOverlay,
     alignItems: "center",
     justifyContent: "center",
     padding: calmSpacing.airy,
@@ -1848,16 +1848,18 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   chatList: { padding: calmSpacing.comfortable, gap: calmSpacing.cozy },
   bubble: {
     maxWidth: "80%",
-    borderRadius: calmRadii.soft,
+    borderRadius: 9999,
     paddingHorizontal: calmSpacing.comfortable,
     paddingVertical: calmSpacing.cozy,
+    minHeight: 44,
+    justifyContent: "center",
   },
   bubbleIn: { alignSelf: "flex-start", backgroundColor: colors.bg.card },
   bubbleOut: { alignSelf: "flex-end", backgroundColor: colors.emerald[500] },
   bubbleText: { ...typography.ui.body, color: colors.text.primary },
-  bubbleTextOut: { color: "#fff" },
+  bubbleTextOut: { color: colors.text.inverse },
   bubbleMeta: { ...typography.ui.caption, color: colors.text.muted, marginTop: 2, textAlign: "right" },
-  bubbleMetaOut: { color: "rgba(255,255,255,0.8)" },
+  bubbleMetaOut: { color: colors.text.inverse, opacity: 0.8 },
   // N6 §10: acción explícita de reintento en mensajes 'failed'.
   retryAction: {
     marginTop: calmSpacing.tight,
@@ -1886,5 +1888,5 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     justifyContent: "center",
   },
   sendBtnDisabled: { opacity: 0.4 },
-  sendBtnText: { color: "#fff", fontSize: 20 },
+  sendBtnText: { color: colors.text.inverse, fontSize: 20 },
 });

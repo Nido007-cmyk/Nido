@@ -52,7 +52,7 @@ export function SourceFootnotes({ citations }: Props) {
           const isExpanded = expandedIndex === i;
           return (
             <View key={i} style={styles.cardWrapper}>
-              <Pressable
+              <Pressable accessibilityRole="button"
                 style={[styles.chip, isExpanded && styles.chipActive]}
                 onPress={() => toggle(i)}
                 hitSlop={4}
@@ -100,7 +100,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     marginTop: spacing.sm,
     paddingTop: spacing.xs,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.08)",
+    borderTopColor: colors.border.subtle,
     gap: 6,
   },
   header: {
@@ -117,20 +117,18 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     fontSize: 11,
   },
   headerTitle: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     color: colors.text.accentCyan,
     fontWeight: "700",
-    letterSpacing: 0.5,
   },
   relevanceCaption: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     color: colors.text.dim,
-    fontSize: 9,
   },
   sourceCountBadge: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     color: colors.text.muted,
-    backgroundColor: "rgba(255, 255, 255, 0.07)",
+    backgroundColor: colors.bg.subtle,
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: radii.xs,
@@ -156,7 +154,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   chipActive: {
     borderColor: colors.cyan[500],
-    backgroundColor: "rgba(6, 182, 212, 0.1)",
+    backgroundColor: colors.cyan.bgSubtle,
   },
   chipIndexPill: {
     width: 16,
@@ -167,10 +165,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     justifyContent: "center",
   },
   chipIndexText: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     color: colors.text.accentCyan,
     fontWeight: "700",
-    fontSize: 9,
   },
   chipTitle: {
     ...typography.ui.caption,
@@ -179,7 +176,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     fontWeight: "600",
   },
   scoreText: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     color: colors.text.accentEmerald,
     fontWeight: "600",
     // BUG-7-2026-10-06: sin flexShrink:0 el porcentaje se deforma/apreta
@@ -205,18 +202,18 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: 8,
   },
   snippetPackTag: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     color: colors.text.accentEmerald,
     fontWeight: "700",
   },
   snippetDocId: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     color: colors.text.dim,
     flex: 1,
     textAlign: "right",
   },
   snippetText: {
-    ...typography.mono.xs,
+    ...typography.ui.caption,
     color: colors.text.secondary,
     lineHeight: 16,
   },

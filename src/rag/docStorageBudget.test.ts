@@ -5,7 +5,7 @@
  */
 
 /**
- * Tests for document storage budget (BOAR item 4, adapted for NIDO).
+ * Tests for document storage budget (upstream item 4, adapted for NIDO).
  *
  * Uses an in-memory SQLite database via the test fixture.
  */

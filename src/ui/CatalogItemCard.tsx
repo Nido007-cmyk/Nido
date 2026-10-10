@@ -227,7 +227,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
       {!row?.downloading && (
         <View style={styles.actionsRow}>
           {!present && (
-            <Pressable
+            <Pressable accessibilityRole="button"
               style={styles.downloadBtn}
               onPress={() => handleAction(() => onDownload(item))}
             >
@@ -245,7 +245,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
           )}
 
           {present && !isCorpus && !isActive && !activating && (
-            <Pressable
+            <Pressable accessibilityRole="button" accessibilityLabel={t("catalogItemCard.selectUse")}
               style={[styles.useBtn, busy && styles.disabled]}
               onPress={() => handleAction(() => onUse(item))}
               disabled={busy}
@@ -269,7 +269,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
           )}
 
           {(present || fromHuggingFace) && !item.required && (
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={confirmRemove}
               hitSlop={8}
               disabled={busy}
@@ -338,7 +338,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   cardActive: {
     borderColor: colors.emerald.border,
-    backgroundColor: "rgba(16, 185, 129, 0.06)",
+    backgroundColor: colors.emerald.bgSubtle,
   },
   headerRow: {
     flexDirection: "row",
@@ -360,7 +360,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: 5,
   },
   kindChip: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: colors.bg.subtle,
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: radii.xs,
@@ -482,7 +482,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   progressTrack: {
     height: 8,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    backgroundColor: colors.bg.modalOverlay,
     borderRadius: radii.xs,
     overflow: "hidden",
   },
@@ -532,9 +532,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     backgroundColor: colors.emerald.bgSubtle,
     borderColor: colors.emerald.border,
     borderWidth: 1,
-    borderRadius: radii.sm,
+    borderRadius: 9999,
     paddingHorizontal: 14,
     paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: "center",
   },
   downloadBtnText: {
     ...typography.ui.titleSm,
@@ -574,7 +576,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     marginLeft: "auto",
     padding: 6,
     borderRadius: radii.xs,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: colors.bg.subtle,
   },
   trashIcon: {
     fontSize: 14,
@@ -589,7 +591,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: 4,
   },
   badgeGrey: {
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: colors.bg.subtle,
     borderColor: colors.border.subtle,
   },
   badgeTextMuted: {
@@ -625,7 +627,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     fontWeight: "700",
   },
   badgeDownloading: {
-    backgroundColor: "rgba(6, 182, 212, 0.15)",
+    backgroundColor: colors.cyan.bgSubtle,
     borderColor: colors.cyan.border,
   },
   badgeTextCyan: {

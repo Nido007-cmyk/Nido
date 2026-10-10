@@ -4,26 +4,37 @@
  * See LICENSE file for details.
  */
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Image } from "react-native";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
-import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
+import { calmSpacing, calmRadii } from "./theme/calm";
+import { makeSurfaces } from "./theme/surfaces";
 import appConfig from "../../app.json";
 import { NetworkAuditCard } from "./NetworkAuditCard";
+import { SkillsCard } from "./SkillsCard";
+import { AgentPermissionsCard } from "./AgentPermissionsCard";
+import { SecurityStatusCard } from "./SecurityStatusCard";
+import { BackupScreen } from "./BackupScreen";
 
 export function AboutScreen({ onClose }: { onClose: () => void }) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
   const { t } = useTranslation();
+  // U1: la pantalla de respaldo existía pero ningún menú llevaba a ella.
+  const [showBackup, setShowBackup] = useState(false);
   const handleClose = () => {
     impact(ImpactFeedbackStyle.Light);
     onClose();
   };
+
+  if (showBackup) {
+    return <BackupScreen onClose={() => setShowBackup(false)} />;
+  }
 
   return (
     <View style={styles.container}>
@@ -68,6 +79,42 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
         {/* U3: el registro de red, visible para el usuario. */}
         <NetworkAuditCard />
 
+        {/* U7: estado de seguridad comprobado en este teléfono. */}
+        <SecurityStatusCard />
+
+        {/* U1: acceso a respaldo, clave de cifrado y rotación de clave. */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{t("aboutScreen.backupTitle")}</Text>
+          <Text style={styles.paragraph}>{t("aboutScreen.backupBody")}</Text>
+          <Pressable
+            style={styles.actionBtn}
+            onPress={() => {
+              impact(ImpactFeedbackStyle.Light);
+              setShowBackup(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t("aboutScreen.backupOpen")}
+          >
+            <Text style={styles.actionBtnText}>{t("aboutScreen.backupOpen")}</Text>
+          </Pressable>
+        </View>
+
+        {/* U6: qué sabe hacer el agente. */}
+        <SkillsCard />
+
+        {/* Historial de acciones y permisos por herramienta. */}
+        <AgentPermissionsCard />
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{t("aboutScreen.limitsTitle")}</Text>
+          <Text style={styles.paragraph}>{t("aboutScreen.limitsBody")}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{t("aboutScreen.privacyTitle")}</Text>
+          <Text style={styles.paragraph}>{t("aboutScreen.privacyBody")}</Text>
+        </View>
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t("aboutScreen.hardwareTitle")}</Text>
           <Text style={styles.paragraph}>{t("aboutScreen.hardwareBody")}</Text>
@@ -90,108 +137,66 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
   );
 }
 
-const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg.surface },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: calmSpacing.comfortable,
-    paddingVertical: calmSpacing.cozy,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.default,
-    backgroundColor: colors.bg.cardElevated,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: calmSpacing.cozy,
-  },
-  headerIcon: {
-    fontSize: 18,
-  },
-  title: {
-    ...typography.ui.titleSm,
-    color: colors.text.heading,
-  },
-  closeBtn: {
-    paddingHorizontal: calmSpacing.cozy,
-    paddingVertical: calmSpacing.tight,
-    borderRadius: calmRadii.subtle,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-  },
-  closeBtnText: {
-    ...typography.mono.xs,
-    color: colors.text.accentCyan,
-    fontWeight: "800",
-  },
-  body: {
-    padding: calmSpacing.comfortable,
-    gap: calmSpacing.comfortable,
-    paddingBottom: calmSpacing.generous,
-  },
-  heroBox: {
-    alignItems: "center",
-    paddingVertical: calmSpacing.comfortable,
-    gap: calmSpacing.tight,
-  },
-  mascotImg: {
-    width: 64,
-    height: 64,
-    borderRadius: calmRadii.soft,
-    marginBottom: calmSpacing.tight,
-  },
-  heroTitle: {
-    ...typography.ui.headline,
-    color: colors.text.heading,
-  },
-  heroSubtitle: {
-    ...typography.mono.xs,
-    color: colors.text.accentEmerald,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  versionBadge: {
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
-    paddingHorizontal: calmSpacing.cozy,
-    paddingVertical: 2,
-    borderRadius: calmRadii.subtle,
-    marginTop: calmSpacing.tight,
-  },
-  versionText: {
-    ...typography.mono.xs,
-    fontSize: 9,
-    color: colors.text.dim,
-  },
-  card: {
-    backgroundColor: colors.bg.cardElevated,
-    borderRadius: calmRadii.gentle,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-    padding: calmSpacing.comfortable,
-    gap: calmSpacing.cozy,
-    ...calmShadows.none,
-  },
-  cardTitle: {
-    ...typography.mono.xs,
-    color: colors.text.accentCyan,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  paragraph: {
-    ...typography.ui.body,
-    color: colors.text.secondary,
-    lineHeight: 20,
-  },
-  repoBox: {
-    backgroundColor: colors.bg.terminal,
-    borderRadius: calmRadii.subtle,
-    padding: calmSpacing.cozy,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-  },
-  repoText: {
-    ...typography.mono.xs,
-    color: colors.text.accentEmerald,
-  },
-});
+const getStyles = (colors: Colors, typography: Typography) => {
+  const ui = makeSurfaces(colors, typography);
+  return StyleSheet.create({
+    container: ui.page,
+    header: ui.topBar,
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: calmSpacing.cozy,
+      flexShrink: 1,
+    },
+    title: ui.topBarTitle,
+    closeBtn: ui.topBarAction,
+    closeBtnText: ui.topBarActionText,
+    body: {
+      paddingHorizontal: calmSpacing.comfortable,
+      paddingTop: calmSpacing.cozy,
+      gap: 12,
+      paddingBottom: calmSpacing.generous,
+    },
+    heroBox: {
+      alignItems: "center",
+      paddingVertical: calmSpacing.comfortable,
+      gap: calmSpacing.tight,
+    },
+    mascotImg: {
+      width: 72,
+      height: 72,
+      borderRadius: calmRadii.round,
+      marginBottom: calmSpacing.tight,
+    },
+    heroTitle: {
+      ...typography.ui.headline,
+      color: colors.text.heading,
+    },
+    heroSubtitle: {
+      ...typography.ui.body,
+      color: colors.text.secondary,
+    },
+    versionBadge: {
+      backgroundColor: colors.emerald.bgSubtle,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: calmRadii.pill,
+      marginTop: calmSpacing.cozy,
+    },
+    versionText: {
+      ...typography.ui.micro,
+      color: colors.emerald[600],
+      fontWeight: "700",
+    },
+    card: ui.card,
+    cardTitle: ui.sectionLabel,
+    paragraph: ui.body,
+    repoBox: ui.inset,
+    actionBtn: ui.primaryButton,
+    actionBtnText: ui.primaryButtonText,
+    repoText: {
+      ...typography.mono.xs,
+      color: colors.text.accentEmerald,
+    },
+  });
+};

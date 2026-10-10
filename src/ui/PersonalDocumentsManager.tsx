@@ -125,21 +125,21 @@ export function PersonalDocumentsManager() {
         <TextInput
           style={styles.nameInput}
           placeholder={t("personalDocumentsManager.namePlaceholder")}
-          placeholderTextColor="#666"
+          placeholderTextColor={colors.text.muted}
           value={newName}
           onChangeText={setNewName}
           editable={!importProgress}
         />
-        <Pressable
+        <Pressable accessibilityRole="button" accessibilityLabel={t("personalDocumentsManager.pickButton")}
           style={[styles.importBtn, !!importProgress && styles.importBtnDisabled]}
           onPress={handleImport}
           disabled={!!importProgress}
         >
           {importProgress ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.text.inverse} />
           ) : (
             <View style={styles.importBtnRow}>
-              <NidoIcon name="download" size={14} color="#fff" />
+              <NidoIcon name="download" size={14} color={colors.text.inverse} />
               <Text style={styles.importBtnText}>{t("personalDocumentsManager.pickButton")}</Text>
             </View>
           )}
@@ -178,17 +178,17 @@ export function PersonalDocumentsManager() {
               {t("personalDocumentsManager.chunkCount", { count: c.chunkCount })} · {formatBytes(c.sizeBytes)}
             </Text>
             <View style={styles.collectionActions}>
-              <Pressable onPress={() => handleExport(c)} disabled={busyId === c.id} style={styles.exportBtn}>
+              <Pressable accessibilityRole="button" onPress={() => handleExport(c)} disabled={busyId === c.id} style={styles.exportBtn}>
                 {busyId === c.id ? (
                   <Text style={styles.exportBtnText}>{t("personalDocumentsManager.exporting")}</Text>
                 ) : (
                   <View style={styles.exportBtnRow}>
-                    <NidoIcon name="external" size={13} color="#9cc4ff" />
+                    <NidoIcon name="external" size={13} color={colors.text.accentEmerald} />
                     <Text style={styles.exportBtnText}>{t("personalDocumentsManager.exportButton")}</Text>
                   </View>
                 )}
               </Pressable>
-              <Pressable onPress={() => handleDelete(c)} hitSlop={8} style={styles.trashBtn}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t("personalDocumentsManager.removeConfirmTitle")} onPress={() => handleDelete(c)} hitSlop={12} style={styles.trashBtn}>
                 <NidoIcon name="delete" size={14} />
               </Pressable>
             </View>
@@ -225,9 +225,11 @@ const getStyles = (colors: Colors) =>
     },
     importBtn: {
       backgroundColor: colors.text.accentEmerald,
-      borderRadius: 6,
+      borderRadius: 9999,
       paddingVertical: 10,
       alignItems: "center",
+      minHeight: 44,
+      justifyContent: "center",
     },
     importBtnDisabled: { backgroundColor: colors.border.default },
     importBtnText: { color: colors.text.inverse, fontWeight: "700", fontSize: 13 },

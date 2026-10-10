@@ -40,14 +40,14 @@ Creado: 2026-10-04. Directiva del owner: implementar todo lo técnicamente ejecu
 
 ---
 
-## SECCIÓN B: 37 ITEMS BOAR (adopción técnica)
+## SECCIÓN B: 37 ITEMS the upstream project (adopción técnica)
 
 Directiva: no copiar a ciegas. Para cada item: ADOPT / ADAPT / ALREADY COVERED / REJECT WITH EVIDENCE / BLOCKED.
 
 ### Prioridad alta (1-7)
 | # | Item | Estado inicial | Decisión | Evidencia |
 |---|------|----------------|----------|-----------|
-| 1 | Relevance gate for RAG | AUTHORIZED NOW | ALREADY COVERED | NIDO ya tiene filterByMinScore antes de fuseRetrievalResults con HONESTY CONTRACT. Threshold 0.45 es intencional (no copiar 0.7 de BOAR sin datos de dispositivo). |
+| 1 | Relevance gate for RAG | AUTHORIZED NOW | ALREADY COVERED | NIDO ya tiene filterByMinScore antes de fuseRetrievalResults con HONESTY CONTRACT. Threshold 0.45 es intencional (no copiar 0.7 de the upstream project sin datos de dispositivo). |
 | 2 | Skip retrieval on chit-chat | AUTHORIZED NOW | ADAPT | Agregado tipo 'conversation' (jokes, about assistant, time). NIDO ya tenía el mecanismo, se extendió la categoría. 21 tests pasan. |
 | 3 | 4 context chunks instead of 6 | AUTHORIZED NOW | PENDIENTE | Verificar en eval propio de NIDO |
 | 4 | Storage budget check | AUTHORIZED NOW | PENDIENTE | Directamente portable |
@@ -58,11 +58,11 @@ Directiva: no copiar a ciegas. Para cada item: ADOPT / ADAPT / ALREADY COVERED /
 ### Metodología y fixes (18-22)
 | # | Item | Estado inicial | Decisión | Evidencia |
 |---|------|----------------|----------|-----------|
-| 18 | Reproducible offline proof (audit-apk.py) | AUTHORIZED NOW | ADOPT | Metodología adoptada. Estructura creada en scripts/offline-proof/. Scripts completos por portar de BOAR (798 líneas). Documentado en README. |
+| 18 | Reproducible offline proof (audit-apk.py) | AUTHORIZED NOW | ADOPT | Metodología adoptada. Estructura creada en scripts/offline-proof/. Scripts completos por portar de the upstream project (798 líneas). Documentado en README. |
 | 19 | llama.rn unload crash fix | AUTHORIZED NOW | PENDIENTE | Verificar versión pineada de NIDO |
 | 20 | Cross-library retrieval dedupe | AUTHORIZED NOW | ADOPT | Implementado: dedupe.ts con dedupeArticleCopies (word pairs, COPY_MIN_SHARE=0.6). Integrado en retrieve(). 10 tests pasan, tsc limpio. |
 | 21 | RAM auto-pick cap 4GB | AUTHORIZED NOW | ALREADY COVERED | NIDO tiene RAM pre-flight (ramBudget.ts) que bloquea loads inseguros con mensaje claro. Default model Qwen2.5-1.5B Q4 (~0.9GB) está bajo el cap. El pre-flight es guardrail más fuerte que el cap del picker. |
-| 22 | Eval resume with restore points | AUTHORIZED NOW | ADOPT | Diseño creado en src/eval/evalResume.design.ts adaptado al formato de NIDO. Incluye edge cases de BOAR (blocked models, config mismatch, etc.). Implementación completa pendiente (prioridad media). |
+| 22 | Eval resume with restore points | AUTHORIZED NOW | ADOPT | Diseño creado en src/eval/evalResume.design.ts adaptado al formato de NIDO. Incluye edge cases de the upstream project (blocked models, config mismatch, etc.). Implementación completa pendiente (prioridad media). |
 
 ### Features y diseño (8-17, 23-31)
 | # | Item | Estado inicial | Decisión | Evidencia |
@@ -75,7 +75,7 @@ Directiva: no copiar a ciegas. Para cada item: ADOPT / ADAPT / ALREADY COVERED /
 | 13 | Chipset/CPU reporting | AUTHORIZED NOW | ADOPT | Adoptar como instrumentación para el device gate (Tab A9+). Reportar chipset/CPU en evals. |
 | 14 | Setup flow order | AUTHORIZED NOW | ADOPT | Usar como input de diseño para el wizard de setup de NIDO. No portar código, adaptar el orden. |
 | 15 | Honest setup UX | AUTHORIZED NOW | ADOPT | Adoptar el patrón de UX honesto (progreso real, no fake). Aplicar a setup y descargas de NIDO. |
-| 16 | Measurement conventions | AUTHORIZED NOW | ADOPT | Adoptar convenciones de medición de BOAR (TTFT, tokens/s, memoria) como estándar para benchmarks de NIDO. Documentar en docs/. |
+| 16 | Measurement conventions | AUTHORIZED NOW | ADOPT | Adoptar convenciones de medición de the upstream project (TTFT, tokens/s, memoria) como estándar para benchmarks de NIDO. Documentar en docs/. |
 | 17 | Crowdsourced eval (Supabase) | AUTHORIZED NOW | REJECT | Requiere backend/Supabase. Conflicto directo con principio zero-network de NIDO. |
 | 23 | In-app benchmark (PR #36) | AUTHORIZED NOW | ADAPT | NIDO tiene eval harness. Adaptar la idea de benchmark dentro de la app (UI) usando el harness existente. |
 | 24 | Hardware-key attestation | AUTHORIZED NOW | ADAPT | Patrón de referencia para verificación de dispositivo. NO adoptar el módulo server-side (incompatible con zero-network). Usar el concepto para device-gate. |
@@ -95,8 +95,8 @@ Directiva: no copiar a ciegas. Para cada item: ADOPT / ADAPT / ALREADY COVERED /
 | 39 | Health-instruction safety guard (PR #65) | AUTHORIZED NOW | ADOPT | CRÍTICO: Guard de seguridad para instrucciones médicas citadas. NIDO debe tener esto antes de cualquier uso con contenido de salud. |
 | 45 | Android setup wizard RAM-gated (PR #67) | AUTHORIZED NOW | ADAPT | Adaptar wizard de setup con gate de RAM. NIDO ya tiene RAM pre-flight; integrar al flujo de setup. |
 | 46 | Prompt ideas UI (PR #68) | AUTHORIZED NOW | ADOPT | Adoptar UI de ideas de prompts para ayudar a usuarios nuevos. |
-| 51 | Four writing styles | AUTHORIZED NOW | ADAPT | NIDO tiene sistema de tonos. Evaluar si los 4 estilos de BOAR aportan o si el sistema actual es suficiente. |
-| 52 | Encrypted private memory (Branches) | AUTHORIZED NOW | ALREADY COVERED | NIDO YA TIENE memoria privada cifrada (SQLCipher). Es un diferenciador core de NIDO, BOAR apenas lo está planeando. |
+| 51 | Four writing styles | AUTHORIZED NOW | ADAPT | NIDO tiene sistema de tonos. Evaluar si los 4 estilos de the upstream project aportan o si el sistema actual es suficiente. |
+| 52 | Encrypted private memory (Branches) | AUTHORIZED NOW | ALREADY COVERED | NIDO YA TIENE memoria privada cifrada (SQLCipher). Es un diferenciador core de NIDO, the upstream project apenas lo está planeando. |
 
 ### Solo intel (no implementar)
 32, 33, 34, 35, 36, 40, 41, 42, 43, 44, 47, 48, 49, 50, 53 — INTEL ONLY, documentados.
@@ -140,7 +140,7 @@ Priorizadas por impacto en diferenciadores de NIDO.
 | # | Oportunidad | Estado | Notas |
 |---|-------------|--------|-------|
 | DR-6 | Knowledge graph + hybrid retrieval | EN CURSO | Implementado: knowledgeGraph.ts (entidades, relaciones, decay, vecinos). 10 tests pasan. |
-| DR-7 | P2P knowledge pack sharing (Bluetooth/Wi-Fi) | EN CURSO | Implementado: packSharing.ts con protocolo (advertise, chunk, verify, reassemble). 8 tests pasan. ¡BOAR no lo tiene! |
+| DR-7 | P2P knowledge pack sharing (Bluetooth/Wi-Fi) | EN CURSO | Implementado: packSharing.ts con protocolo (advertise, chunk, verify, reassemble). 8 tests pasan. ¡the upstream project no lo tiene! |
 | DR-8 | Dual-model architecture | PENDIENTE | Tiny specialist + reasoner grande |
 
 ### Prioridad Baja (research-stage, vigilar)

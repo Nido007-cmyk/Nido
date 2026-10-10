@@ -75,7 +75,7 @@ yourself".
 
 ## Post draft
 
-> BOAR: an offline AI research app for Android. No signal needed after a 1 GB
+> the upstream project: an offline AI research app for Android. No signal needed after a 1 GB
 > first-run setup.
 >
 > Airplane mode on, and it still answers explanations, comparisons and multi-step

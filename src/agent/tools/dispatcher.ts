@@ -27,6 +27,9 @@ import {
   type PolicyDecision,
 } from "../policy/policyEngine";
 
+import { actionLog } from "../actionLog";
+import { isToolDisabled } from "./toolPermissions";
+
 export interface ToolCall {
   name: string;
   arguments: Record<string, unknown>;
@@ -110,7 +113,14 @@ export async function dispatchToolCall(
 ): Promise<string> {
   const validated = validateToolCall(call);
   if (!validated.ok) {
+    actionLog.record(typeof call?.name === "string" && call.name ? call.name : "?", "invalid");
     return `Error de herramienta: ${validated.error}.`;
+  }
+
+  // Permisos del usuario: una herramienta apagada no se ejecuta nunca.
+  if (isToolDisabled(validated.tool.name)) {
+    actionLog.record(validated.tool.name, "disabled");
+    return `La herramienta "${validated.tool.name}" está desactivada por el usuario en los permisos del agente. No la uses; dile al usuario que puede activarla en Acerca de.`;
   }
 
   // Policy Engine: evaluar antes de ejecutar.
@@ -121,6 +131,7 @@ export async function dispatchToolCall(
   });
 
   if (!decision.allowed) {
+    actionLog.record(validated.tool.name, "blocked");
     return `Bloqueado por política de seguridad: ${decision.reason}`;
   }
 
@@ -129,18 +140,22 @@ export async function dispatchToolCall(
       ? await options.onConfirm(decision).catch(() => false)
       : false;
     if (!confirmed) {
+      actionLog.record(validated.tool.name, "cancelled");
       return `Acción "${validated.tool.name}" cancelada: requiere confirmación del usuario.`;
     }
   }
 
   const handler = handlers[validated.tool.name];
   if (!handler) {
+    actionLog.record(validated.tool.name, "invalid");
     return `Error de herramienta: "${validated.tool.name}" no está implementada en este dispositivo.`;
   }
   try {
     const result = await handler(validated.args);
+    actionLog.record(validated.tool.name, "executed", decision.requiresConfirmation);
     return typeof result === "string" ? result : JSON.stringify(result);
   } catch (e: any) {
+    actionLog.record(validated.tool.name, "failed");
     return `Error ejecutando "${validated.tool.name}": ${e?.message ?? String(e)}`;
   }
 }

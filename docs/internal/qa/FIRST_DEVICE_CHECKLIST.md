@@ -31,7 +31,7 @@ Tester: ___________________________
 
 **Steps**
 
-1. `adb install <apk>` (fresh install — no previous NIDO/BOAR install on the device; if one exists, `adb uninstall` first and note it).
+1. `adb install <apk>` (fresh install — no previous NIDO/the upstream project install on the device; if one exists, `adb uninstall` first and note it).
 2. Observe installer output.
 
 **Expected**

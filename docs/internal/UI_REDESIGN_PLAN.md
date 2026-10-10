@@ -1,19 +1,19 @@
 # NIDO UI Redesign — Plan v1
 
 **Date:** 2026-10-05
-**Directive:** UI propia, profesional, que no se parezca a BOAR.
+**Directive:** UI propia, profesional, que no se parezca a the upstream project.
 **Status:** APPROVED 2026-10-05 — Direction: 'Calm Agent' (airy, subtle mascot, memory transparency, agency receipt).
 
 ## Problem
 
 NIDO's current UI (Tier 2: Daylight/Night Garden) has its own color system,
-but the layouts, components, and interaction patterns still feel like BOAR:
+but the layouts, components, and interaction patterns still feel like the upstream project:
 - Chat-first layout with standard message bubbles
 - Settings as long scrolling lists
 - Model management as cards in a grid
 - Generic drawer navigation
 
-BOAR is a research/Q&A tool. NIDO is a personal agent. The UI should feel
+the upstream project is a research/Q&A tool. NIDO is a personal agent. The UI should feel
 like a personal assistant, not a search engine.
 
 ## Design Direction: "Calm Agent"
@@ -26,7 +26,7 @@ like a personal assistant, not a search engine.
    no "syncing" states, no account avatars.
 3. **Professional, not playful.** Clean typography, generous whitespace,
    subtle motion. Think premium productivity tools, not chat apps.
-4. **Distinct from BOAR.** No research-paper aesthetic. No citation-heavy
+4. **Distinct from the upstream project.** No research-paper aesthetic. No citation-heavy
    layouts as the default. No "query → results" pattern.
 
 **Visual language:**
@@ -35,7 +35,7 @@ like a personal assistant, not a search engine.
 - **Color:** Keep the Tier 2 palette (Daylight/Night Garden are NIDO's own),
   but use it differently — more whitespace, less chrome, accent colors used
   sparingly for meaning (not decoration).
-- **Shape:** Soft, rounded, approachable. Not sharp/technical like BOAR.
+- **Shape:** Soft, rounded, approachable. Not sharp/technical like the upstream project.
 - **Motion:** Subtle, purposeful. The agent "thinks" visibly but calmly.
   No bouncy animations.
 - **Layout:** Conversational first. Tools and settings are quiet, accessible
@@ -70,7 +70,7 @@ like a personal assistant, not a search engine.
 - The NidoIcon system (already NIDO-specific)
 
 **Change:**
-- Layout patterns (not BOAR's card grids and dense lists)
+- Layout patterns (not the upstream project's card grids and dense lists)
 - Component designs (custom, not generic RN)
 - Navigation structure (agent-centric, not feature-centric)
 - Micro-interactions (calm, not snappy)

@@ -470,7 +470,7 @@ desde 0%.
   cuando `AppState` vuelve a `"active"` y existe un asset fallido/pausado,
   así el usuario no tiene que notar la tarjeta de error y tocar Reintentar
   manualmente tras volver a la app — se reanuda solo.
-- Aviso explícito de "mantén BOAR abierto" añadido al Paso 3 mientras una
+- Aviso explícito de "mantén NIDO abierto" añadido al Paso 3 mientras una
   descarga está activa, ya que la descarga verdadera en background
   necesitaría un Foreground Service nativo de Android — un costo
   desproporcionado para una descarga de configuración única — así que el
@@ -536,7 +536,7 @@ acciones alucinadas rastreadas y corregidas (`assemblePrompt` de
 Con la recuperación correctamente omitida, las pruebas en dispositivo real
 detectaron el problema más profundo: "wake up" → *"morning alarm set to
 standard wake up / room temperature adjusted."* — una acción fabricada;
-BOAR no tiene ninguna capacidad de alarma ni smart-home. Rastreados el
+NIDO no tiene ninguna capacidad de alarma ni smart-home. Rastreados el
 prompt final exacto enviado a Phi para esta entrada (sin chat template en
 uso en ningún lado — ver el comentario `DEFAULT_STOP_SEQUENCES` de
 `LlamaEngine.ts`, `assemblePrompt` construye a mano una forma genérica de
@@ -552,7 +552,7 @@ una respuesta de "tarea".
 
 Fix: una `GROUNDING_INSTRUCTION` universal en `assemblePrompt`, siempre
 añadida sin importar persona/contenido — **no** una respuesta hardcodeada
-a ninguna frase específica. Declara que BOAR no puede controlar
+a ninguna frase específica. Declara que NIDO no puede controlar
 dispositivos del mundo real ni tomar acciones físicas, que la charla
 casual debería recibir una respuesta conversacional breve, y que nunca
 debe afirmar haber hecho algo que realmente no puede hacer.
@@ -974,7 +974,7 @@ efectivos en preguntas difíciles". Su tesis: *"local será suficiente para
 las preguntas comunes pero se quedará atrás en las difíciles, lo que
 significa que necesitaremos formas de enviar (¿verificablemente?) las
 consultas más duras a una red global."* Una de las tres apps que probó es
-BOAR — el codebase sobre el que se construye NIDO.
+el proyecto original — el codebase sobre el que se construye NIDO.
 
 **Estado: SOLO ROADMAP — no diseñado en detalle, no implementado.** Esta
 sección registra dirección de diseño para que el trabajo futuro no la
@@ -1022,7 +1022,7 @@ capability). El diseño futuro debe satisfacer:
   números reales, se convierten en la fuente de datos de enrutamiento
   (tok/s, TTFT, memoria pico por modelo) y la base para tablas públicas
   honestas de benchmark (modelo, tok/s, primer token, memoria pico,
-  resultados crudos enlazados) — el formato que BOAR ahora publica en
+  resultados crudos enlazados) — el formato que NIDO ahora publica en
   boarapp.com, que es la barra de transparencia correcta.
 - La velocidad es la otra mitad de la crítica de Vitalik ("mucho más
   lento" — una consulta difícil tomó ~5 min en las apps probadas). La ruta

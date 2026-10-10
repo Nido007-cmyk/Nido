@@ -126,7 +126,8 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
         <AuraRing key={delay} active={listening} delay={delay} colors={auraColors} />
       ))}
       <Animated.View style={{ transform: [{ scale: pulse }] }}>
-        <Pressable
+        <Pressable accessibilityRole="button"
+          accessibilityLabel={listening ? t("voiceInputAlert.stopLabel") : t("voiceInputAlert.startLabel")}
           onPress={handlePress}
           disabled={disabled && !listening}
           hitSlop={8}

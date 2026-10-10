@@ -366,7 +366,7 @@ export function EvaluationScreen({ onClose, chatBusy, deviceRequest }: Props) {
 }
 
 const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg.surface },
+  container: { flex: 1, backgroundColor: colors.bg.black },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -380,14 +380,14 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   headerLeft: { flexDirection: "row", alignItems: "center", gap: calmSpacing.cozy },
   headerIcon: { fontSize: 20 },
   headerTitle: { ...typography.ui.titleSm, color: colors.text.heading, letterSpacing: 0.5 },
-  headerSubtitle: { ...typography.mono.xs, fontSize: 9, color: colors.text.dim },
+  headerSubtitle: { ...typography.ui.caption, fontSize: 9, color: colors.text.dim },
   closeBtn: {
     paddingHorizontal: calmSpacing.cozy,
     paddingVertical: calmSpacing.tight,
     borderRadius: calmRadii.subtle,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: colors.bg.subtle,
   },
-  closeBtnText: { ...typography.mono.xs, color: colors.text.accentCyan, fontWeight: "600" },
+  closeBtnText: { ...typography.ui.caption, color: colors.emerald[600], fontWeight: "600" },
   scrollContent: { padding: calmSpacing.comfortable, gap: calmSpacing.cozy, paddingBottom: calmSpacing.generous },
   sectionTitle: { ...typography.ui.subtext, color: colors.text.heading, fontWeight: "700" },
   configRow: {
@@ -405,19 +405,19 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   checkbox: { fontSize: 16, color: colors.text.dim },
   checkboxOn: { color: colors.text.accentEmerald },
   configLabel: { ...typography.ui.subtext, color: colors.text.primary, flex: 1 },
-  note: { ...typography.mono.xs, fontSize: 10, color: colors.text.dim },
+  note: { ...typography.ui.caption, fontSize: 10, color: colors.text.dim },
   actionsRow: { flexDirection: "row", gap: calmSpacing.cozy },
   actionBtn: {
     flex: 1,
     paddingVertical: calmSpacing.cozy,
-    borderRadius: calmRadii.subtle,
-    backgroundColor: colors.bg.cardElevated,
+    borderRadius: 16,
+    backgroundColor: colors.bg.card,
     borderWidth: 1,
     borderColor: colors.border.default,
     alignItems: "center",
     ...calmShadows.none,
   },
-  actionBtnText: { ...typography.mono.xs, color: colors.text.accentCyan, fontWeight: "600" },
+  actionBtnText: { ...typography.ui.caption, color: colors.text.accentCyan, fontWeight: "600" },
   stopBtn: { borderColor: colors.crimson.border, backgroundColor: colors.crimson.bgSubtle },
   stopBtnText: { color: colors.crimson[400] },
   disabled: { opacity: 0.4 },
@@ -430,7 +430,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: calmSpacing.tight,
     ...calmShadows.none,
   },
-  progressText: { ...typography.mono.xs, color: colors.text.accentCyan, fontWeight: "600" },
+  progressText: { ...typography.ui.caption, color: colors.text.accentCyan, fontWeight: "600" },
   progressQuery: { ...typography.ui.subtext, color: colors.text.primary },
   row: {
     backgroundColor: colors.bg.cardElevated,

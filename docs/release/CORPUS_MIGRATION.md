@@ -1,11 +1,11 @@
-# Corpus migration: runtime separation from BOAR infrastructure (2026-09-27)
+# Corpus migration: runtime separation from the upstream project infrastructure (2026-09-27)
 
 **Status (2026-09-28): PARTIAL/STOPPED — 0 of 3 artifacts anonymously
 reachable on NIDO hosting; all 3 reverted to temporary upstream endpoints
 (proven working, byte-exact, SHA-256 verified).**
 
 2026-09-28 correction (parent agent): `scripts/verify-manifest-pins.mjs`
-(BOAR idea #2, now wired into CI as `npm run verify:pins`) proved that the
+(the upstream project idea #2, now wired into CI as `npm run verify:pins`) proved that the
 NIDO release asset for `wiki-vital5`
 (`releases/download/corpus-v1/wiki-vital5.sqlite.2`) returns **404
 anonymously** — HEAD, ranged GET and full GET all fail, because the NIDO repo
@@ -71,7 +71,7 @@ blocked from sandbox. Owner has the file locally; remaining step is uploading
 it to the `corpus-v1` release from a logged-in browser, then the parent
 verifies SHA-256 from the new URL, swaps the manifest URL, and re-runs tests.
 
-## 1. Artifacts identified (all fetched from BOAR infrastructure at runtime)
+## 1. Artifacts identified (all fetched from the upstream project infrastructure at runtime)
 
 | id | kind | original sourceUrl | size (B) | sha256 (manifest) |
 |---|---|---|---|---|
@@ -79,7 +79,7 @@ verifies SHA-256 from the new URL, swaps the manifest URL, and re-runs tests.
 | `corpus-full` | corpus json | `https://raw.githubusercontent.com/rferrari/boar-app/main/assets/corpus/corpus-full.json` (same pinned rev) | 2,530,725 | `6d602003bb9da59200e3e55b75b9e15bb073a4b9b1357da2c2d47b2803c570be` |
 | `wiki-vital5` | sqlite-pack | `https://github.com/rferrari/boar-app/releases/download/knowledge-pack-v1/wiki-vital5.sqlite` (immutable release asset) | 163,647,488 | `d3b87d562baba3489f6878bf99783f50d504db94c347029771e53f6d1aecc666` |
 
-No other runtime URL in `src/models/manifest.ts` points at BOAR infrastructure
+No other runtime URL in `src/models/manifest.ts` points at the upstream project infrastructure
 (the 6 model weights come from Hugging Face; verified in Track C).
 
 ## 2. Byte preservation + verification (done)
@@ -179,5 +179,5 @@ changes).
 - Manifest URLs unchanged — current downloads keep working; zero runtime risk.
 - No commit, no push (build `36357101406` untouched, still `in_progress`).
 - No content changes to any pack; no attribution removed anywhere.
-- The 6 Hugging Face model URLs were not touched (not BOAR infrastructure;
+- The 6 Hugging Face model URLs were not touched (not the upstream project infrastructure;
   their `/resolve/main/` drift is a separate, already-documented issue).

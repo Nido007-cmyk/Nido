@@ -44,7 +44,7 @@ The preserved material includes:
 - roadmap
 - specifications
 - security reports
-- BOAR deep-dive/audit documentation
+- the upstream project deep-dive/audit documentation
 - CI evidence
 - preserved APKs and hashes
 - 3D source files from v02 through v41
@@ -171,21 +171,21 @@ new features cannot silently survive Clear All Data.
 
 ---
 
-## CORPUS / BOAR INDEPENDENCE
+## CORPUS / the upstream project INDEPENDENCE
 
 NIDO runtime must not depend operationally on rferrari/boar-app.
 
 The corpus migration has been completed and byte identity was verified by SHA-256.
 
 Preserve provenance and licensing attribution where legally required, but do not
-reintroduce BOAR as an operational runtime dependency.
+reintroduce the upstream project as an operational runtime dependency.
 
-The previous BOAR branding audit removed/replaced real BOAR identity references,
+The previous the upstream project branding audit removed/replaced real the upstream project identity references,
 including system-prompt identity.
 
 The assistant identity is **NIDO**.
 
-Do not reintroduce BOAR branding except where legally/provenance documentation
+Do not reintroduce the upstream project branding except where legally/provenance documentation
 requires historical attribution.
 
 NIDO applicationId remains:

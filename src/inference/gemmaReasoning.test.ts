@@ -5,7 +5,7 @@
  */
 
 /**
- * Tests for Gemma reasoning parser (BOAR item 5, adapted for NIDO).
+ * Tests for Gemma reasoning parser (upstream item 5, adapted for NIDO).
  */
 
 import { describe, it, expect } from "vitest";

@@ -1,6 +1,6 @@
 > **Idioma:** [English](AGENTS.md) · Español
 
-# AGENTS.md — compilar e instalar BOAR desde el código fuente
+# AGENTS.md — compilar e instalar NIDO desde el código fuente
 
 Este archivo es para un agente de codificación de IA (o cualquiera que
 automatice un build) que necesita pasar de un checkout limpio a una app
@@ -82,7 +82,7 @@ cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 y `NIDO_UPLOAD_KEY_PASSWORD` en `~/.gradle/gradle.properties` (nunca en el
 repo). Sin ellas, el build release se firma en modo debug, lo cual está bien
 para tu propio teléfono. Un APK firmado con otra clave no puede instalarse
-sobre un BOAR existente: Android exige desinstalar primero, lo que borra los
+sobre un NIDO existente: Android exige desinstalar primero, lo que borra los
 modelos descargados por la app. Un primer build release tarda unos 40 minutos.
 
 ## Sin Android SDK local: compila vía EAS en su lugar
@@ -156,7 +156,7 @@ Antes y durante una ejecución:
 - **Comprueba que el teléfono no esté ocupado.** `eval:device` recarga la app.
   No lo ejecutes, reinstales, fuerces la detención ni recargues mientras una
   descarga de modelo esté en curso (`adb shell dumpsys power | grep
-  BOAR:ModelDownload`, o un archivo creciendo en `adb exec-out run-as
+  NIDO:ModelDownload`, o un archivo creciendo en `adb exec-out run-as
   team.sopa.aoair ls -l files/models`); las descargas no pueden reanudarse tras
   un reinicio. Es posible que el dueño del teléfono lo esté usando: pregunta
   primero.

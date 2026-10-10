@@ -52,7 +52,7 @@ reproducibly on physical hardware.
 
 ## Priority 3 — Complete operational independence
 
-NIDO runtime should not depend operationally on BOAR infrastructure.
+NIDO runtime should not depend operationally on the upstream project infrastructure.
 
 Corpus migration to NIDO-controlled immutable releases is part of this
 objective.
@@ -160,7 +160,7 @@ Before public launch, build NIDO's own website (owner directive 2026-10-05;
 reference: BOAR's site, boarapp.com — noted as inspiration, not to copy):
 
 * own identity first: tagline "your agent, your world" / "tu agente, tu mundo"
-* lead with differentiators BOAR doesn't have: agent with memory, 100%
+* lead with differentiators the upstream project doesn't have: agent with memory, 100%
   offline, P2P, encrypted on-device memory, own release signing
 * honest framing: "forked from BOAR, heavily extended" — MIT attribution stays
 * publish: public docs, SECURITY.md, APK downloads with hashes, identity/manifesto

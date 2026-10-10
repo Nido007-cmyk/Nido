@@ -12,7 +12,7 @@ Implemented all technically executable items from the NIDO master directive.
 
 ## What Was Built
 
-### BOAR Adoptions (5 items)
+### the upstream project Adoptions (5 items)
 - Item 2: Chit-chat retrieval bypass - skips RAG for greetings
 - Item 4: Storage budget enforcement - caps at 500MB
 - Item 5: Gemma reasoning parser - extracts <think> blocks

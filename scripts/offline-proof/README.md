@@ -7,7 +7,7 @@ a reproducible, third-party-verifiable proof for that claim.
 
 ## Components
 
-1. **audit-apk.py** (TODO: port from BOAR) — Statically audits an APK's network surface:
+1. **audit-apk.py** (TODO: port from the upstream project) — Statically audits an APK's network surface:
    - Manifest permissions/flags/exported components via `aapt2 dump xmltree`
    - Tracker/GMS/Firebase class prefixes in `classes*.dex`
    - Native socket imports in `.so` ELF symbols
@@ -15,7 +15,7 @@ a reproducible, third-party-verifiable proof for that claim.
    - Signer cert SHA-256 from APK Signing Block
    - Verdicts: NO-NETWORK-BY-CONSTRUCTION / NO-INTERNET-PERMISSION / NETWORK-CAPABLE
 
-2. **netstats-uid.sh** (TODO: port from BOAR) — Reads kernel per-UID counters
+2. **netstats-uid.sh** (TODO: port from the upstream project) — Reads kernel per-UID counters
    via `dumpsys netstats detail` to show the app sends nothing (rx=0/tx=0)
    after real use, in both airplane mode and Wi-Fi on.
 
@@ -29,5 +29,5 @@ Per release:
 
 ## Status
 
-Methodology adopted. Scripts to be ported from BOAR's implementation.
+Methodology adopted. Scripts to be ported from the upstream project's implementation.
 See: https://github.com/rferrari/boar-app (scripts/audit-apk.py)

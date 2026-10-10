@@ -102,8 +102,8 @@ son literales. Deben pasar a claves de locale.
 
 ## LOW
 
-### TD-13 — Restos de marca "BOAR"
-`AboutScreen.tsx`, `ChatHeader.tsx`, `Drawer.tsx` (×"BOAR"), `SetupWizardScreen.tsx`
+### TD-13 — Restos de marca "el proyecto original"
+`AboutScreen.tsx`, `ChatHeader.tsx`, `Drawer.tsx` (×"el proyecto original"), `SetupWizardScreen.tsx`
 (título héroe), URL del repo `github.com/rferrari/boar-app` en About. Rebrand a
 NIDO incompleto — visible para los usuarios.
 

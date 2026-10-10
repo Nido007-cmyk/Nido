@@ -61,7 +61,7 @@ Must equal `252ec5ba8b6a33f16a9176808e158f0f58ab1fe2e2a267c60889fde14819f8f5`.
 If it does not match: STOP. Do not install.
 
 ### 2. Fresh install
-- If any NIDO/BOAR install exists: `adb uninstall team.nido.app` first, and note it.
+- If any NIDO/the upstream project install exists: `adb uninstall team.nido.app` first, and note it.
 - `adb install app-debug.apk` → expect `Success`; launcher icon appears as NIDO.
 - Record installer output verbatim.
 

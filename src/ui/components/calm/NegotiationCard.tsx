@@ -175,7 +175,7 @@ export function NegotiationCard({
         </View>
       ) : !counterMode ? (
         <View style={styles.actions}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityLabel={t("negotiationCard.decline")}
             style={[styles.button, styles.declineButton]}
             onPress={onDecline}
             disabled={processing}
@@ -183,7 +183,7 @@ export function NegotiationCard({
           >
             <Text style={styles.declineText}>{t("negotiationCard.decline")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityLabel={t("negotiationCard.counter")}
             style={[styles.button, styles.counterButton]}
             onPress={() => setCounterMode(true)}
             disabled={processing}
@@ -191,7 +191,7 @@ export function NegotiationCard({
           >
             <Text style={styles.counterText}>{t("negotiationCard.counter")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityLabel={t("negotiationCard.accept")}
             style={[styles.button, styles.acceptButton]}
             onPress={onAccept}
             disabled={processing}
@@ -202,7 +202,7 @@ export function NegotiationCard({
         </View>
       ) : (
         <View style={styles.actions}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityLabel={t("negotiationCard.cancel")}
             style={[styles.button, styles.declineButton]}
             onPress={() => {
               setCounterMode(false);
@@ -213,7 +213,7 @@ export function NegotiationCard({
           >
             <Text style={styles.declineText}>{t("negotiationCard.cancel")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityLabel={t("negotiationCard.sendCounter")}
             style={[styles.button, styles.acceptButton]}
             onPress={() => onCounter(selectedScopes)}
             disabled={processing || selectedScopes.length === 0}
@@ -327,6 +327,8 @@ const getStyles = (colors: Colors, typography: Typography) =>
     },
     declineButton: {
       backgroundColor: colors.bg.subtle,
+      minHeight: 44,
+      justifyContent: "center",
     },
     declineText: {
       ...typography.ui.body,
@@ -337,6 +339,8 @@ const getStyles = (colors: Colors, typography: Typography) =>
       backgroundColor: colors.bg.subtle,
       borderWidth: 1,
       borderColor: colors.border.default,
+      minHeight: 44,
+      justifyContent: "center",
     },
     counterText: {
       ...typography.ui.body,
@@ -345,10 +349,12 @@ const getStyles = (colors: Colors, typography: Typography) =>
     },
     acceptButton: {
       backgroundColor: colors.emerald[400],
+      minHeight: 44,
+      justifyContent: "center",
     },
     acceptText: {
       ...typography.ui.body,
-      color: "#FFFFFF",
+      color: colors.text.inverse,
       fontWeight: "600",
     },
     retryRow: {
@@ -382,10 +388,12 @@ const getStyles = (colors: Colors, typography: Typography) =>
       flexShrink: 0,
       flexBasis: "auto",
       paddingHorizontal: spacing.md,
+      minHeight: 44,
+      justifyContent: "center",
     },
     retryButtonText: {
       ...typography.ui.body,
-      color: "#FFFFFF",
+      color: colors.text.inverse,
       fontWeight: "600",
     },
   });

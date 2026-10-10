@@ -12,7 +12,8 @@
     "yes": "Sim",
     "no": "Não",
     "delete": "Apagar",
-    "deny": "Negar"
+    "deny": "Negar",
+    "send": "Enviar"
   },
   "time": {
     "justNow": "agora mesmo",
@@ -23,7 +24,8 @@
   "drawer": {
     "subtitle": "Seu agente. Seu mundo.",
     "newChat": "Novo chat",
-    "recentSessions": "Conversas recentes"
+    "recentSessions": "Conversas recentes",
+    "deleteSession": "Apagar conversa: {{title}}"
   },
   "catalogItemCard": {
     "calculating": "Calculando…",
@@ -472,7 +474,14 @@
     "benchmarkBody": "O NIDO mede cada resposta no seu próprio celular: tempo de carregamento do modelo, tempo até o primeiro token, tokens/s, pico de memória e quais fontes foram usadas. Rode a avaliação embutida em Telemetria de Execução → 🧪 Avaliar para comparar qualquer modelo instalado nas mesmas perguntas, ou comande pelo computador com npm run eval:device.",
     "repoTitle": "Código aberto",
     "repoBody": "Código aberto (Licença MIT).",
-    "repoUrl": "github.com/Nido007-cmyk/Nido"
+    "repoUrl": "github.com/Nido007-cmyk/Nido",
+    "backupTitle": "Backup e chave de criptografia",
+    "backupBody": "Crie um backup criptografado, veja sua chave de criptografia ou troque-a.",
+    "backupOpen": "Abrir backup",
+    "limitsTitle": "Conheça os limites",
+    "limitsBody": "O NIDO executa modelos de IA dentro do seu telefone. Eles podem errar ou inventar dados, e os modelos menores com mais frequência. Não dependa só do NIDO para decisões de saúde, jurídicas, financeiras ou de segurança: consulte um profissional ou uma fonte confiável.",
+    "privacyTitle": "Privacidade e termos",
+    "privacyBody": "O NIDO não tem contas, nem análise de uso, nem servidores próprios. As únicas conexões que faz são os downloads que você inicia (modelos e pacotes de conhecimento), e elas aparecem no registro de rede acima. A política de privacidade e os termos de uso completos estão em PRIVACY.md e TERMS.md no repositório."
   },
   "sourceFootnotes": {
     "title": "Fontes offline · ordenadas por relevância",
@@ -900,7 +909,9 @@
   },
   "voiceInputAlert": {
     "unavailableTitle": "Entrada de voz indisponível",
-    "unavailableMessage": "Nenhum serviço de reconhecimento de voz foi encontrado neste dispositivo (comum em GrapheneOS / builds sem Google). Digite sua pergunta."
+    "unavailableMessage": "Nenhum serviço de reconhecimento de voz foi encontrado neste dispositivo (comum em GrapheneOS / builds sem Google). Digite sua pergunta.",
+    "startLabel": "Ditar por voz",
+    "stopLabel": "Parar o ditado"
   },
   "tasks": {
     "approvalTitle": "Solicitação de tarefa",
@@ -959,7 +970,7 @@
     "cancel": "Cancelar",
     "ok": "OK",
     "sectionDesc": "Exporte seu banco de dados criptografado. Guarde-o com sua chave em um lugar seguro.",
-    "screenTitle": "Backup & Recovery",
+    "screenTitle": "Backup e recuperação",
     "screenDesc": "Seu banco de dados está criptografado. O backup copia o arquivo criptografado. Você precisa guardar sua chave separadamente — sem ela, o backup não pode ser restaurado. Nenhum servidor vê seus dados.",
     "createNow": "Criar backup agora",
     "showKey": "Ver minha chave de criptografia",
@@ -967,7 +978,29 @@
     "saveToDownloads": "Salvar em Downloads",
     "close": "Fechar",
     "lastBackup": "Último backup: {{path}}",
-    "warning": "Importante: guarde o arquivo de backup e sua chave em lugares diferentes. Se perder a chave, ninguém (nem NIDO) pode recuperar seus dados."
+    "warning": "Importante: guarde o arquivo de backup e sua chave em lugares diferentes. Se perder a chave, ninguém (nem NIDO) pode recuperar seus dados.",
+    "unlockReason": "Ver sua chave de criptografia",
+    "cancelledTitle": "Cancelado",
+    "keyNotShown": "A chave não foi mostrada.",
+    "rotateTitle": "Trocar chave de criptografia",
+    "rotateBody": "Isto gera uma chave nova e criptografa de novo o seu banco de dados. Os backups anteriores NÃO poderão ser restaurados com a chave nova. Continuar?",
+    "rotateConfirm": "Trocar",
+    "rotatedTitle": "Chave trocada",
+    "rotatedBody": "Seu banco de dados agora usa uma chave de criptografia nova. Guarde a chave nova em «Ver minha chave de criptografia». Os backups antigos precisarão da chave anterior.",
+    "rotateFailed": "Não foi possível trocar a chave.",
+    "createFirst": "Primeiro crie um backup com o botão acima.",
+    "noPermission": "Sem permissão não é possível salvar o backup.",
+    "savedTitle": "Salvo",
+    "savedBody": "Backup copiado para a pasta escolhida:\n{{files}}",
+    "saveFailed": "Não foi possível salvar o backup.",
+    "keyFailed": "Não foi possível ler a chave.",
+    "keyTitle": "Sua chave de criptografia",
+    "restoreWithKeyButton": "Restaurar com a chave do backup",
+    "restoreWithKeyTitle": "Restaurar um backup de outro telefone",
+    "restoreWithKeyBody": "Use quando o backup foi feito em outro telefone, em uma instalação anterior ou antes de trocar sua chave. Cole a chave que você guardou ao criar esse backup e depois escolha o arquivo. Isto substitui TODOS os seus dados atuais.",
+    "keyPlaceholder": "Chave do backup (64 caracteres)",
+    "keyInvalid": "A chave deve ter 64 caracteres, apenas 0–9 e a–f.",
+    "chooseFile": "Escolher arquivo"
   },
   "remoteTasks": {
     "title_one": "{{count}} tarefa remota aguarda sua decisão",
@@ -990,6 +1023,43 @@
       "download_start": "Download iniciado",
       "download_complete": "Download concluído",
       "download_failed": "Download com falha"
+    }
+  },
+  "skillsCard": {
+    "title": "O que o agente sabe fazer",
+    "body": "Habilidades que o NIDO pode seguir passo a passo. Ações que mudam algo sempre perguntam antes."
+  },
+  "securityStatus": {
+    "title": "Verificação de segurança",
+    "body": "Verifica neste telefone se seus dados estão realmente protegidos. Nunca mostra chaves.",
+    "run": "Verificar agora",
+    "runFailed": "Não foi possível fazer a verificação.",
+    "database": "Banco de dados criptografado",
+    "keystore": "Armazenamento de chaves do Android",
+    "biometric": "Bloqueio por digital ou rosto",
+    "hardwareBacked": "Chave protegida por hardware",
+    "state": {
+      "verified": "Verificado",
+      "failed": "Falhou",
+      "unavailable": "Não configurado",
+      "not-verifiable": "Não é possível verificar"
+    }
+  },
+  "agentPermissions": {
+    "historyTitle": "O que o agente fez",
+    "historyBody": "Cada ferramenta que o agente usou ou tentou usar desde que você abriu o app. Só ficam o nome da ferramenta e o resultado, nunca o conteúdo.",
+    "historyEmpty": "Ainda não há ações nesta sessão.",
+    "confirmed": "você confirmou",
+    "toolsTitle": "Permissões do agente",
+    "toolsBody": "Desligue qualquer ferramenta que você não queira que o agente use. Ações que mudam algo continuam perguntando antes; isso não pode ser desligado.",
+    "toggleLabel": "Permitir que o agente use {{tool}}",
+    "outcome": {
+      "executed": "Feito",
+      "blocked": "Bloqueado pela política de segurança",
+      "disabled": "Desligada por você",
+      "cancelled": "Não confirmado",
+      "invalid": "Pedido inválido",
+      "failed": "Falhou"
     }
   }
 }

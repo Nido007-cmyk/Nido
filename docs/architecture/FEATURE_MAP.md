@@ -24,7 +24,7 @@ custom `Animated` overlay.
 | Screen | Purpose | Status | Evidence / notes |
 |---|---|---|---|
 | App root + LockScreen (`App.tsx`) | Biometric/PIN gate, required-setup vs chat routing | BUILT | `ensureUnlocked` (l.38–108); gating via `ModelManager.requiredModelsPresent()`; 0 hard-coded strings |
-| SetupWizardScreen | Mandatory 4-step first-run: hardware scan → tier select → model downloads → offline indexing | BUILT | Real RAM/disk probing, resumable downloads, embedding load + KB seeding; 1 hard-coded: "BOAR" hero title |
+| SetupWizardScreen | Mandatory 4-step first-run: hardware scan → tier select → model downloads → offline indexing | BUILT | Real RAM/disk probing, resumable downloads, embedding load + KB seeding; 1 hard-coded: "the upstream project" hero title |
 | ModelSetupScreen (`mode="required"`) | First-run model download UI | BUILT | Real `downloadManager` + `llamaEngine.load()`; 0 hard-coded |
 
 ## 2. Chat (core)
@@ -32,8 +32,8 @@ custom `Animated` overlay.
 | Screen / component | Purpose | Status | Evidence / notes |
 |---|---|---|---|
 | ChatScreen | Main chat: streaming inference, RAG, sessions, feedback, TTS, deep research, adaptive routing, agent loop | BUILT | Real `llamaEngine`, `retrieve`/`assemblePrompt`, `chatHistory` CRUD, `runAgentLoop`, `runAdaptiveChat`, `speakAloud`; 75 `t()` calls; 1 hard-coded: drawer label `"NIDO"` |
-| ChatHeader | Top bar: drawer, brand, offline pill, model label, tone/new-chat, deep-research toggle, live tok/s | BUILT | Props wired; 2 hard-coded: "BOAR", "tok/s" |
-| Drawer | Sessions list + new chat + nav (Prompts, My Documents, Settings, Telemetry, NIDO, About) + footer stats | BUILT | Real session list; 1 hard-coded: "BOAR" |
+| ChatHeader | Top bar: drawer, brand, offline pill, model label, tone/new-chat, deep-research toggle, live tok/s | BUILT | Props wired; 2 hard-coded: "the upstream project", "tok/s" |
+| Drawer | Sessions list + new chat + nav (Prompts, My Documents, Settings, Telemetry, NIDO, About) + footer stats | BUILT | Real session list; 1 hard-coded: "the upstream project" |
 | DrawerFooterStats | Live RAM/disk bars + last-query tok/s | BUILT | Polls real native stats; degrades if module unlinked; 0 hard-coded |
 | PromptIdeasCarousel | Dismissible demo-prompt carousel | BUILT | Persists dismissal; **12 hard-coded English strings** (not in i18n) |
 | ProcessingIndicator | Retrieving/thinking/generating status animation | BUILT | Presentational; 0 hard-coded |
@@ -88,7 +88,7 @@ Language".
 |---|---|---|---|
 | ExecutionTelemetryScreen | Browse/export/clear persisted execution telemetry; launches eval | BUILT | Real list/export/clear; 1 hard-coded: "🧭 adaptive" |
 | EvaluationScreen | Fixed eval set vs models/adaptive; progress, results, JSONL/CSV export; device-eval auto-run | BUILT | Real `evalHarness`; 0 hard-coded |
-| AboutScreen | Static app info, version, air-gapped/hardware/benchmark cards | BUILT | Version from `app.json`; 2 hard-coded: "BOAR", repo URL |
+| AboutScreen | Static app info, version, air-gapped/hardware/benchmark cards | BUILT | Version from `app.json`; 2 hard-coded: "the upstream project", repo URL |
 | UsageStatsContent | Hardware telemetry: RAM/12GB audit, storage breakdown, inference stats | BUILT (i18n gap) | Real native stats; 16 hard-coded English strings |
 | UsageStatsScreen | Fullscreen wrapper of UsageStatsContent | **DEAD** | Zero references; unreachable |
 | SystemMonitor | RAM/disk bars vs budgets (4s poll) | **DEAD** | Zero references; unreachable (real logic, never rendered) |
@@ -117,15 +117,15 @@ comments instead (NidoScreen:412, p2p transport comments).
 ## 9. i18n coverage column (summary)
 
 Fully keyed via `t()`: App root, ChatScreen (75 calls), ModelSetupScreen,
-SetupWizardScreen (except "BOAR"), KnowledgeBaseScreen, ExecutionTelemetryScreen
+SetupWizardScreen (except "the upstream project"), KnowledgeBaseScreen, ExecutionTelemetryScreen
 (except 1), EvaluationScreen, PersonalDocumentsManager, CorpusSettingsTab,
-PersonalitySettings, MemorySettings, VoiceSettings, Drawer (except "BOAR"),
+PersonalitySettings, MemorySettings, VoiceSettings, Drawer (except "the upstream project"),
 DrawerFooterStats, ProcessingIndicator, ReasoningPeek, SourceFootnotes,
 AccordionSection, CatalogItemCard, Toast.
 Gaps: NidoScreen (20 ES, no `t()` at all), UsageStatsContent (16 EN),
 PromptIdeasCarousel (12 EN), ThemeSelector (8+ EN), VoiceInputButton (2 EN),
 MarkdownMessage (2 EN), LanguageSelector header (1), misc brand/technical
-("BOAR" ×4 screens, "tok/s", "ERR_LOCAL_INIT", "🧭 adaptive").
+("the upstream project" ×4 screens, "tok/s", "ERR_LOCAL_INIT", "🧭 adaptive").
 Notifications (`src/notify/notifications.ts`): hard-coded Spanish channel
 names and titles ("Recordatorios de NIDO", "NIDO · Recordatorio",
 "NIDO · Tu día") — must move to keys.

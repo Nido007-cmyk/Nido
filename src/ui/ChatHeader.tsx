@@ -55,7 +55,7 @@ export function ChatHeader({
     >
       <View style={styles.topRow}>
         {/* Drawer Hamburger */}
-        <Pressable
+        <Pressable accessibilityRole="button"
           style={styles.iconBtn}
           onPress={() => handlePress(onOpenDrawer)}
           hitSlop={10}
@@ -89,7 +89,7 @@ export function ChatHeader({
         {/* Right Action Controls */}
         <View style={styles.rightActions}>
           {/* Tone Selector Pill */}
-          <Pressable
+          <Pressable accessibilityRole="button"
             style={styles.tonePill}
             onPress={() => handlePress(onCycleTone)}
             hitSlop={6}
@@ -99,7 +99,7 @@ export function ChatHeader({
           </Pressable>
 
           {/* New Chat Button */}
-          <Pressable
+          <Pressable accessibilityRole="button"
             style={styles.newChatBtn}
             onPress={() => handlePress(onNewChat, ImpactFeedbackStyle.Medium)}
             hitSlop={6}
@@ -113,7 +113,7 @@ export function ChatHeader({
       {/* Sub-bar: Telemetry & Deep Research Indicator / Toggle */}
       <View style={styles.subBar}>
         {onToggleDeepResearch ? (
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel={t("chatHeader.deepResearch")}
             style={[
               styles.deepResearchPill,
               deepResearchActive && styles.deepResearchPillActive,
@@ -163,7 +163,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   statusRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 1 },
   statusText: { ...typography.ui.subtext, color: colors.text.secondary },
   headerContainerDeepResearch: {
-    backgroundColor: "#111028",
+    backgroundColor: colors.cyan.bgSubtle,
     borderBottomColor: colors.border.frontier,
   },
   topRow: {
@@ -273,7 +273,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   deepResearchPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: colors.bg.subtle,
     borderColor: colors.border.subtle,
     borderWidth: 1,
     borderRadius: radii.sm,
@@ -309,7 +309,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   telemetryBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(6, 182, 212, 0.12)",
+    backgroundColor: colors.cyan.bgSubtle,
     borderColor: colors.cyan.border,
     borderWidth: 1,
     borderRadius: radii.sm,

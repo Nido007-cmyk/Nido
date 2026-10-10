@@ -103,14 +103,14 @@ export function TaskApprovalCard({ request, onAllow, onDeny }: Props) {
       )}
 
       <View style={styles.buttons}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={[styles.button, styles.deny]}
           onPress={onDeny}
           testID="task-approval-deny"
         >
           <Text style={styles.denyText}>{t("common.deny", "Deny")}</Text>
         </TouchableOpacity>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={[styles.button, styles.allow]}
           onPress={onAllow}
           testID="task-approval-allow"

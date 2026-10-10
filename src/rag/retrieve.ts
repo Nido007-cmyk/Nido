@@ -139,7 +139,7 @@ export async function retrieve(query: string, topK = 6): Promise<RetrievedChunk[
     [...semantic, ...packs.semantic],
     topK
   );
-  // Dedupe cross-library copies (BOAR item 20): same article in multiple
+  // Dedupe cross-library copies (upstream item 20): same article in multiple
   // sources should appear once, not waste context.
   return dedupeArticleCopies(fused);
 }

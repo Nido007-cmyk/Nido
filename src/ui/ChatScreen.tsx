@@ -1343,7 +1343,7 @@ export function ChatScreen({
             const reasoningShown = shownReasoning.has(item.id);
 
             return (
-              <Pressable
+              <Pressable accessibilityRole="button"
                 onLongPress={item.role === "user" ? () => reuseMessage(item.text) : undefined}
                 delayLongPress={350}
                 style={[
@@ -1462,7 +1462,7 @@ export function ChatScreen({
 
                 {item.role === "assistant" && item.text.length > 0 && (
                   <View style={[styles.bubbleFooter, { borderTopColor: colors.border.subtle }]}>
-                    <Pressable
+                    <Pressable accessibilityRole="button"
                       onPress={() => rateMessage(item.id, "up")}
                       hitSlop={6}
                       accessibilityLabel={t("chatScreen.rateUp")}
@@ -1499,7 +1499,7 @@ export function ChatScreen({
                       )}
                     </Pressable>
 
-                    <Pressable
+                    <Pressable accessibilityRole="button"
                       onPress={() => rateMessage(item.id, "down")}
                       hitSlop={6}
                       accessibilityLabel={t("chatScreen.rateDown")}
@@ -1539,7 +1539,7 @@ export function ChatScreen({
                     <View style={styles.footerSpacer} />
 
                     {split?.thinking && (
-                      <Pressable
+                      <Pressable accessibilityRole="button"
                         onPress={() => toggleReasoning(item.id)}
                         hitSlop={6}
                         accessibilityLabel={reasoningShown ? t("chatScreen.hideReasoning") : t("chatScreen.showReasoning")}
@@ -1555,7 +1555,7 @@ export function ChatScreen({
                       </Pressable>
                     )}
 
-                    <Pressable
+                    <Pressable accessibilityRole="button"
                       onPress={() => copyMessage(item.id, shownText)}
                       hitSlop={6}
                       accessibilityLabel={t("chatScreen.copyResponse")}
@@ -1663,7 +1663,7 @@ export function ChatScreen({
               maxLength={4000}
             />
             {generating ? (
-              <Pressable
+              <Pressable accessibilityRole="button"
                 style={styles.stopBtn}
                 onPress={stopGeneration}
                 disabled={stopping}
@@ -1673,11 +1673,11 @@ export function ChatScreen({
                 {stopping ? (
                   <ActivityIndicator color={colors.text.primary} size="small" />
                 ) : (
-                  <NidoIcon name="stop" size={16} color="#FFFFFF" />
+                  <NidoIcon name="stop" size={16} color={colors.text.inverse} />
                 )}
               </Pressable>
             ) : (
-              <Pressable
+              <Pressable accessibilityRole="button"
                 style={[styles.sendBtn, (!ready || !input.trim()) && styles.sendBtnDisabled]}
                 onPress={handleSend}
                 disabled={!ready || !input.trim()}
@@ -1738,11 +1738,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     width: 280,
     height: 280,
     borderRadius: 140,
-    backgroundColor: "rgba(6, 182, 212, 0.12)",
+    backgroundColor: colors.cyan.bgSubtle,
     opacity: 0.6,
   },
   ambientGlowTopDeep: {
-    backgroundColor: "rgba(139, 92, 246, 0.25)",
+    backgroundColor: colors.bg.subtle,
     opacity: 0.85,
   },
   ambientGlowBottom: {
@@ -1752,11 +1752,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     width: 320,
     height: 320,
     borderRadius: 160,
-    backgroundColor: "rgba(16, 185, 129, 0.08)",
+    backgroundColor: colors.emerald.bgSubtle,
     opacity: 0.5,
   },
   ambientGlowBottomDeep: {
-    backgroundColor: "rgba(6, 182, 212, 0.18)",
+    backgroundColor: colors.cyan.bgSubtle,
     opacity: 0.7,
   },
   deepResearchBanner: {
@@ -2008,7 +2008,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     opacity: 0.35,
   },
   sendBtnText: {
-    color: "#FFFFFF",
+    color: colors.text.inverse,
     fontWeight: "800",
     fontSize: 16,
     marginLeft: 2,
@@ -2022,7 +2022,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     justifyContent: "center",
   },
   stopBtnText: {
-    color: "#FFFFFF",
+    color: colors.text.inverse,
     fontWeight: "800",
     fontSize: 14,
   },
