@@ -10,7 +10,7 @@ every status. Statuses are only what has been checked:
 - **OPEN**: not done or not verified yet.
 
 Raw benchmark files (JSONL, answers, reports) are in [evidence/](evidence/);
-the demo videos and screenshots are in [demo/](demo/README.md).
+the demo videos and screenshots are in [demo/](internal/demo/README.md).
 
 Last reviewed: 2026-09-25. Test device: Xiaomi 2311DRK48G, MediaTek MT6897
 (Dimensity 8300), 11.6 GB RAM, Android 16.
@@ -78,7 +78,7 @@ Last reviewed: 2026-09-25. Test device: Xiaomi 2311DRK48G, MediaTek MT6897
   and packs.
 - Recorded on the test phone with airplane mode on and Wi-Fi off: four queries,
   a follow-up and the knowledge pack answering
-  ([demo/](demo/README.md), 2026-09-24).
+  ([demo/](internal/demo/README.md), 2026-09-24).
 
 ### 5. No network requests during use — PASS
 The only network code in the app (`src/`):
@@ -180,7 +180,7 @@ APK (see [docs/MODELS.md](MODELS.md)).
 
 ### 15–17. Public demo and poidh submission — PASS / PARTIAL / OPEN
 - Posted on X: [x.com/arferrari/status/2103677576380387484](https://x.com/arferrari/status/2103677576380387484), with the demo clips from
-  [demo/](demo/README.md): airplane mode, a synthesis prompt, a follow-up and
+  [demo/](internal/demo/README.md): airplane mode, a synthesis prompt, a follow-up and
   knowledge-pack facts.
 - Still to do: submit a screenshot and links to poidh.
 

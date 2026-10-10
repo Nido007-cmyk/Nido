@@ -53,9 +53,9 @@ eval-results/
 build/knowledge-pack/
 
 # Raw demo recording (31 MB); the compressed copy is docs/demo/boar_demo_small.mp4
-docs/demo/boar_demo.mp4
+docs/internal/demo/boar_demo.mp4
 __pycache__/
 apk/
 
 # CI evidence artifacts (APKs, zips) — never commit binaries
-docs/ci-evidence/artifacts/
+docs/internal/ci-evidence/artifacts/

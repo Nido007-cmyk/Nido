@@ -11,7 +11,7 @@ de cada estado. Los estados son solo lo que se ha verificado:
 
 Los archivos crudos de benchmark (JSONL, respuestas, reportes) están en
 [evidence/](evidence/); los videos de demo y screenshots están en
-[demo/](demo/README.md).
+[demo/](internal/demo/README.md).
 
 Última revisión: 2026-09-25. Dispositivo de prueba: Xiaomi 2311DRK48G,
 MediaTek MT6897 (Dimensity 8300), 11.6 GB RAM, Android 16.
@@ -82,7 +82,7 @@ MediaTek MT6897 (Dimensity 8300), 11.6 GB RAM, Android 16.
   SQLite local y packs.
 - Grabado en el teléfono de prueba con modo avión encendido y Wi-Fi
   apagado: cuatro consultas, un follow-up y el pack de conocimiento
-  respondiendo ([demo/](demo/README.md), 2026-09-24).
+  respondiendo ([demo/](internal/demo/README.md), 2026-09-24).
 
 ### 5. Sin peticiones de red durante el uso — PASS
 El único código de red en la app (`src/`):
@@ -193,7 +193,7 @@ el APK (ver [docs/MODELS.md](MODELS.md)).
 
 ### 15–17. Demo pública y envío a poidh — PASS / PARTIAL / OPEN
 - Publicado en X: [x.com/arferrari/status/2103677576380387484](https://x.com/arferrari/status/2103677576380387484), con los clips de demo de
-  [demo/](demo/README.md): modo avión, un prompt de síntesis, un follow-up
+  [demo/](internal/demo/README.md): modo avión, un prompt de síntesis, un follow-up
   y hechos del pack de conocimiento.
 - Aún por hacer: enviar un screenshot y enlaces a poidh.
 
