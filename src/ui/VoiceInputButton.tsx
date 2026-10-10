@@ -133,7 +133,7 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
           style={(disabled || available === false) && styles.btnDisabled}
         >
           <LinearGradient
-            colors={listening ? auraColors : ["#2a2a3a", "#16161f"]}
+            colors={listening ? auraColors : [colors.bg.input, colors.bg.input]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.btn}
@@ -141,7 +141,7 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
             {listening ? (
               <Text style={styles.icon}>●</Text>
             ) : (
-              <NidoIcon name="mic" size={20} color="#fff" />
+              <NidoIcon name="mic" size={20} color={colors.text.accentEmerald} />
             )}
           </LinearGradient>
         </Pressable>

@@ -14,6 +14,8 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 
 ## What changed in 0.1.1-alpha
 
+New look for the chat: calmer background, a solid bubble for your messages, NIDO's mascot as its avatar, a rounded composer, and tappable suggestions on the first screen. The header now says “Offline · private” instead of the model's technical name, and the NIDO screen uses segmented tabs.
+
 Fixes from the 2026-10-10 code audit:
 
 - The agent now recognizes many more everyday requests (messages, notes, reminders, unit conversions, arithmetic) in Spanish, English and Portuguese.
@@ -36,6 +38,7 @@ Fixes from the 2026-10-10 code audit:
 - **Voice input uses Android's system speech recognizer** with the prefer-offline flag. On devices without an offline model, the system service may process audio online.
 - **Sharing knowledge packs between phones is not available yet.** The tab is hidden.
 - This build was verified by automated tests only. The changes in this version were not tested on a physical device before release.
+- The redesign in this version covers the chat, the header and the NIDO tabs. Settings, Memory, Documents and the remaining screens keep their previous look for now.
 - UI is functional but not final.
 
 ## Security disclaimer

@@ -387,7 +387,8 @@
     "cycleTone": "Cycle Assistant Tone",
     "newChatSession": "New chat",
     "deepResearch": "Deep Research",
-    "deepResearchActive": "Deep Research Active"
+    "deepResearchActive": "Deep Research Active",
+    "statusLine": "Offline · private"
   },
   "chatScreen": {
     "initializingCore": "Starting NIDO…",
@@ -432,7 +433,30 @@
     "stageTimedOut": "A research step took too long and was cut short",
     "interruptedByBackground": "Paused — app was backgrounded. Ask again to continue.",
     "emptyTitle": "Hi, I'm NIDO",
-    "emptySubtitle": "Your private agent. Everything stays on this device."
+    "emptySubtitle": "Your private agent. Everything stays on this device.",
+    "privacyHint": "Private · nothing leaves this device",
+    "suggestions": {
+      "reminder": {
+        "title": "Remind me of something",
+        "hint": "“Call mom tomorrow at 5”",
+        "prompt": "remind me to "
+      },
+      "note": {
+        "title": "Save a note",
+        "hint": "“Note: buy milk and bread”",
+        "prompt": "save a note: "
+      },
+      "documents": {
+        "title": "Ask your documents",
+        "hint": "Search what you imported",
+        "prompt": "What do my documents say about "
+      },
+      "message": {
+        "title": "Message another NIDO",
+        "hint": "Encrypted, over Bluetooth, no internet",
+        "prompt": "send a message to "
+      }
+    }
   },
   "aboutScreen": {
     "title": "About NIDO",
@@ -586,9 +610,9 @@
     "verifiedSuffix": " · ✓ verified",
     "linkActive": "🟢 Link active",
     "linkStopped": "⚪ Link stopped",
-    "tabChats": "💬 Chats",
-    "tabContacts": "👥 Contacts",
-    "tabLink": "🔗 Link",
+    "tabChats": "Chats",
+    "tabContacts": "Contacts",
+    "tabLink": "Link",
     "tabNegotiations": "Negotiations",
     "noContactsTitle": "No contacts yet",
     "noContactsBody": "Pair your first contact in the Contacts tab: show them your QR and scan theirs (or paste it as text).",

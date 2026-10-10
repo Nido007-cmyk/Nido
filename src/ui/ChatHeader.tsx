@@ -66,18 +66,23 @@ export function ChatHeader({
 
         {/* Brand & Mascot (rol: brand — identidad, no mensaje) */}
         <View style={styles.brandContainer}>
-          <NidoMascot role="brand" />
+          <NidoMascot role="brand" size={34} />
           <View style={styles.titleColumn}>
             <View style={styles.titleRow}>
               <Text style={styles.titleText}>NIDO</Text>
-              <View style={styles.offlineStatusPill}>
-                <View style={styles.offlineDot} />
-                <Text style={styles.offlineText}>{t("chatHeader.offline")}</Text>
-              </View>
             </View>
-            <Text style={styles.modelPillText} numberOfLines={1}>
-              {activeModelLabel ? activeModelLabel.toUpperCase() : t("chatHeader.localLlmCore")}
-            </Text>
+            {/* Rediseño 2026-10-10: estado en lenguaje llano. El nombre técnico
+                del modelo se sigue leyendo por accesibilidad y vive en Ajustes. */}
+            <View
+              style={styles.statusRow}
+              accessible
+              accessibilityLabel={`${t("chatHeader.statusLine")}. ${activeModelLabel ?? t("chatHeader.localLlmCore")}`}
+            >
+              <View style={styles.offlineDot} />
+              <Text style={styles.statusText} numberOfLines={1}>
+                {t("chatHeader.statusLine")}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -147,14 +152,16 @@ export function ChatHeader({
 
 const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create({
   headerContainer: {
-    backgroundColor: colors.bg.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.default,
+    backgroundColor: colors.bg.black,
+    borderBottomWidth: 0,
+    borderBottomColor: "transparent",
     paddingHorizontal: spacing.md,
     paddingTop: 8,
     paddingBottom: 8,
     gap: 6,
   },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 1 },
+  statusText: { ...typography.ui.subtext, color: colors.text.secondary },
   headerContainerDeepResearch: {
     backgroundColor: "#111028",
     borderBottomColor: colors.border.frontier,
@@ -165,9 +172,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     justifyContent: "space-between",
   },
   iconBtn: {
-    padding: 6,
-    borderRadius: radii.sm,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
   hamburgerIcon: {
     color: colors.text.heading,
@@ -206,9 +215,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: 3,
   },
   offlineDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.emerald[400],
   },
   offlineText: {
@@ -228,12 +237,12 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     gap: 8,
   },
   tonePill: {
-    backgroundColor: "rgba(255, 255, 255, 0.07)",
-    borderColor: colors.border.subtle,
+    backgroundColor: colors.bg.card,
+    borderColor: colors.border.default,
     borderWidth: 1,
-    borderRadius: radii.md,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    borderRadius: 16,
+    height: 32,
+    paddingHorizontal: 10,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -241,12 +250,12 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     fontSize: 14,
   },
   newChatBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: radii.md,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: colors.emerald.bgSubtle,
-    borderColor: colors.emerald.border,
-    borderWidth: 1,
+    borderColor: "transparent",
+    borderWidth: 0,
     alignItems: "center",
     justifyContent: "center",
   },

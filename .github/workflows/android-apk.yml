@@ -215,29 +215,63 @@ jobs:
           if-no-files-found: error
 
   release:
-    # A4/A10: publica el APK del tag que disparó el run, junto a su SHA-256.
-    # Antes cada push a main reemplazaba el APK del tag fijo v0.1.0-alpha y
-    # el hash publicado en las notas dejaba de corresponder al archivo.
+    # A4/A10: publica el APK junto a su SHA-256.
+    # - Con un tag v*: publica en ese tag.
+    # - En main: publica UNA vez por versión. El tag es v<versión de
+    #   package.json>-alpha; si ese release ya existe no se toca (el APK de
+    #   una versión publicada nunca se reemplaza). Para publicar de nuevo hay
+    #   que subir la versión.
     needs: build-apk
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            package.json
+            docs/ALPHA_RELEASE_NOTES.md
+          sparse-checkout-cone-mode: false
+
+      - name: Decide release tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG="$GITHUB_REF_NAME"
+          else
+            TAG="v$(node -p "require('./package.json').version")-alpha"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG ya existe: no se reemplaza."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/download-artifact@v4
+        if: steps.tag.outputs.publish == 'true'
         with:
           path: dist
           merge-multiple: true
 
       - name: Verify checksum
+        if: steps.tag.outputs.publish == 'true'
         working-directory: dist
         run: sha256sum -c app-release.apk.sha256
 
       - name: Upload APK to release
+        if: steps.tag.outputs.publish == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          tag_name: ${{ steps.tag.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: NIDO ${{ steps.tag.outputs.tag }}
+          body_path: docs/ALPHA_RELEASE_NOTES.md
+          prerelease: ${{ contains(steps.tag.outputs.tag, '-') }}
           files: |
             dist/app-release.apk
             dist/app-release.apk.sha256
