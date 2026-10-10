@@ -1047,8 +1047,8 @@
   },
   "agentPermissions": {
     "historyTitle": "What the agent did",
-    "historyBody": "Every tool the agent used or tried to use since you opened the app. Only the tool name and the result are kept, never the content.",
-    "historyEmpty": "No actions yet in this session.",
+    "historyBody": "Every tool the agent used or tried to use. Only the tool name and the result are kept, never the content. It is stored encrypted on this phone and you can delete it.",
+    "historyEmpty": "No actions yet.",
     "confirmed": "you confirmed",
     "toolsTitle": "Agent permissions",
     "toolsBody": "Turn off any tool you do not want the agent to use. Actions that change something keep asking you first; that cannot be turned off.",
@@ -1060,7 +1060,16 @@
       "cancelled": "Not confirmed",
       "invalid": "Invalid request",
       "failed": "Failed"
-    }
+    },
+    "undo": "Undo",
+    "undone": "Undone",
+    "undoLabel": "Undo {{tool}}",
+    "undoTitle": "Undo this action",
+    "undoNoteBody": "The note the agent saved will be deleted.",
+    "undoReminderBody": "The reminder the agent created will be deleted.",
+    "undoFailed": "The action could not be undone.",
+    "clearTitle": "Delete history",
+    "clearBody": "Delete the list of agent actions? Your notes and reminders are not affected."
   },
   "scheduledTasks": {
     "title": "Scheduled tasks",

@@ -144,6 +144,20 @@ CREATE TABLE IF NOT EXISTS scheduled_task_runs (
 );
 CREATE INDEX IF NOT EXISTS idx_task_runs_task_id ON scheduled_task_runs(task_id);
 
+-- Historial de acciones del agente. Nunca guarda argumentos ni resultados:
+-- solo la herramienta, el desenlace y, si la acción se puede deshacer, el
+-- id de lo que creó.
+CREATE TABLE IF NOT EXISTS agent_action_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts TEXT NOT NULL,
+  tool TEXT NOT NULL,
+  outcome TEXT NOT NULL,
+  confirmed INTEGER NOT NULL DEFAULT 0,
+  undo_kind TEXT,
+  undo_id TEXT,
+  undone INTEGER NOT NULL DEFAULT 0
+);
+
 -- Learned skills store
 CREATE TABLE IF NOT EXISTS learned_skills (
   name TEXT PRIMARY KEY,

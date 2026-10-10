@@ -1047,8 +1047,8 @@
   },
   "agentPermissions": {
     "historyTitle": "Qué hizo el agente",
-    "historyBody": "Cada herramienta que el agente usó o intentó usar desde que abriste la app. Solo se guarda el nombre de la herramienta y el resultado, nunca el contenido.",
-    "historyEmpty": "Todavía no hay acciones en esta sesión.",
+    "historyBody": "Cada herramienta que el agente usó o intentó usar. Solo se guarda el nombre de la herramienta y el resultado, nunca el contenido. Queda cifrado en este teléfono y lo puedes borrar.",
+    "historyEmpty": "Todavía no hay acciones.",
     "confirmed": "tú confirmaste",
     "toolsTitle": "Permisos del agente",
     "toolsBody": "Apaga cualquier herramienta que no quieras que el agente use. Las acciones que cambian algo te siguen preguntando primero; eso no se puede apagar.",
@@ -1060,7 +1060,16 @@
       "cancelled": "Sin confirmar",
       "invalid": "Petición inválida",
       "failed": "Falló"
-    }
+    },
+    "undo": "Deshacer",
+    "undone": "Deshecho",
+    "undoLabel": "Deshacer {{tool}}",
+    "undoTitle": "Deshacer esta acción",
+    "undoNoteBody": "Se borrará la nota que guardó el agente.",
+    "undoReminderBody": "Se borrará el recordatorio que creó el agente.",
+    "undoFailed": "No se pudo deshacer la acción.",
+    "clearTitle": "Borrar historial",
+    "clearBody": "¿Borrar la lista de acciones del agente? Tus notas y recordatorios no se tocan."
   },
   "scheduledTasks": {
     "title": "Tareas programadas",
