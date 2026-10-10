@@ -449,17 +449,17 @@ class NidoP2PManager(private val context: Context) {
     address: String,
   ): BluetoothSocket {
     val errors = mutableListOf<String>()
-    // 1. Seguro con SDP (el estándar)
-    try {
-      return device.createRfcommSocketToServiceRecord(SERVICE_UUID)
-    } catch (e: Exception) {
-      errors.add("secure: ${e.message}")
-    }
-    // 2. Inseguro con SDP (el que usábamos)
+    // 1. Inseguro con SDP (el que usábamos y funciona con bond establecido)
     try {
       return device.createInsecureRfcommSocketToServiceRecord(SERVICE_UUID)
     } catch (e: Exception) {
       errors.add("insecure: ${e.message}")
+    }
+    // 2. Seguro con SDP (fallback si el inseguro falla)
+    try {
+      return device.createRfcommSocketToServiceRecord(SERVICE_UUID)
+    } catch (e: Exception) {
+      errors.add("secure: ${e.message}")
     }
     // 3. Reflection canal 1 (salta SDP; último recurso)
     try {
@@ -496,10 +496,10 @@ class NidoP2PManager(private val context: Context) {
     // timeout genérico. Mejor fallar rápido con mensaje accionable.
     // Además Samsung pierde bonds tras reboot (bug documentado) — por eso
     // se verifica cada vez, no se asume persistencia.
-    val bondStatePre = try {
+    val bondStatePre: Int? = try {
       device.bondState
     } catch (_: SecurityException) {
-      BluetoothDevice.BOND_NONE // sin permiso: no podemos verificar, intentar igual
+      null // sin permiso: no podemos verificar, intentar igual
     }
     if (bondStatePre == BluetoothDevice.BOND_NONE) {
       throw IOException(
