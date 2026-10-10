@@ -1061,5 +1061,56 @@
       "invalid": "Petición inválida",
       "failed": "Falló"
     }
+  },
+  "scheduledTasks": {
+    "title": "Tareas programadas",
+    "body": "Algo que el agente hace solo a una hora fija, como un resumen de tus notas cada mañana. Las tareas corren mientras NIDO está abierto; si está cerrado a esa hora, el teléfono muestra un aviso y la tarea corre al abrir la app. Una tarea puede leer tus notas, calendario y bandeja, y guardar notas. Nunca puede enviar mensajes, llamar, emparejar ni abrir otras apps.",
+    "empty": "Todavía no tienes tareas programadas.",
+    "loadFailed": "No se pudieron cargar tus tareas.",
+    "add": "Nueva tarea",
+    "save": "Guardar tarea",
+    "namePlaceholder": "Nombre (por ejemplo: Resumen de la mañana)",
+    "instructionPlaceholder": "¿Qué debe hacer el agente? (por ejemplo: Resume mis notas de ayer)",
+    "timeLabel": "Hora (24 h)",
+    "daysLabel": "Días",
+    "everyDayAt": "Todos los días a las {{time}}",
+    "daysAt": "{{days}} a las {{time}}",
+    "nextRun": "Próxima: {{when}}",
+    "neverRan": "Todavía no se ha ejecutado",
+    "lastOk": "Última vez: hecha",
+    "lastFailed": "Última vez: falló",
+    "toggleLabel": "Activar o pausar la tarea {{name}}",
+    "deleteLabel": "Borrar la tarea {{name}}",
+    "deleteTitle": "Borrar tarea",
+    "deleteBody": "¿Borrar «{{name}}» y su historial?",
+    "errorTitle": "Revisa la tarea",
+    "badTime": "Escribe la hora como hora:minuto, por ejemplo 07:30.",
+    "missingFields": "Escribe un nombre y qué debe hacer el agente.",
+    "noDays": "Elige al menos un día.",
+    "createFailed": "No se pudo guardar la tarea.",
+    "limit": "Puedes tener hasta {{max}} tareas.",
+    "notifyDone": "NIDO · {{name}}",
+    "notifyFailed": "NIDO · {{name}} falló",
+    "notifyFailedBody": "La tarea no se pudo completar. Abre NIDO para verla.",
+    "notifyDue": "NIDO · {{name}}",
+    "notifyDueBody": "Una tarea programada está lista. Abre NIDO para ejecutarla.",
+    "dayShort": {
+      "0": "Dom",
+      "1": "Lun",
+      "2": "Mar",
+      "3": "Mié",
+      "4": "Jue",
+      "5": "Vie",
+      "6": "Sáb"
+    },
+    "dayLong": {
+      "0": "Domingo",
+      "1": "Lunes",
+      "2": "Martes",
+      "3": "Miércoles",
+      "4": "Jueves",
+      "5": "Viernes",
+      "6": "Sábado"
+    }
   }
 }

@@ -430,6 +430,54 @@ export function ChatScreen({
     };
   }, [ready, deviceEvalRequest]);
 
+  // Tareas programadas: se revisan al quedar listo el modelo, cada minuto y
+  // al volver a primer plano. Usan el mismo candado que send(): nunca corren
+  // a la vez que una respuesta del chat, y mientras corren el chat se muestra
+  // ocupado.
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    const check = async () => {
+      if (cancelled || generatingRef.current) return;
+      if (!sendGuardRef.current.tryAcquire()) return;
+      try {
+        const { getDueTasks } = await import("../agent/scheduled/taskStore");
+        if ((await getDueTasks()).length === 0) return;
+        if (!llamaEngine.isLoaded) return;
+        setGenerating(true);
+        const { runScheduledTasksNow } = await import("../agent/scheduled/runScheduled");
+        await runScheduledTasksNow({
+          engine: llamaEngine,
+          nCtx: llamaEngine.getModelInfo()?.nCtx,
+          lang: i18n.language?.startsWith("en") ? "en" : "es",
+          strings: {
+            doneTitle: (name) => t("scheduledTasks.notifyDone", { name }),
+            failedTitle: (name) => t("scheduledTasks.notifyFailed", { name }),
+            failedBody: t("scheduledTasks.notifyFailedBody"),
+            dueTitle: (name) => t("scheduledTasks.notifyDue", { name }),
+            dueBody: t("scheduledTasks.notifyDueBody"),
+          },
+        });
+      } catch {
+        // Una pasada fallida se reintenta en la siguiente revisión.
+      } finally {
+        setGenerating(false);
+        sendGuardRef.current.release();
+      }
+    };
+    void check();
+    const id = setInterval(() => void check(), 60_000);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") void check();
+    });
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      sub.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+
   const stopRequestedRef = useRef(false);
 
   // Stop only takes effect between generated tokens, so while the prompt is

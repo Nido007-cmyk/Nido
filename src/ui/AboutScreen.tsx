@@ -17,6 +17,7 @@ import appConfig from "../../app.json";
 import { NetworkAuditCard } from "./NetworkAuditCard";
 import { SkillsCard } from "./SkillsCard";
 import { AgentPermissionsCard } from "./AgentPermissionsCard";
+import { ScheduledTasksCard } from "./ScheduledTasksCard";
 import { SecurityStatusCard } from "./SecurityStatusCard";
 import { BackupScreen } from "./BackupScreen";
 
@@ -101,6 +102,9 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
 
         {/* U6: qué sabe hacer el agente. */}
         <SkillsCard />
+
+        {/* U8: tareas que el agente ejecuta solo a una hora fija. */}
+        <ScheduledTasksCard />
 
         {/* Historial de acciones y permisos por herramienta. */}
         <AgentPermissionsCard />

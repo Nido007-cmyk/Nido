@@ -4,6 +4,20 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.3-alpha — 2026-10-10
+
+### Added
+- Scheduled tasks now work. Create one in About → Scheduled tasks: a name,
+  what the agent should do, a time and the days. The agent runs it on its
+  own and the result is shown in the card and in a notification.
+- Schedules accept specific weekdays (for example Monday to Friday).
+
+### Notes
+- Tasks run while NIDO is open. If the app is closed at the scheduled time
+  the phone shows a notice and the task runs once when the app is opened.
+- A scheduled task can read notes, calendar and inbox and save notes. It can
+  never send messages, call, pair, open other apps or approve anything.
+
 ## 0.1.2-alpha — 2026-10-10
 
 ### Added

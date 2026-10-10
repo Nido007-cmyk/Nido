@@ -1061,5 +1061,56 @@
       "invalid": "Pedido inválido",
       "failed": "Falhou"
     }
+  },
+  "scheduledTasks": {
+    "title": "Tarefas agendadas",
+    "body": "Algo que o agente faz sozinho em um horário fixo, como um resumo das suas notas toda manhã. As tarefas rodam enquanto o NIDO está aberto; se estiver fechado nesse horário, o telefone mostra um aviso e a tarefa roda ao abrir o app. Uma tarefa pode ler suas notas, calendário e caixa de entrada, e salvar notas. Nunca pode enviar mensagens, ligar, parear nem abrir outros apps.",
+    "empty": "Você ainda não tem tarefas agendadas.",
+    "loadFailed": "Não foi possível carregar suas tarefas.",
+    "add": "Nova tarefa",
+    "save": "Salvar tarefa",
+    "namePlaceholder": "Nome (por exemplo: Resumo da manhã)",
+    "instructionPlaceholder": "O que o agente deve fazer? (por exemplo: Resuma minhas notas de ontem)",
+    "timeLabel": "Horário (24 h)",
+    "daysLabel": "Dias",
+    "everyDayAt": "Todos os dias às {{time}}",
+    "daysAt": "{{days}} às {{time}}",
+    "nextRun": "Próxima: {{when}}",
+    "neverRan": "Ainda não foi executada",
+    "lastOk": "Última vez: feita",
+    "lastFailed": "Última vez: falhou",
+    "toggleLabel": "Ativar ou pausar a tarefa {{name}}",
+    "deleteLabel": "Apagar a tarefa {{name}}",
+    "deleteTitle": "Apagar tarefa",
+    "deleteBody": "Apagar «{{name}}» e seu histórico?",
+    "errorTitle": "Revise a tarefa",
+    "badTime": "Escreva o horário como hora:minuto, por exemplo 07:30.",
+    "missingFields": "Escreva um nome e o que o agente deve fazer.",
+    "noDays": "Escolha pelo menos um dia.",
+    "createFailed": "Não foi possível salvar a tarefa.",
+    "limit": "Você pode ter até {{max}} tarefas.",
+    "notifyDone": "NIDO · {{name}}",
+    "notifyFailed": "NIDO · {{name}} falhou",
+    "notifyFailedBody": "A tarefa não pôde ser concluída. Abra o NIDO para ver.",
+    "notifyDue": "NIDO · {{name}}",
+    "notifyDueBody": "Uma tarefa agendada está pronta. Abra o NIDO para executá-la.",
+    "dayShort": {
+      "0": "Dom",
+      "1": "Seg",
+      "2": "Ter",
+      "3": "Qua",
+      "4": "Qui",
+      "5": "Sex",
+      "6": "Sáb"
+    },
+    "dayLong": {
+      "0": "Domingo",
+      "1": "Segunda",
+      "2": "Terça",
+      "3": "Quarta",
+      "4": "Quinta",
+      "5": "Sexta",
+      "6": "Sábado"
+    }
   }
 }
