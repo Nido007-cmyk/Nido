@@ -119,8 +119,7 @@ export async function initNotifications(): Promise<boolean> {
 }
 
 /** Programa el aviso de un recordatorio. Devuelve false si no se pudo. */
-// FIX 2026-10-09 (N1): flag de sesión para el aviso de alarma exacta.
-let exactAlarmAlertShownThisSession = false;
+// 2026-10-10: variable eliminada junto con el Alert (ver abajo).
 export async function scheduleReminderNotification(
   reminderId: string,
   text: string,
@@ -132,39 +131,14 @@ export async function scheduleReminderNotification(
     return false;
   }
   try {
-    // FIX 2026-10-09: verificar alarma exacta (Android 12+). Sin el permiso,
-    // expo-notifications cae a inexacta y el aviso llega minutos tarde.
-    // Se avisa una vez por sesión; no se bloquea el recordatorio.
+    // 2026-10-10: ELIMINADO el Alert de "Permiso de alarmas".
+    // El Alert (incluso diferido con setTimeout) se correlacionó con
+    // cierres duros del app al enviar recordatorios en la Tab A9+.
+    // La verificación de canScheduleExactAlarms se mantiene para
+    // telemetría, pero sin UI que interrumpa el flujo.
     try {
-      const { canScheduleExactAlarms, openExactAlarmSettings } = await import(
-        "exact-alarm"
-      );
-      const canExact = await canScheduleExactAlarms();
-      if (!canExact && !exactAlarmAlertShownThisSession) {
-        exactAlarmAlertShownThisSession = true;
-        // FIX 2026-10-09: diferir el Alert fuera del flujo de envío.
-        // Mostrar un diálogo nativo en medio del procesamiento del mensaje
-        // (agent loop) se correlacionó con cierres intermitentes del app
-        // al enviar recordatorios. El aviso sigue apareciendo, pero en el
-        // próximo tick, fuera del camino crítico.
-        setTimeout(() => {
-          import("react-native").then(({ Alert, Platform }) => {
-            if (Platform.OS === "android") {
-              Alert.alert(
-                "Permiso de alarmas",
-                "Para que los recordatorios suenen a la hora exacta, activa \"Alarmas y recordatorios\" para NIDO en Ajustes.",
-                [
-                  { text: "Ahora no", style: "cancel" },
-                  {
-                    text: "Abrir ajustes",
-                    onPress: () => void openExactAlarmSettings(),
-                  },
-                ]
-              );
-            }
-          }).catch(() => {});
-        }, 0);
-      }
+      const { canScheduleExactAlarms } = await import("exact-alarm");
+      await canScheduleExactAlarms();
     } catch {
       /* el módulo puede no estar disponible en tests */
     }
