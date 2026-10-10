@@ -9,7 +9,7 @@
  *
  * REBRAND-2026-10-07: Toda la marca visible al usuario vive aquí. Si en el
  * futuro se necesita cambiar el nombre (p. ej. por un conflicto legal),
- * se cambia en este archivo y en los archivos listados en docs/internal/REBRAND.md.
+ * se cambia en este archivo y en los archivos listados en REBRAND.md.
  *
  * REGLA CRÍTICA: Los identificadores de protocolo (`nido-hello`,
  * `nido-confirm`, UUIDs Bluetooth, etc.) NO están aquí y NO deben cambiar
