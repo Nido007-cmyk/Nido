@@ -64,6 +64,10 @@ on:
       - 'package-lock.json'
       - '.github/workflows/android-apk.yml'
 
+# Needed for softprops/action-gh-release to attach the APK to the release.
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
