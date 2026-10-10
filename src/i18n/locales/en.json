@@ -148,7 +148,8 @@
       "consequenceModels": "All downloaded models",
       "consequenceEmbeddings": "All knowledge base documents",
       "consequenceHistory": "All chats and summaries",
-      "confirmButton": "Delete all data"
+      "confirmButton": "Delete all data",
+      "confirm": "Confirm deleting all data"
     },
     "wipeRecovery": {
       "recovering": "Finishing interrupted data deletion…",
@@ -674,7 +675,12 @@
     "tabPacks": "Packs",
     "identityError": "Could not create identity: {{error}}",
     "deleteMessageTitle": "Delete message",
-    "deleteMessageConfirm": "Delete this message? It will only be deleted on this device."
+    "deleteMessageConfirm": "Delete this message? It will only be deleted on this device.",
+    "deleteContactTitle": "Delete “{{name}}”?",
+    "deleteContactConfirm": "This removes the contact and the whole conversation with them from this device. To talk again you will have to pair by scanning their QR code. This cannot be undone.",
+    "deleteContactLabel": "Delete contact {{name}}",
+    "contactDeleted": "“{{name}}” was deleted.",
+    "deleteContactFailed": "Could not delete the contact."
   },
   "notifications": {
     "reminderChannel": "NIDO Reminders",
@@ -710,7 +716,14 @@
       "no-scheme": "it doesn't start with a valid scheme",
       "scheme-not-allowed": "its scheme isn't allowed",
       "unsafe-chars": "it contains unsafe characters"
-    }
+    },
+    "pairDisambiguationTitle": "Disambiguate pairing",
+    "pairAmbiguousAsk": "This code is for “{{name}}” (fingerprint {{fingerprint}}), but you already have {{count}} live contact(s) with that name under a DIFFERENT identity: {{candidates}}. A name is not an identity — I cannot assume this is the same person.\n\nTell me explicitly (in chat):\n• “replace” — the same person with a new device: retire the old identity everywhere (destructive);\n• “different person” — a different person: give me a unique name for the new contact;\n• “cancel” — do nothing.\n\nIf you don't choose, I cancel. Nothing has been paired yet.",
+    "pairReplaceConfirmMessage": "REPLACE the identity of “{{name}}”?\nFingerprint: {{fingerprint}}\n\nThis retires the old identity EVERYWHERE: its routes, sessions and pending messages die, and its pending outbox is marked failed. Old messages stay readable. This cannot be undone. Confirm only if you verified this code in person.",
+    "pairDifferentPersonConfirmMessage": "Pair “{{name}}” as a DIFFERENT PERSON named “{{newName}}”?\nFingerprint: {{fingerprint}}\n\nBoth identities stay live. Confirm only if you scanned this code in person.",
+    "pairCancelled": "Pairing cancelled — nothing was written.",
+    "pairInvalidChoice": "Invalid disambiguation “{{choice}}”: use replace, different_person or cancel.",
+    "pairBindingWasRetired": "Note: this identity was previously paired as “{{name}}” and later retired. Confirming will make it live again."
   },
   "downloadErrors": {
     "checksumMismatch": "The integrity check failed (SHA-256 mismatch), so the file was deleted. Retrying downloads it again from the start.",
@@ -931,5 +944,28 @@
     "close": "Close",
     "lastBackup": "Last backup: {{path}}",
     "warning": "Important: store the backup file and your key in different places. If you lose the key, nobody (not even NIDO) can recover your data."
+  },
+  "remoteTasks": {
+    "title_one": "{{count}} remote task awaiting your decision",
+    "title_other": "{{count}} remote tasks awaiting your decision",
+    "hint": "A paired NIDO contact asked your NIDO to do something. Nothing runs until you decide, and approving only records your decision.",
+    "actionTitle": "accept a task from {{sender}}",
+    "from": "From",
+    "received": "Received",
+    "approved": "Task from {{sender}} approved. Nothing was executed automatically.",
+    "rejected": "Task from {{sender}} rejected.",
+    "alreadyDecided": "That task was already decided.",
+    "failed": "Could not record the decision."
+  },
+  "networkLog": {
+    "title": "NETWORK LOG",
+    "body": "Every network request NIDO makes is recorded here. Entries never contain your content: only the host and path, sizes, time and outcome.",
+    "empty": "No network requests recorded.",
+    "showing": "Showing the latest {{shown}} of {{total}}.",
+    "kind": {
+      "download_start": "Download started",
+      "download_complete": "Download completed",
+      "download_failed": "Download failed"
+    }
   }
 }

@@ -329,7 +329,8 @@
       "consequenceModels": "Todos los modelos descargados",
       "consequencesHeader": "Esto eliminará:",
       "subtitle": "Esta acción es inmediata, permanente y no se puede deshacer.",
-      "title": "Confirmar restablecimiento"
+      "title": "Confirmar restablecimiento",
+      "confirm": "Confirmar el borrado de todos los datos"
     },
     "wipeRecovery": {
       "recovering": "Terminando el borrado de datos interrumpido…",
@@ -674,7 +675,12 @@
     "errorLabel": "Error",
     "identityError": "No se pudo crear la identidad: {{error}}",
     "deleteMessageTitle": "Borrar mensaje",
-    "deleteMessageConfirm": "¿Borrar este mensaje? Solo se borra en este dispositivo."
+    "deleteMessageConfirm": "¿Borrar este mensaje? Solo se borra en este dispositivo.",
+    "deleteContactTitle": "¿Eliminar a «{{name}}»?",
+    "deleteContactConfirm": "Esto borra el contacto y toda la conversación con él de este dispositivo. Para volver a hablar tendrán que emparejarse escaneando su código QR. No se puede deshacer.",
+    "deleteContactLabel": "Eliminar el contacto {{name}}",
+    "contactDeleted": "«{{name}}» fue eliminado.",
+    "deleteContactFailed": "No se pudo eliminar el contacto."
   },
   "notifications": {
     "reminderChannel": "Recordatorios de NIDO",
@@ -710,7 +716,14 @@
       "no-scheme": "no empieza con un esquema válido",
       "scheme-not-allowed": "su esquema no está permitido",
       "unsafe-chars": "contiene caracteres inseguros"
-    }
+    },
+    "pairDisambiguationTitle": "Aclarar emparejamiento",
+    "pairAmbiguousAsk": "Este código es de «{{name}}» (huella {{fingerprint}}), pero ya tienes {{count}} contacto(s) activo(s) con ese nombre bajo una identidad DISTINTA: {{candidates}}. Un nombre no es una identidad: no puedo asumir que es la misma persona.\n\nDime explícitamente (en el chat):\n• «replace» — la misma persona con un dispositivo nuevo: retira la identidad anterior en todas partes (destructivo);\n• «different person» — otra persona: dame un nombre único para el contacto nuevo;\n• «cancel» — no hacer nada.\n\nSi no eliges, cancelo. Todavía no se ha emparejado nada.",
+    "pairReplaceConfirmMessage": "¿REEMPLAZAR la identidad de «{{name}}»?\nHuella: {{fingerprint}}\n\nEsto retira la identidad anterior EN TODAS PARTES: sus rutas, sesiones y mensajes pendientes se pierden, y su bandeja de salida pendiente se marca como fallida. Los mensajes antiguos siguen siendo legibles. No se puede deshacer. Confirma solo si verificaste este código en persona.",
+    "pairDifferentPersonConfirmMessage": "¿Emparejar a «{{name}}» como una PERSONA DISTINTA llamada «{{newName}}»?\nHuella: {{fingerprint}}\n\nAmbas identidades siguen activas. Confirma solo si escaneaste este código en persona.",
+    "pairCancelled": "Emparejamiento cancelado: no se escribió nada.",
+    "pairInvalidChoice": "Opción «{{choice}}» no válida: usa replace, different_person o cancel.",
+    "pairBindingWasRetired": "Nota: esta identidad estuvo emparejada antes como «{{name}}» y luego se retiró. Si confirmas, volverá a estar activa."
   },
   "downloadErrors": {
     "checksumMismatch": "La verificación de integridad falló (SHA-256 no coincide), así que el archivo fue eliminado. Reintentarlo lo descarga de nuevo desde el principio.",
@@ -931,5 +944,28 @@
     "close": "Cerrar",
     "lastBackup": "Último backup: {{path}}",
     "warning": "Importante: guarda el archivo de backup y tu clave en lugares diferentes. Si pierdes la clave, nadie (ni NIDO) puede recuperar tus datos."
+  },
+  "remoteTasks": {
+    "title_one": "{{count}} tarea remota espera tu decisión",
+    "title_other": "{{count}} tareas remotas esperan tu decisión",
+    "hint": "Un contacto NIDO emparejado le pidió algo a tu NIDO. Nada se ejecuta hasta que decidas, y aprobar solo registra tu decisión.",
+    "actionTitle": "aceptar una tarea de {{sender}}",
+    "from": "De",
+    "received": "Recibida",
+    "approved": "Tarea de {{sender}} aprobada. No se ejecutó nada automáticamente.",
+    "rejected": "Tarea de {{sender}} rechazada.",
+    "alreadyDecided": "Esa tarea ya estaba decidida.",
+    "failed": "No se pudo registrar la decisión."
+  },
+  "networkLog": {
+    "title": "REGISTRO DE RED",
+    "body": "Aquí queda registrada cada petición de red que hace NIDO. Las entradas nunca contienen tu contenido: solo el servidor y la ruta, el tamaño, la hora y el resultado.",
+    "empty": "No hay peticiones de red registradas.",
+    "showing": "Mostrando las últimas {{shown}} de {{total}}.",
+    "kind": {
+      "download_start": "Descarga iniciada",
+      "download_complete": "Descarga completada",
+      "download_failed": "Descarga fallida"
+    }
   }
 }

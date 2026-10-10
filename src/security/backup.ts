@@ -32,8 +32,23 @@ import { getDatabase, closeDatabase } from "./databaseManager";
 const DB_NAME = "nido_memory.db";
 const KNOWLEDGE_DB_NAME = "nido_knowledge.db";
 const BACKUP_VERSION = 1;
+// A14: misma versión que package.json y el tag del release.
+const APP_VERSION = "0.1.1";
 // SQLCipher magic header: "SQLite format 3\0" — los primeros 16 bytes
 const SQLITE_MAGIC = "SQLite format 3\0";
+
+/**
+ * A2 (auditoría 2026-10-10): única fuente del nombre del backup de la base
+ * de conocimiento. Antes createBackup escribía "X.knowledge.db" (reemplazando
+ * ".db") mientras createPortableBundle y restoreBackup buscaban
+ * "X.db.knowledge.db": la base de conocimiento nunca entraba en el bundle ni
+ * se restauraba.
+ */
+export function knowledgeBackupUriFor(backupUri: string): string {
+  return /\.db$/.test(backupUri)
+    ? backupUri.replace(/\.db$/, ".knowledge.db")
+    : `${backupUri}.knowledge.db`;
+}
 
 /**
  * Obtiene la ruta del archivo de la base de datos.
@@ -101,7 +116,7 @@ export async function createBackup(destinationUri: string): Promise<string> {
   await FileSystem.copyAsync({ from: dbPath, to: destinationUri });
 
   // 3. Copiar la base de conocimiento si existe (M3).
-  const knowledgeDest = destinationUri.replace(/\.db$/, ".knowledge.db");
+  const knowledgeDest = knowledgeBackupUriFor(destinationUri);
   let knowledgeBackedUp = false;
   try {
     const kInfo = await FileSystem.getInfoAsync(knowledgePath);
@@ -133,7 +148,7 @@ export async function createBackup(destinationUri: string): Promise<string> {
     dbName: DB_NAME,
     knowledgeDbName: knowledgeBackedUp ? KNOWLEDGE_DB_NAME : null,
     knowledgeBackupPath: knowledgeBackedUp ? knowledgeDest : null,
-    appVersion: "1.0.0", // TODO: leer de app.json dinámicamente
+    appVersion: APP_VERSION,
     sha256: await sha256File(destinationUri),
     // FIX 2026-10-09 (K1): fingerprint del DEK para detectar key mismatch en restore.
     dekFingerprint,
@@ -229,6 +244,13 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
     // real NO empieza con "SQLite format 3". En su lugar, hacer trial-open
     // con el DEK actual: si abre, es un backup válido nuestro.
     // (El check de header anterior rompía la restauración en producción.)
+    // A5 (auditoría 2026-10-10): un backup solo es válido si se VERIFICÓ por
+    // alguna vía: apertura de prueba con la clave, o manifest con SHA-256
+    // correcto. Antes, si la apertura fallaba por un error técnico y no
+    // había manifest, cualquier archivo de más de 1 KB se aceptaba y
+    // sobrescribía la base viva.
+    let trialOpenOk = false;
+    let manifestVerified = false;
     try {
       const { getDatabaseKeyHex, applyDatabaseKey } = await import("../privacy/keyManager");
       const SQLite = await import("expo-sqlite");
@@ -244,6 +266,7 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
           await applyDatabaseKey(db as any, dekHex, "backup-validate");
           // Si llegamos aquí, el DEK abre la DB → backup válido.
           await (db as any).closeAsync().catch(() => {});
+          trialOpenOk = true;
         } catch {
           await (db as any).closeAsync().catch(() => {});
           return { valid: false, reason: "El backup no se puede abrir con la clave actual (es de otra instalación o está corrupto)." };
@@ -308,9 +331,17 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
             }
           }
         }
+        manifestVerified = true;
       }
     } catch {
-      // Sin manifest, continuar con validación básica (backups viejos).
+      // Error al leer o verificar el manifest: no cuenta como verificado.
+    }
+    if (!trialOpenOk && !manifestVerified) {
+      return {
+        valid: false,
+        reason:
+          "No se pudo verificar el backup: no abre con la clave de este dispositivo y no trae un manifest válido.",
+      };
     }
     return { valid: true, sizeBytes: size };
   } catch (e) {
@@ -390,8 +421,18 @@ export async function restoreBackup(backupUri: string): Promise<void> {
   // FIX 2026-10-09 (NEW3-H-1): usar actualUri (para bundles, el knowledge
   // se extrajo junto al .db, no junto al .nidobackup.json).
   try {
-    const knowledgeBackupUri = `${actualUri}.knowledge.db`;
-    const kbInfo = await FileSystem.getInfoAsync(knowledgeBackupUri);
+    // A2: nombre canónico; se acepta también el sufijo antiguo por si el
+    // usuario conserva archivos extraídos con una versión anterior.
+    let knowledgeBackupUri = knowledgeBackupUriFor(actualUri);
+    let kbInfo = await FileSystem.getInfoAsync(knowledgeBackupUri);
+    if (!kbInfo.exists) {
+      const legacyUri = `${actualUri}.knowledge.db`;
+      const legacyInfo = await FileSystem.getInfoAsync(legacyUri);
+      if (legacyInfo.exists) {
+        knowledgeBackupUri = legacyUri;
+        kbInfo = legacyInfo;
+      }
+    }
     if (kbInfo.exists) {
       // FIX 2026-10-09 (R3): usar KNOWLEDGE_DB_NAME, no derivar del nombre.
       // dbPath.replace() producía "nido_memory_knowledge.db" (huérfano).
@@ -406,8 +447,29 @@ export async function restoreBackup(backupUri: string): Promise<void> {
     // Best-effort: si no hay knowledge backup, continuar.
   }
 
-  // 6. Limpiar la copia de seguridad solo si todo salió bien.
-  // (Se conserva si hubo algún problema para recuperación manual.)
+  // 6. A12 (auditoría 2026-10-10): conservar SOLO la copia de seguridad de
+  // esta restauración. Antes cada restauración dejaba una copia completa de
+  // la base que nunca se borraba. La copia actual se mantiene porque la
+  // base restaurada aún no se ha reabierto (la app debe reiniciarse).
+  if (hasSafetyCopy) {
+    try {
+      const readDir = (FileSystem as { readDirectoryAsync?: (uri: string) => Promise<string[]> })
+        .readDirectoryAsync;
+      if (typeof readDir === "function") {
+        const slash = dbPath.lastIndexOf("/");
+        const dirUri = dbPath.slice(0, slash + 1);
+        const prefix = `${dbPath.slice(slash + 1)}.pre-restore-`;
+        const keep = safetyCopy.slice(slash + 1);
+        for (const name of await readDir(dirUri)) {
+          if (name.startsWith(prefix) && name !== keep) {
+            await FileSystem.deleteAsync(`${dirUri}${name}`, { idempotent: true });
+          }
+        }
+      }
+    } catch {
+      // Best-effort: la limpieza nunca debe hacer fallar una restauración.
+    }
+  }
   // Nota: no reabrimos la base aquí; la app debe reiniciarse.
 }
 
@@ -419,7 +481,7 @@ export async function restoreBackup(backupUri: string): Promise<void> {
  */
 export async function createPortableBundle(backupUri: string): Promise<string> {
   const manifestUri = `${backupUri}.manifest.json`;
-  const knowledgeUri = `${backupUri}.knowledge.db`;
+  const knowledgeUri = knowledgeBackupUriFor(backupUri);
 
   const manifestRaw = await FileSystem.readAsStringAsync(manifestUri);
   const dbBase64 = await FileSystem.readAsStringAsync(backupUri, {
@@ -460,7 +522,7 @@ export async function extractPortableBundle(bundleUri: string, destDir: string):
     throw new Error("Formato de bundle no reconocido");
   }
 
-  const dbUri = `${destDir}/restored.db`;
+  const dbUri = `${destDir.replace(/\/+$/, "")}/restored.db`;
   // FIX 2026-10-09 (B1): argumentos en orden correcto (uri, contenido).
   // Estaban invertidos: el blob base64 iba como URI y el path como contenido.
   await FileSystem.writeAsStringAsync(dbUri, bundle.db, {
@@ -473,7 +535,7 @@ export async function extractPortableBundle(bundleUri: string, destDir: string):
   );
 
   if (bundle.knowledge) {
-    await FileSystem.writeAsStringAsync(`${dbUri}.knowledge.db`, bundle.knowledge, {
+    await FileSystem.writeAsStringAsync(knowledgeBackupUriFor(dbUri), bundle.knowledge, {
       encoding: FileSystem.EncodingType.Base64,
     });
   }

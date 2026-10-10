@@ -28,7 +28,7 @@ import * as Clipboard from "expo-clipboard";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import * as Backup from "../security/backup";
-import { requireUnlock } from "../security/biometricGate";
+import { requireUnlock, BiometricUnavailable } from "../security/biometricGate";
 
 export function BackupScreen({ onClose }: { onClose: () => void }) {
   const { colors } = useTheme();
@@ -53,8 +53,9 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
       try {
         await requireUnlock("Ver tu clave de respaldo");
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "";
-        const isUnavailable = msg.includes("no tiene biometría") || msg.includes("no disponible");
+        // A11 (auditoría 2026-10-10): decidir por el tipo de error, no por
+        // el texto del mensaje (cambiar la redacción cambiaba el comportamiento).
+        const isUnavailable = e instanceof BiometricUnavailable;
         if (!isUnavailable) {
           // Usuario canceló: no mostrar.
           Alert.alert("Cancelado", "No se mostró la clave.");

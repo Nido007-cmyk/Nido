@@ -39,6 +39,10 @@ export function extractCalcAction(userText: string): CalcAction | null {
   // Validación: solo caracteres matemáticos permitidos.
   if (!/^[\d\s+\-*/().%^]+$/.test(expr)) return null;
   if (expr.length < 1 || expr.length > 50) return null;
+  // F3 (auditoría 2026-10-10): "1.000 + 1" en español es mil más uno, pero
+  // el evaluador lo lee como 1.0 + 1 = 2. Un punto seguido de exactamente
+  // tres dígitos es ambiguo: no se resuelve por la ruta rápida.
+  if (/\d\.\d{3}(?!\d)/.test(expr)) return null;
 
   try {
     const result = evaluateExpression(expr);
@@ -93,6 +97,9 @@ export function extractReminderAction(userText: string): ReminderAction | null {
       .trim();
   }
 
+  // F6 (auditoría 2026-10-10): "recuérdame mañana" dejaba el texto vacío
+  // tras quitar la fecha. Sin texto no hay recordatorio: que decida el modelo.
+  if (!text.trim()) return null;
   return { text, dueAt };
 }
 
@@ -244,6 +251,22 @@ function parseReminderDateTime(text: string): string | null {
   } else {
     // Sin hora: 9 AM por defecto.
     targetDate.setHours(9, 0, 0, 0);
+  }
+
+  // F6 (auditoría 2026-10-10): "hoy a las 8" dicho por la tarde. Sin am/pm
+  // la hora se leía como 8:00, ya pasada, y el rollover de abajo la movía a
+  // MAÑANA aunque el usuario dijo "hoy". Si la versión de la tarde todavía
+  // cae hoy en el futuro, es la lectura correcta.
+  if (
+    timeMatch &&
+    !(timeMatch[3] || "") &&
+    /\b(hoy|today)\b/.test(t) &&
+    targetDate.getTime() <= now.getTime() &&
+    targetDate.getHours() < 12
+  ) {
+    const evening = new Date(targetDate);
+    evening.setHours(targetDate.getHours() + 12);
+    if (evening.getTime() > now.getTime()) targetDate = evening;
   }
 
   // M2 FIX 2026-10-07: si la fecha resultante ya pasó, mover al día siguiente.

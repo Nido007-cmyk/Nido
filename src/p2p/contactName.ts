@@ -20,5 +20,15 @@
  * pasa a minúsculas y normaliza Unicode (NFC).
  */
 export function normalizeContactName(name: string): string {
-  return name.trim().toLowerCase().normalize("NFC");
+  // P5 (auditoría 2026-10-10): NFKC pliega formas de compatibilidad (ancho
+  // completo, ligaduras) y se descartan los caracteres invisibles, para que
+  // "Beto" + espacio de ancho cero colisione con "Beto". Los homoglifos
+  // entre alfabetos (cirílico/latino) NO se pliegan aquí: la huella es la
+  // identidad, el nombre solo es una etiqueta.
+  return name
+    .normalize("NFKC")
+    .replace(/[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g, "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFC");
 }

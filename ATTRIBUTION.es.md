@@ -22,8 +22,10 @@ El aviso de copyright y el texto de la licencia MIT se conservan en `LICENSE`.
 - `allowBackup=false`: fuera del backup de Google
 - Eliminado: buscador de modelos en Hugging Face (filtraba intereses por red),
   telemetría persistente, pantallas de desarrollo
-- Voz del sistema reemplazada por inferencia on-device (whisper.cpp)
-- Español (`src/i18n/locales/es.json`) como idioma principal
+- La entrada de voz usa el SpeechRecognizer integrado de Android con la
+  opción de preferir offline (no es un modelo incluido: la disponibilidad y
+  el comportamiento sin conexión dependen del servicio del dispositivo)
+- Idiomas español y portugués además del inglés (`src/i18n/locales/`)
 
 ## Licencias de modelos y datos (si se distribuyen los assets de BOAR)
 - Qwen2.5 / Gemma: Apache-2.0

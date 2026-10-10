@@ -81,7 +81,7 @@ const ACT_PATTERNS: RegExp[] = [
   /analiza (el |este )?archivo/i,
   /\bcalculate\b/i,
   /\bconvert\b/i,
-  /\bcall\b/i,
+  /^\s*(please |can you |could you )?call\b/i,
   // Fase D: análisis de datos.
   /analiza (mis |los |estos )?datos/i,
   /analiza (el |este )?(csv|excel|archivo)/i,
@@ -94,6 +94,46 @@ const ACT_PATTERNS: RegExp[] = [
   /empar[ée]jame con/i,
   /escanea (el |este )?qr/i,
   /mi c[óo]digo (de emparejamiento|nido)/i,
+  // F1 (auditoría 2026-10-10): frases habituales que no llegaban a las
+  // herramientas. Mensajería NIDO.
+  /\b(manda|mandar|env[ií]a|enviar|m[aá]ndale|env[ií]ale)\b.{0,40}\bmensaje\b/i,
+  /\bdile a\b/i,
+  /\b(lee|leer|revisa|mu[eé]strame|tengo)\b.{0,20}\b(mensajes|bandeja)\b/i,
+  /\btareas (pendientes|remotas)\b/i,
+  /\b(aprueba|rechaza) la tarea\b/i,
+  /\bemparejar\b/i,
+  /\bc[óo]digo qr\b/i,
+  // Notas, recordatorios y alarmas.
+  /\b(qu[eé]|cu[aá]les) notas\b/i,
+  /\bapunta que\b/i,
+  /\b(pon|ponme|crea|cr[eé]ame|agrega|programa)\b.{0,12}\b(recordatorio|alarma)\b/i,
+  /\bdespi[eé]rtame\b/i,
+  // Conversión de unidades y cálculo sin verbo ("10 km en millas", "2+2").
+  /\b\d+(?:[.,]\d+)?\s*(km|kil[oó]metros?|millas?|kg|kilos?|libras?|lb|grados|celsius|fahrenheit|litros?|galones?|metros?|pies|cm|pulgadas?|miles?|pounds?|feet|inch(?:es)?)\b.{0,14}\b(a|en|to|in)\b/i,
+  /\bcu[aá]nt[oa]s? .{1,20} (son|es|hay en)\b.{0,6}\d/i,
+  /^\s*\(?\d[\d\s().]*[+\-*/^][\d\s+\-*/().%^]*\d\)?\s*[=?]*\s*$/,
+  /\b\d+(?:[.,]\d+)?\s*% (de|of)\b/i,
+  /\busa la (habilidad|skill)\b/i,
+  /analiza (esta|la) tabla/i,
+  // Inglés.
+  /\bsend (a |an )?(message|text|sms)\b/i,
+  /\b(read|check) my (inbox|messages)\b/i,
+  /\b(save|add|write) a note\b/i,
+  /\bset (a |an )?(reminder|alarm)\b/i,
+  /\badd (a |an )?(event|appointment)\b/i,
+  /\bmy calendar\b/i,
+  /\bin my contacts\b/i,
+  /\bopen https?:/i,
+  /\bwhat(?:'s| is) (the date|today's date)\b/i,
+  /\bwhat(?:'s| is) \d/i,
+  /\bpair(ing)? (with|code)\b/i,
+  // Portugués.
+  /\blembr[ae]-me\b/i,
+  /\bque horas s[aã]o\b/i,
+  /\b(envia|enviar|manda)\b.{0,30}\bmensagem\b/i,
+  /\bguarda (uma )?nota\b/i,
+  /\bquanto [eé]\s/i,
+  /\bconverte\b/i,
 ];
 
 /**

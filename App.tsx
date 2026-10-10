@@ -316,7 +316,7 @@ function AppContent() {
         <View style={styles.centered}>
           <ActivityIndicator color={colors.emerald[400]} size="large" />
           <Text style={[styles.lockSubtitle, { color: colors.text.secondary }]}>
-            {t("wipeRecovery.recovering")}
+            {t("modelSetupScreen.wipeRecovery.recovering")}
           </Text>
         </View>
       )}
@@ -324,10 +324,10 @@ function AppContent() {
       {screen === "wipe-blocked" && (
         <View style={styles.centered}>
           <Text style={[styles.lockTitle, { color: colors.text.primary }]}>
-            {t("wipeRecovery.blockedTitle")}
+            {t("modelSetupScreen.wipeRecovery.blockedTitle")}
           </Text>
           <Text style={[styles.lockSubtitle, { color: colors.text.secondary }]}>
-            {t("wipeRecovery.blockedBody")}
+            {t("modelSetupScreen.wipeRecovery.blockedBody")}
           </Text>
           {wipeError && (
             <Text style={[styles.lockWarning, { color: colors.crimson[400] }]}>{wipeError}</Text>
@@ -336,7 +336,7 @@ function AppContent() {
             onPress={runStartupGate}
             style={[styles.lockButton, { backgroundColor: colors.emerald[500] }]}
           >
-            <Text style={styles.lockButtonText}>{t("wipeRecovery.retry")}</Text>
+            <Text style={styles.lockButtonText}>{t("modelSetupScreen.wipeRecovery.retry")}</Text>
           </Pressable>
         </View>
       )}
@@ -345,10 +345,10 @@ function AppContent() {
       {screen === "startup-error" && (
         <View style={styles.centered}>
           <Text style={[styles.lockTitle, { color: colors.text.primary }]}>
-            {t("startupError.title")}
+            {t("modelSetupScreen.startupError.title")}
           </Text>
           <Text style={[styles.lockSubtitle, { color: colors.text.secondary }]}>
-            {t("startupError.body")}
+            {t("modelSetupScreen.startupError.body")}
           </Text>
           {wipeError && (
             <Text style={[styles.lockWarning, { color: colors.crimson[400] }]}>{wipeError}</Text>
@@ -357,7 +357,7 @@ function AppContent() {
             onPress={runStartupGate}
             style={[styles.lockButton, { backgroundColor: colors.emerald[500] }]}
           >
-            <Text style={styles.lockButtonText}>{t("startupError.retry")}</Text>
+            <Text style={styles.lockButtonText}>{t("modelSetupScreen.startupError.retry")}</Text>
           </Pressable>
         </View>
       )}

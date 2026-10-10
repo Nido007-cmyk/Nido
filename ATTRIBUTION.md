@@ -22,8 +22,10 @@ The copyright notice and the MIT license text are preserved in `LICENSE`.
 - `allowBackup=false`: out of Google backup
 - Removed: Hugging Face model browser (leaked interests over the network),
   persistent telemetry, development screens
-- System voice replaced with on-device inference (whisper.cpp)
-- Spanish (`src/i18n/locales/es.json`) as the primary language
+- Voice input uses Android's built-in SpeechRecognizer with the
+  prefer-offline flag (not a bundled model: availability and offline
+  behaviour depend on the device's recognition service)
+- Spanish and Portuguese locales alongside English (`src/i18n/locales/`)
 
 ## Model and data licenses (if BOAR assets are distributed)
 - Qwen2.5 / Gemma: Apache-2.0

@@ -64,16 +64,19 @@ describe("backup.ts — validación (BK-4)", () => {
     // Ahora falla por manifest, no por header (el header ya no se verifica).
   });
 
-  it("acepta archivo con magic header válido", async () => {
+  it("A5: rechaza un archivo que no se pudo verificar por ninguna vía", async () => {
+    // Sin manifest, y la apertura de prueba no puede completarse en este
+    // entorno (módulos nativos simulados). Antes este caso se ACEPTABA
+    // (fail-open): cualquier archivo de más de 1 KB pasaba la validación y
+    // podía sobrescribir la base viva.
     (FileSystem.getInfoAsync as any).mockImplementation(async (uri: string) => {
-      // El manifest no existe en este test (backup viejo sin manifest).
       if (uri.endsWith(".manifest.json")) return { exists: false };
       return { exists: true, size: 5000 };
     });
     (FileSystem.readAsStringAsync as any).mockResolvedValue("SQLite format 3\0 resto...");
-    const r = await validateBackup("/valido.db");
-    expect(r.valid).toBe(true);
-    expect(r.sizeBytes).toBe(5000);
+    const r = await validateBackup("/sin-verificar.db");
+    expect(r.valid).toBe(false);
+    expect(r.reason).toContain("verificar");
   });
 });
 
@@ -82,5 +85,25 @@ describe("backup.ts — exportDatabaseKey", () => {
     const key = await exportDatabaseKey();
     expect(key).toBe("ab".repeat(32));
     expect(key.length).toBe(64);
+  });
+});
+
+describe("backup.ts — nombre del backup de conocimiento (A2)", () => {
+  it("createBackup, el bundle y la restauración usan el mismo nombre", async () => {
+    const { knowledgeBackupUriFor, createPortableBundle } = await import("./backup");
+    expect(knowledgeBackupUriFor("/mock/nido-backup-X.db")).toBe("/mock/nido-backup-X.knowledge.db");
+    expect(knowledgeBackupUriFor("/mock/sin-extension")).toBe("/mock/sin-extension.knowledge.db");
+
+    vi.clearAllMocks();
+    (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: true, size: 5000 });
+    (FileSystem.readAsStringAsync as any).mockImplementation(async (uri: string) => {
+      if (uri.endsWith(".manifest.json")) return JSON.stringify({ sha256: "aa", dekFingerprint: "bb" });
+      if (uri === "/mock/nido-backup-X.knowledge.db") return "KNOWLEDGE_BASE64";
+      return "DB_BASE64";
+    });
+    await createPortableBundle("/mock/nido-backup-X.db");
+    const written = (FileSystem.writeAsStringAsync as any).mock.calls[0];
+    expect(written[0]).toBe("/mock/nido-backup-X.nidobackup.json");
+    expect(JSON.parse(written[1]).knowledge).toBe("KNOWLEDGE_BASE64");
   });
 });

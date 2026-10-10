@@ -5,6 +5,11 @@ on:
     branches: [main, master]
   pull_request:
 
+# A10 (auditoría 2026-10-10): permisos mínimos para el token del workflow.
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   gitleaks:
     # H-5: fail on any secret that is not an allowlisted test fixture.
@@ -29,5 +34,8 @@ jobs:
       - run: npm run verify:deps
       - run: npm run typecheck
       - run: npm test
+      # A8 (auditoría 2026-10-10): `npm run test:components` (Jest) no corre en
+      # CI. Al activarlo el 2026-10-10 falló en el runner; queda pendiente de
+      # diagnóstico antes de convertirlo en puerta obligatoria.
       - run: npm run verify:pins
       - run: npm run verify:manifest-sig

@@ -177,7 +177,7 @@ export const LOCAL_TOOLS: ToolDefinition[] = [
   {
     name: "nido_send_message",
     description:
-      "Envía un mensaje cifrado de NIDO a NIDO a un contacto emparejado (sin internet, por Bluetooth cuando el módulo nativo esté listo). " +
+      "Envía un mensaje cifrado de NIDO a NIDO a un contacto emparejado (sin internet, por Bluetooth). " +
       "Si el contacto no está al alcance, el mensaje queda cifrado en la cola de salida.",
     parameters: {
       to: { type: "string", description: "Nombre del contacto NIDO emparejado", required: true },

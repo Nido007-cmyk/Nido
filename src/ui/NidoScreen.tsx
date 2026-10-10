@@ -34,6 +34,7 @@ import { SendGuard } from "./sendGuard";
 import { NegotiationsTab } from "./NegotiationsTab";
 import { reconnectManager } from "../p2p/reconnectManager";
 import { PacksTab } from "./PacksTab";
+import { RemoteTasksCard } from "./RemoteTasksCard";
 
 const ERROR_RED = "#F87171";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
@@ -1203,7 +1204,8 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             ["contactos", t("nido.tabContacts")],
             ["enlace", t("nido.tabLink")],
             ["negociaciones", t("nido.tabNegotiations")],
-            ["packs", t("nido.tabPacks")],
+            // F2/U5: la pestaña Packs se oculta hasta que el envío y la
+            // recepción estén conectados (hoy el botón no hace nada).
           ] as Array<[Tab, string]>
         ).map(([key, label]) => (
           <Pressable
@@ -1217,6 +1219,9 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           </Pressable>
         ))}
       </View>
+
+      {/* U2: tareas remotas pendientes de decisión, visibles en cualquier pestaña. */}
+      <RemoteTasksCard onNotice={setNotice} />
 
       {tab === "chats" && (
         <ScrollView contentContainerStyle={styles.body}>
@@ -1410,6 +1415,36 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
                   >
                     <Text style={[styles.smallBtnText, styles.revokeBtnText]}>
                       {t("nido.revoke")}
+                    </Text>
+                  </Pressable>
+                  {/* U4: eliminar el contacto y su conversación. */}
+                  <Pressable
+                    onPress={async () => {
+                      const ok = await showSecureAlert({
+                        title: t("nido.deleteContactTitle", { name: c.name }),
+                        message: t("nido.deleteContactConfirm"),
+                        cancelLabel: t("common.cancel"),
+                        confirmLabel: t("common.delete"),
+                        cancelable: true,
+                      });
+                      if (ok) {
+                        try {
+                          await mRef.current.removeContact(c.pkHex);
+                          await loadContacts();
+                          setNotice(t("nido.contactDeleted", { name: c.name }));
+                        } catch (e) {
+                          setNotice(
+                            e instanceof Error ? e.message : t("nido.deleteContactFailed")
+                          );
+                        }
+                      }
+                    }}
+                    style={[styles.smallBtn, styles.revokeBtn]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("nido.deleteContactLabel", { name: c.name })}
+                  >
+                    <Text style={[styles.smallBtnText, styles.revokeBtnText]}>
+                      {t("common.delete")}
                     </Text>
                   </Pressable>
                 </View>
