@@ -34,5 +34,7 @@ jobs:
       - run: npm run verify:deps
       - run: npm run typecheck
       - run: npm test
+      # A8 (auditoría 2026-10-10): los tests de componentes (Jest) no corrían en CI.
+      - run: npm run test:components
       - run: npm run verify:pins
       - run: npm run verify:manifest-sig
