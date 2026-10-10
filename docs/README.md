@@ -28,3 +28,7 @@ Spanish translations mirror this tree under [`es/`](es/).
 [`internal/`](internal/) holds dated working documents: research, design
 reviews, audit logs and QA evidence. They are
 kept for the record and may be out of date.
+
+## Next steps
+
+- [Próximos pasos](es/PROXIMOS_PASOS.md) — living list of what is pending, in Spanish.
