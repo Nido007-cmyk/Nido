@@ -23,8 +23,3 @@ Spanish translations mirror this tree under [`es/`](es/).
 - [Android build](ANDROID_BUILD.md) · [signing](SIGNING.md)
 - [Device evaluation](DEVICE_EVALUATION.md) · [local evaluation](EVAL_LOCAL.md)
 - [Roadmap](ROADMAP.md) · [product roadmap](NIDO_PRODUCT_ROADMAP.md)
-
-## Internal working notes
-[`internal/`](internal/) holds dated working documents: research, design
-reviews, audit logs and QA evidence. They are
-kept for the record and may be out of date.
