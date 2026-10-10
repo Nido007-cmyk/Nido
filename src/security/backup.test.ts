@@ -84,3 +84,23 @@ describe("backup.ts — exportDatabaseKey", () => {
     expect(key.length).toBe(64);
   });
 });
+
+describe("backup.ts — nombre del backup de conocimiento (A2)", () => {
+  it("createBackup, el bundle y la restauración usan el mismo nombre", async () => {
+    const { knowledgeBackupUriFor, createPortableBundle } = await import("./backup");
+    expect(knowledgeBackupUriFor("/mock/nido-backup-X.db")).toBe("/mock/nido-backup-X.knowledge.db");
+    expect(knowledgeBackupUriFor("/mock/sin-extension")).toBe("/mock/sin-extension.knowledge.db");
+
+    vi.clearAllMocks();
+    (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: true, size: 5000 });
+    (FileSystem.readAsStringAsync as any).mockImplementation(async (uri: string) => {
+      if (uri.endsWith(".manifest.json")) return JSON.stringify({ sha256: "aa", dekFingerprint: "bb" });
+      if (uri === "/mock/nido-backup-X.knowledge.db") return "KNOWLEDGE_BASE64";
+      return "DB_BASE64";
+    });
+    await createPortableBundle("/mock/nido-backup-X.db");
+    const written = (FileSystem.writeAsStringAsync as any).mock.calls[0];
+    expect(written[0]).toBe("/mock/nido-backup-X.nidobackup.json");
+    expect(JSON.parse(written[1]).knowledge).toBe("KNOWLEDGE_BASE64");
+  });
+});

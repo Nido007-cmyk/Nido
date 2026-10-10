@@ -39,6 +39,18 @@ function withReleaseSigning(config) {
       /(release \{\n(?:\s*\/\/.*\n)*\s*)signingConfig signingConfigs\.debug/,
       "$1signingConfig project.hasProperty('NIDO_UPLOAD_STORE_FILE') ? signingConfigs.release : signingConfigs.debug"
     );
+    // A9 (auditoría 2026-10-10): si la plantilla de Expo cambia y los
+    // reemplazos no encajan, fallar aquí. En silencio, el APK "release"
+    // saldría con firma debug.
+    if (
+      !gradle.includes("storeFile file(NIDO_UPLOAD_STORE_FILE)") ||
+      !gradle.includes("? signingConfigs.release : signingConfigs.debug")
+    ) {
+      throw new Error(
+        "withReleaseSigning: no se pudo inyectar la firma de release en build.gradle " +
+          "(¿cambió la plantilla de Expo?). Se aborta para no producir un APK con firma debug."
+      );
+    }
     config.modResults.contents = gradle;
     return config;
   });

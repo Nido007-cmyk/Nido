@@ -381,6 +381,18 @@ export function deriveSessionKeyV2(
   if (nonceA.length !== HANDSHAKE_NONCE_BYTES || nonceB.length !== HANDSHAKE_NONCE_BYTES) {
     throw new Error("Nonce de handshake inválido.");
   }
+  // P8 (auditoría 2026-10-10): un efímero de orden bajo (p. ej. todo ceros)
+  // produce un X25519 nulo, y la clave quedaría determinada solo por los
+  // nonces, que viajan en claro. Se comprueba el DH crudo (box.before le
+  // aplica HSalsa20, así que su salida nunca es cero). Sin salida temprana.
+  const rawDh = nacl.scalarMult(myEphemeralSecret, theirEphemeralPk);
+  let dhOr = 0;
+  for (let i = 0; i < rawDh.length; i++) dhOr |= rawDh[i];
+  rawDh.fill(0);
+  if (dhOr === 0) {
+    myEphemeralSecret.fill(0);
+    throw new Error("Clave efímera del peer inválida (secreto compartido nulo).");
+  }
   const shared = nacl.box.before(theirEphemeralPk, myEphemeralSecret);
   // El secreto efímero ya cumplió su único propósito (el DH): borrarlo
   // ahora cierra la ventana de forward-secrecy en memoria.

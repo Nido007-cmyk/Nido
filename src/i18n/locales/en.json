@@ -148,7 +148,8 @@
       "consequenceModels": "All downloaded models",
       "consequenceEmbeddings": "All knowledge base documents",
       "consequenceHistory": "All chats and summaries",
-      "confirmButton": "Delete all data"
+      "confirmButton": "Delete all data",
+      "confirm": "Confirm deleting all data"
     },
     "wipeRecovery": {
       "recovering": "Finishing interrupted data deletion…",
@@ -710,7 +711,14 @@
       "no-scheme": "it doesn't start with a valid scheme",
       "scheme-not-allowed": "its scheme isn't allowed",
       "unsafe-chars": "it contains unsafe characters"
-    }
+    },
+    "pairDisambiguationTitle": "Disambiguate pairing",
+    "pairAmbiguousAsk": "This code is for “{{name}}” (fingerprint {{fingerprint}}), but you already have {{count}} live contact(s) with that name under a DIFFERENT identity: {{candidates}}. A name is not an identity — I cannot assume this is the same person.\n\nTell me explicitly (in chat):\n• “replace” — the same person with a new device: retire the old identity everywhere (destructive);\n• “different person” — a different person: give me a unique name for the new contact;\n• “cancel” — do nothing.\n\nIf you don't choose, I cancel. Nothing has been paired yet.",
+    "pairReplaceConfirmMessage": "REPLACE the identity of “{{name}}”?\nFingerprint: {{fingerprint}}\n\nThis retires the old identity EVERYWHERE: its routes, sessions and pending messages die, and its pending outbox is marked failed. Old messages stay readable. This cannot be undone. Confirm only if you verified this code in person.",
+    "pairDifferentPersonConfirmMessage": "Pair “{{name}}” as a DIFFERENT PERSON named “{{newName}}”?\nFingerprint: {{fingerprint}}\n\nBoth identities stay live. Confirm only if you scanned this code in person.",
+    "pairCancelled": "Pairing cancelled — nothing was written.",
+    "pairInvalidChoice": "Invalid disambiguation “{{choice}}”: use replace, different_person or cancel.",
+    "pairBindingWasRetired": "Note: this identity was previously paired as “{{name}}” and later retired. Confirming will make it live again."
   },
   "downloadErrors": {
     "checksumMismatch": "The integrity check failed (SHA-256 mismatch), so the file was deleted. Retrying downloads it again from the start.",

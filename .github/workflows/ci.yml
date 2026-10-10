@@ -5,6 +5,11 @@ on:
     branches: [main, master]
   pull_request:
 
+# A10 (auditoría 2026-10-10): permisos mínimos para el token del workflow.
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   gitleaks:
     # H-5: fail on any secret that is not an allowlisted test fixture.

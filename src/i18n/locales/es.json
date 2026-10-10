@@ -329,7 +329,8 @@
       "consequenceModels": "Todos los modelos descargados",
       "consequencesHeader": "Esto eliminará:",
       "subtitle": "Esta acción es inmediata, permanente y no se puede deshacer.",
-      "title": "Confirmar restablecimiento"
+      "title": "Confirmar restablecimiento",
+      "confirm": "Confirmar el borrado de todos los datos"
     },
     "wipeRecovery": {
       "recovering": "Terminando el borrado de datos interrumpido…",
@@ -710,7 +711,14 @@
       "no-scheme": "no empieza con un esquema válido",
       "scheme-not-allowed": "su esquema no está permitido",
       "unsafe-chars": "contiene caracteres inseguros"
-    }
+    },
+    "pairDisambiguationTitle": "Aclarar emparejamiento",
+    "pairAmbiguousAsk": "Este código es de «{{name}}» (huella {{fingerprint}}), pero ya tienes {{count}} contacto(s) activo(s) con ese nombre bajo una identidad DISTINTA: {{candidates}}. Un nombre no es una identidad: no puedo asumir que es la misma persona.\n\nDime explícitamente (en el chat):\n• «replace» — la misma persona con un dispositivo nuevo: retira la identidad anterior en todas partes (destructivo);\n• «different person» — otra persona: dame un nombre único para el contacto nuevo;\n• «cancel» — no hacer nada.\n\nSi no eliges, cancelo. Todavía no se ha emparejado nada.",
+    "pairReplaceConfirmMessage": "¿REEMPLAZAR la identidad de «{{name}}»?\nHuella: {{fingerprint}}\n\nEsto retira la identidad anterior EN TODAS PARTES: sus rutas, sesiones y mensajes pendientes se pierden, y su bandeja de salida pendiente se marca como fallida. Los mensajes antiguos siguen siendo legibles. No se puede deshacer. Confirma solo si verificaste este código en persona.",
+    "pairDifferentPersonConfirmMessage": "¿Emparejar a «{{name}}» como una PERSONA DISTINTA llamada «{{newName}}»?\nHuella: {{fingerprint}}\n\nAmbas identidades siguen activas. Confirma solo si escaneaste este código en persona.",
+    "pairCancelled": "Emparejamiento cancelado: no se escribió nada.",
+    "pairInvalidChoice": "Opción «{{choice}}» no válida: usa replace, different_person o cancel.",
+    "pairBindingWasRetired": "Nota: esta identidad estuvo emparejada antes como «{{name}}» y luego se retiró. Si confirmas, volverá a estar activa."
   },
   "downloadErrors": {
     "checksumMismatch": "La verificación de integridad falló (SHA-256 no coincide), así que el archivo fue eliminado. Reintentarlo lo descarga de nuevo desde el principio.",

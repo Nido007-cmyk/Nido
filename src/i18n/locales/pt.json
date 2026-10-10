@@ -11,7 +11,8 @@
     "confirm": "Confirmar",
     "yes": "Sim",
     "no": "Não",
-    "delete": "Apagar"
+    "delete": "Apagar",
+    "deny": "Negar"
   },
   "time": {
     "justNow": "agora mesmo",
@@ -147,7 +148,8 @@
       "consequenceModels": "Todos os modelos baixados",
       "consequenceEmbeddings": "Todos os documentos da base de conhecimento",
       "consequenceHistory": "Todas as conversas e resumos",
-      "confirmButton": "Excluir todos os dados"
+      "confirmButton": "Excluir todos os dados",
+      "confirm": "Confirmar a exclusão de todos os dados"
     },
     "wipeRecovery": {
       "recovering": "A concluir a eliminação de dados interrompida…",
@@ -671,7 +673,9 @@
     "connecting": "Conectando…",
     "noNearbyForPaired": "Nenhum dispositivo próximo encontrado. Verifique se o Bluetooth está ligado.",
     "pairedNotFound": "Não foi possível conectar a {{name}}. Verifique se o outro tablet tem o NIDO aberto.",
-    "waitingForPeer": "Aguardando {{name}} conectar. Mantenha o NIDO aberto nesta tela."
+    "waitingForPeer": "Aguardando {{name}} conectar. Mantenha o NIDO aberto nesta tela.",
+    "troubleshootTitle": "Problemas para conectar?",
+    "troubleshootBody": "Se não conectar, tente nesta ordem:\n\n1. Reinicie os dois tablets.\n2. Desligue o WiFi nos dois (o WiFi interfere no Bluetooth).\n3. Em Configurações do Android → Bluetooth, emparelhe os tablets entre si.\n4. Abra o NIDO e conecte por aqui.\n5. Se desconectar em segundo plano: Configurações → Apps → NIDO → Bateria → Sem restrições."
   },
   "notifications": {
     "reminderChannel": "Lembretes do NIDO",
@@ -707,7 +711,14 @@
       "no-scheme": "não começa com um esquema válido",
       "scheme-not-allowed": "seu esquema não é permitido",
       "unsafe-chars": "contém caracteres inseguros"
-    }
+    },
+    "pairDisambiguationTitle": "Esclarecer emparelhamento",
+    "pairAmbiguousAsk": "Este código é de “{{name}}” (impressão digital {{fingerprint}}), mas você já tem {{count}} contato(s) ativo(s) com esse nome sob uma identidade DIFERENTE: {{candidates}}. Um nome não é uma identidade: não posso presumir que é a mesma pessoa.\n\nDiga explicitamente (no chat):\n• “replace” — a mesma pessoa com um dispositivo novo: retira a identidade antiga em todos os lugares (destrutivo);\n• “different person” — outra pessoa: dê um nome único para o novo contato;\n• “cancel” — não fazer nada.\n\nSe você não escolher, eu cancelo. Nada foi emparelhado ainda.",
+    "pairReplaceConfirmMessage": "SUBSTITUIR a identidade de “{{name}}”?\nImpressão digital: {{fingerprint}}\n\nIsso retira a identidade antiga EM TODOS OS LUGARES: suas rotas, sessões e mensagens pendentes são perdidas, e a caixa de saída pendente é marcada como falha. As mensagens antigas continuam legíveis. Não pode ser desfeito. Confirme apenas se verificou este código pessoalmente.",
+    "pairDifferentPersonConfirmMessage": "Emparelhar “{{name}}” como uma PESSOA DIFERENTE chamada “{{newName}}”?\nImpressão digital: {{fingerprint}}\n\nAmbas as identidades continuam ativas. Confirme apenas se escaneou este código pessoalmente.",
+    "pairCancelled": "Emparelhamento cancelado: nada foi gravado.",
+    "pairInvalidChoice": "Opção “{{choice}}” inválida: use replace, different_person ou cancel.",
+    "pairBindingWasRetired": "Nota: esta identidade já foi emparelhada como “{{name}}” e depois retirada. Se confirmar, ela voltará a ficar ativa."
   },
   "downloadErrors": {
     "checksumMismatch": "A verificação de integridade falhou (SHA-256 não confere), então o arquivo foi excluído. Tentar de novo baixa tudo desde o início.",

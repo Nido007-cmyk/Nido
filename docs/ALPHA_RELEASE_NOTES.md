@@ -1,4 +1,4 @@
-# NIDO Alpha — Release Notes (Draft)
+# NIDO Alpha — Release Notes
 
 ## What is this?
 
@@ -24,8 +24,8 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 
 - Ed25519 signatures and X25519 key exchange for P2P
 - SQLCipher for on-device encrypted storage
-- PBKDF2 for key derivation
-- Encrypted backups
+- A random 256-bit database key held in the Android Keystore (no password-based key derivation)
+- Backups that are a copy of the already-encrypted database; the key is exported separately, in plain hex, and a backup can currently be restored only on the installation that created it
 
 These implementations have not been independently reviewed. **Do not rely on NIDO for high-stakes secrets yet.** We are building in the open so the design can be scrutinized.
 

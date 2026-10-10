@@ -92,7 +92,10 @@ function canonical(v: unknown): string {
 function sortKeys(v: unknown): unknown {
   if (Array.isArray(v)) return v.map(sortKeys);
   if (v !== null && typeof v === "object") {
-    const out: Record<string, unknown> = {};
+    // P9 (auditoría 2026-10-10): objeto sin prototipo. Con `{}`, asignar la
+    // clave "__proto__" cambiaba el prototipo en vez de crear la propiedad,
+    // JSON.stringify la omitía y ese contenido quedaba fuera de la firma.
+    const out: Record<string, unknown> = Object.create(null);
     for (const k of Object.keys(v).sort()) {
       out[k] = sortKeys((v as Record<string, unknown>)[k]);
     }

@@ -18,6 +18,22 @@
 
 import { fromHex, toHex } from "./crypto";
 
+/**
+ * P5 (auditoría 2026-10-10): caracteres que un nombre de contacto no puede
+ * llevar. El nombre se muestra en diálogos de confirmación y entra al
+ * contexto del agente, así que no puede contener saltos de línea ni otros
+ * controles (inyección), controles bidireccionales ni espacios de ancho
+ * cero (suplantación visual), ni "<" / ">" (etiquetas del prompt).
+ * U+200D (ZWJ) se permite: lo usan los emoji compuestos.
+ */
+const UNSAFE_NAME_CHARS =
+  /[\u0000-\u001f\u007f-\u009f\u200b\u200c\u200e\u200f\u202a-\u202e\u2060-\u2069\ufeff<>]/;
+
+/** true si el nombre es seguro para mostrarse y usarse como etiqueta. */
+export function isSafeContactName(name: string): boolean {
+  return !UNSAFE_NAME_CHARS.test(name);
+}
+
 export interface PairingPayload {
   v: 1 | 2;
   app: "nido";
@@ -36,6 +52,7 @@ export interface PairingPayload {
 export function encodePairingPayload(name: string, publicKey: Uint8Array, signingPublicKey: Uint8Array): string {
   const clean = name.trim().slice(0, 40);
   if (!clean) throw new Error("Ponle un nombre a tu NIDO para emparejar.");
+  if (!isSafeContactName(clean)) throw new Error("El nombre de tu NIDO tiene caracteres no permitidos.");
   if (publicKey.length !== 32) throw new Error("Clave pública inválida.");
   if (signingPublicKey.length !== 32) throw new Error("Clave de firma inválida.");
   const payload: PairingPayload = {
@@ -69,6 +86,7 @@ export function decodePairingPayload(qrText: string): PairingPayload {
   const p = parsed as Record<string, unknown>;
   if ((p.v !== 1 && p.v !== 2) || p.app !== "nido") throw new Error("Versión de emparejamiento no soportada.");
   if (typeof p.name !== "string" || !p.name.trim()) throw new Error("El QR no trae un nombre válido.");
+  if (!isSafeContactName(p.name.trim())) throw new Error("El QR trae un nombre con caracteres no permitidos.");
   if (typeof p.pk !== "string") throw new Error("El QR no trae una clave válida.");
   let pk: Uint8Array;
   try {
@@ -77,6 +95,8 @@ export function decodePairingPayload(qrText: string): PairingPayload {
     throw new Error("La clave del QR no es válida.");
   }
   if (pk.length !== 32) throw new Error("La clave del QR no es válida.");
+  // P8: una clave todo-ceros no es una identidad (punto de orden bajo).
+  if (pk.every((b) => b === 0)) throw new Error("La clave del QR no es válida.");
   // v2 trae la clave de firma; v1 (legacy) no la trae.
   let spk: string | undefined;
   if (p.spk !== undefined) {
@@ -88,6 +108,7 @@ export function decodePairingPayload(qrText: string): PairingPayload {
       throw new Error("La clave de firma del QR no es válida.");
     }
     if (raw.length !== 32) throw new Error("La clave de firma del QR no es válida.");
+    if (raw.every((b) => b === 0)) throw new Error("La clave de firma del QR no es válida.");
     spk = toHex(raw);
   } else if (p.v === 2) {
     throw new Error("El QR v2 no trae clave de firma.");
