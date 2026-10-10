@@ -187,7 +187,7 @@ describe("A3: replay tras reinicio — la cache anti-replay sobrevive", () => {
     // --- "Proceso 1": handshake legítimo en dos fases.
     const t1 = makeTransportWithSharedCache();
     await t1.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "Beto", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "Beto", incoming: false } as never);
     await tick();
     const captured = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: MAC, base64: captured.b64 } as never);
@@ -209,7 +209,7 @@ describe("A3: replay tras reinicio — la cache anti-replay sobrevive", () => {
     const t2 = makeTransportWithSharedCache();
     await t2.startDiscovery(ev.events);
     // El atacante reinyecta el HELLO capturado en el proceso anterior.
-    f.emit("onConnected", { address: ATTACKER_MAC, name: "Atacante", incoming: true } as never);
+    f.emit("onConnected", { address: ATTACKER_MAC, name: "Atacante", incoming: false } as never);
     await tick();
     f.emit("onFrame", { address: ATTACKER_MAC, base64: captured.b64 } as never);
     await tick();
@@ -224,7 +224,7 @@ describe("A3: replay tras reinicio — la cache anti-replay sobrevive", () => {
   it("tras el reinicio, un handshake legítimo con nonce fresco sí funciona", async () => {
     const t1 = makeTransportWithSharedCache();
     await t1.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "Beto", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "Beto", incoming: false } as never);
     await tick();
     const old = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: MAC, base64: old.b64 } as never);
@@ -233,7 +233,7 @@ describe("A3: replay tras reinicio — la cache anti-replay sobrevive", () => {
 
     const t2 = makeTransportWithSharedCache();
     await t2.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "Beto", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "Beto", incoming: false } as never);
     await tick();
     const fresh = peerHello(toHex(generateEphemeral().publicKey));
     // Nuestro HELLO fresco ya salió con el onConnected de arriba.
@@ -267,7 +267,7 @@ describe("A4: transcript binding — un CONFIRM de otra sesión no sirve", () =>
   it("CONFIRM genuino de la sesión S1 reinyectado en el socket S2 → rechazado (pn no coincide)", async () => {
     await t.startDiscovery(ev.events);
     // Sesión S1 legítima y completa en MAC.
-    f.emit("onConnected", { address: MAC, name: "Beto", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "Beto", incoming: false } as never);
     await tick();
     const s1 = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: MAC, base64: s1.b64 } as never);
@@ -287,7 +287,7 @@ describe("A4: transcript binding — un CONFIRM de otra sesión no sirve", () =>
       0,
     );
     const S2 = "AA:BB:CC:DD:EE:01";
-    f.emit("onConnected", { address: S2, name: "Atacante", incoming: true } as never);
+    f.emit("onConnected", { address: S2, name: "Atacante", incoming: false } as never);
     await tick();
     const s2 = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: S2, base64: s2.b64 } as never);
@@ -324,7 +324,7 @@ describe("A8: límites del timestamp firmado", () => {
 
   async function phase1(mac: string, ts: number): Promise<void> {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: mac, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: mac, name: "X", incoming: false } as never);
     await tick();
     const ph = peerHello(toHex(generateEphemeral().publicKey), ts);
     f.emit("onFrame", { address: mac, base64: ph.b64 } as never);
@@ -370,7 +370,7 @@ describe("A8: límites del timestamp firmado", () => {
       buildHello(PEER_PK_HEX, ephHex, nonceHex, nowSec(), sigHex),
     );
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
     await tick();
     f.emit("onFrame", { address: MAC, base64: tampered } as never);
     await tick();
@@ -395,7 +395,7 @@ describe("A9: el peer reutiliza su propio nonce en otro socket → replay", () =
 
   it("segundo HELLO con el mismo nonce (peer con bug o malicioso) → rechazado; la sesión original intacta", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "Beto", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "Beto", incoming: false } as never);
     await tick();
     // Peer defectuoso: construye el HELLO una vez y lo envía por dos sockets.
     const ephHex = toHex(generateEphemeral().publicKey);
@@ -414,7 +414,7 @@ describe("A9: el peer reutiliza su propio nonce en otro socket → replay", () =
     expect(ev.handshakes).toHaveLength(1);
     // Socket 2: el MISMO HELLO (mismo nonce) → replay aunque la firma sea válida.
     const S2 = "AA:BB:CC:DD:EE:02";
-    f.emit("onConnected", { address: S2, name: "Beto-2", incoming: true } as never);
+    f.emit("onConnected", { address: S2, name: "Beto-2", incoming: false } as never);
     await tick();
     f.emit("onFrame", { address: S2, base64: dupHello } as never);
     await tick();

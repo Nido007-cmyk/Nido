@@ -427,7 +427,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
     mac: string = MAC,
   ): Promise<{ eph: string; myNonceHex: string; peerNonceHex: string }> {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: mac, name: "Teléfono de Beto", incoming: true } as never);
+    f.emit("onConnected", { address: mac, name: "Teléfono de Beto", incoming: false } as never);
     await tick();
     const eph = toHex(generateEphemeral().publicKey);
     const ph = peerHello(eph);
@@ -454,7 +454,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
 
   it("al conectar envía un HELLO v3 firmado con mi pk, efímera, nonce y ts", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
     await tick();
     expect(f.sent).toHaveLength(1);
     expect(f.sent[0].address).toBe(MAC);
@@ -472,7 +472,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
 
   it("INVARIANTE R4: HELLO válido sin CONFIRM jamás mueve la ruta", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "Teléfono de Beto", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "Teléfono de Beto", incoming: false } as never);
     await tick();
     const ph = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
@@ -512,7 +512,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
 
   it("CONFIRM con firma forjada → rechazado, sin ruta", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
     await tick();
     const ph = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
@@ -533,7 +533,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
 
   it("CONFIRM reflejado (mi propio CONFIRM devuelto) → rechazado por identidad", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
     await tick();
     const ph = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
@@ -549,7 +549,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
 
   it("CONFIRM que no cita mi nonce fresco (pn ajeno) → rechazado", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
     await tick();
     const ph = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
@@ -570,7 +570,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
 
   it("CONFIRM que no cita el nonce del peer de esta conexión (cn ajeno) → rechazado", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
     await tick();
     const ph = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
@@ -590,7 +590,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
 
   it("HELLO v2 → hard cut con mensaje de actualización", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
     await tick();
     const v2 = new TextEncoder().encode(
       JSON.stringify({
@@ -613,7 +613,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
 
   it("HELLO con ts fuera del margen → rechazado por frescura", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
     await tick();
     const stale = peerHello(toHex(generateEphemeral().publicKey), PEER_PK_HEX, nowSec() - 3600);
     f.emit("onFrame", { address: MAC, base64: stale.b64 } as never);
@@ -639,7 +639,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
 
   it("red-team: HELLO capturado (mismos bytes) en otra conexión → anti-replay lo rechaza", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "Teléfono de Beto", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "Teléfono de Beto", incoming: false } as never);
     await tick();
     // HELLO real del peer: viaja en claro por el aire y un atacante cercano puede capturarlo.
     const eph = toHex(generateEphemeral().publicKey);
@@ -654,7 +654,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
     await tick();
     expect(ev.handshakes).toHaveLength(1);
     // El atacante abre OTRA conexión (su propia MAC) y reinyecta el HELLO capturado.
-    f.emit("onConnected", { address: ATTACKER_MAC, name: "Atacante", incoming: true } as never);
+    f.emit("onConnected", { address: ATTACKER_MAC, name: "Atacante", incoming: false } as never);
     await tick();
     f.emit("onFrame", { address: ATTACKER_MAC, base64: captured.b64 } as never);
     await tick();
@@ -673,7 +673,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
     await completeHandshakeWithPeer();
     // Un HELLO NUEVO y genuino del peer (nonce fresco: solo el peer real
     // podría firmarlo) en otra MAC mientras la ruta está viva y reciente.
-    f.emit("onConnected", { address: ATTACKER_MAC, name: "Atacante", incoming: true } as never);
+    f.emit("onConnected", { address: ATTACKER_MAC, name: "Atacante", incoming: false } as never);
     await tick();
     const fresh = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: ATTACKER_MAC, base64: fresh.b64 } as never);
@@ -689,7 +689,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
 
   it("peer NO emparejado → se cierra la conexión y no hay handshake", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "Desconocido", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "Desconocido", incoming: false } as never);
     await tick();
     const otherPk = toHex(new Uint8Array(32).fill(9));
     const otherSign = generateSigningKeypair();
@@ -704,7 +704,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
 
   it("HELLO inválido → conexión cerrada sin handshake", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
     await tick();
     f.emit("onFrame", { address: MAC, base64: encodeBase64(new Uint8Array([9, 9])) } as never);
     await tick();
@@ -796,7 +796,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
 
   it("MITM: efímero sustituido tras la firma → conexión cerrada, sin handshake", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
     await tick();
     // El atacante reenvía el HELLO con SU efímero pero la firma original.
     f.emit("onFrame", {
@@ -812,7 +812,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
 
   it("firma forjada con otra clave → rechazada aunque el pk sea conocido", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
     await tick();
     f.emit("onFrame", {
       address: MAC,
@@ -827,7 +827,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
 
   it("HELLO con mi propia pk → rechazado", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
     await tick();
     const nonceHex = toHex(randomNonce(HANDSHAKE_NONCE_BYTES));
     const ephHex = toHex(generateEphemeral().publicKey);
@@ -863,7 +863,7 @@ describe("nativeTransport: handshake v3 + CONFIRM", () => {
     vi.useFakeTimers();
     try {
       await t.startDiscovery(ev.events);
-      f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+      f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
       await vi.advanceTimersByTimeAsync(50);
       const ph = peerHello(toHex(generateEphemeral().publicKey));
       f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
@@ -924,14 +924,14 @@ describe("nativeTransport: simultaneous dial (tie-break determinista)", () => {
   ): Promise<string> {
     await t.startDiscovery(ev.events);
     // Socket 1: fases HELLO.
-    f.emit("onConnected", { address: firstMac, name: "Beto-1", incoming: true } as never);
+    f.emit("onConnected", { address: firstMac, name: "Beto-1", incoming: false } as never);
     await tick();
     const ph1 = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: firstMac, base64: ph1.b64 } as never);
     await tick();
     const myHello1 = parseHello(decodeBase64(f.sent[0].base64));
     // Socket 2: fases HELLO.
-    f.emit("onConnected", { address: secondMac, name: "Beto-2", incoming: true } as never);
+    f.emit("onConnected", { address: secondMac, name: "Beto-2", incoming: false } as never);
     await tick();
     const ph2 = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: secondMac, base64: ph2.b64 } as never);
@@ -1018,7 +1018,7 @@ describe("R4: anti-replay persistente de HELLO (nonce claim atómico)", () => {
   /** Handshake legítimo entrante en dos fases; devuelve el HELLO exacto (capturable). */
   async function legitHandshake(fromMac: string = MAC): Promise<string> {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: fromMac, name: "Teléfono de Beto", incoming: true } as never);
+    f.emit("onConnected", { address: fromMac, name: "Teléfono de Beto", incoming: false } as never);
     await tick();
     const captured = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: fromMac, base64: captured.b64 } as never);
@@ -1035,7 +1035,7 @@ describe("R4: anti-replay persistente de HELLO (nonce claim atómico)", () => {
 
   /** El atacante abre su propia conexión RFCOMM y reinyecta bytes capturados. */
   async function replayFromAttacker(capturedB64: string) {
-    f.emit("onConnected", { address: ATTACKER_MAC, name: "Atacante", incoming: true } as never);
+    f.emit("onConnected", { address: ATTACKER_MAC, name: "Atacante", incoming: false } as never);
     await tick();
     f.emit("onFrame", { address: ATTACKER_MAC, base64: capturedB64 } as never);
     await tick();
@@ -1076,7 +1076,7 @@ describe("R4: anti-replay persistente de HELLO (nonce claim atómico)", () => {
     f.emit("onDisconnected", { address: MAC } as never);
     await tick();
     // El peer real vuelve con un HELLO nuevo: nonce fresco, firma válida.
-    f.emit("onConnected", { address: MAC, name: "Teléfono de Beto", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "Teléfono de Beto", incoming: false } as never);
     await tick();
     const ph = peerHello(toHex(generateEphemeral().publicKey));
     // Nuestro segundo HELLO ya salió con el onConnected de arriba.
@@ -1098,7 +1098,7 @@ describe("R4: anti-replay persistente de HELLO (nonce claim atómico)", () => {
     const first = await legitHandshake();
     f.emit("onDisconnected", { address: MAC } as never);
     await tick();
-    f.emit("onConnected", { address: MAC, name: "Teléfono de Beto", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "Teléfono de Beto", incoming: false } as never);
     await tick();
     const ph = peerHello(toHex(generateEphemeral().publicKey));
     // Nuestro segundo HELLO ya salió con el onConnected de arriba.
@@ -1148,7 +1148,7 @@ describe("R4: anti-replay persistente de HELLO (nonce claim atómico)", () => {
     });
 
     // 1) Handshake legítimo con Beto en dos fases; el atacante captura el HELLO en el aire.
-    f.emit("onConnected", { address: MAC, name: "Teléfono de Beto", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "Teléfono de Beto", incoming: false } as never);
     await tick();
     const captured = peerHello(toHex(generateEphemeral().publicKey));
     f.emit("onFrame", { address: MAC, base64: captured.b64 } as never);
@@ -1189,7 +1189,7 @@ describe("R4: anti-replay persistente de HELLO (nonce claim atómico)", () => {
       PEER_PK_HEX.toLowerCase(),
       Date.now() - 11_000,
     );
-    f.emit("onConnected", { address: ATTACKER_MAC, name: "Atacante", incoming: true } as never);
+    f.emit("onConnected", { address: ATTACKER_MAC, name: "Atacante", incoming: false } as never);
     await tick();
     f.emit("onFrame", { address: ATTACKER_MAC, base64: captured.b64 } as never);
     await tick();
@@ -1436,7 +1436,7 @@ describe("R7: higiene del secreto efímero + carrera de handshake", () => {
 
   it("failHello borra el secreto efímero (no solo la ruta de éxito)", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
     await tick();
     expect(f.sent).toHaveLength(1); // nuestro HELLO salió
     const pend = pendingOf(t).get(MAC);
@@ -1457,7 +1457,7 @@ describe("R7: higiene del secreto efímero + carrera de handshake", () => {
 
   it("desconexión a mitad del handshake borra el secreto efímero", async () => {
     await t.startDiscovery(ev.events);
-    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: false } as never);
     await tick();
     const pend = pendingOf(t).get(MAC);
     expect(pend).toBeDefined();
@@ -1745,5 +1745,83 @@ describe("R1 FIX 2026-10-09: disconnect manual no bloquea reconexión", () => {
     await t.disconnect(pk);
     // SÍ debe marcar porque no hay MAC.
     expect((t as any).manualDisconnectPks.has(pk.toLowerCase())).toBe(true);
+  });
+});
+
+describe("P3: en una conexión entrante no se habla primero", () => {
+  let f: ReturnType<typeof makeFake>;
+  let ev: ReturnType<typeof makeEvents>;
+  let t: NidoBluetoothTransport;
+
+  beforeEach(() => {
+    f = makeFake();
+    ev = makeEvents();
+    t = makeTransport(f.fake);
+  });
+
+  it("al aceptar una conexión entrante no se envía ningún byte", async () => {
+    await t.startDiscovery(ev.events);
+    f.emit("onConnected", { address: MAC, name: "Quien sea", incoming: true } as never);
+    await tick();
+    expect(f.sent).toHaveLength(0);
+    await t.stopDiscovery();
+  });
+
+  it("un desconocido que envía un HELLO no recibe nada y se le cierra el socket", async () => {
+    await t.startDiscovery(ev.events);
+    f.emit("onConnected", { address: MAC, name: "Desconocido", incoming: true } as never);
+    await tick();
+    const otherPk = toHex(new Uint8Array(32).fill(9));
+    const ph = peerHello(toHex(generateEphemeral().publicKey), otherPk, nowSec(), generateSigningKeypair());
+    f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
+    await tick();
+    expect(f.sent).toHaveLength(0);
+    expect(f.disconnected).toContain(MAC);
+    expect(ev.handshakes).toHaveLength(0);
+    // Un desconocido no genera ruido en la interfaz.
+    expect(ev.errors).toHaveLength(0);
+    await t.stopDiscovery();
+  });
+
+  it("basura como primer frame: silencio y socket cerrado", async () => {
+    await t.startDiscovery(ev.events);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    await tick();
+    f.emit("onFrame", { address: MAC, base64: encodeBase64(new Uint8Array([1, 2, 3, 4])) } as never);
+    await tick();
+    expect(f.sent).toHaveLength(0);
+    expect(f.disconnected).toContain(MAC);
+    await t.stopDiscovery();
+  });
+
+  it("quien suplanta a un contacto con otra firma no recibe nuestro HELLO", async () => {
+    await t.startDiscovery(ev.events);
+    f.emit("onConnected", { address: MAC, name: "Impostor", incoming: true } as never);
+    await tick();
+    const ph = peerHello(toHex(generateEphemeral().publicKey), PEER_PK_HEX, nowSec(), generateSigningKeypair());
+    f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
+    await tick();
+    expect(f.sent).toHaveLength(0);
+    expect(f.disconnected).toContain(MAC);
+    // Aquí sí se avisa localmente: alguien dijo ser un contacto conocido.
+    expect(ev.errors.join(" ")).toMatch(/firma.*inválida|intermediario/i);
+    await t.stopDiscovery();
+  });
+
+  it("un contacto legítimo que llama completa el handshake", async () => {
+    await t.startDiscovery(ev.events);
+    f.emit("onConnected", { address: MAC, name: "Teléfono de Beto", incoming: true } as never);
+    await tick();
+    expect(f.sent).toHaveLength(0);
+    const ph = peerHello(toHex(generateEphemeral().publicKey));
+    f.emit("onFrame", { address: MAC, base64: ph.b64 } as never);
+    await tick(100);
+    // Tras verificar su HELLO: nuestro HELLO + nuestro CONFIRM.
+    expect(f.sent).toHaveLength(2);
+    const myHello = parseHello(decodeBase64(f.sent[0].base64));
+    f.emit("onFrame", { address: MAC, base64: peerConfirm(ph.nonceHex, myHello.nonce) } as never);
+    await tick();
+    expect(ev.handshakes).toHaveLength(1);
+    await t.stopDiscovery();
   });
 });

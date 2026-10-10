@@ -663,6 +663,18 @@ export class NidoBluetoothTransport implements P2PTransport {
     // stopDiscovery) separados de los de DESCUBRIMIENTO.
     this.linkUnsubs = [
       b.addListener("onConnected", (e) => {
+        // P3 (auditoría 2026-10-10): en una conexión ENTRANTE no hablamos
+        // primero. Antes se enviaba nuestro HELLO (clave pública de
+        // identidad + firma con hora) a cualquiera que abriera el socket:
+        // un desconocido podía detectar NIDO, obtener un identificador
+        // estable y una prueba firmada de presencia. Ahora se espera el
+        // HELLO del que llama y solo se responde si es un contacto con
+        // firma válida (ver onNativeFrame). Compatible en el cable: el que
+        // llama siempre envió su HELLO al conectar.
+        if (e.incoming) {
+          this.expectIncomingHello(e.address);
+          return;
+        }
         void this.beginHello(e.address).catch((err: unknown) =>
           this.events?.onError?.(
             `No se pudo iniciar el handshake: ${err instanceof Error ? err.message : String(err)}`,
@@ -881,6 +893,8 @@ export class NidoBluetoothTransport implements P2PTransport {
     this.linked = false;
     // FIX 2026-10-09: limpiar reconnects pendientes en shutdown terminal.
     for (const [, t] of this.reconnectTimers) clearTimeout(t);
+    for (const [, t] of this.incomingAwaitingHello) clearTimeout(t);
+    this.incomingAwaitingHello.clear();
     this.reconnectTimers.clear();
     this.reconnectAttempts.clear();
     this.manualDisconnectMacs.clear();
@@ -1248,6 +1262,89 @@ export class NidoBluetoothTransport implements P2PTransport {
     }
   }
 
+  /**
+   * P3: conexiones entrantes a la espera del HELLO del que llama. El valor
+   * es el temporizador que cierra el socket si ese HELLO no llega.
+   */
+  private incomingAwaitingHello = new Map<string, ReturnType<typeof setTimeout>>();
+
+  /** P3: registra una conexión entrante sin enviar nada por ella. */
+  private expectIncomingHello(address: string): void {
+    const mac = address.toUpperCase();
+    // Si el HELLO del peer se adelantó al evento (carrera nativa) el
+    // handshake ya está en curso o la ruta ya existe: nada que esperar.
+    if (this.pending.has(mac) || this.macToPk.has(mac)) return;
+    this.clearIncomingWait(mac);
+    const timer = setTimeout(() => {
+      this.incomingAwaitingHello.delete(mac);
+      if (this.pending.has(mac) || this.macToPk.has(mac)) return;
+      try {
+        this.bt().disconnect(mac).catch(() => {});
+      } catch {
+        // Sin enlace nativo: nada que desconectar.
+      }
+    }, HELLO_TIMEOUT_MS);
+    this.incomingAwaitingHello.set(mac, timer);
+  }
+
+  private clearIncomingWait(mac: string): void {
+    const timer = this.incomingAwaitingHello.get(mac);
+    if (timer !== undefined) clearTimeout(timer);
+    this.incomingAwaitingHello.delete(mac);
+  }
+
+  /**
+   * P3: decide si se responde al primer frame de alguien que nos llamó.
+   * Solo se admite un HELLO v3 bien formado, fresco, de un contacto
+   * emparejado y con firma válida. Cualquier otra cosa cierra el socket SIN
+   * enviar un solo byte: un desconocido no aprende ni nuestra identidad ni
+   * que aquí hay un NIDO. No consume el nonce (eso lo hace handleHello, que
+   * repite todas las comprobaciones de forma atómica).
+   */
+  private async admitIncomingHello(mac: string, body: Uint8Array): Promise<boolean> {
+    this.clearIncomingWait(mac);
+    let knownContactName: string | null = null;
+    let reason = "";
+    try {
+      const hello = parseHello(body);
+      const myPkHex = await this.ensureMyPk();
+      if (hello.pk === myPkHex) throw new Error("self");
+      const contact = await findContactByPk(hello.pk);
+      if (!contact) throw new Error("unknown");
+      knownContactName = contact.name;
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (Math.abs(nowSec - hello.ts) > HELLO_TS_SKEW_S) {
+        reason =
+          "Reloj del peer fuera del margen permitido (±10 min): revisa la hora de ambos dispositivos.";
+        throw new Error("skew");
+      }
+      if (!contact.sigPkHex) {
+        reason = `Contacto sin clave de firma (QR antiguo): pídele a ${contact.name} que te pase su QR de nuevo y re-escanea.`;
+        throw new Error("no-sig");
+      }
+      const msg = buildHelloSignMessageV3(hello.pk, hello.eph, hello.nonce, hello.ts);
+      if (!verifyDetached(msg, fromHex(hello.sig), fromHex(contact.sigPkHex))) {
+        reason = "Firma del handshake inválida: posible ataque de intermediario. Conexión rechazada.";
+        throw new Error("bad-sig");
+      }
+      return true;
+    } catch {
+      // Al peer: silencio y socket cerrado. Al usuario local solo se le
+      // avisa cuando quien llama dice ser un contacto conocido (dato útil
+      // para diagnosticar reloj o QR antiguo); un desconocido no genera
+      // ruido en la interfaz.
+      if (knownContactName && reason) {
+        this.events?.onError?.(`Handshake con ${mac}: ${reason}`);
+      }
+      try {
+        this.bt().disconnect(mac).catch(() => {});
+      } catch {
+        // Sin enlace nativo: nada que desconectar.
+      }
+      return false;
+    }
+  }
+
   private async onNativeFrame(address: string, b64: string): Promise<void> {
     const mac = address.toUpperCase();
     let body: Uint8Array;
@@ -1275,7 +1372,14 @@ export class NidoBluetoothTransport implements P2PTransport {
     // el frame se ignoraba silenciosamente y el handshake moría por
     // timeout en ambos lados. Si no hay pend, iniciar el handshake
     // ahora (beginHello es idempotente) y reprocesar el frame.
-    if (!pend) {
+    if (!pend && !this.macToPk.has(mac)) {
+      // P3: sin handshake propio en curso NI ruta establecida, este frame
+      // viene de alguien que nos llamó (las conexiones salientes registran
+      // su pendiente antes de conectar). No se revela nada hasta verificar
+      // que es un contacto. Con la ruta ya establecida el frame es tráfico
+      // normal y sigue hacia abajo.
+      const admitted = await this.admitIncomingHello(mac, body);
+      if (!admitted) return;
       try {
         await this.beginHello(mac);
       } catch {
@@ -1572,6 +1676,7 @@ export class NidoBluetoothTransport implements P2PTransport {
 
   private onNativeDisconnected(address: string): void {
     const mac = address.toUpperCase();
+    this.clearIncomingWait(mac);
     const pend = this.pending.get(mac);
     if (pend) {
       clearTimeout(pend.timer);
