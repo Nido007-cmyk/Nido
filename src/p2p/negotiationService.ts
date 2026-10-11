@@ -110,6 +110,7 @@ export type NegotiationEvent =
   | { type: "declined"; session: NegotiationSession; reason?: string }
   | { type: "expired"; session: NegotiationSession }
   | { type: "proposed"; session: NegotiationSession }
+  | { type: "deleted"; session: NegotiationSession }
   | { type: "ask_required"; session: NegotiationSession; taskId: string }
   | {
       type: "send_failed";
@@ -143,6 +144,13 @@ class NegotiationService {
    * frames entrantes es concurrente y hay awaits entre el chequeo y el set).
    */
   private inflightProposals = new Set<string>();
+  /**
+   * DELETE-NEGOTIATIONS 2026-10-10: IDs que el usuario borró a mano. Un
+   * reenvío tardío del mismo PROPOSE (mismos bytes tras expirar la ventana
+   * anti-replay) no debe resucitar la negociación borrada. Acotado.
+   */
+  private deletedIds = new Set<string>();
+  private static readonly MAX_DELETED_IDS = 1000;
   private handlers = new Set<NegotiationEventHandler>();
   private myPkHex: string | null = null;
   /**
@@ -645,7 +653,8 @@ class NegotiationService {
     // se ignora; un proponente legítimo usa un ID nuevo.
     if (
       this.sessions.has(negotiationId) ||
-      this.inflightProposals.has(negotiationId)
+      this.inflightProposals.has(negotiationId) ||
+      this.deletedIds.has(negotiationId)
     ) {
       return;
     }
@@ -835,6 +844,27 @@ class NegotiationService {
     session.state = "EXPIRED";
     session.updatedAt = Date.now();
     this.emit({ type: "expired", session });
+  }
+
+  /**
+   * DELETE-NEGOTIATIONS 2026-10-10: el usuario borra una negociación de su
+   * lista cuando quiera. Es LOCAL: no envía nada al peer (para avisar al otro
+   * lado está "Rechazar"). Respuestas posteriores del peer para ese ID se
+   * ignoran (no hay sesión) y un PROPOSE repetido con el mismo ID no la
+   * resucita. Devuelve false si no existe o si hay un envío en vuelo.
+   */
+  deleteSession(negotiationId: string): boolean {
+    const session = this.sessions.get(negotiationId);
+    if (!session) return false;
+    if (session.sending) return false;
+    this.sessions.delete(negotiationId);
+    this.deletedIds.add(negotiationId);
+    if (this.deletedIds.size > NegotiationService.MAX_DELETED_IDS) {
+      const oldest = this.deletedIds.values().next().value;
+      if (oldest !== undefined) this.deletedIds.delete(oldest);
+    }
+    this.emit({ type: "deleted", session });
+    return true;
   }
 
   /** Limpia sesiones en estado terminal (para la UI). */

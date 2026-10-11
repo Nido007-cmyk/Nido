@@ -380,7 +380,12 @@
     "outgoingWaiting": "Waiting for response",
     "activeTitle": "Active collaborations",
     "acceptedOn": "Accepted on {{date}}",
-    "proposePlaceholder": "What do you want to propose?"
+    "proposePlaceholder": "What do you want to propose?",
+    "deleteButton": "Delete",
+    "deleteTitle": "Delete this negotiation?",
+    "deleteBody": "It is only removed from this tablet. The other person is not notified; to let them know, use Decline before deleting.",
+    "deleteConfirm": "Delete",
+    "deleteBusy": "A response is being sent. Wait a moment and try again."
   },
   "chatHeader": {
     "openDrawer": "Open Navigation Drawer",

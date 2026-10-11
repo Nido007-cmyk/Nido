@@ -308,7 +308,12 @@
     "outgoingWaiting": "Esperando respuesta",
     "activeTitle": "Colaboraciones activas",
     "acceptedOn": "Aceptada el {{date}}",
-    "proposePlaceholder": "¿Qué quieres proponer?"
+    "proposePlaceholder": "¿Qué quieres proponer?",
+    "deleteButton": "Borrar",
+    "deleteTitle": "¿Borrar esta negociación?",
+    "deleteBody": "Se borra solo de esta tablet. La otra persona no recibe aviso; si quieres avisarle, usa Rechazar antes de borrar.",
+    "deleteConfirm": "Borrar",
+    "deleteBusy": "Se está enviando una respuesta. Espera un momento e inténtalo de nuevo."
   },
   "memorySettings": {
     "autoSummarizeLabel": "Resumen de contexto en segundo plano",

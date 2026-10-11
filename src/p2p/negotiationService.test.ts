@@ -500,6 +500,27 @@ describe("NegotiationService: routing y state machine", () => {
       negotiationService.listSessions().some((s) => s.negotiationId === "neg-r3c")
     ).toBe(false);
   });
+
+  it("DELETE-NEGOTIATIONS: el usuario puede borrar una negociación y no resucita", async () => {
+    const proposal = makeProposal();
+    const sign = () =>
+      signNegotiationMessage(aliceKeys.secretKey, alicePkHex, "PROPOSE", proposal.proposalId, proposal);
+    await negotiationService.handleEnvelope(makeEnvelope("PROPOSE", "neg-del", sign()) as any);
+    expect(negotiationService.listSessions().some((s) => s.negotiationId === "neg-del")).toBe(true);
+
+    events = [];
+    expect(negotiationService.deleteSession("neg-del")).toBe(true);
+    expect(negotiationService.listSessions().some((s) => s.negotiationId === "neg-del")).toBe(false);
+    expect(events.some((e) => e.type === "deleted")).toBe(true);
+
+    // Un PROPOSE repetido con el mismo ID (nonce nuevo) no la vuelve a crear.
+    await negotiationService.handleEnvelope(makeEnvelope("PROPOSE", "neg-del", sign()) as any);
+    expect(negotiationService.listSessions().some((s) => s.negotiationId === "neg-del")).toBe(false);
+  });
+
+  it("DELETE-NEGOTIATIONS: borrar un ID inexistente devuelve false", () => {
+    expect(negotiationService.deleteSession("neg-no-existe")).toBe(false);
+  });
 });
 
 describe("NEGOTIATION-INIT 2026-10-07: proposeTo", () => {

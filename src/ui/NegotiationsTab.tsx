@@ -13,7 +13,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
@@ -197,6 +197,41 @@ export function NegotiationsTab() {
   // activas justo cuando solo quedaban aceptadas (caso físico real).
   const acceptedSessions = sessions.filter((s) => s.state === "ACCEPTED");
 
+  // DELETE-NEGOTIATIONS 2026-10-10: borrar una negociación de la lista
+  // cuando el usuario decida. Local: no avisa al otro lado.
+  const handleDelete = useCallback(
+    (session: NegotiationSession) => {
+      Alert.alert(
+        t("negotiations.deleteTitle"),
+        t("negotiations.deleteBody"),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("negotiations.deleteConfirm"),
+            style: "destructive",
+            onPress: () => {
+              const ok = negotiationService.deleteSession(session.negotiationId);
+              if (!ok) Alert.alert(t("negotiations.deleteBusy"));
+              refresh();
+            },
+          },
+        ],
+      );
+    },
+    [refresh, t],
+  );
+
+  const renderDelete = (session: NegotiationSession) => (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel={t("negotiations.deleteButton")}
+      style={styles.deleteButton}
+      onPress={() => handleDelete(session)}
+    >
+      <Text style={styles.deleteButtonText}>{t("negotiations.deleteButton")}</Text>
+    </TouchableOpacity>
+  );
+
   const openPropose = useCallback(async () => {
     setProposeError(null);
     setDescription("");
@@ -328,10 +363,11 @@ export function NegotiationsTab() {
                 ? t("negotiations.outgoingSending")
                 : t("negotiations.outgoingWaiting")}
             </Text>
+            {renderDelete(session)}
           </View>
         ) : (
+          <View key={session.negotiationId}>
           <NegotiationCard
-            key={session.negotiationId}
             proposal={session.proposal}
             peerName={contactNames.get(session.peerPkHex.toLowerCase()) ?? session.peerPkHex.slice(0, 8)}
             peerPkShort={session.peerPkHex.slice(0, 16)}
@@ -346,6 +382,8 @@ export function NegotiationsTab() {
             }
             processing={processingId === session.negotiationId}
           />
+          {renderDelete(session)}
+          </View>
         )
       )}
       {/* TESTFIX-2026-10-08: colaboraciones activas. Evidencia física:
@@ -384,6 +422,7 @@ export function NegotiationsTab() {
                       {t("tasks.requestTask")}
                     </Text>
                   </TouchableOpacity>
+                  {renderDelete(session)}
                 </View>
               );
             })}
@@ -398,6 +437,7 @@ export function NegotiationsTab() {
             <Text style={styles.terminalText}>
               {session.state}: {session.proposal.taskDescription.slice(0, 50)}
             </Text>
+            {renderDelete(session)}
           </View>
         ))}
       {/* TESTFIX-2026-10-08 (Fix 7): aprobaciones de tareas pendientes. */}
@@ -545,6 +585,17 @@ const getStyles = (colors: Colors) =>
     terminalText: {
       color: colors.text.secondary,
       fontSize: 13,
+    },
+    deleteButton: {
+      alignSelf: "flex-end",
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      marginTop: 4,
+    },
+    deleteButtonText: {
+      color: colors.crimson[400],
+      fontSize: 13,
+      fontWeight: "600",
     },
     outgoingCard: {
       backgroundColor: colors.bg.card,
