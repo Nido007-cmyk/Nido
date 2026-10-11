@@ -30,6 +30,7 @@ import {
   type PackShareEvent,
 } from "../p2p/packShareService";
 import { knowledgePacks } from "../rag/packs";
+import { MAX_PACK_SIZE_BYTES } from "../p2p/packSharing";
 import type { CatalogModel } from "../models/manifest";
 
 interface PeerOption {
@@ -84,6 +85,26 @@ export function PacksTab({ peers, getPeerName }: Props) {
 
   const handleSharePack = useCallback(
     async (packId: string) => {
+      // PACKS-2026-10-10: decir la verdad. El envío de packs aún no está
+      // conectado en la app (el servicio no tiene identidad, envío ni
+      // proveedor de datos), y el máximo por pack es MAX_PACK_SIZE_BYTES.
+      // Antes, cualquier intento terminaba en "Verifica la conexión con el
+      // peer", aunque la conexión estuviera bien.
+      if (!packShareService.isReady()) {
+        Alert.alert(t("packshare.unavailableTitle"), t("packshare.unavailableMessage"));
+        return;
+      }
+      const pack = packs.find((p) => p.id === packId);
+      if (pack && pack.sizeBytes > MAX_PACK_SIZE_BYTES) {
+        Alert.alert(
+          t("packshare.tooLargeTitle"),
+          t("packshare.tooLargeMessage", {
+            size: Math.round(pack.sizeBytes / (1024 * 1024)),
+            max: Math.round(MAX_PACK_SIZE_BYTES / (1024 * 1024)),
+          }),
+        );
+        return;
+      }
       if (peers.length === 0) {
         Alert.alert(t("packshare.noPeersTitle"), t("packshare.noPeersMessage"));
         return;
@@ -102,7 +123,7 @@ export function PacksTab({ peers, getPeerName }: Props) {
         refresh();
       }
     },
-    [peers, t, refresh]
+    [peers, packs, t, refresh]
   );
 
   const handleAccept = useCallback(

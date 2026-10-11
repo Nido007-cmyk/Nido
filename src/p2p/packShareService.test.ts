@@ -314,3 +314,15 @@ describe("PackShareService: flujo completo", () => {
     expect(packShareService._getReceiveSession("sess-cancel")).toBeUndefined();
   });
 });
+
+describe("PACKS-2026-10-10: isReady refleja si el servicio está conectado", () => {
+  it("false sin identidad/envío/proveedor; true con los tres", () => {
+    packShareService._reset();
+    expect(packShareService.isReady()).toBe(false);
+    packShareService.setLocalIdentity("a".repeat(64));
+    packShareService.setSendFunction(async () => {});
+    expect(packShareService.isReady()).toBe(false);
+    packShareService.setDataProvider(async () => null);
+    expect(packShareService.isReady()).toBe(true);
+  });
+});
