@@ -16,6 +16,7 @@ import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { spacing, radii } from "./theme/spacing";
+import { getCorpusIndexStatus, onCorpusIndexStatus, type CorpusIndexStatus } from "../rag/corpusIndexStatus";
 
 function formatMB(bytes: number): string {
   if (bytes <= 0) return "0 MB";
@@ -72,6 +73,14 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
   const isCorpus = item.kind === "corpus";
   const present = row?.present ?? false;
   const effectivelyActive = isCorpus ? present : isActive;
+
+  // INDEX-FIX 2026-10-11: "en tu base de conocimiento" solo cuando el
+  // paquete está indexado de verdad, no con solo tener el archivo.
+  const [indexStatus, setIndexStatus] = useState<CorpusIndexStatus | null>(() =>
+    isCorpus ? getCorpusIndexStatus() : null
+  );
+  useEffect(() => (isCorpus ? onCorpusIndexStatus(setIndexStatus) : undefined), [isCorpus]);
+  const packIndex = indexStatus?.[item.id];
 
   const [deviceRam, setDeviceRam] = useState(0);
   useEffect(() => {
@@ -254,10 +263,29 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
             </Pressable>
           )}
 
-          {present && isCorpus && (
+          {present && isCorpus && packIndex && packIndex.indexed < packIndex.total && (
+            <View style={styles.activeCheckRow}>
+              <ActivityIndicator size="small" color={colors.emerald[400]} />
+              <Text style={styles.activeNote}>
+                {t("catalogItemCard.indexingNote", {
+                  done: packIndex.indexed.toLocaleString(),
+                  total: packIndex.total.toLocaleString(),
+                })}
+              </Text>
+            </View>
+          )}
+
+          {present && isCorpus && (!packIndex || packIndex.indexed >= packIndex.total) && (
             <View style={styles.activeCheckRow}>
               <NidoIcon name="check" size={14} color={colors.text.accentEmerald} />
-              <Text style={styles.activeNote}>{t("catalogItemCard.indexedNote")}</Text>
+              <Text style={styles.activeNote}>
+                {/* Paquetes que no pasan por el indexado (sqlite-pack, ya
+                    indexados de fábrica) o estado aún no comprobado en esta
+                    sesión: sin estado se dice solo "Descargado". */}
+                {packIndex || item.format === "sqlite-pack"
+                  ? t("catalogItemCard.indexedNote")
+                  : t("catalogItemCard.downloadedNote")}
+              </Text>
             </View>
           )}
 

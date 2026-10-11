@@ -22,13 +22,14 @@ import {
   refreshBriefingNotification,
   cancelReminderNotification,
 } from "../notify/notifications";
-import { upcomingEventsForBriefing, fmtDateTime } from "../agent/tools/handlers";
+import { upcomingEventsForBriefing } from "../agent/tools/handlers";
+import { formatDay } from "../agent/loop/toolRouter";
 
 /** Construye el texto del resumen diario. */
 async function buildBriefingBody(): Promise<string> {
   const parts: string[] = [];
   const now = new Date();
-  parts.push(`Hoy es ${fmtDateTime(now.toISOString()).split(",")[0]}.`);
+  parts.push(`Hoy es ${formatDay(now, "es")}.`);
 
   // TOOLS-AUDIT 2026-10-11: el resumen respeta el interruptor "Listar
   // eventos del calendario" de Acerca de (antes lo ignoraba) y nunca pide

@@ -54,6 +54,8 @@
     "loadingModel": "Carregando modelo…",
     "selectUse": "🔘 Selecionar e Usar",
     "indexedNote": "Na sua base de conhecimento",
+    "indexingNote": "Baixado · indexando para busca {{done}} / {{total}} (deixe o NIDO aberto)",
+    "downloadedNote": "Baixado",
     "activeNote": "Em uso no momento",
     "deleteAccessibility": "Excluir recurso do modelo",
     "badge": {
@@ -400,7 +402,7 @@
   "chatScreen": {
     "initializingCore": "Iniciando o NIDO…",
     "mountingWeights": "Carregando o modelo…",
-    "indexingKnowledgeBase": "Preparando seu conhecimento…",
+    "indexingKnowledgeBase": "Indexando conhecimento novo para busca offline…",
     "reasoningElapsed": "💭 Raciocinando… {{seconds}}s",
     "reasoningUnfinished": "O raciocínio não terminou antes do fim da resposta (interrompido ou sem tokens). Toque em 💭 para ler.",
     "showReasoning": "Mostrar raciocínio",

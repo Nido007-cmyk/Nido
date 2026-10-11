@@ -91,3 +91,24 @@ describe("matchSmallTalk — adversarial: lo mixto o con contenido NO es charla"
     expect(matchSmallTalk("hola ".repeat(30))).toBeNull();
   });
 });
+
+describe("matchSmallTalk — 0.1.8: devolver la pregunta con errores de corrector", () => {
+  it.each([
+    ["Been y tu ?", "es"],
+    ["Been y tu", "es"],
+    ["cansado y tú?", "es"],
+    ["más o menos, ¿y tú?", "es"],
+    ["tired, and you?", "en"],
+    ["mais ou menos e você", "pt"],
+  ])("%p → respuesta neutra", (text, lang) => {
+    const hit = matchSmallTalk(text as string, lang as "es" | "en" | "pt");
+    expect(hit).not.toBeNull();
+    expect(["andYou", "fineAndYou"]).toContain(hit!.kind);
+    expect(hit!.text).not.toMatch(/me alegra que est[eé]s bien/i);
+  });
+
+  it("no captura frases largas ni peticiones", () => {
+    expect(matchSmallTalk("hoy tuve un día muy largo en el trabajo y tú")).toBeNull();
+    expect(matchSmallTalk("y tú qué opinas de la fotosíntesis")).toBeNull();
+  });
+});

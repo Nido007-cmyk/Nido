@@ -43,6 +43,7 @@ import { fingerprint, fromHex } from "../../p2p/crypto";
 import { withPermissionRequest } from "../../p2p/permissionGuard";
 import type { ContactSearchResult } from "../loop/contactRouter";
 import { ensureRuntimePermission, filterContacts } from "./contactSearch";
+import { formatDay, formatTime } from "../loop/toolRouter";
 import {
   approveAgentTask,
   getPendingAgentTask,
@@ -142,29 +143,16 @@ export function fmtDateTime(iso: string | null): string {
   if (!iso) return "sin fecha";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("es-MX", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  // 0.1.8: sin Intl (CRASH-2026-10-10, ver reminderFormat.ts): en Hermes
+  // para Android toLocale*String con opciones pasa por JNI y puede cerrar
+  // la app. Solo getters de Date.
+  return `${formatDay(d, "es")}, ${formatTime(d, "es")}`;
 }
 
 /** Hora actual del dispositivo, en español. */
 const deviceTime: ToolHandler = async () => {
   const now = new Date();
-  const fecha = now.toLocaleDateString("es-MX", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  const hora = now.toLocaleTimeString("es-MX", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  return `Ahora es ${hora} del ${fecha} (hora del dispositivo).`;
+  return `Ahora son las ${formatTime(now, "es")} del ${formatDay(now, "es")} de ${now.getFullYear()} (hora del dispositivo).`;
 };
 
 const saveNoteHandler: ToolHandler = async (args) => {
@@ -527,12 +515,7 @@ export function buildToolHandlers(opts?: {
         "\n" +
         pending
           .map((task) => {
-            const when = new Date(task.receivedAt).toLocaleString("es-MX", {
-              day: "numeric",
-              month: "short",
-              hour: "2-digit",
-              minute: "2-digit",
-            });
+            const when = fmtDateTime(new Date(task.receivedAt).toISOString());
             return t("agentTasks.reviewItem", {
               id: task.id,
               sender: task.senderName,
@@ -575,12 +558,7 @@ export function buildToolHandlers(opts?: {
           message: t("agentConfirm.approveTaskMessage", {
             sender: `${task.senderName} (${task.senderPkShort}…)`,
             action: task.actionText,
-            when: new Date(task.receivedAt).toLocaleString("es-MX", {
-              day: "numeric",
-              month: "short",
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
+            when: fmtDateTime(new Date(task.receivedAt).toISOString()),
           }),
         };
       },
@@ -996,9 +974,7 @@ const nidoReadInboxHandler: ToolHandler = async () => {
     return unread
       .map((msg) => {
         const who = names.get(msg.peerPk.toLowerCase()) ?? "Contacto NIDO";
-        const when = new Date(msg.ts).toLocaleString("es-MX", {
-          day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-        });
+        const when = fmtDateTime(new Date(msg.ts).toISOString());
         // M-6: la tarea sigue "queued" (readInbox ya no la marca como leída);
         // se muestra como pendiente de decisión explícita.
         if (msg.type === "agent_task" && msg.status === "queued") {

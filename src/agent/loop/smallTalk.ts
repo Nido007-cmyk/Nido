@@ -37,7 +37,8 @@ export type SmallTalkKind =
   | "thanks"
   | "bye"
   | "ack"
-  | "whatsUp";
+  | "whatsUp"
+  | "andYou";
 
 export interface SmallTalkHit {
   kind: SmallTalkKind;
@@ -64,7 +65,7 @@ const NAME = "(?: nido)?";
 const HOW =
   "(?:(?:y )?(?:como|que tal) (?:estas|esta usted|te va|vas|andas|sigues)(?: tu| hoy)?|que tal|como te encuentras|how are you(?: doing| today)?|how are u|how r u|hows it going|how is it going|how you doing|how do you do|whats up|wassup|sup|como vai(?: voce)?|como voce esta|como vc ta|tudo bem|tudo bom|tudo certo|e ai)";
 const FINE =
-  "(?:(?:yo )?(?:estoy )?(?:muy |super |bastante )?(?:bien|genial|excelente|de maravilla|perfecto|feliz|contento|contenta)|todo bien|todo perfecto|aqui (?:bien|andando|todo bien)|mas o menos|(?:i am |im |i m )?(?:really |very |pretty )?(?:good|fine|great|ok|okay|well|alright|doing (?:good|well|great|fine))|not bad|all good|(?:eu )?(?:estou|to|tou) (?:muito )?bem|(?:muito )?bem|tudo (?:bem|bom|otimo|tranquilo|certo)|otimo|beleza)";
+  "(?:(?:yo )?(?:estoy )?(?:muy |super |bastante )?(?:bien|genial|excelente|de maravilla|perfecto|feliz|contento|contenta)|todo bien|todo perfecto|aqui (?:bien|andando|todo bien)|(?:i am |im |i m )?(?:really |very |pretty )?(?:good|fine|great|ok|okay|well|alright|doing (?:good|well|great|fine))|not bad|all good|(?:eu )?(?:estou|to|tou) (?:muito )?bem|(?:muito )?bem|tudo (?:bem|bom|otimo|tranquilo|certo)|otimo|beleza)";
 const THANKS_TAIL = "(?: (?:y )?(?:muchas )?gracias| thanks| thank you| thx| obrigad[oa])?";
 const AND_YOU =
   "(?:y tu(?: como estas| que tal| como te va)?|y usted|y vos|and you|and u|you|how about you|what about you|and yourself|and how are you|e voce(?: como esta| como vai)?|e vc|e tu)";
@@ -72,6 +73,10 @@ const AND_YOU =
 const RULES: Array<{ kind: SmallTalkKind; re: RegExp }> = [
   { kind: "fineAndYou", re: new RegExp(`^(?:${GREET} )?${FINE}${THANKS_TAIL} ${AND_YOU}$`) },
   { kind: "howAreYou", re: new RegExp(`^(?:${GREET}${NAME} )?${HOW}${NAME}$`) },
+  // 0.1.8 (evidencia: "Been y tu?" — el corrector cambió "Bien"): cualquier
+  // respuesta corta (hasta 3 palabras) que termine devolviendo la pregunta
+  // recibe una respuesta neutra, sin suponer cómo está el usuario.
+  { kind: "andYou", re: new RegExp(`^(?:\\S+ ){1,3}${AND_YOU}$`) },
   // "ok" / "perfecto" son acuse, no "estoy bien": va antes que "fine".
   {
     kind: "ack",
@@ -128,6 +133,11 @@ const REPLIES: Record<SmallTalkKind, Record<SmallTalkLang, string>> = {
     es: "Perfecto. Dime si necesitas algo más.",
     en: "Great. Let me know if you need anything else.",
     pt: "Perfeito. Me diga se precisar de mais alguma coisa.",
+  },
+  andYou: {
+    es: "¡Yo muy bien, gracias por preguntar! ¿En qué te ayudo?",
+    en: "I'm doing well, thanks for asking! What can I do for you?",
+    pt: "Eu estou muito bem, obrigado por perguntar! Como posso ajudar?",
   },
   whatsUp: {
     es: "Aquí, listo para ayudarte. ¿Qué necesitas?",

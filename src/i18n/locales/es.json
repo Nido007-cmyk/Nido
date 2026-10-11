@@ -42,6 +42,8 @@
     "downloadingAsset": "Descargando",
     "eta": "ETA: {{eta}}",
     "indexedNote": "En tu base de conocimiento",
+    "indexingNote": "Descargado · indexando para búsqueda {{done}} / {{total}} (deja NIDO abierto)",
+    "downloadedNote": "Descargado",
     "kind": {
       "corpus": "Corpus",
       "embedding": "Embedding",
@@ -81,7 +83,7 @@
       "telemetry": "Telemetría de ejecución"
     },
     "hideReasoning": "Ocultar razonamiento",
-    "indexingKnowledgeBase": "Preparando tu conocimiento…",
+    "indexingKnowledgeBase": "Indexando conocimiento nuevo para buscar sin internet…",
     "initializingCore": "Iniciando NIDO…",
     "inputPlaceholder": "Pregunta lo que sea…",
     "noRelevantOfflineSources": "No se encontraron fuentes offline relevantes para esta pregunta.",

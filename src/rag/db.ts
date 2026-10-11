@@ -573,6 +573,23 @@ export async function insertChunk(
 }
 
 /**
+ * Borra filas del corpus incluido/descargado (sin collection_id) por id.
+ * Lo usa seedCorpus para limpiar el índice de un paquete que el usuario
+ * quitó del teléfono (deleteModel borra el archivo, no sus filas).
+ * Nunca toca colecciones importadas por el usuario.
+ */
+export async function deleteSeedChunks(ids: readonly string[], opts?: WriteOptions): Promise<void> {
+  if (ids.length === 0) return;
+  await writeTransaction(async (txn) => {
+    for (const id of ids) {
+      await txn.runAsync(`DELETE FROM chunk_embeddings WHERE chunk_id = ?`, [id]);
+      await txn.runAsync(`DELETE FROM chunks_fts WHERE chunk_id = ?`, [id]);
+      await txn.runAsync(`DELETE FROM chunks WHERE chunk_id = ? AND collection_id IS NULL`, [id]);
+    }
+  }, opts);
+}
+
+/**
  * Inserts a chunk WITHOUT a vector embedding (FTS-only). Used when the
  * native embedding engine is unavailable in the build — the document is
  * still searchable via full-text search; only semantic vector search is
