@@ -45,7 +45,7 @@ import {
 } from "../models/manifest";
 import { defaultLlmForRam, setupLlmChoices, preselectLlmId, contextSpecForModel } from "../models/defaultModel";
 import { estimateContextBytes, toGb } from "../inference/ramBudget";
-import { setActiveModelId } from "../models/settings";
+import { getActiveModelId, setActiveModelId } from "../models/settings";
 import { ModelManager } from "../models/ModelManager";
 import {
   startDownload,
@@ -56,6 +56,13 @@ import {
 import { onSeedProgress, seedKnowledgeBaseIfEmpty, SeedProgress } from "../rag/seedCorpus";
 import { KeyLossError } from "../privacy/keyManager";
 import { embeddingEngine } from "../rag/embed";
+import {
+  DEFAULT_EMBEDDING_ID,
+  defaultEmbeddingIdForLanguage,
+  embeddingModelById,
+  packIdForEmbedding,
+} from "../rag/embeddingSwitch";
+import { countChunkVectors, resetEmbeddingsForModel } from "../rag/db";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import { LanguageSelector } from "./components/LanguageSelector";
@@ -354,7 +361,7 @@ const verdictStyles = StyleSheet.create({
 
 export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
   const { colors, typography: tp, themeId } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [step, setStep] = useState<WizardStep>(1);
   const [selectedTier, setSelectedTier] = useState<SetupTier>("standard");
   // Model picker (2026-10-05): the user chooses which LLM to download in
@@ -426,8 +433,37 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
     refreshPresence();
   }, [refreshPresence]);
 
+  // Search model (0.2.0, docs/design/BUSQUEDA_MULTILINGUE.md): multilingual
+  // for Spanish/Portuguese, but only on a fresh knowledge base. A wizard
+  // re-run over existing data keeps whatever model is in use; switching
+  // that one is Settings → Knowledge base, which rebuilds the vectors.
+  const [embeddingChoice, setEmbeddingChoice] = useState<{ id: string; locked: boolean } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const stored = await getActiveModelId("embedding").catch(() => null);
+      if (stored && embeddingModelById(stored)) {
+        if (!cancelled) setEmbeddingChoice({ id: stored, locked: true });
+        return;
+      }
+      const vectors = await countChunkVectors().catch(() => ({ withVector: 1 }));
+      if (!cancelled) setEmbeddingChoice({ id: DEFAULT_EMBEDDING_ID, locked: vectors.withVector > 0 });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const setupEmbeddingId =
+    embeddingChoice === null
+      ? DEFAULT_EMBEDDING_ID
+      : embeddingChoice.locked
+        ? embeddingChoice.id
+        : defaultEmbeddingIdForLanguage(i18n.language);
+  const setupEmbedding: CatalogModel =
+    embeddingModelById(setupEmbeddingId) ?? MODEL_CATALOG.find((m) => m.kind === "embedding" && m.required)!;
+
   const activeTierConfig = TIERS.find((t) => t.id === selectedTier) ?? TIERS[0];
-  const tierCorpusPackIds = activeTierConfig.corpusPackIds ?? [];
+  const tierCorpusPackIds = (activeTierConfig.corpusPackIds ?? []).map((id) => packIdForEmbedding(id, setupEmbedding.id));
   // RAM-aware setup set: the required non-LLM assets plus the LLM the user
   // picked in step 2 (preselected for this device's RAM), instead of blindly
   // the catalog's `required` LLM. Falls back to the RAM default before the
@@ -435,7 +471,8 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
   const setupLlm: CatalogModel =
     MODEL_CATALOG.find((m) => m.id === selectedLlmId) ?? defaultLlmForRam(hardware.totalRamBytes);
   const setupLlmAssets: CatalogModel[] = [
-    ...MODEL_CATALOG.filter((m) => m.required && m.kind !== "llm"),
+    ...MODEL_CATALOG.filter((m) => m.required && m.kind !== "llm" && m.kind !== "embedding"),
+    setupEmbedding,
     setupLlm,
   ];
   const tierAssets: CatalogModel[] = [
@@ -454,6 +491,17 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
     } catch {
       // Non-fatal: the download set below is already built from setupLlm.
     }
+    // Search model: only chosen here on a fresh knowledge base (no vectors),
+    // so stamping it can't invalidate anything. Same order as a switch:
+    // stamp, then make it active.
+    if (embeddingChoice && !embeddingChoice.locked) {
+      try {
+        await resetEmbeddingsForModel(setupEmbedding.sha256);
+        await setActiveModelId("embedding", setupEmbedding.id);
+      } catch {
+        // Non-fatal: stays on the default model, which the base accepts.
+      }
+    }
     setStep(3);
     const presMap = await refreshPresence();
 
@@ -466,7 +514,7 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
         startDownload(asset).finally(() => refreshPresence());
       }
     }
-  }, [refreshPresence, tierAssets]);
+  }, [refreshPresence, tierAssets, embeddingChoice, setupEmbedding]);
 
   // Downloads done: move on to indexing.
   useEffect(() => {
@@ -480,7 +528,8 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
     try {
       setIndexingPhase("building");
       setIndexingError(null);
-      const emb = MODEL_CATALOG.find((m) => m.kind === "embedding" && m.required)!;
+      const embId = (await getActiveModelId("embedding").catch(() => null)) ?? DEFAULT_EMBEDDING_ID;
+      const emb = embeddingModelById(embId) ?? MODEL_CATALOG.find((m) => m.kind === "embedding" && m.required)!;
       await embeddingEngine.load(emb.filename);
       await withStage("seed-knowledge-base", () => seedKnowledgeBaseIfEmpty());
       setIndexingPhase("ready");

@@ -407,6 +407,13 @@ export function ChatScreen({
       );
       await seedKnowledgeBaseIfEmpty().finally(stopProgress);
       setReady(true);
+      // Multilingual search (0.2.0): finish a model switch that was
+      // interrupted, and build pack vector indexes. Background, never blocks
+      // the chat; both are no-ops when there's nothing to do.
+      void import("../rag/reembed").then(({ reembedMissing }) => reembedMissing()).catch(() => {});
+      void import("../rag/packs")
+        .then(({ prepareVectorIndexes }) => prepareVectorIndexes(embeddingEngine.loadedModelSha256, embeddingEngine.profile))
+        .catch(() => {});
     } catch (e: any) {
       setLoadError(e?.message ?? String(e));
     }

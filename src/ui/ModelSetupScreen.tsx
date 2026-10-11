@@ -29,7 +29,8 @@ import { getActiveModelId, setActiveModelId, getHapticsEnabled, setHapticsEnable
 import { seedKnowledgeBaseIfEmpty } from "../rag/seedCorpus";
 import { DbLifecycleEndedError } from "../security/secureDatabase";
 import type { KeyLossError } from "../privacy/keyManager";
-import { closePack } from "../rag/packs";
+import { closePack, prepareVectorIndexes } from "../rag/packs";
+import { deletePackIndexes } from "../rag/vectorIndex";
 import {
   startDownload,
   getDownloadState,
@@ -201,6 +202,12 @@ export function ModelSetupScreen(props: Props) {
       await startDownload(model);
       await refreshStatus();
 
+      if (model.format === "sqlite-pack" && !getDownloadState(model.id)?.error) {
+        // Multilingual search: build the pack's vector index in the background.
+        void import("../rag/embed").then(({ embeddingEngine }) =>
+          prepareVectorIndexes(embeddingEngine.loadedModelSha256, embeddingEngine.profile)
+        );
+      }
       if (model.kind === "corpus" && !requiredMode && !getDownloadState(model.id)?.error) {
         let seedAborted = false;
         try {
@@ -221,7 +228,10 @@ export function ModelSetupScreen(props: Props) {
 
   const remove = useCallback(
     async (model: CatalogModel) => {
-      if (model.format === "sqlite-pack") await closePack(model.id);
+      if (model.format === "sqlite-pack") {
+        await closePack(model.id);
+        await deletePackIndexes(model).catch(() => {});
+      }
       await modelManager.deleteModel(model);
       await refreshStatus();
       setToast(t("modelSetupScreen.toasts.removed", { name: model.label }));

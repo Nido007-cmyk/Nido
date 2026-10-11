@@ -12,10 +12,9 @@ import {
   filterByMinScore,
   filterByTermCoverage,
   fuseRetrievalResults,
-  MIN_SEMANTIC_SIMILARITY,
-  MIN_SEMANTIC_SIMILARITY_SINGLE_TERM,
   pruneSemanticByMargin,
 } from "./pure";
+import { BGE_SMALL_EN_PROFILE, embeddingProfileForSha, semanticFloor, type EmbeddingProfile } from "./embeddingProfile";
 import type { RetrievedChunk } from "./retrieve.types";
 import { searchPacks } from "./packs";
 import { dedupeArticleCopies } from "./dedupe";
@@ -63,7 +62,12 @@ async function lexicalSearch(query: string, limit: number): Promise<RetrievedChu
 }
 
 /** Brute-force cosine search over stored embeddings; fine at knowledge-base scale on-device. */
-async function semanticSearch(query: string, queryVec: Float32Array, limit: number): Promise<RetrievedChunk[]> {
+async function semanticSearch(
+  query: string,
+  queryVec: Float32Array,
+  limit: number,
+  profile: EmbeddingProfile
+): Promise<RetrievedChunk[]> {
   const db = await getDb();
 
   const rows = await db.getAllAsync<{
@@ -98,12 +102,12 @@ async function semanticSearch(query: string, queryVec: Float32Array, limit: numb
 
   scored.sort((a, b) => b.score - a.score);
   // H1-2026-10-06: umbral más alto para queries de un solo término.
-  const termCount = query.trim().split(/\s+/).filter(Boolean).length;
-  const threshold = termCount <= 1 ? MIN_SEMANTIC_SIMILARITY_SINGLE_TERM : MIN_SEMANTIC_SIMILARITY;
-  const gated = filterByMinScore(scored, threshold);
+  // 0.2.0: los umbrales son del modelo cargado (embeddingProfile.ts); para
+  // bge son los mismos de siempre (0.60 / 0.70, margen 0.4).
+  const gated = filterByMinScore(scored, semanticFloor(profile, query));
   // BUG-2-2026-10-06 (structural): poda por margen sobre cosenos crudos.
   // El gap predice relevancia mejor que el valor absoluto.
-  return pruneSemanticByMargin(gated).slice(0, limit);
+  return pruneSemanticByMargin(gated, profile.margin).slice(0, limit);
 }
 
 /**
@@ -120,8 +124,13 @@ export async function retrieve(query: string, topK = 6): Promise<RetrievedChunk[
   // embedding no está disponible. seedCorpus ya soporta indexar sin
   // embeddings; retrieve() no debe fallar en duro en ese mismo build.
   let queryVec: Float32Array | null = null;
+  let profile: EmbeddingProfile = BGE_SMALL_EN_PROFILE;
+  let modelSha256: string | null = null;
   try {
-    queryVec = await embeddingEngine.embed(query);
+    const tagged = await embeddingEngine.embedQueryTagged(query);
+    queryVec = tagged.vector;
+    modelSha256 = tagged.modelSha256;
+    profile = embeddingProfileForSha(modelSha256);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (!/native embedding unavailable/i.test(msg)) throw err;
@@ -129,15 +138,17 @@ export async function retrieve(query: string, topK = 6): Promise<RetrievedChunk[
   }
   const [lexical, semantic, packs] = await Promise.all([
     lexicalSearch(query, topK * 2),
-    queryVec ? semanticSearch(query, queryVec, topK * 2) : [],
+    queryVec ? semanticSearch(query, queryVec, topK * 2, profile) : [],
     // Downloaded knowledge packs (src/rag/packs.ts); a failing pack is skipped, never fatal.
-    searchPacks(query, queryVec, topK * 2).catch(() => ({ lexical: [], semantic: [] })),
+    searchPacks(query, queryVec, topK * 2, { profile, modelSha256 }).catch(() => ({ lexical: [], semantic: [] })),
   ]);
 
   const fused = fuseRetrievalResults(
     [...lexical, ...packs.lexical],
     [...semantic, ...packs.semantic],
-    topK
+    topK,
+    undefined,
+    profile.minSimilarity
   );
   // Dedupe cross-library copies (upstream item 20): same article in multiple
   // sources should appear once, not waste context.

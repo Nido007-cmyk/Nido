@@ -299,6 +299,26 @@ export const MODEL_CATALOG: CatalogModel[] = [
     capabilities: { roles: ["embedding"] },
   },
   {
+    // Multilingual search (docs/design/BUSQUEDA_MULTILINGUE.md). Optional:
+    // Settings → Knowledge base, or the default for new installs in es/pt.
+    // Converted by NIDO's CI (.github/workflows/multilingual-e5.yml) from
+    // intfloat/multilingual-e5-small @ 614241f622f53c4eeff9890bdc4f31cfecc418b3
+    // with the llama.cpp that llama.rn 0.13.0-rc.6 vendors (b11192), checked
+    // against the original model (cosine >= 0.999 on every test text).
+    id: "multilingual-e5-small-q8",
+    kind: "embedding",
+    label: "multilingual-e5-small (Q8_0)",
+    filename: "models/embedding-multilingual.gguf",
+    sizeBytes: 132441664,
+    sha256: "802c868f57ccddd2e0c80645c3db1cb96a1aa50986a057cbaee2526f6e474cde",
+    sourceUrl:
+      "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf",
+    license: "MIT",
+    description: "118M, multilingual sentence embeddings: search in Spanish, Portuguese and English.",
+    required: false,
+    capabilities: { roles: ["embedding"] },
+  },
+  {
     id: "qwen2.5-1.5b-instruct-q4km",
     kind: "llm",
     label: "Qwen2.5-1.5B-Instruct (Q4_K_M)",

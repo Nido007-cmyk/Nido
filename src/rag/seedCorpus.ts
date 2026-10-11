@@ -265,7 +265,7 @@ async function seedNow(): Promise<void> {
       // the document FTS-only (no vector) rather than blocking setup. The
       // chat LLM is unaffected; only semantic vector search is degraded.
       try {
-        return await embeddingEngine.embed(`${doc.title}\n${doc.body}`);
+        return await embeddingEngine.embedPassageTagged(`${doc.title}\n${doc.body}`);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         if (msg.includes("native embedding unavailable")) {
@@ -276,7 +276,7 @@ async function seedNow(): Promise<void> {
     });
     if (embedding) {
       await stage("insertChunk", async () =>
-        insertChunk(chunk, embedding, { lifecycleEpoch: runEpoch })
+        insertChunk(chunk, embedding.vector, { lifecycleEpoch: runEpoch, modelSha256: embedding.modelSha256 })
       );
     } else {
       // Native embedding unavailable: FTS-only fallback (graceful degradation).
