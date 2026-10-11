@@ -16,6 +16,12 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 
 > **Pre-release.** Built and checked by automated tests; real-device testing is ongoing. Please report anything that fails in Issues. Pairing and fingerprints are unchanged from 0.1.6.
 
+**New: Hardware protection (optional, Android 11+)** — About → Hardware protection
+- Ties the key of your NIDO data to the tablet's security chip (StrongBox/TEE). With it on, NIDO only opens with your PIN, pattern or fingerprint, and the key can't be copied out of the device.
+- **Maximum security mode** (optional): if NIDO stays in the background for 30 s, 1 min or 5 min, it closes completely and wipes the key from memory.
+- ⚠️ **Make a backup first.** If you remove the tablet's screen lock, Android destroys the protected key; the backup is how you get your data back.
+- New and not yet tested on many devices: please report anything odd in Issues.
+
 **Agent tools (from a full audit of the 9 tools)**
 - **Contact search works on Android.** It never did: the code used an iOS-only function. Search also ignores accents now ("Ruben" finds "Rubén").
 - **Contacts, calls and SMS work in Spanish, English and Portuguese**, without depending on the small model: "find contact Ana", "call Ana", "llama a Ana", "liga para a Ana", "text Ana that I'm late". "Call Ana" looks her up and asks which one if there are several.

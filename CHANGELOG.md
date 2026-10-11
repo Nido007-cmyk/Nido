@@ -6,6 +6,12 @@ All notable changes to NIDO are recorded here. Versions follow
 
 ## 0.1.7-alpha — 2026-10-11
 
+### Added
+- Optional hardware protection (Android 11+): NIDO's data key is sealed by
+  the device's security chip and only opens with PIN, pattern or
+  fingerprint. Optional maximum security mode closes NIDO after 30 s, 1 min
+  or 5 min in the background. Make a backup before turning it on.
+
 ### Fixed
 - Contacts: searching contacts never worked on Android (the code used an
   iOS-only API). Search now ignores accents ("Ruben" finds "Rubén").
