@@ -905,7 +905,11 @@
     "noPeersTitle": "Sem contatos",
     "noPeersMessage": "Você precisa de pelo menos um contato emparelhado para compartilhar packs.",
     "offerFailedTitle": "Não foi possível enviar",
-    "offerFailedMessage": "Não foi possível criar a oferta. Verifique a conexão com o peer."
+    "offerFailedMessage": "Não foi possível preparar o envio do pacote.",
+    "unavailableTitle": "Ainda não disponível",
+    "unavailableMessage": "Compartilhar pacotes entre dispositivos ainda não está disponível nesta versão. Chegará numa próxima atualização.",
+    "tooLargeTitle": "Pacote grande demais",
+    "tooLargeMessage": "Este pacote tem {{size}} MB e o limite para compartilhar é {{max}} MB."
   },
   "voiceInputAlert": {
     "unavailableTitle": "Entrada de voz indisponível",
