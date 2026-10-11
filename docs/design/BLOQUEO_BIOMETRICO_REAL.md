@@ -1,6 +1,7 @@
 # Diseño: bloqueo biométrico real (clave de la base atada a la autenticación)
 
-> Estado: **DISEÑO LISTO, NO IMPLEMENTADO.** No forma parte de v0.1.6.
+> Estado: **IMPLEMENTADO en la rama `feat/hardware-key-vault` (PR #36), sin probar en dispositivos.** No forma parte de v0.1.6.
+> Revisión 2 (2026-10-11): tras la investigación del §15 se cambió a autorización **por operación** (CryptoObject, timeout 0) y se quitó `setUnlockedDeviceRequired`.
 > Fecha: 2026-10-11. Autor: Claude (a pedido del owner).
 > Objetivo de versión: v0.1.7 (como pieza principal, probada con calma).
 
@@ -47,84 +48,54 @@ Investigado (docs de expo-secure-store v57):
 Por eso hace falta un **módulo nativo propio** (como ya existen `nido-p2p`,
 `ram-monitor`, etc.).
 
-## 4. Arquitectura
+## 4. Arquitectura (revisión 2)
 
 ```
-Android Keystore (StrongBox si existe; si no, TEE)
+Android Keystore (StrongBox si el dispositivo declara FEATURE_STRONGBOX_KEYSTORE; si no, TEE)
   └─ KEK  "nido_kek_v1"  AES-256-GCM, no exportable
         · setUserAuthenticationRequired(true)
-        · API ≥ 30: setUserAuthenticationParameters(30 s, DEVICE_CREDENTIAL | BIOMETRIC_STRONG)
-        · API 24–29: setUserAuthenticationValidityDurationSeconds(30)
-        · setInvalidatedByBiometricEnrollment(false)   ← agregar una huella NO invalida
-        · setUnlockedDeviceRequired(true) (API ≥ 28)
-        · setIsStrongBoxBacked(true) con reintento sin StrongBox
+        · setUserAuthenticationParameters(0, AUTH_DEVICE_CREDENTIAL | AUTH_BIOMETRIC_STRONG)
+            → timeout 0 = autorización POR OPERACIÓN (CryptoObject obligatorio)
+        · setInvalidatedByBiometricEnrollment(false)
+        · SIN setUnlockedDeviceRequired (ver §15.3)
+        · Solo Android 11+ (API 30): por debajo la bóveda no se ofrece.
      └─ envuelve → DEK (32 B)  →  blob "nido_db_key_wrapped_v1"
-                                   = versión(1) ‖ iv(12) ‖ ciphertext+tag(48)
+                                   = versión(1) ‖ iv(12) ‖ ciphertext+tag(48), AAD "nido-dek-v1"
                                    guardado en expo-secure-store (sin auth)
         └─ PRAGMA key = x'<DEK>' sobre cada base SQLCipher (sin cambios)
 ```
 
-Puntos clave:
+Cada operación con la KEK (envolver o desenvolver) abre su propio
+`BiometricPrompt` con un `CryptoObject` sobre el `Cipher` ya inicializado.
+El hardware solo permite `update/doFinal` si el token de autenticación lleva
+el desafío de **esa** operación. Consecuencias:
 
-1. **La KEK nunca sale del hardware.** Solo cifra/descifra 32 bytes.
-2. **Ventana de 30 s tras autenticarse:** el desbloqueo con PIN o huella en la
-   pantalla de NIDO habilita la KEK durante 30 s; en ese intervalo se
-   desenvuelve la DEK. Luego la KEK vuelve a quedar cerrada.
-3. **PIN incluido como método:** atar la llave también a la credencial del
-   dispositivo evita que agregar o quitar huellas invalide nada.
-4. **La DEK queda en memoria mientras el proceso vive** (nivel recomendado,
-   §6). Al reiniciar la tablet o forzar el cierre, hace falta autenticarse de
-   nuevo: ese es el beneficio principal.
-5. **Formato versionado** del blob para poder migrar en el futuro.
+1. **Un desbloqueo normal de la tablet no habilita la llave** (con ventana de
+   tiempo sí: cualquier token reciente la abría).
+2. **Enganchar el callback de éxito no sirve** (ataque típico con Frida): sin
+   token válido, `doFinal` falla.
+3. **Diálogos:** desbloquear NIDO = 1; activar = 2 (proteger + verificar);
+   rotar la llave = 2; desactivar = 1.
 
 ## 5. Módulo nativo `nido-keyvault` (Kotlin)
 
-API expuesta a JS (Expo Modules):
-
 ```ts
-// modules/nido-keyvault/index.ts
-export type VaultStatus = {
-  supported: boolean;            // hay pantalla de bloqueo segura y API suficiente
-  kekExists: boolean;
-  securityLevel: "strongbox" | "tee" | "software" | "unknown";
-  apiLevel: number;
-};
-export function getStatus(): Promise<VaultStatus>;
-/** Crea la KEK si no existe. Falla si no hay pantalla de bloqueo segura. */
-export function ensureKek(): Promise<VaultStatus>;
-/** Muestra BiometricPrompt (huella o PIN) y deja la KEK usable 30 s. */
-export function authenticate(title: string, subtitle: string): Promise<"ok" | "cancelled" | "failed">;
-/** Cifra con la KEK (requiere authenticate() reciente). Devuelve blob base64. */
-export function wrap(plainB64: string): Promise<string>;
-/** Descifra el blob (requiere authenticate() reciente). */
-export function unwrap(blobB64: string): Promise<string>;
-/** Borra la KEK (solo para "Borrar todos los datos"). */
-export function deleteKek(): Promise<void>;
+export interface NidoKeyVaultNative {
+  getStatus(): Promise<{ supported; kekExists; securityLevel: "strongbox"|"tee"|"software"|"unknown"; apiLevel }>;
+  ensureKek(): Promise<VaultStatus>;                       // E_UNSUPPORTED, E_NO_SECURE_LOCK, E_KEYGEN
+  wrapWithAuth(plainB64, title, subtitle): Promise<string>;   // diálogo + cifrado
+  unwrapWithAuth(blobB64, title, subtitle): Promise<string>;  // diálogo + descifrado
+  deleteKek(): Promise<void>;
+}
 ```
-
-Errores tipados (códigos que JS traduce a pantallas):
 
 | Código | Causa | Respuesta de la app |
 |---|---|---|
-| `E_NO_SECURE_LOCK` | La tablet no tiene PIN/patrón/contraseña | Seguir en modo actual + aviso |
-| `E_AUTH_REQUIRED` | Se llamó a unwrap fuera de la ventana | Volver a pedir autenticación |
-| `E_KEY_INVALIDATED` | `KeyPermanentlyInvalidatedException` (p. ej. se quitó el PIN) | Pantalla honesta de recuperación con respaldo |
-| `E_STRONGBOX_UNAVAILABLE` | Interno: reintentar en TEE | Transparente |
-| `E_CANCELLED` | El usuario canceló el diálogo | Quedarse en la pantalla de bloqueo |
-
-Detalles de implementación:
-
-- `BiometricPrompt` (androidx.biometric) con `setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)` en API ≥ 30.
-  En API 28–29 esa combinación no está permitida: usar `BIOMETRIC_WEAK or DEVICE_CREDENTIAL`
-  sin `CryptoObject` (la KEK con ventana de validez no lo necesita). Ojo: una
-  biometría débil (clase 2, p. ej. algunos desbloqueos faciales) **no**
-  habilita llaves del Keystore; si `unwrap` devuelve `E_AUTH_REQUIRED` tras
-  una autenticación así, se vuelve a pedir con PIN.
-  En API 24–27: `KeyguardManager.createConfirmDeviceCredentialIntent`.
-- Nivel de seguridad: `KeyInfo.securityLevel` (API ≥ 31) o `isInsideSecureHardware` (anteriores).
-- Cifrado: `Cipher.getInstance("AES/GCM/NoPadding")`, IV aleatorio de 12 B
-  generado por el Keystore, AAD fija `"nido-dek-v1"` para atar el blob a su uso.
-- La DEK en Kotlin vive en `ByteArray` que se rellena con ceros tras pasarla a JS.
+| `E_UNSUPPORTED` | Android 10 o inferior | Seguir en modo actual |
+| `E_NO_SECURE_LOCK` | Sin PIN/patrón/contraseña | Seguir en modo actual + aviso |
+| `E_KEY_INVALIDATED` | `KeyPermanentlyInvalidatedException` (se quitó el bloqueo de pantalla) | Pantalla de recuperación |
+| `E_BLOB_CORRUPT` | Blob dañado o de otra versión | Si existe la DEK legada: volver al modo legado |
+| `E_CANCELLED` / `E_AUTH_FAILED` | Diálogo cancelado / fallido | Quedarse bloqueado, reintentar |
 
 ## 6. Niveles de protección
 
@@ -145,8 +116,8 @@ arranque), así que el nivel A no pierde funcionalidad en segundo plano.
 checking
   ├─ vault.getStatus()
   ├─ ¿blob envuelto existe?
-  │    ├─ sí → pantalla de bloqueo → vault.authenticate()
-  │    │        → vault.unwrap(blob) → DEK en memoria → abrir bases → chat
+  │    ├─ sí → pantalla de bloqueo → vault.unwrapWithAuth(blob)
+  │    │        (un diálogo PIN/huella) → DEK en memoria → abrir bases → chat
   │    └─ no → flujo actual (DEK en SecureStore) + ofrecer migración (§8)
   └─ errores de vault → pantallas: E_KEY_INVALIDATED → recuperación
 ```
@@ -158,7 +129,7 @@ Cambios concretos:
 - `getDatabaseKeyHex()` (keyManager) pasa a leer de una caché en memoria
   poblada tras `unwrap`; si la caché está vacía y hay blob → `E_LOCKED`
   (nunca cae al almacenamiento sin auth).
-- `biometricGate.ensureUnlocked()` se sustituye por `vault.authenticate()`
+- `biometricGate.ensureUnlocked()` se sustituye por `unlockVault()`
   cuando la bóveda está activa (misma UI).
 
 ## 8. Migración (sin pérdida de datos)
@@ -167,9 +138,8 @@ Máquina de estados persistida (archivo marcador, igual que `secureDatabase.ts`)
 
 1. `LEGACY` — DEK solo en SecureStore (estado actual de todos los usuarios).
 2. Tras un desbloqueo exitoso, con aviso previo al usuario (§9):
-   - `ensureKek()` → `authenticate()` → `wrap(DEK)` → guardar blob.
-3. `WRAPPED_PENDING` — verificar: `unwrap(blob)` == DEK **y** abrir cada base
-   SQLCipher con la DEK desenvuelta (lectura de prueba).
+   - `ensureKek()` → `wrapWithAuth(DEK)` (diálogo 1) → guardar blob.
+3. `WRAPPED_PENDING` — verificar: `unwrapWithAuth(blob)` (diálogo 2) == DEK.
 4. Solo si todo verifica → borrar `nido_db_key` del SecureStore → `WRAPPED`.
 5. Cualquier fallo antes del paso 4 → borrar el blob, quedar en `LEGACY`,
    registrar el motivo. **Nunca** se borra la DEK original sin verificación.
@@ -257,3 +227,83 @@ antes de activar, y pantalla honesta de recuperación.
 - `KeyPermanentlyInvalidatedException`: https://developer.android.com/reference/kotlin/android/security/keystore/KeyPermanentlyInvalidatedException
 - expo-secure-store (comportamiento de `requireAuthentication`): https://docs.expo.dev/versions/v57.0.0/sdk/securestore/
 - Estado actual documentado: `docs/C1_SQLCIPHER.md`, `src/security/biometricGate.ts`, `src/privacy/keyManager.ts`, `src/security/secureDatabase.ts`.
+
+## 15. Investigación (revisión 2, 2026-10-11)
+
+### 15.1 Por tiempo vs. por operación
+
+- **OWASP MASTG-BEST-0036** recomienda `BiometricPrompt` con `CryptoObject`
+  respaldado por una llave del Keystore y `setUserAuthenticationParameters(0, …)`
+  ("un timeout de 0 exige autenticación para cada operación criptográfica"),
+  porque sin `CryptoObject` la autenticación depende solo del callback, que se
+  puede enganchar.
+- **OWASP MASTG-TEST-0330** marca como fallo las llaves para operaciones
+  sensibles con duración > 0: "un atacante con acceso físico al teléfono podría
+  disparar operaciones sensibles sin verificación biométrica".
+- **Código de Keymaster (AOSP, `keymaster_enforcement.cpp`)**: las llaves con
+  timeout solo verifican la frescura del token al **iniciar** la operación; las
+  de timeout 0 exigen que el **desafío** del token coincida con el identificador
+  de la operación en cada update/finish.
+- **Documentación del Keystore**: el hardware seguro normalmente **no** impone
+  los intervalos de validez temporal (no tiene reloj propio); sí impone la
+  autorización por operación.
+
+**Decisión:** por operación (timeout 0) con `CryptoObject`.
+
+### 15.2 PIN además de la huella (desviación consciente de MASTG-BEST-0031/0037)
+
+- MASTG-BEST-0031 desaconseja `DEVICE_CREDENTIAL` cuando la operación es "solo
+  biométrica"; MASTG-BEST-0037 recomienda invalidar al inscribir huellas nuevas
+  (para que quien sepa el PIN no agregue su dedo).
+- En NIDO el PIN **es** la raíz de confianza (igual que en el iPhone): quien lo
+  sepa ya puede autenticarse con él, así que invalidar por inscripción no añade
+  protección y sí riesgo de pérdida de datos. Además, muchos usuarios no tienen
+  huella. La documentación del Keystore indica que la invalidación por
+  inscripción aplica a llaves solo biométricas.
+- Con `CryptoObject`, la credencial del dispositivo solo es posible desde
+  **Android 11** (MASTG-KNOW-0001): por eso el requisito mínimo es API 30.
+
+### 15.3 `setUnlockedDeviceRequired`: retirado
+
+La documentación de AOSP (cambio "Improve the documentation for
+UnlockedDeviceRequired") advierte usarlo **solo en Android 15+**: en 12–14 hay
+fallos conocidos, entre ellos que desbloquear con una biometría no fuerte (p.
+ej. ciertos desbloqueos faciales) **no** re-autoriza la llave. En tablets
+Samsung con reconocimiento facial eso podía dejar a NIDO sin abrir. La
+autorización por operación ya es más estricta, así que no se usa.
+
+### 15.4 StrongBox
+
+La guía oficial: StrongBox es más resistente a manipulación física y canales
+laterales pero más lento; "para la mayoría de apps no es necesario". NIDO hace
+una sola operación AES de 32 B por desbloqueo y el riesgo que se busca cubrir
+es justamente la tablet robada, así que se **prefiere StrongBox si el
+dispositivo lo declara**, con caída a TEE si la generación falla. El nivel real
+se muestra en Acerca de.
+
+### 15.5 Antecedentes en otras apps
+
+- **Signal** quitó su contraseña local de la base al apoyarse en el cifrado de
+  disco de Android (FBE); **Molly** (fork de Signal) la reintrodujo como "cifrado
+  en reposo" con bloqueo configurable y borrado seguro de RAM. Es el mismo
+  objetivo que este diseño (nivel A ≈ FBE "credential encrypted" a nivel de app;
+  nivel B ≈ bloqueo de Molly).
+
+### 15.6 Fuentes
+
+- OWASP MASTG-BEST-0036: https://mas.owasp.org/MASTG/best-practices/MASTG-BEST-0036/
+- OWASP MASTG-TEST-0330: https://mas.owasp.org/MASTG/tests/android/MASVS-AUTH/MASTG-TEST-0330/
+- OWASP MASTG-BEST-0031 y 0037, MASTG-KNOW-0001 (repositorio OWASP/mastg)
+- Android Keystore: https://developer.android.com/privacy-and-security/keystore
+- AOSP keymaster_enforcement.cpp: https://android.googlesource.com/platform/system/keymaster/+/refs/heads/oreo-dr1-dev/keymaster_enforcement.cpp
+- AOSP, documentación de UnlockedDeviceRequired: https://gerrit.omnirom.org/plugins/gitiles/android_frameworks_base/+/dbbfc624add70d97f1d9b5c6140f10bf7d658793%5E%21
+- StrongBox vs TEE: https://proandroiddev.com/android-keystore-what-is-the-difference-between-strongbox-and-hardware-backed-keys-4c276ea78fd0
+- Molly: https://github.com/mollyim/mollyim-android
+
+### 15.7 Pendiente de verificar en dispositivo
+
+- Si las Tab A9+ declaran StrongBox y si la generación con StrongBox +
+  autenticación por operación funciona (si no, debe caer a TEE).
+- Que el diálogo con PIN funcione con `CryptoObject` en la versión de Android
+  de las tablets (Samsung One UI).
+- Tiempos: StrongBox puede tardar; medir el desbloqueo.

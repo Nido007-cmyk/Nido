@@ -1163,6 +1163,10 @@
     "errVerify": "Verification failed and nothing was changed. Your data is unchanged.",
     "errGeneric": "Couldn't complete it. Nothing was changed.",
     "lockSubtitle": "Your data is protected by the security chip. Unlock with your PIN, pattern or fingerprint.",
-    "keyInvalidated": "Android invalidated NIDO's security key (usually because the screen lock was removed). Your data can't be opened without a backup."
+    "keyInvalidated": "Android invalidated NIDO's security key (usually because the screen lock was removed). Your data can't be opened without a backup.",
+    "promptVerify": "Confirm once more to verify the protection",
+    "errUnsupported": "Hardware protection requires Android 11 or later.",
+    "rewrapProtect": "Confirm to protect the new key",
+    "rewrapVerify": "Confirm once more to verify it"
   }
 }

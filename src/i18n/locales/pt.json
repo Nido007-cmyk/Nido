@@ -1163,6 +1163,10 @@
     "errVerify": "A verificação falhou e nada foi alterado. Seus dados continuam iguais.",
     "errGeneric": "Não foi possível concluir. Nada foi alterado.",
     "lockSubtitle": "Seus dados estão protegidos pelo chip de segurança. Desbloqueie com seu PIN, padrão ou digital.",
-    "keyInvalidated": "O Android invalidou a chave de segurança do NIDO (normalmente porque o bloqueio de tela foi removido). Seus dados não podem ser abertos sem um backup."
+    "keyInvalidated": "O Android invalidou a chave de segurança do NIDO (normalmente porque o bloqueio de tela foi removido). Seus dados não podem ser abertos sem um backup.",
+    "promptVerify": "Confirme mais uma vez para verificar a proteção",
+    "errUnsupported": "A proteção por hardware requer Android 11 ou superior.",
+    "rewrapProtect": "Confirme para proteger a nova chave",
+    "rewrapVerify": "Confirme mais uma vez para verificá-la"
   }
 }

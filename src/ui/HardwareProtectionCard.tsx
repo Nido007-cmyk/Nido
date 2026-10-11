@@ -59,11 +59,16 @@ export function HardwareProtectionCard() {
     () => ({ title: t("vault.promptTitle"), subtitle: t("vault.promptSubtitle") }),
     [t],
   );
+  const verifyPrompt = useMemo(
+    () => ({ title: t("vault.promptTitle"), subtitle: t("vault.promptVerify") }),
+    [t],
+  );
 
   const describeError = useCallback(
     (e: unknown): string => {
       const code = (e as { code?: string } | null)?.code;
       if (code === "E_NO_SECURE_LOCK") return t("vault.errNoLock");
+      if (code === "E_UNSUPPORTED") return t("vault.errUnsupported");
       if (code === "E_CANCELLED") return t("lockScreen.cancelled");
       if (code === "E_VERIFY_MISMATCH") return t("vault.errVerify");
       return t("vault.errGeneric");
@@ -75,7 +80,7 @@ export function HardwareProtectionCard() {
     setBusy(true);
     setMessage(null);
     try {
-      await activateVault(prompt);
+      await activateVault(prompt, verifyPrompt);
       setMessage(t("vault.activated"));
     } catch (e) {
       setMessage(describeError(e));
@@ -83,7 +88,7 @@ export function HardwareProtectionCard() {
       setBusy(false);
       await refresh();
     }
-  }, [describeError, prompt, refresh, t]);
+  }, [describeError, prompt, verifyPrompt, refresh, t]);
 
   const confirmActivate = useCallback(() => {
     Alert.alert(t("vault.confirmTitle"), t("vault.confirmBody"), [
@@ -135,7 +140,9 @@ export function HardwareProtectionCard() {
           ? t("vault.statusActive", { level: levelLabel })
           : status.supported
             ? t("vault.statusInactive")
-            : t("vault.errNoLock")}
+            : status.apiLevel < 30
+              ? t("vault.errUnsupported")
+              : t("vault.errNoLock")}
       </Text>
       {message && <Text style={styles.status}>{message}</Text>}
       <View style={styles.row}>

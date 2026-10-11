@@ -13,8 +13,9 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyInfo
 import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
-import android.security.keystore.UserNotAuthenticatedException
 import android.util.Base64
+import androidx.annotation.RequiresApi
+import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
@@ -38,27 +39,38 @@ class VaultException(code: String, message: String, cause: Throwable? = null) :
 
 /**
  * NidoKeyVault — KEK de hardware atada a la autenticación del usuario.
+ * Diseño e investigación: docs/design/BLOQUEO_BIOMETRICO_REAL.md.
  *
- * Diseño: docs/design/BLOQUEO_BIOMETRICO_REAL.md.
- *  - La KEK (AES-256-GCM, no exportable) vive en el Android Keystore
- *    (StrongBox si existe; si no, TEE) y SOLO se puede usar durante
- *    [VALIDITY_SECONDS] s después de que el dueño se autentique con su
- *    PIN/patrón/contraseña o su huella (biometría fuerte).
- *  - Agregar o quitar huellas NO la invalida (setInvalidatedByBiometricEnrollment
- *    false + credencial del dispositivo aceptada). Quitar el bloqueo de
- *    pantalla SÍ (lo hace Android): JS lo trata como E_KEY_INVALIDATED.
- *  - Solo cifra/descifra la DEK de 32 B; el blob va versionado:
- *    [0x01][iv 12 B][ciphertext ‖ tag 16 B], con AAD fija "nido-dek-v1".
+ *  - KEK AES-256-GCM no exportable en el Android Keystore (StrongBox si
+ *    existe; si no, TEE).
+ *  - Autorización POR OPERACIÓN (timeout 0) con BiometricPrompt +
+ *    CryptoObject: el hardware exige un token de autenticación ligado al
+ *    desafío de ESA operación concreta. Un desbloqueo cualquiera de la
+ *    tablet no habilita la llave (con una ventana de tiempo sí lo haría), y
+ *    enganchar el callback de éxito no sirve: sin token válido, doFinal
+ *    falla. Recomendación OWASP MASTG-BEST-0036 / MASTG-TEST-0330.
+ *  - Métodos: biometría fuerte (clase 3) o PIN/patrón/contraseña. Con
+ *    CryptoObject, la credencial del dispositivo solo es posible desde
+ *    Android 11 (API 30): por debajo la bóveda se declara no soportada y
+ *    NIDO sigue en el modo actual.
+ *  - setInvalidatedByBiometricEnrollment(false): agregar huellas no destruye
+ *    los datos. Con el PIN aceptado como método, invalidar por inscripción no
+ *    añade protección (quien sabe el PIN ya puede autenticarse).
+ *  - Sin setUnlockedDeviceRequired: Android documenta fallos en 12–14 (p. ej.
+ *    desbloqueo facial "débil" de Samsung no re-autoriza la llave) y la
+ *    autorización por operación ya es más estricta.
+ *  - Blob versionado: [0x01][iv 12 B][ciphertext ‖ tag 16 B], AAD "nido-dek-v1".
  */
 class NidoKeyVaultModule : Module() {
   companion object {
     const val KEYSTORE = "AndroidKeyStore"
     const val KEK_ALIAS = "nido_kek_v1"
-    const val VALIDITY_SECONDS = 30
+    const val MIN_API = Build.VERSION_CODES.R // 30
     const val BLOB_VERSION: Byte = 1
     const val IV_BYTES = 12
     const val TAG_BITS = 128
     val AAD = "nido-dek-v1".toByteArray(Charsets.UTF_8)
+    const val AUTHENTICATORS = Authenticators.BIOMETRIC_STRONG or Authenticators.DEVICE_CREDENTIAL
   }
 
   private val context: Context
@@ -74,18 +86,24 @@ class NidoKeyVaultModule : Module() {
       status()
     }
 
-    AsyncFunction("authenticate") { title: String, subtitle: String, promise: Promise ->
-      authenticate(title, subtitle, promise)
+    /** Cifra la DEK tras un diálogo de PIN/huella ligado a ESTA operación. */
+    AsyncFunction("wrapWithAuth") { plainB64: String, title: String, subtitle: String, promise: Promise ->
+      wrapWithAuth(plainB64, title, subtitle, promise)
     }
 
-    AsyncFunction("wrap") { plainB64: String -> wrap(plainB64) }
-
-    AsyncFunction("unwrap") { blobB64: String -> unwrap(blobB64) }
+    /** Descifra el blob tras un diálogo de PIN/huella ligado a ESTA operación. */
+    AsyncFunction("unwrapWithAuth") { blobB64: String, title: String, subtitle: String, promise: Promise ->
+      unwrapWithAuth(blobB64, title, subtitle, promise)
+    }
 
     AsyncFunction("deleteKek") {
       deleteKekQuietly()
     }
   }
+
+  // ------------------------------------------------------------ estado
+
+  private fun keyStore(): KeyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
 
   private fun deleteKekQuietly() {
     try {
@@ -94,13 +112,15 @@ class NidoKeyVaultModule : Module() {
     }
   }
 
-  // ------------------------------------------------------------ estado
-
-  private fun keyStore(): KeyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
-
   private fun deviceSecure(): Boolean {
     val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
     return km?.isDeviceSecure ?: false
+  }
+
+  private fun canAuthenticate(): Boolean = try {
+    BiometricManager.from(context).canAuthenticate(AUTHENTICATORS) == BiometricManager.BIOMETRIC_SUCCESS
+  } catch (_: Exception) {
+    false
   }
 
   private fun status(): Map<String, Any> {
@@ -109,8 +129,9 @@ class NidoKeyVaultModule : Module() {
     } catch (_: Exception) {
       false
     }
+    val supported = Build.VERSION.SDK_INT >= MIN_API && deviceSecure() && canAuthenticate()
     return mapOf(
-      "supported" to deviceSecure(),
+      "supported" to supported,
       "kekExists" to exists,
       "securityLevel" to (if (exists) securityLevel() else "unknown"),
       "apiLevel" to Build.VERSION.SDK_INT,
@@ -139,6 +160,9 @@ class NidoKeyVaultModule : Module() {
   // ------------------------------------------------------------ KEK
 
   private fun ensureKek() {
+    if (Build.VERSION.SDK_INT < MIN_API) {
+      throw VaultException("E_UNSUPPORTED", "Requiere Android 11 o superior.")
+    }
     if (!deviceSecure()) {
       throw VaultException(
         "E_NO_SECURE_LOCK",
@@ -146,16 +170,18 @@ class NidoKeyVaultModule : Module() {
       )
     }
     if (keyStore().containsAlias(KEK_ALIAS)) return
-    val wantStrongBox = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) createKek()
+  }
+
+  @RequiresApi(Build.VERSION_CODES.R)
+  private fun createKek() {
+    val hasStrongBox = context.packageManager.hasSystemFeature("android.hardware.strongbox_keystore")
     try {
-      generateKek(strongBox = wantStrongBox)
+      generateKek(strongBox = hasStrongBox)
     } catch (e: Exception) {
-      if (!wantStrongBox) throw VaultException("E_KEYGEN", "No se pudo crear la llave: ${e.message}", e)
-      // StrongBox ausente o sin soporte para estos parámetros: TEE.
-      try {
-        keyStore().deleteEntry(KEK_ALIAS)
-      } catch (_: Exception) {
-      }
+      if (!hasStrongBox) throw VaultException("E_KEYGEN", "No se pudo crear la llave: ${e.message}", e)
+      // StrongBox presente pero sin soporte para estos parámetros: TEE.
+      deleteKekQuietly()
       try {
         generateKek(strongBox = false)
       } catch (e2: Exception) {
@@ -164,6 +190,7 @@ class NidoKeyVaultModule : Module() {
     }
   }
 
+  @RequiresApi(Build.VERSION_CODES.R)
   private fun generateKek(strongBox: Boolean) {
     val b = KeyGenParameterSpec.Builder(
       KEK_ALIAS,
@@ -173,22 +200,13 @@ class NidoKeyVaultModule : Module() {
       .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
       .setKeySize(256)
       .setUserAuthenticationRequired(true)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-      b.setUserAuthenticationParameters(
-        VALIDITY_SECONDS,
+      // timeout 0 = autorización por operación (CryptoObject obligatorio).
+      .setUserAuthenticationParameters(
+        0,
         KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG,
       )
-    } else {
-      @Suppress("DEPRECATION")
-      b.setUserAuthenticationValidityDurationSeconds(VALIDITY_SECONDS)
-    }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-      b.setInvalidatedByBiometricEnrollment(false)
-    }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-      b.setUnlockedDeviceRequired(true)
-      if (strongBox) b.setIsStrongBoxBacked(true)
-    }
+      .setInvalidatedByBiometricEnrollment(false)
+    if (strongBox) b.setIsStrongBoxBacked(true)
     val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE)
     gen.init(b.build())
     gen.generateKey()
@@ -203,6 +221,7 @@ class NidoKeyVaultModule : Module() {
     return key ?: throw VaultException("E_NO_KEK", "La llave protegida no existe.")
   }
 
+  /** Inicializa el cifrador; la autorización real llega con el CryptoObject. */
   private fun initCipher(mode: Int, iv: ByteArray?): Cipher {
     val cipher = Cipher.getInstance("AES/GCM/NoPadding")
     try {
@@ -213,112 +232,149 @@ class NidoKeyVaultModule : Module() {
         "Android invalidó la llave protegida (¿se quitó el bloqueo de pantalla?).",
         e,
       )
-    } catch (e: UserNotAuthenticatedException) {
-      throw VaultException("E_AUTH_REQUIRED", "Hace falta autenticarse antes de usar la llave.", e)
     }
-    cipher.updateAAD(AAD)
     return cipher
   }
 
-  // ------------------------------------------------------------ wrap / unwrap
+  // ------------------------------------------------------------ operaciones
 
-  private fun wrap(plainB64: String): String {
-    val plain = Base64.decode(plainB64, Base64.NO_WRAP)
-    try {
-      val cipher = initCipher(Cipher.ENCRYPT_MODE, null)
-      val ct = cipher.doFinal(plain)
-      val iv = cipher.iv
-      if (iv == null || iv.size != IV_BYTES) throw VaultException("E_CRYPTO", "IV inesperado.")
-      val out = ByteArray(1 + IV_BYTES + ct.size)
-      out[0] = BLOB_VERSION
-      System.arraycopy(iv, 0, out, 1, IV_BYTES)
-      System.arraycopy(ct, 0, out, 1 + IV_BYTES, ct.size)
-      return Base64.encodeToString(out, Base64.NO_WRAP)
-    } catch (e: VaultException) {
-      throw e
+  private fun wrapWithAuth(plainB64: String, title: String, subtitle: String, promise: Promise) {
+    val plain = try {
+      Base64.decode(plainB64, Base64.NO_WRAP)
     } catch (e: Exception) {
-      throw VaultException("E_CRYPTO", "No se pudo proteger la llave: ${e.message}", e)
-    } finally {
+      promise.reject(VaultException("E_CRYPTO", "Entrada inválida.", e))
+      return
+    }
+    val cipher = try {
+      initCipher(Cipher.ENCRYPT_MODE, null)
+    } catch (e: VaultException) {
       plain.fill(0)
+      promise.reject(e)
+      return
+    } catch (e: Exception) {
+      plain.fill(0)
+      promise.reject(VaultException("E_CRYPTO", "No se pudo preparar el cifrado: ${e.message}", e))
+      return
+    }
+    prompt(title, subtitle, cipher, promise) { authed ->
+      try {
+        authed.updateAAD(AAD)
+        val ct = authed.doFinal(plain)
+        val iv = authed.iv
+        if (iv == null || iv.size != IV_BYTES) throw VaultException("E_CRYPTO", "IV inesperado.")
+        val out = ByteArray(1 + IV_BYTES + ct.size)
+        out[0] = BLOB_VERSION
+        System.arraycopy(iv, 0, out, 1, IV_BYTES)
+        System.arraycopy(ct, 0, out, 1 + IV_BYTES, ct.size)
+        Base64.encodeToString(out, Base64.NO_WRAP)
+      } finally {
+        plain.fill(0)
+      }
     }
   }
 
-  private fun unwrap(blobB64: String): String {
+  private fun unwrapWithAuth(blobB64: String, title: String, subtitle: String, promise: Promise) {
     val blob = try {
       Base64.decode(blobB64, Base64.NO_WRAP)
     } catch (e: Exception) {
-      throw VaultException("E_BLOB_CORRUPT", "La llave guardada está dañada.", e)
+      promise.reject(VaultException("E_BLOB_CORRUPT", "La llave guardada está dañada.", e))
+      return
     }
     if (blob.size < 1 + IV_BYTES + TAG_BITS / 8 || blob[0] != BLOB_VERSION) {
-      throw VaultException("E_BLOB_CORRUPT", "La llave guardada está dañada o es de otra versión.")
+      promise.reject(VaultException("E_BLOB_CORRUPT", "La llave guardada está dañada o es de otra versión."))
+      return
     }
     val iv = blob.copyOfRange(1, 1 + IV_BYTES)
     val ct = blob.copyOfRange(1 + IV_BYTES, blob.size)
-    var plain: ByteArray? = null
-    try {
-      plain = initCipher(Cipher.DECRYPT_MODE, iv).doFinal(ct)
-      return Base64.encodeToString(plain, Base64.NO_WRAP)
+    val cipher = try {
+      initCipher(Cipher.DECRYPT_MODE, iv)
     } catch (e: VaultException) {
-      throw e
-    } catch (e: AEADBadTagException) {
-      throw VaultException("E_BLOB_CORRUPT", "La llave guardada no se pudo verificar.", e)
+      promise.reject(e)
+      return
     } catch (e: Exception) {
-      throw VaultException("E_CRYPTO", "No se pudo abrir la llave: ${e.message}", e)
-    } finally {
-      plain?.fill(0)
+      promise.reject(VaultException("E_CRYPTO", "No se pudo preparar el descifrado: ${e.message}", e))
+      return
+    }
+    prompt(title, subtitle, cipher, promise) { authed ->
+      authed.updateAAD(AAD)
+      val plain = try {
+        authed.doFinal(ct)
+      } catch (e: AEADBadTagException) {
+        throw VaultException("E_BLOB_CORRUPT", "La llave guardada no se pudo verificar.", e)
+      }
+      try {
+        Base64.encodeToString(plain, Base64.NO_WRAP)
+      } finally {
+        plain.fill(0)
+      }
     }
   }
 
-  // ------------------------------------------------------------ autenticación
-
-  private fun authenticate(title: String, subtitle: String, promise: Promise) {
+  /**
+   * Muestra BiometricPrompt con el CryptoObject y, tras el éxito, ejecuta
+   * [onAuthed] con el cifrador ya autorizado por el hardware.
+   */
+  private fun prompt(
+    title: String,
+    subtitle: String,
+    cipher: Cipher,
+    promise: Promise,
+    onAuthed: (Cipher) -> String,
+  ) {
     val activity = appContext.currentActivity as? FragmentActivity
     if (activity == null) {
       promise.reject(VaultException("E_NO_ACTIVITY", "No hay una pantalla activa para pedir la huella."))
       return
     }
     val settled = AtomicBoolean(false)
-    fun settle(value: String) {
-      if (settled.compareAndSet(false, true)) promise.resolve(value)
+    fun reject(e: CodedException) {
+      if (settled.compareAndSet(false, true)) promise.reject(e)
     }
     activity.runOnUiThread {
       try {
         val executor = ContextCompat.getMainExecutor(activity)
-        val prompt = BiometricPrompt(
+        val bp = BiometricPrompt(
           activity,
           executor,
           object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-              settle("ok")
+              val authed = result.cryptoObject?.cipher
+              if (authed == null) {
+                reject(VaultException("E_AUTH_FAILED", "El sistema no devolvió el cifrador autorizado."))
+                return
+              }
+              try {
+                val out = onAuthed(authed)
+                if (settled.compareAndSet(false, true)) promise.resolve(out)
+              } catch (e: VaultException) {
+                reject(e)
+              } catch (e: KeyPermanentlyInvalidatedException) {
+                reject(VaultException("E_KEY_INVALIDATED", "Android invalidó la llave protegida.", e))
+              } catch (e: Exception) {
+                reject(VaultException("E_CRYPTO", "Fallo criptográfico: ${e.message}", e))
+              }
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
               val cancelled = errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
                 errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
                 errorCode == BiometricPrompt.ERROR_CANCELED
-              settle(if (cancelled) "cancelled" else "failed")
+              reject(
+                if (cancelled) VaultException("E_CANCELLED", "Autenticación cancelada.")
+                else VaultException("E_AUTH_FAILED", "No se pudo autenticar: $errString"),
+              )
             }
             // onAuthenticationFailed = un intento fallido; el diálogo sigue abierto.
           },
         )
-        // API 30+: huella fuerte o PIN. API < 30: STRONG|DEVICE_CREDENTIAL no
-        // está soportado; WEAK|DEVICE_CREDENTIAL sí (una biometría débil no
-        // habilita la llave: JS reintenta y el usuario puede usar el PIN).
-        val authenticators = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-          Authenticators.BIOMETRIC_STRONG or Authenticators.DEVICE_CREDENTIAL
-        } else {
-          Authenticators.BIOMETRIC_WEAK or Authenticators.DEVICE_CREDENTIAL
-        }
         val info = BiometricPrompt.PromptInfo.Builder()
           .setTitle(title)
           .setSubtitle(subtitle)
-          .setAllowedAuthenticators(authenticators)
+          .setAllowedAuthenticators(AUTHENTICATORS)
           .build()
-        prompt.authenticate(info)
+        bp.authenticate(info, BiometricPrompt.CryptoObject(cipher))
       } catch (e: Exception) {
-        if (settled.compareAndSet(false, true)) {
-          promise.reject(VaultException("E_PROMPT", "No se pudo mostrar el diálogo: ${e.message}", e))
-        }
+        reject(VaultException("E_PROMPT", "No se pudo mostrar el diálogo: ${e.message}", e))
       }
     }
   }

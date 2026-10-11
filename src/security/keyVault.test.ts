@@ -22,21 +22,22 @@ import {
   setKeyVaultNativeForTests,
   unlockVault,
   type KeyVaultNative,
-  type VaultAuthResult,
 } from "./keyVault";
 
 const DEK = "ab".repeat(32);
 const PROMPT = { title: "t", subtitle: "s" };
 
-/** Módulo nativo simulado: KEK = XOR con 0x5a; exige autenticación previa. */
+/**
+ * Módulo nativo simulado. KEK = XOR con 0x5a. Cada wrap/unwrap es UNA
+ * operación autorizada por su propio diálogo (CryptoObject, timeout 0).
+ */
 function makeFakeNative(opts: { secure?: boolean } = {}) {
   const state = {
     kek: false,
-    authed: false,
-    authResult: "ok" as VaultAuthResult,
+    authResult: "ok" as "ok" | "cancelled" | "failed",
     invalidated: false,
     corruptNextWrap: false,
-    authCalls: 0,
+    prompts: 0,
   };
   const xor = (b64: string) => {
     const bin = atob(b64);
@@ -44,10 +45,12 @@ function makeFakeNative(opts: { secure?: boolean } = {}) {
     for (let i = 0; i < bin.length; i++) out += String.fromCharCode(bin.charCodeAt(i) ^ 0x5a);
     return btoa(out);
   };
-  const guard = () => {
+  const authorize = () => {
     if (state.invalidated) throw Object.assign(new Error("invalidated"), { code: "E_KEY_INVALIDATED" });
     if (!state.kek) throw Object.assign(new Error("no kek"), { code: "E_NO_KEK" });
-    if (!state.authed) throw Object.assign(new Error("auth"), { code: "E_AUTH_REQUIRED" });
+    state.prompts++;
+    if (state.authResult === "cancelled") throw Object.assign(new Error("cancel"), { code: "E_CANCELLED" });
+    if (state.authResult === "failed") throw Object.assign(new Error("fail"), { code: "E_AUTH_FAILED" });
   };
   const native: KeyVaultNative = {
     getStatus: async () => ({ supported: opts.secure ?? true, kekExists: state.kek, securityLevel: "tee", apiLevel: 34 }),
@@ -56,22 +59,17 @@ function makeFakeNative(opts: { secure?: boolean } = {}) {
       state.kek = true;
       return { supported: true, kekExists: true, securityLevel: "tee", apiLevel: 34 };
     },
-    authenticate: async () => {
-      state.authCalls++;
-      if (state.authResult === "ok") state.authed = true;
-      return state.authResult;
-    },
-    wrap: async (b64) => {
-      guard();
+    wrapWithAuth: async (b64) => {
+      authorize();
       if (state.corruptNextWrap) {
         state.corruptNextWrap = false;
         return "v1:" + xor(btoa("x".repeat(32)));
       }
       return "v1:" + xor(b64);
     },
-    unwrap: async (blob) => {
-      guard();
+    unwrapWithAuth: async (blob) => {
       if (!blob.startsWith("v1:")) throw Object.assign(new Error("corrupt"), { code: "E_BLOB_CORRUPT" });
+      authorize();
       return xor(blob.slice(3));
     },
     deleteKek: async () => {
@@ -80,6 +78,8 @@ function makeFakeNative(opts: { secure?: boolean } = {}) {
   };
   return { native, state };
 }
+
+const dekB64 = () => btoa(String.fromCharCode(...DEK.match(/../g)!.map((h) => parseInt(h, 16))));
 
 let backend: SecureBackend;
 
@@ -94,17 +94,33 @@ describe("HW-VAULT: activación (migración verificada)", () => {
   it("envuelve la DEK, borra la copia en claro y la deja en memoria", async () => {
     const { native } = makeFakeNative();
     setKeyVaultNativeForTests(native);
-    await activateVault(PROMPT);
+    await activateVault(PROMPT, PROMPT);
     expect(await isVaultActive()).toBe(true);
     expect(await backend.getItemAsync("nido_db_key")).toBeNull();
     expect(await getDatabaseKeyHex()).toBe(DEK);
+  });
+
+  it("activar pide exactamente dos diálogos: proteger y verificar", async () => {
+    const { native, state } = makeFakeNative();
+    setKeyVaultNativeForTests(native);
+    await activateVault(PROMPT, PROMPT);
+    expect(state.prompts).toBe(2);
+  });
+
+  it("autorización por operación: sin ventana de tiempo, cada uso pide su diálogo", async () => {
+    const { native, state } = makeFakeNative();
+    setKeyVaultNativeForTests(native);
+    await activateVault(PROMPT, PROMPT);
+    const before = state.prompts;
+    await deactivateVault(PROMPT);
+    expect(state.prompts - before).toBe(1);
   });
 
   it("si la verificación no coincide, no cambia nada", async () => {
     const { native, state } = makeFakeNative();
     setKeyVaultNativeForTests(native);
     state.corruptNextWrap = true;
-    await expect(activateVault(PROMPT)).rejects.toMatchObject({ code: "E_VERIFY_MISMATCH" });
+    await expect(activateVault(PROMPT, PROMPT)).rejects.toMatchObject({ code: "E_VERIFY_MISMATCH" });
     expect(await isVaultActive()).toBe(false);
     expect(await backend.getItemAsync("nido_db_key")).toBe(DEK);
   });
@@ -112,7 +128,7 @@ describe("HW-VAULT: activación (migración verificada)", () => {
   it("tablet sin PIN: error claro y modo legado intacto", async () => {
     const { native } = makeFakeNative({ secure: false });
     setKeyVaultNativeForTests(native);
-    await expect(activateVault(PROMPT)).rejects.toMatchObject({ code: "E_NO_SECURE_LOCK" });
+    await expect(activateVault(PROMPT, PROMPT)).rejects.toMatchObject({ code: "E_NO_SECURE_LOCK" });
     expect(await backend.getItemAsync("nido_db_key")).toBe(DEK);
   });
 
@@ -120,7 +136,7 @@ describe("HW-VAULT: activación (migración verificada)", () => {
     const { native, state } = makeFakeNative();
     setKeyVaultNativeForTests(native);
     state.authResult = "cancelled";
-    await expect(activateVault(PROMPT)).rejects.toMatchObject({ code: "E_CANCELLED" });
+    await expect(activateVault(PROMPT, PROMPT)).rejects.toMatchObject({ code: "E_CANCELLED" });
     expect(await isVaultActive()).toBe(false);
     expect(await backend.getItemAsync("nido_db_key")).toBe(DEK);
   });
@@ -130,9 +146,8 @@ describe("HW-VAULT: arranque", () => {
   it("con la bóveda activa y sin desbloquear, la DEK NO se puede leer", async () => {
     const { native, state } = makeFakeNative();
     setKeyVaultNativeForTests(native);
-    await activateVault(PROMPT);
+    await activateVault(PROMPT, PROMPT);
     setUnlockedDatabaseKey(null); // simula reinicio del proceso
-    state.authed = false;
     await expect(getDatabaseKeyHex()).rejects.toBeInstanceOf(VaultLockedError);
     // Y jamás genera una DEK nueva en claro.
     expect(await backend.getItemAsync("nido_db_key")).toBeNull();
@@ -141,10 +156,12 @@ describe("HW-VAULT: arranque", () => {
   it("desbloquear con PIN/huella devuelve exactamente la misma DEK", async () => {
     const { native, state } = makeFakeNative();
     setKeyVaultNativeForTests(native);
-    await activateVault(PROMPT);
+    await activateVault(PROMPT, PROMPT);
     setUnlockedDatabaseKey(null);
-    state.authed = false;
+    const before = state.prompts;
     await unlockVault(PROMPT);
+    // Un solo diálogo para desbloquear.
+    expect(state.prompts - before).toBe(1);
     expect(await getDatabaseKeyHex()).toBe(DEK);
   });
 
@@ -152,9 +169,7 @@ describe("HW-VAULT: arranque", () => {
     const { native, state } = makeFakeNative();
     setKeyVaultNativeForTests(native);
     state.kek = true;
-    state.authed = true;
-    await backend.setItemAsync(VAULT_BLOB_ALIAS, await native.wrap(btoa(String.fromCharCode(...DEK.match(/../g)!.map((h) => parseInt(h, 16))))));
-    state.authed = false;
+    await backend.setItemAsync(VAULT_BLOB_ALIAS, await native.wrapWithAuth(dekB64(), "t", "s"));
     await unlockVault(PROMPT);
     expect(await getDatabaseKeyHex()).toBe(DEK);
     expect(await backend.getItemAsync("nido_db_key")).toBeNull();
@@ -173,7 +188,7 @@ describe("HW-VAULT: arranque", () => {
   it("llave invalidada por Android (se quitó el PIN): error tipado para la pantalla de recuperación", async () => {
     const { native, state } = makeFakeNative();
     setKeyVaultNativeForTests(native);
-    await activateVault(PROMPT);
+    await activateVault(PROMPT, PROMPT);
     setUnlockedDatabaseKey(null);
     state.invalidated = true;
     await expect(unlockVault(PROMPT)).rejects.toMatchObject({ code: "E_KEY_INVALIDATED" });
@@ -184,7 +199,7 @@ describe("HW-VAULT: nuevas DEK y desactivación", () => {
   it("con la bóveda activa, guardar una DEK nueva la envuelve y nunca la escribe en claro", async () => {
     const { native } = makeFakeNative();
     setKeyVaultNativeForTests(native);
-    await activateVault(PROMPT);
+    await activateVault(PROMPT, PROMPT);
     const NEW = "cd".repeat(32);
     await storeDatabaseKeyHex(NEW);
     expect(await backend.getItemAsync("nido_db_key")).toBeNull();
@@ -204,7 +219,7 @@ describe("HW-VAULT: nuevas DEK y desactivación", () => {
   it("desactivar devuelve la DEK al SecureStore y borra el blob", async () => {
     const { native, state } = makeFakeNative();
     setKeyVaultNativeForTests(native);
-    await activateVault(PROMPT);
+    await activateVault(PROMPT, PROMPT);
     await deactivateVault(PROMPT);
     expect(await isVaultActive()).toBe(false);
     expect(await backend.getItemAsync("nido_db_key")).toBe(DEK);

@@ -6,13 +6,14 @@
 
 /**
  * keyVault.ts — HW-VAULT, nivel A ("tras el primer desbloqueo").
- * Diseño completo: docs/design/BLOQUEO_BIOMETRICO_REAL.md.
+ * Diseño e investigación: docs/design/BLOQUEO_BIOMETRICO_REAL.md.
  *
  * La DEK de SQLCipher se envuelve con una llave de hardware (KEK del
- * Android Keystore) que solo funciona tras el PIN/patrón o la huella del
- * dueño. Tras desbloquear, la DEK queda en memoria mientras el proceso vive
- * (P2P en segundo plano, recordatorios y tareas siguen igual). Si la tablet
- * se reinicia o NIDO se cierra, hace falta autenticarse otra vez.
+ * Android Keystore). Cada uso de la KEK exige un PIN/patrón o una huella
+ * fuerte ligados por el hardware a ESA operación (CryptoObject, timeout 0).
+ * Tras desbloquear, la DEK queda en memoria mientras el proceso vive (P2P
+ * en segundo plano, recordatorios y tareas siguen igual). Si la tablet se
+ * reinicia o NIDO se cierra, hace falta autenticarse otra vez.
  *
  * Reglas de seguridad de datos (no negociables):
  *  - La DEK en claro del SecureStore solo se borra DESPUÉS de verificar que
@@ -40,21 +41,19 @@ export interface VaultStatus {
   securityLevel: VaultSecurityLevel;
   apiLevel: number;
 }
-export type VaultAuthResult = "ok" | "cancelled" | "failed";
 
 export interface KeyVaultNative {
   getStatus(): Promise<VaultStatus>;
   ensureKek(): Promise<VaultStatus>;
-  authenticate(title: string, subtitle: string): Promise<VaultAuthResult>;
-  wrap(plainB64: string): Promise<string>;
-  unwrap(blobB64: string): Promise<string>;
+  wrapWithAuth(plainB64: string, title: string, subtitle: string): Promise<string>;
+  unwrapWithAuth(blobB64: string, title: string, subtitle: string): Promise<string>;
   deleteKek(): Promise<void>;
 }
 
 /** Códigos estables del módulo nativo (ver NidoKeyVaultModule.kt). */
 export type VaultErrorCode =
+  | "E_UNSUPPORTED"
   | "E_NO_SECURE_LOCK"
-  | "E_AUTH_REQUIRED"
   | "E_KEY_INVALIDATED"
   | "E_BLOB_CORRUPT"
   | "E_NO_KEK"
@@ -63,6 +62,16 @@ export type VaultErrorCode =
   | "E_VERIFY_MISMATCH"
   | "E_UNAVAILABLE"
   | "E_UNKNOWN";
+
+const KNOWN_CODES: readonly VaultErrorCode[] = [
+  "E_UNSUPPORTED",
+  "E_NO_SECURE_LOCK",
+  "E_KEY_INVALIDATED",
+  "E_BLOB_CORRUPT",
+  "E_NO_KEK",
+  "E_CANCELLED",
+  "E_AUTH_FAILED",
+];
 
 export class VaultError extends Error {
   readonly code: VaultErrorCode;
@@ -86,7 +95,7 @@ function native(): KeyVaultNative | null {
     // require perezoso: en Node/vitest el módulo nativo no existe.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const m = require("nido-keyvault") as { default?: KeyVaultNative };
-    return m?.default && typeof m.default.wrap === "function" ? m.default : null;
+    return m?.default && typeof m.default.wrapWithAuth === "function" ? m.default : null;
   } catch {
     return null;
   }
@@ -102,25 +111,15 @@ function toVaultError(e: unknown): VaultError {
   if (e instanceof VaultError) return e;
   const code = (e as { code?: unknown } | null)?.code;
   const msg = e instanceof Error ? e.message : String(e);
-  const known: VaultErrorCode[] = [
-    "E_NO_SECURE_LOCK",
-    "E_AUTH_REQUIRED",
-    "E_KEY_INVALIDATED",
-    "E_BLOB_CORRUPT",
-    "E_NO_KEK",
-  ];
-  if (typeof code === "string" && (known as string[]).includes(code)) {
+  if (typeof code === "string" && (KNOWN_CODES as readonly string[]).includes(code)) {
     return new VaultError(code as VaultErrorCode, msg);
   }
   return new VaultError("E_UNKNOWN", msg);
 }
 
 const hexToB64 = (hex: string): string => {
-  const bytes = new Uint8Array(32);
-  for (let i = 0; i < 32; i++) bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
   let bin = "";
-  for (const b of bytes) bin += String.fromCharCode(b);
-  bytes.fill(0);
+  for (let i = 0; i < 32; i++) bin += String.fromCharCode(parseInt(hex.slice(i * 2, i * 2 + 2), 16));
   return btoa(bin);
 };
 
@@ -131,36 +130,22 @@ const b64ToHex = (b64: string): string => {
   return hex;
 };
 
-async function authenticateOrThrow(n: KeyVaultNative, title: string, subtitle: string): Promise<void> {
-  let r: VaultAuthResult;
+export interface VaultPrompt {
+  title: string;
+  subtitle: string;
+}
+
+async function wrapDek(n: KeyVaultNative, dekHex: string, p: VaultPrompt): Promise<string> {
   try {
-    r = await n.authenticate(title, subtitle);
+    return await n.wrapWithAuth(hexToB64(dekHex), p.title, p.subtitle);
   } catch (e) {
     throw toVaultError(e);
   }
-  if (r === "cancelled") throw new VaultError("E_CANCELLED", "Autenticación cancelada.");
-  if (r !== "ok") throw new VaultError("E_AUTH_FAILED", "No se pudo autenticar.");
 }
 
-/**
- * Ejecuta una operación de la KEK; si Android responde que hace falta
- * autenticarse (p. ej. el diálogo previo usó una biometría débil o pasaron
- * más de 30 s), pide autenticación una vez y reintenta.
- */
-async function withKek<T>(
-  n: KeyVaultNative,
-  prompt: { title: string; subtitle: string },
-  op: () => Promise<T>,
-): Promise<T> {
+async function unwrapDek(n: KeyVaultNative, blob: string, p: VaultPrompt): Promise<string> {
   try {
-    return await op();
-  } catch (e) {
-    const ve = toVaultError(e);
-    if (ve.code !== "E_AUTH_REQUIRED") throw ve;
-  }
-  await authenticateOrThrow(n, prompt.title, prompt.subtitle);
-  try {
-    return await op();
+    return b64ToHex(await n.unwrapWithAuth(blob, p.title, p.subtitle));
   } catch (e) {
     throw toVaultError(e);
   }
@@ -182,31 +167,24 @@ export async function vaultStatus(): Promise<VaultStatus | null> {
   }
 }
 
-export interface VaultPrompt {
-  title: string;
-  subtitle: string;
-}
-
 /**
- * Desbloqueo de arranque: autentica, desenvuelve y deja la DEK en memoria.
- * Si quedó una activación a medias (blob + DEK en claro), la completa o la
- * revierte de forma segura.
+ * Desbloqueo de arranque: un diálogo (PIN/huella) que desenvuelve la DEK y
+ * la deja en memoria. Si quedó una activación a medias (blob + DEK en
+ * claro), la completa o la revierte de forma segura.
  */
 export async function unlockVault(prompt: VaultPrompt): Promise<void> {
   const blob = await readVaultBlob();
   if (!blob) return; // modo legado: nada que desbloquear
   const n = requireNative();
-  await authenticateOrThrow(n, prompt.title, prompt.subtitle);
   let dekHex: string;
   try {
-    dekHex = b64ToHex(await withKek(n, prompt, () => n.unwrap(blob)));
+    dekHex = await unwrapDek(n, blob, prompt);
   } catch (e) {
     const ve = toVaultError(e);
     // Activación interrumpida con blob inservible: la DEK legada sigue ahí →
     // volver al modo legado sin perder nada.
     if (ve.code === "E_BLOB_CORRUPT" || ve.code === "E_NO_KEK") {
-      const legacy = await readLegacyDatabaseKey();
-      if (legacy) {
+      if (await readLegacyDatabaseKey()) {
         await deleteVaultBlob();
         return;
       }
@@ -217,9 +195,9 @@ export async function unlockVault(prompt: VaultPrompt): Promise<void> {
   const legacy = await readLegacyDatabaseKey();
   if (legacy) {
     if (legacy === dekHex) {
-      await deleteLegacyKeySafely();
+      await deleteLegacyDatabaseKey();
     } else {
-      // Nunca debería pasar; ante la duda, gana la DEK con la que se abrieron
+      // Nunca debería pasar; ante la duda gana la DEK con la que se abrieron
       // los datos hasta ahora (la legada) y se descarta el blob.
       await deleteVaultBlob();
       setUnlockedDatabaseKey(null);
@@ -229,20 +207,13 @@ export async function unlockVault(prompt: VaultPrompt): Promise<void> {
   setUnlockedDatabaseKey(dekHex);
 }
 
-async function deleteLegacyKeySafely(): Promise<void> {
-  await deleteLegacyDatabaseKey();
-}
-
 /**
  * Activa la protección por hardware (migración verificada, §8 del diseño).
- * Requiere que la app ya esté desbloqueada (la DEK legada se lee aquí).
+ * Dos diálogos: uno para proteger la llave y otro para verificarla.
  */
-export async function activateVault(prompt: VaultPrompt): Promise<VaultStatus> {
-  if (await isVaultActive()) {
-    const st = await requireNative().getStatus();
-    return st;
-  }
+export async function activateVault(protect: VaultPrompt, verify: VaultPrompt): Promise<VaultStatus> {
   const n = requireNative();
+  if (await isVaultActive()) return n.getStatus();
   let status: VaultStatus;
   try {
     status = await n.ensureKek();
@@ -251,14 +222,13 @@ export async function activateVault(prompt: VaultPrompt): Promise<VaultStatus> {
   }
   const dek = await getDatabaseKeyHex();
   if (!dek) throw new VaultError("E_UNKNOWN", "No hay llave de base de datos que proteger.");
-  await authenticateOrThrow(n, prompt.title, prompt.subtitle);
-  const blob = await withKek(n, prompt, () => n.wrap(hexToB64(dek)));
+  const blob = await wrapDek(n, dek, protect);
   // 1) Guardar el blob (la DEK legada SIGUE intacta).
   await writeVaultBlob(blob);
   // 2) Verificar: desenvolver debe devolver exactamente la misma DEK.
   let roundTrip: string;
   try {
-    roundTrip = b64ToHex(await withKek(n, prompt, () => n.unwrap(blob)));
+    roundTrip = await unwrapDek(n, blob, verify);
   } catch (e) {
     await deleteVaultBlob().catch(() => {});
     throw toVaultError(e);
@@ -269,7 +239,7 @@ export async function activateVault(prompt: VaultPrompt): Promise<VaultStatus> {
   }
   // 3) Solo ahora: la DEK queda en memoria y se borra la copia en claro.
   setUnlockedDatabaseKey(roundTrip);
-  await deleteLegacyKeySafely();
+  await deleteLegacyDatabaseKey();
   return status;
 }
 
@@ -278,8 +248,7 @@ export async function deactivateVault(prompt: VaultPrompt): Promise<void> {
   const blob = await readVaultBlob();
   if (!blob) return;
   const n = requireNative();
-  await authenticateOrThrow(n, prompt.title, prompt.subtitle);
-  const dek = b64ToHex(await withKek(n, prompt, () => n.unwrap(blob)));
+  const dek = await unwrapDek(n, blob, prompt);
   await writeLegacyDatabaseKey(dek);
   // Verificar la copia legada antes de soltar el blob.
   if ((await readLegacyDatabaseKey()) !== dek) {
@@ -297,15 +266,24 @@ export async function deleteVaultKek(): Promise<void> {
   if (n) await n.deleteKek().catch(() => {});
 }
 
+let rewrapPrompts: { protect: VaultPrompt; verify: VaultPrompt } = {
+  protect: { title: "NIDO", subtitle: "Confirma para proteger la nueva llave" },
+  verify: { title: "NIDO", subtitle: "Confirma otra vez para verificarla" },
+};
+
+/** La UI puede fijar textos traducidos para la re-envoltura (rotación). */
+export function setRewrapPrompts(p: { protect: VaultPrompt; verify: VaultPrompt }): void {
+  rewrapPrompts = p;
+}
+
 /**
  * Re-envoltura para una DEK NUEVA (rotación / recuperación de rekey) con la
  * bóveda activa: nunca se escribe en claro. Registrada en keyManager.
  */
 async function rewrapNewDek(hex: string): Promise<void> {
   const n = requireNative();
-  const prompt = { title: "NIDO", subtitle: "Confirma para guardar la nueva llave" };
-  const blob = await withKek(n, prompt, () => n.wrap(hexToB64(hex)));
-  const check = b64ToHex(await withKek(n, prompt, () => n.unwrap(blob)));
+  const blob = await wrapDek(n, hex, rewrapPrompts.protect);
+  const check = await unwrapDek(n, blob, rewrapPrompts.verify);
   if (check !== hex.toLowerCase()) {
     throw new VaultError("E_VERIFY_MISMATCH", "No se pudo proteger la nueva llave.");
   }
