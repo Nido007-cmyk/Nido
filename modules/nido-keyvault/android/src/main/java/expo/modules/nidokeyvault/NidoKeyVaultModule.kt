@@ -99,6 +99,31 @@ class NidoKeyVaultModule : Module() {
     AsyncFunction("deleteKek") {
       deleteKekQuietly()
     }
+
+    /**
+     * Nivel B ("máxima seguridad"): cierra NIDO por completo. Matar el
+     * proceso es la única forma fiable de que NO quede en memoria ni la DEK
+     * ni datos ya descifrados (estado de React, cachés): el recolector de
+     * JS no permite borrar memoria a voluntad. El servicio P2P vive en el
+     * mismo proceso; si Android lo reinicia sin intent, se detiene solo.
+     */
+    AsyncFunction("terminateProcess") {
+      val act = appContext.currentActivity
+      act?.runOnUiThread {
+        try {
+          act.finishAndRemoveTask()
+        } catch (_: Exception) {
+        }
+      }
+      Thread {
+        try {
+          Thread.sleep(250)
+        } catch (_: InterruptedException) {
+        }
+        android.os.Process.killProcess(android.os.Process.myPid())
+      }.start()
+      Unit
+    }
   }
 
   // ------------------------------------------------------------ estado

@@ -25,7 +25,10 @@ import { makeSurfaces } from "./theme/surfaces";
 import {
   activateVault,
   deactivateVault,
+  getStrictLockSeconds,
   isVaultActive,
+  setStrictLockSeconds,
+  STRICT_LOCK_OPTIONS,
   vaultStatus,
   type VaultStatus,
 } from "../security/keyVault";
@@ -39,11 +42,13 @@ export function HardwareProtectionCard() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [strictSecs, setStrictSecs] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       setStatus(await vaultStatus());
       setActive(await isVaultActive());
+      setStrictSecs(await getStrictLockSeconds());
     } catch {
       setStatus(null);
     } finally {
@@ -120,6 +125,28 @@ export function HardwareProtectionCard() {
     ]);
   }, [describeError, prompt, refresh, t]);
 
+  const chooseStrict = useCallback(
+    (secs: number | null) => {
+      const apply = async () => {
+        try {
+          await setStrictLockSeconds(secs);
+          setStrictSecs(secs);
+        } catch (e) {
+          setMessage(describeError(e));
+        }
+      };
+      if (secs === null) {
+        void apply();
+        return;
+      }
+      Alert.alert(t("vault.strictTitle"), t("vault.strictConfirm"), [
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("vault.strictEnable"), onPress: () => void apply() },
+      ]);
+    },
+    [describeError, t],
+  );
+
   if (!loaded || !status) return null; // build sin el módulo nativo
 
   const levelLabel =
@@ -168,6 +195,35 @@ export function HardwareProtectionCard() {
           </Pressable>
         )}
       </View>
+      {active && (
+        <View style={styles.strictBox}>
+          <Text style={styles.strictTitle}>{t("vault.strictTitle")}</Text>
+          <Text style={styles.paragraph}>{t("vault.strictBody")}</Text>
+          <View style={styles.row}>
+            {[null, ...STRICT_LOCK_OPTIONS].map((secs) => {
+              const selected = strictSecs === secs;
+              const label =
+                secs === null
+                  ? t("vault.strictOff")
+                  : secs < 60
+                    ? t("vault.strictSeconds", { n: String(secs) })
+                    : t("vault.strictMinutes", { n: String(secs / 60) });
+              return (
+                <Pressable
+                  key={String(secs)}
+                  style={selected ? styles.actionBtn : styles.secondaryBtn}
+                  onPress={() => (selected ? undefined : chooseStrict(secs))}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={label}
+                >
+                  <Text style={selected ? styles.actionBtnText : styles.secondaryBtnText}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -196,6 +252,14 @@ const getStyles = (colors: Colors, typography: Typography) => {
       backgroundColor: "transparent",
       borderWidth: 1,
       borderColor: colors.text.secondary,
+    },
+    strictBox: {
+      marginTop: calmSpacing.comfortable,
+    },
+    strictTitle: {
+      ...typography.mono.xs,
+      color: colors.text.primary,
+      marginBottom: calmSpacing.tight,
     },
     secondaryBtnText: {
       ...ui.primaryButtonText,

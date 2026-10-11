@@ -25,6 +25,8 @@ export interface NidoKeyVaultNative {
   /** Diálogo de PIN/huella ligado a ESTA operación; devuelve la DEK (base64). */
   unwrapWithAuth(blobB64: string, title: string, subtitle: string): Promise<string>;
   deleteKek(): Promise<void>;
+  /** Nivel B: cierra NIDO por completo (borra todo de la memoria). */
+  terminateProcess(): Promise<void>;
 }
 
 const NidoKeyVault = requireNativeModule<NidoKeyVaultNative>("NidoKeyVault");

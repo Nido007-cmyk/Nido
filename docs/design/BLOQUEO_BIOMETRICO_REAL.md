@@ -103,9 +103,17 @@ export interface NidoKeyVaultNative {
   la DEK queda en memoria mientras NIDO esté vivo. No rompe nada de lo que
   funciona: P2P en segundo plano, reconexión, recordatorios y tareas siguen
   igual porque ocurren con el proceso vivo tras el primer desbloqueo.
-- **Nivel B — estricto (opcional, ajuste avanzado):** al pasar a segundo plano
-  más de N minutos se cierra la base y se borra la DEK de memoria. Advertencia
-  explícita: dejarán de recibirse mensajes P2P hasta abrir NIDO.
+- **Nivel B — "Modo máxima seguridad" (opcional, IMPLEMENTADO):** si NIDO
+  pasa a segundo plano (o se apaga la pantalla) más de 30 s, 1 min o 5 min
+  (elige el usuario), NIDO **termina su proceso**. Es la única forma fiable de
+  que no quede en memoria ni la DEK ni datos ya descifrados (estado de React,
+  cachés): JavaScript no permite borrar memoria a voluntad. Mismo enfoque que
+  el bloqueo de Molly. Si el temporizador no corre en segundo plano, se aplica
+  al volver. No hay opción "inmediato": abrir el selector de archivos o la
+  cámara del sistema saca a NIDO a segundo plano y lo cerraría a mitad.
+  Mientras está cerrado no se reciben mensajes P2P; los contactos los guardan
+  en su cola y llegan al reabrir. El servicio P2P vive en el mismo proceso; si
+  Android lo reinicia sin intent, se detiene solo (NidoP2PService).
 
 Nota: tras reiniciar la tablet, NIDO no arranca solo (no hay receptor de
 arranque), así que el nivel A no pierde funcionalidad en segundo plano.

@@ -208,6 +208,10 @@ function AppContent() {
   // C1-2026-10-06: timestamp del último "inactive" para la ventana de gracia
   // de overlays transitorios del sistema.
   const lastInactiveAtRef = useRef(0);
+  // HW-VAULT nivel B ("máxima seguridad"): momento en que NIDO pasó a
+  // segundo plano y temporizador que lo cierra por completo.
+  const strictBackgroundAtRef = useRef(0);
+  const strictTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** Arranque normal: rutinas, modelos y gate biométrico. */
   const finishStartup = async () => {
@@ -379,10 +383,51 @@ function AppContent() {
       if (s === "background") {
         lockNow();
         lastInactiveAtRef.current = 0;
+        // Nivel B: si está activo, cerrar NIDO por completo tras la espera
+        // elegida (borra la llave y todo lo descifrado de la memoria).
+        strictBackgroundAtRef.current = Date.now();
+        void (async () => {
+          try {
+            const { getStrictLockSeconds, isVaultActive, lockAndTerminate } = await import(
+              "./src/security/keyVault"
+            );
+            const secs = await getStrictLockSeconds();
+            if (secs === null || !(await isVaultActive())) return;
+            if (strictTimerRef.current) clearTimeout(strictTimerRef.current);
+            strictTimerRef.current = setTimeout(() => {
+              void lockAndTerminate();
+            }, secs * 1000);
+          } catch {
+            /* sin bóveda: nada que hacer */
+          }
+        })();
       } else if (s === "inactive") {
         // Posible overlay transitorio: registrar el momento, decidir al volver.
         lastInactiveAtRef.current = Date.now();
       } else if (s === "active") {
+        if (strictTimerRef.current) {
+          clearTimeout(strictTimerRef.current);
+          strictTimerRef.current = null;
+        }
+        // Si el temporizador no llegó a dispararse (Android puede congelar
+        // los timers en segundo plano) pero ya pasó la espera, cerrar ahora.
+        const bgAt = strictBackgroundAtRef.current;
+        strictBackgroundAtRef.current = 0;
+        if (bgAt) {
+          void (async () => {
+            try {
+              const { getStrictLockSeconds, isVaultActive, lockAndTerminate } = await import(
+                "./src/security/keyVault"
+              );
+              const secs = await getStrictLockSeconds();
+              if (secs !== null && (await isVaultActive()) && Date.now() - bgAt >= secs * 1000) {
+                await lockAndTerminate();
+              }
+            } catch {
+              /* sin bóveda: nada que hacer */
+            }
+          })();
+        }
         const inactiveAt = lastInactiveAtRef.current;
         lastInactiveAtRef.current = 0;
         // Si venimos de un "inactive" breve, fue un overlay transitorio del

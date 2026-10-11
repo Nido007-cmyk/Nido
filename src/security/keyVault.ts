@@ -28,10 +28,12 @@ import {
   getDatabaseKeyHex,
   readLegacyDatabaseKey,
   readVaultBlob,
+  readVaultSetting,
   registerVaultRewrap,
   setUnlockedDatabaseKey,
   writeLegacyDatabaseKey,
   writeVaultBlob,
+  writeVaultSetting,
 } from "../privacy/keyManager";
 
 export type VaultSecurityLevel = "strongbox" | "tee" | "software" | "unknown";
@@ -48,6 +50,7 @@ export interface KeyVaultNative {
   wrapWithAuth(plainB64: string, title: string, subtitle: string): Promise<string>;
   unwrapWithAuth(blobB64: string, title: string, subtitle: string): Promise<string>;
   deleteKek(): Promise<void>;
+  terminateProcess(): Promise<void>;
 }
 
 /** Códigos estables del módulo nativo (ver NidoKeyVaultModule.kt). */
@@ -256,12 +259,55 @@ export async function deactivateVault(prompt: VaultPrompt): Promise<void> {
   }
   await deleteVaultBlob();
   setUnlockedDatabaseKey(null);
+  await writeVaultSetting(STRICT_KEY, null).catch(() => {});
   await n.deleteKek().catch(() => {});
+}
+
+// ---------------------------------------------------------------------------
+// Nivel B — "máxima seguridad" (opcional)
+// ---------------------------------------------------------------------------
+
+const STRICT_KEY = "nido_vault_strict_lock_seconds";
+/** Opciones de espera antes de cerrar NIDO al salir (s). 0 no se ofrece:
+ *  abrir un selector de archivos o la cámara del sistema saca a NIDO a
+ *  segundo plano y lo cerraría a mitad. */
+export const STRICT_LOCK_OPTIONS = [30, 60, 300] as const;
+
+/** Segundos de espera del nivel B, o null si está desactivado. */
+export async function getStrictLockSeconds(): Promise<number | null> {
+  const raw = await readVaultSetting(STRICT_KEY);
+  if (raw === null) return null;
+  const n = Number(raw);
+  return (STRICT_LOCK_OPTIONS as readonly number[]).includes(n) ? n : null;
+}
+
+/** Activa (segundos) o desactiva (null) el nivel B. Exige la bóveda activa. */
+export async function setStrictLockSeconds(seconds: number | null): Promise<void> {
+  if (seconds !== null) {
+    if (!(STRICT_LOCK_OPTIONS as readonly number[]).includes(seconds)) {
+      throw new Error("keyVault: espera no permitida.");
+    }
+    if (!(await isVaultActive())) {
+      throw new VaultError("E_UNKNOWN", "Activa primero la protección por hardware.");
+    }
+  }
+  await writeVaultSetting(STRICT_KEY, seconds === null ? null : String(seconds));
+}
+
+/**
+ * Cierra NIDO por completo: borra la DEK de memoria y termina el proceso.
+ * Al volver a abrir, la pantalla de la bóveda pide PIN/huella.
+ */
+export async function lockAndTerminate(): Promise<void> {
+  setUnlockedDatabaseKey(null);
+  const n = native();
+  if (n) await n.terminateProcess().catch(() => {});
 }
 
 /** Borrado total ("Borrar todos los datos"): elimina la KEK de hardware. */
 export async function deleteVaultKek(): Promise<void> {
   setUnlockedDatabaseKey(null);
+  await writeVaultSetting(STRICT_KEY, null).catch(() => {});
   const n = native();
   if (n) await n.deleteKek().catch(() => {});
 }

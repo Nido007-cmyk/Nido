@@ -1167,6 +1167,13 @@
     "promptVerify": "Confirm once more to verify the protection",
     "errUnsupported": "Hardware protection requires Android 11 or later.",
     "rewrapProtect": "Confirm to protect the new key",
-    "rewrapVerify": "Confirm once more to verify it"
+    "rewrapVerify": "Confirm once more to verify it",
+    "strictTitle": "Maximum security mode",
+    "strictBody": "If you leave NIDO (or turn the screen off) for longer than the chosen time, NIDO closes completely and wipes the key and your data from memory. So even if the tablet is stolen while on, there's nothing left to extract. While closed you won't receive P2P messages: your contacts keep them and they arrive when you open NIDO again.",
+    "strictOff": "Off",
+    "strictSeconds": "{{n}} s",
+    "strictMinutes": "{{n}} min",
+    "strictEnable": "Turn on",
+    "strictConfirm": "NIDO will close completely when you leave the app for longer than the chosen time, and you'll need to unlock it again. While closed you won't receive P2P messages (they arrive when you open it)."
   }
 }

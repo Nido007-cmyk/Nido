@@ -155,6 +155,30 @@ export function setUnlockedDatabaseKey(hex: string | null): void {
   unlockedDekHex = hex ? hex.toLowerCase() : null;
 }
 
+/**
+ * HW-VAULT: ajustes pequeños de la bóveda que deben leerse SIN abrir la base
+ * (p. ej. el nivel B, que actúa cuando la DEK ya no está en memoria).
+ * Solo claves con prefijo "nido_vault_".
+ */
+export async function readVaultSetting(key: string): Promise<string | null> {
+  if (!key.startsWith("nido_vault_")) throw new Error("keyManager: clave de ajuste no permitida.");
+  const backend = realBackend();
+  if (!backend) return null;
+  try {
+    return await backend.getItemAsync(key);
+  } catch {
+    return null;
+  }
+}
+
+export async function writeVaultSetting(key: string, value: string | null): Promise<void> {
+  if (!key.startsWith("nido_vault_")) throw new Error("keyManager: clave de ajuste no permitida.");
+  const backend = realBackend();
+  if (!backend) throw new Error("keyManager: SecureStore no disponible.");
+  if (value === null) await backend.deleteItemAsync(key);
+  else await backend.setItemAsync(key, value);
+}
+
 /** Lee el blob envuelto (null = bóveda no activa). Fail-closed ante error de lectura. */
 export async function readVaultBlob(): Promise<string | null> {
   const backend = realBackend();

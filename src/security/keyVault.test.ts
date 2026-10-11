@@ -21,6 +21,9 @@ import {
   isVaultActive,
   setKeyVaultNativeForTests,
   unlockVault,
+  getStrictLockSeconds,
+  setStrictLockSeconds,
+  lockAndTerminate,
   type KeyVaultNative,
 } from "./keyVault";
 
@@ -38,6 +41,7 @@ function makeFakeNative(opts: { secure?: boolean } = {}) {
     invalidated: false,
     corruptNextWrap: false,
     prompts: 0,
+    terminated: 0,
   };
   const xor = (b64: string) => {
     const bin = atob(b64);
@@ -74,6 +78,9 @@ function makeFakeNative(opts: { secure?: boolean } = {}) {
     },
     deleteKek: async () => {
       state.kek = false;
+    },
+    terminateProcess: async () => {
+      state.terminated++;
     },
   };
   return { native, state };
@@ -226,5 +233,38 @@ describe("HW-VAULT: nuevas DEK y desactivación", () => {
     expect(state.kek).toBe(false);
     setUnlockedDatabaseKey(null);
     expect(await getDatabaseKeyHex()).toBe(DEK);
+  });
+});
+
+describe("HW-VAULT nivel B: máxima seguridad", () => {
+  it("solo se puede activar con la bóveda activa y con esperas permitidas", async () => {
+    const { native } = makeFakeNative();
+    setKeyVaultNativeForTests(native);
+    await expect(setStrictLockSeconds(60)).rejects.toThrow();
+    await activateVault(PROMPT, PROMPT);
+    await expect(setStrictLockSeconds(5)).rejects.toThrow();
+    await setStrictLockSeconds(60);
+    expect(await getStrictLockSeconds()).toBe(60);
+    await setStrictLockSeconds(null);
+    expect(await getStrictLockSeconds()).toBeNull();
+  });
+
+  it("cerrar por completo borra la DEK de memoria y termina el proceso", async () => {
+    const { native, state } = makeFakeNative();
+    setKeyVaultNativeForTests(native);
+    await activateVault(PROMPT, PROMPT);
+    expect(await getDatabaseKeyHex()).toBe(DEK);
+    await lockAndTerminate();
+    expect(state.terminated).toBe(1);
+    await expect(getDatabaseKeyHex()).rejects.toBeInstanceOf(VaultLockedError);
+  });
+
+  it("desactivar la protección también apaga el nivel B", async () => {
+    const { native } = makeFakeNative();
+    setKeyVaultNativeForTests(native);
+    await activateVault(PROMPT, PROMPT);
+    await setStrictLockSeconds(30);
+    await deactivateVault(PROMPT);
+    expect(await getStrictLockSeconds()).toBeNull();
   });
 });

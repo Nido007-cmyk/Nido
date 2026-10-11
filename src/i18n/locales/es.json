@@ -1167,6 +1167,13 @@
     "promptVerify": "Confirma otra vez para verificar la protección",
     "errUnsupported": "La protección por hardware necesita Android 11 o superior.",
     "rewrapProtect": "Confirma para proteger la nueva llave",
-    "rewrapVerify": "Confirma otra vez para verificarla"
+    "rewrapVerify": "Confirma otra vez para verificarla",
+    "strictTitle": "Modo máxima seguridad",
+    "strictBody": "Si sales de NIDO (o apagas la pantalla) por más del tiempo elegido, NIDO se cierra por completo y borra la llave y tus datos de la memoria. Así, aunque roben la tablet encendida, no queda nada que extraer. Mientras esté cerrado no recibirás mensajes P2P: tus contactos los guardan y te llegan al volver a abrir NIDO.",
+    "strictOff": "Desactivado",
+    "strictSeconds": "{{n}} s",
+    "strictMinutes": "{{n}} min",
+    "strictEnable": "Activar",
+    "strictConfirm": "NIDO se cerrará por completo cuando salgas de la app más del tiempo elegido y tendrás que desbloquearla de nuevo. Mientras esté cerrada no recibirás mensajes P2P (llegarán al abrirla)."
   }
 }
