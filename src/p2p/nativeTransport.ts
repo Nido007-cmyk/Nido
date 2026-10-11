@@ -56,6 +56,7 @@ import {
 } from "./crypto";
 import { getIdentity, getSigningKeypair, findContactByPk } from "./store";
 import { defaultHelloNonceCache, type HelloNonceCache } from "./nonceCache";
+import { globalRevocationRegistry } from "./replayProtection";
 import {
   buildConfirmV1,
   CONFIRM_WAIT_MS,
@@ -290,6 +291,21 @@ export interface NidoBluetoothTransportOpts {
   nonceCache?: HelloNonceCache;
 }
 
+/**
+ * Espeja la revocación del transporte (autoritativa, persistida) en el
+ * registro en memoria que consultan las capas superiores (pack sharing,
+ * grants). Nunca lanza: el espejo no puede romper el transporte.
+ * Auditoría 2026-10-10, M3.
+ */
+function mirrorRevocation(pkLower: string, revoked: boolean): void {
+  try {
+    if (revoked) globalRevocationRegistry.revokePeer(pkLower, "transport-revoked");
+    else globalRevocationRegistry.unrevokePeer(pkLower);
+  } catch {
+    /* best-effort */
+  }
+}
+
 export class NidoBluetoothTransport implements P2PTransport {
   readonly name = "nido-bluetooth";
   readonly available: boolean;
@@ -404,7 +420,10 @@ export class NidoBluetoothTransport implements P2PTransport {
         throw new Error("revoked-peers.json: estructura inválida (no es array)");
       }
       for (const pk of arr) {
-        if (typeof pk === "string") this.revokedPks.add(pk.toLowerCase());
+        if (typeof pk === "string") {
+          this.revokedPks.add(pk.toLowerCase());
+          mirrorRevocation(pk.toLowerCase(), true);
+        }
       }
       this.revokedPksLoaded = true;
       this.revocationStoreHealthy = true;
@@ -511,6 +530,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       FS = await import("expo-file-system/legacy");
     } catch {
       // Sin módulo FS: solo limpiar memoria.
+      for (const pk of this.revokedPks) mirrorRevocation(pk, false);
       this.revokedPks.clear();
       this.revokedPksLoaded = true;
       this.revocationStoreHealthy = true;
@@ -522,6 +542,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       const tmpPath = `${dir}revoked-peers.json.tmp`;
       await FS.deleteAsync(path, { idempotent: true });
       await FS.deleteAsync(tmpPath, { idempotent: true });
+      for (const pk of this.revokedPks) mirrorRevocation(pk, false);
       this.revokedPks.clear();
       this.revokedPksLoaded = true;
       this.revocationStoreHealthy = true;
@@ -1037,6 +1058,7 @@ export class NidoBluetoothTransport implements P2PTransport {
   async revokePeer(peerPkHex: string): Promise<void> {
     const pkLower = peerPkHex.toLowerCase();
     this.revokedPks.add(pkLower);
+    mirrorRevocation(pkLower, true);
     // FIX 2026-10-09 (CR-4/SEC): persistir; fallar visiblemente si no se puede.
     const persisted = await this.saveRevokedPks();
     // Desconectar siempre, incluso si la persistencia falló: el bloqueo
@@ -1063,6 +1085,7 @@ export class NidoBluetoothTransport implements P2PTransport {
    */
   async unrevokePeer(peerPkHex: string): Promise<void> {
     this.revokedPks.delete(peerPkHex.toLowerCase());
+    mirrorRevocation(peerPkHex.toLowerCase(), false);
     // FIX 2026-10-09 (CR-4/SEC): persistir; fallar visiblemente si no se puede.
     const persisted = await this.saveRevokedPks();
     if (!persisted) {

@@ -147,7 +147,7 @@ export function validateGrantForExecution(
   issuerPkHex: string,
   requiredScope: string,
   now: number = Date.now()
-): { valid: boolean; reason?: string } {
+): { valid: boolean; reason?: string; requiresHumanApproval?: boolean } {
   // 1. Verificar firma, expiración y usos (usesConsumed del grant)
   const issuerBytes = fromHex(issuerPkHex);
   const grantCheck = verifyGrant(grant, issuerBytes, grant.usesConsumed, now);
@@ -172,6 +172,14 @@ export function validateGrantForExecution(
     return { valid: false, reason: "scope_now_denied_by_policy" };
   }
 
+  // ASK: el grant es criptográficamente válido, pero la política local exige
+  // confirmación humana para este scope. Antes esto era indistinguible de
+  // AUTO; ahora el llamador DEBE comprobar `requiresHumanApproval` antes de
+  // ejecutar (auditoría 2026-10-10, M3).
+  if (evalResult.decision === "ASK") {
+    return { valid: true, requiresHumanApproval: true };
+  }
+
   return { valid: true };
 }
 
@@ -183,10 +191,13 @@ export function consumeGrantUse(
   grant: CapabilityGrant,
   issuerPkHex: string,
   requiredScope: string,
-  now: number = Date.now()
+  now: number = Date.now(),
+  /** El usuario confirmó ESTA ejecución (obligatorio si la política dice ASK). */
+  humanApproved: boolean = false
 ): boolean {
   const validation = validateGrantForExecution(grant, issuerPkHex, requiredScope, now);
   if (!validation.valid) return false;
+  if (validation.requiresHumanApproval && !humanApproved) return false;
   grant.usesConsumed += 1;
   return true;
 }
