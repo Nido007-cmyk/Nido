@@ -388,9 +388,17 @@ class NidoLanManager(
     }
   }
 
-  /** Descarta nuestro propio servicio si el sistema lo devuelve igualmente. */
+  /**
+   * Descarta nuestro propio servicio si el sistema lo devuelve igualmente.
+   * SELF-CONNECT-2026-10-11: se compara solo la IP, no el puerto. Tras un
+   * cierre forzado, la caché mDNS de la red sigue anunciando el servicio del
+   * proceso muerto (mismo IP, puerto viejo). Con el chequeo de puerto ese
+   * anuncio no se reconocía como propio y la app intentaba conectarse a sí
+   * misma: ECONNREFUSED y 5 s perdidos antes de llegar al peer real. En un
+   * mismo dispositivo nunca hay otro NIDO al que conectarse.
+   */
+  @Suppress("UNUSED_PARAMETER")
   private fun isMyself(host: InetAddress, port: Int): Boolean {
-    if (port != server?.localPort) return false
     return try {
       NetworkInterface.getNetworkInterfaces()?.toList().orEmpty().any { ni ->
         ni.inetAddresses.toList().any { it == host }

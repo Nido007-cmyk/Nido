@@ -16,8 +16,12 @@
  */
 
 export const PBKDF2_CANDIDATE_SOURCE_SHA256 =
+  // 2026-10-11 (FREEZE): pbkdf2.ts changed — yieldToEventLoop now always
+  // uses setTimeout(0) (React Native drains setImmediate in a loop and never
+  // yields to the UI). The KDF math is unchanged; only the yield primitive.
+  // Previous hash (pre-yield-fix): 4f163c4cbf1206094c85e53d98639599093b40b95b2ef6ed2e9bdb19b4f6ed19
   // 2026-10-09: hash updated after MIT header was added to pbkdf2.ts
   // (commit 8014dbe, legal requirement). The crypto code itself was NOT
   // modified — only the 6-line MIT license header was prepended.
   // Previous hash (pre-header): fc2cdc186c790ede737983202367a58acc728f905ef068bdbbd8c0cb59997877
-  "4f163c4cbf1206094c85e53d98639599093b40b95b2ef6ed2e9bdb19b4f6ed19";
+  "d813fbbaa0cde34f1dba1aa6a65461697c96901ccfce6e1aee09ccb10ca8a693";
