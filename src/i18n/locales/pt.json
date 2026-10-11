@@ -380,7 +380,12 @@
     "proposeButton": "+ Propor colaboração",
     "selectContactAndDescribe": "Selecione um contato e escreva a proposta.",
     "sendFailed": "Não foi possível enviar.",
-    "proposePlaceholder": "O que você quer propor?"
+    "proposePlaceholder": "O que você quer propor?",
+    "deleteButton": "Apagar",
+    "deleteTitle": "Apagar esta negociação?",
+    "deleteBody": "Ela é apagada só deste tablet. A outra pessoa não é avisada; para avisá-la, use Recusar antes de apagar.",
+    "deleteConfirm": "Apagar",
+    "deleteBusy": "Uma resposta está sendo enviada. Aguarde um momento e tente de novo."
   },
   "chatHeader": {
     "openDrawer": "Abrir menu de navegação",
