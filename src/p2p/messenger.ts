@@ -372,6 +372,7 @@ export class NidoMessenger {
         void this.handleFrame(peerPkHex, frame).catch(() => {});
       },
       onError: events?.onError,
+      onInfo: events?.onInfo,
     });
   }
 

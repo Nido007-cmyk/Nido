@@ -47,6 +47,11 @@ export interface P2PTransportEvents {
     theirNonce: Uint8Array,
   ) => void;
   onError?: (message: string) => void;
+  /**
+   * WIFI-UX-2026-10-11: avisos informativos que NO son fallos (p. ej.
+   * "Bluetooth apagado: se usa Wi-Fi local"). Sin handler, caen a onError.
+   */
+  onInfo?: (message: string) => void;
 }
 
 export interface P2PTransport {

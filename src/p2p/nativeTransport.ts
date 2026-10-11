@@ -771,7 +771,7 @@ export class NidoBluetoothTransport implements P2PTransport {
     const granted = await withPermissionRequest(() => b.requestPermissions());
     if (!granted) {
       if (!lan) throw new Error("NIDO necesita permisos de Bluetooth para hablar con otro NIDO.");
-      this.events?.onError?.("Sin permisos de Bluetooth: se usará solo Wi-Fi local.");
+      this.info("Sin permisos de Bluetooth: se usará solo Wi-Fi local.");
       return false;
     }
     return true;
@@ -793,7 +793,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       const msg =
         "El servidor Bluetooth no quedó escuchando (accept loop inactivo). Reabre la pantalla de enlace.";
       if (!this.lanCapable()) throw new Error(msg);
-      this.events?.onError?.(`${msg} Se usará Wi-Fi local mientras tanto.`);
+      this.info(`${msg} Se usará Wi-Fi local mientras tanto.`);
       return;
     }
     this.btReady = true;
@@ -915,8 +915,8 @@ export class NidoBluetoothTransport implements P2PTransport {
         : new Error("Ni Bluetooth ni Wi-Fi local están disponibles.");
     }
     if (btError) {
-      this.events?.onError?.(
-        `Bluetooth no pudo buscar (${btError instanceof Error ? btError.message : String(btError)}); se usa Wi-Fi local.`,
+      this.info(
+        `Bluetooth no disponible (${btError instanceof Error ? btError.message : String(btError)}): se usa Wi-Fi local.`,
       );
     }
   }
@@ -1426,6 +1426,12 @@ export class NidoBluetoothTransport implements P2PTransport {
     } finally {
       resolveReady();
     }
+  }
+
+  /** WIFI-UX-2026-10-11: aviso informativo (no es un error). */
+  private info(message: string): void {
+    if (this.events?.onInfo) this.events.onInfo(message);
+    else this.events?.onError?.(message);
   }
 
   /** AUDIT-2026-10-11 (LAN-2): cierra una conexión que no se autenticó. */

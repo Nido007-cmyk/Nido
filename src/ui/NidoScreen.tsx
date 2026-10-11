@@ -117,6 +117,9 @@ function fmtTime(ts: number): string {
  */
 const LISTENER_WAIT_MS = 6000;
 
+/** WIFI-UX-2026-10-11: espera máxima a que aparezca el anuncio Wi-Fi del otro. */
+const LAN_DISCOVERY_WAIT_MS = 6000;
+
 export function NidoScreen({ onClose }: { onClose: () => void }) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
@@ -145,6 +148,12 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   }, [contacts]);
   const [online, setOnline] = useState<Set<string>>(new Set());
   const [nearby, setNearby] = useState<string[]>([]);
+  // WIFI-UX-2026-10-11: lectura viva de "nearby" dentro de bucles async
+  // (el estado capturado por el callback queda congelado).
+  const nearbyRef = useRef<string[]>([]);
+  useEffect(() => {
+    nearbyRef.current = nearby;
+  }, [nearby]);
   const [linking, setLinking] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState<string | null>(null);
@@ -450,6 +459,11 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           },
           onError: (msg) => {
             if (!cancelled) setLinkError(msg);
+          },
+          // WIFI-UX-2026-10-11: "Bluetooth apagado, se usa Wi-Fi" es un aviso,
+          // no un error: se muestra como nota, no en rojo.
+          onInfo: (msg) => {
+            if (!cancelled) setNotice(msg);
           },
         });
         if (!cancelled) {
@@ -875,23 +889,13 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           }
           return out;
         })();
-        if (candidates.length === 0) {
-          throw new Error(t("nido.noNearbyForPaired"));
-        }
         // P2P-2026-10-06: jitter aleatorio 0-2s antes del barrido para evitar
         // choque simultáneo si ambas tablets tocan Connect al mismo tiempo.
         // El research mostró que el dial simultáneo crea condiciones de carrera
         // en los sockets que rompen el handshake.
         await new Promise((r) => setTimeout(r, Math.random() * 2000));
         let lastError: string = "";
-        for (let i = 0; i < candidates.length; i++) {
-          const alias = candidates[i];
-          // P2P-2026-10-06: pausa entre intentos. El research mostró que el
-          // socket anterior necesita ~500ms para cerrarse del todo antes de
-          // intentar el siguiente, o el connect falla con "read failed".
-          if (i > 0) {
-            await new Promise((r) => setTimeout(r, 750));
-          }
+        const attempt = async (alias: string): Promise<boolean> => {
           try {
             const info = await mRef.current.connectPeer(alias);
             if (info.pkHex.toLowerCase() === target) {
@@ -909,7 +913,37 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             lastError = e instanceof Error ? e.message : String(e);
             // Seguir con la siguiente MAC.
           }
+          return false;
+        };
+        for (let i = 0; i < candidates.length; i++) {
+          // P2P-2026-10-06: pausa entre intentos. El research mostró que el
+          // socket anterior necesita ~500ms para cerrarse del todo antes de
+          // intentar el siguiente, o el connect falla con "read failed".
+          if (i > 0) {
+            await new Promise((r) => setTimeout(r, 750));
+          }
+          if (await attempt(candidates[i])) return true;
         }
+        // WIFI-UX-2026-10-11: el anuncio Wi-Fi del otro NIDO tarda unos
+        // segundos en aparecer al abrir la pantalla. Antes, si el primer
+        // toque llegaba antes (p. ej. con Bluetooth apagado), fallaba y había
+        // que tocar Conectar otra vez. Ahora se espera un poco a que aparezca.
+        const tried = new Set(candidates.map((c) => c.toUpperCase()));
+        const lanDeadline = Date.now() + LAN_DISCOVERY_WAIT_MS;
+        while (Date.now() < lanDeadline) {
+          const fresh = nearbyRef.current.filter(
+            (a) => extractLanAddress(a) !== null && !tried.has(a.toUpperCase()),
+          );
+          if (fresh.length === 0) {
+            await new Promise((r) => setTimeout(r, 500));
+            continue;
+          }
+          for (const alias of fresh) {
+            tried.add(alias.toUpperCase());
+            if (await attempt(alias)) return true;
+          }
+        }
+        if (tried.size === 0) throw new Error(t("nido.noNearbyForPaired"));
         throw new Error(
           lastError || t("nido.pairedNotFound", { name })
         );
