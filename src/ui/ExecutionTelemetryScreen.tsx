@@ -58,9 +58,6 @@ function outcomeColor(colors: Colors, outcome: ExecutionTelemetryRecord["outcome
  * models, not a user-facing preference. Kept simple: a scrollable list of
  * recent executions plus export, no charts/analytics.
  */
-/** La evaluación en dispositivo solo existe en builds de desarrollo. */
-const SHOW_EVALUATION = typeof __DEV__ !== "undefined" && __DEV__;
-
 export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
@@ -122,7 +119,7 @@ export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
     );
   };
 
-  if (showEvaluation && SHOW_EVALUATION) {
+  if (showEvaluation) {
     return (
       <EvaluationScreen
         chatBusy={chatBusy}
@@ -152,20 +149,14 @@ export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
       </View>
 
       <View style={styles.actionsRow}>
-        {/* FREEZE-2026-10-10: la suite de evaluación (34 respuestas seguidas
-            del modelo + benchmark PBKDF2 de 600k iteraciones) saturaba la
-            Tab A9+ hasta dejarla sin responder. Es una herramienta de
-            desarrollo: solo en builds de desarrollo, nunca en el APK release. */}
-        {SHOW_EVALUATION && (
-          <Pressable
-            style={styles.actionBtn}
-            onPress={() => setShowEvaluation(true)}
-            accessibilityRole="button"
-            accessibilityLabel={t("executionTelemetry.runEvaluation")}
-          >
-            <Text style={styles.actionBtnText}>{t("executionTelemetry.runEvaluation")}</Text>
-          </Pressable>
-        )}
+        <Pressable
+          style={styles.actionBtn}
+          onPress={() => setShowEvaluation(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t("executionTelemetry.runEvaluation")}
+        >
+          <Text style={styles.actionBtnText}>{t("executionTelemetry.runEvaluation")}</Text>
+        </Pressable>
         <Pressable
           style={styles.actionBtn}
           onPress={() => handleExport("json")}
