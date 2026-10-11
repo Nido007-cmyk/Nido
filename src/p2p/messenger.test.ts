@@ -115,6 +115,24 @@ describe("NidoMessenger", () => {
     expect((await m.contacts()).map((c) => c.name)).toEqual(["Beto"]);
   });
 
+  it("CRYPTO-AUDIT: re-escanear un contacto con OTRA clave de firma no la reemplaza", async () => {
+    const m = new NidoMessenger();
+    await m.ensureIdentity();
+    const peerId = generateIdentity();
+    const realSign = generateSigningKeypair();
+    await m.pairWith(encodePairingPayload("Beto", peerId.publicKey, realSign.publicKey));
+    const attackerSign = generateSigningKeypair();
+    await expect(
+      m.pairWith(encodePairingPayload("Beto", peerId.publicKey, attackerSign.publicKey)),
+    ).rejects.toMatchObject({ code: "NIDO_PAIR_KEY_CHANGED" });
+    const [beto] = await m.contacts();
+    expect(beto.sigPkHex).toBe(toHex(realSign.publicKey));
+    // Re-escanear el QR auténtico sigue siendo idempotente.
+    await expect(
+      m.pairWith(encodePairingPayload("Beto", peerId.publicKey, realSign.publicKey)),
+    ).resolves.not.toBeNull();
+  });
+
   it("pairWith devuelve el contacto correcto aunque el nombre se repita (búsqueda por clave, no por nombre)", async () => {
     const m = new NidoMessenger();
     await m.ensureIdentity();

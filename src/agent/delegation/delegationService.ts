@@ -389,7 +389,11 @@ export class DelegationService {
     const session = negotiationService
       .listSessions()
       .find((s) => s.negotiationId === body.negotiationId);
-    const negState = session?.state ?? "UNKNOWN";
+    // AUDIT-2026-10-11 (NEG-1): la negociación tiene que ser CON ESTE peer.
+    // Antes bastaba citar el ID de una negociación aceptada con otro
+    // contacto para que la tarea pasara el filtro de estado.
+    const samePeer = session?.peerPkHex?.toLowerCase() === fromPkHex.toLowerCase();
+    const negState = session && samePeer ? session.state : "UNKNOWN";
 
     let shown: ShownRequest;
     let requestId: string;

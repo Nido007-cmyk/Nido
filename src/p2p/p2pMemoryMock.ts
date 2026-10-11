@@ -320,7 +320,8 @@ export function makeP2PMemoryDb(mem: P2PMem) {
         const existing = mem.contacts.find((c) => c.pk_hex === pk);
         if (existing) {
           existing.name = name as string;
-          existing.sig_pk = sig ?? null;
+          // CRYPTO-AUDIT-2026-10-11: espejo de COALESCE(excluded.sig_pk, sig_pk).
+          existing.sig_pk = sig ?? existing.sig_pk;
           // UNIT B: re-pair con la misma pk la restaura (defensivo).
           existing.superseded_by = null;
           existing.superseded_at = null;

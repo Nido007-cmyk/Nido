@@ -33,6 +33,8 @@ import type { PairDisambiguation } from "./messenger";
 export interface PairingContactLike {
   pkHex: string;
   name: string;
+  /** Clave de firma (si se conoce): la huella v2 la incluye. */
+  sigPkHex?: string | null;
 }
 
 /** Función i18n inyectada por el llamador (claves agentConfirm.*). */
@@ -92,7 +94,7 @@ export async function findPairingCollision(
   return hits.map((c) => ({
     pkHex: c.pkHex,
     name: c.name,
-    fingerprint: fingerprint(fromHex(c.pkHex)),
+    fingerprint: fingerprint(fromHex(c.pkHex), c.sigPkHex ? fromHex(c.sigPkHex) : null),
   }));
 }
 
@@ -170,7 +172,7 @@ export async function previewPairingCeremony(
   ) {
     throw new Error("Ese es tu propio QR.");
   }
-  const fp = fingerprint(fromHex(payload.pk));
+  const fp = fingerprint(fromHex(payload.pk), payload.spk ? fromHex(payload.spk) : null);
   const warning = await pairingBindingWarning(
     opts.t,
     payload.pk,

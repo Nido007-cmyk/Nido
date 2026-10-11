@@ -161,9 +161,16 @@ async function measureCase(
   const rssBeforeBytes = safeRssBytes();
 
   onProgress?.(`${mode}: cold run (1/${1 + WARM_RUNS})`);
-  const coldMs = await timedRun(mode, (done, total) =>
-    onProgress?.(`${mode}: cold ${((done / total) * 100).toFixed(0)}%`)
-  );
+  // FREEZE-2026-10-11: avisar solo cuando cambia el porcentaje entero. Con
+  // tramos de 64 iteraciones había ~9.400 avisos por pasada, cada uno un
+  // setState y un render de la pantalla de Evaluación.
+  let lastPct = -1;
+  const coldMs = await timedRun(mode, (done, total) => {
+    const pct = Math.floor((done / total) * 100);
+    if (pct === lastPct) return;
+    lastPct = pct;
+    onProgress?.(`${mode}: cold ${pct}%`);
+  });
 
   const warmRunsMs: number[] = [];
   for (let i = 0; i < WARM_RUNS; i++) {

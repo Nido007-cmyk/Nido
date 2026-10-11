@@ -17,10 +17,16 @@ type FakeContext = {
 };
 const created: FakeContext[] = [];
 let inFlightInits = 0;
+// RAM-2026-10-11: parámetros de cada initLlama y rechazo simulado por perfil.
+const initCalls: Array<Record<string, unknown>> = [];
+let rejectInit: ((p: Record<string, unknown>) => boolean) | null = null;
 let maxConcurrentInits = 0;
 
 vi.mock("llama.rn", () => ({
-  initLlama: async ({ model }: { model: string }) => {
+  initLlama: async (params: { model: string } & Record<string, unknown>) => {
+    const { model } = params;
+    initCalls.push(params);
+    if (rejectInit?.(params)) throw new Error("Failed to initialize context");
     inFlightInits++;
     maxConcurrentInits = Math.max(maxConcurrentInits, inFlightInits);
     await new Promise((r) => setTimeout(r, 5));
@@ -83,6 +89,44 @@ beforeEach(() => {
   maxConcurrentInits = 0;
   mockTotalRamBytes = 12 * 1024 ** 3;
   mockRssBytes = 1024 ** 3;
+  initCalls.length = 0;
+  rejectInit = null;
+});
+
+describe("RAM-2026-10-11: perfiles de memoria del LLM", () => {
+  it("usa primero el perfil ahorrador: KV q8_0, n_ubatch 256, n_batch 512", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0]).toMatchObject({ cache_type_k: "q8_0", cache_type_v: "q8_0", n_ubatch: 256, n_batch: 512, use_mlock: false });
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+  });
+
+  it("si llama.cpp rechaza la KV cuantizada, carga con lote pequeño y KV normal", async () => {
+    rejectInit = (p) => p.cache_type_v !== undefined;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls).toHaveLength(2);
+    expect(initCalls[1].cache_type_k).toBeUndefined();
+    expect(initCalls[1].n_ubatch).toBe(256);
+    expect(engine.getModelInfo()?.memoryProfile).toBe("small-batch");
+  });
+
+  it("como último recurso usa exactamente los parámetros originales", async () => {
+    rejectInit = (p) => p.n_ubatch !== undefined;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls).toHaveLength(3);
+    expect(Object.keys(initCalls[2]).sort()).toEqual(["model", "n_ctx", "n_gpu_layers", "n_threads", "use_mlock"]);
+    expect(engine.getModelInfo()?.memoryProfile).toBe("default");
+  });
+
+  it("si ningún perfil carga, el error llega igual que antes", async () => {
+    rejectInit = () => true;
+    const engine = new LlamaEngine();
+    await expect(engine.load("models/a.gguf")).rejects.toThrow(/Failed to load/);
+    expect(engine.isLoaded).toBe(false);
+  });
 });
 
 describe("LlamaEngine load/unload", () => {

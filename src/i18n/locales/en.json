@@ -633,7 +633,7 @@
     "howItWorksTitle": "How it works",
     "howItWorksBody": "Messages are encrypted on your phone and travel straight to the other NIDO over Bluetooth — no internet, no servers. If your contact isn’t within reach, the message stays in an encrypted queue and is sent only when they appear.",
     "troubleshootTitle": "Trouble connecting?",
-    "troubleshootBody": "If it won’t connect, try in this order:\n\n1. Restart both tablets.\n2. Turn off WiFi on both (WiFi interferes with Bluetooth).\n3. In Android Settings → Bluetooth, pair the tablets with each other.\n4. Open NIDO and connect from here.\n5. If it disconnects in background: Settings → Apps → NIDO → Battery → Unrestricted.",
+    "troubleshootBody": "If it won’t connect, try in this order:\n\n1. Open NIDO on this screen on both tablets and tap Connect on either one.\n2. Turn on Bluetooth on both. If Bluetooth fails, put both on the same Wi-Fi network (no internet needed): NIDO uses local Wi-Fi as a fallback.\n3. Restart both tablets.\n4. In Android Settings → Bluetooth, pair the tablets with each other.\n5. If it disconnects in background: Settings → Apps → NIDO → Battery → Unrestricted.",
     "myCodeTitle": "My code",
     "myCodeBody": "Show this QR to your contact to pair. Read the fingerprint aloud to each other before trusting it.",
     "copyCode": "📋 Copy code as text",
@@ -670,7 +670,7 @@
     "revocationRecoveryFailed": "Could not reset the list. Try again.",
     "noNearbyForPaired": "No nearby devices found. Make sure Bluetooth is on and the other NIDO is close.",
     "pairedNotFound": "Could not connect to {{name}}. Make sure the other tablet has NIDO open on the P2P screen with the screen on, then try again.",
-    "waitingForPeer": "Waiting for {{name}} to connect. Keep NIDO open on this screen with the display on.",
+    "waitingForPeer": "Waiting for {{name}} to connect… If it doesn’t call in a few seconds, this tablet will.",
     "privacyTitle": "Privacy",
     "privacyBody": "NIDO uses no internet: discovery and messages use only classic Bluetooth between your devices and your contacts’. Nothing ever reaches a server.",
     "messagePlaceholder": "Encrypted message…",
@@ -718,7 +718,9 @@
     "deleteContactConfirm": "This removes the contact and the whole conversation with them from this device. To talk again you will have to pair by scanning their QR code. This cannot be undone.",
     "deleteContactLabel": "Delete contact {{name}}",
     "contactDeleted": "“{{name}}” was deleted.",
-    "deleteContactFailed": "Could not delete the contact."
+    "deleteContactFailed": "Could not delete the contact.",
+    "dialingInstead": "{{name}} didn’t call: connecting from this tablet…",
+    "pairKeyChanged": "⚠️ The security key for “{{name}}” changed. If you didn’t expect this, do NOT continue: someone could be impersonating your contact. If you know they reinstalled NIDO, delete them from your contacts and pair again, comparing the fingerprint in person. Nothing was saved."
   },
   "notifications": {
     "reminderChannel": "NIDO Reminders",

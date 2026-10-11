@@ -1,4 +1,4 @@
-# NIDO v0.1.5-alpha — Release Notes
+# NIDO v0.1.6-alpha — Release Notes
 
 ## What is this?
 
@@ -11,6 +11,30 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Reminders with local notifications
 - Encrypted on-device storage
 - Backup / restore
+
+## What changed in 0.1.6-alpha
+
+> **Pre-release.** Built and checked by automated tests; real-device testing is ongoing. Please report anything that fails in Issues.
+
+> ⚠️ **Update both devices before pairing.** The security fingerprint shown under the QR code changed (see below), so a v0.1.6 device and a v0.1.5 device will show different fingerprints. Already-paired contacts keep working.
+
+**Security (from a full security audit)**
+- **Pairing fingerprint now covers both keys.** The numbers you compare out loud under the QR code now include the signing key that protects every connection. Before, a tampered QR code could keep the same fingerprint.
+- **A contact's key can no longer be replaced silently.** If someone shows a QR code with a known contact's identity but a different key, NIDO warns you and saves nothing.
+- **Your identity is no longer revealed to strangers on Wi-Fi.** The device that receives a local Wi-Fi connection stays silent until the other side proves it is one of your contacts.
+- **Wi-Fi connections that don't authenticate are closed** (before, someone on the same network could tie up all connection slots).
+- **Negotiations are never accepted automatically**, and a delegated task must come from the same contact as its negotiation.
+
+**P2P**
+- **Connect works from either tablet.** The waiting side calls on its own after a few seconds if the other doesn't — without colliding when both tap Connect.
+- **First Connect over Wi-Fi works** (it waits a few seconds for the other device to appear on the network).
+- After a forced close, NIDO no longer tries to connect to **itself** over Wi-Fi.
+- "Bluetooth off, using local Wi-Fi" is shown as a note, not as an error. The help text no longer tells you to turn Wi-Fi off.
+- Messages arriving right as a connection finishes are no longer lost.
+
+**Stability and performance**
+- **The Evaluation screen no longer freezes the app** (root cause: on React Native, `setImmediate` never yields to Android; the benchmark now yields with `setTimeout`).
+- **Less RAM for the AI model:** smaller compute batch and compressed context cache (q8_0), with automatic fallback to the previous settings if a device rejects them.
 
 ## What changed in 0.1.5-alpha
 

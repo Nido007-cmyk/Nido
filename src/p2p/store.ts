@@ -511,7 +511,10 @@ export async function saveContact(pkHex: string, name: string, sigPkHex?: string
         // UNIT B (§8 Q10): si la pk coincide con una fila superseded, la
         // ceremonia explícita la restaura ("la identidad volvió"): se
         // limpia el retiro. Solo un emparejamiento explícito llega aquí.
-        "ON CONFLICT(pk_hex) DO UPDATE SET name=excluded.name, verified=1, sig_pk=excluded.sig_pk, " +
+        // CRYPTO-AUDIT-2026-10-11: un QR v1 (sin clave de firma) nunca borra
+        // la clave de firma ya verificada de un contacto (degradación).
+        "ON CONFLICT(pk_hex) DO UPDATE SET name=excluded.name, verified=1, " +
+        "sig_pk=COALESCE(excluded.sig_pk, p2p_contacts.sig_pk), " +
         "superseded_by=NULL, superseded_at=NULL",
       [pk, label, sig],
     );
@@ -643,7 +646,10 @@ export async function commitRepair(c: RepairCommit): Promise<{ superseded: strin
     }
     await db.runAsync(
       "INSERT INTO p2p_contacts (pk_hex, name, verified, sig_pk) VALUES (?, ?, 1, ?) " +
-        "ON CONFLICT(pk_hex) DO UPDATE SET name=excluded.name, verified=1, sig_pk=excluded.sig_pk, " +
+        // CRYPTO-AUDIT-2026-10-11: un QR v1 (sin clave de firma) nunca borra
+        // la clave de firma ya verificada de un contacto (degradación).
+        "ON CONFLICT(pk_hex) DO UPDATE SET name=excluded.name, verified=1, " +
+        "sig_pk=COALESCE(excluded.sig_pk, p2p_contacts.sig_pk), " +
         "superseded_by=NULL, superseded_at=NULL",
       [newPk, label, sig],
     );

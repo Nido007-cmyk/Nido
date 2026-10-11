@@ -205,6 +205,28 @@ export interface PairWithOptions {
  * Fail-closed: nada se escribió. El path del agente lo traduce a
  * "cancelled" (default = cancel, nunca "Replace").
  */
+/**
+ * CRYPTO-AUDIT-2026-10-11: el QR escaneado trae la identidad de un contacto
+ * que YA tienes, pero con otra clave de firma. Antes se sobrescribía en
+ * silencio, y como la huella mostrada (solo identidad) era la misma, un QR
+ * alterado convertía al atacante en ese contacto. Ahora no se escribe nada:
+ * para aceptar una clave nueva hay que borrar el contacto y emparejar de
+ * nuevo, verificando la huella en persona.
+ */
+export class PairingKeyChangedError extends Error {
+  readonly code = "NIDO_PAIR_KEY_CHANGED";
+  readonly contactName: string;
+  constructor(contactName: string) {
+    super(
+      `La clave de seguridad de «${contactName}» cambió. Si no lo esperabas, NO continúes: ` +
+        "alguien podría estar haciéndose pasar por tu contacto. Si sabes que reinstaló NIDO, " +
+        "bórralo de tus contactos y empareja de nuevo verificando la huella en persona. No se guardó nada.",
+    );
+    this.name = "PairingKeyChangedError";
+    this.contactName = contactName;
+  }
+}
+
 export class PairingDisambiguationRequiredError extends Error {
   readonly code = "NIDO_PAIR_DISAMBIGUATION_REQUIRED";
   readonly candidates: P2PContact[];
@@ -372,6 +394,7 @@ export class NidoMessenger {
         void this.handleFrame(peerPkHex, frame).catch(() => {});
       },
       onError: events?.onError,
+      onInfo: events?.onInfo,
     });
   }
 
@@ -397,6 +420,12 @@ export class NidoMessenger {
   connectedPeers(): string[] {
     this.assertLive();
     return this.transport.connectedPeers ? this.transport.connectedPeers() : [];
+  }
+
+  /** DIAL-ROLE-2026-10-11: ¿alguien nos está llamando ahora mismo? */
+  handshakeInProgress(): boolean {
+    this.assertLive();
+    return this.transport.handshakeInProgress ? this.transport.handshakeInProgress() : false;
   }
 
   /**
@@ -567,7 +596,22 @@ export class NidoMessenger {
       this.assertLive();
     }
     this.myPk = identity.publicKey;
-    return { pkHex: toHex(identity.publicKey), fingerprint: fingerprint(identity.publicKey) };
+    // CRYPTO-AUDIT-2026-10-11: la huella propia cubre identidad + firma,
+    // igual que la que calcula quien escanea nuestro QR (v2).
+    // Si la clave de firma no está disponible (p. ej. pérdida del Keystore,
+    // que ya tiene su propia pantalla de recuperación), no se rompe esta
+    // llamada: se muestra la huella legada.
+    let signingPk: Uint8Array | null = null;
+    try {
+      signingPk = (await getSigningKeypair()).publicKey;
+    } catch {
+      signingPk = null;
+    }
+    this.assertLive();
+    return {
+      pkHex: toHex(identity.publicKey),
+      fingerprint: fingerprint(identity.publicKey, signingPk),
+    };
   }
 
   /**
@@ -669,6 +713,15 @@ export class NidoMessenger {
     const knownLive = await findContactByPk(payload.pk);
     this.assertLive();
     if (knownLive) {
+      // CRYPTO-AUDIT-2026-10-11: misma identidad, OTRA clave de firma →
+      // nunca se reemplaza en silencio (ver PairingKeyChangedError).
+      if (
+        knownLive.sigPkHex &&
+        payload.spk &&
+        knownLive.sigPkHex.toLowerCase() !== payload.spk.toLowerCase()
+      ) {
+        throw new PairingKeyChangedError(knownLive.name);
+      }
       await commitRepair({
         oldPkHexes: [],
         newPkHex: payload.pk,

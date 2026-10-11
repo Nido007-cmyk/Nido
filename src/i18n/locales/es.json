@@ -634,7 +634,7 @@
     "howItWorksTitle": "Cómo funciona",
     "howItWorksBody": "Los mensajes se cifran en tu teléfono y viajan directo al otro NIDO por Bluetooth, sin internet ni servidores. Si tu contacto no está al alcance, el mensaje queda en cola cifrada y se envía solo cuando aparezca.",
     "troubleshootTitle": "¿Problemas para conectar?",
-    "troubleshootBody": "Si no conecta, prueba en este orden:\n\n1. Reinicia ambas tablets.\n2. Apaga el WiFi en ambas (el WiFi interfiere con el Bluetooth).\n3. En Ajustes de Android → Bluetooth, empareja las tablets entre sí.\n4. Abre NIDO y conecta desde aquí.\n5. Si se desconecta en segundo plano: Ajustes → Apps → NIDO → Batería → Sin restricciones.",
+    "troubleshootBody": "Si no conecta, prueba en este orden:\n\n1. Abre NIDO en esta pantalla en ambas tablets y toca Conectar en cualquiera de las dos.\n2. Activa el Bluetooth en ambas. Si el Bluetooth falla, conecta las dos a la misma red Wi-Fi (no hace falta internet): NIDO usa el Wi-Fi local como respaldo.\n3. Reinicia ambas tablets.\n4. En Ajustes de Android → Bluetooth, empareja las tablets entre sí.\n5. Si se desconecta en segundo plano: Ajustes → Apps → NIDO → Batería → Sin restricciones.",
     "myCodeTitle": "Mi código",
     "myCodeBody": "Muestra este QR a tu contacto para emparejarse. Verifiquen la huella leyéndola en voz alta antes de confiar.",
     "copyCode": "📋 Copiar código como texto",
@@ -671,7 +671,7 @@
     "revocationRecoveryFailed": "No se pudo restablecer la lista. Inténtalo de nuevo.",
     "noNearbyForPaired": "No se encontraron dispositivos cercanos. Asegúrate de que el Bluetooth esté encendido y el otro NIDO esté cerca.",
     "pairedNotFound": "No se pudo conectar con {{name}}. Asegúrate de que la otra tablet tenga NIDO abierto en la pantalla P2P con la pantalla encendida, e inténtalo de nuevo.",
-    "waitingForPeer": "Esperando que {{name}} se conecte. Mantén NIDO abierto en esta pantalla con la pantalla encendida.",
+    "waitingForPeer": "Esperando a que {{name}} se conecte… Si no llama en unos segundos, llamo yo.",
     "privacyTitle": "Privacidad",
     "privacyBody": "NIDO no usa internet: el discovery y los mensajes usan solo Bluetooth clásico entre tus dispositivos y los de tus contactos. Nada sale a ningún servidor.",
     "messagePlaceholder": "Mensaje cifrado…",
@@ -718,7 +718,9 @@
     "deleteContactConfirm": "Esto borra el contacto y toda la conversación con él de este dispositivo. Para volver a hablar tendrán que emparejarse escaneando su código QR. No se puede deshacer.",
     "deleteContactLabel": "Eliminar el contacto {{name}}",
     "contactDeleted": "«{{name}}» fue eliminado.",
-    "deleteContactFailed": "No se pudo eliminar el contacto."
+    "deleteContactFailed": "No se pudo eliminar el contacto.",
+    "dialingInstead": "{{name}} no llamó: conectando desde esta tablet…",
+    "pairKeyChanged": "⚠️ La clave de seguridad de «{{name}}» cambió. Si no lo esperabas, NO continúes: alguien podría estar haciéndose pasar por tu contacto. Si sabes que reinstaló NIDO, bórralo de tus contactos y empareja de nuevo comparando la huella en persona. No se guardó nada."
   },
   "notifications": {
     "reminderChannel": "Recordatorios de NIDO",

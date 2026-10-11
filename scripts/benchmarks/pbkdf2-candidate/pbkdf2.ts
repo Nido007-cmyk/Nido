@@ -104,13 +104,19 @@ export function pbkdf2Sha256(
   return out;
 }
 
-function yieldToEventLoop(): Promise<void> {
+/**
+ * FREEZE-2026-10-11: siempre setTimeout, nunca setImmediate. En React Native
+ * la cola de setImmediate se vacía en bucle al final de cada lote de JS
+ * (JSTimers.callImmediates repite pasadas hasta que la cola queda vacía).
+ * Un setImmediate que programa el siguiente tramo vuelve a entrar en esa
+ * misma pasada: el hilo de JS nunca devuelve el control a Android y la UI
+ * queda congelada hasta terminar las 600k iteraciones, aunque el trabajo
+ * esté troceado. setTimeout(0) sí cede: el siguiente tramo corre en un lote
+ * nuevo, después de que Android procese toques y pintado.
+ */
+export function yieldToEventLoop(): Promise<void> {
   return new Promise((resolve) => {
-    const g = globalThis as unknown as {
-      setImmediate?: (cb: () => void) => void;
-    };
-    if (typeof g.setImmediate === "function") g.setImmediate(resolve);
-    else setTimeout(resolve, 0);
+    setTimeout(resolve, 0);
   });
 }
 

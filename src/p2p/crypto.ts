@@ -358,9 +358,29 @@ export function buildConfirmSignMessage(pkHex: string, cnHex: string, pnHex: str
 }
 
 /** Huella legible para verificación verbal: 8 grupos de 4 hex. */
-export function fingerprint(publicKey: Uint8Array): string {
+export function fingerprint(publicKey: Uint8Array, signingPublicKey?: Uint8Array | null): string {
   if (publicKey.length !== 32) throw new Error("Clave pública inválida (debe ser 32 bytes).");
-  const hex = toHex(publicKey);
+  if (!signingPublicKey) {
+    // Legado (QR v1, sin clave de firma): prefijo de la clave de identidad.
+    const hex = toHex(publicKey);
+    const groups: string[] = [];
+    for (let i = 0; i < 8; i++) groups.push(hex.slice(i * 4, i * 4 + 4));
+    return groups.join(" ");
+  }
+  if (signingPublicKey.length !== 32) throw new Error("Clave de firma inválida (debe ser 32 bytes).");
+  // CRYPTO-AUDIT-2026-10-11: la huella que se coteja en voz alta tiene que
+  // cubrir la clave que de verdad autentica el handshake (la de FIRMA,
+  // Ed25519). Antes era solo el prefijo de la clave de identidad X25519:
+  // un QR alterado que conservaba la identidad real y cambiaba la clave de
+  // firma mostraba la MISMA huella y permitía suplantar al contacto.
+  // Ahora: SHA-512(dominio ‖ identidad ‖ firma), primeros 16 bytes (128
+  // bits), en 8 grupos de 4 hex (mismo formato visual de siempre).
+  const domain = utf8Encode("nido-fingerprint-v2");
+  const buf = new Uint8Array(domain.length + 64);
+  buf.set(domain, 0);
+  buf.set(publicKey, domain.length);
+  buf.set(signingPublicKey, domain.length + 32);
+  const hex = toHex(sha512(buf).slice(0, 16));
   const groups: string[] = [];
   for (let i = 0; i < 8; i++) groups.push(hex.slice(i * 4, i * 4 + 4));
   return groups.join(" ");
