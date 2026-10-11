@@ -1,0 +1,78 @@
+name: P2P / Bluetooth issue
+description: Problems pairing or connecting two devices
+title: "[P2P] "
+labels: ["p2p", "bluetooth"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Privacy first.** Do NOT paste encryption keys, QR codes, note/message contents, contact names, phone numbers or screenshots showing personal data. Describe the problem in your own words or blur the screenshot. You can write in English or Español.
+        **Security vulnerability?** Do not open a public issue — use [private reporting](https://github.com/Nido007-cmyk/Nido/security/advisories/new).
+  - type: input
+    id: device_a
+    attributes:
+      label: Device A (model + Android version)
+    validations:
+      required: true
+  - type: input
+    id: device_b
+    attributes:
+      label: Device B (model + Android version)
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: NIDO version / APK hash on EACH device
+      description: Both devices must run the same build.
+      placeholder: "A: v0.1.0-alpha sha256:d921...  B: same"
+    validations:
+      required: true
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where does it fail?
+      options:
+        - QR exchange / pairing
+        - Connecting (handshake)
+        - Connected, but messages are not delivered
+        - Connection drops after a while
+        - Reconnect after restart or out of range
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: initiator
+    attributes:
+      label: Which device started the connection?
+      options:
+        - Device A
+        - Device B
+        - Both at the same time
+        - Not sure
+  - type: checkboxes
+    id: pairing
+    attributes:
+      label: What you did before connecting
+      options:
+        - label: Paired in Android Settings > Bluetooth before opening NIDO
+        - label: Wi-Fi was OFF during pairing
+        - label: Both devices were restarted before pairing
+        - label: Bluetooth and nearby-devices permissions are granted on both
+        - label: Battery is set to Unrestricted for NIDO on both
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Exact error text (e.g. handshake timeout, "not in range", "clock outside allowed margin").
+    validations:
+      required: true
+  - type: input
+    id: clock
+    attributes:
+      label: Do both devices show the same date and time?
+      description: A clock difference of more than 10 minutes blocks the handshake.
+  - type: textarea
+    id: tried
+    attributes:
+      label: Steps from the in-app "Trouble connecting?" guide you tried

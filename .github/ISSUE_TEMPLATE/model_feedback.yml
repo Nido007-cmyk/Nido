@@ -1,0 +1,53 @@
+name: AI model feedback
+description: Wrong answers, hallucinations or suggestions for the on-device model
+title: "[MODEL] "
+labels: ["model"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Privacy first.** Do NOT paste encryption keys, QR codes, note/message contents, contact names, phone numbers or screenshots showing personal data. Describe the problem in your own words or blur the screenshot. You can write in English or Español.
+        **Security vulnerability?** Do not open a public issue — use [private reporting](https://github.com/Nido007-cmyk/Nido/security/advisories/new).
+  - type: textarea
+    id: asked
+    attributes:
+      label: What you asked
+      description: Use a generic example if the real question was personal.
+    validations:
+      required: true
+  - type: textarea
+    id: answered
+    attributes:
+      label: What NIDO answered
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What was wrong?
+      options:
+        - Made-up fact (hallucination)
+        - Should have said "I don't know"
+        - Wrong date or number
+        - Wrong language
+        - Ignored my instruction
+        - Used a tool or action it should not have
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model shown in Settings
+      placeholder: "Qwen 2.5 0.5B Q4"
+    validations:
+      required: true
+  - type: dropdown
+    id: lang
+    attributes:
+      label: Language of the question
+      options: [Español, English, Português, Other]
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: How should it have behaved?

@@ -1,0 +1,80 @@
+name: Bug report
+description: Something in NIDO does not work as expected
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Privacy first.** Do NOT paste encryption keys, QR codes, note/message contents, contact names, phone numbers or screenshots showing personal data. Describe the problem in your own words or blur the screenshot. You can write in English or Español.
+        **Security vulnerability?** Do not open a public issue — use [private reporting](https://github.com/Nido007-cmyk/Nido/security/advisories/new).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Clear description of the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect instead?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: NIDO version and APK hash
+      description: Settings > About, or the sha256 shown next to app-release.apk on the Releases page.
+      placeholder: "v0.1.0-alpha / sha256:d9210..."
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Phone model and Android version
+      placeholder: "Pixel 7, Android 15"
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: AI model in use
+      description: As shown in Settings.
+      placeholder: "Qwen 2.5 0.5B Q4"
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often does it happen?
+      options:
+        - Always
+        - Often
+        - Sometimes
+        - Only once
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error text or diagnostics (optional)
+      description: Exact error message shown by the app. Remove anything personal first.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I removed personal data, keys and note contents from this report.
+          required: true

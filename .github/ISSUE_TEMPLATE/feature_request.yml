@@ -1,0 +1,31 @@
+name: Feature request
+description: Suggest an improvement
+title: "[FEATURE] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Privacy first.** Do NOT paste encryption keys, QR codes, note/message contents, contact names, phone numbers or screenshots showing personal data. Describe the problem in your own words or blur the screenshot. You can write in English or Español.
+        **Security vulnerability?** Do not open a public issue — use [private reporting](https://github.com/Nido007-cmyk/Nido/security/advisories/new).
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like, and why?
+    validations:
+      required: true
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy considerations
+      description: "How does it fit NIDO's rules (no network, encrypted, local-first)? Would it need a new permission?"
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+  - type: textarea
+    id: impl
+    attributes:
+      label: Proposed implementation (optional)

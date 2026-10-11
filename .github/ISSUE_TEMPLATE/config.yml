@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/Nido007-cmyk/Nido/security/advisories/new
+    about: Never report vulnerabilities in a public issue. This opens a private channel with the maintainers. See SECURITY.md.
+  - name: Questions and ideas
+    url: https://github.com/Nido007-cmyk/Nido/discussions
+    about: General questions and open-ended ideas. (Enable Discussions in repo Settings > General for this link to work.)

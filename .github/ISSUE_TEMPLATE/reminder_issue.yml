@@ -1,0 +1,57 @@
+name: Reminder / notification issue
+description: Reminders not firing, app closing, notification problems
+title: "[REMINDER] "
+labels: ["reminders", "notifications"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Privacy first.** Do NOT paste encryption keys, QR codes, note/message contents, contact names, phone numbers or screenshots showing personal data. Describe the problem in your own words or blur the screenshot. You can write in English or Español.
+        **Security vulnerability?** Do not open a public issue — use [private reporting](https://github.com/Nido007-cmyk/Nido/security/advisories/new).
+  - type: input
+    id: device
+    attributes:
+      label: Phone model and Android version
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: NIDO version / APK hash
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: What happened?
+      options:
+        - It never fired
+        - It fired late
+        - It fired early
+        - The app closed or crashed
+        - Lost after a reboot
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: how
+    attributes:
+      label: How did you create it?
+      options: [Chat message, Voice, Other]
+  - type: input
+    id: when
+    attributes:
+      label: When was it supposed to fire?
+  - type: checkboxes
+    id: perms
+    attributes:
+      label: Settings
+      options:
+        - label: Battery is set to Unrestricted for NIDO
+        - label: "\"Alarms & reminders\" permission is granted (Android 12+)"
+        - label: Notifications are allowed for NIDO
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Do not include the reminder text if it is personal.
