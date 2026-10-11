@@ -115,7 +115,9 @@ function fmtTime(ts: number): string {
  * DIAL-ROLE-2026-10-11: cuánto espera la tablet que "escucha" a que la otra
  * llame antes de llamar ella misma al tocar Conectar.
  */
-const LISTENER_WAIT_MS = 6000;
+const LISTENER_WAIT_MS = 8000;
+/** Tope de espera si el otro ya está llamando (handshake a medias). */
+const LISTENER_MAX_WAIT_MS = 30000;
 
 /** WIFI-UX-2026-10-11: espera máxima a que aparezca el anuncio Wi-Fi del otro. */
 const LAN_DISCOVERY_WAIT_MS = 6000;
@@ -823,9 +825,20 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           // su llamada, llamo yo (el desempate de llamadas simultáneas del
           // transporte cubre el caso de que ambos llamen a la vez).
           setNotice(t("nido.waitingForPeer", { name }));
-          const deadline = Date.now() + LISTENER_WAIT_MS;
+          // Si mientras tanto hay un handshake a medias (el otro ya nos está
+          // llamando), se sigue esperando hasta LISTENER_MAX_WAIT_MS: llamar
+          // en ese momento provocaría el choque de dos llamadas por Bluetooth.
+          const start = Date.now();
+          let deadline = start + LISTENER_WAIT_MS;
           while (Date.now() < deadline) {
             await new Promise((r) => setTimeout(r, 500));
+            let busy = false;
+            try {
+              busy = mRef.current.handshakeInProgress();
+            } catch {
+              busy = false;
+            }
+            if (busy) deadline = Math.max(deadline, Math.min(Date.now() + 2000, start + LISTENER_MAX_WAIT_MS));
             const live = mRef.current.connectedPeers().map((p) => p.toLowerCase());
             if (live.includes(target)) {
               reconnectManager.cancel(target);

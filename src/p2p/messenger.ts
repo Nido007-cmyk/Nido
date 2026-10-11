@@ -400,6 +400,12 @@ export class NidoMessenger {
     return this.transport.connectedPeers ? this.transport.connectedPeers() : [];
   }
 
+  /** DIAL-ROLE-2026-10-11: ¿alguien nos está llamando ahora mismo? */
+  handshakeInProgress(): boolean {
+    this.assertLive();
+    return this.transport.handshakeInProgress ? this.transport.handshakeInProgress() : false;
+  }
+
   /**
    * Conecta con un dispositivo descubierto (alias con MAC, p. ej. lo que
    * muestra la lista de cercanos) y hace el handshake. Resuelve con la

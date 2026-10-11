@@ -69,6 +69,8 @@ export interface P2PTransport {
    * Opcional: transportes sin este concepto devuelven [].
    */
   connectedPeers?(): string[];
+  /** DIAL-ROLE-2026-10-11: true si hay un handshake en curso (cualquier conexión). */
+  handshakeInProgress?(): boolean;
   /**
    * Terminación nativa terminal (B/F4). Opcional: solo los transportes con
    * un módulo nativo real la implementan. La invoca únicamente la

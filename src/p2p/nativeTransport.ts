@@ -869,6 +869,11 @@ export class NidoBluetoothTransport implements P2PTransport {
     return Array.from(this.macToPk.values());
   }
 
+  /** DIAL-ROLE-2026-10-11: hay un handshake a medias (p. ej. el otro nos llama). */
+  handshakeInProgress(): boolean {
+    return this.pending.size > 0 || this.establishing.size > 0;
+  }
+
   async startDiscovery(events: P2PTransportEvents): Promise<void> {
     this.events = events;
     this.stopped = false;
@@ -1474,6 +1479,15 @@ export class NidoBluetoothTransport implements P2PTransport {
    * HELLO del iniciador (contacto emparejado, firma, anti-replay) y SOLO
    * entonces revela nuestra identidad enviando nuestro HELLO. Nuestro
    * CONFIRM se firma ya pero se retiene hasta verificar el del iniciador.
+   *
+   * Límites conocidos (paso intermedio, no la solución final):
+   *  - El iniciador sigue mandando su HELLO en claro a quien llama, incluido
+   *    un anuncio "NIDO" falso en la red.
+   *  - El HELLO no nombra al destinatario: un HELLO de un contacto nuestro
+   *    capturado así puede reenviarse a nosotros dentro de la ventana de
+   *    ±10 min (si su nonce no lo vimos) y obtener nuestro HELLO.
+   * La solución completa es un protocolo v4 sin identidad en claro (como
+   * las etiquetas pseudoaleatorias por contacto de Briar/BTP).
    */
   private async respondToHello(mac: string, pend: PendingHello, body: Uint8Array): Promise<void> {
     pend.stage = "responding";
