@@ -205,6 +205,12 @@ jobs:
             --e5-revision "$E5_RESOLVED_REVISION" --bge-sha "$BGE_SHA256" --llama-commit "$LLAMA_CPP_COMMIT" \
             --out "$W/calibration-builtin.json" --md "$W/calibration-builtin.md"
 
+      - name: Publish built-in calibration early
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/multilingual/push_diag.sh
+
       - name: Restore Vital e5 embeddings
         uses: actions/cache/restore@v4
         with:
@@ -274,24 +280,6 @@ jobs:
 
       - name: Publish reports and logs to the diagnostics branch
         if: always()
-        run: |
-          set -x
-          D="$RUNNER_TEMP/diag-branch"
-          rm -rf "$D" && mkdir -p "$D/logs"
-          for f in parity.json calibration-builtin.json calibration-builtin.md calibration.json calibration.md \
-                   wiki-vital5-e5.sqlite.json multilingual-e5-small-q8_0.gguf.sha256; do
-            [ -f "$W/$f" ] && cp "$W/$f" "$D/"
-          done
-          for f in "$DIAG"/*; do [ -f "$f" ] && tail -c 60000 "$f" > "$D/logs/$(basename "$f")"; done
-          cat > "$D/README.md" <<EOF
-          Run ${GITHUB_RUN_ID} on ${GITHUB_SHA} (${GITHUB_REF_NAME}) — $(date -u)
-          E5 revision: ${E5_RESOLVED_REVISION:-?}  GGUF sha256: ${E5_SHA256:-?}
-          EOF
-          cd "$D"
-          git init -q
-          git checkout -q -b "$DIAG_BRANCH"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -q -m "multilingual-e5 run ${GITHUB_RUN_ID}"
-          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$DIAG_BRANCH"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/multilingual/push_diag.sh
