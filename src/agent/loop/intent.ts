@@ -17,6 +17,7 @@
  */
 
 import { extractContactAction } from "./contactRouter";
+import { extractToolAction } from "./toolRouter";
 
 export type AgentIntent = "conversar" | "recordar" | "actuar";
 
@@ -172,6 +173,8 @@ export function classifyIntent(text: string): AgentIntent {
   // TOOLS-AUDIT 2026-10-11: contactos / llamadas / SMS en es, en y pt
   // ("Find my cellphone contacts" no casaba ningún patrón y caía al chat).
   if (extractContactAction(t)) return "actuar";
+  // 0.1.8: notas, hora, conversiones, calendario, NIDO, enlaces, archivos.
+  if (extractToolAction(t)) return "actuar";
   if (ACT_PATTERNS.some((re) => re.test(t))) return "actuar";
   if (REMEMBER_PATTERNS.some((re) => re.test(t))) return "recordar";
   return "conversar";

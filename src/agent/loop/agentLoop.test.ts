@@ -179,7 +179,7 @@ describe("runAgentLoop", () => {
       'Voy a ver la hora.\n```tool\n{"name": "device_time", "arguments": {}}\n```',
       "Son las 10:30.",
     ]);
-    const result = await runAgentLoop("¿qué hora es?", {
+    const result = await runAgentLoop("oye, ¿qué hora es ahora mismo?", {
       engine,
       handlers: {
         device_time: async () => "2026-09-26T10:30:00",
@@ -395,7 +395,7 @@ describe("T-echo-2026-10-06: eco de la directiva interna", () => {
       '```tool\n{"name": "device_time", "arguments": {}}\n```',
       "Son las 10:30.",
     ]);
-    await runAgentLoop("¿qué hora es?", {
+    await runAgentLoop("oye, ¿qué hora es ahora mismo?", {
       engine,
       handlers: { device_time: async () => "2026-09-26T10:30:00" },
       loadMemory: async () => null,
@@ -423,7 +423,7 @@ describe("P1.2 intent-based sampling presets", () => {
       'Voy a ver la hora.\n```tool\n{"name": "device_time", "arguments": {}}\n```',
       "Son las 10:30.",
     ]);
-    await runAgentLoop("¿qué hora es?", {
+    await runAgentLoop("oye, ¿qué hora es ahora mismo?", {
       engine,
       handlers: { device_time: async () => "2026-09-26T10:30:00" },
       loadMemory: async () => null,
@@ -607,7 +607,7 @@ describe("runAgentLoop — contactos deterministas y respaldos honestos", () => 
       "",
       "",
     ]);
-    const result = await runAgentLoop("¿qué hora es?", {
+    const result = await runAgentLoop("oye, ¿qué hora es ahora mismo?", {
       engine,
       handlers: { device_time: async () => "Son las 10:30." },
       loadMemory: async () => null,

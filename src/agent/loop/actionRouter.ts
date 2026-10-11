@@ -81,10 +81,26 @@ export function extractReminderAction(userText: string): ReminderAction | null {
   const dueAt = parseReminderDateTime(text);
   // Limpiar la fecha del texto para que no quede duplicada.
   if (dueAt) {
-    text = text
-      .replace(/\b(el|la|the)?\s*(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, "")
-      .replace(/\b(mañana|manana|tomorrow|hoy|today)\b/gi, "")
+    text = stripDateWords(text);
+  }
+
+  // F6 (auditoría 2026-10-10): "recuérdame mañana" dejaba el texto vacío
+  // tras quitar la fecha. Sin texto no hay recordatorio: que decida el modelo.
+  if (!text.trim()) return null;
+  return { text, dueAt };
+}
+
+/**
+ * Quita del texto las palabras de fecha/hora que entiende el parser, para
+ * que no queden repetidas en el título (recordatorios y, desde 0.1.8,
+ * eventos de calendario). Exportada para toolRouter.
+ */
+export function stripDateWords(input: string): string {
+  return input
+      .replace(/\b(el|la|the|o|a|na|no)?\s*(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?)\b/gi, "")
+      .replace(/(?<![\p{L}])(mañana|manana|tomorrow|hoy|today|amanhã|amanha|hoje)(?![\p{L}])/giu, "")
       .replace(/\ba\s+las\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
+      .replace(/(?<![\p{L}])às\s+\d{1,2}(:\d{2})?\s*(am|pm|h)?\b/giu, "")
       .replace(/\bat\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
       // TESTFIX-2026-10-08: limpiar tiempo relativo ("en 2 minutos" no es
       // parte del texto del recordatorio). FIX 2026-10-08: \s* para "1minuto".
@@ -95,12 +111,6 @@ export function extractReminderAction(userText: string): ReminderAction | null {
       .replace(/\b(\d{1,2})(:\d{2})?\s*(am|pm)?\s*$/gi, "")
       .replace(/\s+/g, " ")
       .trim();
-  }
-
-  // F6 (auditoría 2026-10-10): "recuérdame mañana" dejaba el texto vacío
-  // tras quitar la fecha. Sin texto no hay recordatorio: que decida el modelo.
-  if (!text.trim()) return null;
-  return { text, dueAt };
 }
 
 /** Palabras numéricas ES/EN para tiempos relativos ("en dos minutos"). */
@@ -152,7 +162,7 @@ function parseRelativeTime(t: string, now: Date): Date | null {
  * ("en 2 minutos", "in 1 hour") y hora suelta ("a las 6:02" → hoy).
  * Devuelve ISO string o null si no hay fecha clara.
  */
-function parseReminderDateTime(text: string): string | null {
+export function parseReminderDateTime(text: string): string | null {
   const t = text.toLowerCase();
   const now = new Date();
 
@@ -171,17 +181,20 @@ function parseReminderDateTime(text: string): string | null {
     jueves: 4, thursday: 4,
     viernes: 5, friday: 5,
     "sábado": 6, sabado: 6, saturday: 6,
+    // 0.1.8: portugués.
+    segunda: 1, "terça": 2, terca: 2, quarta: 3, quinta: 4, sexta: 5,
   };
 
   let targetDate: Date | null = null;
 
   // "mañana" / "tomorrow"
-  if (/\b(mañana|manana|tomorrow)\b/.test(t)) {
+  // 0.1.8: portugués (amanhã / hoje), sin \b tras letras acentuadas.
+  if (/(?<![\p{L}])(mañana|manana|tomorrow|amanhã|amanha)(?![\p{L}])/u.test(t)) {
     targetDate = new Date(now);
     targetDate.setDate(now.getDate() + 1);
   }
   // "hoy" / "today"
-  else if (/\b(hoy|today)\b/.test(t)) {
+  else if (/\b(hoy|today|hoje)\b/.test(t)) {
     targetDate = new Date(now);
   }
   // Día de la semana
@@ -205,8 +218,11 @@ function parseReminderDateTime(text: string): string | null {
       julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
       january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
       july: 6, august: 7, september: 8, october: 9, november: 10, december: 11,
+      // 0.1.8: portugués.
+      janeiro: 0, fevereiro: 1, "março": 2, marco: 2, maio: 4, junho: 5,
+      julho: 6, setembro: 8, outubro: 9, novembro: 10, dezembro: 11,
     };
-    const mEs = /(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i.exec(t);
+    const mEs = /(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)/i.exec(t);
     const mEn = /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i.exec(t);
     let month: number | undefined, day: number | undefined;
     if (mEs) { day = parseInt(mEs[1], 10); month = meses[mEs[2].toLowerCase()]; }
@@ -228,7 +244,7 @@ function parseReminderDateTime(text: string): string | null {
   // Antes: sin día → return null aunque hubiera hora explícita → mismo
   // bucle de "¿para cuándo?" (evidencia física). Ahora se asume hoy;
   // el rollover M2 la mueve a mañana si ya pasó.
-  const timeMatch = /(?:a\s+las|at)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.exec(t);
+  const timeMatch = /(?:a\s+las|at|às)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.exec(t);
   if (!targetDate && timeMatch) {
     targetDate = new Date(now);
   }
@@ -260,7 +276,7 @@ function parseReminderDateTime(text: string): string | null {
   if (
     timeMatch &&
     !(timeMatch[3] || "") &&
-    /\b(hoy|today)\b/.test(t) &&
+    /\b(hoy|today|hoje)\b/.test(t) &&
     targetDate.getTime() <= now.getTime() &&
     targetDate.getHours() < 12
   ) {

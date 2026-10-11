@@ -117,6 +117,17 @@ const ALIASES: Record<string, string> = {
   minute: "min", minutes: "min",
   hour: "h", hours: "h",
   degree: "c", degrees: "c",
+  // portugués (0.1.8)
+  quilometro: "km", quilometros: "km", quilômetro: "km", quilômetros: "km",
+  milha: "mi", milhas: "mi",
+  pé: "ft", pés: "ft", pe: "ft", pes: "ft",
+  polegada: "in", polegadas: "in",
+  quilo: "kg", quilos: "kg", quilograma: "kg", quilogramas: "kg",
+  grama: "g", gramas: "g",
+  onça: "oz", onças: "oz",
+  galão: "gal", galões: "gal", galao: "gal", galoes: "gal",
+  xícara: "cup", xícaras: "cup", xicara: "cup", xicaras: "cup",
+  graus: "c", grau: "c",
 };
 
 function normalizeUnit(raw: string): string {

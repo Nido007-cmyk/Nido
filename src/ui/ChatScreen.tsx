@@ -788,6 +788,11 @@ export function ChatScreen({
           // TOOLS-AUDIT 2026-10-11: contactos/llamadas/SMS por la vía
           // determinista (no depende de que el 0.5B escriba el JSON).
           contactSearch: searchPhoneContacts,
+          // 0.1.8: "lee la nota X" se resuelve por título, no por id.
+          listNoteTitles: async () => {
+            const { listNotes } = await import("../agent/memory/memoryStore");
+            return (await listNotes(50)).map((n) => ({ id: n.id, title: n.title }));
+          },
           // Presupuesto de prompt contra el n_ctx real del modelo cargado
           // (T-contexto-2026-10-06).
           nCtx: llamaEngine.getModelInfo()?.nCtx,

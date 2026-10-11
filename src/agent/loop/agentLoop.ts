@@ -37,6 +37,7 @@ import {
   type ContactSearchResult,
 } from "./contactRouter";
 import { agentFallbackText, type FallbackLang } from "./fallbackText";
+import { extractToolAction, formatDay, runToolAction, toolForAction, type NoteSummary } from "./toolRouter";
 import { classifyIntent, type AgentIntent } from "./intent";
 import { matchCanned } from "./cannedResponses";
 import { recordInferenceEvent } from "../../inference/telemetry";
@@ -112,6 +113,11 @@ export interface AgentLoopOptions {
    * programadas) esas frases siguen el flujo de siempre.
    */
   contactSearch?: (query: string) => Promise<ContactSearchResult>;
+  /**
+   * 0.1.8: notas guardadas (id + título) para "lee la nota X" por título.
+   * Opcional: sin ella, "lee la nota" no se resuelve por código.
+   */
+  listNoteTitles?: () => Promise<NoteSummary[]>;
   /**
    * Tareas programadas: los atajos deterministas (recordatorio, persona,
    * hecho) solo se usan si la herramienta correspondiente está entre los
@@ -364,13 +370,8 @@ export function buildSystemPrompt(
   const today = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
-  const locale = lang === "en" ? "en-US" : "es-ES";
-  const todayLong = today.toLocaleDateString(locale, {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  // 0.1.8: sin Intl (CRASH-2026-10-10, ver reminderFormat.ts).
+  const todayLong = `${formatDay(today, lang)}${lang === "en" ? "," : " de"} ${today.getFullYear()}`;
 
   // use_skill only exists in the actuar list — don't advertise skills
   // the model can't load. One line: the skill store has the details.
@@ -605,6 +606,27 @@ export async function runAgentLoop(
         }),
       isDisabled: isToolDisabled,
       recordFind: (status) => actionLog.record("find_contact", status),
+    });
+    return { response: outcome.response, intent, toolUses: outcome.toolUses, deterministic: true };
+  }
+  // 0.1.8 (auditoría de Acerca de): notas, hora/fecha, conversiones,
+  // calendario, mensajería NIDO, enlaces y archivos por la vía determinista
+  // (toolRouter.ts). Va ANTES del atajo de recordatorios: su regex aceptaba
+  // "crea una nota…" / "crea un evento…" como recordatorio.
+  const toolAction = extractToolAction(userText);
+  // Una herramienta apagada SÍ entra aquí: runToolAction responde, en el
+  // idioma del usuario, que está desactivada y dónde activarla (en vez de
+  // mandar el turno al modelo). En tareas programadas solo si la
+  // herramienta está entre las permitidas para la tarea.
+  if (toolAction && (!options.restrictFastPathsToHandlers || toolForAction(toolAction) in handlers)) {
+    const outcome = await runToolAction(toolAction, {
+      dispatch: (name, args) =>
+        dispatchToolCallDetailed({ name, arguments: args }, handlers, {
+          policyContext: [],
+          onConfirm: options.onConfirmTool,
+        }),
+      isDisabled: isToolDisabled,
+      listNotes: options.listNoteTitles,
     });
     return { response: outcome.response, intent, toolUses: outcome.toolUses, deterministic: true };
   }
