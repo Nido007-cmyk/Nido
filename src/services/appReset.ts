@@ -23,6 +23,7 @@ import {
   loadP2PPrivateKey,
   loadP2PSigningKey,
   peekDatabaseKey,
+  readVaultBlob,
 } from "../privacy/keyManager";
 
 const MODELS_DIR = `${FileSystem.documentDirectory}models`;
@@ -207,6 +208,13 @@ async function resetAllAppDataInner(): Promise<void> {
   //    caché de clave en memoria para que la próxima apertura genere una
   //    clave nueva en vez de reutilizar la borrada.
   await deleteDatabaseKey();
+  // HW-VAULT: la llave de hardware (KEK) tampoco sobrevive al borrado.
+  try {
+    const { deleteVaultKek } = await import("../security/keyVault");
+    await deleteVaultKek();
+  } catch {
+    /* sin módulo nativo (tests/dev): no hay KEK que borrar */
+  }
   await deleteP2PPrivateKey();
   await deleteP2PSigningKey();
   resetMemoryKeyCache();
@@ -248,6 +256,7 @@ async function resetAllAppDataInner(): Promise<void> {
     await checkGone(p, survivors);
   }
   if ((await peekDatabaseKey()) !== null) survivors.push("keystore:nido_db_key");
+  if ((await readVaultBlob()) !== null) survivors.push("keystore:nido_db_key_wrapped_v1");
   if ((await loadP2PPrivateKey()) !== null) survivors.push("keystore:nido_p2p_sk");
   if ((await loadP2PSigningKey()) !== null) survivors.push("keystore:nido_p2p_sign_sk");
   // 5. Notificaciones del SO: ni programadas ni ya presentadas (bandeja)

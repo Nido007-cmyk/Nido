@@ -48,7 +48,7 @@ const modelManager = new ModelManager();
  */
 const TRANSIENT_INACTIVE_GRACE_MS = 3_000;
 
-type Screen = "checking" | "wipe-recovering" | "wipe-blocked" | "startup-error" | "key-loss" | "locked" | "required-setup" | "chat";
+type Screen = "checking" | "wipe-recovering" | "wipe-blocked" | "startup-error" | "key-loss" | "vault-locked" | "locked" | "required-setup" | "chat";
 
 /**
  * Pantalla de bloqueo: gate biométrico/PIN del sistema antes de mostrar
@@ -126,6 +126,66 @@ function LockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   );
 }
 
+/**
+ * HW-VAULT (docs/design/BLOQUEO_BIOMETRICO_REAL.md): desbloqueo REAL. La
+ * llave de la base solo se abre con el PIN o la huella del dueño; sin eso,
+ * los datos de NIDO no se pueden leer ni con la tablet en otras manos.
+ */
+function VaultLockScreen({ onUnlocked, onKeyLost }: { onUnlocked: () => void; onKeyLost: (message: string) => void }) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const tryUnlock = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const { unlockVault } = await import("./src/security/keyVault");
+      await unlockVault({ title: t("lockScreen.title"), subtitle: t("lockScreen.subtitle") });
+      const { markUnlockedNow } = await import("./src/security/biometricGate");
+      markUnlockedNow();
+      onUnlocked();
+    } catch (e) {
+      const code = (e as { code?: string } | null)?.code;
+      if (code === "E_CANCELLED") setError(t("lockScreen.cancelled"));
+      else if (code === "E_KEY_INVALIDATED") onKeyLost(t("vault.keyInvalidated"));
+      else setError(t("lockScreen.failed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    tryUnlock();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <View style={[styles.centered, { backgroundColor: colors.bg.black }]}>
+      <Image
+        source={require("./assets/mascot-nido.png")}
+        style={styles.lockMascot}
+        resizeMode="contain"
+        accessibilityIgnoresInvertColors
+      />
+      <Text style={[styles.lockTitle, { color: colors.text.primary }]}>{t("lockScreen.title")}</Text>
+      <Text style={[styles.lockSubtitle, { color: colors.text.secondary }]}>{t("vault.lockSubtitle")}</Text>
+      {error && <Text style={[styles.lockWarning, { color: colors.crimson[400] }]}>{error}</Text>}
+      <Pressable
+        accessibilityRole="button"
+        onPress={tryUnlock}
+        disabled={busy}
+        style={[styles.lockButton, { backgroundColor: colors.emerald[500] }, busy && { opacity: 0.6 }]}
+      >
+        <Text style={[styles.lockButtonText, { color: colors.text.inverse }]}>
+          {busy ? t("lockScreen.unlocking") : t("lockScreen.unlock")}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function AppContent() {
   const [screen, setScreen] = useState<Screen>("checking");
   const [modelsReady, setModelsReady] = useState(false);
@@ -148,6 +208,10 @@ function AppContent() {
   // C1-2026-10-06: timestamp del último "inactive" para la ventana de gracia
   // de overlays transitorios del sistema.
   const lastInactiveAtRef = useRef(0);
+  // HW-VAULT nivel B ("máxima seguridad"): momento en que NIDO pasó a
+  // segundo plano y temporizador que lo cierra por completo.
+  const strictBackgroundAtRef = useRef(0);
+  const strictTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** Arranque normal: rutinas, modelos y gate biométrico. */
   const finishStartup = async () => {
@@ -208,13 +272,15 @@ function AppContent() {
       const { checkStaleRekeyStaging } = await import("./src/security/keyRotation");
       const FS = await import("expo-file-system/legacy");
       const stagingPath = `${FS.documentDirectory}rekey-staging.json`;
-      const { default: SecureStore } = await import("expo-secure-store");
       const SQLite = await import("expo-sqlite");
       const { applyDatabaseKey } = await import("./src/privacy/keyManager");
       const result = await checkStaleRekeyStaging(
         stagingPath,
         async (dekHex: string) => {
-          await SecureStore.setItemAsync("nido_db_key", dekHex);
+          // HW-VAULT: por keyManager, que la envuelve si la bóveda está activa
+          // (escribir "nido_db_key" a mano dejaría la DEK en claro y el blob viejo).
+          const { storeDatabaseKeyHex } = await import("./src/privacy/keyManager");
+          await storeDatabaseKeyHex(dekHex);
         },
         async (path: string, dekHex: string) => {
           const slash = path.lastIndexOf("/");
@@ -269,6 +335,20 @@ function AppContent() {
    */
   const enterKeyLossIfNeeded = async (): Promise<boolean> => {
     setKeyLossError(null);
+    // HW-VAULT: con la bóveda de hardware activa, nada puede tocar las bases
+    // hasta que el dueño se autentique. Tras desbloquear, la pantalla
+    // VaultLockScreen vuelve a correr el arranque completo.
+    try {
+      const { isVaultActive } = await import("./src/security/keyVault");
+      const { isDatabaseKeyUnlocked } = await import("./src/privacy/keyManager");
+      if (!isDatabaseKeyUnlocked() && (await isVaultActive())) {
+        setScreen("vault-locked");
+        return true;
+      }
+    } catch {
+      // Sin poder leer el estado de la bóveda: seguir; getDatabaseKeyHex
+      // falla cerrado (VaultLockedError / SecureStoreReadError) más abajo.
+    }
     try {
       await getDatabaseKeyHex();
     } catch (e) {
@@ -303,10 +383,51 @@ function AppContent() {
       if (s === "background") {
         lockNow();
         lastInactiveAtRef.current = 0;
+        // Nivel B: si está activo, cerrar NIDO por completo tras la espera
+        // elegida (borra la llave y todo lo descifrado de la memoria).
+        strictBackgroundAtRef.current = Date.now();
+        void (async () => {
+          try {
+            const { getStrictLockSeconds, isVaultActive, lockAndTerminate } = await import(
+              "./src/security/keyVault"
+            );
+            const secs = await getStrictLockSeconds();
+            if (secs === null || !(await isVaultActive())) return;
+            if (strictTimerRef.current) clearTimeout(strictTimerRef.current);
+            strictTimerRef.current = setTimeout(() => {
+              void lockAndTerminate();
+            }, secs * 1000);
+          } catch {
+            /* sin bóveda: nada que hacer */
+          }
+        })();
       } else if (s === "inactive") {
         // Posible overlay transitorio: registrar el momento, decidir al volver.
         lastInactiveAtRef.current = Date.now();
       } else if (s === "active") {
+        if (strictTimerRef.current) {
+          clearTimeout(strictTimerRef.current);
+          strictTimerRef.current = null;
+        }
+        // Si el temporizador no llegó a dispararse (Android puede congelar
+        // los timers en segundo plano) pero ya pasó la espera, cerrar ahora.
+        const bgAt = strictBackgroundAtRef.current;
+        strictBackgroundAtRef.current = 0;
+        if (bgAt) {
+          void (async () => {
+            try {
+              const { getStrictLockSeconds, isVaultActive, lockAndTerminate } = await import(
+                "./src/security/keyVault"
+              );
+              const secs = await getStrictLockSeconds();
+              if (secs !== null && (await isVaultActive()) && Date.now() - bgAt >= secs * 1000) {
+                await lockAndTerminate();
+              }
+            } catch {
+              /* sin bóveda: nada que hacer */
+            }
+          })();
+        }
         const inactiveAt = lastInactiveAtRef.current;
         lastInactiveAtRef.current = 0;
         // Si venimos de un "inactive" breve, fue un overlay transitorio del
@@ -380,6 +501,17 @@ function AppContent() {
             <Text style={[styles.lockButtonText, { color: colors.text.inverse }]}>{t("modelSetupScreen.startupError.retry")}</Text>
           </Pressable>
         </View>
+      )}
+      {screen === "vault-locked" && (
+        <VaultLockScreen
+          onUnlocked={() => void runStartupGate()}
+          onKeyLost={(message) => {
+            // Android invalidó la llave de hardware (p. ej. se quitó el PIN):
+            // misma pantalla honesta de recuperación que la pérdida de clave.
+            setKeyLossError(new KeyLossError([], message));
+            setScreen("key-loss");
+          }}
+        />
       )}
       {screen === "locked" && (
         <LockScreen onUnlocked={() => setScreen(modelsReady ? "chat" : "required-setup")} />
