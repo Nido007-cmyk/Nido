@@ -59,7 +59,7 @@ import {
   routeIdentityBootstrapError,
 } from "./p2pIdentityRecovery";
 /** BUG-6-2026-10-07: extraer MAC de alias "nombre (MAC)" para deduplicar. */
-import { extractMac } from "../p2p/nativeTransport";
+import { extractLanAddress, extractMac } from "../p2p/nativeTransport";
 
 type Tab = "chats" | "contactos" | "enlace" | "negociaciones" | "packs";
 
@@ -809,7 +809,11 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             /* best-effort: seguir solo con nearby */
           }
           const seen = new Set<string>();
-          const out: string[] = [];
+          // Wi-Fi local PRIMERO: si otro NIDO se anuncia en esta red, probarlo
+          // cuesta segundos (TCP), frente al barrido Bluetooth. El handshake
+          // verifica la identidad igual; si no es el contacto buscado, se
+          // desconecta y se sigue con Bluetooth.
+          const out: string[] = nearby.filter((a) => extractLanAddress(a) !== null);
           for (const m of knownFirst) {
             const up = m.toUpperCase();
             if (!seen.has(up)) { seen.add(up); out.push(up); }
@@ -819,6 +823,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             if (!seen.has(up)) { seen.add(up); out.push(m); }
           }
           for (const alias of nearby) {
+            if (extractLanAddress(alias) !== null) continue; // ya incluido arriba
             const mac = extractMac(alias)?.toUpperCase();
             if (mac && !seen.has(mac)) {
               seen.add(mac);

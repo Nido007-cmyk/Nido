@@ -37,6 +37,9 @@ const nativeFns = vi.hoisted(() => ({
     acceptedCount: 3,
     lastAcceptAt: 1234567890,
   })),
+  startLan: vi.fn(async () => undefined),
+  stopLan: vi.fn(async () => undefined),
+  getLanStatus: vi.fn(() => ({ active: true, port: 41234, connections: 1 })),
 }));
 
 vi.mock("expo-modules-core", () => ({
@@ -85,6 +88,9 @@ describe("puente nido-p2p: superficie exportada", () => {
       "disconnect",
       "shutdown",
       "getServerStatus",
+      "startLan",
+      "stopLan",
+      "getLanStatus",
       "addListener",
     ];
     for (const name of expected) {

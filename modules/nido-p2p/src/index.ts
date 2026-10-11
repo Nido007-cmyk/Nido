@@ -18,7 +18,8 @@
 import { requireNativeModule, EventEmitter } from "expo-modules-core";
 
 export interface NidoP2PDeviceInfo {
-  address: string; // MAC Bluetooth, p. ej. "A1:B2:C3:D4:E5:F6"
+  /** MAC Bluetooth ("A1:B2:C3:D4:E5:F6") o Wi-Fi local ("LAN:192.168.1.5:41234"). */
+  address: string;
   name: string | null;
 }
 
@@ -53,6 +54,10 @@ interface NidoP2PNativeModule {
     acceptedCount: number;
     lastAcceptAt: number;
   };
+  /** Respaldo Wi-Fi local (TCP + mDNS, solo red local). */
+  startLan(): Promise<void>;
+  stopLan(): Promise<void>;
+  getLanStatus(): { active: boolean; port: number; connections: number };
 }
 
 const native = requireNativeModule<NidoP2PNativeModule>("NidoP2P");
@@ -122,6 +127,24 @@ export function getServerStatus(): {
   lastAcceptAt: number;
 } {
   return native.getServerStatus();
+}
+
+/**
+ * Respaldo por Wi-Fi local: servidor TCP + anuncio mDNS con nombre aleatorio
+ * + descubrimiento. Los peers llegan por onDeviceFound con "LAN:ip:puerto".
+ * Solo red local (IPs privadas/link-local); nunca internet.
+ */
+export function startLan(): Promise<void> {
+  return native.startLan();
+}
+
+/** Detiene servidor, anuncio y descubrimiento Wi-Fi; las conexiones vivas siguen. */
+export function stopLan(): Promise<void> {
+  return native.stopLan();
+}
+
+export function getLanStatus(): { active: boolean; port: number; connections: number } {
+  return native.getLanStatus();
 }
 
 /** Suscribe un listener a un evento nativo; devuelve la función para desuscribir. */

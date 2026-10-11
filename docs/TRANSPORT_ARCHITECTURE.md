@@ -62,7 +62,7 @@ Rules:
 | Transport | Status | Properties |
 |---|---|---|
 | Bluetooth RFCOMM | implemented (Kotlin) | reliable stream, ~256 KiB MTU per frame, offline |
-| LAN (TCP + mDNS) | future | reliable stream, offline (local network) |
+| LAN (TCP + mDNS) | **implemented, experimental** (Kotlin `NidoLanManager`) — Bluetooth fallback, see §6 | reliable stream, ~256 KiB MTU per frame, offline (same Wi-Fi or hotspot) |
 | Wi-Fi Direct | future | reliable stream, offline |
 | Direct Internet P2P | future | e.g. QUIC with identity-based addressing; online |
 | Encrypted relay | future | optional store-and-forward; sees ciphertext only |
@@ -129,3 +129,31 @@ changes and even restarts. The transport only reports `available/unavailable`.
    (Interval, entropy, user synchronization.)
 4. Size limits per transport and session-level fragmentation:
    minimum guaranteed common MTU?
+
+## 6. Local Wi-Fi fallback (implemented, experimental)
+
+Used when Bluetooth is off, lacks permissions or fails: both phones on the
+same Wi-Fi network, or one phone sharing a hotspot (works without Internet).
+
+- **Same pipe, same security.** `modules/nido-p2p` exposes local Wi-Fi
+  connections with the same events as Bluetooth (`onConnected`, `onFrame`,
+  `onDisconnected`) and addresses `LAN:<ipv4>:<port>`. The HELLO/CONFIRM
+  handshake, session encryption, anti-replay and revocation in `src/p2p/`
+  are reused unchanged.
+- **Local network only.** The native side refuses any address that is not
+  private IPv4 (10/8, 172.16/12, 192.168/16) or link-local (169.254/16), both
+  when dialing and when accepting. This transport cannot reach the Internet.
+- **Discovery (§5).** mDNS/DNS-SD service `_nidop2p._tcp` with a random
+  instance name per start (`nido-xxxxxxxx`), no TXT records, never the
+  identity. Server and advertisement run only while the link screen is
+  searching (`startLan`/`stopLan`); established connections survive.
+- **Limits.** At most 8 simultaneous Wi-Fi connections; 1 KB cap on
+  HELLO/CONFIRM; the inbound handshake quota is applied per IP (not per
+  port), so opening new connections does not bypass it.
+- **Audit.** Every local Wi-Fi connection is listed in Settings → Network log
+  (`lan_connect`).
+- **Known limits.** The listening side must have the link screen open (the
+  Wi-Fi server is not always-on, unlike Bluetooth). As with Bluetooth, the
+  HELLO carries the identity public key in clear: an observer on the same
+  Wi-Fi can see which identities handshake.
+
