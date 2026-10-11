@@ -21,7 +21,7 @@ const locales = { en, es, pt } as const;
 describe("sourceFootnotes — títulos por estado de anclaje", () => {
   it("existen y no están vacíos en en/es/pt", () => {
     for (const [name, locale] of Object.entries(locales)) {
-      const block = (locale as Record<string, Record<string, unknown>>).sourceFootnotes;
+      const block = (locale as unknown as Record<string, Record<string, unknown>>).sourceFootnotes;
       for (const k of KEYS) {
         expect(typeof block[k], `${name}.sourceFootnotes.${k}`).toBe("string");
         expect((block[k] as string).trim().length, `${name}.${k}`).toBeGreaterThan(0);
@@ -37,7 +37,7 @@ describe("sourceFootnotes — títulos por estado de anclaje", () => {
 
   it("ningún título promete verificación que no existe", () => {
     for (const [name, locale] of Object.entries(locales)) {
-      const block = (locale as Record<string, Record<string, string>>).sourceFootnotes;
+      const block = (locale as unknown as Record<string, Record<string, string>>).sourceFootnotes;
       for (const k of KEYS) {
         expect(block[k], `${name}.${k}`).not.toMatch(/\bverified\b|verificad|confirmad|garantiz|guarantee/i);
       }
