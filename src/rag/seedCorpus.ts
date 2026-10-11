@@ -5,7 +5,11 @@
  */
 
 import * as FileSystem from "expo-file-system/legacy";
-import { getDb, getDbEpoch, insertChunk, insertChunkWithoutEmbedding, ChunkRecord } from "./db";
+import { getDb, getDbEpoch, insertChunk, insertChunkWithoutEmbedding, deleteSeedChunks, ChunkRecord } from "./db";
+import { planSeed } from "./seedPlan";
+import { publishStatus } from "./corpusIndexStatus";
+export { getCorpusIndexStatus, onCorpusIndexStatus } from "./corpusIndexStatus";
+export type { CorpusIndexStatus } from "./corpusIndexStatus";
 import { embeddingEngine } from "./embed";
 import minimumCorpus from "../../assets/corpus/corpus.json";
 import { CORPUS_CATALOG } from "../models/manifest";
@@ -28,7 +32,7 @@ import { CORPUS_CATALOG } from "../models/manifest";
  * precomputed at build/download time) so the vector index always matches
  * whatever embedding model actually ships.
  */
-type SeedDoc = { id: string; title: string; source: string; body: string };
+type SeedDoc = { id: string; title: string; source: string; body: string; packId?: string };
 
 function slug(title: string): string {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -119,29 +123,37 @@ const MINIMUM_CORPUS_DOCS: SeedDoc[] = (
   minimumCorpus as Array<{ title: string; source: string; body: string }>
 ).map((d) => ({ ...d, id: `wiki-min-${slug(d.title)}` }));
 
-async function loadDownloadedCorpusPacks(): Promise<SeedDoc[]> {
+async function loadDownloadedCorpusPacks(): Promise<{ docs: SeedDoc[]; removedPackIds: string[] }> {
   const docs: SeedDoc[] = [];
+  const removedPackIds: string[] = [];
   for (const pack of CORPUS_CATALOG) {
     if (pack.format === "sqlite-pack") continue;
     const path = `${FileSystem.documentDirectory}${pack.filename}`;
     const info = await FileSystem.getInfoAsync(path);
-    if (!info.exists) continue;
+    if (!info.exists) {
+      // Archivo ausente = paquete quitado (o nunca descargado): sus filas
+      // indexadas, si las hay, sobran. Un archivo presente pero ilegible NO
+      // cuenta como quitado (ver seedPlan.ts).
+      removedPackIds.push(pack.id);
+      continue;
+    }
     try {
       const raw = await FileSystem.readAsStringAsync(path);
       const parsed = JSON.parse(raw) as Array<{ title: string; source: string; body: string }>;
       for (const d of parsed) {
-        docs.push({ ...d, id: `wiki-${pack.id}-${slug(d.title)}` });
+        docs.push({ ...d, id: `wiki-${pack.id}-${slug(d.title)}`, packId: pack.id });
       }
     } catch (e) {
       console.warn(`Failed to load corpus pack ${pack.id}:`, e);
     }
   }
-  return docs;
+  return { docs, removedPackIds };
 }
 
 export interface SeedProgress {
-  /** Documents checked so far, including ones already indexed. */
+  /** Documentos NUEVOS indexados en esta corrida (no cuenta los ya hechos). */
   done: number;
+  /** Documentos que faltaban al empezar esta corrida. */
   total: number;
   /** Title of the document being indexed. */
   title: string;
@@ -199,43 +211,42 @@ async function seedNow(): Promise<void> {
   // del ciclo anterior.
   const runEpoch = await stage("getDbEpoch", async () => getDbEpoch());
   const db = await stage("getDb", async () => getDb());
-  const packs = await stage("loadDownloadedCorpusPacks", async () => loadDownloadedCorpusPacks());
-  const allDocs = [...APP_TOPIC_DOCS, ...MINIMUM_CORPUS_DOCS, ...packs];
+  const loaded = await stage("loadDownloadedCorpusPacks", async () => loadDownloadedCorpusPacks());
+  const allDocs = [...APP_TOPIC_DOCS, ...MINIMUM_CORPUS_DOCS, ...loaded.docs];
 
-  // This runs on every ChatScreen mount — including every time Settings
-  // closes and the user returns to chat, not just on first app launch —
-  // so the common case (nothing new to seed) needs to be cheap. Without
-  // this, the per-doc existence check below still runs in full every
-  // time: up to 5,300+ sequential SELECT queries on the "full" corpus
-  // tier, during which the chat input is disabled (see ChatScreen.tsx's
-  // `ready` state), even though almost always nothing actually changed.
-  // A single COUNT(*) lets the fully-seeded case skip straight past the
-  // loop; any mismatch (a newly downloaded corpus pack, a fresh install)
-  // falls through to the real per-doc check, same as before.
-  // collection_id IS NULL scopes this to seed-corpus-managed rows only —
-  // user-imported documents (src/ui/PersonalDocumentsManager.tsx) live in
-  // the same `chunks` table with a non-null collection_id, and counting
-  // those too would make this check permanently mismatch (always fall
-  // through to the full loop) for anyone who's imported personal docs.
-  const { count } = (await stage("countQuery", async () => db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM chunks WHERE collection_id IS NULL`
-  ))) ?? { count: 0 };
-  if (count === allDocs.length) return;
+  // INDEX-FIX 2026-10-11 (evidencia: "Preparing your knowledge… 1,710 /
+  // 5,305" volvía a salir con el índice ya completo). Antes: COUNT(*) ===
+  // esperados o recorrido completo con 5,305 SELECT. Una sola fila de más
+  // (p. ej. de un paquete borrado con la papelera: deleteModel no borra sus
+  // filas) rompía el atajo para siempre. Ahora: UNA consulta con los ids
+  // existentes, diferencia en memoria (seedPlan.ts), se limpia lo de
+  // paquetes quitados y solo se recorre lo que de verdad falta.
+  const existingRows = await stage("listExisting", async () =>
+    db.getAllAsync<{ chunk_id: string }>(`SELECT chunk_id FROM chunks WHERE collection_id IS NULL`)
+  );
+  const plan = planSeed(
+    allDocs.map((d) => ({ id: d.id, packId: d.packId })),
+    existingRows.map((r) => r.chunk_id),
+    loaded.removedPackIds,
+  );
+  if (plan.stale.length > 0) {
+    await stage("deleteStale", async () => deleteSeedChunks(plan.stale, { lifecycleEpoch: runEpoch }));
+  }
+  const packStatus = plan.packs;
+  publishStatus({ ...packStatus });
+  if (plan.missing.length === 0) return;
 
+  const missing = new Set(plan.missing);
+  const todo = allDocs.filter((d) => missing.has(d.id));
   let lastReport = 0;
-  for (const [i, doc] of allDocs.entries()) {
+  for (const [i, doc] of todo.entries()) {
     // About four updates a second is enough to show it's moving.
     const now = Date.now();
-    if (now - lastReport > 250 || i === allDocs.length - 1) {
+    const report = now - lastReport > 250 || i === todo.length - 1;
+    if (report) {
       lastReport = now;
-      listeners.forEach((l) => l({ done: i + 1, total: allDocs.length, title: doc.title }));
+      listeners.forEach((l) => l({ done: i + 1, total: todo.length, title: doc.title }));
     }
-
-    const existing = await stage("existenceCheck", async () => db.getFirstAsync<{ chunk_id: string }>(
-      `SELECT chunk_id FROM chunks WHERE chunk_id = ?`,
-      [doc.id]
-    ));
-    if (existing) continue;
 
     const chunk: ChunkRecord = {
       chunkId: doc.id,
@@ -272,6 +283,13 @@ async function seedNow(): Promise<void> {
       await stage("insertChunk", async () =>
         insertChunkWithoutEmbedding(chunk, { lifecycleEpoch: runEpoch })
       );
+    }
+    if (doc.packId && packStatus[doc.packId]) {
+      packStatus[doc.packId].indexed++;
+      // Ajustes no necesita cada documento: se publica con el mismo ritmo
+      // que el aviso del chat, y siempre al terminar un paquete.
+      const p = packStatus[doc.packId];
+      if (p.indexed === p.total || report) publishStatus({ ...packStatus });
     }
   }
 }

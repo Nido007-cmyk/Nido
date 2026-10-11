@@ -54,6 +54,8 @@
     "loadingModel": "Loading model…",
     "selectUse": "🔘 Select & Use",
     "indexedNote": "In your knowledge base",
+    "indexingNote": "Downloaded · indexing for search {{done}} / {{total}} (keep NIDO open)",
+    "downloadedNote": "Downloaded",
     "activeNote": "Currently in use",
     "deleteAccessibility": "Delete model asset",
     "badge": {
@@ -400,7 +402,7 @@
   "chatScreen": {
     "initializingCore": "Starting NIDO…",
     "mountingWeights": "Loading the model…",
-    "indexingKnowledgeBase": "Preparing your knowledge…",
+    "indexingKnowledgeBase": "Indexing new knowledge for offline search…",
     "reasoningElapsed": "💭 Reasoning… {{seconds}}s",
     "reasoningUnfinished": "Reasoning didn't finish before the reply ended (stopped or out of tokens). Tap 💭 to read it.",
     "showReasoning": "Show reasoning",
