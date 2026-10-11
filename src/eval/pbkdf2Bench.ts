@@ -30,7 +30,6 @@ import {
   PBKDF2_BENCH_SALT_LEN,
   PBKDF2_BENCH_DK_LEN,
   PBKDF2_BENCH_KDF_ID,
-  PBKDF2_BENCH_CHUNK_ITERATIONS,
 } from "../../scripts/benchmarks/pbkdf2-candidate/pbkdf2";
 import { PBKDF2_CANDIDATE_SOURCE_SHA256 } from "../../scripts/benchmarks/pbkdf2-candidate/sourceHash";
 
@@ -44,7 +43,38 @@ function benchSalt(): Uint8Array {
   return s;
 }
 
-const WARM_RUNS = 5;
+/**
+ * FREEZE-2026-10-10: tramo de iteraciones entre cesiones al event loop.
+ * El candidato usa 4096 por defecto, pensado para un motor con JIT. Hermes
+ * NO tiene JIT: medido sin JIT, 4096 iteraciones bloquean el hilo de JS
+ * ~0,8 s en un PC (2-3x más en la Tab A9+), así que la UI apenas respiraba y
+ * la tablet parecía colgada. Con 64, cada bloqueo es ~13 ms en PC (~30-40 ms
+ * en la tablet) y el tiempo total no cambia (el coste es el hashing).
+ * No se toca el candidato en cuarentena: solo cómo lo llama la tarea.
+ */
+export const BENCH_UI_CHUNK_ITERATIONS = 64;
+
+/**
+ * FREEZE-2026-10-10: 1 pasada en caliente (antes 5). En Hermes cada pasada
+ * de 600k tarda minutos; 6 pasadas tenían la tablet al 100 % de CPU durante
+ * más de media hora. Frío + 1 caliente basta para el veredicto del gate.
+ */
+const WARM_RUNS = 1;
+
+/** Error de cancelación (el usuario detuvo el benchmark o salió). */
+export class Pbkdf2BenchAborted extends Error {
+  constructor() {
+    super("PBKDF2 benchmark detenido.");
+    this.name = "Pbkdf2BenchAborted";
+  }
+}
+
+let abortRequested = false;
+
+/** Detiene el benchmark en curso en el siguiente tramo. */
+export function abortPbkdf2Benchmark(): void {
+  abortRequested = true;
+}
 /** Provisional evaluation criterion (NOT a frozen crypto constant). */
 export const PBKDF2_PROVISIONAL_MAX_MS = 10_000;
 
@@ -106,7 +136,17 @@ async function timedRun(
   const salt = benchSalt();
   const t0 = performance.now();
   if (mode === "chunked") {
-    await pbkdf2Sha256Chunked(pw, salt, PBKDF2_BENCH_ITERATIONS, PBKDF2_BENCH_DK_LEN, PBKDF2_BENCH_CHUNK_ITERATIONS, onChunk);
+    await pbkdf2Sha256Chunked(
+      pw,
+      salt,
+      PBKDF2_BENCH_ITERATIONS,
+      PBKDF2_BENCH_DK_LEN,
+      BENCH_UI_CHUNK_ITERATIONS,
+      (done, total) => {
+        if (abortRequested) throw new Pbkdf2BenchAborted();
+        onChunk?.(done, total);
+      },
+    );
   } else {
     pbkdf2Sha256(pw, salt, PBKDF2_BENCH_ITERATIONS, PBKDF2_BENCH_DK_LEN);
   }
@@ -146,13 +186,14 @@ async function measureCase(
 
 /**
  * Runs the full physical-gate protocol: cold (first derivation after start)
- * + warm (median of 5), chunked vs unchunked. Writes the JSON report to the
+ * + warm (1 run, see WARM_RUNS), chunked. Writes the JSON report to the
  * eval results dir and returns it with its saved path.
  */
 export async function runPbkdf2Benchmark(onProgress?: (label: string) => void): Promise<{
   report: Pbkdf2BenchmarkReport;
   savedPath: string;
 }> {
+  abortRequested = false;
   // PBKDF2-2026-10-06: se eliminó la fase "unchunked". El research confirmó
   // que ambas fases miden lo mismo (600k iteraciones idénticas, ~1-2ms de
   // diferencia vs segundos de hashing) y el veredicto del gate ya se
@@ -175,7 +216,7 @@ export async function runPbkdf2Benchmark(onProgress?: (label: string) => void): 
       saltLen: PBKDF2_BENCH_SALT_LEN,
       dkLen: PBKDF2_BENCH_DK_LEN,
     },
-    chunkIterations: PBKDF2_BENCH_CHUNK_ITERATIONS,
+    chunkIterations: BENCH_UI_CHUNK_ITERATIONS,
     cases: [chunked],
     observations: {
       // La fase unchunked se eliminó el 2026-10-06: medía lo mismo que la
@@ -185,7 +226,7 @@ export async function runPbkdf2Benchmark(onProgress?: (label: string) => void): 
       heartbeatBaselineMs: 0,
       notes: [
         "2026-10-06: unchunked phase removed — it measured the same 600k iterations as chunked (~1-2ms scheduling difference vs seconds of hashing). jsThreadBlockedMsUnchunked now carries the chunked cold time as a documented proxy.",
-        "Chunked derivation yields to the event loop every 4096 iterations; UI stays responsive by design.",
+        `Chunked derivation yields to the event loop every ${BENCH_UI_CHUNK_ITERATIONS} iterations (4096 froze Hermes: no JIT). 1 warm run.`,
         "RSS sampled via ram-monitor every 200ms during each case (same source as eval peak memory).",
       ],
     },

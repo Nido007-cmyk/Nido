@@ -36,6 +36,7 @@ import { recordInferenceEvent } from "../../inference/telemetry";
 import { generateToolCallJson } from "./toolCallJson";
 import { validateStructuredOutput } from "./structuredOutput";
 import { extractRememberFact } from "./rememberRouter";
+import { formatReminderWhen } from "./reminderFormat";
 import { actionLog } from "../actionLog";
 import { isToolDisabled } from "../tools/toolPermissions";
 import { listSkillNamesForPrompt } from "../skills/registry";
@@ -597,9 +598,10 @@ export async function runAgentLoop(
     }
     // CALENDAR-FIX 2026-10-07: mostrar fecha si se parseó, ser honesto si no.
     // FIX 2026-10-09 (I2): usar el idioma actual, no "es" hardcodeado.
-    const dateLocale = (options.lang ?? "es") === "en" ? "en-US" : "es-ES";
+    // CRASH-2026-10-10: sin Intl (toLocale* con opciones pasa por JNI en
+    // Hermes/Android y un fallo ahí cierra la app). Ver reminderFormat.ts.
     const dateStr = reminderAction.dueAt
-      ? ` el ${new Date(reminderAction.dueAt).toLocaleDateString(dateLocale, { weekday: "long", day: "numeric", month: "long" })} a las ${new Date(reminderAction.dueAt).toLocaleTimeString(dateLocale, { hour: "numeric", minute: "2-digit" })}`
+      ? formatReminderWhen(reminderAction.dueAt, (options.lang ?? "es") === "en" ? "en" : "es")
       : "";
     return {
       response: dateStr
