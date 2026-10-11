@@ -14,6 +14,13 @@
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("ram-monitor", () => ({ getMemoryInfo: () => ({ rssBytes: 0, totalPssBytes: 0 }) }));
+// evalHarness arrastra el motor de inferencia (módulos nativos): aquí solo
+// hace falta la carpeta de resultados.
+vi.mock("./evalHarness", () => ({ EVAL_RESULTS_DIR: "file:///tmp/eval/" }));
+vi.mock("expo-file-system/legacy", () => ({
+  makeDirectoryAsync: async () => undefined,
+  writeAsStringAsync: async () => undefined,
+}));
 
 import {
   BENCH_UI_CHUNK_ITERATIONS,
