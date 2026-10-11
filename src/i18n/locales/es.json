@@ -1121,5 +1121,15 @@
       "5": "Viernes",
       "6": "Sábado"
     }
+  },
+  "crashReport": {
+    "title": "Diagnóstico de cierres",
+    "body": "Si NIDO se cerró solo, aquí aparece el motivo que registró Android. Copia el informe y pégalo en un reporte de error: no incluye tus mensajes, notas ni memoria.",
+    "lastFailure": "Último cierre por fallo: {{reason}} ({{when}} UTC)",
+    "lastJsCrash": "Hay un fallo de la app registrado.",
+    "none": "No hay cierres por fallo registrados.",
+    "copy": "Copiar informe",
+    "copied": "Copiado",
+    "clear": "Borrar"
   }
 }
