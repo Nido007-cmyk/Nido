@@ -149,7 +149,51 @@ export interface LoadedModelInfo {
   filename: string;
   nCtx: number;
   nThreads: number;
+  /** RAM-2026-10-11: qué perfil de memoria aceptó llama.cpp (diagnóstico). */
+  memoryProfile?: LlmMemoryProfile;
 }
+
+/**
+ * RAM-2026-10-11: perfiles de memoria para el contexto del LLM, del más
+ * ahorrador al original. Se prueban en orden y se queda el primero que
+ * llama.cpp acepta, así un dispositivo o build donde una opción no esté
+ * soportada sigue cargando exactamente como antes.
+ *
+ * - n_ubatch 256 (antes 512 por defecto): el búfer de cómputo de llama.cpp
+ *   se reserva para el peor caso de n_ubatch tokens con logits completos
+ *   (n_ubatch × n_vocab × 4 B). Con Qwen2.5 (vocab 152064) son ~297 MiB a
+ *   512 y ~149 MiB a 256. En CPU de móvil la velocidad de lectura del
+ *   prompt casi no cambia entre 256 y 512.
+ * - n_batch 512 (antes 2048 por defecto en llama.cpp): lote lógico; debe
+ *   ser ≥ n_ubatch. Solo trocea prompts largos.
+ * - KV cache q8_0 (antes f16): ~47 % menos de memoria de contexto con
+ *   pérdida de calidad casi nula en las mediciones de llama.cpp. La V
+ *   cuantizada exige flash attention; con flash_attn_type en "auto" (por
+ *   defecto) llama.cpp la activa en CPU si el modelo la soporta, y si no,
+ *   falla la creación del contexto y se pasa al siguiente perfil.
+ */
+export type LlmMemoryProfile = "kv-q8" | "small-batch" | "default";
+export const LLM_N_BATCH = 512;
+export const LLM_N_UBATCH = 256;
+
+export function llmInitParamsForProfile(
+  profile: LlmMemoryProfile,
+  base: { model: string; n_ctx: number; n_threads: number },
+): Record<string, unknown> {
+  const common = {
+    model: base.model,
+    use_mlock: false, // avoid pinning full weights in RAM; rely on mmap streaming
+    n_ctx: base.n_ctx,
+    n_threads: base.n_threads,
+    n_gpu_layers: 0, // CPU-only for broad device compatibility; adjust per-device
+  };
+  if (profile === "default") return common;
+  const smallBatch = { ...common, n_batch: LLM_N_BATCH, n_ubatch: LLM_N_UBATCH };
+  if (profile === "small-batch") return smallBatch;
+  return { ...smallBatch, cache_type_k: "q8_0", cache_type_v: "q8_0" };
+}
+
+export const LLM_MEMORY_PROFILES: readonly LlmMemoryProfile[] = ["kv-q8", "small-batch", "default"];
 
 /**
  * Thin wrapper around llama.rn. Loads a GGUF model with mmap so weights
@@ -251,16 +295,25 @@ export class LlamaEngine {
     await this.unloadNow();
 
     try {
-      this.context = await withStage("initLlama", () =>
-        initLlama({
-          model: modelPath,
-          use_mlock: false, // avoid pinning full weights in RAM; rely on mmap streaming
-          n_ctx: nCtx,
-          n_threads: nThreads,
-          n_gpu_layers: 0, // CPU-only for broad device compatibility; adjust per-device
-        })
-      );
-      this.modelInfo = { filename: modelFilename, nCtx, nThreads };
+      // RAM-2026-10-11: primer perfil que llama.cpp acepte (ver
+      // LLM_MEMORY_PROFILES). El último es exactamente la llamada original.
+      let lastErr: unknown = null;
+      let loadedProfile: LlmMemoryProfile | null = null;
+      for (const profile of LLM_MEMORY_PROFILES) {
+        try {
+          this.context = await withStage("initLlama", () =>
+            initLlama(
+              llmInitParamsForProfile(profile, { model: modelPath, n_ctx: nCtx, n_threads: nThreads }) as never,
+            )
+          );
+          loadedProfile = profile;
+          break;
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      if (!loadedProfile) throw lastErr;
+      this.modelInfo = { filename: modelFilename, nCtx, nThreads, memoryProfile: loadedProfile };
     } catch (e: any) {
       // The native error here (from llama.rn/llama.cpp) is often terse
       // ("Failed to initialize context" with no further detail) — append
