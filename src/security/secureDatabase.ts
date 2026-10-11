@@ -506,6 +506,17 @@ export async function recoverFromKeyLoss(opts: {
       archived.push(target);
     }
   }
+  // HW-VAULT: si la pérdida vino de la llave de hardware invalidada, el blob
+  // envuelto y la KEK ya no sirven; sin borrarlos, el siguiente arranque
+  // pediría desbloquear una llave imposible de abrir.
+  try {
+    const { deleteVaultBlob } = await import("../privacy/keyManager");
+    await deleteVaultBlob();
+    const { deleteVaultKek } = await import("./keyVault");
+    await deleteVaultKek();
+  } catch {
+    /* best-effort: sin bóveda no hay nada que borrar */
+  }
   return { archived };
 }
 

@@ -1141,5 +1141,28 @@
     "copy": "Copiar informe",
     "copied": "Copiado",
     "clear": "Borrar"
+  },
+  "vault": {
+    "title": "Protección por hardware",
+    "body": "Protege los datos de NIDO con el chip de seguridad de la tablet: solo se abren con tu PIN, patrón o huella. Si alguien se lleva la tablet apagada o reiniciada, no puede leer tus datos de NIDO aunque los extraiga.",
+    "statusActive": "Activa · llave en {{level}}",
+    "statusInactive": "Desactivada",
+    "activate": "Activar protección",
+    "deactivate": "Desactivar",
+    "levelSoftware": "software (sin chip seguro)",
+    "promptTitle": "Proteger tus datos de NIDO",
+    "promptSubtitle": "Confirma con tu PIN o huella",
+    "confirmTitle": "¿Activar la protección por hardware?",
+    "confirmBody": "Tus datos de NIDO solo se abrirán con el PIN, patrón o huella de esta tablet.\n\nImportante: si un día QUITAS el bloqueo de pantalla de la tablet, Android borra esta llave y NIDO no podrá abrir tus datos; solo podrás recuperarlos con un respaldo y su llave.\n\nRecomendado: crea un respaldo antes (Acerca de → Abrir respaldo).",
+    "confirmActivate": "Activar",
+    "activated": "Protección activada.",
+    "deactivateTitle": "¿Desactivar la protección por hardware?",
+    "deactivateBody": "La llave de tus datos volverá a guardarse sin exigir tu PIN o huella.",
+    "deactivated": "Protección desactivada.",
+    "errNoLock": "Pon un PIN, patrón o contraseña en la tablet para poder activar la protección por hardware.",
+    "errVerify": "La verificación falló y no se cambió nada. Tus datos siguen igual.",
+    "errGeneric": "No se pudo completar. No se cambió nada.",
+    "lockSubtitle": "Tus datos están protegidos por el chip de seguridad. Desbloquea con tu PIN, patrón o huella.",
+    "keyInvalidated": "Android invalidó la llave de seguridad de NIDO (normalmente porque se quitó el bloqueo de pantalla). Tus datos no se pueden abrir sin un respaldo."
   }
 }

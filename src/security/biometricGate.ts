@@ -107,6 +107,14 @@ export function lockNow(): void {
   lastUnlockAt = 0;
 }
 
+/**
+ * HW-VAULT: el desbloqueo de la bóveda de hardware YA fue una autenticación
+ * real del sistema (PIN o huella fuerte): no volver a pedirla en seguida.
+ */
+export function markUnlockedNow(): void {
+  lastUnlockAt = Date.now();
+}
+
 /** Solo para tests. */
 export function setLastUnlockAtForTest(t: number): void {
   lastUnlockAt = t;

@@ -21,6 +21,7 @@ import { ScheduledTasksCard } from "./ScheduledTasksCard";
 import { SecurityStatusCard } from "./SecurityStatusCard";
 import { BackupScreen } from "./BackupScreen";
 import { CrashReportCard } from "./CrashReportCard";
+import { HardwareProtectionCard } from "./HardwareProtectionCard";
 
 export function AboutScreen({ onClose }: { onClose: () => void }) {
   const { colors, typography } = useTheme();
@@ -85,6 +86,7 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
         <SecurityStatusCard />
 
         {/* Si la app se cerró sola: motivo registrado por Android, copiable. */}
+        <HardwareProtectionCard />
         <CrashReportCard />
 
         {/* U1: acceso a respaldo, clave de cifrado y rotación de clave. */}

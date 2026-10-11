@@ -48,7 +48,7 @@ const modelManager = new ModelManager();
  */
 const TRANSIENT_INACTIVE_GRACE_MS = 3_000;
 
-type Screen = "checking" | "wipe-recovering" | "wipe-blocked" | "startup-error" | "key-loss" | "locked" | "required-setup" | "chat";
+type Screen = "checking" | "wipe-recovering" | "wipe-blocked" | "startup-error" | "key-loss" | "vault-locked" | "locked" | "required-setup" | "chat";
 
 /**
  * Pantalla de bloqueo: gate biométrico/PIN del sistema antes de mostrar
@@ -120,6 +120,66 @@ function LockScreen({ onUnlocked }: { onUnlocked: () => void }) {
               : error
                 ? t("lockScreen.retry")
                 : t("lockScreen.unlock")}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+/**
+ * HW-VAULT (docs/design/BLOQUEO_BIOMETRICO_REAL.md): desbloqueo REAL. La
+ * llave de la base solo se abre con el PIN o la huella del dueño; sin eso,
+ * los datos de NIDO no se pueden leer ni con la tablet en otras manos.
+ */
+function VaultLockScreen({ onUnlocked, onKeyLost }: { onUnlocked: () => void; onKeyLost: (message: string) => void }) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const tryUnlock = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const { unlockVault } = await import("./src/security/keyVault");
+      await unlockVault({ title: t("lockScreen.title"), subtitle: t("lockScreen.subtitle") });
+      const { markUnlockedNow } = await import("./src/security/biometricGate");
+      markUnlockedNow();
+      onUnlocked();
+    } catch (e) {
+      const code = (e as { code?: string } | null)?.code;
+      if (code === "E_CANCELLED") setError(t("lockScreen.cancelled"));
+      else if (code === "E_KEY_INVALIDATED") onKeyLost(t("vault.keyInvalidated"));
+      else setError(t("lockScreen.failed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    tryUnlock();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <View style={[styles.centered, { backgroundColor: colors.bg.black }]}>
+      <Image
+        source={require("./assets/mascot-nido.png")}
+        style={styles.lockMascot}
+        resizeMode="contain"
+        accessibilityIgnoresInvertColors
+      />
+      <Text style={[styles.lockTitle, { color: colors.text.primary }]}>{t("lockScreen.title")}</Text>
+      <Text style={[styles.lockSubtitle, { color: colors.text.secondary }]}>{t("vault.lockSubtitle")}</Text>
+      {error && <Text style={[styles.lockWarning, { color: colors.crimson[400] }]}>{error}</Text>}
+      <Pressable
+        accessibilityRole="button"
+        onPress={tryUnlock}
+        disabled={busy}
+        style={[styles.lockButton, { backgroundColor: colors.emerald[500] }, busy && { opacity: 0.6 }]}
+      >
+        <Text style={[styles.lockButtonText, { color: colors.text.inverse }]}>
+          {busy ? t("lockScreen.unlocking") : t("lockScreen.unlock")}
         </Text>
       </Pressable>
     </View>
@@ -208,13 +268,15 @@ function AppContent() {
       const { checkStaleRekeyStaging } = await import("./src/security/keyRotation");
       const FS = await import("expo-file-system/legacy");
       const stagingPath = `${FS.documentDirectory}rekey-staging.json`;
-      const { default: SecureStore } = await import("expo-secure-store");
       const SQLite = await import("expo-sqlite");
       const { applyDatabaseKey } = await import("./src/privacy/keyManager");
       const result = await checkStaleRekeyStaging(
         stagingPath,
         async (dekHex: string) => {
-          await SecureStore.setItemAsync("nido_db_key", dekHex);
+          // HW-VAULT: por keyManager, que la envuelve si la bóveda está activa
+          // (escribir "nido_db_key" a mano dejaría la DEK en claro y el blob viejo).
+          const { storeDatabaseKeyHex } = await import("./src/privacy/keyManager");
+          await storeDatabaseKeyHex(dekHex);
         },
         async (path: string, dekHex: string) => {
           const slash = path.lastIndexOf("/");
@@ -269,6 +331,20 @@ function AppContent() {
    */
   const enterKeyLossIfNeeded = async (): Promise<boolean> => {
     setKeyLossError(null);
+    // HW-VAULT: con la bóveda de hardware activa, nada puede tocar las bases
+    // hasta que el dueño se autentique. Tras desbloquear, la pantalla
+    // VaultLockScreen vuelve a correr el arranque completo.
+    try {
+      const { isVaultActive } = await import("./src/security/keyVault");
+      const { isDatabaseKeyUnlocked } = await import("./src/privacy/keyManager");
+      if (!isDatabaseKeyUnlocked() && (await isVaultActive())) {
+        setScreen("vault-locked");
+        return true;
+      }
+    } catch {
+      // Sin poder leer el estado de la bóveda: seguir; getDatabaseKeyHex
+      // falla cerrado (VaultLockedError / SecureStoreReadError) más abajo.
+    }
     try {
       await getDatabaseKeyHex();
     } catch (e) {
@@ -380,6 +456,17 @@ function AppContent() {
             <Text style={[styles.lockButtonText, { color: colors.text.inverse }]}>{t("modelSetupScreen.startupError.retry")}</Text>
           </Pressable>
         </View>
+      )}
+      {screen === "vault-locked" && (
+        <VaultLockScreen
+          onUnlocked={() => void runStartupGate()}
+          onKeyLost={(message) => {
+            // Android invalidó la llave de hardware (p. ej. se quitó el PIN):
+            // misma pantalla honesta de recuperación que la pérdida de clave.
+            setKeyLossError(new KeyLossError([], message));
+            setScreen("key-loss");
+          }}
+        />
       )}
       {screen === "locked" && (
         <LockScreen onUnlocked={() => setScreen(modelsReady ? "chat" : "required-setup")} />

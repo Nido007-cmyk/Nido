@@ -1141,5 +1141,28 @@
     "copy": "Copy report",
     "copied": "Copied",
     "clear": "Clear"
+  },
+  "vault": {
+    "title": "Hardware protection",
+    "body": "Protects NIDO's data with the tablet's security chip: it only opens with your PIN, pattern or fingerprint. If someone takes the tablet powered off or rebooted, they can't read your NIDO data even if they extract it.",
+    "statusActive": "On · key in {{level}}",
+    "statusInactive": "Off",
+    "activate": "Turn on protection",
+    "deactivate": "Turn off",
+    "levelSoftware": "software (no secure chip)",
+    "promptTitle": "Protect your NIDO data",
+    "promptSubtitle": "Confirm with your PIN or fingerprint",
+    "confirmTitle": "Turn on hardware protection?",
+    "confirmBody": "Your NIDO data will only open with this tablet's PIN, pattern or fingerprint.\n\nImportant: if you ever REMOVE the tablet's screen lock, Android deletes this key and NIDO won't be able to open your data; you can only recover it from a backup and its key.\n\nRecommended: create a backup first (About → Open backup).",
+    "confirmActivate": "Turn on",
+    "activated": "Protection turned on.",
+    "deactivateTitle": "Turn off hardware protection?",
+    "deactivateBody": "Your data's key will be stored again without requiring your PIN or fingerprint.",
+    "deactivated": "Protection turned off.",
+    "errNoLock": "Set a PIN, pattern or password on the tablet to turn on hardware protection.",
+    "errVerify": "Verification failed and nothing was changed. Your data is unchanged.",
+    "errGeneric": "Couldn't complete it. Nothing was changed.",
+    "lockSubtitle": "Your data is protected by the security chip. Unlock with your PIN, pattern or fingerprint.",
+    "keyInvalidated": "Android invalidated NIDO's security key (usually because the screen lock was removed). Your data can't be opened without a backup."
   }
 }
