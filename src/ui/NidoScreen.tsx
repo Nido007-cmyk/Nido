@@ -450,6 +450,26 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           setLinking(true);
           setLinkError(null);
         }
+        // RECONNECT-AFTER-CRASH 2026-10-10: tras un cierre/reinicio de la app
+        // el estado de reconexión (en memoria) se pierde. En el primer
+        // arranque del enlace de cada proceso, re-marcar a los contactos ya
+        // emparejados con los que hubo handshake (MAC persistida). Una vez
+        // por proceso, respetando el rol de dial y en segundo plano.
+        void (async () => {
+          const { getKnownMacs } = await import("../p2p/store");
+          const { reconnectKnownContactsOnce } = await import("../p2p/startupReconnect");
+          await reconnectKnownContactsOnce({
+            getKnownMacs,
+            connectedPeers: () => m.connectedPeers(),
+            shouldDialPeer: (pk) => m.shouldDialPeer(pk),
+            connectPeer: (alias) => m.connectPeer(alias),
+            disconnectPeer: (pk) => m.disconnectPeer(pk),
+            onReconnected: (pk) => {
+              reconnectManager.cancel(pk);
+              if (!cancelled) setOnline((prev) => new Set(prev).add(pk));
+            },
+          });
+        })().catch(() => {});
       } catch (e) {
         if (!cancelled) {
           // F-2: la pérdida de identidad se routea a la pantalla de

@@ -25,6 +25,8 @@ import {
   parseHello,
   buildHello,
   extractMac,
+  RECONNECT_MAX_ATTEMPTS,
+  reconnectDelayMs,
   type NidoP2PBindings,
 } from "./nativeTransport";
 import {
@@ -1640,6 +1642,38 @@ describe("nativeTransport: ReconnectManager (BlueLib)", () => {
     expect((t as any).reconnectTimers.has(mac)).toBe(true);
     // La ruta se limpió (forgetRoute).
     expect((t as any).macToPk.has(mac)).toBe(false);
+  });
+
+  it("RECONNECT-AFTER-CRASH: un intento fallido reprograma el siguiente (acotado)", async () => {
+    await t.startDiscovery(ev.events);
+    const mac = "AA:BB:CC:DD:EE:33";
+    const pk = "feedface".repeat(8);
+    (t as any).macToPk.set(mac, pk);
+    (t as any).pkToMac.set(pk.toLowerCase(), mac);
+    const connectSpy = vi.fn(async () => {
+      throw new Error("read failed, socket might closed");
+    });
+    (t as any).connect = connectSpy;
+    vi.useFakeTimers();
+    try {
+      f.emit("onDisconnected", { address: mac } as never);
+      for (let i = 0; i < RECONNECT_MAX_ATTEMPTS + 2; i++) {
+        await vi.advanceTimersByTimeAsync(61000);
+      }
+      // Antes la cadena moría tras el primer fallo (1 llamada). Ahora agota
+      // el presupuesto completo y se detiene.
+      expect(connectSpy).toHaveBeenCalledTimes(RECONNECT_MAX_ATTEMPTS);
+      expect((t as any).reconnectTimers.has(mac)).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reconnectDelayMs cubre ~2 min de reintentos", () => {
+    let total = 0;
+    for (let i = 0; i < RECONNECT_MAX_ATTEMPTS; i++) total += reconnectDelayMs(i);
+    expect(total).toBeGreaterThanOrEqual(120000);
+    expect(reconnectDelayMs(10)).toBe(60000);
   });
 
   it("disconnect manual cancela el reconnect", async () => {
