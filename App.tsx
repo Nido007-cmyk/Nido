@@ -379,10 +379,17 @@ function AppContent() {
   // ventana de gracia, no se bloquea. "background" real siempre bloquea.
   useEffect(() => {
     const sub = AppState.addEventListener("change", (s) => {
-      if (isPermissionFlowActive()) return;
+      // Integración 0.1.7: un diálogo de permiso o el selector de archivos
+      // (withPermissionRequest) no deben mandar a la pantalla de bloqueo,
+      // pero el modo máxima seguridad (nivel B) SÍ sigue contando: si el
+      // usuario se va a otra app desde el selector, NIDO se cierra igual tras
+      // la espera elegida (mínimo 30 s, mucho más que un diálogo de permiso).
+      const permissionFlow = isPermissionFlowActive();
       if (s === "background") {
-        lockNow();
-        lastInactiveAtRef.current = 0;
+        if (!permissionFlow) {
+          lockNow();
+          lastInactiveAtRef.current = 0;
+        }
         // Nivel B: si está activo, cerrar NIDO por completo tras la espera
         // elegida (borra la llave y todo lo descifrado de la memoria).
         strictBackgroundAtRef.current = Date.now();
@@ -402,6 +409,7 @@ function AppContent() {
           }
         })();
       } else if (s === "inactive") {
+        if (permissionFlow) return;
         // Posible overlay transitorio: registrar el momento, decidir al volver.
         lastInactiveAtRef.current = Date.now();
       } else if (s === "active") {
@@ -428,6 +436,7 @@ function AppContent() {
             }
           })();
         }
+        if (permissionFlow) return;
         const inactiveAt = lastInactiveAtRef.current;
         lastInactiveAtRef.current = 0;
         // Si venimos de un "inactive" breve, fue un overlay transitorio del
