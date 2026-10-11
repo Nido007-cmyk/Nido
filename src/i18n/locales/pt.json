@@ -1168,6 +1168,8 @@
     "deactivateBody": "A chave dos seus dados voltará a ser guardada sem exigir seu PIN ou digital.",
     "deactivated": "Proteção desativada.",
     "errNoLock": "Defina um PIN, padrão ou senha no tablet para ativar a proteção por hardware.",
+    "errUnavailable": "A proteção por hardware não está disponível nesta versão do NIDO.",
+    "errStatus": "Não foi possível verificar a proteção por hardware neste dispositivo: {{reason}}",
     "errVerify": "A verificação falhou e nada foi alterado. Seus dados continuam iguais.",
     "errGeneric": "Não foi possível concluir. Nada foi alterado.",
     "lockSubtitle": "Seus dados estão protegidos pelo chip de segurança. Desbloqueie com seu PIN, padrão ou digital.",
