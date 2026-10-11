@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MIT License
+  Copyright (c) 2026 NIDO contributors
+  See LICENSE file for details. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <!-- Acceso rápido "Preguntar a NIDO" (barra de ajustes rápidos). -->
+    <service
+      android:name="expo.modules.nidolaunch.AskNidoTileService"
+      android:exported="true"
+      android:icon="@drawable/nido_tile_icon"
+      android:label="@string/nido_tile_label"
+      android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+      <intent-filter>
+        <action android:name="android.service.quicksettings.action.QS_TILE" />
+      </intent-filter>
+    </service>
+  </application>
+</manifest>
