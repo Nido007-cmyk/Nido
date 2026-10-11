@@ -1022,7 +1022,8 @@
     "kind": {
       "download_start": "Download iniciado",
       "download_complete": "Download concluído",
-      "download_failed": "Download com falha"
+      "download_failed": "Download com falha",
+      "lan_connect": "Conexão por Wi-Fi local"
     }
   },
   "skillsCard": {
