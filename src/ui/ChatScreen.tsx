@@ -57,7 +57,16 @@ import { showSecureAlert } from "nido-secure-dialog";
 // NIDO agent: loop agéntico local con herramientas (Fase A).
 import { classifyIntent } from "../agent/loop/intent";
 import { runAgentLoop, assertPromptBudget, estimatePromptTokens } from "../agent/loop/agentLoop";
-import { buildToolHandlers } from "../agent/tools/handlers";
+import { buildToolHandlers, searchPhoneContacts } from "../agent/tools/handlers";
+import { matchSmallTalk, smallTalkSessionTitle } from "../agent/loop/smallTalk";
+import { agentFallbackText, toFallbackLang } from "../agent/loop/fallbackText";
+import { describePolicyConfirmation } from "../agent/policy/confirmText";
+import {
+  verifyGroundedAnswer,
+  isFactualQuestion,
+  noSourcesAnswer,
+  type GroundingStatus,
+} from "../rag/grounding";
 import { snapshot as loadMemorySnapshot } from "../agent/memory/memoryStore";
 import { getPersonality, PersonalityId, PERSONALITIES } from "../constants/personalities";
 import {
@@ -116,6 +125,12 @@ interface Message {
    * store (a reloaded session shows the text without re-rendering the
    * note). */
   noSourcesFound?: boolean;
+  /**
+   * RAG-GROUNDING 2026-10-11: resultado de verificar la respuesta contra las
+   * fuentes (grounding.ts). La cabecera de fuentes lo muestra para no dar a
+   * entender que una respuesta está respaldada cuando no lo está.
+   */
+  grounding?: GroundingStatus;
   stopped?: boolean;
   timedOut?: boolean;
   interruptedByBackground?: boolean;
@@ -642,7 +657,14 @@ export function ChatScreen({
     // branches, so it covers normal chat and Deep Research alike.
     const kbLocale = toIdentityLocale(i18n.resolvedLanguage ?? i18n.language);
     const kbQueryMeta = answerKnowledgeQueryWithCategory(query, kbLocale);
-    const kbAnswer = kbQueryMeta !== null ? kbQueryMeta.answer : null;
+    // SMALLTALK 2026-10-11: charla básica ("bien y tú?", "gracias", "ok")
+    // con respuesta determinista: sin RAG, sin letrero de "no sources", sin
+    // generar. Antes cannedResponses solo corría dentro del agente y el chat
+    // normal nunca lo consultaba. Anclado al mensaje completo: "hola,
+    // recuérdame comprar pan" sigue su camino normal.
+    const uiLang = toFallbackLang(i18n.resolvedLanguage ?? i18n.language);
+    const smallTalkHit = kbQueryMeta === null ? matchSmallTalk(query, uiLang) : null;
+    const kbAnswer = kbQueryMeta !== null ? kbQueryMeta.answer : smallTalkHit?.text ?? null;
     if (kbAnswer !== null) {
       assistantText = kbAnswer;
       setMessages((prev) =>
@@ -687,7 +709,9 @@ export function ChatScreen({
       // Synchronous and model-free: no background task, no retry path.
       if (isNewSession && kbSettings.autoGenerateTitles) {
         const sid = sessionId;
-        const kbTitle = knowledgeSessionTitle(query, kbLocale);
+        const kbTitle = smallTalkHit
+          ? smallTalkSessionTitle(smallTalkHit.lang)
+          : knowledgeSessionTitle(query, kbLocale);
         await setSessionTitle(sid, kbTitle);
         await refreshSessions();
       }
@@ -732,16 +756,25 @@ export function ChatScreen({
         // que una acción requiere confirmación humana, mostrar diálogo real.
         // Sin esto, las acciones ASK se bloqueaban silenciosamente (fail-closed
         // correcto, pero sin surface para el usuario).
-        const onConfirmTool = async (decision: {
-          reason: string;
-          risk: string;
-        }): Promise<boolean> =>
-          showSecureAlert({
-            title: t("policyAsk.title"),
-            message: `${decision.reason}\n\n${t("policyAsk.risk")}: ${decision.risk}`,
+        // TOOLS-AUDIT 2026-10-11: el diálogo dice QUÉ se va a hacer (número,
+        // texto exacto del SMS, lo que se va a guardar) en el idioma del
+        // usuario, no "Tool 'place_call' is irreversible…".
+        const onConfirmTool = async (
+          decision: { reason: string; risk: string },
+          action?: { tool: string; args: Record<string, unknown> }
+        ): Promise<boolean> => {
+          const dialog = describePolicyConfirmation(
+            decision as { reason: string; risk: "low" | "medium" | "high" | "critical" },
+            action,
+            uiLang
+          );
+          return showSecureAlert({
+            title: dialog.title,
+            message: dialog.message,
             cancelLabel: t("common.cancel"),
             confirmLabel: t("common.confirm"),
           });
+        };
         const agentResult = await runAgentLoop(query, {
           engine: llamaEngine,
           handlers: buildToolHandlers({ requestConfirm }),
@@ -750,7 +783,11 @@ export function ChatScreen({
           maxSteps: 3,
           nPredict: agentMaxTokens,
           // FIX 2026-10-09: idioma vigente para el system prompt.
-          lang: i18n.language?.startsWith("en") ? "en" : "es",
+          // TOOLS-AUDIT 2026-10-11: también pt (respuestas deterministas).
+          lang: uiLang,
+          // TOOLS-AUDIT 2026-10-11: contactos/llamadas/SMS por la vía
+          // determinista (no depende de que el 0.5B escriba el JSON).
+          contactSearch: searchPhoneContacts,
           // Presupuesto de prompt contra el n_ctx real del modelo cargado
           // (T-contexto-2026-10-06).
           nCtx: llamaEngine.getModelInfo()?.nCtx,
@@ -953,6 +990,15 @@ export function ChatScreen({
             c = await retrieve(query, ANSWER_CONTEXT_CHUNKS);
           }
           const noSources = retrievalAttempted && c.length === 0;
+          // RAG-GROUNDING 2026-10-11 (Fase 3, "mejor no inventar"): pregunta
+          // de hechos + ninguna fuente → "no lo sé" honesto y determinista,
+          // sin generar. Pedírselo al 0.5B por prompt no basta: inventa igual.
+          if (noSources && isFactualQuestion(query)) {
+            const idk = noSourcesAnswer(uiLang);
+            assistantText = idk;
+            setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: idk } : m)));
+            return { chunks: c, noSourcesFound: noSources };
+          }
           setProcessing({ messageId: assistantId, status: "thinking" });
           // Use the model's own chat template when its file ships one; the
           // plain prompt is only a fallback. Off-template, models ramble,
@@ -960,9 +1006,12 @@ export function ChatScreen({
           // C2-2026-10-06: verificar el presupuesto de contexto ANTES de
           // generar (la ruta del agent loop ya lo hace; esta ruta directa no).
           const useChatTemplate = llamaEngine.hasEmbeddedChatTemplate();
+          // RAG-GROUNDING 2026-10-11: con fuentes, muestreo factual (0.3)
+          // en vez del 0.7 de charla.
+          const sampling = c.length > 0 ? { samplingPreset: "factual" as const } : {};
           const genInput = useChatTemplate
-            ? { messages: assembleChatMessages(query, c, systemPrompt, history, styleReminder, noSources), nPredict: maxTokens, onToken }
-            : { prompt: assemblePrompt(query, c, systemPrompt, history, styleReminder, noSources), nPredict: maxTokens, onToken };
+            ? { messages: assembleChatMessages(query, c, systemPrompt, history, styleReminder, noSources), nPredict: maxTokens, onToken, ...sampling }
+            : { prompt: assemblePrompt(query, c, systemPrompt, history, styleReminder, noSources), nPredict: maxTokens, onToken, ...sampling };
           {
             const nCtx = llamaEngine.getModelInfo()?.nCtx ?? 4096;
             let promptText: string;
@@ -1086,9 +1135,44 @@ export function ChatScreen({
       flushTokenBuffer();
 
       const wasStopped = stopRequestedRef.current;
+
+      // RAG-GROUNDING 2026-10-11: punto ÚNICO de decisión tras generar
+      // (fijo y adaptativo; Deep Research tiene su propia síntesis y solo
+      // recibe la red de "nunca vacío"). Aquí se sabe a la vez qué dijo el
+      // modelo y qué dicen las fuentes:
+      //  - con fuentes → se quitan frases sin respaldo; si no queda nada,
+      //    "no lo sé" + extracto literal de la fuente (grounding.ts);
+      //  - sin fuentes + pregunta de hechos → "no lo sé" honesto;
+      //  - NEVER-SILENT: respuesta vacía → texto honesto, nunca burbuja vacía.
+      let grounding: GroundingStatus | undefined;
+      if (!wasStopped) {
+        let finalText = assistantText;
+        if (!deepResearchModeRef.current && chunks.length > 0) {
+          const verified = verifyGroundedAnswer(assistantText, chunks, uiLang);
+          grounding = verified.status;
+          if (verified.status !== "skipped") finalText = verified.text;
+        } else if (
+          !deepResearchModeRef.current &&
+          noSourcesFound &&
+          isFactualQuestion(query) &&
+          finalText !== noSourcesAnswer(uiLang)
+        ) {
+          finalText = noSourcesAnswer(uiLang);
+        }
+        if (stripThinking(finalText).trim().length === 0) {
+          finalText = agentFallbackText("emptyAnswer", uiLang);
+        }
+        if (finalText !== assistantText) {
+          assistantText = finalText;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, text: finalText } : m))
+          );
+        }
+      }
+
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === assistantId ? { ...m, citations: chunks, stopped: wasStopped, noSourcesFound } : m
+          m.id === assistantId ? { ...m, citations: chunks, stopped: wasStopped, noSourcesFound, grounding } : m
         )
       );
       notification(wasStopped ? NotificationFeedbackType.Warning : NotificationFeedbackType.Success);
@@ -1451,7 +1535,7 @@ export function ChatScreen({
                 )}
 
                 {item.citations && item.citations.length > 0 && (
-                  <SourceFootnotes citations={item.citations} />
+                  <SourceFootnotes citations={item.citations} grounding={item.grounding} />
                 )}
 
                 {/* Honest no-result (2026-09-28): deterministic note when

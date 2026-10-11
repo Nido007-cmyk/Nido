@@ -403,10 +403,7 @@ export function assemblePrompt(
   // kind of dangling framing that nudges a small model toward inventing
   // content to fill it instead of just answering conversationally.
   const hasContext = chunks.length > 0;
-  const contextInstruction = hasContext
-    ? " Use the context below when relevant, and cite sources as [n]. " +
-      "If the context doesn't cover the question, say so and answer from general knowledge."
-    : "";
+  const contextInstruction = hasContext ? GROUNDED_CONTEXT_INSTRUCTION : "";
   // Honest no-result behavior: retrieval ran and found nothing relevant.
   // FIX 2026-10-09 (Phase 3): the 0.5B model hallucinates confidently when
   // permitted to answer from "general knowledge". Require honest "I don't
@@ -426,6 +423,7 @@ export function assemblePrompt(
   return `${instruction}${contextInstruction}${noSourcesInstruction} ${GROUNDING_INSTRUCTION}\n\n` +
     `${summarySection}${turnsSection}` +
     `${contextSection}` +
+    `${hasContext ? `${GROUNDED_QUESTION_REMINDER}\n\n` : ""}` +
     `Question: ${userQuery}${styleSection(styleReminder)}\n\nAnswer:`;
 }
 
@@ -467,10 +465,7 @@ export function assembleChatMessages(
       : "You are an offline research assistant.";
 
   const hasContext = chunks.length > 0;
-  const contextInstruction = hasContext
-    ? " Use the context below when relevant, and cite sources as [n]. " +
-      "If the context doesn't cover the question, say so and answer from general knowledge."
-    : "";
+  const contextInstruction = hasContext ? GROUNDED_CONTEXT_INSTRUCTION : "";
   // Honest no-result behavior - see assemblePrompt for the rationale.
   // FIX 2026-10-09 (Phase 3): the 0.5B model hallucinates confidently when
   // permitted to answer from "general knowledge". Instead of allowing it,
@@ -483,8 +478,14 @@ export function assembleChatMessages(
         "and suggest what the user could check. Only answer from general knowledge " +
         "for non-factual requests (opinions, creative writing, simple calculations)."
       : "";
-  const contextSection = hasContext
-    ? `\n\nContext:\n${chunks.map((c, i) => `[${i + 1}] ${c.title}\n${c.body}`).join("\n\n")}`
+  // RAG-GROUNDING 2026-10-11: las fuentes van en el turno del usuario,
+  // PEGADAS a la pregunta, no al final del mensaje de sistema (donde el
+  // historial las separaba de la pregunta). Un modelo pequeño atiende sobre
+  // todo a lo último que lee ("Lost in the Middle", Liu et al. 2023): las
+  // fuentes y la regla de ceñirse a ellas quedan justo antes de generar.
+  const sourcesBlock = hasContext
+    ? `Sources:\n${chunks.map((c, i) => `[${i + 1}] ${c.title}\n${c.body}`).join("\n\n")}\n\n` +
+      `${GROUNDED_QUESTION_REMINDER}\n\nQuestion: `
     : "";
   const summarySection =
     history?.summary && history.summary.trim().length > 0
@@ -494,7 +495,7 @@ export function assembleChatMessages(
   const systemMessage: ChatMessage = {
     role: "system",
     content:
-      `${instruction}${contextInstruction}${noSourcesInstruction} ${GROUNDING_INSTRUCTION}${summarySection}${contextSection}`,
+      `${instruction}${contextInstruction}${noSourcesInstruction} ${GROUNDING_INSTRUCTION}${summarySection}`,
   };
 
   const historyMessages: ChatMessage[] = (history?.turns ?? []).map((t) => ({
@@ -502,7 +503,10 @@ export function assembleChatMessages(
     content: t.text,
   }));
 
-  const currentUser: ChatMessage = { role: "user", content: userQuery + styleSection(styleReminder) };
+  const currentUser: ChatMessage = {
+    role: "user",
+    content: `${sourcesBlock}${userQuery}${styleSection(styleReminder)}`,
+  };
 
   // P2.3: when a budget is provided, cut history recent-first instead of
   // hoping it fits. System stays pinned; generation headroom is reserved.
@@ -553,6 +557,27 @@ function styleSection(styleReminder: string | undefined): string {
   const s = styleReminder?.trim();
   return s ? `\n\n(Response style: ${s})` : "";
 }
+
+/**
+ * RAG-GROUNDING 2026-10-11 (evidencia: fotosíntesis en la Tab A9+). La
+ * instrucción anterior decía "If the context doesn't cover the question,
+ * say so and answer from general knowledge": le daba PERMISO al 0.5B para
+ * rellenar con lo que "sabe", y eso es exactamente lo que alucinaba
+ * (fototropismo, luz que viaja a las raíces). Ahora: solo lo escrito en las
+ * fuentes, citado; si no está, decir que no se sabe. Frases cortas y
+ * literales: los modelos pequeños siguen mejor contratos breves.
+ * El "no lo sé" final lo garantiza el código (src/rag/grounding.ts), no
+ * esta frase: el prompt solo lo hace probable.
+ */
+const GROUNDED_CONTEXT_INSTRUCTION =
+  " The user message contains numbered sources. Answer ONLY with facts written in those sources, " +
+  "and cite sources as [n] after each sentence. Do not add facts from your own memory, even if you " +
+  "think you know them. If the sources do not contain the answer, say that you don't know. " +
+  "Answer in the same language as the question.";
+
+/** Recordatorio corto pegado a la pregunta (lo último que lee el modelo). */
+const GROUNDED_QUESTION_REMINDER =
+  "Answer only from the sources above, citing [n]. If they don't contain the answer, say you don't know.";
 
 const GROUNDING_INSTRUCTION =
   "You have no ability to control real-world devices or take physical actions - no alarms, " +

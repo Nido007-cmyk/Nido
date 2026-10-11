@@ -571,7 +571,11 @@
   },
   "sourceFootnotes": {
     "localIndex": "Índice local",
-    "title": "Fuentes offline · ordenadas por relevancia",
+    "title": "Fuentes offline consultadas",
+    "titleGrounded": "Basada en estas fuentes offline",
+    "titlePartial": "Basada en estas fuentes · se quitaron frases sin respaldo",
+    "titleAbstained": "Hay fuentes, pero no responden exactamente a esto",
+    "titleUnverified": "Fuentes consultadas · sin verificación automática (otro idioma)",
     "relevanceCaption": "Los números indican fuerza de coincidencia absoluta con el índice offline, no confianza."
   },
   "systemMonitor": {

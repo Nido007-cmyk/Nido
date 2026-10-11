@@ -240,3 +240,67 @@ describe("describeToolsForPrompt (T-contexto-2026-10-06)", () => {
     }
   });
 });
+
+// TOOLS-AUDIT 2026-10-11
+describe("validateToolCall — números entre comillas del 0.5B", () => {
+  it('convierte "5" → 5 en parámetros numéricos', () => {
+    const r = validateToolCall({ name: "convert_units", arguments: { value: "5", from: "km", to: "mi" } });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.args.value).toBe(5);
+  });
+  it('acepta coma decimal: "3,75" → 3.75', () => {
+    const r = validateToolCall({ name: "convert_units", arguments: { value: "3,75", from: "kg", to: "lb" } });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.args.value).toBe(3.75);
+  });
+  it.each(["5 km", "0x10", "", "cinco", "1e9"])("sigue rechazando %p", (bad) => {
+    const r = validateToolCall({ name: "convert_units", arguments: { value: bad, from: "km", to: "mi" } });
+    expect(r.ok).toBe(false);
+  });
+  it("no muta los argumentos originales del modelo", () => {
+    const args = { value: "5", from: "km", to: "mi" };
+    validateToolCall({ name: "convert_units", arguments: args });
+    expect(args.value).toBe("5");
+  });
+  it("no convierte strings en parámetros de texto", () => {
+    const r = validateToolCall({ name: "place_call", arguments: { phone: "5551234" } });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.args.phone).toBe("5551234");
+  });
+});
+
+describe("dispatchToolCallDetailed", () => {
+  it("devuelve el estado de cada salida de la compuerta", async () => {
+    const { dispatchToolCallDetailed } = await import("./dispatcher");
+    const { setDisabledTools } = await import("./toolPermissions");
+    const h = { place_call: async () => "Abriendo el marcador…" };
+    expect((await dispatchToolCallDetailed({ name: "nope", arguments: {} }, h)).status).toBe("invalid");
+    // place_call es irreversible: sin onConfirm → cancelada (fail-closed).
+    expect((await dispatchToolCallDetailed({ name: "place_call", arguments: { phone: "1" } }, h)).status).toBe("cancelled");
+    const ok = await dispatchToolCallDetailed({ name: "place_call", arguments: { phone: "1" } }, h, {
+      onConfirm: async () => true,
+    });
+    expect(ok).toEqual({ status: "executed", text: "Abriendo el marcador…" });
+    setDisabledTools(["place_call"]);
+    try {
+      expect((await dispatchToolCallDetailed({ name: "place_call", arguments: { phone: "1" } }, h)).status).toBe("disabled");
+    } finally {
+      setDisabledTools([]);
+    }
+  });
+
+  it("onConfirm recibe la herramienta y los args validados (para un diálogo claro)", async () => {
+    const seen: unknown[] = [];
+    await dispatchToolCall(
+      { name: "send_sms", arguments: { phone: "555", message: "hola" } },
+      { send_sms: async () => "ok" },
+      {
+        onConfirm: async (_d, action) => {
+          seen.push(action);
+          return false;
+        },
+      },
+    );
+    expect(seen).toEqual([{ tool: "send_sms", args: { phone: "555", message: "hola" } }]);
+  });
+});

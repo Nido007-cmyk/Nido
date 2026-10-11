@@ -9,6 +9,7 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { impact, ImpactFeedbackStyle } from "../../services/haptics";
 import { useTranslation } from "react-i18next";
 import { RetrievedChunk } from "../../rag/retrieve";
+import type { GroundingStatus } from "../../rag/grounding";
 import { useTheme } from "../theme";
 import type { Colors } from "../theme/colors";
 import { NidoIcon } from "./icons/NidoIcon";
@@ -17,9 +18,24 @@ import { spacing, radii } from "../theme/spacing";
 
 interface Props {
   citations: RetrievedChunk[];
+  /**
+   * RAG-GROUNDING 2026-10-11: el título antiguo ("Offline sources ·
+   * relevance-ranked") daba a entender que la respuesta estaba respaldada
+   * aunque el modelo hubiera inventado. Ahora el título dice lo que se
+   * comprobó de verdad (src/rag/grounding.ts).
+   */
+  grounding?: GroundingStatus;
 }
 
-export function SourceFootnotes({ citations }: Props) {
+const TITLE_KEY: Record<GroundingStatus, string> = {
+  grounded: "sourceFootnotes.titleGrounded",
+  partial: "sourceFootnotes.titlePartial",
+  abstained: "sourceFootnotes.titleAbstained",
+  unverified: "sourceFootnotes.titleUnverified",
+  skipped: "sourceFootnotes.title",
+};
+
+export function SourceFootnotes({ citations, grounding }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
@@ -37,7 +53,7 @@ export function SourceFootnotes({ citations }: Props) {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <NidoIcon name="knowledge" size={20} />
-          <Text style={styles.headerTitle}>{t("sourceFootnotes.title")}</Text>
+          <Text style={styles.headerTitle}>{t(grounding ? TITLE_KEY[grounding] : "sourceFootnotes.title")}</Text>
         </View>
         <Text style={styles.sourceCountBadge}>{citations.length}</Text>
       </View>
