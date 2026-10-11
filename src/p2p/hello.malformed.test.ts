@@ -121,7 +121,9 @@ describe("parseHello — malformed/adversarial inputs", () => {
   });
 
   it("ignores extra unknown fields instead of failing", () => {
-    expect(() => parseHello(helloBody({ evil: "x".repeat(10000) }))).not.toThrow();
+    // Forward-compat: unknown fields are ignored as long as the frame stays
+    // under the handshake size cap (oversized frames: see "size cap" below).
+    expect(() => parseHello(helloBody({ evil: "x".repeat(200) }))).not.toThrow();
   });
 });
 
