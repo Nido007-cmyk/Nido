@@ -1,4 +1,4 @@
-# NIDO v0.1.6-alpha — Release Notes
+# NIDO v0.1.7-alpha — Release Notes
 
 ## What is this?
 
@@ -11,6 +11,29 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Reminders with local notifications
 - Encrypted on-device storage
 - Backup / restore
+
+## What changed in 0.1.7-alpha
+
+> **Pre-release.** Built and checked by automated tests; real-device testing is ongoing. Please report anything that fails in Issues. Pairing and fingerprints are unchanged from 0.1.6.
+
+**Agent tools (from a full audit of the 9 tools)**
+- **Contact search works on Android.** It never did: the code used an iOS-only function. Search also ignores accents now ("Ruben" finds "Rubén").
+- **Contacts, calls and SMS work in Spanish, English and Portuguese**, without depending on the small model: "find contact Ana", "call Ana", "llama a Ana", "liga para a Ana", "text Ana that I'm late". "Call Ana" looks her up and asks which one if there are several.
+- **No more lock screen after a permission prompt.** Asking for a contact, the calendar or a file sent you to "NIDO locked" every time. NIDO now checks the permission first and only asks when it's missing.
+- **Clear confirmations:** call and SMS dialogs show the number and the full text, in your language.
+- Turning a tool off in About now also turns off its shortcut (the calculator ignored it).
+
+**Answers you can trust more**
+- **Small talk gets a real answer.** "Good, and you?", "thanks" or "ok" get a direct reply, with no source search and no "no sources" note.
+- **Answers stick to the offline sources.** NIDO checks each sentence against the sources and removes the ones they don't support, and tells you it did. If nothing is left, it says it doesn't know and shows what the source does say.
+- **Factual questions with no sources get an honest "I don't know"** instead of an invented answer.
+- **The sources header says what was checked**: "Based on these offline sources", "unsupported sentences removed", or "sources found, but they don't answer this exactly".
+- **NIDO always answers.** No empty bubbles, and no fake "Done." when nothing was done.
+
+**Known limits**
+- The source check compares words, not meaning. It catches invented details, but not a sentence that reorders the source's words to say something false.
+- The built-in knowledge is in English. For questions in Spanish or Portuguese only numbers can be checked automatically, and the header says so.
+- "Send a message to Ana" without saying SMS still depends on the model (it could mean SMS or a NIDO message). Creating calendar events still depends on the model writing the date.
 
 ## What changed in 0.1.6-alpha
 

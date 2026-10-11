@@ -4,7 +4,7 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
-## Unreleased
+## 0.1.7-alpha — 2026-10-11
 
 ### Fixed
 - Contacts: searching contacts never worked on Android (the code used an
