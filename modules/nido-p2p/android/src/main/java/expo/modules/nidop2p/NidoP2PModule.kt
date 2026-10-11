@@ -30,34 +30,48 @@ import java.util.concurrent.Executors
  */
 class NidoP2PModule : Module() {
 
+  /**
+   * Listener compartido por los dos transportes (Bluetooth y Wi-Fi local):
+   * ambos emiten los mismos eventos; el lado TS distingue por la dirección
+   * ("AA:BB:..." frente a "LAN:ip:puerto").
+   */
+  private val sharedListener: NidoP2PManager.Listener by lazy {
+    object : NidoP2PManager.Listener {
+      override fun onDeviceFound(address: String, name: String?) {
+        sendEvent("onDeviceFound", mapOf("address" to address, "name" to name))
+      }
+      override fun onDiscoveryFinished() {
+        sendEvent("onDiscoveryFinished", emptyMap<String, Any>())
+      }
+      override fun onConnected(address: String, name: String?, incoming: Boolean) {
+        sendEvent(
+          "onConnected",
+          mapOf("address" to address, "name" to name, "incoming" to incoming),
+        )
+      }
+      override fun onFrame(address: String, base64: String) {
+        sendEvent("onFrame", mapOf("address" to address, "base64" to base64))
+      }
+      override fun onDisconnected(address: String) {
+        sendEvent("onDisconnected", mapOf("address" to address))
+      }
+      override fun onError(message: String) {
+        sendEvent("onError", mapOf("message" to message))
+      }
+    }
+  }
+
   private val manager: NidoP2PManager by lazy {
     val ctx = appContext.reactContext
       ?: throw IllegalStateException("NidoP2P necesita un reactContext activo.")
-    NidoP2PManager(ctx).also { m ->
-      m.listener = object : NidoP2PManager.Listener {
-        override fun onDeviceFound(address: String, name: String?) {
-          sendEvent("onDeviceFound", mapOf("address" to address, "name" to name))
-        }
-        override fun onDiscoveryFinished() {
-          sendEvent("onDiscoveryFinished", emptyMap<String, Any>())
-        }
-        override fun onConnected(address: String, name: String?, incoming: Boolean) {
-          sendEvent(
-            "onConnected",
-            mapOf("address" to address, "name" to name, "incoming" to incoming),
-          )
-        }
-        override fun onFrame(address: String, base64: String) {
-          sendEvent("onFrame", mapOf("address" to address, "base64" to base64))
-        }
-        override fun onDisconnected(address: String) {
-          sendEvent("onDisconnected", mapOf("address" to address))
-        }
-        override fun onError(message: String) {
-          sendEvent("onError", mapOf("message" to message))
-        }
-      }
-    }
+    NidoP2PManager(ctx).also { m -> m.listener = sharedListener }
+  }
+
+  /** Respaldo por Wi-Fi local (TCP + mDNS). Ver NidoLanManager. */
+  private val lan: NidoLanManager by lazy {
+    val ctx = appContext.reactContext
+      ?: throw IllegalStateException("NidoP2P necesita un reactContext activo.")
+    NidoLanManager(ctx.applicationContext) { sharedListener }
   }
 
   /** Serializa las operaciones de socket fuera del hilo de JS. */
@@ -228,7 +242,9 @@ class NidoP2PModule : Module() {
     AsyncFunction("connect") { address: String, promise: Promise ->
       io.execute {
         try {
-          val info = manager.connect(address) // bloqueante, con timeout del SO
+          // Bloqueante, con timeout. "LAN:ip:puerto" va por Wi-Fi local.
+          val info = if (NidoLanManager.isLanAddress(address)) lan.connect(address)
+          else manager.connect(address)
           promise.resolve(info)
         } catch (e: Exception) {
           promise.reject("BT_CONNECT", e.message, e)
@@ -240,7 +256,8 @@ class NidoP2PModule : Module() {
       io.execute {
         try {
           val bytes = Base64.decode(base64, Base64.NO_WRAP)
-          manager.sendFrame(address, bytes)
+          if (NidoLanManager.isLanAddress(address)) lan.sendFrame(address, bytes)
+          else manager.sendFrame(address, bytes)
           promise.resolve(null)
         } catch (e: Exception) {
           promise.reject("BT_SEND", e.message, e)
@@ -251,7 +268,8 @@ class NidoP2PModule : Module() {
     AsyncFunction("disconnect") { address: String, promise: Promise ->
       io.execute {
         try {
-          manager.disconnect(address)
+          if (NidoLanManager.isLanAddress(address)) lan.disconnect(address)
+          else manager.disconnect(address)
           promise.resolve(null)
         } catch (e: Exception) {
           promise.reject("BT_ERROR", e.message, e)
@@ -259,10 +277,54 @@ class NidoP2PModule : Module() {
       }
     }
 
+    /**
+     * Respaldo Wi-Fi local: arranca servidor TCP (puerto efímero), anuncio
+     * mDNS con nombre aleatorio y descubrimiento. Los peers encontrados llegan
+     * por onDeviceFound con dirección "LAN:ip:puerto". Idempotente.
+     * También arranca el foreground service (si Bluetooth está apagado, es el
+     * único que mantiene vivo el proceso mientras se enlaza).
+     */
+    AsyncFunction("startLan") { promise: Promise ->
+      io.execute {
+        try {
+          val ctx = appContext.reactContext ?: throw IllegalStateException("Sin reactContext")
+          NidoP2PService.start(ctx)
+          lan.start()
+          promise.resolve(null)
+        } catch (e: Exception) {
+          promise.reject("LAN_ERROR", e.message, e)
+        }
+      }
+    }
+
+    /** Detiene servidor, anuncio y descubrimiento; las conexiones vivas siguen. */
+    AsyncFunction("stopLan") { promise: Promise ->
+      io.execute {
+        try {
+          lan.stop()
+          promise.resolve(null)
+        } catch (e: Exception) {
+          promise.reject("LAN_ERROR", e.message, e)
+        }
+      }
+    }
+
+    Function("getLanStatus") {
+      try {
+        lan.status()
+      } catch (e: Exception) {
+        mapOf("active" to false, "port" to 0, "connections" to 0)
+      }
+    }
+
     AsyncFunction("shutdown") { promise: Promise ->
       io.execute {
         try {
           manager.shutdown()
+          try {
+            lan.shutdown()
+          } catch (_: Exception) {
+          }
           // Detener el foreground service en el apagado terminal.
           val ctx = appContext.reactContext
           if (ctx != null) {

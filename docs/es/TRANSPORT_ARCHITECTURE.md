@@ -62,7 +62,7 @@ Reglas:
 | Transporte | Estado | Propiedades |
 |---|---|---|
 | Bluetooth RFCOMM | implementado (Kotlin) | stream fiable, MTU ~256 KiB por frame, offline |
-| LAN (TCP + mDNS) | futuro | stream fiable, offline (red local) |
+| LAN (TCP + mDNS) | **implementado, experimental** (Kotlin `NidoLanManager`) — respaldo de Bluetooth, ver §6 | stream fiable, ~256 KiB por frame, offline (misma Wi-Fi u hotspot) |
 | Wi-Fi Direct | futuro | stream fiable, offline |
 | Internet P2P directo | futuro | p. ej. QUIC con direccionamiento por identidad; online |
 | Relay cifrado | futuro | store-and-forward opcional; solo ve ciphertext |
@@ -133,3 +133,32 @@ solo informa `available/unavailable`.
    por radio? (Intervalo, entropía, sincronización con el usuario.)
 4. Límites de tamaño por transporte y fragmentación a nivel de sesión:
    ¿MTU común mínimo garantizado?
+
+## 6. Respaldo por Wi-Fi local (implementado, experimental)
+
+Se usa cuando Bluetooth está apagado, sin permisos o falla: ambos teléfonos
+en la misma red Wi-Fi, o uno compartiendo hotspot (funciona sin internet).
+
+- **Mismo tubo, misma seguridad.** `modules/nido-p2p` entrega las conexiones
+  Wi-Fi con los mismos eventos que Bluetooth (`onConnected`, `onFrame`,
+  `onDisconnected`) y direcciones `LAN:<ipv4>:<puerto>`. El handshake
+  HELLO/CONFIRM, el cifrado de sesión, la anti-replay y la revocación de
+  `src/p2p/` se reutilizan sin cambios.
+- **Solo red local.** El lado nativo rechaza cualquier dirección que no sea
+  IPv4 privada (10/8, 172.16/12, 192.168/16) o link-local (169.254/16), al
+  conectar y al aceptar. Este transporte no puede llegar a internet.
+- **Descubrimiento (§5).** Servicio mDNS/DNS-SD `_nidop2p._tcp` con un nombre
+  aleatorio por arranque (`nido-xxxxxxxx`), sin registros TXT, nunca la
+  identidad. Servidor y anuncio solo viven mientras la pantalla de enlace
+  busca (`startLan`/`stopLan`); las conexiones establecidas siguen.
+- **Límites.** Máximo 8 conexiones Wi-Fi simultáneas; tope de 1 KB en
+  HELLO/CONFIRM; la cuota de handshakes entrantes se aplica por IP (no por
+  puerto), así que abrir conexiones nuevas no la salta.
+- **Registro.** Toda conexión por Wi-Fi local aparece en Ajustes → Registro
+  de red (`lan_connect`).
+- **Límites conocidos.** El lado que escucha debe tener abierta la pantalla
+  de enlace (el servidor Wi-Fi no está siempre activo, a diferencia de
+  Bluetooth). Como en Bluetooth, el HELLO lleva la clave pública de identidad
+  en claro: alguien en la misma Wi-Fi puede ver qué identidades hacen
+  handshake.
+

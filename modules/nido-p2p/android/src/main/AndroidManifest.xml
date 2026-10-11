@@ -19,6 +19,16 @@
   <!-- WAKE_LOCK para el wake lock parcial que protege el handshake de Doze. -->
   <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+  <!-- Respaldo por Wi-Fi local (NidoLanManager): sockets TCP y mDNS/NSD
+       SOLO en la red local (la app rechaza IPs que no sean privadas o
+       link-local). Todos son permisos normales: no hay diálogo en tiempo de
+       ejecución. CHANGE_WIFI_MULTICAST_STATE además habilita el foreground
+       service connectedDevice en Android 14+ cuando Bluetooth está apagado. -->
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+  <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+  <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+
   <application>
     <service
       android:name="expo.modules.nidop2p.NidoP2PService"
