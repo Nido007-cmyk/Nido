@@ -41,7 +41,7 @@
  */
 
 import nacl from "tweetnacl";
-import { toHex, utf8Encode, utf8Decode } from "../../p2p/crypto";
+import { toHex, utf8Encode, utf8DecodeLossy } from "../../p2p/crypto";
 import { decodeBase64 } from "../../p2p/base64";
 import {
   TASK_LIMITS,
@@ -133,7 +133,7 @@ function describeDocument(
   return {
     sha512Hex: toHex(nacl.hash(bytes)),
     sizeBytes: bytes.length,
-    preview: utf8Decode(bytes).slice(0, DOCUMENT_PREVIEW_CHARS),
+    preview: utf8DecodeLossy(bytes).slice(0, DOCUMENT_PREVIEW_CHARS),
   };
 }
 
