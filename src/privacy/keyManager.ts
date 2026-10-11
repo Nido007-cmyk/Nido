@@ -120,6 +120,140 @@ export class SecureStoreReadError extends Error {
  * - el mensaje explica qué pasó y el camino documentado hacia adelante
  *   (`recoverFromKeyLoss` en secureDatabase, con confirmación explícita).
  */
+/**
+ * HW-VAULT (docs/design/BLOQUEO_BIOMETRICO_REAL.md): la DEK está envuelta
+ * por la llave de hardware y todavía no se desbloqueó en este proceso. No es
+ * pérdida de clave: hay que pasar por la pantalla de bloqueo (PIN/huella).
+ */
+export class VaultLockedError extends Error {
+  readonly code = "NIDO_VAULT_LOCKED";
+  constructor() {
+    super("Los datos de NIDO están protegidos: desbloquea con tu PIN o huella.");
+    this.name = "VaultLockedError";
+  }
+}
+
+/** Alias del blob con la DEK envuelta por la KEK de hardware (v1). */
+export const VAULT_BLOB_ALIAS = "nido_db_key_wrapped_v1";
+
+/**
+ * HW-VAULT: DEK desenvuelta en ESTE proceso (nivel A, "tras el primer
+ * desbloqueo"). Vive solo en memoria; nunca se persiste en claro.
+ */
+let unlockedDekHex: string | null = null;
+
+/** ¿La DEK envuelta ya se desbloqueó en este proceso? */
+export function isDatabaseKeyUnlocked(): boolean {
+  return unlockedDekHex !== null;
+}
+
+/** Lo llama keyVault.ts tras desenvolver la DEK (o null al bloquear/borrar). */
+export function setUnlockedDatabaseKey(hex: string | null): void {
+  if (hex !== null && !/^[0-9a-f]{64}$/i.test(hex)) {
+    throw new Error("keyManager: DEK desenvuelta con formato inválido.");
+  }
+  unlockedDekHex = hex ? hex.toLowerCase() : null;
+}
+
+/**
+ * HW-VAULT: ajustes pequeños de la bóveda que deben leerse SIN abrir la base
+ * (p. ej. el nivel B, que actúa cuando la DEK ya no está en memoria).
+ * Solo claves con prefijo "nido_vault_".
+ */
+export async function readVaultSetting(key: string): Promise<string | null> {
+  if (!key.startsWith("nido_vault_")) throw new Error("keyManager: clave de ajuste no permitida.");
+  const backend = realBackend();
+  if (!backend) return null;
+  try {
+    return await backend.getItemAsync(key);
+  } catch {
+    return null;
+  }
+}
+
+export async function writeVaultSetting(key: string, value: string | null): Promise<void> {
+  if (!key.startsWith("nido_vault_")) throw new Error("keyManager: clave de ajuste no permitida.");
+  const backend = realBackend();
+  if (!backend) throw new Error("keyManager: SecureStore no disponible.");
+  if (value === null) await backend.deleteItemAsync(key);
+  else await backend.setItemAsync(key, value);
+}
+
+/** Lee el blob envuelto (null = bóveda no activa). Fail-closed ante error de lectura. */
+export async function readVaultBlob(): Promise<string | null> {
+  const backend = realBackend();
+  if (!backend) return null;
+  try {
+    return await backend.getItemAsync(VAULT_BLOB_ALIAS);
+  } catch (e) {
+    failClosed(VAULT_BLOB_ALIAS, keyStoreStrings().dbKeyReadFailed, "vault/read-throw", e);
+  }
+}
+
+export async function writeVaultBlob(blobB64: string): Promise<void> {
+  const backend = realBackend();
+  if (!backend) throw new Error("keyManager: SecureStore no disponible.");
+  await backend.setItemAsync(VAULT_BLOB_ALIAS, blobB64);
+}
+
+export async function deleteVaultBlob(): Promise<void> {
+  const backend = realBackend();
+  if (!backend) return;
+  await backend.deleteItemAsync(VAULT_BLOB_ALIAS);
+}
+
+/** Lee la DEK legada en claro del SecureStore (null si no existe). Solo keyVault.ts. */
+export async function readLegacyDatabaseKey(): Promise<string | null> {
+  return peekDatabaseKey();
+}
+
+/** Borra SOLO la DEK legada en claro (tras verificar el blob). Solo keyVault.ts. */
+export async function deleteLegacyDatabaseKey(): Promise<void> {
+  const backend = realBackend();
+  if (!backend) return;
+  await backend.deleteItemAsync(DB_KEY_ALIAS);
+}
+
+/** Escribe la DEK legada (modo sin bóveda). Solo keyVault.ts y storeDatabaseKeyHex. */
+export async function writeLegacyDatabaseKey(hex: string): Promise<void> {
+  const backend = realBackend();
+  if (!backend) throw new Error("keyManager: SecureStore no disponible.");
+  if (!/^[0-9a-f]{64}$/i.test(hex)) throw new Error("keyManager: DEK con formato inválido.");
+  await backend.setItemAsync(DB_KEY_ALIAS, hex.toLowerCase());
+}
+
+/**
+ * HW-VAULT: envoltura inyectada por keyVault.ts para guardar una DEK NUEVA
+ * (rotación, recuperación de rekey) cuando la bóveda está activa. Así
+ * keyManager no importa el módulo nativo (evita ciclos y simplifica tests).
+ */
+let vaultRewrap: ((hex: string) => Promise<void>) | null = null;
+export function registerVaultRewrap(fn: ((hex: string) => Promise<void>) | null): void {
+  vaultRewrap = fn;
+}
+
+/**
+ * Guarda una DEK nueva por el camino correcto: envuelta si la bóveda está
+ * activa (nunca en claro), o en el SecureStore si no. Úsese en vez de
+ * escribir `nido_db_key` directamente.
+ */
+export async function storeDatabaseKeyHex(hex: string): Promise<void> {
+  if (!/^[0-9a-f]{64}$/i.test(hex)) throw new Error("keyManager: DEK con formato inválido.");
+  const blob = await readVaultBlob();
+  if (blob) {
+    if (!vaultRewrap) {
+      // keyVault.ts registra la envoltura al cargarse; cargarlo ahora.
+      await import("../security/keyVault");
+    }
+    if (!vaultRewrap) {
+      throw new Error("keyManager: bóveda activa sin envoltura registrada (fail-closed).");
+    }
+    await vaultRewrap(hex.toLowerCase());
+    return;
+  }
+  await writeLegacyDatabaseKey(hex);
+}
+
 export class KeyLossError extends Error {
   readonly code = "NIDO_KEY_LOST";
   readonly alias = DB_KEY_ALIAS;
@@ -311,7 +445,24 @@ export async function getDatabaseKeyHex(): Promise<string | null> {
   return dekInFlight;
 }
 
+/** HW-VAULT: lanza VaultLockedError si hay DEK envuelta (fail-closed si no se puede leer). */
+async function throwIfVaultLocked(
+  backend: SecureBackend,
+  opts: { tolerateReadError?: boolean } = {},
+): Promise<void> {
+  let blob: string | null;
+  try {
+    blob = await backend.getItemAsync(VAULT_BLOB_ALIAS);
+  } catch (e) {
+    if (opts.tolerateReadError) return;
+    failClosed(VAULT_BLOB_ALIAS, keyStoreStrings().dbKeyReadFailed, "vault/read-throw", e);
+  }
+  if (blob) throw new VaultLockedError();
+}
+
 async function resolveDatabaseKeyHex(backend: SecureBackend): Promise<string | null> {
+  // HW-VAULT: la DEK desbloqueada en este proceso tiene prioridad.
+  if (unlockedDekHex) return unlockedDekHex;
   let existing: string | null;
   try {
     existing = await backend.getItemAsync(DB_KEY_ALIAS);
@@ -338,12 +489,21 @@ async function resolveDatabaseKeyHex(backend: SecureBackend): Promise<string | n
           `${keyStoreStrings().dbKeyLost} (${names})`,
         );
       }
-      // Instalación fresca, sin datos que proteger: generar clave nueva.
+      // Instalación fresca, sin datos que proteger: generar clave nueva
+      // (salvo que exista una DEK envuelta: entonces se exige desbloquear).
+      // Aquí la lectura del blob es tolerante: el almacén ya está fallando y
+      // la sonda confirmó que NO hay bases (nada que perder); fallar cerrado
+      // reviviría el bloqueo de primera instalación del hallazgo 2026-10-05.
+      await throwIfVaultLocked(backend, { tolerateReadError: true });
       return generateAndPersistFreshKey(backend);
     }
     failClosed(DB_KEY_ALIAS, keyStoreStrings().dbKeyReadFailed, "db/read-throw/no-probe", e);
   }
   if (existing === null) {
+    // HW-VAULT: sin DEK en claro pero con DEK envuelta = bóveda activa y
+    // bloqueada. Nunca se genera una DEK nueva aquí (dejaría los datos
+    // ilegibles): hay que pasar por el PIN/huella.
+    await throwIfVaultLocked(backend);
     // N4: la lectura tuvo éxito y devolvió null → "ausente de verdad". ANTES
     // de generar, distinguir instalación genuinamente nueva de pérdida de
     // clave: si existen bases cifradas gestionadas, la clave se PERDIÓ
@@ -469,6 +629,9 @@ export async function deleteDatabaseKey(): Promise<void> {
   const backend = realBackend();
   if (!backend) return;
   await backend.deleteItemAsync(DB_KEY_ALIAS).catch(() => {});
+  // HW-VAULT: borrar también la DEK envuelta y la copia en memoria.
+  await backend.deleteItemAsync(VAULT_BLOB_ALIAS).catch(() => {});
+  unlockedDekHex = null;
 }
 
 /**

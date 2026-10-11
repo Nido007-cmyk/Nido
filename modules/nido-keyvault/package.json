@@ -1,0 +1,7 @@
+{
+  "name": "nido-keyvault",
+  "version": "0.1.0",
+  "description": "Local Expo module: hardware-backed KEK (Android Keystore, user-auth bound) that wraps NIDO's database key.",
+  "main": "index.ts",
+  "license": "MIT"
+}

@@ -22,8 +22,7 @@ import {
   refreshBriefingNotification,
   cancelReminderNotification,
 } from "../notify/notifications";
-import { listCalendarEventsHandler } from "../agent/tools/handlers";
-import { fmtDateTime } from "../agent/tools/handlers";
+import { upcomingEventsForBriefing, fmtDateTime } from "../agent/tools/handlers";
 
 /** Construye el texto del resumen diario. */
 async function buildBriefingBody(): Promise<string> {
@@ -31,10 +30,18 @@ async function buildBriefingBody(): Promise<string> {
   const now = new Date();
   parts.push(`Hoy es ${fmtDateTime(now.toISOString()).split(",")[0]}.`);
 
+  // TOOLS-AUDIT 2026-10-11: el resumen respeta el interruptor "Listar
+  // eventos del calendario" de Acerca de (antes lo ignoraba) y nunca pide
+  // el permiso al arrancar ni mete textos de permiso/error en el resumen.
+  // Los ajustes se leen aquí mismo: App.tsx los carga en paralelo y esta
+  // rutina podía ganar la carrera.
   try {
-    const events = await listCalendarEventsHandler({ limit: 5 });
-    if (!events.startsWith("No hay") && !events.startsWith("No pude") && !events.startsWith("NIDO no")) {
-      parts.push(events);
+    const { getDisabledToolNames } = await import("../models/settings");
+    // Si no se pueden leer los ajustes, no se toca el calendario (fail-closed).
+    const disabled = await getDisabledToolNames().catch(() => null);
+    if (disabled && !disabled.includes("list_calendar_events")) {
+      const events = await upcomingEventsForBriefing(5);
+      if (events) parts.push(events);
     }
   } catch {
     // Sin calendario: el resumen sigue con lo demás.

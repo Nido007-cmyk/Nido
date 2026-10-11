@@ -96,7 +96,6 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
             setBusy(true);
             try {
               const { rotateAllDatabaseKeys } = await import("../security/keyRotation");
-              const { default: SecureStore } = await import("expo-secure-store");
               const SQLite = await import("expo-sqlite");
               const { applyDatabaseKey } = await import("../privacy/keyManager");
 
@@ -104,6 +103,13 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
               // rotateAllDatabaseKeys deriva las rutas canónicas de
               // MANAGED_DB_NAMES vía getCurrentDriver() y rota las 3 DBs
               // con el mismo DEK nuevo.
+              // HW-VAULT: si la bóveda está activa, la DEK nueva se protege con
+              // PIN/huella (dos diálogos: proteger y verificar).
+              const { setRewrapPrompts } = await import("../security/keyVault");
+              setRewrapPrompts({
+                protect: { title: t("vault.promptTitle"), subtitle: t("vault.rewrapProtect") },
+                verify: { title: t("vault.promptTitle"), subtitle: t("vault.rewrapVerify") },
+              });
               const result = await rotateAllDatabaseKeys(
                 async (path: string, dekHex: string) => {
                   const slash = path.lastIndexOf("/");
@@ -119,7 +125,10 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
                   };
                 },
                 async (dekHex: string) => {
-                  await SecureStore.setItemAsync("nido_db_key", dekHex);
+                  // HW-VAULT: por keyManager, que la envuelve si la bóveda está activa
+                  // (escribir "nido_db_key" a mano dejaría la DEK en claro y el blob viejo).
+                  const { storeDatabaseKeyHex } = await import("../privacy/keyManager");
+                  await storeDatabaseKeyHex(dekHex);
                 }
               );
               

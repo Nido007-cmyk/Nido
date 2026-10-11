@@ -718,6 +718,32 @@ const createCalendarEventHandler: ToolHandler = async (args) => {
   }
 };
 
+/**
+ * Resumen diario (src/routines/startup.ts): lee los próximos eventos SOLO si
+ * el permiso ya está concedido. Nunca abre el diálogo de permiso al arrancar
+ * la app y nunca devuelve textos de error/permiso (el resumen los mostraría
+ * como si fueran eventos). Devuelve null si no hay nada que mostrar.
+ */
+export async function upcomingEventsForBriefing(limit = 5): Promise<string | null> {
+  try {
+    const Calendar = await import("expo-calendar");
+    const perm = await Calendar.getCalendarPermissions();
+    if (!perm.granted) return null;
+    const calendars = await Calendar.getCalendars();
+    if (calendars.length === 0) return null;
+    const now = new Date();
+    const to = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const events = await Calendar.listEvents(calendars, now, to);
+    const upcoming = events.slice(0, limit).map((e: any) => {
+      const s = e.startDate ? new Date(e.startDate) : null;
+      return `- «${e.title ?? "(sin título)"}»${s ? ` — ${fmtDateTime(s.toISOString())}` : ""}${e.location ? ` @ ${e.location}` : ""}`;
+    });
+    return upcoming.length > 0 ? `Próximos eventos:\n${upcoming.join("\n")}` : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Exportado para las rutinas proactivas (resumen diario). */
 export const listCalendarEventsHandler: ToolHandler = async (args) => {
   const access = await ensureCalendarAccess();

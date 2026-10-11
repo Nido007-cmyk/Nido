@@ -85,7 +85,7 @@ vi.mock("expo-file-system", () => ({ File: class {} }));
 vi.mock("expo-sqlite", () => ({}));
 vi.mock("react-native", () => ({ Linking: { openURL: vi.fn() }, Platform: { OS: "android" } }));
 
-import { buildToolHandlers, searchPhoneContacts } from "./handlers";
+import { buildToolHandlers, searchPhoneContacts, upcomingEventsForBriefing } from "./handlers";
 import { __resetPermissionGuardForTests } from "../../p2p/permissionGuard";
 
 beforeEach(() => {
@@ -153,5 +153,18 @@ describe("calendario y selector de archivos", () => {
     const out = await buildToolHandlers().read_picked_file({});
     expect(out).toBe("No elegiste ningún archivo.");
     expect(state.flagSeenInPicker).toBe(true);
+  });
+});
+
+describe("resumen diario (rutina al arrancar)", () => {
+  it("sin permiso de calendario: no lo pide y no mete textos de permiso en el resumen", async () => {
+    state.calendarGranted = false;
+    expect(await upcomingEventsForBriefing()).toBeNull();
+    expect(state.calendarRequests).toBe(0);
+  });
+
+  it("con permiso y sin eventos: nada que mostrar", async () => {
+    expect(await upcomingEventsForBriefing()).toBeNull();
+    expect(state.calendarRequests).toBe(0);
   });
 });

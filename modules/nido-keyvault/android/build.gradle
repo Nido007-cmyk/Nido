@@ -1,0 +1,24 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.nidokeyvault'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.nidokeyvault"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  // BiometricPrompt (huella o PIN/patrón del dispositivo).
+  implementation "androidx.biometric:biometric:1.1.0"
+}
