@@ -1186,5 +1186,9 @@
     "strictMinutes": "{{n}} min",
     "strictEnable": "Activar",
     "strictConfirm": "NIDO se cerrará por completo cuando salgas de la app más del tiempo elegido y tendrás que desbloquearla de nuevo. Mientras esté cerrada no recibirás mensajes P2P (llegarán al abrirla)."
+  },
+  "launch": {
+    "shortcutNewChat": "Nuevo chat",
+    "shortcutP2P": "Mensajes NIDO"
   }
 }

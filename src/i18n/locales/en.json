@@ -1186,5 +1186,9 @@
     "strictMinutes": "{{n}} min",
     "strictEnable": "Turn on",
     "strictConfirm": "NIDO will close completely when you leave the app for longer than the chosen time, and you'll need to unlock it again. While closed you won't receive P2P messages (they arrive when you open it)."
+  },
+  "launch": {
+    "shortcutNewChat": "New chat",
+    "shortcutP2P": "NIDO messages"
   }
 }

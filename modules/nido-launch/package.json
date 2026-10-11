@@ -1,0 +1,7 @@
+{
+  "name": "nido-launch",
+  "version": "0.1.0",
+  "description": "Local Expo module: share target, app shortcuts and Quick Settings tile that open NIDO with a pending action.",
+  "main": "index.ts",
+  "license": "MIT"
+}
