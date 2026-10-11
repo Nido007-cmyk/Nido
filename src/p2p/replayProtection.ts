@@ -12,6 +12,13 @@
  *
  * Todo en memoria (no persistente entre reinicios por diseño;
  * los grants tienen expiración corta de todos modos).
+ *
+ * La revocación AUTORITATIVA de peers vive en NativeTransport (persistida y
+ * fail-closed). Este registro es su ESPEJO en memoria para las capas
+ * superiores (pack sharing, autorización de grants): NativeTransport lo
+ * actualiza en revokePeer/unrevokePeer y lo puebla al cargar desde disco.
+ * Sin ese espejo, `isPeerRevoked` aquí era siempre false (auditoría
+ * 2026-10-10, M3).
  */
 
 /** Entrada del cache de nonces. */
@@ -54,10 +61,13 @@ export class ReplayProtection {
     if (this.nonces.has(nonce)) {
       return false; // Replay detectado
     }
-    // Evicción por capacidad (FIFO aproximado)
+    // Capacidad: FAIL-CLOSED. Tras evictar lo expirado, si sigue lleno todas
+    // las entradas están DENTRO de la ventana; expulsar una (FIFO) permitiría
+    // re-aceptar su nonce vigente inundando con nonces basura (auditoría
+    // 2026-10-10, M2). Rechazar es seguro: el mensaje legítimo se reintenta
+    // cuando la ventana libere espacio.
     if (this.nonces.size >= this.maxEntries) {
-      const oldest = this.nonces.keys().next().value;
-      if (oldest) this.nonces.delete(oldest);
+      return false;
     }
     this.nonces.set(nonce, { seenAt: now });
     return true;
@@ -117,6 +127,14 @@ export class RevocationRegistry {
       revokedAt: Date.now(),
       reason,
     });
+  }
+
+  /**
+   * Levanta la revocación de un peer (solo tras un re-pair explícito).
+   * Refleja `NativeTransport.unrevokePeer`.
+   */
+  unrevokePeer(peerPkHex: string): void {
+    this.revokedPeers.delete(peerPkHex.toLowerCase());
   }
 
   /**
