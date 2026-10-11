@@ -719,7 +719,8 @@
     "deleteContactLabel": "Delete contact {{name}}",
     "contactDeleted": "“{{name}}” was deleted.",
     "deleteContactFailed": "Could not delete the contact.",
-    "dialingInstead": "{{name}} didn’t call: connecting from this tablet…"
+    "dialingInstead": "{{name}} didn’t call: connecting from this tablet…",
+    "pairKeyChanged": "⚠️ The security key for “{{name}}” changed. If you didn’t expect this, do NOT continue: someone could be impersonating your contact. If you know they reinstalled NIDO, delete them from your contacts and pair again, comparing the fingerprint in person. Nothing was saved."
   },
   "notifications": {
     "reminderChannel": "NIDO Reminders",

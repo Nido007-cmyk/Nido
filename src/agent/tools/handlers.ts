@@ -432,7 +432,7 @@ export function buildToolHandlers(opts?: {
           // muestra en persona para cotejo verbal. M-5: además se avisa de
           // conflictos de ligadura nombre↔identidad ya conocidos.
           const payload = decodePairingPayload(code);
-          const fp = fingerprint(fromHex(payload.pk));
+          const fp = fingerprint(fromHex(payload.pk), payload.spk ? fromHex(payload.spk) : null);
           const warning = await pairingBindingWarning(
             t,
             payload.pk,
@@ -1032,7 +1032,7 @@ const nidoPairHandler: ToolHandler = async (args) => {
       try {
         const payload = decodePairingPayload(code);
         payloadName = payload.name;
-        fp = fingerprint(fromHex(payload.pk));
+        fp = fingerprint(fromHex(payload.pk), payload.spk ? fromHex(payload.spk) : null);
       } catch {
         // Si el QR ni siquiera decodifica, el mensaje de abajo ya no
         // aplica; se devuelve el error original.

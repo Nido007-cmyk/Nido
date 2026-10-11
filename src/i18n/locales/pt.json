@@ -719,7 +719,8 @@
     "deleteContactLabel": "Excluir o contato {{name}}",
     "contactDeleted": "“{{name}}” foi excluído.",
     "deleteContactFailed": "Não foi possível excluir o contato.",
-    "dialingInstead": "{{name}} não chamou: conectando a partir deste tablet…"
+    "dialingInstead": "{{name}} não chamou: conectando a partir deste tablet…",
+    "pairKeyChanged": "⚠️ A chave de segurança de «{{name}}» mudou. Se você não esperava isso, NÃO continue: alguém pode estar se passando pelo seu contato. Se você sabe que ele reinstalou o NIDO, apague-o dos contatos e emparelhe de novo comparando a impressão digital pessoalmente. Nada foi salvo."
   },
   "notifications": {
     "reminderChannel": "Lembretes do NIDO",

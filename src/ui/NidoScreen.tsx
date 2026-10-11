@@ -774,7 +774,14 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
         setNotice(t("nido.pairCancelledNotice"));
       }
     } catch (e) {
-      setPairError(e instanceof Error ? e.message : String(e));
+      // CRYPTO-AUDIT-2026-10-11: clave de firma cambiada → aviso fuerte y
+      // localizado (nada se guardó).
+      const code = (e as { code?: unknown } | null)?.code;
+      if (code === "NIDO_PAIR_KEY_CHANGED") {
+        setPairError(t("nido.pairKeyChanged", { name: (e as { contactName?: string }).contactName ?? "" }));
+      } else {
+        setPairError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
       setPairBusy(false);
     }

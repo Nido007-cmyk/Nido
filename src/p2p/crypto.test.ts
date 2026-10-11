@@ -11,6 +11,7 @@ import {
   fromHex,
   generateEphemeral,
   generateIdentity,
+  generateSigningKeypair,
   hkdfSha512,
   openMessage,
   randomNonce,
@@ -114,6 +115,18 @@ describe("crypto P2P", () => {
     const fp = fingerprint(kp.publicKey);
     expect(fp.split(" ")).toHaveLength(8);
     expect(fingerprint(kp.publicKey)).toBe(fp);
+  });
+
+  it("CRYPTO-AUDIT: la huella v2 cubre la clave de firma (cambiarla cambia la huella)", () => {
+    const id = generateIdentity();
+    const sign1 = generateSigningKeypair();
+    const sign2 = generateSigningKeypair();
+    const a = fingerprint(id.publicKey, sign1.publicKey);
+    expect(a).toMatch(/^([0-9a-f]{4} ){7}[0-9a-f]{4}$/);
+    expect(fingerprint(id.publicKey, sign1.publicKey)).toBe(a);
+    expect(fingerprint(id.publicKey, sign2.publicKey)).not.toBe(a);
+    // Ya no es el prefijo crudo de la identidad.
+    expect(a).not.toBe(fingerprint(id.publicKey));
   });
 
   it("utf8 ida y vuelta con emoji y eñes", () => {

@@ -49,6 +49,7 @@ function makePeer(name: string) {
   return {
     code: encodePairingPayload(name, kp.publicKey, skp.publicKey),
     pkHex: toHex(kp.publicKey),
+    spkHex: toHex(skp.publicKey),
     name,
   };
 }
@@ -88,7 +89,7 @@ describe("previewPairingCeremony", () => {
     });
     expect(preview.payload.name).toBe("Ana");
     expect(preview.payload.pk).toBe(peer.pkHex);
-    expect(preview.fingerprint).toBe(fingerprint(fromHex(peer.pkHex)));
+    expect(preview.fingerprint).toBe(fingerprint(fromHex(peer.pkHex), fromHex(peer.spkHex)));
     // 8 grupos de 4 hex — el formato que se coteja en persona.
     expect(preview.fingerprint.split(" ")).toHaveLength(8);
     expect(preview.message).toContain("Ana");
@@ -150,7 +151,7 @@ describe("runPairingCeremony — confirmación", () => {
     const [title, message] = requestConfirm.mock.calls[0] as [string, string];
     expect(title).not.toBe("");
     expect(message).toContain("Eve");
-    expect(message).toContain(fingerprint(fromHex(peer.pkHex)));
+    expect(message).toContain(fingerprint(fromHex(peer.pkHex), fromHex(peer.spkHex)));
   });
 });
 
