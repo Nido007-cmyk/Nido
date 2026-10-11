@@ -1,4 +1,4 @@
-# NIDO v0.1.8-alpha — Release Notes
+# NIDO v0.1.9-alpha — Release Notes
 
 ## What is this?
 
@@ -11,6 +11,14 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Reminders with local notifications
 - Encrypted on-device storage
 - Backup / restore
+
+## What changed in 0.1.9-alpha
+
+> **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
+
+- **Hardware protection is now easy to find: Settings → Security** (first section). Before, it was halfway down About, and on some devices the card didn't show at all.
+- The card always shows now and explains why if it can't be used — for example, if the tablet has no PIN, pattern or password.
+- Agent replies for NIDO messages, your pairing code and files are now in English and Portuguese too, not only Spanish.
 
 ## What changed in 0.1.8-alpha
 
