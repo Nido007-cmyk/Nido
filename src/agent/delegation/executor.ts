@@ -182,13 +182,18 @@ export class DelegatedExecutor {
     // Watchdog: fail closed on timeout via Promise.race — the model call
     // is abandoned (not awaited) when the budget expires.
     const timeoutError = { code: "timeout", message: "Task exceeded its time budget" };
-    const withTimeout = <T>(p: Promise<T>): Promise<T> =>
-      Promise.race([
-        p,
-        new Promise<T>((_, reject) =>
-          setTimeout(() => reject(Object.assign(new Error("timed out"), { timeout: true })), this.maxDurationMs)
-        ),
-      ]);
+    // Auditoría 2026-10-10 (L5): el temporizador se limpia al terminar, para
+    // no dejar un setTimeout vivo por cada tarea completada a tiempo.
+    const withTimeout = <T>(p: Promise<T>): Promise<T> => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const deadline = new Promise<T>((_, reject) => {
+        timer = setTimeout(
+          () => reject(Object.assign(new Error("timed out"), { timeout: true })),
+          this.maxDurationMs
+        );
+      });
+      return Promise.race([p, deadline]).finally(() => clearTimeout(timer));
+    };
 
     try {
       // v1: the task uses the FIRST scope as the operation. The token

@@ -143,3 +143,14 @@ describe("extractMac — alias parsing", () => {
     expect(extractMac("AB:CD:EF:12:34")).toBeNull();
   });
 });
+
+describe("parseHello — size cap", () => {
+  it("rejects an oversized HELLO before parsing (audit 2026-10-10, L4)", () => {
+    // A valid HELLO padded with an extra field past the 1 KB cap.
+    const big = helloBody({ pad: "x".repeat(2000) });
+    expect(big.length).toBeGreaterThan(1024);
+    expect(() => parseHello(big)).toThrow("HELLO demasiado grande.");
+    // A legitimate HELLO stays far below the cap.
+    expect(buildHello(PK, EPH, NONCE, TS, SIG).length).toBeLessThan(512);
+  });
+});

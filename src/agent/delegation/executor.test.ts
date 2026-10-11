@@ -156,3 +156,24 @@ describe("DelegatedExecutor", () => {
     expect(r.error?.code).toBe("executor_error");
   });
 });
+
+describe("DelegatedExecutor — watchdog cleanup (audit 2026-10-10, L5)", () => {
+  it("clears the watchdog timer when the task finishes in time", async () => {
+    vi.useFakeTimers();
+    try {
+      const ex = new DelegatedExecutor({
+        scopes: ["task:answer"],
+        peerPkShort: "abcd1234",
+        modelInvoke: async () => "4",
+        maxDurationMs: 60_000,
+      });
+      const before = vi.getTimerCount();
+      const r = await ex.execute({ description: "2+2?", resultSchema: { type: "string" } });
+      expect(r.ok).toBe(true);
+      // Before the fix a 60 s setTimeout stayed pending after every task.
+      expect(vi.getTimerCount()).toBe(before);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

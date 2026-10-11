@@ -62,6 +62,7 @@ import {
   HELLO_TS_SKEW_S,
   HELLO_TYPE_V3,
   HELLO_VERSION,
+  MAX_HANDSHAKE_BODY_BYTES,
   NONCE_CACHE_WINDOW_S,
   parseConfirm,
   tieBreakKey,
@@ -213,6 +214,7 @@ export interface HelloPayload {
  * heredado. La frescura del `ts` se chequea en handleHello (necesita "now").
  */
 export function parseHello(body: Uint8Array): HelloPayload {
+  if (body.length > MAX_HANDSHAKE_BODY_BYTES) throw new Error("HELLO demasiado grande.");
   let obj: Record<string, unknown>;
   try {
     obj = JSON.parse(new TextDecoder().decode(body)) as Record<string, unknown>;
