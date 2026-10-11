@@ -105,6 +105,7 @@ import { ReasoningPeek } from "./components/ReasoningPeek";
 import { splitThinking, stripThinking } from "../services/thinking";
 import { cleanCitations } from "../services/citations";
 import { SourceFootnotes } from "./components/SourceFootnotes";
+import { onLaunchAction, registerShortcuts, takeLaunchAction } from "../services/launchActions";
 import { answerKnowledgeQueryWithCategory, toIdentityLocale, knowledgeSessionTitle } from "../rag/selfKnowledge";
 import { recordQueryStats, trackPeakRss, startAppMemoryTracking, QueryStats } from "../services/telemetry";
 import { recordExecution } from "../services/executionTelemetry";
@@ -576,6 +577,37 @@ export function ChatScreen({
     sessionSummaryRef.current = null;
     impact(ImpactFeedbackStyle.Medium);
   }, [stopAndAwaitGeneration, cancelBackgroundTask]);
+
+  // 0.1.10: NIDO desde fuera de la app (Compartir → NIDO, atajos del
+  // icono, acceso rápido). La acción espera en el módulo nativo hasta que el
+  // chat está visible; el texto compartido solo se pone en el campo de texto
+  // (no se envía solo: viene de otra app y no es de confianza).
+  const applyLaunchAction = useCallback(async () => {
+    const action = takeLaunchAction();
+    if (!action) return;
+    if (action.action === "p2p") {
+      setShowNido(true);
+      return;
+    }
+    await resetToNewChat();
+    if (action.action === "share") setInput(action.text);
+  }, [resetToNewChat]);
+
+  useEffect(() => {
+    void applyLaunchAction();
+    const off = onLaunchAction(() => void applyLaunchAction());
+    const sub = AppState.addEventListener("change", (s) => {
+      if (s === "active") void applyLaunchAction();
+    });
+    return () => {
+      off();
+      sub.remove();
+    };
+  }, [applyLaunchAction]);
+
+  useEffect(() => {
+    registerShortcuts({ newChat: t("launch.shortcutNewChat"), p2p: t("launch.shortcutP2P") });
+  }, [t]);
 
   const selectSession = useCallback(async (id: string) => {
     await stopAndAwaitGeneration();

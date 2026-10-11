@@ -4,6 +4,14 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.10-alpha — 2026-10-11
+
+### Added
+- Share text from any app to NIDO (Android share menu): it opens a new chat
+  with the text ready to send; nothing is sent automatically.
+- Long-press the NIDO icon: "New chat" and "NIDO messages" shortcuts.
+- Quick Settings tile "Ask NIDO" (asks to unlock first if the device is locked).
+
 ## 0.1.9-alpha — 2026-10-11
 
 ### Changed

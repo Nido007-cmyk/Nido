@@ -1205,5 +1205,9 @@
     "turnOff": "Desactivar",
     "working": "Trabajando…",
     "packOtherModel": "Hecho para el otro modelo de búsqueda: con este paquete ahora solo funciona la búsqueda por palabras."
+  },
+  "launch": {
+    "shortcutNewChat": "Nuevo chat",
+    "shortcutP2P": "Mensajes NIDO"
   }
 }

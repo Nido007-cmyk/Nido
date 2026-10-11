@@ -1,4 +1,4 @@
-# NIDO v0.1.9-alpha — Release Notes
+# NIDO v0.1.10-alpha — Release Notes
 
 ## What is this?
 
@@ -11,6 +11,15 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Reminders with local notifications
 - Encrypted on-device storage
 - Backup / restore
+
+## What changed in 0.1.10-alpha
+
+> **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
+
+**Use NIDO from outside the app**
+- **Share → NIDO:** select text in any app, tap Share and pick NIDO. A new chat opens with the text in the box, ready to edit or send. Nothing is sent on its own.
+- **Icon shortcuts:** long-press the NIDO icon for **New chat** and **NIDO messages**.
+- **Quick Settings tile "Ask NIDO":** add it from the quick settings edit screen. If the tablet is locked, it asks you to unlock first.
 
 ## What changed in 0.1.9-alpha
 

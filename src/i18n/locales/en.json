@@ -1205,5 +1205,9 @@
     "turnOff": "Turn off",
     "working": "Working…",
     "packOtherModel": "Made for the other search model: only keyword search works with this pack right now."
+  },
+  "launch": {
+    "shortcutNewChat": "New chat",
+    "shortcutP2P": "NIDO messages"
   }
 }
