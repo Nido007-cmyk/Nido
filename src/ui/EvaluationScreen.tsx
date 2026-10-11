@@ -16,7 +16,7 @@ import { EvalConfig, evalConfigId, EvalResultRow } from "../eval/evalHarness.pur
 import { exportEvalResults, listInstalledEvalModels, runEvaluation, EvalProgress, EvaluationRun } from "../eval/evalHarness";
 import { runDeviceEvalRequest } from "../eval/deviceEvalRequest";
 import type { EvalRequest } from "../eval/deviceEvalRequest.pure";
-import { runPbkdf2Benchmark } from "../eval/pbkdf2Bench";
+import { runPbkdf2Benchmark, abortPbkdf2Benchmark, Pbkdf2BenchAborted } from "../eval/pbkdf2Bench";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
@@ -154,7 +154,10 @@ export function EvaluationScreen({ onClose, chatBusy, deviceRequest }: Props) {
       const { report, savedPath } = await runPbkdf2Benchmark(setBenchProgress);
       setBenchResult({ savedPath, provisionalVerdict: report.provisionalVerdict });
     } catch (e: any) {
-      Alert.alert(t("evaluation.pbkdf2FailedTitle"), e?.message ?? String(e));
+      // Detenido por el usuario o al salir: no es un fallo.
+      if (!(e instanceof Pbkdf2BenchAborted)) {
+        Alert.alert(t("evaluation.pbkdf2FailedTitle"), e?.message ?? String(e));
+      }
     } finally {
       setBenchRunning(false);
       setBenchProgress(null);
@@ -163,6 +166,9 @@ export function EvaluationScreen({ onClose, chatBusy, deviceRequest }: Props) {
 
   const canRun = !running && !chatBusy && chosen.length > 0 && models !== null;
   const canBench = !benchRunning && !running && !chatBusy;
+
+  // FREEZE-2026-10-10: el benchmark no sigue quemando CPU tras salir.
+  useEffect(() => () => abortPbkdf2Benchmark(), []);
 
   const autoStarted = useRef(false);
   useEffect(() => {
@@ -317,6 +323,19 @@ export function EvaluationScreen({ onClose, chatBusy, deviceRequest }: Props) {
               {benchRunning ? t("evaluation.pbkdf2Running") : t("evaluation.pbkdf2Run")}
             </Text>
           </Pressable>
+          {benchRunning && (
+            <Pressable
+              style={styles.actionBtn}
+              onPress={() => {
+                impact(ImpactFeedbackStyle.Medium);
+                abortPbkdf2Benchmark();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t("evaluation.stop")}
+            >
+              <Text style={styles.actionBtnText}>{t("evaluation.stop")}</Text>
+            </Pressable>
+          )}
         </View>
         {benchRunning && benchProgress && <Text style={styles.note}>{benchProgress}</Text>}
         {benchResult && !benchRunning && (
