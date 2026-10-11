@@ -68,7 +68,7 @@ jobs:
 
       - name: Restore llama.cpp build
         id: llama-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: build/e5/llama.cpp
           key: llama-cpp-${{ env.LLAMA_CPP_COMMIT }}-server-v1
@@ -89,6 +89,13 @@ jobs:
             -DLLAMA_BUILD_UI=OFF -DLLAMA_USE_PREBUILT_UI=OFF
           cmake --build build --target llama-server llama-quantize -j "$(nproc)"
           ls -la build/bin
+
+      - name: Save llama.cpp build
+        if: steps.llama-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: build/e5/llama.cpp
+          key: llama-cpp-${{ env.LLAMA_CPP_COMMIT }}-server-v1
 
       - name: Python environment
         run: |
@@ -125,7 +132,8 @@ jobs:
         run: |
           exec > >(tee -a "$DIAG/40-convert.log") 2>&1
           set -euxo pipefail
-          "$PY" "$W/llama.cpp/convert_hf_to_gguf.py" "$W/hf" --outtype f16 --outfile "$W/e5-f16.gguf"
+          # Wrapper: BERT weights + XLM-R SentencePiece tokenizer (see the script).
+          "$PY" scripts/multilingual/convert_e5.py "$W/llama.cpp" "$W/hf" --outtype f16 --outfile "$W/e5-f16.gguf"
           "$W/llama.cpp/build/bin/llama-quantize" "$W/e5-f16.gguf" "$W/multilingual-e5-small-q8_0.gguf" Q8_0
           "$PY" - <<'EOF'
           import os, sys
