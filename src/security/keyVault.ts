@@ -22,6 +22,7 @@
  *  - Con el blob presente jamás se genera una DEK nueva (keyManager).
  */
 
+import { withPermissionRequest } from "../p2p/permissionGuard";
 import {
   deleteLegacyDatabaseKey,
   deleteVaultBlob,
@@ -140,7 +141,10 @@ export interface VaultPrompt {
 
 async function wrapDek(n: KeyVaultNative, dekHex: string, p: VaultPrompt): Promise<string> {
   try {
-    return await n.wrapWithAuth(hexToB64(dekHex), p.title, p.subtitle);
+    // Integración 0.1.7: si el diálogo de PIN/huella pausara la actividad en
+    // algún dispositivo, no debe mandar a la pantalla de bloqueo (misma
+    // bandera que los permisos; el nivel B sigue contando, ver App.tsx).
+    return await withPermissionRequest(() => n.wrapWithAuth(hexToB64(dekHex), p.title, p.subtitle));
   } catch (e) {
     throw toVaultError(e);
   }
@@ -148,7 +152,7 @@ async function wrapDek(n: KeyVaultNative, dekHex: string, p: VaultPrompt): Promi
 
 async function unwrapDek(n: KeyVaultNative, blob: string, p: VaultPrompt): Promise<string> {
   try {
-    return b64ToHex(await n.unwrapWithAuth(blob, p.title, p.subtitle));
+    return b64ToHex(await withPermissionRequest(() => n.unwrapWithAuth(blob, p.title, p.subtitle)));
   } catch (e) {
     throw toVaultError(e);
   }
