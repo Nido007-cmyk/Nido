@@ -501,6 +501,14 @@ describe("NegotiationService: routing y state machine", () => {
     ).toBe(false);
   });
 
+  it("AUDIT-CONFIRM NEG-1: una propuesta read:notes se acepta sola, sin el usuario", async () => {
+    const proposal = makeProposal();
+    const signed = signNegotiationMessage(aliceKeys.secretKey, alicePkHex, "PROPOSE", proposal.proposalId, proposal);
+    await negotiationService.handleEnvelope(makeEnvelope("PROPOSE", "neg-audit-auto", signed) as any);
+    const s = negotiationService.listSessions().find((x) => x.negotiationId === "neg-audit-auto");
+    expect(s?.state).toBe("ACCEPTED");
+  });
+
   it("DELETE-NEGOTIATIONS: el usuario puede borrar una negociación y no resucita", async () => {
     const proposal = makeProposal();
     const sign = () =>

@@ -1781,3 +1781,38 @@ describe("R1 FIX 2026-10-09: disconnect manual no bloquea reconexión", () => {
     expect((t as any).manualDisconnectPks.has(pk.toLowerCase())).toBe(true);
   });
 });
+
+describe("AUDIT-CONFIRM 2026-10-11 (temporal): ataques por Wi-Fi local", () => {
+  it("LAN-1: un desconocido que se conecta recibe nuestro HELLO con la identidad", async () => {
+    const f = makeFake();
+    const ev = makeEvents();
+    const t = makeTransport(f.fake);
+    await t.startDiscovery(ev.events);
+    const stranger = "LAN:192.168.1.66:40000";
+    f.emit("onConnected", { address: stranger, name: null, incoming: true } as never);
+    await tick(50);
+    const toStranger = f.sent.filter((s) => s.address.toUpperCase() === stranger.toUpperCase());
+    expect(toStranger.length).toBe(1);
+    const hello = parseHello(decodeBase64(toStranger[0]!.base64));
+    expect(hello.pk).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("LAN-2: superada la cuota, la conexión queda abierta sin timeout y sigue recibiendo frames", async () => {
+    const f = makeFake();
+    const ev = makeEvents();
+    const t = makeTransport(f.fake);
+    await t.startDiscovery(ev.events);
+    for (let i = 0; i < 5; i++) {
+      f.emit("onConnected", { address: `LAN:192.168.1.66:${41000 + i}`, name: null, incoming: true } as never);
+    }
+    await tick(50);
+    const extra = "LAN:192.168.1.66:42000";
+    f.emit("onConnected", { address: extra, name: null, incoming: true } as never);
+    await tick(50);
+    const big = encodeBase64(new Uint8Array(200 * 1024).fill(7));
+    f.emit("onFrame", { address: extra, base64: big } as never);
+    await tick(50);
+    expect((t as any).pending.has(extra.toUpperCase())).toBe(false);
+    expect(f.disconnected.map((a) => a.toUpperCase())).not.toContain(extra.toUpperCase());
+  });
+});
