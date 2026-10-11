@@ -5,7 +5,7 @@
  */
 
 /**
- * HardwareProtectionCard — "Protección por hardware" en Acerca de.
+ * HardwareProtectionCard — "Protección por hardware" en Ajustes → Seguridad.
  * Diseño: docs/design/BLOQUEO_BIOMETRICO_REAL.md (nivel A).
  *
  * Activa/desactiva la bóveda: la llave de la base queda envuelta por una
@@ -42,18 +42,34 @@ export function HardwareProtectionCard() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // 0.1.9 (evidencia: la tarjeta no aparecía en las tablets del usuario):
+  // antes, cualquier error al leer el estado escondía la tarjeta entera
+  // (status = null → return null). Ahora la tarjeta siempre se ve y dice
+  // el motivo, para poder diagnosticarlo en el teléfono.
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [strictSecs, setStrictSecs] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
+    // Cada lectura por separado: un fallo en una no esconde las demás.
     try {
-      setStatus(await vaultStatus());
+      const st = await vaultStatus();
+      setStatus(st);
+      setLoadError(st ? null : "native-unavailable");
+    } catch (e) {
+      setStatus(null);
+      setLoadError(e instanceof Error ? e.message : String(e));
+    }
+    try {
       setActive(await isVaultActive());
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : String(e));
+    }
+    try {
       setStrictSecs(await getStrictLockSeconds());
     } catch {
-      setStatus(null);
-    } finally {
-      setLoaded(true);
+      setStrictSecs(null);
     }
+    setLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -147,7 +163,20 @@ export function HardwareProtectionCard() {
     [describeError, t],
   );
 
-  if (!loaded || !status) return null; // build sin el módulo nativo
+  if (!loaded) return null;
+  if (!status) {
+    return (
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>{t("vault.title")}</Text>
+        <Text style={styles.paragraph}>{t("vault.body")}</Text>
+        <Text style={styles.status}>
+          {loadError === "native-unavailable"
+            ? t("vault.errUnavailable")
+            : t("vault.errStatus", { reason: loadError ?? "?" })}
+        </Text>
+      </View>
+    );
+  }
 
   const levelLabel =
     status.securityLevel === "strongbox"

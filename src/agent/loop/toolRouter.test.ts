@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  localizeHandlerText,
   calendarRange,
   extractToolAction,
   formatDay,
@@ -363,5 +364,26 @@ describe("formateo de fechas sin Intl", () => {
     expect(formatDay(d, "pt")).toBe("domingo, 15 de março");
     expect(formatTime(d, "es")).toBe("21:05");
     expect(formatTime(d, "en")).toBe("9:05 PM");
+  });
+});
+
+describe("localizeHandlerText — salidas en español traducidas para en/pt", () => {
+  it("bandeja, código, envío y archivos", () => {
+    expect(localizeHandlerText("No tienes mensajes NIDO sin leer.", "en")).toBe("You have no unread NIDO messages.");
+    expect(
+      localizeHandlerText(
+        "Tu código de emparejamiento NIDO (muéstralo como QR para que el otro teléfono lo escanee):\nNIDO1:abc\nHuella para verificar en persona: 1234",
+        "pt",
+      ),
+    ).toBe("Seu código de pareamento NIDO (mostre como QR para o outro telefone escanear):\nNIDO1:abc\nImpressão digital para conferir pessoalmente: 1234");
+    expect(localizeHandlerText("Mensaje enviado a «Ana» por NIDO (cifrado de extremo a extremo).", "en")).toBe(
+      "Message sent to “Ana” via NIDO (end-to-end encrypted).",
+    );
+    expect(localizeHandlerText("Archivo «v.csv» (2 KB):\na,b", "en")).toBe("File “v.csv” (2 KB):\na,b");
+  });
+  it("en español no cambia nada y los datos del usuario se conservan", () => {
+    const t = "• Ana (dom): Huella para verificar en persona: no";
+    expect(localizeHandlerText(t, "es")).toBe(t);
+    expect(localizeHandlerText("• Ana (dom): hola", "en")).toBe("• Ana (dom): hola");
   });
 });

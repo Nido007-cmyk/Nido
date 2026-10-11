@@ -119,6 +119,7 @@
       "subtitle": "NIDO — Your agent. Your world."
     },
     "sections": {
+      "security": "Security",
       "tone": "How I talk to you",
       "models": "AI Models",
       "knowledgeBase": "Your library",
@@ -1168,6 +1169,8 @@
     "deactivateBody": "Your data's key will be stored again without requiring your PIN or fingerprint.",
     "deactivated": "Protection turned off.",
     "errNoLock": "Set a PIN, pattern or password on the tablet to turn on hardware protection.",
+    "errUnavailable": "Hardware protection isn't available in this build of NIDO.",
+    "errStatus": "Couldn't check hardware protection on this device: {{reason}}",
     "errVerify": "Verification failed and nothing was changed. Your data is unchanged.",
     "errGeneric": "Couldn't complete it. Nothing was changed.",
     "lockSubtitle": "Your data is protected by the security chip. Unlock with your PIN, pattern or fingerprint.",

@@ -404,6 +404,7 @@
       "models": "Modelos de IA",
       "recovery": "Respaldos y recuperación",
       "telemetry": "Mediciones",
+      "security": "Seguridad",
       "tone": "Cómo te hablo",
       "voice": "Voz"
     },
@@ -1168,6 +1169,8 @@
     "deactivateBody": "La llave de tus datos volverá a guardarse sin exigir tu PIN o huella.",
     "deactivated": "Protección desactivada.",
     "errNoLock": "Pon un PIN, patrón o contraseña en la tablet para poder activar la protección por hardware.",
+    "errUnavailable": "La protección por hardware no está disponible en esta versión de NIDO.",
+    "errStatus": "No se pudo comprobar la protección por hardware en este dispositivo: {{reason}}",
     "errVerify": "La verificación falló y no se cambió nada. Tus datos siguen igual.",
     "errGeneric": "No se pudo completar. No se cambió nada.",
     "lockSubtitle": "Tus datos están protegidos por el chip de seguridad. Desbloquea con tu PIN, patrón o huella.",

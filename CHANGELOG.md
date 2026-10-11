@@ -4,6 +4,17 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.9-alpha — 2026-10-11
+
+### Changed
+- Hardware protection moved to Settings → Security.
+
+### Fixed
+- The hardware protection card could disappear without explanation; it
+  now always shows and says why it can't be used.
+- Agent replies for NIDO messages, pairing code and files are translated
+  to English and Portuguese.
+
 ## 0.1.8-alpha — 2026-10-11
 
 ### Fixed
