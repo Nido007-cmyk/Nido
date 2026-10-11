@@ -380,7 +380,12 @@
     "outgoingWaiting": "Waiting for response",
     "activeTitle": "Active collaborations",
     "acceptedOn": "Accepted on {{date}}",
-    "proposePlaceholder": "What do you want to propose?"
+    "proposePlaceholder": "What do you want to propose?",
+    "deleteButton": "Delete",
+    "deleteTitle": "Delete this negotiation?",
+    "deleteBody": "It is only removed from this tablet. The other person is not notified; to let them know, use Decline before deleting.",
+    "deleteConfirm": "Delete",
+    "deleteBusy": "A response is being sent. Wait a moment and try again."
   },
   "chatHeader": {
     "openDrawer": "Open Navigation Drawer",
@@ -905,7 +910,11 @@
     "noPeersTitle": "No contacts",
     "noPeersMessage": "You need at least one paired contact to share packs.",
     "offerFailedTitle": "Could not send",
-    "offerFailedMessage": "Could not create the offer. Check the connection with the peer."
+    "offerFailedMessage": "Could not prepare the pack transfer.",
+    "unavailableTitle": "Not available yet",
+    "unavailableMessage": "Sharing packs between devices is not available in this version yet. It is coming in a future update.",
+    "tooLargeTitle": "Pack too large",
+    "tooLargeMessage": "This pack is {{size}} MB and the sharing limit is {{max}} MB."
   },
   "voiceInputAlert": {
     "unavailableTitle": "Voice input unavailable",
@@ -1022,7 +1031,8 @@
     "kind": {
       "download_start": "Download started",
       "download_complete": "Download completed",
-      "download_failed": "Download failed"
+      "download_failed": "Download failed",
+      "lan_connect": "Local Wi-Fi connection"
     }
   },
   "skillsCard": {

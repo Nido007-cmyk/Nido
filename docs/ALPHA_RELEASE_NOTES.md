@@ -17,6 +17,13 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - **Reminder crash fixed.** Asking the agent to remind you of something at a time no longer closes the app.
 - **The Evaluation screen no longer freezes the device.** The root cause was a security benchmark (PBKDF2) blocking the UI; it now runs in small steps and has a Stop button.
 - **Crash diagnostics**: About → Crash diagnostics shows what happened the last time the app closed unexpectedly, so you can include it in a bug report.
+- **Setup no longer starts over** on every launch if you picked the lighter AI model.
+- **P2P over local Wi-Fi**: if Bluetooth fails, two NIDOs on the same Wi-Fi or hotspot can still connect.
+- **Reconnects after a crash**: paired devices reconnect on their own after the app closes unexpectedly.
+- **Delete negotiations** whenever you want (only on your device; use Decline to notify the other side).
+- **Security hardening** from a full audit: stronger anti-replay protection, revoked contacts blocked everywhere, human approval required for sensitive delegated tasks, size limits on handshakes and strict text decoding.
+- **Pack sharing** shows a clear message instead of a generic error while the feature is finished.
+- Not yet tested on a physical device: Wi-Fi P2P and reconnect after a crash. Please report anything that fails.
 
 ## What changed in 0.1.4-alpha
 

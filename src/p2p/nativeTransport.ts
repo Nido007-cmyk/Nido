@@ -56,17 +56,20 @@ import {
 } from "./crypto";
 import { getIdentity, getSigningKeypair, findContactByPk } from "./store";
 import { defaultHelloNonceCache, type HelloNonceCache } from "./nonceCache";
+import { globalRevocationRegistry } from "./replayProtection";
 import {
   buildConfirmV1,
   CONFIRM_WAIT_MS,
   HELLO_TS_SKEW_S,
   HELLO_TYPE_V3,
   HELLO_VERSION,
+  MAX_HANDSHAKE_BODY_BYTES,
   NONCE_CACHE_WINDOW_S,
   parseConfirm,
   tieBreakKey,
 } from "./handshakeV3";
 import { encodeBase64, decodeBase64 } from "./base64";
+import { networkAudit } from "../privacy/networkAudit";
 import { withPermissionRequest } from "./permissionGuard";
 
 /** Subconjunto estructural de los bindings de `nido-p2p` (sin expo en tests). */
@@ -104,6 +107,13 @@ export interface NidoP2PBindings {
    * ajenos sin llegar nunca a la receptora (que no mostraba nada).
    */
   getBondedDevices(): Promise<Array<{ address: string; name: string | null }>>;
+  /**
+   * Respaldo Wi-Fi local (TCP + mDNS, solo red local). Opcional: módulos
+   * nativos anteriores no lo tienen y el transporte se comporta como antes.
+   * Los peers llegan por onDeviceFound con dirección "LAN:ip:puerto".
+   */
+  startLan?(): Promise<void>;
+  stopLan?(): Promise<void>;
   addListener(event: "onDeviceFound", fn: (d: { address: string; name: string | null }) => void): () => void;
   addListener(event: "onDiscoveryFinished", fn: () => void): () => void;
   addListener(
@@ -137,6 +147,8 @@ export function createPlatformTransport(): P2PTransport {
 }
 
 const MAC_RE = /([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}/;
+/** Dirección Wi-Fi local que emite el módulo nativo: "LAN:<ipv4>:<puerto>". */
+const LAN_RE = /LAN:(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})/i;
 const HELLO_TIMEOUT_MS = 15_000;
 /**
  * Cooldown anti-spam: si ya hay una ruta viva con el peer y su handshake
@@ -213,6 +225,7 @@ export interface HelloPayload {
  * heredado. La frescura del `ts` se chequea en handleHello (necesita "now").
  */
 export function parseHello(body: Uint8Array): HelloPayload {
+  if (body.length > MAX_HANDSHAKE_BODY_BYTES) throw new Error("HELLO demasiado grande.");
   let obj: Record<string, unknown>;
   try {
     obj = JSON.parse(new TextDecoder().decode(body)) as Record<string, unknown>;
@@ -277,6 +290,40 @@ export function extractMac(alias: string): string | null {
   return alias.match(MAC_RE)?.[0]?.toUpperCase() ?? null;
 }
 
+/**
+ * Extrae una dirección Wi-Fi local ("LAN:ip:puerto") de un alias como
+ * "NIDO Wi-Fi (LAN:192.168.1.5:41234)". Valida octetos y puerto.
+ */
+export function extractLanAddress(alias: string): string | null {
+  const m = alias.match(LAN_RE);
+  if (!m) return null;
+  const ip = m[1]!;
+  const port = Number(m[2]);
+  if (ip.split(".").some((o) => Number(o) > 255)) return null;
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return null;
+  return `LAN:${ip}:${port}`;
+}
+
+/** ¿La dirección nativa es de Wi-Fi local? */
+export function isLanAddress(address: string): boolean {
+  return /^LAN:/i.test(address);
+}
+
+/** Tipo de transporte para P2PPeerInfo según la dirección nativa. */
+function transportOf(address: string): P2PPeerInfo["transport"] {
+  return isLanAddress(address) ? "lan" : "bluetooth";
+}
+
+/**
+ * Clave de la cuota de handshakes entrantes. En Bluetooth la MAC identifica
+ * al dispositivo; en Wi-Fi local cada conexión entrante usa un puerto
+ * efímero distinto, así que la cuota se aplica por IP (sin el puerto): si
+ * no, abrir conexiones nuevas la saltaría.
+ */
+export function handshakeRateKey(address: string): string {
+  return isLanAddress(address) ? address.replace(/:\d+$/, "") : address;
+}
+
 export interface NidoBluetoothTransportOpts {
   /**
    * Firma de identidad Ed25519 (HELLO y CONFIRM).
@@ -288,6 +335,32 @@ export interface NidoBluetoothTransportOpts {
    * persistente (SQLCipher); los tests inyectan uno en memoria.
    */
   nonceCache?: HelloNonceCache;
+}
+
+/**
+ * Espeja la revocación del transporte (autoritativa, persistida) en el
+ * registro en memoria que consultan las capas superiores (pack sharing,
+ * grants). Nunca lanza: el espejo no puede romper el transporte.
+ * Auditoría 2026-10-10, M3.
+ */
+function mirrorRevocation(pkLower: string, revoked: boolean): void {
+  try {
+    if (revoked) globalRevocationRegistry.revokePeer(pkLower, "transport-revoked");
+    else globalRevocationRegistry.unrevokePeer(pkLower);
+  } catch {
+    /* best-effort */
+  }
+}
+
+/**
+ * RECONNECT-AFTER-CRASH 2026-10-10: presupuesto de reconexión automática tras
+ * una desconexión no solicitada. Backoff 2s, 4s, 8s, 16s, 32s, 60s (~2 min en
+ * total) para cubrir el tiempo que tarda un peer en reabrir la app tras un
+ * cierre inesperado.
+ */
+export const RECONNECT_MAX_ATTEMPTS = 6;
+export function reconnectDelayMs(attempt: number): number {
+  return Math.min(2000 * 2 ** attempt, 60000);
 }
 
 export class NidoBluetoothTransport implements P2PTransport {
@@ -306,6 +379,12 @@ export class NidoBluetoothTransport implements P2PTransport {
   // limpian al detener el discovery.
   private linkUnsubs: Array<() => void> = [];
   private discoveryUnsubs: Array<() => void> = [];
+  /**
+   * Bluetooth listo (permisos concedidos y servidor RFCOMM arrancado). Puede
+   * ser false con el enlace activo si Bluetooth está apagado o sin permisos
+   * y el módulo nativo tiene respaldo Wi-Fi local (startLan).
+   */
+  private btReady = false;
   private myPkHex = "";
   private macToPk = new Map<string, string>();
   private pkToMac = new Map<string, string>();
@@ -404,7 +483,10 @@ export class NidoBluetoothTransport implements P2PTransport {
         throw new Error("revoked-peers.json: estructura inválida (no es array)");
       }
       for (const pk of arr) {
-        if (typeof pk === "string") this.revokedPks.add(pk.toLowerCase());
+        if (typeof pk === "string") {
+          this.revokedPks.add(pk.toLowerCase());
+          mirrorRevocation(pk.toLowerCase(), true);
+        }
       }
       this.revokedPksLoaded = true;
       this.revocationStoreHealthy = true;
@@ -511,6 +593,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       FS = await import("expo-file-system/legacy");
     } catch {
       // Sin módulo FS: solo limpiar memoria.
+      for (const pk of this.revokedPks) mirrorRevocation(pk, false);
       this.revokedPks.clear();
       this.revokedPksLoaded = true;
       this.revocationStoreHealthy = true;
@@ -522,6 +605,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       const tmpPath = `${dir}revoked-peers.json.tmp`;
       await FS.deleteAsync(path, { idempotent: true });
       await FS.deleteAsync(tmpPath, { idempotent: true });
+      for (const pk of this.revokedPks) mirrorRevocation(pk, false);
       this.revokedPks.clear();
       this.revokedPksLoaded = true;
       this.revocationStoreHealthy = true;
@@ -646,15 +730,71 @@ export class NidoBluetoothTransport implements P2PTransport {
     }
   }
 
-  private async doLink(): Promise<void> {
+  /** ¿El módulo nativo tiene respaldo por Wi-Fi local? */
+  private lanCapable(): boolean {
+    return typeof this.bindings?.startLan === "function";
+  }
+
+  /**
+   * Fase 1 (antes de registrar listeners, como siempre): ¿Bluetooth está
+   * encendido y con permisos? Sin respaldo Wi-Fi conserva el comportamiento
+   * original y LANZA. Con respaldo Wi-Fi devuelve false y el enlace sigue
+   * solo por Wi-Fi local (el motivo se informa por onError).
+   */
+  private async checkBluetoothUsable(): Promise<boolean> {
     const b = this.bt();
-    await this.ensureMyPk();
-    if (!b.isBluetoothEnabled()) throw new Error("El Bluetooth está apagado.");
+    const lan = this.lanCapable();
+    if (!b.isBluetoothEnabled()) {
+      if (!lan) throw new Error("El Bluetooth está apagado.");
+      return false; // solo Wi-Fi local por ahora
+    }
     // T-permiso-2026-10-06: el diálogo del sistema pausa la Activity; la
     // bandera evita que el gate de App.tsx re-bloquee por esa pausa
     // transitoria.
     const granted = await withPermissionRequest(() => b.requestPermissions());
-    if (!granted) throw new Error("NIDO necesita permisos de Bluetooth para hablar con otro NIDO.");
+    if (!granted) {
+      if (!lan) throw new Error("NIDO necesita permisos de Bluetooth para hablar con otro NIDO.");
+      this.events?.onError?.("Sin permisos de Bluetooth: se usará solo Wi-Fi local.");
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Fase 2 (DESPUÉS de registrar listeners, como siempre): arranca el
+   * servidor RFCOMM y verifica que quedó escuchando.
+   */
+  private async startBluetoothServer(): Promise<void> {
+    const b = this.bt();
+    await b.startServer();
+    // DIAG-2026-10-07: verificar que el servidor quedó realmente escuchando.
+    // La notificación del foreground service NO lo garantiza (el servicio
+    // puede estar en primer plano sin hilo en accept()). Si el servidor no
+    // está vivo, fallar con un error visible en vez de un "listo" mentiroso.
+    const status = this.readServerStatus();
+    if (status && !status.alive) {
+      const msg =
+        "El servidor Bluetooth no quedó escuchando (accept loop inactivo). Reabre la pantalla de enlace.";
+      if (!this.lanCapable()) throw new Error(msg);
+      this.events?.onError?.(`${msg} Se usará Wi-Fi local mientras tanto.`);
+      return;
+    }
+    this.btReady = true;
+  }
+
+  /**
+   * Re-intento en cada startDiscovery() (solo con respaldo Wi-Fi): si el
+   * usuario encendió Bluetooth después de enlazar, se activa sin reiniciar.
+   */
+  private async ensureBluetoothReady(): Promise<void> {
+    if (this.btReady) return;
+    if (await this.checkBluetoothUsable()) await this.startBluetoothServer();
+  }
+
+  private async doLink(): Promise<void> {
+    const b = this.bt();
+    await this.ensureMyPk();
+    const btUsable = await this.checkBluetoothUsable();
     // R4 §8.2: poda oportunista de la cache anti-replay al enlazar. Las
     // filas viejas corresponden a HELLOs que el chequeo de frescura
     // rechaza de todos modos (best-effort: nunca bloquea el enlace).
@@ -663,6 +803,7 @@ export class NidoBluetoothTransport implements P2PTransport {
     // stopDiscovery) separados de los de DESCUBRIMIENTO.
     this.linkUnsubs = [
       b.addListener("onConnected", (e) => {
+        if (isLanAddress(e.address)) this.auditLan(e.address, e.incoming);
         void this.beginHello(e.address).catch((err: unknown) =>
           this.events?.onError?.(
             `No se pudo iniciar el handshake: ${err instanceof Error ? err.message : String(err)}`,
@@ -680,17 +821,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       b.addListener("onError", (e) => this.events?.onError?.(e.message)),
     ];
     this.registerDiscoveryListeners();
-    await b.startServer();
-    // DIAG-2026-10-07: verificar que el servidor quedó realmente escuchando.
-    // La notificación del foreground service NO lo garantiza (el servicio
-    // puede estar en primer plano sin hilo en accept()). Si el servidor no
-    // está vivo, fallar con un error visible en vez de un "listo" mentiroso.
-    const status = this.readServerStatus();
-    if (status && !status.alive) {
-      throw new Error(
-        "El servidor Bluetooth no quedó escuchando (accept loop inactivo). Reabre la pantalla de enlace.",
-      );
-    }
+    if (btUsable) await this.startBluetoothServer();
     this.linked = true;
   }
 
@@ -728,7 +859,61 @@ export class NidoBluetoothTransport implements P2PTransport {
     if (this.discoveryUnsubs.length === 0) {
       this.registerDiscoveryListeners();
     }
-    await this.bt().startDiscovery();
+    const b = this.bt();
+    if (!this.lanCapable()) {
+      // Módulo nativo sin Wi-Fi local: comportamiento original.
+      await b.startDiscovery();
+      return;
+    }
+    // Con respaldo Wi-Fi: Bluetooth y Wi-Fi local en paralelo. Basta con
+    // que uno arranque; el fallo del otro se informa sin cortar el enlace.
+    await this.ensureBluetoothReady().catch(() => {});
+    let started = false;
+    let btError: unknown = null;
+    if (this.btReady && b.isBluetoothEnabled()) {
+      try {
+        await b.startDiscovery();
+        started = true;
+      } catch (e) {
+        btError = e;
+      }
+    }
+    try {
+      await b.startLan!();
+      started = true;
+    } catch (e) {
+      this.events?.onError?.(
+        `Wi-Fi local no disponible: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+    if (!started) {
+      throw btError instanceof Error
+        ? btError
+        : new Error("Ni Bluetooth ni Wi-Fi local están disponibles.");
+    }
+    if (btError) {
+      this.events?.onError?.(
+        `Bluetooth no pudo buscar (${btError instanceof Error ? btError.message : String(btError)}); se usa Wi-Fi local.`,
+      );
+    }
+  }
+
+  /**
+   * Registro de red (src/privacy/networkAudit.ts): toda conexión por Wi-Fi
+   * local queda visible en Ajustes, aunque nunca salga de la red local.
+   */
+  private auditLan(address: string, incoming: boolean): void {
+    try {
+      networkAudit.log({
+        kind: "lan_connect",
+        endpoint: `${address.replace(/^LAN:/i, "")} (${incoming ? "entrante" : "saliente"})`,
+        assetId: "",
+        bytesExpected: 0,
+        bytesReceived: 0,
+      });
+    } catch {
+      /* el registro nunca rompe el transporte */
+    }
   }
 
   /** Registra solo los listeners de descubrimiento (re-utilizable). */
@@ -739,7 +924,7 @@ export class NidoBluetoothTransport implements P2PTransport {
         this.events?.onPeerFound?.({
           pkHex: "",
           alias: d.name ? `${d.name} (${d.address})` : d.address,
-          transport: "bluetooth",
+          transport: transportOf(d.address),
         });
       }),
       b.addListener("onDiscoveryFinished", () => {
@@ -826,6 +1011,10 @@ export class NidoBluetoothTransport implements P2PTransport {
     // solo nunca los muta, así que conservarlos es seguro.
     if (b) {
       await b.stopDiscovery().catch(() => {});
+      // Wi-Fi local: se apagan servidor, anuncio mDNS y búsqueda (privacidad:
+      // no anunciarse en cada red a la que se una el teléfono). Las
+      // conexiones Wi-Fi ya establecidas siguen vivas.
+      if (b.stopLan) await b.stopLan().catch(() => {});
       // P2P-ALWAYS-ON 2026-10-07: NO detener el servidor aquí. El servidor
       // Bluetooth y su foreground service se mantienen corriendo todo el
       // tiempo que la app esté viva (como Briar), no solo mientras la
@@ -895,14 +1084,14 @@ export class NidoBluetoothTransport implements P2PTransport {
    * handshake. Resuelve con la identidad verificada del peer.
    */
   async connect(alias: string): Promise<P2PPeerInfo> {
-    const mac = extractMac(alias);
-    if (!mac) throw new Error(`No encontré una dirección Bluetooth en «${alias}».`);
+    const mac = extractMac(alias) ?? extractLanAddress(alias);
+    if (!mac) throw new Error(`No encontré una dirección Bluetooth ni Wi-Fi local en «${alias}».`);
     const b = this.bt();
     await this.ensureLinked();
     const done = this.macToPk.get(mac);
     if (done) {
       const contact = await findContactByPk(done);
-      return { pkHex: done, alias: contact?.name ?? mac, transport: "bluetooth" };
+      return { pkHex: done, alias: contact?.name ?? mac, transport: transportOf(mac) };
     }
     const existing = this.pending.get(mac);
     if (existing) {
@@ -949,12 +1138,15 @@ export class NidoBluetoothTransport implements P2PTransport {
     mac: string,
     attempt: number,
   ): Promise<void> {
-    const MAX_ATTEMPTS = 3;
+    // Wi-Fi local: TCP es fiable; un fallo (puerto cerrado, peer que ya no
+    // anuncia) es real y reintentar solo alarga el barrido.
+    const MAX_ATTEMPTS = isLanAddress(mac) ? 1 : 3;
     try {
       // FIX 2026-10-09 (BlueLib): detener el discovery antes de conectar.
       // El discovery activo contiende por la radio Bluetooth y causa fallos
       // de conexión intermitentes. Se reanuda solo vía scheduleDiscoveryRestart.
-      if (attempt === 0) {
+      // (No aplica a Wi-Fi local: no comparte radio con el discovery BT.)
+      if (attempt === 0 && !isLanAddress(mac)) {
         try {
           await b.stopDiscovery();
         } catch {
@@ -1037,6 +1229,7 @@ export class NidoBluetoothTransport implements P2PTransport {
   async revokePeer(peerPkHex: string): Promise<void> {
     const pkLower = peerPkHex.toLowerCase();
     this.revokedPks.add(pkLower);
+    mirrorRevocation(pkLower, true);
     // FIX 2026-10-09 (CR-4/SEC): persistir; fallar visiblemente si no se puede.
     const persisted = await this.saveRevokedPks();
     // Desconectar siempre, incluso si la persistencia falló: el bloqueo
@@ -1063,6 +1256,7 @@ export class NidoBluetoothTransport implements P2PTransport {
    */
   async unrevokePeer(peerPkHex: string): Promise<void> {
     this.revokedPks.delete(peerPkHex.toLowerCase());
+    mirrorRevocation(peerPkHex.toLowerCase(), false);
     // FIX 2026-10-09 (CR-4/SEC): persistir; fallar visiblemente si no se puede.
     const persisted = await this.saveRevokedPks();
     if (!persisted) {
@@ -1152,7 +1346,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       // nuestros reintentos salientes (waiting-socket) no se ven afectados.
       // Fail-closed: el peer legítimo reintenta con backoff y entra en la
       // siguiente ventana.
-      if (this.inboundHandshakeRateLimited(mac)) return;
+      if (this.inboundHandshakeRateLimited(handshakeRateKey(mac))) return;
     }
     // R7 FIX: reservar el slot del pendiente de forma SÍNCRONA antes del
     // primer await. Sin esto, dos onNativeFrame concurrentes veían `!pend`
@@ -1535,11 +1729,15 @@ export class NidoBluetoothTransport implements P2PTransport {
     const contact = await findContactByPk(pkLower);
     // BUG-6 Plan B: guardar la MAC conocida para el barrido futuro.
     // Si getBondedDevices() falla, el barrido prueba estas MACs primero.
-    try {
-      const { saveKnownMac } = await import("./store");
-      await saveKnownMac(pkLower, mac);
-    } catch { /* best-effort */ }
-    const info: P2PPeerInfo = { pkHex: pkLower, alias: contact?.name ?? mac, transport: "bluetooth" };
+    // Las direcciones Wi-Fi local cambian (DHCP, puertos efímeros): no se
+    // guardan como "MAC conocida".
+    if (!isLanAddress(mac)) {
+      try {
+        const { saveKnownMac } = await import("./store");
+        await saveKnownMac(pkLower, mac);
+      } catch { /* best-effort */ }
+    }
+    const info: P2PPeerInfo = { pkHex: pkLower, alias: contact?.name ?? mac, transport: transportOf(mac) };
     // La sesión la deriva el messenger (ligada a ambos nonces).
     this.events?.onHandshakeComplete?.(
       pkLower,
@@ -1603,18 +1801,26 @@ export class NidoBluetoothTransport implements P2PTransport {
    * Máximo 5 intentos; después se rinde hasta reconexión manual.
    */
   private scheduleReconnect(mac: string, pkHex: string): void {
+    // Wi-Fi local: la dirección de una conexión entrante es un puerto
+    // efímero y la del peer puede cambiar; reconectar a ella no sirve. La
+    // reconexión la hace el barrido de la UI con los peers redescubiertos.
+    if (isLanAddress(mac)) {
+      this.manualDisconnectMacs.delete(mac);
+      this.reconnectAttempts.delete(mac);
+      return;
+    }
     if (this.manualDisconnectMacs.has(mac)) {
       this.manualDisconnectMacs.delete(mac);
       return;
     }
     if (this.stopped) return;
     const attempts = this.reconnectAttempts.get(mac) ?? 0;
-    if (attempts >= 5) {
+    if (attempts >= RECONNECT_MAX_ATTEMPTS) {
       this.reconnectAttempts.delete(mac);
       return;
     }
     this.cancelReconnect(mac);
-    const delayMs = Math.min(1000 * 2 ** attempts, 30000);
+    const delayMs = reconnectDelayMs(attempts);
     this.reconnectAttempts.set(mac, attempts + 1);
     const timer = setTimeout(() => {
       this.reconnectTimers.delete(mac);
@@ -1631,10 +1837,16 @@ export class NidoBluetoothTransport implements P2PTransport {
       } catch {
         return;
       }
+      // RECONNECT-AFTER-CRASH 2026-10-10: antes, si este connect() fallaba
+      // (p. ej. el peer se cayó y tarda en reabrir la app), la cadena de
+      // reintentos se detenía tras el PRIMER fallo: nadie volvía a programar.
+      // Ahora un fallo reprograma el siguiente intento (acotado por
+      // RECONNECT_MAX_ATTEMPTS). Un éxito borra reconnectAttempts en la
+      // ruta de handshake completado.
       void this.connect(mac).catch(() => {
-        // El backoff de connect() maneja sus reintentos; si falla del todo,
-        // el próximo onNativeDisconnected (si hubo conexión parcial) o el
-        // usuario reintentará manualmente.
+        if (this.stopped) return;
+        if (this.macToPk.has(mac) || this.pending.has(mac)) return;
+        this.scheduleReconnect(mac, pkHex);
       });
     }, delayMs);
     this.reconnectTimers.set(mac, timer);

@@ -48,6 +48,13 @@ export const HELLO_TS_MAX = 2 ** 40;
  */
 export const NONCE_CACHE_WINDOW_S = HELLO_TS_SKEW_S + 3000;
 
+/**
+ * Tamaño máximo de un frame HELLO/CONFIRM (JSON en claro, sin autenticar).
+ * Un HELLO legítimo ocupa ~350 B y un CONFIRM ~300 B; el tope evita parsear
+ * entradas gigantes antes de verificar nada (auditoría 2026-10-10, L4).
+ */
+export const MAX_HANDSHAKE_BODY_BYTES = 1024;
+
 /** Espera máxima del CONFIRM del peer tras enviar el nuestro. */
 export const CONFIRM_WAIT_MS = 10_000;
 
@@ -63,6 +70,7 @@ export interface ConfirmPayload {
  * Lanza si es inválido. Puro y determinista.
  */
 export function parseConfirm(body: Uint8Array): ConfirmPayload {
+  if (body.length > MAX_HANDSHAKE_BODY_BYTES) throw new Error("CONFIRM demasiado grande.");
   let obj: Record<string, unknown>;
   try {
     obj = JSON.parse(new TextDecoder().decode(body)) as Record<string, unknown>;

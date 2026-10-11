@@ -238,7 +238,18 @@ const MAX_SEEN_IDS = 10_000;
 export class P2PSession {
   readonly peerPkHex: string;
   private sessionKey: Uint8Array;
-  private seenIds = new Set<string>();
+  /** id de envelope → `ts` (epoch ms) del mensaje, para la evicción segura. */
+  private seenIds = new Map<string, number>();
+  /**
+   * Marca de agua de evicción (auditoría 2026-10-10, M1): `ts` más alto de
+   * los ids ya expulsados del conjunto. Un frame cuyo `ts` sea <= a esta
+   * marca solo puede ser un mensaje ya visto y expulsado (un replay), así
+   * que se rechaza. Sin esto, un frame capturado se podía reinyectar tras
+   * 10 000 mensajes posteriores en la misma sesión. No cambia el cable ni
+   * exige que los relojes coincidan: `ts` viaja DENTRO del secretbox y la
+   * marca solo se compara con `ts` del propio emisor.
+   */
+  private evictedTsMax = -Infinity;
   private ownPkHex: string | null = null;
   /**
    * Liveness del peer: solo se marca cuando llega un frame válido bajo la
@@ -351,11 +362,19 @@ export class P2PSession {
       if (env.from.toLowerCase() !== this.peerPkHex) return null; // suplantación
       if (this.ownPkHex && env.to.toLowerCase() !== this.ownPkHex) return null; // destinatario incorrecto
       if (this.seenIds.has(env.id)) return null; // replay o duplicado
-      this.seenIds.add(env.id);
+      // Replay de un id ya expulsado por capacidad: su `ts` no supera la
+      // marca de agua (fail-closed; ver evictedTsMax). `ts` no finito también
+      // se rechaza: no se puede ordenar frente a la marca.
+      if (!Number.isFinite(env.ts) || env.ts <= this.evictedTsMax) return null;
+      this.seenIds.set(env.id, env.ts);
       if (this.seenIds.size > MAX_SEEN_IDS) {
-        // Evicción FIFO: Set itera en orden de inserción.
-        const oldest = this.seenIds.values().next().value as string | undefined;
-        if (oldest !== undefined) this.seenIds.delete(oldest);
+        // Evicción FIFO: Map itera en orden de inserción. Se recuerda el `ts`
+        // del expulsado para seguir rechazando su replay.
+        const oldest = this.seenIds.entries().next().value as [string, number] | undefined;
+        if (oldest !== undefined) {
+          this.seenIds.delete(oldest[0]);
+          if (oldest[1] > this.evictedTsMax) this.evictedTsMax = oldest[1];
+        }
       }
       // Un frame válido bajo la clave de esta sesión demuestra que el peer
       // conoce la clave: la sesión está viva (ver P2PSession.peerLive).

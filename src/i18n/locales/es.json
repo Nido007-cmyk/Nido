@@ -308,7 +308,12 @@
     "outgoingWaiting": "Esperando respuesta",
     "activeTitle": "Colaboraciones activas",
     "acceptedOn": "Aceptada el {{date}}",
-    "proposePlaceholder": "¿Qué quieres proponer?"
+    "proposePlaceholder": "¿Qué quieres proponer?",
+    "deleteButton": "Borrar",
+    "deleteTitle": "¿Borrar esta negociación?",
+    "deleteBody": "Se borra solo de esta tablet. La otra persona no recibe aviso; si quieres avisarle, usa Rechazar antes de borrar.",
+    "deleteConfirm": "Borrar",
+    "deleteBusy": "Se está enviando una respuesta. Espera un momento e inténtalo de nuevo."
   },
   "memorySettings": {
     "autoSummarizeLabel": "Resumen de contexto en segundo plano",
@@ -905,7 +910,11 @@
     "noPeersTitle": "Sin contactos",
     "noPeersMessage": "Necesitas al menos un contacto emparejado para compartir packs.",
     "offerFailedTitle": "No se pudo enviar",
-    "offerFailedMessage": "No se pudo crear la oferta. Verifica la conexión con el peer."
+    "offerFailedMessage": "No se pudo preparar el envío del pack.",
+    "unavailableTitle": "Aún no disponible",
+    "unavailableMessage": "Compartir packs entre dispositivos todavía no está disponible en esta versión. Llegará en una próxima actualización.",
+    "tooLargeTitle": "Pack demasiado grande",
+    "tooLargeMessage": "Este pack ocupa {{size}} MB y el máximo para compartir es {{max}} MB."
   },
   "voiceInputAlert": {
     "unavailableTitle": "Entrada de voz no disponible",
@@ -1022,7 +1031,8 @@
     "kind": {
       "download_start": "Descarga iniciada",
       "download_complete": "Descarga completada",
-      "download_failed": "Descarga fallida"
+      "download_failed": "Descarga fallida",
+      "lan_connect": "Conexión por Wi-Fi local"
     }
   },
   "skillsCard": {

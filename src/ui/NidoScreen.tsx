@@ -59,7 +59,7 @@ import {
   routeIdentityBootstrapError,
 } from "./p2pIdentityRecovery";
 /** BUG-6-2026-10-07: extraer MAC de alias "nombre (MAC)" para deduplicar. */
-import { extractMac } from "../p2p/nativeTransport";
+import { extractLanAddress, extractMac } from "../p2p/nativeTransport";
 
 type Tab = "chats" | "contactos" | "enlace" | "negociaciones" | "packs";
 
@@ -450,6 +450,26 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           setLinking(true);
           setLinkError(null);
         }
+        // RECONNECT-AFTER-CRASH 2026-10-10: tras un cierre/reinicio de la app
+        // el estado de reconexión (en memoria) se pierde. En el primer
+        // arranque del enlace de cada proceso, re-marcar a los contactos ya
+        // emparejados con los que hubo handshake (MAC persistida). Una vez
+        // por proceso, respetando el rol de dial y en segundo plano.
+        void (async () => {
+          const { getKnownMacs } = await import("../p2p/store");
+          const { reconnectKnownContactsOnce } = await import("../p2p/startupReconnect");
+          await reconnectKnownContactsOnce({
+            getKnownMacs,
+            connectedPeers: () => m.connectedPeers(),
+            shouldDialPeer: (pk) => m.shouldDialPeer(pk),
+            connectPeer: (alias) => m.connectPeer(alias),
+            disconnectPeer: (pk) => m.disconnectPeer(pk),
+            onReconnected: (pk) => {
+              reconnectManager.cancel(pk);
+              if (!cancelled) setOnline((prev) => new Set(prev).add(pk));
+            },
+          });
+        })().catch(() => {});
       } catch (e) {
         if (!cancelled) {
           // F-2: la pérdida de identidad se routea a la pantalla de
@@ -809,7 +829,11 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             /* best-effort: seguir solo con nearby */
           }
           const seen = new Set<string>();
-          const out: string[] = [];
+          // Wi-Fi local PRIMERO: si otro NIDO se anuncia en esta red, probarlo
+          // cuesta segundos (TCP), frente al barrido Bluetooth. El handshake
+          // verifica la identidad igual; si no es el contacto buscado, se
+          // desconecta y se sigue con Bluetooth.
+          const out: string[] = nearby.filter((a) => extractLanAddress(a) !== null);
           for (const m of knownFirst) {
             const up = m.toUpperCase();
             if (!seen.has(up)) { seen.add(up); out.push(up); }
@@ -819,6 +843,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             if (!seen.has(up)) { seen.add(up); out.push(m); }
           }
           for (const alias of nearby) {
+            if (extractLanAddress(alias) !== null) continue; // ya incluido arriba
             const mac = extractMac(alias)?.toUpperCase();
             if (mac && !seen.has(mac)) {
               seen.add(mac);

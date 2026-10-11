@@ -124,6 +124,15 @@ class PackShareService {
     return PackShareService.instance;
   }
 
+  /**
+   * ¿Está conectado el servicio (identidad, envío y proveedor de datos)?
+   * PACKS-2026-10-10: en la app todavía no se conecta; la UI lo usa para
+   * decir la verdad en vez de culpar a la conexión con el peer.
+   */
+  isReady(): boolean {
+    return this.sendFn !== null && this.dataProvider !== null && this.myPkHex !== null;
+  }
+
   /** Configura la identidad local. */
   setLocalIdentity(pkHex: string): void {
     this.myPkHex = pkHex.toLowerCase();

@@ -20,7 +20,8 @@ export interface P2PPeerInfo {
   pkHex: string;
   /** Nombre Bluetooth / alias visible. */
   alias: string;
-  transport: "bluetooth" | "wifi-direct";
+  /** "lan" = Wi-Fi local (misma red o hotspot), respaldo de Bluetooth. */
+  transport: "bluetooth" | "wifi-direct" | "lan";
 }
 
 export interface P2PTransportEvents {

@@ -1078,12 +1078,42 @@ export class ModelManager {
    * not blindly for the catalog's `required` LLM.
    */
   async requiredModelsPresent(): Promise<boolean> {
-    const defaultLlm = defaultLlmForDevice();
-    const needed = [
-      defaultLlm,
-      ...REQUIRED_MODELS.filter((m) => m.kind !== "llm"),
-    ];
-    const statuses = await Promise.all(needed.map((a) => this.statusOf(a)));
-    return statuses.every((s) => s.present && s.sizeOnDiskBytes === s.asset.sizeBytes);
+    const complete = (s: AssetStatus) => s.present && s.sizeOnDiskBytes === s.asset.sizeBytes;
+    const others = await Promise.all(
+      REQUIRED_MODELS.filter((m) => m.kind !== "llm").map((a) => this.statusOf(a))
+    );
+    if (!others.every(complete)) return false;
+    // SETUP-LOOP-2026-10-10: el asistente deja ELEGIR el modelo (ligero o
+    // recomendado) y lo guarda como modelo activo, pero aquí solo se miraba
+    // el recomendado para la RAM del aparato. Quien elegía el otro (p. ej.
+    // el 0.5B en una tablet de 3,3 GB) volvía al asistente en cada arranque
+    // aunque su modelo estuviera instalado. Basta con que esté el modelo
+    // ELEGIDO o, si no hay elección guardada, el recomendado.
+    const candidates: CatalogModel[] = [];
+    const activeId = await getActiveLlmIdSafe();
+    const active = activeId
+      ? (this.catalog.find((m) => m.id === activeId && m.kind === "llm") ??
+        MODEL_CATALOG.find((m) => m.id === activeId && m.kind === "llm"))
+      : undefined;
+    if (active) candidates.push(active);
+    const fallback = defaultLlmForDevice();
+    if (!candidates.some((c) => c.id === fallback.id)) candidates.push(fallback);
+    for (const llm of candidates) {
+      if (complete(await this.statusOf(llm))) return true;
+    }
+    return false;
+  }
+}
+
+/**
+ * Modelo LLM elegido por el usuario (ajustes), o null si no hay o no se
+ * puede leer. Import perezoso: los ajustes tocan el sistema de archivos.
+ */
+async function getActiveLlmIdSafe(): Promise<string | null> {
+  try {
+    const { getActiveModelId } = await import("./settings");
+    return await getActiveModelId("llm");
+  } catch {
+    return null;
   }
 }

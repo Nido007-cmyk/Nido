@@ -22,6 +22,7 @@
  */
 
 import { globalRevocationRegistry } from "./replayProtection";
+import { randomNonce, toHex } from "./crypto";
 
 /** Estados de sesión. */
 export type SessionState =
@@ -44,6 +45,8 @@ export interface Session {
   activeGrantIds: Set<string>;
   /** Contador de mensajes para detección de reordenamiento. */
   messageCounter: number;
+  /** Último contador entrante aceptado (estrictamente creciente). */
+  lastIncomingCounter: number;
 }
 
 /** Configuración de sesión. */
@@ -77,7 +80,8 @@ export class SessionManager {
    * Crea una nueva sesión post-handshake.
    */
   createSession(peerPkHex: string, now: number = Date.now()): Session {
-    const sessionId = `sess_${now}_${Math.random().toString(36).slice(2, 10)}`;
+    // Auditoría 2026-10-10 (M3): id con PRNG criptográfico, no Math.random().
+    const sessionId = `sess_${now}_${toHex(randomNonce(8))}`;
     const session: Session = {
       sessionId,
       peerPkHex: peerPkHex.toLowerCase(),
@@ -87,9 +91,24 @@ export class SessionManager {
       expiresAt: now + this.config.sessionTtlMs,
       activeGrantIds: new Set(),
       messageCounter: 0,
+      lastIncomingCounter: 0,
     };
     this.sessions.set(sessionId, session);
     return session;
+  }
+
+  /**
+   * ¿El peer de esta sesión fue revocado? Si sí, la sesión pasa a REVOKED.
+   * Auditoría 2026-10-10 (M3): antes solo se miraba la revocación de la
+   * sesión, así que revocar al PEER no cerraba sus sesiones activas.
+   */
+  private revokeIfPeerRevoked(s: Session): boolean {
+    if (globalRevocationRegistry.isPeerRevoked(s.peerPkHex)) {
+      s.state = "REVOKED";
+      s.activeGrantIds.clear();
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -98,6 +117,7 @@ export class SessionManager {
   activateSession(sessionId: string): boolean {
     const s = this.sessions.get(sessionId);
     if (!s || s.state !== "ESTABLISHING") return false;
+    if (this.revokeIfPeerRevoked(s)) return false;
     s.state = "ACTIVE";
     return true;
   }
@@ -119,9 +139,11 @@ export class SessionManager {
       s.state = "EXPIRED";
       return false;
     }
+    // Re-validación real antes de latir/reactivar (el comentario original
+    // lo prometía pero no se hacía): peer revocado → sesión REVOKED.
+    if (this.revokeIfPeerRevoked(s)) return false;
     s.lastHeartbeatAt = now;
     if (s.state === "SUSPENDED") {
-      // Reconnect: re-validar antes de reactivar
       s.state = "ACTIVE";
     }
     return true;
@@ -132,13 +154,19 @@ export class SessionManager {
    * Marca como SUSPENDED las sin heartbeat, EXPIRED las vencidas.
    */
   checkHealth(now: number = Date.now()): void {
-    for (const s of this.sessions.values()) {
+    for (const [id, s] of this.sessions) {
       if (s.state === "ACTIVE" || s.state === "SUSPENDED") {
         if (now > s.expiresAt) {
           s.state = "EXPIRED";
         } else if (now - s.lastHeartbeatAt > this.config.heartbeatTimeoutMs) {
           s.state = "SUSPENDED";
         }
+      } else if (
+        (s.state === "CLOSED" || s.state === "EXPIRED" || s.state === "REVOKED") &&
+        now > s.expiresAt + this.config.sessionTtlMs
+      ) {
+        // Poda de sesiones terminales ya vencidas: el mapa no crece sin límite.
+        this.sessions.delete(id);
       }
     }
   }
@@ -181,6 +209,7 @@ export class SessionManager {
       s.state = "REVOKED";
       return null;
     }
+    if (this.revokeIfPeerRevoked(s)) return null;
     return s;
   }
 
@@ -190,6 +219,7 @@ export class SessionManager {
   attachGrant(sessionId: string, grantId: string): boolean {
     const s = this.sessions.get(sessionId);
     if (!s || s.state !== "ACTIVE") return false;
+    if (this.revokeIfPeerRevoked(s)) return false;
     s.activeGrantIds.add(grantId);
     return true;
   }
@@ -202,6 +232,20 @@ export class SessionManager {
     if (!s || s.state !== "ACTIVE") return null;
     s.messageCounter += 1;
     return s.messageCounter;
+  }
+
+  /**
+   * Valida el contador de un mensaje ENTRANTE: debe ser estrictamente mayor
+   * que el último aceptado (anti-replay/reordenamiento). `nextMessageCounter`
+   * solo numera lo que enviamos; sin esta verificación el contador no
+   * protegía nada al recibir (auditoría 2026-10-10, M3).
+   */
+  acceptIncomingCounter(sessionId: string, counter: number): boolean {
+    const s = this.sessions.get(sessionId);
+    if (!s || s.state !== "ACTIVE") return false;
+    if (!Number.isSafeInteger(counter) || counter <= s.lastIncomingCounter) return false;
+    s.lastIncomingCounter = counter;
+    return true;
   }
 
   /** Para tests. */

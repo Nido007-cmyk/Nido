@@ -24,7 +24,12 @@
  * This is a NIDO addition — the upstream app had no network audit surface.
  */
 
-export type NetworkEventKind = "download_start" | "download_complete" | "download_failed";
+/**
+ * `lan_connect`: conexión P2P por Wi-Fi local (misma red o hotspot). Nunca
+ * sale de la red local, pero se registra igual: el usuario ve TODO lo que
+ * usa la red. `endpoint` es la IP local y la dirección (entrante/saliente).
+ */
+export type NetworkEventKind = "download_start" | "download_complete" | "download_failed" | "lan_connect";
 
 export interface NetworkAuditEntry {
   /** ISO timestamp of the event. */
