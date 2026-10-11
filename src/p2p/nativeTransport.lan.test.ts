@@ -40,7 +40,7 @@ import {
   parseHello,
   type NidoP2PBindings,
 } from "./nativeTransport";
-import { buildConfirmV1 } from "./handshakeV3";
+import { buildConfirmV1, parseConfirm } from "./handshakeV3";
 import { makeMemoryHelloNonceCache } from "./nonceCache";
 import { networkAudit } from "../privacy/networkAudit";
 import type { P2PPeerInfo, P2PTransportEvents } from "./transport";
@@ -87,6 +87,7 @@ function makeFake(opts: { bluetooth?: boolean; permissions?: boolean; lan?: bool
   const listeners = new Map<string, Listener[]>();
   const sent: Array<{ address: string; base64: string }> = [];
   const connected: string[] = [];
+  const disconnected: string[] = [];
   const calls: string[] = [];
   const emit = (event: string, payload: never) => {
     for (const fn of listeners.get(event) ?? []) fn(payload);
@@ -119,7 +120,9 @@ function makeFake(opts: { bluetooth?: boolean; permissions?: boolean; lan?: bool
     sendFrame: async (address: string, base64: string) => {
       sent.push({ address, base64 });
     },
-    disconnect: async () => undefined,
+    disconnect: async (address: string) => {
+      disconnected.push(address);
+    },
     shutdown: async () => {
       calls.push("shutdown");
     },
@@ -141,7 +144,7 @@ function makeFake(opts: { bluetooth?: boolean; permissions?: boolean; lan?: bool
       calls.push("stopLan");
     };
   }
-  return { fake, sent, connected, calls, emit };
+  return { fake, sent, connected, calls, emit, disconnected };
 }
 
 function makeEvents() {
@@ -300,16 +303,20 @@ describe("Wi-Fi local: handshake completo", () => {
     await t.startDiscovery(ev.events);
     f.emit("onConnected", { address: LAN, name: null, incoming: true } as never);
     await tick();
-    const myHello = parseHello(decodeBase64(f.sent[0].base64));
+    // AUDIT-2026-10-11: quien recibe por Wi-Fi no habla primero.
+    expect(f.sent).toHaveLength(0);
     const ph = peerHello();
     f.emit("onFrame", { address: LAN, base64: ph.b64 } as never);
     await tick();
+    const myHello = parseHello(decodeBase64(f.sent[0].base64));
     f.emit("onFrame", {
       address: LAN,
       base64: peerConfirm(ph.nonceHex, myHello.nonce, generateSigningKeypair()),
     } as never);
     await tick();
     expect(ev.handshakes).toHaveLength(0);
+    // Nuestro CONFIRM nunca salió ante un CONFIRM falso.
+    expect(f.sent).toHaveLength(1);
     await expect(t.sendFrame(PEER_PK_HEX, new Uint8Array([1]))).rejects.toThrow(/no conectado/i);
     await t.stopDiscovery();
   });
@@ -323,12 +330,96 @@ describe("Wi-Fi local: handshake completo", () => {
       f.emit("onConnected", { address: `LAN:192.168.43.9:${port}`, name: null, incoming: true } as never);
     }
     await tick(50);
-    // Solo las primeras 5 (INBOUND_HANDSHAKE_MAX_PER_WINDOW) reciben HELLO.
-    expect(f.sent).toHaveLength(5);
+    // AUDIT-2026-10-11: nadie recibe nuestra identidad por conectarse, y las
+    // que superan la cuota (INBOUND_HANDSHAKE_MAX_PER_WINDOW = 5) se CIERRAN
+    // (antes quedaban abiertas sin timeout).
+    expect(f.sent).toHaveLength(0);
+    const closed = f.disconnected.map((a) => a.toUpperCase());
+    for (let port = 50006; port <= 50008; port++) expect(closed).toContain(`LAN:192.168.43.9:${port}`);
+    for (let port = 50001; port <= 50005; port++) expect(closed).not.toContain(`LAN:192.168.43.9:${port}`);
     // Otra IP de la red no se ve afectada.
     f.emit("onConnected", { address: "LAN:192.168.43.10:50001", name: null, incoming: true } as never);
     await tick();
-    expect(f.sent).toHaveLength(6);
+    expect(f.disconnected.map((a) => a.toUpperCase())).not.toContain("LAN:192.168.43.10:50001");
+    await t.stopDiscovery();
+  });
+});
+
+describe("AUDIT-2026-10-11: respondedor Wi-Fi silencioso (LAN-1) y anti-DoS (LAN-2)", () => {
+  it("un desconocido que se conecta no recibe nada y su HELLO lo desconecta", async () => {
+    const f = makeFake({ bluetooth: false });
+    const t = makeTransport(f.fake);
+    await t.startDiscovery(makeEvents().events);
+    const stranger = "LAN:192.168.43.66:40000";
+    f.emit("onConnected", { address: stranger, name: null, incoming: true } as never);
+    await tick();
+    expect(f.sent).toHaveLength(0);
+    const otherSign = generateSigningKeypair();
+    const otherPk = toHex(new Uint8Array(32).fill(9));
+    const eph = toHex(generateEphemeral().publicKey);
+    const nonceHex = toHex(randomNonce(HANDSHAKE_NONCE_BYTES));
+    const ts = nowSec();
+    const sig = toHex(signDetached(buildHelloSignMessageV3(otherPk, eph, nonceHex, ts), otherSign.secretKey));
+    f.emit("onFrame", { address: stranger, base64: encodeBase64(buildHello(otherPk, eph, nonceHex, ts, sig)) } as never);
+    await tick();
+    expect(f.sent).toHaveLength(0);
+    expect(f.disconnected.map((a) => a.toUpperCase())).toContain(stranger.toUpperCase());
+    await t.stopDiscovery();
+  });
+
+  it("basura en vez de HELLO: se desconecta sin revelar nada", async () => {
+    const f = makeFake({ bluetooth: false });
+    const t = makeTransport(f.fake);
+    await t.startDiscovery(makeEvents().events);
+    f.emit("onConnected", { address: LAN, name: null, incoming: true } as never);
+    await tick();
+    f.emit("onFrame", { address: LAN, base64: encodeBase64(new Uint8Array(2000).fill(7)) } as never);
+    await tick();
+    expect(f.sent).toHaveLength(0);
+    expect(f.disconnected.map((a) => a.toUpperCase())).toContain(LAN.toUpperCase());
+    await t.stopDiscovery();
+  });
+
+  it("contacto real: HELLO → nuestro HELLO; su CONFIRM → nuestro CONFIRM y sesión", async () => {
+    const f = makeFake({ bluetooth: false });
+    const ev = makeEvents();
+    const t = makeTransport(f.fake);
+    await t.startDiscovery(ev.events);
+    f.emit("onConnected", { address: LAN, name: null, incoming: true } as never);
+    await tick();
+    const ph = peerHello();
+    f.emit("onFrame", { address: LAN, base64: ph.b64 } as never);
+    await tick();
+    // Solo nuestro HELLO: el CONFIRM se retiene hasta verificar el suyo.
+    expect(f.sent).toHaveLength(1);
+    const myHello = parseHello(decodeBase64(f.sent[0].base64));
+    expect(myHello.pk).toBe(MY_PK_HEX);
+    f.emit("onFrame", { address: LAN, base64: peerConfirm(ph.nonceHex, myHello.nonce) } as never);
+    await tick(50);
+    expect(f.sent).toHaveLength(2);
+    const myConfirm = parseConfirm(decodeBase64(f.sent[1].base64));
+    expect(myConfirm.pk).toBe(MY_PK_HEX);
+    expect(myConfirm.cn).toBe(myHello.nonce);
+    expect(myConfirm.pn).toBe(ph.nonceHex);
+    expect(ev.handshakes).toEqual([PEER_PK_HEX]);
+    await t.stopDiscovery();
+  });
+
+  it("el HELLO del peer llega antes que el evento de conexión: igual responde sin hablar primero", async () => {
+    const f = makeFake({ bluetooth: false });
+    const ev = makeEvents();
+    const t = makeTransport(f.fake);
+    await t.startDiscovery(ev.events);
+    const ph = peerHello();
+    f.emit("onFrame", { address: LAN, base64: ph.b64 } as never);
+    await tick();
+    f.emit("onConnected", { address: LAN, name: null, incoming: true } as never);
+    await tick();
+    expect(f.sent).toHaveLength(1);
+    const myHello = parseHello(decodeBase64(f.sent[0].base64));
+    f.emit("onFrame", { address: LAN, base64: peerConfirm(ph.nonceHex, myHello.nonce) } as never);
+    await tick(50);
+    expect(ev.handshakes).toEqual([PEER_PK_HEX]);
     await t.stopDiscovery();
   });
 });

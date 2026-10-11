@@ -23,7 +23,8 @@ const NEGOTIATION_ID = "neg-1";
 
 vi.mock("../../p2p/negotiationService", () => ({
   negotiationService: {
-    listSessions: () => [{ negotiationId: NEGOTIATION_ID, state: "ACCEPTED" }],
+    // AUDIT-2026-10-11: la negociación pertenece al peer que pide la tarea.
+    listSessions: () => [{ negotiationId: NEGOTIATION_ID, state: "ACCEPTED", peerPkHex: "bb".repeat(32) }],
   },
 }));
 
@@ -184,6 +185,44 @@ describe("delegationService: flag ON → golden flow", () => {
     expect(result).toBeDefined();
     expect((result!.body as { ok: boolean }).ok).toBe(true);
     expect((result!.body as { result: unknown }).result).toBe("4");
+  });
+
+  it("AUDIT-2026-10-11: una tarea que cita la negociación de OTRO contacto se rechaza", async () => {
+    const svc = freshService();
+    await setFeatureEnabled("delegation.enabled", true);
+    svc.setModelInvoke(async () => "4");
+    const sent: { type: TaskMessageType; body: TaskMessageBody }[] = [];
+    svc.setSendFunction(async (_peer, type, body) => {
+      sent.push({ type, body });
+      return true;
+    });
+    const taskId = "123e4567-e89b-42d3-a456-426614174777";
+    const { issueDelegationToken } = await import("../../p2p/delegationToken");
+    const token = issueDelegationToken(aKeys.secretKey, {
+      issuer: aSigHex,
+      audience: bSigHex,
+      negotiationId: NEGOTIATION_ID,
+      taskId,
+      scopes: ["task:answer"],
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 60000,
+    });
+    const events: { type: string }[] = [];
+    svc.subscribe((e: { type: string }) => events.push(e));
+    // Token válido de un contacto emparejado, pero la negociación aceptada
+    // es con "bb…", no con este peer.
+    await svc.handleTaskMessage("cc".repeat(32), "TASK_REQUEST", {
+      negotiationId: NEGOTIATION_ID,
+      taskId,
+      description: "What is 2+2?",
+      resultSchema: { type: "string" },
+      delegationToken: token,
+      expiresAt: Date.now() + 60000,
+      maxDurationMs: 5000,
+    });
+    expect(events.find((e) => e.type === "approval-pending")).toBeUndefined();
+    expect(svc.pendingApprovals).toBe(0);
+    expect(sent.find((s) => s.type === "TASK_REJECT")).toBeDefined();
   });
 
   it("deny → TASK_REJECT with reason denied, nothing executes", async () => {

@@ -55,6 +55,14 @@ class NidoLanManager(
     const val ADDRESS_PREFIX = "LAN:"
     const val CONNECT_TIMEOUT_MS = 5_000
     const val MAX_CONNECTIONS = 8
+    /**
+     * AUDIT-2026-10-11 (LAN-2): los 2 primeros frames de toda conexión son
+     * el handshake (HELLO y CONFIRM, < 1 KB cada uno). Antes de autenticarse
+     * nadie puede mandar frames grandes: se corta en vez de pasar hasta
+     * 256 KB por frame al hilo de JS.
+     */
+    const val HANDSHAKE_FRAMES = 2
+    const val MAX_HANDSHAKE_FRAME_BYTES = 4 * 1024
     const val TAG = "NidoLan"
 
     private val ADDRESS_RE = Regex("^LAN:(\\d{1,3}(?:\\.\\d{1,3}){3}):(\\d{1,5})$")
@@ -445,6 +453,7 @@ class NidoLanManager(
   ) {
     private val readerThread = Thread({ readLoop() }, "nido-lan-read")
     @Volatile private var closed = false
+    private var framesRead = 0
 
     fun start() {
       readerThread.isDaemon = true
@@ -486,6 +495,11 @@ class NidoLanManager(
             listener()?.onError("Frame inválido por Wi-Fi local (${bodyLen} bytes): conexión cerrada.")
             break
           }
+          if (framesRead < HANDSHAKE_FRAMES && bodyLen > MAX_HANDSHAKE_FRAME_BYTES) {
+            Log.w(TAG, "frame de handshake demasiado grande ($bodyLen bytes): conexión cerrada")
+            break
+          }
+          framesRead++
           val body = ByteArray(bodyLen)
           readFully(input, body, bodyLen)
           listener()?.onFrame(address, Base64.encodeToString(body, Base64.NO_WRAP))

@@ -710,9 +710,11 @@ class NegotiationService {
       this.sessions.set(negotiationId, session);
 
       if (outcome.action === "auto_accept") {
-        session.state = "ACCEPTED";
-        session.updatedAt = Date.now();
-        this.emit({ type: "accepted", session });
+        // AUDIT-2026-10-11 (NEG-1): nunca aceptar por el usuario. Antes una
+        // propuesta con scopes de lectura/escritura (read:notes, write:notes…)
+        // quedaba ACCEPTED sola, sin que nadie la viera. Ahora queda
+        // PROPOSED y la tarjeta muestra Aceptar/Rechazar como cualquier otra.
+        this.emit({ type: "proposal_received", session });
       } else if (outcome.action === "queued_for_approval") {
         // La UI debe mostrar ApprovalCard
         this.emit({ type: "ask_required", session, taskId: outcome.taskId });

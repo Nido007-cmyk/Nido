@@ -111,6 +111,12 @@ function fmtTime(ts: number): string {
   return `${hh}:${mm}`;
 }
 
+/**
+ * DIAL-ROLE-2026-10-11: cuánto espera la tablet que "escucha" a que la otra
+ * llame antes de llamar ella misma al tocar Conectar.
+ */
+const LISTENER_WAIT_MS = 6000;
+
 export function NidoScreen({ onClose }: { onClose: () => void }) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
@@ -796,10 +802,25 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
         // Connect al mismo tiempo creaba carreras de sockets RFCOMM).
         const shouldDial = await mRef.current.shouldDialPeer(target);
         if (!shouldDial) {
-          // Soy el listener: no barro, solo espero. El servidor ya está
-          // corriendo (startLink al abrir la pantalla P2P).
+          // Soy el listener: primero espero a que el otro llame (evita el
+          // choque de dos llamadas a la vez). DIAL-ROLE-2026-10-11: antes
+          // aquí se terminaba y, si el otro no llamaba, tocar Conectar en
+          // esta tablet no hacía nada. Ahora, si en unos segundos no llegó
+          // su llamada, llamo yo (el desempate de llamadas simultáneas del
+          // transporte cubre el caso de que ambos llamen a la vez).
           setNotice(t("nido.waitingForPeer", { name }));
-          return true;
+          const deadline = Date.now() + LISTENER_WAIT_MS;
+          while (Date.now() < deadline) {
+            await new Promise((r) => setTimeout(r, 500));
+            const live = mRef.current.connectedPeers().map((p) => p.toLowerCase());
+            if (live.includes(target)) {
+              reconnectManager.cancel(target);
+              setNotice(t("nido.connectedNotice", { alias: name }));
+              await loadContacts();
+              return true;
+            }
+          }
+          setNotice(t("nido.dialingInstead", { name }));
         }
         const candidates = await (async () => {
           // BUG-6-2026-10-07: el barrido solo probaba MACs descubiertas, pero

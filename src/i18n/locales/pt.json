@@ -711,14 +711,15 @@
     "connecting": "Conectando…",
     "noNearbyForPaired": "Nenhum dispositivo próximo encontrado. Verifique se o Bluetooth está ligado.",
     "pairedNotFound": "Não foi possível conectar a {{name}}. Verifique se o outro tablet tem o NIDO aberto.",
-    "waitingForPeer": "Aguardando {{name}} conectar. Mantenha o NIDO aberto nesta tela.",
+    "waitingForPeer": "Aguardando {{name}} conectar… Se não chamar em alguns segundos, este tablet chama.",
     "troubleshootTitle": "Problemas para conectar?",
-    "troubleshootBody": "Se não conectar, tente nesta ordem:\n\n1. Reinicie os dois tablets.\n2. Desligue o WiFi nos dois (o WiFi interfere no Bluetooth).\n3. Em Configurações do Android → Bluetooth, emparelhe os tablets entre si.\n4. Abra o NIDO e conecte por aqui.\n5. Se desconectar em segundo plano: Configurações → Apps → NIDO → Bateria → Sem restrições.",
+    "troubleshootBody": "Se não conectar, tente nesta ordem:\n\n1. Abra o NIDO nesta tela nos dois tablets e toque em Conectar em qualquer um.\n2. Ligue o Bluetooth nos dois. Se o Bluetooth falhar, coloque os dois na mesma rede Wi-Fi (não precisa de internet): o NIDO usa o Wi-Fi local como reserva.\n3. Reinicie os dois tablets.\n4. Em Configurações do Android → Bluetooth, emparelhe os tablets entre si.\n5. Se desconectar em segundo plano: Configurações → Apps → NIDO → Bateria → Sem restrições.",
     "deleteContactTitle": "Excluir “{{name}}”?",
     "deleteContactConfirm": "Isso remove o contato e toda a conversa com ele deste dispositivo. Para falar de novo será preciso emparelhar escaneando o código QR. Não pode ser desfeito.",
     "deleteContactLabel": "Excluir o contato {{name}}",
     "contactDeleted": "“{{name}}” foi excluído.",
-    "deleteContactFailed": "Não foi possível excluir o contato."
+    "deleteContactFailed": "Não foi possível excluir o contato.",
+    "dialingInstead": "{{name}} não chamou: conectando a partir deste tablet…"
   },
   "notifications": {
     "reminderChannel": "Lembretes do NIDO",

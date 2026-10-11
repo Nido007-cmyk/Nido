@@ -501,6 +501,17 @@ describe("NegotiationService: routing y state machine", () => {
     ).toBe(false);
   });
 
+  it("AUDIT-2026-10-11 NEG-1: una propuesta read:notes NO se acepta sola: espera al usuario", async () => {
+    const proposal = makeProposal();
+    const signed = signNegotiationMessage(aliceKeys.secretKey, alicePkHex, "PROPOSE", proposal.proposalId, proposal);
+    events = [];
+    await negotiationService.handleEnvelope(makeEnvelope("PROPOSE", "neg-no-auto", signed) as any);
+    const s = negotiationService.listSessions().find((x) => x.negotiationId === "neg-no-auto");
+    expect(s?.state).toBe("PROPOSED");
+    expect(events.some((e) => e.type === "accepted")).toBe(false);
+    expect(events.some((e) => e.type === "proposal_received")).toBe(true);
+  });
+
   it("DELETE-NEGOTIATIONS: el usuario puede borrar una negociación y no resucita", async () => {
     const proposal = makeProposal();
     const sign = () =>
