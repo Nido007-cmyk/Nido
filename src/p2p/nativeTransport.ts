@@ -290,6 +290,17 @@ export interface NidoBluetoothTransportOpts {
   nonceCache?: HelloNonceCache;
 }
 
+/**
+ * RECONNECT-AFTER-CRASH 2026-10-10: presupuesto de reconexión automática tras
+ * una desconexión no solicitada. Backoff 2s, 4s, 8s, 16s, 32s, 60s (~2 min en
+ * total) para cubrir el tiempo que tarda un peer en reabrir la app tras un
+ * cierre inesperado.
+ */
+export const RECONNECT_MAX_ATTEMPTS = 6;
+export function reconnectDelayMs(attempt: number): number {
+  return Math.min(2000 * 2 ** attempt, 60000);
+}
+
 export class NidoBluetoothTransport implements P2PTransport {
   readonly name = "nido-bluetooth";
   readonly available: boolean;
@@ -1609,12 +1620,12 @@ export class NidoBluetoothTransport implements P2PTransport {
     }
     if (this.stopped) return;
     const attempts = this.reconnectAttempts.get(mac) ?? 0;
-    if (attempts >= 5) {
+    if (attempts >= RECONNECT_MAX_ATTEMPTS) {
       this.reconnectAttempts.delete(mac);
       return;
     }
     this.cancelReconnect(mac);
-    const delayMs = Math.min(1000 * 2 ** attempts, 30000);
+    const delayMs = reconnectDelayMs(attempts);
     this.reconnectAttempts.set(mac, attempts + 1);
     const timer = setTimeout(() => {
       this.reconnectTimers.delete(mac);
@@ -1631,10 +1642,16 @@ export class NidoBluetoothTransport implements P2PTransport {
       } catch {
         return;
       }
+      // RECONNECT-AFTER-CRASH 2026-10-10: antes, si este connect() fallaba
+      // (p. ej. el peer se cayó y tarda en reabrir la app), la cadena de
+      // reintentos se detenía tras el PRIMER fallo: nadie volvía a programar.
+      // Ahora un fallo reprograma el siguiente intento (acotado por
+      // RECONNECT_MAX_ATTEMPTS). Un éxito borra reconnectAttempts en la
+      // ruta de handshake completado.
       void this.connect(mac).catch(() => {
-        // El backoff de connect() maneja sus reintentos; si falla del todo,
-        // el próximo onNativeDisconnected (si hubo conexión parcial) o el
-        // usuario reintentará manualmente.
+        if (this.stopped) return;
+        if (this.macToPk.has(mac) || this.pending.has(mac)) return;
+        this.scheduleReconnect(mac, pkHex);
       });
     }, delayMs);
     this.reconnectTimers.set(mac, timer);
