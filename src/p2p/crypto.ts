@@ -70,7 +70,13 @@ export function installSecurePrng(): void {
     assertExpoCryptoShape(cryptoMod, "p2p/crypto.installSecurePrng");
     const { getRandomBytes } = cryptoMod;
     setPRNG((x, n) => {
-      x.set(getRandomBytes(n));
+      const r = getRandomBytes(n);
+      // Auditoría 2026-10-10 (L2): si la fuente devolviera menos bytes,
+      // `x.set` dejaría ceros sin aviso. Fail-closed: mejor lanzar.
+      if (!r || r.length !== n) {
+        throw new Error("PRNG: expo-crypto devolvió una longitud inesperada.");
+      }
+      x.set(r);
     });
   } catch {
     /* sin PRNG: queda el error explícito de TweetNaCl (fail-closed) */
@@ -108,19 +114,35 @@ export function fromHex(hex: string): Uint8Array {
   return out;
 }
 
+/**
+ * UTF-8 bien formado. Un surrogate suelto se codifica como U+FFFD (igual que
+ * `TextEncoder`). Auditoría 2026-10-10 (L1): antes un surrogate alto seguido
+ * de un carácter que no era surrogate bajo producía bytes basura y se
+ * "comía" ese carácter.
+ *
+ * Para cadenas bien formadas (JSON.stringify, hex) la salida es idéntica a
+ * la versión anterior: no cambia ninguna firma, hash ni frame en el cable.
+ */
 export function utf8Encode(s: string): Uint8Array {
   const out: number[] = [];
   for (let i = 0; i < s.length; i++) {
     let c = s.charCodeAt(i);
+    if (c >= 0xd800 && c <= 0xdfff) {
+      if (c <= 0xdbff && i + 1 < s.length) {
+        const lo = s.charCodeAt(i + 1);
+        if (lo >= 0xdc00 && lo <= 0xdfff) {
+          i++;
+          const cp = 0x10000 + ((c - 0xd800) << 10) + (lo - 0xdc00);
+          out.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3f), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f));
+          continue;
+        }
+      }
+      c = 0xfffd; // surrogate suelto
+    }
     if (c < 0x80) {
       out.push(c);
     } else if (c < 0x800) {
       out.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f));
-    } else if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length) {
-      const hi = c;
-      const lo = s.charCodeAt(++i);
-      const cp = 0x10000 + ((hi - 0xd800) << 10) + (lo - 0xdc00);
-      out.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3f), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f));
     } else {
       out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
     }
@@ -128,23 +150,107 @@ export function utf8Encode(s: string): Uint8Array {
   return Uint8Array.from(out);
 }
 
-export function utf8Decode(bytes: Uint8Array): string {
-  let s = "";
-  for (let i = 0; i < bytes.length; ) {
-    const b = bytes[i++];
-    if (b < 0x80) {
-      s += String.fromCharCode(b);
-    } else if ((b & 0xe0) === 0xc0) {
-      s += String.fromCharCode(((b & 0x1f) << 6) | (bytes[i++] & 0x3f));
-    } else if ((b & 0xf0) === 0xe0) {
-      s += String.fromCharCode(((b & 0x0f) << 12) | ((bytes[i++] & 0x3f) << 6) | (bytes[i++] & 0x3f));
-    } else {
-      const cp = ((b & 0x07) << 18) | ((bytes[i++] & 0x3f) << 12) | ((bytes[i++] & 0x3f) << 6) | (bytes[i++] & 0x3f);
+/**
+ * Decodificador UTF-8 según el algoritmo WHATWG (el mismo que `TextDecoder`).
+ * - fatal=true: lanza ante cualquier secuencia inválida (truncada,
+ *   sobrelarga, surrogate codificado, > U+10FFFF, byte de inicio prohibido).
+ * - fatal=false: sustituye cada subparte inválida máxima por U+FFFD,
+ *   byte a byte idéntico a `new TextDecoder()`.
+ * Implementación propia (sin depender del `TextDecoder` de Hermes, cuyo
+ * soporte de `fatal` no está garantizado).
+ */
+function decodeUtf8(bytes: Uint8Array, fatal: boolean): string {
+  const units: number[] = [];
+  const parts: string[] = [];
+  const flush = () => {
+    if (units.length > 0) {
+      parts.push(String.fromCharCode.apply(null, units));
+      units.length = 0;
+    }
+  };
+  const emit = (cp: number) => {
+    if (cp > 0xffff) {
       const v = cp - 0x10000;
-      s += String.fromCharCode(0xd800 + (v >> 10), 0xdc00 + (v & 0x3ff));
+      units.push(0xd800 + (v >> 10), 0xdc00 + (v & 0x3ff));
+    } else {
+      units.push(cp);
+    }
+    if (units.length >= 8192) flush();
+  };
+  const fail = () => {
+    if (fatal) throw new Error("UTF-8 inválido.");
+    emit(0xfffd);
+  };
+  let needed = 0;
+  let seen = 0;
+  let cp = 0;
+  let lower = 0x80;
+  let upper = 0xbf;
+  for (let i = 0; i < bytes.length; i++) {
+    const b = bytes[i];
+    if (needed === 0) {
+      if (b <= 0x7f) {
+        emit(b);
+      } else if (b >= 0xc2 && b <= 0xdf) {
+        needed = 1;
+        cp = b & 0x1f;
+      } else if (b >= 0xe0 && b <= 0xef) {
+        if (b === 0xe0) lower = 0xa0;
+        if (b === 0xed) upper = 0x9f;
+        needed = 2;
+        cp = b & 0x0f;
+      } else if (b >= 0xf0 && b <= 0xf4) {
+        if (b === 0xf0) lower = 0x90;
+        if (b === 0xf4) upper = 0x8f;
+        needed = 3;
+        cp = b & 0x07;
+      } else {
+        fail();
+      }
+      continue;
+    }
+    if (b < lower || b > upper) {
+      cp = 0;
+      needed = 0;
+      seen = 0;
+      lower = 0x80;
+      upper = 0xbf;
+      fail();
+      i--; // se reprocesa este byte como posible inicio
+      continue;
+    }
+    lower = 0x80;
+    upper = 0xbf;
+    cp = (cp << 6) | (b & 0x3f);
+    seen++;
+    if (seen === needed) {
+      emit(cp);
+      cp = 0;
+      needed = 0;
+      seen = 0;
     }
   }
-  return s;
+  if (needed !== 0) fail();
+  flush();
+  return parts.join("");
+}
+
+/**
+ * Decodifica UTF-8 de forma ESTRICTA: lanza ante bytes inválidos.
+ * Auditoría 2026-10-10 (L1): la versión anterior aceptaba secuencias
+ * truncadas y sobrelargas (p. ej. `C0 AF` → "/"), que un decodificador
+ * estándar rechaza; eso abre diferencias entre implementaciones.
+ */
+export function utf8Decode(bytes: Uint8Array): string {
+  return decodeUtf8(bytes, true);
+}
+
+/**
+ * Decodifica UTF-8 sin lanzar: lo inválido se convierte en U+FFFD.
+ * Solo para MOSTRAR texto no confiable (p. ej. vista previa de un documento).
+ */
+export function utf8DecodeLossy(bytes: Uint8Array): string {
+  return decodeUtf8(bytes, false);
 }
 
 /* ---------- identidad ---------- */

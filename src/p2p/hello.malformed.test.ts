@@ -121,7 +121,9 @@ describe("parseHello — malformed/adversarial inputs", () => {
   });
 
   it("ignores extra unknown fields instead of failing", () => {
-    expect(() => parseHello(helloBody({ evil: "x".repeat(10000) }))).not.toThrow();
+    // Forward-compat: unknown fields are ignored as long as the frame stays
+    // under the handshake size cap (oversized frames: see "size cap" below).
+    expect(() => parseHello(helloBody({ evil: "x".repeat(200) }))).not.toThrow();
   });
 });
 
@@ -141,5 +143,16 @@ describe("extractMac — alias parsing", () => {
 
   it("does not match a truncated MAC", () => {
     expect(extractMac("AB:CD:EF:12:34")).toBeNull();
+  });
+});
+
+describe("parseHello — size cap", () => {
+  it("rejects an oversized HELLO before parsing (audit 2026-10-10, L4)", () => {
+    // A valid HELLO padded with an extra field past the 1 KB cap.
+    const big = helloBody({ pad: "x".repeat(2000) });
+    expect(big.length).toBeGreaterThan(1024);
+    expect(() => parseHello(big)).toThrow("HELLO demasiado grande.");
+    // A legitimate HELLO stays far below the cap.
+    expect(buildHello(PK, EPH, NONCE, TS, SIG).length).toBeLessThan(512);
   });
 });
