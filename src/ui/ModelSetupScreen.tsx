@@ -44,6 +44,7 @@ import { UsageStatsContent } from "./UsageStatsContent";
 import { VoiceSettings } from "./VoiceSettings";
 import { MemorySettings } from "./MemorySettings";
 import { AccordionSection } from "./AccordionSection";
+import { HardwareProtectionCard } from "./HardwareProtectionCard";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { SetupWizardScreen } from "./SetupWizardScreen";
 import { ThemeSelector } from "./components/ThemeSelector";
@@ -310,6 +311,12 @@ export function ModelSetupScreen(props: Props) {
       </View>
 
       <ScrollView contentContainerStyle={styles.accordionScroll}>
+        {/* 0.1.9: la protección por hardware, primera en Ajustes (antes
+            escondida a media pantalla de Acerca de). */}
+        <AccordionSection icon="security" title={t("modelSetupScreen.sections.security")}>
+          <HardwareProtectionCard />
+        </AccordionSection>
+
         <AccordionSection icon="chat" title={t("modelSetupScreen.sections.tone")}>
           <PersonalitySettings />
         </AccordionSection>

@@ -461,6 +461,38 @@ function norm(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
 }
 
+/**
+ * 0.1.9: las salidas de varios handlers están solo en español. Para en/pt
+ * se traducen las frases fijas conocidas (los datos del usuario —nombres,
+ * mensajes, códigos— no se tocan). Exportada para tests.
+ */
+export function localizeHandlerText(text: string, lang: RouterLang): string {
+  if (lang === "es") return text;
+  const L = (en: string, pt: string) => (lang === "en" ? en : pt);
+  return text
+    .replace(/^No tienes mensajes NIDO sin leer\.$/m, L("You have no unread NIDO messages.", "Você não tem mensagens NIDO não lidas."))
+    .replace(
+      /Pendiente de tu aprobación — revísala con nido_review_tasks \(id ([^)]+)\)\./g,
+      (_m, id) => L(`Waiting for your approval — say “pending tasks” (id ${id}).`, `Aguardando sua aprovação — diga “tarefas pendentes” (id ${id}).`),
+    )
+    .replace(
+      /^Tu código de emparejamiento NIDO \(muéstralo como QR para que el otro teléfono lo escanee\):/m,
+      L("Your NIDO pairing code (show it as a QR so the other phone can scan it):", "Seu código de pareamento NIDO (mostre como QR para o outro telefone escanear):"),
+    )
+    .replace(/Huella para verificar en persona:/g, L("Fingerprint to check in person:", "Impressão digital para conferir pessoalmente:"))
+    .replace(
+      /^Mensaje para «(.+?)» guardado cifrado en la cola de salida: se entregará cuando su NIDO esté al alcance \(Bluetooth\)\.$/m,
+      (_m, to) => L(`Message for “${to}” saved encrypted in the outbox: it will be delivered when their NIDO is in range.`, `Mensagem para “${to}” salva criptografada na fila: será entregue quando o NIDO dele estiver ao alcance.`),
+    )
+    .replace(
+      /^Mensaje enviado a «(.+?)» por NIDO \(cifrado de extremo a extremo\)\.$/m,
+      (_m, to) => L(`Message sent to “${to}” via NIDO (end-to-end encrypted).`, `Mensagem enviada para “${to}” pelo NIDO (criptografia de ponta a ponta).`),
+    )
+    .replace(/^No elegiste ningún archivo\.$/m, L("You didn't pick a file.", "Você não escolheu nenhum arquivo."))
+    .replace(/^Archivo «(.+?)» \((\d+) KB\):/m, (_m, n, kb) => L(`File “${n}” (${kb} KB):`, `Arquivo “${n}” (${kb} KB):`))
+    .replace(/^No hay tareas NIDO pendientes[^\n]*$/m, L("There are no NIDO tasks pending approval.", "Não há tarefas NIDO aguardando aprovação."));
+}
+
 /** Traducción mínima de las salidas en español de list_calendar_events. */
 function localizeCalendarList(text: string, label: CalendarRange, lang: RouterLang): string {
   const range = RANGE_WORDS[label][lang];
@@ -575,14 +607,14 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
         if (!action.text) return say(routerMessage("nidoAskText", lang, { to: action.to }));
         const out = await run("nido_send_message", { to: action.to, text: action.text });
         if (out.status !== "executed") return failure(out);
-        return say(out.text);
+        return say(localizeHandlerText(out.text, lang));
       }
 
       case "nidoInbox":
       case "nidoCode":
       case "nidoTasks": {
         const out = await run(tool, {});
-        return out.status === "executed" ? say(out.text) : failure(out);
+        return out.status === "executed" ? say(localizeHandlerText(out.text, lang)) : failure(out);
       }
 
       case "openLink": {
@@ -607,7 +639,7 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
           if (res.status === "executed") return say(`${text.slice(0, nl >= 0 ? nl : text.length)}\n\n${res.text}`);
         }
         const shown = text.length > 1500 ? `${text.slice(0, 1500)}\n${routerMessage("fileTooLongCut", lang)}` : text;
-        return say(shown);
+        return say(localizeHandlerText(shown, lang));
       }
     }
   } catch (e) {

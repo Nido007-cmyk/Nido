@@ -119,6 +119,7 @@
       "subtitle": "NIDO — Your agent. Your world."
     },
     "sections": {
+      "security": "Security",
       "tone": "How I talk to you",
       "models": "AI Models",
       "knowledgeBase": "Your library",

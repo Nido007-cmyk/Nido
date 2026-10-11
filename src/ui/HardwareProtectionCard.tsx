@@ -5,7 +5,7 @@
  */
 
 /**
- * HardwareProtectionCard — "Protección por hardware" en Acerca de.
+ * HardwareProtectionCard — "Protección por hardware" en Ajustes → Seguridad.
  * Diseño: docs/design/BLOQUEO_BIOMETRICO_REAL.md (nivel A).
  *
  * Activa/desactiva la bóveda: la llave de la base queda envuelta por una

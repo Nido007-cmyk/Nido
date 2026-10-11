@@ -119,6 +119,7 @@
       "subtitle": "NIDO — Seu agente. Seu mundo."
     },
     "sections": {
+      "security": "Segurança",
       "tone": "Como falo com você",
       "models": "Modelos de IA",
       "knowledgeBase": "Sua biblioteca",
