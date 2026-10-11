@@ -20,6 +20,17 @@ import * as Notifications from "expo-notifications";
 
 const REMINDER_PREFIX = "nido-reminder-";
 const BRIEFING_IDENTIFIER = "nido-daily-briefing";
+/** Tope para programar un aviso (ms): nunca bloquear la respuesta del chat. */
+export const SCHEDULE_TIMEOUT_MS = 5_000;
+
+/** Resuelve con `fallback` si `p` no termina a tiempo; nunca rechaza. */
+export function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms);
+  });
+  return Promise.race([p.catch(() => fallback), deadline]).finally(() => clearTimeout(timer));
+}
 
 /**
  * Notification copy in the user's language. Resolved lazily — never a
@@ -131,32 +142,31 @@ export async function scheduleReminderNotification(
     return false;
   }
   try {
-    // 2026-10-10: ELIMINADO el Alert de "Permiso de alarmas".
-    // El Alert (incluso diferido con setTimeout) se correlacionó con
-    // cierres duros del app al enviar recordatorios en la Tab A9+.
-    // La verificación de canScheduleExactAlarms se mantiene para
-    // telemetría, pero sin UI que interrumpa el flujo.
-    try {
-      const { canScheduleExactAlarms } = await import("exact-alarm");
-      await canScheduleExactAlarms();
-    } catch {
-      /* el módulo puede no estar disponible en tests */
-    }
-    await cancelReminderNotification(reminderId);
-    await Notifications.scheduleNotificationAsync({
-      identifier: REMINDER_PREFIX + reminderId,
-      content: {
-        title: notifyStrings().reminderTitle,
-        body: text,
-        sound: "default",
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: at,
-        channelId: "nido-reminders",
-      },
-    });
-    return true;
+    // CRASH-2026-10-10: eliminada también la consulta a `exact-alarm`. Ese
+    // módulo nativo no se compila en el APK (no tiene build.gradle), así que
+    // la llamada solo fallaba en silencio; el resultado no se usaba.
+    // expo-notifications ya decide solo entre alarma exacta e inexacta.
+    // CRASH-2026-10-10: el aviso se programa con tope de tiempo. Si el lado
+    // nativo nunca responde, la confirmación del recordatorio no se queda
+    // colgada: el recordatorio ya está guardado y se avisa al abrir la app.
+    const scheduled = (async () => {
+      await cancelReminderNotification(reminderId);
+      await Notifications.scheduleNotificationAsync({
+        identifier: REMINDER_PREFIX + reminderId,
+        content: {
+          title: notifyStrings().reminderTitle,
+          body: text,
+          sound: "default",
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: at,
+          channelId: "nido-reminders",
+        },
+      });
+      return true;
+    })();
+    return await withTimeout(scheduled, SCHEDULE_TIMEOUT_MS, false);
   } catch {
     return false;
   }

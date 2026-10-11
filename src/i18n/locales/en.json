@@ -1121,5 +1121,15 @@
       "5": "Friday",
       "6": "Saturday"
     }
+  },
+  "crashReport": {
+    "title": "Crash diagnostics",
+    "body": "If NIDO closed by itself, the reason Android recorded shows up here. Copy the report and paste it into a bug report: it does not include your messages, notes or memory.",
+    "lastFailure": "Last failure: {{reason}} ({{when}} UTC)",
+    "lastJsCrash": "An app failure was recorded.",
+    "none": "No failures recorded.",
+    "copy": "Copy report",
+    "copied": "Copied",
+    "clear": "Clear"
   }
 }

@@ -150,3 +150,20 @@ describe("FIX 2026-10-08: notificación entregada marca el recordatorio", () => 
     expect(memMocks.completeReminder).toHaveBeenCalledWith("abc123");
   });
 });
+
+describe("withTimeout (CRASH-2026-10-10)", () => {
+  it("devuelve el resultado si llega a tiempo", async () => {
+    const { withTimeout } = await import("./notifications");
+    await expect(withTimeout(Promise.resolve(true), 50, false)).resolves.toBe(true);
+  });
+
+  it("devuelve el valor de reserva si el nativo nunca responde", async () => {
+    const { withTimeout } = await import("./notifications");
+    await expect(withTimeout(new Promise<boolean>(() => {}), 20, false)).resolves.toBe(false);
+  });
+
+  it("un rechazo se convierte en el valor de reserva (nunca lanza)", async () => {
+    const { withTimeout } = await import("./notifications");
+    await expect(withTimeout(Promise.reject(new Error("x")), 50, false)).resolves.toBe(false);
+  });
+});
