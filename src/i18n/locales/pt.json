@@ -489,7 +489,11 @@
     "privacyBody": "O NIDO não tem contas, nem análise de uso, nem servidores próprios. As únicas conexões que faz são os downloads que você inicia (modelos e pacotes de conhecimento), e elas aparecem no registro de rede acima. A política de privacidade e os termos de uso completos estão em PRIVACY.md e TERMS.md no repositório."
   },
   "sourceFootnotes": {
-    "title": "Fontes offline · ordenadas por relevância",
+    "title": "Fontes offline consultadas",
+    "titleGrounded": "Baseada nestas fontes offline",
+    "titlePartial": "Baseada nestas fontes · frases sem respaldo removidas",
+    "titleAbstained": "Há fontes, mas não respondem exatamente a isso",
+    "titleUnverified": "Fontes consultadas · sem verificação automática (outro idioma)",
     "localIndex": "Índice local",
     "relevanceCaption": "Os números indicam força de correspondência absoluta com o índice offline, não confiança."
   },

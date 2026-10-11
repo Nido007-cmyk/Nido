@@ -16,6 +16,8 @@
  * `src/routing/classify.ts` (regex deterministas, cero ML para decidir).
  */
 
+import { extractContactAction } from "./contactRouter";
+
 export type AgentIntent = "conversar" | "recordar" | "actuar";
 
 const REMEMBER_PATTERNS: RegExp[] = [
@@ -65,7 +67,10 @@ const ACT_PATTERNS: RegExp[] = [
   /\bagenda\b/i,
   /crea (un |una )?evento/i,
   /a[ñn]ade (un |una )?(evento|cita)/i,
-  /qu[ée] tengo/i,
+  // TOOLS-AUDIT 2026-10-11: antes /qué tengo/ a secas mandaba "¿qué tengo
+  // que hacer para aprender inglés?" a las herramientas. Ahora exige un
+  // marcador de agenda (día, semana, "agendado", "en mi agenda"…).
+  /qu[ée] tengo (?:hoy|ma[ñn]ana|pasado ma[ñn]ana|esta semana|este (?:fin|mes)|el (?:lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|\d)|para (?:hoy|ma[ñn]ana|el)|agendado|pendiente|en (?:la|mi) agenda)/i,
   /cu[áa]ndo tengo/i,
   /mis (eventos|citas)/i,
   /llama a\b/i,
@@ -114,6 +119,15 @@ const ACT_PATTERNS: RegExp[] = [
   /^\s*\(?\d[\d\s().]*[+\-*/^][\d\s+\-*/().%^]*\d\)?\s*[=?]*\s*$/,
   /\b\d+(?:[.,]\d+)?\s*% (de|of)\b/i,
   /\busa la (habilidad|skill)\b/i,
+  // TOOLS-AUDIT 2026-10-11: archivos y skills en inglés y portugués.
+  /\b(read|open|analy[sz]e|load) (a |the |this |my )?(file|document|csv)\b/i,
+  /\buse the skill\b/i,
+  /\b(l[eê]|ler|abre|abrir|analisa|analisar) (o |um |este |meu )?(arquivo|documento|csv)\b/i,
+  /\busa a (habilidade|skill)\b/i,
+  // Calendario en inglés y portugués.
+  /\bwhat do i have (today|tomorrow|this week|on \w+)\b/i,
+  /\b(minha agenda|meus (eventos|compromissos))\b/i,
+  /\b(cria|crie|adiciona|adicione|marca|marque) (um |uma )?(evento|compromisso)\b/i,
   /analiza (esta|la) tabla/i,
   // Inglés.
   /\bsend (a |an )?(message|text|sms)\b/i,
@@ -155,6 +169,9 @@ export function classifyIntent(text: string): AgentIntent {
   const t = (text ?? "").trim();
   if (!t) return "conversar";
   if (REMEMBER_BEFORE_ACT_PATTERNS.some((re) => re.test(t))) return "recordar";
+  // TOOLS-AUDIT 2026-10-11: contactos / llamadas / SMS en es, en y pt
+  // ("Find my cellphone contacts" no casaba ningún patrón y caía al chat).
+  if (extractContactAction(t)) return "actuar";
   if (ACT_PATTERNS.some((re) => re.test(t))) return "actuar";
   if (REMEMBER_PATTERNS.some((re) => re.test(t))) return "recordar";
   return "conversar";

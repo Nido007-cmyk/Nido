@@ -71,3 +71,36 @@ describe("classifyIntent", () => {
     expect(classifyIntent("mi color favorito es el azul")).toBe("conversar");
   });
 });
+
+// TOOLS-AUDIT 2026-10-11: evidencia física y cobertura es/en/pt.
+describe("classifyIntent — contactos, llamadas, SMS, archivos (es/en/pt)", () => {
+  it.each([
+    "Find my cellphone contacts",
+    "Busca el contacto Ruben",
+    "Call",
+    "call Ruben",
+    "llama a Ana",
+    "liga para a Ana",
+    "procura o contato Ruben",
+    "text Ana that I'm late",
+    "what's Ana's number?",
+    "read a file",
+    "analisa o arquivo",
+    "use the skill analiza-datos",
+    "what do I have tomorrow",
+    "minha agenda",
+    "¿qué tengo el lunes?",
+    "qué tengo mañana",
+  ])("%p → actuar", (text) => {
+    expect(classifyIntent(text)).toBe("actuar");
+  });
+
+  it.each([
+    // Antes /qué tengo/ a secas mandaba esto a las herramientas.
+    "¿qué tengo que hacer para aprender inglés?",
+    "qué tengo que estudiar para el examen",
+    "¿cómo se llama la capital de Francia?",
+  ])("%p → conversar", (text) => {
+    expect(classifyIntent(text)).toBe("conversar");
+  });
+});

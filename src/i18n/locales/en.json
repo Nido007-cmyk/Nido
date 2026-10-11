@@ -489,7 +489,11 @@
     "privacyBody": "NIDO has no accounts, no analytics and no servers of its own. The only connections it makes are the downloads you start (models and knowledge packs), and they are listed in the network log above. The full privacy policy and terms of use are in PRIVACY.md and TERMS.md in the repository."
   },
   "sourceFootnotes": {
-    "title": "Offline sources · relevance-ranked",
+    "title": "Offline sources consulted",
+    "titleGrounded": "Based on these offline sources",
+    "titlePartial": "Based on these sources · unsupported sentences removed",
+    "titleAbstained": "Sources found, but they don't answer this exactly",
+    "titleUnverified": "Sources consulted · not auto-checked (different language)",
     "localIndex": "Local index",
     "relevanceCaption": "Numbers are absolute match strength against the offline index — not confidence."
   },

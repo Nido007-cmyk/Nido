@@ -53,7 +53,15 @@ export interface DispatchOptions {
    * for an irreversible action. Should return true if the user confirmed.
    * If omitted and confirmation is required, the call is blocked.
    */
-  onConfirm?: (decision: PolicyDecision) => Promise<boolean>;
+  onConfirm?: (
+    decision: PolicyDecision,
+    /**
+     * TOOLS-AUDIT 2026-10-11: qué se va a ejecutar exactamente, para que el
+     * diálogo muestre el número / texto en vez de un motivo genérico.
+     * Opcional para no romper llamadores existentes.
+     */
+    action?: { tool: string; args: Record<string, unknown> }
+  ) => Promise<boolean>;
 }
 
 export function validateToolCall(call: {
@@ -67,13 +75,24 @@ export function validateToolCall(call: {
   if (!tool) {
     return { ok: false, error: `herramienta desconocida: "${call.name}"` };
   }
-  const args = call.arguments ?? {};
-  if (typeof args !== "object" || Array.isArray(args)) {
+  const rawArgs = call.arguments ?? {};
+  if (typeof rawArgs !== "object" || Array.isArray(rawArgs)) {
     return { ok: false, error: `argumentos inválidos para "${call.name}"` };
+  }
+  // TOOLS-AUDIT 2026-10-11: el 0.5B suele mandar números entre comillas
+  // ({"value": "5"}) y la validación estricta lo rechazaba. Se convierte
+  // SOLO un string que sea un número decimal completo; cualquier otra
+  // cosa sigue fallando igual que antes.
+  const args: Record<string, unknown> = { ...(rawArgs as Record<string, unknown>) };
+  for (const [paramName, def] of Object.entries(tool.parameters)) {
+    const v = args[paramName];
+    if (def.type === "number" && typeof v === "string" && NUMERIC_STRING_RE.test(v.trim())) {
+      args[paramName] = Number(v.trim().replace(",", "."));
+    }
   }
 
   for (const [paramName, def] of Object.entries(tool.parameters)) {
-    const value = (args as Record<string, unknown>)[paramName];
+    const value = args[paramName];
     if (value === undefined || value === null) {
       if (def.required) {
         return { ok: false, error: `"${call.name}" requiere el parámetro "${paramName}"` };
@@ -95,8 +114,11 @@ export function validateToolCall(call: {
     }
   }
 
-  return { ok: true, tool, args: args as Record<string, unknown> };
+  return { ok: true, tool, args };
 }
+
+/** Número decimal completo: "5", "-2.5", "3,75". Nada de "5 km" ni "0x10". */
+const NUMERIC_STRING_RE = /^-?\d+(?:[.,]\d+)?$/;
 
 /**
  * Valida, aplica la política de seguridad y ejecuta. Si la validación falla,
@@ -111,16 +133,39 @@ export async function dispatchToolCall(
   handlers: Record<string, ToolHandler>,
   options: DispatchOptions = {}
 ): Promise<string> {
+  return (await dispatchToolCallDetailed(call, handlers, options)).text;
+}
+
+/** Resultado de un despacho con su estado (para rutas deterministas). */
+export interface DispatchOutcome {
+  status: "executed" | "invalid" | "disabled" | "blocked" | "cancelled" | "failed";
+  text: string;
+}
+
+/**
+ * Igual que dispatchToolCall (misma compuerta, mismo orden: validación →
+ * interruptor del usuario → política → confirmación → handler), pero
+ * devuelve también el estado, para que los pre-routers deterministas
+ * respondan al usuario en su idioma sin interpretar el texto.
+ */
+export async function dispatchToolCallDetailed(
+  call: { name: string; arguments?: Record<string, unknown> | null },
+  handlers: Record<string, ToolHandler>,
+  options: DispatchOptions = {}
+): Promise<DispatchOutcome> {
   const validated = validateToolCall(call);
   if (!validated.ok) {
     actionLog.record(typeof call?.name === "string" && call.name ? call.name : "?", "invalid");
-    return `Error de herramienta: ${validated.error}.`;
+    return { status: "invalid", text: `Error de herramienta: ${validated.error}.` };
   }
 
   // Permisos del usuario: una herramienta apagada no se ejecuta nunca.
   if (isToolDisabled(validated.tool.name)) {
     actionLog.record(validated.tool.name, "disabled");
-    return `La herramienta "${validated.tool.name}" está desactivada por el usuario en los permisos del agente. No la uses; dile al usuario que puede activarla en Acerca de.`;
+    return {
+      status: "disabled",
+      text: `La herramienta "${validated.tool.name}" está desactivada por el usuario en los permisos del agente. No la uses; dile al usuario que puede activarla en Acerca de.`,
+    };
   }
 
   // Policy Engine: evaluar antes de ejecutar.
@@ -132,31 +177,39 @@ export async function dispatchToolCall(
 
   if (!decision.allowed) {
     actionLog.record(validated.tool.name, "blocked");
-    return `Bloqueado por política de seguridad: ${decision.reason}`;
+    return { status: "blocked", text: `Bloqueado por política de seguridad: ${decision.reason}` };
   }
 
   if (decision.requiresConfirmation) {
     const confirmed = options.onConfirm
-      ? await options.onConfirm(decision).catch(() => false)
+      ? await options
+          .onConfirm(decision, { tool: validated.tool.name, args: validated.args })
+          .catch(() => false)
       : false;
     if (!confirmed) {
       actionLog.record(validated.tool.name, "cancelled");
-      return `Acción "${validated.tool.name}" cancelada: requiere confirmación del usuario.`;
+      return {
+        status: "cancelled",
+        text: `Acción "${validated.tool.name}" cancelada: requiere confirmación del usuario.`,
+      };
     }
   }
 
   const handler = handlers[validated.tool.name];
   if (!handler) {
     actionLog.record(validated.tool.name, "invalid");
-    return `Error de herramienta: "${validated.tool.name}" no está implementada en este dispositivo.`;
+    return {
+      status: "invalid",
+      text: `Error de herramienta: "${validated.tool.name}" no está implementada en este dispositivo.`,
+    };
   }
   try {
     const result = await handler(validated.args);
     actionLog.record(validated.tool.name, "executed", decision.requiresConfirmation);
-    return typeof result === "string" ? result : JSON.stringify(result);
+    return { status: "executed", text: typeof result === "string" ? result : JSON.stringify(result) };
   } catch (e: any) {
     actionLog.record(validated.tool.name, "failed");
-    return `Error ejecutando "${validated.tool.name}": ${e?.message ?? String(e)}`;
+    return { status: "failed", text: `Error ejecutando "${validated.tool.name}": ${e?.message ?? String(e)}` };
   }
 }
 

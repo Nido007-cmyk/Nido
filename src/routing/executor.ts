@@ -304,6 +304,10 @@ export async function executeRoutingPlan(
               onTimeout: markTimedOut,
               // P2.4: label for on-device telemetry.
               telemetryContext: { taskType: "research-generate" },
+              // RAG-GROUNDING 2026-10-11: con fuentes, muestreo factual
+              // (0.3) en vez del 0.7 de charla: menos "creatividad" = menos
+              // datos inventados alrededor de la fuente.
+              ...(citations.length > 0 ? { samplingPreset: "factual" as const } : {}),
             })
           : await llamaEngine.generate({
               prompt: assemblePrompt(input.query, citations, input.systemPrompt, input.history, input.styleReminder, noSourcesFoundNote),
@@ -313,6 +317,10 @@ export async function executeRoutingPlan(
               onTimeout: markTimedOut,
               // P2.4: label for on-device telemetry.
               telemetryContext: { taskType: "research-generate" },
+              // RAG-GROUNDING 2026-10-11: con fuentes, muestreo factual
+              // (0.3) en vez del 0.7 de charla: menos "creatividad" = menos
+              // datos inventados alrededor de la fuente.
+              ...(citations.length > 0 ? { samplingPreset: "factual" as const } : {}),
             });
 
         const genEnd = performance.now();

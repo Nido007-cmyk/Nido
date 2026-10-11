@@ -4,6 +4,29 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+### Fixed
+- Contacts: searching contacts never worked on Android (the code used an
+  iOS-only API). Search now ignores accents ("Ruben" finds "Rubén").
+- Contacts, calls and SMS work in Spanish, English and Portuguese without
+  depending on the small model: "find contact Ana", "call Ana",
+  "text Ana that I'm late". "Call Ana" looks her up and asks you to confirm
+  the number.
+- Asking for a contact, the calendar or a file no longer sends you to the
+  lock screen. NIDO checks the permission first and only asks when it is
+  missing.
+- Call and SMS confirmations now show the number and the full text, in
+  your language.
+- Small talk ("good, and you?", "thanks", "ok") gets a direct answer, with
+  no source search and no "no sources" note.
+- Answers with offline sources stick to the sources. Sentences the sources
+  don't support are removed, and if nothing is left NIDO says it doesn't
+  know and shows what the source does say.
+- Factual questions with no sources get an honest "I don't know" instead
+  of an invented answer.
+- NIDO never answers with an empty bubble or a fake "Done.".
+
 ## 0.1.4-alpha — 2026-10-10
 
 ### Added

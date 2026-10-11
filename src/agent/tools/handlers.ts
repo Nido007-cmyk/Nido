@@ -40,6 +40,9 @@ import { decodePairingPayload } from "../../p2p/pairing";
 import { pairingBindingWarning, findPairingCollision } from "../../p2p/pairingCeremony";
 import { findContactRowAny } from "../../p2p/store";
 import { fingerprint, fromHex } from "../../p2p/crypto";
+import { withPermissionRequest } from "../../p2p/permissionGuard";
+import type { ContactSearchResult } from "../loop/contactRouter";
+import { ensureRuntimePermission, filterContacts } from "./contactSearch";
 import {
   approveAgentTask,
   getPendingAgentTask,
@@ -657,17 +660,25 @@ const convertUnitsHandler: ToolHandler = async (args) => {
   }
 };
 
+const CALENDAR_PERMISSION_TEXT: Record<"denied" | "blocked" | "unavailable", string> = {
+  denied: "No diste permiso de calendario, así que no puedo crear ni leer eventos. Puedes volver a pedírmelo cuando quieras.",
+  blocked:
+    "El permiso de calendario está bloqueado para NIDO. Actívalo en Ajustes del teléfono → Apps → NIDO → Permisos → Calendario.",
+  unavailable: "El módulo de calendario no está disponible en este dispositivo.",
+};
+
 async function ensureCalendarAccess(): Promise<{ ok: boolean; reason?: string }> {
+  let Calendar: typeof import("expo-calendar");
   try {
-    const Calendar = await import("expo-calendar");
-    const perm = await Calendar.requestCalendarPermissions();
-    if (!perm.granted) {
-      return { ok: false, reason: "NIDO no tiene permiso de calendario. Actívalo en Ajustes del teléfono para que pueda crear y leer eventos." };
-    }
-    return { ok: true };
+    Calendar = await import("expo-calendar");
   } catch {
-    return { ok: false, reason: "El módulo de calendario no está disponible en este dispositivo." };
+    return { ok: false, reason: CALENDAR_PERMISSION_TEXT.unavailable };
   }
+  const perm = await ensureRuntimePermission({
+    get: () => Calendar.getCalendarPermissions(),
+    request: () => Calendar.requestCalendarPermissions(),
+  });
+  return perm.ok ? { ok: true } : { ok: false, reason: CALENDAR_PERMISSION_TEXT[perm.reason] };
 }
 
 async function pickWritableCalendar(): Promise<any | null> {
@@ -738,40 +749,65 @@ export const listCalendarEventsHandler: ToolHandler = async (args) => {
   }
 };
 
-const findContactHandler: ToolHandler = async (args) => {
-  const query = String(args.query ?? "").trim().toLowerCase();
-  if (!query) return "Error: falta el nombre a buscar.";
+const CONTACTS_PERMISSION_TEXT: Record<"denied" | "blocked" | "unavailable", string> = {
+  denied: "No diste permiso de contactos, así que no puedo buscar. Puedes volver a pedírmelo cuando quieras.",
+  blocked:
+    "El permiso de contactos está bloqueado para NIDO. Actívalo en Ajustes del teléfono → Apps → NIDO → Permisos → Contactos.",
+  unavailable: "No pude acceder a los contactos del teléfono.",
+};
+
+/**
+ * Búsqueda estructurada en la agenda (la usa el pre-router determinístico de
+ * contactos y también find_contact). Pide el permiso solo si falta.
+ */
+export async function searchPhoneContacts(query: string): Promise<ContactSearchResult> {
+  const q = String(query ?? "").trim();
+  if (!q) return { ok: false, message: "Error: falta el nombre a buscar." };
+  let Contacts: typeof import("expo-contacts");
   try {
-    const Contacts = await import("expo-contacts");
-    const perm = await Contacts.requestPermissionsAsync();
-    if (!perm.granted) {
-      return "NIDO no tiene permiso de contactos. Actívalo en Ajustes del teléfono para buscar.";
-    }
-    const container = await Contacts.Container.getDefault();
-    if (!container) return "No pude acceder a los contactos del teléfono.";
-    const all = await container.getContacts();
-    const matches = all
-      .filter((c: any) => {
-        const haystack = [c.name, c.firstName, c.lastName, ...(c.phoneNumbers ?? []).map((p: any) => p.number)]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(query);
-      })
-      .slice(0, 5);
-    if (matches.length === 0) return `No encontré ningún contacto que coincida con «${args.query}».`;
-    return (
-      "Contactos encontrados:\n" +
-      matches
-        .map((c: any) => {
-          const phone = (c.phoneNumbers ?? [])[0]?.number ?? "sin teléfono";
-          return `- ${c.name ?? `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim()} — ${phone}`;
-        })
-        .join("\n")
-    );
-  } catch (e) {
-    return `No pude buscar contactos: ${e instanceof Error ? e.message : String(e)}`;
+    Contacts = await import("expo-contacts");
+  } catch {
+    return { ok: false, message: CONTACTS_PERMISSION_TEXT.unavailable, reason: "unavailable" };
   }
+  const perm = await ensureRuntimePermission({
+    get: () => Contacts.getPermissionsAsync(),
+    request: () => Contacts.requestPermissionsAsync(),
+  });
+  if (!perm.ok) return { ok: false, message: CONTACTS_PERMISSION_TEXT[perm.reason], reason: perm.reason };
+  try {
+    // TOOLS-AUDIT 2026-10-11 (causa raíz de find_contact roto en Android):
+    // el código usaba `Contacts.Container.getDefault()`, que en expo-contacts
+    // SDK 57 es SOLO iOS (ContactsModule.ts: "@platform ios"; en Android cae
+    // en FallbackContainer, que lanza "Not implemented"). Además
+    // `getContacts()` devuelve objetos nativos, no {name, phoneNumbers}.
+    // La API multiplataforma correcta es Contact.getAllDetails(campos, filtro).
+    const fields = ["fullName", "phones"] as const;
+    const getAllDetails = (Contacts.Contact as any).getAllDetails as (
+      f: readonly string[],
+      o?: { name?: string; limit?: number },
+    ) => Promise<any[]>;
+    // 1) Filtro nativo por nombre (rápido, sin leer toda la agenda).
+    let matches = filterContacts(await getAllDetails(fields, { name: q, limit: 25 }), q);
+    // 2) Sin resultados: el filtro nativo distingue acentos ("Ruben" ≠
+    //    "Rubén") y no busca por número. Se lee nombre+teléfonos y se filtra
+    //    aquí, en el teléfono; solo salen como mucho 5 coincidencias.
+    if (matches.length === 0) {
+      matches = filterContacts(await getAllDetails(fields, { limit: 5000 }), q);
+    }
+    return { ok: true, matches };
+  } catch (e) {
+    return { ok: false, message: `No pude buscar contactos: ${e instanceof Error ? e.message : String(e)}` };
+  }
+}
+
+const findContactHandler: ToolHandler = async (args) => {
+  const res = await searchPhoneContacts(String(args.query ?? ""));
+  if (!res.ok) return res.message;
+  if (res.matches.length === 0) return `No encontré ningún contacto que coincida con «${args.query}».`;
+  return (
+    "Contactos encontrados:\n" +
+    res.matches.map((c) => `- ${c.name} — ${c.phones[0] ?? "sin teléfono"}`).join("\n")
+  );
 };
 
 function cleanPhone(raw: string): string {
@@ -810,10 +846,15 @@ const MAX_PICKED_FILE_BYTES = 200 * 1024;
 const readPickedFileHandler: ToolHandler = async () => {
   try {
     const DocumentPicker = await import("expo-document-picker");
-    const picked = await DocumentPicker.getDocumentAsync({
-      type: "*/*",
-      copyToCacheDirectory: true,
-    });
+    // TOOLS-AUDIT 2026-10-11: el selector del sistema es otra actividad →
+    // NIDO pasa a "background" y el gate bloqueaba al volver (el archivo
+    // elegido se perdía detrás de "NIDO locked"). Mismo guard que permisos.
+    const picked = await withPermissionRequest(() =>
+      DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+      }),
+    );
     if (picked.canceled || !picked.assets?.length) {
       return "No elegiste ningún archivo.";
     }

@@ -248,14 +248,19 @@ describe("assembleChatMessages", () => {
   it("appends the tone's style reminder to the current question only", () => {
     const history = { turns: [{ role: "user" as const, text: "earlier" }, { role: "assistant" as const, text: "reply" }] };
     const messages = assembleChatMessages("q", chunks, "You are Nido.", history, "Be thorough.");
-    expect(messages[messages.length - 1].content).toBe("q\n\n(Response style: Be thorough.)");
+    // RAG-GROUNDING 2026-10-11: con fuentes, el turno actual es
+    // "Sources … Question: q" y el recordatorio de estilo sigue al final.
+    expect(messages[messages.length - 1].content.endsWith("Question: q\n\n(Response style: Be thorough.)")).toBe(true);
     expect(messages[1].content).toBe("earlier");
     expect(messages[0].content).not.toContain("Response style:");
   });
 
   it("leaves the question alone without a reminder", () => {
-    const messages = assembleChatMessages("q", chunks, "You are Nido.");
+    const messages = assembleChatMessages("q", [], "You are Nido.");
     expect(messages[messages.length - 1].content).toBe("q");
+    const withSources = assembleChatMessages("q", chunks, "You are Nido.");
+    expect(withSources[withSources.length - 1].content.endsWith("Question: q")).toBe(true);
+    expect(withSources[withSources.length - 1].content).not.toContain("Response style:");
   });
 
   it("uses the default instruction when no system prompt is given", () => {
@@ -263,11 +268,39 @@ describe("assembleChatMessages", () => {
     expect(messages[0].content).toContain("You are an offline research assistant.");
   });
 
-  it("includes retrieved context and the citation instruction in the system message when there are chunks", () => {
+  // RAG-GROUNDING 2026-10-11: la regla de citar sigue en el sistema, pero
+  // las fuentes van en el turno del usuario, pegadas a la pregunta.
+  it("puts the grounding rule in the system message and the sources right before the question", () => {
     const messages = assembleChatMessages("What is X?", chunks);
     expect(messages[0].content).toContain("cite sources as [n]");
-    expect(messages[0].content).toContain("Doc One");
-    expect(messages[0].content).toContain("Body one.");
+    expect(messages[0].content).not.toContain("Body one.");
+    const last = messages[messages.length - 1];
+    expect(last.role).toBe("user");
+    expect(last.content).toContain("[1] Doc One");
+    expect(last.content).toContain("Body one.");
+    expect(last.content.indexOf("Body one.")).toBeLessThan(last.content.indexOf("Question: What is X?"));
+  });
+
+  it("never tells the model to fall back on general knowledge when there are sources (fotosíntesis evidence)", () => {
+    const messages = assembleChatMessages("What is X?", chunks);
+    const all = messages.map((m) => m.content).join("\n");
+    expect(all).not.toMatch(/general knowledge/i);
+    expect(all).toContain("Answer ONLY with facts written in those sources");
+    expect(all).toContain("say that you don't know");
+    expect(assemblePrompt("What is X?", chunks)).not.toMatch(/answer from general knowledge/i);
+  });
+
+  it("keeps sources next to the question even with long history in between", () => {
+    const history = {
+      turns: [
+        { role: "user" as const, text: "earlier question" },
+        { role: "assistant" as const, text: "earlier answer" },
+      ],
+    };
+    const messages = assembleChatMessages("What is X?", chunks, "sys", history);
+    expect(messages[1].content).toBe("earlier question");
+    expect(messages[messages.length - 1].content).toContain("Body one.");
+    expect(messages[1].content).not.toContain("Body one.");
   });
 
   it("omits the context/citation framing entirely when there are no chunks", () => {

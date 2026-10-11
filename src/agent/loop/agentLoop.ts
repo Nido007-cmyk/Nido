@@ -27,9 +27,16 @@ import type { ChatMessageInput, SamplingPresetName } from "../../inference/Llama
 import {
   describeToolsForPrompt,
   dispatchToolCall,
+  dispatchToolCallDetailed,
   type DispatchOptions,
   type ToolHandler,
 } from "../tools/dispatcher";
+import {
+  extractContactAction,
+  runContactAction,
+  type ContactSearchResult,
+} from "./contactRouter";
+import { agentFallbackText, type FallbackLang } from "./fallbackText";
 import { classifyIntent, type AgentIntent } from "./intent";
 import { matchCanned } from "./cannedResponses";
 import { recordInferenceEvent } from "../../inference/telemetry";
@@ -79,7 +86,7 @@ export interface AgentLoopOptions {
    * FIX 2026-10-09: idioma vigente de la UI ("es" | "en"). El system prompt
    * y las respuestas deterministas lo usan. Si no se pasa, default "es".
    */
-  lang?: "es" | "en";
+  lang?: "es" | "en" | "pt";
   /**
    * Carga el snapshot de memoria. Opcional: si no se da, el loop corre
    * sin memoria (útil en tests). En producción se pasa `snapshot` de
@@ -93,7 +100,18 @@ export interface AgentLoopOptions {
    * Debe devolver true si el usuario confirma. Si no se provee, esas
    * acciones se bloquean por defecto (fail-closed).
    */
-  onConfirmTool?: (decision: PolicyDecision) => Promise<boolean>;
+  onConfirmTool?: (
+    decision: PolicyDecision,
+    action?: { tool: string; args: Record<string, unknown> }
+  ) => Promise<boolean>;
+  /**
+   * TOOLS-AUDIT 2026-10-11: búsqueda estructurada en la agenda del teléfono
+   * (permiso incluido). Si se da, "busca el contacto X" / "llama a X" /
+   * "mándale un SMS a X que…" se resuelven sin depender de que el modelo
+   * escriba la llamada de herramienta. Sin ella (tests, tareas
+   * programadas) esas frases siguen el flujo de siempre.
+   */
+  contactSearch?: (query: string) => Promise<ContactSearchResult>;
   /**
    * Tareas programadas: los atajos deterministas (recordatorio, persona,
    * hecho) solo se usan si la herramienta correspondiente está entre los
@@ -237,9 +255,6 @@ const CONTINUATION_DIRECTIVE =
 
 /** Instrucción mínima para el reintento de reparación (T-echo). */
 const REPAIR_DIRECTIVE = "[tu respuesta al usuario, en español]";
-
-/** Respuesta segura cuando el modelo no produce nada aprovechable. */
-const SAFE_FALLBACK_RESPONSE = "Listo.";
 
 /**
  * Frases clave (normalizadas) que identifican un eco de la directiva
@@ -489,6 +504,18 @@ export async function runAgentLoop(
   // (acantilado de presupuesto). Se calcula por paso según lo disponible.
   const maxNPredict = options.nPredict ?? 512;
   const intent = classifyIntent(userText);
+  const uiLang: FallbackLang = options.lang ?? "es";
+  /**
+   * NEVER-SILENT 2026-10-11: antes, si el modelo no producía nada usable,
+   * se respondía "Listo." aunque no se hubiera hecho nada. Ahora: si alguna
+   * herramienta corrió, se muestra su resultado tal cual (es texto para el
+   * usuario); si no, un "no entendí" honesto en su idioma.
+   */
+  const safeFallback = (): string => {
+    const last = toolUses[toolUses.length - 1];
+    if (last && last.result.trim()) return last.result.trim();
+    return agentFallbackText("notUnderstood", uiLang);
+  };
 
   // P2.2-2026-10-08: canned responses for high-confidence intents. Pure
   // greetings, identity questions and capability questions have zero
@@ -541,7 +568,12 @@ export async function runAgentLoop(
   // ACTION-ROUTER 2026-10-07: calculadora y recordatorios antes que memoria
   // (el modelo 0.5B no siempre genera el tool call para acciones simples).
   const { extractCalcAction, extractReminderAction, extractWeeklyPlanAction, generateWeeklyPlan } = await import("./actionRouter");
-  const calcAction = extractCalcAction(userText);
+  // Permisos del usuario: con la herramienta apagada no hay atajo; el turno
+  // sigue al modelo y el despachador la rechaza.
+  const fastPathAllowed = (tool: string): boolean =>
+    !isToolDisabled(tool) && (!options.restrictFastPathsToHandlers || tool in handlers);
+  // TOOLS-AUDIT 2026-10-11: el atajo de calculadora ignoraba el interruptor.
+  const calcAction = fastPathAllowed("calculate") ? extractCalcAction(userText) : null;
   if (calcAction) {
     const { formatNumber } = await import("../tools/calc");
     return {
@@ -555,10 +587,27 @@ export async function runAgentLoop(
       ],
     };
   }
-  // Permisos del usuario: con la herramienta apagada no hay atajo; el turno
-  // sigue al modelo y el despachador la rechaza.
-  const fastPathAllowed = (tool: string): boolean =>
-    !isToolDisabled(tool) && (!options.restrictFastPathsToHandlers || tool in handlers);
+  // TOOLS-AUDIT 2026-10-11: contactos, llamadas y SMS por la vía
+  // determinista (ver contactRouter.ts). Solo con búsqueda inyectada y fuera
+  // de tareas programadas. El interruptor de cada herramienta y la
+  // confirmación de la política se respetan dentro (dispatchToolCallDetailed).
+  const contactAction =
+    options.contactSearch && !options.restrictFastPathsToHandlers
+      ? extractContactAction(userText)
+      : null;
+  if (contactAction) {
+    const outcome = await runContactAction(contactAction, {
+      search: options.contactSearch!,
+      dispatch: (name, args) =>
+        dispatchToolCallDetailed({ name, arguments: args }, handlers, {
+          policyContext: [],
+          onConfirm: options.onConfirmTool,
+        }),
+      isDisabled: isToolDisabled,
+      recordFind: (status) => actionLog.record("find_contact", status),
+    });
+    return { response: outcome.response, intent, toolUses: outcome.toolUses, deterministic: true };
+  }
   const reminderAction = fastPathAllowed("create_reminder") ? extractReminderAction(userText) : null;
   if (reminderAction) {
     const { saveReminder } = await import("../memory/memoryStore");
@@ -721,7 +770,7 @@ export async function runAgentLoop(
   const mem = await options.loadMemory?.().catch(() => null);
 
   const buildMessages = (memoryText: string): ChatMessageInput[] => [
-    { role: "system", content: buildSystemPrompt(intent, memoryText, options.lang ?? "es") },
+    { role: "system", content: buildSystemPrompt(intent, memoryText, options.lang === "en" ? "en" : "es") },
     { role: "user", content: userText },
   ];
 
@@ -821,10 +870,10 @@ export async function runAgentLoop(
         if (retryCalls.length === 0) {
           // El modelo sigue sin generar tool calls: fallo explícito en vez
           // de fingir éxito con un "Listo".
+          // TOOLS-AUDIT 2026-10-11: antes este texto hablaba de "guardar"
+          // para CUALQUIER acción ("Call" → "No pude guardar eso…").
           return {
-            response:
-              "No pude guardar eso automáticamente. El modelo no generó la " +
-              "acción necesaria. Inténtalo de nuevo o usa la pantalla de memoria directamente.",
+            response: agentFallbackText(intent === "recordar" ? "memoryFailed" : "actionFailed", uiLang),
             intent,
             toolUses,
           };
@@ -857,7 +906,7 @@ export async function runAgentLoop(
       // Un único reintento con instrucción mínima; si falla, respuesta segura.
       messages.push({ role: "user", content: REPAIR_DIRECTIVE });
       const retry = await generateOnce();
-      return { response: appendMutationConfirmation(finalizeResponse(retry) ?? SAFE_FALLBACK_RESPONSE, toolUses), intent, toolUses };
+      return { response: appendMutationConfirmation(finalizeResponse(retry) ?? safeFallback(), toolUses), intent, toolUses };
     }
 
     const observations: string[] = [];
@@ -891,5 +940,5 @@ export async function runAgentLoop(
   }
 
   // Se agotaron los pasos con herramientas pendientes: devolver lo último limpio.
-  return { response: appendMutationConfirmation(finalizeResponse(lastText) ?? SAFE_FALLBACK_RESPONSE, toolUses), intent, toolUses };
+  return { response: appendMutationConfirmation(finalizeResponse(lastText) ?? safeFallback(), toolUses), intent, toolUses };
 }

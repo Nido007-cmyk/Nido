@@ -384,7 +384,9 @@ describe("T-echo-2026-10-06: eco de la directiva interna", () => {
       handlers: {},
       loadMemory: async () => null,
     });
-    expect(result.response).toBe("Listo.");
+    // NEVER-SILENT 2026-10-11: sin herramientas ejecutadas, ya no se finge
+    // éxito con "Listo."; se responde un "no entendí" honesto.
+    expect(result.response).toBe("No entendí bien. ¿Puedes decirlo de otra forma?");
     expect(engine.calls).toHaveLength(2);
   });
 
@@ -496,5 +498,120 @@ describe("P1.3 system-prompt diet", () => {
   it("la memoria del usuario nunca se recorta", () => {
     const mem = "Hechos:\n- [personal] cumpleaños el 3 de mayo";
     expect(buildSystemPrompt("conversar", mem)).toContain("cumpleaños el 3 de mayo");
+  });
+});
+
+
+// TOOLS-AUDIT 2026-10-11 / NEVER-SILENT 2026-10-11
+describe("runAgentLoop — contactos deterministas y respaldos honestos", () => {
+  const book = [{ name: "Rubén", phones: ["555 111 2222"] }];
+  const contactSearch = async (q: string) => ({
+    ok: true as const,
+    matches: book.filter((c) =>
+      c.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q.toLowerCase())
+    ),
+  });
+
+  it('"Busca el contacto Ruben" se resuelve sin llamar al modelo', async () => {
+    const engine = fakeEngine(["NO DEBERÍA USARSE"]);
+    const result = await runAgentLoop("Busca el contacto Ruben", {
+      engine,
+      handlers: {},
+      loadMemory: async () => null,
+      contactSearch,
+    });
+    expect(engine.calls).toHaveLength(0);
+    expect(result.deterministic).toBe(true);
+    expect(result.response).toContain("Rubén — 555 111 2222");
+  });
+
+  it('"llama a Ruben" → confirmación con el número y place_call ejecutado', async () => {
+    const engine = fakeEngine(["NO DEBERÍA USARSE"]);
+    const calls: unknown[] = [];
+    const confirms: unknown[] = [];
+    const result = await runAgentLoop("llama a Ruben", {
+      engine,
+      handlers: {
+        place_call: async (args) => {
+          calls.push(args);
+          return "Abriendo el marcador con 5551112222…";
+        },
+      },
+      onConfirmTool: async (_d, action) => {
+        confirms.push(action);
+        return true;
+      },
+      loadMemory: async () => null,
+      contactSearch,
+    });
+    expect(engine.calls).toHaveLength(0);
+    expect(confirms).toEqual([{ tool: "place_call", args: { phone: "555 111 2222" } }]);
+    expect(calls).toEqual([{ phone: "555 111 2222" }]);
+    expect(result.response).toBe("Abrí el marcador con 555 111 2222. Pulsa llamar para confirmar.");
+  });
+
+  it("sin contactSearch (tareas programadas, tests antiguos) el flujo es el de siempre", async () => {
+    const engine = fakeEngine(["Hola."]);
+    const result = await runAgentLoop("Busca el contacto Ruben", {
+      engine,
+      handlers: {},
+      loadMemory: async () => null,
+    });
+    expect(engine.calls.length).toBeGreaterThan(0);
+    expect(result.deterministic).not.toBe(true);
+  });
+
+  it('"Call" sin contactSearch y sin tool call: ya NO dice "No pude guardar eso"', async () => {
+    const engine = fakeEngine(["Claro, ¿a quién?"]);
+    const result = await runAgentLoop("Call", {
+      engine,
+      handlers: {},
+      loadMemory: async () => null,
+      lang: "en",
+    });
+    expect(result.response).not.toContain("guardar");
+    expect(result.response).toContain("I couldn't tell which action to take");
+  });
+
+  it("recordar fallido conserva el mensaje de memoria, en el idioma de la UI", async () => {
+    const engine = fakeEngine(["ok"]);
+    const result = await runAgentLoop("memoriza", {
+      engine,
+      handlers: {},
+      loadMemory: async () => null,
+      lang: "pt",
+    });
+    expect(result.response).toContain("Não consegui salvar isso automaticamente");
+  });
+
+  it("calculadora apagada por el usuario: el atajo determinista NO la usa", async () => {
+    const { setDisabledTools } = await import("../tools/toolPermissions");
+    setDisabledTools(["calculate"]);
+    try {
+      const engine = fakeEngine(["No puedo calcular ahora."]);
+      const result = await runAgentLoop("cuánto es 2+2", {
+        engine,
+        handlers: {},
+        loadMemory: async () => null,
+      });
+      expect(result.toolUses.find((t) => t.name === "calc")).toBeUndefined();
+      expect(engine.calls.length).toBeGreaterThan(0);
+    } finally {
+      setDisabledTools([]);
+    }
+  });
+
+  it("si una herramienta corrió y el modelo no dice nada útil, se muestra su resultado (no 'Listo.')", async () => {
+    const engine = fakeEngine([
+      '```tool\n{"name": "device_time", "arguments": {}}\n```',
+      "",
+      "",
+    ]);
+    const result = await runAgentLoop("¿qué hora es?", {
+      engine,
+      handlers: { device_time: async () => "Son las 10:30." },
+      loadMemory: async () => null,
+    });
+    expect(result.response).toBe("Son las 10:30.");
   });
 });

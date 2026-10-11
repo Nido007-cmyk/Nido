@@ -266,7 +266,8 @@ async function researchSubQuestion(
   const answer = await llamaEngine.generate({
     ...promptParams,
     nPredict: 300,
-    temperature: 0.6,
+    // RAG-GROUNDING 2026-10-11: con fuentes, más cerca de lo literal.
+    temperature: chunks.length > 0 ? 0.3 : 0.6,
     timeoutMs: STAGE_TIMEOUT_MS,
     onTimeout,
   });
