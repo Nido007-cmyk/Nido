@@ -1,4 +1,4 @@
-# NIDO v0.1.7-alpha — Release Notes
+# NIDO v0.1.8-alpha — Release Notes
 
 ## What is this?
 
@@ -11,6 +11,28 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Reminders with local notifications
 - Encrypted on-device storage
 - Backup / restore
+
+## What changed in 0.1.8-alpha
+
+> **Pre-release.** Built and checked by automated tests; real-device testing is ongoing. Please report anything that fails in Issues.
+
+**The agent understands more, without depending on the small model** (Spanish, English and Portuguese)
+- **Notes:** "take a note: buy milk", "my notes", "read the note about the trip" (by title, no more internal ids).
+- **Time and date:** "what time is it?", "what day is it?".
+- **Conversions:** "10 km to miles", "100 degrees celsius to fahrenheit".
+- **Calendar:** "what do I have tomorrow?", "schedule dentist on Friday at 10". You confirm before anything is created.
+- **NIDO messages:** "send a nido message to Ana saying hi", "read my messages", "my pairing code".
+- **Links and files:** "open https://…", "analyze a csv".
+- Fixed: "create a note…" and "create an event…" were saved as reminders.
+- If a tool is turned off in About, NIDO tells you so instead of trying anyway.
+
+**Knowledge base**
+- **No more "Preparing your knowledge…" every time you open NIDO.** The check was fragile: a knowledge pack removed with the trash icon left its index behind and forced a full re-check on every start. Now NIDO only processes what's actually missing and cleans up removed packs.
+- Settings shows **"Downloaded · indexing x / y"** until a pack is really ready, instead of "In your knowledge base" as soon as it's downloaded.
+
+**Stability and conversation**
+- Dates are formatted without Android's Intl bridge in every agent tool (the same cause as the reminder crash fixed in 0.1.5).
+- Short replies that bounce the question back ("good, and you?", even with typos) get a natural answer.
 
 ## What changed in 0.1.7-alpha
 

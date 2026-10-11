@@ -4,6 +4,20 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.8-alpha — 2026-10-11
+
+### Fixed
+- The agent handles notes, time and date, unit conversions, the calendar,
+  NIDO messages, links and files by code, in Spanish, English and
+  Portuguese, without depending on the small model. Notes are read by
+  title.
+- "Create a note…" and "create an event…" were saved as reminders.
+- The knowledge base no longer re-checks every topic on every start.
+  Removing a pack also removes its index.
+- Settings says "indexing" until a pack is really ready.
+- Agent tools no longer format dates through Intl (possible crash on
+  Android).
+
 ## 0.1.7-alpha — 2026-10-11
 
 ### Added
