@@ -479,6 +479,10 @@ describe("0.1.19 — recordatorios con alcance (hoy/mañana)", () => {
     ["do I have any reminders today", "en", "today"],
     ["quais lembretes tenho hoje", "pt", "today"],
     ["quais lembretes eu tenho amanhã", "pt", "tomorrow"],
+    // Batería trilingüe 0.1.20: «que» sin «quais» también es forma natural PT.
+    ["que lembretes tenho hoje", "pt", "today"],
+    ["que lembretes tenho amanhã", "pt", "tomorrow"],
+    ["tenho algum lembrete", "pt", undefined],
   ])("%p → reminderList (%s, range=%s)", (text, lang, range) => {
     const action = extractToolAction(text as string, NOW);
     expect(action?.kind).toBe("reminderList");

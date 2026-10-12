@@ -164,14 +164,18 @@ const STOPWORDS = new Set([
   "como", "cual", "cuales", "cuando", "donde", "que", "qué", "cuál", "cómo", "cuándo", "dónde",
   "tengo", "tiene", "sabes", "sabe", "llama", "llamo", "nombre", "name", "what", "when", "where",
   "which", "whats", "about", "qual", "quando", "onde", "chama", "chamo", "mein", "meu", "minha",
-  "mine", "your", "yours", "favorito", "favorita", "favorite", "sobre", "contado", "cuentame",
+  "mine", "your", "yours", "sobre", "contado", "cuentame", "have", "does",
+  // «favorito/favorite» NO son stopwords: son justo lo que se pregunta
+  // («¿cuál es mi color favorito?»); con ellas en la lista la búsqueda
+  // se quedaba sin términos (batería trilingüe 0.1.20).
 ]);
 
 /** Búsqueda genérica por palabras en los hechos guardados. */
 function searchFacts(mem: MemoryQueryData, question: string): string | null {
   const tokens = fold(question)
     .split(/[^a-z0-9]+/)
-    .filter((w) => w.length >= 4 && !STOPWORDS.has(w));
+    // >= 3: «car» y «cor» son términos de búsqueda reales en EN/PT.
+    .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
   if (!tokens.length) return null;
   let best: { content: string; score: number } | null = null;
   for (const f of mem.facts) {
@@ -266,8 +270,10 @@ export function answerMemoryQuery(
   // «¿cuál es mi color favorito?» — solo si la pregunta es interrogativa
   // y menciona algo en primera persona; si no, no es para esta ruta.
   const isQuestion = /^\s*¿/.test(t) || /\?\s*$/.test(t);
+  // \bi\b: el «I» inglés («what car do I have?») — sin él la puerta de
+  // primera persona no se abría en inglés (batería trilingüe 0.1.20).
   const firstPerson =
-    /\bmi\b|\bmis\b|\bme\b|\bmy\b|\bmine\b|\bmeu\b|\bminha\b|\bmeus\b|\bminhas\b|\btengo\b|\bvivo\b|\btrabajo\b|\btenho\b|\bmoro\b|\bchamo\b/i.test(t);
+    /\bmi\b|\bmis\b|\bme\b|\bmy\b|\bmine\b|\bi\b|\bmeu\b|\bminha\b|\bmeus\b|\bminhas\b|\btengo\b|\bvivo\b|\btrabajo\b|\btenho\b|\bmoro\b|\bchamo\b/i.test(t);
   if (isQuestion && firstPerson) {
     const fact = searchFacts(mem, t);
     if (fact) return msg("factQuote", lang, { fact });

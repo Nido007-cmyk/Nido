@@ -299,3 +299,19 @@ describe("0.1.14 — memoria en portugués", () => {
     expect(extractRememberFact("não esqueça que tenho dentista na sexta")?.content).toBe("tenho dentista na sexta");
   });
 });
+
+// Batería trilingüe 0.1.20: el cumpleaños implícito PT («meu aniversário»)
+// no se guardaba y los meses PT con letras no parseaban («15 de março»
+// devolvía null → sin recordatorio automático de cumpleaños en PT).
+describe("batería trilingüe: cumpleaños y fechas PT", () => {
+  it("el cumpleaños implícito PT se guarda", () => {
+    expect(extractImplicitFact("meu aniversário é 3 de maio")?.content).toBe("meu aniversário é 3 de maio");
+    expect(extractImplicitFact("o aniversário da minha mãe é 15 de março")).not.toBeNull();
+  });
+  it("los meses PT con letras parsean", () => {
+    expect(extractDateISO("15 de março")).not.toBeNull();
+    expect(extractDateISO("3 de maio")).not.toBeNull();
+    expect(extractDateISO("meu aniversário é 10 de janeiro")).not.toBeNull();
+    expect(extractDateISO("o aniversário é 25 de dezembro")).not.toBeNull();
+  });
+});

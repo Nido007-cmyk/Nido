@@ -70,3 +70,44 @@ describe("0.1.20 (M1) — consultas de memoria deterministas", () => {
     expect(answerMemoryQuery("¿qué sabes de mí?", empty, "es")).toContain("Todavía no me has contado eso");
   });
 });
+
+// Batería trilingüe 0.1.20 (directiva del usuario: probar en los TRES
+// idiomas; el portugués no lo había probado en dispositivo). Huecos
+// cazados: la puerta de primera persona no reconocía el «I» inglés;
+// «favorito/favorite» estaban como stopwords y la búsqueda genérica se
+// quedaba sin términos; «car»/«cor» (3 letras) quedaban fuera.
+describe("batería trilingüe: consultas genéricas EN/PT", () => {
+  const en: MemoryQueryData = {
+    facts: [
+      { content: "my car is a Toyota", category: "general" },
+      { content: "my favorite color is blue", category: "preference" },
+      { content: "I live in Tucson", category: "general" },
+    ],
+    people: [],
+  };
+  const pt: MemoryQueryData = {
+    facts: [
+      { content: "meu carro é um Toyota", category: "general" },
+      { content: "minha cor favorita é azul", category: "preference" },
+      { content: "moro em Tucson", category: "general" },
+    ],
+    people: [],
+  };
+  it("EN: coche, favorito y casa responden desde lo guardado", () => {
+    expect(answerMemoryQuery("what car do I have?", en, "en")).toContain("Toyota");
+    expect(answerMemoryQuery("what's my favorite color?", en, "en")).toContain("blue");
+    expect(answerMemoryQuery("where do I live?", en, "en")).toContain("Tucson");
+  });
+  it("PT: carro, cor favorita e moradia respondem do guardado", () => {
+    expect(answerMemoryQuery("qual carro eu tenho?", pt, "pt")).toContain("Toyota");
+    expect(answerMemoryQuery("qual é minha cor favorita?", pt, "pt")).toContain("azul");
+    expect(answerMemoryQuery("onde moro?", pt, "pt")).toContain("Tucson");
+  });
+  it("ES: el favorito también pasa por la búsqueda genérica", () => {
+    const es: MemoryQueryData = {
+      facts: [{ content: "mi color favorito es el azul", category: "preference" }],
+      people: [],
+    };
+    expect(answerMemoryQuery("¿cuál es mi color favorito?", es, "es")).toContain("azul");
+  });
+});

@@ -175,7 +175,7 @@ const REMINDER_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
     lang: "en",
   },
   {
-    re: /^(?:(?:mostra|mostre|lista|listar|ver)\s+)?(?:meus|os|todos os)\s+lembretes$|^quais lembretes (?:eu )?tenho$/i,
+    re: /^(?:(?:mostra|mostre|lista|listar|ver)\s+)?(?:meus|os|todos os)\s+lembretes$|^(?:que|quais)\s+lembretes\s+(?:eu\s+)?tenho$|^tenho algum lembrete$/i,
     lang: "pt",
   },
 ];
