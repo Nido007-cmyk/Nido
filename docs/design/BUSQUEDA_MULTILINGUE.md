@@ -1,6 +1,6 @@
 # Búsqueda multilingüe (español / portugués) — diseño
 
-Estado: **investigado, no implementado**. Fecha: 2026-10-11.
+Estado: **implementado en la rama `feat/multilingual-search`** (pendiente: firma del catálogo y prueba en tablets). Fecha: 2026-10-11.
 
 ## Problema
 
@@ -83,3 +83,54 @@ multilingual-e5-base/large.
 - RAM: +~90 MB residentes frente a bge (126 vs 37 MB). Medir en la Tab A9+.
 - Tiempo de re-indexado: similar al primer indexado. Opcional y reanudable.
 - Si la calibración no mejora es/pt de forma medible, no se publica.
+
+## Implementación (2026-10-11)
+
+### Modelo (CI, `.github/workflows/multilingual-e5.yml`)
+- `intfloat/multilingual-e5-small` @ `614241f622f53c4eeff9890bdc4f31cfecc418b3`,
+  convertido con el llama.cpp de llama.rn 0.13.0-rc.6 (b11192, `171e884`).
+- El modelo es `BertModel` con el tokenizador SentencePiece de XLM-R: el
+  conversor estándar falla. `scripts/multilingual/convert_e5.py` usa los
+  pesos BERT (posiciones desde 0) con el escritor de vocabulario XLM-R del
+  propio conversor. Pooling MEAN verificado en los metadatos del GGUF.
+- Paridad contra sentence-transformers (73 textos es/en/pt, con prefijos):
+  coseno mínimo **0.9994** (Q8_0). GGUF Q8_0: 132 441 664 bytes,
+  sha256 `802c868f…6e474cde`. La conversión es determinista (mismo sha en
+  dos ejecuciones).
+
+### Calibración (`scripts/multilingual/calibration-queries.json`)
+120 preguntas con respuesta + 30 de una palabra + 60 sin respuesta, en
+es/en/pt, escritas a mano. Se simula el filtro tal como lo corre la app.
+Corpus integrado (1 300 artículos):
+
+| | es | pt | en | fuentes falsas |
+|---|---|---|---|---|
+| bge hoy | 50% | 48% | 98% | 23% |
+| e5 (piso 0.81) | 82% | 90% | 100% | 15% |
+
+Una palabra: es/pt de 17% a 83%, sin falsos ("hola", "gracias"…).
+Informe completo con Wikipedia Vital: `docs/design/calibration/`.
+
+### App
+- `src/rag/embeddingProfile.ts`: prefijos y umbrales por modelo (por sha del
+  catálogo). bge conserva exactamente 0.60 / 0.70 / margen 0.4.
+- `src/rag/embeddingSwitch.ts`: cambio explícito y ordenado (cargar →
+  borrar vectores y re-sellar en una transacción → Ajustes → reconstruir);
+  si algo falla, vuelve al modelo anterior.
+- `src/rag/db.ts`: la base se sella con el modelo **activo**. Vectores de
+  otro modelo **del catálogo** (respaldo viejo, Ajustes perdidos) se
+  descartan y se rehacen; un sello desconocido sigue fallando cerrado.
+  Un vector solo se guarda si la base está sellada para el modelo que lo
+  calculó.
+- `src/rag/reembed.ts`: reconstrucción en segundo plano, reanudable; la
+  búsqueda por palabras funciona mientras tanto.
+- `modules/nido-vectors`: índice plano int8 mapeado en memoria junto al
+  paquete y búsqueda exacta por coseno en Kotlin (probado contra numpy:
+  `modules/nido-vectors/test/run.sh`). Con e5 los paquetes se buscan
+  completos (una pregunta en español no comparte palabras con un artículo
+  en inglés); con bge la búsqueda de paquetes no cambia.
+- Ajustes → Base de conocimiento: tarjeta "Búsqueda en español y
+  portugués". El asistente inicial la activa en es/pt **solo con base nueva**.
+- Paquete Vital v2 (`wiki-vital5-e5`): mismo texto, vectores e5. Licencia
+  CC BY-SA 4.0 ("compilado por NIDO" + Wikipedia), aviso dentro del SQLite y
+  en `LICENSE-ATTRIBUTION.txt`. No puede ser MIT por el ShareAlike.

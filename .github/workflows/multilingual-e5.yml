@@ -36,9 +36,8 @@ env:
   # llama.rn 0.13.0-rc.6 vendor/VERSIONS → LLAMA_CPP_REF=b11192
   LLAMA_CPP_COMMIT: 171e8846b4af9766c354064cb776cb34a50f053f
   E5_REPO: intfloat/multilingual-e5-small
-  # Empty = resolve the current revision once and record it in the reports;
-  # pin it here after the first run.
-  E5_REVISION: ""
+  # Pinned after the first run (run 38181398354). Empty = resolve the latest.
+  E5_REVISION: "614241f622f53c4eeff9890bdc4f31cfecc418b3"
   BGE_URL: https://huggingface.co/CompendiumLabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-q8_0.gguf
   BGE_SHA256: ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514
   VITAL_URL: https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v1/wiki-vital5.sqlite
@@ -257,16 +256,33 @@ jobs:
         run: |
           exec > >(tee -a "$DIAG/97-release.log") 2>&1
           set -euxo pipefail
-          cat > "$W/ATTRIBUTION-e5.txt" <<EOF
-          multilingual-e5-small-q8_0.gguf is a GGUF conversion (Q8_0) of
-          ${E5_REPO} at revision ${E5_RESOLVED_REVISION},
-          by Liang Wang, Nan Yang, Xiaolong Huang, Linjun Yang, Rangan Majumder and Furu Wei
-          ("Multilingual E5 Text Embeddings: A Technical Report", arXiv:2402.05672).
-          License: MIT. Converted with llama.cpp ${LLAMA_CPP_COMMIT}.
-          sha256: ${E5_SHA256}
+          cat > "$W/LICENSE-ATTRIBUTION.txt" <<EOF
+          NIDO knowledge packs v2 — licenses and attribution
+          ==================================================
 
-          wiki-vital5-e5.sqlite: text from Wikipedia (CC BY-SA 4.0), same as
-          knowledge-packs-v1/wiki-vital5.sqlite, with vectors recomputed by the model above.
+          wiki-vital5-e5.sqlite
+            Compiled by NIDO (https://github.com/Nido007-cmyk/Nido) from the
+            introductions of Wikipedia's Vital Articles (level 5),
+            https://www.wikipedia.org — text by Wikipedia contributors.
+            Same text as knowledge-packs-v1/wiki-vital5.sqlite, with vectors
+            recomputed by NIDO with the model below.
+            License: Creative Commons Attribution-ShareAlike 4.0 International
+            (CC BY-SA 4.0), https://creativecommons.org/licenses/by-sa/4.0/
+            If you share or adapt this pack you must credit NIDO and Wikipedia,
+            link the license, indicate changes, and distribute your version
+            under CC BY-SA 4.0. The same notice is stored inside the file
+            (table meta: license, attribution, compiledBy).
+
+          multilingual-e5-small-q8_0.gguf
+            GGUF (Q8_0) conversion by NIDO of ${E5_REPO} at revision
+            ${E5_RESOLVED_REVISION}, by Liang Wang, Nan Yang, Xiaolong Huang,
+            Linjun Yang, Rangan Majumder and Furu Wei ("Multilingual E5 Text
+            Embeddings: A Technical Report", arXiv:2402.05672).
+            License: MIT (the original model's). Converted with llama.cpp
+            ${LLAMA_CPP_COMMIT}. sha256: ${E5_SHA256}
+
+          NIDO's own code (app, scripts, converter) is MIT-licensed:
+          https://github.com/Nido007-cmyk/Nido/blob/main/LICENSE
           EOF
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release create "$RELEASE_TAG" --draft --target "$GITHUB_SHA" \
@@ -275,7 +291,7 @@ jobs:
           fi
           gh release upload "$RELEASE_TAG" --clobber \
             "$W/multilingual-e5-small-q8_0.gguf" "$W/multilingual-e5-small-q8_0.gguf.sha256" \
-            "$W/wiki-vital5-e5.sqlite" "$W/wiki-vital5-e5.sqlite.json" "$W/ATTRIBUTION-e5.txt" \
+            "$W/wiki-vital5-e5.sqlite" "$W/wiki-vital5-e5.sqlite.json" "$W/LICENSE-ATTRIBUTION.txt" \
             "$W/parity.json" "$W/calibration.json" "$W/calibration.md"
 
       - name: Publish reports and logs to the diagnostics branch

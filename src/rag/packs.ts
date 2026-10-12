@@ -19,7 +19,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { CORPUS_CATALOG, MODEL_CATALOG, CatalogModel } from "../models/manifest";
 import { buildLexicalQuery, cosineSimilarityInt8, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM, pruneSemanticByMargin, pruneVectorHits } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
-import { BGE_SMALL_EN_PROFILE, semanticFloor, type EmbeddingProfile } from "./embeddingProfile";
+import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "./embeddingProfile";
 import { packIndexIfReady, releaseAllIndexes, searchPackIndex } from "./vectorIndex";
 
 const PACK_CANDIDATES = 400;
@@ -175,7 +175,7 @@ export async function searchPacks(
       if (!queryVec || !vectorsMatch) continue;
 
       if (fullVectorSearch) {
-        const floor = semanticFloor(profile, query);
+        const floor = packSemanticFloor(profile, query);
         const indexUri = await packIndexIfReady(pack, open.sizeBytes);
         if (indexUri) {
           const hits = await searchPackIndex(indexUri, queryVec, floor, limit);
@@ -206,7 +206,7 @@ export async function searchPacks(
       // "hola" (1 token, fuera del idioma del corpus) puntuaba 0.56 y pasaba
       // el 0.45. Un solo término necesita evidencia más fuerte.
       const threshold = fullVectorSearch
-        ? semanticFloor(profile, query)
+        ? packSemanticFloor(profile, query)
         : (lexicalQuery?.terms.length ?? 0) <= 1
           ? MIN_SEMANTIC_SIMILARITY_SINGLE_TERM
           : MIN_SEMANTIC_SIMILARITY;

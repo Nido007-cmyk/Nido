@@ -32,6 +32,14 @@ The copyright notice and the MIT license text are preserved in `LICENSE`.
 - Phi-3.5-mini / bge-small-en-v1.5: MIT
 - LFM2.5-8B: LFM Open License v1.0 (review terms before distributing)
 - Wikipedia corpus: CC BY-SA 4.0 (attribution + share-alike)
+- multilingual-e5-small (intfloat; Wang et al., arXiv:2402.05672): MIT. The
+  GGUF in the `knowledge-packs-v2` release is NIDO's conversion of it.
+- Knowledge packs compiled by NIDO from Wikipedia (`wiki-vital5`,
+  `wiki-vital5-e5`): CC BY-SA 4.0. Because of ShareAlike the packs can't be
+  MIT. If you share or adapt them, credit **NIDO** (as compiler) and
+  **Wikipedia**, link the license, say what you changed, and keep
+  CC BY-SA 4.0. The notice is also inside each pack (`meta` table) and in
+  `LICENSE-ATTRIBUTION.txt` next to the download.
 
 ## Using NIDO's code? Attribution is required
 

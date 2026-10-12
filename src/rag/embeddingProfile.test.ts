@@ -35,6 +35,11 @@ describe("embedding profiles", () => {
     expect(MULTILINGUAL_E5_SMALL_PROFILE.minSimilaritySingleTerm).toBeGreaterThanOrEqual(
       MULTILINGUAL_E5_SMALL_PROFILE.minSimilarity
     );
+    // A big pack needs more evidence than the built-in base.
+    expect(MULTILINGUAL_E5_SMALL_PROFILE.packMinSimilarity).toBeGreaterThan(MULTILINGUAL_E5_SMALL_PROFILE.minSimilarity);
+    expect(MULTILINGUAL_E5_SMALL_PROFILE.packMinSimilaritySingleTerm).toBeGreaterThan(
+      MULTILINGUAL_E5_SMALL_PROFILE.minSimilaritySingleTerm
+    );
   });
 
   it("profiles are keyed by the catalog SHA-256 of each embedding model", () => {

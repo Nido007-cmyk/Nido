@@ -32,6 +32,14 @@ export interface EmbeddingProfile {
   minSimilarity: number;
   /** Cosine floor for one-word questions ("hola" must not match a village). */
   minSimilaritySingleTerm: number;
+  /**
+   * Floors for downloaded knowledge packs (full vector search). A pack such
+   * as Wikipedia Vital has ~116k chunks: with that many candidates something
+   * is always fairly close, so a pack needs more evidence than the built-in
+   * base (calibration: false "sources" 72% → 25% for es/pt at 0.84).
+   */
+  packMinSimilarity: number;
+  packMinSimilaritySingleTerm: number;
   /** pruneByScoreMargin margin (fraction of the passing range). */
   margin: number;
 }
@@ -46,6 +54,10 @@ export const BGE_SMALL_EN_PROFILE: EmbeddingProfile = {
   passagePrefix: "",
   minSimilarity: 0.6,
   minSimilaritySingleTerm: 0.7,
+  // bge searches packs keyword-first, as before (src/rag/packs.ts); these
+  // equal its built-in floors and are only used by that unchanged path.
+  packMinSimilarity: 0.6,
+  packMinSimilaritySingleTerm: 0.7,
   margin: 0.4,
 };
 
@@ -53,8 +65,13 @@ export const MULTILINGUAL_E5_SMALL_PROFILE: EmbeddingProfile = {
   id: "multilingual-e5-small",
   queryPrefix: "query: ",
   passagePrefix: "passage: ",
+  // Calibration (docs/design/calibration/): built-in base es 50→85%,
+  // pt 48→90% of questions answered from the right article, false
+  // "sources" for es/pt 0–10%.
   minSimilarity: 0.81,
   minSimilaritySingleTerm: 0.87,
+  packMinSimilarity: 0.84,
+  packMinSimilaritySingleTerm: 0.88,
   margin: 0.4,
 };
 
@@ -78,4 +95,9 @@ export function isSingleTermQuery(query: string): boolean {
 
 export function semanticFloor(profile: EmbeddingProfile, query: string): number {
   return isSingleTermQuery(query) ? profile.minSimilaritySingleTerm : profile.minSimilarity;
+}
+
+/** Floor for a downloaded pack's full vector search. */
+export function packSemanticFloor(profile: EmbeddingProfile, query: string): number {
+  return isSingleTermQuery(query) ? profile.packMinSimilaritySingleTerm : profile.packMinSimilarity;
 }

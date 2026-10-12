@@ -96,11 +96,11 @@ describe("searchPacks — multilingual (full vector search)", () => {
     expect(r.semantic[0].chunkId).toBe("pack:wiki-vital5:1");
   });
 
-  it("uses e5's floor and the app's per-source limit", async () => {
+  it("uses e5's (higher) pack floor and the app's per-source limit", async () => {
     await packs.searchPacks("¿qué es la inflación?", new Float32Array([1, 0]), 12, e5Opts());
-    expect(W().searchCalls).toEqual([{ floor: profiles.MULTILINGUAL_E5_SMALL_PROFILE.minSimilarity, limit: 12 }]);
+    expect(W().searchCalls).toEqual([{ floor: profiles.MULTILINGUAL_E5_SMALL_PROFILE.packMinSimilarity, limit: 12 }]);
     await packs.searchPacks("inflación", new Float32Array([1, 0]), 12, e5Opts());
-    expect(W().searchCalls[1].floor).toBe(profiles.MULTILINGUAL_E5_SMALL_PROFILE.minSimilaritySingleTerm);
+    expect(W().searchCalls[1].floor).toBe(profiles.MULTILINGUAL_E5_SMALL_PROFILE.packMinSimilaritySingleTerm);
   });
 
   it("a question made only of stopwords still gets the vector search", async () => {

@@ -198,11 +198,16 @@ def source_search(r, floor, margin, min_keep=1):
     return [(float(r.desc[i]), int(r.top[i])) for i in range(k)]
 
 
+def _floor_for(floor, src):
+    """A floor is one number for every source, or {source: number} (packs get a higher one)."""
+    return floor[src] if isinstance(floor, dict) else floor
+
+
 def app_answer_titles(sources, titles_by_source, floor, margin):
     """Union of sources -> fusion order (semantic only) -> per-title cap -> answer chunks."""
     cands = []
     for src, scores in sources.items():
-        for sc, i in source_search(scores, floor, margin):
+        for sc, i in source_search(scores, _floor_for(floor, src), margin):
             cands.append((sc, titles_by_source[src][i]))
     if not cands:
         return [], 0.0
@@ -217,7 +222,9 @@ def app_answer_titles(sources, titles_by_source, floor, margin):
         out.append((sc, t))
         if len(out) >= APP_TOPK:
             break
-    out = [c for c in out if c[0] >= floor]
+    # Final gate after fusion: the model's base floor (the lowest of them).
+    final = min(floor.values()) if isinstance(floor, dict) else floor
+    out = [c for c in out if c[0] >= final]
     return [t for _, t in out[:APP_ANSWER_CHUNKS]], cands[0][0]
 
 
@@ -432,6 +439,23 @@ def cmd_calibrate(a):
             entry["e5"][str(margin)] = {"multiBest": mb, "singleBest": sbst, "multiSweep": mr[::4], "singleSweep": sr[::4]}
         mr, mb, sr, sbst = choose(items, sb, tbs, base_multi["mean"]["falseAccept"], base_single["mean"]["falseAccept"], APP_MARGIN)
         entry["bgeRetuned"] = {"multiBest": mb, "singleBest": sbst}
+        # The configuration the app ships (src/rag/embeddingProfile.ts):
+        # built-in floor + a higher floor for packs (a 116k-chunk pack always
+        # has *something* close; more candidates need more evidence).
+        bm, bs, pm, ps = a.app_floors
+        fm = {"builtin": bm, "vital": pm}
+        fs = {"builtin": bs, "vital": ps}
+        entry["e5App"] = {
+            "floors": {"builtin": [bm, bs], "packs": [pm, ps]},
+            "multi": evaluate([items[i] for i in multi], [se[i] for i in multi], tbs, fm, fm, APP_MARGIN),
+            "single": evaluate([items[i] for i in single], [se[i] for i in single], tbs, fs, fs, APP_MARGIN),
+        }
+        if with_vital:
+            sweep = []
+            for pf in [round(x, 3) for x in np.arange(0.81, 0.871, 0.005)]:
+                f2 = {"builtin": bm, "vital": pf}
+                sweep.append({"packFloor": pf, **evaluate([items[i] for i in multi], [se[i] for i in multi], tbs, f2, f2, APP_MARGIN)})
+            entry["e5PackFloorSweep"] = sweep
         report["pools"][pool] = entry
 
     json.dump(report, open(a.out, "w"), indent=2)
@@ -471,15 +495,25 @@ def render_md(r):
             b = x["multiBest"]
             if b:
                 L.append(row(f"e5 piso {b['floor']} margen {m}", b))
+        if e.get("e5App"):
+            fl = e["e5App"]["floors"]
+            L.append(row(f"**e5 en la app** (integrado {fl['builtin'][0]}, paquetes {fl['packs'][0]})", e["e5App"]["multi"]))
         if e["bgeRetuned"]["multiBest"]:
             b = e["bgeRetuned"]["multiBest"]
             L.append(row(f"bge re-ajustado piso {b['floor']}", b))
         L += ["", "Una sola palabra:", "", "| | es | en | pt | falsos |", "|---|---|---|---|---|"]
         L.append(row("bge hoy", e["bgeToday"]["single"]))
+        if e.get("e5App"):
+            fl = e["e5App"]["floors"]
+            L.append(row(f"**e5 en la app** (integrado {fl['builtin'][1]}, paquetes {fl['packs'][1]})", e["e5App"]["single"]))
         for m, x in e["e5"].items():
             b = x["singleBest"]
             if b:
                 L.append(row(f"e5 piso {b['floor']} margen {m}", b))
+        if e.get("e5PackFloorSweep"):
+            L += ["", "Piso de los paquetes (frases; integrado fijo):", "", "| piso | es | en | pt | falsos |", "|---|---|---|---|---|"]
+            for r in e["e5PackFloorSweep"]:
+                L.append(row(str(r["packFloor"]), r))
         L += ["", "Mejor coseno por pregunta (p10 / p50 / p90):", "", "| | bge | e5 |", "|---|---|---|"]
         for k in e["top1"]["e5"]:
             bb, ee = e["top1"]["bge"][k], e["top1"]["e5"][k]
@@ -510,6 +544,18 @@ def cmd_build_pack(a):
         "embeddingQueryPrefix": E5_QUERY,
         "builtAt": datetime.now(timezone.utc).isoformat(),
         "derivedFrom": a.src_sha,
+        # The text is Wikipedia's (CC BY-SA 4.0); ShareAlike means the pack as
+        # a whole stays CC BY-SA 4.0. Attribution covers both Wikipedia and
+        # NIDO as the compiler of this adapted work.
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "attribution": (
+            "Compiled by NIDO (https://github.com/Nido007-cmyk/Nido) from Wikipedia article "
+            "introductions (https://www.wikipedia.org, CC BY-SA 4.0). Vectors computed by NIDO with "
+            "intfloat/multilingual-e5-small (MIT). If you share or adapt this pack, credit NIDO and "
+            "Wikipedia, link the license, say what you changed, and keep CC BY-SA 4.0."
+        ),
+        "compiledBy": "NIDO - https://github.com/Nido007-cmyk/Nido",
     }
     con.executemany("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", meta.items())
     con.commit()
@@ -553,6 +599,12 @@ def main():
     pc.add_argument("--llama-commit", required=True)
     pc.add_argument("--out", required=True)
     pc.add_argument("--md", required=True)
+    pc.add_argument(
+        "--app-floors",
+        type=lambda v: [float(x) for x in v.split(",")],
+        default=[0.81, 0.87, 0.84, 0.88],
+        help="built-in multi,single,packs multi,single (src/rag/embeddingProfile.ts)",
+    )
 
     pb = sub.add_parser("build-pack")
     pb.add_argument("--src", required=True)
