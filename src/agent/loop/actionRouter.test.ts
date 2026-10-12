@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { extractCalcAction, extractReminderAction, extractWeeklyPlanAction, generateWeeklyPlan } from "./actionRouter";
+import { extractCalcAction, extractReminderAction, extractTimerAction, extractWeeklyPlanAction, generateWeeklyPlan } from "./actionRouter";
 
 describe("actionRouter: calculadora (FIX 2026-10-07)", () => {
   it("extrae 'cuánto es 245 * 38'", () => {
@@ -388,5 +388,26 @@ describe("0.1.20 (P3-14) — plan semanal: formas naturales", () => {
     expect(extractWeeklyPlanAction("¿cuánto cuesta el plan semanal del gimnasio?")).toBeNull();
     expect(extractWeeklyPlanAction("mi plan de datos es caro")).toBeNull();
     expect(extractWeeklyPlanAction("qué buen plan para el fin de semana")).toBeNull();
+  });
+});
+
+describe("0.1.20 (P3-16) — temporizador", () => {
+  it("formas explícitas en los tres idiomas, con y sin etiqueta", () => {
+    expect(extractTimerAction("pon un temporizador de 10 minutos")).toEqual({ label: null, durationMs: 600_000 });
+    expect(extractTimerAction("ponme un temporizador de 1 hora y 30 minutos para la pasta")).toEqual({ label: "la pasta", durationMs: 5_400_000 });
+    expect(extractTimerAction("temporizador de 45 segundos")).toEqual({ label: null, durationMs: 45_000 });
+    expect(extractTimerAction("pon un temporizador de media hora")).toEqual({ label: null, durationMs: 1_800_000 });
+    expect(extractTimerAction("set a timer for 10 minutes")).toEqual({ label: null, durationMs: 600_000 });
+    expect(extractTimerAction("set a timer for half an hour for the rice")).toEqual({ label: "the rice", durationMs: 1_800_000 });
+    expect(extractTimerAction("coloca um temporizador de 10 minutos para a massa")).toEqual({ label: "a massa", durationMs: 600_000 });
+    expect(extractTimerAction("pon un temporizador de diez minutos")).toEqual({ label: null, durationMs: 600_000 });
+  });
+
+  it("sin duración válida o con forma de pregunta, no hay temporizador", () => {
+    expect(extractTimerAction("pon un temporizador")).toBeNull();
+    expect(extractTimerAction("pon un temporizador de 2 días")).toBeNull();
+    expect(extractTimerAction("¿cuánto dura un temporizador de cocina?")).toBeNull();
+    expect(extractTimerAction("pon un temporizador de 10 minutos para 20 minutos")).toBeNull();
+    expect(extractTimerAction("recuérdame en 10 minutos comprar pan")).toBeNull();
   });
 });

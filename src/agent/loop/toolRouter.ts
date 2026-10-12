@@ -643,6 +643,8 @@ type Key =
   | "noteSearchHeader"
   | "noteSearchNone"
   | "currencyOffline"
+  | "timerSet"
+  | "timerLabel"
   | "factSaved"
   | "factReminderNote";
 
@@ -721,6 +723,16 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: "Sin conexión no tengo tipos de cambio, así que no te voy a inventar una cifra. Cambian todo el tiempo; cuando tengas internet, consúltalo y te ayudo con la cuenta.",
     en: "Offline I don't have exchange rates, so I won't make up a number for you. They change all the time; when you have internet, look it up and I'll help with the math.",
     pt: "Sem conexão eu não tenho taxas de câmbio, então não vou inventar um número para você. Elas mudam o tempo todo; quando tiver internet, consulte e eu ajudo com a conta.",
+  },
+  timerSet: {
+    es: "Temporizador puesto{{when}}.",
+    en: "Timer set{{when}}.",
+    pt: "Temporizador definido{{when}}.",
+  },
+  timerLabel: {
+    es: " Para: {{label}}.",
+    en: " For: {{label}}.",
+    pt: " Para: {{label}}.",
   },
   factSaved: {
     es: "Listo, lo guardé en mi memoria: «{{text}}».",

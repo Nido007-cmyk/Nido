@@ -580,7 +580,7 @@ export async function runAgentLoop(
   // como la solución más confiable para modelos sub-1B.
   // ACTION-ROUTER 2026-10-07: calculadora y recordatorios antes que memoria
   // (el modelo 0.5B no siempre genera el tool call para acciones simples).
-  const { extractCalcAction, extractReminderAction, extractWeeklyPlanAction, generateWeeklyPlan } = await import("./actionRouter");
+  const { extractCalcAction, extractReminderAction, extractTimerAction, extractWeeklyPlanAction, generateWeeklyPlan } = await import("./actionRouter");
   // Permisos del usuario: con la herramienta apagada no hay atajo; el turno
   // sigue al modelo y el despachador la rechaza.
   const fastPathAllowed = (tool: string): boolean =>
@@ -643,6 +643,51 @@ export async function runAgentLoop(
       listReminders: options.listReminders,
     });
     return { response: outcome.response, intent, toolUses: outcome.toolUses, deterministic: true };
+  }
+  // 0.1.20 (P3-16): temporizador — ANTES que recordatorio, porque
+  // «ponme un temporizador de 10 minutos» casaría con el verbo «ponme»
+  // y crearía un recordatorio SIN hora. Un temporizador es un
+  // recordatorio con hora (ahora + duración) y la misma notificación.
+  const timerLang: RouterLang = options.lang === "en" || options.lang === "pt" ? options.lang : "es";
+  const timerAction = fastPathAllowed("create_reminder") ? extractTimerAction(userText) : null;
+  if (timerAction) {
+    const { saveReminder } = await import("../memory/memoryStore");
+    const timerNames: Record<RouterLang, string> = { es: "Temporizador", en: "Timer", pt: "Temporizador" };
+    const base = timerNames[timerLang];
+    const text = timerAction.label ? `${base}: ${timerAction.label}` : base;
+    const dueAt = new Date(Date.now() + timerAction.durationMs).toISOString();
+    let timer;
+    try {
+      timer = await saveReminder({ text, dueAt });
+      actionLog.record("create_reminder", "executed", false, { kind: "reminder", id: timer.id });
+    } catch (e) {
+      actionLog.record("create_reminder", "failed");
+      return {
+        response: routerMessage("reminderSaveFailed", timerLang),
+        intent,
+        toolUses: [{ name: "create_reminder", result: `Fallo al guardar temporizador: ${e instanceof Error ? e.message : String(e)}` }],
+      };
+    }
+    let aviso = "";
+    try {
+      const { scheduleReminderNotification } = await import("../../notify/notifications");
+      const ok = await scheduleReminderNotification(timer.id, timer.text, new Date(dueAt));
+      if (ok) aviso = routerMessage("reminderWillNotify", timerLang);
+    } catch { /* sin notificaciones: el temporizador sigue guardado */ }
+    const when = reminderWhen(dueAt, timerLang);
+    return {
+      response:
+        routerMessage("timerSet", timerLang, { when }) +
+        (timerAction.label ? routerMessage("timerLabel", timerLang, { label: timerAction.label }) : "") +
+        aviso,
+      intent,
+      toolUses: [
+        {
+          name: "create_reminder",
+          result: `Temporizador creado vía pre-router determinístico: «${timer.text}» (${Math.round(timerAction.durationMs / 1000)}s).`,
+        },
+      ],
+    };
   }
   const reminderAction = fastPathAllowed("create_reminder") ? extractReminderAction(userText) : null;
   const reminderLang: RouterLang = options.lang === "en" || options.lang === "pt" ? options.lang : "es";

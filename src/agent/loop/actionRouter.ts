@@ -393,6 +393,98 @@ function parseRelativeTime(t: string, now: Date): Date | null {
   return target;
 }
 
+/** Resultado de una acción de temporizador. */
+export interface TimerAction {
+  /** Etiqueta del usuario («para la pasta») o null. */
+  label: string | null;
+  durationMs: number;
+}
+
+const TIMER_NUMBER_WORDS: Record<string, number> = {
+  ...NUMBER_WORDS,
+  um: 1, uma: 1, dois: 2, duas: 2, três: 3, tres: 3, quatro: 4, cinco: 5,
+  seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, quinze: 15, vinte: 20,
+  trinta: 30, meia: 0.5,
+};
+
+const TIMER_UNIT_MS: Array<{ re: RegExp; ms: number }> = [
+  { re: /^(?:s|seg|segs|segundo|segundos|sec|secs|second|seconds)$/i, ms: 1_000 },
+  { re: /^(?:m|min|mins|minuto|minutos|minute|minutes)$/i, ms: 60_000 },
+  { re: /^(?:h|hr|hrs|hora|horas|hour|hours)$/i, ms: 3_600_000 },
+];
+
+/** «10 minutos», «1 hora y 30 minutos», «half an hour», «meia hora». */
+function parseTimerDuration(raw: string): number | null {
+  const t = raw.trim().toLowerCase().replace(/,/g, " ");
+  if (!t) return null;
+  // Se recorre por componentes número+unidad; «y/and/e» son conectores.
+  let total = 0;
+  let components = 0;
+  let i = 0;
+  const words = t.split(/\s+/).filter((w) => !/^(y|e|and)$/.test(w));
+  while (i < words.length) {
+    const numTok = words[i];
+    // «half an hour», «una hora»: el artículo puede ir entre la
+    // cantidad y la unidad; se salta.
+    let unitTok = words[i + 1];
+    let consumed = 2;
+    if (unitTok !== undefined && /^(?:a|an|un|una|um|uma)$/.test(unitTok) && words[i + 2] !== undefined) {
+      unitTok = words[i + 2];
+      consumed = 3;
+    }
+    if (unitTok === undefined) return null;
+    let n: number | null = null;
+    if (/^\d+(?:\.\d+)?$/.test(numTok)) n = Number(numTok);
+    else if (TIMER_NUMBER_WORDS[numTok] !== undefined) n = TIMER_NUMBER_WORDS[numTok];
+    if (n === null || !(n > 0)) return null;
+    const unit = TIMER_UNIT_MS.find((u) => u.re.test(unitTok));
+    if (!unit) return null;
+    total += n * unit.ms;
+    components++;
+    i += consumed;
+  }
+  if (components === 0 || total <= 0) return null;
+  // Más de 24 h no es un temporizador: es un recordatorio.
+  if (total > 24 * 3_600_000) return null;
+  return total;
+}
+
+const TIMER_FORMS: Array<{ re: RegExp }> = [
+  // ES: «pon un temporizador de 10 minutos (para la pasta)»
+  { re: /^(?:pon(?:me)?|inicia|empieza|activa|crea)\s+(?:un\s+)?(?:temporizador|timer)\s+(?:de\s+)?(.+?)(?:\s+(?:para|de)\s+(.+))?$/i },
+  { re: /^(?:temporizador|timer)\s+(?:de\s+)?(.+?)(?:\s+(?:para|de)\s+(.+))?$/i },
+  // EN: «set a timer for 10 minutes (for the pasta)»
+  { re: /^(?:set|start)\s+(?:a\s+)?timer\s+(?:for\s+)?(.+?)(?:\s+(?:for|to)\s+(.+))?$/i },
+  { re: /^timer\s+(?:for\s+)?(.+?)(?:\s+(?:for|to)\s+(.+))?$/i },
+  // PT: «coloca um temporizador de 10 minutos (para a massa)»
+  { re: /^(?:coloca|inicia|come[çc]a|ativa|p[õo]e|ponha)\s+(?:um\s+)?(?:temporizador|cron[ôo]metro)\s+(?:de\s+)?(.+?)(?:\s+(?:para|de)\s+(.+))?$/i },
+  { re: /^(?:temporizador|cron[ôo]metro)\s+(?:de\s+)?(.+?)(?:\s+(?:para|de)\s+(.+))?$/i },
+];
+
+/**
+ * 0.1.20 (P3-16): temporizador. No es un sistema nuevo: es un
+ * recordatorio cuya hora es ahora + duración, y suena con la MISMA
+ * notificación que cualquier recordatorio (scheduleReminderNotification).
+ * El usuario lo ve y lo borra en la misma lista de recordatorios, y el
+ * deshacer existente lo cubre. Solo se reclaman las formas explícitas
+ * («pon un temporizador de…»); sin duración válida no hay temporizador.
+ */
+export function extractTimerAction(userText: string): TimerAction | null {
+  const trimmed = userText.trim().replace(/[.!]+$/, "");
+  if (!trimmed || trimmed.length > 120) return null;
+  if (INTERROGATIVE_START_RE.test(trimmed)) return null;
+  for (const { re } of TIMER_FORMS) {
+    const m = re.exec(trimmed);
+    if (!m) continue;
+    const durationMs = parseTimerDuration(m[1]);
+    if (durationMs === null) continue;
+    const label = m[2]?.trim();
+    if (label !== undefined && (label.length < 2 || /^\d/.test(label))) continue;
+    return { label: label ?? null, durationMs };
+  }
+  return null;
+}
+
 /**
  * Parsea fecha/hora de un texto de recordatorio.
  * Soporta: días de semana (es/en), hoy/mañana, horas, tiempos relativos
