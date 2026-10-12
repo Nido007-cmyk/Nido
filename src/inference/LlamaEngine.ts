@@ -11,6 +11,7 @@ import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
 import { withStage } from "../utils/stageError";
 import { recordInferenceEvent, type TelemetryStopReason } from "./telemetry";
+import { parseGemmaReasoning } from "./gemmaReasoning";
 
 export interface ChatMessageInput {
   role: string;
@@ -64,6 +65,15 @@ export interface GenerateOptions {
    */
   responseFormat?: CompletionResponseFormat;
   grammar?: string;
+  /**
+   * Qwen3 lane (2026-10-12): thinking switch for the messages/jinja path,
+   * passed to llama.rn as `enable_thinking`. Unset = the loaded model's
+   * catalog flag decides (ModelCapabilities.noThink → false; any other
+   * model → the param is not sent at all, byte-identical legacy call).
+   * Explicit true/false always wins over the catalog flag. Ignored on
+   * the legacy prompt path (no template, nothing to switch).
+   */
+  enableThinking?: boolean;
   onToken?: (piece: string) => void;
   stop?: string[];
   /**
@@ -151,6 +161,8 @@ export interface LoadedModelInfo {
   nThreads: number;
   /** RAM-2026-10-11: qué perfil de memoria aceptó llama.cpp (diagnóstico). */
   memoryProfile?: LlmMemoryProfile;
+  /** Qwen3 lane: el modelo cargado pide enable_thinking=false (catálogo). */
+  noThink?: boolean;
 }
 
 /**
@@ -313,7 +325,13 @@ export class LlamaEngine {
         }
       }
       if (!loadedProfile) throw lastErr;
-      this.modelInfo = { filename: modelFilename, nCtx, nThreads, memoryProfile: loadedProfile };
+      this.modelInfo = {
+        filename: modelFilename,
+        nCtx,
+        nThreads,
+        memoryProfile: loadedProfile,
+        noThink: catalogEntry?.capabilities?.noThink,
+      };
     } catch (e: any) {
       // The native error here (from llama.rn/llama.cpp) is often terse
       // ("Failed to initialize context" with no further detail) — append
@@ -388,6 +406,7 @@ export class LlamaEngine {
     samplingPreset,
     responseFormat,
     grammar,
+    enableThinking,
     onToken,
     stop,
     timeoutMs,
@@ -420,11 +439,18 @@ export class LlamaEngine {
     let stopReason: TelemetryStopReason = "completed";
     try {
       const started = await this.enqueue(() =>
-        this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, onToken: wrappedOnToken, stop, timeoutMs, onTimeout: wrappedOnTimeout })
+        this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, enableThinking, onToken: wrappedOnToken, stop, timeoutMs, onTimeout: wrappedOnTimeout })
       );
       try {
         const { text } = await started.completion;
-        return text ?? started.getFull();
+        const raw = text ?? started.getFull();
+        // Qwen3 lane safety net: if the native layer ignored
+        // enable_thinking=false on a noThink model and think blocks
+        // leaked anyway, the final text (what history/memory keep and
+        // callers parse) never carries them raw. Streamed tokens are
+        // NOT retroactively changed — the switch is the real fix, this
+        // only guarantees a clean settled result.
+        return this.modelInfo?.noThink ? parseGemmaReasoning(raw).answer : raw;
       } finally {
         this.inFlight.delete(started.completion);
         if (started.timer) clearTimeout(started.timer);
@@ -467,6 +493,7 @@ export class LlamaEngine {
     samplingPreset,
     responseFormat,
     grammar,
+    enableThinking,
     onToken,
     stop,
     timeoutMs,
@@ -505,8 +532,21 @@ export class LlamaEngine {
     // unrelated string-based stops on top of it would be either inert or
     // could truncate genuine content that happens to contain "User:"/
     // "Question:". Only applied when the caller passes explicit `stop`.
+    // Qwen3 lane: the thinking switch only exists on the jinja path.
+    // Explicit option wins; unset falls back to the loaded model's
+    // catalog flag (noThink → false); models without the flag never
+    // see the param (byte-identical legacy native call).
+    const thinkingParam = enableThinking ?? (this.modelInfo?.noThink ? false : undefined);
     const completionParams = messages
-      ? { messages, jinja: true, n_predict: nPredict, temperature: sampling.temperature, stop: stop ?? [], ...extraParams }
+      ? {
+          messages,
+          jinja: true,
+          n_predict: nPredict,
+          temperature: sampling.temperature,
+          stop: stop ?? [],
+          ...extraParams,
+          ...(thinkingParam !== undefined ? { enable_thinking: thinkingParam } : {}),
+        }
       : { prompt: prompt!, n_predict: nPredict, temperature: sampling.temperature, stop: stop ?? DEFAULT_STOP_SEQUENCES, ...extraParams };
 
     let full = "";

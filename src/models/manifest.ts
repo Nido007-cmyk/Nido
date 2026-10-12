@@ -411,13 +411,19 @@ export const MODEL_CATALOG: CatalogModel[] = [
     // calls, so its bytes cannot be verified/pinned the way this catalog
     // requires. unsloth's Q4_K_M is used instead: LFS oid and size
     // verified via the HF API at the pinned commit below.
-    // NOT a default and no routing roles yet. Two known cautions for the
-    // device eval: (1) Qwen3's chat template thinks by default (<think>
-    // blocks) and the app has no /no_think wiring yet; (2) its KV cache
-    // is ~9x heavier per token than Qwen2.5-0.5B's (8 KV heads x 128
-    // head dim vs 2 x 64), so on low-RAM devices the pre-flight will
-    // shrink the context. Offered as an optional download ("Select &
-    // Use") until the eval proves it earns a default path.
+    // NOT a default and no routing roles yet. Qwen3's chat template
+    // thinks by default (<think> blocks): the noThink capability below
+    // makes LlamaEngine pass enable_thinking=false on the jinja path
+    // (and strip any leaked block from the final text), so it answers
+    // directly like the Qwen2.5 models. Remaining caution for the
+    // device eval: its KV cache is ~9x heavier per token than
+    // Qwen2.5-0.5B's (8 KV heads x 128 head dim vs 2 x 64) — hence
+    // defaultNCtx 3072 instead of 4096, and on low-RAM devices the
+    // pre-flight will shrink it further. Offered as an optional
+    // download ("Select & Use") until the eval proves it earns a
+    // default path. Sampling: Qwen's non-thinking recommendation
+    // (temp 0.7) matches the existing "chat" preset, so no per-model
+    // preset was added.
     id: "qwen3-0.6b-q4km",
     kind: "llm",
     label: "Qwen3-0.6B (Q4_K_M)",
@@ -429,11 +435,13 @@ export const MODEL_CATALOG: CatalogModel[] = [
     revision: "50968a4468ef4233ed78cd7c3de230dd1d61a56b",
     license: "Apache-2.0",
     description:
-      "New generation of the light model: follows instructions better than Qwen2.5-0.5B at the same size (~0.4GB). Optional download while it is evaluated on real devices; it thinks before answering, so replies can take longer.",
+      "New generation of the light model: follows instructions better than Qwen2.5-0.5B at the same size (~0.4GB). Optional download while it is evaluated on real devices.",
     required: false,
     // RAM pre-flight profile (verified against Qwen/Qwen3-0.6B
     // config.json): 28 layers, GQA with 8 KV heads, head dim 128.
     arch: { nLayer: 28, nKvHeads: 8, headDim: 128 },
+    defaultNCtx: 3072,
+    capabilities: { roles: [], usesChatTemplate: true, noThink: true },
   },
   {
     id: "qwen2.5-7b-instruct-q4km",

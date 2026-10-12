@@ -47,11 +47,11 @@ vi.mock("llama.rn", () => ({
         new Promise((resolve) => {
           generating = true;
           ctx.lastParams = params;
-          onToken({ token: "Hi" });
+          onToken({ token: mockReplyText });
           finishes.push(() =>
             setTimeout(() => {
               generating = false;
-              resolve({ text: "Hi" });
+              resolve({ text: mockReplyText });
             }, 20)
           );
         }),
@@ -69,6 +69,9 @@ vi.mock("expo-file-system/legacy", () => ({
 }));
 let mockTotalRamBytes = 12 * 1024 ** 3;
 let mockRssBytes = 1024 ** 3;
+// Texto que la completion falsa emite/resuelve (los tests de noThink lo
+// cambian por una respuesta con bloque <think>).
+let mockReplyText = "Hi";
 vi.mock("ram-monitor", () => ({
   getDeviceTotalRamBytes: () => mockTotalRamBytes,
   getMemoryInfo: () => ({ rssBytes: mockRssBytes }),
@@ -91,6 +94,7 @@ beforeEach(() => {
   mockRssBytes = 1024 ** 3;
   initCalls.length = 0;
   rejectInit = null;
+  mockReplyText = "Hi";
 });
 
 describe("RAM-2026-10-11: perfiles de memoria del LLM", () => {
@@ -337,5 +341,74 @@ describe("P2.4 telemetry", () => {
     const events = getRecentTelemetry(10);
     expect(events).toHaveLength(1);
     expect(events[0].stopReason).toBe("timeout");
+  });
+});
+
+// Lane Qwen3 (2026-10-12): el interruptor de pensamiento. Qwen3 piensa
+// por defecto; su entrada de catálogo trae noThink y el motor debe
+// pasar enable_thinking=false en la ruta jinja sin que ningún llamador
+// tenga que acordarse, y sin tocar los params de los demás modelos.
+describe("Qwen3 noThink: enable_thinking en el motor", () => {
+  const QWEN3 = "models/qwen3-0.6b-q4km.gguf";
+  const QWEN25 = "models/qwen2.5-0.5b-instruct-q4km.gguf";
+  const MSGS = [{ role: "user", content: "hola" }];
+
+  it("un modelo noThink recibe enable_thinking=false con messages", async () => {
+    const engine = new LlamaEngine();
+    await engine.load(QWEN3);
+    const reply = engine.generate({ messages: MSGS });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Hi");
+    const params = created[0].lastParams as Record<string, unknown>;
+    expect(params.jinja).toBe(true);
+    expect(params.enable_thinking).toBe(false);
+  });
+
+  it("un modelo sin la marca NO recibe el parámetro (params legacy intactos)", async () => {
+    const engine = new LlamaEngine();
+    await engine.load(QWEN25);
+    const reply = engine.generate({ messages: MSGS });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Hi");
+    const params = created[0].lastParams as Record<string, unknown>;
+    expect("enable_thinking" in params).toBe(false);
+  });
+
+  it("la ruta prompt (sin plantilla) nunca lleva el parámetro", async () => {
+    const engine = new LlamaEngine();
+    await engine.load(QWEN3);
+    const reply = engine.generate({ prompt: "hola" });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Hi");
+    const params = created[0].lastParams as Record<string, unknown>;
+    expect("enable_thinking" in params).toBe(false);
+  });
+
+  it("la opción explícita gana sobre la marca del catálogo", async () => {
+    const engine = new LlamaEngine();
+    await engine.load(QWEN3);
+    const reply = engine.generate({ messages: MSGS, enableThinking: true });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Hi");
+    const params = created[0].lastParams as Record<string, unknown>;
+    expect(params.enable_thinking).toBe(true);
+  });
+
+  it("red de seguridad: un <think> filtrado no llega al texto final de un noThink", async () => {
+    mockReplyText = "<think>razonamiento interno</think>Respuesta visible.";
+    const engine = new LlamaEngine();
+    await engine.load(QWEN3);
+    const reply = engine.generate({ messages: MSGS });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Respuesta visible.");
+  });
+
+  it("la red NO se aplica a modelos sin la marca (su texto pasa intacto)", async () => {
+    mockReplyText = "<think>razonamiento interno</think>Respuesta visible.";
+    const engine = new LlamaEngine();
+    await engine.load(QWEN25);
+    const reply = engine.generate({ messages: MSGS });
+    await engine.unload();
+    await expect(reply).resolves.toBe("<think>razonamiento interno</think>Respuesta visible.");
   });
 });

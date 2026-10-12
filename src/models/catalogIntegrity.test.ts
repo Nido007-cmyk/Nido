@@ -228,3 +228,25 @@ describe("gate fail-closed behavior (synthetic contracts)", () => {
     expect(gate.fetchUrl).toBe("https://github.com/org/repo/releases/download/v1/data.sqlite");
   });
 });
+
+// Lane Qwen3 (2026-10-12): la entrada de Qwen3-0.6B declara lo que el
+// motor necesita para correrlo bien — plantilla de chat propia y el
+// interruptor de no-pensar — y sigue fuera de la ruta por defecto.
+describe("Qwen3-0.6B en el catálogo", () => {
+  const qwen3 = MODEL_CATALOG.find((m) => m.id === "qwen3-0.6b-q4km");
+  it("existe como LLM opcional, pineado y con licencia limpia", () => {
+    expect(qwen3).toBeDefined();
+    expect(qwen3!.kind).toBe("llm");
+    expect(qwen3!.required).toBe(false);
+    expect(qwen3!.license).toBe("Apache-2.0");
+    expect(qwen3!.revision).toBe("50968a4468ef4233ed78cd7c3de230dd1d61a56b");
+    expect(qwen3!.sha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+  it("declara usesChatTemplate + noThink, sin roles de routing, con su perfil de RAM", () => {
+    expect(qwen3!.capabilities?.usesChatTemplate).toBe(true);
+    expect(qwen3!.capabilities?.noThink).toBe(true);
+    expect(qwen3!.capabilities?.roles).toEqual([]);
+    expect(qwen3!.arch).toEqual({ nLayer: 28, nKvHeads: 8, headDim: 128 });
+    expect(qwen3!.defaultNCtx).toBe(3072);
+  });
+});

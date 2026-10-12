@@ -92,6 +92,16 @@ export interface ModelCapabilities {
    * actual behavior under this hasn't been checked.
    */
   usesChatTemplate?: boolean;
+  /**
+   * Set true for models whose embedded chat template THINKS by default
+   * (the Qwen3 family emits <think> blocks before answering). The engine
+   * (LlamaEngine) then passes llama.rn's `enable_thinking: false` on the
+   * messages/jinja path so the template injects an empty think block and
+   * the model answers directly, and strips any think block that still
+   * leaks into the final text. Absent/false = legacy behavior, byte
+   * identical native params. Only meaningful with usesChatTemplate.
+   */
+  noThink?: boolean;
   /** Rough working-set estimate, same approximation basis as LlamaEngine's own pre-flight RAM check. */
   estimatedMemoryMb?: number;
   /**
