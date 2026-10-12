@@ -231,6 +231,7 @@ jobs:
         with:
           sparse-checkout: |
             package.json
+            CHANGELOG.md
             docs/ALPHA_RELEASE_NOTES.md
           sparse-checkout-cone-mode: false
 
@@ -263,6 +264,36 @@ jobs:
         working-directory: dist
         run: sha256sum -c app-release.apk.sha256
 
+      # Las notas se COMPONEN desde el CHANGELOG (sección de la versión
+      # que se publica) + las partes fijas de ALPHA_RELEASE_NOTES.md
+      # (qué es NIDO, limitaciones, aviso de seguridad). Antes el body era
+      # el archivo fijo tal cual, y cada release salía con el título y los
+      # cambios de la versión anterior hasta corregirlos a mano por API
+      # (pasó en 0.1.19 y 0.1.20). Sin sección en el CHANGELOG, el job
+      # FALLA a propósito: mejor un release detenido que notas falsas.
+      - name: Compose release notes
+        if: steps.tag.outputs.publish == 'true'
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+          tag = os.environ['TAG']
+          ver = tag.lstrip('v')
+          notes = open('docs/ALPHA_RELEASE_NOTES.md').read()
+          ch = open('CHANGELOG.md').read()
+          m = re.search(r'^## ' + re.escape(ver) + r'\b.*?(?=^## |\Z)', ch, re.M | re.S)
+          if not m:
+              sys.exit(f'CHANGELOG.md has no section for {ver}: refusing to publish stale notes')
+          ch_body = m.group(0).strip().split('\n', 1)[1].strip()
+          head = re.split(r'^## What changed in ', notes, flags=re.M)[0]
+          head = re.sub(r'^# NIDO v\S+ — Release Notes', f'# NIDO {tag} — Release Notes', head, count=1).rstrip()
+          tail = '## Known limitations' + notes.split('## Known limitations', 1)[1]
+          body = f"{head}\n\n## What changed in {ver}\n\n{ch_body}\n\n{tail}"
+          open('release-notes.md', 'w').write(body)
+          print(f'composed release notes for {ver}: {len(body)} bytes')
+          PY
+
       - name: Upload APK to release
         if: steps.tag.outputs.publish == 'true'
         uses: softprops/action-gh-release@v2
@@ -270,7 +301,7 @@ jobs:
           tag_name: ${{ steps.tag.outputs.tag }}
           target_commitish: ${{ github.sha }}
           name: NIDO ${{ steps.tag.outputs.tag }}
-          body_path: docs/ALPHA_RELEASE_NOTES.md
+          body_path: release-notes.md
           prerelease: ${{ contains(steps.tag.outputs.tag, '-') }}
           files: |
             dist/app-release.apk
