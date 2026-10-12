@@ -508,9 +508,12 @@ async function openAndMigrate(): Promise<SecureDbHandle> {
   // el modelo, los vectores almacenados son inválidos (dim distinta o
   // pesos distintos → scores basura silenciosos). Fail-closed con mensaje
   // claro en vez de degradación silenciosa.
-  const { MODEL_CATALOG } = await import("../models/manifest");
-  const embeddingModel = MODEL_CATALOG.find((m) => m.kind === "embedding" && m.required);
-  const expectedSha = embeddingModel?.sha256 ?? "unknown";
+  //
+  // Búsqueda multilingüe (0.2.0): el modelo esperado es el ACTIVO (Ajustes),
+  // no siempre el requerido. El cambio de modelo se hace por un camino
+  // explícito (embeddingSwitch.ts → resetEmbeddingsForModel), que borra los
+  // vectores y re-sella en la misma transacción.
+  const expectedSha = await activeEmbeddingSha256();
   const storedModel = await db.getFirstAsync<{ value: string }>(
     "SELECT value FROM meta WHERE key = 'embedding_model_sha256';"
   );
@@ -519,15 +522,34 @@ async function openAndMigrate(): Promise<SecureDbHandle> {
   if (!storedModel?.value) {
     await db.runAsync("INSERT OR REPLACE INTO meta (key, value) VALUES ('embedding_model_sha256', ?);", [expectedSha]);
   } else if (storedModel.value !== expectedSha) {
-    try {
-      await db.closeAsync();
-    } catch {
-      /* el error original es lo que importa */
+    // Sin ningún vector guardado no hay nada que el modelo anterior haya
+    // calculado: re-sellar es seguro (p. ej. un cambio de modelo
+    // interrumpido entre el borrado de vectores y el ajuste activo). Con
+    // vectores de otro modelo se sigue fallando cerrado, como siempre.
+    const vectors = await db.getFirstAsync<{ n: number }>("SELECT COUNT(*) AS n FROM chunk_embeddings;");
+    // Vectors of ANOTHER CATALOG model (e.g. a backup made before switching
+    // search models, or Settings lost while the base survived): they are
+    // known to be invalid here, so they're dropped and rebuilt in the
+    // background (reembed.ts) — never scored against the wrong model. An
+    // unknown stamp still fails closed.
+    const knownModels = await catalogEmbeddingShas();
+    const storedIsKnown = knownModels.includes(storedModel.value) && knownModels.includes(expectedSha);
+    if ((vectors?.n ?? 0) === 0 || storedIsKnown) {
+      await db.withTransactionAsync(async () => {
+        await db.runAsync("DELETE FROM chunk_embeddings;");
+        await db.runAsync("INSERT OR REPLACE INTO meta (key, value) VALUES ('embedding_model_sha256', ?);", [expectedSha]);
+      });
+    } else {
+      try {
+        await db.closeAsync();
+      } catch {
+        /* el error original es lo que importa */
+      }
+      throw new KnowledgeDbVersionError(
+        storedModel.value,
+        `modelo de embeddings cambió (actual: ${expectedSha.slice(0, 12)}…). Se requiere re-indexar la base de conocimiento.`
+      );
     }
-    throw new KnowledgeDbVersionError(
-      storedModel.value,
-      `modelo de embeddings cambió (actual: ${expectedSha.slice(0, 12)}…). Se requiere re-indexar la base de conocimiento.`
-    );
   }
   } catch (err) {
     try {
@@ -554,9 +576,34 @@ export interface ChunkRecord {
 export async function insertChunk(
   chunk: ChunkRecord,
   embedding: Float32Array,
-  opts?: WriteOptions
+  opts?: WriteOptions & {
+    /**
+     * Model that computed `embedding`. When given, the vector is stored only
+     * if the base is still stamped for that model; otherwise the chunk is
+     * stored without it (keyword search works, reembed.ts adds the vector).
+     * Protects against a model switch landing between embed and insert.
+     */
+    modelSha256?: string | null;
+  }
 ): Promise<void> {
   await writeTransaction(async (txn) => {
+    if (opts?.modelSha256) {
+      const stamp = await txn.getFirstAsync<{ value: string }>(
+        "SELECT value FROM meta WHERE key = 'embedding_model_sha256';"
+      );
+      if (stamp?.value !== opts.modelSha256) {
+        await txn.runAsync(
+          `INSERT OR REPLACE INTO chunks (chunk_id, doc_id, title, body, source, collection_id) VALUES (?, ?, ?, ?, ?, ?)`,
+          [chunk.chunkId, chunk.docId, chunk.title, chunk.body, chunk.source ?? null, chunk.collectionId ?? null]
+        );
+        await txn.runAsync(
+          `INSERT OR REPLACE INTO chunks_fts (chunk_id, doc_id, title, body) VALUES (?, ?, ?, ?)`,
+          [chunk.chunkId, chunk.docId, chunk.title, chunk.body]
+        );
+        await txn.runAsync(`DELETE FROM chunk_embeddings WHERE chunk_id = ?`, [chunk.chunkId]);
+        return;
+      }
+    }
     await txn.runAsync(
       `INSERT OR REPLACE INTO chunks (chunk_id, doc_id, title, body, source, collection_id) VALUES (?, ?, ?, ?, ?, ?)`,
       [chunk.chunkId, chunk.docId, chunk.title, chunk.body, chunk.source ?? null, chunk.collectionId ?? null]
@@ -610,6 +657,102 @@ export async function insertChunkWithoutEmbedding(
     );
     // Deliberately no chunk_embeddings row — vector search will skip it.
   }, opts);
+}
+
+async function catalogEmbeddingShas(): Promise<string[]> {
+  const { MODEL_CATALOG } = await import("../models/manifest");
+  return MODEL_CATALOG.filter((m) => m.kind === "embedding").map((m) => m.sha256);
+}
+
+/**
+ * SHA-256 of the embedding model the user has active (Settings), falling
+ * back to the catalog's required one. This is what the knowledge base must
+ * be stamped with.
+ */
+async function activeEmbeddingSha256(): Promise<string> {
+  const { MODEL_CATALOG } = await import("../models/manifest");
+  const required = MODEL_CATALOG.find((m) => m.kind === "embedding" && m.required);
+  let activeId: string | null = null;
+  try {
+    const { getActiveModelId } = await import("../models/settings");
+    activeId = await getActiveModelId("embedding");
+  } catch {
+    /* settings unreadable: the required model, as before */
+  }
+  const active = activeId ? MODEL_CATALOG.find((m) => m.kind === "embedding" && m.id === activeId) : undefined;
+  return (active ?? required)?.sha256 ?? "unknown";
+}
+
+/**
+ * The explicit embedding-model switch: every stored vector is dropped and
+ * the base is re-stamped with the new model, in ONE transaction. Text and
+ * keyword search are untouched; vectors are rebuilt afterwards by
+ * reembed.ts. Never call this without also making `sha256` the active model.
+ */
+export async function resetEmbeddingsForModel(sha256: string, opts?: WriteOptions): Promise<void> {
+  if (!/^[0-9a-f]{64}$/.test(sha256)) throw new Error(`invalid embedding model sha256: ${sha256}`);
+  await writeTransaction(async (txn) => {
+    await txn.runAsync(`DELETE FROM chunk_embeddings`);
+    await txn.runAsync("INSERT OR REPLACE INTO meta (key, value) VALUES ('embedding_model_sha256', ?);", [sha256]);
+  }, opts);
+}
+
+/** The model the stored vectors belong to (meta stamp), or null. */
+export async function getEmbeddingStamp(): Promise<string | null> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ value: string }>("SELECT value FROM meta WHERE key = 'embedding_model_sha256';");
+  return row?.value ?? null;
+}
+
+/** Chunks with no vector yet (new model, or indexed while embeddings were unavailable). */
+export async function listChunksWithoutEmbedding(
+  limit: number
+): Promise<Array<{ chunkId: string; title: string; body: string }>> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ chunk_id: string; title: string | null; body: string }>(
+    `SELECT c.chunk_id, c.title, c.body FROM chunks c
+     LEFT JOIN chunk_embeddings e ON e.chunk_id = c.chunk_id
+     WHERE e.chunk_id IS NULL ORDER BY c.rowid LIMIT ?`,
+    [limit]
+  );
+  return rows.map((r) => ({ chunkId: r.chunk_id, title: r.title ?? "", body: r.body }));
+}
+
+export async function countChunkVectors(): Promise<{ chunks: number; withVector: number }> {
+  const db = await getDb();
+  const c = await db.getFirstAsync<{ n: number }>("SELECT COUNT(*) AS n FROM chunks;");
+  const e = await db.getFirstAsync<{ n: number }>(
+    "SELECT COUNT(*) AS n FROM chunk_embeddings e JOIN chunks c ON c.chunk_id = e.chunk_id;"
+  );
+  return { chunks: c?.n ?? 0, withVector: e?.n ?? 0 };
+}
+
+/**
+ * Stores a re-computed vector only if the base is still stamped with the
+ * model that computed it and the chunk still exists. Returns false when the
+ * model changed meanwhile (the caller stops), so a vector from one model can
+ * never land in a base stamped for another.
+ */
+export async function insertEmbeddingForModel(
+  chunkId: string,
+  embedding: Float32Array,
+  modelSha256: string,
+  opts?: WriteOptions
+): Promise<boolean> {
+  let stored = false;
+  await writeTransaction(async (txn) => {
+    const stamp = await txn.getFirstAsync<{ value: string }>(
+      "SELECT value FROM meta WHERE key = 'embedding_model_sha256';"
+    );
+    if (stamp?.value !== modelSha256) return;
+    await txn.runAsync(
+      `INSERT OR REPLACE INTO chunk_embeddings (chunk_id, embedding, dim)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM chunks WHERE chunk_id = ?)`,
+      [chunkId, new Uint8Array(embedding.buffer, embedding.byteOffset, embedding.byteLength), embedding.length, chunkId]
+    );
+    stored = true;
+  }, opts);
+  return stored;
 }
 
 export interface CustomCollection {

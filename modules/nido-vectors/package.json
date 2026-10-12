@@ -1,0 +1,7 @@
+{
+  "name": "nido-vectors",
+  "version": "0.1.0",
+  "description": "Local Expo module: fast exact vector search over a knowledge pack's int8 embeddings (memory-mapped index, cosine top-k).",
+  "main": "index.ts",
+  "license": "MIT"
+}

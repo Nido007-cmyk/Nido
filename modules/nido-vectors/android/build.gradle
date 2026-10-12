@@ -1,0 +1,19 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.nidovectors'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.nidovectors"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}

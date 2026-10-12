@@ -238,7 +238,9 @@ export function fuseRetrievalResults(
   lexical: RetrievedChunk[],
   semantic: RetrievedChunk[],
   topK: number,
-  weights: { lexical: number; semantic: number } = { lexical: 0.5, semantic: 0.5 }
+  weights: { lexical: number; semantic: number } = { lexical: 0.5, semantic: 0.5 },
+  /** Absolute floor for semantic raw scores (the embedding model's; bge's by default). */
+  minRawScore: number = MIN_SEMANTIC_SIMILARITY
 ): RetrievedChunk[] {
   const byId = new Map<string, RetrievedChunk>();
   const normalize = (chunks: RetrievedChunk[], weight: number, isSemantic: boolean) => {
@@ -277,7 +279,7 @@ export function fuseRetrievalResults(
   // H2-2026-10-06: gate absoluto post-fusión. La fusión es re-ranking
   // relativo; un chunk semántico con rawScore bajo (pero "mejor de un mal
   // lote") no debe llegar al prompt del modelo.
-  return out.filter((c) => c.rawScore === undefined || c.rawScore >= MIN_SEMANTIC_SIMILARITY);
+  return out.filter((c) => c.rawScore === undefined || c.rawScore >= minRawScore);
 }
 
 /**
@@ -336,6 +338,27 @@ export function pruneByScoreMargin<T extends { score: number }>(
   // minKeep: nunca devolver menos de lo pedido (el top siempre sobrevive
   // porque max >= cutoff por construcción).
   return kept.length >= minKeep ? kept : chunks.slice(0, minKeep);
+}
+
+/**
+ * pruneByScoreMargin for hits from the native full vector search
+ * (src/rag/vectorIndex.ts), which returns only the top `limit` ids plus how
+ * many passed the floor and the lowest passing score. The margin must look
+ * at the whole passing range, exactly like the in-JS search does, so the
+ * lowest passing score joins the list as a sentinel and is dropped after.
+ */
+export function pruneVectorHits(
+  hits: { ids: number[]; scores: number[]; gatedCount: number; gatedMin: number | null },
+  margin: number
+): Array<{ id: number; score: number }> {
+  const scored = hits.ids.map((id, i) => ({ id, score: hits.scores[i] }));
+  if (scored.length === 0) return [];
+  const SENTINEL = Number.NaN;
+  const withFloor =
+    hits.gatedMin !== null && hits.gatedCount > scored.length
+      ? [...scored, { id: SENTINEL, score: hits.gatedMin }]
+      : scored;
+  return pruneByScoreMargin(withFloor, margin).filter((h) => !Number.isNaN(h.id));
 }
 
 export interface ConversationTurn {

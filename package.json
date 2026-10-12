@@ -1,6 +1,6 @@
 {
   "name": "nido-app",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "NIDO \u2014 your offline agent: 100% local personal AI assistant for Android with total privacy (zero network after install, encrypted on-device memory).",
   "license": "MIT",
   "main": "index.ts",
@@ -35,6 +35,7 @@
     "nido-launch": "file:./modules/nido-launch",
     "nido-p2p": "file:./modules/nido-p2p",
     "nido-secure-dialog": "file:./modules/nido-secure-dialog",
+    "nido-vectors": "file:./modules/nido-vectors",
     "qrcode": "1.5.4",
     "ram-monitor": "file:./modules/ram-monitor",
     "react": "19.2.3",

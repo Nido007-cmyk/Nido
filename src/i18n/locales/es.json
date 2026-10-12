@@ -1187,6 +1187,25 @@
     "strictEnable": "Activar",
     "strictConfirm": "NIDO se cerrará por completo cuando salgas de la app más del tiempo elegido y tendrás que desbloquearla de nuevo. Mientras esté cerrada no recibirás mensajes P2P (llegarán al abrirla)."
   },
+  "multilingual": {
+    "title": "Búsqueda en español y portugués",
+    "body": "Entiende preguntas en español y portugués y encuentra los artículos correctos aunque estén escritos en inglés. Descarga un modelo de 126 MB y rehace el índice de búsqueda en segundo plano; mientras tanto la búsqueda por palabras sigue funcionando. Todo se queda en este dispositivo.",
+    "statusOn": "Activada: se usa el modelo de búsqueda multilingüe.",
+    "statusOff": "Desactivada: modelo de búsqueda solo en inglés.",
+    "downloading": "Descargando el modelo… {{pct}}%",
+    "reindexing": "Preparando la búsqueda: {{done}} / {{total}}",
+    "enabled": "Listo. La búsqueda ya entiende español y portugués.",
+    "disabled": "De vuelta al modelo de búsqueda solo en inglés.",
+    "failed": "No se pudo cambiar el modelo de búsqueda: {{error}}",
+    "confirmOnTitle": "¿Activar la búsqueda en español y portugués?",
+    "confirmOnBody": "NIDO descargará un modelo de 126 MB (una sola vez) y rehará el índice de búsqueda en segundo plano. Puede tardar unos minutos y puedes seguir conversando. Si usas el paquete Wikipedia Vital, descarga abajo su versión multilingüe para buscar en él en español o portugués.",
+    "confirmOffTitle": "¿Desactivar la búsqueda en español y portugués?",
+    "confirmOffBody": "NIDO volverá al modelo de búsqueda solo en inglés y rehará el índice de búsqueda en segundo plano.",
+    "turnOn": "Activar",
+    "turnOff": "Desactivar",
+    "working": "Trabajando…",
+    "packOtherModel": "Hecho para el otro modelo de búsqueda: con este paquete ahora solo funciona la búsqueda por palabras."
+  },
   "launch": {
     "shortcutNewChat": "Nuevo chat",
     "shortcutP2P": "Mensajes NIDO"

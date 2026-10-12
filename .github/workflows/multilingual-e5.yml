@@ -1,0 +1,327 @@
+# Multilingual search (docs/design/BUSQUEDA_MULTILINGUE.md) — model pipeline.
+#
+# Converts intfloat/multilingual-e5-small to GGUF with the SAME llama.cpp that
+# llama.rn 0.13.0-rc.6 vendors (vendor/VERSIONS: b11192, commit below), checks
+# it against the original model, calibrates the semantic filter against the
+# app's current bge-small setup, and re-embeds the Wikipedia Vital pack.
+#
+# Outputs (nothing here touches the app or the signed catalog):
+#   - draft release $RELEASE_TAG: the GGUF, the Vital v2 pack, reports.
+#     A draft is invisible to users; it is published only when the app
+#     version that uses it ships, and the catalog entry is signed locally by
+#     the maintainer (scripts/sign-manifest.mjs). No signing key here.
+#   - branch diag/multilingual-e5: reports + step logs of the last run.
+#
+# Every step is deterministic given the pins below; re-runs reuse the cached
+# llama.cpp build and the Vital embeddings already computed.
+
+name: Multilingual search (e5)
+
+on:
+  push:
+    branches: [feat/multilingual-search]
+    paths:
+      - "scripts/multilingual/**"
+      - ".github/workflows/multilingual-e5.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: multilingual-e5-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # llama.rn 0.13.0-rc.6 vendor/VERSIONS → LLAMA_CPP_REF=b11192
+  LLAMA_CPP_COMMIT: 171e8846b4af9766c354064cb776cb34a50f053f
+  E5_REPO: intfloat/multilingual-e5-small
+  # Pinned after the first run (run 38181398354). Empty = resolve the latest.
+  E5_REVISION: "614241f622f53c4eeff9890bdc4f31cfecc418b3"
+  BGE_URL: https://huggingface.co/CompendiumLabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-q8_0.gguf
+  BGE_SHA256: ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514
+  VITAL_URL: https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v1/wiki-vital5.sqlite
+  VITAL_SHA256: d3b87d562baba3489f6878bf99783f50d504db94c347029771e53f6d1aecc666
+  RELEASE_TAG: knowledge-packs-v2
+  # meta.builtAt of the Vital v2 pack: pinned so rebuilds are byte-identical.
+  PACK_BUILT_AT: "2026-10-12T00:00:00Z"
+  DIAG_BRANCH: diag/multilingual-e5
+
+jobs:
+  e5:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    env:
+      W: ${{ github.workspace }}/build/e5
+      DIAG: ${{ github.workspace }}/build/e5/diag
+      PY: ${{ github.workspace }}/build/e5/venv/bin/python
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare
+        run: |
+          mkdir -p "$W" "$DIAG" "$W/cache"
+          { date -u; nproc; free -g; df -h .; } > "$DIAG/00-runner.txt"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore llama.cpp build
+        id: llama-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build/e5/llama.cpp
+          key: llama-cpp-${{ env.LLAMA_CPP_COMMIT }}-server-v1
+
+      - name: Build llama.cpp (llama.rn's commit)
+        if: steps.llama-cache.outputs.cache-hit != 'true'
+        run: |
+          exec > >(tee -a "$DIAG/10-build.log") 2>&1
+          set -euxo pipefail
+          git init -q "$W/llama.cpp"
+          cd "$W/llama.cpp"
+          git remote add origin https://github.com/ggml-org/llama.cpp
+          git fetch -q --depth 1 origin "$LLAMA_CPP_COMMIT"
+          git checkout -q FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$LLAMA_CPP_COMMIT"
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF \
+            -DLLAMA_OPENSSL=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF \
+            -DLLAMA_BUILD_UI=OFF -DLLAMA_USE_PREBUILT_UI=OFF
+          cmake --build build --target llama-server llama-quantize -j "$(nproc)"
+          ls -la build/bin
+
+      - name: Save llama.cpp build
+        if: steps.llama-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: build/e5/llama.cpp
+          key: llama-cpp-${{ env.LLAMA_CPP_COMMIT }}-server-v1
+
+      - name: Python environment
+        run: |
+          exec > >(tee -a "$DIAG/20-python.log") 2>&1
+          set -euxo pipefail
+          python -m venv "$W/venv"
+          "$PY" -m pip install -q --upgrade pip
+          # The converter's own pins (torch, transformers, sentencepiece) plus
+          # the reference implementation, resolved together.
+          "$PY" -m pip install -q -r "$W/llama.cpp/requirements/requirements-convert_hf_to_gguf.txt" \
+            "sentence-transformers>=5.1,<6" "huggingface_hub>=0.34,<1"
+          "$PY" -m pip freeze > "$DIAG/20-pip-freeze.txt"
+
+      - name: Download multilingual-e5-small
+        run: |
+          exec > >(tee -a "$DIAG/30-download.log") 2>&1
+          set -euxo pipefail
+          "$PY" - <<'EOF'
+          import os
+          from huggingface_hub import HfApi, snapshot_download
+          repo, rev = os.environ["E5_REPO"], os.environ["E5_REVISION"] or None
+          info = HfApi().model_info(repo, revision=rev)
+          print("revision", info.sha)
+          d = snapshot_download(repo, revision=info.sha, local_dir=os.path.join(os.environ["W"], "hf"),
+              allow_patterns=["*.json", "*.model", "*.safetensors", "1_Pooling/*", "README.md", "LICENSE*"])
+          print(sorted(os.listdir(d)))
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              f.write(f"E5_RESOLVED_REVISION={info.sha}\n")
+          EOF
+          test -f "$W/hf/modules.json"
+          cat "$W/hf/1_Pooling/config.json"
+
+      - name: Convert to GGUF (F16 → Q8_0)
+        run: |
+          exec > >(tee -a "$DIAG/40-convert.log") 2>&1
+          set -euxo pipefail
+          # Wrapper: BERT weights + XLM-R SentencePiece tokenizer (see the script).
+          "$PY" scripts/multilingual/convert_e5.py "$W/llama.cpp" "$W/hf" --outtype f16 --outfile "$W/e5-f16.gguf"
+          "$W/llama.cpp/build/bin/llama-quantize" "$W/e5-f16.gguf" "$W/multilingual-e5-small-q8_0.gguf" Q8_0
+          "$PY" - <<'EOF'
+          import os, sys
+          sys.path.insert(0, os.path.join(os.environ["W"], "llama.cpp", "gguf-py"))
+          from gguf import GGUFReader
+          for name in ("e5-f16.gguf", "multilingual-e5-small-q8_0.gguf"):
+              r = GGUFReader(os.path.join(os.environ["W"], name))
+              def val(k):
+                  f = r.fields.get(k)
+                  return None if f is None else f.parts[f.data[0]].tolist()
+              arch = bytes(val("general.architecture")).decode()
+              pooling = val(f"{arch}.pooling_type")
+              dims = val(f"{arch}.embedding_length")
+              print(name, "arch", arch, "pooling", pooling, "dims", dims, "tokenizer", bytes(val("tokenizer.ggml.model")).decode())
+              # llama_pooling_type: 1 = MEAN (e5), 2 = CLS (bge)
+              assert pooling == [1], f"{name}: pooling must be MEAN, got {pooling}"
+              assert dims == [384], f"{name}: dims must be 384, got {dims}"
+          EOF
+          sha256sum "$W/multilingual-e5-small-q8_0.gguf" | tee "$W/multilingual-e5-small-q8_0.gguf.sha256"
+          echo "E5_SHA256=$(cut -d' ' -f1 "$W/multilingual-e5-small-q8_0.gguf.sha256")" >> "$GITHUB_ENV"
+          ls -la "$W"/*.gguf
+
+      - name: Fetch bge-small (app model) and Vital pack v1
+        run: |
+          exec > >(tee -a "$DIAG/50-fetch.log") 2>&1
+          set -euxo pipefail
+          curl -fsSL --retry 3 -o "$W/bge.gguf" "$BGE_URL"
+          echo "$BGE_SHA256  $W/bge.gguf" | sha256sum -c -
+          curl -fsSL --retry 3 -o "$W/wiki-vital5.sqlite" "$VITAL_URL"
+          echo "$VITAL_SHA256  $W/wiki-vital5.sqlite" | sha256sum -c -
+
+      - name: Start embedding servers
+        run: |
+          exec > >(tee -a "$DIAG/60-servers.log") 2>&1
+          set -euxo pipefail
+          start() {
+            nohup "$W/llama.cpp/build/bin/llama-server" -m "$1" --embeddings --host 127.0.0.1 --port "$2" \
+              -c 4096 -np 8 -b 4096 -ub 4096 -t "$(nproc)" --no-webui > "$DIAG/server-$2.log" 2>&1 &
+          }
+          start "$W/bge.gguf" 8081
+          start "$W/multilingual-e5-small-q8_0.gguf" 8082
+          start "$W/e5-f16.gguf" 8083
+          for p in 8081 8082 8083; do
+            for i in $(seq 1 180); do curl -sf "http://127.0.0.1:$p/health" && break; sleep 1; done
+            curl -sf "http://127.0.0.1:$p/health"
+          done
+          grep -i "pooling" "$DIAG"/server-*.log || true
+
+      - name: Parity vs sentence-transformers
+        run: |
+          exec > >(tee -a "$DIAG/70-parity.log") 2>&1
+          set -euxo pipefail
+          "$PY" scripts/multilingual/e5_pipeline.py parity \
+            --server-q8 http://127.0.0.1:8082 --server-f16 http://127.0.0.1:8083 --st-dir "$W/hf" \
+            --queries scripts/multilingual/calibration-queries.json \
+            --corpus assets/corpus/corpus.json assets/corpus/corpus-standard.json \
+            --out "$W/parity.json"
+          cat "$W/parity.json"
+
+      - name: Calibrate (built-in corpus)
+        run: |
+          exec > >(tee -a "$DIAG/80-calibrate-builtin.log") 2>&1
+          set -euxo pipefail
+          "$PY" scripts/multilingual/e5_pipeline.py calibrate \
+            --bge http://127.0.0.1:8081 --e5 http://127.0.0.1:8082 \
+            --queries scripts/multilingual/calibration-queries.json \
+            --corpus assets/corpus/corpus.json assets/corpus/corpus-standard.json \
+            --cache-dir "$W/cache" --e5-sha "$E5_SHA256" --e5-repo "$E5_REPO" \
+            --e5-revision "$E5_RESOLVED_REVISION" --bge-sha "$BGE_SHA256" --llama-commit "$LLAMA_CPP_COMMIT" \
+            --out "$W/calibration-builtin.json" --md "$W/calibration-builtin.md"
+
+      - name: Publish built-in calibration early
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/multilingual/push_diag.sh
+
+      - name: Restore Vital e5 embeddings
+        uses: actions/cache/restore@v4
+        with:
+          path: build/e5/cache
+          key: vital-e5-${{ env.E5_SHA256 }}-${{ env.VITAL_SHA256 }}-${{ github.run_id }}
+          restore-keys: |
+            vital-e5-${{ env.E5_SHA256 }}-${{ env.VITAL_SHA256 }}-
+
+      - name: Calibrate (built-in + Vital) and embed Vital with e5
+        timeout-minutes: 290
+        run: |
+          exec > >(tee -a "$DIAG/90-calibrate-vital.log") 2>&1
+          set -euxo pipefail
+          "$PY" scripts/multilingual/e5_pipeline.py calibrate \
+            --bge http://127.0.0.1:8081 --e5 http://127.0.0.1:8082 \
+            --queries scripts/multilingual/calibration-queries.json \
+            --corpus assets/corpus/corpus.json assets/corpus/corpus-standard.json \
+            --vital "$W/wiki-vital5.sqlite" \
+            --cache-dir "$W/cache" --e5-sha "$E5_SHA256" --e5-repo "$E5_REPO" \
+            --e5-revision "$E5_RESOLVED_REVISION" --bge-sha "$BGE_SHA256" --llama-commit "$LLAMA_CPP_COMMIT" \
+            --out "$W/calibration.json" --md "$W/calibration.md"
+
+      - name: Save Vital e5 embeddings
+        if: always() && env.E5_SHA256 != ''
+        uses: actions/cache/save@v4
+        with:
+          path: build/e5/cache
+          key: vital-e5-${{ env.E5_SHA256 }}-${{ env.VITAL_SHA256 }}-${{ github.run_id }}
+
+      - name: Build Vital pack v2 (e5 vectors)
+        run: |
+          exec > >(tee -a "$DIAG/95-pack.log") 2>&1
+          set -euxo pipefail
+          "$PY" scripts/multilingual/e5_pipeline.py build-pack \
+            --src "$W/wiki-vital5.sqlite" --src-sha "$VITAL_SHA256" \
+            --e5-vectors "$W/cache/vital-e5-latest.npy" --e5-sha "$E5_SHA256" \
+            --e5-repo "$E5_REPO" --e5-revision "$E5_RESOLVED_REVISION" \
+            --id wiki-vital5-e5 --name "Wikipedia Vital Articles (multilingual search)" \
+            --built-at "$PACK_BUILT_AT" \
+            --out "$W/wiki-vital5-e5.sqlite"
+
+      - name: Upload to draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          exec > >(tee -a "$DIAG/97-release.log") 2>&1
+          set -euxo pipefail
+          cat > "$W/LICENSE-ATTRIBUTION.txt" <<EOF
+          NIDO knowledge packs v2 — licenses and attribution
+          ==================================================
+
+          wiki-vital5-e5.sqlite
+            Compiled by NIDO (https://github.com/Nido007-cmyk/Nido) from the
+            introductions of Wikipedia's Vital Articles (level 5),
+            https://www.wikipedia.org — text by Wikipedia contributors.
+            Same text as knowledge-packs-v1/wiki-vital5.sqlite, with vectors
+            recomputed by NIDO with the model below.
+            License: Creative Commons Attribution-ShareAlike 4.0 International
+            (CC BY-SA 4.0), https://creativecommons.org/licenses/by-sa/4.0/
+            If you share or adapt this pack you must credit NIDO and Wikipedia,
+            link the license, indicate changes, and distribute your version
+            under CC BY-SA 4.0. The same notice is stored inside the file
+            (table meta: license, attribution, compiledBy).
+
+          multilingual-e5-small-q8_0.gguf
+            GGUF (Q8_0) conversion by NIDO of ${E5_REPO} at revision
+            ${E5_RESOLVED_REVISION}, by Liang Wang, Nan Yang, Xiaolong Huang,
+            Linjun Yang, Rangan Majumder and Furu Wei ("Multilingual E5 Text
+            Embeddings: A Technical Report", arXiv:2402.05672).
+            License: MIT (the original model's). Converted with llama.cpp
+            ${LLAMA_CPP_COMMIT}. sha256: ${E5_SHA256}
+
+          NIDO's own code (app, scripts, converter) is MIT-licensed:
+          https://github.com/Nido007-cmyk/Nido/blob/main/LICENSE
+
+          ----------------------------------------------------------------
+          MIT License (multilingual-e5-small, from microsoft/unilm)
+
+          Copyright (c) Microsoft Corporation.
+
+          Permission is hereby granted, free of charge, to any person obtaining a copy
+          of this software and associated documentation files (the "Software"), to deal
+          in the Software without restriction, including without limitation the rights
+          to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+          copies of the Software, and to permit persons to whom the Software is
+          furnished to do so, subject to the following conditions:
+
+          The above copyright notice and this permission notice shall be included in all
+          copies or substantial portions of the Software.
+
+          THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+          IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+          FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+          AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+          LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+          OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+          SOFTWARE.
+          EOF
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --draft --target "$GITHUB_SHA" \
+              --title "Knowledge packs v2 (multilingual search)" \
+              --notes "Draft. Multilingual search model and Vital pack v2. Not used by any released app version yet."
+          fi
+          gh release upload "$RELEASE_TAG" --clobber \
+            "$W/multilingual-e5-small-q8_0.gguf" "$W/multilingual-e5-small-q8_0.gguf.sha256" \
+            "$W/wiki-vital5-e5.sqlite" "$W/wiki-vital5-e5.sqlite.json" "$W/LICENSE-ATTRIBUTION.txt" \
+            "$W/parity.json" "$W/calibration.json" "$W/calibration.md"
+
+      - name: Publish reports and logs to the diagnostics branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/multilingual/push_diag.sh

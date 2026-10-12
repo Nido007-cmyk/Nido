@@ -207,8 +207,11 @@ export async function importDocuments(
     // F4-2026-10-06: si el JSI de embedding no está disponible, insertar
     // sin embedding (FTS-only) en vez de fallar en duro.
     try {
-      const embedding = await embeddingEngine.embed(`${chunk.title}\n${chunk.body}`);
-      await insertChunk({ ...chunk, collectionId }, embedding, { lifecycleEpoch: runEpoch });
+      const embedding = await embeddingEngine.embedPassageTagged(`${chunk.title}\n${chunk.body}`);
+      await insertChunk({ ...chunk, collectionId }, embedding.vector, {
+        lifecycleEpoch: runEpoch,
+        modelSha256: embedding.modelSha256,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (!/native embedding unavailable/i.test(msg)) throw err;

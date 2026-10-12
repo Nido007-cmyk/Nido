@@ -299,6 +299,26 @@ export const MODEL_CATALOG: CatalogModel[] = [
     capabilities: { roles: ["embedding"] },
   },
   {
+    // Multilingual search (docs/design/BUSQUEDA_MULTILINGUE.md). Optional:
+    // Settings → Knowledge base, or the default for new installs in es/pt.
+    // Converted by NIDO's CI (.github/workflows/multilingual-e5.yml) from
+    // intfloat/multilingual-e5-small @ 614241f622f53c4eeff9890bdc4f31cfecc418b3
+    // with the llama.cpp that llama.rn 0.13.0-rc.6 vendors (b11192), checked
+    // against the original model (cosine >= 0.999 on every test text).
+    id: "multilingual-e5-small-q8",
+    kind: "embedding",
+    label: "multilingual-e5-small (Q8_0)",
+    filename: "models/embedding-multilingual.gguf",
+    sizeBytes: 132441664,
+    sha256: "802c868f57ccddd2e0c80645c3db1cb96a1aa50986a057cbaee2526f6e474cde",
+    sourceUrl:
+      "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf",
+    license: "MIT",
+    description: "118M, multilingual sentence embeddings: search in Spanish, Portuguese and English.",
+    required: false,
+    capabilities: { roles: ["embedding"] },
+  },
+  {
     id: "qwen2.5-1.5b-instruct-q4km",
     kind: "llm",
     label: "Qwen2.5-1.5B-Instruct (Q4_K_M)",
@@ -490,6 +510,27 @@ export const MODEL_CATALOG: CatalogModel[] = [
     // the host: ModelManager verifies sha256 after download.
     license: "CC BY-SA 4.0 (Wikipedia)",
     description: "Introductions of Wikipedia's ~50,000 Vital Articles (level 5), searchable offline. ~164MB.",
+    required: false,
+  },
+  {
+    // Multilingual search (docs/design/BUSQUEDA_MULTILINGUE.md): the same
+    // text as wiki-vital5, with vectors from multilingual-e5-small, built by
+    // .github/workflows/multilingual-e5.yml. Offered instead of wiki-vital5
+    // when multilingual search is on (src/rag/embeddingSwitch.ts).
+    id: "wiki-vital5-e5",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "Wikipedia Vital Articles (+50,000 articles, multilingual search)",
+    filename: "corpus/wiki-vital5-e5.sqlite",
+    sizeBytes: 163647488,
+    sha256: "6eda30dfc736faaad2925ada3f346a51e0211e57353e9842ccb897885da33886",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/wiki-vital5-e5.sqlite",
+    // Compiled by NIDO from Wikipedia: CC BY-SA 4.0 (ShareAlike, so not MIT).
+    // Notice inside the file (meta: license, attribution) and in
+    // LICENSE-ATTRIBUTION.txt next to the download.
+    license: "CC BY-SA 4.0 (Wikipedia; compiled by NIDO)",
+    description:
+      "Introductions of Wikipedia's ~50,000 Vital Articles, searchable offline in Spanish, Portuguese and English. ~164MB.",
     required: false,
   },
   // Add more tested candidates / corpus packs here later (each needs a

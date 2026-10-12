@@ -1187,6 +1187,25 @@
     "strictEnable": "Turn on",
     "strictConfirm": "NIDO will close completely when you leave the app for longer than the chosen time, and you'll need to unlock it again. While closed you won't receive P2P messages (they arrive when you open it)."
   },
+  "multilingual": {
+    "title": "Spanish & Portuguese search",
+    "body": "Understands questions in Spanish and Portuguese and finds the right articles even when they're written in English. Downloads a 126 MB model and rebuilds the search index in the background; keyword search keeps working meanwhile. Everything stays on this device.",
+    "statusOn": "On: multilingual search model in use.",
+    "statusOff": "Off: English-only search model.",
+    "downloading": "Downloading the model… {{pct}}%",
+    "reindexing": "Preparing search: {{done}} / {{total}}",
+    "enabled": "Done. Search now understands Spanish and Portuguese.",
+    "disabled": "Back to the English-only search model.",
+    "failed": "Couldn't change the search model: {{error}}",
+    "confirmOnTitle": "Turn on Spanish & Portuguese search?",
+    "confirmOnBody": "NIDO will download a 126 MB model (only once) and rebuild the search index in the background. It can take a few minutes and you can keep chatting. If you use the Wikipedia Vital pack, download its multilingual version below to search it in Spanish or Portuguese.",
+    "confirmOffTitle": "Turn off Spanish & Portuguese search?",
+    "confirmOffBody": "NIDO will go back to the English-only search model and rebuild the search index in the background.",
+    "turnOn": "Turn on",
+    "turnOff": "Turn off",
+    "working": "Working…",
+    "packOtherModel": "Made for the other search model: only keyword search works with this pack right now."
+  },
   "launch": {
     "shortcutNewChat": "New chat",
     "shortcutP2P": "NIDO messages"

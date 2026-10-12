@@ -4,6 +4,21 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.11-alpha — 2026-10-12
+
+### Added
+- Search in Spanish and Portuguese (Settings → Knowledge base): a
+  multilingual search model (multilingual-e5-small, 126 MB, optional) finds
+  the right article even when it's written in English. On by default for
+  new installs in Spanish or Portuguese; existing installs choose. Search
+  index rebuilt in the background; keyword search keeps working meanwhile.
+- Wikipedia Vital pack for multilingual search (CC BY-SA 4.0, compiled by
+  NIDO), searched in full with a native vector index.
+
+### Fixed
+- Dates like "tomorrow" in agent tool requests now use the request's
+  reference time (a test failed depending on the day CI ran).
+
 ## 0.1.10-alpha — 2026-10-11
 
 ### Added

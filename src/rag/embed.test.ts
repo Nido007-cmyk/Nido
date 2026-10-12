@@ -70,3 +70,33 @@ describe("EmbeddingEngine", () => {
     }
   });
 });
+
+describe("EmbeddingEngine — per-model prefixes (multilingual search)", () => {
+  it("e5: questions get 'query: ', stored texts 'passage: ', tagged with the model", async () => {
+    const engine = new EmbeddingEngine();
+    await engine.load("models/embedding-multilingual.gguf");
+    expect((await engine.embedQuery("ab"))[0]).toBe("query: ab".length);
+    expect((await engine.embedPassage("ab"))[0]).toBe("passage: ab".length);
+    const tagged = await engine.embedPassageTagged("ab");
+    expect(tagged.modelSha256).toBe("802c868f57ccddd2e0c80645c3db1cb96a1aa50986a057cbaee2526f6e474cde");
+    expect(engine.profile.id).toBe("multilingual-e5-small");
+  });
+
+  it("bge: no prefixes, exactly as before", async () => {
+    const engine = new EmbeddingEngine();
+    await engine.load("models/embedding.gguf");
+    expect((await engine.embedQuery("ab"))[0]).toBe(2);
+    expect((await engine.embedPassage("ab"))[0]).toBe(2);
+    expect((await engine.embedQueryTagged("ab")).modelSha256).toBe(
+      "ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514"
+    );
+    expect(engine.profile.id).toBe("bge-small-en");
+  });
+
+  it("unloaded → no model tag", async () => {
+    const engine = new EmbeddingEngine();
+    await engine.load("models/embedding.gguf");
+    await engine.unload();
+    expect(engine.loadedModelSha256).toBeNull();
+  });
+});

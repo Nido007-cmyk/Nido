@@ -32,6 +32,14 @@ El aviso de copyright y el texto de la licencia MIT se conservan en `LICENSE`.
 - Phi-3.5-mini / bge-small-en-v1.5: MIT
 - LFM2.5-8B: LFM Open License v1.0 (revisar términos antes de distribuir)
 - Corpus Wikipedia: CC BY-SA 4.0 (atribución + compartir-igual)
+- multilingual-e5-small (intfloat; Wang et al., arXiv:2402.05672): MIT. El
+  GGUF del release `knowledge-packs-v2` es la conversión que hizo NIDO.
+- Paquetes de conocimiento compilados por NIDO a partir de Wikipedia
+  (`wiki-vital5`, `wiki-vital5-e5`): CC BY-SA 4.0. Por el "compartir-igual"
+  no pueden ser MIT. Si los compartes o adaptas, da crédito a **NIDO** (como
+  compilador) y a **Wikipedia**, enlaza la licencia, indica qué cambiaste y
+  mantén CC BY-SA 4.0. El aviso va también dentro de cada paquete (tabla
+  `meta`) y en `LICENSE-ATTRIBUTION.txt` junto a la descarga.
 
 ## ¿Usas código de NIDO? La atribución es obligatoria
 

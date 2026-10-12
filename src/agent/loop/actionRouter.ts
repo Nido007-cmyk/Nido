@@ -162,9 +162,11 @@ function parseRelativeTime(t: string, now: Date): Date | null {
  * ("en 2 minutos", "in 1 hour") y hora suelta ("a las 6:02" → hoy).
  * Devuelve ISO string o null si no hay fecha clara.
  */
-export function parseReminderDateTime(text: string): string | null {
+export function parseReminderDateTime(text: string, now: Date = new Date()): string | null {
   const t = text.toLowerCase();
-  const now = new Date();
+  // `now` is a parameter so callers that already have a reference time
+  // (toolRouter's extractToolAction) and tests get dates relative to it,
+  // not to the real clock.
 
   // TESTFIX-2026-10-08: tiempos relativos ("en 2 minutos", "in 1 hour").
   // Antes: no se soportaban → dueAt null → el recordatorio se guardaba
