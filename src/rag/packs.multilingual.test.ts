@@ -70,7 +70,8 @@ beforeEach(async () => {
   const vital = catalog.CORPUS_CATALOG.find((c) => c.id === "wiki-vital5")!;
   Object.assign(W(), {
     installed: { filename: vital.filename, size: vital.sizeBytes },
-    meta: { format: "nido-knowledge-pack", embeddingModelSha256: "802c868f57ccddd2e0c80645c3db1cb96a1aa50986a057cbaee2526f6e474cde" },
+    // Test vectors are 2-dimensional; real packs declare 384.
+    meta: { format: "nido-knowledge-pack", dims: "2", embeddingModelSha256: "802c868f57ccddd2e0c80645c3db1cb96a1aa50986a057cbaee2526f6e474cde" },
     rows: [
       { id: 1, title: "Photosynthesis", body: "Plants…", vec: v(10, 0) },
       { id: 2, title: "Black hole", body: "Gravity…", vec: v(0, 10) },
@@ -120,6 +121,15 @@ describe("searchPacks — multilingual (full vector search)", () => {
 
   it("pack made with another model → keyword search only, never its vectors", async () => {
     W().meta.embeddingModelSha256 = catalog.MODEL_CATALOG.find((m) => m.id === "bge-small-en-v1.5-q8")!.sha256;
+    W().ftsHits = [1];
+    const r = await packs.searchPacks("photosynthesis plants", new Float32Array([1, 0]), 12, e5Opts());
+    expect(W().searchCalls).toHaveLength(0);
+    expect(r.lexical.map((c) => c.title)).toEqual(["Photosynthesis"]);
+    expect(r.semantic).toEqual([]);
+  });
+
+  it("a pack declaring another vector size → keyword search only", async () => {
+    W().meta.dims = "384";
     W().ftsHits = [1];
     const r = await packs.searchPacks("photosynthesis plants", new Float32Array([1, 0]), 12, e5Opts());
     expect(W().searchCalls).toHaveLength(0);

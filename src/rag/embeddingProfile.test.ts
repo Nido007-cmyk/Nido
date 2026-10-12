@@ -65,3 +65,13 @@ describe("embedding profiles", () => {
     expect(semanticFloor(MULTILINGUAL_E5_SMALL_PROFILE, "hola qué tal")).toBe(MULTILINGUAL_E5_SMALL_PROFILE.minSimilarity);
   });
 });
+
+describe("every catalog embedding model has a profile", () => {
+  it("no catalog embedding model falls back silently", () => {
+    for (const m of MODEL_CATALOG.filter((x) => x.kind === "embedding")) {
+      const p = embeddingProfileForSha(m.sha256);
+      // bge is the fallback itself; any other model must map to its own profile.
+      if (m.sha256 !== BGE_SMALL_EN_SHA256) expect(p).not.toBe(BGE_SMALL_EN_PROFILE);
+    }
+  });
+});

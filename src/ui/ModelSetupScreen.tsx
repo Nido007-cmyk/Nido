@@ -246,6 +246,19 @@ export function ModelSetupScreen(props: Props) {
     async (model: CatalogModel) => {
       if (activatingId) return;
       impact(ImpactFeedbackStyle.Light);
+      if (model.kind === "embedding") {
+        // Never set the search model directly: the knowledge base is stamped
+        // with it and its vectors must be rebuilt (embeddingSwitch.ts).
+        const { switchEmbeddingModel } = await import("../rag/embeddingSwitch");
+        try {
+          await switchEmbeddingModel(model);
+          setToast(t("modelSetupScreen.toasts.activeSet", { kind: model.kind, name: model.label }));
+        } catch (e: any) {
+          setToast(t("modelSetupScreen.toasts.loadFailed", { name: model.label, error: e?.message ?? String(e) }));
+        }
+        await refreshStatus();
+        return;
+      }
       if (model.kind !== "llm") {
         await setActiveModelId(model.kind, model.id);
         await refreshStatus();

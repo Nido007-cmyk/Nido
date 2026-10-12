@@ -4,6 +4,20 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.12-alpha — 2026-10-12
+
+### Fixed
+- New installs in Spanish or Portuguese went back to the setup wizard on
+  every launch: the start-up check only looked for the English search
+  model, which those installs don't download.
+- Turning Spanish & Portuguese search on and off quickly could lose the
+  second request; requests now run in order and the last one wins.
+- A download that failed and was retrying automatically showed an error
+  while it was still working; the search setting now waits for the retries.
+- Choosing the search model that is already active no longer rebuilds the
+  search index.
+- Packs declaring a different vector size are searched by keywords only.
+
 ## 0.1.11-alpha — 2026-10-12
 
 ### Added

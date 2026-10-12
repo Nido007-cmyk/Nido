@@ -15,7 +15,7 @@
  * Turning it off goes back to the original English model the same way.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, View, Text, StyleSheet, Pressable } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
@@ -24,7 +24,7 @@ import type { Typography } from "./theme/typography";
 import { calmSpacing } from "./theme/calm";
 import { makeSurfaces } from "./theme/surfaces";
 import { ModelManager } from "../models/ModelManager";
-import { startDownload, getDownloadState, isDownloading, subscribeDownloads } from "../services/downloadManager";
+import { downloadUntilSettled, getDownloadState, isDownloading, subscribeDownloads } from "../services/downloadManager";
 import {
   activeEmbeddingModel,
   defaultEmbeddingModel,
@@ -47,6 +47,9 @@ export function MultilingualSearchCard({ onChanged }: { onChanged?: () => void }
   const [message, setMessage] = useState<string | null>(null);
   const [progress, setProgress] = useState<ReembedProgress | null>(null);
   const [, rerender] = useState(0);
+  // A second confirm while a change is running is ignored (the button is
+  // already disabled; this also covers two dialogs confirmed quickly).
+  const running = useRef(false);
 
   const refresh = useCallback(async () => {
     setActive(isMultilingualEmbedding(await activeEmbeddingModel()));
@@ -60,15 +63,16 @@ export function MultilingualSearchCard({ onChanged }: { onChanged?: () => void }
 
   const run = useCallback(
     async (enable: boolean) => {
-      if (!target) return;
+      if (!target || running.current) return;
+      running.current = true;
       setBusy(true);
       setMessage(null);
       try {
         const model = enable ? target : defaultEmbeddingModel();
         const [status] = await modelManager.statusAll().then((all) => all.filter((s) => s.asset.id === model.id));
         if (!status?.present) {
-          await startDownload(model);
-          const err = getDownloadState(model.id)?.error;
+          // Waits through automatic retries: only a final failure is an error.
+          const err = await downloadUntilSettled(model);
           if (err) throw new Error(err);
         }
         await switchEmbeddingModel(model);
@@ -79,6 +83,7 @@ export function MultilingualSearchCard({ onChanged }: { onChanged?: () => void }
         setMessage(t("multilingual.failed", { error: e instanceof Error ? e.message : String(e) }));
         await refresh();
       } finally {
+        running.current = false;
         setBusy(false);
       }
     },
@@ -98,7 +103,7 @@ export function MultilingualSearchCard({ onChanged }: { onChanged?: () => void }
   if (!target) return null;
 
   const dl = getDownloadState(target.id);
-  const downloading = isDownloading(target.id);
+  const downloading = isDownloading(target.id) || !!dl?.autoRetrying;
   const reindexing = progress?.running && progress.total > 0;
 
   return (

@@ -85,7 +85,13 @@ const BY_SHA: Record<string, EmbeddingProfile> = {
  * which is what every build before multilingual search used.
  */
 export function embeddingProfileForSha(sha256: string | null | undefined): EmbeddingProfile {
-  return (sha256 && BY_SHA[sha256]) || BGE_SMALL_EN_PROFILE;
+  const profile = sha256 ? BY_SHA[sha256] : undefined;
+  if (sha256 && !profile) {
+    // Only catalog models can be loaded, so this means a catalog model was
+    // added without a profile: say so instead of failing silently.
+    console.warn(`[embeddingProfile] no profile for model ${sha256.slice(0, 12)}…; using bge-small-en settings`);
+  }
+  return profile ?? BGE_SMALL_EN_PROFILE;
 }
 
 /** Same rule as the calibration: one word (whitespace-separated) or less. */

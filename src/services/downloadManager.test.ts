@@ -316,3 +316,76 @@ describe("automatic retry with backoff (Meta #3)", () => {
     expect(d3).toBeLessThanOrEqual(40000);
   });
 });
+
+describe("downloadUntilSettled — waits through automatic retries", () => {
+  const transient = () =>
+    new DownloadFailure({
+      code: "interrupted",
+      kind: "transient",
+      canResume: false,
+      assetId: "a",
+      bytesReceived: 1,
+      bytesExpected: 100,
+    });
+
+  it("a transient failure followed by success resolves null only after the retry finished", async () => {
+    vi.useFakeTimers();
+    try {
+      const { downloadUntilSettled } = await import("./downloadManager");
+      let calls = 0;
+      downloadMock.mockImplementation(async () => {
+        calls += 1;
+        if (calls === 1) throw transient();
+      });
+      let result: string | null | undefined;
+      void downloadUntilSettled(asset("a")).then((r) => (result = r));
+      await vi.advanceTimersByTimeAsync(0);
+      // First attempt failed, retry scheduled: NOT settled yet.
+      expect(result).toBeUndefined();
+      expect(getDownloadState("a")?.autoRetrying).toBe(true);
+      await vi.advanceTimersByTimeAsync(120_000);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(calls).toBe(2);
+      expect(result).toBeNull();
+    } finally {
+      downloadMock.mockReset();
+      downloadMock.mockImplementation(
+        (a: { id: string }) => new Promise<void>((resolve, reject) => pending.set(a.id, { resolve, reject }))
+      );
+      vi.useRealTimers();
+    }
+  });
+
+  it("retries exhausted → resolves with the final error", async () => {
+    vi.useFakeTimers();
+    try {
+      const { downloadUntilSettled } = await import("./downloadManager");
+      downloadMock.mockImplementation(async () => {
+        throw transient();
+      });
+      let result: string | null | undefined;
+      void downloadUntilSettled(asset("a")).then((r) => (result = r));
+      for (let i = 0; i < 5; i++) {
+        await vi.advanceTimersByTimeAsync(0);
+        await vi.advanceTimersByTimeAsync(120_000);
+      }
+      await vi.advanceTimersByTimeAsync(0);
+      expect(typeof result).toBe("string");
+      expect(result).toMatch(/starts from the beginning/i);
+    } finally {
+      downloadMock.mockReset();
+      downloadMock.mockImplementation(
+        (a: { id: string }) => new Promise<void>((resolve, reject) => pending.set(a.id, { resolve, reject }))
+      );
+      vi.useRealTimers();
+    }
+  });
+
+  it("plain success resolves null after the attempt is no longer in flight", async () => {
+    const { downloadUntilSettled, isDownloading } = await import("./downloadManager");
+    const p = downloadUntilSettled(asset("b"));
+    pending.get("b")!.resolve();
+    expect(await p).toBeNull();
+    expect(isDownloading("b")).toBe(false);
+  });
+});
