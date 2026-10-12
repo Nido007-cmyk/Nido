@@ -56,20 +56,20 @@ jobs:
       DIAG: ${{ github.workspace }}/build/e5/diag
       PY: ${{ github.workspace }}/build/e5/venv/bin/python
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Prepare
         run: |
           mkdir -p "$W" "$DIAG" "$W/cache"
           { date -u; nproc; free -g; df -h .; } > "$DIAG/00-runner.txt"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Restore llama.cpp build
         id: llama-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: build/e5/llama.cpp
           key: llama-cpp-${{ env.LLAMA_CPP_COMMIT }}-server-v1
@@ -93,7 +93,7 @@ jobs:
 
       - name: Save llama.cpp build
         if: steps.llama-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: build/e5/llama.cpp
           key: llama-cpp-${{ env.LLAMA_CPP_COMMIT }}-server-v1
@@ -213,7 +213,7 @@ jobs:
         run: bash scripts/multilingual/push_diag.sh
 
       - name: Restore Vital e5 embeddings
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: build/e5/cache
           key: vital-e5-${{ env.E5_SHA256 }}-${{ env.VITAL_SHA256 }}-${{ github.run_id }}
@@ -236,7 +236,7 @@ jobs:
 
       - name: Save Vital e5 embeddings
         if: always() && env.E5_SHA256 != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: build/e5/cache
           key: vital-e5-${{ env.E5_SHA256 }}-${{ env.VITAL_SHA256 }}-${{ github.run_id }}
