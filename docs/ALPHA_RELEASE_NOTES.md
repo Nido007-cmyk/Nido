@@ -1,4 +1,4 @@
-# NIDO v0.1.10-alpha — Release Notes
+# NIDO v0.1.11-alpha — Release Notes
 
 ## What is this?
 
@@ -11,6 +11,17 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Reminders with local notifications
 - Encrypted on-device storage
 - Backup / restore
+
+## What changed in 0.1.11-alpha
+
+> **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
+
+**Search in Spanish and Portuguese**
+- New in **Settings → Knowledge base: "Spanish & Portuguese search"**. NIDO downloads a 126 MB multilingual search model once and rebuilds its search index in the background — you can keep chatting, keyword search works meanwhile.
+- Questions in Spanish or Portuguese now find the right article even when it's written in English. In our tests with the built-in knowledge base: Spanish 50% → 85%, Portuguese 48% → 90% of questions answered from the right article, with fewer made-up "sources".
+- New installs in Spanish or Portuguese get it from the start. English users keep the original model, unchanged.
+- **Wikipedia Vital (multilingual)**: a version of the 50,000-article pack made for the new model (CC BY-SA 4.0, compiled by NIDO from Wikipedia). With multilingual search on, it's offered instead of the old one.
+- Everything stays on your device, as always.
 
 ## What changed in 0.1.10-alpha
 

@@ -1,6 +1,6 @@
 # Calibración búsqueda multilingüe (generado)
 
-- Generado: 2026-10-12T00:34:56.540410+00:00
+- Generado: 2026-10-12T00:47:29.074448+00:00
 - llama.cpp: `171e8846b4af9766c354064cb776cb34a50f053f` (el de llama.rn)
 - e5: `intfloat/multilingual-e5-small@614241f622f53c4eeff9890bdc4f31cfecc418b3`, GGUF sha256 `802c868f57ccddd2e0c80645c3db1cb96a1aa50986a057cbaee2526f6e474cde`
 - bge GGUF sha256 `ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514`

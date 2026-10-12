@@ -106,10 +106,16 @@ Corpus integrado (1 300 artículos):
 | | es | pt | en | fuentes falsas |
 |---|---|---|---|---|
 | bge hoy | 50% | 48% | 98% | 23% |
-| e5 (piso 0.81) | 82% | 90% | 100% | 15% |
+| e5 (piso 0.81) | 85% | 90% | 100% | 15% |
+
+Con Wikipedia Vital instalado (116k fragmentos) hace falta más evidencia
+para los paquetes: piso 0.84 (0.88 una palabra). es 85%, pt 92%; fuentes
+falsas es/pt 10–25% (con el piso de la base, 72%). Límite conocido: las
+preguntas del set tienen respuesta también en la base integrada; falta un
+set de temas que solo estén en Vital.
 
 Una palabra: es/pt de 17% a 83%, sin falsos ("hola", "gracias"…).
-Informe completo con Wikipedia Vital: `docs/design/calibration/`.
+Informe completo: `docs/design/calibration/e5-calibration.md`.
 
 ### App
 - `src/rag/embeddingProfile.ts`: prefijos y umbrales por modelo (por sha del
