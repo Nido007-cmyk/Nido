@@ -16,6 +16,8 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 
 > **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
 
+> **Includes 0.1.12**, which was not published separately: its build was superseded by this one. All 0.1.12 fixes (below) are in this download.
+
 - The storage usage in Settings now counts the search index NIDO builds for the multilingual Wikipedia pack (~45 MB), so the total matches what's really on your device.
 
 ## What changed in 0.1.12-alpha

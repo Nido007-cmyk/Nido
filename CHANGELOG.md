@@ -6,6 +6,8 @@ All notable changes to NIDO are recorded here. Versions follow
 
 ## 0.1.13-alpha — 2026-10-12
 
+Includes 0.1.12, which was not published as a separate release.
+
 ### Fixed
 - Settings → usage: the knowledge base size now includes the vector index
   built next to a knowledge pack for multilingual search (~45 MB for
