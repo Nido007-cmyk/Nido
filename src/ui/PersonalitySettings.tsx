@@ -23,6 +23,7 @@ import {
   setDeepResearchMode,
   getAdaptiveRoutingEnabled,
   setAdaptiveRoutingEnabled,
+  MAX_CUSTOM_SYSTEM_PROMPT_CHARS,
 } from "../models/settings";
 import { NidoIcon } from "./components/icons/NidoIcon";
 
@@ -116,6 +117,7 @@ export function PersonalitySettings() {
         <TextInput
           style={styles.customInput}
           value={customPrompt}
+          maxLength={MAX_CUSTOM_SYSTEM_PROMPT_CHARS}
           onChangeText={updateCustomPrompt}
           placeholder={t("personalitySettings.customPromptPlaceholder")}
           placeholderTextColor={colors.text.muted}

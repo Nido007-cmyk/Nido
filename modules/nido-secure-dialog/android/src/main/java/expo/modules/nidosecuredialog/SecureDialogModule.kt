@@ -6,6 +6,13 @@
 
 package expo.modules.nidosecuredialog
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.PersistableBundle
 import android.view.WindowManager
 import androidx.appcompat.app.AlertDialog
 import expo.modules.kotlin.Promise
@@ -32,8 +39,58 @@ import java.util.concurrent.atomic.AtomicBoolean
  * untouched.
  */
 class SecureDialogModule : Module() {
+  /**
+   * Offensive audit (0.1.18): the backup key was copied with a plain
+   * clipboard write, so it showed in the keyboard's clipboard preview and
+   * stayed in clipboard history (Gboard / Samsung keep it). Marked as
+   * sensitive, Android 13+ hides it from previews and keyboards don't save
+   * it; clearIfEquals() lets JS remove it after a short time.
+   */
+  private fun clipboard(): ClipboardManager? =
+    (appContext.reactContext ?: appContext.currentActivity)
+      ?.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+
+  private fun onMain(promise: Promise, block: () -> Any) {
+    Handler(Looper.getMainLooper()).post {
+      try {
+        promise.resolve(block())
+      } catch (e: Exception) {
+        promise.reject("CLIPBOARD_ERROR", "NidoSecureDialog: ${e.message}", e)
+      }
+    }
+  }
+
   override fun definition() = ModuleDefinition {
     Name("NidoSecureDialog")
+
+    AsyncFunction("copySensitive") { text: String, promise: Promise ->
+      onMain(promise) {
+        val cm = clipboard() ?: throw IllegalStateException("no clipboard")
+        val clip = ClipData.newPlainText("NIDO", text)
+        val extras = PersistableBundle()
+        // ClipDescription.EXTRA_IS_SENSITIVE (API 33); the same key is read by
+        // keyboards on older versions too.
+        extras.putBoolean("android.content.extra.IS_SENSITIVE", true)
+        clip.description.extras = extras
+        cm.setPrimaryClip(clip)
+        true
+      }
+    }
+
+    AsyncFunction("clearClipboardIfEquals") { text: String, promise: Promise ->
+      onMain(promise) {
+        val cm = clipboard() ?: return@onMain false
+        val current = try {
+          cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString()
+        } catch (_: Exception) {
+          null
+        }
+        if (current != text) return@onMain false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) cm.clearPrimaryClip()
+        else cm.setPrimaryClip(ClipData.newPlainText("", ""))
+        true
+      }
+    }
 
     AsyncFunction("showSecureAlert") {
         title: String,

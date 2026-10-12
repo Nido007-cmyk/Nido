@@ -49,6 +49,30 @@ export const SUPPORTED_MIME_TYPES = [
   "application/pdf",
 ];
 
+/**
+ * Offensive audit (0.1.18): limits. A 300 MB log picked by mistake was read
+ * whole into a JS string (the app could be killed for memory) and then
+ * embedded chunk by chunk for hours. 25 MB of text is ~12,000 pages; PDFs are
+ * measured by the text they give (MAX_IMPORT_CHUNKS).
+ */
+export const MAX_IMPORT_TEXT_FILE_BYTES = 25 * 1024 * 1024;
+export const MAX_IMPORT_PDF_FILE_BYTES = 100 * 1024 * 1024;
+export const MAX_IMPORT_CHUNKS = 4000;
+
+export type DocImportErrorCode = "tooLarge" | "tooManyChunks" | "pdfPassword" | "pdfUnreadable" | "noText";
+
+/** Error with a code the screen shows in the app language (message: for logs). */
+export class DocImportError extends Error {
+  readonly code: DocImportErrorCode;
+  readonly vars: Record<string, string>;
+  constructor(code: DocImportErrorCode, message: string, vars: Record<string, string> = {}) {
+    super(message);
+    this.name = "DocImportError";
+    this.code = code;
+    this.vars = vars;
+  }
+}
+
 export interface ImportProgress {
   stage: "reading" | "chunking" | "embedding";
   chunkIndex?: number;
@@ -95,9 +119,9 @@ async function extractPdf(uri: string, filename: string): Promise<string> {
     return await extractPdfText(uri);
   } catch (e: any) {
     if (e?.code === "PASSWORD_REQUIRED" || e?.code === "INCORRECT_PASSWORD") {
-      throw new Error(`"${filename}" is password-protected - password-protected PDFs aren't supported.`);
+      throw new DocImportError("pdfPassword", `"${filename}" is password-protected - password-protected PDFs aren't supported.`, { name: filename });
     }
-    throw new Error(`Couldn't read "${filename}": ${e?.message ?? e}`);
+    throw new DocImportError("pdfUnreadable", `Couldn't read "${filename}": ${e?.message ?? e}`, { name: filename });
   }
 }
 
@@ -108,12 +132,27 @@ async function parseFileContent(
   const filename = file.name;
   const ext = filename.toLowerCase().split(".").pop();
 
+  const limit = ext === "pdf" ? MAX_IMPORT_PDF_FILE_BYTES : MAX_IMPORT_TEXT_FILE_BYTES;
+  if (file.size != null && file.size > limit) {
+    throw new DocImportError("tooLarge", `"${filename}" is too large (${file.size} bytes).`, {
+      name: filename,
+      max: String(Math.round(limit / (1024 * 1024))),
+    });
+  }
+
   if (ext === "pdf") {
     const text = await extractPdf(file.uri, filename);
     return [{ title: fallbackTitle, source: filename, body: text }];
   }
 
   const raw = await FileSystem.readAsStringAsync(file.uri);
+  // The picker doesn't always know the size: check what was actually read.
+  if (raw.length > MAX_IMPORT_TEXT_FILE_BYTES) {
+    throw new DocImportError("tooLarge", `"${filename}" is too large (${raw.length} chars).`, {
+      name: filename,
+      max: String(Math.round(MAX_IMPORT_TEXT_FILE_BYTES / (1024 * 1024))),
+    });
+  }
 
   if (ext === "json") {
     try {
@@ -201,33 +240,51 @@ export async function importDocuments(
     });
   });
 
-  for (let i = 0; i < chunks.length; i++) {
-    onProgress?.({ stage: "embedding", chunkIndex: i, chunkCount: chunks.length });
-    const chunk = chunks[i];
-    // F4-2026-10-06: si el JSI de embedding no está disponible, insertar
-    // sin embedding (FTS-only) en vez de fallar en duro.
-    try {
-      const embedding = await embeddingEngine.embedPassageTagged(`${chunk.title}\n${chunk.body}`);
-      await insertChunk({ ...chunk, collectionId }, embedding.vector, {
-        lifecycleEpoch: runEpoch,
-        modelSha256: embedding.modelSha256,
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!/native embedding unavailable/i.test(msg)) throw err;
-      await insertChunkWithoutEmbedding({ ...chunk, collectionId }, { lifecycleEpoch: runEpoch });
-    }
+  // Nothing to import (scanned PDF without text, empty file): say so instead
+  // of creating an empty collection that looks imported.
+  if (chunks.length === 0) {
+    throw new DocImportError("noText", "No text found in the selected files.");
+  }
+  if (chunks.length > MAX_IMPORT_CHUNKS) {
+    throw new DocImportError("tooManyChunks", `Too much text: ${chunks.length} chunks.`, {
+      max: String(MAX_IMPORT_CHUNKS),
+    });
   }
 
-  const collection: Omit<CustomCollection, "active" | "createdAt" | "lastAccessed"> = {
-    id: collectionId,
-    name: collectionName,
-    sourceFilename: files.map((f) => f.name).join(", "),
-    docCount: allDocs.length,
-    chunkCount: chunks.length,
-    sizeBytes: totalSizeBytes,
-  };
-  await createCustomCollection(collection, { lifecycleEpoch: runEpoch });
+  try {
+    for (let i = 0; i < chunks.length; i++) {
+      onProgress?.({ stage: "embedding", chunkIndex: i, chunkCount: chunks.length });
+      const chunk = chunks[i];
+      // F4-2026-10-06: si el JSI de embedding no está disponible, insertar
+      // sin embedding (FTS-only) en vez de fallar en duro.
+      try {
+        const embedding = await embeddingEngine.embedPassageTagged(`${chunk.title}\n${chunk.body}`);
+        await insertChunk({ ...chunk, collectionId }, embedding.vector, {
+          lifecycleEpoch: runEpoch,
+          modelSha256: embedding.modelSha256,
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!/native embedding unavailable/i.test(msg)) throw err;
+        await insertChunkWithoutEmbedding({ ...chunk, collectionId }, { lifecycleEpoch: runEpoch });
+      }
+    }
+
+    const collection: Omit<CustomCollection, "active" | "createdAt" | "lastAccessed"> = {
+      id: collectionId,
+      name: collectionName,
+      sourceFilename: files.map((f) => f.name).join(", "),
+      docCount: allDocs.length,
+      chunkCount: chunks.length,
+      sizeBytes: totalSizeBytes,
+    };
+    await createCustomCollection(collection, { lifecycleEpoch: runEpoch });
+  } catch (e) {
+    // Half-imported chunks had no collection row: invisible in search but
+    // taking space forever. Remove them (best-effort) and report the error.
+    await deleteCustomCollection(collectionId).catch(() => {});
+    throw e;
+  }
 
   const [created] = (await listCustomCollections()).filter((c) => c.id === collectionId);
   return created;

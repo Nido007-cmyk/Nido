@@ -74,18 +74,23 @@ export const DEFAULT_MAX_TOKENS = 512;
 /** C2-2026-10-06: tope del prompt de sistema personalizado (~500 tokens). */
 export const MAX_CUSTOM_SYSTEM_PROMPT_CHARS = 2000;
 
+/** A copy of the defaults that shares no object with DEFAULT_SETTINGS. */
+function freshDefaults(): Settings {
+  return { ...DEFAULT_SETTINGS, activeModelId: {} };
+}
+
 async function readSettings(): Promise<Settings> {
   let raw: unknown;
   try {
     const info = await FileSystem.getInfoAsync(SETTINGS_PATH);
-    if (!info.exists) return { ...DEFAULT_SETTINGS };
+    if (!info.exists) return freshDefaults();
     raw = JSON.parse(await FileSystem.readAsStringAsync(SETTINGS_PATH));
   } catch {
     // Fichero ilegible (JSON corrupto, E/S): degradar a defaults, como
     // antes. La versión se chequea FUERA de este try: un format_version
     // desconocido o más nuevo nunca degrada en silencio — falla cerrado
     // con SettingsVersionError.
-    return { ...DEFAULT_SETTINGS };
+    return freshDefaults();
   }
   const parsed: Settings =
     typeof raw === "object" && raw !== null ? (raw as Settings) : { activeModelId: {} };
@@ -99,19 +104,65 @@ async function readSettings(): Promise<Settings> {
   }
   // Claves desconocidas (p. ej. de un futuro) se toleran: spread sobre
   // defaults, solo la versión es exigida.
-  return { ...DEFAULT_SETTINGS, ...parsed };
+  // activeModelId is always a fresh object: it used to be DEFAULT_SETTINGS's
+  // own object when the file was missing or lacked it, so setActiveModelId
+  // mutated the defaults and a model chosen before "Clear all data" came back
+  // in memory until the next restart.
+  return { ...DEFAULT_SETTINGS, ...parsed, activeModelId: { ...(parsed.activeModelId ?? {}) } };
 }
 
+/**
+ * Offensive audit (0.1.18): atomic write. writeAsStringAsync over the live
+ * file could leave it half written if the app is killed mid-write; the next
+ * read then fell back to defaults and silently re-enabled every tool the user
+ * had switched off (Agent permissions), reset the language, etc. Now: write a
+ * temp file, then rename over the old one. Without moveAsync (test fakes)
+ * it writes in place as before.
+ */
 async function writeSettings(s: Settings): Promise<void> {
-  await FileSystem.writeAsStringAsync(
-    SETTINGS_PATH,
-    JSON.stringify({ ...s, format_version: SETTINGS_FORMAT_VERSION })
-  );
+  const json = JSON.stringify({ ...s, format_version: SETTINGS_FORMAT_VERSION });
+  let move: typeof FileSystem.moveAsync | undefined;
+  try {
+    move = typeof FileSystem.moveAsync === "function" ? FileSystem.moveAsync : undefined;
+  } catch {
+    move = undefined;
+  }
+  if (!move) {
+    await FileSystem.writeAsStringAsync(SETTINGS_PATH, json);
+    return;
+  }
+  const tmp = `${SETTINGS_PATH}.tmp`;
+  await FileSystem.writeAsStringAsync(tmp, json);
+  await move({ from: tmp, to: SETTINGS_PATH });
+}
+
+/**
+ * Offensive audit (0.1.18): every change is read → modify → write, one at a
+ * time. Before, two changes close together (typing the custom prompt, which
+ * saves on every keystroke, while a tool is switched off, or the guide marks a
+ * lesson) each read the old file and the last write erased the other change —
+ * e.g. a tool the user had just disabled came back enabled.
+ */
+let settingsQueue: Promise<unknown> = Promise.resolve();
+function mutateSettings(change: (s: Settings) => void): Promise<void> {
+  const run = settingsQueue.then(async () => {
+    const s = await readSettings();
+    change(s);
+    await writeSettings(s);
+  });
+  settingsQueue = run.catch(() => {});
+  return run;
 }
 
 /** Deletes the settings file outright (used by appReset.ts) — next read falls back to defaults. */
 export async function clearSettings(): Promise<void> {
-  await FileSystem.deleteAsync(SETTINGS_PATH, { idempotent: true });
+  // Queued like every change, so a write already on its way can't recreate
+  // the file right after the reset.
+  const run = settingsQueue.then(async () => {
+    await FileSystem.deleteAsync(SETTINGS_PATH, { idempotent: true });
+  });
+  settingsQueue = run.catch(() => {});
+  return run;
 }
 
 /** The user's chosen model for this kind, or null to fall back to the default. */
@@ -121,9 +172,9 @@ export async function getActiveModelId(kind: AssetKind): Promise<string | null> 
 }
 
 export async function setActiveModelId(kind: AssetKind, id: string): Promise<void> {
-  const s = await readSettings();
-  s.activeModelId[kind] = id;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.activeModelId[kind] = id;
+  });
 }
 
 /** "Don't show again" preference for the prompt-ideas onboarding carousel. */
@@ -133,9 +184,9 @@ export async function getHidePromptIdeas(): Promise<boolean> {
 }
 
 export async function setHidePromptIdeas(hide: boolean): Promise<void> {
-  const s = await readSettings();
-  s.hidePromptIdeas = hide;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.hidePromptIdeas = hide;
+  });
 }
 
 export async function getPersonalityId(): Promise<PersonalityId> {
@@ -144,9 +195,9 @@ export async function getPersonalityId(): Promise<PersonalityId> {
 }
 
 export async function setPersonalityId(id: PersonalityId): Promise<void> {
-  const s = await readSettings();
-  s.personalityId = id;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.personalityId = id;
+  });
 }
 
 export async function getCustomSystemPrompt(): Promise<string> {
@@ -155,11 +206,11 @@ export async function getCustomSystemPrompt(): Promise<string> {
 }
 
 export async function setCustomSystemPrompt(prompt: string): Promise<void> {
-  const s = await readSettings();
-  // C2-2026-10-06: cap para que un prompt personalizado gigante no rompa el
-  // presupuesto de contexto del modelo.
-  s.customSystemPrompt = (prompt ?? "").slice(0, MAX_CUSTOM_SYSTEM_PROMPT_CHARS);
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    // C2-2026-10-06: cap para que un prompt personalizado gigante no rompa el
+    // presupuesto de contexto del modelo.
+    s.customSystemPrompt = (prompt ?? "").slice(0, MAX_CUSTOM_SYSTEM_PROMPT_CHARS);
+  });
 }
 
 export async function getMaxTokens(): Promise<number> {
@@ -168,9 +219,9 @@ export async function getMaxTokens(): Promise<number> {
 }
 
 export async function setMaxTokens(maxTokens: number): Promise<void> {
-  const s = await readSettings();
-  s.maxTokens = maxTokens;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.maxTokens = maxTokens;
+  });
 }
 
 export async function getHapticsEnabled(): Promise<boolean> {
@@ -179,9 +230,9 @@ export async function getHapticsEnabled(): Promise<boolean> {
 }
 
 export async function setHapticsEnabled(enabled: boolean): Promise<void> {
-  const s = await readSettings();
-  s.hapticsEnabled = enabled;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.hapticsEnabled = enabled;
+  });
 }
 
 /** Whether the chat shows the microphone button. */
@@ -191,9 +242,9 @@ export async function getVoiceInputEnabled(): Promise<boolean> {
 }
 
 export async function setVoiceInputEnabled(enabled: boolean): Promise<void> {
-  const s = await readSettings();
-  s.voiceInputEnabled = enabled;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.voiceInputEnabled = enabled;
+  });
 }
 
 /** Whether NIDO reads its answers aloud (offline system TTS). Default off. */
@@ -203,9 +254,9 @@ export async function getReadAloudEnabled(): Promise<boolean> {
 }
 
 export async function setReadAloudEnabled(enabled: boolean): Promise<void> {
-  const s = await readSettings();
-  s.readAloudEnabled = enabled;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.readAloudEnabled = enabled;
+  });
 }
 
 export async function getMemorySettings(): Promise<MemorySettings> {
@@ -219,9 +270,9 @@ export async function getMemorySettings(): Promise<MemorySettings> {
 }
 
 export async function setMemorySettings(patch: Partial<MemorySettings>): Promise<void> {
-  const s = await readSettings();
-  Object.assign(s, patch);
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    Object.assign(s, patch);
+  });
 }
 
 /**
@@ -235,9 +286,9 @@ export async function getDeepResearchMode(): Promise<boolean> {
 }
 
 export async function setDeepResearchMode(enabled: boolean): Promise<void> {
-  const s = await readSettings();
-  s.deepResearchMode = enabled;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.deepResearchMode = enabled;
+  });
 }
 
 export async function getThemeId(): Promise<ThemeId> {
@@ -254,9 +305,9 @@ export async function getThemeId(): Promise<ThemeId> {
 }
 
 export async function setThemeId(theme: ThemeId): Promise<void> {
-  const s = await readSettings();
-  s.themeId = theme;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.themeId = theme;
+  });
 }
 
 export async function getFontScale(): Promise<FontScale> {
@@ -265,9 +316,9 @@ export async function getFontScale(): Promise<FontScale> {
 }
 
 export async function setFontScale(scale: FontScale): Promise<void> {
-  const s = await readSettings();
-  s.fontScale = scale;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.fontScale = scale;
+  });
 }
 
 /**
@@ -293,9 +344,9 @@ export async function getLanguageId(): Promise<LanguageId> {
 }
 
 export async function setLanguageId(language: LanguageId): Promise<void> {
-  const s = await readSettings();
-  s.languageId = language;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.languageId = language;
+  });
 }
 
 /**
@@ -322,9 +373,9 @@ export async function getRoutingPreset(): Promise<RoutingPreset> {
 }
 
 export async function setRoutingPreset(preset: RoutingPreset): Promise<void> {
-  const s = await readSettings();
-  s.routingPreset = preset;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.routingPreset = preset;
+  });
 }
 
 export async function getModelRoleAssignments(): Promise<Partial<Record<ModelRole, string>>> {
@@ -333,15 +384,15 @@ export async function getModelRoleAssignments(): Promise<Partial<Record<ModelRol
 }
 
 export async function setModelRoleAssignment(role: ModelRole, modelId: string | undefined): Promise<void> {
-  const s = await readSettings();
-  const assignments = { ...(s.modelRoleAssignments ?? {}) };
-  if (modelId) {
-    assignments[role] = modelId;
-  } else {
-    delete assignments[role];
-  }
-  s.modelRoleAssignments = assignments;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    const assignments = { ...(s.modelRoleAssignments ?? {}) };
+    if (modelId) {
+      assignments[role] = modelId;
+    } else {
+      delete assignments[role];
+    }
+    s.modelRoleAssignments = assignments;
+  });
 }
 
 /**
@@ -360,9 +411,9 @@ export async function getAdaptiveRoutingEnabled(): Promise<boolean> {
 }
 
 export async function setAdaptiveRoutingEnabled(enabled: boolean): Promise<void> {
-  const s = await readSettings();
-  s.adaptiveRoutingEnabled = enabled;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.adaptiveRoutingEnabled = enabled;
+  });
 }
 
 /** Herramientas del agente que el usuario apagó (permisos del agente). */
@@ -374,9 +425,9 @@ export async function getDisabledToolNames(): Promise<string[]> {
 }
 
 export async function setDisabledToolNames(names: string[]): Promise<void> {
-  const s = await readSettings();
-  s.disabledTools = [...new Set(names)].sort();
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.disabledTools = [...new Set(names)].sort();
+  });
 }
 
 // ------------------------------------------------------------ guía (0.1.14)
@@ -388,9 +439,9 @@ export async function getGuideOnboardingDone(): Promise<boolean> {
 }
 
 export async function setGuideOnboardingDone(done = true): Promise<void> {
-  const s = await readSettings();
-  s.guideOnboardingDone = done;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.guideOnboardingDone = done;
+  });
 }
 
 /** Lessons the user opened ("module.lesson"). Losing it is harmless. */
@@ -400,11 +451,11 @@ export async function getGuideVisited(): Promise<string[]> {
 }
 
 export async function markGuideVisited(id: string): Promise<void> {
-  const s = await readSettings();
-  const list = Array.isArray(s.guideVisited) ? s.guideVisited : [];
-  if (list.includes(id)) return;
-  s.guideVisited = [...list, id].slice(-200);
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    const list = Array.isArray(s.guideVisited) ? s.guideVisited : [];
+    if (list.includes(id)) return;
+    s.guideVisited = [...list, id].slice(-200);
+  });
 }
 
 export async function getP2PBatteryHintDismissed(): Promise<boolean> {
@@ -413,7 +464,7 @@ export async function getP2PBatteryHintDismissed(): Promise<boolean> {
 }
 
 export async function setP2PBatteryHintDismissed(dismissed: boolean): Promise<void> {
-  const s = await readSettings();
-  s.p2pBatteryHintDismissed = dismissed;
-  await writeSettings(s);
+  return mutateSettings((s) => {
+    s.p2pBatteryHintDismissed = dismissed;
+  });
 }

@@ -30,6 +30,8 @@ export interface SecureAlertOptions {
 }
 
 interface NidoSecureDialogNativeModule {
+  copySensitive?(text: string): Promise<boolean>;
+  clearClipboardIfEquals?(text: string): Promise<boolean>;
   showSecureAlert(
     title: string,
     message: string,
@@ -59,5 +61,31 @@ export async function showSecureAlert(
   } catch {
     // N2 fail-closed: confirmation unavailable → deny.
     return false;
+  }
+}
+
+/**
+ * 0.1.18: copies a secret marked as sensitive (hidden from clipboard previews
+ * and keyboard history on Android 13+). false if the native function isn't
+ * available (old build, tests): the caller then uses the normal clipboard.
+ */
+export async function copySensitive(text: string): Promise<boolean> {
+  try {
+    const native = requireNativeModule<NidoSecureDialogNativeModule>("NidoSecureDialog");
+    if (!native.copySensitive) return false;
+    return (await native.copySensitive(text)) === true;
+  } catch {
+    return false;
+  }
+}
+
+/** 0.1.18: clears the clipboard if it still holds `text`. null = not available. */
+export async function clearClipboardIfEquals(text: string): Promise<boolean | null> {
+  try {
+    const native = requireNativeModule<NidoSecureDialogNativeModule>("NidoSecureDialog");
+    if (!native.clearClipboardIfEquals) return null;
+    return (await native.clearClipboardIfEquals(text)) === true;
+  } catch {
+    return null;
   }
 }

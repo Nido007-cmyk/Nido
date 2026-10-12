@@ -24,7 +24,7 @@ import {
   ActivityIndicator,
   Modal,
 } from "react-native";
-import * as Clipboard from "expo-clipboard";
+import { copySecret } from "../utils/secretClipboard";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import { makeSurfaces } from "./theme/surfaces";
@@ -350,7 +350,7 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
               <Pressable
                 style={styles.button}
                 onPress={() => {
-                  if (dekModal) void Clipboard.setStringAsync(dekModal.dek);
+                  if (dekModal) void copySecret(dekModal.dek);
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={t("backup.copyKey")}
