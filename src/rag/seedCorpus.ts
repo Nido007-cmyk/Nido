@@ -186,21 +186,15 @@ export function seedKnowledgeBaseIfEmpty(): Promise<void> {
 }
 
 async function seedNow(): Promise<void> {
-  // DIAGNOSTIC INSTRUMENTATION (2026-10-05): "undefined is not a function"
-  // persists even with embedding code fully removed (build 60046a0).
-  // Each stage is wrapped to identify the exact failing operation.
-  // TODO: remove instrumentation once root cause is found and fixed.
+  // Stage of a seeding failure, for the log only (see getDbForEpoch in
+  // db.ts): the 2026-10-05 instrumentation used to prepend "[seed-stage:…]"
+  // to the error message shown to the user. The error now goes up untouched.
   const stage = async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
     try {
       return await fn();
     } catch (e) {
-      // Preserve original error type (instanceof checks) — only prepend
-      // the stage tag to the message.
-      if (e instanceof Error) {
-        e.message = `[seed-stage:${name}] ${e.message}`;
-        throw e;
-      }
-      throw new Error(`[seed-stage:${name}] ${String(e)}`);
+      console.warn(`[seed] failed at stage ${name}`);
+      throw e;
     }
   };
 

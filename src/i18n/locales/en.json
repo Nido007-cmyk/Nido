@@ -626,6 +626,24 @@
     "retry": "Retry"
   },
   "nido": {
+    "errors": {
+      "noIdentity": "Create your NIDO identity first.",
+      "ownQr": "That's your own code. Scan the one on the other device.",
+      "qrInvalid": "That QR code isn't valid or is damaged. Ask the other device to show it again.",
+      "duplicateName": "You already have a contact called “{{name}}”. Pick another name.",
+      "noAddress": "I couldn't find a way to reach “{{alias}}” over Bluetooth or local Wi-Fi.",
+      "contactSaveFailed": "Couldn't save the contact. Try again.",
+      "revoked": "You revoked this contact; it can't talk to you anymore.",
+      "revokeUnsupported": "This connection can't revoke contacts.",
+      "versionMismatch": "The other device has a different NIDO version. Update both.",
+      "bluetoothOff": "Bluetooth is off. Turn it on and try again.",
+      "noRadio": "Neither Bluetooth nor local Wi-Fi is available on this device.",
+      "permission": "NIDO needs Bluetooth / nearby devices permission. Allow it in Android settings.",
+      "alreadyConnected": "There's already an open connection with this contact.",
+      "busy": "NIDO was busy. Try again in a few seconds.",
+      "connection": "Couldn't connect to the other NIDO. Bring the devices closer, check Bluetooth or Wi-Fi, and make sure NIDO is open on both.",
+      "generic": "Something went wrong with the connection ({{detail}})."
+    },
     "back": "‹ Back",
     "online": "within reach",
     "offline": "out of reach",
@@ -997,6 +1015,14 @@
     "sectionDesc": "Export your encrypted database. Store it with your key in a safe place.",
     "screenTitle": "Backup and recovery",
     "screenDesc": "Your database is encrypted. The backup copies the encrypted file. You need to save your key separately — without it, the backup cannot be restored. No server ever sees your data.",
+    "rotateErrors": {
+      "authCancelled": "Authentication cancelled.",
+      "authFailed": "Couldn't verify your identity.",
+      "noKey": "There's no active encryption key on this phone.",
+      "noDatabases": "The databases weren't found.",
+      "staging": "Couldn't prepare the key change. Nothing was changed.",
+      "storeFailed": "Couldn't save the new key; the previous one was kept."
+    },
     "errors": {
       "storage": "Couldn't access the phone's storage.",
       "dbMissing": "The database wasn't found.",

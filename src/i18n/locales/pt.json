@@ -626,6 +626,24 @@
     "retry": "Tentar novamente"
   },
   "nido": {
+    "errors": {
+      "noIdentity": "Primeiro crie sua identidade NIDO.",
+      "ownQr": "Esse é o seu próprio código. Escaneie o do outro dispositivo.",
+      "qrInvalid": "Esse código QR não é válido ou está danificado. Peça ao outro dispositivo para mostrá-lo de novo.",
+      "duplicateName": "Você já tem um contato chamado “{{name}}”. Escolha outro nome.",
+      "noAddress": "Não encontrei como chegar a “{{alias}}” por Bluetooth nem por Wi-Fi local.",
+      "contactSaveFailed": "Não foi possível salvar o contato. Tente de novo.",
+      "revoked": "Você revogou este contato; ele não pode mais se comunicar com você.",
+      "revokeUnsupported": "Esta conexão não permite revogar contatos.",
+      "versionMismatch": "O outro dispositivo tem uma versão diferente do NIDO. Atualize os dois.",
+      "bluetoothOff": "O Bluetooth está desligado. Ligue-o e tente de novo.",
+      "noRadio": "Não há Bluetooth nem Wi-Fi local disponíveis neste dispositivo.",
+      "permission": "O NIDO precisa da permissão de Bluetooth / dispositivos próximos. Conceda-a nas configurações do Android.",
+      "alreadyConnected": "Já existe uma conexão aberta com este contato.",
+      "busy": "O NIDO estava ocupado. Tente de novo em alguns segundos.",
+      "connection": "Não foi possível conectar ao outro NIDO. Aproxime os dispositivos, verifique o Bluetooth ou o Wi-Fi e se o NIDO está aberto nos dois.",
+      "generic": "Algo deu errado com a conexão ({{detail}})."
+    },
     "back": "‹ Voltar",
     "online": "ao alcance",
     "offline": "fora de alcance",
@@ -997,6 +1015,14 @@
     "sectionDesc": "Exporte seu banco de dados criptografado. Guarde-o com sua chave em um lugar seguro.",
     "screenTitle": "Backup e recuperação",
     "screenDesc": "Seu banco de dados está criptografado. O backup copia o arquivo criptografado. Você precisa guardar sua chave separadamente — sem ela, o backup não pode ser restaurado. Nenhum servidor vê seus dados.",
+    "rotateErrors": {
+      "authCancelled": "Autenticação cancelada.",
+      "authFailed": "Não foi possível verificar sua identidade.",
+      "noKey": "Não há uma chave de criptografia ativa neste telefone.",
+      "noDatabases": "Os bancos de dados não foram encontrados.",
+      "staging": "Não foi possível preparar a troca de chave. Nada foi alterado.",
+      "storeFailed": "Não foi possível salvar a nova chave; a anterior foi mantida."
+    },
     "errors": {
       "storage": "Não foi possível acessar o armazenamento do telefone.",
       "dbMissing": "O banco de dados não foi encontrado.",
