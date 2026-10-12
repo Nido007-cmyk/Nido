@@ -260,6 +260,21 @@ const NIDO_SEND_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: new RegExp(`^${POLITE}send\\s+(?:a\\s+)?nido\\s+message\\s+to\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },
   { re: new RegExp(`^${POLITE}(?:send|message)\\s+(.+?)\\s+(?:on|via|through|by)\\s+nido(?:${SEP}(.+))?$`, "is"), lang: "en" },
   { re: new RegExp(`^${POLITE}(?:manda|mande|envia|envie)\\s+(?:uma\\s+)?mensagem\\s+(?:pelo|no|via)\\s+nido\\s+(?:para|pra|pro)\\s+(?:o\\s+|a\\s+)?(.+?)(?:${SEP}(.+))?$`, "is"), lang: "pt" },
+  // 0.1.20 (P3-12): sin la marca «por NIDO». NIDO es el ÚNICO canal de
+  // mensajería del agente (llamar y buscar contactos ya resuelven por
+  // nombre sin pedir el canal), así que «manda un mensaje a Juan» es
+  // este envío. La seguridad no cambia: nido_send_message es
+  // irreversible y CONFIRMA antes de enviar, y si el nombre no es un
+  // contacto NIDO emparejado el handler falla con honestidad.
+  { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?|escr[ií]bele)\\s+(?:un\\s+)?mensaje\\s+(?:a|para)\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "es" },
+  { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?)\\s+(?:a|para)\\s+(.+?)\\s+(?:un\\s+)?mensaje(?:${SEP}(.+))?$`, "is"), lang: "es" },
+  { re: new RegExp(`^${POLITE}d[ií]le\\s+a\\s+(.+?)(?:${SEP}|\\s+)(.+)$`, "is"), lang: "es" },
+  { re: new RegExp(`^${POLITE}send\\s+(?:a\\s+)?message\\s+to\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },
+  { re: new RegExp(`^${POLITE}send\\s+(.+?)\\s+(?:a\\s+)?message(?:${SEP}(.+))?$`, "is"), lang: "en" },
+  { re: new RegExp(`^${POLITE}message\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },
+  { re: new RegExp(`^${POLITE}tell\\s+(.+?)(?:${SEP})(.+)$`, "is"), lang: "en" },
+  { re: new RegExp(`^${POLITE}(?:manda|mande|envia|envie)\\s+(?:uma\\s+)?mensagem\\s+(?:para|pra|pro)\\s+(?:o\\s+|a\\s+)?(.+?)(?:${SEP}(.+))?$`, "is"), lang: "pt" },
+  { re: new RegExp(`^${POLITE}(?:manda|mande|envia|envie)\\s+(?:para|pra|pro)\\s+(?:o\\s+|a\\s+)?(.+?)\\s+(?:uma\\s+)?mensagem(?:${SEP}(.+))?$`, "is"), lang: "pt" },
 ];
 
 const NIDO_INBOX_RULES: Array<{ re: RegExp; lang: RouterLang }> = [

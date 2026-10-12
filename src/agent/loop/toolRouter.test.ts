@@ -696,3 +696,39 @@ describe("0.1.20 (P3-10) — buscar en notas", () => {
     expect(none.response).toBe("No encontré nada en tus notas sobre «contraseña».");
   });
 });
+
+describe("0.1.20 (P3-12) — mensajes a contactos sin decir «por NIDO»", () => {
+  it("extractToolAction: formas naturales en los tres idiomas", () => {
+    expect(extractToolAction("manda un mensaje a Juan")).toMatchObject({ kind: "nidoSend", to: "Juan", text: null, lang: "es" });
+    expect(extractToolAction("manda un mensaje a Juan que diga llego a las 5")).toMatchObject({ kind: "nidoSend", to: "Juan", text: "llego a las 5" });
+    expect(extractToolAction("envía a María un mensaje: ya salí")).toMatchObject({ kind: "nidoSend", to: "María", text: "ya salí" });
+    expect(extractToolAction("dile a Juan que ya llegué")).toMatchObject({ kind: "nidoSend", to: "Juan", text: "ya llegué" });
+    expect(extractToolAction("send a message to Juan")).toMatchObject({ kind: "nidoSend", to: "Juan", text: null, lang: "en" });
+    expect(extractToolAction("send Juan a message saying I'm on my way")).toMatchObject({ kind: "nidoSend", to: "Juan", text: "I'm on my way", lang: "en" });
+    expect(extractToolAction("tell Juan that dinner is ready")).toMatchObject({ kind: "nidoSend", to: "Juan", text: "dinner is ready", lang: "en" });
+    expect(extractToolAction("manda uma mensagem para o João")).toMatchObject({ kind: "nidoSend", to: "João", text: null, lang: "pt" });
+  });
+
+  it("las formas con «por NIDO» siguen ganando (sin cambios)", () => {
+    expect(extractToolAction("manda un mensaje por nido a Juan que diga hola")).toMatchObject({ kind: "nidoSend", to: "Juan", text: "hola" });
+  });
+
+  it("sin la palabra mensaje (ni dile/tell), no hay envío", () => {
+    expect(extractToolAction("manda a Juan por las tortillas")).toBeNull();
+    expect(extractToolAction("escríbele una carta a Juan")).toBeNull();
+  });
+
+  it("sin texto: pregunta qué decir (nidoAskText), no envía nada", async () => {
+    const calls: string[] = [];
+    const deps: ToolRouterDeps = {
+      dispatch: async (name) => {
+        calls.push(name);
+        return { status: "executed", text: "ok" };
+      },
+      isDisabled: () => false,
+    };
+    const out = await runToolAction(extractToolAction("manda un mensaje a Juan")!, deps);
+    expect(calls).toHaveLength(0);
+    expect(out.response).toContain("Juan");
+  });
+});
