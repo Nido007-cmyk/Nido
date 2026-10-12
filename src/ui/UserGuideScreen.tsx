@@ -39,7 +39,7 @@ interface Props {
 export function UserGuideScreen({ onClose, onTryExample }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState<string | null>(null);
   const [visited, setVisited] = useState<string[]>([]);
   const [disabledTools, setDisabledTools] = useState<string[]>([]);
@@ -62,7 +62,8 @@ export function UserGuideScreen({ onClose, onTryExample }: Props) {
   // Arrays come from the locale; every string is then read by its own key so
   // nested labels ($t(...)) resolve to the names the user sees in the app.
   const count = (key: string): number => {
-    const v = t(key, { returnObjects: true, defaultValue: [] }) as unknown;
+    if (!i18n.exists(key)) return 0;
+    const v = t(key, { returnObjects: true }) as unknown;
     return Array.isArray(v) ? v.length : 0;
   };
 
@@ -104,7 +105,7 @@ export function UserGuideScreen({ onClose, onTryExample }: Props) {
               const off = (lesson.tools ?? []).some((tool) => disabledTools.includes(tool));
               const nSteps = count(`${base}.steps`);
               const nExamples = count(`${base}.examples`);
-              const tip = t(`${base}.tip`, { defaultValue: "" });
+              const tip = i18n.exists(`${base}.tip`) ? t(`${base}.tip`) : "";
               return (
                 <View key={id} style={styles.lesson}>
                   <Pressable

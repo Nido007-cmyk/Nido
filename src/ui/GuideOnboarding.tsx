@@ -32,7 +32,7 @@ export function GuideOnboarding({ onDone, onTryExample, onOpenGuide }: Props) {
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
   const [step, setStep] = useState(0);
-  const examples = t("guide.onboarding.s2Examples", { returnObjects: true, defaultValue: [] }) as unknown;
+  const examples = t("guide.onboarding.s2Examples", { returnObjects: true }) as unknown;
   const exampleList = Array.isArray(examples) ? (examples as string[]) : [];
 
   const next = () => {
