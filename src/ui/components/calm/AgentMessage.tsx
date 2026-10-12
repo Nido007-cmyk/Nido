@@ -26,6 +26,7 @@ import { useTheme } from "../../theme/ThemeContext";
 import { calmSpacing, calmRadii, calmType } from "../../theme/calm";
 import { MemoryChip } from "./MemoryChip";
 import { AgencyReceipt } from "./AgencyReceipt";
+import { displayLang, formatClock } from "../../../utils/safeFormat";
 
 export interface AgentMessageProps {
   /** The message text (plain) or custom rendered content */
@@ -60,7 +61,7 @@ export function AgentMessage({
   timestamp,
 }: AgentMessageProps) {
   const { colors } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [showReceipt, setShowReceipt] = useState(false);
 
   const styles = StyleSheet.create({
@@ -153,10 +154,7 @@ export function AgentMessage({
           <View style={styles.footer}>
             {timestamp && (
               <Text style={styles.timestamp}>
-                {new Date(timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                {formatClock(new Date(timestamp), displayLang(i18n.language))}
               </Text>
             )}
             {receipt && (

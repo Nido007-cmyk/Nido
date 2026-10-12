@@ -744,10 +744,10 @@ export async function runAgentLoop(
         const { scheduleReminderNotification } = await import("../../notify/notifications");
         await scheduleReminderNotification(reminder.id, reminder.text, new Date(dueAt));
       } catch { /* best-effort */ }
-      extraNote = " También guardé la fecha como recordatorio.";
+      extraNote = routerMessage("personDateNote", reminderLang);
     }
     return {
-      response: `Listo, guardé a ${person.name}${rel} en mis contactos.${extraNote}`,
+      response: routerMessage("personSaved", reminderLang, { name: person.name, rel }) + extraNote,
       intent,
       toolUses: [
         {
@@ -781,7 +781,7 @@ export async function runAgentLoop(
         const { scheduleReminderNotification } = await import("../../notify/notifications");
         await scheduleReminderNotification(reminder.id, reminder.text, new Date(dueAt));
       } catch { /* best-effort */ }
-      reminderNote = " También te crearé un recordatorio para esa fecha.";
+      reminderNote = routerMessage("factReminderNote", reminderLang);
     }
     // Retornar directamente con confirmación honesta. El trace indica
     // que fue la vía determinística, no el modelo.
@@ -789,7 +789,7 @@ export async function runAgentLoop(
     // el modelo aún puede procesar el resto del mensaje después; por ahora
     // la memoria queda garantizada y se informa al usuario.
     return {
-      response: `Listo, lo guardé en mi memoria: «${extraction.content}».${reminderNote}`,
+      response: routerMessage("factSaved", reminderLang, { text: extraction.content }) + reminderNote,
       intent,
       toolUses: [
         {

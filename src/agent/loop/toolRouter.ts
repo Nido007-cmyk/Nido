@@ -378,9 +378,33 @@ type Key =
   | "reminderSet"
   | "reminderSavedAskWhen"
   | "reminderWillNotify"
-  | "reminderSaveFailed";
+  | "reminderSaveFailed"
+  | "personSaved"
+  | "personDateNote"
+  | "factSaved"
+  | "factReminderNote";
 
 const MSG: Record<Key, Record<RouterLang, string>> = {
+  personSaved: {
+    es: "Listo, guardé a {{name}}{{rel}} en mis contactos.",
+    en: "Done, I saved {{name}}{{rel}} to my contacts.",
+    pt: "Pronto, salvei {{name}}{{rel}} nos meus contatos.",
+  },
+  personDateNote: {
+    es: " También guardé la fecha como recordatorio.",
+    en: " I also saved the date as a reminder.",
+    pt: " Também salvei a data como lembrete.",
+  },
+  factSaved: {
+    es: "Listo, lo guardé en mi memoria: «{{text}}».",
+    en: "Done, I saved it to my memory: “{{text}}”.",
+    pt: "Pronto, salvei na minha memória: “{{text}}”.",
+  },
+  factReminderNote: {
+    es: " También te creé un recordatorio para esa fecha.",
+    en: " I also created a reminder for that date.",
+    pt: " Também criei um lembrete para essa data.",
+  },
   timeNow: { es: "Son las {{time}} ({{day}}).", en: "It's {{time}} ({{day}}).", pt: "São {{time}} ({{day}})." },
   dateToday: { es: "Hoy es {{day}} de {{year}}.", en: "Today is {{day}}, {{year}}.", pt: "Hoje é {{day}} de {{year}}." },
   noteSaved: { es: "Listo, guardé la nota «{{title}}».", en: "Done, I saved the note “{{title}}”.", pt: "Pronto, salvei a nota “{{title}}”." },

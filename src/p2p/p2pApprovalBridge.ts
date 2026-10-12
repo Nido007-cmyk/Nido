@@ -26,6 +26,7 @@ import { verifyProposal } from "./negotiation";
 import { fromHex } from "./crypto";
 import { evaluateProposalScopes } from "./p2pAuthorization";
 import { globalReplayProtection } from "./replayProtection";
+import { formatDateTime } from "../utils/safeFormat";
 
 /**
  * Resultado de procesar una propuesta entrante.
@@ -134,7 +135,7 @@ export function toApprovalRequest(task: QueuedProposalTask): {
       { label: "Scopes", value: task.requestedScopes.join(", ") },
       {
         label: "Expires",
-        value: new Date(task.expiresAt).toLocaleString(),
+        value: formatDateTime(task.expiresAt, "en"),
       },
     ],
     dataLeaving: task.requestedScopes,

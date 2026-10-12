@@ -17,6 +17,7 @@ import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { spacing, radii } from "./theme/spacing";
 import { getCorpusIndexStatus, onCorpusIndexStatus, type CorpusIndexStatus } from "../rag/corpusIndexStatus";
+import { displayLang, formatInt } from "../utils/safeFormat";
 
 function formatMB(bytes: number): string {
   if (bytes <= 0) return "0 MB";
@@ -69,7 +70,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isCorpus = item.kind === "corpus";
   const present = row?.present ?? false;
   const effectivelyActive = isCorpus ? present : isActive;
@@ -268,8 +269,8 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
               <ActivityIndicator size="small" color={colors.emerald[400]} />
               <Text style={styles.activeNote}>
                 {t("catalogItemCard.indexingNote", {
-                  done: packIndex.indexed.toLocaleString(),
-                  total: packIndex.total.toLocaleString(),
+                  done: formatInt(packIndex.indexed, displayLang(i18n.language)),
+                  total: formatInt(packIndex.total, displayLang(i18n.language)),
                 })}
               </Text>
             </View>

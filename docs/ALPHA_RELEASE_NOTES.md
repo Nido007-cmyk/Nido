@@ -1,4 +1,4 @@
-# NIDO v0.1.15-alpha — Release Notes
+# NIDO v0.1.16-alpha — Release Notes
 
 ## What is this?
 
@@ -11,6 +11,13 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Reminders with local notifications
 - Encrypted on-device storage
 - Backup / restore
+
+## What changed in 0.1.16-alpha
+
+> **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
+
+- **Fewer crash risks.** Dates and numbers on a dozen screens no longer use the Android system path that could close the app on some devices.
+- **Answers in your language.** Saving a fact ("remember that…"), a person, or a backup error now speak English or Portuguese when the app is set to them.
 
 ## What changed in 0.1.15-alpha
 

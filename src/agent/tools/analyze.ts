@@ -12,6 +12,8 @@
  * Todo corre en el teléfono: ningún dato sale del dispositivo.
  */
 
+import { formatDecimal } from "../../utils/safeFormat";
+
 export interface AnalyzeOptions {
   /** Delimitador. Si se omite, se detecta (, ; tab |). */
   delimiter?: string;
@@ -127,7 +129,8 @@ function isNumericColumn(values: string[]): boolean {
 }
 
 function fmt(n: number): string {
-  return Number(n.toFixed(4)).toLocaleString("es-MX");
+  // Mismo formato que antes ("es-MX": 1,234.5) pero sin Intl (CRASH-2026-10-10).
+  return formatDecimal(n, "en", 4);
 }
 
 /**

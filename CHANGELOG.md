@@ -4,6 +4,22 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.16-alpha — 2026-10-12
+
+### Fixed
+- Dates and numbers on a dozen screens (network log, agent permissions,
+  scheduled tasks, remote tasks, telemetry, negotiations, message times,
+  indexing counters) no longer go through Android's Intl. On some devices
+  that path can close the app (same crash class fixed for reminders in
+  0.1.10). Same format on every phone, in the app language.
+- "Remember that…" and saving a person answered in Spanish whatever the app
+  language; now in English / Portuguese too. "I'll create a reminder" now
+  says "I created" (it was already created).
+- Backup errors (wrong key, invalid file, cancelled unlock…) are shown in the
+  app language instead of always in Spanish.
+- Untranslated labels: "Contacto:" / "Propuesta:" in Negotiations and
+  "Backup" in Settings.
+
 ## 0.1.15-alpha — 2026-10-12
 
 ### Added

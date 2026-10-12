@@ -28,12 +28,13 @@ import * as FileSystem from "expo-file-system/legacy";
 import { getDatabaseKeyHex } from "../privacy/keyManager";
 import { WAL_CHECKPOINT_SQL } from "./secureDatabase";
 import { getDatabase, closeDatabase } from "./databaseManager";
+import { BackupError } from "./backupErrors";
 
 const DB_NAME = "nido_memory.db";
 const KNOWLEDGE_DB_NAME = "nido_knowledge.db";
 const BACKUP_VERSION = 1;
 // A14: misma versión que package.json y el tag del release.
-const APP_VERSION = "0.1.15";
+const APP_VERSION = "0.1.16";
 // SQLCipher magic header: "SQLite format 3\0" — los primeros 16 bytes
 const SQLITE_MAGIC = "SQLite format 3\0";
 
@@ -55,7 +56,7 @@ export function knowledgeBackupUriFor(backupUri: string): string {
  */
 async function getDbPath(): Promise<string> {
   const dir = FileSystem.documentDirectory;
-  if (!dir) throw new Error("No se pudo acceder al almacenamiento.");
+  if (!dir) throw new BackupError("storage", "No se pudo acceder al almacenamiento.");
   return `${dir}SQLite/${DB_NAME}`;
 }
 
@@ -94,13 +95,13 @@ async function sha256File(uri: string): Promise<string | null> {
  */
 export async function createBackup(destinationUri: string): Promise<string> {
   const dir = FileSystem.documentDirectory;
-  if (!dir) throw new Error("No se pudo acceder al almacenamiento.");
+  if (!dir) throw new BackupError("storage", "No se pudo acceder al almacenamiento.");
   const dbPath = `${dir}SQLite/${DB_NAME}`;
   const knowledgePath = `${dir}SQLite/${KNOWLEDGE_DB_NAME}`;
 
   const info = await FileSystem.getInfoAsync(dbPath);
   if (!info.exists) {
-    throw new Error("Base de datos no encontrada.");
+    throw new BackupError("dbMissing", "Base de datos no encontrada.");
   }
 
   // 1. Checkpoint WAL: consolidar -wal en el archivo principal.
@@ -167,7 +168,7 @@ export async function createBackup(destinationUri: string): Promise<string> {
 export async function exportDatabaseKey(): Promise<string> {
   const keyHex = await getDatabaseKeyHex();
   if (!keyHex) {
-    throw new Error("No se pudo obtener la clave de la base de datos.");
+    throw new BackupError("noDbKey", "No se pudo obtener la clave de la base de datos.");
   }
   return keyHex;
 }
@@ -363,14 +364,14 @@ export async function restoreBackup(backupUri: string): Promise<void> {
   let actualUri = backupUri;
   if (backupUri.endsWith(".nidobackup.json")) {
     const dir = FileSystem.documentDirectory;
-    if (!dir) throw new Error("No se pudo acceder al almacenamiento.");
+    if (!dir) throw new BackupError("storage", "No se pudo acceder al almacenamiento.");
     actualUri = await extractPortableBundle(backupUri, dir);
   }
 
   // 1. Validar ANTES de tocar nada (BK-3).
   const validation = await validateBackup(actualUri);
   if (!validation.valid) {
-    throw new Error(`Backup inválido: ${validation.reason}`);
+    throw new BackupError("invalid", `Backup inválido: ${validation.reason}`);
   }
 
   const dbPath = await getDbPath();
@@ -412,7 +413,7 @@ export async function restoreBackup(backupUri: string): Promise<void> {
         await FileSystem.copyAsync({ from: safetyCopy, to: dbPath });
       } catch { /* rollback best-effort */ }
     }
-    throw new Error(`Falló la restauración y se revirtió: ${e instanceof Error ? e.message : "error desconocido"}`);
+    throw new BackupError("rollback", `Falló la restauración y se revirtió: ${e instanceof Error ? e.message : "error desconocido"}`);
   }
 
   // 5. FIX 2026-10-09 (K3): restaurar la DB de conocimiento también.
@@ -519,7 +520,7 @@ export async function extractPortableBundle(bundleUri: string, destDir: string):
   const raw = await FileSystem.readAsStringAsync(bundleUri);
   const bundle = JSON.parse(raw);
   if (bundle.format !== "nidobackup") {
-    throw new Error("Formato de bundle no reconocido");
+    throw new BackupError("invalid", "Formato de bundle no reconocido");
   }
 
   const dbUri = `${destDir.replace(/\/+$/, "")}/restored.db`;
@@ -567,22 +568,22 @@ export function normalizeBackupKey(input: string): string | null {
 export async function restoreBackupWithKey(backupUri: string, backupKeyInput: string): Promise<void> {
   const backupKey = normalizeBackupKey(backupKeyInput);
   if (!backupKey) {
-    throw new Error("La clave del respaldo debe tener 64 caracteres hexadecimales.");
+    throw new BackupError("keyFormat", "La clave del respaldo debe tener 64 caracteres hexadecimales.");
   }
   const dir = FileSystem.documentDirectory;
-  if (!dir) throw new Error("No se pudo acceder al almacenamiento.");
+  if (!dir) throw new BackupError("storage", "No se pudo acceder al almacenamiento.");
 
   const { getDatabaseKeyHex, applyDatabaseKey } = await import("../privacy/keyManager");
   const currentKey = await getDatabaseKeyHex();
   if (!currentKey || !/^[0-9a-f]{64}$/i.test(currentKey)) {
-    throw new Error("Este teléfono no tiene una clave de cifrado disponible.");
+    throw new BackupError("noDeviceKey", "Este teléfono no tiene una clave de cifrado disponible.");
   }
 
   let sourceUri = backupUri;
   const extracted: string[] = [];
   if (backupUri.endsWith(".nidobackup.json")) {
     const v = await validateBackup(backupUri);
-    if (!v.valid) throw new Error(`Backup inválido: ${v.reason}`);
+    if (!v.valid) throw new BackupError("invalid", `Backup inválido: ${v.reason}`);
     sourceUri = await extractPortableBundle(backupUri, dir);
     extracted.push(sourceUri, `${sourceUri}.manifest.json`, knowledgeBackupUriFor(sourceUri));
   }
@@ -614,11 +615,11 @@ export async function restoreBackupWithKey(backupUri: string, backupKeyInput: st
 
   try {
     const info = await FileSystem.getInfoAsync(sourceUri);
-    if (!info.exists) throw new Error("El archivo no existe.");
+    if (!info.exists) throw new BackupError("invalid", "El archivo no existe.");
     try {
       await rekeyCopy(sourceUri, tempMain, "restore-with-key");
     } catch {
-      throw new Error("La clave no abre este respaldo. Revisa que sea la clave que guardaste al crearlo.");
+      throw new BackupError("wrongKey", "La clave no abre este respaldo. Revisa que sea la clave que guardaste al crearlo.");
     }
     // La base de conocimiento es opcional: si viene, se recifra igual.
     let knowledgeSource = knowledgeBackupUriFor(sourceUri);
