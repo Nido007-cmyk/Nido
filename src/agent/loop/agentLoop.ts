@@ -37,14 +37,22 @@ import {
   type ContactSearchResult,
 } from "./contactRouter";
 import { agentFallbackText, type FallbackLang } from "./fallbackText";
-import { extractToolAction, formatDay, runToolAction, toolForAction, type NoteSummary } from "./toolRouter";
+import {
+  extractToolAction,
+  formatDay,
+  reminderWhen,
+  routerMessage,
+  runToolAction,
+  toolForAction,
+  type NoteSummary,
+  type RouterLang,
+} from "./toolRouter";
 import { classifyIntent, type AgentIntent } from "./intent";
 import { matchCanned } from "./cannedResponses";
 import { recordInferenceEvent } from "../../inference/telemetry";
 import { generateToolCallJson } from "./toolCallJson";
 import { validateStructuredOutput } from "./structuredOutput";
 import { extractRememberFact } from "./rememberRouter";
-import { formatReminderWhen } from "./reminderFormat";
 import { actionLog } from "../actionLog";
 import { isToolDisabled } from "../tools/toolPermissions";
 import { listSkillNamesForPrompt } from "../skills/registry";
@@ -118,6 +126,8 @@ export interface AgentLoopOptions {
    * Opcional: sin ella, "lee la nota" no se resuelve por código.
    */
   listNoteTitles?: () => Promise<NoteSummary[]>;
+  /** 0.1.14: recordatorios pendientes para "qué recordatorios tengo". */
+  listReminders?: () => Promise<Array<{ text: string; dueAt: string | null }>>;
   /**
    * Tareas programadas: los atajos deterministas (recordatorio, persona,
    * hecho) solo se usan si la herramienta correspondiente está entre los
@@ -627,10 +637,12 @@ export async function runAgentLoop(
         }),
       isDisabled: isToolDisabled,
       listNotes: options.listNoteTitles,
+      listReminders: options.listReminders,
     });
     return { response: outcome.response, intent, toolUses: outcome.toolUses, deterministic: true };
   }
   const reminderAction = fastPathAllowed("create_reminder") ? extractReminderAction(userText) : null;
+  const reminderLang: RouterLang = options.lang === "en" || options.lang === "pt" ? options.lang : "es";
   if (reminderAction) {
     const { saveReminder } = await import("../memory/memoryStore");
     // FIX 2026-10-09: envolver saveReminder en try/catch. Un fallo de la base
@@ -647,7 +659,7 @@ export async function runAgentLoop(
     } catch (e) {
       actionLog.record("create_reminder", "failed");
       return {
-        response: "No pude guardar el recordatorio por un problema con la base de datos. Inténtalo de nuevo.",
+        response: routerMessage("reminderSaveFailed", reminderLang),
         intent,
         toolUses: [
           {
@@ -664,20 +676,19 @@ export async function runAgentLoop(
       try {
         const { scheduleReminderNotification } = await import("../../notify/notifications");
         const ok = await scheduleReminderNotification(reminder.id, reminder.text, new Date(reminderAction.dueAt));
-        if (ok) aviso = " Te llegará un aviso aunque NIDO esté cerrado.";
+        if (ok) aviso = routerMessage("reminderWillNotify", reminderLang);
       } catch { /* sin notificaciones: el recordatorio sigue guardado */ }
     }
     // CALENDAR-FIX 2026-10-07: mostrar fecha si se parseó, ser honesto si no.
     // FIX 2026-10-09 (I2): usar el idioma actual, no "es" hardcodeado.
     // CRASH-2026-10-10: sin Intl (toLocale* con opciones pasa por JNI en
     // Hermes/Android y un fallo ahí cierra la app). Ver reminderFormat.ts.
-    const dateStr = reminderAction.dueAt
-      ? formatReminderWhen(reminderAction.dueAt, (options.lang ?? "es") === "en" ? "en" : "es")
-      : "";
+    // 0.1.14: respuesta en el idioma del usuario (antes siempre en español).
+    const dateStr = reminderAction.dueAt ? reminderWhen(reminderAction.dueAt, reminderLang) : "";
     return {
       response: dateStr
-        ? `Listo, te recordaré${dateStr}: «${reminder.text}».${aviso}`
-        : `Listo, guardé: «${reminder.text}». ¿Para cuándo quieres que te avise?`,
+        ? routerMessage("reminderSet", reminderLang, { when: dateStr, text: reminder.text }) + aviso
+        : routerMessage("reminderSavedAskWhen", reminderLang, { text: reminder.text }),
       intent,
       toolUses: [
         {

@@ -43,7 +43,8 @@ export type ToolAction =
   | { kind: "nidoCode"; lang: RouterLang }
   | { kind: "nidoTasks"; lang: RouterLang }
   | { kind: "openLink"; url: string; lang: RouterLang }
-  | { kind: "pickFile"; analyze: boolean; lang: RouterLang };
+  | { kind: "pickFile"; analyze: boolean; lang: RouterLang }
+  | { kind: "reminderList"; lang: RouterLang };
 
 export type CalendarRange = "today" | "tomorrow" | "week";
 
@@ -76,6 +77,9 @@ export function toolForAction(a: ToolAction): string {
       return "open_app";
     case "pickFile":
       return "read_picked_file";
+    // No separate tool: listing belongs to the reminders switch.
+    case "reminderList":
+      return "create_reminder";
   }
 }
 
@@ -131,6 +135,22 @@ const NOTE_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: /^(?:(?:mu[eé]strame|lista|listar|ver|dame|ens[eé][ñn]ame|abre)\s+)?(?:mis|las|todas las|todas mis)\s+notas(?: guardadas)?$|^qu[eé] notas tengo$|^cu[aá]les son mis notas$|^notas$/i, lang: "es" },
   { re: /^(?:(?:show|list|see|open)(?: me)?\s+)?(?:my|all|all my)\s+notes$|^what notes do i have$/i, lang: "en" },
   { re: /^(?:(?:mostra|mostre|lista|listar|ver|abre)\s+)?(?:minhas|as|todas as)\s+notas$|^quais notas eu tenho$/i, lang: "pt" },
+];
+
+// 0.1.14 (guía de usuario): "qué recordatorios tengo" no tenía camino propio.
+const REMINDER_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
+  {
+    re: /^(?:(?:mu[eé]strame|lista|listar|ver|dame|ens[eé][ñn]ame)\s+)?(?:mis|los|todos los|todos mis)\s+recordatorios(?: pendientes)?$|^(?:qu[eé]|cu[aá]les)\s+recordatorios\s+(?:tengo|hay)(?: pendientes)?$|^cu[aá]les son mis recordatorios$|^recordatorios$/i,
+    lang: "es",
+  },
+  {
+    re: /^(?:(?:show|list|see)(?: me)?\s+)?(?:my|all|all my)\s+reminders$|^what reminders do i have$|^do i have any reminders$/i,
+    lang: "en",
+  },
+  {
+    re: /^(?:(?:mostra|mostre|lista|listar|ver)\s+)?(?:meus|os|todos os)\s+lembretes$|^quais lembretes (?:eu )?tenho$/i,
+    lang: "pt",
+  },
 ];
 
 const NOTE_READ_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
@@ -255,6 +275,7 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   for (const { re, what, lang } of TIME_RULES) if (re.test(t)) return { kind: "time", what, lang };
 
   for (const { re, lang } of NOTE_LIST_RULES) if (re.test(t)) return { kind: "noteList", lang };
+  for (const { re, lang } of REMINDER_LIST_RULES) if (re.test(t)) return { kind: "reminderList", lang };
   for (const { re, lang } of NOTE_READ_RULES) {
     const m = re.exec(t);
     if (m && m[1].trim().length >= 2) return { kind: "noteRead", query: m[1].trim(), lang };
@@ -350,7 +371,14 @@ type Key =
   | "disabled"
   | "cancelled"
   | "failed"
-  | "fileTooLongCut";
+  | "fileTooLongCut"
+  | "noReminders"
+  | "remindersHeader"
+  | "reminderNoDate"
+  | "reminderSet"
+  | "reminderSavedAskWhen"
+  | "reminderWillNotify"
+  | "reminderSaveFailed";
 
 const MSG: Record<Key, Record<RouterLang, string>> = {
   timeNow: { es: "Son las {{time}} ({{day}}).", en: "It's {{time}} ({{day}}).", pt: "São {{time}} ({{day}})." },
@@ -390,7 +418,35 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
   cancelled: { es: "Entendido, no hice nada.", en: "Understood, I did nothing.", pt: "Entendido, não fiz nada." },
   failed: { es: "No pude completar la acción: {{reason}}", en: "I couldn't complete the action: {{reason}}", pt: "Não consegui concluir a ação: {{reason}}" },
   fileTooLongCut: { es: "…(recortado)", en: "…(cut)", pt: "…(cortado)" },
+  noReminders: { es: "No tienes recordatorios pendientes.", en: "You have no pending reminders.", pt: "Você não tem lembretes pendentes." },
+  remindersHeader: { es: "Tus recordatorios pendientes:", en: "Your pending reminders:", pt: "Seus lembretes pendentes:" },
+  reminderNoDate: { es: "sin fecha", en: "no date", pt: "sem data" },
+  reminderSet: { es: "Listo, te recordaré{{when}}: «{{text}}».", en: "Done, I'll remind you{{when}}: “{{text}}”.", pt: "Pronto, vou te lembrar{{when}}: “{{text}}”." },
+  reminderSavedAskWhen: {
+    es: "Listo, guardé: «{{text}}». ¿Para cuándo quieres que te avise?",
+    en: "Done, I saved: “{{text}}”. When should I remind you?",
+    pt: "Pronto, salvei: “{{text}}”. Para quando quer que eu te avise?",
+  },
+  reminderWillNotify: {
+    es: " Te llegará un aviso aunque NIDO esté cerrado.",
+    en: " You'll get a notification even if NIDO is closed.",
+    pt: " Você vai receber um aviso mesmo com o NIDO fechado.",
+  },
+  reminderSaveFailed: {
+    es: "No pude guardar el recordatorio por un problema con la base de datos. Inténtalo de nuevo.",
+    en: "I couldn't save the reminder because of a database problem. Please try again.",
+    pt: "Não consegui salvar o lembrete por um problema no banco de dados. Tente de novo.",
+  },
 };
+
+/** " el viernes, 17 de octubre a las 10:00" / " on Friday, October 17 at 10:00 AM" / " na sexta-feira…" */
+export function reminderWhen(iso: string, lang: RouterLang): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  if (lang === "en") return ` on ${formatDay(d, lang)} at ${formatTime(d, lang)}`;
+  if (lang === "pt") return ` em ${formatDay(d, lang)} às ${formatTime(d, lang)}`;
+  return ` el ${formatDay(d, lang)} a las ${formatTime(d, lang)}`;
+}
 
 const RANGE_WORDS: Record<CalendarRange, Record<RouterLang, string>> = {
   today: { es: "hoy", en: "today", pt: "hoje" },
@@ -449,6 +505,8 @@ export interface ToolRouterDeps {
   isDisabled: (tool: string) => boolean;
   /** Notas guardadas (id + título), para resolver "lee la nota X" por título. */
   listNotes?: () => Promise<NoteSummary[]>;
+  /** Recordatorios pendientes, para "qué recordatorios tengo". */
+  listReminders?: () => Promise<Array<{ text: string; dueAt: string | null }>>;
   now?: () => Date;
 }
 
@@ -572,6 +630,18 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
         }
         const out = await run("read_note", { id: chosen.id });
         return out.ok ? say(out.text) : failure(out);
+      }
+
+      case "reminderList": {
+        if (!deps.listReminders) return say(routerMessage("failed", lang, { reason: "reminders unavailable" }));
+        const items = await deps.listReminders();
+        uses.push({ name: "list_reminders", result: `${items.length} pending` });
+        if (items.length === 0) return say(routerMessage("noReminders", lang));
+        const lines = items.slice(0, 20).map((r) => {
+          const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+          return `• ${r.text} (${when})`;
+        });
+        return say(`${routerMessage("remindersHeader", lang)}\n${lines.join("\n")}`);
       }
 
       case "convert": {

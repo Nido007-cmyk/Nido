@@ -132,3 +132,13 @@ describe("rememberRouter: extracción de personas (PEOPLE-FIX 2026-10-07)", () =
     expect(extractPerson("recuerda que debo comprar leche")).toBeNull();
   });
 });
+
+describe("0.1.14 — memoria en portugués", () => {
+  it("lembre que / me lembra que / não esqueça que", () => {
+    expect(extractRememberFact("lembre que minha cor favorita é azul")?.content).toBe("minha cor favorita é azul");
+    expect(extractRememberFact("lembre que o aniversário da minha mãe é 15 de março")?.content).toBe(
+      "o aniversário da minha mãe é 15 de março"
+    );
+    expect(extractRememberFact("não esqueça que tenho dentista na sexta")?.content).toBe("tenho dentista na sexta");
+  });
+});

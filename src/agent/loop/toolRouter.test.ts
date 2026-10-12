@@ -12,6 +12,7 @@ import {
   formatDay,
   formatTime,
   noteTitleFrom,
+  reminderWhen,
   runToolAction,
   toolForAction,
   type ToolAction,
@@ -385,5 +386,66 @@ describe("localizeHandlerText — salidas en español traducidas para en/pt", ()
     const t = "• Ana (dom): Huella para verificar en persona: no";
     expect(localizeHandlerText(t, "es")).toBe(t);
     expect(localizeHandlerText("• Ana (dom): hola", "en")).toBe("• Ana (dom): hola");
+  });
+});
+
+describe("0.1.14 — qué recordatorios tengo", () => {
+  it.each([
+    ["qué recordatorios tengo", "es"],
+    ["¿Qué recordatorios tengo?", "es"],
+    ["mis recordatorios", "es"],
+    ["muéstrame mis recordatorios", "es"],
+    ["cuáles son mis recordatorios", "es"],
+    ["what reminders do I have", "en"],
+    ["show me my reminders", "en"],
+    ["my reminders", "en"],
+    ["quais lembretes eu tenho", "pt"],
+    ["meus lembretes", "pt"],
+  ])("%p → reminderList (%s)", (text, lang) => {
+    expect(extractToolAction(text as string, NOW)).toEqual({ kind: "reminderList", lang });
+  });
+
+  it("creating a reminder is NOT a listing", () => {
+    expect(extractToolAction("recuérdame comprar leche en 2 horas", NOW)).toBeNull();
+    expect(extractToolAction("crea un recordatorio para mañana", NOW)?.kind).not.toBe("reminderList");
+  });
+
+  it("lists pending reminders in the user's language, with dates or 'no date'", async () => {
+    const due = new Date(2026, 9, 12, 17, 0).toISOString();
+    const deps = {
+      dispatch: async () => ({ status: "executed" as const, text: "" }),
+      isDisabled: () => false,
+      listReminders: async () => [
+        { text: "llamar a mamá", dueAt: due },
+        { text: "comprar pan", dueAt: null },
+      ],
+    };
+    const es = await runToolAction({ kind: "reminderList", lang: "es" }, deps);
+    expect(es.response).toContain("Tus recordatorios pendientes:");
+    expect(es.response).toContain("• llamar a mamá (el lunes, 12 de octubre a las 17:00)");
+    expect(es.response).toContain("• comprar pan (sin fecha)");
+    const en = await runToolAction({ kind: "reminderList", lang: "en" }, deps);
+    expect(en.response).toContain("Your pending reminders:");
+    expect(en.response).toContain("on Monday, October 12 at 5:00 PM");
+    const none = await runToolAction({ kind: "reminderList", lang: "pt" }, { ...deps, listReminders: async () => [] });
+    expect(none.response).toBe("Você não tem lembretes pendentes.");
+  });
+
+  it("respects the reminders switch", async () => {
+    const out = await runToolAction(
+      { kind: "reminderList", lang: "es" },
+      { dispatch: async () => ({ status: "executed", text: "" }), isDisabled: (t) => t === "create_reminder", listReminders: async () => [] }
+    );
+    expect(out.response).toMatch(/desactivada/);
+  });
+});
+
+describe("0.1.14 — reminderWhen localized", () => {
+  it("es / en / pt", () => {
+    const iso = new Date(2026, 9, 16, 10, 0).toISOString();
+    expect(reminderWhen(iso, "es")).toBe(" el viernes, 16 de octubre a las 10:00");
+    expect(reminderWhen(iso, "en")).toBe(" on Friday, October 16 at 10:00 AM");
+    expect(reminderWhen(iso, "pt")).toBe(" em sexta-feira, 16 de outubro às 10:00");
+    expect(reminderWhen("nope", "es")).toBe("");
   });
 });

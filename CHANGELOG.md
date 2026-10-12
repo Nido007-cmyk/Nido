@@ -4,6 +4,23 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.14-alpha — 2026-10-12
+
+### Added
+- User guide "Learn to use NIDO" (Settings → Help, and the menu): short
+  lessons in six modules with examples you tap to try. Examples are typed
+  into the chat, never sent on their own. Lessons say when a tool is
+  switched off. A test sends every example of every language through the
+  real routers, so the guide can't promise something that doesn't work.
+- First-run onboarding (three screens, skippable) on new installs.
+- "What reminders do I have" lists pending reminders (es/en/pt).
+- Calculator, reminders and memory now also understand English and
+  Portuguese phrasing ("what is 245 * 38", "remind me to…", "me lembra
+  de…", "lembre que…").
+
+### Fixed
+- Reminder confirmations were always in Spanish; now in the app language.
+
 ## 0.1.13-alpha — 2026-10-12
 
 Includes 0.1.12, which was not published as a separate release.

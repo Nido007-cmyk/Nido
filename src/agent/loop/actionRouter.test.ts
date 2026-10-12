@@ -211,3 +211,27 @@ describe("TESTFIX-2026-10-08: tiempos relativos y hora suelta", () => {
     expect(r!.dueAt).toBeNull();
   });
 });
+
+describe("0.1.14 — calculadora y recordatorios en inglés y portugués (guía)", () => {
+  it("calculadora: what is / calculate / quanto é", () => {
+    expect(extractCalcAction("what is 245 * 38")?.result).toBe(9310);
+    expect(extractCalcAction("what is (100 + 50) * 2")?.result).toBe(300);
+    expect(extractCalcAction("calculate 3^2")?.result).toBe(9);
+    expect(extractCalcAction("quanto é 245 * 38")?.result).toBe(9310);
+  });
+  it("calculadora: nunca captura preguntas que no son cuentas", () => {
+    expect(extractCalcAction("what is love")).toBeNull();
+    expect(extractCalcAction("what's the capital of France")).toBeNull();
+    expect(extractCalcAction("quanto é o dólar hoje")).toBeNull();
+  });
+  it("recordatorios: remind me (to) / me lembra de / lembre-me de", () => {
+    expect(extractReminderAction("remind me to buy milk in 2 hours")?.text).toBe("buy milk");
+    expect(extractReminderAction("remind me to call mom tomorrow at 5")?.text).toBe("call mom");
+    expect(extractReminderAction("me lembra de comprar leite em 2 horas")?.text).toBe("comprar leite");
+    expect(extractReminderAction("me lembra de comprar leite em 2 horas")?.dueAt).not.toBeNull();
+    expect(extractReminderAction("lembre-me de ligar para a Ana amanhã às 5")?.text).toBe("ligar para a Ana");
+  });
+  it("'me lembra que X' es memoria, no recordatorio", () => {
+    expect(extractReminderAction("me lembra que minha cor favorita é azul")).toBeNull();
+  });
+});

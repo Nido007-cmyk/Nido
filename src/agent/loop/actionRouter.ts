@@ -32,7 +32,10 @@ export function extractCalcAction(userText: string): CalcAction | null {
   if (!trimmed) return null;
 
   // "cuánto es 245 * 38" / "cuanto es 2+2" / "calcula 10/3"
-  const m = /(?:cu[áa]nto es|calcula)\s+(.+)/i.exec(trimmed);
+  // 0.1.14 (guía): también en/pt — "what is 245 * 38", "calculate 10/3",
+  // "quanto é 245 * 38". La expresión se sigue validando abajo (solo
+  // caracteres matemáticos), así que "what is love" nunca entra aquí.
+  const m = /(?:cu[áa]nto es|calculate|calcula|calcule|what(?:'s| is)|quanto (?:[ée]|d[áa]))\s+(.+)/i.exec(trimmed);
   if (!m) return null;
 
   const expr = m[1].trim().replace(/[?.!]+$/, "").trim();
@@ -71,7 +74,9 @@ export function extractReminderAction(userText: string): ReminderAction | null {
   // "créame un recordatorio para comprar leche mañana"
   // LOOP-1 FIX 2026-10-07: también "recuérdame comprar pan" / "remember me to call mom"
   // El intent clasificador ya marca estos como "actuar", pero el router no los capturaba.
-  const m = /(?:agr[ée]game|cr[ée]ame|ponme|crea|recu[ée]rdame|remember me to)\s+(?:una?\s+)?(?:cita|recordatorio)?\s*(.+)/i.exec(trimmed);
+  // 0.1.14 (guía): "remind me to …" y portugués "me lembra de …" /
+  // "lembre-me de …". "me lembra que X" es memoria, no recordatorio.
+  const m = /(?:agr[ée]game|cr[ée]ame|ponme|crea|recu[ée]rdame|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?)\s+(?:una?\s+)?(?:cita|recordatorio)?\s*(.+)/i.exec(trimmed);
   if (!m) return null;
 
   let text = m[1].trim();
@@ -106,6 +111,8 @@ export function stripDateWords(input: string): string {
       // parte del texto del recordatorio). FIX 2026-10-08: \s* para "1minuto".
       .replace(/\ben\s+\d+\s*(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
       .replace(/\bin\s+\d+\s*(minutes?|min|hours?|hrs?|h|days?|d|weeks?|w)\b/gi, "")
+      // 0.1.14: portugués "em 2 horas".
+      .replace(/\bem\s+\d+\s*(minutos?|min|horas?|h|dias?|d|semanas?)\b/gi, "")
       .replace(/\ben\s+(uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
       // M3 FIX: limpiar hora suelta después de día ("el viernes 10" → el 10 es la hora).
       .replace(/\b(\d{1,2})(:\d{2})?\s*(am|pm)?\s*$/gi, "")
@@ -130,7 +137,7 @@ const NUMBER_WORDS: Record<string, number> = {
  */
 function parseRelativeTime(t: string, now: Date): Date | null {
   // FIX 2026-10-08: \s* entre número y unidad para "1minuto" (sin espacio).
-  const m = /\b(?:en|in)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/i.exec(t);
+  const m = /\b(?:en|in|em)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/i.exec(t);
   if (!m) return null;
 
   const rawNum = m[1].toLowerCase();

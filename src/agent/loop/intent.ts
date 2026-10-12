@@ -16,6 +16,7 @@
  * `src/routing/classify.ts` (regex deterministas, cero ML para decidir).
  */
 
+import { extractCalcAction } from "./actionRouter";
 import { extractContactAction } from "./contactRouter";
 import { extractToolAction } from "./toolRouter";
 
@@ -144,6 +145,8 @@ const ACT_PATTERNS: RegExp[] = [
   /\bpair(ing)? (with|code)\b/i,
   // Portugués.
   /\blembr[ae]-me\b/i,
+  // 0.1.14: "me lembra de ligar…" (recordatorio). "me lembra que X" es memoria.
+  /\bme lembr[ae]\b(?!\s+que\b)/i,
   /\bque horas s[aã]o\b/i,
   /\b(envia|enviar|manda)\b.{0,30}\bmensagem\b/i,
   /\bguarda (uma )?nota\b/i,
@@ -158,6 +161,9 @@ const ACT_PATTERNS: RegExp[] = [
  */
 const REMEMBER_BEFORE_ACT_PATTERNS: RegExp[] = [
   /recu[eé]rdame que\b/i,
+  // 0.1.14: portugués — "lembre que X", "me lembra que X", "não esqueça que X".
+  /\blembr[ae](?:-se)?(?: de)? que\b/i,
+  /\bn[aã]o (?:se )?esque[cç]a(?: de)? que\b/i,
 ];
 
 /**
@@ -170,6 +176,9 @@ export function classifyIntent(text: string): AgentIntent {
   const t = (text ?? "").trim();
   if (!t) return "conversar";
   if (REMEMBER_BEFORE_ACT_PATTERNS.some((re) => re.test(t))) return "recordar";
+  // 0.1.14: una cuenta válida ("what is (100 + 50) * 2") siempre va a la
+  // calculadora; la expresión ya está validada por extractCalcAction.
+  if (extractCalcAction(t)) return "actuar";
   // TOOLS-AUDIT 2026-10-11: contactos / llamadas / SMS en es, en y pt
   // ("Find my cellphone contacts" no casaba ningún patrón y caía al chat).
   if (extractContactAction(t)) return "actuar";

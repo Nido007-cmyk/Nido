@@ -62,7 +62,7 @@ const LLM_EMBEDDING_KINDS: AssetKind[] = ["llm", "embedding"];
 
 type Props =
   | { mode: "required"; onReady: () => void; onKeyLossError?: (e: KeyLossError) => void }
-  | { mode: "optional"; onClose: () => void; onRelaunchWizard?: () => void };
+  | { mode: "optional"; onClose: () => void; onRelaunchWizard?: () => void; onOpenGuide?: () => void };
 
 /**
  * ModelSetupScreen handles two operational modes:
@@ -338,6 +338,21 @@ export function ModelSetupScreen(props: Props) {
             escondida a media pantalla de Acerca de). */}
         <AccordionSection icon="security" title={t("modelSetupScreen.sections.security")}>
           <HardwareProtectionCard />
+        </AccordionSection>
+
+        {/* 0.1.14: guía de usuario. */}
+        <AccordionSection icon="compass" title={t("guide.helpSection")}>
+          <View style={styles.guideCard}>
+            <Text style={styles.guideBody}>{t("guide.helpBody")}</Text>
+            <Pressable
+              style={styles.wizardBtn}
+              onPress={() => (props as { onOpenGuide?: () => void }).onOpenGuide?.()}
+              accessibilityRole="button"
+              accessibilityLabel={t("guide.helpButton")}
+            >
+              <Text style={styles.wizardBtnText}>{t("guide.helpButton")}</Text>
+            </Pressable>
+          </View>
         </AccordionSection>
 
         <AccordionSection icon="chat" title={t("modelSetupScreen.sections.tone")}>
@@ -782,6 +797,8 @@ const getStyles = (colors: Colors, typography: Typography) => {
   },
   recoveryTitle: { ...typography.ui.body, color: colors.text.heading, fontWeight: "700" },
   recoveryDesc: ui.caption,
+  guideCard: { gap: 10, paddingHorizontal: 16, paddingBottom: 12 },
+  guideBody: ui.caption,
   wizardBtn: ui.secondaryButton,
   wizardBtnText: ui.secondaryButtonText,
   dangerZoneCard: { ...ui.card, backgroundColor: colors.crimson.bgSubtle, borderColor: colors.crimson.border },
