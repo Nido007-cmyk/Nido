@@ -4,6 +4,55 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.20-alpha — 2026-10-12
+
+Memory that actually saves and answers back, the audit's remaining
+routing gaps (P3), and a timer. Every fix came from real phrases —
+several from the tablet — and ships with its exact phrase as a
+regression test.
+
+### Added
+- Timer: "pon un temporizador de 10 minutos" (EN/PT too). A timer is a
+  reminder whose time is now + duration, so it rings with the same
+  notification and lives in the same list.
+- Delete by chat: "borra la nota de la receta", "cancela el
+  recordatorio de mañana", "borra todos mis recordatorios". Every
+  delete confirms first, naming the item; bulk deletes go one by one
+  and stop at the first "no".
+- Search inside notes: "busca en mis notas la receta" searches titles
+  and bodies.
+- Memory queries answered from what you saved: "¿cómo se llama mi
+  mamá?", "¿cómo me llamo?", "¿cuándo es mi cumpleaños?", "¿qué coche
+  tengo?" — and an honest "you haven't told me that yet" when the data
+  isn't there, instead of a made-up answer with a fake source.
+
+### Fixed
+- People now save the way people actually type: "Mi mama se llama
+  Marta" (no accent), lowercase names, Portuguese forms, more
+  relationships (cuñado, suegra, nieto, mejor amigo), and two people
+  at once ("mis hijos se llaman Leo y Max"). Introducing yourself
+  ("Yo me llamo Ruben", "my name is Ruben") saves your name too.
+- Facts without the word "recuerda" now save when they're clearly
+  about you ("mi cumpleaños es el 3 de mayo", "vivo en Tucson", "mi
+  coche es un Toyota") — birthdays still create their reminder.
+  Sensitive numbers are never auto-saved implicitly.
+- Numeric dates ("05/11", "11/05/2027") now produce birthday
+  reminders, not just spelled-out months.
+- Calculator named forms in English and Portuguese: "half of 80",
+  "square root of 144", "a metade de 80". Before, they fell to the
+  model and came back with an absurd sources panel.
+- "Avísame a las 3 de estudiar" and "despiértame a las 7" now create
+  reminders (a wake-up at 7 means 7 AM, not 7 PM).
+- "Manda un mensaje a Juan" works without saying "por NIDO".
+- "Hazme un plan semanal" generates the weekly plan, like
+  "planifica mi semana" already did.
+- Currency questions ("¿cuántos dólares son 100 pesos?") get the
+  honest offline answer instead of an invented exchange rate.
+- A note whose body repeats its title is no longer shown twice
+  (existing notes are fixed on read; nothing to migrate).
+- Source numbers (1, 2, 3…) were clipped inside their circle; the
+  badge is now sized for the glyph.
+
 ## 0.1.19-alpha — 2026-10-12
 
 Routing audit: normal phrases that never reached the right tool and fell
