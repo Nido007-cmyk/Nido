@@ -173,9 +173,13 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     backgroundColor: colors.cyan.bgSubtle,
   },
   chipIndexPill: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    // 0.1.20 (evidencia Tab A9+): con 16px y el estilo caption
+    // (lineHeight 15 + font padding de Android) el glifo no cabía y
+    // Android recortaba la parte superior de los dígitos (el 2 y el 3
+    // se veían cortados). Píldora de 18px y texto con métricas propias.
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: colors.cyan.bgSubtle,
     alignItems: "center",
     justifyContent: "center",
@@ -184,6 +188,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     ...typography.ui.caption,
     color: colors.text.accentCyan,
     fontWeight: "700",
+    fontSize: 10,
+    lineHeight: 12,
+    includeFontPadding: false,
+    textAlign: "center",
+    textAlignVertical: "center",
   },
   chipTitle: {
     ...typography.ui.caption,
