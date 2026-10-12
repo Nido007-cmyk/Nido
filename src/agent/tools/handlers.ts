@@ -19,7 +19,9 @@ import {
   saveNote,
   listNotes,
   getNote,
+  deleteNote,
   saveReminder,
+  deleteReminder,
   saveFact,
 } from "../memory/memoryStore";
 import { LOCAL_TOOLS } from "./manifest";
@@ -182,6 +184,40 @@ const readNoteHandler: ToolHandler = async (args) => {
   return `«${note.title}» (${fmtDateTime(note.created_at)}):\n${note.body || "(sin contenido)"}`;
 };
 
+/**
+ * 0.1.20 (P3-9): borrar notas y recordatorios por la vía del agente.
+ * Antes NO existía herramienta de borrado: "borra la nota de la receta"
+ * caía al modelo y no pasaba nada. La confirmación la impone la política
+ * (IRREVERSIBLE_TOOLS): el diálogo muestra el título/texto exacto
+ * (confirmText.ts) y sin confirmación el dispatcher ni llega aquí.
+ */
+const deleteNoteHandler: ToolHandler = async (args) => {
+  const id = String(args.id ?? "").trim();
+  if (!id) return "Error: falta el id de la nota.";
+  const note = await getNote(id);
+  if (!note) return `No encontré ninguna nota con id ${id}.`;
+  await deleteNote(id);
+  return `Nota borrada: «${note.title}».`;
+};
+
+const deleteReminderHandler: ToolHandler = async (args) => {
+  const id = String(args.id ?? "").trim();
+  if (!id) return "Error: falta el id del recordatorio.";
+  const { listReminders } = await import("../memory/memoryStore");
+  const reminder = (await listReminders(200)).find((r) => r.id === id);
+  if (!reminder) return `No encontré ningún recordatorio con id ${id}.`;
+  // Cancelar el aviso del sistema ANTES de borrar: si quedara programado,
+  // sonaría para un recordatorio que ya no existe.
+  try {
+    const { cancelReminderNotification } = await import("../../notify/notifications");
+    await cancelReminderNotification(id);
+  } catch {
+    // Sin módulo de notificaciones disponible: el borrado sigue.
+  }
+  await deleteReminder(id);
+  return `Recordatorio borrado: «${reminder.text}».`;
+};
+
 const createReminderHandler: ToolHandler = async (args) => {
   const text = String(args.text ?? "").trim();
   if (!text) return "Error: falta el texto del recordatorio.";
@@ -321,7 +357,9 @@ export function buildToolHandlers(opts?: {
     save_note: saveNoteHandler,
     list_notes: listNotesHandler,
     read_note: readNoteHandler,
+    delete_note: deleteNoteHandler,
     create_reminder: createReminderHandler,
+    delete_reminder: deleteReminderHandler,
     remember_fact: rememberFactHandler,
     save_person: savePersonHandler,
     propose_negotiation: proposeNegotiationHandler,

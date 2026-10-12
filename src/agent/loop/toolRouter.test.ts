@@ -436,8 +436,8 @@ describe("0.1.14 — qué recordatorios tengo", () => {
       dispatch: async () => ({ status: "executed" as const, text: "" }),
       isDisabled: () => false,
       listReminders: async () => [
-        { text: "llamar a mamá", dueAt: due },
-        { text: "comprar pan", dueAt: null },
+        { id: "rx1", text: "llamar a mamá", dueAt: due },
+        { id: "rx2", text: "comprar pan", dueAt: null },
       ],
     };
     const es = await runToolAction({ kind: "reminderList", lang: "es" }, deps);
@@ -500,9 +500,9 @@ describe("0.1.19 — recordatorios con alcance (hoy/mañana)", () => {
       isDisabled: () => false,
       now: () => NOW,
       listReminders: async () => [
-        { text: "llamar a mamá", dueAt: todayDue },
-        { text: "comprar pan", dueAt: tomorrowDue },
-        { text: "sin fecha", dueAt: null },
+        { id: "rx3", text: "llamar a mamá", dueAt: todayDue },
+        { id: "rx4", text: "comprar pan", dueAt: tomorrowDue },
+        { id: "rx5", text: "sin fecha", dueAt: null },
       ],
     };
     const today = await runToolAction({ kind: "reminderList", lang: "es", range: "today" }, deps);
@@ -516,7 +516,7 @@ describe("0.1.19 — recordatorios con alcance (hoy/mañana)", () => {
     expect(tomorrow.response).not.toContain("llamar a mamá");
     const empty = await runToolAction(
       { kind: "reminderList", lang: "en", range: "tomorrow" },
-      { ...deps, listReminders: async () => [{ text: "hoy", dueAt: todayDue }] },
+      { ...deps, listReminders: async () => [{ id: "rx6", text: "hoy", dueAt: todayDue }] },
     );
     expect(empty.response).toBe("You have no reminders for tomorrow.");
   });
@@ -537,5 +537,133 @@ describe("0.1.14 — reminderWhen localized", () => {
     expect(reminderWhen(iso, "en")).toBe(" on Friday, October 16 at 10:00 AM");
     expect(reminderWhen(iso, "pt")).toBe(" em sexta-feira, 16 de outubro às 10:00");
     expect(reminderWhen("nope", "es")).toBe("");
+  });
+});
+
+describe("0.1.20 (P3-9) — extractToolAction: borrados", () => {
+  it("por título, en los tres idiomas", () => {
+    expect(extractToolAction("borra la nota de la receta")).toMatchObject({ kind: "noteDelete", target: { type: "one", query: "receta" }, lang: "es" });
+    expect(extractToolAction("elimina la nota del súper")).toMatchObject({ kind: "noteDelete", target: { type: "one", query: "súper" } });
+    expect(extractToolAction("borra el recordatorio de comprar pan")).toMatchObject({ kind: "reminderDelete", target: { type: "one", query: "comprar pan" } });
+    expect(extractToolAction("cancela el recordatorio de la farmacia")).toMatchObject({ kind: "reminderDelete", target: { type: "one", query: "farmacia" } });
+    expect(extractToolAction("delete the note about taxes")).toMatchObject({ kind: "noteDelete", target: { type: "one", query: "taxes" }, lang: "en" });
+    expect(extractToolAction("cancel my reminder to call mom")).toMatchObject({ kind: "reminderDelete", target: { type: "one", query: "call mom" }, lang: "en" });
+    expect(extractToolAction("apaga a nota da receita")).toMatchObject({ kind: "noteDelete", target: { type: "one", query: "receita" }, lang: "pt" });
+    expect(extractToolAction("exclui o lembrete de comprar pão")).toMatchObject({ kind: "reminderDelete", target: { type: "one", query: "comprar pão" }, lang: "pt" });
+  });
+
+  it("conjuntos completos y con alcance de día", () => {
+    expect(extractToolAction("borra todos mis recordatorios")).toMatchObject({ kind: "reminderDelete", target: { type: "all" } });
+    expect(extractToolAction("borra todas mis notas")).toMatchObject({ kind: "noteDelete", target: { type: "all" } });
+    expect(extractToolAction("delete all my notes")).toMatchObject({ kind: "noteDelete", target: { type: "all" }, lang: "en" });
+    expect(extractToolAction("cancela el recordatorio de mañana")).toMatchObject({ kind: "reminderDelete", target: { type: "ask" }, range: "tomorrow" });
+    expect(extractToolAction("borra los recordatorios de hoy")).toMatchObject({ kind: "reminderDelete", target: { type: "all" }, range: "today" });
+    expect(extractToolAction("borra el recordatorio de comprar pan de mañana")).toMatchObject({ kind: "reminderDelete", target: { type: "one", query: "comprar pan" } });
+  });
+
+  it("pelados: preguntar cuál (o el único que haya)", () => {
+    expect(extractToolAction("borra la nota")).toMatchObject({ kind: "noteDelete", target: { type: "ask" } });
+    expect(extractToolAction("borra el recordatorio")).toMatchObject({ kind: "reminderDelete", target: { type: "ask" } });
+  });
+
+  it("trampas: sin el sustantivo no hay ruta de borrado", () => {
+    expect(extractToolAction("borra el mensaje")).toBeNull();
+    expect(extractToolAction("cancela el evento de mañana")).toBeNull();
+    expect(extractToolAction("elimina la aplicación")).toBeNull();
+    expect(extractToolAction("borra eso")).toBeNull();
+  });
+});
+
+describe("0.1.20 (P3-9) — runToolAction: borrados", () => {
+  const TODAY = new Date(2026, 9, 11, 9, 0).toISOString(); // domingo 11, hoy
+  const TOMORROW = new Date(2026, 9, 12, 9, 0).toISOString();
+  function delHarness(results: Record<string, { status: "executed" | "cancelled"; text: string }> = {}) {
+    const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
+    const deps: ToolRouterDeps = {
+      dispatch: async (name, args) => {
+        calls.push({ name, args });
+        return results[name] ?? { status: "executed", text: "Borrado." };
+      },
+      isDisabled: () => false,
+      listNotes: async () => [
+        { id: "n1", title: "Receta de pan" },
+        { id: "n2", title: "Receta de sopa" },
+        { id: "n3", title: "Lista de compras" },
+      ],
+      listReminders: async () => [
+        { id: "r1", text: "comprar pan", dueAt: TODAY },
+        { id: "r2", text: "comprar leche", dueAt: TODAY },
+        { id: "r3", text: "llamar al banco", dueAt: TOMORROW },
+      ],
+      now: () => NOW,
+    };
+    return { deps, calls };
+  }
+
+  it("nota por título: la confirmación lleva id y título (el diálogo nombra el ítem)", async () => {
+    const { deps, calls } = delHarness();
+    const action = extractToolAction("borra la nota de la receta de pan")!;
+    const out = await runToolAction(action, deps);
+    expect(calls).toEqual([{ name: "delete_note", args: { id: "n1", title: "Receta de pan" } }]);
+    expect(out.response).toBe("Listo, borré la nota «Receta de pan».");
+  });
+
+  it("nota ambigua: pregunta cuál y no borra nada", async () => {
+    const { deps, calls } = delHarness();
+    const out = await runToolAction(extractToolAction("borra la nota de la receta")!, deps);
+    expect(calls).toHaveLength(0);
+    expect(out.response).toContain("Receta de pan");
+    expect(out.response).toContain("Receta de sopa");
+  });
+
+  it("recordatorio por texto + alcance: solo los del día, uno por confirmación", async () => {
+    const { deps, calls } = delHarness();
+    const out = await runToolAction(extractToolAction("borra los recordatorios de hoy")!, deps);
+    expect(calls.map((c) => c.args.id)).toEqual(["r1", "r2"]);
+    expect(calls[0].args).toMatchObject({ text: "comprar pan" });
+    expect(out.response).toBe("Listo, borré 2 recordatorios.");
+  });
+
+  it("si el usuario cancela el segundo, se para y reporta el parcial", async () => {
+    const calls: string[] = [];
+    const deps: ToolRouterDeps = {
+      dispatch: async (name, args) => {
+        calls.push(String(args.id));
+        return calls.length === 1
+          ? { status: "executed", text: "Borrado." }
+          : { status: "cancelled", text: "Entendido, no hice nada." };
+      },
+      isDisabled: () => false,
+      listReminders: async () => [
+        { id: "r1", text: "comprar pan", dueAt: TODAY },
+        { id: "r2", text: "comprar leche", dueAt: TODAY },
+      ],
+      now: () => NOW,
+    };
+    const out = await runToolAction({ kind: "reminderDelete", target: { type: "all" }, lang: "es" }, deps);
+    expect(calls).toEqual(["r1", "r2"]);
+    expect(out.response).toBe("Me detuve: borré 1 de 2.");
+  });
+
+  it("pelado con un solo candidato: lo borra (la confirmación protege)", async () => {
+    const { deps, calls } = delHarness();
+    const out = await runToolAction(extractToolAction("cancela el recordatorio de mañana")!, deps);
+    expect(calls).toEqual([{ name: "delete_reminder", args: { id: "r3", text: "llamar al banco" } }]);
+    expect(out.response).toContain("llamar al banco");
+  });
+
+  it("sin coincidencias: honesto", async () => {
+    const { deps, calls } = delHarness();
+    const out = await runToolAction(extractToolAction("borra el recordatorio de regar las plantas")!, deps);
+    expect(calls).toHaveLength(0);
+    expect(out.response).toContain("No encontré ningún recordatorio");
+  });
+
+  it("herramienta apagada: delete_note desactivada se respeta", async () => {
+    const { deps, calls } = delHarness();
+    deps.isDisabled = (t) => t === "delete_note";
+    const out = await runToolAction(extractToolAction("borra la nota de la receta de pan")!, deps);
+    expect(calls).toHaveLength(0);
+    expect(out.response).toContain("desactivada");
   });
 });

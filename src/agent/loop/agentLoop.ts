@@ -127,7 +127,7 @@ export interface AgentLoopOptions {
    */
   listNoteTitles?: () => Promise<NoteSummary[]>;
   /** 0.1.14: recordatorios pendientes para "qué recordatorios tengo". */
-  listReminders?: () => Promise<Array<{ text: string; dueAt: string | null }>>;
+  listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null }>>;
   /**
    * Tareas programadas: los atajos deterministas (recordatorio, persona,
    * hecho) solo se usan si la herramienta correspondiente está entre los
@@ -726,7 +726,7 @@ export async function runAgentLoop(
   if (personExtractions.length) {
     const { savePerson, saveFact, saveReminder } = await import("../memory/memoryStore");
     const { extractDateISO } = await import("./rememberRouter");
-    const saved = [];
+    const saved: Array<{ name: string; relationship?: string }> = [];
     for (const ex of personExtractions) {
       saved.push(
         await savePerson({ name: ex.name, relationship: ex.relationship, notes: ex.notes })

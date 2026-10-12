@@ -39,6 +39,18 @@ const T = {
     en: "Open Messages for {{phone}} with this text?\n\n“{{message}}”\n\nNothing is sent until you send it.",
     pt: "Abrir Mensagens para {{phone}} com este texto?\n\n“{{message}}”\n\nNada é enviado até você enviar.",
   },
+  deleteNoteTitle: { es: "Borrar nota", en: "Delete note", pt: "Apagar nota" },
+  deleteNoteMessage: {
+    es: "¿Borrar la nota «{{label}}»?\n\nNo se puede deshacer.",
+    en: "Delete the note “{{label}}”?\n\nThis can't be undone.",
+    pt: "Apagar a nota “{{label}}”?\n\nIsso não pode ser desfeito.",
+  },
+  deleteReminderTitle: { es: "Borrar recordatorio", en: "Delete reminder", pt: "Apagar lembrete" },
+  deleteReminderMessage: {
+    es: "¿Borrar el recordatorio «{{label}}»?\n\nNo se puede deshacer.",
+    en: "Delete the reminder “{{label}}”?\n\nThis can't be undone.",
+    pt: "Apagar o lembrete “{{label}}”?\n\nIsso não pode ser desfeito.",
+  },
   saveTitle: { es: "Confirmar guardado", en: "Confirm save", pt: "Confirmar salvamento" },
   saveMessage: {
     es: "En esta conversación hay contenido externo (un mensaje, archivo o nota). Revisa lo que se va a guardar:\n\n«{{content}}»",
@@ -88,6 +100,18 @@ export function describePolicyConfirmation(
       // nido_send_message: el usuario aprueba los bytes exactos).
       message: fill(T.smsMessage[lang], { phone: str(args.phone), message: str(args.message) }),
     };
+  }
+  if (tool === "delete_note" || tool === "delete_reminder") {
+    // 0.1.20 (P3-9): el consentimiento informado exige NOMBRAR lo que se
+    // borra. La etiqueta (título/texto) viaja en los args validados; sin
+    // ella se cae al texto genérico crítico, nunca a un borrado a ciegas
+    // descrito como si fuera específico.
+    const label = str(tool === "delete_note" ? args.title : args.text).trim();
+    if (label) {
+      return tool === "delete_note"
+        ? { title: T.deleteNoteTitle[lang], message: fill(T.deleteNoteMessage[lang], { label }) }
+        : { title: T.deleteReminderTitle[lang], message: fill(T.deleteReminderMessage[lang], { label }) };
+    }
   }
   if (tool === "remember_fact" || tool === "save_note" || tool === "create_reminder") {
     const content =

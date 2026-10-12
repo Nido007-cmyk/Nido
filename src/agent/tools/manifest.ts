@@ -45,11 +45,29 @@ export const LOCAL_TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: "delete_note",
+    description:
+      "Borra una nota por su id. Es irreversible y pide confirmación al usuario; el título va en la confirmación para que sepa qué se borra.",
+    parameters: {
+      id: { type: "string", description: "Id de la nota", required: true },
+      title: { type: "string", description: "Título de la nota (se muestra en la confirmación)" },
+    },
+  },
+  {
     name: "create_reminder",
     description: "Crea un recordatorio local (alarma del sistema, sin nube).",
     parameters: {
       text: { type: "string", description: "Qué recordar", required: true },
       at: { type: "string", description: "Fecha/hora ISO local", required: true },
+    },
+  },
+  {
+    name: "delete_reminder",
+    description:
+      "Borra un recordatorio por su id y cancela su aviso. Es irreversible y pide confirmación al usuario; el texto va en la confirmación para que sepa qué se borra.",
+    parameters: {
+      id: { type: "string", description: "Id del recordatorio", required: true },
+      text: { type: "string", description: "Texto del recordatorio (se muestra en la confirmación)" },
     },
   },
   {

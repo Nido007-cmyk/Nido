@@ -873,7 +873,7 @@ export function ChatScreen({
           // 0.1.14: "qué recordatorios tengo".
           listReminders: async () => {
             const { listReminders } = await import("../agent/memory/memoryStore");
-            return (await listReminders(50)).map((r) => ({ text: r.text, dueAt: r.due_at }));
+            return (await listReminders(50)).map((r) => ({ id: r.id, text: r.text, dueAt: r.due_at }));
           },
           // Presupuesto de prompt contra el n_ctx real del modelo cargado
           // (T-contexto-2026-10-06).

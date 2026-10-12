@@ -61,6 +61,9 @@ export const IRREVERSIBLE_TOOLS_CANONICAL = new Set([
   "delete_file",
   "delete_memory",
   "factory_reset",
+  // 0.1.20 (P3-9): borrar notas/recordatorios es irreversible → confirma.
+  "delete_note",
+  "delete_reminder",
 ]);
 
 /**

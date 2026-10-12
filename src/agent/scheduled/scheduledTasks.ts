@@ -153,6 +153,10 @@ export const UNATTENDED_FORBIDDEN_TOOLS: readonly string[] = [
   "delete_file",
   "delete_memory",
   "factory_reset",
+  // 0.1.20 (P3-9): los borrados del agente confirman siempre; una
+  // tarea programada corre sin nadie que confirme → prohibidos aquí.
+  "delete_note",
+  "delete_reminder",
 ];
 
 /** Herramientas que una tarea nueva puede usar si el usuario no elige otras. */

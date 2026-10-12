@@ -305,6 +305,107 @@ export function splitReminderScope(t: string): { text: string; range: "today" | 
   return { text: t.slice(0, m.index).trim(), range };
 }
 
+const DELETE_VERB_ES = "(?:borra|borrar|elimina|eliminar|quita|quitar)";
+const DELETE_VERB_ES_C = "(?:borra|borrar|elimina|eliminar|cancela|cancelar|quita|quitar)";
+const DELETE_VERB_EN = "(?:delete|remove)";
+const DELETE_VERB_EN_C = "(?:delete|remove|cancel)";
+const DELETE_VERB_PT = "(?:apaga|apague|exclui|exclua|remove|remova)";
+const DELETE_VERB_PT_C = "(?:apaga|apague|exclui|exclua|remove|remova|cancela|cancele)";
+
+/**
+ * 0.1.20 (P3-9): borrados por chat. La auditoría de routing confirmó
+ * que no existía NINGUNA ruta para borrar («borra la nota del súper»
+ * caía al modelo, que no tiene con qué). Las reglas exigen el sustantivo
+ * (nota/recordatorio): «borra el mensaje» o «cancela el evento» no son
+ * de esta ruta. El borrado real pasa siempre por el dispatcher con la
+ * política irreversible (confirmación que nombra el ítem).
+ */
+function extractDeleteAction(t: string): ToolAction | null {
+  type Rule = { re: RegExp; lang: RouterLang };
+  const allRules: Array<{ re: RegExp; action: ToolAction }> = [
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_ES_C}\\s+(?:todos\\s+|todas\\s+)?(?:mis|los|las)\\s+recordatorios$`, "i"), action: { kind: "reminderDelete", target: { type: "all" }, lang: "es" } },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_ES}\\s+(?:todas\\s+)?(?:mis|las)\\s+notas$`, "i"), action: { kind: "noteDelete", target: { type: "all" }, lang: "es" } },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_EN_C}\\s+(?:all\\s+)?my\\s+reminders$`, "i"), action: { kind: "reminderDelete", target: { type: "all" }, lang: "en" } },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_EN}\\s+(?:all\\s+)?my\\s+notes$`, "i"), action: { kind: "noteDelete", target: { type: "all" }, lang: "en" } },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_PT_C}\\s+(?:todos\\s+)?(?:os\\s+)?meus\\s+lembretes$`, "i"), action: { kind: "reminderDelete", target: { type: "all" }, lang: "pt" } },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_PT}\\s+(?:todas\\s+)?(?:as\\s+)?minhas\\s+notas$`, "i"), action: { kind: "noteDelete", target: { type: "all" }, lang: "pt" } },
+  ];
+  for (const { re, action } of allRules) if (re.test(t)) return action;
+
+  const bareRemSing: Rule[] = [
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_ES_C}\\s+(?:el|mi)?\\s*recordatorio$`, "i"), lang: "es" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_EN_C}\\s+(?:the|my)?\\s*reminder$`, "i"), lang: "en" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_PT_C}\\s+(?:o|meu)?\\s*lembrete$`, "i"), lang: "pt" },
+  ];
+  const bareRemPlur: Rule[] = [
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_ES_C}\\s+(?:los|mis)\\s+recordatorios$`, "i"), lang: "es" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_EN_C}\\s+(?:the|my)?\\s*reminders$`, "i"), lang: "en" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_PT_C}\\s+(?:os|meus)?\\s*lembretes$`, "i"), lang: "pt" },
+  ];
+  const titleRem: Rule[] = [
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_ES_C}\\s+(?:el|la|mi)?\\s*recordatorio\\s+(?:de|del|para|sobre)\\s+(.+)$`, "i"), lang: "es" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_EN_C}\\s+(?:the|my)\\s+reminder\\s+(?:to|about|for)\\s+(.+)$`, "i"), lang: "en" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_PT_C}\\s+(?:o|meu)\\s+lembrete\\s+(?:de|do|da|para|sobre)\\s+(.+)$`, "i"), lang: "pt" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_ES_C}\\s+(?:el|mi)\\s+recordatorio\\s+(.+)$`, "i"), lang: "es" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_EN_C}\\s+(?:the|my)\\s+reminder\\s+(.+)$`, "i"), lang: "en" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_PT_C}\\s+(?:o|meu)\\s+lembrete\\s+(.+)$`, "i"), lang: "pt" },
+  ];
+  const titleNote: Rule[] = [
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_ES}\\s+(?:la|mi)?\\s*nota\\s+(?:de|del|sobre|llamada)\\s+(.+)$`, "i"), lang: "es" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_EN}\\s+(?:the|my)\\s+note\\s+(?:about|called|named|on|for)\\s+(.+)$`, "i"), lang: "en" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_PT}\\s+(?:a|minha)\\s+nota\\s+(?:de|do|da|sobre|chamada)\\s+(.+)$`, "i"), lang: "pt" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_ES}\\s+(?:la|mi)\\s+nota\\s+(.+)$`, "i"), lang: "es" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_EN}\\s+(?:the|my)\\s+note\\s+(.+)$`, "i"), lang: "en" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_PT}\\s+(?:a|minha)\\s+nota\\s+(.+)$`, "i"), lang: "pt" },
+  ];
+  const bareNote: Rule[] = [
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_ES}\\s+(?:la|mi)?\\s*nota$`, "i"), lang: "es" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_EN}\\s+(?:the|my)\\s+note$`, "i"), lang: "en" },
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_PT}\\s+(?:a|minha)?\\s*nota$`, "i"), lang: "pt" },
+  ];
+
+  const titleOf = (rules: Rule[], text: string): { q: string; lang: RouterLang } | null => {
+    for (const { re, lang } of rules) {
+      const m = re.exec(text);
+      if (m && m[1].trim().length >= 2) {
+        // «la nota de la receta»: la captura trae el artículo de la
+        // segunda mención; fuera, o no casa con el título guardado.
+        const q = m[1].trim().replace(/^(?:el|la|los|las|the|a|o|um|uma)\s+/i, "");
+        if (q.length >= 2) return { q, lang };
+      }
+    }
+    return null;
+  };
+  const bareOf = (rules: Rule[], text: string): RouterLang | null => {
+    for (const { re, lang } of rules) if (re.test(text)) return lang;
+    return null;
+  };
+
+  // Con alcance de día: «cancela el recordatorio de mañana».
+  const scoped = splitReminderScope(t);
+  if (scoped.range) {
+    const sing = bareOf(bareRemSing, scoped.text);
+    if (sing) return { kind: "reminderDelete", target: { type: "ask" }, range: scoped.range, lang: sing };
+    const plur = bareOf(bareRemPlur, scoped.text);
+    if (plur) return { kind: "reminderDelete", target: { type: "all" }, range: scoped.range, lang: plur };
+    const tt = titleOf(titleRem, scoped.text);
+    if (tt) return { kind: "reminderDelete", target: { type: "one", query: tt.q }, lang: tt.lang };
+  }
+
+  const tr = titleOf(titleRem, t);
+  if (tr) return { kind: "reminderDelete", target: { type: "one", query: tr.q }, lang: tr.lang };
+  const tn = titleOf(titleNote, t);
+  if (tn) return { kind: "noteDelete", target: { type: "one", query: tn.q }, lang: tn.lang };
+
+  const bn = bareOf(bareNote, t);
+  if (bn) return { kind: "noteDelete", target: { type: "ask" }, lang: bn };
+  const bs = bareOf(bareRemSing, t);
+  if (bs) return { kind: "reminderDelete", target: { type: "ask" }, lang: bs };
+  const bp = bareOf(bareRemPlur, t);
+  if (bp) return { kind: "reminderDelete", target: { type: "all" }, lang: bp };
+  return null;
+}
+
 /**
  * Detecta una petición explícita para una de las herramientas cubiertas.
  * null si no hay patrón claro (el flujo normal sigue igual).
@@ -334,6 +435,9 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     if (body.length < 2 || /^(?:un recordatorio|a reminder|um lembrete)\b/i.test(body)) return null;
     return { kind: "noteSave", title: noteTitleFrom(body), body, lang };
   }
+  // 0.1.20 (P3-9): borrados (tras guardar/leer notas, antes de convertir).
+  const deleteAction = extractDeleteAction(t);
+  if (deleteAction) return deleteAction;
 
   for (const { re, lang, inv } of CONVERT_RULES) {
     const m = re.exec(t);
@@ -435,6 +539,15 @@ type Key =
   | "personSaved"
   | "personDateNote"
   | "selfNameSaved"
+  | "noteDeleted"
+  | "reminderDeleted"
+  | "notesDeletedMany"
+  | "remindersDeletedMany"
+  | "deletedPartial"
+  | "reminderNotFound"
+  | "reminderWhich"
+  | "deleteWhichNote"
+  | "deleteWhichReminder"
   | "factSaved"
   | "factReminderNote";
 
@@ -453,6 +566,51 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: "Listo, {{name}}. Lo guardé en mi memoria.",
     en: "Done, {{name}}. I saved it to my memory.",
     pt: "Pronto, {{name}}. Salvei na minha memória.",
+  },
+  noteDeleted: {
+    es: "Listo, borré la nota «{{title}}».",
+    en: "Done, I deleted the note “{{title}}”.",
+    pt: "Pronto, apaguei a nota “{{title}}”.",
+  },
+  reminderDeleted: {
+    es: "Listo, borré el recordatorio «{{text}}».",
+    en: "Done, I deleted the reminder “{{text}}”.",
+    pt: "Pronto, apaguei o lembrete “{{text}}”.",
+  },
+  notesDeletedMany: {
+    es: "Listo, borré {{count}} notas.",
+    en: "Done, I deleted {{count}} notes.",
+    pt: "Pronto, apaguei {{count}} notas.",
+  },
+  remindersDeletedMany: {
+    es: "Listo, borré {{count}} recordatorios.",
+    en: "Done, I deleted {{count}} reminders.",
+    pt: "Pronto, apaguei {{count}} lembretes.",
+  },
+  deletedPartial: {
+    es: "Me detuve: borré {{done}} de {{total}}.",
+    en: "I stopped: I deleted {{done}} of {{total}}.",
+    pt: "Parei: apaguei {{done}} de {{total}}.",
+  },
+  reminderNotFound: {
+    es: "No encontré ningún recordatorio que coincida con «{{q}}».",
+    en: "I couldn't find a reminder matching “{{q}}”.",
+    pt: "Não encontrei nenhum lembrete correspondente a “{{q}}”.",
+  },
+  reminderWhich: {
+    es: "Hay varios recordatorios que coinciden. ¿Cuál?",
+    en: "Several reminders match. Which one?",
+    pt: "Vários lembretes correspondem. Qual?",
+  },
+  deleteWhichNote: {
+    es: "¿Cuál nota quieres borrar?",
+    en: "Which note do you want to delete?",
+    pt: "Qual nota você quer apagar?",
+  },
+  deleteWhichReminder: {
+    es: "¿Cuál recordatorio quieres borrar?",
+    en: "Which reminder do you want to delete?",
+    pt: "Qual lembrete você quer apagar?",
   },
   factSaved: {
     es: "Listo, lo guardé en mi memoria: «{{text}}».",
@@ -597,8 +755,9 @@ export interface ToolRouterDeps {
   isDisabled: (tool: string) => boolean;
   /** Notas guardadas (id + título), para resolver "lee la nota X" por título. */
   listNotes?: () => Promise<NoteSummary[]>;
-  /** Recordatorios pendientes, para "qué recordatorios tengo". */
-  listReminders?: () => Promise<Array<{ text: string; dueAt: string | null }>>;
+  /** Recordatorios pendientes, para "qué recordatorios tengo" y para
+   *  resolver los borrados por texto (0.1.20: con id). */
+  listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null }>>;
   now?: () => Date;
 }
 
@@ -684,6 +843,29 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
     return say(routerMessage("failed", lang, { reason: out.text }));
   };
 
+  // 0.1.20 (P3-9): borrado en conjunto, ítem por ítem. Cada ítem pasa
+  // por el dispatcher completo (política irreversible → confirmación
+  // que NOMBRA el ítem). Al primer "no" o fallo se para: lo ya borrado
+  // se reporta como parcial, nunca se sigue en silencio.
+  const deleteSet = async (
+    items: Array<{ id: string; label: string }>,
+    toolName: "delete_note" | "delete_reminder",
+    labelArg: "title" | "text",
+    single: (label: string) => string,
+    many: (n: number) => string
+  ): Promise<ToolRouterOutcome> => {
+    let done = 0;
+    for (const it of items) {
+      const out = await run(toolName, { id: it.id, [labelArg]: it.label });
+      if (!out.ok) {
+        if (done === 0) return failure(out);
+        return say(routerMessage("deletedPartial", lang, { done: String(done), total: String(items.length) }));
+      }
+      done++;
+    }
+    return say(done === 1 ? single(items[0].label) : many(done));
+  };
+
   try {
     switch (action.kind) {
       case "time": {
@@ -762,6 +944,81 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
         const header =
           action.range === "today" ? "remindersHeaderToday" : action.range === "tomorrow" ? "remindersHeaderTomorrow" : "remindersHeader";
         return say(`${routerMessage(header, lang)}\n${lines.join("\n")}`);
+      }
+
+      case "noteDelete": {
+        const notes = (await deps.listNotes?.()) ?? [];
+        if (action.target.type === "one") {
+          const q = norm(action.target.query);
+          const matches = notes.filter((n) => norm(n.title).includes(q) || (q.length >= 4 && q.includes(norm(n.title))));
+          const exact = matches.filter((n) => norm(n.title) === q);
+          const chosen = exact.length === 1 ? exact[0] : matches.length === 1 ? matches[0] : null;
+          if (!chosen) {
+            if (matches.length === 0) return say(routerMessage("noteNotFound", lang, { q: action.target.query }));
+            return say(`${routerMessage("noteWhich", lang)}\n${matches.slice(0, 8).map((n) => `• ${n.title}`).join("\n")}`);
+          }
+          return deleteSet([{ id: chosen.id, label: chosen.title }], "delete_note", "title",
+            (label) => routerMessage("noteDeleted", lang, { title: label }), () => "");
+        }
+        if (notes.length === 0) return say(routerMessage("noNotes", lang));
+        if (action.target.type === "ask" && notes.length > 1) {
+          return say(`${routerMessage("deleteWhichNote", lang)}\n${notes.slice(0, 20).map((n) => `• ${n.title}`).join("\n")}`);
+        }
+        return deleteSet(notes.map((n) => ({ id: n.id, label: n.title })), "delete_note", "title",
+          (label) => routerMessage("noteDeleted", lang, { title: label }),
+          (n) => routerMessage("notesDeletedMany", lang, { count: String(n) }));
+      }
+
+      case "reminderDelete": {
+        if (!deps.listReminders) return say(routerMessage("failed", lang, { reason: "reminders unavailable" }));
+        const all = await deps.listReminders();
+        if (action.target.type === "one") {
+          const q = norm(action.target.query);
+          const matches = all.filter((r) => norm(r.text).includes(q) || (q.length >= 4 && q.includes(norm(r.text))));
+          const chosen = matches.length === 1 ? matches[0] : null;
+          if (!chosen) {
+            if (matches.length === 0) return say(routerMessage("reminderNotFound", lang, { q: action.target.query }));
+            const lines = matches.slice(0, 8).map((r) => {
+              const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+              return `• ${r.text} (${when})`;
+            });
+            return say(`${routerMessage("reminderWhich", lang)}\n${lines.join("\n")}`);
+          }
+          return deleteSet([{ id: chosen.id, label: chosen.text }], "delete_reminder", "text",
+            (label) => routerMessage("reminderDeleted", lang, { text: label }), () => "");
+        }
+        let items = all;
+        if (action.range) {
+          const start = new Date(now);
+          start.setHours(0, 0, 0, 0);
+          if (action.range === "tomorrow") start.setDate(start.getDate() + 1);
+          const end = new Date(start);
+          end.setDate(end.getDate() + 1);
+          const f = start.getTime();
+          const u = end.getTime();
+          items = all.filter((r) => {
+            if (!r.dueAt) return false;
+            const d = new Date(r.dueAt).getTime();
+            return d >= f && d < u;
+          });
+        }
+        if (items.length === 0)
+          return say(
+            routerMessage(
+              action.range === "today" ? "noRemindersToday" : action.range === "tomorrow" ? "noRemindersTomorrow" : "noReminders",
+              lang
+            )
+          );
+        if (action.target.type === "ask" && items.length > 1) {
+          const lines = items.slice(0, 20).map((r) => {
+            const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+            return `• ${r.text} (${when})`;
+          });
+          return say(`${routerMessage("deleteWhichReminder", lang)}\n${lines.join("\n")}`);
+        }
+        return deleteSet(items.map((r) => ({ id: r.id, label: r.text })), "delete_reminder", "text",
+          (label) => routerMessage("reminderDeleted", lang, { text: label }),
+          (n) => routerMessage("remindersDeletedMany", lang, { count: String(n) }));
       }
 
       case "convert": {
