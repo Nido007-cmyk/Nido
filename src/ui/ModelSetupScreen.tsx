@@ -56,6 +56,7 @@ import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { makeSurfaces } from "./theme/surfaces";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
+import { backupErrorCode } from "../security/backupErrors";
 
 const modelManager = new ModelManager();
 const LLM_EMBEDDING_KINDS: AssetKind[] = ["llm", "embedding"];
@@ -73,6 +74,13 @@ export function ModelSetupScreen(props: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
+  // Final audit (0.1.16): backup errors in the app language (they used to
+  // reach the user as backup.ts's Spanish message). Unknown errors: as before.
+  const backupErrorText = (e: unknown, fallbackKey: string): string => {
+    const code = backupErrorCode(e);
+    if (code) return t(`backup.errors.${code}`);
+    return e instanceof Error ? e.message : t(fallbackKey);
+  };
   const requiredMode = props.mode === "required";
   const [presence, setPresence] = useState<Record<string, boolean>>({});
   const [activeIds, setActiveIds] = useState<Partial<Record<AssetKind, string>>>({});
@@ -103,7 +111,7 @@ export function ModelSetupScreen(props: Props) {
       setRestoreKeyText("");
       Alert.alert(t("backup.restoreDoneTitle"), t("backup.restoreDoneBody"), [{ text: t("backup.ok") }]);
     } catch (e) {
-      Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.restoreFailed"));
+      Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.restoreFailed"));
     } finally {
       setRestoreKeyBusy(false);
     }
@@ -493,7 +501,7 @@ export function ModelSetupScreen(props: Props) {
             <View style={styles.recoveryCard}>
               <View style={styles.recoveryHeader}>
                 <NidoIcon name="security" size={18} />
-                <Text style={styles.recoveryTitle}>Backup</Text>
+                <Text style={styles.recoveryTitle}>{t("backup.screenTitle")}</Text>
               </View>
               <Text style={styles.recoveryDesc}>
                 {t("backup.sectionDesc")}
@@ -506,7 +514,7 @@ export function ModelSetupScreen(props: Props) {
                     // backupShare.ts; la alerta ahora ofrece Compartir para
                     // sacar el archivo de la carpeta privada del app.
                     const { createBackupFile } = await import("./backupShare");
-                    const { path, key } = await createBackupFile();
+                    const { path, key } = await createBackupFile(t("backup.createButton"));
                     // Mostrar la clave para que el usuario la copie.
                     Alert.alert(
                       t("backup.dekTitle"),
@@ -527,7 +535,7 @@ export function ModelSetupScreen(props: Props) {
                       ]
                     );
                   } catch (e) {
-                    Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.createFailed"));
+                    Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.createFailed"));
                   }
                 }}
                 accessibilityRole="button"
@@ -594,14 +602,14 @@ export function ModelSetupScreen(props: Props) {
                                 [{ text: t("backup.ok") }]
                               );
                             } catch (e) {
-                              Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.restoreFailed"));
+                              Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.restoreFailed"));
                             }
                           },
                         },
                       ]
                     );
                   } catch (e) {
-                    Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.pickerFailed"));
+                    Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.pickerFailed"));
                   }
                 }}
                 accessibilityRole="button"

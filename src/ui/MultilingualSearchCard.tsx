@@ -34,13 +34,14 @@ import {
   switchEmbeddingModel,
 } from "../rag/embeddingSwitch";
 import { onReembedProgress, type ReembedProgress } from "../rag/reembed";
+import { displayLang, formatInt } from "../utils/safeFormat";
 
 const modelManager = new ModelManager();
 
 export function MultilingualSearchCard({ onChanged }: { onChanged?: () => void }) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const target = embeddingModelById(MULTILINGUAL_EMBEDDING_ID);
   const [active, setActive] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -119,8 +120,8 @@ export function MultilingualSearchCard({ onChanged }: { onChanged?: () => void }
       {reindexing && (
         <Text style={styles.status}>
           {t("multilingual.reindexing", {
-            done: progress!.done.toLocaleString(),
-            total: progress!.total.toLocaleString(),
+            done: formatInt(progress!.done, displayLang(i18n.language)),
+            total: formatInt(progress!.total, displayLang(i18n.language)),
           })}
         </Text>
       )}

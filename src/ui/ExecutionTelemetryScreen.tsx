@@ -21,6 +21,7 @@ import { NidoIcon } from "./components/icons/NidoIcon";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 import { EvaluationScreen } from "./EvaluationScreen";
 import { MODEL_CATALOG } from "../models/manifest";
+import { displayLang, formatDateTime } from "../utils/safeFormat";
 
 interface Props {
   onClose?: () => void;
@@ -61,7 +62,7 @@ function outcomeColor(colors: Colors, outcome: ExecutionTelemetryRecord["outcome
 export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [records, setRecords] = useState<ExecutionTelemetryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -229,7 +230,7 @@ export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
                 <StatCell label={t("executionTelemetry.memory")} value={formatMB(r.peakRssBytes)} />
                 <StatCell label={t("executionTelemetry.tokens")} value={r.tokensGenerated != null ? `${r.tokensGenerated}` : "—"} />
               </View>
-              <Text style={styles.timestamp}>{new Date(r.createdAt).toLocaleString()}</Text>
+              <Text style={styles.timestamp}>{formatDateTime(r.createdAt, displayLang(i18n.language))}</Text>
             </View>
           ))}
         </ScrollView>

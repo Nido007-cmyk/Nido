@@ -31,6 +31,7 @@ import {
 import { deleteTask, getTaskRuns, listTasks, saveTask } from "../agent/scheduled/taskStore";
 import { scheduleTaskReminder } from "../agent/scheduled/runScheduled";
 import { cancelTaskNotification } from "../notify/notifications";
+import { displayLang, formatDateTime } from "../utils/safeFormat";
 
 /** Lunes primero; el valor es el día de la semana de JavaScript (0 = domingo). */
 const WEEK: readonly number[] = [1, 2, 3, 4, 5, 6, 0];
@@ -52,7 +53,7 @@ function pad(n: number): string {
 export function ScheduledTasksCard() {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [lastRuns, setLastRuns] = useState<Record<string, TaskRunResult | undefined>>({});
   const [loadFailed, setLoadFailed] = useState(false);
@@ -210,7 +211,7 @@ export function ScheduledTasksCard() {
             <Text style={styles.rowInstruction}>{task.instruction}</Text>
             {task.enabled && task.nextRunAt ? (
               <Text style={styles.rowMeta}>
-                {t("scheduledTasks.nextRun", { when: new Date(task.nextRunAt).toLocaleString() })}
+                {t("scheduledTasks.nextRun", { when: formatDateTime(task.nextRunAt, displayLang(i18n.language)) })}
               </Text>
             ) : null}
             {run ? (
@@ -218,7 +219,7 @@ export function ScheduledTasksCard() {
                 <Text style={[styles.resultState, { color: run.success ? colors.emerald[600] : colors.crimson[500] }]}>
                   {run.success ? t("scheduledTasks.lastOk") : t("scheduledTasks.lastFailed")}
                   {" · "}
-                  {new Date(run.completedAt).toLocaleString()}
+                  {formatDateTime(run.completedAt, displayLang(i18n.language))}
                 </Text>
                 {run.success && run.summary ? <Text style={styles.resultText}>{run.summary}</Text> : null}
               </View>

@@ -31,13 +31,14 @@ import {
 } from "../agent/actionLogStore";
 import { getDisabledTools, setToolDisabled } from "../agent/tools/toolPermissions";
 import { setDisabledToolNames } from "../models/settings";
+import { displayLang, formatDateTime } from "../utils/safeFormat";
 
 const MAX_LOG_ROWS = 20;
 
 export function AgentPermissionsCard() {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // Fuente principal: la base cifrada (sobrevive al cierre de la app). Si no
   // se puede leer, se muestra lo de esta sesión, que vive en memoria.
   const [stored, setStored] = useState<StoredAction[] | null>(null);
@@ -140,7 +141,7 @@ export function AgentPermissionsCard() {
               <View style={styles.logHead}>
                 <View style={styles.rowText}>
                   <Text style={styles.rowName}>{e.tool}</Text>
-                  <Text style={styles.rowDesc}>{new Date(e.ts).toLocaleString()}</Text>
+                  <Text style={styles.rowDesc}>{formatDateTime(e.ts, displayLang(i18n.language))}</Text>
                 </View>
                 <Text style={[styles.rowState, { color: outcomeColor(e.outcome) }]}>
                   {e.undone

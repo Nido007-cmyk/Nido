@@ -67,6 +67,7 @@ import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import { LanguageSelector } from "./components/LanguageSelector";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
+import { displayLang, formatInt } from "../utils/safeFormat";
 
 const modelManager = new ModelManager();
 
@@ -1038,8 +1039,8 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
               <Text style={[styles.statusLine, tp.ui.title, styles.tabular]}>
                 {seedProgress && seedProgress.total > 0
                   ? t("setupWizard.step4.counter", {
-                      done: seedProgress.done.toLocaleString(),
-                      total: seedProgress.total.toLocaleString(),
+                      done: formatInt(seedProgress.done, displayLang(i18n.language)),
+                      total: formatInt(seedProgress.total, displayLang(i18n.language)),
                     })
                   : t("setupWizard.calculating")}
               </Text>

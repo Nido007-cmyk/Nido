@@ -28,6 +28,7 @@ import {
 } from "../p2p/negotiationService";
 import type { ShownRequest } from "../agent/delegation/approvalGate";
 import type { TaskScope } from "../p2p/taskProtocol";
+import { displayLang, formatDateTime } from "../utils/safeFormat";
 
 interface P2PContact {
   pkHex: string;
@@ -397,13 +398,7 @@ export function NegotiationsTab() {
               const peerName =
                 contactNames.get(session.peerPkHex.toLowerCase()) ??
                 session.peerPkHex.slice(0, 8);
-              const locale = i18n.resolvedLanguage ?? i18n.language ?? "es";
-              const dateStr = new Date(session.updatedAt).toLocaleDateString(locale, {
-                day: "numeric",
-                month: "short",
-                hour: "numeric",
-                minute: "2-digit",
-              });
+              const dateStr = formatDateTime(session.updatedAt, displayLang(i18n.resolvedLanguage ?? i18n.language));
               return (
                 <View key={session.negotiationId} style={styles.activeCard}>
                   <Text style={styles.activePeer}>✓ {peerName}</Text>
@@ -470,7 +465,7 @@ export function NegotiationsTab() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{t("negotiations.proposeButton").replace("+ ", "")}</Text>
-            <Text style={styles.modalLabel}>Contacto:</Text>
+            <Text style={styles.modalLabel}>{t("negotiations.contactLabel")}</Text>
             {contacts.map((c) => (
               <TouchableOpacity accessibilityRole="button"
                 key={c.pkHex}
@@ -483,7 +478,7 @@ export function NegotiationsTab() {
                 <Text style={styles.contactName}>{c.name}</Text>
               </TouchableOpacity>
             ))}
-            <Text style={styles.modalLabel}>Propuesta:</Text>
+            <Text style={styles.modalLabel}>{t("negotiations.proposalLabel")}</Text>
             <TextInput
               style={styles.modalInput}
               value={description}

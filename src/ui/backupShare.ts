@@ -22,6 +22,7 @@ import {
   readDirectoryAsync,
 } from "expo-file-system/legacy";
 import { createBackup, exportDatabaseKey } from "../security/backup";
+import { BackupError } from "../security/backupErrors";
 
 export interface CreatedBackup {
   path: string;
@@ -29,14 +30,14 @@ export interface CreatedBackup {
 }
 
 /** Crea el backup y devuelve ruta + clave. */
-export async function createBackupFile(): Promise<CreatedBackup> {
+export async function createBackupFile(unlockReason = "Crear backup"): Promise<CreatedBackup> {
   // FIX 2026-10-09 (NEW-CR-2): biométrico obligatorio antes de exponer la DEK.
   // Antes se mostraba sin autenticación en el flujo real.
   const { requireUnlock } = await import("../security/biometricGate");
   try {
-    await requireUnlock("Crear backup");
+    await requireUnlock(unlockReason);
   } catch {
-    throw new Error("Autenticación cancelada");
+    throw new BackupError("authCancelled", "Autenticación cancelada");
   }
   const timestamp = new Date()
     .toISOString()

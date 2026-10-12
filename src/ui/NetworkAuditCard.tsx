@@ -24,6 +24,7 @@ import type { Typography } from "./theme/typography";
 import { calmSpacing, calmRadii } from "./theme/calm";
 import { makeSurfaces } from "./theme/surfaces";
 import { networkAudit, type NetworkAuditEntry } from "../privacy/networkAudit";
+import { displayLang, formatDateTime } from "../utils/safeFormat";
 
 /** Entradas más recientes que se muestran. */
 const MAX_ROWS = 30;
@@ -39,7 +40,7 @@ function formatBytes(n: number): string {
 export function NetworkAuditCard() {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [entries, setEntries] = useState<NetworkAuditEntry[]>(() => networkAudit.list());
 
   useEffect(() => {
@@ -64,7 +65,7 @@ export function NetworkAuditCard() {
           {recent.map((e, i) => (
             <View key={`${e.ts}-${i}`} style={styles.row}>
               <Text style={styles.rowKind}>
-                {t(`networkLog.kind.${e.kind}`)} · {new Date(e.ts).toLocaleString()}
+                {t(`networkLog.kind.${e.kind}`)} · {formatDateTime(e.ts, displayLang(i18n.language))}
               </Text>
               <Text style={styles.rowEndpoint}>{e.endpoint}</Text>
               <Text style={styles.rowMeta}>

@@ -119,6 +119,7 @@ import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { spacing, radii } from "./theme/spacing";
 import { calmSpacing, calmRadii, calmType, calmShadows } from "./theme/calm";
+import { displayLang, formatInt } from "../utils/safeFormat";
 
 interface Message {
   id: string;
@@ -441,7 +442,7 @@ export function ChatScreen({
 
       setLoadStatus(t("chatScreen.indexingKnowledgeBase"));
       const stopProgress = onSeedProgress((p) =>
-        setLoadStatus(`${t("chatScreen.indexingKnowledgeBase")} ${p.done.toLocaleString()} / ${p.total.toLocaleString()}`)
+        setLoadStatus(`${t("chatScreen.indexingKnowledgeBase")} ${formatInt(p.done, displayLang(i18n.language))} / ${formatInt(p.total, displayLang(i18n.language))}`)
       );
       await seedKnowledgeBaseIfEmpty().finally(stopProgress);
       setReady(true);

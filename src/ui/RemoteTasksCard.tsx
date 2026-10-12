@@ -29,6 +29,7 @@ import {
   rejectAgentTask,
   type AgentTaskRequest,
 } from "../p2p/approvalInbox";
+import { displayLang, formatDateTime } from "../utils/safeFormat";
 
 /** Cada cuánto se vuelve a consultar la cola mientras la pantalla está abierta. */
 const REFRESH_MS = 5000;
@@ -36,7 +37,7 @@ const REFRESH_MS = 5000;
 export function RemoteTasksCard({ onNotice }: { onNotice?: (message: string) => void }) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [tasks, setTasks] = useState<AgentTaskRequest[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -91,7 +92,7 @@ export function RemoteTasksCard({ onNotice }: { onNotice?: (message: string) => 
             reason: task.actionText,
             details: [
               { label: t("remoteTasks.from"), value: `${task.senderName} (${task.senderPkShort}…)` },
-              { label: t("remoteTasks.received"), value: new Date(task.receivedAt).toLocaleString() },
+              { label: t("remoteTasks.received"), value: formatDateTime(task.receivedAt, displayLang(i18n.language)) },
             ],
             dataLeaving: [],
             riskLevel: "high",
