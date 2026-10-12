@@ -50,6 +50,8 @@ interface Settings {
   /** 0.1.14: guía de usuario (onboarding visto, lecciones abiertas). */
   guideOnboardingDone?: boolean;
   guideVisited?: string[];
+  /** 0.1.15: the user said "not now" to the P2P battery hint. */
+  p2pBatteryHintDismissed?: boolean;
 }
 
 export interface MemorySettings {
@@ -402,5 +404,16 @@ export async function markGuideVisited(id: string): Promise<void> {
   const list = Array.isArray(s.guideVisited) ? s.guideVisited : [];
   if (list.includes(id)) return;
   s.guideVisited = [...list, id].slice(-200);
+  await writeSettings(s);
+}
+
+export async function getP2PBatteryHintDismissed(): Promise<boolean> {
+  const s = await readSettings();
+  return s.p2pBatteryHintDismissed === true;
+}
+
+export async function setP2PBatteryHintDismissed(dismissed: boolean): Promise<void> {
+  const s = await readSettings();
+  s.p2pBatteryHintDismissed = dismissed;
   await writeSettings(s);
 }

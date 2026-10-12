@@ -58,6 +58,10 @@ interface NidoP2PNativeModule {
   startLan(): Promise<void>;
   stopLan(): Promise<void>;
   getLanStatus(): { active: boolean; port: number; connections: number };
+  /** 0.1.15: true if Android's battery saver leaves NIDO alone in the background. */
+  isIgnoringBatteryOptimizations(): boolean;
+  /** Opens the system dialog (or NIDO's app info) to allow background running. */
+  openBatterySettings(): boolean;
 }
 
 const native = requireNativeModule<NidoP2PNativeModule>("NidoP2P");
@@ -155,4 +159,22 @@ export function addListener<K extends keyof NidoP2PEvents>(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sub = (emitter as any).addListener(event, listener);
   return () => sub.remove();
+}
+
+/** 0.1.15: true if NIDO is exempt from battery optimization (or unknown). */
+export function isIgnoringBatteryOptimizations(): boolean {
+  try {
+    return native.isIgnoringBatteryOptimizations();
+  } catch {
+    return true;
+  }
+}
+
+/** 0.1.15: opens the system "always run in background" dialog / app info. */
+export function openBatterySettings(): boolean {
+  try {
+    return native.openBatterySettings();
+  } catch {
+    return false;
+  }
 }

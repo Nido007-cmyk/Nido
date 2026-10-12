@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Modal,
   Keyboard,
+  AppState,
 } from "react-native";
 import { showSecureAlert } from "nido-secure-dialog";
 import * as Clipboard from "expo-clipboard";
@@ -35,6 +36,7 @@ import { NegotiationsTab } from "./NegotiationsTab";
 import { reconnectManager } from "../p2p/reconnectManager";
 import { PacksTab } from "./PacksTab";
 import { RemoteTasksCard } from "./RemoteTasksCard";
+import { dismissBatteryHint, openBatterySettings, shouldShowBatteryHint } from "../p2p/batteryHint";
 
 const ERROR_RED = "#F87171";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
@@ -134,6 +136,28 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   // pérdida de claves (antes: spinner eterno con myCode === "").
   const [identityError, setIdentityError] = useState<string | null>(null);
   const [contacts, setContacts] = useState<P2PContact[]>([]);
+  // 0.1.15: aviso de batería (Android congela NIDO en segundo plano).
+  const [batteryHint, setBatteryHint] = useState(false);
+  const contactCount = contacts.length;
+  useEffect(() => {
+    let cancelled = false;
+    const check = () => {
+      shouldShowBatteryHint(contactCount)
+        .then((show) => {
+          if (!cancelled) setBatteryHint(show);
+        })
+        .catch(() => {});
+    };
+    check();
+    // Al volver de los ajustes del sistema, el aviso desaparece si ya se permitió.
+    const sub = AppState.addEventListener("change", (s) => {
+      if (s === "active") check();
+    });
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
+  }, [contactCount]);
   /** PKs revocados (para filtrar de la lista de contactos). */
   const [revokedPks, setRevokedPks] = useState<Set<string>>(new Set());
   /**
@@ -1265,6 +1289,36 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           </Text>
         )}
       </View>
+      {batteryHint ? (
+        <View style={styles.batteryHint}>
+          <Text style={styles.batteryHintTitle}>{t("nido.batteryHintTitle")}</Text>
+          <Text style={styles.batteryHintBody}>{t("nido.batteryHintBody")}</Text>
+          <View style={styles.batteryHintRow}>
+            <Pressable
+              style={styles.batteryHintButton}
+              onPress={() => {
+                impact(ImpactFeedbackStyle.Light);
+                if (!openBatterySettings()) setNotice(t("nido.batteryHintManual"));
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t("nido.batteryHintAllow")}
+            >
+              <Text style={styles.batteryHintButtonText}>{t("nido.batteryHintAllow")}</Text>
+            </Pressable>
+            <Pressable
+              style={styles.batteryHintLater}
+              onPress={() => {
+                setBatteryHint(false);
+                dismissBatteryHint().catch(() => {});
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t("nido.batteryHintLater")}
+            >
+              <Text style={styles.batteryHintLaterText}>{t("nido.batteryHintLater")}</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
       {notice ? (
         <Text style={styles.notice} onPress={() => setNotice(null)}>
           {notice}
@@ -1766,6 +1820,27 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   // FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): banner de alerta para
   // almacenamiento de revocaciones corrupto.
+  batteryHint: {
+    backgroundColor: colors.amber.bgSubtle,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.amber.border,
+    paddingHorizontal: calmSpacing.comfortable,
+    paddingVertical: calmSpacing.cozy,
+    gap: 6,
+  },
+  batteryHintTitle: { ...typography.ui.body, fontWeight: "700", color: colors.amber[600] },
+  batteryHintBody: { ...typography.ui.caption, color: colors.text.secondary },
+  batteryHintRow: { flexDirection: "row", gap: 10, alignItems: "center", flexWrap: "wrap" },
+  batteryHintButton: {
+    backgroundColor: colors.emerald[500],
+    paddingHorizontal: calmSpacing.comfortable,
+    borderRadius: 9999,
+    minHeight: 40,
+    justifyContent: "center",
+  },
+  batteryHintButtonText: { ...typography.ui.caption, fontWeight: "700", color: colors.text.inverse },
+  batteryHintLater: { paddingHorizontal: 12, minHeight: 40, justifyContent: "center" },
+  batteryHintLaterText: { ...typography.ui.caption, color: colors.text.secondary, fontWeight: "600" },
   revocationAlert: {
     backgroundColor: colors.crimson.bgSubtle,
     borderLeftWidth: 4,

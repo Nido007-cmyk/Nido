@@ -727,7 +727,12 @@
     "contactDeleted": "“{{name}}” was deleted.",
     "deleteContactFailed": "Could not delete the contact.",
     "dialingInstead": "{{name}} didn’t call: connecting from this tablet…",
-    "pairKeyChanged": "⚠️ The security key for “{{name}}” changed. If you didn’t expect this, do NOT continue: someone could be impersonating your contact. If you know they reinstalled NIDO, delete them from your contacts and pair again, comparing the fingerprint in person. Nothing was saved."
+    "pairKeyChanged": "⚠️ The security key for “{{name}}” changed. If you didn’t expect this, do NOT continue: someone could be impersonating your contact. If you know they reinstalled NIDO, delete them from your contacts and pair again, comparing the fingerprint in person. Nothing was saved.",
+    "batteryHintTitle": "So messages arrive while NIDO is closed",
+    "batteryHintBody": "Android puts NIDO to sleep after a while to save battery, and the link with your contacts drops until you open it again. Let NIDO run in the background (it uses very little battery).",
+    "batteryHintAllow": "Allow",
+    "batteryHintLater": "Not now",
+    "batteryHintManual": "Go to Android Settings → Apps → NIDO → Battery → Unrestricted."
   },
   "notifications": {
     "reminderChannel": "NIDO Reminders",
@@ -1364,7 +1369,7 @@
             "steps": [
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.knowledgeBase) → “$t(multilingual.title)” → $t(multilingual.turnOn) (downloads a 126 MB model, once).",
               "Wait for “Preparing search”: you can keep chatting meanwhile.",
-              "Optional: download “Wikipedia Vital (multilingual search)”, about 164 MB."
+              "Optional: download “Wikipedia Vital (multilingual search)”, about 156 MB."
             ],
             "tip": "New installs in Spanish or Portuguese have it on from the start."
           },
@@ -1394,7 +1399,7 @@
               "Check the verification fingerprint together.",
               "In the $t(nido.tabLink) tab tap $t(nido.connectButton) on either tablet and write in $t(nido.tabChats)."
             ],
-            "tip": "If the other NIDO is out of range, the message waits encrypted and is sent when it shows up."
+            "tip": "If the other NIDO is out of range, the message waits encrypted and is sent when it shows up. If it disconnects after a while with NIDO closed, tap “Allow” on the battery notice in the NIDO screen."
           },
           {
             "id": "outside",

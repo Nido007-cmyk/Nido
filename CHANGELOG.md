@@ -4,6 +4,14 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.15-alpha — 2026-10-12
+
+### Added
+- NIDO messages: when you use P2P and Android is still battery-optimizing
+  NIDO, the NIDO screen offers to let it run in the background (system
+  dialog). Android's battery saver froze NIDO after a while with the app
+  closed and the link dropped until it was opened again.
+
 ## 0.1.14-alpha — 2026-10-12
 
 ### Added
