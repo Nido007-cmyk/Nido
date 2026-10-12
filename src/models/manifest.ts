@@ -279,7 +279,19 @@ export const MODEL_CATALOG: CatalogModel[] = [
     license: "MIT",
     description: "Powerful. Best for complex reasoning and detailed analysis. Slower, uses more storage (~2.4GB).",
     required: false,
-    capabilities: { roles: ["general", "reasoning"] },
+    // RAM pre-flight profile (verified against microsoft/Phi-3.5-mini-
+    // instruct config.json): 32 layers, plain multi-head attention —
+    // 32 KV heads, NO GQA — head dim 96. Its KV cache is the heaviest
+    // per token in the catalog (~1.5 GiB at 4096 in fp16): without this
+    // declaration the pre-flight fell back to the light default profile
+    // and underestimated it ~13x, admitting loads RAM cannot sustain.
+    arch: { nLayer: 32, nKvHeads: 32, headDim: 96 },
+    defaultNCtx: 4096,
+    // usesChatTemplate: it HAS routing roles, so the adaptive executor
+    // must give it its own <|user|>/<|assistant|> template like the
+    // direct-chat route already does — not the hand-built plain prompt
+    // with foreign stop strings.
+    capabilities: { roles: ["general", "reasoning"], usesChatTemplate: true },
   },
   {
     id: "bge-small-en-v1.5-q8",
@@ -458,7 +470,14 @@ export const MODEL_CATALOG: CatalogModel[] = [
     license: "Apache-2.0",
     description: "Powerful. Strongest reasoning for complex tasks. Needs more resources (~4.7GB).",
     required: false,
-    capabilities: { roles: ["reasoning", "verifier"] },
+    // RAM pre-flight profile (verified against Qwen/Qwen2.5-7B-Instruct
+    // config.json): 28 layers, GQA with 4 KV heads, head dim 128. Its
+    // KV cache is ~224 MiB at 4096 — without this declaration the
+    // pre-flight estimated half of that on the heaviest model we ship.
+    arch: { nLayer: 28, nKvHeads: 4, headDim: 128 },
+    // Same ChatML family as the 1.5B/0.5B: with routing roles assigned,
+    // the adaptive executor must use its real chat template too.
+    capabilities: { roles: ["reasoning", "verifier"], usesChatTemplate: true },
   },
   // Tested on a real phone (docs/DEVICE_EVALUATION.md) and offered as suggestions so users
   // don't have to search for them. No routing roles yet: they're used when picked with
@@ -494,6 +513,15 @@ export const MODEL_CATALOG: CatalogModel[] = [
     license: "Apache-2.0",
     description: "Private Local. Google's on-device model. Balanced performance and privacy (~5.2GB).",
     required: false,
+    // RAM pre-flight profile (verified against google/gemma-4-E4B-it):
+    // 42 text layers, 2 KV heads, head dim 320. This is an UPPER BOUND:
+    // most layers use a 512-token sliding window and layers share KV,
+    // so llama.cpp's real allocation is lower — the naive formula
+    // overestimates, which is the safe direction for a pre-flight. Its
+    // thinking mode is opt-in via a <|think|> system token this app
+    // never sends, so no reasoning handling is needed. Text-only: the
+    // catalog ships no mmproj, vision/audio are not supported.
+    arch: { nLayer: 42, nKvHeads: 2, headDim: 320 },
   },
   {
     id: "corpus-standard",

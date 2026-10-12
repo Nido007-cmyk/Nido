@@ -36,6 +36,19 @@ describe("estimateKvCacheBytes", () => {
   it("scales linearly with context length", () => {
     expect(estimateKvCacheBytes(28, 512, 2, 128)).toBe(estimateKvCacheBytes(28, 4096, 2, 128) / 8);
   });
+
+  // Estudio de modelos (2026-10-12): el pre-flight solo es exacto con el
+  // arch declarado en el catálogo. Estos son los costos KV reales a
+  // 4096 que las entradas corregidas declaran hoy (la matemática vive
+  // aquí porque ramBudget arrastra módulos nativos que el test de
+  // catálogo no puede importar).
+  it("los arch del catálogo dan los KV reales: Phi 1.5 GiB, 7B 224 MiB, Gemma 420 MiB", () => {
+    expect(estimateKvCacheBytes(32, 4096, 32, 96)).toBe(1_610_612_736); // Phi-3.5 MHA
+    expect(estimateKvCacheBytes(28, 4096, 4, 128)).toBe(234_881_024); // Qwen2.5-7B
+    expect(estimateKvCacheBytes(42, 4096, 2, 320)).toBe(440_401_920); // Gemma 4 (cota superior)
+    // Y el perfil por defecto sin arch (112 MiB) es el error que se corrigió.
+    expect(estimateKvCacheBytes(28, 4096, 2, 128)).toBe(117_440_512);
+  });
 });
 
 describe("estimateContextBytes", () => {

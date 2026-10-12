@@ -229,6 +229,30 @@ describe("gate fail-closed behavior (synthetic contracts)", () => {
   });
 });
 
+// Estudio de modelos (2026-10-12): sin `arch` declarado, el pre-flight
+// de RAM cae al perfil ligero por defecto (112 MiB a 4096) y subestima
+// la caché KV de los modelos pesados — 13x en Phi-3.5, 2x en el 7B.
+// Estos tests fijan las declaraciones contra las config oficiales y el
+// costo KV que el pre-flight debe ver.
+describe("correcciones del estudio de modelos: arch y plantillas", () => {
+  const byId = (id: string) => MODEL_CATALOG.find((m) => m.id === id);
+  it("Phi-3.5-mini: arch MHA real {32,32,96} y plantilla propia en la ruta adaptativa", () => {
+    const phi = byId("phi-3.5-mini-instruct-q4km")!;
+    expect(phi.arch).toEqual({ nLayer: 32, nKvHeads: 32, headDim: 96 });
+    expect(phi.capabilities?.usesChatTemplate).toBe(true);
+    expect(phi.capabilities?.roles).toEqual(["general", "reasoning"]);
+  });
+  it("Qwen2.5-7B: arch {28,4,128} y plantilla ChatML con roles", () => {
+    const b7 = byId("qwen2.5-7b-instruct-q4km")!;
+    expect(b7.arch).toEqual({ nLayer: 28, nKvHeads: 4, headDim: 128 });
+    expect(b7.capabilities?.usesChatTemplate).toBe(true);
+  });
+  it("Gemma 4 E4B: arch {42,2,320} como cota superior documentada", () => {
+    const gemma = byId("gemma-4-e4b-it-q4_0")!;
+    expect(gemma.arch).toEqual({ nLayer: 42, nKvHeads: 2, headDim: 320 });
+  });
+});
+
 // Lane Qwen3 (2026-10-12): la entrada de Qwen3-0.6B declara lo que el
 // motor necesita para correrlo bien — plantilla de chat propia y el
 // interruptor de no-pensar — y sigue fuera de la ruta por defecto.
