@@ -4,6 +4,39 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.19-alpha — 2026-10-12
+
+Routing audit: normal phrases that never reached the right tool and fell
+to the small model instead.
+
+### Fixed
+- Reminder lists with a day: "what reminders do I have today / tomorrow"
+  (and the Spanish and Portuguese forms) now list that day's reminders.
+  Before, the phrase fell to the model and answered from the knowledge
+  base — the exact failure seen on the tablet.
+- Calculator without a trigger phrase: "15% of 200", "245*38", "9 por 7",
+  "45 más 67", "suma 45 y 67", "la mitad de 80", "el doble de 35",
+  "raíz cuadrada de 144", "2 elevado a 10", "cuánto es 1,5 por 4",
+  "cuánto son 3 docenas", "cuánto sería la propina del 15% de 230".
+  A date typed on its own ("12/10/2026") is not treated as a division.
+- Conversions asked as questions: "cuántos pies son 2 metros", "cuánto
+  es 70 kg en libras", "how many feet are in 2 meters", "quantos pés são
+  2 metros". The imperative forms already worked; the question forms
+  depended on the model.
+- Reminders with the time first ("mañana recuérdame comprar pan", "en
+  media hora recuérdame la junta") were saved with no time and would
+  never have rung. The time is now read from the whole phrase.
+- "Recuerda que mañana tengo dentista" was stored as a memory fact and
+  no reminder existed; with a future date and a first-person event it is
+  now a reminder. And "recuérdame cómo se llama la capital de Francia"
+  is a question again: it no longer creates a junk reminder (or a junk
+  memory fact).
+- Repeating reminders ("cada día recuérdame tomar la pastilla") were
+  silently saved as one-time. Repeats are not supported yet, and the
+  confirmation now says so instead of letting you believe it repeats.
+- "Ponme un recordatorio para el viernes" no longer saves a reminder
+  titled "para".
+
 ## 0.1.18-alpha — 2026-10-12
 
 Offensive audit: trying to break the app.
