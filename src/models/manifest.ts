@@ -404,6 +404,38 @@ export const MODEL_CATALOG: CatalogModel[] = [
     capabilities: { roles: ["fast"], usesChatTemplate: true },
   },
   {
+    // 2026-10-12: Qwen3-0.6B, added at the owner's request. The successor
+    // generation to the light 0.5B: Apache-2.0 (passes the license audit),
+    // official GGUF exists but only at Q8_0 (639 MB — too heavy for the
+    // light tier), and bartowski's repo does not answer anonymous HF API
+    // calls, so its bytes cannot be verified/pinned the way this catalog
+    // requires. unsloth's Q4_K_M is used instead: LFS oid and size
+    // verified via the HF API at the pinned commit below.
+    // NOT a default and no routing roles yet. Two known cautions for the
+    // device eval: (1) Qwen3's chat template thinks by default (<think>
+    // blocks) and the app has no /no_think wiring yet; (2) its KV cache
+    // is ~9x heavier per token than Qwen2.5-0.5B's (8 KV heads x 128
+    // head dim vs 2 x 64), so on low-RAM devices the pre-flight will
+    // shrink the context. Offered as an optional download ("Select &
+    // Use") until the eval proves it earns a default path.
+    id: "qwen3-0.6b-q4km",
+    kind: "llm",
+    label: "Qwen3-0.6B (Q4_K_M)",
+    filename: "models/qwen3-0.6b-q4km.gguf",
+    sizeBytes: 396705472,
+    sha256: "ac2d97712095a558e31573f62f466a3f9d93990898b0ec79d7c974c1780d524a",
+    sourceUrl:
+      "https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf",
+    revision: "50968a4468ef4233ed78cd7c3de230dd1d61a56b",
+    license: "Apache-2.0",
+    description:
+      "New generation of the light model: follows instructions better than Qwen2.5-0.5B at the same size (~0.4GB). Optional download while it is evaluated on real devices; it thinks before answering, so replies can take longer.",
+    required: false,
+    // RAM pre-flight profile (verified against Qwen/Qwen3-0.6B
+    // config.json): 28 layers, GQA with 8 KV heads, head dim 128.
+    arch: { nLayer: 28, nKvHeads: 8, headDim: 128 },
+  },
+  {
     id: "qwen2.5-7b-instruct-q4km",
     kind: "llm",
     label: "Qwen2.5-7B-Instruct (Q4_K_M)",
