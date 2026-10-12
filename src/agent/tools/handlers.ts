@@ -30,7 +30,7 @@ import {
   classifyOpenAppTarget,
   type OpenAppRejectReason,
 } from "./externalLink";
-import { evaluateExpression, formatNumber } from "./calc";
+import { evaluateExpression, formatNumber, isApproximate } from "./calc";
 import { convertUnits } from "./convert";
 import { loadSkill, listSkills } from "../skills/registry";
 import { analyzeTable } from "./analyze";
@@ -618,7 +618,8 @@ const calculateHandler: ToolHandler = async (args) => {
   const expr = String(args.expression ?? "").trim();
   if (!expr) return "Error: falta la expresión a calcular.";
   try {
-    return `${expr} = ${formatNumber(evaluateExpression(expr))}`;
+    const value = evaluateExpression(expr);
+    return `${expr} ${isApproximate(value) ? "≈" : "="} ${formatNumber(value)}`;
   } catch (e) {
     return `No pude calcular eso: ${e instanceof Error ? e.message : String(e)}`;
   }

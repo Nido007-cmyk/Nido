@@ -57,6 +57,7 @@ import type { Typography } from "./theme/typography";
 import { makeSurfaces } from "./theme/surfaces";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 import { backupErrorCode } from "../security/backupErrors";
+import { showSecureAlert } from "nido-secure-dialog";
 
 const modelManager = new ModelManager();
 const LLM_EMBEDDING_KINDS: AssetKind[] = ["llm", "embedding"];
@@ -516,24 +517,26 @@ export function ModelSetupScreen(props: Props) {
                     const { createBackupFile } = await import("./backupShare");
                     const { path, key } = await createBackupFile(t("backup.createButton"));
                     // Mostrar la clave para que el usuario la copie.
-                    Alert.alert(
-                      t("backup.dekTitle"),
-                      `${t("backup.dekSavedIn")} ${path}\n\n${t("backup.dekCopyPrompt")}\n${key}`,
-                      [
-                        {
-                          text: t("backup.shareButton"),
-                          onPress: async () => {
-                            try {
-                              const { shareBackupFile } = await import("./backupShare");
-                              await shareBackupFile(path);
-                            } catch {
-                              Alert.alert(t("backup.errorTitle"), t("backup.shareFailed"));
-                            }
-                          },
-                        },
-                        { text: t("backup.ok") },
-                      ]
-                    );
+                    // Auditoría ofensiva (0.1.18): Alert.alert abre su propia
+                    // ventana, que NO hereda FLAG_SECURE de la actividad: la
+                    // clave podía salir en capturas, grabaciones de pantalla y
+                    // en la miniatura de Recientes. El diálogo seguro pone el
+                    // flag en su propia ventana. Mismos dos botones.
+                    const share = await showSecureAlert({
+                      title: t("backup.dekTitle"),
+                      message: `${t("backup.dekSavedIn")} ${path}\n\n${t("backup.dekCopyPrompt")}\n${key}`,
+                      cancelLabel: t("backup.ok"),
+                      confirmLabel: t("backup.shareButton"),
+                      cancelable: false,
+                    });
+                    if (share) {
+                      try {
+                        const { shareBackupFile } = await import("./backupShare");
+                        await shareBackupFile(path);
+                      } catch {
+                        Alert.alert(t("backup.errorTitle"), t("backup.shareFailed"));
+                      }
+                    }
                   } catch (e) {
                     Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.createFailed"));
                   }
@@ -643,6 +646,7 @@ export function ModelSetupScreen(props: Props) {
             <TextInput
               style={styles.restoreKeyInput}
               value={restoreKeyText}
+              maxLength={200}
               onChangeText={setRestoreKeyText}
               placeholder={t("backup.keyPlaceholder")}
               placeholderTextColor={colors.text.muted}

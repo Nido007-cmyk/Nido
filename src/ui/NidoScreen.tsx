@@ -1472,6 +1472,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             <TextInput
               style={[styles.input, styles.pairInput]}
               value={pairText}
+              maxLength={2000}
               onChangeText={(v) => {
                 setPairText(v);
                 setPairError(null);

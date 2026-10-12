@@ -21,12 +21,34 @@ import { evaluateExpression } from "../tools/calc";
 export interface CalcAction {
   expression: string;
   result: number;
+  /** The user wrote decimals with a comma ("2,5"): answer the same way. */
+  decimalComma?: boolean;
 }
 
 /**
  * Detecta "cuánto es [expresión]" / "calcula [expresión]" y la evalúa.
  * Retorna null si no hay patrón de cálculo explícito.
  */
+/**
+ * Auditoría ofensiva (0.1.18): formas habituales de escribir una cuenta que
+ * antes no llegaban a la calculadora (y el modelo podía inventar el
+ * resultado): "15% de 200", "7 x 8", "12 ÷ 4", "3·4", "2,5 * 4" (coma
+ * decimal). Devuelve null si la escritura es ambigua ("1,000": ¿mil o uno?).
+ */
+function normalizeCalcText(text: string): string | null {
+  let t = text.replace(/^(?:el|la|o|a|the)\s+/i, "");
+  // "15% de 200" / "15% of 200" / "15% do 200" → (15/100)*200
+  t = t.replace(/(\d+(?:[.,]\d+)?)\s*%\s*(?:de|del|of|do|da)\s+/gi, "($1/100)*");
+  t = t.replace(/(\d)\s*[x×]\s*(?=\d)/gi, "$1*").replace(/[·∙]/g, "*").replace(/÷/g, "/");
+  if (/,/.test(t)) {
+    // Coma decimal solo si no hay puntos y ninguna coma va seguida de
+    // exactamente tres cifras (eso es separador de miles en inglés).
+    if (/\./.test(t) || /\d,\d{3}(?!\d)/.test(t)) return null;
+    t = t.replace(/(\d),(\d)/g, "$1.$2");
+  }
+  return t;
+}
+
 export function extractCalcAction(userText: string): CalcAction | null {
   const trimmed = userText.trim();
   if (!trimmed) return null;
@@ -38,7 +60,15 @@ export function extractCalcAction(userText: string): CalcAction | null {
   const m = /(?:cu[áa]nto es|calculate|calcula|calcule|what(?:'s| is)|quanto (?:[ée]|d[áa]))\s+(.+)/i.exec(trimmed);
   if (!m) return null;
 
-  const expr = m[1].trim().replace(/[?.!]+$/, "").trim();
+  const raw = m[1].trim();
+  // Auditoría ofensiva (0.1.18): "3!" es factorial, que la calculadora no
+  // tiene; antes se quitaba el "!" como si fuera exclamación y respondía 3.
+  if (/\d\s*!/.test(raw)) return null;
+  // "0x10" es hexadecimal, no 0 por 10.
+  if (/\b0x[0-9a-f]/i.test(raw)) return null;
+  const shown = raw.replace(/[?.!¿¡]+$/, "").trim().replace(/^(?:el|la|o|a|the)\s+/i, "");
+  const expr = normalizeCalcText(shown);
+  if (expr === null) return null;
   // Validación: solo caracteres matemáticos permitidos.
   if (!/^[\d\s+\-*/().%^]+$/.test(expr)) return null;
   if (expr.length < 1 || expr.length > 50) return null;
@@ -50,7 +80,8 @@ export function extractCalcAction(userText: string): CalcAction | null {
   try {
     const result = evaluateExpression(expr);
     if (!Number.isFinite(result)) return null;
-    return { expression: expr, result };
+    // Se muestra como lo escribió el usuario ("15% de 200 = 30").
+    return /\d,\d/.test(shown) ? { expression: shown, result, decimalComma: true } : { expression: shown, result };
   } catch {
     return null;
   }
@@ -100,8 +131,34 @@ export function extractReminderAction(userText: string): ReminderAction | null {
  * que no queden repetidas en el título (recordatorios y, desde 0.1.8,
  * eventos de calendario). Exportada para toolRouter.
  */
+/**
+ * Auditoría ofensiva (0.1.18): "a las 7 de la mañana" programaba la alarma
+ * MAÑANA a las 19:00 ("mañana" se leía como "tomorrow" y, sin am/pm, las 7
+ * pasaban a la tarde); "a las 9 de la noche" quedaba a las 9:00 y "a las 2
+ * de la madrugada" a las 14:00. La parte del día manda sobre la suposición.
+ */
+const AM_PERIOD_RE =
+  /(?:(?:de|por|en)\s+la\s+(?:mañana|manana|madrugada)|in\s+the\s+morning|(?:da|de|pela)\s+(?:manhã|manha|madrugada))(?![\p{L}])/giu;
+const PM_PERIOD_RE =
+  /(?:(?:de|por|en)\s+la\s+(?:tarde|noche)|esta\s+(?:tarde|noche)|in\s+the\s+(?:afternoon|evening)|at\s+night|tonight|this\s+(?:afternoon|evening)|(?:da|de|à|a|pela|esta)\s+(?:tarde|noite))(?![\p{L}])/giu;
+const NIGHT_RE = /(?:noche|night|noite)/i;
+const NOON_RE = /(?<![\p{L}])(?:a\s+)?(?:mediod[ií]a|noon|meio-dia|meio\s+dia)(?![\p{L}])/giu;
+const MIDNIGHT_RE = /(?<![\p{L}])(?:a\s+)?(?:medianoche|midnight|meia-noite|meia\s+noite)(?![\p{L}])/giu;
+
+function dayPeriod(t: string): "am" | "pm" | null {
+  AM_PERIOD_RE.lastIndex = 0;
+  PM_PERIOD_RE.lastIndex = 0;
+  if (AM_PERIOD_RE.test(t)) return "am";
+  if (PM_PERIOD_RE.test(t)) return "pm";
+  return null;
+}
+
 export function stripDateWords(input: string): string {
   return input
+      .replace(AM_PERIOD_RE, "")
+      .replace(PM_PERIOD_RE, "")
+      .replace(NOON_RE, "")
+      .replace(MIDNIGHT_RE, "")
       .replace(/\b(el|la|the|o|a|na|no)?\s*(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?)\b/gi, "")
       .replace(/(?<![\p{L}])(mañana|manana|tomorrow|hoy|today|amanhã|amanha|hoje)(?![\p{L}])/giu, "")
       .replace(/\ba\s+las\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
@@ -145,11 +202,15 @@ function parseRelativeTime(t: string, now: Date): Date | null {
   if (n === undefined || n <= 0) return null;
 
   const unit = m[2].toLowerCase();
-  const target = new Date(now);
+  let target = new Date(now);
+  // "en media hora": n = 0.5. setMinutes/setHours truncan a entero (media
+  // hora daba +0 y se rechazaba); en milisegundos no.
   if (/^min/.test(unit)) {
-    target.setMinutes(target.getMinutes() + n);
+    target = new Date(now.getTime() + Math.round(n * 60_000));
   } else if (/^(h|hora|horas|hour|hours|hrs)$/.test(unit)) {
-    target.setHours(target.getHours() + n);
+    target = new Date(now.getTime() + Math.round(n * 3_600_000));
+  } else if (!Number.isInteger(n)) {
+    return null;
   } else if (/^(d|d[ií]a|dias|días|day|days)$/.test(unit)) {
     target.setDate(target.getDate() + n);
   } else if (/^(w|semana|semanas|week|weeks)$/.test(unit)) {
@@ -170,7 +231,12 @@ function parseRelativeTime(t: string, now: Date): Date | null {
  * Devuelve ISO string o null si no hay fecha clara.
  */
 export function parseReminderDateTime(text: string, now: Date = new Date()): string | null {
-  const t = text.toLowerCase();
+  const full = text.toLowerCase();
+  const period = dayPeriod(full);
+  const noon = new RegExp(NOON_RE.source, "iu").test(full);
+  const midnight = new RegExp(MIDNIGHT_RE.source, "iu").test(full);
+  // "de la mañana" no es "tomorrow": se quita antes de buscar el día.
+  const t = full.replace(AM_PERIOD_RE, " ").replace(PM_PERIOD_RE, " ");
   // `now` is a parameter so callers that already have a reference time
   // (toolRouter's extractToolAction) and tests get dates relative to it,
   // not to the real clock.
@@ -195,6 +261,7 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
   };
 
   let targetDate: Date | null = null;
+  let explicitYear = false;
 
   // "mañana" / "tomorrow"
   // 0.1.8: portugués (amanhã / hoje), sin \b tras letras acentuadas.
@@ -231,19 +298,34 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
       janeiro: 0, fevereiro: 1, "março": 2, marco: 2, maio: 4, junho: 5,
       julho: 6, setembro: 8, outubro: 9, novembro: 10, dezembro: 11,
     };
-    const mEs = /(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)/i.exec(t);
-    const mEn = /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i.exec(t);
-    let month: number | undefined, day: number | undefined;
-    if (mEs) { day = parseInt(mEs[1], 10); month = meses[mEs[2].toLowerCase()]; }
-    else if (mEn) { month = meses[mEn[1].toLowerCase()]; day = parseInt(mEn[2], 10); }
+    const mEs = /(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)(?:\s+de(?:l)?\s+(\d{4}))?/i.exec(t);
+    const mEn = /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?/i.exec(t);
+    let month: number | undefined, day: number | undefined, year: number | undefined;
+    if (mEs) { day = parseInt(mEs[1], 10); month = meses[mEs[2].toLowerCase()]; year = mEs[3] ? parseInt(mEs[3], 10) : undefined; }
+    else if (mEn) { month = meses[mEn[1].toLowerCase()]; day = parseInt(mEn[2], 10); year = mEn[3] ? parseInt(mEn[3], 10) : undefined; }
     if (month !== undefined && day !== undefined && day >= 1 && day <= 31) {
-      // Validar fecha real (M5).
-      const test = new Date(2024, month, day);
-      if (test.getMonth() === month && test.getDate() === day) {
-        targetDate = new Date(now);
-        targetDate.setMonth(month, day);
-        if (targetDate.getTime() <= now.getTime()) {
-          targetDate.setFullYear(now.getFullYear() + 1);
+      // Validar fecha real (M5) en el año en que caería. Antes se validaba
+      // contra 2024 (bisiesto) y "el 29 de febrero" en 2027 se convertía en
+      // silencio en el 1 de marzo. Ahora: el próximo 29 de febrero real.
+      // Con año explícito ("de 2027") se usa ese año; si ya pasó, no hay fecha
+      // (antes "el 1 de enero de 1990" se programaba para el próximo enero).
+      const build = (y: number): Date | null => {
+        const d = new Date(now);
+        d.setFullYear(y, month!, day!);
+        return d.getMonth() === month && d.getDate() === day ? d : null;
+      };
+      if (year !== undefined) {
+        const d = build(year);
+        if (!d) return null;
+        targetDate = d;
+        explicitYear = true;
+      } else {
+        for (let y = now.getFullYear(); y <= now.getFullYear() + 8 && !targetDate; y++) {
+          const d = build(y);
+          if (!d) continue;
+          const endOfDay = new Date(d);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (endOfDay.getTime() > now.getTime()) targetDate = d;
         }
       }
     }
@@ -254,7 +336,7 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
   // bucle de "¿para cuándo?" (evidencia física). Ahora se asume hoy;
   // el rollover M2 la mueve a mañana si ya pasó.
   const timeMatch = /(?:a\s+las|at|às)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.exec(t);
-  if (!targetDate && timeMatch) {
+  if (!targetDate && (timeMatch || noon || midnight)) {
     targetDate = new Date(now);
   }
 
@@ -267,12 +349,24 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
     // M1 FIX 2026-10-07: validar rangos. "a las 25" o "10:75" son inválidos,
     // no hacer rollover silencioso que cambia el día.
     if (hour > 23 || minute > 59) return null;
-    const ampm = (timeMatch[3] || "").toLowerCase();
-    if (ampm === "pm" && hour < 12) hour += 12;
+    const ampm = (timeMatch[3] || period || "").toLowerCase();
+    // "a las 12 de la noche" es medianoche.
+    if (ampm === "pm" && hour === 12 && NIGHT_RE.test(full)) hour = 0;
+    else if (ampm === "pm" && hour < 12) hour += 12;
     if (ampm === "am" && hour === 12) hour = 0;
-    // Sin am/pm: asumir hora razonable (si es < 8, probablemente PM).
-    if (!ampm && hour < 8) hour += 12;
+    // Sin am/pm: asumir hora razonable (de 1 a 7, probablemente PM). "a las
+    // 0" es medianoche, no mediodía.
+    if (!ampm && hour >= 1 && hour < 8) hour += 12;
     targetDate.setHours(hour, minute, 0, 0);
+  } else if (noon) {
+    targetDate.setHours(12, 0, 0, 0);
+  } else if (midnight) {
+    targetDate.setHours(0, 0, 0, 0);
+    // "a medianoche" es el final del día nombrado (o de hoy).
+    targetDate.setDate(targetDate.getDate() + 1);
+  } else if (period) {
+    // "mañana por la tarde" sin hora: una hora razonable de esa parte del día.
+    targetDate.setHours(period === "pm" ? (NIGHT_RE.test(full) ? 20 : 16) : 9, 0, 0, 0);
   } else {
     // Sin hora: 9 AM por defecto.
     targetDate.setHours(9, 0, 0, 0);
@@ -284,7 +378,7 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
   // cae hoy en el futuro, es la lectura correcta.
   if (
     timeMatch &&
-    !(timeMatch[3] || "") &&
+    !(timeMatch[3] || period || "") &&
     /\b(hoy|today|hoje)\b/.test(t) &&
     targetDate.getTime() <= now.getTime() &&
     targetDate.getHours() < 12
@@ -293,6 +387,9 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
     evening.setHours(targetDate.getHours() + 12);
     if (evening.getTime() > now.getTime()) targetDate = evening;
   }
+
+  // Fecha con año explícito que ya pasó: no se inventa otra.
+  if (explicitYear && targetDate.getTime() <= now.getTime()) return null;
 
   // M2 FIX 2026-10-07: si la fecha resultante ya pasó, mover al día siguiente.
   // "recuérdame hoy a las 6" a las 20:00 no debe crear recordatorio para las 18:00.

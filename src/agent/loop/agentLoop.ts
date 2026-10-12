@@ -586,9 +586,9 @@ export async function runAgentLoop(
   // TOOLS-AUDIT 2026-10-11: el atajo de calculadora ignoraba el interruptor.
   const calcAction = fastPathAllowed("calculate") ? extractCalcAction(userText) : null;
   if (calcAction) {
-    const { formatNumber } = await import("../tools/calc");
+    const { formatNumber, isApproximate } = await import("../tools/calc");
     return {
-      response: `${calcAction.expression} = ${formatNumber(calcAction.result)}`,
+      response: `${calcAction.expression} ${isApproximate(calcAction.result) ? "≈" : "="} ${calcAction.decimalComma ? formatNumber(calcAction.result).replace(".", ",") : formatNumber(calcAction.result)}`,
       intent,
       toolUses: [
         {

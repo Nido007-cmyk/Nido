@@ -29,6 +29,7 @@ import {
 import type { ShownRequest } from "../agent/delegation/approvalGate";
 import type { TaskScope } from "../p2p/taskProtocol";
 import { displayLang, formatDateTime } from "../utils/safeFormat";
+import { TASK_LIMITS } from "../p2p/taskProtocol";
 
 interface P2PContact {
   pkHex: string;
@@ -482,6 +483,7 @@ export function NegotiationsTab() {
             <TextInput
               style={styles.modalInput}
               value={description}
+              maxLength={TASK_LIMITS.descriptionMaxChars}
               onChangeText={setDescription}
               placeholder={t("negotiations.proposePlaceholder")}
               multiline
@@ -517,6 +519,7 @@ export function NegotiationsTab() {
             <TextInput
               style={styles.modalInput}
               value={taskDescription}
+              maxLength={TASK_LIMITS.descriptionMaxChars}
               onChangeText={setTaskDescription}
               placeholder={t("tasks.taskDescriptionPlaceholder")}
               multiline

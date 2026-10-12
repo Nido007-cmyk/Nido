@@ -165,18 +165,15 @@ class Parser {
     }
   }
 
-  // factor := unary ("^" factor)?   — ^ asocia a la derecha
+  // factor := unary
+  // Auditoría ofensiva (0.1.18): antes el signo ligaba más fuerte que ^ y
+  // "-2^2" daba 4. En matemáticas (y en cualquier calculadora científica)
+  // es -(2^2) = -4. El exponente sí puede llevar signo: 2^-2 = 0.25.
   private parseFactor(): number {
-    const base = this.parseUnary();
-    const t = this.peek();
-    if (t?.kind === "op" && t.op === "^") {
-      this.next();
-      return Math.pow(base, this.parseFactor());
-    }
-    return base;
+    return this.parseUnary();
   }
 
-  // unary := "-" unary | primary
+  // unary := ("-"|"+") unary | power
   private parseUnary(): number {
     const t = this.peek();
     if (t?.kind === "op" && (t.op === "-" || t.op === "+")) {
@@ -184,7 +181,34 @@ class Parser {
       const value = this.parseUnary();
       return t.op === "-" ? -value : value;
     }
-    return this.parsePrimary();
+    return this.parsePower();
+  }
+
+  // power := postfix ("^" unary)?   — ^ asocia a la derecha
+  private parsePower(): number {
+    const base = this.parsePostfix();
+    const t = this.peek();
+    if (t?.kind === "op" && t.op === "^") {
+      this.next();
+      return Math.pow(base, this.parseUnary());
+    }
+    return base;
+  }
+
+  // postfix := primary "%"?   — "15%" es 0.15 cuando el % no va seguido de
+  // un operando (si lo va, "10%3", sigue siendo el módulo de siempre).
+  private parsePostfix(): number {
+    const value = this.parsePrimary();
+    const t = this.peek();
+    if (t?.kind === "op" && t.op === "%") {
+      const after = this.tokens[this.pos + 1];
+      const operandFollows = after !== undefined && (after.kind === "num" || after.kind === "lparen" || after.kind === "ident");
+      if (!operandFollows) {
+        this.next();
+        return value / 100;
+      }
+    }
+    return value;
   }
 
   private parsePrimary(): number {
@@ -228,8 +252,17 @@ export function evaluateExpression(input: string): number {
   return value;
 }
 
+/** true si el resultado es un entero demasiado grande para ser exacto. */
+export function isApproximate(value: number): boolean {
+  return Number.isInteger(value) && !Number.isSafeInteger(value);
+}
+
 /** Formatea un número para mostrarlo: recorta decimales flotantes. */
 export function formatNumber(value: number): string {
+  // Más allá de 2^53 un double ya no representa cada entero: se muestran 15
+  // cifras significativas (las que sí son exactas) en vez de unas últimas
+  // cifras inventadas. isApproximate() dice cuándo usar "≈".
+  if (isApproximate(value)) return String(Number(value.toPrecision(15)));
   if (Number.isInteger(value)) return String(value);
   // 10 decimales significativos como máximo, sin ceros de relleno.
   return String(Number(value.toFixed(10)));

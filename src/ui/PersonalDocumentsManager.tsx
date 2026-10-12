@@ -66,7 +66,12 @@ export function PersonalDocumentsManager() {
       setNewName("");
       await refresh();
     } catch (e: any) {
-      Alert.alert(t("personalDocumentsManager.importFailedTitle"), e?.message ?? String(e));
+      // 0.1.18: known import errors in the app language.
+      const code = typeof e?.code === "string" && e?.name === "DocImportError" ? e.code : null;
+      Alert.alert(
+        t("personalDocumentsManager.importFailedTitle"),
+        code ? t(`personalDocumentsManager.errors.${code}`, e.vars ?? {}) : e?.message ?? String(e),
+      );
     } finally {
       setImportProgress(null);
     }
@@ -127,6 +132,7 @@ export function PersonalDocumentsManager() {
           placeholder={t("personalDocumentsManager.namePlaceholder")}
           placeholderTextColor={colors.text.muted}
           value={newName}
+          maxLength={60}
           onChangeText={setNewName}
           editable={!importProgress}
         />

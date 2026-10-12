@@ -175,13 +175,15 @@ function nextOccurrence(month: number, day: number): string | null {
   if (testDate.getMonth() !== month || testDate.getDate() !== day) {
     return null; // Fecha inexistente como "31 de febrero" o "32 de enero".
   }
+  // Auditoría ofensiva (0.1.18): validar en el año en que cae. Un cumpleaños
+  // el 29 de febrero, en un año no bisiesto, se convertía en el 1 de marzo.
   const now = new Date();
-  let year = now.getFullYear();
-  const candidate = new Date(year, month, day, 9, 0, 0);
-  if (candidate.getTime() < now.getTime()) {
-    year += 1;
+  for (let year = now.getFullYear(); year <= now.getFullYear() + 8; year++) {
+    const candidate = new Date(year, month, day, 9, 0, 0);
+    if (candidate.getMonth() !== month || candidate.getDate() !== day) continue;
+    if (candidate.getTime() >= now.getTime()) return candidate.toISOString();
   }
-  return new Date(year, month, day, 9, 0, 0).toISOString();
+  return null;
 }
 
 /** Resultado de la extracción de persona. */
