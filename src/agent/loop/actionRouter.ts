@@ -49,6 +49,19 @@ function normalizeCalcText(text: string): string | null {
   return t;
 }
 
+function looksLikeBareMath(text: string): boolean {
+  const t = text.trim().replace(/[?¿!¡.=\s]+$/, "");
+  if (t.length === 0 || t.length > 50) return false;
+  if (!/^[\d\s+\-*/().,%^x×÷·]*(?:(?:de|del|of|do|da)\s+[\d\s+\-*/().,%^x×÷·]+)?$/i.test(t)) return false;
+  if (!/\d/.test(t)) return false;
+  return (
+    /\d\s*%\s*(?:de|del|of|do|da)\s+\d/i.test(t) ||
+    /[*×÷·^]/.test(t) ||
+    /\d\s*[x]\s*\d/i.test(t) ||
+    /\d\s*\+\s*[\d(]/.test(t)
+  );
+}
+
 export function extractCalcAction(userText: string): CalcAction | null {
   const trimmed = userText.trim();
   if (!trimmed) return null;
@@ -58,9 +71,15 @@ export function extractCalcAction(userText: string): CalcAction | null {
   // "quanto é 245 * 38". La expresión se sigue validando abajo (solo
   // caracteres matemáticos), así que "what is love" nunca entra aquí.
   const m = /(?:cu[áa]nto es|calculate|calcula|calcule|what(?:'s| is)|quanto (?:[ée]|d[áa]))\s+(.+)/i.exec(trimmed);
-  if (!m) return null;
+  // 0.1.19 (prueba en tablet): "15% de 200" escrito solo, sin "cuánto es",
+  // iba al modelo, que llamó mal a la herramienta y respondió "Error de
+  // herramienta…". Una cuenta escrita sola también se calcula, pero solo con
+  // un operador inequívoco: "12/10" o "3-2" solos pueden ser una fecha o un
+  // marcador, así que "/" y "-" solos no cuentan.
+  const bare = !m && looksLikeBareMath(trimmed);
+  if (!m && !bare) return null;
 
-  const raw = m[1].trim();
+  const raw = (m ? m[1] : trimmed).trim().replace(/\s*=\s*\??$/, "");
   // Auditoría ofensiva (0.1.18): "3!" es factorial, que la calculadora no
   // tiene; antes se quitaba el "!" como si fuera exclamación y respondía 3.
   if (/\d\s*!/.test(raw)) return null;

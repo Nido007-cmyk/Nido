@@ -36,7 +36,7 @@ import {
   runContactAction,
   type ContactSearchResult,
 } from "./contactRouter";
-import { agentFallbackText, type FallbackLang } from "./fallbackText";
+import { agentFallbackText, isEchoedToolError, type FallbackLang } from "./fallbackText";
 import {
   extractToolAction,
   formatDay,
@@ -934,6 +934,12 @@ export async function runAgentLoop(
         continue;
       }
       const final = finalizeResponse(text);
+      // 0.1.19: the small model sometimes repeats the dispatcher's internal
+      // error ("Error de herramienta: …") as its answer. That's not for the
+      // user: say plainly that the action couldn't be done, in their language.
+      if (final !== null && isEchoedToolError(final)) {
+        return { response: agentFallbackText("actionFailed", uiLang), intent, toolUses };
+      }
       if (final !== null) return { response: appendMutationConfirmation(final, toolUses), intent, toolUses };
       // T-echo-2026-10-06: el modelo solo repitió la directiva interna.
       // Un único reintento con instrucción mínima; si falla, respuesta segura.
@@ -973,5 +979,9 @@ export async function runAgentLoop(
   }
 
   // Se agotaron los pasos con herramientas pendientes: devolver lo último limpio.
+  const last = finalizeResponse(lastText);
+  if (last !== null && isEchoedToolError(last)) {
+    return { response: agentFallbackText("actionFailed", uiLang), intent, toolUses };
+  }
   return { response: appendMutationConfirmation(finalizeResponse(lastText) ?? safeFallback(), toolUses), intent, toolUses };
 }

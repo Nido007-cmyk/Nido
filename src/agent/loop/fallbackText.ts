@@ -68,3 +68,8 @@ export function toFallbackLang(tag: string | null | undefined): FallbackLang {
   if (t.startsWith("pt")) return "pt";
   return "es";
 }
+
+/** 0.1.19: the answer is just the dispatcher's internal tool error repeated back. */
+export function isEchoedToolError(text: string): boolean {
+  return /^\s*(?:Error de herramienta|Error:\s*falta|No pude calcular eso)\b/i.test(text);
+}

@@ -69,3 +69,33 @@ describe("calculator — what reaches it", () => {
     expect(extractCalcAction(text)).toBeNull();
   });
 });
+
+describe("calculator — sums written on their own (0.1.19)", () => {
+  it.each([
+    ["15% de 200", 30],
+    ["15 % de 80", 12],
+    ["245*38", 9310],
+    ["2+2", 4],
+    ["7 x 8", 56],
+    ["-2^2", -4],
+    ["1+1=?", 2],
+  ])("%s", (text, result) => {
+    expect(extractCalcAction(text)?.result).toBeCloseTo(result, 12);
+  });
+
+  it.each(["12/10", "10-12", "3-2", "+1 555 1234", "hola 2+2", "2+2 y algo", "5 de mayo", "del 1 al 5"])(
+    "%s → not a sum on its own (date, score, phone or sentence)",
+    (text) => {
+      expect(extractCalcAction(text)).toBeNull();
+    },
+  );
+});
+
+describe("echoed tool errors never reach the user", () => {
+  it("detects the dispatcher's internal error text", async () => {
+    const { isEchoedToolError } = await import("./fallbackText");
+    expect(isEchoedToolError('Error de herramienta: "calculate" no acepta el parámetro "from".')).toBe(true);
+    expect(isEchoedToolError("15% de 200 = 30")).toBe(false);
+    expect(isEchoedToolError("El error más común es…")).toBe(false);
+  });
+});

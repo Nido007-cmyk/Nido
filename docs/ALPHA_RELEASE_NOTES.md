@@ -1,4 +1,4 @@
-# NIDO v0.1.18-alpha — Release Notes
+# NIDO v0.1.19-alpha — Release Notes
 
 ## What is this?
 
@@ -11,6 +11,13 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Reminders with local notifications
 - Encrypted on-device storage
 - Backup / restore
+
+## What changed in 0.1.19-alpha
+
+> **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
+
+- **Just type the sum.** "15% de 200", "245*38" or "7 x 8" are calculated directly, without "what is…" first (found testing 0.1.18 on a tablet).
+- No more internal "tool error" messages in the chat.
 
 ## What changed in 0.1.18-alpha
 

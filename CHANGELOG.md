@@ -4,6 +4,17 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.19-alpha — 2026-10-12
+
+### Fixed
+- A sum written on its own ("15% de 200", "245*38", "7 x 8") went to the
+  model instead of the calculator; the model called the tool wrongly and
+  answered with an internal error ("Error de herramienta…"). Now it's
+  calculated directly. "12/10" or "3-2" on their own are left alone (they may
+  be a date or a score).
+- If the model repeats an internal tool error, the user sees a plain message
+  in their language instead.
+
 ## 0.1.18-alpha — 2026-10-12
 
 Offensive audit: trying to break the app.
