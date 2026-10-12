@@ -542,7 +542,9 @@ def cmd_build_pack(a):
         "embeddingModel": f"{a.e5_repo}@{a.e5_revision}",
         "embeddingPassagePrefix": E5_PASSAGE,
         "embeddingQueryPrefix": E5_QUERY,
-        "builtAt": datetime.now(timezone.utc).isoformat(),
+        # Fixed (not "now") so a rebuild from the same inputs is byte-identical
+        # and keeps the SHA-256 pinned in the signed catalog.
+        "builtAt": a.built_at,
         "derivedFrom": a.src_sha,
         # The text is Wikipedia's (CC BY-SA 4.0); ShareAlike means the pack as
         # a whole stays CC BY-SA 4.0. Attribution covers both Wikipedia and
@@ -616,6 +618,7 @@ def main():
     pb.add_argument("--id", required=True)
     pb.add_argument("--name", required=True)
     pb.add_argument("--out", required=True)
+    pb.add_argument("--built-at", required=True, help="ISO date stored in meta.builtAt (pinned for reproducible builds)")
 
     a = p.parse_args()
     {"parity": cmd_parity, "calibrate": cmd_calibrate, "build-pack": cmd_build_pack}[a.cmd](a)

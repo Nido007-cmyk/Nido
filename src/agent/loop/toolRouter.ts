@@ -306,7 +306,7 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     const m = re.exec(t);
     if (!m) continue;
     const rest = m[1].trim();
-    const start = parseReminderDateTime(rest);
+    const start = parseReminderDateTime(rest, now);
     const title = (start ? stripDateWords(rest) : rest)
       .replace(/^(?:una?|um|uma|an?|the|el|la|o|a)\s+(?:cita|evento|event|compromisso|appointment)\s+(?:con|de|with|com)?\s*/i, "")
       .replace(/^(?:para|for|pro|pra|de|con|with|com)\s+/i, "")

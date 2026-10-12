@@ -43,6 +43,8 @@ env:
   VITAL_URL: https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v1/wiki-vital5.sqlite
   VITAL_SHA256: d3b87d562baba3489f6878bf99783f50d504db94c347029771e53f6d1aecc666
   RELEASE_TAG: knowledge-packs-v2
+  # meta.builtAt of the Vital v2 pack: pinned so rebuilds are byte-identical.
+  PACK_BUILT_AT: "2026-10-12T00:00:00Z"
   DIAG_BRANCH: diag/multilingual-e5
 
 jobs:
@@ -248,6 +250,7 @@ jobs:
             --e5-vectors "$W/cache/vital-e5-latest.npy" --e5-sha "$E5_SHA256" \
             --e5-repo "$E5_REPO" --e5-revision "$E5_RESOLVED_REVISION" \
             --id wiki-vital5-e5 --name "Wikipedia Vital Articles (multilingual search)" \
+            --built-at "$PACK_BUILT_AT" \
             --out "$W/wiki-vital5-e5.sqlite"
 
       - name: Upload to draft release
@@ -283,6 +286,29 @@ jobs:
 
           NIDO's own code (app, scripts, converter) is MIT-licensed:
           https://github.com/Nido007-cmyk/Nido/blob/main/LICENSE
+
+          ----------------------------------------------------------------
+          MIT License (multilingual-e5-small, from microsoft/unilm)
+
+          Copyright (c) Microsoft Corporation.
+
+          Permission is hereby granted, free of charge, to any person obtaining a copy
+          of this software and associated documentation files (the "Software"), to deal
+          in the Software without restriction, including without limitation the rights
+          to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+          copies of the Software, and to permit persons to whom the Software is
+          furnished to do so, subject to the following conditions:
+
+          The above copyright notice and this permission notice shall be included in all
+          copies or substantial portions of the Software.
+
+          THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+          IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+          FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+          AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+          LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+          OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+          SOFTWARE.
           EOF
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release create "$RELEASE_TAG" --draft --target "$GITHUB_SHA" \

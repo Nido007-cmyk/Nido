@@ -512,6 +512,27 @@ export const MODEL_CATALOG: CatalogModel[] = [
     description: "Introductions of Wikipedia's ~50,000 Vital Articles (level 5), searchable offline. ~164MB.",
     required: false,
   },
+  {
+    // Multilingual search (docs/design/BUSQUEDA_MULTILINGUE.md): the same
+    // text as wiki-vital5, with vectors from multilingual-e5-small, built by
+    // .github/workflows/multilingual-e5.yml. Offered instead of wiki-vital5
+    // when multilingual search is on (src/rag/embeddingSwitch.ts).
+    id: "wiki-vital5-e5",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "Wikipedia Vital Articles (+50,000 articles, multilingual search)",
+    filename: "corpus/wiki-vital5-e5.sqlite",
+    sizeBytes: 163647488,
+    sha256: "dc572963548ed6ff69c408fcf2010d1d8b7b22ab0d74b0d27e2621780c508227",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/wiki-vital5-e5.sqlite",
+    // Compiled by NIDO from Wikipedia: CC BY-SA 4.0 (ShareAlike, so not MIT).
+    // Notice inside the file (meta: license, attribution) and in
+    // LICENSE-ATTRIBUTION.txt next to the download.
+    license: "CC BY-SA 4.0 (Wikipedia; compiled by NIDO)",
+    description:
+      "Introductions of Wikipedia's ~50,000 Vital Articles, searchable offline in Spanish, Portuguese and English. ~164MB.",
+    required: false,
+  },
   // Add more tested candidates / corpus packs here later (each needs a
   // unique `id` and `filename`). They ship with `required: false` and
   // appear in the Settings screen as optional downloads.
