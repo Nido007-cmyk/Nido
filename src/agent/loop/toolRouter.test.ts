@@ -108,9 +108,11 @@ describe("extractToolAction — conversiones", () => {
     expect(extractToolAction(text as string, NOW)).toEqual({ kind: "convert", value, from, to, lang });
   });
 
-  it("la moneda no se enruta (sin tipos de cambio en el dispositivo)", () => {
-    expect(extractToolAction("cuántos dólares son 100 pesos", NOW)).toBeNull();
-    expect(extractToolAction("cuánto es 100 pesos en dólares", NOW)).toBeNull();
+  it("la moneda va a la respuesta honesta offline (0.1.20, P3-15)", () => {
+    // Antes no se enrutaba y el MODELO inventaba un tipo de cambio.
+    // Ahora la ruta determinista responde que sin conexión no hay tasas.
+    expect(extractToolAction("cuántos dólares son 100 pesos", NOW)).toMatchObject({ kind: "currencyInfo" });
+    expect(extractToolAction("cuánto es 100 pesos en dólares", NOW)).toMatchObject({ kind: "currencyInfo" });
   });
 });
 
@@ -730,5 +732,37 @@ describe("0.1.20 (P3-12) — mensajes a contactos sin decir «por NIDO»", () =>
     const out = await runToolAction(extractToolAction("manda un mensaje a Juan")!, deps);
     expect(calls).toHaveLength(0);
     expect(out.response).toContain("Juan");
+  });
+});
+
+describe("0.1.20 (P3-15) — moneda: respuesta honesta offline", () => {
+  it("extractToolAction detecta las preguntas de cambio", () => {
+    expect(extractToolAction("¿cuántos dólares son 100 pesos?")).toMatchObject({ kind: "currencyInfo", lang: "es" });
+    expect(extractToolAction("cuánto es 100 pesos en dólares")).toMatchObject({ kind: "currencyInfo" });
+    expect(extractToolAction("¿cuánto vale un dólar?")).toMatchObject({ kind: "currencyInfo" });
+    expect(extractToolAction("convierte 50 euros a pesos")).toMatchObject({ kind: "currencyInfo" });
+    expect(extractToolAction("how many dollars is 100 pesos")).toMatchObject({ kind: "currencyInfo", lang: "en" });
+    expect(extractToolAction("convert 50 euros to dollars")).toMatchObject({ kind: "currencyInfo", lang: "en" });
+    expect(extractToolAction("quantos reais são 100 dólares")).toMatchObject({ kind: "currencyInfo", lang: "pt" });
+  });
+
+  it("no secuestra otras preguntas con «cuántos» ni conversiones de unidades", () => {
+    expect(extractToolAction("¿cuántos pesos son 5 kilos de tortillas?")).toBeNull();
+    expect(extractToolAction("¿cuánto es 70 kg en libras?")?.kind).toBe("convert");
+  });
+
+  it("runToolAction responde honesto, sin dispatch ni cifras inventadas", async () => {
+    const calls: string[] = [];
+    const deps: ToolRouterDeps = {
+      dispatch: async (name) => {
+        calls.push(name);
+        return { status: "executed", text: "ok" };
+      },
+      isDisabled: () => false,
+    };
+    const out = await runToolAction({ kind: "currencyInfo", lang: "es" }, deps);
+    expect(calls).toHaveLength(0);
+    expect(out.response).toContain("no tengo tipos de cambio");
+    expect(out.response).toContain("no te voy a inventar una cifra");
   });
 });

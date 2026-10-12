@@ -37,6 +37,7 @@ export type ToolAction =
   | { kind: "noteRead"; query: string; lang: RouterLang }
   | { kind: "noteSearch"; query: string; lang: RouterLang }
   | { kind: "convert"; value: number; from: string; to: string; lang: RouterLang }
+  | { kind: "currencyInfo"; lang: RouterLang }
   | { kind: "calendarList"; from: string; to: string; label: CalendarRange; lang: RouterLang }
   | { kind: "calendarCreate"; title: string; start: string | null; lang: RouterLang }
   | { kind: "nidoSend"; to: string; text: string | null; lang: RouterLang }
@@ -98,6 +99,10 @@ export function toolForAction(a: ToolAction): string {
       return "delete_reminder";
     case "noteSearch":
       return "list_notes";
+    case "currencyInfo":
+      // Sin herramienta propia: la respuesta honesta sale del router.
+      // Se mapea a convert_units para el interruptor del usuario.
+      return "convert_units";
   }
 }
 
@@ -480,6 +485,51 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   // 0.1.20 (P3-9): borrados (tras guardar/leer notas, antes de convertir).
   const deleteAction = extractDeleteAction(t);
   if (deleteAction) return deleteAction;
+  // 0.1.20 (P3-15): moneda. Las conversiones de unidades excluyen la
+  // moneda A PROPÓSITO, pero sin ruta la pregunta caía al modelo y el
+  // modelo INVENTABA un tipo de cambio. Aquí la respuesta honesta es
+  // determinista: sin conexión no hay tasas, y no se inventan.
+  const CUR_SRC = "pesos?|d[oó]lar(?:es)?|dollars?|euros?|reales|reais|libras?|pounds?|yenes?|yens?|francos?|francs?|soles|quetzales|bol[ií]vares|usd|mxn|eur|brl|gbp|jpy|cad|chf";
+  const CURRENCY_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
+    // Dos monedas con verbo entre ellas, o el precio de UNA moneda
+    // («¿cuánto vale un dólar?»): «¿cuántos pesos son 5 kilos?» no entra.
+    { re: new RegExp(`\\bcu[aá]nt[oa]s?\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b[^.?!]{0,30}\\b(?:son|es|vale|valen|equivale)\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b`, "i"), lang: "es" },
+    { re: new RegExp(`\\bcu[aá]nt[oa]s?\\b[^.?!]{0,30}\\b(?:vale|valen|cuesta)\\b[^.?!]{0,30}\\b(?:${CUR_SRC})\\b`, "i"), lang: "es" },
+    { re: new RegExp(`\\b\\d+(?:[.,]\\d+)?\\s*(?:${CUR_SRC})\\s+(?:en|a)\\s+(?:${CUR_SRC})\\b`, "i"), lang: "es" },
+    { re: new RegExp(`\\b(?:convierte|convertir|cambi[ao]r?)\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b`, "i"), lang: "es" },
+    { re: /\b(?:tipo de cambio|cotizaci[oó]n del)\b/i, lang: "es" },
+    { re: new RegExp(`\\bhow\\s+(?:much|many)\\b[^.?!]{0,60}\\b(?:${CUR_SRC})\\b`, "i"), lang: "en" },
+    { re: new RegExp(`\\b\\d+(?:[.,]\\d+)?\\s*(?:${CUR_SRC})\\s+(?:in|to)\\s+(?:${CUR_SRC})\\b`, "i"), lang: "en" },
+    { re: new RegExp(`\\bconvert\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b`, "i"), lang: "en" },
+    { re: /\bexchange rate\b/i, lang: "en" },
+    { re: new RegExp(`\\bquant[oa]s?\\b[^.?!]{0,60}\\b(?:${CUR_SRC})\\b`, "i"), lang: "pt" },
+    { re: new RegExp(`\\b\\d+(?:[.,]\\d+)?\\s*(?:${CUR_SRC})\\s+(?:em|para)\\s+(?:${CUR_SRC})\\b`, "i"), lang: "pt" },
+    { re: new RegExp(`\\b(?:converter|converta|trocar)\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b`, "i"), lang: "pt" },
+    { re: /\btaxa de c[aâ]mbio\b/i, lang: "pt" },
+  ];
+  // «libras» es moneda y también peso: si la frase ES una conversión
+  // de unidades válida («convierte 3,5 kilos a libras»), manda la
+  // conversión. Se replica la validación del bucle de abajo sin su
+  // «return null» (esa salida mataría preguntas de moneda con la misma
+  // forma: «cuántos dólares son 100 pesos»).
+  let isConversion = false;
+  for (const { re, inv } of CONVERT_RULES) {
+    const m = re.exec(t);
+    if (!m) continue;
+    const value = Number((inv ? m[2] : m[1]).replace(",", "."));
+    try {
+      convertUnits(value, unitWord(inv ? m[3] : m[2]), unitWord(inv ? m[1] : m[3]));
+      isConversion = true;
+    } catch {
+      /* forma de conversión, unidades no: puede ser moneda */
+    }
+    break;
+  }
+  if (!isConversion) {
+    for (const { re, lang } of CURRENCY_RULES) {
+      if (re.test(t)) return { kind: "currencyInfo", lang };
+    }
+  }
 
   for (const { re, lang, inv } of CONVERT_RULES) {
     const m = re.exec(t);
@@ -592,6 +642,7 @@ type Key =
   | "deleteWhichReminder"
   | "noteSearchHeader"
   | "noteSearchNone"
+  | "currencyOffline"
   | "factSaved"
   | "factReminderNote";
 
@@ -665,6 +716,11 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: "No encontré nada en tus notas sobre «{{q}}».",
     en: "I didn't find anything in your notes about “{{q}}”.",
     pt: "Não encontrei nada nas suas notas sobre “{{q}}”.",
+  },
+  currencyOffline: {
+    es: "Sin conexión no tengo tipos de cambio, así que no te voy a inventar una cifra. Cambian todo el tiempo; cuando tengas internet, consúltalo y te ayudo con la cuenta.",
+    en: "Offline I don't have exchange rates, so I won't make up a number for you. They change all the time; when you have internet, look it up and I'll help with the math.",
+    pt: "Sem conexão eu não tenho taxas de câmbio, então não vou inventar um número para você. Elas mudam o tempo todo; quando tiver internet, consulte e eu ajudo com a conta.",
   },
   factSaved: {
     es: "Listo, lo guardé en mi memoria: «{{text}}».",
@@ -1101,6 +1157,13 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
           return `• ${n.title}${excerpt ? `: ${excerpt}` : ""}`;
         });
         return say(`${routerMessage("noteSearchHeader", lang, { q: action.query })}\n${lines.join("\n")}`);
+      }
+
+      case "currencyInfo": {
+        // Sin dispatch: no hay herramienta de tipos de cambio (la app es
+        // cero-red). La respuesta honesta ES la función (P3-15).
+        uses.push({ name: "convert_units", result: "Moneda: sin tipos de cambio offline; respuesta honesta." });
+        return say(routerMessage("currencyOffline", lang));
       }
 
       case "convert": {
