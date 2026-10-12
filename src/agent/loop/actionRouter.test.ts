@@ -142,6 +142,101 @@ describe("CALENDAR-FIX 2026-10-07: parseo de fechas", () => {
   });
 });
 
+describe("0.1.19: recurrencia pedida y título 'para'", () => {
+  it("'cada día recuérdame…' marca recurrenceRequested (se crea una vez y se avisa)", () => {
+    const r = extractReminderAction("cada día recuérdame tomar la pastilla a las 9");
+    expect(r).not.toBeNull();
+    expect(r!.text).toContain("tomar la pastilla");
+    expect(r!.dueAt).not.toBeNull();
+    expect(r!.recurrenceRequested).toBe(true);
+  });
+
+  it("sin palabras de repetición, la marca no aparece", () => {
+    const r = extractReminderAction("recuérdame tomar la pastilla a las 9");
+    expect(r).not.toBeNull();
+    expect(r!.recurrenceRequested).toBeUndefined();
+  });
+
+  it("'ponme un recordatorio para el viernes' no crea un recordatorio titulado 'para'", () => {
+    expect(extractReminderAction("ponme un recordatorio para el viernes")).toBeNull();
+  });
+
+  it("con contenido, el 'para' inicial no contamina el título", () => {
+    const r = extractReminderAction("ponme un recordatorio para comprar leche el viernes");
+    expect(r).not.toBeNull();
+    expect(r!.text).toBe("comprar leche");
+    expect(r!.dueAt).not.toBeNull();
+  });
+});
+
+describe("0.1.19: 'recuerda que' ambiguo y preguntas disfrazadas", () => {
+  it("'recuerda que mañana tengo dentista' → recordatorio, no hecho", () => {
+    const r = extractReminderAction("recuerda que mañana tengo dentista");
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).not.toBeNull();
+    expect(r!.text.toLowerCase()).toContain("dentista");
+    expect(r!.text.toLowerCase()).not.toContain("mañana");
+  });
+
+  it("'remember that tomorrow I have the dentist' → recordatorio", () => {
+    const r = extractReminderAction("remember that tomorrow I have the dentist");
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).not.toBeNull();
+  });
+
+  it("sin evento en primera persona NO es recordatorio (sigue memoria)", () => {
+    expect(extractReminderAction("recuerda que mi mamá se llama Marta")).toBeNull();
+    expect(extractReminderAction("recuerda que el cumpleaños de mi mamá es el 15 de marzo")).toBeNull();
+    expect(extractReminderAction("recuerda que me gusta el café")).toBeNull();
+  });
+
+  it("una pregunta no crea un recordatorio basura", () => {
+    expect(extractReminderAction("recuérdame cómo se llama la capital de Francia")).toBeNull();
+    expect(extractReminderAction("recuérdame qué día es hoy")).toBeNull();
+    expect(extractReminderAction("remind me what time it is")).toBeNull();
+  });
+});
+
+describe("0.1.19: la hora ANTES del verbo no se pierde", () => {
+  it("'en media hora recuérdame la junta' → dueAt ≈ +30 min", () => {
+    const before = Date.now();
+    const r = extractReminderAction("en media hora recuérdame la junta");
+    expect(r).not.toBeNull();
+    expect(r!.text).toBe("la junta");
+    expect(r!.dueAt).not.toBeNull();
+    const d = new Date(r!.dueAt!).getTime();
+    expect(d - before).toBeGreaterThan(25 * 60 * 1000);
+    expect(d - before).toBeLessThan(35 * 60 * 1000);
+  });
+
+  it("'mañana recuérdame comprar pan' → dueAt mañana, no null", () => {
+    const r = extractReminderAction("mañana recuérdame comprar pan");
+    expect(r).not.toBeNull();
+    expect(r!.text).toBe("comprar pan");
+    expect(r!.dueAt).not.toBeNull();
+    const d = new Date(r!.dueAt!);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    expect(d.getDate()).toBe(tomorrow.getDate());
+  });
+
+  it("'en 20 minutos recuérdame sacar el pan' → dueAt ≈ +20 min", () => {
+    const before = Date.now();
+    const r = extractReminderAction("en 20 minutos recuérdame sacar el pan");
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).not.toBeNull();
+    const d = new Date(r!.dueAt!).getTime();
+    expect(d - before).toBeGreaterThan(15 * 60 * 1000);
+    expect(d - before).toBeLessThan(25 * 60 * 1000);
+  });
+
+  it("sin hora en ninguna parte → dueAt sigue null (sin inventar)", () => {
+    const r = extractReminderAction("por favor recuérdame comprar pan");
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).toBeNull();
+  });
+});
+
 describe("TESTFIX-2026-10-08: tiempos relativos y hora suelta", () => {
   it("parsea 'Recuerdame en 2 minutes tengo que salir' (evidencia física)", () => {
     const before = Date.now();

@@ -21,6 +21,8 @@
  * Puro, sin dependencias, 100% testeable.
  */
 
+import { INTERROGATIVE_START_RE, stripDateWords } from "./actionRouter";
+
 /** Resultado de la extracción determinística. */
 export interface RememberExtraction {
   /** El contenido a guardar, en palabras del usuario. */
@@ -267,7 +269,14 @@ export function extractRememberFact(userText: string): RememberExtraction | null
       // remind me in time") que no son parte del hecho.
       const content = stripTrailingInstructions(match[group].trim());
       // Validación mínima: el contenido debe ser sustancial.
-      if (content.length >= 3) {
+      // 0.1.19 (sonda de routing): "recuerda mañana" guardaba el hecho
+      // basura "mañana". Si al quitar las palabras de fecha/hora no queda
+      // contenido, no hay hecho que guardar.
+      // 0.1.19 (segunda pasada de la sonda): "recuérdame cómo se llama la
+      // capital de Francia" — al dejar de ser recordatorio (guardia
+      // interrogativa) caía aquí y la PREGUNTA se guardaba como hecho.
+      // Una pregunta no es un hecho: mismo corte que en recordatorios.
+      if (content.length >= 3 && !INTERROGATIVE_START_RE.test(content) && stripDateWords(content).trim().length >= 3) {
         return {
           content,
           category: detectCategory(content),

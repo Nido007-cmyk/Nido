@@ -36,9 +36,47 @@ export interface CalcAction {
  * decimal). Devuelve null si la escritura es ambigua ("1,000": ¿mil o uno?).
  */
 function normalizeCalcText(text: string): string | null {
-  let t = text.replace(/^(?:el|la|o|a|the)\s+/i, "");
+  let t = text.replace(/^(?:el|la|los|las|de|del|o|a|the)\s+/i, "");
+  // 0.1.19 (sonda de routing): operadores escritos con palabras. Todo lo
+  // que no se convierta aquí deja letras y lo rechaza la validación de
+  // caracteres del final, así que una frase normal nunca se convierte en
+  // cuenta por accidente.
+  // Verbo inicial: "suma 45 y 67", "multiplica 6 por 9", "divide 100 entre 4".
+  const verb = /^(suma|sumar|resta|restar|multiplica|multiplicar|divide|dividir|sum|add|subtract|multiply|divide)\s+/i.exec(t);
+  if (verb) {
+    t = t.slice(verb[0].length).replace(/^(?:el|la|los|las|de|del|o|a|the)\s+/i, "");
+    // "resta 25 de 100" es 100 − 25: el minuendo va DESPUÉS del "de".
+    if (/^(?:resta|restar|subtract)$/i.test(verb[1])) {
+      const sub = /^(\d+(?:[.,]\d+)?)\s+de\s+(\d+(?:[.,]\d+)?)$/i.exec(t);
+      if (sub) {
+        if (/\d,\d{3}(?!\d)/.test(sub[1]) || /\d,\d{3}(?!\d)/.test(sub[2])) return null;
+        return `(${sub[2].replace(",", ".")})-(${sub[1].replace(",", ".")})`;
+      }
+    }
+  }
+  // "la propina del 15% de 230": la propina ES ese porcentaje.
+  t = t.replace(/^(?:la\s+)?propina\s+(?:de|del)\s+/i, "");
+  // "la mitad de 80" / "el doble de 35" / "el triple de 12".
+  const frac = /^(mitad|doble|triple)\s+de\s+(.+)$/i.exec(t);
+  if (frac) {
+    const inner = normalizeCalcText(frac[2].trim());
+    if (inner === null) return null;
+    const f = frac[1].toLowerCase();
+    return f === "mitad" ? `(${inner})/2` : f === "doble" ? `(${inner})*2` : `(${inner})*3`;
+  }
   // "15% de 200" / "15% of 200" / "15% do 200" → (15/100)*200
   t = t.replace(/(\d+(?:[.,]\d+)?)\s*%\s*(?:de|del|of|do|da)\s+/gi, "($1/100)*");
+  // "15 percent of 200" / "15 por ciento de 200" → (15/100)*200
+  t = t.replace(/(\d+(?:[.,]\d+)?)\s*(?:percent|por\s*ciento|porcento)\s+(?:de|del|of|do|da)\s+/gi, "($1/100)*");
+  // "3 docenas" → (3*12); "2 elevado a 10" → 2^10
+  t = t.replace(/(\d+(?:[.,]\d+)?)\s+(?:docenas?|dozen)\b/gi, "($1*12)");
+  t = t.replace(/(\d+(?:[.,]\d+)?)\s+(?:elevado\s+a|raised\s+to)\s+(\d+(?:[.,]\d+)?)/gi, "$1^$2");
+  // Operadores entre cifras: "45 más 67", "9 por 7", "100 entre 4", "45 y 67".
+  t = t.replace(/(\d)\s+(?:m[áa]s|plus|mais)\s+(?=\d)/gi, "$1+");
+  t = t.replace(/(\d)\s+(?:menos|minus)\s+(?=\d)/gi, "$1-");
+  t = t.replace(/(\d)\s+(?:por|vezes|times)\s+(?=\d)/gi, "$1*");
+  t = t.replace(/(\d)\s+(?:entre|dividido\s+(?:entre|por)|divided\s+by)\s+(?=\d)/gi, "$1/");
+  t = t.replace(/(\d)\s+(?:y|and)\s+(?=\d)/gi, "$1+");
   t = t.replace(/(\d)\s*[x×]\s*(?=\d)/gi, "$1*").replace(/[·∙]/g, "*").replace(/÷/g, "/");
   if (/,/.test(t)) {
     // Coma decimal solo si no hay puntos y ninguna coma va seguida de
@@ -57,20 +95,42 @@ export function extractCalcAction(userText: string): CalcAction | null {
   // 0.1.14 (guía): también en/pt — "what is 245 * 38", "calculate 10/3",
   // "quanto é 245 * 38". La expresión se sigue validando abajo (solo
   // caracteres matemáticos), así que "what is love" nunca entra aquí.
-  const m = /(?:cu[áa]nto es|calculate|calcula|calcule|what(?:'s| is)|quanto (?:[ée]|d[áa]))\s+(.+)/i.exec(trimmed);
-  if (!m) return null;
+  // 0.1.19: "cuánto sería / sale / da" y "how much is" como gatillos.
+  const m = /(?:cu[áa]nto (?:es|ser[íi]a|sale|da|son)|cu[áa]ntos son|calculate|calcula|calcule|what(?:'s| is)|how much is|quanto (?:[ée]|d[áa]))\s+(.+)/i.exec(trimmed);
+  // 0.1.19 (sonda de routing): la cuenta escrita SOLA ("15% de 200",
+  // "245*38", "9 por 7") no llegaba y el modelo repetía el error interno.
+  // Sin gatillo, TODO el mensaje debe ser la cuenta: se valida igual que
+  // con gatillo y además se exige un operador binario. Una fecha suelta
+  // ("12/10/2026") no es una cuenta.
+  const bare = !m;
+  if (bare) {
+    if (!/\d/.test(trimmed) || trimmed.length > 60) return null;
+    if (/\d{1,2}\/\d{1,2}\/\d{2,4}/.test(trimmed)) return null;
+  }
 
-  const raw = m[1].trim();
+  const raw = (m ? m[1] : trimmed).trim();
   // Auditoría ofensiva (0.1.18): "3!" es factorial, que la calculadora no
   // tiene; antes se quitaba el "!" como si fuera exclamación y respondía 3.
   if (/\d\s*!/.test(raw)) return null;
   // "0x10" es hexadecimal, no 0 por 10.
   if (/\b0x[0-9a-f]/i.test(raw)) return null;
   const shown = raw.replace(/[?.!¿¡]+$/, "").trim().replace(/^(?:el|la|o|a|the)\s+/i, "");
+  // 0.1.19: "raíz cuadrada de 144" / "raíz cúbica de 27" — el evaluador
+  // tiene sqrt, pero la validación de caracteres no admite letras; se
+  // resuelve aquí directamente.
+  const root = /^ra[íi]z\s+(cuadrada|c[úu]bica)\s+de\s+(\d+(?:[.,]\d+)?)$/i.exec(shown);
+  if (root) {
+    const n = Number(root[2].replace(",", "."));
+    const result = root[1].toLowerCase() === "cuadrada" ? Math.sqrt(n) : Math.cbrt(n);
+    return /\d,\d/.test(shown) ? { expression: shown, result, decimalComma: true } : { expression: shown, result };
+  }
   const expr = normalizeCalcText(shown);
   if (expr === null) return null;
   // Validación: solo caracteres matemáticos permitidos.
   if (!/^[\d\s+\-*/().%^]+$/.test(expr)) return null;
+  // Sin gatillo hace falta un operador binario: "200" o "15%" a secas no
+  // son una cuenta que responder.
+  if (bare && !/[+\-*/^]/.test(expr)) return null;
   if (expr.length < 1 || expr.length > 50) return null;
   // F3 (auditoría 2026-10-10): "1.000 + 1" en español es mil más uno, pero
   // el evaluador lo lee como 1.0 + 1 = 2. Un punto seguido de exactamente
@@ -87,11 +147,32 @@ export function extractCalcAction(userText: string): CalcAction | null {
   }
 }
 
+/**
+ * 0.1.19: inicio interrogativo (es/en/pt). Lo usan el router de
+ * recordatorios y el de memoria: una pregunta no es ni un recordatorio ni
+ * un hecho. Ojo: el corte es (?![\p{L}]) y no \b — tras una vocal
+ * acentuada ("qué") el \b ASCII no ve frontera de palabra y la guardia no
+ * dispararía.
+ */
+export const INTERROGATIVE_START_RE =
+  /^(?:c[óo]mo|qu[ée]|qui[ée]n(?:es)?|cu[áa]ndo|d[óo]nde|cu[áa]l(?:es)?|por\s*qu[ée]|how|what|who|whom|when|where|which|why|como|qual|quais|quando|onde|quem)(?![\p{L}])/iu;
+
 /** Resultado de una acción de recordatorio. */
 export interface ReminderAction {
   text: string;
   dueAt: string | null;
+  /**
+   * 0.1.19: el usuario pidió repetición ("cada día…") pero el sistema de
+   * recordatorios no soporta recurrencia en ninguna capa. La acción se
+   * crea una sola vez y el caller DEBE avisar de ello: antes se creaba en
+   * silencio y el usuario creía que era diario (riesgo real con
+   * medicación).
+   */
+  recurrenceRequested?: boolean;
 }
+
+const RECURRENCE_RE =
+  /\b(?:cada\s+(?:d[ií]a|semana|mes|a[ñn]o|lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo)|todos\s+los\s+d[ií]as|todas\s+las\s+semanas|diariamente|a\s+diario|semanalmente|mensualmente|every\s+(?:day|week|month|morning|night|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|daily|weekly|monthly|todo\s+dia|todos\s+os\s+dias|diariamente|semanalmente)\b/iu;
 
 /**
  * Detecta "agrégame cita/recordatorio..." y extrae el texto.
@@ -100,6 +181,24 @@ export interface ReminderAction {
 export function extractReminderAction(userText: string): ReminderAction | null {
   const trimmed = userText.trim();
   if (!trimmed) return null;
+  const recurrenceRequested = RECURRENCE_RE.test(trimmed);
+
+  // 0.1.19 (sonda de routing): "recuerda que mañana tengo dentista" se
+  // guardaba como HECHO de memoria y el aviso nunca existía. Con fecha
+  // futura parseable Y evento en primera persona es un recordatorio; sin
+  // una de las dos ("recuerda que mi mamá se llama Marta", "recuerda que
+  // el cumpleaños de mamá es el 15 de marzo") sigue siendo memoria y esta
+  // vía devuelve null para que el flujo normal (personas/hechos) decida.
+  const que = /^(?:recuerda|remember|lembra(?:-te)?|lembre(?:-se)?)\s+(?:que|that)\s+(.+)/i.exec(trimmed);
+  if (que) {
+    const content = que[1].trim();
+    const dueAt = parseReminderDateTime(content);
+    if (dueAt && /\b(?:tengo|debo|hay que|tenho|preciso|i have|i need)\b/i.test(content)) {
+      const text = stripDateWords(content).trim();
+      if (text.length >= 3) return recurrenceRequested ? { text, dueAt, recurrenceRequested: true } : { text, dueAt };
+    }
+    return null;
+  }
 
   // "agrégame cita con el doctor el viernes a las 10"
   // "créame un recordatorio para comprar leche mañana"
@@ -113,17 +212,38 @@ export function extractReminderAction(userText: string): ReminderAction | null {
   let text = m[1].trim();
   if (text.length < 3) return null;
 
+  // 0.1.19 (sonda de routing): "recuérdame cómo se llama la capital de
+  // Francia" es una PREGUNTA: creaba un recordatorio basura con el texto
+  // de la pregunta y nadie la respondía. Si el texto empieza con palabra
+  // interrogativa, que responda el flujo normal.
+  if (INTERROGATIVE_START_RE.test(text)) return null;
+
   // CALENDAR-FIX 2026-10-07: parsear fecha/hora del texto.
-  const dueAt = parseReminderDateTime(text);
+  let dueAt = parseReminderDateTime(text);
+  if (!dueAt) {
+    // 0.1.19 (sonda de routing): la hora puede ir ANTES del verbo —
+    // "en media hora recuérdame la junta", "mañana recuérdame comprar
+    // pan". La regex no está anclada al inicio y ese prefijo se perdía:
+    // el recordatorio se creaba con dueAt null y nunca avisaba.
+    const prefix = trimmed.slice(0, m.index).trim();
+    if (prefix) dueAt = parseReminderDateTime(prefix);
+  }
   // Limpiar la fecha del texto para que no quede duplicada.
   if (dueAt) {
     text = stripDateWords(text);
   }
 
+  // 0.1.19 (sonda de routing): "ponme un recordatorio para el viernes"
+  // dejaba el título en "para" (la fecha se comía el contenido) y se
+  // guardaba así. Un "para" inicial sobra en el título, y si no queda
+  // contenido no hay recordatorio que crear.
+  text = text.replace(/^para\s+/i, "").trim();
+
   // F6 (auditoría 2026-10-10): "recuérdame mañana" dejaba el texto vacío
   // tras quitar la fecha. Sin texto no hay recordatorio: que decida el modelo.
   if (!text.trim()) return null;
-  return { text, dueAt };
+  if (/^(?:para|de|a|el|la|the|to|for)$/i.test(text)) return null;
+  return recurrenceRequested ? { text, dueAt, recurrenceRequested: true } : { text, dueAt };
 }
 
 /**

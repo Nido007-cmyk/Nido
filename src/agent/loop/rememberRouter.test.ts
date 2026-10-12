@@ -78,6 +78,20 @@ describe("rememberRouter: extracción determinística", () => {
     expect(r).not.toBeNull();
     expect(r!.content).toBe("mi teléfono es 555-1234");
   });
+
+  it("0.1.19: una fecha sola no es un hecho ('recuerda mañana')", () => {
+    expect(extractRememberFact("recuerda mañana")).toBeNull();
+    expect(extractRememberFact("recuerda hoy")).toBeNull();
+    expect(extractRememberFact("recuerda el viernes")).toBeNull();
+    // Con contenido real detrás de la fecha, el hecho sí se guarda.
+    const r = extractRememberFact("recuerda que el cumpleaños de mi mamá es el 15 de marzo");
+    expect(r).not.toBeNull();
+  });
+
+  it("0.1.19: una pregunta no es un hecho ('recuérdame cómo se llama…')", () => {
+    expect(extractRememberFact("recuérdame cómo se llama la capital de Francia")).toBeNull();
+    expect(extractRememberFact("recuerda qué es la fotosíntesis")).toBeNull();
+  });
 });
 
 describe("rememberRouter: consultas vs guardados (FIX 2026-10-07)", () => {

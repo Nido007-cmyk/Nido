@@ -69,3 +69,53 @@ describe("calculator — what reaches it", () => {
     expect(extractCalcAction(text)).toBeNull();
   });
 });
+
+describe("calculator 0.1.19 — bare expressions and word operators (routing probe)", () => {
+  it.each([
+    // La cuenta escrita sola, sin "cuánto es" (el fallo que motivó 0.1.19).
+    ["15% de 200", 30],
+    ["245*38", 9310],
+    ["2+2", 4],
+    ["7 x 8", 56],
+    ["12 ÷ 4", 3],
+    ["15 percent of 200", 30],
+    // Operadores con palabras.
+    ["9 por 7", 63],
+    ["45 más 67", 112],
+    ["45 plus 67", 112],
+    ["100 menos 25", 75],
+    ["suma 45 y 67", 112],
+    ["suma de 45 y 67", 112],
+    ["resta 25 de 100", 75],
+    ["multiplica 6 por 9", 54],
+    ["divide 100 entre 4", 25],
+    // Formas con nombre.
+    ["la mitad de 80", 40],
+    ["cuánto es la mitad de 80", 40],
+    ["el doble de 35", 70],
+    ["el triple de 12", 36],
+    ["2 elevado a 10", 1024],
+    ["raíz cuadrada de 144", 12],
+    ["cuánto es la raíz cuadrada de 144", 12],
+    ["cuánto son 3 docenas", 36],
+    ["cuánto sería la propina del 15% de 230", 34.5],
+    ["cuánto es 1,5 por 4", 6],
+  ])("%s", (text, result) => {
+    expect(extractCalcAction(text)?.result).toBeCloseTo(result, 10);
+  });
+
+  it.each([
+    "200", // un número solo no es una cuenta
+    "15%", // un porcentaje solo tampoco
+    "12/10/2026", // una fecha, no una división
+    "3!", // factorial, también sin gatillo
+    "cuánto es la población de México", // pregunta con gatillo, sin cuenta
+    "suma de los ángulos de un triángulo", // "suma" sin números
+    "tengo 3 hijos y 2 perros", // frase normal con cifras
+    "compré 2 kilos por 50 pesos", // "por" que no es multiplicación
+    "quedamos 2+2 en tu casa", // la cuenta no es todo el mensaje
+    "cuánto es 70 kg en libras", // conversión, no calculadora
+  ])("%s → not answered by the fast path", (text) => {
+    expect(extractCalcAction(text)).toBeNull();
+  });
+});
