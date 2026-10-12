@@ -330,3 +330,38 @@ describe("0.1.14 — calculadora y recordatorios en inglés y portugués (guía)
     expect(extractReminderAction("me lembra que minha cor favorita é azul")).toBeNull();
   });
 });
+
+describe("0.1.20 (P3-11) — verbos de aviso crean recordatorio", () => {
+  it("«avísame a las 3 de estudiar» → texto «estudiar» con hora", () => {
+    const r = extractReminderAction("avísame a las 3 de estudiar");
+    expect(r).not.toBeNull();
+    expect(r!.text).toBe("estudiar");
+    expect(r!.dueAt).not.toBeNull();
+    expect(new Date(r!.dueAt!).getHours()).toBe(15);
+  });
+
+  it("«avísame cuando sean las 3» → aviso con la frase como título", () => {
+    const r = extractReminderAction("avísame cuando sean las 3");
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).not.toBeNull();
+    expect(new Date(r!.dueAt!).getHours()).toBe(15);
+    expect(r!.text).toBe("avísame cuando sean las 3");
+  });
+
+  it("«despiértame a las 7» → recordatorio a las 7", () => {
+    const r = extractReminderAction("despiértame a las 7");
+    expect(r).not.toBeNull();
+    expect(new Date(r!.dueAt!).getHours()).toBe(7);
+  });
+
+  it("EN/PT: «wake me at 7» y «me acorde às 7»", () => {
+    expect(extractReminderAction("wake me at 7")).not.toBeNull();
+    expect(extractReminderAction("me acorde às 7")).not.toBeNull();
+    const en = extractReminderAction("let me know at 3 to study");
+    expect(en?.text).toBe("study");
+  });
+
+  it("la guardia de preguntas sigue intacta con los verbos nuevos", () => {
+    expect(extractReminderAction("avísame cómo llegar al centro")).toBeNull();
+  });
+});

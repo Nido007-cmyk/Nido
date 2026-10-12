@@ -225,11 +225,30 @@ export function extractReminderAction(userText: string): ReminderAction | null {
   // El intent clasificador ya marca estos como "actuar", pero el router no los capturaba.
   // 0.1.14 (guía): "remind me to …" y portugués "me lembra de …" /
   // "lembre-me de …". "me lembra que X" es memoria, no recordatorio.
-  const m = /(?:agr[ée]game|cr[ée]ame|ponme|crea|recu[ée]rdame|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?)\s+(?:una?\s+)?(?:cita|recordatorio)?\s*(.+)/i.exec(trimmed);
+  // 0.1.20 (P3-11): verbos de AVISO — «avísame a las 3 de estudiar»,
+  // «despiértame a las 7», «me acorde às 7», «wake me at 7» creaban
+  // nada: caían al modelo. El verbo va en su grupo para saber si es un
+  // aviso (su texto puede ser la propia orden cuando no hay tarea).
+  const m = /(agr[ée]game|cr[ée]ame|ponme|crea|recu[ée]rdame|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
   if (!m) return null;
+  const isAlertVerb = /av[íi]s|despi|despert|wake|acord|let\s+me\s+know/i.test(m[1]);
 
-  let text = m[1].trim();
+  let text = m[2].trim();
   if (text.length < 3) return null;
+  // 0.1.20 (P3-11): un DESPERTADOR es de mañana. Sin esta marca, «a
+  // las 7» a media tarde se programaba a las 19:00 (la siguiente
+  // ocurrencia de las 7). Con verbos de despertar y sin parte del día
+  // explícita, se añade la de la mañana según el idioma del verbo.
+  const isWakeVerb = /despi|despert|wake|acord/i.test(m[1]);
+  if (isWakeVerb && !/(ma[ñn]ana|tarde|noche|madrugada|morning|afternoon|evening|night|manh[ãa]|noite)/i.test(text)) {
+    text += /wake/i.test(m[1]) ? " in the morning" : /acord/i.test(m[1]) ? " da manhã" : " de la mañana";
+  }
+  // «avísame cuando sean las 3»: el parser entiende «a las 3», no la
+  // subordinada. Se reformula solo el arranque.
+  text = text
+    .replace(/^cuando\s+(?:sean|sea)\s+/i, "a ")
+    .replace(/^when\s+it'?s\s+/i, "at ")
+    .replace(/^quando\s+(?:forem|for)\s+/i, "às ");
 
   // 0.1.19 (sonda de routing): "recuérdame cómo se llama la capital de
   // Francia" es una PREGUNTA: creaba un recordatorio basura con el texto
@@ -256,11 +275,22 @@ export function extractReminderAction(userText: string): ReminderAction | null {
   // dejaba el título en "para" (la fecha se comía el contenido) y se
   // guardaba así. Un "para" inicial sobra en el título, y si no queda
   // contenido no hay recordatorio que crear.
-  text = text.replace(/^para\s+/i, "").trim();
+  // 0.1.20: también el "de" de «avísame a las 3 de estudiar» (queda
+  // «estudiar») y de «un recordatorio de comprar pan».
+  text = text.replace(/^(?:para|de|to)\s+/i, "").trim();
 
   // F6 (auditoría 2026-10-10): "recuérdame mañana" dejaba el texto vacío
   // tras quitar la fecha. Sin texto no hay recordatorio: que decida el modelo.
-  if (!text.trim()) return null;
+  // 0.1.20 (P3-11): con un verbo de AVISO la orden sola sí es el aviso
+  // («despiértame a las 7», «avísame cuando sean las 3»): el título es
+  // la frase del usuario, que es exactamente lo que pidió.
+  if (!text.trim()) {
+    if (isAlertVerb && dueAt) {
+      const title = trimmed.replace(/[.!]+$/, "").trim();
+      return recurrenceRequested ? { text: title, dueAt, recurrenceRequested: true } : { text: title, dueAt };
+    }
+    return null;
+  }
   if (/^(?:para|de|a|el|la|the|to|for)$/i.test(text)) return null;
   return recurrenceRequested ? { text, dueAt, recurrenceRequested: true } : { text, dueAt };
 }
