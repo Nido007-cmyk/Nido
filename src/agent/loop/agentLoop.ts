@@ -719,21 +719,24 @@ export async function runAgentLoop(
     };
   }
   // PEOPLE-FIX 2026-10-07: extraer persona ANTES que hecho (más específico).
-  const { extractPerson } = await import("./rememberRouter");
-  const personExtraction = fastPathAllowed("remember_fact") ? extractPerson(userText) : null;
-  if (personExtraction) {
+  // 0.1.20: extractPeople — el plural («mis hijos se llaman Leo y Max»)
+  // guarda una ficha por persona.
+  const { extractPeople } = await import("./rememberRouter");
+  const personExtractions = fastPathAllowed("remember_fact") ? extractPeople(userText) : [];
+  if (personExtractions.length) {
     const { savePerson, saveFact, saveReminder } = await import("../memory/memoryStore");
     const { extractDateISO } = await import("./rememberRouter");
-    const person = await savePerson({
-      name: personExtraction.name,
-      relationship: personExtraction.relationship,
-      notes: personExtraction.notes,
-    });
-    const rel = person.relationship ? ` (${person.relationship})` : "";
+    const saved = [];
+    for (const ex of personExtractions) {
+      saved.push(
+        await savePerson({ name: ex.name, relationship: ex.relationship, notes: ex.notes })
+      );
+    }
+    const relOf = (p: (typeof saved)[number]) => (p.relationship ? ` (${p.relationship})` : "");
     // LOOP-2 FIX 2026-10-07: si el texto también contiene una fecha (ej: cumpleaños),
     // guardarla como hecho + recordatorio. Antes se perdía al retornar early.
     let extraNote = "";
-    const dueAt = extractDateISO(userText);
+    const dueAt = extractDateISO(userText, reminderLang);
     if (dueAt) {
       await saveFact({
         content: userText.trim(),
@@ -741,7 +744,7 @@ export async function runAgentLoop(
         source: "user",
       });
       const reminder = await saveReminder({
-        text: `${person.name}: ${userText.trim()}`,
+        text: `${saved.map((p) => p.name).join(" y ")}: ${userText.trim()}`,
         dueAt,
       });
       // M10 FIX: programar notificación del sistema.
@@ -752,17 +755,48 @@ export async function runAgentLoop(
       extraNote = routerMessage("personDateNote", reminderLang);
     }
     return {
-      response: routerMessage("personSaved", reminderLang, { name: person.name, rel }) + extraNote,
+      response:
+        saved
+          .map((p) => routerMessage("personSaved", reminderLang, { name: p.name, rel: relOf(p) }))
+          .join(" ") + extraNote,
+      intent,
+      toolUses: saved.map((p) => ({
+        name: "save_person",
+        result: `Guardado vía pre-router determinístico: «${p.name}»${relOf(p)}.`,
+      })),
+    };
+  }
+  // 0.1.20 (evidencia Tab A9+): la presentación del propio usuario
+  // («Yo me llamo Ruben») no tenía ruta: caía al modelo y no se
+  // guardaba nada. Se guarda como hecho y aparece en Mi memoria → Datos.
+  const { extractSelfName } = await import("./rememberRouter");
+  const selfName = fastPathAllowed("remember_fact") ? extractSelfName(userText) : null;
+  if (selfName) {
+    const { saveFact } = await import("../memory/memoryStore");
+    const factText =
+      reminderLang === "en"
+        ? `My name is ${selfName}`
+        : reminderLang === "pt"
+          ? `Meu nome é ${selfName}`
+          : `Me llamo ${selfName}`;
+    await saveFact({ content: factText, category: "general", source: "user" });
+    return {
+      response: routerMessage("selfNameSaved", reminderLang, { name: selfName }),
       intent,
       toolUses: [
         {
-          name: "save_person",
-          result: `Guardado vía pre-router determinístico: «${person.name}»${rel}.`,
+          name: "remember_fact",
+          result: `Guardado vía pre-router determinístico: «${factText}».`,
         },
       ],
     };
   }
-  const extraction = fastPathAllowed("remember_fact") ? extractRememberFact(userText) : null;
+  // 0.1.20 (M2): sin gatillo explícito, probar los hechos implícitos
+  // acotados («mi cumpleaños es el 3 de mayo», «vivo en Tucson»).
+  const { extractImplicitFact } = await import("./rememberRouter");
+  const extraction = fastPathAllowed("remember_fact")
+    ? (extractRememberFact(userText) ?? extractImplicitFact(userText))
+    : null;
   if (extraction) {
     const { saveFact, saveReminder } = await import("../memory/memoryStore");
     const { extractDateISO } = await import("./rememberRouter");
@@ -775,7 +809,7 @@ export async function runAgentLoop(
     // automáticamente. Antes solo se guardaba el texto y Reminders quedaba
     // vacío (el usuario tenía que pedir el recordatorio por separado).
     let reminderNote = "";
-    const dueAt = extractDateISO(extraction.content);
+    const dueAt = extractDateISO(extraction.content, reminderLang);
     if (dueAt) {
       const reminder = await saveReminder({
         text: extraction.content,
@@ -806,6 +840,25 @@ export async function runAgentLoop(
   }
 
   const mem = await options.loadMemory?.().catch(() => null);
+
+  // 0.1.20 (M1): consultas SOBRE la memoria («¿cómo se llama mi
+  // mamá?») se responden desde lo guardado, no desde el modelo.
+  if (mem && fastPathAllowed("remember_fact")) {
+    const { answerMemoryQuery } = await import("./memoryQuery");
+    const memAnswer = answerMemoryQuery(userText, mem, reminderLang);
+    if (memAnswer) {
+      return {
+        response: memAnswer,
+        intent,
+        toolUses: [
+          {
+            name: "memory_query",
+            result: "Respondido vía determinística desde la memoria guardada.",
+          },
+        ],
+      };
+    }
+  }
 
   const buildMessages = (memoryText: string): ChatMessageInput[] => [
     { role: "system", content: buildSystemPrompt(intent, memoryText, options.lang === "en" ? "en" : "es") },

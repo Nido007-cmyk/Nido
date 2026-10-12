@@ -400,10 +400,16 @@ export async function saveNote(input: {
   title: string;
   body?: string;
 }): Promise<AgentNote> {
+  // 0.1.20 (evidencia Tab A9+): la ruta determinista deriva el título de
+  // las primeras palabras del cuerpo, así que en notas cortas título y
+  // cuerpo quedaban idénticos y la lista de notas los pintaba duplicados.
+  // Una nota cuyo cuerpo ES el título es una nota solo-título: cuerpo "".
+  const rawBody = input.body ?? "";
+  const bodyIsTitle = rawBody.trim().replace(/[.,;:!?¡¿]+$/, "") === input.title.trim();
   const note: AgentNote = {
     id: newId(),
     title: input.title,
-    body: input.body ?? "",
+    body: bodyIsTitle ? "" : rawBody,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -416,13 +422,27 @@ export async function saveNote(input: {
   return note;
 }
 
+/**
+ * 0.1.20: normaliza notas ya guardadas con cuerpo idéntico al título
+ * (ver saveNote): al leer se presentan como solo-título, sin migrar la
+ * base — las filas viejas dejan de verse duplicadas en la lista y al
+ * leerlas en voz alta no se repite la misma frase dos veces.
+ */
+function collapseTitleBody(note: AgentNote): AgentNote {
+  if (note.body && note.body.trim().replace(/[.,;:!?¡¿]+$/, "") === note.title.trim()) {
+    return { ...note, body: "" };
+  }
+  return note;
+}
+
 /** Lista las notas (título + fecha), más recientes primero. */
 export async function listNotes(limit = 50): Promise<AgentNote[]> {
   const db = await getMemoryDb();
-  return db.getAllAsync<AgentNote>(
+  const rows = await db.getAllAsync<AgentNote>(
     "SELECT id, title, body, created_at, updated_at FROM agent_notes ORDER BY created_at DESC LIMIT ?;",
     [limit]
   );
+  return rows.map(collapseTitleBody);
 }
 
 /** Lee una nota completa por id. Null si no existe. */
@@ -432,7 +452,7 @@ export async function getNote(id: string): Promise<AgentNote | null> {
     "SELECT id, title, body, created_at, updated_at FROM agent_notes WHERE id = ?;",
     [id]
   );
-  return row ?? null;
+  return row ? collapseTitleBody(row) : null;
 }
 
 /** Elimina una nota por id. */

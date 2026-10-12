@@ -50,6 +50,11 @@ const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
   { re: /gu[aá]rda\w*( esto| eso|lo|la)? en (tu |la )?memoria que[:\s]+(.+)/i, group: 3 },
   // "memoriza que X" / "memoriza: X"
   { re: /memoriza[:\s]+(.+)/i, group: 1 },
+  // 0.1.20 (M3): "guarda que X" a secas — la sonda mostró que solo
+  // funcionaba la forma larga "guarda en memoria que". No choca con
+  // "guarda una nota…" (esa frase no empieza con "guarda que" y la
+  // ruta de notas corre por toolRouter).
+  { re: /gu[aá]rda(?:te)? que[:\s]+(.+)/i, group: 1 },
   // "apunta esto para siempre: X"
   { re: /apunta (esto|eso) para (siempre|despu[eé]s)[:\s]+(.+)/i, group: 3 },
   // Inglés: "remember that X" / "remember: X"
@@ -142,7 +147,7 @@ const MESES: Record<string, number> = {
  * Extrae una fecha de un texto en español (ej: "15 de marzo").
  * Retorna la fecha ISO (año actual, o el siguiente si ya pasó) o null.
  */
-export function extractDateISO(text: string): string | null {
+export function extractDateISO(text: string, lang: "es" | "en" | "pt" = "es"): string | null {
   // Español: "15 de marzo"
   const mEs = /(\d{1,2}) de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i.exec(text);
   if (mEs) {
@@ -163,6 +168,45 @@ export function extractDateISO(text: string): string | null {
     const day = parseInt(mEn[2], 10);
     if (day >= 1 && day <= 31 && month !== undefined) {
       return nextOccurrence(month, day);
+    }
+  }
+  // 0.1.20 (M6): fechas numéricas "05/11", "11/05/2027". La sonda mostró
+  // que solo servían con el mes en letras: un cumpleaños dictado con
+  // números no generaba su recordatorio automático. Separadores / y -
+  // únicamente (el punto es decimal en "cuesta 3.5": fail-closed).
+  const mNum = /(?<!\d)(\d{1,2})[/-](\d{1,2})(?:[/-](\d{4}|\d{2}))?(?!\d)/.exec(text);
+  if (mNum) {
+    const a = parseInt(mNum[1], 10);
+    const b = parseInt(mNum[2], 10);
+    // Desambiguación: si un lado pasa de 12, ese lado es el día. Si
+    // ambos ≤ 12, manda el idioma (ES/PT: D/M; EN: M/D).
+    let day: number;
+    let month: number;
+    if (a > 12 && b >= 1 && b <= 12) {
+      day = a;
+      month = b;
+    } else if (b > 12 && a >= 1 && a <= 12) {
+      month = a;
+      day = b;
+    } else if (lang === "en") {
+      month = a;
+      day = b;
+    } else {
+      day = a;
+      month = b;
+    }
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+      if (mNum[3]) {
+        // Con año explícito: esa fecha concreta (09:00 local). Si ya
+        // pasó, no hay recordatorio que crear: null.
+        const year = mNum[3].length === 2 ? 2000 + parseInt(mNum[3], 10) : parseInt(mNum[3], 10);
+        const d = new Date(year, month - 1, day, 9, 0, 0);
+        if (d.getMonth() === month - 1 && d.getDate() === day && d.getTime() >= Date.now()) {
+          return d.toISOString();
+        }
+        return null;
+      }
+      return nextOccurrence(month - 1, day);
     }
   }
   return null;
@@ -196,52 +240,267 @@ export interface PersonExtraction {
 }
 
 /**
- * PEOPLE-FIX 2026-10-07: extrae una persona del texto de forma determinística.
- * Patrones: "mi mamá se llama María", "recuerda que mi hermano Juan...",
- * "mi esposa se llama Ana".
+ * 0.1.20 (evidencia Tab A9+): el extractor original exigía los parentescos
+ * CON acento («mamá») y el nombre con mayúscula inicial. El usuario
+ * escribió «Mi mama se llama Marta» (sin acento, como se escribe en un
+ * teclado) y no hubo match: el mensaje cayó a la búsqueda de conocimiento
+ * y la persona nunca se guardó. Ahora los parentescos aceptan la forma
+ * con y sin acento, el nombre puede empezar en minúscula y hay patrones
+ * en portugués. La relación se guarda en su forma canónica con acento.
  */
-export function extractPerson(userText: string): PersonExtraction | null {
+const ES_REL =
+  "mamá|mama|papá|papa|madre|padre|hermano|hermana|esposo|esposa|hijo|hija|novio|novia|amigo|amiga|tío|tio|tía|tia|primo|prima|abuelo|abuela|sobrino|sobrina|cuñado|cuñada|cunado|cunada|suegro|suegra|yerno|nuera|nieto|nieta|compadre|comadre|pareja";
+const PT_REL =
+  "mãe|mae|pai|irmão|irmao|irmã|irma|esposa|marido|esposo|filho|filha|namorado|namorada|amigo|amiga|tio|tia|primo|prima|avô|avo|avó|sobrinho|sobrinha|cunhado|cunhada|sogro|sogra|genro|nora|neto|neta|compadre|comadre";
+/**
+ * Nombre: corrida de 1 a 3 palabras (la validación fina va en
+ * validName, en código, porque con la bandera /i las clases de
+ * mayúsculas también aceptan minúsculas y el regex solo no basta).
+ * Las clases incluyen las letras del portugués (ã õ ç â ê ô à).
+ */
+const NAME_SRC = "[A-Za-zÁÉÍÓÚÑÜÀÂÊÔÃÕÇáéíóúñüàâêôãõç]+(?: [A-Za-zÁÉÍÓÚÑÜÀÂÊÔÃÕÇáéíóúñüàâêôãõç]+){0,2}";
+/** Palabras que jamás son un nombre en estas posiciones («se llama como…»). */
+const NOT_A_NAME = /^(como|así|asi|igual|también|tambien|bien|mal|todo|eso|esto|aquí|aqui|ahora|la|el|los|las|un|una|atención|atencion|se|me|te|le|que|de|en|y|e)$/i;
+/** Segunda palabra que corta el nombre: verbos típicos tras un nombre. */
+const NAME_STOP_SECOND = /^(cumple|vive|trabaja|estudia|tiene|es|está|esta|va|viene|llega|juega|come|duerme)$/i;
+const STARTS_UPPER = /^[A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ]/;
+
+const CANON_REL: Record<string, string> = {
+  mama: "mamá",
+  papa: "papá",
+  tio: "tío",
+  tia: "tía",
+  mae: "mãe",
+  irmao: "irmão",
+  irma: "irmã",
+  avo: "avô",
+  cunado: "cuñado",
+  cunada: "cuñada",
+};
+
+function tidyName(raw: string): string {
+  return raw
+    .trim()
+    .split(/\s+/)
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
+function validName(raw: string): string | null {
+  const words = raw.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0 || NOT_A_NAME.test(words[0])) return null;
+  // Cuántas palabras de la corrida son nombre de verdad:
+  // - si la 2ª va capitalizada en el original, la cadena de palabras
+  //   capitalizadas manda («Juan Pérez», «Mary Jane Watson»).
+  // - si va en minúscula, máximo 2 (nombre compuesto: «ana maría»),
+  //   y ninguna si es un verbo típico («juan cumple años» → «Juan»).
+  let keep = 1;
+  if (words.length > 1) {
+    if (STARTS_UPPER.test(words[1])) {
+      while (keep < words.length && keep < 3 && STARTS_UPPER.test(words[keep])) keep++;
+    } else if (!NAME_STOP_SECOND.test(words[1])) {
+      keep = 2;
+    }
+  }
+  const name = tidyName(words.slice(0, keep).join(" "));
+  return name.length >= 2 ? name : null;
+}
+
+/** Una pregunta no afirma nada: no crea personas ni guarda el nombre. */
+function looksLikeQuestion(t: string): boolean {
+  return /^\s*¿/.test(t) || /\?\s*$/.test(t);
+}
+
+function canonRel(raw: string): string {
+  const rel = raw.toLowerCase();
+  return CANON_REL[rel] ?? rel;
+}
+
+/**
+ * PEOPLE-FIX 2026-10-07: extrae personas del texto de forma
+ * determinística. Patrones: "mi mamá se llama María", "recuerda que mi
+ * hermano Juan...", "mi esposa se llama Ana".
+ *
+ * 0.1.20 (M4/M5): los patrones de «se llama» van ANCLADOS al inicio del
+ * mensaje (saludo o gatillo «recuerda que» opcionales). Sin anclar,
+ * «la esposa de mi hermano se llama Laura» guardaba a Laura con la
+ * relación «hermano». El plural («mis hijos se llaman Leo y Max»)
+ * devuelve dos personas.
+ */
+export function extractPeople(userText: string): PersonExtraction[] {
   const trimmed = userText.trim();
-  if (!trimmed) return null;
+  if (!trimmed || looksLikeQuestion(trimmed)) return [];
+  const out: PersonExtraction[] = [];
+  const start = "^(?:(?:hola|buenas|oye)[,.\\s]+)?(?:recuerda(?:te)?(?:\\s+que)?[,\\s]+)?";
+
+  // Plural: "mis hijos se llaman Leo y Max"
+  const mp = new RegExp(
+    `${start}mis (hijos|hijas|hermanos|hermanas) se llaman (${NAME_SRC}) y (${NAME_SRC})`,
+    "i"
+  ).exec(trimmed);
+  if (mp) {
+    const relBase = mp[1].toLowerCase().replace(/s$/, "");
+    for (const raw of [mp[2], mp[3]]) {
+      const name = validName(raw);
+      if (name) out.push({ name, relationship: relBase, notes: trimmed });
+    }
+    if (out.length) return out;
+  }
+
+  // "mi mejor amigo se llama Diego"
+  const mb = new RegExp(`${start}mi mejor (amigo|amiga) se llama (${NAME_SRC})`, "i").exec(trimmed);
+  if (mb) {
+    const name = validName(mb[2]);
+    if (name) return [{ name, relationship: `mejor ${mb[1].toLowerCase()}` }];
+  }
 
   // "mi [relación] se llama [Nombre]"
-  const m1 = /mi (mamá|papá|madre|padre|hermano|hermana|esposo|esposa|hijo|hija|novio|novia|amigo|amiga|tío|tía|primo|prima|abuelo|abuela|sobrino|sobrina) se llama ([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?: [A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)*)/i.exec(trimmed);
+  const m1 = new RegExp(`${start}mi (${ES_REL}) se llama (${NAME_SRC})`, "i").exec(trimmed);
   if (m1) {
-    return {
-      name: m1[2].trim(),
-      relationship: m1[1].toLowerCase(),
-    };
+    const name = validName(m1[2]);
+    if (name) return [{ name, relationship: canonRel(m1[1]) }];
   }
 
-  // "recuerda que mi [relación] [Nombre]..."
-  const m2 = /recuerda( que)? mi (mamá|papá|madre|padre|hermano|hermana|esposo|esposa|hijo|hija) ([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/i.exec(trimmed);
+  // "recuerda que mi [relación] [Nombre]..." (sin «se llama»: si lo hay,
+  // el patrón anterior ya lo capturó; «se» está vetado como nombre).
+  const m2 = new RegExp(`recuerda( que)? mi (${ES_REL}) (${NAME_SRC})`, "i").exec(trimmed);
   if (m2) {
-    return {
-      name: m2[3].trim(),
-      relationship: m2[2].toLowerCase(),
-      notes: trimmed,
-    };
+    const name = validName(m2[3]);
+    if (name) return [{ name, relationship: canonRel(m2[2]), notes: trimmed }];
   }
 
-  // PEOPLE-FIX 2026-10-07: más patrones.
   // "my mom's name is Mary", "my brother is called John"
-  const m3 = /my (mom|dad|mother|father|brother|sister|husband|wife|son|daughter|boyfriend|girlfriend|friend)(?:'s name)? is (?:called )?([A-Z][a-z]+(?: [A-Z][a-z]+)*)/i.exec(trimmed);
+  const m3 = new RegExp(
+    `my (mom|dad|mother|father|brother|sister|husband|wife|son|daughter|boyfriend|girlfriend|friend)(?:'s name)? is (?:called )?(${NAME_SRC})`,
+    "i"
+  ).exec(trimmed);
   if (m3) {
-    return {
-      name: m3[2].trim(),
-      relationship: m3[1].toLowerCase(),
-    };
+    const name = validName(m3[2]);
+    if (name) return [{ name, relationship: m3[1].toLowerCase() }];
   }
 
   // "se llama [Nombre], es mi [relación]"
-  const m4 = /se llama ([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?: [A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)*),? es mi (mamá|papá|hermano|hermana|esposo|esposa|hijo|hija)/i.exec(trimmed);
+  const m4 = new RegExp(`se llama (${NAME_SRC}),? es mi (${ES_REL})`, "i").exec(trimmed);
   if (m4) {
-    return {
-      name: m4[1].trim(),
-      relationship: m4[2].toLowerCase(),
-    };
+    const name = validName(m4[1]);
+    if (name) return [{ name, relationship: canonRel(m4[2]) }];
   }
 
+  // PT: "minha mãe se chama Maria", "meu irmão chama-se João"
+  const m5 = new RegExp(
+    `^(?:(?:olá|ola|oi)[,.\\s]+)?(?:lembr[ae](?:-se)?(?:\\s+de)?\\s+que\\s+)?(?:minha|meu) (${PT_REL}) (?:se chama|chama-se) (${NAME_SRC})`,
+    "i"
+  ).exec(trimmed);
+  if (m5) {
+    const name = validName(m5[2]);
+    if (name) return [{ name, relationship: canonRel(m5[1]) }];
+  }
+
+  return out;
+}
+
+export function extractPerson(userText: string): PersonExtraction | null {
+  return extractPeople(userText)[0] ?? null;
+}
+
+/**
+ * 0.1.20 (evidencia Tab A9+): la presentación del PROPIO usuario no
+ * tenía ningún patrón — «Yo me llamo Ruben» caía al modelo, que lo
+ * repetía como loro y no guardaba nada. Devuelve el nombre propio o
+ * null. Solo mensajes que SON la presentación (con saludo opcional),
+ * no frases que la mencionan de paso.
+ */
+export function extractSelfName(userText: string): string | null {
+  if (looksLikeQuestion(userText.trim())) return null;
+  const t = userText
+    .trim()
+    .replace(/[.!]+$/, "")
+    // "you": el autocorrector de un teclado en inglés convierte «yo» en
+    // «you» — le pasó al usuario en la tablet («You me llamo Ruben»).
+    .replace(/^(hola|buenas|hi|hello|olá|ola|you)[,.\s]+/i, "");
+  if (!t || t.length > 80) return null;
+  const patterns = [
+    new RegExp(`^(?:yo\\s+)?me\\s+llamo\\s+(${NAME_SRC})$`, "i"),
+    new RegExp(`^mi\\s+nombre\\s+es\\s+(${NAME_SRC})$`, "i"),
+    new RegExp(`^my\\s+name\\s+is\\s+(${NAME_SRC})$`, "i"),
+    new RegExp(`^meu\\s+nome\\s+(?:é|e)\\s+(${NAME_SRC})$`, "i"),
+    new RegExp(`^eu\\s+me\\s+chamo\\s+(${NAME_SRC})$`, "i"),
+  ];
+  for (const re of patterns) {
+    const m = re.exec(t);
+    if (m) {
+      const name = validName(m[1]);
+      if (name) return name;
+    }
+  }
+  return null;
+}
+
+/**
+ * 0.1.20 (M2): hechos IMPLÍCITOS — afirmaciones sobre el usuario sin la
+ * palabra «recuerda». La sonda mostró 7/7 cayendo al modelo («mi
+ * cumpleaños es el 3 de mayo», «mi coche es un Toyota», «vivo en
+ * Tucson»). Patrones anclados y de alta precisión; corre DESPUÉS del
+ * extractor con gatillo y de personas/nombre propio, y en agentLoop
+ * llega cuando notas/recordatorios/calculadora ya pasaron, así que no
+ * roba frases de otras rutas.
+ *
+ * Fail-closed con datos sensibles: un valor con 7+ dígitos seguidos o
+ * un sustantivo tipo cuenta/tarjeta/clave NO se auto-guarda; eso solo
+ * entra con gatillo explícito («recuerda que…»), decisión del usuario.
+ */
+const SENSITIVE_NOUN = /cuenta|tarjeta|clave|contraseña|contrasena|password|pin|seguro|card|account|senha/i;
+const LONG_DIGITS = /\d{7,}/;
+
+export function extractImplicitFact(userText: string): RememberExtraction | null {
+  const t = userText.trim().replace(/[.!]+$/, "");
+  if (!t || t.length > 200 || looksLikeQuestion(t) || isMemoryQuery(t)) return null;
+  const done = (content: string): RememberExtraction | null => {
+    const c = content.trim();
+    if (c.length < 3 || LONG_DIGITS.test(c)) return null;
+    return { content: c, category: detectCategory(c) };
+  };
+
+  // Cumpleaños / aniversario (propio o de una relación): categoría event
+  // vía detectCategory; agentLoop crea el recordatorio por la fecha.
+  if (
+    /^(?:mi|el|la)\s+(?:cumpleaños|cumpleanos|aniversario)\b/i.test(t) ||
+    /^(?:el|la)\s+(?:cumpleaños|cumpleanos|aniversario)\s+de\b/i.test(t) ||
+    /^(?:my|o|a)\s+(?:birthday|aniversário|aniversario)\b/i.test(t) ||
+    /^(?:the|o)\s+(?:birthday|aniversário)\s+(?:of|de|da|do)\b/i.test(t)
+  ) {
+    return done(t);
+  }
+  // "vivo en X" / "I live in X" / "moro em X" (1-4 palabras de lugar).
+  const home = /^(?:vivo en|i live in|moro em|eu moro em)\s+([\p{L}][\p{L}\s.'-]{1,40})$/iu.exec(t);
+  if (home && home[1].trim().split(/\s+/).length <= 4) return done(t);
+  // Favoritos: "mi X favorito/a es Y", "my favorite X is Y", PT.
+  if (
+    /^mi\s+.+\s+favorit[oa]\s+es\s+.+/i.test(t) ||
+    /^my\s+favorite\s+.+\s+is\s+.+/i.test(t) ||
+    /^meu\s+.+\s+favorito\s+(?:é|e)\s+.+/i.test(t) ||
+    /^minha\s+.+\s+favorita\s+(?:é|e)\s+.+/i.test(t)
+  ) {
+    return done(t);
+  }
+  // "trabajo en/de X" (ocupación o turno, valor corto).
+  const job = /^trabajo\s+(?:en|de)\s+(.{2,40})$/i.exec(t);
+  if (job && job[1].trim().split(/\s+/).length <= 4) return done(t);
+  // "mi <sustantivo curado> es/se llama <valor>": posesiones e identidad
+  // cotidiana. Lista cerrada a propósito: fuera de ella, sin gatillo
+  // no se guarda (precisión > cobertura en memoria automática).
+  const noun =
+    /^(mi)\s+(coche|carro|auto|teléfono|telefono|celular|banco|correo|dirección|direccion|equipo|perro|gato|mascota|ciudad|pueblo|trabajo)\s+(?:es|se llama)\s+(.+)$/i.exec(t) ||
+    /^(my)\s+(car|phone|bank|email|dog|cat|team|city|job)\s+is\s+(.+)$/i.exec(t) ||
+    /^(meu|minha)\s+(carro|telefone|celular|banco|correio|time|cachorro|gato|cidade|trabalho)\s+(?:é|e|se chama)\s+(.+)$/i.exec(t);
+  if (noun) {
+    if (SENSITIVE_NOUN.test(noun[2])) return null;
+    // El valor debe ser un dato (nombre/marca/lugar), no una descripción:
+    // «mi perro es un pastor alemán» sí; «mi perro es muy bonito y
+    // juega mucho en el parque» es charla, no un hecho durable.
+    if (noun[3].trim().split(/\s+/).length > 4) return null;
+    return done(t);
+  }
   return null;
 }
 

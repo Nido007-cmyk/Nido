@@ -44,7 +44,18 @@ export type ToolAction =
   | { kind: "nidoTasks"; lang: RouterLang }
   | { kind: "openLink"; url: string; lang: RouterLang }
   | { kind: "pickFile"; analyze: boolean; lang: RouterLang }
-  | { kind: "reminderList"; lang: RouterLang; range?: "today" | "tomorrow" };
+  | { kind: "reminderList"; lang: RouterLang; range?: "today" | "tomorrow" }
+  | { kind: "noteDelete"; target: DeleteTarget; lang: RouterLang }
+  | { kind: "reminderDelete"; target: DeleteTarget; range?: "today" | "tomorrow"; lang: RouterLang };
+
+/**
+ * 0.1.20 (P3-9): destino de un borrado.
+ * - one: identificado por título/texto ("la nota de la receta").
+ * - all: el conjunto completo (o el del día, si hay range).
+ * - ask: el usuario no dijo cuál ("borra la nota"): si solo hay uno se
+ *   borra ese (la confirmación protege); si hay varios, se listan.
+ */
+export type DeleteTarget = { type: "one"; query: string } | { type: "all" } | { type: "ask" };
 
 export type CalendarRange = "today" | "tomorrow" | "week";
 
@@ -80,6 +91,10 @@ export function toolForAction(a: ToolAction): string {
     // No separate tool: listing belongs to the reminders switch.
     case "reminderList":
       return "create_reminder";
+    case "noteDelete":
+      return "delete_note";
+    case "reminderDelete":
+      return "delete_reminder";
   }
 }
 
@@ -419,6 +434,7 @@ type Key =
   | "reminderSaveFailed"
   | "personSaved"
   | "personDateNote"
+  | "selfNameSaved"
   | "factSaved"
   | "factReminderNote";
 
@@ -432,6 +448,11 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: " También guardé la fecha como recordatorio.",
     en: " I also saved the date as a reminder.",
     pt: " Também salvei a data como lembrete.",
+  },
+  selfNameSaved: {
+    es: "Listo, {{name}}. Lo guardé en mi memoria.",
+    en: "Done, {{name}}. I saved it to my memory.",
+    pt: "Pronto, {{name}}. Salvei na minha memória.",
   },
   factSaved: {
     es: "Listo, lo guardé en mi memoria: «{{text}}».",

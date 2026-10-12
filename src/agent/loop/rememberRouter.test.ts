@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { extractRememberFact, isMemoryQuery, extractDateISO, extractPerson } from "./rememberRouter";
+import { extractRememberFact, extractImplicitFact, isMemoryQuery, extractDateISO, extractPerson, extractPeople, extractSelfName } from "./rememberRouter";
 
 describe("rememberRouter: extracción determinística", () => {
   it("extrae 'recuerda que X'", () => {
@@ -121,6 +121,30 @@ describe("rememberRouter: consultas vs guardados (FIX 2026-10-07)", () => {
     expect(d.getDate()).toBe(15);
   });
 
+  it("0.1.20 (M6): fechas numéricas D/M (ES) y M/D (EN), con y sin año", () => {
+    const dm = extractDateISO("mi cumpleaños es el 05/11", "es");
+    expect(dm).not.toBeNull();
+    expect(new Date(dm!).getMonth()).toBe(10); // noviembre
+    expect(new Date(dm!).getDate()).toBe(5);
+    const md = extractDateISO("my birthday is 11/05", "en");
+    expect(new Date(md!).getMonth()).toBe(10);
+    expect(new Date(md!).getDate()).toBe(5);
+    // Un lado > 12 desambigua solo, en cualquier idioma.
+    const forced = extractDateISO("aniversario el 25/03", "en");
+    expect(new Date(forced!).getMonth()).toBe(2);
+    expect(new Date(forced!).getDate()).toBe(25);
+    // Con año futuro explícito: esa fecha.
+    const future = extractDateISO("la boda es el 11/05/2027", "es");
+    expect(new Date(future!).getFullYear()).toBe(2027);
+    expect(new Date(future!).getMonth()).toBe(4);
+    // Con año pasado: sin recordatorio.
+    expect(extractDateISO("nos casamos el 11/05/2020", "es")).toBeNull();
+    // Un decimal no es una fecha.
+    expect(extractDateISO("el coche cuesta 3.5 mil", "es")).toBeNull();
+    // Fecha imposible.
+    expect(extractDateISO("el 31/02", "es")).toBeNull();
+  });
+
   it("extractDateISO retorna null sin fecha", () => {
     expect(extractDateISO("me gustan las orquídeas")).toBeNull();
   });
@@ -144,6 +168,125 @@ describe("rememberRouter: extracción de personas (PEOPLE-FIX 2026-10-07)", () =
   it("retorna null sin patrón de persona", () => {
     expect(extractPerson("hola, ¿cómo estás?")).toBeNull();
     expect(extractPerson("recuerda que debo comprar leche")).toBeNull();
+  });
+});
+
+describe("0.1.20 — personas como se escribe de verdad (evidencia Tab A9+)", () => {
+  it("extrae 'Mi mama se llama Marta' SIN acento (la frase exacta de la tablet)", () => {
+    const r = extractPerson("Mi mama se llama Marta");
+    expect(r).not.toBeNull();
+    expect(r!.name).toBe("Marta");
+    expect(r!.relationship).toBe("mamá");
+  });
+
+  it("acepta parentescos sin acento y nombre en minúscula", () => {
+    expect(extractPerson("mi papa se llama jose")?.name).toBe("Jose");
+    expect(extractPerson("mi papa se llama jose")?.relationship).toBe("papá");
+    expect(extractPerson("mi tio se llama raul")?.relationship).toBe("tío");
+    expect(extractPerson("mi hermana se llama ana maría")?.name).toBe("Ana María");
+    expect(extractPerson("recuerda que mi hermano juan cumple años en mayo")?.name).toBe("Juan");
+  });
+
+  it("no captura palabras que no son nombre", () => {
+    expect(extractPerson("mi mamá se llama como su abuela")).toBeNull();
+    expect(extractPerson("mi mamá se llama bien")).toBeNull();
+  });
+
+  it("una pregunta sobre la persona no crea la ficha", () => {
+    expect(extractPerson("¿cómo se llama mi mamá?")).toBeNull();
+    expect(extractPerson("¿mi mamá se llama Marta?")).toBeNull();
+  });
+
+  it("inglés con nombre en minúscula", () => {
+    expect(extractPerson("my mom is called mary")?.name).toBe("Mary");
+  });
+
+  it("portugués: 'minha mae se chama Maria' sin acentos", () => {
+    const r = extractPerson("minha mae se chama maria");
+    expect(r).not.toBeNull();
+    expect(r!.name).toBe("Maria");
+    expect(r!.relationship).toBe("mãe");
+    expect(extractPerson("meu irmão se chama João")?.name).toBe("João");
+  });
+});
+
+describe("0.1.20 — M4/M5/M3: anclaje, parentescos, plural, «guarda que»", () => {
+  it("M4: la cadena posesiva no roba la relación", () => {
+    expect(extractPerson("la esposa de mi hermano se llama Laura")).toBeNull();
+  });
+
+  it("M4: «recuerda que mi mamá se llama Marta» sí guarda (y no captura «se»)", () => {
+    const r = extractPerson("recuerda que mi mamá se llama Marta");
+    expect(r?.name).toBe("Marta");
+    expect(r?.relationship).toBe("mamá");
+  });
+
+  it("M5: parentescos que faltaban", () => {
+    expect(extractPerson("mi cuñado se llama Pedro")?.relationship).toBe("cuñado");
+    expect(extractPerson("mi cunada se llama Lucia")?.relationship).toBe("cuñada");
+    expect(extractPerson("mi suegra se llama Carmen")?.relationship).toBe("suegra");
+    expect(extractPerson("mi nieto se llama Leo")?.relationship).toBe("nieto");
+    expect(extractPerson("mi mejor amigo se llama Diego")?.relationship).toBe("mejor amigo");
+  });
+
+  it("M5: plural «mis hijos se llaman Leo y Max» crea dos fichas", () => {
+    const people = extractPeople("mis hijos se llaman Leo y Max");
+    expect(people.map((p) => p.name)).toEqual(["Leo", "Max"]);
+    expect(people[0].relationship).toBe("hijo");
+  });
+
+  it("M3: «guarda que X» guarda el hecho", () => {
+    expect(extractRememberFact("guarda que mi coche es un Toyota")?.content).toBe("mi coche es un Toyota");
+    expect(extractRememberFact("guardate que vivo en Tucson")?.content).toBe("vivo en Tucson");
+  });
+});
+
+describe("0.1.20 — M2: hechos implícitos acotados", () => {
+  it("guarda las afirmaciones de la sonda", () => {
+    expect(extractImplicitFact("mi cumpleaños es el 3 de mayo")?.category).toBe("event");
+    expect(extractImplicitFact("mi coche es un Toyota")?.content).toBe("mi coche es un Toyota");
+    expect(extractImplicitFact("vivo en Tucson")?.content).toBe("vivo en Tucson");
+    expect(extractImplicitFact("mi color favorito es el azul")?.category).toBe("preference");
+    expect(extractImplicitFact("el cumpleaños de mi mamá es el 15 de marzo")?.category).toBe("event");
+    expect(extractImplicitFact("trabajo de noche")?.content).toBe("trabajo de noche");
+    expect(extractImplicitFact("my car is a Toyota")?.content).toBe("my car is a Toyota");
+    expect(extractImplicitFact("meu carro é um Toyota")?.content).toBe("meu carro é um Toyota");
+  });
+
+  it("fail-closed: sensibles, preguntas y charla no se guardan", () => {
+    expect(extractImplicitFact("mi número de cuenta es 4521")).toBeNull();
+    expect(extractImplicitFact("mi teléfono es 5551234567")).toBeNull();
+    expect(extractImplicitFact("¿mi coche es un Toyota?")).toBeNull();
+    expect(extractImplicitFact("el coche es un Toyota")).toBeNull();
+    expect(extractImplicitFact("mi perro es muy bonito y juega mucho en el parque")).toBeNull();
+    expect(extractImplicitFact("qué bonito día hace hoy")).toBeNull();
+  });
+});
+
+describe("0.1.20 — presentación del propio usuario (evidencia Tab A9+)", () => {
+  it("extrae 'Yo me llamo Ruben'", () => {
+    expect(extractSelfName("Yo me llamo Ruben")).toBe("Ruben");
+    expect(extractSelfName("yo me llamo ruben")).toBe("Ruben");
+    expect(extractSelfName("me llamo Ruben")).toBe("Ruben");
+    expect(extractSelfName("mi nombre es Ruben")).toBe("Ruben");
+  });
+
+  it("tolera el autocorrector: 'You me llamo Ruben' y saludos", () => {
+    expect(extractSelfName("You me llamo Ruben")).toBe("Ruben");
+    expect(extractSelfName("hola, me llamo Ruben")).toBe("Ruben");
+  });
+
+  it("inglés y portugués", () => {
+    expect(extractSelfName("my name is Ruben")).toBe("Ruben");
+    expect(extractSelfName("meu nome é Ruben")).toBe("Ruben");
+    expect(extractSelfName("eu me chamo Ruben")).toBe("Ruben");
+  });
+
+  it("no confunde frases que mencionan un nombre de paso", () => {
+    expect(extractSelfName("me llamo la atención ese anuncio")).toBeNull();
+    expect(extractSelfName("¿cómo me llamo?")).toBeNull();
+    expect(extractSelfName("mi mamá se llama Marta")).toBeNull();
+    expect(extractSelfName("hola")).toBeNull();
   });
 });
 
