@@ -4,6 +4,32 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.18-alpha — 2026-10-12
+
+Offensive audit: trying to break the app.
+
+### Fixed
+- Reminders at the wrong time: "at 7 in the morning" (es/pt: "de la
+  mañana", "da manhã") rang TOMORROW at 19:00; "9 at night" rang at 9:00,
+  "2 in the early morning" at 14:00. "In half an hour", "at noon" and "at
+  midnight" now work. 29 February no longer becomes 1 March; a date with a
+  past year is not moved to next year.
+- Calculator: "-2^2" is -4 (was 4); "3!" is no longer answered as 3; huge
+  integers are shown as approximate instead of with invented last digits.
+  Now understands "15% of 200", "7 x 8", "12 ÷ 4" and decimal commas.
+- Settings: two changes close together could erase each other (a tool just
+  switched off could come back on), and a write interrupted by the app being
+  killed reset every setting. Changes are now queued and written atomically.
+- Backup key: copying it now marks it as sensitive (hidden from keyboard
+  clipboard history on Android 13+) and clears it after a minute; the key
+  shown after creating a backup is in a screenshot-protected dialog.
+- Importing documents: files over 25 MB (text) / 100 MB (PDF) are refused
+  instead of risking a crash; a PDF without text says so instead of creating
+  an empty collection; a failed import no longer leaves hidden data behind.
+  Import errors are in the app language.
+- Text fields have limits (P2P proposals longer than the other NIDO accepts
+  were silently dropped).
+
 ## 0.1.17-alpha — 2026-10-12
 
 ### Fixed

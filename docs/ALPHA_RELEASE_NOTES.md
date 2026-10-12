@@ -1,4 +1,4 @@
-# NIDO v0.1.17-alpha — Release Notes
+# NIDO v0.1.18-alpha — Release Notes
 
 ## What is this?
 
@@ -11,6 +11,15 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Reminders with local notifications
 - Encrypted on-device storage
 - Backup / restore
+
+## What changed in 0.1.18-alpha
+
+> **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
+
+- **Reminders ring at the right time.** "At 7 in the morning" or "at 9 at night" are now understood correctly (they could ring 12 hours off), plus "in half an hour", "at noon" and "at midnight".
+- **Calculator fixes.** "-2^2" is -4, percentages ("15% of 200"), "7 x 8" and decimal commas work, and huge numbers are marked as approximate.
+- **Safer settings and backup key.** Settings can't erase each other or get lost if the app is closed while saving; the backup key is hidden from clipboard history and screenshots.
+- **Safer document import.** Huge files are refused instead of risking a crash, and empty PDFs are reported.
 
 ## What changed in 0.1.17-alpha
 
