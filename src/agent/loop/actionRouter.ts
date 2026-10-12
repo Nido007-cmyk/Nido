@@ -586,8 +586,17 @@ export interface WeeklyPlanAction {
 export function extractWeeklyPlanAction(userText: string): WeeklyPlanAction | null {
   const t = userText.toLowerCase();
   // M7a FIX: word boundary en "week" para no matchear "weekend".
+  // 0.1.20 (P3-14): las formas naturales faltaban — «hazme un plan
+  // semanal» caía al modelo mientras «planifica mi semana» sí entraba.
+  // Las formas nuevas exigen verbo de petición o el mensaje pelado, así
+  // «¿cuánto cuesta el plan semanal?» y «mi plan de datos» no disparan.
+  const bare = t.trim().replace(/[.?!\s]+$/, "");
   const isPlanRequest =
-    /plan\s*(my|la)?\s*week\b|planifica(r)?\s*(mi\s+)?semana|organiza(r)?\s*(mi\s+)?semana|horario\s+semanal/i.test(t);
+    /plan\s*(my|la)?\s*week\b|planifica(r)?\s*(mi\s+|la\s+)?semana|organiza(r)?\s*(mi\s+|la\s+)?semana|horario\s+semanal/i.test(t) ||
+    /(?:haz(?:me)?|quiero|necesito|dame|cr[eé]a(?:me)?|arma(?:me)?|prep[aá]ra(?:me)?)\s+(?:un\s+|una\s+)?plan\s+(?:semanal|de\s+(?:la|mi)\s+semana|para\s+(?:la|mi)\s+semana)/i.test(t) ||
+    /(?:make(?:\s+me)?|give\s+me|i\s+want|i\s+need|create)\s+(?:a\s+)?(?:weekly\s+plan|plan\s+for\s+(?:my|the)\s+week)/i.test(t) ||
+    /(?:faz|quero|preciso|planej[ae](?:r)?|organiz[ae](?:r)?)\s+(?:um\s+|a\s+)?(?:plano\s+(?:semanal|da\s+(?:minha\s+)?semana)|minha\s+semana)/i.test(t) ||
+    /^(?:plan\s+(?:semanal|de\s+la\s+semana)|weekly\s+plan|plano\s+semanal)$/i.test(bare);
   if (!isPlanRequest) return null;
 
   // Extraer horario de trabajo: "work 9 to 6", "trabajo de 9 a 6"

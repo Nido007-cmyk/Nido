@@ -365,3 +365,28 @@ describe("0.1.20 (P3-11) — verbos de aviso crean recordatorio", () => {
     expect(extractReminderAction("avísame cómo llegar al centro")).toBeNull();
   });
 });
+
+describe("0.1.20 (P3-14) — plan semanal: formas naturales", () => {
+  it("las que faltaban ahora entran", () => {
+    expect(extractWeeklyPlanAction("hazme un plan semanal")).not.toBeNull();
+    expect(extractWeeklyPlanAction("quiero un plan semanal")).not.toBeNull();
+    expect(extractWeeklyPlanAction("plan semanal")).not.toBeNull();
+    expect(extractWeeklyPlanAction("hazme un plan para mi semana")).not.toBeNull();
+    expect(extractWeeklyPlanAction("make me a weekly plan")).not.toBeNull();
+    expect(extractWeeklyPlanAction("weekly plan")).not.toBeNull();
+    expect(extractWeeklyPlanAction("faz um plano semanal")).not.toBeNull();
+    expect(extractWeeklyPlanAction("planeja minha semana")).not.toBeNull();
+    expect(extractWeeklyPlanAction("planifica la semana")).not.toBeNull();
+  });
+
+  it("las que ya funcionaban siguen", () => {
+    expect(extractWeeklyPlanAction("planifica mi semana")).not.toBeNull();
+    expect(extractWeeklyPlanAction("plan my week")).not.toBeNull();
+  });
+
+  it("trampas: preguntas y otros «planes» no generan plan", () => {
+    expect(extractWeeklyPlanAction("¿cuánto cuesta el plan semanal del gimnasio?")).toBeNull();
+    expect(extractWeeklyPlanAction("mi plan de datos es caro")).toBeNull();
+    expect(extractWeeklyPlanAction("qué buen plan para el fin de semana")).toBeNull();
+  });
+});
