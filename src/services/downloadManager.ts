@@ -219,6 +219,37 @@ export async function restartDownload(asset: CatalogModel): Promise<void> {
   await startDownload(asset);
 }
 
+/**
+ * Starts (or joins) a download and resolves only when it is really over:
+ * finished, or failed for good. startDownload() resolves after each ATTEMPT,
+ * so on a transient failure it returns while an automatic retry is still
+ * scheduled — a caller that then uses the file (e.g. loads the model) would
+ * report a failure while the download is in fact still going.
+ * Resolves to the final error message, or null on success.
+ */
+export function downloadUntilSettled(asset: CatalogModel): Promise<string | null> {
+  return new Promise((resolve) => {
+    let unsubscribe: (() => void) | null = null;
+    const settled = () => {
+      if (isDownloading(asset.id)) return false;
+      const s = state.get(asset.id);
+      // `downloading` is set (and listeners notified) a moment before the
+      // attempt is registered as in flight; an automatic retry may be pending.
+      if (s?.downloading || s?.autoRetrying) return false;
+      unsubscribe?.();
+      resolve(s?.error ?? null);
+      return true;
+    };
+    unsubscribe = subscribeDownloads(() => {
+      settled();
+    });
+    startDownload(asset).finally(() => {
+      // The attempt's own state update may already be the final one.
+      settled();
+    });
+  });
+}
+
 /** Starts a download if one isn't already running for this asset; otherwise no-ops. */
 export function startDownload(asset: CatalogModel): Promise<void> {
   // Manual start (user tapped Retry/Download): any pending auto-retry chain

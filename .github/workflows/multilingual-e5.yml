@@ -310,6 +310,14 @@ jobs:
           OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
           SOFTWARE.
           EOF
+          # Never touch a PUBLISHED release: the app's signed catalog pins the
+          # SHA-256 of these files, and a rebuild on another runner without the
+          # embeddings cache could produce different bytes. Only drafts are
+          # (re)uploaded; for a new version, use a new tag.
+          if gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft 2>/dev/null | grep -qx false; then
+            echo "::notice::$RELEASE_TAG is already published; not uploading (reports are on $DIAG_BRANCH)."
+            exit 0
+          fi
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release create "$RELEASE_TAG" --draft --target "$GITHUB_SHA" \
               --title "Knowledge packs v2 (multilingual search)" \

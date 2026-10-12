@@ -59,7 +59,8 @@ export function nativeVectorSearchAvailable(): boolean {
   return nativeVectors() !== null;
 }
 
-const DIMS = 384;
+/** Vector size when a pack doesn't say (every NIDO pack so far: 384). */
+const DEFAULT_DIMS = 384;
 const building = new Map<string, Promise<string | null>>();
 const ready = new Set<string>();
 
@@ -93,7 +94,11 @@ async function removeIndexes(pack: CatalogModel, keep: string | null): Promise<v
  * The pack's index if it's built; otherwise starts building it in the
  * background (once) and returns null so this question uses the fallback.
  */
-export async function packIndexIfReady(pack: CatalogModel, packSizeBytes: number): Promise<string | null> {
+export async function packIndexIfReady(
+  pack: CatalogModel,
+  packSizeBytes: number,
+  dims: number = DEFAULT_DIMS
+): Promise<string | null> {
   const n = nativeVectors();
   if (!n) return null;
   const uri = indexUriFor(pack, packSizeBytes);
@@ -103,12 +108,16 @@ export async function packIndexIfReady(pack: CatalogModel, packSizeBytes: number
     ready.add(uri);
     return uri;
   }
-  void buildPackIndex(pack, packSizeBytes);
+  void buildPackIndex(pack, packSizeBytes, dims);
   return null;
 }
 
 /** Builds (once) the pack's index; resolves to its uri, or null if it failed. */
-export function buildPackIndex(pack: CatalogModel, packSizeBytes: number): Promise<string | null> {
+export function buildPackIndex(
+  pack: CatalogModel,
+  packSizeBytes: number,
+  dims: number = DEFAULT_DIMS
+): Promise<string | null> {
   const n = nativeVectors();
   if (!n) return Promise.resolve(null);
   const uri = indexUriFor(pack, packSizeBytes);
@@ -118,7 +127,7 @@ export function buildPackIndex(pack: CatalogModel, packSizeBytes: number): Promi
     try {
       await removeIndexes(pack, null);
       const packPath = stripScheme(`${FileSystem.documentDirectory}${pack.filename}`);
-      await n.buildIndex(packPath, stripScheme(uri), DIMS);
+      await n.buildIndex(packPath, stripScheme(uri), dims);
       ready.add(uri);
       return uri;
     } catch (e) {

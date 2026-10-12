@@ -30,6 +30,8 @@ interface OpenPack {
   /** Embedding model the pack's vectors were made with (meta.embeddingModelSha256). */
   modelSha256: string;
   sizeBytes: number;
+  /** Vector size declared by the pack (meta.dims), 384 if absent. */
+  dims: number;
 }
 
 const openPacks = new Map<string, OpenPack>();
@@ -113,6 +115,7 @@ async function openPack(pack: CatalogModel): Promise<OpenPack | null> {
     db,
     modelSha256: String(meta.embeddingModelSha256 ?? ""),
     sizeBytes: (info as { size?: number }).size ?? 0,
+    dims: Number(meta.dims) > 0 ? Number(meta.dims) : 384,
   };
   openPacks.set(pack.id, open);
   return open;
@@ -150,7 +153,9 @@ export async function searchPacks(
       const open = await openPack(pack);
       if (!open) continue;
       const { db } = open;
-      const vectorsMatch = open.modelSha256 === modelSha256;
+      // Same model AND same vector size as the question (a pack that
+      // declares another size is never scored against it).
+      const vectorsMatch = open.modelSha256 === modelSha256 && (!queryVec || queryVec.length === open.dims);
       const toChunk = (r: { id: number; title: string; body: string }, score: number, matchType: RetrievedChunk["matchType"]): RetrievedChunk => ({
         chunkId: `pack:${pack.id}:${r.id}`,
         docId: `pack:${pack.id}:${r.title}`,
@@ -176,7 +181,7 @@ export async function searchPacks(
 
       if (fullVectorSearch) {
         const floor = packSemanticFloor(profile, query);
-        const indexUri = await packIndexIfReady(pack, open.sizeBytes);
+        const indexUri = await packIndexIfReady(pack, open.sizeBytes, open.dims);
         if (indexUri) {
           const hits = await searchPackIndex(indexUri, queryVec, floor, limit);
           if (hits && hits.ids.length > 0) {
@@ -231,7 +236,7 @@ export async function prepareVectorIndexes(modelSha256: string | null, profile: 
     for (const pack of await knowledgePacks()) {
       const open = await openPack(pack).catch(() => null);
       if (!open || open.modelSha256 !== modelSha256) continue;
-      await packIndexIfReady(pack, open.sizeBytes);
+      await packIndexIfReady(pack, open.sizeBytes, open.dims);
     }
   } catch (e) {
     console.warn("[packs] prepareVectorIndexes:", e instanceof Error ? e.message : String(e));

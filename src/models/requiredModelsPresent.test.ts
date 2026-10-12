@@ -25,8 +25,9 @@ vi.mock("../privacy/networkAudit", () => ({
 }));
 
 let activeLlm: string | null = null;
+let activeEmbedding: string | null = null;
 vi.mock("./settings", () => ({
-  getActiveModelId: async () => activeLlm,
+  getActiveModelId: async (kind: string) => (kind === "embedding" ? activeEmbedding : activeLlm),
 }));
 
 import { ModelManager } from "./ModelManager";
@@ -50,6 +51,7 @@ const otherLlm = MODEL_CATALOG.find((m) => m.kind === "llm" && m.id !== deviceDe
 describe("requiredModelsPresent — honours the LLM chosen in setup", () => {
   beforeEach(() => {
     activeLlm = null;
+    activeEmbedding = null;
   });
 
   it("is true when the user's chosen (non-default) LLM is installed", async () => {
@@ -74,5 +76,34 @@ describe("requiredModelsPresent — honours the LLM chosen in setup", () => {
     activeLlm = otherLlm.id;
     const mm = managerWithInstalled(new Set([otherLlm.id]));
     expect(await mm.requiredModelsPresent()).toBe(false);
+  });
+});
+
+describe("requiredModelsPresent — honours the search model chosen in setup (es/pt)", () => {
+  const e5 = MODEL_CATALOG.find((m) => m.id === "multilingual-e5-small-q8")!;
+  const bge = MODEL_CATALOG.find((m) => m.kind === "embedding" && m.required)!;
+  const notEmbedding = MODEL_CATALOG.filter((m) => m.required && m.kind !== "llm" && m.kind !== "embedding").map((m) => m.id);
+  beforeEach(() => {
+    activeLlm = null;
+    activeEmbedding = null;
+  });
+
+  it("multilingual install (e5 active, bge never downloaded) does NOT loop back to setup", async () => {
+    activeEmbedding = e5.id;
+    const mm = managerWithInstalled(new Set([...notEmbedding, e5.id, deviceDefault.id]));
+    expect(await mm.requiredModelsPresent()).toBe(true);
+  });
+
+  it("e5 active but its file missing → setup", async () => {
+    activeEmbedding = e5.id;
+    const mm = managerWithInstalled(new Set([...notEmbedding, bge.id, deviceDefault.id]));
+    expect(await mm.requiredModelsPresent()).toBe(false);
+  });
+
+  it("no choice saved → the required bge, as before", async () => {
+    const withBge = managerWithInstalled(new Set([...notEmbedding, bge.id, deviceDefault.id]));
+    expect(await withBge.requiredModelsPresent()).toBe(true);
+    const withoutBge = managerWithInstalled(new Set([...notEmbedding, e5.id, deviceDefault.id]));
+    expect(await withoutBge.requiredModelsPresent()).toBe(false);
   });
 });

@@ -1080,9 +1080,19 @@ export class ModelManager {
   async requiredModelsPresent(): Promise<boolean> {
     const complete = (s: AssetStatus) => s.present && s.sizeOnDiskBytes === s.asset.sizeBytes;
     const others = await Promise.all(
-      REQUIRED_MODELS.filter((m) => m.kind !== "llm").map((a) => this.statusOf(a))
+      REQUIRED_MODELS.filter((m) => m.kind !== "llm" && m.kind !== "embedding").map((a) => this.statusOf(a))
     );
     if (!others.every(complete)) return false;
+    // 0.1.12 (audit): same rule for the search model. New installs in
+    // Spanish/Portuguese download multilingual-e5 INSTEAD of the required
+    // bge (src/ui/SetupWizardScreen.tsx); checking only bge sent them back
+    // to the setup wizard on every launch. The active one is enough; with no
+    // choice saved, the required one.
+    const activeEmbeddingId = await getActiveModelIdSafe("embedding");
+    const embedding =
+      (activeEmbeddingId && MODEL_CATALOG.find((m) => m.id === activeEmbeddingId && m.kind === "embedding")) ||
+      REQUIRED_MODELS.find((m) => m.kind === "embedding");
+    if (embedding && !complete(await this.statusOf(embedding))) return false;
     // SETUP-LOOP-2026-10-10: el asistente deja ELEGIR el modelo (ligero o
     // recomendado) y lo guarda como modelo activo, pero aquí solo se miraba
     // el recomendado para la RAM del aparato. Quien elegía el otro (p. ej.
@@ -1090,7 +1100,7 @@ export class ModelManager {
     // aunque su modelo estuviera instalado. Basta con que esté el modelo
     // ELEGIDO o, si no hay elección guardada, el recomendado.
     const candidates: CatalogModel[] = [];
-    const activeId = await getActiveLlmIdSafe();
+    const activeId = await getActiveModelIdSafe("llm");
     const active = activeId
       ? (this.catalog.find((m) => m.id === activeId && m.kind === "llm") ??
         MODEL_CATALOG.find((m) => m.id === activeId && m.kind === "llm"))
@@ -1109,10 +1119,10 @@ export class ModelManager {
  * Modelo LLM elegido por el usuario (ajustes), o null si no hay o no se
  * puede leer. Import perezoso: los ajustes tocan el sistema de archivos.
  */
-async function getActiveLlmIdSafe(): Promise<string | null> {
+async function getActiveModelIdSafe(kind: "llm" | "embedding"): Promise<string | null> {
   try {
     const { getActiveModelId } = await import("./settings");
-    return await getActiveModelId("llm");
+    return await getActiveModelId(kind);
   } catch {
     return null;
   }

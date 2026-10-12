@@ -152,6 +152,40 @@ describe("switchEmbeddingModel — order and recovery", () => {
     ]);
   });
 
+  it("already the active model → only ensures it's loaded, never drops vectors", async () => {
+    W().active = MULTILINGUAL_EMBEDDING_ID;
+    await m.switchEmbeddingModel(e5());
+    expect(W().log).toEqual([`load:${e5().filename}`]);
+  });
+
+  it("requests run in order and the LAST one wins (on → off quickly)", async () => {
+    const on = m.switchEmbeddingModel(e5());
+    const off = m.switchEmbeddingModel(bge());
+    await Promise.all([on, off]);
+    expect(W().active).toBe(DEFAULT_EMBEDDING_ID);
+    expect(W().log.filter((l) => l.startsWith("setActive"))).toEqual([
+      `setActive:${MULTILINGUAL_EMBEDDING_ID}`,
+      `setActive:${DEFAULT_EMBEDDING_ID}`,
+    ]);
+  });
+
+  it("the same request twice while waiting is joined, not run twice", async () => {
+    const first = m.switchEmbeddingModel(bge()); // no-op (bge active), occupies the queue
+    const a = m.switchEmbeddingModel(e5());
+    const b = m.switchEmbeddingModel(e5());
+    expect(b).toBe(a);
+    await Promise.all([first, a, b]);
+    expect(W().log.filter((l) => l.startsWith("reset"))).toHaveLength(1);
+  });
+
+  it("a failed request doesn't block the next one", async () => {
+    W().failLoad = e5().filename;
+    await expect(m.switchEmbeddingModel(e5())).rejects.toThrow();
+    W().failLoad = null;
+    await m.switchEmbeddingModel(e5());
+    expect(W().active).toBe(MULTILINGUAL_EMBEDDING_ID);
+  });
+
   it("refuses a non-embedding model", async () => {
     await expect(m.switchEmbeddingModel({ ...e5(), kind: "llm" })).rejects.toThrow(/not an embedding model/);
   });
