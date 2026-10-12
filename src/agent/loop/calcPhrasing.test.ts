@@ -100,6 +100,22 @@ describe("calculator 0.1.19 — bare expressions and word operators (routing pro
     ["cuánto son 3 docenas", 36],
     ["cuánto sería la propina del 15% de 230", 34.5],
     ["cuánto es 1,5 por 4", 6],
+    // 0.1.20 (evidencia Tab A9+): paridad EN/PT de las formas con nombre.
+    ["Half of 80", 40],
+    ["half of 80", 40],
+    ["how much is half of 80", 40],
+    ["double 35", 70],
+    ["the double of 35", 70],
+    ["triple of 12", 36],
+    ["square root of 144", 12],
+    ["cube root of 27", 3],
+    ["what is the square root of 144", 12],
+    ["a metade de 80", 40],
+    ["o dobro de 35", 70],
+    ["o triplo de 12", 36],
+    ["raiz quadrada de 144", 12],
+    ["raiz cúbica de 27", 3],
+    ["15 por cento de 200", 30],
   ])("%s", (text, result) => {
     expect(extractCalcAction(text)?.result).toBeCloseTo(result, 10);
   });

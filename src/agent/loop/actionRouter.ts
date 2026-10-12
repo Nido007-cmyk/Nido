@@ -57,17 +57,28 @@ function normalizeCalcText(text: string): string | null {
   // "la propina del 15% de 230": la propina ES ese porcentaje.
   t = t.replace(/^(?:la\s+)?propina\s+(?:de|del)\s+/i, "");
   // "la mitad de 80" / "el doble de 35" / "el triple de 12".
-  const frac = /^(mitad|doble|triple)\s+de\s+(.+)$/i.exec(t);
+  // 0.1.20 (evidencia Tab A9+): las formas con nombre solo existían en
+  // español — «Half of 80» caía al modelo, que respondía el 40 con un
+  // panel de «fuentes» absurdas (la Interestatal 80, Sugar Ray Leonard).
+  // Paridad EN/PT: "half of 80", "double 35", "a metade de 80", "o dobro de 35".
+  const frac =
+    /^(mitad|doble|triple)\s+de\s+(.+)$/i.exec(t) ||
+    /^(half|double|triple)\s+(?:of\s+)?(.+)$/i.exec(t) ||
+    /^(metade|dobro|triplo)\s+de\s+(.+)$/i.exec(t);
   if (frac) {
     const inner = normalizeCalcText(frac[2].trim());
     if (inner === null) return null;
     const f = frac[1].toLowerCase();
-    return f === "mitad" ? `(${inner})/2` : f === "doble" ? `(${inner})*2` : `(${inner})*3`;
+    return f === "mitad" || f === "half" || f === "metade"
+      ? `(${inner})/2`
+      : f === "doble" || f === "double" || f === "dobro"
+        ? `(${inner})*2`
+        : `(${inner})*3`;
   }
   // "15% de 200" / "15% of 200" / "15% do 200" → (15/100)*200
   t = t.replace(/(\d+(?:[.,]\d+)?)\s*%\s*(?:de|del|of|do|da)\s+/gi, "($1/100)*");
   // "15 percent of 200" / "15 por ciento de 200" → (15/100)*200
-  t = t.replace(/(\d+(?:[.,]\d+)?)\s*(?:percent|por\s*ciento|porcento)\s+(?:de|del|of|do|da)\s+/gi, "($1/100)*");
+  t = t.replace(/(\d+(?:[.,]\d+)?)\s*(?:percent|por\s*ciento|por\s*cento)\s+(?:de|del|of|do|da)\s+/gi, "($1/100)*");
   // "3 docenas" → (3*12); "2 elevado a 10" → 2^10
   t = t.replace(/(\d+(?:[.,]\d+)?)\s+(?:docenas?|dozen)\b/gi, "($1*12)");
   t = t.replace(/(\d+(?:[.,]\d+)?)\s+(?:elevado\s+a|raised\s+to)\s+(\d+(?:[.,]\d+)?)/gi, "$1^$2");
@@ -118,10 +129,18 @@ export function extractCalcAction(userText: string): CalcAction | null {
   // 0.1.19: "raíz cuadrada de 144" / "raíz cúbica de 27" — el evaluador
   // tiene sqrt, pero la validación de caracteres no admite letras; se
   // resuelve aquí directamente.
-  const root = /^ra[íi]z\s+(cuadrada|c[úu]bica)\s+de\s+(\d+(?:[.,]\d+)?)$/i.exec(shown);
+  const root = /^ra[íi]z\s+(cuadrada|quadrada|c[úu]bica)\s+de\s+(\d+(?:[.,]\d+)?)$/i.exec(shown);
   if (root) {
     const n = Number(root[2].replace(",", "."));
-    const result = root[1].toLowerCase() === "cuadrada" ? Math.sqrt(n) : Math.cbrt(n);
+    const kind = root[1].toLowerCase();
+    const result = kind === "cuadrada" || kind === "quadrada" ? Math.sqrt(n) : Math.cbrt(n);
+    return /\d,\d/.test(shown) ? { expression: shown, result, decimalComma: true } : { expression: shown, result };
+  }
+  // 0.1.20: "square root of 144" / "cube root of 27" (paridad EN de la raíz).
+  const rootEn = /^(square|cube) root of\s+(\d+(?:[.,]\d+)?)$/i.exec(shown);
+  if (rootEn) {
+    const n = Number(rootEn[2].replace(",", "."));
+    const result = rootEn[1].toLowerCase() === "square" ? Math.sqrt(n) : Math.cbrt(n);
     return /\d,\d/.test(shown) ? { expression: shown, result, decimalComma: true } : { expression: shown, result };
   }
   const expr = normalizeCalcText(shown);
