@@ -7,6 +7,11 @@
 package expo.modules.nidop2p
 
 import android.util.Base64
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.PowerManager
+import android.provider.Settings
 import expo.modules.interfaces.permissions.PermissionsResponseListener
 import expo.modules.interfaces.permissions.PermissionsStatus
 import expo.modules.kotlin.Promise
@@ -104,6 +109,43 @@ class NidoP2PModule : Module() {
       } catch (e: Exception) {
         mapOf("alive" to false, "acceptedCount" to 0, "lastAcceptAt" to 0L)
       }
+    }
+
+    // 0.1.15: Android's battery saver (Samsung especially) freezes NIDO in
+    // the background after a while, even with the foreground service, and
+    // the P2P link drops. These let the app check it and send the user to
+    // the right setting.
+    Function("isIgnoringBatteryOptimizations") {
+      try {
+        val ctx = appContext.reactContext ?: return@Function true
+        val pm = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
+        pm.isIgnoringBatteryOptimizations(ctx.packageName)
+      } catch (e: Exception) {
+        // Unknown: don't nag.
+        true
+      }
+    }
+
+    // System dialog "Let NIDO always run in the background?"; if a device
+    // doesn't offer it, NIDO's app info page (Battery → Unrestricted).
+    Function("openBatterySettings") {
+      val activity = appContext.activityProvider?.currentActivity
+      val ctx: Context = activity ?: appContext.reactContext ?: return@Function false
+      val pkg = ctx.packageName
+      val intents = listOf(
+        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$pkg")),
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$pkg")),
+      )
+      for (intent in intents) {
+        try {
+          if (activity == null) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+          ctx.startActivity(intent)
+          return@Function true
+        } catch (e: Exception) {
+          // try the next one
+        }
+      }
+      false
     }
 
     Function("isBluetoothEnabled") {

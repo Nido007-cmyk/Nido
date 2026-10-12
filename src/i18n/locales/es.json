@@ -727,7 +727,12 @@
     "contactDeleted": "«{{name}}» fue eliminado.",
     "deleteContactFailed": "No se pudo eliminar el contacto.",
     "dialingInstead": "{{name}} no llamó: conectando desde esta tablet…",
-    "pairKeyChanged": "⚠️ La clave de seguridad de «{{name}}» cambió. Si no lo esperabas, NO continúes: alguien podría estar haciéndose pasar por tu contacto. Si sabes que reinstaló NIDO, bórralo de tus contactos y empareja de nuevo comparando la huella en persona. No se guardó nada."
+    "pairKeyChanged": "⚠️ La clave de seguridad de «{{name}}» cambió. Si no lo esperabas, NO continúes: alguien podría estar haciéndose pasar por tu contacto. Si sabes que reinstaló NIDO, bórralo de tus contactos y empareja de nuevo comparando la huella en persona. No se guardó nada.",
+    "batteryHintTitle": "Para que los mensajes lleguen con NIDO cerrado",
+    "batteryHintBody": "Android pone NIDO en reposo al rato de no usarlo para ahorrar batería, y la conexión con tus contactos se corta hasta que lo vuelves a abrir. Permite que NIDO funcione en segundo plano (gasta muy poca batería).",
+    "batteryHintAllow": "Permitir",
+    "batteryHintLater": "Ahora no",
+    "batteryHintManual": "Ve a Ajustes de Android → Aplicaciones → NIDO → Batería → Sin restricciones."
   },
   "notifications": {
     "reminderChannel": "Recordatorios de NIDO",
@@ -1394,7 +1399,7 @@
               "Comprueben juntos la huella de verificación.",
               "En la pestaña $t(nido.tabLink) toca $t(nido.connectButton) en cualquiera de las dos y escribe en $t(nido.tabChats)."
             ],
-            "tip": "Si el otro no está al alcance, el mensaje espera cifrado y se envía solo cuando aparezca."
+            "tip": "Si el otro no está al alcance, el mensaje espera cifrado y se envía solo cuando aparezca. Si se desconecta al rato con NIDO cerrado, toca «Permitir» en el aviso de batería de la pantalla NIDO."
           },
           {
             "id": "outside",

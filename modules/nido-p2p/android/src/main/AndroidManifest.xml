@@ -18,6 +18,10 @@
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
   <!-- WAKE_LOCK para el wake lock parcial que protege el handshake de Doze. -->
   <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <!-- 0.1.15: pedir quedar fuera del ahorro de batería (diálogo del sistema
+       que el usuario acepta o no). Sin esto Android congela NIDO en segundo
+       plano al rato y el enlace P2P se corta. Es un permiso normal. -->
+  <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
   <!-- Respaldo por Wi-Fi local (NidoLanManager): sockets TCP y mDNS/NSD
        SOLO en la red local (la app rechaza IPs que no sean privadas o

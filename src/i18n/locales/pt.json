@@ -727,7 +727,12 @@
     "contactDeleted": "“{{name}}” foi excluído.",
     "deleteContactFailed": "Não foi possível excluir o contato.",
     "dialingInstead": "{{name}} não chamou: conectando a partir deste tablet…",
-    "pairKeyChanged": "⚠️ A chave de segurança de «{{name}}» mudou. Se você não esperava isso, NÃO continue: alguém pode estar se passando pelo seu contato. Se você sabe que ele reinstalou o NIDO, apague-o dos contatos e emparelhe de novo comparando a impressão digital pessoalmente. Nada foi salvo."
+    "pairKeyChanged": "⚠️ A chave de segurança de «{{name}}» mudou. Se você não esperava isso, NÃO continue: alguém pode estar se passando pelo seu contato. Se você sabe que ele reinstalou o NIDO, apague-o dos contatos e emparelhe de novo comparando a impressão digital pessoalmente. Nada foi salvo.",
+    "batteryHintTitle": "Para as mensagens chegarem com o NIDO fechado",
+    "batteryHintBody": "O Android coloca o NIDO em repouso depois de um tempo para economizar bateria, e a conexão com seus contatos cai até você abri-lo de novo. Permita que o NIDO funcione em segundo plano (gasta muito pouca bateria).",
+    "batteryHintAllow": "Permitir",
+    "batteryHintLater": "Agora não",
+    "batteryHintManual": "Vá em Configurações do Android → Apps → NIDO → Bateria → Sem restrições."
   },
   "notifications": {
     "reminderChannel": "Lembretes do NIDO",
@@ -1394,7 +1399,7 @@
               "Confiram juntos a impressão digital de verificação.",
               "Na aba $t(nido.tabLink) toque em $t(nido.connectButton) em qualquer um e escreva em $t(nido.tabChats)."
             ],
-            "tip": "Se o outro NIDO estiver fora de alcance, a mensagem espera criptografada e é enviada quando ele aparecer."
+            "tip": "Se o outro NIDO estiver fora de alcance, a mensagem espera criptografada e é enviada quando ele aparecer. Se desconectar depois de um tempo com o NIDO fechado, toque em “Permitir” no aviso de bateria da tela NIDO."
           },
           {
             "id": "outside",
