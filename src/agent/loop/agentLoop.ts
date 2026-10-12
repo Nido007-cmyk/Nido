@@ -126,6 +126,8 @@ export interface AgentLoopOptions {
    * Opcional: sin ella, "lee la nota" no se resuelve por código.
    */
   listNoteTitles?: () => Promise<NoteSummary[]>;
+  /** 0.1.20 (P3-10): notas con cuerpo para buscar dentro de ellas. */
+  listNotesFull?: () => Promise<Array<{ id: string; title: string; body: string }>>;
   /** 0.1.14: recordatorios pendientes para "qué recordatorios tengo". */
   listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null }>>;
   /**
@@ -637,6 +639,7 @@ export async function runAgentLoop(
         }),
       isDisabled: isToolDisabled,
       listNotes: options.listNoteTitles,
+      listNotesFull: options.listNotesFull,
       listReminders: options.listReminders,
     });
     return { response: outcome.response, intent, toolUses: outcome.toolUses, deterministic: true };

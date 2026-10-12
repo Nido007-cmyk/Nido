@@ -667,3 +667,32 @@ describe("0.1.20 (P3-9) — runToolAction: borrados", () => {
     expect(out.response).toContain("desactivada");
   });
 });
+
+describe("0.1.20 (P3-10) — buscar en notas", () => {
+  it("extractToolAction en los tres idiomas y en las dos órdenes", () => {
+    expect(extractToolAction("busca en mis notas la receta")).toMatchObject({ kind: "noteSearch", query: "receta", lang: "es" });
+    expect(extractToolAction("busca la receta en mis notas")).toMatchObject({ kind: "noteSearch", query: "receta" });
+    expect(extractToolAction("search my notes for the recipe")).toMatchObject({ kind: "noteSearch", query: "recipe", lang: "en" });
+    expect(extractToolAction("find wifi password in my notes")).toMatchObject({ kind: "noteSearch", query: "wifi password", lang: "en" });
+    expect(extractToolAction("procura nas minhas notas a receita")).toMatchObject({ kind: "noteSearch", query: "receita", lang: "pt" });
+  });
+
+  it("runToolAction busca en título Y cuerpo (sin acentos también)", async () => {
+    const deps: ToolRouterDeps = {
+      dispatch: async () => ({ status: "executed", text: "ok" }),
+      isDisabled: () => false,
+      listNotesFull: async () => [
+        { id: "n1", title: "Compras", body: "pan, leche y aguacate" },
+        { id: "n2", title: "Receta de la abuela", body: "hornear a 180 grados" },
+      ],
+      now: () => NOW,
+    };
+    const hit = await runToolAction({ kind: "noteSearch", query: "aguacate", lang: "es" }, deps);
+    expect(hit.response).toContain("Compras");
+    expect(hit.response).toContain("aguacate");
+    const termsHit = await runToolAction({ kind: "noteSearch", query: "receta abuela", lang: "es" }, deps);
+    expect(termsHit.response).toContain("Receta de la abuela");
+    const none = await runToolAction({ kind: "noteSearch", query: "contraseña", lang: "es" }, deps);
+    expect(none.response).toBe("No encontré nada en tus notas sobre «contraseña».");
+  });
+});

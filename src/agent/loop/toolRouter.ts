@@ -35,6 +35,7 @@ export type ToolAction =
   | { kind: "noteSave"; title: string; body: string; lang: RouterLang }
   | { kind: "noteList"; lang: RouterLang }
   | { kind: "noteRead"; query: string; lang: RouterLang }
+  | { kind: "noteSearch"; query: string; lang: RouterLang }
   | { kind: "convert"; value: number; from: string; to: string; lang: RouterLang }
   | { kind: "calendarList"; from: string; to: string; label: CalendarRange; lang: RouterLang }
   | { kind: "calendarCreate"; title: string; start: string | null; lang: RouterLang }
@@ -95,6 +96,8 @@ export function toolForAction(a: ToolAction): string {
       return "delete_note";
     case "reminderDelete":
       return "delete_reminder";
+    case "noteSearch":
+      return "list_notes";
   }
 }
 
@@ -435,6 +438,30 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     if (body.length < 2 || /^(?:un recordatorio|a reminder|um lembrete)\b/i.test(body)) return null;
     return { kind: "noteSave", title: noteTitleFrom(body), body, lang };
   }
+  // 0.1.20 (P3-10): buscar DENTRO de las notas. Listar y abrir ya
+  // existían; «busca en mis notas la receta» caía al modelo, que no
+  // puede buscar en una base que no ve.
+  const NOTE_SEARCH_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
+    { re: /^busca(?:r)?\s+(.+?)\s+en\s+(?:mis\s+|tus\s+)?notas$/i, lang: "es" },
+    { re: /^busca(?:r)?\s+(?:en\s+)?(?:mis\s+|las\s+)?notas?\s+(?:sobre\s+|de\s+|la\s+|el\s+)?(.+)$/i, lang: "es" },
+    { re: /^encuentra\s+(?:en\s+)?(?:mis\s+)?notas?\s+(?:sobre\s+|de\s+)?(.+)$/i, lang: "es" },
+    { re: /^search\s+(.+?)\s+in\s+(?:my\s+)?notes$/i, lang: "en" },
+    { re: /^search\s+(?:my\s+)?notes?\s+(?:for\s+|about\s+)?(.+)$/i, lang: "en" },
+    { re: /^find\s+(.+?)\s+in\s+(?:my\s+)?notes$/i, lang: "en" },
+    { re: /^find\s+(?:in\s+)?(?:my\s+)?notes?\s+(?:about\s+|for\s+)?(.+)$/i, lang: "en" },
+    { re: /^procur(?:a|e|ar)\s+(.+?)\s+nas\s+(?:minhas\s+)?notas$/i, lang: "pt" },
+    { re: /^procur(?:a|e|ar)\s+(?:nas\s+)?(?:minhas\s+)?notas?\s+(?:sobre\s+|por\s+)?(.+)$/i, lang: "pt" },
+    { re: /^busc(?:a|e|ar)\s+(?:nas\s+)?(?:minhas\s+)?notas?\s+(?:sobre\s+)?(.+)$/i, lang: "pt" },
+  ];
+  for (const { re, lang } of NOTE_SEARCH_RULES) {
+    const m = re.exec(t);
+    if (m && m[1].trim().length >= 2) {
+      // «busca la receta en mis notas»: el artículo inicial no es
+      // parte de lo buscado.
+      const q = m[1].trim().replace(/^(?:la|el|los|las|the|a|o|um|uma)\s+/i, "");
+      if (q.length >= 2) return { kind: "noteSearch", query: q, lang };
+    }
+  }
   // 0.1.20 (P3-9): borrados (tras guardar/leer notas, antes de convertir).
   const deleteAction = extractDeleteAction(t);
   if (deleteAction) return deleteAction;
@@ -548,6 +575,8 @@ type Key =
   | "reminderWhich"
   | "deleteWhichNote"
   | "deleteWhichReminder"
+  | "noteSearchHeader"
+  | "noteSearchNone"
   | "factSaved"
   | "factReminderNote";
 
@@ -611,6 +640,16 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: "¿Cuál recordatorio quieres borrar?",
     en: "Which reminder do you want to delete?",
     pt: "Qual lembrete você quer apagar?",
+  },
+  noteSearchHeader: {
+    es: "Esto encontré en tus notas sobre «{{q}}»:",
+    en: "Here's what I found in your notes about “{{q}}”:",
+    pt: "Isto é o que encontrei nas suas notas sobre “{{q}}”:",
+  },
+  noteSearchNone: {
+    es: "No encontré nada en tus notas sobre «{{q}}».",
+    en: "I didn't find anything in your notes about “{{q}}”.",
+    pt: "Não encontrei nada nas suas notas sobre “{{q}}”.",
   },
   factSaved: {
     es: "Listo, lo guardé en mi memoria: «{{text}}».",
@@ -755,6 +794,8 @@ export interface ToolRouterDeps {
   isDisabled: (tool: string) => boolean;
   /** Notas guardadas (id + título), para resolver "lee la nota X" por título. */
   listNotes?: () => Promise<NoteSummary[]>;
+  /** Notas con cuerpo, para buscar DENTRO de las notas (P3-10). */
+  listNotesFull?: () => Promise<Array<{ id: string; title: string; body: string }>>;
   /** Recordatorios pendientes, para "qué recordatorios tengo" y para
    *  resolver los borrados por texto (0.1.20: con id). */
   listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null }>>;
@@ -1019,6 +1060,32 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
         return deleteSet(items.map((r) => ({ id: r.id, label: r.text })), "delete_reminder", "text",
           (label) => routerMessage("reminderDeleted", lang, { text: label }),
           (n) => routerMessage("remindersDeletedMany", lang, { count: String(n) }));
+      }
+
+      case "noteSearch": {
+        // Sin proveedor con cuerpo, se degrada a buscar en títulos
+        // (honesto: menos alcance, nunca un «no pude» seco).
+        const full = await deps.listNotesFull?.().catch(() => null);
+        const notes = full ?? ((await deps.listNotes?.()) ?? []).map((n) => ({ id: n.id, title: n.title, body: "" }));
+        uses.push({ name: "list_notes", result: `${notes.length} notes searched` });
+        if (notes.length === 0) return say(routerMessage("noNotes", lang));
+        const q = norm(action.query);
+        const terms = q.split(" ").filter((w) => w.length >= 3);
+        const hay = (n: { title: string; body: string }) => `${norm(n.title)} ${norm(n.body)}`;
+        let matches = notes.filter((n) => hay(n).includes(q));
+        if (matches.length === 0 && terms.length > 1) {
+          matches = notes
+            .map((n) => ({ n, score: terms.reduce((acc, w) => acc + (hay(n).includes(w) ? 1 : 0), 0) }))
+            .filter((x) => x.score === terms.length)
+            .map((x) => x.n);
+        }
+        if (matches.length === 0) return say(routerMessage("noteSearchNone", lang, { q: action.query }));
+        const lines = matches.slice(0, 8).map((n) => {
+          const body = n.body.trim();
+          const excerpt = body && norm(body) !== norm(n.title) ? body.slice(0, 160) : "";
+          return `• ${n.title}${excerpt ? `: ${excerpt}` : ""}`;
+        });
+        return say(`${routerMessage("noteSearchHeader", lang, { q: action.query })}\n${lines.join("\n")}`);
       }
 
       case "convert": {

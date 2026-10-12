@@ -870,6 +870,11 @@ export function ChatScreen({
             const { listNotes } = await import("../agent/memory/memoryStore");
             return (await listNotes(50)).map((n) => ({ id: n.id, title: n.title }));
           },
+          // 0.1.20 (P3-10): buscar dentro de las notas necesita el cuerpo.
+          listNotesFull: async () => {
+            const { listNotes } = await import("../agent/memory/memoryStore");
+            return (await listNotes(50)).map((n) => ({ id: n.id, title: n.title, body: n.body }));
+          },
           // 0.1.14: "qué recordatorios tengo".
           listReminders: async () => {
             const { listReminders } = await import("../agent/memory/memoryStore");
