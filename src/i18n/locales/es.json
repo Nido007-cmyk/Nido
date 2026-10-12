@@ -1369,7 +1369,7 @@
             "steps": [
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.knowledgeBase) → «$t(multilingual.title)» → $t(multilingual.turnOn) (descarga un modelo de 126 MB, una sola vez).",
               "Espera «Preparando la búsqueda»: puedes seguir conversando mientras tanto.",
-              "Opcional: descarga «Wikipedia Vital (búsqueda multilingüe)», de unos 164 MB."
+              "Opcional: descarga «Wikipedia Vital (búsqueda multilingüe)», de unos 156 MB."
             ],
             "tip": "Las instalaciones nuevas en español o portugués ya la traen activada."
           },
