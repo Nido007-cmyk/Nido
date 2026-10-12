@@ -62,6 +62,7 @@ import {
 } from "./p2pIdentityRecovery";
 /** BUG-6-2026-10-07: extraer MAC de alias "nombre (MAC)" para deduplicar. */
 import { extractLanAddress, extractMac } from "../p2p/nativeTransport";
+import { describeP2PError } from "../p2p/p2pErrorText";
 
 type Tab = "chats" | "contactos" | "enlace" | "negociaciones" | "packs";
 
@@ -128,6 +129,12 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
+  // Final audit (0.1.17): P2P errors in plain words and in the app language
+  // (they used to show the transport's technical Spanish as is).
+  const p2pErr = (e: unknown): string => {
+    const d = describeP2PError(e);
+    return t(d.key, d.vars ?? {});
+  };
   const mRef = useRef(getSharedNidoMessenger());
   const [tab, setTab] = useState<Tab>("chats");
   const [myCode, setMyCode] = useState("");
@@ -396,7 +403,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       } else {
         // H4-2026-10-06: cualquier otro error → estado visible con reintento,
         // no spinner eterno.
-        setIdentityError(e instanceof Error ? e.message : String(e));
+        setIdentityError(p2pErr(e));
       }
     }
   }, [loadContacts]);
@@ -523,7 +530,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           if (routeIdentityBootstrapError(e) === "p2p-identity-loss") {
             setIdentityKeyLoss(e as P2PIdentityKeyLossError);
           } else {
-            setLinkError(e instanceof Error ? e.message : String(e));
+            setLinkError(p2pErr(e));
           }
         }
       }
@@ -592,7 +599,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       setNotice(res.queued ? t("nido.queuedNotice") : t("nido.sentNotice"));
       await loadConversation(peer.pkHex);
     } catch (e) {
-      setNotice(`${t("nido.errorLabel")}: ${e instanceof Error ? e.message : String(e)}`);
+      setNotice(p2pErr(e));
     } finally {
       setSending(false);
       sendGuardRef.current.release();
@@ -686,7 +693,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
         }
         await loadConversation(peer.pkHex);
       } catch (e) {
-        setNotice(`${t("nido.errorLabel")}: ${e instanceof Error ? e.message : String(e)}`);
+        setNotice(p2pErr(e));
       } finally {
         retryGuardRef.current.release();
       }
@@ -804,7 +811,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       if (code === "NIDO_PAIR_KEY_CHANGED") {
         setPairError(t("nido.pairKeyChanged", { name: (e as { contactName?: string }).contactName ?? "" }));
       } else {
-        setPairError(e instanceof Error ? e.message : String(e));
+        setPairError(p2pErr(e));
       }
     } finally {
       setPairBusy(false);
@@ -822,7 +829,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
         setNearby((prev) => prev.filter((a) => a !== alias));
         await loadContacts();
       } catch (e) {
-        setLinkError(e instanceof Error ? e.message : String(e));
+        setLinkError(p2pErr(e));
       } finally {
         setConnecting(null);
       }
@@ -954,7 +961,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             // BUG-5-2026-10-06: antes no se desconectaba, dejando conexiones basura abiertas.
             await mRef.current.disconnectPeer(info.pkHex).catch(() => {});
           } catch (e) {
-            lastError = e instanceof Error ? e.message : String(e);
+            lastError = p2pErr(e);
             // Seguir con la siguiente MAC.
           }
           return false;
@@ -1124,7 +1131,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       // con la identidad nueva.
       setLinkAttempt((a) => a + 1);
     } catch (e) {
-      setLinkError(e instanceof Error ? e.message : String(e));
+      setLinkError(p2pErr(e));
     } finally {
       setRecoveryBusy(false);
     }
@@ -1558,7 +1565,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
                           setNotice(t("nido.revoked", { name: c.name }));
                         } catch (e) {
                           setNotice(
-                            e instanceof Error ? e.message : t("nido.revokeFailed")
+                            e instanceof Error ? p2pErr(e) : t("nido.revokeFailed")
                           );
                         }
                       }

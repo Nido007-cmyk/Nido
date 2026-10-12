@@ -129,7 +129,9 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
                   // (escribir "nido_db_key" a mano dejaría la DEK en claro y el blob viejo).
                   const { storeDatabaseKeyHex } = await import("../privacy/keyManager");
                   await storeDatabaseKeyHex(dekHex);
-                }
+                },
+                undefined,
+                t("backup.rotateTitle")
               );
               
               if (result.ok) {
@@ -138,7 +140,10 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
                   t("backup.rotatedBody")
                 );
               } else {
-                Alert.alert(t("backup.errorTitle"), result.error ?? t("backup.rotateFailed"));
+                Alert.alert(
+                  t("backup.errorTitle"),
+                  result.code ? t(`backup.rotateErrors.${result.code}`) : result.error ?? t("backup.rotateFailed")
+                );
               }
             } catch (e) {
               Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.rotateFailed"));

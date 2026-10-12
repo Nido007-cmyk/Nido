@@ -154,19 +154,17 @@ export function getDb(): Promise<SecureDbHandle> {
  * handle usable después de que reset avance el ciclo de vida a N+1.
  */
 async function getDbForEpoch(epoch: number): Promise<SecureDbHandle> {
-  // DIAGNOSTIC (2026-10-05): fine-grained stages to find "undefined is not
-  // a function" inside getDb(). TODO: remove once root cause fixed.
+  // Stage of a getDb() failure, for the log only. Until 0.1.16 this
+  // instrumentation (2026-10-05, the "undefined is not a function" hunt, root
+  // cause fixed in secureDatabase.ts) prepended "[seed-stage:…]" to the error
+  // message, which then reached the user on screen. Now the error goes up
+  // untouched and the stage is only written to the log.
   const dstage = async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
     try {
       return await fn();
     } catch (e) {
-      // Preserve original error type (instanceof checks in tests) — only
-      // prepend the stage tag to the message.
-      if (e instanceof Error) {
-        e.message = `[seed-stage:getDb:${name}] ${e.message}`;
-        throw e;
-      }
-      throw new Error(`[seed-stage:getDb:${name}] ${String(e)}`);
+      console.warn(`[db] getDb failed at stage ${name}`);
+      throw e;
     }
   };
   // Barrera de wipe (ver secureDatabase.getWipeGate): ni lecturas, ni

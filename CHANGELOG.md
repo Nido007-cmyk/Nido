@@ -4,6 +4,17 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.17-alpha — 2026-10-12
+
+### Fixed
+- NIDO messages (P2P): connection, pairing and QR errors are explained in
+  plain words and in the app language ("Bluetooth is off", "bring the
+  devices closer…") instead of the transport's technical message.
+- Rotating the encryption key: the fingerprint prompt and the errors are in
+  the app language (they were always in Spanish).
+- Knowledge base: leftover debug instrumentation no longer adds
+  "[seed-stage:…]" to errors shown on screen (it only goes to the log now).
+
 ## 0.1.16-alpha — 2026-10-12
 
 ### Fixed

@@ -626,6 +626,24 @@
     "retry": "Reintentar"
   },
   "nido": {
+    "errors": {
+      "noIdentity": "Primero crea tu identidad NIDO.",
+      "ownQr": "Ese es tu propio código. Escanea el del otro dispositivo.",
+      "qrInvalid": "Ese código QR no es válido o está dañado. Pide al otro dispositivo que lo muestre de nuevo.",
+      "duplicateName": "Ya tienes un contacto llamado «{{name}}». Elige otro nombre.",
+      "noAddress": "No encontré cómo llegar a «{{alias}}» por Bluetooth ni por Wi-Fi local.",
+      "contactSaveFailed": "No se pudo guardar el contacto. Inténtalo de nuevo.",
+      "revoked": "Revocaste a este contacto; ya no puede comunicarse contigo.",
+      "revokeUnsupported": "Esta conexión no permite revocar contactos.",
+      "versionMismatch": "El otro dispositivo tiene una versión de NIDO distinta. Actualiza los dos.",
+      "bluetoothOff": "El Bluetooth está apagado. Actívalo e inténtalo de nuevo.",
+      "noRadio": "No hay Bluetooth ni Wi-Fi local disponibles en este dispositivo.",
+      "permission": "NIDO necesita permiso de Bluetooth / dispositivos cercanos. Concédelo en los ajustes de Android.",
+      "alreadyConnected": "Ya hay una conexión abierta con este contacto.",
+      "busy": "NIDO estaba ocupado. Vuelve a intentarlo en unos segundos.",
+      "connection": "No se pudo conectar con el otro NIDO. Acerca los dispositivos, revisa el Bluetooth o la Wi-Fi y que NIDO esté abierto en los dos.",
+      "generic": "Algo falló con la conexión ({{detail}})."
+    },
     "back": "‹ Atrás",
     "online": "al alcance",
     "offline": "fuera de alcance",
@@ -997,6 +1015,14 @@
     "sectionDesc": "Exporta tu base de datos cifrada. Guárdala junto con tu clave en un lugar seguro.",
     "screenTitle": "Respaldo y recuperación",
     "screenDesc": "Tu base de datos está cifrada. El backup copia el archivo cifrado. Necesitas guardar tu clave por separado — sin ella, el backup no se puede restaurar. Ningún servidor ve tus datos en ningún momento.",
+    "rotateErrors": {
+      "authCancelled": "Autenticación cancelada.",
+      "authFailed": "No se pudo verificar tu identidad.",
+      "noKey": "No hay una clave de cifrado activa en este teléfono.",
+      "noDatabases": "No se encontraron las bases de datos.",
+      "staging": "No se pudo preparar el cambio de clave. No se cambió nada.",
+      "storeFailed": "No se pudo guardar la nueva clave; se dejó la anterior."
+    },
     "errors": {
       "storage": "No se pudo acceder al almacenamiento del teléfono.",
       "dbMissing": "No se encontró la base de datos.",

@@ -37,10 +37,18 @@ import { getDatabaseKeyHex } from "../privacy/keyManager";
 import { requireUnlock } from "./biometricGate";
 import { MANAGED_DB_NAMES, getCurrentDriver } from "./secureDatabase";
 
+export type RekeyErrorCode = "authCancelled" | "authFailed" | "noKey" | "noDatabases" | "staging" | "storeFailed";
+
 export interface RekeyResult {
   ok: boolean;
+  /** Internal message (Spanish; logs and tests). */
   error?: string;
+  /** Final audit (0.1.17): stable code so the screen can say it in the app language. */
+  code?: RekeyErrorCode;
 }
+
+/** Default text of the unlock prompt when the caller doesn't pass a translated one. */
+const DEFAULT_UNLOCK_REASON = "Rotar clave de cifrado";
 
 /**
  * FIX 2026-10-09 (CR2-MULTIDB): rota la DEK de TODAS las bases gestionadas.
@@ -59,25 +67,26 @@ export interface RekeyResult {
 export async function rotateAllDatabaseKeys(
   openDb: (path: string, dekHex: string) => Promise<{ exec: (sql: string) => Promise<void>; close: () => Promise<void> }>,
   storeDek: (dekHex: string) => Promise<void>,
-  stagingPath?: string
+  stagingPath?: string,
+  unlockReason: string = DEFAULT_UNLOCK_REASON
 ): Promise<RekeyResult> {
   // 1. Biométrico obligatorio.
   // FIX 2026-10-09: distinguir cancelación de error real.
   try {
-    await requireUnlock("Rotar clave de cifrado");
+    await requireUnlock(unlockReason);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";
     // El usuario canceló explícitamente vs. fallo del hardware/sistema.
     if (/cancel|cancelled|dismissed|user_cancel/i.test(msg)) {
-      return { ok: false, error: "Autenticación cancelada" };
+      return { ok: false, error: "Autenticación cancelada", code: "authCancelled" };
     }
-    return { ok: false, error: `No se pudo autenticar: ${msg || "error desconocido"}` };
+    return { ok: false, error: `No se pudo autenticar: ${msg || "error desconocido"}`, code: "authFailed" };
   }
 
   // 2. Cargar DEK actual
   const oldDekHex = await getDatabaseKeyHex();
   if (!oldDekHex) {
-    return { ok: false, error: "No hay clave actual (fail-closed)" };
+    return { ok: false, error: "No hay clave actual (fail-closed)", code: "noKey" };
   }
 
   // 3. Derivar rutas canónicas de las DBs existentes (CR2-PATH: no hardcodear)
@@ -91,7 +100,7 @@ export async function rotateAllDatabaseKeys(
     }
   }
   if (dbPaths.length === 0) {
-    return { ok: false, error: "No se encontraron bases de datos" };
+    return { ok: false, error: "No se encontraron bases de datos", code: "noDatabases" };
   }
 
   // 4. Generar nuevo DEK (uno solo para todas las DBs)
@@ -117,7 +126,7 @@ export async function rotateAllDatabaseKeys(
       at: Date.now(),
     }));
   } catch {
-    return { ok: false, error: "No se pudo crear el staging (fail-closed)" };
+    return { ok: false, error: "No se pudo crear el staging (fail-closed)", code: "staging" };
   }
 
   // 6. Rekey de cada DB con el DEK nuevo.
@@ -156,7 +165,7 @@ export async function rotateAllDatabaseKeys(
       try {
         await FS.deleteAsync(staging, { idempotent: true });
       } catch { /* noop */ }
-      return { ok: false, error: "No se pudo guardar la nueva clave; se revirtió el cambio" };
+      return { ok: false, error: "No se pudo guardar la nueva clave; se revirtió el cambio", code: "storeFailed" };
     }
 
     // 8. Éxito: borrar staging
@@ -185,24 +194,25 @@ export async function rotateDatabaseKey(
   dbPath: string,
   openDb: (path: string, dekHex: string) => Promise<{ exec: (sql: string) => Promise<void>; close: () => Promise<void> }>,
   storeDek: (dekHex: string) => Promise<void>,
-  stagingPath?: string
+  stagingPath?: string,
+  unlockReason: string = DEFAULT_UNLOCK_REASON
 ): Promise<RekeyResult> {
   // 1. Biométrico obligatorio.
   // FIX 2026-10-09: distinguir cancelación de error real.
   try {
-    await requireUnlock("Rotar clave de cifrado");
+    await requireUnlock(unlockReason);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";
     if (/cancel|cancelled|dismissed|user_cancel/i.test(msg)) {
-      return { ok: false, error: "Autenticación cancelada" };
+      return { ok: false, error: "Autenticación cancelada", code: "authCancelled" };
     }
-    return { ok: false, error: `No se pudo autenticar: ${msg || "error desconocido"}` };
+    return { ok: false, error: `No se pudo autenticar: ${msg || "error desconocido"}`, code: "authFailed" };
   }
 
   // 2. Cargar DEK actual
   const oldDekHex = await getDatabaseKeyHex();
   if (!oldDekHex) {
-    return { ok: false, error: "No hay clave actual (fail-closed)" };
+    return { ok: false, error: "No hay clave actual (fail-closed)", code: "noKey" };
   }
 
   // 3. Generar nuevo DEK
@@ -224,7 +234,7 @@ export async function rotateDatabaseKey(
       at: Date.now(),
     }));
   } catch {
-    return { ok: false, error: "No se pudo crear el staging (fail-closed)" };
+    return { ok: false, error: "No se pudo crear el staging (fail-closed)", code: "staging" };
   }
 
   let db: { exec: (sql: string) => Promise<void>; close: () => Promise<void> } | null = null;
@@ -246,7 +256,7 @@ export async function rotateDatabaseKey(
       try {
         await FS.deleteAsync(staging, { idempotent: true });
       } catch { /* noop */ }
-      return { ok: false, error: "No se pudo guardar la nueva clave; se revirtió el cambio" };
+      return { ok: false, error: "No se pudo guardar la nueva clave; se revirtió el cambio", code: "storeFailed" };
     }
 
     // 6. Éxito: borrar staging
