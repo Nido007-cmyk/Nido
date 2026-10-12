@@ -354,7 +354,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     // hand-built "Question: ...\n\nAnswer:" prompt shape being outside
     // Qwen2.5-Instruct's own fine-tuned ChatML template — see
     // routing/types.ts's ModelCapabilities.usesChatTemplate doc comment.
-    capabilities: { roles: ["fast"], usesChatTemplate: true },
+    capabilities: { roles: ["fast"], usesChatTemplate: true, sampling: { topP: 0.8, topK: 20 } },
   },
   {
     id: "qwen2.5-0.5b-instruct-q4km",
@@ -387,7 +387,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     defaultNCtx: 4096,
     // Same Qwen2.5 family as the 1.5B default: same ChatML template and
     // stop sequences, so the existing prompt engineering applies unchanged.
-    capabilities: { roles: ["fast"], usesChatTemplate: true },
+    capabilities: { roles: ["fast"], usesChatTemplate: true, sampling: { topP: 0.8, topK: 20 } },
   },
   {
     // P2.1 (2026-10-08): Q5_K_M variant of the 0.5B for the Q4-vs-Q5 A/B.
@@ -413,7 +413,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     arch: { nLayer: 24, nKvHeads: 2, headDim: 64 },
     // Same n_ctx as the Q4 0.5B so the A/B compares quantization only.
     defaultNCtx: 4096,
-    capabilities: { roles: ["fast"], usesChatTemplate: true },
+    capabilities: { roles: ["fast"], usesChatTemplate: true, sampling: { topP: 0.8, topK: 20 } },
   },
   {
     // 2026-10-12: Qwen3-0.6B, added at the owner's request. The successor
@@ -453,7 +453,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     // config.json): 28 layers, GQA with 8 KV heads, head dim 128.
     arch: { nLayer: 28, nKvHeads: 8, headDim: 128 },
     defaultNCtx: 3072,
-    capabilities: { roles: [], usesChatTemplate: true, noThink: true },
+    capabilities: { roles: [], usesChatTemplate: true, noThink: true, sampling: { topP: 0.8, topK: 20 } },
   },
   {
     id: "qwen2.5-7b-instruct-q4km",
@@ -477,7 +477,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     arch: { nLayer: 28, nKvHeads: 4, headDim: 128 },
     // Same ChatML family as the 1.5B/0.5B: with routing roles assigned,
     // the adaptive executor must use its real chat template too.
-    capabilities: { roles: ["reasoning", "verifier"], usesChatTemplate: true },
+    capabilities: { roles: ["reasoning", "verifier"], usesChatTemplate: true, sampling: { topP: 0.8, topK: 20 } },
   },
   // Tested on a real phone (docs/DEVICE_EVALUATION.md) and offered as suggestions so users
   // don't have to search for them. No routing roles yet: they're used when picked with
@@ -498,6 +498,29 @@ export const MODEL_CATALOG: CatalogModel[] = [
     description:
       "Mixture of experts: 8B total, ~1.5B active per token. Fastest in our benchmark (~15 tok/s) and the best reasoning, but it thinks before answering, so give it a bigger answer budget. ~5.2GB.",
     required: false,
+    // RAM pre-flight profile (verified against LiquidAI/LFM2.5-8B-A1B):
+    // 24 layers but only 6 are attention (GQA 8 KV heads, head dim
+    // 64); the naive layers x KV formula therefore OVERestimates its
+    // KV ~4x (~192 MiB vs ~48 MiB real at 4096) — a deliberate,
+    // documented conservative bound, the safe direction.
+    arch: { nLayer: 24, nKvHeads: 8, headDim: 64 },
+    // Estudio de modelos (2026-10-12): este modelo es razonamiento
+    // puro — cada respuesta abre con <think> y su plantilla no tiene
+    // interruptor (verificado; la eval de BOAR del mismo GGUF midió
+    // ~85% de la salida en razonamiento y 4/17 respuestas ausentes con
+    // presupuestos de 512). Tratamiento: su plantilla propia, la
+    // receta oficial de LiquidAI como capa bajo los presets
+    // (temp 0.2, top_k 80, rep 1.05), piso de 2048 tokens en las rutas
+    // de respuesta final, y la cadena se retira del texto asentado
+    // (stripReasoning) para que historial y memoria guarden la
+    // respuesta. Sin roles: sigue siendo selección manual.
+    capabilities: {
+      roles: [],
+      usesChatTemplate: true,
+      stripReasoning: true,
+      minGenerationTokens: 2048,
+      sampling: { temperature: 0.2, topK: 80, repeatPenalty: 1.05 },
+    },
   },
   {
     id: "gemma-4-e4b-it-q4_0",
@@ -522,6 +545,11 @@ export const MODEL_CATALOG: CatalogModel[] = [
     // never sends, so no reasoning handling is needed. Text-only: the
     // catalog ships no mmproj, vision/audio are not supported.
     arch: { nLayer: 42, nKvHeads: 2, headDim: 320 },
+    // Google's published sampling (top_p 0.95 / top_k 64) as the
+    // under-preset layer. Temperature deliberately NOT declared: the
+    // official 1.0 targets open chat; this app's cooler task presets
+    // are a product choice for a factual assistant.
+    capabilities: { roles: [], sampling: { topP: 0.95, topK: 64 } },
   },
   {
     id: "corpus-standard",

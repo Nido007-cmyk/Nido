@@ -242,6 +242,29 @@ describe("P1.2 sampling presets", () => {
     expect(s.repeatPenalty).toBe(1.2);
   });
 
+  // Estudio de modelos (2026-10-12): la capa del fabricante va DEBAJO
+  // del preset — rellena lo que ningún preset define (topK/topP) sin
+  // pisar la política por tarea.
+  it("resolveSampling: los defaults del modelo rellenan topK/topP", () => {
+    const s = resolveSampling({ modelDefaults: { topK: 20, topP: 0.8 } });
+    expect(s.temperature).toBe(0.7);
+    expect(s.topK).toBe(20);
+    expect(s.topP).toBe(0.8);
+  });
+
+  it("resolveSampling: el preset gana a la temperatura del modelo; el topK del modelo sobrevive", () => {
+    const s = resolveSampling({ samplingPreset: "factual", modelDefaults: { temperature: 0.2, topK: 80, repeatPenalty: 1.05 } });
+    expect(s.temperature).toBe(0.3); // factual, no el 0.2 de LiquidAI
+    expect(s.topK).toBe(80);
+    expect(s.repeatPenalty).toBe(1.05); // factual no define rep: rellena el modelo
+  });
+
+  it("resolveSampling: explícito gana al modelo, y el preset de chat gana en repetición", () => {
+    expect(resolveSampling({ topK: 5, modelDefaults: { topK: 80 } }).topK).toBe(5);
+    expect(resolveSampling({ samplingPreset: "chat", modelDefaults: { repeatPenalty: 1.05 } }).repeatPenalty).toBe(1.1);
+    expect(resolveSampling({ modelDefaults: { temperature: 0.2 } }).temperature).toBe(0.2);
+  });
+
   it("SAMPLING_PRESETS table matches the research calibration", () => {
     expect(SAMPLING_PRESETS.structured.temperature).toBeLessThanOrEqual(0.2);
     expect(SAMPLING_PRESETS.factual.temperature).toBeLessThanOrEqual(0.4);
@@ -410,5 +433,69 @@ describe("Qwen3 noThink: enable_thinking en el motor", () => {
     const reply = engine.generate({ messages: MSGS });
     await engine.unload();
     await expect(reply).resolves.toBe("<think>razonamiento interno</think>Respuesta visible.");
+  });
+});
+
+// Estudio de modelos (2026-10-12): la receta del fabricante declarada en
+// el catálogo llega a la llamada nativa vía el modelo cargado, y los
+// modelos de razonamiento (LFM2.5) pierden su cadena en el texto final.
+describe("estudio de modelos: sampling por modelo y stripReasoning", () => {
+  const LFM = "models/hf-liquidai-lfm2-5-8b-a1b-gguf-lfm2-5-8b-a1b-q4-k-m-gguf.gguf";
+  const QWEN15 = "models/qwen2.5-1.5b-instruct-q4km.gguf";
+  const MSGS = [{ role: "user", content: "hola" }];
+
+  it("LFM2.5 sin preset: llega su receta oficial (temp 0.2, top_k 80, rep 1.05)", async () => {
+    const engine = new LlamaEngine();
+    await engine.load(LFM);
+    const reply = engine.generate({ messages: MSGS });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Hi");
+    const params = created[0].lastParams as Record<string, unknown>;
+    expect(params.temperature).toBe(0.2);
+    expect(params.top_k).toBe(80);
+    expect(params.penalty_repeat).toBe(1.05);
+  });
+
+  it("LFM2.5 con preset factual: la temperatura es del preset, el top_k sobrevive", async () => {
+    const engine = new LlamaEngine();
+    await engine.load(LFM);
+    const reply = engine.generate({ messages: MSGS, samplingPreset: "factual" });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Hi");
+    const params = created[0].lastParams as Record<string, unknown>;
+    expect(params.temperature).toBe(0.3);
+    expect(params.top_k).toBe(80);
+  });
+
+  it("LFM2.5: la cadena <think> no llega al texto final (stripReasoning)", async () => {
+    mockReplyText = "<think>cadena de razonamiento muy larga</think>La respuesta final.";
+    const engine = new LlamaEngine();
+    await engine.load(LFM);
+    const reply = engine.generate({ messages: MSGS });
+    await engine.unload();
+    await expect(reply).resolves.toBe("La respuesta final.");
+  });
+
+  it("Qwen2.5-1.5B: su top_p/top_k oficiales rellenan sin preset", async () => {
+    const engine = new LlamaEngine();
+    await engine.load(QWEN15);
+    const reply = engine.generate({ messages: MSGS });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Hi");
+    const params = created[0].lastParams as Record<string, unknown>;
+    expect(params.temperature).toBe(0.7);
+    expect(params.top_k).toBe(20);
+    expect(params.top_p).toBe(0.8);
+  });
+
+  it("un archivo fuera de catálogo no recibe capa de modelo (legacy intacto)", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const reply = engine.generate({ messages: MSGS });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Hi");
+    const params = created[0].lastParams as Record<string, unknown>;
+    expect("top_k" in params).toBe(false);
+    expect("top_p" in params).toBe(false);
   });
 });

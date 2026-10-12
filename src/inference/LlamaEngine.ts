@@ -12,6 +12,7 @@ import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
 import { withStage } from "../utils/stageError";
 import { recordInferenceEvent, type TelemetryStopReason } from "./telemetry";
 import { parseGemmaReasoning } from "./gemmaReasoning";
+import type { ModelSamplingDefaults } from "../routing/types";
 
 export interface ChatMessageInput {
   role: string;
@@ -123,7 +124,14 @@ export const SAMPLING_PRESETS: Record<SamplingPresetName, SamplingPreset> = {
   chat: { temperature: 0.7, minP: 0, repeatPenalty: 1.1 },
 };
 
-/** Resolve preset + explicit overrides into concrete sampling params. Pure — unit tested. */
+/**
+ * Resolve sampling into concrete params. Pure — unit tested.
+ * Precedence, highest first: explicit caller values → per-task preset
+ * → the loaded model's manufacturer defaults (ModelCapabilities.
+ * sampling, estudio de modelos 2026-10-12) → built-in defaults. The
+ * model layer exists because presets never set topK/topP: without it,
+ * every manufacturer's published recipe was silently dropped.
+ */
 export function resolveSampling(opts: {
   temperature?: number;
   topK?: number;
@@ -131,14 +139,16 @@ export function resolveSampling(opts: {
   minP?: number;
   repeatPenalty?: number;
   samplingPreset?: SamplingPresetName;
+  modelDefaults?: ModelSamplingDefaults;
 }): { temperature: number; topK?: number; topP?: number; minP?: number; repeatPenalty?: number } {
   const preset = opts.samplingPreset ? SAMPLING_PRESETS[opts.samplingPreset] : undefined;
+  const model = opts.modelDefaults;
   return {
-    temperature: opts.temperature ?? preset?.temperature ?? 0.7,
-    topK: opts.topK,
-    topP: opts.topP,
+    temperature: opts.temperature ?? preset?.temperature ?? model?.temperature ?? 0.7,
+    topK: opts.topK ?? model?.topK,
+    topP: opts.topP ?? model?.topP,
     minP: opts.minP ?? preset?.minP,
-    repeatPenalty: opts.repeatPenalty ?? preset?.repeatPenalty,
+    repeatPenalty: opts.repeatPenalty ?? preset?.repeatPenalty ?? model?.repeatPenalty,
   };
 }
 
@@ -163,6 +173,10 @@ export interface LoadedModelInfo {
   memoryProfile?: LlmMemoryProfile;
   /** Qwen3 lane: el modelo cargado pide enable_thinking=false (catálogo). */
   noThink?: boolean;
+  /** Estudio de modelos: receta de muestreo del fabricante (catálogo). */
+  sampling?: ModelSamplingDefaults;
+  /** Estudio de modelos: quitar la cadena <think> del texto final. */
+  stripReasoning?: boolean;
 }
 
 /**
@@ -331,6 +345,8 @@ export class LlamaEngine {
         nThreads,
         memoryProfile: loadedProfile,
         noThink: catalogEntry?.capabilities?.noThink,
+        sampling: catalogEntry?.capabilities?.sampling,
+        stripReasoning: catalogEntry?.capabilities?.stripReasoning,
       };
     } catch (e: any) {
       // The native error here (from llama.rn/llama.cpp) is often terse
@@ -444,13 +460,16 @@ export class LlamaEngine {
       try {
         const { text } = await started.completion;
         const raw = text ?? started.getFull();
-        // Qwen3 lane safety net: if the native layer ignored
-        // enable_thinking=false on a noThink model and think blocks
-        // leaked anyway, the final text (what history/memory keep and
-        // callers parse) never carries them raw. Streamed tokens are
-        // NOT retroactively changed — the switch is the real fix, this
-        // only guarantees a clean settled result.
-        return this.modelInfo?.noThink ? parseGemmaReasoning(raw).answer : raw;
+        // Safety net (Qwen3 lane + estudio de modelos): for a noThink
+        // model whose native layer ignored enable_thinking=false, and
+        // for stripReasoning models (LFM2.5) whose chain-of-thought is
+        // wanted for quality but must not be what history/memory keep
+        // or parsers read, the final settled text never carries a raw
+        // <think> block. Streamed tokens are NOT retroactively
+        // changed — this only guarantees a clean settled result.
+        return this.modelInfo?.noThink || this.modelInfo?.stripReasoning
+          ? parseGemmaReasoning(raw).answer
+          : raw;
       } finally {
         this.inFlight.delete(started.completion);
         if (started.timer) clearTimeout(started.timer);
@@ -514,7 +533,15 @@ export class LlamaEngine {
     // P1.1/P1.2: preset fills unset sampling values; explicit values win.
     // Only defined values are added to the params so callers that don't
     // use the new options get exactly the same native call as before.
-    const sampling = resolveSampling({ temperature, topK, topP, minP, repeatPenalty, samplingPreset });
+    const sampling = resolveSampling({
+      temperature,
+      topK,
+      topP,
+      minP,
+      repeatPenalty,
+      samplingPreset,
+      modelDefaults: this.modelInfo?.sampling,
+    });
     const extraParams: Record<string, unknown> = {};
     if (sampling.topK !== undefined) extraParams.top_k = sampling.topK;
     if (sampling.topP !== undefined) extraParams.top_p = sampling.topP;

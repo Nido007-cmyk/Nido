@@ -60,6 +60,12 @@ export interface ExecutableModel {
    * Absent → callers fall back to 4096.
    */
   defaultNCtx?: number;
+  /**
+   * Estudio de modelos (2026-10-12): piso de presupuesto de generación
+   * para la respuesta final (ModelCapabilities.minGenerationTokens) —
+   * un modelo que razona no debe quedarse sin tokens antes de responder.
+   */
+  minGenerationTokens?: number;
 }
 
 export type PromptFormat = "chat-template" | "plain";
@@ -276,6 +282,12 @@ export async function executeRoutingPlan(
             : !!generateModel?.usesChatTemplate;
         promptFormat = useTemplate ? "chat-template" : "plain";
 
+        // Estudio de modelos: el piso del modelo (razonamiento) manda
+        // sobre el default del paso tanto en la reserva de contexto
+        // como en el nPredict real — deben coincidir o el prompt se
+        // presupuesta para 512 y se genera con 2048.
+        const genTokens = Math.max(step.maxTokens ?? 512, generateModel?.minGenerationTokens ?? 0);
+
         // Honest no-result: retrieval ran and returned zero chunks, so the
         // prompt tells the model to say so briefly rather than answering
         // from general knowledge as if local sources backed it. (The UI
@@ -295,10 +307,10 @@ export async function executeRoutingPlan(
                 // of hoping it fits; reserves the step's generation headroom.
                 {
                   nCtx: generateModel?.defaultNCtx ?? 4096,
-                  reserveGeneration: step.maxTokens ?? 512,
+                  reserveGeneration: genTokens,
                 }
               ),
-              nPredict: step.maxTokens ?? 512,
+              nPredict: genTokens,
               onToken: timedOnToken,
               timeoutMs: step.timeoutMs ?? STEP_TIMEOUT_MS,
               onTimeout: markTimedOut,
@@ -311,7 +323,7 @@ export async function executeRoutingPlan(
             })
           : await llamaEngine.generate({
               prompt: assemblePrompt(input.query, citations, input.systemPrompt, input.history, input.styleReminder, noSourcesFoundNote),
-              nPredict: step.maxTokens ?? 512,
+              nPredict: genTokens,
               onToken: timedOnToken,
               timeoutMs: step.timeoutMs ?? STEP_TIMEOUT_MS,
               onTimeout: markTimedOut,

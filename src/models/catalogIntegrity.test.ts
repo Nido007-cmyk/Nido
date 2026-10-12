@@ -251,6 +251,24 @@ describe("correcciones del estudio de modelos: arch y plantillas", () => {
     const gemma = byId("gemma-4-e4b-it-q4_0")!;
     expect(gemma.arch).toEqual({ nLayer: 42, nKvHeads: 2, headDim: 320 });
   });
+  it("LFM2.5: tratamiento completo de modelo de razonamiento, sin roles", () => {
+    const lfm = byId("lfm2.5-8b-a1b-q4km")!;
+    expect(lfm.arch).toEqual({ nLayer: 24, nKvHeads: 8, headDim: 64 });
+    expect(lfm.capabilities?.roles).toEqual([]);
+    expect(lfm.capabilities?.usesChatTemplate).toBe(true);
+    expect(lfm.capabilities?.stripReasoning).toBe(true);
+    expect(lfm.capabilities?.minGenerationTokens).toBe(2048);
+    expect(lfm.capabilities?.sampling).toEqual({ temperature: 0.2, topK: 80, repeatPenalty: 1.05 });
+  });
+  it("las recetas oficiales de muestreo están declaradas (capa bajo los presets)", () => {
+    for (const id of ["qwen2.5-1.5b-instruct-q4km", "qwen2.5-0.5b-instruct-q4km", "qwen2.5-0.5b-instruct-q5km", "qwen2.5-7b-instruct-q4km", "qwen3-0.6b-q4km"]) {
+      expect(byId(id)!.capabilities?.sampling, id).toEqual({ topP: 0.8, topK: 20 });
+    }
+    expect(byId("gemma-4-e4b-it-q4_0")!.capabilities?.sampling).toEqual({ topP: 0.95, topK: 64 });
+    // Phi-3.5: sin receta declarada — su generation_config no quedó
+    // verificada en el estudio; no se inventa.
+    expect(byId("phi-3.5-mini-instruct-q4km")!.capabilities?.sampling).toBeUndefined();
+  });
 });
 
 // Lane Qwen3 (2026-10-12): la entrada de Qwen3-0.6B declara lo que el

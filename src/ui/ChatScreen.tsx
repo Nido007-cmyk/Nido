@@ -1101,26 +1101,30 @@ export function ChatScreen({
           // RAG-GROUNDING 2026-10-11: con fuentes, muestreo factual (0.3)
           // en vez del 0.7 de charla.
           const sampling = c.length > 0 ? { samplingPreset: "factual" as const } : {};
+          const directMessages = useChatTemplate
+            ? assembleChatMessages(query, c, systemPrompt, history, styleReminder, noSources)
+            : undefined;
+          const directPrompt = useChatTemplate
+            ? undefined
+            : assemblePrompt(query, c, systemPrompt, history, styleReminder, noSources);
+          const promptText = useChatTemplate ? directMessages!.map((m) => m.content).join("\n") : directPrompt!;
+          const nCtx = llamaEngine.getModelInfo()?.nCtx ?? 4096;
+          // Estudio de modelos (2026-10-12): piso de generación del
+          // modelo cargado — un modelo que razona (LFM2.5) con el
+          // presupuesto normal puede gastar todos los tokens pensando
+          // y no responder nunca. El piso se recorta a lo que el
+          // contexto admite tras el prompt, y la aserción de abajo
+          // sigue siendo la guarda final.
+          const loadedEntry = MODEL_CATALOG.find((m) => m.filename === llamaEngine.getModelInfo()?.filename);
+          const genFloor = loadedEntry?.capabilities?.minGenerationTokens ?? 0;
+          const genTokens = Math.min(
+            Math.max(maxTokens, genFloor),
+            Math.max(512, nCtx - estimatePromptTokens(promptText) - 64)
+          );
           const genInput = useChatTemplate
-            ? { messages: assembleChatMessages(query, c, systemPrompt, history, styleReminder, noSources), nPredict: maxTokens, onToken, ...sampling }
-            : { prompt: assemblePrompt(query, c, systemPrompt, history, styleReminder, noSources), nPredict: maxTokens, onToken, ...sampling };
-          {
-            const nCtx = llamaEngine.getModelInfo()?.nCtx ?? 4096;
-            let promptText: string;
-            if (useChatTemplate && "messages" in genInput && genInput.messages) {
-              promptText = genInput.messages.map((m: { content: string }) => m.content).join("\n");
-            } else if (!useChatTemplate && "prompt" in genInput && genInput.prompt) {
-              promptText = genInput.prompt;
-            } else {
-              promptText = query;
-            }
-            assertPromptBudget(
-              [{ role: "user", content: promptText }],
-              nCtx,
-              maxTokens,
-              "chat-directo"
-            );
-          }
+            ? { messages: directMessages!, nPredict: genTokens, onToken, ...sampling }
+            : { prompt: directPrompt!, nPredict: genTokens, onToken, ...sampling };
+          assertPromptBudget([{ role: "user", content: promptText }], nCtx, genTokens, "chat-directo");
           await llamaEngine.generate(genInput);
           // 5.1: flush final del buffer de tokens.
           flushTokenBuffer();

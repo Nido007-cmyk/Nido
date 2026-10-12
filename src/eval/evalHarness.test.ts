@@ -227,12 +227,17 @@ describe("runEvaluation", () => {
     expect(withTemplate.timeoutMs).toBe(plain.timeoutMs);
   });
 
-  it("leaves the adaptive config on live-chat formatting (Phi plain), and records it", async () => {
+  // Estudio de modelos (2026-10-12): este test fijaba el formato "plain"
+  // para Phi en la ruta adaptativa — era el bug: Phi tiene roles y su
+  // plantilla propia, así que la ruta adaptativa debía darle
+  // chat-template como la ruta directa. Ahora fija el comportamiento
+  // corregido (regresión: si Phi vuelve a "plain", el test lo caza).
+  it("the adaptive config gives Phi its chat template (post-study fix), and records it", async () => {
     presentIds.add(PHI.id).add(QWEN.id);
     const comparison = EVAL_SET.find((q) => q.id === "comparison-1")!;
     const run = await runEvaluation({ configs: [{ kind: "adaptive", label: "Adaptive" }], queries: [comparison] });
     expect(run.rows[0].modelId).toBe(PHI.id);
-    expect(run.rows[0].promptFormat).toBe("plain");
+    expect(run.rows[0].promptFormat).toBe("chat-template");
   });
 
   it("records every query in the persisted execution telemetry", async () => {

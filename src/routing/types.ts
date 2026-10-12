@@ -102,6 +102,34 @@ export interface ModelCapabilities {
    * identical native params. Only meaningful with usesChatTemplate.
    */
   noThink?: boolean;
+  /**
+   * Manufacturer sampling recipe for this model (its official
+   * generation_config / model card), applied by LlamaEngine as the
+   * layer UNDER the per-task presets: explicit caller values win,
+   * then the task preset, then these defaults. Exists because no task
+   * preset sets topK/topP at all, so without this layer the published
+   * recipes (Qwen top_p 0.8/top_k 20, LiquidAI temp 0.2/top_k 80,
+   * Google top_p 0.95/top_k 64) never reached the native call.
+   */
+  sampling?: ModelSamplingDefaults;
+  /**
+   * Set true for reasoning models whose chain-of-thought must NOT be
+   * disabled (noThink's opposite case): the engine strips the
+   * <think> block from the final settled text so history/memory and
+   * parsers see the answer, while the model keeps reasoning.
+   * (LFM2.5-8B-A1B: every answer opens with <think>, and its template
+   * has no off switch.)
+   */
+  stripReasoning?: boolean;
+  /**
+   * Floor for the generation budget on final-answer paths (executor
+   * generate step, direct chat): reasoning models can spend the whole
+   * default 512 tokens thinking and leave no answer (measured by
+   * BOAR's device eval of LFM2.5: 4 of 17 answers never appeared).
+   * Deliberately-small structured budgets are unaffected — the floor
+   * only applies where a full answer is being produced.
+   */
+  minGenerationTokens?: number;
   /** Rough working-set estimate, same approximation basis as LlamaEngine's own pre-flight RAM check. */
   estimatedMemoryMb?: number;
   /**
@@ -110,4 +138,12 @@ export interface ModelCapabilities {
    * explicit benchmark backing the number, absent otherwise.
    */
   estimatedTokensPerSecond?: number;
+}
+
+/** Manufacturer sampling defaults declared per catalog model. */
+export interface ModelSamplingDefaults {
+  temperature?: number;
+  topK?: number;
+  topP?: number;
+  repeatPenalty?: number;
 }

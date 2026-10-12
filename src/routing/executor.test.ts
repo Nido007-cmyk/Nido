@@ -45,6 +45,12 @@ const MODELS: Record<string, ExecutableModel> = {
     filename: "models/qwen2.5-1.5b-instruct-q4km.gguf",
     usesChatTemplate: true,
   },
+  lfm: {
+    id: "lfm",
+    filename: "models/lfm.gguf",
+    usesChatTemplate: true,
+    minGenerationTokens: 2048,
+  },
 };
 const resolveModel = (id: string) => MODELS[id];
 
@@ -80,6 +86,35 @@ describe("executeRoutingPlan", () => {
     expect(loadMock).toHaveBeenCalledWith("models/qwen2.5-1.5b-instruct-q4km.gguf");
     expect(result.stepsExecuted).toBe(1);
     expect(result.modelSwitches).toBe(0);
+  });
+
+  // Estudio de modelos (2026-10-12): el piso de generación del modelo
+  // manda sobre el default del paso en la respuesta final.
+  it("generate step: el piso del modelo (2048) vence al default 512", async () => {
+    const p = plan({
+      steps: [{ id: "generate-0", type: "generate", modelId: "lfm", required: true }],
+      selectedModelIds: ["lfm"],
+    });
+    await executeRoutingPlan(p, { query: "hi" }, resolveModel);
+    expect(generateMock).toHaveBeenCalledWith(expect.objectContaining({ nPredict: 2048 }));
+  });
+
+  it("generate step: un maxTokens del paso mayor que el piso gana", async () => {
+    const p = plan({
+      steps: [{ id: "generate-0", type: "generate", modelId: "lfm", required: true, maxTokens: 3000 }],
+      selectedModelIds: ["lfm"],
+    });
+    await executeRoutingPlan(p, { query: "hi" }, resolveModel);
+    expect(generateMock).toHaveBeenCalledWith(expect.objectContaining({ nPredict: 3000 }));
+  });
+
+  it("generate step: sin piso, el default del paso queda intacto", async () => {
+    const p = plan({
+      steps: [{ id: "generate-0", type: "generate", modelId: "qwen-1.5b", required: true }],
+      selectedModelIds: ["qwen-1.5b"],
+    });
+    await executeRoutingPlan(p, { query: "hi" }, resolveModel);
+    expect(generateMock).toHaveBeenCalledWith(expect.objectContaining({ nPredict: 512 }));
   });
 
   it("calls retrieve for a retrieve step and threads its chunks into the prompt/citations", async () => {

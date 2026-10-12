@@ -97,7 +97,13 @@ export async function runAdaptiveChat(
       .filter((a) => a.present)
       .map((a) => [
         a.model.id,
-        { id: a.model.id, filename: a.model.filename, usesChatTemplate: a.model.capabilities?.usesChatTemplate, defaultNCtx: a.model.defaultNCtx },
+        {
+          id: a.model.id,
+          filename: a.model.filename,
+          usesChatTemplate: a.model.capabilities?.usesChatTemplate,
+          defaultNCtx: a.model.defaultNCtx,
+          minGenerationTokens: a.model.capabilities?.minGenerationTokens,
+        },
       ])
   );
   const resolveModel = (modelId: string) => modelById.get(modelId);
