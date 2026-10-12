@@ -44,7 +44,7 @@ export type ToolAction =
   | { kind: "nidoTasks"; lang: RouterLang }
   | { kind: "openLink"; url: string; lang: RouterLang }
   | { kind: "pickFile"; analyze: boolean; lang: RouterLang }
-  | { kind: "reminderList"; lang: RouterLang };
+  | { kind: "reminderList"; lang: RouterLang; range?: "today" | "tomorrow" };
 
 export type CalendarRange = "today" | "tomorrow" | "week";
 
@@ -138,9 +138,13 @@ const NOTE_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
 ];
 
 // 0.1.14 (guía de usuario): "qué recordatorios tengo" no tenía camino propio.
+// 0.1.19: el alcance temporal ("…hoy", "…mañana", "…para hoy") rompía el
+// anclaje y la frase caía al modelo (evidencia física en tablet + sonda de
+// routing 2026-10-12). El alcance se separa ANTES de aplicar estas reglas
+// (splitReminderScope) y la lista se filtra por día en el handler.
 const REMINDER_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   {
-    re: /^(?:(?:mu[eé]strame|lista|listar|ver|dame|ens[eé][ñn]ame)\s+)?(?:mis|los|todos los|todos mis)\s+recordatorios(?: pendientes)?$|^(?:qu[eé]|cu[aá]les)\s+recordatorios\s+(?:tengo|hay)(?: pendientes)?$|^cu[aá]les son mis recordatorios$|^recordatorios$/i,
+    re: /^(?:(?:mu[eé]strame|lista|listar|ver|dame|ens[eé][ñn]ame)\s+)?(?:mis|los|todos los|todos mis)\s+recordatorios(?: pendientes)?$|^(?:qu[eé]|cu[aá]les)\s+recordatorios\s+(?:tengo|hay)(?: pendientes)?$|^cu[aá]les son mis recordatorios$|^recordatorios$|^lista de recordatorios$|^tengo alg[uú]n recordatorio$/i,
     lang: "es",
   },
   {
@@ -170,10 +174,18 @@ export function noteTitleFrom(body: string): string {
 
 const NUM = "(-?\\d+(?:[.,]\\d+)?)";
 const UNIT = "((?:grados |degrees |graus )?[a-záéíóúâêôãõçñº°µ]+)";
-const CONVERT_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
-  { re: new RegExp(`^(?:convierte|pasa|cu[aá]nto(?:s|as)? son)?\\s*${NUM}\\s*${UNIT}\\s+(?:a|en)\\s+${UNIT}$`, "i"), lang: "es" },
+// 0.1.19 (sonda de routing): la forma de PREGUNTA no llegaba — "cuántos
+// pies son 2 metros" pone la unidad destino delante (reglas inv) y "cuánto
+// es 70 kg en libras" no estaba entre los prefijos. La forma imperativa
+// ("pasa 5 km a millas") sí funcionaba, así que el éxito en tablet
+// dependía de cómo lo pidiera el usuario (o del modelo).
+const CONVERT_RULES: Array<{ re: RegExp; lang: RouterLang; inv?: boolean }> = [
+  { re: new RegExp(`^(?:convierte|pasa|cu[aá]nto(?:s|as)? son|cu[aá]nto es)?\\s*${NUM}\\s*${UNIT}\\s+(?:a|en)\\s+${UNIT}$`, "i"), lang: "es" },
   { re: new RegExp(`^(?:convert|how much is|what is)?\\s*${NUM}\\s*${UNIT}\\s+(?:to|in|into)\\s+${UNIT}$`, "i"), lang: "en" },
   { re: new RegExp(`^(?:converte|converta|quanto(?:s|as)? s[aã]o)?\\s*${NUM}\\s*${UNIT}\\s+(?:para|em)\\s+${UNIT}$`, "i"), lang: "pt" },
+  { re: new RegExp(`^cu[aá]ntos?\\s+${UNIT}\\s+(?:son|hay(?:\\s+en)?)\\s+${NUM}\\s+${UNIT}$`, "i"), lang: "es", inv: true },
+  { re: new RegExp(`^how many\\s+${UNIT}\\s+(?:are|is)(?:\\s+in)?\\s+${NUM}\\s+${UNIT}$`, "i"), lang: "en", inv: true },
+  { re: new RegExp(`^quantos?\\s+${UNIT}\\s+s[aã]o\\s+${NUM}\\s+${UNIT}$`, "i"), lang: "pt", inv: true },
 ];
 
 function unitWord(raw: string): string {
@@ -265,6 +277,20 @@ const PICK_FILE_RE: Array<{ re: RegExp; lang: RouterLang }> = [
 ];
 
 /**
+ * 0.1.19: separa el alcance temporal FINAL de una consulta de recordatorios
+ * ("qué recordatorios tengo hoy" → texto "qué recordatorios tengo" + rango
+ * "today"). Sin esto, el anclaje `$` de REMINDER_LIST_RULES rechazaba la
+ * frase y caía al modelo 0.5B (que respondía con la base de conocimiento).
+ * El alcance solo se busca al final y solo con hoy/mañana (+ de/para/for).
+ */
+export function splitReminderScope(t: string): { text: string; range: "today" | "tomorrow" | null } {
+  const m = /\s+(?:(?:de|para|for)\s+)?(hoy|ma[ñn]ana|hoje|amanh[ãa]|today|tomorrow)$/i.exec(t);
+  if (!m) return { text: t, range: null };
+  const range = /ma[ñn]ana|amanh|tomorrow/i.test(m[1]) ? "tomorrow" : "today";
+  return { text: t.slice(0, m.index).trim(), range };
+}
+
+/**
  * Detecta una petición explícita para una de las herramientas cubiertas.
  * null si no hay patrón claro (el flujo normal sigue igual).
  */
@@ -275,7 +301,12 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   for (const { re, what, lang } of TIME_RULES) if (re.test(t)) return { kind: "time", what, lang };
 
   for (const { re, lang } of NOTE_LIST_RULES) if (re.test(t)) return { kind: "noteList", lang };
-  for (const { re, lang } of REMINDER_LIST_RULES) if (re.test(t)) return { kind: "reminderList", lang };
+  const reminderQuery = splitReminderScope(t);
+  for (const { re, lang } of REMINDER_LIST_RULES)
+    if (re.test(reminderQuery.text))
+      return reminderQuery.range
+        ? { kind: "reminderList", lang, range: reminderQuery.range }
+        : { kind: "reminderList", lang };
   for (const { re, lang } of NOTE_READ_RULES) {
     const m = re.exec(t);
     if (m && m[1].trim().length >= 2) return { kind: "noteRead", query: m[1].trim(), lang };
@@ -289,12 +320,14 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     return { kind: "noteSave", title: noteTitleFrom(body), body, lang };
   }
 
-  for (const { re, lang } of CONVERT_RULES) {
+  for (const { re, lang, inv } of CONVERT_RULES) {
     const m = re.exec(t);
     if (!m) continue;
-    const value = Number(m[1].replace(",", "."));
-    const from = unitWord(m[2]);
-    const to = unitWord(m[3]);
+    // inv: la pregunta nombra primero la unidad DESTINO ("cuántos pies son
+    // 2 metros" → grupos: destino, valor, origen).
+    const value = Number((inv ? m[2] : m[1]).replace(",", "."));
+    const from = unitWord(inv ? m[3] : m[2]);
+    const to = unitWord(inv ? m[1] : m[3]);
     try {
       convertUnits(value, from, to); // valida unidades y categoría
       return { kind: "convert", value, from, to, lang };
@@ -373,9 +406,14 @@ type Key =
   | "failed"
   | "fileTooLongCut"
   | "noReminders"
+  | "noRemindersToday"
+  | "noRemindersTomorrow"
   | "remindersHeader"
+  | "remindersHeaderToday"
+  | "remindersHeaderTomorrow"
   | "reminderNoDate"
   | "reminderSet"
+  | "reminderOneTimeOnly"
   | "reminderSavedAskWhen"
   | "reminderWillNotify"
   | "reminderSaveFailed"
@@ -443,9 +481,18 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
   failed: { es: "No pude completar la acción: {{reason}}", en: "I couldn't complete the action: {{reason}}", pt: "Não consegui concluir a ação: {{reason}}" },
   fileTooLongCut: { es: "…(recortado)", en: "…(cut)", pt: "…(cortado)" },
   noReminders: { es: "No tienes recordatorios pendientes.", en: "You have no pending reminders.", pt: "Você não tem lembretes pendentes." },
+  noRemindersToday: { es: "No tienes recordatorios para hoy.", en: "You have no reminders for today.", pt: "Você não tem lembretes para hoje." },
+  noRemindersTomorrow: { es: "No tienes recordatorios para mañana.", en: "You have no reminders for tomorrow.", pt: "Você não tem lembretes para amanhã." },
   remindersHeader: { es: "Tus recordatorios pendientes:", en: "Your pending reminders:", pt: "Seus lembretes pendentes:" },
+  remindersHeaderToday: { es: "Tus recordatorios de hoy:", en: "Your reminders for today:", pt: "Seus lembretes de hoje:" },
+  remindersHeaderTomorrow: { es: "Tus recordatorios de mañana:", en: "Your reminders for tomorrow:", pt: "Seus lembretes de amanhã:" },
   reminderNoDate: { es: "sin fecha", en: "no date", pt: "sem data" },
   reminderSet: { es: "Listo, te recordaré{{when}}: «{{text}}».", en: "Done, I'll remind you{{when}}: “{{text}}”.", pt: "Pronto, vou te lembrar{{when}}: “{{text}}”." },
+  reminderOneTimeOnly: {
+    es: " Ojo: lo guardé como un recordatorio de una sola vez; los recordatorios que se repiten todavía no están soportados.",
+    en: " Note: I saved it as a one-time reminder; repeating reminders are not supported yet.",
+    pt: " Atenção: salvei como um lembrete único; lembretes repetidos ainda não são suportados.",
+  },
   reminderSavedAskWhen: {
     es: "Listo, guardé: «{{text}}». ¿Para cuándo quieres que te avise?",
     en: "Done, I saved: “{{text}}”. When should I remind you?",
@@ -658,14 +705,42 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
 
       case "reminderList": {
         if (!deps.listReminders) return say(routerMessage("failed", lang, { reason: "reminders unavailable" }));
-        const items = await deps.listReminders();
+        const all = await deps.listReminders();
+        let items = all;
+        if (action.range) {
+          // 0.1.19: con alcance ("hoy"/"mañana") se filtra por día LOCAL
+          // completo (00:00–24:00): un recordatorio de hoy a las 9 sigue
+          // siendo "de hoy" aunque ya sean las 12. Los sin fecha no cuentan
+          // como de un día concreto y quedan fuera del filtro.
+          const now = deps.now?.() ?? new Date();
+          const start = new Date(now);
+          start.setHours(0, 0, 0, 0);
+          if (action.range === "tomorrow") start.setDate(start.getDate() + 1);
+          const end = new Date(start);
+          end.setDate(end.getDate() + 1);
+          const f = start.getTime();
+          const u = end.getTime();
+          items = all.filter((r) => {
+            if (!r.dueAt) return false;
+            const d = new Date(r.dueAt).getTime();
+            return d >= f && d < u;
+          });
+        }
         uses.push({ name: "list_reminders", result: `${items.length} pending` });
-        if (items.length === 0) return say(routerMessage("noReminders", lang));
+        if (items.length === 0)
+          return say(
+            routerMessage(
+              action.range === "today" ? "noRemindersToday" : action.range === "tomorrow" ? "noRemindersTomorrow" : "noReminders",
+              lang,
+            ),
+          );
         const lines = items.slice(0, 20).map((r) => {
           const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
           return `• ${r.text} (${when})`;
         });
-        return say(`${routerMessage("remindersHeader", lang)}\n${lines.join("\n")}`);
+        const header =
+          action.range === "today" ? "remindersHeaderToday" : action.range === "tomorrow" ? "remindersHeaderTomorrow" : "remindersHeader";
+        return say(`${routerMessage(header, lang)}\n${lines.join("\n")}`);
       }
 
       case "convert": {

@@ -13,6 +13,7 @@ import {
   formatTime,
   noteTitleFrom,
   reminderWhen,
+  routerMessage,
   runToolAction,
   toolForAction,
   type ToolAction,
@@ -91,6 +92,25 @@ describe("extractToolAction — conversiones", () => {
   it("unidades desconocidas o de distinta categoría → no se enruta", () => {
     expect(extractToolAction("10 km a libras", NOW)).toBeNull();
     expect(extractToolAction("5 manzanas a peras", NOW)).toBeNull();
+  });
+
+  // 0.1.19: la forma de pregunta ("cuántos pies son 2 metros") caía al modelo.
+  it.each([
+    ["cuántos pies son 2 metros", 2, "metros", "pies", "es"],
+    ["cuántos pies hay en 2 metros", 2, "metros", "pies", "es"],
+    ["cuánto es 70 kg en libras", 70, "kg", "libras", "es"],
+    ["cuánto es 70 kilos en libras", 70, "kilos", "libras", "es"],
+    ["cuántos gramos hay en 2 kilos", 2, "kilos", "gramos", "es"],
+    ["how many feet are in 2 meters", 2, "meters", "feet", "en"],
+    ["how many feet is 2 meters", 2, "meters", "feet", "en"],
+    ["quantos pés são 2 metros", 2, "metros", "pés", "pt"],
+  ])("pregunta: %p", (text, value, from, to, lang) => {
+    expect(extractToolAction(text as string, NOW)).toEqual({ kind: "convert", value, from, to, lang });
+  });
+
+  it("la moneda no se enruta (sin tipos de cambio en el dispositivo)", () => {
+    expect(extractToolAction("cuántos dólares son 100 pesos", NOW)).toBeNull();
+    expect(extractToolAction("cuánto es 100 pesos en dólares", NOW)).toBeNull();
   });
 });
 
@@ -437,6 +457,76 @@ describe("0.1.14 — qué recordatorios tengo", () => {
       { dispatch: async () => ({ status: "executed", text: "" }), isDisabled: (t) => t === "create_reminder", listReminders: async () => [] }
     );
     expect(out.response).toMatch(/desactivada/);
+  });
+});
+
+describe("0.1.19 — recordatorios con alcance (hoy/mañana)", () => {
+  it.each([
+    ["qué recordatorios tengo hoy", "es", "today"],
+    ["¿Qué recordatorios tengo hoy?", "es", "today"],
+    ["qué recordatorios tengo mañana", "es", "tomorrow"],
+    ["qué recordatorios tengo para hoy", "es", "today"],
+    ["qué recordatorios tengo para mañana", "es", "tomorrow"],
+    ["mis recordatorios de hoy", "es", "today"],
+    ["mis recordatorios de mañana", "es", "tomorrow"],
+    ["tengo algún recordatorio hoy", "es", "today"],
+    ["tengo algún recordatorio", "es", undefined],
+    ["lista de recordatorios", "es", undefined],
+    ["what reminders do I have today", "en", "today"],
+    ["what reminders do I have tomorrow", "en", "tomorrow"],
+    ["do I have any reminders today", "en", "today"],
+    ["quais lembretes tenho hoje", "pt", "today"],
+    ["quais lembretes eu tenho amanhã", "pt", "tomorrow"],
+  ])("%p → reminderList (%s, range=%s)", (text, lang, range) => {
+    const action = extractToolAction(text as string, NOW);
+    expect(action?.kind).toBe("reminderList");
+    expect((action as { lang: string }).lang).toBe(lang);
+    expect((action as { range?: string }).range).toBe(range);
+  });
+
+  it("scoped listing does not steal other routes", () => {
+    // El calendario sigue siendo del calendario, no de recordatorios.
+    expect(extractToolAction("qué tengo hoy", NOW)?.kind).toBe("calendarList");
+    expect(extractToolAction("qué tengo mañana", NOW)?.kind).toBe("calendarList");
+    // Crear con "hoy" no es listar.
+    expect(extractToolAction("recuérdame hoy comprar pan", NOW)).toBeNull();
+  });
+
+  it("filters by local day and speaks of that day", async () => {
+    const todayDue = new Date(2026, 9, 11, 17, 0).toISOString(); // domingo 11 (NOW)
+    const tomorrowDue = new Date(2026, 9, 12, 9, 0).toISOString();
+    const deps = {
+      dispatch: async () => ({ status: "executed" as const, text: "" }),
+      isDisabled: () => false,
+      now: () => NOW,
+      listReminders: async () => [
+        { text: "llamar a mamá", dueAt: todayDue },
+        { text: "comprar pan", dueAt: tomorrowDue },
+        { text: "sin fecha", dueAt: null },
+      ],
+    };
+    const today = await runToolAction({ kind: "reminderList", lang: "es", range: "today" }, deps);
+    expect(today.response).toContain("Tus recordatorios de hoy:");
+    expect(today.response).toContain("llamar a mamá");
+    expect(today.response).not.toContain("comprar pan");
+    expect(today.response).not.toContain("sin fecha");
+    const tomorrow = await runToolAction({ kind: "reminderList", lang: "es", range: "tomorrow" }, deps);
+    expect(tomorrow.response).toContain("Tus recordatorios de mañana:");
+    expect(tomorrow.response).toContain("comprar pan");
+    expect(tomorrow.response).not.toContain("llamar a mamá");
+    const empty = await runToolAction(
+      { kind: "reminderList", lang: "en", range: "tomorrow" },
+      { ...deps, listReminders: async () => [{ text: "hoy", dueAt: todayDue }] },
+    );
+    expect(empty.response).toBe("You have no reminders for tomorrow.");
+  });
+});
+
+describe("0.1.19 — aviso de recordatorio de una sola vez", () => {
+  it("existe en los tres idiomas y dice que no se repite", () => {
+    expect(routerMessage("reminderOneTimeOnly", "es")).toContain("una sola vez");
+    expect(routerMessage("reminderOneTimeOnly", "en")).toContain("one-time");
+    expect(routerMessage("reminderOneTimeOnly", "pt")).toContain("único");
   });
 });
 

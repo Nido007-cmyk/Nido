@@ -685,10 +685,15 @@ export async function runAgentLoop(
     // Hermes/Android y un fallo ahí cierra la app). Ver reminderFormat.ts.
     // 0.1.14: respuesta en el idioma del usuario (antes siempre en español).
     const dateStr = reminderAction.dueAt ? reminderWhen(reminderAction.dueAt, reminderLang) : "";
+    // 0.1.19: si pidió repetición ("cada día…") se avisa de que es una
+    // sola vez — antes se creaba en silencio y el usuario creía que el
+    // aviso se repetiría.
+    const oneTimeNote = reminderAction.recurrenceRequested ? routerMessage("reminderOneTimeOnly", reminderLang) : "";
     return {
-      response: dateStr
-        ? routerMessage("reminderSet", reminderLang, { when: dateStr, text: reminder.text }) + aviso
-        : routerMessage("reminderSavedAskWhen", reminderLang, { text: reminder.text }),
+      response:
+        (dateStr
+          ? routerMessage("reminderSet", reminderLang, { when: dateStr, text: reminder.text }) + aviso
+          : routerMessage("reminderSavedAskWhen", reminderLang, { text: reminder.text })) + oneTimeNote,
       intent,
       toolUses: [
         {
