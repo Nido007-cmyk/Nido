@@ -47,6 +47,9 @@ interface Settings {
   adaptiveRoutingEnabled?: boolean;
   /** Herramientas del agente que el usuario apagó. */
   disabledTools?: string[];
+  /** 0.1.14: guía de usuario (onboarding visto, lecciones abiertas). */
+  guideOnboardingDone?: boolean;
+  guideVisited?: string[];
 }
 
 export interface MemorySettings {
@@ -371,5 +374,33 @@ export async function getDisabledToolNames(): Promise<string[]> {
 export async function setDisabledToolNames(names: string[]): Promise<void> {
   const s = await readSettings();
   s.disabledTools = [...new Set(names)].sort();
+  await writeSettings(s);
+}
+
+// ------------------------------------------------------------ guía (0.1.14)
+
+/** Whether the 3-screen onboarding was already shown (or skipped). */
+export async function getGuideOnboardingDone(): Promise<boolean> {
+  const s = await readSettings();
+  return s.guideOnboardingDone === true;
+}
+
+export async function setGuideOnboardingDone(done = true): Promise<void> {
+  const s = await readSettings();
+  s.guideOnboardingDone = done;
+  await writeSettings(s);
+}
+
+/** Lessons the user opened ("module.lesson"). Losing it is harmless. */
+export async function getGuideVisited(): Promise<string[]> {
+  const s = await readSettings();
+  return Array.isArray(s.guideVisited) ? s.guideVisited.filter((x) => typeof x === "string") : [];
+}
+
+export async function markGuideVisited(id: string): Promise<void> {
+  const s = await readSettings();
+  const list = Array.isArray(s.guideVisited) ? s.guideVisited : [];
+  if (list.includes(id)) return;
+  s.guideVisited = [...list, id].slice(-200);
   await writeSettings(s);
 }

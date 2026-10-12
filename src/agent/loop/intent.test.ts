@@ -104,3 +104,17 @@ describe("classifyIntent — contactos, llamadas, SMS, archivos (es/en/pt)", () 
     expect(classifyIntent(text)).toBe("conversar");
   });
 });
+
+describe("0.1.14 — intenciones en portugués y cuentas", () => {
+  it("cuentas válidas siempre a la calculadora", () => {
+    expect(classifyIntent("what is (100 + 50) * 2")).toBe("actuar");
+    expect(classifyIntent("quanto é 245 * 38")).toBe("actuar");
+    expect(classifyIntent("what is love")).toBe("conversar");
+  });
+  it("me lembra de → acción; lembre que / me lembra que → memoria", () => {
+    expect(classifyIntent("me lembra de comprar leite em 2 horas")).toBe("actuar");
+    expect(classifyIntent("lembre que minha cor favorita é azul")).toBe("recordar");
+    expect(classifyIntent("me lembra que o aniversário da Ana é em maio")).toBe("recordar");
+    expect(classifyIntent("não esqueça que tenho dentista na sexta")).toBe("recordar");
+  });
+});

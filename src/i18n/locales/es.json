@@ -1209,5 +1209,287 @@
   "launch": {
     "shortcutNewChat": "Nuevo chat",
     "shortcutP2P": "Mensajes NIDO"
+  },
+  "guide": {
+    "title": "Aprende a usar NIDO",
+    "subtitle": "Toca un ejemplo y se escribe en el chat, listo para enviar. Nada se envía solo.",
+    "progress": "{{done}} de {{total}} lecciones vistas",
+    "try": "Pruébalo",
+    "steps": "Pasos",
+    "tip": "Consejo",
+    "toolOff": "Esta función está desactivada en $t(chatScreen.drawerItems.about) → $t(agentPermissions.toolsTitle). Actívala ahí para probarla.",
+    "helpSection": "Ayuda",
+    "helpBody": "Una guía corta con ejemplos que puedes tocar para probar cada función.",
+    "helpButton": "Aprende a usar NIDO",
+    "drawer": "Guía",
+    "onboarding": {
+      "skip": "Saltar",
+      "next": "Siguiente",
+      "start": "Empezar",
+      "fullGuide": "Ver la guía completa",
+      "s1Title": "Hola, soy NIDO",
+      "s1Body": "Tu agente privado. Vivo en tu dispositivo, no en la nube: sin cuentas, sin rastreo, y después de instalarme funciono sin internet.",
+      "s2Title": "Pruébame ahora",
+      "s2Body": "Toca un ejemplo: se escribe en el chat y tú decides cuándo enviarlo.",
+      "s2Wait": "La primera respuesta puede tardar unos segundos mientras me preparo.",
+      "s2Examples": [
+        "hola",
+        "cuánto es 245 * 38",
+        "recuérdame tomar agua en 1 hora"
+      ],
+      "s3Title": "Esto es solo el inicio",
+      "s3Body": "Busco en Wikipedia sin internet, leo tus documentos, te recuerdo cosas, hablo con otro NIDO por Bluetooth y protejo tus datos con el chip de seguridad de tu tablet."
+    },
+    "modules": [
+      {
+        "id": "start",
+        "title": "Primeros pasos",
+        "lessons": [
+          {
+            "id": "chat",
+            "title": "Hablar con NIDO",
+            "what": "Conversa como con cualquier persona. Los saludos y la charla corta tienen respuesta al instante.",
+            "examples": [
+              "hola",
+              "gracias",
+              "¿cómo estás?"
+            ],
+            "tip": "Para todo lo demás NIDO usa su modelo de IA, que vive en tu dispositivo: puede tardar unos segundos."
+          },
+          {
+            "id": "quick",
+            "title": "Hora, cálculos y conversiones",
+            "what": "Respuestas exactas: la hora la lee del dispositivo y los cálculos los hace la app, no el modelo de IA.",
+            "examples": [
+              "qué hora es",
+              "cuánto es 245 * 38",
+              "cuánto es (100 + 50) * 2",
+              "convierte 5 metros a pies"
+            ],
+            "tip": "La calculadora entiende +, -, *, /, %, potencias (^), sqrt y pi, hasta 50 caracteres."
+          }
+        ]
+      },
+      {
+        "id": "organize",
+        "title": "Organízate",
+        "lessons": [
+          {
+            "id": "reminders",
+            "title": "Recordatorios",
+            "what": "NIDO te avisa a la hora que digas, aunque la app esté cerrada.",
+            "examples": [
+              "recuérdame llamar a mamá mañana a las 5",
+              "recuérdame comprar leche en 2 horas",
+              "qué recordatorios tengo"
+            ],
+            "tip": "Di cuándo: «mañana», «el viernes», «en 30 minutos». Si no lo dices, NIDO te lo pregunta."
+          },
+          {
+            "id": "notes",
+            "title": "Notas",
+            "what": "Guarda notas rápidas, cifradas en tu dispositivo.",
+            "examples": [
+              "guarda una nota: ideas para el cumpleaños de Ana",
+              "qué notas tengo",
+              "lee la nota del cumpleaños"
+            ],
+            "tip": "Para abrir una nota basta con una palabra de su título."
+          },
+          {
+            "id": "memory",
+            "title": "Memoria",
+            "what": "NIDO recuerda datos sobre ti para darte respuestas más personales.",
+            "examples": [
+              "recuerda que el cumpleaños de mi mamá es el 15 de marzo",
+              "recuerda que mi color favorito es el azul"
+            ],
+            "tip": "«Recuerda que…» guarda un dato. «Recuérdame…» crea un aviso. Ves y borras lo guardado en el menú → $t(chatScreen.drawerItems.memory)."
+          },
+          {
+            "id": "calendar",
+            "title": "Calendario",
+            "what": "Consulta tus eventos y crea nuevos en el calendario del dispositivo.",
+            "examples": [
+              "qué tengo hoy",
+              "qué tengo mañana",
+              "agenda dentista el viernes a las 10"
+            ],
+            "tip": "Antes de crear un evento NIDO te lo muestra y te pide confirmar. Necesita permiso de calendario."
+          },
+          {
+            "id": "contacts",
+            "title": "Contactos y llamadas",
+            "what": "Busca en tus contactos y llama sin buscar el número.",
+            "examples": [
+              "busca el contacto Ana",
+              "llama a Ana"
+            ],
+            "tip": "Antes de llamar NIDO te muestra el número y te pide confirmar. Necesita permiso de contactos."
+          }
+        ]
+      },
+      {
+        "id": "knowledge",
+        "title": "Conocimiento",
+        "lessons": [
+          {
+            "id": "wikipedia",
+            "title": "Preguntar sin internet",
+            "what": "NIDO responde con artículos de Wikipedia guardados en tu dispositivo y te muestra las fuentes.",
+            "examples": [
+              "¿cómo hacen las plantas su comida?",
+              "¿qué es la inflación?"
+            ],
+            "tip": "Pregunta con normalidad; si no encuentra nada, prueba con la palabra clave. Para tener 50.000 artículos descarga «Wikipedia Vital» en $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.knowledgeBase)."
+          },
+          {
+            "id": "documents",
+            "title": "Tus documentos",
+            "what": "Importa tus documentos y pregunta sobre ellos.",
+            "steps": [
+              "Ve a $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.knowledgeBase) → $t(corpusSettingsTab.yourDocuments).",
+              "Importa un PDF, .txt o .md.",
+              "Pregunta sobre su contenido."
+            ],
+            "examples": [
+              "¿qué dice mi documento sobre la renovación?"
+            ],
+            "tip": "Los PDF necesitan texto seleccionable: los escaneados como imagen no se pueden leer."
+          },
+          {
+            "id": "multilingual",
+            "title": "Búsqueda en español y portugués",
+            "what": "Entiende preguntas en español y portugués y encuentra el artículo correcto aunque esté en inglés.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.knowledgeBase) → «$t(multilingual.title)» → $t(multilingual.turnOn) (descarga un modelo de 126 MB, una sola vez).",
+              "Espera «Preparando la búsqueda»: puedes seguir conversando mientras tanto.",
+              "Opcional: descarga «Wikipedia Vital (búsqueda multilingüe)», de unos 164 MB."
+            ],
+            "tip": "Las instalaciones nuevas en español o portugués ya la traen activada."
+          },
+          {
+            "id": "linksFiles",
+            "title": "Enlaces y archivos",
+            "what": "Abre enlaces y analiza archivos de tu dispositivo, como una tabla CSV.",
+            "examples": [
+              "abre https://es.wikipedia.org",
+              "analiza un csv"
+            ],
+            "tip": "NIDO te pide confirmación antes de abrir un enlace, y tú eliges el archivo."
+          }
+        ]
+      },
+      {
+        "id": "connect",
+        "title": "Conectar",
+        "lessons": [
+          {
+            "id": "p2p",
+            "title": "NIDO a NIDO",
+            "what": "Mensajes cifrados directos a otro NIDO por Bluetooth o por el Wi-Fi local, sin internet ni servidores.",
+            "steps": [
+              "Abre el menú → NIDO en las dos tablets.",
+              "En la pestaña $t(nido.tabContacts), muestra tu QR y escanea el del otro (o pégalo como texto).",
+              "Comprueben juntos la huella de verificación.",
+              "En la pestaña $t(nido.tabLink) toca $t(nido.connectButton) en cualquiera de las dos y escribe en $t(nido.tabChats)."
+            ],
+            "tip": "Si el otro no está al alcance, el mensaje espera cifrado y se envía solo cuando aparezca."
+          },
+          {
+            "id": "outside",
+            "title": "NIDO desde cualquier app",
+            "what": "Usa NIDO sin abrirlo primero.",
+            "steps": [
+              "Compartir → NIDO: selecciona texto en cualquier app, toca Compartir y elige NIDO. Se abre un chat nuevo con el texto escrito, sin enviarse.",
+              "Mantén pulsado el icono de NIDO para ver Nuevo chat y Mensajes NIDO.",
+              "Añade el mosaico «Ask NIDO» a tus ajustes rápidos (editar ajustes rápidos)."
+            ]
+          },
+          {
+            "id": "voice",
+            "title": "Voz",
+            "what": "Dicta tus mensajes y, si quieres, escucha las respuestas.",
+            "steps": [
+              "Toca el micrófono en la barra del chat y habla.",
+              "Para escuchar las respuestas: $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.voice) → $t(voiceSettings.readAloudLabel)."
+            ],
+            "tip": "Necesita permiso de micrófono. El dictado depende del reconocimiento de voz de tu dispositivo."
+          }
+        ]
+      },
+      {
+        "id": "privacy",
+        "title": "Tu privacidad",
+        "lessons": [
+          {
+            "id": "offline",
+            "title": "Todo en tu dispositivo",
+            "what": "Tus chats, notas, memoria y documentos se guardan cifrados en tu dispositivo. Después de instalar, NIDO funciona sin internet; solo se conecta cuando tú descargas un modelo o un paquete.",
+            "tip": "En $t(chatScreen.drawerItems.about) puedes ver el registro de conexiones de NIDO."
+          },
+          {
+            "id": "hardware",
+            "title": "Protección por hardware",
+            "what": "Bloquea tus datos con el chip de seguridad de la tablet: solo se abren con tu PIN o tu huella.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.security) → $t(vault.title) → $t(vault.activate)."
+            ],
+            "tip": "Necesita que la tablet tenga PIN, patrón o contraseña. Haz un respaldo antes de activarla."
+          },
+          {
+            "id": "backup",
+            "title": "Respaldo",
+            "what": "Guarda una copia cifrada de tus datos para no perderlos si cambias de tablet.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.recovery) → Backup → $t(backup.createButton).",
+              "Copia y guarda la clave que te muestra: sin ella el respaldo no se puede abrir.",
+              "Comparte el archivo a un lugar seguro."
+            ]
+          },
+          {
+            "id": "erase",
+            "title": "Borrar todo",
+            "what": "Elimina todos tus datos del dispositivo y empieza de cero.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.recovery) → $t(modelSetupScreen.recovery.dangerBadge)."
+            ],
+            "tip": "No se puede deshacer. Si quieres conservar algo, haz antes un respaldo."
+          }
+        ]
+      },
+      {
+        "id": "personalize",
+        "title": "Ajusta NIDO",
+        "lessons": [
+          {
+            "id": "models",
+            "title": "Elegir modelo",
+            "what": "Cambia el modelo de IA según tu dispositivo: los pequeños son rápidos, los grandes razonan mejor y ocupan más memoria.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models)."
+            ],
+            "tip": "Si una respuesta tarda mucho o la app se cierra, prueba un modelo más pequeño."
+          },
+          {
+            "id": "tone",
+            "title": "Tono",
+            "what": "Elige cómo te habla NIDO: más breve, más detallado o con tus propias instrucciones.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.tone)."
+            ]
+          },
+          {
+            "id": "problems",
+            "title": "Si algo falla",
+            "what": "Si NIDO se cierra solo, la próxima vez puedes ver el motivo y copiarlo para reportarlo.",
+            "steps": [
+              "$t(chatScreen.drawerItems.about) → $t(crashReport.title).",
+              "Reporta el problema en GitHub, en Issues del repositorio de NIDO."
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

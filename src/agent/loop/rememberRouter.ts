@@ -54,6 +54,10 @@ const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
   { re: /remember( that)?[:\s]+(.+)/i, group: 2 },
   // Inglés: "don't forget that X"
   { re: /don't forget( that)?[:\s]+(.+)/i, group: 2 },
+  // 0.1.14: portugués — "lembre que X", "me lembra que X", "lembre-se de que X".
+  { re: /lembr[ae](?:-se)?(?: de)? que[:\s]+(.+)/i, group: 1 },
+  // "não esqueça que X" / "não se esqueça de que X"
+  { re: /n[aã]o (?:se )?esque[cç]a(?: de)? que[:\s]+(.+)/i, group: 1 },
 ];
 
 /**

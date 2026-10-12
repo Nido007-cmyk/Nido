@@ -1209,5 +1209,287 @@
   "launch": {
     "shortcutNewChat": "New chat",
     "shortcutP2P": "NIDO messages"
+  },
+  "guide": {
+    "title": "Learn to use NIDO",
+    "subtitle": "Tap an example and it's typed into the chat, ready to send. Nothing is sent on its own.",
+    "progress": "{{done}} of {{total}} lessons seen",
+    "try": "Try it",
+    "steps": "Steps",
+    "tip": "Tip",
+    "toolOff": "This feature is turned off in $t(chatScreen.drawerItems.about) → $t(agentPermissions.toolsTitle). Turn it on there to try it.",
+    "helpSection": "Help",
+    "helpBody": "A short guide with examples you can tap to try each feature.",
+    "helpButton": "Learn to use NIDO",
+    "drawer": "Guide",
+    "onboarding": {
+      "skip": "Skip",
+      "next": "Next",
+      "start": "Start",
+      "fullGuide": "See the full guide",
+      "s1Title": "Hi, I'm NIDO",
+      "s1Body": "Your private agent. I live on your device, not in the cloud: no accounts, no tracking, and once installed I work without internet.",
+      "s2Title": "Try me now",
+      "s2Body": "Tap an example: it's typed into the chat and you decide when to send it.",
+      "s2Wait": "The first answer can take a few seconds while I get ready.",
+      "s2Examples": [
+        "hello",
+        "what is 245 * 38",
+        "remind me to drink water in 1 hour"
+      ],
+      "s3Title": "This is just the start",
+      "s3Body": "I search Wikipedia without internet, read your documents, remind you of things, talk to another NIDO over Bluetooth and protect your data with your tablet's security chip."
+    },
+    "modules": [
+      {
+        "id": "start",
+        "title": "Getting started",
+        "lessons": [
+          {
+            "id": "chat",
+            "title": "Talk to NIDO",
+            "what": "Chat like you would with anyone. Greetings and small talk get an instant answer.",
+            "examples": [
+              "hello",
+              "thanks",
+              "how are you?"
+            ],
+            "tip": "For everything else NIDO uses its AI model, which lives on your device: it can take a few seconds."
+          },
+          {
+            "id": "quick",
+            "title": "Time, math and conversions",
+            "what": "Exact answers: the time comes from your device and the math is done by the app, not the AI model.",
+            "examples": [
+              "what time is it",
+              "what is 245 * 38",
+              "what is (100 + 50) * 2",
+              "convert 5 meters to feet"
+            ],
+            "tip": "The calculator understands +, -, *, /, %, powers (^), sqrt and pi, up to 50 characters."
+          }
+        ]
+      },
+      {
+        "id": "organize",
+        "title": "Get organized",
+        "lessons": [
+          {
+            "id": "reminders",
+            "title": "Reminders",
+            "what": "NIDO notifies you at the time you say, even if the app is closed.",
+            "examples": [
+              "remind me to call mom tomorrow at 5",
+              "remind me to buy milk in 2 hours",
+              "what reminders do I have"
+            ],
+            "tip": "Say when: “tomorrow”, “on Friday”, “in 30 minutes”. If you don't, NIDO asks."
+          },
+          {
+            "id": "notes",
+            "title": "Notes",
+            "what": "Save quick notes, encrypted on your device.",
+            "examples": [
+              "take a note: ideas for Ana's birthday",
+              "what notes do I have",
+              "read the note about birthday"
+            ],
+            "tip": "One word from the title is enough to open a note."
+          },
+          {
+            "id": "memory",
+            "title": "Memory",
+            "what": "NIDO remembers things about you to give more personal answers.",
+            "examples": [
+              "remember that my mom's birthday is March 15",
+              "remember that my favorite color is blue"
+            ],
+            "tip": "“Remember that…” saves a fact. “Remind me…” sets an alert. See and delete what's saved in the menu → $t(chatScreen.drawerItems.memory)."
+          },
+          {
+            "id": "calendar",
+            "title": "Calendar",
+            "what": "Check your events and add new ones to your device's calendar.",
+            "examples": [
+              "what do I have today",
+              "what do I have tomorrow",
+              "schedule dentist on Friday at 10"
+            ],
+            "tip": "Before creating an event NIDO shows it to you and asks you to confirm. Needs calendar permission."
+          },
+          {
+            "id": "contacts",
+            "title": "Contacts and calls",
+            "what": "Search your contacts and call without looking up the number.",
+            "examples": [
+              "find contact Ana",
+              "call Ana"
+            ],
+            "tip": "Before calling NIDO shows you the number and asks you to confirm. Needs contacts permission."
+          }
+        ]
+      },
+      {
+        "id": "knowledge",
+        "title": "Knowledge",
+        "lessons": [
+          {
+            "id": "wikipedia",
+            "title": "Ask without internet",
+            "what": "NIDO answers with Wikipedia articles stored on your device and shows you the sources.",
+            "examples": [
+              "how do plants make their food?",
+              "what is inflation?"
+            ],
+            "tip": "Just ask normally; if nothing comes up, try the keyword. For 50,000 articles download “Wikipedia Vital” in $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.knowledgeBase)."
+          },
+          {
+            "id": "documents",
+            "title": "Your documents",
+            "what": "Import your documents and ask about them.",
+            "steps": [
+              "Go to $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.knowledgeBase) → $t(corpusSettingsTab.yourDocuments).",
+              "Import a PDF, .txt or .md file.",
+              "Ask about its content."
+            ],
+            "examples": [
+              "what does my document say about the renewal?"
+            ],
+            "tip": "PDFs need selectable text: scanned images can't be read."
+          },
+          {
+            "id": "multilingual",
+            "title": "Spanish and Portuguese search",
+            "what": "Understands questions in Spanish and Portuguese and finds the right article even when it's in English.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.knowledgeBase) → “$t(multilingual.title)” → $t(multilingual.turnOn) (downloads a 126 MB model, once).",
+              "Wait for “Preparing search”: you can keep chatting meanwhile.",
+              "Optional: download “Wikipedia Vital (multilingual search)”, about 164 MB."
+            ],
+            "tip": "New installs in Spanish or Portuguese have it on from the start."
+          },
+          {
+            "id": "linksFiles",
+            "title": "Links and files",
+            "what": "Open links and analyze files on your device, like a CSV table.",
+            "examples": [
+              "open https://en.wikipedia.org",
+              "analyze a csv"
+            ],
+            "tip": "NIDO asks you to confirm before opening a link, and you pick the file."
+          }
+        ]
+      },
+      {
+        "id": "connect",
+        "title": "Connect",
+        "lessons": [
+          {
+            "id": "p2p",
+            "title": "NIDO to NIDO",
+            "what": "Encrypted messages straight to another NIDO over Bluetooth or local Wi-Fi, without internet or servers.",
+            "steps": [
+              "Open the menu → NIDO on both tablets.",
+              "In the $t(nido.tabContacts) tab, show your QR and scan the other one (or paste it as text).",
+              "Check the verification fingerprint together.",
+              "In the $t(nido.tabLink) tab tap $t(nido.connectButton) on either tablet and write in $t(nido.tabChats)."
+            ],
+            "tip": "If the other NIDO is out of range, the message waits encrypted and is sent when it shows up."
+          },
+          {
+            "id": "outside",
+            "title": "NIDO from any app",
+            "what": "Use NIDO without opening it first.",
+            "steps": [
+              "Share → NIDO: select text in any app, tap Share and pick NIDO. A new chat opens with the text typed in, not sent.",
+              "Long-press the NIDO icon for New chat and NIDO messages.",
+              "Add the “Ask NIDO” tile to your Quick Settings (edit Quick Settings)."
+            ]
+          },
+          {
+            "id": "voice",
+            "title": "Voice",
+            "what": "Dictate your messages and, if you like, hear the answers.",
+            "steps": [
+              "Tap the microphone in the chat bar and speak.",
+              "To hear answers: $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.voice) → $t(voiceSettings.readAloudLabel)."
+            ],
+            "tip": "Needs microphone permission. Dictation depends on your device's speech recognition."
+          }
+        ]
+      },
+      {
+        "id": "privacy",
+        "title": "Your privacy",
+        "lessons": [
+          {
+            "id": "offline",
+            "title": "Everything on your device",
+            "what": "Your chats, notes, memory and documents are stored encrypted on your device. After install, NIDO works without internet; it only connects when you download a model or a pack.",
+            "tip": "In $t(chatScreen.drawerItems.about) you can see NIDO's network log."
+          },
+          {
+            "id": "hardware",
+            "title": "Hardware protection",
+            "what": "Lock your data with your tablet's security chip: it only opens with your PIN or fingerprint.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.security) → $t(vault.title) → $t(vault.activate)."
+            ],
+            "tip": "Your tablet needs a PIN, pattern or password. Make a backup before turning it on."
+          },
+          {
+            "id": "backup",
+            "title": "Backup",
+            "what": "Keep an encrypted copy of your data so you don't lose it if you change tablets.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.recovery) → Backup → $t(backup.createButton).",
+              "Copy and keep the key it shows you: without it the backup can't be opened.",
+              "Share the file to a safe place."
+            ]
+          },
+          {
+            "id": "erase",
+            "title": "Erase everything",
+            "what": "Delete all your data from the device and start over.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.recovery) → $t(modelSetupScreen.recovery.dangerBadge)."
+            ],
+            "tip": "This can't be undone. If you want to keep something, make a backup first."
+          }
+        ]
+      },
+      {
+        "id": "personalize",
+        "title": "Make NIDO yours",
+        "lessons": [
+          {
+            "id": "models",
+            "title": "Choose a model",
+            "what": "Change the AI model for your device: small ones are fast, big ones reason better and use more memory.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.models)."
+            ],
+            "tip": "If answers take too long or the app closes, try a smaller model."
+          },
+          {
+            "id": "tone",
+            "title": "Tone",
+            "what": "Choose how NIDO talks to you: shorter, more detailed, or with your own instructions.",
+            "steps": [
+              "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.tone)."
+            ]
+          },
+          {
+            "id": "problems",
+            "title": "If something fails",
+            "what": "If NIDO closes on its own, next time you can see why and copy it to report it.",
+            "steps": [
+              "$t(chatScreen.drawerItems.about) → $t(crashReport.title).",
+              "Report the problem on GitHub, in the NIDO repository's Issues."
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

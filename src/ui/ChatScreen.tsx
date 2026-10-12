@@ -38,6 +38,8 @@ import { subscribeDownloads, listDownloadStates } from "../services/downloadMana
 import {
   getActiveModelId,
   getHidePromptIdeas,
+  getGuideOnboardingDone,
+  setGuideOnboardingDone,
   getPersonalityId,
   setPersonalityId,
   getCustomSystemPrompt,
@@ -83,6 +85,8 @@ import {
 } from "../services/chatHistory";
 import { generateSessionTitle, summarizeConversation } from "../services/summarize";
 import { PromptIdeasCarousel } from "./PromptIdeasCarousel";
+import { UserGuideScreen } from "./UserGuideScreen";
+import { GuideOnboarding } from "./GuideOnboarding";
 import { VoiceInputButton } from "./VoiceInputButton";
 import { ProcessingIndicator, ProcessingStatus } from "./ProcessingIndicator";
 import { Drawer, DrawerItem } from "./Drawer";
@@ -181,6 +185,9 @@ export function ChatScreen({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [showPromptIdeas, setShowPromptIdeas] = useState(false);
+  // 0.1.14: guía de usuario y onboarding de primera vez.
+  const [showGuide, setShowGuide] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
@@ -313,8 +320,24 @@ export function ChatScreen({
 
   useEffect(() => {
     (async () => {
-      const hide = await getHidePromptIdeas();
-      if (!hide) setShowPromptIdeas(true);
+      // 0.1.14: en una instalación nueva (sin conversaciones) se muestra el
+      // onboarding de la guía UNA vez, en lugar de las ideas de prompts.
+      // Quien ya usaba NIDO no lo ve: se marca como hecho sin mostrarlo.
+      let onboarding = false;
+      try {
+        if (!(await getGuideOnboardingDone())) {
+          const existing = await listSessions();
+          if (existing.length === 0) onboarding = true;
+          else await setGuideOnboardingDone(true);
+        }
+      } catch {
+        /* settings unreadable: no onboarding, as before */
+      }
+      if (onboarding) setShowOnboarding(true);
+      else {
+        const hide = await getHidePromptIdeas();
+        if (!hide) setShowPromptIdeas(true);
+      }
       setPersonalityIdState(await getPersonalityId());
       memorySettingsRef.current = await getMemorySettings();
       const drMode = await getDeepResearchMode();
@@ -376,6 +399,20 @@ export function ChatScreen({
     },
     [t]
   );
+
+  // 0.1.14: un ejemplo de la guía se escribe en el chat; nunca se envía solo.
+  const tryGuideExample = useCallback((text: string) => {
+    setShowGuide(false);
+    setShowOnboarding(false);
+    setGuideOnboardingDone(true).catch(() => {});
+    setInput(text);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
+
+  const finishOnboarding = useCallback(() => {
+    setShowOnboarding(false);
+    setGuideOnboardingDone(true).catch(() => {});
+  }, []);
 
   const cycleTone = useCallback(async () => {
     const customPrompt = (await getCustomSystemPrompt()) ?? "";
@@ -831,6 +868,11 @@ export function ChatScreen({
           listNoteTitles: async () => {
             const { listNotes } = await import("../agent/memory/memoryStore");
             return (await listNotes(50)).map((n) => ({ id: n.id, title: n.title }));
+          },
+          // 0.1.14: "qué recordatorios tengo".
+          listReminders: async () => {
+            const { listReminders } = await import("../agent/memory/memoryStore");
+            return (await listReminders(50)).map((r) => ({ text: r.text, dueAt: r.due_at }));
           },
           // Presupuesto de prompt contra el n_ctx real del modelo cargado
           // (T-contexto-2026-10-06).
@@ -1375,6 +1417,7 @@ export function ChatScreen({
   }, [messages, generating, send, scrollToBottom]);
 
   const drawerItems: DrawerItem[] = [
+    { key: "guide", icon: "compass", label: t("guide.drawer"), onPress: () => setShowGuide(true) },
     { key: "prompts", icon: "ideas", label: t("chatScreen.drawerItems.prompts"), onPress: () => setShowPromptIdeas(true) },
     { key: "knowledge", icon: "knowledge", label: t("chatScreen.drawerItems.myDocuments"), onPress: () => setShowKnowledgeBase(true) },
     { key: "memory", icon: "memory", label: t("chatScreen.drawerItems.memory"), onPress: () => setShowMemoryManager(true) },
@@ -1388,10 +1431,18 @@ export function ChatScreen({
     return <EvaluationScreen deviceRequest={deviceEvalRequest} onClose={() => setDeviceEvalRequest(null)} />;
   }
 
+  if (showGuide) {
+    return <UserGuideScreen onClose={() => setShowGuide(false)} onTryExample={tryGuideExample} />;
+  }
+
   if (showSettings) {
     return (
       <ModelSetupScreen
         mode="optional"
+        onOpenGuide={() => {
+          setShowSettings(false);
+          setShowGuide(true);
+        }}
         onClose={async () => {
           setShowSettings(false);
           getVoiceInputEnabled().then(setVoiceInputEnabledState);
@@ -1871,6 +1922,17 @@ export function ChatScreen({
             </Text>
           </View>
         </View>
+
+        {showOnboarding && (
+          <GuideOnboarding
+            onDone={finishOnboarding}
+            onTryExample={tryGuideExample}
+            onOpenGuide={() => {
+              finishOnboarding();
+              setShowGuide(true);
+            }}
+          />
+        )}
 
         {showPromptIdeas && (
           <PromptIdeasCarousel
