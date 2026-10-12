@@ -523,7 +523,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     label: "Wikipedia Vital Articles (+50,000 articles, multilingual search)",
     filename: "corpus/wiki-vital5-e5.sqlite",
     sizeBytes: 163647488,
-    sha256: "dc572963548ed6ff69c408fcf2010d1d8b7b22ab0d74b0d27e2621780c508227",
+    sha256: "6eda30dfc736faaad2925ada3f346a51e0211e57353e9842ccb897885da33886",
     sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/wiki-vital5-e5.sqlite",
     // Compiled by NIDO from Wikipedia: CC BY-SA 4.0 (ShareAlike, so not MIT).
     // Notice inside the file (meta: license, attribution) and in
