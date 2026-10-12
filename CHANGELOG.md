@@ -4,6 +4,13 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.13-alpha — 2026-10-12
+
+### Fixed
+- Settings → usage: the knowledge base size now includes the vector index
+  built next to a knowledge pack for multilingual search (~45 MB for
+  Wikipedia Vital), which wasn't counted.
+
 ## 0.1.12-alpha — 2026-10-12
 
 ### Fixed

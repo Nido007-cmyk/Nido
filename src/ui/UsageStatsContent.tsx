@@ -100,6 +100,14 @@ export function UsageStatsContent() {
           else if (s.asset.kind === "corpus") corpus += s.sizeOnDiskBytes;
           else other += s.sizeOnDiskBytes;
         }
+        // Vector indexes built next to knowledge packs (multilingual search)
+        // are part of the knowledge base's footprint.
+        try {
+          const { vectorIndexBytes } = await import("../rag/vectorIndex");
+          corpus += await vectorIndexBytes();
+        } catch {
+          /* no index / unreadable: nothing to add */
+        }
 
         let freeBytes = 0;
         try {
