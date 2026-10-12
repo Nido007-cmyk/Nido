@@ -12,7 +12,7 @@ const W = (): World => (globalThis as unknown as { __viW: World }).__viW;
 
 vi.mock("expo-file-system/legacy", () => ({
   documentDirectory: "file:///docs/",
-  getInfoAsync: async (uri: string) => ({ exists: W().files.has(uri) }),
+  getInfoAsync: async (uri: string) => ({ exists: W().files.has(uri), size: uri.endsWith(".nvi") ? 45 : 1000 }),
   readDirectoryAsync: async (dir: string) =>
     [...W().files].filter((f) => f.startsWith(dir)).map((f) => f.slice(dir.length)),
   deleteAsync: async (uri: string) => {
@@ -140,5 +140,15 @@ describe("vectorIndex", () => {
     expect(await vi_.buildPackIndex(pack, 10)).toBeNull();
     expect(native.buildIndex).toHaveBeenCalledTimes(2);
     warn.mockRestore();
+  });
+});
+
+describe("vectorIndexBytes", () => {
+  it("sums only the .nvi files in corpus/", async () => {
+    W().files = new Set([
+      "file:///docs/corpus/wiki-vital5-e5.sqlite",
+      "file:///docs/corpus/wiki-vital5-e5.abcdef0123456789.nvi",
+    ]);
+    expect(await vi_.vectorIndexBytes()).toBe(45);
   });
 });

@@ -1,4 +1,4 @@
-# NIDO v0.1.12-alpha — Release Notes
+# NIDO v0.1.13-alpha — Release Notes
 
 ## What is this?
 
@@ -11,6 +11,12 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Reminders with local notifications
 - Encrypted on-device storage
 - Backup / restore
+
+## What changed in 0.1.13-alpha
+
+> **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
+
+- The storage usage in Settings now counts the search index NIDO builds for the multilingual Wikipedia pack (~45 MB), so the total matches what's really on your device.
 
 ## What changed in 0.1.12-alpha
 

@@ -163,3 +163,16 @@ export async function searchPackIndex(
   if (!n) return null;
   return n.search(stripScheme(indexUri), Array.from(queryVec), floor, limit);
 }
+
+/** Disk used by pack vector indexes (corpus/*.nvi), for the storage breakdown. */
+export async function vectorIndexBytes(): Promise<number> {
+  const dir = `${FileSystem.documentDirectory}corpus/`;
+  const names = await FileSystem.readDirectoryAsync(dir).catch(() => [] as string[]);
+  let total = 0;
+  for (const n of names) {
+    if (!n.endsWith(".nvi")) continue;
+    const info = await FileSystem.getInfoAsync(`${dir}${n}`).catch(() => null);
+    if (info?.exists) total += (info as { size?: number }).size ?? 0;
+  }
+  return total;
+}
