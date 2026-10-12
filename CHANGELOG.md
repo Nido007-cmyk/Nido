@@ -4,6 +4,48 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.21-alpha — 2026-10-12
+
+A new model in the catalog, and a full audit of how NIDO treats every
+model it ships. Each catalog entry was checked against its maker's
+official specs, and the mismatches were fixed: memory estimates that
+were far too optimistic, chat templates not being used on every route,
+and manufacturer sampling recipes that never reached the engine.
+
+### Added
+- Qwen3-0.6B (Q4_K_M) in the model catalog as an optional download:
+  the newest generation of the light model, stronger at following
+  instructions than Qwen2.5-0.5B at the same ~0.4GB size. It runs with
+  its thinking mode switched off, so it answers directly like the
+  other models.
+- Manufacturer sampling recipes are now applied per model, under the
+  app's per-task settings: Qwen models get their published
+  top_p 0.8 / top_k 20, Gemma 4 its top_p 0.95 / top_k 64, and
+  LFM2.5 its full official recipe (temperature 0.2, top_k 80,
+  repetition penalty 1.05).
+
+### Fixed
+- Memory (RAM) estimates before loading a model were far too
+  optimistic for the heavy models, because three catalog entries did
+  not declare their real architecture. Phi-3.5-mini's context cache
+  is about 13x larger than the old estimate (~1.5GB at 4k context),
+  Qwen2.5-7B's about 2x. All entries now declare their real profile,
+  so the pre-flight check can refuse a load the device cannot hold
+  instead of dying mid-conversation.
+- Phi-3.5-mini and Qwen2.5-7B now use their own chat templates on the
+  adaptive route too, not just in direct chat — the same model no
+  longer behaves differently depending on the route.
+- LFM2.5-8B-A1B is a reasoning-only model and was treated like a
+  plain chat model: with the normal answer budget its replies could
+  spend every token thinking and never produce an answer. It now
+  gets a 2048-token floor on answer paths, its official sampling
+  recipe, and its chain of thought is kept out of the saved answer
+  text (the model still reasons; you just read the answer).
+- Release notes are now composed from this changelog for the exact
+  version being published. Earlier alphas shipped with the previous
+  version's notes because the workflow read a static file; the job
+  now refuses to publish if the version has no changelog section.
+
 ## 0.1.20-alpha — 2026-10-12
 
 Memory that actually saves and answers back, the audit's remaining
