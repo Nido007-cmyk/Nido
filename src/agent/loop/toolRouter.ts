@@ -539,6 +539,39 @@ function extractDeleteAction(t: string): ToolAction | null {
   return null;
 }
 
+// 0.1.33: estas tablas vivían DENTRO de extractToolAction y se volvían a
+// construir (con la interpolación de CUR_SRC) en cada mensaje.
+const NOTE_SEARCH_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
+  { re: /^busca(?:r)?\s+(.+?)\s+en\s+(?:mis\s+|tus\s+)?notas$/i, lang: "es" },
+  { re: /^busca(?:r)?\s+(?:en\s+)?(?:mis\s+|las\s+)?notas?\s+(?:sobre\s+|de\s+|la\s+|el\s+)?(.+)$/i, lang: "es" },
+  { re: /^encuentra\s+(?:en\s+)?(?:mis\s+)?notas?\s+(?:sobre\s+|de\s+)?(.+)$/i, lang: "es" },
+  { re: /^search\s+(.+?)\s+in\s+(?:my\s+)?notes$/i, lang: "en" },
+  { re: /^search\s+(?:my\s+)?notes?\s+(?:for\s+|about\s+)?(.+)$/i, lang: "en" },
+  { re: /^find\s+(.+?)\s+in\s+(?:my\s+)?notes$/i, lang: "en" },
+  { re: /^find\s+(?:in\s+)?(?:my\s+)?notes?\s+(?:about\s+|for\s+)?(.+)$/i, lang: "en" },
+  { re: /^procur(?:a|e|ar)\s+(.+?)\s+nas\s+(?:minhas\s+)?notas$/i, lang: "pt" },
+  { re: /^procur(?:a|e|ar)\s+(?:nas\s+)?(?:minhas\s+)?notas?\s+(?:sobre\s+|por\s+)?(.+)$/i, lang: "pt" },
+  { re: /^busc(?:a|e|ar)\s+(?:nas\s+)?(?:minhas\s+)?notas?\s+(?:sobre\s+)?(.+)$/i, lang: "pt" },
+];
+const CUR_SRC = "pesos?|d[oó]lar(?:es)?|dollars?|euros?|reales|reais|libras?|pounds?|yenes?|yens?|francos?|francs?|soles|quetzales|bol[ií]vares|usd|mxn|eur|brl|gbp|jpy|cad|chf";
+const CURRENCY_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
+  // Dos monedas con verbo entre ellas, o el precio de UNA moneda
+  // («¿cuánto vale un dólar?»): «¿cuántos pesos son 5 kilos?» no entra.
+  { re: new RegExp(`\\bcu[aá]nt[oa]s?\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b[^.?!]{0,30}\\b(?:son|es|vale|valen|equivale)\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b`, "i"), lang: "es" },
+  { re: new RegExp(`\\bcu[aá]nt[oa]s?\\b[^.?!]{0,30}\\b(?:vale|valen|cuesta)\\b[^.?!]{0,30}\\b(?:${CUR_SRC})\\b`, "i"), lang: "es" },
+  { re: new RegExp(`\\b\\d+(?:[.,]\\d+)?\\s*(?:${CUR_SRC})\\s+(?:en|a)\\s+(?:${CUR_SRC})\\b`, "i"), lang: "es" },
+  { re: new RegExp(`\\b(?:convierte|convertir|cambi[ao]r?)\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b`, "i"), lang: "es" },
+  { re: /\b(?:tipo de cambio|cotizaci[oó]n del)\b/i, lang: "es" },
+  { re: new RegExp(`\\bhow\\s+(?:much|many)\\b[^.?!]{0,60}\\b(?:${CUR_SRC})\\b`, "i"), lang: "en" },
+  { re: new RegExp(`\\b\\d+(?:[.,]\\d+)?\\s*(?:${CUR_SRC})\\s+(?:in|to)\\s+(?:${CUR_SRC})\\b`, "i"), lang: "en" },
+  { re: new RegExp(`\\bconvert\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b`, "i"), lang: "en" },
+  { re: /\bexchange rate\b/i, lang: "en" },
+  { re: new RegExp(`\\bquant[oa]s?\\b[^.?!]{0,60}\\b(?:${CUR_SRC})\\b`, "i"), lang: "pt" },
+  { re: new RegExp(`\\b\\d+(?:[.,]\\d+)?\\s*(?:${CUR_SRC})\\s+(?:em|para)\\s+(?:${CUR_SRC})\\b`, "i"), lang: "pt" },
+  { re: new RegExp(`\\b(?:converter|converta|trocar)\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b`, "i"), lang: "pt" },
+  { re: /\btaxa de c[aâ]mbio\b/i, lang: "pt" },
+];
+
 /**
  * Detecta una petición explícita para una de las herramientas cubiertas.
  * null si no hay patrón claro (el flujo normal sigue igual).
@@ -587,18 +620,6 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   // 0.1.20 (P3-10): buscar DENTRO de las notas. Listar y abrir ya
   // existían; «busca en mis notas la receta» caía al modelo, que no
   // puede buscar en una base que no ve.
-  const NOTE_SEARCH_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
-    { re: /^busca(?:r)?\s+(.+?)\s+en\s+(?:mis\s+|tus\s+)?notas$/i, lang: "es" },
-    { re: /^busca(?:r)?\s+(?:en\s+)?(?:mis\s+|las\s+)?notas?\s+(?:sobre\s+|de\s+|la\s+|el\s+)?(.+)$/i, lang: "es" },
-    { re: /^encuentra\s+(?:en\s+)?(?:mis\s+)?notas?\s+(?:sobre\s+|de\s+)?(.+)$/i, lang: "es" },
-    { re: /^search\s+(.+?)\s+in\s+(?:my\s+)?notes$/i, lang: "en" },
-    { re: /^search\s+(?:my\s+)?notes?\s+(?:for\s+|about\s+)?(.+)$/i, lang: "en" },
-    { re: /^find\s+(.+?)\s+in\s+(?:my\s+)?notes$/i, lang: "en" },
-    { re: /^find\s+(?:in\s+)?(?:my\s+)?notes?\s+(?:about\s+|for\s+)?(.+)$/i, lang: "en" },
-    { re: /^procur(?:a|e|ar)\s+(.+?)\s+nas\s+(?:minhas\s+)?notas$/i, lang: "pt" },
-    { re: /^procur(?:a|e|ar)\s+(?:nas\s+)?(?:minhas\s+)?notas?\s+(?:sobre\s+|por\s+)?(.+)$/i, lang: "pt" },
-    { re: /^busc(?:a|e|ar)\s+(?:nas\s+)?(?:minhas\s+)?notas?\s+(?:sobre\s+)?(.+)$/i, lang: "pt" },
-  ];
   for (const { re, lang } of NOTE_SEARCH_RULES) {
     const m = re.exec(t);
     if (m && m[1].trim().length >= 2) {
@@ -622,24 +643,6 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   // moneda A PROPÓSITO, pero sin ruta la pregunta caía al modelo y el
   // modelo INVENTABA un tipo de cambio. Aquí la respuesta honesta es
   // determinista: sin conexión no hay tasas, y no se inventan.
-  const CUR_SRC = "pesos?|d[oó]lar(?:es)?|dollars?|euros?|reales|reais|libras?|pounds?|yenes?|yens?|francos?|francs?|soles|quetzales|bol[ií]vares|usd|mxn|eur|brl|gbp|jpy|cad|chf";
-  const CURRENCY_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
-    // Dos monedas con verbo entre ellas, o el precio de UNA moneda
-    // («¿cuánto vale un dólar?»): «¿cuántos pesos son 5 kilos?» no entra.
-    { re: new RegExp(`\\bcu[aá]nt[oa]s?\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b[^.?!]{0,30}\\b(?:son|es|vale|valen|equivale)\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b`, "i"), lang: "es" },
-    { re: new RegExp(`\\bcu[aá]nt[oa]s?\\b[^.?!]{0,30}\\b(?:vale|valen|cuesta)\\b[^.?!]{0,30}\\b(?:${CUR_SRC})\\b`, "i"), lang: "es" },
-    { re: new RegExp(`\\b\\d+(?:[.,]\\d+)?\\s*(?:${CUR_SRC})\\s+(?:en|a)\\s+(?:${CUR_SRC})\\b`, "i"), lang: "es" },
-    { re: new RegExp(`\\b(?:convierte|convertir|cambi[ao]r?)\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b`, "i"), lang: "es" },
-    { re: /\b(?:tipo de cambio|cotizaci[oó]n del)\b/i, lang: "es" },
-    { re: new RegExp(`\\bhow\\s+(?:much|many)\\b[^.?!]{0,60}\\b(?:${CUR_SRC})\\b`, "i"), lang: "en" },
-    { re: new RegExp(`\\b\\d+(?:[.,]\\d+)?\\s*(?:${CUR_SRC})\\s+(?:in|to)\\s+(?:${CUR_SRC})\\b`, "i"), lang: "en" },
-    { re: new RegExp(`\\bconvert\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b`, "i"), lang: "en" },
-    { re: /\bexchange rate\b/i, lang: "en" },
-    { re: new RegExp(`\\bquant[oa]s?\\b[^.?!]{0,60}\\b(?:${CUR_SRC})\\b`, "i"), lang: "pt" },
-    { re: new RegExp(`\\b\\d+(?:[.,]\\d+)?\\s*(?:${CUR_SRC})\\s+(?:em|para)\\s+(?:${CUR_SRC})\\b`, "i"), lang: "pt" },
-    { re: new RegExp(`\\b(?:converter|converta|trocar)\\b[^.?!]{0,40}\\b(?:${CUR_SRC})\\b`, "i"), lang: "pt" },
-    { re: /\btaxa de c[aâ]mbio\b/i, lang: "pt" },
-  ];
   // «libras» es moneda y también peso: si la frase ES una conversión
   // de unidades válida («convierte 3,5 kilos a libras»), manda la
   // conversión. Se replica la validación del bucle de abajo sin su
