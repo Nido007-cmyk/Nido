@@ -40,6 +40,7 @@ import { agentFallbackText, type FallbackLang } from "./fallbackText";
 import {
   choiceQuestionText,
   extractToolAction,
+  settleSharedLang,
   formatDay,
   reminderWhen,
   resolveChoiceReply,
@@ -697,7 +698,8 @@ export async function runAgentLoop(
   // calendario, mensajería NIDO, enlaces y archivos por la vía determinista
   // (toolRouter.ts). Va ANTES del atajo de recordatorios: su regex aceptaba
   // "crea una nota…" / "crea un evento…" como recordatorio.
-  const toolAction = extractToolAction(userText);
+  const rawToolAction = extractToolAction(userText);
+  const toolAction = rawToolAction ? settleSharedLang(rawToolAction, userText, options.lang) : null;
   // Una herramienta apagada SÍ entra aquí: runToolAction responde, en el
   // idioma del usuario, que está desactivada y dónde activarla (en vez de
   // mandar el turno al modelo). En tareas programadas solo si la

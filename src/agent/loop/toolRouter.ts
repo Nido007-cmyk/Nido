@@ -38,6 +38,7 @@ export type ToolAction =
   | { kind: "noteSearch"; query: string; lang: RouterLang }
   | { kind: "convert"; value: number; from: string; to: string; lang: RouterLang }
   | { kind: "currencyInfo"; lang: RouterLang }
+  | { kind: "memoryForgetHelp"; lang: RouterLang }
   | { kind: "calendarList"; from: string; to: string; label: CalendarRange; lang: RouterLang }
   | { kind: "calendarCreate"; title: string; start: string | null; lang: RouterLang }
   | { kind: "nidoSend"; to: string; text: string | null; lang: RouterLang }
@@ -60,6 +61,23 @@ export type ToolAction =
 export type DeleteTarget = { type: "one"; query: string; directId?: string } | { type: "all" } | { type: "ask" };
 
 export type CalendarRange = "today" | "tomorrow" | "week";
+
+/**
+ * 0.1.31 (auditoría del loop): el español y el portugués comparten verbos
+ * («anota que…», «cancela…», «lista…»). La regla que casa primero fija el
+ * idioma de la respuesta, así que «anota que preciso pagar a luz» con la
+ * app en portugués respondía «Listo, guardé la nota». Si el idioma de la
+ * regla es es/pt, el de la app es el otro y el texto no trae marcas propias
+ * del idioma de la regla, se responde en el idioma de la app.
+ */
+const ES_ONLY = /[ñ¿¡]|\b(?:que diga|tengo|mis|mi|el|los|las|del|para el|hoy|mañana|ahora|llamar|comprar|pagar la|y)\b/i;
+const PT_ONLY = /[ãõç]|\b(?:preciso|tenho|minhas?|meus?|você|não|amanhã|hoje|agora|ligar|comprar o|pagar a|e)\b|\bé\b/i;
+export function settleSharedLang<T extends { lang: RouterLang }>(action: T, text: string, uiLang: RouterLang | undefined): T {
+  if (!uiLang || uiLang === action.lang) return action;
+  if (action.lang === "es" && uiLang === "pt" && !ES_ONLY.test(text)) return { ...action, lang: "pt" };
+  if (action.lang === "pt" && uiLang === "es" && !PT_ONLY.test(text)) return { ...action, lang: "es" };
+  return action;
+}
 
 /** Herramienta del manifiesto que ejecuta cada acción (para interruptores y tareas programadas). */
 export function toolForAction(a: ToolAction): string {
@@ -103,6 +121,10 @@ export function toolForAction(a: ToolAction): string {
       // Sin herramienta propia: la respuesta honesta sale del router.
       // Se mapea a convert_units para el interruptor del usuario.
       return "convert_units";
+    case "memoryForgetHelp":
+      // Sin herramienta de borrado de memoria para el agente: se explica
+      // dónde se borra. Va con el interruptor de la memoria.
+      return "remember_fact";
   }
 }
 
@@ -117,13 +139,26 @@ function clean(text: string): string {
 
 const POLITE = "(?:(?:por favor|please|nido),?\\s+)?";
 
+const TIMER_CANCEL_RULES: Array<{ re: RegExp; q: string; lang: RouterLang }> = [
+  { re: /^(?:cancela|cancelar|quita|quitar|borra|borrar|para|det[eé]n|apaga)\s+(?:el\s+|mi\s+)?temporizador$/i, q: "temporizador", lang: "es" },
+  { re: /^(?:cancel|stop|delete|remove|turn off)\s+(?:the\s+|my\s+)?timer$/i, q: "timer", lang: "en" },
+  { re: /^(?:cancela|cancele|cancelar|para|pare|parar|apaga|apague|desliga|desligue)\s+(?:o\s+|meu\s+)?temporizador$/i, q: "temporizador", lang: "pt" },
+];
+
+const MEMORY_FORGET_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
+  { re: /^(?:olvida|olv[ií]date de|borra de tu memoria|borra de la memoria)\s+(?!(?:eso|esto|lo)$).{2,}/i, lang: "es" },
+  // «forget it» / «forget about it» es «déjalo», no una orden de memoria.
+  { re: /^(?:forget|delete from your memory|erase from your memory)\s+(?!(?:it|that|about it|about that|this)$).{2,}/i, lang: "en" },
+  { re: /^(?:esque[cç]a|esquece|apaga da sua mem[oó]ria|apague da mem[oó]ria)\s+(?!(?:isso|isto)$).{2,}/i, lang: "pt" },
+];
+
 // --------------------------------------------------------------- tiempo
 
 const TIME_RULES: Array<{ re: RegExp; what: "time" | "date"; lang: RouterLang }> = [
   // 0.1.30: «dime la hora» caía al conocimiento y el modelo inventaba la hora.
-  { re: /^(?:qu[eé] hora es(?: ahora)?|qu[eé] horas son|tienes la hora|me (?:dices|das) la hora|d[ií]me la hora|la hora|hora actual)$/i, what: "time", lang: "es" },
+  { re: /^(?:qu[eé] hora es(?: ahora)?|qu[eé] horas son|tienes la hora|me (?:dices|das) la hora|d[ií]me la hora|la hora|hora|hora actual)$/i, what: "time", lang: "es" },
   { re: /^(?:qu[eé] (?:d[ií]a|fecha) es(?: hoy)?|a qu[eé] (?:d[ií]a|fecha) estamos|qu[eé] d[ií]a es hoy|cu[aá]l es la fecha(?: de hoy)?)$/i, what: "date", lang: "es" },
-  { re: /^(?:what time is it(?: now)?|what(?:'s| is) the time(?: now)?|do you have the time|tell me the time|current time)$/i, what: "time", lang: "en" },
+  { re: /^(?:what time is it(?: now)?|what(?:'s| is) the time(?: now)?|do you have the time|tell me the time|current time|time please|the time)$/i, what: "time", lang: "en" },
   { re: /^(?:what(?:'s| is) (?:the date|today'?s date|the day)(?: today)?|what day is (?:it|today)|what(?:'s| is) today)$/i, what: "date", lang: "en" },
   { re: /^(?:que horas s[aã]o(?: agora)?|me diz as horas|diga as horas|hora atual)$/i, what: "time", lang: "pt" },
   { re: /^(?:que dia [eé] hoje|qual [eé] a data(?: de hoje)?|que dia [eé] hoje\??)$/i, what: "date", lang: "pt" },
@@ -168,15 +203,15 @@ const NOTE_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
 // (splitReminderScope) y la lista se filtra por día en el handler.
 const REMINDER_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   {
-    re: /^(?:(?:mu[eé]strame|lista|listar|ver|dame|ens[eé][ñn]ame)\s+)?(?:mis|los|todos los|todos mis)\s+recordatorios(?: pendientes)?$|^(?:qu[eé]|cu[aá]les)\s+recordatorios\s+(?:tengo|hay)(?: pendientes)?$|^cu[aá]les son mis recordatorios$|^recordatorios$|^lista de recordatorios$|^tengo alg[uú]n recordatorio$/i,
+    re: /^(?:(?:mu[eé]strame|lista|listar|ver|dame|ens[eé][ñn]ame)\s+)?(?:mis|los|todos los|todos mis)\s+recordatorios(?: pendientes)?$|^(?:qu[eé]|cu[aá]les)\s+recordatorios\s+(?:tengo|hay)(?: pendientes)?$|^cu[aá]les son mis recordatorios$|^recordatorios$|^lista de recordatorios$|^tengo alg[uú]n recordatorio$|^qu[eé] tengo pendiente$|^qu[eé] (?:me )?(?:queda|falta) pendiente$/i,
     lang: "es",
   },
   {
-    re: /^(?:(?:show|list|see)(?: me)?\s+)?(?:my|all|all my)\s+reminders$|^what reminders do i have$|^do i have any reminders$/i,
+    re: /^(?:(?:show|list|see)(?: me)?\s+)?(?:my|all|all my)\s+reminders$|^what reminders do i have$|^do i have any reminders$|^what'?s pending$|^what do i have pending$/i,
     lang: "en",
   },
   {
-    re: /^(?:(?:mostra|mostre|lista|listar|ver)\s+)?(?:meus|os|todos os)\s+lembretes$|^(?:que|quais)\s+lembretes\s+(?:eu\s+)?tenho$|^tenho algum lembrete$/i,
+    re: /^(?:(?:mostra|mostre|lista|listar|ver)\s+)?(?:meus|os|todos os)\s+lembretes$|^(?:que|quais)\s+lembretes\s+(?:eu\s+)?tenho$|^tenho algum lembrete$|^o que (?:eu )?tenho pendente$/i,
     lang: "pt",
   },
 ];
@@ -220,19 +255,24 @@ function unitWord(raw: string): string {
 
 // ----------------------------------------------------------- calendario
 
-const DAY_RE = "(hoy|ma[ñn]ana|esta semana|today|tomorrow|this week|hoje|amanh[aã]|esta semana)";
+// 0.1.31: «desta semana» (pt) — «minha agenda desta semana» caía al modelo.
+const DAY_RE = "(hoy|ma[ñn]ana|esta semana|today|tomorrow|this week|hoje|amanh[aã]|esta semana|desta semana|nesta semana)";
 const CAL_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: new RegExp(`^(?:qu[eé] tengo|qu[eé] hay en (?:mi|la) agenda|mi agenda|mis (?:eventos|citas)|mi calendario)(?: (?:de|para))? ${DAY_RE}(?: en (?:mi|la) agenda)?$`, "i"), lang: "es" },
   { re: /^(?:mi agenda|mis eventos|mis citas|mi calendario)$/i, lang: "es" },
   { re: new RegExp(`^(?:what do i have|what'?s on my (?:calendar|agenda|schedule)|my (?:calendar|agenda|events|schedule))(?: for)? ${DAY_RE}$`, "i"), lang: "en" },
   { re: /^(?:my calendar|my agenda|my events|my schedule)$/i, lang: "en" },
-  { re: new RegExp(`^(?:o que (?:eu )?tenho|minha agenda|meus (?:eventos|compromissos))(?: (?:de|para))? ${DAY_RE}$`, "i"), lang: "pt" },
+  { re: new RegExp(`^(?:o que (?:eu )?tenho|minha agenda|meus (?:eventos|compromissos))(?: (?:de|para|para a))? ${DAY_RE}$`, "i"), lang: "pt" },
   { re: /^(?:minha agenda|meus eventos|meus compromissos)$/i, lang: "pt" },
 ];
 
 const CAL_CREATE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: new RegExp(`^${POLITE}(?:ag[eé]ndame|agenda|crea(?: un)? evento|crea una cita|a[ñn]ade (?:un |una )?(?:evento|cita)|agrega (?:un |una )?(?:evento|cita)|pon en (?:mi |el )?calendario)(?: (?:al|en (?:mi|el)) calendario)?(?::)?\\s+(.+)$`, "is"), lang: "es" },
   { re: new RegExp(`^${POLITE}(?:schedule|create an event|add (?:an? )?(?:event|appointment)(?: to my calendar)?|put on my calendar)(?::)?\\s+(.+)$`, "is"), lang: "en" },
+  // 0.1.31: «add a meeting on monday at 9» / «marca reunião segunda às 9»
+  // caían al conocimiento. El título conserva la palabra (meeting/reunião).
+  { re: new RegExp(`^${POLITE}add\\s+(?:a|an)\\s+((?:meeting|call|appointment|event)\\s+.+)$`, "is"), lang: "en" },
+  { re: new RegExp(`^${POLITE}(?:marca|marque|agenda)\\s+(?:uma\\s+|um\\s+)?((?:reuni[aã]o|consulta|encontro|compromisso)\\s+.+)$`, "is"), lang: "pt" },
   { re: new RegExp(`^${POLITE}(?:agende|marca um compromisso|marque um compromisso|cria um evento|crie um evento|adiciona um evento|adicione um evento)(?::)?\\s+(.+)$`, "is"), lang: "pt" },
 ];
 
@@ -261,6 +301,12 @@ function rangeLabel(word: string | undefined): CalendarRange {
 
 const SEP = "(?:\\s*:\\s*|\\s+que diga\\s+|\\s+diciendo\\s+|\\s+que\\s+|\\s+saying\\s+|\\s+that\\s+|\\s+dizendo\\s+)";
 const NIDO_SEND_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
+  // 0.1.31 (auditoría del loop): la forma que la PROPIA app enseña cuando
+  // falta el texto («Dímelo así: manda por nido a Ana que …») caía al
+  // modelo y respondía «No supe qué acción hacer». También «envía por nido
+  // a Ana: …» y «mándale a Ana por nido que …».
+  { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?|escr[ií]bele)\\s+(?:por|v[ií]a|con)\\s+nido\\s+(?:a|para)\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "es" },
+  { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?|escr[ií]bele)\\s+(?:a|para)\\s+(.+?)\\s+(?:por|v[ií]a|con)\\s+nido(?:${SEP}(.+))?$`, "is"), lang: "es" },
   { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?|escr[ií]bele)\\s+(?:un\\s+)?mensaje\\s+(?:por|con|en|v[ií]a)\\s+nido\\s+(?:a|para)\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "es" },
   { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?)\\s+(?:a|para)\\s+(.+?)\\s+(?:un\\s+)?mensaje\\s+(?:por|con|en|v[ií]a)\\s+nido(?:${SEP}(.+))?$`, "is"), lang: "es" },
   { re: new RegExp(`^${POLITE}d[ií]le\\s+a\\s+(.+?)\\s+(?:por|v[ií]a)\\s+nido(?:${SEP}|\\s+)(.+)$`, "is"), lang: "es" },
@@ -452,6 +498,16 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   if (!t || t.length > 600) return null;
 
   for (const { re, what, lang } of TIME_RULES) if (re.test(t)) return { kind: "time", what, lang };
+
+  // 0.1.31 (auditoría del loop): «cancela el temporizador» caía al
+  // conocimiento y el modelo podía decir que lo había cancelado sin hacer
+  // nada. Un temporizador es un recordatorio llamado «Temporizador»/«Timer»:
+  // se cancela por la ruta de borrado (con su confirmación y su «¿cuál?»).
+  for (const { re, q, lang } of TIMER_CANCEL_RULES) if (re.test(t)) return { kind: "reminderDelete", target: { type: "one", query: q }, lang };
+  // «olvida mi color favorito»: el agente no borra memoria por sí solo. Antes
+  // caía al modelo, que podía responder «listo, lo olvidé» sin borrar nada.
+  // Respuesta honesta: dónde se borra.
+  for (const { re, lang } of MEMORY_FORGET_RULES) if (re.test(t)) return { kind: "memoryForgetHelp", lang };
 
   for (const { re, lang } of NOTE_LIST_RULES) if (re.test(t)) return { kind: "noteList", lang };
   const reminderQuery = splitReminderScope(t);
@@ -672,16 +728,19 @@ type Key =
   | "noteSearchHeader"
   | "noteSearchNone"
   | "currencyOffline"
+  | "memoryForgetHelp"
   | "timerSet"
   | "timerLabel"
   | "factSaved"
   | "factReminderNote";
 
 const MSG: Record<Key, Record<RouterLang, string>> = {
+  // 0.1.31: «en mis contactos» hacía pensar en los contactos del teléfono;
+  // la persona se guarda en la memoria de NIDO.
   personSaved: {
-    es: "Listo, guardé a {{name}}{{rel}} en mis contactos.",
-    en: "Done, I saved {{name}}{{rel}} to my contacts.",
-    pt: "Pronto, salvei {{name}}{{rel}} nos meus contatos.",
+    es: "Listo, recordaré a {{name}}{{rel}}.",
+    en: "Done, I'll remember {{name}}{{rel}}.",
+    pt: "Pronto, vou lembrar de {{name}}{{rel}}.",
   },
   personDateNote: {
     es: " También guardé la fecha como recordatorio.",
@@ -747,6 +806,11 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: "No encontré nada en tus notas sobre «{{q}}».",
     en: "I didn't find anything in your notes about “{{q}}”.",
     pt: "Não encontrei nada nas suas notas sobre “{{q}}”.",
+  },
+  memoryForgetHelp: {
+    es: "No borro recuerdos por mi cuenta. Para olvidar algo, abre el menú → «Mi memoria» y bórralo ahí: verás exactamente qué se elimina.",
+    en: "I don't delete memories on my own. To forget something, open the menu → “My Memory” and delete it there: you'll see exactly what gets removed.",
+    pt: "Eu não apago lembranças por conta própria. Para esquecer algo, abra o menu → “Minha Memória” e apague por lá: você verá exatamente o que será removido.",
   },
   currencyOffline: {
     es: "Sin conexión no tengo tipos de cambio, así que no te voy a inventar una cifra. Cambian todo el tiempo; cuando tengas internet, consúltalo y te ayudo con la cuenta.",
@@ -1390,6 +1454,9 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
         });
         return say(`${routerMessage("noteSearchHeader", lang, { q: action.query })}\n${lines.join("\n")}`);
       }
+
+      case "memoryForgetHelp":
+        return say(routerMessage("memoryForgetHelp", lang));
 
       case "currencyInfo": {
         // Sin dispatch: no hay herramienta de tipos de cambio (la app es

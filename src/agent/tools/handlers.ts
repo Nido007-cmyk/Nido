@@ -167,14 +167,35 @@ function agentConfirmT(): ConfirmT {
 }
 
 /** Exportado para las rutinas proactivas (resumen diario). */
+/**
+ * 0.1.31 (auditoría del loop): idioma de la UI para los textos que los
+ * handlers devuelven y que el router muestra tal cual (fechas de notas,
+ * mensajes NIDO, eventos, errores de calendario/conversión). Antes iban
+ * siempre en español aunque la app estuviera en inglés o portugués. Sin
+ * i18n (tests) se queda en español, como antes.
+ */
+function uiLang(): RouterLang {
+  try {
+    const i18n = require("../../i18n").default as { language?: string };
+    const l = (i18n.language ?? "").slice(0, 2);
+    if (l === "es" || l === "en" || l === "pt") return l;
+  } catch { /* sin i18n */ }
+  return "es";
+}
+const L = (es: string, en: string, pt: string): string => {
+  const l = uiLang();
+  return l === "en" ? en : l === "pt" ? pt : es;
+};
+
 export function fmtDateTime(iso: string | null): string {
-  if (!iso) return "sin fecha";
+  if (!iso) return L("sin fecha", "no date", "sem data");
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   // 0.1.8: sin Intl (CRASH-2026-10-10, ver reminderFormat.ts): en Hermes
   // para Android toLocale*String con opciones pasa por JNI y puede cerrar
   // la app. Solo getters de Date.
-  return `${formatDay(d, "es")}, ${formatTime(d, "es")}`;
+  const lang = uiLang();
+  return `${formatDay(d, lang)}, ${formatTime(d, lang)}`;
 }
 
 /** Hora actual del dispositivo, en español. */
@@ -207,7 +228,7 @@ const readNoteHandler: ToolHandler = async (args) => {
   if (!id) return "Error: falta el id de la nota.";
   const note = await getNote(id);
   if (!note) return `No encontré ninguna nota con id ${id}.`;
-  return `«${note.title}» (${fmtDateTime(note.created_at)}):\n${note.body || "(sin contenido)"}`;
+  return `«${note.title}» (${fmtDateTime(note.created_at)}):\n${note.body || L("(sin contenido)", "(empty)", "(sem conteúdo)")}`;
 };
 
 /**
@@ -718,17 +739,35 @@ const convertUnitsHandler: ToolHandler = async (args) => {
   if (!from || !to) return "Error: indica la unidad de origen y la de destino.";
   try {
     const r = convertUnits(value, from, to);
-    return `${formatNumber(value)} ${r.from} = ${formatNumber(r.value)} ${r.to}`;
+    // 0.1.31 (auditoría del loop): «5 km = 3.1068559612 mi» → «3.1069 mi».
+    // Cuatro decimales bastan para una conversión cotidiana; cantidades muy
+    // pequeñas conservan 4 cifras significativas.
+    const shown = Math.abs(r.value) >= 0.01 || r.value === 0 ? Number(r.value.toFixed(4)) : Number(r.value.toPrecision(4));
+    return `${formatNumber(value)} ${r.from} = ${formatNumber(shown)} ${r.to}`;
   } catch (e) {
-    return `No pude convertir eso: ${e instanceof Error ? e.message : String(e)}`;
+    return `${L("No pude convertir eso", "I couldn't convert that", "Não consegui converter isso")}: ${e instanceof Error ? e.message : String(e)}`;
   }
 };
 
-const CALENDAR_PERMISSION_TEXT: Record<"denied" | "blocked" | "unavailable", string> = {
-  denied: "No diste permiso de calendario, así que no puedo crear ni leer eventos. Puedes volver a pedírmelo cuando quieras.",
-  blocked:
-    "El permiso de calendario está bloqueado para NIDO. Actívalo en Ajustes del teléfono → Apps → NIDO → Permisos → Calendario.",
-  unavailable: "El módulo de calendario no está disponible en este dispositivo.",
+const CALENDAR_PERMISSION_TEXT: Record<"denied" | "blocked" | "unavailable", () => string> = {
+  denied: () =>
+    L(
+      "No diste permiso de calendario, así que no puedo crear ni leer eventos. Puedes volver a pedírmelo cuando quieras.",
+      "You didn't give calendar permission, so I can't create or read events. You can ask me again whenever you want.",
+      "Você não deu permissão de calendário, então não posso criar nem ler eventos. Pode me pedir de novo quando quiser.",
+    ),
+  blocked: () =>
+    L(
+      "El permiso de calendario está bloqueado para NIDO. Actívalo en Ajustes del teléfono → Apps → NIDO → Permisos → Calendario.",
+      "Calendar permission is blocked for NIDO. Turn it on in phone Settings → Apps → NIDO → Permissions → Calendar.",
+      "A permissão de calendário está bloqueada para o NIDO. Ative em Configurações do telefone → Apps → NIDO → Permissões → Calendário.",
+    ),
+  unavailable: () =>
+    L(
+      "El módulo de calendario no está disponible en este dispositivo.",
+      "The calendar isn't available on this device.",
+      "O calendário não está disponível neste dispositivo.",
+    ),
 };
 
 async function ensureCalendarAccess(): Promise<{ ok: boolean; reason?: string }> {
@@ -736,13 +775,13 @@ async function ensureCalendarAccess(): Promise<{ ok: boolean; reason?: string }>
   try {
     Calendar = await import("expo-calendar");
   } catch {
-    return { ok: false, reason: CALENDAR_PERMISSION_TEXT.unavailable };
+    return { ok: false, reason: CALENDAR_PERMISSION_TEXT.unavailable() };
   }
   const perm = await ensureRuntimePermission({
     get: () => Calendar.getCalendarPermissions(),
     request: () => Calendar.requestCalendarPermissions(),
   });
-  return perm.ok ? { ok: true } : { ok: false, reason: CALENDAR_PERMISSION_TEXT[perm.reason] };
+  return perm.ok ? { ok: true } : { ok: false, reason: CALENDAR_PERMISSION_TEXT[perm.reason]() };
 }
 
 async function pickWritableCalendar(): Promise<any | null> {
@@ -800,7 +839,7 @@ export async function upcomingEventsForBriefing(limit = 5): Promise<string | nul
     const events = await Calendar.listEvents(calendars, now, to);
     const upcoming = events.slice(0, limit).map((e: any) => {
       const s = e.startDate ? new Date(e.startDate) : null;
-      return `- «${e.title ?? "(sin título)"}»${s ? ` — ${fmtDateTime(s.toISOString())}` : ""}${e.location ? ` @ ${e.location}` : ""}`;
+      return `- «${e.title ?? L("(sin título)", "(untitled)", "(sem título)")}»${s ? ` — ${fmtDateTime(s.toISOString())}` : ""}${e.location ? ` @ ${e.location}` : ""}`;
     });
     return upcoming.length > 0 ? `Próximos eventos:\n${upcoming.join("\n")}` : null;
   } catch {
@@ -830,7 +869,7 @@ export const listCalendarEventsHandler: ToolHandler = async (args) => {
       .slice(0, limit)
       .map((e: any) => {
         const s = e.startDate ? new Date(e.startDate) : null;
-        return `- «${e.title ?? "(sin título)"}»${s ? ` — ${fmtDateTime(s.toISOString())}` : ""}${e.location ? ` @ ${e.location}` : ""}`;
+        return `- «${e.title ?? L("(sin título)", "(untitled)", "(sem título)")}»${s ? ` — ${fmtDateTime(s.toISOString())}` : ""}${e.location ? ` @ ${e.location}` : ""}`;
       });
     if (upcoming.length === 0) return "No hay eventos en ese rango.";
     return `Próximos eventos:\n${upcoming.join("\n")}`;
@@ -1059,7 +1098,7 @@ const nidoReadInboxHandler: ToolHandler = async () => {
     if (unread.length === 0) return "No tienes mensajes NIDO sin leer.";
     return unread
       .map((msg) => {
-        const who = names.get(msg.peerPk.toLowerCase()) ?? "Contacto NIDO";
+        const who = names.get(msg.peerPk.toLowerCase()) ?? L("Contacto NIDO", "NIDO contact", "Contato NIDO");
         const when = fmtDateTime(new Date(msg.ts).toISOString());
         // M-6: la tarea sigue "queued" (readInbox ya no la marca como leída);
         // se muestra como pendiente de decisión explícita.
@@ -1073,7 +1112,7 @@ const nidoReadInboxHandler: ToolHandler = async () => {
       })
       .join("\n");
   } catch (e) {
-    return `No pude leer la bandeja NIDO: ${e instanceof Error ? e.message : String(e)}`;
+    return `${L("No pude leer la bandeja NIDO", "I couldn't read the NIDO inbox", "Não consegui ler a caixa do NIDO")}: ${e instanceof Error ? e.message : String(e)}`;
   }
 };
 
