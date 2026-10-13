@@ -21,7 +21,7 @@
     "expo-keep-awake": "57.0.2",
     "expo-linear-gradient": "57.0.2",
     "expo-local-authentication": "57.0.3",
-    "expo-modules-core": "57.0.22",
+    "expo-modules-core": "58.0.15",
     "expo-notifications": "57.0.22",
     "expo-pdf-text-extract": "1.1.0",
     "expo-secure-store": "57.0.4",
