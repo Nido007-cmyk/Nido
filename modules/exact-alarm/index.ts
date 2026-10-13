@@ -4,21 +4,47 @@
  * See LICENSE file for details.
  */
 
-import { requireNativeModule } from "expo-modules-core";
+/**
+ * Estado de las alarmas exactas (Android 12+).
+ *
+ * 0.1.32: el módulo nativo se resuelve al USARLO, no al importar. Antes
+ * `requireNativeModule` se llamaba al cargar el archivo: sin la parte
+ * nativa compilada lanzaba en ese momento (así cayó el aviso de la 0.1.x
+ * que se quitó por cerrar la app). Si el nativo no está, se devuelve
+ * `null` («no se sabe») y la pantalla no muestra nada.
+ */
+import { requireOptionalNativeModule } from "expo-modules-core";
 
-const ExactAlarm = requireNativeModule("ExactAlarm");
+interface ExactAlarmNative {
+  canScheduleExactAlarms(): boolean;
+  openExactAlarmSettings(): boolean;
+}
 
-export async function canScheduleExactAlarms(): Promise<boolean> {
+function native(): ExactAlarmNative | null {
   try {
-    return await ExactAlarm.canScheduleExactAlarms();
+    return requireOptionalNativeModule<ExactAlarmNative>("ExactAlarm");
   } catch {
-    return false;
+    return null;
   }
 }
 
-export async function openExactAlarmSettings(): Promise<boolean> {
+/** true/false si se sabe; null si el módulo nativo no está disponible. */
+export async function canScheduleExactAlarms(): Promise<boolean | null> {
+  const m = native();
+  if (!m) return null;
   try {
-    return await ExactAlarm.openExactAlarmSettings();
+    return Boolean(await m.canScheduleExactAlarms());
+  } catch {
+    return null;
+  }
+}
+
+/** Abre la pantalla del sistema para permitir alarmas exactas. */
+export async function openExactAlarmSettings(): Promise<boolean> {
+  const m = native();
+  if (!m) return false;
+  try {
+    return Boolean(await m.openExactAlarmSettings());
   } catch {
     return false;
   }

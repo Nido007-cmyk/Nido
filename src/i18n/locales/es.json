@@ -1560,5 +1560,11 @@
         ]
       }
     ]
+  },
+  "exactAlarm": {
+    "title": "Recordatorios a la hora exacta",
+    "ok": "Los recordatorios llegan a la hora exacta.",
+    "off": "Android puede retrasar tus recordatorios unos minutos cuando el teléfono está en reposo. Para que lleguen a la hora exacta, permite «Alarmas y recordatorios» para NIDO.",
+    "allow": "Permitir alarmas exactas"
   }
 }

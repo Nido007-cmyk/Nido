@@ -1560,5 +1560,11 @@
         ]
       }
     ]
+  },
+  "exactAlarm": {
+    "title": "Reminders on time",
+    "ok": "Reminders arrive at the exact time.",
+    "off": "Android may delay your reminders by a few minutes while the phone is idle. To get them at the exact time, allow “Alarms & reminders” for NIDO.",
+    "allow": "Allow exact alarms"
   }
 }

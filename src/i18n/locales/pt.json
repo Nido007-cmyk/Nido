@@ -1560,5 +1560,11 @@
         ]
       }
     ]
+  },
+  "exactAlarm": {
+    "title": "Lembretes na hora exata",
+    "ok": "Os lembretes chegam na hora exata.",
+    "off": "O Android pode atrasar seus lembretes alguns minutos quando o telefone está em repouso. Para chegarem na hora exata, permita “Alarmes e lembretes” para o NIDO.",
+    "allow": "Permitir alarmes exatos"
   }
 }
