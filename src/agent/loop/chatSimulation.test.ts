@@ -354,3 +354,41 @@ describe("simulación del chat — consultas genéricas con hit de memoria (0.1.
     expect(probe.loads).toBe(loadsBefore);
   });
 });
+
+describe("simulación del chat — 0.1.24 (auditoría H-7): «no olvides» con día de semana", () => {
+  // Antes: el hecho se guardaba pero el aviso NUNCA se creaba — el
+  // contenido no trae fecha de calendario (extractDateISO → null) y
+  // la rama «que» del extractor de recordatorios no cubre «no
+  // olvides». Sonda P1, casos 8a/8b/8c (3 idiomas).
+  it.each([
+    ["No olvides que el viernes es el cumpleaños de Ana", "es"],
+    ["Don't forget that Friday is Ana's birthday", "en"],
+    ["Não esqueça que sexta-feira é o aniversário da Ana", "pt"],
+  ] as Array<[string, Lang]>)("guarda el hecho Y crea el aviso del viernes: %s", async (text, lang) => {
+    const engine = fakeEngine();
+    const t = await send(text, lang, engine);
+    expect(t.route).toBe("agent");
+    expect(store.facts).toHaveLength(1);
+    expect(store.reminders).toHaveLength(1);
+    expect(store.reminders[0].text).toBe(store.facts[0].content);
+    const due = new Date(store.reminders[0].dueAt!);
+    expect(due.getDay()).toBe(5); // viernes: próxima ocurrencia
+    expect(due.getHours()).toBe(9); // convenio de la familia: 9:00
+    expect(due.getTime()).toBeGreaterThan(Date.now() - 24 * 3600 * 1000);
+    expect(due.getTime()).toBeLessThan(Date.now() + 8 * 24 * 3600 * 1000);
+    expect(t.response).toContain(store.facts[0].content);
+    expect(engine.calls).toHaveLength(0);
+  });
+
+  it("sin el gatillo «no olvides», un hecho con día de semana NO crea aviso", async () => {
+    // La semántica protegida: contar un hecho con día («mi cumpleaños
+    // es el viernes») guarda el hecho y nada más — el aviso dual solo
+    // nace de la petición explícita de no olvidar.
+    const engine = fakeEngine();
+    const t = await send("Mi cumpleaños es el viernes", "es", engine);
+    expect(t.route).toBe("agent");
+    expect(store.facts).toHaveLength(1);
+    expect(store.reminders).toHaveLength(0);
+    expect(engine.calls).toHaveLength(0);
+  });
+});

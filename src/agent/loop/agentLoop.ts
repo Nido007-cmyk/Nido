@@ -59,6 +59,16 @@ import { listSkillNamesForPrompt } from "../skills/registry";
 import type { LabeledContent, PolicyDecision } from "../policy/policyEngine";
 import { wrapUntrusted } from "../policy/policyEngine";
 
+/**
+ * 0.1.24 (auditoría de alcanzabilidad, H-7): gatillos «no olvides» en
+ * los tres idiomas — las mismas formas que rememberRouter reconoce
+ * como petición de recuerdo. El slot de hecho los usa para decidir
+ * si un hecho con solo día de semana también merece aviso (ver el
+ * slot): sin el gatillo explícito, un hecho con día («los viernes
+ * hay mercado») NO crea recordatorio, como hasta hoy.
+ */
+const FORGET_TRIGGER_RE = /no (?:te )?olvides|don['’]?t forget|n[aã]o (?:se )?esque[cç]a/i;
+
 /** Motor de generación inyectado (en producción: llamaEngine). */
 export interface AgentEngine {
   generate(args: {
@@ -857,7 +867,18 @@ export async function runAgentLoop(
     // automáticamente. Antes solo se guardaba el texto y Reminders quedaba
     // vacío (el usuario tenía que pedir el recordatorio por separado).
     let reminderNote = "";
-    const dueAt = extractDateISO(extraction.content, reminderLang);
+    let dueAt = extractDateISO(extraction.content, reminderLang);
+    // 0.1.24 (H-7): «no olvides que el viernes es el cumpleaños de
+    // Ana» guardaba el hecho pero NUNCA creaba el aviso: el contenido
+    // no trae fecha de calendario (extractDateISO → null) y la rama
+    // «que» del extractor de recordatorios no cubre «no olvides».
+    // Solo con el gatillo explícito de no-olvidar en el texto
+    // original se interpreta también el día de semana (próxima
+    // ocurrencia, 9:00 por defecto: el convenio de la familia).
+    if (!dueAt && FORGET_TRIGGER_RE.test(userText)) {
+      const { parseReminderDateTime } = await import("./actionRouter");
+      dueAt = parseReminderDateTime(extraction.content);
+    }
     if (dueAt) {
       const reminder = await saveReminder({
         text: extraction.content,
