@@ -4,6 +4,21 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.26-alpha — 2026-10-12
+
+Security fix for devices without biometric hardware.
+
+### Fixed
+- The access gate only asked Android about biometrics. On a device
+  with no fingerprint or face hardware (for example a Galaxy Tab A9+),
+  setting a system PIN was invisible to the gate: the lock screen
+  claimed "no biometrics or PIN set up" with the PIN in place, and
+  protected actions such as creating a backup failed with
+  "Authentication cancelled." The gate now also reads the enrolled
+  security level, so a device credential (PIN, pattern or password)
+  counts as enrollment and the system prompt accepts it — the
+  fallback the gate's policy always documented.
+
 ## 0.1.25-alpha — 2026-10-12
 
 The in-app guide learns everything the last versions added, and the
