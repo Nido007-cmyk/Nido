@@ -4,6 +4,48 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.24-alpha — 2026-10-12
+
+Fixes from a full reachability audit: every responder the in-app
+guide teaches was probed end to end in Spanish, English and
+Portuguese, and the phrases that silently fell through were fixed.
+
+### Fixed
+- "Where do you store my data?" (and its Spanish/Portuguese forms)
+  now reaches the deterministic privacy answer instead of falling
+  through: the natural second-person phrasing was not covered, only
+  the impersonal one.
+- Deleting in natural English works: "delete the birthday note" and
+  "delete the dentist reminder" now reach the delete flow with
+  confirmation, instead of being deflected to general knowledge.
+- The guide's own example "schedule dentist on Friday at 10" now
+  creates the event titled "dentist" (it was saved as "dentist on").
+- Sending "a message to Juan por nido: …" no longer swallows the
+  channel mark into the recipient's name, and the "vía nido" form
+  is understood too.
+- Notes can be found across languages: a note saved as "cumpleaños
+  de Ana" is now read, searched and deleted when you ask for the
+  "birthday" note, and searching for "flowers" finds "flores".
+- The weekly plan answers in Portuguese when you ask in Portuguese,
+  including Portuguese work hours ("trabalho das 8 às 17") and
+  family time ("família").
+- "Don't forget that Friday is Ana's birthday" (Spanish, English,
+  Portuguese) now creates the reminder as well as saving the fact;
+  before, the weekday-only date was silently dropped.
+- Scheduled tasks can actually read your notes (a task asking to
+  "search my notes" answered "you have no notes" even when you
+  did), and they answer in your language, Portuguese included.
+- Note search ignores filler openings ("busca en mis notas algo
+  sobre flores" now searches for "flores").
+- The English birthday answer for a relative no longer starts with
+  a lowercase letter.
+
+### Internal
+- The audit's 118 probes now live in the test suite as permanent
+  end-to-end composition tests (chat and scheduled tasks), so a
+  responder can no longer be green piece by piece while the
+  composed path is broken.
+
 ## 0.1.23-alpha — 2026-10-12
 
 ### Fixed
