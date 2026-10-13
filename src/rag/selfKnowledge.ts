@@ -293,6 +293,12 @@ const CAPABILITY_PATTERNS: RegExp[] = [
 const PRIVACY_PATTERNS: RegExp[] = [
   // English
   /\bwhere\s+is\s+my\s+data\s+stored\b/,
+  // 0.1.24 (auditoría de alcanzabilidad, H-1): la forma natural en
+  // segunda persona («where do you store my data») no estaba: solo la
+  // impersonal. La misma frase quedó sin responder en la tablet en
+  // 2026-10-09 y la auditoría la volvió a encontrar huérfana entre
+  // esta capa y el PRIVACY_RE del loop (tras la puerta).
+  /\bwhere\s+do\s+you\s+(store|keep|save)\s+my\s+(data|information|chats|messages)\b/,
   /\bwhere\s+(are|is)\s+my\s+(data|chats|messages|information)\s+(stored|kept|saved)\b/,
   /\bwho\s+can\s+see\s+my\s+data\b/,
   /\bwho\s+can\s+see\s+it\b/,
@@ -309,6 +315,9 @@ const PRIVACY_PATTERNS: RegExp[] = [
   // to the general model which hallucinated false answers.
   /\bdonde\s+se\s+guardan\s+mis\s+datos\b/,
   /\bdonde\s+(estan|están)\s+mis\s+datos\b/,
+  // 0.1.24 (H-1): segunda persona — «¿dónde guardas mis datos?» es la
+  // forma natural de preguntarlo y no casaba ninguna regla.
+  /\bdonde\s+guardas\s+(?:mis\s+(?:datos|chats|mensajes)|mi\s+informaci[oó]n)\b/,
   /\bquien\s+puede\s+ver\s+mis\s+datos\b/,
   /\bquien\s+tiene\s+acceso\s+a\s+mis\s+datos\b/,
   /\bmis\s+datos\s+son\s+privados\b/,
@@ -320,6 +329,9 @@ const PRIVACY_PATTERNS: RegExp[] = [
   /\bque\s+pasa\s+con\s+mis\s+datos\b/,
   // Portuguese
   /\bonde\s+meus\s+dados\s+(sao|ficam)\b/,
+  // 0.1.24 (H-1): segunda persona y la forma con «ficam» sin «meus dados» delante.
+  /\bonde\s+voce\s+guarda\s+meus\s+dados\b/,
+  /\bonde\s+ficam\s+meus\s+dados\b/,
   /\bquem\s+pode\s+ver\s+meus\s+dados\b/,
   /\bmeus\s+dados\s+sao\s+privados\b/,
 ];

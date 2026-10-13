@@ -110,6 +110,15 @@ describe("classifyKnowledgeQuery", () => {
     ["do you send my data", "advantages"],
     ["do you share my information", "advantages"],
     ["what do you do with my data", "advantages"],
+    // 0.1.24 (auditoría de alcanzabilidad, H-1): la forma natural en
+    // segunda persona — quedó sin responder en la tablet en 2026-10-09
+    // y la auditoría la encontró huérfana otra vez.
+    ["¿dónde guardas mis datos?", "advantages"],
+    ["donde guardas mi información", "advantages"],
+    ["where do you store my data", "advantages"],
+    ["where do you keep my chats", "advantages"],
+    ["onde você guarda meus dados", "advantages"],
+    ["onde ficam meus dados", "advantages"],
   ] as Array<[string, string]>)("classifies privacy %j as %s", (query, expected) => {
     expect(classifyKnowledgeQuery(query)).toBe(expected);
   });
