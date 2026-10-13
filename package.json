@@ -1,7 +1,7 @@
 {
   "name": "nido-app",
   "version": "0.1.28",
-  "description": "NIDO \u2014 your offline agent: 100% local personal AI assistant for Android with total privacy (zero network after install, encrypted on-device memory).",
+  "description": "NIDO — your offline agent: 100% local personal AI assistant for Android with total privacy (zero network after install, encrypted on-device memory).",
   "license": "MIT",
   "main": "index.ts",
   "dependencies": {
@@ -21,8 +21,8 @@
     "expo-keep-awake": "57.0.2",
     "expo-linear-gradient": "57.0.2",
     "expo-local-authentication": "57.0.3",
-    "expo-notifications": "57.0.22",
     "expo-modules-core": "57.0.22",
+    "expo-notifications": "57.0.22",
     "expo-pdf-text-extract": "1.1.0",
     "expo-secure-store": "57.0.4",
     "expo-sharing": "57.0.22",
@@ -30,7 +30,7 @@
     "expo-splash-screen": "57.0.9",
     "expo-sqlite": "57.0.4",
     "expo-status-bar": "57.0.1",
-    "i18next": "26.4.2",
+    "i18next": "26.4.3",
     "llama.rn": "0.13.0-rc.6",
     "nido-keyvault": "file:./modules/nido-keyvault",
     "nido-launch": "file:./modules/nido-launch",
@@ -49,7 +49,7 @@
   "devDependencies": {
     "@react-native/babel-preset": "0.87.1",
     "@react-native/jest-preset": "0.86.3",
-    "@testing-library/react-native": "14.0.1",
+    "@testing-library/react-native": "14.1.0",
     "@types/jest": "29.5.14",
     "@types/react": "19.3.0",
     "babel-jest": "29.7.0",
