@@ -4,6 +4,21 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.27-alpha — 2026-10-12
+
+One backup flow, the same from every entry point.
+
+### Fixed
+- Creating a backup from Settings showed the encryption key in a
+  system alert whose text cannot be copied: the key could only be
+  written down by hand or photographed, and that screen had no way
+  to save the backup to a folder. Settings now uses the same
+  copyable key dialog as the backup screen (secure copy that clears
+  itself after 60 seconds, with a visible confirmation) and adds
+  the "Save to Downloads" button, which stores the encrypted backup
+  files in a folder you pick. The key itself is never written to
+  that folder, and the unlock check before showing it is unchanged.
+
 ## 0.1.26-alpha — 2026-10-12
 
 Security fix for devices without biometric hardware.
