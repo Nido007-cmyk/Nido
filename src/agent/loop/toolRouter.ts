@@ -910,6 +910,53 @@ function norm(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
 }
 
+// 0.1.24 (auditoría de alcanzabilidad, H-4): leer/buscar/borrar notas
+// casaba LITERAL en el título: la nota «cumpleaños de Ana» respondía
+// «I couldn't find a note called "birthday"» — un negativo engañoso
+// para un dueño bilingüe que guarda en un idioma y pregunta en otro.
+// Tabla pequeña y curada de equivalencias ES/EN/PT (formas ya
+// normalizadas, palabra única): la consulta se expande a sus
+// equivalentes y basta que UNA variante esté en el título/cuerpo. Es
+// estrictamente aditiva — el matching literal de hoy no cambia — y no
+// pretende ser un diccionario: cubre el vocabulario de notas típico.
+const XWORD_GROUPS: string[][] = [
+  ["cumpleanos", "birthday", "aniversario"],
+  ["flores", "flowers"],
+  ["receta", "recipe", "receita"],
+  ["compras", "shopping", "groceries"],
+  ["viaje", "trip", "viagem"],
+  ["dentista", "dentist"],
+  ["trabajo", "work", "trabalho"],
+  ["regalo", "gift", "presente"],
+  ["fiesta", "party", "festa"],
+  ["escuela", "school", "escola"],
+  ["coche", "car", "carro"],
+  ["perro", "dog", "cachorro"],
+  ["gato", "cat"],
+  ["medicina", "medicine", "remedio"],
+  ["leche", "milk", "leite"],
+  ["pan", "bread", "pao"],
+  ["casa", "house"],
+  ["dinero", "money", "dinheiro"],
+];
+
+/** La consulta normalizada más sus equivalentes entre idiomas. */
+function queryVariants(query: string): string[] {
+  const q = norm(query);
+  const out = new Set<string>([q]);
+  for (const w of q.split(" ")) {
+    for (const g of XWORD_GROUPS) {
+      if (g.includes(w)) for (const v of g) out.add(v);
+    }
+  }
+  return [...out];
+}
+
+/** ¿El término (o su equivalente en otro idioma) está en el texto? */
+function termMatches(haystackNorm: string, termNorm: string): boolean {
+  return queryVariants(termNorm).some((v) => haystackNorm.includes(v));
+}
+
 /**
  * 0.1.9: las salidas de varios handlers están solo en español. Para en/pt
  * se traducen las frases fijas conocidas (los datos del usuario —nombres,
@@ -1035,7 +1082,11 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
       case "noteRead": {
         const notes = (await deps.listNotes?.()) ?? [];
         const q = norm(action.query);
-        const matches = notes.filter((n) => norm(n.title).includes(q) || (q.length >= 4 && q.includes(norm(n.title))));
+        // 0.1.24 (H-4): la consulta se expande a sus equivalentes
+        // ES/EN/PT — la nota puede estar guardada en otro idioma.
+        const matches = notes.filter(
+          (n) => queryVariants(q).some((v) => norm(n.title).includes(v)) || (q.length >= 4 && q.includes(norm(n.title))),
+        );
         const exact = matches.filter((n) => norm(n.title) === q);
         const chosen = exact.length === 1 ? exact[0] : matches.length === 1 ? matches[0] : null;
         if (!chosen) {
@@ -1090,7 +1141,10 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
         const notes = (await deps.listNotes?.()) ?? [];
         if (action.target.type === "one") {
           const q = norm(action.target.query);
-          const matches = notes.filter((n) => norm(n.title).includes(q) || (q.length >= 4 && q.includes(norm(n.title))));
+          // 0.1.24 (H-4): equivalentes entre idiomas también al borrar.
+          const matches = notes.filter(
+            (n) => queryVariants(q).some((v) => norm(n.title).includes(v)) || (q.length >= 4 && q.includes(norm(n.title))),
+          );
           const exact = matches.filter((n) => norm(n.title) === q);
           const chosen = exact.length === 1 ? exact[0] : matches.length === 1 ? matches[0] : null;
           if (!chosen) {
@@ -1171,10 +1225,12 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
         const q = norm(action.query);
         const terms = q.split(" ").filter((w) => w.length >= 3);
         const hay = (n: { title: string; body: string }) => `${norm(n.title)} ${norm(n.body)}`;
-        let matches = notes.filter((n) => hay(n).includes(q));
+        // 0.1.24 (H-4): un término casa también por su equivalente en
+        // otro idioma («flowers» encuentra la nota de «flores»).
+        let matches = notes.filter((n) => hay(n).includes(q) || (terms.length === 1 && termMatches(hay(n), terms[0])));
         if (matches.length === 0 && terms.length > 1) {
           matches = notes
-            .map((n) => ({ n, score: terms.reduce((acc, w) => acc + (hay(n).includes(w) ? 1 : 0), 0) }))
+            .map((n) => ({ n, score: terms.reduce((acc, w) => acc + (termMatches(hay(n), w) ? 1 : 0), 0) }))
             .filter((x) => x.score === terms.length)
             .map((x) => x.n);
         }

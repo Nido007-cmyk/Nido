@@ -835,3 +835,46 @@ describe("0.1.20 (P3-15) — moneda: respuesta honesta offline", () => {
     expect(out.response).toContain("no te voy a inventar una cifra");
   });
 });
+
+describe("0.1.24 (auditoría de alcanzabilidad, H-4) — notas entre idiomas", () => {
+  // El dueño guarda en un idioma y pregunta en otro: el matching
+  // literal respondía «I couldn't find a note called "birthday"»
+  // teniendo la nota «cumpleaños de Ana» delante (sonda P2, 14a/14b).
+  const NOTES = [{ id: "n1", title: "cumpleaños de Ana", body: "ideas para el cumpleaños de Ana: flores y pastel" }];
+  const deps: ToolRouterDeps = {
+    dispatch: async (name, args) => ({
+      status: "executed",
+      text: name === "read_note" ? NOTES.find((n) => n.id === args.id)!.body : "ok",
+    }),
+    isDisabled: () => false,
+    listNotes: async () => NOTES.map((n) => ({ id: n.id, title: n.title })),
+    listNotesFull: async () => NOTES,
+    now: () => NOW,
+  };
+
+  it("leer: «read the note about birthday» encuentra la nota en español", async () => {
+    const out = await runToolAction(extractToolAction("read the note about birthday", NOW)!, deps);
+    expect(out.response).toContain("flores y pastel");
+  });
+
+  it("buscar: «search flowers in my notes» la encuentra por el cuerpo", async () => {
+    const out = await runToolAction(extractToolAction("search flowers in my notes", NOW)!, deps);
+    expect(out.response).toContain("cumpleaños de Ana");
+  });
+
+  it("buscar en PT: «procura flores nas minhas notas» también", async () => {
+    const out = await runToolAction(extractToolAction("procura flores nas minhas notas", NOW)!, deps);
+    expect(out.response).toContain("cumpleaños de Ana");
+  });
+
+  it("borrar: «delete the birthday note» llega a la nota en español (pide confirmación)", async () => {
+    const out = await runToolAction(extractToolAction("delete the birthday note", NOW)!, deps);
+    expect(out.response).toContain("cumpleaños de Ana");
+    expect(out.toolUses.map((u) => u.name)).toContain("delete_note");
+  });
+
+  it("el matching normal no se rompe: una consulta sin equivalente sigue sin encontrar", async () => {
+    const out = await runToolAction(extractToolAction("read the note about quantum", NOW)!, deps);
+    expect(out.response).toContain("couldn't find");
+  });
+});
