@@ -84,14 +84,26 @@ function realModule(): LocalAuthModule | null {
 export async function getGateStatus(): Promise<GateStatus> {
   const m = realModule();
   if (!m) return { hasHardware: false, enrolled: false, method: "none" };
-  const [hasHardware, enrolled, types] = await Promise.all([
+  const [hasHardware, enrolledBio, level] = await Promise.all([
     m.hasHardwareAsync().catch(() => false),
     m.isEnrolledAsync().catch(() => false),
-    m.supportedAuthenticationTypesAsync().catch(() => [] as number[]),
+    m.getEnrolledLevelAsync().catch(() => 0),
   ]);
-  // AuthenticationType: 1 = FINGERPRINT, 2 = FACIAL_RECOGNITION, 3 = IRIS
-  const method: AuthMethod =
-    !enrolled || !hasHardware ? "none" : types.length > 0 ? "biometrics" : "device-credential";
+  // hasHardwareAsync/isEnrolledAsync miran SOLO la biometría (fuente nativa
+  // de Expo en Android: isEnrolled = canAuthenticate(biométrico) == SUCCESS).
+  // En un dispositivo sin hardware biométrico pero con PIN del sistema, ambos
+  // dan false y el gate concluía «sin biometría ni PIN» con el PIN puesto,
+  // bloqueando hasta «Crear backup». La credencial del dispositivo vive en
+  // getEnrolledLevelAsync: en Android devuelve 1 (SECRET) cuando
+  // KeyguardManager.isDeviceSecure, 2/3 cuando hay biometría enrolada.
+  // Evidencia (Tab A9+, v0.1.24): PIN recién configurado y la pantalla de
+  // bloqueo decía «Este dispositivo no tiene biometría ni PIN configurado».
+  const enrolled = enrolledBio || level > 0;
+  const method: AuthMethod = !enrolled
+    ? "none"
+    : level >= 2 || enrolledBio
+      ? "biometrics"
+      : "device-credential";
   return { hasHardware, enrolled, method };
 }
 

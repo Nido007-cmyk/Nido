@@ -60,13 +60,45 @@ describe("getGateStatus", () => {
   });
 
   it("enrolado sin tipos biométricos → device-credential", async () => {
-    mockModule({ supportedAuthenticationTypesAsync: async () => [] });
+    mockModule({
+      supportedAuthenticationTypesAsync: async () => [],
+      isEnrolledAsync: async () => false,
+      getEnrolledLevelAsync: async () => 1,
+    });
     await expect(getGateStatus()).resolves.toMatchObject({ method: "device-credential" });
   });
 
   it("no enrolado → none", async () => {
-    mockModule({ isEnrolledAsync: async () => false });
+    mockModule({ isEnrolledAsync: async () => false, getEnrolledLevelAsync: async () => 0 });
     await expect(getGateStatus()).resolves.toMatchObject({ method: "none", enrolled: false });
+  });
+
+  it("solo PIN, sin hardware biométrico (Tab A9+) → enrolled, device-credential", async () => {
+    // Evidencia física v0.1.24: la Tab A9+ no tiene lector de huella; con el
+    // PIN recién puesto el gate decía «no tiene biometría ni PIN».
+    mockModule({
+      hasHardwareAsync: async () => false,
+      isEnrolledAsync: async () => false,
+      supportedAuthenticationTypesAsync: async () => [],
+      getEnrolledLevelAsync: async () => 1, // SECRET: KeyguardManager.isDeviceSecure
+    });
+    await expect(getGateStatus()).resolves.toEqual({
+      hasHardware: false,
+      enrolled: true,
+      method: "device-credential",
+    });
+  });
+
+  it("hardware biométrico presente pero sin enrolar, con PIN → device-credential", async () => {
+    mockModule({
+      hasHardwareAsync: async () => true,
+      isEnrolledAsync: async () => false,
+      getEnrolledLevelAsync: async () => 1,
+    });
+    await expect(getGateStatus()).resolves.toMatchObject({
+      enrolled: true,
+      method: "device-credential",
+    });
   });
 });
 
@@ -90,10 +122,25 @@ describe("requireUnlock", () => {
   });
 
   it("sin enrollment → BiometricUnavailable (no bypass silencioso)", async () => {
-    const calls = mockModule({ isEnrolledAsync: async () => false });
+    const calls = mockModule({
+      isEnrolledAsync: async () => false,
+      getEnrolledLevelAsync: async () => 0,
+    });
     await expect(requireUnlock("test")).rejects.toBeInstanceOf(BiometricUnavailable);
     expect(calls).toHaveLength(0); // ni siquiera se llamó al SO
     expect(isUnlocked()).toBe(false);
+  });
+
+  it("solo PIN (sin hardware biométrico) → pide autenticación al SO y desbloquea", async () => {
+    const calls = mockModule({
+      hasHardwareAsync: async () => false,
+      isEnrolledAsync: async () => false,
+      supportedAuthenticationTypesAsync: async () => [],
+      getEnrolledLevelAsync: async () => 1,
+    });
+    await requireUnlock("test");
+    expect(calls).toEqual(["authenticate"]); // el SO muestra su prompt con fallback a PIN
+    expect(isUnlocked()).toBe(true);
   });
 });
 
