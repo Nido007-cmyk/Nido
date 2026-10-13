@@ -47,6 +47,8 @@ const RULES: Array<{ re: RegExp; key: string; group?: string }> = [
   { re: /No se pudo guardar el contacto/i, key: "contactSaveFailed" },
   { re: /Contacto revocado/i, key: "revoked" },
   { re: /El transporte no soporta revocación/i, key: "revokeUnsupported" },
+  { re: /El transporte no soporta recuperación de revocaciones/i, key: "revokeRecoveryUnsupported" },
+  { re: /NidoMessenger invalidado por Clear All Data/i, key: "sessionInvalidated" },
   { re: /Versión de protocolo no soportada|HELLO de versión desconocida/i, key: "versionMismatch" },
   { re: /El Bluetooth está apagado/i, key: "bluetoothOff" },
   { re: /Bluetooth no disponible|Ni Bluetooth ni Wi-Fi local están disponibles|sin radio/i, key: "noRadio" },

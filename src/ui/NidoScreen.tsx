@@ -135,6 +135,14 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
     const d = describeP2PError(e);
     return t(d.key, d.vars ?? {});
   };
+  // Errores que ESTA pantalla ya construyó con t(): se muestran tal cual,
+  // sin pasar por el mapeo (que los envolvería en el genérico con el
+  // texto localizado como «detalle»). Auditoría 2026-10-12.
+  const localizedP2PError = (msg: string): Error => {
+    const err = new Error(msg) as Error & { nidoLocalized?: boolean };
+    err.nidoLocalized = true;
+    return err;
+  };
   const mRef = useRef(getSharedNidoMessenger());
   const [tab, setTab] = useState<Tab>("chats");
   const [myCode, setMyCode] = useState("");
@@ -293,9 +301,8 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       setMessages(await getConversation(pkHex));
     } catch (e) {
       // FIX 2026-10-09 (UI-AUDIT/F4): error visible en vez de silencio.
-      setNotice(
-        `${t("nido.errorLabel")}: ${e instanceof Error ? e.message : String(e)}`
-      );
+      // Auditoría 2026-10-12: por el mapeo localizado, no el mensaje crudo.
+      setNotice(`${t("nido.errorLabel")}: ${p2pErr(e)}`);
     }
   }, [t]);
 
@@ -326,9 +333,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
         setNotice(t("nido.revocationRecoveryFailed"));
       }
     } catch (e) {
-      setNotice(
-        `${t("nido.errorLabel")}: ${e instanceof Error ? e.message : String(e)}`
-      );
+      setNotice(`${t("nido.errorLabel")}: ${p2pErr(e)}`);
     } finally {
       setRevocationRecovering(false);
     }
@@ -720,7 +725,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
         await deleteMessage(item.id);
         setMessages((prev) => prev.filter((m) => m.id !== item.id));
       } catch (e) {
-        setNotice(`${t("nido.errorLabel")}: ${e instanceof Error ? e.message : String(e)}`);
+        setNotice(`${t("nido.errorLabel")}: ${p2pErr(e)}`);
       }
     },
     [peer, t],
@@ -994,12 +999,16 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             if (await attempt(alias)) return true;
           }
         }
-        if (tried.size === 0) throw new Error(t("nido.noNearbyForPaired"));
-        throw new Error(
-          lastError || t("nido.pairedNotFound", { name })
-        );
+        if (tried.size === 0) throw localizedP2PError(t("nido.noNearbyForPaired"));
+        throw lastError
+          ? new Error(lastError)
+          : localizedP2PError(t("nido.pairedNotFound", { name }));
       } catch (e) {
-        setLinkError(e instanceof Error ? e.message : String(e));
+        setLinkError(
+          e instanceof Error && (e as { nidoLocalized?: boolean }).nidoLocalized
+            ? e.message
+            : p2pErr(e)
+        );
         // FIX 2026-10-07: devolver false en vez de tragar el error.
         // El auto-reconnect necesita saber si falló para reintentar.
         return false;
@@ -1596,7 +1605,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
                           setNotice(t("nido.contactDeleted", { name: c.name }));
                         } catch (e) {
                           setNotice(
-                            e instanceof Error ? e.message : t("nido.deleteContactFailed")
+                            e instanceof Error ? p2pErr(e) : t("nido.deleteContactFailed")
                           );
                         }
                       }

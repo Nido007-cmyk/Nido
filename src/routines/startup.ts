@@ -21,6 +21,7 @@ import {
   notifyNow,
   refreshBriefingNotification,
   cancelReminderNotification,
+  reminderNotificationTitle,
 } from "../notify/notifications";
 import { upcomingEventsForBriefing } from "../agent/tools/handlers";
 import { formatDay } from "../agent/loop/toolRouter";
@@ -72,7 +73,7 @@ export async function runStartupRoutines(): Promise<void> {
     const due = await getDueReminders();
     for (const r of due) {
       if (notifyOk) {
-        await notifyNow("NIDO · Recordatorio", r.text);
+        await notifyNow(reminderNotificationTitle(), r.text);
       }
       await cancelReminderNotification(r.id);
       await completeReminder(r.id);

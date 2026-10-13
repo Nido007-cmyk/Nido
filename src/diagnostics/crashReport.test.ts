@@ -45,4 +45,18 @@ describe("crashReport", () => {
     expect(text).toContain("(sin registros)");
     expect(text).toContain("(ninguno)");
   });
+
+  it("con rótulos localizados, el informe sale en ese idioma (auditoría 2026-10-12)", () => {
+    const text = formatCrashReport({ sdkInt: 29, device: "x", lastCrash: null, exits: [] }, "1", {
+      exitsTitle: "== Latest exits (Android) ==",
+      noRecords: "(no records)",
+      traceLabel: "  trace:",
+      lastCrashTitle: "== Latest Java/JS crash ==",
+      noneLabel: "(none)",
+    });
+    expect(text).toContain("== Latest exits (Android) ==");
+    expect(text).toContain("(no records)");
+    expect(text).toContain("(none)");
+    expect(text).not.toContain("Últimos cierres");
+  });
 });

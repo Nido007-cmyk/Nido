@@ -54,14 +54,33 @@ export function latestFailure(report: CrashReportLike): ExitInfoLike | null {
 
 const MB = 1024;
 
+/** Rótulos del informe, localizables desde la tarjeta (auditoría
+ * 2026-10-12: el informe salía siempre en español). Sin `strings`, se
+ * usan los rótulos en español de siempre. */
+export interface CrashReportStrings {
+  exitsTitle: string;
+  noRecords: string;
+  traceLabel: string;
+  lastCrashTitle: string;
+  noneLabel: string;
+}
+
+const ES_STRINGS: CrashReportStrings = {
+  exitsTitle: "== Últimos cierres (Android) ==",
+  noRecords: "(sin registros)",
+  traceLabel: "  traza:",
+  lastCrashTitle: "== Último fallo Java/JS ==",
+  noneLabel: "(ninguno)",
+};
+
 /** Texto plano para copiar en un reporte de error. */
-export function formatCrashReport(report: CrashReportLike, appVersion: string): string {
+export function formatCrashReport(report: CrashReportLike, appVersion: string, strings: CrashReportStrings = ES_STRINGS): string {
   const lines: string[] = [];
   lines.push(`NIDO ${appVersion} · ${report.device} · Android SDK ${report.sdkInt}`);
   lines.push("");
-  lines.push("== Últimos cierres (Android) ==");
+  lines.push(strings.exitsTitle);
   if (report.exits.length === 0) {
-    lines.push("(sin registros)");
+    lines.push(strings.noRecords);
   }
   const sorted = [...report.exits].sort((a, b) => b.timestamp - a.timestamp);
   for (const e of sorted) {
@@ -69,12 +88,12 @@ export function formatCrashReport(report: CrashReportLike, appVersion: string): 
     const mem = e.rssKb > 0 ? ` · RSS ${Math.round(e.rssKb / MB)} MB` : "";
     lines.push(`- ${when} ${e.reason} (status ${e.status})${mem}${e.description ? ` · ${e.description}` : ""}`);
     if (e.trace) {
-      lines.push("  traza:");
+      lines.push(strings.traceLabel);
       for (const l of e.trace.split("\n").slice(0, 60)) lines.push(`    ${l}`);
     }
   }
   lines.push("");
-  lines.push("== Último fallo Java/JS ==");
-  lines.push(report.lastCrash ?? "(ninguno)");
+  lines.push(strings.lastCrashTitle);
+  lines.push(report.lastCrash ?? strings.noneLabel);
   return lines.join("\n");
 }

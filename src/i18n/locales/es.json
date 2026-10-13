@@ -186,8 +186,6 @@
     "pbkdf2Running": "Ejecutando benchmark PBKDF2…",
     "pbkdf2Saved": "Guardado en {{path}} · provisional: {{verdict}}",
     "pbkdf2Title": "Benchmark PBKDF2 (cuarentena — no es cripto de producción)",
-    "pbkdf2WarnTitle": "Benchmark PBKDF2",
-    "pbkdf2WarnMsg": "Este benchmark congelará el app por un rato durante la fase sin fragmentar (por diseño, mide el costo real de bloqueo). No toques el app hasta que termine.",
     "progress": "Config. {{config}}/{{configs}} · Consulta {{query}}/{{queries}}",
     "run": "▶ Ejecutar",
     "runFailedTitle": "Falló la evaluación",
@@ -642,6 +640,7 @@
       "contactSaveFailed": "No se pudo guardar el contacto. Inténtalo de nuevo.",
       "revoked": "Revocaste a este contacto; ya no puede comunicarse contigo.",
       "revokeUnsupported": "Esta conexión no permite revocar contactos.",
+      "revokeRecoveryUnsupported": "Esta conexión no permite recuperar revocaciones.",
       "versionMismatch": "El otro dispositivo tiene una versión de NIDO distinta. Actualiza los dos.",
       "bluetoothOff": "El Bluetooth está apagado. Actívalo e inténtalo de nuevo.",
       "noRadio": "No hay Bluetooth ni Wi-Fi local disponibles en este dispositivo.",
@@ -649,7 +648,8 @@
       "alreadyConnected": "Ya hay una conexión abierta con este contacto.",
       "busy": "NIDO estaba ocupado. Vuelve a intentarlo en unos segundos.",
       "connection": "No se pudo conectar con el otro NIDO. Acerca los dispositivos, revisa el Bluetooth o la Wi-Fi y que NIDO esté abierto en los dos.",
-      "generic": "Algo falló con la conexión ({{detail}})."
+      "generic": "Algo falló con la conexión ({{detail}}).",
+      "sessionInvalidated": "La sesión de NIDO se cerró al borrar los datos. Cierra esta pantalla y vuelve a abrirla."
     },
     "back": "‹ Atrás",
     "online": "al alcance",
@@ -664,7 +664,7 @@
     "tabNegotiations": "Negociaciones",
     "tabPacks": "Packs",
     "noContactsTitle": "Sin contactos todavía",
-    "noContactsBody": "Empareja tu primer contacto en la pestaña Contactos: muéstrale tu QR y escanea el suyo (o pégalo como texto).",
+    "noContactsBody": "Empareja tu primer contacto en la pestaña Contactos: muestra tu código QR y pega el código del otro como texto.",
     "howItWorksTitle": "Cómo funciona",
     "howItWorksBody": "Los mensajes se cifran en tu teléfono y viajan directo al otro NIDO por Bluetooth, sin internet ni servidores. Si tu contacto no está al alcance, el mensaje queda en cola cifrada y se envía solo cuando aparezca.",
     "troubleshootTitle": "¿Problemas para conectar?",
@@ -1201,7 +1201,12 @@
     "none": "No hay cierres por fallo registrados.",
     "copy": "Copiar informe",
     "copied": "Copiado",
-    "clear": "Borrar"
+    "clear": "Borrar",
+    "fmtExitsTitle": "== Últimos cierres (Android) ==",
+    "fmtNoRecords": "(sin registros)",
+    "fmtTraceLabel": "  traza:",
+    "fmtLastCrashTitle": "== Último fallo Java/JS ==",
+    "fmtNone": "(ninguno)"
   },
   "vault": {
     "title": "Protección por hardware",
@@ -1449,7 +1454,7 @@
             "what": "Mensajes cifrados directos a otro NIDO por Bluetooth o por el Wi-Fi local, sin internet ni servidores.",
             "steps": [
               "Abre el menú → NIDO en las dos tablets.",
-              "En la pestaña $t(nido.tabContacts), muestra tu QR y escanea el del otro (o pégalo como texto).",
+              "En la pestaña $t(nido.tabContacts), muestra tu código QR y pega el código del otro como texto.",
               "Comprueben juntos la huella de verificación.",
               "En la pestaña $t(nido.tabLink) toca $t(nido.connectButton) en cualquiera de las dos y escribe en $t(nido.tabChats)."
             ],

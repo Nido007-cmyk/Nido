@@ -53,8 +53,13 @@ describe("describeP2PError", () => {
     expect(describeP2PError(undefined).key).toBe("nido.errors.generic");
   });
 
+  it("auditoría 2026-10-12: recuperación de revocaciones y sesión invalidada", () => {
+    expect(k(new Error("El transporte no soporta recuperación de revocaciones"))).toBe("revokeRecoveryUnsupported");
+    expect(k(new Error("NidoMessenger invalidado por Clear All Data: se requiere una instancia nueva."))).toBe("sessionInvalidated");
+  });
+
   it("every key exists in every language, with its variables", () => {
-    const keys = ["noIdentity", "ownQr", "qrInvalid", "duplicateName", "noAddress", "contactSaveFailed", "revoked", "revokeUnsupported", "versionMismatch", "bluetoothOff", "noRadio", "permission", "alreadyConnected", "busy", "connection", "generic"];
+    const keys = ["noIdentity", "ownQr", "qrInvalid", "duplicateName", "noAddress", "contactSaveFailed", "revoked", "revokeUnsupported", "revokeRecoveryUnsupported", "sessionInvalidated", "versionMismatch", "bluetoothOff", "noRadio", "permission", "alreadyConnected", "busy", "connection", "generic"];
     for (const loc of [es, en, pt] as Array<{ nido: { errors: Record<string, string> } }>) {
       for (const key of keys) expect(loc.nido.errors[key], key).toBeTruthy();
       expect(loc.nido.errors.duplicateName).toContain("{{name}}");

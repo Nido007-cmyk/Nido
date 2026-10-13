@@ -39,12 +39,18 @@ export function CrashReportCard() {
   const copy = useCallback(async () => {
     if (!report) return;
     try {
-      await Clipboard.setStringAsync(formatCrashReport(report, appConfig.expo.version));
+      await Clipboard.setStringAsync(formatCrashReport(report, appConfig.expo.version, {
+        exitsTitle: t("crashReport.fmtExitsTitle"),
+        noRecords: t("crashReport.fmtNoRecords"),
+        traceLabel: t("crashReport.fmtTraceLabel"),
+        lastCrashTitle: t("crashReport.fmtLastCrashTitle"),
+        noneLabel: t("crashReport.fmtNone"),
+      }));
       setCopied(true);
     } catch {
       /* sin portapapeles: nada que hacer */
     }
-  }, [report]);
+  }, [report, t]);
 
   const clear = useCallback(() => {
     clearCrashReport();

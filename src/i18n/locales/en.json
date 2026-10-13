@@ -617,9 +617,7 @@
     "pbkdf2Run": "▶ Run PBKDF2 benchmark",
     "pbkdf2Running": "Running PBKDF2 benchmark…",
     "pbkdf2Saved": "Saved to {{path}} · provisional: {{verdict}}",
-    "pbkdf2Title": "PBKDF2 benchmark (quarantine — not production crypto)",
-    "pbkdf2WarnTitle": "PBKDF2 benchmark",
-    "pbkdf2WarnMsg": "This benchmark will freeze the app for a while during the unchunked phase (by design, it measures the real blocking cost). Do not touch the app until it finishes."
+    "pbkdf2Title": "PBKDF2 benchmark (quarantine — not production crypto)"
   },
   "lockScreen": {
     "title": "NIDO locked",
@@ -642,6 +640,7 @@
       "contactSaveFailed": "Couldn't save the contact. Try again.",
       "revoked": "You revoked this contact; it can't talk to you anymore.",
       "revokeUnsupported": "This connection can't revoke contacts.",
+      "revokeRecoveryUnsupported": "This connection can't recover revocations.",
       "versionMismatch": "The other device has a different NIDO version. Update both.",
       "bluetoothOff": "Bluetooth is off. Turn it on and try again.",
       "noRadio": "Neither Bluetooth nor local Wi-Fi is available on this device.",
@@ -649,7 +648,8 @@
       "alreadyConnected": "There's already an open connection with this contact.",
       "busy": "NIDO was busy. Try again in a few seconds.",
       "connection": "Couldn't connect to the other NIDO. Bring the devices closer, check Bluetooth or Wi-Fi, and make sure NIDO is open on both.",
-      "generic": "Something went wrong with the connection ({{detail}})."
+      "generic": "Something went wrong with the connection ({{detail}}).",
+      "sessionInvalidated": "The NIDO session was closed when the data was erased. Close this screen and open it again."
     },
     "back": "‹ Back",
     "online": "within reach",
@@ -663,7 +663,7 @@
     "tabLink": "Link",
     "tabNegotiations": "Negotiations",
     "noContactsTitle": "No contacts yet",
-    "noContactsBody": "Pair your first contact in the Contacts tab: show them your QR and scan theirs (or paste it as text).",
+    "noContactsBody": "Pair your first contact in the Contacts tab: show your QR code and paste theirs as text.",
     "howItWorksTitle": "How it works",
     "howItWorksBody": "Messages are encrypted on your phone and travel straight to the other NIDO over Bluetooth — no internet, no servers. If your contact isn’t within reach, the message stays in an encrypted queue and is sent only when they appear.",
     "troubleshootTitle": "Trouble connecting?",
@@ -1201,7 +1201,12 @@
     "none": "No failures recorded.",
     "copy": "Copy report",
     "copied": "Copied",
-    "clear": "Clear"
+    "clear": "Clear",
+    "fmtExitsTitle": "== Latest exits (Android) ==",
+    "fmtNoRecords": "(no records)",
+    "fmtTraceLabel": "  trace:",
+    "fmtLastCrashTitle": "== Latest Java/JS crash ==",
+    "fmtNone": "(none)"
   },
   "vault": {
     "title": "Hardware protection",
@@ -1449,7 +1454,7 @@
             "what": "Encrypted messages straight to another NIDO over Bluetooth or local Wi-Fi, without internet or servers.",
             "steps": [
               "Open the menu → NIDO on both tablets.",
-              "In the $t(nido.tabContacts) tab, show your QR and scan the other one (or paste it as text).",
+              "In the $t(nido.tabContacts) tab, show your QR code and paste the other one as text.",
               "Check the verification fingerprint together.",
               "In the $t(nido.tabLink) tab tap $t(nido.connectButton) on either tablet and write in $t(nido.tabChats)."
             ],

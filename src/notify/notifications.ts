@@ -66,6 +66,14 @@ function notifyStrings(): NotifyStrings {
   }
 }
 
+/** Título localizado de las notificaciones de recordatorio (para las
+ * rutas que disparan notifyNow fuera del programador, p. ej. el aviso de
+ * vencidos al arrancar: antes llevaba «NIDO · Recordatorio» fijo en
+ * español en cualquier idioma — auditoría 2026-10-12). */
+export function reminderNotificationTitle(): string {
+  return notifyStrings().reminderTitle;
+}
+
 /** Permisos + canales. Llamar una vez al arrancar la app. */
 // FIX 2026-10-09 (N2): guard contra doble inicialización (Fast Refresh,
 // re-init). Sin esto se apilan listeners duplicados.
