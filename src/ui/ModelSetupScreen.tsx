@@ -46,6 +46,7 @@ import { VoiceSettings } from "./VoiceSettings";
 import { MemorySettings } from "./MemorySettings";
 import { AccordionSection } from "./AccordionSection";
 import { HardwareProtectionCard } from "./HardwareProtectionCard";
+import { BackupKeyModal } from "./BackupKeyModal";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { SetupWizardScreen } from "./SetupWizardScreen";
 import { ThemeSelector } from "./components/ThemeSelector";
@@ -57,7 +58,6 @@ import type { Typography } from "./theme/typography";
 import { makeSurfaces } from "./theme/surfaces";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 import { backupErrorCode } from "../security/backupErrors";
-import { showSecureAlert } from "nido-secure-dialog";
 
 const modelManager = new ModelManager();
 const LLM_EMBEDDING_KINDS: AssetKind[] = ["llm", "embedding"];
@@ -89,6 +89,11 @@ export function ModelSetupScreen(props: Props) {
   const [dangerModalVisible, setDangerModalVisible] = useState(false);
   // A1: restaurar un respaldo hecho con otra clave (otro teléfono o antes
   // de rotar). El usuario escribe la clave que guardó al crear el respaldo.
+  // 2026-10-12: la tarjeta de respaldo muestra la clave en el modal
+  // copiable compartido (antes una alerta del sistema no copiable) y
+  // recuerda el último backup creado para «Guardar en Descargas».
+  const [backupKeyModal, setBackupKeyModal] = useState<{ dek: string; dest: string } | null>(null);
+  const [lastBackupPath, setLastBackupPath] = useState<string | null>(null);
   const [restoreKeyVisible, setRestoreKeyVisible] = useState(false);
   const [restoreKeyText, setRestoreKeyText] = useState("");
   const [restoreKeyBusy, setRestoreKeyBusy] = useState(false);
@@ -512,31 +517,18 @@ export function ModelSetupScreen(props: Props) {
                 onPress={async () => {
                   try {
                     // TESTFIX-2026-10-08 (Fix 6): lógica extraída a
-                    // backupShare.ts; la alerta ahora ofrece Compartir para
-                    // sacar el archivo de la carpeta privada del app.
+                    // backupShare.ts para sacar el archivo de la carpeta
+                    // privada del app.
                     const { createBackupFile } = await import("./backupShare");
                     const { path, key } = await createBackupFile(t("backup.createButton"));
-                    // Mostrar la clave para que el usuario la copie.
-                    // Auditoría ofensiva (0.1.18): Alert.alert abre su propia
-                    // ventana, que NO hereda FLAG_SECURE de la actividad: la
-                    // clave podía salir en capturas, grabaciones de pantalla y
-                    // en la miniatura de Recientes. El diálogo seguro pone el
-                    // flag en su propia ventana. Mismos dos botones.
-                    const share = await showSecureAlert({
-                      title: t("backup.dekTitle"),
-                      message: `${t("backup.dekSavedIn")} ${path}\n\n${t("backup.dekCopyPrompt")}\n${key}`,
-                      cancelLabel: t("backup.ok"),
-                      confirmLabel: t("backup.shareButton"),
-                      cancelable: false,
-                    });
-                    if (share) {
-                      try {
-                        const { shareBackupFile } = await import("./backupShare");
-                        await shareBackupFile(path);
-                      } catch {
-                        Alert.alert(t("backup.errorTitle"), t("backup.shareFailed"));
-                      }
-                    }
+                    // 2026-10-12: la clave se muestra en el modal copiable
+                    // compartido (BackupKeyModal), igual que en la pantalla
+                    // de respaldo. Antes salía en una alerta del sistema
+                    // cuyo texto no se puede copiar: el usuario solo podía
+                    // anotarla o fotografiarla (evidencia física). Compartir
+                    // sigue disponible en su propio botón de esta tarjeta.
+                    setLastBackupPath(path);
+                    setBackupKeyModal({ dek: key, dest: path });
                   } catch (e) {
                     Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.createFailed"));
                   }
@@ -565,6 +557,33 @@ export function ModelSetupScreen(props: Props) {
                 accessibilityRole="button"
               >
                 <Text style={styles.wizardBtnText}>{t("backup.shareButton")}</Text>
+              </Pressable>
+              {/* 2026-10-12: guardar en una carpeta (Descargas) también desde
+                  Ajustes; el menú Compartir de Android no ofrece guardar en
+                  archivos. Misma rutina que la pantalla de respaldo. */}
+              <Pressable accessibilityLabel={t("backup.saveToDownloads")}
+                style={[styles.wizardBtn, { marginTop: 8 }]}
+                onPress={async () => {
+                  try {
+                    const { findLatestBackup, saveBackupToFolder } = await import("./backupShare");
+                    const src = lastBackupPath ?? (await findLatestBackup());
+                    if (!src) {
+                      Alert.alert(t("backup.noBackupsTitle"), t("backup.noBackupsBody"));
+                      return;
+                    }
+                    const copied = await saveBackupToFolder(src);
+                    if (copied === null) {
+                      Alert.alert(t("backup.cancelledTitle"), t("backup.noPermission"));
+                      return;
+                    }
+                    Alert.alert(t("backup.savedTitle"), t("backup.savedBody", { files: copied.join("\n") }));
+                  } catch (e) {
+                    Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.saveFailed"));
+                  }
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={styles.wizardBtnText}>{t("backup.saveToDownloads")}</Text>
               </Pressable>
               <Pressable accessibilityLabel={t("backup.restoreButton")}
                 style={[styles.wizardBtn, { marginTop: 8 }]}
@@ -628,6 +647,11 @@ export function ModelSetupScreen(props: Props) {
                 <Text style={styles.wizardBtnText}>{t("backup.restoreWithKeyButton")}</Text>
               </Pressable>
             </View>
+            <BackupKeyModal
+              dek={backupKeyModal?.dek ?? null}
+              dest={backupKeyModal?.dest ?? ""}
+              onClose={() => setBackupKeyModal(null)}
+            />
           </View>
         </AccordionSection>
       </ScrollView>
