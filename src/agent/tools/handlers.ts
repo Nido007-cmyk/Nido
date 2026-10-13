@@ -217,11 +217,29 @@ const readNoteHandler: ToolHandler = async (args) => {
  * (IRREVERSIBLE_TOOLS): el diálogo muestra el título/texto exacto
  * (confirmText.ts) y sin confirmación el dispatcher ni llega aquí.
  */
+/**
+ * 0.1.29 (auditoría 2026-10-13): el diálogo de confirmación muestra la
+ * etiqueta que llega en los args (title/text). Por la ruta del modelo esa
+ * etiqueta la escribe el modelo, que puede estar influido por contenido
+ * externo: «borra la nota <id de tu nota importante>» con el título «nota
+ * vieja de prueba» se confirmaba viendo un nombre y borraba otra cosa. Solo
+ * se borra si lo que el usuario vio coincide con lo guardado; si no,
+ * no se borra nada (se lanza: el dispatcher lo reporta como fallo, nunca
+ * como borrado).
+ */
+function sameLabel(shown: unknown, stored: string): boolean {
+  const n = (v: string) => v.normalize("NFC").replace(/\s+/g, " ").trim().toLowerCase();
+  return typeof shown === "string" && n(shown).length > 0 && n(shown) === n(stored);
+}
+
 const deleteNoteHandler: ToolHandler = async (args) => {
   const id = String(args.id ?? "").trim();
   if (!id) return "Error: falta el id de la nota.";
   const note = await getNote(id);
   if (!note) return `No encontré ninguna nota con id ${id}.`;
+  if (!sameLabel(args.title, note.title)) {
+    throw new Error("la nota confirmada no coincide con la guardada; no se borró nada");
+  }
   await deleteNote(id);
   return `Nota borrada: «${note.title}».`;
 };
@@ -232,6 +250,9 @@ const deleteReminderHandler: ToolHandler = async (args) => {
   const { listReminders } = await import("../memory/memoryStore");
   const reminder = (await listReminders(200)).find((r) => r.id === id);
   if (!reminder) return `No encontré ningún recordatorio con id ${id}.`;
+  if (!sameLabel(args.text, reminder.text)) {
+    throw new Error("el recordatorio confirmado no coincide con el guardado; no se borró nada");
+  }
   // Cancelar el aviso del sistema ANTES de borrar: si quedara programado,
   // sonaría para un recordatorio que ya no existe.
   try {

@@ -169,3 +169,32 @@ describe("ensureUnlocked / lockNow", () => {
     expect(calls).toEqual(["authenticate"]);
   });
 });
+
+describe("unlockForSecret (0.1.29, B-2: una sola política para la clave)", () => {
+  it("desbloqueo correcto → unlocked", async () => {
+    mockModule();
+    const { unlockForSecret } = await import("./biometricGate");
+    await expect(unlockForSecret("x")).resolves.toBe("unlocked");
+  });
+
+  it("teléfono sin biometría ni PIN → no-lock (la pantalla avisa y continúa)", async () => {
+    mockModule({ hasHardwareAsync: async () => false, isEnrolledAsync: async () => false, getEnrolledLevelAsync: async () => 0 });
+    const { unlockForSecret } = await import("./biometricGate");
+    await expect(unlockForSecret("x")).resolves.toBe("no-lock");
+  });
+
+  it("solo PIN → pide el PIN (unlocked), no se salta la puerta", async () => {
+    const calls = mockModule({ hasHardwareAsync: async () => false, isEnrolledAsync: async () => false, getEnrolledLevelAsync: async () => 1 });
+    const { unlockForSecret } = await import("./biometricGate");
+    await expect(unlockForSecret("x")).resolves.toBe("unlocked");
+    expect(calls).toEqual(["authenticate"]);
+  });
+
+  it("cancelado o fallido → lanza (no se muestra nada)", async () => {
+    const { unlockForSecret } = await import("./biometricGate");
+    mockModule({ authenticateAsync: async () => ({ success: false, error: "user_cancel" }) });
+    await expect(unlockForSecret("x")).rejects.toBeInstanceOf(BiometricCancelled);
+    mockModule({ authenticateAsync: async () => ({ success: false, error: "lockout" }) });
+    await expect(unlockForSecret("x")).rejects.toBeInstanceOf(BiometricFailed);
+  });
+});

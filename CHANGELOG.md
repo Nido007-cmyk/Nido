@@ -4,6 +4,42 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.29-alpha — 2026-10-13
+
+Security and privacy fixes from the October 13 audit, plus the
+maintenance updates (Dependabot) already on main.
+
+### Security
+- Deleting a note or reminder through the assistant now only happens if
+  what you confirmed is what is stored. The confirmation showed the name
+  the model sent; text hidden in a document or message could make it ask
+  to delete one note while showing you another name.
+- The backup key is shown in a layer of the app's own window, which is
+  protected from screenshots, screen recording and the Recents preview.
+  The shared key dialog from 0.1.27 used a separate window that the
+  protection might not cover.
+- Restoring a backup on a phone without an encryption key is refused (use
+  "Restore with the backup's key"): there was no way to check the file,
+  and a crafted one could be accepted. With a key, a backup is only
+  accepted if it actually opens with it.
+- Files extracted from a backup bundle are deleted after restoring.
+- Release builds use third-party GitHub Actions pinned to exact commits:
+  the job that signs the APK no longer trusts a movable tag.
+
+### Privacy
+- Notifications sent right away (scheduled task results, overdue
+  reminders at startup) use the reminders channel, hidden on the lock
+  screen. They used the default channel, which showed the text — and
+  scheduled tasks can read your notes since 0.1.24.
+
+### Changed
+- One rule for every backup-key gate (create, view, rotate, restore, in
+  Backup and in Settings): unlock with your fingerprint or PIN; if the
+  phone has neither, NIDO warns you clearly and continues, instead of
+  blocking in some places and not in others.
+- Android version code bumped again (it had stayed at 19 since 0.1.18);
+  backups record the right app version.
+
 ## 0.1.28-alpha — 2026-10-12
 
 Everything the full audit found, fixed. Mostly words in the wrong language.

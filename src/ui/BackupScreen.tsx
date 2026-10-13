@@ -29,7 +29,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import { makeSurfaces } from "./theme/surfaces";
 import * as Backup from "../security/backup";
-import { requireUnlock, BiometricUnavailable } from "../security/biometricGate";
+import { unlockForSecret } from "../security/biometricGate";
 
 export function BackupScreen({ onClose }: { onClose: () => void }) {
   const { colors, typography } = useTheme();
@@ -38,6 +38,21 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
   const [lastBackup, setLastBackup] = useState<string | null>(null);
   // FIX 2026-10-09 (K4/K5): DEK en modal copiable con biométrico, no en Alert.
   const [dekModal, setDekModal] = useState<{ dek: string; dest: string } | null>(null);
+
+  // 0.1.29 (B-2): misma política en todas las puertas de la clave. Sin PIN
+  // en el teléfono se avisa de forma visible ANTES de mostrarla.
+  const revealKey = (dek: string, dest: string, noLock: boolean) => {
+    if (!noLock) {
+      setDekModal({ dek, dest });
+      return;
+    }
+    Alert.alert(
+      t("backup.noLockTitle"),
+      t("backup.noLockBody"),
+      [{ text: t("backup.understood"), onPress: () => setDekModal({ dek, dest }) }],
+      { cancelable: false },
+    );
+  };
 
   const handleCreateBackup = async () => {
     setBusy(true);
@@ -48,25 +63,18 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
       await Backup.createBackup(dest);
       const key = await Backup.exportDatabaseKey();
       setLastBackup(dest);
-      // K5/R2: biométrico antes de mostrar la clave. Si no hay biométrico
-      // configurado (tablets de prueba), advertir pero permitir continuar —
-      // bloquear por completo dejaba al usuario sin acceso a su DEK (R2).
+      // K5/R2: desbloqueo antes de mostrar la clave. 0.1.29 (B-2): sin PIN
+      // en el teléfono se avisa de forma visible y se muestra (negarle la
+      // clave de un respaldo ya creado es peor); cancelar no la muestra.
+      let noLock: boolean;
       try {
-        await requireUnlock(t("backup.unlockReason"));
-      } catch (e) {
-        // A11 (auditoría 2026-10-10): decidir por el tipo de error, no por
-        // el texto del mensaje (cambiar la redacción cambiaba el comportamiento).
-        const isUnavailable = e instanceof BiometricUnavailable;
-        if (!isUnavailable) {
-          // Usuario canceló: no mostrar.
-          Alert.alert(t("backup.cancelledTitle"), t("backup.keyNotShown"));
-          return;
-        }
-        // Sin biométrico: advertir y continuar bajo consentimiento.
-        // (El usuario ya creó el backup; negarle la clave es peor.)
+        noLock = (await unlockForSecret(t("backup.unlockReason"))) === "no-lock";
+      } catch {
+        Alert.alert(t("backup.cancelledTitle"), t("backup.keyNotShown"));
+        return;
       }
       // K4: modal copiable en vez de Alert (el texto de Alert no se puede copiar).
-      setDekModal({ dek: key, dest });
+      revealKey(key, dest, noLock);
     } catch (e) {
       Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.createFailed"));
     } finally {
@@ -89,9 +97,9 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
             // Sin bloqueo configurado en el teléfono se permite continuar,
             // igual que al crear un respaldo.
             try {
-              await requireUnlock(t("backup.rotateTitle"));
-            } catch (e) {
-              if (!(e instanceof BiometricUnavailable)) return;
+              await unlockForSecret(t("backup.rotateTitle"));
+            } catch {
+              return;
             }
             setBusy(true);
             try {
@@ -182,9 +190,12 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
   const handleShowKey = async () => {
     setBusy(true);
     try {
-      // FIX 2026-10-09 (H-3): biométrico obligatorio para ver la DEK.
+      // FIX 2026-10-09 (H-3): desbloqueo para ver la DEK. 0.1.29 (B-2):
+      // misma política que al crear el respaldo (antes aquí se bloqueaba
+      // sin PIN y allí no).
+      let noLock: boolean;
       try {
-        await requireUnlock(t("backup.unlockReason"));
+        noLock = (await unlockForSecret(t("backup.unlockReason"))) === "no-lock";
       } catch {
         Alert.alert(t("backup.cancelledTitle"), t("backup.keyNotShown"));
         return;
@@ -192,7 +203,7 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
       const key = await Backup.exportDatabaseKey();
       // La clave se muestra en el mismo modal copiable que al crear el
       // respaldo: el texto de un Alert no se puede copiar.
-      setDekModal({ dek: key, dest: "" });
+      revealKey(key, "", noLock);
     } catch (e) {
       Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.keyFailed"));
     } finally {
@@ -215,6 +226,7 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
   });
 
   return (
+    <View style={{ flex: 1 }}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>{t("backup.screenTitle")}</Text>
       <Text style={styles.desc}>
@@ -286,13 +298,16 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
         <Text style={styles.buttonSecondaryText}>{t("backup.close")}</Text>
       </Pressable>
 
+    </ScrollView>
       {/* FIX 2026-10-09 (K4): modal con clave copiable. Desde 2026-10-12
-          vive en BackupKeyModal, compartido con la tarjeta de Ajustes. */}
+          vive en BackupKeyModal, compartido con la tarjeta de Ajustes.
+          0.1.29 (M-1): es una capa de la misma ventana, así que va en la
+          raíz de la pantalla y no dentro del ScrollView. */}
       <BackupKeyModal
         dek={dekModal?.dek ?? null}
         dest={dekModal?.dest ?? ""}
         onClose={() => setDekModal(null)}
       />
-    </ScrollView>
+    </View>
   );
 }

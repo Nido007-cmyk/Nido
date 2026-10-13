@@ -85,4 +85,12 @@ describe("BackupKeyModal", () => {
     fireEvent.press(screen.getByLabelText("backup.understood"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("0.1.29 (M-1): no usa <Modal> (otra ventana sin FLAG_SECURE), sino una capa en la misma ventana", async () => {
+    const { Modal } = require("react-native");
+    const { BackupKeyModal } = require("./BackupKeyModal");
+    const r = await render(<BackupKeyModal dek="clave-de-prueba-123" dest="" onClose={() => {}} />);
+    expect(r.UNSAFE_queryAllByType(Modal)).toHaveLength(0);
+    expect(screen.getByText("clave-de-prueba-123")).toBeTruthy();
+  });
 });
