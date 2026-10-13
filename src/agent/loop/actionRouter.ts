@@ -673,7 +673,9 @@ export interface WeeklyPlanAction {
   workEnd: number;   // hora 24h, ej 18
   exerciseDays: number; // veces por semana
   wantsFamilyTime: boolean;
-  lang: "es" | "en"; // M7d: idioma para la salida
+  // 0.1.24 (auditoría de alcanzabilidad, H-6): «pt» añadido — el tipo
+  // solo admitía es|en y toda petición en portugués salía en español.
+  lang: "es" | "en" | "pt"; // M7d: idioma para la salida
 }
 
 /**
@@ -701,8 +703,11 @@ export function extractWeeklyPlanAction(userText: string): WeeklyPlanAction | nu
   // M7b FIX: requerir contexto work/trabajo/horario, no cualquier "N to M"
   // como "I have 2 to 3 meetings".
   let workStart = 9, workEnd = 18;
+  // 0.1.24 (H-6): contexto y separadores PT («trabalho das 9 às 18») —
+  // sin esto el plan en PT usaba el horario por defecto salvo que
+  // coincidiera con 9–18.
   const workMatch =
-    /(?:work|trabajo|horario)\s*(?:de\s*|from\s*)?(\d{1,2})\s*(?:to|a|-)\s*(\d{1,2})/i.exec(t);
+    /(?:work|trabajo|trabalho|horario|horário)\s*(?:de\s*|das\s*|from\s*)?(\d{1,2})\s*(?:to|a|à|às|-)\s*(\d{1,2})/i.exec(t);
   if (workMatch) {
     let s = parseInt(workMatch[1], 10);
     let e = parseInt(workMatch[2], 10);
@@ -718,16 +723,28 @@ export function extractWeeklyPlanAction(userText: string): WeeklyPlanAction | nu
 
   // Extraer ejercicio: "exercise 3 times", "ejercicio 3 veces"
   let exerciseDays = 3;
-  const exMatch = /exercis\w*\s*(\d+)\s*times?|ejercicio\s*(\d+)\s*veces?|(\d+)\s*(?:times|veces)\s*(?:a\s*la\s*semana|per\s*week)?/i.exec(t);
+  // 0.1.24 (H-6): ramas PT («exercício 3 vezes») — grupos 4 y 5.
+  const exMatch = /exercis\w*\s*(\d+)\s*times?|ejercicio\s*(\d+)\s*veces?|(\d+)\s*(?:times|veces)\s*(?:a\s*la\s*semana|per\s*week)?|exerc[ií]ci\w*\s*(\d+)\s*vezes|(\d+)\s*vezes(?:\s*por\s*semana)?/i.exec(t);
   if (exMatch) {
-    const n = parseInt(exMatch[1] || exMatch[2] || exMatch[3], 10);
+    const n = parseInt(exMatch[1] || exMatch[2] || exMatch[3] || exMatch[4] || exMatch[5], 10);
     if (n >= 1 && n <= 7) exerciseDays = n;
   }
 
-  const wantsFamilyTime = /famil/i.test(t);
+  // 0.1.24 (H-6): /fam[ií]l/ — «família» en PT lleva í acentuada y
+  // /famil/ no la casaba: el plan PT salía sin tiempo en familia.
+  const wantsFamilyTime = /fam[ií]l/i.test(t);
 
   // M7d: detectar idioma del trigger para la salida.
-  const lang: "es" | "en" = /planifica|semana|organiza|horario|trabajo|ejercicio/i.test(t) ? "es" : "en";
+  // 0.1.24 (H-6): el PT se detecta ANTES que el ES — «planeja minha
+  // semana» contiene «semana» y caía en «es»: el plan salía en
+  // español a una petición en portugués. Marcadores inequívocos de
+  // PT (ninguno es forma española): planej-, plano, minha, faz,
+  // quero, preciso.
+  const lang: "es" | "en" | "pt" = /planej|\bplano\b|\bminha\b|\bfaz\b|\bquero\b|\bpreciso\b/i.test(t)
+    ? "pt"
+    : /planifica|semana|organiza|horario|trabajo|ejercicio/i.test(t)
+      ? "es"
+      : "en";
 
   return { workStart, workEnd, exerciseDays, wantsFamilyTime, lang };
 }
@@ -739,10 +756,14 @@ export function extractWeeklyPlanAction(userText: string): WeeklyPlanAction | nu
  */
 export function generateWeeklyPlan(action: WeeklyPlanAction): string {
   // M7d FIX: usar el idioma detectado del trigger.
+  // 0.1.24 (H-6): etiquetas y días en portugués cuando lang es «pt».
   const es = action.lang === "es";
+  const pt = action.lang === "pt";
   const days = es
     ? ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
-    : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    : pt
+      ? ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
+      : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
   // Distribuir días de ejercicio uniformemente.
   const exDays: boolean[] = [false, false, false, false, false, false, false];
@@ -763,7 +784,9 @@ export function generateWeeklyPlan(action: WeeklyPlanAction): string {
   const lines: string[] = [];
   const title = es
     ? `Horario semanal (trabajo ${fmtHour(action.workStart)}–${fmtHour(action.workEnd)}):`
-    : `Weekly Schedule (work ${fmtHour(action.workStart)}–${fmtHour(action.workEnd)}):`;
+    : pt
+      ? `Horário semanal (trabalho ${fmtHour(action.workStart)}–${fmtHour(action.workEnd)}):`
+      : `Weekly Schedule (work ${fmtHour(action.workStart)}–${fmtHour(action.workEnd)}):`;
   lines.push(title);
   lines.push("");
 
@@ -771,11 +794,15 @@ export function generateWeeklyPlan(action: WeeklyPlanAction): string {
     const isWeekend = d >= 5;
     lines.push(`**${days[d]}**`);
 
-    const workLabel = es ? "Trabajo" : "Work";
-    const exLabel = es ? "Ejercicio (1 hora)" : "Exercise (1 hour)";
-    const famLabel = es ? "Tiempo en familia" : "Family time";
-    const restLabel = es ? "Día de descanso" : "Rest day";
-    const restFamLabel = es ? "Resto del día: familia y descanso" : "Rest of day: Family time & rest";
+    const workLabel = es ? "Trabajo" : pt ? "Trabalho" : "Work";
+    const exLabel = es ? "Ejercicio (1 hora)" : pt ? "Exercício (1 hora)" : "Exercise (1 hour)";
+    const famLabel = es ? "Tiempo en familia" : pt ? "Tempo em família" : "Family time";
+    const restLabel = es ? "Día de descanso" : pt ? "Dia de descanso" : "Rest day";
+    const restFamLabel = es
+      ? "Resto del día: familia y descanso"
+      : pt
+        ? "Resto do dia: família e descanso"
+        : "Rest of day: Family time & rest";
 
     if (!isWeekend) {
       lines.push(`- ${fmtHour(action.workStart)}–${fmtHour(action.workEnd)}: ${workLabel}`);

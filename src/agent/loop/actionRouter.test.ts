@@ -74,6 +74,30 @@ describe("WEEKLY-PLAN 2026-10-07", () => {
     expect(extractWeeklyPlanAction("cuánto es 2+2")).toBeNull();
   });
 
+  it("0.1.24 (H-6): la petición en portugués genera el plan EN portugués", () => {
+    // Sonda P3: «planeja minha semana…» → lang «es» y plan en español,
+    // porque «semana» también es palabra portuguesa y ganaba el ES.
+    const a = extractWeeklyPlanAction("planeja minha semana: trabalho das 9 às 18, exercício 1 hora, família");
+    expect(a).not.toBeNull();
+    expect(a!.lang).toBe("pt");
+    const plan = generateWeeklyPlan(a!);
+    expect(plan).toContain("Horário semanal (trabalho 9:00 AM–6:00 PM):");
+    expect(plan).toContain("**Segunda-feira**");
+    expect(plan).toContain("**Sexta-feira**");
+    expect(plan).toContain("Trabalho");
+    expect(plan).toContain("Tempo em família");
+    expect(plan).not.toContain("Horario semanal");
+    // Horas PT reales, no el defecto: «trabalho das 8 às 17».
+    const b = extractWeeklyPlanAction("faz um plano semanal, trabalho das 8 às 17, exercício 3 vezes");
+    expect(b!.lang).toBe("pt");
+    expect(b!.workStart).toBe(8);
+    expect(b!.workEnd).toBe(17);
+    expect(b!.exerciseDays).toBe(3);
+    // El ES sigue en español y el EN en inglés.
+    expect(extractWeeklyPlanAction("organiza mi semana")!.lang).toBe("es");
+    expect(extractWeeklyPlanAction("plan my week")!.lang).toBe("en");
+  });
+
   it("genera 7 días sin traslapes", () => {
     const plan = generateWeeklyPlan({ workStart: 9, workEnd: 18, exerciseDays: 3, wantsFamilyTime: true, lang: "en" });
     // 7 días mencionados
