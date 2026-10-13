@@ -580,6 +580,71 @@ describe("0.1.20 (P3-9) — extractToolAction: borrados", () => {
   });
 });
 
+describe("0.1.24 (auditoría de alcanzabilidad) — H-2/H-3/H-5", () => {
+  it("H-2: el inglés pone el adjetivo antes del sustantivo («delete the birthday note»)", () => {
+    // Antes: ninguna regla casaba y el turno se desviaba a
+    // conocimiento sin pedir confirmación (sonda P2, caso 12d).
+    expect(extractToolAction("delete the birthday note", NOW)).toMatchObject({
+      kind: "noteDelete",
+      target: { type: "one", query: "birthday" },
+      lang: "en",
+    });
+    expect(extractToolAction("delete the dentist reminder", NOW)).toMatchObject({
+      kind: "reminderDelete",
+      target: { type: "one", query: "dentist" },
+      lang: "en",
+    });
+    expect(extractToolAction("remove my shopping list note", NOW)).toMatchObject({
+      kind: "noteDelete",
+      target: { type: "one", query: "shopping list" },
+    });
+    // Las formas que ya funcionaban no cambian, y el pelado sigue pelado.
+    expect(extractToolAction("delete the note about taxes", NOW)).toMatchObject({
+      kind: "noteDelete",
+      target: { type: "one", query: "taxes" },
+    });
+    expect(extractToolAction("delete the note", NOW)).toMatchObject({ kind: "noteDelete", target: { type: "ask" } });
+  });
+
+  it("H-3: «schedule dentist on Friday at 10» crea el evento con título limpio", () => {
+    // El ejemplo exacto de la guía EN (locales/en.json) guardaba el
+    // título corrupto «dentist on»: stripDateWords quitaba día y hora
+    // pero no la preposición «on» (sonda P2, caso 7e).
+    const a = extractToolAction("schedule dentist on Friday at 10", NOW) as Extract<ToolAction, { kind: "calendarCreate" }>;
+    expect(a.kind).toBe("calendarCreate");
+    expect(a.title).toBe("dentist");
+    expect(new Date(a.start!).getDay()).toBe(5);
+    expect(new Date(a.start!).getHours()).toBe(10);
+  });
+
+  it("H-5: la marca de canal al final no se traga en el destinatario", () => {
+    // Sonda P2/P3: «…a Juan por nido: …» despachaba a «Juan por nido».
+    expect(extractToolAction("Manda un mensaje a Juan por nido: ya llegué", NOW)).toMatchObject({
+      kind: "nidoSend",
+      to: "Juan",
+      text: "ya llegué",
+      lang: "es",
+    });
+    expect(extractToolAction("manda uma mensagem para o Juan pelo nido: já cheguei", NOW)).toMatchObject({
+      kind: "nidoSend",
+      to: "Juan",
+      text: "já cheguei",
+      lang: "pt",
+    });
+    // «vía nido» ni siquiera tenía regla con marca: devolvía null.
+    expect(extractToolAction("manda un mensaje vía nido a Juan: ya llegué", NOW)).toMatchObject({
+      kind: "nidoSend",
+      to: "Juan",
+      text: "ya llegué",
+    });
+    expect(extractToolAction("dile a Juan vía nido que ya llegué", NOW)).toMatchObject({
+      kind: "nidoSend",
+      to: "Juan",
+      text: "ya llegué",
+    });
+  });
+});
+
 describe("0.1.20 (P3-9) — runToolAction: borrados", () => {
   const TODAY = new Date(2026, 9, 11, 9, 0).toISOString(); // domingo 11, hoy
   const TOMORROW = new Date(2026, 9, 12, 9, 0).toISOString();

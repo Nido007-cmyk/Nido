@@ -259,9 +259,9 @@ function rangeLabel(word: string | undefined): CalendarRange {
 
 const SEP = "(?:\\s*:\\s*|\\s+que diga\\s+|\\s+diciendo\\s+|\\s+que\\s+|\\s+saying\\s+|\\s+that\\s+|\\s+dizendo\\s+)";
 const NIDO_SEND_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
-  { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?|escr[ií]bele)\\s+(?:un\\s+)?mensaje\\s+(?:por|con|en)\\s+nido\\s+(?:a|para)\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "es" },
-  { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?)\\s+(?:a|para)\\s+(.+?)\\s+(?:un\\s+)?mensaje\\s+(?:por|con|en)\\s+nido(?:${SEP}(.+))?$`, "is"), lang: "es" },
-  { re: new RegExp(`^${POLITE}d[ií]le\\s+a\\s+(.+?)\\s+por\\s+nido(?:${SEP}|\\s+)(.+)$`, "is"), lang: "es" },
+  { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?|escr[ií]bele)\\s+(?:un\\s+)?mensaje\\s+(?:por|con|en|v[ií]a)\\s+nido\\s+(?:a|para)\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "es" },
+  { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?)\\s+(?:a|para)\\s+(.+?)\\s+(?:un\\s+)?mensaje\\s+(?:por|con|en|v[ií]a)\\s+nido(?:${SEP}(.+))?$`, "is"), lang: "es" },
+  { re: new RegExp(`^${POLITE}d[ií]le\\s+a\\s+(.+?)\\s+(?:por|v[ií]a)\\s+nido(?:${SEP}|\\s+)(.+)$`, "is"), lang: "es" },
   { re: new RegExp(`^${POLITE}send\\s+(?:a\\s+)?nido\\s+message\\s+to\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },
   { re: new RegExp(`^${POLITE}(?:send|message)\\s+(.+?)\\s+(?:on|via|through|by)\\s+nido(?:${SEP}(.+))?$`, "is"), lang: "en" },
   { re: new RegExp(`^${POLITE}(?:manda|mande|envia|envie)\\s+(?:uma\\s+)?mensagem\\s+(?:pelo|no|via)\\s+nido\\s+(?:para|pra|pro)\\s+(?:o\\s+|a\\s+)?(.+?)(?:${SEP}(.+))?$`, "is"), lang: "pt" },
@@ -372,6 +372,11 @@ function extractDeleteAction(t: string): ToolAction | null {
     { re: new RegExp(`^${POLITE}${DELETE_VERB_ES_C}\\s+(?:el|mi)\\s+recordatorio\\s+(.+)$`, "i"), lang: "es" },
     { re: new RegExp(`^${POLITE}${DELETE_VERB_EN_C}\\s+(?:the|my)\\s+reminder\\s+(.+)$`, "i"), lang: "en" },
     { re: new RegExp(`^${POLITE}${DELETE_VERB_PT_C}\\s+(?:o|meu)\\s+lembrete\\s+(.+)$`, "i"), lang: "pt" },
+    // 0.1.24 (auditoría de alcanzabilidad, H-2): el inglés pone el
+    // adjetivo ANTES del sustantivo — «delete the dentist reminder».
+    // Sin esta regla la forma natural no casaba ninguna y el turno se
+    // desviaba a conocimiento sin ni siquiera pedir confirmación.
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_EN_C}\\s+(?:the|my)\\s+(.+?)\\s+reminder$`, "i"), lang: "en" },
   ];
   const titleNote: Rule[] = [
     { re: new RegExp(`^${POLITE}${DELETE_VERB_ES}\\s+(?:la|mi)?\\s*nota\\s+(?:de|del|sobre|llamada)\\s+(.+)$`, "i"), lang: "es" },
@@ -380,6 +385,9 @@ function extractDeleteAction(t: string): ToolAction | null {
     { re: new RegExp(`^${POLITE}${DELETE_VERB_ES}\\s+(?:la|mi)\\s+nota\\s+(.+)$`, "i"), lang: "es" },
     { re: new RegExp(`^${POLITE}${DELETE_VERB_EN}\\s+(?:the|my)\\s+note\\s+(.+)$`, "i"), lang: "en" },
     { re: new RegExp(`^${POLITE}${DELETE_VERB_PT}\\s+(?:a|minha)\\s+nota\\s+(.+)$`, "i"), lang: "pt" },
+    // 0.1.24 (H-2): «delete the birthday note» — adjetivo antes de
+    // «note», la forma natural en inglés (ver titleRem).
+    { re: new RegExp(`^${POLITE}${DELETE_VERB_EN}\\s+(?:the|my)\\s+(.+?)\\s+note$`, "i"), lang: "en" },
   ];
   const bareNote: Rule[] = [
     { re: new RegExp(`^${POLITE}${DELETE_VERB_ES}\\s+(?:la|mi)?\\s*nota$`, "i"), lang: "es" },
@@ -559,7 +567,15 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   for (const { re, lang } of NIDO_SEND_RULES) {
     const m = re.exec(t);
     if (!m) continue;
-    const to = m[1].trim().replace(/^(?:a|para|to)\s+/i, "");
+    // 0.1.24 (auditoría de alcanzabilidad, H-5): la marca de canal al
+    // FINAL («manda un mensaje a Juan por nido: …») no tiene regla
+    // con marca y la captura sin marca se la tragaba: el destinatario
+    // salía «Juan por nido» y el mensaje no llegaba a nadie. Se pela
+    // la marca trailing de cualquier captura, en los tres idiomas.
+    const to = m[1]
+      .trim()
+      .replace(/^(?:a|para|to)\s+/i, "")
+      .replace(/\s+(?:por|con|en|v[ií]a|on|via|through|by|pelo|no)\s+(?:nido|la app)$/i, "");
     if (!to || to.split(/\s+/).length > 5) return null;
     return { kind: "nidoSend", to, text: m[2]?.trim() || null, lang };
   }

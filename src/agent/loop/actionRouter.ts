@@ -328,7 +328,13 @@ export function stripDateWords(input: string): string {
       .replace(PM_PERIOD_RE, "")
       .replace(NOON_RE, "")
       .replace(MIDNIGHT_RE, "")
-      .replace(/\b(el|la|the|o|a|na|no)?\s*(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?)\b/gi, "")
+      // 0.1.24 (auditoría de alcanzabilidad, H-3): «on» entra en el
+      // grupo de artículos/preposiciones ante día — sin él, «schedule
+      // dentist on Friday at 10» (el ejemplo exacto de la guía EN)
+      // dejaba el título «dentist on»: se quitaban día y hora pero no
+      // la preposición. La misma fuga dejaba «call mom on» en
+      // recordatorios EN.
+      .replace(/\b(el|la|the|o|a|na|no|on)?\s*(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?)\b/gi, "")
       .replace(/(?<![\p{L}])(mañana|manana|tomorrow|hoy|today|amanhã|amanha|hoje)(?![\p{L}])/giu, "")
       .replace(/\ba\s+las\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
       .replace(/(?<![\p{L}])às\s+\d{1,2}(:\d{2})?\s*(am|pm|h)?\b/giu, "")
