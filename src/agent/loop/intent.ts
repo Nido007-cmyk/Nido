@@ -16,9 +16,22 @@
  * `src/routing/classify.ts` (regex deterministas, cero ML para decidir).
  */
 
-import { extractCalcAction } from "./actionRouter";
+import {
+  extractCalcAction,
+  extractReminderAction,
+  extractTimerAction,
+  extractWeeklyPlanAction,
+} from "./actionRouter";
 import { extractContactAction } from "./contactRouter";
 import { extractToolAction } from "./toolRouter";
+import {
+  extractImplicitFact,
+  extractPeople,
+  extractRememberFact,
+  extractSelfName,
+  isMemoryQuery,
+} from "./rememberRouter";
+import { isMemoryStyleQuery } from "./memoryQuery";
 
 export type AgentIntent = "conversar" | "recordar" | "actuar";
 
@@ -184,7 +197,26 @@ export function classifyIntent(text: string): AgentIntent {
   if (extractContactAction(t)) return "actuar";
   // 0.1.8: notas, hora, conversiones, calendario, NIDO, enlaces, archivos.
   if (extractToolAction(t)) return "actuar";
+  // 0.1.22 (evidencia física Tab A9+, v0.1.21): la puerta solo consultaba
+  // calculadora, contactos y herramientas. Los demás detectores del
+  // pre-router del loop nunca se consultaban aquí, así que sus frases
+  // naturales («Mi mama se llama Marta», «Pon un temporizador de 2
+  // minutos», «¿Cómo se llama mi mamá?») clasificaban «conversar», el
+  // loop jamás corría y el mensaje caía al conocimiento (cita «Lista
+  // (Madrid Metro)»). Ahora se consultan LOS MISMOS extractores que el
+  // loop ejecuta — una sola fuente de verdad, como ya se hacía con la
+  // calculadora — y DESPUÉS de los patrones de siempre, que cargan las
+  // desambiguaciones históricas y no deben pisarse («no olvides
+  // llamar» = acción, no memoria; «qué tengo el lunes» = agenda).
+  if (extractTimerAction(t)) return "actuar";
   if (ACT_PATTERNS.some((re) => re.test(t))) return "actuar";
   if (REMEMBER_PATTERNS.some((re) => re.test(t))) return "recordar";
+  // 0.1.22: resto de detectores del pre-router del loop (ver arriba).
+  if (extractReminderAction(t)) return "actuar";
+  if (extractWeeklyPlanAction(t)) return "actuar";
+  if (extractPeople(t).length > 0) return "recordar";
+  if (extractSelfName(t)) return "recordar";
+  if (extractRememberFact(t) || extractImplicitFact(t)) return "recordar";
+  if (isMemoryQuery(t) || isMemoryStyleQuery(t)) return "recordar";
   return "conversar";
 }

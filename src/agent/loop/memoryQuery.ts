@@ -186,6 +186,68 @@ function searchFacts(mem: MemoryQueryData, question: string): string | null {
   return best?.content ?? null;
 }
 
+/**
+ * Formas de CONSULTA de memoria (las mismas que responde
+ * answerMemoryQuery abajo). Viven como constantes compartidas porque
+ * la puerta del chat (classifyIntent) necesita reconocerlas SIN tener
+ * la memoria cargada: si la pregunta no entra al loop, la respuesta
+ * determinista nunca ocurre (evidencia física 0.1.21: «¿cómo se llama
+ * mi mamá?» caía al conocimiento y citaba el Metro de Madrid).
+ */
+const REL_NAME_Q_RES: RegExp[] = [
+  /¿?c[oó]mo se llama mi ([a-záéíóúñü ]+?)\??$/i,
+  /what'?s my ([a-z -]+?)'?s name\??$/i,
+  /como se chama (?:a )?minha? ([a-záéíóúãõç ]+?)\??$/i,
+];
+const SELF_NAME_Q_RES: RegExp[] = [
+  /¿?c[oó]mo me llamo\??$/i,
+  /what'?s my name\??$/i,
+  /como (?:eu )?me chamo\??$/i,
+  /qual (?:é|e) (?:o )?meu nome\??$/i,
+];
+const BDAY_PERSON_Q_RES: RegExp[] = [
+  /cu[aá]ndo es el cumplea[ñn]os de mi ([a-záéíóúñü ]+?)\??$/i,
+  /when is my ([a-z -]+?)'?s birthday\??$/i,
+  /quando (?:é|e) o anivers[aá]rio d[aeo] minha? ([a-záéíóúãõç ]+?)\??$/i,
+];
+const BDAY_SELF_Q_RES: RegExp[] = [
+  /cu[aá]ndo es mi cumplea[ñn]os\??$/i,
+  /when is my birthday\??$/i,
+  /quando (?:é|e) (?:o )?meu anivers[aá]rio\??$/i,
+];
+const ABOUT_ME_Q_RES: RegExp[] = [
+  /qu[eé] sabes de m[ií]\??$/i,
+  /what do you know about me\??$/i,
+  /o que (?:você|voce) sabe sobre mim\??$/i,
+];
+/** Primera persona (rama genérica de answerMemoryQuery, punto 5). */
+const FIRST_PERSON_RE =
+  /\bmi\b|\bmis\b|\bme\b|\bmy\b|\bmine\b|\bi\b|\bmeu\b|\bminha\b|\bmeus\b|\bminhas\b|\btengo\b|\bvivo\b|\btrabajo\b|\btenho\b|\bmoro\b|\bchamo\b/i;
+
+/**
+ * ¿Es esto una consulta SOBRE la memoria del usuario? Espejo de las
+ * formas que answerMemoryQuery reclama (puntos 1–4). La usa la puerta
+ * de intenciones para dejar pasar la pregunta al loop, que es quien
+ * puede responderla desde lo guardado.
+ *
+ * El punto 5 (pregunta genérica en primera persona) NO se espeja a
+ * propósito: esa forma es ambigua con las preguntas sobre documentos
+ * («¿qué dice mi documento sobre…?», ejemplos de la guía que deben ir
+ * al conocimiento) y con charla («¿qué tengo que hacer para…?»). La
+ * rama 5 sigue viva dentro del loop para los turnos que entran por
+ * otra vía; en la puerta mandan las formas inequívocas.
+ */
+export function isMemoryStyleQuery(userText: string): boolean {
+  const t = (userText ?? "").trim();
+  if (!t) return false;
+  if (REL_NAME_Q_RES.some((re) => re.test(t))) return true;
+  if (SELF_NAME_Q_RES.some((re) => re.test(t))) return true;
+  if (BDAY_PERSON_Q_RES.some((re) => re.test(t))) return true;
+  if (BDAY_SELF_Q_RES.some((re) => re.test(t))) return true;
+  if (ABOUT_ME_Q_RES.some((re) => re.test(t))) return true;
+  return false;
+}
+
 export function answerMemoryQuery(
   userText: string,
   mem: MemoryQueryData,
@@ -195,10 +257,7 @@ export function answerMemoryQuery(
   if (!t) return null;
 
   // 1) «¿cómo se llama mi REL?» — nombre de una persona guardada.
-  const relNameQ =
-    /¿?c[oó]mo se llama mi ([a-záéíóúñü ]+?)\??$/i.exec(t) ||
-    /what'?s my ([a-z -]+?)'?s name\??$/i.exec(t) ||
-    /como se chama (?:a )?minha? ([a-záéíóúãõç ]+?)\??$/i.exec(t);
+  const relNameQ = REL_NAME_Q_RES.map((re) => re.exec(t)).find((m) => m !== null) ?? null;
   if (relNameQ) {
     const rel = relNameQ[1].trim();
     const person = findPersonByRel(mem, rel);
@@ -216,12 +275,7 @@ export function answerMemoryQuery(
   }
 
   // 2) «¿cómo me llamo?» — el nombre del propio usuario.
-  if (
-    /¿?c[oó]mo me llamo\??$/i.test(t) ||
-    /what'?s my name\??$/i.test(t) ||
-    /como (?:eu )?me chamo\??$/i.test(t) ||
-    /qual (?:é|e) (?:o )?meu nome\??$/i.test(t)
-  ) {
+  if (SELF_NAME_Q_RES.some((re) => re.test(t))) {
     const fact = mem.facts.find((f) => /me llamo|my name is|meu nome é/i.test(f.content));
     if (fact) {
       const m = /(?:me llamo|my name is|meu nome é)\s+(.+)$/i.exec(fact.content);
@@ -231,10 +285,7 @@ export function answerMemoryQuery(
   }
 
   // 3) Cumpleaños: de una persona o el propio.
-  const bdayPersonQ =
-    /cu[aá]ndo es el cumplea[ñn]os de mi ([a-záéíóúñü ]+?)\??$/i.exec(t) ||
-    /when is my ([a-z -]+?)'?s birthday\??$/i.exec(t) ||
-    /quando (?:é|e) o anivers[aá]rio d[aeo] minha? ([a-záéíóúãõç ]+?)\??$/i.exec(t);
+  const bdayPersonQ = BDAY_PERSON_Q_RES.map((re) => re.exec(t)).find((m) => m !== null) ?? null;
   if (bdayPersonQ) {
     const rel = bdayPersonQ[1].trim();
     const person = findPersonByRel(mem, rel);
@@ -242,22 +293,14 @@ export function answerMemoryQuery(
     if (fact) return birthdayAnswer(fact, lang === "en" ? `your ${rel}` : lang === "pt" ? `sua ${rel}` : `tu ${rel}`, lang);
     return msg("notKnown", lang);
   }
-  if (
-    /cu[aá]ndo es mi cumplea[ñn]os\??$/i.test(t) ||
-    /when is my birthday\??$/i.test(t) ||
-    /quando (?:é|e) (?:o )?meu anivers[aá]rio\??$/i.test(t)
-  ) {
+  if (BDAY_SELF_Q_RES.some((re) => re.test(t))) {
     const fact = findBirthdayFact(mem, { self: true });
     if (fact) return birthdayAnswer(fact, null, lang);
     return msg("notKnown", lang);
   }
 
   // 4) «¿qué sabes de mí?» — resumen de lo guardado.
-  if (
-    /qu[eé] sabes de m[ií]\??$/i.test(t) ||
-    /what do you know about me\??$/i.test(t) ||
-    /o que (?:você|voce) sabe sobre mim\??$/i.test(t)
-  ) {
+  if (ABOUT_ME_Q_RES.some((re) => re.test(t))) {
     const lines: string[] = [];
     for (const f of mem.facts.slice(0, 6)) lines.push(`• ${f.content}`);
     for (const p of mem.people.slice(0, 4))
@@ -272,8 +315,7 @@ export function answerMemoryQuery(
   const isQuestion = /^\s*¿/.test(t) || /\?\s*$/.test(t);
   // \bi\b: el «I» inglés («what car do I have?») — sin él la puerta de
   // primera persona no se abría en inglés (batería trilingüe 0.1.20).
-  const firstPerson =
-    /\bmi\b|\bmis\b|\bme\b|\bmy\b|\bmine\b|\bi\b|\bmeu\b|\bminha\b|\bmeus\b|\bminhas\b|\btengo\b|\bvivo\b|\btrabajo\b|\btenho\b|\bmoro\b|\bchamo\b/i.test(t);
+  const firstPerson = FIRST_PERSON_RE.test(t);
   if (isQuestion && firstPerson) {
     const fact = searchFacts(mem, t);
     if (fact) return msg("factQuote", lang, { fact });

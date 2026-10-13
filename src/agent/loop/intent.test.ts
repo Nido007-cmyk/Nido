@@ -68,7 +68,11 @@ describe("classifyIntent", () => {
     expect(classifyIntent("hola, ¿cómo estás?")).toBe("conversar");
     expect(classifyIntent("explícame la fotosíntesis")).toBe("conversar");
     expect(classifyIntent("")).toBe("conversar");
-    expect(classifyIntent("mi color favorito es el azul")).toBe("conversar");
+    // 0.1.22: «mi color favorito es el azul» es un hecho implícito
+    // (M2, 0.1.20) que el loop guarda; la puerta ahora lo deja pasar.
+    // La expectativa anterior («conversar») fosilizaba el hueco de la
+    // puerta: el extractor existía pero el chat nunca lo alcanzaba.
+    expect(classifyIntent("mi color favorito es el azul")).toBe("recordar");
   });
 });
 
@@ -102,6 +106,109 @@ describe("classifyIntent — contactos, llamadas, SMS, archivos (es/en/pt)", () 
     "¿cómo se llama la capital de Francia?",
   ])("%p → conversar", (text) => {
     expect(classifyIntent(text)).toBe("conversar");
+  });
+});
+
+describe("0.1.22 — la puerta consulta los detectores del loop (evidencia física Tab A9+)", () => {
+  // v0.1.21 en dispositivo: «Mi mama se llama Marta» (chat nuevo) caía al
+  // conocimiento y citaba «Lista (Madrid Metro)». Causa raíz: ChatScreen
+  // solo entra al loop si classifyIntent dice recordar/actuar, y el
+  // clasificador no consultaba los extractores de personas, nombre
+  // propio, hechos, consultas de memoria ni temporizador — solo calc,
+  // contactos y herramientas. Las frases de abajo son las físicas.
+  it.each([
+    // Personas (ES/EN/PT), con y sin acento.
+    "Mi mama se llama Marta",
+    "Mi mamá se llama Marta",
+    "Mis hijos se llaman Leo y Max",
+    "My mom's name is Marta",
+    "Minha mãe se chama Marta",
+    // Nombre propio.
+    "Yo me llamo Ruben",
+    "Mi nombre es Ruben",
+    "My name is Ruben",
+    "Meu nome é Ruben",
+    "Eu me chamo Ruben",
+    // Hechos implícitos (fail-closed, anclados).
+    "Mi cumpleaños es el 5 de mayo",
+    "My birthday is May 5",
+    "Meu aniversário é 5 de maio",
+    "Vivo en Tucson",
+    "I live in Tucson",
+    "Moro em Tucson",
+    "Mi perro se llama Rocky",
+    "Mi coche es un Toyota",
+    "My car is a Toyota",
+    // Gatillo que solo vivía en el extractor («guarda que…», M3).
+    "guarda que mañana tengo dentista",
+    // Consultas de memoria: se responden desde lo guardado.
+    "¿Cómo se llama mi mamá?",
+    "What's my mom's name?",
+    "Como se chama minha mãe?",
+    "¿Cómo me llamo?",
+    "What's my name?",
+    "Qual é o meu nome?",
+    "¿Cuándo es el cumpleaños de mi mamá?",
+    "¿Cuándo es mi cumpleaños?",
+    "When is my birthday?",
+    "Quando é o meu aniversário?",
+    "¿Qué sabes de mí?",
+    "What do you know about me?",
+    "O que você sabe sobre mim?",
+  ])("%p → recordar", (text) => {
+    expect(classifyIntent(text)).toBe("recordar");
+  });
+
+  it.each([
+    // Temporizador: el extractor lo resolvía dentro del loop, pero la
+    // puerta nunca lo consultaba («conversar» en la sonda 0.1.21).
+    "Pon un temporizador de 2 minutos",
+    "Temporizador de 2 minutos",
+    "Set a timer for 2 minutes",
+    "Timer for 5 minutes",
+    "Põe um temporizador de 2 minutos",
+    // El extractor de recordatorios la reclama antes que la consulta de
+    // memoria (mismo orden que el pre-router del loop); entra igual.
+    "recuérdame la fecha de mi aniversario",
+  ])("%p → actuar", (text) => {
+    expect(classifyIntent(text)).toBe("actuar");
+  });
+
+  it.each([
+    // Sin ancla personal no hay memoria: el conocimiento sigue su ruta.
+    "La capital de Francia es París",
+    "¿Quién escribió Don Quijote?",
+    "¿Cómo se llama la capital de España?",
+    "¿Quién es Marta?",
+    "Cuéntame un cuento",
+    "El cielo es azul",
+    // Narrativa con palabras de tiempo: no es recordatorio.
+    "Mañana voy al mercado",
+    "En una hora salgo de casa",
+    "El tren sale en una hora",
+    // Preguntas genéricas en primera persona (rama 5 de
+    // answerMemoryQuery): ambiguas con preguntas sobre documentos
+    // («¿qué dice mi documento sobre…?», guía) — se quedan en el chat
+    // a propósito; la puerta solo abre a las formas inequívocas.
+    "¿Cuál es mi color favorito?",
+    "¿Dónde vivo?",
+    "What car do I have?",
+  ])("%p → conversar", (text) => {
+    expect(classifyIntent(text)).toBe("conversar");
+  });
+
+  it("la condición de entrada de ChatScreen deja pasar las frases físicas", () => {
+    // ChatScreen: agentIntent === "recordar" || agentIntent === "actuar".
+    for (const text of [
+      "Mi mama se llama Marta",
+      "Mi mamá se llama Marta",
+      "Yo me llamo Ruben",
+      "¿Cómo se llama mi mamá?",
+      "Mi cumpleaños es el 5 de mayo",
+      "Pon un temporizador de 2 minutos",
+    ]) {
+      expect(["recordar", "actuar"]).toContain(classifyIntent(text));
+    }
   });
 });
 
