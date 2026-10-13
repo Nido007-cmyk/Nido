@@ -15,6 +15,7 @@
  * Puro, sin dependencias, 100% testeable.
  */
 
+import type { ReminderRepeat } from "../memory/reminderRepeat";
 import { evaluateExpression } from "../tools/calc";
 
 /** Resultado de una acción de calculadora. */
@@ -190,16 +191,117 @@ export interface ReminderAction {
    * medicación).
    */
   recurrenceRequested?: boolean;
+  /**
+   * 0.1.32: repetición soportada («cada día», «cada lunes», «every
+   * week»…). dueAt es la PRIMERA vez; la notificación se programa como
+   * diaria/semanal y completeReminder avanza a la siguiente.
+   */
+  repeat?: ReminderRepeat;
 }
 
 const RECURRENCE_RE =
-  /\b(?:cada\s+(?:d[ií]a|semana|mes|a[ñn]o|lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo)|todos\s+los\s+d[ií]as|todas\s+las\s+semanas|diariamente|a\s+diario|semanalmente|mensualmente|every\s+(?:day|week|month|morning|night|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|daily|weekly|monthly|todo\s+dia|todos\s+os\s+dias|diariamente|semanalmente)\b/iu;
+  /\b(?:cada\s+\d+|every\s+\d+|a\s+cada\s+\d+|cada\s+(?:d[ií]a|semana|mes|a[ñn]o|lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo)|todos\s+los\s+d[ií]as|todas\s+las\s+semanas|diariamente|a\s+diario|semanalmente|mensualmente|every\s+(?:day|week|month|morning|night|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|daily|weekly|monthly|todo\s+dia|todos\s+os\s+dias|diariamente|semanalmente)\b/iu;
 
 /**
  * Detecta "agrégame cita/recordatorio..." y extrae el texto.
  * La fecha se parsea de forma simple; si no hay fecha clara, dueAt=null.
  */
-export function extractReminderAction(userText: string): ReminderAction | null {
+/**
+ * 0.1.32: «ponme un recordatorio para el lunes» (fecha sin contenido)
+ * devolvía null y caía al modelo. extractReminderAction lo sigue
+ * devolviendo null (sin texto no hay recordatorio), pero deja anotada la
+ * fecha para que reminderMissingText() permita PREGUNTAR qué recordar.
+ */
+let lastMissingText: string | null = null;
+export function reminderMissingText(userText: string): string | null {
+  lastMissingText = null;
+  if (extractReminderAction(userText)) return null;
+  return lastMissingText;
+}
+
+const WEEKDAY_NAMES = "lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?";
+const WEEKDAY_NUM: Array<[RegExp, number]> = [
+  [/^(?:domingo|sunday)/i, 0],
+  [/^(?:lunes|monday|segunda)/i, 1],
+  [/^(?:martes|tuesday|ter[çc]a)/i, 2],
+  [/^(?:mi[ée]rcoles|wednesday|quarta)/i, 3],
+  [/^(?:jueves|thursday|quinta)/i, 4],
+  [/^(?:viernes|friday|sexta)/i, 5],
+  [/^(?:s[áa]bado|saturday)/i, 6],
+];
+// «cada lunes», «todos los lunes», «every monday», «on mondays», «toda segunda», «todas as segundas», «todo domingo».
+const REPEAT_WEEKDAY_RE = new RegExp(
+  `(?<![\\p{L}])(?:cada|todos\\s+los|every|on|todas?\\s+(?:as\\s+)?|todos?\\s+(?:os\\s+)?)\\s*(${WEEKDAY_NAMES})s?(?![\\p{L}-])`,
+  "iu",
+);
+const REPEAT_WEEK_RE =
+  /(?<![\p{L}])(?:cada\s+semana|todas\s+las\s+semanas|semanalmente|every\s+week|weekly|toda\s+semana|todas\s+as\s+semanas)(?![\p{L}])/iu;
+const REPEAT_MORNING_RE =
+  /(?<![\p{L}])(?:cada\s+ma[ñn]ana|todas\s+las\s+ma[ñn]anas|every\s+morning|toda\s+manh[ãa]|todas\s+as\s+manh[ãa]s)(?![\p{L}])/iu;
+const REPEAT_NIGHT_RE =
+  /(?<![\p{L}])(?:cada\s+noche|todas\s+las\s+noches|every\s+(?:night|evening)|toda\s+noite|todas\s+as\s+noites)(?![\p{L}])/iu;
+const REPEAT_DAY_RE =
+  /(?<![\p{L}])(?:cada\s+d[ií]a|todos\s+los\s+d[ií]as|diariamente|a\s+diario|every\s*day|daily|todo\s+dia|todos\s+os\s+dias)(?![\p{L}])/iu;
+
+interface RepeatSpec { repeat: ReminderRepeat; weekday?: number; cleaned: string; defaultHour: number; period?: "am" | "pm" }
+
+/** Detecta una repetición soportada y devuelve la frase sin ella. */
+export function detectReminderRepeat(text: string): RepeatSpec | null {
+  const tidy = (s: string) => s.replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim();
+  const wd = REPEAT_WEEKDAY_RE.exec(text);
+  // «on monday» es UNA vez; solo el plural («on mondays») se repite.
+  if (wd && !(/^on\s/i.test(wd[0]) && !/s$/i.test(wd[0]))) {
+    const name = wd[1];
+    const weekday = WEEKDAY_NUM.find(([re]) => re.test(name))?.[1];
+    if (weekday !== undefined) {
+      // Se deja el nombre del día: el parser lo entiende y luego lo quita
+      // del título; sin él, «ponme un recordatorio cada lunes» perdía la
+      // fecha y no se podía preguntar qué recordar.
+      return { repeat: "week", weekday, defaultHour: 9, cleaned: tidy(text.slice(0, wd.index) + " " + name + " " + text.slice(wd.index + wd[0].length)) };
+    }
+  }
+  const wk = REPEAT_WEEK_RE.exec(text);
+  if (wk) return { repeat: "week", defaultHour: 9, cleaned: tidy(text.replace(REPEAT_WEEK_RE, " ")) };
+  const mo = REPEAT_MORNING_RE.exec(text);
+  if (mo) return { repeat: "day", defaultHour: 9, period: "am", cleaned: tidy(text.replace(REPEAT_MORNING_RE, " ")) };
+  const ni = REPEAT_NIGHT_RE.exec(text);
+  if (ni) return { repeat: "day", defaultHour: 21, period: "pm", cleaned: tidy(text.replace(REPEAT_NIGHT_RE, " ")) };
+  const dy = REPEAT_DAY_RE.exec(text);
+  if (dy) return { repeat: "day", defaultHour: 9, cleaned: tidy(text.replace(REPEAT_DAY_RE, " ")) };
+  return null;
+}
+
+export function extractReminderAction(userText: string, now: Date = new Date()): ReminderAction | null {
+  lastMissingText = null;
+  const spec = detectReminderRepeat(userText.trim());
+  if (!spec) return extractReminderCore(userText);
+  const res = extractReminderCore(spec.cleaned);
+  if (!res) return null;
+  // Hora: la que dijo el usuario o la por defecto del ritmo. «cada noche a
+  // las 10» es 22:00 (sin am/pm el parser tomaría las 10 de la mañana).
+  let hour = spec.defaultHour;
+  let minute = 0;
+  if (res.dueAt) {
+    const d = new Date(res.dueAt);
+    hour = d.getHours();
+    minute = d.getMinutes();
+    if (spec.period === "pm" && hour < 12 && hour !== 0) hour += 12;
+  }
+  const first = new Date(now);
+  first.setHours(hour, minute, 0, 0);
+  if (spec.repeat === "week") {
+    const weekday = spec.weekday ?? (res.dueAt ? new Date(res.dueAt).getDay() : now.getDay());
+    first.setDate(first.getDate() + ((weekday - now.getDay() + 7) % 7));
+    if (first.getTime() <= now.getTime()) first.setDate(first.getDate() + 7);
+  } else if (first.getTime() <= now.getTime()) {
+    first.setDate(first.getDate() + 1);
+  }
+  const text = res.text.replace(/\s{2,}/g, " ").trim();
+  return { text, dueAt: first.toISOString(), repeat: spec.repeat };
+}
+
+function extractReminderCore(userText: string): ReminderAction | null {
+  lastMissingText = null;
   const trimmed = userText.trim();
   if (!trimmed) return null;
   const recurrenceRequested = RECURRENCE_RE.test(trimmed);
@@ -231,11 +333,12 @@ export function extractReminderAction(userText: string): ReminderAction | null {
   // «despiértame a las 7», «me acorde às 7», «wake me at 7» creaban
   // nada: caían al modelo. El verbo va en su grupo para saber si es un
   // aviso (su texto puede ser la propia orden cuando no hay tarea).
-  const m = /(agr[ée]game|cr[ée]ame|ponme|crea|recu[ée]rdame|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
+  const m = /(agr[ée]game|cr[ée]ame|ponme|crea|recu[ée]rdame|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|faz|fa[çc]a)\s+um\s+lembrete|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
   if (!m) return null;
   // 0.1.30 (rutas que caían al modelo): «pon una alarma a las 7» y «set a
   // reminder for 5pm» también son avisos: sin tarea, el título es la frase.
-  const isAlertVerb = /av[íi]s|despi|despert|wake|acord|let\s+me\s+know|alarm|^set\s/i.test(m[1]);
+  // «set a reminder» sin contenido NO es un aviso: se pregunta qué recordar (0.1.32).
+  const isAlertVerb = /av[íi]s|despi|despert|wake|acord|let\s+me\s+know|alarm/i.test(m[1]);
 
   let text = m[2].trim();
   if (text.length < 3) return null;
@@ -283,7 +386,8 @@ export function extractReminderAction(userText: string): ReminderAction | null {
   // contenido no hay recordatorio que crear.
   // 0.1.20: también el "de" de «avísame a las 3 de estudiar» (queda
   // «estudiar») y de «un recordatorio de comprar pan».
-  text = text.replace(/^(?:para|de|to)\s+/i, "").trim();
+  // 0.1.32: puede haber varios («para el lunes de pagar…» → «para de pagar…»).
+  text = text.replace(/^(?:(?:para|de|to|for)\s+)+/i, "").trim();
 
   // F6 (auditoría 2026-10-10): "recuérdame mañana" dejaba el texto vacío
   // tras quitar la fecha. Sin texto no hay recordatorio: que decida el modelo.
@@ -295,10 +399,21 @@ export function extractReminderAction(userText: string): ReminderAction | null {
       const title = trimmed.replace(/[.!]+$/, "").trim();
       return recurrenceRequested ? { text: title, dueAt, recurrenceRequested: true } : { text: title, dueAt };
     }
+    // 0.1.32: hay fecha pero no qué recordar → se pregunta (no al modelo).
+    if (dueAt) lastMissingText = dueAt;
     return null;
   }
-  if (/^(?:para|de|a|el|la|the|to|for)$/i.test(text)) return null;
-  return recurrenceRequested ? { text, dueAt, recurrenceRequested: true } : { text, dueAt };
+  // «ponme un recordatorio» sin nada más: la palabra no es el contenido.
+  if (/^(?:para|de|a|el|la|the|to|for|recordatorio|reminder|lembrete|cita)$/i.test(text)) {
+    if (dueAt) lastMissingText = dueAt;
+    return null;
+  }
+  if (recurrenceRequested) {
+    // 0.1.32: «cada mes» no se queda en el título de un aviso de una vez.
+    const clean = text.replace(new RegExp(RECURRENCE_RE.source, "giu"), " ").replace(/\s{2,}/g, " ").trim();
+    return { text: clean.length >= 3 ? clean : text, dueAt, recurrenceRequested: true };
+  }
+  return { text, dueAt };
 }
 
 /**

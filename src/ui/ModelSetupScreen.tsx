@@ -17,6 +17,7 @@ import {
   Switch,
   Alert,
   TextInput,
+  BackHandler,
 } from "react-native";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType, setHapticsEnabledCache } from "../services/haptics";
 import { useTranslation } from "react-i18next";
@@ -58,6 +59,7 @@ import type { Typography } from "./theme/typography";
 import { makeSurfaces } from "./theme/surfaces";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 import { backupErrorCode } from "../security/backupErrors";
+import { ExactAlarmCard } from "./ExactAlarmCard";
 
 const modelManager = new ModelManager();
 const LLM_EMBEDDING_KINDS: AssetKind[] = ["llm", "embedding"];
@@ -97,6 +99,17 @@ export function ModelSetupScreen(props: Props) {
   const [restoreKeyVisible, setRestoreKeyVisible] = useState(false);
   const [restoreKeyText, setRestoreKeyText] = useState("");
   const [restoreKeyBusy, setRestoreKeyBusy] = useState(false);
+  // 0.1.32: la capa de «restaurar con clave» ya no es un <Modal>: Atrás la
+  // cierra (antes lo hacía onRequestClose del Modal).
+  useEffect(() => {
+    if (!restoreKeyVisible) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      setRestoreKeyVisible(false);
+      setRestoreKeyText("");
+      return true;
+    });
+    return () => sub.remove();
+  }, [restoreKeyVisible]);
 
   const handleRestoreWithKey = async () => {
     const { normalizeBackupKey, restoreBackupWithKey } = await import("../security/backup");
@@ -412,6 +425,8 @@ export function ModelSetupScreen(props: Props) {
 
         <AccordionSection icon="memory" title={t("modelSetupScreen.sections.memory")}>
           <MemorySettings />
+          {/* 0.1.32: ¿los recordatorios llegan a tiempo? (Android 12+) */}
+          <ExactAlarmCard />
         </AccordionSection>
 
         <AccordionSection icon="activity" title={t("modelSetupScreen.sections.telemetry")}>
@@ -665,14 +680,13 @@ export function ModelSetupScreen(props: Props) {
         </AccordionSection>
       </ScrollView>
 
-      {/* A1: restaurar con la clave del respaldo */}
-      <Modal
-        visible={restoreKeyVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setRestoreKeyVisible(false)}
-      >
-        <View style={styles.modalBackdrop}>
+      {/* A1: restaurar con la clave del respaldo.
+          0.1.32: capa de esta misma ventana (con FLAG_SECURE), no un <Modal>
+          (ventana aparte sin la protección): aquí se ESCRIBE la clave del
+          respaldo y no debe salir en capturas, grabaciones ni en Recientes.
+          Mismo arreglo que BackupKeyModal (0.1.29, M-1). */}
+      {restoreKeyVisible && (
+        <View style={[styles.modalBackdrop, styles.inWindowOverlay]} accessibilityViewIsModal>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{t("backup.restoreWithKeyTitle")}</Text>
             <Text style={styles.modalSubtitle}>{t("backup.restoreWithKeyBody")}</Text>
@@ -712,7 +726,7 @@ export function ModelSetupScreen(props: Props) {
             </View>
           </View>
         </View>
-      </Modal>
+      )}
 
       {/* High-Impact Danger Confirmation Modal */}
       <Modal
@@ -868,6 +882,16 @@ const getStyles = (colors: Colors, typography: Typography) => {
   dangerDesc: ui.caption,
   dangerActionBtn: ui.dangerButton,
   dangerActionBtnText: ui.dangerButtonText,
+  // 0.1.32: capa a pantalla completa dentro de la ventana de la actividad.
+  inWindowOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+    elevation: 1000,
+  },
   modalBackdrop: {
     flex: 1,
     backgroundColor: colors.bg.modalOverlay,

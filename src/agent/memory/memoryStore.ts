@@ -43,6 +43,7 @@ import {
   getDatabaseEpoch,
   safeJsonParse,
 } from "../../security/databaseManager";
+import { isReminderRepeat, nextOccurrence, type ReminderRepeat } from "./reminderRepeat";
 
 const DB_NAME = "nido_memory.db";
 /** Nombre del fichero de la base de memoria (lo necesita appReset para verificar el borrado). */
@@ -470,12 +471,20 @@ export interface AgentReminder {
   due_at: string | null;
   done: number;
   created_at: string;
+  /** 0.1.32: «day»/«week» si se repite; null si es de una vez. */
+  repeat?: ReminderRepeat | null;
 }
+
+const REMINDER_COLS =
+  "r.id AS id, r.text AS text, r.due_at AS due_at, r.done AS done, r.created_at AS created_at, rr.every AS repeat";
+const REMINDER_FROM = "agent_reminders r LEFT JOIN agent_reminder_repeat rr ON rr.reminder_id = r.id";
 
 /** Crea un recordatorio. due_at en ISO-8601 o null (sin fecha). */
 export async function saveReminder(input: {
   text: string;
   dueAt?: string | null;
+  /** 0.1.32: se repite cada día/semana (necesita fecha). */
+  repeat?: ReminderRepeat | null;
 }): Promise<AgentReminder> {
   // DEDUP 2026-10-07: no crear duplicado si ya existe uno pendiente similar.
   // M6 FIX: también comparar dueAt. Si el texto coincide pero la fecha es
@@ -483,8 +492,13 @@ export async function saveReminder(input: {
   const existing = await listReminders(50);
   const normalized = input.text.toLowerCase().trim();
   const dueAtNorm = input.dueAt ?? null;
+  const repeat = isReminderRepeat(input.repeat) && dueAtNorm ? input.repeat : null;
   const dup = existing.find(
-    (r) => !r.done && r.text.toLowerCase().trim() === normalized && (r.due_at ?? null) === dueAtNorm
+    (r) =>
+      !r.done &&
+      r.text.toLowerCase().trim() === normalized &&
+      (r.due_at ?? null) === dueAtNorm &&
+      (r.repeat ?? null) === repeat
   );
   if (dup) return dup;
 
@@ -494,12 +508,16 @@ export async function saveReminder(input: {
     due_at: input.dueAt ?? null,
     done: 0,
     created_at: new Date().toISOString(),
+    repeat,
   };
   await writeMemoryTransaction(async (db) => {
     await db.runAsync(
       "INSERT INTO agent_reminders (id, text, due_at, done, created_at) VALUES (?, ?, ?, 0, ?);",
       [reminder.id, reminder.text, reminder.due_at, reminder.created_at]
     );
+    if (repeat) {
+      await db.runAsync("INSERT INTO agent_reminder_repeat (reminder_id, every) VALUES (?, ?);", [reminder.id, repeat]);
+    }
   });
   return reminder;
 }
@@ -508,7 +526,7 @@ export async function saveReminder(input: {
 export async function listReminders(limit = 50): Promise<AgentReminder[]> {
   const db = await getMemoryDb();
   return db.getAllAsync<AgentReminder>(
-    "SELECT id, text, due_at, done, created_at FROM agent_reminders WHERE done = 0 ORDER BY due_at IS NULL, due_at ASC LIMIT ?;",
+    `SELECT ${REMINDER_COLS} FROM ${REMINDER_FROM} WHERE r.done = 0 ORDER BY r.due_at IS NULL, r.due_at ASC LIMIT ?;`,
     [limit]
   );
 }
@@ -518,14 +536,31 @@ export async function getDueReminders(nowIso?: string): Promise<AgentReminder[]>
   const now = nowIso ?? new Date().toISOString();
   const db = await getMemoryDb();
   return db.getAllAsync<AgentReminder>(
-    "SELECT id, text, due_at, done, created_at FROM agent_reminders WHERE done = 0 AND due_at IS NOT NULL AND due_at <= ? ORDER BY due_at ASC;",
+    `SELECT ${REMINDER_COLS} FROM ${REMINDER_FROM} WHERE r.done = 0 AND r.due_at IS NOT NULL AND r.due_at <= ? ORDER BY r.due_at ASC;`,
     [now]
   );
 }
 
-/** Marca un recordatorio como hecho. */
-export async function completeReminder(id: string): Promise<void> {
+/**
+ * Marca un recordatorio como hecho. 0.1.32: si se repite, no se cierra: su
+ * fecha avanza a la próxima vez (el sistema ya tiene programado el aviso
+ * repetido; aquí solo se mantiene la lista al día).
+ */
+export async function completeReminder(id: string, now: Date = new Date()): Promise<void> {
   await writeMemoryTransaction(async (db) => {
+    const row = await db.getFirstAsync<{ due_at: string | null; every: string | null }>(
+      "SELECT r.due_at AS due_at, rr.every AS every FROM agent_reminders r LEFT JOIN agent_reminder_repeat rr ON rr.reminder_id = r.id WHERE r.id = ?;",
+      [id]
+    );
+    if (row && isReminderRepeat(row.every) && row.due_at) {
+      // Si el aviso llega un poco ANTES de su hora (alarma inexacta), la
+      // vez actual cuenta como entregada: se avanza desde la mayor.
+      const due = new Date(row.due_at);
+      const after = due.getTime() > now.getTime() ? due : now;
+      const next = nextOccurrence(due, row.every, after);
+      await db.runAsync("UPDATE agent_reminders SET due_at = ? WHERE id = ?;", [next.toISOString(), id]);
+      return;
+    }
     await db.runAsync("UPDATE agent_reminders SET done = 1 WHERE id = ?;", [id]);
   });
 }
@@ -533,6 +568,7 @@ export async function completeReminder(id: string): Promise<void> {
 /** Elimina un recordatorio por id. */
 export async function deleteReminder(id: string): Promise<void> {
   await writeMemoryTransaction(async (db) => {
+    await db.runAsync("DELETE FROM agent_reminder_repeat WHERE reminder_id = ?;", [id]);
     await db.runAsync("DELETE FROM agent_reminders WHERE id = ?;", [id]);
   });
 }

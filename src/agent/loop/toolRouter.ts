@@ -24,6 +24,7 @@
  * Puro salvo las dependencias inyectadas. 100% testeable.
  */
 
+import { nextOccurrence } from "../memory/reminderRepeat";
 import { convertUnits } from "../tools/convert";
 import { parseReminderDateTime, stripDateWords } from "./actionRouter";
 import type { DispatchStatus } from "./contactRouter";
@@ -39,6 +40,7 @@ export type ToolAction =
   | { kind: "convert"; value: number; from: string; to: string; lang: RouterLang }
   | { kind: "currencyInfo"; lang: RouterLang }
   | { kind: "memoryForgetHelp"; lang: RouterLang }
+  | { kind: "countdown"; target: string; label: string; lang: RouterLang }
   | { kind: "calendarList"; from: string; to: string; label: CalendarRange; lang: RouterLang }
   | { kind: "calendarCreate"; title: string; start: string | null; lang: RouterLang }
   | { kind: "nidoSend"; to: string; text: string | null; lang: RouterLang }
@@ -125,6 +127,8 @@ export function toolForAction(a: ToolAction): string {
       // Sin herramienta de borrado de memoria para el agente: se explica
       // dónde se borra. Va con el interruptor de la memoria.
       return "remember_fact";
+    case "countdown":
+      return "device_time";
   }
 }
 
@@ -138,6 +142,43 @@ function clean(text: string): string {
 }
 
 const POLITE = "(?:(?:por favor|please|nido),?\\s+)?";
+
+// 0.1.32: «¿cuánto falta para Navidad?» lo respondía el modelo, que no
+// sabe la fecha de hoy y podía inventar los días. Es una resta de fechas.
+const COUNTDOWN_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
+  { re: /^(?:cu[aá]nto(?:\s+tiempo)?\s+(?:falta|queda)n?|cu[aá]ntos\s+d[ií]as\s+(?:faltan|quedan))\s+para\s+(?:el\s+|la\s+|los\s+)?(.+)$/i, lang: "es" },
+  { re: /^(?:how\s+(?:long|many\s+days)(?:\s+(?:is\s+it|are\s+there|left))?\s+(?:until|till|to|before)|days\s+(?:until|till|left\s+until))\s+(.+)$/i, lang: "en" },
+  { re: /^(?:quanto(?:\s+tempo)?\s+falta|quantos\s+dias\s+faltam)\s+(?:para|pro|pra)\s+(?:o\s+|a\s+)?(.+)$/i, lang: "pt" },
+];
+
+const NAMED_DAYS: Array<{ re: RegExp; month: number; day: number; label: Record<RouterLang, string> }> = [
+  { re: /^(?:navidad|christmas(?:\s+day)?|natal)$/i, month: 11, day: 25, label: { es: "Navidad", en: "Christmas", pt: "o Natal" } },
+  { re: /^(?:nochebuena|christmas\s+eve|v[eé]spera\s+de\s+natal)$/i, month: 11, day: 24, label: { es: "Nochebuena", en: "Christmas Eve", pt: "a véspera de Natal" } },
+  { re: /^(?:a[ñn]o\s+nuevo|new\s+year'?s?(?:\s+day)?|ano\s+novo)$/i, month: 0, day: 1, label: { es: "Año Nuevo", en: "New Year's Day", pt: "o Ano Novo" } },
+  { re: /^(?:nochevieja|new\s+year'?s\s+eve|r[eé]veillon)$/i, month: 11, day: 31, label: { es: "Nochevieja", en: "New Year's Eve", pt: "o Réveillon" } },
+  { re: /^halloween$/i, month: 9, day: 31, label: { es: "Halloween", en: "Halloween", pt: "o Halloween" } },
+];
+
+/** Fecha (00:00 local) de lo nombrado, o null si no se entiende. */
+export function countdownTarget(raw: string, now: Date, lang: RouterLang): { target: Date; label: string } | null {
+  const t = raw.trim().replace(/[?.!]+$/, "");
+  for (const n of NAMED_DAYS) {
+    if (!n.re.test(t)) continue;
+    const d = new Date(now.getFullYear(), n.month, n.day);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (d.getTime() < today.getTime()) d.setFullYear(d.getFullYear() + 1);
+    return { target: d, label: n.label[lang] };
+  }
+  // Desde el inicio del día: «el 13 de octubre» dicho el 13 a las 10 es HOY
+  // (con la hora real, la hora por defecto de las 9 ya habría pasado y la
+  // fecha saltaba a mañana).
+  const iso = parseReminderDateTime(t, new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+  if (!iso) return null;
+  const at = new Date(iso);
+  // Una fecha («el 25 de diciembre», «el viernes») no lleva etiqueta: la
+  // respuesta ya nombra el día.
+  return { target: new Date(at.getFullYear(), at.getMonth(), at.getDate()), label: "" };
+}
 
 const TIMER_CANCEL_RULES: Array<{ re: RegExp; q: string; lang: RouterLang }> = [
   { re: /^(?:cancela|cancelar|quita|quitar|borra|borrar|para|det[eé]n|apaga)\s+(?:el\s+|mi\s+)?temporizador$/i, q: "temporizador", lang: "es" },
@@ -313,6 +354,10 @@ const NIDO_SEND_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: new RegExp(`^${POLITE}send\\s+(?:a\\s+)?nido\\s+message\\s+to\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },
   { re: new RegExp(`^${POLITE}(?:send|message)\\s+(.+?)\\s+(?:on|via|through|by)\\s+nido(?:${SEP}(.+))?$`, "is"), lang: "en" },
   { re: new RegExp(`^${POLITE}(?:manda|mande|envia|envie)\\s+(?:uma\\s+)?mensagem\\s+(?:pelo|no|via)\\s+nido\\s+(?:para|pra|pro)\\s+(?:o\\s+|a\\s+)?(.+?)(?:${SEP}(.+))?$`, "is"), lang: "pt" },
+  // 0.1.32 (paridad es/en/pt): las formas con marca que solo tenía un idioma.
+  { re: new RegExp(`^${POLITE}(?:manda|mande|envia|envie|escreve|escreva)\\s+(?:pelo|via)\\s+nido\\s+(?:para|pra|pro)\\s+(?:o\\s+|a\\s+)?(.+?)(?:${SEP}(.+))?$`, "is"), lang: "pt" },
+  { re: new RegExp(`^${POLITE}(?:send|write)\\s+(?:on|via|through|by)\\s+nido\\s+to\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },
+  { re: new RegExp(`^${POLITE}send\\s+(.+?)\\s+(?:a\\s+)?nido\\s+message(?:${SEP}(.+))?$`, "is"), lang: "en" },
   // 0.1.20 (P3-12): sin la marca «por NIDO». NIDO es el ÚNICO canal de
   // mensajería del agente (llamar y buscar contactos ya resuelven por
   // nombre sin pedir el canal), así que «manda un mensaje a Juan» es
@@ -322,6 +367,11 @@ const NIDO_SEND_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?|escr[ií]bele)\\s+(?:un\\s+)?mensaje\\s+(?:a|para)\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "es" },
   { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?)\\s+(?:a|para)\\s+(.+?)\\s+(?:un\\s+)?mensaje(?:${SEP}(.+))?$`, "is"), lang: "es" },
   { re: new RegExp(`^${POLITE}d[ií]le\\s+a\\s+(.+?)(?:${SEP}|\\s+)(.+)$`, "is"), lang: "es" },
+  // 0.1.32 (paridad): «escríbele a Ana que…», «write to Ana that…»,
+  // «diz/fala/escreve para a Ana que…» — antes solo «dile a» tenía forma corta.
+  { re: new RegExp(`^${POLITE}escr[ií]bele\\s+a\\s+(.+?)(?:${SEP})(.+)$`, "is"), lang: "es" },
+  { re: new RegExp(`^${POLITE}write\\s+to\\s+(.+?)(?:${SEP})(.+)$`, "is"), lang: "en" },
+  { re: new RegExp(`^${POLITE}(?:diz|diga|fala|fale|escreve|escreva)\\s+(?:para|pra|pro|à|ao)\\s+(?:o\\s+|a\\s+)?(.+?)(?:${SEP})(.+)$`, "is"), lang: "pt" },
   { re: new RegExp(`^${POLITE}send\\s+(?:a\\s+)?message\\s+to\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },
   { re: new RegExp(`^${POLITE}send\\s+(.+?)\\s+(?:a\\s+)?message(?:${SEP}(.+))?$`, "is"), lang: "en" },
   { re: new RegExp(`^${POLITE}message\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },
@@ -503,6 +553,12 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   // conocimiento y el modelo podía decir que lo había cancelado sin hacer
   // nada. Un temporizador es un recordatorio llamado «Temporizador»/«Timer»:
   // se cancela por la ruta de borrado (con su confirmación y su «¿cuál?»).
+  for (const { re, lang } of COUNTDOWN_RULES) {
+    const m = re.exec(t);
+    if (!m) continue;
+    const c = countdownTarget(m[1], now, lang);
+    if (c) return { kind: "countdown", target: c.target.toISOString(), label: c.label, lang };
+  }
   for (const { re, q, lang } of TIMER_CANCEL_RULES) if (re.test(t)) return { kind: "reminderDelete", target: { type: "one", query: q }, lang };
   // «olvida mi color favorito»: el agente no borra memoria por sí solo. Antes
   // caía al modelo, que podía responder «listo, lo olvidé» sin borrar nada.
@@ -646,6 +702,9 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
       .replace(/^(?:a|para|to)\s+/i, "")
       .replace(/\s+(?:por|con|en|v[ií]a|on|via|through|by|pelo|no)\s+(?:nido|la app)$/i, "");
     if (!to || to.split(/\s+/).length > 5) return null;
+    // 0.1.32: «tell me that…», «diz pra mim que…», «dime que…» hablan
+    // CONMIGO: no son un mensaje a un contacto llamado «me».
+    if (/^(?:me|m[ií]|mim|myself|us|n[oó]s|nosotros)$/i.test(to)) return null;
     return { kind: "nidoSend", to, text: m[2]?.trim() || null, lang };
   }
   for (const { re, lang } of NIDO_INBOX_RULES) if (re.test(t)) return { kind: "nidoInbox", lang };
@@ -711,6 +770,7 @@ type Key =
   | "reminderSet"
   | "reminderOneTimeOnly"
   | "reminderSavedAskWhen"
+  | "reminderAskWhat"
   | "reminderWillNotify"
   | "reminderSaveFailed"
   | "personSaved"
@@ -729,6 +789,11 @@ type Key =
   | "noteSearchNone"
   | "currencyOffline"
   | "memoryForgetHelp"
+  | "countdownToday"
+  | "countdownOne"
+  | "countdownMany"
+  | "countdownDateOne"
+  | "countdownDateMany"
   | "timerSet"
   | "timerLabel"
   | "factSaved"
@@ -807,6 +872,19 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     en: "I didn't find anything in your notes about “{{q}}”.",
     pt: "Não encontrei nada nas suas notas sobre “{{q}}”.",
   },
+  countdownToday: { es: "¡Es hoy! ({{label}})", en: "It's today! ({{label}})", pt: "É hoje! ({{label}})" },
+  countdownOne: {
+    es: "Falta 1 día para {{label}} ({{day}}).",
+    en: "1 day until {{label}} ({{day}}).",
+    pt: "Falta 1 dia para {{label}} ({{day}}).",
+  },
+  countdownMany: {
+    es: "Faltan {{n}} días para {{label}} ({{day}}).",
+    en: "{{n}} days until {{label}} ({{day}}).",
+    pt: "Faltam {{n}} dias para {{label}} ({{day}}).",
+  },
+  countdownDateOne: { es: "Falta 1 día para el {{day}}.", en: "1 day until {{day}}.", pt: "Falta 1 dia para {{day}}." },
+  countdownDateMany: { es: "Faltan {{n}} días para el {{day}}.", en: "{{n}} days until {{day}}.", pt: "Faltam {{n}} dias para {{day}}." },
   memoryForgetHelp: {
     es: "No borro recuerdos por mi cuenta. Para olvidar algo, abre el menú → «Mi memoria» y bórralo ahí: verás exactamente qué se elimina.",
     en: "I don't delete memories on my own. To forget something, open the menu → “My Memory” and delete it there: you'll see exactly what gets removed.",
@@ -883,9 +961,14 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
   reminderNoDate: { es: "sin fecha", en: "no date", pt: "sem data" },
   reminderSet: { es: "Listo, te recordaré{{when}}: «{{text}}».", en: "Done, I'll remind you{{when}}: “{{text}}”.", pt: "Pronto, vou te lembrar{{when}}: “{{text}}”." },
   reminderOneTimeOnly: {
-    es: " Ojo: lo guardé como un recordatorio de una sola vez; los recordatorios que se repiten todavía no están soportados.",
-    en: " Note: I saved it as a one-time reminder; repeating reminders are not supported yet.",
-    pt: " Atenção: salvei como um lembrete único; lembretes repetidos ainda não são suportados.",
+    es: " Ojo: lo guardé como un recordatorio de una sola vez; solo puedo repetirlos cada día o cada semana.",
+    en: " Note: I saved it as a one-time reminder; I can only repeat reminders every day or every week.",
+    pt: " Atenção: salvei como um lembrete único; só consigo repetir lembretes todos os dias ou toda semana.",
+  },
+  reminderAskWhat: {
+    es: "¿Qué quieres que te recuerde{{when}}? Dímelo en una frase, por ejemplo: «recuérdame el lunes pagar la luz».",
+    en: "What should I remind you of{{when}}? Say it in one go, for example: “remind me on Monday to pay the bill”.",
+    pt: "O que você quer que eu te lembre{{when}}? Diga numa frase só, por exemplo: “me lembra na segunda de pagar a luz”.",
   },
   reminderSavedAskWhen: {
     es: "Listo, guardé: «{{text}}». ¿Para cuándo quieres que te avise?",
@@ -911,6 +994,21 @@ export function reminderWhen(iso: string, lang: RouterLang): string {
   if (lang === "en") return ` on ${formatDay(d, lang)} at ${formatTime(d, lang)}`;
   if (lang === "pt") return ` em ${formatDay(d, lang)} às ${formatTime(d, lang)}`;
   return ` el ${formatDay(d, lang)} a las ${formatTime(d, lang)}`;
+}
+
+/** 0.1.32: « cada lunes a las 9:00» / « every day at 9:00» / « toda segunda-feira às 9:00». */
+export function reminderRepeatWhen(iso: string, repeat: "day" | "week", lang: RouterLang): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const time = formatTime(d, lang);
+  const day = DAYS[lang][d.getDay()];
+  if (lang === "en") return repeat === "day" ? ` every day at ${time}` : ` every ${day} at ${time}`;
+  if (lang === "pt") {
+    if (repeat === "day") return ` todos os dias às ${time}`;
+    // sábado e domingo são masculinos.
+    return ` ${d.getDay() === 0 || d.getDay() === 6 ? "todo" : "toda"} ${day} às ${time}`;
+  }
+  return repeat === "day" ? ` cada día a las ${time}` : ` cada ${day} a las ${time}`;
 }
 
 const RANGE_WORDS: Record<CalendarRange, Record<RouterLang, string>> = {
@@ -974,7 +1072,7 @@ export interface ToolRouterDeps {
   listNotesFull?: () => Promise<Array<{ id: string; title: string; body: string }>>;
   /** Recordatorios pendientes, para "qué recordatorios tengo" y para
    *  resolver los borrados por texto (0.1.20: con id). */
-  listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null }>>;
+  listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null; repeat?: "day" | "week" | null }>>;
   now?: () => Date;
   /**
    * 0.1.25: almacén de la elección pendiente («¿cuál nota?») entre
@@ -1155,8 +1253,8 @@ export function localizeHandlerText(text: string, lang: RouterLang): string {
     )
     .replace(/Huella para verificar en persona:/g, L("Fingerprint to check in person:", "Impressão digital para conferir pessoalmente:"))
     .replace(
-      /^Mensaje para «(.+?)» guardado cifrado en la cola de salida: se entregará cuando su NIDO esté al alcance \(Bluetooth\)\.$/m,
-      (_m, to) => L(`Message for “${to}” saved encrypted in the outbox: it will be delivered when their NIDO is in range.`, `Mensagem para “${to}” salva criptografada na fila: será entregue quando o NIDO dele estiver ao alcance.`),
+      /^Mensaje para «(.+?)» guardado cifrado en la cola de salida: se entregará cuando su NIDO esté al alcance(?: \(Bluetooth\))?\.$/m,
+      (_m, to) => L(`Message for “${to}” saved encrypted in the outbox: it will be delivered when their NIDO is in range.`, `Mensagem para “${to}” salva criptografada na fila: será entregue quando o NIDO dessa pessoa estiver ao alcance.`),
     )
     .replace(
       /^Mensaje enviado a «(.+?)» por NIDO \(cifrado de extremo a extremo\)\.$/m,
@@ -1233,6 +1331,21 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
 
   try {
     switch (action.kind) {
+      case "countdown": {
+        const target = new Date(action.target);
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const days = Math.round((target.getTime() - today.getTime()) / 86_400_000);
+        uses.push({ name: "device_time", result: now.toISOString() });
+        const day = formatDay(target, lang);
+        if (days === 0) return say(routerMessage("countdownToday", lang, { label: action.label || day }));
+        if (!action.label) {
+          return say(routerMessage(days === 1 ? "countdownDateOne" : "countdownDateMany", lang, { n: String(days), day }));
+        }
+        return say(
+          routerMessage(days === 1 ? "countdownOne" : "countdownMany", lang, { n: String(days), label: action.label, day }),
+        );
+      }
+
       case "time": {
         // Hora del sistema leída aquí (determinista); se registra como device_time.
         uses.push({ name: "device_time", result: now.toISOString() });
@@ -1302,6 +1415,8 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
           const u = end.getTime();
           items = all.filter((r) => {
             if (!r.dueAt) return false;
+            // 0.1.32: uno que se repite cuenta si alguna de sus veces cae ese día.
+            if (r.repeat) return nextOccurrence(new Date(r.dueAt), r.repeat, new Date(f - 1)).getTime() < u;
             const d = new Date(r.dueAt).getTime();
             return d >= f && d < u;
           });
@@ -1315,7 +1430,9 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
             ),
           );
         const lines = items.slice(0, 20).map((r) => {
-          const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+          const when = r.dueAt
+            ? (r.repeat ? reminderRepeatWhen(r.dueAt, r.repeat, lang) : reminderWhen(r.dueAt, lang)).trim()
+            : routerMessage("reminderNoDate", lang);
           return `• ${r.text} (${when})`;
         });
         const header =
@@ -1377,11 +1494,15 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
           if (!chosen) {
             if (matches.length === 0) return say(routerMessage("reminderNotFound", lang, { q: action.target.query }));
             stashChoice(deps, "reminderDelete", matches.slice(0, 8).map((r) => {
-              const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+              const when = r.dueAt
+            ? (r.repeat ? reminderRepeatWhen(r.dueAt, r.repeat, lang) : reminderWhen(r.dueAt, lang)).trim()
+            : routerMessage("reminderNoDate", lang);
               return { id: r.id, label: `${r.text} (${when})`, match: r.text };
             }), lang);
             const lines = matches.slice(0, 8).map((r) => {
-              const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+              const when = r.dueAt
+            ? (r.repeat ? reminderRepeatWhen(r.dueAt, r.repeat, lang) : reminderWhen(r.dueAt, lang)).trim()
+            : routerMessage("reminderNoDate", lang);
               return `• ${r.text} (${when})`;
             });
             return say(`${routerMessage("reminderWhich", lang)}\n${lines.join("\n")}`);
@@ -1400,6 +1521,8 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
           const u = end.getTime();
           items = all.filter((r) => {
             if (!r.dueAt) return false;
+            // 0.1.32: uno que se repite cuenta si alguna de sus veces cae ese día.
+            if (r.repeat) return nextOccurrence(new Date(r.dueAt), r.repeat, new Date(f - 1)).getTime() < u;
             const d = new Date(r.dueAt).getTime();
             return d >= f && d < u;
           });
@@ -1413,11 +1536,15 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
           );
         if (action.target.type === "ask" && items.length > 1) {
           stashChoice(deps, "reminderDelete", items.slice(0, 20).map((r) => {
-            const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+            const when = r.dueAt
+            ? (r.repeat ? reminderRepeatWhen(r.dueAt, r.repeat, lang) : reminderWhen(r.dueAt, lang)).trim()
+            : routerMessage("reminderNoDate", lang);
             return { id: r.id, label: `${r.text} (${when})`, match: r.text };
           }), lang);
           const lines = items.slice(0, 20).map((r) => {
-            const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+            const when = r.dueAt
+            ? (r.repeat ? reminderRepeatWhen(r.dueAt, r.repeat, lang) : reminderWhen(r.dueAt, lang)).trim()
+            : routerMessage("reminderNoDate", lang);
             return `• ${r.text} (${when})`;
           });
           return say(`${routerMessage("deleteWhichReminder", lang)}\n${lines.join("\n")}`);

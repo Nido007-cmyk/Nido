@@ -14,6 +14,7 @@
 import {
   getDueReminders,
   completeReminder,
+  listReminders,
   snapshot as memorySnapshot,
 } from "../agent/memory/memoryStore";
 import {
@@ -21,6 +22,7 @@ import {
   notifyNow,
   refreshBriefingNotification,
   cancelReminderNotification,
+  scheduleReminderNotification,
   reminderNotificationTitle,
 } from "../notify/notifications";
 import { upcomingEventsForBriefing } from "../agent/tools/handlers";
@@ -72,6 +74,14 @@ export async function runStartupRoutines(): Promise<void> {
   try {
     const due = await getDueReminders();
     for (const r of due) {
+      // 0.1.32: un recordatorio que se repite lo avisa el sistema con su
+      // disparador diario/semanal aunque la app esté cerrada; aquí solo se
+      // avanza su fecha. Ni se repite el aviso ni se cancela (cancelarlo
+      // apagaría todas las veces siguientes).
+      if (r.repeat) {
+        await completeReminder(r.id);
+        continue;
+      }
       if (notifyOk) {
         await notifyNow(reminderNotificationTitle(), r.text);
       }
@@ -80,6 +90,22 @@ export async function runStartupRoutines(): Promise<void> {
     }
   } catch {
     // La memoria aún no está lista: se reintentará en el próximo arranque.
+  }
+
+  // 0.1.32: los repetidos se vuelven a programar al arrancar (mismo
+  // identificador, así que no se duplican). Cubre un aviso que no se pudo
+  // programar al crearlo y una copia de seguridad recién restaurada.
+  if (notifyOk) {
+    try {
+      const pending = await listReminders(200);
+      for (const r of pending) {
+        if (r.repeat && r.due_at) {
+          await scheduleReminderNotification(r.id, r.text, new Date(r.due_at), r.repeat);
+        }
+      }
+    } catch {
+      // Sin memoria o sin permiso: siguen guardados y se reintenta al abrir.
+    }
   }
 
   try {

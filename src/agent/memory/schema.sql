@@ -51,6 +51,11 @@ CREATE TABLE IF NOT EXISTS agent_reminders (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_reminders_due ON agent_reminders(due_at) WHERE done = 0;
+-- 0.1.32: ritmo de los recordatorios que se repiten.
+CREATE TABLE IF NOT EXISTS agent_reminder_repeat (
+  reminder_id TEXT PRIMARY KEY,
+  every       TEXT NOT NULL CHECK (every IN ('day', 'week'))
+);
 
 -- Borrado total ("derecho al olvido" local): basta con borrar el archivo
 -- de la base y la clave del Keystore. Nada existe en ningún otro lugar.

@@ -10,7 +10,7 @@
  * herramientas) y ahora tienen ruta determinista.
  */
 import { describe, expect, it } from "vitest";
-import { extractCalcAction, extractReminderAction } from "./actionRouter";
+import { extractCalcAction, extractReminderAction, reminderMissingText } from "./actionRouter";
 import { extractToolAction } from "./toolRouter";
 import { classifyIntent } from "./intent";
 
@@ -52,9 +52,10 @@ describe("alarmas y avisos", () => {
     const r = extractReminderAction("pon una alarma a las 7");
     expect(r?.dueAt).toBeTruthy();
   });
-  it("set a reminder for 5pm → aviso a las 17:00", () => {
-    const r = extractReminderAction("set a reminder for 5pm");
-    expect(new Date(r!.dueAt!).getHours()).toBe(17);
+  it("set a reminder for 5pm → sin contenido: se pregunta qué recordar a las 17:00 (0.1.32)", () => {
+    expect(extractReminderAction("set a reminder for 5pm")).toBeNull();
+    const due = reminderMissingText("set a reminder for 5pm");
+    expect(new Date(due!).getHours()).toBe(17);
   });
   it.each([
     ["no me dejes olvidar comprar pan", "comprar pan"],
@@ -64,6 +65,7 @@ describe("alarmas y avisos", () => {
   });
   it("todas entran como acción", () => {
     for (const s of ["pon una alarma a las 7", "set a reminder for 5pm", "no me dejes olvidar comprar pan"]) {
+      // (sin contenido, «set a reminder for 5pm» entra igual: el loop pregunta qué)
       expect(classifyIntent(s)).toBe("actuar");
     }
   });

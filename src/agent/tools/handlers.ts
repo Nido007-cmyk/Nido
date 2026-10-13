@@ -1088,7 +1088,7 @@ const nidoSendMessageHandler: ToolHandler = async (args) => {
     await m.ensureIdentity();
     const { queued } = await m.sendChat(to, text);
     return queued
-      ? `Mensaje para «${to}» guardado cifrado en la cola de salida: se entregará cuando su NIDO esté al alcance (Bluetooth).`
+      ? `Mensaje para «${to}» guardado cifrado en la cola de salida: se entregará cuando su NIDO esté al alcance.`
       : `Mensaje enviado a «${to}» por NIDO (cifrado de extremo a extremo).`;
   } catch (e) {
     return `No pude enviar el mensaje NIDO: ${e instanceof Error ? e.message : String(e)}`;

@@ -22,7 +22,7 @@ vi.mock("expo-notifications", () => ({
   scheduleNotificationAsync: mocks.scheduleNotificationAsync,
   cancelScheduledNotificationAsync: mocks.cancelScheduledNotificationAsync,
   addNotificationReceivedListener: mocks.addNotificationReceivedListener,
-  SchedulableTriggerInputTypes: { DATE: "date", DAILY: "daily" },
+  SchedulableTriggerInputTypes: { DATE: "date", DAILY: "daily", WEEKLY: "weekly" },
   AndroidImportance: { HIGH: 4, DEFAULT: 3 },
   AndroidNotificationVisibility: { UNKNOWN: 0, PUBLIC: 1, PRIVATE: 2, SECRET: 3 },
 }));
@@ -177,5 +177,37 @@ describe("notifyNow (0.1.29)", () => {
     const call = mocks.scheduleNotificationAsync.mock.calls[0][0];
     expect(call.trigger).toEqual({ channelId: "nido-reminders" });
     expect(call.content.body).toBe("Tus notas dicen…");
+  });
+});
+
+describe("0.1.32: recordatorios que se repiten", () => {
+  it("cada día → DAILY a esa hora, mismo identificador", async () => {
+    mocks.scheduleNotificationAsync.mockResolvedValue("id");
+    const at = new Date(2026, 9, 14, 8, 30);
+    const ok = await scheduleReminderNotification("r1", "pastilla", at, "day");
+    expect(ok).toBe(true);
+    const arg = mocks.scheduleNotificationAsync.mock.calls[0][0];
+    expect(arg.identifier).toBe("nido-reminder-r1");
+    expect(arg.trigger).toEqual({ type: "daily", hour: 8, minute: 30, channelId: "nido-reminders" });
+  });
+
+  it("cada semana → WEEKLY con el día de expo (1 = domingo)", async () => {
+    mocks.scheduleNotificationAsync.mockResolvedValue("id");
+    const at = new Date(2026, 9, 19, 9, 0); // lunes
+    await scheduleReminderNotification("r2", "basura", at, "week");
+    const arg = mocks.scheduleNotificationAsync.mock.calls[0][0];
+    expect(arg.trigger).toEqual({ type: "weekly", weekday: 2, hour: 9, minute: 0, channelId: "nido-reminders" });
+  });
+
+  it("uno repetido con base pasada se programa igual (no tiene «pasado»)", async () => {
+    mocks.scheduleNotificationAsync.mockResolvedValue("id");
+    const ok = await scheduleReminderNotification("r3", "x", new Date(2020, 0, 1, 9, 0), "day");
+    expect(ok).toBe(true);
+  });
+
+  it("sin repetición sigue siendo DATE y rechaza el pasado", async () => {
+    const ok = await scheduleReminderNotification("r4", "x", new Date(2020, 0, 1, 9, 0));
+    expect(ok).toBe(false);
+    expect(mocks.scheduleNotificationAsync).not.toHaveBeenCalled();
   });
 });

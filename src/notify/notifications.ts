@@ -142,11 +142,13 @@ export async function initNotifications(): Promise<boolean> {
 export async function scheduleReminderNotification(
   reminderId: string,
   text: string,
-  at: Date
+  at: Date,
+  repeat?: "day" | "week" | null
 ): Promise<boolean> {
   // FIX 2026-10-09 (N4): rechazar fechas pasadas. Un trigger DATE en el
-  // pasado tiene comportamiento indefinido según el backend.
-  if (at.getTime() < Date.now() - 60_000) {
+  // pasado tiene comportamiento indefinido según el backend. Un aviso que
+  // se repite no tiene «pasado»: solo importan su hora y su día.
+  if (!repeat && at.getTime() < Date.now() - 60_000) {
     return false;
   }
   try {
@@ -166,11 +168,7 @@ export async function scheduleReminderNotification(
           body: text,
           sound: "default",
         },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: at,
-          channelId: "nido-reminders",
-        },
+        trigger: reminderTrigger(at, repeat),
       });
       return true;
     })();
@@ -178,6 +176,36 @@ export async function scheduleReminderNotification(
   } catch {
     return false;
   }
+}
+
+/**
+ * 0.1.32: disparador del aviso. Una vez → DATE; cada día → DAILY a esa
+ * hora; cada semana → WEEKLY ese día (expo: 1 = domingo … 7 = sábado). Los
+ * repetidos los dispara el sistema aunque la app no se abra.
+ */
+export function reminderTrigger(at: Date, repeat?: "day" | "week" | null): Notifications.NotificationTriggerInput {
+  if (repeat === "day") {
+    return {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
+      hour: at.getHours(),
+      minute: at.getMinutes(),
+      channelId: "nido-reminders",
+    };
+  }
+  if (repeat === "week") {
+    return {
+      type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+      weekday: at.getDay() + 1,
+      hour: at.getHours(),
+      minute: at.getMinutes(),
+      channelId: "nido-reminders",
+    };
+  }
+  return {
+    type: Notifications.SchedulableTriggerInputTypes.DATE,
+    date: at,
+    channelId: "nido-reminders",
+  };
 }
 
 /** Cancela el aviso programado de un recordatorio. */

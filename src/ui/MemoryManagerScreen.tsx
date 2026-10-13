@@ -254,6 +254,11 @@ export function MemoryManagerScreen({ onClose }: { onClose: () => void }) {
                   {r.due_at ? (
                     <Text style={styles.cardMeta}>{r.due_at}</Text>
                   ) : null}
+                  {r.repeat ? (
+                    <Text style={styles.cardMeta}>
+                      {t(r.repeat === "week" ? "memoryManager.repeatWeek" : "memoryManager.repeatDay")}
+                    </Text>
+                  ) : null}
                   <View style={styles.cardActions}>
                     {r.done !== 1 && (
                       <Pressable
@@ -274,7 +279,17 @@ export function MemoryManagerScreen({ onClose }: { onClose: () => void }) {
                         confirmDelete(
                           t("memoryManager.deleteTitle"),
                           t("memoryManager.deleteMessage"),
-                          () => deleteReminder(r.id)
+                          async () => {
+                            // 0.1.32: cancelar el aviso del sistema antes de
+                            // borrar (uno repetido sonaría para siempre).
+                            try {
+                              const { cancelReminderNotification } = await import("../notify/notifications");
+                              await cancelReminderNotification(r.id);
+                            } catch {
+                              // Sin notificaciones: el borrado sigue.
+                            }
+                            await deleteReminder(r.id);
+                          }
                         )
                       }
                       hitSlop={8}
