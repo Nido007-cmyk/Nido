@@ -194,7 +194,12 @@ export async function notifyNow(title: string, body: string): Promise<void> {
   try {
     await Notifications.scheduleNotificationAsync({
       content: { title, body, sound: "default" },
-      trigger: null,
+      // 0.1.29 (auditoría 2026-10-13): con `trigger: null` el aviso iba al
+      // canal por defecto, que muestra el texto en la pantalla de bloqueo.
+      // Por aquí salen los resultados de las tareas programadas (que desde
+      // 0.1.24 pueden leer notas) y los recordatorios vencidos al arrancar.
+      // El canal de recordatorios lo oculta (SECRET), como el resto.
+      trigger: { channelId: "nido-reminders" },
     });
   } catch {
     // Sin permiso o sin módulo: silencioso.

@@ -108,7 +108,7 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v4
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
         with:
           # The action defaults to `packages: tools platform-tools`, but the
           # obsolete `tools` package no longer exists in the SDK repository
@@ -296,7 +296,7 @@ jobs:
 
       - name: Upload APK to release
         if: steps.tag.outputs.publish == 'true'
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           target_commitish: ${{ github.sha }}

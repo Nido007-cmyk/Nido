@@ -145,6 +145,31 @@ export function isUnlocked(): boolean {
  * no tiene nada enrolado, BiometricCancelled si el usuario cancela y
  * BiometricFailed si falla. Nunca devuelve "éxito" sin pasar por el SO.
  */
+/**
+ * 0.1.29 (B-2, auditoría ofensiva 2026-10-12): UNA sola política para todas
+ * las puertas de la clave de respaldo (crear backup en la pantalla de
+ * respaldo y en Ajustes, ver la clave, rotarla). Antes Ajustes y «ver la
+ * clave» bloqueaban en un teléfono sin PIN, mientras que crear/rotar en la
+ * pantalla de respaldo seguían: el usuario sin PIN podía acabar con
+ * respaldos que nunca podría restaurar.
+ *
+ * - Desbloqueo correcto → "unlocked".
+ * - El teléfono no tiene ni biometría ni PIN → "no-lock": la puerta no
+ *   puede proteger nada (quien tiene el teléfono ya ve todo NIDO); la
+ *   pantalla AVISA de forma visible y continúa.
+ * - Cancelado o fallido → lanza (BiometricCancelled/BiometricFailed): no
+ *   se muestra nada.
+ */
+export async function unlockForSecret(reason: string): Promise<"unlocked" | "no-lock"> {
+  try {
+    await requireUnlock(reason);
+    return "unlocked";
+  } catch (e) {
+    if (e instanceof BiometricUnavailable) return "no-lock";
+    throw e;
+  }
+}
+
 export async function requireUnlock(reason: string): Promise<void> {
   const m = realModule();
   if (!m) throw new BiometricUnavailable("Módulo biométrico no disponible.");

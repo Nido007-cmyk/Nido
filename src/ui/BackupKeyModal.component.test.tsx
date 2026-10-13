@@ -85,4 +85,12 @@ describe("BackupKeyModal", () => {
     fireEvent.press(screen.getByLabelText("backup.understood"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("0.1.29 (M-1): no usa <Modal> (otra ventana sin FLAG_SECURE), sino una capa en la misma ventana", async () => {
+    const { BackupKeyModal } = require("./BackupKeyModal");
+    await render(<BackupKeyModal dek="clave-de-prueba-123" dest="" onClose={() => {}} />);
+    expect(screen.getByText("clave-de-prueba-123")).toBeTruthy();
+    // En el árbol renderizado no hay ningún host «Modal».
+    expect(JSON.stringify(screen.toJSON())).not.toMatch(/"type":"(RCT)?Modal(HostView)?"/);
+  });
 });

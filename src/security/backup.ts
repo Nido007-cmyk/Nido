@@ -34,7 +34,7 @@ const DB_NAME = "nido_memory.db";
 const KNOWLEDGE_DB_NAME = "nido_knowledge.db";
 const BACKUP_VERSION = 1;
 // A14: misma versión que package.json y el tag del release.
-const APP_VERSION = "0.1.18";
+const APP_VERSION = "0.1.29";
 // SQLCipher magic header: "SQLite format 3\0" — los primeros 16 bytes
 const SQLITE_MAGIC = "SQLite format 3\0";
 
@@ -252,10 +252,12 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
     // sobrescribía la base viva.
     let trialOpenOk = false;
     let manifestVerified = false;
+    let dekPresent = false;
     try {
       const { getDatabaseKeyHex, applyDatabaseKey } = await import("../privacy/keyManager");
-      const SQLite = await import("expo-sqlite");
       const dekHex = await getDatabaseKeyHex().catch(() => null);
+      dekPresent = !!dekHex;
+      const SQLite = await import("expo-sqlite");
       if (dekHex) {
         const slash = uri.lastIndexOf("/");
         const db = await SQLite.openDatabaseAsync(
@@ -277,6 +279,13 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
       // Continuar con validación de manifest (K1/K2).
     } catch {
       // Si el trial-open falla por error técnico, continuar con validación básica.
+    }
+    // 0.1.29 (B-1, auditoría ofensiva 2026-10-12): con clave en el teléfono
+    // la única prueba que vale es abrir el archivo con ella. Un manifest no
+    // va firmado: basura + manifest con el SHA recalculado lo pasaba si la
+    // apertura de prueba no llegaba a ejecutarse (error técnico).
+    if (dekPresent && !trialOpenOk) {
+      return { valid: false, reason: "No se pudo comprobar el backup con la clave de este teléfono." };
     }
     // FIX 2026-10-09 (K1/K2): verificar manifest — SHA-256 del archivo y
     // fingerprint del DEK. Si el backup es de otra instalación (DEK distinto),
@@ -360,14 +369,44 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
  * ADVERTENCIA: esto sobrescribe los datos actuales. La app debe reiniciarse después.
  */
 export async function restoreBackup(backupUri: string): Promise<void> {
+  // 0.1.29 (B-1): sin clave en este teléfono no hay forma de comprobar el
+  // respaldo (ni de abrirlo después): validateBackup solo podía fiarse del
+  // manifest, que no va firmado, y aceptaba un archivo fabricado. Se
+  // rechaza y la pantalla ofrece «Restaurar con clave», que sí lo abre con
+  // la clave que guardó el usuario antes de tocar nada.
+  const dek = await getDatabaseKeyHex().catch(() => null);
+  if (!dek) {
+    throw new BackupError(
+      "noDeviceKey",
+      "Este teléfono no tiene una clave de cifrado disponible: usa «Restaurar con clave».",
+    );
+  }
+
   // FIX 2026-10-09 (CR-1): si es un bundle portable, extraer primero.
   let actualUri = backupUri;
+  const extracted: string[] = [];
   if (backupUri.endsWith(".nidobackup.json")) {
     const dir = FileSystem.documentDirectory;
     if (!dir) throw new BackupError("storage", "No se pudo acceder al almacenamiento.");
     actualUri = await extractPortableBundle(backupUri, dir);
+    extracted.push(actualUri, `${actualUri}.manifest.json`, knowledgeBackupUriFor(actualUri));
   }
+  try {
+    await restoreExtracted(actualUri);
+  } finally {
+    // 0.1.29 (B-3): los archivos extraídos del bundle (restored.db, su
+    // manifest y la base de conocimiento) ya no se quedan para siempre en
+    // documentos tras restaurar o fallar. Estaban cifrados, pero eran una
+    // copia completa más de los datos.
+    for (const uri of extracted) {
+      try {
+        await FileSystem.deleteAsync(uri, { idempotent: true });
+      } catch { /* best-effort */ }
+    }
+  }
+}
 
+async function restoreExtracted(actualUri: string): Promise<void> {
   // 1. Validar ANTES de tocar nada (BK-3).
   const validation = await validateBackup(actualUri);
   if (!validation.valid) {

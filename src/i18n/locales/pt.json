@@ -1031,6 +1031,8 @@
       "staging": "Não foi possível preparar a troca de chave. Nada foi alterado.",
       "storeFailed": "Não foi possível salvar a nova chave; a anterior foi mantida."
     },
+    "noLockTitle": "Seu telefone não tem PIN",
+    "noLockBody": "Sem PIN nem digital, o NIDO não consegue proteger sua chave: qualquer pessoa com o telefone poderia vê-la. Vamos mostrá-la mesmo assim para você guardá-la. Recomendamos definir um PIN nas configurações do Android.",
     "errors": {
       "storage": "Não foi possível acessar o armazenamento do telefone.",
       "dbMissing": "O banco de dados não foi encontrado.",
@@ -1038,7 +1040,7 @@
       "invalid": "O arquivo não é um backup válido.",
       "rollback": "Não foi possível restaurar; seus dados anteriores ficaram como estavam.",
       "keyFormat": "A chave do backup deve ter 64 caracteres hexadecimais.",
-      "noDeviceKey": "Este telefone não tem uma chave de criptografia disponível.",
+      "noDeviceKey": "Este telefone não tem uma chave de criptografia disponível. Use “Restaurar com a chave do backup”.",
       "wrongKey": "A chave não abre este backup. Verifique se é a chave que você guardou ao criá-lo.",
       "authCancelled": "Autenticação cancelada."
     },

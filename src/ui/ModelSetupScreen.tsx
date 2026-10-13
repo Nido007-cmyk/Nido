@@ -110,8 +110,11 @@ export function ModelSetupScreen(props: Props) {
       const result = await DocumentPicker.getDocumentAsync({ type: "*/*", copyToCacheDirectory: true });
       if (result.canceled) return;
       const uri = result.assets[0].uri;
-      const { requireUnlock } = await import("../security/biometricGate");
-      await requireUnlock(t("backup.restoreTitle"));
+      // 0.1.29 (B-2): misma política que el resto de puertas de respaldo:
+      // sin PIN en el teléfono no hay nada que la puerta pueda proteger y
+      // bloquear dejaba al usuario sin poder restaurar nunca.
+      const { unlockForSecret } = await import("../security/biometricGate");
+      await unlockForSecret(t("backup.restoreTitle"));
       await restoreBackupWithKey(uri, restoreKeyText);
       setRestoreKeyVisible(false);
       setRestoreKeyText("");
@@ -520,7 +523,7 @@ export function ModelSetupScreen(props: Props) {
                     // backupShare.ts para sacar el archivo de la carpeta
                     // privada del app.
                     const { createBackupFile } = await import("./backupShare");
-                    const { path, key } = await createBackupFile(t("backup.createButton"));
+                    const { path, key, noLock } = await createBackupFile(t("backup.createButton"));
                     // 2026-10-12: la clave se muestra en el modal copiable
                     // compartido (BackupKeyModal), igual que en la pantalla
                     // de respaldo. Antes salía en una alerta del sistema
@@ -528,7 +531,18 @@ export function ModelSetupScreen(props: Props) {
                     // anotarla o fotografiarla (evidencia física). Compartir
                     // sigue disponible en su propio botón de esta tarjeta.
                     setLastBackupPath(path);
-                    setBackupKeyModal({ dek: key, dest: path });
+                    // 0.1.29 (B-2): sin PIN en el teléfono, aviso visible
+                    // antes de la clave (misma política en todas las puertas).
+                    if (noLock) {
+                      Alert.alert(
+                        t("backup.noLockTitle"),
+                        t("backup.noLockBody"),
+                        [{ text: t("backup.understood"), onPress: () => setBackupKeyModal({ dek: key, dest: path }) }],
+                        { cancelable: false },
+                      );
+                    } else {
+                      setBackupKeyModal({ dek: key, dest: path });
+                    }
                   } catch (e) {
                     Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.createFailed"));
                   }
@@ -615,8 +629,8 @@ export function ModelSetupScreen(props: Props) {
                               // FIX 2026-10-09 (RESTORE-BIOMETRIC): restauración es
                               // destructiva (reemplaza todos los datos) → requiere
                               // autenticación biométrica.
-                              const { requireUnlock } = await import("../security/biometricGate");
-                              await requireUnlock(t("backup.restoreTitle"));
+                              const { unlockForSecret } = await import("../security/biometricGate");
+                              await unlockForSecret(t("backup.restoreTitle"));
                               await restoreBackup(uri);
                               Alert.alert(
                                 t("backup.restoreDoneTitle"),
@@ -647,11 +661,6 @@ export function ModelSetupScreen(props: Props) {
                 <Text style={styles.wizardBtnText}>{t("backup.restoreWithKeyButton")}</Text>
               </Pressable>
             </View>
-            <BackupKeyModal
-              dek={backupKeyModal?.dek ?? null}
-              dest={backupKeyModal?.dest ?? ""}
-              onClose={() => setBackupKeyModal(null)}
-            />
           </View>
         </AccordionSection>
       </ScrollView>
@@ -769,6 +778,13 @@ export function ModelSetupScreen(props: Props) {
       </Modal>
 
       {toast && <Toast message={toast} onHide={() => setToast(null)} />}
+      {/* 0.1.29 (M-1): la clave se muestra en una capa de esta misma
+          ventana (con FLAG_SECURE), montada en la raíz de la pantalla. */}
+      <BackupKeyModal
+        dek={backupKeyModal?.dek ?? null}
+        dest={backupKeyModal?.dest ?? ""}
+        onClose={() => setBackupKeyModal(null)}
+      />
     </View>
   );
 }

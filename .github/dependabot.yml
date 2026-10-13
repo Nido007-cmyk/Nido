@@ -9,6 +9,19 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     versioning-strategy: increase
+    # 0.1.29: React Native y React los fija el SDK de Expo (SDK 57 → RN
+    # 0.86). Subirlos por fuera del SDK rompe los módulos nativos, no solo
+    # el typecheck (PR #63). Se migran con el SDK siguiente vía
+    # `npx expo install --fix`, nunca sueltos.
+    ignore:
+      - dependency-name: "react-native"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      - dependency-name: "@react-native/*"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
     # Un solo PR semanal para parches y menores; las mayores llegan aparte
     # porque suelen romper la compilación nativa y hay que revisarlas a mano.
     groups:

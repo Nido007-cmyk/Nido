@@ -1031,6 +1031,8 @@
       "staging": "Couldn't prepare the key change. Nothing was changed.",
       "storeFailed": "Couldn't save the new key; the previous one was kept."
     },
+    "noLockTitle": "Your phone has no PIN",
+    "noLockBody": "Without a PIN or fingerprint, NIDO can't protect your key: anyone with the phone could see it. We'll show it anyway so you can save it. We recommend setting a PIN in Android settings.",
     "errors": {
       "storage": "Couldn't access the phone's storage.",
       "dbMissing": "The database wasn't found.",
@@ -1038,7 +1040,7 @@
       "invalid": "The file isn't a valid backup.",
       "rollback": "Couldn't restore; your previous data was left as it was.",
       "keyFormat": "The backup key must be 64 hexadecimal characters.",
-      "noDeviceKey": "This phone has no encryption key available.",
+      "noDeviceKey": "This phone has no encryption key available. Use “Restore with the backup's key”.",
       "wrongKey": "The key doesn't open this backup. Check that it's the key you saved when you created it.",
       "authCancelled": "Authentication cancelled."
     },

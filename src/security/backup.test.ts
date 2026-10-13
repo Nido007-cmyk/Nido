@@ -127,3 +127,43 @@ describe("backup.ts — restaurar con la clave del respaldo (A1)", () => {
     expect(FileSystem.copyAsync).not.toHaveBeenCalled();
   });
 });
+
+describe("backup.ts — auditoría ofensiva 2026-10-12 (0.1.29)", () => {
+  it("B-1: con clave en el teléfono, un manifest correcto NO basta si no se pudo abrir el archivo", async () => {
+    vi.clearAllMocks();
+    // El manifest «cuadra» (SHA recalculado por el atacante), pero la
+    // apertura de prueba no llega a ejecutarse en este entorno.
+    (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: true, size: 5000 });
+    (FileSystem.readAsStringAsync as any).mockImplementation(async (uri: string) =>
+      uri.endsWith(".manifest.json") ? JSON.stringify({ sha256: "x", dekFingerprint: "y" }) : "BASURA",
+    );
+    const r = await validateBackup("/fabricado.db");
+    expect(r.valid).toBe(false);
+  });
+
+  it("B-1: sin clave en el teléfono, restaurar se niega antes de tocar nada", async () => {
+    const km = await import("../privacy/keyManager");
+    (km.getDatabaseKeyHex as any).mockResolvedValueOnce(null);
+    vi.clearAllMocks();
+    const { restoreBackup } = await import("./backup");
+    await expect(restoreBackup("/mock/b.db")).rejects.toMatchObject({ code: "noDeviceKey" });
+    expect(FileSystem.copyAsync).not.toHaveBeenCalled();
+    expect(FileSystem.writeAsStringAsync).not.toHaveBeenCalled();
+  });
+
+  it("B-3: los archivos extraídos de un bundle se borran aunque la restauración falle", async () => {
+    vi.clearAllMocks();
+    (FileSystem.readAsStringAsync as any).mockImplementation(async (uri: string) =>
+      uri.endsWith(".nidobackup.json")
+        ? JSON.stringify({ format: "nidobackup", version: 1, manifest: {}, db: "AAAA", knowledge: "BBBB" })
+        : "BASURA",
+    );
+    (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: true, size: 5000 });
+    const { restoreBackup } = await import("./backup");
+    await expect(restoreBackup("/mock/x.nidobackup.json")).rejects.toBeTruthy();
+    const deleted = (FileSystem.deleteAsync as any).mock.calls.map((c: unknown[]) => c[0]);
+    expect(deleted).toEqual(
+      expect.arrayContaining(["/mock/restored.db", "/mock/restored.db.manifest.json", "/mock/restored.knowledge.db"]),
+    );
+  });
+});

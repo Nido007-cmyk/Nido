@@ -167,3 +167,15 @@ describe("withTimeout (CRASH-2026-10-10)", () => {
     await expect(withTimeout(Promise.reject(new Error("x")), 50, false)).resolves.toBe(false);
   });
 });
+
+describe("notifyNow (0.1.29)", () => {
+  it("va por el canal de recordatorios (oculto en la pantalla de bloqueo), no por el canal por defecto", async () => {
+    const { notifyNow } = await import("./notifications");
+    mocks.scheduleNotificationAsync.mockClear();
+    mocks.scheduleNotificationAsync.mockResolvedValue("x");
+    await notifyNow("Tarea lista", "Tus notas dicen…");
+    const call = mocks.scheduleNotificationAsync.mock.calls[0][0];
+    expect(call.trigger).toEqual({ channelId: "nido-reminders" });
+    expect(call.content.body).toBe("Tus notas dicen…");
+  });
+});

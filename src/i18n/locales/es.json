@@ -1031,6 +1031,8 @@
       "staging": "No se pudo preparar el cambio de clave. No se cambió nada.",
       "storeFailed": "No se pudo guardar la nueva clave; se dejó la anterior."
     },
+    "noLockTitle": "Tu teléfono no tiene PIN",
+    "noLockBody": "Sin PIN ni huella, NIDO no puede proteger tu clave: cualquiera con el teléfono podría verla. Te la mostramos igual para que puedas guardarla. Te recomendamos poner un PIN en los ajustes de Android.",
     "errors": {
       "storage": "No se pudo acceder al almacenamiento del teléfono.",
       "dbMissing": "No se encontró la base de datos.",
@@ -1038,7 +1040,7 @@
       "invalid": "El archivo no es un backup válido.",
       "rollback": "No se pudo restaurar; tus datos anteriores se dejaron como estaban.",
       "keyFormat": "La clave del respaldo debe tener 64 caracteres hexadecimales.",
-      "noDeviceKey": "Este teléfono no tiene una clave de cifrado disponible.",
+      "noDeviceKey": "Este teléfono no tiene una clave de cifrado disponible. Usa «Restaurar con la clave del respaldo».",
       "wrongKey": "La clave no abre este respaldo. Revisa que sea la clave que guardaste al crearlo.",
       "authCancelled": "Autenticación cancelada."
     },

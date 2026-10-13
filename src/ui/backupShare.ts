@@ -26,15 +26,18 @@ import { BackupError } from "../security/backupErrors";
 export interface CreatedBackup {
   path: string;
   key: string;
+  /** 0.1.29 (B-2): el teléfono no tiene PIN; la pantalla debe avisar. */
+  noLock: boolean;
 }
 
 /** Crea el backup y devuelve ruta + clave. */
 export async function createBackupFile(unlockReason = "Crear backup"): Promise<CreatedBackup> {
   // FIX 2026-10-09 (NEW-CR-2): biométrico obligatorio antes de exponer la DEK.
   // Antes se mostraba sin autenticación en el flujo real.
-  const { requireUnlock } = await import("../security/biometricGate");
+  const { unlockForSecret } = await import("../security/biometricGate");
+  let noLock = false;
   try {
-    await requireUnlock(unlockReason);
+    noLock = (await unlockForSecret(unlockReason)) === "no-lock";
   } catch {
     throw new BackupError("authCancelled", "Autenticación cancelada");
   }
@@ -45,7 +48,7 @@ export async function createBackupFile(unlockReason = "Crear backup"): Promise<C
   const dest = `${FS.documentDirectory}nido-backup-${timestamp}.db`;
   await createBackup(dest);
   const key = await exportDatabaseKey();
-  return { path: dest, key };
+  return { path: dest, key, noLock };
 }
 
 /** Ruta del backup más reciente, o null si no hay ninguno. */
