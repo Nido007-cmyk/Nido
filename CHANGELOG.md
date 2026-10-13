@@ -4,6 +4,23 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.30-alpha — 2026-10-13
+
+Everyday phrases that went to the small model (which can invent the time
+or a result) now have a direct, exact answer.
+
+### Fixed
+- "Tell me the time" / "dime la hora" / "me diz as horas" read the clock
+  instead of asking the model.
+- "How many miles are 10 km" also in the feminine Spanish and Portuguese
+  forms ("cuántas millas son 10 km", "quantas milhas são 10 km").
+- "Open youtube.com" works without typing https:// (the confirmation still
+  shows the full address). File names like "notas.pdf" are not links.
+- "Set a reminder for 5pm", "pon una alarma a las 7", "don't let me
+  forget to call mom", "no me dejes olvidar comprar pan" create the
+  reminder directly.
+- "La raíz de 16" without "cuadrada" is the square root.
+
 ## 0.1.29-alpha — 2026-10-13
 
 Security and privacy fixes from the October 13 audit, plus the

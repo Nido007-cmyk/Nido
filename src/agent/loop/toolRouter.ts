@@ -120,11 +120,12 @@ const POLITE = "(?:(?:por favor|please|nido),?\\s+)?";
 // --------------------------------------------------------------- tiempo
 
 const TIME_RULES: Array<{ re: RegExp; what: "time" | "date"; lang: RouterLang }> = [
-  { re: /^(?:qu[eé] hora es|qu[eé] horas son|tienes la hora|me dices la hora)$/i, what: "time", lang: "es" },
+  // 0.1.30: «dime la hora» caía al conocimiento y el modelo inventaba la hora.
+  { re: /^(?:qu[eé] hora es(?: ahora)?|qu[eé] horas son|tienes la hora|me (?:dices|das) la hora|d[ií]me la hora|la hora|hora actual)$/i, what: "time", lang: "es" },
   { re: /^(?:qu[eé] (?:d[ií]a|fecha) es(?: hoy)?|a qu[eé] (?:d[ií]a|fecha) estamos|qu[eé] d[ií]a es hoy|cu[aá]l es la fecha(?: de hoy)?)$/i, what: "date", lang: "es" },
-  { re: /^(?:what time is it|what(?:'s| is) the time|do you have the time)$/i, what: "time", lang: "en" },
+  { re: /^(?:what time is it(?: now)?|what(?:'s| is) the time(?: now)?|do you have the time|tell me the time|current time)$/i, what: "time", lang: "en" },
   { re: /^(?:what(?:'s| is) (?:the date|today'?s date|the day)(?: today)?|what day is (?:it|today)|what(?:'s| is) today)$/i, what: "date", lang: "en" },
-  { re: /^(?:que horas s[aã]o)$/i, what: "time", lang: "pt" },
+  { re: /^(?:que horas s[aã]o(?: agora)?|me diz as horas|diga as horas|hora atual)$/i, what: "time", lang: "pt" },
   { re: /^(?:que dia [eé] hoje|qual [eé] a data(?: de hoje)?|que dia [eé] hoje\??)$/i, what: "date", lang: "pt" },
 ];
 
@@ -206,9 +207,10 @@ const CONVERT_RULES: Array<{ re: RegExp; lang: RouterLang; inv?: boolean }> = [
   { re: new RegExp(`^(?:convierte|pasa|cu[aá]nto(?:s|as)? son|cu[aá]nto es)?\\s*${NUM}\\s*${UNIT}\\s+(?:a|en)\\s+${UNIT}$`, "i"), lang: "es" },
   { re: new RegExp(`^(?:convert|how much is|what is)?\\s*${NUM}\\s*${UNIT}\\s+(?:to|in|into)\\s+${UNIT}$`, "i"), lang: "en" },
   { re: new RegExp(`^(?:converte|converta|quanto(?:s|as)? s[aã]o)?\\s*${NUM}\\s*${UNIT}\\s+(?:para|em)\\s+${UNIT}$`, "i"), lang: "pt" },
-  { re: new RegExp(`^cu[aá]ntos?\\s+${UNIT}\\s+(?:son|hay(?:\\s+en)?)\\s+${NUM}\\s+${UNIT}$`, "i"), lang: "es", inv: true },
+  // 0.1.30: también femenino («cuántas millas son 10 km»).
+  { re: new RegExp(`^cu[aá]nt(?:o|a|os|as)\\s+${UNIT}\\s+(?:son|hay(?:\\s+en)?)\\s+${NUM}\\s+${UNIT}$`, "i"), lang: "es", inv: true },
   { re: new RegExp(`^how many\\s+${UNIT}\\s+(?:are|is)(?:\\s+in)?\\s+${NUM}\\s+${UNIT}$`, "i"), lang: "en", inv: true },
-  { re: new RegExp(`^quantos?\\s+${UNIT}\\s+s[aã]o\\s+${NUM}\\s+${UNIT}$`, "i"), lang: "pt", inv: true },
+  { re: new RegExp(`^quant(?:o|a|os|as)\\s+${UNIT}\\s+s[aã]o\\s+${NUM}\\s+${UNIT}$`, "i"), lang: "pt", inv: true },
 ];
 
 function unitWord(raw: string): string {
@@ -303,9 +305,13 @@ const NIDO_TASKS_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
 // --------------------------------------------------------- enlaces/archivos
 
 const OPEN_LINK_RE: Array<{ re: RegExp; lang: RouterLang }> = [
-  { re: /^(?:abre|abrir|abre el enlace|abre la p[aá]gina|ve a)\s+((?:https?:\/\/|www\.)\S+)$/i, lang: "es" },
-  { re: /^(?:open|open the link|go to|visit)\s+((?:https?:\/\/|www\.)\S+)$/i, lang: "en" },
-  { re: /^(?:abra|abrir|abre o link|v[aá] para)\s+((?:https?:\/\/|www\.)\S+)$/i, lang: "pt" },
+  // 0.1.30: también un dominio sin esquema («abre youtube.com»), que se
+  // abre como https://. El diálogo de confirmación sigue mostrando la
+  // dirección completa antes de abrir. Un nombre de archivo («notas.pdf»)
+  // no cuenta como dominio.
+  { re: /^(?:abre|abrir|abre el enlace|abre la p[aá]gina|ve a)\s+((?:https?:\/\/\S+|www\.\S+|[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?!(?:pdf|txt|csv|docx?|xlsx?|pptx?|jpe?g|png|gif|mp[34]|json|md|zip|apk)(?:\/|$))[a-z]{2,}(?:\/\S*)?))$/i, lang: "es" },
+  { re: /^(?:open|open the link|go to|visit)\s+((?:https?:\/\/\S+|www\.\S+|[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?!(?:pdf|txt|csv|docx?|xlsx?|pptx?|jpe?g|png|gif|mp[34]|json|md|zip|apk)(?:\/|$))[a-z]{2,}(?:\/\S*)?))$/i, lang: "en" },
+  { re: /^(?:abra|abrir|abre o link|v[aá] para)\s+((?:https?:\/\/\S+|www\.\S+|[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?!(?:pdf|txt|csv|docx?|xlsx?|pptx?|jpe?g|png|gif|mp[34]|json|md|zip|apk)(?:\/|$))[a-z]{2,}(?:\/\S*)?))$/i, lang: "pt" },
 ];
 
 const PICK_FILE_RE: Array<{ re: RegExp; lang: RouterLang }> = [
@@ -607,7 +613,7 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   for (const { re, lang } of OPEN_LINK_RE) {
     const m = re.exec(t);
     if (!m) continue;
-    const url = m[1].startsWith("www.") ? `https://${m[1]}` : m[1];
+    const url = /^https?:\/\//i.test(m[1]) ? m[1] : `https://${m[1]}`;
     return { kind: "openLink", url, lang };
   }
 

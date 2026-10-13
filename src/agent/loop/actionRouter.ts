@@ -129,10 +129,11 @@ export function extractCalcAction(userText: string): CalcAction | null {
   // 0.1.19: "raíz cuadrada de 144" / "raíz cúbica de 27" — el evaluador
   // tiene sqrt, pero la validación de caracteres no admite letras; se
   // resuelve aquí directamente.
-  const root = /^ra[íi]z\s+(cuadrada|quadrada|c[úu]bica)\s+de\s+(\d+(?:[.,]\d+)?)$/i.exec(shown);
+  // 0.1.30: «la raíz de 16» sin «cuadrada» es la cuadrada.
+  const root = /^ra[íi]z\s+(?:(cuadrada|quadrada|c[úu]bica)\s+)?de\s+(\d+(?:[.,]\d+)?)$/i.exec(shown);
   if (root) {
     const n = Number(root[2].replace(",", "."));
-    const kind = root[1].toLowerCase();
+    const kind = (root[1] ?? "cuadrada").toLowerCase();
     const result = kind === "cuadrada" || kind === "quadrada" ? Math.sqrt(n) : Math.cbrt(n);
     return /\d,\d/.test(shown) ? { expression: shown, result, decimalComma: true } : { expression: shown, result };
   }
@@ -229,9 +230,11 @@ export function extractReminderAction(userText: string): ReminderAction | null {
   // «despiértame a las 7», «me acorde às 7», «wake me at 7» creaban
   // nada: caían al modelo. El verbo va en su grupo para saber si es un
   // aviso (su texto puede ser la propia orden cuando no hay tarea).
-  const m = /(agr[ée]game|cr[ée]ame|ponme|crea|recu[ée]rdame|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
+  const m = /(agr[ée]game|cr[ée]ame|ponme|crea|recu[ée]rdame|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
   if (!m) return null;
-  const isAlertVerb = /av[íi]s|despi|despert|wake|acord|let\s+me\s+know/i.test(m[1]);
+  // 0.1.30 (rutas que caían al modelo): «pon una alarma a las 7» y «set a
+  // reminder for 5pm» también son avisos: sin tarea, el título es la frase.
+  const isAlertVerb = /av[íi]s|despi|despert|wake|acord|let\s+me\s+know|alarm|^set\s/i.test(m[1]);
 
   let text = m[2].trim();
   if (text.length < 3) return null;
@@ -246,6 +249,8 @@ export function extractReminderAction(userText: string): ReminderAction | null {
   // «avísame cuando sean las 3»: el parser entiende «a las 3», no la
   // subordinada. Se reformula solo el arranque.
   text = text
+    // «set a reminder for 5pm»: el parser entiende «at 5pm».
+    .replace(/^(?:for\s+)?(?=\d{1,2}(?::\d{2})?\s*(?:am|pm)\b)/i, "at ")
     .replace(/^cuando\s+(?:sean|sea)\s+/i, "a ")
     .replace(/^when\s+it'?s\s+/i, "at ")
     .replace(/^quando\s+(?:forem|for)\s+/i, "às ");
