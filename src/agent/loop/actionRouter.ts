@@ -122,6 +122,12 @@ export function extractCalcAction(userText: string): CalcAction | null {
   }
 
   const raw = (m ? m[1] : trimmed).trim();
+  // 0.1.33 (medición del router): una cuenta real cabe holgada en 120
+  // caracteres (la expresión final admite 50). Sin este tope, pegar una
+  // tira de miles de dígitos costaba tiempo CUADRÁTICO en la
+  // normalización (≈110 ms con 4.000 en un PC; segundos en el teléfono)
+  // y se pagaba varias veces por turno, bloqueando la interfaz.
+  if (raw.length > 120) return null;
   // Auditoría ofensiva (0.1.18): "3!" es factorial, que la calculadora no
   // tiene; antes se quitaba el "!" como si fuera exclamación y respondía 3.
   if (/\d\s*!/.test(raw)) return null;
