@@ -76,10 +76,13 @@ The interface is available in English, Spanish and Portuguese.
 
 ## Status
 
-Alpha, October 2026. The project has more than 2,300 automated tests and
+Alpha, October 2026. The project has more than 3,400 automated tests and
 runs type checking and the test suite on every change. What automated tests
-cannot cover is behaviour on real hardware: Bluetooth in particular varies
-by phone model, and two-device validation is still in progress.
+cannot cover is behaviour on real hardware, so the headline flows are also
+exercised on physical Galaxy tablets: chat and agent tools, memory,
+reminders and notifications, backup and recovery, and two-device P2P
+messaging, including in airplane mode. Bluetooth still varies by phone
+model.
 
 Known limitations of the current release, including what a backup can and
 cannot restore, are listed in the

@@ -14,7 +14,7 @@ Alpha.
 
 The foundation is working: on-device AI chat, encrypted memory, local tools, offline capabilities, and encrypted device-to-device communication.
 
-Automated testing is extensive, but software tests are not a substitute for real hardware. Physical validation (including two-device P2P testing) is the current gate before NIDO is considered ready for broader release.
+Automated testing is extensive, but software tests are not a substitute for real hardware. Physical validation is a standing practice: the core flows (chat and agent tools, encrypted memory, reminders and notifications, backup and recovery, and two-device P2P messaging, including airplane mode) are exercised on physical Galaxy tablets as releases come out. Broader device diversity is the remaining validation gap before NIDO is considered ready for a wider release.
 
 We document what is verified, experimental, incomplete, or still awaiting physical validation. See the README and project documentation for current status.
 
@@ -22,9 +22,9 @@ We document what is verified, experimental, incomplete, or still awaiting physic
 
 ### Now: Proving the foundation
 
-- Validate NIDO on real Android devices
-- Complete two-device P2P and offline testing
-- Verify reminders, voice, encrypted memory, backup and recovery
+- Validate NIDO on real Android devices with every release
+- Two-device P2P and offline messaging: verified on physical tablets, including airplane mode — keep it in the per-release routine
+- Reminders, encrypted memory, backup and recovery: verified on physical hardware — keep regression-testing them
 - Improve reliability and usability based on real-device testing
 - Keep every UI surface honest: no simulated functionality and no fake success states
 - Fix regressions before expanding the feature set

@@ -78,11 +78,14 @@ La interfaz está disponible en español, inglés y portugués.
 
 ## Estado
 
-Alfa, octubre de 2026. El proyecto tiene más de 2300 pruebas automáticas y
+Alfa, octubre de 2026. El proyecto tiene más de 3400 pruebas automáticas y
 ejecuta la comprobación de tipos y la batería de pruebas en cada cambio. Lo
-que las pruebas automáticas no cubren es el comportamiento en hardware real:
-el Bluetooth en particular varía según el modelo de teléfono, y la
-validación con dos dispositivos sigue en curso.
+que las pruebas automáticas no cubren es el comportamiento en hardware real,
+así que los flujos principales también se prueban en tabletas Galaxy
+físicas: chat y herramientas del agente, memoria, recordatorios y
+notificaciones, respaldo y recuperación, y mensajería P2P entre dos
+dispositivos, también en modo avión. El Bluetooth sigue variando según el
+modelo de teléfono.
 
 Las limitaciones conocidas de la versión actual, incluido qué puede y qué no
 puede restaurar un respaldo, están en las

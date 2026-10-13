@@ -14,7 +14,7 @@ Alpha.
 
 La base funciona: chat de IA en el dispositivo, memoria cifrada, herramientas locales, capacidades offline y comunicación cifrada entre dispositivos.
 
-Las pruebas automatizadas son extensas, pero no sustituyen las pruebas con hardware real. La validación física (incluyendo P2P entre dos dispositivos) es el gate actual antes de considerar NIDO listo para una distribución más amplia.
+Las pruebas automatizadas son extensas, pero no sustituyen las pruebas con hardware real. La validación física es una práctica permanente: los flujos principales (chat y herramientas del agente, memoria cifrada, recordatorios y notificaciones, respaldo y recuperación, y mensajería P2P entre dos dispositivos, también en modo avión) se prueban en tabletas Galaxy físicas a medida que salen las versiones. La diversidad de dispositivos más amplia es el hueco de validación que queda antes de considerar NIDO listo para una distribución mayor.
 
 Documentamos qué está verificado, qué es experimental, qué está incompleto y qué todavía necesita validación física. Consulta el README y la documentación del proyecto para conocer el estado actual.
 
@@ -22,9 +22,9 @@ Documentamos qué está verificado, qué es experimental, qué está incompleto 
 
 ### Ahora: Probando la base
 
-- Validar NIDO en dispositivos Android reales
-- Completar las pruebas P2P entre dos dispositivos y las pruebas offline
-- Verificar recordatorios, voz, memoria cifrada, backup y recuperación
+- Validar NIDO en dispositivos Android reales con cada versión
+- P2P entre dos dispositivos y mensajería offline: verificado en tabletas físicas, también en modo avión — mantenerlo en la rutina de cada versión
+- Recordatorios, memoria cifrada, respaldo y recuperación: verificado en hardware físico — seguir probándolos contra regresiones
 - Mejorar confiabilidad y usabilidad basándonos en pruebas reales
 - Mantener cada parte de la UI honesta: sin funciones simuladas ni estados falsos de éxito
 - Corregir regresiones antes de ampliar las funciones

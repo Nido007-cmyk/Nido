@@ -1,5 +1,10 @@
 # NIDO v0.1.18-alpha — Release Notes
 
+> This document keeps the alpha overview and the current known
+> limitations. Per-version changes from 0.1.19 on are in the
+> [changelog](../CHANGELOG.md) and in each GitHub release. The known
+> limitations below are kept current as features are verified.
+
 ## What is this?
 
 NIDO is a private, offline-first personal AI assistant for Android. This is an **early alpha** for testing and feedback — not a finished product.
@@ -230,11 +235,10 @@ Fixes from the 2026-10-10 code audit:
 
 - The 0.5B model is small and will sometimes give wrong or made-up answers. We are working on honest "I don't know" behavior and better source grounding.
 - P2P Bluetooth behavior varies by phone manufacturer. See the in-app troubleshooting guide if you have connection issues.
-- **A nearby device can tell that you run NIDO.** When any Bluetooth device connects to NIDO's service, NIDO sends its public identity key before knowing who connected. A fix exists and is waiting for two-device testing.
-- **A backup can only be restored on the installation that created it.** If you reinstall or change phones, earlier backups cannot be restored, even with the exported key.
+- **A backup restored on a new installation needs the exported key.** If you reinstall or change phones, a backup can be restored with the exported database key. Without that key a backup cannot be opened anywhere, so keep the key somewhere safe and separate from the backup file.
 - **Voice input uses Android's system speech recognizer** with the prefer-offline flag. On devices without an offline model, the system service may process audio online.
 - **Sharing knowledge packs between phones is not available yet.** The tab is hidden.
-- This build was verified by automated tests only. The changes in this version were not tested on a physical device before release.
+- Builds are checked by automated tests, and the headline flows (chat and agent tools, memory, reminders and notifications, notes, and two-device P2P messaging, including airplane mode) are also exercised on physical hardware (Galaxy Tab A9+). Not every change is device-tested before every pre-release.
 - The redesign in this version covers the chat, the header and the NIDO tabs. Settings, Memory, Documents and the remaining screens keep their previous look for now.
 - UI is functional but not final.
 
@@ -245,7 +249,7 @@ Fixes from the 2026-10-10 code audit:
 - Ed25519 signatures and X25519 key exchange for P2P
 - SQLCipher for on-device encrypted storage
 - A random 256-bit database key held in the Android Keystore (no password-based key derivation)
-- Backups that are a copy of the already-encrypted database; the key is exported separately, in plain hex, and a backup can currently be restored only on the installation that created it
+- Backups that are a copy of the already-encrypted database; the key is exported separately, in plain hex, and restoring a backup on a different installation requires that exported key
 
 These implementations have not been independently reviewed. **Do not rely on NIDO for high-stakes secrets yet.** We are building in the open so the design can be scrutinized.
 
