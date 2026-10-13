@@ -38,6 +38,13 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "babel-preset-expo"
         update-types: ["version-update:semver-major"]
+      # TypeScript 7 es el compilador nativo y su paquete npm ya no trae la
+      # API de JavaScript (ts.transpileModule) que usan
+      # scripts/verify-manifest-pins.mjs y scripts/sign-manifest.mjs (la
+      # firma del manifiesto que hace el mantenedor). El #75 rompía
+      # verify:pins en la CI. La mayor se hace a mano: primero esos scripts.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     # Un solo PR semanal para parches y menores; las mayores llegan aparte
     # porque suelen romper la compilación nativa y hay que revisarlas a mano.
     groups:
