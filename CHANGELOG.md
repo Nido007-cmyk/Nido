@@ -4,6 +4,33 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.28-alpha — 2026-10-12
+
+Everything the full audit found, fixed. Mostly words in the wrong language.
+
+### Fixed
+- NIDO-to-NIDO errors now always speak your language. A few screens
+  still showed the transport's raw technical Spanish; they now use
+  the same plain-language error mapping as the rest of the NIDO
+  screen, in Spanish, English and Portuguese.
+- The overdue-reminder notification shown at startup always had a
+  Spanish title; it now uses the localized title, like every other
+  notification.
+- The crash report you can copy from About is written in your
+  language too (its headings used to be Spanish only).
+- The guide and the empty Contacts state no longer tell you to scan
+  the other person's code: there is no camera in the app yet.
+  Pairing is show your code, paste theirs as text — which is what
+  the pairing screen already said.
+
+### Under the hood
+- The component test suites run in CI again. They had been red and
+  invisible since October 10 (stale test mocks and untransformed
+  Expo modules); all 5 suites pass now, and CI fails if they break.
+- Corrected the security roadmap's baseline table: it still said
+  "not done" for screenshot/clipboard protection, data-extraction
+  rules and physical two-device tests. All three were already in.
+
 ## 0.1.27-alpha — 2026-10-12
 
 One backup flow, the same from every entry point.
