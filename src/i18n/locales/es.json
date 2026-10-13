@@ -1332,6 +1332,7 @@
             "examples": [
               "recuérdame llamar a mamá mañana a las 5",
               "recuérdame comprar leche en 2 horas",
+              "pon un temporizador de 2 minutos",
               "qué recordatorios tengo"
             ],
             "tip": "Di cuándo: «mañana», «el viernes», «en 30 minutos». Si no lo dices, NIDO te lo pregunta."
@@ -1342,6 +1343,7 @@
             "what": "Guarda notas rápidas, cifradas en tu dispositivo.",
             "examples": [
               "guarda una nota: ideas para el cumpleaños de Ana",
+              "apunta: regar las plantas el domingo",
               "qué notas tengo",
               "lee la nota del cumpleaños"
             ],
@@ -1350,10 +1352,15 @@
           {
             "id": "memory",
             "title": "Memoria",
-            "what": "NIDO recuerda datos sobre ti para darte respuestas más personales.",
+            "what": "Tu memoria funciona así. Lo que me cuentas se guarda en cuatro cajones: en Datos quedan los hechos sobre ti, como tu nombre, dónde vives o tu color favorito. En Personas quedan los demás: tu mamá, tu pareja, tus amigos. En Notas queda lo que me pides apuntar tal cual. Y en Recordatorios, lo que lleva fecha u hora. También puedes preguntarme de vuelta con tus palabras: «¿cómo se llama mi mamá?», «¿cuál es mi color favorito?». Te respondo desde lo que me contaste. Todo vive en este dispositivo, cifrado. Nada se sube a ningún servidor, y lo que quieras borrar, se borra.",
             "examples": [
-              "recuerda que el cumpleaños de mi mamá es el 15 de marzo",
-              "recuerda que mi color favorito es el azul"
+              "Mi mamá se llama Marta",
+              "¿Cómo se llama mi mamá?",
+              "Mi color favorito es el verde",
+              "¿Cuál es mi color favorito?",
+              "Vivo en Tucson",
+              "¿Dónde vivo?",
+              "Mi cumpleaños es el 5 de mayo"
             ],
             "tip": "«Recuerda que…» guarda un dato. «Recuérdame…» crea un aviso. Ves y borras lo guardado en el menú → $t(chatScreen.drawerItems.memory)."
           },
@@ -1477,6 +1484,9 @@
             "id": "offline",
             "title": "Todo en tu dispositivo",
             "what": "Tus chats, notas, memoria y documentos se guardan cifrados en tu dispositivo. Después de instalar, NIDO funciona sin internet; solo se conecta cuando tú descargas un modelo o un paquete.",
+            "examples": [
+              "¿Dónde guardas mis datos?"
+            ],
             "tip": "En $t(chatScreen.drawerItems.about) puedes ver el registro de conexiones de NIDO."
           },
           {

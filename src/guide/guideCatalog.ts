@@ -20,9 +20,10 @@
 
 export type GuideRoute =
   | "smallTalk" // instant reply (smallTalk.ts)
+  | "selfKnowledge" // the app talking about itself (rag/selfKnowledge)
   | "calc" // calculator (actionRouter.extractCalcAction)
-  | "reminderCreate" // reminder (actionRouter.extractReminderAction)
-  | "remember" // "recuerda que…" (rememberRouter.extractRememberFact)
+  | "reminderCreate" // reminder or timer (actionRouter)
+  | "remember" // memory saves and questions (rememberRouter/memoryQuery)
   | "contact" // contacts / calls (contactRouter.extractContactAction)
   | "knowledge" // normal chat with the offline knowledge base
   | `tool:${string}`; // toolRouter.extractToolAction kind
@@ -55,9 +56,13 @@ export const GUIDE_MODULES: GuideModuleSpec[] = [
   {
     id: "organize",
     lessons: [
-      { id: "reminders", tools: ["create_reminder"], routes: ["reminderCreate", "reminderCreate", "tool:reminderList"] },
-      { id: "notes", tools: ["save_note", "list_notes", "read_note"], routes: ["tool:noteSave", "tool:noteList", "tool:noteRead"] },
-      { id: "memory", tools: ["remember_fact"], routes: ["remember", "remember"] },
+      { id: "reminders", tools: ["create_reminder"], routes: ["reminderCreate", "reminderCreate", "reminderCreate", "tool:reminderList"] },
+      { id: "notes", tools: ["save_note", "list_notes", "read_note"], routes: ["tool:noteSave", "tool:noteSave", "tool:noteList", "tool:noteRead"] },
+      {
+        id: "memory",
+        tools: ["remember_fact"],
+        routes: ["remember", "remember", "remember", "remember", "remember", "remember", "remember"],
+      },
       {
         id: "calendar",
         tools: ["list_calendar_events", "create_calendar_event"],
@@ -81,7 +86,7 @@ export const GUIDE_MODULES: GuideModuleSpec[] = [
   },
   {
     id: "privacy",
-    lessons: [{ id: "offline" }, { id: "hardware" }, { id: "backup" }, { id: "erase" }],
+    lessons: [{ id: "offline", routes: ["selfKnowledge"] }, { id: "hardware" }, { id: "backup" }, { id: "erase" }],
   },
   {
     id: "personalize",

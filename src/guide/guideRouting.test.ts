@@ -21,10 +21,16 @@ import pt from "../i18n/locales/pt.json";
 import { GUIDE_MODULES, ONBOARDING_ROUTES, type GuideRoute } from "./guideCatalog";
 import { matchSmallTalk } from "../agent/loop/smallTalk";
 import { classifyIntent } from "../agent/loop/intent";
-import { extractCalcAction, extractReminderAction } from "../agent/loop/actionRouter";
+import { extractCalcAction, extractReminderAction, extractTimerAction } from "../agent/loop/actionRouter";
 import { extractContactAction } from "../agent/loop/contactRouter";
 import { extractToolAction } from "../agent/loop/toolRouter";
-import { extractRememberFact } from "../agent/loop/rememberRouter";
+import {
+  extractImplicitFact,
+  extractPeople,
+  extractRememberFact,
+  extractSelfName,
+} from "../agent/loop/rememberRouter";
+import { isGenericMemoryQuestionShape, isMemoryStyleQuery } from "../agent/loop/memoryQuery";
 import { answerKnowledgeQueryWithCategory, toIdentityLocale } from "../rag/selfKnowledge";
 
 type Lang = "es" | "en" | "pt";
@@ -51,13 +57,37 @@ function routeOf(text: string, lang: Lang): GuideRoute | "selfKnowledge" | "none
   if (answerKnowledgeQueryWithCategory(text, toIdentityLocale(lang)) !== null) return "selfKnowledge";
   if (matchSmallTalk(text, lang) !== null) return "smallTalk";
   const intent = classifyIntent(text);
-  if (intent === "conversar") return "knowledge";
+  if (intent === "conversar") {
+    // 0.1.25: espejo de la sonda de ChatScreen (0.1.23): una pregunta
+    // genérica en primera persona entra al loop cuando lo guardado
+    // tiene el dato. Los ejemplos de la lección de Memoria van en
+    // pares guardar → preguntar, así que al llegar a la pregunta el
+    // dato existe y la ruta real es la memoria. Las preguntas sobre
+    // documentos importados NO son de la memoria (la sonda no
+    // encontraría el dato en los hechos guardados): siguen a
+    // conocimiento, como en la app.
+    if (isGenericMemoryQuestionShape(text) && !/document/.test(text.toLowerCase())) return "remember";
+    return "knowledge";
+  }
   if (extractCalcAction(text)) return "calc";
   if (extractContactAction(text)) return "contact";
   const tool = extractToolAction(text);
   if (tool) return `tool:${tool.kind}`;
+  // 0.1.25: el espejo cubre la familia completa del loop actual: el
+  // temporizador va antes que el recordatorio (agentLoop), y las
+  // declaraciones de memoria se guardan con los extractores de
+  // personas, nombre propio y hechos implícitos (puerta 0.1.22), no
+  // solo con extractRememberFact.
+  if (extractTimerAction(text)) return "reminderCreate";
   if (extractReminderAction(text)) return "reminderCreate";
+  if (extractPeople(text).length > 0) return "remember";
+  if (extractSelfName(text)) return "remember";
   if (extractRememberFact(text)) return "remember";
+  if (extractImplicitFact(text)) return "remember";
+  // Las consultas de memoria con forma («¿cómo se llama mi mamá?»)
+  // las responde answerMemoryQuery dentro del loop: la puerta las
+  // clasifica «recordar» por su forma (isMemoryStyleQuery).
+  if (isMemoryStyleQuery(text)) return "remember";
   return "none";
 }
 

@@ -1332,6 +1332,7 @@
             "examples": [
               "remind me to call mom tomorrow at 5",
               "remind me to buy milk in 2 hours",
+              "set a timer for 2 minutes",
               "what reminders do I have"
             ],
             "tip": "Say when: “tomorrow”, “on Friday”, “in 30 minutes”. If you don't, NIDO asks."
@@ -1342,6 +1343,7 @@
             "what": "Save quick notes, encrypted on your device.",
             "examples": [
               "take a note: ideas for Ana's birthday",
+              "note: water the plants on Sunday",
               "what notes do I have",
               "read the note about birthday"
             ],
@@ -1350,10 +1352,15 @@
           {
             "id": "memory",
             "title": "Memory",
-            "what": "NIDO remembers things about you to give more personal answers.",
+            "what": "Your memory works like this. What you tell me is kept in four drawers: Facts holds things about you, like your name, where you live or your favorite color. People holds everyone else: your mom, your partner, your friends. Notes holds what you ask me to write down, word for word. And Reminders holds anything with a date or a time. You can also ask me back in your own words: “What's my mom's name?”, “What's my favorite color?”. I answer from what you told me. Everything lives on this device, encrypted. Nothing is uploaded to any server, and whatever you want deleted, gets deleted.",
             "examples": [
-              "remember that my mom's birthday is March 15",
-              "remember that my favorite color is blue"
+              "My mom's name is Marta",
+              "What's my mom's name?",
+              "My favorite color is green",
+              "What's my favorite color?",
+              "I live in Tucson",
+              "Where do I live?",
+              "My birthday is May 5"
             ],
             "tip": "“Remember that…” saves a fact. “Remind me…” sets an alert. See and delete what's saved in the menu → $t(chatScreen.drawerItems.memory)."
           },
@@ -1477,6 +1484,9 @@
             "id": "offline",
             "title": "Everything on your device",
             "what": "Your chats, notes, memory and documents are stored encrypted on your device. After install, NIDO works without internet; it only connects when you download a model or a pack.",
+            "examples": [
+              "Where do you store my data?"
+            ],
             "tip": "In $t(chatScreen.drawerItems.about) you can see NIDO's network log."
           },
           {
