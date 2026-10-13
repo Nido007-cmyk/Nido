@@ -511,7 +511,10 @@ export function ChatScreen({
         await runScheduledTasksNow({
           engine: llamaEngine,
           nCtx: llamaEngine.getModelInfo()?.nCtx,
-          lang: i18n.language?.startsWith("en") ? "en" : "es",
+          // 0.1.24 (H-9): el mismo mapeo de idioma que la ruta del
+          // chat (toFallbackLang admite pt); el ternario anterior
+          // colapsaba el portugués a español solo en tareas.
+          lang: toFallbackLang(i18n.resolvedLanguage ?? i18n.language),
           strings: {
             doneTitle: (name) => t("scheduledTasks.notifyDone", { name }),
             failedTitle: (name) => t("scheduledTasks.notifyFailed", { name }),

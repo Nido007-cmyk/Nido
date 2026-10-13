@@ -20,7 +20,10 @@ import type { AgentEngine } from "../loop/agentLoop";
 export interface ScheduledRunContext {
   engine: AgentEngine;
   nCtx?: number;
-  lang: "es" | "en";
+  // 0.1.24 (auditoría de alcanzabilidad, H-9): «pt» admitido — el
+  // llamador colapsaba pt→es y las tareas de un usuario en portugués
+  // respondían en español, a diferencia de la ruta del chat.
+  lang: "es" | "en" | "pt";
   /** Textos ya traducidos para los avisos. */
   strings: {
     doneTitle(name: string): string;
@@ -47,7 +50,7 @@ export async function scheduleTaskReminder(
 }
 
 export async function runScheduledTasksNow(ctx: ScheduledRunContext): Promise<TaskRunResult[]> {
-  const [{ runAgentLoop }, { buildToolHandlers }, { snapshot }, { notifyNow }] = await Promise.all([
+  const [{ runAgentLoop }, { buildToolHandlers }, { snapshot, listNotes, listReminders }, { notifyNow }] = await Promise.all([
     import("../loop/agentLoop"),
     import("../tools/handlers"),
     import("../memory/memoryStore"),
@@ -69,6 +72,18 @@ export async function runScheduledTasksNow(ctx: ScheduledRunContext): Promise<Ta
         handlers,
         restrictFastPathsToHandlers: true,
         loadMemory: () => snapshot().catch(() => null),
+        // 0.1.24 (H-9): proveedores de SOLO LECTURA de notas y
+        // recordatorios, los mismos que construye ChatScreen para el
+        // chat. Sin ellos, una instrucción «busca en mis notas» caía
+        // a la degradación de toolRouter y respondía «no hay notas»
+        // HABIÉNDOLAS (negativo falso en segundo plano). El borrado
+        // sigue siendo imposible en tareas: delete_note y
+        // delete_reminder están en UNATTENDED_FORBIDDEN_TOOLS y el
+        // router de recordatorios mapea a create_reminder, que no
+        // está en DEFAULT_TASK_TOOLS — ninguno alcanza los handlers.
+        listNoteTitles: async () => (await listNotes(50)).map((n) => ({ id: n.id, title: n.title })),
+        listNotesFull: async () => (await listNotes(50)).map((n) => ({ id: n.id, title: n.title, body: n.body })),
+        listReminders: async () => (await listReminders(50)).map((r) => ({ id: r.id, text: r.text, dueAt: r.due_at })),
         maxSteps: 3,
         nPredict: 384,
         lang: ctx.lang,
