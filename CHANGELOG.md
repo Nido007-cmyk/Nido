@@ -4,6 +4,41 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.25-alpha — 2026-10-12
+
+The in-app guide learns everything the last versions added, and the
+loose ends found while physically testing 0.1.24 are fixed.
+
+### The guide
+- The Memory lesson now explains how your memory is organized
+  (Facts, People, Notes, Reminders) and teaches by doing: tap a
+  save example, then the matching question ("My mom's name is
+  Marta" → "What's my mom's name?", your favorite color, where you
+  live, your birthday), in Spanish, English and Portuguese.
+- The Reminders lesson includes the timer, the Notes lesson the
+  quick "note: …" form, and the Privacy lesson answers "Where do
+  you store my data?" — every guide example is verified by an
+  automated test against the real routers in the three languages.
+
+### Fixed
+- "Which one?" now waits for your answer. When reading or deleting
+  matched several notes or reminders, the reply ("cumpleaños",
+  "the first one", "cancel") started a new turn and the choice was
+  lost; the question now keeps its state between messages.
+- Dictation fusions in memory questions: "mima" (a fused "mi
+  mamá") and its family now reach the memory answer ("Tu mamá se
+  llama Marta.") instead of falling through to the model.
+- The create-event confirmation dialog showed the raw UTC instant
+  ("2026-10-16T17:00:00.000Z"); it now shows the local date and
+  time in your language.
+
+### Documentation
+- The Bluetooth identity limitation is closed: the fix (NIDO does
+  not speak first on incoming connections) is verified on two
+  physical devices. Backup wording matches the shipped
+  restore-with-key, and the README and roadmap reflect the current
+  physical validation status.
+
 ## 0.1.24-alpha — 2026-10-12
 
 Fixes from a full reachability audit: every responder the in-app
