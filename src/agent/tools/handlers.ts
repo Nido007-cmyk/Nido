@@ -174,7 +174,14 @@ function agentConfirmT(): ConfirmT {
  * siempre en español aunque la app estuviera en inglés o portugués. Sin
  * i18n (tests) se queda en español, como antes.
  */
+let langOverrideForTest: RouterLang | null = null;
+/** Solo tests: fija el idioma de la UI que ven los handlers (null = el real). */
+export function setHandlerLangForTest(lang: RouterLang | null): void {
+  langOverrideForTest = lang;
+}
+
 function uiLang(): RouterLang {
+  if (langOverrideForTest) return langOverrideForTest;
   try {
     const i18n = require("../../i18n").default as { language?: string };
     const l = (i18n.language ?? "").slice(0, 2);
