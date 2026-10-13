@@ -286,8 +286,42 @@ export function isGenericMemoryQuestionShape(userText: string): boolean {
  * (isGenericMemoryQuestionShape + memoryGateHit), no por el
  * clasificador, que se queda puro y sin memoria.
  */
+// 0.1.25 (hallazgo físico, Tab A9+ 2026-10-12): el autocorrector o el
+// dictado fusionan «mi mamá» en «mima» («mi papá» → «mipa», «mi hijo»
+// → «mihijo»). Las formas de consulta exigen «mi» + parentesco como
+// palabras separadas y la pregunta fusionada caía al modelo, que
+// respondía en primera persona («Mi mamá se llama Marta») y con el
+// banner de «sin fuentes». Se reescribe la fusión a su forma canónica
+// SOLO para casar las formas de consulta: los dos consumidores de
+// este módulo (la puerta vía isMemoryStyleQuery y la respuesta vía
+// answerMemoryQuery) normalizan su copia antes de probar las formas.
+const MI_FUSIONS: Record<string, string> = {
+  mima: "mi mamá",
+  mimama: "mi mamá",
+  "mimamá": "mi mamá",
+  mipa: "mi papá",
+  mipapa: "mi papá",
+  "mipapá": "mi papá",
+  mimadre: "mi madre",
+  mipadre: "mi padre",
+  mihijo: "mi hijo",
+  mihija: "mi hija",
+  mihermano: "mi hermano",
+  mihermana: "mi hermana",
+  miesposo: "mi esposo",
+  miesposa: "mi esposa",
+  miabuelo: "mi abuelo",
+  miabuela: "mi abuela",
+};
+const MI_FUSION_RE =
+  /(^|\s)(mimam[aá]|mima|mipap[aá]|mipa|mimadre|mipadre|mihijo|mihija|mihermano|mihermana|miesposo|miesposa|miabuelo|miabuela)(?=\s|$|[?.,!])/gi;
+
+function unfuseMi(text: string): string {
+  return text.replace(MI_FUSION_RE, (_m, pre: string, w: string) => pre + (MI_FUSIONS[w.toLowerCase()] ?? w));
+}
+
 export function isMemoryStyleQuery(userText: string): boolean {
-  const t = (userText ?? "").trim();
+  const t = unfuseMi((userText ?? "").trim());
   if (!t) return false;
   if (REL_NAME_Q_RES.some((re) => re.test(t))) return true;
   if (SELF_NAME_Q_RES.some((re) => re.test(t))) return true;
@@ -302,7 +336,7 @@ export function answerMemoryQuery(
   mem: MemoryQueryData,
   lang: MemoryQueryLang
 ): string | null {
-  const t = userText.trim();
+  const t = unfuseMi(userText.trim());
   if (!t) return null;
 
   // 1) «¿cómo se llama mi REL?» — nombre de una persona guardada.
