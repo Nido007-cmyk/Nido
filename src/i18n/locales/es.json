@@ -269,6 +269,8 @@
     "risk": "Riesgo"
   },
   "memoryManager": {
+    "repeatDay": "Se repite cada día",
+    "repeatWeek": "Se repite cada semana",
     "title": "Mi memoria",
     "tabs": {
       "facts": "Datos",

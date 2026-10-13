@@ -6,7 +6,7 @@
 
 /** 0.1.32: cuenta atrás de fechas y recordatorio con fecha pero sin contenido. */
 import { describe, expect, it } from "vitest";
-import { countdownTarget, extractToolAction, routerMessage, runToolAction } from "./toolRouter";
+import { countdownTarget, extractToolAction, reminderRepeatWhen, routerMessage, runToolAction } from "./toolRouter";
 import { extractReminderAction, reminderMissingText } from "./actionRouter";
 import { classifyIntent } from "./intent";
 
@@ -76,5 +76,95 @@ describe("recordatorio con fecha pero sin contenido: se pregunta qué", () => {
   });
   it("el mensaje existe en los tres idiomas", () => {
     for (const l of ["es", "en", "pt"] as const) expect(routerMessage("reminderAskWhat", l, { when: " X" })).toContain(" X");
+  });
+});
+
+describe("recordatorios que se repiten", () => {
+  const at = (r: { dueAt: string | null } | null) => new Date(r!.dueAt!);
+
+  it.each([
+    ["recuérdame tomar la pastilla cada día a las 8 de la mañana", "tomar la pastilla", 8],
+    ["recuérdame todos los días beber agua", "beber agua", 9],
+    ["remind me to take my pill every day at 8am", "take my pill", 8],
+    ["remind me daily to stretch", "stretch", 9],
+    ["me lembra de tomar o remédio todos os dias às 8 da manhã", "tomar o remédio", 8],
+  ])("diario: %s", (s, text, hour) => {
+    const r = extractReminderAction(s, NOW);
+    expect(r).toMatchObject({ text, repeat: "day" });
+    expect(r!.recurrenceRequested).toBeUndefined();
+    expect(at(r).getHours()).toBe(hour);
+    expect(at(r).getTime()).toBeGreaterThan(NOW.getTime());
+    // La primera vez es la próxima: hoy si aún no pasó, si no mañana.
+    expect(at(r).getTime() - NOW.getTime()).toBeLessThanOrEqual(24 * 3600_000);
+  });
+
+  it.each([
+    ["recuérdame cada lunes sacar la basura", "sacar la basura", 1, 9],
+    ["recuérdame todos los viernes a las 6 de la tarde llamar a mamá", "llamar a mamá", 5, 18],
+    ["remind me every sunday to water the plants", "water the plants", 0, 9],
+    ["remind me on mondays to send the report", "send the report", 1, 9],
+    ["me lembra toda segunda de levar o lixo", "levar o lixo", 1, 9],
+  ])("semanal: %s", (s, text, weekday, hour) => {
+    const r = extractReminderAction(s, NOW);
+    expect(r).toMatchObject({ text, repeat: "week" });
+    expect(at(r).getDay()).toBe(weekday);
+    expect(at(r).getHours()).toBe(hour);
+    expect(at(r).getTime()).toBeGreaterThan(NOW.getTime());
+    expect(at(r).getTime() - NOW.getTime()).toBeLessThanOrEqual(7 * 24 * 3600_000);
+  });
+
+  it("«cada martes» dicho un martes antes de la hora: hoy", () => {
+    const r = extractReminderAction("recuérdame cada martes a las 11 ir al gimnasio", NOW);
+    expect(at(r).getDate()).toBe(13);
+    expect(at(r).getHours()).toBe(11);
+  });
+
+  it("«cada semana» sin día usa el de la fecha dicha", () => {
+    const r = extractReminderAction("recuérdame cada semana el jueves revisar las cuentas", NOW);
+    expect(r).toMatchObject({ text: "revisar las cuentas", repeat: "week" });
+    expect(at(r).getDay()).toBe(4);
+  });
+
+  it("«cada noche a las 10» es a las 22:00", () => {
+    const r = extractReminderAction("recuérdame cada noche a las 10 apagar el horno", NOW);
+    expect(r).toMatchObject({ repeat: "day" });
+    expect(at(r).getHours()).toBe(22);
+  });
+
+  it("«on monday» (singular) es una sola vez", () => {
+    const r = extractReminderAction("remind me on monday to call the bank", NOW);
+    expect(r).not.toBeNull();
+    expect(r!.repeat).toBeUndefined();
+  });
+
+  it("sin repetición nada cambia", () => {
+    const r = extractReminderAction("recuérdame mañana a las 9 llamar al médico", NOW);
+    expect(r!.repeat).toBeUndefined();
+  });
+
+  it("respuestas: «cada lunes a las 9:00» en los 3 idiomas", () => {
+    const iso = new Date(2026, 9, 19, 9, 0).toISOString();
+    expect(reminderRepeatWhen(iso, "week", "es")).toBe(" cada lunes a las 9:00");
+    expect(reminderRepeatWhen(iso, "day", "en")).toMatch(/^ every day at /);
+    expect(reminderRepeatWhen(iso, "week", "pt")).toBe(" toda segunda-feira às 9:00");
+    const sun = new Date(2026, 9, 18, 9, 0).toISOString();
+    expect(reminderRepeatWhen(sun, "week", "pt")).toBe(" todo domingo às 9:00");
+  });
+
+  it("listar «mañana» incluye uno diario cuya próxima vez es hoy", async () => {
+    const a = extractToolAction("qué recordatorios tengo mañana", NOW);
+    expect(a).toMatchObject({ kind: "reminderList", range: "tomorrow" });
+    const res = await runToolAction(a!, {
+      now: () => NOW,
+      isDisabled: () => false,
+      dispatch: async () => ({ status: "executed" as const, text: "" }),
+      listReminders: async () => [
+        { id: "1", text: "pastilla", dueAt: new Date(2026, 9, 13, 21, 0).toISOString(), repeat: "day" },
+        { id: "2", text: "dentista", dueAt: new Date(2026, 9, 13, 18, 0).toISOString(), repeat: null },
+      ],
+    } as never);
+    expect(res.response).toContain("pastilla");
+    expect(res.response).toContain("cada día");
+    expect(res.response).not.toContain("dentista");
   });
 });

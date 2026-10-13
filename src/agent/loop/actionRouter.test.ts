@@ -167,11 +167,19 @@ describe("CALENDAR-FIX 2026-10-07: parseo de fechas", () => {
 });
 
 describe("0.1.19: recurrencia pedida y título 'para'", () => {
-  it("'cada día recuérdame…' marca recurrenceRequested (se crea una vez y se avisa)", () => {
+  it("'cada día recuérdame…' se repite cada día (0.1.32; antes solo se avisaba)", () => {
     const r = extractReminderAction("cada día recuérdame tomar la pastilla a las 9");
     expect(r).not.toBeNull();
     expect(r!.text).toContain("tomar la pastilla");
     expect(r!.dueAt).not.toBeNull();
+    expect(r!.repeat).toBe("day");
+    expect(r!.recurrenceRequested).toBeUndefined();
+  });
+
+  it("'cada mes' sigue sin soporte: una vez y se avisa", () => {
+    const r = extractReminderAction("recuérdame pagar el alquiler cada mes el 1 de noviembre");
+    expect(r).not.toBeNull();
+    expect(r!.repeat).toBeUndefined();
     expect(r!.recurrenceRequested).toBe(true);
   });
 

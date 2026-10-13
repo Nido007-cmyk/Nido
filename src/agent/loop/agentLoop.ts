@@ -43,6 +43,7 @@ import {
   settleSharedLang,
   formatDay,
   reminderWhen,
+  reminderRepeatWhen,
   resolveChoiceReply,
   routerMessage,
   runToolAction,
@@ -145,7 +146,7 @@ export interface AgentLoopOptions {
   /** 0.1.20 (P3-10): notas con cuerpo para buscar dentro de ellas. */
   listNotesFull?: () => Promise<Array<{ id: string; title: string; body: string }>>;
   /** 0.1.14: recordatorios pendientes para "qué recordatorios tengo". */
-  listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null }>>;
+  listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null; repeat?: "day" | "week" | null }>>;
   /**
    * 0.1.25: almacén de la elección pendiente («¿cuál nota?») entre
    * turnos. La app lo crea una vez y lo pasa en cada envío; el loop
@@ -782,6 +783,7 @@ export async function runAgentLoop(
       reminder = await saveReminder({
         text: reminderAction.text,
         dueAt: reminderAction.dueAt,
+        repeat: reminderAction.repeat ?? null,
       });
       actionLog.record("create_reminder", "executed", false, { kind: "reminder", id: reminder.id });
     } catch (e) {
@@ -803,7 +805,12 @@ export async function runAgentLoop(
     if (reminderAction.dueAt) {
       try {
         const { scheduleReminderNotification } = await import("../../notify/notifications");
-        const ok = await scheduleReminderNotification(reminder.id, reminder.text, new Date(reminderAction.dueAt));
+        const ok = await scheduleReminderNotification(
+          reminder.id,
+          reminder.text,
+          new Date(reminderAction.dueAt),
+          reminderAction.repeat ?? null,
+        );
         if (ok) aviso = routerMessage("reminderWillNotify", reminderLang);
       } catch { /* sin notificaciones: el recordatorio sigue guardado */ }
     }
@@ -812,7 +819,12 @@ export async function runAgentLoop(
     // CRASH-2026-10-10: sin Intl (toLocale* con opciones pasa por JNI en
     // Hermes/Android y un fallo ahí cierra la app). Ver reminderFormat.ts.
     // 0.1.14: respuesta en el idioma del usuario (antes siempre en español).
-    const dateStr = reminderAction.dueAt ? reminderWhen(reminderAction.dueAt, reminderLang) : "";
+    // 0.1.32: si se repite, «cada lunes a las 9:00» en vez de una fecha.
+    const dateStr = reminderAction.dueAt
+      ? reminderAction.repeat
+        ? reminderRepeatWhen(reminderAction.dueAt, reminderAction.repeat, reminderLang)
+        : reminderWhen(reminderAction.dueAt, reminderLang)
+      : "";
     // 0.1.19: si pidió repetición ("cada día…") se avisa de que es una
     // sola vez — antes se creaba en silencio y el usuario creía que el
     // aviso se repetiría.

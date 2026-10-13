@@ -24,6 +24,7 @@
  * Puro salvo las dependencias inyectadas. 100% testeable.
  */
 
+import { nextOccurrence } from "../memory/reminderRepeat";
 import { convertUnits } from "../tools/convert";
 import { parseReminderDateTime, stripDateWords } from "./actionRouter";
 import type { DispatchStatus } from "./contactRouter";
@@ -948,9 +949,9 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
   reminderNoDate: { es: "sin fecha", en: "no date", pt: "sem data" },
   reminderSet: { es: "Listo, te recordaré{{when}}: «{{text}}».", en: "Done, I'll remind you{{when}}: “{{text}}”.", pt: "Pronto, vou te lembrar{{when}}: “{{text}}”." },
   reminderOneTimeOnly: {
-    es: " Ojo: lo guardé como un recordatorio de una sola vez; los recordatorios que se repiten todavía no están soportados.",
-    en: " Note: I saved it as a one-time reminder; repeating reminders are not supported yet.",
-    pt: " Atenção: salvei como um lembrete único; lembretes repetidos ainda não são suportados.",
+    es: " Ojo: lo guardé como un recordatorio de una sola vez; solo puedo repetirlos cada día o cada semana.",
+    en: " Note: I saved it as a one-time reminder; I can only repeat reminders every day or every week.",
+    pt: " Atenção: salvei como um lembrete único; só consigo repetir lembretes todos os dias ou toda semana.",
   },
   reminderAskWhat: {
     es: "¿Qué quieres que te recuerde{{when}}? Dímelo en una frase, por ejemplo: «recuérdame el lunes pagar la luz».",
@@ -981,6 +982,21 @@ export function reminderWhen(iso: string, lang: RouterLang): string {
   if (lang === "en") return ` on ${formatDay(d, lang)} at ${formatTime(d, lang)}`;
   if (lang === "pt") return ` em ${formatDay(d, lang)} às ${formatTime(d, lang)}`;
   return ` el ${formatDay(d, lang)} a las ${formatTime(d, lang)}`;
+}
+
+/** 0.1.32: « cada lunes a las 9:00» / « every day at 9:00» / « toda segunda-feira às 9:00». */
+export function reminderRepeatWhen(iso: string, repeat: "day" | "week", lang: RouterLang): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const time = formatTime(d, lang);
+  const day = DAYS[lang][d.getDay()];
+  if (lang === "en") return repeat === "day" ? ` every day at ${time}` : ` every ${day} at ${time}`;
+  if (lang === "pt") {
+    if (repeat === "day") return ` todos os dias às ${time}`;
+    // sábado e domingo são masculinos.
+    return ` ${d.getDay() === 0 || d.getDay() === 6 ? "todo" : "toda"} ${day} às ${time}`;
+  }
+  return repeat === "day" ? ` cada día a las ${time}` : ` cada ${day} a las ${time}`;
 }
 
 const RANGE_WORDS: Record<CalendarRange, Record<RouterLang, string>> = {
@@ -1044,7 +1060,7 @@ export interface ToolRouterDeps {
   listNotesFull?: () => Promise<Array<{ id: string; title: string; body: string }>>;
   /** Recordatorios pendientes, para "qué recordatorios tengo" y para
    *  resolver los borrados por texto (0.1.20: con id). */
-  listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null }>>;
+  listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null; repeat?: "day" | "week" | null }>>;
   now?: () => Date;
   /**
    * 0.1.25: almacén de la elección pendiente («¿cuál nota?») entre
@@ -1387,6 +1403,8 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
           const u = end.getTime();
           items = all.filter((r) => {
             if (!r.dueAt) return false;
+            // 0.1.32: uno que se repite cuenta si alguna de sus veces cae ese día.
+            if (r.repeat) return nextOccurrence(new Date(r.dueAt), r.repeat, new Date(f - 1)).getTime() < u;
             const d = new Date(r.dueAt).getTime();
             return d >= f && d < u;
           });
@@ -1400,7 +1418,9 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
             ),
           );
         const lines = items.slice(0, 20).map((r) => {
-          const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+          const when = r.dueAt
+            ? (r.repeat ? reminderRepeatWhen(r.dueAt, r.repeat, lang) : reminderWhen(r.dueAt, lang)).trim()
+            : routerMessage("reminderNoDate", lang);
           return `• ${r.text} (${when})`;
         });
         const header =
@@ -1462,11 +1482,15 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
           if (!chosen) {
             if (matches.length === 0) return say(routerMessage("reminderNotFound", lang, { q: action.target.query }));
             stashChoice(deps, "reminderDelete", matches.slice(0, 8).map((r) => {
-              const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+              const when = r.dueAt
+            ? (r.repeat ? reminderRepeatWhen(r.dueAt, r.repeat, lang) : reminderWhen(r.dueAt, lang)).trim()
+            : routerMessage("reminderNoDate", lang);
               return { id: r.id, label: `${r.text} (${when})`, match: r.text };
             }), lang);
             const lines = matches.slice(0, 8).map((r) => {
-              const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+              const when = r.dueAt
+            ? (r.repeat ? reminderRepeatWhen(r.dueAt, r.repeat, lang) : reminderWhen(r.dueAt, lang)).trim()
+            : routerMessage("reminderNoDate", lang);
               return `• ${r.text} (${when})`;
             });
             return say(`${routerMessage("reminderWhich", lang)}\n${lines.join("\n")}`);
@@ -1485,6 +1509,8 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
           const u = end.getTime();
           items = all.filter((r) => {
             if (!r.dueAt) return false;
+            // 0.1.32: uno que se repite cuenta si alguna de sus veces cae ese día.
+            if (r.repeat) return nextOccurrence(new Date(r.dueAt), r.repeat, new Date(f - 1)).getTime() < u;
             const d = new Date(r.dueAt).getTime();
             return d >= f && d < u;
           });
@@ -1498,11 +1524,15 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
           );
         if (action.target.type === "ask" && items.length > 1) {
           stashChoice(deps, "reminderDelete", items.slice(0, 20).map((r) => {
-            const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+            const when = r.dueAt
+            ? (r.repeat ? reminderRepeatWhen(r.dueAt, r.repeat, lang) : reminderWhen(r.dueAt, lang)).trim()
+            : routerMessage("reminderNoDate", lang);
             return { id: r.id, label: `${r.text} (${when})`, match: r.text };
           }), lang);
           const lines = items.slice(0, 20).map((r) => {
-            const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+            const when = r.dueAt
+            ? (r.repeat ? reminderRepeatWhen(r.dueAt, r.repeat, lang) : reminderWhen(r.dueAt, lang)).trim()
+            : routerMessage("reminderNoDate", lang);
             return `• ${r.text} (${when})`;
           });
           return say(`${routerMessage("deleteWhichReminder", lang)}\n${lines.join("\n")}`);

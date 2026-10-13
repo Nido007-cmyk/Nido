@@ -83,7 +83,7 @@ export async function runScheduledTasksNow(ctx: ScheduledRunContext): Promise<Ta
         // está en DEFAULT_TASK_TOOLS — ninguno alcanza los handlers.
         listNoteTitles: async () => (await listNotes(50)).map((n) => ({ id: n.id, title: n.title })),
         listNotesFull: async () => (await listNotes(50)).map((n) => ({ id: n.id, title: n.title, body: n.body })),
-        listReminders: async () => (await listReminders(50)).map((r) => ({ id: r.id, text: r.text, dueAt: r.due_at })),
+        listReminders: async () => (await listReminders(50)).map((r) => ({ id: r.id, text: r.text, dueAt: r.due_at, repeat: r.repeat ?? null })),
         maxSteps: 3,
         nPredict: 384,
         lang: ctx.lang,
