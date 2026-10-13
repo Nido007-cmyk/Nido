@@ -4,6 +4,20 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.22-alpha — 2026-10-12
+
+### Fixed
+- Telling NIDO about your life in plain words now actually saves it.
+  The chat only sent a message to the agent when it sounded like an
+  explicit command ("remember that…"), so natural statements fell
+  through to the offline knowledge base instead: "My mom's name is
+  Marta" was answered with a Madrid Metro station, "What's my mom's
+  name?" could not be answered from memory, and even "Set a timer for
+  2 minutes" was treated as small talk. The intent gate now checks
+  the same detectors the agent itself uses — people, your own name,
+  implicit facts, memory questions, timers, reminders and weekly
+  plans — in Spanish, English and Portuguese.
+
 ## 0.1.21-alpha — 2026-10-12
 
 A new model in the catalog, and a full audit of how NIDO treats every
