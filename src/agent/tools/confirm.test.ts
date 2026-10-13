@@ -155,6 +155,23 @@ describe("confirm: integración con handlers", () => {
     expect(out).toMatch(/no está disponible/i);
   });
 
+  it("0.1.25: el diálogo de crear evento muestra la fecha legible, no el ISO crudo", async () => {
+    // Nota física (Tab A9+, 2026-10-12): el diálogo decía
+    // «2026-10-16T17:00:00.000Z» en vez de la fecha local.
+    const seen: Array<{ title: string; message: string }> = [];
+    const h = buildToolHandlers({
+      requestConfirm: async (req) => {
+        seen.push(req);
+        return false;
+      },
+    });
+    await h["create_calendar_event"]({ title: "dentist", start: "2026-10-16T17:00:00.000Z" });
+    expect(seen).toHaveLength(1);
+    expect(seen[0].message).toContain("dentist");
+    expect(seen[0].message).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
+    expect(seen[0].message).toMatch(/\d{1,2}:\d{2}/);
+  });
+
   it("nido_send_message cancelado no envía nada", async () => {
     const h = buildToolHandlers({ requestConfirm: async () => false });
     const out = await h["nido_send_message"]({ to: "Beto", text: "hola" });

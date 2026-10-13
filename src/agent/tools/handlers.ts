@@ -45,7 +45,7 @@ import { fingerprint, fromHex } from "../../p2p/crypto";
 import { withPermissionRequest } from "../../p2p/permissionGuard";
 import type { ContactSearchResult } from "../loop/contactRouter";
 import { ensureRuntimePermission, filterContacts } from "./contactSearch";
-import { formatDay, formatTime } from "../loop/toolRouter";
+import { formatDay, formatTime, type RouterLang } from "../loop/toolRouter";
 import {
   approveAgentTask,
   getPendingAgentTask,
@@ -124,6 +124,32 @@ const EN_CONFIRM_FALLBACK: Record<string, string> = {
   "agentConfirm.openAppReason.scheme-not-allowed": "its scheme isn't allowed",
   "agentConfirm.openAppReason.unsafe-chars": "it contains unsafe characters",
 };
+/** Idioma vigente de la UI para formatear fechas en los diálogos. */
+function confirmLang(): RouterLang {
+  try {
+    const i18n = require("../../i18n").default as { language?: string };
+    const l = (i18n.language ?? "").slice(0, 2);
+    if (l === "es" || l === "en" || l === "pt") return l;
+  } catch { /* sin i18n: se cae al idioma de los textos de reserva */ }
+  return "en";
+}
+
+/**
+ * 0.1.25 (nota física del dueño, Tab A9+ 2026-10-12): el diálogo de
+ * crear evento mostraba el instante en ISO crudo UTC
+ * («2026-10-16T17:00:00.000Z») en vez de la fecha local legible. Se
+ * formatea con los helpers sin Intl de siempre, en el idioma de la
+ * UI y en la hora LOCAL del dispositivo (los getters de Date ya
+ * trabajan en la zona del sistema).
+ */
+function fmtDialogWhen(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const lang = confirmLang();
+  const at = lang === "en" ? "at" : lang === "pt" ? "às" : "a las";
+  return `${formatDay(d, lang)} ${at} ${formatTime(d, lang)}`;
+}
+
 function agentConfirmT(): ConfirmT {
   try {
     const i18n = require("../../i18n").default as {
@@ -400,8 +426,8 @@ export function buildToolHandlers(opts?: {
       (args) => {
         const t = agentConfirmT();
         const title = String(args.title ?? "").trim();
-        const start = String(args.start ?? "").trim();
-        const end = args.end ? String(args.end).trim() : "";
+        const start = fmtDialogWhen(String(args.start ?? "").trim());
+        const end = args.end ? fmtDialogWhen(String(args.end).trim()) : "";
         return {
           tool: "create_calendar_event",
           title: t("agentConfirm.createEventTitle"),
