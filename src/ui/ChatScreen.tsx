@@ -115,6 +115,7 @@ import { onLaunchAction, registerShortcuts, takeLaunchAction } from "../services
 import { answerKnowledgeQueryWithCategory, toIdentityLocale, knowledgeSessionTitle } from "../rag/selfKnowledge";
 import { recordQueryStats, trackPeakRss, startAppMemoryTracking, QueryStats } from "../services/telemetry";
 import { recordExecution } from "../services/executionTelemetry";
+import { recordRouterSample } from "../services/routerStats";
 import { getMemoryInfo } from "ram-monitor";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
@@ -820,7 +821,10 @@ export function ChatScreen({
     // memoria, hora del dispositivo) se resuelven con el loop agéntico en
     // vez del pipeline RAG/adaptativo: 100% local, con memoria inyectada.
     // Si el modelo no usa herramientas, responde directo igual que el chat.
+    // 0.1.33: coste real del pre-router en el dispositivo (Diagnóstico).
+    const classifyT0 = performance.now();
     let agentIntent = classifyIntent(query);
+    const classifyMs = performance.now() - classifyT0;
     // 0.1.23: sonda con hit de memoria para las preguntas genéricas en
     // primera persona («¿cuál es mi color favorito?», «¿dónde vivo?»,
     // «what car do I have?»). classifyIntent las deja en conversar a
@@ -859,8 +863,14 @@ export function ChatScreen({
         choiceStoreRef.current.current = null;
       }
     }
+    if (agentIntent !== "recordar" && agentIntent !== "actuar") {
+      recordRouterSample(classifyMs, "chat");
+    }
     if (agentIntent === "recordar" || agentIntent === "actuar") {
       setProcessing({ messageId: assistantId, status: "thinking" });
+      // 0.1.33: ¿respondió el modelo o el código? Solo se cuenta, el
+      // motor es el mismo.
+      let modelUsed = false;
       try {
         const agentMaxTokens = await getMaxTokens();
         // NIDO: las acciones sensibles (calendario, mensajes NIDO) piden
@@ -898,7 +908,12 @@ export function ChatScreen({
           });
         };
         const agentResult = await runAgentLoop(query, {
-          engine: llamaEngine,
+          engine: {
+            generate: (args) => {
+              modelUsed = true;
+              return llamaEngine.generate(args);
+            },
+          },
           handlers: buildToolHandlers({ requestConfirm }),
           onConfirmTool,
           loadMemory: () =>
@@ -935,6 +950,14 @@ export function ChatScreen({
           nCtx: llamaEngine.getModelInfo()?.nCtx,
         });
         assistantText = agentResult.response;
+        recordRouterSample(
+          classifyMs,
+          (["notUnderstood", "actionFailed"] as const).some((k) => agentResult.response.trim() === agentFallbackText(k, uiLang))
+            ? "notUnderstood"
+            : modelUsed
+              ? "model"
+              : "router",
+        );
         setMessages((prev) =>
           prev.map((m) => (m.id === assistantId ? { ...m, text: assistantText } : m))
         );

@@ -198,6 +198,19 @@
     "title": "Evaluación"
   },
   "executionTelemetry": {
+    "router": {
+      "title": "Decisión de ruta (sin modelo)",
+      "hint": "Lo que tarda NIDO en decidir qué hacer con cada mensaje, antes de llamar al modelo. Solo tiempos y cuentas: nunca el texto.",
+      "messages": "Mensajes",
+      "p50": "Mediana",
+      "p95": "p95",
+      "max": "Máximo",
+      "router": "Resueltos sin modelo",
+      "model": "Con el modelo",
+      "notUnderstood": "«No entendí»",
+      "chat": "Conversación",
+      "empty": "Aún no hay mensajes medidos."
+    },
     "clear": "🗑 Borrar",
     "clearConfirm": "Borrar",
     "clearMessage": "Elimina todos los registros de ejecución guardados en este dispositivo. No se puede deshacer.",

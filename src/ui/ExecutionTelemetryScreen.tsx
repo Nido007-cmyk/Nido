@@ -22,6 +22,14 @@ import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 import { EvaluationScreen } from "./EvaluationScreen";
 import { MODEL_CATALOG } from "../models/manifest";
 import { displayLang, formatDateTime } from "../utils/safeFormat";
+import {
+  listRouterSamples,
+  clearRouterSamples,
+  summarizeRouterSamples,
+  formatRouterMs,
+  percentOf,
+  type RouterSummary,
+} from "../services/routerStats";
 
 interface Props {
   onClose?: () => void;
@@ -67,6 +75,8 @@ export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
+  // 0.1.33: coste del pre-router y adónde va cada mensaje.
+  const [routerSummary, setRouterSummary] = useState<RouterSummary | null>(null);
   // Model id -> readable name; Hugging Face ids are long file-derived strings.
   const [modelLabels, setModelLabels] = useState<Record<string, string>>(
     () => Object.fromEntries(MODEL_CATALOG.map((m) => [m.id, m.label]))
@@ -76,6 +86,7 @@ export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
     setLoading(true);
     try {
       setRecords(await listRecentExecutions(200));
+      setRouterSummary(summarizeRouterSamples(await listRouterSamples().catch(() => [])));
     } finally {
       setLoading(false);
     }
@@ -113,6 +124,7 @@ export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
           style: "destructive",
           onPress: async () => {
             await clearExecutionTelemetry();
+            await clearRouterSamples().catch(() => {});
             await refresh();
           },
         },
@@ -186,6 +198,10 @@ export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
         </Pressable>
       </View>
 
+      {!loading && routerSummary ? (
+        <RouterCard summary={routerSummary} decimalComma={displayLang(i18n.language) !== "en"} />
+      ) : null}
+
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator color={colors.emerald[400]} />
@@ -234,6 +250,37 @@ export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
             </View>
           ))}
         </ScrollView>
+      )}
+    </View>
+  );
+}
+
+function RouterCard({ summary, decimalComma }: { summary: RouterSummary; decimalComma: boolean }) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const { t } = useTranslation();
+  const o = summary.outcomes;
+  return (
+    <View style={[styles.row, styles.routerCard]} accessibilityLabel={t("executionTelemetry.router.title")}>
+      <Text style={styles.modelLabel}>{t("executionTelemetry.router.title")}</Text>
+      <Text style={styles.metaText}>{t("executionTelemetry.router.hint")}</Text>
+      {summary.count === 0 ? (
+        <Text style={styles.metaText}>{t("executionTelemetry.router.empty")}</Text>
+      ) : (
+        <>
+          <View style={styles.statsGrid}>
+            <StatCell label={t("executionTelemetry.router.messages")} value={`${summary.count}`} />
+            <StatCell label={t("executionTelemetry.router.p50")} value={formatRouterMs(summary.p50Ms, decimalComma)} />
+            <StatCell label={t("executionTelemetry.router.p95")} value={formatRouterMs(summary.p95Ms, decimalComma)} />
+            <StatCell label={t("executionTelemetry.router.max")} value={formatRouterMs(summary.maxMs, decimalComma)} />
+          </View>
+          <View style={styles.statsGrid}>
+            <StatCell label={t("executionTelemetry.router.router")} value={`${o.router} · ${percentOf(o.router, summary.count)}`} />
+            <StatCell label={t("executionTelemetry.router.model")} value={`${o.model} · ${percentOf(o.model, summary.count)}`} />
+            <StatCell label={t("executionTelemetry.router.notUnderstood")} value={`${o.notUnderstood} · ${percentOf(o.notUnderstood, summary.count)}`} />
+            <StatCell label={t("executionTelemetry.router.chat")} value={`${o.chat} · ${percentOf(o.chat, summary.count)}`} />
+          </View>
+        </>
       )}
     </View>
   );
@@ -322,4 +369,5 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   statValue: { ...typography.mono.sm, color: colors.text.primary, fontWeight: "700", fontVariant: ["tabular-nums"] },
   statLabel: { ...typography.mono.xs, fontSize: 8, color: colors.text.dim },
   timestamp: { ...typography.mono.xs, fontSize: 8, color: colors.text.dim, textAlign: "right" },
+  routerCard: { marginHorizontal: calmSpacing.comfortable, marginTop: calmSpacing.cozy },
 });

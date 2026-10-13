@@ -446,6 +446,15 @@ async function openAndMigrate(): Promise<SecureDbHandle> {
     CREATE INDEX IF NOT EXISTS idx_execution_telemetry_created
       ON execution_telemetry(created_at DESC);
 
+    -- 0.1.33: coste del pre-router por mensaje (ms) y adónde fue
+    -- (router / model / notUnderstood / chat). Solo números: NUNCA el texto.
+    CREATE TABLE IF NOT EXISTS router_samples (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts INTEGER NOT NULL,
+      classify_ms REAL NOT NULL,
+      outcome TEXT NOT NULL
+    );
+
     -- User-imported document collections (Settings > Knowledge Base >
     -- Import). Chunks from the bundled/downloaded corpus have no collection
     -- (collection_id IS NULL on the chunks table below) and are always
