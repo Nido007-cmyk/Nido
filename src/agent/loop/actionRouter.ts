@@ -81,7 +81,8 @@ function normalizeCalcText(text: string): string | null {
   t = t.replace(/(\d+(?:[.,]\d+)?)\s*(?:percent|por\s*ciento|por\s*cento)\s+(?:de|del|of|do|da)\s+/gi, "($1/100)*");
   // "3 docenas" → (3*12); "2 elevado a 10" → 2^10
   t = t.replace(/(\d+(?:[.,]\d+)?)\s+(?:docenas?|dozen)\b/gi, "($1*12)");
-  t = t.replace(/(\d+(?:[.,]\d+)?)\s+(?:elevado\s+a|raised\s+to)\s+(\d+(?:[.,]\d+)?)/gi, "$1^$2");
+  // 0.1.31: también «to the power of» / «elevado a la potencia» / «elevado à».
+  t = t.replace(/(\d+(?:[.,]\d+)?)\s+(?:elevado\s+a(?:\s+la(?:\s+potencia)?)?|elevado\s+[àa]|raised\s+to(?:\s+the\s+power\s+of)?|to\s+the\s+power\s+of|to\s+the)\s+(\d+(?:[.,]\d+)?)/gi, "$1^$2");
   // Operadores entre cifras: "45 más 67", "9 por 7", "100 entre 4", "45 y 67".
   t = t.replace(/(\d)\s+(?:m[áa]s|plus|mais)\s+(?=\d)/gi, "$1+");
   t = t.replace(/(\d)\s+(?:menos|minus)\s+(?=\d)/gi, "$1-");
@@ -339,7 +340,10 @@ export function stripDateWords(input: string): string {
       // dejaba el título «dentist on»: se quitaban día y hora pero no
       // la preposición. La misma fuga dejaba «call mom on» en
       // recordatorios EN.
-      .replace(/\b(el|la|the|o|a|na|no|on)?\s*(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?)\b/gi, "")
+      // 0.1.31: el artículo solo cuenta como palabra suelta. Con \b, la «o»
+      // final de «reunião»/«canção» (tras «ã», que \b no ve como letra)
+      // se tomaba por artículo: «marca reunião segunda» quedaba «reuniã».
+      .replace(/(?:(?<![\p{L}])(?:el|la|the|o|a|na|no|on)\s+)?(?<![\p{L}])(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?)(?![\p{L}-])/giu, "")
       .replace(/(?<![\p{L}])(mañana|manana|tomorrow|hoy|today|amanhã|amanha|hoje)(?![\p{L}])/giu, "")
       .replace(/\ba\s+las\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
       .replace(/(?<![\p{L}])às\s+\d{1,2}(:\d{2})?\s*(am|pm|h)?\b/giu, "")
@@ -779,8 +783,11 @@ export function generateWeeklyPlan(action: WeeklyPlanAction): string {
     }
   }
 
+  // 0.1.31 (auditoría del loop): en español y portugués la hora va en
+  // formato de 24 h, como en el resto de respuestas («9:00–18:00»).
   const fmtHour = (h: number) => {
     const hh = h % 24;
+    if (es || pt) return `${hh}:00`;
     const ampm = hh < 12 ? "AM" : "PM";
     const h12 = hh % 12 === 0 ? 12 : hh % 12;
     return `${h12}:00 ${ampm}`;
@@ -822,7 +829,7 @@ export function generateWeeklyPlan(action: WeeklyPlanAction): string {
     } else {
       // Fin de semana: más flexible.
       if (exDays[d]) {
-        lines.push(`- 10:00 AM–11:00 AM: ${exLabel}`);
+        lines.push(`- ${fmtHour(10)}–${fmtHour(11)}: ${exLabel}`);
       }
       if (action.wantsFamilyTime) {
         lines.push(`- ${restFamLabel}`);

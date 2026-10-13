@@ -81,7 +81,7 @@ describe("WEEKLY-PLAN 2026-10-07", () => {
     expect(a).not.toBeNull();
     expect(a!.lang).toBe("pt");
     const plan = generateWeeklyPlan(a!);
-    expect(plan).toContain("Horário semanal (trabalho 9:00 AM–6:00 PM):");
+    expect(plan).toContain("Horário semanal (trabalho 9:00–18:00):");
     expect(plan).toContain("**Segunda-feira**");
     expect(plan).toContain("**Sexta-feira**");
     expect(plan).toContain("Trabalho");

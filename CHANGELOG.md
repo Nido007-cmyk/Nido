@@ -4,6 +4,36 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.31-alpha — 2026-10-13
+
+Audit of the assistant loop in Spanish, English and Portuguese: ~200
+real phrases sent through the same chain the chat uses.
+
+### Fixed
+- "Manda por nido a Ana que llego tarde" — the exact phrasing NIDO itself
+  suggests when the text is missing — went to the model and failed. Also
+  "envía por nido a Ana: …" and "mándale a Ana por nido que …".
+- "Cancel the timer" / "cancela el temporizador" / "cancela o temporizador"
+  cancel it (before, the model could say it did without doing anything).
+- "Forget my favorite color" / "olvida…" / "esqueça…" get an honest answer
+  (where to delete it: menu → My Memory) instead of a possible fake "done".
+- "My mom's birthday is March 15" is saved with its reminder in English
+  too (Spanish and Portuguese already were).
+- "Add a meeting on Monday at 9", "marca reunião segunda às 9", "minha
+  agenda desta semana", "what's pending", "qué tengo pendiente", "hora",
+  "time please", "2 to the power of 8" now reach their feature.
+- Event titles ending in "-ão" before a weekday lost their last letter
+  ("reunião segunda" → "reuniã").
+- Spanish and Portuguese share verbs ("anota que…"): with the app in
+  Portuguese the answer was in Spanish. The app language now decides when
+  the phrase isn't clearly the other language.
+- Dates and messages from notes, NIDO inbox, calendar and conversion
+  errors are in the app language (they were always Spanish).
+- Conversions show 4 decimals ("3.1069 mi", not "3.1068559612 mi").
+- The weekly plan uses 24-hour times in Spanish and Portuguese.
+- Saving a person says "I'll remember Marta (mom)" instead of "saved to my
+  contacts", which sounded like the phone's contacts.
+
 ## 0.1.30-alpha — 2026-10-13
 
 Everyday phrases that went to the small model (which can invent the time

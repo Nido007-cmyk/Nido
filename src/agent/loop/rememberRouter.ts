@@ -471,7 +471,10 @@ export function extractImplicitFact(userText: string): RememberExtraction | null
     /^(?:mi|el|la)\s+(?:cumpleaños|cumpleanos|aniversario)\b/i.test(t) ||
     /^(?:el|la)\s+(?:cumpleaños|cumpleanos|aniversario)\s+de\b/i.test(t) ||
     /^(?:my|meu|minha|o|a)\s+(?:birthday|aniversário|aniversario)\b/i.test(t) ||
-    /^(?:the|o)\s+(?:birthday|aniversário)\s+(?:of|de|da|do)\b/i.test(t)
+    /^(?:the|o)\s+(?:birthday|aniversário)\s+(?:of|de|da|do)\b/i.test(t) ||
+    // 0.1.31 (auditoría del loop): «my mom's birthday is March 15» caía
+    // al conocimiento; el español y el portugués ya se guardaban.
+    /^my\s+[\p{L}' -]{1,30}'s\s+(?:birthday|anniversary)\b/iu.test(t)
   ) {
     return done(t);
   }
