@@ -38,14 +38,19 @@ import {
 } from "./contactRouter";
 import { agentFallbackText, type FallbackLang } from "./fallbackText";
 import {
+  choiceQuestionText,
   extractToolAction,
   formatDay,
   reminderWhen,
+  resolveChoiceReply,
   routerMessage,
   runToolAction,
   toolForAction,
+  type ChoiceStore,
   type NoteSummary,
   type RouterLang,
+  type ToolAction,
+  type ToolRouterDeps,
 } from "./toolRouter";
 import { classifyIntent, type AgentIntent } from "./intent";
 import { matchCanned } from "./cannedResponses";
@@ -140,6 +145,14 @@ export interface AgentLoopOptions {
   listNotesFull?: () => Promise<Array<{ id: string; title: string; body: string }>>;
   /** 0.1.14: recordatorios pendientes para "qué recordatorios tengo". */
   listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null }>>;
+  /**
+   * 0.1.25: almacén de la elección pendiente («¿cuál nota?») entre
+   * turnos. La app lo crea una vez y lo pasa en cada envío; el loop
+   * consume la respuesta (título, ordinal o cancelación) antes de
+   * rutear el turno. Sin él, la pregunta «¿cuál?» queda sin estado,
+   * como hasta la 0.1.24.
+   */
+  choiceStore?: ChoiceStore;
   /**
    * Tareas programadas: los atajos deterministas (recordatorio, persona,
    * hecho) solo se usan si la herramienta correspondiente está entre los
@@ -631,6 +644,55 @@ export async function runAgentLoop(
     });
     return { response: outcome.response, intent, toolUses: outcome.toolUses, deterministic: true };
   }
+  // Dependencias del router de herramientas: las usa tanto la acción
+  // extraída del turno como la elección pendiente que se consume aquí.
+  const toolDeps: ToolRouterDeps = {
+    dispatch: (name, args) =>
+      dispatchToolCallDetailed({ name, arguments: args }, handlers, {
+        policyContext: [],
+        onConfirm: options.onConfirmTool,
+      }),
+    isDisabled: isToolDisabled,
+    listNotes: options.listNoteTitles,
+    listNotesFull: options.listNotesFull,
+    listReminders: options.listReminders,
+    choiceStore: options.choiceStore,
+  };
+  // 0.1.25 (hallazgo físico del dueño, Tab A9+ 2026-10-12): consumir la
+  // elección pendiente («Hay varias notas que coinciden. ¿Cuál?»)
+  // ANTES de rutear el turno. La respuesta del usuario («cumpleaños»,
+  // «la primera», «cancelar») no es una orden nueva: es la continuación
+  // de la pregunta anterior. Hasta la 0.1.24 la pregunta no guardaba
+  // estado y la respuesta caía a conocimiento, sin borrar ni leer nada.
+  const pendingChoice = options.choiceStore?.current ?? null;
+  if (pendingChoice && options.choiceStore) {
+    const resolution = resolveChoiceReply(userText, pendingChoice.candidates);
+    if (resolution?.type === "cancel") {
+      options.choiceStore.current = null;
+      return { response: routerMessage("cancelled", pendingChoice.lang), intent, toolUses: [], deterministic: true };
+    }
+    if (resolution?.type === "pick") {
+      options.choiceStore.current = null;
+      const c = pendingChoice.candidates[resolution.index];
+      const synth: ToolAction =
+        pendingChoice.action === "noteRead"
+          ? { kind: "noteRead", query: c.match, directId: c.id, lang: pendingChoice.lang }
+          : pendingChoice.action === "noteDelete"
+            ? { kind: "noteDelete", target: { type: "one", query: c.match, directId: c.id }, lang: pendingChoice.lang }
+            : { kind: "reminderDelete", target: { type: "one", query: c.match, directId: c.id }, lang: pendingChoice.lang };
+      if (!options.restrictFastPathsToHandlers || toolForAction(synth) in handlers) {
+        const outcome = await runToolAction(synth, toolDeps);
+        return { response: outcome.response, intent, toolUses: outcome.toolUses, deterministic: true };
+      }
+    } else if (userText.trim().split(/\s+/).length <= 4) {
+      // Respuesta corta que no resuelve: se repite la pregunta y la
+      // elección sigue viva (un typo no debe matar el flujo).
+      return { response: choiceQuestionText(pendingChoice), intent, toolUses: [], deterministic: true };
+    } else {
+      // Mensaje nuevo y largo: la elección caduca y el turno sigue.
+      options.choiceStore.current = null;
+    }
+  }
   // 0.1.8 (auditoría de Acerca de): notas, hora/fecha, conversiones,
   // calendario, mensajería NIDO, enlaces y archivos por la vía determinista
   // (toolRouter.ts). Va ANTES del atajo de recordatorios: su regex aceptaba
@@ -641,17 +703,7 @@ export async function runAgentLoop(
   // mandar el turno al modelo). En tareas programadas solo si la
   // herramienta está entre las permitidas para la tarea.
   if (toolAction && (!options.restrictFastPathsToHandlers || toolForAction(toolAction) in handlers)) {
-    const outcome = await runToolAction(toolAction, {
-      dispatch: (name, args) =>
-        dispatchToolCallDetailed({ name, arguments: args }, handlers, {
-          policyContext: [],
-          onConfirm: options.onConfirmTool,
-        }),
-      isDisabled: isToolDisabled,
-      listNotes: options.listNoteTitles,
-      listNotesFull: options.listNotesFull,
-      listReminders: options.listReminders,
-    });
+    const outcome = await runToolAction(toolAction, toolDeps);
     return { response: outcome.response, intent, toolUses: outcome.toolUses, deterministic: true };
   }
   // 0.1.20 (P3-16): temporizador — ANTES que recordatorio, porque

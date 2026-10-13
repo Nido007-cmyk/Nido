@@ -29,8 +29,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { classifyIntent } from "./intent";
 import { isGenericMemoryQuestionShape, memoryGateHit } from "./memoryQuery";
 import { runAgentLoop, type AgentEngine } from "./agentLoop";
+import { choiceTurnKind, resolveChoiceReply, type ChoiceStore } from "./toolRouter";
 import { answerKnowledgeQueryWithCategory } from "../../rag/selfKnowledge";
 import { matchSmallTalk } from "./smallTalk";
+
+/** 0.1.25: la elección pendiente compartida por los turnos de un test. */
+const choiceStore: ChoiceStore = { current: null };
 
 type Lang = "es" | "en" | "pt";
 
@@ -147,12 +151,20 @@ async function send(text: string, lang: Lang, engine: AgentEngine, opts: { deepR
       probedSnapshot = snap;
     }
   }
+  // 0.1.25: espejo de la puerta de ChatScreen — con elección
+  // pendiente, la respuesta entra al loop aunque clasifique conversar.
+  const pendingChoice = choiceStore.current;
+  if (pendingChoice && intent === "conversar") {
+    if (choiceTurnKind(text, pendingChoice) !== "none") intent = "actuar";
+    else choiceStore.current = null;
+  }
   if (intent !== "recordar" && intent !== "actuar") {
     return { route: "knowledge" as Route, response: null, toolUses: [] as Array<{ name: string }> };
   }
   const result = await runAgentLoop(text, {
     engine,
     handlers: makeHandlers(),
+    choiceStore,
     lang,
     loadMemory: async () => probedSnapshot ?? snapshotFromStore(),
     listNoteTitles: async () => data.notes.map((n) => ({ id: n.id, title: n.title })),
@@ -179,6 +191,7 @@ beforeEach(() => {
   data.notes.length = 0;
   data.calls.length = 0;
   data.confirms.length = 0;
+  choiceStore.current = null;
 });
 
 describe("composición — conocimiento y charla (las capas previas a la puerta)", () => {
@@ -476,5 +489,142 @@ describe("composición — personas y decisiones de diseño fijadas", () => {
     expect(t.route).toBe("agent");
     expect(t.response).toBe("Tu mamá se llama Marta.");
     expect(engine.calls).toHaveLength(0);
+  });
+});
+
+describe("composición — elección pendiente entre turnos (0.1.25)", () => {
+  // Hallazgo físico (Tab A9+, 2026-10-12, v0.1.24): «Delete the
+  // birthday note» preguntaba «Several notes match. Which one?» y la
+  // respuesta «Cumpleaños» caía a conocimiento — la elección no
+  // tenía estado. Estos tests componen puerta + loop en DOS turnos
+  // con el almacén compartido, como hace ChatScreen.
+  const seedTwoNotes = () => {
+    data.notes.push(
+      { id: "n1", title: "cumpleaños", body: "solo eso" },
+      { id: "n2", title: "ideas para el cumpleaños de Ana", body: "globos y pastel" },
+    );
+  };
+
+  it("la respuesta por título consume la elección (el caso físico, en inglés)", async () => {
+    seedTwoNotes();
+    const engine = fakeEngine();
+    const t1 = await send("delete the birthday note", "en", engine);
+    expect(t1.response).toContain("Several notes match. Which one?");
+    expect(choiceStore.current?.candidates).toHaveLength(2);
+    const t2 = await send("cumpleaños", "en", engine);
+    expect(callsOf("delete_note")).toHaveLength(1);
+    expect(callsOf("delete_note")[0].args.id).toBe("n1");
+    expect(data.notes.map((n) => n.id)).toEqual(["n2"]);
+    expect(choiceStore.current).toBeNull();
+    expect(engine.calls).toHaveLength(0);
+  });
+
+  it("la respuesta por ordinal consume la elección (inglés)", async () => {
+    seedTwoNotes();
+    const engine = fakeEngine();
+    await send("delete the birthday note", "en", engine);
+    const t2 = await send("the second one", "en", engine);
+    expect(callsOf("delete_note")).toHaveLength(1);
+    expect(callsOf("delete_note")[0].args.id).toBe("n2");
+    expect(data.notes.map((n) => n.id)).toEqual(["n1"]);
+    expect(t2.response).toBeTruthy();
+  });
+
+  it("borrar sin decir cuál lista todo, y el título elige (español, vía ask)", async () => {
+    seedTwoNotes();
+    const engine = fakeEngine();
+    const t1 = await send("borra la nota", "es", engine);
+    expect(t1.response).toContain("cumpleaños");
+    expect(choiceStore.current?.action).toBe("noteDelete");
+    await send("ideas para el cumpleaños de Ana", "es", engine);
+    expect(data.notes.map((n) => n.id)).toEqual(["n1"]);
+  });
+
+  it("leer con varias coincidencias: el ordinal elige (portugués)", async () => {
+    data.notes.push(
+      { id: "n1", title: "receita de bolo", body: "BOLO" },
+      { id: "n2", title: "receita de arroz", body: "ARROZ" },
+    );
+    const engine = fakeEngine();
+    const t1 = await send("lê a nota da receita", "pt", engine);
+    expect(t1.response).toContain("Várias notas correspondem. Qual?");
+    const t2 = await send("a segunda", "pt", engine);
+    expect(t2.response).toContain("ARROZ");
+    expect(callsOf("read_note")[0].args.id).toBe("n2");
+  });
+
+  it("cancelar cierra la elección sin tocar nada (español)", async () => {
+    data.notes.push(
+      { id: "n1", title: "receta de pollo", body: "POLLO" },
+      { id: "n2", title: "receta de arroz", body: "ARROZ" },
+    );
+    const engine = fakeEngine();
+    const t1 = await send("lee la nota de la receta", "es", engine);
+    expect(t1.response).toContain("¿Cuál?");
+    const t2 = await send("cancelar", "es", engine);
+    expect(t2.response).toBe("Entendido, no hice nada.");
+    expect(callsOf("delete_note")).toHaveLength(0);
+    expect(callsOf("read_note")).toHaveLength(0);
+    expect(choiceStore.current).toBeNull();
+    // Y el turno siguiente ya no está atrapado por la elección vieja.
+    const t3 = await send("cumpleaños", "es", engine);
+    expect(t3.route).toBe("knowledge");
+    expect(data.notes).toHaveLength(2);
+  });
+
+  it("una respuesta corta que no resuelve repite la pregunta y sigue viva", async () => {
+    seedTwoNotes();
+    const engine = fakeEngine();
+    await send("delete the birthday note", "en", engine);
+    const t2 = await send("esa", "es", engine);
+    expect(t2.response).toContain("Several notes match. Which one?");
+    expect(choiceStore.current).not.toBeNull();
+    await send("la primera", "es", engine);
+    expect(data.notes.map((n) => n.id)).toEqual(["n2"]);
+  });
+
+  it("un mensaje nuevo y largo hace caducar la elección y se atiende", async () => {
+    seedTwoNotes();
+    const engine = fakeEngine();
+    await send("delete the birthday note", "en", engine);
+    const t2 = await send("recuérdame comprar leche mañana a las 5", "es", engine);
+    expect(t2.route).toBe("agent");
+    expect(data.reminders).toHaveLength(1);
+    expect(choiceStore.current).toBeNull();
+    expect(callsOf("delete_note")).toHaveLength(0);
+  });
+
+  it("resolveChoiceReply: la igualdad exacta gana sobre la parcial (caso físico)", () => {
+    const candidates = [
+      { id: "n1", label: "cumpleaños", match: "cumpleaños" },
+      { id: "n2", label: "ideas para el cumpleaños de Ana", match: "ideas para el cumpleaños de Ana" },
+    ];
+    expect(resolveChoiceReply("cumpleaños", candidates)).toEqual({ type: "pick", index: 0 });
+    expect(resolveChoiceReply("2", candidates)).toEqual({ type: "pick", index: 1 });
+    expect(resolveChoiceReply("never mind", candidates)).toEqual({ type: "cancel" });
+    expect(resolveChoiceReply("quiero otra cosa distinta hoy", candidates)).toBeNull();
+  });
+});
+
+describe("composición — fusiones de autocorrector en consultas (0.1.25)", () => {
+  // Hallazgo físico (Tab A9+, 2026-10-12, v0.1.23): el usuario dictó
+  // «¿Cómo se llama mi mamá?» y el dictado lo fusionó en «¿Cómo se
+  // llama mima?» — la forma no casó y respondió el modelo en primera
+  // persona con el banner de sin fuentes.
+  it("«mima» entra por la puerta y responde «Tu mamá se llama Marta.»", async () => {
+    const engine = fakeEngine();
+    await send("Mi mama se llama Marta", "es", engine);
+    const t = await send("Como se llama mima?", "es", engine);
+    expect(t.route).toBe("agent");
+    expect(t.response).toBe("Tu mamá se llama Marta.");
+    expect(engine.calls).toHaveLength(0);
+  });
+
+  it("las formas fusionadas largas también casan («mihijo»)", async () => {
+    const engine = fakeEngine();
+    await send("Mi hijo se llama Pedro", "es", engine);
+    const t = await send("¿Cómo se llama mihijo?", "es", engine);
+    expect(t.route).toBe("agent");
+    expect(t.response).toBe("Tu hijo se llama Pedro.");
   });
 });

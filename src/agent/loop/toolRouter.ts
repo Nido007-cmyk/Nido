@@ -34,7 +34,7 @@ export type ToolAction =
   | { kind: "time"; what: "time" | "date"; lang: RouterLang }
   | { kind: "noteSave"; title: string; body: string; lang: RouterLang }
   | { kind: "noteList"; lang: RouterLang }
-  | { kind: "noteRead"; query: string; lang: RouterLang }
+  | { kind: "noteRead"; query: string; lang: RouterLang; directId?: string }
   | { kind: "noteSearch"; query: string; lang: RouterLang }
   | { kind: "convert"; value: number; from: string; to: string; lang: RouterLang }
   | { kind: "currencyInfo"; lang: RouterLang }
@@ -57,7 +57,7 @@ export type ToolAction =
  * - ask: el usuario no dijo cuál ("borra la nota"): si solo hay uno se
  *   borra ese (la confirmación protege); si hay varios, se listan.
  */
-export type DeleteTarget = { type: "one"; query: string } | { type: "all" } | { type: "ask" };
+export type DeleteTarget = { type: "one"; query: string; directId?: string } | { type: "all" } | { type: "ask" };
 
 export type CalendarRange = "today" | "tomorrow" | "week";
 
@@ -906,6 +906,12 @@ export interface ToolRouterDeps {
    *  resolver los borrados por texto (0.1.20: con id). */
   listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null }>>;
   now?: () => Date;
+  /**
+   * 0.1.25: almacén de la elección pendiente («¿cuál nota?») entre
+   * turnos. La app lo crea una vez y lo pasa siempre; sin él (tareas
+   * programadas, tests de un turno) la pregunta queda como hoy.
+   */
+  choiceStore?: ChoiceStore;
 }
 
 export interface ToolRouterOutcome {
@@ -957,6 +963,101 @@ function queryVariants(query: string): string[] {
     }
   }
   return [...out];
+}
+
+// 0.1.25 (hallazgo físico del dueño, Tab A9+ 2026-10-12): cuando leer
+// o borrar coincide con varias notas o recordatorios, el router
+// pregunta «¿cuál?» — pero la pregunta no guardaba NINGÚN estado: la
+// respuesta («cumpleaños», «la primera») arrancaba un turno nuevo,
+// caía a conocimiento («El cumpleaños está en tu lista de
+// actividades») y la elección se perdía. Ahora la pregunta deja una
+// elección pendiente en un almacén que la app pasa entre turnos: el
+// turno siguiente la consume por título, por ordinal o la cancela,
+// en los tres idiomas.
+export interface ChoiceCandidate {
+  id: string;
+  /** Lo que se muestra en la lista de la pregunta. */
+  label: string;
+  /** Texto para casar la respuesta del usuario (el título del ítem). */
+  match: string;
+}
+export interface PendingChoice {
+  action: "noteRead" | "noteDelete" | "reminderDelete";
+  candidates: ChoiceCandidate[];
+  lang: RouterLang;
+}
+export interface ChoiceStore {
+  current: PendingChoice | null;
+}
+
+function stashChoice(
+  deps: ToolRouterDeps,
+  action: PendingChoice["action"],
+  candidates: ChoiceCandidate[],
+  lang: RouterLang
+): void {
+  if (deps.choiceStore) deps.choiceStore.current = { action, candidates, lang };
+}
+
+const CHOICE_CANCEL_WORDS = new Set([
+  "cancelar", "cancela", "cancel", "ninguno", "ninguna", "none", "neither",
+  "nenhum", "nenhuma", "deixa", "esquece", "olvidalo", "never",
+]);
+const CHOICE_ORDINALS: Record<string, number> = {
+  primero: 0, primera: 0, primer: 0, first: 0, primeiro: 0, primeira: 0,
+  segundo: 1, segunda: 1, second: 1,
+  tercero: 2, tercera: 2, tercer: 2, third: 2, terceiro: 2, terceira: 2,
+  cuarto: 3, cuarta: 3, fourth: 3, quarto: 3, quarta: 3,
+};
+
+export type ChoiceResolution = { type: "pick"; index: number } | { type: "cancel" } | null;
+
+/**
+ * Resuelve la respuesta del usuario contra las candidatas de una
+ * elección pendiente: cancelación, número u ordinal («2», «la
+ * primera», «the first one», «a segunda»), o el título — la igualdad
+ * exacta gana sobre las coincidencias parciales, y las parciales
+ * usan las mismas equivalencias entre idiomas que la búsqueda.
+ */
+export function resolveChoiceReply(text: string, candidates: ChoiceCandidate[]): ChoiceResolution {
+  const t = norm(text);
+  if (!t) return null;
+  const tokens = t.split(" ");
+  if (tokens.length <= 3 && tokens.some((w) => CHOICE_CANCEL_WORDS.has(w))) return { type: "cancel" };
+  for (const w of tokens) {
+    if (/^\d+$/.test(w)) {
+      const idx = Number(w) - 1;
+      if (idx >= 0 && idx < candidates.length) return { type: "pick", index: idx };
+    }
+    const ord = CHOICE_ORDINALS[w];
+    if (ord !== undefined && ord < candidates.length) return { type: "pick", index: ord };
+  }
+  const exact = candidates.findIndex((c) => norm(c.match) === t);
+  if (exact >= 0) return { type: "pick", index: exact };
+  const variants = queryVariants(t);
+  const hits = candidates.filter((c) => {
+    const m = norm(c.match);
+    return variants.some((v) => v.length >= 3 && m.includes(v)) || (t.length >= 4 && t.includes(m));
+  });
+  if (hits.length === 1) return { type: "pick", index: candidates.indexOf(hits[0]) };
+  return null;
+}
+
+/**
+ * ¿Este mensaje es la respuesta a la elección pendiente? «resolve»
+ * la consume, «reask» es una respuesta corta que no resuelve (se
+ * repite la pregunta), «none» es un mensaje nuevo: la elección
+ * caduca y el turno sigue su curso normal.
+ */
+export function choiceTurnKind(text: string, pending: PendingChoice): "resolve" | "reask" | "none" {
+  if (resolveChoiceReply(text, pending.candidates)) return "resolve";
+  return text.trim().split(/\s+/).length <= 4 ? "reask" : "none";
+}
+
+/** El texto de la pregunta «¿cuál?», para repetirla tal cual se hizo. */
+export function choiceQuestionText(pending: PendingChoice): string {
+  const key = pending.action === "reminderDelete" ? "reminderWhich" : "noteWhich";
+  return `${routerMessage(key, pending.lang)}\n${pending.candidates.map((c) => `• ${c.label}`).join("\n")}`;
 }
 
 /** ¿El término (o su equivalente en otro idioma) está en el texto? */
@@ -1088,6 +1189,13 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
 
       case "noteRead": {
         const notes = (await deps.listNotes?.()) ?? [];
+        // 0.1.25: elección ya resuelta por el turno siguiente.
+        if (action.directId) {
+          const chosen = notes.find((n) => n.id === action.directId);
+          if (!chosen) return say(routerMessage("noteNotFound", lang, { q: action.query }));
+          const out = await run("read_note", { id: chosen.id });
+          return out.ok ? say(out.text) : failure(out);
+        }
         const q = norm(action.query);
         // 0.1.24 (H-4): la consulta se expande a sus equivalentes
         // ES/EN/PT — la nota puede estar guardada en otro idioma.
@@ -1098,6 +1206,7 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
         const chosen = exact.length === 1 ? exact[0] : matches.length === 1 ? matches[0] : null;
         if (!chosen) {
           if (matches.length === 0) return say(routerMessage("noteNotFound", lang, { q: action.query }));
+          stashChoice(deps, "noteRead", matches.slice(0, 8).map((n) => ({ id: n.id, label: n.title, match: n.title })), lang);
           return say(`${routerMessage("noteWhich", lang)}\n${matches.slice(0, 8).map((n) => `• ${n.title}`).join("\n")}`);
         }
         const out = await run("read_note", { id: chosen.id });
@@ -1147,6 +1256,14 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
       case "noteDelete": {
         const notes = (await deps.listNotes?.()) ?? [];
         if (action.target.type === "one") {
+          // 0.1.25: elección ya resuelta por el turno siguiente.
+          const directId = action.target.directId;
+          if (directId) {
+            const chosen = notes.find((n) => n.id === directId);
+            if (!chosen) return say(routerMessage("noteNotFound", lang, { q: action.target.query }));
+            return deleteSet([{ id: chosen.id, label: chosen.title }], "delete_note", "title",
+              (label) => routerMessage("noteDeleted", lang, { title: label }), () => "");
+          }
           const q = norm(action.target.query);
           // 0.1.24 (H-4): equivalentes entre idiomas también al borrar.
           const matches = notes.filter(
@@ -1156,6 +1273,7 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
           const chosen = exact.length === 1 ? exact[0] : matches.length === 1 ? matches[0] : null;
           if (!chosen) {
             if (matches.length === 0) return say(routerMessage("noteNotFound", lang, { q: action.target.query }));
+            stashChoice(deps, "noteDelete", matches.slice(0, 8).map((n) => ({ id: n.id, label: n.title, match: n.title })), lang);
             return say(`${routerMessage("noteWhich", lang)}\n${matches.slice(0, 8).map((n) => `• ${n.title}`).join("\n")}`);
           }
           return deleteSet([{ id: chosen.id, label: chosen.title }], "delete_note", "title",
@@ -1163,6 +1281,7 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
         }
         if (notes.length === 0) return say(routerMessage("noNotes", lang));
         if (action.target.type === "ask" && notes.length > 1) {
+          stashChoice(deps, "noteDelete", notes.slice(0, 20).map((n) => ({ id: n.id, label: n.title, match: n.title })), lang);
           return say(`${routerMessage("deleteWhichNote", lang)}\n${notes.slice(0, 20).map((n) => `• ${n.title}`).join("\n")}`);
         }
         return deleteSet(notes.map((n) => ({ id: n.id, label: n.title })), "delete_note", "title",
@@ -1174,11 +1293,23 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
         if (!deps.listReminders) return say(routerMessage("failed", lang, { reason: "reminders unavailable" }));
         const all = await deps.listReminders();
         if (action.target.type === "one") {
+          // 0.1.25: elección ya resuelta por el turno siguiente.
+          const directId = action.target.directId;
+          if (directId) {
+            const chosen = all.find((r) => r.id === directId);
+            if (!chosen) return say(routerMessage("reminderNotFound", lang, { q: action.target.query }));
+            return deleteSet([{ id: chosen.id, label: chosen.text }], "delete_reminder", "text",
+              (label) => routerMessage("reminderDeleted", lang, { text: label }), () => "");
+          }
           const q = norm(action.target.query);
           const matches = all.filter((r) => norm(r.text).includes(q) || (q.length >= 4 && q.includes(norm(r.text))));
           const chosen = matches.length === 1 ? matches[0] : null;
           if (!chosen) {
             if (matches.length === 0) return say(routerMessage("reminderNotFound", lang, { q: action.target.query }));
+            stashChoice(deps, "reminderDelete", matches.slice(0, 8).map((r) => {
+              const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+              return { id: r.id, label: `${r.text} (${when})`, match: r.text };
+            }), lang);
             const lines = matches.slice(0, 8).map((r) => {
               const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
               return `• ${r.text} (${when})`;
@@ -1211,6 +1342,10 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
             )
           );
         if (action.target.type === "ask" && items.length > 1) {
+          stashChoice(deps, "reminderDelete", items.slice(0, 20).map((r) => {
+            const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
+            return { id: r.id, label: `${r.text} (${when})`, match: r.text };
+          }), lang);
           const lines = items.slice(0, 20).map((r) => {
             const when = r.dueAt ? reminderWhen(r.dueAt, lang).trim() : routerMessage("reminderNoDate", lang);
             return `• ${r.text} (${when})`;

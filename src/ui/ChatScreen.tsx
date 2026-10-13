@@ -59,6 +59,7 @@ import { showSecureAlert } from "nido-secure-dialog";
 // NIDO agent: loop agéntico local con herramientas (Fase A).
 import { classifyIntent } from "../agent/loop/intent";
 import { isGenericMemoryQuestionShape, memoryGateHit } from "../agent/loop/memoryQuery";
+import { choiceTurnKind, type ChoiceStore } from "../agent/loop/toolRouter";
 import { runAgentLoop, assertPromptBudget, estimatePromptTokens } from "../agent/loop/agentLoop";
 import { buildToolHandlers, searchPhoneContacts } from "../agent/tools/handlers";
 import { matchSmallTalk, smallTalkSessionTitle } from "../agent/loop/smallTalk";
@@ -253,6 +254,8 @@ export function ChatScreen({
   const seenDownloadingRef = useRef<Set<string>>(new Set());
   const memorySettingsRef = useRef<MemorySettingsType>(DEFAULT_MEMORY_SETTINGS);
   const deepResearchModeRef = useRef(false);
+  // 0.1.25: elección pendiente («¿cuál nota?») entre turnos del chat.
+  const choiceStoreRef = useRef<ChoiceStore>({ current: null });
   const sessionSummaryRef = useRef<string | null>(null);
   const messagesRef = useRef<Message[]>([]);
   const backgroundTaskRef = useRef<Promise<void> | null>(null);
@@ -843,6 +846,19 @@ export function ChatScreen({
         probedMemory = snap;
       }
     }
+    // 0.1.25: si hay una elección pendiente («¿cuál nota?»), la
+    // respuesta del usuario clasifica como conversar y nunca entraría
+    // al loop: si la resuelve o es corta, el turno entra para
+    // consumirla o repetir la pregunta; si es un mensaje nuevo y
+    // largo, la elección caduca en silencio y el turno sigue normal.
+    const pendingChoice = choiceStoreRef.current.current;
+    if (pendingChoice && agentIntent === "conversar") {
+      if (choiceTurnKind(query, pendingChoice) !== "none") {
+        agentIntent = "actuar";
+      } else {
+        choiceStoreRef.current.current = null;
+      }
+    }
     if (agentIntent === "recordar" || agentIntent === "actuar") {
       setProcessing({ messageId: assistantId, status: "thinking" });
       try {
@@ -897,6 +913,8 @@ export function ChatScreen({
           // TOOLS-AUDIT 2026-10-11: contactos/llamadas/SMS por la vía
           // determinista (no depende de que el 0.5B escriba el JSON).
           contactSearch: searchPhoneContacts,
+          // 0.1.25: elección pendiente («¿cuál nota?») compartida entre turnos.
+          choiceStore: choiceStoreRef.current,
           // 0.1.8: "lee la nota X" se resuelve por título, no por id.
           listNoteTitles: async () => {
             const { listNotes } = await import("../agent/memory/memoryStore");
