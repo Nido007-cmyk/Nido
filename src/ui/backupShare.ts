@@ -13,14 +13,13 @@
  * (evidencia física). Este módulo añade el compartido vía el share sheet
  * del sistema para que el archivo salga a un lugar accesible.
  *
- * La clave se sigue mostrando en la alerta (sin cambios).
+ * La clave la muestra BackupKeyModal (copiable) en ambas rutas desde
+ * 2026-10-12; antes la tarjeta de Ajustes la ponía en una alerta del
+ * sistema cuyo texto no se puede copiar.
  */
 
 import * as Sharing from "expo-sharing";
-import {
-  documentDirectory,
-  readDirectoryAsync,
-} from "expo-file-system/legacy";
+import * as FS from "expo-file-system/legacy";
 import { createBackup, exportDatabaseKey } from "../security/backup";
 import { BackupError } from "../security/backupErrors";
 
@@ -43,7 +42,7 @@ export async function createBackupFile(unlockReason = "Crear backup"): Promise<C
     .toISOString()
     .replace(/[:.]/g, "-")
     .slice(0, 19);
-  const dest = `${documentDirectory}nido-backup-${timestamp}.db`;
+  const dest = `${FS.documentDirectory}nido-backup-${timestamp}.db`;
   await createBackup(dest);
   const key = await exportDatabaseKey();
   return { path: dest, key };
@@ -51,12 +50,50 @@ export async function createBackupFile(unlockReason = "Crear backup"): Promise<C
 
 /** Ruta del backup más reciente, o null si no hay ninguno. */
 export async function findLatestBackup(): Promise<string | null> {
-  const files = await readDirectoryAsync(documentDirectory ?? "");
+  const files = await FS.readDirectoryAsync(FS.documentDirectory ?? "");
   const backups = files
     .filter((f) => f.startsWith("nido-backup-") && f.endsWith(".db"))
     .sort();
   if (backups.length === 0) return null;
-  return `${documentDirectory}${backups[backups.length - 1]}`;
+  return `${FS.documentDirectory}${backups[backups.length - 1]}`;
+}
+
+/**
+ * Copia el backup (y sus acompañantes .manifest.json / .knowledge.db si
+ * existen) a una carpeta elegida por el usuario vía SAF (Descargas).
+ * Devuelve los nombres copiados, o null si no se concedió el permiso de
+ * carpeta. Extraído de BackupScreen (2026-10-12) para que la tarjeta de
+ * Ajustes ofrezca exactamente el mismo guardado.
+ */
+export async function saveBackupToFolder(sourcePath: string): Promise<string[] | null> {
+  const perms = await FS.StorageAccessFramework.requestDirectoryPermissionsAsync();
+  if (!perms.granted) return null;
+  // FIX 2026-10-09 (C1): copiar los 3 archivos (db + manifest + knowledge).
+  // Si no, K1/K2/K3 no protegen el flujo de Descargas.
+  const filesToCopy = [sourcePath];
+  for (const extra of [`${sourcePath}.manifest.json`, `${sourcePath}.knowledge.db`]) {
+    try {
+      const info = await FS.getInfoAsync(extra);
+      if (info.exists) filesToCopy.push(extra);
+    } catch { /* noop */ }
+  }
+  const copied: string[] = [];
+  for (const srcUri of filesToCopy) {
+    const fileName = srcUri.split("/").pop() ?? "nido-backup.db";
+    const destUri = await FS.StorageAccessFramework.createFileAsync(
+      perms.directoryUri,
+      fileName,
+      "application/octet-stream"
+    );
+    const content = await FS.readAsStringAsync(srcUri, {
+      encoding: FS.EncodingType.Base64,
+    });
+    await FS.writeAsStringAsync(destUri, content, {
+      encoding: FS.EncodingType.Base64,
+    });
+    copied.push(fileName);
+  }
+  return copied;
 }
 
 /**

@@ -22,9 +22,9 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
-  Modal,
 } from "react-native";
-import { copySecret } from "../utils/secretClipboard";
+import { BackupKeyModal } from "./BackupKeyModal";
+import { saveBackupToFolder } from "./backupShare";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import { makeSurfaces } from "./theme/surfaces";
@@ -163,41 +163,13 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
     }
     setBusy(true);
     try {
-      const FS = await import("expo-file-system/legacy");
-      // SAF: pedir al usuario que elija dónde guardar (Descargas).
-      const perms = await FS.StorageAccessFramework.requestDirectoryPermissionsAsync();
-      if (!perms.granted) {
+      // SAF: pedir al usuario que elija dónde guardar (Descargas). La
+      // copia vive en backupShare.saveBackupToFolder (compartida con la
+      // tarjeta de Ajustes desde 2026-10-12).
+      const copied = await saveBackupToFolder(lastBackup);
+      if (copied === null) {
         Alert.alert(t("backup.cancelledTitle"), t("backup.noPermission"));
         return;
-      }
-      // FIX 2026-10-09 (C1): copiar los 3 archivos (db + manifest + knowledge).
-      // Si no, K1/K2/K3 no protegen el flujo de Descargas.
-      const filesToCopy = [lastBackup];
-      const manifestUri = `${lastBackup}.manifest.json`;
-      const knowledgeUri = `${lastBackup}.knowledge.db`;
-      try {
-        const mi = await FS.getInfoAsync(manifestUri);
-        if (mi.exists) filesToCopy.push(manifestUri);
-      } catch { /* noop */ }
-      try {
-        const ki = await FS.getInfoAsync(knowledgeUri);
-        if (ki.exists) filesToCopy.push(knowledgeUri);
-      } catch { /* noop */ }
-      const copied: string[] = [];
-      for (const srcUri of filesToCopy) {
-        const fileName = srcUri.split("/").pop() ?? "nido-backup.db";
-        const destUri = await FS.StorageAccessFramework.createFileAsync(
-          perms.directoryUri,
-          fileName,
-          "application/octet-stream"
-        );
-        const content = await FS.readAsStringAsync(srcUri, {
-          encoding: FS.EncodingType.Base64,
-        });
-        await FS.writeAsStringAsync(destUri, content, {
-          encoding: FS.EncodingType.Base64,
-        });
-        copied.push(fileName);
       }
       Alert.alert(t("backup.savedTitle"), t("backup.savedBody", { files: copied.join("\n") }));
     } catch (e) {
@@ -240,18 +212,6 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
     buttonSecondaryText: ui.secondaryButtonText,
     warning: ui.warning,
     warningText: ui.warningText,
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: colors.bg.modalOverlay,
-      justifyContent: "center",
-      alignItems: "center",
-      padding: 24,
-    },
-    modalBox: { borderRadius: 20, padding: 20, width: "100%", maxWidth: 400, gap: 4 },
-    modalTitle: { ...typography.ui.title, fontWeight: "700", marginBottom: 8 },
-    modalText: { ...typography.ui.body },
-    dekText: { fontSize: 13, fontFamily: "monospace", lineHeight: 18 },
-    modalButtons: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 16 },
   });
 
   return (
@@ -326,49 +286,13 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
         <Text style={styles.buttonSecondaryText}>{t("backup.close")}</Text>
       </Pressable>
 
-      {/* FIX 2026-10-09 (K4): modal con clave copiable */}
-      <Modal visible={dekModal !== null} transparent animationType="fade" onRequestClose={() => setDekModal(null)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalBox, { backgroundColor: colors.bg.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
-              {dekModal?.dest ? t("backup.dekTitle") : t("backup.keyTitle")}
-            </Text>
-            <Text style={[styles.modalText, { color: colors.text.primary }]}>
-              {dekModal?.dest ? `${t("backup.dekSavedIn")}\n${dekModal.dest}\n\n` : ""}
-              {t("backup.dekCopyPrompt")}{"\n\n"}
-            </Text>
-            <Text selectable style={[styles.dekText, {"color": colors.text.primary}]}>{dekModal?.dek}</Text>
-            <Text style={[styles.modalText, {"color": colors.text.primary}]}>
-              {"\n"}{t("backup.dekWarning")}
-            </Text>
-            {/* FIX 2026-10-09: advertencia anti-fraude (ataques reales documentados:
-                actores roban claves de backup con bots falsos de "soporte") */}
-            <Text style={[styles.modalText, {"color": colors.crimson[500], "fontWeight": "bold"}]}>
-              {"\n"}{t("backup.dekFraudWarning")}
-            </Text>
-            <View style={styles.modalButtons}>
-              <Pressable
-                style={styles.button}
-                onPress={() => {
-                  if (dekModal) void copySecret(dekModal.dek);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={t("backup.copyKey")}
-              >
-                <Text style={styles.buttonText}>{t("backup.copyKey")}</Text>
-              </Pressable>
-              <Pressable
-                style={styles.buttonSecondary}
-                onPress={() => setDekModal(null)}
-                accessibilityRole="button"
-                accessibilityLabel={t("backup.understood")}
-              >
-                <Text style={styles.buttonSecondaryText}>{t("backup.understood")}</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* FIX 2026-10-09 (K4): modal con clave copiable. Desde 2026-10-12
+          vive en BackupKeyModal, compartido con la tarjeta de Ajustes. */}
+      <BackupKeyModal
+        dek={dekModal?.dek ?? null}
+        dest={dekModal?.dest ?? ""}
+        onClose={() => setDekModal(null)}
+      />
     </ScrollView>
   );
 }

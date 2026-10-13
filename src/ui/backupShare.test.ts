@@ -10,6 +10,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // correcto del archivo del backup.
 const shareAsync = vi.fn();
 const isAvailableAsync = vi.fn();
+const requestDirectoryPermissionsAsync = vi.fn();
+const createFileAsync = vi.fn();
+const getInfoAsync = vi.fn();
+const readAsStringAsync = vi.fn();
+const writeAsStringAsync = vi.fn();
 
 vi.mock("expo-sharing", () => ({
   isAvailableAsync: (...args: unknown[]) => isAvailableAsync(...args),
@@ -23,6 +28,15 @@ vi.mock("expo-file-system/legacy", () => ({
     "nido-backup-2026-10-09T01-01-29.db",
     "other-file.txt",
   ],
+  StorageAccessFramework: {
+    requestDirectoryPermissionsAsync: (...args: unknown[]) =>
+      requestDirectoryPermissionsAsync(...args),
+    createFileAsync: (...args: unknown[]) => createFileAsync(...args),
+  },
+  getInfoAsync: (...args: unknown[]) => getInfoAsync(...args),
+  readAsStringAsync: (...args: unknown[]) => readAsStringAsync(...args),
+  writeAsStringAsync: (...args: unknown[]) => writeAsStringAsync(...args),
+  EncodingType: { Base64: "base64", UTF8: "utf8" },
 }));
 
 vi.mock("../security/backup", () => ({
@@ -31,7 +45,7 @@ vi.mock("../security/backup", () => ({
   createPortableBundle: vi.fn(async (uri: string) => uri.replace(/\.db$/, ".nidobackup.json")),
 }));
 
-import { shareBackupFile, findLatestBackup } from "./backupShare";
+import { shareBackupFile, findLatestBackup, saveBackupToFolder } from "./backupShare";
 
 describe("backupShare (Fix 6)", () => {
   beforeEach(() => {
@@ -62,5 +76,48 @@ describe("backupShare (Fix 6)", () => {
     expect(latest).toBe(
       "file:///data/user/0/team.nido.app/files/nido-backup-2026-10-09T01-01-29.db"
     );
+  });
+});
+
+describe("saveBackupToFolder (guardar en carpeta, 2026-10-12)", () => {
+  const src = "file:///data/user/0/team.nido.app/files/nido-backup-2026-10-09T01-01-29.db";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requestDirectoryPermissionsAsync.mockResolvedValue({
+      granted: true,
+      directoryUri: "content://tree/downloads",
+    });
+    createFileAsync.mockImplementation(
+      async (_dir: string, fileName: string) => `content://tree/downloads/${fileName}`
+    );
+    readAsStringAsync.mockResolvedValue("BASE64DATA");
+    writeAsStringAsync.mockResolvedValue(undefined);
+  });
+
+  it("copia db + manifest + knowledge cuando los tres existen", async () => {
+    getInfoAsync.mockResolvedValue({ exists: true });
+    const copied = await saveBackupToFolder(src);
+    expect(copied).toEqual([
+      "nido-backup-2026-10-09T01-01-29.db",
+      "nido-backup-2026-10-09T01-01-29.db.manifest.json",
+      "nido-backup-2026-10-09T01-01-29.db.knowledge.db",
+    ]);
+    expect(writeAsStringAsync).toHaveBeenCalledTimes(3);
+  });
+
+  it("copia solo la db cuando los acompañantes no existen", async () => {
+    getInfoAsync.mockResolvedValue({ exists: false });
+    const copied = await saveBackupToFolder(src);
+    expect(copied).toEqual(["nido-backup-2026-10-09T01-01-29.db"]);
+    expect(writeAsStringAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("devuelve null sin copiar nada si no se concede el permiso", async () => {
+    requestDirectoryPermissionsAsync.mockResolvedValue({ granted: false });
+    const copied = await saveBackupToFolder(src);
+    expect(copied).toBeNull();
+    expect(createFileAsync).not.toHaveBeenCalled();
+    expect(writeAsStringAsync).not.toHaveBeenCalled();
   });
 });
