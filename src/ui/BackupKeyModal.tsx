@@ -75,7 +75,11 @@ export function BackupKeyModal({ dek, dest, onClose }: BackupKeyModalProps) {
     buttonSecondary: ui.secondaryButton,
     buttonSecondaryText: ui.secondaryButtonText,
     modalOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       zIndex: 1000,
       elevation: 1000,
       backgroundColor: colors.bg.modalOverlay,
