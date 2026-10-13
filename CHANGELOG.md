@@ -4,6 +4,40 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.32-alpha — 2026-10-13
+
+Pending items from the backlog, one by one, each with its own tests.
+
+### Added
+- Repeating reminders: "remind me every day at 8 to take my pill",
+  "recuérdame cada lunes sacar la basura", "me lembra toda sexta de pagar
+  a conta". Every day or every week, in Spanish, English and Portuguese.
+  The phone fires them on its own (daily/weekly system alarm) even if NIDO
+  is closed; the list shows "every Monday at 9:00". "Every month" is still
+  not supported and NIDO says so instead of pretending.
+- Countdowns: "how many days until Christmas", "cuánto falta para Navidad",
+  "quanto falta para o Natal", or any date — counted on the phone, not
+  guessed by the model.
+- Settings → memory shows whether exact alarms are allowed (Android 12+)
+  and a button to allow them; without it, reminders can arrive minutes
+  late while the phone sleeps.
+
+### Fixed
+- "Ponme un recordatorio para el lunes" (a date but nothing to remind)
+  now asks what to remind instead of going to the model. Same for "set a
+  reminder for 5pm" and "me põe um lembrete para segunda".
+- The restore-with-key screen is now protected from screenshots and
+  screen recording, like the screen that shows the key.
+- The exact-alarm module was never compiled into the app (it had no
+  Android build file).
+- NIDO messages accept the same phrasings in all three languages:
+  "escríbele a Ana que…", "write to Ana that…", "diz/fala/escreve para a
+  Ana que…", "send Ana a NIDO message saying…", "manda pelo NIDO para…".
+  "Tell me that…" / "diz pra mim…" are no longer taken as a message to a
+  contact called "me". The outbox note says the same in every language.
+- Deleting a reminder from My Memory now also cancels its scheduled
+  notification.
+
 ## 0.1.31-alpha — 2026-10-13
 
 Audit of the assistant loop in Spanish, English and Portuguese: ~200
