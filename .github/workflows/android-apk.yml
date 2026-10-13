@@ -253,7 +253,7 @@ jobs:
             echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         if: steps.tag.outputs.publish == 'true'
         with:
           path: dist
@@ -296,7 +296,7 @@ jobs:
 
       - name: Upload APK to release
         if: steps.tag.outputs.publish == 'true'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           target_commitish: ${{ github.sha }}
