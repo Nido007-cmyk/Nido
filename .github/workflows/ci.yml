@@ -34,8 +34,10 @@ jobs:
       - run: npm run verify:deps
       - run: npm run typecheck
       - run: npm test
-      # A8 (auditoría 2026-10-10): `npm run test:components` (Jest) no corre en
-      # CI. Al activarlo el 2026-10-10 falló en el runner; queda pendiente de
-      # diagnóstico antes de convertirlo en puerta obligatoria.
+      # Auditoría 2026-10-12: las suites de componentes (Jest) llevaban rojas
+      # e invisibles desde el 2026-10-10 (mocks de tema viejos y módulos
+      # expo ESM sin stub en jest.config.js). Diagnosticadas y en verde
+      # (5 suites, 15 tests): desde esta versión corren como puerta.
+      - run: npm run test:components
       - run: npm run verify:pins
       - run: npm run verify:manifest-sig

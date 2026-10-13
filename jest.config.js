@@ -21,5 +21,17 @@ module.exports = {
     "node_modules/(?!(react-native|@react-native|@testing-library)/)",
   ],
   setupFilesAfterEnv: ["@testing-library/react-native"],
+  moduleNameMapper: {
+    // expo-sqlite es ESM puro; sin stub, cualquier pantalla que importe
+    // secureDatabase (AboutScreen -> SkillsCard -> registry) revienta al
+    // parsear. Mismo criterio que vitest.setup.mts.
+    "^expo-sqlite$": "<rootDir>/jest-mocks/expo-sqlite.js",
+    "^expo-file-system/legacy$": "<rootDir>/jest-mocks/expo-file-system-legacy.js",
+    "^expo-notifications$": "<rootDir>/jest-mocks/expo-notifications.js",
+    "^expo-sharing$": "<rootDir>/jest-mocks/expo-sharing.js",
+    "^expo-local-authentication$": "<rootDir>/jest-mocks/expo-local-authentication.js",
+    "^expo-clipboard$": "<rootDir>/jest-mocks/expo-clipboard.js",
+    "^expo-modules-core(/.*)?$": "<rootDir>/jest-mocks/expo-modules-core.js",
+  },
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
 };

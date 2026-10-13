@@ -15,8 +15,14 @@ import { render, screen } from "@testing-library/react-native";
 jest.mock("./theme", () => ({
   useTheme: () => ({
     colors: {
-      bg: { surface: "#000", cardElevated: "#111", subtle: "#222" },
-      text: { primary: "#fff", secondary: "#ccc", muted: "#888" },
+      // 2026-10-12: el mock quedó viejo cuando el componente adoptó más
+      // tokens del tema (bg.card, crimson, emerald, border, text.inverse);
+      // la suite fallaba por el mock, no por el componente.
+      bg: { surface: "#000", cardElevated: "#111", subtle: "#222", card: "#111", black: "#000", modalOverlay: "rgba(0,0,0,0.5)" },
+      text: { primary: "#fff", secondary: "#ccc", muted: "#888", inverse: "#000" },
+      border: { default: "#444" },
+      crimson: { 400: "#C05A44", 500: "#B3442F" },
+      emerald: { 500: "#2F9E44" },
     },
   }),
 }));
