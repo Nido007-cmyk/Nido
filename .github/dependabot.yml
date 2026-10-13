@@ -9,19 +9,35 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     versioning-strategy: increase
-    # 0.1.29: React Native y React los fija el SDK de Expo (SDK 57 → RN
-    # 0.86). Subirlos por fuera del SDK rompe los módulos nativos, no solo
-    # el typecheck (PR #63). Se migran con el SDK siguiente vía
-    # `npx expo install --fix`, nunca sueltos.
+    # React y React Native los fija el SDK de Expo (SDK 57 → RN 0.86.3 +
+    # React 19.2.3). Se ignoran en TODAS sus versiones, también parches:
+    # el renderer que trae react-native exige exactamente la versión de
+    # react con la que se compiló, así que hasta un parche de react suelto
+    # rompe el arranque (PR #63, #66). Solo se mueven con el SDK, vía
+    # `npx expo install --fix`.
+    #
+    # Las MAYORES de la familia Expo son el cambio de SDK (57 → 58): un
+    # paquete suelto en la línea 58 mezcla dos SDK en el árbol (el #69
+    # dejaba dos expo-modules-core, 58 arriba y 57 dentro de expo). Los
+    # parches y menores dentro del SDK actual sí llegan en el grupo.
+    #
+    # Sin fecha de caducidad: así es como se actualiza siempre, no una
+    # pausa. Tras migrar al SDK 58 estas reglas siguen valiendo para el 59.
     ignore:
-      - dependency-name: "react-native"
-        update-types: ["version-update:semver-minor", "version-update:semver-major"]
       - dependency-name: "react"
-        update-types: ["version-update:semver-minor", "version-update:semver-major"]
       - dependency-name: "react-dom"
-        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      - dependency-name: "react-native"
       - dependency-name: "@react-native/*"
-        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "expo-*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@expo/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "jest-expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "babel-preset-expo"
+        update-types: ["version-update:semver-major"]
     # Un solo PR semanal para parches y menores; las mayores llegan aparte
     # porque suelen romper la compilación nativa y hay que revisarlas a mano.
     groups:
