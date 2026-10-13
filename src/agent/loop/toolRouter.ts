@@ -486,7 +486,14 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     if (m && m[1].trim().length >= 2) {
       // «busca la receta en mis notas»: el artículo inicial no es
       // parte de lo buscado.
-      const q = m[1].trim().replace(/^(?:la|el|los|las|the|a|o|um|uma)\s+/i, "");
+      // 0.1.24: tampoco el relleno «algo sobre…» / «something
+      // about…» / «alguma coisa sobre…» — con él dentro, la consulta
+      // multitérmino exigía «algo» y «sobre» en la nota y no
+      // encontraba nada (lo cazó el test de composición de H-10).
+      const q = m[1]
+        .trim()
+        .replace(/^(?:algo\s+(?:sobre|de)|something\s+about|alguma\s+coisa\s+(?:sobre|de))\s+/i, "")
+        .replace(/^(?:la|el|los|las|the|a|o|um|uma)\s+/i, "");
       if (q.length >= 2) return { kind: "noteSearch", query: q, lang };
     }
   }
