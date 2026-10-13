@@ -11,7 +11,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 
 ## What's working
 
-- Offline AI chat, 100% on-device, with a catalog of models from 0.4 GB to 5 GB (Qwen 2.5 0.5B / 1.5B / 7B, Phi-3.5 mini, LFM 2.5, Gemma) — pick what your phone can run
+- Offline AI chat, 100% on-device, with a catalog of models from 0.4 GB to 5 GB (Qwen 2.5 0.5B / 1.5B / 7B, Qwen3 0.6B, Phi-3.5 mini, LFM 2.5, Gemma) — pick what your phone can run
 - P2P device-to-device messaging over Bluetooth (no internet, no servers)
 - Reminders with local notifications
 - Encrypted on-device storage

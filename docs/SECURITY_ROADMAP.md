@@ -30,15 +30,19 @@ Nothing described here should be read as "audited", "quantum-proof" or "impossib
 | allowBackup=false | IMPLEMENTED |
 | SQLCipher | **YES** — IMPLEMENTED + AUTOMATED TESTED (DEK in Keystore, fail-closed) |
 | Biometrics as cryptographic gate | **NO** — pending only |
-| FLAG_SECURE / clipboard policy / content-less notifications | **NO** |
-| dataExtractionRules (device-transfer) | **NO** |
+| FLAG_SECURE / clipboard policy / content-less notifications | **YES** — IMPLEMENTED (withFlagSecure plugin; secretClipboard sensitive copies that self-clear in 60 s) |
+| dataExtractionRules (device-transfer) | **YES** — IMPLEMENTED (plugin registered in app.json) |
 | Migration tweetnacl → @noble/\* | **NO** |
 | HKDF (today: ad-hoc SHA-512 in KDF) | **YES** — HKDF-SHA512 (RFC 5869), IMPLEMENTED + AUTOMATED TESTED (Oct 2026) |
 | XChaCha20-Poly1305 (today: XSalsa20-Poly1305) | **NO** |
 | Noise_XX | **NO** — documented as future migration |
 | PQ hybrid X25519+ML-KEM | **NO** — FUTURE, no audited implementation for RN |
 | Android compilation of the nido-p2p module | **NO** — no JDK/SDK in this environment |
-| Physical tests between two phones | **NO** |
+| Physical tests between two devices | **YES** — physically verified (two tablets: direct messages in airplane mode, LAN backup, Bluetooth identity; Oct 2026) |
+
+> Baseline re-verified against the code on 2026-10-12 (full audit): the
+> FLAG_SECURE/clipboard, dataExtractionRules and physical-tests rows above
+> still said NO from the 2026-09-27 snapshot; all three were already done.
 
 ---
 
