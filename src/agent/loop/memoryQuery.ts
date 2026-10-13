@@ -339,7 +339,10 @@ export function answerMemoryQuery(
     const rel = bdayPersonQ[1].trim();
     const person = findPersonByRel(mem, rel);
     const fact = findBirthdayFact(mem, { rel, personName: person?.name });
-    if (fact) return birthdayAnswer(fact, lang === "en" ? `your ${rel}` : lang === "pt" ? `sua ${rel}` : `tu ${rel}`, lang);
+    // 0.1.24 (auditoría, H-13): en EN el «who» abre la frase
+    // («{{who}}'s birthday is on…») y salía en minúscula («your
+    // mom's birthday…»); en ES/PT va tras «de», en minúscula bien.
+    if (fact) return birthdayAnswer(fact, lang === "en" ? `Your ${rel}` : lang === "pt" ? `sua ${rel}` : `tu ${rel}`, lang);
     return msg("notKnown", lang);
   }
   if (BDAY_SELF_Q_RES.some((re) => re.test(t))) {

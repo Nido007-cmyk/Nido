@@ -42,6 +42,15 @@ describe("0.1.20 (M1) — consultas de memoria deterministas", () => {
     expect(answerMemoryQuery("when is my birthday?", MEM, "en")).toContain("May 3");
   });
 
+  it("0.1.24 (H-13): la respuesta EN de cumpleaños de un familiar empieza en mayúscula", () => {
+    // La plantilla EN pone {{who}} al inicio («{{who}}'s birthday is
+    // on…») y el llamador pasaba «your mom»: la frase salía en
+    // minúscula. ES/PT ponen el «who» tras «de»: minúscula correcta.
+    const en = answerMemoryQuery("when is my mom's birthday?", MEM, "en");
+    expect(en).toMatch(/^Your mom's birthday is on /);
+    expect(answerMemoryQuery("¿cuándo es el cumpleaños de mi mamá?", MEM, "es")).toMatch(/^El cumpleaños de tu mamá/);
+  });
+
   it("búsqueda genérica en hechos", () => {
     expect(answerMemoryQuery("¿cuál es mi color favorito?", MEM, "es")).toContain("mi color favorito es el azul");
     expect(answerMemoryQuery("¿qué coche tengo?", MEM, "es")).toContain("Toyota");
