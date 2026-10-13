@@ -58,6 +58,7 @@ import { speakAloud } from "../voice/tts";
 import { showSecureAlert } from "nido-secure-dialog";
 // NIDO agent: loop agéntico local con herramientas (Fase A).
 import { classifyIntent } from "../agent/loop/intent";
+import { isGenericMemoryQuestionShape, memoryGateHit } from "../agent/loop/memoryQuery";
 import { runAgentLoop, assertPromptBudget, estimatePromptTokens } from "../agent/loop/agentLoop";
 import { buildToolHandlers, searchPhoneContacts } from "../agent/tools/handlers";
 import { matchSmallTalk, smallTalkSessionTitle } from "../agent/loop/smallTalk";
@@ -813,7 +814,32 @@ export function ChatScreen({
     // memoria, hora del dispositivo) se resuelven con el loop agéntico en
     // vez del pipeline RAG/adaptativo: 100% local, con memoria inyectada.
     // Si el modelo no usa herramientas, responde directo igual que el chat.
-    const agentIntent = classifyIntent(query);
+    let agentIntent = classifyIntent(query);
+    // 0.1.23: sonda con hit de memoria para las preguntas genéricas en
+    // primera persona («¿cuál es mi color favorito?», «¿dónde vivo?»,
+    // «what car do I have?»). classifyIntent las deja en conversar a
+    // propósito — la forma es ambigua con las preguntas sobre
+    // documentos de la guía y con la charla — y quien decide es el
+    // dato: si lo guardado tiene un hit fuerte (memoryGateHit), el
+    // turno entra al loop y la rama genérica de answerMemoryQuery
+    // cita el hecho. Sin hit, o si la snapshot falla, el turno sigue
+    // exactamente el camino de hoy (fail-open). En Deep Research la
+    // sonda se salta: una pregunta en modo investigación es para
+    // investigar, no para atajarla con un hecho guardado.
+    let probedMemory: Awaited<ReturnType<typeof loadMemorySnapshot>> | null = null;
+    if (
+      agentIntent === "conversar" &&
+      !deepResearchModeRef.current &&
+      isGenericMemoryQuestionShape(query)
+    ) {
+      const snap = await loadMemorySnapshot().catch(() => null);
+      if (snap && memoryGateHit(query, snap)) {
+        agentIntent = "recordar";
+        // La snapshot de la sonda se reutiliza como loadMemory del
+        // loop: no se paga dos veces en los turnos que entran.
+        probedMemory = snap;
+      }
+    }
     if (agentIntent === "recordar" || agentIntent === "actuar") {
       setProcessing({ messageId: assistantId, status: "thinking" });
       try {
@@ -856,7 +882,10 @@ export function ChatScreen({
           engine: llamaEngine,
           handlers: buildToolHandlers({ requestConfirm }),
           onConfirmTool,
-          loadMemory: () => loadMemorySnapshot().catch(() => null),
+          loadMemory: () =>
+            probedMemory !== null
+              ? Promise.resolve(probedMemory)
+              : loadMemorySnapshot().catch(() => null),
           maxSteps: 3,
           nPredict: agentMaxTokens,
           // FIX 2026-10-09: idioma vigente para el system prompt.

@@ -170,20 +170,49 @@ const STOPWORDS = new Set([
   // se quedaba sin términos (batería trilingüe 0.1.20).
 ]);
 
-/** Búsqueda genérica por palabras en los hechos guardados. */
-function searchFacts(mem: MemoryQueryData, question: string): string | null {
+export interface MemoryFactScore {
+  /** El hecho con mayor puntuación (su texto), o null si ninguno puntúa. */
+  fact: string | null;
+  /** Cuántos términos de contenido de la pregunta aparecen en el hecho. */
+  score: number;
+  /** Cuántos términos de contenido trae la pregunta. */
+  tokenCount: number;
+}
+
+/**
+ * Búsqueda genérica por palabras en los hechos guardados, con la
+ * puntuación a la vista. Es la ÚNICA fuente de puntuación: la usa la
+ * rama genérica de answerMemoryQuery para elegir el hecho a citar y
+ * la sonda de la puerta (memoryGateHit) para decidir si la pregunta
+ * entra al loop — puerta y respuesta nunca discrepan (0.1.23).
+ */
+export function scoreMemoryFacts(mem: MemoryQueryData, question: string): MemoryFactScore {
   const tokens = fold(question)
     .split(/[^a-z0-9]+/)
     // >= 3: «car» y «cor» son términos de búsqueda reales en EN/PT.
     .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
-  if (!tokens.length) return null;
   let best: { content: string; score: number } | null = null;
   for (const f of mem.facts) {
     const fc = fold(f.content);
     const score = tokens.reduce((n, t) => n + (fc.includes(t) ? 1 : 0), 0);
     if (score > 0 && (!best || score > best.score)) best = { content: f.content, score };
   }
-  return best?.content ?? null;
+  return { fact: best?.content ?? null, score: best?.score ?? 0, tokenCount: tokens.length };
+}
+
+/**
+ * 0.1.23: ¿la pregunta genérica tiene un hit FUERTE en la memoria?
+ * Umbral aprobado por el dueño: score >= 2, o score == 1 cuando la
+ * pregunta trae un único término de contenido («¿dónde vivo?» →
+ * [vivo]). Con varios términos, un solo término compartido NO basta:
+ * es justo el solape típico de las preguntas sobre documentos («¿qué
+ * dice mi documento sobre…?») y de la charla, que deben seguir su ruta.
+ */
+export function memoryGateHit(userText: string, mem: MemoryQueryData): boolean {
+  const t = (userText ?? "").trim();
+  if (!t || !mem.facts.length) return false;
+  const { score, tokenCount } = scoreMemoryFacts(mem, t);
+  return score >= 2 || (score === 1 && tokenCount === 1);
 }
 
 /**
@@ -225,6 +254,23 @@ const FIRST_PERSON_RE =
   /\bmi\b|\bmis\b|\bme\b|\bmy\b|\bmine\b|\bi\b|\bmeu\b|\bminha\b|\bmeus\b|\bminhas\b|\btengo\b|\bvivo\b|\btrabajo\b|\btenho\b|\bmoro\b|\bchamo\b/i;
 
 /**
+ * 0.1.23: la FORMA de la pregunta genérica (punto 5): interrogativa y
+ * en primera persona. Es el guardia exacto de la rama 5, exportado
+ * para que la sonda de ChatScreen pre-filtre con él sin duplicarlo.
+ * La forma sola NO decide nada: también caza las preguntas sobre
+ * documentos y la charla con primera persona. Lo que separa las
+ * familias es el hit (memoryGateHit): ¿existe el dato guardado?
+ * \bi\b: el «I» inglés («what car do I have?») — sin él la puerta de
+ * primera persona no se abría en inglés (batería trilingüe 0.1.20).
+ */
+export function isGenericMemoryQuestionShape(userText: string): boolean {
+  const t = (userText ?? "").trim();
+  if (!t) return false;
+  const isQuestion = /^\s*¿/.test(t) || /\?\s*$/.test(t);
+  return isQuestion && FIRST_PERSON_RE.test(t);
+}
+
+/**
  * ¿Es esto una consulta SOBRE la memoria del usuario? Espejo de las
  * formas que answerMemoryQuery reclama (puntos 1–4). La usa la puerta
  * de intenciones para dejar pasar la pregunta al loop, que es quien
@@ -235,7 +281,10 @@ const FIRST_PERSON_RE =
  * («¿qué dice mi documento sobre…?», ejemplos de la guía que deben ir
  * al conocimiento) y con charla («¿qué tengo que hacer para…?»). La
  * rama 5 sigue viva dentro del loop para los turnos que entran por
- * otra vía; en la puerta mandan las formas inequívocas.
+ * otra vía; en la puerta mandan las formas inequívocas. Desde la
+ * 0.1.23, esa familia entra por la sonda con hit de ChatScreen
+ * (isGenericMemoryQuestionShape + memoryGateHit), no por el
+ * clasificador, que se queda puro y sin memoria.
  */
 export function isMemoryStyleQuery(userText: string): boolean {
   const t = (userText ?? "").trim();
@@ -312,12 +361,11 @@ export function answerMemoryQuery(
   // 5) Genérica sobre datos propios: «¿qué coche tengo?», «¿dónde vivo?»,
   // «¿cuál es mi color favorito?» — solo si la pregunta es interrogativa
   // y menciona algo en primera persona; si no, no es para esta ruta.
-  const isQuestion = /^\s*¿/.test(t) || /\?\s*$/.test(t);
-  // \bi\b: el «I» inglés («what car do I have?») — sin él la puerta de
-  // primera persona no se abría en inglés (batería trilingüe 0.1.20).
-  const firstPerson = FIRST_PERSON_RE.test(t);
-  if (isQuestion && firstPerson) {
-    const fact = searchFacts(mem, t);
+  // La forma es isGenericMemoryQuestionShape y la cita sale de
+  // scoreMemoryFacts: las mismas piezas que usa la sonda de la puerta
+  // (0.1.23), para que puerta y respuesta nunca discrepen.
+  if (isGenericMemoryQuestionShape(t)) {
+    const { fact } = scoreMemoryFacts(mem, t);
     if (fact) return msg("factQuote", lang, { fact });
     return msg("notKnown", lang);
   }

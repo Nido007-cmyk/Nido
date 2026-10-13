@@ -212,6 +212,27 @@ describe("0.1.22 — la puerta consulta los detectores del loop (evidencia físi
   });
 });
 
+describe("0.1.23 — pin: las preguntas genéricas siguen «conversar» en el clasificador puro", () => {
+  // La 0.1.23 NO abre estas formas en classifyIntent: son ambiguas con
+  // documentos y charla, y quien decide es la sonda con hit de memoria
+  // en ChatScreen (forma + dato guardado), no el clasificador. Este pin
+  // existe para que nadie «arregle» la familia en la capa equivocada:
+  // el clasificador se queda puro, sincrónico y sin memoria.
+  it.each([
+    "¿Cuál es mi color favorito?",
+    "¿Dónde vivo?",
+    "¿Qué coche tengo?",
+    "What's my favorite color?",
+    "Where do I live?",
+    "What car do I have?",
+    "Qual é a minha cor favorita?",
+    "Onde eu moro?",
+    "Que carro eu tenho?",
+  ])("%p → conversar (la sonda decide con la memoria, no la puerta)", (text) => {
+    expect(classifyIntent(text)).toBe("conversar");
+  });
+});
+
 describe("0.1.14 — intenciones en portugués y cuentas", () => {
   it("cuentas válidas siempre a la calculadora", () => {
     expect(classifyIntent("what is (100 + 50) * 2")).toBe("actuar");
