@@ -199,7 +199,21 @@ const RECURRENCE_RE =
  * Detecta "agrégame cita/recordatorio..." y extrae el texto.
  * La fecha se parsea de forma simple; si no hay fecha clara, dueAt=null.
  */
+/**
+ * 0.1.32: «ponme un recordatorio para el lunes» (fecha sin contenido)
+ * devolvía null y caía al modelo. extractReminderAction lo sigue
+ * devolviendo null (sin texto no hay recordatorio), pero deja anotada la
+ * fecha para que reminderMissingText() permita PREGUNTAR qué recordar.
+ */
+let lastMissingText: string | null = null;
+export function reminderMissingText(userText: string): string | null {
+  lastMissingText = null;
+  if (extractReminderAction(userText)) return null;
+  return lastMissingText;
+}
+
 export function extractReminderAction(userText: string): ReminderAction | null {
+  lastMissingText = null;
   const trimmed = userText.trim();
   if (!trimmed) return null;
   const recurrenceRequested = RECURRENCE_RE.test(trimmed);
@@ -231,11 +245,12 @@ export function extractReminderAction(userText: string): ReminderAction | null {
   // «despiértame a las 7», «me acorde às 7», «wake me at 7» creaban
   // nada: caían al modelo. El verbo va en su grupo para saber si es un
   // aviso (su texto puede ser la propia orden cuando no hay tarea).
-  const m = /(agr[ée]game|cr[ée]ame|ponme|crea|recu[ée]rdame|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
+  const m = /(agr[ée]game|cr[ée]ame|ponme|crea|recu[ée]rdame|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|faz|fa[çc]a)\s+um\s+lembrete|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
   if (!m) return null;
   // 0.1.30 (rutas que caían al modelo): «pon una alarma a las 7» y «set a
   // reminder for 5pm» también son avisos: sin tarea, el título es la frase.
-  const isAlertVerb = /av[íi]s|despi|despert|wake|acord|let\s+me\s+know|alarm|^set\s/i.test(m[1]);
+  // «set a reminder» sin contenido NO es un aviso: se pregunta qué recordar (0.1.32).
+  const isAlertVerb = /av[íi]s|despi|despert|wake|acord|let\s+me\s+know|alarm/i.test(m[1]);
 
   let text = m[2].trim();
   if (text.length < 3) return null;
@@ -283,7 +298,8 @@ export function extractReminderAction(userText: string): ReminderAction | null {
   // contenido no hay recordatorio que crear.
   // 0.1.20: también el "de" de «avísame a las 3 de estudiar» (queda
   // «estudiar») y de «un recordatorio de comprar pan».
-  text = text.replace(/^(?:para|de|to)\s+/i, "").trim();
+  // 0.1.32: puede haber varios («para el lunes de pagar…» → «para de pagar…»).
+  text = text.replace(/^(?:(?:para|de|to|for)\s+)+/i, "").trim();
 
   // F6 (auditoría 2026-10-10): "recuérdame mañana" dejaba el texto vacío
   // tras quitar la fecha. Sin texto no hay recordatorio: que decida el modelo.
@@ -295,9 +311,14 @@ export function extractReminderAction(userText: string): ReminderAction | null {
       const title = trimmed.replace(/[.!]+$/, "").trim();
       return recurrenceRequested ? { text: title, dueAt, recurrenceRequested: true } : { text: title, dueAt };
     }
+    // 0.1.32: hay fecha pero no qué recordar → se pregunta (no al modelo).
+    if (dueAt) lastMissingText = dueAt;
     return null;
   }
-  if (/^(?:para|de|a|el|la|the|to|for)$/i.test(text)) return null;
+  if (/^(?:para|de|a|el|la|the|to|for)$/i.test(text)) {
+    if (dueAt) lastMissingText = dueAt;
+    return null;
+  }
   return recurrenceRequested ? { text, dueAt, recurrenceRequested: true } : { text, dueAt };
 }
 

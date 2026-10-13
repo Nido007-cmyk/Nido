@@ -604,7 +604,7 @@ export async function runAgentLoop(
   // como la solución más confiable para modelos sub-1B.
   // ACTION-ROUTER 2026-10-07: calculadora y recordatorios antes que memoria
   // (el modelo 0.5B no siempre genera el tool call para acciones simples).
-  const { extractCalcAction, extractReminderAction, extractTimerAction, extractWeeklyPlanAction, generateWeeklyPlan } = await import("./actionRouter");
+  const { extractCalcAction, extractReminderAction, reminderMissingText, extractTimerAction, extractWeeklyPlanAction, generateWeeklyPlan } = await import("./actionRouter");
   // Permisos del usuario: con la herramienta apagada no hay atajo; el turno
   // sigue al modelo y el despachador la rechaza.
   const fastPathAllowed = (tool: string): boolean =>
@@ -755,6 +755,22 @@ export async function runAgentLoop(
   }
   const reminderAction = fastPathAllowed("create_reminder") ? extractReminderAction(userText) : null;
   const reminderLang: RouterLang = options.lang === "en" || options.lang === "pt" ? options.lang : "es";
+  // 0.1.32: fecha sin contenido («ponme un recordatorio para el lunes»):
+  // se pregunta qué recordar en vez de mandar el turno al modelo.
+  if (!reminderAction && fastPathAllowed("create_reminder")) {
+    const missingDue = reminderMissingText(userText);
+    if (missingDue) {
+      return {
+        // Solo el día (la hora por defecto, 9:00, no la dijo el usuario).
+        response: routerMessage("reminderAskWhat", reminderLang, {
+          when: `${reminderLang === "en" ? " on" : reminderLang === "pt" ? " em" : " el"} ${formatDay(new Date(missingDue), reminderLang)}`,
+        }),
+        intent,
+        toolUses: [],
+        deterministic: true,
+      };
+    }
+  }
   if (reminderAction) {
     const { saveReminder } = await import("../memory/memoryStore");
     // FIX 2026-10-09: envolver saveReminder en try/catch. Un fallo de la base

@@ -20,6 +20,7 @@ import {
   extractCalcAction,
   extractReminderAction,
   extractTimerAction,
+  reminderMissingText,
   extractWeeklyPlanAction,
 } from "./actionRouter";
 import { extractContactAction } from "./contactRouter";
@@ -213,6 +214,8 @@ export function classifyIntent(text: string): AgentIntent {
   if (REMEMBER_PATTERNS.some((re) => re.test(t))) return "recordar";
   // 0.1.22: resto de detectores del pre-router del loop (ver arriba).
   if (extractReminderAction(t)) return "actuar";
+  // 0.1.32: fecha sin contenido → el loop pregunta qué recordar.
+  if (reminderMissingText(t)) return "actuar";
   if (extractWeeklyPlanAction(t)) return "actuar";
   if (extractPeople(t).length > 0) return "recordar";
   if (extractSelfName(t)) return "recordar";

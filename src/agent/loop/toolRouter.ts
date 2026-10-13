@@ -39,6 +39,7 @@ export type ToolAction =
   | { kind: "convert"; value: number; from: string; to: string; lang: RouterLang }
   | { kind: "currencyInfo"; lang: RouterLang }
   | { kind: "memoryForgetHelp"; lang: RouterLang }
+  | { kind: "countdown"; target: string; label: string; lang: RouterLang }
   | { kind: "calendarList"; from: string; to: string; label: CalendarRange; lang: RouterLang }
   | { kind: "calendarCreate"; title: string; start: string | null; lang: RouterLang }
   | { kind: "nidoSend"; to: string; text: string | null; lang: RouterLang }
@@ -125,6 +126,8 @@ export function toolForAction(a: ToolAction): string {
       // Sin herramienta de borrado de memoria para el agente: se explica
       // dónde se borra. Va con el interruptor de la memoria.
       return "remember_fact";
+    case "countdown":
+      return "device_time";
   }
 }
 
@@ -138,6 +141,43 @@ function clean(text: string): string {
 }
 
 const POLITE = "(?:(?:por favor|please|nido),?\\s+)?";
+
+// 0.1.32: «¿cuánto falta para Navidad?» lo respondía el modelo, que no
+// sabe la fecha de hoy y podía inventar los días. Es una resta de fechas.
+const COUNTDOWN_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
+  { re: /^(?:cu[aá]nto(?:\s+tiempo)?\s+(?:falta|queda)n?|cu[aá]ntos\s+d[ií]as\s+(?:faltan|quedan))\s+para\s+(?:el\s+|la\s+|los\s+)?(.+)$/i, lang: "es" },
+  { re: /^(?:how\s+(?:long|many\s+days)(?:\s+(?:is\s+it|are\s+there|left))?\s+(?:until|till|to|before)|days\s+(?:until|till|left\s+until))\s+(.+)$/i, lang: "en" },
+  { re: /^(?:quanto(?:\s+tempo)?\s+falta|quantos\s+dias\s+faltam)\s+(?:para|pro|pra)\s+(?:o\s+|a\s+)?(.+)$/i, lang: "pt" },
+];
+
+const NAMED_DAYS: Array<{ re: RegExp; month: number; day: number; label: Record<RouterLang, string> }> = [
+  { re: /^(?:navidad|christmas(?:\s+day)?|natal)$/i, month: 11, day: 25, label: { es: "Navidad", en: "Christmas", pt: "o Natal" } },
+  { re: /^(?:nochebuena|christmas\s+eve|v[eé]spera\s+de\s+natal)$/i, month: 11, day: 24, label: { es: "Nochebuena", en: "Christmas Eve", pt: "a véspera de Natal" } },
+  { re: /^(?:a[ñn]o\s+nuevo|new\s+year'?s?(?:\s+day)?|ano\s+novo)$/i, month: 0, day: 1, label: { es: "Año Nuevo", en: "New Year's Day", pt: "o Ano Novo" } },
+  { re: /^(?:nochevieja|new\s+year'?s\s+eve|r[eé]veillon)$/i, month: 11, day: 31, label: { es: "Nochevieja", en: "New Year's Eve", pt: "o Réveillon" } },
+  { re: /^halloween$/i, month: 9, day: 31, label: { es: "Halloween", en: "Halloween", pt: "o Halloween" } },
+];
+
+/** Fecha (00:00 local) de lo nombrado, o null si no se entiende. */
+export function countdownTarget(raw: string, now: Date, lang: RouterLang): { target: Date; label: string } | null {
+  const t = raw.trim().replace(/[?.!]+$/, "");
+  for (const n of NAMED_DAYS) {
+    if (!n.re.test(t)) continue;
+    const d = new Date(now.getFullYear(), n.month, n.day);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (d.getTime() < today.getTime()) d.setFullYear(d.getFullYear() + 1);
+    return { target: d, label: n.label[lang] };
+  }
+  // Desde el inicio del día: «el 13 de octubre» dicho el 13 a las 10 es HOY
+  // (con la hora real, la hora por defecto de las 9 ya habría pasado y la
+  // fecha saltaba a mañana).
+  const iso = parseReminderDateTime(t, new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+  if (!iso) return null;
+  const at = new Date(iso);
+  // Una fecha («el 25 de diciembre», «el viernes») no lleva etiqueta: la
+  // respuesta ya nombra el día.
+  return { target: new Date(at.getFullYear(), at.getMonth(), at.getDate()), label: "" };
+}
 
 const TIMER_CANCEL_RULES: Array<{ re: RegExp; q: string; lang: RouterLang }> = [
   { re: /^(?:cancela|cancelar|quita|quitar|borra|borrar|para|det[eé]n|apaga)\s+(?:el\s+|mi\s+)?temporizador$/i, q: "temporizador", lang: "es" },
@@ -503,6 +543,12 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   // conocimiento y el modelo podía decir que lo había cancelado sin hacer
   // nada. Un temporizador es un recordatorio llamado «Temporizador»/«Timer»:
   // se cancela por la ruta de borrado (con su confirmación y su «¿cuál?»).
+  for (const { re, lang } of COUNTDOWN_RULES) {
+    const m = re.exec(t);
+    if (!m) continue;
+    const c = countdownTarget(m[1], now, lang);
+    if (c) return { kind: "countdown", target: c.target.toISOString(), label: c.label, lang };
+  }
   for (const { re, q, lang } of TIMER_CANCEL_RULES) if (re.test(t)) return { kind: "reminderDelete", target: { type: "one", query: q }, lang };
   // «olvida mi color favorito»: el agente no borra memoria por sí solo. Antes
   // caía al modelo, que podía responder «listo, lo olvidé» sin borrar nada.
@@ -711,6 +757,7 @@ type Key =
   | "reminderSet"
   | "reminderOneTimeOnly"
   | "reminderSavedAskWhen"
+  | "reminderAskWhat"
   | "reminderWillNotify"
   | "reminderSaveFailed"
   | "personSaved"
@@ -729,6 +776,11 @@ type Key =
   | "noteSearchNone"
   | "currencyOffline"
   | "memoryForgetHelp"
+  | "countdownToday"
+  | "countdownOne"
+  | "countdownMany"
+  | "countdownDateOne"
+  | "countdownDateMany"
   | "timerSet"
   | "timerLabel"
   | "factSaved"
@@ -807,6 +859,19 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     en: "I didn't find anything in your notes about “{{q}}”.",
     pt: "Não encontrei nada nas suas notas sobre “{{q}}”.",
   },
+  countdownToday: { es: "¡Es hoy! ({{label}})", en: "It's today! ({{label}})", pt: "É hoje! ({{label}})" },
+  countdownOne: {
+    es: "Falta 1 día para {{label}} ({{day}}).",
+    en: "1 day until {{label}} ({{day}}).",
+    pt: "Falta 1 dia para {{label}} ({{day}}).",
+  },
+  countdownMany: {
+    es: "Faltan {{n}} días para {{label}} ({{day}}).",
+    en: "{{n}} days until {{label}} ({{day}}).",
+    pt: "Faltam {{n}} dias para {{label}} ({{day}}).",
+  },
+  countdownDateOne: { es: "Falta 1 día para el {{day}}.", en: "1 day until {{day}}.", pt: "Falta 1 dia para {{day}}." },
+  countdownDateMany: { es: "Faltan {{n}} días para el {{day}}.", en: "{{n}} days until {{day}}.", pt: "Faltam {{n}} dias para {{day}}." },
   memoryForgetHelp: {
     es: "No borro recuerdos por mi cuenta. Para olvidar algo, abre el menú → «Mi memoria» y bórralo ahí: verás exactamente qué se elimina.",
     en: "I don't delete memories on my own. To forget something, open the menu → “My Memory” and delete it there: you'll see exactly what gets removed.",
@@ -886,6 +951,11 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: " Ojo: lo guardé como un recordatorio de una sola vez; los recordatorios que se repiten todavía no están soportados.",
     en: " Note: I saved it as a one-time reminder; repeating reminders are not supported yet.",
     pt: " Atenção: salvei como um lembrete único; lembretes repetidos ainda não são suportados.",
+  },
+  reminderAskWhat: {
+    es: "¿Qué quieres que te recuerde{{when}}? Dímelo en una frase, por ejemplo: «recuérdame el lunes pagar la luz».",
+    en: "What should I remind you of{{when}}? Say it in one go, for example: “remind me on Monday to pay the bill”.",
+    pt: "O que você quer que eu te lembre{{when}}? Diga numa frase só, por exemplo: “me lembra na segunda de pagar a luz”.",
   },
   reminderSavedAskWhen: {
     es: "Listo, guardé: «{{text}}». ¿Para cuándo quieres que te avise?",
@@ -1233,6 +1303,21 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
 
   try {
     switch (action.kind) {
+      case "countdown": {
+        const target = new Date(action.target);
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const days = Math.round((target.getTime() - today.getTime()) / 86_400_000);
+        uses.push({ name: "device_time", result: now.toISOString() });
+        const day = formatDay(target, lang);
+        if (days === 0) return say(routerMessage("countdownToday", lang, { label: action.label || day }));
+        if (!action.label) {
+          return say(routerMessage(days === 1 ? "countdownDateOne" : "countdownDateMany", lang, { n: String(days), day }));
+        }
+        return say(
+          routerMessage(days === 1 ? "countdownOne" : "countdownMany", lang, { n: String(days), label: action.label, day }),
+        );
+      }
+
       case "time": {
         // Hora del sistema leída aquí (determinista); se registra como device_time.
         uses.push({ name: "device_time", result: now.toISOString() });
