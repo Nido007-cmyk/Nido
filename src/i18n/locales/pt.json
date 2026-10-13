@@ -574,6 +574,19 @@
     }
   },
   "executionTelemetry": {
+    "router": {
+      "title": "Decisão de rota (sem modelo)",
+      "hint": "Quanto o NIDO demora para decidir o que fazer com cada mensagem, antes de chamar o modelo. Só tempos e contagens: nunca o texto.",
+      "messages": "Mensagens",
+      "p50": "Mediana",
+      "p95": "p95",
+      "max": "Máximo",
+      "router": "Resolvidas sem o modelo",
+      "model": "Com o modelo",
+      "notUnderstood": "“Não entendi”",
+      "chat": "Conversa",
+      "empty": "Ainda não há mensagens medidas."
+    },
     "title": "Telemetria de execução",
     "subtitle": "{{count}} execuções recentes",
     "exportJson": "⬇ JSON",

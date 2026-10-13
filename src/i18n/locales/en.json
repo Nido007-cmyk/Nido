@@ -574,6 +574,19 @@
     }
   },
   "executionTelemetry": {
+    "router": {
+      "title": "Route decision (no model)",
+      "hint": "How long NIDO takes to decide what to do with each message, before calling the model. Only times and counts: never the text.",
+      "messages": "Messages",
+      "p50": "Median",
+      "p95": "p95",
+      "max": "Max",
+      "router": "Solved without the model",
+      "model": "With the model",
+      "notUnderstood": "“Didn't understand”",
+      "chat": "Conversation",
+      "empty": "No measured messages yet."
+    },
     "title": "Execution telemetry",
     "subtitle": "{{count}} recent runs",
     "exportJson": "⬇ JSON",

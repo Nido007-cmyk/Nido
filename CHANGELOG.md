@@ -4,6 +4,27 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.33-alpha — 2026-10-13
+
+Measuring the router (the code that decides what to do with each message
+before the model).
+
+### Added
+- Menu → Telemetry now shows "Route decision (no model)": how long NIDO
+  takes to decide on each message (median, p95, max) and where messages
+  end up — solved without the model, with the model, "didn't understand",
+  or normal conversation. Only times and counts are stored on the phone,
+  never the text. "Clear" also clears these.
+
+### Fixed
+- Pasting a very long run of digits ("what is 1111…+") made the calculator
+  check take quadratic time (about 110 ms with 4,000 characters on a PC,
+  likely seconds on a phone), paid several times per message, freezing
+  the screen. Anything over 120 characters is no longer treated as a sum.
+- A new CI check sends hostile 4,000-character messages (the chat maximum)
+  through every router step with a time budget, so a slow pattern can't
+  slip in again.
+
 ## 0.1.32-alpha — 2026-10-13
 
 Pending items from the backlog, one by one, each with its own tests.
