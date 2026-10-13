@@ -168,3 +168,45 @@ describe("recordatorios que se repiten", () => {
     expect(res.response).not.toContain("dentista");
   });
 });
+
+describe("mensajes NIDO: mismas formas en es/en/pt", () => {
+  it.each([
+    ["escríbele a Ana que llego tarde", "es", "Ana", "llego tarde"],
+    ["dile a Ana que llego tarde", "es", "Ana", "llego tarde"],
+    ["write to Ana that I'm late", "en", "Ana", "I'm late"],
+    ["send Ana a nido message saying hi", "en", "Ana", "hi"],
+    ["send via nido to Ana: hi", "en", "Ana", "hi"],
+    ["escreve para a Ana que chego tarde", "pt", "Ana", "chego tarde"],
+    ["diz para a Ana que chego tarde", "pt", "Ana", "chego tarde"],
+    ["fala pra Ana que chego tarde", "pt", "Ana", "chego tarde"],
+    ["manda pelo nido para a Ana que oi", "pt", "Ana", "oi"],
+  ])("%s", (s, lang, to, text) => {
+    expect(extractToolAction(s, NOW)).toEqual({ kind: "nidoSend", to, text, lang });
+  });
+
+  it.each(["tell me that you can do it", "diz pra mim que horas são", "write to me that it's done"])(
+    "«%s» habla conmigo, no es un envío",
+    (s) => {
+      const a = extractToolAction(s, NOW);
+      expect(a?.kind).not.toBe("nidoSend");
+    },
+  );
+
+  it("la cola de salida se explica igual en los tres idiomas (sin «Bluetooth» solo en español)", async () => {
+    const deps = {
+      isDisabled: () => false,
+      now: () => NOW,
+      dispatch: async () => ({
+        status: "executed" as const,
+        text: "Mensaje para «Ana» guardado cifrado en la cola de salida: se entregará cuando su NIDO esté al alcance.",
+      }),
+    };
+    const es = await runToolAction({ kind: "nidoSend", to: "Ana", text: "hola", lang: "es" }, deps as never);
+    const en = await runToolAction({ kind: "nidoSend", to: "Ana", text: "hi", lang: "en" }, deps as never);
+    const pt = await runToolAction({ kind: "nidoSend", to: "Ana", text: "oi", lang: "pt" }, deps as never);
+    expect(es.response).not.toContain("Bluetooth");
+    expect(en.response).toContain("outbox");
+    expect(pt.response).toContain("fila");
+    expect(pt.response).not.toContain("dele");
+  });
+});

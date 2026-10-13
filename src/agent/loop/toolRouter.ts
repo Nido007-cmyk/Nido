@@ -354,6 +354,10 @@ const NIDO_SEND_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: new RegExp(`^${POLITE}send\\s+(?:a\\s+)?nido\\s+message\\s+to\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },
   { re: new RegExp(`^${POLITE}(?:send|message)\\s+(.+?)\\s+(?:on|via|through|by)\\s+nido(?:${SEP}(.+))?$`, "is"), lang: "en" },
   { re: new RegExp(`^${POLITE}(?:manda|mande|envia|envie)\\s+(?:uma\\s+)?mensagem\\s+(?:pelo|no|via)\\s+nido\\s+(?:para|pra|pro)\\s+(?:o\\s+|a\\s+)?(.+?)(?:${SEP}(.+))?$`, "is"), lang: "pt" },
+  // 0.1.32 (paridad es/en/pt): las formas con marca que solo tenía un idioma.
+  { re: new RegExp(`^${POLITE}(?:manda|mande|envia|envie|escreve|escreva)\\s+(?:pelo|via)\\s+nido\\s+(?:para|pra|pro)\\s+(?:o\\s+|a\\s+)?(.+?)(?:${SEP}(.+))?$`, "is"), lang: "pt" },
+  { re: new RegExp(`^${POLITE}(?:send|write)\\s+(?:on|via|through|by)\\s+nido\\s+to\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },
+  { re: new RegExp(`^${POLITE}send\\s+(.+?)\\s+(?:a\\s+)?nido\\s+message(?:${SEP}(.+))?$`, "is"), lang: "en" },
   // 0.1.20 (P3-12): sin la marca «por NIDO». NIDO es el ÚNICO canal de
   // mensajería del agente (llamar y buscar contactos ya resuelven por
   // nombre sin pedir el canal), así que «manda un mensaje a Juan» es
@@ -363,6 +367,11 @@ const NIDO_SEND_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?|escr[ií]bele)\\s+(?:un\\s+)?mensaje\\s+(?:a|para)\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "es" },
   { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?)\\s+(?:a|para)\\s+(.+?)\\s+(?:un\\s+)?mensaje(?:${SEP}(.+))?$`, "is"), lang: "es" },
   { re: new RegExp(`^${POLITE}d[ií]le\\s+a\\s+(.+?)(?:${SEP}|\\s+)(.+)$`, "is"), lang: "es" },
+  // 0.1.32 (paridad): «escríbele a Ana que…», «write to Ana that…»,
+  // «diz/fala/escreve para a Ana que…» — antes solo «dile a» tenía forma corta.
+  { re: new RegExp(`^${POLITE}escr[ií]bele\\s+a\\s+(.+?)(?:${SEP})(.+)$`, "is"), lang: "es" },
+  { re: new RegExp(`^${POLITE}write\\s+to\\s+(.+?)(?:${SEP})(.+)$`, "is"), lang: "en" },
+  { re: new RegExp(`^${POLITE}(?:diz|diga|fala|fale|escreve|escreva)\\s+(?:para|pra|pro|à|ao)\\s+(?:o\\s+|a\\s+)?(.+?)(?:${SEP})(.+)$`, "is"), lang: "pt" },
   { re: new RegExp(`^${POLITE}send\\s+(?:a\\s+)?message\\s+to\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },
   { re: new RegExp(`^${POLITE}send\\s+(.+?)\\s+(?:a\\s+)?message(?:${SEP}(.+))?$`, "is"), lang: "en" },
   { re: new RegExp(`^${POLITE}message\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },
@@ -693,6 +702,9 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
       .replace(/^(?:a|para|to)\s+/i, "")
       .replace(/\s+(?:por|con|en|v[ií]a|on|via|through|by|pelo|no)\s+(?:nido|la app)$/i, "");
     if (!to || to.split(/\s+/).length > 5) return null;
+    // 0.1.32: «tell me that…», «diz pra mim que…», «dime que…» hablan
+    // CONMIGO: no son un mensaje a un contacto llamado «me».
+    if (/^(?:me|m[ií]|mim|myself|us|n[oó]s|nosotros)$/i.test(to)) return null;
     return { kind: "nidoSend", to, text: m[2]?.trim() || null, lang };
   }
   for (const { re, lang } of NIDO_INBOX_RULES) if (re.test(t)) return { kind: "nidoInbox", lang };
@@ -1241,8 +1253,8 @@ export function localizeHandlerText(text: string, lang: RouterLang): string {
     )
     .replace(/Huella para verificar en persona:/g, L("Fingerprint to check in person:", "Impressão digital para conferir pessoalmente:"))
     .replace(
-      /^Mensaje para «(.+?)» guardado cifrado en la cola de salida: se entregará cuando su NIDO esté al alcance \(Bluetooth\)\.$/m,
-      (_m, to) => L(`Message for “${to}” saved encrypted in the outbox: it will be delivered when their NIDO is in range.`, `Mensagem para “${to}” salva criptografada na fila: será entregue quando o NIDO dele estiver ao alcance.`),
+      /^Mensaje para «(.+?)» guardado cifrado en la cola de salida: se entregará cuando su NIDO esté al alcance(?: \(Bluetooth\))?\.$/m,
+      (_m, to) => L(`Message for “${to}” saved encrypted in the outbox: it will be delivered when their NIDO is in range.`, `Mensagem para “${to}” salva criptografada na fila: será entregue quando o NIDO dessa pessoa estiver ao alcance.`),
     )
     .replace(
       /^Mensaje enviado a «(.+?)» por NIDO \(cifrado de extremo a extremo\)\.$/m,
