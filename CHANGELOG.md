@@ -4,6 +4,21 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.23-alpha — 2026-10-12
+
+### Fixed
+- Asking back about your own life now works in your own words, not
+  just in a few fixed phrasings. Since 0.1.22, telling NIDO things
+  saves them ("My favorite color is green" is stored), but generic
+  questions like "What's my favorite color?", "Where do I live?" or
+  "What car do I have?" still fell through to the offline knowledge
+  base, which knows nothing about you. For first-person questions
+  the chat now checks your saved memory first: when a saved fact
+  clearly matches, the answer quotes it ("From what you told me:
+  …") in Spanish, English and Portuguese. When nothing matches,
+  the question follows the exact same path as before, so questions
+  about your documents and ordinary small talk are untouched.
+
 ## 0.1.22-alpha — 2026-10-12
 
 ### Fixed
