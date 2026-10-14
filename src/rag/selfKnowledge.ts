@@ -322,6 +322,14 @@ const PRIVACY_PATTERNS: RegExp[] = [
   // and missed common variations, letting privacy questions fall through
   // to the general model which hallucinated false answers.
   /\bdonde\s+se\s+guardan\s+mis\s+datos\b/,
+  // 0.1.34: ejemplo «Privacidad total» del propio carrusel de la app, que
+  // caía al modelo en los tres idiomas.
+  /\bque\s+significa\s+que\s+(?:seas|eres)\s+(?:(?:100\s*%?|cien\s+por\s+ciento)\s+)?offline\b/,
+  /\b(?:mis\s+)?(?:conversaciones|chats|datos|mensajes)\s+salen\s+de\s+(?:este|mi)\s+(?:dispositivo|telefono|celular|movil|tablet)(?:\s+en\s+algun\s+momento)?\b/,
+  /\bwhat\s+does\s+it\s+mean\s+that\s+you(?:re|\s+are)\s+(?:100\s*%?\s+)?offline\b/,
+  /\b(?:does|do)\s+my\s+(?:conversation|conversations|chats|data|messages)\s+(?:ever\s+)?leave\s+(?:this|my)\s+(?:device|phone|tablet)(?:\s+at\s+any\s+point)?\b/,
+  /\bo\s+que\s+significa\s+(?:voce\s+)?ser\s+(?:100\s*%?\s+)?offline\b/,
+  /\b(?:minha\s+conversa|minhas\s+conversas|meus\s+dados)\s+sa(?:i|em)\s+(?:deste|do)\s+(?:dispositivo|celular|telefone|tablet)(?:\s+em\s+algum\s+momento)?\b/,
   // 0.1.34: la pregunta doble («…y quién puede verlos») dejaba resto sin
   // atribuir y no casaba. Mismo caso en en/pt.
   /\bdonde\s+(?:se\s+guardan|estan|guardas)\s+mis\s+datos\s+y\s+quien\s+(?:puede|pueden)\s+verlos\b/,

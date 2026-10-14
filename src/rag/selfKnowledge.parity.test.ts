@@ -18,6 +18,10 @@ describe("autoconocimiento: misma pregunta en es/en/pt", () => {
     ["Explícame cómo funcionas sin internet.", "capabilities"],
     ["¿Cómo funcionas?", "capabilities"],
     ["¿Dónde se guardan mis datos y quién puede verlos?", "advantages"],
+    // Ejemplos «Privacidad total» del carrusel de la app.
+    ["¿Qué significa que seas 100% offline? ¿Mis conversaciones salen de este dispositivo en algún momento?", "advantages"],
+    ["What does it mean that you're 100% offline? Does my conversation ever leave this device?", "advantages"],
+    ["O que significa ser 100% offline? Minha conversa sai deste dispositivo em algum momento?", "advantages"],
   ])("%s", (q, cat) => {
     expect(classifyKnowledgeQuery(q)).toBe(cat);
   });
