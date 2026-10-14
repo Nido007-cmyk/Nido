@@ -34,4 +34,8 @@ module.exports = {
     "^expo-modules-core(/.*)?$": "<rootDir>/jest-mocks/expo-modules-core.js",
   },
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
+  // 0.1.38: la primera prueba de un archivo carga y transforma en frío toda
+  // la pantalla (AboutScreen arrastra medio árbol de la app); en el runner
+  // de CI eso pasó de los 5 s por defecto sin que nada fallara de verdad.
+  testTimeout: 30000,
 };
