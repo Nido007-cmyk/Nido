@@ -42,7 +42,9 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
 - **Actúa cuando se lo pides**: recordatorios (una vez, o cada día, semana,
   mes o año), cuentas atrás, notas, eventos de calendario, conversión de
   unidades, cálculos, abrir enlaces. Todo lo que tiene efecto fuera de la
-  app pide antes tu confirmación.
+  app pide antes tu confirmación. El texto que pegas o compartes desde otra
+  app nunca se toma como una orden, y si un mensaje trae más de una petición,
+  NIDO muestra la orden como un botón y espera a que lo toques.
 - **Responde con tus documentos**: importa archivos `.txt`, `.md`, `.csv`,
   `.json` o `.pdf` y NIDO los indexa en el teléfono.
 - **Sabe cosas sin internet**: una base de conocimiento integrada y un

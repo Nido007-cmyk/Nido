@@ -479,6 +479,12 @@
         "hint": "Encrypted, over Bluetooth, no internet",
         "prompt": "send a message to "
       }
+    },
+    "staged": {
+      "hint": "Tap to do it. Nothing runs until you tap.",
+      "hintDraft": "Tap to do it. The rest stays in the box so you can send it separately.",
+      "runA11y": "Do it: {{action}}",
+      "dismiss": "Dismiss"
     }
   },
   "aboutScreen": {

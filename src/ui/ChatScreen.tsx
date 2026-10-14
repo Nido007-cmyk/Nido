@@ -60,6 +60,8 @@ import { showSecureAlert } from "nido-secure-dialog";
 import { classifyIntent } from "../agent/loop/intent";
 import { isGenericMemoryQuestionShape, memoryGateHit } from "../agent/loop/memoryQuery";
 import { beginUserTurn, choiceTurnKind, resetConversationState, type ChoiceStore } from "../agent/loop/toolRouter";
+import { applyEdit, type InputSource, type Segment } from "../agent/input/provenance";
+import { planSend } from "../agent/input/sendPlan";
 import { runAgentLoop, assertPromptBudget, estimatePromptTokens } from "../agent/loop/agentLoop";
 import { buildToolHandlers, searchPhoneContacts } from "../agent/tools/handlers";
 import { matchSmallTalk, smallTalkSessionTitle } from "../agent/loop/smallTalk";
@@ -260,6 +262,26 @@ export function ChatScreen({
   const choiceStoreRef = useRef<ChoiceStore>({ current: null });
   // 0.1.37: idioma del turno anterior (al cambiar, se olvida todo seguimiento).
   const lastTurnLangRef = useRef<string | null>(null);
+  // 0.1.38: de dónde vino cada tramo de la caja (escrito, dictado, pegado,
+  // compartido, ejemplo) y la orden preparada como chip. El chip va ligado
+  // al texto, al idioma y al modo: si cambia cualquiera, cae en silencio y
+  // el siguiente envío vuelve a analizar el texto actual.
+  const segmentsRef = useRef<Segment[]>([]);
+  const inputValueRef = useRef("");
+  const [staged, setStaged] = useState<null | {
+    text: string;
+    lang: string;
+    deep: boolean;
+    label: string;
+    runText: string;
+    draft: string;
+  }>(null);
+  const updateInput = useCallback((next: string, source?: InputSource) => {
+    segmentsRef.current = applyEdit(segmentsRef.current, inputValueRef.current, next, source);
+    inputValueRef.current = next;
+    setInput(next);
+    setStaged((cur) => (cur && cur.text !== next ? null : cur));
+  }, []);
   const sessionSummaryRef = useRef<string | null>(null);
   const messagesRef = useRef<Message[]>([]);
   const backgroundTaskRef = useRef<Promise<void> | null>(null);
@@ -401,7 +423,7 @@ export function ChatScreen({
   // Long-press a sent message to put it back in the input and send it again.
   const reuseMessage = useCallback(
     (text: string) => {
-      setInput(text);
+      updateInput(text, "typed");
       inputRef.current?.focus();
       impact(ImpactFeedbackStyle.Medium);
       setToast(t("chatScreen.messageReused"));
@@ -414,7 +436,7 @@ export function ChatScreen({
     setShowGuide(false);
     setShowOnboarding(false);
     setGuideOnboardingDone(true).catch(() => {});
-    setInput(text);
+    updateInput(text, "example");
     requestAnimationFrame(() => inputRef.current?.focus());
   }, []);
 
@@ -628,6 +650,7 @@ export function ChatScreen({
     // convertir el primer mensaje del nuevo en un recordatorio o un borrado.
     choiceStoreRef.current.current = null;
     resetConversationState();
+    setStaged(null);
     impact(ImpactFeedbackStyle.Medium);
   }, [stopAndAwaitGeneration, cancelBackgroundTask]);
 
@@ -643,7 +666,8 @@ export function ChatScreen({
       return;
     }
     await resetToNewChat();
-    if (action.action === "share") setInput(action.text);
+    // 0.1.38: lo compartido queda cercado: si se envía, el router no lo mira.
+    if (action.action === "share") updateInput(action.text, "shared");
   }, [resetToNewChat]);
 
   useEffect(() => {
@@ -671,6 +695,7 @@ export function ChatScreen({
     setActiveSessionId(id);
     choiceStoreRef.current.current = null;
     resetConversationState();
+    setStaged(null);
     const session = sessions.find((s) => s.id === id);
     sessionSummaryRef.current = session?.summary ?? null;
   }, [stopAndAwaitGeneration, cancelBackgroundTask, sessions]);
@@ -684,8 +709,8 @@ export function ChatScreen({
     [activeSessionId, refreshSessions, resetToNewChat]
   );
 
-  const send = useCallback(async () => {
-    const query = input.trim();
+  const send = useCallback(async (override?: { text: string; draft: string }) => {
+    const query = (override?.text ?? input).trim();
     // FIX 2026-10-09: no enviar antes de que los motores estén listos.
     // El carrusel de sugerencias llena el input programáticamente (evade
     // `editable={ready}`) y el teclado puede disparar onSubmitEditing
@@ -701,13 +726,37 @@ export function ChatScreen({
     // passes through it, so the button can never be left permanently blocked.
     if (!sendGuardRef.current.tryAcquire()) return;
     try {
+    // 0.1.38 (enrutado por tramo): lo pegado o compartido no llega al
+    // router; si sobra texto alrededor de una orden, la orden se prepara
+    // como chip y solo el toque la ejecuta. El toque llega aquí como
+    // `override` (el plan ya se hizo).
+    let inertRouting = false;
+    if (!override) {
+      const plan = planSend(query, segmentsRef.current);
+      if (plan.kind === "stage") {
+        setStaged({
+          text: inputValueRef.current,
+          lang: i18n.resolvedLanguage ?? i18n.language,
+          deep: deepResearchModeRef.current,
+          label: plan.label,
+          runText: plan.runText,
+          draft: plan.draft,
+        });
+        return;
+      }
+      inertRouting = plan.kind === "inert";
+    }
     // 0.1.37: los seguimientos («¿qué te recuerdo?», «Haz uno») valen solo
     // para el turno siguiente.
     beginUserTurn();
 
     await cancelBackgroundTask();
 
-    setInput("");
+    // Tras el toque de un chip, lo demás vuelve a la caja como borrador.
+    segmentsRef.current = [];
+    inputValueRef.current = "";
+    updateInput(override?.draft ?? "", "typed");
+    setStaged(null);
     setGenerating(true);
     stopRequestedRef.current = false;
 
@@ -840,7 +889,9 @@ export function ChatScreen({
     // Si el modelo no usa herramientas, responde directo igual que el chat.
     // 0.1.33: coste real del pre-router en el dispositivo (Diagnóstico).
     const classifyT0 = performance.now();
-    let agentIntent = classifyIntent(query);
+    // 0.1.38: texto citado (pegado/compartido) sin orden propia: el router
+    // no lo mira; es conversación.
+    let agentIntent: ReturnType<typeof classifyIntent> = inertRouting ? "conversar" : classifyIntent(query);
     const classifyMs = performance.now() - classifyT0;
     // 0.1.23: sonda con hit de memoria para las preguntas genéricas en
     // primera persona («¿cuál es mi color favorito?», «¿dónde vivo?»,
@@ -856,6 +907,7 @@ export function ChatScreen({
     let probedMemory: Awaited<ReturnType<typeof loadMemorySnapshot>> | null = null;
     if (
       agentIntent === "conversar" &&
+      !inertRouting &&
       !deepResearchModeRef.current &&
       isGenericMemoryQuestionShape(query)
     ) {
@@ -873,7 +925,7 @@ export function ChatScreen({
     // consumirla o repetir la pregunta; si es un mensaje nuevo y
     // largo, la elección caduca en silencio y el turno sigue normal.
     const pendingChoice = choiceStoreRef.current.current;
-    if (pendingChoice && agentIntent === "conversar") {
+    if (pendingChoice && agentIntent === "conversar" && !inertRouting) {
       if (choiceTurnKind(query, pendingChoice) !== "none") {
         agentIntent = "actuar";
       } else {
@@ -1489,7 +1541,7 @@ export function ChatScreen({
       // here, so error/retry keeps working and the send button is never wedged.
       sendGuardRef.current.release();
     }
-  }, [input, generating, ready, activeSessionId, cancelBackgroundTask, refreshSessions]);
+  }, [input, generating, ready, activeSessionId, cancelBackgroundTask, refreshSessions, updateInput]);
 
   // send() itself isn't awaited by its callers (onPress/onSubmitEditing) —
   // stopAndAwaitGeneration needs a handle on the in-flight promise so a
@@ -1503,12 +1555,37 @@ export function ChatScreen({
     });
   }, [send, scrollToBottom]);
 
+  // 0.1.38: el toque en el chip es el commit. Si el texto, el idioma o el
+  // modo cambiaron desde que se preparó, el chip ya no vale (cae en silencio).
+  const runStaged = useCallback(() => {
+    const cur = staged;
+    if (!cur) return;
+    if (
+      cur.text !== inputValueRef.current ||
+      cur.lang !== (i18n.resolvedLanguage ?? i18n.language) ||
+      cur.deep !== deepResearchModeRef.current
+    ) {
+      setStaged(null);
+      return;
+    }
+    followBottom.current = true;
+    scrollToBottom(true);
+    sendTaskRef.current = send({ text: cur.runText, draft: cur.draft }).finally(() => {
+      sendTaskRef.current = null;
+    });
+  }, [staged, send, scrollToBottom, i18n]);
+
+  // Cambio de idioma o de modo (Investigación): el chip preparado cae.
+  useEffect(() => {
+    setStaged(null);
+  }, [i18n.language, deepResearchEnabled]);
+
   // FASE D6: Retry explícito para mensajes de error. Busca el último mensaje
   // del usuario y lo reenvía sin que el usuario tenga que reescribirlo.
   const retryLastMessage = useCallback(() => {
     const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
     if (lastUserMsg && !generating) {
-      setInput(lastUserMsg.text);
+      updateInput(lastUserMsg.text, "typed");
       // Pequeño delay para que setInput se aplique antes de send()
       setTimeout(() => {
         followBottom.current = true;
@@ -1945,7 +2022,7 @@ export function ChatScreen({
                   <Pressable
                     key={key}
                     onPress={() => {
-                      setInput(t(`chatScreen.suggestions.${key}.prompt`));
+                      updateInput(t(`chatScreen.suggestions.${key}.prompt`), "example");
                       requestAnimationFrame(() => inputRef.current?.focus());
                     }}
                     style={[styles.suggestion, { backgroundColor: colors.bg.card, borderColor: colors.border.default }]}
@@ -1973,18 +2050,52 @@ export function ChatScreen({
 
         {/* Input Bar */}
         <View style={[styles.inputContainer, { backgroundColor: colors.bg.black, borderTopColor: "transparent" }]}>
+          {staged && (
+            <View style={styles.stagedWrap}>
+              <View style={styles.stagedRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t("chatScreen.staged.runA11y", { action: staged.label })}
+                  onPress={runStaged}
+                  disabled={!ready || generating}
+                  style={[styles.stagedChip, { backgroundColor: colors.bg.input, borderColor: colors.border.default }]}
+                >
+                  <NidoIcon name="play" size={14} color={colors.text.primary} />
+                  <Text numberOfLines={2} style={[styles.stagedText, { color: colors.text.primary }]}>
+                    {staged.label}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t("chatScreen.staged.dismiss")}
+                  onPress={() => setStaged(null)}
+                  hitSlop={10}
+                  style={styles.stagedDismiss}
+                >
+                  <NidoIcon name="close" size={16} color={colors.text.dim} />
+                </Pressable>
+              </View>
+              <Text style={[styles.stagedHint, { color: colors.text.dim }]}>
+                {t(staged.draft ? "chatScreen.staged.hintDraft" : "chatScreen.staged.hint")}
+              </Text>
+            </View>
+          )}
           <View style={[styles.inputRow, { backgroundColor: colors.bg.input, borderColor: colors.border.default }]}>
             {voiceInputEnabled && (
               <VoiceInputButton
                 disabled={!ready || generating}
-                onTranscript={(text) => setInput((prev) => (prev ? `${prev} ${text}` : text))}
+                onTranscript={(text) => {
+                  // 0.1.38: el micrófono del chat es entrada de órdenes (dictado).
+                  const prev = inputValueRef.current;
+                  updateInput(prev ? `${prev} ${text}` : text, "dictated");
+                }}
               />
             )}
             <TextInput
               ref={inputRef}
               style={[styles.input, { color: colors.text.primary }]}
               value={input}
-              onChangeText={setInput}
+              onChangeText={(next) => updateInput(next)}
               placeholder={t("chatScreen.inputPlaceholder")}
               placeholderTextColor={colors.text.dim}
               editable={ready && !generating}
@@ -2042,7 +2153,7 @@ export function ChatScreen({
           <PromptIdeasCarousel
             onDismiss={() => setShowPromptIdeas(false)}
             onUsePrompt={(prompt) => {
-              setInput(prompt);
+              updateInput(prompt, "example");
               setShowPromptIdeas(false);
               requestAnimationFrame(() => inputRef.current?.focus());
             }}
@@ -2314,6 +2425,21 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     paddingHorizontal: spacing.md,
     paddingVertical: 8,
   },
+  stagedWrap: { marginBottom: 6, gap: 4 },
+  stagedRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  stagedChip: {
+    flexShrink: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  stagedText: { flexShrink: 1, fontSize: 14, fontWeight: "600" },
+  stagedDismiss: { padding: 4 },
+  stagedHint: { fontSize: 12, paddingHorizontal: 4 },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
