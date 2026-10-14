@@ -1,0 +1,7 @@
++ /home/runner/work/Nido/Nido/build/e5/venv/bin/python scripts/multilingual/e5_pipeline.py calibrate --bge http://127.0.0.1:8081 --e5 http://127.0.0.1:8082 --queries scripts/multilingual/calibration-queries.json --corpus assets/corpus/corpus.json assets/corpus/corpus-standard.json --cache-dir /home/runner/work/Nido/Nido/build/e5/cache --e5-sha 802c868f57ccddd2e0c80645c3db1cb96a1aa50986a057cbaee2526f6e474cde --e5-repo intfloat/multilingual-e5-small --e5-revision 614241f622f53c4eeff9890bdc4f31cfecc418b3 --bge-sha ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514 --llama-commit 171e8846b4af9766c354064cb776cb34a50f053f --out /home/runner/work/Nido/Nido/build/e5/calibration-builtin.json --md /home/runner/work/Nido/Nido/build/e5/calibration-builtin.md
+[03:31:28] built-in corpus: 1300 docs; queries: 240
+[03:31:28] bge: built-in passages
+[03:32:46] e5: built-in passages
+[03:34:15] queries
+[03:34:19] pool builtin
+[03:34:20] report: /home/runner/work/Nido/Nido/build/e5/calibration-builtin.json, /home/runner/work/Nido/Nido/build/e5/calibration-builtin.md

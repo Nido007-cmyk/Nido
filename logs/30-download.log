@@ -1,0 +1,13 @@
++ /home/runner/work/Nido/Nido/build/e5/venv/bin/python -
+revision 614241f622f53c4eeff9890bdc4f31cfecc418b3
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files:  53%|█████▎    | 8/15 [00:00<00:00, 24.65it/s]Fetching 15 files: 100%|██████████| 15/15 [00:04<00:00,  3.31it/s]
+['.cache', '1_Pooling', 'README.md', 'config.json', 'model.safetensors', 'modules.json', 'onnx', 'sentence_bert_config.json', 'sentencepiece.bpe.model', 'special_tokens_map.json', 'tokenizer.json', 'tokenizer_config.json']
++ test -f /home/runner/work/Nido/Nido/build/e5/hf/modules.json
++ cat /home/runner/work/Nido/Nido/build/e5/hf/1_Pooling/config.json
+{
+    "word_embedding_dimension": 384,
+    "pooling_mode_cls_token": false,
+    "pooling_mode_mean_tokens": true,
+    "pooling_mode_max_tokens": false,
+    "pooling_mode_mean_sqrt_len_tokens": false
+}

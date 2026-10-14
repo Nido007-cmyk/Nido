@@ -1,0 +1,21 @@
++ /home/runner/work/Nido/Nido/build/e5/venv/bin/python scripts/multilingual/e5_pipeline.py calibrate --bge http://127.0.0.1:8081 --e5 http://127.0.0.1:8082 --queries scripts/multilingual/calibration-queries.json --corpus assets/corpus/corpus.json assets/corpus/corpus-standard.json --vital /home/runner/work/Nido/Nido/build/e5/wiki-vital5.sqlite --cache-dir /home/runner/work/Nido/Nido/build/e5/cache --e5-sha 802c868f57ccddd2e0c80645c3db1cb96a1aa50986a057cbaee2526f6e474cde --e5-repo intfloat/multilingual-e5-small --e5-revision 614241f622f53c4eeff9890bdc4f31cfecc418b3 --bge-sha ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514 --llama-commit 171e8846b4af9766c354064cb776cb34a50f053f --out /home/runner/work/Nido/Nido/build/e5/calibration.json --md /home/runner/work/Nido/Nido/build/e5/calibration.md
+[03:34:22] built-in corpus: 1300 docs; queries: 240
+[03:34:22] vital pack: 115813 chunks
+[03:34:22] bge: built-in passages
+[03:35:40] e5: built-in passages
+[03:48:22]   vital e5 10000/115813 (11.3 min this run)
+[03:59:57]   vital e5 20000/115813 (22.9 min this run)
+[04:11:59]   vital e5 30000/115813 (34.9 min this run)
+[04:24:16]   vital e5 40000/115813 (47.2 min this run)
+[04:36:57]   vital e5 50000/115813 (59.9 min this run)
+[04:49:43]   vital e5 60000/115813 (72.6 min this run)
+[05:03:00]   vital e5 70000/115813 (85.9 min this run)
+[05:16:22]   vital e5 80000/115813 (99.3 min this run)
+[05:30:28]   vital e5 90000/115813 (113.4 min this run)
+[05:45:12]   vital e5 100000/115813 (128.1 min this run)
+[05:59:25]   vital e5 110000/115813 (142.3 min this run)
+[06:07:56]   vital e5 115813/115813 (150.8 min this run)
+[06:07:57] queries
+[06:08:00] pool builtin
+[06:08:02] pool builtin+vital
+[06:08:23] report: /home/runner/work/Nido/Nido/build/e5/calibration.json, /home/runner/work/Nido/Nido/build/e5/calibration.md

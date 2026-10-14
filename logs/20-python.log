@@ -1,0 +1,4 @@
++ python -m venv /home/runner/work/Nido/Nido/build/e5/venv
++ /home/runner/work/Nido/Nido/build/e5/venv/bin/python -m pip install -q --upgrade pip
++ /home/runner/work/Nido/Nido/build/e5/venv/bin/python -m pip install -q -r /home/runner/work/Nido/Nido/build/e5/llama.cpp/requirements/requirements-convert_hf_to_gguf.txt 'sentence-transformers>=5.1,<6' 'huggingface_hub>=0.34,<1'
++ /home/runner/work/Nido/Nido/build/e5/venv/bin/python -m pip freeze

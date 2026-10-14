@@ -1,0 +1,38 @@
++ start /home/runner/work/Nido/Nido/build/e5/bge.gguf 8081
++ start /home/runner/work/Nido/Nido/build/e5/multilingual-e5-small-q8_0.gguf 8082
+++ nproc
+++ nproc
++ start /home/runner/work/Nido/Nido/build/e5/e5-f16.gguf 8083
++ for p in 8081 8082 8083
+++ seq 1 180
+++ nproc
++ nohup /home/runner/work/Nido/Nido/build/e5/llama.cpp/build/bin/llama-server -m /home/runner/work/Nido/Nido/build/e5/bge.gguf --embeddings --host 127.0.0.1 --port 8081 -c 4096 -np 8 -b 4096 -ub 4096 -t 4 --no-webui
++ nohup /home/runner/work/Nido/Nido/build/e5/llama.cpp/build/bin/llama-server -m /home/runner/work/Nido/Nido/build/e5/multilingual-e5-small-q8_0.gguf --embeddings --host 127.0.0.1 --port 8082 -c 4096 -np 8 -b 4096 -ub 4096 -t 4 --no-webui
++ nohup /home/runner/work/Nido/Nido/build/e5/llama.cpp/build/bin/llama-server -m /home/runner/work/Nido/Nido/build/e5/e5-f16.gguf --embeddings --host 127.0.0.1 --port 8083 -c 4096 -np 8 -b 4096 -ub 4096 -t 4 --no-webui
++ for i in $(seq 1 180)
++ curl -sf http://127.0.0.1:8081/health
++ sleep 1
++ for i in $(seq 1 180)
++ curl -sf http://127.0.0.1:8081/health
+{"status":"ok"}+ break
++ curl -sf http://127.0.0.1:8081/health
+{"status":"ok"}+ for p in 8081 8082 8083
+++ seq 1 180
++ for i in $(seq 1 180)
++ curl -sf http://127.0.0.1:8082/health
++ sleep 1
++ for i in $(seq 1 180)
++ curl -sf http://127.0.0.1:8082/health
++ sleep 1
++ for i in $(seq 1 180)
++ curl -sf http://127.0.0.1:8082/health
+{"status":"ok"}+ break
++ curl -sf http://127.0.0.1:8082/health
+{"status":"ok"}+ for p in 8081 8082 8083
+++ seq 1 180
++ for i in $(seq 1 180)
++ curl -sf http://127.0.0.1:8083/health
+{"status":"ok"}+ break
++ curl -sf http://127.0.0.1:8083/health
+{"status":"ok"}+ grep -i pooling /home/runner/work/Nido/Nido/build/e5/diag/server-8081.log /home/runner/work/Nido/Nido/build/e5/diag/server-8082.log /home/runner/work/Nido/Nido/build/e5/diag/server-8083.log
++ true

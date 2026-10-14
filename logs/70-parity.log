@@ -1,0 +1,135 @@
++ /home/runner/work/Nido/Nido/build/e5/venv/bin/python scripts/multilingual/e5_pipeline.py parity --server-q8 http://127.0.0.1:8082 --server-f16 http://127.0.0.1:8083 --st-dir /home/runner/work/Nido/Nido/build/e5/hf --queries scripts/multilingual/calibration-queries.json --corpus assets/corpus/corpus.json assets/corpus/corpus-standard.json --out /home/runner/work/Nido/Nido/build/e5/parity.json
+[03:31:24] q8_0: cos min 0.99941 mean 0.99987, token mismatches 1/73
+[03:31:27] f16: cos min 0.99948 mean 0.99999, token mismatches 1/73
++ cat /home/runner/work/Nido/Nido/build/e5/parity.json
+{
+  "texts": 73,
+  "servers": {
+    "q8_0": {
+      "cosMin": 0.9994083046913147,
+      "cosMean": 0.9998695850372314,
+      "tokenMismatches": 1,
+      "tokenMismatchSamples": [
+        {
+          "text": "passage: Agricultural revolution\nAgricultural revolution may refer to:First Agri",
+          "llama": [
+            0,
+            46692,
+            12,
+            40612,
+            93782,
+            98834,
+            40612,
+            93782,
+            98834,
+            1543,
+            15005,
+            47,
+            12,
+            207263,
+            40612,
+            93782,
+            135555,
+            4,
+            70,
+            479,
+            66029,
+            238,
+            149307,
+            1295
+          ],
+          "hf": [
+            0,
+            46692,
+            12,
+            40612,
+            93782,
+            98834,
+            40612,
+            93782,
+            98834,
+            1543,
+            15005,
+            47,
+            12,
+            207263,
+            40612,
+            93782,
+            135555,
+            4,
+            70,
+            479,
+            66029,
+            238,
+            149307,
+            1295
+          ]
+        }
+      ]
+    },
+    "f16": {
+      "cosMin": 0.9994798898696899,
+      "cosMean": 0.9999922513961792,
+      "tokenMismatches": 1,
+      "tokenMismatchSamples": [
+        {
+          "text": "passage: Agricultural revolution\nAgricultural revolution may refer to:First Agri",
+          "llama": [
+            0,
+            46692,
+            12,
+            40612,
+            93782,
+            98834,
+            40612,
+            93782,
+            98834,
+            1543,
+            15005,
+            47,
+            12,
+            207263,
+            40612,
+            93782,
+            135555,
+            4,
+            70,
+            479,
+            66029,
+            238,
+            149307,
+            1295
+          ],
+          "hf": [
+            0,
+            46692,
+            12,
+            40612,
+            93782,
+            98834,
+            40612,
+            93782,
+            98834,
+            1543,
+            15005,
+            47,
+            12,
+            207263,
+            40612,
+            93782,
+            135555,
+            4,
+            70,
+            479,
+            66029,
+            238,
+            149307,
+            1295
+          ]
+        }
+      ]
+    }
+  },
+  "minCosRequired": 0.99,
+  "pass": true
+}

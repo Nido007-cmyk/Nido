@@ -1,0 +1,6 @@
++ cat
++ gh release view knowledge-packs-v2 --json isDraft --jq .isDraft
++ grep -qx false
++ echo '::notice::knowledge-packs-v2 is already published; not uploading (reports are on diag/multilingual-e5).'
+::notice::knowledge-packs-v2 is already published; not uploading (reports are on diag/multilingual-e5).
++ exit 0

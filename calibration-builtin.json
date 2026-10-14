@@ -1,0 +1,5375 @@
+{
+  "generatedAt": "2026-10-14T03:34:19.166791+00:00",
+  "llamaCppCommit": "171e8846b4af9766c354064cb776cb34a50f053f",
+  "e5": {
+    "repo": "intfloat/multilingual-e5-small",
+    "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+    "ggufSha256": "802c868f57ccddd2e0c80645c3db1cb96a1aa50986a057cbaee2526f6e474cde"
+  },
+  "bge": {
+    "ggufSha256": "ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514"
+  },
+  "appBaseline": {
+    "minSim": 0.6,
+    "minSimSingle": 0.7,
+    "margin": 0.4
+  },
+  "pools": {
+    "builtin": {
+      "bgeToday": {
+        "multi": {
+          "es": {
+            "recall": 0.5,
+            "falseAccept": 0.23333333333333334,
+            "answerable": 40,
+            "unanswerable": 30
+          },
+          "en": {
+            "recall": 0.975,
+            "falseAccept": 0.13333333333333333,
+            "answerable": 40,
+            "unanswerable": 30
+          },
+          "pt": {
+            "recall": 0.475,
+            "falseAccept": 0.26666666666666666,
+            "answerable": 40,
+            "unanswerable": 30
+          },
+          "mean": {
+            "recall": 0.65,
+            "falseAccept": 0.2111111111111111
+          }
+        },
+        "single": {
+          "es": {
+            "recall": 0.16666666666666666,
+            "falseAccept": 0.0,
+            "answerable": 6,
+            "unanswerable": 4
+          },
+          "en": {
+            "recall": 0.8333333333333334,
+            "falseAccept": 0.0,
+            "answerable": 6,
+            "unanswerable": 4
+          },
+          "pt": {
+            "recall": 0.16666666666666666,
+            "falseAccept": 0.0,
+            "answerable": 6,
+            "unanswerable": 4
+          },
+          "mean": {
+            "recall": 0.3888888888888889,
+            "falseAccept": 0.0
+          }
+        }
+      },
+      "e5AtBgeFloors": {
+        "multi": {
+          "es": {
+            "recall": 1.0,
+            "falseAccept": 1.0,
+            "answerable": 40,
+            "unanswerable": 30
+          },
+          "en": {
+            "recall": 1.0,
+            "falseAccept": 1.0,
+            "answerable": 40,
+            "unanswerable": 30
+          },
+          "pt": {
+            "recall": 1.0,
+            "falseAccept": 1.0,
+            "answerable": 40,
+            "unanswerable": 30
+          },
+          "mean": {
+            "recall": 1.0,
+            "falseAccept": 1.0
+          }
+        }
+      },
+      "top1": {
+        "bge": {
+          "neg_en": {
+            "p10": 0.5031727254390717,
+            "p50": 0.5442664921283722,
+            "p90": 0.6032693445682525,
+            "min": 0.46990782022476196,
+            "max": 0.6249922513961792
+          },
+          "neg_es": {
+            "p10": 0.5425144135951996,
+            "p50": 0.5764256119728088,
+            "p90": 0.6110595226287842,
+            "min": 0.5225919485092163,
+            "max": 0.6591730713844299
+          },
+          "neg_pt": {
+            "p10": 0.5636980175971985,
+            "p50": 0.5887769460678101,
+            "p90": 0.6206590890884399,
+            "min": 0.5478816628456116,
+            "max": 0.6668190360069275
+          },
+          "pos_en": {
+            "p10": 0.7033926546573639,
+            "p50": 0.7613246142864227,
+            "p90": 0.8220914900302887,
+            "min": 0.643429696559906,
+            "max": 0.9016512036323547
+          },
+          "pos_es": {
+            "p10": 0.580262303352356,
+            "p50": 0.6386117935180664,
+            "p90": 0.7316678464412689,
+            "min": 0.5465432405471802,
+            "max": 0.8526548147201538
+          },
+          "pos_pt": {
+            "p10": 0.5818499028682709,
+            "p50": 0.6485093235969543,
+            "p90": 0.723291426897049,
+            "min": 0.5618377327919006,
+            "max": 0.8526548147201538
+          }
+        },
+        "e5": {
+          "neg_en": {
+            "p10": 0.7980333089828491,
+            "p50": 0.8104305267333984,
+            "p90": 0.8292961597442627,
+            "min": 0.7766596674919128,
+            "max": 0.85081946849823
+          },
+          "neg_es": {
+            "p10": 0.7811155200004578,
+            "p50": 0.7966552078723907,
+            "p90": 0.8146129250526428,
+            "min": 0.7732024192810059,
+            "max": 0.8302726149559021
+          },
+          "neg_pt": {
+            "p10": 0.7826517939567565,
+            "p50": 0.7994265556335449,
+            "p90": 0.8142443060874939,
+            "min": 0.7754430770874023,
+            "max": 0.826796293258667
+          },
+          "pos_en": {
+            "p10": 0.8475707471370697,
+            "p50": 0.874687135219574,
+            "p90": 0.9090820550918579,
+            "min": 0.8231645226478577,
+            "max": 0.9355391263961792
+          },
+          "pos_es": {
+            "p10": 0.8082822561264038,
+            "p50": 0.8291648328304291,
+            "p90": 0.8748260736465454,
+            "min": 0.7972415089607239,
+            "max": 0.9158269166946411
+          },
+          "pos_pt": {
+            "p10": 0.8205794990062714,
+            "p50": 0.8400830626487732,
+            "p90": 0.8717462718486786,
+            "min": 0.7917705774307251,
+            "max": 0.9158268570899963
+          }
+        }
+      },
+      "e5": {
+        "0.3": {
+          "multiBest": {
+            "floor": 0.81,
+            "es": {
+              "recall": 0.85,
+              "falseAccept": 0.1,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "en": {
+              "recall": 1.0,
+              "falseAccept": 0.43333333333333335,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "pt": {
+              "recall": 0.9,
+              "falseAccept": 0.06666666666666667,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "mean": {
+              "recall": 0.9166666666666666,
+              "falseAccept": 0.19999999999999998
+            }
+          },
+          "singleBest": {
+            "floor": 0.87,
+            "es": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "en": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "pt": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "mean": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0
+            }
+          },
+          "multiSweep": [
+            {
+              "floor": 0.4,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.42,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.44,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.46,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.48,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.5,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.52,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.54,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.56,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.58,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.6,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.62,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.64,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.66,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.68,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.7,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.72,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.74,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.76,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.78,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 0.8666666666666667,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 0.9666666666666667,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 0.9333333333333333,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 0.9222222222222222
+              }
+            },
+            {
+              "floor": 0.8,
+              "es": {
+                "recall": 0.975,
+                "falseAccept": 0.26666666666666666,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 0.8666666666666667,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.95,
+                "falseAccept": 0.43333333333333335,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.975,
+                "falseAccept": 0.5222222222222223
+              }
+            },
+            {
+              "floor": 0.82,
+              "es": {
+                "recall": 0.625,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.975,
+                "falseAccept": 0.23333333333333334,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.85,
+                "falseAccept": 0.03333333333333333,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.8166666666666668,
+                "falseAccept": 0.08888888888888889
+              }
+            },
+            {
+              "floor": 0.84,
+              "es": {
+                "recall": 0.325,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.925,
+                "falseAccept": 0.03333333333333333,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.45,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.5666666666666667,
+                "falseAccept": 0.011111111111111112
+              }
+            },
+            {
+              "floor": 0.86,
+              "es": {
+                "recall": 0.05,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.775,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.15,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.325,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.88,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.375,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.125,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.9,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.075,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.024999999999999998,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.92,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.94,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.96,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            }
+          ],
+          "singleSweep": [
+            {
+              "floor": 0.4,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.42,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.44,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.46,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.48,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.5,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.52,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.54,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.56,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.58,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.6,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.62,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.64,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.66,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.68,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.7,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.72,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.74,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.76,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.78,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.8,
+              "es": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.888888888888889,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.82,
+              "es": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.25,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 0.5,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.25,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.888888888888889,
+                "falseAccept": 0.3333333333333333
+              }
+            },
+            {
+              "floor": 0.84,
+              "es": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.86,
+              "es": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.88,
+              "es": {
+                "recall": 0.5,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.3333333333333333,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.5555555555555556,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.9,
+              "es": {
+                "recall": 0.3333333333333333,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.16666666666666666,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.4444444444444445,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.92,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.3333333333333333,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.1111111111111111,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.94,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.96,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            }
+          ]
+        },
+        "0.4": {
+          "multiBest": {
+            "floor": 0.81,
+            "es": {
+              "recall": 0.85,
+              "falseAccept": 0.1,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "en": {
+              "recall": 1.0,
+              "falseAccept": 0.43333333333333335,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "pt": {
+              "recall": 0.9,
+              "falseAccept": 0.06666666666666667,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "mean": {
+              "recall": 0.9166666666666666,
+              "falseAccept": 0.19999999999999998
+            }
+          },
+          "singleBest": {
+            "floor": 0.87,
+            "es": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "en": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "pt": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "mean": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0
+            }
+          },
+          "multiSweep": [
+            {
+              "floor": 0.4,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.42,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.44,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.46,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.48,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.5,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.52,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.54,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.56,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.58,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.6,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.62,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.64,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.66,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.68,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.7,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.72,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.74,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.76,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.78,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 0.8666666666666667,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 0.9666666666666667,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 0.9333333333333333,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 0.9222222222222222
+              }
+            },
+            {
+              "floor": 0.8,
+              "es": {
+                "recall": 0.975,
+                "falseAccept": 0.26666666666666666,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 0.8666666666666667,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.95,
+                "falseAccept": 0.43333333333333335,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.975,
+                "falseAccept": 0.5222222222222223
+              }
+            },
+            {
+              "floor": 0.82,
+              "es": {
+                "recall": 0.625,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.975,
+                "falseAccept": 0.23333333333333334,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.85,
+                "falseAccept": 0.03333333333333333,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.8166666666666668,
+                "falseAccept": 0.08888888888888889
+              }
+            },
+            {
+              "floor": 0.84,
+              "es": {
+                "recall": 0.325,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.925,
+                "falseAccept": 0.03333333333333333,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.45,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.5666666666666667,
+                "falseAccept": 0.011111111111111112
+              }
+            },
+            {
+              "floor": 0.86,
+              "es": {
+                "recall": 0.05,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.775,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.15,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.325,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.88,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.375,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.125,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.9,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.075,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.024999999999999998,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.92,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.94,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.96,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            }
+          ],
+          "singleSweep": [
+            {
+              "floor": 0.4,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.42,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.44,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.46,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.48,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.5,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.52,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.54,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.56,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.58,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.6,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.62,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.64,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.66,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.68,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.7,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.72,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.74,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.76,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.78,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.8,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.82,
+              "es": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.25,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 0.5,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.25,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.888888888888889,
+                "falseAccept": 0.3333333333333333
+              }
+            },
+            {
+              "floor": 0.84,
+              "es": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.86,
+              "es": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.88,
+              "es": {
+                "recall": 0.5,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.3333333333333333,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.5555555555555556,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.9,
+              "es": {
+                "recall": 0.3333333333333333,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.16666666666666666,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.4444444444444445,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.92,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.3333333333333333,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.1111111111111111,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.94,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.96,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            }
+          ]
+        },
+        "0.5": {
+          "multiBest": {
+            "floor": 0.81,
+            "es": {
+              "recall": 0.85,
+              "falseAccept": 0.1,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "en": {
+              "recall": 1.0,
+              "falseAccept": 0.43333333333333335,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "pt": {
+              "recall": 0.9,
+              "falseAccept": 0.06666666666666667,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "mean": {
+              "recall": 0.9166666666666666,
+              "falseAccept": 0.19999999999999998
+            }
+          },
+          "singleBest": {
+            "floor": 0.87,
+            "es": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "en": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "pt": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "mean": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0
+            }
+          },
+          "multiSweep": [
+            {
+              "floor": 0.4,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.42,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.44,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.46,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.48,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.5,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.52,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.54,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.56,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.58,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.6,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.62,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.64,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.66,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.68,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.7,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.72,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.74,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.76,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.78,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 0.8666666666666667,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 0.9666666666666667,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 0.9333333333333333,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 0.9222222222222222
+              }
+            },
+            {
+              "floor": 0.8,
+              "es": {
+                "recall": 0.975,
+                "falseAccept": 0.26666666666666666,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 0.8666666666666667,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.95,
+                "falseAccept": 0.43333333333333335,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.975,
+                "falseAccept": 0.5222222222222223
+              }
+            },
+            {
+              "floor": 0.82,
+              "es": {
+                "recall": 0.625,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.975,
+                "falseAccept": 0.23333333333333334,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.85,
+                "falseAccept": 0.03333333333333333,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.8166666666666668,
+                "falseAccept": 0.08888888888888889
+              }
+            },
+            {
+              "floor": 0.84,
+              "es": {
+                "recall": 0.325,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.925,
+                "falseAccept": 0.03333333333333333,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.45,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.5666666666666667,
+                "falseAccept": 0.011111111111111112
+              }
+            },
+            {
+              "floor": 0.86,
+              "es": {
+                "recall": 0.05,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.775,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.15,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.325,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.88,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.375,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.125,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.9,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.075,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.024999999999999998,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.92,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.94,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.96,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 40,
+                "unanswerable": 30
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            }
+          ],
+          "singleSweep": [
+            {
+              "floor": 0.4,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.42,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.44,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.46,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.48,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.5,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.52,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.54,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.56,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.58,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.6,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.62,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.64,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.66,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.68,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.7,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.72,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.74,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.76,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.78,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.8,
+              "es": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 1.0,
+                "falseAccept": 1.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 1.0,
+                "falseAccept": 1.0
+              }
+            },
+            {
+              "floor": 0.82,
+              "es": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.25,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 1.0,
+                "falseAccept": 0.5,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.25,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.888888888888889,
+                "falseAccept": 0.3333333333333333
+              }
+            },
+            {
+              "floor": 0.84,
+              "es": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.86,
+              "es": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.88,
+              "es": {
+                "recall": 0.5,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.3333333333333333,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.5555555555555556,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.9,
+              "es": {
+                "recall": 0.3333333333333333,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.8333333333333334,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.16666666666666666,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.4444444444444445,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.92,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.3333333333333333,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.1111111111111111,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.94,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            },
+            {
+              "floor": 0.96,
+              "es": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "en": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "pt": {
+                "recall": 0.0,
+                "falseAccept": 0.0,
+                "answerable": 6,
+                "unanswerable": 4
+              },
+              "mean": {
+                "recall": 0.0,
+                "falseAccept": 0.0
+              }
+            }
+          ]
+        }
+      },
+      "bgeRetuned": {
+        "multiBest": {
+          "floor": 0.6,
+          "es": {
+            "recall": 0.5,
+            "falseAccept": 0.23333333333333334,
+            "answerable": 40,
+            "unanswerable": 30
+          },
+          "en": {
+            "recall": 0.975,
+            "falseAccept": 0.13333333333333333,
+            "answerable": 40,
+            "unanswerable": 30
+          },
+          "pt": {
+            "recall": 0.475,
+            "falseAccept": 0.26666666666666666,
+            "answerable": 40,
+            "unanswerable": 30
+          },
+          "mean": {
+            "recall": 0.65,
+            "falseAccept": 0.2111111111111111
+          }
+        },
+        "singleBest": {
+          "floor": 0.69,
+          "es": {
+            "recall": 0.16666666666666666,
+            "falseAccept": 0.0,
+            "answerable": 6,
+            "unanswerable": 4
+          },
+          "en": {
+            "recall": 0.8333333333333334,
+            "falseAccept": 0.0,
+            "answerable": 6,
+            "unanswerable": 4
+          },
+          "pt": {
+            "recall": 0.3333333333333333,
+            "falseAccept": 0.0,
+            "answerable": 6,
+            "unanswerable": 4
+          },
+          "mean": {
+            "recall": 0.4444444444444444,
+            "falseAccept": 0.0
+          }
+        }
+      },
+      "e5App": {
+        "floors": {
+          "builtin": [
+            0.81,
+            0.87
+          ],
+          "packs": [
+            0.84,
+            0.88
+          ]
+        },
+        "multi": {
+          "es": {
+            "recall": 0.85,
+            "falseAccept": 0.1,
+            "answerable": 40,
+            "unanswerable": 30
+          },
+          "en": {
+            "recall": 1.0,
+            "falseAccept": 0.43333333333333335,
+            "answerable": 40,
+            "unanswerable": 30
+          },
+          "pt": {
+            "recall": 0.9,
+            "falseAccept": 0.06666666666666667,
+            "answerable": 40,
+            "unanswerable": 30
+          },
+          "mean": {
+            "recall": 0.9166666666666666,
+            "falseAccept": 0.19999999999999998
+          }
+        },
+        "single": {
+          "es": {
+            "recall": 0.8333333333333334,
+            "falseAccept": 0.0,
+            "answerable": 6,
+            "unanswerable": 4
+          },
+          "en": {
+            "recall": 0.8333333333333334,
+            "falseAccept": 0.0,
+            "answerable": 6,
+            "unanswerable": 4
+          },
+          "pt": {
+            "recall": 0.8333333333333334,
+            "falseAccept": 0.0,
+            "answerable": 6,
+            "unanswerable": 4
+          },
+          "mean": {
+            "recall": 0.8333333333333334,
+            "falseAccept": 0.0
+          }
+        }
+      },
+      "e5GapSweep": [
+        {
+          "gap": 0.0,
+          "multi": {
+            "es": {
+              "recall": 0.85,
+              "falseAccept": 0.1,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "en": {
+              "recall": 1.0,
+              "falseAccept": 0.43333333333333335,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "pt": {
+              "recall": 0.9,
+              "falseAccept": 0.06666666666666667,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "mean": {
+              "recall": 0.9166666666666666,
+              "falseAccept": 0.19999999999999998
+            }
+          },
+          "single": {
+            "es": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "en": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "pt": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "mean": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0
+            }
+          }
+        },
+        {
+          "gap": 0.01,
+          "multi": {
+            "es": {
+              "recall": 0.85,
+              "falseAccept": 0.1,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "en": {
+              "recall": 1.0,
+              "falseAccept": 0.43333333333333335,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "pt": {
+              "recall": 0.9,
+              "falseAccept": 0.06666666666666667,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "mean": {
+              "recall": 0.9166666666666666,
+              "falseAccept": 0.19999999999999998
+            }
+          },
+          "single": {
+            "es": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "en": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "pt": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "mean": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0
+            }
+          }
+        },
+        {
+          "gap": 0.015,
+          "multi": {
+            "es": {
+              "recall": 0.85,
+              "falseAccept": 0.1,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "en": {
+              "recall": 1.0,
+              "falseAccept": 0.43333333333333335,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "pt": {
+              "recall": 0.9,
+              "falseAccept": 0.06666666666666667,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "mean": {
+              "recall": 0.9166666666666666,
+              "falseAccept": 0.19999999999999998
+            }
+          },
+          "single": {
+            "es": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "en": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "pt": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "mean": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0
+            }
+          }
+        },
+        {
+          "gap": 0.02,
+          "multi": {
+            "es": {
+              "recall": 0.85,
+              "falseAccept": 0.06666666666666667,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "en": {
+              "recall": 1.0,
+              "falseAccept": 0.36666666666666664,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "pt": {
+              "recall": 0.9,
+              "falseAccept": 0.06666666666666667,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "mean": {
+              "recall": 0.9166666666666666,
+              "falseAccept": 0.16666666666666666
+            }
+          },
+          "single": {
+            "es": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "en": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "pt": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "mean": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0
+            }
+          }
+        },
+        {
+          "gap": 0.025,
+          "multi": {
+            "es": {
+              "recall": 0.85,
+              "falseAccept": 0.06666666666666667,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "en": {
+              "recall": 1.0,
+              "falseAccept": 0.3333333333333333,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "pt": {
+              "recall": 0.9,
+              "falseAccept": 0.03333333333333333,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "mean": {
+              "recall": 0.9166666666666666,
+              "falseAccept": 0.14444444444444443
+            }
+          },
+          "single": {
+            "es": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "en": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "pt": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "mean": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0
+            }
+          }
+        },
+        {
+          "gap": 0.03,
+          "multi": {
+            "es": {
+              "recall": 0.85,
+              "falseAccept": 0.03333333333333333,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "en": {
+              "recall": 1.0,
+              "falseAccept": 0.23333333333333334,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "pt": {
+              "recall": 0.9,
+              "falseAccept": 0.03333333333333333,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "mean": {
+              "recall": 0.9166666666666666,
+              "falseAccept": 0.09999999999999999
+            }
+          },
+          "single": {
+            "es": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "en": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "pt": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "mean": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0
+            }
+          }
+        },
+        {
+          "gap": 0.035,
+          "multi": {
+            "es": {
+              "recall": 0.825,
+              "falseAccept": 0.03333333333333333,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "en": {
+              "recall": 0.975,
+              "falseAccept": 0.16666666666666666,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "pt": {
+              "recall": 0.9,
+              "falseAccept": 0.03333333333333333,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "mean": {
+              "recall": 0.8999999999999999,
+              "falseAccept": 0.07777777777777777
+            }
+          },
+          "single": {
+            "es": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "en": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "pt": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "mean": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0
+            }
+          }
+        },
+        {
+          "gap": 0.04,
+          "multi": {
+            "es": {
+              "recall": 0.825,
+              "falseAccept": 0.03333333333333333,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "en": {
+              "recall": 0.975,
+              "falseAccept": 0.13333333333333333,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "pt": {
+              "recall": 0.875,
+              "falseAccept": 0.03333333333333333,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "mean": {
+              "recall": 0.8916666666666666,
+              "falseAccept": 0.06666666666666667
+            }
+          },
+          "single": {
+            "es": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "en": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "pt": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "mean": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0
+            }
+          }
+        },
+        {
+          "gap": 0.05,
+          "multi": {
+            "es": {
+              "recall": 0.8,
+              "falseAccept": 0.0,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "en": {
+              "recall": 0.95,
+              "falseAccept": 0.06666666666666667,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "pt": {
+              "recall": 0.8,
+              "falseAccept": 0.03333333333333333,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "mean": {
+              "recall": 0.85,
+              "falseAccept": 0.03333333333333333
+            }
+          },
+          "single": {
+            "es": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "en": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "pt": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "mean": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0
+            }
+          }
+        },
+        {
+          "gap": 0.06,
+          "multi": {
+            "es": {
+              "recall": 0.625,
+              "falseAccept": 0.0,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "en": {
+              "recall": 0.9,
+              "falseAccept": 0.03333333333333333,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "pt": {
+              "recall": 0.65,
+              "falseAccept": 0.0,
+              "answerable": 40,
+              "unanswerable": 30
+            },
+            "mean": {
+              "recall": 0.725,
+              "falseAccept": 0.011111111111111112
+            }
+          },
+          "single": {
+            "es": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "en": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "pt": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0,
+              "answerable": 6,
+              "unanswerable": 4
+            },
+            "mean": {
+              "recall": 0.8333333333333334,
+              "falseAccept": 0.0
+            }
+          }
+        }
+      ],
+      "e5Distinctiveness": {
+        "neg_en": {
+          "p10": 0.01679494380950928,
+          "p50": 0.026566535234451294,
+          "p90": 0.04454984068870544,
+          "min": 0.012577652931213379,
+          "max": 0.07649517059326172
+        },
+        "neg_es": {
+          "p10": 0.017108994722366332,
+          "p50": 0.02496933937072754,
+          "p90": 0.03769425749778747,
+          "min": 0.014369726181030273,
+          "max": 0.055610060691833496
+        },
+        "neg_pt": {
+          "p10": 0.019325214624404907,
+          "p50": 0.026505351066589355,
+          "p90": 0.04205449223518372,
+          "min": 0.010099530220031738,
+          "max": 0.05557525157928467
+        },
+        "pos_en": {
+          "p10": 0.06191781163215637,
+          "p50": 0.09044063091278076,
+          "p90": 0.11764088273048401,
+          "min": 0.04284512996673584,
+          "max": 0.1321818232536316
+        },
+        "pos_es": {
+          "p10": 0.04806876182556152,
+          "p50": 0.07174095511436462,
+          "p90": 0.10425245761871338,
+          "min": 0.027031302452087402,
+          "max": 0.11846458911895752
+        },
+        "pos_pt": {
+          "p10": 0.04769018292427063,
+          "p50": 0.07520979642868042,
+          "p90": 0.09517624974250793,
+          "min": 0.027031302452087402,
+          "max": 0.11846458911895752
+        }
+      }
+    }
+  }
+}
