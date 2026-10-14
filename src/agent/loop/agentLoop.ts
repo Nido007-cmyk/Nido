@@ -44,6 +44,7 @@ import {
   formatDay,
   reminderWhen,
   reminderRepeatWhen,
+  notePendingReminderAsk,
   resolveChoiceReply,
   routerMessage,
   runToolAction,
@@ -761,6 +762,8 @@ export async function runAgentLoop(
   if (!reminderAction && fastPathAllowed("create_reminder")) {
     const missingDue = reminderMissingText(userText);
     if (missingDue) {
+      // 0.1.35: la siguiente respuesta corta será el contenido.
+      notePendingReminderAsk(missingDue, reminderLang, new Date());
       return {
         // Solo el día (la hora por defecto, 9:00, no la dijo el usuario).
         response: routerMessage("reminderAskWhat", reminderLang, {

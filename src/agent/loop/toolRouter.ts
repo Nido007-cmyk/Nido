@@ -42,6 +42,7 @@ export type ToolAction =
   | { kind: "memoryForgetHelp"; lang: RouterLang }
   | { kind: "countdown"; target: string; label: string; lang: RouterLang }
   | { kind: "reminderOfferCreate"; range: "today" | "tomorrow" | null; lang: RouterLang }
+  | { kind: "reminderFill"; text: string; dueAt: string; lang: RouterLang }
   | { kind: "calendarList"; from: string; to: string; label: CalendarRange; lang: RouterLang }
   | { kind: "calendarCreate"; title: string; start: string | null; lang: RouterLang }
   | { kind: "nidoSend"; to: string; text: string | null; lang: RouterLang }
@@ -131,6 +132,7 @@ export function toolForAction(a: ToolAction): string {
     case "countdown":
       return "device_time";
     case "reminderOfferCreate":
+    case "reminderFill":
       return "create_reminder";
   }
 }
@@ -200,6 +202,36 @@ function offerCreateAction(t: string, now: Date): ToolAction | null {
     if (re.test(t)) return { kind: "reminderOfferCreate", range: offer.range, lang };
   }
   return null;
+}
+
+/**
+ * 0.1.35: «ponme un recordatorio para el lunes» → NIDO pregunta «¿Qué
+ * quieres que te recuerde el lunes?». La respuesta («pagar la luz») era un
+ * mensaje suelto que caía al modelo y el recordatorio nunca se creaba.
+ * Durante 3 minutos, una respuesta corta que no es otra cosa se toma como
+ * el contenido de ese recordatorio. «no», «cancela», «olvídalo» lo anulan.
+ */
+let pendingAsk: { dueAt: string; lang: RouterLang; at: number } | null = null;
+export function notePendingReminderAsk(dueAt: string, lang: RouterLang, now: Date): void {
+  pendingAsk = { dueAt, lang, at: now.getTime() };
+}
+const ASK_CANCEL_RE = /^(?:no|nada|cancela(?:r)?|olv[ií]dalo|d[eé]jalo|nevermind|never mind|cancel|forget it|nothing|n[aã]o|deixa|esquece|cancelar)$/i;
+function pendingFillAction(t: string, now: Date): ToolAction | null {
+  const p = pendingAsk;
+  if (!p || now.getTime() - p.at > OFFER_WINDOW_MS || now.getTime() < p.at) return null;
+  const s = t.trim().replace(/[.!]+$/, "");
+  if (ASK_CANCEL_RE.test(s)) {
+    pendingAsk = null;
+    return null;
+  }
+  const words = s.split(/\s+/).filter(Boolean);
+  if (words.length < 1 || words.length > 10 || /\?/.test(s)) return null;
+  if (/^(?:qu[eé]|c[oó]mo|cu[aá]nto|cu[aá]ndo|d[oó]nde|por qu[eé]|qui[eé]n|cu[aá]l|what|how|when|where|why|who|which|o que|como|quanto|quando|onde|quem|qual)(?![\p{L}])/iu.test(s)) return null;
+  const text = s.replace(/^(?:(?:para|de|to|for|que|that|about|sobre)\s+)+/i, "").trim();
+  if (text.length < 2) return null;
+  // No se consume aquí: la puerta del chat y el loop lo consultan los dos;
+  // se borra al crear el recordatorio.
+  return { kind: "reminderFill", text, dueAt: p.dueAt, lang: p.lang };
 }
 
 /** Fecha (00:00 local) de un día con nombre (Navidad, Año Nuevo…), o null. */
@@ -297,7 +329,7 @@ const NOTE_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
 // (splitReminderScope) y la lista se filtra por día en el handler.
 const REMINDER_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   {
-    re: /^(?:(?:mu[eé]strame|lista|listar|ver|dame|ens[eé][ñn]ame)\s+)?(?:mis|los|todos los|todos mis)\s+recordatorios(?: pendientes)?$|^(?:qu[eé]|cu[aá]les)\s+recordatorios\s+(?:tengo|hay)(?: pendientes)?$|^cu[aá]les son mis recordatorios$|^recordatorios$|^lista de recordatorios$|^tengo alg[uú]n recordatorio$|^qu[eé] tengo pendiente$|^qu[eé] (?:me )?(?:queda|falta) pendiente$/i,
+    re: /^(?:(?:mu[eé]strame|lista|listar|ver|dame|ens[eé][ñn]ame)\s+)?(?:mis|los|todos los|todos mis)\s+recordatorios(?: pendientes)?$|^(?:qu[eé]|cu[aá]les)\s+recordatorios\s+(?:tengo|hay)(?: pendientes)?$|^cu[aá]les son mis recordatorios$|^recordatorios$|^lista de recordatorios$|^tengo alg[uú]n recordatorio$|^qu[eé] tengo pendiente$|^qu[eé] (?:me )?(?:queda|falta) pendiente$|^qu[eé] hay pendiente$/i,
     lang: "es",
   },
   {
@@ -305,7 +337,7 @@ const REMINDER_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
     lang: "en",
   },
   {
-    re: /^(?:(?:mostra|mostre|lista|listar|ver)\s+)?(?:meus|os|todos os)\s+lembretes$|^(?:que|quais)\s+lembretes\s+(?:eu\s+)?tenho$|^tenho algum lembrete$|^o que (?:eu )?tenho pendente$/i,
+    re: /^(?:(?:mostra|mostre|lista|listar|ver)\s+)?(?:meus|os|todos os)\s+lembretes$|^(?:que|quais)\s+lembretes\s+(?:eu\s+)?tenho$|^tenho algum lembrete$|^o que (?:eu )?tenho pendente$|^o que (?:tem|h[aá]) pendente$/i,
     lang: "pt",
   },
 ];
@@ -366,6 +398,10 @@ const CAL_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
 
 const CAL_CREATE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: new RegExp(`^${POLITE}(?:ag[eé]ndame|agenda|crea(?: un)? evento|crea una cita|a[ñn]ade (?:un |una )?(?:evento|cita)|agrega (?:un |una )?(?:evento|cita)|pon en (?:mi |el )?calendario)(?: (?:al|en (?:mi|el)) calendario)?(?::)?\\s+(.+)$`, "is"), lang: "es" },
+  // 0.1.35 (barrido de paridad): «agrega una reunión el lunes a las 9» y
+  // «adiciona uma reunião segunda às 9» (el inglés ya casaba).
+  { re: new RegExp(`^${POLITE}(?:agrega|a[ñn]ade|pon|crea)\\s+(?:una?\\s+)?((?:reuni[oó]n|cita|llamada|junta)\\s+.+)$`, "is"), lang: "es" },
+  { re: new RegExp(`^${POLITE}(?:adiciona|adicione|cria|crie|coloca)\\s+(?:uma\\s+|um\\s+)?((?:reuni[aã]o|consulta|encontro|compromisso)\\s+.+)$`, "is"), lang: "pt" },
   { re: new RegExp(`^${POLITE}(?:schedule|create an event|add (?:an? )?(?:event|appointment)(?: to my calendar)?|put on my calendar)(?::)?\\s+(.+)$`, "is"), lang: "en" },
   // 0.1.31: «add a meeting on monday at 9» / «marca reunião segunda às 9»
   // caían al conocimiento. El título conserva la palabra (meeting/reunião).
@@ -805,7 +841,8 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     if (!m) continue;
     return { kind: "pickFile", analyze: /^anali[sz]|^analy|^revisa|^check/i.test(m[1]), lang };
   }
-  return null;
+  // Al final: solo si nada más casó, la respuesta a «¿qué te recuerdo?».
+  return pendingFillAction(t, now);
 }
 
 // ------------------------------------------------------------ respuestas
@@ -1046,9 +1083,9 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     pt: "Claro. Diga o quê e quando numa frase só, por exemplo: “me lembra{{when}} às 9 de ligar para o médico”.",
   },
   reminderAskWhat: {
-    es: "¿Qué quieres que te recuerde{{when}}? Dímelo en una frase, por ejemplo: «recuérdame el lunes pagar la luz».",
-    en: "What should I remind you of{{when}}? Say it in one go, for example: “remind me on Monday to pay the bill”.",
-    pt: "O que você quer que eu te lembre{{when}}? Diga numa frase só, por exemplo: “me lembra na segunda de pagar a luz”.",
+    es: "¿Qué quieres que te recuerde{{when}}? Respóndeme solo con eso, por ejemplo: «pagar la luz».",
+    en: "What should I remind you of{{when}}? Just reply with it, for example: “pay the bill”.",
+    pt: "O que você quer que eu te lembre{{when}}? Responda só com isso, por exemplo: “pagar a luz”.",
   },
   reminderSavedAskWhen: {
     es: "Listo, guardé: «{{text}}». ¿Para cuándo quieres que te avise?",
@@ -1424,6 +1461,14 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
 
   try {
     switch (action.kind) {
+      case "reminderFill": {
+        pendingAsk = null;
+        const out = await run("create_reminder", { text: action.text, at: action.dueAt });
+        if (!out.ok) return failure(out);
+        const aviso = /aunque NIDO est[eé] cerrado/.test(out.text) ? routerMessage("reminderWillNotify", lang) : "";
+        return say(routerMessage("reminderSet", lang, { when: reminderWhen(action.dueAt, lang), text: action.text }) + aviso);
+      }
+
       case "reminderOfferCreate": {
         const when =
           action.range === "tomorrow"
