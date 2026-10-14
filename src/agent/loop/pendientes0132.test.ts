@@ -7,7 +7,7 @@
 /** 0.1.32: cuenta atrás de fechas y recordatorio con fecha pero sin contenido. */
 import { describe, expect, it } from "vitest";
 import { countdownTarget, extractToolAction, reminderRepeatWhen, routerMessage, runToolAction } from "./toolRouter";
-import { extractReminderAction, reminderMissingText } from "./actionRouter";
+import { extractCalcAction, extractReminderAction, reminderMissingText } from "./actionRouter";
 import { classifyIntent } from "./intent";
 
 const NOW = new Date(2026, 9, 13, 10, 0); // martes 13-10-2026
@@ -233,4 +233,21 @@ describe("0.1.34: cuenta atrás tolerante con días con nombre", () => {
     expect(extractToolAction("manda un mensaje a Ana que falta para navidad", NOW)?.kind).toBe("nidoSend");
     expect(extractToolAction("convert 5 km to miles", NOW)?.kind).toBe("convert");
   });
+});
+
+describe("0.1.34: calculadora con el gatillo cambiado por el autocorrector", () => {
+  it.each([
+    ["Canton es 15% de 200", 30],
+    ["Canton es 245*38", 9310],
+    ["Canton son 9 por 7", 63],
+  ])("%s", (s, result) => {
+    expect(extractCalcAction(s)?.result).toBe(result);
+  });
+
+  it.each(["mi edad es 30", "la clave es 1234", "Teléfono es 555-1234", "Canton es 1111111111111111111111"])(
+    "«%s» no es una cuenta",
+    (s) => {
+      expect(extractCalcAction(s)).toBeNull();
+    },
+  );
 });
