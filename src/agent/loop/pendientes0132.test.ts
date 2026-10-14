@@ -6,7 +6,7 @@
 
 /** 0.1.32: cuenta atrás de fechas y recordatorio con fecha pero sin contenido. */
 import { describe, expect, it } from "vitest";
-import { countdownTarget, extractToolAction, reminderRepeatWhen, routerMessage, runToolAction } from "./toolRouter";
+import { countdownTarget, extractToolAction, notePendingReminderAsk, reminderRepeatWhen, routerMessage, runToolAction } from "./toolRouter";
 import { extractCalcAction, extractReminderAction, extractWeeklyPlanAction, reminderMissingText } from "./actionRouter";
 import { classifyIntent } from "./intent";
 
@@ -305,5 +305,46 @@ describe("0.1.35: recordatorios cada mes y cada año", () => {
     expect(reminderRepeatWhen(iso, "year", "es")).toBe(" cada año el 15 de marzo a las 9:00");
     expect(reminderRepeatWhen(iso, "month", "en")).toMatch(/^ every month on the 15th at /);
     expect(reminderRepeatWhen(iso, "month", "pt")).toBe(" todo mês no dia 15 às 9:00");
+  });
+});
+
+describe("0.1.35: la respuesta a «¿qué te recuerdo?» crea el recordatorio", () => {
+  it("«ponme un recordatorio para el lunes» → «pagar la luz» → recordatorio del lunes", async () => {
+    const t0 = new Date(2026, 9, 13, 20, 0);
+    const created: Array<Record<string, unknown>> = [];
+    const deps = {
+      isDisabled: () => false,
+      now: () => t0,
+      dispatch: async (_n: string, args: Record<string, unknown>) => {
+        created.push(args);
+        return { status: "executed" as const, text: "Recordatorio guardado: «pagar la luz». Te llegará un aviso del sistema a esa hora, aunque NIDO esté cerrado." };
+      },
+    };
+    const due = new Date(2026, 9, 19, 9, 0).toISOString();
+    notePendingReminderAsk(due, "es", t0);
+    const a = extractToolAction("pagar la luz", new Date(t0.getTime() + 20_000));
+    expect(a).toMatchObject({ kind: "reminderFill", text: "pagar la luz", dueAt: due });
+    // La puerta y el loop lo consultan los dos: no se consume al detectar.
+    expect(extractToolAction("pagar la luz", new Date(t0.getTime() + 21_000))?.kind).toBe("reminderFill");
+    const r = await runToolAction(a!, deps as never);
+    expect(created[0]).toMatchObject({ text: "pagar la luz", at: due });
+    expect(r.response).toContain("pagar la luz");
+    // Ya usado: un mensaje corto después no crea otro.
+    expect(extractToolAction("sacar la basura", new Date(t0.getTime() + 40_000))).toBeNull();
+  });
+
+  it("«no» lo anula; una pregunta o un mensaje largo no se toman como contenido", () => {
+    const t0 = new Date(2026, 9, 13, 20, 0);
+    notePendingReminderAsk(new Date(2026, 9, 19, 9, 0).toISOString(), "es", t0);
+    expect(extractToolAction("¿qué es la inflación?", t0)).toBeNull();
+    expect(extractToolAction("uno dos tres cuatro cinco seis siete ocho nueve diez once", t0)).toBeNull();
+    expect(extractToolAction("no", t0)).toBeNull();
+    expect(extractToolAction("pagar la luz", t0)).toBeNull();
+  });
+
+  it("fuera de la ventana de 3 minutos no hace nada", () => {
+    const t0 = new Date(2026, 9, 13, 20, 0);
+    notePendingReminderAsk(new Date(2026, 9, 19, 9, 0).toISOString(), "es", t0);
+    expect(extractToolAction("pagar la luz", new Date(t0.getTime() + 5 * 60_000))).toBeNull();
   });
 });
