@@ -198,3 +198,19 @@ describe("unlockForSecret (0.1.29, B-2: una sola política para la clave)", () =
     await expect(unlockForSecret("x")).rejects.toBeInstanceOf(BiometricFailed);
   });
 });
+
+describe("0.1.37 (auditoría): una consulta fallida no cuenta como «sin bloqueo»", () => {
+  it("si el sistema no responde, unlockForSecret falla cerrado", async () => {
+    lockNow();
+    const boom = () => Promise.reject(new Error("binder died"));
+    setBiometricTestModule({
+      hasHardwareAsync: boom,
+      isEnrolledAsync: boom,
+      getEnrolledLevelAsync: boom,
+      supportedAuthenticationTypesAsync: async () => [],
+      authenticateAsync: async () => ({ success: true }),
+    });
+    const { unlockForSecret } = await import("./biometricGate");
+    await expect(unlockForSecret("x")).rejects.toBeInstanceOf(BiometricFailed);
+  });
+});

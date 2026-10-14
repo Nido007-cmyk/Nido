@@ -191,7 +191,9 @@ const REMEMBER_BEFORE_ACT_PATTERNS: RegExp[] = [
  * del español; pero "recuérdame que + cláusula" va primero (memoria).
  */
 export function classifyIntent(text: string): AgentIntent {
-  const t = (text ?? "").trim();
+  // 0.1.37 (auditoría): una tira larga de «?!.» costaba tiempo cuadrático
+  // en las limpiezas «[?!.]+$» de los routers; para clasificar bastan 3.
+  const t = (text ?? "").trim().replace(/[?!.]{4,}/g, (run) => run.slice(0, 3));
   if (!t) return "conversar";
   if (REMEMBER_BEFORE_ACT_PATTERNS.some((re) => re.test(t))) return "recordar";
   // 0.1.14: una cuenta válida ("what is (100 + 50) * 2") siempre va a la

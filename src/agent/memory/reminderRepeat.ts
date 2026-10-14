@@ -60,16 +60,24 @@ export function nextOccurrence(base: Date, repeat: ReminderRepeat, after: Date):
   }
   const next = new Date(base);
   const step = repeat === "day" ? 1 : 7;
+  // 0.1.37 (auditoría): tras un cambio de hora la hora local se corría
+  // (02:30 → 03:30) y se quedaba corrida. Cada paso vuelve a la hora pedida.
+  const hh = base.getHours();
+  const mm = base.getMinutes();
+  const stepBy = (d: Date, days: number) => {
+    d.setDate(d.getDate() + days);
+    d.setHours(hh, mm, base.getSeconds(), base.getMilliseconds());
+  };
   if (next.getTime() > after.getTime()) {
     // Ya es futura: retrocede mientras la anterior también lo sea (por si
     // la base quedó muy adelante) y devuelve la primera tras `after`.
     while (true) {
       const prev = new Date(next);
-      prev.setDate(prev.getDate() - step);
+      stepBy(prev, -step);
       if (prev.getTime() <= after.getTime()) return next;
       next.setTime(prev.getTime());
     }
   }
-  while (next.getTime() <= after.getTime()) next.setDate(next.getDate() + step);
+  while (next.getTime() <= after.getTime()) stepBy(next, step);
   return next;
 }

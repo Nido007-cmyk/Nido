@@ -31,12 +31,18 @@ export interface RepetitionLoop {
 
 export function findRepetitionLoop(text: string): RepetitionLoop | null {
   if (text.length < 80) return null;
+  // 0.1.37 (auditoría): dentro de un bloque de código abierto la
+  // repetición es legítima (un tablero de ceros, filas iguales).
+  if ((text.match(/```/g)?.length ?? 0) % 2 === 1) return null;
   const offset = Math.max(0, text.length - WINDOW);
   const s = text.slice(offset);
   const n = s.length;
   for (let L = 2; L <= MAX_UNIT && L * 3 <= n; L++) {
     const unit = s.slice(n - L);
     if (!unit.trim()) continue;
+    // 0.1.37: filas de tabla («| | |»), separadores («====») y listas de
+    // números no son el bucle del modelo; los bucles reales llevan palabras.
+    if (unit.includes("|") || !/\p{L}/u.test(unit)) continue;
     let k = 1;
     while (n - (k + 1) * L >= 0 && s.slice(n - (k + 1) * L, n - k * L) === unit) k++;
     const span = k * L;

@@ -291,6 +291,10 @@ const REPEAT_MONTH_RE =
 const MONTH_DAY_RE =
   /(?<![\p{L}])(?:el\s+d[ií]a|el|on\s+the|the|(?:todo\s+)?(?:no\s+)?dia)\s+(\d{1,2})(?:st|nd|rd|th|º)?(?=\s|$|[,.;:!?])/iu;
 
+// 30/31 de febrero, 31 de abril/junio/septiembre/noviembre (es/en/pt).
+const IMPOSSIBLE_DATE_RE =
+  /(?<![\d])(?:3[01]\s+(?:de\s+)?(?:febrero|february|fevereiro)|31\s+(?:de\s+)?(?:abril|april|junio|june|junho|septiembre|setiembre|september|setembro|noviembre|november|novembro)|(?:february|april|june|september|november)\s+31|february\s+3[01])(?![\p{L}\d])/iu;
+
 /** Detecta una repetición soportada y devuelve la frase sin ella. */
 export function detectReminderRepeat(text: string): RepeatSpec | null {
   const tidy = (s: string) => s.replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim();
@@ -355,13 +359,23 @@ export function extractReminderAction(userText: string, now: Date = new Date()):
   if (spec.repeat === "year" || spec.repeat === "month") {
     // Base: la fecha dicha («el 15 de marzo», «el día 5») o la de hoy; la
     // primera vez es la próxima ocurrencia a partir de ahora.
-    const base = res.dueAt ? new Date(res.dueAt) : new Date(now);
+    let base = res.dueAt ? new Date(res.dueAt) : new Date(now);
     if (spec.repeat === "month" && spec.monthDay) {
-      base.setDate(1);
-      base.setMonth(now.getMonth());
-      base.setFullYear(now.getFullYear());
-      base.setDate(spec.monthDay);
+      // 0.1.37 (auditoría): «el día 31» dicho en noviembre era el 1 de
+      // diciembre (setDate desbordaba) y quedaba «cada día 1». La base es el
+      // primer mes, desde este, que tiene ese día; nextOccurrence salta los
+      // meses cortos igual que la alarma del sistema.
+      for (let k = 0; k < 12; k++) {
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + k + 1, 0).getDate();
+        if (daysInMonth >= spec.monthDay) {
+          base = new Date(now.getFullYear(), now.getMonth() + k, spec.monthDay);
+          break;
+        }
+      }
     }
+    // «cada año el 30 de febrero»: una fecha que no existe no se cambia por
+    // la de hoy en silencio; no se crea nada (el modelo/el usuario aclaran).
+    if (spec.repeat === "year" && IMPOSSIBLE_DATE_RE.test(spec.cleaned)) return null;
     base.setHours(hour, minute, 0, 0);
     const next = nextOccurrence(base, spec.repeat, new Date(now.getTime() - 1));
     const text = res.text.replace(/\s{2,}/g, " ").trim();

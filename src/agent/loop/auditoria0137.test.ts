@@ -226,3 +226,53 @@ describe("0.1.37 nombres, «remember» y fechas", () => {
     expect(extractCalcAction("cuánto es 14/10")).not.toBeNull();
   });
 });
+
+import { findRepetitionLoop, trimRepetitionLoop } from "../../inference/repetitionGuard";
+import { nextOccurrence } from "../memory/reminderRepeat";
+
+describe("0.1.37 recordatorios mensuales/anuales con días que no existen", () => {
+  it("«cada mes el día 31» dicho en noviembre: el 31 de diciembre, no el 1", () => {
+    const a = extractReminderAction("recuérdame pagar el alquiler cada mes el día 31", new Date(2026, 10, 5, 10, 0));
+    const d = new Date(a!.dueAt!);
+    expect(a?.repeat).toBe("month");
+    expect([d.getMonth(), d.getDate()]).toEqual([11, 31]);
+    // Y la siguiente salta febrero… hasta el próximo mes con 31.
+    const n = nextOccurrence(d, "month", d);
+    expect([n.getMonth(), n.getDate()]).toEqual([0, 31]);
+  });
+
+  it("«cada mes el día 30» dicho en febrero: el 30 de marzo", () => {
+    const a = extractReminderAction("recuérdame regar cada mes el día 30", new Date(2027, 1, 10, 10, 0));
+    const d = new Date(a!.dueAt!);
+    expect([d.getMonth(), d.getDate()]).toEqual([2, 30]);
+  });
+
+  it("«cada año el 30 de febrero» no se guarda con la fecha de hoy", () => {
+    expect(extractReminderAction("recuérdame cada año el 30 de febrero la fiesta", T0)).toBeNull();
+  });
+});
+
+describe("0.1.37 el filtro anti-bucles no corta código ni tablas", () => {
+  it("un tablero de ceros dentro de un bloque de código", () => {
+    const board = "```python\nboard = [\n" + "    [0, 0, 0, 0, 0, 0, 0, 0, 0],\n".repeat(9) + "]\n";
+    expect(findRepetitionLoop(board)).toBeNull();
+  });
+  it("filas de tabla vacías y separadores", () => {
+    expect(findRepetitionLoop("| Día | Tarea |\n|---|---|\n" + "|  |  |\n".repeat(10))).toBeNull();
+    expect(findRepetitionLoop("Título\n" + "=".repeat(90))).toBeNull();
+  });
+  it("el bucle real del modelo se sigue cortando", () => {
+    const loop = "Los minerales son " + "las aluminosas, ".repeat(12);
+    expect(findRepetitionLoop(loop)).not.toBeNull();
+    expect(trimRepetitionLoop(loop)).toBe("Los minerales son las aluminosas…");
+  });
+});
+
+describe("0.1.37 clasificar una tira de signos no es cuadrático", () => {
+  it("4000 «?!» en menos de 60 ms", () => {
+    const s = "hola" + "?!".repeat(2000) + "a";
+    const t0 = performance.now();
+    classifyIntent(s);
+    expect(performance.now() - t0).toBeLessThan(60);
+  });
+});
