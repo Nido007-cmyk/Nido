@@ -430,16 +430,16 @@ Source: `package-lock.json sha256:752e3ec044fb` · 584 packages.
 | minimatch | 3.1.5 | ISC |
 | minipass | 7.1.3 | BlueOak-1.0.0 |
 | mkdirp | 1.0.4 | MIT |
-| modules/bundled-assets | 0.1.0 | MIT |
-| modules/download-wake-lock | 0.1.0 | MIT |
-| modules/exact-alarm | 0.1.0 | MIT |
-| modules/nido-keyvault | 0.1.0 | MIT |
-| modules/nido-launch | 0.1.0 | MIT |
-| modules/nido-p2p | 0.1.0 | MIT |
-| modules/nido-secure-dialog | 0.1.0 | MIT |
-| modules/nido-vectors | 0.1.0 | MIT |
-| modules/ram-monitor | 0.1.0 | MIT |
-| modules/voice-input | 0.1.0 | MIT |
+| modules/bundled-assets | 0.1.0 | MIT (NIDO's own module) |
+| modules/download-wake-lock | 0.1.0 | MIT (NIDO's own module) |
+| modules/exact-alarm | 0.1.0 | MIT (NIDO's own module) |
+| modules/nido-keyvault | 0.1.0 | MIT (NIDO's own module) |
+| modules/nido-launch | 0.1.0 | MIT (NIDO's own module) |
+| modules/nido-p2p | 0.1.0 | MIT (NIDO's own module) |
+| modules/nido-secure-dialog | 0.1.0 | MIT (NIDO's own module) |
+| modules/nido-vectors | 0.1.0 | MIT (NIDO's own module) |
+| modules/ram-monitor | 0.1.0 | MIT (NIDO's own module) |
+| modules/voice-input | 0.1.0 | MIT (NIDO's own module) |
 | ms | 2.0.0 | MIT |
 | ms | 2.1.3 | MIT |
 | multitars | 1.0.2 | MIT |
@@ -3886,6 +3886,50 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+### @react-native/assets-registry@0.86.3
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### @react-native/babel-plugin-codegen@0.86.3
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### @react-native/codegen@0.86.3
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### @react-native/community-cli-plugin@0.86.3
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### @react-native/debugger-shell@0.86.3
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### @react-native/dev-middleware@0.86.3
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### @react-native/gradle-plugin@0.86.3
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### @react-native/jest-preset@0.86.3
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### @react-native/js-polyfills@0.86.3
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### @react-native/normalize-colors@0.86.3
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### @react-native/virtualized-lists@0.86.3
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
 
 ### @sinclair/typebox@0.27.12 — license
 
@@ -9528,6 +9572,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+### hermes-compiler@250829098.0.17
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
 ### hermes-estree@0.35.0 — LICENSE
 
 ```text
@@ -12322,6 +12370,62 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
+### metro@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### metro-babel-transformer@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### metro-cache@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### metro-cache-key@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### metro-config@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### metro-core@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### metro-file-map@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### metro-minify-terser@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### metro-resolver@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### metro-runtime@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### metro-source-map@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### metro-symbolicate@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### metro-transform-plugins@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
+### metro-transform-worker@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
 ### micromatch@4.0.8 — LICENSE
 
 ```text
@@ -13301,6 +13405,10 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
+### ob1@0.84.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
+
 ### on-finished@2.3.0 — LICENSE
 
 ```text
@@ -14074,6 +14182,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+### react-devtools-core@6.1.5
+
+Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
 
 ### react-i18next@17.0.16 — LICENSE
 
@@ -16779,21 +16891,10 @@ SOFTWARE.
 
 ## Packages without a license file
 
-These packages declare a license in their `package.json` but ship no license file; the declared license applies.
+These packages declare a license in their `package.json` but ship no license file; the declared license applies. Most are build tools that do not end up in the APK.
 
 - @expo/sdk-runtime-versions@1.0.0
-- @react-native/assets-registry@0.86.3
-- @react-native/babel-plugin-codegen@0.86.3
-- @react-native/codegen@0.86.3
-- @react-native/community-cli-plugin@0.86.3
 - @react-native/debugger-frontend@0.86.3
-- @react-native/debugger-shell@0.86.3
-- @react-native/dev-middleware@0.86.3
-- @react-native/gradle-plugin@0.86.3
-- @react-native/jest-preset@0.86.3
-- @react-native/js-polyfills@0.86.3
-- @react-native/normalize-colors@0.86.3
-- @react-native/virtualized-lists@0.86.3
 - babel-plugin-react-compiler@1.0.0
 - badgin@1.2.3
 - bplist-parser@0.3.1
@@ -16801,7 +16902,6 @@ These packages declare a license in their `package.json` but ship no license fil
 - fb-dotslash@0.5.8
 - fb-watchman@2.0.2
 - fsevents@2.3.3
-- hermes-compiler@250829098.0.17
 - imurmurhash@0.1.4
 - jimp-compact@0.16.1
 - lightningcss-android-arm64@1.33.0
@@ -16814,32 +16914,6 @@ These packages declare a license in their `package.json` but ship no license fil
 - lightningcss-linux-x64-musl@1.33.0
 - lightningcss-win32-arm64-msvc@1.33.0
 - lightningcss-win32-x64-msvc@1.33.0
-- metro@0.84.5
-- metro-babel-transformer@0.84.5
-- metro-cache@0.84.5
-- metro-cache-key@0.84.5
-- metro-config@0.84.5
-- metro-core@0.84.5
-- metro-file-map@0.84.5
-- metro-minify-terser@0.84.5
-- metro-resolver@0.84.5
-- metro-runtime@0.84.5
-- metro-source-map@0.84.5
-- metro-symbolicate@0.84.5
-- metro-transform-plugins@0.84.5
-- metro-transform-worker@0.84.5
-- modules/bundled-assets@0.1.0
-- modules/download-wake-lock@0.1.0
-- modules/exact-alarm@0.1.0
-- modules/nido-keyvault@0.1.0
-- modules/nido-launch@0.1.0
-- modules/nido-p2p@0.1.0
-- modules/nido-secure-dialog@0.1.0
-- modules/nido-vectors@0.1.0
-- modules/ram-monitor@0.1.0
-- modules/voice-input@0.1.0
-- ob1@0.84.5
-- react-devtools-core@6.1.5
 - stream-buffers@2.2.0
 - structured-headers@0.4.1
 
