@@ -49,7 +49,7 @@ env:
 
 jobs:
   e5:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 355
     env:
       W: ${{ github.workspace }}/build/e5

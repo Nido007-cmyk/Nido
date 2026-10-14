@@ -13,7 +13,7 @@ permissions:
 jobs:
   gitleaks:
     # H-5: fail on any secret that is not an allowlisted test fixture.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -23,7 +23,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   typecheck-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -33,11 +33,22 @@ jobs:
       - run: npm ci
       - run: npm run verify:deps
       - run: npm run typecheck
-      - run: npm test
+      # Recuento verificable: los reportes JSON alimentan el aviso de abajo.
+      - run: npm test -- --reporter=default --reporter=json --outputFile.json=vitest-results.json
       # Auditoría 2026-10-12: las suites de componentes (Jest) llevaban rojas
       # e invisibles desde el 2026-10-10 (mocks de tema viejos y módulos
       # expo ESM sin stub en jest.config.js). Diagnosticadas y en verde
       # (5 suites, 15 tests): desde esta versión corren como puerta.
-      - run: npm run test:components
+      - run: npm run test:components -- --json --outputFile=jest-results.json
+      - name: Test count
+        if: always()
+        run: |
+          node -e '
+            const fs = require("fs");
+            const read = (f) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch { return null; } };
+            const v = read("vitest-results.json"), j = read("jest-results.json");
+            const n = (r) => (r ? r.numTotalTests : 0), p = (r) => (r ? r.numPassedTests : 0);
+            console.log(`::notice title=Test count::${n(v) + n(j)} tests (${p(v) + p(j)} passed): vitest ${n(v)}, jest ${n(j)}`);
+          '
       - run: npm run verify:pins
       - run: npm run verify:manifest-sig

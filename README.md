@@ -85,7 +85,7 @@ The interface is available in English, Spanish and Portuguese.
 
 ## Status
 
-Alpha, October 2026. The project has more than 3,400 automated tests and
+Alpha, October 2026. The project has more than 3,700 automated tests and
 runs type checking and the test suite on every change. What automated tests
 cannot cover is behaviour on real hardware, so the headline flows are also
 exercised on physical Galaxy tablets: chat and agent tools, memory,
