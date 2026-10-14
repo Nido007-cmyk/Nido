@@ -62,12 +62,39 @@ function isConversation(trimmed: string): boolean {
   return CONVERSATION_RE.test(trimmed);
 }
 
+/**
+ * 0.1.34 (prueba física, Tab A9+): «Tengo arroz, frijoles… ¿Qué puedo
+ * cocinar? Dame 3 ideas con instrucciones» buscaba en la enciclopedia
+ * offline, traía «Quesadilla» y «Ginataang langka» y la respuesta quedaba
+ * en esos dos títulos. Pedir ideas, recetas con lo que tengo o un texto
+ * creativo no mejora con artículos sueltos: lo responde el modelo sin
+ * búsqueda (como la charla). es/en/pt.
+ */
+const CREATIVE_RE = new RegExp(
+  [
+    // es
+    "\\b(?:dame|sugi[eé]reme|sugiere|prop[oó]n(?:me)?|recomi[eé]ndame)\\s+(?:\\d+\\s+|unas?\\s+|algunas?\\s+|dos\\s+|tres\\s+|cinco\\s+)?ideas?\\b",
+    "\\bqu[eé]\\s+puedo\\s+(?:cocinar|preparar|hacer\\s+de\\s+(?:comer|cenar|desayunar))\\b",
+    "\\b(?:escr[ií]be(?:me)?|inv[eé]nta(?:me)?)\\s+(?:un|una)\\s+(?:poema|cuento|historia|canci[oó]n|carta)\\b",
+    // en
+    "\\b(?:give\\s+me|suggest|brainstorm)\\s+(?:\\d+\\s+|some\\s+|a\\s+few\\s+|two\\s+|three\\s+|five\\s+)?ideas?\\b",
+    "\\bwhat\\s+can\\s+i\\s+(?:cook|make\\s+for\\s+(?:dinner|lunch|breakfast))\\b",
+    "\\bwrite\\s+(?:me\\s+)?(?:a|an)\\s+(?:poem|story|song|letter)\\b",
+    // pt
+    "\\b(?:me\\s+d[aáê]|sugira|sugere)\\s+(?:\\d+\\s+|algumas\\s+|umas\\s+|duas\\s+|tr[eê]s\\s+)?ideias?\\b",
+    "\\bo\\s+que\\s+(?:eu\\s+)?posso\\s+(?:cozinhar|preparar|fazer\\s+para\\s+(?:o\\s+)?(?:jantar|almo[cç]o))\\b",
+    "\\b(?:escreva|escreve)\\s+(?:um|uma)\\s+(?:poema|hist[oó]ria|can[cç][aã]o|carta)\\b",
+  ].join("|"),
+  "i",
+);
+
 export function classifyTask(query: string): TaskType {
   const trimmed = query.trim();
   if (!trimmed) return "unknown";
 
   if (isGreeting(trimmed)) return "greeting";
   if (isConversation(trimmed)) return "conversation";
+  if (CREATIVE_RE.test(trimmed)) return "conversation";
 
   for (const { type, test } of PATTERNS) {
     if (test.test(trimmed)) return type;
