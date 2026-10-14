@@ -42,6 +42,16 @@ export interface EmbeddingProfile {
   packMinSimilaritySingleTerm: number;
   /** pruneByScoreMargin margin (fraction of the passing range). */
   margin: number;
+  /**
+   * 0.1.35 «distintividad»: el mejor candidato tiene que destacar sobre el
+   * fondo (media de los puestos 10–50 de la misma fuente) al menos esto.
+   * e5 puntúa alto TODO (una pregunta sin respuesta saca 0.80–0.87), así
+   * que el coseno absoluto no separa; la distancia al fondo sí
+   * (docs/design/calibration: sin respuesta p90 0.045, con respuesta p10
+   * 0.048). 0 = desactivado. Integrado y paquetes por separado.
+   */
+  distinctGap: number;
+  packDistinctGap: number;
 }
 
 export const BGE_SMALL_EN_SHA256 = "ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514";
@@ -59,6 +69,9 @@ export const BGE_SMALL_EN_PROFILE: EmbeddingProfile = {
   packMinSimilarity: 0.6,
   packMinSimilaritySingleTerm: 0.7,
   margin: 0.4,
+  // bge no se recalibró con esta medida: sin cambios.
+  distinctGap: 0,
+  packDistinctGap: 0,
 };
 
 export const MULTILINGUAL_E5_SMALL_PROFILE: EmbeddingProfile = {
@@ -73,6 +86,11 @@ export const MULTILINGUAL_E5_SMALL_PROFILE: EmbeddingProfile = {
   packMinSimilarity: 0.84,
   packMinSimilaritySingleTerm: 0.88,
   margin: 0.4,
+  // Calibración 2026-10-14 (run 38506218056, base integrada): con 0.03 los
+  // falsos bajan 20 % → 10 % sin perder ninguna respuesta (es 85 %, en
+  // 100 %, pt 90 %); con 0.05 bajan a 3 % perdiendo algo de recall.
+  distinctGap: 0.03,
+  packDistinctGap: 0.03,
 };
 
 const BY_SHA: Record<string, EmbeddingProfile> = {

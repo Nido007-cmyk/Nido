@@ -17,7 +17,7 @@
 import * as SQLite from "expo-sqlite";
 import * as FileSystem from "expo-file-system/legacy";
 import { CORPUS_CATALOG, MODEL_CATALOG, CatalogModel } from "../models/manifest";
-import { buildLexicalQuery, cosineSimilarityInt8, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM, pruneSemanticByMargin, pruneVectorHits } from "./pure";
+import { buildLexicalQuery, cosineSimilarityInt8, distinctFloor, DISTINCT_BG_TO, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM, pruneSemanticByMargin, pruneVectorHits } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
 import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "./embeddingProfile";
 import { packIndexIfReady, releaseAllIndexes, searchPackIndex } from "./vectorIndex";
@@ -180,9 +180,18 @@ export async function searchPacks(
       if (!queryVec || !vectorsMatch) continue;
 
       if (fullVectorSearch) {
-        const floor = packSemanticFloor(profile, query);
+        let floor = packSemanticFloor(profile, query);
         const indexUri = await packIndexIfReady(pack, open.sizeBytes, open.dims);
         if (indexUri) {
+          // 0.1.35 distintividad: el fondo (puestos 10–50) sale de una
+          // primera búsqueda sin piso; el piso efectivo sube a fondo+gap
+          // cuando el mejor no destaca (pregunta sin respuesta en el pack).
+          if (profile.packDistinctGap > 0) {
+            const top = await searchPackIndex(indexUri, queryVec, -1, DISTINCT_BG_TO);
+            if (top && top.scores.length > 0) {
+              floor = distinctFloor(floor, [...top.scores].sort((a, b) => b - a), profile.packDistinctGap);
+            }
+          }
           const hits = await searchPackIndex(indexUri, queryVec, floor, limit);
           if (hits && hits.ids.length > 0) {
             // Same margin pruning as the built-in search, over the whole

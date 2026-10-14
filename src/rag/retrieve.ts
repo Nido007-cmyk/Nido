@@ -9,6 +9,7 @@ import { embeddingEngine } from "./embed";
 import {
   buildLexicalQuery,
   cosineSimilarity,
+  distinctFloor,
   filterByMinScore,
   filterByTermCoverage,
   fuseRetrievalResults,
@@ -104,7 +105,14 @@ async function semanticSearch(
   // H1-2026-10-06: umbral más alto para queries de un solo término.
   // 0.2.0: los umbrales son del modelo cargado (embeddingProfile.ts); para
   // bge son los mismos de siempre (0.60 / 0.70, margen 0.4).
-  const gated = filterByMinScore(scored, semanticFloor(profile, query));
+  // 0.1.35: además del piso absoluto, el mejor tiene que destacar sobre el
+  // fondo (distintividad; 0 en bge = sin cambio).
+  const floor = distinctFloor(
+    semanticFloor(profile, query),
+    scored.map((s) => s.score),
+    profile.distinctGap
+  );
+  const gated = filterByMinScore(scored, floor);
   // BUG-2-2026-10-06 (structural): poda por margen sobre cosenos crudos.
   // El gap predice relevancia mejor que el valor absoluto.
   return pruneSemanticByMargin(gated, profile.margin).slice(0, limit);
