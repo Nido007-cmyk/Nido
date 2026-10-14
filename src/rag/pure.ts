@@ -640,3 +640,29 @@ export function deserializeEmbedding(bytes: Uint8Array, expectedDim: number): Fl
   }
   return new Float32Array(bytes.buffer, bytes.byteOffset, actualDim);
 }
+
+/**
+ * 0.1.36: fondo de una lista de puntuaciones ORDENADA de mayor a menor: la
+ * media de los puestos 10–50 (o del último 3/4 si hay menos de 50). Igual
+ * que `background()` de scripts/multilingual/e5_pipeline.py, que es donde
+ * se calibró.
+ */
+export const DISTINCT_BG_FROM = 10;
+export const DISTINCT_BG_TO = 50;
+export function backgroundScore(sortedDesc: readonly number[]): number {
+  const n = sortedDesc.length;
+  if (n === 0) return 0;
+  const from = n > DISTINCT_BG_TO ? DISTINCT_BG_FROM : Math.floor(n / 4);
+  const to = n > DISTINCT_BG_TO ? DISTINCT_BG_TO : n;
+  let sum = 0;
+  for (let i = from; i < to; i++) sum += sortedDesc[i];
+  return to > from ? sum / (to - from) : 0;
+}
+
+/** Piso efectivo: el del modelo, o el fondo + `gap` si es más alto. */
+export function distinctFloor(floor: number, sortedDesc: readonly number[], gap: number): number {
+  // Con pocos candidatos (un puñado de documentos propios) no hay fondo
+  // fiable: se deja el piso del modelo tal cual.
+  if (!(gap > 0) || sortedDesc.length <= DISTINCT_BG_TO) return floor;
+  return Math.max(floor, backgroundScore(sortedDesc) + gap);
+}

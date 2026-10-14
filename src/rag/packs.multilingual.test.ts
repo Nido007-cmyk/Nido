@@ -21,6 +21,8 @@ type World = {
   indexReady: boolean;
   searchCalls: Array<{ floor: number; limit: number }>;
   hits: { ids: number[]; scores: number[]; gatedCount: number; gatedMin: number | null };
+  /** 0.1.36: lo que devuelve la búsqueda sin piso (fondo para la distintividad). */
+  topHits?: { ids: number[]; scores: number[]; gatedCount: number; gatedMin: number | null };
 };
 const W = (): World => (globalThis as unknown as { __pkW: World }).__pkW;
 (globalThis as unknown as { __pkW: World }).__pkW = {} as World;
@@ -51,7 +53,7 @@ vi.mock("./vectorIndex", () => ({
   packIndexIfReady: async () => (W().indexReady ? "file:///docs/corpus/wiki-vital5-e5.x.nvi" : null),
   searchPackIndex: async (_uri: string, _q: Float32Array, floor: number, limit: number) => {
     W().searchCalls.push({ floor, limit });
-    return W().hits;
+    return floor < 0 ? W().topHits ?? W().hits : W().hits;
   },
 }));
 
@@ -81,6 +83,7 @@ beforeEach(async () => {
     indexReady: true,
     searchCalls: [],
     hits: { ids: [1, 3], scores: [0.93, 0.9], gatedCount: 40, gatedMin: 0.81 },
+    topHits: undefined,
   });
   await packs.closeAllPacks();
 });
@@ -99,15 +102,37 @@ describe("searchPacks — multilingual (full vector search)", () => {
 
   it("uses e5's (higher) pack floor and the app's per-source limit", async () => {
     await packs.searchPacks("¿qué es la inflación?", new Float32Array([1, 0]), 12, e5Opts());
-    expect(W().searchCalls).toEqual([{ floor: profiles.MULTILINGUAL_E5_SMALL_PROFILE.packMinSimilarity, limit: 12 }]);
+    // 0.1.36: primero el fondo (sin piso, 50), luego la búsqueda real.
+    expect(W().searchCalls).toEqual([
+      { floor: -1, limit: 51 },
+      { floor: profiles.MULTILINGUAL_E5_SMALL_PROFILE.packMinSimilarity, limit: 12 },
+    ]);
     await packs.searchPacks("inflación", new Float32Array([1, 0]), 12, e5Opts());
-    expect(W().searchCalls[1].floor).toBe(profiles.MULTILINGUAL_E5_SMALL_PROFILE.packMinSimilaritySingleTerm);
+    expect(W().searchCalls[3].floor).toBe(profiles.MULTILINGUAL_E5_SMALL_PROFILE.packMinSimilaritySingleTerm);
   });
 
   it("a question made only of stopwords still gets the vector search", async () => {
     const r = await packs.searchPacks("¿qué es?", new Float32Array([1, 0]), 12, e5Opts());
-    expect(W().searchCalls).toHaveLength(1);
+    expect(W().searchCalls.filter((c) => c.floor >= 0)).toHaveLength(1);
     expect(r.semantic.length).toBeGreaterThan(0);
+  });
+
+  it("0.1.36 distintividad: si nada destaca del fondo, el piso sube y no hay fuentes falsas", async () => {
+    // Pregunta sin respuesta: los 50 mejores son todos parecidos (0.86–0.85).
+    const flat = Array.from({ length: 51 }, (_, i) => 0.86 - i * 0.0002);
+    W().topHits = { ids: flat.map((_, i) => i + 1), scores: flat, gatedCount: 51, gatedMin: flat[50] };
+    await packs.searchPacks("¿dónde dejé las llaves del coche?", new Float32Array([1, 0]), 12, e5Opts());
+    const real = W().searchCalls[1];
+    expect(real.floor).toBeGreaterThan(0.86); // fondo ≈ 0.853 + 0.03
+  });
+
+  it("0.1.36 distintividad: si el mejor destaca, sigue pasando", async () => {
+    const peaked = [0.93, 0.91, ...Array.from({ length: 49 }, (_, i) => 0.84 - i * 0.0005)];
+    W().topHits = { ids: peaked.map((_, i) => i + 1), scores: peaked, gatedCount: 51, gatedMin: peaked[50] };
+    await packs.searchPacks("¿qué es la inflación?", new Float32Array([1, 0]), 12, e5Opts());
+    // El piso sube con el fondo (≈0.826 + 0.03) pero el mejor (0.93) pasa de sobra.
+    expect(W().searchCalls[1].floor).toBeLessThan(0.93);
+    expect(W().searchCalls[1].floor).toBeGreaterThanOrEqual(profiles.MULTILINGUAL_E5_SMALL_PROFILE.packMinSimilarity);
   });
 
   it("index not built yet → keyword-first fallback for this question (no wait)", async () => {

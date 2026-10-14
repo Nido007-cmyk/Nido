@@ -4,6 +4,14 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.36-alpha — 2026-10-14
+
+### Fixed
+- Fewer unrelated sources under answers with multilingual search on. The
+  best match now has to stand out from the rest of the results, not just
+  pass a fixed score. Measured on the built-in corpus: wrong sources 20 % →
+  10 %; with the Vital pack: 33 % → 22 %. No correct answers were lost.
+
 ## 0.1.35-alpha — 2026-10-14
 
 ### Added
