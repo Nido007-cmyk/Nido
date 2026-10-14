@@ -276,3 +276,21 @@ describe("0.1.37 clasificar una tira de signos no es cuadrático", () => {
     expect(performance.now() - t0).toBeLessThan(60);
   });
 });
+
+import { extractRememberFact } from "./rememberRouter";
+
+describe("0.1.37 frases citadas no se guardan como recuerdos", () => {
+  it.each(["traduce al inglés: recuérdame comprar pan", "escribe una canción que se llame recuérdame siempre"])(
+    "«%s»",
+    (s) => {
+      expect(extractRememberFact(s)).toBeNull();
+    },
+  );
+  it("«oye, recuerda que…» y «recuerda que…» siguen guardando", () => {
+    expect(extractRememberFact("oye, recuerda que mi coche es azul")?.content).toBe("mi coche es azul");
+    expect(extractRememberFact("recuerda que mi coche es azul")?.content).toBe("mi coche es azul");
+  });
+  it("el título de un intervalo no soportado queda limpio", () => {
+    expect(extractReminderAction("recuérdame cada 2 semanas los lunes sacar el reciclaje", T0)?.text).toBe("sacar el reciclaje");
+  });
+});

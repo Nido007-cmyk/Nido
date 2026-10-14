@@ -295,6 +295,31 @@ const MONTH_DAY_RE =
 const IMPOSSIBLE_DATE_RE =
   /(?<![\d])(?:3[01]\s+(?:de\s+)?(?:febrero|february|fevereiro)|31\s+(?:de\s+)?(?:abril|april|junio|june|junho|septiembre|setiembre|september|setembro|noviembre|november|novembro)|(?:february|april|june|september|november)\s+31|february\s+3[01])(?![\p{L}\d])/iu;
 
+/**
+ * 0.1.37 (auditoría): ¿lo que va DELANTE del verbo («recuérdame»,
+ * «recuerda que»…) deja que sea una orden? Vale nada, una fecha («mañana
+ * recuérdame…») o una cortesía/enlace («oye,», «mejor», «y también»). Una
+ * frase citada («traduce: recuérdame…», «una canción que se llame
+ * recuérdame…») no lo es.
+ */
+export function isOrderLead(rawLead: string): boolean {
+  const lead = rawLead.trim().replace(/[,:;]+$/, "").trim();
+  if (!lead) return true;
+  if (
+    /^(?:(?:por\s+favor|porfa|oye|hey|hola|ok|okay|vale|bueno|please|hi|nido|ei|olá|ola|mejor|better|melhor|no|n[aã]o|y|and|e|tambi[eé]n|also|tamb[eé]m|entonces|then|ent[aã]o|ahora|now|agora)[,!.]?\s*)+$/i.test(lead)
+  ) {
+    return true;
+  }
+  return Boolean(parseReminderDateTime(lead));
+}
+
+// «los lunes», «on mondays», «todas as segundas» junto a un intervalo no
+// soportado: sobran en el título del aviso de una vez.
+const WEEKDAY_PLURAL_RE = new RegExp(
+  `(?<![\\p{L}])(?:los|on|todos\\s+los|every|as|todas\\s+as)\\s+(?:${WEEKDAY_NAMES})s?(?![\\p{L}-])`,
+  "giu",
+);
+
 /** Detecta una repetición soportada y devuelve la frase sin ella. */
 export function detectReminderRepeat(text: string): RepeatSpec | null {
   const tidy = (s: string) => s.replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim();
@@ -431,14 +456,7 @@ function extractReminderCore(userText: string): ReminderAction | null {
   // cabe una fecha («mañana recuérdame…») o una cortesía («oye, …»). Así
   // «traduce al inglés: recuérdame comprar pan», «una canción que se llame
   // recuérdame siempre» o «how do I say remind me to…» no crean nada.
-  const lead = trimmed.slice(0, m.index).trim().replace(/[,:;]+$/, "").trim();
-  if (
-    lead &&
-    !/^(?:(?:por\s+favor|porfa|oye|hey|hola|ok|okay|vale|bueno|please|hi|nido|ei|olá|ola|mejor|better|melhor|no|n[aã]o|y|and|e|tambi[eé]n|also|tamb[eé]m|entonces|then|ent[aã]o|ahora|now|agora)[,!.]?\s*)+$/i.test(lead) &&
-    !parseReminderDateTime(lead)
-  ) {
-    return null;
-  }
+  if (!isOrderLead(trimmed.slice(0, m.index))) return null;
   // «avísame si llueve», «let me know if…», «me avisa se chover»: NIDO no
   // puede comprobar condiciones; no es un recordatorio.
   if (/^(?:si|if|se)\s+\S/i.test(m[2].trim())) return null;
@@ -526,6 +544,8 @@ function extractReminderCore(userText: string): ReminderAction | null {
     // 0.1.32: «cada mes» no se queda en el título de un aviso de una vez.
     const clean = text
       .replace(UNSUPPORTED_INTERVAL_PHRASE_RE, " ")
+      .replace(UNSUPPORTED_INTERVAL_RE.test(text) ? WEEKDAY_PLURAL_RE : /(?!)/, " ")
+      .replace(UNSUPPORTED_INTERVAL_RE.test(text) ? /^\s*(?:los|las|on|os|as)\s+/i : /(?!)/, " ")
       .replace(new RegExp(RECURRENCE_RE.source, "giu"), " ")
       .replace(/\s{2,}/g, " ")
       .trim();

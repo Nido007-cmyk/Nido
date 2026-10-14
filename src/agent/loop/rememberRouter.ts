@@ -21,7 +21,7 @@
  * Puro, sin dependencias, 100% testeable.
  */
 
-import { INTERROGATIVE_START_RE, stripDateWords } from "./actionRouter";
+import { INTERROGATIVE_START_RE, isOrderLead, stripDateWords } from "./actionRouter";
 
 /** Resultado de la extracción determinística. */
 export interface RememberExtraction {
@@ -617,7 +617,10 @@ export function extractRememberFact(userText: string): RememberExtraction | null
 
   for (const { re, group } of EXTRACTION_PATTERNS) {
     const match = re.exec(trimmed);
-    if (match && match[group]) {
+    // 0.1.37 (auditoría): «traduce al inglés: recuérdame comprar pan» o
+    // «una canción que se llame recuérdame siempre» guardaban un hecho: el
+    // verbo tiene que abrir la orden (delante, solo fecha o cortesía).
+    if (match && match[group] && isOrderLead(trimmed.slice(0, match.index))) {
       // FIX 2026-10-07: limpiar instrucciones trailing ("Save it so you can
       // remind me in time") que no son parte del hecho.
       const content = stripTrailingInstructions(match[group].trim());

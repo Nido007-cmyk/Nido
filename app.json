@@ -2,7 +2,7 @@
   "expo": {
     "name": "NIDO",
     "slug": "nido-app",
-    "version": "0.1.36",
+    "version": "0.1.37",
     "orientation": "portrait",
     "icon": "./assets/icon-nido.png",
     "userInterfaceStyle": "light",
@@ -11,7 +11,7 @@
     },
     "android": {
       "package": "team.nido.app",
-      "versionCode": 37,
+      "versionCode": 38,
       "allowBackup": false,
       "permissions": [
         "android.permission.BLUETOOTH",
