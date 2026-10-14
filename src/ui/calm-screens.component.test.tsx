@@ -8,7 +8,7 @@
 // Component tests for Calm-migrated screens.
 // Verifies: renders without crashing, has accessibility labels, uses Calm structure.
 import React from "react";
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 
 // Mock the theme hook
 jest.mock("./theme", () => ({
@@ -55,6 +55,39 @@ describe("Calm-migrated screens", () => {
     await render(<AboutScreen onClose={() => {}} />);
     // Should have a close button with accessibility label
     expect(screen.getByLabelText("common.done")).toBeTruthy();
+  });
+
+  // 0.1.40: Acerca de → Licencias.
+  it("AboutScreen abre la pantalla de licencias", async () => {
+    const { AboutScreen } = require("./AboutScreen");
+    await render(<AboutScreen onClose={() => {}} />);
+    await fireEvent.press(screen.getByLabelText("aboutScreen.licensesOpen"));
+    expect(await screen.findByText("licenses.title")).toBeTruthy();
+  });
+
+  it("LicensesScreen: la licencia de NIDO, cada modelo con su licencia y la nota de LFM", async () => {
+    const { LicensesScreen } = require("./LicensesScreen");
+    await render(<LicensesScreen onClose={() => {}} />);
+    expect(screen.getByText(/Copyright \(c\) 2026 NIDO contributors/)).toBeTruthy();
+    expect(screen.getByTestId("license-asset-lfm2.5-8b-a1b-q4km")).toBeTruthy();
+    expect(screen.getByTestId("license-asset-qwen3-0.6b-q4km")).toBeTruthy();
+    expect(screen.getByText("licenses.notes.lfm")).toBeTruthy();
+    expect(screen.getAllByText("licenses.notes.ccBySa").length).toBeGreaterThan(0);
+    expect(screen.getByText("licenses.knowledgeBody")).toBeTruthy();
+  });
+
+  it("LicensesScreen: tocar un paquete enseña su licencia", async () => {
+    const { THIRD_PARTY } = require("../legal/licenses");
+    const { LicensesScreen } = require("./LicensesScreen");
+    await render(<LicensesScreen onClose={() => {}} />);
+    const first = THIRD_PARTY.packages[0];
+    const row = screen.getByLabelText(new RegExp(`^${first.name.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")} ${first.version},`));
+    await fireEvent.press(row);
+    if (first.files.length) {
+      expect(screen.getAllByText(THIRD_PARTY.texts[first.files[0].text]).length).toBeGreaterThan(0);
+    } else {
+      expect(screen.getByText("licenses.noText")).toBeTruthy();
+    }
   });
 
   // KnowledgeBaseScreen requires mocking expo modules (documentImporter)

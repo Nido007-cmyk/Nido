@@ -20,38 +20,62 @@ El aviso de copyright y el texto de la licencia MIT se conservan en `LICENSE`.
 - `src/privacy/networkAudit.ts`: auditoría de red (registro inmutable)
 - Base de datos y ajustes cifrados (SQLCipher + Android Keystore)
 - `allowBackup=false`: fuera del backup de Google
-- Eliminado: buscador de modelos en Hugging Face (filtraba intereses por red),
-  telemetría persistente, pantallas de desarrollo
+- Eliminado: buscador de modelos en Hugging Face (filtraba intereses por red)
+  y pantallas de desarrollo. La telemetría es solo local: tiempos y
+  cuentas en la base cifrada, que nunca se envían a ningún sitio
 - La entrada de voz usa el SpeechRecognizer integrado de Android con la
   opción de preferir offline (no es un modelo incluido: la disponibilidad y
   el comportamiento sin conexión dependen del servicio del dispositivo)
 - Idiomas español y portugués además del inglés (`src/i18n/locales/`)
 
-## Licencias de modelos y datos (si se distribuyen los assets de BOAR)
-- Qwen2.5 / Gemma: Apache-2.0
-- Phi-3.5-mini / bge-small-en-v1.5: MIT
-- LFM2.5-8B: LFM Open License v1.0 (revisar términos antes de distribuir)
-- Corpus Wikipedia: CC BY-SA 4.0 (atribución + compartir-igual)
-- multilingual-e5-small (intfloat; Wang et al., arXiv:2402.05672): MIT. El
-  GGUF del release `knowledge-packs-v2` es la conversión que hizo NIDO.
-- Paquetes de conocimiento compilados por NIDO a partir de Wikipedia
-  (`wiki-vital5`, `wiki-vital5-e5`): CC BY-SA 4.0. Por el "compartir-igual"
-  no pueden ser MIT. Si los compartes o adaptas, da crédito a **NIDO** (como
-  compilador) y a **Wikipedia**, enlaza la licencia, indica qué cambiaste y
-  mantén CC BY-SA 4.0. El aviso va también dentro de cada paquete (tabla
-  `meta`) y en `LICENSE-ATTRIBUTION.txt` junto a la descarga.
+## Licencias de modelos y datos
 
-## ¿Usas código de NIDO? La atribución es obligatoria
+La app no lleva ningún modelo de IA dentro del APK: los modelos se descargan
+de quien los publica cuando los eliges, y cada uno conserva su licencia. Las
+licencias de abajo se verificaron en su origen el 2026-10-14 (ver
+[`docs/release/MODEL_LICENSE_AUDIT.md`](docs/release/MODEL_LICENSE_AUDIT.md)).
 
-NIDO tiene licencia MIT. Puedes usarlo, modificarlo y distribuirlo, pero la
-licencia MIT **exige** conservar el aviso de copyright:
+| Qué | Licencia | Notas |
+|---|---|---|
+| Qwen2.5 0.5B / 1.5B / 7B Instruct (Alibaba Qwen) | Apache-2.0 | GGUF de bartowski |
+| Qwen3-0.6B (Alibaba Qwen) | Apache-2.0 | GGUF de unsloth |
+| Gemma 4 E4B (Google) | Apache-2.0 | GGUF QAT oficial |
+| Phi-3.5-mini-instruct (Microsoft) | MIT | GGUF de bartowski |
+| bge-small-en-v1.5 (BAAI) | MIT | GGUF de CompendiumLabs |
+| multilingual-e5-small (intfloat; Wang et al., arXiv:2402.05672) | MIT, Copyright (c) Microsoft Corporation | el GGUF del release `knowledge-packs-v2` es la conversión de NIDO; el aviso MIT va en `LICENSE-ATTRIBUTION.txt` junto a él |
+| LFM2.5-8B-A1B (Liquid AI) | LFM Open License v1.0 | no es Apache/MIT: el uso comercial solo se licencia a entidades con menos de 10 millones de USD de ingresos anuales (§5); redistribuirlo exige entregar copia de la licencia (§4). NIDO no lo redistribuye: la app lo descarga del repositorio de Liquid AI |
+
+**Texto de Wikipedia (CC BY-SA 4.0).** La app *sí* lleva texto de Wikipedia:
+300 introducciones de artículos dentro del APK (`assets/corpus/corpus.json`),
+además de los paquetes opcionales que se descargan (`corpus-standard`,
+`corpus-full`, `wiki-vital5`, `wiki-vital5-e5`). Texto de los colaboradores
+de Wikipedia, https://www.wikipedia.org, con licencia Creative Commons
+Atribución-CompartirIgual 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).
+Cada entrada conserva la URL de su artículo. Los paquetes compilados por NIDO
+se comparten con la misma licencia CC BY-SA 4.0 (por el «compartir igual» no
+pueden ser MIT): si los compartes o adaptas, da crédito a **NIDO** (como
+compilador) y a **Wikipedia**, enlaza la licencia, indica qué cambiaste y
+mantén CC BY-SA 4.0. El aviso va también dentro de cada paquete (tabla
+`meta`), en `assets/packs/ATTRIBUTION.txt` y en los archivos
+`LICENSE-ATTRIBUTION.txt` / `ATTRIBUTION.txt` de los releases. NIDO no está
+afiliado a la Fundación Wikimedia ni cuenta con su respaldo.
+
+**Software de terceros.** Los paquetes npm que se compilan dentro de la app y
+los textos de sus licencias están en
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), y la misma lista se puede
+leer dentro de la app (Acerca de → Licencias).
+
+## ¿Usas código de NIDO? Conserva el aviso
+
+NIDO tiene licencia MIT. Puedes usarlo, copiarlo, modificarlo y distribuirlo.
+La única condición de la licencia MIT es incluir el aviso de copyright y el
+aviso de permiso en todas las copias o partes sustanciales:
 
 > Copyright (c) 2026 NIDO contributors
 
-Esto significa: conserva el archivo `LICENSE`, conserva los encabezados de
-cada archivo ("Copyright (c) 2026 NIDO contributors") y menciona a NIDO donde
-menciones tus otras dependencias (README, pantalla de acerca de,
-documentación).
+En la práctica: conserva el archivo `LICENSE` (que también lleva el aviso de
+BOAR, "Copyright (c) 2026 aoair contributors") y los encabezados de cada
+archivo.
 
 Trabajo original de NIDO (no heredado de BOAR):
 - Capa P2P: `src/p2p/` — emparejamiento Bluetooth, handshake cifrado,
@@ -65,5 +89,5 @@ Trabajo original de NIDO (no heredado de BOAR):
 - i18n con español primero y la identidad visual/marca NIDO
 
 Si haces fork de NIDO o reutilizas porciones sustanciales, un crédito visible
-como "Basado en [NIDO](https://github.com/Nido007-cmyk/Nido)" es exigido por
-la licencia y apreciado por quienes lo construyeron.
+como "Basado en [NIDO](https://github.com/Nido007-cmyk/Nido)" no lo exige la
+licencia, pero lo agradecen quienes lo construyeron.

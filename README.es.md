@@ -161,3 +161,10 @@ contribuidores de aoair, también MIT. De BOAR se reutiliza la base de
 inferencia y búsqueda sin conexión; el agente, el almacenamiento cifrado, la
 política de seguridad y el protocolo Bluetooth son trabajo propio de NIDO.
 [ATTRIBUTION.es.md](ATTRIBUTION.es.md) detalla qué viene de dónde.
+
+Los modelos de IA y los paquetes de conocimiento se descargan aparte y
+conservan sus licencias (Apache-2.0, MIT, la LFM Open License v1.0 de LFM2.5
+y CC BY-SA 4.0 para el texto de Wikipedia, parte del cual va dentro de la
+app). Los paquetes de código abierto compilados en la app están, con los
+textos de sus licencias, en [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Todo se puede leer también dentro de la app, en Acerca de → Licencias.

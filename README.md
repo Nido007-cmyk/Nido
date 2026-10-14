@@ -156,3 +156,10 @@ aoair contributors, also MIT. BOAR's offline inference and retrieval
 foundation is reused; the agent, the encrypted storage, the safety policy
 and the Bluetooth protocol are NIDO's own work.
 [ATTRIBUTION.md](ATTRIBUTION.md) lists what came from where.
+
+AI models and knowledge packs are downloaded separately and keep their own
+licenses (Apache-2.0, MIT, the LFM Open License v1.0 for LFM2.5, and
+CC BY-SA 4.0 for Wikipedia text, some of which ships inside the app). The
+open-source packages compiled into the app are listed with their license
+texts in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). All of it is also
+readable inside the app, in About → Licenses.

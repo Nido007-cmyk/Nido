@@ -57,3 +57,12 @@ jobs:
           '
       - run: npm run verify:pins
       - run: npm run verify:manifest-sig
+      # Avisos de licencias de terceros (2026-10-14): se generan desde
+      # node_modules para comprobar que el generador funciona y avisar si
+      # lo subido está desfasado. No bloquea: el APK los regenera al
+      # compilar y el workflow third-party-notices los sube al repo.
+      - name: Third-party notices
+        run: |
+          npm run notices
+          node -e 'const n=require("./src/legal/thirdPartyNotices.json");console.log(`::notice title=Third-party notices::${n.count} packages, ${Object.keys(n.texts).length} distinct license texts, ${n.withoutText.length} without a license file`)'
+          git diff --quiet -- src/legal THIRD_PARTY_NOTICES.md || echo "::warning title=Third-party notices::the committed notices differ from node_modules (the third-party-notices workflow updates them)"
