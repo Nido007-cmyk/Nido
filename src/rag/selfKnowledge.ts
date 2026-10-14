@@ -143,6 +143,13 @@ const IDENTITY_PATTERNS: RegExp[] = [
   new RegExp(`\\bcuentame\\s+(de|sobre)\\s+${BRAND}\\b`),
   new RegExp(`\\bquien\\s+(creo|hizo)\\s+${BRAND}\\b`),
   /^quien\s+eres$/,
+  // 0.1.35 (barrido de paridad): «¿cuál es tu nombre?» caía al modelo en
+  // los tres idiomas.
+  /^cual\s+es\s+tu\s+nombre$/,
+  /^como\s+te\s+llamas$/,
+  /^(?:whats|what\s+is)\s+your\s+name$/,
+  /^qual\s+e\s+(?:o\s+)?seu\s+nome$/,
+  /^como\s+voce\s+se\s+chama$/,
   // Portuguese
   new RegExp(`\\bo\\s+que\\s+e\\s+(o\\s+)?(app\\s+)?${BRAND}\\b`),
   new RegExp(`\\b(me\\s+)?fala\\s+sobre\\s+(o\\s+)?${BRAND}\\b`),

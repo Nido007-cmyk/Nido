@@ -348,3 +348,14 @@ describe("0.1.35: la respuesta a «¿qué te recuerdo?» crea el recordatorio", 
     expect(extractToolAction("pagar la luz", new Date(t0.getTime() + 5 * 60_000))).toBeNull();
   });
 });
+
+describe("0.1.35: una alarma sin parte del día es de mañana", () => {
+  it.each(["pon una alarma a las 7", "set an alarm for 7", "coloca um alarme às 7"])("%s → 7:00", (s) => {
+    const r = extractReminderAction(s, new Date(2026, 9, 13, 20, 0));
+    expect(new Date(r!.dueAt!).getHours()).toBe(7);
+  });
+  it("con «de la tarde» respeta la tarde", () => {
+    const r = extractReminderAction("pon una alarma a las 5 de la tarde", new Date(2026, 9, 13, 10, 0));
+    expect(new Date(r!.dueAt!).getHours()).toBe(17);
+  });
+});

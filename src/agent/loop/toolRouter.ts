@@ -329,7 +329,7 @@ const NOTE_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
 // (splitReminderScope) y la lista se filtra por día en el handler.
 const REMINDER_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   {
-    re: /^(?:(?:mu[eé]strame|lista|listar|ver|dame|ens[eé][ñn]ame)\s+)?(?:mis|los|todos los|todos mis)\s+recordatorios(?: pendientes)?$|^(?:qu[eé]|cu[aá]les)\s+recordatorios\s+(?:tengo|hay)(?: pendientes)?$|^cu[aá]les son mis recordatorios$|^recordatorios$|^lista de recordatorios$|^tengo alg[uú]n recordatorio$|^qu[eé] tengo pendiente$|^qu[eé] (?:me )?(?:queda|falta) pendiente$/i,
+    re: /^(?:(?:mu[eé]strame|lista|listar|ver|dame|ens[eé][ñn]ame)\s+)?(?:mis|los|todos los|todos mis)\s+recordatorios(?: pendientes)?$|^(?:qu[eé]|cu[aá]les)\s+recordatorios\s+(?:tengo|hay)(?: pendientes)?$|^cu[aá]les son mis recordatorios$|^recordatorios$|^lista de recordatorios$|^tengo alg[uú]n recordatorio$|^qu[eé] tengo pendiente$|^qu[eé] (?:me )?(?:queda|falta) pendiente$|^qu[eé] hay pendiente$/i,
     lang: "es",
   },
   {
@@ -337,7 +337,7 @@ const REMINDER_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
     lang: "en",
   },
   {
-    re: /^(?:(?:mostra|mostre|lista|listar|ver)\s+)?(?:meus|os|todos os)\s+lembretes$|^(?:que|quais)\s+lembretes\s+(?:eu\s+)?tenho$|^tenho algum lembrete$|^o que (?:eu )?tenho pendente$/i,
+    re: /^(?:(?:mostra|mostre|lista|listar|ver)\s+)?(?:meus|os|todos os)\s+lembretes$|^(?:que|quais)\s+lembretes\s+(?:eu\s+)?tenho$|^tenho algum lembrete$|^o que (?:eu )?tenho pendente$|^o que (?:tem|h[aá]) pendente$/i,
     lang: "pt",
   },
 ];
@@ -398,6 +398,10 @@ const CAL_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
 
 const CAL_CREATE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: new RegExp(`^${POLITE}(?:ag[eé]ndame|agenda|crea(?: un)? evento|crea una cita|a[ñn]ade (?:un |una )?(?:evento|cita)|agrega (?:un |una )?(?:evento|cita)|pon en (?:mi |el )?calendario)(?: (?:al|en (?:mi|el)) calendario)?(?::)?\\s+(.+)$`, "is"), lang: "es" },
+  // 0.1.35 (barrido de paridad): «agrega una reunión el lunes a las 9» y
+  // «adiciona uma reunião segunda às 9» (el inglés ya casaba).
+  { re: new RegExp(`^${POLITE}(?:agrega|a[ñn]ade|pon|crea)\\s+(?:una?\\s+)?((?:reuni[oó]n|cita|llamada|junta)\\s+.+)$`, "is"), lang: "es" },
+  { re: new RegExp(`^${POLITE}(?:adiciona|adicione|cria|crie|coloca)\\s+(?:uma\\s+|um\\s+)?((?:reuni[aã]o|consulta|encontro|compromisso)\\s+.+)$`, "is"), lang: "pt" },
   { re: new RegExp(`^${POLITE}(?:schedule|create an event|add (?:an? )?(?:event|appointment)(?: to my calendar)?|put on my calendar)(?::)?\\s+(.+)$`, "is"), lang: "en" },
   // 0.1.31: «add a meeting on monday at 9» / «marca reunião segunda às 9»
   // caían al conocimiento. El título conserva la palabra (meeting/reunião).

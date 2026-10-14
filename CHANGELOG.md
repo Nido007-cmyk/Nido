@@ -18,6 +18,12 @@ All notable changes to NIDO are recorded here. Versions follow
 - "Ponme un recordatorio para el lunes" → NIDO asks what to remind → the
   answer ("pagar la luz") now creates the reminder. Before, that answer
   went to the model and nothing was saved. "No"/"cancel" drops it.
+- Same request, every language (second sweep): "set an alarm for 7",
+  "coloca um alarme às 7", "10 minute timer", "agrega una reunión el
+  lunes…", "adiciona uma reunião…", "qué hay pendiente", "o que tem
+  pendente", and "what's your name / cuál es tu nombre / qual é o seu
+  nome" now get their direct answer instead of the model. An alarm with no
+  time of day ("alarm for 7") is in the morning, like "wake me at 7".
 - Reminder titles no longer keep the calendar date inside ("el 15 de marzo
   el cumpleaños…" → "el cumpleaños de mamá").
 

@@ -730,6 +730,13 @@ const PARITY: Array<[string, string, string]> = [
   ["cómo uso la investigación profunda", "how do I use deep research", "como uso a pesquisa profunda"],
   ["elige un archivo", "pick a file", "escolha um arquivo"],
   ["abre https://example.com", "open https://example.com", "abra https://example.com"],
+  // 0.1.35: segundo barrido.
+  ["pon una alarma a las 7", "set an alarm for 7", "coloca um alarme às 7"],
+  ["temporizador de 10 minutos", "10 minute timer", "temporizador de 10 minutos"],
+  ["agrega una reunión el lunes a las 9", "add a meeting on monday at 9", "adiciona uma reunião segunda às 9"],
+  ["qué hay pendiente", "what's pending", "o que tem pendente"],
+  ["cuál es tu nombre", "what's your name", "qual é o seu nome"],
+  ["recuérdame pagar el alquiler el día 1 de cada mes", "remind me to pay rent on the 1st of every month", "me lembra de pagar o aluguel todo dia 1 de cada mês"],
 ];
 
 describe("composición — paridad es/en/pt de las rutas deterministas", () => {
