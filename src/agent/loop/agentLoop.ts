@@ -45,6 +45,8 @@ import {
   reminderWhen,
   reminderRepeatWhen,
   notePendingReminderAsk,
+  clearPendingReminderAsk,
+  choiceTurnKind,
   resolveChoiceReply,
   routerMessage,
   runToolAction,
@@ -606,7 +608,7 @@ export async function runAgentLoop(
   // como la solución más confiable para modelos sub-1B.
   // ACTION-ROUTER 2026-10-07: calculadora y recordatorios antes que memoria
   // (el modelo 0.5B no siempre genera el tool call para acciones simples).
-  const { extractCalcAction, extractReminderAction, reminderMissingText, extractTimerAction, extractWeeklyPlanAction, generateWeeklyPlan } = await import("./actionRouter");
+  const { extractCalcAction, extractReminderAction, reminderMissingText, extractTimerAction, extractWeeklyPlanAction, generateWeeklyPlan, detectReminderRepeat } = await import("./actionRouter");
   // Permisos del usuario: con la herramienta apagada no hay atajo; el turno
   // sigue al modelo y el despachador la rechaza.
   const fastPathAllowed = (tool: string): boolean =>
@@ -668,7 +670,12 @@ export async function runAgentLoop(
   // de la pregunta anterior. Hasta la 0.1.24 la pregunta no guardaba
   // estado y la respuesta caía a conocimiento, sin borrar ni leer nada.
   const pendingChoice = options.choiceStore?.current ?? null;
-  if (pendingChoice && options.choiceStore) {
+  // 0.1.37 (auditoría): caducada o con pinta de orden nueva → se olvida y
+  // el turno sigue su curso normal (choiceTurnKind decide, igual que en
+  // la puerta del chat).
+  if (pendingChoice && options.choiceStore && choiceTurnKind(userText, pendingChoice) === "none") {
+    options.choiceStore.current = null;
+  } else if (pendingChoice && options.choiceStore) {
     const resolution = resolveChoiceReply(userText, pendingChoice.candidates);
     if (resolution?.type === "cancel") {
       options.choiceStore.current = null;
@@ -702,11 +709,15 @@ export async function runAgentLoop(
   // "crea una nota…" / "crea un evento…" como recordatorio.
   const rawToolAction = extractToolAction(userText);
   const toolAction = rawToolAction ? settleSharedLang(rawToolAction, userText, options.lang) : null;
+  // 0.1.37: la respuesta a «¿qué te recuerdo cada lunes?» conserva la
+  // repetición: se crea por la vía de recordatorios de abajo (la misma
+  // que «recuérdame cada lunes…»), no por la herramienta de una sola vez.
+  const fillWithRepeat = toolAction?.kind === "reminderFill" && toolAction.repeat ? toolAction : null;
   // Una herramienta apagada SÍ entra aquí: runToolAction responde, en el
   // idioma del usuario, que está desactivada y dónde activarla (en vez de
   // mandar el turno al modelo). En tareas programadas solo si la
   // herramienta está entre las permitidas para la tarea.
-  if (toolAction && (!options.restrictFastPathsToHandlers || toolForAction(toolAction) in handlers)) {
+  if (toolAction && !fillWithRepeat && (!options.restrictFastPathsToHandlers || toolForAction(toolAction) in handlers)) {
     const outcome = await runToolAction(toolAction, toolDeps);
     return { response: outcome.response, intent, toolUses: outcome.toolUses, deterministic: true };
   }
@@ -715,7 +726,7 @@ export async function runAgentLoop(
   // y crearía un recordatorio SIN hora. Un temporizador es un
   // recordatorio con hora (ahora + duración) y la misma notificación.
   const timerLang: RouterLang = options.lang === "en" || options.lang === "pt" ? options.lang : "es";
-  const timerAction = fastPathAllowed("create_reminder") ? extractTimerAction(userText) : null;
+  const timerAction = fastPathAllowed("create_reminder") && !fillWithRepeat ? extractTimerAction(userText) : null;
   if (timerAction) {
     const { saveReminder } = await import("../memory/memoryStore");
     const timerNames: Record<RouterLang, string> = { es: "Temporizador", en: "Timer", pt: "Temporizador" };
@@ -755,7 +766,15 @@ export async function runAgentLoop(
       ],
     };
   }
-  const reminderAction = fastPathAllowed("create_reminder") ? extractReminderAction(userText) : null;
+  let reminderAction: ReturnType<typeof extractReminderAction> = null;
+  if (fastPathAllowed("create_reminder")) {
+    if (fillWithRepeat && fillWithRepeat.kind === "reminderFill") {
+      clearPendingReminderAsk();
+      reminderAction = { text: fillWithRepeat.text, dueAt: fillWithRepeat.dueAt, repeat: fillWithRepeat.repeat ?? undefined };
+    } else {
+      reminderAction = extractReminderAction(userText);
+    }
+  }
   const reminderLang: RouterLang = options.lang === "en" || options.lang === "pt" ? options.lang : "es";
   // 0.1.32: fecha sin contenido («ponme un recordatorio para el lunes»):
   // se pregunta qué recordar en vez de mandar el turno al modelo.
@@ -763,7 +782,7 @@ export async function runAgentLoop(
     const missingDue = reminderMissingText(userText);
     if (missingDue) {
       // 0.1.35: la siguiente respuesta corta será el contenido.
-      notePendingReminderAsk(missingDue, reminderLang, new Date());
+      notePendingReminderAsk(missingDue, reminderLang, new Date(), detectReminderRepeat(userText.trim())?.repeat ?? null);
       return {
         // Solo el día (la hora por defecto, 9:00, no la dijo el usuario).
         response: routerMessage("reminderAskWhat", reminderLang, {

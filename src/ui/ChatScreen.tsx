@@ -59,7 +59,7 @@ import { showSecureAlert } from "nido-secure-dialog";
 // NIDO agent: loop agéntico local con herramientas (Fase A).
 import { classifyIntent } from "../agent/loop/intent";
 import { isGenericMemoryQuestionShape, memoryGateHit } from "../agent/loop/memoryQuery";
-import { choiceTurnKind, type ChoiceStore } from "../agent/loop/toolRouter";
+import { beginUserTurn, choiceTurnKind, resetConversationState, type ChoiceStore } from "../agent/loop/toolRouter";
 import { runAgentLoop, assertPromptBudget, estimatePromptTokens } from "../agent/loop/agentLoop";
 import { buildToolHandlers, searchPhoneContacts } from "../agent/tools/handlers";
 import { matchSmallTalk, smallTalkSessionTitle } from "../agent/loop/smallTalk";
@@ -258,6 +258,8 @@ export function ChatScreen({
   const deepResearchModeRef = useRef(false);
   // 0.1.25: elección pendiente («¿cuál nota?») entre turnos del chat.
   const choiceStoreRef = useRef<ChoiceStore>({ current: null });
+  // 0.1.37: idioma del turno anterior (al cambiar, se olvida todo seguimiento).
+  const lastTurnLangRef = useRef<string | null>(null);
   const sessionSummaryRef = useRef<string | null>(null);
   const messagesRef = useRef<Message[]>([]);
   const backgroundTaskRef = useRef<Promise<void> | null>(null);
@@ -622,6 +624,10 @@ export function ChatScreen({
     setMessages([]);
     setActiveSessionId(null);
     sessionSummaryRef.current = null;
+    // 0.1.37 (auditoría): una pregunta pendiente del chat anterior no debe
+    // convertir el primer mensaje del nuevo en un recordatorio o un borrado.
+    choiceStoreRef.current.current = null;
+    resetConversationState();
     impact(ImpactFeedbackStyle.Medium);
   }, [stopAndAwaitGeneration, cancelBackgroundTask]);
 
@@ -663,6 +669,8 @@ export function ChatScreen({
     followBottom.current = true;
     setMessages(records.map((r) => ({ id: r.id, role: r.role, text: r.text, feedback: r.feedback })));
     setActiveSessionId(id);
+    choiceStoreRef.current.current = null;
+    resetConversationState();
     const session = sessions.find((s) => s.id === id);
     sessionSummaryRef.current = session?.summary ?? null;
   }, [stopAndAwaitGeneration, cancelBackgroundTask, sessions]);
@@ -693,6 +701,9 @@ export function ChatScreen({
     // passes through it, so the button can never be left permanently blocked.
     if (!sendGuardRef.current.tryAcquire()) return;
     try {
+    // 0.1.37: los seguimientos («¿qué te recuerdo?», «Haz uno») valen solo
+    // para el turno siguiente.
+    beginUserTurn();
 
     await cancelBackgroundTask();
 
@@ -749,6 +760,11 @@ export function ChatScreen({
     // normal nunca lo consultaba. Anclado al mensaje completo: "hola,
     // recuérdame comprar pan" sigue su camino normal.
     const uiLang = toFallbackLang(i18n.resolvedLanguage ?? i18n.language);
+    if (lastTurnLangRef.current !== null && lastTurnLangRef.current !== uiLang) {
+      choiceStoreRef.current.current = null;
+      resetConversationState();
+    }
+    lastTurnLangRef.current = uiLang;
     const smallTalkHit = kbQueryMeta === null ? matchSmallTalk(query, uiLang) : null;
     const kbAnswer = kbQueryMeta !== null ? kbQueryMeta.answer : smallTalkHit?.text ?? null;
     if (kbAnswer !== null) {
