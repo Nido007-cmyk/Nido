@@ -159,8 +159,22 @@ const NAMED_DAYS: Array<{ re: RegExp; month: number; day: number; label: Record<
   { re: /^halloween$/i, month: 9, day: 31, label: { es: "Halloween", en: "Halloween", pt: "o Halloween" } },
 ];
 
-/** Fecha (00:00 local) de lo nombrado, o null si no se entiende. */
-export function countdownTarget(raw: string, now: Date, lang: RouterLang): { target: Date; label: string } | null {
+/**
+ * 0.1.34 (prueba física, Tab A9+): el autocorrector cambió «Cuánto» por
+ * «Canton» y «Canton falta para navidad» acabó en la búsqueda offline
+ * (citó «Cheti Chand»). Con una FECHA CON NOMBRE detrás, la palabra de
+ * delante da igual: «falta para navidad», «cuanto falta pa navidad»,
+ * «days till christmas», «falta pro natal». Solo para días con nombre:
+ * con fechas sueltas se sigue exigiendo la pregunta completa.
+ */
+const LENIENT_COUNTDOWN_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
+  { re: /^(?:\S+\s+){0,2}(?:falta|queda)n?(?:\s+\S+)?\s+(?:para|pa)\s+(?:el\s+|la\s+)?(.+)$/i, lang: "es" },
+  { re: /^(?:\S+\s+){0,3}(?:until|till|til|to)\s+(.+)$/i, lang: "en" },
+  { re: /^(?:\S+\s+){0,2}falta(?:m)?(?:\s+\S+)?\s+(?:para|pro|pra)\s+(?:o\s+|a\s+)?(.+)$/i, lang: "pt" },
+];
+
+/** Fecha (00:00 local) de un día con nombre (Navidad, Año Nuevo…), o null. */
+export function namedDayTarget(raw: string, now: Date, lang: RouterLang): { target: Date; label: string } | null {
   const t = raw.trim().replace(/[?.!]+$/, "");
   for (const n of NAMED_DAYS) {
     if (!n.re.test(t)) continue;
@@ -168,6 +182,16 @@ export function countdownTarget(raw: string, now: Date, lang: RouterLang): { tar
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     if (d.getTime() < today.getTime()) d.setFullYear(d.getFullYear() + 1);
     return { target: d, label: n.label[lang] };
+  }
+  return null;
+}
+
+/** Fecha (00:00 local) de lo nombrado, o null si no se entiende. */
+export function countdownTarget(raw: string, now: Date, lang: RouterLang): { target: Date; label: string } | null {
+  const t = raw.trim().replace(/[?.!]+$/, "");
+  {
+    const named = namedDayTarget(t, now, lang);
+    if (named) return named;
   }
   // Desde el inicio del día: «el 13 de octubre» dicho el 13 a las 10 es HOY
   // (con la hora real, la hora por defecto de las 9 ya habría pasado y la
@@ -590,6 +614,12 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     const m = re.exec(t);
     if (!m) continue;
     const c = countdownTarget(m[1], now, lang);
+    if (c) return { kind: "countdown", target: c.target.toISOString(), label: c.label, lang };
+  }
+  for (const { re, lang } of LENIENT_COUNTDOWN_RULES) {
+    const m = re.exec(t);
+    if (!m) continue;
+    const c = namedDayTarget(m[1], now, lang);
     if (c) return { kind: "countdown", target: c.target.toISOString(), label: c.label, lang };
   }
   for (const { re, q, lang } of TIMER_CANCEL_RULES) if (re.test(t)) return { kind: "reminderDelete", target: { type: "one", query: q }, lang };
