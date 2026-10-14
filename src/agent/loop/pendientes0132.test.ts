@@ -260,6 +260,9 @@ describe("0.1.34: «ayúdame a planear mi semana» usa la plantilla", () => {
   });
   it("contarlo no es pedirlo", () => {
     expect(extractWeeklyPlanAction("voy a planear mi semana mañana, qué opinas")).toBeNull();
+  });
+});
+
 describe("0.1.34: «Haz uno» tras una lista de recordatorios vacía", () => {
   it("dentro de la ventana explica cómo pedirlo; fuera, no se toca", async () => {
     const t0 = new Date(2026, 9, 13, 18, 25);
