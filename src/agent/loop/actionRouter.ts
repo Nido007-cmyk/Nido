@@ -384,7 +384,7 @@ function extractReminderCore(userText: string): ReminderAction | null {
   // «despiértame a las 7», «me acorde às 7», «wake me at 7» creaban
   // nada: caían al modelo. El verbo va en su grupo para saber si es un
   // aviso (su texto puede ser la propia orden cuando no hay tarea).
-  const m = /(agr[ée]game|cr[ée]ame|ponme|crea|recu[ée]rdame|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|faz|fa[çc]a)\s+um\s+lembrete|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
+  const m = /(agr[ée]game|cr[ée]ame|ponme|crea|recu[ée]rdame|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|faz|fa[çc]a)\s+um\s+lembrete|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|define|defina)\s+um\s+alarme(?:\s+para)?|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
   if (!m) return null;
   // 0.1.30 (rutas que caían al modelo): «pon una alarma a las 7» y «set a
   // reminder for 5pm» también son avisos: sin tarea, el título es la frase.
@@ -392,14 +392,19 @@ function extractReminderCore(userText: string): ReminderAction | null {
   const isAlertVerb = /av[íi]s|despi|despert|wake|acord|let\s+me\s+know|alarm/i.test(m[1]);
 
   let text = m[2].trim();
-  if (text.length < 3) return null;
+  // 0.1.35: «set an alarm for 7» deja solo «7»: corto pero válido.
+  if (text.length < 3 && !/^\d/.test(text)) return null;
   // 0.1.20 (P3-11): un DESPERTADOR es de mañana. Sin esta marca, «a
   // las 7» a media tarde se programaba a las 19:00 (la siguiente
   // ocurrencia de las 7). Con verbos de despertar y sin parte del día
   // explícita, se añade la de la mañana según el idioma del verbo.
-  const isWakeVerb = /despi|despert|wake|acord/i.test(m[1]);
-  if (isWakeVerb && !/(ma[ñn]ana|tarde|noche|madrugada|morning|afternoon|evening|night|manh[ãa]|noite)/i.test(text)) {
-    text += /wake/i.test(m[1]) ? " in the morning" : /acord/i.test(m[1]) ? " da manhã" : " de la mañana";
+  // 0.1.35: una ALARMA sin parte del día también es de mañana (como el
+  // despertador): «set an alarm for 7» a las 20:00 son las 7:00, no las 19:00.
+  const isWakeVerb = /despi|despert|wake|acord|alarm/i.test(m[1]);
+  // «set an alarm for 7» / «coloca um alarme para 7»: hora suelta → «at 7».
+  text = text.replace(/^(?:for\s+|para\s+(?:las\s+|as\s+)?)?(\d{1,2}(?::\d{2})?)\s*$/i, "at $1");
+  if (isWakeVerb && !/(ma[ñn]ana|tarde|noche|madrugada|morning|afternoon|evening|night|manh[ãa]|noite|am\b|pm\b)/i.test(text)) {
+    text += /wake|alarm(?!a|e)/i.test(m[1]) ? " in the morning" : /acord|alarme/i.test(m[1]) ? " da manhã" : " de la mañana";
   }
   // «avísame cuando sean las 3»: el parser entiende «a las 3», no la
   // subordinada. Se reformula solo el arranque.
@@ -641,6 +646,8 @@ const TIMER_FORMS: Array<{ re: RegExp }> = [
   // EN: «set a timer for 10 minutes (for the pasta)»
   { re: /^(?:set|start)\s+(?:a\s+)?timer\s+(?:for\s+)?(.+?)(?:\s+(?:for|to)\s+(.+))?$/i },
   { re: /^timer\s+(?:for\s+)?(.+?)(?:\s+(?:for|to)\s+(.+))?$/i },
+  // 0.1.35: «10 minute timer» (la duración delante).
+  { re: /^(?:(?:set|start)\s+)?(?:a\s+)?(\d+\s*(?:-\s*)?(?:second|sec|minute|min|hour)s?)\s+timer(?:\s+(?:for|to)\s+(.+))?$/i },
   // PT: «coloca um temporizador de 10 minutos (para a massa)»
   { re: /^(?:coloca|inicia|come[çc]a|ativa|p[õo]e|ponha)\s+(?:um\s+)?(?:temporizador|cron[ôo]metro)\s+(?:de\s+)?(.+?)(?:\s+(?:para|de)\s+(.+))?$/i },
   { re: /^(?:temporizador|cron[ôo]metro)\s+(?:de\s+)?(.+?)(?:\s+(?:para|de)\s+(.+))?$/i },
