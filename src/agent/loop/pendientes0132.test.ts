@@ -251,3 +251,18 @@ describe("0.1.34: calculadora con el gatillo cambiado por el autocorrector", () 
     },
   );
 });
+
+describe("0.1.34: «Haz uno» tras una lista de recordatorios vacía", () => {
+  it("dentro de la ventana explica cómo pedirlo; fuera, no se toca", async () => {
+    const t0 = new Date(2026, 9, 13, 18, 25);
+    const deps = { isDisabled: () => false, now: () => t0, dispatch: async () => ({ status: "executed" as const, text: "" }), listReminders: async () => [] };
+    const list = extractToolAction("qué recordatorios tengo mañana", t0)!;
+    await runToolAction(list, deps as never);
+    const a = extractToolAction("Haz uno", new Date(t0.getTime() + 30_000));
+    expect(a).toMatchObject({ kind: "reminderOfferCreate", range: "tomorrow", lang: "es" });
+    const r = await runToolAction(a!, deps as never);
+    expect(r.response).toContain("recuérdame mañana a las 9");
+    expect(extractToolAction("make one", new Date(t0.getTime() + 60_000))).toMatchObject({ kind: "reminderOfferCreate", lang: "en" });
+    expect(extractToolAction("Haz uno", new Date(t0.getTime() + 10 * 60_000))).toBeNull();
+  });
+});
