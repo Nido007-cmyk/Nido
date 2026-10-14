@@ -143,7 +143,7 @@ export async function scheduleReminderNotification(
   reminderId: string,
   text: string,
   at: Date,
-  repeat?: "day" | "week" | null
+  repeat?: "day" | "week" | "month" | "year" | null
 ): Promise<boolean> {
   // FIX 2026-10-09 (N4): rechazar fechas pasadas. Un trigger DATE en el
   // pasado tiene comportamiento indefinido según el backend. Un aviso que
@@ -183,10 +183,30 @@ export async function scheduleReminderNotification(
  * hora; cada semana → WEEKLY ese día (expo: 1 = domingo … 7 = sábado). Los
  * repetidos los dispara el sistema aunque la app no se abra.
  */
-export function reminderTrigger(at: Date, repeat?: "day" | "week" | null): Notifications.NotificationTriggerInput {
+export function reminderTrigger(at: Date, repeat?: "day" | "week" | "month" | "year" | null): Notifications.NotificationTriggerInput {
   if (repeat === "day") {
     return {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
+      hour: at.getHours(),
+      minute: at.getMinutes(),
+      channelId: "nido-reminders",
+    };
+  }
+  if (repeat === "month") {
+    return {
+      type: Notifications.SchedulableTriggerInputTypes.MONTHLY,
+      day: at.getDate(),
+      hour: at.getHours(),
+      minute: at.getMinutes(),
+      channelId: "nido-reminders",
+    };
+  }
+  if (repeat === "year") {
+    // expo: mes base 0 (como Date).
+    return {
+      type: Notifications.SchedulableTriggerInputTypes.YEARLY,
+      month: at.getMonth(),
+      day: at.getDate(),
       hour: at.getHours(),
       minute: at.getMinutes(),
       channelId: "nido-reminders",

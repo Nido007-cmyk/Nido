@@ -839,6 +839,7 @@ type Key =
   | "reminderOneTimeOnly"
   | "reminderSavedAskWhen"
   | "reminderAskWhat"
+  | "factReminderYearlyNote"
   | "reminderHowTo"
   | "reminderWillNotify"
   | "reminderSaveFailed"
@@ -979,6 +980,11 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     en: "Done, I saved it to my memory: “{{text}}”.",
     pt: "Pronto, salvei na minha memória: “{{text}}”.",
   },
+  factReminderYearlyNote: {
+    es: " También te creé un recordatorio que se repite cada año en esa fecha.",
+    en: " I also created a reminder that repeats every year on that date.",
+    pt: " Também criei um lembrete que se repete todo ano nessa data.",
+  },
   factReminderNote: {
     es: " También te creé un recordatorio para esa fecha.",
     en: " I also created a reminder for that date.",
@@ -1030,9 +1036,9 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
   reminderNoDate: { es: "sin fecha", en: "no date", pt: "sem data" },
   reminderSet: { es: "Listo, te recordaré{{when}}: «{{text}}».", en: "Done, I'll remind you{{when}}: “{{text}}”.", pt: "Pronto, vou te lembrar{{when}}: “{{text}}”." },
   reminderOneTimeOnly: {
-    es: " Ojo: lo guardé como un recordatorio de una sola vez; solo puedo repetirlos cada día o cada semana.",
-    en: " Note: I saved it as a one-time reminder; I can only repeat reminders every day or every week.",
-    pt: " Atenção: salvei como um lembrete único; só consigo repetir lembretes todos os dias ou toda semana.",
+    es: " Ojo: lo guardé como un recordatorio de una sola vez; puedo repetirlos cada día, semana, mes o año, pero no cada varios días.",
+    en: " Note: I saved it as a one-time reminder; I can repeat reminders every day, week, month or year, but not every few days.",
+    pt: " Atenção: salvei como um lembrete único; consigo repetir lembretes todo dia, semana, mês ou ano, mas não a cada vários dias.",
   },
   reminderHowTo: {
     es: "Claro. Dime qué y cuándo en una frase, por ejemplo: «recuérdame{{when}} a las 9 llamar al médico».",
@@ -1071,11 +1077,24 @@ export function reminderWhen(iso: string, lang: RouterLang): string {
 }
 
 /** 0.1.32: « cada lunes a las 9:00» / « every day at 9:00» / « toda segunda-feira às 9:00». */
-export function reminderRepeatWhen(iso: string, repeat: "day" | "week", lang: RouterLang): string {
+export function reminderRepeatWhen(iso: string, repeat: "day" | "week" | "month" | "year", lang: RouterLang): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   const time = formatTime(d, lang);
   const day = DAYS[lang][d.getDay()];
+  // 0.1.35: cada mes / cada año.
+  if (repeat === "month") {
+    const n = d.getDate();
+    if (lang === "en") return ` every month on the ${n}${n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th"} at ${time}`;
+    if (lang === "pt") return ` todo mês no dia ${n} às ${time}`;
+    return ` cada mes el día ${n} a las ${time}`;
+  }
+  if (repeat === "year") {
+    const m = MONTHS[lang][d.getMonth()];
+    if (lang === "en") return ` every year on ${m} ${d.getDate()} at ${time}`;
+    if (lang === "pt") return ` todo ano em ${d.getDate()} de ${m} às ${time}`;
+    return ` cada año el ${d.getDate()} de ${m} a las ${time}`;
+  }
   if (lang === "en") return repeat === "day" ? ` every day at ${time}` : ` every ${day} at ${time}`;
   if (lang === "pt") {
     if (repeat === "day") return ` todos os dias às ${time}`;
@@ -1146,7 +1165,7 @@ export interface ToolRouterDeps {
   listNotesFull?: () => Promise<Array<{ id: string; title: string; body: string }>>;
   /** Recordatorios pendientes, para "qué recordatorios tengo" y para
    *  resolver los borrados por texto (0.1.20: con id). */
-  listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null; repeat?: "day" | "week" | null }>>;
+  listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null; repeat?: "day" | "week" | "month" | "year" | null }>>;
   now?: () => Date;
   /**
    * 0.1.25: almacén de la elección pendiente («¿cuál nota?») entre

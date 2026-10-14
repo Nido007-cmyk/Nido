@@ -351,6 +351,8 @@
     "risk": "Risco"
   },
   "memoryManager": {
+    "repeatMonth": "Repete todo mês",
+    "repeatYear": "Repete todo ano",
     "repeatDay": "Repete todos os dias",
     "repeatWeek": "Repete todas as semanas",
     "title": "Minha memória",

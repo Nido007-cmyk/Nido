@@ -16,6 +16,6 @@ module.exports = {
   addNotificationReceivedListener: jest.fn(() => sub),
   addNotificationResponseReceivedListener: jest.fn(() => sub),
   setNotificationCategoryAsync: jest.fn(async () => {}),
-  SchedulableTriggerInputTypes: { DATE: "date", TIME_INTERVAL: "timeInterval", DAILY: "daily", WEEKLY: "weekly" },
+  SchedulableTriggerInputTypes: { DATE: "date", TIME_INTERVAL: "timeInterval", DAILY: "daily", WEEKLY: "weekly", MONTHLY: "monthly", YEARLY: "yearly" },
   AndroidImportance: { DEFAULT: 3, HIGH: 4, MAX: 5 },
 };

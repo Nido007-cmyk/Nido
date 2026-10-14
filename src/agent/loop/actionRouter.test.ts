@@ -176,11 +176,12 @@ describe("0.1.19: recurrencia pedida y título 'para'", () => {
     expect(r!.recurrenceRequested).toBeUndefined();
   });
 
-  it("'cada mes' sigue sin soporte: una vez y se avisa", () => {
-    const r = extractReminderAction("recuérdame pagar el alquiler cada mes el 1 de noviembre");
+  it("'cada 2 días' sigue sin soporte: una vez y se avisa (0.1.35: cada mes/año sí)", () => {
+    const r = extractReminderAction("recuérdame regar las plantas cada 2 días a las 8");
     expect(r).not.toBeNull();
     expect(r!.repeat).toBeUndefined();
     expect(r!.recurrenceRequested).toBe(true);
+    expect(r!.text).toBe("regar las plantas");
   });
 
   it("sin palabras de repetición, la marca no aparece", () => {

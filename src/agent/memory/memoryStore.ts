@@ -43,7 +43,7 @@ import {
   getDatabaseEpoch,
   safeJsonParse,
 } from "../../security/databaseManager";
-import { isReminderRepeat, nextOccurrence, type ReminderRepeat } from "./reminderRepeat";
+import { isCalendarRepeat, isReminderRepeat, nextOccurrence, type ReminderRepeat } from "./reminderRepeat";
 
 const DB_NAME = "nido_memory.db";
 /** Nombre del fichero de la base de memoria (lo necesita appReset para verificar el borrado). */
@@ -476,8 +476,9 @@ export interface AgentReminder {
 }
 
 const REMINDER_COLS =
-  "r.id AS id, r.text AS text, r.due_at AS due_at, r.done AS done, r.created_at AS created_at, rr.every AS repeat";
-const REMINDER_FROM = "agent_reminders r LEFT JOIN agent_reminder_repeat rr ON rr.reminder_id = r.id";
+  "r.id AS id, r.text AS text, r.due_at AS due_at, r.done AS done, r.created_at AS created_at, COALESCE(rr.every, rc.every) AS repeat";
+const REMINDER_FROM =
+  "agent_reminders r LEFT JOIN agent_reminder_repeat rr ON rr.reminder_id = r.id LEFT JOIN agent_reminder_repeat_cal rc ON rc.reminder_id = r.id";
 
 /** Crea un recordatorio. due_at en ISO-8601 o null (sin fecha). */
 export async function saveReminder(input: {
@@ -516,7 +517,8 @@ export async function saveReminder(input: {
       [reminder.id, reminder.text, reminder.due_at, reminder.created_at]
     );
     if (repeat) {
-      await db.runAsync("INSERT INTO agent_reminder_repeat (reminder_id, every) VALUES (?, ?);", [reminder.id, repeat]);
+      const table = isCalendarRepeat(repeat) ? "agent_reminder_repeat_cal" : "agent_reminder_repeat";
+      await db.runAsync(`INSERT INTO ${table} (reminder_id, every) VALUES (?, ?);`, [reminder.id, repeat]);
     }
   });
   return reminder;
@@ -549,7 +551,7 @@ export async function getDueReminders(nowIso?: string): Promise<AgentReminder[]>
 export async function completeReminder(id: string, now: Date = new Date()): Promise<void> {
   await writeMemoryTransaction(async (db) => {
     const row = await db.getFirstAsync<{ due_at: string | null; every: string | null }>(
-      "SELECT r.due_at AS due_at, rr.every AS every FROM agent_reminders r LEFT JOIN agent_reminder_repeat rr ON rr.reminder_id = r.id WHERE r.id = ?;",
+      `SELECT r.due_at AS due_at, COALESCE(rr.every, rc.every) AS every FROM ${REMINDER_FROM} WHERE r.id = ?;`,
       [id]
     );
     if (row && isReminderRepeat(row.every) && row.due_at) {
@@ -569,6 +571,7 @@ export async function completeReminder(id: string, now: Date = new Date()): Prom
 export async function deleteReminder(id: string): Promise<void> {
   await writeMemoryTransaction(async (db) => {
     await db.runAsync("DELETE FROM agent_reminder_repeat WHERE reminder_id = ?;", [id]);
+    await db.runAsync("DELETE FROM agent_reminder_repeat_cal WHERE reminder_id = ?;", [id]);
     await db.runAsync("DELETE FROM agent_reminders WHERE id = ?;", [id]);
   });
 }

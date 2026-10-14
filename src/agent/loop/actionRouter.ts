@@ -15,7 +15,7 @@
  * Puro, sin dependencias, 100% testeable.
  */
 
-import type { ReminderRepeat } from "../memory/reminderRepeat";
+import { nextOccurrence, type ReminderRepeat } from "../memory/reminderRepeat";
 import { evaluateExpression } from "../tools/calc";
 
 /** Resultado de una acción de calculadora. */
@@ -213,7 +213,7 @@ export interface ReminderAction {
 }
 
 const RECURRENCE_RE =
-  /\b(?:cada\s+\d+|every\s+\d+|a\s+cada\s+\d+|cada\s+(?:d[ií]a|semana|mes|a[ñn]o|lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo)|todos\s+los\s+d[ií]as|todas\s+las\s+semanas|diariamente|a\s+diario|semanalmente|mensualmente|every\s+(?:day|week|month|morning|night|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|daily|weekly|monthly|todo\s+dia|todos\s+os\s+dias|diariamente|semanalmente)\b/iu;
+  /\b(?:cada\s+\d+(?:\s+(?:d[ií]as?|semanas?|meses|horas?|a[ñn]os?|minutos?))?|every\s+\d+(?:\s+(?:days?|weeks?|months?|hours?|years?|minutes?))?|a\s+cada\s+\d+(?:\s+(?:dias?|semanas?|meses|horas?|anos?))?|cada\s+(?:d[ií]a|semana|mes|a[ñn]o|lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo)|todos\s+los\s+d[ií]as|todas\s+las\s+semanas|diariamente|a\s+diario|semanalmente|mensualmente|every\s+(?:day|week|month|morning|night|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|daily|weekly|monthly|todo\s+dia|todos\s+os\s+dias|diariamente|semanalmente)\b/iu;
 
 /**
  * Detecta "agrégame cita/recordatorio..." y extrae el texto.
@@ -256,11 +256,34 @@ const REPEAT_NIGHT_RE =
 const REPEAT_DAY_RE =
   /(?<![\p{L}])(?:cada\s+d[ií]a|todos\s+los\s+d[ií]as|diariamente|a\s+diario|every\s*day|daily|todo\s+dia|todos\s+os\s+dias)(?![\p{L}])/iu;
 
-interface RepeatSpec { repeat: ReminderRepeat; weekday?: number; cleaned: string; defaultHour: number; period?: "am" | "pm" }
+interface RepeatSpec { repeat: ReminderRepeat; weekday?: number; monthDay?: number; cleaned: string; defaultHour: number; period?: "am" | "pm" }
+
+// 0.1.35: cada mes / cada año (cumpleaños, alquiler, facturas).
+const REPEAT_YEAR_RE =
+  /(?<![\p{L}])(?:cada\s+a[ñn]o|todos\s+los\s+a[ñn]os|anualmente|every\s+year|yearly|annually|todo\s+ano|todos\s+os\s+anos)(?![\p{L}])/iu;
+const REPEAT_MONTH_RE =
+  /(?<![\p{L}])(?:(?:de\s+)?cada\s+mes|(?:de\s+)?todos\s+los\s+meses|mensualmente|(?:of\s+)?every\s+month|monthly|(?:de\s+)?cada\s+m[eê]s|todo\s+m[eê]s|todos\s+os\s+meses|mensalmente)(?![\p{L}])/iu;
+// «el día 5», «el 1», «on the 5th», «the 1st», «no dia 5», «dia 10».
+const MONTH_DAY_RE =
+  /(?<![\p{L}])(?:el\s+d[ií]a|el|on\s+the|the|(?:todo\s+)?(?:no\s+)?dia)\s+(\d{1,2})(?:st|nd|rd|th|º)?(?=\s|$|[,.;:!?])/iu;
 
 /** Detecta una repetición soportada y devuelve la frase sin ella. */
 export function detectReminderRepeat(text: string): RepeatSpec | null {
   const tidy = (s: string) => s.replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim();
+  const yr = REPEAT_YEAR_RE.exec(text);
+  if (yr) return { repeat: "year", defaultHour: 9, cleaned: tidy(text.replace(REPEAT_YEAR_RE, " ")) };
+  const mo0 = REPEAT_MONTH_RE.exec(text);
+  if (mo0) {
+    let cleaned = text.replace(REPEAT_MONTH_RE, " ");
+    const dm = MONTH_DAY_RE.exec(cleaned);
+    const n = dm ? Number(dm[1]) : NaN;
+    let monthDay: number | undefined;
+    if (dm && n >= 1 && n <= 31) {
+      monthDay = n;
+      cleaned = cleaned.slice(0, dm.index) + " " + cleaned.slice(dm.index + dm[0].length);
+    }
+    return { repeat: "month", monthDay, defaultHour: 9, cleaned: tidy(cleaned) };
+  }
   const wd = REPEAT_WEEKDAY_RE.exec(text);
   // «on monday» es UNA vez; solo el plural («on mondays») se repite.
   if (wd && !(/^on\s/i.test(wd[0]) && !/s$/i.test(wd[0]))) {
@@ -302,6 +325,21 @@ export function extractReminderAction(userText: string, now: Date = new Date()):
   }
   const first = new Date(now);
   first.setHours(hour, minute, 0, 0);
+  if (spec.repeat === "year" || spec.repeat === "month") {
+    // Base: la fecha dicha («el 15 de marzo», «el día 5») o la de hoy; la
+    // primera vez es la próxima ocurrencia a partir de ahora.
+    const base = res.dueAt ? new Date(res.dueAt) : new Date(now);
+    if (spec.repeat === "month" && spec.monthDay) {
+      base.setDate(1);
+      base.setMonth(now.getMonth());
+      base.setFullYear(now.getFullYear());
+      base.setDate(spec.monthDay);
+    }
+    base.setHours(hour, minute, 0, 0);
+    const next = nextOccurrence(base, spec.repeat, new Date(now.getTime() - 1));
+    const text = res.text.replace(/\s{2,}/g, " ").trim();
+    return { text, dueAt: next.toISOString(), repeat: spec.repeat };
+  }
   if (spec.repeat === "week") {
     const weekday = spec.weekday ?? (res.dueAt ? new Date(res.dueAt).getDay() : now.getDay());
     first.setDate(first.getDate() + ((weekday - now.getDay() + 7) % 7));
@@ -400,7 +438,7 @@ function extractReminderCore(userText: string): ReminderAction | null {
   // 0.1.20: también el "de" de «avísame a las 3 de estudiar» (queda
   // «estudiar») y de «un recordatorio de comprar pan».
   // 0.1.32: puede haber varios («para el lunes de pagar…» → «para de pagar…»).
-  text = text.replace(/^(?:(?:para|de|to|for)\s+)+/i, "").trim();
+  text = text.replace(/^(?:(?:para|de|to|for|about|sobre|do|da)\s+)+/i, "").trim();
 
   // F6 (auditoría 2026-10-10): "recuérdame mañana" dejaba el texto vacío
   // tras quitar la fecha. Sin texto no hay recordatorio: que decida el modelo.
@@ -473,6 +511,10 @@ export function stripDateWords(input: string): string {
       // se tomaba por artículo: «marca reunião segunda» quedaba «reuniã».
       .replace(/(?:(?<![\p{L}])(?:el|la|the|o|a|na|no|on)\s+)?(?<![\p{L}])(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?)(?![\p{L}-])/giu, "")
       .replace(/(?<![\p{L}])(mañana|manana|tomorrow|hoy|today|amanhã|amanha|hoje)(?![\p{L}])/giu, "")
+      // 0.1.35: fecha de calendario («el 15 de marzo», «em 15 de março»,
+      // «on March 15th»): el título del aviso quedaba con la fecha dentro.
+      .replace(/(?:(?<![\p{L}])(?:el|em|no|on)\s+)?(?<![\p{L}\d])\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)(?:\s+de(?:l)?\s+\d{4})?(?![\p{L}])/giu, "")
+      .replace(/(?:(?<![\p{L}])on\s+)?(?<![\p{L}])(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?(?![\p{L}\d])/giu, "")
       .replace(/\ba\s+las\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
       .replace(/(?<![\p{L}])às\s+\d{1,2}(:\d{2})?\s*(am|pm|h)?\b/giu, "")
       .replace(/\bat\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")

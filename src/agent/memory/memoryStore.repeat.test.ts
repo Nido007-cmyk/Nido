@@ -236,3 +236,23 @@ describe("0.1.32: recordatorios repetidos en la base", () => {
     expect(a.id).not.toBe(b.id);
   });
 });
+
+describe("0.1.35: repetición mensual y anual en la base", () => {
+  it("un cumpleaños anual se guarda, se lista y al completarse pasa al año siguiente", async () => {
+    const r = await saveReminder({ text: "Cumpleaños de mi mamá", dueAt: new Date(2027, 2, 15, 9, 0).toISOString(), repeat: "year" });
+    expect(r.repeat).toBe("year");
+    expect((await listReminders()).find((x) => x.id === r.id)?.repeat).toBe("year");
+    await completeReminder(r.id, new Date(2027, 2, 15, 9, 1));
+    const after = (await listReminders()).find((x) => x.id === r.id);
+    expect(new Date(after!.due_at!)).toEqual(new Date(2028, 2, 15, 9, 0));
+  });
+
+  it("mensual: avanza al mes siguiente; borrar limpia también su tabla", async () => {
+    const r = await saveReminder({ text: "alquiler", dueAt: new Date(2026, 10, 1, 9, 0).toISOString(), repeat: "month" });
+    await completeReminder(r.id, new Date(2026, 10, 1, 9, 5));
+    expect(new Date((await listReminders()).find((x) => x.id === r.id)!.due_at!)).toEqual(new Date(2026, 11, 1, 9, 0));
+    await deleteReminder(r.id);
+    const again = await saveReminder({ text: "alquiler", dueAt: new Date(2026, 10, 1, 9, 0).toISOString() });
+    expect((await listReminders()).find((x) => x.id === again.id)?.repeat ?? null).toBeNull();
+  });
+});

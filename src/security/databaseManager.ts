@@ -123,6 +123,12 @@ CREATE TABLE IF NOT EXISTS agent_reminder_repeat (
   reminder_id TEXT PRIMARY KEY,
   every       TEXT NOT NULL CHECK (every IN ('day', 'week'))
 );
+-- 0.1.35: «cada mes» / «cada año». Tabla aparte (aditiva): la de arriba
+-- tiene CHECK (day, week) en las bases ya creadas y no se puede alterar.
+CREATE TABLE IF NOT EXISTS agent_reminder_repeat_cal (
+  reminder_id TEXT PRIMARY KEY,
+  every       TEXT NOT NULL CHECK (every IN ('month', 'year'))
+);
 
 -- Task store (scheduled tasks)
 CREATE TABLE IF NOT EXISTS scheduled_tasks (

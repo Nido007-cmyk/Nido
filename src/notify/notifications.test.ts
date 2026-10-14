@@ -22,7 +22,7 @@ vi.mock("expo-notifications", () => ({
   scheduleNotificationAsync: mocks.scheduleNotificationAsync,
   cancelScheduledNotificationAsync: mocks.cancelScheduledNotificationAsync,
   addNotificationReceivedListener: mocks.addNotificationReceivedListener,
-  SchedulableTriggerInputTypes: { DATE: "date", DAILY: "daily", WEEKLY: "weekly" },
+  SchedulableTriggerInputTypes: { DATE: "date", DAILY: "daily", WEEKLY: "weekly", MONTHLY: "monthly", YEARLY: "yearly" },
   AndroidImportance: { HIGH: 4, DEFAULT: 3 },
   AndroidNotificationVisibility: { UNKNOWN: 0, PUBLIC: 1, PRIVATE: 2, SECRET: 3 },
 }));
@@ -209,5 +209,15 @@ describe("0.1.32: recordatorios que se repiten", () => {
     const ok = await scheduleReminderNotification("r4", "x", new Date(2020, 0, 1, 9, 0));
     expect(ok).toBe(false);
     expect(mocks.scheduleNotificationAsync).not.toHaveBeenCalled();
+  });
+});
+
+describe("0.1.35: cada mes / cada año", () => {
+  it("mensual → MONTHLY con el día; anual → YEARLY con mes base 0", async () => {
+    mocks.scheduleNotificationAsync.mockResolvedValue("id");
+    await scheduleReminderNotification("m1", "alquiler", new Date(2026, 10, 1, 9, 30), "month");
+    expect(mocks.scheduleNotificationAsync.mock.calls[0][0].trigger).toEqual({ type: "monthly", day: 1, hour: 9, minute: 30, channelId: "nido-reminders" });
+    await scheduleReminderNotification("y1", "cumpleaños", new Date(2027, 2, 15, 9, 0), "year");
+    expect(mocks.scheduleNotificationAsync.mock.calls[1][0].trigger).toEqual({ type: "yearly", month: 2, day: 15, hour: 9, minute: 0, channelId: "nido-reminders" });
   });
 });
