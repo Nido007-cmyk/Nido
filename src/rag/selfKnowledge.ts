@@ -283,10 +283,18 @@ const CAPABILITY_PATTERNS: RegExp[] = [
   /\bcuales\s+son\s+tus\s+(funciones|caracteristicas|capacidades)\b/,
   /\bcomo\s+funcionas\s+sin\s+internet\b/,
   /\bfuncionas\s+sin\s+internet\b/,
+  // 0.1.34 (prueba física, Tab A9+): «Explícame cómo funcionas sin
+  // internet» no casaba — el inglés tenía «explain how you work…» y el
+  // español no. Paridad es/pt.
+  /\b(?:explicame|cuentame|dime)\s+como\s+funcionas(?:\s+sin\s+internet)?\b/,
+  /\bcomo\s+funcionas\b/,
   // Portuguese
   /\bo\s+que\s+voce\s+pode\s+fazer\b/,
   /\bo\s+que\s+voce\s+sabe\s+fazer\b/,
   /\bquais\s+sao\s+(seus\s+)?(recursos|funcionalidades|capacidades)\b/,
+  /\b(?:me\s+)?expli(?:ca|que)\s+como\s+(?:voce\s+)?funciona(?:\s+sem\s+internet)?\b/,
+  /\bcomo\s+voce\s+funciona(?:\s+sem\s+internet)?\b/,
+  /\bvoce\s+funciona\s+sem\s+internet\b/,
 ];
 
 /** Privacy questions: where data is stored, who can see it. */
@@ -314,6 +322,11 @@ const PRIVACY_PATTERNS: RegExp[] = [
   // and missed common variations, letting privacy questions fall through
   // to the general model which hallucinated false answers.
   /\bdonde\s+se\s+guardan\s+mis\s+datos\b/,
+  // 0.1.34: la pregunta doble («…y quién puede verlos») dejaba resto sin
+  // atribuir y no casaba. Mismo caso en en/pt.
+  /\bdonde\s+(?:se\s+guardan|estan|guardas)\s+mis\s+datos\s+y\s+quien\s+(?:puede|pueden)\s+verlos\b/,
+  /\bwhere\s+(?:is|are)\s+my\s+data\s+(?:stored|kept)\s+and\s+who\s+can\s+see\s+it\b/,
+  /\bonde\s+(?:ficam|sao\s+guardados)\s+meus\s+dados\s+e\s+quem\s+pode\s+ve[\s-]?los\b/,
   /\bdonde\s+(estan|están)\s+mis\s+datos\b/,
   // 0.1.24 (H-1): segunda persona — «¿dónde guardas mis datos?» es la
   // forma natural de preguntarlo y no casaba ninguna regla.
