@@ -32,6 +32,10 @@ import { runAgentLoop, type AgentEngine } from "./agentLoop";
 import { choiceTurnKind, resolveChoiceReply, type ChoiceStore } from "./toolRouter";
 import { answerKnowledgeQueryWithCategory } from "../../rag/selfKnowledge";
 import { matchSmallTalk } from "./smallTalk";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { classifyTask, isRetrievalIrrelevant } from "../../routing/classify";
 
 /** 0.1.25: la elección pendiente compartida por los turnos de un test. */
 const choiceStore: ChoiceStore = { current: null };
@@ -626,5 +630,116 @@ describe("composición — fusiones de autocorrector en consultas (0.1.25)", () 
     const t = await send("¿Cómo se llama mihijo?", "es", engine);
     expect(t.route).toBe("agent");
     expect(t.response).toBe("Tu hijo se llama Pedro.");
+  });
+});
+
+
+/**
+ * 0.1.34 (prueba física, Tab A9+): los 6 ejemplos del CARRUSEL de la
+ * pantalla de inicio fallaban en uno o más idiomas y ningún test los
+ * cubría (sí estaban los de la guía). Son lo primero que prueba un
+ * usuario: se leen de los propios locales, así que si alguien cambia un
+ * ejemplo, el test lo vuelve a comprobar solo.
+ */
+function locale(lang: Lang): { promptIdeasCarousel: { items: Array<{ category: string; prompt: string }> } } {
+  return JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "i18n", "locales", `${lang}.json`), "utf8"));
+}
+
+describe("composición — los 6 ejemplos del carrusel, en es/en/pt", () => {
+  for (const lang of ["es", "en", "pt"] as Lang[]) {
+    const items = locale(lang).promptIdeasCarousel.items;
+
+    it(`${lang}: «Memoria privada» guarda el dato limpio y crea el aviso`, async () => {
+      const engine = fakeEngine();
+      const t = await send(items[0].prompt, lang, engine);
+      expect(t.route).toBe("agent");
+      expect(data.facts).toHaveLength(1);
+      expect(data.facts[0].content).not.toMatch(/gu[aá]rd|save it|guarde|avis|remind me/i);
+      expect(data.reminders).toHaveLength(1);
+      expect(data.reminders[0].text.length).toBeLessThan(40);
+      expect(engine.calls).toHaveLength(0);
+    });
+
+    it(`${lang}: «Sin internet» y «Privacidad total» responden con el texto fijo de NIDO`, async () => {
+      const engine = fakeEngine();
+      for (const i of [1, 5]) {
+        const t = await send(items[i].prompt, lang, engine);
+        expect(t.route).toBe("knowledge");
+        expect(t.response).toBeTruthy();
+      }
+      expect(engine.calls).toHaveLength(0);
+    });
+
+    it(`${lang}: «Organiza mi día» usa la plantilla semanal`, async () => {
+      const engine = fakeEngine();
+      const t = await send(items[3].prompt, lang, engine);
+      expect(t.route).toBe("agent");
+      expect(t.response).toMatch(/9:00/);
+      expect(engine.calls).toHaveLength(0);
+    });
+
+    it(`${lang}: «Aprende conmigo» va al modelo CON búsqueda; «Cocina creativa» SIN búsqueda`, async () => {
+      const engine = fakeEngine();
+      const learn = await send(items[2].prompt, lang, engine);
+      expect(learn.route).toBe("knowledge");
+      expect(learn.response).toBeNull();
+      expect(isRetrievalIrrelevant(classifyTask(items[2].prompt))).toBe(false);
+      const cook = await send(items[4].prompt, lang, engine);
+      expect(cook.route).toBe("knowledge");
+      expect(cook.response).toBeNull();
+      expect(isRetrievalIrrelevant(classifyTask(items[4].prompt))).toBe(true);
+    });
+  }
+});
+
+/**
+ * 0.1.34: barrido de paridad. Cada fila es LA MISMA petición en los tres
+ * idiomas; si una ruta determinista existe en un idioma, tiene que
+ * existir en los otros dos (antes: «what day is it today», «qué tengo en
+ * el calendario hoy», «minhas mensagens nido», «read the shopping note»,
+ * «elige un archivo», «cómo uso la investigación profunda»… fallaban en
+ * uno solo).
+ */
+const PARITY: Array<[string, string, string]> = [
+  ["qué hora es", "what time is it", "que horas são"],
+  ["qué día es hoy", "what day is it today", "que dia é hoje"],
+  ["cuánto es 15% de 200", "what is 15% of 200", "quanto é 15% de 200"],
+  ["convierte 5 km a millas", "convert 5 km to miles", "converta 5 km para milhas"],
+  ["anota que mañana compro pan", "note that tomorrow I buy bread", "anota que amanhã compro pão"],
+  ["mis notas", "my notes", "minhas notas"],
+  ["lee la nota de la compra", "read the shopping note", "lê a nota das compras"],
+  ["recuérdame mañana a las 9 llamar al médico", "remind me tomorrow at 9 to call the doctor", "me lembra amanhã às 9 de ligar para o médico"],
+  ["recuérdame cada día a las 8 tomar agua", "remind me every day at 8 to drink water", "me lembra todo dia às 8 de beber água"],
+  ["qué recordatorios tengo", "what reminders do I have", "quais lembretes eu tenho"],
+  ["pon un temporizador de 5 minutos", "set a timer for 5 minutes", "coloca um temporizador de 5 minutos"],
+  ["cancela el temporizador", "cancel the timer", "cancela o temporizador"],
+  ["qué tengo en el calendario hoy", "what's on my calendar today", "o que tenho na agenda hoje"],
+  ["llama a Ana", "call Ana", "liga para a Ana"],
+  ["mándale un mensaje a Ana que llego tarde", "send a message to Ana saying I'm late", "manda uma mensagem para a Ana dizendo que chego tarde"],
+  ["dile a Ana que llego tarde", "tell Ana that I'm late", "diz para a Ana que chego tarde"],
+  ["mis mensajes nido", "my nido messages", "minhas mensagens nido"],
+  ["mi código nido", "my nido code", "meu código nido"],
+  ["mi mamá se llama Marta", "my mom's name is Marta", "minha mãe se chama Marta"],
+  ["cómo se llama mi mamá", "what is my mom's name", "como se chama minha mãe"],
+  ["olvida mi color favorito", "forget my favorite color", "esqueça minha cor favorita"],
+  ["cuánto falta para navidad", "how many days until christmas", "quanto falta para o natal"],
+  ["planifica mi semana", "plan my week", "planeje minha semana"],
+  ["qué puedes hacer", "what can you do", "o que você pode fazer"],
+  ["cómo funcionas sin internet", "how do you work without internet", "como você funciona sem internet"],
+  ["mis datos salen del teléfono", "does my data ever leave this device", "meus dados saem do celular"],
+  ["cómo uso la investigación profunda", "how do I use deep research", "como uso a pesquisa profunda"],
+  ["elige un archivo", "pick a file", "escolha um arquivo"],
+  ["abre https://example.com", "open https://example.com", "abra https://example.com"],
+];
+
+describe("composición — paridad es/en/pt de las rutas deterministas", () => {
+  it.each(PARITY)("%s / %s / %s", async (es, en, pt) => {
+    const engine = fakeEngine();
+    for (const [text, lang] of [[es, "es"], [en, "en"], [pt, "pt"]] as Array<[string, Lang]>) {
+      const t = await send(text, lang, engine);
+      // Determinista = la KB/charla respondió, o el loop respondió sin el modelo.
+      const deterministic = t.response !== null && engine.calls.length === 0;
+      expect(deterministic, `«${text}» (${lang}) cayó al modelo/conocimiento`).toBe(true);
+    }
   });
 });

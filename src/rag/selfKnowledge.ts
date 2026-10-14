@@ -222,6 +222,11 @@ const USAGE_PATTERNS: RegExp[] = [
   /\bwhere\s+(is|are)\s+(my\s+|the\s+)?(settings|ajustes|configuracoes|notes|notas|reminders|recordatorios|lembretes)\b/,
   // Spanish
   /\bcomo\s+(uso|usar|se\s+usa)\b/,
+  // 0.1.34 (barrido de paridad): el inglés tenía «how do I use deep research».
+  /\bcomo\s+(?:uso|usar|se\s+usa|funciona|activo)\s+(?:la\s+)?investigacion\s+profunda\b/,
+  /\bque\s+es\s+(?:la\s+)?investigacion\s+profunda\b/,
+  /\bcomo\s+(?:uso|usar|se\s+usa|funciona|ativo)\s+(?:a\s+)?pesquisa\s+profunda\b/,
+  /\bo\s+que\s+e\s+(?:a\s+)?pesquisa\s+profunda\b/,
   /\bcomo\s+funciona\b/,
   /\bcomo\s+(activo|habilito)\b/,
   /\bcomo\s+(emparejar|emparejo)\b/,
@@ -325,7 +330,7 @@ const PRIVACY_PATTERNS: RegExp[] = [
   // 0.1.34: ejemplo «Privacidad total» del propio carrusel de la app, que
   // caía al modelo en los tres idiomas.
   /\bque\s+significa\s+que\s+(?:seas|eres)\s+(?:(?:100\s*%?|cien\s+por\s+ciento)\s+)?offline\b/,
-  /\b(?:mis\s+)?(?:conversaciones|chats|datos|mensajes)\s+salen\s+de\s+(?:este|mi)\s+(?:dispositivo|telefono|celular|movil|tablet)(?:\s+en\s+algun\s+momento)?\b/,
+  /\b(?:mis\s+)?(?:conversaciones|chats|datos|mensajes)\s+salen\s+(?:de\s+(?:este|mi)|del)\s+(?:dispositivo|telefono|celular|movil|tablet)(?:\s+en\s+algun\s+momento)?\b/,
   /\bwhat\s+does\s+it\s+mean\s+that\s+you(?:re|\s+are)\s+(?:100\s*%?\s+)?offline\b/,
   /\b(?:does|do)\s+my\s+(?:conversation|conversations|chats|data|messages)\s+(?:ever\s+)?leave\s+(?:this|my)\s+(?:device|phone|tablet)(?:\s+at\s+any\s+point)?\b/,
   /\bo\s+que\s+significa\s+(?:voce\s+)?ser\s+(?:100\s*%?\s+)?offline\b/,

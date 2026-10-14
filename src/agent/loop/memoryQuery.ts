@@ -226,6 +226,10 @@ export function memoryGateHit(userText: string, mem: MemoryQueryData): boolean {
 const REL_NAME_Q_RES: RegExp[] = [
   /¿?c[oó]mo se llama mi ([a-záéíóúñü ]+?)\??$/i,
   /what'?s my ([a-z -]+?)'?s name\??$/i,
+  // 0.1.34 (barrido de paridad): «what is my mom's name» (sin contraer) y
+  // «what is the name of my mom» caían al modelo sin memoria guardada.
+  /what is my ([a-z -]+?)'?s name\??$/i,
+  /what is the name of my ([a-z -]+?)\??$/i,
   /como se chama (?:a )?minha? ([a-záéíóúãõç ]+?)\??$/i,
 ];
 const SELF_NAME_Q_RES: RegExp[] = [
