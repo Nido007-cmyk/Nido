@@ -256,7 +256,7 @@ describe("P1.2 sampling presets", () => {
     const s = resolveSampling({ samplingPreset: "factual", modelDefaults: { temperature: 0.2, topK: 80, repeatPenalty: 1.05 } });
     expect(s.temperature).toBe(0.3); // factual, no el 0.2 de LiquidAI
     expect(s.topK).toBe(80);
-    expect(s.repeatPenalty).toBe(1.05); // factual no define rep: rellena el modelo
+    expect(s.repeatPenalty).toBe(1.1); // 0.1.34: factual trae su propia penalización (bucles en la Tab A9+)
   });
 
   it("resolveSampling: explícito gana al modelo, y el preset de chat gana en repetición", () => {
@@ -465,6 +465,24 @@ describe("estudio de modelos: sampling por modelo y stripReasoning", () => {
     const params = created[0].lastParams as Record<string, unknown>;
     expect(params.temperature).toBe(0.3);
     expect(params.top_k).toBe(80);
+  });
+
+  it("0.1.34: un bucle de repetición del modelo queda en la primera vez", async () => {
+    mockReplyText = "Ejemplos de plantas que conozco son " + "las aluminosas, ".repeat(30);
+    const engine = new LlamaEngine();
+    await engine.load(LFM);
+    const reply = engine.generate({ messages: MSGS });
+    await engine.unload();
+    await expect(reply).resolves.toBe("Ejemplos de plantas que conozco son las aluminosas…");
+  });
+
+  it("0.1.34: con salida estructurada (JSON) la guarda no toca nada", async () => {
+    mockReplyText = '{"a":"las aluminosas, ' + "las aluminosas, ".repeat(30) + '"}';
+    const engine = new LlamaEngine();
+    await engine.load(LFM);
+    const reply = engine.generate({ messages: MSGS, responseFormat: { type: "json_object" } });
+    await engine.unload();
+    await expect(reply).resolves.toBe(mockReplyText);
   });
 
   it("LFM2.5: la cadena <think> no llega al texto final (stripReasoning)", async () => {

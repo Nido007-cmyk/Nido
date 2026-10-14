@@ -33,7 +33,7 @@ export async function generateSessionTitle(firstUserMessage: string): Promise<st
         prompt:
           `${instruction}\n"${firstUserMessage}"\n\nTitle:`,
       };
-  const text = await llamaEngine.generate({ ...promptParams, nPredict: 16, temperature: 0.3 });
+  const text = await llamaEngine.generate({ ...promptParams, nPredict: 16, temperature: 0.3, samplingPreset: "factual" });
   const title = text.trim().replace(/^["']|["']$/g, "").split("\n")[0].slice(0, 60);
   return title || "New chat";
 }
@@ -73,6 +73,6 @@ export async function summarizeConversation(
     : {
         prompt: `${instruction}\n${userContent}\n\nSummary:`,
       };
-  const text = await llamaEngine.generate({ ...promptParams, nPredict: 150, temperature: 0.3 });
+  const text = await llamaEngine.generate({ ...promptParams, nPredict: 150, temperature: 0.3, samplingPreset: "factual" });
   return text.trim();
 }

@@ -253,7 +253,7 @@ const TIME_RULES: Array<{ re: RegExp; what: "time" | "date"; lang: RouterLang }>
   { re: /^(?:qu[eé] hora es(?: ahora)?|qu[eé] horas son|tienes la hora|me (?:dices|das) la hora|d[ií]me la hora|la hora|hora|hora actual)$/i, what: "time", lang: "es" },
   { re: /^(?:qu[eé] (?:d[ií]a|fecha) es(?: hoy)?|a qu[eé] (?:d[ií]a|fecha) estamos|qu[eé] d[ií]a es hoy|cu[aá]l es la fecha(?: de hoy)?)$/i, what: "date", lang: "es" },
   { re: /^(?:what time is it(?: now)?|what(?:'s| is) the time(?: now)?|do you have the time|tell me the time|current time|time please|the time)$/i, what: "time", lang: "en" },
-  { re: /^(?:what(?:'s| is) (?:the date|today'?s date|the day)(?: today)?|what day is (?:it|today)|what(?:'s| is) today)$/i, what: "date", lang: "en" },
+  { re: /^(?:what(?:'s| is) (?:the date|today'?s date|the day)(?: today)?|what day is (?:it|today)(?: today)?|what(?:'s| is) today)$/i, what: "date", lang: "en" },
   { re: /^(?:que horas s[aã]o(?: agora)?|me diz as horas|diga as horas|hora atual)$/i, what: "time", lang: "pt" },
   { re: /^(?:que dia [eé] hoje|qual [eé] a data(?: de hoje)?|que dia [eé] hoje\??)$/i, what: "date", lang: "pt" },
 ];
@@ -313,6 +313,8 @@ const REMINDER_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
 const NOTE_READ_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: /^(?:lee|leer|l[eé]eme|abre|mu[eé]strame|qu[eé] dice)\s+(?:la|mi)\s+nota\s+(?:de\s+|del\s+|sobre\s+|llamada\s+|que se llama\s+)?(.+)$/i, lang: "es" },
   { re: /^(?:read|open|show(?: me)?)\s+(?:the|my)\s+note\s+(?:about\s+|called\s+|named\s+|on\s+|for\s+)?(.+)$/i, lang: "en" },
+  // 0.1.34: «read the shopping note» (el título delante de «note»).
+  { re: /^(?:read|open|show(?: me)?)\s+(?:the|my)\s+(.+?)\s+note$/i, lang: "en" },
   { re: /^(?:l[eê]|ler|leia|abre|abra|mostra|mostre)\s+(?:a|minha)\s+nota\s+(?:de\s+|do\s+|da\s+|sobre\s+|chamada\s+)?(.+)$/i, lang: "pt" },
 ];
 
@@ -352,11 +354,13 @@ function unitWord(raw: string): string {
 // 0.1.31: «desta semana» (pt) — «minha agenda desta semana» caía al modelo.
 const DAY_RE = "(hoy|ma[ñn]ana|esta semana|today|tomorrow|this week|hoje|amanh[aã]|esta semana|desta semana|nesta semana)";
 const CAL_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
-  { re: new RegExp(`^(?:qu[eé] tengo|qu[eé] hay en (?:mi|la) agenda|mi agenda|mis (?:eventos|citas)|mi calendario)(?: (?:de|para))? ${DAY_RE}(?: en (?:mi|la) agenda)?$`, "i"), lang: "es" },
+  // 0.1.34 (barrido de paridad): «qué tengo en el calendario hoy» y «o que
+  // tenho na agenda hoje» caían al modelo; el inglés sí casaba.
+  { re: new RegExp(`^(?:qu[eé] tengo|qu[eé] hay en (?:mi|la) agenda|mi agenda|mis (?:eventos|citas)|mi calendario)(?: en (?:el|mi|la) (?:calendario|agenda))?(?: (?:de|para))? ${DAY_RE}(?: en (?:mi|la|el) (?:agenda|calendario))?$`, "i"), lang: "es" },
   { re: /^(?:mi agenda|mis eventos|mis citas|mi calendario)$/i, lang: "es" },
   { re: new RegExp(`^(?:what do i have|what'?s on my (?:calendar|agenda|schedule)|my (?:calendar|agenda|events|schedule))(?: for)? ${DAY_RE}$`, "i"), lang: "en" },
   { re: /^(?:my calendar|my agenda|my events|my schedule)$/i, lang: "en" },
-  { re: new RegExp(`^(?:o que (?:eu )?tenho|minha agenda|meus (?:eventos|compromissos))(?: (?:de|para|para a))? ${DAY_RE}$`, "i"), lang: "pt" },
+  { re: new RegExp(`^(?:o que (?:eu )?tenho|minha agenda|meus (?:eventos|compromissos))(?: (?:na (?:minha )?agenda|no (?:meu )?calend[aá]rio))?(?: (?:de|para|para a))? ${DAY_RE}$`, "i"), lang: "pt" },
   { re: /^(?:minha agenda|meus eventos|meus compromissos)$/i, lang: "pt" },
 ];
 
@@ -436,7 +440,7 @@ const NIDO_SEND_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
 const NIDO_INBOX_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: /^(?:(?:lee|leer|l[eé]eme|revisa|mu[eé]strame|ver|abre)\s+)?(?:mis\s+)?mensajes(?:\s+(?:de\s+)?nido)?(?:\s+nuevos)?$|^(?:tengo|hay)\s+mensajes(?:\s+nuevos)?(?:\s+de\s+nido)?$|^(?:mi\s+)?bandeja(?:\s+de\s+entrada)?(?:\s+de\s+nido)?$/i, lang: "es" },
   { re: /^(?:(?:read|check|show(?: me)?|open)\s+)?my\s+(?:nido\s+)?(?:messages|inbox)$|^do i have (?:any )?(?:new )?messages$/i, lang: "en" },
-  { re: /^(?:(?:l[eê]|ler|leia|ver|mostra|mostre|abre)\s+)?(?:minhas\s+)?mensagens(?:\s+do\s+nido)?$|^tenho\s+mensagens(?:\s+novas)?$/i, lang: "pt" },
+  { re: /^(?:(?:l[eê]|ler|leia|ver|mostra|mostre|abre)\s+)?(?:minhas\s+)?mensagens(?:\s+(?:do\s+)?nido)?$|^tenho\s+mensagens(?:\s+novas)?$/i, lang: "pt" },
 ];
 
 const NIDO_CODE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
@@ -464,9 +468,9 @@ const OPEN_LINK_RE: Array<{ re: RegExp; lang: RouterLang }> = [
 ];
 
 const PICK_FILE_RE: Array<{ re: RegExp; lang: RouterLang }> = [
-  { re: /^(lee|leer|abre|abrir|analiza|analizar|revisa)\s+(?:un|el|este|mi|una)\s+(?:archivo|documento|csv|excel|tabla)$/i, lang: "es" },
-  { re: /^(read|open|analy[sz]e|check)\s+(?:a|the|this|my)\s+(?:file|document|csv|spreadsheet|table)$/i, lang: "en" },
-  { re: /^(l[eê]|ler|leia|abre|abra|abrir|analisa|analise|analisar)\s+(?:um|o|este|meu|uma)\s+(?:arquivo|documento|csv|planilha|tabela)$/i, lang: "pt" },
+  { re: /^(lee|leer|abre|abrir|analiza|analizar|revisa|elige|escoge|selecciona)\s+(?:un|el|este|mi|una)\s+(?:archivo|documento|csv|excel|tabla)$/i, lang: "es" },
+  { re: /^(read|open|analy[sz]e|check|pick|choose|select)\s+(?:a|the|this|my)\s+(?:file|document|csv|spreadsheet|table)$/i, lang: "en" },
+  { re: /^(l[eê]|ler|leia|abre|abra|abrir|analisa|analise|analisar|escolha|escolhe|seleciona|selecione)\s+(?:um|o|este|meu|uma)\s+(?:arquivo|documento|csv|planilha|tabela)$/i, lang: "pt" },
 ];
 
 /**

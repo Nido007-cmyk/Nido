@@ -226,6 +226,9 @@ async function decompose(query: string, onTimeout: () => void): Promise<string[]
   const genOpts = {
     nPredict: 150,
     temperature: 0.4,
+    // 0.1.34: la temperatura explícita gana; el preset aporta la
+    // penalización de repetición (sin ella el 0.5B entra en bucle).
+    samplingPreset: "factual" as const,
     timeoutMs: STAGE_TIMEOUT_MS,
     onTimeout,
   };
@@ -268,6 +271,7 @@ async function researchSubQuestion(
     nPredict: 300,
     // RAG-GROUNDING 2026-10-11: con fuentes, más cerca de lo literal.
     temperature: chunks.length > 0 ? 0.3 : 0.6,
+    samplingPreset: chunks.length > 0 ? "factual" : "chat",
     timeoutMs: STAGE_TIMEOUT_MS,
     onTimeout,
   });
@@ -291,6 +295,7 @@ async function synthesize(
     ...promptParams,
     nPredict: maxTokens,
     temperature: 0.6,
+    samplingPreset: "chat",
     onToken,
     timeoutMs: STAGE_TIMEOUT_MS,
     onTimeout,

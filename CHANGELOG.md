@@ -4,6 +4,28 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.34-alpha — 2026-10-13
+
+Fixes from the physical test on the Galaxy Tab A9+.
+
+### Fixed
+- The small model could get stuck repeating the same words ("…las
+  aluminosas, las aluminosas, las aluminosas…") until it ran out of
+  tokens. NIDO now detects the loop, stops generating (saves battery) and
+  keeps only the first occurrence. Answers with sources and answers
+  without sources now both use a mild repetition penalty (answers without
+  sources had none at all).
+- My Memory → Reminders showed raw UTC dates ("2026-10-15T01:00:00.000Z",
+  which looks like the next day in the Americas). Now: "Wednesday,
+  October 14 at 6:00 PM", in the phone's time and language.
+- The keyboard autocorrects "Cuánto" to "Canton": "Canton falta para
+  navidad" and "Canton es 15% de 200" now work like the real question.
+  Countdowns to named days (Christmas, New Year…) accept loose phrasings
+  ("falta mucho para navidad", "days till christmas", "falta pouco para o
+  natal").
+- "Ayúdame a planear mi semana…" uses the weekly-plan template instead of
+  the model.
+
 ## 0.1.33-alpha — 2026-10-13
 
 Measuring the router (the code that decides what to do with each message

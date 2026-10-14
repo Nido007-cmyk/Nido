@@ -829,7 +829,7 @@ export function extractWeeklyPlanAction(userText: string): WeeklyPlanAction | nu
   // «¿cuánto cuesta el plan semanal?» y «mi plan de datos» no disparan.
   const bare = t.trim().replace(/[.?!\s]+$/, "");
   const isPlanRequest =
-    /plan\s*(my|la)?\s*week\b|planifica(r)?\s*(mi\s+|la\s+)?semana|organiza(r)?\s*(mi\s+|la\s+)?semana|horario\s+semanal/i.test(t) ||
+    /plan\s*(my|la)?\s*week\b|planifica(r)?\s*(mi\s+|la\s+)?semana|(?:ay[uú]dame\s+a\s+|quiero\s+|necesito\s+|^)planea(?:r)?\s+(?:mi\s+|la\s+)?semana|organiza(r)?\s*(mi\s+|la\s+)?semana|horario\s+semanal/i.test(t) ||
     /(?:haz(?:me)?|quiero|necesito|dame|cr[eé]a(?:me)?|arma(?:me)?|prep[aá]ra(?:me)?)\s+(?:un\s+|una\s+)?plan\s+(?:semanal|de\s+(?:la|mi)\s+semana|para\s+(?:la|mi)\s+semana)/i.test(t) ||
     /(?:make(?:\s+me)?|give\s+me|i\s+want|i\s+need|create)\s+(?:a\s+)?(?:weekly\s+plan|plan\s+for\s+(?:my|the)\s+week)/i.test(t) ||
     /(?:faz|quero|preciso|planej[ae](?:r)?|organiz[ae](?:r)?)\s+(?:um\s+|a\s+)?(?:plano\s+(?:semanal|da\s+(?:minha\s+)?semana)|minha\s+semana)/i.test(t) ||

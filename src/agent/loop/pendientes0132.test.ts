@@ -7,7 +7,7 @@
 /** 0.1.32: cuenta atrás de fechas y recordatorio con fecha pero sin contenido. */
 import { describe, expect, it } from "vitest";
 import { countdownTarget, extractToolAction, reminderRepeatWhen, routerMessage, runToolAction } from "./toolRouter";
-import { extractCalcAction, extractReminderAction, reminderMissingText } from "./actionRouter";
+import { extractCalcAction, extractReminderAction, extractWeeklyPlanAction, reminderMissingText } from "./actionRouter";
 import { classifyIntent } from "./intent";
 
 const NOW = new Date(2026, 9, 13, 10, 0); // martes 13-10-2026
@@ -250,6 +250,17 @@ describe("0.1.34: calculadora con el gatillo cambiado por el autocorrector", () 
       expect(extractCalcAction(s)).toBeNull();
     },
   );
+});
+
+describe("0.1.34: «ayúdame a planear mi semana» usa la plantilla", () => {
+  it("con petición explícita", () => {
+    expect(
+      extractWeeklyPlanAction("Ayúdame a planear mi semana: trabajo de 9 a 6, quiero hacer ejercicio 3 veces y pasar tiempo con mi familia."),
+    ).toMatchObject({ workStart: 9, workEnd: 18, exerciseDays: 3, wantsFamilyTime: true });
+  });
+  it("contarlo no es pedirlo", () => {
+    expect(extractWeeklyPlanAction("voy a planear mi semana mañana, qué opinas")).toBeNull();
+  });
 });
 
 describe("0.1.34: «Haz uno» tras una lista de recordatorios vacía", () => {
