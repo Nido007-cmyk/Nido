@@ -210,3 +210,27 @@ describe("mensajes NIDO: mismas formas en es/en/pt", () => {
     expect(pt.response).not.toContain("dele");
   });
 });
+
+describe("0.1.34: cuenta atrás tolerante con días con nombre", () => {
+  it.each([
+    ["Canton falta Para navidad", "es", "Navidad"], // autocorrector (prueba física)
+    ["cuanto falta pa navidad", "es", "Navidad"],
+    ["falta mucho para navidad?", "es", "Navidad"],
+    ["days till christmas", "en", "Christmas"],
+    ["how long till new year", "en", "New Year's Day"],
+    ["quanto falta pro natal", "pt", "o Natal"],
+    ["falta pouco para o natal", "pt", "o Natal"],
+  ])("%s", (s, lang, label) => {
+    expect(extractToolAction(s, NOW)).toMatchObject({ kind: "countdown", label, lang });
+  });
+
+  it("con fechas sueltas sigue exigiendo la pregunta completa", () => {
+    expect(extractToolAction("Canton falta para el 25 de diciembre", NOW)?.kind).not.toBe("countdown");
+    expect(extractToolAction("falta para el lunes", NOW)?.kind).not.toBe("countdown");
+  });
+
+  it("no pisa otras rutas", () => {
+    expect(extractToolAction("manda un mensaje a Ana que falta para navidad", NOW)?.kind).toBe("nidoSend");
+    expect(extractToolAction("convert 5 km to miles", NOW)?.kind).toBe("convert");
+  });
+});
