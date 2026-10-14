@@ -187,7 +187,7 @@ export async function searchPacks(
           // primera búsqueda sin piso; el piso efectivo sube a fondo+gap
           // cuando el mejor no destaca (pregunta sin respuesta en el pack).
           if (profile.packDistinctGap > 0) {
-            const top = await searchPackIndex(indexUri, queryVec, -1, DISTINCT_BG_TO);
+            const top = await searchPackIndex(indexUri, queryVec, -1, DISTINCT_BG_TO + 1);
             if (top && top.scores.length > 0) {
               floor = distinctFloor(floor, [...top.scores].sort((a, b) => b - a), profile.packDistinctGap);
             }
