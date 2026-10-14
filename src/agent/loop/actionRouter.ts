@@ -115,13 +115,20 @@ export function extractCalcAction(userText: string): CalcAction | null {
   // Sin gatillo, TODO el mensaje debe ser la cuenta: se valida igual que
   // con gatillo y además se exige un operador binario. Una fecha suelta
   // ("12/10/2026") no es una cuenta.
+  // 0.1.34 (prueba física, Tab A9+): el autocorrector cambia «Cuánto» por
+  // «Canton» y «Canton es 15% de 200» no tenía gatillo. Una palabra
+  // cualquiera + «es/son/is/é» + cuenta vale, pero SIN gatillo real se trata
+  // como cuenta suelta: exige operador («mi edad es 30» no es una cuenta).
+  const loose = m ? null : /^\S+\s+(?:es|son|da|sale|is|é)\s+(.+)$/i.exec(trimmed);
   const bare = !m;
   if (bare) {
     if (!/\d/.test(trimmed) || trimmed.length > 60) return null;
     if (/\d{1,2}\/\d{1,2}\/\d{2,4}/.test(trimmed)) return null;
   }
 
-  const raw = (m ? m[1] : trimmed).trim();
+  const raw = (m ? m[1] : loose ? loose[1] : trimmed).trim();
+  // «Teléfono es 555-1234» no es una resta.
+  if (loose && !m && /^\d+(?:\s*-\s*\d+)+$/.test(raw)) return null;
   // 0.1.33 (medición del router): una cuenta real cabe holgada en 120
   // caracteres (la expresión final admite 50). Sin este tope, pegar una
   // tira de miles de dígitos costaba tiempo CUADRÁTICO en la
