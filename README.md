@@ -37,16 +37,25 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   (llama.cpp through `llama.rn`).
 - **Remembers for you**: facts, notes and reminders, stored in a database
   encrypted with SQLCipher. The key lives in the Android Keystore.
-- **Acts on your requests**: reminders, notes, calendar events, unit
-  conversions, arithmetic, opening links. Anything with an effect outside
-  the app asks for your confirmation first.
+  Birthdays you tell it get a reminder every year.
+- **Acts on your requests**: reminders (once, or every day, week, month or
+  year), countdowns, notes, calendar events, unit conversions, arithmetic,
+  opening links. Anything with an effect outside the app asks for your
+  confirmation first.
 - **Answers from your documents**: import `.txt`, `.md`, `.csv`, `.json` or
   `.pdf` files and NIDO indexes them on the phone.
+- **Knows things offline**: a built-in knowledge base plus an optional
+  Wikipedia pack (about 116,000 articles). With multilingual search on, you
+  can ask in Spanish, Portuguese or English, and answers show the articles
+  they come from; when nothing in the base really matches, no source is shown.
 - **Talks to another NIDO over Bluetooth**: encrypted messages between two
   paired phones, with no internet and no server. Pairing is done in person
   with a QR code.
 - **Shows its network use**: every download the app makes is logged and
   visible in the About screen.
+- **Measures itself, on the phone**: the Execution Telemetry screen (menu) shows generation
+  speed, time to first word and how long request routing takes, recorded
+  locally and never sent anywhere.
 
 The interface is available in English, Spanish and Portuguese.
 

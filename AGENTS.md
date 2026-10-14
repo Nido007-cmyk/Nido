@@ -83,6 +83,24 @@ phone. An APK signed with a different key can't install over an existing NIDO:
 Android requires uninstalling first, which deletes the app's downloaded models.
 A first release build takes about 40 minutes.
 
+## Publishing a version: keep the repo up to date
+
+Every version bump (the APK workflow releases when `package.json`'s version
+changes on `main`) goes with, in the same PR:
+
+1. `package.json`, `app.json` (`version` and `android.versionCode` + 1) and
+   `APP_VERSION` in `src/security/backup.ts` — all the same version.
+2. A `CHANGELOG.md` entry written for users (what changed for them, not how).
+3. If a user-visible feature or limitation changed: the "What it does today"
+   list in `README.md` **and** `README.es.md`, and "What's working" / "Known
+   limitations" in `docs/ALPHA_RELEASE_NOTES.md`.
+4. If retrieval, models or packs changed: `docs/KNOWLEDGE_PACKS.md` /
+   `docs/MODELS.md` and their `docs/es/` copies.
+5. If a roadmap item was done or added: `docs/ROADMAP.md` and `docs/es/ROADMAP.md`.
+
+After the release: check that the published `app-release.apk.sha256` matches
+the asset's digest.
+
 ## No local Android SDK: build via EAS instead
 
 ```bash

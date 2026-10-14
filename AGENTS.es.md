@@ -85,6 +85,26 @@ para tu propio teléfono. Un APK firmado con otra clave no puede instalarse
 sobre un NIDO existente: Android exige desinstalar primero, lo que borra los
 modelos descargados por la app. Un primer build release tarda unos 40 minutos.
 
+## Publicar una versión: mantener el repo al día
+
+Cada subida de versión (el workflow del APK publica cuando cambia la versión
+de `package.json` en `main`) va acompañada, en el mismo PR, de:
+
+1. `package.json`, `app.json` (`version` y `android.versionCode` + 1) y
+   `APP_VERSION` en `src/security/backup.ts`, todos con la misma versión.
+2. Una entrada en `CHANGELOG.md` escrita para usuarios (qué cambia para
+   ellos, no cómo).
+3. Si cambió una función o limitación visible: la lista "Qué hace hoy" de
+   `README.md` **y** `README.es.md`, y "What's working" / "Known
+   limitations" en `docs/ALPHA_RELEASE_NOTES.md`.
+4. Si cambió la búsqueda, los modelos o los paquetes: `docs/KNOWLEDGE_PACKS.md`
+   / `docs/MODELS.md` y sus copias en `docs/es/`.
+5. Si se completó o añadió algo del roadmap: `docs/ROADMAP.md` y
+   `docs/es/ROADMAP.md`.
+
+Tras la release: comprobar que el `app-release.apk.sha256` publicado coincide
+con el digest del archivo.
+
 ## Sin Android SDK local: compila vía EAS en su lugar
 
 ```bash

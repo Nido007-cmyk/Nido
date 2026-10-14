@@ -67,7 +67,19 @@ archivo `bge-small-en-v1.5-q8_0.gguf` (~35MB, sha256 abajo).
   pero crecerlo (texto de artículo más completo, otras fuentes) mejoraría
   significativamente la utilidad real.
 
-## Alcance de idioma: solo inglés en esta versión
+## Alcance de idioma: búsqueda multilingüe (opcional, desde la 0.1.11)
+
+> **Actualización.** La sección de abajo describe la decisión original. Desde
+> entonces NIDO ofrece un modelo de embeddings multilingüe opcional,
+> **multilingual-e5-small** (GGUF Q8_0 convertido en CI por
+> `.github/workflows/multilingual-e5.yml`, licencia MIT), con una versión
+> multilingüe del pack Vital. Viene desactivado; al activarlo descarga el
+> modelo una vez y reconstruye el índice de búsqueda en segundo plano. Sus
+> pisos, margen y "distintividad" se calibran en CI con preguntas en español,
+> inglés y portugués (ver `src/rag/embeddingProfile.ts` y
+> [KNOWLEDGE_PACKS.md](KNOWLEDGE_PACKS.md#con-la-búsqueda-multilingüe-activada)).
+
+### Decisión original: solo inglés
 
 bge-small-en-v1.5 es un modelo de embeddings solo-inglés, y el corpus bootstrap es
 solo-inglés. Fue una elección deliberada, no un descuido: cambiar a un modelo de

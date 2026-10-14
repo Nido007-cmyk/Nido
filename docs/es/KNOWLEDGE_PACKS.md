@@ -92,3 +92,25 @@ cada embedding de un pack de 100k fragmentos tardaría segundos en el teléfono,
 que los candidatos vienen primero de las palabras clave. Un pack construido con un
 modelo de embeddings distinto se ignora con un aviso, ya que sus embeddings no
 coincidirían con los de la app.
+
+### Con la búsqueda multilingüe activada
+
+Con la búsqueda multilingüe activada (Ajustes → Base de conocimiento offline),
+NIDO usa el modelo de embeddings multilingual-e5-small y la versión multilingüe
+del pack Vital (`wiki-vital5-e5`). Una pregunta en español no comparte palabras
+clave con un artículo en inglés, así que los candidatos por palabras clave no
+bastan: la app construye, una sola vez y en segundo plano, un índice vectorial
+de todo el pack y busca en él entero. Hasta que ese índice está listo, vuelve a
+la búsqueda por palabras clave.
+
+e5 da una similitud alta a casi cualquier par de textos, así que un piso fijo
+dejaba pasar artículos sin relación. Desde la 0.1.36 el mejor resultado además
+tiene que **destacar**: debe superar por un margen la media de los resultados
+10–50 de la misma pregunta (`distinctGap` / `packDistinctGap` en
+`src/rag/embeddingProfile.ts`). Si nada destaca, la pregunta no tiene respuesta
+en el pack y no se muestra ninguna fuente. El margen se calibra en CI
+(`.github/workflows/multilingual-e5.yml`, `scripts/multilingual/e5_pipeline.py`)
+con preguntas en español, inglés y portugués, incluidas preguntas sin respuesta
+en la base. Con el valor elegido (0.03), las fuentes falsas bajaron del 20 % al
+10 % en la base integrada y del 33 % al 22 % con el pack Vital, sin perder
+ninguna respuesta correcta.

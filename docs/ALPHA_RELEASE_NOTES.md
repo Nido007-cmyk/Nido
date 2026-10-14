@@ -1,9 +1,10 @@
-# NIDO v0.1.18-alpha — Release Notes
+# NIDO alpha — Release Notes
 
 > This document keeps the alpha overview and the current known
-> limitations. Per-version changes from 0.1.19 on are in the
-> [changelog](../CHANGELOG.md) and in each GitHub release. The known
-> limitations below are kept current as features are verified.
+> limitations, kept up to date with the latest release (0.1.36-alpha).
+> Per-version changes from 0.1.19 on are in the
+> [changelog](../CHANGELOG.md) and in each GitHub release; the notes for
+> 0.1.1 to 0.1.18 are kept below for reference.
 
 ## What is this?
 
@@ -12,12 +13,17 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 ## What's working
 
 - Offline AI chat, 100% on-device, with a catalog of models from 0.4 GB to 5 GB (Qwen 2.5 0.5B / 1.5B / 7B, Qwen3 0.6B, Phi-3.5 mini, LFM 2.5, Gemma) — pick what your phone can run
+- Reminders with local notifications: once, or every day, week, month or year; countdowns ("how many days until…"); birthdays you save get a yearly reminder
+- Encrypted memory of facts, people and notes, with a "My Memory" screen to review and delete them
+- Answers from your own documents and from an offline knowledge base, with an optional Wikipedia pack and optional multilingual search (Spanish, English, Portuguese)
 - P2P device-to-device messaging over Bluetooth (no internet, no servers)
-- Reminders with local notifications
 - Encrypted on-device storage
 - Backup / restore
+- On-device measurements (generation speed, time to first word, routing time) that never leave the phone
 
-## What changed in 0.1.18-alpha
+## Earlier releases (0.1.1 – 0.1.18)
+
+### What changed in 0.1.18-alpha
 
 > **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
 
@@ -26,7 +32,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - **Safer settings and backup key.** Settings can't erase each other or get lost if the app is closed while saving; the backup key is hidden from clipboard history and screenshots.
 - **Safer document import.** Huge files are refused instead of risking a crash, and empty PDFs are reported.
 
-## What changed in 0.1.17-alpha
+### What changed in 0.1.17-alpha
 
 > **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
 
@@ -34,20 +40,20 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - **Key rotation in your language.** The fingerprint prompt and its errors no longer appear in Spanish for everyone.
 - **Cleaner error messages** in the knowledge base (no more internal debug tags).
 
-## What changed in 0.1.16-alpha
+### What changed in 0.1.16-alpha
 
 > **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
 
 - **Fewer crash risks.** Dates and numbers on a dozen screens no longer use the Android system path that could close the app on some devices.
 - **Answers in your language.** Saving a fact ("remember that…"), a person, or a backup error now speak English or Portuguese when the app is set to them.
 
-## What changed in 0.1.15-alpha
+### What changed in 0.1.15-alpha
 
 > **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
 
 - **NIDO messages stay connected with the app closed.** Android (Samsung tablets especially) puts apps to sleep after a while to save battery, which dropped the link between tablets. The NIDO screen now offers to let NIDO run in the background: tap **Allow** and accept the system dialog. It uses very little battery.
 
-## What changed in 0.1.14-alpha
+### What changed in 0.1.14-alpha
 
 > **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
 
@@ -56,7 +62,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - **"What reminders do I have?"** now lists your pending reminders.
 - The calculator, reminders and memory understand English and Portuguese phrasing too, and reminder confirmations come in your language.
 
-## What changed in 0.1.13-alpha
+### What changed in 0.1.13-alpha
 
 > **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
 
@@ -64,7 +70,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 
 - The storage usage in Settings now counts the search index NIDO builds for the multilingual Wikipedia pack (~45 MB), so the total matches what's really on your device.
 
-## What changed in 0.1.12-alpha
+### What changed in 0.1.12-alpha
 
 > **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
 
@@ -72,7 +78,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Turning "Spanish & Portuguese search" on and off quickly now always ends in the last choice you made.
 - If the model download hiccups and retries by itself, NIDO waits for it instead of showing an error too early.
 
-## What changed in 0.1.11-alpha
+### What changed in 0.1.11-alpha
 
 > **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
 
@@ -83,7 +89,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - **Wikipedia Vital (multilingual)**: a version of the 50,000-article pack made for the new model (CC BY-SA 4.0, compiled by NIDO from Wikipedia). With multilingual search on, it's offered instead of the old one.
 - Everything stays on your device, as always.
 
-## What changed in 0.1.10-alpha
+### What changed in 0.1.10-alpha
 
 > **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
 
@@ -92,7 +98,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - **Icon shortcuts:** long-press the NIDO icon for **New chat** and **NIDO messages**.
 - **Quick Settings tile "Ask NIDO":** add it from the quick settings edit screen. If the tablet is locked, it asks you to unlock first.
 
-## What changed in 0.1.9-alpha
+### What changed in 0.1.9-alpha
 
 > **Pre-release.** Built and checked by automated tests. Please report anything that fails in Issues.
 
@@ -100,7 +106,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - The card always shows now and explains why if it can't be used — for example, if the tablet has no PIN, pattern or password.
 - Agent replies for NIDO messages, your pairing code and files are now in English and Portuguese too, not only Spanish.
 
-## What changed in 0.1.8-alpha
+### What changed in 0.1.8-alpha
 
 > **Pre-release.** Built and checked by automated tests; real-device testing is ongoing. Please report anything that fails in Issues.
 
@@ -122,7 +128,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Dates are formatted without Android's Intl bridge in every agent tool (the same cause as the reminder crash fixed in 0.1.5).
 - Short replies that bounce the question back ("good, and you?", even with typos) get a natural answer.
 
-## What changed in 0.1.7-alpha
+### What changed in 0.1.7-alpha
 
 > **Pre-release.** Built and checked by automated tests; real-device testing is ongoing. Please report anything that fails in Issues. Pairing and fingerprints are unchanged from 0.1.6.
 
@@ -151,7 +157,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - The built-in knowledge is in English. For questions in Spanish or Portuguese only numbers can be checked automatically, and the header says so.
 - "Send a message to Ana" without saying SMS still depends on the model (it could mean SMS or a NIDO message). Creating calendar events still depends on the model writing the date.
 
-## What changed in 0.1.6-alpha
+### What changed in 0.1.6-alpha
 
 > **Pre-release.** Built and checked by automated tests; real-device testing is ongoing. Please report anything that fails in Issues.
 
@@ -175,7 +181,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - **The Evaluation screen no longer freezes the app** (root cause: on React Native, `setImmediate` never yields to Android; the benchmark now yields with `setTimeout`).
 - **Less RAM for the AI model:** smaller compute batch and compressed context cache (q8_0), with automatic fallback to the previous settings if a device rejects them.
 
-## What changed in 0.1.5-alpha
+### What changed in 0.1.5-alpha
 
 - **Reminder crash fixed.** Asking the agent to remind you of something at a time no longer closes the app.
 - **The Evaluation screen no longer freezes the device.** The root cause was a security benchmark (PBKDF2) blocking the UI; it now runs in small steps and has a Stop button.
@@ -188,20 +194,20 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - **Pack sharing** shows a clear message instead of a generic error while the feature is finished.
 - Not yet tested on a physical device: Wi-Fi P2P and reconnect after a crash. Please report anything that fails.
 
-## What changed in 0.1.4-alpha
+### What changed in 0.1.4-alpha
 
 - **The agent history is kept** between sessions (encrypted, tool names and results only) and can be deleted from About.
 - **Undo**: a note or reminder the agent created can be undone from the history.
 - A security self-assessment against OWASP MASVS is in `docs/security/MASVS_CHECKLIST.md`.
 
-## What changed in 0.1.3-alpha
+### What changed in 0.1.3-alpha
 
 - **Scheduled tasks work.** About → Scheduled tasks → New task: give it a name, say what the agent should do, pick a time and the days. The agent runs it on its own; the result appears in the card and in a notification.
 - Tasks run while NIDO is open. If the app is closed at that time, your phone shows a notice and the task runs when you open the app.
 - A scheduled task can read your notes, calendar and inbox and save notes. It can never send messages, call, pair or open other apps.
 - Not yet tested on a physical device.
 
-## What changed in 0.1.2-alpha
+### What changed in 0.1.2-alpha
 
 - **Backup is now reachable**: About → Open backup. Create an encrypted backup, view and copy your encryption key, or rotate it.
 - **New look on every screen**, matching the chat, in both the light and the dark theme. Tone, memory and voice settings no longer stay dark in the light theme.
@@ -214,7 +220,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Backup dialogs are fully translated (English, Spanish, Portuguese).
 - New privacy policy and terms of use in the repository.
 
-## What changed in 0.1.1-alpha
+### What changed in 0.1.1-alpha
 
 New look for the chat: calmer background, a solid bubble for your messages, NIDO's mascot as its avatar, a rounded composer, and tappable suggestions on the first screen. The header now says “Offline · private” instead of the model's technical name, and the NIDO screen uses segmented tabs.
 
@@ -233,13 +239,14 @@ Fixes from the 2026-10-10 code audit:
 
 ## Known limitations
 
-- The 0.5B model is small and will sometimes give wrong or made-up answers. We are working on honest "I don't know" behavior and better source grounding.
+- The 0.5B model is small and will sometimes give wrong or made-up answers. Since 0.1.36 NIDO shows no source when nothing in its knowledge base really matches, but the model can still answer wrongly from its own knowledge.
+- On low-end phones the first word of a long answer can take a while (about 20 seconds measured on a Galaxy Tab A9+ when several sources are used).
 - P2P Bluetooth behavior varies by phone manufacturer. See the in-app troubleshooting guide if you have connection issues.
 - **A backup restored on a new installation needs the exported key.** If you reinstall or change phones, a backup can be restored with the exported database key. Without that key a backup cannot be opened anywhere, so keep the key somewhere safe and separate from the backup file.
 - **Voice input uses Android's system speech recognizer** with the prefer-offline flag. On devices without an offline model, the system service may process audio online.
 - **Sharing knowledge packs between phones is not available yet.** The tab is hidden.
 - Builds are checked by automated tests, and the headline flows (chat and agent tools, memory, reminders and notifications, notes, and two-device P2P messaging, including airplane mode) are also exercised on physical hardware (Galaxy Tab A9+). Not every change is device-tested before every pre-release.
-- The redesign in this version covers the chat, the header and the NIDO tabs. Settings, Memory, Documents and the remaining screens keep their previous look for now.
+- Some screens still have their earlier look; the visual redesign is not finished everywhere.
 - UI is functional but not final.
 
 ## Security disclaimer
