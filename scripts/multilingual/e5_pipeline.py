@@ -183,8 +183,26 @@ class Ranked:
         return int(np.searchsorted(-self.desc, -x, side="right"))
 
 
-def source_search(r, floor, margin, min_keep=1):
+# 0.1.35 (prueba física, Tab A9+): con e5 + Vital, un tercio de las preguntas
+# sin respuesta traían fuentes con 81-85 %: el coseno absoluto de e5 es alto
+# para TODO. Hipótesis: en una pregunta sin respuesta todos los candidatos
+# puntúan parecido (distribución plana) y en una con respuesta el mejor
+# destaca. «Distintividad» = mejor puntuación − media de los puestos
+# BG_FROM..BG_TO de la misma fuente.
+BG_FROM, BG_TO = 10, 50
+
+
+def background(r):
+    d = r.desc
+    if len(d) > BG_TO:
+        return float(np.mean(d[BG_FROM:BG_TO]))
+    return float(np.mean(d[len(d) // 4 :])) if len(d) else 0.0
+
+
+def source_search(r, floor, margin, min_keep=1, gap=0.0):
     """semanticSearch / searchPacks: floor, then pruneByScoreMargin, then limit."""
+    if gap > 0:
+        floor = max(floor, background(r) + gap)
     n = r.count_at_least(floor)
     if n == 0:
         return []
@@ -203,11 +221,11 @@ def _floor_for(floor, src):
     return floor[src] if isinstance(floor, dict) else floor
 
 
-def app_answer_titles(sources, titles_by_source, floor, margin):
+def app_answer_titles(sources, titles_by_source, floor, margin, gap=0.0):
     """Union of sources -> fusion order (semantic only) -> per-title cap -> answer chunks."""
     cands = []
     for src, scores in sources.items():
-        for sc, i in source_search(scores, _floor_for(floor, src), margin):
+        for sc, i in source_search(scores, _floor_for(floor, src), margin, gap=gap):
             cands.append((sc, titles_by_source[src][i]))
     if not cands:
         return [], 0.0
@@ -231,8 +249,8 @@ def app_answer_titles(sources, titles_by_source, floor, margin):
 def load_queries(path):
     q = json.load(open(path, encoding="utf-8"))
     items = []
-    for kind in ("answerable", "singleTerm", "unanswerable"):
-        for it in q[kind]:
+    for kind in ("answerable", "singleTerm", "unanswerable", "unanswerableReal"):
+        for it in q.get(kind, []):
             for lang in LANGS:
                 items.append(
                     {
@@ -246,12 +264,12 @@ def load_queries(path):
     return items
 
 
-def evaluate(items, qscores, titles_by_source, floor_multi, floor_single, margin):
+def evaluate(items, qscores, titles_by_source, floor_multi, floor_single, margin, gap=0.0):
     """Per-language recall@4 (answerable) and false-accept rate (no answer in corpus)."""
     stats = {lang: {"ans": 0, "hit": 0, "neg": 0, "fa": 0} for lang in LANGS}
     for it, sources in zip(items, qscores):
         floor = floor_single if it["single"] else floor_multi
-        got, _ = app_answer_titles(sources, titles_by_source, floor, margin)
+        got, _ = app_answer_titles(sources, titles_by_source, floor, margin, gap=gap)
         st = stats[it["lang"]]
         if it["expect"]:
             st["ans"] += 1
@@ -450,6 +468,26 @@ def cmd_calibrate(a):
             "multi": evaluate([items[i] for i in multi], [se[i] for i in multi], tbs, fm, fm, APP_MARGIN),
             "single": evaluate([items[i] for i in single], [se[i] for i in single], tbs, fs, fs, APP_MARGIN),
         }
+        # 0.1.35: distintividad a los pisos de la app (frases y una palabra).
+        gap_rows = []
+        for g in (0.0, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.05, 0.06):
+            gap_rows.append(
+                {
+                    "gap": g,
+                    "multi": evaluate([items[i] for i in multi], [se[i] for i in multi], tbs, fm, fm, APP_MARGIN, gap=g),
+                    "single": evaluate([items[i] for i in single], [se[i] for i in single], tbs, fs, fs, APP_MARGIN, gap=g),
+                }
+            )
+        entry["e5GapSweep"] = gap_rows
+        # Distintividad por pregunta (para ver cuánto se solapan).
+        dist = {}
+        for it, sources in zip(items, se):
+            best = max(float(s.desc[0]) - background(s) for s in sources.values())
+            dist.setdefault(f"{'pos' if it['expect'] else 'neg'}_{it['lang']}", []).append(best)
+        entry["e5Distinctiveness"] = {
+            k: {"p10": float(np.percentile(v, 10)), "p50": float(np.percentile(v, 50)), "p90": float(np.percentile(v, 90)), "min": float(min(v)), "max": float(max(v))}
+            for k, v in sorted(dist.items())
+        }
         if with_vital:
             sweep = []
             for pf in [round(x, 3) for x in np.arange(0.81, 0.871, 0.005)]:
@@ -514,6 +552,18 @@ def render_md(r):
             L += ["", "Piso de los paquetes (frases; integrado fijo):", "", "| piso | es | en | pt | falsos |", "|---|---|---|---|---|"]
             for r in e["e5PackFloorSweep"]:
                 L.append(row(str(r["packFloor"]), r))
+        if e.get("e5GapSweep"):
+            L += ["", "Distintividad (mejor − media de los puestos 10–50) a los pisos de la app:", "", "| gap | es | en | pt | falsos | 1 palabra es/en/pt | falsos 1p |", "|---|---|---|---|---|---|---|"]
+            for g in e["e5GapSweep"]:
+                m, s = g["multi"], g["single"]
+                L.append(
+                    f"| {g['gap']} | {_pct(m['es']['recall'])} | {_pct(m['en']['recall'])} | {_pct(m['pt']['recall'])} | {_pct(m['mean']['falseAccept'])} | "
+                    f"{_pct(s['es']['recall'])}/{_pct(s['en']['recall'])}/{_pct(s['pt']['recall'])} | {_pct(s['mean']['falseAccept'])} |"
+                )
+        if e.get("e5Distinctiveness"):
+            L += ["", "Distintividad por pregunta (p10 / p50 / p90):", "", "| | e5 |", "|---|---|"]
+            for k, v in e["e5Distinctiveness"].items():
+                L.append(f"| {k} | {v['p10']:.3f} / {v['p50']:.3f} / {v['p90']:.3f} |")
         L += ["", "Mejor coseno por pregunta (p10 / p50 / p90):", "", "| | bge | e5 |", "|---|---|---|"]
         for k in e["top1"]["e5"]:
             bb, ee = e["top1"]["bge"][k], e["top1"]["e5"][k]

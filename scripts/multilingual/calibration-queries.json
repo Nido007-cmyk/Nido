@@ -534,5 +534,57 @@
       "es": "¿por qué mi teléfono va tan lento hoy?",
       "pt": "por que meu celular está tão lento hoje?"
     }
+  ],
+  "unanswerableReal": [
+    {
+      "es": "tengo arroz, frijoles y queso, ¿qué puedo cocinar?",
+      "en": "I have rice, beans and cheese, what can I cook?",
+      "pt": "tenho arroz, feijão e queijo, o que posso cozinhar?"
+    },
+    {
+      "es": "haz uno",
+      "en": "make one",
+      "pt": "faz um"
+    },
+    {
+      "es": "mi hermano se llama Juan",
+      "en": "my brother's name is Juan",
+      "pt": "meu irmão se chama João"
+    },
+    {
+      "es": "ayúdame a planear mi semana",
+      "en": "help me plan my week",
+      "pt": "me ajuda a planejar minha semana"
+    },
+    {
+      "es": "¿qué significa que seas 100% offline?",
+      "en": "what does it mean that you are 100% offline?",
+      "pt": "o que significa ser 100% offline?"
+    },
+    {
+      "es": "escribe un poema corto sobre el mar",
+      "en": "write a short poem about the sea",
+      "pt": "escreva um poema curto sobre o mar"
+    },
+    {
+      "es": "estoy cansado, ¿qué me recomiendas para dormir mejor esta noche?",
+      "en": "I'm tired, what do you recommend to sleep better tonight?",
+      "pt": "estou cansado, o que você recomenda para dormir melhor hoje?"
+    },
+    {
+      "es": "¿cuánto falta para mi cumpleaños?",
+      "en": "how long until my birthday?",
+      "pt": "quanto falta para o meu aniversário?"
+    },
+    {
+      "es": "dame tres ideas para el regalo de mi mamá",
+      "en": "give me three gift ideas for my mom",
+      "pt": "me dê três ideias de presente para minha mãe"
+    },
+    {
+      "es": "¿dónde dejé las llaves del coche?",
+      "en": "where did I leave my car keys?",
+      "pt": "onde deixei as chaves do carro?"
+    }
   ]
 }
