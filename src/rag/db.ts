@@ -452,7 +452,24 @@ async function openAndMigrate(): Promise<SecureDbHandle> {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       ts INTEGER NOT NULL,
       classify_ms REAL NOT NULL,
-      outcome TEXT NOT NULL
+      outcome TEXT NOT NULL,
+      route TEXT,
+      model_tool TEXT,
+      retry TEXT
+    );
+
+    -- 0.1.39: registro OPCIONAL (apagado por defecto, meta
+    -- 'router.keep_missed') de las frases que el router no reconoció.
+    -- Es el único sitio de la telemetría que guarda texto: solo si el
+    -- usuario lo enciende, máximo 50, y apagarlo lo borra.
+    CREATE TABLE IF NOT EXISTS router_missed (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts INTEGER NOT NULL,
+      text TEXT NOT NULL,
+      route TEXT NOT NULL,
+      model_tool TEXT,
+      retry TEXT,
+      fallback TEXT
     );
 
     -- User-imported document collections (Settings > Knowledge Base >
@@ -482,6 +499,15 @@ async function openAndMigrate(): Promise<SecureDbHandle> {
   const columns = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(chunks)`);
   if (!columns.some((c) => c.name === "collection_id")) {
     await db.execAsync(`ALTER TABLE chunks ADD COLUMN collection_id TEXT REFERENCES custom_collections(id)`);
+  }
+
+  // 0.1.39: vía de cada turno (route / model_tool / retry), aditivo: las
+  // muestras anteriores quedan con NULL y el resumen no las cuenta.
+  const routerColumns = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(router_samples)`);
+  for (const col of ["route", "model_tool", "retry"]) {
+    if (!routerColumns.some((c) => c.name === col)) {
+      await db.execAsync(`ALTER TABLE router_samples ADD COLUMN ${col} TEXT`);
+    }
   }
 
   // Storage budget (upstream item 4, adapted): track last access for LRU eviction.

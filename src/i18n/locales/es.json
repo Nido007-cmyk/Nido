@@ -215,7 +215,16 @@
       "model": "Con el modelo",
       "notUnderstood": "«No entendí»",
       "chat": "Conversación",
-      "empty": "Aún no hay mensajes medidos."
+      "empty": "Aún no hay mensajes medidos.",
+      "leakTitle": "Órdenes que se colaron al modelo",
+      "leakEmpty": "Desde la 0.1.39 se mide por dónde sale cada orden. Aún no hay órdenes medidas.",
+      "leakMeasured": "Órdenes medidas",
+      "leakToModel": "Llegaron al modelo",
+      "leakAskedTool": "El modelo pidió herramienta",
+      "leakRetried": "Con reintento",
+      "leakByTool": "Herramientas que pidió el modelo",
+      "leakByRoute": "Resueltas por el código",
+      "leakHint": "Si el modelo pidió una herramienta, el router debió reconocer la orden: es un fallo del router, no del modelo. Solo cuentas y nombres de herramienta, nunca el texto."
     },
     "clear": "🗑 Borrar",
     "clearConfirm": "Borrar",
@@ -234,7 +243,15 @@
     "tokPerSec": "Velocidad",
     "tokens": "Tokens",
     "totalTime": "Total",
-    "ttft": "TTFT"
+    "ttft": "TTFT",
+    "missed": {
+      "title": "Frases que el router no reconoció",
+      "toggle": "Guardar las frases que el router no reconoció",
+      "hint": "Opcional y apagado por defecto. Si lo enciendes, NIDO guarda en este dispositivo (cifrado) las últimas 50 órdenes que tuvo que resolver el modelo, para ver cuáles le faltan al router. Nunca salen del teléfono. Apagarlo las borra.",
+      "empty": "Aún no hay frases guardadas.",
+      "copy": "Copiar",
+      "clear": "Borrar frases"
+    }
   },
   "interfaceSettings": {
     "hapticFeedbackLabel": "Respuesta háptica",
