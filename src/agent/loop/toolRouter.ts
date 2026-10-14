@@ -42,6 +42,7 @@ export type ToolAction =
   | { kind: "memoryForgetHelp"; lang: RouterLang }
   | { kind: "countdown"; target: string; label: string; lang: RouterLang }
   | { kind: "reminderOfferCreate"; range: "today" | "tomorrow" | null; lang: RouterLang }
+  | { kind: "reminderFill"; text: string; dueAt: string; lang: RouterLang }
   | { kind: "calendarList"; from: string; to: string; label: CalendarRange; lang: RouterLang }
   | { kind: "calendarCreate"; title: string; start: string | null; lang: RouterLang }
   | { kind: "nidoSend"; to: string; text: string | null; lang: RouterLang }
@@ -131,6 +132,7 @@ export function toolForAction(a: ToolAction): string {
     case "countdown":
       return "device_time";
     case "reminderOfferCreate":
+    case "reminderFill":
       return "create_reminder";
   }
 }
@@ -200,6 +202,36 @@ function offerCreateAction(t: string, now: Date): ToolAction | null {
     if (re.test(t)) return { kind: "reminderOfferCreate", range: offer.range, lang };
   }
   return null;
+}
+
+/**
+ * 0.1.35: «ponme un recordatorio para el lunes» → NIDO pregunta «¿Qué
+ * quieres que te recuerde el lunes?». La respuesta («pagar la luz») era un
+ * mensaje suelto que caía al modelo y el recordatorio nunca se creaba.
+ * Durante 3 minutos, una respuesta corta que no es otra cosa se toma como
+ * el contenido de ese recordatorio. «no», «cancela», «olvídalo» lo anulan.
+ */
+let pendingAsk: { dueAt: string; lang: RouterLang; at: number } | null = null;
+export function notePendingReminderAsk(dueAt: string, lang: RouterLang, now: Date): void {
+  pendingAsk = { dueAt, lang, at: now.getTime() };
+}
+const ASK_CANCEL_RE = /^(?:no|nada|cancela(?:r)?|olv[ií]dalo|d[eé]jalo|nevermind|never mind|cancel|forget it|nothing|n[aã]o|deixa|esquece|cancelar)$/i;
+function pendingFillAction(t: string, now: Date): ToolAction | null {
+  const p = pendingAsk;
+  if (!p || now.getTime() - p.at > OFFER_WINDOW_MS || now.getTime() < p.at) return null;
+  const s = t.trim().replace(/[.!]+$/, "");
+  if (ASK_CANCEL_RE.test(s)) {
+    pendingAsk = null;
+    return null;
+  }
+  const words = s.split(/\s+/).filter(Boolean);
+  if (words.length < 1 || words.length > 10 || /\?/.test(s)) return null;
+  if (/^(?:qu[eé]|c[oó]mo|cu[aá]nto|cu[aá]ndo|d[oó]nde|por qu[eé]|qui[eé]n|cu[aá]l|what|how|when|where|why|who|which|o que|como|quanto|quando|onde|quem|qual)(?![\p{L}])/iu.test(s)) return null;
+  const text = s.replace(/^(?:(?:para|de|to|for|que|that|about|sobre)\s+)+/i, "").trim();
+  if (text.length < 2) return null;
+  // No se consume aquí: la puerta del chat y el loop lo consultan los dos;
+  // se borra al crear el recordatorio.
+  return { kind: "reminderFill", text, dueAt: p.dueAt, lang: p.lang };
 }
 
 /** Fecha (00:00 local) de un día con nombre (Navidad, Año Nuevo…), o null. */
@@ -805,7 +837,8 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     if (!m) continue;
     return { kind: "pickFile", analyze: /^anali[sz]|^analy|^revisa|^check/i.test(m[1]), lang };
   }
-  return null;
+  // Al final: solo si nada más casó, la respuesta a «¿qué te recuerdo?».
+  return pendingFillAction(t, now);
 }
 
 // ------------------------------------------------------------ respuestas
@@ -1046,9 +1079,9 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     pt: "Claro. Diga o quê e quando numa frase só, por exemplo: “me lembra{{when}} às 9 de ligar para o médico”.",
   },
   reminderAskWhat: {
-    es: "¿Qué quieres que te recuerde{{when}}? Dímelo en una frase, por ejemplo: «recuérdame el lunes pagar la luz».",
-    en: "What should I remind you of{{when}}? Say it in one go, for example: “remind me on Monday to pay the bill”.",
-    pt: "O que você quer que eu te lembre{{when}}? Diga numa frase só, por exemplo: “me lembra na segunda de pagar a luz”.",
+    es: "¿Qué quieres que te recuerde{{when}}? Respóndeme solo con eso, por ejemplo: «pagar la luz».",
+    en: "What should I remind you of{{when}}? Just reply with it, for example: “pay the bill”.",
+    pt: "O que você quer que eu te lembre{{when}}? Responda só com isso, por exemplo: “pagar a luz”.",
   },
   reminderSavedAskWhen: {
     es: "Listo, guardé: «{{text}}». ¿Para cuándo quieres que te avise?",
@@ -1424,6 +1457,14 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
 
   try {
     switch (action.kind) {
+      case "reminderFill": {
+        pendingAsk = null;
+        const out = await run("create_reminder", { text: action.text, at: action.dueAt });
+        if (!out.ok) return failure(out);
+        const aviso = /aunque NIDO est[eé] cerrado/.test(out.text) ? routerMessage("reminderWillNotify", lang) : "";
+        return say(routerMessage("reminderSet", lang, { when: reminderWhen(action.dueAt, lang), text: action.text }) + aviso);
+      }
+
       case "reminderOfferCreate": {
         const when =
           action.range === "tomorrow"

@@ -15,6 +15,9 @@ All notable changes to NIDO are recorded here. Versions follow
   NIDO says so.
 
 ### Fixed
+- "Ponme un recordatorio para el lunes" → NIDO asks what to remind → the
+  answer ("pagar la luz") now creates the reminder. Before, that answer
+  went to the model and nothing was saved. "No"/"cancel" drops it.
 - Reminder titles no longer keep the calendar date inside ("el 15 de marzo
   el cumpleaños…" → "el cumpleaños de mamá").
 
