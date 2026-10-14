@@ -21,7 +21,7 @@ type World = {
   indexReady: boolean;
   searchCalls: Array<{ floor: number; limit: number }>;
   hits: { ids: number[]; scores: number[]; gatedCount: number; gatedMin: number | null };
-  /** 0.1.35: lo que devuelve la búsqueda sin piso (fondo para la distintividad). */
+  /** 0.1.36: lo que devuelve la búsqueda sin piso (fondo para la distintividad). */
   topHits?: { ids: number[]; scores: number[]; gatedCount: number; gatedMin: number | null };
 };
 const W = (): World => (globalThis as unknown as { __pkW: World }).__pkW;
@@ -102,7 +102,7 @@ describe("searchPacks — multilingual (full vector search)", () => {
 
   it("uses e5's (higher) pack floor and the app's per-source limit", async () => {
     await packs.searchPacks("¿qué es la inflación?", new Float32Array([1, 0]), 12, e5Opts());
-    // 0.1.35: primero el fondo (sin piso, 50), luego la búsqueda real.
+    // 0.1.36: primero el fondo (sin piso, 50), luego la búsqueda real.
     expect(W().searchCalls).toEqual([
       { floor: -1, limit: 51 },
       { floor: profiles.MULTILINGUAL_E5_SMALL_PROFILE.packMinSimilarity, limit: 12 },
@@ -117,7 +117,7 @@ describe("searchPacks — multilingual (full vector search)", () => {
     expect(r.semantic.length).toBeGreaterThan(0);
   });
 
-  it("0.1.35 distintividad: si nada destaca del fondo, el piso sube y no hay fuentes falsas", async () => {
+  it("0.1.36 distintividad: si nada destaca del fondo, el piso sube y no hay fuentes falsas", async () => {
     // Pregunta sin respuesta: los 50 mejores son todos parecidos (0.86–0.85).
     const flat = Array.from({ length: 51 }, (_, i) => 0.86 - i * 0.0002);
     W().topHits = { ids: flat.map((_, i) => i + 1), scores: flat, gatedCount: 51, gatedMin: flat[50] };
@@ -126,7 +126,7 @@ describe("searchPacks — multilingual (full vector search)", () => {
     expect(real.floor).toBeGreaterThan(0.86); // fondo ≈ 0.853 + 0.03
   });
 
-  it("0.1.35 distintividad: si el mejor destaca, sigue pasando", async () => {
+  it("0.1.36 distintividad: si el mejor destaca, sigue pasando", async () => {
     const peaked = [0.93, 0.91, ...Array.from({ length: 49 }, (_, i) => 0.84 - i * 0.0005)];
     W().topHits = { ids: peaked.map((_, i) => i + 1), scores: peaked, gatedCount: 51, gatedMin: peaked[50] };
     await packs.searchPacks("¿qué es la inflación?", new Float32Array([1, 0]), 12, e5Opts());

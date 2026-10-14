@@ -183,7 +183,7 @@ export async function searchPacks(
         let floor = packSemanticFloor(profile, query);
         const indexUri = await packIndexIfReady(pack, open.sizeBytes, open.dims);
         if (indexUri) {
-          // 0.1.35 distintividad: el fondo (puestos 10–50) sale de una
+          // 0.1.36 distintividad: el fondo (puestos 10–50) sale de una
           // primera búsqueda sin piso; el piso efectivo sube a fondo+gap
           // cuando el mejor no destaca (pregunta sin respuesta en el pack).
           if (profile.packDistinctGap > 0) {

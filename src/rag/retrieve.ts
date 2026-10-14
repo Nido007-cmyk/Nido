@@ -105,7 +105,7 @@ async function semanticSearch(
   // H1-2026-10-06: umbral más alto para queries de un solo término.
   // 0.2.0: los umbrales son del modelo cargado (embeddingProfile.ts); para
   // bge son los mismos de siempre (0.60 / 0.70, margen 0.4).
-  // 0.1.35: además del piso absoluto, el mejor tiene que destacar sobre el
+  // 0.1.36: además del piso absoluto, el mejor tiene que destacar sobre el
   // fondo (distintividad; 0 en bge = sin cambio).
   const floor = distinctFloor(
     semanticFloor(profile, query),

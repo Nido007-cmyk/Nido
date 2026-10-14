@@ -4,7 +4,7 @@
  * See LICENSE file for details.
  */
 
-// 0.1.35: distintividad del mejor candidato frente al fondo (puestos 10–50),
+// 0.1.36: distintividad del mejor candidato frente al fondo (puestos 10–50),
 // igual que scripts/multilingual/e5_pipeline.py.
 import { describe, expect, it } from "vitest";
 import { backgroundScore, distinctFloor } from "./pure";

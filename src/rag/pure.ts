@@ -642,7 +642,7 @@ export function deserializeEmbedding(bytes: Uint8Array, expectedDim: number): Fl
 }
 
 /**
- * 0.1.35: fondo de una lista de puntuaciones ORDENADA de mayor a menor: la
+ * 0.1.36: fondo de una lista de puntuaciones ORDENADA de mayor a menor: la
  * media de los puestos 10–50 (o del último 3/4 si hay menos de 50). Igual
  * que `background()` de scripts/multilingual/e5_pipeline.py, que es donde
  * se calibró.
