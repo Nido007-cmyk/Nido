@@ -52,6 +52,36 @@ describe("productionPackages", () => {
   });
 });
 
+describe("paquetes sin archivo del mismo proyecto", () => {
+  const lock2 = {
+    packages: {
+      "": { name: "nido-app" },
+      "node_modules/react-native": { version: "0.86.3", license: "MIT" },
+      "node_modules/@react-native/virtualized-lists": { version: "0.86.3", license: "MIT" },
+      "node_modules/@react-native/debugger-frontend": { version: "0.86.3", license: "BSD-3-Clause" },
+      "node_modules/metro-runtime": { version: "0.84.5", license: "MIT" },
+      "node_modules/ram-monitor": { resolved: "modules/ram-monitor", link: true },
+      "modules/ram-monitor": { name: "ram-monitor", version: "0.1.0", license: "MIT" },
+    },
+  };
+  const read = (p) => (p.name === "react-native" ? [{ file: "LICENSE", text: "MIT License\n\nCopyright (c) Meta Platforms, Inc. and affiliates." }] : []);
+
+  it("toman el aviso de react-native solo si la licencia coincide", () => {
+    const n = buildNotices(productionPackages(lock2), read);
+    const vl = n.packages.find((p) => p.name === "@react-native/virtualized-lists");
+    expect(vl.inheritedFrom).toBe("react-native");
+    expect(vl.files[0].file).toBe("LICENSE (react-native)");
+    expect(n.packages.find((p) => p.name === "metro-runtime").inheritedFrom).toBe("react-native");
+    expect(n.packages.find((p) => p.name === "@react-native/debugger-frontend").inheritedFrom).toBeUndefined();
+    expect(n.withoutText).toEqual(["@react-native/debugger-frontend@0.86.3"]);
+  });
+
+  it("la carpeta del módulo propio cuenta como de NIDO", () => {
+    const pk = productionPackages(lock2);
+    expect(pk.filter((p) => p.name === "ram-monitor").every((p) => p.local)).toBe(true);
+  });
+});
+
 describe("archivos de licencia", () => {
   it("reconoce los nombres habituales y nada más", () => {
     for (const f of ["LICENSE", "LICENSE.md", "license.txt", "LICENCE", "COPYING", "NOTICE", "LICENSE-MIT", "LICENSE.APACHE2"]) {

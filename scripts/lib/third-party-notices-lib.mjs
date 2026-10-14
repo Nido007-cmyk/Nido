@@ -33,6 +33,19 @@ export const LICENSE_ELECTIONS = {
   },
 };
 
+/**
+ * Paquetes que no traen archivo de licencia pero salen del mismo proyecto
+ * que otro que sí lo trae: mismo titular (Meta Platforms) y misma licencia
+ * MIT que `react-native`. Su aviso es el de ese proyecto. Solo se aplica si
+ * la licencia declarada coincide con la del paquete de origen.
+ */
+export const LICENSE_FALLBACKS = [
+  {
+    match: /^(?:@react-native\/|metro(?:-|$)|ob1$|hermes-compiler$|react-devtools-core$)/,
+    from: "react-native",
+  },
+];
+
 /** Nombre del paquete a partir de su ruta en el lockfile. */
 export function packageNameFromPath(path) {
   const i = path.lastIndexOf("node_modules/");
@@ -59,7 +72,12 @@ export function productionPackages(lock) {
   for (const [path, info] of Object.entries(lock?.packages ?? {})) {
     if (!path || info.dev) continue;
     const name = info.name ?? packageNameFromPath(path);
-    const local = Boolean(info.link) || (typeof info.resolved === "string" && info.resolved.startsWith("modules/"));
+    // Los módulos propios de NIDO aparecen dos veces en el lockfile: el
+    // enlace en node_modules y su carpeta (modules/…). Los dos son de NIDO.
+    const local =
+      Boolean(info.link) ||
+      !path.includes("node_modules/") ||
+      (typeof info.resolved === "string" && info.resolved.startsWith("modules/"));
     const version = info.version ?? (local ? "local" : "?");
     const key = `${name}@${version}`;
     if (out.has(key)) continue;
@@ -109,6 +127,16 @@ export function buildNotices(packages, readNotices, meta = {}) {
       ...(pkg.local ? { local: true } : {}),
       files,
     });
+  }
+  // Segundo paso: los que no traen archivo y salen del mismo proyecto que
+  // otro paquete (LICENSE_FALLBACKS) llevan el aviso de ese proyecto.
+  for (const e of entries) {
+    if (e.files.length || e.local) continue;
+    const fb = LICENSE_FALLBACKS.find((f) => f.match.test(e.name));
+    const origin = fb && entries.find((o) => o.name === fb.from && o.files.length);
+    if (!origin || origin.license !== e.license) continue;
+    e.files = origin.files.map((f) => ({ file: `${f.file} (${origin.name})`, text: f.text }));
+    e.inheritedFrom = origin.name;
   }
   // Sin node_modules (--lockfile-only) no se leyó ningún texto: no es que
   // falten, es que no se buscaron.
@@ -170,6 +198,13 @@ export function renderMarkdown(notices) {
   lines.push("");
   for (const p of notices.packages) {
     if (!p.files.length) continue;
+    if (p.inheritedFrom) {
+      lines.push(`### ${p.name}@${p.version}`);
+      lines.push("");
+      lines.push(`Ships no license file; same project, copyright holder and license as \`${p.inheritedFrom}\`, whose notice applies (see above).`);
+      lines.push("");
+      continue;
+    }
     for (const f of p.files) {
       lines.push(`### ${p.name}@${p.version} — ${f.file}`);
       lines.push("");
@@ -182,7 +217,7 @@ export function renderMarkdown(notices) {
   if (notices.withoutText?.length) {
     lines.push("## Packages without a license file");
     lines.push("");
-    lines.push("These packages declare a license in their `package.json` but ship no license file; the declared license applies.");
+    lines.push("These packages declare a license in their `package.json` but ship no license file; the declared license applies. Most are build tools that do not end up in the APK.");
     lines.push("");
     for (const n of notices.withoutText) lines.push(`- ${n}`);
     lines.push("");
