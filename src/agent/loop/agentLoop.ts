@@ -905,16 +905,23 @@ export async function runAgentLoop(
         category: "general",
         source: "user",
       });
-      const reminder = await saveReminder({
-        text: `${saved.map((p) => p.name).join(" y ")}: ${userText.trim()}`,
-        dueAt,
-      });
-      // M10 FIX: programar notificación del sistema.
-      try {
-        const { scheduleReminderNotification } = await import("../../notify/notifications");
-        await scheduleReminderNotification(reminder.id, reminder.text, new Date(dueAt));
-      } catch { /* best-effort */ }
-      extraNote = routerMessage("personDateNote", reminderLang);
+      // 0.1.37 (auditoría): con «Recordatorios» apagado no se crea ni se
+      // programa ningún aviso (el dato sí se guarda). Y un cumpleaños se
+      // repite cada año, igual que por la ruta de los hechos.
+      if (fastPathAllowed("create_reminder")) {
+        const yearly = /cumplea[ñn]os|birthday|anivers[aá]rio/i.test(userText);
+        const reminder = await saveReminder({
+          text: `${saved.map((p) => p.name).join(" y ")}: ${userText.trim()}`,
+          dueAt,
+          repeat: yearly ? "year" : null,
+        });
+        // M10 FIX: programar notificación del sistema.
+        try {
+          const { scheduleReminderNotification } = await import("../../notify/notifications");
+          await scheduleReminderNotification(reminder.id, reminder.text, new Date(dueAt), yearly ? "year" : null);
+        } catch { /* best-effort */ }
+        extraNote = routerMessage(yearly ? "factReminderYearlyNote" : "personDateNote", reminderLang);
+      }
     }
     return {
       response:
@@ -983,7 +990,8 @@ export async function runAgentLoop(
       const { parseReminderDateTime } = await import("./actionRouter");
       dueAt = parseReminderDateTime(extraction.content);
     }
-    if (dueAt) {
+    // 0.1.37 (auditoría): solo si la herramienta de recordatorios está activa.
+    if (dueAt && fastPathAllowed("create_reminder")) {
       const { reminderTitleForFact } = await import("./rememberRouter");
       // 0.1.35: un cumpleaños se repite cada año (antes avisaba una sola vez).
       const yearly = /cumplea[ñn]os|birthday|anivers[aá]rio/i.test(extraction.content);

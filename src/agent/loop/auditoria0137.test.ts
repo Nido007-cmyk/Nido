@@ -134,3 +134,95 @@ describe("0.1.37 «¿Cuál?»: una orden nueva no elige ni borra una nota", () =
     expect(choiceTurnKind("2", pending(), soon(181))).toBe("none");
   });
 });
+
+import { extractCalcAction, extractReminderAction } from "./actionRouter";
+import { extractPeople } from "./rememberRouter";
+import { classifyIntent } from "./intent";
+
+describe("0.1.37 peticiones creativas y frases citadas no crean recordatorios", () => {
+  it.each([
+    "crea una historia sobre un dragón",
+    "crea un poema sobre el otoño",
+    "crea una receta con pollo y arroz",
+    "crea una lista de ideas para un cumpleaños",
+    "ponme una canción triste",
+    "ponme un ejemplo de verbo irregular",
+    "escribe una canción que se llame recuérdame siempre",
+    "traduce al inglés: recuérdame comprar pan",
+    "how do I say remind me to call mom in Spanish",
+    "let me know your thoughts on this plan",
+    "avísame si llueve mañana",
+    "let me know if it rains tomorrow",
+  ])("«%s»", (s) => {
+    expect(extractReminderAction(s, T0)).toBeNull();
+  });
+
+  it.each([
+    ["crea un recordatorio para comprar leche mañana", "comprar leche"],
+    ["ponme un recordatorio de pagar la luz mañana a las 9", "pagar la luz"],
+    ["mañana recuérdame comprar pan", "comprar pan"],
+    ["oye, recuérdame llamar a mamá a las 5", "llamar a mamá"],
+    ["mejor recuérdame mañana llamar al banco", "llamar al banco"],
+  ])("«%s» sigue creando el recordatorio", (s, text) => {
+    expect(extractReminderAction(s, T0)?.text).toBe(text);
+  });
+});
+
+describe("0.1.37 intervalos que NIDO no repite: una vez y aviso", () => {
+  it.each([
+    "recuérdame tomar la pastilla todos los días cada 8 horas",
+    "remind me to take the pill daily every 6 hours",
+    "remind me every 2 weeks on mondays to water the plants",
+    "recuérdame regar las plantas cada dos días",
+    "recuérdame pagar la tarjeta cada quince días",
+    "remind me to stretch every other day",
+    "remind me to call grandma biweekly",
+    "recuérdame fichar de lunes a viernes a las 8",
+    "me lembra de tomar o remédio a cada dois dias",
+  ])("«%s»", (s) => {
+    const a = extractReminderAction(s, T0);
+    expect(a?.repeat).toBeUndefined();
+    expect(a?.recurrenceRequested).toBe(true);
+    expect(a?.text).not.toMatch(/cada|every|biweekly|a cada/i);
+  });
+
+  it("los ritmos soportados siguen repitiéndose", () => {
+    expect(extractReminderAction("recuérdame tomar agua todos los días a las 6 de la tarde", T0)?.repeat).toBe("day");
+    expect(extractReminderAction("remind me each day at 8 to read", T0)?.repeat).toBe("day");
+    expect(extractReminderAction("recuérdame cada lunes sacar la basura", T0)?.repeat).toBe("week");
+  });
+});
+
+describe("0.1.37 nombres, «remember» y fechas", () => {
+  it.each([
+    ["mi hermana se llama Ana y su cumpleaños es el 3 de mayo", "Ana"],
+    ["my sister is called Ana and her birthday is May 3", "Ana"],
+    ["minha irmã se chama Ana e o aniversário dela é 3 de maio", "Ana"],
+  ])("«%s» → %s", (s, name) => {
+    expect(extractPeople(s)[0]?.name).toBe(name);
+  });
+
+  it("los nombres compuestos siguen enteros", () => {
+    expect(extractPeople("mi prima se llama ana maría")[0]?.name).toMatch(/^Ana Mar[ií]a$/i);
+  });
+
+  it.each(["I can't remember the capital of Peru", "do you remember what Titanic is about?"])(
+    "«%s» no es una orden de guardar",
+    (s) => {
+      expect(classifyIntent(s)).not.toBe("recordar");
+    },
+  );
+
+  it("«remember that…» sigue siendo memoria", () => {
+    expect(classifyIntent("remember that my car is blue")).toBe("recordar");
+    expect(classifyIntent("please remember my sister's name is Ana")).toBe("recordar");
+  });
+
+  it.each(["hoy es 14/10", "today is 10/14", "mañana es 15/10"])("«%s» no es una división", (s) => {
+    expect(extractCalcAction(s)).toBeNull();
+  });
+
+  it("«cuánto es 14/10» sigue siendo una cuenta", () => {
+    expect(extractCalcAction("cuánto es 14/10")).not.toBeNull();
+  });
+});

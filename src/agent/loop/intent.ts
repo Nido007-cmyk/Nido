@@ -46,7 +46,11 @@ const REMEMBER_PATTERNS: RegExp[] = [
   /apunta (esto|eso) para (siempre|despu[eé]s)/i,
   /a partir de ahora/i,
   /ten en cuenta (que|siempre)/i,
-  /\bremember\b/i,
+  // 0.1.37 (auditoría): «remember» solo como ORDEN al principio o con
+  // «please». «I can't remember the capital of Peru» o «do you remember
+  // what Titanic is about?» no son peticiones de guardar nada.
+  /^(?:(?:please|hey|ok|okay|nido)[,!]?\s+)*remember\b(?!\s+(?:when|what|how|who|where|why|which|if)\b)/i,
+  /\bplease\s+remember\b/i,
   /\bdon't forget\b/i,
 ];
 

@@ -129,6 +129,8 @@ export function extractCalcAction(userText: string): CalcAction | null {
   const raw = (m ? m[1] : loose ? loose[1] : trimmed).trim();
   // «Teléfono es 555-1234» no es una resta.
   if (loose && !m && /^\d+(?:\s*-\s*\d+)+$/.test(raw)) return null;
+  // 0.1.37 (auditoría): «hoy es 14/10», «today is 10/14» son fechas, no divisiones.
+  if (loose && !m && /^\d{1,2}\s*\/\s*\d{1,2}$/.test(raw)) return null;
   // 0.1.33 (medición del router): una cuenta real cabe holgada en 120
   // caracteres (la expresión final admite 50). Sin este tope, pegar una
   // tira de miles de dígitos costaba tiempo CUADRÁTICO en la
@@ -216,6 +218,28 @@ const RECURRENCE_RE =
   /\b(?:cada\s+\d+(?:\s+(?:d[ií]as?|semanas?|meses|horas?|a[ñn]os?|minutos?))?|every\s+\d+(?:\s+(?:days?|weeks?|months?|hours?|years?|minutes?))?|a\s+cada\s+\d+(?:\s+(?:dias?|semanas?|meses|horas?|anos?))?|cada\s+(?:d[ií]a|semana|mes|a[ñn]o|lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo)|todos\s+los\s+d[ií]as|todas\s+las\s+semanas|diariamente|a\s+diario|semanalmente|mensualmente|every\s+(?:day|week|month|morning|night|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|daily|weekly|monthly|todo\s+dia|todos\s+os\s+dias|diariamente|semanalmente)\b/iu;
 
 /**
+ * 0.1.37 (auditoría): intervalos que NIDO no sabe repetir. «cada 8 horas»,
+ * «cada dos días», «every other day», «biweekly», «de lunes a viernes»…
+ * Antes, si además había un ritmo soportado («todos los días cada 8
+ * horas»), se guardaba como diario y se decía que se repetiría; y los
+ * números escritos con letras ni se detectaban. Ahora se crea una sola vez
+ * y se avisa (recurrenceRequested).
+ */
+const INTERVAL_NUMBER =
+  "\\d+|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|doce|quince|veinte|treinta|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen|twenty|thirty|dois|duas|tr[eê]s|quatro|sete|oito|nove|dez|quinze|vinte|trinta|other|otro|otra";
+const UNSUPPORTED_INTERVAL_RE = new RegExp(
+  `(?<![\\p{L}])(?:(?:cada|every|each|a\\s+cada)\\s+(?:${INTERVAL_NUMBER})(?=\\s|$|[,.;!?])|biweekly|bi-weekly|fortnightly|every\\s+weekday|weekdays|quincenal(?:mente)?|de\\s+lunes\\s+a\\s+viernes|entre\\s+semana|de\\s+segunda\\s+a\\s+sexta|dias\\s+[úu]teis)(?![\\p{L}])`,
+  "iu",
+);
+const UNSUPPORTED_INTERVAL_PHRASE_RE = new RegExp(
+  `(?<![\\p{L}])(?:(?:cada|every|each|a\\s+cada)\\s+(?:${INTERVAL_NUMBER})(?:\\s+(?:d[ií]as?|dias?|semanas?|meses|m[eê]ses|horas?|minutos?|a[ñn]os?|anos?|days?|weeks?|months?|hours?|minutes?|years?))?|biweekly|bi-weekly|fortnightly|every\\s+weekday|weekdays|quincenal(?:mente)?|de\\s+lunes\\s+a\\s+viernes|entre\\s+semana|de\\s+segunda\\s+a\\s+sexta|dias\\s+[úu]teis)(?![\\p{L}])`,
+  "giu",
+);
+export function hasUnsupportedInterval(text: string): boolean {
+  return UNSUPPORTED_INTERVAL_RE.test(text);
+}
+
+/**
  * Detecta "agrégame cita/recordatorio..." y extrae el texto.
  * La fecha se parsea de forma simple; si no hay fecha clara, dueAt=null.
  */
@@ -254,7 +278,7 @@ const REPEAT_MORNING_RE =
 const REPEAT_NIGHT_RE =
   /(?<![\p{L}])(?:cada\s+noche|todas\s+las\s+noches|every\s+(?:night|evening)|toda\s+noite|todas\s+as\s+noites)(?![\p{L}])/iu;
 const REPEAT_DAY_RE =
-  /(?<![\p{L}])(?:cada\s+d[ií]a|todos\s+los\s+d[ií]as|diariamente|a\s+diario|every\s*day|daily|todo\s+dia|todos\s+os\s+dias)(?![\p{L}])/iu;
+  /(?<![\p{L}])(?:cada\s+d[ií]a|todos\s+los\s+d[ií]as|diariamente|a\s+diario|every\s*day|each\s+day|daily|todo\s+dia|todos\s+os\s+dias)(?![\p{L}])/iu;
 
 interface RepeatSpec { repeat: ReminderRepeat; weekday?: number; monthDay?: number; cleaned: string; defaultHour: number; period?: "am" | "pm" }
 
@@ -309,6 +333,9 @@ export function detectReminderRepeat(text: string): RepeatSpec | null {
 
 export function extractReminderAction(userText: string, now: Date = new Date()): ReminderAction | null {
   lastMissingText = null;
+  // 0.1.37: un intervalo no soportado manda: una sola vez y aviso honesto,
+  // aunque la frase traiga también «todos los días» o «cada lunes».
+  if (hasUnsupportedInterval(userText)) return extractReminderCore(userText);
   const spec = detectReminderRepeat(userText.trim());
   if (!spec) return extractReminderCore(userText);
   const res = extractReminderCore(spec.cleaned);
@@ -355,7 +382,7 @@ function extractReminderCore(userText: string): ReminderAction | null {
   lastMissingText = null;
   const trimmed = userText.trim();
   if (!trimmed) return null;
-  const recurrenceRequested = RECURRENCE_RE.test(trimmed);
+  const recurrenceRequested = RECURRENCE_RE.test(trimmed) || UNSUPPORTED_INTERVAL_RE.test(trimmed);
 
   // 0.1.19 (sonda de routing): "recuerda que mañana tengo dentista" se
   // guardaba como HECHO de memoria y el aviso nunca existía. Con fecha
@@ -384,8 +411,25 @@ function extractReminderCore(userText: string): ReminderAction | null {
   // «despiértame a las 7», «me acorde às 7», «wake me at 7» creaban
   // nada: caían al modelo. El verbo va en su grupo para saber si es un
   // aviso (su texto puede ser la propia orden cuando no hay tarea).
-  const m = /(agr[ée]game|cr[ée]ame|ponme|crea|recu[ée]rdame|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|faz|fa[çc]a)\s+um\s+lembrete|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|define|defina)\s+um\s+alarme(?:\s+para)?|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
+  const m = /((?:agr[ée]game|cr[ée]ame|ponme|crea)(?=\s+(?:una?\s+)?(?:cita|recordatorio|aviso|alarma)(?![a-záéíóúñ]))|recu[ée]rdame|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|faz|fa[çc]a)\s+um\s+lembrete|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|define|defina)\s+um\s+alarme(?:\s+para)?|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
   if (!m) return null;
+  // 0.1.37 (auditoría): el verbo tiene que abrir la orden. Delante solo
+  // cabe una fecha («mañana recuérdame…») o una cortesía («oye, …»). Así
+  // «traduce al inglés: recuérdame comprar pan», «una canción que se llame
+  // recuérdame siempre» o «how do I say remind me to…» no crean nada.
+  const lead = trimmed.slice(0, m.index).trim().replace(/[,:;]+$/, "").trim();
+  if (
+    lead &&
+    !/^(?:(?:por\s+favor|porfa|oye|hey|hola|ok|okay|vale|bueno|please|hi|nido|ei|olá|ola|mejor|better|melhor|no|n[aã]o|y|and|e|tambi[eé]n|also|tamb[eé]m|entonces|then|ent[aã]o|ahora|now|agora)[,!.]?\s*)+$/i.test(lead) &&
+    !parseReminderDateTime(lead)
+  ) {
+    return null;
+  }
+  // «avísame si llueve», «let me know if…», «me avisa se chover»: NIDO no
+  // puede comprobar condiciones; no es un recordatorio.
+  if (/^(?:si|if|se)\s+\S/i.test(m[2].trim())) return null;
+  // «let me know your thoughts…» no es un aviso: sin hora, no hay recordatorio.
+  if (/^let\s+me\s+know$/i.test(m[1]) && !parseReminderDateTime(m[2])) return null;
   // 0.1.30 (rutas que caían al modelo): «pon una alarma a las 7» y «set a
   // reminder for 5pm» también son avisos: sin tarea, el título es la frase.
   // «set a reminder» sin contenido NO es un aviso: se pregunta qué recordar (0.1.32).
@@ -466,7 +510,11 @@ function extractReminderCore(userText: string): ReminderAction | null {
   }
   if (recurrenceRequested) {
     // 0.1.32: «cada mes» no se queda en el título de un aviso de una vez.
-    const clean = text.replace(new RegExp(RECURRENCE_RE.source, "giu"), " ").replace(/\s{2,}/g, " ").trim();
+    const clean = text
+      .replace(UNSUPPORTED_INTERVAL_PHRASE_RE, " ")
+      .replace(new RegExp(RECURRENCE_RE.source, "giu"), " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
     return { text: clean.length >= 3 ? clean : text, dueAt, recurrenceRequested: true };
   }
   return { text, dueAt };

@@ -58,7 +58,10 @@ const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
   // "apunta esto para siempre: X"
   { re: /apunta (esto|eso) para (siempre|despu[eé]s)[:\s]+(.+)/i, group: 3 },
   // Inglés: "remember that X" / "remember: X"
-  { re: /remember( that)?[:\s]+(.+)/i, group: 2 },
+  // 0.1.37 (auditoría): solo como orden (al principio o con «please»);
+  // «I can't remember the capital of Peru» guardaba «the capital of Peru».
+  { re: /^(?:(?:please|hey|ok|okay|nido|also|and)[,!]?\s+)*remember( that)?[:\s]+(.+)/i, group: 2 },
+  { re: /\bplease\s+remember( that)?[:\s]+(.+)/i, group: 2 },
   // Inglés: "don't forget that X"
   { re: /don't forget( that)?[:\s]+(.+)/i, group: 2 },
   // 0.1.14: portugués — "lembre que X", "me lembra que X", "lembre-se de que X".
@@ -295,7 +298,10 @@ const NAME_SRC = "[A-Za-zÁÉÍÓÚÑÜÀÂÊÔÃÕÇáéíóúñüàâêôãõ�
 /** Palabras que jamás son un nombre en estas posiciones («se llama como…»). */
 const NOT_A_NAME = /^(como|así|asi|igual|también|tambien|bien|mal|todo|eso|esto|aquí|aqui|ahora|la|el|los|las|un|una|atención|atencion|se|me|te|le|que|de|en|y|e)$/i;
 /** Segunda palabra que corta el nombre: verbos típicos tras un nombre. */
-const NAME_STOP_SECOND = /^(cumple|vive|trabaja|estudia|tiene|es|está|esta|va|viene|llega|juega|come|duerme)$/i;
+// 0.1.37 (auditoría): conjunciones y posesivos tampoco son apellido
+// («Ana y su cumpleaños…» guardaba «Ana Y»; en/pt «Ana And», «Ana E»).
+const NAME_STOP_SECOND =
+  /^(cumple|vive|trabaja|estudia|tiene|es|está|esta|va|viene|llega|juega|come|duerme|y|e|o|u|ou|and|or|but|pero|mas|que|su|sus|seu|sua|his|her|their|who|is|lives|works|has)$/i;
 const STARTS_UPPER = /^[A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ]/;
 
 const CANON_REL: Record<string, string> = {
