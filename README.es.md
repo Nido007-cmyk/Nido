@@ -89,7 +89,7 @@ La interfaz está disponible en español, inglés y portugués.
 
 ## Estado
 
-Alfa, octubre de 2026. El proyecto tiene más de 3400 pruebas automáticas y
+Alfa, octubre de 2026. El proyecto tiene más de 3700 pruebas automáticas y
 ejecuta la comprobación de tipos y la batería de pruebas en cada cambio. Lo
 que las pruebas automáticas no cubren es el comportamiento en hardware real,
 así que los flujos principales también se prueban en tabletas Galaxy

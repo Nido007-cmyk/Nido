@@ -74,7 +74,9 @@ permissions:
 
 jobs:
   build-apk:
-    runs-on: ubuntu-latest
+    # Fijado: ubuntu-latest pasa a Ubuntu 26 (beta) desde el 2026-10-19;
+    # cambiar de imagen se prueba en una rama aparte, no por sorpresa.
+    runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7
@@ -223,7 +225,7 @@ jobs:
     #   que subir la versión.
     needs: build-apk
     if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
