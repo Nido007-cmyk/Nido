@@ -41,7 +41,9 @@ device, encrypted. There are no accounts, no cloud and no analytics.
 - **Acts on your requests**: reminders (once, or every day, week, month or
   year), countdowns, notes, calendar events, unit conversions, arithmetic,
   opening links. Anything with an effect outside the app asks for your
-  confirmation first.
+  confirmation first. Text you paste or share from another app is never
+  taken as a command, and when a message holds more than one request, NIDO
+  shows the command as a button and waits for your tap.
 - **Answers from your documents**: import `.txt`, `.md`, `.csv`, `.json` or
   `.pdf` files and NIDO indexes them on the phone.
 - **Knows things offline**: a built-in knowledge base plus an optional

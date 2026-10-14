@@ -136,6 +136,12 @@
         "hint": "Cifrado, por Bluetooth, sin internet",
         "prompt": "manda un mensaje a "
       }
+    },
+    "staged": {
+      "hint": "Toca para hacerlo. Nada se ejecuta hasta que tocas.",
+      "hintDraft": "Toca para hacerlo. Lo demás se queda en la caja para enviarlo aparte.",
+      "runA11y": "Hacer: {{action}}",
+      "dismiss": "Descartar"
     }
   },
   "common": {

@@ -4,6 +4,27 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.38-alpha — 2026-10-14
+
+### Changed
+- **Pasted and shared text is never treated as a command.** Text you paste
+  into the chat or share to NIDO from another app is treated as quoted
+  content: if it says "remind me…" or "delete my notes", NIDO reads it but
+  does not act on it. Before, sharing a text and tapping send ran it as if
+  you had typed it. What you type, dictate with the chat microphone or pick
+  from NIDO's own examples still works as a command.
+- **One message, one action — and you tap to run it when there's more.** If
+  a message has a command plus something else ("remind me to buy bread
+  tomorrow and then write a poem"), NIDO no longer guesses: it shows the
+  command as a button above the text box, and nothing runs until you tap
+  it. The rest stays in the box as a draft to send separately. With two
+  commands, only the first is prepared; the second stays in the draft. The
+  button disappears if you edit the text, change the language or switch
+  modes.
+- A message that is just one command ("remind me to buy bread tomorrow at
+  9", "set a 5 minute timer") still runs right away, as before. All of
+  NIDO's examples keep working exactly the same.
+
 ## 0.1.37-alpha — 2026-10-14
 
 An independent audit of everything added to the assistant since 0.1.19.

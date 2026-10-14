@@ -479,6 +479,12 @@
         "hint": "Criptografada, por Bluetooth, sem internet",
         "prompt": "envia uma mensagem ao "
       }
+    },
+    "staged": {
+      "hint": "Toque para fazer. Nada é executado até você tocar.",
+      "hintDraft": "Toque para fazer. O resto fica na caixa para você enviar separado.",
+      "runA11y": "Fazer: {{action}}",
+      "dismiss": "Descartar"
     }
   },
   "aboutScreen": {
