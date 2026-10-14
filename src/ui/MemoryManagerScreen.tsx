@@ -15,6 +15,8 @@ import {
   Alert,
 } from "react-native";
 import { useTranslation } from "react-i18next";
+import { reminderWhen } from "../agent/loop/toolRouter";
+import { displayLang } from "../utils/safeFormat";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import { NidoIcon } from "./components/icons/NidoIcon";
@@ -36,6 +38,8 @@ import {
 import type { Fact, Person } from "../agent/memory/types";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 
+const capitalize = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
 type Tab = "facts" | "notes" | "people" | "reminders";
 
 /**
@@ -47,7 +51,11 @@ type Tab = "facts" | "notes" | "people" | "reminders";
 export function MemoryManagerScreen({ onClose }: { onClose: () => void }) {
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // 0.1.34: fechas en hora LOCAL y en palabras («el miércoles, 14 de
+  // octubre a las 18:00»), sin Intl. Antes se mostraba el ISO en UTC
+  // («2026-10-15T01:00:00.000Z»), que en América parece el día siguiente.
+  const dateLang = displayLang(i18n?.language);
   const [tab, setTab] = useState<Tab>("facts");
   const [loading, setLoading] = useState(true);
   const [facts, setFacts] = useState<Fact[]>([]);
@@ -252,7 +260,7 @@ export function MemoryManagerScreen({ onClose }: { onClose: () => void }) {
                     {r.text}
                   </Text>
                   {r.due_at ? (
-                    <Text style={styles.cardMeta}>{r.due_at}</Text>
+                    <Text style={styles.cardMeta}>{capitalize(reminderWhen(r.due_at, dateLang).trim()) || r.due_at}</Text>
                   ) : null}
                   {r.repeat ? (
                     <Text style={styles.cardMeta}>
