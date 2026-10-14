@@ -180,10 +180,14 @@ answers that use it show the source.
    NIDO's MIT license (with BOAR's notice), every catalog asset with its license
    name, the canonical URL and the conditions that matter (LFM §4/§5, CC BY-SA),
    and the full license text of every third-party package.
-3. CC BY-SA 4.0 notice for the corpus — **closed** (Licenses screen,
-   `ATTRIBUTION.md`, `assets/packs/ATTRIBUTION.txt`; the `knowledge-packs-v1`
-   release, whose description referred to an `ATTRIBUTION.txt` that was never
-   uploaded, now carries it).
+3. CC BY-SA 4.0 notice for the corpus — **closed in the app and the repo**
+   (Licenses screen, `ATTRIBUTION.md`, `assets/packs/ATTRIBUTION.txt`).
+   **Pending, maintainer action:** the `knowledge-packs-v1` release
+   description refers to an `ATTRIBUTION.txt` that was never uploaded, and the
+   `knowledge-packs-v2` description still says "Draft… not used by any released
+   app version". Releases can only be edited by the maintainer: upload
+   `assets/packs/ATTRIBUTION.txt` to `knowledge-packs-v1` and replace both
+   descriptions (texts prepared on 2026-10-14).
 4. AboutScreen legal section — **closed** (same screen).
 5. Link to full license texts — **closed** (same screen; URLs shown as
    selectable text because the app does not open the network).
