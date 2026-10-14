@@ -136,6 +136,15 @@ jobs:
         # Never ship an APK from code with failing tests.
         run: npm test
 
+      - name: Component tests (CICD-01 gate)
+        # 0.1.37 (auditoría): la release corría solo vitest; las suites de
+        # componentes (Jest) y la comprobación de pins solo estaban en CI,
+        # que no corre en tags. Mismas puertas que ci.yml.
+        run: npm run test:components
+
+      - name: Verify download pins (CICD-01 gate)
+        run: npm run verify:pins
+
       - name: Verify manifest signature (CICD-01 gate)
         run: npm run verify:manifest-sig
 

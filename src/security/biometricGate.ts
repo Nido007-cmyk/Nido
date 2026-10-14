@@ -47,6 +47,11 @@ export interface GateStatus {
   hasHardware: boolean;
   enrolled: boolean;
   method: AuthMethod;
+  /**
+   * 0.1.37 (auditoría): alguna consulta al sistema falló. Entonces no se
+   * sabe si hay PIN: nunca se concluye «sin bloqueo».
+   */
+  probeFailed?: boolean;
 }
 
 interface LocalAuthModule {
@@ -84,10 +89,15 @@ function realModule(): LocalAuthModule | null {
 export async function getGateStatus(): Promise<GateStatus> {
   const m = realModule();
   if (!m) return { hasHardware: false, enrolled: false, method: "none" };
+  let probeFailed = false;
+  const failed = <T,>(v: T) => () => {
+    probeFailed = true;
+    return v;
+  };
   const [hasHardware, enrolledBio, level] = await Promise.all([
-    m.hasHardwareAsync().catch(() => false),
-    m.isEnrolledAsync().catch(() => false),
-    m.getEnrolledLevelAsync().catch(() => 0),
+    m.hasHardwareAsync().catch(failed(false)),
+    m.isEnrolledAsync().catch(failed(false)),
+    m.getEnrolledLevelAsync().catch(failed(0)),
   ]);
   // hasHardwareAsync/isEnrolledAsync miran SOLO la biometría (fuente nativa
   // de Expo en Android: isEnrolled = canAuthenticate(biométrico) == SUCCESS).
@@ -104,7 +114,7 @@ export async function getGateStatus(): Promise<GateStatus> {
     : level >= 2 || enrolledBio
       ? "biometrics"
       : "device-credential";
-  return { hasHardware, enrolled, method };
+  return probeFailed ? { hasHardware, enrolled, method, probeFailed } : { hasHardware, enrolled, method };
 }
 
 // ---------------------------------------------------------------------------
@@ -172,8 +182,14 @@ export async function unlockForSecret(reason: string): Promise<"unlocked" | "no-
 
 export async function requireUnlock(reason: string): Promise<void> {
   const m = realModule();
-  if (!m) throw new BiometricUnavailable("Módulo biométrico no disponible.");
+  // 0.1.37 (auditoría): sin módulo o con una consulta fallida NO se sabe
+  // si el teléfono tiene PIN. Antes eso contaba como «sin bloqueo» y la
+  // clave del respaldo se mostraba sin pedir nada: ahora falla cerrado.
+  if (!m) throw new BiometricFailed("Módulo biométrico no disponible.");
   const status = await getGateStatus();
+  if (status.probeFailed && !status.enrolled) {
+    throw new BiometricFailed("No se pudo comprobar el bloqueo del dispositivo.");
+  }
   if (!status.enrolled) {
     throw new BiometricUnavailable(
       "Este dispositivo no tiene biometría ni credencial del sistema configurada. " +

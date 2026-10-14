@@ -26,7 +26,16 @@
 
 import { nextOccurrence } from "../memory/reminderRepeat";
 import { convertUnits } from "../tools/convert";
-import { parseReminderDateTime, stripDateWords } from "./actionRouter";
+import {
+  extractCalcAction,
+  extractReminderAction,
+  extractTimerAction,
+  parseReminderDateTime,
+  reminderMissingText,
+  stripDateWords,
+} from "./actionRouter";
+import type { ReminderRepeat } from "../memory/reminderRepeat";
+import { extractImplicitFact, extractPeople, extractRememberFact } from "./rememberRouter";
 import type { DispatchStatus } from "./contactRouter";
 
 export type RouterLang = "es" | "en" | "pt";
@@ -42,7 +51,7 @@ export type ToolAction =
   | { kind: "memoryForgetHelp"; lang: RouterLang }
   | { kind: "countdown"; target: string; label: string; lang: RouterLang }
   | { kind: "reminderOfferCreate"; range: "today" | "tomorrow" | null; lang: RouterLang }
-  | { kind: "reminderFill"; text: string; dueAt: string; lang: RouterLang }
+  | { kind: "reminderFill"; text: string; dueAt: string; lang: RouterLang; repeat?: ReminderRepeat | null }
   | { kind: "calendarList"; from: string; to: string; label: CalendarRange; lang: RouterLang }
   | { kind: "calendarCreate"; title: string; start: string | null; lang: RouterLang }
   | { kind: "nidoSend"; to: string; text: string | null; lang: RouterLang }
@@ -185,10 +194,32 @@ const LENIENT_COUNTDOWN_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
  * «crea uno» / «make one» / «faz um» es la oferta de crear uno: se explica
  * cómo pedirlo (sin inventar qué ni cuándo).
  */
-let emptyReminderList: { range: "today" | "tomorrow" | null; lang: RouterLang; at: number } | null = null;
+let emptyReminderList: { range: "today" | "tomorrow" | null; lang: RouterLang; at: number; turn: number } | null = null;
 const OFFER_WINDOW_MS = 3 * 60_000;
+
+/**
+ * 0.1.37 (auditoría del loop): los estados de seguimiento («¿qué te
+ * recuerdo?», «Haz uno») valían 3 minutos para CUALQUIER mensaje, así que
+ * «pon un temporizador de 5 minutos» dicho después se convertía en un
+ * recordatorio para el lunes, incluso tras «Nuevo chat». Ahora solo valen
+ * para el turno SIGUIENTE: la app llama a beginUserTurn() al empezar cada
+ * envío (sin esa llamada —tests, tareas— rige solo la ventana de tiempo).
+ */
+let followupTurn = 0;
+export function beginUserTurn(): void {
+  followupTurn++;
+}
+/** Nuevo chat, cambio de conversación o de idioma: se olvida todo seguimiento. */
+export function resetConversationState(): void {
+  pendingAsk = null;
+  emptyReminderList = null;
+}
+function followupExpired(at: number, turn: number, now: Date): boolean {
+  const t = now.getTime();
+  return t - at > OFFER_WINDOW_MS || t < at || followupTurn > turn + 1;
+}
 export function noteEmptyReminderList(range: "today" | "tomorrow" | null, lang: RouterLang, now: Date): void {
-  emptyReminderList = { range, lang, at: now.getTime() };
+  emptyReminderList = { range, lang, at: now.getTime(), turn: followupTurn };
 }
 const OFFER_CREATE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: /^(?:s[ií],?\s+|vale,?\s+|ok,?\s+|bueno,?\s+)?(?:haz(?:me)?|crea(?:me)?|cr[eé]ame|pon(?:me)?|agr[eé]ga(?:me)?|a[ñn][aá]de(?:me)?)\s+(?:uno|un\s+recordatorio)$/i, lang: "es" },
@@ -197,7 +228,7 @@ const OFFER_CREATE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
 ];
 function offerCreateAction(t: string, now: Date): ToolAction | null {
   const offer = emptyReminderList;
-  if (!offer || now.getTime() - offer.at > OFFER_WINDOW_MS || now.getTime() < offer.at) return null;
+  if (!offer || followupExpired(offer.at, offer.turn, now)) return null;
   for (const { re, lang } of OFFER_CREATE_RULES) {
     if (re.test(t)) return { kind: "reminderOfferCreate", range: offer.range, lang };
   }
@@ -211,14 +242,27 @@ function offerCreateAction(t: string, now: Date): ToolAction | null {
  * Durante 3 minutos, una respuesta corta que no es otra cosa se toma como
  * el contenido de ese recordatorio. «no», «cancela», «olvídalo» lo anulan.
  */
-let pendingAsk: { dueAt: string; lang: RouterLang; at: number } | null = null;
-export function notePendingReminderAsk(dueAt: string, lang: RouterLang, now: Date): void {
-  pendingAsk = { dueAt, lang, at: now.getTime() };
+let pendingAsk: { dueAt: string; lang: RouterLang; at: number; turn: number; repeat: ReminderRepeat | null } | null = null;
+export function notePendingReminderAsk(dueAt: string, lang: RouterLang, now: Date, repeat: ReminderRepeat | null = null): void {
+  pendingAsk = { dueAt, lang, at: now.getTime(), turn: followupTurn, repeat };
 }
-const ASK_CANCEL_RE = /^(?:no|nada|cancela(?:r)?|olv[ií]dalo|d[eé]jalo|nevermind|never mind|cancel|forget it|nothing|n[aã]o|deixa|esquece|cancelar)$/i;
+/** Se creó el recordatorio por otra vía: la pregunta ya no está abierta. */
+export function clearPendingReminderAsk(): void {
+  pendingAsk = null;
+}
+// 0.1.37: «no, gracias», «no quiero nada», «no thanks», «não, obrigado»
+// también anulan (antes solo la palabra exacta y se guardaba «no, gracias»).
+const ASK_CANCEL_RE =
+  /^(?:(?:no|nada|nope|nah|n[aã]o)(?:$|[\s,.!]+(?!olvid|te\s+olvid|forget|esque[cç])\S*)|cancela(?:r)?|olv[ií]dalo|d[eé]jalo|nevermind|never\s+mind|cancel|forget\s+it|nothing|deixa|esquece|cancelar)/iu;
+// Acuses que no son contenido («sí», «ok», «espera», «gracias»).
+const ASK_ACK_RE =
+  /^(?:s[ií]|ok(?:ay)?|vale|bueno|claro|espera|un\s+momento|gracias|yes|yeah|sure|wait|thanks|thank\s+you|sim|t[aá]|beleza|obrigad[oa]|perai|espera\s+a[ií])$/iu;
+// Peticiones creativas o de conversación: no son lo que hay que recordar.
+const ASK_NOT_CONTENT_RE =
+  /^(?:escr[ií]be(?:me)?|crea(?:me)?|cu[eé]nta(?:me)?|dime|h[aá]blame|expl[ií]ca(?:me)?|traduce|resume|write|tell\s+me|make\s+up|explain|translate|summari[sz]e|escreva|conte|me\s+conta|fale|explique|traduza|resuma)(?![\p{L}])/iu;
 function pendingFillAction(t: string, now: Date): ToolAction | null {
   const p = pendingAsk;
-  if (!p || now.getTime() - p.at > OFFER_WINDOW_MS || now.getTime() < p.at) return null;
+  if (!p || followupExpired(p.at, p.turn, now)) return null;
   const s = t.trim().replace(/[.!]+$/, "");
   if (ASK_CANCEL_RE.test(s)) {
     pendingAsk = null;
@@ -226,12 +270,26 @@ function pendingFillAction(t: string, now: Date): ToolAction | null {
   }
   const words = s.split(/\s+/).filter(Boolean);
   if (words.length < 1 || words.length > 10 || /\?/.test(s)) return null;
+  if (ASK_ACK_RE.test(s) || ASK_NOT_CONTENT_RE.test(s)) return null;
+  // Una orden completa (temporizador, otro recordatorio, un dato para
+  // recordar, una cuenta) es un mensaje nuevo, no la respuesta.
+  if (
+    extractTimerAction(s) ||
+    extractReminderAction(s, now) ||
+    reminderMissingText(s) ||
+    extractCalcAction(s) ||
+    extractPeople(s).length > 0 ||
+    extractRememberFact(s) ||
+    extractImplicitFact(s)
+  ) {
+    return null;
+  }
   if (/^(?:qu[eé]|c[oó]mo|cu[aá]nto|cu[aá]ndo|d[oó]nde|por qu[eé]|qui[eé]n|cu[aá]l|what|how|when|where|why|who|which|o que|como|quanto|quando|onde|quem|qual)(?![\p{L}])/iu.test(s)) return null;
   const text = s.replace(/^(?:(?:para|de|to|for|que|that|about|sobre)\s+)+/i, "").trim();
   if (text.length < 2) return null;
   // No se consume aquí: la puerta del chat y el loop lo consultan los dos;
   // se borra al crear el recordatorio.
-  return { kind: "reminderFill", text, dueAt: p.dueAt, lang: p.lang };
+  return { kind: "reminderFill", text, dueAt: p.dueAt, lang: p.lang, repeat: p.repeat };
 }
 
 /** Fecha (00:00 local) de un día con nombre (Navidad, Año Nuevo…), o null. */
@@ -1283,6 +1341,8 @@ export interface PendingChoice {
   action: "noteRead" | "noteDelete" | "reminderDelete";
   candidates: ChoiceCandidate[];
   lang: RouterLang;
+  /** 0.1.37: cuándo se preguntó (caduca a los 3 minutos). */
+  at?: number;
 }
 export interface ChoiceStore {
   current: PendingChoice | null;
@@ -1294,7 +1354,7 @@ function stashChoice(
   candidates: ChoiceCandidate[],
   lang: RouterLang
 ): void {
-  if (deps.choiceStore) deps.choiceStore.current = { action, candidates, lang };
+  if (deps.choiceStore) deps.choiceStore.current = { action, candidates, lang, at: Date.now() };
 }
 
 const CHOICE_CANCEL_WORDS = new Set([
@@ -1322,6 +1382,14 @@ export function resolveChoiceReply(text: string, candidates: ChoiceCandidate[]):
   if (!t) return null;
   const tokens = t.split(" ");
   if (tokens.length <= 3 && tokens.some((w) => CHOICE_CANCEL_WORDS.has(w))) return { type: "cancel" };
+  // 0.1.37 (auditoría): un mensaje largo solo resuelve por título exacto.
+  // Antes cualquier número u ordinal dentro de una orden nueva («pon un
+  // temporizador de 2 minutos», «limpiar el cuarto», «na quarta») elegía
+  // una nota para borrar.
+  if (tokens.length > 3) {
+    const exactLong = candidates.findIndex((c) => norm(c.match) === t);
+    return exactLong >= 0 ? { type: "pick", index: exactLong } : null;
+  }
   for (const w of tokens) {
     if (/^\d+$/.test(w)) {
       const idx = Number(w) - 1;
@@ -1347,9 +1415,25 @@ export function resolveChoiceReply(text: string, candidates: ChoiceCandidate[]):
  * repite la pregunta), «none» es un mensaje nuevo: la elección
  * caduca y el turno sigue su curso normal.
  */
-export function choiceTurnKind(text: string, pending: PendingChoice): "resolve" | "reask" | "none" {
+export function choiceTurnKind(text: string, pending: PendingChoice, now: Date = new Date()): "resolve" | "reask" | "none" {
+  // 0.1.37: la elección caduca a los 3 minutos (antes no caducaba nunca).
+  if (pending.at !== undefined && (now.getTime() - pending.at > OFFER_WINDOW_MS || now.getTime() < pending.at)) return "none";
   if (resolveChoiceReply(text, pending.candidates)) return "resolve";
+  // Una orden nueva corta («qué hora es», «pon un temporizador») no es la
+  // respuesta: no se repite la pregunta.
+  if (isNewCommand(text, now)) return "none";
   return text.trim().split(/\s+/).length <= 4 ? "reask" : "none";
+}
+
+function isNewCommand(text: string, now: Date): boolean {
+  const t = text.trim();
+  return Boolean(
+    extractToolAction(t, now) ||
+      extractTimerAction(t) ||
+      extractReminderAction(t, now) ||
+      reminderMissingText(t) ||
+      extractCalcAction(t),
+  );
 }
 
 /** El texto de la pregunta «¿cuál?», para repetirla tal cual se hizo. */

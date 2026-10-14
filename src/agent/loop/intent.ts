@@ -46,7 +46,11 @@ const REMEMBER_PATTERNS: RegExp[] = [
   /apunta (esto|eso) para (siempre|despu[eé]s)/i,
   /a partir de ahora/i,
   /ten en cuenta (que|siempre)/i,
-  /\bremember\b/i,
+  // 0.1.37 (auditoría): «remember» solo como ORDEN al principio o con
+  // «please». «I can't remember the capital of Peru» o «do you remember
+  // what Titanic is about?» no son peticiones de guardar nada.
+  /^(?:(?:please|hey|ok|okay|nido)[,!]?\s+)*remember\b(?!\s+(?:when|what|how|who|where|why|which|if)\b)/i,
+  /\bplease\s+remember\b/i,
   /\bdon't forget\b/i,
 ];
 
@@ -187,7 +191,9 @@ const REMEMBER_BEFORE_ACT_PATTERNS: RegExp[] = [
  * del español; pero "recuérdame que + cláusula" va primero (memoria).
  */
 export function classifyIntent(text: string): AgentIntent {
-  const t = (text ?? "").trim();
+  // 0.1.37 (auditoría): una tira larga de «?!.» costaba tiempo cuadrático
+  // en las limpiezas «[?!.]+$» de los routers; para clasificar bastan 3.
+  const t = (text ?? "").trim().replace(/[?!.]{4,}/g, (run) => run.slice(0, 3));
   if (!t) return "conversar";
   if (REMEMBER_BEFORE_ACT_PATTERNS.some((re) => re.test(t))) return "recordar";
   // 0.1.14: una cuenta válida ("what is (100 + 50) * 2") siempre va a la

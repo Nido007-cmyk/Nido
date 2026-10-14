@@ -4,6 +4,41 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.37-alpha — 2026-10-14
+
+An independent audit of everything added to the assistant since 0.1.19.
+Nothing from outside (another NIDO, a document, a note, a knowledge pack) can
+take control; these are the behaviour bugs it found, all fixed and tested.
+
+### Fixed
+- After "what should I remind you?", only your answer counts. A timer,
+  another reminder, a question, "yes", "ok" or "no, thanks" are no longer
+  turned into a reminder, and the question is forgotten after one message,
+  when you start a new chat, switch conversations or change language. A
+  repeating request ("every Monday") keeps repeating after you answer.
+- "Create a story…", "ponme una canción…" and phrases that only quote "remind
+  me" no longer create reminders or memories. "Let me know if it rains" is
+  not a reminder (NIDO can't check conditions).
+- "Every 8 hours", "every other day", "biweekly", "Monday to Friday": NIDO
+  saves the reminder once and says so, instead of claiming it will repeat
+  daily or weekly.
+- After "Which one?" (deleting or reading a note), a later command with a
+  number in it ("set a 2 minute timer") no longer picks a note. The question
+  expires after 3 minutes.
+- "Every month on the 31st" fires on the 31st (skipping shorter months), not
+  on the 1st. Repeating reminders keep their time after a daylight-saving
+  change. "Every year on February 30" is not saved with today's date.
+- Names: "my sister is called Ana and her birthday is May 3" saves "Ana" (not
+  "Ana And"), and that birthday repeats every year. With Reminders turned
+  off, saving a birthday no longer creates a reminder.
+- "I can't remember the capital of Peru" is answered, not saved as a memory.
+  "Today is 14/10" is not calculated as a division.
+- The loop guard no longer cuts code blocks, tables or separator lines.
+- Showing the backup key now fails safe if the phone's lock status can't be
+  read (before, it was treated as a phone with no lock).
+- The release build runs the same checks as CI (component tests and download
+  pins).
+
 ## 0.1.36-alpha — 2026-10-14
 
 ### Fixed

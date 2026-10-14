@@ -49,6 +49,11 @@ jobs:
             const v = read("vitest-results.json"), j = read("jest-results.json");
             const n = (r) => (r ? r.numTotalTests : 0), p = (r) => (r ? r.numPassedTests : 0);
             console.log(`::notice title=Test count::${n(v) + n(j)} tests (${p(v) + p(j)} passed): vitest ${n(v)}, jest ${n(j)}`);
+            // Logs de CI no siempre accesibles: los fallos también como anotación.
+            const esc = (m) => String(m).replace(/\u001b\[[0-9;]*m/g, "").slice(0, 1500).replace(/%/g, "%25").replace(/\r?\n/g, "%0A");
+            for (const r of [...(v?.testResults ?? []), ...(j?.testResults ?? [])]) {
+              if (r.status === "failed") console.log(`::error title=${(r.name ?? "").split("/").slice(-2).join("/")}::${esc(r.message || (r.assertionResults ?? []).filter((a) => a.status === "failed").map((a) => a.fullName + ": " + (a.failureMessages ?? []).join(" ")).join(" | "))}`);
+            }
           '
       - run: npm run verify:pins
       - run: npm run verify:manifest-sig

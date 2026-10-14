@@ -49,8 +49,8 @@ describe("extractToolAction — notas", () => {
   });
 
   it('evidencia: "crea una nota…" era un RECORDATORIO; ahora es una nota', () => {
-    // La regex de recordatorios acepta "crea …" sin exigir "recordatorio".
-    expect(extractReminderAction("crea una nota que diga comprar pan")).not.toBeNull();
+    // 0.1.37: la regex de recordatorios ya exige «recordatorio» tras «crea».
+    expect(extractReminderAction("crea una nota que diga comprar pan")).toBeNull();
     expect(extractToolAction("crea una nota que diga comprar pan", NOW)).toMatchObject({ kind: "noteSave", body: "comprar pan" });
   });
 
