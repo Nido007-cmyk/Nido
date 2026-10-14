@@ -116,6 +116,7 @@ import { answerKnowledgeQueryWithCategory, toIdentityLocale, knowledgeSessionTit
 import { recordQueryStats, trackPeakRss, startAppMemoryTracking, QueryStats } from "../services/telemetry";
 import { recordExecution } from "../services/executionTelemetry";
 import { recordRouterSample } from "../services/routerStats";
+import { trimRepetitionLoop } from "../inference/repetitionGuard";
 import { getMemoryInfo } from "ram-monitor";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
@@ -1173,7 +1174,10 @@ export function ChatScreen({
           const useChatTemplate = llamaEngine.hasEmbeddedChatTemplate();
           // RAG-GROUNDING 2026-10-11: con fuentes, muestreo factual (0.3)
           // en vez del 0.7 de charla.
-          const sampling = c.length > 0 ? { samplingPreset: "factual" as const } : {};
+          // 0.1.34: sin fuentes, el preset de charla (con penalización de
+          // repetición). Antes no se pasaba ninguno y el 0.5B corría sin
+          // penalización: bucle «las aluminosas, las aluminosas…».
+          const sampling = { samplingPreset: c.length > 0 ? ("factual" as const) : ("chat" as const) };
           const directMessages = useChatTemplate
             ? assembleChatMessages(query, c, systemPrompt, history, styleReminder, noSources)
             : undefined;
@@ -1315,7 +1319,8 @@ export function ChatScreen({
       //  - NEVER-SILENT: respuesta vacía → texto honesto, nunca burbuja vacía.
       let grounding: GroundingStatus | undefined;
       if (!wasStopped) {
-        let finalText = assistantText;
+        // 0.1.34: si el modelo entró en bucle, queda solo la primera vez.
+        let finalText = trimRepetitionLoop(assistantText);
         if (!deepResearchModeRef.current && chunks.length > 0) {
           const verified = verifyGroundedAnswer(assistantText, chunks, uiLang);
           grounding = verified.status;

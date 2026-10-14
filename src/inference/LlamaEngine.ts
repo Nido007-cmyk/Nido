@@ -11,6 +11,7 @@ import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
 import { withStage } from "../utils/stageError";
 import { recordInferenceEvent, type TelemetryStopReason } from "./telemetry";
+import { findRepetitionLoop, trimRepetitionLoop } from "./repetitionGuard";
 import { parseGemmaReasoning } from "./gemmaReasoning";
 import type { ModelSamplingDefaults } from "../routing/types";
 
@@ -118,8 +119,13 @@ export interface SamplingPreset {
 export const SAMPLING_PRESETS: Record<SamplingPresetName, SamplingPreset> = {
   /** Tool calls, JSON, classifications — near-greedy, validity first. */
   structured: { temperature: 0.1, minP: 0 },
-  /** Memory lookups, factual answers — low temp, still some flexibility. */
-  factual: { temperature: 0.3, minP: 0 },
+  /**
+   * Memory lookups, factual answers — low temp, still some flexibility.
+   * 0.1.34: también penalización leve de repetición. Es prosa, no un
+   * formato que se parsee, y a 0.3 el 0.5B entró en bucle en la Tab A9+
+   * («las aluminosas, las aluminosas…») con fuentes en otro idioma.
+   */
+  factual: { temperature: 0.3, minP: 0, repeatPenalty: 1.1 },
   /** Open conversation — the old 0.7 default, plus repetition control. */
   chat: { temperature: 0.7, minP: 0, repeatPenalty: 1.1 },
 };
@@ -434,15 +440,35 @@ export class LlamaEngine {
     let firstTokenAt: number | null = null;
     let tokenCount = 0;
     let timedOut = false;
+    // 0.1.34: guarda de bucle. Si el modelo repite el mismo trozo una y
+    // otra vez («las aluminosas, las aluminosas…», visto en la Tab A9+),
+    // se corta la generación (ahorra batería) y el texto final queda en
+    // la primera aparición.
+    // Salida estructurada (JSON/gramática): sin guarda, para no tocar
+    // nunca un formato que se va a parsear.
+    const guardLoops = responseFormat === undefined && grammar === undefined;
+    let streamed = "";
+    let loopCut = false;
+    const watchLoop = (piece: string) => {
+      if (!guardLoops) return;
+      streamed += piece;
+      if (loopCut || tokenCount % 8 !== 0) return;
+      if (findRepetitionLoop(streamed)) {
+        loopCut = true;
+        void this.context?.stopCompletion();
+      }
+    };
     const wrappedOnToken = onToken
       ? (piece: string) => {
           if (firstTokenAt === null) firstTokenAt = Date.now();
           tokenCount += 1;
-          onToken(piece);
+          watchLoop(piece);
+          if (!loopCut) onToken(piece);
         }
       : (piece: string) => {
           if (firstTokenAt === null) firstTokenAt = Date.now();
           tokenCount += 1;
+          watchLoop(piece);
         };
     const wrappedOnTimeout = () => {
       timedOut = true;
@@ -459,7 +485,8 @@ export class LlamaEngine {
       );
       try {
         const { text } = await started.completion;
-        const raw = text ?? started.getFull();
+        const settled = text ?? started.getFull();
+        const raw = guardLoops ? trimRepetitionLoop(settled) : settled;
         // Safety net (Qwen3 lane + estudio de modelos): for a noThink
         // model whose native layer ignored enable_thinking=false, and
         // for stripReasoning models (LFM2.5) whose chain-of-thought is
@@ -479,6 +506,7 @@ export class LlamaEngine {
       throw e;
     } finally {
       if (timedOut) stopReason = "timeout";
+      else if (loopCut && stopReason === "completed") stopReason = "stopped";
       const totalMs = Date.now() - tStart;
       const ttftMs = firstTokenAt === null ? null : firstTokenAt - tStart;
       const genMs = totalMs - (ttftMs ?? 0);
