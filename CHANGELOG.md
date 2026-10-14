@@ -4,6 +4,29 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.39-alpha — 2026-10-14
+
+### Added
+- **NIDO now measures what its command router misses.** When a message
+  that looks like a command ("remind me…", "save…", "convert…") is not
+  recognized by NIDO's built-in router, it goes to the AI model instead.
+  Until now a miss like that looked like a model mistake. The Execution
+  Telemetry screen (menu) now shows, for the commands you
+  send: how many were handled by the router, how many reached the model,
+  how many times the model had to ask for a tool the router should have
+  caught (and which tools), and how many needed a retry. Only counts and
+  tool names are kept, never the text of your messages.
+- **Optional: keep the phrases the router missed.** Off by default. If you
+  turn it on in the same screen, NIDO keeps on your phone (encrypted) the
+  last 50 commands that the model had to handle, so you can see which ones
+  the router is missing, copy them and report them. They never leave the
+  phone, and turning the option off deletes them.
+
+### Fixed
+- When the model failed to save something to memory ("I couldn't save
+  that"), the measurement counted it as a model answer instead of as "not
+  understood". It is now counted correctly.
+
 ## 0.1.38-alpha — 2026-10-14
 
 ### Changed

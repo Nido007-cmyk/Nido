@@ -593,7 +593,16 @@
       "model": "With the model",
       "notUnderstood": "“Didn't understand”",
       "chat": "Conversation",
-      "empty": "No measured messages yet."
+      "empty": "No measured messages yet.",
+      "leakTitle": "Commands that slipped to the model",
+      "leakEmpty": "Since 0.1.39 NIDO records which path each command takes. No commands measured yet.",
+      "leakMeasured": "Commands measured",
+      "leakToModel": "Reached the model",
+      "leakAskedTool": "Model asked for a tool",
+      "leakRetried": "Needed a retry",
+      "leakByTool": "Tools the model asked for",
+      "leakByRoute": "Handled by code",
+      "leakHint": "If the model asked for a tool, the router should have recognized the command: that is a router miss, not a model mistake. Only counts and tool names, never the text."
     },
     "title": "Execution telemetry",
     "subtitle": "{{count}} recent runs",
@@ -612,7 +621,15 @@
     "totalTime": "Total",
     "memory": "Peak Mem",
     "tokens": "Tokens",
-    "runEvaluation": "🧪 Evaluate"
+    "runEvaluation": "🧪 Evaluate",
+    "missed": {
+      "title": "Phrases the router did not recognize",
+      "toggle": "Save the phrases the router did not recognize",
+      "hint": "Optional and off by default. When on, NIDO keeps on this device (encrypted) the last 50 commands the model had to handle, so you can see what the router is missing. They never leave the phone. Turning it off deletes them.",
+      "empty": "No phrases saved yet.",
+      "copy": "Copy",
+      "clear": "Delete phrases"
+    }
   },
   "evaluation": {
     "title": "Evaluation",

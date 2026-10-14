@@ -13,6 +13,8 @@ NIDO runs on your phone. It has no accounts, no analytics, no advertising and no
 - Chats, notes, reminders, memories and the documents you import.
 - The AI models and knowledge packs you download.
 - Your NIDO identity keys and the list of phones you paired with.
+- On-device measurements for the Execution Telemetry screen: timings, and which path each message took (handled by NIDO's router or by the AI model, and which tool). They contain no message text.
+- Only if you turn it on (it is off by default): the last 50 commands NIDO's router did not recognize, so you can review them. Turning the option off deletes them.
 
 This data is stored in an encrypted database (SQLCipher). The encryption key is kept in the Android Keystore. Android automatic cloud backup is disabled for the app.
 

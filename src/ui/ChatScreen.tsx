@@ -118,6 +118,7 @@ import { answerKnowledgeQueryWithCategory, toIdentityLocale, knowledgeSessionTit
 import { recordQueryStats, trackPeakRss, startAppMemoryTracking, QueryStats } from "../services/telemetry";
 import { recordExecution } from "../services/executionTelemetry";
 import { recordRouterSample } from "../services/routerStats";
+import { recordMissedPhrase } from "../services/missedPhrases";
 import { trimRepetitionLoop } from "../inference/repetitionGuard";
 import { getMemoryInfo } from "ram-monitor";
 import { useTheme } from "./theme";
@@ -1019,14 +1020,25 @@ export function ChatScreen({
           nCtx: llamaEngine.getModelInfo()?.nCtx,
         });
         assistantText = agentResult.response;
-        recordRouterSample(
-          classifyMs,
-          (["notUnderstood", "actionFailed"] as const).some((k) => agentResult.response.trim() === agentFallbackText(k, uiLang))
+        // 0.1.39: el loop dice por dónde salió el turno (routing). Antes
+        // se adivinaba comparando el texto con dos respaldos y se escapaba
+        // el tercero («memoryFailed»), que contaba como respuesta del modelo.
+        const routing = agentResult.routing;
+        const routedOutcome =
+          routing?.fallback ||
+          (["notUnderstood", "actionFailed", "memoryFailed"] as const).some(
+            (k) => agentResult.response.trim() === agentFallbackText(k, uiLang),
+          )
             ? "notUnderstood"
-            : modelUsed
+            : modelUsed || routing?.route === "model"
               ? "model"
-              : "router",
-        );
+              : "router";
+        recordRouterSample(classifyMs, routedOutcome, routing);
+        if (routing && routedOutcome !== "router") {
+          // Opcional y apagado por defecto: guardar la frase que el router
+          // no reconoció, para revisarla uno mismo (Diagnóstico).
+          void recordMissedPhrase(query, routing).catch(() => {});
+        }
         setMessages((prev) =>
           prev.map((m) => (m.id === assistantId ? { ...m, text: assistantText } : m))
         );

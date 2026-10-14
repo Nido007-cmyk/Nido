@@ -56,8 +56,10 @@ device, encrypted. There are no accounts, no cloud and no analytics.
 - **Shows its network use**: every download the app makes is logged and
   visible in the About screen.
 - **Measures itself, on the phone**: the Execution Telemetry screen (menu) shows generation
-  speed, time to first word and how long request routing takes, recorded
-  locally and never sent anywhere.
+  speed, time to first word, how long request routing takes and how many
+  commands the router missed and sent to the model, recorded locally and
+  never sent anywhere. Optionally (off by default) it can keep the missed
+  phrases on the phone so you can review them.
 
 The interface is available in English, Spanish and Portuguese.
 

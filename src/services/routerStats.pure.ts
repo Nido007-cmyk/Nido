@@ -27,6 +27,37 @@ export interface RouterSample {
   /** Tiempo de classifyIntent (la decisión que se paga en CADA mensaje), ms. */
   classifyMs: number;
   outcome: RouterOutcome;
+  /**
+   * 0.1.39 (solo turnos del asistente; null en «chat» y en muestras de
+   * versiones anteriores): la vía que lo resolvió — una herramienta
+   * determinista, «fixed» o «model».
+   */
+  route?: string | null;
+  /** Herramientas que pidió el MODELO, separadas por coma (fallo del router). */
+  modelTool?: string | null;
+  /** El modelo no llamó a nada a la primera: «constrained» o «nudge». */
+  retry?: string | null;
+}
+
+/**
+ * 0.1.39: lo que el router deja pasar al modelo, sobre los turnos del
+ * asistente medidos con la 0.1.39 o posterior.
+ */
+export interface RouterLeak {
+  /** Turnos del asistente con detalle de vía (los anteriores no cuentan). */
+  measured: number;
+  /** Resueltos por el código, sin el modelo. */
+  router: number;
+  /** Llegaron al modelo (resuelvan bien o acaben en «no entendí»). */
+  toModel: number;
+  /** De esos, el modelo pidió una herramienta: el router debió atraparlos. */
+  modelAskedTool: number;
+  /** De esos, el modelo no llamó a nada a la primera y hubo que reintentar. */
+  retried: number;
+  /** Herramientas que pidió el modelo, de más a menos. */
+  byTool: Array<[string, number]>;
+  /** Vías deterministas que resolvieron, de más a menos. */
+  byRoute: Array<[string, number]>;
 }
 
 export interface RouterSummary {
@@ -35,6 +66,51 @@ export interface RouterSummary {
   p95Ms: number | null;
   maxMs: number | null;
   outcomes: Record<RouterOutcome, number>;
+  leak: RouterLeak;
+}
+
+const LABEL_RE = /^[a-z][a-z0-9_]{0,39}$/;
+
+/**
+ * Una etiqueta de vía o herramienta tal como se guarda: un identificador
+ * corto en minúsculas o «other». El nombre de herramienta lo escribe el
+ * MODELO y podría traer cualquier cosa (incluso texto del usuario): lo que
+ * no tenga forma de identificador no se guarda nunca.
+ */
+export function safeLabel(v: unknown): string {
+  return typeof v === "string" && LABEL_RE.test(v) ? v : "other";
+}
+
+/** Lista de herramientas del modelo → «a,b» saneado, o null si no hay. */
+export function joinToolLabels(names: readonly string[]): string | null {
+  const clean = names.slice(0, 5).map(safeLabel);
+  return clean.length ? clean.join(",") : null;
+}
+
+function sortedCounts(m: Map<string, number>): Array<[string, number]> {
+  return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
+export function summarizeLeak(samples: readonly RouterSample[]): RouterLeak {
+  let measured = 0, router = 0, toModel = 0, modelAskedTool = 0, retried = 0;
+  const byTool = new Map<string, number>();
+  const byRoute = new Map<string, number>();
+  for (const s of samples) {
+    if (!s.route || s.outcome === "chat" || !isRouterOutcome(s.outcome)) continue;
+    measured++;
+    if (s.route !== "model") {
+      router++;
+      byRoute.set(safeLabel(s.route), (byRoute.get(safeLabel(s.route)) ?? 0) + 1);
+      continue;
+    }
+    toModel++;
+    if (s.retry) retried++;
+    if (s.modelTool) {
+      modelAskedTool++;
+      for (const t of s.modelTool.split(",")) byTool.set(safeLabel(t), (byTool.get(safeLabel(t)) ?? 0) + 1);
+    }
+  }
+  return { measured, router, toModel, modelAskedTool, retried, byTool: sortedCounts(byTool), byRoute: sortedCounts(byRoute) };
 }
 
 const OUTCOMES: readonly RouterOutcome[] = ["router", "model", "notUnderstood", "chat"];
@@ -64,6 +140,7 @@ export function summarizeRouterSamples(samples: readonly RouterSample[]): Router
     p95Ms: times.length ? percentile(times, 95) : null,
     maxMs: times.length ? times[times.length - 1] : null,
     outcomes,
+    leak: summarizeLeak(samples),
   };
 }
 

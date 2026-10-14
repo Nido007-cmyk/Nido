@@ -59,8 +59,10 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   y visible en la pantalla Acerca de.
 - **Se mide a sí mismo, en el teléfono**: la pantalla Telemetría de ejecución (menú) muestra la
   velocidad de generación, el tiempo hasta la primera palabra y cuánto tarda
-  en decidir qué hacer con cada mensaje; todo se guarda en el teléfono y no
-  se envía a ningún sitio.
+  en decidir qué hacer con cada mensaje y cuántas órdenes no reconoció el
+  router y acabaron en el modelo; todo se guarda en el teléfono y no se
+  envía a ningún sitio. Si quieres (viene apagado), también guarda esas
+  frases en el teléfono para que las revises.
 
 La interfaz está disponible en español, inglés y portugués.
 

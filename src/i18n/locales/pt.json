@@ -593,7 +593,16 @@
       "model": "Com o modelo",
       "notUnderstood": "“Não entendi”",
       "chat": "Conversa",
-      "empty": "Ainda não há mensagens medidas."
+      "empty": "Ainda não há mensagens medidas.",
+      "leakTitle": "Comandos que escaparam para o modelo",
+      "leakEmpty": "Desde a 0.1.39 o NIDO mede por onde sai cada comando. Ainda não há comandos medidos.",
+      "leakMeasured": "Comandos medidos",
+      "leakToModel": "Chegaram ao modelo",
+      "leakAskedTool": "O modelo pediu ferramenta",
+      "leakRetried": "Com nova tentativa",
+      "leakByTool": "Ferramentas que o modelo pediu",
+      "leakByRoute": "Resolvidos pelo código",
+      "leakHint": "Se o modelo pediu uma ferramenta, o roteador devia ter reconhecido o comando: é uma falha do roteador, não do modelo. Só contagens e nomes de ferramenta, nunca o texto."
     },
     "title": "Telemetria de execução",
     "subtitle": "{{count}} execuções recentes",
@@ -612,7 +621,15 @@
     "totalTime": "Total",
     "memory": "Mem. Pico",
     "tokens": "Tokens",
-    "runEvaluation": "🧪 Avaliar"
+    "runEvaluation": "🧪 Avaliar",
+    "missed": {
+      "title": "Frases que o roteador não reconheceu",
+      "toggle": "Guardar as frases que o roteador não reconheceu",
+      "hint": "Opcional e desligado por padrão. Se você ligar, o NIDO guarda neste dispositivo (criptografado) os últimos 50 comandos que o modelo teve de resolver, para ver o que falta no roteador. Nunca saem do telefone. Desligar apaga tudo.",
+      "empty": "Ainda não há frases guardadas.",
+      "copy": "Copiar",
+      "clear": "Apagar frases"
+    }
   },
   "evaluation": {
     "title": "Avaliação",

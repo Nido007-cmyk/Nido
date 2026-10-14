@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { formatRouterMs, isRouterOutcome, percentOf, summarizeRouterSamples, type RouterSample } from "./routerStats.pure";
+import { formatRouterMs, isRouterOutcome, joinToolLabels, percentOf, safeLabel, summarizeLeak, summarizeRouterSamples, type RouterSample } from "./routerStats.pure";
 
 const s = (classifyMs: number, outcome: RouterSample["outcome"]): RouterSample => ({ ts: 0, classifyMs, outcome });
 
@@ -14,6 +14,7 @@ describe("summarizeRouterSamples", () => {
     expect(summarizeRouterSamples([])).toEqual({
       count: 0, p50Ms: null, p95Ms: null, maxMs: null,
       outcomes: { router: 0, model: 0, notUnderstood: 0, chat: 0 },
+      leak: { measured: 0, router: 0, toModel: 0, modelAskedTool: 0, retried: 0, byTool: [], byRoute: [] },
     });
   });
 
@@ -55,5 +56,47 @@ describe("formato sin Intl", () => {
   it("solo los cuatro desenlaces conocidos", () => {
     expect(isRouterOutcome("router")).toBe(true);
     expect(isRouterOutcome("texto del usuario")).toBe(false);
+  });
+});
+
+describe("0.1.39: lo que el router deja pasar al modelo", () => {
+  const t = (outcome: RouterSample["outcome"], route: string | null, modelTool: string | null = null, retry: string | null = null): RouterSample =>
+    ({ ts: 0, classifyMs: 0.1, outcome, route, modelTool, retry });
+
+  it("cuenta solo turnos del asistente con vía (ni chat ni muestras viejas)", () => {
+    const r = summarizeLeak([
+      t("router", "calc"),
+      t("router", "create_reminder"),
+      t("router", "create_reminder"),
+      t("model", "model", "create_reminder"),
+      t("model", "model", "create_reminder,device_time", "constrained"),
+      t("notUnderstood", "model", null, "nudge"),
+      t("model", "model"),
+      t("chat", null),
+      t("router", null), // anterior a la 0.1.39
+    ]);
+    expect(r).toEqual({
+      measured: 7,
+      router: 3,
+      toModel: 4,
+      modelAskedTool: 2,
+      retried: 2,
+      byTool: [["create_reminder", 2], ["device_time", 1]],
+      byRoute: [["create_reminder", 2], ["calc", 1]],
+    });
+  });
+
+  it("un «no entendí» de una vía determinista (fixed) no cuenta como fuga al modelo", () => {
+    expect(summarizeLeak([t("notUnderstood", "fixed")])).toMatchObject({ measured: 1, router: 1, toModel: 0 });
+  });
+
+  it("las etiquetas nunca llevan texto libre", () => {
+    expect(safeLabel("create_reminder")).toBe("create_reminder");
+    expect(safeLabel("recuérdame a Ana")).toBe("other");
+    expect(safeLabel("Create_Reminder")).toBe("other");
+    expect(safeLabel("x".repeat(41))).toBe("other");
+    expect(safeLabel(42)).toBe("other");
+    expect(joinToolLabels([])).toBeNull();
+    expect(joinToolLabels(["a", "llama a mamá", "b", "c", "d", "e", "f"])).toBe("a,other,b,c,d");
   });
 });

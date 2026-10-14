@@ -194,6 +194,41 @@ export interface AgentLoopResult {
    * must distinguish the two. Absent/false = model-generated.
    */
   deterministic?: boolean;
+  /**
+   * 0.1.39: por dónde salió el turno, para medir lo que el router deja
+   * pasar al modelo (r/AI_Agents: «cada frase que se cuela se lee después
+   * como un error del modelo, no del router, y se afina la capa que no
+   * es»). Solo etiquetas: nunca el texto del mensaje ni la respuesta.
+   */
+  routing?: AgentRouting;
+}
+
+/** Cómo salió un turno del loop (ver AgentLoopResult.routing). */
+export interface AgentRouting {
+  /**
+   * La vía determinista que lo resolvió (el nombre de su herramienta:
+   * «calc», «create_reminder», «memory_query»… o «fixed» para plantillas
+   * y preguntas de elección), o «model» si llegó al modelo.
+   */
+  route: string;
+  /**
+   * Herramientas que pidió EL MODELO. Cada una es un fallo del router por
+   * definición: era una orden con forma de herramienta y el código
+   * determinista no la reconoció.
+   */
+  modelTools: string[];
+  /** El modelo no llamó a nada y hubo que reintentar: JSON forzado o empujón. */
+  retry: "constrained" | "nudge" | null;
+  /** Acabó en un texto de respaldo («no pude…», «no entendí»). */
+  fallback: "actionFailed" | "memoryFailed" | "notUnderstood" | null;
+}
+
+/** Lo que el núcleo del loop va apuntando para AgentRouting. */
+interface RoutingTrace {
+  modelCalled: boolean;
+  modelTools: string[];
+  retry: AgentRouting["retry"];
+  fallback: AgentRouting["fallback"];
 }
 
 const DEFAULT_MAX_STEPS = 3;
@@ -538,6 +573,24 @@ export async function runAgentLoop(
   userText: string,
   options: AgentLoopOptions
 ): Promise<AgentLoopResult> {
+  const trace: RoutingTrace = { modelCalled: false, modelTools: [], retry: null, fallback: null };
+  const result = await runAgentLoopCore(userText, options, trace);
+  // Las vías deterministas se nombran por la herramienta que usaron (su
+  // primera toolUse); sin herramienta (plantillas, preguntas de elección,
+  // «¿a qué hora?») son «fixed». Si el modelo generó, la vía es «model»
+  // aunque además haya corrido una herramienta: la eligió el modelo.
+  const route = trace.modelCalled ? "model" : (result.toolUses[0]?.name ?? "fixed");
+  return {
+    ...result,
+    routing: { route, modelTools: trace.modelTools, retry: trace.retry, fallback: trace.fallback },
+  };
+}
+
+async function runAgentLoopCore(
+  userText: string,
+  options: AgentLoopOptions,
+  trace: RoutingTrace
+): Promise<AgentLoopResult> {
   const { engine, handlers, maxSteps = DEFAULT_MAX_STEPS } = options;
   const nCtx = options.nCtx ?? 4096;
   // H5-2026-10-06: nPredict adaptativo. Con un sistema de ~1790 tokens y
@@ -555,6 +608,7 @@ export async function runAgentLoop(
   const safeFallback = (): string => {
     const last = toolUses[toolUses.length - 1];
     if (last && last.result.trim()) return last.result.trim();
+    trace.fallback = "notUnderstood";
     return agentFallbackText("notUnderstood", uiLang);
   };
 
@@ -1083,6 +1137,7 @@ export async function runAgentLoop(
   // anterior más control de repetición.
   const intentPreset = intent === "actuar" ? "structured" : intent === "recordar" ? "factual" : "chat";
   const generateOnce = async (): Promise<string> => {
+    trace.modelCalled = true;
     try {
       return await engine.generate({
         messages,
@@ -1124,14 +1179,17 @@ export async function runAgentLoop(
         // sigue como backstop — el comportamiento anterior se conserva.
         let retryCalls: ParsedToolCall[] = [];
         let retryText: string;
+        trace.modelCalled = true;
         const constrained = await generateToolCallJson(engine, {
           userText,
           toolNames: Object.keys(handlers),
         }).catch(() => null);
         if (constrained) {
+          trace.retry = "constrained";
           retryCalls = [constrained];
           retryText = JSON.stringify({ name: constrained.name, arguments: constrained.arguments });
         } else {
+          trace.retry = "nudge";
           // Reintento legacy con instrucción explícita de usar la herramienta.
           messages.push({
             role: "user",
@@ -1144,6 +1202,7 @@ export async function runAgentLoop(
           retryCalls = parseToolCalls(retry);
         }
         if (retryCalls.length === 0) {
+          trace.fallback = intent === "recordar" ? "memoryFailed" : "actionFailed";
           // El modelo sigue sin generar tool calls: fallo explícito en vez
           // de fingir éxito con un "Listo".
           // TOOLS-AUDIT 2026-10-11: antes este texto hablaba de "guardar"
@@ -1159,6 +1218,7 @@ export async function runAgentLoop(
         lastText = retryText;
         const retryObservations: string[] = [];
         for (const call of retryCalls) {
+          trace.modelTools.push(call.name);
           const result = await dispatchToolCall(call, handlers, dispatchOptions);
           toolUses.push({ name: call.name, result });
           const truncatedResult = result.length > 2000 ? result.slice(0, 2000) + "…[truncado]" : result;
@@ -1187,6 +1247,7 @@ export async function runAgentLoop(
 
     const observations: string[] = [];
     for (const call of calls) {
+      trace.modelTools.push(call.name);
       const result = await dispatchToolCall(call, handlers, dispatchOptions);
       toolUses.push({ name: call.name, result });
       // Wrap tool results as untrusted content (defense in depth).

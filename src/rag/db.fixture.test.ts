@@ -90,7 +90,15 @@ vi.mock("../privacy/keyManager", () => ({
 // Código REAL bajo prueba.
 import { setSecureDbTestDriver } from "../security/secureDatabase";
 import { KnowledgeDbVersionError } from "../security/formatVersion";
-import { getDb, resetDatabase } from "./db";
+import { getDb, resetDatabase, writeTransaction } from "./db";
+import { listRouterSamples, recordRouterSample } from "../services/routerStats";
+import {
+  clearMissedPhrases,
+  isMissedPhraseLogOn,
+  listMissedPhrases,
+  recordMissedPhrase,
+  setMissedPhraseLog,
+} from "../services/missedPhrases";
 
 // ---------------------------------------------------------------------------
 // Driver respaldado por el fixture real
@@ -117,18 +125,18 @@ function makeHandle(dbPath: string) {
       }
       sqlite.exec(sql);
     },
-    getAllAsync: async <T>(sql: string): Promise<T[]> => {
+    getAllAsync: async <T>(sql: string, params?: unknown[]): Promise<T[]> => {
       if (/cipher_version/i.test(sql)) return [{ cipher_version: "4.9.0-fake" }] as T[];
-      return sqlite.prepare(sql).all() as T[];
+      return (sqlite.prepare(sql).all as (...a: unknown[]) => unknown[])(...(params ?? [])) as T[];
     },
-    getFirstAsync: async <T>(sql: string): Promise<T | null> => {
+    getFirstAsync: async <T>(sql: string, params?: unknown[]): Promise<T | null> => {
       if (/cipher_version/i.test(sql)) return { cipher_version: "4.9.0-fake" } as T;
       if (/FROM\s+sqlite_master/i.test(sql) && !keyApplied) {
         // Sin PRAGMA key la base "cifrada" no se puede leer: probeDatabaseKind
         // la clasifica como encrypted (como una base SQLCipher real).
         throw new Error("file is not a database (sin clave)");
       }
-      const row = sqlite.prepare(sql).get();
+      const row = (sqlite.prepare(sql).get as (...a: unknown[]) => unknown)(...(params ?? []));
       return (row ?? null) as T | null;
     },
     runAsync: async (sql: string, params?: unknown[]) => {
@@ -228,5 +236,82 @@ describe("knowledge DB fixture corpus — longevity contract", () => {
     await expect(getDb()).resolves.toBeDefined();
     // El stamp lo escribió el propio código al abrir, no el test.
     expect(readStamp(dbPath)).toBe("1");
+  });
+});
+
+// 0.1.39: lo que el router deja pasar al modelo. SQL real contra la base v1.
+describe("router_samples y router_missed (0.1.39) sobre una base v1 existente", () => {
+  // recordRouterSample no espera a la escritura: una transacción vacía en
+  // la misma cola termina después de las anteriores.
+  const flush = () => writeTransaction(async () => {});
+  const columns = (dbPath: string, table: string): string[] => {
+    const check = new DatabaseSync(dbPath);
+    try {
+      return (check.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map((c) => c.name);
+    } finally {
+      check.close();
+    }
+  };
+
+  it("la migración añade las columnas de vía y la tabla de frases, sin tocar lo demás", async () => {
+    const dbPath = useFixture("knowledge.v1.db");
+    await getDb();
+    expect(columns(dbPath, "router_samples")).toEqual(
+      expect.arrayContaining(["ts", "classify_ms", "outcome", "route", "model_tool", "retry"]),
+    );
+    expect(columns(dbPath, "router_missed")).toEqual(
+      expect.arrayContaining(["ts", "text", "route", "model_tool", "retry", "fallback"]),
+    );
+    expect(readStamp(dbPath)).toBe("1");
+  });
+
+  it("guarda y lee la vía de cada turno, saneando lo que escribe el modelo", async () => {
+    useFixture("knowledge.v1.db");
+    await getDb();
+    recordRouterSample(0.05, "router", { route: "calc", modelTools: [], retry: null });
+    recordRouterSample(0.05, "model", { route: "model", modelTools: ["create_reminder", "recuérdame a Ana"], retry: "nudge" });
+    recordRouterSample(0.05, "chat");
+    await flush();
+    const rows = await listRouterSamples();
+    expect(rows.map((r) => [r.outcome, r.route, r.modelTool, r.retry])).toEqual([
+      ["chat", null, null, null],
+      ["model", "model", "create_reminder,other", "nudge"],
+      ["router", "calc", null, null],
+    ]);
+  });
+
+  it("las frases no reconocidas: apagado por defecto, se guardan solo si se enciende y apagar las borra", async () => {
+    useFixture("knowledge.v1.db");
+    await getDb();
+    const routing = { route: "model", modelTools: ["create_reminder"], retry: null, fallback: null };
+    expect(await isMissedPhraseLogOn()).toBe(false);
+    await recordMissedPhrase("avísame del dentista el jueves", routing);
+    expect(await listMissedPhrases()).toEqual([]);
+
+    await setMissedPhraseLog(true);
+    expect(await isMissedPhraseLogOn()).toBe(true);
+    await recordMissedPhrase("avísame del dentista el jueves", routing);
+    const list = await listMissedPhrases();
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ text: "avísame del dentista el jueves", route: "model", modelTool: "create_reminder" });
+
+    await setMissedPhraseLog(false);
+    expect(await listMissedPhrases()).toEqual([]);
+    await setMissedPhraseLog(true);
+    await recordMissedPhrase("otra", routing);
+    await clearMissedPhrases();
+    expect(await listMissedPhrases()).toEqual([]);
+  });
+
+  it("conserva solo las 50 más recientes", async () => {
+    useFixture("knowledge.v1.db");
+    await getDb();
+    await setMissedPhraseLog(true);
+    const routing = { route: "model", modelTools: [], retry: null, fallback: "notUnderstood" };
+    for (let i = 0; i < 55; i++) await recordMissedPhrase(`frase ${i}`, routing);
+    const list = await listMissedPhrases(100);
+    expect(list).toHaveLength(50);
+    expect(list[0].text).toBe("frase 54");
+    expect(list[49].text).toBe("frase 5");
   });
 });
