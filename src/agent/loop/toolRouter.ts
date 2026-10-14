@@ -41,6 +41,7 @@ export type ToolAction =
   | { kind: "currencyInfo"; lang: RouterLang }
   | { kind: "memoryForgetHelp"; lang: RouterLang }
   | { kind: "countdown"; target: string; label: string; lang: RouterLang }
+  | { kind: "reminderOfferCreate"; range: "today" | "tomorrow" | null; lang: RouterLang }
   | { kind: "calendarList"; from: string; to: string; label: CalendarRange; lang: RouterLang }
   | { kind: "calendarCreate"; title: string; start: string | null; lang: RouterLang }
   | { kind: "nidoSend"; to: string; text: string | null; lang: RouterLang }
@@ -129,6 +130,8 @@ export function toolForAction(a: ToolAction): string {
       return "remember_fact";
     case "countdown":
       return "device_time";
+    case "reminderOfferCreate":
+      return "create_reminder";
   }
 }
 
@@ -172,6 +175,32 @@ const LENIENT_COUNTDOWN_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: /^(?:\S+\s+){0,3}(?:until|till|til|to)\s+(.+)$/i, lang: "en" },
   { re: /^(?:\S+\s+){0,2}falta(?:m)?(?:\s+\S+)?\s+(?:para|pro|pra)\s+(?:o\s+|a\s+)?(.+)$/i, lang: "pt" },
 ];
+
+/**
+ * 0.1.34 (prueba física, Tab A9+): tras «No tienes recordatorios para
+ * mañana», «Haz uno» caía a la enciclopedia y respondía sobre el juego
+ * UNO, en inglés. Durante 3 minutos tras una lista vacía, «haz uno» /
+ * «crea uno» / «make one» / «faz um» es la oferta de crear uno: se explica
+ * cómo pedirlo (sin inventar qué ni cuándo).
+ */
+let emptyReminderList: { range: "today" | "tomorrow" | null; lang: RouterLang; at: number } | null = null;
+const OFFER_WINDOW_MS = 3 * 60_000;
+export function noteEmptyReminderList(range: "today" | "tomorrow" | null, lang: RouterLang, now: Date): void {
+  emptyReminderList = { range, lang, at: now.getTime() };
+}
+const OFFER_CREATE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
+  { re: /^(?:s[ií],?\s+|vale,?\s+|ok,?\s+|bueno,?\s+)?(?:haz(?:me)?|crea(?:me)?|cr[eé]ame|pon(?:me)?|agr[eé]ga(?:me)?|a[ñn][aá]de(?:me)?)\s+(?:uno|un\s+recordatorio)$/i, lang: "es" },
+  { re: /^(?:yes,?\s+|ok,?\s+|sure,?\s+)?(?:make|create|add|set)\s+(?:me\s+)?(?:one|a\s+reminder)$/i, lang: "en" },
+  { re: /^(?:sim,?\s+|ok,?\s+)?(?:faz|fa[cç]a|cria|crie|p[oõ]e|coloca)\s+(?:um|um\s+lembrete)$/i, lang: "pt" },
+];
+function offerCreateAction(t: string, now: Date): ToolAction | null {
+  const offer = emptyReminderList;
+  if (!offer || now.getTime() - offer.at > OFFER_WINDOW_MS || now.getTime() < offer.at) return null;
+  for (const { re, lang } of OFFER_CREATE_RULES) {
+    if (re.test(t)) return { kind: "reminderOfferCreate", range: offer.range, lang };
+  }
+  return null;
+}
 
 /** Fecha (00:00 local) de un día con nombre (Navidad, Año Nuevo…), o null. */
 export function namedDayTarget(raw: string, now: Date, lang: RouterLang): { target: Date; label: string } | null {
@@ -610,6 +639,8 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   // conocimiento y el modelo podía decir que lo había cancelado sin hacer
   // nada. Un temporizador es un recordatorio llamado «Temporizador»/«Timer»:
   // se cancela por la ruta de borrado (con su confirmación y su «¿cuál?»).
+  const offer = offerCreateAction(t, now);
+  if (offer) return offer;
   for (const { re, lang } of COUNTDOWN_RULES) {
     const m = re.exec(t);
     if (!m) continue;
@@ -804,6 +835,7 @@ type Key =
   | "reminderOneTimeOnly"
   | "reminderSavedAskWhen"
   | "reminderAskWhat"
+  | "reminderHowTo"
   | "reminderWillNotify"
   | "reminderSaveFailed"
   | "personSaved"
@@ -997,6 +1029,11 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: " Ojo: lo guardé como un recordatorio de una sola vez; solo puedo repetirlos cada día o cada semana.",
     en: " Note: I saved it as a one-time reminder; I can only repeat reminders every day or every week.",
     pt: " Atenção: salvei como um lembrete único; só consigo repetir lembretes todos os dias ou toda semana.",
+  },
+  reminderHowTo: {
+    es: "Claro. Dime qué y cuándo en una frase, por ejemplo: «recuérdame{{when}} a las 9 llamar al médico».",
+    en: "Sure. Tell me what and when in one go, for example: “remind me{{when}} at 9 to call the doctor”.",
+    pt: "Claro. Diga o quê e quando numa frase só, por exemplo: “me lembra{{when}} às 9 de ligar para o médico”.",
   },
   reminderAskWhat: {
     es: "¿Qué quieres que te recuerde{{when}}? Dímelo en una frase, por ejemplo: «recuérdame el lunes pagar la luz».",
@@ -1364,6 +1401,16 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
 
   try {
     switch (action.kind) {
+      case "reminderOfferCreate": {
+        const when =
+          action.range === "tomorrow"
+            ? { es: " mañana", en: " tomorrow", pt: " amanhã" }[lang]
+            : action.range === "today"
+              ? { es: " hoy", en: " today", pt: " hoje" }[lang]
+              : { es: " mañana", en: " tomorrow", pt: " amanhã" }[lang];
+        return say(routerMessage("reminderHowTo", lang, { when }));
+      }
+
       case "countdown": {
         const target = new Date(action.target);
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1455,13 +1502,17 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
           });
         }
         uses.push({ name: "list_reminders", result: `${items.length} pending` });
-        if (items.length === 0)
+        if (items.length === 0) {
+          // 0.1.34: «Haz uno» justo después buscaba «Uno» (el juego de
+          // cartas) en la enciclopedia. Se recuerda la oferta un rato.
+          noteEmptyReminderList(action.range ?? null, lang, now);
           return say(
             routerMessage(
               action.range === "today" ? "noRemindersToday" : action.range === "tomorrow" ? "noRemindersTomorrow" : "noReminders",
               lang,
             ),
           );
+        }
         const lines = items.slice(0, 20).map((r) => {
           const when = r.dueAt
             ? (r.repeat ? reminderRepeatWhen(r.dueAt, r.repeat, lang) : reminderWhen(r.dueAt, lang)).trim()

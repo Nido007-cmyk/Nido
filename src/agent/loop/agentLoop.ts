@@ -962,8 +962,9 @@ export async function runAgentLoop(
       dueAt = parseReminderDateTime(extraction.content);
     }
     if (dueAt) {
+      const { reminderTitleForFact } = await import("./rememberRouter");
       const reminder = await saveReminder({
-        text: extraction.content,
+        text: reminderTitleForFact(extraction.content),
         dueAt,
       });
       // M10 FIX: programar notificación del sistema.

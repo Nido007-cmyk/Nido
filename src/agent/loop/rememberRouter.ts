@@ -135,7 +135,36 @@ function stripTrailingInstructions(content: string): string {
   for (const re of patterns) {
     result = result.replace(re, "").trim();
   }
+  // 0.1.34 (ejemplo «Memoria privada» del carrusel, es/pt): la petición
+  // final («Guárdalo en tu memoria…», «Guarde para me avisar com
+  // antecedência») se guardaba dentro del hecho. Se quitan las frases
+  // finales que son una ORDEN a NIDO, no parte de lo que hay que recordar.
+  const ORDER_RE =
+    /^(?:gu[aá]rd(?:a|alo|ala|e|ar)|save|keep|store|av[ií]sa(?:me)?|recu[eé]rd(?:a|amelo)|no\s+lo\s+olvides|don'?t\s+forget|lembr(?:e|a)|n[aã]o\s+esque[cç]a|me\s+avis[ae])\b/i;
+  for (;;) {
+    const cut = result.search(/[.!;]\s+[^.!;]+[.!;]?$/);
+    if (cut < 0) break;
+    const tail = result.slice(cut + 1).trim();
+    if (!ORDER_RE.test(tail)) break;
+    result = result.slice(0, cut).trim();
+  }
+  // «…es el 15 de marzo y que le gustan…»: el «que» repetido sobra.
+  result = result.replace(/\by que\b/gi, "y").replace(/[.!;]+$/, "").trim();
   return result;
+}
+
+/**
+ * 0.1.34: título corto del aviso que crea un hecho con fecha. «el
+ * cumpleaños de mi mamá es el 15 de marzo y le gustan las orquídeas» →
+ * «Cumpleaños de mi mamá». Si no hay forma clara, el hecho entero.
+ */
+export function reminderTitleForFact(content: string): string {
+  const m = /^((?:el\s+|o\s+)?(?:cumplea[ñn]os|aniversario|anivers[aá]rio)\s+(?:de|da|do)\s+.+?|my\s+.+?(?:'s)?\s+birthday|.+?'s\s+birthday)\s+(?:es|is|é|será|will be)(?=\s|$)/i.exec(
+    content.trim(),
+  );
+  if (!m) return content;
+  const t = m[1].replace(/^(?:el|o)\s+/i, "").trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 const MESES: Record<string, number> = {
@@ -331,8 +360,60 @@ function canonRel(raw: string): string {
  * relación «hermano». El plural («mis hijos se llaman Leo y Max»)
  * devuelve dos personas.
  */
+/**
+ * 0.1.34 (prueba física, Tab A9+): «Mi hermank se llama juan» — una tecla
+ * vecina en el parentesco y la persona no se guardaba. Corrige SOLO la
+ * palabra del parentesco en «mi X se llama» / «meu|minha X se chama»,
+ * cuando está a UNA letra de un parentesco conocido y esa letra es una
+ * tecla vecina en QWERTY (así «hermank» → «hermano» y no «hermana»). Si
+ * hay empate o dudas, no toca nada.
+ */
+const QWERTY_ROWS = ["qwertyuiop", "asdfghjklñ", "zxcvbnm"];
+function keyPos(c: string): [number, number] | null {
+  for (let r = 0; r < QWERTY_ROWS.length; r++) {
+    const i = QWERTY_ROWS[r].indexOf(c);
+    if (i >= 0) return [r, i];
+  }
+  return null;
+}
+function neighborKeys(a: string, b: string): boolean {
+  const pa = keyPos(a);
+  const pb = keyPos(b);
+  if (!pa || !pb) return false;
+  return Math.abs(pa[0] - pb[0]) <= 1 && Math.abs(pa[1] - pb[1]) <= 1;
+}
+function fixRelationWord(word: string, relations: readonly string[]): string | null {
+  const w = word.toLowerCase();
+  if (w.length < 5 || relations.includes(w)) return null;
+  const hits = relations.filter((r) => {
+    if (r.length !== w.length) return false;
+    let diff = -1;
+    for (let i = 0; i < r.length; i++) {
+      if (r[i] !== w[i]) {
+        if (diff >= 0) return false;
+        diff = i;
+      }
+    }
+    return diff >= 0 && neighborKeys(w[diff], r[diff]);
+  });
+  return hits.length === 1 ? hits[0] : null;
+}
+export function fixRelationTypos(text: string): string {
+  const es = ES_REL.split("|");
+  const pt = PT_REL.split("|");
+  return text
+    .replace(/(\bmi\s+)(\p{L}+)(\s+se\s+llama\b)/iu, (all, a, w, b) => {
+      const f = fixRelationWord(w, es);
+      return f ? a + f + b : all;
+    })
+    .replace(/(\b(?:meu|minha)\s+)(\p{L}+)(\s+(?:se\s+chama|chama-se)\b)/iu, (all, a, w, b) => {
+      const f = fixRelationWord(w, pt);
+      return f ? a + f + b : all;
+    });
+}
+
 export function extractPeople(userText: string): PersonExtraction[] {
-  const trimmed = userText.trim();
+  const trimmed = fixRelationTypos(userText.trim());
   if (!trimmed || looksLikeQuestion(trimmed)) return [];
   const out: PersonExtraction[] = [];
   const start = "^(?:(?:hola|buenas|oye)[,.\\s]+)?(?:recuerda(?:te)?(?:\\s+que)?[,\\s]+)?";
