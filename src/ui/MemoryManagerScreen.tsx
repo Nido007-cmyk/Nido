@@ -264,7 +264,15 @@ export function MemoryManagerScreen({ onClose }: { onClose: () => void }) {
                   ) : null}
                   {r.repeat ? (
                     <Text style={styles.cardMeta}>
-                      {t(r.repeat === "week" ? "memoryManager.repeatWeek" : "memoryManager.repeatDay")}
+                      {t(
+                        r.repeat === "year"
+                          ? "memoryManager.repeatYear"
+                          : r.repeat === "month"
+                            ? "memoryManager.repeatMonth"
+                            : r.repeat === "week"
+                              ? "memoryManager.repeatWeek"
+                              : "memoryManager.repeatDay",
+                      )}
                     </Text>
                   ) : null}
                   <View style={styles.cardActions}>

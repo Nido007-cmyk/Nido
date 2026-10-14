@@ -146,7 +146,7 @@ export interface AgentLoopOptions {
   /** 0.1.20 (P3-10): notas con cuerpo para buscar dentro de ellas. */
   listNotesFull?: () => Promise<Array<{ id: string; title: string; body: string }>>;
   /** 0.1.14: recordatorios pendientes para "qué recordatorios tengo". */
-  listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null; repeat?: "day" | "week" | null }>>;
+  listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null; repeat?: "day" | "week" | "month" | "year" | null }>>;
   /**
    * 0.1.25: almacén de la elección pendiente («¿cuál nota?») entre
    * turnos. La app lo crea una vez y lo pasa en cada envío; el loop
@@ -963,16 +963,19 @@ export async function runAgentLoop(
     }
     if (dueAt) {
       const { reminderTitleForFact } = await import("./rememberRouter");
+      // 0.1.35: un cumpleaños se repite cada año (antes avisaba una sola vez).
+      const yearly = /cumplea[ñn]os|birthday|anivers[aá]rio/i.test(extraction.content);
       const reminder = await saveReminder({
         text: reminderTitleForFact(extraction.content),
         dueAt,
+        repeat: yearly ? "year" : null,
       });
       // M10 FIX: programar notificación del sistema.
       try {
         const { scheduleReminderNotification } = await import("../../notify/notifications");
-        await scheduleReminderNotification(reminder.id, reminder.text, new Date(dueAt));
+        await scheduleReminderNotification(reminder.id, reminder.text, new Date(dueAt), yearly ? "year" : null);
       } catch { /* best-effort */ }
-      reminderNote = routerMessage("factReminderNote", reminderLang);
+      reminderNote = routerMessage(yearly ? "factReminderYearlyNote" : "factReminderNote", reminderLang);
     }
     // Retornar directamente con confirmación honesta. El trace indica
     // que fue la vía determinística, no el modelo.

@@ -277,3 +277,33 @@ describe("0.1.34: «Haz uno» tras una lista de recordatorios vacía", () => {
     expect(extractToolAction("Haz uno", new Date(t0.getTime() + 10 * 60_000))).toBeNull();
   });
 });
+
+describe("0.1.35: recordatorios cada mes y cada año", () => {
+  const at = (r: { dueAt: string | null } | null) => new Date(r!.dueAt!);
+  it.each([
+    ["recuérdame pagar el alquiler el día 1 de cada mes", "pagar el alquiler", 1],
+    ["recuérdame cada mes el día 5 pagar la luz", "pagar la luz", 5],
+    ["remind me to pay rent on the 1st of every month", "pay rent", 1],
+    ["me lembra de pagar o aluguel todo dia 5 de cada mês", "pagar o aluguel", 5],
+  ])("mensual: %s", (s, text, day) => {
+    const r = extractReminderAction(s, NOW);
+    expect(r).toMatchObject({ text, repeat: "month" });
+    expect(at(r).getDate()).toBe(day);
+    expect(at(r).getTime()).toBeGreaterThan(NOW.getTime());
+  });
+  it.each([
+    ["recuérdame cada año el 15 de marzo el cumpleaños de mamá", "el cumpleaños de mamá"],
+    ["remind me every year on March 15 about mom's birthday", "mom's birthday"],
+    ["me lembra todo ano em 15 de março do aniversário da mãe", "aniversário da mãe"],
+  ])("anual: %s", (s, text) => {
+    const r = extractReminderAction(s, NOW);
+    expect(r).toMatchObject({ text, repeat: "year" });
+    expect([at(r).getMonth(), at(r).getDate()]).toEqual([2, 15]);
+  });
+  it("respuestas en los tres idiomas", () => {
+    const iso = new Date(2027, 2, 15, 9, 0).toISOString();
+    expect(reminderRepeatWhen(iso, "year", "es")).toBe(" cada año el 15 de marzo a las 9:00");
+    expect(reminderRepeatWhen(iso, "month", "en")).toMatch(/^ every month on the 15th at /);
+    expect(reminderRepeatWhen(iso, "month", "pt")).toBe(" todo mês no dia 15 às 9:00");
+  });
+});

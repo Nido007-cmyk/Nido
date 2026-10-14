@@ -4,6 +4,20 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.35-alpha — 2026-10-14
+
+### Added
+- Reminders that repeat every month or every year: "remind me to pay rent
+  on the 1st of every month", "recuérdame cada año el 15 de marzo…", "me
+  lembra todo dia 5 de cada mês…". Birthdays saved to memory ("my mom's
+  birthday is March 15th") now get a reminder that repeats every year
+  (before, it fired only once). "Every 2 days" is still not supported and
+  NIDO says so.
+
+### Fixed
+- Reminder titles no longer keep the calendar date inside ("el 15 de marzo
+  el cumpleaños…" → "el cumpleaños de mamá").
+
 ## 0.1.34-alpha — 2026-10-13
 
 Fixes from the physical test on the Galaxy Tab A9+.

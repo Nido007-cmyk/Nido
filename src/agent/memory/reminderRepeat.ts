@@ -14,10 +14,35 @@
  * repitiera).
  */
 
-export type ReminderRepeat = "day" | "week";
+export type ReminderRepeat = "day" | "week" | "month" | "year";
 
 export function isReminderRepeat(v: unknown): v is ReminderRepeat {
-  return v === "day" || v === "week";
+  return v === "day" || v === "week" || v === "month" || v === "year";
+}
+
+/** 0.1.35: «cada mes» / «cada año» (cumpleaños) se guardan en su propia tabla. */
+export function isCalendarRepeat(v: unknown): v is "month" | "year" {
+  return v === "month" || v === "year";
+}
+
+/**
+ * Suma `n` pasos de calendario conservando el día; si el día no existe en
+ * ese mes (31 en abril, 29-F en año no bisiesto) se salta a la siguiente
+ * vez en que sí exista, como hace la alarma del sistema.
+ */
+function addCalendar(base: Date, repeat: "month" | "year", n: number): Date {
+  const d = new Date(base);
+  const day = base.getDate();
+  for (let k = n; k < n + 48; k++) {
+    const t = new Date(base);
+    t.setDate(1);
+    if (repeat === "month") t.setMonth(base.getMonth() + k);
+    else t.setFullYear(base.getFullYear() + k);
+    const month = t.getMonth();
+    t.setDate(day);
+    if (t.getMonth() === month) return t;
+  }
+  return d;
 }
 
 /**
@@ -25,6 +50,14 @@ export function isReminderRepeat(v: unknown): v is ReminderRepeat {
  * (y el mismo día de la semana si es semanal) que `base`.
  */
 export function nextOccurrence(base: Date, repeat: ReminderRepeat, after: Date): Date {
+  if (isCalendarRepeat(repeat)) {
+    // Por pasos de calendario desde la base: primero hacia atrás mientras
+    // la anterior siga siendo futura, luego hacia delante.
+    let k = 0;
+    while (k > -600 && addCalendar(base, repeat, k - 1).getTime() > after.getTime()) k--;
+    while (addCalendar(base, repeat, k).getTime() <= after.getTime()) k++;
+    return addCalendar(base, repeat, k);
+  }
   const next = new Date(base);
   const step = repeat === "day" ? 1 : 7;
   if (next.getTime() > after.getTime()) {
