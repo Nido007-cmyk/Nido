@@ -1,0 +1,53 @@
+# Avisos de licencias de terceros al día en el repo (2026-10-14).
+#
+# THIRD_PARTY_NOTICES.md y src/legal/thirdPartyNotices.json se generan desde
+# node_modules (scripts/third-party-notices.mjs). Cuando cambian las
+# dependencias o el generador, este workflow los regenera y sube el
+# resultado a la misma rama. El APK no depende de esto: su workflow los
+# regenera antes de compilar.
+#
+# Los push de Dependabot reciben un token de solo lectura: se saltan, y los
+# avisos se actualizan al fusionar (push a main).
+
+name: Third-party notices
+
+on:
+  push:
+    paths:
+      - 'package-lock.json'
+      - 'scripts/third-party-notices.mjs'
+      - 'scripts/lib/third-party-notices-lib.mjs'
+      - '.github/workflows/third-party-notices.yml'
+
+concurrency:
+  group: third-party-notices-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  notices:
+    if: github.actor != 'dependabot[bot]' && github.ref_type == 'branch'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      # --ignore-scripts: para leer licencias no hace falta ejecutar nada de
+      # los paquetes.
+      - run: npm ci --ignore-scripts
+      - run: npm run notices
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- src/legal THIRD_PARTY_NOTICES.md; then
+            echo "Avisos ya al día."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/legal/thirdPartyNotices.json THIRD_PARTY_NOTICES.md
+          git commit -m "chore(legal): avisos de licencias de terceros al día"
+          git push

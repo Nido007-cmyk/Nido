@@ -508,7 +508,10 @@
     "limitsTitle": "Conheça os limites",
     "limitsBody": "O NIDO executa modelos de IA dentro do seu telefone. Eles podem errar ou inventar dados, e os modelos menores com mais frequência. Não dependa só do NIDO para decisões de saúde, jurídicas, financeiras ou de segurança: consulte um profissional ou uma fonte confiável.",
     "privacyTitle": "Privacidade e termos",
-    "privacyBody": "O NIDO não tem contas, nem análise de uso, nem servidores próprios. As únicas conexões que faz são os downloads que você inicia (modelos e pacotes de conhecimento), e elas aparecem no registro de rede acima. A política de privacidade e os termos de uso completos estão em PRIVACY.md e TERMS.md no repositório."
+    "privacyBody": "O NIDO não tem contas, nem análise de uso, nem servidores próprios. As únicas conexões que faz são os downloads que você inicia (modelos e pacotes de conhecimento), e elas aparecem no registro de rede acima. A política de privacidade e os termos de uso completos estão em PRIVACY.md e TERMS.md no repositório.",
+    "licensesTitle": "Licenças",
+    "licensesBody": "A licença do NIDO, de cada modelo de IA, do texto da Wikipédia que ele traz e das bibliotecas com que é feito.",
+    "licensesOpen": "Ver licenças"
   },
   "sourceFootnotes": {
     "title": "Fontes offline consultadas",
@@ -1606,5 +1609,25 @@
     "ok": "Os lembretes chegam na hora exata.",
     "off": "O Android pode atrasar seus lembretes alguns minutos quando o telefone está em repouso. Para chegarem na hora exata, permita “Alarmes e lembretes” para o NIDO.",
     "allow": "Permitir alarmes exatos"
+  },
+  "licenses": {
+    "title": "Licenças",
+    "intro": "O NIDO é software livre. Aqui está o que diz cada licença que se aplica ao app e ao que você baixa com ele. Os links são para copiar: o NIDO não abre a internet.",
+    "appTitle": "NIDO",
+    "appBody": "Licença MIT. O NIDO parte do BOAR (também MIT); os dois avisos de copyright estão no texto abaixo.",
+    "modelsTitle": "Modelos de IA e pacotes de conhecimento",
+    "modelsBody": "Não vêm dentro do app: são baixados de quem os publica quando você os escolhe, e cada um mantém sua licença.",
+    "knowledgeTitle": "Texto da Wikipédia",
+    "knowledgeBody": "O app traz 300 introduções de artigos da Wikipédia, e os pacotes de conhecimento opcionais trazem mais. Texto dos colaboradores da Wikipédia (wikipedia.org), sob a licença CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0). Toda resposta que o usa mostra a URL do artigo. Os pacotes compilados pelo NIDO são compartilhados com a mesma licença. O NIDO não é afiliado à Fundação Wikimedia.",
+    "embeddingNote": "O modelo de busca multilíngue (multilingual-e5-small, da intfloat) é MIT, Copyright (c) Microsoft Corporation; o NIDO publica a conversão para GGUF com esse aviso.",
+    "thirdPartyTitle": "Software de terceiros",
+    "thirdPartyBody": "{{count}} pacotes de código aberto. Toque em um para ver a licença.",
+    "thirdPartyPartial": "Esta compilação não traz os textos das licenças de terceiros; eles estão em THIRD_PARTY_NOTICES.md no repositório.",
+    "noText": "Este pacote não traz arquivo de licença; vale a licença que ele declara.",
+    "licenseLink": "Texto oficial",
+    "notes": {
+      "lfm": "Não é Apache nem MIT: o uso comercial só é permitido a entidades com menos de 10 milhões de USD de receita anual, e quem o redistribuir deve entregar uma cópia da licença.",
+      "ccBySa": "Você pode compartilhar e adaptar dando crédito à Wikipédia (e ao NIDO como compilador dos pacotes), linkando a licença, indicando as mudanças e mantendo CC BY-SA 4.0."
+    }
   }
 }

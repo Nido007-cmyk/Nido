@@ -133,6 +133,7 @@ phone (Xiaomi 2311DRK48G, Dimensity 8300, 11.6 GB RAM; see
 | Candidate | Params | Quant | Size | License | Measured on the phone |
 |---|---|---|---|---|---|
 | Qwen2.5-0.5B-Instruct | 0.5B dense | Q4_K_M | 0.38GB | Apache-2.0 | not benchmarked yet; the low-RAM default (n_ctx 2048) |
+| Qwen3-0.6B | 0.6B dense | Q4_K_M (unsloth) | 0.40GB | Apache-2.0 | not benchmarked yet; optional since 0.1.21, answers without "thinking" (noThink), n_ctx 3072 |
 | Phi-3.5-mini-instruct | 3.8B dense | Q4_K_M | 2.39GB | MIT | ~4 tok/s; most complete comparisons and syntheses |
 | Qwen2.5-7B-Instruct | 7B dense | Q4_K_M | 4.68GB | Apache-2.0 | ~2.7 tok/s; accurate, often too slow for the 120s step limit |
 | LFM2.5-8B-A1B | 8B MoE, ~1.5B active | Q4_K_M | 5.16GB | LFM Open License v1.0 | ~15 tok/s; best reasoning, but it thinks first and needs a larger answer budget |

@@ -20,7 +20,10 @@
     "limitsTitle": "Conoce sus límites",
     "limitsBody": "NIDO ejecuta modelos de IA dentro de tu teléfono. Pueden equivocarse o inventar datos, y los modelos más pequeños con más frecuencia. No dependas solo de NIDO para decisiones de salud, legales, financieras o de seguridad: consulta a un profesional o una fuente confiable.",
     "privacyTitle": "Privacidad y términos",
-    "privacyBody": "NIDO no tiene cuentas, ni analítica, ni servidores propios. Las únicas conexiones que hace son las descargas que tú inicias (modelos y paquetes de conocimiento), y aparecen en el registro de red de arriba. La política de privacidad y los términos de uso completos están en PRIVACY.md y TERMS.md del repositorio."
+    "privacyBody": "NIDO no tiene cuentas, ni analítica, ni servidores propios. Las únicas conexiones que hace son las descargas que tú inicias (modelos y paquetes de conocimiento), y aparecen en el registro de red de arriba. La política de privacidad y los términos de uso completos están en PRIVACY.md y TERMS.md del repositorio.",
+    "licensesTitle": "Licencias",
+    "licensesBody": "Qué licencia tiene NIDO, cada modelo de IA, el texto de Wikipedia que trae y las librerías con las que está hecho.",
+    "licensesOpen": "Ver licencias"
   },
   "catalogItemCard": {
     "activeNote": "En uso actualmente",
@@ -1606,5 +1609,25 @@
     "ok": "Los recordatorios llegan a la hora exacta.",
     "off": "Android puede retrasar tus recordatorios unos minutos cuando el teléfono está en reposo. Para que lleguen a la hora exacta, permite «Alarmas y recordatorios» para NIDO.",
     "allow": "Permitir alarmas exactas"
+  },
+  "licenses": {
+    "title": "Licencias",
+    "intro": "NIDO es software libre. Aquí está lo que dice cada licencia que aplica a la app y a lo que descargas con ella. Los enlaces son para copiarlos: NIDO no abre internet.",
+    "appTitle": "NIDO",
+    "appBody": "Licencia MIT. NIDO parte de BOAR (también MIT); los dos avisos de copyright van en el texto de abajo.",
+    "modelsTitle": "Modelos de IA y paquetes de conocimiento",
+    "modelsBody": "No vienen dentro de la app: se descargan de quien los publica cuando los eliges, y cada uno conserva su licencia.",
+    "knowledgeTitle": "Texto de Wikipedia",
+    "knowledgeBody": "La app trae 300 introducciones de artículos de Wikipedia, y los paquetes de conocimiento opcionales traen más. Texto de los colaboradores de Wikipedia (wikipedia.org), con licencia CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0). Cada respuesta que lo usa enseña la URL de su artículo. Los paquetes compilados por NIDO se comparten con la misma licencia. NIDO no está afiliado a la Fundación Wikimedia.",
+    "embeddingNote": "El modelo de búsqueda multilingüe (multilingual-e5-small, de intfloat) es MIT, Copyright (c) Microsoft Corporation; NIDO publica su conversión a GGUF con ese aviso.",
+    "thirdPartyTitle": "Software de terceros",
+    "thirdPartyBody": "{{count}} paquetes de código abierto. Toca uno para ver su licencia.",
+    "thirdPartyPartial": "Esta compilación no trae los textos de las licencias de terceros; están en THIRD_PARTY_NOTICES.md del repositorio.",
+    "noText": "Este paquete no trae archivo de licencia; aplica la licencia que declara.",
+    "licenseLink": "Texto oficial",
+    "notes": {
+      "lfm": "No es Apache ni MIT: el uso comercial solo está permitido a entidades con menos de 10 millones de USD de ingresos al año, y quien lo redistribuya debe entregar copia de la licencia.",
+      "ccBySa": "Puedes compartir y adaptar dando crédito a Wikipedia (y a NIDO como compilador de los paquetes), enlazando la licencia, indicando los cambios y manteniendo CC BY-SA 4.0."
+    }
   }
 }

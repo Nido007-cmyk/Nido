@@ -4,6 +4,24 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.40-alpha — 2026-10-14
+
+### Added
+- **About → Licenses.** NIDO now shows, inside the app, the licenses that
+  apply to it: its own MIT license (with the notice of BOAR, the project it
+  started from), the license of every AI model and knowledge pack you can
+  download (with the conditions that matter, such as the LFM2.5 license's
+  limit on commercial use), the credit and CC BY-SA 4.0 license of the
+  Wikipedia text that comes inside the app, and the full license text of
+  each open-source package the app is built with.
+
+### Changed
+- The license documents in the repository were reviewed and brought up to
+  date: a refreshed model license audit (Qwen3-0.6B and the multilingual
+  search model included), a new `THIRD_PARTY_NOTICES.md`, and corrections
+  in `ATTRIBUTION.md` (the MIT license asks to keep the copyright notice; a
+  visible credit is appreciated but not required).
+
 ## 0.1.39-alpha — 2026-10-14
 
 ### Added

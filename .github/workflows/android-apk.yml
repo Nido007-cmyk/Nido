@@ -122,6 +122,12 @@ jobs:
       - name: Install JS dependencies
         run: npm ci
 
+      - name: Third-party notices (bundled into the app)
+        # Las licencias de los paquetes que se compilan dentro del APK
+        # viajan con él (Acerca de → Licencias): se regeneran aquí, desde
+        # el node_modules exacto de esta compilación, antes de empaquetar.
+        run: npm run notices
+
       - name: Verify dependency pins (F-8 build gate)
         # The release/Hermes APK must be built from the exact native modules
         # we reviewed: fail the build if any native/security-sensitive dep

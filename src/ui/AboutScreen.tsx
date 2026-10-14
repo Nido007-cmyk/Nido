@@ -21,6 +21,7 @@ import { ScheduledTasksCard } from "./ScheduledTasksCard";
 import { SecurityStatusCard } from "./SecurityStatusCard";
 import { BackupScreen } from "./BackupScreen";
 import { CrashReportCard } from "./CrashReportCard";
+import { LicensesScreen } from "./LicensesScreen";
 
 export function AboutScreen({ onClose }: { onClose: () => void }) {
   const { colors, typography } = useTheme();
@@ -29,6 +30,8 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   // U1: la pantalla de respaldo existía pero ningún menú llevaba a ella.
   const [showBackup, setShowBackup] = useState(false);
+  // 0.1.40: licencias de la app, de los modelos y de terceros.
+  const [showLicenses, setShowLicenses] = useState(false);
   const handleClose = () => {
     impact(ImpactFeedbackStyle.Light);
     onClose();
@@ -36,6 +39,9 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
 
   if (showBackup) {
     return <BackupScreen onClose={() => setShowBackup(false)} />;
+  }
+  if (showLicenses) {
+    return <LicensesScreen onClose={() => setShowLicenses(false)} />;
   }
 
   return (
@@ -140,6 +146,22 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
           <View style={styles.repoBox}>
             <Text style={styles.repoText}>{t("aboutScreen.repoUrl")}</Text>
           </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{t("aboutScreen.licensesTitle")}</Text>
+          <Text style={styles.paragraph}>{t("aboutScreen.licensesBody")}</Text>
+          <Pressable
+            style={styles.actionBtn}
+            onPress={() => {
+              impact(ImpactFeedbackStyle.Light);
+              setShowLicenses(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t("aboutScreen.licensesOpen")}
+          >
+            <Text style={styles.actionBtnText}>{t("aboutScreen.licensesOpen")}</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </View>

@@ -1,6 +1,6 @@
 {
   "name": "nido-app",
-  "version": "0.1.39",
+  "version": "0.1.40",
   "description": "NIDO — your offline agent: 100% local personal AI assistant for Android with total privacy (zero network after install, encrypted on-device memory).",
   "license": "MIT",
   "main": "index.ts",
@@ -74,6 +74,7 @@
     "pack:build": "node scripts/build-knowledge-pack.mjs",
     "pack:push": "node scripts/push-knowledge-pack.mjs",
     "test:components": "jest",
+    "notices": "node scripts/third-party-notices.mjs",
     "test:all": "npm test && npm run test:components"
   },
   "private": true

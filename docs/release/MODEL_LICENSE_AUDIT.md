@@ -1,4 +1,9 @@
-# Model + Corpus License Audit (2026-09-27)
+# Model + Corpus License Audit (2026-09-27, re-run 2026-10-14)
+
+> **Re-run 2026-10-14 (0.1.40):** see [the section at the end](#re-run-2026-10-14).
+> It adds the assets that joined the catalog after this audit, corrects one
+> wrong statement (the APK *does* bundle Wikipedia text) and records which
+> gaps are now closed.
 
 **Status:** RESEARCH / EVIDENCE ONLY. No code changed, nothing committed.
 **Scope:** every downloadable asset in `src/models/manifest.ts` (`MODEL_CATALOG`).
@@ -132,3 +137,64 @@ clauses below (notably LFM §4(a)).
 **Explicit non-goals of this audit:** legal advice (counsel review still required before
 public distribution); patent-claim analysis beyond the license texts' express grants;
 verification of the *weights'* provenance beyond the upstream card/license declarations.
+
+
+## Re-run 2026-10-14
+
+**Method:** license labels re-checked against each publisher's model card on
+Hugging Face (2026-10-14). Pinned revisions in `src/models/manifest.ts` fix the
+exact bytes, so the license at those revisions cannot change underneath us.
+
+### Assets added after 2026-09-27
+
+| Asset | License (manifest → upstream) | Evidence | Verdict |
+|---|---|---|---|
+| `qwen2.5-0.5b-instruct-q4km` / `-q5km` | Apache-2.0 → Apache-2.0 ✓ | `Qwen/Qwen2.5-0.5B-Instruct` repository header "License: apache-2.0", LICENSE at `/blob/main/LICENSE` | **GO** (runtime download from bartowski's GGUF) |
+| `qwen3-0.6b-q4km` | Apache-2.0 → Apache-2.0 ✓ | `unsloth/Qwen3-0.6B-GGUF` card "License: apache-2.0", base `Qwen/Qwen3-0.6B`; the official `ggml-org/Qwen3-0.6B-GGUF` card is also apache-2.0 | **GO** |
+| `multilingual-e5-small-q8` | MIT → MIT ✓ | `intfloat/multilingual-e5-small` README front matter `license: mit`. NIDO **redistributes** this one (its own GGUF conversion in the `knowledge-packs-v2` release): the MIT notice (Copyright (c) Microsoft Corporation) is shipped next to it in `LICENSE-ATTRIBUTION.txt` ✓ | **GO** |
+| `wiki-vital5-e5` | CC BY-SA 4.0 | Compiled by NIDO from Wikipedia; notice inside the file (`meta`) and in `LICENSE-ATTRIBUTION.txt` ✓ | **GO** |
+
+Unchanged since 2026-09-27 and re-confirmed on the cards: Phi-3.5-mini (MIT),
+Gemma 4 E4B (apache-2.0, card links `ai.google.dev/gemma/docs/gemma_4_license`),
+LFM2.5-8B-A1B (card "License: lfm1.0", i.e. the LFM Open License v1.0 read in
+full on 2026-09-27; the USD 10M commercial threshold in §5 still applies).
+
+### Correction: Wikipedia text IS inside the APK
+
+The 2026-09-27 audit said the APK bundles no corpus. That is wrong for one
+file: `assets/corpus/corpus.json` (300 Wikipedia introductions) is imported by
+`src/rag/seedCorpus.ts` and compiled into the JS bundle. Shipping the APK is
+therefore distribution of CC BY-SA 4.0 material, which needs the credit, a
+license notice and a link to the license *with* the app. Closed in 0.1.40 by
+About → Licenses (see below); each entry also keeps its article URL, and
+answers that use it show the source.
+
+### Gap list status
+
+1. `THIRD_PARTY_NOTICES.md` — **closed.** Generated from `package-lock.json` and
+   the license files in `node_modules` (`npm run notices`); the APK workflow
+   regenerates it right before building, and the `Third-party notices`
+   workflow keeps the repository copy up to date. Election recorded:
+   `node-forge` is used under **BSD-3-Clause** (offered as BSD-3-Clause OR GPL-2.0).
+2. License texts reachable from the app — **closed.** About → Licenses shows
+   NIDO's MIT license (with BOAR's notice), every catalog asset with its license
+   name, the canonical URL and the conditions that matter (LFM §4/§5, CC BY-SA),
+   and the full license text of every third-party package.
+3. CC BY-SA 4.0 notice for the corpus — **closed** (Licenses screen,
+   `ATTRIBUTION.md`, `assets/packs/ATTRIBUTION.txt`; the `knowledge-packs-v1`
+   release, whose description referred to an `ATTRIBUTION.txt` that was never
+   uploaded, now carries it).
+4. AboutScreen legal section — **closed** (same screen).
+5. Link to full license texts — **closed** (same screen; URLs shown as
+   selectable text because the app does not open the network).
+6. `/resolve/main/` pointers — **closed earlier:** every Hugging Face entry
+   now pins a `revision`, and `assertImmutableSourcePreDownload` refuses to
+   download a branch-pointer URL without one (`catalogIntegrity.test.ts`).
+
+**Still open (documented, not blocking at alpha scale):**
+- Android libraries resolved by Gradle (AndroidX, Kotlin, etc.; Apache-2.0)
+  are not yet listed in the notices.
+- LFM §5: if the project ever approaches USD 10M annual revenue, LFM2.5 must
+  leave the catalog or be licensed separately.
+- Before adding LFM2.5-350M (or any other LFM model): confirm its LICENSE file
+  is the same LFM Open License v1.0 and pin its revision.

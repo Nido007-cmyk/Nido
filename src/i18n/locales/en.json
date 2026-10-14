@@ -508,7 +508,10 @@
     "limitsTitle": "Know its limits",
     "limitsBody": "NIDO runs AI models inside your phone. They can be wrong or make things up, and smaller models more often. Do not rely on NIDO alone for health, legal, financial or safety decisions: check with a professional or a trusted source.",
     "privacyTitle": "Privacy and terms",
-    "privacyBody": "NIDO has no accounts, no analytics and no servers of its own. The only connections it makes are the downloads you start (models and knowledge packs), and they are listed in the network log above. The full privacy policy and terms of use are in PRIVACY.md and TERMS.md in the repository."
+    "privacyBody": "NIDO has no accounts, no analytics and no servers of its own. The only connections it makes are the downloads you start (models and knowledge packs), and they are listed in the network log above. The full privacy policy and terms of use are in PRIVACY.md and TERMS.md in the repository.",
+    "licensesTitle": "Licenses",
+    "licensesBody": "The license of NIDO, of each AI model, of the Wikipedia text it carries and of the libraries it is built with.",
+    "licensesOpen": "View licenses"
   },
   "sourceFootnotes": {
     "title": "Offline sources consulted",
@@ -1606,5 +1609,25 @@
     "ok": "Reminders arrive at the exact time.",
     "off": "Android may delay your reminders by a few minutes while the phone is idle. To get them at the exact time, allow “Alarms & reminders” for NIDO.",
     "allow": "Allow exact alarms"
+  },
+  "licenses": {
+    "title": "Licenses",
+    "intro": "NIDO is open-source software. This is what each license that applies to the app, and to what you download with it, says. Links are for copying: NIDO does not open the internet.",
+    "appTitle": "NIDO",
+    "appBody": "MIT License. NIDO is based on BOAR (also MIT); both copyright notices are in the text below.",
+    "modelsTitle": "AI models and knowledge packs",
+    "modelsBody": "They are not inside the app: they are downloaded from their publishers when you choose them, and each keeps its own license.",
+    "knowledgeTitle": "Wikipedia text",
+    "knowledgeBody": "The app carries 300 Wikipedia article introductions, and the optional knowledge packs carry more. Text by Wikipedia contributors (wikipedia.org), licensed under CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0). Every answer that uses it shows its article URL. The packs compiled by NIDO are shared under the same license. NIDO is not affiliated with the Wikimedia Foundation.",
+    "embeddingNote": "The multilingual search model (multilingual-e5-small, by intfloat) is MIT, Copyright (c) Microsoft Corporation; NIDO publishes its GGUF conversion with that notice.",
+    "thirdPartyTitle": "Third-party software",
+    "thirdPartyBody": "{{count}} open-source packages. Tap one to read its license.",
+    "thirdPartyPartial": "This build does not include the third-party license texts; they are in THIRD_PARTY_NOTICES.md in the repository.",
+    "noText": "This package ships no license file; the license it declares applies.",
+    "licenseLink": "Official text",
+    "notes": {
+      "lfm": "Not Apache or MIT: commercial use is only allowed for entities with under USD 10 million in annual revenue, and anyone who redistributes it must give a copy of the license.",
+      "ccBySa": "You may share and adapt it by crediting Wikipedia (and NIDO as compiler of the packs), linking the license, indicating changes and keeping CC BY-SA 4.0."
+    }
   }
 }
