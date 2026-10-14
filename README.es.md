@@ -37,17 +37,28 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
 - **Conversa sin conexión** con un modelo de lenguaje pequeño que corre en
   el teléfono (llama.cpp mediante `llama.rn`).
 - **Recuerda por ti**: datos, notas y recordatorios, guardados en una base
-  cifrada con SQLCipher. La clave vive en el Keystore de Android.
-- **Actúa cuando se lo pides**: recordatorios, notas, eventos de calendario,
-  conversión de unidades, cálculos, abrir enlaces. Todo lo que tiene efecto
-  fuera de la app pide antes tu confirmación.
+  cifrada con SQLCipher. La clave vive en el Keystore de Android. Los
+  cumpleaños que le cuentas tienen recordatorio cada año.
+- **Actúa cuando se lo pides**: recordatorios (una vez, o cada día, semana,
+  mes o año), cuentas atrás, notas, eventos de calendario, conversión de
+  unidades, cálculos, abrir enlaces. Todo lo que tiene efecto fuera de la
+  app pide antes tu confirmación.
 - **Responde con tus documentos**: importa archivos `.txt`, `.md`, `.csv`,
   `.json` o `.pdf` y NIDO los indexa en el teléfono.
+- **Sabe cosas sin internet**: una base de conocimiento integrada y un
+  paquete opcional de Wikipedia (unos 116.000 artículos). Con la búsqueda
+  multilingüe activada puedes preguntar en español, portugués o inglés, y las
+  respuestas muestran los artículos de donde salen; si nada de la base
+  encaja de verdad, no se muestra ninguna fuente.
 - **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
   teléfonos emparejados, sin internet y sin servidor. El emparejamiento se
   hace en persona con un código QR.
 - **Muestra su uso de red**: cada descarga que hace la app queda registrada
   y visible en la pantalla Acerca de.
+- **Se mide a sí mismo, en el teléfono**: la pantalla Telemetría de ejecución (menú) muestra la
+  velocidad de generación, el tiempo hasta la primera palabra y cuánto tarda
+  en decidir qué hacer con cada mensaje; todo se guarda en el teléfono y no
+  se envía a ningún sitio.
 
 La interfaz está disponible en español, inglés y portugués.
 

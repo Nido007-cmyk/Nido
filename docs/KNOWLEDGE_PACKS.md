@@ -90,3 +90,24 @@ article can't crowd out another topic. Comparing a question against every
 embedding in a 100k-chunk pack would take seconds on the phone, so candidates
 come from keywords first. A pack built with a different embedding model is
 ignored with a warning, since its embeddings wouldn't match the app's.
+
+### With multilingual search on
+
+With multilingual search on (Settings → Offline Knowledge Base), NIDO uses the
+multilingual-e5-small embedding model and the multilingual version of the
+Vital pack (`wiki-vital5-e5`). A question in Spanish shares no keywords with an
+English article, so keyword candidates aren't enough: the app builds, once and
+in the background, a vector index of the whole pack and searches all of it.
+Until that index is ready it falls back to keyword-first search.
+
+e5 gives a high similarity to almost any pair of texts, so a fixed score floor
+alone let unrelated articles through. Since 0.1.36 the best match must also
+**stand out**: it has to beat the average of results 10–50 for the same
+question by a margin (`distinctGap` / `packDistinctGap` in
+`src/rag/embeddingProfile.ts`). If nothing stands out, the question has no
+answer in the pack and no source is shown. The margin is calibrated in CI
+(`.github/workflows/multilingual-e5.yml`, `scripts/multilingual/e5_pipeline.py`)
+against questions in Spanish, English and Portuguese, including questions with
+no answer in the base. At the chosen value (0.03), wrong sources dropped from
+20 % to 10 % on the built-in base and from 33 % to 22 % with the Vital pack,
+with no correct answers lost.

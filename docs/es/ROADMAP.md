@@ -32,6 +32,8 @@ Documentamos qué está verificado, qué es experimental, qué está incompleto 
 ### Después: Profundizando el producto
 
 - Mejorar la comprensión local del tiempo, contexto y seguimiento
+- Primera respuesta más rápida en teléfonos modestos (prompts más cortos, mejor reutilización de la caché del modelo)
+- Medir modelos pequeños más nuevos (Qwen3 y otros) en teléfonos reales: calidad, velocidad y batería
 - Fortalecer la experiencia NIDO-a-NIDO
 - Continuar mejorando voz e interacción local
 - Pulir la experiencia en inglés, español y portugués
@@ -41,6 +43,7 @@ Documentamos qué está verificado, qué es experimental, qué está incompleto 
 ### Más adelante: Creciendo el ecosistema
 
 - Preparar NIDO para una distribución pública más amplia
+- Auditoría de seguridad independiente
 - Distribución mediante Google Play
 - Sitio web dedicado y documentación pública ampliada
 - Facilitar las contribuciones de la comunidad open source

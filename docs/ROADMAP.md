@@ -32,6 +32,8 @@ We document what is verified, experimental, incomplete, or still awaiting physic
 ### Next: Deepening the product
 
 - Improve on-device understanding of time, context and follow-through
+- Faster first answer on low-end phones (shorter prompts, better reuse of the model's cache)
+- Benchmark newer small models (Qwen3 and others) on real phones: quality, speed and battery
 - Strengthen the NIDO-to-NIDO experience
 - Continue improving voice and local interaction
 - Polish the experience across English, Spanish and Portuguese
@@ -41,6 +43,7 @@ We document what is verified, experimental, incomplete, or still awaiting physic
 ### Later: Growing the ecosystem
 
 - Prepare NIDO for a broader public release
+- Independent security audit
 - Google Play distribution
 - Dedicated website and expanded public documentation
 - Easier contribution workflows for the open-source community
