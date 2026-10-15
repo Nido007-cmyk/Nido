@@ -994,6 +994,7 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
 type Key =
   | "timeNow"
   | "dateToday"
+  | "weekdayOf"
   | "noteSaved"
   | "noNotes"
   | "notesHeader"
