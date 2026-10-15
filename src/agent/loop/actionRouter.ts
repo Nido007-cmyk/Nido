@@ -519,7 +519,9 @@ function extractReminderCore(userText: string): ReminderAction | null {
   // 0.1.20: también el "de" de «avísame a las 3 de estudiar» (queda
   // «estudiar») y de «un recordatorio de comprar pan».
   // 0.1.32: puede haber varios («para el lunes de pagar…» → «para de pagar…»).
-  text = text.replace(/^(?:(?:para|de|to|for|about|sobre|do|da)\s+)+/i, "").trim();
+  // 0.1.41 (prueba física): «avísame en 20 minutos que saque la ropa» dejaba
+  // el título «que saque la ropa»; el «que» de enlace tampoco es contenido.
+  text = text.replace(/^(?:(?:para|de|que|to|for|about|sobre|do|da)\s+)+/i, "").trim();
 
   // F6 (auditoría 2026-10-10): "recuérdame mañana" dejaba el texto vacío
   // tras quitar la fecha. Sin texto no hay recordatorio: que decida el modelo.
