@@ -132,14 +132,15 @@ describe("runAgentLoop", () => {
   });
 
   it("P2.5: BUG-4 usa la vía constrained antes del retry legacy", async () => {
-    // "ten en cuenta que llueve": intent recordar, sin pre-router
+    // "guarda esto en tu memoria por favor": intent recordar, sin pre-router
+    // (0.1.41: «ten en cuenta que…» y «a partir de ahora…» ya los resuelve rememberRouter)
     // determinístico → llega al modelo.
     const engine = fakeEngine([
       "Listo", // el modelo no emite tool call (BUG-4)
       '{"name": "remember_fact", "arguments": {"content": "llueve"}}', // vía constrained
       "Guardado en memoria.", // turno tras la observación
     ]);
-    const result = await runAgentLoop("ten en cuenta que llueve", {
+    const result = await runAgentLoop("guarda esto en tu memoria por favor", {
       engine,
       handlers: {
         remember_fact: async (args) => `guardado: ${String(args.content)}`,
@@ -163,7 +164,7 @@ describe("runAgentLoop", () => {
       '```tool\n{"name": "remember_fact", "arguments": {"content": "llueve"}}\n```', // retry legacy
       "Guardado.",
     ]);
-    const result = await runAgentLoop("ten en cuenta que llueve", {
+    const result = await runAgentLoop("guarda esto en tu memoria por favor", {
       engine,
       handlers: {
         remember_fact: async (args) => `guardado: ${String(args.content)}`,

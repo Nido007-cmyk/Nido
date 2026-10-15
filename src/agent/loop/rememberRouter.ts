@@ -55,6 +55,20 @@ const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
   // "guarda una nota…" (esa frase no empieza con "guarda que" y la
   // ruta de notas corre por toolRouter).
   { re: /gu[aá]rda(?:te)? que[:\s]+(.+)/i, group: 1 },
+  // 0.1.41 (prueba física, Tab A9+): «ten en cuenta que llueve mañana»
+  // clasificaba como recordar pero ninguna extracción la reconocía: caía
+  // al modelo pequeño, que tardó 43 s en decir «no pude guardar eso».
+  // (No se añaden «anota que» / «apunta que» / «toma nota»: son notas,
+  // las resuelve toolRouter.)
+  { re: /\bten(?:ga|gan)? (?:muy |siempre )?en cuenta(?: siempre)? que[:\s]+(.+)/i, group: 1 },
+  { re: /\bten(?:ga|gan)? (?:muy |siempre )?en cuenta(?: esto| eso)?:\s*(.+)/i, group: 1 },
+  // 0.1.41 (prueba física): «a partir de ahora háblame de usted» caía al
+  // modelo, que vio «ahora» y respondió con la hora. Una indicación que
+  // vale «desde ahora» es una preferencia: se guarda ENTERA (sin el «a
+  // partir de ahora» el hecho pierde el sentido de regla permanente).
+  { re: /^((?:a partir de ahora|de ahora en adelante|desde ahora|a partir de hoy)[,:]?\s+\S.+)/i, group: 1 },
+  { re: /^((?:from now on|going forward)[,:]?\s+\S.+)/i, group: 1 },
+  { re: /^((?:a partir de agora|de agora em diante|daqui (?:em|pra) frente)[,:]?\s+\S.+)/i, group: 1 },
   // "apunta esto para siempre: X"
   { re: /apunta (esto|eso) para (siempre|despu[eé]s)[:\s]+(.+)/i, group: 3 },
   // Inglés: "remember that X" / "remember: X"
@@ -62,10 +76,15 @@ const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
   // «I can't remember the capital of Peru» guardaba «the capital of Peru».
   { re: /^(?:(?:please|hey|ok|okay|nido|also|and)[,!]?\s+)*remember( that)?[:\s]+(.+)/i, group: 2 },
   { re: /\bplease\s+remember( that)?[:\s]+(.+)/i, group: 2 },
+  // 0.1.41: "keep in mind that X" / "bear in mind that X" (como orden).
+  { re: /^(?:(?:please|hey|ok|okay|nido|also|and)[,!]?\s+)*(?:keep|bear) in mind(?: that)?[:\s]+(.+)/i, group: 1 },
   // Inglés: "don't forget that X"
   { re: /don't forget( that)?[:\s]+(.+)/i, group: 2 },
   // 0.1.14: portugués — "lembre que X", "me lembra que X", "lembre-se de que X".
   { re: /lembr[ae](?:-se)?(?: de)? que[:\s]+(.+)/i, group: 1 },
+  // 0.1.41: "tenha em mente que X" / "leve em conta que X".
+  { re: /(?:tenha|tenham|tem) em mente que[:\s]+(.+)/i, group: 1 },
+  { re: /leve em (?:conta|considera[cç][aã]o) que[:\s]+(.+)/i, group: 1 },
   // "não esqueça que X" / "não se esqueça de que X"
   { re: /n[aã]o (?:se )?esque[cç]a(?: de)? que[:\s]+(.+)/i, group: 1 },
 ];
@@ -84,8 +103,12 @@ function detectCategory(content: string): RememberExtraction["category"] {
   ) {
     return "event";
   }
-  // Preferencias: "me gusta", "prefiero", "no me gusta".
-  if (/me gusta|prefiero|no me gusta|odio|amo|favorit/i.test(lower)) {
+  // Preferencias: "me gusta", "prefiero", "no me gusta" y las reglas que
+  // valen «desde ahora» (0.1.41).
+  if (
+    /me gusta|prefiero|no me gusta|odio|amo|favorit/i.test(lower) ||
+    /^(?:a partir de (?:ahora|hoy|agora)|de ahora en adelante|desde ahora|from now on|going forward|de agora em diante|daqui (?:em|pra) frente)\b/i.test(lower)
+  ) {
     return "preference";
   }
   // Metas: "quiero", "mi objetivo", "mi meta".

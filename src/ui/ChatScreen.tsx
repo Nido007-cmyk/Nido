@@ -1402,7 +1402,9 @@ export function ChatScreen({
         // 0.1.34: si el modelo entró en bucle, queda solo la primera vez.
         let finalText = trimRepetitionLoop(assistantText);
         if (!deepResearchModeRef.current && chunks.length > 0) {
-          const verified = verifyGroundedAnswer(assistantText, chunks, uiLang);
+          // 0.1.41 (prueba física, «¿qué es la inflación?»): se verificaba
+          // el texto SIN recortar y el bucle volvía a la pantalla.
+          const verified = verifyGroundedAnswer(finalText, chunks, uiLang);
           grounding = verified.status;
           if (verified.status !== "skipped") finalText = verified.text;
         } else if (

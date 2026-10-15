@@ -6,6 +6,7 @@
 
 import { describe, it, expect } from "vitest";
 import { extractRememberFact, extractImplicitFact, isMemoryQuery, extractDateISO, extractPerson, extractPeople, extractSelfName } from "./rememberRouter";
+import { classifyIntent } from "./intent";
 
 describe("rememberRouter: extracción determinística", () => {
   it("extrae 'recuerda que X'", () => {
@@ -313,5 +314,53 @@ describe("batería trilingüe: cumpleaños y fechas PT", () => {
     expect(extractDateISO("3 de maio")).not.toBeNull();
     expect(extractDateISO("meu aniversário é 10 de janeiro")).not.toBeNull();
     expect(extractDateISO("o aniversário é 25 de dezembro")).not.toBeNull();
+  });
+});
+
+describe("0.1.41 — «ten en cuenta que…» (prueba física: caía al modelo y fallaba)", () => {
+  it.each([
+    ["ten en cuenta que llueve mañana", "llueve mañana"],
+    ["Ten en cuenta que mi perro se llama Toby", "mi perro se llama Toby"],
+    ["tenga en cuenta que soy alérgico a las nueces", "soy alérgico a las nueces"],
+    ["ten muy en cuenta que el lunes cierro tarde", "el lunes cierro tarde"],
+    ["ten en cuenta esto: la clave del wifi está en la nevera", "la clave del wifi está en la nevera"],
+    ["keep in mind that my sister lives in Lima", "my sister lives in Lima"],
+    ["please keep in mind I don't eat pork", "I don't eat pork"],
+    ["tenha em mente que eu trabalho de noite", "eu trabalho de noite"],
+    ["leve em conta que minha mãe faz anos em maio", "minha mãe faz anos em maio"],
+  ])("%s → guarda «%s»", (input, content) => {
+    expect(extractRememberFact(input)?.content).toBe(content);
+    expect(classifyIntent(input)).toBe("recordar");
+  });
+
+  it.each([
+    "hay que tener en cuenta que el clima cambia", // no es una orden
+    "no tuvieron en cuenta que llovía",
+    "si tienes en cuenta que es tarde, ¿vale la pena ir?",
+    "I can't keep in mind so many things",
+    "anota que mañana hay reunión", // es una nota (toolRouter), no un recuerdo
+  ])("«%s» no se guarda como recuerdo", (input) => {
+    expect(extractRememberFact(input)).toBeNull();
+  });
+});
+
+describe("0.1.41 — «a partir de ahora…» se guarda como preferencia (caía al modelo y daba la hora)", () => {
+  it.each([
+    ["A partir de Ahora hablame de usted", "A partir de Ahora hablame de usted"],
+    ["a partir de ahora, respóndeme corto", "a partir de ahora, respóndeme corto"],
+    ["de ahora en adelante llámame Aldo", "de ahora en adelante llámame Aldo"],
+    ["from now on answer in English", "from now on answer in English"],
+    ["a partir de agora me chama de você", "a partir de agora me chama de você"],
+  ])("%s", (input, content) => {
+    const r = extractRememberFact(input);
+    expect(r?.content).toBe(content);
+    expect(r?.category).toBe("preference");
+    // Entra al asistente (recordar o actuar: «llámame» suena a acción); la
+    // extracción corre igual en los dos casos.
+    expect(["recordar", "actuar"]).toContain(classifyIntent(input));
+  });
+
+  it.each(["a partir de ahora", "¿qué pasa a partir de ahora?", "el precio sube a partir de ahora"])("«%s» no", (input) => {
+    expect(extractRememberFact(input)).toBeNull();
   });
 });
