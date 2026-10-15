@@ -23,6 +23,7 @@
  * herramienta toca la red.
  */
 
+import { normalizeForRouting } from "./routingText";
 import type { ChatMessageInput, SamplingPresetName } from "../../inference/LlamaEngine";
 import {
   describeToolsForPrompt,
@@ -574,7 +575,9 @@ export async function runAgentLoop(
   options: AgentLoopOptions
 ): Promise<AgentLoopResult> {
   const trace: RoutingTrace = { modelCalled: false, modelTools: [], retry: null, fallback: null };
-  const result = await runAgentLoopCore(userText, options, trace);
+  // 0.1.42: todas las vías deterministas (y el modelo) leen el texto sin
+  // muletillas ni espacios de más (ver routingText.ts).
+  const result = await runAgentLoopCore(normalizeForRouting(userText), options, trace);
   // Las vías deterministas se nombran por la herramienta que usaron (su
   // primera toolUse); sin herramienta (plantillas, preguntas de elección,
   // «¿a qué hora?») son «fixed». Si el modelo generó, la vía es «model»

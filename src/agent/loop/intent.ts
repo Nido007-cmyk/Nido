@@ -33,6 +33,7 @@ import {
   isMemoryQuery,
 } from "./rememberRouter";
 import { isMemoryStyleQuery } from "./memoryQuery";
+import { normalizeForRouting } from "./routingText";
 
 export type AgentIntent = "conversar" | "recordar" | "actuar";
 
@@ -44,6 +45,14 @@ const REMEMBER_PATTERNS: RegExp[] = [
   // Tolerante a enclíticos y acentos: "guárdalo/guardala en tu memoria"
   /gu[aá]rda\w* (esto |eso )?en (tu |la )?memoria/i,
   /memoriza/i,
+  // 0.1.42 (barrido): las mismas formas que rememberRouter.
+  /\btoma(?:r)? en cuenta que\b/i,
+  /^quiero que (?:recuerdes|sepas|tengas en cuenta|guardes|memorices)\b/i,
+  /^(?:para que lo sepas|que sepas|te cuento que|para tu informaci[oó]n)\b/i,
+  /^(?:anota|apunta|guarda)(?:lo)? en (?:tu|la) memoria\b/i,
+  /^(?:just so you know|fyi|for your information|for the record)\b/i,
+  /^(?:make sure (?:you|to) remember|i want you to remember)\b/i,
+  /^(?:s[oó] pra voc[eê] saber|quero que voc[eê] lembre)\b/i,
   /apunta (esto|eso) para (siempre|despu[eé]s)/i,
   /a partir de ahora/i,
   // 0.1.41: las demás formas de «desde ahora» (preferencia permanente).
@@ -202,7 +211,8 @@ const REMEMBER_BEFORE_ACT_PATTERNS: RegExp[] = [
 export function classifyIntent(text: string): AgentIntent {
   // 0.1.37 (auditoría): una tira larga de «?!.» costaba tiempo cuadrático
   // en las limpiezas «[?!.]+$» de los routers; para clasificar bastan 3.
-  const t = (text ?? "").trim().replace(/[?!.]{4,}/g, (run) => run.slice(0, 3));
+  // 0.1.42: mismo texto que lee el router (sin muletillas ni espacios de más).
+  const t = normalizeForRouting(text ?? "").replace(/[?!.]{4,}/g, (run) => run.slice(0, 3));
   if (!t) return "conversar";
   if (REMEMBER_BEFORE_ACT_PATTERNS.some((re) => re.test(t))) return "recordar";
   // 0.1.14: una cuenta válida ("what is (100 + 50) * 2") siempre va a la

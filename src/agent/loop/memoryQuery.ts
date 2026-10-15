@@ -253,9 +253,14 @@ const ABOUT_ME_Q_RES: RegExp[] = [
   /what do you (?:know|remember) about me\??$/i,
   /o que (?:você|voce) sabe sobre mim\??$/i,
 ];
-/** Primera persona (rama genérica de answerMemoryQuery, punto 5). */
+/**
+ * Primera persona (rama genérica de answerMemoryQuery, punto 5).
+ * 0.1.42 (barrido): también un pasado en primera persona («¿dónde dejé el
+ * coche?», «¿dónde estacioné?»). Con «u» y límites por letra: con \b, la
+ * «é» final de «dejé» no cerraba la palabra y la forma nunca casaba.
+ */
 const FIRST_PERSON_RE =
-  /\bmi\b|\bmis\b|\bme\b|\bmy\b|\bmine\b|\bi\b|\bmeu\b|\bminha\b|\bmeus\b|\bminhas\b|\btengo\b|\bvivo\b|\btrabajo\b|\btenho\b|\bmoro\b|\bchamo\b/i;
+  /(?<![\p{L}])(?:mi|mis|me|my|mine|i|meu|minha|meus|minhas|tengo|vivo|trabajo|tenho|moro|chamo|dej[eé]|puse|guard[eé]|estacion[eé]|aparqu[eé]|deixei|estacionei)(?![\p{L}])/iu;
 
 /**
  * 0.1.23: la FORMA de la pregunta genérica (punto 5): interrogativa y
@@ -267,6 +272,22 @@ const FIRST_PERSON_RE =
  * \bi\b: el «I» inglés («what car do I have?») — sin él la puerta de
  * primera persona no se abría en inglés (batería trilingüe 0.1.20).
  */
+/**
+ * 0.1.42 (barrido): «¿dónde está la clave del wifi?» no está en primera
+ * persona, pero si TODOS sus términos de contenido están en un mismo hecho
+ * guardado (y son al menos dos), la pregunta es sobre ese hecho. Pregunta +
+ * cobertura total: un documento o la charla rara vez comparten todos los
+ * términos con una frase que el usuario guardó.
+ */
+export function memoryFullCoverageHit(userText: string, mem: MemoryQueryData): boolean {
+  const t = (userText ?? "").trim();
+  if (!t || !mem.facts.length) return false;
+  const isQuestion = /^\s*¿/.test(t) || /\?\s*$/.test(t);
+  if (!isQuestion) return false;
+  const { score, tokenCount } = scoreMemoryFacts(mem, t);
+  return tokenCount >= 2 && score === tokenCount;
+}
+
 export function isGenericMemoryQuestionShape(userText: string): boolean {
   const t = (userText ?? "").trim();
   if (!t) return false;
@@ -325,7 +346,7 @@ function unfuseMi(text: string): string {
 }
 
 export function isMemoryStyleQuery(userText: string): boolean {
-  const t = unfuseMi((userText ?? "").trim()).replace(/\s+([?!.]+)$/, "$1");
+  const t = unfuseMi((userText ?? "").trim()).replace(/\s+([?!.]+)$/, "$1").replace(/[.!]+$/, "");
   if (!t) return false;
   if (REL_NAME_Q_RES.some((re) => re.test(t))) return true;
   if (SELF_NAME_Q_RES.some((re) => re.test(t))) return true;
@@ -342,7 +363,7 @@ export function answerMemoryQuery(
 ): string | null {
   // 0.1.41 (prueba física): «Que sabes de mi ?» — el espacio antes del
   // signo dejaba fuera todos los patrones anclados con «\??$».
-  const t = unfuseMi(userText.trim()).replace(/\s+([?!.]+)$/, "$1");
+  const t = unfuseMi(userText.trim()).replace(/\s+([?!.]+)$/, "$1").replace(/[.!]+$/, "");
   if (!t) return null;
 
   // 1) «¿cómo se llama mi REL?» — nombre de una persona guardada.
@@ -411,6 +432,12 @@ export function answerMemoryQuery(
     const { fact } = scoreMemoryFacts(mem, t);
     if (fact) return msg("factQuote", lang, { fact });
     return msg("notKnown", lang);
+  }
+  // 0.1.42: la otra puerta de la sonda (memoryFullCoverageHit), con la
+  // misma regla, para que puerta y respuesta tampoco discrepen aquí.
+  if (memoryFullCoverageHit(t, mem)) {
+    const { fact } = scoreMemoryFacts(mem, t);
+    if (fact) return msg("factQuote", lang, { fact });
   }
 
   return null;

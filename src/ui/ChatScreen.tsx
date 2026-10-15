@@ -58,7 +58,7 @@ import { speakAloud } from "../voice/tts";
 import { showSecureAlert } from "nido-secure-dialog";
 // NIDO agent: loop agéntico local con herramientas (Fase A).
 import { classifyIntent } from "../agent/loop/intent";
-import { isGenericMemoryQuestionShape, memoryGateHit } from "../agent/loop/memoryQuery";
+import { isGenericMemoryQuestionShape, memoryFullCoverageHit, memoryGateHit } from "../agent/loop/memoryQuery";
 import { beginUserTurn, choiceTurnKind, resetConversationState, type ChoiceStore } from "../agent/loop/toolRouter";
 import { applyEdit, type InputSource, type Segment } from "../agent/input/provenance";
 import { planSend } from "../agent/input/sendPlan";
@@ -910,10 +910,12 @@ export function ChatScreen({
       agentIntent === "conversar" &&
       !inertRouting &&
       !deepResearchModeRef.current &&
-      isGenericMemoryQuestionShape(query)
+      (isGenericMemoryQuestionShape(query) || /^\s*¿|\?\s*$/.test(query))
     ) {
       const snap = await loadMemorySnapshot().catch(() => null);
-      if (snap && memoryGateHit(query, snap)) {
+      // 0.1.42: también una pregunta sin primera persona cuyos términos
+      // están TODOS en un hecho guardado («¿dónde está la clave del wifi?»).
+      if (snap && ((isGenericMemoryQuestionShape(query) && memoryGateHit(query, snap)) || memoryFullCoverageHit(query, snap))) {
         agentIntent = "recordar";
         // La snapshot de la sonda se reutiliza como loadMemory del
         // loop: no se paga dos veces en los turnos que entran.

@@ -432,7 +432,9 @@ export function weekdayAction(t: string, now: Date): ToolAction | null {
 const NOTE_SAVE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   {
     re: new RegExp(
-      `^${POLITE}(?:anota(?:me)?|apunta(?:me)?|toma nota|guarda una nota|crea una nota|haz una nota|escribe una nota|agrega una nota|a[ñn]ade una nota)(?:\\s+(?:que diga|diciendo|que|de|con)|:)?\\s+(.+)$`,
+      // 0.1.42 (barrido): «apúntame» con tilde; «anota en tu memoria…» es
+      // memoria (rememberRouter), no una nota.
+      `^${POLITE}(?!(?:anota|apunta|guarda)(?:lo)?\\s+en\\s+(?:tu|la)\\s+memoria)(?:an[oó]ta(?:me)?|ap[uú]nta(?:me)?|toma nota|guarda una nota|crea una nota|haz una nota|escribe una nota|agrega una nota|a[ñn]ade una nota)(?:\\s+(?:que diga|diciendo|que|de|con)|:)?\\s+(.+)$`,
       "is",
     ),
     lang: "es",

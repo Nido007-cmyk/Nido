@@ -40,6 +40,13 @@ describe("routing: vías deterministas", () => {
     expect(engine.calls).toBe(0);
   });
 
+  it("0.1.42: una muletilla delante no saca la orden de su vía", async () => {
+    const engine = fakeEngine(["NO"]);
+    const r = await runAgentLoop("oye,  cuánto es 2+2 ?", { ...base, engine });
+    expect(r.routing?.route).toBe("calc");
+    expect(engine.calls).toBe(0);
+  });
+
   it("nunca lleva el texto del mensaje", async () => {
     const engine = fakeEngine(["NO"]);
     const r = await runAgentLoop("cuánto es 1234+5678", { ...base, engine });
