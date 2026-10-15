@@ -628,10 +628,12 @@
     "missed": {
       "title": "Phrases the router did not recognize",
       "toggle": "Save the phrases the router did not recognize",
-      "hint": "Optional and off by default. When on, NIDO keeps on this device (encrypted) the last 50 commands the model had to handle, so you can see what the router is missing. They never leave the phone. Turning it off deletes them.",
+      "hint": "Optional and off by default. When on, NIDO keeps on this device (encrypted) the last 50 commands it could not handle by itself: the ones it had to pass to the model and the ones it took for conversation. It shows what the router is missing. They never leave the phone. Turning it off deletes them.",
       "empty": "No phrases saved yet.",
       "copy": "Copy",
-      "clear": "Delete phrases"
+      "clear": "Delete phrases",
+      "stateOn": "On",
+      "stateOff": "Off"
     }
   },
   "evaluation": {

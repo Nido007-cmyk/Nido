@@ -250,10 +250,12 @@
     "missed": {
       "title": "Frases que el router no reconoció",
       "toggle": "Guardar las frases que el router no reconoció",
-      "hint": "Opcional y apagado por defecto. Si lo enciendes, NIDO guarda en este dispositivo (cifrado) las últimas 50 órdenes que tuvo que resolver el modelo, para ver cuáles le faltan al router. Nunca salen del teléfono. Apagarlo las borra.",
+      "hint": "Opcional y apagado por defecto. Si lo enciendes, NIDO guarda en este dispositivo (cifrado) las últimas 50 órdenes que no supo resolver solo: las que tuvo que pasar al modelo y las que tomó por conversación. Sirve para ver cuáles le faltan al router. Nunca salen del teléfono. Apagarlo las borra.",
       "empty": "Aún no hay frases guardadas.",
       "copy": "Copiar",
-      "clear": "Borrar frases"
+      "clear": "Borrar frases",
+      "stateOn": "Activado",
+      "stateOff": "Desactivado"
     }
   },
   "interfaceSettings": {

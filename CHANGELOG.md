@@ -4,6 +4,41 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.41-alpha — 2026-10-14
+
+Fixes found by testing on a real tablet with the new "phrases the router
+missed" log: every item below was a phrase that went wrong on the device.
+
+### Fixed
+- **Corrections to your memory are no longer lost.** If NIDO had "my
+  birthday is May 5" saved and you said "my birthday is May 3", it kept the
+  old date because the two sentences looked alike. Now the latest thing you
+  say wins; repeating a fact with more detail still keeps the detailed one.
+- **More ways of asking NIDO to remember things are understood without the
+  AI model** (faster, and they no longer fail): "keep in mind that…",
+  "from now on…" (saved as a preference; it used to answer with the time),
+  "don't let me forget that…", and facts about your diet and allergies such
+  as "I'm vegetarian" or "I'm allergic to peanuts", also with "by the way"
+  in front. In Spanish and Portuguese as well.
+- **Reminders asked as a question** ("on Friday at 6 can you remind me to
+  call my aunt?") now create the reminder. A reminder title no longer keeps
+  a stray leading "que" in Spanish.
+- **"What day is December 25?"** is answered with the weekday, calculated
+  on the phone, in Spanish, English and Portuguese.
+- **Unit conversions with a typo** ("grades" for "grados") are no longer
+  sent to the AI model, which could get the direction wrong.
+- **"What do you know about me ?"** with a space before the question mark
+  now lists what you told NIDO instead of going to the knowledge base.
+- **Answers that cite sources no longer show the model looping** ("the
+  trend of the generalization of the trend of…"): the repeated text is cut
+  there too.
+
+### Changed
+- The "phrases the router missed" log (Execution Telemetry, off by default)
+  now also keeps messages that look like a command but that NIDO took for
+  conversation, which were invisible before. Its switch is easier to see
+  and shows whether it is on.
+
 ## 0.1.40-alpha — 2026-10-14
 
 ### Added

@@ -398,13 +398,24 @@ function MissedCard({
     <View style={styles.row} accessibilityLabel={t("executionTelemetry.missed.title")}>
       <View style={styles.rowHeader}>
         <Text style={styles.modelLabel}>{t("executionTelemetry.missed.title")}</Text>
-        <Switch
-          value={on}
-          onValueChange={onToggle}
-          accessibilityRole="switch"
-          accessibilityLabel={t("executionTelemetry.missed.toggle")}
-          testID="missed-phrases-toggle"
-        />
+        {/* 0.1.41 (prueba física): en el tema oscuro solo se veía la bolita
+            blanca; con colores propios y el estado escrito se ve que es un
+            interruptor y si está encendido. */}
+        <View style={styles.toggleRow}>
+          <Text style={[styles.toggleState, on ? styles.toggleStateOn : null]}>
+            {on ? t("executionTelemetry.missed.stateOn") : t("executionTelemetry.missed.stateOff")}
+          </Text>
+          <Switch
+            value={on}
+            onValueChange={onToggle}
+            trackColor={{ false: colors.text.dim, true: colors.emerald[400] }}
+            thumbColor={on ? colors.emerald[600] : colors.text.secondary}
+            ios_backgroundColor={colors.text.dim}
+            accessibilityRole="switch"
+            accessibilityLabel={t("executionTelemetry.missed.toggle")}
+            testID="missed-phrases-toggle"
+          />
+        </View>
       </View>
       <Text style={styles.metaText}>{t("executionTelemetry.missed.hint")}</Text>
       {on ? (
@@ -528,4 +539,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   sectionLabel: { ...typography.ui.caption, color: colors.text.heading, fontWeight: "700" },
   missedText: { ...typography.ui.subtext, color: colors.text.primary },
   missedActions: { flexDirection: "row", gap: calmSpacing.cozy },
+  toggleRow: { flexDirection: "row", alignItems: "center", gap: calmSpacing.tight },
+  toggleState: { ...typography.ui.caption, color: colors.text.dim, fontWeight: "700" },
+  toggleStateOn: { color: colors.emerald[600] },
 });

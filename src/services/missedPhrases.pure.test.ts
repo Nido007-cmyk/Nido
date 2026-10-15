@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { formatMissedForCopy, MAX_MISSED_CHARS, toMissedPhrase } from "./missedPhrases.pure";
+import { formatMissedForCopy, looksLikeMissedCommand, MAX_MISSED_CHARS, toMissedPhrase } from "./missedPhrases.pure";
 
 const routing = { route: "model", modelTools: ["create_reminder"], retry: null, fallback: null };
 
@@ -51,4 +51,28 @@ describe("formatMissedForCopy", () => {
     ];
     expect(formatMissedForCopy(rows)).toBe("[tool:create_reminder] avísame del dentista\n[actionFailed] bla\n[retry:constrained] qué tal");
   });
+});
+
+describe("0.1.41 — órdenes que NIDO tomó por conversación", () => {
+  it.each([
+    "Que no se te olvide que el martes pago la renta",
+    "Por cierto,soy vegetariano",
+    "Que sabes de mi ?",
+    "Que dia cae el 25 de diciembre",
+    "mi cumpleaños es el 3 de mayo",
+    "llama a mi hermana",
+    "btw I'm vegetarian",
+    "remind me to call mom",
+    "me lembra de pagar a conta",
+    "sou alérgico a camarão",
+  ])("«%s» se registra", (t) => {
+    expect(looksLikeMissedCommand(t)).toBe(true);
+  });
+
+  it.each(["¿qué es la inflación?", "hola", "cuéntame un chiste", "¿quién ganó el mundial de 2010?", "gracias"])(
+    "«%s» es conversación de verdad",
+    (t) => {
+      expect(looksLikeMissedCommand(t)).toBe(false);
+    },
+  );
 });
