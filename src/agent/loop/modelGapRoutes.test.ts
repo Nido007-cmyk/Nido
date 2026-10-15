@@ -110,3 +110,20 @@ describe("0.1.41 — prueba física en la Tab A9+", () => {
     expect(extractReminderAction("Avisame en 20 minutos que saque la ropa", now)?.text).toBe("saque la ropa");
   });
 });
+
+describe("0.1.41 — recordatorios en forma de pregunta (prueba física)", () => {
+  const now = new Date(2026, 9, 14, 18, 0);
+  it.each([
+    ["El viernes a las 6 me recuerdas llamar a mi tia", "llamar a mi tia"],
+    ["¿me recuerdas mañana comprar pan?", "comprar pan"],
+    ["puedes recordarme el lunes a las 9 la cita", "la cita"],
+    ["el lunes me avisas de la cita", "la cita"],
+  ])("%s", (input, text) => {
+    const r = extractReminderAction(input, now);
+    expect(r?.text).toBe(text);
+    expect(r?.dueAt).toBeTruthy();
+  });
+  it.each(["¿me recuerdas?", "me recuerdas a mi padre", "¿recuerdas cómo se llama mi perro?"])("«%s» no es un aviso", (input) => {
+    expect(extractReminderAction(input, now)).toBeNull();
+  });
+});

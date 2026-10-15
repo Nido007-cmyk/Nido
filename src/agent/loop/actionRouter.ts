@@ -419,7 +419,9 @@ export function extractReminderAction(userText: string, now: Date = new Date()):
 
 function extractReminderCore(userText: string): ReminderAction | null {
   lastMissingText = null;
-  const trimmed = userText.trim();
+  // 0.1.41: la forma de pregunta llega entre signos («¿me recuerdas mañana
+  // comprar pan?»): los signos que la envuelven no son parte de la orden.
+  const trimmed = userText.trim().replace(/^¿\s*/, "").replace(/\s*\?+$/, "").trim();
   if (!trimmed) return null;
   const recurrenceRequested = RECURRENCE_RE.test(trimmed) || UNSUPPORTED_INTERVAL_RE.test(trimmed);
 
@@ -450,7 +452,7 @@ function extractReminderCore(userText: string): ReminderAction | null {
   // «despiértame a las 7», «me acorde às 7», «wake me at 7» creaban
   // nada: caían al modelo. El verbo va en su grupo para saber si es un
   // aviso (su texto puede ser la propia orden cuando no hay tarea).
-  const m = /((?:agr[ée]game|cr[ée]ame|ponme|crea)(?=\s+(?:una?\s+)?(?:cita|recordatorio|aviso|alarma)(?![a-záéíóúñ]))|recu[ée]rdame|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|faz|fa[çc]a)\s+um\s+lembrete|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|define|defina)\s+um\s+alarme(?:\s+para)?|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
+  const m = /((?:agr[ée]game|cr[ée]ame|ponme|crea)(?=\s+(?:una?\s+)?(?:cita|recordatorio|aviso|alarma)(?![a-záéíóúñ]))|recu[ée]rdame|me\s+recuerdas|me\s+(?:puedes|podr[ií]as)\s+recordar|(?:puedes|podr[ií]as)\s+recordarme|me\s+(?:avisas|puedes\s+avisar|podr[ií]as\s+avisar)|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|faz|fa[çc]a)\s+um\s+lembrete|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|define|defina)\s+um\s+alarme(?:\s+para)?|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
   if (!m) return null;
   // 0.1.37 (auditoría): el verbo tiene que abrir la orden. Delante solo
   // cabe una fecha («mañana recuérdame…») o una cortesía («oye, …»). Así
@@ -506,6 +508,13 @@ function extractReminderCore(userText: string): ReminderAction | null {
     // el recordatorio se creaba con dueAt null y nunca avisaba.
     const prefix = trimmed.slice(0, m.index).trim();
     if (prefix) dueAt = parseReminderDateTime(prefix);
+  }
+  // 0.1.41 (prueba física): «el viernes a las 6 me recuerdas llamar a mi
+  // tía» caía al modelo y no se creaba nada. Las formas de pregunta («me
+  // recuerdas…», «me avisas…», «puedes recordarme…») solo valen con fecha:
+  // sin ella, «¿me recuerdas?» o «me recuerdas a mi padre» no son avisos.
+  if (!dueAt && /^(?:me\s+recuerdas|me\s+(?:puedes|podr[ií]as)\s+recordar|(?:puedes|podr[ií]as)\s+recordarme|me\s+(?:avisas|puedes\s+avisar|podr[ií]as\s+avisar))$/i.test(m[1].trim())) {
+    return null;
   }
   // Limpiar la fecha del texto para que no quede duplicada.
   if (dueAt) {
