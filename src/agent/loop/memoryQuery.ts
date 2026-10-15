@@ -249,8 +249,8 @@ const BDAY_SELF_Q_RES: RegExp[] = [
   /quando (?:é|e) (?:o )?meu anivers[aá]rio\??$/i,
 ];
 const ABOUT_ME_Q_RES: RegExp[] = [
-  /qu[eé] sabes de m[ií]\??$/i,
-  /what do you know about me\??$/i,
+  /qu[eé] (?:sabes|recuerdas|tienes guardado|has guardado) (?:de|sobre) m[ií]\??$/i,
+  /what do you (?:know|remember) about me\??$/i,
   /o que (?:você|voce) sabe sobre mim\??$/i,
 ];
 /** Primera persona (rama genérica de answerMemoryQuery, punto 5). */
@@ -325,7 +325,7 @@ function unfuseMi(text: string): string {
 }
 
 export function isMemoryStyleQuery(userText: string): boolean {
-  const t = unfuseMi((userText ?? "").trim());
+  const t = unfuseMi((userText ?? "").trim()).replace(/\s+([?!.]+)$/, "$1");
   if (!t) return false;
   if (REL_NAME_Q_RES.some((re) => re.test(t))) return true;
   if (SELF_NAME_Q_RES.some((re) => re.test(t))) return true;
@@ -340,7 +340,9 @@ export function answerMemoryQuery(
   mem: MemoryQueryData,
   lang: MemoryQueryLang
 ): string | null {
-  const t = unfuseMi(userText.trim());
+  // 0.1.41 (prueba física): «Que sabes de mi ?» — el espacio antes del
+  // signo dejaba fuera todos los patrones anclados con «\??$».
+  const t = unfuseMi(userText.trim()).replace(/\s+([?!.]+)$/, "$1");
   if (!t) return null;
 
   // 1) «¿cómo se llama mi REL?» — nombre de una persona guardada.

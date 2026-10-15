@@ -40,12 +40,21 @@ const REMEMBER_PATTERNS: RegExp[] = [
   /recuerda( que|te)?/i,
   /acu[eé]rdate/i,
   /no (olvides|te olvides)/i,
+  /^(?:que\s+)?no se te (?:olvide|pase)\b/i,
   // Tolerante a enclíticos y acentos: "guárdalo/guardala en tu memoria"
   /gu[aá]rda\w* (esto |eso )?en (tu |la )?memoria/i,
   /memoriza/i,
   /apunta (esto|eso) para (siempre|despu[eé]s)/i,
   /a partir de ahora/i,
-  /ten en cuenta (que|siempre)/i,
+  // 0.1.41: las demás formas de «desde ahora» (preferencia permanente).
+  /^(?:(?:por favor|oye|nido)[,\s]+)?(?:de ahora en adelante|desde ahora|a partir de hoy)\b/i,
+  /^(?:(?:please|hey|nido)[,\s]+)?(?:from now on|going forward)\b/i,
+  /^(?:(?:por favor|ei|nido)[,\s]+)?(?:a partir de agora|de agora em diante|daqui (?:em|pra) frente)\b/i,
+  /\bten(?:ga|gan)? (?:muy |siempre )?en cuenta (que|siempre|esto|eso)/i,
+  // 0.1.41: «keep in mind that…», «tenha em mente que…», «leve em conta que…».
+  /^(?:(?:please|hey|ok|okay|nido|also|and)[,!]?\s+)*(?:keep|bear) in mind\b/i,
+  /(?:tenha|tenham|tem) em mente que/i,
+  /leve em (?:conta|considera[cç][aã]o) que/i,
   // 0.1.37 (auditoría): «remember» solo como ORDEN al principio o con
   // «please». «I can't remember the capital of Peru» o «do you remember
   // what Titanic is about?» no son peticiones de guardar nada.

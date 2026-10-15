@@ -21,7 +21,7 @@ import {
 } from "./missedPhrases.pure";
 
 export type { MissedPhrase } from "./missedPhrases.pure";
-export { formatMissedForCopy, missedSignal, MAX_MISSED_PHRASES } from "./missedPhrases.pure";
+export { formatMissedForCopy, looksLikeMissedCommand, missedSignal, MAX_MISSED_PHRASES } from "./missedPhrases.pure";
 
 /** ¿Está encendido el registro? Apagado por defecto (y ante cualquier error). */
 export async function isMissedPhraseLogOn(): Promise<boolean> {

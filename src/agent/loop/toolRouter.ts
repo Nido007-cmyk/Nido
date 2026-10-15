@@ -42,6 +42,8 @@ export type RouterLang = "es" | "en" | "pt";
 
 export type ToolAction =
   | { kind: "time"; what: "time" | "date"; lang: RouterLang }
+  /** 0.1.41: «qué día cae el 25 de diciembre» → día de la semana, calculado. */
+  | { kind: "weekday"; year: number; month: number; day: number; lang: RouterLang }
   | { kind: "noteSave"; title: string; body: string; lang: RouterLang }
   | { kind: "noteList"; lang: RouterLang }
   | { kind: "noteRead"; query: string; lang: RouterLang; directId?: string }
@@ -96,6 +98,7 @@ export function settleSharedLang<T extends { lang: RouterLang }>(action: T, text
 export function toolForAction(a: ToolAction): string {
   switch (a.kind) {
     case "time":
+    case "weekday":
       return "device_time";
     case "noteSave":
       return "save_note";
@@ -348,6 +351,82 @@ const TIME_RULES: Array<{ re: RegExp; what: "time" | "date"; lang: RouterLang }>
   { re: /^(?:que dia [eé] hoje|qual [eé] a data(?: de hoje)?|que dia [eé] hoje\??)$/i, what: "date", lang: "pt" },
 ];
 
+// ------------------------------------------------- día de la semana
+
+// 0.1.41 (prueba física): «que dia cae el 25 de diciembre» caía al modelo,
+// que contestó «está en el día de la Navidad» sin decir el día. Es una
+// cuenta de calendario: se resuelve aquí, sin modelo.
+const MONTH_LOOKUP: Record<string, number> = (() => {
+  const names: Array<[string[], number]> = [
+    [["enero", "january", "jan", "janeiro"], 1],
+    [["febrero", "february", "feb", "fevereiro"], 2],
+    [["marzo", "march", "mar", "marco", "março"], 3],
+    [["abril", "april", "apr"], 4],
+    [["mayo", "may", "maio"], 5],
+    [["junio", "june", "jun", "junho"], 6],
+    [["julio", "july", "jul", "julho"], 7],
+    [["agosto", "august", "aug"], 8],
+    [["septiembre", "setiembre", "september", "sep", "sept", "setembro"], 9],
+    [["octubre", "october", "oct", "outubro"], 10],
+    [["noviembre", "november", "nov", "novembro"], 11],
+    [["diciembre", "december", "dec", "dezembro"], 12],
+  ];
+  const out: Record<string, number> = {};
+  for (const [list, n] of names) for (const w of list) out[w] = n;
+  return out;
+})();
+
+const WEEKDAY_RULES: Array<{ re: RegExp; lang: RouterLang; order: "dm" | "md-or-dm" }> = [
+  {
+    re: /^(?:en\s+)?qu[eé]\s+d[ií]a(?:\s+de\s+la\s+semana)?\s+(?:cae|es|ser[aá]|fue|toca)\s+(?:el\s+)?(\d{1,2})\s+de\s+([\p{L}]+)(?:\s+(?:de|del)\s+(\d{4}))?$/iu,
+    lang: "es",
+    order: "dm",
+  },
+  {
+    re: /^(?:em\s+)?que\s+dia(?:\s+da\s+semana)?\s+(?:cai|[eé]|ser[aá]|foi)\s+(?:o\s+(?:dia\s+)?)?(\d{1,2})\s+de\s+([\p{L}]+)(?:\s+de\s+(\d{4}))?$/iu,
+    lang: "pt",
+    order: "dm",
+  },
+  {
+    re: /^what\s+day(?:\s+of\s+the\s+week)?\s+(?:is|was|will\s+be|does)\s+(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?\s+of\s+([a-z]+)(?:,?\s+(\d{4}))?(?:\s+fall\s+on)?$/i,
+    lang: "en",
+    order: "dm",
+  },
+  {
+    re: /^what\s+day(?:\s+of\s+the\s+week)?\s+(?:is|was|will\s+be|does)\s+([a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?(?:\s+fall\s+on)?$/i,
+    lang: "en",
+    order: "md-or-dm",
+  },
+];
+
+function stripAccents(w: string): string {
+  return w.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+/** «qué día cae el 25 de diciembre» → { year, month, day } o null. */
+export function weekdayAction(t: string, now: Date): ToolAction | null {
+  const q = t.replace(/^[¿\s]+|[?\s.]+$/g, "");
+  for (const { re, lang, order } of WEEKDAY_RULES) {
+    const m = re.exec(q);
+    if (!m) continue;
+    const dayRaw = order === "dm" ? m[1] : m[2];
+    const monthRaw = order === "dm" ? m[2] : m[1];
+    const month = MONTH_LOOKUP[stripAccents(monthRaw)] ?? MONTH_LOOKUP[monthRaw.toLowerCase()];
+    const day = Number(dayRaw);
+    if (!month || !day) return null;
+    let year = m[3] ? Number(m[3]) : now.getFullYear();
+    const daysInMonth = new Date(year, month, 0).getDate();
+    if (day > daysInMonth && !(month === 2 && day === 29 && !m[3])) return null;
+    if (!m[3]) {
+      // Sin año: la próxima vez que llegue esa fecha (hoy cuenta).
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      while (new Date(year, month - 1, day) < today || new Date(year, month, 0).getDate() < day) year += 1;
+    }
+    return { kind: "weekday", year, month, day, lang };
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------- notas
 
 const NOTE_SAVE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
@@ -418,7 +497,10 @@ export function noteTitleFrom(body: string): string {
 // ---------------------------------------------------------- conversión
 
 const NUM = "(-?\\d+(?:[.,]\\d+)?)";
-const UNIT = "((?:grados |degrees |graus )?[a-záéíóúâêôãõçñº°µ]+)";
+// 0.1.41 (prueba física): «cuantos grades fahrenheit son 30 grados» (con
+// la errata «grades») no casaba, caía al modelo y éste contestó al revés
+// («30 °F son 86 °C»). El prefijo admite las erratas habituales.
+const UNIT = "((?:grad[oe]s? |degrees? |graus? )?[a-záéíóúâêôãõçñº°µ]+)";
 // 0.1.19 (sonda de routing): la forma de PREGUNTA no llegaba — "cuántos
 // pies son 2 metros" pone la unidad destino delante (reglas inv) y "cuánto
 // es 70 kg en libras" no estaba entre los prefijos. La forma imperativa
@@ -436,7 +518,9 @@ const CONVERT_RULES: Array<{ re: RegExp; lang: RouterLang; inv?: boolean }> = [
 
 function unitWord(raw: string): string {
   // "grados celsius" → "celsius"; "°F" → "f".
-  return raw.trim().toLowerCase().replace(/^(grados|degrees|graus)\s+/, "").replace(/[º°]/g, "");
+  const w = raw.trim().toLowerCase().replace(/^(?:grad[oe]s?|degrees?|graus?)\s+/, "").replace(/[º°]/g, "");
+  // «grades»/«grado» solos son la misma unidad que «grados».
+  return /^grad[oe]s?$/.test(w) ? "grados" : w;
 }
 
 // ----------------------------------------------------------- calendario
@@ -732,6 +816,8 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   if (!t || t.length > 600) return null;
 
   for (const { re, what, lang } of TIME_RULES) if (re.test(t)) return { kind: "time", what, lang };
+  const weekday = weekdayAction(t, now);
+  if (weekday) return weekday;
 
   // 0.1.31 (auditoría del loop): «cancela el temporizador» caía al
   // conocimiento y el modelo podía decir que lo había cancelado sin hacer
@@ -908,6 +994,7 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
 type Key =
   | "timeNow"
   | "dateToday"
+  | "weekdayOf"
   | "noteSaved"
   | "noNotes"
   | "notesHeader"
@@ -1087,6 +1174,11 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
   },
   timeNow: { es: "Son las {{time}} ({{day}}).", en: "It's {{time}} ({{day}}).", pt: "São {{time}} ({{day}})." },
   dateToday: { es: "Hoy es {{day}} de {{year}}.", en: "Today is {{day}}, {{year}}.", pt: "Hoje é {{day}} de {{year}}." },
+  weekdayOf: {
+    es: "El {{date}} de {{year}} cae en {{weekday}}.",
+    en: "{{date}}, {{year}} falls on a {{weekday}}.",
+    pt: "O dia {{date}} de {{year}} cai {{weekday}}.",
+  },
   noteSaved: { es: "Listo, guardé la nota «{{title}}».", en: "Done, I saved the note “{{title}}”.", pt: "Pronto, salvei a nota “{{title}}”." },
   noNotes: { es: "Todavía no tienes notas guardadas.", en: "You don't have any saved notes yet.", pt: "Você ainda não tem notas salvas." },
   notesHeader: {
@@ -1584,6 +1676,17 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
         return action.what === "time"
           ? say(routerMessage("timeNow", lang, { time: formatTime(now, lang), day: formatDay(now, lang) }))
           : say(routerMessage("dateToday", lang, { day: formatDay(now, lang), year: String(now.getFullYear()) }));
+      }
+
+      case "weekday": {
+        const d = new Date(action.year, action.month - 1, action.day);
+        const date =
+          lang === "en" ? `${MONTHS.en[action.month - 1]} ${action.day}` : `${action.day} de ${MONTHS[lang][action.month - 1]}`;
+        uses.push({ name: "device_time", result: `${action.year}-${action.month}-${action.day} → ${DAYS.en[d.getDay()]}` });
+        const wd = DAYS[lang][d.getDay()];
+        // pt: «num sábado/domingo», «numa segunda-feira…».
+        const weekday = lang === "pt" ? `${d.getDay() === 0 || d.getDay() === 6 ? "num" : "numa"} ${wd}` : wd;
+        return say(routerMessage("weekdayOf", lang, { date, year: String(action.year), weekday }));
       }
 
       case "noteSave": {

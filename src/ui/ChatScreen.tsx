@@ -118,7 +118,7 @@ import { answerKnowledgeQueryWithCategory, toIdentityLocale, knowledgeSessionTit
 import { recordQueryStats, trackPeakRss, startAppMemoryTracking, QueryStats } from "../services/telemetry";
 import { recordExecution } from "../services/executionTelemetry";
 import { recordRouterSample } from "../services/routerStats";
-import { recordMissedPhrase } from "../services/missedPhrases";
+import { looksLikeMissedCommand, recordMissedPhrase } from "../services/missedPhrases";
 import { trimRepetitionLoop } from "../inference/repetitionGuard";
 import { getMemoryInfo } from "ram-monitor";
 import { useTheme } from "./theme";
@@ -935,6 +935,11 @@ export function ChatScreen({
     }
     if (agentIntent !== "recordar" && agentIntent !== "actuar") {
       recordRouterSample(classifyMs, "chat");
+      // 0.1.41: una orden que NIDO tomó por conversación también es un
+      // fallo del router (opcional, con el registro de frases encendido).
+      if (!inertRouting && looksLikeMissedCommand(query)) {
+        void recordMissedPhrase(query, { route: "chat", modelTools: [], retry: null, fallback: null }).catch(() => {});
+      }
     }
     if (agentIntent === "recordar" || agentIntent === "actuar") {
       setProcessing({ messageId: assistantId, status: "thinking" });
@@ -1402,7 +1407,9 @@ export function ChatScreen({
         // 0.1.34: si el modelo entró en bucle, queda solo la primera vez.
         let finalText = trimRepetitionLoop(assistantText);
         if (!deepResearchModeRef.current && chunks.length > 0) {
-          const verified = verifyGroundedAnswer(assistantText, chunks, uiLang);
+          // 0.1.41 (prueba física, «¿qué es la inflación?»): se verificaba
+          // el texto SIN recortar y el bucle volvía a la pantalla.
+          const verified = verifyGroundedAnswer(finalText, chunks, uiLang);
           grounding = verified.status;
           if (verified.status !== "skipped") finalText = verified.text;
         } else if (

@@ -72,7 +72,7 @@ describe("routing: lo que se cuela al modelo", () => {
       '{"name": "remember_fact", "arguments": {"content": "llueve"}}',
       "Guardado.",
     ]);
-    const r = await runAgentLoop("ten en cuenta que llueve", {
+    const r = await runAgentLoop("guarda esto en tu memoria por favor", {
       ...base,
       engine,
       handlers: { remember_fact: async () => "ok" },
@@ -82,7 +82,7 @@ describe("routing: lo que se cuela al modelo", () => {
 
   it("el JSON forzado falla y el empujón también → fallback memoryFailed", async () => {
     const engine = fakeEngine(["Listo", "basura", "más basura", "sigo sin herramienta"]);
-    const r = await runAgentLoop("ten en cuenta que llueve", {
+    const r = await runAgentLoop("guarda esto en tu memoria por favor", {
       ...base,
       engine,
       handlers: { remember_fact: async () => "ok" },

@@ -42,6 +42,10 @@ const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
   { re: /recu[eé]rdame( que)?[:\s]+(.+)/i, group: 2 },
   // "acuérdate de que X" / "acuérdate que X"
   { re: /acu[eé]rdate( de)?( que)?[:\s]+(.+)/i, group: 3 },
+  // 0.1.41 (prueba física): «que no se te olvide que el martes pago la
+  // renta» iba a conversación y el modelo lo repetía como «La respuesta
+  // es: …». Formas con «se»: «no se te olvide», «que no se te pase».
+  { re: /^(?:que\s+)?no\s+se\s+te\s+(?:olvide|pase)(?:\s+de)?(?:\s+que)?[:\s]+(.+)/i, group: 1 },
   // "no olvides que X" / "no te olvides de que X"
   { re: /no (te )?olvides( de)?( que)?[:\s]+(.+)/i, group: 4 },
   // "guarda en tu memoria que X" / "guarda en memoria: X"
@@ -55,6 +59,20 @@ const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
   // "guarda una nota…" (esa frase no empieza con "guarda que" y la
   // ruta de notas corre por toolRouter).
   { re: /gu[aá]rda(?:te)? que[:\s]+(.+)/i, group: 1 },
+  // 0.1.41 (prueba física, Tab A9+): «ten en cuenta que llueve mañana»
+  // clasificaba como recordar pero ninguna extracción la reconocía: caía
+  // al modelo pequeño, que tardó 43 s en decir «no pude guardar eso».
+  // (No se añaden «anota que» / «apunta que» / «toma nota»: son notas,
+  // las resuelve toolRouter.)
+  { re: /\bten(?:ga|gan)? (?:muy |siempre )?en cuenta(?: siempre)? que[:\s]+(.+)/i, group: 1 },
+  { re: /\bten(?:ga|gan)? (?:muy |siempre )?en cuenta(?: esto| eso)?:\s*(.+)/i, group: 1 },
+  // 0.1.41 (prueba física): «a partir de ahora háblame de usted» caía al
+  // modelo, que vio «ahora» y respondió con la hora. Una indicación que
+  // vale «desde ahora» es una preferencia: se guarda ENTERA (sin el «a
+  // partir de ahora» el hecho pierde el sentido de regla permanente).
+  { re: /^((?:a partir de ahora|de ahora en adelante|desde ahora|a partir de hoy)[,:]?\s+\S.+)/i, group: 1 },
+  { re: /^((?:from now on|going forward)[,:]?\s+\S.+)/i, group: 1 },
+  { re: /^((?:a partir de agora|de agora em diante|daqui (?:em|pra) frente)[,:]?\s+\S.+)/i, group: 1 },
   // "apunta esto para siempre: X"
   { re: /apunta (esto|eso) para (siempre|despu[eé]s)[:\s]+(.+)/i, group: 3 },
   // Inglés: "remember that X" / "remember: X"
@@ -62,10 +80,15 @@ const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
   // «I can't remember the capital of Peru» guardaba «the capital of Peru».
   { re: /^(?:(?:please|hey|ok|okay|nido|also|and)[,!]?\s+)*remember( that)?[:\s]+(.+)/i, group: 2 },
   { re: /\bplease\s+remember( that)?[:\s]+(.+)/i, group: 2 },
+  // 0.1.41: "keep in mind that X" / "bear in mind that X" (como orden).
+  { re: /^(?:(?:please|hey|ok|okay|nido|also|and)[,!]?\s+)*(?:keep|bear) in mind(?: that)?[:\s]+(.+)/i, group: 1 },
   // Inglés: "don't forget that X"
   { re: /don't forget( that)?[:\s]+(.+)/i, group: 2 },
   // 0.1.14: portugués — "lembre que X", "me lembra que X", "lembre-se de que X".
   { re: /lembr[ae](?:-se)?(?: de)? que[:\s]+(.+)/i, group: 1 },
+  // 0.1.41: "tenha em mente que X" / "leve em conta que X".
+  { re: /(?:tenha|tenham|tem) em mente que[:\s]+(.+)/i, group: 1 },
+  { re: /leve em (?:conta|considera[cç][aã]o) que[:\s]+(.+)/i, group: 1 },
   // "não esqueça que X" / "não se esqueça de que X"
   { re: /n[aã]o (?:se )?esque[cç]a(?: de)? que[:\s]+(.+)/i, group: 1 },
 ];
@@ -84,8 +107,12 @@ function detectCategory(content: string): RememberExtraction["category"] {
   ) {
     return "event";
   }
-  // Preferencias: "me gusta", "prefiero", "no me gusta".
-  if (/me gusta|prefiero|no me gusta|odio|amo|favorit/i.test(lower)) {
+  // Preferencias: "me gusta", "prefiero", "no me gusta" y las reglas que
+  // valen «desde ahora» (0.1.41).
+  if (
+    /me gusta|prefiero|no me gusta|odio|amo|favorit/i.test(lower) ||
+    /^(?:a partir de (?:ahora|hoy|agora)|de ahora en adelante|desde ahora|from now on|going forward|de agora em diante|daqui (?:em|pra) frente)\b/i.test(lower)
+  ) {
     return "preference";
   }
   // Metas: "quiero", "mi objetivo", "mi meta".
@@ -543,8 +570,34 @@ export function extractSelfName(userText: string): string | null {
 const SENSITIVE_NOUN = /cuenta|tarjeta|clave|contraseña|contrasena|password|pin|seguro|card|account|senha/i;
 const LONG_DIGITS = /\d{7,}/;
 
+// 0.1.41 (prueba física): «Por cierto,soy vegetariano» — una muletilla
+// delante (y sin espacio tras la coma) no cambia que sea un dato propio.
+const IMPLICIT_LEAD_RE =
+  /^(?:(?:por\s+cierto|a\s+prop[oó]sito|oye|ah|bueno|tambi[eé]n|btw|by\s+the\s+way|also|oh|aliás|alias|por\s+falar\s+nisso|ah[,!]?\s+e|tamb[eé]m)[,.!:]?\s*)+/i;
+
+// 0.1.41: dieta y alergias dichas de uno mismo. Lista cerrada (precisión >
+// cobertura): «soy vegetariano», «soy alérgico a las nueces», «tengo
+// alergia al polen», «no como cerdo», y sus formas en inglés y portugués.
+const DIET_ALLERGY_RES: RegExp[] = [
+  /^soy\s+(?:vegetarian[oa]|vegan[oa]|pescetarian[oa]|cel[ií]ac[oa]|intolerante\s+a\s+(?:la\s+)?(?:lactosa|gluten|fructosa))$/i,
+  /^soy\s+al[eé]rgic[oa]\s+a(?:l|\s+la|\s+los|\s+las)?\s+[\p{L}][\p{L}\s-]{1,30}$/iu,
+  /^tengo\s+alergia\s+a(?:l|\s+la|\s+los|\s+las)?\s+[\p{L}][\p{L}\s-]{1,30}$/iu,
+  /^no\s+(?:como|bebo|tomo)\s+(?:carne|cerdo|puerco|gluten|l[aá]cteos|alcohol|pescado|mariscos|az[uú]car|picante)$/i,
+  /^i(?:'m|\s+am)\s+(?:a\s+)?(?:vegetarian|vegan|pescatarian|celiac|lactose\s+intolerant|gluten\s+intolerant)$/i,
+  /^i(?:'m|\s+am)\s+allergic\s+to\s+[a-z][a-z\s-]{1,30}$/i,
+  /^i\s+(?:don't|do\s+not)\s+(?:eat|drink)\s+(?:meat|pork|gluten|dairy|alcohol|fish|seafood|sugar|spicy\s+food)$/i,
+  /^(?:eu\s+)?sou\s+(?:vegetarian[oa]|vegan[oa]|cel[ií]ac[oa]|intolerante\s+[aà]\s+lactose)$/i,
+  /^(?:eu\s+)?sou\s+al[eé]rgic[oa]\s+(?:a|ao|à|aos|às)\s+[\p{L}][\p{L}\s-]{1,30}$/iu,
+  /^(?:eu\s+)?tenho\s+alergia\s+(?:a|ao|à|aos|às)\s+[\p{L}][\p{L}\s-]{1,30}$/iu,
+  /^(?:eu\s+)?n[aã]o\s+(?:como|bebo)\s+(?:carne|porco|gl[uú]ten|latic[ií]nios|[aá]lcool|peixe|frutos\s+do\s+mar)$/i,
+];
+
 export function extractImplicitFact(userText: string): RememberExtraction | null {
-  const t = userText.trim().replace(/[.!]+$/, "");
+  const t = userText
+    .trim()
+    .replace(/[.!]+$/, "")
+    .replace(IMPLICIT_LEAD_RE, "")
+    .trim();
   if (!t || t.length > 200 || looksLikeQuestion(t) || isMemoryQuery(t)) return null;
   const done = (content: string): RememberExtraction | null => {
     const c = content.trim();
@@ -564,6 +617,9 @@ export function extractImplicitFact(userText: string): RememberExtraction | null
     /^my\s+[\p{L}' -]{1,30}'s\s+(?:birthday|anniversary)\b/iu.test(t)
   ) {
     return done(t);
+  }
+  if (DIET_ALLERGY_RES.some((re) => re.test(t))) {
+    return { content: t.charAt(0).toUpperCase() + t.slice(1), category: "preference" };
   }
   // "vivo en X" / "I live in X" / "moro em X" (1-4 palabras de lugar).
   const home = /^(?:vivo en|i live in|moro em|eu moro em)\s+([\p{L}][\p{L}\s.'-]{1,40})$/iu.exec(t);
@@ -610,7 +666,9 @@ export function extractImplicitFact(userText: string): RememberExtraction | null
  * no guardar la pregunta como hecho.
  */
 export function extractRememberFact(userText: string): RememberExtraction | null {
-  const trimmed = userText.trim();
+  // 0.1.41: el teclado mete a veces dos espacios seguidos («olvide  que»);
+  // los patrones esperan uno.
+  const trimmed = userText.trim().replace(/[ \t]{2,}/g, " ");
   if (!trimmed) return null;
   // No guardar consultas como hechos.
   if (isMemoryQuery(trimmed)) return null;

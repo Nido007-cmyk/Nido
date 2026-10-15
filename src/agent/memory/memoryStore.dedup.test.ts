@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { normalizeFactText, factSimilarity } from "./memoryStore";
+import { normalizeFactText, factSimilarity, mergeFactContent } from "./memoryStore";
 
 describe("DEDUP-2026-10-08: deduplicación de facts", () => {
   it("normaliza texto", () => {
@@ -29,5 +29,21 @@ describe("DEDUP-2026-10-08: deduplicación de facts", () => {
 
   it("no confunde facts distintos", () => {
     expect(factSimilarity("my mom's birthday is March 15th", "I like pizza")).toBeLessThan(0.3);
+  });
+});
+
+describe("0.1.41 — una corrección no se pierde al deduplicar", () => {
+  it("«3 de mayo» corrige a «5 de mayo» (antes ganaba el viejo y NIDO seguía diciendo 5)", () => {
+    expect(factSimilarity("Mi cumpleaños es el 3 de mayo", "Mi cumpleaños es el 5 de mayo")).toBeGreaterThanOrEqual(0.75);
+    expect(mergeFactContent("Mi cumpleaños es el 3 de mayo", "Mi cumpleaños es el 5 de mayo")).toBe("Mi cumpleaños es el 3 de mayo");
+  });
+
+  it("el mismo dato con más detalle conserva el detalle, venga de donde venga", () => {
+    expect(mergeFactContent("mi perro se llama Toby", "Mi perro se llama Toby y es café")).toBe("Mi perro se llama Toby y es café");
+    expect(mergeFactContent("Mi perro se llama Toby y es café", "mi perro se llama Toby")).toBe("Mi perro se llama Toby y es café");
+  });
+
+  it("repetir lo mismo deja lo guardado tal cual", () => {
+    expect(mergeFactContent("mi cumpleaños es el 3 de mayo.", "Mi cumpleaños es el 3 de mayo")).toBe("Mi cumpleaños es el 3 de mayo");
   });
 });

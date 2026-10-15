@@ -77,3 +77,53 @@ describe("raíz sin «cuadrada»", () => {
     expect(extractCalcAction("cuánto es la raíz de 81")?.result).toBe(9);
   });
 });
+
+describe("0.1.41 — prueba física en la Tab A9+", () => {
+  const now = new Date(2026, 9, 14, 17, 55);
+
+  it("«grades» (errata) también convierte, y en el sentido correcto", () => {
+    expect(extractToolAction("Cuantos grades Fahrenheit son 30 grados", now)).toMatchObject({ kind: "convert", value: 30, from: "grados", to: "fahrenheit" });
+    expect(extractToolAction("pasa 30 grado a fahrenheit", now)).toMatchObject({ kind: "convert", from: "grados", to: "fahrenheit" });
+  });
+
+  it.each([
+    ["Que dia cae el 25 de diciembre", { year: 2026, month: 12, day: 25, lang: "es" }],
+    ["¿qué día de la semana es el 1 de enero?", { year: 2027, month: 1, day: 1, lang: "es" }],
+    ["que dia cae el 25 de diciembre de 2027", { year: 2027, month: 12, day: 25 }],
+    ["what day is December 25", { year: 2026, month: 12, day: 25, lang: "en" }],
+    ["what day of the week is the 4th of July 2027", { year: 2027, month: 7, day: 4, lang: "en" }],
+    ["que dia cai 25 de dezembro", { year: 2026, month: 12, day: 25, lang: "pt" }],
+  ])("%s → día de la semana sin modelo", (input, want) => {
+    expect(extractToolAction(input, now)).toMatchObject({ kind: "weekday", ...want });
+    expect(classifyIntent(input)).toBe("actuar");
+  });
+
+  it("una fecha imposible no se inventa", () => {
+    expect(extractToolAction("qué día cae el 31 de febrero", now)).toBeNull();
+  });
+
+  it("«qué día es hoy» sigue siendo la fecha de hoy", () => {
+    expect(extractToolAction("qué día es hoy", now)).toMatchObject({ kind: "time", what: "date" });
+  });
+
+  it("«avísame en 20 minutos que saque la ropa» → título sin el «que»", () => {
+    expect(extractReminderAction("Avisame en 20 minutos que saque la ropa", now)?.text).toBe("saque la ropa");
+  });
+});
+
+describe("0.1.41 — recordatorios en forma de pregunta (prueba física)", () => {
+  const now = new Date(2026, 9, 14, 18, 0);
+  it.each([
+    ["El viernes a las 6 me recuerdas llamar a mi tia", "llamar a mi tia"],
+    ["¿me recuerdas mañana comprar pan?", "comprar pan"],
+    ["puedes recordarme el lunes a las 9 la cita", "la cita"],
+    ["el lunes me avisas de la cita", "la cita"],
+  ])("%s", (input, text) => {
+    const r = extractReminderAction(input, now);
+    expect(r?.text).toBe(text);
+    expect(r?.dueAt).toBeTruthy();
+  });
+  it.each(["¿me recuerdas?", "me recuerdas a mi padre", "¿recuerdas cómo se llama mi perro?"])("«%s» no es un aviso", (input) => {
+    expect(extractReminderAction(input, now)).toBeNull();
+  });
+});

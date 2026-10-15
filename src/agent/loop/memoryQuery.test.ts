@@ -8,6 +8,7 @@ import { describe, it, expect } from "vitest";
 import {
   answerMemoryQuery,
   isGenericMemoryQuestionShape,
+  isMemoryStyleQuery,
   memoryGateHit,
   scoreMemoryFacts,
   type MemoryQueryData,
@@ -209,5 +210,13 @@ describe("0.1.23 — scoreMemoryFacts / memoryGateHit / forma genérica", () => 
     ]) {
       expect(isGenericMemoryQuestionShape(q)).toBe(false);
     }
+  });
+});
+
+describe("0.1.41 — «Que sabes de mi ?» con espacio antes del signo (prueba física)", () => {
+  const mem = { facts: [{ content: "Mi cumpleaños es el 3 de mayo", category: "event" }, { content: "Soy vegetariano", category: "preference" }], preferences: [], people: [], recentLog: [] } as never;
+  it.each(["Que sabes de mi ?", "qué recuerdas de mí", "Cuando es mi cumpleaños ?"])("%s", (q) => {
+    expect(isMemoryStyleQuery(q)).toBe(true);
+    expect(answerMemoryQuery(q, mem, "es")).toBeTruthy();
   });
 });

@@ -120,8 +120,7 @@ export async function saveFact(input: {
   // corrupción ciega de la memoria del dueño por contenido remoto.
   const existing = await findSimilarFact(content, input.source ?? "user");
   if (existing) {
-    // Conservar el contenido más completo de los dos.
-    const merged = content.length > existing.content.length ? content : existing.content;
+    const merged = mergeFactContent(content, existing.content);
     const updatedAt = new Date().toISOString();
     await writeMemoryTransaction(async (db) => {
       await db.runAsync("UPDATE facts SET content = ?, updated_at = ? WHERE id = ?;", [
@@ -148,6 +147,29 @@ export async function saveFact(input: {
     );
   });
   return fact;
+}
+
+/**
+ * Qué contenido queda cuando un hecho nuevo se parece a uno guardado.
+ *
+ * - Si uno CONTIENE al otro, es el mismo dato con más o menos detalle: se
+ *   conserva el más completo («mi perro se llama Toby» ⊂ «mi perro se
+ *   llama Toby y es café»).
+ * - Si solo se parecen (comparten casi todas las palabras pero alguna
+ *   cambia), es una CORRECCIÓN y manda lo último que dijo el usuario.
+ *
+ * 0.1.41 (prueba física, Tab A9+): «mi cumpleaños es el 3 de mayo» contra
+ * un «…el 5 de mayo» guardado antes da Jaccard 0,75: se tomaba como
+ * duplicado y, con la misma longitud, se quedaba el VIEJO. La corrección
+ * se perdía en silencio y NIDO seguía diciendo «5 de mayo».
+ */
+export function mergeFactContent(incoming: string, stored: string): string {
+  const a = normalizeFactText(incoming);
+  const b = normalizeFactText(stored);
+  if (a === b) return stored;
+  if (b.includes(a)) return stored;
+  if (a.includes(b)) return incoming;
+  return incoming;
 }
 
 /** Normaliza un texto para comparar facts: minúsculas, sin puntuación, espacios simples. */
