@@ -376,3 +376,31 @@ describe("0.1.41 — «que no se te olvide que…» (iba a conversación)", () =
   });
 });
 it("dos espacios no rompen «ten en cuenta que»", () => { expect(extractRememberFact("ten en cuenta  que llueve")?.content).toBe("llueve"); });
+
+describe("0.1.41 — dieta y alergias propias, también con muletilla delante", () => {
+  it.each([
+    ["Por cierto,soy vegetariano", "Soy vegetariano"],
+    ["soy vegana", "Soy vegana"],
+    ["oye, soy alérgico a las nueces", "Soy alérgico a las nueces"],
+    ["tengo alergia al polen", "Tengo alergia al polen"],
+    ["no como cerdo", "No como cerdo"],
+    ["btw I'm vegetarian", "I'm vegetarian"],
+    ["I am allergic to peanuts", "I am allergic to peanuts"],
+    ["sou vegetariano", "Sou vegetariano"],
+    ["tenho alergia a camarão", "Tenho alergia a camarão"],
+  ])("%s → «%s»", (input, content) => {
+    expect(extractImplicitFact(input)).toEqual({ content, category: "preference" });
+    expect(classifyIntent(input)).toBe("recordar");
+  });
+
+  it("la muletilla tampoco estorba a los datos que ya se guardaban", () => {
+    expect(extractImplicitFact("Por cierto, mi perro se llama Toby")?.content).toBe("mi perro se llama Toby");
+  });
+
+  it.each(["soy vegetariano?", "¿eres vegetariano?", "soy muy feliz", "no como nada hoy", "soy alérgico a que me griten todo el día en el trabajo y luego"])(
+    "«%s» no",
+    (input) => {
+      expect(extractImplicitFact(input)).toBeNull();
+    },
+  );
+});

@@ -570,8 +570,34 @@ export function extractSelfName(userText: string): string | null {
 const SENSITIVE_NOUN = /cuenta|tarjeta|clave|contraseña|contrasena|password|pin|seguro|card|account|senha/i;
 const LONG_DIGITS = /\d{7,}/;
 
+// 0.1.41 (prueba física): «Por cierto,soy vegetariano» — una muletilla
+// delante (y sin espacio tras la coma) no cambia que sea un dato propio.
+const IMPLICIT_LEAD_RE =
+  /^(?:(?:por\s+cierto|a\s+prop[oó]sito|oye|ah|bueno|tambi[eé]n|btw|by\s+the\s+way|also|oh|aliás|alias|por\s+falar\s+nisso|ah[,!]?\s+e|tamb[eé]m)[,.!:]?\s*)+/i;
+
+// 0.1.41: dieta y alergias dichas de uno mismo. Lista cerrada (precisión >
+// cobertura): «soy vegetariano», «soy alérgico a las nueces», «tengo
+// alergia al polen», «no como cerdo», y sus formas en inglés y portugués.
+const DIET_ALLERGY_RES: RegExp[] = [
+  /^soy\s+(?:vegetarian[oa]|vegan[oa]|pescetarian[oa]|cel[ií]ac[oa]|intolerante\s+a\s+(?:la\s+)?(?:lactosa|gluten|fructosa))$/i,
+  /^soy\s+al[eé]rgic[oa]\s+a(?:l|\s+la|\s+los|\s+las)?\s+[\p{L}][\p{L}\s-]{1,30}$/iu,
+  /^tengo\s+alergia\s+a(?:l|\s+la|\s+los|\s+las)?\s+[\p{L}][\p{L}\s-]{1,30}$/iu,
+  /^no\s+(?:como|bebo|tomo)\s+(?:carne|cerdo|puerco|gluten|l[aá]cteos|alcohol|pescado|mariscos|az[uú]car|picante)$/i,
+  /^i(?:'m|\s+am)\s+(?:a\s+)?(?:vegetarian|vegan|pescatarian|celiac|lactose\s+intolerant|gluten\s+intolerant)$/i,
+  /^i(?:'m|\s+am)\s+allergic\s+to\s+[a-z][a-z\s-]{1,30}$/i,
+  /^i\s+(?:don't|do\s+not)\s+(?:eat|drink)\s+(?:meat|pork|gluten|dairy|alcohol|fish|seafood|sugar|spicy\s+food)$/i,
+  /^(?:eu\s+)?sou\s+(?:vegetarian[oa]|vegan[oa]|cel[ií]ac[oa]|intolerante\s+[aà]\s+lactose)$/i,
+  /^(?:eu\s+)?sou\s+al[eé]rgic[oa]\s+(?:a|ao|à|aos|às)\s+[\p{L}][\p{L}\s-]{1,30}$/iu,
+  /^(?:eu\s+)?tenho\s+alergia\s+(?:a|ao|à|aos|às)\s+[\p{L}][\p{L}\s-]{1,30}$/iu,
+  /^(?:eu\s+)?n[aã]o\s+(?:como|bebo)\s+(?:carne|porco|gl[uú]ten|latic[ií]nios|[aá]lcool|peixe|frutos\s+do\s+mar)$/i,
+];
+
 export function extractImplicitFact(userText: string): RememberExtraction | null {
-  const t = userText.trim().replace(/[.!]+$/, "");
+  const t = userText
+    .trim()
+    .replace(/[.!]+$/, "")
+    .replace(IMPLICIT_LEAD_RE, "")
+    .trim();
   if (!t || t.length > 200 || looksLikeQuestion(t) || isMemoryQuery(t)) return null;
   const done = (content: string): RememberExtraction | null => {
     const c = content.trim();
@@ -591,6 +617,9 @@ export function extractImplicitFact(userText: string): RememberExtraction | null
     /^my\s+[\p{L}' -]{1,30}'s\s+(?:birthday|anniversary)\b/iu.test(t)
   ) {
     return done(t);
+  }
+  if (DIET_ALLERGY_RES.some((re) => re.test(t))) {
+    return { content: t.charAt(0).toUpperCase() + t.slice(1), category: "preference" };
   }
   // "vivo en X" / "I live in X" / "moro em X" (1-4 palabras de lugar).
   const home = /^(?:vivo en|i live in|moro em|eu moro em)\s+([\p{L}][\p{L}\s.'-]{1,40})$/iu.exec(t);
