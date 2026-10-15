@@ -4,6 +4,42 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.42-alpha — 2026-10-15
+
+The router (the part that handles commands on the phone without the AI
+model) was tested against 5,871 generated phrases: each of the usual
+commands written the way people type them, with a filler word in front
+("hey,", "by the way,", "please"), double spaces, a space before the
+question mark, no accents, capitals, or a final period. Before this
+release about a third of those still went to the AI model or were taken
+for conversation; now nearly all of them are handled directly. The phrases
+are generated, so these numbers are not what real use looks like; the log
+of missed phrases on the device stays the real measure.
+
+### Fixed
+- **Filler words and extra spaces no longer break commands.** "Hey,
+  remind me…", "by the way, my favourite colour is…", "please, what is
+  2+2" or "set a timer  for 5 minutes ?" now work the same as without them,
+  in Spanish, English and Portuguese.
+- **More reminder and timer forms**: "can you remind me…", "add a
+  reminder…", "set a timer for half an hour", "count 5 minutes", and
+  Portuguese «timer».
+- **"7 squared", "3 cubed"** are calculated on the phone.
+- **More ways of telling NIDO something to remember**: "just so you know…",
+  "for the record…", "I want you to remember…", "save in your memory
+  that…" (no longer saved as a note), and facts such as "I have 2 kids" or
+  "I'm married".
+- **Questions about something you saved** are answered from your memory
+  even when they are not in the first person ("where is the wifi
+  password?" when you saved "the wifi password is on the fridge"), and
+  "where did I leave the car?" works with the past tense.
+
+### Added
+- The phrase sweep is kept in the repository as a test
+  (`src/eval/routerSweep.pure.test.ts`): it fails if a later change makes
+  any family of commands drop below its current level, or if ordinary
+  conversation ever triggers an action.
+
 ## 0.1.41-alpha — 2026-10-14
 
 Fixes found by testing on a real tablet with the new "phrases the router

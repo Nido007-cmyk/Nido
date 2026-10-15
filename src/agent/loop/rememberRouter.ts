@@ -53,7 +53,16 @@ const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
   // para evitar capturar cláusulas de propósito como "para que me avises".
   { re: /gu[aá]rda\w*( esto| eso|lo|la)? en (tu |la )?memoria que[:\s]+(.+)/i, group: 3 },
   // "memoriza que X" / "memoriza: X"
-  { re: /memoriza[:\s]+(.+)/i, group: 1 },
+  { re: /memoriza(?:\s+que)?[:\s]+(.+)/i, group: 1 },
+  // 0.1.42 (barrido de 5 871 frases): formas frecuentes que caían a
+  // conversación o al modelo.
+  { re: /\btoma(?:r)? en cuenta que[:\s]+(.+)/i, group: 1 },
+  { re: /^quiero que (?:recuerdes|sepas|tengas en cuenta|guardes|memorices)(?: que)?[:\s]+(.+)/i, group: 1 },
+  { re: /^(?:para que lo sepas|que sepas|te cuento que|para tu informaci[oó]n)[,:]?\s+(.+)/i, group: 1 },
+  { re: /^(?:anota|apunta|guarda)(?:lo)? en (?:tu|la) memoria(?: que)?[:\s]+(.+)/i, group: 1 },
+  { re: /^(?:just so you know|fyi|for your information|for the record)[,:]?\s+(.+)/i, group: 1 },
+  { re: /^(?:make sure (?:you|to) remember|i want you to remember)(?: that)?[:\s]+(.+)/i, group: 1 },
+  { re: /^(?:s[oó] pra voc[eê] saber|quero que voc[eê] lembre)(?: que)?[,:]?\s+(.+)/i, group: 1 },
   // 0.1.20 (M3): "guarda que X" a secas — la sonda mostró que solo
   // funcionaba la forma larga "guarda en memoria que". No choca con
   // "guarda una nota…" (esa frase no empieza con "guarda que" y la
@@ -579,7 +588,14 @@ const IMPLICIT_LEAD_RE =
 // cobertura): «soy vegetariano», «soy alérgico a las nueces», «tengo
 // alergia al polen», «no como cerdo», y sus formas en inglés y portugués.
 const DIET_ALLERGY_RES: RegExp[] = [
-  /^soy\s+(?:vegetarian[oa]|vegan[oa]|pescetarian[oa]|cel[ií]ac[oa]|intolerante\s+a\s+(?:la\s+)?(?:lactosa|gluten|fructosa))$/i,
+  /^soy\s+(?:vegetarian[oa]|vegan[oa]|pescetarian[oa]|cel[ií]ac[oa]|diab[eé]tic[oa]|hipertens[oa]|asm[aá]tic[oa]|intolerante\s+a\s+(?:la\s+)?(?:lactosa|gluten|fructosa))$/i,
+  // 0.1.42 (barrido): estado civil y familia, datos estables de uno mismo.
+  /^(?:estoy|soy)\s+(?:casad[oa]|solter[oa]|divorciad[oa]|viud[oa]|comprometid[oa])$/i,
+  /^tengo\s+(?:un[oa]?|dos|tres|cuatro|cinco|\d)\s+(?:hij[oa]s?|niet[oa]s?|herman[oa]s?|perr[oa]s?|gat[oa]s?|mascotas?)$/i,
+  /^i(?:'m|\s+am)\s+(?:married|single|divorced|widowed|engaged|diabetic)$/i,
+  /^i\s+have\s+(?:a|an|one|two|three|four|five|\d)\s+(?:kids?|children|child|sons?|daughters?|brothers?|sisters?|dogs?|cats?|pets?|grandchildren)$/i,
+  /^(?:eu\s+)?(?:sou|estou)\s+(?:casad[oa]|solteir[oa]|divorciad[oa]|vi[uú]v[oa]|diab[eé]tic[oa])$/i,
+  /^(?:eu\s+)?tenho\s+(?:um|uma|dois|duas|tr[eê]s|\d)\s+(?:filh[oa]s?|net[oa]s?|irm[aã][oa]?s?|cachorros?|gatos?)$/i,
   /^soy\s+al[eé]rgic[oa]\s+a(?:l|\s+la|\s+los|\s+las)?\s+[\p{L}][\p{L}\s-]{1,30}$/iu,
   /^tengo\s+alergia\s+a(?:l|\s+la|\s+los|\s+las)?\s+[\p{L}][\p{L}\s-]{1,30}$/iu,
   /^no\s+(?:como|bebo|tomo)\s+(?:carne|cerdo|puerco|gluten|l[aá]cteos|alcohol|pescado|mariscos|az[uú]car|picante)$/i,

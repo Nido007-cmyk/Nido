@@ -154,6 +154,15 @@ export function extractCalcAction(userText: string): CalcAction | null {
     const result = kind === "cuadrada" || kind === "quadrada" ? Math.sqrt(n) : Math.cbrt(n);
     return /\d,\d/.test(shown) ? { expression: shown, result, decimalComma: true } : { expression: shown, result };
   }
+  // 0.1.42 (barrido): «7 al cuadrado», «3 al cubo», «5 squared», «2 cubed»,
+  // «4 ao quadrado»: potencia escrita con palabras.
+  const pow = /^(-?\d+(?:[.,]\d+)?)\s+(?:al\s+(cuadrado|cubo)|(squared|cubed)|ao\s+(quadrado|cubo))$/i.exec(shown);
+  if (pow) {
+    const n = Number(pow[1].replace(",", "."));
+    const word = (pow[2] ?? pow[3] ?? pow[4]).toLowerCase();
+    const result = /cuadrado|squared|quadrado/.test(word) ? n * n : n * n * n;
+    return /\d,\d/.test(shown) ? { expression: shown, result, decimalComma: true } : { expression: shown, result };
+  }
   // 0.1.20: "square root of 144" / "cube root of 27" (paridad EN de la raíz).
   const rootEn = /^(square|cube) root of\s+(\d+(?:[.,]\d+)?)$/i.exec(shown);
   if (rootEn) {
@@ -306,7 +315,7 @@ export function isOrderLead(rawLead: string): boolean {
   const lead = rawLead.trim().replace(/[,:;]+$/, "").trim();
   if (!lead) return true;
   if (
-    /^(?:(?:por\s+favor|porfa|oye|hey|hola|ok|okay|vale|bueno|please|hi|nido|ei|olá|ola|mejor|better|melhor|no|n[aã]o|y|and|e|tambi[eé]n|also|tamb[eé]m|entonces|then|ent[aã]o|ahora|now|agora)[,!.]?\s*)+$/i.test(lead)
+    /^(?:(?:por\s+favor|porfa|oye|hey|hola|ok|okay|vale|bueno|please|hi|nido|ei|olá|ola|mejor|better|melhor|no|n[aã]o|y|and|e|tambi[eé]n|also|tamb[eé]m|entonces|then|ent[aã]o|ahora|now|agora|can\s+you|could\s+you|would\s+you|will\s+you|puedes|podr[ií]as|me\s+puedes|me\s+podr[ií]as|pode|voc[eê]\s+pode)[,!.]?\s*)+$/i.test(lead)
   ) {
     return true;
   }
@@ -452,7 +461,7 @@ function extractReminderCore(userText: string): ReminderAction | null {
   // «despiértame a las 7», «me acorde às 7», «wake me at 7» creaban
   // nada: caían al modelo. El verbo va en su grupo para saber si es un
   // aviso (su texto puede ser la propia orden cuando no hay tarea).
-  const m = /((?:agr[ée]game|cr[ée]ame|ponme|crea)(?=\s+(?:una?\s+)?(?:cita|recordatorio|aviso|alarma)(?![a-záéíóúñ]))|recu[ée]rdame|me\s+recuerdas|me\s+(?:puedes|podr[ií]as)\s+recordar|(?:puedes|podr[ií]as)\s+recordarme|me\s+(?:avisas|puedes\s+avisar|podr[ií]as\s+avisar)|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|faz|fa[çc]a)\s+um\s+lembrete|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|define|defina)\s+um\s+alarme(?:\s+para)?|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
+  const m = /((?:agr[ée]game|cr[ée]ame|ponme|crea)(?=\s+(?:una?\s+)?(?:cita|recordatorio|aviso|alarma)(?![a-záéíóúñ]))|(?:pon|agrega|a[ñn]ade|programa)(?=\s+(?:una?\s+)?(?:cita|recordatorio|aviso)(?![a-záéíóúñ]))|recu[ée]rdame|me\s+recuerdas|me\s+(?:puedes|podr[ií]as)\s+recordar|(?:puedes|podr[ií]as)\s+recordarme|me\s+(?:avisas|puedes\s+avisar|podr[ií]as\s+avisar)|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|faz|fa[çc]a)\s+um\s+lembrete|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|define|defina)\s+um\s+alarme(?:\s+para)?|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
   if (!m) return null;
   // 0.1.37 (auditoría): el verbo tiene que abrir la orden. Delante solo
   // cabe una fecha («mañana recuérdame…») o una cortesía («oye, …»). Así
@@ -622,7 +631,7 @@ export function stripDateWords(input: string): string {
       .replace(/\bin\s+\d+\s*(minutes?|min|hours?|hrs?|h|days?|d|weeks?|w)\b/gi, "")
       // 0.1.14: portugués "em 2 horas".
       .replace(/\bem\s+\d+\s*(minutos?|min|horas?|h|dias?|d|semanas?)\b/gi, "")
-      .replace(/\ben\s+(uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
+      .replace(/\ben\s+(uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
       // M3 FIX: limpiar hora suelta después de día ("el viernes 10" → el 10 es la hora).
       .replace(/\b(\d{1,2})(:\d{2})?\s*(am|pm)?\s*$/gi, "")
       .replace(/\s+/g, " ")
@@ -646,7 +655,7 @@ const NUMBER_WORDS: Record<string, number> = {
  */
 function parseRelativeTime(t: string, now: Date): Date | null {
   // FIX 2026-10-08: \s* entre número y unidad para "1minuto" (sin espacio).
-  const m = /\b(?:en|in|em)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/i.exec(t);
+  const m = /\b(?:en|in|em)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/i.exec(t);
   if (!m) return null;
 
   const rawNum = m[1].toLowerCase();
@@ -742,7 +751,9 @@ const TIMER_FORMS: Array<{ re: RegExp }> = [
   // 0.1.35: «10 minute timer» (la duración delante).
   { re: /^(?:(?:set|start)\s+)?(?:a\s+)?(\d+\s*(?:-\s*)?(?:second|sec|minute|min|hour)s?)\s+timer(?:\s+(?:for|to)\s+(.+))?$/i },
   // PT: «coloca um temporizador de 10 minutos (para a massa)»
-  { re: /^(?:coloca|inicia|come[çc]a|ativa|p[õo]e|ponha)\s+(?:um\s+)?(?:temporizador|cron[ôo]metro)\s+(?:de\s+)?(.+?)(?:\s+(?:para|de)\s+(.+))?$/i },
+  { re: /^(?:coloca|inicia|come[çc]a|ativa|p[õo]e|ponha)\s+(?:um\s+)?(?:temporizador|cron[ôo]metro|timer)\s+(?:de\s+)?(.+?)(?:\s+(?:para|de)\s+(.+))?$/i },
+  // 0.1.42 (barrido): «cuenta 3 minutos», «cronometra 5 minutos».
+  { re: /^(?:cuenta|cronometra|count|conta)\s+(\d+\s*(?:segundos?|seconds?|minutos?|minutes?|min|horas?|hours?))(?:\s+(?:para|de|for)\s+(.+))?$/i },
   { re: /^(?:temporizador|cron[ôo]metro)\s+(?:de\s+)?(.+?)(?:\s+(?:para|de)\s+(.+))?$/i },
 ];
 
