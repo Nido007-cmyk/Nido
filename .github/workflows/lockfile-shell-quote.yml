@@ -1,0 +1,26 @@
+# TEMPORAL (rama security/npm-audit): sube shell-quote dentro del rango que
+# ya pide react-devtools-core (^1.6.1) a la versión corregida, solo en el
+# lockfile, y lo sube a la misma rama. Se borra antes de fusionar.
+name: lockfile shell-quote (temporal)
+on:
+  push:
+    branches: ['security/npm-audit']
+    paths: ['.github/workflows/lockfile-shell-quote.yml']
+permissions:
+  contents: write
+jobs:
+  bump:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm update shell-quote --package-lock-only --ignore-scripts
+      - run: |
+          node -e 'const p=require("./package-lock.json").packages["node_modules/shell-quote"];console.log(`::notice title=shell-quote::${p.version}`)'
+          git diff --stat
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "deps: shell-quote corregido (GHSA-pqg4-j6r4-53mv), solo lockfile" || exit 0
+          git push
