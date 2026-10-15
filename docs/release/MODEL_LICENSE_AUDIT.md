@@ -182,12 +182,12 @@ answers that use it show the source.
    and the full license text of every third-party package.
 3. CC BY-SA 4.0 notice for the corpus — **closed in the app and the repo**
    (Licenses screen, `ATTRIBUTION.md`, `assets/packs/ATTRIBUTION.txt`).
-   **Pending, maintainer action:** the `knowledge-packs-v1` release
-   description refers to an `ATTRIBUTION.txt` that was never uploaded, and the
-   `knowledge-packs-v2` description still says "Draft… not used by any released
-   app version". Releases can only be edited by the maintainer: upload
-   `assets/packs/ATTRIBUTION.txt` to `knowledge-packs-v1` and replace both
-   descriptions (texts prepared on 2026-10-14).
+   **Closed 2026-10-14, maintainer action (via API):** `ATTRIBUTION.txt`
+   uploaded to the `knowledge-packs-v1` release (1,231 bytes, next to the
+   untouched `wiki-vital5.sqlite`) and both release descriptions replaced
+   with the texts prepared on 2026-10-14 (verified byte-for-byte; the
+   "Draft… not used by any released app version" text is gone from v2).
+   No other assets, tags or pre-release flags were changed.
 4. AboutScreen legal section — **closed** (same screen).
 5. Link to full license texts — **closed** (same screen; URLs shown as
    selectable text because the app does not open the network).
