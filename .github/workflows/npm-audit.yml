@@ -1,0 +1,38 @@
+# Auditoría de dependencias (npm audit) con el resultado como anotaciones,
+# legibles sin abrir los logs. Solo lee: no cambia nada del repo.
+name: npm audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['security/**']
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: npm audit (todas y solo producción)
+        run: |
+          npm audit --json > audit-all.json || true
+          npm audit --omit=dev --json > audit-prod.json || true
+          node -e '
+            const fs = require("fs");
+            const prod = JSON.parse(fs.readFileSync("audit-prod.json", "utf8"));
+            const all = JSON.parse(fs.readFileSync("audit-all.json", "utf8"));
+            const inProd = new Set(Object.keys(prod.vulnerabilities || {}));
+            const m = all.metadata?.vulnerabilities || {};
+            console.log(`::notice title=npm audit::total ${m.total} (critical ${m.critical}, high ${m.high}, moderate ${m.moderate}, low ${m.low}); en producción ${Object.keys(prod.vulnerabilities||{}).length}`);
+            for (const [name, v] of Object.entries(all.vulnerabilities || {})) {
+              const via = (v.via || []).map((x) => typeof x === "string" ? "via " + x : `${x.title} [${x.url}] rango ${x.range}`).join(" | ");
+              const fix = v.fixAvailable === true ? "fix: npm audit fix" : v.fixAvailable ? `fix: ${v.fixAvailable.name}@${v.fixAvailable.version}${v.fixAvailable.isSemVerMajor ? " (MAJOR)" : ""}` : "sin fix";
+              const msg = `${name} ${v.severity} ${inProd.has(name) ? "PROD" : "dev"} rango ${v.range} · nodes ${(v.nodes||[]).slice(0,3).join(",")} · ${fix} · ${via}`.replace(/%/g,"%25").replace(/\r?\n/g," ");
+              console.log(`::warning title=vuln ${name}::${msg.slice(0, 900)}`);
+            }
+          '
