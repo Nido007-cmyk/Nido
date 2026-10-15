@@ -9,7 +9,7 @@ The list covers every package that `package-lock.json` does not mark as developm
 
 AI models and knowledge packs are not part of the app: they are downloaded separately and keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin) are not listed here yet.
 
-Source: `package-lock.json sha256:752e3ec044fb` · 584 packages.
+Source: `package-lock.json sha256:2ab913ba1fbc` · 584 packages.
 
 ## License elections
 
@@ -524,7 +524,7 @@ Source: `package-lock.json sha256:752e3ec044fb` · 584 packages.
 | setprototypeof | 1.2.0 | ISC |
 | shebang-command | 2.0.0 | MIT |
 | shebang-regex | 3.0.0 | MIT |
-| shell-quote | 1.10.0 | MIT |
+| shell-quote | 1.12.0 | MIT |
 | signal-exit | 3.0.7 | ISC |
 | simple-plist | 1.3.1 | MIT |
 | sisteransi | 1.0.5 | MIT |
@@ -14936,7 +14936,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### shell-quote@1.10.0 — LICENSE
+### shell-quote@1.12.0 — LICENSE
 
 ```text
 The MIT License
