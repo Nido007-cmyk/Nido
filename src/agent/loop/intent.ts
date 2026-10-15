@@ -40,6 +40,7 @@ const REMEMBER_PATTERNS: RegExp[] = [
   /recuerda( que|te)?/i,
   /acu[eé]rdate/i,
   /no (olvides|te olvides)/i,
+  /^(?:que\s+)?no se te (?:olvide|pase)\b/i,
   // Tolerante a enclíticos y acentos: "guárdalo/guardala en tu memoria"
   /gu[aá]rda\w* (esto |eso )?en (tu |la )?memoria/i,
   /memoriza/i,

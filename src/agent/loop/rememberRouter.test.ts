@@ -364,3 +364,15 @@ describe("0.1.41 — «a partir de ahora…» se guarda como preferencia (caía 
     expect(extractRememberFact(input)).toBeNull();
   });
 });
+
+describe("0.1.41 — «que no se te olvide que…» (iba a conversación)", () => {
+  it.each([
+    ["Que no se te olvide  que el martes pago la renta", "el martes pago la renta"],
+    ["no se te olvide que mi hija sale a las 3", "mi hija sale a las 3"],
+    ["que no se te pase que el gas se paga el 5", "el gas se paga el 5"],
+  ])("%s", (input, content) => {
+    expect(extractRememberFact(input)?.content).toBe(content);
+    expect(classifyIntent(input)).toBe("recordar");
+  });
+});
+it("dos espacios no rompen «ten en cuenta que»", () => { expect(extractRememberFact("ten en cuenta  que llueve")?.content).toBe("llueve"); });

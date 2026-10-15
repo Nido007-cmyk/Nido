@@ -42,6 +42,10 @@ const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
   { re: /recu[eé]rdame( que)?[:\s]+(.+)/i, group: 2 },
   // "acuérdate de que X" / "acuérdate que X"
   { re: /acu[eé]rdate( de)?( que)?[:\s]+(.+)/i, group: 3 },
+  // 0.1.41 (prueba física): «que no se te olvide que el martes pago la
+  // renta» iba a conversación y el modelo lo repetía como «La respuesta
+  // es: …». Formas con «se»: «no se te olvide», «que no se te pase».
+  { re: /^(?:que\s+)?no\s+se\s+te\s+(?:olvide|pase)(?:\s+de)?(?:\s+que)?[:\s]+(.+)/i, group: 1 },
   // "no olvides que X" / "no te olvides de que X"
   { re: /no (te )?olvides( de)?( que)?[:\s]+(.+)/i, group: 4 },
   // "guarda en tu memoria que X" / "guarda en memoria: X"
@@ -633,7 +637,9 @@ export function extractImplicitFact(userText: string): RememberExtraction | null
  * no guardar la pregunta como hecho.
  */
 export function extractRememberFact(userText: string): RememberExtraction | null {
-  const trimmed = userText.trim();
+  // 0.1.41: el teclado mete a veces dos espacios seguidos («olvide  que»);
+  // los patrones esperan uno.
+  const trimmed = userText.trim().replace(/[ \t]{2,}/g, " ");
   if (!trimmed) return null;
   // No guardar consultas como hechos.
   if (isMemoryQuery(trimmed)) return null;
