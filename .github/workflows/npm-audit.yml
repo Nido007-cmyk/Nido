@@ -1,0 +1,50 @@
+# Auditoría de dependencias (npm audit) con el resultado como anotaciones,
+# legibles sin abrir los logs. Solo lee: no cambia nada del repo.
+name: npm audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['security/**']
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: npm audit (todas y solo producción)
+        run: |
+          npm audit --json > audit-all.json || true
+          npm audit --omit=dev --json > audit-prod.json || true
+          node -e '
+            const fs = require("fs");
+            const prod = JSON.parse(fs.readFileSync("audit-prod.json", "utf8"));
+            const all = JSON.parse(fs.readFileSync("audit-all.json", "utf8"));
+            const inProd = new Set(Object.keys(prod.vulnerabilities || {}));
+            const m = all.metadata?.vulnerabilities || {};
+            console.log(`::notice title=npm audit::total ${m.total} (critical ${m.critical}, high ${m.high}, moderate ${m.moderate}, low ${m.low}); en producción ${inProd.size}`);
+            // Solo las causas raíz (avisos con GHSA), agrupadas: los
+            // paquetes que «heredan» la vulnerabilidad no aportan nada.
+            const roots = new Map();
+            for (const [name, v] of Object.entries(all.vulnerabilities || {})) {
+              for (const x of v.via || []) {
+                if (typeof x === "string") continue;
+                const k = x.url;
+                const r = roots.get(k) || { pkg: x.name, sev: x.severity, title: x.title, range: x.range, url: x.url, prod: false, fix: v.fixAvailable };
+                r.prod = r.prod || inProd.has(name);
+                roots.set(k, r);
+              }
+            }
+            const order = { critical: 0, high: 1, moderate: 2, low: 3 };
+            const list = [...roots.values()].sort((a, b) => order[a.sev] - order[b.sev] || a.pkg.localeCompare(b.pkg));
+            const line = (r) => `[${r.sev}] ${r.pkg} ${r.range} ${r.prod ? "PROD" : "dev"} - ${r.title} - ${r.url} - fix: ${r.fix === true ? "audit fix" : r.fix ? r.fix.name + "@" + r.fix.version + (r.fix.isSemVerMajor ? " MAJOR" : "") : "none"}`;
+            const chunks = [];
+            for (let i = 0; i < list.length; i += 6) chunks.push(list.slice(i, i + 6));
+            chunks.slice(0, 9).forEach((c, i) => console.log(`::warning title=causas ${i + 1}::${c.map(line).join(" || ").replace(/%/g, "%25")}`));
+          '
