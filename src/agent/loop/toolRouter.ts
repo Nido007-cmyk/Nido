@@ -40,6 +40,44 @@ import type { DispatchStatus } from "./contactRouter";
 
 export type RouterLang = "es" | "en" | "pt";
 
+/**
+ * 0.1.43 (vigilancia del router): la lista canónica de «kinds» que
+ * extractToolAction puede devolver. Hasta aquí la única enumeración era
+ * la unión de ToolAction, invisible fuera de este archivo: el barrido
+ * del router no podía saber qué rutas existían, y 17 quedaron sin
+ * ejercitar sin que ningún test lo notara (la promesa pública del hilo
+ * de Reddit). El tipo del kind deriva de esta lista (ToolKind y la
+ * guarda tras la unión): un kind nuevo que no entre aquí es un error
+ * de compilación, no una sorpresa en producción.
+ */
+export const TOOL_KINDS = [
+  "calendarCreate",
+  "calendarList",
+  "convert",
+  "countdown",
+  "currencyInfo",
+  "memoryForgetHelp",
+  "nidoCode",
+  "nidoInbox",
+  "nidoSend",
+  "nidoTasks",
+  "noteDelete",
+  "noteList",
+  "noteRead",
+  "noteSave",
+  "noteSearch",
+  "openLink",
+  "pickFile",
+  "reminderDelete",
+  "reminderFill",
+  "reminderList",
+  "reminderOfferCreate",
+  "time",
+  "weekday",
+] as const;
+
+export type ToolKind = (typeof TOOL_KINDS)[number];
+
 export type ToolAction =
   | { kind: "time"; what: "time" | "date"; lang: RouterLang }
   /** 0.1.41: «qué día cae el 25 de diciembre» → día de la semana, calculado. */
@@ -65,6 +103,16 @@ export type ToolAction =
   | { kind: "reminderList"; lang: RouterLang; range?: "today" | "tomorrow" }
   | { kind: "noteDelete"; target: DeleteTarget; lang: RouterLang }
   | { kind: "reminderDelete"; target: DeleteTarget; range?: "today" | "tomorrow"; lang: RouterLang };
+
+/**
+ * La unión y TOOL_KINDS no pueden desajustarse: si un kind entra en la
+ * unión sin estar en la lista (o al revés), esta igualdad de tipos vale
+ * `false` y la constante de debajo deja de compilar.
+ */
+type ToolKindsMatchUnion = (<T>() => T extends ToolAction["kind"] ? 1 : 2) extends <T>() => T extends ToolKind ? 1 : 2
+  ? true
+  : false;
+export const TOOL_KINDS_IN_SYNC: ToolKindsMatchUnion = true;
 
 /**
  * 0.1.20 (P3-9): destino de un borrado.

@@ -15,7 +15,17 @@
  */
 import { describe, expect, it } from "vitest";
 import { memoryFullCoverageHit } from "../agent/loop/memoryQuery";
-import { buildCorpus, EXPECTED, routeOf, runSweep, summarize, SWEEP_MEMORY, type Family } from "./routerSweep.pure";
+import {
+  buildCorpus,
+  EXPECTED,
+  PENDING_ROUTES,
+  ROUTER_ROUTES,
+  routeOf,
+  runSweep,
+  summarize,
+  SWEEP_MEMORY,
+  type Family,
+} from "./routerSweep.pure";
 
 const MIN_RATE: Record<Family, number> = {
   remember: 0.98,
@@ -90,5 +100,27 @@ describe("memoryFullCoverageHit", () => {
   });
   it("cobertura parcial → no", () => {
     expect(memoryFullCoverageHit("¿cuál es la capital de Francia?", SWEEP_MEMORY)).toBe(false);
+  });
+});
+
+/**
+ * 0.1.43 (la promesa del hilo de Reddit): el hueco era que 17 rutas del
+ * router no las probaba ninguna familia y nadie lo veía. Estos dos
+ * tests vigilan el inventario completo: una ruta nueva en el código
+ * (un kind nuevo en TOOL_KINDS, una vía nueva en routeOf) obliga a
+ * ejercitarla en una familia o a declararla en PENDING_ROUTES.
+ */
+describe("cobertura de rutas del router (0.1.43)", () => {
+  const covered = new Set(Object.values(EXPECTED).flat());
+
+  it("toda ruta del router está en una familia del barrido o en la deuda declarada", () => {
+    const accounted = new Set([...covered, ...PENDING_ROUTES]);
+    const missing = ROUTER_ROUTES.filter((r) => !accounted.has(r));
+    expect(missing).toEqual([]);
+  });
+
+  it("ninguna ruta está a la vez cubierta por una familia y pendiente", () => {
+    const both = PENDING_ROUTES.filter((r) => covered.has(r));
+    expect(both).toEqual([]);
   });
 });
