@@ -13,6 +13,7 @@ body:
     attributes:
       label: What happened?
       description: Clear description of the problem.
+      placeholder: "The app closed when I tapped Save on a note."
     validations:
       required: true
   - type: textarea
@@ -28,9 +29,7 @@ body:
   - type: textarea
     id: expected
     attributes:
-      label: What did you expect instead?
-    validations:
-      required: true
+      label: What did you expect instead? (optional)
   - type: input
     id: version
     attributes:
@@ -49,7 +48,7 @@ body:
   - type: input
     id: model
     attributes:
-      label: AI model in use
+      label: AI model in use (optional)
       description: As shown in Settings.
       placeholder: "Qwen 2.5 0.5B Q4"
   - type: dropdown
