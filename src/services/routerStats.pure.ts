@@ -19,8 +19,34 @@
  * - model: entró al asistente y respondió el modelo.
  * - notUnderstood: entró al asistente y acabó en «no entendí».
  * - chat: conversación normal (no era una acción ni memoria).
+ * - stageDropped (0.1.43): una orden preparada como chip cayó sin
+ *   ejecutarse; el motivo viaja en `route` (ver STAGE_DROP_REASONS).
+ *   Estas filas NO son mensajes: no cuentan en totales, tiempos ni
+ *   porcentajes del router; se cuentan aparte, en `drops`.
  */
-export type RouterOutcome = "router" | "model" | "notUnderstood" | "chat";
+export type RouterOutcome = "router" | "model" | "notUnderstood" | "chat" | "stageDropped";
+
+/**
+ * 0.1.43: por qué cayó un chip preparado sin ejecutarse. Lista cerrada:
+ * un motivo fuera de esta lista no se guarda tal cual, jamás (y nunca
+ * se guarda texto: solo la etiqueta del motivo). Todos cumplen la forma
+ * de safeLabel, así que pasan intactos al guardarlos como `route`.
+ */
+export const STAGE_DROP_REASONS = [
+  "text_edited",
+  "lang_changed",
+  "mode_changed",
+  "new_chat",
+  "session_switch",
+  "dismissed",
+  "stale_on_tap",
+] as const;
+
+export type StageDropReason = (typeof STAGE_DROP_REASONS)[number];
+
+export function isStageDropReason(v: unknown): v is StageDropReason {
+  return typeof v === "string" && (STAGE_DROP_REASONS as readonly string[]).includes(v);
+}
 
 export interface RouterSample {
   ts: number;
@@ -67,6 +93,12 @@ export interface RouterSummary {
   maxMs: number | null;
   outcomes: Record<RouterOutcome, number>;
   leak: RouterLeak;
+  /** 0.1.43: chips que cayeron sin ejecutarse, por motivo (aparte de todo lo demás). */
+  drops: Record<StageDropReason, number>;
+}
+
+function emptyDrops(): Record<StageDropReason, number> {
+  return { text_edited: 0, lang_changed: 0, mode_changed: 0, new_chat: 0, session_switch: 0, dismissed: 0, stale_on_tap: 0 };
 }
 
 const LABEL_RE = /^[a-z][a-z0-9_]{0,39}$/;
@@ -96,7 +128,8 @@ export function summarizeLeak(samples: readonly RouterSample[]): RouterLeak {
   const byTool = new Map<string, number>();
   const byRoute = new Map<string, number>();
   for (const s of samples) {
-    if (!s.route || s.outcome === "chat" || !isRouterOutcome(s.outcome)) continue;
+    // Un chip caído no resolvió nada: no es un turno resuelto por el código.
+    if (!s.route || s.outcome === "chat" || s.outcome === "stageDropped" || !isRouterOutcome(s.outcome)) continue;
     measured++;
     if (s.route !== "model") {
       router++;
@@ -113,7 +146,7 @@ export function summarizeLeak(samples: readonly RouterSample[]): RouterLeak {
   return { measured, router, toModel, modelAskedTool, retried, byTool: sortedCounts(byTool), byRoute: sortedCounts(byRoute) };
 }
 
-const OUTCOMES: readonly RouterOutcome[] = ["router", "model", "notUnderstood", "chat"];
+const OUTCOMES: readonly RouterOutcome[] = ["router", "model", "notUnderstood", "chat", "stageDropped"];
 
 export function isRouterOutcome(v: unknown): v is RouterOutcome {
   return typeof v === "string" && (OUTCOMES as readonly string[]).includes(v);
@@ -126,10 +159,17 @@ function percentile(sorted: number[], p: number): number {
 }
 
 export function summarizeRouterSamples(samples: readonly RouterSample[]): RouterSummary {
-  const outcomes: Record<RouterOutcome, number> = { router: 0, model: 0, notUnderstood: 0, chat: 0 };
+  const outcomes: Record<RouterOutcome, number> = { router: 0, model: 0, notUnderstood: 0, chat: 0, stageDropped: 0 };
+  const drops = emptyDrops();
   const times: number[] = [];
   for (const s of samples) {
     if (!Number.isFinite(s.classifyMs) || s.classifyMs < 0) continue;
+    // 0.1.43: un chip caído no es un mensaje medido: fuera de count,
+    // tiempos y desenlaces; solo suma en su motivo (si es de la lista).
+    if (s.outcome === "stageDropped") {
+      if (isStageDropReason(s.route)) drops[s.route]++;
+      continue;
+    }
     times.push(s.classifyMs);
     if (isRouterOutcome(s.outcome)) outcomes[s.outcome]++;
   }
@@ -141,6 +181,7 @@ export function summarizeRouterSamples(samples: readonly RouterSample[]): Router
     maxMs: times.length ? times[times.length - 1] : null,
     outcomes,
     leak: summarizeLeak(samples),
+    drops,
   };
 }
 

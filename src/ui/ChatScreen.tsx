@@ -117,7 +117,7 @@ import { onLaunchAction, registerShortcuts, takeLaunchAction } from "../services
 import { answerKnowledgeQueryWithCategory, toIdentityLocale, knowledgeSessionTitle } from "../rag/selfKnowledge";
 import { recordQueryStats, trackPeakRss, startAppMemoryTracking, QueryStats } from "../services/telemetry";
 import { recordExecution } from "../services/executionTelemetry";
-import { recordRouterSample } from "../services/routerStats";
+import { recordRouterSample, type StageDropReason } from "../services/routerStats";
 import { looksLikeMissedCommand, recordMissedPhrase } from "../services/missedPhrases";
 import { trimRepetitionLoop } from "../inference/repetitionGuard";
 import { getMemoryInfo } from "ram-monitor";
@@ -277,12 +277,27 @@ export function ChatScreen({
     runText: string;
     draft: string;
   }>(null);
+  // 0.1.43: espejo sincrónico del chip. Registra la caída del chip (si lo
+  // hay) con su motivo — solo la etiqueta, nunca texto — y anula el espejo
+  // al registrar: una caída = un registro, aunque varios sitios la
+  // intenten en el mismo tick.
+  const stagedRef = useRef<typeof staged>(null);
+  useEffect(() => {
+    stagedRef.current = staged;
+  }, [staged]);
+  const recordChipDrop = useCallback((reason: StageDropReason) => {
+    if (!stagedRef.current) return;
+    stagedRef.current = null;
+    recordRouterSample(0, "stageDropped", { route: reason, modelTools: [], retry: null });
+  }, []);
   const updateInput = useCallback((next: string, source?: InputSource) => {
     segmentsRef.current = applyEdit(segmentsRef.current, inputValueRef.current, next, source);
     inputValueRef.current = next;
     setInput(next);
+    // 0.1.43: si el texto deja de ser el del chip, el chip cae.
+    if (stagedRef.current && stagedRef.current.text !== next) recordChipDrop("text_edited");
     setStaged((cur) => (cur && cur.text !== next ? null : cur));
-  }, []);
+  }, [recordChipDrop]);
   const sessionSummaryRef = useRef<string | null>(null);
   const messagesRef = useRef<Message[]>([]);
   const backgroundTaskRef = useRef<Promise<void> | null>(null);
@@ -651,9 +666,10 @@ export function ChatScreen({
     // convertir el primer mensaje del nuevo en un recordatorio o un borrado.
     choiceStoreRef.current.current = null;
     resetConversationState();
+    recordChipDrop("new_chat");
     setStaged(null);
     impact(ImpactFeedbackStyle.Medium);
-  }, [stopAndAwaitGeneration, cancelBackgroundTask]);
+  }, [stopAndAwaitGeneration, cancelBackgroundTask, recordChipDrop]);
 
   // 0.1.10: NIDO desde fuera de la app (Compartir → NIDO, atajos del
   // icono, acceso rápido). La acción espera en el módulo nativo hasta que el
@@ -696,10 +712,11 @@ export function ChatScreen({
     setActiveSessionId(id);
     choiceStoreRef.current.current = null;
     resetConversationState();
+    recordChipDrop("session_switch");
     setStaged(null);
     const session = sessions.find((s) => s.id === id);
     sessionSummaryRef.current = session?.summary ?? null;
-  }, [stopAndAwaitGeneration, cancelBackgroundTask, sessions]);
+  }, [stopAndAwaitGeneration, cancelBackgroundTask, sessions, recordChipDrop]);
 
   const removeSession = useCallback(
     async (id: string) => {
@@ -756,6 +773,11 @@ export function ChatScreen({
     // Tras el toque de un chip, lo demás vuelve a la caja como borrador.
     segmentsRef.current = [];
     inputValueRef.current = "";
+    // 0.1.43: con override el chip se está EJECUTANDO (llegó por su toque),
+    // no cayendo: se marca consumido para que updateInput no lo cuente
+    // como caída. Sin override no se toca: si había un chip y se envió
+    // otra cosa, su caída la registra updateInput (text_edited).
+    if (override) stagedRef.current = null;
     updateInput(override?.draft ?? "", "typed");
     setStaged(null);
     setGenerating(true);
@@ -1586,6 +1608,7 @@ export function ChatScreen({
       cur.lang !== (i18n.resolvedLanguage ?? i18n.language) ||
       cur.deep !== deepResearchModeRef.current
     ) {
+      recordChipDrop("stale_on_tap");
       setStaged(null);
       return;
     }
@@ -1597,9 +1620,19 @@ export function ChatScreen({
   }, [staged, send, scrollToBottom, i18n]);
 
   // Cambio de idioma o de modo (Investigación): el chip preparado cae.
+  // 0.1.43: el motivo registrado es el que cambió (si cambian los dos a
+  // la vez, manda el idioma); al montar no cae nada porque no hay chip.
+  const prevLangRef = useRef(i18n.language);
+  const prevDeepRef = useRef(deepResearchEnabled);
   useEffect(() => {
+    const langChanged = prevLangRef.current !== i18n.language;
+    const modeChanged = prevDeepRef.current !== deepResearchEnabled;
+    prevLangRef.current = i18n.language;
+    prevDeepRef.current = deepResearchEnabled;
+    if (langChanged) recordChipDrop("lang_changed");
+    else if (modeChanged) recordChipDrop("mode_changed");
     setStaged(null);
-  }, [i18n.language, deepResearchEnabled]);
+  }, [i18n.language, deepResearchEnabled, recordChipDrop]);
 
   // FASE D6: Retry explícito para mensajes de error. Busca el último mensaje
   // del usuario y lo reenvía sin que el usuario tenga que reescribirlo.
@@ -2089,7 +2122,10 @@ export function ChatScreen({
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={t("chatScreen.staged.dismiss")}
-                  onPress={() => setStaged(null)}
+                  onPress={() => {
+                    recordChipDrop("dismissed");
+                    setStaged(null);
+                  }}
                   hitSlop={10}
                   style={styles.stagedDismiss}
                 >
