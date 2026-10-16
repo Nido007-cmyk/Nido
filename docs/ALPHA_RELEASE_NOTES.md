@@ -1,7 +1,7 @@
 # NIDO alpha — Release Notes
 
 > This document keeps the alpha overview and the current known
-> limitations, kept up to date with the latest release (0.1.42-alpha).
+> limitations, kept up to date with the latest release (0.1.43-alpha).
 > Per-version changes from 0.1.19 on are in the
 > [changelog](../CHANGELOG.md) and in each GitHub release; the notes for
 > 0.1.1 to 0.1.18 are kept below for reference.
@@ -20,7 +20,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Encrypted on-device storage
 - Backup / restore
 - About → Licenses: the license of NIDO, of every downloadable model and pack, of the Wikipedia text inside the app and of every open-source package it is built with
-- On-device measurements (generation speed, time to first word, routing time, and how many commands the router missed and sent to the model) that never leave the phone
+- On-device measurements (generation speed, time to first word, routing time, how many commands the router missed and sent to the model, and how many prepared commands were dropped before running, and why) that never leave the phone
 
 ## Earlier releases (0.1.1 – 0.1.18)
 
