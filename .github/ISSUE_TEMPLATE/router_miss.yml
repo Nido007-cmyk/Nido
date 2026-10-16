@@ -52,8 +52,6 @@ body:
         - English
         - Português
         - Mixed / mezcla
-    validations:
-      required: true
   - type: textarea
     id: expected
     attributes:
