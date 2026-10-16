@@ -4,6 +4,44 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.43-alpha — 2026-10-16
+
+This release watches the router itself. Every route a message can take
+is now inventoried in the code, and the test suite fails if a route is
+ever left unclassified. The phrase sweep grew from 5,871 to 6,550
+generated phrases, with five more families measured — contacts,
+calendar, managing reminders, deleting notes and the weekly plan, in
+Spanish, English and Portuguese. Measuring them found three real bugs,
+fixed below; after the fixes those families pass in full, and 120
+phrases that almost sound like commands (but are conversation) now
+correctly stay conversation. Ten routes still have no measured family;
+they are listed in the code as pending, on purpose.
+
+### Fixed
+- **Sentences that mention a phone or a number are no longer treated
+  as a contact search.** "The phone in my house stopped working", "I
+  lost Juan's number" or «o telefone de casa não funciona mais» opened
+  the contact search with the whole sentence as the name. Bare forms
+  like "Ana's number" now only search when what follows really looks
+  like a name; real searches ("what's Ana's number", «teléfono de mi
+  mamá») work as before.
+- **Portuguese text messages**: «envia uma mensagem de texto para a
+  Ana» (with the feminine article) fell through to the AI model; it is
+  handled directly now, like the masculine form already was.
+- **Portuguese calendar events without a title**: «cria um evento
+  amanhã» was discarded because the event had no title; it now gets
+  the generic title («Evento») instead of being dropped. Questions
+  disguised as events («agenda de hoy») still add nothing.
+
+### Added
+- **Dropped commands are counted on the device.** When NIDO prepares a
+  command as a tappable chip and the chip is dropped without running —
+  the text was edited, the language or mode changed, a new chat was
+  started, another chat was opened, it was dismissed, or the tap came
+  too late — Telemetry now shows "Dropped chips: N" with the count per
+  reason. Only the reason is stored, never the text, and dropped chips
+  do not count as messages in the router's numbers.
+
 ## 0.1.42-alpha — 2026-10-15
 
 The router (the part that handles commands on the phone without the AI
