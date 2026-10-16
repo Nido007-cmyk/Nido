@@ -45,9 +45,9 @@ body:
   - type: dropdown
     id: lang
     attributes:
-      label: Language of the question
+      label: Language of the question (optional)
       options: [Español, English, Português, Other]
   - type: textarea
     id: suggestion
     attributes:
-      label: How should it have behaved?
+      label: How should it have behaved? (optional)
