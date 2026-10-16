@@ -12,6 +12,7 @@ body:
     id: device
     attributes:
       label: Phone model and Android version
+      placeholder: "Pixel 7, Android 15"
     validations:
       required: true
   - type: input
@@ -36,12 +37,12 @@ body:
   - type: dropdown
     id: how
     attributes:
-      label: How did you create it?
+      label: How did you create it? (optional)
       options: [Chat message, Voice, Other]
   - type: input
     id: when
     attributes:
-      label: When was it supposed to fire?
+      label: When was it supposed to fire? (optional)
   - type: checkboxes
     id: perms
     attributes:
@@ -53,5 +54,5 @@ body:
   - type: textarea
     id: details
     attributes:
-      label: Details
+      label: Details (optional)
       description: Do not include the reminder text if it is personal.

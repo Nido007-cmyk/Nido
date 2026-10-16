@@ -6,3 +6,6 @@ contact_links:
   - name: Questions and ideas
     url: https://github.com/Nido007-cmyk/Nido/discussions
     about: General questions and open-ended ideas. (Enable Discussions in repo Settings > General for this link to work.)
+  - name: Email your missed phrases instead
+    url: mailto:arsrs91@gmail.com?subject=NIDO%20missed%20phrases
+    about: Prefer email? Copy the list from the app (Execution Telemetry) and send it from your own mail app. NIDO never sends it for you.

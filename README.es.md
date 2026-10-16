@@ -148,7 +148,12 @@ docs/         Documentación (ver docs/README.md)
 ## Contribuir
 
 Lo más útil ahora mismo son los reportes de errores y los comentarios de
-quienes prueban la app. Usa las plantillas de issues. Para código, lee antes
+quienes prueban la app. Usa las plantillas de issues. Las frases que NIDO no
+entendió tienen su propia plantilla: [Frases que NIDO no reconoció](https://github.com/Nido007-cmyk/Nido/issues/new?template=router_miss.yml).
+NIDO nunca envía esas frases por su cuenta: tú revisas y copias la lista
+opcional guardada en el dispositivo, quitas cualquier dato personal y pegas
+solo lo que decidas compartir. También puedes enviar la lista tú mismo por
+correo, desde tu propia app de correo, a arsrs91@gmail.com. Para código, lee antes
 [CONTRIBUTING.md](CONTRIBUTING.md) y el
 [código de conducta](CODE_OF_CONDUCT.es.md).
 
