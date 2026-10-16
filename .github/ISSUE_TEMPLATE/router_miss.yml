@@ -1,0 +1,59 @@
+name: Phrases NIDO missed (router)
+description: Share phrases NIDO passed to the model or misunderstood, so they can become fast on-device routes
+title: "[MISSED] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Privacy first — read this before pasting anything.**
+
+        NIDO never sends your phrases anywhere. The app is offline and has no report button, on purpose. This channel is manual: **you** review your own missed-phrase list, remove anything you do not want to share, and paste only what you choose.
+
+        These are phrases **you typed to your own NIDO**. If one contains a name, address, phone number or anything personal, edit or omit it before posting. Changing a name teaches the same route.
+
+        **Security vulnerability?** Do not open a public issue — use [private reporting](https://github.com/Nido007-cmyk/Nido/security/advisories/new).
+  - type: markdown
+    attributes:
+      value: |
+        **How to get the list from the app**
+
+        1. Open **Execution Telemetry** from the app menu.
+        2. Turn on **Save the phrases the router did not recognize**. It is off by default; NIDO keeps only the last 50 on this device, encrypted, and turning it off deletes them.
+        3. Use NIDO normally.
+        4. Return to **Execution Telemetry**, tap **Copy**, and paste the list below.
+
+        No saved list? You can type the phrases manually, one per line.
+  - type: textarea
+    id: phrases
+    attributes:
+      label: Phrases NIDO missed
+      description: One phrase per line, in the language you used (Español, English or Português). Keep the leading signal in brackets if you copied the app's list. Remove personal details first.
+      placeholder: |
+        [tool:create_reminder] acuérdame de regar las plantas el viernes
+        [chat] que no se te olvide que el martes pago la renta
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: NIDO version
+      description: For example, 0.1.43. You can find it in the release name or in the app's About screen.
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Main language of these phrases
+      options:
+        - Español
+        - English
+        - Português
+        - Mixed / mezcla
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect NIDO to do? (optional)
+      description: Add this only when the intended action is not obvious from the phrase. Do not include personal data.

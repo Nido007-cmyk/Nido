@@ -143,8 +143,11 @@ docs/         Documentation (see docs/README.md)
 ## Contributing
 
 Bug reports and feedback from testers are the most useful contribution right
-now. Please use the issue templates. For code, read
-[CONTRIBUTING.md](CONTRIBUTING.md) and the
+now. Please use the issue templates. Phrases NIDO misunderstood have their own
+template: [Phrases NIDO missed](https://github.com/Nido007-cmyk/Nido/issues/new?template=router_miss.yml).
+NIDO never sends those phrases by itself: you review and copy the optional
+on-device list, remove anything personal, and paste only what you choose to
+share. For code, read [CONTRIBUTING.md](CONTRIBUTING.md) and the
 [code of conduct](CODE_OF_CONDUCT.md) first.
 
 ## Credits and license
