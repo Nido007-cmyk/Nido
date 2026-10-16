@@ -19,13 +19,11 @@ body:
   - type: textarea
     id: steps
     attributes:
-      label: Steps to reproduce
+      label: Steps to reproduce (optional)
       placeholder: |
         1.
         2.
         3.
-    validations:
-      required: true
   - type: textarea
     id: expected
     attributes:
@@ -33,18 +31,16 @@ body:
   - type: input
     id: version
     attributes:
-      label: NIDO version and APK hash
-      description: Settings > About, or the sha256 shown next to app-release.apk on the Releases page.
-      placeholder: "v0.1.0-alpha / sha256:d9210..."
+      label: NIDO version
+      description: For example, 0.1.43. You can find it in Settings > About or in the release name. Adding the APK sha256 from the Releases page helps too.
+      placeholder: "0.1.43"
     validations:
       required: true
   - type: input
     id: device
     attributes:
-      label: Phone model and Android version
+      label: Phone model and Android version (optional)
       placeholder: "Pixel 7, Android 15"
-    validations:
-      required: true
   - type: input
     id: model
     attributes:
@@ -54,14 +50,12 @@ body:
   - type: dropdown
     id: frequency
     attributes:
-      label: How often does it happen?
+      label: How often does it happen? (optional)
       options:
         - Always
         - Often
         - Sometimes
         - Only once
-    validations:
-      required: true
   - type: textarea
     id: logs
     attributes:
@@ -74,6 +68,5 @@ body:
       label: Before submitting
       options:
         - label: I searched existing issues and this is not a duplicate.
-          required: true
         - label: I removed personal data, keys and note contents from this report.
           required: true
