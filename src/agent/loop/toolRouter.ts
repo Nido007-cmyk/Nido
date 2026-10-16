@@ -1014,10 +1014,20 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     if (!m) continue;
     const rest = m[1].trim();
     const start = parseReminderDateTime(rest, now);
-    const title = (start ? stripDateWords(rest) : rest)
+    let title = (start ? stripDateWords(rest) : rest)
       .replace(/^(?:una?|um|uma|an?|the|el|la|o|a)\s+(?:cita|evento|event|compromisso|appointment)\s+(?:con|de|with|com)?\s*/i, "")
       .replace(/^(?:para|for|pro|pra|de|con|with|com)\s+/i, "")
       .trim();
+    // 0.1.43 (paso 2, enmienda del dueño; medido por el barrido):
+    // «cria um evento amanhã» se descartaba aquí — el patrón consume
+    // «um evento» en el verbo y el resto es solo la fecha, así que el
+    // título quedaba vacío. Si el sustantivo venía consumido en el
+    // propio patrón (crea/cria/create + un/um/an + evento/cita), el
+    // título es ese sustantivo genérico. La consulta disfrazada
+    // («agenda de hoy») no trae ese sustantivo y se sigue descartando.
+    if (title.length < 3 && /(?:crea|crear|cria|criar|crie|create)\s+(?:un|una|um|uma|an)\s+(?:evento|event|cita|appointment)\b/i.test(t)) {
+      title = /\bcita\b/i.test(t) ? "Cita" : /\bappointment\b/i.test(t) ? "Appointment" : lang === "en" ? "Event" : "Evento";
+    }
     // "agenda de hoy", "agenda para mañana": es una consulta, no un evento.
     if (title.length < 3 || /^(de|del|para|for|of)$/i.test(title)) return null;
     return { kind: "calendarCreate", title, start, lang };
