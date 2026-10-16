@@ -5,16 +5,19 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { formatRouterMs, isRouterOutcome, joinToolLabels, percentOf, safeLabel, summarizeLeak, summarizeRouterSamples, type RouterSample } from "./routerStats.pure";
+import { formatRouterMs, isRouterOutcome, isStageDropReason, joinToolLabels, percentOf, safeLabel, STAGE_DROP_REASONS, summarizeLeak, summarizeRouterSamples, type RouterSample } from "./routerStats.pure";
 
 const s = (classifyMs: number, outcome: RouterSample["outcome"]): RouterSample => ({ ts: 0, classifyMs, outcome });
+
+const NO_DROPS = { text_edited: 0, lang_changed: 0, mode_changed: 0, new_chat: 0, session_switch: 0, dismissed: 0, stale_on_tap: 0 };
 
 describe("summarizeRouterSamples", () => {
   it("sin muestras: todo vacío", () => {
     expect(summarizeRouterSamples([])).toEqual({
       count: 0, p50Ms: null, p95Ms: null, maxMs: null,
-      outcomes: { router: 0, model: 0, notUnderstood: 0, chat: 0 },
+      outcomes: { router: 0, model: 0, notUnderstood: 0, chat: 0, stageDropped: 0 },
       leak: { measured: 0, router: 0, toModel: 0, modelAskedTool: 0, retried: 0, byTool: [], byRoute: [] },
+      drops: NO_DROPS,
     });
   });
 
@@ -25,7 +28,7 @@ describe("summarizeRouterSamples", () => {
     expect(r.p50Ms).toBe(10);
     expect(r.p95Ms).toBe(19);
     expect(r.maxMs).toBe(20);
-    expect(r.outcomes).toEqual({ router: 10, chat: 5, model: 4, notUnderstood: 1 });
+    expect(r.outcomes).toEqual({ router: 10, chat: 5, model: 4, notUnderstood: 1, stageDropped: 0 });
   });
 
   it("descarta tiempos imposibles (negativos, NaN, infinitos)", () => {
@@ -53,8 +56,9 @@ describe("formato sin Intl", () => {
     expect(percentOf(0, 0)).toBe("—");
   });
 
-  it("solo los cuatro desenlaces conocidos", () => {
+  it("solo los cinco desenlaces conocidos", () => {
     expect(isRouterOutcome("router")).toBe(true);
+    expect(isRouterOutcome("stageDropped")).toBe(true);
     expect(isRouterOutcome("texto del usuario")).toBe(false);
   });
 });
@@ -98,5 +102,57 @@ describe("0.1.39: lo que el router deja pasar al modelo", () => {
     expect(safeLabel(42)).toBe("other");
     expect(joinToolLabels([])).toBeNull();
     expect(joinToolLabels(["a", "llama a mamá", "b", "c", "d", "e", "f"])).toBe("a,other,b,c,d");
+  });
+});
+
+describe("0.1.43: el chip que cae (stageDropped)", () => {
+  const drop = (reason: string | null): RouterSample => ({ ts: 0, classifyMs: 0, outcome: "stageDropped", route: reason });
+
+  it("(a) las caídas no cuentan en count, ni en tiempos, ni en desenlaces", () => {
+    const r = summarizeRouterSamples([
+      s(1, "router"), s(2, "model"), s(3, "chat"),
+      drop("text_edited"), drop("dismissed"),
+    ]);
+    expect(r.count).toBe(3);
+    expect(r.p50Ms).toBe(2); // percentiles SOLO de las 3 filas normales
+    expect(r.p95Ms).toBe(3);
+    expect(r.maxMs).toBe(3);
+    expect(r.outcomes).toEqual({ router: 1, model: 1, notUnderstood: 0, chat: 1, stageDropped: 0 });
+  });
+
+  it("(b) drops cuenta por motivo, con los siete motivos siempre presentes", () => {
+    const r = summarizeRouterSamples([
+      drop("text_edited"), drop("text_edited"), drop("new_chat"), drop("stale_on_tap"),
+    ]);
+    expect(r.drops).toEqual({ ...NO_DROPS, text_edited: 2, new_chat: 1, stale_on_tap: 1 });
+    expect(r.count).toBe(0);
+    expect(r.p50Ms).toBeNull();
+  });
+
+  it("(c) un motivo fuera de la lista no se guarda tal cual (ni como caída ni como mensaje)", () => {
+    const r = summarizeRouterSamples([
+      drop("cualquier_cosa"), // forma de etiqueta válida, pero no es un motivo
+      drop("se cayó porque quiso"), // texto libre
+      drop(null),
+    ]);
+    expect(r.drops).toEqual(NO_DROPS);
+    expect(r.count).toBe(0);
+    expect(Object.keys(r.drops)).toEqual([...STAGE_DROP_REASONS]);
+  });
+
+  it("un chip caído no cuenta como turno resuelto en la fuga al modelo", () => {
+    const r = summarizeLeak([drop("text_edited"), drop("dismissed")]);
+    expect(r.measured).toBe(0);
+    expect(r.router).toBe(0);
+  });
+
+  it("los siete motivos son etiquetas válidas: safeLabel los deja pasar intactos", () => {
+    expect(STAGE_DROP_REASONS).toHaveLength(7);
+    for (const reason of STAGE_DROP_REASONS) {
+      expect(safeLabel(reason)).toBe(reason);
+      expect(isStageDropReason(reason)).toBe(true);
+    }
+    expect(isStageDropReason("other")).toBe(false);
+    expect(isStageDropReason("create_reminder")).toBe(false);
   });
 });

@@ -14,8 +14,8 @@
 import { getDb, writeTransaction } from "../rag/db";
 import { isRouterOutcome, joinToolLabels, safeLabel, type RouterOutcome, type RouterSample } from "./routerStats.pure";
 
-export type { RouterOutcome, RouterSample, RouterSummary, RouterLeak } from "./routerStats.pure";
-export { summarizeRouterSamples, formatRouterMs, percentOf } from "./routerStats.pure";
+export type { RouterOutcome, RouterSample, RouterSummary, RouterLeak, StageDropReason } from "./routerStats.pure";
+export { summarizeRouterSamples, formatRouterMs, percentOf, STAGE_DROP_REASONS, isStageDropReason } from "./routerStats.pure";
 
 /** 0.1.39: detalle de vía de un turno del asistente (ver AgentRouting). */
 export interface RouterSampleDetail {

@@ -29,7 +29,9 @@ import {
   summarizeRouterSamples,
   formatRouterMs,
   percentOf,
+  STAGE_DROP_REASONS,
   type RouterSummary,
+  type StageDropReason,
 } from "../services/routerStats";
 import {
   clearMissedPhrases,
@@ -329,6 +331,41 @@ function RouterCard({ summary, decimalComma }: { summary: RouterSummary; decimal
           <LeakSection summary={summary} />
         </>
       )}
+      <DropsSection summary={summary} />
+    </View>
+  );
+}
+
+const DROP_LABEL_KEYS: Record<StageDropReason, string> = {
+  text_edited: "executionTelemetry.router.dropTextEdited",
+  lang_changed: "executionTelemetry.router.dropLangChanged",
+  mode_changed: "executionTelemetry.router.dropModeChanged",
+  new_chat: "executionTelemetry.router.dropNewChat",
+  session_switch: "executionTelemetry.router.dropSessionSwitch",
+  dismissed: "executionTelemetry.router.dropDismissed",
+  stale_on_tap: "executionTelemetry.router.dropStaleOnTap",
+};
+
+/**
+ * 0.1.43: chips preparados que cayeron sin ejecutarse, por motivo. Van
+ * aparte a propósito: no son mensajes y no mueven ningún porcentaje del
+ * router. Sin caídas no se muestra nada.
+ */
+function DropsSection({ summary }: { summary: RouterSummary }) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const { t } = useTranslation();
+  const total = STAGE_DROP_REASONS.reduce((n, r) => n + summary.drops[r], 0);
+  if (total === 0) return null;
+  const detail = STAGE_DROP_REASONS.filter((r) => summary.drops[r] > 0)
+    .map((r) => `${t(DROP_LABEL_KEYS[r])} ${summary.drops[r]}`)
+    .join(" · ");
+  return (
+    <View style={styles.leakBox} accessibilityLabel={t("executionTelemetry.router.dropped")}>
+      <Text style={styles.sectionLabel}>
+        {t("executionTelemetry.router.dropped")}: {total}
+      </Text>
+      <Text style={styles.metaText}>{detail}</Text>
     </View>
   );
 }
