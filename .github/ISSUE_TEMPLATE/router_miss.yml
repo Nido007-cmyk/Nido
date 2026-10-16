@@ -36,6 +36,11 @@ body:
         [chat] que no se te olvide que el martes pago la renta
     validations:
       required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you want NIDO to do? (optional)
+      description: One line is enough, in your own words. A missed phrase with its intent attached becomes a route. A phrase on its own leaves the intent to guesswork, and guesswork is the blind spot this channel exists to close. Please do not include personal data.
   - type: input
     id: version
     attributes:
@@ -52,8 +57,3 @@ body:
         - English
         - Português
         - Mixed / mezcla
-  - type: textarea
-    id: expected
-    attributes:
-      label: What did you expect NIDO to do? (optional)
-      description: Add this only when the intended action is not obvious from the phrase. Do not include personal data.
