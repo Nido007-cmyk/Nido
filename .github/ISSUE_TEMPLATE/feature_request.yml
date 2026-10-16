@@ -12,19 +12,18 @@ body:
     id: what
     attributes:
       label: What would you like, and why?
+      placeholder: "A weekly summary of my reminders, because I plan my week on Sundays."
     validations:
       required: true
   - type: textarea
     id: privacy
     attributes:
-      label: Privacy considerations
-      description: "How does it fit NIDO's rules (no network, encrypted, local-first)? Would it need a new permission?"
-    validations:
-      required: true
+      label: Privacy considerations (optional)
+      description: "If you already see a catch: how does it fit NIDO's rules (no network, encrypted, local-first)? Would it need a new permission? Leave it blank if you're not sure; we'll look at it together."
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternatives you considered
+      label: Alternatives you considered (optional)
   - type: textarea
     id: impl
     attributes:
