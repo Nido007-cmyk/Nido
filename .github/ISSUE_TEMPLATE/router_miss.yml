@@ -24,6 +24,8 @@ body:
         4. Return to **Execution Telemetry**, tap **Copy**, and paste the list below.
 
         No saved list? You can type the phrases manually, one per line.
+
+        **Prefer email?** Send the same list from your own mail app to arsrs91@gmail.com with the subject "NIDO missed phrases". NIDO itself never sends anything: your mail app sends it because you chose to.
   - type: textarea
     id: phrases
     attributes:
