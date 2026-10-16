@@ -33,7 +33,7 @@ import {
   extractWeeklyPlanAction,
 } from "../agent/loop/actionRouter";
 import { extractContactAction } from "../agent/loop/contactRouter";
-import { extractToolAction } from "../agent/loop/toolRouter";
+import { extractToolAction, TOOL_KINDS } from "../agent/loop/toolRouter";
 import {
   extractImplicitFact,
   extractPeople,
@@ -84,6 +84,57 @@ export const EXPECTED: Record<Family, readonly string[]> = {
   // Conversación: lo correcto es NO actuar (chat o modelo).
   chat: ["chat", "model", "canned"],
 };
+
+/**
+ * 0.1.43: TODAS las rutas que routeOf() puede devolver — las fijas de
+ * esta función más cada «kind» de extractToolAction (TOOL_KINDS). Es el
+ * inventario completo del router: si una ruta nueva aparece en el
+ * código, aparece aquí sola, y el test de cobertura la exige en una
+ * familia del barrido o en la deuda declarada de abajo.
+ */
+export const ROUTER_ROUTES: readonly string[] = [
+  "canned",
+  "calc",
+  "contact",
+  "timer",
+  "create_reminder",
+  "weekly_plan",
+  "save_person",
+  "self_name",
+  "remember_fact",
+  "memory_query",
+  "model",
+  "chat",
+  ...TOOL_KINDS,
+];
+
+/**
+ * Deuda declarada (0.1.43): rutas reales del router que el barrido
+ * todavía no ejercita con ninguna familia. Nombrarlas aquí es lo que
+ * permite que el test de cobertura distinga «sin probar a propósito»
+ * de «sin probar por olvido». El Paso 2 de la v0.1.43 las va sacando
+ * de esta lista familia a familia; las que queden se miden en la
+ * v0.1.44.
+ */
+export const PENDING_ROUTES: readonly string[] = [
+  "calendarCreate",
+  "calendarList",
+  "contact",
+  "currencyInfo",
+  "memoryForgetHelp",
+  "nidoCode",
+  "nidoInbox",
+  "nidoSend",
+  "nidoTasks",
+  "noteDelete",
+  "openLink",
+  "pickFile",
+  "reminderDelete",
+  "reminderFill",
+  "reminderList",
+  "reminderOfferCreate",
+  "weekly_plan",
+];
 
 // ------------------------------------------------------------ plantillas
 
