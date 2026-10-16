@@ -58,7 +58,13 @@ export type Family =
   | "calc"
   | "convert"
   | "date"
-  | "chat";
+  | "chat"
+  // 0.1.43 (paso 2): las familias que bajan la deuda de PENDING_ROUTES.
+  | "contact"
+  | "reminderManage"
+  | "calendar"
+  | "noteDelete"
+  | "weeklyPlan";
 
 export interface SweepCase {
   text: string;
@@ -83,6 +89,14 @@ export const EXPECTED: Record<Family, readonly string[]> = {
   date: ["time", "weekday", "countdown"],
   // Conversación: lo correcto es NO actuar (chat o modelo).
   chat: ["chat", "model", "canned"],
+  // 0.1.43 (paso 2): «contact» cubre llamar y SMS (contactRouter); la
+  // mensajería sin canal («mándale un mensaje a X») es un caso ambiguo
+  // deliberado y se vigila aparte: vale contact o nidoSend.
+  contact: ["contact"],
+  reminderManage: ["reminderList", "reminderDelete"],
+  calendar: ["calendarCreate", "calendarList"],
+  noteDelete: ["noteDelete"],
+  weeklyPlan: ["weekly_plan"],
 };
 
 /**
@@ -117,23 +131,16 @@ export const ROUTER_ROUTES: readonly string[] = [
  * v0.1.44.
  */
 export const PENDING_ROUTES: readonly string[] = [
-  "calendarCreate",
-  "calendarList",
-  "contact",
   "currencyInfo",
   "memoryForgetHelp",
   "nidoCode",
   "nidoInbox",
   "nidoSend",
   "nidoTasks",
-  "noteDelete",
   "openLink",
   "pickFile",
-  "reminderDelete",
   "reminderFill",
-  "reminderList",
   "reminderOfferCreate",
-  "weekly_plan",
 ];
 
 // ------------------------------------------------------------ plantillas
@@ -343,6 +350,276 @@ const CHAT = [
   ["pt", "me conta uma piada"],
 ] as const;
 
+// 0.1.43 (paso 2): familias nuevas. Frases reales contra las reglas que
+// ya existen (contactRouter, REMINDER_LIST/CAL_*/DELETE de toolRouter,
+// extractWeeklyPlanAction): el barrido mide, no maquilla — lo que las
+// variantes rompan se verá en la tasa de la familia.
+
+const CONTACT = [
+  ["es", "llama a mi mamá"],
+  ["es", "llámale a Ana"],
+  ["es", "marca al 555 1234"],
+  ["es", "haz una llamada a Juan"],
+  ["es", "mándale un sms a Ana que llego tarde"],
+  ["es", "envía un mensaje de texto a Juan: ya salí"],
+  ["es", "escríbele un sms a mi hermana"],
+  ["en", "call mom"],
+  ["en", "call Ana"],
+  ["en", "dial 555 1234"],
+  ["en", "text Ana that I'm late"],
+  ["en", "send a text to Juan saying hi"],
+  ["en", "sms mom"],
+  ["pt", "liga para a Ana"],
+  ["pt", "ligue pro João"],
+  ["pt", "telefona para a minha mãe"],
+  ["pt", "manda um sms para a Ana dizendo que chego tarde"],
+  ["pt", "manda um torpedo para o João"],
+  ["pt", "envia uma mensagem de texto para a Ana"],
+] as const;
+
+const REMINDER_MANAGE = [
+  ["es", "qué recordatorios tengo"],
+  ["es", "muéstrame mis recordatorios"],
+  ["es", "qué recordatorios tengo hoy"],
+  ["es", "tengo algún recordatorio"],
+  ["es", "borra el recordatorio de la renta"],
+  ["es", "cancela el recordatorio de mañana"],
+  ["es", "borra todos mis recordatorios"],
+  ["es", "borra el recordatorio"],
+  ["en", "show my reminders"],
+  ["en", "what reminders do i have"],
+  ["en", "do i have any reminders"],
+  ["en", "delete the dentist reminder"],
+  ["en", "delete my reminder to call mom"],
+  ["en", "cancel my reminder"],
+  ["en", "delete all my reminders"],
+  ["pt", "mostra meus lembretes"],
+  ["pt", "que lembretes eu tenho"],
+  ["pt", "tenho algum lembrete"],
+  ["pt", "apaga o lembrete do dentista"],
+  ["pt", "cancela o lembrete"],
+  ["pt", "apaga todos os meus lembretes"],
+] as const;
+
+const CALENDAR = [
+  ["es", "agenda una reunión el viernes a las 10"],
+  ["es", "agrega una cita con el dentista mañana a las 9"],
+  ["es", "crea un evento: cena el sábado a las 8"],
+  ["es", "pon en mi calendario la junta del lunes"],
+  ["es", "qué tengo en mi agenda hoy"],
+  ["es", "mi agenda de mañana"],
+  ["es", "mis eventos de esta semana"],
+  ["es", "mi calendario"],
+  ["en", "schedule a meeting on monday at 9"],
+  ["en", "add a meeting on friday at 10"],
+  ["en", "create an event: dentist tomorrow at 9"],
+  ["en", "add an appointment to my calendar: lunch friday"],
+  ["en", "what do i have tomorrow"],
+  ["en", "what's on my calendar today"],
+  ["en", "my calendar"],
+  ["en", "my agenda for this week"],
+  ["pt", "marca uma reunião segunda às 9"],
+  ["pt", "agenda uma consulta amanhã às 10"],
+  ["pt", "adiciona um evento: almoço sábado"],
+  ["pt", "cria um evento amanhã"],
+  ["pt", "o que eu tenho amanhã"],
+  ["pt", "minha agenda de hoje"],
+  ["pt", "meus compromissos desta semana"],
+  ["pt", "minha agenda"],
+] as const;
+
+const NOTE_DELETE = [
+  ["es", "borra la nota de la receta"],
+  ["es", "elimina mi nota del viaje"],
+  ["es", "quita la nota de la lista de compras"],
+  ["es", "borra todas mis notas"],
+  ["es", "borra la nota"],
+  ["en", "delete the shopping note"],
+  ["en", "delete my note about the trip"],
+  ["en", "delete all my notes"],
+  ["en", "delete the note"],
+  ["pt", "apaga a nota da receita"],
+  ["pt", "exclui a nota do mercado"],
+  ["pt", "apaga todas as minhas notas"],
+  ["pt", "apaga a nota"],
+] as const;
+
+const WEEKLY_PLAN = [
+  ["es", "planifica mi semana"],
+  ["es", "organiza mi semana"],
+  ["es", "hazme un plan semanal"],
+  ["es", "quiero un plan para mi semana"],
+  ["es", "planifica mi semana, trabajo de 9 a 6"],
+  ["es", "plan semanal"],
+  ["en", "plan my week"],
+  ["en", "make me a weekly plan"],
+  ["en", "i need a plan for my week"],
+  ["en", "create a weekly plan"],
+  ["en", "weekly plan"],
+  ["pt", "faz um plano semanal"],
+  ["pt", "planeja minha semana"],
+  ["pt", "organiza minha semana"],
+  ["pt", "quero um plano da minha semana"],
+  ["pt", "plano semanal"],
+] as const;
+
+/**
+ * 0.1.43 (paso 2): las «casi órdenes» de cada familia nueva — frases
+ * que parecen una orden pero no lo son. Lo correcto es que se queden
+ * en charla (chat/model/canned), SIEMPRE: el mínimo es el 100 %. Si
+ * una dispara una acción es el fallo grave de la v0.1.44, no un
+ * porcentaje que se diluye en la media de una familia.
+ */
+export const NEAR_MISS: Record<"contact" | "reminderManage" | "calendar" | "noteDelete" | "weeklyPlan", ReadonlyArray<readonly [string, string]>> = {
+  contact: [
+    ["es", "ayer me llamó mi mamá"],
+    ["es", "mi hermana nunca contesta mensajes"],
+    ["es", "perdí el número de Juan"],
+    ["es", "mi teléfono no tiene señal"],
+    ["es", "las llamadas de ventas me tienen harto"],
+    ["es", "mi mamá me escribe todos los días"],
+    ["es", "no sé dónde guardé ese contacto"],
+    ["es", "el teléfono de mi casa ya no funciona"],
+    ["en", "my mom called me yesterday"],
+    ["en", "my sister never answers her messages"],
+    ["en", "i lost Juan's number"],
+    ["en", "my phone has no signal"],
+    ["en", "sales calls are so annoying"],
+    ["en", "my mom texts me every day"],
+    ["en", "i don't know where i saved that contact"],
+    ["en", "our home phone doesn't work anymore"],
+    ["pt", "minha mãe me ligou ontem"],
+    ["pt", "minha irmã nunca responde mensagens"],
+    ["pt", "perdi o número do João"],
+    ["pt", "meu celular está sem sinal"],
+    ["pt", "ligações de vendas são um saco"],
+    ["pt", "minha mãe me escreve todo dia"],
+    ["pt", "não sei onde salvei esse contato"],
+    ["pt", "o telefone de casa não funciona mais"],
+  ],
+  reminderManage: [
+    ["es", "nunca me acuerdo de nada"],
+    ["es", "mis recordatorios del móvil viejo eran mejores"],
+    ["es", "se me olvidó el recordatorio de ayer"],
+    ["es", "los recordatorios me estresan"],
+    ["es", "ayer borré un recordatorio sin querer"],
+    ["es", "mi memoria ya no es la de antes"],
+    ["es", "qué mala memoria tengo"],
+    ["es", "antes no necesitaba recordatorios"],
+    ["en", "i never remember anything"],
+    ["en", "my old phone's reminders were better"],
+    ["en", "i forgot yesterday's reminder"],
+    ["en", "reminders stress me out"],
+    ["en", "i deleted a reminder by accident yesterday"],
+    ["en", "my memory isn't what it used to be"],
+    ["en", "i have such a bad memory"],
+    ["en", "i didn't use to need reminders"],
+    ["pt", "nunca me lembro de nada"],
+    ["pt", "meus lembretes do celular velho eram melhores"],
+    ["pt", "esqueci o lembrete de ontem"],
+    ["pt", "os lembretes me estressam"],
+    ["pt", "ontem apaguei um lembrete sem querer"],
+    ["pt", "minha memória já não é a mesma"],
+    ["pt", "que memória ruim a minha"],
+    ["pt", "antes eu não precisava de lembretes"],
+  ],
+  calendar: [
+    ["es", "el calendario de este año está raro"],
+    ["es", "¿cuándo fue la última vez que fui al dentista?"],
+    ["es", "mi agenda está llena esta semana"],
+    ["es", "odio las reuniones de los lunes"],
+    ["es", "el calendario dice que hoy es festivo"],
+    ["es", "tengo la semana complicadísima"],
+    ["es", "las citas médicas me ponen nervioso"],
+    ["es", "este mes se me hizo eterno"],
+    ["en", "this year's calendar looks weird"],
+    ["en", "when was the last time i went to the dentist?"],
+    ["en", "my schedule is packed this week"],
+    ["en", "i hate monday meetings"],
+    ["en", "the calendar says today is a holiday"],
+    ["en", "my week is completely crazy"],
+    ["en", "doctor appointments make me nervous"],
+    ["en", "this month felt endless"],
+    ["pt", "o calendário deste ano está estranho"],
+    ["pt", "quando foi a última vez que fui ao dentista?"],
+    ["pt", "minha agenda está cheia esta semana"],
+    ["pt", "odeio reuniões de segunda"],
+    ["pt", "o calendário diz que hoje é feriado"],
+    ["pt", "minha semana está complicadíssima"],
+    ["pt", "consultas médicas me deixam nervoso"],
+    ["pt", "este mês demorou uma eternidade"],
+  ],
+  noteDelete: [
+    ["es", "borré sin querer una foto"],
+    ["es", "quiero olvidarme de ese día"],
+    ["es", "mis notas de la escuela eran un desastre"],
+    ["es", "perdí la nota que me dejó mi mamá"],
+    ["es", "las notas adhesivas se caen siempre"],
+    ["es", "escribí una nota y la perdí"],
+    ["es", "mi cuaderno de notas está lleno"],
+    ["es", "no encuentro la receta que anoté"],
+    ["en", "i deleted a photo by accident"],
+    ["en", "i want to forget that day"],
+    ["en", "my school notes were a mess"],
+    ["en", "i lost the note my mom left me"],
+    ["en", "sticky notes always fall off"],
+    ["en", "i wrote a note and lost it"],
+    ["en", "my notebook is full"],
+    ["en", "i can't find the recipe i wrote down"],
+    ["pt", "apaguei uma foto sem querer"],
+    ["pt", "quero esquecer aquele dia"],
+    ["pt", "minhas anotações da escola eram uma bagunça"],
+    ["pt", "perdi o bilhete que minha mãe deixou"],
+    ["pt", "os post-its sempre caem"],
+    ["pt", "escrevi uma nota e perdi"],
+    ["pt", "meu caderno está cheio"],
+    ["pt", "não acho a receita que anotei"],
+  ],
+  weeklyPlan: [
+    ["es", "esta semana fue larguísima"],
+    ["es", "mi plan era descansar"],
+    ["es", "la semana pasada viajé mucho"],
+    ["es", "qué semana tan pesada"],
+    ["es", "mi horario de trabajo es horrible"],
+    ["es", "los planes nunca salen como uno quiere"],
+    ["es", "esta semana no paró de llover"],
+    ["es", "ya quiero que sea fin de semana"],
+    ["en", "this week felt endless"],
+    ["en", "my plan was to rest"],
+    ["en", "last week i traveled a lot"],
+    ["en", "what a heavy week"],
+    ["en", "my work schedule is awful"],
+    ["en", "plans never work out the way you want"],
+    ["en", "it rained all week"],
+    ["en", "i can't wait for the weekend"],
+    ["pt", "esta semana foi longa demais"],
+    ["pt", "meu plano era descansar"],
+    ["pt", "semana passada viajei muito"],
+    ["pt", "que semana pesada"],
+    ["pt", "meu horário de trabalho é horrível"],
+    ["pt", "os planos nunca saem como a gente quer"],
+    ["pt", "choveu a semana toda"],
+    ["pt", "quero que chegue o fim de semana"],
+  ],
+};
+
+/**
+ * 0.1.43 (paso 2): el caso ambiguo deliberado — «mándale un mensaje
+ * a X» sin decir el canal. Las dos salidas son legítimas: SMS del
+ * teléfono (contact) o mensaje NIDO (nidoSend), que además confirma
+ * antes de enviar. Otra ruta sí sería un fallo.
+ */
+export const AMBIGUOUS_MESSAGE: ReadonlyArray<readonly [string, string]> = [
+  ["es", "mándale un mensaje a Ana"],
+  ["es", "envíale un mensaje a Juan que ya llegué"],
+  ["es", "escríbele un mensaje a mi hermana"],
+  ["en", "send a message to Ana"],
+  ["en", "send Ana a message"],
+  ["en", "message Ana that i'm late"],
+  ["pt", "manda uma mensagem para a Ana"],
+  ["pt", "envia uma mensagem pro João que já cheguei"],
+];
+
 // ------------------------------------------------------------- variantes
 
 const noAccents = (s: string): string => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[¿¡]/g, "");
@@ -396,6 +673,11 @@ export function buildCorpus(): SweepCase[] {
     ["convert", CONVERT],
     ["date", DATE],
     ["chat", CHAT],
+    ["contact", CONTACT],
+    ["reminderManage", REMINDER_MANAGE],
+    ["calendar", CALENDAR],
+    ["noteDelete", NOTE_DELETE],
+    ["weeklyPlan", WEEKLY_PLAN],
   ];
   for (const [family, list] of fixed) for (const [lang, s] of list) add(family, lang as "es" | "en" | "pt", s, s);
   return out;

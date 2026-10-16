@@ -94,9 +94,26 @@ export function looksLikePhone(s: string): boolean {
   return (t.match(/\d/g) ?? []).length >= 6;
 }
 
+/**
+ * 0.1.43 (paso 2, enmienda del dueño; medido por el barrido): las
+ * formas peladas «teléfono de X» / «X's number» se tragaban frases
+ * enteras como si fueran el nombre del contacto — «el teléfono de
+ * mi casa ya no funciona» buscaba el contacto «mi casa ya no
+ * funciona», y «i lost Juan's number» buscaba «i lost Juan». Nadie
+ * había pedido buscar nada. En estas formas la captura solo vale
+ * si parece un nombre: hasta 3 palabras y ninguna palabra de frase
+ * (negaciones, verbos sueltos, marcas de tiempo, pronombres).
+ */
+const NOT_A_NAME_RE =
+  /\b(no|n[aã]o|nunca|jamais|ya|j[aá]|m[aá]s|mais|funciona|funcionam|works|working|perd[ií]|lost|ayer|ontem|yesterday|hoy|hoje|today|ma[ñn]ana|amanh[aã]|tomorrow|est[aá]|estava|era|fue|foi|was|were|is|are|es|[eé]|tiene|tem|tengo|tenho|have|has|quiero|quero|want|wants|s[eé]|sei|know|i|eu)\b/i;
+
+function isPlausibleBareName(query: string): boolean {
+  return query.split(/\s+/).length <= 3 && !NOT_A_NAME_RE.test(query);
+}
+
 // ------------------------------------------------------------------ FIND
 
-const FIND_PATTERNS: Array<{ lang: RouterLang; re: RegExp; group: number | null }> = [
+const FIND_PATTERNS: Array<{ lang: RouterLang; re: RegExp; group: number | null; barePhone?: boolean }> = [
   // es: "busca el contacto Ruben", "busca mis contactos", "muéstrame los contactos de Ana"
   {
     lang: "es",
@@ -114,6 +131,7 @@ const FIND_PATTERNS: Array<{ lang: RouterLang; re: RegExp; group: number | null 
     lang: "es",
     re: /^(?:cu[aá]l es\s+)?(?:el\s+)?(?:tel[eé]fono|celular|n[uú]mero de (?:tel[eé]fono|celular|contacto))\s+de\s+(.+)$/i,
     group: 1,
+    barePhone: true,
   },
   // en: "find my cellphone contacts", "search contacts for Ruben", "show me contact Ana"
   {
@@ -132,12 +150,14 @@ const FIND_PATTERNS: Array<{ lang: RouterLang; re: RegExp; group: number | null 
     lang: "en",
     re: /^(?:what(?:'s| is)\s+)?(.+?)'s\s+(?:phone\s+|cell\s+|mobile\s+)?number$/i,
     group: 1,
+    barePhone: true,
   },
   // en: "phone number of/for Ana"
   {
     lang: "en",
     re: /^(?:what(?:'s| is)\s+the\s+)?(?:phone|cell|mobile)\s+number\s+(?:of|for)\s+(.+)$/i,
     group: 1,
+    barePhone: true,
   },
   // pt: "procura o contato Ruben", "mostra meus contatos"
   {
@@ -156,6 +176,7 @@ const FIND_PATTERNS: Array<{ lang: RouterLang; re: RegExp; group: number | null 
     lang: "pt",
     re: /^(?:qual [eé]\s+)?(?:o\s+)?(?:telefone|celular|n[uú]mero de (?:telefone|celular))\s+(?:de|do|da)\s+(.+)$/i,
     group: 1,
+    barePhone: true,
   },
 ];
 
@@ -202,10 +223,12 @@ const SMS_PATTERNS: Array<{ lang: RouterLang; re: RegExp }> = [
     ),
   },
   // pt: "manda um sms para a Ana dizendo que chego tarde"
+  // 0.1.43 (paso 2): «uma» también — «envia uma mensagem de texto…»
+  // caía al modelo porque el patrón solo admitía el masculino «um».
   {
     lang: "pt",
     re: new RegExp(
-      `^(?:por favor,?\\s+)?(?:manda|mande|envia|envie)\\s+(?:um\\s+)?(?:sms|torpedo|mensagem de texto)(?:\\s+(?:para|pra|pro|ao|à)\\s+(?:o\\s+|a\\s+)?(.+?))?(?:${SMS_SEP}\\s*(.+))?$`,
+      `^(?:por favor,?\\s+)?(?:manda|mande|envia|envie)\\s+(?:uma?\\s+)?(?:sms|torpedo|mensagem de texto)(?:\\s+(?:para|pra|pro|ao|à)\\s+(?:o\\s+|a\\s+)?(.+?))?(?:${SMS_SEP}\\s*(.+))?$`,
       "i",
     ),
   },
@@ -245,10 +268,14 @@ export function extractContactAction(userText: string): ContactAction | null {
     return { kind: "call", target: cleanTarget(raw), lang };
   }
 
-  for (const { lang, re, group } of FIND_PATTERNS) {
+  for (const { lang, re, group, barePhone } of FIND_PATTERNS) {
     const m = re.exec(t);
     if (!m) continue;
-    return { kind: "find", query: group ? cleanTarget(m[group]) : null, lang };
+    const query = group ? cleanTarget(m[group]) : null;
+    // Forma pelada («teléfono de X»): si lo capturado no parece un
+    // nombre, no es una búsqueda — es una frase sobre un teléfono.
+    if (barePhone && query && !isPlausibleBareName(query)) continue;
+    return { kind: "find", query, lang };
   }
   return null;
 }

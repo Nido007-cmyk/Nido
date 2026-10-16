@@ -16,8 +16,10 @@
 import { describe, expect, it } from "vitest";
 import { memoryFullCoverageHit } from "../agent/loop/memoryQuery";
 import {
+  AMBIGUOUS_MESSAGE,
   buildCorpus,
   EXPECTED,
+  NEAR_MISS,
   PENDING_ROUTES,
   ROUTER_ROUTES,
   routeOf,
@@ -38,6 +40,17 @@ const MIN_RATE: Record<Family, number> = {
   convert: 0.98,
   date: 0.88,
   chat: 1,
+  // 0.1.43 (paso 2): mínimos MEDIDOS al crear las familias (tasa real
+  // del barrido, redondeada hacia abajo a la centésima; nunca un
+  // número deseado). Antes de los arreglos del paso: contact 136/142
+  // = 0,9577 y calendar 171/178 = 0,9607; con los tres arreglos
+  // (enmienda del dueño), las cinco familias miden 1,0000 y su
+  // mínimo es 1.
+  contact: 1,
+  reminderManage: 1,
+  calendar: 1,
+  noteDelete: 1,
+  weeklyPlan: 1,
 };
 
 describe("barrido del router", () => {
@@ -122,5 +135,63 @@ describe("cobertura de rutas del router (0.1.43)", () => {
   it("ninguna ruta está a la vez cubierta por una familia y pendiente", () => {
     const both = PENDING_ROUTES.filter((r) => covered.has(r));
     expect(both).toEqual([]);
+  });
+});
+
+describe("casi órdenes de las familias nuevas (0.1.43, paso 2)", () => {
+  // Frases que parecen una orden pero no lo son: el 100 % tiene que
+  // quedarse en charla. Sin mínimo diluido: una sola que dispare
+  // rompe este test. (Al medir, 3 disparaban la búsqueda de
+  // contactos; el dueño ordenó arreglarlas en este mismo paso y
+  // viven en NEAR_MISS como cualquier otra: ver el bloque de
+  // arreglos de abajo.)
+  for (const [family, list] of Object.entries(NEAR_MISS)) {
+    it(`${family}: ninguna casi orden dispara una acción`, () => {
+      const fired = list
+        .map(([, text]) => ({ text, route: routeOf(text) }))
+        .filter(({ route }) => !["chat", "model", "canned"].includes(route));
+      expect(fired).toEqual([]);
+    });
+  }
+});
+
+describe("caso ambiguo: «un mensaje a X» sin canal (0.1.43, paso 2)", () => {
+  // Sin decir SMS ni NIDO, las dos salidas son legítimas: contact o
+  // nidoSend (que confirma antes de enviar). Otra ruta sería un fallo.
+  it.each(AMBIGUOUS_MESSAGE.map(([lang, text]) => [lang, text] as const))("[%s] %s → contact o nidoSend", (_lang, text) => {
+    expect(["contact", "nidoSend"]).toContain(routeOf(text));
+  });
+});
+
+/**
+ * Arreglos del paso 2 (enmienda del dueño al encargo: «arregla los
+ * tres fallos ahora, dentro de este paso», 2026-10-15). El encargo
+ * original reservaba los arreglos del router a la v0.1.44; medidos
+ * los fallos, el dueño ordenó adelantarlos y quedan aquí como
+ * regresión permanente, con el «antes» medido en cada comentario.
+ */
+describe("arreglos del paso 2 (0.1.43)", () => {
+  it("[contact/pt] «envia uma mensagem de texto para a Ana» → contact", () => {
+    // Antes: model. El patrón SMS pt solo admitía «um» antes de
+    // sms/torpedo/mensagem de texto; con «uma mensagem» no casaba.
+    expect(routeOf("envia uma mensagem de texto para a Ana")).toBe("contact");
+  });
+
+  it("[calendar/pt] «cria um evento amanhã» → calendarCreate", () => {
+    // Antes: model. El patrón consume «um evento» en el verbo, el
+    // resto es solo la fecha y la guarda de título vacío descartaba
+    // la acción; ahora el título es el sustantivo genérico. La
+    // consulta disfrazada («agenda de hoy») se sigue descartando.
+    expect(routeOf("cria um evento amanhã")).toBe("calendarCreate");
+  });
+
+  it("las casi órdenes que disparaban la búsqueda de contactos ya no disparan", () => {
+    // Antes: contact, con queries «mi casa ya no funciona»,
+    // «i lost Juan» y «casa não funciona mais». La forma pelada
+    // «teléfono de X» / «X's number» ahora exige que X parezca un
+    // nombre (contactRouter, isPlausibleBareName).
+    for (const text of ["el teléfono de mi casa ya no funciona", "i lost Juan's number", "o telefone de casa não funciona mais"]) {
+      expect(["chat", "model", "canned"]).toContain(routeOf(text));
+    }
   });
 });
