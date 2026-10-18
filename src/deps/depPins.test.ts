@@ -41,7 +41,7 @@ describe("F-8 dependency pins", () => {
     expect(deps["llama.rn"]).toBe("0.13.0-rc.6"); // native .so binary — the reviewed one
     expect(deps["expo-secure-store"]).toBe("57.0.4"); // Keystore DEK wrapper
     expect(deps["expo-sqlite"]).toBe("57.0.4"); // SQLCipher storage (fix concurrencia #49796)
-    expect(deps["expo-crypto"]).toBe("57.0.3"); // RNG/hash
+    expect(deps["expo-crypto"]).toBe("57.0.4"); // RNG/hash
     expect(deps["expo-local-authentication"]).toBe("57.0.3"); // biometric gate
     expect(deps["tweetnacl"]).toBe("1.0.3"); // P2P crypto primitives
     expect(deps["react-native"]).toBe("0.86.3"); // native framework
