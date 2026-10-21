@@ -136,7 +136,8 @@
       "removed": "Removed \"{{name}}\"",
       "activeSet": "Active {{kind}} model set to \"{{name}}\"",
       "loadFailed": "Couldn't load \"{{name}}\": {{error}}",
-      "resetFailed": "Reset failed: {{error}}"
+      "resetFailed": "Reset failed: {{error}}",
+      "resetCancelled": "Nothing was erased: the unlock was cancelled."
     },
     "recovery": {
       "wizardTitle": "Setup wizard",

@@ -321,6 +321,17 @@ export function ModelSetupScreen(props: Props) {
     : undefined;
 
   const handleExecuteReset = async () => {
+    // Blindaje 0.1.44: borrar todo es irreversible, así que pide la huella o
+    // el PIN del teléfono, igual que ver la clave o restaurar. Sin bloqueo de
+    // pantalla configurado se permite (como en el resto de la app); si el
+    // usuario cancela o falla, no se borra nada.
+    try {
+      const { unlockForSecret } = await import("../security/biometricGate");
+      await unlockForSecret(t("modelSetupScreen.dangerModal.title"));
+    } catch {
+      setToast(t("modelSetupScreen.toasts.resetCancelled"));
+      return;
+    }
     notification(NotificationFeedbackType.Warning);
     setResetting(true);
     try {

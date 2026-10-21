@@ -2,7 +2,7 @@
   "expo": {
     "name": "NIDO",
     "slug": "nido-app",
-    "version": "0.1.43",
+    "version": "0.1.44",
     "orientation": "portrait",
     "icon": "./assets/icon-nido.png",
     "userInterfaceStyle": "light",
@@ -11,7 +11,7 @@
     },
     "android": {
       "package": "team.nido.app",
-      "versionCode": 44,
+      "versionCode": 45,
       "allowBackup": false,
       "permissions": [
         "android.permission.BLUETOOTH",
@@ -69,6 +69,7 @@
       ],
       "./plugins/withReleaseSigning",
       "./plugins/withFlagSecure",
+      "./plugins/withHideOverlays",
       "./plugins/with-bluetooth-never-for-location",
       [
         "expo-build-properties",

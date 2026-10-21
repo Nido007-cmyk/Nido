@@ -4,6 +4,37 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.44-alpha — 2026-10-21
+
+A security and privacy hardening release. Nothing about how NIDO-to-NIDO
+connections work changed.
+
+### Added
+- **Protection against fake overlays (tapjacking).** On Android 12 and
+  later, other apps can no longer draw on top of NIDO while it is on
+  screen, so nobody can place a fake button over a confirmation.
+
+### Changed
+- **Erasing all data asks for your fingerprint or PIN**, like viewing the
+  backup key or restoring already did. If you cancel, nothing is erased.
+- **Your custom system prompt is stored encrypted** in the phone's secure
+  storage instead of the plain settings file. An existing prompt moves
+  there automatically the first time it is read.
+- **The pairing code is copied as private**: on Android 13 and later it no
+  longer shows in the clipboard preview or the keyboard's clipboard
+  history.
+- **The privacy policy now describes the local Wi-Fi route** (what is
+  announced on the network and who can see it) and says plainly what is
+  not hidden yet: the phone that starts a connection sends its public key
+  in clear.
+
+### Behind the scenes
+- Every GitHub Action used to build NIDO is pinned to an exact commit.
+- The dependency audit runs every week and on every change to `main`.
+- Each release includes a list of its components (SBOM, CycloneDX).
+- The security checklist (`docs/security/MASVS_CHECKLIST.md`) is up to
+  date with this version.
+
 ## 0.1.43-alpha — 2026-10-16
 
 This release watches the router itself. Every route a message can take

@@ -81,8 +81,15 @@ The interface is available in English, Spanish and Portuguese.
 - Content that comes from outside (a contact's message, a file, a note) is
   treated as data, never as instructions, and actions that write or send
   something after reading it ask for confirmation.
-- Bluetooth messages are end-to-end encrypted with keys exchanged by QR code
-  (X25519 key agreement, Ed25519 signatures, XSalsa20-Poly1305).
+- Optional hardware vault: the database key can be tied to your fingerprint
+  or PIN in the phone's secure hardware, with a strict mode that closes NIDO
+  after a short time in the background.
+- Messages between two NIDOs (Bluetooth, or local Wi-Fi as a backup route)
+  are end-to-end encrypted with keys exchanged by QR code (X25519 key
+  agreement, Ed25519 signatures, XSalsa20-Poly1305). The phone that starts a
+  connection still sends its public key in clear; hiding it is planned.
+- Screenshots are blocked, other apps' overlays are hidden while NIDO is on
+  screen (Android 12+), and erasing all data asks for your fingerprint or PIN.
 
 [Privacy policy](PRIVACY.md) · [terms of use](TERMS.md). More detail: [privacy hardening](docs/PRIVACY.md) · [crypto architecture](docs/CRYPTO_ARCHITECTURE.md) ·
 [threat model](docs/THREAT_MODEL_SUMMARY.md) · [reporting a vulnerability](SECURITY.md)
