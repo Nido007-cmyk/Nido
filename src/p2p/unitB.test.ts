@@ -113,6 +113,8 @@ import {
   failAllOutbox,
   resolveContactByName,
   StaleReplaceConflictError,
+  isContactV4Capable,
+  isContactConfirmV2,
 } from "./store";
 import { normalizeContactName } from "./contactName";
 import {
@@ -1400,5 +1402,29 @@ describe("UNIT B-Q13 (destroy mid-flight): la instancia muerta no marca nada", (
     expect(row?.status).toBe("queued"); // nunca 'sent' desde una instancia muerta
     // Y la SQL sigue operativa para otras instancias (la txn no se corrompió).
     expect(await as(() => getLiveSuccessorPk(bobPk))).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 0.1.49: el QR trae las capacidades → protegido desde la primera conexión.
+// ---------------------------------------------------------------------------
+describe("0.1.49: capacidades del QR al emparejar", () => {
+  it("QR nuevo: saludo sellado y CONFIRM v2 quedan marcados al emparejar", async () => {
+    const m = freshMessenger();
+    const { pkHex } = await pairedPeer(m, "Beto");
+    expect(await isContactV4Capable(pkHex)).toBe(true);
+    expect(await isContactConfirmV2(pkHex)).toBe(true);
+  });
+
+  it("QR viejo (sin caps): nada marcado, se aprende en la conexión como antes", async () => {
+    const m = freshMessenger();
+    await m.ensureIdentity("Yo");
+    const id = generateIdentity();
+    const sign = generateSigningKeypair();
+    const pkHex = toHex(id.publicKey);
+    const code = `NIDO1:${JSON.stringify({ v: 2, app: "nido", name: "Viejo", pk: pkHex, spk: toHex(sign.publicKey) })}`;
+    expect(await m.pairWith(code)).not.toBeNull();
+    expect(await isContactV4Capable(pkHex)).toBe(false);
+    expect(await isContactConfirmV2(pkHex)).toBe(false);
   });
 });

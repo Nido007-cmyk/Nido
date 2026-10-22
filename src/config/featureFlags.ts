@@ -12,8 +12,9 @@
  * - `isFeatureEnabled()` stays synchronous (safe to call in hot paths and
  *   message handlers), reading an in-memory override map over defaults.
  * - `setFeatureEnabled()` persists to disk; `loadFeatureFlags()` hydrates
- *   at startup. Persistence is best-effort (fail-open to defaults, which
- *   are all OFF — fail-closed direction for risky features).
+ *   at startup. Persistence is best-effort (fail-open to defaults). Since
+ *   0.1.49 the P2P protections (sealed hello, v5) default ON; risky
+ *   features (delegation, panic button) stay OFF.
  *
  * SAFETY: `delegation.enabled` defaults to OFF. All delegation code
  * paths (protocol handlers, executor, approval UI) must check this
@@ -33,17 +34,17 @@ const DEFAULTS: Record<FeatureFlag, boolean> = {
   /**
    * P2P v4 (2026-10-21): saludo sellado, sin identidad en claro. Solo cambia
    * lo que ENVÍA este teléfono al llamar a un contacto que ya dijo soportarlo.
-   * Recibir saludos sellados funciona siempre. Default OFF hasta probarlo en
-   * dos teléfonos.
+   * Recibir saludos sellados funciona siempre. 0.1.49: ON por defecto (nada
+   * débil por defecto); con un contacto que no lo soporta no cambia nada.
    */
-  "p2p.sealedHandshake": false,
+  "p2p.sealedHandshake": true,
   /**
    * P2P v5 (0.1.46): clave nueva por mensaje (Double Ratchet) y arranque
    * híbrido X25519 + ML-KEM-768. Solo se usa si los DOS teléfonos lo tienen
-   * activado; si no, la sesión sigue en el modo de siempre. Default OFF
-   * hasta probarlo en dos teléfonos.
+   * activado; si no, la sesión sigue en el modo de siempre. 0.1.49: ON por
+   * defecto; un teléfono viejo o con v5 apagado sigue en el modo clásico.
    */
-  "p2p.ratchetV5": false,
+  "p2p.ratchetV5": true,
   /**
    * Botón de pánico (0.1.46, como Briar): muestra en la pantalla principal un
    * botón que, mantenido 3 segundos, borra todos los datos de NIDO sin más
@@ -127,6 +128,6 @@ export async function loadFeatureFlags(): Promise<void> {
       }
     }
   } catch {
-    // Fail-open to defaults (all OFF).
+    // Fail-open to defaults.
   }
 }

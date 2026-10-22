@@ -1062,10 +1062,10 @@
   "settings": {
     "delegationTitle": "Delegated tasks (experimental)",
     "delegationDesc": "A paired NIDO can ask you to run tasks. Every task requires your explicit approval.",
-    "sealedHelloTitle": "Private hello (experimental)",
-    "sealedHelloDesc": "When this phone calls a paired NIDO that supports it, the first messages are sealed so nobody nearby can see who is calling. Turn it on in both phones to test. If connecting fails, turn it off.",
-    "ratchetV5Title": "New key per message + quantum-resistant (experimental)",
-    "ratchetV5Desc": "Every message gets its own key, like Signal's Double Ratchet: a key stolen today does not open earlier messages. The session also mixes in ML-KEM-768, so traffic recorded today stays closed to future quantum computers. Only used when both phones have it on; otherwise nothing changes. Applies from the next connection."
+    "sealedHelloTitle": "Private hello",
+    "sealedHelloDesc": "When this phone calls a paired NIDO that supports it, the first messages are sealed so nobody nearby can see who is calling. On by default; with an older NIDO nothing changes.",
+    "ratchetV5Title": "New key per message + quantum-resistant",
+    "ratchetV5Desc": "Every message gets its own key, like Signal's Double Ratchet: a key stolen today does not open earlier messages. The session also mixes in ML-KEM-768, so traffic recorded today stays closed to future quantum computers. On by default; used when both phones have it. Applies from the next connection."
   },
   "backup": {
     "dekTitle": "Backup created",

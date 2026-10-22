@@ -228,6 +228,23 @@ export interface PairWithOptions {
  * para aceptar una clave nueva hay que borrar el contacto y emparejar de
  * nuevo, verificando la huella en persona.
  */
+/**
+ * 0.1.49: el QR (escaneado en persona, auténtico) dice qué sabe hacer el otro
+ * NIDO. Así desde la PRIMERA conexión se llama con saludo sellado y se exige
+ * el CONFIRM v2, sin una primera conexión que un atacante pudiera degradar.
+ * Best-effort: si falla, se aprende igual en la primera conexión.
+ */
+async function applyPairingCapabilities(payload: { pk: string; caps?: string[] }): Promise<void> {
+  const caps = payload.caps ?? [];
+  try {
+    const store = await import("./store");
+    if (caps.includes("c4")) await store.setContactV4Capable(payload.pk, true);
+    if (caps.includes("cf2")) await store.setContactConfirmV2(payload.pk);
+  } catch {
+    /* best-effort */
+  }
+}
+
 export class PairingKeyChangedError extends Error {
   readonly code = "NIDO_PAIR_KEY_CHANGED";
   readonly contactName: string;
@@ -757,6 +774,7 @@ export class NidoMessenger {
       const contact = await findContactByPk(payload.pk);
       this.assertLive();
       if (!contact) throw new Error("No se pudo guardar el contacto.");
+      await applyPairingCapabilities(payload);
       return contact;
     }
     // UNIT B (R2): mismo nombre normalizado + pk distinta y VIVA →
@@ -847,6 +865,7 @@ export class NidoMessenger {
     const contact = await findContactByPk(payload.pk);
     this.assertLive();
     if (!contact) throw new Error("No se pudo guardar el contacto.");
+    await applyPairingCapabilities(payload);
     // FIX 2026-10-09: si esta identidad estaba revocada, el re-emparejamiento
     // explícito (ceremonia QR con confirmación) la rehabilita. Sin esto, revocar
     // y volver a emparejar el mismo dispositivo lo dejaba invisible para siempre:

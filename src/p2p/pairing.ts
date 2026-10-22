@@ -50,7 +50,17 @@ export interface PairingPayload {
   pk: string;
   /** v2: clave pública de firma Ed25519, en hex (64 chars). */
   spk?: string;
+  /**
+   * 0.1.49: lo que sabe hacer este NIDO, para no esperar a la primera
+   * conexión (que es justo la que un atacante podría degradar). El QR se
+   * escanea en persona, así que esto es auténtico. Un NIDO viejo ignora el
+   * campo. "c4" = saludo sellado; "cf2" = CONFIRM v2.
+   */
+  caps?: string[];
 }
+
+/** 0.1.49: capacidades que anuncia el QR de este NIDO. */
+export const PAIRING_CAPS: readonly string[] = ["c4", "cf2"];
 
 /**
  * Codifica el payload para mostrarlo como QR (siempre v2).
@@ -68,6 +78,7 @@ export function encodePairingPayload(name: string, publicKey: Uint8Array, signin
     name: clean,
     pk: toHex(publicKey),
     spk: toHex(signingPublicKey),
+    caps: [...PAIRING_CAPS],
   };
   return "NIDO1:" + JSON.stringify(payload);
 }
@@ -128,5 +139,19 @@ export function decodePairingPayload(qrText: string): PairingPayload {
   } else if (p.v === 2) {
     throw new Error("El QR v2 no trae clave de firma.");
   }
-  return { v: p.v as 1 | 2, app: "nido", name: p.name.trim().slice(0, 40), pk: toHex(pk), spk };
+  // 0.1.49: capacidades. Si vienen, tienen que estar bien formadas.
+  let caps: string[] | undefined;
+  if (p.caps !== undefined) {
+    if (
+      !Array.isArray(p.caps) ||
+      p.caps.length > 16 ||
+      !p.caps.every((c) => typeof c === "string" && /^[a-z0-9]{1,8}$/.test(c))
+    ) {
+      throw new Error("El QR de NIDO está dañado.");
+    }
+    caps = [...new Set(p.caps as string[])];
+  }
+  const out: PairingPayload = { v: p.v as 1 | 2, app: "nido", name: p.name.trim().slice(0, 40), pk: toHex(pk), spk };
+  if (caps) out.caps = caps;
+  return out;
 }

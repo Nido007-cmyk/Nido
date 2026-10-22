@@ -53,7 +53,8 @@ beforeEach(() => {
 
 /** Un messenger con un contacto y sesión viva contra un peer simulado. */
 async function setup(opts: { v5?: boolean; peerV5?: boolean; iAm?: "low" | "high" } = {}) {
-  if (opts.v5) await setFeatureEnabled("p2p.ratchetV5", true);
+  // 0.1.49: v5 viene activado de fábrica; cada prueba fija el valor que quiere.
+  await setFeatureEnabled("p2p.ratchetV5", opts.v5 === true);
   const tA = new LoopbackTransport();
   const tB = new LoopbackTransport();
   const m = new NidoMessenger(tA);

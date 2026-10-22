@@ -90,13 +90,14 @@ La interfaz está disponible en español, inglés y portugués.
   cierra NIDO tras poco tiempo en segundo plano.
 - Los mensajes entre dos NIDO (Bluetooth, o Wi-Fi local como respaldo) van
   cifrados de extremo a extremo con claves intercambiadas por código QR
-  (X25519, firmas Ed25519, XSalsa20-Poly1305). El teléfono que inicia una
-  conexión todavía manda su clave pública en claro por defecto; el ajuste
-  experimental «Saludo privado» la sella con los contactos que lo soportan.
-  Los mensajes se rellenan hasta tamaños fijos. Un ajuste experimental
-  (apagado por defecto) da a cada mensaje su propia clave (Double Ratchet,
-  como en Signal) y añade ML-KEM-768 a cada conexión frente a ordenadores
-  cuánticos futuros.
+  (X25519, firmas Ed25519, XSalsa20-Poly1305). Desde 0.1.49, activado por
+  defecto entre dos NIDO que lo soportan: los primeros mensajes van sellados
+  y nadie cerca puede ver quién llama («Saludo privado»), cada mensaje usa
+  su propia clave (Double Ratchet, como en Signal) y cada conexión añade
+  ML-KEM-768 frente a ordenadores cuánticos futuros. Con un NIDO más viejo
+  al otro lado, la conexión usa lo que ese teléfono soporte. Los mensajes se
+  rellenan hasta tamaños fijos. El saludo está comprobado con verificación
+  formal (`formal/`).
 - Mensajes temporales en los chats entre NIDO, un botón de pánico opcional
   que lo borra todo en 3 segundos y teclado incógnito (se pide al teclado que
   no aprenda de lo que escribes).

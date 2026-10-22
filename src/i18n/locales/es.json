@@ -1062,10 +1062,10 @@
   "settings": {
     "delegationTitle": "Tareas delegadas (experimental)",
     "delegationDesc": "Otro NIDO emparejado puede pedirte ejecutar tareas. Cada tarea requiere tu aprobación explícita.",
-    "sealedHelloTitle": "Saludo privado (experimental)",
-    "sealedHelloDesc": "Cuando este teléfono llama a un NIDO emparejado que lo soporta, los primeros mensajes van sellados y nadie cerca puede ver quién llama. Actívalo en los dos teléfonos para probarlo. Si no conecta, apágalo.",
-    "ratchetV5Title": "Clave nueva por mensaje + resistencia cuántica (experimental)",
-    "ratchetV5Desc": "Cada mensaje usa su propia clave, como el Double Ratchet de Signal: una clave robada hoy no abre los mensajes anteriores. Además la sesión mezcla ML-KEM-768, para que el tráfico grabado hoy siga cerrado ante ordenadores cuánticos futuros. Solo se usa si los dos teléfonos lo tienen activado; si no, nada cambia. Vale desde la siguiente conexión."
+    "sealedHelloTitle": "Saludo privado",
+    "sealedHelloDesc": "Cuando este teléfono llama a un NIDO emparejado que lo soporta, los primeros mensajes van sellados y nadie cerca puede ver quién llama. Activado por defecto; con un NIDO viejo no cambia nada.",
+    "ratchetV5Title": "Clave nueva por mensaje + resistencia cuántica",
+    "ratchetV5Desc": "Cada mensaje usa su propia clave, como el Double Ratchet de Signal: una clave robada hoy no abre los mensajes anteriores. Además la sesión mezcla ML-KEM-768, para que el tráfico grabado hoy siga cerrado ante ordenadores cuánticos futuros. Activado por defecto; se usa cuando los dos teléfonos lo tienen. Vale desde la siguiente conexión."
   },
   "backup": {
     "dekTitle": "Backup creado",

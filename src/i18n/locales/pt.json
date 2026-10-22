@@ -1062,10 +1062,10 @@
   "settings": {
     "delegationDesc": "Um NIDO pareado pode pedir para você executar tarefas. Cada tarefa requer sua aprovação.",
     "delegationTitle": "Tarefas delegadas (experimental)",
-    "sealedHelloTitle": "Saudação privada (experimental)",
-    "sealedHelloDesc": "Quando este telefone chama um NIDO pareado que tem suporte, as primeiras mensagens vão seladas e ninguém por perto vê quem está chamando. Ative nos dois telefones para testar. Se não conectar, desative.",
-    "ratchetV5Title": "Chave nova por mensagem + resistência quântica (experimental)",
-    "ratchetV5Desc": "Cada mensagem usa sua própria chave, como o Double Ratchet do Signal: uma chave roubada hoje não abre as mensagens anteriores. A sessão também mistura ML-KEM-768, para que o tráfego gravado hoje continue fechado para computadores quânticos futuros. Só é usado se os dois telefones o tiverem ativado; caso contrário, nada muda. Vale a partir da próxima conexão."
+    "sealedHelloTitle": "Saudação privada",
+    "sealedHelloDesc": "Quando este telefone chama um NIDO pareado que tem suporte, as primeiras mensagens vão seladas e ninguém por perto vê quem está chamando. Ativada por padrão; com um NIDO antigo nada muda.",
+    "ratchetV5Title": "Chave nova por mensagem + resistência quântica",
+    "ratchetV5Desc": "Cada mensagem usa sua própria chave, como o Double Ratchet do Signal: uma chave roubada hoje não abre as mensagens anteriores. A sessão também mistura ML-KEM-768, para que o tráfego gravado hoje continue fechado para computadores quânticos futuros. Ativado por padrão; é usado quando os dois telefones o têm. Vale a partir da próxima conexão."
   },
   "backup": {
     "dekTitle": "Backup criado",

@@ -86,12 +86,14 @@ The interface is available in English, Spanish and Portuguese.
   after a short time in the background.
 - Messages between two NIDOs (Bluetooth, or local Wi-Fi as a backup route)
   are end-to-end encrypted with keys exchanged by QR code (X25519 key
-  agreement, Ed25519 signatures, XSalsa20-Poly1305). The phone that starts a
-  connection still sends its public key in clear by default; the experimental
-  "Private hello" setting seals it for contacts that support it. Messages
-  are padded to fixed sizes. An experimental setting (off by default) gives
-  every message its own key (Double Ratchet, as in Signal) and adds
-  ML-KEM-768 to each connection against future quantum computers.
+  agreement, Ed25519 signatures, XSalsa20-Poly1305). Since 0.1.49, on by
+  default between two NIDOs that support them: the first messages are
+  sealed so nobody nearby can see who is calling ("Private hello"), every
+  message gets its own key (Double Ratchet, as in Signal) and each
+  connection adds ML-KEM-768 against future quantum computers. With an older
+  NIDO on the other side, the connection falls back to what that phone
+  supports. Messages are padded to fixed sizes. The handshake is checked
+  with formal verification (`formal/`).
 - Disappearing messages in NIDO-to-NIDO chats, an optional panic button that
   erases everything in 3 seconds, and an incognito keyboard (the keyboard is
   asked not to learn from what you type).
