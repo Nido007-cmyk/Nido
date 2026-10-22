@@ -42,6 +42,20 @@
  *   k = HKDF(sal = mk, ikm = cabecera, info = "nido-v5-msg")
  * Cambiar un solo bit de la cabecera da otra clave y el frame no abre.
  *
+ * 0.1.50 — CABECERAS CIFRADAS (por encima de Signal, que las manda en claro).
+ * Si los dos lados lo soportan, cada frame v5 va entero dentro de otra caja:
+ *   0x06 | nonce(24) | secretbox(frame v5 de arriba, clave de cabecera)
+ * Quien graba el tráfico ya no ve la clave de ratchet, los contadores ni el
+ * cifrado ML-KEM: solo bytes al azar de tamaño fijo por tramos.
+ * - hk0 = HKDF(clave de sesión clásica, ids): para los primeros frames de H
+ *   (los que llevan el cifrado ML-KEM, cuando L aún no tiene la raíz).
+ * - hk1 = HKDF(raíz v5, ids): para todo lo demás. Mezcla ML-KEM, así que
+ *   un ordenador cuántico futuro tampoco ve esas cabeceras.
+ * Negociación: L pide "he":1 en su oferta (dentro del session_confirm
+ * cifrado); H, si lo entiende, escribe siempre 0x06; L pasa a 0x06 al ver el
+ * primer 0x06 de H. Desde entonces un frame 0x05 sin caja se rechaza
+ * (nadie puede forzar la vuelta a cabeceras en claro).
+ *
  * Todas las operaciones de descifrado trabajan sobre una copia del estado y
  * solo la confirman si el mensaje autentica: un frame falso o repetido no
  * mueve nada.
@@ -59,6 +73,8 @@ import {
 } from "./pq";
 
 export const V5_MARKER = 0x05;
+/** 0.1.50: frame v5 con la cabecera cifrada (ver arriba). */
+export const V5_HE_MARKER = 0x06;
 const FLAG_HAS_CT = 0x01;
 const DH_BYTES = 32;
 const HEADER_BYTES = 1 + 1 + DH_BYTES + 4 + 4;
@@ -74,6 +90,8 @@ export interface V5Offer {
   v: 1;
   dh: string;
   ek: string;
+  /** 0.1.50: L entiende cabeceras cifradas. Un H viejo ignora el campo. */
+  he?: 1;
 }
 
 interface State {
@@ -103,6 +121,8 @@ const T_RK = utf8Encode("nido-v5-rk");
 const T_MK = utf8Encode("nido-v5-mk");
 const T_CK = utf8Encode("nido-v5-ck");
 const T_MSG = utf8Encode("nido-v5-msg");
+const T_HK0 = utf8Encode("nido-v5-hk0");
+const T_HK1 = utf8Encode("nido-v5-hk1");
 const T_CHAIN_STEP_MK = new Uint8Array([0x01]);
 const T_CHAIN_STEP_CK = new Uint8Array([0x02]);
 
@@ -159,6 +179,11 @@ export function deriveV5Root(
   const rk = hkdfSha512(T_ROOT, ikm, info, 32);
   ikm.fill(0);
   return rk;
+}
+
+/** 0.1.50: claves de cabecera, ligadas a las dos identidades. */
+function headerKey(secret: Uint8Array, tag: Uint8Array, lowPkHex: string, highPkHex: string): Uint8Array {
+  return hkdfSha512(tag, secret, utf8Encode(`${lowPkHex}|${highPkHex}`), 32);
 }
 
 /* ---------- utilidades de estado ---------- */
@@ -306,6 +331,15 @@ export class V5Ratchet {
   private readonly highPk: string;
   /** ¿Ya llegó al menos un frame v5 válido del peer? */
   private heardV5 = false;
+  /**
+   * 0.1.50: ¿cabeceras cifradas? true/false una vez decidido; null = L
+   * todavía no sabe si H lo entiende (lo sabrá con el primer frame de H).
+   */
+  private he: boolean | null = false;
+  /** 0.1.50: clave de cabecera desde la clave clásica (primeros frames de H). */
+  private hk0: Uint8Array;
+  /** 0.1.50: clave de cabecera desde la raíz v5 (null hasta conocer la raíz). */
+  private hk1: Uint8Array | null = null;
 
   private constructor(role: V5Role, sessionKey: Uint8Array, lowPk: string, highPk: string) {
     this.role = role;
@@ -313,6 +347,12 @@ export class V5Ratchet {
     this.sessionKey = sessionKey.slice();
     this.lowPk = lowPk.toLowerCase();
     this.highPk = highPk.toLowerCase();
+    this.hk0 = headerKey(this.sessionKey, T_HK0, this.lowPk, this.highPk);
+  }
+
+  /** 0.1.50: ¿esta conexión ya usa cabeceras cifradas? */
+  get headerEncrypted(): boolean {
+    return this.he === true;
   }
 
   /** L: prepara la oferta (clave de ratchet + clave ML-KEM). */
@@ -321,7 +361,8 @@ export class V5Ratchet {
     const dhKp = nacl.box.keyPair();
     const kem = kemKeygen();
     r.offer = { dh: dhKp, kem };
-    return { ratchet: r, offer: { v: 1, dh: toHex(dhKp.publicKey), ek: toHex(kem.publicKey) } };
+    r.he = null; // se sabrá con el primer frame v5 de H
+    return { ratchet: r, offer: { v: 1, dh: toHex(dhKp.publicKey), ek: toHex(kem.publicKey), he: 1 } };
   }
 
   /** H: acepta la oferta de L y arranca como Alice. null si la oferta no es válida. */
@@ -333,6 +374,8 @@ export class V5Ratchet {
       const { cipherText, sharedSecret } = kemEncapsulate(parsed.ek);
       const rk0 = deriveV5Root(r.sessionKey, sharedSecret, r.lowPk, r.highPk, parsed.ek, cipherText);
       sharedSecret.fill(0);
+      r.he = parsed.he;
+      r.hk1 = headerKey(rk0, T_HK1, r.lowPk, r.highPk);
       const dhs = nacl.box.keyPair();
       const [rk, cks] = kdfRk(rk0, dh(dhs.secretKey, parsed.dh));
       rk0.fill(0);
@@ -388,7 +431,30 @@ export class V5Ratchet {
     s.cks.fill(0);
     s.cks = next;
     s.ns++;
-    return concat(header, nonce, boxed);
+    const inner = concat(header, nonce, boxed);
+    if (this.he !== true) return inner;
+    // 0.1.50: todo el frame v5 dentro de la caja de cabecera. Con el cifrado
+    // ML-KEM a bordo (primeros frames de H), L aún no tiene la raíz: hk0.
+    const hk = hasCt ? this.hk0 : this.hk1;
+    if (!hk) throw new Error("v5: falta la clave de cabecera.");
+    const outerNonce = randomNonce(NONCE_BYTES);
+    return concat(new Uint8Array([V5_HE_MARKER]), outerNonce, nacl.secretbox(inner, outerNonce, hk));
+  }
+
+  /**
+   * 0.1.50: quita la caja de cabecera. Devuelve el frame v5 de dentro, o
+   * null. Se prueban las claves que este lado conoce (hk1 primero).
+   */
+  private unwrapHeader(body: Uint8Array): Uint8Array | null {
+    if (body.length < 1 + NONCE_BYTES + MAC_BYTES) return null;
+    const n = body.slice(1, 1 + NONCE_BYTES);
+    const boxed = body.slice(1 + NONCE_BYTES);
+    for (const k of [this.hk1, this.hk0]) {
+      if (!k) continue;
+      const inner = nacl.secretbox.open(boxed, n, k);
+      if (inner && inner[0] === V5_MARKER) return inner;
+    }
+    return null;
   }
 
   /**
@@ -396,8 +462,23 @@ export class V5Ratchet {
    * mensaje autentica; si no, devuelve null y nada cambia.
    */
   open(body: Uint8Array): Uint8Array | null {
+    // 0.1.50: ¿con caja de cabecera?
+    let wrapped = false;
+    if (body[0] === V5_HE_MARKER) {
+      // Solo si lo pedimos/aceptamos (L lo pidió: he null o true; H: si L lo pidió).
+      if (this.he === false) return null;
+      const inner = this.unwrapHeader(body);
+      if (!inner) return null;
+      body = inner;
+      wrapped = true;
+    } else if (this.he === true) {
+      // Ya se usan cabeceras cifradas: un frame sin caja es un intento de
+      // volver a cabeceras en claro.
+      return null;
+    }
     const p = parseV5Body(body);
     if (!p) return null;
+    let newHk1: Uint8Array | null = null;
     try {
       let s: State;
       if (this.state === null) {
@@ -406,6 +487,7 @@ export class V5Ratchet {
         const ss = kemDecapsulate(p.ct, this.offer.kem.secretKey);
         const rk0 = deriveV5Root(this.sessionKey, ss, this.lowPk, this.highPk, this.offer.kem.publicKey, p.ct);
         ss.fill(0);
+        newHk1 = headerKey(rk0, T_HK1, this.lowPk, this.highPk);
         s = {
           rk: rk0,
           dhs: this.offer.dh,
@@ -423,7 +505,14 @@ export class V5Ratchet {
         s = cloneState(this.state);
       }
       const plain = this.openWithState(s, p);
-      if (!plain) return null;
+      if (!plain) {
+        newHk1?.fill(0);
+        return null;
+      }
+      // 0.1.50: L decide con el primer frame auténtico de H si hay cabeceras
+      // cifradas (lo hay si H mandó la caja), y desde entonces no cambia.
+      if (this.he === null) this.he = wrapped;
+      if (newHk1) this.hk1 = newHk1;
       // Éxito: se confirma el estado.
       if (this.state === null) {
         // Bob ya arrancó: las claves de la oferta y la clave clásica dejan
@@ -478,7 +567,15 @@ export class V5Ratchet {
   }
 }
 
-function parseOffer(offer: unknown): { dh: Uint8Array; ek: Uint8Array } | null {
+/**
+ * Solo tests: quita la caja de cabecera con las claves de `r` (para comprobar
+ * que el frame de dentro existe y que, sin la caja, se rechaza).
+ */
+export function unwrapHeaderForTests(r: V5Ratchet, body: Uint8Array): Uint8Array | null {
+  return (r as unknown as { unwrapHeader(b: Uint8Array): Uint8Array | null }).unwrapHeader(body);
+}
+
+function parseOffer(offer: unknown): { dh: Uint8Array; ek: Uint8Array; he: boolean } | null {
   if (typeof offer !== "object" || offer === null) return null;
   const o = offer as Record<string, unknown>;
   if (o.v !== 1 || typeof o.dh !== "string" || typeof o.ek !== "string") return null;
@@ -488,5 +585,5 @@ function parseOffer(offer: unknown): { dh: Uint8Array; ek: Uint8Array } | null {
   for (let i = 0; i < 32; i++) dhBytes[i] = parseInt(o.dh.slice(i * 2, i * 2 + 2), 16);
   const ek = new Uint8Array(KEM_PUBLIC_KEY_BYTES);
   for (let i = 0; i < ek.length; i++) ek[i] = parseInt(o.ek.slice(i * 2, i * 2 + 2), 16);
-  return { dh: dhBytes, ek };
+  return { dh: dhBytes, ek, he: o.he === 1 };
 }

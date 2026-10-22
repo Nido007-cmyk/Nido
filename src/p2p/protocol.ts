@@ -22,7 +22,7 @@ import {
   utf8Encode,
   HANDSHAKE_NONCE_BYTES,
 } from "./crypto";
-import { V5Ratchet, V5_MARKER, type V5Offer } from "./ratchet";
+import { V5Ratchet, V5_HE_MARKER, V5_MARKER, type V5Offer } from "./ratchet";
 
 export const PROTOCOL_VERSION = 2;
 
@@ -236,8 +236,11 @@ const MAX_FRAME_BYTES = 256 * 1024; // 256 KB por mensaje
  */
 const PAD_MIN = 512;
 const PAD_STEP_LARGE = 16 * 1024;
-/** Lo que cabe en un frame descontando nonce (24) + MAC (16), con holgura para v5. */
-const MAX_PLAINTEXT_BYTES = MAX_FRAME_BYTES - 24 - 16 - 1200;
+/**
+ * Lo que cabe en un frame descontando nonce (24) + MAC (16), con holgura para
+ * v5 (cabecera 42 + ML-KEM 1088) y su caja de cabecera de 0.1.50 (41).
+ */
+const MAX_PLAINTEXT_BYTES = MAX_FRAME_BYTES - 24 - 16 - 1300;
 
 export function paddedLength(n: number): number {
   let target: number;
@@ -551,7 +554,7 @@ export class P2PSession {
    */
   private openBody(body: Uint8Array): Uint8Array | null {
     if (this.v5) {
-      if (body[0] === V5_MARKER) {
+      if (body[0] === V5_MARKER || body[0] === V5_HE_MARKER) {
         const plain = this.v5.open(body);
         if (plain) {
           // Los dos sentidos ya van en v5: la clave clásica de la conexión

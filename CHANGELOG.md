@@ -4,6 +4,25 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.50-alpha — 2026-10-22
+
+### Security
+- **Encrypted headers in NIDO-to-NIDO messages.** Each message already had
+  its own key. Its header still travelled in the clear: the per-message
+  ratchet key, the message counters and, in the first messages, the ML-KEM
+  ciphertext. Someone recording nearby could count messages and follow
+  turns. Now the whole message, header included, goes inside a second
+  encrypted box.
+  - Signal does not encrypt these headers.
+  - The box key comes from the session root, which also mixes in ML-KEM,
+    so a future quantum computer cannot read those headers either. The
+    only exception is the first messages, before the other phone has that
+    root.
+  - Used when both phones have 0.1.50 or later. With an older NIDO,
+    messages go as in 0.1.49.
+  - Once a connection uses encrypted headers, a message without the box is
+    rejected, so nobody can force a fall back.
+
 ## 0.1.49-alpha — 2026-10-22
 
 ### Security

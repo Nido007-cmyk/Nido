@@ -10,7 +10,7 @@
 import { describe, expect, it } from "vitest";
 import { generateEphemeral, generateIdentity, randomNonce, toHex, HANDSHAKE_NONCE_BYTES } from "./crypto";
 import { makeEnvelope, P2PSession, paddedLength, padPlaintext } from "./protocol";
-import { V5_MARKER, MAX_SKIP } from "./ratchet";
+import { V5_HE_MARKER, V5_MARKER, MAX_SKIP, unwrapHeaderForTests, type V5Ratchet } from "./ratchet";
 
 function pair(opts: { lowV5: boolean; highV5: boolean }) {
   let a = generateIdentity();
@@ -54,6 +54,7 @@ function bootV5() {
 }
 
 const body = (frame: Uint8Array) => frame.slice(4);
+const v5Of = (s: P2PSession) => (s as unknown as { v5: V5Ratchet }).v5;
 
 describe("relleno de mensajes", () => {
   it("tamaños fijos", () => {
@@ -137,19 +138,22 @@ describe("protocolo v5", () => {
     expect(p.sH.unpack(early)?.payload).toEqual({ text: "hola" });
 
     const h1 = p.sH.pack(p.env("H", "chat", { text: "uno" }));
-    expect(body(h1)[0]).toBe(V5_MARKER);
-    expect(body(h1)[1] & 1).toBe(1); // lleva el cifrado ML-KEM
+    // 0.1.50: los dos son nuevos → cabecera cifrada; dentro, el frame v5.
+    expect(body(h1)[0]).toBe(V5_HE_MARKER);
+    const h1in = unwrapHeaderForTests(v5Of(p.sH), body(h1))!;
+    expect(h1in[0]).toBe(V5_MARKER);
+    expect(h1in[1] & 1).toBe(1); // lleva el cifrado ML-KEM
     expect(p.sL.unpack(h1)?.payload).toEqual({ text: "uno" });
     expect(p.sL.usesV5).toBe(true);
 
     const l1 = p.sL.pack(p.env("L", "chat", { text: "dos" }));
-    expect(body(l1)[0]).toBe(V5_MARKER);
-    expect(body(l1)[1] & 1).toBe(0);
+    expect(body(l1)[0]).toBe(V5_HE_MARKER);
+    expect(unwrapHeaderForTests(v5Of(p.sL), body(l1))![1] & 1).toBe(0);
     expect(p.sH.unpack(l1)?.payload).toEqual({ text: "dos" });
 
     // H ya sabe que L arrancó: deja de mandar el cifrado ML-KEM.
     const h2 = p.sH.pack(p.env("H", "chat", { text: "tres" }));
-    expect(body(h2)[1] & 1).toBe(0);
+    expect(unwrapHeaderForTests(v5Of(p.sH), body(h2))![1] & 1).toBe(0);
     expect(p.sL.unpack(h2)?.payload).toEqual({ text: "tres" });
   });
 
@@ -160,7 +164,7 @@ describe("protocolo v5", () => {
       const s = fromH ? p.sH : p.sL;
       const r = fromH ? p.sL : p.sH;
       const f = s.pack(p.env(fromH ? "H" : "L", "chat", { text: `m${i}` }));
-      if (fromH || p.sL.usesV5) expect(body(f)[0]).toBe(V5_MARKER);
+      if (fromH || p.sL.usesV5) expect(body(f)[0]).toBe(V5_HE_MARKER);
       expect(r.unpack(f)?.payload).toEqual({ text: `m${i}` });
     }
     expect(p.sL.usesV5).toBe(true);
@@ -317,6 +321,88 @@ describe("protocolo v5", () => {
       const c = p.env("L", "session_confirm", { r5 });
       expect(p.sH.unpack(p.sL.pack(c))).not.toBeNull();
       expect(p.sH.usesV5).toBe(false);
+    }
+  });
+});
+
+describe("0.1.50: cabeceras cifradas", () => {
+  /** Simula un NIDO 0.1.46-0.1.49: su oferta no trae "he". */
+  function bootWithOldLow() {
+    const p = pair({ lowV5: true, highV5: true });
+    const payload = p.sL.confirmPayload() as { r5: Record<string, unknown> };
+    delete payload.r5.he;
+    const fL = p.sL.pack(p.env("L", "session_confirm", payload));
+    const fH = p.sH.pack(p.env("H", "session_confirm", p.sH.confirmPayload()));
+    expect(p.sH.unpack(fL)).not.toBeNull();
+    expect(p.sL.unpack(fH)).not.toBeNull();
+    return p;
+  }
+
+  it("la oferta de L pide cabeceras cifradas", () => {
+    const p = pair({ lowV5: true, highV5: true });
+    expect((p.sL.confirmPayload() as { r5: { he?: number } }).r5.he).toBe(1);
+  });
+
+  it("nada de la cabecera viaja en claro: ni la clave de ratchet ni los contadores", () => {
+    const p = bootV5();
+    const h1 = body(p.sH.pack(p.env("H", "chat", { text: "x" })));
+    const inner = unwrapHeaderForTests(v5Of(p.sH), h1)!;
+    const dhPub = toHex(inner.slice(2, 34));
+    expect(toHex(h1)).not.toContain(dhPub);
+    // El cifrado ML-KEM tampoco.
+    expect(toHex(h1)).not.toContain(toHex(inner.slice(42, 42 + 64)));
+  });
+
+  it("con cabeceras cifradas, un frame v5 sin caja se rechaza (sin vuelta atrás)", () => {
+    const p = bootV5();
+    const h1 = p.sH.pack(p.env("H", "chat", { text: "uno" }));
+    expect(p.sL.unpack(h1)).not.toBeNull(); // L ya sabe que hay cabeceras cifradas
+    const h2 = p.sH.pack(p.env("H", "chat", { text: "dos" }));
+    const inner = unwrapHeaderForTests(v5Of(p.sH), body(h2))!;
+    const naked = new Uint8Array(4 + inner.length);
+    naked[0] = (inner.length >>> 24) & 0xff;
+    naked[1] = (inner.length >>> 16) & 0xff;
+    naked[2] = (inner.length >>> 8) & 0xff;
+    naked[3] = inner.length & 0xff;
+    naked.set(inner, 4);
+    expect(p.sL.unpack(naked)).toBeNull();
+    // El frame bueno sigue abriendo: el rechazo no movió el estado.
+    expect(p.sL.unpack(h2)?.payload).toEqual({ text: "dos" });
+  });
+
+  it("caja manipulada (un bit) → no abre y el estado no cambia", () => {
+    const p = bootV5();
+    const h1 = p.sH.pack(p.env("H", "chat", { text: "uno" }));
+    const bad = h1.slice();
+    bad[bad.length - 1] ^= 1;
+    expect(p.sL.unpack(bad)).toBeNull();
+    expect(p.sL.unpack(h1)?.payload).toEqual({ text: "uno" });
+  });
+
+  it("con un L viejo (sin 'he'), H escribe v5 sin caja y todo funciona como antes", () => {
+    const p = bootWithOldLow();
+    const h1 = p.sH.pack(p.env("H", "chat", { text: "uno" }));
+    expect(body(h1)[0]).toBe(V5_MARKER);
+    expect(p.sL.unpack(h1)?.payload).toEqual({ text: "uno" });
+    const l1 = p.sL.pack(p.env("L", "chat", { text: "dos" }));
+    // L nuevo con H que no puso caja: L tampoco la pone (H podría ser viejo).
+    expect(body(l1)[0]).toBe(V5_MARKER);
+    expect(p.sH.unpack(l1)?.payload).toEqual({ text: "dos" });
+    // Y un frame con caja no se acepta en esta sesión.
+    expect(v5Of(p.sL).headerEncrypted).toBe(false);
+  });
+
+  it("muchos mensajes en los dos sentidos con cabeceras cifradas, incluso desordenados", () => {
+    const p = bootV5();
+    const h = [0, 1, 2].map((i) => p.sH.pack(p.env("H", "chat", { text: `h${i}` })));
+    expect(p.sL.unpack(h[2])?.payload).toEqual({ text: "h2" });
+    expect(p.sL.unpack(h[0])?.payload).toEqual({ text: "h0" });
+    expect(p.sL.unpack(h[1])?.payload).toEqual({ text: "h1" });
+    for (let i = 0; i < 20; i++) {
+      const fromH = i % 2 === 0;
+      const f = (fromH ? p.sH : p.sL).pack(p.env(fromH ? "H" : "L", "chat", { text: `m${i}` }));
+      expect(body(f)[0]).toBe(V5_HE_MARKER);
+      expect((fromH ? p.sL : p.sH).unpack(f)?.payload).toEqual({ text: `m${i}` });
     }
   });
 });
