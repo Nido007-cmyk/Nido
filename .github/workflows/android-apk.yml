@@ -116,7 +116,9 @@ jobs:
           # and makes sdkmanager exit 1. Install only what is needed here;
           # Gradle downloads build-tools/platforms itself (licenses are
           # pre-accepted by this action).
-          packages: platform-tools
+          # 0.1.47: el NDK se instala aquí (antes lo descargaba Gradle a
+          # mitad de compilación y una descarga fallida tumbó un build).
+          packages: platform-tools ndk;27.0.12077973
 
       - name: Install JS dependencies
         run: npm ci
