@@ -2,7 +2,7 @@
 
 *Política de privacidad — versión en español más abajo.*
 
-Last updated: 2026-10-21. Applies to the NIDO Android app built from this repository.
+Last updated: 2026-10-21 (0.1.45). Applies to the NIDO Android app built from this repository.
 
 ## Summary
 
@@ -33,7 +33,7 @@ When you pair with another NIDO, messages travel directly between the two phones
 
 - **Bluetooth.** While NIDO is running, it listens for your paired contacts over Bluetooth, also in the background. A nearby device that probes yours could learn that NIDO is installed. The phone that receives a connection does not reveal who it is until the other side proves it is one of your contacts.
 - **Local Wi-Fi (backup route).** While you are looking for or connecting to another NIDO, it also uses your Wi-Fi network or hotspot. It announces itself on that network with a random name that changes on every start and a fixed service type, so other devices on the same network can see that a NIDO is there, but not who you are. It only accepts connections from local network addresses, never from the internet. When you leave that screen it stops announcing itself; connections already open stay.
-- **What is not hidden yet.** The phone that starts a connection sends its NIDO public key in the first message, before encryption begins. Someone recording Bluetooth or Wi-Fi traffic nearby could recognise the same phone across connections, without being able to read any message. Removing this is planned.
+- **What is not hidden yet.** By default, the phone that starts a connection sends its NIDO public key in the first message, before encryption begins. Someone recording Bluetooth or Wi-Fi traffic nearby could recognise the same phone across connections, without being able to read any message. The experimental **Private hello** setting (Settings) removes it when calling a contact whose NIDO supports it.
 
 Every local Wi-Fi connection also appears in the network log.
 
@@ -69,7 +69,7 @@ Changes to this policy are made in this file and recorded in the repository hist
 
 # Política de privacidad
 
-Última actualización: 2026-10-21. Aplica a la app NIDO para Android compilada desde este repositorio.
+Última actualización: 2026-10-21 (0.1.45). Aplica a la app NIDO para Android compilada desde este repositorio.
 
 ## Resumen
 
@@ -98,7 +98,7 @@ Cuando te emparejas con otro NIDO, los mensajes viajan directamente entre los do
 
 - **Bluetooth.** Mientras NIDO está en marcha, espera a tus contactos emparejados por Bluetooth, también en segundo plano. Un dispositivo cercano que consulte el tuyo podría saber que tienes NIDO instalado. El teléfono que recibe una conexión no dice quién es hasta que el otro demuestra ser uno de tus contactos.
 - **Wi-Fi local (ruta de respaldo).** Mientras buscas o te conectas a otro NIDO, también usa tu red Wi-Fi o el punto de acceso. Se anuncia en esa red con un nombre aleatorio que cambia en cada arranque y un tipo de servicio fijo: otros dispositivos de la misma red pueden ver que hay un NIDO, pero no quién eres. Solo acepta conexiones de direcciones de la red local, nunca de internet. Al salir de esa pantalla deja de anunciarse; las conexiones ya abiertas siguen.
-- **Lo que todavía no se oculta.** El teléfono que inicia una conexión manda su clave pública de NIDO en el primer mensaje, antes de que empiece el cifrado. Alguien que grabe el tráfico Bluetooth o Wi-Fi cerca podría reconocer el mismo teléfono de una conexión a otra, sin poder leer ningún mensaje. Está previsto quitarlo.
+- **Lo que todavía no se oculta.** Por defecto, el teléfono que inicia una conexión manda su clave pública de NIDO en el primer mensaje, antes de que empiece el cifrado. Alguien que grabe el tráfico Bluetooth o Wi-Fi cerca podría reconocer el mismo teléfono de una conexión a otra, sin poder leer ningún mensaje. El ajuste experimental **Saludo privado** (Ajustes) lo quita al llamar a un contacto cuyo NIDO lo soporta.
 
 Cada conexión por Wi-Fi local también aparece en el registro de red.
 

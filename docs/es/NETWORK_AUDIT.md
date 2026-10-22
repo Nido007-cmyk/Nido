@@ -27,11 +27,11 @@ grep -rn "createDownloadResumable\|downloadAsync" src --include="*.ts" | grep -v
 |---|---|
 | `fetch` / axios / WebSocket / EventSource en `src/` | **Ninguno** |
 | URLs `http(s)` en `src/` | Solo `src/models/manifest.ts`: URLs de descarga de modelos (HuggingFace) y corpus (raw.githubusercontent.com). Son datos de configuración, no llamadas. |
-| Red en Kotlin de `modules/*` | **Ninguna** (`nido-p2p` solo usa Bluetooth; los demás módulos no tocan red) |
+| Red en Kotlin de `modules/*` | Solo la ruta Wi-Fi local de `nido-p2p` (`NidoLanManager.kt`): TCP + mDNS, aceptadas solo desde direcciones privadas de la misma subred, nunca internet. Los demás módulos no tocan red |
 | SDKs de analítica/telemetría | **Ninguno** |
 | Descargas de archivos | Un único punto: `src/models/ModelManager.ts` → `expo-file-system` `createDownloadResumable`, solo con las URLs del manifest y **solo cuando el usuario pulsa descargar** en la configuración inicial |
 | Deep Research | Local: descompone con el LLM del teléfono y recupera del corpus local (RAG). No hay búsqueda web. |
-| P2P NIDO | Cero red por diseño: RFCOMM Bluetooth entre dispositivos; el handshake y los mensajes nunca salen del enlace local |
+| P2P NIDO | Sin internet por diseño: Bluetooth RFCOMM o Wi-Fi local entre dispositivos; el saludo y los mensajes nunca salen del enlace local y van cifrados de extremo a extremo. Las conexiones por Wi-Fi local quedan en el registro como las descargas |
 
 ## Conclusión
 

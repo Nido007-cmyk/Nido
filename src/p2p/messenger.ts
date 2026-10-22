@@ -433,11 +433,19 @@ export class NidoMessenger {
    * muestra la lista de cercanos) y hace el handshake. Resuelve con la
    * identidad verificada del peer (debe ser un contacto emparejado por QR).
    */
-  async connectPeer(alias: string): Promise<P2PPeerInfo> {
+  /**
+   * P7: tag de la sesión establecida con un peer (igual en ambos lados), o
+   * null si no hay sesión viva. Lo usan los tokens de tareas delegadas.
+   */
+  getSessionTag(peerPkHex: string): string | null {
+    return this.sessions.get(peerPkHex.toLowerCase())?.sessionTag ?? null;
+  }
+
+  async connectPeer(alias: string, opts?: { targetPkHex?: string }): Promise<P2PPeerInfo> {
     this.assertLive();
     await this.ensureIdentity();
     this.assertLive();
-    return this.transport.connect(alias);
+    return opts ? this.transport.connect(alias, opts) : this.transport.connect(alias);
   }
 
   /**

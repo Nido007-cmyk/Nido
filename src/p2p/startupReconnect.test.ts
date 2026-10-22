@@ -34,8 +34,9 @@ describe("reconnectKnownContactsOnce (RECONNECT-AFTER-CRASH)", () => {
   it("re-dials known paired contacts after a restart", async () => {
     const d = deps();
     expect(await reconnectKnownContactsOnce(d)).toEqual([A, B]);
-    expect(d.connectPeer).toHaveBeenCalledWith(MAC_A);
-    expect(d.connectPeer).toHaveBeenCalledWith(MAC_B);
+    // P2P v4: se dice a quién se busca (permite el saludo privado).
+    expect(d.connectPeer).toHaveBeenCalledWith(MAC_A, { targetPkHex: A });
+    expect(d.connectPeer).toHaveBeenCalledWith(MAC_B, { targetPkHex: B });
   });
 
   it("runs only once per process", async () => {
@@ -48,13 +49,13 @@ describe("reconnectKnownContactsOnce (RECONNECT-AFTER-CRASH)", () => {
   it("skips peers already connected", async () => {
     const d = deps({ connectedPeers: () => [A.toUpperCase()] });
     expect(await reconnectKnownContactsOnce(d)).toEqual([B]);
-    expect(d.connectPeer).not.toHaveBeenCalledWith(MAC_A);
+    expect(d.connectPeer).not.toHaveBeenCalledWith(MAC_A, expect.anything());
   });
 
   it("respects the deterministic dial role (listener does not dial)", async () => {
     const d = deps({ shouldDialPeer: async (pk) => pk !== A });
     expect(await reconnectKnownContactsOnce(d)).toEqual([B]);
-    expect(d.connectPeer).not.toHaveBeenCalledWith(MAC_A);
+    expect(d.connectPeer).not.toHaveBeenCalledWith(MAC_A, expect.anything());
   });
 
   it("disconnects when the MAC now answers with a different identity", async () => {

@@ -246,6 +246,12 @@ async function migrateOn(db: Awaited<ReturnType<typeof getMemoryDb>>): Promise<v
   } catch (e) {
     if (!/duplicate column name/i.test(String((e as Error)?.message ?? e))) throw e;
   }
+  // P2P v4 (2026-10-21): el contacto anunció que entiende el saludo sellado.
+  try {
+    await db.execAsync("ALTER TABLE p2p_contacts ADD COLUMN v4_capable INTEGER NOT NULL DEFAULT 0");
+  } catch (e) {
+    if (!/duplicate column name/i.test(String((e as Error)?.message ?? e))) throw e;
+  }
   await db.execAsync(
     "CREATE TABLE IF NOT EXISTS p2p_identity_archive(" +
       "pk_hex TEXT PRIMARY KEY, name TEXT NOT NULL, sign_pk_hex TEXT, " +
@@ -1691,4 +1697,30 @@ export async function getTaskAudit(limit = 50): Promise<
     startedAt: r.started_at,
     finishedAt: r.finished_at,
   }));
+}
+
+/**
+ * P2P v4: guarda si un contacto entiende el saludo sellado. Se marca al
+ * recibir de él un HELLO auténtico que lo anuncia (o un saludo sellado), y se
+ * desmarca si un HELLO auténtico suyo deja de anunciarlo (app más vieja).
+ */
+export async function setContactV4Capable(pkHex: string, capable: boolean): Promise<void> {
+  const pk = pkHex.toLowerCase();
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    await db.runAsync(
+      "UPDATE p2p_contacts SET v4_capable = ? WHERE pk_hex = ? AND superseded_by IS NULL",
+      [capable ? 1 : 0, pk],
+    );
+  });
+}
+
+export async function isContactV4Capable(pkHex: string): Promise<boolean> {
+  await migrate();
+  const db = await getMemoryDb();
+  const row = await db.getFirstAsync<{ v4_capable: number | null }>(
+    "SELECT v4_capable FROM p2p_contacts WHERE pk_hex = ? AND superseded_by IS NULL LIMIT 1",
+    [pkHex.toLowerCase()],
+  );
+  return row?.v4_capable === 1;
 }

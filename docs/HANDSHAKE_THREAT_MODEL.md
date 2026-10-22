@@ -154,6 +154,44 @@ a restored install generates a fresh identity and requires re-pairing.
    both nonces + per-peer rate limit. A replay leaks no content and
    doesn't resurrect sessions.
 
+## P2P v4 (2026-10-21): the receiver stays silent, and the hello can be sealed
+
+**Silent receiver on both transports.** The phone that *receives* a
+connection (Bluetooth or local Wi-Fi) sends nothing until the caller's HELLO
+proves it is a paired contact (signature, freshness, anti-replay). Before
+2026-10-21 this held only for Wi-Fi: over Bluetooth, where the RFCOMM server
+listens in the background, any nearby device that connected to NIDO's
+service received our signed HELLO — a stable identifier plus a signed proof
+of presence. No wire change: the caller always sent its HELLO first.
+
+**Sealed hello (experimental, off by default).** The caller's HELLO still
+carries its permanent public key in clear. The sealed hello removes it:
+
+- Each pair of contacts shares a static key nobody else has:
+  `K_pair = HKDF-SHA512(salt="nido-v4-pair", X25519(my_sk, their_pk), info="nido-v4|pk_min|pk_max")`.
+- Every handshake frame (the unchanged HELLO v3 and CONFIRM v1) is sealed:
+  a fresh random `r`, a 16-byte tag `HKDF(salt=r, K_pair, "nido-v4-tag|kind")`,
+  and the body encrypted with `secretbox` under `HKDF(salt=r, K_pair, "nido-v4-enc|kind")`.
+  On the wire: `{"t":"nido-s4", r, g, n, b}` — random-looking bytes only.
+- The receiver tries the tag against each contact (always all of them, no
+  early exit) and only then opens the body. Inside, the v3 checks run as
+  before: signature, timestamp window, nonce claim, CONFIRM bound to both nonces.
+- Once a hello is sealed, every following handshake frame must be sealed
+  with the same key. No fallback to v3 inside a sealed hello.
+- A phone advertises support with `"c4":1` in its v3 HELLO (unsigned hint).
+  A caller seals only when the "Private hello" setting is on **and** the
+  contact advertised support. Receiving sealed hellos always works.
+
+What it achieves: a passive observer sees no identity and cannot link two
+connections of the same phone; a stranger who calls learns nothing; a sealed
+HELLO meant for B cannot be replayed to another contact (it only opens with
+B's pair key), which closes the HELLO-forwarding gap of v3.
+
+What it does not: the frame type `nido-s4` and its size still reveal that
+NIDO is in use; an active attacker can strip the `c4` hint so two phones
+keep using v3 (today's behaviour); a contact can, by definition, recognise
+the other side.
+
 ## What it does NOT resolve (honest limits)
 
 - **Compromised peer**: if Bob's phone has malware, Bob is a legitimate
@@ -177,7 +215,7 @@ a restored install generates a fresh identity and requires re-pairing.
 | Key compromised | Impact |
 |---|---|
 | Ed25519 signing secret | **Serious and active**: the attacker can impersonate the owner in future handshakes and establish sessions as them. Cannot read past sessions (forward secrecy) or already-delivered messages. Remedy: the owner generates a new identity and re-pairs their contacts via QR. |
-| Identity box X25519 secret | **Low**: the identity `pk` is only used as an identifier; message encryption uses ephemerals. It decrypts nothing by itself. |
+| Identity box X25519 secret | **Low for confidentiality, real for privacy**: message encryption uses ephemerals, so it decrypts nothing by itself. Since v4 it also derives the pair keys of the sealed hello, so whoever holds it can recognise that phone's sealed hellos with its contacts. |
 | Ephemeral secret of a connection | **Bounded to that connection**: only that session's messages. Erased on disconnect. |
 | Database key (SQLCipher) | **Total local**: inbox, queue and identities at rest. Protected by Android Keystore (P3); the risk is a rooted device with the app unlocked. |
 

@@ -68,6 +68,21 @@ class NidoP2PManager(private val context: Context) {
 
     /** Tag de logcat para el diagnóstico del accept loop. */
     const val TAG = "NidoP2P"
+
+    /**
+     * Blindaje 2026-10-21: tope de conexiones Bluetooth simultáneas (igual
+     * que el Wi-Fi local). Cada conexión tiene su hilo lector; sin tope, varios
+     * aparatos cercanos podían abrir conexiones sin fin.
+     */
+    const val MAX_CONNECTIONS = 8
+
+    /**
+     * Blindaje 2026-10-21: los 2 primeros frames de toda conexión son el
+     * saludo (HELLO y CONFIRM, sellados o no: < 2 KB). Antes de autenticarse
+     * nadie puede mandar frames grandes; ya existía para el Wi-Fi local.
+     */
+    const val HANDSHAKE_FRAMES = 2
+    const val MAX_HANDSHAKE_FRAME_BYTES = 4 * 1024
   }
 
   var listener: Listener? = null
@@ -382,6 +397,14 @@ class NidoP2PManager(private val context: Context) {
         while (!Thread.currentThread().isInterrupted) {
           try {
             val socket = server.accept() // bloqueante
+            if (connections.size >= MAX_CONNECTIONS) {
+              Log.w(TAG, "accept: conexión rechazada (tope de $MAX_CONNECTIONS).")
+              try {
+                socket.close()
+              } catch (_: Exception) {
+              }
+              continue
+            }
             onSocketAccepted(socket, incoming = true)
           } catch (e: IOException) {
             // accept() lanza al cerrar el serverSocket en stopServer(): salida normal.
@@ -685,6 +708,7 @@ class NidoP2PManager(private val context: Context) {
   ) {
     private val readerThread = Thread({ readLoop() }, "nido-p2p-read-$address")
     @Volatile private var closed = false
+    private var framesRead = 0
 
     fun start() = readerThread.start()
 
@@ -733,6 +757,11 @@ class NidoP2PManager(private val context: Context) {
             listener?.onError("Frame inválido de $address (${bodyLen} bytes): conexión cerrada.")
             break
           }
+          if (framesRead < HANDSHAKE_FRAMES && bodyLen > MAX_HANDSHAKE_FRAME_BYTES) {
+            Log.w(TAG, "frame de saludo demasiado grande ($bodyLen bytes): conexión cerrada")
+            break
+          }
+          framesRead++
           val body = ByteArray(bodyLen)
           readFully(input, body, 0, bodyLen)
           listener?.onFrame(address, Base64.encodeToString(body, Base64.NO_WRAP))

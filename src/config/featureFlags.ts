@@ -21,11 +21,18 @@
  * (transport, handshake, negotiation, chat) never reads this flag.
  */
 
-export type FeatureFlag = "delegation.enabled";
+export type FeatureFlag = "delegation.enabled" | "p2p.sealedHandshake";
 
 const DEFAULTS: Record<FeatureFlag, boolean> = {
   /** Delegated task execution NIDO-A -> NIDO-B. Default OFF. */
   "delegation.enabled": false,
+  /**
+   * P2P v4 (2026-10-21): saludo sellado, sin identidad en claro. Solo cambia
+   * lo que ENVÍA este teléfono al llamar a un contacto que ya dijo soportarlo.
+   * Recibir saludos sellados funciona siempre. Default OFF hasta probarlo en
+   * dos teléfonos.
+   */
+  "p2p.sealedHandshake": false,
 };
 
 /** In-memory overrides (hydrated from disk by loadFeatureFlags). */

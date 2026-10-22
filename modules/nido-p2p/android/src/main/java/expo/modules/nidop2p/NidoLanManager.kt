@@ -75,6 +75,37 @@ class NidoLanManager(
 
     fun formatAddress(addr: InetAddress, port: Int): String =
       "$ADDRESS_PREFIX${addr.hostAddress}:$port"
+
+    /**
+     * Blindaje 2026-10-21: ¿el que se conecta está en la MISMA red local que
+     * la interfaz que recibió la conexión? Muchas operadoras móviles dan
+     * direcciones 10.x a sus clientes: con solo el filtro de «IP privada»,
+     * otro cliente de la misma operadora podía llegar al servidor por datos
+     * móviles mientras se buscaban contactos. Las redes móviles asignan
+     * prefijos muy cortos (/30, /32), así que otro cliente nunca queda en la
+     * misma subred; en Wi-Fi o punto de acceso (/24) el contacto sí.
+     * Si no se puede determinar la subred, se conserva el comportamiento
+     * anterior (solo IP privada) para no romper conexiones que funcionaban.
+     */
+    fun isSameLocalSubnet(local: InetAddress?, remote: InetAddress): Boolean {
+      if (local !is Inet4Address || remote !is Inet4Address) return true
+      val iface = try {
+        NetworkInterface.getByInetAddress(local)
+      } catch (_: Exception) {
+        null
+      } ?: return true
+      val ia = iface.interfaceAddresses.firstOrNull { it.address == local } ?: return true
+      val prefix = ia.networkPrefixLength.toInt()
+      if (prefix !in 1..32) return true
+      val mask = if (prefix == 32) -1 else (-1 shl (32 - prefix))
+      return (ipv4ToInt(local) and mask) == (ipv4ToInt(remote) and mask)
+    }
+
+    private fun ipv4ToInt(a: InetAddress): Int {
+      val b = a.address
+      return ((b[0].toInt() and 0xff) shl 24) or ((b[1].toInt() and 0xff) shl 16) or
+        ((b[2].toInt() and 0xff) shl 8) or (b[3].toInt() and 0xff)
+    }
   }
 
   private val nsd: NsdManager? by lazy {
@@ -174,6 +205,11 @@ class NidoLanManager(
       val remote = socket.inetAddress
       if (remote == null || !isLocalIpv4(remote)) {
         Log.w(TAG, "conexión rechazada: dirección no local")
+        closeQuietly(socket)
+        continue
+      }
+      if (!isSameLocalSubnet(socket.localAddress, remote)) {
+        Log.w(TAG, "conexión rechazada: no está en la misma red local")
         closeQuietly(socket)
         continue
       }

@@ -143,6 +143,7 @@ export function ModelSetupScreen(props: Props) {
   const [hapticsEnabled, setHapticsEnabledState] = useState(true);
   // TESTFIX-2026-10-08 (Fix 7): toggle de tareas delegadas (default OFF).
   const [delegationEnabled, setDelegationEnabledState] = useState(false);
+  const [sealedHelloEnabled, setSealedHelloEnabledState] = useState(false);
 
   useEffect(() => subscribeDownloads(() => forceRender((n) => n + 1)), []);
 
@@ -175,9 +176,24 @@ export function ModelSetupScreen(props: Props) {
 
   // TESTFIX-2026-10-08 (Fix 7): cargar el flag persistido.
   useEffect(() => {
-    import("../config/featureFlags").then(({ isFeatureEnabled }) =>
-      setDelegationEnabledState(isFeatureEnabled("delegation.enabled"))
-    ).catch(() => {});
+    import("../config/featureFlags").then(async ({ isFeatureEnabled, loadFeatureFlags }) => {
+      await loadFeatureFlags().catch(() => {});
+      setDelegationEnabledState(isFeatureEnabled("delegation.enabled"));
+      setSealedHelloEnabledState(isFeatureEnabled("p2p.sealedHandshake"));
+    }).catch(() => {});
+  }, []);
+
+  // P2P v4 (2026-10-21): saludo privado, experimental hasta probarlo en dos
+  // teléfonos. Solo cambia cómo LLAMA este teléfono a contactos que ya lo
+  // soportan; si falla, se apaga y todo vuelve al saludo de siempre.
+  const toggleSealedHello = useCallback(async (value: boolean) => {
+    setSealedHelloEnabledState(value);
+    try {
+      const { setFeatureEnabled } = await import("../config/featureFlags");
+      await setFeatureEnabled("p2p.sealedHandshake", value);
+    } catch {
+      setSealedHelloEnabledState(!value);
+    }
   }, []);
 
   const toggleDelegation = useCallback(async (value: boolean) => {
@@ -379,6 +395,19 @@ export function ModelSetupScreen(props: Props) {
             escondida a media pantalla de Acerca de). */}
         <AccordionSection icon="security" title={t("modelSetupScreen.sections.security")}>
           <HardwareProtectionCard />
+          <View style={styles.hapticRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.hapticRowLabel}>{t("settings.sealedHelloTitle")}</Text>
+              <Text style={styles.hapticRowValue}>{t("settings.sealedHelloDesc")}</Text>
+            </View>
+            <Switch
+              value={sealedHelloEnabled}
+              onValueChange={toggleSealedHello}
+              accessibilityLabel={t("settings.sealedHelloTitle")}
+              trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+              thumbColor={colors.bg.card}
+            />
+          </View>
         </AccordionSection>
 
         {/* 0.1.14: guía de usuario. */}

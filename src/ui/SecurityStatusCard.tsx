@@ -64,11 +64,20 @@ export function SecurityStatusCard() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<SecurityDiagnostics | null>(null);
   const [failed, setFailed] = useState(false);
+  // Blindaje 2026-10-21: la bóveda de hardware es la mayor protección que
+  // falta por defecto; la comprobación lo dice y dónde activarla.
+  const [vaultOn, setVaultOn] = useState<boolean | null>(null);
 
   const handleRun = async () => {
     setBusy(true);
     setFailed(false);
     try {
+      try {
+        const { isVaultActive } = await import("../security/keyVault");
+        setVaultOn(await isVaultActive());
+      } catch {
+        setVaultOn(null);
+      }
       setResult(await runDiagnostics());
     } catch {
       setResult(null);
@@ -114,6 +123,17 @@ export function SecurityStatusCard() {
           </Text>
         </View>
       ))}
+      {result && vaultOn !== null ? (
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>{t("securityStatus.vault")}</Text>
+          <Text style={[styles.rowState, { color: vaultOn ? colors.emerald[600] : colors.amber[600] }]}>
+            {vaultOn ? t("securityStatus.vaultOn") : t("securityStatus.vaultOff")}
+          </Text>
+        </View>
+      ) : null}
+      {result && vaultOn === false ? (
+        <Text style={styles.paragraph}>{t("securityStatus.vaultHint")}</Text>
+      ) : null}
       {failed && <Text style={styles.paragraph}>{t("securityStatus.runFailed")}</Text>}
       <Pressable
         style={styles.button}
