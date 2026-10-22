@@ -28,7 +28,7 @@ vi.mock("expo-sqlite", () => ({
   // Solo se puede abrir en las pruebas de 0.1.47: el resto (p. ej. A5)
   // depende de que la apertura de prueba NO pueda completarse.
   openDatabaseAsync: async () => {
-    if (!sqlx.allowOpen) throw new Error("sin SQLite nativo en tests");
+    if (!sqlx.allowOpen) return undefined; // como el stub global de vitest.setup
     return {
     execAsync: async (q: string) => {
       sqlx.sql.push(q);
