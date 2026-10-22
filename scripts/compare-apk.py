@@ -44,6 +44,8 @@ def digest_entries(path):
 
 
 def main(argv):
+    github = "--github" in argv
+    argv = [a for a in argv if a != "--github"]
     if len(argv) != 3:
         print(__doc__.strip())
         return 2
@@ -51,17 +53,24 @@ def main(argv):
     only_a = sorted(set(a) - set(b))
     only_b = sorted(set(b) - set(a))
     changed = sorted(k for k in set(a) & set(b) if a[k][0] != b[k][0])
-    for k in only_a:
-        print(f"solo en {argv[1]}: {k}")
-    for k in only_b:
-        print(f"solo en {argv[2]}: {k}")
-    for k in changed:
-        print(f"distinto: {k} ({a[k][1]} B vs {b[k][1]} B)")
+    # --github: además, cada diferencia como anotación de GitHub Actions
+    # (visible en la página del run sin abrir el log).
+    def say(msg, level="error"):
+        print(msg)
+        if github:
+            print(f"::{level} title=compare-apk::{msg}")
+
+    for k in only_a[:40]:
+        say(f"solo en {argv[1]}: {k}")
+    for k in only_b[:40]:
+        say(f"solo en {argv[2]}: {k}")
+    for k in changed[:40]:
+        say(f"distinto: {k} ({a[k][1]} B vs {b[k][1]} B)")
     total = len(set(a) | set(b))
     if only_a or only_b or changed:
-        print(f"DIFERENTES: {len(only_a) + len(only_b) + len(changed)} de {total} archivos.")
+        say(f"DIFERENTES: {len(only_a) + len(only_b) + len(changed)} de {total} archivos.")
         return 1
-    print(f"IGUALES: los {total} archivos coinciden byte a byte (sin contar la firma).")
+    say(f"IGUALES: los {total} archivos coinciden byte a byte (sin contar la firma).", "notice")
     return 0
 
 

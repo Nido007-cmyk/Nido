@@ -101,11 +101,11 @@ jobs:
         shell: bash
         run: |
           echo "## Compilación reproducible" >> "$GITHUB_STEP_SUMMARY"
-          python3 scripts/compare-apk.py dist/apk-a/app-release.apk dist/apk-b/app-release.apk | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 scripts/compare-apk.py --github dist/apk-a/app-release.apk dist/apk-b/app-release.apk | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Same as the published release
         if: inputs.release_tag != ''
         shell: bash
         run: |
           gh release download "${{ inputs.release_tag }}" --repo "$GITHUB_REPOSITORY" --pattern app-release.apk --dir published
           echo "### Contra el release ${{ inputs.release_tag }}" >> "$GITHUB_STEP_SUMMARY"
-          python3 scripts/compare-apk.py dist/apk-a/app-release.apk published/app-release.apk | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 scripts/compare-apk.py --github dist/apk-a/app-release.apk published/app-release.apk | tee -a "$GITHUB_STEP_SUMMARY"
