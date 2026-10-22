@@ -104,3 +104,28 @@ describe("blindaje 2026-10-21: tamaño del código de emparejamiento", () => {
     expect(decodePairingPayload(`  ${code}\n`).name).toBe("Ana");
   });
 });
+
+describe("0.1.49: capacidades en el QR", () => {
+  const kp = generateIdentity();
+  const skp = generateSigningKeypair();
+  const base = `"v":2,"app":"nido","name":"Ana","pk":"${toHex(kp.publicKey)}","spk":"${toHex(skp.publicKey)}"`;
+
+  it("el QR propio anuncia saludo sellado (c4) y CONFIRM v2 (cf2)", () => {
+    const p = decodePairingPayload(encodePairingPayload("Ana", kp.publicKey, skp.publicKey));
+    expect(p.caps).toEqual(["c4", "cf2"]);
+  });
+
+  it("un QR viejo sin caps se sigue aceptando (sin caps)", () => {
+    expect(decodePairingPayload(`NIDO1:{${base}}`).caps).toBeUndefined();
+  });
+
+  it("caps mal formadas → QR dañado", () => {
+    for (const bad of ['"c4"', "[1]", '["C4"]', '["muy-largo-de-verdad"]', "{}", `[${'"a",'.repeat(16)}"a"]`]) {
+      expect(() => decodePairingPayload(`NIDO1:{${base},"caps":${bad}}`)).toThrow(/dañado/);
+    }
+  });
+
+  it("capacidades desconocidas se aceptan (versiones futuras) y se quitan duplicados", () => {
+    expect(decodePairingPayload(`NIDO1:{${base},"caps":["c4","zz9","c4"]}`).caps).toEqual(["c4", "zz9"]);
+  });
+});

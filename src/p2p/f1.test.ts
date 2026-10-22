@@ -17,6 +17,7 @@
  * (RACE-1, RACE-2) y la tabla de transición guardada markOutboundSent.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { setFeatureOverrideForTests } from "../config/featureFlags";
 import {
   createMemorySecureBackend,
   setTestSecureBackend,
@@ -150,6 +151,14 @@ async function waitParked(tx: ReturnType<typeof makeDeferredTransport>, count = 
   }
   if (tx.parked() < count) throw new Error("sendFrame nunca se aparcó");
 }
+
+// 0.1.49: v5 viene activado de fábrica. Este arnés fabrica frames clásicos
+// a mano (vistas P2PSession sin v5) y entrega los frames uno a uno (sin el
+// "kick" v5 automático), así que fija el modo clásico. v5 a través del
+// messenger se prueba en disappearingAndV5.test.ts y ratchetV5.test.ts.
+beforeEach(() => {
+  setFeatureOverrideForTests("p2p.ratchetV5", false);
+});
 
 beforeEach(() => {
   resetP2PMem(memA);

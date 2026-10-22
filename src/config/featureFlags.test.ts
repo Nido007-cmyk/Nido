@@ -69,3 +69,14 @@ describe("featureFlags (Fix 7)", () => {
     expect(isFeatureEnabled("evil.flag" as never)).toBe(false);
   });
 });
+
+describe("0.1.49: valores de fábrica", () => {
+  it("las protecciones P2P vienen activadas; lo arriesgado, apagado", async () => {
+    const ff = await import("./featureFlags");
+    ff.resetFeatureFlagsForTests();
+    expect(ff.isFeatureEnabled("p2p.sealedHandshake")).toBe(true);
+    expect(ff.isFeatureEnabled("p2p.ratchetV5")).toBe(true);
+    expect(ff.isFeatureEnabled("delegation.enabled")).toBe(false);
+    expect(ff.isFeatureEnabled("security.panicButton")).toBe(false);
+  });
+});

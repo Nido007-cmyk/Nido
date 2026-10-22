@@ -28,6 +28,7 @@
  * 13. (N6 A/B/C, regresión R4, full suite y tsc: fuera de este archivo.)
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { setFeatureOverrideForTests } from "../config/featureFlags";
 
 vi.hoisted(() => {
   (globalThis as unknown as { __DEV__: boolean }).__DEV__ = false;
@@ -113,6 +114,8 @@ import {
   failAllOutbox,
   resolveContactByName,
   StaleReplaceConflictError,
+  isContactV4Capable,
+  isContactConfirmV2,
 } from "./store";
 import { normalizeContactName } from "./contactName";
 import {
@@ -140,6 +143,14 @@ async function pairedPeer(
   expect(contact!.pkHex).toBe(pkHex);
   return { pkHex, code };
 }
+
+// 0.1.49: v5 viene activado de fábrica. Este arnés fabrica frames clásicos
+// a mano (vistas P2PSession sin v5) y entrega los frames uno a uno (sin el
+// "kick" v5 automático), así que fija el modo clásico. v5 a través del
+// messenger se prueba en disappearingAndV5.test.ts y ratchetV5.test.ts.
+beforeEach(() => {
+  setFeatureOverrideForTests("p2p.ratchetV5", false);
+});
 
 beforeEach(() => {
   resetSqliteBridge();
@@ -1400,5 +1411,29 @@ describe("UNIT B-Q13 (destroy mid-flight): la instancia muerta no marca nada", (
     expect(row?.status).toBe("queued"); // nunca 'sent' desde una instancia muerta
     // Y la SQL sigue operativa para otras instancias (la txn no se corrompió).
     expect(await as(() => getLiveSuccessorPk(bobPk))).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 0.1.49: el QR trae las capacidades → protegido desde la primera conexión.
+// ---------------------------------------------------------------------------
+describe("0.1.49: capacidades del QR al emparejar", () => {
+  it("QR nuevo: saludo sellado y CONFIRM v2 quedan marcados al emparejar", async () => {
+    const m = freshMessenger();
+    const { pkHex } = await pairedPeer(m, "Beto");
+    expect(await isContactV4Capable(pkHex)).toBe(true);
+    expect(await isContactConfirmV2(pkHex)).toBe(true);
+  });
+
+  it("QR viejo (sin caps): nada marcado, se aprende en la conexión como antes", async () => {
+    const m = freshMessenger();
+    await m.ensureIdentity("Yo");
+    const id = generateIdentity();
+    const sign = generateSigningKeypair();
+    const pkHex = toHex(id.publicKey);
+    const code = `NIDO1:${JSON.stringify({ v: 2, app: "nido", name: "Viejo", pk: pkHex, spk: toHex(sign.publicKey) })}`;
+    expect(await m.pairWith(code)).not.toBeNull();
+    expect(await isContactV4Capable(pkHex)).toBe(false);
+    expect(await isContactConfirmV2(pkHex)).toBe(false);
   });
 });

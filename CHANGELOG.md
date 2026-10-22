@@ -4,6 +4,25 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.49-alpha — 2026-10-22
+
+### Security
+- **The strongest NIDO-to-NIDO protections are now on by default.** Before,
+  you had to turn them on in Settings:
+  - **Private hello:** the first messages of a connection are sealed, so
+    nobody nearby can see who is calling.
+  - **A new key for every message** (Double Ratchet) and **ML-KEM-768** in
+    every connection, against future quantum computers.
+
+  They are used when the other phone supports them. With an older NIDO,
+  the connection uses what that phone supports, as before. They can still
+  be turned off in Settings.
+- **Protected from the very first connection.** The pairing QR code now says
+  what your NIDO supports. A new contact uses the private hello and the
+  signed confirmation from 0.1.48 from the first connection, instead of
+  learning it during that connection, which was the one an attacker could
+  try to downgrade. An older NIDO reads the QR code as always.
+
 ## 0.1.48-alpha — 2026-10-22
 
 ### Security
