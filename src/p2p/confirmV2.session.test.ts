@@ -79,3 +79,59 @@ describe("0.1.48: cf2 en el session_confirm", () => {
     expect(sB.confirmV2Downgrade(chat)).toBe(false);
   });
 });
+
+describe("0.1.52: unknown key share detectado en la sesión (revisión independiente)", () => {
+  /**
+   * El ataque: un contacto malicioso C junta dos handshakes. A cree hablar con
+   * B; B cree hablar con C; los dos acaban con la MISMA clave de sesión. C le
+   * quitó a A la firma v2 del CONFIRM de B (que nombraba a C).
+   */
+  function uks() {
+    const A = generateIdentity();
+    const B = generateIdentity();
+    const C = generateIdentity();
+    const aPk = toHex(A.publicKey);
+    const bPk = toHex(B.publicKey);
+    const cPk = toHex(C.publicKey);
+    const eA = generateEphemeral();
+    const eB = generateEphemeral();
+    const nA = randomNonce(HANDSHAKE_NONCE_BYTES);
+    const nB = randomNonce(HANDSHAKE_NONCE_BYTES);
+    const atA = P2PSession.fromHandshakeV2(eA.secretKey, eB.publicKey, bPk, nA, nB); // A: "hablo con B"
+    const atB = P2PSession.fromHandshakeV2(eB.secretKey, eA.publicKey, cPk, nB, nA); // B: "hablo con C"
+    atA.expectRecipient(aPk);
+    atB.expectRecipient(bPk);
+    atA.enableV5(false);
+    atB.enableV5(false);
+    atA.setPeerConfirmV2(false);
+    return { atA, atB, B, cPk };
+  }
+
+  it("el session_confirm de B (para C) autentica con la clave de A: A lo detecta y sabe que B firma v2", () => {
+    const { atA, atB, B, cPk } = uks();
+    const frame = atB.pack(makeEnvelope("session_confirm", "c-B", B.publicKey, cPk, atB.confirmPayload()));
+    expect(atA.unpack(frame)).toBeNull();
+    expect(atA.unknownKeyShare).toEqual({ cf2: true });
+  });
+
+  it("un chat de B para C también lo delata", () => {
+    const { atA, atB, B, cPk } = uks();
+    expect(atA.unpack(atB.pack(makeEnvelope("chat", "x", B.publicKey, cPk, { text: "hola C" })))).toBeNull();
+    expect(atA.unknownKeyShare).toEqual({ cf2: false });
+  });
+
+  it("basura o un frame de otra sesión NO cuentan (no autentican)", () => {
+    const { atA } = uks();
+    const other = pair();
+    const f = other.sA.pack(makeEnvelope("chat", "y", generateIdentity().publicKey, "00".repeat(32), { text: "x" }));
+    expect(atA.unpack(f)).toBeNull();
+    expect(atA.unpack(new Uint8Array(200))).toBeNull();
+    expect(atA.unknownKeyShare).toBeNull();
+  });
+
+  it("una sesión normal nunca lo marca", () => {
+    const { sB, confirmFromA } = pair();
+    expect(confirmFromA()).not.toBeNull();
+    expect(sB.unknownKeyShare).toBeNull();
+  });
+});

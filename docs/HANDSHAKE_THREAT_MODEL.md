@@ -216,6 +216,13 @@ Since 0.1.48 the CONFIRM carries a second signature, `s2`, over
   encrypted and authenticated. If the CONFIRM arrived without `s2` but the
   peer says `cf2`, someone stripped it: the session is never used, the
   connection is dropped and the contact is flagged.
+- Since 0.1.52 (found by an independent review): a frame that authenticates
+  under the session key but names another sender or recipient is exactly the
+  unknown key share. Before, it was dropped silently and the session stayed
+  pending. Now the session is never used, the connection is dropped and, if
+  the frame said `cf2`, the contact is flagged.
+- If the attacker drops those frames instead, the session never becomes live
+  (nothing is sent over it), but it is not detected either.
 - Older phones ignore `s2` and keep connecting with v1.
 - `formal/nido_handshake_v2.pv` proves identity agreement (role-independent)
   together with message secrecy, forward secrecy and authentication.
@@ -274,6 +281,10 @@ frame goes inside a second box:
   `session_confirm`); H then always writes `0x06`; L adopts it with H's first
   authentic frame. From then on, a v5 frame without the box is refused.
 - Signal does not encrypt these headers.
+- `hk1` stays the same for the whole connection: someone who steals the
+  phone's memory mid-connection can read the headers already recorded on that
+  connection (never the content). `hk0` is erased as soon as it is no longer
+  needed (since 0.1.52).
 
 **What it achieves.**
 - Forward secrecy per message: a state stolen later does not open earlier
@@ -300,8 +311,11 @@ frame goes inside a second box:
   correct and constant-time with HOL-Light). Before using it, NIDO checks
   that it gives exactly the same bytes as `@noble/post-quantum` 0.7.1 (pure
   JavaScript, not constant-time, not independently audited), which stays
-  only as a fallback. NIDO's v5 itself has had an independent review by
-  another AI agent, not a professional audit.
+  only as a fallback. Known limit: on the way between JavaScript and the
+  native code, the ML-KEM secret key and shared secret travel as text
+  (hex), which cannot be wiped from memory until the garbage collector
+  frees it. NIDO's v5 itself has had independent reviews by other AI
+  agents, not a professional audit.
 - v5 has not yet been tested on two physical phones. It is on by default
   since 0.1.49 and can be turned off in Settings if two phones fail to
   connect.

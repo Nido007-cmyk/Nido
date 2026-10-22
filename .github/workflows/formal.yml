@@ -21,21 +21,35 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Cache ProVerif
+        # 0.1.52: el sitio de INRIA a veces no responde y el paso se colgaba
+        # (más de 40 min). Con la caché, solo se descarga y compila una vez.
+        id: pvcache
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: ~/proverif-bin
+          key: proverif-2.05-ubuntu-24.04-v1
+      - name: Use cached ProVerif
+        if: steps.pvcache.outputs.cache-hit == 'true'
+        run: echo "$HOME/proverif-bin" >> "$GITHUB_PATH"
       - name: Install ProVerif
         # Ubuntu 24.04 no trae el paquete proverif. Se compila desde el código
         # fuente oficial (INRIA) con el OCaml de Ubuntu; si eso falla, opam.
-        # Cada intento deja su error como anotación.
+        # Cada intento deja su error como anotación. Con tiempos máximos.
+        if: steps.pvcache.outputs.cache-hit != 'true'
+        timeout-minutes: 20
         shell: bash
         run: |
           set -o pipefail
-          sudo apt-get update -q
-          sudo apt-get install -y -q ocaml-nox ocaml-findlib curl m4 > /dev/null
+          timeout 300 sudo apt-get update -q
+          timeout 600 sudo apt-get install -y -q ocaml-nox ocaml-findlib curl m4 > /dev/null
           ok=0
           for v in 2.05 2.04; do
-            if curl -fsSL "https://bblanche.gitlabpages.inria.fr/proverif/proverif$v.tar.gz" -o pv.tgz; then
+            if curl -fsSL --connect-timeout 20 --max-time 180 --retry 3 "https://bblanche.gitlabpages.inria.fr/proverif/proverif$v.tar.gz" -o pv.tgz; then
               tar xzf pv.tgz
               if (cd "proverif$v" && ./build -nointeract) > build.log 2>&1; then
-                echo "$PWD/proverif$v" >> "$GITHUB_PATH"; ok=1; echo "ProVerif $v compilado"; break
+                mkdir -p "$HOME/proverif-bin" && cp "proverif$v/proverif" "$HOME/proverif-bin/"
+                echo "$HOME/proverif-bin" >> "$GITHUB_PATH"; ok=1; echo "ProVerif $v compilado"; break
               else
                 tail -15 build.log | while IFS= read -r l; do echo "::warning title=build proverif $v::$l"; done
               fi
@@ -48,7 +62,8 @@ jobs:
             opam init -y --disable-sandboxing > opam.log 2>&1 || true
             eval "$(opam env)"
             if opam install -y proverif >> opam.log 2>&1; then
-              echo "$(opam var bin)" >> "$GITHUB_PATH"; ok=1
+              mkdir -p "$HOME/proverif-bin" && cp "$(opam var bin)/proverif" "$HOME/proverif-bin/"
+              echo "$HOME/proverif-bin" >> "$GITHUB_PATH"; ok=1
             else
               tail -25 opam.log | while IFS= read -r l; do echo "::error title=opam::$l"; done
             fi

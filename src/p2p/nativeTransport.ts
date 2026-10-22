@@ -2150,11 +2150,16 @@ export class NidoBluetoothTransport implements P2PTransport {
         await saveKnownMac(pkLower, mac);
       } catch { /* best-effort */ }
     }
-    // P2P v4: recordar si este contacto entiende el saludo sellado.
-    if (pend.peerAdvertisesV4 !== undefined) {
+    // P2P v4: recordar si este contacto entiende el saludo sellado. Solo se
+    // marca, nunca se desmarca (0.1.52, revisión independiente): la pista
+    // "c4" del HELLO no va firmada, así que un atacante podía quitarla y
+    // borrar lo aprendido del QR, y este teléfono volvería a llamar con su
+    // identidad en claro. Si el contacto vuelve a una app de antes de 0.1.45,
+    // el dueño puede apagar "Saludo privado" en Ajustes.
+    if (pend.peerAdvertisesV4 === true) {
       try {
         const { setContactV4Capable } = await import("./store");
-        await setContactV4Capable(pkLower, pend.peerAdvertisesV4);
+        await setContactV4Capable(pkLower, true);
       } catch { /* best-effort */ }
     }
     // 0.1.48: desde ahora este contacto tiene que firmar siempre v2.

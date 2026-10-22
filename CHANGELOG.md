@@ -4,6 +4,40 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.52-alpha — 2026-10-22
+
+Fixes from an independent security review of the code added in 0.1.48–0.1.51,
+done by a reviewer that had not seen the code being written.
+
+### Security
+- **The handshake flaw that 0.1.48 fixed is now also caught on the first
+  connection with a contact paired before 0.1.49.** That flaw is the
+  "unknown key share", where a malicious contact makes two phones share a
+  session while each one believes it is talking to someone else.
+  - In that case, a message that is genuine for the session but addressed
+    to another person used to be dropped silently, which left a session
+    that went nowhere.
+  - Now the phone recognises it, drops the connection and from then on
+    requires that contact's signed confirmation, so the trick cannot be
+    repeated.
+  - Messages could never be read or forged, because they always carried
+    sender and recipient inside the encryption.
+  - **Correction:** the 0.1.48 notes said the first connection was already
+    covered; for this case it was not, until now.
+- **The private hello can no longer be switched off by an attacker.**
+  Whether a contact supports it was also learned from an unsigned hint in
+  its hello. Someone in between could remove that hint, and this phone would
+  go back to calling that contact with its identity in clear. Now that
+  knowledge is only ever added, never removed.
+- The key that encrypts the first headers of a connection is erased as soon
+  as it is no longer needed.
+
+### Tests
+- **Two complete NIDO phones end to end:** pair by QR code, connect,
+  private hello, signed confirmation, new key per message with encrypted
+  headers, and chat in both directions. The test also checks that no byte
+  on the wire contains either phone's identity.
+
 ## 0.1.51-alpha — 2026-10-22
 
 ### Security

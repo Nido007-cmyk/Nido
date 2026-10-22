@@ -369,6 +369,18 @@ export function makeP2PMemoryDb(mem: P2PMem) {
         mem.bootRepairLog.push({ at: at as number, detail: detail as string });
         return ok(1);
       }
+      // 0.1.48+: marcas por contacto (saludo sellado, v5, CONFIRM v2).
+      const cap = sql.match(/UPDATE p2p_contacts SET (v4_capable|v5_capable|confirm_v2) = (\?|1)/);
+      if (cap) {
+        const fixed = cap[2] === "1";
+        const value = fixed ? 1 : Number(params[0]) ? 1 : 0;
+        const pk = String(fixed ? params[0] : params[1]).toLowerCase();
+        const c = mem.contacts.find((x) => x.pk_hex === pk && x.superseded_by === null) as
+          | (Record<string, unknown> & { pk_hex: string })
+          | undefined;
+        if (c) c[cap[1]] = value;
+        return ok(c ? 1 : 0);
+      }
       if (sql.includes("UPDATE p2p_contacts SET name")) {
         const [name, pk] = params as string[];
         const c = mem.contacts.find((x) => x.pk_hex === pk);
@@ -589,9 +601,20 @@ export function useP2PMem(mem: P2PMem | null): void {
   activeMem = mem;
 }
 
+let memResolver: (() => P2PMem | null) | null = null;
+
+/**
+ * Pruebas con dos teléfonos que funcionan a la vez (e2e): en vez de cambiar
+ * la memoria a mano, se resuelve en cada acceso (p. ej. con AsyncLocalStorage).
+ */
+export function setP2PMemResolver(fn: (() => P2PMem | null) | null): void {
+  memResolver = fn;
+}
+
 function currentMem(): P2PMem {
-  if (!activeMem) throw new Error("p2pMemoryMock: llama useP2PMem(mem) antes de operar");
-  return activeMem;
+  const m = memResolver?.() ?? activeMem;
+  if (!m) throw new Error("p2pMemoryMock: llama useP2PMem(mem) antes de operar");
+  return m;
 }
 
 /** Variante enrutada de p2pMemoryStoreModule para tests multi-dispositivo. */

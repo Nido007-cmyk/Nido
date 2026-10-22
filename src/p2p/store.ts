@@ -1770,8 +1770,9 @@ export async function getTaskAudit(limit = 50): Promise<
 
 /**
  * P2P v4: guarda si un contacto entiende el saludo sellado. Se marca al
- * recibir de él un HELLO auténtico que lo anuncia (o un saludo sellado), y se
- * desmarca si un HELLO auténtico suyo deja de anunciarlo (app más vieja).
+ * emparejar con un QR que lo anuncia (0.1.49) o al recibir de él un HELLO que
+ * lo anuncia (o un saludo sellado). Desde 0.1.52 el transporte solo marca,
+ * nunca desmarca: la pista del HELLO no va firmada.
  */
 export async function setContactV4Capable(pkHex: string, capable: boolean): Promise<void> {
   const pk = pkHex.toLowerCase();
@@ -2007,8 +2008,8 @@ export async function setContactV5Capable(pkHex: string, capable: boolean): Prom
  * 0.1.48: el contacto ya nos mandó un CONFIRM con la firma v2 (que nombra al
  * destinatario) y verificó. Desde entonces se EXIGE esa firma: un CONFIRM
  * suyo sin ella se rechaza como intento de degradación. Solo se marca, nunca
- * se desmarca solo (un atacante no puede "quitar" la marca); al emparejar de
- * nuevo por QR el contacto empieza sin marcar.
+ * se desmarca solo (un atacante no puede "quitar" la marca). Volver a
+ * escanear el QR del mismo contacto conserva la marca.
  */
 export async function setContactConfirmV2(pkHex: string): Promise<void> {
   await writeMemoryTransaction(async (db) => {
