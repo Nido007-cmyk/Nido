@@ -31,7 +31,8 @@ function helloBody(overrides: Record<string, unknown> = {}): Uint8Array {
 describe("parseHello — malformed/adversarial inputs", () => {
   it("round-trips a locally built HELLO", () => {
     const parsed = parseHello(buildHello(PK, EPH, NONCE, TS, SIG));
-    expect(parsed).toEqual({ pk: PK, eph: EPH, nonce: NONCE, ts: TS, sig: SIG });
+    // P2P v4: el HELLO propio anuncia que entiende el saludo sellado.
+    expect(parsed).toEqual({ pk: PK, eph: EPH, nonce: NONCE, ts: TS, sig: SIG, c4: true });
   });
 
   it("rejects non-JSON without throwing a raw SyntaxError", () => {

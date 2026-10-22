@@ -299,7 +299,9 @@ export function parseHello(body: Uint8Array): HelloPayload {
     nonce: nonce.toLowerCase(),
     ts,
     sig: sig.toLowerCase(),
-    c4: obj.c4 === 1,
+    // Solo presente si el remitente lo anunció (los HELLO de versiones
+    // anteriores quedan exactamente como antes).
+    ...(obj.c4 === 1 ? { c4: true } : {}),
   };
 }
 

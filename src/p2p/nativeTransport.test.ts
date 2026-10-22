@@ -314,7 +314,7 @@ describe("nativeTransport: utilidades", () => {
     const msg = buildHelloSignMessageV3(MY_PK_HEX, eph, nonceHex, ts);
     const sigHex = toHex(signDetached(msg, MY_SIGN.secretKey));
     const body = buildHello(MY_PK_HEX, eph, nonceHex, ts, sigHex);
-    expect(parseHello(body)).toEqual({ pk: MY_PK_HEX, eph, nonce: nonceHex, ts, sig: sigHex });
+    expect(parseHello(body)).toEqual({ pk: MY_PK_HEX, eph, nonce: nonceHex, ts, sig: sigHex, c4: true });
     // v1 → error claro de versión antigua
     expect(() =>
       parseHello(
