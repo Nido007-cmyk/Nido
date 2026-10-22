@@ -4,6 +4,32 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.48-alpha — 2026-10-22
+
+### Security
+- **Closed a weakness that formal verification found in the NIDO-to-NIDO
+  handshake.** The protocol is now checked with ProVerif, a research tool
+  that proves security properties against an attacker who controls the
+  whole network. It found an "unknown key share": the signatures in the
+  handshake did not say *who they were meant for*, so a malicious contact
+  could make one phone accept a connection "with B" that B believed it was
+  having with someone else. It could not read or forge messages (every
+  message names sender and recipient inside the encryption, and that is
+  checked), but it was a real flaw in the handshake.
+- The handshake confirmation now carries a second signature that also names
+  the recipient. A confirmation made for someone else is rejected.
+  - Once a contact has used it, it is always required. If someone strips it
+    off, even on the very first connection, the phone notices inside the
+    encrypted session, drops the connection and keeps requiring it.
+  - Phones with an older NIDO still connect as before. The fix applies as
+    soon as both phones have 0.1.48.
+  - The formal model with the fix (`formal/nido_handshake_v2.pv`) proves
+    that both sides agree on who they are talking to.
+- Formal verification of the protocol runs in CI on every protocol change
+  (`formal/`, see `formal/README.md`). It proves that messages stay secret
+  and authentic, also against a malicious contact, and that what is sent
+  with the post-quantum mode stays secret even if X25519 is broken later.
+
 ## 0.1.47-alpha — 2026-10-22
 
 Fixes from a full audit of NIDO.

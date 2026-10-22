@@ -276,17 +276,22 @@ cambio de `src/p2p/` (más detalles en `formal/README.md`).
 - autenticidad inyectiva de los mensajes;
 - en v5, que lo grabado hoy sigue secreto aunque X25519 se rompa después.
 
-**Encontrado (esperado, todavía abierto):** *unknown key share* a nivel de
-handshake. Ni la firma del HELLO v3 ni la del CONFIRM v1 nombran al otro
-lado, así que un contacto malicioso C puede lograr que A y B terminen con la
-misma clave de sesión creyendo cada uno que habla con otro.
+**Encontrado y cerrado en 0.1.48: *unknown key share*.**
 
-No permite leer ni falsificar mensajes: el sobre lleva `from`/`to` dentro del
-cifrado y el receptor los comprueba. En v5, además, la raíz de claves liga las
-dos identidades.
+Con CONFIRM v1, ni la firma del HELLO v3 ni la del CONFIRM nombran al otro
+lado. Así, un contacto malicioso C podía lograr que A aceptara una sesión
+"con B" que B creía tener con C. No permitía leer ni falsificar mensajes,
+porque `from`/`to` van dentro del cifrado.
 
-Corrección prevista: un CONFIRM v2 que firme también la clave pública del
-otro lado.
+0.1.48 añade al CONFIRM una segunda firma que nombra al destinatario
+(`nido-confirm-v2|yo|destinatario|cn|pn`, campo `s2`):
+
+- Tras la primera v2 válida de un contacto, se le exige siempre.
+- Si en la primera conexión alguien le quita la firma v2 al CONFIRM, el
+  `session_confirm` cifrado (`cf2`) lo delata y la sesión no se usa.
+- `formal/nido_handshake_v2.pv` demuestra el acuerdo de identidades.
+- Con un NIDO anterior a 0.1.48, que solo puede firmar v1, se aplica el modelo
+  v1 hasta que se actualice.
 
 ## Qué NO resuelve (límites honestos)
 

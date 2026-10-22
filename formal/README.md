@@ -22,7 +22,16 @@ malicioso** de los dos: el atacante tiene su clave de firma.
 | 1–2 | Lo que A y B se mandan es secreto | ✅ demostrado |
 | 3 | Secreto hacia adelante: aunque después se filtren las claves de firma de A y B, lo enviado antes sigue secreto | ✅ demostrado |
 | 4–5 | Autenticidad: si B acepta un mensaje "de A", A lo envió a B (sin repeticiones) | ✅ demostrado |
-| 6–7 | Acuerdo de identidades **solo a nivel de handshake** | ❌ ataque encontrado (esperado, ver abajo) |
+| 6–7 | Acuerdo de identidades a nivel de handshake con CONFIRM **v1**: si A acepta una sesión con B, ¿B la ejecutó (mismos nonces) creyendo hablar con A? | ❌ ataque encontrado (ver abajo) |
+
+### `nido_handshake_v2.pv` — lo mismo con CONFIRM v2 (0.1.48)
+
+La firma v2 del CONFIRM nombra también al destinatario.
+
+| # | Propiedad | Resultado |
+|---|-----------|-----------|
+| 1–5 | Igual que arriba | ✅ demostrado |
+| 6–7 | Acuerdo de identidades a nivel de handshake | ✅ **demostrado**: el ataque de v1 desaparece |
 
 ### `nido_v5_pq.pv`: v5 (X25519 + ML-KEM-768 + Double Ratchet)
 
@@ -33,19 +42,35 @@ malicioso** de los dos: el atacante tiene su clave de firma.
 | 3 | Autenticidad del primer mensaje v5 | ✅ demostrado |
 | 4 | Secreto del mensaje v5 durante la sesión, también con el contacto malicioso C | ✅ demostrado |
 
-## El ataque esperado: "unknown key share" (consultas 6–7)
+## El ataque de CONFIRM v1: "unknown key share" (y cómo se cerró)
 
-Ni la firma del HELLO ni la del CONFIRM nombran al otro lado. Por eso un
-contacto malicioso C puede conseguir que A y B terminen con la misma clave de
-sesión creyendo cada uno que habla con otra persona.
+Con CONFIRM v1, ni la firma del HELLO ni la del CONFIRM nombran al otro
+lado. Por eso un contacto malicioso C puede conseguir que A acepte una sesión
+"con B" que B cree estar teniendo con C. No permite leer ni falsificar
+mensajes (consultas 1–5): el sobre lleva `from`/`to` dentro del cifrado y se
+rechaza.
 
-**No permite leer ni falsificar mensajes** (consultas 1–5): cada sobre lleva
-`from`/`to` dentro del cifrado y el receptor lo comprueba. En v5, además, la
-raíz de claves incluye las dos identidades.
+**0.1.48 lo cierra (CONFIRM v2):**
 
-Aun así, es una debilidad del handshake en sí. La corrección prevista es
-CONFIRM v2: que la firma incluya la clave pública del otro, como hace SIGMA.
-Cuando esté, estas dos consultas deben pasar a "verdadero".
+1. **Firma v2.** El CONFIRM lleva una segunda firma,
+   `nido-confirm-v2|yo|destinatario|cn|pn` (campo `s2`). Un CONFIRM hecho
+   para otro destinatario no verifica.
+2. **Exigencia por contacto.** Tras la primera v2 válida de un contacto, el
+   contacto queda marcado y desde entonces su CONFIRM sin v2 se rechaza (es
+   una degradación). Si la marca no se puede leer, se rechaza igual.
+3. **Primera conexión, también cubierta.** Cada NIDO 0.1.48 dice `cf2`
+   dentro de su `session_confirm`, que va cifrado y autenticado y nadie puede
+   quitar. Si alguien le quitó la firma v2 al CONFIRM en esa primera
+   conexión, el otro lado lo detecta, no usa la sesión, corta y marca al
+   contacto.
+4. **Con un NIDO viejo**, que no sabe firmar v2, la conexión sigue
+   funcionando como antes, porque ese teléfono solo puede usar v1. Se aplica
+   el modelo v1: los mensajes siguen protegidos (consultas 1–5). El punto
+   débil desaparece cuando ese teléfono se actualiza.
+
+Las consultas 6–7 no dependen del papel de cada uno: dos teléfonos que se
+llaman a la vez (los dos iniciadores) forman una sesión legítima, como en el
+código.
 
 ## Abstracciones (léalas antes de citar estos resultados)
 
@@ -76,7 +101,7 @@ Cuando esté, estas dos consultas deben pasar a "verdadero".
 
 ```sh
 # ProVerif 2.05 (https://bblanche.gitlabpages.inria.fr/proverif/)
-python3 formal/check.py                     # los dos modelos
+python3 formal/check.py                     # todos los modelos
 python3 formal/check.py nido_handshake.pv   # uno solo
 ```
 
