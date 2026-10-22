@@ -164,7 +164,7 @@ listens in the background, any nearby device that connected to NIDO's
 service received our signed HELLO — a stable identifier plus a signed proof
 of presence. No wire change: the caller always sent its HELLO first.
 
-**Sealed hello (experimental, off by default).** The caller's HELLO still
+**Sealed hello (on by default since 0.1.49).** The v3 caller's HELLO
 carries its permanent public key in clear. The sealed hello removes it:
 
 - Each pair of contacts shares a static key nobody else has:
@@ -178,9 +178,11 @@ carries its permanent public key in clear. The sealed hello removes it:
   before: signature, timestamp window, nonce claim, CONFIRM bound to both nonces.
 - Once a hello is sealed, every following handshake frame must be sealed
   with the same key. No fallback to v3 inside a sealed hello.
-- A phone advertises support with `"c4":1` in its v3 HELLO (unsigned hint).
-  A caller seals only when the "Private hello" setting is on **and** the
-  contact advertised support. Receiving sealed hellos always works.
+- A phone advertises support with `"c4":1` in its v3 HELLO (unsigned hint)
+  and, since 0.1.49, in its pairing QR code (`"caps":["c4","cf2"]`, scanned
+  in person, so authentic). A caller seals only when the "Private hello"
+  setting is on (the default) **and** the contact is known to support it.
+  Receiving sealed hellos always works.
 
 What it achieves: a passive observer sees no identity and cannot link two
 connections of the same phone; a stranger who calls learns nothing; a sealed
@@ -188,13 +190,39 @@ HELLO meant for B cannot be replayed to another contact (it only opens with
 B's pair key), which closes the HELLO-forwarding gap of v3.
 
 What it does not: the frame type `nido-s4` and its size still reveal that
-NIDO is in use; an active attacker can strip the `c4` hint so two phones
-keep using v3 (today's behaviour); a contact can, by definition, recognise
-the other side.
+NIDO is in use; for a contact paired before 0.1.49 that has never connected
+with a NIDO that sends `c4`, an active attacker can strip the hint so the
+two phones keep using v3 (contacts paired since 0.1.49 learn support from
+the QR code, so this does not apply to them); a contact can, by definition,
+recognise the other side.
+
+## CONFIRM v2 (0.1.48): the confirmation names its recipient
+
+Formal verification (`formal/nido_handshake.pv`, see `formal/README.md`)
+found an *unknown key share* in CONFIRM v1: neither the HELLO nor the
+CONFIRM signature names the other side. A malicious contact C could
+therefore make A accept a session "with B" that B believed it had with C.
+It could not read or forge messages (every envelope carries `from`/`to`
+inside the encryption, and they are checked), but it was a real flaw.
+
+Since 0.1.48 the CONFIRM carries a second signature, `s2`, over
+`nido-confirm-v2|me|recipient|cn|pn`:
+- A CONFIRM v2 made for another recipient is rejected (initiator and
+  responder; the responder does not release its own CONFIRM before).
+- After the first valid v2 from a contact (or, since 0.1.49, from its
+  pairing QR code), v2 is required: a CONFIRM without it is rejected as a
+  downgrade; if the flag cannot be read, the connection is refused.
+- Each 0.1.48+ phone says `cf2` inside its `session_confirm`, which is
+  encrypted and authenticated. If the CONFIRM arrived without `s2` but the
+  peer says `cf2`, someone stripped it: the session is never used, the
+  connection is dropped and the contact is flagged.
+- Older phones ignore `s2` and keep connecting with v1.
+- `formal/nido_handshake_v2.pv` proves identity agreement (role-independent)
+  together with message secrecy, forward secrecy and authentication.
 
 ## P2P v5 (0.1.46): a new key per message, and ML-KEM in every connection
 
-Experimental, off by default (Settings → Security). Used only when **both**
+On by default since 0.1.49 (Settings → Security). Used only when **both**
 phones have it on; otherwise the session stays as described above. Code:
 `src/p2p/ratchet.ts`, `src/p2p/pq.ts`, `src/p2p/protocol.ts`.
 
@@ -236,6 +264,17 @@ The header is bound to the message by deriving the encryption key as
 After the first v5 frame from the peer, classical frames are refused, and
 once both directions use v5 the classical key `SK` is erased from memory.
 
+**Encrypted headers (0.1.50).** When both phones support it, the whole v5
+frame goes inside a second box:
+`0x06 ‖ nonce(24) ‖ secretbox(v5 frame, hk)`.
+- `hk1 = HKDF(RK0, "nido-v5-hk1", pk_L|pk_H)` for everything, except H's
+  first frames (those carrying `ct`, before L has `RK0`), which use
+  `hk0 = HKDF(SK, "nido-v5-hk0", pk_L|pk_H)`.
+- L asks with `he:1` in its offer (inside the authenticated
+  `session_confirm`); H then always writes `0x06`; L adopts it with H's first
+  authentic frame. From then on, a v5 frame without the box is refused.
+- Signal does not encrypt these headers.
+
 **What it achieves.**
 - Forward secrecy per message: a state stolen later does not open earlier
   messages.
@@ -249,14 +288,23 @@ once both directions use v5 the classical key `SK` is erased from memory.
   against an active quantum attacker during the connection.
 
 **What it does not.**
-- The v5 header (ratchet key, counters) is not encrypted, as in Signal
-  without header encryption: an observer can count messages and see turns.
+- With a phone older than 0.1.50, the v5 header (ratchet key, counters)
+  travels in clear, as in Signal: an observer can count messages and see
+  turns. H's first frames use a header key derived from the classical
+  session key: a future quantum computer could read those few headers,
+  never their content.
 - Padding hides lengths only to a power of two (512 B, 1 KB, 2 KB…).
-- The ML-KEM library (`@noble/post-quantum` 0.7.1) is pure JavaScript, not
-  constant-time and not independently audited, and NIDO's v5 itself has had
-  an independent review by another AI agent, not a professional audit.
-- v5 has not yet been tested on two physical phones; that is why it is off
-  by default.
+- Since 0.1.51 ML-KEM runs natively with mlkem-native v2.0.0 (the
+  implementation used by AWS-LC and libOQS: its C code is proven memory-safe
+  with CBMC, and its AArch64 assembly, used on arm64 phones, is proven
+  correct and constant-time with HOL-Light). Before using it, NIDO checks
+  that it gives exactly the same bytes as `@noble/post-quantum` 0.7.1 (pure
+  JavaScript, not constant-time, not independently audited), which stays
+  only as a fallback. NIDO's v5 itself has had an independent review by
+  another AI agent, not a professional audit.
+- v5 has not yet been tested on two physical phones. It is on by default
+  since 0.1.49 and can be turned off in Settings if two phones fail to
+  connect.
 
 ## What it does NOT resolve (honest limits)
 

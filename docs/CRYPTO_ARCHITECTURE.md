@@ -313,8 +313,10 @@ not-covered lists.
 
 ## 13. Protocol v5 and other 0.1.46 additions
 
-- **P2P v5** (experimental, off by default): Double Ratchet with a new key
-  per message and a hybrid X25519 + ML-KEM-768 root per connection. Full
+- **P2P v5** (on by default since 0.1.49, used when both phones support
+  it): Double Ratchet with a new key per message and a hybrid X25519 +
+  ML-KEM-768 root per connection; encrypted headers since 0.1.50; native
+  ML-KEM (mlkem-native) since 0.1.51. Full
   description, guarantees and limits in
   [HANDSHAKE_THREAT_MODEL.md](HANDSHAKE_THREAT_MODEL.md#p2p-v5-0146-a-new-key-per-message-and-ml-kem-in-every-connection).
 - **Padding**: session plaintext (the JSON envelope) is padded with trailing
