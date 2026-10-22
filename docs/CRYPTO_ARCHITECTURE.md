@@ -310,3 +310,18 @@ two-device physical test has been run; adaptive prompt-injection
 testing against the on-device model has not been done. See
 `docs/security/AUDITS_2026-10.md` for the full verified-holding and
 not-covered lists.
+
+## 13. Protocol v5 and other 0.1.46 additions
+
+- **P2P v5** (experimental, off by default): Double Ratchet with a new key
+  per message and a hybrid X25519 + ML-KEM-768 root per connection. Full
+  description, guarantees and limits in
+  [HANDSHAKE_THREAT_MODEL.md](HANDSHAKE_THREAT_MODEL.md#p2p-v5-0146-a-new-key-per-message-and-ml-kem-in-every-connection).
+- **Padding**: session plaintext (the JSON envelope) is padded with trailing
+  spaces to 512 B, 1 KB, 2 KB … 16 KB, then multiples of 16 KB;
+  `session_confirm` is always 4 KB. `JSON.parse` ignores the spaces, so older
+  versions read padded frames.
+- **Disappearing messages**: per-conversation timer with a version number
+  (the higher version wins; on a tie, the longer timer), sent with every chat
+  message and as a `settings` notice when changed. Expired rows are deleted
+  with `PRAGMA secure_delete = ON` and a WAL checkpoint.
