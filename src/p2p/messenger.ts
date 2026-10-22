@@ -931,6 +931,29 @@ export class NidoMessenger {
    * lo dice dentro de la sesión cifrada). Se corta la conexión y el contacto
    * queda marcado: desde ahora su CONFIRM sin v2 se rechaza ya en el saludo.
    */
+  /**
+   * 0.1.52: el otro lado tiene nuestra clave de sesión pero cree hablar con
+   * otra persona (unknown key share, ver P2PSession.unknownKeyShare). Se corta
+   * la conexión. Si su frame decía `cf2` (firma CONFIRM v2), el contacto queda
+   * marcado: desde ahora su CONFIRM sin v2 se rechaza, y con v2 este ataque
+   * ya no es posible.
+   */
+  private async rejectUnknownKeyShare(key: string, peerSaidCf2: boolean): Promise<void> {
+    if (peerSaidCf2) {
+      try {
+        const { setContactConfirmV2 } = await import("./store");
+        await setContactConfirmV2(key);
+      } catch {
+        /* best-effort */
+      }
+    }
+    try {
+      await this.transport.disconnect(key);
+    } catch {
+      /* best-effort */
+    }
+  }
+
   private async rejectConfirmV2Downgrade(key: string): Promise<void> {
     try {
       const { setContactConfirmV2 } = await import("./store");
@@ -1460,6 +1483,16 @@ export class NidoMessenger {
       // anterior siguió intacta (H-8): un HELLO repetido no la desaloja.
       const candidate = this.pendingSessions.get(key);
       const candEnv = candidate?.unpack(frame) ?? null;
+      // 0.1.52: un frame auténtico de esta sesión pero para otra persona es un
+      // "unknown key share": la sesión no se usa y se corta.
+      const liveUks = session?.unknownKeyShare ?? null;
+      const candUks = candidate && !candEnv ? candidate.unknownKeyShare : null;
+      if (liveUks || candUks) {
+        if (liveUks) this.sessions.delete(key);
+        if (candUks) this.pendingSessions.delete(key);
+        await this.rejectUnknownKeyShare(key, (liveUks?.cf2 ?? false) || (candUks?.cf2 ?? false));
+        return null;
+      }
       if (candidate && candEnv && candidate.confirmV2Downgrade(candEnv)) {
         // 0.1.48: el peer firma CONFIRM v2 pero el que nos llegó venía sin
         // ella: alguien la quitó. La candidata no se promociona nunca.

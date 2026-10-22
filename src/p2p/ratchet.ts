@@ -336,8 +336,12 @@ export class V5Ratchet {
    * todavía no sabe si H lo entiende (lo sabrá con el primer frame de H).
    */
   private he: boolean | null = false;
-  /** 0.1.50: clave de cabecera desde la clave clásica (primeros frames de H). */
-  private hk0: Uint8Array;
+  /**
+   * 0.1.50: clave de cabecera desde la clave clásica (primeros frames de H).
+   * 0.1.52: se borra en cuanto deja de hacer falta (H: al oír a L; L: con el
+   * primer frame de H que ya no trae el cifrado ML-KEM).
+   */
+  private hk0: Uint8Array | null;
   /** 0.1.50: clave de cabecera desde la raíz v5 (null hasta conocer la raíz). */
   private hk1: Uint8Array | null = null;
 
@@ -441,6 +445,13 @@ export class V5Ratchet {
     return concat(new Uint8Array([V5_HE_MARKER]), outerNonce, nacl.secretbox(inner, outerNonce, hk));
   }
 
+  private wipeHk0(): void {
+    if (this.hk0) {
+      this.hk0.fill(0);
+      this.hk0 = null;
+    }
+  }
+
   /**
    * 0.1.50: quita la caja de cabecera. Devuelve el frame v5 de dentro, o
    * null. Se prueban las claves que este lado conoce (hk1 primero).
@@ -521,7 +532,12 @@ export class V5Ratchet {
         this.offer = null;
         this.sessionKey.fill(0);
       }
-      if (this.role === "high") s.ctToSend = null; // L ya tiene el secreto ML-KEM
+      if (this.role === "high") {
+        s.ctToSend = null; // L ya tiene el secreto ML-KEM
+        this.wipeHk0(); // H ya no manda frames con el cifrado ML-KEM
+      } else if (!p.ct) {
+        this.wipeHk0(); // H ya oyó a L: no llegarán más frames con hk0
+      }
       // Confirmado: ahora sí se borra lo que este mensaje dejó en desuso.
       for (const k of s.retired) k.fill(0);
       s.retired = [];

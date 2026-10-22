@@ -336,7 +336,7 @@ describe("P2P v4 en el transporte", () => {
     await t.stopDiscovery();
   });
 
-  it("un HELLO auténtico sin c4 desmarca al contacto (volvió a una app vieja)", async () => {
+  it("0.1.52: un HELLO sin c4 NO desmarca al contacto (la pista c4 no va firmada y un atacante puede quitarla)", async () => {
     await t.startDiscovery(ev.events);
     f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
     await tick();
@@ -356,7 +356,7 @@ describe("P2P v4 en el transporte", () => {
     } as never);
     await tick();
     expect(ev.handshakes).toEqual([PEER]);
-    expect(keys.state.capabilityWrites).toContainEqual([PEER, false]);
+    expect(keys.state.capabilityWrites).not.toContainEqual([PEER, false]);
     await t.stopDiscovery();
   });
 });

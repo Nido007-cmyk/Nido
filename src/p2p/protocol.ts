@@ -433,6 +433,21 @@ export class P2PSession {
   }
 
   /**
+   * 0.1.52 (revisión independiente): un frame que AUTENTICA con la clave de
+   * esta sesión pero viene de otro remitente o va dirigido a otro. Solo
+   * puede escribirlo quien tiene la clave de sesión, así que no es ruido: es
+   * el "unknown key share" (un contacto malicioso juntó dos handshakes y el
+   * otro lado cree hablar con otra persona). Antes ese frame se descartaba en
+   * silencio y la sesión quedaba colgada; ahora el messenger corta.
+   */
+  private misaddressed: { cf2: boolean } | null = null;
+
+  /** ¿Llegó un frame auténtico de esta sesión con remitente o destinatario ajeno? */
+  get unknownKeyShare(): { cf2: boolean } | null {
+    return this.misaddressed;
+  }
+
+  /**
    * 0.1.48: el peer dice, en un frame AUTÉNTICO de esta sesión, que firma el
    * CONFIRM v2, pero el CONFIRM que nos llegó no la traía: alguien la quitó
    * en el camino. La sesión no debe usarse.
@@ -592,8 +607,15 @@ export class P2PSession {
     try {
       const env = parsed as P2PEnvelope;
       validateEnvelope(env);
-      if (env.from.toLowerCase() !== this.peerPkHex) return null; // suplantación
-      if (this.ownPkHex && env.to.toLowerCase() !== this.ownPkHex) return null; // destinatario incorrecto
+      if (
+        env.from.toLowerCase() !== this.peerPkHex || // suplantación
+        (this.ownPkHex && env.to.toLowerCase() !== this.ownPkHex) // destinatario incorrecto
+      ) {
+        // Autenticó con nuestra clave de sesión: ver `unknownKeyShare`.
+        const cf2 = env.type === "session_confirm" && (env.payload as { cf2?: unknown } | null)?.cf2 === 1;
+        this.misaddressed = { cf2: cf2 || (this.misaddressed?.cf2 ?? false) };
+        return null;
+      }
       if (this.seenIds.has(env.id)) return null; // replay o duplicado
       // Replay de un id ya expulsado por capacidad: su `ts` no supera la
       // marca de agua (fail-closed; ver evictedTsMax). `ts` no finito también
