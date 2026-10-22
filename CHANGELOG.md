@@ -34,6 +34,14 @@ Fixes from a full audit of NIDO.
   Android recommends.
 - Every build now lists the final Android permissions and the parts of
   the app other apps can open, so they can be reviewed on each release.
+  The first list showed things libraries added that NIDO never uses, now
+  removed: the Firebase push-notification receiver and its permission,
+  "display over other apps", Google Play's install referrer and permission
+  to edit your contacts (NIDO only reads them, when you ask).
+- **Reproducible builds:** found why two builds of the same code sometimes
+  differed: React Native stored the IP address of the machine that built
+  the app inside it (for its development server, unused in the released
+  app). It is now fixed to the same value on every machine.
 
 ## 0.1.46-alpha — 2026-10-22
 
