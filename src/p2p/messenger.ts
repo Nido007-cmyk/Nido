@@ -32,6 +32,7 @@ import {
   P2PMessageType,
   P2PSession,
   makeEnvelope,
+  V5_HOLD_MS,
   type AgentTaskPayload,
   type DeliveryAckPayload,
 } from "./protocol";
@@ -72,8 +73,11 @@ import {
   setContactDisappearSec,
   adoptContactDisappear,
   getPendingDisappear,
+  setContactV5Capable,
+  isContactV5Capable,
   clearPendingDisappear,
   deleteExpiredMessages,
+  purgeExpiredIfDue,
   startOutgoingTimer,
   startIncomingTimers,
   isValidDisappearSec,
@@ -1398,6 +1402,9 @@ export class NidoMessenger {
    */
   async handleFrame(peerPkHex: string, frame: Uint8Array): Promise<P2PEnvelope | null> {
     this.assertLive();
+    // 0.1.46: aunque la app pase días en segundo plano con el enlace activo,
+    // los mensajes temporales vencidos se borran (como mucho cada 5 s).
+    void purgeExpiredIfDue().catch(() => {});
     const key = peerPkHex.toLowerCase();
     let session = this.sessions.get(key) ?? null;
     let env = session?.unpack(frame) ?? null;
@@ -1435,6 +1442,7 @@ export class NidoMessenger {
       await this.flushOutbox(key);
       return env;
     }
+    if (session) await this.recordV5Capability(key, session);
     if (env.type === "session_confirm") {
       // Confirmación de sesión: no va a la bandeja. El peer demostró
       // conocer la clave → la sesión está viva → se vacía la cola.
@@ -1735,8 +1743,52 @@ export class NidoMessenger {
   private async adoptIncomingTimer(peerKey: string, timer: { sec: number; v: number }): Promise<void> {
     try {
       await adoptContactDisappear(peerKey, timer.sec, timer.v);
+      // Si el contacto ya trae la versión que le avisamos, el aviso llegó.
+      await clearPendingDisappear(peerKey, timer.v);
     } catch {
       /* best-effort: el mensaje ya está guardado */
+    }
+  }
+
+  /** Sesiones cuyo estado v5 ya se guardó (para no escribir en cada frame). */
+  private v5Recorded = new WeakSet<P2PSession>();
+  private async recordV5Capability(key: string, session: P2PSession): Promise<void> {
+    if (this.v5Recorded.has(session)) return;
+    let value: boolean | null = null;
+    if (session.usesV5) value = true;
+    else if (session.peerDeclinedV5) value = false;
+    if (value === null) return;
+    this.v5Recorded.add(session);
+    try {
+      await setContactV5Capable(key, value);
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  /**
+   * Aviso de posible degradación: este teléfono tiene v5, el contacto ya lo
+   * usó antes y no lo ha apagado (ningún frame suyo auténtico lo dice), pero
+   * la sesión actual sigue en clásico pasado el margen de arranque. Puede
+   * ser que alguien descartara la oferta en el aire.
+   */
+  async sessionV5Warning(peerPkHex: string): Promise<boolean> {
+    const key = peerPkHex.toLowerCase();
+    const session = this.sessions.get(key);
+    if (!session || !session.isPeerLive || session.usesV5 || session.peerDeclinedV5) return false;
+    if (!isFeatureEnabled("p2p.ratchetV5")) return false;
+    if (Date.now() - session.createdAt < V5_HOLD_MS + 2000) return false;
+    try {
+      return await isContactV5Capable(key);
+    } catch {
+      return false;
+    }
+  }
+
+  /** Espera (como mucho V5_HOLD_MS) a que arranque v5 antes de un envío directo. */
+  private async waitForV5Hold(session: P2PSession): Promise<void> {
+    while (session.holdForV5) {
+      await new Promise((r) => setTimeout(r, Math.min(100, session.v5HoldRemainingMs + 10)));
     }
   }
 
@@ -1831,6 +1883,8 @@ export class NidoMessenger {
     const key = peerPkHex.toLowerCase();
     const session = this.sessions.get(key);
     if (!session || !session.isPeerLive || !this.transport.available) return false;
+    await this.waitForV5Hold(session);
+    this.assertLive();
     try {
       const envelope = makeEnvelope(
         "pack_share",
@@ -1869,6 +1923,8 @@ export class NidoMessenger {
     const key = peerPkHex.toLowerCase();
     const session = this.sessions.get(key);
     if (!session || !session.isPeerLive || !this.transport.available) return false;
+    await this.waitForV5Hold(session);
+    this.assertLive();
     try {
       const envelope = makeEnvelope(
         "negotiation",
@@ -1906,6 +1962,8 @@ export class NidoMessenger {
     const key = peerPkHex.toLowerCase();
     const session = this.sessions.get(key);
     if (!session || !session.isPeerLive || !this.transport.available) return false;
+    await this.waitForV5Hold(session);
+    this.assertLive();
     try {
       const envelope = makeEnvelope(
         "delegation",
@@ -1941,8 +1999,9 @@ export class NidoMessenger {
    * Manda el aviso de cambio de temporizador (tipo "settings"), como Signal
    * al cambiar el temporizador. Las versiones anteriores lo descartan.
    */
+  private timerNoticeSent = new WeakSet<P2PSession>();
   private async sendPendingTimerNotice(key: string, session: P2PSession): Promise<void> {
-    if (!this.myPk) return;
+    if (!this.myPk || this.timerNoticeSent.has(session)) return;
     try {
       const pending = await getPendingDisappear(key);
       if (!pending) return;
@@ -1950,7 +2009,10 @@ export class NidoMessenger {
         disappear: { sec: pending.sec, v: pending.v },
       });
       await this.transport.sendFrame(key, session.pack(env));
-      await clearPendingDisappear(key, pending.v);
+      // Una vez por sesión. El aviso NO se da por entregado aquí (no lleva
+      // ACK): sigue pendiente hasta que un frame del contacto traiga ya esa
+      // versión (ver adoptIncomingTimer), y se repite en cada sesión nueva.
+      this.timerNoticeSent.add(session);
     } catch {
       /* queda pendiente: se reintenta en la próxima sesión */
     }

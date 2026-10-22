@@ -209,11 +209,14 @@ L es el lado con la clave de identidad menor y H el de la mayor.
 - L (si tiene v5) mete una oferta: una clave de ratchet X25519 nueva `dh_L`
   y una clave pública ML-KEM-768 nueva `ek`.
 - H (si tiene v5) pone `r5cap: 1` en su confirm.
-- Todos los `session_confirm` se rellenan al mismo tamaño (4 KB): no se
-  distingue el que lleva la oferta para descartarlo a propósito.
+- Todos los `session_confirm` se rellenan al mismo tamaño (4 KB): su tamaño
+  no revela si llevan oferta. Su posición sí (es el primer frame de sesión
+  de L).
 - La oferta viaja dentro de un frame autenticado con `SK`: nadie puede
-  quitarla ni cambiarla. Descartarla solo deja a los dos en modo clásico, y
-  la pantalla del chat muestra cuándo una sesión va en v5.
+  quitarla ni cambiarla, solo descartar el frame entero. Eso deja a los dos
+  en modo clásico. La pantalla del chat muestra cuándo una sesión va en v5
+  y avisa si un contacto que ya usaba v5, y que no ha dicho (en un frame
+  autenticado) que lo apagó, está conectado sin él.
 
 **Arranque (como RatchetInitAlice/Bob de Signal).** H encapsula hacia `ek` →
 `(ct, ss)`, deriva

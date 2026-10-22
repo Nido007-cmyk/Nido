@@ -258,6 +258,7 @@ async function migrateOn(db: Awaited<ReturnType<typeof getMemoryDb>>): Promise<v
     "ALTER TABLE p2p_contacts ADD COLUMN disappear_sec INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE p2p_contacts ADD COLUMN disappear_v INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE p2p_contacts ADD COLUMN disappear_pending INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE p2p_contacts ADD COLUMN v5_capable INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE p2p_messages ADD COLUMN ttl_sec INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE p2p_messages ADD COLUMN ttl_v INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE p2p_messages ADD COLUMN expires_at INTEGER",
@@ -1057,8 +1058,8 @@ function isExpired(m: P2PStoredMessage, nowMs: number): boolean {
 }
 
 let lastPurgeAt = 0;
-/** Borra vencidos como mucho cada 5 s (lecturas frecuentes de la UI). */
-async function purgeExpiredIfDue(nowMs = Date.now()): Promise<void> {
+/** Borra vencidos como mucho cada 5 s (lecturas frecuentes de la UI, frames entrantes). */
+export async function purgeExpiredIfDue(nowMs = Date.now()): Promise<void> {
   if (nowMs - lastPurgeAt < 5_000) return;
   lastPurgeAt = nowMs;
   await deleteExpiredMessages(nowMs).catch(() => 0);
@@ -1983,4 +1984,29 @@ export async function getMessageExpiry(id: string): Promise<{ ttlSec: number; ex
   );
   if (!row) return null;
   return { ttlSec: Number(row.ttl_sec ?? 0), expiresAt: row.expires_at ?? null };
+}
+
+/**
+ * 0.1.46: el contacto ya usó v5 con nosotros (1) o dijo en un frame
+ * auténtico que lo tiene apagado (0). Sirve para avisar si una sesión con
+ * un contacto que usaba v5 se queda en clásico sin que él lo haya apagado.
+ */
+export async function setContactV5Capable(pkHex: string, capable: boolean): Promise<void> {
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    await db.runAsync(
+      "UPDATE p2p_contacts SET v5_capable = ? WHERE pk_hex = ? AND superseded_by IS NULL",
+      [capable ? 1 : 0, pkHex.toLowerCase()],
+    );
+  });
+}
+
+export async function isContactV5Capable(pkHex: string): Promise<boolean> {
+  await migrate();
+  const db = await getMemoryDb();
+  const row = await db.getFirstAsync<{ v5_capable?: number | null }>(
+    "SELECT v5_capable FROM p2p_contacts WHERE pk_hex = ? AND superseded_by IS NULL LIMIT 1",
+    [pkHex.toLowerCase()],
+  );
+  return row?.v5_capable === 1;
 }

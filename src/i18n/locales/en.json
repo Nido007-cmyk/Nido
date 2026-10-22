@@ -827,7 +827,8 @@
     "disappearHint": "New messages in this chat delete themselves on both phones. For you the time counts from sending; for your contact, from when they see it. Your contact's NIDO takes this setting with your next message (older versions of NIDO ignore it). Nobody can stop someone from photographing the screen with another camera.",
     "disappearBadge": "disappearing",
     "disappearShort": "Timer: {{value}}",
-    "v5Active": "new key per message"
+    "v5Active": "new key per message",
+    "v5Missing": "This connection is not using per-message keys, although this contact used them before. If they did not turn it off, someone may have blocked it: reconnect, and check with them in person."
   },
   "notifications": {
     "reminderChannel": "NIDO Reminders",
@@ -1665,7 +1666,7 @@
   },
   "panic": {
     "buttonLabel": "Panic button: hold 3 seconds to erase everything",
-    "buttonHint": "Erases all NIDO data: chats, contacts, keys, memory and models. It cannot be undone.",
+    "buttonHint": "Erases all NIDO data: chats, contacts, keys, memory and models. It cannot be undone. With TalkBack, the long-press action erases at once.",
     "short": "SOS",
     "wiping": "Erasing",
     "failedTitle": "Could not erase everything",

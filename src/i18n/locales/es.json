@@ -827,7 +827,8 @@
     "disappearHint": "Los mensajes nuevos de este chat se borran solos en los dos teléfonos. Para ti el tiempo cuenta desde que lo envías; para tu contacto, desde que lo ve. El NIDO de tu contacto adopta este ajuste con tu próximo mensaje (las versiones anteriores de NIDO lo ignoran). Nadie puede impedir que alguien fotografíe la pantalla con otra cámara.",
     "disappearBadge": "temporal",
     "disappearShort": "Temporal: {{value}}",
-    "v5Active": "clave por mensaje"
+    "v5Active": "clave por mensaje",
+    "v5Missing": "Esta conexión no usa clave por mensaje, aunque este contacto ya la usaba. Si no la apagó, alguien pudo bloquearla: vuelve a conectar y compruébalo con él en persona."
   },
   "notifications": {
     "reminderChannel": "Recordatorios de NIDO",
@@ -1665,7 +1666,7 @@
   },
   "panic": {
     "buttonLabel": "Botón de pánico: mantén 3 segundos para borrarlo todo",
-    "buttonHint": "Borra todos los datos de NIDO: chats, contactos, claves, memoria y modelos. No se puede deshacer.",
+    "buttonHint": "Borra todos los datos de NIDO: chats, contactos, claves, memoria y modelos. No se puede deshacer. Con TalkBack, la acción de mantener pulsado borra al instante.",
     "short": "SOS",
     "wiping": "Borrando",
     "failedTitle": "No se pudo borrar todo",

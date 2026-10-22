@@ -220,6 +220,7 @@ export function NidoScreen({
   const [disappearSec, setDisappearSec] = useState(0);
   const [showTimerPicker, setShowTimerPicker] = useState(false);
   const [sessionV5, setSessionV5] = useState(false);
+  const [v5Warning, setV5Warning] = useState(false);
   const [messages, setMessages] = useState<P2PStoredMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -323,6 +324,7 @@ export function NidoScreen({
       // si la sesión va en v5 (clave por mensaje + ML-KEM).
       setDisappearSec(await mRef.current.getDisappearingTimer(pkHex).catch(() => 0));
       setSessionV5(mRef.current.sessionUsesV5(pkHex));
+      setV5Warning(await mRef.current.sessionV5Warning(pkHex).catch(() => false));
     } catch (e) {
       // FIX 2026-10-09 (UI-AUDIT/F4): error visible en vez de silencio.
       // Auditoría 2026-10-12: por el mapeo localizado, no el mensaje crudo.
@@ -1288,6 +1290,7 @@ export function NidoScreen({
               {isOnline ? t("nido.online") : t("nido.offlineQueued")}
               {isOnline && sessionV5 ? ` · ${t("nido.v5Active")}` : ""}
             </Text>
+            {isOnline && v5Warning ? <Text style={styles.v5Warning}>{t("nido.v5Missing")}</Text> : null}
           </View>
           <Pressable
             onPress={() => setShowTimerPicker((v) => !v)}
@@ -1919,6 +1922,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   peerTitleWrap: { flex: 1, alignItems: "center", marginRight: calmSpacing.spacious },
   peerName: { ...typography.ui.titleSm, color: colors.text.primary },
   peerSub: { ...typography.ui.caption, color: colors.text.muted },
+  v5Warning: { ...typography.ui.caption, color: colors.crimson[500] },
   timerBtn: {
     marginLeft: calmSpacing.tight,
     paddingHorizontal: 10,

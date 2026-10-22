@@ -328,6 +328,13 @@ export class P2PSession {
    * con clave por mensaje y ML-KEM. Pasado ese tiempo, se envía igual.
    */
   private v5CapSeenAt: number | null = null;
+  /**
+   * El session_confirm AUTÉNTICO del peer dice que no tiene v5 (L sin
+   * oferta, o H sin r5cap): el modo clásico es decisión suya, no un ataque.
+   */
+  private peerSaidNoV5 = false;
+  /** Momento de creación (para saber cuándo ya debería ir en v5). */
+  readonly createdAt = Date.now();
 
   private constructor(peerPkHex: string, sessionKey: Uint8Array) {
     this.peerPkHex = peerPkHex;
@@ -439,8 +446,21 @@ export class P2PSession {
   }
 
   /** H recibió el session_confirm de L: si trae oferta v5 y v5 está activado, arranca. */
+  /** El peer dijo, en un frame autenticado, que no usa v5. */
+  get peerDeclinedV5(): boolean {
+    return this.peerSaidNoV5;
+  }
+
   private maybeAcceptV5(env: P2PEnvelope): void {
     if (env.type !== "session_confirm" || !this.v5Enabled || !this.ownPkHex) return;
+    const pl = env.payload as { r5?: unknown; r5cap?: unknown };
+    const peerIsLow = this.peerPkHex < this.ownPkHex;
+    // Confirm auténtico del peer sin señal de v5 → el peer lo tiene apagado.
+    // (Soy H: el confirm de L no trae oferta. Soy L con oferta: el confirm
+    // clásico de H no trae r5cap; el "kick" v5 de H no cuenta porque llega
+    // cuando ya puedo cifrar en v5.)
+    if (peerIsLow && !this.v5 && pl.r5 === undefined) this.peerSaidNoV5 = true;
+    if (!peerIsLow && this.v5 && !this.v5.canSend && pl.r5cap === undefined) this.peerSaidNoV5 = true;
     // L con oferta hecha: H anuncia que tiene v5 → esperar su primer frame v5.
     if (
       this.v5 &&
@@ -470,9 +490,11 @@ export class P2PSession {
     const plain = utf8Encode(json);
     if (plain.length > MAX_PLAINTEXT_BYTES) throw new Error("Mensaje demasiado grande.");
     // Todos los session_confirm miden lo mismo (4 KB), lleven o no la oferta
-    // v5 (~2,8 KB): quien mira el aire no puede distinguirlos ni descartar
-    // justo el que lleva la oferta. (No es de los dos primeros frames de la
-    // conexión, HELLO y CONFIRM, a los que el lado nativo pone tope de 4 KB.)
+    // v5 (~2,8 KB): el tamaño no delata si hay oferta. Ojo: su POSICIÓN sí
+    // (es el primer frame de sesión de L), así que un atacante en el camino
+    // podría descartarlo; eso solo deja la sesión en clásico y la UI lo
+    // avisa (ver NidoMessenger.sessionV5Warning). No es de los dos primeros
+    // frames (HELLO y CONFIRM), los únicos con tope nativo de 4 KB.
     const padded = envelope.type === "session_confirm" ? padTo(plain, CONFIRM_PADDED_BYTES) : padPlaintext(plain);
     let body: Uint8Array;
     if (this.v5 && this.v5.canSend) {

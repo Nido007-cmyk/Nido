@@ -827,7 +827,8 @@
     "disappearHint": "As mensagens novas deste chat se apagam sozinhas nos dois telefones. Para você, o tempo conta a partir do envio; para seu contato, a partir de quando ele a vê. O NIDO do seu contato adota esta configuração com sua próxima mensagem (versões anteriores do NIDO a ignoram). Ninguém pode impedir que alguém fotografe a tela com outra câmera.",
     "disappearBadge": "temporária",
     "disappearShort": "Temporária: {{value}}",
-    "v5Active": "chave por mensagem"
+    "v5Active": "chave por mensagem",
+    "v5Missing": "Esta conexão não usa chave por mensagem, embora este contato já a usasse. Se ele não a desativou, alguém pode tê-la bloqueado: reconecte e confirme com ele pessoalmente."
   },
   "notifications": {
     "reminderChannel": "Lembretes do NIDO",
@@ -1665,7 +1666,7 @@
   },
   "panic": {
     "buttonLabel": "Botão de pânico: segure 3 segundos para apagar tudo",
-    "buttonHint": "Apaga todos os dados do NIDO: chats, contatos, chaves, memória e modelos. Não pode ser desfeito.",
+    "buttonHint": "Apaga todos os dados do NIDO: chats, contatos, chaves, memória e modelos. Não pode ser desfeito. Com o TalkBack, a ação de manter pressionado apaga na hora.",
     "short": "SOS",
     "wiping": "Apagando",
     "failedTitle": "Não foi possível apagar tudo",

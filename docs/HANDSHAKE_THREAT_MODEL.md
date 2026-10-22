@@ -204,11 +204,14 @@ Let L be the side with the lower identity key and H the higher one.
 - L (if v5 is on) puts an offer in it: a fresh X25519 ratchet key `dh_L` and
   a fresh ML-KEM-768 public key `ek`.
 - H (if v5 is on) puts `r5cap: 1` in its own confirm.
-- All `session_confirm` frames are padded to the same 4 KB, so the one that
-  carries the offer cannot be told apart and selectively dropped.
+- All `session_confirm` frames are padded to the same 4 KB, so their size
+  does not reveal whether an offer is inside. Their position still does
+  (it is L's first session frame).
 - Because the offer travels inside a frame authenticated with `SK`, an
-  attacker cannot remove or alter it. Dropping it only leaves both phones
-  in the classical mode; the chat screen shows when a session uses v5.
+  attacker cannot remove or alter it, only drop the whole frame. That leaves
+  both phones in the classical mode. The chat screen shows when a session
+  uses v5, and warns when a contact that used v5 before, and has not said
+  (in an authenticated frame) that it turned it off, is connected without it.
 
 **Start (as Signal's RatchetInitAlice/Bob).** H encapsulates to `ek` →
 `(ct, ss)`, derives
