@@ -77,6 +77,11 @@ export function parseConfirm(body: Uint8Array): ConfirmPayload {
   } catch {
     throw new Error("CONFIRM no es JSON.");
   }
+  // Fuzzing 0.1.46: `null`, un número o un array son JSON válido pero no un
+  // objeto; sin esta guarda, leer obj.t lanzaba un TypeError crudo.
+  if (typeof obj !== "object" || obj === null || Array.isArray(obj)) {
+    throw new Error("CONFIRM no es un objeto.");
+  }
   if (obj.t !== CONFIRM_TYPE_V1) throw new Error("CONFIRM de tipo desconocido.");
   if (obj.v !== CONFIRM_VERSION) throw new Error("CONFIRM de versión desconocida.");
   const pk = typeof obj.pk === "string" ? obj.pk.toLowerCase() : "";

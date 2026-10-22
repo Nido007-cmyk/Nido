@@ -17,7 +17,9 @@ import {
   AppState,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Alert,
 } from "react-native";
+import { PanicButton } from "./components/PanicButton";
 import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { LinearGradient } from "expo-linear-gradient";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType } from "../services/haptics";
@@ -202,6 +204,23 @@ export function ChatScreen({
   const [showMemoryManager, setShowMemoryManager] = useState(false);
   const [showExecutionTelemetry, setShowExecutionTelemetry] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  // 0.1.46: botón de pánico (opt-in en Ajustes). Se relee al cerrar Ajustes.
+  // Cargar los interruptores aquí, al arrancar, también deja listos los del
+  // P2P (saludo privado, v5) antes de la primera reconexión.
+  const [panicEnabled, setPanicEnabled] = useState(false);
+  useEffect(() => {
+    if (showSettings) return;
+    let alive = true;
+    import("../config/featureFlags")
+      .then(async ({ isFeatureEnabled, loadFeatureFlags }) => {
+        await loadFeatureFlags().catch(() => {});
+        if (alive) setPanicEnabled(isFeatureEnabled("security.panicButton"));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [showSettings]);
   const [showNido, setShowNido] = useState(false);
   const [voiceInputEnabled, setVoiceInputEnabledState] = useState(true);
   const showSettingsRef = useRef(false);
@@ -1740,6 +1759,14 @@ export function ChatScreen({
           }}
           onCycleTone={cycleTone}
           onNewChat={resetToNewChat}
+          panicSlot={
+            panicEnabled ? (
+              <PanicButton
+                onWiped={() => onRelaunchWizard?.()}
+                onError={(msg) => Alert.alert(t("panic.failedTitle"), msg)}
+              />
+            ) : null
+          }
         />
 
         {/* Deep Research Mode Banner */}

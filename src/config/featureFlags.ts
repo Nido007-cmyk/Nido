@@ -21,7 +21,11 @@
  * (transport, handshake, negotiation, chat) never reads this flag.
  */
 
-export type FeatureFlag = "delegation.enabled" | "p2p.sealedHandshake" | "p2p.ratchetV5";
+export type FeatureFlag =
+  | "delegation.enabled"
+  | "p2p.sealedHandshake"
+  | "p2p.ratchetV5"
+  | "security.panicButton";
 
 const DEFAULTS: Record<FeatureFlag, boolean> = {
   /** Delegated task execution NIDO-A -> NIDO-B. Default OFF. */
@@ -40,6 +44,12 @@ const DEFAULTS: Record<FeatureFlag, boolean> = {
    * hasta probarlo en dos teléfonos.
    */
   "p2p.ratchetV5": false,
+  /**
+   * Botón de pánico (0.1.46, como Briar): muestra en la pantalla principal un
+   * botón que, mantenido 3 segundos, borra todos los datos de NIDO sin más
+   * preguntas. Default OFF: lo activa el usuario en Ajustes.
+   */
+  "security.panicButton": false,
 };
 
 /** In-memory overrides (hydrated from disk by loadFeatureFlags). */

@@ -22,6 +22,8 @@ interface Props {
   onCycleTone: () => void;
   onNewChat: () => void;
   onToggleDeepResearch?: () => void;
+  /** 0.1.46: botón de pánico (solo si el usuario lo activó). */
+  panicSlot?: React.ReactNode;
 }
 
 /**
@@ -36,6 +38,7 @@ export function ChatHeader({
   onCycleTone,
   onNewChat,
   onToggleDeepResearch,
+  panicSlot,
 }: Props) {
   const { t } = useTranslation();
   const { colors, typography } = useTheme();
@@ -88,6 +91,7 @@ export function ChatHeader({
 
         {/* Right Action Controls */}
         <View style={styles.rightActions}>
+          {panicSlot}
           {/* Tone Selector Pill */}
           <Pressable accessibilityRole="button"
             style={styles.tonePill}

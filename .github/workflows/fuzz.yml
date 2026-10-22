@@ -1,0 +1,32 @@
+# Fuzzing semanal (0.1.46): los mismos objetivos que corren en cada PR con
+# 300 casos, aquí con 100 000 casos por objetivo y una semilla nueva en cada
+# ejecución. Si falla, el log trae la semilla para reproducirlo:
+#   FUZZ_SEED=<semilla> FUZZ_ITERATIONS=100000 npx vitest run src/p2p/fuzz
+name: Fuzz
+
+on:
+  schedule:
+    - cron: '41 6 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Fuzz
+        env:
+          FUZZ_ITERATIONS: '100000'
+          FUZZ_SEED: ${{ github.run_id }}
+        run: |
+          echo "Semilla: $FUZZ_SEED"
+          npx vitest run src/p2p/fuzz --testTimeout=3600000

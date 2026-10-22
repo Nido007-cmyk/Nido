@@ -813,7 +813,18 @@
     "batteryHintBody": "O Android coloca o NIDO em repouso depois de um tempo para economizar bateria, e a conexão com seus contatos cai até você abri-lo de novo. Permita que o NIDO funcione em segundo plano (gasta muito pouca bateria).",
     "batteryHintAllow": "Permitir",
     "batteryHintLater": "Agora não",
-    "batteryHintManual": "Vá em Configurações do Android → Apps → NIDO → Bateria → Sem restrições."
+    "batteryHintManual": "Vá em Configurações do Android → Apps → NIDO → Bateria → Sem restrições.",
+    "disappearTitle": "Mensagens temporárias",
+    "disappearOff": "Desativado",
+    "disappearOffShort": "Não",
+    "disappear_300": "5 min",
+    "disappear_3600": "1 hora",
+    "disappear_28800": "8 horas",
+    "disappear_86400": "1 dia",
+    "disappear_604800": "1 semana",
+    "disappear_2419200": "4 semanas",
+    "disappearSet": "Mensagens temporárias: {{value}}",
+    "disappearHint": "As mensagens novas deste chat se apagam sozinhas nos dois telefones. Para você, o tempo conta a partir do envio; para seu contato, a partir de quando ele a vê. O NIDO do seu contato adota esta configuração com sua próxima mensagem (versões anteriores do NIDO a ignoram). Ninguém pode impedir que alguém fotografe a tela com outra câmera."
   },
   "notifications": {
     "reminderChannel": "Lembretes do NIDO",
@@ -1045,7 +1056,9 @@
     "delegationDesc": "Um NIDO pareado pode pedir para você executar tarefas. Cada tarefa requer sua aprovação.",
     "delegationTitle": "Tarefas delegadas (experimental)",
     "sealedHelloTitle": "Saudação privada (experimental)",
-    "sealedHelloDesc": "Quando este telefone chama um NIDO pareado que tem suporte, as primeiras mensagens vão seladas e ninguém por perto vê quem está chamando. Ative nos dois telefones para testar. Se não conectar, desative."
+    "sealedHelloDesc": "Quando este telefone chama um NIDO pareado que tem suporte, as primeiras mensagens vão seladas e ninguém por perto vê quem está chamando. Ative nos dois telefones para testar. Se não conectar, desative.",
+    "ratchetV5Title": "Chave nova por mensagem + resistência quântica (experimental)",
+    "ratchetV5Desc": "Cada mensagem usa sua própria chave, como o Double Ratchet do Signal: uma chave roubada hoje não abre as mensagens anteriores. A sessão também mistura ML-KEM-768, para que o tráfego gravado hoje continue fechado para computadores quânticos futuros. Só é usado se os dois telefones o tiverem ativado; caso contrário, nada muda. Vale a partir da próxima conexão."
   },
   "backup": {
     "dekTitle": "Backup criado",
@@ -1646,5 +1659,14 @@
       "lfm": "Não é Apache nem MIT: o uso comercial só é permitido a entidades com menos de 10 milhões de USD de receita anual, e quem o redistribuir deve entregar uma cópia da licença.",
       "ccBySa": "Você pode compartilhar e adaptar dando crédito à Wikipédia (e ao NIDO como compilador dos pacotes), linkando a licença, indicando as mudanças e mantendo CC BY-SA 4.0."
     }
+  },
+  "panic": {
+    "buttonLabel": "Botão de pânico: segure 3 segundos para apagar tudo",
+    "buttonHint": "Apaga todos os dados do NIDO: chats, contatos, chaves, memória e modelos. Não pode ser desfeito.",
+    "short": "SOS",
+    "wiping": "…",
+    "failedTitle": "Não foi possível apagar tudo",
+    "settingTitle": "Botão de pânico",
+    "settingDesc": "Mostra um botão SOS na tela principal. Segurá-lo por 3 segundos apaga todos os dados do NIDO de uma vez, sem pedir digital nem confirmação. Não pode ser desfeito; faça um backup antes se quiser guardar algo."
   }
 }

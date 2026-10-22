@@ -46,6 +46,7 @@ import {
   findContactRowAny,
   getConversation,
   deleteMessage,
+  DISAPPEAR_OPTIONS_SEC,
   P2PIdentityKeyLossError,
   type P2PContact,
   type P2PStoredMessage,
@@ -298,6 +299,9 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
 
   const loadConversation = useCallback(async (pkHex: string) => {
     try {
+      // 0.1.46: mostrar la conversación arranca la cuenta atrás de los
+      // mensajes temporales recibidos (como Signal: al verlos).
+      await mRef.current.markConversationSeen(pkHex).catch(() => 0);
       setMessages(await getConversation(pkHex));
     } catch (e) {
       // FIX 2026-10-09 (UI-AUDIT/F4): error visible en vez de silencio.
@@ -1042,9 +1046,53 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       impact(ImpactFeedbackStyle.Light);
       setPeer(c);
       setNotice(null);
+      setShowTimerPicker(false);
+      setDisappearSec(0);
+      void mRef.current
+        .getDisappearingTimer(c.pkHex)
+        .then(setDisappearSec)
+        .catch(() => {});
       void loadConversation(c.pkHex);
     },
     [loadConversation],
+  );
+
+  // 0.1.46: mensajes temporales. Con el chat abierto se recarga cada 10 s
+  // para que lo vencido desaparezca de la pantalla y se lea el temporizador
+  // que haya adoptado de un mensaje del contacto.
+  const [disappearSec, setDisappearSec] = useState(0);
+  const [showTimerPicker, setShowTimerPicker] = useState(false);
+  const peerPkForTimer = peer?.pkHex ?? null;
+  useEffect(() => {
+    if (!peerPkForTimer) return;
+    const id = setInterval(() => {
+      void loadConversation(peerPkForTimer);
+      void mRef.current
+        .getDisappearingTimer(peerPkForTimer)
+        .then(setDisappearSec)
+        .catch(() => {});
+    }, 10_000);
+    return () => clearInterval(id);
+  }, [peerPkForTimer, loadConversation]);
+
+  const timerLabel = useCallback(
+    (sec: number) => (sec === 0 ? t("nido.disappearOff") : t(`nido.disappear_${sec}`)),
+    [t],
+  );
+
+  const chooseTimer = useCallback(
+    async (sec: number) => {
+      if (!peer) return;
+      try {
+        await mRef.current.setDisappearingTimer(peer.pkHex, sec);
+        setDisappearSec(sec);
+        setShowTimerPicker(false);
+        setNotice(t("nido.disappearSet", { value: timerLabel(sec) }));
+      } catch (e) {
+        setNotice(`${t("nido.errorLabel")}: ${p2pErr(e)}`);
+      }
+    },
+    [peer, t, timerLabel],
   );
 
   /**
@@ -1088,6 +1136,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       >
         <Text style={[styles.bubbleText, out && styles.bubbleTextOut]}>{item.text}</Text>
         <Text style={[styles.bubbleMeta, out && styles.bubbleMetaOut]}>
+          {item.ttlSec ? "⏱ " : ""}
           {fmtTime(item.ts)}
           {out ? outStatusSuffix(item) : ""}
         </Text>
@@ -1234,7 +1283,41 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
               {isOnline ? t("nido.online") : t("nido.offlineQueued")}
             </Text>
           </View>
+          <Pressable
+            onPress={() => setShowTimerPicker((v) => !v)}
+            hitSlop={8}
+            style={styles.timerBtn}
+            accessibilityRole="button"
+            accessibilityLabel={`${t("nido.disappearTitle")}: ${timerLabel(disappearSec)}`}
+          >
+            <Text style={styles.timerBtnText}>
+              {"⏱ "}
+              {disappearSec === 0 ? t("nido.disappearOffShort") : timerLabel(disappearSec)}
+            </Text>
+          </Pressable>
         </View>
+        {showTimerPicker ? (
+          <View style={styles.timerPicker}>
+            <Text style={styles.timerPickerTitle}>{t("nido.disappearTitle")}</Text>
+            <View style={styles.timerChips}>
+              {DISAPPEAR_OPTIONS_SEC.map((sec) => (
+                <Pressable
+                  key={sec}
+                  onPress={() => void chooseTimer(sec)}
+                  style={[styles.timerChip, sec === disappearSec && styles.timerChipActive]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: sec === disappearSec }}
+                  accessibilityLabel={timerLabel(sec)}
+                >
+                  <Text style={[styles.timerChipText, sec === disappearSec && styles.timerChipTextActive]}>
+                    {timerLabel(sec)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={styles.timerPickerHint}>{t("nido.disappearHint")}</Text>
+          </View>
+        ) : null}
         {notice ? (
           <Text style={styles.notice} onPress={() => setNotice(null)}>
             {notice}
@@ -1827,6 +1910,35 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   peerTitleWrap: { flex: 1, alignItems: "center", marginRight: calmSpacing.spacious },
   peerName: { ...typography.ui.titleSm, color: colors.text.primary },
   peerSub: { ...typography.ui.caption, color: colors.text.muted },
+  timerBtn: {
+    marginLeft: calmSpacing.tight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  timerBtnText: { ...typography.ui.caption, color: colors.text.secondary },
+  timerPicker: {
+    paddingHorizontal: calmSpacing.comfortable,
+    paddingVertical: calmSpacing.tight,
+    backgroundColor: colors.bg.terminal,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+  },
+  timerPickerTitle: { ...typography.ui.caption, color: colors.text.heading, fontWeight: "700" },
+  timerChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginVertical: 8 },
+  timerChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  timerChipActive: { backgroundColor: colors.emerald.bgSubtle, borderColor: colors.emerald[500] },
+  timerChipText: { ...typography.ui.caption, color: colors.text.secondary },
+  timerChipTextActive: { color: colors.text.accentEmerald, fontWeight: "700" },
+  timerPickerHint: { ...typography.ui.caption, color: colors.text.muted },
   linkBar: {
     paddingHorizontal: calmSpacing.comfortable,
     paddingVertical: calmSpacing.tight,

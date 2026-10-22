@@ -269,6 +269,11 @@ export function parseHello(body: Uint8Array): HelloPayload {
   } catch {
     throw new Error("HELLO no es JSON.");
   }
+  // Fuzzing 0.1.46: `null`, un número o un array son JSON válido pero no un
+  // objeto; sin esta guarda, leer obj.t lanzaba un TypeError crudo.
+  if (typeof obj !== "object" || obj === null || Array.isArray(obj)) {
+    throw new Error("HELLO no es un objeto.");
+  }
   if (obj.t !== HELLO_TYPE_V3) throw new Error("HELLO de tipo desconocido.");
   if (obj.v === 1) {
     throw new Error(

@@ -139,6 +139,9 @@ export function parseSealed(body: Uint8Array): ParsedSealed {
   } catch {
     throw new Error("Saludo sellado ilegible.");
   }
+  if (typeof o !== "object" || o === null || Array.isArray(o)) {
+    throw new Error("Saludo sellado ilegible.");
+  }
   if (o.t !== SEALED_TYPE) throw new Error("No es un saludo sellado.");
   const hex = (v: unknown, bytes: number): Uint8Array => {
     if (typeof v !== "string" || !new RegExp(`^[0-9a-f]{${bytes * 2}}$`).test(v)) {

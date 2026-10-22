@@ -813,7 +813,18 @@
     "batteryHintBody": "Android pone NIDO en reposo al rato de no usarlo para ahorrar batería, y la conexión con tus contactos se corta hasta que lo vuelves a abrir. Permite que NIDO funcione en segundo plano (gasta muy poca batería).",
     "batteryHintAllow": "Permitir",
     "batteryHintLater": "Ahora no",
-    "batteryHintManual": "Ve a Ajustes de Android → Aplicaciones → NIDO → Batería → Sin restricciones."
+    "batteryHintManual": "Ve a Ajustes de Android → Aplicaciones → NIDO → Batería → Sin restricciones.",
+    "disappearTitle": "Mensajes temporales",
+    "disappearOff": "Apagado",
+    "disappearOffShort": "No",
+    "disappear_300": "5 min",
+    "disappear_3600": "1 hora",
+    "disappear_28800": "8 horas",
+    "disappear_86400": "1 día",
+    "disappear_604800": "1 semana",
+    "disappear_2419200": "4 semanas",
+    "disappearSet": "Mensajes temporales: {{value}}",
+    "disappearHint": "Los mensajes nuevos de este chat se borran solos en los dos teléfonos. Para ti el tiempo cuenta desde que lo envías; para tu contacto, desde que lo ve. El NIDO de tu contacto adopta este ajuste con tu próximo mensaje (las versiones anteriores de NIDO lo ignoran). Nadie puede impedir que alguien fotografíe la pantalla con otra cámara."
   },
   "notifications": {
     "reminderChannel": "Recordatorios de NIDO",
@@ -1045,7 +1056,9 @@
     "delegationTitle": "Tareas delegadas (experimental)",
     "delegationDesc": "Otro NIDO emparejado puede pedirte ejecutar tareas. Cada tarea requiere tu aprobación explícita.",
     "sealedHelloTitle": "Saludo privado (experimental)",
-    "sealedHelloDesc": "Cuando este teléfono llama a un NIDO emparejado que lo soporta, los primeros mensajes van sellados y nadie cerca puede ver quién llama. Actívalo en los dos teléfonos para probarlo. Si no conecta, apágalo."
+    "sealedHelloDesc": "Cuando este teléfono llama a un NIDO emparejado que lo soporta, los primeros mensajes van sellados y nadie cerca puede ver quién llama. Actívalo en los dos teléfonos para probarlo. Si no conecta, apágalo.",
+    "ratchetV5Title": "Clave nueva por mensaje + resistencia cuántica (experimental)",
+    "ratchetV5Desc": "Cada mensaje usa su propia clave, como el Double Ratchet de Signal: una clave robada hoy no abre los mensajes anteriores. Además la sesión mezcla ML-KEM-768, para que el tráfico grabado hoy siga cerrado ante ordenadores cuánticos futuros. Solo se usa si los dos teléfonos lo tienen activado; si no, nada cambia. Vale desde la siguiente conexión."
   },
   "backup": {
     "dekTitle": "Backup creado",
@@ -1646,5 +1659,14 @@
       "lfm": "No es Apache ni MIT: el uso comercial solo está permitido a entidades con menos de 10 millones de USD de ingresos al año, y quien lo redistribuya debe entregar copia de la licencia.",
       "ccBySa": "Puedes compartir y adaptar dando crédito a Wikipedia (y a NIDO como compilador de los paquetes), enlazando la licencia, indicando los cambios y manteniendo CC BY-SA 4.0."
     }
+  },
+  "panic": {
+    "buttonLabel": "Botón de pánico: mantén 3 segundos para borrarlo todo",
+    "buttonHint": "Borra todos los datos de NIDO: chats, contactos, claves, memoria y modelos. No se puede deshacer.",
+    "short": "SOS",
+    "wiping": "…",
+    "failedTitle": "No se pudo borrar todo",
+    "settingTitle": "Botón de pánico",
+    "settingDesc": "Muestra un botón SOS en la pantalla principal. Mantenerlo 3 segundos borra todos los datos de NIDO de una vez, sin pedir huella ni confirmación. No se puede deshacer; haz antes un respaldo si quieres conservar algo."
   }
 }

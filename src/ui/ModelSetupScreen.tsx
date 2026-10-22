@@ -144,6 +144,8 @@ export function ModelSetupScreen(props: Props) {
   // TESTFIX-2026-10-08 (Fix 7): toggle de tareas delegadas (default OFF).
   const [delegationEnabled, setDelegationEnabledState] = useState(false);
   const [sealedHelloEnabled, setSealedHelloEnabledState] = useState(false);
+  const [ratchetV5Enabled, setRatchetV5EnabledState] = useState(false);
+  const [panicEnabled, setPanicEnabledState] = useState(false);
 
   useEffect(() => subscribeDownloads(() => forceRender((n) => n + 1)), []);
 
@@ -180,6 +182,8 @@ export function ModelSetupScreen(props: Props) {
       await loadFeatureFlags().catch(() => {});
       setDelegationEnabledState(isFeatureEnabled("delegation.enabled"));
       setSealedHelloEnabledState(isFeatureEnabled("p2p.sealedHandshake"));
+      setRatchetV5EnabledState(isFeatureEnabled("p2p.ratchetV5"));
+      setPanicEnabledState(isFeatureEnabled("security.panicButton"));
     }).catch(() => {});
   }, []);
 
@@ -195,6 +199,39 @@ export function ModelSetupScreen(props: Props) {
       setSealedHelloEnabledState(!value);
     }
   }, []);
+
+  // 0.1.46: v5 (clave por mensaje + ML-KEM). Solo se usa si los dos
+  // teléfonos lo tienen activado; vale desde la siguiente conexión.
+  const toggleRatchetV5 = useCallback(async (value: boolean) => {
+    setRatchetV5EnabledState(value);
+    try {
+      const { setFeatureEnabled } = await import("../config/featureFlags");
+      await setFeatureEnabled("p2p.ratchetV5", value);
+    } catch {
+      setRatchetV5EnabledState(!value);
+    }
+  }, []);
+
+  // 0.1.46: botón de pánico. Activarlo pide la huella/PIN (un tercero con el
+  // teléfono desbloqueado no debe poder dejar armado un borrado de 3 s);
+  // apagarlo no.
+  const togglePanic = useCallback(async (value: boolean) => {
+    if (value) {
+      try {
+        const { unlockForSecret } = await import("../security/biometricGate");
+        await unlockForSecret(t("panic.settingTitle"));
+      } catch {
+        return;
+      }
+    }
+    setPanicEnabledState(value);
+    try {
+      const { setFeatureEnabled } = await import("../config/featureFlags");
+      await setFeatureEnabled("security.panicButton", value);
+    } catch {
+      setPanicEnabledState(!value);
+    }
+  }, [t]);
 
   const toggleDelegation = useCallback(async (value: boolean) => {
     setDelegationEnabledState(value);
@@ -405,6 +442,32 @@ export function ModelSetupScreen(props: Props) {
               onValueChange={toggleSealedHello}
               accessibilityLabel={t("settings.sealedHelloTitle")}
               trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+              thumbColor={colors.bg.card}
+            />
+          </View>
+          <View style={styles.hapticRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.hapticRowLabel}>{t("settings.ratchetV5Title")}</Text>
+              <Text style={styles.hapticRowValue}>{t("settings.ratchetV5Desc")}</Text>
+            </View>
+            <Switch
+              value={ratchetV5Enabled}
+              onValueChange={toggleRatchetV5}
+              accessibilityLabel={t("settings.ratchetV5Title")}
+              trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+              thumbColor={colors.bg.card}
+            />
+          </View>
+          <View style={styles.hapticRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.hapticRowLabel}>{t("panic.settingTitle")}</Text>
+              <Text style={styles.hapticRowValue}>{t("panic.settingDesc")}</Text>
+            </View>
+            <Switch
+              value={panicEnabled}
+              onValueChange={togglePanic}
+              accessibilityLabel={t("panic.settingTitle")}
+              trackColor={{ false: colors.border.elevated, true: colors.crimson[500] }}
               thumbColor={colors.bg.card}
             />
           </View>
