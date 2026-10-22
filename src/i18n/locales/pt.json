@@ -1043,7 +1043,9 @@
   },
   "settings": {
     "delegationDesc": "Um NIDO pareado pode pedir para você executar tarefas. Cada tarefa requer sua aprovação.",
-    "delegationTitle": "Tarefas delegadas (experimental)"
+    "delegationTitle": "Tarefas delegadas (experimental)",
+    "sealedHelloTitle": "Saudação privada (experimental)",
+    "sealedHelloDesc": "Quando este telefone chama um NIDO pareado que tem suporte, as primeiras mensagens vão seladas e ninguém por perto vê quem está chamando. Ative nos dois telefones para testar. Se não conectar, desative."
   },
   "backup": {
     "dekTitle": "Backup criado",

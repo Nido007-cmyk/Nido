@@ -29,7 +29,7 @@ export interface StartupReconnectDeps {
   getKnownMacs(): Promise<Map<string, string>>;
   connectedPeers(): string[];
   shouldDialPeer(pkHex: string): Promise<boolean>;
-  connectPeer(alias: string): Promise<{ pkHex: string }>;
+  connectPeer(alias: string, opts?: { targetPkHex?: string }): Promise<{ pkHex: string }>;
   disconnectPeer(pkHex: string): Promise<void>;
   /** Called after each successful reconnect (e.g. refresh UI). */
   onReconnected?(pkHex: string): void;
@@ -65,7 +65,7 @@ export async function reconnectKnownContactsOnce(deps: StartupReconnectDeps): Pr
       if (!(await deps.shouldDialPeer(target))) continue;
       if (!first && gapMs > 0) await new Promise((r) => setTimeout(r, gapMs));
       first = false;
-      const info = await deps.connectPeer(mac);
+      const info = await deps.connectPeer(mac, { targetPkHex: target });
       if (info.pkHex.toLowerCase() === target) {
         reconnected.push(target);
         deps.onReconnected?.(target);

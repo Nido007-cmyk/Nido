@@ -96,7 +96,11 @@ export interface P2PTransport {
    */
   getBondedMacs?(): Promise<string[]>;
   /** Conecta con un peer descubierto (por su alias/MAC) y hace el handshake. */
-  connect(alias: string): Promise<P2PPeerInfo>;
+  /**
+   * `opts.targetPkHex`: el contacto al que se quiere llegar, si se sabe.
+   * Permite al transporte usar el saludo sellado (P2P v4) con ese contacto.
+   */
+  connect(alias: string, opts?: { targetPkHex?: string }): Promise<P2PPeerInfo>;
   /** Envía un frame ya cifrado al peer conectado. */
   sendFrame(peerPkHex: string, frame: Uint8Array): Promise<void>;
   disconnect(peerPkHex: string): Promise<void>;

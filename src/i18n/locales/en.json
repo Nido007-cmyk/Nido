@@ -1043,7 +1043,9 @@
   },
   "settings": {
     "delegationTitle": "Delegated tasks (experimental)",
-    "delegationDesc": "A paired NIDO can ask you to run tasks. Every task requires your explicit approval."
+    "delegationDesc": "A paired NIDO can ask you to run tasks. Every task requires your explicit approval.",
+    "sealedHelloTitle": "Private hello (experimental)",
+    "sealedHelloDesc": "When this phone calls a paired NIDO that supports it, the first messages are sealed so nobody nearby can see who is calling. Turn it on in both phones to test. If connecting fails, turn it off."
   },
   "backup": {
     "dekTitle": "Backup created",

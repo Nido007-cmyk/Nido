@@ -54,7 +54,15 @@ import {
   toHex,
   verifyDetached,
 } from "./crypto";
-import { getIdentity, getSigningKeypair, findContactByPk } from "./store";
+import { getIdentity, getSigningKeypair, findContactByPk, listContacts } from "./store";
+import {
+  derivePairKey,
+  isSealedFrame,
+  openFromAnyContact,
+  openWithPairKey,
+  parseSealed,
+  sealHandshakeFrame,
+} from "./sealedHandshake";
 import { defaultHelloNonceCache, type HelloNonceCache } from "./nonceCache";
 import { globalRevocationRegistry } from "./replayProtection";
 import {
@@ -198,6 +206,15 @@ interface PendingHello {
    * procesa nuestro HELLO antes de recibir nuestro CONFIRM: sin carrera).
    */
   pendingConfirm?: Uint8Array;
+  /**
+   * P2P v4: contacto al que llamamos con saludo sellado (iniciador). Solo se
+   * fija si el interruptor está activo y el contacto anunció soportarlo.
+   */
+  sealTargetPk?: string;
+  /** P2P v4: clave de la pareja si ESTE saludo va sellado (ambos lados). */
+  sealKey?: Uint8Array;
+  /** P2P v4: el peer anunció que entiende el saludo sellado. */
+  peerAdvertisesV4?: boolean;
   myEphSecret: Uint8Array;
   myNonce: Uint8Array;
   myNonceHex: string;
@@ -231,6 +248,11 @@ export interface HelloPayload {
   /** Segundos Unix del reloj del remitente (firmado). */
   ts: number;
   sig: string;
+  /**
+   * P2P v4: el remitente entiende el saludo sellado. Pista NO firmada: un
+   * atacante activo solo puede quitarla (el peer sigue en v3, como hoy).
+   */
+  c4?: boolean;
 }
 
 /**
@@ -277,6 +299,7 @@ export function parseHello(body: Uint8Array): HelloPayload {
     nonce: nonce.toLowerCase(),
     ts,
     sig: sig.toLowerCase(),
+    c4: obj.c4 === 1,
   };
 }
 
@@ -297,6 +320,9 @@ export function buildHello(
       nonce: nonceHex,
       ts: tsSeconds,
       sig: sigHex,
+      // P2P v4: «entiendo el saludo sellado». Las versiones anteriores
+      // ignoran campos desconocidos del HELLO.
+      c4: 1,
     }),
   );
 }
@@ -725,6 +751,7 @@ export class NidoBluetoothTransport implements P2PTransport {
    * tocan (nuestra identidad no las invalida).
    */
   resetMyIdentityCache(): void {
+    this.pairKeys.clear();
     this.myPkHex = "";
     this.confirmedPair.clear();
     this.lastHandshakeAt.clear();
@@ -1118,7 +1145,7 @@ export class NidoBluetoothTransport implements P2PTransport {
    * Conecta por alias ("Nombre (AA:BB:CC:DD:EE:FF)") o MAC directa y hace el
    * handshake. Resuelve con la identidad verificada del peer.
    */
-  async connect(alias: string): Promise<P2PPeerInfo> {
+  async connect(alias: string, opts?: { targetPkHex?: string }): Promise<P2PPeerInfo> {
     const mac = extractMac(alias) ?? extractLanAddress(alias);
     if (!mac) throw new Error(`No encontré una dirección Bluetooth ni Wi-Fi local en «${alias}».`);
     const b = this.bt();
@@ -1137,6 +1164,13 @@ export class NidoBluetoothTransport implements P2PTransport {
         existing.waiters.add({ resolve, reject });
       });
     }
+    // P2P v4: ¿saludo sellado con este contacto? Se decide ANTES de abrir el
+    // socket (no hay awaits entre esto y el registro del pendiente).
+    const sealTargetPk = opts?.targetPkHex ? await this.sealTargetFor(opts.targetPkHex) : undefined;
+    if (this.pending.has(mac) || this.macToPk.has(mac)) {
+      // Mientras se decidía, otro camino abrió el handshake: sumarse a él.
+      return this.connect(alias);
+    }
     return new Promise<P2PPeerInfo>((resolve, reject) => {
       const timer = this.armHelloTimeout(mac);
       const waiters = new Set<{
@@ -1153,6 +1187,7 @@ export class NidoBluetoothTransport implements P2PTransport {
         myNonceHex: "", // se rellena en beginHello al enviar el HELLO
         waiters,
         timer,
+        sealTargetPk,
       });
       // RETRY-2026-10-07: reintento con backoff exponencial. El error
       // "read failed, socket might closed" es ambiental (peer no escuchando,
@@ -1427,11 +1462,18 @@ export class NidoBluetoothTransport implements P2PTransport {
         buildHelloSignMessageV3(myPkHex, ephPkHex, nonceHex, ts)
       );
       const hello = buildHello(myPkHex, ephPkHex, nonceHex, ts, toHex(sig));
+      // P2P v4: con un contacto que lo soporta, el HELLO viaja sellado con la
+      // clave de la pareja: en el cable no aparece nuestra identidad.
+      let frame = hello;
+      if (pend.sealTargetPk) {
+        pend.sealKey = await this.pairKeyFor(pend.sealTargetPk);
+        frame = sealHandshakeFrame(pend.sealKey, "hello", hello);
+      }
       pend.stage = "hello-sent";
       pend.myNonce = nonce;
       pend.myNonceHex = nonceHex;
       pend.helloReady = undefined; // listo: nadie necesita esperar más
-      await b.sendFrame(mac, encodeBase64(hello));
+      await b.sendFrame(mac, encodeBase64(frame));
     } catch (e) {
       this.failHello(mac, e instanceof Error ? e : new Error(String(e)));
       throw e;
@@ -1450,6 +1492,59 @@ export class NidoBluetoothTransport implements P2PTransport {
     if (this.macToPk.has(mac)) return false;
     const existing = this.pending.get(mac);
     return !existing || existing.stage === "awaiting-hello";
+  }
+
+  /** P2P v4: claves de pareja ya calculadas (una X25519 por contacto). */
+  private pairKeys = new Map<string, Uint8Array>();
+
+  /** P2P v4: clave estática compartida con un contacto (con caché). */
+  private async pairKeyFor(peerPkHex: string): Promise<Uint8Array> {
+    const myPk = await this.ensureMyPk();
+    const peer = peerPkHex.toLowerCase();
+    const cacheKey = `${myPk}|${peer}`;
+    const hit = this.pairKeys.get(cacheKey);
+    if (hit) return hit;
+    const identity = await getIdentity();
+    if (!identity) throw new Error("Primero crea tu identidad NIDO.");
+    const key = derivePairKey(identity.secretKey, myPk, peer);
+    this.pairKeys.set(cacheKey, key);
+    return key;
+  }
+
+  /**
+   * P2P v4 (respondedor): identifica qué contacto envió un saludo sellado y
+   * lo abre. Lanza si no es de ningún contacto (sin decir nada al otro).
+   */
+  private async openSealedHello(
+    body: Uint8Array,
+  ): Promise<{ pk: string; pairKey: Uint8Array; inner: Uint8Array }> {
+    const sealed = parseSealed(body);
+    const contacts = await listContacts();
+    const candidates: Array<{ pk: string; pairKey: Uint8Array }> = [];
+    for (const c of contacts) {
+      if (!c.sigPkHex) continue;
+      try {
+        candidates.push({ pk: c.pkHex.toLowerCase(), pairKey: await this.pairKeyFor(c.pkHex) });
+      } catch {
+        /* clave de contacto inválida: no puede ser el remitente */
+      }
+    }
+    const out = openFromAnyContact(sealed, candidates, "hello");
+    if (!out) throw new Error("Saludo privado de un dispositivo que no es tu contacto.");
+    return { pk: out.contact.pk, pairKey: out.contact.pairKey, inner: out.inner };
+  }
+
+  /** P2P v4: ¿llamar a este contacto con saludo sellado? */
+  private async sealTargetFor(targetPkHex: string): Promise<string | undefined> {
+    try {
+      const { isFeatureEnabled } = await import("../config/featureFlags");
+      if (!isFeatureEnabled("p2p.sealedHandshake")) return undefined;
+      const { isContactV4Capable } = await import("./store");
+      const pk = targetPkHex.toLowerCase();
+      return (await isContactV4Capable(pk)) ? pk : undefined;
+    } catch {
+      return undefined; // ante la duda, el saludo de siempre (v3)
+    }
   }
 
   /** WIFI-UX-2026-10-11: aviso informativo (no es un error). */
@@ -1511,16 +1606,35 @@ export class NidoBluetoothTransport implements P2PTransport {
   private async respondToHello(mac: string, pend: PendingHello, body: Uint8Array): Promise<void> {
     pend.stage = "responding";
     try {
-      const { hello, contact, myPkHex, pkLower } = await this.validatePeerHello(body);
+      // P2P v4: si el saludo viene sellado, primero se identifica al contacto
+      // por la etiqueta (sin ella no se descifra nada) y se abre el sobre.
+      let inner = body;
+      let sealedFromPk: string | undefined;
+      if (isSealedFrame(body)) {
+        const opened = await this.openSealedHello(body);
+        inner = opened.inner;
+        sealedFromPk = opened.pk;
+        pend.sealKey = opened.pairKey;
+      }
+      const { hello, contact, myPkHex, pkLower } = await this.validatePeerHello(inner);
+      if (sealedFromPk !== undefined && pkLower !== sealedFromPk) {
+        throw new Error("Saludo privado con identidad ajena: conexión rechazada.");
+      }
+      pend.peerAdvertisesV4 = hello.c4 === true || pend.sealKey !== undefined;
       const eph = generateEphemeral();
       const nonce = randomNonce(HANDSHAKE_NONCE_BYTES);
       const nonceHex = toHex(nonce);
       const ephPkHex = toHex(eph.publicKey);
       const ts = Math.floor(Date.now() / 1000);
       const sig = await this.signHello(buildHelloSignMessageV3(myPkHex, ephPkHex, nonceHex, ts));
-      const ourHello = buildHello(myPkHex, ephPkHex, nonceHex, ts, toHex(sig));
+      const helloPlain = buildHello(myPkHex, ephPkHex, nonceHex, ts, toHex(sig));
       const confirmSig = await this.signHello(buildConfirmSignMessage(myPkHex, nonceHex, hello.nonce));
-      const ourConfirm = buildConfirmV1(myPkHex, nonceHex, hello.nonce, toHex(confirmSig));
+      const confirmPlain = buildConfirmV1(myPkHex, nonceHex, hello.nonce, toHex(confirmSig));
+      // P2P v4: si nos llamaron con saludo sellado, respondemos sellado.
+      const ourHello = pend.sealKey ? sealHandshakeFrame(pend.sealKey, "hello", helloPlain) : helloPlain;
+      const ourConfirm = pend.sealKey
+        ? sealHandshakeFrame(pend.sealKey, "confirm", confirmPlain)
+        : confirmPlain;
       if (this.pending.get(mac) !== pend) {
         // El handshake se canceló mientras validábamos (timeout/desconexión).
         eph.secretKey.fill(0);
@@ -1637,6 +1751,22 @@ export class NidoBluetoothTransport implements P2PTransport {
       }
       pend = this.pending.get(mac);
     }
+    if (pend && pend.sealKey && (pend.stage === "hello-sent" || pend.stage === "confirm-sent")) {
+      // P2P v4: en un saludo sellado, cada frame del otro también debe venir
+      // sellado con la misma clave de pareja (sin vuelta atrás a v3).
+      const kind = pend.stage === "hello-sent" ? "hello" : "confirm";
+      let opened: Uint8Array | null = null;
+      try {
+        opened = isSealedFrame(body) ? openWithPairKey(parseSealed(body), pend.sealKey, kind) : null;
+      } catch {
+        opened = null;
+      }
+      if (!opened) {
+        this.failHello(mac, new Error("Saludo privado inválido o no sellado: conexión rechazada."));
+        return;
+      }
+      body = opened;
+    }
     if (pend) {
       // El handshake se parsea por fase (§4.5 del packet): hello-sent
       // espera HELLO; confirm-sent espera CONFIRM; cualquier otra cosa
@@ -1740,13 +1870,22 @@ export class NidoBluetoothTransport implements P2PTransport {
   private async handleHello(mac: string, pend: PendingHello, body: Uint8Array): Promise<void> {
     try {
       const { hello, contact, myPkHex, pkLower } = await this.validatePeerHello(body);
+      // P2P v4: el saludo sellado se hizo para UN contacto; responder como
+      // otro no se acepta.
+      if (pend.sealTargetPk && pkLower !== pend.sealTargetPk) {
+        throw new Error("Respondió otro contacto distinto al que se llamó con saludo privado.");
+      }
+      pend.peerAdvertisesV4 = hello.c4 === true || pend.sealKey !== undefined;
       // HELLO válido: enviamos nuestro CONFIRM (cn = nuestro nonce,
       // pn = el nonce del peer visto en ESTA conexión) y esperamos el suyo.
       // La RUTA SIGUE SIN TOCARSE (invariante central R4).
       const confirmSig = await this.signHello(
         buildConfirmSignMessage(myPkHex, pend.myNonceHex, hello.nonce),
       );
-      const confirm = buildConfirmV1(myPkHex, pend.myNonceHex, hello.nonce, toHex(confirmSig));
+      const confirmPlain = buildConfirmV1(myPkHex, pend.myNonceHex, hello.nonce, toHex(confirmSig));
+      const confirm = pend.sealKey
+        ? sealHandshakeFrame(pend.sealKey, "confirm", confirmPlain)
+        : confirmPlain;
       clearTimeout(pend.timer);
       pend.stage = "confirm-sent";
       pend.peerPk = pkLower;
@@ -1940,6 +2079,13 @@ export class NidoBluetoothTransport implements P2PTransport {
       try {
         const { saveKnownMac } = await import("./store");
         await saveKnownMac(pkLower, mac);
+      } catch { /* best-effort */ }
+    }
+    // P2P v4: recordar si este contacto entiende el saludo sellado.
+    if (pend.peerAdvertisesV4 !== undefined) {
+      try {
+        const { setContactV4Capable } = await import("./store");
+        await setContactV4Capable(pkLower, pend.peerAdvertisesV4);
       } catch { /* best-effort */ }
     }
     const info: P2PPeerInfo = { pkHex: pkLower, alias: contact?.name ?? mac, transport: transportOf(mac) };

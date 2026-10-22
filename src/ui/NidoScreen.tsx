@@ -520,7 +520,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             getKnownMacs,
             connectedPeers: () => m.connectedPeers(),
             shouldDialPeer: (pk) => m.shouldDialPeer(pk),
-            connectPeer: (alias) => m.connectPeer(alias),
+            connectPeer: (alias, opts) => m.connectPeer(alias, opts),
             disconnectPeer: (pk) => m.disconnectPeer(pk),
             onReconnected: (pk) => {
               reconnectManager.cancel(pk);
@@ -953,7 +953,8 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
         let lastError: string = "";
         const attempt = async (alias: string): Promise<boolean> => {
           try {
-            const info = await mRef.current.connectPeer(alias);
+            // P2P v4: decir a quién buscamos permite el saludo privado.
+            const info = await mRef.current.connectPeer(alias, { targetPkHex: target });
             if (info.pkHex.toLowerCase() === target) {
               // AUTO-RECONNECT 2026-10-07: conexión exitosa, cancelar reintentos.
               reconnectManager.cancel(target);

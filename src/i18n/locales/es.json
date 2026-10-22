@@ -1043,7 +1043,9 @@
   },
   "settings": {
     "delegationTitle": "Tareas delegadas (experimental)",
-    "delegationDesc": "Otro NIDO emparejado puede pedirte ejecutar tareas. Cada tarea requiere tu aprobación explícita."
+    "delegationDesc": "Otro NIDO emparejado puede pedirte ejecutar tareas. Cada tarea requiere tu aprobación explícita.",
+    "sealedHelloTitle": "Saludo privado (experimental)",
+    "sealedHelloDesc": "Cuando este teléfono llama a un NIDO emparejado que lo soporta, los primeros mensajes van sellados y nadie cerca puede ver quién llama. Actívalo en los dos teléfonos para probarlo. Si no conecta, apágalo."
   },
   "backup": {
     "dekTitle": "Backup creado",
