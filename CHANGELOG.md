@@ -28,6 +28,17 @@ All notable changes to NIDO are recorded here. Versions follow
   screen lock, asks you to confirm and turns it on with your fingerprint or
   PIN. It is not turned on by itself, because it needs a screen lock and
   that is your choice. "Not now" hides it for a week.
+- **Checked against the public audits of other messengers.** The findings
+  published against Threema (ETH Zürich), Signal's PQXDH, Briar (Cure53)
+  and Matrix were compared one by one with NIDO's code
+  ([`docs/security/LESSONS_FROM_PUBLIC_AUDITS.md`](docs/security/LESSONS_FROM_PUBLIC_AUDITS.md)).
+  Two things were changed as a result:
+  - On Android 11 and older, NIDO now ignores taps while another app draws
+    over it, as Briar did after its audit. Android 12 and later already hid
+    those overlays. Side effect: with a screen-filter app on, NIDO does not
+    respond to taps until the filter is turned off.
+  - The system log no longer records the Bluetooth or Wi-Fi address of the
+    phones NIDO connects to.
 - **Scope for a professional security audit:**
   [`docs/security/AUDIT_SCOPE.md`](docs/security/AUDIT_SCOPE.md) lists what
   to review, what has already been checked and how, and the weaknesses we

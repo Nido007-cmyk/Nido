@@ -90,6 +90,12 @@ themselves.
 8. v5, encrypted headers and CONFIRM v2 have not been tested on two physical
    phones at the time of writing.
 
+## 5b. Findings from other messengers' public audits
+
+[`LESSONS_FROM_PUBLIC_AUDITS.md`](LESSONS_FROM_PUBLIC_AUDITS.md) maps the
+published findings against Threema, Signal (PQXDH), Briar and Matrix to
+NIDO's code.
+
 ## 6. How to build and test
 
 - Build: [`docs/ANDROID_BUILD.md`](../ANDROID_BUILD.md). CI builds the APK

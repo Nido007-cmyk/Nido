@@ -286,7 +286,7 @@ class NidoLanManager(
     val conn = LanConnection(address, socket)
     connections[address] = conn
     conn.start()
-    Log.i(TAG, "conexión LAN ${if (incoming) "entrante" else "saliente"}: $address")
+    Log.i(TAG, "conexión LAN ${if (incoming) "entrante" else "saliente"}") // sin dirección: el log del sistema no guarda con quién se habla
     listener()?.onConnected(address, null, incoming)
   }
 
