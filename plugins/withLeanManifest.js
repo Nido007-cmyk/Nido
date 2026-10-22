@@ -48,16 +48,20 @@ function applyLeanManifest(manifest) {
   return manifest;
 }
 
-/** Inserta el resValue en buildTypes.release del app/build.gradle (idempotente). */
+/**
+ * Añade al final de app/build.gradle un bloque propio que vuelve a
+ * configurar buildTypes.release (Gradle combina las dos configuraciones).
+ * No se toca el bloque release original: otros plugins (withReleaseSigning)
+ * buscan su forma exacta. Idempotente.
+ */
 function applyStableDevServerIp(gradle) {
   if (gradle.includes(MARKER)) return gradle;
-  const re = /(buildTypes\s*\{[\s\S]*?\brelease\s*\{)/;
-  if (!re.test(gradle)) {
-    throw new Error("[withLeanManifest] no se encontró buildTypes { release { en app/build.gradle");
+  if (!/\bandroid\s*\{/.test(gradle)) {
+    throw new Error("[withLeanManifest] app/build.gradle sin bloque android { }");
   }
-  return gradle.replace(
-    re,
-    `$1\n            // ${MARKER}\n            resValue "string", "react_native_dev_server_ip", "localhost"`,
+  return (
+    gradle.replace(/\s*$/, "\n") +
+    `\n// ${MARKER}\nandroid {\n    buildTypes {\n        release {\n            resValue "string", "react_native_dev_server_ip", "localhost"\n        }\n    }\n}\n`
   );
 }
 

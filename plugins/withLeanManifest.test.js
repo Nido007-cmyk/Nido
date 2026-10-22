@@ -18,15 +18,17 @@ describe("withLeanManifest", () => {
     expect(m.application[0].receiver.find((x) => x.$["android:name"] === "otro.Receiver").$["tools:node"]).toBeUndefined();
   });
 
-  it("fija la IP del servidor de desarrollo solo en release, una vez", () => {
-    const gradle = `android {\n    buildTypes {\n        debug {\n            signingConfig signingConfigs.debug\n        }\n        release {\n            minifyEnabled false\n        }\n    }\n}\n`;
+  it("fija la IP del servidor de desarrollo en release sin tocar el bloque original, una vez", () => {
+    const gradle = `android {\n    buildTypes {\n        release {\n            // Caution!\n            signingConfig signingConfigs.debug\n        }\n    }\n}\n`;
     const out = applyStableDevServerIp(gradle);
-    expect(out).toMatch(/release \{\n\s+\/\/ NIDO: IP fija[^\n]*\n\s+resValue "string", "react_native_dev_server_ip", "localhost"/);
-    expect(out.indexOf("react_native_dev_server_ip")).toBeGreaterThan(out.indexOf("release {"));
+    expect(out.startsWith(gradle)).toBe(true); // el bloque original queda intacto
+    expect(out).toContain('resValue "string", "react_native_dev_server_ip", "localhost"');
     expect(applyStableDevServerIp(out)).toBe(out);
+    // withReleaseSigning sigue encontrando su patrón.
+    expect(/(release \{\n(?:\s*\/\/.*\n)*\s*)signingConfig signingConfigs\.debug/.test(out)).toBe(true);
   });
 
   it("falla en voz alta si la plantilla cambia", () => {
-    expect(() => applyStableDevServerIp("android {}")).toThrow(/buildTypes/);
+    expect(() => applyStableDevServerIp("plugins {}")).toThrow(/android/);
   });
 });
