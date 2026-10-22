@@ -63,6 +63,12 @@ export interface ConfirmPayload {
   cn: string;
   pn: string;
   sig: string;
+  /**
+   * 0.1.48: segunda firma, sobre buildConfirmSignMessageV2 (nombra también
+   * al destinatario). Opcional en el cable: un NIDO viejo no la manda y
+   * tampoco la lee (ignora campos que no conoce), así que no rompe nada.
+   */
+  s2?: string;
 }
 
 /**
@@ -92,7 +98,11 @@ export function parseConfirm(body: Uint8Array): ConfirmPayload {
   if (!HEX32.test(cn)) throw new Error("CONFIRM sin cn válido.");
   if (!HEX32.test(pn)) throw new Error("CONFIRM sin pn válido.");
   if (!HEX128.test(sig)) throw new Error("CONFIRM sin firma válida.");
-  return { pk, cn, pn, sig };
+  if (obj.s2 === undefined) return { pk, cn, pn, sig };
+  // Si viene, tiene que estar bien formada: nada de "medio presente".
+  const s2 = typeof obj.s2 === "string" ? obj.s2.toLowerCase() : "";
+  if (!HEX128.test(s2)) throw new Error("CONFIRM con firma v2 mal formada.");
+  return { pk, cn, pn, sig, s2 };
 }
 
 /**
@@ -105,17 +115,19 @@ export function buildConfirmV1(
   myNonceHex: string,
   peerNonceHex: string,
   sigHex: string,
+  s2Hex?: string,
 ): Uint8Array {
-  return new TextEncoder().encode(
-    JSON.stringify({
-      t: CONFIRM_TYPE_V1,
-      v: CONFIRM_VERSION,
-      pk: myPkHex.toLowerCase(),
-      cn: myNonceHex.toLowerCase(),
-      pn: peerNonceHex.toLowerCase(),
-      sig: sigHex.toLowerCase(),
-    }),
-  );
+  const body: Record<string, unknown> = {
+    t: CONFIRM_TYPE_V1,
+    v: CONFIRM_VERSION,
+    pk: myPkHex.toLowerCase(),
+    cn: myNonceHex.toLowerCase(),
+    pn: peerNonceHex.toLowerCase(),
+    sig: sigHex.toLowerCase(),
+  };
+  // 0.1.48: segunda firma que nombra al destinatario (ver ConfirmPayload.s2).
+  if (s2Hex !== undefined) body.s2 = s2Hex.toLowerCase();
+  return new TextEncoder().encode(JSON.stringify(body));
 }
 
 /**

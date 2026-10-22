@@ -411,6 +411,35 @@ export class P2PSession {
    * Requiere `expectRecipient` (la sesión necesita saber cuál es mi pk).
    */
   confirmPayload(): Record<string, unknown> {
+    // 0.1.48: "cf2" = este teléfono firma siempre el CONFIRM v2 (con
+    // destinatario). Va dentro de la sesión cifrada y autenticada, así que
+    // nadie puede quitarlo: si el otro lado recibió nuestro CONFIRM SIN la
+    // firma v2, sabe que alguien la quitó por el camino (ver confirmV2Downgrade).
+    return { ...this.v5ConfirmPayload(), cf2: 1 };
+  }
+
+  /**
+   * 0.1.48: lo que dijo el transporte sobre ESTE handshake: true si el
+   * CONFIRM del peer traía la firma v2 y verificó; false si no la traía;
+   * null si no se sabe (sesión creada sin pasar por el transporte real).
+   */
+  private peerConfirmV2: boolean | null = null;
+
+  setPeerConfirmV2(verified: boolean): void {
+    this.peerConfirmV2 = verified;
+  }
+
+  /**
+   * 0.1.48: el peer dice, en un frame AUTÉNTICO de esta sesión, que firma el
+   * CONFIRM v2, pero el CONFIRM que nos llegó no la traía: alguien la quitó
+   * en el camino. La sesión no debe usarse.
+   */
+  confirmV2Downgrade(env: P2PEnvelope): boolean {
+    if (env.type !== "session_confirm" || this.peerConfirmV2 !== false) return false;
+    return (env.payload as { cf2?: unknown } | null)?.cf2 === 1;
+  }
+
+  private v5ConfirmPayload(): Record<string, unknown> {
     if (!this.v5Enabled || !this.ownPkHex || this.v5) return {};
     // H solo anuncia que lo tiene: así L sabe que merece la pena esperar.
     if (!(this.ownPkHex < this.peerPkHex)) return { r5cap: 1 };

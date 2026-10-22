@@ -259,6 +259,8 @@ async function migrateOn(db: Awaited<ReturnType<typeof getMemoryDb>>): Promise<v
     "ALTER TABLE p2p_contacts ADD COLUMN disappear_v INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE p2p_contacts ADD COLUMN disappear_pending INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE p2p_contacts ADD COLUMN v5_capable INTEGER NOT NULL DEFAULT 0",
+    // 0.1.48: el contacto ya firmó un CONFIRM v2 (con destinatario).
+    "ALTER TABLE p2p_contacts ADD COLUMN confirm_v2 INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE p2p_messages ADD COLUMN ttl_sec INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE p2p_messages ADD COLUMN ttl_v INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE p2p_messages ADD COLUMN expires_at INTEGER",
@@ -1999,6 +2001,33 @@ export async function setContactV5Capable(pkHex: string, capable: boolean): Prom
       [capable ? 1 : 0, pkHex.toLowerCase()],
     );
   });
+}
+
+/**
+ * 0.1.48: el contacto ya nos mandó un CONFIRM con la firma v2 (que nombra al
+ * destinatario) y verificó. Desde entonces se EXIGE esa firma: un CONFIRM
+ * suyo sin ella se rechaza como intento de degradación. Solo se marca, nunca
+ * se desmarca solo (un atacante no puede "quitar" la marca); al emparejar de
+ * nuevo por QR el contacto empieza sin marcar.
+ */
+export async function setContactConfirmV2(pkHex: string): Promise<void> {
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    await db.runAsync(
+      "UPDATE p2p_contacts SET confirm_v2 = 1 WHERE pk_hex = ? AND superseded_by IS NULL",
+      [pkHex.toLowerCase()],
+    );
+  });
+}
+
+export async function isContactConfirmV2(pkHex: string): Promise<boolean> {
+  await migrate();
+  const db = await getMemoryDb();
+  const row = await db.getFirstAsync<{ confirm_v2?: number | null }>(
+    "SELECT confirm_v2 FROM p2p_contacts WHERE pk_hex = ? AND superseded_by IS NULL LIMIT 1",
+    [pkHex.toLowerCase()],
+  );
+  return row?.confirm_v2 === 1;
 }
 
 export async function isContactV5Capable(pkHex: string): Promise<boolean> {

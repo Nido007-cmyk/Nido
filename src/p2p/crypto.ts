@@ -357,6 +357,28 @@ export function buildConfirmSignMessage(pkHex: string, cnHex: string, pnHex: str
   );
 }
 
+/**
+ * 0.1.48 — mensaje que firma la segunda firma del CONFIRM ("s2"):
+ *   "nido-confirm-v2" | pk_hex | peer_pk_hex | cn_hex | pn_hex
+ *
+ * Igual que v1 pero nombra también la identidad del OTRO lado (a quién se
+ * confirma). Sin esto, la verificación formal (formal/nido_handshake.pv,
+ * consultas 6-7) encontró un "unknown key share": un contacto malicioso
+ * podía hacer que dos teléfonos acabaran con la misma clave de sesión
+ * creyendo cada uno hablar con otro. Firmar el destinatario lo impide (como
+ * SIGMA / Signal, que ligan ambas identidades).
+ */
+export function buildConfirmSignMessageV2(
+  pkHex: string,
+  peerPkHex: string,
+  cnHex: string,
+  pnHex: string,
+): Uint8Array {
+  return utf8Encode(
+    `nido-confirm-v2|${pkHex.toLowerCase()}|${peerPkHex.toLowerCase()}|${cnHex.toLowerCase()}|${pnHex.toLowerCase()}`,
+  );
+}
+
 /** Huella legible para verificación verbal: 8 grupos de 4 hex. */
 export function fingerprint(publicKey: Uint8Array, signingPublicKey?: Uint8Array | null): string {
   if (publicKey.length !== 32) throw new Error("Clave pública inválida (debe ser 32 bytes).");

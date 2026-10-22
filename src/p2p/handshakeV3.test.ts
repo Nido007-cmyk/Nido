@@ -16,6 +16,7 @@ import {
   buildHelloSignMessage,
   buildHelloSignMessageV3,
   buildConfirmSignMessage,
+  buildConfirmSignMessageV2,
   fromHex,
   generateSigningKeypair,
   signDetached,
@@ -226,5 +227,56 @@ describe("R4: tie-break de simultaneous dial (vectores)", () => {
 
   it("fromHex sigue disponible para el transporte (sanity)", () => {
     expect(toHex(fromHex(PK))).toBe(PK);
+  });
+});
+
+describe("0.1.48: CONFIRM v2 (firma con destinatario)", () => {
+  const PEER = "66".repeat(32);
+  const SIG = "77".repeat(64);
+  const S2 = "88".repeat(64);
+
+  it("vector exacto: 'nido-confirm-v2|pk|peer|cn|pn'", () => {
+    expect(utf8(buildConfirmSignMessageV2(PK, PEER, CN, PN))).toBe(
+      `nido-confirm-v2|${PK}|${PEER}|${CN}|${PN}`,
+    );
+    // En minúsculas, como v1.
+    expect(utf8(buildConfirmSignMessageV2(PK.toUpperCase(), PEER.toUpperCase(), CN, PN))).toBe(
+      `nido-confirm-v2|${PK}|${PEER}|${CN}|${PN}`,
+    );
+  });
+
+  it("v1 y v2 nunca firman los mismos bytes (separación de dominio)", () => {
+    expect(utf8(buildConfirmSignMessageV2(PK, PEER, CN, PN))).not.toBe(utf8(buildConfirmSignMessage(PK, CN, PN)));
+  });
+
+  it("el cable con s2 se parsea y conserva la firma v2", () => {
+    const c = parseConfirm(buildConfirmV1(PK, CN, PN, SIG, S2));
+    expect(c).toEqual({ pk: PK, cn: CN, pn: PN, sig: SIG, s2: S2 });
+  });
+
+  it("sin s2 (NIDO viejo) se parsea igual que siempre, sin campo s2", () => {
+    const c = parseConfirm(buildConfirmV1(PK, CN, PN, SIG));
+    expect(c).toEqual({ pk: PK, cn: CN, pn: PN, sig: SIG });
+    expect("s2" in c).toBe(false);
+  });
+
+  it("s2 presente pero mal formado → rechazado", () => {
+    const base = { t: CONFIRM_TYPE_V1, v: CONFIRM_VERSION, pk: PK, cn: CN, pn: PN, sig: SIG };
+    for (const bad of ["", "zz".repeat(64), "88".repeat(63), 123, null, ["x"]]) {
+      const body = new TextEncoder().encode(JSON.stringify({ ...base, s2: bad }));
+      expect(() => parseConfirm(body)).toThrow();
+    }
+  });
+
+  it("el CONFIRM con las dos firmas cabe de sobra en el tope del handshake", () => {
+    expect(buildConfirmV1(PK, CN, PN, SIG, S2).length).toBeLessThan(600);
+  });
+
+  it("una firma v2 hecha para otro destinatario no verifica para mí", () => {
+    const kp = generateSigningKeypair();
+    const me = "99".repeat(32);
+    const sigForOther = signDetached(buildConfirmSignMessageV2(PK, PEER, CN, PN), kp.secretKey);
+    expect(verifyDetached(buildConfirmSignMessageV2(PK, PEER, CN, PN), sigForOther, kp.publicKey)).toBe(true);
+    expect(verifyDetached(buildConfirmSignMessageV2(PK, me, CN, PN), sigForOther, kp.publicKey)).toBe(false);
   });
 });

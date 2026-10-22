@@ -45,6 +45,11 @@ export interface P2PTransportEvents {
     theirEphemeralPk: Uint8Array,
     myNonce: Uint8Array,
     theirNonce: Uint8Array,
+    /**
+     * 0.1.48: el CONFIRM del peer traía la firma v2 (con destinatario) y
+     * verificó. El messenger lo usa para detectar que alguien la quitó.
+     */
+    confirmV2?: boolean,
   ) => void;
   onError?: (message: string) => void;
   /**

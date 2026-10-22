@@ -404,8 +404,8 @@ export class NidoMessenger {
         this.handleDisconnect(pkHex);
         events?.onPeerLost?.(pkHex);
       },
-      onHandshakeComplete: (peerPkHex, myEphSecret, theirEphPk, myNonce, theirNonce) => {
-        void this.completeHandshake(peerPkHex, myEphSecret, theirEphPk, myNonce, theirNonce).catch(() => {});
+      onHandshakeComplete: (peerPkHex, myEphSecret, theirEphPk, myNonce, theirNonce, confirmV2) => {
+        void this.completeHandshake(peerPkHex, myEphSecret, theirEphPk, myNonce, theirNonce, confirmV2).catch(() => {});
       },
       onFrame: (peerPkHex, frame) => {
         void this.handleFrame(peerPkHex, frame).catch(() => {});
@@ -908,6 +908,25 @@ export class NidoMessenger {
   }
 
   /**
+   * 0.1.48: alguien quitó la firma v2 del CONFIRM del peer (el peer la usa,
+   * lo dice dentro de la sesión cifrada). Se corta la conexión y el contacto
+   * queda marcado: desde ahora su CONFIRM sin v2 se rechaza ya en el saludo.
+   */
+  private async rejectConfirmV2Downgrade(key: string): Promise<void> {
+    try {
+      const { setContactConfirmV2 } = await import("./store");
+      await setContactConfirmV2(key);
+    } catch {
+      /* best-effort: la conexión se corta igual */
+    }
+    try {
+      await this.transport.disconnect(key);
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  /**
    * Completa el handshake v3 tras el intercambio HELLO + CONFIRM firmados:
    * 1. `const eph = messenger.newHandshakeEphemeral()` → se envía `eph.publicKey` al peer.
    * 2. Se recibe `theirEphemeralPk` + `theirNonce` del peer.
@@ -935,6 +954,8 @@ export class NidoMessenger {
     theirEphemeralPk: Uint8Array,
     myNonce: Uint8Array,
     theirNonce: Uint8Array,
+    /** 0.1.48: el transporte verificó la firma v2 del CONFIRM del peer. */
+    confirmV2?: boolean,
   ): Promise<void> {
     this.assertLive();
     const session = P2PSession.fromHandshakeV2(
@@ -944,6 +965,7 @@ export class NidoMessenger {
       myNonce,
       theirNonce,
     );
+    if (confirmV2 !== undefined) session.setPeerConfirmV2(confirmV2);
     if (this.myPk) {
       session.expectRecipient(toHex(this.myPk));
       // N6: derivación read-only del session_tag (R4 congelado).
@@ -1419,6 +1441,13 @@ export class NidoMessenger {
       // anterior siguió intacta (H-8): un HELLO repetido no la desaloja.
       const candidate = this.pendingSessions.get(key);
       const candEnv = candidate?.unpack(frame) ?? null;
+      if (candidate && candEnv && candidate.confirmV2Downgrade(candEnv)) {
+        // 0.1.48: el peer firma CONFIRM v2 pero el que nos llegó venía sin
+        // ella: alguien la quitó. La candidata no se promociona nunca.
+        this.pendingSessions.delete(key);
+        await this.rejectConfirmV2Downgrade(key);
+        return null;
+      }
       if (candidate && candEnv) {
         this.sessions.set(key, candidate);
         this.pendingSessions.delete(key);
@@ -1427,6 +1456,11 @@ export class NidoMessenger {
       } else {
         return null; // sin sesión válida: manipulado, replay o corrupto; se descarta en silencio
       }
+    }
+    if (session && session.confirmV2Downgrade(env)) {
+      this.sessions.delete(key);
+      await this.rejectConfirmV2Downgrade(key);
+      return null;
     }
     if (env.type === "delivery_ack") {
       // N6 §3.2/§4.5: un ACK nunca va al inbox, nunca dispara flushOutbox

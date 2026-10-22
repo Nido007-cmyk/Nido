@@ -86,13 +86,13 @@ describe("relleno de mensajes", () => {
 describe("protocolo v5", () => {
   it("solo L ofrece, y solo si tiene v5 activado", () => {
     const p = pair({ lowV5: true, highV5: true });
-    expect(p.sH.confirmPayload()).toEqual({ r5cap: 1 }); // H solo anuncia
+    expect(p.sH.confirmPayload()).toEqual({ r5cap: 1, cf2: 1 }); // H solo anuncia
     const offer = p.sL.confirmPayload() as { r5?: { v: number; dh: string; ek: string } };
     expect(offer.r5?.v).toBe(1);
     expect(offer.r5?.dh.length).toBe(64);
     expect(offer.r5?.ek.length).toBe(1184 * 2);
     const off = pair({ lowV5: false, highV5: true });
-    expect(off.sL.confirmPayload()).toEqual({});
+    expect(off.sL.confirmPayload()).toEqual({ cf2: 1 });
   });
 
   it("todos los session_confirm miden lo mismo (con oferta, con anuncio o vacíos)", () => {
