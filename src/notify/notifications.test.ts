@@ -221,3 +221,25 @@ describe("0.1.35: cada mes / cada año", () => {
     expect(mocks.scheduleNotificationAsync.mock.calls[1][0].trigger).toEqual({ type: "yearly", month: 2, day: 15, hour: 9, minute: 0, channelId: "nido-reminders" });
   });
 });
+
+describe("0.1.47: aviso de mensaje NIDO", () => {
+  it("canal propio oculto en la pantalla de bloqueo", async () => {
+    await initNotifications();
+    expect(mocks.setNotificationChannelAsync).toHaveBeenCalledWith(
+      "nido-messages",
+      expect.objectContaining({ lockscreenVisibility: 3 }),
+    );
+  });
+
+  it("un solo aviso, sin remitente ni texto del mensaje", async () => {
+    const { notifyIncomingP2P } = await import("./notifications");
+    await notifyIncomingP2P();
+    await notifyIncomingP2P();
+    expect(mocks.scheduleNotificationAsync).toHaveBeenCalledTimes(2);
+    for (const [arg] of mocks.scheduleNotificationAsync.mock.calls) {
+      expect(arg.identifier).toBe("nido-p2p-message");
+      expect(arg.content).toEqual({ title: "NIDO", body: "New NIDO message", sound: "default" });
+      expect(arg.trigger).toEqual({ channelId: "nido-messages" });
+    }
+  });
+});

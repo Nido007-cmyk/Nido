@@ -79,7 +79,15 @@ vi.mock("expo-file-system/legacy", () => ({
     return c;
   },
   makeDirectoryAsync: async () => {},
-  readDirectoryAsync: async () => [] as string[],
+  // Lista los hijos directos del directorio a partir de los archivos simulados.
+  readDirectoryAsync: async (dir: string) => {
+    const base = dir.endsWith("/") ? dir : `${dir}/`;
+    const names = new Set<string>();
+    for (const f of fsx.files.keys()) {
+      if (f.startsWith(base)) names.add(f.slice(base.length).split("/")[0]);
+    }
+    return [...names];
+  },
 }));
 vi.mock("expo-sqlite", () => ({
   deleteDatabaseAsync: async (name: string) => {
@@ -287,6 +295,35 @@ describe("resetAllAppData (Clear All Data)", () => {
     const k2 = await getDatabaseKeyHex();
     expect(k2).toMatch(/^[0-9a-f]{64}$/);
     expect(k2).not.toBe(k1);
+  });
+
+  it("0.1.47: borra respaldos locales, copia de restauración, revocados e interruptores", async () => {
+    await seedKeys();
+    seedFullDevice();
+    const leftovers = [
+      `${DOC}nido-backup-2026-10-22T05-00-00.db`,
+      `${DOC}nido-backup-2026-10-22T05-00-00.db.manifest.json`,
+      `${DOC}nido-backup-2026-10-22T05-00-00.db.knowledge.db`,
+      `${DOC}nido-backup-2026-10-22T05-00-00.nidobackup.json`,
+      `${DOC}restored.db`,
+      `${DOC}revoked-peers.json`,
+      `${DOC}feature-flags.json`,
+      `${DOC}rekey-staging.json`,
+      `${DOC}SQLite/nido_memory.db.pre-restore-2026-10-22T05-00-00-000Z`,
+      `${DOC}SQLite/nido-restore-123.db`,
+    ];
+    for (const f of leftovers) fsx.files.set(f, "x");
+    await resetAllAppData();
+    for (const f of leftovers) expect(fsExists(f), `${f} debe haber desaparecido`).toBe(false);
+  });
+
+  it("0.1.47: si un respaldo local sobrevive, el wipe falla en voz alta", async () => {
+    await seedKeys();
+    seedFullDevice();
+    const f = `${DOC}nido-backup-2026-10-22T05-00-00.db`;
+    fsx.files.set(f, "x");
+    fsx.noDelete.add(norm(f));
+    await expect(resetAllAppData()).rejects.toThrow("nido-backup-");
   });
 
   it("no falla en un dispositivo ya vacío", async () => {

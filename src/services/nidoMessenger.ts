@@ -37,7 +37,14 @@ export function getSharedNidoMessenger(): NidoMessenger {
       "P2P no disponible: Clear All Data en curso. Se requiere completar el borrado."
     );
   }
-  if (!shared) shared = new NidoMessenger();
+  if (!shared) {
+    shared = new NidoMessenger();
+    // 0.1.47: aviso genérico de mensaje NIDO nuevo cuando la app no está en
+    // primer plano (sin remitente ni texto; oculto en la pantalla de bloqueo).
+    shared.onIncomingMessage = () => {
+      void notifyIfBackground();
+    };
+  }
   return shared;
 }
 
@@ -68,4 +75,16 @@ export function completeP2PDataReset(): void {
 /** Solo para tests: estado del bloqueo. */
 export function isP2PDataResetInProgress(): boolean {
   return resetInProgress;
+}
+
+async function notifyIfBackground(): Promise<void> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { AppState } = require("react-native") as { AppState: { currentState: string } };
+    if (AppState.currentState === "active") return;
+    const { notifyIncomingP2P } = await import("../notify/notifications");
+    await notifyIncomingP2P();
+  } catch {
+    /* sin módulo de notificaciones (tests): nada */
+  }
 }

@@ -9,7 +9,7 @@ The list covers every package that `package-lock.json` does not mark as developm
 
 AI models and knowledge packs are not part of the app: they are downloaded separately and keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin) are not listed here yet.
 
-Source: `package-lock.json sha256:af4bfee30cfd` · 589 packages.
+Source: `package-lock.json sha256:3a91d5c2f1b2` · 589 packages.
 
 ## License elections
 

@@ -19,6 +19,9 @@
 const { withAndroidManifest } = require("@expo/config-plugins");
 
 const SCAN = "android.permission.BLUETOOTH_SCAN";
+// 0.1.47: los permisos Bluetooth antiguos solo hacen falta hasta Android 11
+// (API 30); desde Android 12 los sustituyen SCAN/CONNECT/ADVERTISE.
+const LEGACY_BT = new Set(["android.permission.BLUETOOTH", "android.permission.BLUETOOTH_ADMIN"]);
 const FINE_LOCATION = "android.permission.ACCESS_FINE_LOCATION";
 const COARSE_LOCATION = "android.permission.ACCESS_COARSE_LOCATION";
 
@@ -37,7 +40,7 @@ function applyBluetoothLocationFlags(manifest) {
     const name = p.$["android:name"];
     if (name === SCAN) {
       p.$["android:usesPermissionFlags"] = "neverForLocation";
-    } else if (name === FINE_LOCATION || name === COARSE_LOCATION) {
+    } else if (name === FINE_LOCATION || name === COARSE_LOCATION || LEGACY_BT.has(name)) {
       const current = Number(p.$["android:maxSdkVersion"]);
       if (!Number.isInteger(current) || current > 30) {
         p.$["android:maxSdkVersion"] = "30";

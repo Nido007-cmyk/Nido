@@ -61,7 +61,9 @@ jobs:
           java-version: 17
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
         with:
-          packages: platform-tools
+          # 0.1.47: el NDK se instala aquí (antes lo descargaba Gradle a
+          # mitad de compilación y una descarga fallida tumbó un build).
+          packages: platform-tools ndk;27.0.12077973
       - run: npm ci
       - run: npm run notices
       - name: Deep-clean runner disk

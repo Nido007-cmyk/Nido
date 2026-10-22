@@ -296,3 +296,16 @@ describe("revisión independiente: cola de L y aviso de temporizador", () => {
 });
 
 void toHex;
+
+describe("0.1.47: aviso de mensaje nuevo", () => {
+  it("se avisa una vez por mensaje NUEVO, nunca por duplicados ni por avisos de ajustes", async () => {
+    const s = await setup();
+    const seen: string[] = [];
+    s.m.onIncomingMessage = (_pk, type) => seen.push(type);
+    const chat = s.fromPeer("chat", { text: "hola", message_id: "n-1", ttl: 0, ttl_v: 0 });
+    await s.m.handleFrame(s.peerPk, s.peer.pack(chat));
+    await s.m.handleFrame(s.peerPk, s.peer.pack(s.fromPeer("chat", { text: "hola", message_id: "n-1", ttl: 0, ttl_v: 0 })));
+    await s.m.handleFrame(s.peerPk, s.peer.pack(s.fromPeer("settings" as never, { disappear: { sec: 300, v: 1 } })));
+    expect(seen).toEqual(["chat"]);
+  });
+});

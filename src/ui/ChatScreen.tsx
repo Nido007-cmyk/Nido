@@ -230,6 +230,11 @@ export function ChatScreen({
         .catch(() => {});
     };
     purge();
+    // 0.1.47: tras una restauración, la copia previa se borra en cuanto la
+    // base restaurada abre bien.
+    import("../security/backup")
+      .then(({ cleanupAfterSuccessfulRestore }) => cleanupAfterSuccessfulRestore())
+      .catch(() => {});
     const sub = AppState.addEventListener("change", (st) => {
       if (st === "active") purge();
     });

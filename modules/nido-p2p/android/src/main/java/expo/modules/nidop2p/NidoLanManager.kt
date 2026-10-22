@@ -63,6 +63,19 @@ class NidoLanManager(
      */
     const val HANDSHAKE_FRAMES = 2
     const val MAX_HANDSHAKE_FRAME_BYTES = 4 * 1024
+    /**
+     * 0.1.47 (auditoría): conexiones simultáneas por dirección IP. Sin esto,
+     * un solo dispositivo de la red podía ocupar los MAX_CONNECTIONS huecos
+     * abriendo y reabriendo conexiones sin saludar, y dejar fuera a tus
+     * contactos.
+     */
+    const val MAX_CONNECTIONS_PER_IP = 2
+    /**
+     * 0.1.47: tiempo máximo de silencio antes de completar el saludo (los dos
+     * primeros frames). Después ya no hay tope: una sesión puede estar
+     * callada mucho rato.
+     */
+    const val HANDSHAKE_READ_TIMEOUT_MS = 20_000
     const val TAG = "NidoLan"
 
     private val ADDRESS_RE = Regex("^LAN:(\\d{1,3}(?:\\.\\d{1,3}){3}):(\\d{1,5})$")
@@ -217,6 +230,16 @@ class NidoLanManager(
         Log.w(TAG, "conexión rechazada: tope de $MAX_CONNECTIONS conexiones")
         closeQuietly(socket)
         continue
+      }
+      val ipPrefix = "$ADDRESS_PREFIX${remote.hostAddress}:"
+      if (connections.keys.count { it.startsWith(ipPrefix) } >= MAX_CONNECTIONS_PER_IP) {
+        Log.w(TAG, "conexión rechazada: tope de $MAX_CONNECTIONS_PER_IP por dirección")
+        closeQuietly(socket)
+        continue
+      }
+      try {
+        socket.soTimeout = HANDSHAKE_READ_TIMEOUT_MS
+      } catch (_: Exception) {
       }
       onSocket(socket, formatAddress(remote, socket.port), incoming = true)
     }
@@ -538,6 +561,13 @@ class NidoLanManager(
           framesRead++
           val body = ByteArray(bodyLen)
           readFully(input, body, bodyLen)
+          if (framesRead == HANDSHAKE_FRAMES) {
+            // Saludo completo: sin tope de silencio a partir de aquí.
+            try {
+              socket.soTimeout = 0
+            } catch (_: Exception) {
+            }
+          }
           listener()?.onFrame(address, Base64.encodeToString(body, Base64.NO_WRAP))
         }
       } catch (_: IOException) {

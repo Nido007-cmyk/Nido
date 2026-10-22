@@ -1561,6 +1561,7 @@ export class NidoMessenger {
     });
     if (!isNew) return null; // duplicado persistente (p. ej. tras reinicio): no reprocesar
     if (legacyTimer) await this.adoptIncomingTimer(key, legacyTimer);
+    if (env.type === "chat" || env.type === "agent_task") this.signalIncoming(key, env.type);
     // Cualquier frame válido confirma la sesión: es seguro vaciar la cola.
     this.assertLive();
     await this.flushOutbox(key);
@@ -1632,6 +1633,7 @@ export class NidoMessenger {
       return null;
     }
     if (timer) await this.adoptIncomingTimer(key, timer);
+    if (env.type === "chat" || env.type === "agent_task") this.signalIncoming(key, env.type);
     if (tag) {
       await this.emitDeliveryAck(key, session, messageId, env.type);
     }
@@ -1981,6 +1983,19 @@ export class NidoMessenger {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * 0.1.47: se llama al guardar un mensaje entrante NUEVO (chat o tarea).
+   * El servicio compartido lo usa para el aviso genérico de mensaje nuevo.
+   */
+  onIncomingMessage: ((peerPkHex: string, type: string) => void) | null = null;
+  private signalIncoming(peerKey: string, type: string): void {
+    try {
+      this.onIncomingMessage?.(peerKey, type);
+    } catch {
+      /* el aviso nunca afecta a la recepción */
     }
   }
 

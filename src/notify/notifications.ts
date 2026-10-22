@@ -43,6 +43,9 @@ interface NotifyStrings {
   briefingChannel: string;
   reminderTitle: string;
   briefingTitle: string;
+  messagesChannel: string;
+  messageTitle: string;
+  messageBody: string;
 }
 
 const EN_STRINGS: NotifyStrings = {
@@ -50,6 +53,9 @@ const EN_STRINGS: NotifyStrings = {
   briefingChannel: "NIDO Daily Briefing",
   reminderTitle: "NIDO · Reminder",
   briefingTitle: "NIDO · Your day",
+  messagesChannel: "NIDO messages",
+  messageTitle: "NIDO",
+  messageBody: "New NIDO message",
 };
 
 function notifyStrings(): NotifyStrings {
@@ -60,6 +66,9 @@ function notifyStrings(): NotifyStrings {
       briefingChannel: i18n.t("notifications.briefingChannel"),
       reminderTitle: i18n.t("notifications.reminderTitle"),
       briefingTitle: i18n.t("notifications.briefingTitle"),
+      messagesChannel: i18n.t("notifications.messagesChannel"),
+      messageTitle: i18n.t("notifications.messageTitle"),
+      messageBody: i18n.t("notifications.messageBody"),
     };
   } catch {
     return EN_STRINGS;
@@ -109,6 +118,14 @@ export async function initNotifications(): Promise<boolean> {
       importance: Notifications.AndroidImportance.DEFAULT,
       // M-1: el resumen diario incluye eventos del calendario y datos de
       // memoria; oculto en la pantalla de bloqueo por defecto.
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.SECRET,
+    });
+    // 0.1.47: mensajes de otro NIDO. El aviso no lleva remitente ni texto,
+    // y además se oculta en la pantalla de bloqueo.
+    await Notifications.setNotificationChannelAsync("nido-messages", {
+      name: notifyStrings().messagesChannel,
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: "default",
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.SECRET,
     });
     // FIX 2026-10-08: marcar el recordatorio como completado cuando su
@@ -319,5 +336,33 @@ export async function cancelTaskNotification(taskId: string): Promise<void> {
     await Notifications.cancelScheduledNotificationAsync(TASK_PREFIX + taskId);
   } catch {
     // No estaba programado: nada que hacer.
+  }
+}
+
+const MESSAGE_IDENTIFIER = "nido-p2p-message";
+
+/**
+ * 0.1.47: aviso de mensaje NIDO nuevo. Siempre el mismo identificador (un
+ * solo aviso, no uno por mensaje) y sin datos: ni quién escribe ni qué.
+ */
+export async function notifyIncomingP2P(): Promise<void> {
+  try {
+    const s = notifyStrings();
+    await Notifications.scheduleNotificationAsync({
+      identifier: MESSAGE_IDENTIFIER,
+      content: { title: s.messageTitle, body: s.messageBody, sound: "default" },
+      trigger: { channelId: "nido-messages" },
+    });
+  } catch {
+    // Sin permiso: el mensaje está igual en el chat NIDO.
+  }
+}
+
+/** Al abrir el chat NIDO, el aviso ya no hace falta. */
+export async function dismissIncomingP2P(): Promise<void> {
+  try {
+    await Notifications.dismissNotificationAsync(MESSAGE_IDENTIFIER);
+  } catch {
+    /* no estaba */
   }
 }

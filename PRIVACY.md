@@ -51,13 +51,13 @@ Voice dictation uses the speech recognition service installed on your phone. NID
 - **Display over other apps is blocked**: on Android 12 and later NIDO asks the system to hide other apps' overlays while it is on screen, so nobody can draw a fake button over a confirmation.
 - **Location** (on older Android versions): required by Android to scan for Bluetooth devices. NIDO does not read your location.
 - **Microphone**: voice input, only while you hold dictation open.
-- **Notifications**: reminders and incoming messages.
+- **Notifications**: reminders, and a notice when a NIDO message arrives with the app in the background. The message notice never shows who wrote or what: only "New NIDO message", hidden on the lock screen.
 - **Calendar and contacts**, if you grant them: so the agent can read them on the phone when you ask. They are not uploaded.
 
 ## Your controls
 
 - Delete any chat, memory, document or contact from inside the app.
-- Erase everything from Settings → Danger zone, or by uninstalling the app.
+- Erase everything from Settings → Danger zone, or by uninstalling the app. This also deletes the local backups made from Settings; copies you saved elsewhere (Downloads, another app) are outside NIDO and stay.
 - Optional panic button (Settings → Security): holding it for 3 seconds erases all NIDO data at once, without asking for a fingerprint.
 - NIDO asks your keyboard not to learn from what you type in it (incognito keyboard). Major keyboards respect this; NIDO cannot force one that ignores it.
 - Create an encrypted backup and keep the key yourself. If you lose the key, nobody can recover the data, including the maintainers.
@@ -121,13 +121,13 @@ El dictado usa el servicio de reconocimiento de voz instalado en tu teléfono. N
 - **Superposiciones bloqueadas**: en Android 12 y posteriores NIDO pide al sistema ocultar las capas de otras apps mientras está en pantalla, para que nadie pueda dibujar un botón falso sobre una confirmación.
 - **Ubicación** (en versiones antiguas de Android): Android la exige para buscar dispositivos Bluetooth. NIDO no lee tu ubicación.
 - **Micrófono**: entrada por voz, solo mientras dictas.
-- **Notificaciones**: recordatorios y mensajes entrantes.
+- **Notificaciones**: recordatorios y un aviso cuando llega un mensaje NIDO con la app en segundo plano. El aviso nunca muestra quién escribe ni qué: solo «Nuevo mensaje NIDO», y oculto en la pantalla de bloqueo.
 - **Calendario y contactos**, si los concedes: para que el agente los lea en el teléfono cuando se lo pides. No se suben a ningún lado.
 
 ## Tus controles
 
 - Borra cualquier chat, memoria, documento o contacto desde la app.
-- Borra todo desde Ajustes → Zona de peligro, o desinstalando la app.
+- Borra todo desde Ajustes → Zona de peligro, o desinstalando la app. Eso borra también los respaldos locales hechos desde Ajustes; las copias que guardaste fuera (Descargas, otra app) quedan fuera de NIDO y siguen ahí.
 - Botón de pánico opcional (Ajustes → Seguridad): mantenerlo 3 segundos borra todos los datos de NIDO de una vez, sin pedir huella.
 - NIDO pide a tu teclado que no aprenda de lo que escribes en la app (teclado incógnito). Los teclados principales lo respetan; NIDO no puede obligar a uno que lo ignore.
 - Crea un respaldo cifrado y guarda tú la clave. Si pierdes la clave, nadie puede recuperar los datos, tampoco quienes mantienen el proyecto.

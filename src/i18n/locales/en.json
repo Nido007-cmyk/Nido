@@ -834,7 +834,10 @@
     "reminderChannel": "NIDO Reminders",
     "briefingChannel": "NIDO Daily Briefing",
     "reminderTitle": "NIDO · Reminder",
-    "briefingTitle": "NIDO · Your day"
+    "briefingTitle": "NIDO · Your day",
+    "messagesChannel": "NIDO messages",
+    "messageTitle": "NIDO",
+    "messageBody": "New NIDO message"
   },
   "agentConfirm": {
     "createEventTitle": "Create event",

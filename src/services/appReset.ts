@@ -44,6 +44,68 @@ const SETTINGS_FILE = `${FileSystem.documentDirectory}settings.json`;
  */
 const WIPE_MARKER = `${FileSystem.documentDirectory}.nido-wipe-in-progress`;
 
+// 0.1.47 (auditoría): restos que el borrado no tocaba.
+// - En documentos: respaldos locales (nido-backup-*.db y acompañantes),
+//   restos de restaurar un respaldo portable (restored.db*), la lista de
+//   contactos revocados, los interruptores y el estado de una rotación.
+// - En SQLite/: la copia previa a cada restauración (*.pre-restore-*) y los
+//   temporales de "restaurar con clave" (nido-restore-*).
+const DOC_LEFTOVER_FILES = new Set([
+  "revoked-peers.json",
+  "revoked-peers.json.tmp",
+  "feature-flags.json",
+  "rekey-staging.json",
+]);
+function isDocLeftover(name: string): boolean {
+  return name.startsWith("nido-backup-") || name.startsWith("restored.db") || DOC_LEFTOVER_FILES.has(name);
+}
+function isSqliteLeftover(name: string): boolean {
+  return name.includes(".pre-restore-") || name.startsWith("nido-restore-");
+}
+async function listDir(dir: string): Promise<string[] | null> {
+  try {
+    const read = (FileSystem as { readDirectoryAsync?: (uri: string) => Promise<string[]> }).readDirectoryAsync;
+    if (typeof read !== "function") return null;
+    return await read(dir);
+  } catch {
+    return null;
+  }
+}
+const DOC_DIR = FileSystem.documentDirectory ?? "";
+const SQLITE_DIR_SLASH = `${FileSystem.documentDirectory}SQLite/`;
+
+async function deleteLeftovers(): Promise<void> {
+  for (const [dir, match] of [
+    [DOC_DIR, isDocLeftover],
+    [SQLITE_DIR_SLASH, isSqliteLeftover],
+  ] as const) {
+    const names = await listDir(dir);
+    for (const name of names ?? []) {
+      if (match(name)) await FileSystem.deleteAsync(`${dir}${name}`, { idempotent: true });
+    }
+  }
+  // Por si el listado no está disponible: los nombres fijos, uno a uno.
+  for (const name of DOC_LEFTOVER_FILES) {
+    await FileSystem.deleteAsync(`${DOC_DIR}${name}`, { idempotent: true });
+  }
+}
+
+async function checkLeftovers(survivors: string[]): Promise<void> {
+  for (const [dir, match] of [
+    [DOC_DIR, isDocLeftover],
+    [SQLITE_DIR_SLASH, isSqliteLeftover],
+  ] as const) {
+    const names = await listDir(dir);
+    if (names === null) {
+      // Sin listado (solo puede pasar si el sistema de archivos falla): se
+      // comprueban al menos los nombres fijos.
+      if (dir === DOC_DIR) for (const n of DOC_LEFTOVER_FILES) await checkGone(`${dir}${n}`, survivors);
+      continue;
+    }
+    for (const name of names) if (match(name)) survivors.push(`${dir}${name}`);
+  }
+}
+
 export async function wipeInterrupted(): Promise<boolean> {
   // Fail-closed: si el marcador no se puede comprobar, NO se asume
   // "limpio". El error se propaga para que el arranque muestre bloqueo en
@@ -230,6 +292,16 @@ async function resetAllAppDataInner(): Promise<void> {
   // garantía del wipe: una app "limpia" seguía arrastrando los registros
   // de instalación de los modelos.
   await FileSystem.deleteAsync(installStatePath(), { idempotent: true });
+  // 0.1.47: respaldos locales, copia de restauración, revocados,
+  // interruptores (el de pánico incluido: no debe delatar nada) y la
+  // rotación a medias. Los interruptores en memoria vuelven a los de fábrica.
+  await deleteLeftovers();
+  try {
+    const { resetFeatureFlagsInMemory } = await import("../config/featureFlags");
+    resetFeatureFlagsInMemory();
+  } catch {
+    /* sin módulo: nada en memoria */
+  }
 
   // 4. Verificación: todo lo anterior debe haber desaparecido. Si algo
   //    sobrevive (o no se puede comprobar), se lanza en vez de declarar
@@ -255,6 +327,7 @@ async function resetAllAppDataInner(): Promise<void> {
   ]) {
     await checkGone(p, survivors);
   }
+  await checkLeftovers(survivors);
   if ((await peekDatabaseKey()) !== null) survivors.push("keystore:nido_db_key");
   if ((await readVaultBlob()) !== null) survivors.push("keystore:nido_db_key_wrapped_v1");
   if ((await loadP2PPrivateKey()) !== null) survivors.push("keystore:nido_p2p_sk");

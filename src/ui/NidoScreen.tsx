@@ -316,10 +316,15 @@ export function NidoScreen({
       // mensajes temporales recibidos (como Signal: al verlos). Solo con la
       // app en primer plano: el refresco periódico sigue en segundo plano y
       // ahí nadie está mirando.
-      if (AppState.currentState === "active") {
-        await mRef.current.markConversationSeen(pkHex).catch(() => 0);
+      let conv = await getConversation(pkHex);
+      // 0.1.47: solo se escribe en la base si hay algún temporal recibido
+      // cuya cuenta atrás aún no empezó (antes: una escritura cada 4 s).
+      const needsStart = conv.some((m) => m.dir === "in" && (m.ttlSec ?? 0) > 0 && m.expiresAt == null);
+      if (needsStart && AppState.currentState === "active") {
+        const started = await mRef.current.markConversationSeen(pkHex).catch(() => 0);
+        if (started > 0) conv = await getConversation(pkHex);
       }
-      setMessages(await getConversation(pkHex));
+      setMessages(conv);
       // Temporizador (puede haberlo adoptado de un mensaje del contacto) y
       // si la sesión va en v5 (clave por mensaje + ML-KEM).
       setDisappearSec(await mRef.current.getDisappearingTimer(pkHex).catch(() => 0));
@@ -1070,6 +1075,10 @@ export function NidoScreen({
       setNotice(null);
       setShowTimerPicker(false);
       setDisappearSec(0);
+      // 0.1.47: el aviso de mensaje nuevo ya cumplió su función.
+      import("../notify/notifications")
+        .then(({ dismissIncomingP2P }) => dismissIncomingP2P())
+        .catch(() => {});
       void mRef.current
         .getDisappearingTimer(c.pkHex)
         .then(setDisappearSec)

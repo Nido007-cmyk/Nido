@@ -4,6 +4,46 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.47-alpha — 2026-10-22
+
+Fixes from a full audit of NIDO.
+
+### Fixed
+- **"Erase all data" and the panic button now really erase everything.**
+  Before, these stayed on the phone: local backups made from Settings (all
+  your chats, encrypted with the key you were shown), the copy NIDO keeps
+  when restoring a backup, the list of revoked contacts, and the settings
+  file that showed, for example, that the panic button was on. Now they are
+  deleted too, and the erase fails loudly if any of them survives.
+- **Disappearing messages no longer survive in backups.** A backup now
+  leaves them out (as Signal does), and the copy kept after restoring a
+  backup is deleted the next time NIDO opens normally.
+- **You get a notice when a NIDO message arrives** with the app in the
+  background. It says only "New NIDO message": not who wrote it, not what
+  they wrote, and it is hidden on the lock screen. The privacy policy
+  already promised message notifications; they did not exist.
+
+### Security
+- **Local Wi-Fi: at most 2 connections from the same device**, and a
+  device that connects has 20 seconds to say hello. Before, one device on
+  your network could fill all 8 connection slots and keep your contacts
+  out.
+- The NIDO chat no longer writes to the database every 4 seconds while it
+  is open; it only does so when a disappearing message starts its timer.
+- The old Bluetooth permissions are limited to Android 11 and earlier, as
+  Android recommends.
+- Every build now lists the final Android permissions and the parts of
+  the app other apps can open, so they can be reviewed on each release.
+  The first list showed things libraries added that NIDO never uses, now
+  removed: the Firebase push-notification receiver and its permission,
+  "display over other apps", Google Play's install referrer and permission
+  to edit your contacts (NIDO only reads them, when you ask).
+- **Reproducible builds:** found why two builds of the same code sometimes
+  differed: React Native stored the IP address of the machine that built
+  the app inside it (for its development server, unused in the released
+  app). It is now fixed to the same value on every machine. Two independent
+  builds of this release now match in all 1,554 files (signature excluded).
+
 ## 0.1.46-alpha — 2026-10-22
 
 This release brings over the security features of Signal and Briar that

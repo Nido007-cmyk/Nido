@@ -116,7 +116,9 @@ jobs:
           # and makes sdkmanager exit 1. Install only what is needed here;
           # Gradle downloads build-tools/platforms itself (licenses are
           # pre-accepted by this action).
-          packages: platform-tools
+          # 0.1.47: el NDK se instala aquí (antes lo descargaba Gradle a
+          # mitad de compilación y una descarga fallida tumbó un build).
+          packages: platform-tools ndk;27.0.12077973
 
       - name: Install JS dependencies
         run: npm ci
@@ -209,7 +211,28 @@ jobs:
         # assembleRelease (not assembleDebug): embeds the JS bundle so the app
         # cold-launches without Metro, and __DEV__=false activates the
         # production security paths (fail-closed key management).
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --stacktrace
+        shell: bash
+        run: |
+          # 0.1.47: si falla, el motivo sale como anotación (los logs de CI
+          # no siempre se pueden abrir).
+          set -o pipefail
+          ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --stacktrace 2>&1 | tee "$RUNNER_TEMP/gradle.log" || {
+            grep -A12 "What went wrong" "$RUNNER_TEMP/gradle.log" | head -40 | while IFS= read -r l; do echo "::error title=gradle::$l"; done
+            grep -iE "^e: |error:|ERROR:|FAILURE" "$RUNNER_TEMP/gradle.log" | head -20 | while IFS= read -r l; do echo "::error title=gradle::$l"; done
+            exit 1
+          }
+
+      - name: Manifest summary (permissions and exported components)
+        # 0.1.47 (auditoría): el manifiesto FINAL (tras fusionar los de todas
+        # las librerías) queda a la vista en cada compilación, como anotación.
+        if: always()
+        shell: bash
+        run: |
+          AAPT2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          if [ -z "$AAPT2" ] || [ ! -f "$APK" ]; then echo "sin aapt2 o sin APK"; exit 0; fi
+          "$AAPT2" dump xmltree --file AndroidManifest.xml "$APK" > manifest.txt
+          python3 scripts/manifest-summary.py manifest.txt --github
 
       - name: Upload APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
