@@ -1,7 +1,7 @@
 # NIDO alpha — Release Notes
 
 > This document keeps the alpha overview and the current known
-> limitations, kept up to date with the latest release (0.1.50-alpha).
+> limitations, kept up to date with the latest release (0.1.51-alpha).
 > Per-version changes from 0.1.19 on are in the
 > [changelog](../CHANGELOG.md) and in each GitHub release; the notes for
 > 0.1.1 to 0.1.18 are kept below for reference.
@@ -261,7 +261,7 @@ Fixes from the 2026-10-10 code audit:
 
 **This alpha has NOT undergone a professional security audit.** The app uses:
 
-- Ed25519 signatures and X25519 key exchange for P2P; experimental Double Ratchet and ML-KEM-768 (via @noble/post-quantum, which has not been independently audited either)
+- Ed25519 signatures and X25519 key exchange for P2P (tweetnacl, audited by Cure53 in 2017); Double Ratchet and ML-KEM-768 (mlkem-native since 0.1.51, with formally verified parts; NIDO's own protocol code has not been professionally audited)
 - SQLCipher for on-device encrypted storage
 - A random 256-bit database key held in the Android Keystore (no password-based key derivation)
 - Backups that are a copy of the already-encrypted database; the key is exported separately, in plain hex, and restoring a backup on a different installation requires that exported key
