@@ -91,7 +91,8 @@ La interfaz está disponible en español, inglés y portugués.
 - Los mensajes entre dos NIDO (Bluetooth, o Wi-Fi local como respaldo) van
   cifrados de extremo a extremo con claves intercambiadas por código QR
   (X25519, firmas Ed25519, XSalsa20-Poly1305). El teléfono que inicia una
-  conexión todavía manda su clave pública en claro; ocultarla está previsto.
+  conexión todavía manda su clave pública en claro por defecto; el ajuste
+  experimental «Saludo privado» la sella con los contactos que lo soportan.
 - Las capturas de pantalla están bloqueadas, las capas de otras apps se
   ocultan mientras NIDO está en pantalla (Android 12+) y borrar todos los
   datos pide tu huella o PIN.

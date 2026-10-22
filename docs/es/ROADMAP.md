@@ -34,6 +34,7 @@ Documentamos qué está verificado, qué es experimental, qué está incompleto 
 - Mejorar la comprensión local del tiempo, contexto y seguimiento
 - Primera respuesta más rápida en teléfonos modestos (prompts más cortos, mejor reutilización de la caché del modelo)
 - Medir modelos pequeños más nuevos (Qwen3 y otros) en teléfonos reales: calidad, velocidad y batería
+- Saludo privado (P2P v4): probarlo en dos teléfonos y luego activarlo por defecto
 - Fortalecer la experiencia NIDO-a-NIDO
 - Continuar mejorando voz e interacción local
 - Pulir la experiencia en inglés, español y portugués

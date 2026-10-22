@@ -246,7 +246,7 @@ Fixes from the 2026-10-10 code audit:
 - **A backup restored on a new installation needs the exported key.** If you reinstall or change phones, a backup can be restored with the exported database key. Without that key a backup cannot be opened anywhere, so keep the key somewhere safe and separate from the backup file.
 - **Voice input uses Android's system speech recognizer** with the prefer-offline flag. On devices without an offline model, the system service may process audio online.
 - **Sharing knowledge packs between phones is not available yet.** The tab is hidden.
-- **The phone that starts a NIDO-to-NIDO connection sends its public key in clear** in the first message. Someone recording Bluetooth or Wi-Fi traffic nearby could recognise the same phone across connections (they cannot read messages). Hiding it is planned.
+- **The phone that starts a NIDO-to-NIDO connection sends its public key in clear** in the first message, unless the experimental **Private hello** setting is on (both phones need 0.1.45 or later). Someone recording Bluetooth or Wi-Fi traffic nearby could recognise the same phone across connections (they cannot read messages).
 - **The hardware vault is off by default.** Turn it on in Settings → Security for the strongest protection of your data.
 - Builds are checked by automated tests, and the headline flows (chat and agent tools, memory, reminders and notifications, notes, and two-device P2P messaging, including airplane mode) are also exercised on physical hardware (Galaxy Tab A9+). Not every change is device-tested before every pre-release.
 - Some screens still have their earlier look; the visual redesign is not finished everywhere.

@@ -4,6 +4,24 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.45-alpha — 2026-10-21
+
+### Fixed
+- **Over Bluetooth, the phone that receives a connection no longer
+  reveals who it is to strangers.** It now stays silent until the caller
+  proves to be one of your paired contacts, as it already did over local
+  Wi-Fi. Before, any nearby device that connected to NIDO's Bluetooth
+  service received your NIDO identity, signed. Our earlier notes said this
+  was already fixed for Bluetooth; it was not, and the privacy policy in
+  0.1.44 repeated that mistake. Phones on older versions still connect.
+
+### Added
+- **Private hello (experimental, off by default)**: Settings → Delegated
+  tasks → Private hello. When on, and the contact you call also has
+  0.1.45 or later, the first messages of the connection are sealed, so
+  nobody nearby can see who is calling or link two of your connections.
+  Turn it on in both phones to test it; if connecting fails, turn it off.
+
 ## 0.1.44-alpha — 2026-10-21
 
 A security and privacy hardening release. Nothing about how NIDO-to-NIDO

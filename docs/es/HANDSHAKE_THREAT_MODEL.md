@@ -156,6 +156,47 @@ exige re-emparejar.
    ambos nonces + rate-limit por peer. Un replay no filtra contenido ni
    resucita sesiones.
 
+## P2P v4 (2026-10-21): quien recibe calla, y el saludo puede ir sellado
+
+**Receptor silencioso en los dos transportes.** El teléfono que *recibe*
+una conexión (Bluetooth o Wi-Fi local) no envía nada hasta que el HELLO de
+quien llama demuestra que es un contacto emparejado (firma, frescura,
+anti-replay). Antes del 2026-10-21 esto solo valía por Wi-Fi: por Bluetooth,
+donde el servidor RFCOMM escucha en segundo plano, cualquier dispositivo
+cercano que conectara al servicio de NIDO recibía nuestro HELLO firmado: un
+identificador estable y una prueba firmada de presencia. Sin cambios en el
+cable: quien llama siempre envió su HELLO primero.
+
+**Saludo sellado (experimental, apagado por defecto).** El HELLO de quien
+llama todavía lleva su clave pública permanente en claro. El saludo sellado
+la quita:
+
+- Cada pareja de contactos comparte una clave estática que nadie más tiene:
+  `K_pareja = HKDF-SHA512(salt="nido-v4-pair", X25519(mi_sk, su_pk), info="nido-v4|pk_min|pk_max")`.
+- Cada frame del saludo (HELLO v3 y CONFIRM v1 sin cambios) se sella: un `r`
+  aleatorio nuevo, una etiqueta de 16 bytes `HKDF(salt=r, K_pareja, "nido-v4-tag|tipo")`
+  y el cuerpo cifrado con `secretbox` bajo `HKDF(salt=r, K_pareja, "nido-v4-enc|tipo")`.
+  En el cable: `{"t":"nido-s4", r, g, n, b}`, solo bytes de aspecto aleatorio.
+- Quien recibe prueba la etiqueta contra cada contacto (siempre todos, sin
+  salida temprana) y solo entonces abre el cuerpo. Dentro corren las mismas
+  comprobaciones v3: firma, ventana de tiempo, nonce único, CONFIRM ligado a
+  los dos nonces.
+- Si un saludo empezó sellado, todos sus frames deben venir sellados con la
+  misma clave. No hay vuelta a v3 dentro de un saludo sellado.
+- Un teléfono anuncia que lo entiende con `"c4":1` en su HELLO v3 (pista no
+  firmada). Quien llama sella solo si el ajuste «Saludo privado» está activo
+  **y** el contacto lo anunció. Recibir saludos sellados funciona siempre.
+
+Qué consigue: un observador pasivo no ve ninguna identidad ni puede enlazar
+dos conexiones del mismo teléfono; un desconocido que llame no obtiene
+nada; un HELLO sellado para B no se puede reenviar a otro contacto (solo se
+abre con la clave de la pareja con B), lo que cierra el hueco de reenvío de
+HELLO del v3.
+
+Qué no: el tipo de frame `nido-s4` y su tamaño siguen delatando que se usa
+NIDO; un atacante activo puede quitar la pista `c4` para que dos teléfonos
+sigan en v3 (lo de hoy); un contacto, por definición, reconoce al otro.
+
 ## Qué NO resuelve (límites honestos)
 
 - **Peer comprometido**: si el teléfono de Bob tiene malware, Bob es un
@@ -179,7 +220,7 @@ exige re-emparejar.
 | Clave comprometida | Impacto |
 |---|---|
 | Secreto de firma Ed25519 | **Grave y activo**: el atacante puede suplantar al dueño en handshakes futuros y establecer sesiones como él. NO puede leer sesiones pasadas (forward secrecy) ni mensajes ya entregados. Remedio: el dueño genera nueva identidad y re-empareja por QR a sus contactos. |
-| Secreto box X25519 de identidad | **Bajo**: la `pk` de identidad solo se usa como identificador; el cifrado de mensajes usa efímeras. No descifra nada por sí sola. |
+| Secreto box X25519 de identidad | **Bajo para la confidencialidad, real para la privacidad**: el cifrado de mensajes usa efímeras, así que no descifra nada por sí solo. Desde el v4 también deriva las claves de pareja del saludo sellado: quien lo tenga puede reconocer los saludos sellados de ese teléfono con sus contactos. |
 | Secreto efímero de una conexión | **Acotado a esa conexión**: solo los mensajes de esa sesión. Se borra al desconectar. |
 | Clave de la base (SQLCipher) | **Total local**: bandeja, cola e identidades en reposo. Protegida por Android Keystore (P3); el riesgo es un dispositivo rooteado con la app desbloqueada. |
 
