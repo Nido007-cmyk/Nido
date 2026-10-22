@@ -109,3 +109,13 @@ jobs:
           gh release download "${{ inputs.release_tag }}" --repo "$GITHUB_REPOSITORY" --pattern app-release.apk --dir published
           echo "### Contra el release ${{ inputs.release_tag }}" >> "$GITHUB_STEP_SUMMARY"
           python3 scripts/compare-apk.py --github dist/apk-a/app-release.apk published/app-release.apk | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Explain resources.arsc differences
+        if: failure()
+        shell: bash
+        run: |
+          AAPT2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)
+          [ -z "$AAPT2" ] && { echo "sin aapt2"; exit 0; }
+          "$AAPT2" dump resources dist/apk-a/app-release.apk > a.txt || true
+          "$AAPT2" dump resources dist/apk-b/app-release.apk > b.txt || true
+          diff a.txt b.txt | head -40 | while IFS= read -r line; do echo "::warning title=arsc::${line}"; done
+          echo "::notice title=arsc::líneas distintas: $(diff a.txt b.txt | grep -c '^[<>]')"

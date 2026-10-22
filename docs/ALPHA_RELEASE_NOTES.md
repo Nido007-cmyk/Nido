@@ -251,7 +251,7 @@ Fixes from the 2026-10-10 code audit:
 - **The phone that starts a NIDO-to-NIDO connection sends its public key in clear** in the first message, unless the experimental **Private hello** setting is on (both phones need 0.1.45 or later). Someone recording Bluetooth or Wi-Fi traffic nearby could recognise the same phone across connections (they cannot read messages).
 - **New key per message + ML-KEM (P2P v5) is experimental and off by default.** It only works when both phones have it on, and it has not been tested on two physical phones yet.
 - **Disappearing messages are deleted by each phone.** An older NIDO on the other side ignores the timer, and nothing stops someone from photographing the screen with another camera.
-- **Reproducible builds:** the check that compares two independent builds is new; see the latest run before relying on it.
+- **The build is not reproducible yet.** Two independent builds match in 1,553 of 1,554 files; the compiled resource table (`resources.arsc`) still differs.
 - **The hardware vault is off by default.** Turn it on in Settings → Security for the strongest protection of your data.
 - Builds are checked by automated tests, and the headline flows (chat and agent tools, memory, reminders and notifications, notes, and two-device P2P messaging, including airplane mode) are also exercised on physical hardware (Galaxy Tab A9+). Not every change is device-tested before every pre-release.
 - Some screens still have their earlier look; the visual redesign is not finished everywhere.

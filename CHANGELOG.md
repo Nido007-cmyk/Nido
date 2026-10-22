@@ -45,10 +45,11 @@ it is tested on two phones.
   100,000 cases per target every week. Writing these checks turned up
   three handshake parsers that failed with a raw error on inputs like
   `null`; they now reject them cleanly.
-- **Reproducible builds**: a new check builds the APK twice on separate
-  machines and compares them byte by byte (and, on request, against the
-  published APK). `scripts/compare-apk.py` lets anyone do the same
-  comparison.
+- **Towards reproducible builds**: a new check builds the APK twice on
+  separate machines and compares them file by file (and, on request, against
+  the published APK); `scripts/compare-apk.py` lets anyone do the same. The
+  first run found 1,553 of 1,554 files identical; the compiled resource table
+  (`resources.arsc`) still differs, so the build is **not reproducible yet**.
 
 ## 0.1.45-alpha — 2026-10-21
 
