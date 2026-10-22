@@ -1172,7 +1172,11 @@
       "failed": "Falhou",
       "unavailable": "Não configurado",
       "not-verifiable": "Não é possível verificar"
-    }
+    },
+    "vault": "Proteção por hardware (digital ou PIN para seus dados)",
+    "vaultOn": "Ativada",
+    "vaultOff": "Desativada — recomendado ativar",
+    "vaultHint": "A proteção mais forte: faça um backup e depois ative Ajustes → Segurança → Proteção por hardware. Seus dados só abrirão com sua digital, PIN ou padrão."
   },
   "agentPermissions": {
     "historyTitle": "O que o agente fez",

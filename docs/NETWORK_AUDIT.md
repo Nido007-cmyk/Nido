@@ -27,11 +27,11 @@ grep -rn "createDownloadResumable\|downloadAsync" src --include="*.ts" | grep -v
 |---|---|
 | `fetch` / axios / WebSocket / EventSource in `src/` | **None** |
 | `http(s)` URLs in `src/` | Only `src/models/manifest.ts`: model download URLs (HuggingFace) and corpus (raw.githubusercontent.com). They're configuration data, not calls. |
-| Network in `modules/*` Kotlin | **None** (`nido-p2p` only uses Bluetooth; the other modules don't touch the network) |
+| Network in `modules/*` Kotlin | Only `nido-p2p`'s local Wi-Fi route (`NidoLanManager.kt`): TCP + mDNS, accepted only from private addresses on the same subnet, never the internet. The other modules don't touch the network |
 | Analytics/telemetry SDKs | **None** |
 | File downloads | A single point: `src/models/ModelManager.ts` → `expo-file-system` `createDownloadResumable`, only with the manifest URLs and **only when the user taps download** in the initial setup |
 | Deep Research | Local: decomposes with the phone's LLM and retrieves from the local corpus (RAG). No web search. |
-| NIDO P2P | Zero network by design: Bluetooth RFCOMM between devices; the handshake and messages never leave the local link |
+| NIDO P2P | No internet by design: Bluetooth RFCOMM or local Wi-Fi between devices; the handshake and messages never leave the local link and are end-to-end encrypted. Local Wi-Fi connections are logged like downloads |
 
 ## Conclusion
 

@@ -34,7 +34,10 @@ Toda versión futura del protocolo exige bump explícito de `v` + tests negativo
 - **Clave de firma de identidad:** Ed25519 (`spk` de 32 B, semilla de 32 B).
   **Separación de claves:** la misma clave nunca se usa para firmar y para DH.
   La Ed25519 solo firma HELLOs; la X25519 solo identifica (el DH de sesión usa
-  **efímeras**, nunca la identidad).
+  **efímeras**, nunca la identidad). Desde el P2P v4 la clave X25519 de
+  identidad también deriva, con cada contacto, la clave de pareja estática
+  que sella el saludo (`src/p2p/sealedHandshake.ts`); sigue sin cifrar
+  mensajes.
 - **Generación:** `generateSigningKeypair()` con CSPRNG (`expo-crypto` / `nacl.randomBytes`).
 - **Almacenamiento:** la semilla Ed25519 (32 B) vive en SecureStore bajo la clave
   `nido_p2p_sign_sk` (cifrada por el Android Keystore; nunca en plaintext en el disco

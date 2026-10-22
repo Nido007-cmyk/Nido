@@ -1172,7 +1172,11 @@
       "failed": "Falló",
       "unavailable": "Sin configurar",
       "not-verifiable": "No se puede comprobar"
-    }
+    },
+    "vault": "Protección por hardware (huella o PIN para tus datos)",
+    "vaultOn": "Activada",
+    "vaultOff": "Apagada — recomendado activarla",
+    "vaultHint": "La protección más fuerte: haz un respaldo y luego activa Ajustes → Seguridad → Protección por hardware. Tus datos solo se abrirán con tu huella, PIN o patrón."
   },
   "agentPermissions": {
     "historyTitle": "Qué hizo el agente",

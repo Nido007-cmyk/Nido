@@ -1172,7 +1172,11 @@
       "failed": "Failed",
       "unavailable": "Not set up",
       "not-verifiable": "Cannot be checked"
-    }
+    },
+    "vault": "Hardware protection (fingerprint or PIN for your data)",
+    "vaultOn": "On",
+    "vaultOff": "Off — recommended",
+    "vaultHint": "Strongest protection: make a backup, then turn on Settings → Security → Hardware protection. Your data will only open with your fingerprint, PIN or pattern."
   },
   "agentPermissions": {
     "historyTitle": "What the agent did",

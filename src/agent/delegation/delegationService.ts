@@ -83,6 +83,12 @@ export class DelegationService {
   private static instance: DelegationService | null = null;
   private sendFn: DelegationSendFn | null = null;
   private modelInvoke: ((prompt: string) => Promise<string>) | null = null;
+  /**
+   * P7 (2026-10-21): tag de la sesión de transporte viva con un peer (el
+   * mismo en los dos lados). Los tokens se atan a él al emitirse y se exige
+   * al verificarlos: un token capturado no sirve en otra sesión.
+   */
+  private sessionTagLookup: ((peerPkHex: string) => string | null) | null = null;
   private readonly gate = new ApprovalGate();
   private readonly handlers = new Set<(e: DelegationEvent) => void>();
   /** Outbound tasks awaiting result/reject, by taskId. */
@@ -135,6 +141,19 @@ export class DelegationService {
 
   setSendFunction(fn: DelegationSendFn): void {
     this.sendFn = fn;
+  }
+
+  setSessionTagLookup(fn: (peerPkHex: string) => string | null): void {
+    this.sessionTagLookup = fn;
+  }
+
+  private liveSessionTag(peerPkHex: string): string | undefined {
+    try {
+      const tag = this.sessionTagLookup?.(peerPkHex.toLowerCase());
+      return typeof tag === "string" && /^[0-9a-f]{128}$/.test(tag) ? tag : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   setModelInvoke(fn: (prompt: string) => Promise<string>): void {
@@ -218,6 +237,10 @@ export class DelegationService {
         scopes: [params.scope],
         issuedAt: Date.now(),
         expiresAt,
+        // P7: atado a la sesión que lo transporta (si hay lookup y sesión).
+        ...(this.liveSessionTag(params.peerPkHex) !== undefined
+          ? { sessionTag: this.liveSessionTag(params.peerPkHex) }
+          : {}),
       });
     } catch (e) {
       // FIX 2026-10-08: no tragar el motivo específico. Sigue siendo
@@ -375,10 +398,16 @@ export class DelegationService {
     } catch {
       return;
     }
+    // P7: con el lookup conectado se exige el tag de la sesión viva con
+    // ESTE peer; un token de otra sesión (o sin atar) se descarta.
+    const expectedTag = this.sessionTagLookup ? this.liveSessionTag(fromPkHex) : undefined;
+    if (this.sessionTagLookup && expectedTag === undefined) return; // sin sesión viva → drop
     const verified = verifyDelegationToken(
       body.delegationToken,
       peerSigHex,
-      mySigHex
+      mySigHex,
+      Date.now(),
+      expectedTag
     );
     if (!verified) return; // bad token → drop
     if (verified.root.taskId !== body.taskId.toLowerCase()) return;

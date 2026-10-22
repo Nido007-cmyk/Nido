@@ -377,6 +377,8 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
         delegationService.setSendFunction((peerPkHex, taskType, body) =>
           m.sendDelegationMessage(peerPkHex, taskType, body as unknown as Record<string, unknown>)
         );
+        // P7: los tokens de tareas quedan atados a la sesión viva con el peer.
+        delegationService.setSessionTagLookup((peerPkHex) => m.getSessionTag(peerPkHex));
         // R5: liveness re-check — la negociación debe seguir ACCEPTED al aprobar.
         delegationService.setNegotiationStateLookup(
           (negotiationId) =>

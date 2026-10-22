@@ -395,6 +395,19 @@ export function ModelSetupScreen(props: Props) {
             escondida a media pantalla de Acerca de). */}
         <AccordionSection icon="security" title={t("modelSetupScreen.sections.security")}>
           <HardwareProtectionCard />
+          <View style={styles.hapticRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.hapticRowLabel}>{t("settings.sealedHelloTitle")}</Text>
+              <Text style={styles.hapticRowValue}>{t("settings.sealedHelloDesc")}</Text>
+            </View>
+            <Switch
+              value={sealedHelloEnabled}
+              onValueChange={toggleSealedHello}
+              accessibilityLabel={t("settings.sealedHelloTitle")}
+              trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+              thumbColor={colors.bg.card}
+            />
+          </View>
         </AccordionSection>
 
         {/* 0.1.14: guía de usuario. */}
@@ -470,19 +483,6 @@ export function ModelSetupScreen(props: Props) {
             <Switch
               value={delegationEnabled}
               onValueChange={toggleDelegation}
-              trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
-              thumbColor={colors.bg.card}
-            />
-          </View>
-          <View style={styles.hapticRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.hapticRowLabel}>{t("settings.sealedHelloTitle")}</Text>
-              <Text style={styles.hapticRowValue}>{t("settings.sealedHelloDesc")}</Text>
-            </View>
-            <Switch
-              value={sealedHelloEnabled}
-              onValueChange={toggleSealedHello}
-              accessibilityLabel={t("settings.sealedHelloTitle")}
               trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
               thumbColor={colors.bg.card}
             />

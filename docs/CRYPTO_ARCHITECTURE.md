@@ -35,7 +35,10 @@ explicit `v` bump + negative tests (see §9, anti-downgrade policy).
 - **Identity signing key:** Ed25519 (32 B `spk`, 32 B seed).
   **Key separation:** the same key is never used for signing and DH.
   Ed25519 only signs HELLOs; X25519 only identifies (the session DH
-  uses **ephemerals**, never the identity).
+  uses **ephemerals**, never the identity). Since P2P v4 the X25519
+  identity key also derives, with each contact, the static pair key that
+  seals the hello (`src/p2p/sealedHandshake.ts`); it still never encrypts
+  messages.
 - **Generation:** `generateSigningKeypair()` with CSPRNG (`expo-crypto` / `nacl.randomBytes`).
 - **Storage:** the Ed25519 seed (32 B) lives in SecureStore under the
   key `nido_p2p_sign_sk` (encrypted by the Android Keystore; never in

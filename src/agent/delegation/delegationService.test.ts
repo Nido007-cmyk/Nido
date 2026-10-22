@@ -299,3 +299,92 @@ describe("I2 FIX 2026-10-09: TASK_CANCEL inbound aborta executor", () => {
     expect(fakeExecutor.abort).toHaveBeenCalled();
   });
 });
+
+describe("P7 (2026-10-21): tokens atados a la sesión viva", () => {
+  const TAG = "c3".repeat(64);
+  const OTHER_TAG = "d4".repeat(64);
+  const A_ID = "bb".repeat(32);
+  let seq = 0;
+
+  async function inbound(svc: DelegationService, tokenTag: string | undefined) {
+    seq += 1;
+    const taskId = `123e4567-e89b-42d3-a456-${String(426614175000 + seq).padStart(12, "0")}`;
+    const { issueDelegationToken } = await import("../../p2p/delegationToken");
+    const token = issueDelegationToken(aKeys.secretKey, {
+      issuer: aSigHex,
+      audience: bSigHex,
+      negotiationId: NEGOTIATION_ID,
+      taskId,
+      scopes: ["task:answer"],
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 60000,
+      ...(tokenTag !== undefined ? { sessionTag: tokenTag } : {}),
+    });
+    const events: { type: string }[] = [];
+    svc.subscribe((e: { type: string }) => events.push(e));
+    await svc.handleTaskMessage(A_ID, "TASK_REQUEST", {
+      negotiationId: NEGOTIATION_ID,
+      taskId,
+      description: "What is 2+2?",
+      resultSchema: { type: "string" },
+      delegationToken: token,
+      expiresAt: Date.now() + 60000,
+      maxDurationMs: 5000,
+    });
+    return events.some((e) => e.type === "approval-pending");
+  }
+
+  async function service(lookup: (pk: string) => string | null) {
+    const svc = freshService();
+    await setFeatureEnabled("delegation.enabled", true);
+    (globalThis as any).__delegationLocalKeys = bKeys;
+    svc.setModelInvoke(async () => "4");
+    svc.setNegotiationStateLookup(() => "ACCEPTED");
+    svc.setSendFunction(async () => true);
+    svc.setSessionTagLookup(lookup);
+    return svc;
+  }
+
+  it("un token atado a la sesión viva se acepta", async () => {
+    const svc = await service(() => TAG);
+    expect(await inbound(svc, TAG)).toBe(true);
+  });
+
+  it("un token de otra sesión se descarta", async () => {
+    const svc = await service(() => TAG);
+    expect(await inbound(svc, OTHER_TAG)).toBe(false);
+  });
+
+  it("un token sin atar se descarta cuando hay sesión", async () => {
+    const svc = await service(() => TAG);
+    expect(await inbound(svc, undefined)).toBe(false);
+  });
+
+  it("sin sesión viva con ese peer, nada se acepta", async () => {
+    const svc = await service(() => null);
+    expect(await inbound(svc, TAG)).toBe(false);
+  });
+
+  it("al pedir una tarea, el token sale atado a la sesión con ese peer", async () => {
+    const svc = freshService();
+    await setFeatureEnabled("delegation.enabled", true);
+    (globalThis as any).__delegationLocalKeys = aKeys;
+    const sent: { body: TaskMessageBody }[] = [];
+    svc.setSendFunction(async (_p, _t, body) => {
+      sent.push({ body });
+      return true;
+    });
+    svc.setSessionTagLookup(() => TAG);
+    const r = await svc.requestTask({
+      peerPkHex: PEER_PK,
+      negotiationId: NEGOTIATION_ID,
+      description: "What is 2+2?",
+      scope: "task:answer",
+    });
+    expect(r.ok).toBe(true);
+    const { verifyDelegationToken } = await import("../../p2p/delegationToken");
+    const token = (sent[0].body as { delegationToken: string }).delegationToken;
+    expect(verifyDelegationToken(token, aSigHex, bSigHex, Date.now(), TAG)).not.toBeNull();
+    expect(verifyDelegationToken(token, aSigHex, bSigHex, Date.now(), OTHER_TAG)).toBeNull();
+  });
+});
