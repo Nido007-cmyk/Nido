@@ -124,7 +124,11 @@ export async function createBackup(destinationUri: string): Promise<string> {
   try {
     await stripDisappearingMessages(destinationUri);
   } catch (e) {
-    await FileSystem.deleteAsync(destinationUri, { idempotent: true }).catch(() => {});
+    try {
+      await FileSystem.deleteAsync(destinationUri, { idempotent: true });
+    } catch {
+      /* best-effort */
+    }
     throw new BackupError(
       "storage",
       `No se pudo preparar el respaldo: ${e instanceof Error ? e.message : String(e)}`,
@@ -201,7 +205,11 @@ async function stripDisappearingMessages(copyUri: string): Promise<void> {
     await db.closeAsync().catch(() => {});
   }
   for (const suffix of ["-wal", "-shm", "-journal"]) {
-    await FileSystem.deleteAsync(`${copyUri}${suffix}`, { idempotent: true }).catch(() => {});
+    try {
+      await FileSystem.deleteAsync(`${copyUri}${suffix}`, { idempotent: true });
+    } catch {
+      /* best-effort */
+    }
   }
 }
 
