@@ -52,6 +52,9 @@ interface Settings {
   guideVisited?: string[];
   /** 0.1.15: the user said "not now" to the P2P battery hint. */
   p2pBatteryHintDismissed?: boolean;
+  /** 0.1.51: the hardware-vault offer on the main screen: "never" or snoozed until (epoch ms). */
+  vaultOfferNever?: boolean;
+  vaultOfferSnoozeUntil?: number;
 }
 
 export interface MemorySettings {
@@ -493,6 +496,24 @@ export async function markGuideVisited(id: string): Promise<void> {
     const list = Array.isArray(s.guideVisited) ? s.guideVisited : [];
     if (list.includes(id)) return;
     s.guideVisited = [...list, id].slice(-200);
+  });
+}
+
+/** 0.1.51: ¿toca ofrecer la protección por hardware en la pantalla principal? */
+export async function getVaultOfferState(): Promise<{ never: boolean; snoozeUntil: number }> {
+  const s = await readSettings();
+  return { never: s.vaultOfferNever === true, snoozeUntil: Number(s.vaultOfferSnoozeUntil ?? 0) || 0 };
+}
+
+export async function snoozeVaultOffer(untilMs: number): Promise<void> {
+  return mutateSettings((s) => {
+    s.vaultOfferSnoozeUntil = untilMs;
+  });
+}
+
+export async function neverOfferVault(): Promise<void> {
+  return mutateSettings((s) => {
+    s.vaultOfferNever = true;
   });
 }
 

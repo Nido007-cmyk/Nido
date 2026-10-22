@@ -1291,6 +1291,13 @@
     "fmtNone": "(ninguno)"
   },
   "vault": {
+    "offerTitle": "Protege tus datos con tu huella o PIN",
+    "offerBody": "Activa la protección por hardware: la llave de tus datos queda en el chip de seguridad de la tablet y solo se abre con tu PIN, patrón o huella. Es la protección más fuerte de NIDO.",
+    "offerActivate": "Activar",
+    "offerLater": "Ahora no",
+    "offerNever": "No volver a preguntar",
+    "offerConfirmHint": "Antes de confirmar: si un día quitas el bloqueo de pantalla, NIDO no podrá abrir tus datos sin un respaldo y su llave. Te recomendamos crear un respaldo primero (Acerca de → Abrir respaldo).",
+    "offerConfirm": "Confirmar y activar",
     "title": "Protección por hardware",
     "body": "Protege los datos de NIDO con el chip de seguridad de la tablet: solo se abren con tu PIN, patrón o huella. Si alguien se lleva la tablet apagada o reiniciada, no puede leer tus datos de NIDO aunque los extraiga.",
     "statusActive": "Activa · llave en {{level}}",

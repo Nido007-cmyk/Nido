@@ -1291,6 +1291,13 @@
     "fmtNone": "(nenhuma)"
   },
   "vault": {
+    "offerTitle": "Proteja seus dados com sua digital ou PIN",
+    "offerBody": "Ative a proteção por hardware: a chave dos seus dados fica no chip de segurança do tablet e só abre com seu PIN, padrão ou digital. É a proteção mais forte do NIDO.",
+    "offerActivate": "Ativar",
+    "offerLater": "Agora não",
+    "offerNever": "Não perguntar de novo",
+    "offerConfirmHint": "Antes de confirmar: se um dia você remover o bloqueio de tela, o NIDO não poderá abrir seus dados sem um backup e sua chave. Recomendamos fazer um backup antes (Sobre → Abrir backup).",
+    "offerConfirm": "Confirmar e ativar",
     "title": "Proteção por hardware",
     "body": "Protege os dados do NIDO com o chip de segurança do tablet: só abrem com seu PIN, padrão ou digital. Se alguém levar o tablet desligado ou reiniciado, não consegue ler seus dados do NIDO mesmo extraindo-os.",
     "statusActive": "Ativa · chave em {{level}}",
