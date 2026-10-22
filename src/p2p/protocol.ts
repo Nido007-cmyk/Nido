@@ -72,7 +72,8 @@ export type P2PMessageType =
   | "delivery_ack"
   | "negotiation"
   | "pack_share"
-  | "delegation";
+  | "delegation"
+  | "settings";
 
 export interface P2PEnvelope {
   v: number;
@@ -246,6 +247,19 @@ export function paddedLength(n: number): number {
   return Math.max(n, Math.min(target, MAX_PLAINTEXT_BYTES));
 }
 
+/** Tamaño fijo de todos los session_confirm. */
+const CONFIRM_PADDED_BYTES = 4096;
+/** Cuánto espera L el primer frame v5 de H antes de enviar en clásico. */
+export const V5_HOLD_MS = 5000;
+
+function padTo(bytes: Uint8Array, size: number): Uint8Array {
+  if (bytes.length >= size) return padPlaintext(bytes);
+  const out = new Uint8Array(size);
+  out.set(bytes, 0);
+  out.fill(0x20, bytes.length);
+  return out;
+}
+
 /** Rellena con espacios (0x20) hasta `paddedLength`. */
 export function padPlaintext(bytes: Uint8Array): Uint8Array {
   const target = paddedLength(bytes.length);
@@ -307,6 +321,13 @@ export class P2PSession {
   private v5Enabled = false;
   /** H: v5 acaba de arrancar y conviene mandar un frame para que L arranque. */
   private v5KickoffPending = false;
+  /**
+   * L: momento en que H anunció (en su session_confirm) que tiene v5. Desde
+   * ahí, durante V5_HOLD_MS, la cola NO se vacía en modo clásico: se espera
+   * el primer frame v5 de H para que también los mensajes encolados vayan
+   * con clave por mensaje y ML-KEM. Pasado ese tiempo, se envía igual.
+   */
+  private v5CapSeenAt: number | null = null;
 
   private constructor(peerPkHex: string, sessionKey: Uint8Array) {
     this.peerPkHex = peerPkHex;
@@ -384,7 +405,8 @@ export class P2PSession {
    */
   confirmPayload(): Record<string, unknown> {
     if (!this.v5Enabled || !this.ownPkHex || this.v5) return {};
-    if (!(this.ownPkHex < this.peerPkHex)) return {};
+    // H solo anuncia que lo tiene: así L sabe que merece la pena esperar.
+    if (!(this.ownPkHex < this.peerPkHex)) return { r5cap: 1 };
     try {
       const { ratchet, offer } = V5Ratchet.createOffer(this.sessionKey, this.ownPkHex, this.peerPkHex);
       this.v5 = ratchet;
@@ -392,6 +414,21 @@ export class P2PSession {
     } catch {
       return {};
     }
+  }
+
+  /**
+   * L: ¿hay que retener la cola un momento porque H tiene v5 y su primer
+   * frame v5 está al llegar? (ver v5CapSeenAt).
+   */
+  get holdForV5(): boolean {
+    if (!this.v5 || this.v5.canSend || this.v5CapSeenAt === null) return false;
+    return Date.now() - this.v5CapSeenAt < V5_HOLD_MS;
+  }
+
+  /** Milisegundos que quedan de espera (0 si no se espera). */
+  get v5HoldRemainingMs(): number {
+    if (!this.holdForV5 || this.v5CapSeenAt === null) return 0;
+    return Math.max(0, V5_HOLD_MS - (Date.now() - this.v5CapSeenAt));
   }
 
   /** H: ¿hay que mandar ya un frame v5 para que L arranque? (se consume). */
@@ -403,7 +440,19 @@ export class P2PSession {
 
   /** H recibió el session_confirm de L: si trae oferta v5 y v5 está activado, arranca. */
   private maybeAcceptV5(env: P2PEnvelope): void {
-    if (env.type !== "session_confirm" || !this.v5Enabled || this.v5 || !this.ownPkHex) return;
+    if (env.type !== "session_confirm" || !this.v5Enabled || !this.ownPkHex) return;
+    // L con oferta hecha: H anuncia que tiene v5 → esperar su primer frame v5.
+    if (
+      this.v5 &&
+      this.v5.role === "low" &&
+      !this.v5.canSend &&
+      (env.payload as { r5cap?: unknown }).r5cap === 1 &&
+      this.v5CapSeenAt === null
+    ) {
+      this.v5CapSeenAt = Date.now();
+      return;
+    }
+    if (this.v5) return;
     if (!(this.peerPkHex < this.ownPkHex)) return; // solo H acepta
     const offer = (env.payload as { r5?: unknown }).r5;
     if (offer === undefined) return;
@@ -420,10 +469,11 @@ export class P2PSession {
     const json = JSON.stringify(envelope);
     const plain = utf8Encode(json);
     if (plain.length > MAX_PLAINTEXT_BYTES) throw new Error("Mensaje demasiado grande.");
-    // El session_confirm no se rellena: su forma es fija (no revela texto) y
-    // así el que lleva la oferta v5 (~2,8 KB) queda por debajo del tope de
-    // 4 KB que el lado nativo aplica a los primeros frames de una conexión.
-    const padded = envelope.type === "session_confirm" ? plain : padPlaintext(plain);
+    // Todos los session_confirm miden lo mismo (4 KB), lleven o no la oferta
+    // v5 (~2,8 KB): quien mira el aire no puede distinguirlos ni descartar
+    // justo el que lleva la oferta. (No es de los dos primeros frames de la
+    // conexión, HELLO y CONFIRM, a los que el lado nativo pone tope de 4 KB.)
+    const padded = envelope.type === "session_confirm" ? padTo(plain, CONFIRM_PADDED_BYTES) : padPlaintext(plain);
     let body: Uint8Array;
     if (this.v5 && this.v5.canSend) {
       body = this.v5.seal(padded);
@@ -556,7 +606,7 @@ export class FrameReassembler {
 function validateEnvelope(env: P2PEnvelope): void {
   if (typeof env !== "object" || env === null) throw new Error("Envelope inválido.");
   if (env.v !== PROTOCOL_VERSION) throw new Error("Versión de protocolo no soportada.");
-  const types: P2PMessageType[] = ["chat", "agent_task", "agent_result", "receipt", "session_confirm", "delivery_ack", "negotiation", "pack_share", "delegation"];
+  const types: P2PMessageType[] = ["chat", "agent_task", "agent_result", "receipt", "session_confirm", "delivery_ack", "negotiation", "pack_share", "delegation", "settings"];
   if (!types.includes(env.type)) throw new Error("Tipo de mensaje desconocido.");
   if (typeof env.id !== "string" || !env.id) throw new Error("Falta id.");
   if (typeof env.from !== "string" || typeof env.to !== "string") throw new Error("Falta from/to.");

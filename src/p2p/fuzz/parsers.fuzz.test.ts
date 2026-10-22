@@ -174,6 +174,66 @@ describe(`fuzzing (semilla ${FUZZ_SEED}, ${FUZZ_ITERATIONS} casos por objetivo)`
     });
   }
 
+  it("v5 en los dos sentidos, con turnos, pérdidas, desorden y frames alterados", () => {
+    const rng = new Rng(FUZZ_SEED + 9);
+    let a = generateIdentity();
+    let b = generateIdentity();
+    if (toHex(a.publicKey) > toHex(b.publicKey)) [a, b] = [b, a];
+    const lowPk = toHex(a.publicKey);
+    const highPk = toHex(b.publicKey);
+    const eL = generateEphemeral();
+    const eH = generateEphemeral();
+    const nL = randomNonce(HANDSHAKE_NONCE_BYTES);
+    const nH = randomNonce(HANDSHAKE_NONCE_BYTES);
+    const L = P2PSession.fromHandshakeV2(eL.secretKey, eH.publicKey, highPk, nL, nH);
+    const H = P2PSession.fromHandshakeV2(eH.secretKey, eL.publicKey, lowPk, nH, nL);
+    L.expectRecipient(lowPk);
+    H.expectRecipient(highPk);
+    L.enableV5(true);
+    H.enableV5(true);
+    H.unpack(L.pack(makeEnvelope("session_confirm", "cL", a.publicKey, highPk, L.confirmPayload())));
+    L.unpack(H.pack(makeEnvelope("session_confirm", "cH", b.publicKey, lowPk, H.confirmPayload())));
+    // Arranque en orden (como en un socket real): a partir de aquí los dos
+    // sentidos van en v5 y el desorden ya no puede mezclar un clásico.
+    L.unpack(H.pack(makeEnvelope("chat", "w1", b.publicKey, lowPk, { text: "w1" })));
+    H.unpack(L.pack(makeEnvelope("chat", "w2", a.publicKey, highPk, { text: "w2" })));
+    expect(L.usesV5 && H.usesV5).toBe(true);
+    let n = 0;
+    // Cola por sentido: [frame, texto]. Se entregan en desorden, algunos se
+    // pierden y a veces llega antes una versión alterada.
+    const toL: Array<[Uint8Array, string]> = [];
+    const toH: Array<[Uint8Array, string]> = [];
+    const rounds = Math.max(60, FUZZ_ITERATIONS);
+    for (let r = 0; r < rounds; r++) {
+      const fromHigh = rng.int(3) !== 0;
+      const text = `t${n++}`;
+      const frame = fromHigh
+        ? H.pack(makeEnvelope("chat", text, b.publicKey, lowPk, { text }))
+        : L.pack(makeEnvelope("chat", text, a.publicKey, highPk, { text }));
+      (fromHigh ? toL : toH).push([frame, text]);
+      for (const [queue, recv] of [
+        [toL, L],
+        [toH, H],
+      ] as const) {
+        if (queue.length === 0 || rng.int(2) === 0) continue;
+        const [f, t] = queue.splice(rng.int(Math.min(queue.length, 4)), 1)[0];
+        if (rng.int(10) === 0) continue; // perdido
+        if (rng.int(4) === 0) {
+          const bad = mutate(rng, f);
+          if (!equal(bad, f)) {
+            const out = expectOnlyErrors(() => recv.unpack(bad));
+            expect(out.threw).toBe(false);
+            expect(out.value).toBeNull();
+          }
+        }
+        const env = recv.unpack(f);
+        // Un frame auténtico siempre abre, salvo que su cadena ya se cerró
+        // por desorden extremo (más de MAX_SKIP): aquí el desorden es <= 4.
+        expect((env?.payload as { text?: string } | undefined)?.text).toBe(t);
+      }
+    }
+  });
+
   it("reensamblador de frames con trozos y basura", () => {
     const rng = new Rng(FUZZ_SEED + 8);
     for (let i = 0; i < FUZZ_ITERATIONS; i++) {

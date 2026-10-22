@@ -52,13 +52,20 @@ beforeEach(() => {
 });
 
 /** Un messenger con un contacto y sesión viva contra un peer simulado. */
-async function setup(opts: { v5?: boolean; peerV5?: boolean } = {}) {
+async function setup(opts: { v5?: boolean; peerV5?: boolean; iAm?: "low" | "high" } = {}) {
   if (opts.v5) await setFeatureEnabled("p2p.ratchetV5", true);
   const tA = new LoopbackTransport();
   const tB = new LoopbackTransport();
   const m = new NidoMessenger(tA);
   const { pkHex: myPk } = await m.ensureIdentity();
-  const peerId = generateIdentity();
+  let peerId = generateIdentity();
+  // Rol fijo cuando el test lo pide (L = pk menor, H = pk mayor).
+  while (
+    (opts.iAm === "low" && !(myPk < toHex(peerId.publicKey))) ||
+    (opts.iAm === "high" && !(myPk > toHex(peerId.publicKey)))
+  ) {
+    peerId = generateIdentity();
+  }
   const peerSign = generateSigningKeypair();
   await m.pairWith(encodePairingPayload("Beto", peerId.publicKey, peerSign.publicKey));
   const contact = (await m.contacts())[0];
@@ -185,7 +192,7 @@ describe("v5 a través del messenger", () => {
       expect(peerConfirm[4]).toBe(V5_MARKER);
       await s.m.handleFrame(s.peerPk, peerConfirm);
     } else {
-      expect(myConfirm.payload).toEqual({});
+      expect(myConfirm.payload).toEqual({ r5cap: 1 });
       // El peer (L) manda su oferta; yo arranco como H y mando el kick v5.
       const offer = s.peer.confirmPayload();
       const before = s.wire.length;
@@ -235,6 +242,56 @@ describe("v5 a través del messenger", () => {
         ttl_v: 0,
       });
     }
+  });
+});
+
+describe("revisión independiente: cola de L y aviso de temporizador", () => {
+  it("L retiene lo encolado hasta el primer v5 de H y lo manda ya en v5", async () => {
+    const s = await setup({ v5: true, peerV5: true, iAm: "low" });
+    const myConfirm = s.peer.unpack(s.wire[0]) as P2PEnvelope; // H acepta la oferta
+    expect((myConfirm.payload as { r5?: unknown }).r5).toBeDefined();
+    // Mensaje escrito sin conexión viva todavía: queda en cola.
+    const { id, queued } = await s.m.sendChat("Beto", "escrito antes");
+    expect(queued).toBe(true);
+    // Confirm de H anunciando v5 (en el cable va ya en v5 porque H aceptó;
+    // simulamos el caso habitual: su confirm clásico salió antes).
+    const before = s.wire.length;
+    void before;
+    expect(s.peer.usesV5).toBe(true);
+    const kick = s.peer.pack(s.fromPeer("session_confirm", { r5cap: 1 }));
+    await s.m.handleFrame(s.peerPk, kick);
+    await tick();
+    const out = s.wire[s.wire.length - 1];
+    expect(out[4]).toBe(V5_MARKER);
+    expect(s.peer.unpack(out)?.payload).toEqual({ text: "escrito antes", message_id: id, ttl: 0, ttl_v: 0 });
+  });
+
+  it("con el anuncio de H pero sin su v5, L espera y luego manda igual (respaldo)", async () => {
+    const s = await setup({ v5: true, peerV5: false, iAm: "low" });
+    s.peer.unpack(s.wire[0]);
+    // Peer clásico que (por versión rara) anuncia r5cap pero nunca arranca.
+    const fake = s.peer.pack(s.fromPeer("session_confirm", { r5cap: 1 }));
+    await s.m.handleFrame(s.peerPk, fake);
+    const { queued } = await s.m.sendChat("Beto", "tarde");
+    expect(queued).toBe(true);
+    await new Promise((r) => setTimeout(r, 5300));
+    const env = s.peer.unpack(s.wire[s.wire.length - 1]);
+    expect((env?.payload as { text?: string })?.text).toBe("tarde");
+  }, 15_000);
+
+  it("cambiar el temporizador avisa al contacto en cuanto hay conexión", async () => {
+    const s = await setup();
+    await s.m.setDisappearingTimer(s.peerPk, 3600);
+    await s.m.handleFrame(s.peerPk, s.peer.pack(s.fromPeer("session_confirm", {})));
+    await tick();
+    const notices = s.wire
+      .map((f) => s.peer.unpack(f))
+      .filter((e): e is P2PEnvelope => !!e && e.type === "settings");
+    expect(notices).toHaveLength(1);
+    expect(notices[0].payload).toEqual({ disappear: { sec: 3600, v: 1 } });
+    // El aviso del otro lado se adopta (versión mayor).
+    await s.m.handleFrame(s.peerPk, s.peer.pack(s.fromPeer("settings" as never, { disappear: { sec: 300, v: 2 } })));
+    expect(await getContactDisappear(s.peerPk)).toEqual({ sec: 300, v: 2 });
   });
 });
 

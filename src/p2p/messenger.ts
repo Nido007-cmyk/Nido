@@ -71,8 +71,9 @@ import {
   getContactDisappearSec,
   setContactDisappearSec,
   adoptContactDisappear,
-  shouldAdoptDisappear,
-  setMessageTtl,
+  getPendingDisappear,
+  clearPendingDisappear,
+  deleteExpiredMessages,
   startOutgoingTimer,
   startIncomingTimers,
   isValidDisappearSec,
@@ -352,6 +353,8 @@ export class NidoMessenger {
     for (const t of this.ackTimers.values()) clearTimeout(t);
     this.ackTimers.clear();
     this.lastAttemptAt.clear();
+    for (const t of this.holdTimers.values()) clearTimeout(t);
+    this.holdTimers.clear();
     try {
       await this.transport.stopDiscovery();
     } catch {
@@ -1047,8 +1050,9 @@ export class NidoMessenger {
       status: "queued",
       ts: Date.now(),
       ackAttempts: 0,
+      ttlSec: timer.sec,
+      ttlV: timer.v,
     });
-    if (timer.sec > 0 || timer.v > 0) await setMessageTtl(id, timer.sec, timer.v);
     const sent = await this.attemptOutboundSend(id);
     return { id, queued: !sent };
   }
@@ -1083,6 +1087,12 @@ export class NidoMessenger {
     const key = msg.peerPk.toLowerCase();
     const session = this.sessions.get(key);
     if (!session || !session.isPeerLive || !this.transport.available) return false;
+    // v5: el primer frame v5 del peer está al llegar; el mensaje espera en
+    // cola (como mucho V5_HOLD_MS) para salir ya con clave por mensaje.
+    if (session.holdForV5) {
+      this.scheduleHoldFlush(key, session);
+      return false;
+    }
     try {
       const envelope = makeEnvelope(
         msg.type as P2PMessageType,
@@ -1233,6 +1243,9 @@ export class NidoMessenger {
       status: "queued",
       ts: Date.now(),
       ackAttempts: 0,
+      // 0.1.46: un reenvío conserva el temporizador del original.
+      ttlSec: msg.ttlSec,
+      ttlV: msg.ttlV,
     });
     this.assertLive();
     await this.attemptOutboundSend(freshId);
@@ -1273,6 +1286,8 @@ export class NidoMessenger {
       status: "queued",
       ts: Date.now(),
       ackAttempts: 0,
+      ttlSec: msg.ttlSec,
+      ttlV: msg.ttlV,
     });
     this.assertLive();
     await this.attemptOutboundSend(freshId);
@@ -1411,6 +1426,15 @@ export class NidoMessenger {
       await this.processDeliveryAck(key, env, session);
       return env;
     }
+    if (env.type === "settings") {
+      // 0.1.46: aviso de ajustes del contacto (temporizador de la conversación).
+      this.assertLive();
+      const d = (env.payload as { disappear?: unknown }).disappear;
+      const timer = incomingTimer(d && typeof d === "object" ? { ttl: (d as { sec?: unknown }).sec, ttl_v: (d as { v?: unknown }).v } : {});
+      if (timer) await this.adoptIncomingTimer(key, timer);
+      await this.flushOutbox(key);
+      return env;
+    }
     if (env.type === "session_confirm") {
       // Confirmación de sesión: no va a la bandeja. El peer demostró
       // conocer la clave → la sesión está viva → se vacía la cola.
@@ -1511,6 +1535,7 @@ export class NidoMessenger {
     // procesamiento (el guard de epoch de la base lo rechazaría tras un
     // wipe, pero la instancia muerta no debe ni intentarlo).
     this.assertLive();
+    const legacyTimer = env.type === "chat" ? incomingTimer(env.payload) : null;
     const isNew = await saveMessage({
       id: env.id,
       dir: "in",
@@ -1519,9 +1544,11 @@ export class NidoMessenger {
       text,
       status: env.type === "agent_task" ? "queued" : "delivered",
       ts: env.ts,
+      ttlSec: legacyTimer?.sec,
+      ttlV: legacyTimer?.v,
     });
     if (!isNew) return null; // duplicado persistente (p. ej. tras reinicio): no reprocesar
-    if (env.type === "chat") await this.applyIncomingTimer(key, env.id, env.payload);
+    if (legacyTimer) await this.adoptIncomingTimer(key, legacyTimer);
     // Cualquier frame válido confirma la sesión: es seguro vaciar la cola.
     this.assertLive();
     await this.flushOutbox(key);
@@ -1552,6 +1579,8 @@ export class NidoMessenger {
           : "";
     this.assertLive();
     const tag = session.sessionTag;
+    // 0.1.46: temporizador del mensaje, guardado en el mismo insert.
+    const timer = env.type === "chat" ? incomingTimer(env.payload) : null;
     let isNew: boolean;
     if (tag) {
       // D4: mensaje + entrada del ack log EN LA MISMA TRANSACCIÓN; el ACK
@@ -1565,6 +1594,8 @@ export class NidoMessenger {
         ts: env.ts,
         sessionTag: tag,
         persistedAt: Date.now(),
+        ttlSec: timer?.sec,
+        ttlV: timer?.v,
       });
     } else {
       // Fail-closed en el ACK, no en el mensaje: sin tag no podemos
@@ -1579,6 +1610,8 @@ export class NidoMessenger {
         text,
         status: env.type === "agent_task" ? "queued" : "delivered",
         ts: env.ts,
+        ttlSec: timer?.sec,
+        ttlV: timer?.v,
       });
     }
     if (!isNew) {
@@ -1586,7 +1619,7 @@ export class NidoMessenger {
       await this.emitDeliveryAck(key, session, messageId, env.type);
       return null;
     }
-    if (env.type === "chat") await this.applyIncomingTimer(key, messageId, env.payload);
+    if (timer) await this.adoptIncomingTimer(key, timer);
     if (tag) {
       await this.emitDeliveryAck(key, session, messageId, env.type);
     }
@@ -1695,19 +1728,27 @@ export class NidoMessenger {
    * cambió el de la conversación, lo adopta (como Signal). Un valor fuera de
    * la lista permitida se ignora; un peer viejo no manda `ttl` y no cambia nada.
    */
-  private async applyIncomingTimer(peerKey: string, messageId: string, payload: Record<string, unknown>): Promise<void> {
-    const ttl = payload.ttl;
-    const ttlV = payload.ttl_v ?? 0;
-    if (typeof ttl !== "number" || typeof ttlV !== "number") return;
+  /**
+   * Adopta el temporizador de la conversación que trae un mensaje o un aviso
+   * del contacto, si es más nuevo (UPDATE condicional y atómico en el store).
+   */
+  private async adoptIncomingTimer(peerKey: string, timer: { sec: number; v: number }): Promise<void> {
     try {
-      if (!isValidDisappearSec(ttl) || !Number.isInteger(ttlV) || ttlV < 0 || ttlV > 1_000_000) return;
-      if (ttl > 0) await setMessageTtl(messageId, ttl, ttlV);
-      const local = await getContactDisappear(peerKey);
-      const incoming = { sec: ttl, v: ttlV };
-      if (shouldAdoptDisappear(local, incoming)) await adoptContactDisappear(peerKey, ttl, ttlV);
+      await adoptContactDisappear(peerKey, timer.sec, timer.v);
     } catch {
       /* best-effort: el mensaje ya está guardado */
     }
+  }
+
+  /** ¿La sesión con este contacto ya cifra en v5? (indicador de la UI). */
+  sessionUsesV5(peerPkHex: string): boolean {
+    return this.sessions.get(peerPkHex.toLowerCase())?.usesV5 === true;
+  }
+
+  /** Borra los mensajes temporales vencidos (al arrancar y al volver a primer plano). */
+  async purgeExpiredMessages(): Promise<number> {
+    this.assertLive();
+    return deleteExpiredMessages();
   }
 
   /** Temporizador de la conversación con un contacto (segundos, 0 = apagado). */
@@ -1736,9 +1777,20 @@ export class NidoMessenger {
 
   /** Bandeja de entrada sin leer (y la marca como leída). */
   async readInbox(): Promise<P2PStoredMessage[]> {
+    return (await this.readInboxWithHidden()).messages;
+  }
+
+  /**
+   * 0.1.46: como readInbox, pero los mensajes TEMPORALES no se entregan
+   * (el asistente los guardaría en su historial, fuera del temporizador) ni
+   * se marcan como leídos: solo se cuentan. Se leen en el chat NIDO.
+   */
+  async readInboxWithHidden(): Promise<{ messages: P2PStoredMessage[]; hiddenTemporal: number }> {
     this.assertLive();
-    const unread = await getUnreadInbox();
+    const all = await getUnreadInbox();
     this.assertLive();
+    const unread = all.filter((m) => !((m.ttlSec ?? 0) > 0));
+    const hiddenTemporal = all.length - unread.length;
     for (const m of unread) {
       // M-6: una agent_task encolada NO se marca como leída al leer la
       // bandeja: sigue pendiente de aprobación explícita. Marcarla "read"
@@ -1746,7 +1798,7 @@ export class NidoMessenger {
       if (m.type === "agent_task" && m.status === "queued") continue;
       await markMessageStatus(m.id, "read");
     }
-    return unread;
+    return { messages: unread, hiddenTemporal };
   }
 
   async pendingOutbox(): Promise<P2PStoredMessage[]> {
@@ -1870,6 +1922,40 @@ export class NidoMessenger {
     }
   }
 
+  /** Respaldo: si el frame v5 no llega a tiempo, la cola sale igual. */
+  private holdTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private scheduleHoldFlush(key: string, session: P2PSession): void {
+    if (this.holdTimers.has(key)) return;
+    const t = setTimeout(() => {
+      this.holdTimers.delete(key);
+      if (this.destroyed) return;
+      void this.flushOutbox(key).catch(() => {});
+    }, session.v5HoldRemainingMs + 50);
+    if (typeof (t as unknown as { unref?: () => void }).unref === "function") {
+      (t as unknown as { unref: () => void }).unref();
+    }
+    this.holdTimers.set(key, t);
+  }
+
+  /**
+   * Manda el aviso de cambio de temporizador (tipo "settings"), como Signal
+   * al cambiar el temporizador. Las versiones anteriores lo descartan.
+   */
+  private async sendPendingTimerNotice(key: string, session: P2PSession): Promise<void> {
+    if (!this.myPk) return;
+    try {
+      const pending = await getPendingDisappear(key);
+      if (!pending) return;
+      const env = makeEnvelope("settings", newId(), this.myPk, key, {
+        disappear: { sec: pending.sec, v: pending.v },
+      });
+      await this.transport.sendFrame(key, session.pack(env));
+      await clearPendingDisappear(key, pending.v);
+    } catch {
+      /* queda pendiente: se reintenta en la próxima sesión */
+    }
+  }
+
   private async flushOutbox(peerPkHex: string): Promise<void> {
     const key = peerPkHex.toLowerCase();
     const session = this.sessions.get(key);
@@ -1877,6 +1963,12 @@ export class NidoMessenger {
     // clave de esta sesión. Sin liveness, un HELLO repetido podría
     // tragarse mensajes en una sesión que el peer real no comparte.
     if (!session || !session.isPeerLive || !this.transport.available) return;
+    if (session.holdForV5) {
+      this.scheduleHoldFlush(key, session);
+      return;
+    }
+    // 0.1.46: aviso de temporizador pendiente (el usuario lo cambió).
+    await this.sendPendingTimerNotice(key, session);
     const outbox = await getOutbox();
     this.assertLive();
     if (!this.myPk) return;
@@ -1912,4 +2004,22 @@ export class NidoMessenger {
       }
     }
   }
+}
+
+
+/**
+ * 0.1.46: temporizador que trae un payload de chat ({ttl, ttl_v}). null si
+ * no trae (peer anterior) o si los valores no son válidos.
+ */
+function incomingTimer(payload: Record<string, unknown>): { sec: number; v: number } | null {
+  const sec = payload.ttl;
+  const v = payload.ttl_v ?? 0;
+  if (typeof sec !== "number" || typeof v !== "number") return null;
+  if (!Number.isInteger(v) || v < 0 || v > 1_000_000) return null;
+  try {
+    if (!isValidDisappearSec(sec)) return null;
+  } catch {
+    return null;
+  }
+  return { sec, v };
 }

@@ -17,7 +17,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../theme/ThemeContext";
-import { notification, NotificationFeedbackType } from "../../services/haptics";
+import { impact, ImpactFeedbackStyle, notification, NotificationFeedbackType } from "../../services/haptics";
 
 export const PANIC_HOLD_MS = 3000;
 
@@ -62,6 +62,7 @@ export function PanicButton({ onWiped, onError }: Props) {
   const start = useCallback(() => {
     if (wiping) return;
     cancel();
+    impact(ImpactFeedbackStyle.Heavy); // se nota que empezó la cuenta
     Animated.timing(progress, { toValue: 1, duration: PANIC_HOLD_MS, useNativeDriver: false }).start();
     timer.current = setTimeout(() => void wipe(), PANIC_HOLD_MS);
   }, [cancel, progress, wipe, wiping]);
@@ -94,6 +95,12 @@ export function PanicButton({ onWiped, onError }: Props) {
       accessibilityRole="button"
       accessibilityLabel={t("panic.buttonLabel")}
       accessibilityHint={t("panic.buttonHint")}
+      // TalkBack: la acción "mantener pulsado" del lector de pantalla borra
+      // directamente (ese gesto ya es deliberado; no hay 3 s que mantener).
+      accessibilityActions={[{ name: "longpress", label: t("panic.buttonLabel") }]}
+      onAccessibilityAction={(e) => {
+        if (e.nativeEvent.actionName === "longpress" && !wiping) void wipe();
+      }}
       hitSlop={6}
     >
       <View style={styles.btn}>

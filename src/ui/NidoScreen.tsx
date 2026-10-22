@@ -126,7 +126,14 @@ const LISTENER_MAX_WAIT_MS = 30000;
 /** WIFI-UX-2026-10-11: espera máxima a que aparezca el anuncio Wi-Fi del otro. */
 const LAN_DISCOVERY_WAIT_MS = 6000;
 
-export function NidoScreen({ onClose }: { onClose: () => void }) {
+export function NidoScreen({
+  onClose,
+  panicSlot,
+}: {
+  onClose: () => void;
+  /** 0.1.46: botón de pánico (solo si el usuario lo activó). */
+  panicSlot?: React.ReactNode;
+}) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
@@ -208,6 +215,11 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
     lastAcceptAt: number;
   } | null>(null);
   const [peer, setPeer] = useState<P2PContact | null>(null);
+  // 0.1.46: temporizador de mensajes temporales del chat abierto, selector
+  // y si la sesión con este contacto va en v5.
+  const [disappearSec, setDisappearSec] = useState(0);
+  const [showTimerPicker, setShowTimerPicker] = useState(false);
+  const [sessionV5, setSessionV5] = useState(false);
   const [messages, setMessages] = useState<P2PStoredMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -300,9 +312,17 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
   const loadConversation = useCallback(async (pkHex: string) => {
     try {
       // 0.1.46: mostrar la conversación arranca la cuenta atrás de los
-      // mensajes temporales recibidos (como Signal: al verlos).
-      await mRef.current.markConversationSeen(pkHex).catch(() => 0);
+      // mensajes temporales recibidos (como Signal: al verlos). Solo con la
+      // app en primer plano: el refresco periódico sigue en segundo plano y
+      // ahí nadie está mirando.
+      if (AppState.currentState === "active") {
+        await mRef.current.markConversationSeen(pkHex).catch(() => 0);
+      }
       setMessages(await getConversation(pkHex));
+      // Temporizador (puede haberlo adoptado de un mensaje del contacto) y
+      // si la sesión va en v5 (clave por mensaje + ML-KEM).
+      setDisappearSec(await mRef.current.getDisappearingTimer(pkHex).catch(() => 0));
+      setSessionV5(mRef.current.sessionUsesV5(pkHex));
     } catch (e) {
       // FIX 2026-10-09 (UI-AUDIT/F4): error visible en vez de silencio.
       // Auditoría 2026-10-12: por el mapeo localizado, no el mensaje crudo.
@@ -1057,23 +1077,8 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
     [loadConversation],
   );
 
-  // 0.1.46: mensajes temporales. Con el chat abierto se recarga cada 10 s
-  // para que lo vencido desaparezca de la pantalla y se lea el temporizador
-  // que haya adoptado de un mensaje del contacto.
-  const [disappearSec, setDisappearSec] = useState(0);
-  const [showTimerPicker, setShowTimerPicker] = useState(false);
-  const peerPkForTimer = peer?.pkHex ?? null;
-  useEffect(() => {
-    if (!peerPkForTimer) return;
-    const id = setInterval(() => {
-      void loadConversation(peerPkForTimer);
-      void mRef.current
-        .getDisappearingTimer(peerPkForTimer)
-        .then(setDisappearSec)
-        .catch(() => {});
-    }, 10_000);
-    return () => clearInterval(id);
-  }, [peerPkForTimer, loadConversation]);
+  // 0.1.46: mensajes temporales e indicador v5. El refresco de la
+  // conversación (cada 4 s, más abajo) también relee los dos.
 
   const timerLabel = useCallback(
     (sec: number) => (sec === 0 ? t("nido.disappearOff") : t(`nido.disappear_${sec}`)),
@@ -1281,6 +1286,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             </View>
             <Text style={styles.peerSub}>
               {isOnline ? t("nido.online") : t("nido.offlineQueued")}
+              {isOnline && sessionV5 ? ` · ${t("nido.v5Active")}` : ""}
             </Text>
           </View>
           <Pressable
@@ -1296,6 +1302,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
               })}
             </Text>
           </Pressable>
+          {panicSlot}
         </View>
         {showTimerPicker ? (
           <View style={styles.timerPicker}>
@@ -1368,6 +1375,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           <NidoIcon name="pairing" size={20} />
           <Text style={styles.title}>NIDO</Text>
         </View>
+        {panicSlot}
         <Pressable
           onPress={() => {
             impact(ImpactFeedbackStyle.Light);

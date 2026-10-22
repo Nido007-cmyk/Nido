@@ -86,7 +86,7 @@ describe("relleno de mensajes", () => {
 describe("protocolo v5", () => {
   it("solo L ofrece, y solo si tiene v5 activado", () => {
     const p = pair({ lowV5: true, highV5: true });
-    expect(p.sH.confirmPayload()).toEqual({});
+    expect(p.sH.confirmPayload()).toEqual({ r5cap: 1 }); // H solo anuncia
     const offer = p.sL.confirmPayload() as { r5?: { v: number; dh: string; ek: string } };
     expect(offer.r5?.v).toBe(1);
     expect(offer.r5?.dh.length).toBe(64);
@@ -95,10 +95,34 @@ describe("protocolo v5", () => {
     expect(off.sL.confirmPayload()).toEqual({});
   });
 
-  it("el confirm con oferta cabe en el tope nativo de 4 KB", () => {
+  it("todos los session_confirm miden lo mismo (con oferta, con anuncio o vacíos)", () => {
     const p = pair({ lowV5: true, highV5: true });
-    const frame = p.sL.pack(p.env("L", "session_confirm", p.sL.confirmPayload()));
-    expect(frame.length - 4).toBeLessThan(4096);
+    const withOffer = p.sL.pack(p.env("L", "session_confirm", p.sL.confirmPayload()));
+    const withCap = p.sH.pack(p.env("H", "session_confirm", p.sH.confirmPayload()));
+    const plain = pair({ lowV5: false, highV5: false });
+    const empty = plain.sL.pack(plain.env("L", "session_confirm", {}));
+    expect(withOffer.length).toBe(withCap.length);
+    expect(withOffer.length).toBe(empty.length);
+  });
+
+  it("L retiene la cola mientras llega el primer v5 de H, y deja de retener al llegar", () => {
+    const p = pair({ lowV5: true, highV5: true });
+    const fL = p.sL.pack(p.env("L", "session_confirm", p.sL.confirmPayload()));
+    const fH = p.sH.pack(p.env("H", "session_confirm", p.sH.confirmPayload()));
+    expect(p.sL.holdForV5).toBe(false);
+    expect(p.sL.unpack(fH)).not.toBeNull(); // confirm clásico de H con r5cap
+    expect(p.sL.holdForV5).toBe(true);
+    expect(p.sL.v5HoldRemainingMs).toBeGreaterThan(0);
+    expect(p.sH.unpack(fL)).not.toBeNull(); // H arranca
+    const kick = p.sH.pack(p.env("H", "session_confirm", {}));
+    expect(p.sL.unpack(kick)).not.toBeNull();
+    expect(p.sL.holdForV5).toBe(false);
+    expect(p.sL.usesV5).toBe(true);
+    // Sin anuncio de H (v5 apagado allí), L no retiene nada.
+    const q = pair({ lowV5: true, highV5: false });
+    q.sL.confirmPayload();
+    expect(q.sL.unpack(q.sH.pack(q.env("H", "session_confirm", q.sH.confirmPayload())))).not.toBeNull();
+    expect(q.sL.holdForV5).toBe(false);
   });
 
   it("arranca en los dos lados y cifra en v5", () => {
@@ -185,23 +209,76 @@ describe("protocolo v5", () => {
     expect(p.sL.unpack(frames[0])).not.toBeNull();
   });
 
-  it("tras oír v5, L ya no acepta frames clásicos", () => {
+  it("tras oír v5, ya no se aceptan frames clásicos (aunque sean auténticos)", () => {
+    // Dos sesiones H con la MISMA clave clásica: hClassic sigue en clásico.
+    let a = generateIdentity();
+    let b = generateIdentity();
+    if (toHex(a.publicKey) > toHex(b.publicKey)) [a, b] = [b, a];
+    const lowPk = toHex(a.publicKey);
+    const highPk = toHex(b.publicKey);
+    const eL = generateEphemeral();
+    const eH = generateEphemeral();
+    const eHcopy = eH.secretKey.slice();
+    const nL = randomNonce(HANDSHAKE_NONCE_BYTES);
+    const nH = randomNonce(HANDSHAKE_NONCE_BYTES);
+    const sL = P2PSession.fromHandshakeV2(eL.secretKey, eH.publicKey, highPk, nL, nH);
+    const sH = P2PSession.fromHandshakeV2(eH.secretKey, eL.publicKey, lowPk, nH, nL);
+    const hClassic = P2PSession.fromHandshakeV2(eHcopy, eL.publicKey, lowPk, nH, nL);
+    sL.expectRecipient(lowPk);
+    sH.expectRecipient(highPk);
+    hClassic.expectRecipient(highPk);
+    sL.enableV5(true);
+    sH.enableV5(true);
+    const env = (id: string) => makeEnvelope("chat", id, b.publicKey, lowPk, { text: id });
+    expect(sH.unpack(sL.pack(makeEnvelope("session_confirm", "c", a.publicKey, highPk, sL.confirmPayload())))).not.toBeNull();
+    // Antes de oír v5, L acepta un clásico auténtico.
+    expect(sL.unpack(hClassic.pack(env("c1")))?.payload).toEqual({ text: "c1" });
+    // L oye v5 de H…
+    expect(sL.unpack(sH.pack(env("v1")))).not.toBeNull();
+    expect(sL.usesV5).toBe(true);
+    // …y desde ahí un clásico auténtico (mismo canal, id nuevo) se rechaza.
+    expect(sL.unpack(hClassic.pack(env("c2")))).toBeNull();
+  });
+
+  it("un frame falso no borra claves guardadas aunque fuerce la expulsión (rollback completo)", () => {
     const p = bootV5();
-    // Sesión clásica con la MISMA clave (simula un frame clásico válido).
-    const legacy = pair({ lowV5: false, highV5: false });
-    void legacy;
-    expect(p.sL.unpack(p.sH.pack(p.env("H")))).not.toBeNull();
-    // H no puede producir un clásico ya, pero comprobamos la regla en L
-    // con un frame clásico grabado antes del arranque de L.
-    const p2 = bootV5();
-    const classicFromL = p2.sL.pack(p2.env("L", "chat", { text: "clásico" }));
-    expect(p2.sL.usesV5).toBe(false);
-    const h = p2.sH.pack(p2.env("H"));
-    expect(p2.sL.unpack(h)).not.toBeNull();
-    // H recibe el clásico de L antes de cualquier v5 de L: válido.
-    expect(p2.sH.unpack(classicFromL)?.payload).toEqual({ text: "clásico" });
-    const v5FromL = p2.sL.pack(p2.env("L"));
-    expect(p2.sH.unpack(v5FromL)).not.toBeNull();
+    expect(p.sH.unpack(p.sL.pack(p.env("L")))).not.toBeNull();
+    // Dos tandas de 250 mensajes retrasados: L guarda 500 claves saltadas.
+    const batch1: Uint8Array[] = [];
+    const batch2: Uint8Array[] = [];
+    for (let i = 0; i < 250; i++) batch1.push(p.sH.pack(p.env("H", "chat", { text: `a${i}` })));
+    const mid = p.sH.pack(p.env("H", "chat", { text: "mid" }));
+    for (let i = 0; i < 250; i++) batch2.push(p.sH.pack(p.env("H", "chat", { text: `b${i}` })));
+    const last = p.sH.pack(p.env("H", "chat", { text: "last" }));
+    expect(p.sL.unpack(mid)?.payload).toEqual({ text: "mid" });
+    expect(p.sL.unpack(last)?.payload).toEqual({ text: "last" });
+    // Frame falso: dh nuevo, pn = 501 (cadena actual ya en 502 → nada que
+    // saltar ahí) y n = 200: calcula 200 claves nuevas y, con 700 > 512,
+    // expulsa ~188 de la primera tanda… dentro de la copia.
+    const forged = last.slice();
+    for (let i = 4 + 2; i < 4 + 34; i++) forged[i] ^= 0x5a;
+    forged[4 + 34 + 2] = 0x01;
+    forged[4 + 34 + 3] = 0xf5; // pn = 501
+    forged[4 + 38 + 2] = 0x00;
+    forged[4 + 38 + 3] = 200; // n = 200
+    expect(p.sL.unpack(forged)).toBeNull();
+    // Todas las claves guardadas siguen intactas.
+    for (let i = 0; i < 250; i++) expect(p.sL.unpack(batch1[i])?.payload).toEqual({ text: `a${i}` });
+    for (let i = 0; i < 250; i++) expect(p.sL.unpack(batch2[i])?.payload).toEqual({ text: `b${i}` });
+  });
+
+  it("rechaza sin calcular nada un frame que pediría más de MAX_SKIP claves en total", () => {
+    const p = bootV5();
+    expect(p.sH.unpack(p.sL.pack(p.env("L")))).not.toBeNull();
+    const last = p.sH.pack(p.env("H", "chat", { text: "x" }));
+    expect(p.sL.unpack(last)).not.toBeNull();
+    const forged = last.slice();
+    for (let i = 4 + 2; i < 4 + 34; i++) forged[i] ^= 0x33;
+    forged[4 + 34 + 3] = 200; // pn: 199 claves viejas
+    forged[4 + 38 + 3] = 100; // n: 100 nuevas → 299 > MAX_SKIP
+    const t0 = Date.now();
+    expect(p.sL.unpack(forged)).toBeNull();
+    expect(Date.now() - t0).toBeLessThan(50);
   });
 
   it("si un lado no tiene v5, todo sigue en clásico", () => {

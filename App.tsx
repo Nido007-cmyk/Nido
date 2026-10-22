@@ -37,6 +37,12 @@ import {
   lockNow,
 } from "./src/security/biometricGate";
 import { isPermissionFlowActive } from "./src/p2p/permissionGuard";
+import { loadFeatureFlags } from "./src/config/featureFlags";
+
+// 0.1.46: los interruptores (saludo privado, v5, pánico…) se cargan al
+// arrancar, antes de cualquier reconexión P2P: un handshake lee el de v5 de
+// forma síncrona y no debe ver todavía los valores por defecto.
+void loadFeatureFlags();
 
 const modelManager = new ModelManager();
 

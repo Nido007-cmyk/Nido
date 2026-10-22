@@ -257,6 +257,7 @@ async function migrateOn(db: Awaited<ReturnType<typeof getMemoryDb>>): Promise<v
   for (const col of [
     "ALTER TABLE p2p_contacts ADD COLUMN disappear_sec INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE p2p_contacts ADD COLUMN disappear_v INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE p2p_contacts ADD COLUMN disappear_pending INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE p2p_messages ADD COLUMN ttl_sec INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE p2p_messages ADD COLUMN ttl_v INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE p2p_messages ADD COLUMN expires_at INTEGER",
@@ -1086,6 +1087,9 @@ export async function saveMessage(msg: {
   failureReason?: N6FailureReason | null;
   /** UNIT B (F-5): solo la escriben las transiciones autoritativas. */
   identityChangeCause?: IdentityChangeCause | null;
+  /** 0.1.46: temporizador del mensaje (segundos) y su versión. */
+  ttlSec?: number;
+  ttlV?: number;
 }): Promise<boolean> {
   const row = {
     id: msg.id,
@@ -1102,10 +1106,17 @@ export async function saveMessage(msg: {
   let inserted = false;
   await writeMemoryTransaction(async (db) => {
     await migrateOn(db);
-    const res = await db.runAsync(
-      "INSERT OR IGNORE INTO p2p_messages (id, dir, peer_pk, type, text, status, ts, ack_attempts, failure_reason, identity_change_cause) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [row.id, row.dir, row.peerPk, row.type, row.text, row.status, row.ts, row.ackAttempts, row.failureReason, row.identityChangeCause],
-    );
+    const ttl = timerOrNull(msg.ttlSec, msg.ttlV);
+    // 0.1.46: el temporizador va en el MISMO insert (atómico con el mensaje).
+    const res = ttl
+      ? await db.runAsync(
+          "INSERT OR IGNORE INTO p2p_messages (id, dir, peer_pk, type, text, status, ts, ack_attempts, failure_reason, identity_change_cause, ttl_sec, ttl_v) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [row.id, row.dir, row.peerPk, row.type, row.text, row.status, row.ts, row.ackAttempts, row.failureReason, row.identityChangeCause, ttl.sec, ttl.v],
+        )
+      : await db.runAsync(
+          "INSERT OR IGNORE INTO p2p_messages (id, dir, peer_pk, type, text, status, ts, ack_attempts, failure_reason, identity_change_cause) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [row.id, row.dir, row.peerPk, row.type, row.text, row.status, row.ts, row.ackAttempts, row.failureReason, row.identityChangeCause],
+        );
     inserted = (res?.changes ?? 0) > 0;
   });
   return inserted;
@@ -1169,6 +1180,7 @@ export async function deleteMessage(id: string): Promise<void> {
     await migrateOn(db);
     await db.runAsync("DELETE FROM p2p_messages WHERE id=?", [id]);
   });
+  await checkpointAfterDelete();
 }
 
 /**
@@ -1221,6 +1233,9 @@ export async function saveInboundMessageWithAckLog(msg: {
   ts?: number;
   sessionTag: string;
   persistedAt?: number;
+  /** 0.1.46: temporizador del mensaje (segundos) y su versión. */
+  ttlSec?: number;
+  ttlV?: number;
 }): Promise<boolean> {
   if (!/^[0-9a-f]{128}$/.test(msg.sessionTag)) throw new Error("session_tag inválido para el ack log.");
   const ts = msg.ts ?? Date.now();
@@ -1228,10 +1243,16 @@ export async function saveInboundMessageWithAckLog(msg: {
   let inserted = false;
   await writeMemoryTransaction(async (db) => {
     await migrateOn(db);
-    const res = await db.runAsync(
-      "INSERT OR IGNORE INTO p2p_messages (id, dir, peer_pk, type, text, status, ts) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [msg.id, "in", msg.peerPk.toLowerCase(), msg.type, msg.text, msg.status ?? "delivered", ts],
-    );
+    const ttl = timerOrNull(msg.ttlSec, msg.ttlV);
+    const res = ttl
+      ? await db.runAsync(
+          "INSERT OR IGNORE INTO p2p_messages (id, dir, peer_pk, type, text, status, ts, ttl_sec, ttl_v) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [msg.id, "in", msg.peerPk.toLowerCase(), msg.type, msg.text, msg.status ?? "delivered", ts, ttl.sec, ttl.v],
+        )
+      : await db.runAsync(
+          "INSERT OR IGNORE INTO p2p_messages (id, dir, peer_pk, type, text, status, ts) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [msg.id, "in", msg.peerPk.toLowerCase(), msg.type, msg.text, msg.status ?? "delivered", ts],
+        );
     inserted = (res?.changes ?? 0) > 0;
     if (inserted) {
       await db.runAsync(
@@ -1808,29 +1829,71 @@ export async function getContactDisappearSec(pkHex: string): Promise<number> {
   return (await getContactDisappear(pkHex)).sec;
 }
 
-/** Cambio hecho en ESTE teléfono: nueva versión. */
+/**
+ * Cambio hecho en ESTE teléfono: nueva versión, y queda pendiente avisar al
+ * contacto (se le manda un aviso en cuanto haya conexión, como Signal).
+ */
 export async function setContactDisappearSec(pkHex: string, sec: number): Promise<void> {
   if (!isValidDisappearSec(sec)) throw new Error("Temporizador no válido.");
   await writeMemoryTransaction(async (db) => {
     await migrateOn(db);
     await db.runAsync(
-      "UPDATE p2p_contacts SET disappear_sec = ?, disappear_v = disappear_v + 1 " +
+      "UPDATE p2p_contacts SET disappear_sec = ?, disappear_v = disappear_v + 1, disappear_pending = 1 " +
         "WHERE pk_hex = ? AND superseded_by IS NULL",
       [sec, pkHex.toLowerCase()],
     );
   });
 }
 
-/** Temporizador recibido del contacto: se adopta tal cual (sec y versión). */
-export async function adoptContactDisappear(pkHex: string, sec: number, v: number): Promise<void> {
-  if (!isValidDisappearSec(sec) || !Number.isInteger(v) || v < 0) return;
+/**
+ * Temporizador recibido del contacto. Se adopta en UN solo UPDATE
+ * condicional (regla de shouldAdoptDisappear dentro del WHERE): un cambio
+ * del usuario hecho a la vez no se pisa. Devuelve true si lo adoptó.
+ */
+export async function adoptContactDisappear(pkHex: string, sec: number, v: number): Promise<boolean> {
+  if (!isValidDisappearSec(sec) || !Number.isInteger(v) || v < 0) return false;
+  let changed = false;
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    const res = await db.runAsync(
+      "UPDATE p2p_contacts SET disappear_sec = ?, disappear_v = ?, disappear_pending = 0 " +
+        "WHERE pk_hex = ? AND superseded_by IS NULL " +
+        "AND (disappear_v < ? OR (disappear_v = ? AND disappear_sec < ?))",
+      [sec, v, pkHex.toLowerCase(), v, v, sec],
+    );
+    changed = Number(res?.changes ?? 0) > 0;
+  });
+  return changed;
+}
+
+/** Aviso de temporizador pendiente de mandar a un contacto (null = nada). */
+export async function getPendingDisappear(pkHex: string): Promise<{ sec: number; v: number } | null> {
+  await migrate();
+  const db = await getMemoryDb();
+  const row = await db.getFirstAsync<{ disappear_sec?: number | null; disappear_v?: number | null; disappear_pending?: number | null }>(
+    "SELECT disappear_sec, disappear_v, disappear_pending FROM p2p_contacts WHERE pk_hex = ? AND superseded_by IS NULL LIMIT 1",
+    [pkHex.toLowerCase()],
+  );
+  if (!row || row.disappear_pending !== 1) return null;
+  const sec = isValidDisappearSec(row.disappear_sec) ? (row.disappear_sec as number) : 0;
+  return { sec, v: Number(row.disappear_v ?? 0) };
+}
+
+/** El aviso de la versión `v` ya salió (si entretanto cambió, sigue pendiente). */
+export async function clearPendingDisappear(pkHex: string, v: number): Promise<void> {
   await writeMemoryTransaction(async (db) => {
     await migrateOn(db);
     await db.runAsync(
-      "UPDATE p2p_contacts SET disappear_sec = ?, disappear_v = ? WHERE pk_hex = ? AND superseded_by IS NULL",
-      [sec, v, pkHex.toLowerCase()],
+      "UPDATE p2p_contacts SET disappear_pending = 0 WHERE pk_hex = ? AND disappear_v = ?",
+      [pkHex.toLowerCase(), v],
     );
   });
+}
+
+function timerOrNull(sec: unknown, v: unknown): { sec: number; v: number } | null {
+  const s2 = isValidDisappearSec(sec) ? sec : 0;
+  const v2 = typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : 0;
+  return s2 > 0 || v2 > 0 ? { sec: s2, v: v2 } : null;
 }
 
 /** Regla de adopción (pura, probada aparte). */
@@ -1840,19 +1903,6 @@ export function shouldAdoptDisappear(
 ): boolean {
   if (incoming.v > local.v) return true;
   return incoming.v === local.v && incoming.sec > local.sec;
-}
-
-/** Fija el temporizador (y su versión) de un mensaje recién guardado. */
-export async function setMessageTtl(id: string, sec: number, v = 0): Promise<void> {
-  if (!isValidDisappearSec(sec) || !Number.isInteger(v) || v < 0) return;
-  if (sec === 0 && v === 0) return;
-  await writeMemoryTransaction(async (db) => {
-    await migrateOn(db);
-    await db.runAsync(
-      "UPDATE p2p_messages SET ttl_sec = ?, ttl_v = ? WHERE id = ? AND expires_at IS NULL",
-      [sec, v, id],
-    );
-  });
 }
 
 /**
@@ -1905,7 +1955,22 @@ export async function deleteExpiredMessages(nowMs = Date.now()): Promise<number>
     );
     changed = Number(res?.changes ?? 0);
   });
+  if (changed > 0) await checkpointAfterDelete();
   return changed;
+}
+
+/**
+ * Tras borrar, vuelca el WAL a la base y lo trunca: con secure_delete el
+ * contenido borrado queda sobrescrito en el archivo principal, y así no
+ * sobreviven copias antiguas en el archivo -wal. Best-effort.
+ */
+async function checkpointAfterDelete(): Promise<void> {
+  try {
+    const db = await getMemoryDb();
+    await db.execAsync("PRAGMA wal_checkpoint(TRUNCATE);");
+  } catch {
+    /* best-effort */
+  }
 }
 
 /** Momento de borrado de un mensaje (null = sin temporizador o aún sin arrancar). */

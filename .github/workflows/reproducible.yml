@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.ref || 'main' }}
+          ref: ${{ inputs.ref || github.sha }}
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /usr/share/swift
@@ -89,18 +89,22 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.ref || 'main' }}
+          ref: ${{ inputs.ref || github.sha }}
           sparse-checkout: scripts/compare-apk.py
           sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           path: dist
       - name: Two independent builds are identical
+        # shell: bash = bash -eo pipefail: el código de salida de
+        # compare-apk.py cuenta aunque su salida pase por tee.
+        shell: bash
         run: |
           echo "## Compilación reproducible" >> "$GITHUB_STEP_SUMMARY"
           python3 scripts/compare-apk.py dist/apk-a/app-release.apk dist/apk-b/app-release.apk | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Same as the published release
         if: inputs.release_tag != ''
+        shell: bash
         run: |
           gh release download "${{ inputs.release_tag }}" --repo "$GITHUB_REPOSITORY" --pattern app-release.apk --dir published
           echo "### Contra el release ${{ inputs.release_tag }}" >> "$GITHUB_STEP_SUMMARY"

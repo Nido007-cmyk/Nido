@@ -88,6 +88,12 @@ interface State {
   skipped: Map<string, Uint8Array>;
   /** Solo H (Alice): cifrado ML-KEM que acompaña sus frames hasta oír a L. */
   ctToSend: Uint8Array | null;
+  /**
+   * Material que deja de usarse durante un descifrado. Se borra (fill(0))
+   * SOLO si el mensaje autentica y el estado nuevo se confirma: mientras se
+   * prueba, esos arrays siguen siendo del estado vivo.
+   */
+  retired: Uint8Array[];
 }
 
 /* ---------- KDFs ---------- */
@@ -169,6 +175,7 @@ function cloneState(s: State): State {
     pn: s.pn,
     skipped: new Map(s.skipped),
     ctToSend: s.ctToSend,
+    retired: [],
   };
 }
 
@@ -246,14 +253,17 @@ function skipUntil(s: State, until: number): boolean {
   while (s.nr < until) {
     const [next, mk] = kdfCk(s.ckr);
     s.skipped.set(skipKey(s.dhr!, s.nr), mk);
+    s.retired.push(s.ckr);
     s.ckr = next;
     s.nr++;
   }
-  // Tope total: se descartan las más antiguas (orden de inserción).
+  // Tope total: se descartan las más antiguas (orden de inserción). No se
+  // borran aquí: pueden ser del estado vivo; se borran al confirmar.
   while (s.skipped.size > MAX_SKIPPED_STORED) {
     const oldest = s.skipped.keys().next().value as string | undefined;
     if (oldest === undefined) break;
-    s.skipped.get(oldest)?.fill(0);
+    const mk = s.skipped.get(oldest);
+    if (mk) s.retired.push(mk);
     s.skipped.delete(oldest);
   }
   return true;
@@ -264,9 +274,18 @@ function dhRatchet(s: State, theirDh: Uint8Array): void {
   s.ns = 0;
   s.nr = 0;
   s.dhr = theirDh;
-  [s.rk, s.ckr] = kdfRk(s.rk, dh(s.dhs.secretKey, s.dhr));
+  const oldRk = s.rk;
+  const oldCkr = s.ckr;
+  const oldCks = s.cks;
+  const oldDhs = s.dhs;
+  let mid: Uint8Array;
+  [mid, s.ckr] = kdfRk(oldRk, dh(oldDhs.secretKey, s.dhr));
   s.dhs = nacl.box.keyPair();
-  [s.rk, s.cks] = kdfRk(s.rk, dh(s.dhs.secretKey, s.dhr));
+  [s.rk, s.cks] = kdfRk(mid, dh(s.dhs.secretKey, s.dhr));
+  mid.fill(0); // intermedio propio de este paso
+  s.retired.push(oldRk, oldDhs.secretKey);
+  if (oldCkr) s.retired.push(oldCkr);
+  if (oldCks) s.retired.push(oldCks);
 }
 
 /* ---------- la sesión v5 ---------- */
@@ -328,6 +347,7 @@ export class V5Ratchet {
         pn: 0,
         skipped: new Map(),
         ctToSend: cipherText,
+        retired: [],
       };
       // La clave clásica ya cumplió su papel en el ratchet: fuera de memoria.
       r.sessionKey.fill(0);
@@ -397,6 +417,7 @@ export class V5Ratchet {
           pn: 0,
           skipped: new Map(),
           ctToSend: null,
+          retired: [],
         };
       } else {
         s = cloneState(this.state);
@@ -412,6 +433,9 @@ export class V5Ratchet {
         this.sessionKey.fill(0);
       }
       if (this.role === "high") s.ctToSend = null; // L ya tiene el secreto ML-KEM
+      // Confirmado: ahora sí se borra lo que este mensaje dejó en desuso.
+      for (const k of s.retired) k.fill(0);
+      s.retired = [];
       this.state = s;
       this.heardV5 = true;
       return plain;
@@ -428,11 +452,16 @@ export class V5Ratchet {
       const plain = openWith(saved, p);
       if (plain) {
         s.skipped.delete(sk);
+        s.retired.push(saved);
       }
       return plain;
     }
-    // 2) ¿Nuevo turno del peer? → ratchet DH.
+    // 2) ¿Nuevo turno del peer? → ratchet DH. Antes de calcular nada se
+    // comprueba el coste total (lo que falta de la cadena vieja + la nueva):
+    // un frame falso no puede obligar a derivar más de MAX_SKIP claves.
     if (s.dhr === null || !equalBytes(p.dh, s.dhr)) {
+      const oldCost = s.ckr !== null && p.pn > s.nr ? p.pn - s.nr : 0;
+      if (oldCost + p.n > MAX_SKIP) return null;
       if (!skipUntil(s, p.pn)) return null;
       dhRatchet(s, p.dh);
     }
@@ -442,6 +471,7 @@ export class V5Ratchet {
     const plain = openWith(mk, p);
     mk.fill(0);
     if (!plain) return null;
+    s.retired.push(s.ckr);
     s.ckr = next;
     s.nr++;
     return plain;

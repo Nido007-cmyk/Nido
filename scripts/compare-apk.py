@@ -31,6 +31,10 @@ def digest_entries(path):
         for info in z.infolist():
             if info.is_dir() or SIGNATURE_FILE.match(info.filename):
                 continue
+            if info.filename in out:
+                # Un zip con nombres repetidos es sospechoso: Android y las
+                # herramientas pueden leer copias distintas. No se acepta.
+                raise SystemExit(f"{path}: entrada repetida {info.filename!r}")
             h = hashlib.sha256()
             with z.open(info) as f:
                 for chunk in iter(lambda: f.read(1 << 20), b""):
