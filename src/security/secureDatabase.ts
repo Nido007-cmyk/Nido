@@ -887,8 +887,18 @@ export async function openEncryptedDatabase(
     // applyDatabaseKey ya cerró; re-lanzar con contexto.
     throw e;
   }
+  // 0.1.46: al borrar (mensajes temporales, borrar chat), SQLite sobrescribe
+  // con ceros el contenido borrado en vez de dejarlo en páginas libres del
+  // archivo. Best-effort: si el pragma fallara, la base abre igual.
+  try {
+    await h.execAsync(SECURE_DELETE_SQL);
+  } catch {
+    /* best-effort */
+  }
   return h;
 }
+
+export const SECURE_DELETE_SQL = "PRAGMA secure_delete = ON;";
 
 export interface EnsureOptions {
   driver?: SecureDbDriver;

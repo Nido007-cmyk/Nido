@@ -5,6 +5,7 @@
   "license": "MIT",
   "main": "index.ts",
   "dependencies": {
+    "@noble/post-quantum": "0.7.1",
     "@types/qrcode": "1.5.6",
     "bundled-assets": "file:./modules/bundled-assets",
     "download-wake-lock": "file:./modules/download-wake-lock",

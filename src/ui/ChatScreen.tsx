@@ -8,7 +8,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   FlatList,
   StyleSheet,
@@ -19,6 +18,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native";
+import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { LinearGradient } from "expo-linear-gradient";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType } from "../services/haptics";
 import { NidoIcon } from "./components/icons/NidoIcon";

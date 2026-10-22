@@ -12,12 +12,12 @@ import {
   Pressable,
   ScrollView,
   FlatList,
-  TextInput,
   ActivityIndicator,
   Modal,
   Keyboard,
   AppState,
 } from "react-native";
+import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { showSecureAlert } from "nido-secure-dialog";
 import { copyPrivate } from "../utils/secretClipboard";
 import QRCode from "qrcode";

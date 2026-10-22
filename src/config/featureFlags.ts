@@ -21,7 +21,7 @@
  * (transport, handshake, negotiation, chat) never reads this flag.
  */
 
-export type FeatureFlag = "delegation.enabled" | "p2p.sealedHandshake";
+export type FeatureFlag = "delegation.enabled" | "p2p.sealedHandshake" | "p2p.ratchetV5";
 
 const DEFAULTS: Record<FeatureFlag, boolean> = {
   /** Delegated task execution NIDO-A -> NIDO-B. Default OFF. */
@@ -33,6 +33,13 @@ const DEFAULTS: Record<FeatureFlag, boolean> = {
    * dos teléfonos.
    */
   "p2p.sealedHandshake": false,
+  /**
+   * P2P v5 (0.1.46): clave nueva por mensaje (Double Ratchet) y arranque
+   * híbrido X25519 + ML-KEM-768. Solo se usa si los DOS teléfonos lo tienen
+   * activado; si no, la sesión sigue en el modo de siempre. Default OFF
+   * hasta probarlo en dos teléfonos.
+   */
+  "p2p.ratchetV5": false,
 };
 
 /** In-memory overrides (hydrated from disk by loadFeatureFlags). */

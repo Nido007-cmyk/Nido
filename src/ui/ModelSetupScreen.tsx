@@ -16,9 +16,9 @@ import {
   ActivityIndicator,
   Switch,
   Alert,
-  TextInput,
   BackHandler,
 } from "react-native";
+import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType, setHapticsEnabledCache } from "../services/haptics";
 import { useTranslation } from "react-i18next";
 import { NidoMascot } from "./components/calm/NidoMascot";

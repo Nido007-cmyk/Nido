@@ -32,6 +32,7 @@ export interface SecureAlertOptions {
 interface NidoSecureDialogNativeModule {
   copySensitive?(text: string): Promise<boolean>;
   clearClipboardIfEquals?(text: string): Promise<boolean>;
+  applyIncognitoKeyboard?(): Promise<number>;
   showSecureAlert(
     title: string,
     message: string,
@@ -85,6 +86,21 @@ export async function clearClipboardIfEquals(text: string): Promise<boolean | nu
     const native = requireNativeModule<NidoSecureDialogNativeModule>("NidoSecureDialog");
     if (!native.clearClipboardIfEquals) return null;
     return (await native.clearClipboardIfEquals(text)) === true;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 0.1.46: incognito keyboard. Asks the keyboard not to learn from the focused
+ * text field (IME_FLAG_NO_PERSONALIZED_LEARNING). Call it from a TextInput's
+ * onFocus. null = not available (old build, tests); never throws.
+ */
+export async function applyIncognitoKeyboard(): Promise<number | null> {
+  try {
+    const native = requireNativeModule<NidoSecureDialogNativeModule>("NidoSecureDialog");
+    if (!native.applyIncognitoKeyboard) return null;
+    return await native.applyIncognitoKeyboard();
   } catch {
     return null;
   }

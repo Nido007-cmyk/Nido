@@ -13,7 +13,11 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PersistableBundle
+import android.view.View
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
@@ -89,6 +93,42 @@ class SecureDialogModule : Module() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) cm.clearPrimaryClip()
         else cm.setPrimaryClip(ClipData.newPlainText("", ""))
         true
+      }
+    }
+
+    /**
+     * 0.1.46 — teclado incógnito (como Signal). Marca el campo de texto que
+     * tiene el foco con IME_FLAG_NO_PERSONALIZED_LEARNING: el teclado no debe
+     * aprender ni guardar lo que se escribe en NIDO (diccionario personal,
+     * sugerencias, historial). Recorre todas las ventanas de la app
+     * (API 29+), así cubre también los Modal de React Native, que viven en
+     * otra ventana. Devuelve cuántos campos marcó (0 si ninguno).
+     */
+    AsyncFunction("applyIncognitoKeyboard") { promise: Promise ->
+      onMain(promise) {
+        val roots: List<View> =
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+              android.view.inspector.WindowInspector.getGlobalWindowViews()
+            } catch (_: Exception) {
+              emptyList()
+            }
+          } else {
+            emptyList()
+          }
+        val all = roots.ifEmpty { listOfNotNull(appContext.currentActivity?.window?.decorView) }
+        val flag = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+        var applied = 0
+        for (root in all) {
+          val field = root.findFocus() as? EditText ?: continue
+          if ((field.imeOptions and flag) == 0) {
+            field.imeOptions = field.imeOptions or flag
+            (field.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
+              ?.restartInput(field)
+          }
+          applied++
+        }
+        applied
       }
     }
 

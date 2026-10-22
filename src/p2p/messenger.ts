@@ -17,6 +17,7 @@
  * se guardan para que el usuario los apruebe explícitamente.
  */
 
+import { isFeatureEnabled } from "../config/featureFlags";
 import {
   fingerprint,
   generateEphemeral,
@@ -66,6 +67,15 @@ import {
   runP2PBootRepair,
   saveIdentity,
   saveInboundMessageWithAckLog,
+  getContactDisappear,
+  getContactDisappearSec,
+  setContactDisappearSec,
+  adoptContactDisappear,
+  shouldAdoptDisappear,
+  setMessageTtl,
+  startOutgoingTimer,
+  startIncomingTimers,
+  isValidDisappearSec,
   saveMessage,
   StaleReplaceConflictError,
   type N6FailureReason,
@@ -938,6 +948,11 @@ export class NidoMessenger {
         // Tag inválido: queda null y los ACK se rechazan fail-closed.
       }
     }
+    // 0.1.46 — v5 (Double Ratchet + ML-KEM) si el interruptor está activado.
+    // Solo arranca si el peer también lo tiene; si no, todo sigue igual.
+    // Síncrono a propósito: nada de await antes de registrar la candidata,
+    // o el session_confirm del peer podría llegar sin sesión que lo abra.
+    session.enableV5(isFeatureEnabled("p2p.ratchetV5"));
     const key = peerPkHex.toLowerCase();
     // H-8: candidata, no sustitución. La sesión viva sigue en `sessions`.
     this.pendingSessions.set(key, session);
@@ -948,7 +963,13 @@ export class NidoMessenger {
     // jamás llega un frame válido y ningún mensaje encolado se pierde en ella.
     if (this.myPk && this.transport.available) {
       try {
-        const confirm = makeEnvelope("session_confirm", newId(), this.myPk, peerPkHex, {});
+        const confirm = makeEnvelope(
+          "session_confirm",
+          newId(),
+          this.myPk,
+          peerPkHex,
+          session.confirmPayload(),
+        );
         this.assertLive();
         await this.transport.sendFrame(key, session.pack(confirm));
       } catch {
@@ -1008,6 +1029,13 @@ export class NidoMessenger {
       this.myPk = identity.publicKey;
     }
     const id = newId(); // N6: message_id estable en todos los reintentos (§5.1, Tier 2)
+    // 0.1.46: temporizador de mensajes temporales de esta conversación.
+    let timer = { sec: 0, v: 0 };
+    try {
+      timer = await getContactDisappear(contact.pkHex);
+    } catch {
+      timer = { sec: 0, v: 0 };
+    }
     // P1: persistir ANTES del primer intento de envío.
     this.assertLive();
     await saveMessage({
@@ -1020,6 +1048,7 @@ export class NidoMessenger {
       ts: Date.now(),
       ackAttempts: 0,
     });
+    if (timer.sec > 0 || timer.v > 0) await setMessageTtl(id, timer.sec, timer.v);
     const sent = await this.attemptOutboundSend(id);
     return { id, queued: !sent };
   }
@@ -1031,7 +1060,14 @@ export class NidoMessenger {
    * (N2 parity preservado sobre el payload).
    */
   private buildOutboundPayload(msg: P2PStoredMessage): Record<string, unknown> {
-    return { text: msg.text, message_id: msg.id };
+    // 0.1.46: `ttl` = temporizador de la conversación (0 = apagado). El otro
+    // teléfono lo adopta, como en Signal. Las versiones anteriores lo ignoran.
+    return {
+      text: msg.text,
+      message_id: msg.id,
+      ttl: msg.type === "chat" ? (msg.ttlSec ?? 0) : 0,
+      ttl_v: msg.type === "chat" ? (msg.ttlV ?? 0) : 0,
+    };
   }
 
   /**
@@ -1070,6 +1106,14 @@ export class NidoMessenger {
     // (que seguiría siendo vencible por otro await).
     const won = await markOutboundSent(msg.id);
     if (!won) return false; // bytes ya salidos al OS; la terminal mandó
+    // 0.1.46: el temporizador del remitente empieza al enviar (como Signal).
+    if ((msg.ttlSec ?? 0) > 0) {
+      try {
+        await startOutgoingTimer(msg.id);
+      } catch {
+        /* best-effort */
+      }
+    }
     this.startAckTimer(msg.id);
     return true;
   }
@@ -1371,6 +1415,17 @@ export class NidoMessenger {
       // Confirmación de sesión: no va a la bandeja. El peer demostró
       // conocer la clave → la sesión está viva → se vacía la cola.
       this.assertLive();
+      // v5: si este lado (H) acaba de arrancar el ratchet, manda ya un
+      // frame v5 para que el peer (L) arranque aunque no haya nada en cola.
+      if (session?.takeV5Kickoff() && this.myPk && this.transport.available) {
+        try {
+          const kick = makeEnvelope("session_confirm", newId(), this.myPk, key, {});
+          await this.transport.sendFrame(key, session.pack(kick));
+        } catch {
+          /* best-effort: el siguiente mensaje normal también arranca a L */
+        }
+        this.assertLive();
+      }
       await this.flushOutbox(key);
       return env;
     }
@@ -1380,7 +1435,6 @@ export class NidoMessenger {
       // Con el flag OFF el mensaje se descarta en silencio y el resto
       // del stack P2P nunca lo ve.
       this.assertLive();
-      const { isFeatureEnabled } = await import("../config/featureFlags");
       if (isFeatureEnabled("delegation.enabled")) {
         const { delegationService } = await import("../agent/delegation/delegationService");
         const payload = env.payload as { taskType?: unknown; body?: unknown };
@@ -1467,6 +1521,7 @@ export class NidoMessenger {
       ts: env.ts,
     });
     if (!isNew) return null; // duplicado persistente (p. ej. tras reinicio): no reprocesar
+    if (env.type === "chat") await this.applyIncomingTimer(key, env.id, env.payload);
     // Cualquier frame válido confirma la sesión: es seguro vaciar la cola.
     this.assertLive();
     await this.flushOutbox(key);
@@ -1531,6 +1586,7 @@ export class NidoMessenger {
       await this.emitDeliveryAck(key, session, messageId, env.type);
       return null;
     }
+    if (env.type === "chat") await this.applyIncomingTimer(key, messageId, env.payload);
     if (tag) {
       await this.emitDeliveryAck(key, session, messageId, env.type);
     }
@@ -1630,6 +1686,52 @@ export class NidoMessenger {
   private async transitionToDelivered(id: string): Promise<void> {
     this.cancelAckTimer(id);
     await markOutboundDelivered(id);
+  }
+
+  /* ---------- 0.1.46: mensajes temporales ---------- */
+
+  /**
+   * Mensaje de chat recibido: aplica su temporizador y, si el remitente
+   * cambió el de la conversación, lo adopta (como Signal). Un valor fuera de
+   * la lista permitida se ignora; un peer viejo no manda `ttl` y no cambia nada.
+   */
+  private async applyIncomingTimer(peerKey: string, messageId: string, payload: Record<string, unknown>): Promise<void> {
+    const ttl = payload.ttl;
+    const ttlV = payload.ttl_v ?? 0;
+    if (typeof ttl !== "number" || typeof ttlV !== "number") return;
+    try {
+      if (!isValidDisappearSec(ttl) || !Number.isInteger(ttlV) || ttlV < 0 || ttlV > 1_000_000) return;
+      if (ttl > 0) await setMessageTtl(messageId, ttl, ttlV);
+      const local = await getContactDisappear(peerKey);
+      const incoming = { sec: ttl, v: ttlV };
+      if (shouldAdoptDisappear(local, incoming)) await adoptContactDisappear(peerKey, ttl, ttlV);
+    } catch {
+      /* best-effort: el mensaje ya está guardado */
+    }
+  }
+
+  /** Temporizador de la conversación con un contacto (segundos, 0 = apagado). */
+  async getDisappearingTimer(peerPkHex: string): Promise<number> {
+    this.assertLive();
+    return getContactDisappearSec(peerPkHex);
+  }
+
+  /**
+   * Cambia el temporizador. Vale para los mensajes nuevos; el contacto lo
+   * adopta al recibir tu siguiente mensaje.
+   */
+  async setDisappearingTimer(peerPkHex: string, sec: number): Promise<void> {
+    this.assertLive();
+    await setContactDisappearSec(peerPkHex, sec);
+  }
+
+  /**
+   * La pantalla del chat muestra la conversación: arranca la cuenta atrás de
+   * los mensajes recibidos (para quien recibe, empieza al verlos).
+   */
+  async markConversationSeen(peerPkHex: string): Promise<number> {
+    this.assertLive();
+    return startIncomingTimers(peerPkHex);
   }
 
   /** Bandeja de entrada sin leer (y la marca como leída). */

@@ -252,6 +252,21 @@ async function migrateOn(db: Awaited<ReturnType<typeof getMemoryDb>>): Promise<v
   } catch (e) {
     if (!/duplicate column name/i.test(String((e as Error)?.message ?? e))) throw e;
   }
+  // 0.1.46 — mensajes temporales: temporizador por contacto (segundos, 0 =
+  // apagado), temporizador de cada mensaje y momento en que se borra.
+  for (const col of [
+    "ALTER TABLE p2p_contacts ADD COLUMN disappear_sec INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE p2p_contacts ADD COLUMN disappear_v INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE p2p_messages ADD COLUMN ttl_sec INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE p2p_messages ADD COLUMN ttl_v INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE p2p_messages ADD COLUMN expires_at INTEGER",
+  ]) {
+    try {
+      await db.execAsync(col);
+    } catch (e) {
+      if (!/duplicate column name/i.test(String((e as Error)?.message ?? e))) throw e;
+    }
+  }
   await db.execAsync(
     "CREATE TABLE IF NOT EXISTS p2p_identity_archive(" +
       "pk_hex TEXT PRIMARY KEY, name TEXT NOT NULL, sign_pk_hex TEXT, " +
@@ -969,6 +984,12 @@ export interface P2PStoredMessage {
    * retry las trata distinto (ver tabla en §7 del packet de diseño).
    */
   identityChangeCause?: IdentityChangeCause | null;
+  /** 0.1.46: temporizador del mensaje en segundos (0 = no se borra solo). */
+  ttlSec?: number;
+  /** 0.1.46: versión del temporizador de la conversación al enviarlo. */
+  ttlV?: number;
+  /** 0.1.46: epoch ms en que se borra; null = sin temporizador o sin arrancar. */
+  expiresAt?: number | null;
 }
 
 /**
@@ -1011,6 +1032,7 @@ function assertN6FailureReason(r: string): asserts r is N6FailureReason {
 type P2PMessageRow = {
   id: string; dir: string; peer_pk: string; type: string; text: string; status: string; ts: number;
   ack_attempts?: number | null; failure_reason?: string | null; identity_change_cause?: string | null;
+  ttl_sec?: number | null; ttl_v?: number | null; expires_at?: number | null;
 };
 
 function rowToMessage(r: P2PMessageRow): P2PStoredMessage {
@@ -1020,11 +1042,29 @@ function rowToMessage(r: P2PMessageRow): P2PStoredMessage {
     ackAttempts: r.ack_attempts ?? 0,
     failureReason: r.failure_reason ?? null,
     identityChangeCause: (r.identity_change_cause ?? null) as IdentityChangeCause | null,
+    // Solo aparecen si el mensaje es temporal: así los mensajes normales
+    // conservan exactamente la misma forma que antes.
+    ...(Number(r.ttl_sec ?? 0) > 0 || Number(r.ttl_v ?? 0) > 0
+      ? { ttlSec: Number(r.ttl_sec ?? 0), ttlV: Number(r.ttl_v ?? 0), expiresAt: r.expires_at ?? null }
+      : {}),
   };
 }
 
+/** 0.1.46: ¿ya venció el temporizador de este mensaje? */
+function isExpired(m: P2PStoredMessage, nowMs: number): boolean {
+  return m.expiresAt !== null && m.expiresAt !== undefined && m.expiresAt <= nowMs;
+}
+
+let lastPurgeAt = 0;
+/** Borra vencidos como mucho cada 5 s (lecturas frecuentes de la UI). */
+async function purgeExpiredIfDue(nowMs = Date.now()): Promise<void> {
+  if (nowMs - lastPurgeAt < 5_000) return;
+  lastPurgeAt = nowMs;
+  await deleteExpiredMessages(nowMs).catch(() => 0);
+}
+
 const P2P_MESSAGE_COLS =
-  "id, dir, peer_pk, type, text, status, ts, ack_attempts, failure_reason, identity_change_cause";
+  "id, dir, peer_pk, type, text, status, ts, ack_attempts, failure_reason, identity_change_cause, ttl_sec, ttl_v, expires_at";
 
 /**
  * Guarda un mensaje. Idempotente: si el id ya existe no lo toca
@@ -1074,6 +1114,8 @@ export async function saveMessage(msg: {
 /** Conversación con un peer (entrantes + salientes), ordenada por fecha. */
 export async function getConversation(peerPkHex: string, limit = 200): Promise<P2PStoredMessage[]> {
   await migrate();
+  // 0.1.46: un mensaje temporal vencido nunca se vuelve a mostrar.
+  await purgeExpiredIfDue();
   let pk: string;
   try {
     pk = toHex(fromHex(peerPkHex));
@@ -1086,16 +1128,19 @@ export async function getConversation(peerPkHex: string, limit = 200): Promise<P
       "WHERE peer_pk = ? ORDER BY ts ASC LIMIT ?",
     [pk, limit],
   );
-  return rows.map(rowToMessage);
+  const now = Date.now();
+  return rows.map(rowToMessage).filter((m) => !isExpired(m, now));
 }
 
 /** Bandeja de entrada: mensajes recibidos no leídos. */
 export async function getUnreadInbox(): Promise<P2PStoredMessage[]> {
   await migrate();
+  await purgeExpiredIfDue();
   const db = await getMemoryDb();
   const rows = await db.getAllAsync<P2PMessageRow>(
     `SELECT ${P2P_MESSAGE_COLS} FROM p2p_messages WHERE dir='in' AND status != 'read' ORDER BY ts`);
-  return rows.map(rowToMessage);
+  const now = Date.now();
+  return rows.map(rowToMessage).filter((m) => !isExpired(m, now));
 }
 
 /** Cola de salida: mensajes pendientes de entregar al peer. */
@@ -1723,4 +1768,154 @@ export async function isContactV4Capable(pkHex: string): Promise<boolean> {
     [pkHex.toLowerCase()],
   );
   return row?.v4_capable === 1;
+}
+
+
+/* ---------- 0.1.46: mensajes temporales ---------- */
+
+/**
+ * Temporizadores permitidos (segundos). Igual que en Signal, el temporizador
+ * es de la conversación: lo puede cambiar cualquiera de los dos y el otro
+ * teléfono lo adopta al recibir el siguiente mensaje.
+ */
+export const DISAPPEAR_OPTIONS_SEC = [0, 300, 3600, 28_800, 86_400, 604_800, 2_419_200] as const;
+
+export function isValidDisappearSec(v: unknown): v is number {
+  return typeof v === "number" && (DISAPPEAR_OPTIONS_SEC as readonly number[]).includes(v);
+}
+
+/**
+ * Temporizador de la conversación y su versión. La versión sube con cada
+ * cambio hecho en este teléfono; al recibir un mensaje, solo se adopta un
+ * temporizador con versión MAYOR (o igual versión y temporizador más largo,
+ * para que los dos lados converjan). Así un mensaje que ya iba en camino con
+ * el temporizador viejo no deshace un cambio reciente (mismo criterio que
+ * Signal con su "expire timer version").
+ */
+export async function getContactDisappear(pkHex: string): Promise<{ sec: number; v: number }> {
+  await migrate();
+  const db = await getMemoryDb();
+  const row = await db.getFirstAsync<{ disappear_sec?: number | null; disappear_v?: number | null }>(
+    "SELECT disappear_sec, disappear_v FROM p2p_contacts WHERE pk_hex = ? AND superseded_by IS NULL LIMIT 1",
+    [pkHex.toLowerCase()],
+  );
+  const sec = isValidDisappearSec(row?.disappear_sec) ? (row!.disappear_sec as number) : 0;
+  const v = Number.isInteger(row?.disappear_v) && (row!.disappear_v as number) >= 0 ? (row!.disappear_v as number) : 0;
+  return { sec, v };
+}
+
+export async function getContactDisappearSec(pkHex: string): Promise<number> {
+  return (await getContactDisappear(pkHex)).sec;
+}
+
+/** Cambio hecho en ESTE teléfono: nueva versión. */
+export async function setContactDisappearSec(pkHex: string, sec: number): Promise<void> {
+  if (!isValidDisappearSec(sec)) throw new Error("Temporizador no válido.");
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    await db.runAsync(
+      "UPDATE p2p_contacts SET disappear_sec = ?, disappear_v = disappear_v + 1 " +
+        "WHERE pk_hex = ? AND superseded_by IS NULL",
+      [sec, pkHex.toLowerCase()],
+    );
+  });
+}
+
+/** Temporizador recibido del contacto: se adopta tal cual (sec y versión). */
+export async function adoptContactDisappear(pkHex: string, sec: number, v: number): Promise<void> {
+  if (!isValidDisappearSec(sec) || !Number.isInteger(v) || v < 0) return;
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    await db.runAsync(
+      "UPDATE p2p_contacts SET disappear_sec = ?, disappear_v = ? WHERE pk_hex = ? AND superseded_by IS NULL",
+      [sec, v, pkHex.toLowerCase()],
+    );
+  });
+}
+
+/** Regla de adopción (pura, probada aparte). */
+export function shouldAdoptDisappear(
+  local: { sec: number; v: number },
+  incoming: { sec: number; v: number },
+): boolean {
+  if (incoming.v > local.v) return true;
+  return incoming.v === local.v && incoming.sec > local.sec;
+}
+
+/** Fija el temporizador (y su versión) de un mensaje recién guardado. */
+export async function setMessageTtl(id: string, sec: number, v = 0): Promise<void> {
+  if (!isValidDisappearSec(sec) || !Number.isInteger(v) || v < 0) return;
+  if (sec === 0 && v === 0) return;
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    await db.runAsync(
+      "UPDATE p2p_messages SET ttl_sec = ?, ttl_v = ? WHERE id = ? AND expires_at IS NULL",
+      [sec, v, id],
+    );
+  });
+}
+
+/**
+ * Arranca la cuenta atrás de un mensaje SALIENTE cuando sale del teléfono
+ * (como Signal: para quien lo envía, el temporizador empieza al enviarlo).
+ */
+export async function startOutgoingTimer(id: string, nowMs = Date.now()): Promise<void> {
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    await db.runAsync(
+      "UPDATE p2p_messages SET expires_at = ? + ttl_sec * 1000 " +
+        "WHERE id = ? AND dir = 'out' AND ttl_sec > 0 AND expires_at IS NULL",
+      [nowMs, id],
+    );
+  });
+}
+
+/**
+ * Arranca la cuenta atrás de los mensajes RECIBIDOS de un contacto cuando
+ * se muestran en pantalla (como Signal: para quien lo recibe, el
+ * temporizador empieza al verlo). Devuelve cuántos arrancó.
+ */
+export async function startIncomingTimers(peerPkHex: string, nowMs = Date.now()): Promise<number> {
+  let changed = 0;
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    const res = await db.runAsync(
+      "UPDATE p2p_messages SET expires_at = ? + ttl_sec * 1000 " +
+        "WHERE peer_pk = ? AND dir = 'in' AND ttl_sec > 0 AND expires_at IS NULL",
+      [nowMs, peerPkHex.toLowerCase()],
+    );
+    changed = Number(res?.changes ?? 0);
+  });
+  return changed;
+}
+
+/**
+ * Borra los mensajes cuyo temporizador ya venció. Con `secure_delete` (ver
+ * secureDatabase.openEncryptedDatabase) el contenido se sobrescribe en el
+ * archivo. El registro anti-duplicados (delivery_ack_log) guarda solo el id,
+ * nunca el texto, y evita que un reintento del otro teléfono lo resucite.
+ */
+export async function deleteExpiredMessages(nowMs = Date.now()): Promise<number> {
+  let changed = 0;
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    const res = await db.runAsync(
+      "DELETE FROM p2p_messages WHERE expires_at IS NOT NULL AND expires_at <= ?",
+      [nowMs],
+    );
+    changed = Number(res?.changes ?? 0);
+  });
+  return changed;
+}
+
+/** Momento de borrado de un mensaje (null = sin temporizador o aún sin arrancar). */
+export async function getMessageExpiry(id: string): Promise<{ ttlSec: number; expiresAt: number | null } | null> {
+  await migrate();
+  const db = await getMemoryDb();
+  const row = await db.getFirstAsync<{ ttl_sec?: number | null; expires_at?: number | null }>(
+    "SELECT ttl_sec, expires_at FROM p2p_messages WHERE id = ? LIMIT 1",
+    [id],
+  );
+  if (!row) return null;
+  return { ttlSec: Number(row.ttl_sec ?? 0), expiresAt: row.expires_at ?? null };
 }
