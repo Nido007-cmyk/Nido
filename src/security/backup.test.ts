@@ -23,15 +23,20 @@ vi.mock("../privacy/keyManager", () => ({
 }));
 
 // 0.1.47: la copia del respaldo se abre para quitar los mensajes temporales.
-const sqlx = vi.hoisted(() => ({ sql: [] as string[], failWith: null as string | null }));
+const sqlx = vi.hoisted(() => ({ sql: [] as string[], failWith: null as string | null, allowOpen: false }));
 vi.mock("expo-sqlite", () => ({
-  openDatabaseAsync: async () => ({
+  // Solo se puede abrir en las pruebas de 0.1.47: el resto (p. ej. A5)
+  // depende de que la apertura de prueba NO pueda completarse.
+  openDatabaseAsync: async () => {
+    if (!sqlx.allowOpen) throw new Error("sin SQLite nativo en tests");
+    return {
     execAsync: async (q: string) => {
       sqlx.sql.push(q);
       if (sqlx.failWith && q.startsWith("DELETE")) throw new Error(sqlx.failWith);
     },
     closeAsync: async () => {},
-  }),
+    };
+  },
 }));
 
 vi.mock("./secureDatabase", () => ({
@@ -186,6 +191,7 @@ describe("backup.ts — 0.1.47: los mensajes temporales no van en los respaldos"
     vi.clearAllMocks();
     sqlx.sql = [];
     sqlx.failWith = null;
+    sqlx.allowOpen = true;
     (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: true, size: 5000 });
   });
 
