@@ -1,0 +1,70 @@
+# Verificación formal del protocolo P2P con ProVerif (0.1.48).
+# Modelos en formal/*.pv; resultados esperados en formal/expected.txt.
+name: Formal verification
+
+on:
+  pull_request:
+    paths: ['formal/**', 'src/p2p/**', '.github/workflows/formal.yml']
+  push:
+    branches: [main]
+    paths: ['formal/**', 'src/p2p/**']
+  schedule:
+    - cron: '7 5 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  proverif:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install ProVerif
+        # Ubuntu 24.04 no trae el paquete proverif. Se compila desde el código
+        # fuente oficial (INRIA) con el OCaml de Ubuntu; si eso falla, opam.
+        # Cada intento deja su error como anotación.
+        shell: bash
+        run: |
+          set -o pipefail
+          sudo apt-get update -q
+          sudo apt-get install -y -q ocaml-nox ocaml-findlib curl m4 > /dev/null
+          ok=0
+          for v in 2.05 2.04; do
+            if curl -fsSL "https://bblanche.gitlabpages.inria.fr/proverif/proverif$v.tar.gz" -o pv.tgz; then
+              tar xzf pv.tgz
+              if (cd "proverif$v" && ./build -nointeract) > build.log 2>&1; then
+                echo "$PWD/proverif$v" >> "$GITHUB_PATH"; ok=1; echo "ProVerif $v compilado"; break
+              else
+                tail -15 build.log | while IFS= read -r l; do echo "::warning title=build proverif $v::$l"; done
+              fi
+            else
+              echo "::warning title=proverif::no se pudo descargar la versión $v"
+            fi
+          done
+          if [ $ok = 0 ]; then
+            sudo apt-get install -y -q opam > /dev/null
+            opam init -y --disable-sandboxing > opam.log 2>&1 || true
+            eval "$(opam env)"
+            if opam install -y proverif >> opam.log 2>&1; then
+              echo "$(opam var bin)" >> "$GITHUB_PATH"; ok=1
+            else
+              tail -25 opam.log | while IFS= read -r l; do echo "::error title=opam::$l"; done
+            fi
+          fi
+          [ $ok = 1 ]
+      - name: ProVerif version
+        run: proverif -help 2>&1 | head -2 || true
+      - name: Verify handshake model
+        id: hs
+        continue-on-error: true
+        run: python3 formal/check.py --github nido_handshake.pv
+      - name: Verify v5 post-quantum model
+        id: pq
+        continue-on-error: true
+        run: python3 formal/check.py --github nido_v5_pq.pv
+      - name: Result
+        run: |
+          echo "handshake=${{ steps.hs.outcome }} v5=${{ steps.pq.outcome }}"
+          [ "${{ steps.hs.outcome }}" = success ] && [ "${{ steps.pq.outcome }}" = success ]

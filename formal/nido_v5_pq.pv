@@ -1,0 +1,140 @@
+(*
+  MIT License
+  Copyright (c) 2026 NIDO contributors
+  See LICENSE file for details.
+
+  NIDO P2P v5 — arranque híbrido X25519 + ML-KEM-768 y primer paso del
+  Double Ratchet. Modelo simbólico para ProVerif.
+
+  Pregunta principal ("grabar ahora, descifrar después"): un atacante activo
+  en la red (fase 0) que DESPUÉS gana un ordenador cuántico (fase 1: rompe
+  X25519 — aquí, se le entregan todos los secretos X25519 de la sesión:
+  efímeros del handshake y claves del ratchet) ¿puede
+  leer lo que se envió en v5? Y, como control, ¿sí puede leer lo que se
+  envió solo con la clave clásica? (Si no pudiera, el modelo estaría mal
+  hecho: el control debe salir "falso".)
+
+  Fuente: src/p2p/ratchet.ts (createOffer, acceptOffer, open, deriveV5Root,
+  kdfRk/kdfCk/messageKey), src/p2p/protocol.ts (confirmPayload,
+  maybeAcceptV5, pack/unpack).
+
+  Roles: L = identidad menor (aquí A), H = mayor (aquí B). C es un contacto
+  malicioso de ambos. ML-KEM se modela como un KEM ideal (IND-CCA).
+
+  El handshake v3 (firmas Ed25519) se verifica en nido_handshake.pv; este
+  modelo parte de su resultado (ver "Composición modular" abajo). Las firmas
+  no hacen falta aquí: romperlas DESPUÉS de la sesión no cambia lo ya
+  enviado.
+*)
+
+type G.
+type exponent.
+type key.
+type nonce.
+type kemsk.
+type kemrand.
+
+free c: channel.
+
+const g: G [data].
+fun exp(G, exponent): G.
+equation forall x: exponent, y: exponent; exp(exp(g, x), y) = exp(exp(g, y), x).
+
+
+(* KEM ideal: ct = encapsulación con aleatoriedad r; solo el dueño de dk
+   recupera el secreto compartido. *)
+fun kempk(kemsk): bitstring.
+fun kemct(bitstring, kemrand): bitstring.
+fun kemss(bitstring, kemrand): key.
+reduc forall dk: kemsk, r: kemrand; kemdec(dk, kemct(kempk(dk), r)) = kemss(kempk(dk), r).
+
+fun kdf(G, nonce, nonce): key.                       (* SK clásica *)
+fun kdf5(key, key, bitstring, bitstring): key.       (* raíz v5: SK, ss, pk_L, pk_H *)
+fun kdfck(key, G): key.                              (* paso DH del ratchet → cadena *)
+fun kdfmk(key): key.                                 (* cadena → clave de mensaje *)
+fun hmk(key, bitstring): key.                        (* clave ligada a la cabecera *)
+
+fun senc(bitstring, key): bitstring.
+reduc forall m: bitstring, k: key; sdec(senc(m, k), k) = m.
+
+const sessConfirm, offerTag: bitstring.
+
+free idA, idB, idC: bitstring.
+
+fun secretV5(bitstring, bitstring): bitstring [private].
+fun secretClassic(bitstring, bitstring): bitstring [private].
+
+
+event SentV5(bitstring, bitstring, bitstring).
+event RecvV5(bitstring, bitstring, bitstring).
+
+(* 1. Grabar ahora, descifrar después: lo enviado en v5 sigue secreto aunque
+      en la fase 1 se rompa todo X25519/Ed25519. Esperado: verdadero. *)
+query attacker(secretV5(idB, idA)) phase 1.
+(* 2. Control: lo enviado solo con la clave clásica SÍ cae en la fase 1.
+      Esperado: falso (el atacante lo obtiene). *)
+query attacker(secretClassic(idB, idA)) phase 1.
+(* 3. Autenticidad del primer mensaje v5 (fase 0). Esperado: verdadero. *)
+query m: bitstring; inj-event(RecvV5(idB, idA, m)) ==> inj-event(SentV5(idB, idA, m)).
+(* 4. Secreto del mensaje v5 durante la sesión (fase 0), incluso con un
+      contacto malicioso C emparejado con los dos. Esperado: verdadero. *)
+query attacker(secretV5(idB, idA)).
+
+(* L (pk menor): hace la oferta dentro del session_confirm sellado con SK y
+   espera el primer frame v5 de H. *)
+let LowV5(myId: bitstring, peerId: bitstring, k: key, eph: exponent, dk: kemsk, xL: exponent) =
+  out(c, senc((sessConfirm, myId, peerId, (offerTag, exp(g, xL), kempk(dk))), k));
+  in(c, (gH: G, ct: bitstring, box: bitstring));
+  let ss = kemdec(dk, ct) in
+  let root = kdf5(k, ss, myId, peerId) in
+  let mk = kdfmk(kdfck(root, exp(gH, xL))) in
+  let (from: bitstring, to: bitstring, m: bitstring) = sdec(box, hmk(mk, (gH, ct))) in
+  if from = peerId && to = myId then
+  event RecvV5(peerId, myId, m);
+  (* Fase 1: el ordenador cuántico rompe el efímero del handshake y la clave
+     de ratchet X25519. La clave ML-KEM (dk) no cae. *)
+  phase 1;
+  out(c, (eph, xL)).
+
+(* H (pk mayor): recibe la oferta, encapsula, arranca como Alice y manda su
+   primer mensaje v5 (con el cifrado ML-KEM en la cabecera). También manda
+   un mensaje solo con la clave clásica, como control. *)
+let HighV5(myId: bitstring, peerId: bitstring, k: key, eph: exponent, r: kemrand, xH: exponent) =
+  out(c, senc((peerId, myId, secretClassic(myId, peerId)), k));
+  in(c, x: bitstring);
+  let (=sessConfirm, from: bitstring, to: bitstring, (=offerTag, gL: G, ek: bitstring)) = sdec(x, k) in
+  if from = peerId && to = myId then
+  let ct = kemct(ek, r) in
+  let ss = kemss(ek, r) in
+  let root = kdf5(k, ss, peerId, myId) in
+  let gH = exp(g, xH) in
+  let mk = kdfmk(kdfck(root, exp(gL, xH))) in
+  event SentV5(myId, peerId, secretV5(myId, peerId));
+  out(c, (gH, ct, senc((myId, peerId, secretV5(myId, peerId)), hmk(mk, (gH, ct)))));
+  phase 1;
+  out(c, (eph, xH)).
+
+(* Composición modular: el handshake v3 está verificado aparte
+   (nido_handshake.pv: la clave de sesión entre A y B es secreta y los
+   mensajes, auténticos). Aquí se parte de su resultado: A y B comparten la
+   clave clásica SK = kdf(g^(eI·eR), nI, nR); los efímeros y nonces van en
+   claro por la red y los efímeros se filtran en la fase 1 (cuántico).
+   Con el contacto malicioso C, el atacante conoce la clave de sesión.
+   Los valores nuevos se crean al principio de cada sesión (ver
+   nido_handshake.pv: así ProVerif termina). *)
+let Session =
+  new eI: exponent; new eR: exponent; new nI: nonce; new nR: nonce;
+  new dk: kemsk; new xL: exponent; new r: kemrand; new xH: exponent;
+  out(c, (exp(g, eI), exp(g, eR), nI, nR));
+  let k = kdf(exp(exp(g, eI), eR), nI, nR) in
+  (LowV5(idA, idB, k, eI, dk, xL) | HighV5(idB, idA, k, eR, r, xH)).
+
+(* Sesiones de A y de B con el contacto malicioso C (clave conocida). *)
+let WithC(myId: bitstring) =
+  new k: key; new e: exponent;
+  new dk: kemsk; new xL: exponent; new r: kemrand; new xH: exponent;
+  out(c, (k, e));
+  (LowV5(myId, idC, k, e, dk, xL) | HighV5(myId, idC, k, e, r, xH)).
+
+process
+  (!Session) | (!WithC(idA)) | (!WithC(idB))

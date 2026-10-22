@@ -1,0 +1,22 @@
+# Resultado esperado de cada consulta, en el orden en que ProVerif las imprime.
+# true  = la propiedad se demuestra.
+# false = ProVerif encuentra un ataque (documentado como esperado abajo).
+#
+# nido_handshake.pv
+#  1-2  secreto de los mensajes A<->B
+#  3    secreto hacia adelante (claves de firma filtradas después)
+#  4-5  autenticidad de los mensajes (capa de mensajes: from/to)
+#  6-7  acuerdo de identidades SOLO a nivel de handshake: falso.
+#       "Unknown key share" con un contacto malicioso C: la firma del HELLO
+#       y la del CONFIRM no nombran al otro lado, así que C puede hacer que
+#       A y B acaben con la misma clave creyendo cada uno hablar con otro.
+#       No permite leer ni falsificar nada (consultas 1-5): los sobres llevan
+#       from/to dentro del cifrado y se rechazan. v5 además liga la raíz a
+#       las dos identidades. Ver formal/README.md.
+nido_handshake.pv: true true true true true false false
+# nido_v5_pq.pv
+#  1  grabar ahora, descifrar después: lo enviado en v5 sobrevive a romper X25519/Ed25519
+#  2  control: lo enviado solo con la clave clásica NO sobrevive (debe ser false)
+#  3  autenticidad del primer mensaje v5
+#  4  secreto del mensaje v5 durante la sesión
+nido_v5_pq.pv: true false true true

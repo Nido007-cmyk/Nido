@@ -57,3 +57,4 @@ apk/
 
 # CI evidence artifacts (APKs, zips) — never commit binaries
 docs/internal/ci-evidence/artifacts/
+formal/out/

@@ -1,0 +1,164 @@
+(*
+  MIT License
+  Copyright (c) 2026 NIDO contributors
+  See LICENSE file for details.
+
+  NIDO P2P — handshake v3 (HELLO v3 + CONFIRM v1) y capa de mensajes.
+  Modelo simbólico (Dolev-Yao) para ProVerif.
+
+  Fuente del modelo (leer junto al código):
+    src/p2p/crypto.ts          buildHelloSignMessageV3, buildConfirmSignMessage,
+                               deriveSessionKeyV2
+    src/p2p/nativeTransport.ts validatePeerHello, respondToHello, handleHello,
+                               handleConfirmInner
+    src/p2p/protocol.ts        P2PSession.unpack (from/to del sobre)
+
+  Actores: A y B, honestos, emparejados entre sí por QR (cada uno conoce la
+  clave de firma auténtica del otro). C es un contacto MALICIOSO de los dos:
+  el atacante conoce su clave de firma. La red la controla el atacante.
+
+  Abstracciones (conservadoras salvo donde se indica):
+  - El reloj no se modela: cada HELLO lleva un valor nuevo y público (el
+    atacante puede reenviar HELLOs viejos tal cual, como dentro de la ventana
+    real de ±10 min). En el código el timestamp lo pone el reloj del equipo.
+  - Todos los valores nuevos (efímeros, nonces) se crean al principio de
+    cada sesión, antes de leer de la red. Es equivalente (un valor aleatorio
+    no usado todavía no cambia nada) y evita que ProVerif no termine: si se
+    crean después de una entrada, sus nombres simbólicos dependen de ella y
+    el atacante puede anidarlos sin fin reflejando HELLOs entre A y B.
+  - La caché anti-replay de nonces (claimHelloNonce) se modela con una tabla.
+  - X25519 = Diffie-Hellman ideal; Ed25519 = firma ideal; HKDF = función
+    aleatoria; secretbox = cifrado autenticado ideal.
+  - El orden canónico de los nonces en el KDF se modela como (nI, nR): ambos
+    lados saben quién inició, y el resultado es el mismo.
+*)
+
+type G.
+type exponent.
+type skey.
+type spkey.
+type key.
+type nonce.
+
+free c: channel.
+
+const g: G [data].
+fun exp(G, exponent): G.
+equation forall x: exponent, y: exponent; exp(exp(g, x), y) = exp(exp(g, y), x).
+
+fun spk(skey): spkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; verify(sign(m, k), m, spk(k)) = true.
+
+fun kdf(G, nonce, nonce): key.
+
+fun senc(bitstring, key): bitstring.
+reduc forall m: bitstring, k: key; sdec(senc(m, k), k) = m.
+
+const hello3: bitstring.
+const confirm1: bitstring.
+
+(* Identidades públicas (claves X25519 de identidad, en claro). *)
+free idA, idB, idC: bitstring.
+(* C es un contacto malicioso: su clave de firma es pública. *)
+free skC: skey.
+
+(* Contenido secreto que un honesto manda a otro por la sesión. *)
+fun secretMsg(bitstring, bitstring): bitstring [private].
+
+table contacts(bitstring, spkey).
+table seenNonce(bitstring, nonce).
+
+(* Eventos de acuerdo sobre la CLAVE (nivel handshake). *)
+event InitRunning(bitstring, bitstring, key).
+event InitAccept(bitstring, bitstring, key).
+event RespRunning(bitstring, bitstring, key).
+event RespAccept(bitstring, bitstring, key).
+(* Eventos de la capa de mensajes (lo que ve el usuario). *)
+event MsgSent(bitstring, bitstring, bitstring).
+event MsgRecv(bitstring, bitstring, bitstring).
+
+(* 1. Secreto de los mensajes entre A y B. *)
+query attacker(secretMsg(idA, idB)).
+query attacker(secretMsg(idB, idA)).
+
+(* 2. Secreto hacia adelante: aunque después se filtren las claves de firma
+      de A y B (fase 1), lo enviado antes sigue secreto. *)
+query attacker(secretMsg(idA, idB)) phase 1.
+
+(* 3. Autenticación de mensajes: si B acepta un mensaje "de A", A lo envió
+      para B. (inyectiva: ni repeticiones ni duplicados) *)
+query m: bitstring; inj-event(MsgRecv(idA, idB, m)) ==> inj-event(MsgSent(idA, idB, m)).
+query m: bitstring; inj-event(MsgRecv(idB, idA, m)) ==> inj-event(MsgSent(idB, idA, m)).
+
+(* 4. Acuerdo de identidades a nivel HANDSHAKE (sin la capa de mensajes).
+      El iniciador que acepta con B: ¿B ejecutó el handshake con él? *)
+query k: key; inj-event(InitAccept(idA, idB, k)) ==> inj-event(RespRunning(idA, idB, k)).
+(* El respondedor que acepta a A: ¿A ejecutó el handshake con él? *)
+query k: key; inj-event(RespAccept(idA, idB, k)) ==> inj-event(InitRunning(idA, idB, k)).
+
+(* Mensaje de aplicación: sobre con from/to dentro del cifrado; el receptor
+   comprueba from = peer y to = yo (P2PSession.unpack + expectRecipient). *)
+let Talk(myId: bitstring, peerId: bitstring, k: key) =
+  (
+    event MsgSent(myId, peerId, secretMsg(myId, peerId));
+    out(c, senc((myId, peerId, secretMsg(myId, peerId)), k))
+  ) | (
+    in(c, x: bitstring);
+    let (from: bitstring, to: bitstring, m: bitstring) = sdec(x, k) in
+    if from = peerId && to = myId then
+    event MsgRecv(peerId, myId, m)
+  ).
+
+let Initiator(myId: bitstring, mySk: skey) =
+  new eI: exponent;
+  new nI: nonce;
+  new tsI: bitstring;
+  let gI = exp(g, eI) in
+  out(c, (myId, gI, nI, tsI, sign((hello3, myId, gI, nI, tsI), mySk)));
+  in(c, (peerId: bitstring, gR: G, nR: nonce, tsR: bitstring, sigR: bitstring));
+  if peerId <> myId then
+  get contacts(=peerId, peerSpk: spkey) in
+  if verify(sigR, (hello3, peerId, gR, nR, tsR), peerSpk) = true then
+  let k = kdf(exp(gR, eI), nI, nR) in
+  event InitRunning(myId, peerId, k);
+  out(c, (myId, nI, nR, sign((confirm1, myId, nI, nR), mySk)));
+  in(c, (cpk: bitstring, cn: nonce, pn: nonce, csig: bitstring));
+  if cpk = peerId && cn = nR && pn = nI then
+  if verify(csig, (confirm1, cpk, cn, pn), peerSpk) = true then
+  event InitAccept(myId, peerId, k);
+  Talk(myId, peerId, k).
+
+let Responder(myId: bitstring, mySk: skey) =
+  new eR: exponent;
+  new nR: nonce;
+  new tsR: bitstring;
+  in(c, (peerId: bitstring, gI: G, nI: nonce, tsI: bitstring, sigI: bitstring));
+  if peerId <> myId then
+  get contacts(=peerId, peerSpk: spkey) in
+  if verify(sigI, (hello3, peerId, gI, nI, tsI), peerSpk) = true then
+  get seenNonce(=peerId, =nI) in 0 else
+  insert seenNonce(peerId, nI);
+  let gR = exp(g, eR) in
+  out(c, (myId, gR, nR, tsR, sign((hello3, myId, gR, nR, tsR), mySk)));
+  in(c, (cpk: bitstring, cn: nonce, pn: nonce, csig: bitstring));
+  if cpk = peerId && cn = nI && pn = nR then
+  if verify(csig, (confirm1, cpk, cn, pn), peerSpk) = true then
+  let k = kdf(exp(gI, eR), nI, nR) in
+  event RespRunning(peerId, myId, k);
+  out(c, (myId, nR, nI, sign((confirm1, myId, nR, nI), mySk)));
+  event RespAccept(peerId, myId, k);
+  Talk(myId, peerId, k).
+
+process
+  new skA: skey;
+  new skB: skey;
+  out(c, (spk(skA), spk(skB)));
+  insert contacts(idA, spk(skA));
+  insert contacts(idB, spk(skB));
+  insert contacts(idC, spk(skC));
+  (
+    (!Initiator(idA, skA)) | (!Responder(idA, skA)) |
+    (!Initiator(idB, skB)) | (!Responder(idB, skB)) |
+    (phase 1; out(c, (skA, skB)))
+  )
