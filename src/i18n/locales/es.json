@@ -824,7 +824,9 @@
     "disappear_604800": "1 semana",
     "disappear_2419200": "4 semanas",
     "disappearSet": "Mensajes temporales: {{value}}",
-    "disappearHint": "Los mensajes nuevos de este chat se borran solos en los dos teléfonos. Para ti el tiempo cuenta desde que lo envías; para tu contacto, desde que lo ve. El NIDO de tu contacto adopta este ajuste con tu próximo mensaje (las versiones anteriores de NIDO lo ignoran). Nadie puede impedir que alguien fotografíe la pantalla con otra cámara."
+    "disappearHint": "Los mensajes nuevos de este chat se borran solos en los dos teléfonos. Para ti el tiempo cuenta desde que lo envías; para tu contacto, desde que lo ve. El NIDO de tu contacto adopta este ajuste con tu próximo mensaje (las versiones anteriores de NIDO lo ignoran). Nadie puede impedir que alguien fotografíe la pantalla con otra cámara.",
+    "disappearBadge": "temporal",
+    "disappearShort": "Temporal: {{value}}"
   },
   "notifications": {
     "reminderChannel": "Recordatorios de NIDO",
@@ -1664,7 +1666,7 @@
     "buttonLabel": "Botón de pánico: mantén 3 segundos para borrarlo todo",
     "buttonHint": "Borra todos los datos de NIDO: chats, contactos, claves, memoria y modelos. No se puede deshacer.",
     "short": "SOS",
-    "wiping": "…",
+    "wiping": "Borrando",
     "failedTitle": "No se pudo borrar todo",
     "settingTitle": "Botón de pánico",
     "settingDesc": "Muestra un botón SOS en la pantalla principal. Mantenerlo 3 segundos borra todos los datos de NIDO de una vez, sin pedir huella ni confirmación. No se puede deshacer; haz antes un respaldo si quieres conservar algo."

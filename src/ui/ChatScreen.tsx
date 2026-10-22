@@ -17,7 +17,6 @@ import {
   AppState,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Alert,
 } from "react-native";
 import { PanicButton } from "./components/PanicButton";
 import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
@@ -1763,7 +1762,7 @@ export function ChatScreen({
             panicEnabled ? (
               <PanicButton
                 onWiped={() => onRelaunchWizard?.()}
-                onError={(msg) => Alert.alert(t("panic.failedTitle"), msg)}
+                onError={(msg) => setToast(`${t("panic.failedTitle")}: ${msg}`)}
               />
             ) : null
           }

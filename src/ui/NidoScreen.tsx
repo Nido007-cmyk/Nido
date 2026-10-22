@@ -1136,9 +1136,9 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       >
         <Text style={[styles.bubbleText, out && styles.bubbleTextOut]}>{item.text}</Text>
         <Text style={[styles.bubbleMeta, out && styles.bubbleMetaOut]}>
-          {item.ttlSec ? "⏱ " : ""}
           {fmtTime(item.ts)}
           {out ? outStatusSuffix(item) : ""}
+          {item.ttlSec ? ` · ${t("nido.disappearBadge")}` : ""}
         </Text>
         {showRetry ? (
           <Pressable
@@ -1291,8 +1291,9 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             accessibilityLabel={`${t("nido.disappearTitle")}: ${timerLabel(disappearSec)}`}
           >
             <Text style={styles.timerBtnText}>
-              {"⏱ "}
-              {disappearSec === 0 ? t("nido.disappearOffShort") : timerLabel(disappearSec)}
+              {t("nido.disappearShort", {
+                value: disappearSec === 0 ? t("nido.disappearOffShort") : timerLabel(disappearSec),
+              })}
             </Text>
           </Pressable>
         </View>

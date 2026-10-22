@@ -824,7 +824,9 @@
     "disappear_604800": "1 week",
     "disappear_2419200": "4 weeks",
     "disappearSet": "Disappearing messages: {{value}}",
-    "disappearHint": "New messages in this chat delete themselves on both phones. For you the time counts from sending; for your contact, from when they see it. Your contact's NIDO takes this setting with your next message (older versions of NIDO ignore it). Nobody can stop someone from photographing the screen with another camera."
+    "disappearHint": "New messages in this chat delete themselves on both phones. For you the time counts from sending; for your contact, from when they see it. Your contact's NIDO takes this setting with your next message (older versions of NIDO ignore it). Nobody can stop someone from photographing the screen with another camera.",
+    "disappearBadge": "disappearing",
+    "disappearShort": "Timer: {{value}}"
   },
   "notifications": {
     "reminderChannel": "NIDO Reminders",
@@ -1664,7 +1666,7 @@
     "buttonLabel": "Panic button: hold 3 seconds to erase everything",
     "buttonHint": "Erases all NIDO data: chats, contacts, keys, memory and models. It cannot be undone.",
     "short": "SOS",
-    "wiping": "…",
+    "wiping": "Erasing",
     "failedTitle": "Could not erase everything",
     "settingTitle": "Panic button",
     "settingDesc": "Shows an SOS button on the main screen. Holding it for 3 seconds erases all NIDO data at once, without asking for fingerprint or confirmation. It cannot be undone; make a backup first if you want to keep anything."
