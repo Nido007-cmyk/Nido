@@ -46,6 +46,7 @@ import { NativeP2PTransport } from "./transport";
 import {
   buildHelloSignMessageV3,
   buildConfirmSignMessage,
+  buildConfirmSignMessageV2,
   fromHex,
   generateEphemeral,
   HANDSHAKE_NONCE_BYTES,
@@ -231,6 +232,10 @@ interface PendingHello {
   peerNonceHex?: string;
   /** Clave de firma Ed25519 del contacto (capturada al validar su HELLO). */
   peerSigPkHex?: string;
+  /** 0.1.48: mi identidad (hex), para verificar la firma v2 del CONFIRM del peer. */
+  myPkHex?: string;
+  /** 0.1.48: el CONFIRM del peer traía la firma v2 (con destinatario) y verificó. */
+  peerConfirmV2?: boolean;
   // FIX 2026-10-09 (B2): multicast en vez de resolve/reject único. Antes un
   // segundo connect() SOBREESCRIBÍA estos y la primera promise quedaba
   // colgada para siempre (spinner "Connecting…" eterno).
@@ -1635,8 +1640,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       const ts = Math.floor(Date.now() / 1000);
       const sig = await this.signHello(buildHelloSignMessageV3(myPkHex, ephPkHex, nonceHex, ts));
       const helloPlain = buildHello(myPkHex, ephPkHex, nonceHex, ts, toHex(sig));
-      const confirmSig = await this.signHello(buildConfirmSignMessage(myPkHex, nonceHex, hello.nonce));
-      const confirmPlain = buildConfirmV1(myPkHex, nonceHex, hello.nonce, toHex(confirmSig));
+      const confirmPlain = await this.signOurConfirm(myPkHex, nonceHex, hello.nonce, pkLower);
       // P2P v4: si nos llamaron con saludo sellado, respondemos sellado.
       const ourHello = pend.sealKey ? sealHandshakeFrame(pend.sealKey, "hello", helloPlain) : helloPlain;
       const ourConfirm = pend.sealKey
@@ -1655,6 +1659,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       pend.peerEphPkHex = hello.eph;
       pend.peerNonceHex = hello.nonce;
       pend.peerSigPkHex = contact.sigPkHex;
+      pend.myPkHex = myPkHex;
       pend.pendingConfirm = ourConfirm;
       pend.stage = "confirm-sent";
       pend.timer = this.armConfirmTimeout(mac);
@@ -1886,10 +1891,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       // HELLO válido: enviamos nuestro CONFIRM (cn = nuestro nonce,
       // pn = el nonce del peer visto en ESTA conexión) y esperamos el suyo.
       // La RUTA SIGUE SIN TOCARSE (invariante central R4).
-      const confirmSig = await this.signHello(
-        buildConfirmSignMessage(myPkHex, pend.myNonceHex, hello.nonce),
-      );
-      const confirmPlain = buildConfirmV1(myPkHex, pend.myNonceHex, hello.nonce, toHex(confirmSig));
+      const confirmPlain = await this.signOurConfirm(myPkHex, pend.myNonceHex, hello.nonce, pkLower);
       const confirm = pend.sealKey
         ? sealHandshakeFrame(pend.sealKey, "confirm", confirmPlain)
         : confirmPlain;
@@ -1899,6 +1901,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       pend.peerEphPkHex = hello.eph;
       pend.peerNonceHex = hello.nonce;
       pend.peerSigPkHex = contact.sigPkHex;
+      pend.myPkHex = myPkHex;
       pend.timer = this.armConfirmTimeout(mac);
       try {
         await this.bt().sendFrame(mac, encodeBase64(confirm));
@@ -1913,6 +1916,40 @@ export class NidoBluetoothTransport implements P2PTransport {
       // handleHello nunca muta pkToMac/macToPk.
       this.failHello(mac, err);
     }
+  }
+
+  /**
+   * 0.1.48: nuestro CONFIRM con las dos firmas: la v1 (la que entiende un
+   * NIDO viejo) y la v2 en el campo "s2", que nombra también al destinatario.
+   */
+  private async signOurConfirm(
+    myPkHex: string,
+    myNonceHex: string,
+    peerNonceHex: string,
+    peerPkHex: string,
+  ): Promise<Uint8Array> {
+    const sig = await this.signHello(buildConfirmSignMessage(myPkHex, myNonceHex, peerNonceHex));
+    const s2 = await this.signHello(
+      buildConfirmSignMessageV2(myPkHex, peerPkHex, myNonceHex, peerNonceHex),
+    );
+    return buildConfirmV1(myPkHex, myNonceHex, peerNonceHex, toHex(sig), toHex(s2));
+  }
+
+  /**
+   * 0.1.48: ¿el contacto ya nos mandó un CONFIRM v2 válido? Entonces se exige.
+   * Si la base de datos falla, el error sube y la conexión se rechaza
+   * (fail-closed): no se acepta un CONFIRM sin v2 sin saber si se exigía.
+   */
+  private async contactRequiresConfirmV2(pkHex: string): Promise<boolean> {
+    const store = await import("./store");
+    let fn: ((pk: string) => Promise<boolean>) | undefined;
+    try {
+      // Solo puede fallar con un store simulado sin esta función (tests).
+      fn = (store as { isContactConfirmV2?: (pk: string) => Promise<boolean> }).isContactConfirmV2;
+    } catch {
+      fn = undefined;
+    }
+    return typeof fn === "function" ? await fn(pkHex) : false;
   }
 
   /**
@@ -1971,6 +2008,31 @@ export class NidoBluetoothTransport implements P2PTransport {
         throw new Error(
           "Firma del CONFIRM inválida: posible ataque de intermediario. Conexión rechazada.",
         );
+      }
+      // 0.1.48: firma v2, que nombra también al destinatario (yo). Cierra el
+      // "unknown key share" que encontró la verificación formal: un CONFIRM
+      // hecho para otro contacto no verifica aquí.
+      if (confirm.s2 !== undefined) {
+        if (!pend.myPkHex) throw new Error("CONFIRM v2 sin identidad propia: conexión rechazada.");
+        const ok2 = verifyDetached(
+          buildConfirmSignMessageV2(confirm.pk, pend.myPkHex, confirm.cn, confirm.pn),
+          fromHex(confirm.s2),
+          fromHex(pend.peerSigPkHex!),
+        );
+        if (!ok2) {
+          throw new Error(
+            "Firma v2 del CONFIRM inválida: la confirmación no iba dirigida a este teléfono. Conexión rechazada.",
+          );
+        }
+        pend.peerConfirmV2 = true;
+      } else {
+        pend.peerConfirmV2 = false;
+        // Un contacto que ya firmó v2 no vuelve a v1: si falta, alguien la quitó.
+        if (await this.contactRequiresConfirmV2(confirm.pk)) {
+          throw new Error(
+            "CONFIRM sin la firma v2 de un contacto que ya la usa: posible intento de degradación. Conexión rechazada.",
+          );
+        }
       }
       // AUDIT-2026-10-11 (LAN-1): como respondedor Wi-Fi, nuestro CONFIRM
       // sale recién ahora, cuando el iniciador ya procesó nuestro HELLO.
@@ -2095,6 +2157,13 @@ export class NidoBluetoothTransport implements P2PTransport {
         await setContactV4Capable(pkLower, pend.peerAdvertisesV4);
       } catch { /* best-effort */ }
     }
+    // 0.1.48: desde ahora este contacto tiene que firmar siempre v2.
+    if (pend.peerConfirmV2 === true) {
+      try {
+        const { setContactConfirmV2 } = await import("./store");
+        await setContactConfirmV2(pkLower);
+      } catch { /* best-effort: la sesión de abajo vuelve a avisarlo (cf2) */ }
+    }
     const info: P2PPeerInfo = { pkHex: pkLower, alias: contact?.name ?? mac, transport: transportOf(mac) };
     // La sesión la deriva el messenger (ligada a ambos nonces).
     this.events?.onHandshakeComplete?.(
@@ -2103,6 +2172,7 @@ export class NidoBluetoothTransport implements P2PTransport {
       fromHex(pend.peerEphPkHex!),
       pend.myNonce,
       fromHex(pend.peerNonceHex!),
+      pend.peerConfirmV2 === true,
     );
     this.events?.onPeerFound?.(info);
     this.resolvePending(pend, info);

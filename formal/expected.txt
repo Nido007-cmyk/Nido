@@ -20,3 +20,8 @@ nido_handshake.pv: true true true true true false false
 #  3  autenticidad del primer mensaje v5
 #  4  secreto del mensaje v5 durante la sesión
 nido_v5_pq.pv: true false true true
+# nido_handshake_v2.pv (CONFIRM v2, 0.1.48: la firma nombra al destinatario)
+#  1-5  igual que arriba
+#  6-7  acuerdo de identidades a nivel de handshake: ahora VERDADERO
+#       (el "unknown key share" de CONFIRM v1 queda cerrado)
+nido_handshake_v2.pv: true true true true true true true

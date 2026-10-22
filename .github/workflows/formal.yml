@@ -60,11 +60,15 @@ jobs:
         id: hs
         continue-on-error: true
         run: python3 formal/check.py --github nido_handshake.pv
+      - name: Verify handshake model with CONFIRM v2
+        id: hs2
+        continue-on-error: true
+        run: python3 formal/check.py --github nido_handshake_v2.pv
       - name: Verify v5 post-quantum model
         id: pq
         continue-on-error: true
         run: python3 formal/check.py --github nido_v5_pq.pv
       - name: Result
         run: |
-          echo "handshake=${{ steps.hs.outcome }} v5=${{ steps.pq.outcome }}"
-          [ "${{ steps.hs.outcome }}" = success ] && [ "${{ steps.pq.outcome }}" = success ]
+          echo "handshake=${{ steps.hs.outcome }} handshake_v2=${{ steps.hs2.outcome }} v5=${{ steps.pq.outcome }}"
+          [ "${{ steps.hs.outcome }}" = success ] && [ "${{ steps.hs2.outcome }}" = success ] && [ "${{ steps.pq.outcome }}" = success ]
