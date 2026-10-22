@@ -209,7 +209,16 @@ jobs:
         # assembleRelease (not assembleDebug): embeds the JS bundle so the app
         # cold-launches without Metro, and __DEV__=false activates the
         # production security paths (fail-closed key management).
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --stacktrace
+        shell: bash
+        run: |
+          # 0.1.47: si falla, el motivo sale como anotación (los logs de CI
+          # no siempre se pueden abrir).
+          set -o pipefail
+          ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --stacktrace 2>&1 | tee "$RUNNER_TEMP/gradle.log" || {
+            grep -A12 "What went wrong" "$RUNNER_TEMP/gradle.log" | head -40 | while IFS= read -r l; do echo "::error title=gradle::$l"; done
+            grep -iE "^e: |error:|ERROR:|FAILURE" "$RUNNER_TEMP/gradle.log" | head -20 | while IFS= read -r l; do echo "::error title=gradle::$l"; done
+            exit 1
+          }
 
       - name: Manifest summary (permissions and exported components)
         # 0.1.47 (auditoría): el manifiesto FINAL (tras fusionar los de todas
