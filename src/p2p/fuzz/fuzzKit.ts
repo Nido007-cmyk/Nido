@@ -66,7 +66,7 @@ const INTERESTING = [0x00, 0x01, 0x05, 0x7f, 0x80, 0xff, 0x20, 0x22, 0x7b, 0x7d,
 
 /** Aplica de 1 a 4 mutaciones al azar. Nunca devuelve el mismo objeto. */
 export function mutate(rng: Rng, input: Uint8Array, corpus: readonly Uint8Array[] = []): Uint8Array {
-  let b = input.slice();
+  let b: Uint8Array = input.slice();
   const rounds = 1 + rng.int(4);
   for (let r = 0; r < rounds; r++) {
     const op = rng.int(8);
