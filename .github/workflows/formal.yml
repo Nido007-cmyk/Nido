@@ -21,18 +21,39 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Install ProVerif (opam)
-        # Ubuntu 24.04 no trae el paquete proverif: se instala con opam, el
-        # gestor oficial de OCaml (versión fija para que el resultado sea
-        # reproducible).
+      - name: Install ProVerif
+        # Ubuntu 24.04 no trae el paquete proverif. Se compila desde el código
+        # fuente oficial (INRIA) con el OCaml de Ubuntu; si eso falla, opam.
+        # Cada intento deja su error como anotación.
+        shell: bash
         run: |
+          set -o pipefail
           sudo apt-get update -q
-          sudo apt-get install -y -q opam graphviz
-          opam init -y --disable-sandboxing --bare
-          opam switch create -y nido ocaml-base-compiler.4.14.2
-          eval "$(opam env --switch=nido)"
-          opam install -y proverif.2.05
-          echo "$(opam var --switch=nido bin)" >> "$GITHUB_PATH"
+          sudo apt-get install -y -q ocaml-nox ocaml-findlib curl m4 > /dev/null
+          ok=0
+          for v in 2.05 2.04; do
+            if curl -fsSL "https://bblanche.gitlabpages.inria.fr/proverif/proverif$v.tar.gz" -o pv.tgz; then
+              tar xzf pv.tgz
+              if (cd "proverif$v" && ./build -nointeract) > build.log 2>&1; then
+                echo "$PWD/proverif$v" >> "$GITHUB_PATH"; ok=1; echo "ProVerif $v compilado"; break
+              else
+                tail -15 build.log | while IFS= read -r l; do echo "::warning title=build proverif $v::$l"; done
+              fi
+            else
+              echo "::warning title=proverif::no se pudo descargar la versión $v"
+            fi
+          done
+          if [ $ok = 0 ]; then
+            sudo apt-get install -y -q opam > /dev/null
+            opam init -y --disable-sandboxing > opam.log 2>&1 || true
+            eval "$(opam env)"
+            if opam install -y proverif >> opam.log 2>&1; then
+              echo "$(opam var bin)" >> "$GITHUB_PATH"; ok=1
+            else
+              tail -25 opam.log | while IFS= read -r l; do echo "::error title=opam::$l"; done
+            fi
+          fi
+          [ $ok = 1 ]
       - name: ProVerif version
         run: proverif -help 2>&1 | head -2 || true
       - name: Verify models
