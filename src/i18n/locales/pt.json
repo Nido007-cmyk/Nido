@@ -826,7 +826,8 @@
     "disappearSet": "Mensagens temporárias: {{value}}",
     "disappearHint": "As mensagens novas deste chat se apagam sozinhas nos dois telefones. Para você, o tempo conta a partir do envio; para seu contato, a partir de quando ele a vê. O NIDO do seu contato adota esta configuração com sua próxima mensagem (versões anteriores do NIDO a ignoram). Ninguém pode impedir que alguém fotografe a tela com outra câmera.",
     "disappearBadge": "temporária",
-    "disappearShort": "Temporária: {{value}}"
+    "disappearShort": "Temporária: {{value}}",
+    "v5Active": "chave por mensagem"
   },
   "notifications": {
     "reminderChannel": "Lembretes do NIDO",

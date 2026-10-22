@@ -826,7 +826,8 @@
     "disappearSet": "Disappearing messages: {{value}}",
     "disappearHint": "New messages in this chat delete themselves on both phones. For you the time counts from sending; for your contact, from when they see it. Your contact's NIDO takes this setting with your next message (older versions of NIDO ignore it). Nobody can stop someone from photographing the screen with another camera.",
     "disappearBadge": "disappearing",
-    "disappearShort": "Timer: {{value}}"
+    "disappearShort": "Timer: {{value}}",
+    "v5Active": "new key per message"
   },
   "notifications": {
     "reminderChannel": "NIDO Reminders",
