@@ -83,9 +83,7 @@ query attacker(secretV5(idB, idA)).
 
 (* L (pk menor): hace la oferta dentro del session_confirm sellado con SK y
    espera el primer frame v5 de H. *)
-let LowV5(myId: bitstring, peerId: bitstring, k: key, eph: exponent) =
-  new dk: kemsk;
-  new xL: exponent;
+let LowV5(myId: bitstring, peerId: bitstring, k: key, eph: exponent, dk: kemsk, xL: exponent) =
   out(c, senc((sessConfirm, myId, peerId, (offerTag, exp(g, xL), kempk(dk))), k));
   in(c, (gH: G, ct: bitstring, box: bitstring));
   let ss = kemdec(dk, ct) in
@@ -102,16 +100,14 @@ let LowV5(myId: bitstring, peerId: bitstring, k: key, eph: exponent) =
 (* H (pk mayor): recibe la oferta, encapsula, arranca como Alice y manda su
    primer mensaje v5 (con el cifrado ML-KEM en la cabecera). También manda
    un mensaje solo con la clave clásica, como control. *)
-let HighV5(myId: bitstring, peerId: bitstring, k: key, eph: exponent) =
+let HighV5(myId: bitstring, peerId: bitstring, k: key, eph: exponent, r: kemrand, xH: exponent) =
   out(c, senc((peerId, myId, secretClassic(myId, peerId)), k));
   in(c, x: bitstring);
   let (=sessConfirm, from: bitstring, to: bitstring, (=offerTag, gL: G, ek: bitstring)) = sdec(x, k) in
   if from = peerId && to = myId then
-  new r: kemrand;
   let ct = kemct(ek, r) in
   let ss = kemss(ek, r) in
   let root = kdf5(k, ss, peerId, myId) in
-  new xH: exponent;
   let gH = exp(g, xH) in
   let mk = kdfmk(kdfck(root, exp(gL, xH))) in
   event SentV5(myId, peerId, secretV5(myId, peerId));
@@ -121,11 +117,16 @@ let HighV5(myId: bitstring, peerId: bitstring, k: key, eph: exponent) =
 
 (* Handshake v3 (como en nido_handshake.pv), ya autenticado, seguido de v5.
    Los roles L/H dependen de la identidad, no de quién inicia. *)
-let V5(myId: bitstring, peerId: bitstring, k: key, eph: exponent) =
-  if myId = idA then LowV5(myId, peerId, k, eph)
-  else HighV5(myId, peerId, k, eph).
+(* Los valores nuevos de v5 (dk, xL, r, xH) se crean al principio de la
+   sesión, antes de leer de la red: equivalente, y así ProVerif termina
+   (ver nido_handshake.pv). *)
+let V5(myId: bitstring, peerId: bitstring, k: key, eph: exponent,
+       dk: kemsk, xL: exponent, r: kemrand, xH: exponent) =
+  if myId = idA then LowV5(myId, peerId, k, eph, dk, xL)
+  else HighV5(myId, peerId, k, eph, r, xH).
 
 let Initiator(myId: bitstring, mySk: skey) =
+  new dk: kemsk; new xL: exponent; new r: kemrand; new xH: exponent;
   new eI: exponent;
   new nI: nonce;
   new tsI: bitstring;
@@ -139,23 +140,24 @@ let Initiator(myId: bitstring, mySk: skey) =
   in(c, (cpk: bitstring, cn: nonce, pn: nonce, csig: bitstring));
   if cpk = peerId && cn = nR && pn = nI then
   if verify(csig, (confirm1, cpk, cn, pn), peerSpk) = true then
-  V5(myId, peerId, kdf(exp(gR, eI), nI, nR), eI).
+  V5(myId, peerId, kdf(exp(gR, eI), nI, nR), eI, dk, xL, r, xH).
 
 let Responder(myId: bitstring, mySk: skey) =
+  new dk: kemsk; new xL: exponent; new r: kemrand; new xH: exponent;
+  new eR: exponent;
+  new nR: nonce;
+  new tsR: bitstring;
   in(c, (peerId: bitstring, gI: G, nI: nonce, tsI: bitstring, sigI: bitstring));
   if peerId <> myId then
   get contacts(=peerId, peerSpk: spkey) in
   if verify(sigI, (hello3, peerId, gI, nI, tsI), peerSpk) = true then
-  new eR: exponent;
-  new nR: nonce;
-  new tsR: bitstring;
   let gR = exp(g, eR) in
   out(c, (myId, gR, nR, tsR, sign((hello3, myId, gR, nR, tsR), mySk)));
   in(c, (cpk: bitstring, cn: nonce, pn: nonce, csig: bitstring));
   if cpk = peerId && cn = nI && pn = nR then
   if verify(csig, (confirm1, cpk, cn, pn), peerSpk) = true then
   out(c, (myId, nR, nI, sign((confirm1, myId, nR, nI), mySk)));
-  V5(myId, peerId, kdf(exp(gI, eR), nI, nR), eR).
+  V5(myId, peerId, kdf(exp(gI, eR), nI, nR), eR, dk, xL, r, xH).
 
 process
   new skA: skey;
