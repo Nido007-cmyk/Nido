@@ -193,7 +193,7 @@ describe("v5 a través del messenger", () => {
       expect(peerConfirm[4]).toBe(V5_MARKER);
       await s.m.handleFrame(s.peerPk, peerConfirm);
     } else {
-      expect(myConfirm.payload).toEqual({ r5cap: 1 });
+      expect(myConfirm.payload).toEqual({ r5cap: 1, cf2: 1 });
       // El peer (L) manda su oferta; yo arranco como H y mando el kick v5.
       const offer = s.peer.confirmPayload();
       const before = s.wire.length;

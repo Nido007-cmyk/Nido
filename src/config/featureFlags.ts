@@ -67,6 +67,14 @@ export function resetFeatureFlagsForTests(): void {
   overrides.clear();
 }
 
+/**
+ * Solo tests: fija un interruptor en memoria (sin tocar disco). Los arneses
+ * que fabrican frames clásicos a mano fijan v5 apagado con esto.
+ */
+export function setFeatureOverrideForTests(flag: FeatureFlag, value: boolean): void {
+  overrides.set(flag, value);
+}
+
 /** 0.1.47: tras borrar todos los datos, los interruptores vuelven a los de fábrica. */
 export function resetFeatureFlagsInMemory(): void {
   overrides.clear();
