@@ -85,8 +85,16 @@ La interfaz está disponible en español, inglés y portugués.
 - El contenido que viene de fuera (el mensaje de un contacto, un archivo,
   una nota) se trata como datos, nunca como instrucciones, y las acciones
   que escriben o envían algo después de leerlo piden confirmación.
-- Los mensajes por Bluetooth van cifrados de extremo a extremo con claves
-  intercambiadas por código QR (X25519, firmas Ed25519, XSalsa20-Poly1305).
+- Bóveda de hardware opcional: la clave de la base puede quedar atada a tu
+  huella o PIN en el hardware seguro del teléfono, con un modo estricto que
+  cierra NIDO tras poco tiempo en segundo plano.
+- Los mensajes entre dos NIDO (Bluetooth, o Wi-Fi local como respaldo) van
+  cifrados de extremo a extremo con claves intercambiadas por código QR
+  (X25519, firmas Ed25519, XSalsa20-Poly1305). El teléfono que inicia una
+  conexión todavía manda su clave pública en claro; ocultarla está previsto.
+- Las capturas de pantalla están bloqueadas, las capas de otras apps se
+  ocultan mientras NIDO está en pantalla (Android 12+) y borrar todos los
+  datos pide tu huella o PIN.
 
 [Política de privacidad](PRIVACY.md) · [términos de uso](TERMS.md). Más detalle: [endurecimiento de privacidad](docs/es/PRIVACY.md) · [arquitectura criptográfica](docs/es/CRYPTO_ARCHITECTURE.md) ·
 [modelo de amenazas](docs/THREAT_MODEL_SUMMARY.md) · [reportar una vulnerabilidad](SECURITY.es.md)

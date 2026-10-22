@@ -19,7 +19,7 @@ import {
   AppState,
 } from "react-native";
 import { showSecureAlert } from "nido-secure-dialog";
-import * as Clipboard from "expo-clipboard";
+import { copyPrivate } from "../utils/secretClipboard";
 import QRCode from "qrcode";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
@@ -1026,7 +1026,9 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
 
   const copy = useCallback(
     async (value: string, label: string) => {
-      await Clipboard.setStringAsync(value);
+      // Blindaje 0.1.44: el código lleva tu nombre y tus claves públicas;
+      // se copia marcado como sensible (fuera del historial del teclado).
+      await copyPrivate(value);
       setNotice(t("nido.copiedNotice", { label }));
     },
     [t],

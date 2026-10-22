@@ -466,7 +466,8 @@
       "indexed": "«{{name}}» indexado en la base de conocimiento offline",
       "loadFailed": "No se pudo cargar «{{name}}»: {{error}}",
       "removed": "Se eliminó «{{name}}»",
-      "resetFailed": "Falló el restablecimiento: {{error}}"
+      "resetFailed": "Falló el restablecimiento: {{error}}",
+      "resetCancelled": "No se borró nada: se canceló el desbloqueo."
     }
   },
   "personalDocumentsManager": {

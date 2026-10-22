@@ -5,7 +5,11 @@ name: npm audit
 on:
   workflow_dispatch:
   push:
-    branches: ['security/**']
+    branches: ['security/**', main]
+  # Blindaje 0.1.44: también una vez por semana, aunque nadie toque el
+  # código: las vulnerabilidades nuevas se publican sin avisar.
+  schedule:
+    - cron: '17 9 * * 1'
 
 permissions:
   contents: read
@@ -14,8 +18,8 @@ jobs:
   audit:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 24
       - name: npm audit (todas y solo producción)

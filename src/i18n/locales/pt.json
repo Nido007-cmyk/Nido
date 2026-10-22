@@ -136,7 +136,8 @@
       "removed": "\"{{name}}\" removido",
       "activeSet": "Modelo {{kind}} ativo definido como \"{{name}}\"",
       "loadFailed": "Não foi possível carregar \"{{name}}\": {{error}}",
-      "resetFailed": "Falha ao redefinir: {{error}}"
+      "resetFailed": "Falha ao redefinir: {{error}}",
+      "resetCancelled": "Nada foi apagado: o desbloqueio foi cancelado."
     },
     "recovery": {
       "wizardTitle": "Assistente de configuração",

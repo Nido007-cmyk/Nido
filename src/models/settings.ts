@@ -160,6 +160,9 @@ export async function clearSettings(): Promise<void> {
   // the file right after the reset.
   const run = settingsQueue.then(async () => {
     await FileSystem.deleteAsync(SETTINGS_PATH, { idempotent: true });
+    // También el ajuste privado cifrado (prompt personalizado).
+    const km = await import("../privacy/keyManager").catch(() => null);
+    await km?.writePrivateSetting(CUSTOM_PROMPT_KEY, null).catch(() => false);
   });
   settingsQueue = run.catch(() => {});
   return run;
@@ -200,17 +203,52 @@ export async function setPersonalityId(id: PersonalityId): Promise<void> {
   });
 }
 
+/**
+ * Blindaje 0.1.44: el prompt personalizado es texto del usuario, así que se
+ * guarda cifrado en SecureStore y no en `settings.json` en claro. Si
+ * SecureStore no está disponible (tests, fallo del Keystore) se usa el
+ * archivo como antes: nunca se pierde ni se rompe el ajuste.
+ */
+const CUSTOM_PROMPT_KEY = "nido_private_custom_prompt";
+
+async function privateStore() {
+  return import("../privacy/keyManager");
+}
+
 export async function getCustomSystemPrompt(): Promise<string> {
+  const km = await privateStore();
+  const secure = await km.readPrivateSetting(CUSTOM_PROMPT_KEY);
+  if (typeof secure === "string") return secure;
   const s = await readSettings();
-  return s.customSystemPrompt ?? "";
+  const legacy = s.customSystemPrompt ?? "";
+  if (secure === null && legacy) {
+    // Migración: mover el valor viejo del archivo a SecureStore y quitarlo
+    // del archivo solo si la escritura cifrada funcionó.
+    if (await km.writePrivateSetting(CUSTOM_PROMPT_KEY, legacy)) {
+      await mutateSettings((x) => {
+        delete x.customSystemPrompt;
+      }).catch(() => {});
+    }
+  }
+  return legacy;
 }
 
 export async function setCustomSystemPrompt(prompt: string): Promise<void> {
-  return mutateSettings((s) => {
-    // C2-2026-10-06: cap para que un prompt personalizado gigante no rompa el
-    // presupuesto de contexto del modelo.
-    s.customSystemPrompt = (prompt ?? "").slice(0, MAX_CUSTOM_SYSTEM_PROMPT_CHARS);
+  // C2-2026-10-06: cap para que un prompt personalizado gigante no rompa el
+  // presupuesto de contexto del modelo.
+  const value = (prompt ?? "").slice(0, MAX_CUSTOM_SYSTEM_PROMPT_CHARS);
+  // En la misma cola que el resto de cambios: se guarda en cada tecla, y dos
+  // escrituras seguidas no deben poder llegar al revés.
+  const run = settingsQueue.then(async () => {
+    const km = await privateStore();
+    const secured = await km.writePrivateSetting(CUSTOM_PROMPT_KEY, value);
+    const s = await readSettings();
+    if (secured) delete s.customSystemPrompt;
+    else s.customSystemPrompt = value;
+    await writeSettings(s);
   });
+  settingsQueue = run.catch(() => {});
+  return run;
 }
 
 export async function getMaxTokens(): Promise<number> {

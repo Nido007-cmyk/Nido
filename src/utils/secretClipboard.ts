@@ -88,3 +88,17 @@ export async function copySecret(text: string): Promise<void> {
     text,
   );
 }
+
+/**
+ * Blindaje 0.1.44: copia marcada como sensible SIN borrado automático. Para
+ * datos que no son secretos pero sí personales (el código de emparejamiento:
+ * nombre + claves públicas) y que el usuario puede necesitar pegar más tarde.
+ * Android 13+ no lo muestra en la vista previa del portapapeles ni en el
+ * historial del teclado. Si el módulo nativo no está, copia normal.
+ */
+export async function copyPrivate(text: string): Promise<void> {
+  const Clipboard = await import("expo-clipboard");
+  const secure = await import("nido-secure-dialog");
+  const ok = await secure.copySensitive(text).catch(() => false);
+  if (!ok) await Clipboard.setStringAsync(text);
+}

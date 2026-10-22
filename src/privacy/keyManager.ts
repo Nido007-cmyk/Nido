@@ -179,6 +179,40 @@ export async function writeVaultSetting(key: string, value: string | null): Prom
   else await backend.setItemAsync(key, value);
 }
 
+/**
+ * Ajustes privados del usuario (p. ej. su prompt de sistema personalizado):
+ * texto escrito por la persona que no debe quedar en `settings.json` en
+ * claro. Viven en SecureStore (cifrado con el Keystore). Solo claves con
+ * prefijo "nido_private_".
+ *
+ * `undefined` = SecureStore no disponible o falló la lectura: quien llama
+ * usa su respaldo, nunca rompe.
+ */
+export async function readPrivateSetting(key: string): Promise<string | null | undefined> {
+  if (!key.startsWith("nido_private_")) throw new Error("keyManager: clave privada no permitida.");
+  const backend = realBackend();
+  if (!backend) return undefined;
+  try {
+    return await backend.getItemAsync(key);
+  } catch {
+    return undefined;
+  }
+}
+
+/** true si quedó guardado en SecureStore; false si no se pudo (quien llama decide). */
+export async function writePrivateSetting(key: string, value: string | null): Promise<boolean> {
+  if (!key.startsWith("nido_private_")) throw new Error("keyManager: clave privada no permitida.");
+  const backend = realBackend();
+  if (!backend) return false;
+  try {
+    if (value === null) await backend.deleteItemAsync(key);
+    else await backend.setItemAsync(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Lee el blob envuelto (null = bóveda no activa). Fail-closed ante error de lectura. */
 export async function readVaultBlob(): Promise<string | null> {
   const backend = realBackend();
