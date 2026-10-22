@@ -56,5 +56,15 @@ jobs:
           [ $ok = 1 ]
       - name: ProVerif version
         run: proverif -help 2>&1 | head -2 || true
-      - name: Verify models
-        run: python3 formal/check.py --github
+      - name: Verify handshake model
+        id: hs
+        continue-on-error: true
+        run: python3 formal/check.py --github nido_handshake.pv
+      - name: Verify v5 post-quantum model
+        id: pq
+        continue-on-error: true
+        run: python3 formal/check.py --github nido_v5_pq.pv
+      - name: Result
+        run: |
+          echo "handshake=${{ steps.hs.outcome }} v5=${{ steps.pq.outcome }}"
+          [ "${{ steps.hs.outcome }}" = success ] && [ "${{ steps.pq.outcome }}" = success ]
