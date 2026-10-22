@@ -1404,7 +1404,11 @@ export class NidoMessenger {
     this.assertLive();
     // 0.1.46: aunque la app pase días en segundo plano con el enlace activo,
     // los mensajes temporales vencidos se borran (como mucho cada 5 s).
-    void purgeExpiredIfDue().catch(() => {});
+    try {
+      void purgeExpiredIfDue().catch(() => {});
+    } catch {
+      /* store simulado en tests: sin purga */
+    }
     const key = peerPkHex.toLowerCase();
     let session = this.sessions.get(key) ?? null;
     let env = session?.unpack(frame) ?? null;
