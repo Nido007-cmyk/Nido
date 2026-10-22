@@ -1,0 +1,171 @@
+(*
+  MIT License
+  Copyright (c) 2026 NIDO contributors
+  See LICENSE file for details.
+
+  NIDO P2P v5 — arranque híbrido X25519 + ML-KEM-768 y primer paso del
+  Double Ratchet. Modelo simbólico para ProVerif.
+
+  Pregunta principal ("grabar ahora, descifrar después"): un atacante activo
+  en la red (fase 0) que DESPUÉS gana un ordenador cuántico (fase 1: rompe
+  todo X25519 y Ed25519 — aquí, se le entregan todos esos secretos) ¿puede
+  leer lo que se envió en v5? Y, como control, ¿sí puede leer lo que se
+  envió solo con la clave clásica? (Si no pudiera, el modelo estaría mal
+  hecho: el control debe salir "falso".)
+
+  Fuente: src/p2p/ratchet.ts (createOffer, acceptOffer, open, deriveV5Root,
+  kdfRk/kdfCk/messageKey), src/p2p/protocol.ts (confirmPayload,
+  maybeAcceptV5, pack/unpack).
+
+  Roles: L = identidad menor (aquí A), H = mayor (aquí B). C es un contacto
+  malicioso de ambos. ML-KEM se modela como un KEM ideal (IND-CCA).
+*)
+
+type G.
+type exponent.
+type skey.
+type spkey.
+type key.
+type nonce.
+type kemsk.
+type kemrand.
+
+free c: channel.
+
+const g: G [data].
+fun exp(G, exponent): G.
+equation forall x: exponent, y: exponent; exp(exp(g, x), y) = exp(exp(g, y), x).
+
+fun spk(skey): spkey.
+fun sign(bitstring, skey): bitstring.
+reduc forall m: bitstring, k: skey; verify(sign(m, k), m, spk(k)) = true.
+
+(* KEM ideal: ct = encapsulación con aleatoriedad r; solo el dueño de dk
+   recupera el secreto compartido. *)
+fun kempk(kemsk): bitstring.
+fun kemct(bitstring, kemrand): bitstring.
+fun kemss(bitstring, kemrand): key.
+reduc forall dk: kemsk, r: kemrand; kemdec(dk, kemct(kempk(dk), r)) = kemss(kempk(dk), r).
+
+fun kdf(G, nonce, nonce): key.                       (* SK clásica *)
+fun kdf5(key, key, bitstring, bitstring): key.       (* raíz v5: SK, ss, pk_L, pk_H *)
+fun kdfck(key, G): key.                              (* paso DH del ratchet → cadena *)
+fun kdfmk(key): key.                                 (* cadena → clave de mensaje *)
+fun hmk(key, bitstring): key.                        (* clave ligada a la cabecera *)
+
+fun senc(bitstring, key): bitstring.
+reduc forall m: bitstring, k: key; sdec(senc(m, k), k) = m.
+
+const hello3, confirm1, sessConfirm, offerTag: bitstring.
+
+free idA, idB, idC: bitstring.
+free skC: skey.
+
+fun secretV5(bitstring, bitstring): bitstring [private].
+fun secretClassic(bitstring, bitstring): bitstring [private].
+
+table contacts(bitstring, spkey).
+
+event SentV5(bitstring, bitstring, bitstring).
+event RecvV5(bitstring, bitstring, bitstring).
+
+(* 1. Grabar ahora, descifrar después: lo enviado en v5 sigue secreto aunque
+      en la fase 1 se rompa todo X25519/Ed25519. Esperado: verdadero. *)
+query attacker(secretV5(idB, idA)) phase 1.
+(* 2. Control: lo enviado solo con la clave clásica SÍ cae en la fase 1.
+      Esperado: falso (el atacante lo obtiene). *)
+query attacker(secretClassic(idB, idA)) phase 1.
+(* 3. Autenticidad del primer mensaje v5 (fase 0). Esperado: verdadero. *)
+query m: bitstring; inj-event(RecvV5(idB, idA, m)) ==> inj-event(SentV5(idB, idA, m)).
+(* 4. Secreto del mensaje v5 durante la sesión (fase 0), incluso con un
+      contacto malicioso C emparejado con los dos. Esperado: verdadero. *)
+query attacker(secretV5(idB, idA)).
+
+(* L (pk menor): hace la oferta dentro del session_confirm sellado con SK y
+   espera el primer frame v5 de H. *)
+let LowV5(myId: bitstring, peerId: bitstring, k: key, eph: exponent) =
+  new dk: kemsk;
+  new xL: exponent;
+  out(c, senc((sessConfirm, myId, peerId, (offerTag, exp(g, xL), kempk(dk))), k));
+  in(c, (gH: G, ct: bitstring, box: bitstring));
+  let ss = kemdec(dk, ct) in
+  let root = kdf5(k, ss, myId, peerId) in
+  let mk = kdfmk(kdfck(root, exp(gH, xL))) in
+  let (from: bitstring, to: bitstring, m: bitstring) = sdec(box, hmk(mk, (gH, ct))) in
+  if from = peerId && to = myId then
+  event RecvV5(peerId, myId, m);
+  (* Fase 1: el ordenador cuántico rompe el efímero del handshake y la clave
+     de ratchet X25519. La clave ML-KEM (dk) no cae. *)
+  phase 1;
+  out(c, (eph, xL)).
+
+(* H (pk mayor): recibe la oferta, encapsula, arranca como Alice y manda su
+   primer mensaje v5 (con el cifrado ML-KEM en la cabecera). También manda
+   un mensaje solo con la clave clásica, como control. *)
+let HighV5(myId: bitstring, peerId: bitstring, k: key, eph: exponent) =
+  out(c, senc((peerId, myId, secretClassic(myId, peerId)), k));
+  in(c, x: bitstring);
+  let (=sessConfirm, from: bitstring, to: bitstring, (=offerTag, gL: G, ek: bitstring)) = sdec(x, k) in
+  if from = peerId && to = myId then
+  new r: kemrand;
+  let ct = kemct(ek, r) in
+  let ss = kemss(ek, r) in
+  let root = kdf5(k, ss, peerId, myId) in
+  new xH: exponent;
+  let gH = exp(g, xH) in
+  let mk = kdfmk(kdfck(root, exp(gL, xH))) in
+  event SentV5(myId, peerId, secretV5(myId, peerId));
+  out(c, (gH, ct, senc((myId, peerId, secretV5(myId, peerId)), hmk(mk, (gH, ct)))));
+  phase 1;
+  out(c, (eph, xH)).
+
+(* Handshake v3 (como en nido_handshake.pv), ya autenticado, seguido de v5.
+   Los roles L/H dependen de la identidad, no de quién inicia. *)
+let V5(myId: bitstring, peerId: bitstring, k: key, eph: exponent) =
+  if myId = idA then LowV5(myId, peerId, k, eph)
+  else HighV5(myId, peerId, k, eph).
+
+let Initiator(myId: bitstring, mySk: skey) =
+  new eI: exponent;
+  new nI: nonce;
+  in(c, tsI: bitstring);
+  let gI = exp(g, eI) in
+  out(c, (myId, gI, nI, tsI, sign((hello3, myId, gI, nI, tsI), mySk)));
+  in(c, (peerId: bitstring, gR: G, nR: nonce, tsR: bitstring, sigR: bitstring));
+  if peerId <> myId then
+  get contacts(=peerId, peerSpk: spkey) in
+  if verify(sigR, (hello3, peerId, gR, nR, tsR), peerSpk) = true then
+  out(c, (myId, nI, nR, sign((confirm1, myId, nI, nR), mySk)));
+  in(c, (cpk: bitstring, cn: nonce, pn: nonce, csig: bitstring));
+  if cpk = peerId && cn = nR && pn = nI then
+  if verify(csig, (confirm1, cpk, cn, pn), peerSpk) = true then
+  V5(myId, peerId, kdf(exp(gR, eI), nI, nR), eI).
+
+let Responder(myId: bitstring, mySk: skey) =
+  in(c, (peerId: bitstring, gI: G, nI: nonce, tsI: bitstring, sigI: bitstring));
+  if peerId <> myId then
+  get contacts(=peerId, peerSpk: spkey) in
+  if verify(sigI, (hello3, peerId, gI, nI, tsI), peerSpk) = true then
+  new eR: exponent;
+  new nR: nonce;
+  in(c, tsR: bitstring);
+  let gR = exp(g, eR) in
+  out(c, (myId, gR, nR, tsR, sign((hello3, myId, gR, nR, tsR), mySk)));
+  in(c, (cpk: bitstring, cn: nonce, pn: nonce, csig: bitstring));
+  if cpk = peerId && cn = nI && pn = nR then
+  if verify(csig, (confirm1, cpk, cn, pn), peerSpk) = true then
+  out(c, (myId, nR, nI, sign((confirm1, myId, nR, nI), mySk)));
+  V5(myId, peerId, kdf(exp(gI, eR), nI, nR), eR).
+
+process
+  new skA: skey;
+  new skB: skey;
+  out(c, (spk(skA), spk(skB)));
+  insert contacts(idA, spk(skA));
+  insert contacts(idB, spk(skB));
+  insert contacts(idC, spk(skC));
+  (
+    (!Initiator(idA, skA)) | (!Responder(idA, skA)) |
+    (!Initiator(idB, skB)) | (!Responder(idB, skB)) |
+    (phase 1; out(c, (skA, skB)))
+  )

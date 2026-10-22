@@ -1,0 +1,30 @@
+# Verificación formal del protocolo P2P con ProVerif (0.1.48).
+# Modelos en formal/*.pv; resultados esperados en formal/expected.txt.
+name: Formal verification
+
+on:
+  pull_request:
+    paths: ['formal/**', 'src/p2p/**', '.github/workflows/formal.yml']
+  push:
+    branches: [main]
+    paths: ['formal/**', 'src/p2p/**']
+  schedule:
+    - cron: '7 5 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  proverif:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install ProVerif
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q proverif
+          proverif -help 2>&1 | head -1 || true
+      - name: Verify models
+        run: python3 formal/check.py --github
