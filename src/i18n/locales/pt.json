@@ -834,7 +834,10 @@
     "reminderChannel": "Lembretes do NIDO",
     "briefingChannel": "Resumo diário do NIDO",
     "reminderTitle": "NIDO · Lembrete",
-    "briefingTitle": "NIDO · Seu dia"
+    "briefingTitle": "NIDO · Seu dia",
+    "messagesChannel": "Mensagens NIDO",
+    "messageTitle": "NIDO",
+    "messageBody": "Nova mensagem NIDO"
   },
   "agentConfirm": {
     "createEventTitle": "Criar evento",

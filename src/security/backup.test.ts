@@ -19,6 +19,19 @@ vi.mock("expo-file-system/legacy", () => ({
 
 vi.mock("../privacy/keyManager", () => ({
   getDatabaseKeyHex: vi.fn().mockResolvedValue("ab".repeat(32)),
+  applyDatabaseKey: vi.fn().mockResolvedValue(undefined),
+}));
+
+// 0.1.47: la copia del respaldo se abre para quitar los mensajes temporales.
+const sqlx = vi.hoisted(() => ({ sql: [] as string[], failWith: null as string | null }));
+vi.mock("expo-sqlite", () => ({
+  openDatabaseAsync: async () => ({
+    execAsync: async (q: string) => {
+      sqlx.sql.push(q);
+      if (sqlx.failWith && q.startsWith("DELETE")) throw new Error(sqlx.failWith);
+    },
+    closeAsync: async () => {},
+  }),
 }));
 
 vi.mock("./secureDatabase", () => ({
@@ -165,5 +178,35 @@ describe("backup.ts — auditoría ofensiva 2026-10-12 (0.1.29)", () => {
     expect(deleted).toEqual(
       expect.arrayContaining(["/mock/restored.db", "/mock/restored.db.manifest.json", "/mock/restored.knowledge.db"]),
     );
+  });
+});
+
+describe("backup.ts — 0.1.47: los mensajes temporales no van en los respaldos", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sqlx.sql = [];
+    sqlx.failWith = null;
+    (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: true, size: 5000 });
+  });
+
+  it("borra los temporales de la COPIA y la compacta", async () => {
+    const { createBackup } = await import("./backup");
+    await createBackup("/mock/nido-backup-T.db");
+    expect(sqlx.sql).toContain("DELETE FROM p2p_messages WHERE ttl_sec > 0;");
+    expect(sqlx.sql).toContain("VACUUM;");
+    expect(sqlx.sql.indexOf("PRAGMA secure_delete = ON;")).toBeLessThan(sqlx.sql.indexOf("VACUUM;"));
+  });
+
+  it("una base anterior sin la columna se respalda igual", async () => {
+    sqlx.failWith = "no such column: ttl_sec";
+    const { createBackup } = await import("./backup");
+    await expect(createBackup("/mock/nido-backup-T.db")).resolves.toBe("/mock/nido-backup-T.db");
+  });
+
+  it("si no se puede limpiar, no hay respaldo (y la copia se borra)", async () => {
+    sqlx.failWith = "disk I/O error";
+    const { createBackup } = await import("./backup");
+    await expect(createBackup("/mock/nido-backup-T.db")).rejects.toThrow(/preparar el respaldo/);
+    expect(FileSystem.deleteAsync).toHaveBeenCalledWith("/mock/nido-backup-T.db", { idempotent: true });
   });
 });

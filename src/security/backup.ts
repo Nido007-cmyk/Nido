@@ -116,6 +116,21 @@ export async function createBackup(destinationUri: string): Promise<string> {
   // 2. Copiar la base principal.
   await FileSystem.copyAsync({ from: dbPath, to: destinationUri });
 
+  // 2b. 0.1.47 (como Signal): los mensajes temporales NO viajan en los
+  // respaldos. Se borran de la COPIA (nunca de la base viva) y se compacta,
+  // para que su contenido no quede en páginas libres del archivo. Si no se
+  // puede limpiar, no hay respaldo: mejor fallar que guardar lo que debía
+  // desaparecer.
+  try {
+    await stripDisappearingMessages(destinationUri);
+  } catch (e) {
+    await FileSystem.deleteAsync(destinationUri, { idempotent: true }).catch(() => {});
+    throw new BackupError(
+      "storage",
+      `No se pudo preparar el respaldo: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+
   // 3. Copiar la base de conocimiento si existe (M3).
   const knowledgeDest = knowledgeBackupUriFor(destinationUri);
   let knowledgeBackedUp = false;
@@ -158,6 +173,64 @@ export async function createBackup(destinationUri: string): Promise<string> {
   await FileSystem.writeAsStringAsync(manifestUri, JSON.stringify(manifest, null, 2));
 
   return destinationUri;
+}
+
+/**
+ * 0.1.47: abre la copia del respaldo con la clave del teléfono, borra los
+ * mensajes temporales (ttl_sec > 0) y hace VACUUM. Una base sin la columna
+ * (anterior a 0.1.46, sin mensajes temporales) se deja como está.
+ */
+async function stripDisappearingMessages(copyUri: string): Promise<void> {
+  const dek = await getDatabaseKeyHex().catch(() => null);
+  const SQLite = await import("expo-sqlite");
+  const { applyDatabaseKey } = await import("../privacy/keyManager");
+  const slash = copyUri.lastIndexOf("/");
+  const db = await SQLite.openDatabaseAsync(copyUri.slice(slash + 1), { useNewConnection: true }, copyUri.slice(0, slash));
+  try {
+    if (dek) await applyDatabaseKey(db as never, dek, "backup-strip");
+    try {
+      await db.execAsync("PRAGMA secure_delete = ON;");
+      await db.execAsync("DELETE FROM p2p_messages WHERE ttl_sec > 0;");
+    } catch (e) {
+      const msg = String((e as Error)?.message ?? e);
+      if (/no such (column|table)/i.test(msg)) return;
+      throw e;
+    }
+    await db.execAsync("VACUUM;");
+  } finally {
+    await db.closeAsync().catch(() => {});
+  }
+  for (const suffix of ["-wal", "-shm", "-journal"]) {
+    await FileSystem.deleteAsync(`${copyUri}${suffix}`, { idempotent: true }).catch(() => {});
+  }
+}
+
+/**
+ * 0.1.47: tras una restauración, la copia previa (*.pre-restore-*) se
+ * guardaba para siempre: una copia completa más de la base, con mensajes que
+ * quizá ya debían haber desaparecido. Ahora se borra en cuanto la base
+ * restaurada abre bien en el siguiente arranque. Best-effort, nunca lanza.
+ */
+export async function cleanupAfterSuccessfulRestore(): Promise<number> {
+  try {
+    const dir = FileSystem.documentDirectory;
+    if (!dir) return 0;
+    const sqliteDir = `${dir}SQLite/`;
+    const names = await FileSystem.readDirectoryAsync(sqliteDir).catch(() => [] as string[]);
+    const copies = names.filter((n) => n.startsWith(`${DB_NAME}.pre-restore-`));
+    const leftovers = (await FileSystem.readDirectoryAsync(dir).catch(() => [] as string[])).filter((n) =>
+      n.startsWith("restored.db"),
+    );
+    if (copies.length === 0 && leftovers.length === 0) return 0;
+    // Solo si la base actual abre y se puede leer.
+    const db = await getDatabase();
+    await db.getFirstAsync("SELECT count(*) AS n FROM sqlite_master;");
+    for (const n of copies) await FileSystem.deleteAsync(`${sqliteDir}${n}`, { idempotent: true });
+    for (const n of leftovers) await FileSystem.deleteAsync(`${dir}${n}`, { idempotent: true });
+    return copies.length + leftovers.length;
+  } catch {
+    return 0;
+  }
 }
 
 /**

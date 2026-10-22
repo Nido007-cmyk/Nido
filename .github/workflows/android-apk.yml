@@ -211,6 +211,18 @@ jobs:
         # production security paths (fail-closed key management).
         run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --stacktrace
 
+      - name: Manifest summary (permissions and exported components)
+        # 0.1.47 (auditoría): el manifiesto FINAL (tras fusionar los de todas
+        # las librerías) queda a la vista en cada compilación, como anotación.
+        if: always()
+        shell: bash
+        run: |
+          AAPT2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          if [ -z "$AAPT2" ] || [ ! -f "$APK" ]; then echo "sin aapt2 o sin APK"; exit 0; fi
+          "$AAPT2" dump xmltree --file AndroidManifest.xml "$APK" > manifest.txt
+          python3 scripts/manifest-summary.py manifest.txt --github
+
       - name: Upload APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:

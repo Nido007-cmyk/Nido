@@ -66,6 +66,11 @@ export function resetFeatureFlagsForTests(): void {
   overrides.clear();
 }
 
+/** 0.1.47: tras borrar todos los datos, los interruptores vuelven a los de fábrica. */
+export function resetFeatureFlagsInMemory(): void {
+  overrides.clear();
+}
+
 const FLAGS_PATH_SUFFIX = "feature-flags.json";
 
 async function flagsPath(): Promise<string> {

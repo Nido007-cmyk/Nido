@@ -33,6 +33,14 @@ describe("with-bluetooth-never-for-location", () => {
     expect(find(m, "android.permission.ACCESS_COARSE_LOCATION")["android:maxSdkVersion"]).toBe("30");
   });
 
+  it("0.1.47: BLUETOOTH y BLUETOOTH_ADMIN solo hasta Android 11 (maxSdkVersion 30)", () => {
+    const m = applyBluetoothLocationFlags({
+      "uses-permission": [perm("android.permission.BLUETOOTH"), perm("android.permission.BLUETOOTH_ADMIN")],
+    });
+    expect(find(m, "android.permission.BLUETOOTH")["android:maxSdkVersion"]).toBe("30");
+    expect(find(m, "android.permission.BLUETOOTH_ADMIN")["android:maxSdkVersion"]).toBe("30");
+  });
+
   it("no sube un maxSdkVersion más restrictivo ya existente", () => {
     const m = applyBluetoothLocationFlags({
       "uses-permission": [perm("android.permission.ACCESS_FINE_LOCATION", { "android:maxSdkVersion": "28" })],
