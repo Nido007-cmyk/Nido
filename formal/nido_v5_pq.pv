@@ -128,7 +128,7 @@ let V5(myId: bitstring, peerId: bitstring, k: key, eph: exponent) =
 let Initiator(myId: bitstring, mySk: skey) =
   new eI: exponent;
   new nI: nonce;
-  in(c, tsI: bitstring);
+  new tsI: bitstring;
   let gI = exp(g, eI) in
   out(c, (myId, gI, nI, tsI, sign((hello3, myId, gI, nI, tsI), mySk)));
   in(c, (peerId: bitstring, gR: G, nR: nonce, tsR: bitstring, sigR: bitstring));
@@ -148,7 +148,7 @@ let Responder(myId: bitstring, mySk: skey) =
   if verify(sigI, (hello3, peerId, gI, nI, tsI), peerSpk) = true then
   new eR: exponent;
   new nR: nonce;
-  in(c, tsR: bitstring);
+  new tsR: bitstring;
   let gR = exp(g, eR) in
   out(c, (myId, gR, nR, tsR, sign((hello3, myId, gR, nR, tsR), mySk)));
   in(c, (cpk: bitstring, cn: nonce, pn: nonce, csig: bitstring));
