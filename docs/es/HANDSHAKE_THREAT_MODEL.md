@@ -254,20 +254,27 @@ dos sentidos van en v5 la clave clásica `SK` se borra de la memoria.
   contra un atacante cuántico activo durante la conexión.
 
 **Qué no consigue.**
-- La cabecera v5 (clave de ratchet, contadores) va sin cifrar, como en
-  Signal sin cifrado de cabeceras: se pueden contar mensajes y ver turnos.
+- Desde 0.1.50, si los dos teléfonos lo soportan, la cabecera v5 (clave de
+  ratchet, contadores, cifrado ML-KEM) va dentro de una caja cifrada
+  (`0x06`, ver `src/p2p/ratchet.ts`). Signal no cifra estas cabeceras.
+  - La clave de la caja sale de la raíz v5, que mezcla ML-KEM. Los primeros
+    frames de H, antes de que L tenga la raíz, usan una clave derivada de la
+    sesión clásica: un ordenador cuántico futuro podría ver esas pocas
+    cabeceras, nunca el contenido.
+  - Con un NIDO anterior a 0.1.50, la cabecera va en claro como antes.
+  - Una vez en uso, un frame sin caja se rechaza.
 - El relleno oculta la longitud solo hasta una potencia de dos (512 B,
   1 KB, 2 KB…).
 - La librería de ML-KEM (`@noble/post-quantum` 0.7.1) es JavaScript puro, no
   es de tiempo constante y no tiene auditoría independiente. El propio v5
   de NIDO tuvo una revisión independiente hecha por otro agente de IA, no
   una auditoría profesional.
-- v5 todavía no se ha probado en dos teléfonos físicos; por eso viene
-  apagado.
+- v5 todavía no se ha probado en dos teléfonos físicos. Viene activado
+  desde 0.1.49 y se puede apagar en Ajustes si dos teléfonos no conectan.
 
 ## Verificación formal (ProVerif, 2026-10-22)
 
-`formal/` tiene dos modelos simbólicos del protocolo. CI los verifica en cada
+`formal/` tiene tres modelos simbólicos del protocolo. CI los verifica en cada
 cambio de `src/p2p/` (más detalles en `formal/README.md`).
 
 **Demostrado, con un contacto malicioso C en juego:**

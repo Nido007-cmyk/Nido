@@ -42,7 +42,7 @@ import {
   isValidDisappearSec,
 } from "./store";
 import { resetFeatureFlagsForTests, setFeatureEnabled } from "../config/featureFlags";
-import { V5_MARKER } from "./ratchet";
+import { V5_HE_MARKER } from "./ratchet";
 
 beforeEach(() => {
   resetSqliteBridge();
@@ -190,7 +190,7 @@ describe("v5 a través del messenger", () => {
       expect((myConfirm.payload as { r5?: unknown }).r5).toBeDefined();
       // El peer (H) arrancó al leer mi oferta; su confirm ya va en v5.
       const peerConfirm = s.peer.pack(s.fromPeer("session_confirm", {}));
-      expect(peerConfirm[4]).toBe(V5_MARKER);
+      expect(peerConfirm[4]).toBe(V5_HE_MARKER);
       await s.m.handleFrame(s.peerPk, peerConfirm);
     } else {
       expect(myConfirm.payload).toEqual({ r5cap: 1, cf2: 1 });
@@ -201,18 +201,18 @@ describe("v5 a través del messenger", () => {
       await tick();
       expect(s.wire.length).toBeGreaterThan(before);
       const kick = s.wire[before];
-      expect(kick[4]).toBe(V5_MARKER);
+      expect(kick[4]).toBe(V5_HE_MARKER);
       expect(s.peer.unpack(kick)?.type).toBe("session_confirm");
     }
     const { id } = await s.m.sendChat("Beto", "por v5");
     await tick();
     const last = s.wire[s.wire.length - 1];
-    expect(last[4]).toBe(V5_MARKER);
+    expect(last[4]).toBe(V5_HE_MARKER);
     const env = s.peer.unpack(last);
     expect(env?.payload).toEqual({ text: "por v5", message_id: id, ttl: 0, ttl_v: 0 });
     // Respuesta del peer en v5 (ya arrancó).
     const reply = s.peer.pack(s.fromPeer("chat", { text: "recibido", message_id: "r-1", ttl: 0, ttl_v: 0 }));
-    expect(reply[4]).toBe(V5_MARKER);
+    expect(reply[4]).toBe(V5_HE_MARKER);
     const got = await s.m.handleFrame(s.peerPk, reply);
     expect(got?.payload).toEqual({ text: "recibido", message_id: "r-1", ttl: 0, ttl_v: 0 });
   });
@@ -263,7 +263,7 @@ describe("revisión independiente: cola de L y aviso de temporizador", () => {
     await s.m.handleFrame(s.peerPk, kick);
     await tick();
     const out = s.wire[s.wire.length - 1];
-    expect(out[4]).toBe(V5_MARKER);
+    expect(out[4]).toBe(V5_HE_MARKER);
     expect(s.peer.unpack(out)?.payload).toEqual({ text: "escrito antes", message_id: id, ttl: 0, ttl_v: 0 });
   });
 
