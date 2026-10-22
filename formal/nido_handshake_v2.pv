@@ -80,10 +80,14 @@ table contacts(bitstring, spkey).
 table seenNonce(bitstring, nonce).
 
 (* Eventos de acuerdo sobre la CLAVE (nivel handshake). *)
-event InitRunning(bitstring, bitstring, key).
-event InitAccept(bitstring, bitstring, key).
-event RespRunning(bitstring, bitstring, key).
-event RespAccept(bitstring, bitstring, key).
+(* Running(yo, peer, mi nonce, nonce del peer): firmé mi CONFIRM para esta
+   sesión. Accept(...): acepté la sesión. No dependen del papel (iniciador o
+   respondedor): dos teléfonos que se llaman a la vez (los dos iniciadores)
+   también forman una sesión legítima, igual que en el código. La clave de
+   sesión es función del DH (efímeros firmados en los HELLO) y de estos dos
+   nonces, así que acordar identidades + nonces es acordar la sesión. *)
+event Running(bitstring, bitstring, nonce, nonce).
+event Accept(bitstring, bitstring, nonce, nonce).
 (* Eventos de la capa de mensajes (lo que ve el usuario). *)
 event MsgSent(bitstring, bitstring, bitstring).
 event MsgRecv(bitstring, bitstring, bitstring).
@@ -102,10 +106,10 @@ query m: bitstring; inj-event(MsgRecv(idA, idB, m)) ==> inj-event(MsgSent(idA, i
 query m: bitstring; inj-event(MsgRecv(idB, idA, m)) ==> inj-event(MsgSent(idB, idA, m)).
 
 (* 4. Acuerdo de identidades a nivel HANDSHAKE (sin la capa de mensajes).
-      El iniciador que acepta con B: ¿B ejecutó el handshake con él? *)
-query k: key; inj-event(InitAccept(idA, idB, k)) ==> inj-event(RespRunning(idA, idB, k)).
-(* El respondedor que acepta a A: ¿A ejecutó el handshake con él? *)
-query k: key; inj-event(RespAccept(idA, idB, k)) ==> inj-event(InitRunning(idA, idB, k)).
+      Si A acepta una sesión con B, B ejecutó ESA sesión (mismos nonces)
+      y creyendo hablar con A. Y lo mismo desde B. *)
+query x: nonce, y: nonce; inj-event(Accept(idA, idB, x, y)) ==> inj-event(Running(idB, idA, y, x)).
+query x: nonce, y: nonce; inj-event(Accept(idB, idA, x, y)) ==> inj-event(Running(idA, idB, y, x)).
 
 (* Mensaje de aplicación: sobre con from/to dentro del cifrado; el receptor
    comprueba from = peer y to = yo (P2PSession.unpack + expectRecipient). *)
@@ -131,13 +135,13 @@ let Initiator(myId: bitstring, mySk: skey) =
   get contacts(=peerId, peerSpk: spkey) in
   if verify(sigR, (hello3, peerId, gR, nR, tsR), peerSpk) = true then
   let k = kdf(exp(gR, eI), nI, nR) in
-  event InitRunning(myId, peerId, k);
+  event Running(myId, peerId, nI, nR);
   out(c, (myId, nI, nR, sign((confirm1, myId, nI, nR), mySk), sign((confirm2, myId, peerId, nI, nR), mySk)));
   in(c, (cpk: bitstring, cn: nonce, pn: nonce, csig: bitstring, csig2: bitstring));
   if cpk = peerId && cn = nR && pn = nI then
   if verify(csig, (confirm1, cpk, cn, pn), peerSpk) = true then
   if verify(csig2, (confirm2, cpk, myId, cn, pn), peerSpk) = true then
-  event InitAccept(myId, peerId, k);
+  event Accept(myId, peerId, nI, nR);
   Talk(myId, peerId, k).
 
 let Responder(myId: bitstring, mySk: skey) =
@@ -157,9 +161,9 @@ let Responder(myId: bitstring, mySk: skey) =
   if verify(csig, (confirm1, cpk, cn, pn), peerSpk) = true then
   if verify(csig2, (confirm2, cpk, myId, cn, pn), peerSpk) = true then
   let k = kdf(exp(gI, eR), nI, nR) in
-  event RespRunning(peerId, myId, k);
+  event Running(myId, peerId, nR, nI);
   out(c, (myId, nR, nI, sign((confirm1, myId, nR, nI), mySk), sign((confirm2, myId, peerId, nR, nI), mySk)));
-  event RespAccept(peerId, myId, k);
+  event Accept(myId, peerId, nR, nI);
   Talk(myId, peerId, k).
 
 process
