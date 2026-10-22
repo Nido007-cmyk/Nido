@@ -94,7 +94,9 @@ describe("backup.ts — validación (BK-4)", () => {
     (FileSystem.readAsStringAsync as any).mockResolvedValue("SQLite format 3\0 resto...");
     const r = await validateBackup("/sin-verificar.db");
     expect(r.valid).toBe(false);
-    expect(r.reason).toContain("verificar");
+    // Con la clave del teléfono disponible el motivo es "no se pudo
+    // comprobar con la clave"; sin ella, "no se pudo verificar".
+    expect(r.reason).toMatch(/verificar|comprobar/);
   });
 });
 
