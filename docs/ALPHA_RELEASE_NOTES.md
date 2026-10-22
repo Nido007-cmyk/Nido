@@ -1,7 +1,7 @@
 # NIDO alpha — Release Notes
 
 > This document keeps the alpha overview and the current known
-> limitations, kept up to date with the latest release (0.1.43-alpha).
+> limitations, kept up to date with the latest release (0.1.46-alpha).
 > Per-version changes from 0.1.19 on are in the
 > [changelog](../CHANGELOG.md) and in each GitHub release; the notes for
 > 0.1.1 to 0.1.18 are kept below for reference.
@@ -16,7 +16,9 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Reminders with local notifications: once, or every day, week, month or year; countdowns ("how many days until…"); birthdays you save get a yearly reminder
 - Encrypted memory of facts, people and notes, with a "My Memory" screen to review and delete them
 - Answers from your own documents and from an offline knowledge base, with an optional Wikipedia pack and optional multilingual search (Spanish, English, Portuguese)
-- P2P device-to-device messaging over Bluetooth (no internet, no servers)
+- P2P device-to-device messaging over Bluetooth or local Wi-Fi (no internet, no servers), with messages padded to fixed sizes and optional disappearing messages
+- Experimental (off by default): a new key for every message (Double Ratchet) and ML-KEM-768 in every connection
+- Optional panic button and an incognito keyboard
 - Encrypted on-device storage
 - Backup / restore
 - About → Licenses: the license of NIDO, of every downloadable model and pack, of the Wikipedia text inside the app and of every open-source package it is built with
@@ -247,6 +249,9 @@ Fixes from the 2026-10-10 code audit:
 - **Voice input uses Android's system speech recognizer** with the prefer-offline flag. On devices without an offline model, the system service may process audio online.
 - **Sharing knowledge packs between phones is not available yet.** The tab is hidden.
 - **The phone that starts a NIDO-to-NIDO connection sends its public key in clear** in the first message, unless the experimental **Private hello** setting is on (both phones need 0.1.45 or later). Someone recording Bluetooth or Wi-Fi traffic nearby could recognise the same phone across connections (they cannot read messages).
+- **New key per message + ML-KEM (P2P v5) is experimental and off by default.** It only works when both phones have it on, and it has not been tested on two physical phones yet.
+- **Disappearing messages are deleted by each phone.** An older NIDO on the other side ignores the timer, and nothing stops someone from photographing the screen with another camera.
+- **Reproducible builds:** the check that compares two independent builds is new; see the latest run before relying on it.
 - **The hardware vault is off by default.** Turn it on in Settings → Security for the strongest protection of your data.
 - Builds are checked by automated tests, and the headline flows (chat and agent tools, memory, reminders and notifications, notes, and two-device P2P messaging, including airplane mode) are also exercised on physical hardware (Galaxy Tab A9+). Not every change is device-tested before every pre-release.
 - Some screens still have their earlier look; the visual redesign is not finished everywhere.
@@ -256,7 +261,7 @@ Fixes from the 2026-10-10 code audit:
 
 **This alpha has NOT undergone a professional security audit.** The app uses:
 
-- Ed25519 signatures and X25519 key exchange for P2P
+- Ed25519 signatures and X25519 key exchange for P2P; experimental Double Ratchet and ML-KEM-768 (via @noble/post-quantum, which has not been independently audited either)
 - SQLCipher for on-device encrypted storage
 - A random 256-bit database key held in the Android Keystore (no password-based key derivation)
 - Backups that are a copy of the already-encrypted database; the key is exported separately, in plain hex, and restoring a backup on a different installation requires that exported key

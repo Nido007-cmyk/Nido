@@ -93,6 +93,13 @@ La interfaz está disponible en español, inglés y portugués.
   (X25519, firmas Ed25519, XSalsa20-Poly1305). El teléfono que inicia una
   conexión todavía manda su clave pública en claro por defecto; el ajuste
   experimental «Saludo privado» la sella con los contactos que lo soportan.
+  Los mensajes se rellenan hasta tamaños fijos. Un ajuste experimental
+  (apagado por defecto) da a cada mensaje su propia clave (Double Ratchet,
+  como en Signal) y añade ML-KEM-768 a cada conexión frente a ordenadores
+  cuánticos futuros.
+- Mensajes temporales en los chats entre NIDO, un botón de pánico opcional
+  que lo borra todo en 3 segundos y teclado incógnito (se pide al teclado que
+  no aprenda de lo que escribes).
 - Las capturas de pantalla están bloqueadas, las capas de otras apps se
   ocultan mientras NIDO está en pantalla (Android 12+) y borrar todos los
   datos pide tu huella o PIN.

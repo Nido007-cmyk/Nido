@@ -4,6 +4,52 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.46-alpha — 2026-10-22
+
+This release brings over the security features of Signal and Briar that
+NIDO did not have yet. The new connection protocol is off by default until
+it is tested on two phones.
+
+### Added
+- **New key for every message, and quantum-resistant connections
+  (experimental, off by default)**: Settings → Security. When both phones
+  have it on, every message is encrypted with its own key that is erased
+  after use (the Double Ratchet design used by Signal): a key stolen from
+  memory does not open earlier messages, and the conversation heals on its
+  own after the next reply. Each connection also mixes in ML-KEM-768
+  (FIPS 203) with the existing X25519 key, so traffic recorded today stays
+  closed even to a future quantum computer. If one phone has it off or runs
+  an older NIDO, the connection works exactly as before.
+- **Disappearing messages**: in a NIDO-to-NIDO chat, tap the timer next to
+  the contact's name (5 minutes to 4 weeks). New messages delete themselves
+  on both phones: for the sender the time counts from sending, for the
+  receiver from when they see it, like Signal. Either side can change it;
+  the other phone takes the newest setting with the next message.
+- **Panic button (off by default)**: Settings → Security → Panic button.
+  It puts an SOS button on the main screen; holding it for 3 seconds erases
+  all NIDO data at once, without asking for a fingerprint. Turning it on
+  asks for your fingerprint or PIN.
+- **Incognito keyboard**: every text field in NIDO asks the keyboard not
+  to learn from what you type (no new words in its dictionary, no
+  suggestions based on your chats), like Signal's incognito keyboard. Major
+  keyboards respect this; NIDO cannot force one that ignores it.
+
+### Security
+- **Message padding**: NIDO-to-NIDO messages are padded to fixed sizes, so
+  their length no longer gives away the length of what you wrote. Older
+  versions of NIDO read padded messages normally.
+- **Deleted messages are overwritten** inside the encrypted database
+  instead of being left in free space.
+- **Fuzzing**: everything that reads data from another phone or a QR code
+  is now tested with mutated and random inputs on every change, and with
+  100,000 cases per target every week. Writing these checks turned up
+  three handshake parsers that failed with a raw error on inputs like
+  `null`; they now reject them cleanly.
+- **Reproducible builds**: a new check builds the APK twice on separate
+  machines and compares them byte by byte (and, on request, against the
+  published APK). `scripts/compare-apk.py` lets anyone do the same
+  comparison.
+
 ## 0.1.45-alpha — 2026-10-21
 
 ### Fixed
