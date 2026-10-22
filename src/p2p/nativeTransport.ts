@@ -821,9 +821,16 @@ export class NidoBluetoothTransport implements P2PTransport {
     this.linkUnsubs = [
       b.addListener("onConnected", (e) => {
         if (isLanAddress(e.address)) this.auditLan(e.address, e.incoming);
-        // AUDIT-2026-10-11 (LAN-1): por Wi-Fi, quien RECIBE la conexión no
-        // revela su identidad hasta que el otro demuestre ser un contacto.
-        if (e.incoming && isLanAddress(e.address)) {
+        // AUDIT-2026-10-11 (LAN-1) + P3 Bluetooth (2026-10-21): quien
+        // RECIBE una conexión no revela su identidad hasta que el otro
+        // demuestre ser un contacto, por Wi-Fi Y por Bluetooth. El servidor
+        // RFCOMM escucha en segundo plano: antes cualquier dispositivo
+        // cercano que conectara con el UUID de NIDO recibía nuestro HELLO
+        // firmado (identidad estable + prueba de presencia).
+        // Excepción: si NOSOTROS también estamos conectando a esa dirección
+        // (pendiente "waiting-socket", conexión cruzada), el socket nativo
+        // es uno solo y seguimos como iniciador, igual que antes.
+        if (e.incoming && this.shouldWaitSilently(e.address)) {
           this.awaitPeerHello(e.address);
           return;
         }
@@ -1433,6 +1440,18 @@ export class NidoBluetoothTransport implements P2PTransport {
     }
   }
 
+  /**
+   * P3 (2026-10-21): ¿una conexión entrante debe esperar en silencio el HELLO
+   * del otro? Sí, salvo que ya haya ruta o un handshake nuestro en curso con
+   * esa dirección (conexión cruzada por Bluetooth: un solo socket por MAC).
+   */
+  private shouldWaitSilently(address: string): boolean {
+    const mac = address.toUpperCase();
+    if (this.macToPk.has(mac)) return false;
+    const existing = this.pending.get(mac);
+    return !existing || existing.stage === "awaiting-hello";
+  }
+
   /** WIFI-UX-2026-10-11: aviso informativo (no es un error). */
   private info(message: string): void {
     if (this.events?.onInfo) this.events.onInfo(message);
@@ -1601,10 +1620,11 @@ export class NidoBluetoothTransport implements P2PTransport {
       return;
     }
     if (pend && pend.stage === "responding") return; // ya validando un HELLO
-    // AUDIT-2026-10-11 (LAN-1): frame Wi-Fi sin handshake ni ruta = conexión
-    // entrante (las salientes registran su pendiente en connect()). Se
-    // valida ANTES de revelar nuestra identidad.
-    if (!pend && isLanAddress(mac) && !this.macToPk.has(mac)) {
+    // AUDIT-2026-10-11 (LAN-1) + P3 Bluetooth: frame sin handshake ni ruta =
+    // conexión entrante (las salientes SIEMPRE registran su pendiente en
+    // connect() antes de abrir el socket). Se valida ANTES de revelar
+    // nuestra identidad, también si el frame llega antes que onConnected.
+    if (!pend && !this.macToPk.has(mac)) {
       const waiting = this.awaitPeerHello(mac);
       if (waiting) await this.respondToHello(mac, waiting, body);
       return;
