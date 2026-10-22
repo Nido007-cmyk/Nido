@@ -1443,7 +1443,6 @@ export class NidoMessenger {
       const d = (env.payload as { disappear?: unknown }).disappear;
       const timer = incomingTimer(d && typeof d === "object" ? { ttl: (d as { sec?: unknown }).sec, ttl_v: (d as { v?: unknown }).v } : {});
       if (timer) await this.adoptIncomingTimer(key, timer);
-    if (env.type === "chat" || env.type === "agent_task") this.signalIncoming(key, env.type);
       await this.flushOutbox(key);
       return env;
     }
@@ -1634,6 +1633,7 @@ export class NidoMessenger {
       return null;
     }
     if (timer) await this.adoptIncomingTimer(key, timer);
+    if (env.type === "chat" || env.type === "agent_task") this.signalIncoming(key, env.type);
     if (tag) {
       await this.emitDeliveryAck(key, session, messageId, env.type);
     }
