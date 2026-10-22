@@ -89,3 +89,18 @@ describe("pairing QR", () => {
     expect(() => encodePairingPayload("x", kp.publicKey, new Uint8Array(16))).toThrow();
   });
 });
+
+describe("blindaje 2026-10-21: tamaño del código de emparejamiento", () => {
+  it("un texto enorme se rechaza antes de parsearlo", () => {
+    const huge = "NIDO1:" + JSON.stringify({ v: 2, app: "nido", name: "x".repeat(5000) });
+    expect(() => decodePairingPayload(huge)).toThrow(/no es de NIDO/);
+  });
+
+  it("un código real (más espacios alrededor) sigue funcionando", () => {
+    const id = generateIdentity();
+    const sk = generateSigningKeypair();
+    const code = encodePairingPayload("Ana", id.publicKey, sk.publicKey);
+    expect(code.length).toBeLessThan(400);
+    expect(decodePairingPayload(`  ${code}\n`).name).toBe("Ana");
+  });
+});

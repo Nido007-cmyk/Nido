@@ -76,7 +76,15 @@ export function encodePairingPayload(name: string, publicKey: Uint8Array, signin
  * Decodifica y valida el QR escaneado. Lanza si no es un QR de NIDO válido.
  * Verifica: prefijo, JSON, versión, app, nombre y clave de 32 bytes.
  */
+/** Un código de emparejamiento real ocupa ~250 caracteres. */
+export const MAX_PAIRING_TEXT_CHARS = 2048;
+
 export function decodePairingPayload(qrText: string): PairingPayload {
+  // Blindaje 2026-10-21: tope antes de parsear nada (un texto pegado o un QR
+  // enorme no llega a JSON.parse).
+  if (typeof qrText !== "string" || qrText.length > MAX_PAIRING_TEXT_CHARS) {
+    throw new Error("Ese QR no es de NIDO.");
+  }
   const text = qrText.trim();
   if (!text.startsWith("NIDO1:")) {
     throw new Error("Ese QR no es de NIDO.");
