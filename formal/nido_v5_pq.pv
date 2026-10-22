@@ -8,7 +8,8 @@
 
   Pregunta principal ("grabar ahora, descifrar después"): un atacante activo
   en la red (fase 0) que DESPUÉS gana un ordenador cuántico (fase 1: rompe
-  todo X25519 y Ed25519 — aquí, se le entregan todos esos secretos) ¿puede
+  X25519 — aquí, se le entregan todos los secretos X25519 de la sesión:
+  efímeros del handshake y claves del ratchet) ¿puede
   leer lo que se envió en v5? Y, como control, ¿sí puede leer lo que se
   envió solo con la clave clásica? (Si no pudiera, el modelo estaría mal
   hecho: el control debe salir "falso".)
@@ -19,12 +20,15 @@
 
   Roles: L = identidad menor (aquí A), H = mayor (aquí B). C es un contacto
   malicioso de ambos. ML-KEM se modela como un KEM ideal (IND-CCA).
+
+  El handshake v3 (firmas Ed25519) se verifica en nido_handshake.pv; este
+  modelo parte de su resultado (ver "Composición modular" abajo). Las firmas
+  no hacen falta aquí: romperlas DESPUÉS de la sesión no cambia lo ya
+  enviado.
 *)
 
 type G.
 type exponent.
-type skey.
-type spkey.
 type key.
 type nonce.
 type kemsk.
@@ -36,9 +40,6 @@ const g: G [data].
 fun exp(G, exponent): G.
 equation forall x: exponent, y: exponent; exp(exp(g, x), y) = exp(exp(g, y), x).
 
-fun spk(skey): spkey.
-fun sign(bitstring, skey): bitstring.
-reduc forall m: bitstring, k: skey; verify(sign(m, k), m, spk(k)) = true.
 
 (* KEM ideal: ct = encapsulación con aleatoriedad r; solo el dueño de dk
    recupera el secreto compartido. *)
@@ -56,15 +57,13 @@ fun hmk(key, bitstring): key.                        (* clave ligada a la cabece
 fun senc(bitstring, key): bitstring.
 reduc forall m: bitstring, k: key; sdec(senc(m, k), k) = m.
 
-const hello3, confirm1, sessConfirm, offerTag: bitstring.
+const sessConfirm, offerTag: bitstring.
 
 free idA, idB, idC: bitstring.
-free skC: skey.
 
 fun secretV5(bitstring, bitstring): bitstring [private].
 fun secretClassic(bitstring, bitstring): bitstring [private].
 
-table contacts(bitstring, spkey).
 
 event SentV5(bitstring, bitstring, bitstring).
 event RecvV5(bitstring, bitstring, bitstring).
@@ -115,59 +114,27 @@ let HighV5(myId: bitstring, peerId: bitstring, k: key, eph: exponent, r: kemrand
   phase 1;
   out(c, (eph, xH)).
 
-(* Handshake v3 (como en nido_handshake.pv), ya autenticado, seguido de v5.
-   Los roles L/H dependen de la identidad, no de quién inicia. *)
-(* Los valores nuevos de v5 (dk, xL, r, xH) se crean al principio de la
-   sesión, antes de leer de la red: equivalente, y así ProVerif termina
-   (ver nido_handshake.pv). *)
-let V5(myId: bitstring, peerId: bitstring, k: key, eph: exponent,
-       dk: kemsk, xL: exponent, r: kemrand, xH: exponent) =
-  if myId = idA then LowV5(myId, peerId, k, eph, dk, xL)
-  else HighV5(myId, peerId, k, eph, r, xH).
-
-let Initiator(myId: bitstring, mySk: skey) =
+(* Composición modular: el handshake v3 está verificado aparte
+   (nido_handshake.pv: la clave de sesión entre A y B es secreta y los
+   mensajes, auténticos). Aquí se parte de su resultado: A y B comparten la
+   clave clásica SK = kdf(g^(eI·eR), nI, nR); los efímeros y nonces van en
+   claro por la red y los efímeros se filtran en la fase 1 (cuántico).
+   Con el contacto malicioso C, el atacante conoce la clave de sesión.
+   Los valores nuevos se crean al principio de cada sesión (ver
+   nido_handshake.pv: así ProVerif termina). *)
+let Session =
+  new eI: exponent; new eR: exponent; new nI: nonce; new nR: nonce;
   new dk: kemsk; new xL: exponent; new r: kemrand; new xH: exponent;
-  new eI: exponent;
-  new nI: nonce;
-  new tsI: bitstring;
-  let gI = exp(g, eI) in
-  out(c, (myId, gI, nI, tsI, sign((hello3, myId, gI, nI, tsI), mySk)));
-  in(c, (peerId: bitstring, gR: G, nR: nonce, tsR: bitstring, sigR: bitstring));
-  if peerId <> myId then
-  get contacts(=peerId, peerSpk: spkey) in
-  if verify(sigR, (hello3, peerId, gR, nR, tsR), peerSpk) = true then
-  out(c, (myId, nI, nR, sign((confirm1, myId, nI, nR), mySk)));
-  in(c, (cpk: bitstring, cn: nonce, pn: nonce, csig: bitstring));
-  if cpk = peerId && cn = nR && pn = nI then
-  if verify(csig, (confirm1, cpk, cn, pn), peerSpk) = true then
-  V5(myId, peerId, kdf(exp(gR, eI), nI, nR), eI, dk, xL, r, xH).
+  out(c, (exp(g, eI), exp(g, eR), nI, nR));
+  let k = kdf(exp(exp(g, eI), eR), nI, nR) in
+  (LowV5(idA, idB, k, eI, dk, xL) | HighV5(idB, idA, k, eR, r, xH)).
 
-let Responder(myId: bitstring, mySk: skey) =
+(* Sesiones de A y de B con el contacto malicioso C (clave conocida). *)
+let WithC(myId: bitstring) =
+  new k: key; new e: exponent;
   new dk: kemsk; new xL: exponent; new r: kemrand; new xH: exponent;
-  new eR: exponent;
-  new nR: nonce;
-  new tsR: bitstring;
-  in(c, (peerId: bitstring, gI: G, nI: nonce, tsI: bitstring, sigI: bitstring));
-  if peerId <> myId then
-  get contacts(=peerId, peerSpk: spkey) in
-  if verify(sigI, (hello3, peerId, gI, nI, tsI), peerSpk) = true then
-  let gR = exp(g, eR) in
-  out(c, (myId, gR, nR, tsR, sign((hello3, myId, gR, nR, tsR), mySk)));
-  in(c, (cpk: bitstring, cn: nonce, pn: nonce, csig: bitstring));
-  if cpk = peerId && cn = nI && pn = nR then
-  if verify(csig, (confirm1, cpk, cn, pn), peerSpk) = true then
-  out(c, (myId, nR, nI, sign((confirm1, myId, nR, nI), mySk)));
-  V5(myId, peerId, kdf(exp(gI, eR), nI, nR), eR, dk, xL, r, xH).
+  out(c, (k, e));
+  (LowV5(myId, idC, k, e, dk, xL) | HighV5(myId, idC, k, e, r, xH)).
 
 process
-  new skA: skey;
-  new skB: skey;
-  out(c, (spk(skA), spk(skB)));
-  insert contacts(idA, spk(skA));
-  insert contacts(idB, spk(skB));
-  insert contacts(idC, spk(skC));
-  (
-    (!Initiator(idA, skA)) | (!Responder(idA, skA)) |
-    (!Initiator(idB, skB)) | (!Responder(idB, skB)) |
-    (phase 1; out(c, (skA, skB)))
-  )
+  (!Session) | (!WithC(idA)) | (!WithC(idB))

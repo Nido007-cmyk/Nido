@@ -1,0 +1,83 @@
+# Verificación formal del protocolo P2P de NIDO
+
+Aquí están los modelos del protocolo NIDO-a-NIDO para
+[ProVerif](https://bblanche.gitlabpages.inria.fr/proverif/), una herramienta
+que prueba propiedades de seguridad contra un atacante que controla toda la
+red (modelo Dolev-Yao). El atacante puede leer, borrar, reenviar e inventar
+cualquier mensaje.
+
+CI (`.github/workflows/formal.yml`) los verifica en cada cambio de `formal/` o
+`src/p2p/`, y también una vez por semana. Los resultados se comparan con
+`expected.txt`. Si uno cambia, la comprobación falla.
+
+## Qué se prueba
+
+### `nido_handshake.pv`: handshake v3 + capa de mensajes
+
+Actores: A y B, honestos y emparejados por QR. C es un **contacto
+malicioso** de los dos: el atacante tiene su clave de firma.
+
+| # | Propiedad | Resultado |
+|---|-----------|-----------|
+| 1–2 | Lo que A y B se mandan es secreto | ✅ demostrado |
+| 3 | Secreto hacia adelante: aunque después se filtren las claves de firma de A y B, lo enviado antes sigue secreto | ✅ demostrado |
+| 4–5 | Autenticidad: si B acepta un mensaje "de A", A lo envió a B (sin repeticiones) | ✅ demostrado |
+| 6–7 | Acuerdo de identidades **solo a nivel de handshake** | ❌ ataque encontrado (esperado, ver abajo) |
+
+### `nido_v5_pq.pv`: v5 (X25519 + ML-KEM-768 + Double Ratchet)
+
+| # | Propiedad | Resultado |
+|---|-----------|-----------|
+| 1 | **Grabar ahora, descifrar después:** un atacante que graba la sesión y más tarde rompe X25519 con un ordenador cuántico no puede leer lo enviado en v5 | ✅ demostrado |
+| 2 | Control: ese mismo atacante **sí** puede leer lo enviado solo con la clave clásica | ❌ ataque encontrado (esperado: comprueba que el modelo no es demasiado optimista) |
+| 3 | Autenticidad del primer mensaje v5 | ✅ demostrado |
+| 4 | Secreto del mensaje v5 durante la sesión, también con el contacto malicioso C | ✅ demostrado |
+
+## El ataque esperado: "unknown key share" (consultas 6–7)
+
+Ni la firma del HELLO ni la del CONFIRM nombran al otro lado. Por eso un
+contacto malicioso C puede conseguir que A y B terminen con la misma clave de
+sesión creyendo cada uno que habla con otra persona.
+
+**No permite leer ni falsificar mensajes** (consultas 1–5): cada sobre lleva
+`from`/`to` dentro del cifrado y el receptor lo comprueba. En v5, además, la
+raíz de claves incluye las dos identidades.
+
+Aun así, es una debilidad del handshake en sí. La corrección prevista es
+CONFIRM v2: que la firma incluya la clave pública del otro, como hace SIGMA.
+Cuando esté, estas dos consultas deben pasar a "verdadero".
+
+## Abstracciones (léalas antes de citar estos resultados)
+
+- **Criptografía ideal.** X25519 es Diffie-Hellman ideal y Ed25519 es firma
+  ideal. HKDF es una función aleatoria, secretbox es cifrado autenticado ideal
+  y ML-KEM es un KEM ideal (IND-CCA). Se prueba el *diseño* del protocolo, no
+  las bibliotecas.
+- **El modelo no es el código.** Está escrito a mano a partir de los
+  archivos que cita en su cabecera. Si el código cambia, hay que actualizar el
+  modelo.
+- **Reloj:** cada HELLO lleva un valor nuevo y público. El atacante puede
+  reenviar HELLOs viejos tal cual.
+- **Valores nuevos al principio de la sesión.** Los efímeros, nonces y
+  claves KEM se crean antes de leer de la red. Es equivalente, porque un valor
+  aleatorio que todavía no se ha usado no cambia nada. Sin esto ProVerif no
+  termina: los nombres simbólicos dependerían de las entradas y el atacante
+  podría anidarlos sin fin reflejando HELLOs entre A y B.
+- **Composición modular para v5.** `nido_v5_pq.pv` parte de una clave
+  clásica compartida por A y B, que es lo que demuestra `nido_handshake.pv`.
+  No vuelve a modelar las firmas. Con el contacto malicioso C, el atacante
+  conoce la clave de sesión.
+- **Solo el primer paso del ratchet.** Las propiedades de los pasos
+  siguientes (ventana de claves saltadas, retroceso de estado) se cubren con
+  pruebas unitarias y fuzzing (`src/p2p/ratchetV5.test.ts`, `src/p2p/fuzz/`),
+  no aquí.
+
+## Cómo ejecutarlo
+
+```sh
+# ProVerif 2.05 (https://bblanche.gitlabpages.inria.fr/proverif/)
+python3 formal/check.py                     # los dos modelos
+python3 formal/check.py nido_handshake.pv   # uno solo
+```
+
+Cada ejecución guarda su salida completa en `formal/out/<modelo>.log`.
