@@ -16,4 +16,13 @@ android {
     versionCode 1
     versionName "0.1.0"
   }
+  // 0.1.51: ML-KEM-768 nativo (mlkem-native, ver src/main/cpp/CMakeLists.txt).
+  if (rootProject.hasProperty("ndkVersion")) {
+    ndkVersion rootProject.ext.ndkVersion
+  }
+  externalNativeBuild {
+    cmake {
+      path "src/main/cpp/CMakeLists.txt"
+    }
+  }
 }

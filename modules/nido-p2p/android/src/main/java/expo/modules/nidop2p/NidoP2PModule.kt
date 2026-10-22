@@ -98,6 +98,13 @@ class NidoP2PModule : Module() {
 
     Function("getServiceUuid") { NidoP2PManager.SERVICE_UUID_STRING }
 
+    // 0.1.51: ML-KEM-768 nativo (mlkem-native). Síncronas: el ratchet v5 las
+    // llama dentro de su lógica síncrona. Hex en las dos direcciones.
+    Function("mlkemAvailable") { NidoPqc.available }
+    Function("mlkemKeypair") { coinsHex: String -> NidoPqc.keypair(coinsHex) }
+    Function("mlkemEncaps") { pkHex: String, mHex: String -> NidoPqc.encaps(pkHex, mHex) }
+    Function("mlkemDecaps") { ctHex: String, skHex: String -> NidoPqc.decaps(ctHex, skHex) }
+
     /**
      * DIAG-2026-10-07: estado del servidor RFCOMM para diagnóstico.
      * Síncrona: el hilo de JS la invoca para pintar "servidor activo/inactivo"
