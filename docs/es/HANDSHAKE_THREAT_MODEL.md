@@ -265,6 +265,29 @@ dos sentidos van en v5 la clave clásica `SK` se borra de la memoria.
 - v5 todavía no se ha probado en dos teléfonos físicos; por eso viene
   apagado.
 
+## Verificación formal (ProVerif, 2026-10-22)
+
+`formal/` tiene dos modelos simbólicos del protocolo. CI los verifica en cada
+cambio de `src/p2p/` (más detalles en `formal/README.md`).
+
+**Demostrado, con un contacto malicioso C en juego:**
+- secreto de los mensajes A↔B;
+- secreto hacia adelante frente a la filtración posterior de las claves de firma;
+- autenticidad inyectiva de los mensajes;
+- en v5, que lo grabado hoy sigue secreto aunque X25519 se rompa después.
+
+**Encontrado (esperado, todavía abierto):** *unknown key share* a nivel de
+handshake. Ni la firma del HELLO v3 ni la del CONFIRM v1 nombran al otro
+lado, así que un contacto malicioso C puede lograr que A y B terminen con la
+misma clave de sesión creyendo cada uno que habla con otro.
+
+No permite leer ni falsificar mensajes: el sobre lleva `from`/`to` dentro del
+cifrado y el receptor los comprueba. En v5, además, la raíz de claves liga las
+dos identidades.
+
+Corrección prevista: un CONFIRM v2 que firme también la clave pública del
+otro lado.
+
 ## Qué NO resuelve (límites honestos)
 
 - **Peer comprometido**: si el teléfono de Bob tiene malware, Bob es un
