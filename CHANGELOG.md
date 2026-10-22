@@ -41,7 +41,8 @@ Fixes from a full audit of NIDO.
 - **Reproducible builds:** found why two builds of the same code sometimes
   differed: React Native stored the IP address of the machine that built
   the app inside it (for its development server, unused in the released
-  app). It is now fixed to the same value on every machine.
+  app). It is now fixed to the same value on every machine. Two independent
+  builds of this release now match in all 1,554 files (signature excluded).
 
 ## 0.1.46-alpha — 2026-10-22
 
