@@ -23,9 +23,14 @@ on:
         default: ''
   schedule:
     - cron: '23 4 * * 6'
-  # TEMPORAL (se quita antes de fusionar): prueba en la rama del PR.
+  # Ramas repro/**: para probar la reproducibilidad de un cambio antes de
+  # fusionarlo (empujar el commit a repro/<algo>).
   push:
-    branches: ['feat/security-parity']
+    branches: ['repro/**']
+
+concurrency:
+  group: reproducible-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
