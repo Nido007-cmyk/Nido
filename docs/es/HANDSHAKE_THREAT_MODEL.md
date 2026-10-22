@@ -303,6 +303,13 @@ porque `from`/`to` van dentro del cifrado.
 - Tras la primera v2 válida de un contacto, se le exige siempre.
 - Si en la primera conexión alguien le quita la firma v2 al CONFIRM, el
   `session_confirm` cifrado (`cf2`) lo delata y la sesión no se usa.
+- Desde 0.1.52 (lo encontró una revisión independiente): un frame que
+  autentica con la clave de sesión pero nombra a otro remitente o
+  destinatario es justo el *unknown key share*. Se corta la conexión y, si
+  decía `cf2`, se marca al contacto. Hasta 0.1.51 ese frame se descartaba en
+  silencio y la sesión quedaba pendiente.
+- Si el atacante descarta esos frames, la sesión nunca se activa (no pasa
+  ningún mensaje), pero tampoco se detecta.
 - `formal/nido_handshake_v2.pv` demuestra el acuerdo de identidades.
 - Con un NIDO anterior a 0.1.48, que solo puede firmar v1, se aplica el modelo
   v1 hasta que se actualice.

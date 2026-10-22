@@ -58,11 +58,22 @@ rechaza.
 2. **Exigencia por contacto.** Tras la primera v2 válida de un contacto, el
    contacto queda marcado y desde entonces su CONFIRM sin v2 se rechaza (es
    una degradación). Si la marca no se puede leer, se rechaza igual.
-3. **Primera conexión, también cubierta.** Cada NIDO 0.1.48 dice `cf2`
-   dentro de su `session_confirm`, que va cifrado y autenticado y nadie puede
-   quitar. Si alguien le quitó la firma v2 al CONFIRM en esa primera
-   conexión, el otro lado lo detecta, no usa la sesión, corta y marca al
-   contacto.
+3. **Primera conexión, también cubierta** (completo desde 0.1.52). Con un
+   contacto todavía sin marcar, el CONFIRM sin v2 se acepta. Desde 0.1.49, los
+   contactos emparejados con un QR nuevo ya vienen marcados. Lo que pase
+   después lo vigila la sesión cifrada, que nadie puede tocar:
+   - Si el otro lado dice `cf2` (firma v2) y su CONFIRM llegó sin ella,
+     alguien la quitó: la sesión no se usa, se corta y se marca al contacto.
+   - Si llega un frame que autentica con la clave de sesión pero viene de otra
+     identidad o va dirigido a otra, eso es justo el *unknown key share*: se
+     corta y, si decía `cf2`, se marca al contacto. Esto lo encontró una
+     revisión independiente: hasta 0.1.51 ese frame se descartaba en silencio.
+   - Si el atacante descarta esos frames, la sesión nunca se activa (ningún
+     mensaje se envía por ella), pero tampoco se detecta.
+
+   Los modelos formales cubren el modo estricto (v2 exigida). Este último
+   tramo, la primera conexión con un contacto sin marcar, está cubierto por
+   pruebas (`unknownKeyShare.test.ts`, `confirmV2.session.test.ts`).
 4. **Con un NIDO viejo**, que no sabe firmar v2, la conexión sigue
    funcionando como antes, porque ese teléfono solo puede usar v1. Se aplica
    el modelo v1: los mensajes siguen protegidos (consultas 1–5). El punto
