@@ -88,7 +88,13 @@ The interface is available in English, Spanish and Portuguese.
   are end-to-end encrypted with keys exchanged by QR code (X25519 key
   agreement, Ed25519 signatures, XSalsa20-Poly1305). The phone that starts a
   connection still sends its public key in clear by default; the experimental
-  "Private hello" setting seals it for contacts that support it.
+  "Private hello" setting seals it for contacts that support it. Messages
+  are padded to fixed sizes. An experimental setting (off by default) gives
+  every message its own key (Double Ratchet, as in Signal) and adds
+  ML-KEM-768 to each connection against future quantum computers.
+- Disappearing messages in NIDO-to-NIDO chats, an optional panic button that
+  erases everything in 3 seconds, and an incognito keyboard (the keyboard is
+  asked not to learn from what you type).
 - Screenshots are blocked, other apps' overlays are hidden while NIDO is on
   screen (Android 12+), and erasing all data asks for your fingerprint or PIN.
 

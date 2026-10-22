@@ -12,12 +12,12 @@ import {
   Pressable,
   ScrollView,
   FlatList,
-  TextInput,
   ActivityIndicator,
   Modal,
   Keyboard,
   AppState,
 } from "react-native";
+import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { showSecureAlert } from "nido-secure-dialog";
 import { copyPrivate } from "../utils/secretClipboard";
 import QRCode from "qrcode";
@@ -46,6 +46,7 @@ import {
   findContactRowAny,
   getConversation,
   deleteMessage,
+  DISAPPEAR_OPTIONS_SEC,
   P2PIdentityKeyLossError,
   type P2PContact,
   type P2PStoredMessage,
@@ -125,7 +126,14 @@ const LISTENER_MAX_WAIT_MS = 30000;
 /** WIFI-UX-2026-10-11: espera máxima a que aparezca el anuncio Wi-Fi del otro. */
 const LAN_DISCOVERY_WAIT_MS = 6000;
 
-export function NidoScreen({ onClose }: { onClose: () => void }) {
+export function NidoScreen({
+  onClose,
+  panicSlot,
+}: {
+  onClose: () => void;
+  /** 0.1.46: botón de pánico (solo si el usuario lo activó). */
+  panicSlot?: React.ReactNode;
+}) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
@@ -207,6 +215,12 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
     lastAcceptAt: number;
   } | null>(null);
   const [peer, setPeer] = useState<P2PContact | null>(null);
+  // 0.1.46: temporizador de mensajes temporales del chat abierto, selector
+  // y si la sesión con este contacto va en v5.
+  const [disappearSec, setDisappearSec] = useState(0);
+  const [showTimerPicker, setShowTimerPicker] = useState(false);
+  const [sessionV5, setSessionV5] = useState(false);
+  const [v5Warning, setV5Warning] = useState(false);
   const [messages, setMessages] = useState<P2PStoredMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -298,7 +312,19 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
 
   const loadConversation = useCallback(async (pkHex: string) => {
     try {
+      // 0.1.46: mostrar la conversación arranca la cuenta atrás de los
+      // mensajes temporales recibidos (como Signal: al verlos). Solo con la
+      // app en primer plano: el refresco periódico sigue en segundo plano y
+      // ahí nadie está mirando.
+      if (AppState.currentState === "active") {
+        await mRef.current.markConversationSeen(pkHex).catch(() => 0);
+      }
       setMessages(await getConversation(pkHex));
+      // Temporizador (puede haberlo adoptado de un mensaje del contacto) y
+      // si la sesión va en v5 (clave por mensaje + ML-KEM).
+      setDisappearSec(await mRef.current.getDisappearingTimer(pkHex).catch(() => 0));
+      setSessionV5(mRef.current.sessionUsesV5(pkHex));
+      setV5Warning(await mRef.current.sessionV5Warning(pkHex).catch(() => false));
     } catch (e) {
       // FIX 2026-10-09 (UI-AUDIT/F4): error visible en vez de silencio.
       // Auditoría 2026-10-12: por el mapeo localizado, no el mensaje crudo.
@@ -1042,9 +1068,38 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
       impact(ImpactFeedbackStyle.Light);
       setPeer(c);
       setNotice(null);
+      setShowTimerPicker(false);
+      setDisappearSec(0);
+      void mRef.current
+        .getDisappearingTimer(c.pkHex)
+        .then(setDisappearSec)
+        .catch(() => {});
       void loadConversation(c.pkHex);
     },
     [loadConversation],
+  );
+
+  // 0.1.46: mensajes temporales e indicador v5. El refresco de la
+  // conversación (cada 4 s, más abajo) también relee los dos.
+
+  const timerLabel = useCallback(
+    (sec: number) => (sec === 0 ? t("nido.disappearOff") : t(`nido.disappear_${sec}`)),
+    [t],
+  );
+
+  const chooseTimer = useCallback(
+    async (sec: number) => {
+      if (!peer) return;
+      try {
+        await mRef.current.setDisappearingTimer(peer.pkHex, sec);
+        setDisappearSec(sec);
+        setShowTimerPicker(false);
+        setNotice(t("nido.disappearSet", { value: timerLabel(sec) }));
+      } catch (e) {
+        setNotice(`${t("nido.errorLabel")}: ${p2pErr(e)}`);
+      }
+    },
+    [peer, t, timerLabel],
   );
 
   /**
@@ -1090,6 +1145,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
         <Text style={[styles.bubbleMeta, out && styles.bubbleMetaOut]}>
           {fmtTime(item.ts)}
           {out ? outStatusSuffix(item) : ""}
+          {item.ttlSec ? ` · ${t("nido.disappearBadge")}` : ""}
         </Text>
         {showRetry ? (
           <Pressable
@@ -1232,9 +1288,47 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
             </View>
             <Text style={styles.peerSub}>
               {isOnline ? t("nido.online") : t("nido.offlineQueued")}
+              {isOnline && sessionV5 ? ` · ${t("nido.v5Active")}` : ""}
             </Text>
+            {isOnline && v5Warning ? <Text style={styles.v5Warning}>{t("nido.v5Missing")}</Text> : null}
           </View>
+          <Pressable
+            onPress={() => setShowTimerPicker((v) => !v)}
+            hitSlop={8}
+            style={styles.timerBtn}
+            accessibilityRole="button"
+            accessibilityLabel={`${t("nido.disappearTitle")}: ${timerLabel(disappearSec)}`}
+          >
+            <Text style={styles.timerBtnText}>
+              {t("nido.disappearShort", {
+                value: disappearSec === 0 ? t("nido.disappearOffShort") : timerLabel(disappearSec),
+              })}
+            </Text>
+          </Pressable>
+          {panicSlot}
         </View>
+        {showTimerPicker ? (
+          <View style={styles.timerPicker}>
+            <Text style={styles.timerPickerTitle}>{t("nido.disappearTitle")}</Text>
+            <View style={styles.timerChips}>
+              {DISAPPEAR_OPTIONS_SEC.map((sec) => (
+                <Pressable
+                  key={sec}
+                  onPress={() => void chooseTimer(sec)}
+                  style={[styles.timerChip, sec === disappearSec && styles.timerChipActive]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: sec === disappearSec }}
+                  accessibilityLabel={timerLabel(sec)}
+                >
+                  <Text style={[styles.timerChipText, sec === disappearSec && styles.timerChipTextActive]}>
+                    {timerLabel(sec)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={styles.timerPickerHint}>{t("nido.disappearHint")}</Text>
+          </View>
+        ) : null}
         {notice ? (
           <Text style={styles.notice} onPress={() => setNotice(null)}>
             {notice}
@@ -1284,6 +1378,7 @@ export function NidoScreen({ onClose }: { onClose: () => void }) {
           <NidoIcon name="pairing" size={20} />
           <Text style={styles.title}>NIDO</Text>
         </View>
+        {panicSlot}
         <Pressable
           onPress={() => {
             impact(ImpactFeedbackStyle.Light);
@@ -1827,6 +1922,36 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   peerTitleWrap: { flex: 1, alignItems: "center", marginRight: calmSpacing.spacious },
   peerName: { ...typography.ui.titleSm, color: colors.text.primary },
   peerSub: { ...typography.ui.caption, color: colors.text.muted },
+  v5Warning: { ...typography.ui.caption, color: colors.crimson[500] },
+  timerBtn: {
+    marginLeft: calmSpacing.tight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  timerBtnText: { ...typography.ui.caption, color: colors.text.secondary },
+  timerPicker: {
+    paddingHorizontal: calmSpacing.comfortable,
+    paddingVertical: calmSpacing.tight,
+    backgroundColor: colors.bg.terminal,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+  },
+  timerPickerTitle: { ...typography.ui.caption, color: colors.text.heading, fontWeight: "700" },
+  timerChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginVertical: 8 },
+  timerChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  timerChipActive: { backgroundColor: colors.emerald.bgSubtle, borderColor: colors.emerald[500] },
+  timerChipText: { ...typography.ui.caption, color: colors.text.secondary },
+  timerChipTextActive: { color: colors.text.accentEmerald, fontWeight: "700" },
+  timerPickerHint: { ...typography.ui.caption, color: colors.text.muted },
   linkBar: {
     paddingHorizontal: calmSpacing.comfortable,
     paddingVertical: calmSpacing.tight,

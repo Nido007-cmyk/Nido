@@ -36,6 +36,8 @@ We document what is verified, experimental, incomplete, or still awaiting physic
 - Benchmark newer small models (Qwen3 and others) on real phones: quality, speed and battery
 - Strengthen the NIDO-to-NIDO experience
 - Private hello (P2P v4): test on two phones, then turn it on by default
+- New key per message + ML-KEM (P2P v5): test on two phones, then turn it on by default
+- Reproducible builds: keep the two-build check green on every release
 - Continue improving voice and local interaction
 - Polish the experience across English, Spanish and Portuguese
 - Improve accessibility and first-time-user experience

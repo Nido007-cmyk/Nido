@@ -5,7 +5,8 @@
  */
 
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, TextInput, Switch } from "react-native";
+import { View, Text, StyleSheet, Pressable, Switch } from "react-native";
+import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";

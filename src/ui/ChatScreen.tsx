@@ -8,7 +8,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   FlatList,
   StyleSheet,
@@ -19,6 +18,8 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native";
+import { PanicButton } from "./components/PanicButton";
+import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { LinearGradient } from "expo-linear-gradient";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType } from "../services/haptics";
 import { NidoIcon } from "./components/icons/NidoIcon";
@@ -202,6 +203,38 @@ export function ChatScreen({
   const [showMemoryManager, setShowMemoryManager] = useState(false);
   const [showExecutionTelemetry, setShowExecutionTelemetry] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  // 0.1.46: botón de pánico (opt-in en Ajustes). Se relee al cerrar Ajustes.
+  // Cargar los interruptores aquí, al arrancar, también deja listos los del
+  // P2P (saludo privado, v5) antes de la primera reconexión.
+  const [panicEnabled, setPanicEnabled] = useState(false);
+  useEffect(() => {
+    if (showSettings) return;
+    let alive = true;
+    import("../config/featureFlags")
+      .then(async ({ isFeatureEnabled, loadFeatureFlags }) => {
+        await loadFeatureFlags().catch(() => {});
+        if (alive) setPanicEnabled(isFeatureEnabled("security.panicButton"));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [showSettings]);
+
+  // 0.1.46: los mensajes temporales vencidos se borran al arrancar y cada
+  // vez que NIDO vuelve a primer plano, aunque no se abra ese chat.
+  useEffect(() => {
+    const purge = () => {
+      import("../p2p/store")
+        .then(({ deleteExpiredMessages }) => deleteExpiredMessages())
+        .catch(() => {});
+    };
+    purge();
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st === "active") purge();
+    });
+    return () => sub.remove();
+  }, []);
   const [showNido, setShowNido] = useState(false);
   const [voiceInputEnabled, setVoiceInputEnabledState] = useState(true);
   const showSettingsRef = useRef(false);
@@ -1711,8 +1744,17 @@ export function ChatScreen({
     return <MemoryManagerScreen onClose={() => setShowMemoryManager(false)} />;
   }
 
+  // 0.1.46: el botón de pánico va en la cabecera principal y en la de NIDO
+  // (que sustituye a esta pantalla mientras está abierta).
+  const panicNode = panicEnabled ? (
+    <PanicButton
+      onWiped={() => onRelaunchWizard?.()}
+      onError={(msg) => setToast(`${t("panic.failedTitle")}: ${msg}`)}
+    />
+  ) : null;
+
   if (showNido) {
-    return <NidoScreen onClose={() => setShowNido(false)} />;
+    return <NidoScreen onClose={() => setShowNido(false)} panicSlot={panicNode} />;
   }
 
   if (showAbout) {
@@ -1740,6 +1782,7 @@ export function ChatScreen({
           }}
           onCycleTone={cycleTone}
           onNewChat={resetToNewChat}
+          panicSlot={panicNode}
         />
 
         {/* Deep Research Mode Banner */}

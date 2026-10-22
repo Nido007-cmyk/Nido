@@ -813,7 +813,22 @@
     "batteryHintBody": "Android puts NIDO to sleep after a while to save battery, and the link with your contacts drops until you open it again. Let NIDO run in the background (it uses very little battery).",
     "batteryHintAllow": "Allow",
     "batteryHintLater": "Not now",
-    "batteryHintManual": "Go to Android Settings → Apps → NIDO → Battery → Unrestricted."
+    "batteryHintManual": "Go to Android Settings → Apps → NIDO → Battery → Unrestricted.",
+    "disappearTitle": "Disappearing messages",
+    "disappearOff": "Off",
+    "disappearOffShort": "Off",
+    "disappear_300": "5 min",
+    "disappear_3600": "1 hour",
+    "disappear_28800": "8 hours",
+    "disappear_86400": "1 day",
+    "disappear_604800": "1 week",
+    "disappear_2419200": "4 weeks",
+    "disappearSet": "Disappearing messages: {{value}}",
+    "disappearHint": "New messages in this chat delete themselves on both phones. For you the time counts from sending; for your contact, from when they see it. Your contact's NIDO takes this setting with your next message (older versions of NIDO ignore it). Nobody can stop someone from photographing the screen with another camera.",
+    "disappearBadge": "disappearing",
+    "disappearShort": "Timer: {{value}}",
+    "v5Active": "new key per message",
+    "v5Missing": "This connection is not using per-message keys, although this contact used them before. If they did not turn it off, someone may have blocked it: reconnect, and check with them in person."
   },
   "notifications": {
     "reminderChannel": "NIDO Reminders",
@@ -1045,7 +1060,9 @@
     "delegationTitle": "Delegated tasks (experimental)",
     "delegationDesc": "A paired NIDO can ask you to run tasks. Every task requires your explicit approval.",
     "sealedHelloTitle": "Private hello (experimental)",
-    "sealedHelloDesc": "When this phone calls a paired NIDO that supports it, the first messages are sealed so nobody nearby can see who is calling. Turn it on in both phones to test. If connecting fails, turn it off."
+    "sealedHelloDesc": "When this phone calls a paired NIDO that supports it, the first messages are sealed so nobody nearby can see who is calling. Turn it on in both phones to test. If connecting fails, turn it off.",
+    "ratchetV5Title": "New key per message + quantum-resistant (experimental)",
+    "ratchetV5Desc": "Every message gets its own key, like Signal's Double Ratchet: a key stolen today does not open earlier messages. The session also mixes in ML-KEM-768, so traffic recorded today stays closed to future quantum computers. Only used when both phones have it on; otherwise nothing changes. Applies from the next connection."
   },
   "backup": {
     "dekTitle": "Backup created",
@@ -1646,5 +1663,14 @@
       "lfm": "Not Apache or MIT: commercial use is only allowed for entities with under USD 10 million in annual revenue, and anyone who redistributes it must give a copy of the license.",
       "ccBySa": "You may share and adapt it by crediting Wikipedia (and NIDO as compiler of the packs), linking the license, indicating changes and keeping CC BY-SA 4.0."
     }
+  },
+  "panic": {
+    "buttonLabel": "Panic button: hold 3 seconds to erase everything",
+    "buttonHint": "Erases all NIDO data: chats, contacts, keys, memory and models. It cannot be undone. With TalkBack, the long-press action erases at once.",
+    "short": "SOS",
+    "wiping": "Erasing",
+    "failedTitle": "Could not erase everything",
+    "settingTitle": "Panic button",
+    "settingDesc": "Shows an SOS button on the main screen. Holding it for 3 seconds erases all NIDO data at once, without asking for fingerprint or confirmation. It cannot be undone; make a backup first if you want to keep anything."
   }
 }

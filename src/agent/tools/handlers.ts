@@ -1101,8 +1101,18 @@ const nidoReadInboxHandler: ToolHandler = async () => {
     await m.ensureIdentity();
     const contacts = await m.contacts();
     const names = new Map(contacts.map((c) => [c.pkHex.toLowerCase(), c.name]));
-    const unread = await m.readInbox();
-    if (unread.length === 0) return "No tienes mensajes NIDO sin leer.";
+    const { messages: unread, hiddenTemporal } = await m.readInboxWithHidden();
+    // 0.1.46: los mensajes temporales no pasan por el asistente (quedarían en
+    // su historial sin temporizador): solo se avisa de que hay.
+    const temporalNote =
+      hiddenTemporal > 0
+        ? L(
+            `Hay ${hiddenTemporal} mensaje(s) temporal(es) sin leer: ábrelos en el chat NIDO.`,
+            `There are ${hiddenTemporal} unread disappearing message(s): open them in the NIDO chat.`,
+            `Há ${hiddenTemporal} mensagem(ns) temporária(s) não lida(s): abra-as no chat NIDO.`,
+          )
+        : "";
+    if (unread.length === 0) return temporalNote || "No tienes mensajes NIDO sin leer.";
     return unread
       .map((msg) => {
         const who = names.get(msg.peerPk.toLowerCase()) ?? L("Contacto NIDO", "NIDO contact", "Contato NIDO");
@@ -1117,7 +1127,7 @@ const nidoReadInboxHandler: ToolHandler = async () => {
         }
         return `• ${who} (${when}): ${msg.text}`;
       })
-      .join("\n");
+      .join("\n") + (temporalNote ? `\n${temporalNote}` : "");
   } catch (e) {
     return `${L("No pude leer la bandeja NIDO", "I couldn't read the NIDO inbox", "Não consegui ler a caixa do NIDO")}: ${e instanceof Error ? e.message : String(e)}`;
   }

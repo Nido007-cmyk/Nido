@@ -35,6 +35,8 @@ Documentamos qué está verificado, qué es experimental, qué está incompleto 
 - Primera respuesta más rápida en teléfonos modestos (prompts más cortos, mejor reutilización de la caché del modelo)
 - Medir modelos pequeños más nuevos (Qwen3 y otros) en teléfonos reales: calidad, velocidad y batería
 - Saludo privado (P2P v4): probarlo en dos teléfonos y luego activarlo por defecto
+- Clave nueva por mensaje + ML-KEM (P2P v5): probarlo en dos teléfonos y luego activarlo por defecto
+- Compilación reproducible: mantener en verde la comprobación de dos compilaciones en cada versión
 - Fortalecer la experiencia NIDO-a-NIDO
 - Continuar mejorando voz e interacción local
 - Pulir la experiencia en inglés, español y portugués

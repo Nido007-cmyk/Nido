@@ -1,6 +1,6 @@
 # OWASP MASVS checklist — NIDO
 
-Self-assessment against the [OWASP Mobile Application Security Verification Standard](https://mas.owasp.org/MASVS/) control groups. Last reviewed 2026-10-21 against version 0.1.45.
+Self-assessment against the [OWASP Mobile Application Security Verification Standard](https://mas.owasp.org/MASVS/) control groups. Last reviewed 2026-10-22 against version 0.1.46.
 
 This is a code review by the project, not an external audit. Nothing here was verified on a physical device unless the row says so. Status values:
 
@@ -14,13 +14,13 @@ This is a code review by the project, not an external audit. Nothing here was ve
 | Control | Status | Evidence / gap |
 |---|---|---|
 | STORAGE-1 Sensitive data is stored securely | Partial | Chats, notes, reminders, memory, contacts and the action history live in SQLCipher databases (`src/security/databaseManager.ts`, `src/rag/db.ts`). The key is in the Android Keystore via `expo-secure-store` (`src/privacy/keyManager.ts`). Optional hardware vault (`src/security/keyVault.ts`, `modules/nido-keyvault`): the database key is wrapped by a non-exportable AES-256-GCM Keystore key (StrongBox or TEE) that needs a fingerprint or PIN for each use (`BiometricPrompt` + `CryptoObject`, timeout 0). The custom system prompt is stored in SecureStore since 0.1.44. **Gaps:** the vault is off by default; `settings.json` (theme, language, chosen model, disabled tools) is still a plain file in app-private storage. |
-| STORAGE-2 No sensitive data leaks outside the app | Partial | `android.allowBackup: false`; data-extraction rules plugin excludes app data from cloud and device transfer; `FLAG_SECURE` on the main window blocks screenshots and the recents thumbnail; notification channels hide content on the lock screen. The backup key is copied flagged as sensitive and cleared after 60 s; the pairing code is copied flagged as sensitive (0.1.44). **Gap:** text typed with a third-party keyboard is outside the app's control. |
+| STORAGE-2 No sensitive data leaks outside the app | Partial | `android.allowBackup: false`; data-extraction rules plugin excludes app data from cloud and device transfer; `FLAG_SECURE` on the main window blocks screenshots and the recents thumbnail; notification channels hide content on the lock screen. The backup key is copied flagged as sensitive and cleared after 60 s; the pairing code is copied flagged as sensitive (0.1.44). Since 0.1.46 every text field asks the keyboard not to learn from input (`IME_FLAG_NO_PERSONALIZED_LEARNING`, `src/ui/components/PrivateTextInput.tsx`), deleted rows are overwritten (`PRAGMA secure_delete`), and NIDO-to-NIDO chats can have disappearing messages. **Gap:** a keyboard can ignore the no-learning request; the flag is applied when a field gets focus, so a prop update can drop it until the next focus. |
 
 ## MASVS-CRYPTO
 
 | Control | Status | Evidence / gap |
 |---|---|---|
-| CRYPTO-1 Strong, standard cryptography | Met | SQLCipher (AES-256) at rest; X25519, Ed25519 and XSalsa20-Poly1305 from `tweetnacl` for P2P; HKDF-SHA512 for session keys. No home-made primitives. Covered by `src/p2p/*.test.ts`. |
+| CRYPTO-1 Strong, standard cryptography | Met | SQLCipher (AES-256) at rest; X25519, Ed25519 and XSalsa20-Poly1305 from `tweetnacl` for P2P; HKDF-SHA512 for session keys. Experimental P2P v5 (off by default): Double Ratchet over the same primitives plus ML-KEM-768 (FIPS 203) from `@noble/post-quantum` (pure JS, not constant-time, not independently audited). No home-made primitives. Covered by `src/p2p/*.test.ts`, including `ratchetV5.test.ts` and the fuzz suite. |
 | CRYPTO-2 Key management | Partial | Database key generated from the platform CSPRNG and held in the Keystore; rotation exists (`src/security/keyRotation.ts`); all-zero public keys and null shared secrets are rejected. **Gaps:** hardware backing and StrongBox cannot be confirmed from JavaScript (the in-app security check reports this honestly as "cannot be checked"); identifiers that are not secrets (note, task and chat ids) use `Math.random`. |
 
 ## MASVS-AUTH
@@ -37,7 +37,7 @@ This is a code review by the project, not an external audit. Nothing here was ve
 |---|---|---|
 | NETWORK-1 Secure network traffic | Met | Internet use is limited to HTTPS downloads the user starts (models, corpus). The only other network use is the local Wi-Fi P2P route (TCP + mDNS, private addresses only, app-level end-to-end encryption). Every connection, including local Wi-Fi ones, is logged and shown in the app (`src/privacy/networkAudit.ts`). The download catalog is signed and verified at start-up; small assets are SHA-256 checked. |
 | NETWORK-2 Identity pinning | Partial | Downloads are pinned to exact revisions and hashes rather than to certificates, so a tampered file is rejected. **Gap:** no TLS certificate pinning; multi-gigabyte model files are verified on demand, not automatically. |
-| P2P transport (outside MASVS scope) | Partial | Bluetooth RFCOMM and local Wi-Fi with app-level end-to-end encryption and QR pairing. The receiving phone stays silent until the caller proves to be a contact, over Wi-Fi and, since 0.1.45, over Bluetooth too. An experimental sealed hello (P2P v4, off by default) hides the caller's identity from anyone but the intended contact. **Gaps:** by default the caller's static public key is still sent in clear in the first frame (linkable across connections);  fixed Bluetooth service UUID and mDNS service type reveal that NIDO is present. |
+| P2P transport (outside MASVS scope) | Partial | Bluetooth RFCOMM and local Wi-Fi with app-level end-to-end encryption and QR pairing. The receiving phone stays silent until the caller proves to be a contact, over Wi-Fi and, since 0.1.45, over Bluetooth too. An experimental sealed hello (P2P v4, off by default) hides the caller's identity from anyone but the intended contact. Since 0.1.46 session frames are padded to fixed sizes, and an experimental P2P v5 (off by default) gives each message its own key and adds ML-KEM-768. **Gaps:** by default the caller's static public key is still sent in clear in the first frame (linkable across connections); fixed Bluetooth service UUID and mDNS service type reveal that NIDO is present; v5 headers are not encrypted. |
 
 ## MASVS-PLATFORM
 
@@ -53,8 +53,8 @@ This is a code review by the project, not an external audit. Nothing here was ve
 |---|---|---|
 | CODE-1 Up-to-date platform | Not verified | `compileSdk` and `targetSdk` are 36. The minimum Android version is the Expo default and is not declared explicitly. |
 | CODE-2 Update mechanism | Not met | No in-app update check; updates are manual APK installs. Each release ships a SHA-256 file. |
-| CODE-3 Dependencies | Partial | Exact-pinned versions checked in CI (`npm run verify:deps`), Dependabot weekly, secret scanning on every push. Since 0.1.44 every GitHub Action is pinned to a commit hash, `npm audit` runs weekly and on `main`, and each release carries a CycloneDX SBOM. **Gap:** no reproducible build. |
-| CODE-4 Input validation | Partial | Pairing codes, contact names, tool arguments, link targets and untrusted content blocks are validated and tested (`src/p2p/auditFixes.test.ts`, `src/agent/policy/*.test.ts`). **Gap:** no fuzzing of the P2P frame parser; no linter in CI. |
+| CODE-3 Dependencies | Partial | Exact-pinned versions checked in CI (`npm run verify:deps`), Dependabot weekly, secret scanning on every push. Since 0.1.44 every GitHub Action is pinned to a commit hash, `npm audit` runs weekly and on `main`, and each release carries a CycloneDX SBOM. Since 0.1.46 a workflow builds the APK twice on separate runners and compares them file by file (`.github/workflows/reproducible.yml`, `scripts/compare-apk.py`). **Gap:** not reproducible yet: the first run matched 1,553 of 1,554 files; `resources.arsc` differs. |
+| CODE-4 Input validation | Partial | Pairing codes, contact names, tool arguments, link targets and untrusted content blocks are validated and tested (`src/p2p/auditFixes.test.ts`, `src/agent/policy/*.test.ts`). Since 0.1.46 every parser of data from another phone or a QR code is fuzzed with mutated inputs on each change and with 100,000 cases per target weekly (`src/p2p/fuzz/`; mutation-based, not coverage-guided). **Gap:** no linter in CI. |
 
 ## MASVS-RESILIENCE
 
@@ -71,4 +71,4 @@ This is a code review by the project, not an external audit. Nothing here was ve
 | PRIVACY-1 Data minimisation | Met | No accounts, analytics, advertising or crash reporting. The agent action history stores tool names and outcomes only, never content (tested). |
 | PRIVACY-2 No tracking | Met | No identifiers leave the device. |
 | PRIVACY-3 Transparency | Met | `PRIVACY.md`, in-app privacy summary, visible network log, in-app security check. |
-| PRIVACY-4 User control | Partial | Delete any chat, memory, document, contact, task or the action history; wipe everything; turn off any agent tool; undo notes and reminders the agent created. **Gap:** voice input uses the phone's speech service, which the app can ask to stay offline but cannot guarantee. |
+| PRIVACY-4 User control | Partial | Delete any chat, memory, document, contact, task or the action history; wipe everything (also with an optional 3-second panic button, 0.1.46); turn off any agent tool; undo notes and reminders the agent created. **Gap:** voice input uses the phone's speech service, which the app can ask to stay offline but cannot guarantee. |

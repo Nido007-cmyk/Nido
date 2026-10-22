@@ -18,7 +18,8 @@ module.exports = {
     "^.+\\.(js|jsx|ts|tsx)$": "babel-jest",
   },
   transformIgnorePatterns: [
-    "node_modules/(?!(react-native|@react-native|@testing-library)/)",
+    // @noble: ESM puro (ML-KEM del protocolo v5); babel lo pasa a CJS.
+    "node_modules/(?!(react-native|@react-native|@testing-library|@noble)/)",
   ],
   setupFilesAfterEnv: ["@testing-library/react-native"],
   moduleNameMapper: {

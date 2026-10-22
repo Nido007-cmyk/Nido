@@ -192,6 +192,72 @@ NIDO is in use; an active attacker can strip the `c4` hint so two phones
 keep using v3 (today's behaviour); a contact can, by definition, recognise
 the other side.
 
+## P2P v5 (0.1.46): a new key per message, and ML-KEM in every connection
+
+Experimental, off by default (Settings → Security). Used only when **both**
+phones have it on; otherwise the session stays as described above. Code:
+`src/p2p/ratchet.ts`, `src/p2p/pq.ts`, `src/p2p/protocol.ts`.
+
+**Negotiation (no handshake change).** After the v3 handshake each side
+sends its `session_confirm`, sealed under the classical session key `SK`.
+Let L be the side with the lower identity key and H the higher one.
+- L (if v5 is on) puts an offer in it: a fresh X25519 ratchet key `dh_L` and
+  a fresh ML-KEM-768 public key `ek`.
+- H (if v5 is on) puts `r5cap: 1` in its own confirm.
+- All `session_confirm` frames are padded to the same 4 KB, so their size
+  does not reveal whether an offer is inside. Their position still does
+  (it is L's first session frame).
+- Because the offer travels inside a frame authenticated with `SK`, an
+  attacker cannot remove or alter it, only drop the whole frame. That leaves
+  both phones in the classical mode. The chat screen shows when a session
+  uses v5, and warns when a contact that used v5 before, and has not said
+  (in an authenticated frame) that it turned it off, is connected without it.
+
+**Start (as Signal's RatchetInitAlice/Bob).** H encapsulates to `ek` →
+`(ct, ss)`, derives
+`RK0 = HKDF-SHA512(salt="nido-v5-root", SK ‖ ss, info="nido-v5-root|pk_L|pk_H|H(ek‖ct)")`
+and starts as Alice with `dh_L` as the peer's ratchet key. Its v5 frames carry
+`ct` until it hears a v5 frame from L. L decapsulates on the first v5 frame
+and starts as Bob. While L waits for H's first v5 frame (at most 5 s after
+seeing `r5cap`), it holds its outbox so queued messages also leave in v5.
+
+**Double Ratchet.** Root and chain KDFs are HKDF-SHA512 with separate labels
+(`nido-v5-rk`, `nido-v5-ck`, `nido-v5-mk`). Every message key is used once
+and erased. A DH ratchet step happens each time the speaker changes.
+Skipped keys: at most 256 per message (`MAX_SKIP`, checked against the total
+of the old and new chain before computing anything) and 512 stored per
+connection. Decryption works on a copy of the state and commits — and only
+then erases the keys it retired — when the message authenticates; a forged
+frame changes nothing.
+
+**Frame.** `0x05 ‖ flags ‖ dh(32) ‖ pn ‖ n ‖ [ct(1088)] ‖ nonce(24) ‖ secretbox`.
+The header is bound to the message by deriving the encryption key as
+`HKDF(salt=mk, ikm=header, "nido-v5-msg")`: one changed bit gives another key.
+After the first v5 frame from the peer, classical frames are refused, and
+once both directions use v5 the classical key `SK` is erased from memory.
+
+**What it achieves.**
+- Forward secrecy per message: a state stolen later does not open earlier
+  messages.
+- Post-compromise security: after a stolen state, the next exchange of
+  turns heals the session (fresh X25519). Every new connection also runs a
+  fresh ML-KEM-768, so healing against a quantum attacker happens at the
+  next connection.
+- "Harvest now, decrypt later": the root mixes ML-KEM-768 (FIPS 203) with
+  X25519, so recorded traffic stays closed unless both are broken.
+  Authentication stays Ed25519, as in Signal's PQXDH: this is not protection
+  against an active quantum attacker during the connection.
+
+**What it does not.**
+- The v5 header (ratchet key, counters) is not encrypted, as in Signal
+  without header encryption: an observer can count messages and see turns.
+- Padding hides lengths only to a power of two (512 B, 1 KB, 2 KB…).
+- The ML-KEM library (`@noble/post-quantum` 0.7.1) is pure JavaScript, not
+  constant-time and not independently audited, and NIDO's v5 itself has had
+  an independent review by another AI agent, not a professional audit.
+- v5 has not yet been tested on two physical phones; that is why it is off
+  by default.
+
 ## What it does NOT resolve (honest limits)
 
 - **Compromised peer**: if Bob's phone has malware, Bob is a legitimate

@@ -22,6 +22,7 @@ import {
   utf8Encode,
   HANDSHAKE_NONCE_BYTES,
 } from "./crypto";
+import { V5Ratchet, V5_MARKER, type V5Offer } from "./ratchet";
 
 export const PROTOCOL_VERSION = 2;
 
@@ -71,7 +72,8 @@ export type P2PMessageType =
   | "delivery_ack"
   | "negotiation"
   | "pack_share"
-  | "delegation";
+  | "delegation"
+  | "settings";
 
 export interface P2PEnvelope {
   v: number;
@@ -219,6 +221,54 @@ export function deriveAckSessionTag(
 }
 
 const MAX_FRAME_BYTES = 256 * 1024; // 256 KB por mensaje
+
+/**
+ * 0.1.46 — relleno de mensajes (como Signal y Briar). Antes el tamaño del
+ * frame delataba el del texto: un "sí" y un párrafo largo se distinguían a
+ * simple vista en el aire. Ahora el JSON se rellena hasta un tamaño fijo:
+ * 512 B, 1 KB, 2 KB… hasta 16 KB en potencias de dos, y por encima en
+ * múltiplos de 16 KB. (El sobre del mensaje ya ocupa ~250 B, así que 512 B
+ * iguala todos los mensajes de hasta ~250 caracteres.)
+ *
+ * El relleno son ESPACIOS al final del JSON: `JSON.parse` los ignora, así que
+ * una versión anterior de NIDO que reciba un mensaje relleno lo lee igual.
+ * No cambia el formato del cable.
+ */
+const PAD_MIN = 512;
+const PAD_STEP_LARGE = 16 * 1024;
+/** Lo que cabe en un frame descontando nonce (24) + MAC (16), con holgura para v5. */
+const MAX_PLAINTEXT_BYTES = MAX_FRAME_BYTES - 24 - 16 - 1200;
+
+export function paddedLength(n: number): number {
+  let target: number;
+  if (n <= PAD_MIN) target = PAD_MIN;
+  else if (n <= PAD_STEP_LARGE) target = 2 ** Math.ceil(Math.log2(n));
+  else target = Math.ceil(n / PAD_STEP_LARGE) * PAD_STEP_LARGE;
+  return Math.max(n, Math.min(target, MAX_PLAINTEXT_BYTES));
+}
+
+/** Tamaño fijo de todos los session_confirm. */
+const CONFIRM_PADDED_BYTES = 4096;
+/** Cuánto espera L el primer frame v5 de H antes de enviar en clásico. */
+export const V5_HOLD_MS = 5000;
+
+function padTo(bytes: Uint8Array, size: number): Uint8Array {
+  if (bytes.length >= size) return padPlaintext(bytes);
+  const out = new Uint8Array(size);
+  out.set(bytes, 0);
+  out.fill(0x20, bytes.length);
+  return out;
+}
+
+/** Rellena con espacios (0x20) hasta `paddedLength`. */
+export function padPlaintext(bytes: Uint8Array): Uint8Array {
+  const target = paddedLength(bytes.length);
+  if (target === bytes.length) return bytes;
+  const out = new Uint8Array(target);
+  out.set(bytes, 0);
+  out.fill(0x20, bytes.length);
+  return out;
+}
 /** Tope de ids recordados por sesión (anti-replay en memoria). */
 const MAX_SEEN_IDS = 10_000;
 
@@ -265,6 +315,26 @@ export class P2PSession {
    * la ruta. null = no derivado (los ACK se rechazan fail-closed).
    */
   private ackSessionTag: string | null = null;
+  /** 0.1.46 — protocolo v5 (Double Ratchet + ML-KEM). null = modo clásico. */
+  private v5: V5Ratchet | null = null;
+  /** ¿Este lado tiene v5 activado (interruptor)? Lo fija el messenger. */
+  private v5Enabled = false;
+  /** H: v5 acaba de arrancar y conviene mandar un frame para que L arranque. */
+  private v5KickoffPending = false;
+  /**
+   * L: momento en que H anunció (en su session_confirm) que tiene v5. Desde
+   * ahí, durante V5_HOLD_MS, la cola NO se vacía en modo clásico: se espera
+   * el primer frame v5 de H para que también los mensajes encolados vayan
+   * con clave por mensaje y ML-KEM. Pasado ese tiempo, se envía igual.
+   */
+  private v5CapSeenAt: number | null = null;
+  /**
+   * El session_confirm AUTÉNTICO del peer dice que no tiene v5 (L sin
+   * oferta, o H sin r5cap): el modo clásico es decisión suya, no un ataque.
+   */
+  private peerSaidNoV5 = false;
+  /** Momento de creación (para saber cuándo ya debería ir en v5). */
+  readonly createdAt = Date.now();
 
   private constructor(peerPkHex: string, sessionKey: Uint8Array) {
     this.peerPkHex = peerPkHex;
@@ -320,21 +390,154 @@ export class P2PSession {
     return s;
   }
 
+  /* ---------- protocolo v5 ---------- */
+
+  /**
+   * Activa (o no) v5 para esta sesión. Solo tiene efecto si el peer también
+   * lo tiene: si no, la sesión sigue en modo clásico como siempre.
+   */
+  enableV5(on: boolean): void {
+    this.v5Enabled = on;
+  }
+
+  /** ¿La sesión ya cifra en v5? (para diagnóstico y la UI). */
+  get usesV5(): boolean {
+    return this.v5 !== null && this.v5.canSend;
+  }
+
+  /**
+   * Carga útil del `session_confirm` propio. Si este lado es L (pk menor) y
+   * tiene v5 activado, incluye la oferta v5; si no, `{}` como siempre.
+   * Requiere `expectRecipient` (la sesión necesita saber cuál es mi pk).
+   */
+  confirmPayload(): Record<string, unknown> {
+    if (!this.v5Enabled || !this.ownPkHex || this.v5) return {};
+    // H solo anuncia que lo tiene: así L sabe que merece la pena esperar.
+    if (!(this.ownPkHex < this.peerPkHex)) return { r5cap: 1 };
+    try {
+      const { ratchet, offer } = V5Ratchet.createOffer(this.sessionKey, this.ownPkHex, this.peerPkHex);
+      this.v5 = ratchet;
+      return { r5: offer satisfies V5Offer };
+    } catch {
+      return {};
+    }
+  }
+
+  /**
+   * L: ¿hay que retener la cola un momento porque H tiene v5 y su primer
+   * frame v5 está al llegar? (ver v5CapSeenAt).
+   */
+  get holdForV5(): boolean {
+    if (!this.v5 || this.v5.canSend || this.v5CapSeenAt === null) return false;
+    return Date.now() - this.v5CapSeenAt < V5_HOLD_MS;
+  }
+
+  /** Milisegundos que quedan de espera (0 si no se espera). */
+  get v5HoldRemainingMs(): number {
+    if (!this.holdForV5 || this.v5CapSeenAt === null) return 0;
+    return Math.max(0, V5_HOLD_MS - (Date.now() - this.v5CapSeenAt));
+  }
+
+  /** H: ¿hay que mandar ya un frame v5 para que L arranque? (se consume). */
+  takeV5Kickoff(): boolean {
+    const k = this.v5KickoffPending;
+    this.v5KickoffPending = false;
+    return k;
+  }
+
+  /** H recibió el session_confirm de L: si trae oferta v5 y v5 está activado, arranca. */
+  /** El peer dijo, en un frame autenticado, que no usa v5. */
+  get peerDeclinedV5(): boolean {
+    return this.peerSaidNoV5;
+  }
+
+  private maybeAcceptV5(env: P2PEnvelope): void {
+    if (env.type !== "session_confirm" || !this.v5Enabled || !this.ownPkHex) return;
+    const pl = env.payload as { r5?: unknown; r5cap?: unknown };
+    const peerIsLow = this.peerPkHex < this.ownPkHex;
+    // Confirm auténtico del peer sin señal de v5 → el peer lo tiene apagado.
+    // (Soy H: el confirm de L no trae oferta. Soy L con oferta: el confirm
+    // clásico de H no trae r5cap; el "kick" v5 de H no cuenta porque llega
+    // cuando ya puedo cifrar en v5.)
+    if (peerIsLow && !this.v5 && pl.r5 === undefined) this.peerSaidNoV5 = true;
+    if (!peerIsLow && this.v5 && !this.v5.canSend && pl.r5cap === undefined) this.peerSaidNoV5 = true;
+    // L con oferta hecha: H anuncia que tiene v5 → esperar su primer frame v5.
+    if (
+      this.v5 &&
+      this.v5.role === "low" &&
+      !this.v5.canSend &&
+      (env.payload as { r5cap?: unknown }).r5cap === 1 &&
+      this.v5CapSeenAt === null
+    ) {
+      this.v5CapSeenAt = Date.now();
+      return;
+    }
+    if (this.v5) return;
+    if (!(this.peerPkHex < this.ownPkHex)) return; // solo H acepta
+    const offer = (env.payload as { r5?: unknown }).r5;
+    if (offer === undefined) return;
+    const r = V5Ratchet.acceptOffer(this.sessionKey, this.peerPkHex, this.ownPkHex, offer);
+    if (r) {
+      this.v5 = r;
+      this.v5KickoffPending = true;
+    }
+  }
+
   /** Empaqueta un envelope en un frame listo para el socket. */
   pack(envelope: P2PEnvelope): Uint8Array {
     validateEnvelope(envelope);
     const json = JSON.stringify(envelope);
-    const sealed = sealMessage(utf8Encode(json), this.sessionKey);
-    const bodyLen = sealed.nonce.length + sealed.boxed.length;
+    const plain = utf8Encode(json);
+    if (plain.length > MAX_PLAINTEXT_BYTES) throw new Error("Mensaje demasiado grande.");
+    // Todos los session_confirm miden lo mismo (4 KB), lleven o no la oferta
+    // v5 (~2,8 KB): el tamaño no delata si hay oferta. Ojo: su POSICIÓN sí
+    // (es el primer frame de sesión de L), así que un atacante en el camino
+    // podría descartarlo; eso solo deja la sesión en clásico y la UI lo
+    // avisa (ver NidoMessenger.sessionV5Warning). No es de los dos primeros
+    // frames (HELLO y CONFIRM), los únicos con tope nativo de 4 KB.
+    const padded = envelope.type === "session_confirm" ? padTo(plain, CONFIRM_PADDED_BYTES) : padPlaintext(plain);
+    let body: Uint8Array;
+    if (this.v5 && this.v5.canSend) {
+      body = this.v5.seal(padded);
+    } else {
+      const sealed = sealMessage(padded, this.sessionKey);
+      body = new Uint8Array(sealed.nonce.length + sealed.boxed.length);
+      body.set(sealed.nonce, 0);
+      body.set(sealed.boxed, sealed.nonce.length);
+    }
+    const bodyLen = body.length;
     if (bodyLen > MAX_FRAME_BYTES) throw new Error("Mensaje demasiado grande.");
     const frame = new Uint8Array(4 + bodyLen);
     frame[0] = (bodyLen >>> 24) & 0xff;
     frame[1] = (bodyLen >>> 16) & 0xff;
     frame[2] = (bodyLen >>> 8) & 0xff;
     frame[3] = bodyLen & 0xff;
-    frame.set(sealed.nonce, 4);
-    frame.set(sealed.boxed, 4 + sealed.nonce.length);
+    frame.set(body, 4);
     return frame;
+  }
+
+  /**
+   * Descifra el cuerpo: v5 si la sesión lo tiene, clásico si el peer todavía
+   * no pasó a v5. Nunca lanza.
+   */
+  private openBody(body: Uint8Array): Uint8Array | null {
+    if (this.v5) {
+      if (body[0] === V5_MARKER) {
+        const plain = this.v5.open(body);
+        if (plain) {
+          // Los dos sentidos ya van en v5: la clave clásica de la conexión
+          // no se vuelve a usar (ni para cifrar ni para descifrar), así que
+          // se borra. Un robo de memoria posterior no abriría los primeros
+          // frames clásicos de esta conexión.
+          if (this.v5.canSend && this.v5.peerUsesV5) this.sessionKey.fill(0);
+          return plain;
+        }
+      }
+      // Desde el primer v5 del peer, el modo clásico queda cerrado.
+      if (this.v5.peerUsesV5) return null;
+    }
+    if (body.length < 24 + 16) return null;
+    return openMessage({ nonce: body.slice(0, 24), boxed: body.slice(24) }, this.sessionKey);
   }
 
   /**
@@ -346,9 +549,7 @@ export class P2PSession {
     if (frame.length < 4 + 24 + 16) return null;
     const bodyLen = (frame[0] << 24) | (frame[1] << 16) | (frame[2] << 8) | frame[3];
     if (bodyLen !== frame.length - 4 || bodyLen > MAX_FRAME_BYTES) return null;
-    const nonce = frame.slice(4, 28);
-    const boxed = frame.slice(28);
-    const opened = openMessage({ nonce, boxed }, this.sessionKey);
+    const opened = this.openBody(frame.slice(4));
     if (!opened) return null;
     let parsed: unknown;
     try {
@@ -379,6 +580,9 @@ export class P2PSession {
       // Un frame válido bajo la clave de esta sesión demuestra que el peer
       // conoce la clave: la sesión está viva (ver P2PSession.peerLive).
       this.peerLive = true;
+      // v5: H arranca al ver la oferta de L (síncrono, antes de cualquier
+      // await, para que el siguiente frame ya vea el estado correcto).
+      this.maybeAcceptV5(env);
       return env;
     } catch {
       return null;
@@ -424,7 +628,7 @@ export class FrameReassembler {
 function validateEnvelope(env: P2PEnvelope): void {
   if (typeof env !== "object" || env === null) throw new Error("Envelope inválido.");
   if (env.v !== PROTOCOL_VERSION) throw new Error("Versión de protocolo no soportada.");
-  const types: P2PMessageType[] = ["chat", "agent_task", "agent_result", "receipt", "session_confirm", "delivery_ack", "negotiation", "pack_share", "delegation"];
+  const types: P2PMessageType[] = ["chat", "agent_task", "agent_result", "receipt", "session_confirm", "delivery_ack", "negotiation", "pack_share", "delegation", "settings"];
   if (!types.includes(env.type)) throw new Error("Tipo de mensaje desconocido.");
   if (typeof env.id !== "string" || !env.id) throw new Error("Falta id.");
   if (typeof env.from !== "string" || typeof env.to !== "string") throw new Error("Falta from/to.");

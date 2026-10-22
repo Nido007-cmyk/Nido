@@ -286,3 +286,18 @@ vulnerada en ninguna ronda. Cambios desde §11:
 prueba física con dos dispositivos; no se ha probado inyección de prompts
 adaptativa contra el modelo on-device. Ver `docs/es/security/AUDITS_2026-10.md`
 para las listas completas de verificado y no cubierto.
+
+## 13. Protocolo v5 y otras novedades de 0.1.46
+
+- **P2P v5** (experimental, apagado por defecto): Double Ratchet con clave
+  nueva por mensaje y raíz híbrida X25519 + ML-KEM-768 por conexión.
+  Descripción completa, garantías y límites en
+  [HANDSHAKE_THREAT_MODEL.md](HANDSHAKE_THREAT_MODEL.md#p2p-v5-0146-clave-nueva-por-mensaje-y-ml-kem-en-cada-conexión).
+- **Relleno**: el texto de la sesión (el sobre JSON) se rellena con espacios
+  hasta 512 B, 1 KB, 2 KB … 16 KB y luego múltiplos de 16 KB; el
+  `session_confirm` mide siempre 4 KB. `JSON.parse` ignora los espacios, así
+  que las versiones anteriores leen los frames rellenos.
+- **Mensajes temporales**: temporizador por conversación con número de
+  versión (gana la versión mayor; si empatan, el temporizador más largo),
+  que viaja en cada mensaje y como aviso `settings` al cambiarlo. Las filas
+  vencidas se borran con `PRAGMA secure_delete = ON` y un checkpoint del WAL.

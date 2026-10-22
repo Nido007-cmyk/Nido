@@ -216,7 +216,7 @@ describe("NidoMessenger", () => {
     expect(env?.type).toBe("chat");
     // N6 §5.1: el payload saliente lleva el message_id estable (mismo id en
     // todos los reintentos); el envelope id es el nonce de transmisión.
-    expect(env?.payload).toEqual({ text: "hola por NIDO", message_id: id });
+    expect(env?.payload).toEqual({ text: "hola por NIDO", message_id: id, ttl: 0, ttl_v: 0 });
   });
 
   it("handleFrame guarda en bandeja y readInbox marca leído", async () => {

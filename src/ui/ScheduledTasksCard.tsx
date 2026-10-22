@@ -13,7 +13,8 @@
  * usuario; el resultado queda aquí y, si se pide, en un aviso.
  */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, TextInput, Switch, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, Switch, Alert } from "react-native";
+import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";

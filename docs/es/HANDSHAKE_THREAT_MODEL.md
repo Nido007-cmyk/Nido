@@ -197,6 +197,74 @@ Qué no: el tipo de frame `nido-s4` y su tamaño siguen delatando que se usa
 NIDO; un atacante activo puede quitar la pista `c4` para que dos teléfonos
 sigan en v3 (lo de hoy); un contacto, por definición, reconoce al otro.
 
+## P2P v5 (0.1.46): clave nueva por mensaje y ML-KEM en cada conexión
+
+Experimental, apagado por defecto (Ajustes → Seguridad). Solo se usa si los
+**dos** teléfonos lo tienen activado; si no, la sesión sigue como se describe
+arriba. Código: `src/p2p/ratchet.ts`, `src/p2p/pq.ts`, `src/p2p/protocol.ts`.
+
+**Negociación (sin tocar el handshake).** Tras el handshake v3 cada lado
+manda su `session_confirm`, sellado con la clave clásica de la sesión `SK`.
+L es el lado con la clave de identidad menor y H el de la mayor.
+- L (si tiene v5) mete una oferta: una clave de ratchet X25519 nueva `dh_L`
+  y una clave pública ML-KEM-768 nueva `ek`.
+- H (si tiene v5) pone `r5cap: 1` en su confirm.
+- Todos los `session_confirm` se rellenan al mismo tamaño (4 KB): su tamaño
+  no revela si llevan oferta. Su posición sí (es el primer frame de sesión
+  de L).
+- La oferta viaja dentro de un frame autenticado con `SK`: nadie puede
+  quitarla ni cambiarla, solo descartar el frame entero. Eso deja a los dos
+  en modo clásico. La pantalla del chat muestra cuándo una sesión va en v5
+  y avisa si un contacto que ya usaba v5, y que no ha dicho (en un frame
+  autenticado) que lo apagó, está conectado sin él.
+
+**Arranque (como RatchetInitAlice/Bob de Signal).** H encapsula hacia `ek` →
+`(ct, ss)`, deriva
+`RK0 = HKDF-SHA512(sal="nido-v5-root", SK ‖ ss, info="nido-v5-root|pk_L|pk_H|H(ek‖ct)")`
+y arranca como Alice con `dh_L` como clave de ratchet del otro. Sus frames v5
+llevan `ct` hasta que oye un frame v5 de L. L desencapsula con el primer frame
+v5 y arranca como Bob. Mientras L espera el primer v5 de H (como mucho 5 s
+desde ver `r5cap`), retiene su cola para que lo encolado salga también en v5.
+
+**Double Ratchet.** Los KDF de raíz y de cadena son HKDF-SHA512 con
+etiquetas separadas (`nido-v5-rk`, `nido-v5-ck`, `nido-v5-mk`). Cada clave de
+mensaje se usa una vez y se borra. Hay un paso DH cada vez que cambia quién
+escribe. Claves saltadas: como mucho 256 por mensaje (`MAX_SKIP`, comprobado
+sobre el total de la cadena vieja y la nueva antes de calcular nada) y 512
+guardadas por conexión. Descifrar trabaja sobre una copia del estado y solo
+la confirma —y solo entonces borra las claves retiradas— si el mensaje
+autentica: un frame falso no cambia nada.
+
+**Frame.** `0x05 ‖ flags ‖ dh(32) ‖ pn ‖ n ‖ [ct(1088)] ‖ nonce(24) ‖ secretbox`.
+La cabecera se liga al mensaje derivando la clave de cifrado como
+`HKDF(sal=mk, ikm=cabecera, "nido-v5-msg")`: un bit cambiado da otra clave.
+Desde el primer frame v5 del otro lado se rechazan los clásicos, y cuando los
+dos sentidos van en v5 la clave clásica `SK` se borra de la memoria.
+
+**Qué consigue.**
+- Secreto hacia atrás por mensaje: un estado robado después no abre los
+  mensajes anteriores.
+- Recuperación tras compromiso: tras un robo de estado, el siguiente cambio
+  de turno cura la sesión (X25519 nuevo). Cada conexión nueva hace además
+  un ML-KEM-768 nuevo: frente a un atacante cuántico la curación llega en la
+  siguiente conexión.
+- "Grabar ahora, descifrar después": la raíz mezcla ML-KEM-768 (FIPS 203)
+  con X25519; lo grabado sigue cerrado salvo que se rompan los dos. La
+  autenticación sigue siendo Ed25519, como en PQXDH de Signal: no protege
+  contra un atacante cuántico activo durante la conexión.
+
+**Qué no consigue.**
+- La cabecera v5 (clave de ratchet, contadores) va sin cifrar, como en
+  Signal sin cifrado de cabeceras: se pueden contar mensajes y ver turnos.
+- El relleno oculta la longitud solo hasta una potencia de dos (512 B,
+  1 KB, 2 KB…).
+- La librería de ML-KEM (`@noble/post-quantum` 0.7.1) es JavaScript puro, no
+  es de tiempo constante y no tiene auditoría independiente. El propio v5
+  de NIDO tuvo una revisión independiente hecha por otro agente de IA, no
+  una auditoría profesional.
+- v5 todavía no se ha probado en dos teléfonos físicos; por eso viene
+  apagado.
+
 ## Qué NO resuelve (límites honestos)
 
 - **Peer comprometido**: si el teléfono de Bob tiene malware, Bob es un

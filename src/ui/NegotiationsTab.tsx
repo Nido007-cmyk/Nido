@@ -13,7 +13,8 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert } from "react-native";
+import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
