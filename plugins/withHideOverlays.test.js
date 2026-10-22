@@ -39,6 +39,14 @@ describe("withHideOverlays", () => {
     expect(out.join("\n")).toContain("window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)");
   });
 
+  it("0.1.51: on Android 11 and older, ignores touches while another app covers NIDO", () => {
+    const out = applyHideOverlaysToMainActivity(KT).split("\n");
+    const i = out.findIndex((l) => l.includes("super.onCreate"));
+    expect(out[i + 4].trim()).toBe("} else {");
+    expect(out[i + 5]).toContain("window.decorView.filterTouchesWhenObscured = true");
+    expect(applyHideOverlaysToMainActivity(JAVA)).toContain("setFilterTouchesWhenObscured(true)");
+  });
+
   it("injects the Java variant", () => {
     const out = applyHideOverlaysToMainActivity(JAVA);
     expect(out).toContain("getWindow().setHideOverlayWindows(true);");

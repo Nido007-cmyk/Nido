@@ -18,6 +18,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native";
+import { VaultOfferBanner } from "./VaultOfferBanner";
 import { PanicButton } from "./components/PanicButton";
 import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { LinearGradient } from "expo-linear-gradient";
@@ -1817,6 +1818,9 @@ export function ChatScreen({
             <Text style={[styles.loadingBannerText, { color: colors.text.accentEmerald }]}>{loadStatus}</Text>
           </View>
         )}
+
+        {/* 0.1.51: la protección por hardware se ofrece aquí, no solo en Ajustes. */}
+        <VaultOfferBanner />
 
         <FlatList
           ref={listRef}

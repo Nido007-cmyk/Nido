@@ -265,8 +265,15 @@ dos sentidos van en v5 la clave clásica `SK` se borra de la memoria.
   - Una vez en uso, un frame sin caja se rechaza.
 - El relleno oculta la longitud solo hasta una potencia de dos (512 B,
   1 KB, 2 KB…).
-- La librería de ML-KEM (`@noble/post-quantum` 0.7.1) es JavaScript puro, no
-  es de tiempo constante y no tiene auditoría independiente. El propio v5
+- Desde 0.1.51, ML-KEM corre en nativo con mlkem-native v2.0.0, la
+  implementación de AWS-LC y libOQS:
+  - su C está demostrado seguro en memoria con CBMC;
+  - su ensamblador AArch64, el que usan los teléfonos arm64, está demostrado
+    correcto y de tiempo constante con HOL-Light.
+
+  Antes de usarlo, NIDO comprueba que da exactamente los mismos bytes que
+  `@noble/post-quantum` 0.7.1, que queda solo como respaldo (JavaScript
+  puro, sin tiempo constante y sin auditoría independiente). El propio v5
   de NIDO tuvo una revisión independiente hecha por otro agente de IA, no
   una auditoría profesional.
 - v5 todavía no se ha probado en dos teléfonos físicos. Viene activado

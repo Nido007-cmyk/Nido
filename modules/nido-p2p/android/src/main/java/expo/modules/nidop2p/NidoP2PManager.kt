@@ -620,7 +620,7 @@ class NidoP2PManager(private val context: Context) {
     // DIAG-2026-10-07: telemetría del accept.
     acceptedCount++
     lastAcceptAt = System.currentTimeMillis()
-    Log.i(TAG, "accept: conexión #$acceptedCount aceptada de $address (incoming=$incoming).")
+    Log.i(TAG, "accept: conexión #$acceptedCount aceptada (incoming=$incoming).") // sin MAC: el log del sistema no guarda con quién se habla
     val name = try {
       socket.remoteDevice.name
     } catch (_: Exception) {

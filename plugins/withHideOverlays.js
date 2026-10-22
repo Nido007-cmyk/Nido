@@ -17,6 +17,12 @@
  *
  * El código inyectado va dentro de try/catch y solo corre en API 31+: si un
  * fabricante no lo soporta, NIDO arranca igual que antes.
+ *
+ * 0.1.51 (como el arreglo de Briar a BRP-01-004 de Cure53): en Android 11 y
+ * anteriores, donde no se pueden ocultar las capas, la ventana ignora los
+ * toques mientras otra app la tapa (filterTouchesWhenObscured). Efecto
+ * secundario conocido: con una app de filtro de pantalla activa, NIDO no
+ * responde a toques hasta apagarla.
  */
 const { withMainActivity, AndroidConfig } = require("@expo/config-plugins");
 
@@ -28,6 +34,8 @@ function kotlinBlock(indent) {
     `${indent}// ${MARKER}`,
     `${indent}if (android.os.Build.VERSION.SDK_INT >= 31) {`,
     `${indent}  try { window.setHideOverlayWindows(true) } catch (_: Exception) {}`,
+    `${indent}} else {`,
+    `${indent}  try { window.decorView.filterTouchesWhenObscured = true } catch (_: Exception) {}`,
     `${indent}}`,
   ];
 }
@@ -37,6 +45,8 @@ function javaBlock(indent) {
     `${indent}// ${MARKER}`,
     `${indent}if (android.os.Build.VERSION.SDK_INT >= 31) {`,
     `${indent}  try { getWindow().setHideOverlayWindows(true); } catch (Exception ignored) {}`,
+    `${indent}} else {`,
+    `${indent}  try { getWindow().getDecorView().setFilterTouchesWhenObscured(true); } catch (Exception ignored) {}`,
     `${indent}}`,
   ];
 }

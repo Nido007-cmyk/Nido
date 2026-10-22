@@ -1,0 +1,46 @@
+# ML-KEM-768 nativo (0.1.51): el C de mlkem-native con la configuración de
+# NIDO da exactamente los mismos bytes que @noble/post-quantum.
+# x86_64 = C portable; arm64 = con el ensamblador AArch64 verificado (el
+# mismo camino que en los teléfonos arm64).
+name: Native ML-KEM
+
+on:
+  pull_request:
+    paths: ['modules/nido-p2p/android/src/main/cpp/**', 'src/p2p/pq.ts', 'scripts/pqc-*', '.github/workflows/pqc.yml']
+  push:
+    branches: [main]
+    paths: ['modules/nido-p2p/android/src/main/cpp/**', 'src/p2p/pq.ts', 'scripts/pqc-*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  crosscheck:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build native ML-KEM for this machine
+        shell: bash
+        run: |
+          set -euo pipefail
+          C=modules/nido-p2p/android/src/main/cpp
+          SRC="scripts/pqc-cli.c $C/nido_mlkem.c"
+          if [ "$(uname -m)" = aarch64 ]; then SRC="$SRC $C/mlkem-native/mlkem_native_asm.S"; else EXTRA=-DNIDO_MLKEM_PORTABLE; fi
+          gcc -O2 -std=c99 -Wall -Wextra -Werror ${EXTRA:-} -DMLK_CONFIG_FILE='"nido_mlkem_config.h"' -I$C -o pqc-cli $SRC
+          if [ "$(uname -m)" = aarch64 ]; then
+            # Comprobar que de verdad entra el ensamblador verificado.
+            nm pqc-cli | grep -qi "ntt_asm\|keccak_f1600_x" && echo "::notice title=ML-KEM nativo::arm64 con backend AArch64"
+          fi
+      - name: Compare with @noble/post-quantum
+        run: node scripts/pqc-crosscheck.mjs ./pqc-cli 300 --github

@@ -62,6 +62,11 @@ interface NidoP2PNativeModule {
   isIgnoringBatteryOptimizations(): boolean;
   /** Opens the system dialog (or NIDO's app info) to allow background running. */
   openBatterySettings(): boolean;
+  /** 0.1.51: ML-KEM-768 nativo (mlkem-native). Hex en las dos direcciones; null si falla. */
+  mlkemAvailable?(): boolean;
+  mlkemKeypair?(coinsHex: string): string | null;
+  mlkemEncaps?(pkHex: string, mHex: string): string | null;
+  mlkemDecaps?(ctHex: string, skHex: string): string | null;
 }
 
 const native = requireNativeModule<NidoP2PNativeModule>("NidoP2P");
@@ -178,3 +183,32 @@ export function openBatterySettings(): boolean {
     return false;
   }
 }
+
+/**
+ * 0.1.51: ML-KEM-768 nativo. null si este build no lo trae. src/p2p/pq.ts lo
+ * comprueba contra la versión JS antes de usarlo.
+ */
+export const mlkemNative: {
+  keypair(coinsHex: string): string | null;
+  encaps(pkHex: string, mHex: string): string | null;
+  decaps(ctHex: string, skHex: string): string | null;
+} | null = (() => {
+  try {
+    if (
+      typeof native.mlkemAvailable !== "function" ||
+      typeof native.mlkemKeypair !== "function" ||
+      typeof native.mlkemEncaps !== "function" ||
+      typeof native.mlkemDecaps !== "function" ||
+      !native.mlkemAvailable()
+    ) {
+      return null;
+    }
+    return {
+      keypair: (c: string) => native.mlkemKeypair!(c),
+      encaps: (pk: string, m: string) => native.mlkemEncaps!(pk, m),
+      decaps: (ct: string, sk: string) => native.mlkemDecaps!(ct, sk),
+    };
+  } catch {
+    return null;
+  }
+})();

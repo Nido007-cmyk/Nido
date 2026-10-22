@@ -20,7 +20,7 @@ This is a code review by the project, not an external audit. Nothing here was ve
 
 | Control | Status | Evidence / gap |
 |---|---|---|
-| CRYPTO-1 Strong, standard cryptography | Met | SQLCipher (AES-256) at rest; X25519, Ed25519 and XSalsa20-Poly1305 from `tweetnacl` for P2P; HKDF-SHA512 for session keys. P2P v5 (on by default since 0.1.49, used when both phones support it): Double Ratchet over the same primitives plus ML-KEM-768 (FIPS 203) from `@noble/post-quantum` (pure JS, not constant-time, not independently audited). No home-made primitives. Covered by `src/p2p/*.test.ts`, including `ratchetV5.test.ts` and the fuzz suite. |
+| CRYPTO-1 Strong, standard cryptography | Met | SQLCipher (AES-256) at rest; X25519, Ed25519 and XSalsa20-Poly1305 from `tweetnacl` for P2P; HKDF-SHA512 for session keys. P2P v5 (on by default since 0.1.49, used when both phones support it): Double Ratchet over the same primitives plus ML-KEM-768 (FIPS 203) from mlkem-native v2.0.0 since 0.1.51 (native; C proven memory-safe with CBMC, AArch64 assembly proven correct and constant-time with HOL-Light), checked byte for byte against `@noble/post-quantum`, which remains only as a fallback. No home-made primitives. Covered by `src/p2p/*.test.ts`, including `ratchetV5.test.ts` and the fuzz suite. |
 | CRYPTO-2 Key management | Partial | Database key generated from the platform CSPRNG and held in the Keystore; rotation exists (`src/security/keyRotation.ts`); all-zero public keys and null shared secrets are rejected. **Gaps:** hardware backing and StrongBox cannot be confirmed from JavaScript (the in-app security check reports this honestly as "cannot be checked"); identifiers that are not secrets (note, task and chat ids) use `Math.random`. |
 
 ## MASVS-AUTH

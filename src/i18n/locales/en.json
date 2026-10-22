@@ -1291,6 +1291,13 @@
     "fmtNone": "(none)"
   },
   "vault": {
+    "offerTitle": "Protect your data with your fingerprint or PIN",
+    "offerBody": "Turn on hardware protection: the key to your data stays in the tablet's security chip and only opens with your PIN, pattern or fingerprint. It is NIDO's strongest protection.",
+    "offerActivate": "Turn on",
+    "offerLater": "Not now",
+    "offerNever": "Don't ask again",
+    "offerConfirmHint": "Before you confirm: if you ever remove the screen lock, NIDO cannot open your data without a backup and its key. We recommend making a backup first (About → Open backup).",
+    "offerConfirm": "Confirm and turn on",
     "title": "Hardware protection",
     "body": "Protects NIDO's data with the tablet's security chip: it only opens with your PIN, pattern or fingerprint. If someone takes the tablet powered off or rebooted, they can't read your NIDO data even if they extract it.",
     "statusActive": "On · key in {{level}}",

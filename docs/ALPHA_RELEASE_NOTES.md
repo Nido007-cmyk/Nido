@@ -1,7 +1,7 @@
 # NIDO alpha — Release Notes
 
 > This document keeps the alpha overview and the current known
-> limitations, kept up to date with the latest release (0.1.50-alpha).
+> limitations, kept up to date with the latest release (0.1.51-alpha).
 > Per-version changes from 0.1.19 on are in the
 > [changelog](../CHANGELOG.md) and in each GitHub release; the notes for
 > 0.1.1 to 0.1.18 are kept below for reference.
@@ -251,7 +251,7 @@ Fixes from the 2026-10-10 code audit:
 - **With an older NIDO on the other side, the protections fall back to what that phone supports.** Private hello needs 0.1.45 or later on the contact's phone; the new key per message and ML-KEM need 0.1.46 or later. Otherwise the calling phone sends its public key in clear in the first message (someone recording nearby could recognise the same phone across connections, but cannot read messages).
 - **Private hello and the new key per message are on by default since 0.1.49, but have not been tested on two physical phones yet.** If two phones fail to connect, turn them off in Settings and report it.
 - **Disappearing messages are deleted by each phone.** An older NIDO on the other side ignores the timer, and nothing stops someone from photographing the screen with another camera.
-- **Reproducible build, checked by CI only.** Two independent builds of 0.1.47 on GitHub match in all 1,554 files (signature excluded). Nobody outside the project has rebuilt it yet; the check (`.github/workflows/reproducible.yml`, `scripts/compare-apk.py`) is public so anyone can.
+- **Reproducible build, checked by CI only.** Two independent builds on GitHub match in all files except the signature (1,555 files for 0.1.51, which includes the native ML-KEM library). Nobody outside the project has rebuilt it yet; the check (`.github/workflows/reproducible.yml`, `scripts/compare-apk.py`) is public so anyone can.
 - **The hardware vault is off by default.** Turn it on in Settings → Security for the strongest protection of your data.
 - Builds are checked by automated tests, and the headline flows (chat and agent tools, memory, reminders and notifications, notes, and two-device P2P messaging, including airplane mode) are also exercised on physical hardware (Galaxy Tab A9+). Not every change is device-tested before every pre-release.
 - Some screens still have their earlier look; the visual redesign is not finished everywhere.
@@ -261,7 +261,7 @@ Fixes from the 2026-10-10 code audit:
 
 **This alpha has NOT undergone a professional security audit.** The app uses:
 
-- Ed25519 signatures and X25519 key exchange for P2P; experimental Double Ratchet and ML-KEM-768 (via @noble/post-quantum, which has not been independently audited either)
+- Ed25519 signatures and X25519 key exchange for P2P (tweetnacl, audited by Cure53 in 2017); Double Ratchet and ML-KEM-768 (mlkem-native since 0.1.51, with formally verified parts; NIDO's own protocol code has not been professionally audited)
 - SQLCipher for on-device encrypted storage
 - A random 256-bit database key held in the Android Keystore (no password-based key derivation)
 - Backups that are a copy of the already-encrypted database; the key is exported separately, in plain hex, and restoring a backup on a different installation requires that exported key
