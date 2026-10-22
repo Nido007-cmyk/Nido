@@ -452,7 +452,14 @@ export class P2PSession {
     if (this.v5) {
       if (body[0] === V5_MARKER) {
         const plain = this.v5.open(body);
-        if (plain) return plain;
+        if (plain) {
+          // Los dos sentidos ya van en v5: la clave clásica de la conexión
+          // no se vuelve a usar (ni para cifrar ni para descifrar), así que
+          // se borra. Un robo de memoria posterior no abriría los primeros
+          // frames clásicos de esta conexión.
+          if (this.v5.canSend && this.v5.peerUsesV5) this.sessionKey.fill(0);
+          return plain;
+        }
       }
       // Desde el primer v5 del peer, el modo clásico queda cerrado.
       if (this.v5.peerUsesV5) return null;

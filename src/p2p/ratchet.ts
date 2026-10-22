@@ -329,6 +329,8 @@ export class V5Ratchet {
         skipped: new Map(),
         ctToSend: cipherText,
       };
+      // La clave clásica ya cumplió su papel en el ratchet: fuera de memoria.
+      r.sessionKey.fill(0);
       return r;
     } catch {
       return null;
@@ -403,9 +405,11 @@ export class V5Ratchet {
       if (!plain) return null;
       // Éxito: se confirma el estado.
       if (this.state === null) {
-        // Bob ya arrancó: las claves de la oferta dejan de hacer falta.
+        // Bob ya arrancó: las claves de la oferta y la clave clásica dejan
+        // de hacer falta en el ratchet.
         this.offer!.kem.secretKey.fill(0);
         this.offer = null;
+        this.sessionKey.fill(0);
       }
       if (this.role === "high") s.ctToSend = null; // L ya tiene el secreto ML-KEM
       this.state = s;
