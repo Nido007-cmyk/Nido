@@ -78,3 +78,17 @@ describe("int8 embeddings", () => {
     }
   });
 });
+
+describe("parseArgs — embedding model and fixed build date", () => {
+  it("bge by default, e5 on request", () => {
+    expect(parseArgs([]).embedding).toBe("bge");
+    expect(parseArgs(["--embedding", "e5"]).embedding).toBe("e5");
+  });
+  it("rejects unknown models and bad dates", () => {
+    expect(() => parseArgs(["--embedding", "openai"])).toThrow(/bge or e5/);
+    expect(() => parseArgs(["--built-at", "ayer"])).toThrow(/ISO/);
+  });
+  it("keeps a fixed build date", () => {
+    expect(parseArgs(["--built-at", "2026-10-23T00:00:00Z"]).builtAt).toBe("2026-10-23T00:00:00Z");
+  });
+});

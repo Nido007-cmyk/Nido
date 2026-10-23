@@ -22,11 +22,29 @@ import { chunkIntro, cleanIntro, parseArgs, quantizeInt8, USAGE, vitalListPages 
 
 const WIKI_API = "https://en.wikipedia.org/w/api.php";
 const USER_AGENT = "NIDO-knowledge-pack-builder/1.0 (https://github.com/arsrs91-png/NIDO)";
-const EMBEDDING_MODEL = {
-  path: "assets/models/embedding.gguf",
-  url: "https://huggingface.co/CompendiumLabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-q8_0.gguf",
-  sha256: "ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514",
+// The pack's vectors must come from the same model the app searches with.
+// bge: the default (English) model. e5: multilingual search (Spanish,
+// Portuguese, English), with the passage/query prefixes the app uses
+// (src/rag/embeddingProfile.ts).
+const EMBEDDING_MODELS = {
+  bge: {
+    path: "assets/models/embedding.gguf",
+    url: "https://huggingface.co/CompendiumLabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-q8_0.gguf",
+    sha256: "ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514",
+    name: "BAAI/bge-small-en-v1.5",
+    passagePrefix: "",
+    queryPrefix: "",
+  },
+  e5: {
+    path: "assets/models/embedding-multilingual.gguf",
+    url: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf",
+    sha256: "802c868f57ccddd2e0c80645c3db1cb96a1aa50986a057cbaee2526f6e474cde",
+    name: "intfloat/multilingual-e5-small",
+    passagePrefix: "passage: ",
+    queryPrefix: "query: ",
+  },
 };
+let EMBEDDING_MODEL = EMBEDDING_MODELS.bge;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (msg) => console.log(`[${new Date().toISOString().slice(11, 19)}] ${msg}`);
@@ -154,7 +172,7 @@ async function embedChunks(chunks, cacheFile, threads) {
       await Promise.all(
         contexts.map(async (ctx, w) => {
           for (let j = w; j < group.length; j += threads) {
-            vectors[j] = (await ctx.getEmbeddingFor(`${group[j].title}\n${group[j].body}`)).vector;
+            vectors[j] = (await ctx.getEmbeddingFor(`${EMBEDDING_MODEL.passagePrefix}${group[j].title}\n${group[j].body}`)).vector;
           }
         })
       );
@@ -210,6 +228,7 @@ async function main() {
     process.exit(1);
   }
   if (opts.help) return console.log(USAGE);
+  EMBEDDING_MODEL = EMBEDDING_MODELS[opts.embedding];
 
   const work = resolve("build/knowledge-pack", opts.id);
   mkdirSync(work, { recursive: true });
@@ -241,10 +260,18 @@ async function main() {
     name: opts.name,
     source: opts.titlesFile ? `Wikipedia introductions for ${titles.length} listed titles` : `Wikipedia Vital Articles level ${opts.level} introductions`,
     license: "CC BY-SA 4.0 (Wikipedia)",
+    licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",
+    attribution:
+      "Compiled by NIDO (https://github.com/Nido007-cmyk/Nido) from Wikipedia article introductions " +
+      `(https://www.wikipedia.org, CC BY-SA 4.0). Vectors computed by NIDO with ${EMBEDDING_MODEL.name}. ` +
+      "If you share or adapt this pack, credit NIDO and Wikipedia, link the license, say what you changed, and keep CC BY-SA 4.0.",
     articles: pages.length,
     chunks: chunks.length,
     embeddingModelSha256: EMBEDDING_MODEL.sha256,
-    builtAt: new Date().toISOString(),
+    embeddingModel: EMBEDDING_MODEL.name,
+    embeddingPassagePrefix: EMBEDDING_MODEL.passagePrefix,
+    embeddingQueryPrefix: EMBEDDING_MODEL.queryPrefix,
+    builtAt: opts.builtAt ?? new Date().toISOString(),
   });
   const size = statSync(outFile).size;
   const sha = await sha256File(outFile);

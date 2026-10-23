@@ -1,0 +1,115 @@
+# Knowledge packs built from a list of Wikipedia titles (knowledge-packs/*.txt).
+#
+# Builds each pack twice, one per search model the app has (bge: English,
+# e5: multilingual), checks that its vectors match the published Vital
+# packs made with the same models (scripts/check-pack-parity.mjs), and
+# uploads both files to a DRAFT release. A draft is invisible to users: the
+# catalog entry (src/models/manifest.ts) is signed locally by the maintainer
+# and the release is published with the app version that offers the pack.
+#
+# No signing key here.
+name: Knowledge pack
+
+on:
+  push:
+    branches: ['pack/**', 'feat/emergency-pack']
+    paths: ['knowledge-packs/**', 'scripts/build-knowledge-pack.mjs', 'scripts/check-pack-parity.mjs', 'scripts/lib/knowledge-pack-lib.mjs', '.github/workflows/knowledge-pack.yml']
+  workflow_dispatch:
+    inputs:
+      pack:
+        description: 'Title list in knowledge-packs/ (without .txt)'
+        default: 'emergency-survival'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: knowledge-pack-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PACK: ${{ inputs.pack || 'emergency-survival' }}
+  RELEASE_TAG: knowledge-packs-v3
+  # Fixed so a rebuild from the same Wikipedia text gives the same file.
+  BUILT_AT: '2026-10-23T00:00:00Z'
+  VITAL_BGE_URL: https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v1/wiki-vital5.sqlite
+  VITAL_BGE_SHA256: d3b87d562baba3489f6878bf99783f50d504db94c347029771e53f6d1aecc666
+  VITAL_E5_URL: https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/wiki-vital5-e5.sqlite
+  VITAL_E5_SHA256: 6eda30dfc736faaad2925ada3f346a51e0211e57353e9842ccb897885da33886
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Name and size of the list
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "knowledge-packs/$PACK.txt"
+          echo "::notice title=Knowledge pack::$PACK: $(grep -c . knowledge-packs/$PACK.txt) titles"
+      - name: Build (bge, English search)
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/build-knowledge-pack.mjs --titles "knowledge-packs/$PACK.txt" --id "$PACK" \
+            --name "Emergencies and survival" --embedding bge --built-at "$BUILT_AT" --threads 4
+      - name: Build (e5, multilingual search)
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/build-knowledge-pack.mjs --titles "knowledge-packs/$PACK.txt" --id "$PACK-e5" \
+            --name "Emergencies and survival (multilingual search)" --embedding e5 --built-at "$BUILT_AT" --threads 4
+      - name: Summary
+        shell: bash
+        run: |
+          node -e '
+            const fs = require("fs");
+            const want = fs.readFileSync(`knowledge-packs/${process.env.PACK}.txt`, "utf8").split("\n").map(s => s.trim()).filter(Boolean);
+            const s = JSON.parse(fs.readFileSync(`build/knowledge-pack/${process.env.PACK}.sqlite.json`, "utf8"));
+            console.log(`::notice title=Knowledge pack::${s.articles} articles, ${s.chunks} chunks, ${(s.sizeBytes/1e6).toFixed(1)} MB, sha256 ${s.sha256}`);
+            const e5 = JSON.parse(fs.readFileSync(`build/knowledge-pack/${process.env.PACK}-e5.sqlite.json`, "utf8"));
+            console.log(`::notice title=Knowledge pack (e5)::${e5.articles} articles, ${e5.chunks} chunks, ${(e5.sizeBytes/1e6).toFixed(1)} MB, sha256 ${e5.sha256}`);
+            if (s.articles < want.length) console.log(`::warning title=Knowledge pack::${want.length - s.articles} titles gave no article (missing page, or the same article reached through two titles)`);
+          '
+      - name: Parity with the published Vital packs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ref
+          curl -fsSL --retry 3 "$VITAL_BGE_URL" -o ref/vital.sqlite
+          curl -fsSL --retry 3 "$VITAL_E5_URL" -o ref/vital-e5.sqlite
+          echo "$VITAL_BGE_SHA256  ref/vital.sqlite" | sha256sum -c -
+          echo "$VITAL_E5_SHA256  ref/vital-e5.sqlite" | sha256sum -c -
+          node scripts/check-pack-parity.mjs "build/knowledge-pack/$PACK.sqlite" ref/vital.sqlite --github
+          node scripts/check-pack-parity.mjs "build/knowledge-pack/$PACK-e5.sqlite" ref/vital-e5.sqlite --github
+      - name: Upload to the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > LICENSE-ATTRIBUTION.txt <<'TXT'
+          NIDO knowledge packs in this release are compiled by NIDO
+          (https://github.com/Nido007-cmyk/Nido) from Wikipedia article
+          introductions (https://www.wikipedia.org). The text is licensed under
+          CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/), and so
+          is each pack as a whole. If you share or adapt a pack, credit NIDO and
+          Wikipedia, link the license, say what you changed, and keep CC BY-SA 4.0.
+          The packs give general information only. They are not medical advice:
+          in an emergency, call your local emergency number.
+          TXT
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --draft --title "Knowledge packs v3" \
+              --notes "Draft: knowledge packs built by .github/workflows/knowledge-pack.yml. Published with the app version that offers them."
+          fi
+          gh release upload "$RELEASE_TAG" --clobber \
+            "build/knowledge-pack/$PACK.sqlite" "build/knowledge-pack/$PACK-e5.sqlite" \
+            "build/knowledge-pack/$PACK.sqlite.json" "build/knowledge-pack/$PACK-e5.sqlite.json" LICENSE-ATTRIBUTION.txt
+          echo "::notice title=Knowledge pack::uploaded to draft release $RELEASE_TAG"
