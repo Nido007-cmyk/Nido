@@ -4,7 +4,7 @@ category: Supervivencia
 lang: es
 sources: Organizaciones de búsqueda y rescate (NASAR); OACI, señales tierra-aire; Club Alpino, señal de socorro alpina; Ready.gov
 ---
-## Si te pierdes
+## Si te pierdes en la montaña, el bosque o el campo
 1. **Para.** No sigas caminando: cuanto más te muevas, más grande es la zona de búsqueda.
 2. Intenta llamar al número de emergencias aunque no tengas cobertura de tu compañía: las llamadas de emergencia pueden usar otras redes. Si no conecta, envía un mensaje de texto (pasa con menos señal).
 3. Ahorra batería: modo avión entre intentos, brillo al mínimo. Sube a un lugar alto para buscar señal.

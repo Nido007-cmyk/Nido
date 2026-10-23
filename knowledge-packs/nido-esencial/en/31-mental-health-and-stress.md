@@ -4,7 +4,7 @@ category: Health at home
 lang: en
 sources: WHO, "Doing What Matters in Times of Stress" (2020); IFRC Reference Centre for Psychosocial Support; WHO mhGAP guide
 ---
-Emergencies, uncertainty and loss affect the mind as much as the body. Feeling fear, sadness or anger is a normal reaction to something abnormal.
+Emergencies, uncertainty and loss affect the mind as much as the body. After an earthquake, a flood or another disaster it is common to feel anxious, be unable to sleep, or keep reliving what happened. Feeling fear, sadness or anger is a normal reaction to something abnormal.
 
 ## Simple stress techniques (WHO)
 - **Grounding**: when an emotion overwhelms you, feel your feet on the floor, straighten your back, breathe slowly and notice 5 things you see and 5 you hear.

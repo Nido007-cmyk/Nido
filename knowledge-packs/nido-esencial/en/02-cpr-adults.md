@@ -4,7 +4,7 @@ category: First aid
 lang: en
 sources: AHA Guidelines for CPR and Emergency Cardiovascular Care 2025; American Red Cross; IFRC First Aid Guidelines 2020
 ---
-If someone does not respond and is not breathing normally (or is only gasping), their heart has probably stopped. Every minute without CPR sharply lowers the chance of survival. Starting quickly matters most: do not be afraid of doing it "wrong"; doing nothing is worse.
+If someone collapses, does not respond and is not breathing normally (or is only gasping), their heart has probably stopped. Every minute without CPR sharply lowers the chance of survival. Starting quickly matters most: do not be afraid of doing it "wrong"; doing nothing is worse.
 
 ## Before you start
 - Check that the scene is safe.

@@ -4,7 +4,7 @@ category: First aid
 lang: en
 sources: WHO, Psychological First Aid: Guide for Field Workers (2011); IFRC Reference Centre for Psychosocial Support; Red Cross
 ---
-After an accident, a disaster or bad news, people may be in shock, frightened, confused or frozen. You don't need to be a psychologist to help. The WHO sums it up in three words: **look, listen and link**.
+After an accident, a disaster or bad news, people may be in shock, frightened, confused or frozen. You don't need to be a psychologist to help or comfort someone. The WHO sums it up in three words: **look, listen and link**.
 
 ## Look
 - Is the place safe? Who needs urgent basic help (injured people, children on their own, older people)?

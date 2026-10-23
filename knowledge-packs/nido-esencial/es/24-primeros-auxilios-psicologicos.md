@@ -4,7 +4,7 @@ category: Primeros auxilios
 lang: es
 sources: OMS, Primeros Auxilios Psicológicos: guía para trabajadores de campo (2011); IFRC Centro de Apoyo Psicosocial; Cruz Roja
 ---
-Tras un accidente, un desastre o una mala noticia, las personas pueden quedar en shock, con miedo, confusas o paralizadas. No hace falta ser psicólogo para ayudar. La OMS lo resume en tres verbos: **observar, escuchar y conectar**.
+Tras un accidente, un desastre o una mala noticia, las personas pueden quedar en shock, con miedo, confusas o paralizadas. No hace falta ser psicólogo para ayudar ni para consolar a alguien. La OMS lo resume en tres verbos: **observar, escuchar y conectar**.
 
 ## Observar
 - ¿Es seguro el lugar? ¿Quién necesita ayuda básica urgente (heridos, niños solos, personas mayores)?

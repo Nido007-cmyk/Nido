@@ -4,7 +4,7 @@ category: Survival
 lang: en
 sources: Search-and-rescue organizations (NASAR); ICAO, ground-to-air signals; Alpine distress signal; Ready.gov
 ---
-## If you get lost
+## If you get lost in the mountains, forest or countryside
 1. **Stop.** Don't keep walking: the more you move, the bigger the search area.
 2. Try calling the emergency number even without coverage from your provider: emergency calls can use other networks. If it doesn't connect, send a text message (it goes through with less signal).
 3. Save battery: airplane mode between attempts, minimum brightness. Climb to a high point to look for signal.

@@ -4,7 +4,7 @@ category: Health at home
 lang: en
 sources: WHO, IMCI and Emergency Triage Assessment and Treatment (ETAT); AHA; Canadian Red Cross 2020; NHS
 ---
-Call the emergency number or go to the emergency department at once if you see any of these signs.
+Call the emergency number or go to the emergency department (ER) at once if you see any of these signs, in an adult or a child.
 
 ## In anyone
 - Not responding, very confused or drowsy.

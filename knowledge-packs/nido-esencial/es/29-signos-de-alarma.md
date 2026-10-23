@@ -4,7 +4,7 @@ category: Salud en casa
 lang: es
 sources: OMS, AIEPI y signos de emergencia (ETAT); AHA; Cruz Roja Canadiense 2020; NHS
 ---
-Llama al número de emergencias o ve a urgencias de inmediato si ves alguno de estos signos.
+Llama al número de emergencias o ve a urgencias de inmediato si ves alguno de estos signos, en un adulto o en un niño.
 
 ## En cualquier persona
 - No responde, está muy confusa o somnolienta.

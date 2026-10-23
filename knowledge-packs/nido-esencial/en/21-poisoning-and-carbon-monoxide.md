@@ -5,7 +5,7 @@ lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; WHO; CDC, carbon monoxide
 ---
 ## If someone swallowed something toxic
-(Medicines, cleaning products, plants, mushrooms, alcohol, button batteries...)
+(Medicines, bleach and other cleaning products, plants, mushrooms, alcohol, button batteries...)
 1. If they don't respond, have trouble breathing or have a seizure: call the emergency number.
 2. If they are fine: call the poison control center or your country's emergency number. Have the container at hand.
 3. Find out what they took, how much and when. Keep the container or leftovers.

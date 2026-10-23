@@ -5,7 +5,7 @@ lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; OMS; CDC, monóxido de carbono
 ---
 ## Si alguien tragó algo tóxico
-(Medicamentos, productos de limpieza, plantas, setas, alcohol, pilas de botón...)
+(Medicamentos, lejía y otros productos de limpieza, plantas, setas, alcohol, pilas de botón...)
 1. Si no responde, le cuesta respirar o convulsiona: llama al número de emergencias.
 2. Si está bien: llama al centro de toxicología o al número de emergencias de tu país. Ten a mano el envase.
 3. Averigua qué tomó, cuánto y cuándo. Guarda el envase o restos.

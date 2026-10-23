@@ -4,7 +4,7 @@ category: Salud en casa
 lang: es
 sources: OMS, "Doing What Matters in Times of Stress" (2020); IFRC Centro de Apoyo Psicosocial; OMS, guía mhGAP
 ---
-Las emergencias, la incertidumbre y las pérdidas afectan a la mente tanto como al cuerpo. Sentir miedo, tristeza o rabia es una reacción normal ante algo anormal.
+Las emergencias, la incertidumbre y las pérdidas afectan a la mente tanto como al cuerpo. Después de un terremoto, una inundación u otro desastre es frecuente tener ansiedad, no poder dormir o revivir lo ocurrido. Sentir miedo, tristeza o rabia es una reacción normal ante algo anormal.
 
 ## Técnicas sencillas para el estrés (OMS)
 - **Anclarse**: cuando te invade una emoción, nota tus pies en el suelo, estira la espalda, respira despacio y fíjate en 5 cosas que veas y 5 que oigas.

@@ -4,7 +4,7 @@ category: Primeros auxilios
 lang: es
 sources: AHA, Guías de RCP y atención cardiovascular de emergencia 2025; Cruz Roja Americana; IFRC, Directrices de primeros auxilios 2020
 ---
-Si una persona no responde y no respira normal (o solo boquea), su corazón probablemente se ha parado. Cada minuto sin RCP baja mucho la posibilidad de sobrevivir. Empezar rápido es lo más importante: no tengas miedo de hacerlo "mal"; no hacer nada es peor.
+Si una persona se desploma, no responde y no respira normal (o solo boquea), su corazón probablemente se ha parado. Cada minuto sin RCP baja mucho la posibilidad de sobrevivir. Empezar rápido es lo más importante: no tengas miedo de hacerlo "mal"; no hacer nada es peor.
 
 ## Antes de empezar
 - Comprueba que el lugar es seguro.
