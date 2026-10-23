@@ -4,6 +4,24 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.54-alpha — 2026-10-23
+
+### Fixed
+- **NIDO Esencial knowledge pack v4 — fact-checked guides.** Five guides
+  were corrected against the current official guidelines (AHA and
+  American Red Cross 2024, ERC 2021, WHO), in Spanish and English:
+  12 severe allergy / anaphylaxis (a second adrenaline dose after
+  5–10 minutes, only if help has not arrived), 14 chest pain / heart
+  attack (chewable aspirin 162–325 mg), 20 drowning (ERC 2021 added to
+  the sources), 22 bites and stings (the jellyfish vinegar advice was
+  removed: it depends on the species and can worsen some stings),
+  and 23 nose, eyes, teeth and ears (nosebleed: 15 minutes of
+  continuous pressure; knocked-out tooth: rinse under 10 seconds).
+  The signed catalog now pins the knowledge-packs-v4 release (PRs #136
+  and #137); the v3 files stay published and pinned for 0.1.53. As
+  before: no medical body has reviewed the pack and the Red Cross
+  does not endorse it.
+
 ## 0.1.53-alpha — 2026-10-22
 
 ### Added

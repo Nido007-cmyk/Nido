@@ -1,7 +1,7 @@
 # NIDO alpha — Release Notes
 
 > This document keeps the alpha overview and the current known
-> limitations, kept up to date with the latest release (0.1.53-alpha).
+> limitations, kept up to date with the latest release (0.1.54-alpha).
 > Per-version changes from 0.1.19 on are in the
 > [changelog](../CHANGELOG.md) and in each GitHub release; the notes for
 > 0.1.1 to 0.1.18 are kept below for reference.
