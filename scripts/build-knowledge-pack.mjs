@@ -18,7 +18,8 @@ import { createHash } from "node:crypto";
 import { createReadStream, existsSync, mkdirSync, readFileSync, appendFileSync, writeFileSync, rmSync, statSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { dirname, join, resolve } from "node:path";
-import { chunkIntro, cleanIntro, parseArgs, quantizeInt8, USAGE, vitalListPages } from "./lib/knowledge-pack-lib.mjs";
+import { readdirSync } from "node:fs";
+import { chunkGuide, chunkIntro, cleanIntro, parseArgs, parseGuide, quantizeInt8, USAGE, vitalListPages } from "./lib/knowledge-pack-lib.mjs";
 
 const WIKI_API = "https://en.wikipedia.org/w/api.php";
 const USER_AGENT = "NIDO-knowledge-pack-builder/1.0 (https://github.com/arsrs91-png/NIDO)";
@@ -234,15 +235,37 @@ async function main() {
   mkdirSync(work, { recursive: true });
   log(`building ${opts.id} in ${work}`);
 
-  const titles = await fetchTitles(opts, join(work, "titles.json"));
-  log(`${titles.length} titles`);
-  const pages = await fetchIntros(titles, join(work, "intros.jsonl"));
-  log(`${pages.length} articles with an introduction`);
-
+  let titles = [];
+  let pages = [];
   const chunks = [];
-  for (const p of pages) {
-    for (const body of chunkIntro(cleanIntro(p.extract), opts.chunkChars, opts.maxChunks)) {
-      chunks.push({ title: p.title, body, source: `Wikipedia — ${p.url}` });
+  if (opts.guidesDir) {
+    // NIDO's own guides (knowledge-packs/<pack>/<lang>/*.md), in file order.
+    const files = readdirSync(opts.guidesDir, { recursive: true })
+      .map(String)
+      .filter((f) => f.endsWith(".md") && !f.toLowerCase().endsWith("readme.md"))
+      .sort();
+    for (const f of files) {
+      const g = parseGuide(readFileSync(join(opts.guidesDir, f), "utf8"), f);
+      pages.push(g);
+      for (const c of chunkGuide(g)) {
+        chunks.push({
+          title: c.heading ? `${g.title} — ${c.heading}` : g.title,
+          body: c.body,
+          source: `NIDO — ${g.title} (${g.lang === "es" ? "basado en" : "based on"}: ${g.sources})`,
+        });
+      }
+    }
+    titles = pages.map((g) => g.title);
+    log(`${pages.length} guides`);
+  } else {
+    titles = await fetchTitles(opts, join(work, "titles.json"));
+    log(`${titles.length} titles`);
+    pages = await fetchIntros(titles, join(work, "intros.jsonl"));
+    log(`${pages.length} articles with an introduction`);
+    for (const p of pages) {
+      for (const body of chunkIntro(cleanIntro(p.extract), opts.chunkChars, opts.maxChunks)) {
+        chunks.push({ title: p.title, body, source: `Wikipedia — ${p.url}` });
+      }
     }
   }
   log(`${chunks.length} chunks`);
@@ -258,13 +281,25 @@ async function main() {
     dims: 384,
     id: opts.id,
     name: opts.name,
-    source: opts.titlesFile ? `Wikipedia introductions for ${titles.length} listed titles` : `Wikipedia Vital Articles level ${opts.level} introductions`,
-    license: "CC BY-SA 4.0 (Wikipedia)",
-    licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",
-    attribution:
-      "Compiled by NIDO (https://github.com/Nido007-cmyk/Nido) from Wikipedia article introductions " +
-      `(https://www.wikipedia.org, CC BY-SA 4.0). Vectors computed by NIDO with ${EMBEDDING_MODEL.name}. ` +
-      "If you share or adapt this pack, credit NIDO and Wikipedia, link the license, say what you changed, and keep CC BY-SA 4.0.",
+    ...(opts.guidesDir
+      ? {
+          source: `${titles.length} guides written by NIDO from official sources (cited in each guide)`,
+          license: "CC BY 4.0 (NIDO)",
+          licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+          attribution:
+            "Written by NIDO (https://github.com/Nido007-cmyk/Nido) from public guidance by the organizations cited in each guide. " +
+            `Vectors computed by NIDO with ${EMBEDDING_MODEL.name}. General information only: not a substitute for a first aid course or ` +
+            "for professional help. In an emergency, call your local emergency number.",
+        }
+      : {
+          source: opts.titlesFile ? `Wikipedia introductions for ${titles.length} listed titles` : `Wikipedia Vital Articles level ${opts.level} introductions`,
+          license: "CC BY-SA 4.0 (Wikipedia)",
+          licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",
+          attribution:
+            "Compiled by NIDO (https://github.com/Nido007-cmyk/Nido) from Wikipedia article introductions " +
+            `(https://www.wikipedia.org, CC BY-SA 4.0). Vectors computed by NIDO with ${EMBEDDING_MODEL.name}. ` +
+            "If you share or adapt this pack, credit NIDO and Wikipedia, link the license, say what you changed, and keep CC BY-SA 4.0.",
+        }),
     articles: pages.length,
     chunks: chunks.length,
     embeddingModelSha256: EMBEDDING_MODEL.sha256,

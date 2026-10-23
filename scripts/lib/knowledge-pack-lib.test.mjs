@@ -5,7 +5,10 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { chunkIntro, cleanIntro, parseArgs, quantizeInt8, vitalListPages } from "./knowledge-pack-lib.mjs";
+import { chunkGuide, chunkIntro, cleanIntro, parseArgs, parseGuide, quantizeInt8, vitalListPages } from "./knowledge-pack-lib.mjs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cosineSimilarity, cosineSimilarityInt8 } from "../../src/rag/pure";
 
 describe("parseArgs", () => {
@@ -90,5 +93,63 @@ describe("parseArgs — embedding model and fixed build date", () => {
   });
   it("keeps a fixed build date", () => {
     expect(parseArgs(["--built-at", "2026-10-23T00:00:00Z"]).builtAt).toBe("2026-10-23T00:00:00Z");
+  });
+});
+
+describe("NIDO guides (--guides)", () => {
+  const md = (body) => `---\ntitle: Test\ncategory: Primeros auxilios\nlang: es\nsources: Cruz Roja\n---\n${body}`;
+
+  it("parseGuide reads front matter and splits sections", () => {
+    const g = parseGuide(md("Intro.\n## Qué hacer\n1. Llama.\n### Detalle\n- Uno"), "t.md");
+    expect(g).toMatchObject({ title: "Test", lang: "es", sources: "Cruz Roja", category: "Primeros auxilios" });
+    expect(g.sections.map((s) => s.heading)).toEqual(["", "Qué hacer", "Detalle"]);
+  });
+
+  it("parseGuide rejects guides without front matter, title, language or sources", () => {
+    expect(() => parseGuide("## A\nb", "x.md")).toThrow(/front matter/);
+    expect(() => parseGuide("---\nlang: es\nsources: x\n---\n## A\nb", "x.md")).toThrow(/title/);
+    expect(() => parseGuide("---\ntitle: T\nsources: x\n---\n## A\nb", "x.md")).toThrow(/lang/);
+    expect(() => parseGuide("---\ntitle: T\nlang: es\n---\n## A\nb", "x.md")).toThrow(/sources/);
+    expect(() => parseGuide("---\ntitle: T\nlang: es\nsources: x\n---\n\n", "x.md")).toThrow(/empty/);
+  });
+
+  it("chunkGuide never cuts a line and labels each chunk with its section", () => {
+    const steps = Array.from({ length: 40 }, (_, i) => `- Paso ${i} con algo de texto para que ocupe sitio.`).join("\n");
+    const chunks = chunkGuide(parseGuide(md(`## Pasos\n${steps}`), "t.md"), 400);
+    expect(chunks.length).toBeGreaterThan(3);
+    for (const c of chunks) {
+      expect(c.body.startsWith("Pasos\n")).toBe(true);
+      for (const line of c.body.split("\n").slice(1)) expect(line).toMatch(/^- Paso \d+ con algo de texto para que ocupe sitio\.$/);
+    }
+    const all = chunks.flatMap((c) => c.body.split("\n").slice(1));
+    expect(all).toEqual(steps.split("\n"));
+  });
+
+  it("chunkGuide folds short sections (intro, closing note) into a neighbour", () => {
+    const long = "x".repeat(400);
+    const chunks = chunkGuide(parseGuide(md(`Intro corta.\n## A\n${long}\n## B\n${long}\n## Importante\nBasado en la Cruz Roja.`), "t.md"));
+    expect(chunks.map((c) => c.heading)).toEqual(["A", "B"]);
+    expect(chunks[0].body.startsWith("Intro corta.")).toBe(true);
+    expect(chunks[1].body.endsWith("Importante\nBasado en la Cruz Roja.")).toBe(true);
+  });
+
+  it("every guide in knowledge-packs/nido-esencial parses, cites sources and ends with its note", () => {
+    const root = fileURLToPath(new URL("../../knowledge-packs/nido-esencial", import.meta.url));
+    const langs = readdirSync(root).filter((d) => !d.includes("."));
+    expect(langs).toContain("es");
+    const titles = new Map();
+    for (const lang of langs) {
+      const files = readdirSync(join(root, lang)).filter((f) => f.endsWith(".md"));
+      expect(files.length).toBeGreaterThan(40);
+      for (const f of files) {
+        const g = parseGuide(readFileSync(join(root, lang, f), "utf8"), f);
+        expect(g.lang).toBe(lang);
+        expect(g.sources.length).toBeGreaterThan(5);
+        expect(g.sections.at(-1).heading).toMatch(/^(Importante|Important)$/);
+        expect(chunkGuide(g).length).toBeGreaterThan(0);
+        titles.set(`${lang}:${g.title}`, (titles.get(`${lang}:${g.title}`) ?? 0) + 1);
+      }
+    }
+    for (const [t, n] of titles) expect(n, t).toBe(1);
   });
 });
