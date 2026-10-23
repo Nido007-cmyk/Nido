@@ -4,6 +4,21 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.53-alpha — 2026-10-22
+
+### Added
+- **NIDO Esencial knowledge pack.** 116 offline guides (58 in Spanish and the
+  same 58 in English) on first aid, health at home, disasters and survival,
+  written by NIDO from public guidance: the IFRC and the American, Canadian
+  and Spanish Red Cross societies, the AHA 2025 CPR guidelines, WHO, UNICEF,
+  CDC, FEMA, NOAA and USGS. Offered in the Standard, Full and Encyclopedia
+  installs, with a multilingual-search variant. The signed download catalog
+  (signed in the pull request that added the pack) points at the
+  knowledge-packs-v3 release, whose files match the catalog pins byte for
+  byte. Every guide states that it does not replace a course and that
+  emergency services come first; no medical body has reviewed the pack and
+  the Red Cross does not endorse it.
+
 ## 0.1.52-alpha — 2026-10-22
 
 Fixes from an independent security review of the code added in 0.1.48–0.1.51,
