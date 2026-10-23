@@ -2,7 +2,7 @@
 title: Drowning and water rescue
 category: First aid
 lang: en
-sources: AHA and American Red Cross Guidelines 2024; WHO, drowning prevention; Canadian Red Cross 2020
+sources: AHA and American Red Cross Guidelines 2024; European Resuscitation Council (ERC) Guidelines 2021; WHO, drowning prevention; Canadian Red Cross 2020
 ---
 Someone who is drowning almost never shouts or waves: they slip under silently within seconds.
 

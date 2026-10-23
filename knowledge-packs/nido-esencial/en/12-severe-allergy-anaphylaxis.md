@@ -15,7 +15,7 @@ Anaphylaxis is a severe allergic reaction that can kill within minutes. It usual
 ## What to do
 1. Call the emergency number at once.
 2. If the person has an adrenaline (epinephrine) auto-injector, such as an EpiPen, help them use it on the outer thigh (it can go through clothing). Follow the device instructions and hold it in place for the time it says.
-3. If there is no improvement after 5 to 15 minutes and a second auto-injector is available, a second dose can be given.
+3. If there is no improvement after 5–10 minutes, help has not arrived yet and a second auto-injector is available, a second dose can be given.
 4. Position: if breathing is hard, sitting up. If dizzy or pale, lying down with the legs slightly raised. Do not stand them up or make them walk.
 5. If they stop responding and are not breathing normally, start CPR.
 6. Even if they get better, they must go to hospital: the reaction can come back hours later.

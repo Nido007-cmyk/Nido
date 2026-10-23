@@ -6,9 +6,9 @@ sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cros
 ---
 ## Nosebleed
 1. Sit down and lean the head slightly forward (not back: the blood would run into the throat).
-2. Pinch the soft part of the nose with your fingers, without letting go, for 10 to 15 minutes. Breathe through the mouth.
+2. Pinch the soft part of the nose with your fingers, without letting go, for 15 minutes straight. Breathe through the mouth.
 3. Spit out any blood that reaches the mouth.
-4. Get medical care if it doesn't stop within 20 minutes, if it followed a hard blow to the head, or if the person takes blood thinners and bleeds heavily.
+4. Get medical care if it doesn't stop after 15 minutes of continuous pressure, if it followed a hard blow to the head, or if the person takes blood thinners and bleeds heavily.
 
 ## Something in the eye
 - Dust or sand: don't rub. Rinse with plenty of clean water or saline.
@@ -18,7 +18,7 @@ sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cros
 
 ## Knocked-out tooth (adult)
 1. Hold the tooth by the crown (the white part), never by the root.
-2. If it's dirty, rinse it briefly with water, without scrubbing.
+2. If it's dirty, rinse it with water for less than 10 seconds, without scrubbing.
 3. If the person is awake and cooperative, try to put it back in its socket and have them bite on gauze.
 4. If not, keep it in milk, saline, or the person's mouth (between cheek and gum, if there is no risk of swallowing it). Do not keep it in water or dry.
 5. See a dentist or the emergency department within an hour. Baby teeth are not put back.

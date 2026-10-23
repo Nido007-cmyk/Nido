@@ -15,7 +15,7 @@ In a heart attack, every minute counts. Do not wait to see if it passes.
 ## What to do
 1. Call the emergency number at once.
 2. Have the person stop any effort. Sit them half-reclined, in the most comfortable position.
-3. If it is an adult who is awake, not allergic to aspirin, not bleeding, and whose doctor has not told them to avoid it: have them chew one adult aspirin (160 to 325 mg, or 2 to 4 low-dose 81 mg aspirins) and swallow it.
+3. If it is an adult who is awake, not allergic to aspirin, not bleeding, and whose doctor has not told them to avoid it: have them chew one adult aspirin (162 to 325 mg, or 2 to 4 low-dose 81 mg aspirins) and swallow it.
 4. If they have prescribed angina medicine (nitroglycerin), help them take it.
 5. Loosen clothing, reassure them and don't leave them alone.
 6. If they stop responding and are not breathing normally, start CPR and ask for a defibrillator.
