@@ -1662,7 +1662,7 @@
     "modelsTitle": "Modelos de IA e pacotes de conhecimento",
     "modelsBody": "Não vêm dentro do app: são baixados de quem os publica quando você os escolhe, e cada um mantém sua licença.",
     "knowledgeTitle": "Texto da Wikipédia",
-    "knowledgeBody": "O app traz 300 introduções de artigos da Wikipédia, e os pacotes de conhecimento opcionais trazem mais. Texto dos colaboradores da Wikipédia (wikipedia.org), sob a licença CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0). Toda resposta que o usa mostra a URL do artigo. Os pacotes compilados pelo NIDO são compartilhados com a mesma licença. O NIDO não é afiliado à Fundação Wikimedia.",
+    "knowledgeBody": "O app traz 300 introduções de artigos da Wikipédia, e os pacotes de conhecimento opcionais trazem mais. Texto dos colaboradores da Wikipédia (wikipedia.org), sob a licença CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0). Toda resposta que o usa mostra a URL do artigo. Os pacotes da Wikipédia compilados pelo NIDO são compartilhados com a mesma licença; os guias NIDO Essencial, escritos pelo NIDO, têm licença CC BY 4.0. O NIDO não é afiliado à Fundação Wikimedia.",
     "embeddingNote": "O modelo de busca multilíngue (multilingual-e5-small, da intfloat) é MIT, Copyright (c) Microsoft Corporation; o NIDO publica a conversão para GGUF com esse aviso.",
     "thirdPartyTitle": "Software de terceiros",
     "thirdPartyBody": "{{count}} pacotes de código aberto. Toque em um para ver a licença.",
@@ -1671,7 +1671,8 @@
     "licenseLink": "Texto oficial",
     "notes": {
       "lfm": "Não é Apache nem MIT: o uso comercial só é permitido a entidades com menos de 10 milhões de USD de receita anual, e quem o redistribuir deve entregar uma cópia da licença.",
-      "ccBySa": "Você pode compartilhar e adaptar dando crédito à Wikipédia (e ao NIDO como compilador dos pacotes), linkando a licença, indicando as mudanças e mantendo CC BY-SA 4.0."
+      "ccBySa": "Você pode compartilhar e adaptar dando crédito à Wikipédia (e ao NIDO como compilador dos pacotes), linkando a licença, indicando as mudanças e mantendo CC BY-SA 4.0.",
+      "ccByNido": "Guias escritos pelo NIDO a partir das recomendações públicas da Cruz Vermelha, da AHA, da OMS e de outras organizações, que não os revisaram nem endossam o NIDO. Você pode compartilhá-los e adaptá-los citando o NIDO. Informação geral: não substitui um curso de primeiros socorros; em uma emergência, ligue para o número de emergência."
     }
   },
   "panic": {

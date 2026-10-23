@@ -629,6 +629,40 @@ export const MODEL_CATALOG: CatalogModel[] = [
       "Introductions of Wikipedia's ~50,000 Vital Articles, searchable offline in Spanish, Portuguese and English. ~164MB.",
     required: false,
   },
+  {
+    // NIDO Esencial: 58 guides in Spanish + 58 in English (first aid, health
+    // at home, disasters, survival) written by NIDO from IFRC, Red Cross, AHA,
+    // WHO, UNICEF, CDC, Ready.gov and other public guidance
+    // (knowledge-packs/nido-esencial, built and checked by
+    // .github/workflows/knowledge-pack.yml).
+    id: "nido-esencial",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Essentials: first aid, health, disasters, survival",
+    filename: "corpus/nido-esencial.sqlite",
+    sizeBytes: 716800,
+    sha256: "7c4f658ba34486d0d597fc2e3b445813292af6eafb4abd15ce9317990292939c",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v3/nido-esencial.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description: "116 offline guides (58 in Spanish, 58 in English) on first aid, health at home, disasters and survival. ~0.7MB.",
+    required: false,
+  },
+  {
+    // Same guides with multilingual-e5 vectors, offered instead of
+    // nido-esencial when multilingual search is on (src/rag/embeddingSwitch.ts).
+    id: "nido-esencial-e5",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Essentials (multilingual search)",
+    filename: "corpus/nido-esencial-e5.sqlite",
+    sizeBytes: 716800,
+    sha256: "fe5db94ea6ce3495bb4e03d189a98ddf0c60f1cc35e9839ac21ab491993c41fe",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v3/nido-esencial-e5.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "116 offline guides on first aid, health at home, disasters and survival, searchable in Spanish, Portuguese and English. ~0.7MB.",
+    required: false,
+  },
   // Add more tested candidates / corpus packs here later (each needs a
   // unique `id` and `filename`). They ship with `required: false` and
   // appear in the Settings screen as optional downloads.
@@ -655,20 +689,20 @@ export const TIERS: TierDefinition[] = [
   {
     id: "standard",
     label: "Standard",
-    description: "+ 1,000 more Wikipedia-derived topics (~600KB extra download).",
-    corpusPackIds: ["corpus-standard"],
+    description: "+ 1,000 more Wikipedia-derived topics and NIDO's first aid, disaster and survival guides (~1.3MB extra download).",
+    corpusPackIds: ["corpus-standard", "nido-esencial"],
   },
   {
     id: "full",
     label: "Full",
-    description: "+ 5,000 more Wikipedia-derived topics total (~3MB extra download).",
-    corpusPackIds: ["corpus-standard", "corpus-full"],
+    description: "+ 5,000 more Wikipedia-derived topics total and NIDO's first aid, disaster and survival guides (~3.7MB extra download).",
+    corpusPackIds: ["corpus-standard", "corpus-full", "nido-esencial"],
   },
   {
     id: "encyclopedia",
     label: "Encyclopedia",
-    description: "Full, plus Wikipedia's ~50,000 Vital Articles (~164MB extra download).",
-    corpusPackIds: ["corpus-standard", "corpus-full", "wiki-vital5"],
+    description: "Full, plus Wikipedia's ~50,000 Vital Articles (~165MB extra download).",
+    corpusPackIds: ["corpus-standard", "corpus-full", "nido-esencial", "wiki-vital5"],
   },
 ];
 
