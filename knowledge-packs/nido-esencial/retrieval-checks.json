@@ -1,0 +1,667 @@
+[
+ {
+  "lang": "es",
+  "q": "qué hago primero si veo un accidente",
+  "expect": "Cómo actuar en una emergencia"
+ },
+ {
+  "lang": "es",
+  "q": "a qué número llamo en una emergencia",
+  "expect": "Cómo actuar en una emergencia"
+ },
+ {
+  "lang": "es",
+  "q": "una persona no respira y no responde, qué hago",
+  "expect": "RCP (reanimación) en adultos"
+ },
+ {
+  "lang": "es",
+  "q": "cómo se hacen las compresiones del pecho",
+  "expect": "RCP (reanimación) en adultos"
+ },
+ {
+  "lang": "es",
+  "q": "mi bebé no respira",
+  "expect": "RCP en niños y bebés"
+ },
+ {
+  "lang": "es",
+  "q": "reanimación a un niño pequeño",
+  "expect": "RCP en niños y bebés"
+ },
+ {
+  "lang": "es",
+  "q": "dónde pongo los parches del desfibrilador",
+  "expect": "Cómo usar un desfibrilador"
+ },
+ {
+  "lang": "es",
+  "q": "se está ahogando con comida y no puede toser",
+  "expect": "Atragantamiento"
+ },
+ {
+  "lang": "es",
+  "q": "maniobra de Heimlich",
+  "expect": "Atragantamiento"
+ },
+ {
+  "lang": "es",
+  "q": "cómo paro una hemorragia fuerte",
+  "expect": "Hemorragias graves"
+ },
+ {
+  "lang": "es",
+  "q": "cómo poner un torniquete",
+  "expect": "Hemorragias graves"
+ },
+ {
+  "lang": "es",
+  "q": "me corté con un cuchillo, cómo limpio la herida",
+  "expect": "Heridas, cortes"
+ },
+ {
+  "lang": "es",
+  "q": "me quemé con aceite hirviendo",
+  "expect": "Quemaduras"
+ },
+ {
+  "lang": "es",
+  "q": "creo que tiene el brazo roto",
+  "expect": "Fracturas"
+ },
+ {
+  "lang": "es",
+  "q": "se cayó y se golpeó la cabeza",
+  "expect": "Golpes en la cabeza"
+ },
+ {
+  "lang": "es",
+  "q": "cómo pongo a alguien en posición lateral de seguridad",
+  "expect": "Shock, desmayos"
+ },
+ {
+  "lang": "es",
+  "q": "se ha desmayado",
+  "expect": "Shock, desmayos"
+ },
+ {
+  "lang": "es",
+  "q": "cómo se usa el EpiPen",
+  "expect": "Alergia grave"
+ },
+ {
+  "lang": "es",
+  "q": "se le hinchan los labios después de comer cacahuetes",
+  "expect": "Alergia grave"
+ },
+ {
+  "lang": "es",
+  "q": "le falta el aire y tiene asma",
+  "expect": "Crisis de asma"
+ },
+ {
+  "lang": "es",
+  "q": "me duele el pecho y el brazo izquierdo",
+  "expect": "Dolor de pecho e infarto"
+ },
+ {
+  "lang": "es",
+  "q": "se le cayó un lado de la cara y habla raro",
+  "expect": "Ictus"
+ },
+ {
+  "lang": "es",
+  "q": "está convulsionando, qué hago",
+  "expect": "Convulsiones"
+ },
+ {
+  "lang": "es",
+  "q": "un diabético está sudando y confuso",
+  "expect": "Bajada de azúcar"
+ },
+ {
+  "lang": "es",
+  "q": "insolación con confusión y piel muy caliente",
+  "expect": "Golpe de calor"
+ },
+ {
+  "lang": "es",
+  "q": "tiene mucho frío y no deja de temblar",
+  "expect": "Hipotermia y congelación"
+ },
+ {
+  "lang": "es",
+  "q": "sacamos a un niño de la piscina sin respirar",
+  "expect": "Ahogamiento"
+ },
+ {
+  "lang": "es",
+  "q": "mi hijo se tomó lejía",
+  "expect": "Intoxicaciones"
+ },
+ {
+  "lang": "es",
+  "q": "síntomas de monóxido de carbono",
+  "expect": "Intoxicaciones"
+ },
+ {
+  "lang": "es",
+  "q": "me mordió una serpiente",
+  "expect": "Mordeduras y picaduras"
+ },
+ {
+  "lang": "es",
+  "q": "cómo quito una garrapata",
+  "expect": "Mordeduras y picaduras"
+ },
+ {
+  "lang": "es",
+  "q": "me sangra la nariz",
+  "expect": "Sangrado de nariz"
+ },
+ {
+  "lang": "es",
+  "q": "cómo ayudo a alguien en shock emocional tras el desastre",
+  "expect": "Primeros auxilios psicológicos"
+ },
+ {
+  "lang": "es",
+  "q": "mi bebé de dos meses tiene fiebre",
+  "expect": "Fiebre"
+ },
+ {
+  "lang": "es",
+  "q": "receta de suero oral casero",
+  "expect": "Diarrea, vómitos y suero oral"
+ },
+ {
+  "lang": "es",
+  "q": "cómo lavarse bien las manos",
+  "expect": "Higiene y prevención"
+ },
+ {
+  "lang": "es",
+  "q": "qué debe tener un botiquín",
+  "expect": "Botiquín"
+ },
+ {
+  "lang": "es",
+  "q": "cuándo llevar a un niño a urgencias",
+  "expect": "Signos de alarma"
+ },
+ {
+  "lang": "es",
+  "q": "va a dar a luz y no llega la ambulancia",
+  "expect": "Parto de emergencia"
+ },
+ {
+  "lang": "es",
+  "q": "no puedo dormir y tengo ansiedad después del terremoto",
+  "expect": "Salud mental"
+ },
+ {
+  "lang": "es",
+  "q": "cómo preparo a mi familia para un desastre",
+  "expect": "Plan familiar"
+ },
+ {
+  "lang": "es",
+  "q": "qué meter en la mochila de emergencia",
+  "expect": "Mochila de emergencia"
+ },
+ {
+  "lang": "es",
+  "q": "qué hago durante un sismo",
+  "expect": "Terremoto"
+ },
+ {
+  "lang": "es",
+  "q": "el mar se retiró de repente en la playa",
+  "expect": "Tsunami"
+ },
+ {
+  "lang": "es",
+  "q": "puedo cruzar con el coche una calle inundada",
+  "expect": "Inundaciones"
+ },
+ {
+  "lang": "es",
+  "q": "cómo prepararse para un huracán",
+  "expect": "Huracanes"
+ },
+ {
+  "lang": "es",
+  "q": "dónde me refugio de un tornado",
+  "expect": "Tornados"
+ },
+ {
+  "lang": "es",
+  "q": "hay rayos y estoy en el campo",
+  "expect": "Tormentas eléctricas"
+ },
+ {
+  "lang": "es",
+  "q": "hay humo en mi edificio, cómo salgo",
+  "expect": "Incendio en casa"
+ },
+ {
+  "lang": "es",
+  "q": "el incendio forestal se acerca a mi casa",
+  "expect": "Incendio forestal"
+ },
+ {
+  "lang": "es",
+  "q": "cae ceniza del volcán",
+  "expect": "Erupción volcánica"
+ },
+ {
+  "lang": "es",
+  "q": "cómo aguantar una ola de calor en casa",
+  "expect": "Olas de calor"
+ },
+ {
+  "lang": "es",
+  "q": "señales de un deslizamiento de tierra",
+  "expect": "Deslizamientos"
+ },
+ {
+  "lang": "es",
+  "q": "cómo cuidar a un enfermo contagioso en casa",
+  "expect": "Epidemias"
+ },
+ {
+  "lang": "es",
+  "q": "escape radiactivo cerca, qué hago",
+  "expect": "Emergencia química"
+ },
+ {
+  "lang": "es",
+  "q": "regla de los tres en supervivencia",
+  "expect": "Supervivencia: las prioridades"
+ },
+ {
+  "lang": "es",
+  "q": "cómo potabilizar agua con lejía",
+  "expect": "Agua segura"
+ },
+ {
+  "lang": "es",
+  "q": "cuánto tiempo hay que hervir el agua",
+  "expect": "Agua segura"
+ },
+ {
+  "lang": "es",
+  "q": "cómo hacer un refugio en el bosque",
+  "expect": "Refugio"
+ },
+ {
+  "lang": "es",
+  "q": "cómo encender una fogata",
+  "expect": "Hacer fuego"
+ },
+ {
+  "lang": "es",
+  "q": "cuánto aguanta la comida del congelador sin luz",
+  "expect": "Comida en emergencias"
+ },
+ {
+  "lang": "es",
+  "q": "cómo encontrar el norte con las estrellas",
+  "expect": "Orientarse sin GPS"
+ },
+ {
+  "lang": "es",
+  "q": "me perdí en la montaña",
+  "expect": "Perdido"
+ },
+ {
+  "lang": "es",
+  "q": "señales de socorro para un avión",
+  "expect": "Perdido"
+ },
+ {
+  "lang": "es",
+  "q": "cómo hablar con mi familia sin cobertura",
+  "expect": "Comunicarse cuando no hay internet"
+ },
+ {
+  "lang": "es",
+  "q": "se fue la luz en toda la ciudad",
+  "expect": "Apagón"
+ },
+ {
+  "lang": "es",
+  "q": "no hay agua para el inodoro",
+  "expect": "Baño y basura de emergencia"
+ },
+ {
+  "lang": "es",
+  "q": "choque en la carretera con heridos",
+  "expect": "Accidente de tráfico"
+ },
+ {
+  "lang": "es",
+  "q": "dónde hago un curso de primeros auxilios",
+  "expect": "Aprender más"
+ },
+ {
+  "lang": "en",
+  "q": "what do I do first at an accident scene",
+  "expect": "What to do in an emergency"
+ },
+ {
+  "lang": "en",
+  "q": "someone collapsed and is not breathing",
+  "expect": "CPR for adults"
+ },
+ {
+  "lang": "en",
+  "q": "how to do chest compressions",
+  "expect": "CPR for adults"
+ },
+ {
+  "lang": "en",
+  "q": "my baby is not breathing",
+  "expect": "CPR for children and babies"
+ },
+ {
+  "lang": "en",
+  "q": "where do the AED pads go",
+  "expect": "How to use a defibrillator"
+ },
+ {
+  "lang": "en",
+  "q": "someone is choking on food and can't cough",
+  "expect": "Choking"
+ },
+ {
+  "lang": "en",
+  "q": "how do I stop heavy bleeding",
+  "expect": "Severe bleeding"
+ },
+ {
+  "lang": "en",
+  "q": "how to apply a tourniquet",
+  "expect": "Severe bleeding"
+ },
+ {
+  "lang": "en",
+  "q": "how to clean a cut",
+  "expect": "Wounds, cuts"
+ },
+ {
+  "lang": "en",
+  "q": "I burned my hand with boiling water",
+  "expect": "Burns"
+ },
+ {
+  "lang": "en",
+  "q": "I think my arm is broken",
+  "expect": "Fractures"
+ },
+ {
+  "lang": "en",
+  "q": "he fell and hit his head",
+  "expect": "Head, neck and back"
+ },
+ {
+  "lang": "en",
+  "q": "how to put someone in the recovery position",
+  "expect": "Shock, fainting"
+ },
+ {
+  "lang": "en",
+  "q": "how to use an EpiPen",
+  "expect": "Severe allergic reaction"
+ },
+ {
+  "lang": "en",
+  "q": "asthma attack without inhaler",
+  "expect": "Asthma attack"
+ },
+ {
+  "lang": "en",
+  "q": "chest pain spreading to the left arm",
+  "expect": "Chest pain and heart attack"
+ },
+ {
+  "lang": "en",
+  "q": "face drooping and slurred speech",
+  "expect": "Stroke"
+ },
+ {
+  "lang": "en",
+  "q": "someone is having a seizure",
+  "expect": "Seizures"
+ },
+ {
+  "lang": "en",
+  "q": "diabetic person shaking and confused",
+  "expect": "Low blood sugar"
+ },
+ {
+  "lang": "en",
+  "q": "heat stroke treatment",
+  "expect": "Heat stroke"
+ },
+ {
+  "lang": "en",
+  "q": "frostbite on fingers",
+  "expect": "Hypothermia and frostbite"
+ },
+ {
+  "lang": "en",
+  "q": "child pulled from the pool not breathing",
+  "expect": "Drowning"
+ },
+ {
+  "lang": "en",
+  "q": "my child drank bleach",
+  "expect": "Poisoning"
+ },
+ {
+  "lang": "en",
+  "q": "carbon monoxide symptoms",
+  "expect": "Poisoning"
+ },
+ {
+  "lang": "en",
+  "q": "snake bite first aid",
+  "expect": "Bites and stings"
+ },
+ {
+  "lang": "en",
+  "q": "how to remove a tick",
+  "expect": "Bites and stings"
+ },
+ {
+  "lang": "en",
+  "q": "my nose is bleeding",
+  "expect": "Nosebleeds"
+ },
+ {
+  "lang": "en",
+  "q": "how to comfort someone after a disaster",
+  "expect": "Psychological first aid"
+ },
+ {
+  "lang": "en",
+  "q": "my 2 month old baby has a fever",
+  "expect": "Fever in adults"
+ },
+ {
+  "lang": "en",
+  "q": "homemade oral rehydration solution recipe",
+  "expect": "Diarrhea, vomiting"
+ },
+ {
+  "lang": "en",
+  "q": "how to wash hands properly",
+  "expect": "Hygiene and infection"
+ },
+ {
+  "lang": "en",
+  "q": "what goes in a first aid kit",
+  "expect": "First aid kit"
+ },
+ {
+  "lang": "en",
+  "q": "when should I take my child to the ER",
+  "expect": "Warning signs"
+ },
+ {
+  "lang": "en",
+  "q": "baby is coming and the ambulance is not here",
+  "expect": "Emergency childbirth"
+ },
+ {
+  "lang": "en",
+  "q": "I can't sleep and feel anxious after the earthquake",
+  "expect": "Mental health"
+ },
+ {
+  "lang": "en",
+  "q": "how to prepare my family for a disaster",
+  "expect": "Family emergency plan"
+ },
+ {
+  "lang": "en",
+  "q": "what to pack in a go bag",
+  "expect": "Emergency go-bag"
+ },
+ {
+  "lang": "en",
+  "q": "what to do during an earthquake",
+  "expect": "Earthquake"
+ },
+ {
+  "lang": "en",
+  "q": "the sea suddenly pulled back at the beach",
+  "expect": "Tsunami"
+ },
+ {
+  "lang": "en",
+  "q": "can I drive through a flooded road",
+  "expect": "Floods"
+ },
+ {
+  "lang": "en",
+  "q": "how to prepare for a hurricane",
+  "expect": "Hurricanes"
+ },
+ {
+  "lang": "en",
+  "q": "where to shelter from a tornado",
+  "expect": "Tornadoes"
+ },
+ {
+  "lang": "en",
+  "q": "lightning storm while hiking",
+  "expect": "Thunderstorms and lightning"
+ },
+ {
+  "lang": "en",
+  "q": "smoke in my building, how do I get out",
+  "expect": "Fire at home"
+ },
+ {
+  "lang": "en",
+  "q": "wildfire approaching my house",
+  "expect": "Wildfire"
+ },
+ {
+  "lang": "en",
+  "q": "volcanic ash falling",
+  "expect": "Volcanic eruption"
+ },
+ {
+  "lang": "en",
+  "q": "staying safe in a heat wave",
+  "expect": "Heat waves and extreme cold"
+ },
+ {
+  "lang": "en",
+  "q": "landslide warning signs",
+  "expect": "Landslides"
+ },
+ {
+  "lang": "en",
+  "q": "caring for someone contagious at home",
+  "expect": "Epidemics"
+ },
+ {
+  "lang": "en",
+  "q": "radiation leak nearby what do I do",
+  "expect": "Chemical, nuclear"
+ },
+ {
+  "lang": "en",
+  "q": "survival rule of threes",
+  "expect": "Survival: the priorities"
+ },
+ {
+  "lang": "en",
+  "q": "how to purify water with bleach",
+  "expect": "Safe water"
+ },
+ {
+  "lang": "en",
+  "q": "how long to boil water",
+  "expect": "Safe water"
+ },
+ {
+  "lang": "en",
+  "q": "how to build a shelter in the woods",
+  "expect": "Shelter and keeping warm"
+ },
+ {
+  "lang": "en",
+  "q": "how to start a campfire",
+  "expect": "Making a fire"
+ },
+ {
+  "lang": "en",
+  "q": "how long does freezer food last without power",
+  "expect": "Food in emergencies"
+ },
+ {
+  "lang": "en",
+  "q": "find north using the stars",
+  "expect": "Finding your way without GPS"
+ },
+ {
+  "lang": "en",
+  "q": "I'm lost in the mountains",
+  "expect": "Lost"
+ },
+ {
+  "lang": "en",
+  "q": "ground signals for aircraft",
+  "expect": "Lost"
+ },
+ {
+  "lang": "en",
+  "q": "how to talk to my family with no signal",
+  "expect": "Communicating without internet"
+ },
+ {
+  "lang": "en",
+  "q": "the power is out in the whole city",
+  "expect": "Long power outage"
+ },
+ {
+  "lang": "en",
+  "q": "no water to flush the toilet",
+  "expect": "Emergency toilet"
+ },
+ {
+  "lang": "en",
+  "q": "car crash on the highway with injured people",
+  "expect": "Road traffic crash"
+ },
+ {
+  "lang": "en",
+  "q": "where can I take a first aid course",
+  "expect": "Learn more"
+ }
+]

@@ -59,6 +59,28 @@ build/knowledge-pack/<id>.sqlite.json   its size, SHA-256, article and chunk cou
 
 Wikipedia text is CC BY-SA 4.0; keep the attribution if you share a pack.
 
+### Packs from your own guides
+
+The builder can also take Markdown guides instead of Wikipedia titles:
+
+```bash
+npm run pack:build -- --guides knowledge-packs/nido-esencial --id nido-esencial --embedding e5
+```
+
+Each guide is a `.md` file with front matter (`title`, `lang`, `sources`, and
+optionally `category`) and sections that start with `##`. Every section becomes
+one or more chunks named "Guide title — Section"; very short sections (a
+one-line intro, the closing note) are folded into a neighbour. The pack's
+license and attribution say the text was written by NIDO from the cited
+sources (CC BY 4.0).
+
+`knowledge-packs/nido-esencial/` is NIDO's own pack: 58 guides in Spanish and
+58 in English on first aid, health at home, disasters and survival, written
+from Red Cross, AHA, WHO, UNICEF, CDC, FEMA and other public guidance (each
+guide cites its sources). `scripts/check-pack-retrieval.mjs` checks that real
+questions (`retrieval-checks.json`) find the right guide, and CI
+(`.github/workflows/knowledge-pack.yml`) builds and checks it.
+
 ## Putting a pack on your phone
 
 **For testing, over USB** (a development build of NIDO, USB debugging on):
