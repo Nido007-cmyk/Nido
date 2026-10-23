@@ -1662,7 +1662,7 @@
     "modelsTitle": "AI models and knowledge packs",
     "modelsBody": "They are not inside the app: they are downloaded from their publishers when you choose them, and each keeps its own license.",
     "knowledgeTitle": "Wikipedia text",
-    "knowledgeBody": "The app carries 300 Wikipedia article introductions, and the optional knowledge packs carry more. Text by Wikipedia contributors (wikipedia.org), licensed under CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0). Every answer that uses it shows its article URL. The packs compiled by NIDO are shared under the same license. NIDO is not affiliated with the Wikimedia Foundation.",
+    "knowledgeBody": "The app carries 300 Wikipedia article introductions, and the optional knowledge packs carry more. Text by Wikipedia contributors (wikipedia.org), licensed under CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0). Every answer that uses it shows its article URL. The Wikipedia packs compiled by NIDO are shared under the same license; the NIDO Essentials guides, written by NIDO, are CC BY 4.0. NIDO is not affiliated with the Wikimedia Foundation.",
     "embeddingNote": "The multilingual search model (multilingual-e5-small, by intfloat) is MIT, Copyright (c) Microsoft Corporation; NIDO publishes its GGUF conversion with that notice.",
     "thirdPartyTitle": "Third-party software",
     "thirdPartyBody": "{{count}} open-source packages. Tap one to read its license.",
@@ -1671,7 +1671,8 @@
     "licenseLink": "Official text",
     "notes": {
       "lfm": "Not Apache or MIT: commercial use is only allowed for entities with under USD 10 million in annual revenue, and anyone who redistributes it must give a copy of the license.",
-      "ccBySa": "You may share and adapt it by crediting Wikipedia (and NIDO as compiler of the packs), linking the license, indicating changes and keeping CC BY-SA 4.0."
+      "ccBySa": "You may share and adapt it by crediting Wikipedia (and NIDO as compiler of the packs), linking the license, indicating changes and keeping CC BY-SA 4.0.",
+      "ccByNido": "Guides written by NIDO from public guidance by the Red Cross, the AHA, the WHO and other organizations, which have not reviewed them and do not endorse NIDO. You may share and adapt them, crediting NIDO. General information only: not a substitute for a first aid course; in an emergency, call your emergency number."
     }
   },
   "panic": {

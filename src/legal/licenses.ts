@@ -41,6 +41,12 @@ export const LICENSES: Readonly<Record<string, LicenseInfo>> = {
   },
   "CC BY-SA 4.0 (Wikipedia)": CC_BY_SA,
   "CC BY-SA 4.0 (Wikipedia; compiled by NIDO)": CC_BY_SA,
+  // NIDO Esencial: guides written by NIDO (knowledge-packs/nido-esencial).
+  "CC BY 4.0 (NIDO)": {
+    name: "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+    url: "https://creativecommons.org/licenses/by/4.0/",
+    noteKey: "licenses.notes.ccByNido",
+  },
 };
 
 export function licenseInfo(label: string): LicenseInfo | null {
