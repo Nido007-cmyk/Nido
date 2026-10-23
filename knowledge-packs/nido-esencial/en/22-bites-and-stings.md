@@ -32,8 +32,9 @@ Note: in Australia and some regions, for snakes whose venom affects the nerves, 
 
 ## Jellyfish
 1. Get out of the water. Remove tentacles with tweezers or a gloved hand.
-2. For many jellyfish, rinsing with vinegar helps (not for all species; follow beach signs). Do not rinse with fresh water or rub.
-3. Then, water as hot as can be tolerated (without burning) for 20 minutes relieves pain.
+2. Don't rub the area.
+3. For pain, immerse or rinse the area in water as hot as can be tolerated without scalding (about 20 minutes).
+4. If beach lifeguards advise a different treatment for local jellyfish, follow it.
 
 ## Important
 Based on the AHA, American Red Cross, Canadian Red Cross and WHO guidance.

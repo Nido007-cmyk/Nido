@@ -32,8 +32,9 @@ Nota: en Australia y algunas zonas, para serpientes cuyo veneno ataca los nervio
 
 ## Medusas
 1. Sal del agua. Quita los tentáculos con pinzas o con la mano enguantada.
-2. Para muchas medusas, lavar con vinagre ayuda (no en todas las especies; sigue los avisos de la playa). No lavar con agua dulce ni frotar.
-3. Después, agua lo más caliente que se tolere (sin quemar) durante 20 minutos alivia el dolor.
+2. No frotes la zona.
+3. Para el dolor, sumerge o lava la zona con agua lo más caliente que se tolere sin quemar (unos 20 minutos).
+4. Si los socorristas de la playa indican otro tratamiento para las medusas de esa zona, síguelo.
 
 ## Importante
 Basado en las directrices de la AHA, la Cruz Roja Americana, la Cruz Roja Canadiense y la OMS.

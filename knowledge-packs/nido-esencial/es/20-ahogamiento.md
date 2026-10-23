@@ -2,7 +2,7 @@
 title: Ahogamiento y rescate en el agua
 category: Primeros auxilios
 lang: es
-sources: AHA y Cruz Roja Americana, directrices 2024; OMS, prevención de ahogamientos; Cruz Roja Canadiense 2020
+sources: AHA y Cruz Roja Americana, directrices 2024; Consejo Europeo de Resucitación (ERC), guías 2021; OMS, prevención de ahogamientos; Cruz Roja Canadiense 2020
 ---
 Alguien que se ahoga casi nunca grita ni hace señales: se hunde en silencio en segundos.
 

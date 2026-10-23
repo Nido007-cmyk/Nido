@@ -15,7 +15,7 @@ La anafilaxia es una reacción alérgica grave que puede matar en minutos. Suele
 ## Qué hacer
 1. Llama de inmediato al número de emergencias.
 2. Si la persona tiene un autoinyector de adrenalina (epinefrina, por ejemplo EpiPen), ayúdala a usarlo en el muslo, por la parte externa (puede atravesar la ropa). Sigue las instrucciones del dispositivo y mantenlo apretado el tiempo que indica.
-3. Si en 5 a 15 minutos no mejora y hay un segundo autoinyector, se puede poner otra dosis.
+3. Si a los 5–10 minutos no mejora, la ayuda aún no ha llegado y hay un segundo autoinyector, se puede poner otra dosis.
 4. Posición: si le cuesta respirar, sentada. Si está mareada o pálida, tumbada con las piernas algo elevadas. No la pongas de pie ni la hagas caminar.
 5. Si deja de responder y no respira normal, empieza la RCP.
 6. Aunque mejore, debe ir al hospital: la reacción puede volver horas después.

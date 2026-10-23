@@ -34,7 +34,8 @@ concurrency:
 
 env:
   PACK: ${{ inputs.pack || 'nido-esencial' }}
-  RELEASE_TAG: knowledge-packs-v3
+  # v3 is published and pinned by the signed catalog: never overwrite it.
+  RELEASE_TAG: knowledge-packs-v4
   # Fixed so a rebuild from the same text gives the same file.
   BUILT_AT: '2026-10-23T00:00:00Z'
   VITAL_BGE_URL: https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v1/wiki-vital5.sqlite
@@ -156,8 +157,12 @@ jobs:
           in an emergency, call your local emergency number.
           TXT
           fi
+          if gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft 2>/dev/null | grep -qx false; then
+            echo "::error title=Knowledge pack::$RELEASE_TAG is already published; its files are pinned by the signed catalog. Use a new tag."
+            exit 1
+          fi
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release create "$RELEASE_TAG" --draft --title "Knowledge packs v3" \
+            gh release create "$RELEASE_TAG" --draft --title "Knowledge packs ${RELEASE_TAG#knowledge-packs-}" \
               --notes "Draft: knowledge packs built by .github/workflows/knowledge-pack.yml. Published with the app version that offers them."
           fi
           gh release upload "$RELEASE_TAG" --clobber \

@@ -15,7 +15,7 @@ En un infarto, cada minuto cuenta. No esperes a ver si se pasa.
 ## Qué hacer
 1. Llama de inmediato al número de emergencias.
 2. Que la persona deje de hacer esfuerzo. Siéntala semirrecostada, en la posición más cómoda.
-3. Si es un adulto despierto, no es alérgico a la aspirina, no está sangrando y su médico no se lo ha prohibido: que mastique una aspirina para adultos (entre 160 y 325 mg, o 2 a 4 aspirinas infantiles de 81 mg) y la trague.
+3. Si es un adulto despierto, no es alérgico a la aspirina, no está sangrando y su médico no se lo ha prohibido: que mastique una aspirina para adultos (entre 162 y 325 mg, o 2 a 4 aspirinas infantiles de 81 mg) y la trague.
 4. Si tiene medicación recetada para la angina (nitroglicerina), ayúdala a tomarla.
 5. Afloja la ropa, tranquilízala y no la dejes sola.
 6. Si dejan de responder y no respiran normal, empieza la RCP y pide un desfibrilador.
