@@ -3,7 +3,7 @@
  * Copyright (c) 2026 NIDO contributors
  * See LICENSE file for details.
  *
- * 0.1.56 — search in the chat history and in Settings. Accent- and
+ * 0.1.55 — search in the chat history and in Settings. Accent- and
  * case-insensitive, every word must appear ("ajustes voz" finds "Voz").
  */
 

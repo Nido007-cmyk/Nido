@@ -19,7 +19,7 @@ interface Props {
   deepResearchActive: boolean;
   activeModelLabel?: string;
   onOpenDrawer: () => void;
-  /** 0.1.56: el tono pasó al chip junto al cuadro de texto; aquí es opcional. */
+  /** 0.1.55: el tono pasó al chip junto al cuadro de texto; aquí es opcional. */
   onCycleTone?: () => void;
   onNewChat: () => void;
   onToggleDeepResearch?: () => void;

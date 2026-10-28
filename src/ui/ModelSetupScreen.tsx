@@ -76,7 +76,7 @@ type Props =
   | { mode: "required"; onReady: () => void; onKeyLossError?: (e: KeyLossError) => void }
   | OptionalProps;
 
-/** 0.1.56: Settings also opens Mi memoria, the execution telemetry and About. */
+/** 0.1.55: Settings also opens Mi memoria, the execution telemetry and About. */
 type OptionalProps = {
   mode: "optional";
   onClose: () => void;
@@ -85,7 +85,7 @@ type OptionalProps = {
   onOpenMemory?: () => void;
   onOpenTelemetry?: () => void;
   onOpenAbout?: () => void;
-  /** 0.1.56: only the knowledge packs (the Library tab embeds them). */
+  /** 0.1.55: only the knowledge packs (the Library tab embeds them). */
   section?: "knowledge";
 };
 
@@ -160,7 +160,7 @@ export function ModelSetupScreen(props: Props) {
     }
   };
   const [resetting, setResetting] = useState(false);
-  // 0.1.56: buscador de Ajustes y la pantalla de clave/rotación (antes solo en Acerca de).
+  // 0.1.55: buscador de Ajustes y la pantalla de clave/rotación (antes solo en Acerca de).
   const [settingsQuery, setSettingsQuery] = useState("");
   const [showBackupScreen, setShowBackupScreen] = useState(false);
   const [, forceRender] = useState(0);
@@ -431,7 +431,7 @@ export function ModelSetupScreen(props: Props) {
     return <BackupScreen onClose={() => setShowBackupScreen(false)} />;
   }
 
-  // 0.1.56: Biblioteca › Packs: the same download / remove logic, without the rest of Settings.
+  // 0.1.55: Biblioteca › Packs: the same download / remove logic, without the rest of Settings.
   if ((props as OptionalProps).section === "knowledge") {
     return (
       <View style={styles.container}>
@@ -443,7 +443,7 @@ export function ModelSetupScreen(props: Props) {
     );
   }
 
-  // 0.1.56: grupos con título y buscador. Con búsqueda, los títulos de grupo
+  // 0.1.55: grupos con título y buscador. Con búsqueda, los títulos de grupo
   // se ocultan y las secciones que coinciden se abren solas.
   const searching = settingsQuery.trim().length > 0;
   const searchKey = searching ? "open" : "closed";

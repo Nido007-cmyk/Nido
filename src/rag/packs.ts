@@ -314,7 +314,7 @@ export async function answerFromPackFacts(text: string, lang: FactLang): Promise
 }
 
 /**
- * 0.1.56: every verified fact of the installed v2 packs, for the Emergency
+ * 0.1.55: every verified fact of the installed v2 packs, for the Emergency
  * tab. A country covered by two packs keeps the first pack's numbers (the
  * catalog order), so one screen never mixes two sources. Never throws.
  */

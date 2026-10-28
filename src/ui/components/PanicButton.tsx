@@ -110,7 +110,7 @@ export function PanicButton({ onWiped, onError }: Props) {
         <Animated.View
           style={[styles.fill, { width: progress.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }) }]}
         />
-        {/* 0.1.56: a shield, not «SOS»: the Emergency tab is where you ask for help. */}
+        {/* 0.1.55: a shield, not «SOS»: the Emergency tab is where you ask for help. */}
         <NidoIcon name="security" size={14} color={colors.crimson[600]} />
         <Text style={styles.label}>{wiping ? t("panic.wiping") : t("panic.short")}</Text>
       </View>

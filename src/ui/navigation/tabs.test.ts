@@ -17,7 +17,7 @@ const ICON_NAMES = [...REGISTRY.slice(REGISTRY.indexOf("ICON_NAMES"), REGISTRY.i
 const get = (obj: unknown, path: string): unknown =>
   path.split(".").reduce<unknown>((o, k) => (o && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined), obj);
 
-describe("barra inferior (0.1.56)", () => {
+describe("barra inferior (0.1.55)", () => {
   it("cinco secciones, en este orden, con Emergencia al alcance del pulgar", () => {
     expect(MAIN_TABS).toEqual(["chat", "emergency", "library", "nido", "settings"]);
   });

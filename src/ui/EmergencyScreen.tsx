@@ -3,7 +3,7 @@
  * Copyright (c) 2026 NIDO contributors
  * See LICENSE file for details.
  *
- * 0.1.56 — Emergency tab. The checked emergency numbers of the chosen country
+ * 0.1.55 — Emergency tab. The checked emergency numbers of the chosen country
  * (straight from the knowledge packs' verified facts: no model, source and
  * date shown), one-tap calling (opens the phone's dialer, the person presses
  * call), "describe what's happening" into the chat, and quick guides.

@@ -3,7 +3,7 @@
  * Copyright (c) 2026 NIDO contributors
  * See LICENSE file for details.
  *
- * 0.1.56 — bottom tab bar: Chat · Emergency · Library · NIDO · Settings.
+ * 0.1.55 — bottom tab bar: Chat · Emergency · Library · NIDO · Settings.
  * Every main section is one tap away (before, most lived behind the drawer).
  * The Emergency icon is always red: it has to be findable in a hurry.
  */

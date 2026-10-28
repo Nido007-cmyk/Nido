@@ -3,7 +3,7 @@
  * Copyright (c) 2026 NIDO contributors
  * See LICENSE file for details.
  *
- * 0.1.56 — the five main sections, always one tap away (bottom tab bar).
+ * 0.1.55 — the five main sections, always one tap away (bottom tab bar).
  * Pure: which tab owns which screen, so the drawer, deep links and the bar
  * agree and no screen is left without a way back.
  */

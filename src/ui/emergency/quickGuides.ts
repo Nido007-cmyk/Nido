@@ -3,7 +3,7 @@
  * Copyright (c) 2026 NIDO contributors
  * See LICENSE file for details.
  *
- * 0.1.56 — quick guides on the Emergency tab. Each one sends a plain
+ * 0.1.55 — quick guides on the Emergency tab. Each one sends a plain
  * question to the chat, which answers from the NIDO Esencial guides on the
  * phone ("RCP (reanimación)…", "Hemorragias graves…", "Atragantamiento…",
  * "Quemaduras", "Terremoto", "Huracanes, ciclones…"). Labels and questions

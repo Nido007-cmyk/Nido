@@ -37,7 +37,7 @@ export interface PackFact {
 
 export interface FactsAnswer {
   text: string;
-  /** 0.1.56: the numbers in the order the text gives them, for "Call" buttons. */
+  /** 0.1.55: the numbers in the order the text gives them, for "Call" buttons. */
   calls: Array<{ value: string; label: string; tel: string }>;
   region: string;
   facts: PackFact[];
@@ -194,7 +194,7 @@ export function composeFactsAnswer(text: string, lang: FactLang, regions: PackRe
 }
 
 // ---------------------------------------------------------------------------
-// 0.1.56: the Emergency tab — the same verified facts, laid out per country.
+// 0.1.55: the Emergency tab — the same verified facts, laid out per country.
 
 export interface EmergencyNumber {
   key: string;

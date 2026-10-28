@@ -55,7 +55,7 @@ interface Settings {
   /** 0.1.51: the hardware-vault offer on the main screen: "never" or snoozed until (epoch ms). */
   vaultOfferNever?: boolean;
   vaultOfferSnoozeUntil?: number;
-  /** 0.1.56: country chosen on the Emergency tab (ISO 3166-1 alpha-2). */
+  /** 0.1.55: country chosen on the Emergency tab (ISO 3166-1 alpha-2). */
   emergencyRegion?: string;
 }
 
@@ -392,7 +392,7 @@ export function deviceRegion(): string | null {
   }
 }
 
-/** 0.1.56: the Emergency tab's country; the device's region until the user picks one. */
+/** 0.1.55: the Emergency tab's country; the device's region until the user picks one. */
 export async function getEmergencyRegion(): Promise<string | null> {
   const s = await readSettings();
   return s.emergencyRegion ?? deviceRegion();

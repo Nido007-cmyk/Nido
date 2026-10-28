@@ -78,7 +78,7 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
           <Text style={styles.paragraph}>{t("aboutScreen.airGappedBody")}</Text>
         </View>
 
-        {/* 0.1.56: el registro de red, la comprobación de seguridad, el diagnóstico
+        {/* 0.1.55: el registro de red, la comprobación de seguridad, el diagnóstico
             de cierres, las habilidades, las tareas programadas y los permisos del
             agente se movieron a Ajustes (Seguridad, Asistente y Diagnóstico). */}
         {/* U1: acceso a respaldo, clave de cifrado y rotación de clave. */}

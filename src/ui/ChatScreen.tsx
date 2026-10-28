@@ -157,7 +157,7 @@ interface Message {
   timedOut?: boolean;
   interruptedByBackground?: boolean;
   feedback?: "up" | "down" | null;
-  /** 0.1.56: "Call" buttons under an emergency-number answer (verified facts). */
+  /** 0.1.55: "Call" buttons under an emergency-number answer (verified facts). */
   calls?: Array<{ value: string; label: string; tel: string }>;
 }
 
@@ -213,7 +213,7 @@ export function ChatScreen({
   const [showMemoryManager, setShowMemoryManager] = useState(false);
   const [showExecutionTelemetry, setShowExecutionTelemetry] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  // 0.1.56: barra inferior. Ajustes y NIDO siguen siendo showSettings /
+  // 0.1.55: barra inferior. Ajustes y NIDO siguen siendo showSettings /
   // showNido (sus efectos dependen de ellos); Emergencia y Biblioteca son
   // pestañas nuevas. La pestaña visible sale de effectiveTab, más abajo.
   const [activeTab, setActiveTab] = useState<MainTab>("chat");
@@ -523,7 +523,7 @@ export function ChatScreen({
     setToast(t("chatScreen.toneChanged", { tone: `${getPersonality(next).icon} ${t(`personalities.${next}.label`)}` }));
   }, [personalityId, t]);
 
-  // 0.1.56: Investigación profunda también desde el chat (chip junto al
+  // 0.1.55: Investigación profunda también desde el chat (chip junto al
   // cuadro de texto); sigue guardándose en Ajustes, que lo muestra igual.
   const toggleDeepResearch = useCallback(async () => {
     const next = !deepResearchModeRef.current;
@@ -2321,7 +2321,7 @@ export function ChatScreen({
               </Text>
             </View>
           )}
-          {/* 0.1.56: tono e investigación, junto a donde se escribe (antes, en la cabecera y en Ajustes). */}
+          {/* 0.1.55: tono e investigación, junto a donde se escribe (antes, en la cabecera y en Ajustes). */}
           <View style={styles.modeChips}>
             <Pressable
               accessibilityRole="button"

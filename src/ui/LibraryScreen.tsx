@@ -3,7 +3,7 @@
  * Copyright (c) 2026 NIDO contributors
  * See LICENSE file for details.
  *
- * 0.1.56 — Library tab: your documents, learning NIDO, and the way to the
+ * 0.1.55 — Library tab: your documents, learning NIDO, and the way to the
  * knowledge packs. It reuses the existing pieces (PersonalDocumentsManager,
  * the user guide, the prompt ideas and Settings' knowledge-pack list, embedded)
  * so no control changes behaviour; only where it lives.

@@ -100,7 +100,7 @@ describe("preguntas indexadas en la búsqueda léxica (packs v2)", () => {
   });
 });
 
-describe("pestaña Emergencia (0.1.56)", () => {
+describe("pestaña Emergencia (0.1.55)", () => {
   it("ordena primero la ambulancia o el número único, y da el tel: solo con cifras", async () => {
     const { emergencyCard } = await import("./packFacts");
     const cl = emergencyCard("CL", "es", regions, facts)!;

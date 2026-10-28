@@ -3,7 +3,7 @@
  * Copyright (c) 2026 NIDO contributors
  * See LICENSE file for details.
  *
- * 0.1.56 — nueva interfaz, fase 2: Ajustes agrupado y con buscador. Nada se
+ * 0.1.55 — nueva interfaz, fase 2: Ajustes agrupado y con buscador. Nada se
  * pierde: cada tarjeta que salió de «Acerca de» está ahora en Ajustes, y
  * cada sección vieja sigue en Ajustes.
  */
@@ -14,7 +14,7 @@ const SETTINGS = readFileSync(new URL("./ModelSetupScreen.tsx", import.meta.url)
 const ABOUT = readFileSync(new URL("./AboutScreen.tsx", import.meta.url), "utf8");
 const CHAT = readFileSync(new URL("./ChatScreen.tsx", import.meta.url), "utf8");
 
-describe("Ajustes por grupos (0.1.56)", () => {
+describe("Ajustes por grupos (0.1.55)", () => {
   it("las tarjetas que estaban en Acerca de viven ahora en Ajustes, una sola vez", () => {
     for (const card of ["SecurityStatusCard", "NetworkAuditCard", "CrashReportCard", "SkillsCard", "ScheduledTasksCard", "AgentPermissionsCard"]) {
       expect(SETTINGS).toContain(`<${card} />`);

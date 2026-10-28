@@ -62,7 +62,7 @@ export function Drawer({
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
-  // 0.1.56: buscar en el historial (sin tildes ni mayúsculas).
+  // 0.1.55: buscar en el historial (sin tildes ni mayúsculas).
   const [query, setQuery] = useState("");
   const shown = useMemo(() => filterByTitle(sessions ?? [], query), [sessions, query]);
   useEffect(() => {

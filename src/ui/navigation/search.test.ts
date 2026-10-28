@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 import { filterByTitle, foldSearch, matchesSearch } from "./search";
 
-describe("búsqueda en historial y ajustes (0.1.56)", () => {
+describe("búsqueda en historial y ajustes (0.1.55)", () => {
   it("ignora tildes, mayúsculas y espacios de más", () => {
     expect(foldSearch("  Investigación   PROFUNDA ")).toBe("investigacion profunda");
     expect(matchesSearch("investigacion", "Investigación profunda")).toBe(true);
