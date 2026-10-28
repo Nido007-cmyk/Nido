@@ -21,12 +21,15 @@ import { buildLexicalQuery, cosineSimilarityInt8, distinctFloor, DISTINCT_BG_TO,
 import type { RetrievedChunk } from "./retrieve.types";
 import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "./embeddingProfile";
 import { packIndexIfReady, releaseAllIndexes, searchPackIndex } from "./vectorIndex";
+import { composeFactsAnswer, type FactLang, type FactsAnswer, type PackFact, type PackRegion } from "./packFacts";
 
 const PACK_CANDIDATES = 400;
 const REQUIRED_EMBEDDING_SHA256 = MODEL_CATALOG.find((m) => m.kind === "embedding" && m.required)!.sha256;
 
 interface OpenPack {
   db: SQLite.SQLiteDatabase;
+  /** meta.formatVersion: 2 adds guides, regions, facts and chunks.keys (0.1.55). */
+  formatVersion: number;
   /** Embedding model the pack's vectors were made with (meta.embeddingModelSha256). */
   modelSha256: string;
   sizeBytes: number;
@@ -69,6 +72,7 @@ export async function knowledgePacks(): Promise<CatalogModel[]> {
 export async function closePack(id: string): Promise<void> {
   const open = openPacks.get(id);
   openPacks.delete(id);
+  factsCache.delete(id);
   await open?.db.closeAsync().catch(() => {});
 }
 
@@ -113,6 +117,7 @@ async function openPack(pack: CatalogModel): Promise<OpenPack | null> {
   }
   const open: OpenPack = {
     db,
+    formatVersion: Number(meta.formatVersion) > 0 ? Number(meta.formatVersion) : 1,
     modelSha256: String(meta.embeddingModelSha256 ?? ""),
     sizeBytes: (info as { size?: number }).size ?? 0,
     dims: Number(meta.dims) > 0 ? Number(meta.dims) : 384,
@@ -121,7 +126,7 @@ async function openPack(pack: CatalogModel): Promise<OpenPack | null> {
   return open;
 }
 
-type PackRow = { id: number; title: string; body: string; vec: Uint8Array; rank: number };
+type PackRow = { id: number; title: string; body: string; keys?: string; vec: Uint8Array; rank: number };
 
 export interface PackSearchOptions {
   /** Search settings of the model that embedded the question. */
@@ -166,7 +171,7 @@ export async function searchPacks(
       });
       const rows = lexicalQuery
         ? await db.getAllAsync<PackRow>(
-            `SELECT c.id, c.title, c.body, c.vec, bm25(chunks_fts) AS rank
+            `SELECT c.id, c.title, c.body, ${open.formatVersion >= 2 ? "c.keys," : ""} c.vec, bm25(chunks_fts) AS rank
              FROM chunks_fts f JOIN chunks c ON c.id = f.rowid
              WHERE chunks_fts MATCH ? ORDER BY rank LIMIT ?`,
             [lexicalQuery.match, PACK_CANDIDATES]
@@ -250,4 +255,87 @@ export async function prepareVectorIndexes(modelSha256: string | null, profile: 
   } catch (e) {
     console.warn("[packs] prepareVectorIndexes:", e instanceof Error ? e.message : String(e));
   }
+}
+
+/** Verified facts read once per open pack (they never change while it's installed). */
+const factsCache = new Map<string, { regions: PackRegion[]; facts: PackFact[] }>();
+
+async function packFacts(packId: string, open: OpenPack): Promise<{ regions: PackRegion[]; facts: PackFact[] }> {
+  const cached = factsCache.get(packId);
+  if (cached && openPacks.get(packId) === open) return cached;
+  const empty = { regions: [], facts: [] };
+  if (open.formatVersion < 2) return empty;
+  const parse = (json: string): any => {
+    try {
+      return JSON.parse(json);
+    } catch {
+      return {};
+    }
+  };
+  const regionRows = await open.db.getAllAsync<{ code: string; names: string; aliases: string; phrases: string }>(
+    "SELECT code, names, aliases, phrases FROM regions"
+  );
+  const factRows = await open.db.getAllAsync<{
+    region: string; key: string; value: string; label: string; note: string;
+    source_title: string; source_url: string; quote: string; checked: string;
+  }>("SELECT region, key, value, label, note, source_title, source_url, quote, checked FROM facts ORDER BY id");
+  const out = {
+    regions: regionRows.map((r) => {
+      const aliases = parse(r.aliases);
+      return { code: r.code, names: parse(r.names), phrases: parse(r.phrases), aliases: Array.isArray(aliases) ? aliases.map(String) : [] };
+    }),
+    facts: factRows.map((f) => ({
+      region: f.region, key: f.key, value: f.value, label: parse(f.label), note: parse(f.note),
+      sourceTitle: f.source_title, sourceUrl: f.source_url, quote: f.quote, checked: f.checked,
+    })),
+  };
+  factsCache.set(packId, out);
+  return out;
+}
+
+/**
+ * 0.1.55: "what number do I call in X?" answered from the verified facts of
+ * the installed packs (source and date cited), or null to follow the normal
+ * path. The first pack that covers the country answers. Never throws.
+ */
+export async function answerFromPackFacts(text: string, lang: FactLang): Promise<FactsAnswer | null> {
+  try {
+    for (const pack of await knowledgePacks()) {
+      const open = await openPack(pack).catch(() => null);
+      if (!open || open.formatVersion < 2) continue;
+      const { regions, facts } = await packFacts(pack.id, open).catch(() => ({ regions: [], facts: [] }));
+      const answer = composeFactsAnswer(text, lang, regions, facts);
+      if (answer) return answer;
+    }
+  } catch (e) {
+    console.warn("[packs] answerFromPackFacts:", e instanceof Error ? e.message : String(e));
+  }
+  return null;
+}
+
+/**
+ * 0.1.55: every verified fact of the installed v2 packs, for the Emergency
+ * tab. A country covered by two packs keeps the first pack's numbers (the
+ * catalog order), so one screen never mixes two sources. Never throws.
+ */
+export async function loadAllPackFacts(): Promise<{ regions: PackRegion[]; facts: PackFact[] }> {
+  const regions: PackRegion[] = [];
+  const facts: PackFact[] = [];
+  const taken = new Set<string>();
+  try {
+    for (const pack of await knowledgePacks()) {
+      const open = await openPack(pack).catch(() => null);
+      if (!open || open.formatVersion < 2) continue;
+      const data = await packFacts(pack.id, open).catch(() => ({ regions: [] as PackRegion[], facts: [] as PackFact[] }));
+      for (const r of data.regions) {
+        if (taken.has(r.code)) continue;
+        taken.add(r.code);
+        regions.push(r);
+        facts.push(...data.facts.filter((f) => f.region === r.code));
+      }
+    }
+  } catch (e) {
+    console.warn("[packs] loadAllPackFacts:", e instanceof Error ? e.message : String(e));
+  }
+  return { regions, facts };
 }

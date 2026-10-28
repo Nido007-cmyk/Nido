@@ -19,6 +19,53 @@ All notable changes to NIDO are recorded here. Versions follow
   license text. The license texts of the Android libraries are not
   reproduced yet.
 
+## 0.1.55-alpha — 2026-10-28
+
+### Added
+- **New interface.** A bottom bar puts the five main sections one tap away:
+  Chat, Emergency, Library, NIDO and Settings.
+  - **Emergency** (new) shows your country's checked emergency numbers with
+    their source and date. "Call" opens the phone's dialer with the number
+    typed in. "Describe what's happening" and quick guides (CPR, bleeding,
+    choking, burns, earthquake, hurricane) write the question into the chat.
+  - **Library** (new) gathers the knowledge packs (download, remove,
+    multilingual search), your documents, the guide and prompt ideas. The
+    packs are still in Settings too.
+  - **Settings** is grouped into nine sections (security, assistant, models,
+    memory, appearance, backup, diagnostics, help, danger zone) and has a
+    search box. The security check, network log, crash diagnostics, agent
+    permissions and activity, skills and scheduled tasks moved there from
+    About. Settings also opens My memory, the execution telemetry, About and
+    the backup key screen.
+  - **Chat:** tone and deep research are chips next to the input. Deep
+    research can now be switched on from the chat too. An emergency-number
+    answer comes with "Call" buttons; they open the dialer.
+  - **Chat history** has a search box.
+  - **Wipe button:** now a red shield labelled "Wipe" instead of "SOS", so it
+    isn't mistaken for asking for help.
+  - **No control was removed.** Every button is still there, in its new place.
+- **NIDO Local knowledge pack: 23 countries.** Guides by country, in
+  Spanish and English, with the emergency numbers checked against an
+  official source: Cuba, Dominican Republic, Puerto Rico, Mexico, Guatemala,
+  Honduras, El Salvador, Nicaragua, Costa Rica, Panama, Colombia, Venezuela,
+  Ecuador, Peru, Bolivia, Chile, Argentina, Uruguay, Paraguay, Spain,
+  Portugal, Brazil and the United States. Where we could check it, also who
+  issues warnings and what each official alert means (Cuba's cyclone phases,
+  the COE alerts, NWS watches and warnings, Mexico's hurricane colors and
+  earthquake alert, Chile's SAE, Spain's ES-Alert, Brazil's Civil Defense
+  SMS, US Wireless Emergency Alerts). Optional download; it can also be
+  passed phone to phone. Built in knowledge-packs-v5; the catalog entry
+  needs the maintainer's signature.
+- **Emergency numbers answered from verified facts.** Ask "what number do I
+  call for an ambulance in Chile?" and, with NIDO Local installed, the answer
+  comes straight from the pack's facts table: the number you asked for first,
+  the others after, and the official source with the date it was checked. No
+  search ranking and no model in between, so it can't be made up.
+- **Weekly source check.** Every number in the packs is stored with the exact
+  quote from its official page; a weekly check reopens each page and flags
+  any quote that is gone, so a changed number is caught before the next
+  release.
+
 ## 0.1.54-alpha — 2026-10-23
 
 ### Fixed

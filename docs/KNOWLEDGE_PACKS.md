@@ -81,6 +81,29 @@ guide cites its sources). `scripts/check-pack-retrieval.mjs` checks that real
 questions (`retrieval-checks.json`) find the right guide, and CI
 (`.github/workflows/knowledge-pack.yml`) builds and checks it.
 
+### Format v2: indexed questions and verified facts (0.1.55)
+
+A guide can also declare, in its front matter, `id` (stable across languages,
+e.g. `local-chile`), `region` (ISO 3166-1 code), `verified` (the date it was
+last checked) and `questions` (real questions it answers, separated by `|`).
+A section can list its own with a line `<!-- preguntas: … | … -->` (or
+`questions:`). These questions are indexed with the section (full-text and
+embedding) but never shown; keep the questions in `retrieval-checks.json`
+different from them, so the check still measures real retrieval.
+
+A pack folder can carry `facts.json`: regions (names, "in X" phrases, aliases)
+and facts, each with `key`, `region`, `value`, `label` in es/en/pt and a
+`source` with `title`, `url`, the exact `quote` from that page and the
+`checked` date. The builder refuses a fact without all of it. The app answers
+"what number do I call in X?" from this table, without retrieval or the model,
+and cites the source and date. `scripts/check-pack-claims.mjs` reopens every
+source and checks the quote is still there; `.github/workflows/pack-claims.yml`
+runs it weekly.
+
+A v2 pack (`meta.formatVersion = 2`) adds the tables `guides`, `regions`,
+`facts` and the column `chunks.keys`; older app versions keep reading it as
+before.
+
 ## Putting a pack on your phone
 
 **For testing, over USB** (a development build of NIDO, USB debugging on):

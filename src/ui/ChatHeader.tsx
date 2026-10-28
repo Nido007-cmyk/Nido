@@ -19,7 +19,8 @@ interface Props {
   deepResearchActive: boolean;
   activeModelLabel?: string;
   onOpenDrawer: () => void;
-  onCycleTone: () => void;
+  /** 0.1.55: el tono pasó al chip junto al cuadro de texto; aquí es opcional. */
+  onCycleTone?: () => void;
   onNewChat: () => void;
   onToggleDeepResearch?: () => void;
   /** 0.1.46: botón de pánico (solo si el usuario lo activó). */
@@ -92,15 +93,17 @@ export function ChatHeader({
         {/* Right Action Controls */}
         <View style={styles.rightActions}>
           {panicSlot}
-          {/* Tone Selector Pill */}
-          <Pressable accessibilityRole="button"
-            style={styles.tonePill}
-            onPress={() => handlePress(onCycleTone)}
-            hitSlop={6}
-            accessibilityLabel={t("chatHeader.cycleTone")}
-          >
-            <Text style={styles.tonePillEmoji}>{toneIcon}</Text>
-          </Pressable>
+          {/* Tone Selector Pill (only when the screen still wants it here) */}
+          {onCycleTone && (
+            <Pressable accessibilityRole="button"
+              style={styles.tonePill}
+              onPress={() => handlePress(onCycleTone)}
+              hitSlop={6}
+              accessibilityLabel={t("chatHeader.cycleTone")}
+            >
+              <Text style={styles.tonePillEmoji}>{toneIcon}</Text>
+            </Pressable>
+          )}
 
           {/* New Chat Button */}
           <Pressable accessibilityRole="button"
