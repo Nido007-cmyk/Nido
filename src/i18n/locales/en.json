@@ -25,7 +25,11 @@
     "subtitle": "Your agent. Your world.",
     "newChat": "New chat",
     "recentSessions": "Recent chats",
-    "deleteSession": "Delete chat: {{title}}"
+    "deleteSession": "Delete chat: {{title}}",
+    "searchPlaceholder": "Search your chats",
+    "searchLabel": "Search your chats",
+    "noMatches": "No chat matches.",
+    "shortcuts": "Shortcuts"
   },
   "catalogItemCard": {
     "calculating": "Calculating…",
@@ -405,7 +409,7 @@
     "deleteBusy": "A response is being sent. Wait a moment and try again."
   },
   "chatHeader": {
-    "openDrawer": "Open Navigation Drawer",
+    "openDrawer": "Chat history and shortcuts",
     "offline": "Offline",
     "localLlmCore": "Local model",
     "cycleTone": "Cycle Assistant Tone",
@@ -486,7 +490,11 @@
       "hintDraft": "Tap to do it. The rest stays in the box so you can send it separately.",
       "runA11y": "Do it: {{action}}",
       "dismiss": "Dismiss"
-    }
+    },
+    "toneChip": "Tone: {{tone}}",
+    "researchChip": "Research",
+    "researchOn": "Deep research on",
+    "researchOff": "Deep research off"
   },
   "aboutScreen": {
     "title": "About NIDO",
@@ -1739,5 +1747,36 @@
     "learnBody": "A short guide with examples you can tap to try each feature.",
     "openGuide": "Open the guide",
     "promptIdeas": "Prompt ideas"
+  },
+  "settingsGroups": {
+    "security": "Security and privacy",
+    "assistant": "Assistant",
+    "models": "Models and knowledge",
+    "memory": "Memory and chats",
+    "appearance": "Appearance, language and voice",
+    "backup": "Backup",
+    "diagnostics": "Diagnostics",
+    "help": "Help and information",
+    "danger": "Danger zone"
+  },
+  "settingsSearch": {
+    "placeholder": "Search settings",
+    "label": "Search settings",
+    "empty": "No setting matches “{{query}}”.",
+    "clear": "Clear the search"
+  },
+  "settingsMore": {
+    "checkSection": "Security check and network log",
+    "agentSection": "Agent permissions and activity",
+    "openMemory": "Open My memory",
+    "openMemoryDesc": "Facts, notes, people and reminders NIDO keeps about you.",
+    "openTelemetry": "Open execution telemetry",
+    "openTelemetryDesc": "Speed, timings and memory of every answer. Export as JSON or CSV and evaluate models.",
+    "crashSection": "Crash diagnostics",
+    "backupKeyDesc": "See your encryption key or rotate it.",
+    "openBackupKey": "See my key or rotate it",
+    "aboutSection": "About NIDO",
+    "aboutDesc": "Version, privacy, limits, open source and licenses.",
+    "openAbout": "Open About"
   }
 }

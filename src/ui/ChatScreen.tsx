@@ -51,6 +51,7 @@ import {
   MemorySettings as MemorySettingsType,
   DEFAULT_MEMORY_SETTINGS,
   getDeepResearchMode,
+  setDeepResearchMode,
   getVoiceInputEnabled,
   getReadAloudEnabled,
   getAdaptiveRoutingEnabled,
@@ -518,6 +519,17 @@ export function ChatScreen({
     impact(ImpactFeedbackStyle.Light);
     setToast(t("chatScreen.toneChanged", { tone: `${getPersonality(next).icon} ${t(`personalities.${next}.label`)}` }));
   }, [personalityId, t]);
+
+  // 0.1.56: Investigación profunda también desde el chat (chip junto al
+  // cuadro de texto); sigue guardándose en Ajustes, que lo muestra igual.
+  const toggleDeepResearch = useCallback(async () => {
+    const next = !deepResearchModeRef.current;
+    deepResearchModeRef.current = next;
+    setDeepResearchEnabled(next);
+    impact(ImpactFeedbackStyle.Light);
+    setToast(t(next ? "chatScreen.researchOn" : "chatScreen.researchOff"));
+    await setDeepResearchMode(next).catch(() => {});
+  }, [t]);
 
   const initModels = useCallback(async () => {
     try {
@@ -1770,24 +1782,6 @@ export function ChatScreen({
     return <UserGuideScreen onClose={() => setShowGuide(false)} onTryExample={tryGuideExample} />;
   }
 
-  if (showSettings) {
-    return withTabs(
-      <ModelSetupScreen
-        mode="optional"
-        onOpenGuide={() => {
-          void closeSettings();
-          setActiveTab("library");
-          setShowGuide(true);
-        }}
-        onClose={async () => {
-          setActiveTab("chat");
-          await closeSettings();
-        }}
-        onRelaunchWizard={onRelaunchWizard}
-      />
-    );
-  }
-
   if (showExecutionTelemetry) {
     return <ExecutionTelemetryScreen chatBusy={generating} onClose={() => setShowExecutionTelemetry(false)} />;
   }
@@ -1809,6 +1803,31 @@ export function ChatScreen({
     />
   ) : null;
 
+  if (showAbout) {
+    return <AboutScreen onClose={() => setShowAbout(false)} />;
+  }
+
+  if (showSettings) {
+    return withTabs(
+      <ModelSetupScreen
+        mode="optional"
+        onOpenGuide={() => {
+          void closeSettings();
+          setActiveTab("library");
+          setShowGuide(true);
+        }}
+        onClose={async () => {
+          setActiveTab("chat");
+          await closeSettings();
+        }}
+        onRelaunchWizard={onRelaunchWizard}
+        onOpenMemory={() => setShowMemoryManager(true)}
+        onOpenTelemetry={() => setShowExecutionTelemetry(true)}
+        onOpenAbout={() => setShowAbout(true)}
+      />
+    );
+  }
+
   if (showNido) {
     return withTabs(
       <NidoScreen
@@ -1819,10 +1838,6 @@ export function ChatScreen({
         panicSlot={panicNode}
       />
     );
-  }
-
-  if (showAbout) {
-    return <AboutScreen onClose={() => setShowAbout(false)} />;
   }
 
   if (activeTab === "emergency") {
@@ -1871,7 +1886,6 @@ export function ChatScreen({
             refreshSessions();
             setDrawerOpen(true);
           }}
-          onCycleTone={cycleTone}
           onNewChat={resetToNewChat}
           panicSlot={panicNode}
         />
@@ -2274,6 +2288,38 @@ export function ChatScreen({
               </Text>
             </View>
           )}
+          {/* 0.1.56: tono e investigación, junto a donde se escribe (antes, en la cabecera y en Ajustes). */}
+          <View style={styles.modeChips}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("chatHeader.cycleTone")}
+              onPress={cycleTone}
+              disabled={generating}
+              style={[styles.modeChip, { borderColor: colors.border.default, backgroundColor: colors.bg.surface }]}
+            >
+              <Text style={[styles.modeChipText, { color: colors.text.primary }]} numberOfLines={1}>
+                {t("chatScreen.toneChip", { tone: t(`personalities.${personalityId}.label`) })}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="switch"
+              accessibilityState={{ checked: deepResearchEnabled }}
+              accessibilityLabel={t("chatHeader.deepResearch")}
+              onPress={() => void toggleDeepResearch()}
+              disabled={generating}
+              style={[
+                styles.modeChip,
+                deepResearchEnabled
+                  ? { borderColor: colors.emerald[500], backgroundColor: colors.emerald.bgSubtle }
+                  : { borderColor: colors.border.default, backgroundColor: colors.bg.surface },
+              ]}
+            >
+              <NidoIcon name="deep-research" size={14} />
+              <Text style={[styles.modeChipText, { color: deepResearchEnabled ? colors.emerald[600] : colors.text.primary }]}>
+                {t("chatScreen.researchChip")}
+              </Text>
+            </Pressable>
+          </View>
           <View style={[styles.inputRow, { backgroundColor: colors.bg.input, borderColor: colors.border.default }]}>
             {voiceInputEnabled && (
               <VoiceInputButton
@@ -2636,6 +2682,18 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   stagedText: { flexShrink: 1, fontSize: 14, fontWeight: "600" },
   stagedDismiss: { padding: 4 },
   stagedHint: { fontSize: 12, paddingHorizontal: 4 },
+  modeChips: { flexDirection: "row", gap: 8, marginBottom: 8, flexWrap: "wrap" },
+  modeChip: {
+    minHeight: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    maxWidth: "70%",
+  },
+  modeChipText: { ...typography.ui.subtext, fontWeight: "600" },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",

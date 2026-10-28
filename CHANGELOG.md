@@ -7,6 +7,26 @@ All notable changes to NIDO are recorded here. Versions follow
 ## Unreleased
 
 ### Added
+- **New interface.** A bottom bar puts the five main sections one tap away:
+  Chat, Emergency, Library, NIDO and Settings.
+  - **Emergency** (new) shows your country's checked emergency numbers with
+    their source and date. "Call" opens the phone's dialer with the number
+    typed in. "Describe what's happening" and quick guides (CPR, bleeding,
+    choking, burns, earthquake, hurricane) write the question into the chat.
+  - **Library** (new) gathers your documents, the guide, prompt ideas and the
+    way to the knowledge packs.
+  - **Settings** is grouped into nine sections (security, assistant, models,
+    memory, appearance, backup, diagnostics, help, danger zone) and has a
+    search box. The security check, network log, crash diagnostics, agent
+    permissions and activity, skills and scheduled tasks moved there from
+    About. Settings also opens My memory, the execution telemetry, About and
+    the backup key screen.
+  - **Chat:** tone and deep research are chips next to the input. Deep
+    research can now be switched on from the chat too.
+  - **Chat history** has a search box.
+  - **Wipe button:** now a red shield labelled "Wipe" instead of "SOS", so it
+    isn't mistaken for asking for help.
+  - **No control was removed.** Every button is still there, in its new place.
 - **NIDO Local knowledge pack: 23 countries.** Guides by country, in
   Spanish and English, with the emergency numbers checked against an
   official source: Cuba, Dominican Republic, Puerto Rico, Mexico, Guatemala,
