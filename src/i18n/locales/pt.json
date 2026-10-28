@@ -1786,5 +1786,10 @@
     "aboutSection": "Sobre o NIDO",
     "aboutDesc": "Versão, privacidade, limites, código aberto e licenças.",
     "openAbout": "Abrir Sobre"
+  },
+  "answering": {
+    "title": "NIDO está respondendo…",
+    "text": "A resposta continua sendo escrita mesmo se você sair do app.",
+    "channel": "Respostas em andamento"
   }
 }

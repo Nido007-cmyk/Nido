@@ -31,9 +31,23 @@ class DownloadWakeLockModule : Module() {
       release()
     }
 
+    // 0.1.55: «NIDO está respondiendo…» mientras la IA escribe (ver
+    // AnswerKeepAliveService). Nunca lanza: si Android no lo permite, la
+    // respuesta sigue igual, solo sin la protección.
+    Function("startAnswering") { title: String, text: String, channelName: String ->
+      val context = appContext.reactContext ?: return@Function false
+      AnswerKeepAliveService.start(context.applicationContext, title, text, channelName)
+    }
+
+    Function("stopAnswering") {
+      val context = appContext.reactContext ?: return@Function Unit
+      AnswerKeepAliveService.stop(context.applicationContext)
+    }
+
     // JS reload or app teardown: nothing on the JS side will release it anymore.
     OnDestroy {
       release()
+      appContext.reactContext?.let { AnswerKeepAliveService.stop(it.applicationContext) }
     }
   }
 

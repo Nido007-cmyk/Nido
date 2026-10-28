@@ -1786,5 +1786,10 @@
     "aboutSection": "About NIDO",
     "aboutDesc": "Version, privacy, limits, open source and licenses.",
     "openAbout": "Open About"
+  },
+  "answering": {
+    "title": "NIDO is answering…",
+    "text": "The answer keeps being written even if you leave the app.",
+    "channel": "Answers in progress"
   }
 }

@@ -5,4 +5,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
   package="expo.modules.downloadwakelock">
   <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <!-- 0.1.55: «NIDO está respondiendo…» (AnswerKeepAliveService). -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+  <application>
+    <service
+      android:name="expo.modules.downloadwakelock.AnswerKeepAliveService"
+      android:exported="false"
+      android:foregroundServiceType="specialUse">
+      <property
+        android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+        android:value="Finishes an answer the on-device AI model is writing while the user is in another app; stops when the answer ends." />
+    </service>
+  </application>
 </manifest>

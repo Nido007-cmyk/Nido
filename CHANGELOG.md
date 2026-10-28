@@ -34,6 +34,14 @@ All notable changes to NIDO are recorded here. Versions follow
   save** (when no installer was connected, the receiver said "complete").
 - **Choose the contact** when several are connected, instead of sending to
   the first one in the list; only connected contacts are offered.
+- **An answer is no longer lost when you leave the app.** While the AI
+  writes an answer, NIDO now shows a quiet "NIDO is answering…"
+  notification (an Android foreground service). Some phones closed NIDO a
+  few seconds after you switched apps, and the answer stopped half-way. It
+  starts with each visible answer and stops when it ends; no sound, no
+  pop-up; it stops by itself after 15 minutes if nothing stops it. Idea
+  seen in BOAR; NIDO's own implementation. Needs the check on the
+  tablets (start an answer, switch apps, come back) before release.
 
 ### Security
 - **Private hello: no identity in clear with contacts that support it.**
