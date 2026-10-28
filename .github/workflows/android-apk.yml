@@ -336,8 +336,13 @@ jobs:
           if not m:
               sys.exit(f'CHANGELOG.md has no section for {ver}: refusing to publish stale notes')
           ch_body = m.group(0).strip().split('\n', 1)[1].strip()
-          head = re.split(r'^## What changed in ', notes, flags=re.M)[0]
-          head = re.sub(r'^# NIDO v\S+ — Release Notes', f'# NIDO {tag} — Release Notes', head, count=1).rstrip()
+          # 0.1.55 (auditoría): el corte buscaba «## What changed in», pero
+          # el archivo usa «## Earlier releases» y «### What changed in…»:
+          # el body llevaba el archivo entero (240 líneas de notas viejas
+          # antes de los cambios) y las limitaciones dos veces.
+          head = re.split(r'^## (?:Earlier releases|What changed in )', notes, flags=re.M)[0]
+          head = re.sub(r'^# NIDO \S+ — Release Notes', f'# NIDO {tag} — Release Notes', head, count=1)
+          head = re.sub(r'^> .*?(?=^## )', '', head, count=1, flags=re.M | re.S).rstrip()
           tail = '## Known limitations' + notes.split('## Known limitations', 1)[1]
           body = f"{head}\n\n## What changed in {ver}\n\n{ch_body}\n\n{tail}"
           open('release-notes.md', 'w').write(body)

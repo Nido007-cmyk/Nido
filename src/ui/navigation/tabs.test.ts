@@ -49,3 +49,24 @@ describe("barra inferior (0.1.55)", () => {
     for (const locale of [en, es, pt]) expect(get(locale, "panic.short")).not.toBe("SOS");
   });
 });
+
+describe("auditoría 0.1.55: navegación entre pestañas", () => {
+  const src = readFileSync(new URL("../ChatScreen.tsx", import.meta.url), "utf8");
+  const body = (start: string, end: string) => src.slice(src.indexOf(start), src.indexOf(end, src.indexOf(start)));
+
+  it("«Pruébalo» de la guía lleva al Chat (la guía también se abre desde Biblioteca y Ajustes)", () => {
+    expect(body("const tryGuideExample", "}, []);")).toContain('selectTabRef.current?.("chat")');
+  });
+
+  it("«Compartir → NIDO» y el atajo de nuevo chat llevan al Chat", () => {
+    expect(body("const applyLaunchAction", "}, [resetToNewChat]);")).toContain('selectTabRef.current?.("chat")');
+  });
+
+  it("«Atrás» de Android cierra lo abierto y vuelve al Chat en vez de salir", () => {
+    expect(src).toContain('BackHandler.addEventListener("hardwareBackPress", () => backActionRef.current())');
+    const back = body("backActionRef.current = () => {", "const withTabs");
+    expect(back).toContain("setDrawerOpen(false)");
+    expect(back).toContain('selectTab("chat")');
+    expect(back).toContain("return false;");
+  });
+});
