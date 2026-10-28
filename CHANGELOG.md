@@ -4,6 +4,20 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+### Added
+- **NIDO Local knowledge pack (first batch).** Guides by country, in Spanish
+  and English: the emergency numbers checked against an official source,
+  who issues warnings and what each official alert means — Cuba (Civil
+  Defense cyclone phases), Dominican Republic (9-1-1 and COE green, yellow
+  and red alerts), Puerto Rico (9-1-1, NWS watches and warnings) and Mexico
+  (911, the SIAT-CT hurricane colors and the SASMEX earthquake alert). 8
+  guides, about 0.1 MB, optional download; it can also be passed phone to
+  phone. Every guide cites its sources; for Cuba, whose Civil Defense
+  website could not be opened, the guide says so. Built in
+  knowledge-packs-v5; the catalog entry needs the maintainer's signature.
+
 ## 0.1.54-alpha — 2026-10-23
 
 ### Fixed

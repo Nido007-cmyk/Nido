@@ -663,6 +663,39 @@ export const MODEL_CATALOG: CatalogModel[] = [
       "116 offline guides on first aid, health at home, disasters and survival, searchable in Spanish, Portuguese and English. ~0.7MB.",
     required: false,
   },
+  {
+    // NIDO Local (0.1.55): guides by country in Spanish + English — checked
+    // emergency numbers and what each official alert means (Cuba, Dominican
+    // Republic, Puerto Rico, Mexico). knowledge-packs/nido-local, built and
+    // checked by .github/workflows/knowledge-pack.yml (25/25 real questions).
+    id: "nido-local",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Local: emergency numbers and alerts by country",
+    filename: "corpus/nido-local.sqlite",
+    sizeBytes: 94208,
+    sha256: "75221ca3068a222470c655810b3b34a7b15993cef1cc750e70c5bc4d0d7d83d5",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "Emergency numbers and official alerts (hurricanes, earthquakes) for Cuba, the Dominican Republic, Puerto Rico and Mexico, in Spanish and English. ~0.1MB.",
+    required: false,
+  },
+  {
+    // Same guides with multilingual-e5 vectors (src/rag/embeddingSwitch.ts).
+    id: "nido-local-e5",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Local (multilingual search)",
+    filename: "corpus/nido-local-e5.sqlite",
+    sizeBytes: 94208,
+    sha256: "7a7e118c9a83bb53e98444f6ab430b07a448752d0b47fdb1df8e02ddfdb25af3",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local-e5.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "Emergency numbers and official alerts for Cuba, the Dominican Republic, Puerto Rico and Mexico, searchable in Spanish, Portuguese and English. ~0.1MB.",
+    required: false,
+  },
   // Add more tested candidates / corpus packs here later (each needs a
   // unique `id` and `filename`). They ship with `required: false` and
   // appear in the Settings screen as optional downloads.
