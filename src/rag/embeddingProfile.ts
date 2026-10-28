@@ -89,7 +89,7 @@ export const MULTILINGUAL_E5_SMALL_PROFILE: EmbeddingProfile = {
   // Calibración 2026-10-14 (run 38506218056, base integrada): con 0.03 los
   // falsos bajan 20 % → 10 % sin perder ninguna respuesta (es 85 %, en
   // 100 %, pt 90 %); con 0.05 bajan a 3 % perdiendo algo de recall.
-  // Con el paquete Vital (116 000 artículos, mismo run) 0.03 baja los falsos
+  // Con el paquete Vital (unos 50 000 artículos, 116 000 fragmentos, mismo run) 0.03 baja los falsos
   // 33 % → 22 % sin perder recall (en sube 90 % → 100 %); 0.04 ya pierde.
   distinctGap: 0.03,
   packDistinctGap: 0.03,
