@@ -151,23 +151,46 @@ export function parseGuide(markdown, file = "guide") {
   const sections = [];
   let heading = "";
   let buf = [];
+  let sectionQuestions = [];
   const flush = () => {
     const text = buf.join("\n").trim();
-    if (text) sections.push({ heading, text });
+    if (text) sections.push({ heading, text, questions: sectionQuestions });
+    else if (sectionQuestions.length && sections.length) sections[sections.length - 1].questions.push(...sectionQuestions);
     buf = [];
+    sectionQuestions = [];
   };
   for (const line of m[2].split("\n")) {
     const h = line.match(/^#{2,3}\s+(.*)$/);
+    // Format v2: «<!-- preguntas: … | … -->» lists real questions this
+    // section answers. Not shown to the reader: it only helps search.
+    const q = line.match(/^\s*<!--\s*(?:preguntas|questions|perguntas)\s*:\s*(.*?)\s*-->\s*$/i);
     if (h) {
       flush();
       heading = h[1].trim();
+    } else if (q) {
+      sectionQuestions.push(...splitQuestions(q[1]));
     } else {
       buf.push(line);
     }
   }
   flush();
   if (sections.length === 0) throw new Error(`${file}: empty guide`);
-  return { title: meta.title, category: meta.category ?? "", lang: meta.lang, sources: meta.sources, sections };
+  if (meta.region && !/^[A-Z]{2}$/.test(meta.region)) throw new Error(`${file}: region must be an ISO 3166-1 alpha-2 code`);
+  if (meta.verified && !/^\d{4}-\d{2}-\d{2}$/.test(meta.verified)) throw new Error(`${file}: verified must be YYYY-MM-DD`);
+  return {
+    title: meta.title,
+    category: meta.category ?? "",
+    lang: meta.lang,
+    sources: meta.sources,
+    // Format v2 (all optional): a key shared by the same guide in every
+    // language, the country it is about, when it was last checked, and real
+    // questions it answers as a whole.
+    key: meta.id ?? "",
+    region: meta.region ?? "",
+    verified: meta.verified ?? "",
+    questions: splitQuestions(meta.questions ?? ""),
+    sections,
+  };
 }
 
 /**
@@ -187,28 +210,118 @@ export function chunkGuide(guide, target = 900, minChars = 250) {
   for (const s of guide.sections) {
     const label = s.heading ? `${s.heading}\n` : "";
     let cur = "";
+    let questions = [...(s.questions ?? [])];
     for (const line of s.text.split("\n")) {
       if (cur && cur.length + 1 + line.length > target) {
-        raw.push({ heading: s.heading, body: (label + cur).trim() });
+        raw.push({ heading: s.heading, body: (label + cur).trim(), questions });
+        questions = [];
         cur = line;
       } else {
         cur = cur ? `${cur}\n${line}` : line;
       }
     }
-    if (cur.trim()) raw.push({ heading: s.heading, body: (label + cur).trim() });
+    if (cur.trim()) raw.push({ heading: s.heading, body: (label + cur).trim(), questions });
   }
   const out = [];
   for (const c of raw) {
     const prev = out[out.length - 1];
     if (prev && prev.heading !== c.heading && c.body.length < minChars && prev.body.length + 2 + c.body.length <= target) {
       prev.body = `${prev.body}\n\n${c.body}`;
+      prev.questions = [...prev.questions, ...c.questions];
     } else {
-      out.push({ ...c });
+      out.push({ ...c, questions: [...c.questions] });
     }
   }
   if (out.length > 1 && out[0].body.length < minChars && out[0].body.length + 2 + out[1].body.length <= target) {
     const [first, second] = out.splice(0, 2);
-    out.unshift({ heading: second.heading, body: `${first.body}\n\n${second.body}` });
+    out.unshift({ heading: second.heading, body: `${first.body}\n\n${second.body}`, questions: [...first.questions, ...second.questions] });
   }
+  // The guide's own questions go with its first chunk.
+  if (out.length > 0 && guide.questions?.length) out[0].questions = [...guide.questions, ...out[0].questions];
   return out;
+}
+
+/** «a | b | c» → ["a", "b", "c"] (format v2 questions). */
+export function splitQuestions(text) {
+  return String(text ?? "")
+    .split("|")
+    .map((q) => q.trim())
+    .filter((q) => q.length > 0);
+}
+
+/**
+ * Format v2: the pack's verified facts (knowledge-packs/<pack>/facts.json).
+ * Every fact names its region, a value, and the official source it was
+ * checked against: title, URL, the exact quote and the date. Throws on
+ * anything missing, so an unsourced fact can never reach a pack.
+ */
+export function validateFacts(doc, file = "facts.json") {
+  if (!doc || typeof doc !== "object") throw new Error(`${file}: not an object`);
+  const regions = doc.regions ?? {};
+  for (const [code, r] of Object.entries(regions)) {
+    if (!/^[A-Z]{2}$/.test(code)) throw new Error(`${file}: region ${code} is not an ISO 3166-1 alpha-2 code`);
+    for (const l of ["es", "en", "pt"]) if (!r?.names?.[l]) throw new Error(`${file}: region ${code} needs names.${l}`);
+    if (!Array.isArray(r.aliases) || r.aliases.length === 0) throw new Error(`${file}: region ${code} needs aliases`);
+    if (r.in !== undefined) for (const l of ["es", "en", "pt"]) if (!r.in?.[l]) throw new Error(`${file}: region ${code} needs in.${l}`);
+  }
+  const facts = Array.isArray(doc.facts) ? doc.facts : [];
+  const seen = new Set();
+  for (const f of facts) {
+    const where = `${file}: fact ${f?.key ?? "?"}/${f?.region ?? "?"}`;
+    if (!f?.key || !/^[a-z]+(\.[a-z0-9-]+)+$/.test(f.key)) throw new Error(`${where}: bad key`);
+    if (!regions[f.region]) throw new Error(`${where}: unknown region`);
+    if (!f.value || typeof f.value !== "string") throw new Error(`${where}: needs a value`);
+    for (const l of ["es", "en", "pt"]) if (!f.label?.[l]) throw new Error(`${where}: needs label.${l}`);
+    if (f.note !== undefined) for (const l of ["es", "en", "pt"]) if (!f.note?.[l]) throw new Error(`${where}: needs note.${l}`);
+    const s = f.source ?? {};
+    if (!s.title || !/^https:\/\//.test(s.url ?? "") || !s.quote || !/^\d{4}-\d{2}-\d{2}$/.test(s.checked ?? "")) {
+      throw new Error(`${where}: needs source.title, an https source.url, source.quote and source.checked (YYYY-MM-DD)`);
+    }
+    const id = `${f.region}|${f.key}`;
+    if (seen.has(id)) throw new Error(`${where}: duplicated`);
+    seen.add(id);
+  }
+  return { regions, facts };
+}
+
+/**
+ * Text normalization for the weekly source check: a quote still counts as
+ * present when only accents, case, punctuation spacing, typographic quotes or
+ * HTML entities changed on the official page.
+ */
+export function normalizeForQuote(text) {
+  return String(text)
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[‘’‚‛]/g, "'")
+    .replace(/[“”„«»]/g, '"')
+    .replace(/[‐-―]/g, "-")
+    .toLowerCase()
+    // Punctuation and markup spacing vary between page versions ("Civil: 110",
+    // "Civil</strong>: 110", "Civil - 110"): compare the words and digits only.
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+
+/** Visible text of an HTML page (scripts and styles dropped, entities decoded). */
+export function htmlToText(html) {
+  return String(html)
+    .replace(/<(script|style|noscript)\b[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/&([a-z]+);/gi, (m, n) => ENTITIES[n.toLowerCase()] ?? (/^[a-z](acute|grave|tilde|uml|circ|cedil)$/i.test(n) ? n[0] : m));
+}
+
+/** True when the quote (normalized) appears in the page text (normalized). */
+export function quoteIsPresent(pageText, quote) {
+  return normalizeForQuote(pageText).includes(normalizeForQuote(quote));
+}
+
+/** Days between a YYYY-MM-DD check date and `today` (a Date). */
+export function daysSince(checked, today = new Date()) {
+  return Math.floor((today.getTime() - Date.parse(`${checked}T00:00:00Z`)) / 86_400_000);
 }

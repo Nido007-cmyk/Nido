@@ -53,9 +53,16 @@ device, encrypted. There are no accounts, no cloud and no analytics.
 - **Talks to another NIDO over Bluetooth**: encrypted messages between two
   paired phones, with no internet and no server. Pairing is done in person
   with a QR code.
+- **Has an Emergency tab**: your country's emergency numbers, checked
+  against official sources (23 countries in the NIDO Local pack), each with
+  its source and date. "Call" opens the dialer with the number typed in.
+  Quick guides (CPR, bleeding, choking, burns, earthquake, hurricane) and
+  "describe what's happening" write the question into the chat.
+- **Five sections one tap away**: Chat, Emergency, Library, NIDO and
+  Settings, in a bottom bar. Settings is grouped and has a search box.
 - **Shows its network use**: every download the app makes is logged and
-  visible in the About screen.
-- **Measures itself, on the phone**: the Execution Telemetry screen (menu) shows generation
+  visible in Settings › Security and privacy.
+- **Measures itself, on the phone**: the Execution Telemetry screen (Settings › Diagnostics) shows generation
   speed, time to first word, how long request routing takes and how many
   commands the router missed and sent to the model, recorded locally and
   never sent anywhere. Optionally (off by default) it can keep the missed
