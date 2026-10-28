@@ -521,7 +521,8 @@
     "titleAbstained": "Sources found, but they don't answer this exactly",
     "titleUnverified": "Sources consulted · not auto-checked (different language)",
     "localIndex": "Local index",
-    "relevanceCaption": "Numbers are absolute match strength against the offline index — not confidence."
+    "relevanceCaption": "Numbers are absolute match strength against the offline index — not confidence.",
+    "readWhole": "Read the whole guide"
   },
   "promptIdeasCarousel": {
     "title": "Try asking",
@@ -1683,5 +1684,13 @@
     "failedTitle": "Could not erase everything",
     "settingTitle": "Panic button",
     "settingDesc": "Shows an SOS button on the main screen. Holding it for 3 seconds erases all NIDO data at once, without asking for fingerprint or confirmation. It cannot be undone; make a backup first if you want to keep anything."
+  },
+  "sourceReader": {
+    "title": "Source",
+    "close": "Close",
+    "hint": "The highlighted part is the one NIDO used to answer.",
+    "usedPart": "Used in the answer",
+    "source": "Original source: {{source}}",
+    "notFound": "The guide was not found: the pack may have been removed or updated."
   }
 }

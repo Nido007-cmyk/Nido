@@ -521,7 +521,8 @@
     "titleAbstained": "Há fontes, mas não respondem exatamente a isso",
     "titleUnverified": "Fontes consultadas · sem verificação automática (outro idioma)",
     "localIndex": "Índice local",
-    "relevanceCaption": "Os números indicam força de correspondência absoluta com o índice offline, não confiança."
+    "relevanceCaption": "Os números indicam força de correspondência absoluta com o índice offline, não confiança.",
+    "readWhole": "Ler o guia inteiro"
   },
   "promptIdeasCarousel": {
     "title": "Experimente perguntar",
@@ -1683,5 +1684,13 @@
     "failedTitle": "Não foi possível apagar tudo",
     "settingTitle": "Botão de pânico",
     "settingDesc": "Mostra um botão SOS na tela principal. Segurá-lo por 3 segundos apaga todos os dados do NIDO de uma vez, sem pedir digital nem confirmação. Não pode ser desfeito; faça um backup antes se quiser guardar algo."
+  },
+  "sourceReader": {
+    "title": "Fonte",
+    "close": "Fechar",
+    "hint": "A parte destacada é a que o NIDO usou para responder.",
+    "usedPart": "Usada na resposta",
+    "source": "Fonte original: {{source}}",
+    "notFound": "O guia não foi encontrado: o pack pode ter sido removido ou atualizado."
   }
 }

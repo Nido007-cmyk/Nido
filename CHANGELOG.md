@@ -4,6 +4,15 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+### Added
+- **Read the whole guide behind an answer.** Under an answer's sources, a
+  knowledge-pack source now has "Read the whole guide": it opens the full
+  guide, offline, with the part NIDO used highlighted and the original
+  source it was written from. Anyone can check where an answer comes from.
+  Idea from BOAR (MIT).
+
 ## 0.1.54-alpha — 2026-10-23
 
 ### Fixed

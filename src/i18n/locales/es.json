@@ -640,7 +640,8 @@
     "titlePartial": "Basada en estas fuentes · se quitaron frases sin respaldo",
     "titleAbstained": "Hay fuentes, pero no responden exactamente a esto",
     "titleUnverified": "Fuentes consultadas · sin verificación automática (otro idioma)",
-    "relevanceCaption": "Los números indican fuerza de coincidencia absoluta con el índice offline, no confianza."
+    "relevanceCaption": "Los números indican fuerza de coincidencia absoluta con el índice offline, no confianza.",
+    "readWhole": "Leer la guía entera"
   },
   "systemMonitor": {
     "diskLabel": "Almacenamiento en disco (límite: 50 GB)",
@@ -1683,5 +1684,13 @@
     "failedTitle": "No se pudo borrar todo",
     "settingTitle": "Botón de pánico",
     "settingDesc": "Muestra un botón SOS en la pantalla principal. Mantenerlo 3 segundos borra todos los datos de NIDO de una vez, sin pedir huella ni confirmación. No se puede deshacer; haz antes un respaldo si quieres conservar algo."
+  },
+  "sourceReader": {
+    "title": "Fuente",
+    "close": "Cerrar",
+    "hint": "La parte resaltada es la que NIDO usó para responder.",
+    "usedPart": "Usada en la respuesta",
+    "source": "Fuente original: {{source}}",
+    "notFound": "No se encontró la guía: puede que el pack se haya quitado o actualizado."
   }
 }

@@ -15,6 +15,8 @@ import type { Colors } from "../theme/colors";
 import { NidoIcon } from "./icons/NidoIcon";
 import type { Typography } from "../theme/typography";
 import { spacing, radii } from "../theme/spacing";
+import { parsePackChunkId } from "../../rag/packSource";
+import { SourceReader } from "./SourceReader";
 
 interface Props {
   citations: RetrievedChunk[];
@@ -40,6 +42,8 @@ export function SourceFootnotes({ citations, grounding }: Props) {
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  // 0.1.55: la guía entera, con la parte usada resaltada.
+  const [readerChunkId, setReaderChunkId] = useState<string | null>(null);
 
   if (!citations || citations.length === 0) return null;
 
@@ -101,12 +105,23 @@ export function SourceFootnotes({ citations, grounding }: Props) {
                   <Text style={styles.snippetText} numberOfLines={6}>
                     {c.body}
                   </Text>
+                  {parsePackChunkId(c.chunkId) ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={t("sourceFootnotes.readWhole")}
+                      onPress={() => setReaderChunkId(c.chunkId)}
+                      hitSlop={6}
+                    >
+                      <Text style={styles.readWhole}>{t("sourceFootnotes.readWhole")}</Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               )}
             </View>
           );
         })}
       </View>
+      <SourceReader chunkId={readerChunkId} onClose={() => setReaderChunkId(null)} />
     </View>
   );
 }
@@ -241,5 +256,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     ...typography.ui.caption,
     color: colors.text.secondary,
     lineHeight: 16,
+  },
+  readWhole: {
+    ...typography.ui.caption,
+    color: colors.text.accentEmerald,
+    fontWeight: "700",
+    marginTop: 2,
   },
 });
