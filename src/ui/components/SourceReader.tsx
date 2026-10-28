@@ -7,7 +7,7 @@
 /**
  * SourceReader — 0.1.55: la guía entera de la que salió una respuesta, sin
  * internet, con la parte que se usó resaltada. Así cualquiera comprueba de
- * dónde sale lo que dice NIDO. Idea de BOAR (MIT).
+ * dónde sale lo que dice NIDO. Idea vista en BOAR; código propio de NIDO.
  */
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";

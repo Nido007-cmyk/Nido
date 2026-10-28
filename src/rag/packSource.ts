@@ -7,8 +7,8 @@
 /**
  * packSource.ts — 0.1.55: lo puro de «leer la fuente entera». Un trozo de
  * un pack se identifica como `pack:<packId>:<fila>`; la guía entera son
- * todas las filas con el mismo título, en orden. Idea de BOAR («read a
- * source whole, offline, with the part BOAR used marked», MIT).
+ * todas las filas con el mismo título, en orden. La idea de abrir la fuente
+ * entera la vimos en BOAR; el diseño y el código son de NIDO.
  */
 
 export interface PackChunkRef {
