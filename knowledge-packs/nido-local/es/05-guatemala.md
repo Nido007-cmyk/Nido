@@ -13,7 +13,7 @@ En Guatemala, los números de emergencia comprobados son: 110 (policía), 122 (b
 ## A quién llamar
 <!-- preguntas: número de los bomberos en Guatemala | número de emergencias médicas en Guatemala -->
 - **110**: policía
-- **122**: bomberos
+- **122**: bomberos (Bomberos Voluntarios)
 - **123**: bomberos municipales
 - **125**: Cruz Roja
 - **119**: protección civil y desastres (CONRED; también 1566)

@@ -13,7 +13,7 @@ In Guatemala, the checked emergency numbers are: 110 (police), 122 (fire departm
 ## Who to call
 <!-- questions: fire department number in Guatemala | medical emergency number in Guatemala -->
 - **110**: police
-- **122**: fire department
+- **122**: fire department (Volunteer Fire Department)
 - **123**: municipal fire department
 - **125**: Red Cross
 - **119**: civil protection and disasters (CONRED; also 1566)
