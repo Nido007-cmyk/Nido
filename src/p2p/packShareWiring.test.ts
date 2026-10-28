@@ -8,8 +8,15 @@
  * 0.1.55: compartir packs NIDO↔NIDO. Solo viajan e instalan packs del
  * catálogo, byte a byte iguales a los que NIDO descargaría.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createHash } from "crypto";
+
+// packSharing (límite de tamaño) importa expo-crypto, que arrastra
+// react-native: fuera del teléfono se sustituye, como en sus propias pruebas.
+vi.mock("expo-crypto", () => ({
+  CryptoDigestAlgorithm: { SHA256: "SHA256" },
+  digestStringAsync: async (_a: string, data: string) => createHash("sha256").update(data, "utf8").digest("hex"),
+}));
 import type { CatalogModel } from "../models/manifest";
 import { encodeBase64 } from "./base64";
 import {
