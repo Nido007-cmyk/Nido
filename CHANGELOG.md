@@ -15,6 +15,11 @@ All notable changes to NIDO are recorded here. Versions follow
   offered and not installed. The previous pack stays in place if anything
   fails. The transfer code existed since 0.1.4 but was never connected; the
   Packs tab said so.
+- **Read the whole guide behind an answer.** Under an answer's sources, a
+  knowledge-pack source now has "Read the whole guide": it opens the full
+  guide, offline, with the part NIDO used highlighted and the original
+  source it was written from. Anyone can check where an answer comes from.
+  Idea from BOAR (MIT).
 
 ### Changed
 - **Every release checks its own reproducibility.** After publishing, the

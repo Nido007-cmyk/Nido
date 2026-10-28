@@ -529,7 +529,8 @@
     "titleAbstained": "Há fontes, mas não respondem exatamente a isso",
     "titleUnverified": "Fontes consultadas · sem verificação automática (outro idioma)",
     "localIndex": "Índice local",
-    "relevanceCaption": "Os números indicam força de correspondência absoluta com o índice offline, não confiança."
+    "relevanceCaption": "Os números indicam força de correspondência absoluta com o índice offline, não confiança.",
+    "readWhole": "Ler o guia inteiro"
   },
   "promptIdeasCarousel": {
     "title": "Experimente perguntar",
@@ -1791,5 +1792,13 @@
     "title": "NIDO está respondendo…",
     "text": "A resposta continua sendo escrita mesmo se você sair do app.",
     "channel": "Respostas em andamento"
+  },
+  "sourceReader": {
+    "title": "Fonte",
+    "close": "Fechar",
+    "hint": "A parte destacada é a que o NIDO usou para responder.",
+    "usedPart": "Usada na resposta",
+    "source": "Fonte original: {{source}}",
+    "notFound": "O guia não foi encontrado: o pack pode ter sido removido ou atualizado."
   }
 }
