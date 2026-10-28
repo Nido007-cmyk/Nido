@@ -479,6 +479,21 @@ export class LlamaEngine {
         ? prompt.length
         : (messages ?? []).reduce((n, m) => n + (m.content?.length ?? 0), 0);
     let stopReason: TelemetryStopReason = "completed";
+    // 0.1.55: «NIDO está respondiendo…» mientras dure la generación, para que
+    // Android no cierre la app si el usuario sale (answerKeepAlive). Solo
+    // para respuestas que se ven escribirse (onToken), no para trabajos
+    // internos cortos. Se carga aparte: si el módulo nativo no está, la
+    // generación sigue igual.
+    let releaseKeepAlive: (() => void) | null = null;
+    let keepAliveDone = false;
+    if (onToken) {
+      void import("../services/answerKeepAlive")
+        .then((m) => {
+          if (keepAliveDone) return;
+          releaseKeepAlive = m.holdAnswerKeepAlive();
+        })
+        .catch(() => {});
+    }
     try {
       const started = await this.enqueue(() =>
         this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, enableThinking, onToken: wrappedOnToken, stop, timeoutMs, onTimeout: wrappedOnTimeout })
@@ -505,6 +520,8 @@ export class LlamaEngine {
       stopReason = "error";
       throw e;
     } finally {
+      keepAliveDone = true;
+      (releaseKeepAlive as (() => void) | null)?.();
       if (timedOut) stopReason = "timeout";
       else if (loopCut && stopReason === "completed") stopReason = "stopped";
       const totalMs = Date.now() - tStart;

@@ -79,4 +79,10 @@ describe("0.1.49: valores de fábrica", () => {
     expect(ff.isFeatureEnabled("delegation.enabled")).toBe(false);
     expect(ff.isFeatureEnabled("security.panicButton")).toBe(false);
   });
+
+  it("0.1.55: «solo saludo privado» viene apagado (dejaría sin conexión a NIDO viejos)", async () => {
+    const ff = await import("./featureFlags");
+    ff.resetFeatureFlagsForTests();
+    expect(ff.isFeatureEnabled("p2p.privateHelloOnly")).toBe(false);
+  });
 });

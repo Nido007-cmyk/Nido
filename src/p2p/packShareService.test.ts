@@ -326,3 +326,74 @@ describe("PACKS-2026-10-10: isReady refleja si el servicio está conectado", () 
     expect(packShareService.isReady()).toBe(true);
   });
 });
+
+describe("0.1.55: compartir packs de verdad", () => {
+  beforeEach(() => {
+    packShareService._reset();
+    packShareService.setLocalIdentity(RECEIVER_PK);
+    packShareService.setSendFunction(async () => {});
+  });
+
+  async function runToComplete(sessionId: string): Promise<any[]> {
+    const events: any[] = [];
+    packShareService.subscribe((e) => events.push(e));
+    const base64Data = Buffer.from("contenido del pack").toString("base64");
+    const adv: PackAdvertisement = {
+      id: "pack1",
+      name: "Test Pack",
+      description: "Test",
+      sizeBytes: Math.ceil((base64Data.length * 3) / 4),
+      hash: createHash("sha256").update(base64Data, "utf8").digest("hex"),
+      chunkCount: 1,
+      senderId: SENDER_PK,
+    };
+    await packShareService.handleEnvelope(makeEnvelope(SENDER_PK, "OFFER", sessionId, { advertisement: adv }));
+    await packShareService.acceptOffer(sessionId);
+    await packShareService.handleEnvelope(
+      makeEnvelope(SENDER_PK, "CHUNK", sessionId, {
+        chunk: { packId: "pack1", index: 0, total: 1, data: base64Data, hash: "" },
+      })
+    );
+    await packShareService.handleEnvelope(makeEnvelope(SENDER_PK, "COMPLETE", sessionId, {}));
+    return events;
+  }
+
+  it("sin importador NO dice «completado» (antes anunciaba un pack que no se guardaba)", async () => {
+    const events = await runToComplete("sess-noimp");
+    expect(events.some((e) => e.type === "transfer_complete")).toBe(false);
+    expect(events.some((e) => e.type === "transfer_failed")).toBe(true);
+  });
+
+  it("si el importador lanza, la transferencia falla sin romper el servicio", async () => {
+    packShareService.setImporter(async () => {
+      throw new Error("disco lleno");
+    });
+    const events = await runToComplete("sess-throw");
+    expect(events.some((e) => e.type === "transfer_complete")).toBe(false);
+    expect(events.some((e) => e.type === "transfer_failed")).toBe(true);
+  });
+
+  it("el filtro de ofertas esconde las de packs que la app no instalaría", async () => {
+    const events: any[] = [];
+    packShareService.subscribe((e) => events.push(e));
+    packShareService.setOfferFilter((adv) => adv.id === "nido-esencial");
+    const adv = makeValidAdvertisement(); // id "pack1"
+    await packShareService.handleEnvelope(makeEnvelope(SENDER_PK, "OFFER", "sess-filt", { advertisement: adv }));
+    expect(events.some((e) => e.type === "offer_received")).toBe(false);
+    expect(packShareService._getReceiveSession("sess-filt")).toBeUndefined();
+  });
+
+  it("si la oferta no sale, no queda una sesión colgada y offerPack devuelve null", async () => {
+    packShareService.setSendFunction(async () => {
+      throw new Error("Sin conexión con el contacto");
+    });
+    packShareService.setDataProvider(async () => ({
+      base64Data: Buffer.from("x").toString("base64"),
+      name: "P",
+      description: "",
+    }));
+    const id = await packShareService.offerPack("pack1", SENDER_PK);
+    expect(id).toBeNull();
+    expect(packShareService.listTransfers()).toHaveLength(0);
+  });
+});

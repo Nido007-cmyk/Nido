@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Animated,
   AppState,
+  BackHandler,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Linking,
@@ -70,6 +71,7 @@ import { planSend } from "../agent/input/sendPlan";
 import { runAgentLoop, assertPromptBudget, estimatePromptTokens } from "../agent/loop/agentLoop";
 import { buildToolHandlers, searchPhoneContacts } from "../agent/tools/handlers";
 import { matchSmallTalk, smallTalkSessionTitle } from "../agent/loop/smallTalk";
+import { matchSafetyAnswer } from "../agent/loop/safetyAnswers";
 import { agentFallbackText, toFallbackLang } from "../agent/loop/fallbackText";
 import { describePolicyConfirmation } from "../agent/policy/confirmText";
 import {
@@ -217,6 +219,8 @@ export function ChatScreen({
   // showNido (sus efectos dependen de ellos); Emergencia y Biblioteca son
   // pestañas nuevas. La pestaña visible sale de effectiveTab, más abajo.
   const [activeTab, setActiveTab] = useState<MainTab>("chat");
+  // Auditoría 0.1.55: «Mis documentos» del menú abre la Biblioteca en Mis documentos.
+  const [librarySection, setLibrarySection] = useState<"documents" | "learn" | "packs">("packs");
   // 0.1.46: botón de pánico (opt-in en Ajustes). Se relee al cerrar Ajustes.
   // Cargar los interruptores aquí, al arrancar, también deja listos los del
   // P2P (saludo privado, v5) antes de la primera reconexión.
@@ -258,6 +262,14 @@ export function ChatScreen({
   const [voiceInputEnabled, setVoiceInputEnabledState] = useState(true);
   const showSettingsRef = useRef(false);
   showSettingsRef.current = showSettings;
+  // 0.1.55: selectTab and the Android back action are rebuilt every render;
+  // callbacks and the BackHandler read the current ones through these refs.
+  const selectTabRef = useRef<((tab: MainTab) => void) | null>(null);
+  const backActionRef = useRef<() => boolean>(() => false);
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => backActionRef.current());
+    return () => sub.remove();
+  }, []);
   const [deviceEvalRequest, setDeviceEvalRequest] = useState<EvalRequest | null>(null);
   const [personalityId, setPersonalityIdState] = useState<PersonalityId>("succinct");
   const [processing, setProcessing] = useState<{ messageId: string; status: ProcessingStatus; label?: string } | null>(null);
@@ -503,6 +515,9 @@ export function ChatScreen({
   const tryGuideExample = useCallback((text: string) => {
     setShowGuide(false);
     setShowOnboarding(false);
+    // 0.1.55 (auditoría): la guía también se abre desde Biblioteca y Ajustes;
+    // el ejemplo se escribe en el chat, así que hay que mostrar el chat.
+    selectTabRef.current?.("chat");
     setGuideOnboardingDone(true).catch(() => {});
     updateInput(text, "example");
     requestAnimationFrame(() => inputRef.current?.focus());
@@ -746,6 +761,9 @@ export function ChatScreen({
       setActiveTab("nido");
       return;
     }
+    // 0.1.55 (auditoría): «Compartir → NIDO» o el atajo de nuevo chat con otra
+    // pestaña abierta dejaba el texto escondido en el chat.
+    selectTabRef.current?.("chat");
     await resetToNewChat();
     // 0.1.38: lo compartido queda cercado: si se envía, el router no lo mira.
     if (action.action === "share") updateInput(action.text, "shared");
@@ -901,15 +919,26 @@ export function ChatScreen({
       resetConversationState();
     }
     lastTurnLangRef.current = uiLang;
-    const smallTalkHit = kbQueryMeta === null ? matchSmallTalk(query, uiLang) : null;
-    // 0.1.55: «¿a qué número llamo en Chile?» sale de los datos verificados
-    // del pack (fuente y fecha citadas), sin búsqueda ni modelo. Solo con un
-    // pack v2 instalado que cubra ese país; si no, el turno sigue igual.
+    // 0.1.55: preguntas de seguridad con respuesta FIJA, sin modelo. Orden:
+    // 1) monóxido de carbono (siempre primero: un error puede costar una vida);
+    // 2) números de emergencia desde los datos verificados de los packs
+    //    (23 países, con fuente y fecha); 3) la tabla fija de safetyAnswers
+    //    (8 países, o «¿en qué país estás?») solo si ningún pack respondió.
+    // Lo pegado o compartido (inertRouting) no cuenta como pregunta.
+    const safetyHit = inertRouting ? null : matchSafetyAnswer(query, uiLang);
+    const coHit = safetyHit !== null && safetyHit.kind !== "emergency-number" ? safetyHit : null;
+    const smallTalkHit = safetyHit === null && kbQueryMeta === null ? matchSmallTalk(query, uiLang) : null;
     const factsHit =
-      kbQueryMeta === null && smallTalkHit === null && !inertRouting
+      coHit === null && kbQueryMeta === null && smallTalkHit === null && !inertRouting
         ? await answerFromPackFacts(query, uiLang)
         : null;
-    const kbAnswer = kbQueryMeta !== null ? kbQueryMeta.answer : smallTalkHit?.text ?? factsHit?.text ?? null;
+    const numberHit = safetyHit !== null && safetyHit.kind === "emergency-number" && factsHit === null ? safetyHit : null;
+    const kbAnswer =
+      coHit !== null
+        ? coHit.text
+        : kbQueryMeta !== null
+          ? kbQueryMeta.answer
+          : smallTalkHit?.text ?? factsHit?.text ?? numberHit?.text ?? null;
     if (kbAnswer !== null) {
       assistantText = kbAnswer;
       setMessages((prev) =>
@@ -1759,7 +1788,33 @@ export function ChatScreen({
     setShowExecutionTelemetry(false);
     setShowAbout(false);
     setDrawerOpen(false);
+    if (tab === "library" && activeTab !== "library") setLibrarySection("packs");
     setActiveTab(tab);
+  };
+
+  selectTabRef.current = selectTab;
+  // 0.1.55 (auditoría): «Atrás» de Android cierra lo que está abierto y luego
+  // vuelve al Chat; antes salía de la app desde cualquier pantalla. Las
+  // pantallas con su propio manejador (diálogos de clave) se registran después
+  // y tienen prioridad.
+  backActionRef.current = () => {
+    if (drawerOpen) {
+      setDrawerOpen(false);
+      return true;
+    }
+    if (showGuide || showExecutionTelemetry || showKnowledgeBase || showMemoryManager || showAbout) {
+      setShowGuide(false);
+      setShowExecutionTelemetry(false);
+      setShowKnowledgeBase(false);
+      setShowMemoryManager(false);
+      setShowAbout(false);
+      return true;
+    }
+    if (showSettings || showNido || activeTab !== "chat") {
+      selectTab("chat");
+      return true;
+    }
+    return false;
   };
 
   const withTabs = (node: React.ReactNode) => (
@@ -1773,7 +1828,11 @@ export function ChatScreen({
     { key: "emergency", icon: "warning", label: t("tabs.emergency"), onPress: () => selectTab("emergency") },
     { key: "guide", icon: "compass", label: t("guide.drawer"), onPress: () => setShowGuide(true) },
     { key: "prompts", icon: "ideas", label: t("chatScreen.drawerItems.prompts"), onPress: () => setShowPromptIdeas(true) },
-    { key: "knowledge", icon: "knowledge", label: t("chatScreen.drawerItems.myDocuments"), onPress: () => selectTab("library") },
+    { key: "knowledge", icon: "knowledge", label: t("chatScreen.drawerItems.myDocuments"), onPress: () => {
+      selectTab("library");
+      // Después de selectTab (que vuelve a «Packs» al entrar): el último set gana.
+      setLibrarySection("documents");
+    } },
     { key: "memory", icon: "memory", label: t("chatScreen.drawerItems.memory"), onPress: () => setShowMemoryManager(true) },
     { key: "settings", icon: "settings", label: t("chatScreen.drawerItems.settings"), onPress: () => selectTab("settings") },
     { key: "telemetry", icon: "telemetry", label: t("chatScreen.drawerItems.telemetry"), onPress: () => setShowExecutionTelemetry(true) },
@@ -1864,6 +1923,8 @@ export function ChatScreen({
   if (activeTab === "library") {
     return withTabs(
       <LibraryScreen
+        key={librarySection}
+        initialSection={librarySection}
         onOpenGuide={() => setShowGuide(true)}
         onOpenPromptIdeas={() => {
           selectTab("chat");

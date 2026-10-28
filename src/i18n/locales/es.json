@@ -648,7 +648,8 @@
     "titlePartial": "Basada en estas fuentes · se quitaron frases sin respaldo",
     "titleAbstained": "Hay fuentes, pero no responden exactamente a esto",
     "titleUnverified": "Fuentes consultadas · sin verificación automática (otro idioma)",
-    "relevanceCaption": "Los números indican fuerza de coincidencia absoluta con el índice offline, no confianza."
+    "relevanceCaption": "Los números indican fuerza de coincidencia absoluta con el índice offline, no confianza.",
+    "readWhole": "Leer la guía entera"
   },
   "systemMonitor": {
     "diskLabel": "Almacenamiento en disco (límite: 50 GB)",
@@ -711,7 +712,11 @@
       "busy": "NIDO estaba ocupado. Vuelve a intentarlo en unos segundos.",
       "connection": "No se pudo conectar con el otro NIDO. Acerca los dispositivos, revisa el Bluetooth o la Wi-Fi y que NIDO esté abierto en los dos.",
       "generic": "Algo falló con la conexión ({{detail}}).",
-      "sessionInvalidated": "La sesión de NIDO se cerró al borrar los datos. Cierra esta pantalla y vuelve a abrirla."
+      "sessionInvalidated": "La sesión de NIDO se cerró al borrar los datos. Cierra esta pantalla y vuelve a abrirla.",
+      "privateCheckFailed": "No pude comprobar si este contacto admite el saludo privado, así que no llamé y tu identidad no salió del teléfono. Inténtalo de nuevo.",
+      "privateOnlyOldContact": "Tienes activado «Solo saludo privado» y este contacto usa un NIDO antiguo que no lo admite, así que no llamé. Pídele que actualice o apaga la opción en Ajustes → Seguridad.",
+      "privateOnlyNoTarget": "Tienes activado «Solo saludo privado»: solo se puede llamar a tus contactos, desde la lista de contactos.",
+      "privateOnlyPlainHello": "Se rechazó una llamada con saludo en claro (tienes activado «Solo saludo privado»)."
     },
     "back": "‹ Atrás",
     "online": "al alcance",
@@ -836,7 +841,8 @@
     "disappearBadge": "temporal",
     "disappearShort": "Temporal: {{value}}",
     "v5Active": "clave por mensaje",
-    "v5Missing": "Esta conexión no usa clave por mensaje, aunque este contacto ya la usaba. Si no la apagó, alguien pudo bloquearla: vuelve a conectar y compruébalo con él en persona."
+    "v5Missing": "Esta conexión no usa clave por mensaje, aunque este contacto ya la usaba. Si no la apagó, alguien pudo bloquearla: vuelve a conectar y compruébalo con él en persona.",
+    "oldNidoWarning": "Saludo privado aún sin confirmar con este contacto: hasta que se conecten con NIDO 0.1.49 o posterior en los dos teléfonos, quien esté cerca puede ver que le llamas."
   },
   "notifications": {
     "reminderChannel": "Recordatorios de NIDO",
@@ -1028,14 +1034,15 @@
     "decline": "Rechazar",
     "cancel": "Cancelar",
     "retry": "Reintentar",
-    "noPeersTitle": "Sin contactos",
-    "noPeersMessage": "Necesitas al menos un contacto emparejado para compartir packs.",
+    "noPeersTitle": "Ningún contacto conectado",
+    "noPeersMessage": "Conéctate primero con un contacto (pestaña Contactos) y vuelve a intentarlo.",
     "offerFailedTitle": "No se pudo enviar",
-    "offerFailedMessage": "No se pudo preparar el envío del pack.",
-    "unavailableTitle": "Aún no disponible",
-    "unavailableMessage": "Compartir packs entre dispositivos todavía no está disponible en esta versión. Llegará en una próxima actualización.",
+    "offerFailedMessage": "No se pudo enviar la oferta. Comprueba que el contacto siga conectado. Solo se pueden compartir los packs del catálogo de NIDO, tal como se descargaron.",
+    "unavailableTitle": "Todavía no está listo",
+    "unavailableMessage": "NIDO aún está cargando tu identidad. Espera unos segundos y vuelve a intentarlo.",
     "tooLargeTitle": "Pack demasiado grande",
-    "tooLargeMessage": "Este pack ocupa {{size}} MB y el máximo para compartir es {{max}} MB."
+    "tooLargeMessage": "Este pack ocupa {{size}} MB y el máximo para compartir es {{max}} MB.",
+    "choosePeerTitle": "¿A quién se lo envías?"
   },
   "voiceInputAlert": {
     "unavailableTitle": "Entrada de voz no disponible",
@@ -1073,7 +1080,9 @@
     "sealedHelloTitle": "Saludo privado",
     "sealedHelloDesc": "Cuando este teléfono llama a un NIDO emparejado que lo soporta, los primeros mensajes van sellados y nadie cerca puede ver quién llama. Activado por defecto; con un NIDO viejo no cambia nada.",
     "ratchetV5Title": "Clave nueva por mensaje + resistencia cuántica",
-    "ratchetV5Desc": "Cada mensaje usa su propia clave, como el Double Ratchet de Signal: una clave robada hoy no abre los mensajes anteriores. Además la sesión mezcla ML-KEM-768, para que el tráfico grabado hoy siga cerrado ante ordenadores cuánticos futuros. Activado por defecto; se usa cuando los dos teléfonos lo tienen. Vale desde la siguiente conexión."
+    "ratchetV5Desc": "Cada mensaje usa su propia clave, como el Double Ratchet de Signal: una clave robada hoy no abre los mensajes anteriores. Además la sesión mezcla ML-KEM-768, para que el tráfico grabado hoy siga cerrado ante ordenadores cuánticos futuros. Activado por defecto; se usa cuando los dos teléfonos lo tienen. Vale desde la siguiente conexión.",
+    "privateHelloOnlyTitle": "Solo saludo privado",
+    "privateHelloOnlyDesc": "Tu teléfono nunca dice en claro quién eres: no llama a contactos con un NIDO antiguo (anterior a la 0.1.49) ni a dispositivos que no son tus contactos, y no contesta saludos en claro. Apagado por defecto porque deja sin conexión a quien no haya actualizado."
   },
   "backup": {
     "dekTitle": "Backup creado",
@@ -1778,5 +1787,18 @@
     "aboutSection": "Acerca de NIDO",
     "aboutDesc": "Versión, privacidad, límites, código abierto y licencias.",
     "openAbout": "Abrir Acerca de"
+  },
+  "answering": {
+    "title": "NIDO está respondiendo…",
+    "text": "La respuesta sigue escribiéndose aunque salgas de la app.",
+    "channel": "Respuestas en curso"
+  },
+  "sourceReader": {
+    "title": "Fuente",
+    "close": "Cerrar",
+    "hint": "La parte resaltada es la que NIDO usó para responder.",
+    "usedPart": "Usada en la respuesta",
+    "source": "Fuente original: {{source}}",
+    "notFound": "No se encontró la guía: puede que el pack se haya quitado o actualizado."
   }
 }

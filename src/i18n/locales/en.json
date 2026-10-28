@@ -529,7 +529,8 @@
     "titleAbstained": "Sources found, but they don't answer this exactly",
     "titleUnverified": "Sources consulted · not auto-checked (different language)",
     "localIndex": "Local index",
-    "relevanceCaption": "Numbers are absolute match strength against the offline index — not confidence."
+    "relevanceCaption": "Numbers are absolute match strength against the offline index — not confidence.",
+    "readWhole": "Read the whole guide"
   },
   "promptIdeasCarousel": {
     "title": "Try asking",
@@ -711,7 +712,11 @@
       "busy": "NIDO was busy. Try again in a few seconds.",
       "connection": "Couldn't connect to the other NIDO. Bring the devices closer, check Bluetooth or Wi-Fi, and make sure NIDO is open on both.",
       "generic": "Something went wrong with the connection ({{detail}}).",
-      "sessionInvalidated": "The NIDO session was closed when the data was erased. Close this screen and open it again."
+      "sessionInvalidated": "The NIDO session was closed when the data was erased. Close this screen and open it again.",
+      "privateCheckFailed": "I couldn't check whether this contact supports the private hello, so I didn't call and your identity never left the phone. Please try again.",
+      "privateOnlyOldContact": "\"Private hello only\" is on and this contact uses an old NIDO that doesn't support it, so I didn't call. Ask them to update, or turn the option off in Settings → Security.",
+      "privateOnlyNoTarget": "\"Private hello only\" is on: you can only call your contacts, from the contacts list.",
+      "privateOnlyPlainHello": "A call with a plain hello was refused (\"Private hello only\" is on)."
     },
     "back": "‹ Back",
     "online": "within reach",
@@ -836,7 +841,8 @@
     "disappearBadge": "disappearing",
     "disappearShort": "Timer: {{value}}",
     "v5Active": "new key per message",
-    "v5Missing": "This connection is not using per-message keys, although this contact used them before. If they did not turn it off, someone may have blocked it: reconnect, and check with them in person."
+    "v5Missing": "This connection is not using per-message keys, although this contact used them before. If they did not turn it off, someone may have blocked it: reconnect, and check with them in person.",
+    "oldNidoWarning": "Private hello not confirmed with this contact yet: until you connect with NIDO 0.1.49 or later on both phones, people nearby can see you are calling them."
   },
   "notifications": {
     "reminderChannel": "NIDO Reminders",
@@ -1028,14 +1034,15 @@
     "decline": "Decline",
     "cancel": "Cancel",
     "retry": "Retry",
-    "noPeersTitle": "No contacts",
-    "noPeersMessage": "You need at least one paired contact to share packs.",
+    "noPeersTitle": "No contact connected",
+    "noPeersMessage": "Connect with a contact first (Contacts tab) and try again.",
     "offerFailedTitle": "Could not send",
-    "offerFailedMessage": "Could not prepare the pack transfer.",
-    "unavailableTitle": "Not available yet",
-    "unavailableMessage": "Sharing packs between devices is not available in this version yet. It is coming in a future update.",
+    "offerFailedMessage": "The offer could not be sent. Check that the contact is still connected. Only NIDO catalog packs, exactly as downloaded, can be shared.",
+    "unavailableTitle": "Not ready yet",
+    "unavailableMessage": "NIDO is still loading your identity. Wait a few seconds and try again.",
     "tooLargeTitle": "Pack too large",
-    "tooLargeMessage": "This pack is {{size}} MB and the sharing limit is {{max}} MB."
+    "tooLargeMessage": "This pack is {{size}} MB and the sharing limit is {{max}} MB.",
+    "choosePeerTitle": "Who do you want to send it to?"
   },
   "voiceInputAlert": {
     "unavailableTitle": "Voice input unavailable",
@@ -1073,7 +1080,9 @@
     "sealedHelloTitle": "Private hello",
     "sealedHelloDesc": "When this phone calls a paired NIDO that supports it, the first messages are sealed so nobody nearby can see who is calling. On by default; with an older NIDO nothing changes.",
     "ratchetV5Title": "New key per message + quantum-resistant",
-    "ratchetV5Desc": "Every message gets its own key, like Signal's Double Ratchet: a key stolen today does not open earlier messages. The session also mixes in ML-KEM-768, so traffic recorded today stays closed to future quantum computers. On by default; used when both phones have it. Applies from the next connection."
+    "ratchetV5Desc": "Every message gets its own key, like Signal's Double Ratchet: a key stolen today does not open earlier messages. The session also mixes in ML-KEM-768, so traffic recorded today stays closed to future quantum computers. On by default; used when both phones have it. Applies from the next connection.",
+    "privateHelloOnlyTitle": "Private hello only",
+    "privateHelloOnlyDesc": "Your phone never reveals who you are in the clear: it doesn't call contacts with an old NIDO (before 0.1.49) or devices that aren't your contacts, and it doesn't answer plain hellos. Off by default because it cuts off anyone who hasn't updated."
   },
   "backup": {
     "dekTitle": "Backup created",
@@ -1778,5 +1787,18 @@
     "aboutSection": "About NIDO",
     "aboutDesc": "Version, privacy, limits, open source and licenses.",
     "openAbout": "Open About"
+  },
+  "answering": {
+    "title": "NIDO is answering…",
+    "text": "The answer keeps being written even if you leave the app.",
+    "channel": "Answers in progress"
+  },
+  "sourceReader": {
+    "title": "Source",
+    "close": "Close",
+    "hint": "The highlighted part is the one NIDO used to answer.",
+    "usedPart": "Used in the answer",
+    "source": "Original source: {{source}}",
+    "notFound": "The guide was not found: the pack may have been removed or updated."
   }
 }

@@ -4,6 +4,101 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.56-alpha — 2026-10-28
+
+### Added
+- **Share a knowledge pack with a contact, without internet.** A NIDO can
+  now pass a catalog pack (for example NIDO Essentials, about 0.7 MB) to a
+  connected contact over Bluetooth or local Wi-Fi, from the Packs tab. The
+  receiver installs it only if it is byte-for-byte the file in NIDO's
+  signed catalog; anything else — a hand-made pack, a modified one — is not
+  offered and not installed. The previous pack stays in place if anything
+  fails. The transfer code existed since 0.1.4 but was never connected, and
+  the Packs tab (NIDO › Packs) was hidden; it is visible again.
+- **Read the whole guide behind an answer.** Under an answer's sources, a
+  knowledge-pack source now has "Read the whole guide": it opens the full
+  guide, offline, with the part NIDO used highlighted and the original
+  source it was written from. Anyone can check where an answer comes from.
+  Idea from BOAR (MIT).
+
+### Changed
+- **Every release checks its own reproducibility.** After publishing, the
+  release workflow starts the reproducible-build check against the APK it
+  just published (two independent builds of the same commit, compared file
+  by file, signature aside). Before, it had to be started by hand.
+- **Android libraries in the licenses.** Each release now carries
+  `android-runtime-dependencies.txt`, the exact list of Android libraries
+  (AndroidX, Kotlin, SQLCipher and what they pull in) compiled into that
+  APK. THIRD_PARTY_NOTICES now also lists the native ML-KEM code vendored in
+  the repository (mlkem-native 2.0.0, Apache-2.0 OR ISC OR MIT) with its
+  license text. The license texts of the Android libraries are not
+  reproduced yet.
+
+### Fixed
+- **Navigation in the new interface** (found auditing the 0.1.55 APK):
+  "Try it" in the guide opened from the Library or Settings now shows the
+  chat where the example was typed; "Share → NIDO" and the new-chat
+  shortcut show the chat even if another tab was open; Android's Back
+  button closes the open menu or screen and returns to Chat instead of
+  leaving the app; "My documents" in the side menu opens the Library on My
+  documents.
+- **Release notes on GitHub** no longer repeat the whole notes file (with
+  the 0.1.1–0.1.18 history before the new changes and the limitations
+  twice).
+- **"The emergency number that's used here"** is no longer taken as a
+  question about the United States ("usa" is also a Spanish verb).
+- **Pack sharing no longer reports "complete" for a pack it did not
+  save** (when no installer was connected, the receiver said "complete").
+- **Choose the contact** when several are connected, instead of sending to
+  the first one in the list; only connected contacts are offered.
+- **An answer is no longer lost when you leave the app.** While the AI
+  writes an answer, NIDO now shows a quiet "NIDO is answering…"
+  notification (an Android foreground service). Some phones closed NIDO a
+  few seconds after you switched apps, and the answer stopped half-way. It
+  starts with each visible answer and stops when it ends; no sound, no
+  pop-up; it stops by itself after 15 minutes if nothing stops it. Idea
+  seen in BOAR; NIDO's own implementation. Needs the check on the
+  tablets (start an answer, switch apps, come back) before release.
+
+### Security
+- **Private hello: no identity in clear with contacts that support it.**
+  Automatic Bluetooth reconnection called the contact without naming it and
+  sent the old hello with the permanent identity in clear; it now seals like
+  a manual call. If the contact's private-hello mark cannot be read, NIDO no
+  longer falls back to the plain hello: it does not call and says why.
+- **New setting "Private hello only"** (Settings → Security, off by
+  default): this phone never states its identity in clear — it does not
+  call contacts on NIDO older than 0.1.49 or devices that are not contacts,
+  and it does not answer plain hellos. The contacts list now marks contacts
+  whose private hello is not confirmed yet. Off by default because it cuts
+  off contacts who have not updated. Tested in CI only; needs the two-phone
+  check before release.
+- **Local Wi-Fi server on the Wi-Fi interface only.** While searching for
+  contacts, the Wi-Fi server used to listen on every network interface
+  (filtered by private address and subnet). It now listens only on the
+  Wi-Fi network the phone is on, or on the hotspot it is sharing, so it does
+  not exist on the mobile-data interface. With unusual interface names it
+  falls back to the previous behaviour. Needs the two-phone check (same
+  Wi-Fi, one phone as hotspot, Wi-Fi change mid-search) before release.
+
+### Safety
+- **Fixed answers where a mistake could kill.** Two kinds of question are
+  now answered by NIDO's own checked text, never by the AI model:
+  - Running a generator, grill, brazier, charcoal or a running car inside a
+    home, garage, basement or tent: "No", even with doors and windows open,
+    20 feet / 6 m from the house, CO alarms, and what to do if the alarm
+    sounds or someone feels sick (US CPSC and CDC). A small model can answer
+    "yes, with ventilation". Idea from BOAR's Cohazard; text and rules are
+    NIDO's.
+  - "What's the emergency number in…": only countries checked against an
+    official source (United States, Puerto Rico, Mexico, Dominican Republic,
+    Cuba, Spain, Portugal, Brazil), each with its source. With the NIDO
+    Local pack installed, its 23 checked countries answer first. Any other
+    country: NIDO says it has not checked it and does not guess.
+  In Spanish, English and Portuguese. Questions that merely mention these
+  things (cleaning the kitchen grill, a car parked in the garage) are not
+  caught.
+
 ## 0.1.55-alpha — 2026-10-28
 
 ### Added

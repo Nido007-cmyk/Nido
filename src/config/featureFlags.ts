@@ -26,6 +26,7 @@ export type FeatureFlag =
   | "delegation.enabled"
   | "p2p.sealedHandshake"
   | "p2p.ratchetV5"
+  | "p2p.privateHelloOnly"
   | "security.panicButton";
 
 const DEFAULTS: Record<FeatureFlag, boolean> = {
@@ -45,6 +46,15 @@ const DEFAULTS: Record<FeatureFlag, boolean> = {
    * defecto; un teléfono viejo o con v5 apagado sigue en el modo clásico.
    */
   "p2p.ratchetV5": true,
+  /**
+   * 0.1.55: «Solo saludo privado». Con él encendido este teléfono NUNCA dice
+   * en claro quién es: no llama a contactos que no admiten el saludo sellado
+   * (NIDO anteriores a la 0.1.49), no llama a dispositivos sin contacto
+   * conocido (la lista de cercanos) y rechaza los saludos en claro que le
+   * lleguen. Default OFF: encendido deja sin conexión a quien tenga un NIDO
+   * viejo, y eso lo decide el usuario.
+   */
+  "p2p.privateHelloOnly": false,
   /**
    * Botón de pánico (0.1.46, como Briar): muestra en la pantalla principal un
    * botón que, mantenido 3 segundos, borra todos los datos de NIDO sin más

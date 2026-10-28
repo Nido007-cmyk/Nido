@@ -19,6 +19,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { CORPUS_CATALOG, MODEL_CATALOG, CatalogModel } from "../models/manifest";
 import { buildLexicalQuery, cosineSimilarityInt8, distinctFloor, DISTINCT_BG_TO, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM, pruneSemanticByMargin, pruneVectorHits } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
+import { guideTitleOf, markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId, sectionLikePattern, type PackSourceDoc } from "./packSource";
 import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "./embeddingProfile";
 import { packIndexIfReady, releaseAllIndexes, searchPackIndex } from "./vectorIndex";
 import { composeFactsAnswer, type FactLang, type FactsAnswer, type PackFact, type PackRegion } from "./packFacts";
@@ -67,6 +68,33 @@ export async function knowledgePacks(): Promise<CatalogModel[]> {
       })
     );
   return [...catalog, ...extra];
+}
+
+/**
+ * 0.1.55: la guía entera de la que salió un trozo de una respuesta, con la
+ * parte usada marcada. Solo lectura, sin internet. null si el pack ya no
+ * está, cambió o el trozo no es de un pack.
+ */
+export async function readPackSource(chunkId: string): Promise<PackSourceDoc | null> {
+  const ref = parsePackChunkId(chunkId);
+  if (!ref) return null;
+  const pack = (await knowledgePacks()).find((p) => p.id === ref.packId);
+  if (!pack) return null;
+  const open = await openPack(pack);
+  if (!open) return null;
+  const head = await open.db.getFirstAsync<{ title: string; source: string | null }>(
+    "SELECT title, source FROM chunks WHERE id = ?",
+    [ref.rowId],
+  );
+  if (!head) return null;
+  // La guía entera: el trozo sin apartado («Guía») y todos sus apartados
+  // («Guía — Apartado»), en orden.
+  const guide = guideTitleOf(head.title);
+  const rows = await open.db.getAllAsync<{ id: number; body: string }>(
+    "SELECT id, body FROM chunks WHERE title = ? OR title LIKE ? ESCAPE '\\' ORDER BY id LIMIT ?",
+    [guide, sectionLikePattern(guide), MAX_SOURCE_PARTS],
+  );
+  return markUsedPart(guide, head.source ?? "", rows, ref.rowId);
 }
 
 export async function closePack(id: string): Promise<void> {

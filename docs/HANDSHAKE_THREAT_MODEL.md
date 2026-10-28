@@ -196,6 +196,27 @@ two phones keep using v3 (contacts paired since 0.1.49 learn support from
 the QR code, so this does not apply to them); a contact can, by definition,
 recognise the other side.
 
+**0.1.55: closing the leftovers.** Three paths still sent the identity in
+clear to a contact that supports the sealed hello, or let a plain hello
+through:
+
+- *Automatic Bluetooth reconnection* called the contact without naming it,
+  so it sent the v3 HELLO (identity in clear) every time a link dropped.
+  It now names the contact and seals like a manual call.
+- *Fail-open lookup.* If reading the contact's `c4` mark failed, the caller
+  fell back to v3. It now fails closed: no call, and the user is told why.
+- *"Private hello only"* (Settings → Security, **off by default**): the
+  phone never states its identity in clear. It does not call contacts
+  without the `c4` mark (NIDO before 0.1.49, or never confirmed), does not
+  call devices that are not contacts (the nearby list), and does not answer
+  plain v3 hellos — which also closes, for those who turn it on, the v3
+  HELLO-forwarding gap within the ±10 min window. It is off by default
+  because it cuts off contacts who have not updated. The contacts list marks
+  the contacts whose private hello is not confirmed yet.
+
+The "Private hello" switch keeps its meaning as the emergency off switch for
+contacts that do support it; "Private hello only" overrides it.
+
 ## CONFIRM v2 (0.1.48): the confirmation names its recipient
 
 Formal verification (`formal/nido_handshake.pv`, see `formal/README.md`)

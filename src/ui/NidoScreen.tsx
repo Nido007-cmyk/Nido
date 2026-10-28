@@ -183,6 +183,8 @@ export function NidoScreen({
   }, [contactCount]);
   /** PKs revocados (para filtrar de la lista de contactos). */
   const [revokedPks, setRevokedPks] = useState<Set<string>>(new Set());
+  // 0.1.55 (P-04): contactos que admiten el saludo privado (los demás llevan aviso).
+  const [v4Pks, setV4Pks] = useState<Set<string> | null>(null);
   /**
    * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): salud del almacenamiento
    * de revocaciones. Si es false, el banner de recuperación se muestra
@@ -284,6 +286,12 @@ export function NidoScreen({
   const loadContacts = useCallback(async () => {    try {
       const list = await listContacts();
       setContacts(list);
+      try {
+        const { listV4CapablePks } = await import("../p2p/store");
+        setV4Pks(await listV4CapablePks());
+      } catch {
+        setV4Pks(null); // sin dato: no se avisa (mejor callar que avisar mal)
+      }
       // FIX 2026-10-09: filtrar revocados de la vista.
       const revoked = new Set<string>();
       for (const c of list) {
@@ -433,6 +441,14 @@ export function NidoScreen({
         (peerPkHex, action, negotiationId, signed) =>
           m.sendNegotiationResponse(peerPkHex, action, negotiationId, signed)
       );
+      // 0.1.55: compartir packs del catálogo NIDO↔NIDO (antes el servicio
+      // existía pero nadie le daba envío, bytes ni importador).
+      try {
+        const { wirePackShare } = await import("../p2p/packShareApp");
+        await wirePackShare(m, id.pkHex);
+      } catch {
+        /* noop: la pestaña Packs dice que compartir no está disponible */
+      }
     } catch (e) {
       // F-2: pérdida de claves de identidad → recovery honesto, no
       // first-run falso ni regeneración silenciosa.
@@ -1483,8 +1499,9 @@ export function NidoScreen({
             ["contactos", t("nido.tabContacts")],
             ["enlace", t("nido.tabLink")],
             ["negociaciones", t("nido.tabNegotiations")],
-            // F2/U5: la pestaña Packs se oculta hasta que el envío y la
-            // recepción estén conectados (hoy el botón no hace nada).
+            // 0.1.56: envío y recepción ya conectados (packShareApp), así
+            // que la pestaña Packs vuelve a verse.
+            ["packs", t("nido.tabPacks")],
           ] as Array<[Tab, string]>
         ).map(([key, label]) => (
           <Pressable
@@ -1645,6 +1662,9 @@ export function NidoScreen({
                       {c.pkHex.slice(0, 16)}… ·{" "}
                       {isOnline ? t("nido.online") : t("nido.offline")}
                     </Text>
+                    {v4Pks && !v4Pks.has(c.pkHex.toLowerCase()) ? (
+                      <Text style={styles.contactSub}>{t("nido.oldNidoWarning")}</Text>
+                    ) : null}
                   </View>
                   {/* BUG-5-2026-10-06: botón para conectar probando MACs */}
                   {!isOnline && (
@@ -1784,7 +1804,11 @@ export function NidoScreen({
       {tab === "negociaciones" && <NegotiationsTab />}
       {tab === "packs" && (
         <PacksTab
-          peers={contacts.map((c) => ({ pkHex: c.pkHex, name: c.name }))}
+          // 0.1.55: solo contactos conectados ahora (un pack se envía por
+          // la sesión viva) y nunca revocados.
+          peers={contacts
+            .filter((c) => online.has(c.pkHex.toLowerCase()) && !revokedPks.has(c.pkHex.toLowerCase()))
+            .map((c) => ({ pkHex: c.pkHex, name: c.name }))}
           getPeerName={(pkHex) => {
             const contact = contacts.find((c) => c.pkHex.toLowerCase() === pkHex.toLowerCase());
             return contact?.name ?? pkHex.slice(0, 8);

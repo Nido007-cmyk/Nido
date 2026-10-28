@@ -1795,6 +1795,20 @@ export async function isContactV4Capable(pkHex: string): Promise<boolean> {
   return row?.v4_capable === 1;
 }
 
+/**
+ * 0.1.55 (P-04): pks (en minúsculas) de los contactos vivos que admiten el
+ * saludo sellado. La lista de contactos lo usa para avisar de los que siguen
+ * con un NIDO antiguo (a esos se les llama con la identidad en claro).
+ */
+export async function listV4CapablePks(): Promise<Set<string>> {
+  await migrate();
+  const db = await getMemoryDb();
+  const rows = await db.getAllAsync<{ pk_hex: string }>(
+    "SELECT pk_hex FROM p2p_contacts WHERE v4_capable = 1 AND superseded_by IS NULL",
+  );
+  return new Set(rows.map((r) => r.pk_hex.toLowerCase()));
+}
+
 
 /* ---------- 0.1.46: mensajes temporales ---------- */
 

@@ -46,6 +46,23 @@ export const LICENSE_FALLBACKS = [
   },
 ];
 
+/**
+ * 0.1.55 (P-10): código nativo copiado DENTRO de este repositorio (no llega
+ * por npm, así que el lockfile no lo ve). Lista revisada a mano: cada
+ * entrada nombra el archivo de licencia del propio repo, cuyo texto se
+ * copia tal cual. Lo que trae llama.rn (llama.cpp, MIT) ya sale con
+ * llama.rn: su carpeta `cpp` se recorre como componente empotrado.
+ */
+export const NATIVE_COMPONENTS = [
+  {
+    name: "mlkem-native",
+    version: "2.0.0",
+    license: "Apache-2.0 OR ISC OR MIT",
+    where: "modules/nido-p2p (ML-KEM-768, compiled into libnidomlkem.so)",
+    licenseFile: "modules/nido-p2p/android/src/main/cpp/mlkem-native/LICENSE",
+  },
+];
+
 /** Nombre del paquete a partir de su ruta en el lockfile. */
 export function packageNameFromPath(path) {
   const i = path.lastIndexOf("node_modules/");
@@ -143,7 +160,15 @@ export function buildNotices(packages, readNotices, meta = {}) {
   const withoutText = meta.partial
     ? []
     : entries.filter((e) => e.files.length === 0 && !e.local).map((e) => `${e.name}@${e.version}`);
-  return { ...meta, count: entries.length, withoutText, packages: entries, texts };
+  const native = (meta.native ?? []).map((c) => {
+    const text = cleanText(c.licenseText ?? "");
+    const rest = { name: c.name, version: c.version, license: c.license, where: c.where, licenseFile: c.licenseFile };
+    if (!text) return rest;
+    const id = textId(text);
+    texts[id] = text;
+    return { ...rest, text: id };
+  });
+  return { ...meta, native, count: entries.length, withoutText, packages: entries, texts };
 }
 
 /** THIRD_PARTY_NOTICES.md a partir del resultado de buildNotices. */
@@ -169,7 +194,9 @@ export function renderMarkdown(notices) {
   lines.push(
     "AI models and knowledge packs are not part of the app: they are downloaded separately and keep " +
       "their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). " +
-      "Android libraries resolved by Gradle at build time (AndroidX, Kotlin) are not listed here yet.",
+      "Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) " +
+      "do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as " +
+      "`android-runtime-dependencies.txt` (see below).",
   );
   lines.push("");
   if (notices.generatedFrom) lines.push(`Source: \`${notices.generatedFrom}\` · ${notices.count} packages.`);
@@ -185,6 +212,22 @@ export function renderMarkdown(notices) {
     for (const p of elections) lines.push(`- **${p.name}** is offered under \`${p.license}\`; NIDO uses it under **${p.elected}**. ${p.electionReason}`);
     lines.push("");
   }
+  if (notices.native?.length) {
+    lines.push("## Native code vendored in this repository");
+    lines.push("");
+    lines.push("| Component | Version | License | Where |");
+    lines.push("|---|---|---|---|");
+    for (const c of notices.native) lines.push(`| ${c.name} | ${c.version} | ${c.license} | ${c.where} |`);
+    lines.push("");
+  }
+  lines.push("## Android libraries (Gradle)");
+  lines.push("");
+  lines.push(
+    "AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolved by Gradle when the APK is built. " +
+      "The release workflow saves the exact `releaseRuntimeClasspath` tree of each build and attaches it to the " +
+      "GitHub release as `android-runtime-dependencies.txt`. Their license texts are not reproduced in this file yet.",
+  );
+  lines.push("");
   lines.push("## Packages");
   lines.push("");
   lines.push("| Package | Version | License |");
@@ -213,6 +256,15 @@ export function renderMarkdown(notices) {
       lines.push("```");
       lines.push("");
     }
+  }
+  for (const c of notices.native ?? []) {
+    if (!c.text) continue;
+    lines.push(`### ${c.name}@${c.version} — ${c.licenseFile}`);
+    lines.push("");
+    lines.push("```text");
+    lines.push(notices.texts[c.text].replace(/```/g, "ʼʼʼ"));
+    lines.push("```");
+    lines.push("");
   }
   if (notices.withoutText?.length) {
     lines.push("## Packages without a license file");
