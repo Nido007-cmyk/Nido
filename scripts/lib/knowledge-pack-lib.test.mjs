@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { chunkGuide, chunkIntro, cleanIntro, parseArgs, parseGuide, quantizeInt8, vitalListPages } from "./knowledge-pack-lib.mjs";
+import { chunkGuide, chunkIntro, cleanIntro, parseArgs, parseGuide, quantizeInt8, splitQuestions, validateFacts, vitalListPages } from "./knowledge-pack-lib.mjs";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -153,3 +153,81 @@ describe("NIDO guides (--guides)", () => {
     for (const [t, n] of titles) expect(n, t).toBe(1);
   });
 });
+
+describe("formato v2 de los packs (0.1.55)", () => {
+  const guide = [
+    "---",
+    "title: Cuba: números",
+    "lang: es",
+    "sources: Consulado",
+    "id: local-cuba",
+    "region: CU",
+    "verified: 2026-10-28",
+    "questions: número de la ambulancia en Cuba | a qué número llamo en La Habana",
+    "---",
+    "En Cuba, el 104 es la ambulancia.",
+    "<!-- preguntas: teléfono de emergencias cubano -->",
+    "## Fases",
+    "Fase de alarma: unas 24 horas.",
+    "<!-- questions: what does the alarm phase mean -->",
+  ].join("\n");
+
+  it("lee id, región, fecha y preguntas, y las preguntas no aparecen en el texto", () => {
+    const g = parseGuide(guide, "cu.md");
+    expect(g).toMatchObject({ key: "local-cuba", region: "CU", verified: "2026-10-28" });
+    expect(g.questions).toEqual(["número de la ambulancia en Cuba", "a qué número llamo en La Habana"]);
+    expect(g.sections.map((s) => s.questions)).toEqual([["teléfono de emergencias cubano"], ["what does the alarm phase mean"]]);
+    const chunks = chunkGuide(g);
+    expect(chunks.map((c) => c.body).join("\n")).not.toMatch(/<!--|preguntas|questions/);
+    expect(chunks[0].questions).toContain("número de la ambulancia en Cuba");
+    expect(chunks.flatMap((c) => c.questions)).toContain("what does the alarm phase mean");
+  });
+
+  it("rechaza una región o una fecha mal escritas", () => {
+    expect(() => parseGuide(guide.replace("region: CU", "region: Cuba"), "x.md")).toThrow(/ISO/);
+    expect(() => parseGuide(guide.replace("verified: 2026-10-28", "verified: ayer"), "x.md")).toThrow(/YYYY-MM-DD/);
+  });
+
+  it("splitQuestions", () => {
+    expect(splitQuestions(" a | | b ")).toEqual(["a", "b"]);
+    expect(splitQuestions(undefined)).toEqual([]);
+  });
+
+  const region = { names: { es: "Cuba", en: "Cuba", pt: "Cuba" }, aliases: ["cuba"] };
+  const fact = {
+    key: "emergency.ambulance",
+    region: "CU",
+    value: "104",
+    label: { es: "ambulancia", en: "ambulance", pt: "ambulância" },
+    source: { title: "Consulado", url: "https://exteriores.gob.es/x", quote: "Ambulancia, 104", checked: "2026-10-27" },
+  };
+
+  it("validateFacts acepta un dato con su fuente, cita y fecha", () => {
+    expect(validateFacts({ regions: { CU: region }, facts: [fact] }).facts).toHaveLength(1);
+  });
+
+  it("validateFacts rechaza un dato sin fuente, sin cita, con región desconocida o repetido", () => {
+    const bad = (f) => () => validateFacts({ regions: { CU: region }, facts: [f] });
+    expect(bad({ ...fact, source: { ...fact.source, quote: "" } })).toThrow(/quote/);
+    expect(bad({ ...fact, source: { ...fact.source, url: "http://x" } })).toThrow(/https/);
+    expect(bad({ ...fact, region: "XX" })).toThrow(/unknown region/);
+    expect(bad({ ...fact, label: { es: "a", en: "b" } })).toThrow(/label.pt/);
+    expect(() => validateFacts({ regions: { CU: region }, facts: [fact, fact] })).toThrow(/duplicated/);
+    expect(() => validateFacts({ regions: { cu: region }, facts: [] })).toThrow(/ISO/);
+    expect(() => validateFacts({ regions: { CU: { ...region, in: { es: "en Cuba" } } }, facts: [] })).toThrow(/in\.en/);
+    expect(bad({ ...fact, note: { es: "solo en español" } })).toThrow(/note\.en/);
+  });
+
+  it("los datos de NIDO Local son válidos y cada uno cita su fuente oficial", () => {
+    const file = fileURLToPath(new URL("../../knowledge-packs/nido-local/facts.json", import.meta.url));
+    const { regions, facts } = validateFacts(JSON.parse(readFileSync(file, "utf8")), file);
+    expect(Object.keys(regions).length).toBeGreaterThanOrEqual(20);
+    for (const f of facts) {
+      // A number the quote doesn't contain would be our claim, not the source's.
+      const digits = f.value.replace(/\D/g, "");
+      expect(f.source.quote.replace(/\D/g, "")).toContain(digits);
+      expect(regions[f.region].in).toBeDefined();
+    }
+  });
+});
+

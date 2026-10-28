@@ -3,6 +3,10 @@ title: Puerto Rico: 9-1-1, hurricane watches and warnings
 category: Emergencies by country
 lang: en
 sources: Puerto Rico 9-1-1 Service Governing Board, annual report (9-1-1); US National Weather Service (NWS), "Hurricane Safety Tips" (watch and warning definitions, what to do); Puerto Rico Emergency Management Bureau (NMEAD), as reported by Platea PR
+id: local-puerto-rico
+region: PR
+verified: 2026-10-28
+questions: what number do I call if something happens in Puerto Rico | what to do when a hurricane comes to Puerto Rico
 ---
 In Puerto Rico, the emergency number is 9-1-1: police, fire and emergency medical services.
 

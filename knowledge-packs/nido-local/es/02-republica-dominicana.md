@@ -3,6 +3,10 @@ title: República Dominicana: 9-1-1 y alertas del COE
 category: Emergencias por país
 lang: es
 sources: Decreto 187-14 del Sistema Nacional de Atención a Emergencias y Seguridad 9-1-1 (Indotel); Centro de Operaciones de Emergencias (COE), cuenta oficial @coe_rd; Servicio Nacional de Meteorología de EE. UU. (NWS), «Consejos de seguridad: huracanes» (qué hacer)
+id: local-dominican-republic
+region: DO
+verified: 2026-10-28
+questions: a qué número llamo si pasa algo en República Dominicana | qué significan los colores de alerta del COE
 ---
 En la República Dominicana, el número de emergencias es el 9-1-1, desde cualquier punto del país (Decreto 187-14).
 

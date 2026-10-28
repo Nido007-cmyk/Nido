@@ -3,6 +3,10 @@ title: Mexico: 911, the hurricane alert colors and the earthquake alert
 category: Emergencies by country
 lang: en
 sources: Embassy of Spain in Mexico, "911, nuevo teléfono de emergencias" (911); Government of Mexico, "Tema 5: Sistemas de Alerta Temprana" (SIAT-CT) and "Tema 3: Sistemas de Alerta Temprana" (earthquake alert); US National Weather Service (NWS), "Hurricane Safety Tips" (what to do)
+id: local-mexico
+region: MX
+verified: 2026-10-28
+questions: what number do I call if something happens in Mexico | what to do when the earthquake alert sounds
 ---
 In Mexico, the emergency number is 911, the single number for the whole country since 2016-2017.
 

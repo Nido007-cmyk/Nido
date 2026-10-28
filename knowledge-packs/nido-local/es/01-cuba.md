@@ -3,6 +3,10 @@ title: Cuba: números de emergencia y fases ante ciclones
 category: Emergencias por país
 lang: es
 sources: Consulado General de España en La Habana, «Seguridad y otros aspectos» (números de emergencia); comunicados del Estado Mayor Nacional de la Defensa Civil de Cuba recogidos por la agencia EFE (fases ciclónicas); Servicio Nacional de Meteorología de EE. UU. (NWS), «Consejos de seguridad: huracanes» (qué hacer)
+id: local-cuba
+region: CU
+verified: 2026-10-28
+questions: a qué número llamo si pasa algo en Cuba | cómo pido una ambulancia en Cuba | qué hago cuando anuncian un ciclón en Cuba
 ---
 En Cuba, los números de emergencia son 104 ambulancia, 105 bomberos y 106 policía (Policía Nacional Revolucionaria). Según el Consulado de España en La Habana, desde un teléfono móvil se marca un 7 delante.
 

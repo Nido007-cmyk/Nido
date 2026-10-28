@@ -3,6 +3,10 @@ title: Dominican Republic: 9-1-1 and COE alerts
 category: Emergencies by country
 lang: en
 sources: Decree 187-14 on the National 9-1-1 Emergency and Security System (Indotel); Emergency Operations Center (COE), official account @coe_rd; US National Weather Service (NWS), "Hurricane Safety Tips" (what to do)
+id: local-dominican-republic
+region: DO
+verified: 2026-10-28
+questions: what number do I call if something happens in the Dominican Republic | what the COE alert colours mean
 ---
 In the Dominican Republic, the emergency number is 9-1-1, from anywhere in the country (Decree 187-14).
 

@@ -1,0 +1,1301 @@
+{
+ "regions": {
+  "US": {
+   "names": {
+    "es": "Estados Unidos",
+    "en": "the United States",
+    "pt": "Estados Unidos"
+   },
+   "in": {
+    "es": "en Estados Unidos",
+    "en": "in the United States",
+    "pt": "nos Estados Unidos"
+   },
+   "aliases": [
+    "estados unidos",
+    "eeuu",
+    "ee uu",
+    "usa",
+    "united states",
+    "the us",
+    "estados unidos da america",
+    "eua"
+   ]
+  },
+  "PR": {
+   "names": {
+    "es": "Puerto Rico",
+    "en": "Puerto Rico",
+    "pt": "Porto Rico"
+   },
+   "in": {
+    "es": "en Puerto Rico",
+    "en": "in Puerto Rico",
+    "pt": "em Porto Rico"
+   },
+   "aliases": [
+    "puerto rico",
+    "porto rico",
+    "san juan"
+   ]
+  },
+  "MX": {
+   "names": {
+    "es": "México",
+    "en": "Mexico",
+    "pt": "México"
+   },
+   "in": {
+    "es": "en México",
+    "en": "in Mexico",
+    "pt": "no México"
+   },
+   "aliases": [
+    "mexico",
+    "méxico",
+    "ciudad de mexico",
+    "cdmx"
+   ]
+  },
+  "DO": {
+   "names": {
+    "es": "República Dominicana",
+    "en": "the Dominican Republic",
+    "pt": "República Dominicana"
+   },
+   "in": {
+    "es": "en República Dominicana",
+    "en": "in the Dominican Republic",
+    "pt": "na República Dominicana"
+   },
+   "aliases": [
+    "republica dominicana",
+    "dominicana",
+    "dominican republic",
+    "santo domingo"
+   ]
+  },
+  "CU": {
+   "names": {
+    "es": "Cuba",
+    "en": "Cuba",
+    "pt": "Cuba"
+   },
+   "in": {
+    "es": "en Cuba",
+    "en": "in Cuba",
+    "pt": "em Cuba"
+   },
+   "aliases": [
+    "cuba",
+    "la habana",
+    "havana",
+    "habana"
+   ]
+  },
+  "GT": {
+   "names": {
+    "es": "Guatemala",
+    "en": "Guatemala",
+    "pt": "Guatemala"
+   },
+   "in": {
+    "es": "en Guatemala",
+    "en": "in Guatemala",
+    "pt": "na Guatemala"
+   },
+   "aliases": [
+    "guatemala"
+   ]
+  },
+  "HN": {
+   "names": {
+    "es": "Honduras",
+    "en": "Honduras",
+    "pt": "Honduras"
+   },
+   "in": {
+    "es": "en Honduras",
+    "en": "in Honduras",
+    "pt": "em Honduras"
+   },
+   "aliases": [
+    "honduras",
+    "tegucigalpa"
+   ]
+  },
+  "SV": {
+   "names": {
+    "es": "El Salvador",
+    "en": "El Salvador",
+    "pt": "El Salvador"
+   },
+   "in": {
+    "es": "en El Salvador",
+    "en": "in El Salvador",
+    "pt": "em El Salvador"
+   },
+   "aliases": [
+    "el salvador",
+    "salvador",
+    "san salvador"
+   ]
+  },
+  "NI": {
+   "names": {
+    "es": "Nicaragua",
+    "en": "Nicaragua",
+    "pt": "Nicarágua"
+   },
+   "in": {
+    "es": "en Nicaragua",
+    "en": "in Nicaragua",
+    "pt": "na Nicarágua"
+   },
+   "aliases": [
+    "nicaragua",
+    "nicarágua",
+    "managua"
+   ]
+  },
+  "CR": {
+   "names": {
+    "es": "Costa Rica",
+    "en": "Costa Rica",
+    "pt": "Costa Rica"
+   },
+   "in": {
+    "es": "en Costa Rica",
+    "en": "in Costa Rica",
+    "pt": "na Costa Rica"
+   },
+   "aliases": [
+    "costa rica",
+    "san jose de costa rica"
+   ]
+  },
+  "PA": {
+   "names": {
+    "es": "Panamá",
+    "en": "Panama",
+    "pt": "Panamá"
+   },
+   "in": {
+    "es": "en Panamá",
+    "en": "in Panama",
+    "pt": "no Panamá"
+   },
+   "aliases": [
+    "panama",
+    "panamá",
+    "ciudad de panama"
+   ]
+  },
+  "CO": {
+   "names": {
+    "es": "Colombia",
+    "en": "Colombia",
+    "pt": "Colômbia"
+   },
+   "in": {
+    "es": "en Colombia",
+    "en": "in Colombia",
+    "pt": "na Colômbia"
+   },
+   "aliases": [
+    "colombia",
+    "colômbia",
+    "bogota",
+    "bogotá",
+    "medellin",
+    "medellín"
+   ]
+  },
+  "VE": {
+   "names": {
+    "es": "Venezuela",
+    "en": "Venezuela",
+    "pt": "Venezuela"
+   },
+   "in": {
+    "es": "en Venezuela",
+    "en": "in Venezuela",
+    "pt": "na Venezuela"
+   },
+   "aliases": [
+    "venezuela",
+    "caracas"
+   ]
+  },
+  "EC": {
+   "names": {
+    "es": "Ecuador",
+    "en": "Ecuador",
+    "pt": "Equador"
+   },
+   "in": {
+    "es": "en Ecuador",
+    "en": "in Ecuador",
+    "pt": "no Equador"
+   },
+   "aliases": [
+    "ecuador",
+    "equador",
+    "quito",
+    "guayaquil"
+   ]
+  },
+  "PE": {
+   "names": {
+    "es": "Perú",
+    "en": "Peru",
+    "pt": "Peru"
+   },
+   "in": {
+    "es": "en Perú",
+    "en": "in Peru",
+    "pt": "no Peru"
+   },
+   "aliases": [
+    "peru",
+    "perú",
+    "lima"
+   ]
+  },
+  "BO": {
+   "names": {
+    "es": "Bolivia",
+    "en": "Bolivia",
+    "pt": "Bolívia"
+   },
+   "in": {
+    "es": "en Bolivia",
+    "en": "in Bolivia",
+    "pt": "na Bolívia"
+   },
+   "aliases": [
+    "bolivia",
+    "bolívia",
+    "la paz",
+    "santa cruz de la sierra"
+   ]
+  },
+  "CL": {
+   "names": {
+    "es": "Chile",
+    "en": "Chile",
+    "pt": "Chile"
+   },
+   "in": {
+    "es": "en Chile",
+    "en": "in Chile",
+    "pt": "no Chile"
+   },
+   "aliases": [
+    "chile",
+    "santiago de chile"
+   ]
+  },
+  "AR": {
+   "names": {
+    "es": "Argentina",
+    "en": "Argentina",
+    "pt": "Argentina"
+   },
+   "in": {
+    "es": "en Argentina",
+    "en": "in Argentina",
+    "pt": "na Argentina"
+   },
+   "aliases": [
+    "argentina",
+    "buenos aires"
+   ]
+  },
+  "PY": {
+   "names": {
+    "es": "Paraguay",
+    "en": "Paraguay",
+    "pt": "Paraguai"
+   },
+   "in": {
+    "es": "en Paraguay",
+    "en": "in Paraguay",
+    "pt": "no Paraguai"
+   },
+   "aliases": [
+    "paraguay",
+    "paraguai",
+    "asuncion",
+    "asunción"
+   ]
+  },
+  "UY": {
+   "names": {
+    "es": "Uruguay",
+    "en": "Uruguay",
+    "pt": "Uruguai"
+   },
+   "in": {
+    "es": "en Uruguay",
+    "en": "in Uruguay",
+    "pt": "no Uruguai"
+   },
+   "aliases": [
+    "uruguay",
+    "uruguai",
+    "montevideo"
+   ]
+  },
+  "ES": {
+   "names": {
+    "es": "España",
+    "en": "Spain",
+    "pt": "Espanha"
+   },
+   "in": {
+    "es": "en España",
+    "en": "in Spain",
+    "pt": "na Espanha"
+   },
+   "aliases": [
+    "espana",
+    "españa",
+    "spain",
+    "espanha",
+    "madrid"
+   ]
+  },
+  "PT": {
+   "names": {
+    "es": "Portugal",
+    "en": "Portugal",
+    "pt": "Portugal"
+   },
+   "in": {
+    "es": "en Portugal",
+    "en": "in Portugal",
+    "pt": "em Portugal"
+   },
+   "aliases": [
+    "portugal",
+    "lisboa",
+    "lisbon"
+   ]
+  },
+  "BR": {
+   "names": {
+    "es": "Brasil",
+    "en": "Brazil",
+    "pt": "Brasil"
+   },
+   "in": {
+    "es": "en Brasil",
+    "en": "in Brazil",
+    "pt": "no Brasil"
+   },
+   "aliases": [
+    "brasil",
+    "brazil",
+    "sao paulo",
+    "são paulo",
+    "rio de janeiro"
+   ]
+  }
+ },
+ "facts": [
+  {
+   "key": "emergency.general",
+   "region": "US",
+   "value": "911",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (EE. UU.)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/united-states-america",
+    "quote": "Call 911.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "PR",
+   "value": "9-1-1",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Junta de Gobierno del Servicio 9-1-1 de Puerto Rico, informe anual",
+    "url": "https://transition.fcc.gov/pshs/911/Net%20911/8th-Report/PuertoRico_AnnualReport.pdf",
+    "quote": "El Sistema de Emergencias 9-1-1 de Puerto Rico consiste de servicios coordinados entre organismos gubernamentales",
+    "checked": "2026-10-27"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "MX",
+   "value": "911",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Embajada de España en México, «911, nuevo teléfono de emergencias»",
+    "url": "https://www.exteriores.gob.es/Embajadas/mexico/es/Comunicacion/Noticias/Paginas/Articulos/Tel%C3%A9fono-de-emergencias-911.aspx",
+    "quote": "911, único para todo el territorio de México",
+    "checked": "2026-10-27"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "DO",
+   "value": "9-1-1",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Decreto 187-14 del Sistema Nacional 9-1-1 (Indotel)",
+    "url": "https://indotel.gob.do/wp-content/uploads/2022/10/decreto_numero_187-14.pdf",
+    "quote": "marcando al número de atención a emergencias 9-1-1",
+    "checked": "2026-10-27"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "CU",
+   "value": "104",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "Consulado General de España en La Habana",
+    "url": "https://exteriores.gob.es/Consulados/lahabana/es/ViajarA/Paginas/Seguridad-y-otros-aspectos.aspx",
+    "quote": "Ambulancia, 104",
+    "checked": "2026-10-27"
+   },
+   "note": {
+    "es": "desde un móvil, el Consulado de España indica marcar un 7 delante",
+    "en": "from a mobile phone, the Spanish Consulate says to dial a 7 first",
+    "pt": "de um celular, o Consulado da Espanha indica discar um 7 antes"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "CU",
+   "value": "105",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Consulado General de España en La Habana",
+    "url": "https://exteriores.gob.es/Consulados/lahabana/es/ViajarA/Paginas/Seguridad-y-otros-aspectos.aspx",
+    "quote": "Bomberos, 105",
+    "checked": "2026-10-27"
+   },
+   "note": {
+    "es": "desde un móvil, el Consulado de España indica marcar un 7 delante",
+    "en": "from a mobile phone, the Spanish Consulate says to dial a 7 first",
+    "pt": "de um celular, o Consulado da Espanha indica discar um 7 antes"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "CU",
+   "value": "106",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Consulado General de España en La Habana",
+    "url": "https://exteriores.gob.es/Consulados/lahabana/es/ViajarA/Paginas/Seguridad-y-otros-aspectos.aspx",
+    "quote": "PNR, 106",
+    "checked": "2026-10-27"
+   },
+   "note": {
+    "es": "desde un móvil, el Consulado de España indica marcar un 7 delante",
+    "en": "from a mobile phone, the Spanish Consulate says to dial a 7 first",
+    "pt": "de um celular, o Consulado da Espanha indica discar um 7 antes"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "GT",
+   "value": "110",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Guatemala)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/259-guatemala",
+    "quote": "Policía Nacional Civil: 110",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "GT",
+   "value": "122",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Guatemala)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/259-guatemala",
+    "quote": "Bomberos Voluntarios: 122",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire-municipal",
+   "region": "GT",
+   "value": "123",
+   "label": {
+    "es": "bomberos municipales",
+    "en": "municipal fire department",
+    "pt": "bombeiros municipais"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Guatemala)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/259-guatemala",
+    "quote": "Bomberos Municipales: 123",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.redcross",
+   "region": "GT",
+   "value": "125",
+   "label": {
+    "es": "Cruz Roja",
+    "en": "Red Cross",
+    "pt": "Cruz Vermelha"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Guatemala)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/259-guatemala",
+    "quote": "Cruz Roja: 125",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.civil-protection",
+   "region": "GT",
+   "value": "119",
+   "label": {
+    "es": "protección civil y desastres",
+    "en": "civil protection and disasters",
+    "pt": "proteção civil e desastres"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Guatemala)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/259-guatemala",
+    "quote": "CONRED: 119 y 1566",
+    "checked": "2026-10-28"
+   },
+   "note": {
+    "es": "CONRED; también 1566",
+    "en": "CONRED; also 1566",
+    "pt": "CONRED; também 1566"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "HN",
+   "value": "911",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Honduras)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/265-honduras",
+    "quote": "Emergencias en Honduras: 911",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "HN",
+   "value": "198",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Honduras)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/265-honduras",
+    "quote": "Bomberos: 198",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "HN",
+   "value": "195",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Honduras)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/265-honduras",
+    "quote": "Ambulancia: 195",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.civil-protection",
+   "region": "HN",
+   "value": "113",
+   "label": {
+    "es": "protección civil y desastres",
+    "en": "civil protection and disasters",
+    "pt": "proteção civil e desastres"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Honduras)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/265-honduras",
+    "quote": "Comisión Permanente de Contingencias (Protección Civil): 113",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "SV",
+   "value": "911",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (El Salvador)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/262-el-salvador",
+    "quote": "Emergencias Policía Nacional Civil: 911",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "SV",
+   "value": "913",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (El Salvador)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/262-el-salvador",
+    "quote": "Bomberos: 913",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "NI",
+   "value": "118",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Nicaragua)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/nicaragua",
+    "quote": "Call 118.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "NI",
+   "value": "115",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Nicaragua)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/nicaragua",
+    "quote": "Call 115.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.medical",
+   "region": "NI",
+   "value": "128",
+   "label": {
+    "es": "emergencias médicas",
+    "en": "medical emergencies",
+    "pt": "emergências médicas"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Nicaragua)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/nicaragua",
+    "quote": "Call 128 or go to the hospital.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.tourist-police",
+   "region": "NI",
+   "value": "101",
+   "label": {
+    "es": "policía de turismo",
+    "en": "tourist police",
+    "pt": "polícia de turismo"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Nicaragua)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/nicaragua",
+    "quote": "Call 101 for the tourist police",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "CR",
+   "value": "911",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Costa Rica)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/costa-rica",
+    "quote": "Call 911.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "CR",
+   "value": "118",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Costa Rica)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/costa-rica",
+    "quote": "Call 911 or 118.",
+    "checked": "2026-10-28"
+   },
+   "note": {
+    "es": "o el 911",
+    "en": "or 911",
+    "pt": "ou o 911"
+   }
+  },
+  {
+   "key": "emergency.medical",
+   "region": "CR",
+   "value": "128",
+   "label": {
+    "es": "emergencias médicas",
+    "en": "medical emergencies",
+    "pt": "emergências médicas"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Costa Rica)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/costa-rica",
+    "quote": "Call 911 or 128.",
+    "checked": "2026-10-28"
+   },
+   "note": {
+    "es": "o el 911",
+    "en": "or 911",
+    "pt": "ou o 911"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "PA",
+   "value": "104",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Panamá)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/320-panama",
+    "quote": "Emergencias en Panamá (Policía Nacional): 104",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "PA",
+   "value": "911",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Panamá)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/320-panama",
+    "quote": "Ambulancia: 911",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "PA",
+   "value": "103",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Panamá)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/320-panama",
+    "quote": "Bomberos: 103",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "CO",
+   "value": "123",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Colombia)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/colombia",
+    "quote": "Call 123.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.medical",
+   "region": "CO",
+   "value": "123",
+   "label": {
+    "es": "emergencias médicas",
+    "en": "medical emergencies",
+    "pt": "emergências médicas"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Colombia)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/colombia",
+    "quote": "Call 123 or go to the hospital.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "CO",
+   "value": "112",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Colombia)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/colombia",
+    "quote": "Call 112 or go to the local police station.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "VE",
+   "value": "911",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Venezuela)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/318-venezuela&gsessionid=qMs2jV2D_gABSelkA7C-feNGLdOiSPO6gOxt0mJKl8O9e7tYYYlYgA",
+    "quote": "911 número gratuito para la atención de emergencias a nivel nacional",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "EC",
+   "value": "911",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Ecuador)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/258-ecuador",
+    "quote": "Marcar al 911 para reportar cualquier emergencia o acto ilícito.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "PE",
+   "value": "105",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Perú)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/peru",
+    "quote": "Call 105.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "PE",
+   "value": "116",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Perú)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/peru",
+    "quote": "Call 116.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.medical",
+   "region": "PE",
+   "value": "106",
+   "label": {
+    "es": "emergencias médicas",
+    "en": "medical emergencies",
+    "pt": "emergências médicas"
+   },
+   "source": {
+    "title": "El Peruano (diario oficial): «Minsa garantiza atención 24 horas de SAMU 106»",
+    "url": "https://elperuano.pe/noticia/294676-minsa-garantiza-atencion-24-horas-de-samu-106-durante-el-feriado-largo-del-1-de-mayo",
+    "quote": "llame de inmediato al 106",
+    "checked": "2026-10-28"
+   },
+   "note": {
+    "es": "SAMU del Ministerio de Salud, gratuito; los asegurados de EsSalud también tienen el 117",
+    "en": "Ministry of Health SAMU, free; EsSalud members also have 117",
+    "pt": "SAMU do Ministério da Saúde, gratuito; os segurados do EsSalud também têm o 117"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "BO",
+   "value": "110",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Bolivia)",
+    "url": "https://smartraveller.gov.au/Bolivia",
+    "quote": "Call 110 or contact the nearest police station.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "BO",
+   "value": "119",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Bolivia)",
+    "url": "https://smartraveller.gov.au/Bolivia",
+    "quote": "Call 119.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "CL",
+   "value": "133",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Chile)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/chile",
+    "quote": "Call 133",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.medical",
+   "region": "CL",
+   "value": "131",
+   "label": {
+    "es": "emergencias médicas",
+    "en": "medical emergencies",
+    "pt": "emergências médicas"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Chile)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/chile",
+    "quote": "Call 131",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "CL",
+   "value": "132",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Chile)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/chile",
+    "quote": "Call 132",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "AR",
+   "value": "911",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Argentina)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/279-argentina&gsessionid=eWnXbdwmgRRcXcrW_umBGH_SoNTbaFuswHOBg-mm-7kh4PuSev4Ycw",
+    "quote": "Policía y denuncias: 911",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "AR",
+   "value": "100",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Argentina)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/279-argentina&gsessionid=eWnXbdwmgRRcXcrW_umBGH_SoNTbaFuswHOBg-mm-7kh4PuSev4Ycw",
+    "quote": "Bomberos: 100",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.medical",
+   "region": "AR",
+   "value": "107",
+   "label": {
+    "es": "emergencias médicas",
+    "en": "medical emergencies",
+    "pt": "emergências médicas"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Argentina)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/279-argentina&gsessionid=eWnXbdwmgRRcXcrW_umBGH_SoNTbaFuswHOBg-mm-7kh4PuSev4Ycw",
+    "quote": "Emergencias médicas en vía Pública (SAME): 107",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "PY",
+   "value": "911",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Paraguay)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/394-paraguay",
+    "quote": "Policía: 911",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "PY",
+   "value": "132",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Paraguay)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/394-paraguay",
+    "quote": "Bomberos: 132",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.emergencies",
+   "region": "PY",
+   "value": "141",
+   "label": {
+    "es": "emergencias",
+    "en": "emergencies",
+    "pt": "emergências"
+   },
+   "source": {
+    "title": "Secretaría de Relaciones Exteriores de México, Guía del viajero (Paraguay)",
+    "url": "https://portales.sre.gob.mx/guiadeviaje/103-ficha-de-paises/394-paraguay",
+    "quote": "Emergencias: 141",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "UY",
+   "value": "9-1-1",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Sistema Nacional de Emergencias de Uruguay (gub.uy), «Recomendaciones ante emergencias»",
+    "url": "https://www.gub.uy/sistema-nacional-emergencias/recomendaciones-ante-emergencias",
+    "quote": "Ante cualquier emergencia llama al 9-1-1.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "ES",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Administración General del Estado (administracion.gob.es), «Números de urgencia»",
+    "url": "https://administracion.gob.es/pag_Home/Tu-espacio-europeo/derechos-obligaciones/ciudadanos/asistencia-sanitaria/numeros-urgencia.html",
+    "quote": "112",
+    "checked": "2026-10-27"
+   },
+   "note": {
+    "es": "gratis desde fijos y móviles, también con el móvil bloqueado",
+    "en": "free from landlines and mobiles, even with the phone locked",
+    "pt": "gratuito de fixos e celulares, mesmo com o celular bloqueado"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "PT",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "ePortugal (gov.pt), «Contactos de emergência em Portugal»",
+    "url": "https://eportugal.gov.pt/en/cidadaos-europeus-viajar-viver-e-fazer-negocios-em-portugal/cuidados-de-saude-em-portugal/contactos-de-emergencia-em-portugal",
+    "quote": "112",
+    "checked": "2026-10-27"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "BR",
+   "value": "190",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Governo do Paraná, «193: em quais ocorrências o número do Corpo de Bombeiros Militar deve ser acionado»",
+    "url": "https://www.parana.pr.gov.br/Audio/193-em-quais-ocorrencias-o-numero-do-Corpo-de-Bombeiros-Militar-deve-ser-acionado",
+    "quote": "190",
+    "checked": "2026-10-27"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "BR",
+   "value": "192",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "Governo do Paraná, «193: em quais ocorrências o número do Corpo de Bombeiros Militar deve ser acionado»",
+    "url": "https://www.parana.pr.gov.br/Audio/193-em-quais-ocorrencias-o-numero-do-Corpo-de-Bombeiros-Militar-deve-ser-acionado",
+    "quote": "192",
+    "checked": "2026-10-27"
+   },
+   "note": {
+    "es": "SAMU",
+    "en": "SAMU",
+    "pt": "SAMU"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "BR",
+   "value": "193",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Governo do Paraná, «193: em quais ocorrências o número do Corpo de Bombeiros Militar deve ser acionado»",
+    "url": "https://www.parana.pr.gov.br/Audio/193-em-quais-ocorrencias-o-numero-do-Corpo-de-Bombeiros-Militar-deve-ser-acionado",
+    "quote": "193",
+    "checked": "2026-10-27"
+   }
+  }
+ ]
+}

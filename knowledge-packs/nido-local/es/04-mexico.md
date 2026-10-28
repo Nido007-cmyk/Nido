@@ -3,6 +3,10 @@ title: México: 911, semáforo de ciclones y alerta sísmica
 category: Emergencias por país
 lang: es
 sources: Embajada de España en México, «911, nuevo teléfono de emergencias» (911); Gobierno de México, «Tema 5: Sistemas de Alerta Temprana» (SIAT-CT) y «Tema 3: Sistemas de Alerta Temprana» (alerta sísmica); Servicio Nacional de Meteorología de EE. UU. (NWS), «Consejos de seguridad: huracanes» (qué hacer)
+id: local-mexico
+region: MX
+verified: 2026-10-28
+questions: a qué número llamo si pasa algo en México | qué hago cuando suena la alerta sísmica
 ---
 En México, el número de emergencias es el 911, único para todo el país desde 2016-2017.
 

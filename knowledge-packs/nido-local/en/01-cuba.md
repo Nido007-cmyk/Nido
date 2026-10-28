@@ -3,6 +3,10 @@ title: Cuba: emergency numbers and hurricane phases
 category: Emergencies by country
 lang: en
 sources: Consulate General of Spain in Havana, "Seguridad y otros aspectos" (emergency numbers); statements by Cuba's National Civil Defense Staff reported by the EFE news agency (cyclone phases); US National Weather Service (NWS), "Hurricane Safety Tips" (what to do)
+id: local-cuba
+region: CU
+verified: 2026-10-28
+questions: what number do I call if something happens in Cuba | how do I get an ambulance in Cuba | what to do when a cyclone is announced in Cuba
 ---
 In Cuba, the emergency numbers are 104 for an ambulance, 105 for the fire department and 106 for the police (Policía Nacional Revolucionaria). According to the Spanish Consulate in Havana, from a mobile phone you dial a 7 first.
 

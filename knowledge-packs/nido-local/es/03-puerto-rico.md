@@ -3,6 +3,10 @@ title: Puerto Rico: 9-1-1, vigilancias y avisos de huracán
 category: Emergencias por país
 lang: es
 sources: Junta de Gobierno del Servicio 9-1-1 de Puerto Rico, informe anual (9-1-1); Servicio Nacional de Meteorología de EE. UU. (NWS), «Consejos de seguridad: huracanes» (definiciones de vigilancia y aviso, y qué hacer); Negociado para el Manejo de Emergencias y Administración de Desastres (NMEAD), según Platea PR
+id: local-puerto-rico
+region: PR
+verified: 2026-10-28
+questions: a qué número llamo si pasa algo en Puerto Rico | qué hago ante un huracán en Puerto Rico
 ---
 En Puerto Rico, el número de emergencias es el 9-1-1: policía, bomberos y emergencias médicas.
 
