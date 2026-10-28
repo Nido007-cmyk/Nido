@@ -60,3 +60,20 @@ export function markUsedPart(
     parts: rows.slice(0, MAX_SOURCE_PARTS).map((r) => ({ id: r.id, body: r.body, used: r.id === usedRowId })),
   };
 }
+
+/**
+ * Título de la GUÍA a partir del título de un trozo. Los packs de guías
+ * titulan cada trozo «Guía — Apartado» (scripts/build-knowledge-pack.mjs);
+ * los de Wikipedia, con el título del artículo. Sin esto, «leer la guía
+ * entera» abría solo un apartado.
+ */
+export function guideTitleOf(chunkTitle: string): string {
+  const cut = chunkTitle.indexOf(" — ");
+  return cut > 0 ? chunkTitle.slice(0, cut) : chunkTitle;
+}
+
+/** Patrón LIKE (con ESCAPE '\\') para los apartados de una guía: «Guía — %». */
+export function sectionLikePattern(guideTitle: string): string {
+  return `${guideTitle.replace(/[\\%_]/g, (c) => `\\${c}`)} — %`;
+}
+

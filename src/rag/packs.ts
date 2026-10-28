@@ -19,7 +19,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { CORPUS_CATALOG, MODEL_CATALOG, CatalogModel } from "../models/manifest";
 import { buildLexicalQuery, cosineSimilarityInt8, distinctFloor, DISTINCT_BG_TO, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM, pruneSemanticByMargin, pruneVectorHits } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
-import { markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId, type PackSourceDoc } from "./packSource";
+import { guideTitleOf, markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId, sectionLikePattern, type PackSourceDoc } from "./packSource";
 import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "./embeddingProfile";
 import { packIndexIfReady, releaseAllIndexes, searchPackIndex } from "./vectorIndex";
 
@@ -84,11 +84,14 @@ export async function readPackSource(chunkId: string): Promise<PackSourceDoc | n
     [ref.rowId],
   );
   if (!head) return null;
+  // La guía entera: el trozo sin apartado («Guía») y todos sus apartados
+  // («Guía — Apartado»), en orden.
+  const guide = guideTitleOf(head.title);
   const rows = await open.db.getAllAsync<{ id: number; body: string }>(
-    "SELECT id, body FROM chunks WHERE title = ? ORDER BY id LIMIT ?",
-    [head.title, MAX_SOURCE_PARTS],
+    "SELECT id, body FROM chunks WHERE title = ? OR title LIKE ? ESCAPE '\\' ORDER BY id LIMIT ?",
+    [guide, sectionLikePattern(guide), MAX_SOURCE_PARTS],
   );
-  return markUsedPart(head.title, head.source ?? "", rows, ref.rowId);
+  return markUsedPart(guide, head.source ?? "", rows, ref.rowId);
 }
 
 export async function closePack(id: string): Promise<void> {

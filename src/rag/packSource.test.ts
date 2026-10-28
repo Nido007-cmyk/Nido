@@ -4,7 +4,7 @@
  * See LICENSE file for details.
  */
 import { describe, expect, it } from "vitest";
-import { markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId } from "./packSource";
+import { guideTitleOf, markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId, sectionLikePattern } from "./packSource";
 
 describe("parsePackChunkId (0.1.55)", () => {
   it("lee el pack y la fila", () => {
@@ -39,3 +39,18 @@ describe("markUsedPart (0.1.55)", () => {
     expect(markUsedPart("T", "", many, 0)!.parts).toHaveLength(MAX_SOURCE_PARTS);
   });
 });
+
+describe("la guía entera, no solo un apartado (0.1.55)", () => {
+  it("el título de la guía sale del título del trozo «Guía — Apartado»", () => {
+    expect(guideTitleOf("Hemorragias graves — Qué hacer")).toBe("Hemorragias graves");
+    expect(guideTitleOf("Cuba: números de emergencia y fases ante ciclones — Las cuatro fases")).toBe(
+      "Cuba: números de emergencia y fases ante ciclones",
+    );
+    expect(guideTitleOf("Paris")).toBe("Paris");
+  });
+  it("el patrón LIKE escapa %, _ y la barra", () => {
+    expect(sectionLikePattern("Guía")).toBe("Guía — %");
+    expect(sectionLikePattern("50%_a\\b")).toBe("50\\%\\_a\\\\b — %");
+  });
+});
+
