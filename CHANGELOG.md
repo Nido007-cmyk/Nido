@@ -6,6 +6,8 @@ All notable changes to NIDO are recorded here. Versions follow
 
 ## Unreleased
 
+## 0.1.58-alpha — 2026-10-28
+
 ### Added
 - **NIDO Local: the emergency numbers table grows to 32 countries.** Nine
   countries join the pack's checked facts table: Equatorial Guinea,
