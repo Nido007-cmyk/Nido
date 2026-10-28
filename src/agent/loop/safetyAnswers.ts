@@ -35,6 +35,13 @@ export interface SafetyHit {
   text: string;
   /** País respondido (solo emergency-number con país conocido). */
   country?: string;
+  /**
+   * 0.1.57: emergency-number sin país de la tabla. `asked`: nombró un país que
+   * no está (no se adivina); si no, se pregunta cuál. La pantalla puede
+   * rehacer el texto con la lista de países de los packs instalados
+   * (unknownCountryText), que es más larga que la de esta tabla.
+   */
+  countryUnknown?: { asked: boolean };
   deterministic: true;
 }
 
@@ -220,9 +227,18 @@ function emergencyText(lang: SafetyLang, folded: string): SafetyHit {
           : `En ${e.label.es}, ${pl ? "los números de emergencia son" : "el número de emergencias es"} ${e.numbers.es}.\n\nFuente: ${e.source}.`;
     return { kind: "emergency-number", lang, text, country: e.label.en, deterministic: true };
   }
-  const known = EMERGENCY_NUMBERS.map((x) => (lang === "pt" ? x.label.pt.replace(/^(nos|no|na|em) /, "") : x.label[lang])).join(", ");
+  const known = EMERGENCY_NUMBERS.map((x) => (lang === "pt" ? x.label.pt.replace(/^(nos|no|na|em) /, "") : x.label[lang]));
   const asked = OTHER_COUNTRY_RE.test(folded);
-  const text =
+  return { kind: "emergency-number", lang, text: unknownCountryText(lang, asked, known), countryUnknown: { asked }, deterministic: true };
+}
+
+/**
+ * Texto fijo cuando no hay número comprobado para el país: no se adivina.
+ * `known`: los países que sí están comprobados, en el idioma de la respuesta.
+ */
+export function unknownCountryText(lang: SafetyLang, asked: boolean, knownNames: readonly string[]): string {
+  const known = knownNames.join(", ");
+  return (
     lang === "en"
       ? (asked
           ? "I don't have that country's emergency number checked against an official source, so I won't guess. Look for it on the local government's website or ask someone nearby."
@@ -234,8 +250,8 @@ function emergencyText(lang: SafetyLang, folded: string): SafetyHit {
             : "Em que país você está? Eu digo o número.") + `\n\nPaíses conferidos até agora: ${known}.`
         : (asked
             ? "No tengo el número de emergencias de ese país comprobado en una fuente oficial, así que no lo voy a adivinar. Búscalo en la web del gobierno local o pregunta a alguien cercano."
-            : "¿En qué país estás? Te digo el número.") + `\n\nPaíses comprobados por ahora: ${known}.`;
-  return { kind: "emergency-number", lang, text, deterministic: true };
+            : "¿En qué país estás? Te digo el número.") + `\n\nPaíses comprobados por ahora: ${known}.`
+  );
 }
 
 /**

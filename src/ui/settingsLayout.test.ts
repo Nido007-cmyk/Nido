@@ -101,7 +101,10 @@ describe("auditoría 0.1.55: orden de las respuestas fijas de seguridad", () => 
   it("monóxido primero; números: pack verificado antes que la tabla fija", () => {
     const i = (s: string) => CHAT.indexOf(s);
     expect(i("const coHit")).toBeGreaterThan(-1);
-    expect(i("await answerFromPackFacts(query, uiLang)")).toBeLessThan(i("const numberHit"));
+    expect(i("let numberHit")).toBeGreaterThan(-1);
+    expect(i("await answerFromPackFacts(query, uiLang)")).toBeLessThan(i("let numberHit"));
+    // 0.1.57: the "no lo adivino" text is redone with the packs' countries, still no number.
+    expect(i("let numberHit")).toBeLessThan(i("unknownCountryText(uiLang, numberHit.countryUnknown.asked, names)"));
     expect(CHAT).toContain('safetyHit.kind === "emergency-number" && factsHit === null');
     expect(CHAT).toContain("smallTalkHit?.text ?? factsHit?.text ?? numberHit?.text ?? null");
   });
