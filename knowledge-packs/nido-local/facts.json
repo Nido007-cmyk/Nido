@@ -1491,7 +1491,7 @@
    },
    "source": {
     "title": "Departamento de Estado de EE. UU., información del país (Guinea Ecuatorial)",
-    "url": "https://travel.state.gov/content/travel/en/international-travel/International-Travel-Country-Information-Pages/EquatorialGuinea.html/",
+    "url": "https://travel.state.gov/content/travel/en/international-travel/International-Travel-Country-Information-Pages/EquatorialGuinea.html",
     "quote": "Dial 112 and 115 for fire related and medical emergencies.",
     "checked": "2026-10-28"
    },
@@ -1512,7 +1512,7 @@
    },
    "source": {
     "title": "Departamento de Estado de EE. UU., información del país (Guinea Ecuatorial)",
-    "url": "https://travel.state.gov/content/travel/en/international-travel/International-Travel-Country-Information-Pages/EquatorialGuinea.html/",
+    "url": "https://travel.state.gov/content/travel/en/international-travel/International-Travel-Country-Information-Pages/EquatorialGuinea.html",
     "quote": "Dial 112 and 115 for fire related and medical emergencies.",
     "checked": "2026-10-28"
    },
@@ -1533,7 +1533,7 @@
    },
    "source": {
     "title": "Departamento de Estado de EE. UU., información del país (Guinea Ecuatorial)",
-    "url": "https://travel.state.gov/content/travel/en/international-travel/International-Travel-Country-Information-Pages/EquatorialGuinea.html/",
+    "url": "https://travel.state.gov/content/travel/en/international-travel/International-Travel-Country-Information-Pages/EquatorialGuinea.html",
     "quote": "Dial 113 and 114 for law enforcement related emergencies.",
     "checked": "2026-10-28"
    },
@@ -1755,15 +1755,15 @@
     "pt": "emergências (número único)"
    },
    "source": {
-    "title": "GOV.UK, «Get urgent help and report a crime»",
-    "url": "https://www.gov.uk/guidance/get-urgent-help-and-report-a-crime-homes-for-ukraine",
-    "quote": "999 is the number to call in an emergency.",
+    "title": "GOV.UK, «999 and 112: the UK's national emergency numbers»",
+    "url": "https://gov.uk/guidance/999-and-112-the-uks-national-emergency-numbers",
+    "quote": "112 is the pan-European equivalent to 999 and can be used in the UK.",
     "checked": "2026-10-28"
    },
    "note": {
-    "es": "también funciona el 112 y conecta con los mismos servicios",
-    "en": "112 also works and will connect you to the same services",
-    "pt": "o 112 também funciona e liga aos mesmos serviços"
+    "es": "también se puede usar el 112 en Reino Unido",
+    "en": "112 can also be used in the UK",
+    "pt": "também se pode usar o 112 no Reino Unido"
    }
   },
   {
