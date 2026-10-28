@@ -297,7 +297,9 @@ export function normalizeForQuote(text) {
     .replace(/[“”„«»]/g, '"')
     .replace(/[‐-―]/g, "-")
     .toLowerCase()
-    .replace(/\s+/g, " ")
+    // Punctuation and markup spacing vary between page versions ("Civil: 110",
+    // "Civil</strong>: 110", "Civil - 110"): compare the words and digits only.
+    .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
 

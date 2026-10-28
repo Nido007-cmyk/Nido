@@ -33,7 +33,7 @@ async function pageText(url) {
   const res = await fetch(url, {
     headers: { "user-agent": "NIDO-source-check/1.0 (+https://github.com/Nido007-cmyk/Nido)", accept: "text/html,application/pdf;q=0.9,*/*;q=0.8" },
     redirect: "follow",
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(90_000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const type = res.headers.get("content-type") ?? "";

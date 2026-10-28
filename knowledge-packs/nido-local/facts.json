@@ -1242,10 +1242,15 @@
     "pt": "emergências (número único)"
    },
    "source": {
-    "title": "ePortugal (gov.pt), «Contactos de emergência em Portugal»",
-    "url": "https://eportugal.gov.pt/en/cidadaos-europeus-viajar-viver-e-fazer-negocios-em-portugal/cuidados-de-saude-em-portugal/contactos-de-emergencia-em-portugal",
-    "quote": "112",
-    "checked": "2026-10-27"
+    "title": "gov.pt, «Emergency contacts in Portugal»",
+    "url": "https://www2.gov.pt/en/cidadaos-europeus-viajar-viver-e-fazer-negocios-em-portugal/cuidados-de-saude-em-portugal/contactos-de-emergencia-em-portugal",
+    "quote": "112 is the single European emergency telephone number available throughout the European Union.",
+    "checked": "2026-10-28"
+   },
+   "note": {
+    "es": "gratis, las 24 horas; para dudas de salud, la línea SNS 24: 808 24 24 24",
+    "en": "free, 24 hours a day; for health questions, the SNS 24 line: 808 24 24 24",
+    "pt": "gratuito, 24 horas por dia; para dúvidas de saúde, a linha SNS 24: 808 24 24 24"
    }
   },
   {
