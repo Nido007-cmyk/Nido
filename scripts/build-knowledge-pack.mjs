@@ -19,7 +19,7 @@ import { createReadStream, existsSync, mkdirSync, readFileSync, appendFileSync, 
 import { DatabaseSync } from "node:sqlite";
 import { dirname, join, resolve } from "node:path";
 import { readdirSync } from "node:fs";
-import { chunkGuide, chunkIntro, cleanIntro, parseArgs, parseGuide, quantizeInt8, USAGE, vitalListPages } from "./lib/knowledge-pack-lib.mjs";
+import { chunkGuide, chunkIntro, cleanIntro, parseArgs, parseGuide, quantizeInt8, USAGE, validateFacts, vitalListPages } from "./lib/knowledge-pack-lib.mjs";
 
 const WIKI_API = "https://en.wikipedia.org/w/api.php";
 const USER_AGENT = "NIDO-knowledge-pack-builder/1.0 (https://github.com/arsrs91-png/NIDO)";
@@ -173,7 +173,11 @@ async function embedChunks(chunks, cacheFile, threads) {
       await Promise.all(
         contexts.map(async (ctx, w) => {
           for (let j = w; j < group.length; j += threads) {
-            vectors[j] = (await ctx.getEmbeddingFor(`${EMBEDDING_MODEL.passagePrefix}${group[j].title}\n${group[j].body}`)).vector;
+            // Format v2: the real questions a chunk answers are embedded with
+            // it (the reader never sees them; they help a question in other
+            // words find it).
+            const keys = group[j].keys ? `\n${group[j].keys}` : "";
+            vectors[j] = (await ctx.getEmbeddingFor(`${EMBEDDING_MODEL.passagePrefix}${group[j].title}\n${group[j].body}${keys}`)).vector;
           }
         })
       );
@@ -196,22 +200,39 @@ async function embedChunks(chunks, cacheFile, threads) {
   return new Float32Array(raw.buffer, raw.byteOffset, chunks.length * dims);
 }
 
-function writePack(file, opts, chunks, vectors, meta) {
+function writePack(file, opts, chunks, vectors, meta, extra = {}) {
   rmSync(file, { force: true });
   const db = new DatabaseSync(file);
+  // Format v2 adds, without changing anything an older app reads: the guide
+  // of each chunk and its search keys (chunks.guide, chunks.keys, also in the
+  // full-text index), the guides themselves, and the verified facts.
   db.exec(`
     PRAGMA page_size = 4096;
     CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
     -- vec: the chunk's embedding as int8 (384 bytes), vec * scale ≈ the float vector.
-    CREATE TABLE chunks (id INTEGER PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, source TEXT NOT NULL, scale REAL NOT NULL, vec BLOB NOT NULL);
-    CREATE VIRTUAL TABLE chunks_fts USING fts5(title, body, content='chunks', content_rowid='id');
+    CREATE TABLE chunks (id INTEGER PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, source TEXT NOT NULL, scale REAL NOT NULL, vec BLOB NOT NULL, guide INTEGER, keys TEXT NOT NULL DEFAULT '');
+    CREATE VIRTUAL TABLE chunks_fts USING fts5(title, body, keys, content='chunks', content_rowid='id');
+    CREATE TABLE guides (id INTEGER PRIMARY KEY, key TEXT NOT NULL, lang TEXT NOT NULL, title TEXT NOT NULL, category TEXT NOT NULL, region TEXT NOT NULL, sources TEXT NOT NULL, verified TEXT NOT NULL);
+    CREATE TABLE regions (code TEXT PRIMARY KEY, names TEXT NOT NULL, aliases TEXT NOT NULL, phrases TEXT NOT NULL DEFAULT '{}');
+    CREATE TABLE facts (id INTEGER PRIMARY KEY, region TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL, label TEXT NOT NULL, note TEXT NOT NULL, source_title TEXT NOT NULL, source_url TEXT NOT NULL, quote TEXT NOT NULL, checked TEXT NOT NULL);
+    CREATE INDEX facts_region ON facts (region, key);
   `);
   const { data, scales } = quantizeInt8(vectors, 384);
-  const insert = db.prepare("INSERT INTO chunks (id, title, body, source, scale, vec) VALUES (?, ?, ?, ?, ?, ?)");
+  const insertGuide = db.prepare("INSERT INTO guides (id, key, lang, title, category, region, sources, verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+  const insert = db.prepare("INSERT INTO chunks (id, title, body, source, scale, vec, guide, keys) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+  const insertRegion = db.prepare("INSERT INTO regions (code, names, aliases, phrases) VALUES (?, ?, ?, ?)");
+  const insertFact = db.prepare("INSERT INTO facts (region, key, value, label, note, source_title, source_url, quote, checked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
   db.exec("BEGIN");
-  chunks.forEach((c, i) =>
-    insert.run(i + 1, c.title, c.body, c.source, scales[i], Buffer.from(data.buffer, data.byteOffset + i * 384, 384))
+  (extra.guides ?? []).forEach((g, i) =>
+    insertGuide.run(i + 1, g.key || `guide-${i + 1}`, g.lang, g.title, g.category, g.region, g.sources, g.verified)
   );
+  chunks.forEach((c, i) =>
+    insert.run(i + 1, c.title, c.body, c.source, scales[i], Buffer.from(data.buffer, data.byteOffset + i * 384, 384), c.guide ?? null, c.keys ?? "")
+  );
+  for (const [code, r] of Object.entries(extra.regions ?? {})) insertRegion.run(code, JSON.stringify(r.names), JSON.stringify(r.aliases), JSON.stringify(r.in ?? {}));
+  for (const f of extra.facts ?? []) {
+    insertFact.run(f.region, f.key, f.value, JSON.stringify(f.label), JSON.stringify(f.note ?? {}), f.source.title, f.source.url, f.source.quote, f.source.checked);
+  }
   db.exec("COMMIT");
   db.exec("INSERT INTO chunks_fts (chunks_fts) VALUES ('rebuild')");
   const setMeta = db.prepare("INSERT INTO meta (key, value) VALUES (?, ?)");
@@ -252,6 +273,8 @@ async function main() {
           title: c.heading ? `${g.title} — ${c.heading}` : g.title,
           body: c.body,
           source: `NIDO — ${g.title} (${g.lang === "es" ? "basado en" : "based on"}: ${g.sources})`,
+          guide: pages.length,
+          keys: c.questions.join("\n"),
         });
       }
     }
@@ -275,9 +298,17 @@ async function main() {
 
   const outFile = resolve(opts.out, `${opts.id}.sqlite`);
   mkdirSync(dirname(outFile), { recursive: true });
+  // Format v2: verified facts beside the guides (knowledge-packs/<pack>/facts.json).
+  let factsDoc = { regions: {}, facts: [] };
+  const factsFile = opts.guidesDir ? join(opts.guidesDir, "facts.json") : null;
+  if (factsFile && existsSync(factsFile)) {
+    factsDoc = validateFacts(JSON.parse(readFileSync(factsFile, "utf8")), factsFile);
+    log(`${factsDoc.facts.length} verified facts for ${Object.keys(factsDoc.regions).length} regions`);
+  }
   writePack(outFile, opts, chunks, vectors, {
     format: "nido-knowledge-pack",
-    formatVersion: 1,
+    formatVersion: 2,
+    facts: factsDoc.facts.length,
     dims: 384,
     id: opts.id,
     name: opts.name,
@@ -307,7 +338,7 @@ async function main() {
     embeddingPassagePrefix: EMBEDDING_MODEL.passagePrefix,
     embeddingQueryPrefix: EMBEDDING_MODEL.queryPrefix,
     builtAt: opts.builtAt ?? new Date().toISOString(),
-  });
+  }, opts.guidesDir ? { guides: pages, regions: factsDoc.regions, facts: factsDoc.facts } : {});
   const size = statSync(outFile).size;
   const sha = await sha256File(outFile);
   const summary = { id: opts.id, file: outFile, sizeBytes: size, sha256: sha, articles: pages.length, chunks: chunks.length };

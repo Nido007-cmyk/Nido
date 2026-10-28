@@ -25,7 +25,11 @@
     "subtitle": "Seu agente. Seu mundo.",
     "newChat": "Novo chat",
     "recentSessions": "Conversas recentes",
-    "deleteSession": "Apagar conversa: {{title}}"
+    "deleteSession": "Apagar conversa: {{title}}",
+    "searchPlaceholder": "Buscar nas suas conversas",
+    "searchLabel": "Buscar nas suas conversas",
+    "noMatches": "Nenhuma conversa corresponde.",
+    "shortcuts": "Atalhos"
   },
   "catalogItemCard": {
     "calculating": "Calculando…",
@@ -405,7 +409,7 @@
     "deleteBusy": "Uma resposta está sendo enviada. Aguarde um momento e tente de novo."
   },
   "chatHeader": {
-    "openDrawer": "Abrir menu de navegação",
+    "openDrawer": "Histórico de conversas e atalhos",
     "offline": "Offline",
     "localLlmCore": "Modelo local",
     "cycleTone": "Alternar tom do assistente",
@@ -486,7 +490,11 @@
       "hintDraft": "Toque para fazer. O resto fica na caixa para você enviar separado.",
       "runA11y": "Fazer: {{action}}",
       "dismiss": "Descartar"
-    }
+    },
+    "toneChip": "Tom: {{tone}}",
+    "researchChip": "Pesquisar",
+    "researchOn": "Pesquisa profunda ativada",
+    "researchOff": "Pesquisa profunda desativada"
   },
   "aboutScreen": {
     "title": "Sobre o NIDO",
@@ -1679,11 +1687,98 @@
   "panic": {
     "buttonLabel": "Botão de pânico: segure 3 segundos para apagar tudo",
     "buttonHint": "Apaga todos os dados do NIDO: chats, contatos, chaves, memória e modelos. Não pode ser desfeito. Com o TalkBack, a ação de manter pressionado apaga na hora.",
-    "short": "SOS",
+    "short": "Apagar",
     "wiping": "Apagando",
     "failedTitle": "Não foi possível apagar tudo",
     "settingTitle": "Botão de pânico",
-    "settingDesc": "Mostra um botão SOS na tela principal. Segurá-lo por 3 segundos apaga todos os dados do NIDO de uma vez, sem pedir digital nem confirmação. Não pode ser desfeito; faça um backup antes se quiser guardar algo."
+    "settingDesc": "Mostra um botão de apagar (um escudo vermelho) na tela principal. Segurá-lo por 3 segundos apaga todos os dados do NIDO de uma vez, sem pedir digital nem confirmação. Não pode ser desfeito; faça um backup antes se quiser guardar algo."
+  },
+  "tabs": {
+    "chat": "Chat",
+    "emergency": "Emergência",
+    "library": "Biblioteca",
+    "nido": "NIDO",
+    "settings": "Ajustes"
+  },
+  "emergency": {
+    "title": "Emergência",
+    "changeCountry": "Mudar de país: {{name}}",
+    "chooseCountry": "Escolha seu país",
+    "call": "Ligar",
+    "callA11y": "Ligar para {{number}}, {{label}}",
+    "checked": "Verificado em {{date}} · {{source}}",
+    "noPackTitle": "Baixe o NIDO Local",
+    "noPackBody": "Para ver aqui os números de emergência verificados do seu país, baixe o pacote NIDO Local (cerca de 0,2 MB).",
+    "openLibrary": "Ir para a Biblioteca",
+    "noCountryTitle": "{{name}} ainda não está no NIDO Local",
+    "noCountryBody": "Escolha outro país ou pergunte no chat.",
+    "pickCountry": "Escolher país",
+    "describeLabel": "Descreva o que está acontecendo",
+    "describePlaceholder": "Ex.: meu filho engasgou",
+    "describeHint": "O NIDO responde com os guias do celular, sem internet.",
+    "ask": "Perguntar",
+    "quickGuides": "Guias rápidos",
+    "disclaimer": "Se alguém está em perigo, ligue primeiro. O NIDO não substitui os serviços de emergência.",
+    "close": "Fechar",
+    "guides": {
+      "cpr": "RCP",
+      "bleeding": "Hemorragia",
+      "choking": "Engasgo",
+      "burns": "Queimaduras",
+      "earthquake": "Terremoto",
+      "hurricane": "Furacão"
+    },
+    "questions": {
+      "cpr": "Como faço RCP em um adulto?",
+      "bleeding": "Como paro um sangramento grave?",
+      "choking": "O que faço se alguém engasgar?",
+      "burns": "O que faço com uma queimadura?",
+      "earthquake": "O que faço durante um terremoto?",
+      "hurricane": "Como me preparo para um furacão?"
+    }
+  },
+  "library": {
+    "title": "Biblioteca",
+    "tabDocuments": "Meus documentos",
+    "tabLearn": "Aprender",
+    "tabPacks": "Pacotes",
+    "packsHint": "Os pacotes de conhecimento são baixados e removidos em Ajustes › Sua biblioteca.",
+    "openPacks": "Abrir pacotes de conhecimento",
+    "learnTitle": "Aprenda a usar o NIDO",
+    "learnBody": "Um guia curto com exemplos que você pode tocar para testar cada função.",
+    "openGuide": "Abrir o guia",
+    "promptIdeas": "Ideias de prompts"
+  },
+  "settingsGroups": {
+    "security": "Segurança e privacidade",
+    "assistant": "Assistente",
+    "models": "Modelos e conhecimento",
+    "memory": "Memória e conversas",
+    "appearance": "Aparência, idioma e voz",
+    "backup": "Backup",
+    "diagnostics": "Diagnóstico",
+    "help": "Ajuda e informação",
+    "danger": "Zona de perigo"
+  },
+  "settingsSearch": {
+    "placeholder": "Buscar nos ajustes",
+    "label": "Buscar nos ajustes",
+    "empty": "Nenhum ajuste corresponde a “{{query}}”.",
+    "clear": "Limpar a busca"
+  },
+  "settingsMore": {
+    "checkSection": "Verificação de segurança e registro de rede",
+    "agentSection": "Permissões e atividade do agente",
+    "openMemory": "Abrir Minha memória",
+    "openMemoryDesc": "Dados, notas, pessoas e lembretes que o NIDO guarda sobre você.",
+    "openTelemetry": "Abrir a telemetria de execução",
+    "openTelemetryDesc": "Velocidade, tempos e memória de cada resposta. Exporte em JSON ou CSV e avalie modelos.",
+    "crashSection": "Diagnóstico de fechamentos",
+    "backupKeyDesc": "Ver sua chave de criptografia ou trocá-la.",
+    "openBackupKey": "Ver minha chave ou trocá-la",
+    "aboutSection": "Sobre o NIDO",
+    "aboutDesc": "Versão, privacidade, limites, código aberto e licenças.",
+    "openAbout": "Abrir Sobre"
   },
   "sourceReader": {
     "title": "Fonte",
