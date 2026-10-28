@@ -663,6 +663,40 @@ export const MODEL_CATALOG: CatalogModel[] = [
       "116 offline guides on first aid, health at home, disasters and survival, searchable in Spanish, Portuguese and English. ~0.7MB.",
     required: false,
   },
+  {
+    // NIDO Local (0.1.55): guides by country in Spanish + English for 23
+    // countries — checked emergency numbers (facts table with source, quote
+    // and date: pack format v2) and what each official alert means.
+    // knowledge-packs/nido-local, built and checked by
+    // .github/workflows/knowledge-pack.yml (109 real questions, ≥ 90 % top 3).
+    id: "nido-local",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Local: emergency numbers and alerts by country",
+    filename: "corpus/nido-local.sqlite",
+    sizeBytes: 237568,
+    sha256: "02e1b594f58b4816d87b9758323b835515892a71c235679abcdee755ad823f24",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "Checked emergency numbers for 23 countries in Latin America, Spain, Portugal and the US, each with its official source, plus what official alerts mean. Spanish and English. ~0.2MB.",
+    required: false,
+  },
+  {
+    // Same guides with multilingual-e5 vectors (src/rag/embeddingSwitch.ts).
+    id: "nido-local-e5",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Local (multilingual search)",
+    filename: "corpus/nido-local-e5.sqlite",
+    sizeBytes: 237568,
+    sha256: "bac6511cbbfa1f9e326b0563f3959aaadbe1a88e496ceff8ffeef025ad2b29b4",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local-e5.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "Checked emergency numbers for 23 countries, each with its official source, plus what official alerts mean; searchable in Spanish, Portuguese and English. ~0.2MB.",
+    required: false,
+  },
   // Add more tested candidates / corpus packs here later (each needs a
   // unique `id` and `filename`). They ship with `required: false` and
   // appear in the Settings screen as optional downloads.
