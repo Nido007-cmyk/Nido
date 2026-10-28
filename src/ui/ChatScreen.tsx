@@ -67,6 +67,7 @@ import { planSend } from "../agent/input/sendPlan";
 import { runAgentLoop, assertPromptBudget, estimatePromptTokens } from "../agent/loop/agentLoop";
 import { buildToolHandlers, searchPhoneContacts } from "../agent/tools/handlers";
 import { matchSmallTalk, smallTalkSessionTitle } from "../agent/loop/smallTalk";
+import { matchSafetyAnswer } from "../agent/loop/safetyAnswers";
 import { agentFallbackText, toFallbackLang } from "../agent/loop/fallbackText";
 import { describePolicyConfirmation } from "../agent/policy/confirmText";
 import {
@@ -876,8 +877,14 @@ export function ChatScreen({
       resetConversationState();
     }
     lastTurnLangRef.current = uiLang;
-    const smallTalkHit = kbQueryMeta === null ? matchSmallTalk(query, uiLang) : null;
-    const kbAnswer = kbQueryMeta !== null ? kbQueryMeta.answer : smallTalkHit?.text ?? null;
+    // 0.1.55: preguntas de seguridad con respuesta FIJA (monóxido de
+    // carbono, números de emergencia comprobados). Antes que todo lo demás:
+    // en estas, un error del modelo puede costar una vida. Lo pegado o
+    // compartido (inertRouting) no cuenta como pregunta.
+    const safetyHit = inertRouting ? null : matchSafetyAnswer(query, uiLang);
+    const smallTalkHit = safetyHit === null && kbQueryMeta === null ? matchSmallTalk(query, uiLang) : null;
+    const kbAnswer =
+      safetyHit !== null ? safetyHit.text : kbQueryMeta !== null ? kbQueryMeta.answer : smallTalkHit?.text ?? null;
     if (kbAnswer !== null) {
       assistantText = kbAnswer;
       setMessages((prev) =>

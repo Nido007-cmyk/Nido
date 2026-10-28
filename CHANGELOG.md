@@ -4,6 +4,25 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+### Safety
+- **Fixed answers where a mistake could kill.** Two kinds of question are
+  now answered by NIDO's own checked text, never by the AI model:
+  - Running a generator, grill, brazier, charcoal or a running car inside a
+    home, garage, basement or tent: "No", even with doors and windows open,
+    20 feet / 6 m from the house, CO alarms, and what to do if the alarm
+    sounds or someone feels sick (US CPSC and CDC). A small model can answer
+    "yes, with ventilation". Idea from BOAR's Cohazard; text and rules are
+    NIDO's.
+  - "What's the emergency number in…": only countries checked against an
+    official source (United States, Puerto Rico, Mexico, Dominican Republic,
+    Cuba, Spain, Portugal, Brazil), each with its source. Any other country:
+    NIDO says it has not checked it and does not guess.
+  In Spanish, English and Portuguese. Questions that merely mention these
+  things (cleaning the kitchen grill, a car parked in the garage) are not
+  caught.
+
 ## 0.1.54-alpha — 2026-10-23
 
 ### Fixed
