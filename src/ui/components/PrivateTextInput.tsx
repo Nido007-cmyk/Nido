@@ -18,7 +18,7 @@
  * (tests, build viejo) se comporta igual que TextInput.
  */
 import React, { forwardRef, useCallback } from "react";
-import { TextInput, type TextInputProps } from "react-native";
+import { TextInput, type TextInputInstance, type TextInputProps } from "react-native";
 
 type FocusEvent = Parameters<NonNullable<TextInputProps["onFocus"]>>[0];
 
@@ -31,7 +31,7 @@ async function markFocusedFieldIncognito(): Promise<void> {
   }
 }
 
-export const PrivateTextInput = forwardRef<TextInput, TextInputProps>(function PrivateTextInput(
+export const PrivateTextInput = forwardRef<TextInputInstance, TextInputProps>(function PrivateTextInput(
   { onFocus, ...rest },
   ref,
 ) {
@@ -46,4 +46,4 @@ export const PrivateTextInput = forwardRef<TextInput, TextInputProps>(function P
 });
 
 /** Mismo tipo de instancia que TextInput, para `useRef<PrivateTextInput>`. */
-export type PrivateTextInput = TextInput;
+export type PrivateTextInput = TextInputInstance;

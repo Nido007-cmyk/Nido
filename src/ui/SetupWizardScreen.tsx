@@ -1090,7 +1090,6 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
     <SafeAreaView style={[styles.root, { backgroundColor: colors.bg.black }]} edges={["top", "bottom"]}>
       <StatusBar
         barStyle={themeId === "daylight" ? "dark-content" : "light-content"}
-        backgroundColor={colors.bg.black}
       />
       <SegProgress current={segIndex} labels={segLabels} progress={segProgress} />
       {step === 1 && renderStep1()}
