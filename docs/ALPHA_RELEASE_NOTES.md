@@ -249,7 +249,7 @@ Fixes from the 2026-10-10 code audit:
 - P2P Bluetooth behavior varies by phone manufacturer. See the in-app troubleshooting guide if you have connection issues.
 - **A backup restored on a new installation needs the exported key.** If you reinstall or change phones, a backup can be restored with the exported database key. Without that key a backup cannot be opened anywhere, so keep the key somewhere safe and separate from the backup file.
 - **Voice input uses Android's system speech recognizer** with the prefer-offline flag. On devices without an offline model, the system service may process audio online.
-- **Sharing knowledge packs between phones is not available yet.** The tab is hidden.
+- **Sharing knowledge packs between phones (0.1.56) has passed the automated tests only.** Only packs from NIDO's signed catalog can be sent and installed, and only to a contact connected right now; it still needs the check on two physical phones.
 - **With an older NIDO on the other side, the protections fall back to what that phone supports.** Private hello needs 0.1.45 or later on the contact's phone; the new key per message and ML-KEM need 0.1.46 or later. Otherwise the calling phone sends its public key in clear in the first message (someone recording nearby could recognise the same phone across connections, but cannot read messages).
 - **Private hello and the new key per message are on by default since 0.1.49, but have not been tested on two physical phones yet.** If two phones fail to connect, turn them off in Settings and report it.
 - **Disappearing messages are deleted by each phone.** An older NIDO on the other side ignores the timer, and nothing stops someone from photographing the screen with another camera.

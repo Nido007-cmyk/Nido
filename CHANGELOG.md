@@ -4,7 +4,7 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
-## Unreleased
+## 0.1.56-alpha — 2026-10-28
 
 ### Added
 - **Share a knowledge pack with a contact, without internet.** A NIDO can
@@ -13,8 +13,8 @@ All notable changes to NIDO are recorded here. Versions follow
   receiver installs it only if it is byte-for-byte the file in NIDO's
   signed catalog; anything else — a hand-made pack, a modified one — is not
   offered and not installed. The previous pack stays in place if anything
-  fails. The transfer code existed since 0.1.4 but was never connected; the
-  Packs tab said so.
+  fails. The transfer code existed since 0.1.4 but was never connected, and
+  the Packs tab (NIDO › Packs) was hidden; it is visible again.
 - **Read the whole guide behind an answer.** Under an answer's sources, a
   knowledge-pack source now has "Read the whole guide": it opens the full
   guide, offline, with the part NIDO used highlighted and the original
@@ -35,6 +35,18 @@ All notable changes to NIDO are recorded here. Versions follow
   reproduced yet.
 
 ### Fixed
+- **Navigation in the new interface** (found auditing the 0.1.55 APK):
+  "Try it" in the guide opened from the Library or Settings now shows the
+  chat where the example was typed; "Share → NIDO" and the new-chat
+  shortcut show the chat even if another tab was open; Android's Back
+  button closes the open menu or screen and returns to Chat instead of
+  leaving the app; "My documents" in the side menu opens the Library on My
+  documents.
+- **Release notes on GitHub** no longer repeat the whole notes file (with
+  the 0.1.1–0.1.18 history before the new changes and the limitations
+  twice).
+- **"The emergency number that's used here"** is no longer taken as a
+  question about the United States ("usa" is also a Spanish verb).
 - **Pack sharing no longer reports "complete" for a pack it did not
   save** (when no installer was connected, the receiver said "complete").
 - **Choose the contact** when several are connected, instead of sending to
@@ -80,8 +92,9 @@ All notable changes to NIDO are recorded here. Versions follow
     NIDO's.
   - "What's the emergency number in…": only countries checked against an
     official source (United States, Puerto Rico, Mexico, Dominican Republic,
-    Cuba, Spain, Portugal, Brazil), each with its source. Any other country:
-    NIDO says it has not checked it and does not guess.
+    Cuba, Spain, Portugal, Brazil), each with its source. With the NIDO
+    Local pack installed, its 23 checked countries answer first. Any other
+    country: NIDO says it has not checked it and does not guess.
   In Spanish, English and Portuguese. Questions that merely mention these
   things (cleaning the kitchen grill, a car parked in the garage) are not
   caught.

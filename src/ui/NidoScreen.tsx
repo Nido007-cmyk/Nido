@@ -1499,8 +1499,9 @@ export function NidoScreen({
             ["contactos", t("nido.tabContacts")],
             ["enlace", t("nido.tabLink")],
             ["negociaciones", t("nido.tabNegotiations")],
-            // F2/U5: la pestaña Packs se oculta hasta que el envío y la
-            // recepción estén conectados (hoy el botón no hace nada).
+            // 0.1.56: envío y recepción ya conectados (packShareApp), así
+            // que la pestaña Packs vuelve a verse.
+            ["packs", t("nido.tabPacks")],
           ] as Array<[Tab, string]>
         ).map(([key, label]) => (
           <Pressable
