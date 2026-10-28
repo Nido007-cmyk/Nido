@@ -4,7 +4,7 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
-## Unreleased
+## 0.1.57-alpha — 2026-10-28
 
 ### Fixed
 - **A pack is no longer deleted just because a newer version exists.** When
