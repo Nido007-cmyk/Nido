@@ -69,4 +69,10 @@ describe("auditoría 0.1.55: navegación entre pestañas", () => {
     expect(back).toContain('selectTab("chat")');
     expect(back).toContain("return false;");
   });
+
+  it("«Mis documentos» del menú abre la Biblioteca en Mis documentos", () => {
+    const item = body('key: "knowledge"', "},\n");
+    expect(item.indexOf('selectTab("library")')).toBeLessThan(item.indexOf('setLibrarySection("documents")'));
+    expect(src).toContain("initialSection={librarySection}");
+  });
 });

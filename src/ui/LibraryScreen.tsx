@@ -18,18 +18,21 @@ import { NidoIcon } from "./components/icons/NidoIcon";
 import { PersonalDocumentsManager } from "./PersonalDocumentsManager";
 import { ModelSetupScreen } from "./ModelSetupScreen";
 
-type Section = "documents" | "learn" | "packs";
+export type LibrarySection = "documents" | "learn" | "packs";
+type Section = LibrarySection;
 
 interface Props {
+  /** Section shown first (the drawer's «Mis documentos» opens "documents"). */
+  initialSection?: LibrarySection;
   onOpenGuide: () => void;
   onOpenPromptIdeas: () => void;
 }
 
-export function LibraryScreen({ onOpenGuide, onOpenPromptIdeas }: Props) {
+export function LibraryScreen({ initialSection = "packs", onOpenGuide, onOpenPromptIdeas }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
-  const [section, setSection] = useState<Section>("packs");
+  const [section, setSection] = useState<Section>(initialSection);
 
   const tabs: Array<{ key: Section; label: string }> = [
     { key: "packs", label: t("library.tabPacks") },

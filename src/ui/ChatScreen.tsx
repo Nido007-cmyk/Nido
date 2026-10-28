@@ -218,6 +218,8 @@ export function ChatScreen({
   // showNido (sus efectos dependen de ellos); Emergencia y Biblioteca son
   // pestañas nuevas. La pestaña visible sale de effectiveTab, más abajo.
   const [activeTab, setActiveTab] = useState<MainTab>("chat");
+  // Auditoría 0.1.55: «Mis documentos» del menú abre la Biblioteca en Mis documentos.
+  const [librarySection, setLibrarySection] = useState<"documents" | "learn" | "packs">("packs");
   // 0.1.46: botón de pánico (opt-in en Ajustes). Se relee al cerrar Ajustes.
   // Cargar los interruptores aquí, al arrancar, también deja listos los del
   // P2P (saludo privado, v5) antes de la primera reconexión.
@@ -1774,6 +1776,7 @@ export function ChatScreen({
     setShowExecutionTelemetry(false);
     setShowAbout(false);
     setDrawerOpen(false);
+    if (tab === "library" && activeTab !== "library") setLibrarySection("packs");
     setActiveTab(tab);
   };
 
@@ -1813,7 +1816,11 @@ export function ChatScreen({
     { key: "emergency", icon: "warning", label: t("tabs.emergency"), onPress: () => selectTab("emergency") },
     { key: "guide", icon: "compass", label: t("guide.drawer"), onPress: () => setShowGuide(true) },
     { key: "prompts", icon: "ideas", label: t("chatScreen.drawerItems.prompts"), onPress: () => setShowPromptIdeas(true) },
-    { key: "knowledge", icon: "knowledge", label: t("chatScreen.drawerItems.myDocuments"), onPress: () => selectTab("library") },
+    { key: "knowledge", icon: "knowledge", label: t("chatScreen.drawerItems.myDocuments"), onPress: () => {
+      selectTab("library");
+      // Después de selectTab (que vuelve a «Packs» al entrar): el último set gana.
+      setLibrarySection("documents");
+    } },
     { key: "memory", icon: "memory", label: t("chatScreen.drawerItems.memory"), onPress: () => setShowMemoryManager(true) },
     { key: "settings", icon: "settings", label: t("chatScreen.drawerItems.settings"), onPress: () => selectTab("settings") },
     { key: "telemetry", icon: "telemetry", label: t("chatScreen.drawerItems.telemetry"), onPress: () => setShowExecutionTelemetry(true) },
@@ -1904,6 +1911,8 @@ export function ChatScreen({
   if (activeTab === "library") {
     return withTabs(
       <LibraryScreen
+        key={librarySection}
+        initialSection={librarySection}
         onOpenGuide={() => setShowGuide(true)}
         onOpenPromptIdeas={() => {
           selectTab("chat");
