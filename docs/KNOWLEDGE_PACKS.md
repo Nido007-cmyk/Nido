@@ -126,6 +126,20 @@ download it:
 3. To offer it in the setup wizard, add its id to a tier's `corpusPackIds`
    (`TIERS` in the same file).
 
+## When a pack gets a new version
+
+A new app version can ship a new version of a catalog pack (new size and
+SHA-256 in the signed catalog). The pack already on the phone is not deleted:
+it is still exactly the file that was verified when it was installed, so the
+app keeps using it, also offline, and the Packs list shows **Update
+available**. Answers with emergency numbers from it say that they come from an
+older version of the pack, next to the date each source was checked. The new
+version replaces the old file only once it has finished downloading and its
+SHA-256 has been verified; if the download fails or is cut off, the old pack
+stays. A pack file that changed after it was installed (any other bytes) is
+not treated as an older version: it is deleted, as before. Models keep the
+strict check.
+
 ## Passing a pack to another phone (no internet)
 
 Since 0.1.55 a NIDO can hand a catalog pack (for example NIDO Essentials,

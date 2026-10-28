@@ -66,8 +66,11 @@
       "downloading": "Baixando",
       "notOnDisk": "Não baixado",
       "active": "Ativo",
-      "cached": "Baixado"
-    }
+      "cached": "Baixado",
+      "outdated": "Atualização disponível"
+    },
+    "updateAsset": "⬆️ Atualizar",
+    "outdatedNote": "Há uma versão mais nova deste pacote. Enquanto isso, a que você tem continua funcionando, também sem conexão; a nova só a substitui quando terminar de baixar e for verificada."
   },
   "modelLoadErrorCard": {
     "corrupt": {

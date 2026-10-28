@@ -66,8 +66,11 @@
       "downloading": "Downloading",
       "notOnDisk": "Not on disk",
       "active": "Active",
-      "cached": "Downloaded"
-    }
+      "cached": "Downloaded",
+      "outdated": "Update available"
+    },
+    "updateAsset": "⬆️ Update",
+    "outdatedNote": "A newer version of this pack is available. Until then the one you have keeps working, offline too; the new one only replaces it once it has finished downloading and been verified."
   },
   "modelLoadErrorCard": {
     "corrupt": {

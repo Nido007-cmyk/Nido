@@ -127,3 +127,18 @@ describe("pestaña Emergencia (0.1.55)", () => {
     expect(es.map((r) => r.code)).toContain("ES");
   });
 });
+
+describe("respuestas desde un pack desactualizado (0.1.57)", () => {
+  it("mantiene los números y la fecha de la fuente, y avisa de que hay una versión más nueva", async () => {
+    const { markOutdated } = await import("./packFacts");
+    const a = composeFactsAnswer("número de emergencias de España", "es", regions, facts)!;
+    const m = markOutdated(a, "es", "NIDO Local");
+    expect(m.outdated).toBe(true);
+    expect(m.text.startsWith(a.text)).toBe(true);
+    expect(m.text).toMatch(/comprobado el \d{4}-\d{2}-\d{2}/);
+    expect(m.text).toContain("versión anterior del pack «NIDO Local»");
+    expect(m.calls).toEqual(a.calls);
+    expect(markOutdated(a, "en", "NIDO Local").text).toContain("older version of the “NIDO Local” pack");
+    expect(markOutdated(a, "pt", "NIDO Local").text).toContain("versão anterior do pacote «NIDO Local»");
+  });
+});

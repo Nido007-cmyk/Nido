@@ -107,6 +107,7 @@ export function ModelSetupScreen(props: Props) {
   };
   const requiredMode = props.mode === "required";
   const [presence, setPresence] = useState<Record<string, boolean>>({});
+  const [outdatedIds, setOutdatedIds] = useState<Record<string, boolean>>({});
   const [activeIds, setActiveIds] = useState<Partial<Record<AssetKind, string>>>({});
   const [toast, setToast] = useState<string | null>(null);
   const [dangerModalVisible, setDangerModalVisible] = useState(false);
@@ -177,6 +178,7 @@ export function ModelSetupScreen(props: Props) {
   const refreshStatus = useCallback(async () => {
     const statuses = await modelManager.statusAll();
     setPresence(Object.fromEntries(statuses.map((s) => [s.asset.id, s.present])));
+    setOutdatedIds(Object.fromEntries(statuses.map((s) => [s.asset.id, s.outdated === true])));
 
     const next: Partial<Record<AssetKind, string>> = {};
     for (const kind of LLM_EMBEDDING_KINDS) {
@@ -305,6 +307,7 @@ export function ModelSetupScreen(props: Props) {
       const dl = getDownloadState(item.id);
       return {
         present: presence[item.id] ?? false,
+        outdated: outdatedIds[item.id] ?? false,
         downloading: isDownloading(item.id),
         progress: dl?.progress ?? 0,
         error: dl?.error ?? null,
@@ -314,7 +317,7 @@ export function ModelSetupScreen(props: Props) {
         etaSeconds: dl?.etaSeconds,
       };
     },
-    [presence]
+    [presence, outdatedIds]
   );
 
   const download = useCallback(

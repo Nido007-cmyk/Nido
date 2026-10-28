@@ -4,6 +4,20 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+### Fixed
+- **A pack is no longer deleted just because a newer version exists.** When
+  an app update brought a new version of an installed pack (for example NIDO
+  Local), the old one was deleted on the next check so it could be
+  downloaded again — offline, that left the phone without the emergency
+  numbers it had. Now the pack you have keeps working, offline too, and is
+  shown as **Update available**. Answers with emergency numbers from it say
+  they come from an older version of the pack, next to the date each source
+  was checked. The new version replaces it only after it has finished
+  downloading and been verified. A pack file that was modified is still
+  deleted, as before.
+
 ## 0.1.56-alpha — 2026-10-28
 
 ### Added

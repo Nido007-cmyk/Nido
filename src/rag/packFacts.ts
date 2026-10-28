@@ -43,6 +43,30 @@ export interface FactsAnswer {
   facts: PackFact[];
   /** Short session title ("Emergencias en Chile"). */
   title: string;
+  /** 0.1.57: answered from an older version of the pack (the app has a newer one to download). */
+  outdated?: boolean;
+}
+
+const OUTDATED_NOTE: Record<FactLang, (pack: string) => string> = {
+  es: (pack) =>
+    `Aviso: este dato viene de una versión anterior del pack «${pack}» guardada en el teléfono. Hay una más nueva: descárgala en Biblioteca › Packs cuando tengas conexión.`,
+  en: (pack) =>
+    `Note: this comes from an older version of the “${pack}” pack saved on this phone. A newer one is available: download it in Library › Packs when you're online.`,
+  pt: (pack) =>
+    `Aviso: este dado vem de uma versão anterior do pacote «${pack}» guardada no telefone. Há uma mais nova: baixe-a em Biblioteca › Pacotes quando tiver conexão.`,
+};
+
+/**
+ * 0.1.57: marks an answer that came from an older pack. The numbers stay (an
+ * older verified list beats none, especially offline); the date of each source
+ * is already in the text, and this says a newer version exists.
+ */
+export function markOutdated(answer: FactsAnswer, lang: FactLang, packLabel: string): FactsAnswer {
+  return { ...answer, text: `${answer.text}\n\n${OUTDATED_NOTE[lang](packLabel)}`, outdated: true };
+}
+
+export function outdatedPackNote(lang: FactLang, packLabel: string): string {
+  return OUTDATED_NOTE[lang](packLabel);
 }
 
 /** Lower-case, no accents, punctuation as spaces, single spaces. */

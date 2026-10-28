@@ -52,6 +52,12 @@ export interface AssetStatus {
   present: boolean;
   sizeOnDiskBytes: number;
   checksumOk: boolean | null; // null = not verified yet (expensive on large files)
+  /**
+   * 0.1.57: a knowledge pack from an older catalog, still exactly its verified
+   * bytes. Kept and used; the UI offers the update. `present` stays false so
+   * every "is the current version installed?" check keeps its meaning.
+   */
+  outdated?: boolean;
 }
 
 export interface DownloadProgress {
@@ -312,6 +318,11 @@ export class ModelManager {
     const verdict = await checkModelTrust(asset);
     if (verdict.trusted) {
       return { asset, present: true, sizeOnDiskBytes: verdict.sizeOnDiskBytes, checksumOk: true };
+    }
+    if (verdict.outdated) {
+      // Never deleted here: offline it may be the only copy of the emergency
+      // numbers. A new download replaces it only after verification.
+      return { asset, present: false, sizeOnDiskBytes: verdict.sizeOnDiskBytes, checksumOk: null, outdated: true };
     }
     if (verdict.deleteFile) {
       dlog(asset.id, `statusOf(): deleting untrusted file (${verdict.reason})`);

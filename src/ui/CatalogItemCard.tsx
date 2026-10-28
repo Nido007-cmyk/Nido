@@ -51,6 +51,8 @@ export interface CatalogRowState {
   bytesExpected?: number;
   speedBytesPerSec?: number;
   etaSeconds?: number;
+  /** 0.1.57: older verified pack, still in use; the new version can be downloaded. */
+  outdated?: boolean;
 }
 
 interface Props {
@@ -73,6 +75,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
   const { t, i18n } = useTranslation();
   const isCorpus = item.kind === "corpus";
   const present = row?.present ?? false;
+  const outdated = !present && (row?.outdated ?? false);
   const effectivelyActive = isCorpus ? present : isActive;
 
   // INDEX-FIX 2026-10-11: "en tu base de conocimiento" solo cuando el
@@ -152,6 +155,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
 
         <StatusBadge
           present={present}
+          outdated={outdated}
           active={effectivelyActive}
           downloading={row?.downloading ?? false}
         />
@@ -183,6 +187,14 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
 
       {/* Description */}
       <Text style={styles.description}>{item.description}</Text>
+
+      {/* 0.1.57: older pack kept and used until the update is verified */}
+      {outdated && !row?.downloading && (
+        <View style={styles.outdatedBox}>
+          <NidoIcon name="warning" size={14} color={colors.text.accentAmber} />
+          <Text style={styles.outdatedText}>{t("catalogItemCard.outdatedNote")}</Text>
+        </View>
+      )}
 
       {/* Error Callout */}
       {row?.error && (
@@ -242,7 +254,11 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
               onPress={() => handleAction(() => onDownload(item))}
             >
               <Text style={styles.downloadBtnText}>
-                {row?.error ? t("catalogItemCard.retryDownload") : t("catalogItemCard.downloadAsset")}
+                {row?.error
+                  ? t("catalogItemCard.retryDownload")
+                  : outdated
+                    ? t("catalogItemCard.updateAsset")
+                    : t("catalogItemCard.downloadAsset")}
               </Text>
             </Pressable>
           )}
@@ -297,7 +313,7 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
             </View>
           )}
 
-          {(present || fromHuggingFace) && !item.required && (
+          {(present || outdated || fromHuggingFace) && !item.required && (
             <Pressable accessibilityRole="button"
               onPress={confirmRemove}
               hitSlop={8}
@@ -316,10 +332,12 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
 
 function StatusBadge({
   present,
+  outdated,
   active,
   downloading,
 }: {
   present: boolean;
+  outdated: boolean;
   active: boolean;
   downloading: boolean;
 }) {
@@ -331,6 +349,13 @@ function StatusBadge({
     return (
       <View style={[styles.badge, styles.badgeDownloading]}>
         <Text style={styles.badgeTextCyan}>{t("catalogItemCard.badge.downloading")}</Text>
+      </View>
+    );
+  }
+  if (outdated) {
+    return (
+      <View style={[styles.badge, styles.badgeOutdated]}>
+        <Text style={styles.badgeTextAmber}>{t("catalogItemCard.badge.outdated")}</Text>
       </View>
     );
   }
@@ -471,6 +496,31 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     borderRadius: radii.sm,
     padding: spacing.sm,
     gap: 6,
+  },
+  outdatedBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.amber.bgSubtle,
+    borderColor: colors.amber.border,
+    borderWidth: 1,
+    borderRadius: radii.sm,
+    padding: spacing.sm,
+    gap: 6,
+  },
+  outdatedText: {
+    ...typography.ui.caption,
+    color: colors.text.primary,
+    flex: 1,
+  },
+  badgeOutdated: {
+    backgroundColor: colors.amber.bgSubtle,
+    borderColor: colors.amber.border,
+  },
+  badgeTextAmber: {
+    ...typography.mono.xs,
+    fontSize: 9,
+    color: colors.text.accentAmber,
+    fontWeight: "800",
   },
   errorIcon: {
     fontSize: 12,

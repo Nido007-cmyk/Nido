@@ -101,6 +101,21 @@ descargarlo:
 3. Para ofrecerlo en el asistente de configuración, añade su id a los `corpusPackIds`
    de un tier (`TIERS` en el mismo archivo).
 
+## Cuando un pack tiene una versión nueva
+
+Una versión nueva de la app puede traer una versión nueva de un pack del
+catálogo (otro tamaño y otra SHA-256 en el catálogo firmado). El pack que ya
+está en el teléfono no se borra: sigue siendo exactamente el archivo que se
+verificó al instalarlo, así que la app lo sigue usando, también sin conexión,
+y en la lista de Packs aparece **Actualización disponible**. Las respuestas con
+números de emergencia sacadas de él avisan de que vienen de una versión
+anterior del pack, junto a la fecha en que se comprobó cada fuente. La versión
+nueva reemplaza al archivo viejo solo cuando termina de descargarse y su
+SHA-256 queda verificada; si la descarga falla o se corta, el pack viejo se
+queda. Un archivo de pack que cambió después de instalarse (cualquier otro
+contenido) no cuenta como versión anterior: se borra, como antes. Los modelos
+mantienen la comprobación estricta.
+
 ## Cómo la app busca en un pack
 
 Para cada pregunta, el índice de palabras clave del pack elige hasta 400 fragmentos
