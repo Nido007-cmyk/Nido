@@ -5,7 +5,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { answerFromPackFacts } from "../rag/packs";
+import { answerFromPackFacts, packCountryNames } from "../rag/packs";
 import {
   View,
   Text,
@@ -71,7 +71,7 @@ import { planSend } from "../agent/input/sendPlan";
 import { runAgentLoop, assertPromptBudget, estimatePromptTokens } from "../agent/loop/agentLoop";
 import { buildToolHandlers, searchPhoneContacts } from "../agent/tools/handlers";
 import { matchSmallTalk, smallTalkSessionTitle } from "../agent/loop/smallTalk";
-import { matchSafetyAnswer } from "../agent/loop/safetyAnswers";
+import { matchSafetyAnswer, unknownCountryText } from "../agent/loop/safetyAnswers";
 import { agentFallbackText, toFallbackLang } from "../agent/loop/fallbackText";
 import { describePolicyConfirmation } from "../agent/policy/confirmText";
 import {
@@ -932,7 +932,13 @@ export function ChatScreen({
       coHit === null && kbQueryMeta === null && smallTalkHit === null && !inertRouting
         ? await answerFromPackFacts(query, uiLang)
         : null;
-    const numberHit = safetyHit !== null && safetyHit.kind === "emergency-number" && factsHit === null ? safetyHit : null;
+    let numberHit = safetyHit !== null && safetyHit.kind === "emergency-number" && factsHit === null ? safetyHit : null;
+    if (numberHit?.countryUnknown) {
+      // 0.1.57: list every country with checked numbers (the packs' 23, not
+      // only the built-in table's 8). Still a fixed text: no number guessed.
+      const names = await packCountryNames(uiLang).catch(() => [] as string[]);
+      if (names.length > 0) numberHit = { ...numberHit, text: unknownCountryText(uiLang, numberHit.countryUnknown.asked, names) };
+    }
     const kbAnswer =
       coHit !== null
         ? coHit.text

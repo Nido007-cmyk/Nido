@@ -23,7 +23,7 @@ import type { RetrievedChunk } from "./retrieve.types";
 import { guideTitleOf, markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId, sectionLikePattern, type PackSourceDoc } from "./packSource";
 import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "./embeddingProfile";
 import { packIndexIfReady, releaseAllIndexes, searchPackIndex } from "./vectorIndex";
-import { composeFactsAnswer, markOutdated, type FactLang, type FactsAnswer, type PackFact, type PackRegion } from "./packFacts";
+import { composeFactsAnswer, emergencyRegions, markOutdated, type FactLang, type FactsAnswer, type PackFact, type PackRegion } from "./packFacts";
 
 const PACK_CANDIDATES = 400;
 const REQUIRED_EMBEDDING_SHA256 = MODEL_CATALOG.find((m) => m.kind === "embedding" && m.required)!.sha256;
@@ -387,4 +387,14 @@ export async function loadAllPackFacts(): Promise<{ regions: PackRegion[]; facts
     console.warn("[packs] loadAllPackFacts:", e instanceof Error ? e.message : String(e));
   }
   return { regions, facts, outdatedPacks };
+}
+
+/**
+ * 0.1.57: names of the countries the installed packs have checked numbers for,
+ * sorted in the language — for the fixed "I won't guess" answer, whose own
+ * list only has the 8 countries of the built-in table. Empty without packs.
+ */
+export async function packCountryNames(lang: FactLang): Promise<string[]> {
+  const { regions, facts } = await loadAllPackFacts();
+  return emergencyRegions(lang, regions, facts).map((r) => r.name);
 }

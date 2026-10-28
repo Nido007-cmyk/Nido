@@ -110,3 +110,28 @@ describe("auditoría 0.1.55: «usa» como verbo no es Estados Unidos", () => {
     expect(matchSafetyAnswer("número de emergencias en Estados Unidos", "es")?.country).toBe("the United States");
   });
 });
+
+describe("país sin número comprobado: lista de los packs (0.1.57)", () => {
+  it("marca la respuesta para poder rehacerla con los países de los packs, sin cambiar el texto de la tabla", async () => {
+    const { unknownCountryText } = await import("./safetyAnswers");
+    const asked = matchSafetyAnswer("número de emergencias en Japón", "es")!;
+    expect(asked.countryUnknown).toEqual({ asked: true });
+    const which = matchSafetyAnswer("cuál es el número de emergencias", "es")!;
+    expect(which.countryUnknown).toEqual({ asked: false });
+    // Same fixed text as before for the built-in list.
+    const names = EMERGENCY_NUMBERS.map((x) => x.label.es);
+    expect(unknownCountryText("es", true, names)).toBe(asked.text);
+    expect(unknownCountryText("es", false, names)).toBe(which.text);
+    // A country the table knows is not "unknown".
+    expect(matchSafetyAnswer("número de emergencias en México", "es")!.countryUnknown).toBeUndefined();
+  });
+
+  it("con la lista de los packs sigue sin adivinar y nombra todos los países", async () => {
+    const { unknownCountryText } = await import("./safetyAnswers");
+    const t = unknownCountryText("es", true, ["Argentina", "Chile", "Uruguay"]);
+    expect(t).toContain("no lo voy a adivinar");
+    expect(t).toContain("Países comprobados por ahora: Argentina, Chile, Uruguay.");
+    expect(t).not.toMatch(/\b\d{3}\b/);
+    expect(unknownCountryText("en", false, ["Chile"])).toBe("Which country are you in? I'll tell you the number.\n\nCountries checked so far: Chile.");
+  });
+});

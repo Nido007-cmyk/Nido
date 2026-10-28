@@ -4,6 +4,15 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+### Fixed
+- **The "which country?" answer lists every country with checked numbers.**
+  When you ask for an emergency number without a country, or for a country
+  NIDO has no checked number for, it still doesn't guess; the list of
+  countries it does have now includes all the ones in your installed packs
+  (23 with NIDO Local) instead of only the 8 built into the app.
+
 ## 0.1.57-alpha — 2026-10-28
 
 ### Fixed
