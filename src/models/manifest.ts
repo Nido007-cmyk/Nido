@@ -664,21 +664,22 @@ export const MODEL_CATALOG: CatalogModel[] = [
     required: false,
   },
   {
-    // NIDO Local (0.1.55): guides by country in Spanish + English — checked
-    // emergency numbers and what each official alert means (Cuba, Dominican
-    // Republic, Puerto Rico, Mexico). knowledge-packs/nido-local, built and
-    // checked by .github/workflows/knowledge-pack.yml (25/25 real questions).
+    // NIDO Local (0.1.55): guides by country in Spanish + English for 23
+    // countries — checked emergency numbers (facts table with source, quote
+    // and date: pack format v2) and what each official alert means.
+    // knowledge-packs/nido-local, built and checked by
+    // .github/workflows/knowledge-pack.yml (109 real questions, ≥ 90 % top 3).
     id: "nido-local",
     kind: "corpus",
     format: "sqlite-pack",
     label: "NIDO Local: emergency numbers and alerts by country",
     filename: "corpus/nido-local.sqlite",
-    sizeBytes: 94208,
-    sha256: "75221ca3068a222470c655810b3b34a7b15993cef1cc750e70c5bc4d0d7d83d5",
+    sizeBytes: 237568,
+    sha256: "b4536c07d5e07cafd6c180f1567f00f60d2bea4bc25e75441d7ace8696be3400",
     sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
-      "Emergency numbers and official alerts (hurricanes, earthquakes) for Cuba, the Dominican Republic, Puerto Rico and Mexico, in Spanish and English. ~0.1MB.",
+      "Checked emergency numbers for 23 countries in Latin America, Spain, Portugal and the US, each with its official source, plus what official alerts mean. Spanish and English. ~0.2MB.",
     required: false,
   },
   {
@@ -688,12 +689,12 @@ export const MODEL_CATALOG: CatalogModel[] = [
     format: "sqlite-pack",
     label: "NIDO Local (multilingual search)",
     filename: "corpus/nido-local-e5.sqlite",
-    sizeBytes: 94208,
-    sha256: "7a7e118c9a83bb53e98444f6ab430b07a448752d0b47fdb1df8e02ddfdb25af3",
+    sizeBytes: 237568,
+    sha256: "e151ad34d84254eafd0ef1ec0206010bc82f6cafe369b1cc670bbc862ef7dff4",
     sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local-e5.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
-      "Emergency numbers and official alerts for Cuba, the Dominican Republic, Puerto Rico and Mexico, searchable in Spanish, Portuguese and English. ~0.1MB.",
+      "Checked emergency numbers for 23 countries, each with its official source, plus what official alerts mean; searchable in Spanish, Portuguese and English. ~0.2MB.",
     required: false,
   },
   // Add more tested candidates / corpus packs here later (each needs a
