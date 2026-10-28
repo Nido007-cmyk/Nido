@@ -9,7 +9,8 @@
  * plano de Android, módulo download-wake-lock). Sin él, algunos fabricantes
  * cierran NIDO pocos segundos después de salir de la app y la respuesta se
  * pierde. Varias generaciones a la vez comparten el mismo servicio: se para
- * cuando termina la última. Nunca lanza.
+ * cuando termina la última. Nunca lanza. Diseño propio (la idea de un aviso
+ * «respondiendo» la vimos en BOAR; el código es de NIDO).
  */
 import { startAnsweringKeepAlive, stopAnsweringKeepAlive } from "download-wake-lock";
 import i18n from "../i18n";

@@ -37,7 +37,6 @@ class DownloadWakeLockModule : Module() {
     Function("startAnswering") { title: String, text: String, channelName: String ->
       val context = appContext.reactContext ?: return@Function false
       AnswerKeepAliveService.start(context.applicationContext, title, text, channelName)
-      true
     }
 
     Function("stopAnswering") {

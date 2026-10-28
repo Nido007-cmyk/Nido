@@ -15,116 +15,143 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 
 /**
- * 0.1.55: mantiene vivo NIDO mientras la IA escribe una respuesta, con una
- * notificación discreta («NIDO está respondiendo…»). Sin esto, algunos
- * fabricantes cierran la app pocos segundos después de salir de ella y la
- * respuesta se pierde a medias. Patrón tomado de BOAR (AnswerService, MIT).
+ * AnswerKeepAliveService — 0.1.55: «NIDO está respondiendo…».
  *
- * Empieza con cada respuesta, mientras NIDO está en pantalla (Android no deja
- * que una app en segundo plano lo arranque: ese intento se ignora, nunca
- * lanza) y para cuando la respuesta termina. Importancia baja: sin sonido ni
- * ventana emergente.
+ * Mientras la IA escribe una respuesta, este servicio en primer plano evita
+ * que Android congele o cierre NIDO si el usuario cambia de app (algunos
+ * fabricantes lo hacen a los pocos segundos y la respuesta se corta). Mismo
+ * esquema que NidoP2PService: órdenes START y STOP por Intent, en orden.
+ *
+ * Propio de NIDO:
+ *  - Tope de seguridad: si nadie lo para (JS recargado, error), se para solo
+ *    a los [MAX_ALIVE_MS]. Una notificación «respondiendo» que se queda
+ *    para siempre sería mentir.
+ *  - Un reinicio del sistema (Intent nulo) no lo resucita: sin el motor de
+ *    JS no hay respuesta que proteger.
+ *  - Textos en el idioma de la app: los manda JS con cada START.
  */
 class AnswerKeepAliveService : Service() {
+
+  companion object {
+    const val CHANNEL_ID = "nido_answering"
+    const val NOTIFICATION_ID = 0x1D1
+    const val ACTION_START = "team.nido.app.answer.START"
+    const val ACTION_STOP = "team.nido.app.answer.STOP"
+    const val EXTRA_TITLE = "title"
+    const val EXTRA_TEXT = "text"
+    const val EXTRA_CHANNEL = "channel"
+    /** Más que cualquier respuesta razonable en un teléfono (n_predict + carga). */
+    const val MAX_ALIVE_MS = 15L * 60 * 1000
+
+    /** Pide el servicio. Si Android no deja (NIDO ya en segundo plano), se ignora. */
+    fun start(context: Context, title: String, text: String, channelName: String): Boolean {
+      val intent = Intent(context, AnswerKeepAliveService::class.java)
+        .setAction(ACTION_START)
+        .putExtra(EXTRA_TITLE, title)
+        .putExtra(EXTRA_TEXT, text)
+        .putExtra(EXTRA_CHANNEL, channelName)
+      return runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent)
+        else context.startService(intent)
+        true
+      }.getOrDefault(false)
+    }
+
+    /** Lo para. Seguro aunque no esté activo. */
+    fun stop(context: Context) {
+      val intent = Intent(context, AnswerKeepAliveService::class.java).setAction(ACTION_STOP)
+      // La orden STOP llega detrás de START: el servicio ya es foreground y
+      // pararlo es seguro. Si Android no acepta la orden, se para por fuera.
+      runCatching { context.startService(intent) }
+        .onFailure { runCatching { context.stopService(Intent(context, AnswerKeepAliveService::class.java)) } }
+    }
+  }
+
+  private val handler = Handler(Looper.getMainLooper())
+  private val safetyStop = Runnable { finish() }
+
   override fun onBind(intent: Intent?): IBinder? = null
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-    // Siempre foreground primero: Android cierra la app si a
-    // startForegroundService() no le sigue startForeground().
-    runCatching {
-      val n = notification(this)
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-      } else {
-        startForeground(ID, n)
+    when (intent?.action) {
+      ACTION_START -> {
+        goForeground(
+          intent.getStringExtra(EXTRA_TITLE) ?: "NIDO",
+          intent.getStringExtra(EXTRA_TEXT) ?: "",
+          intent.getStringExtra(EXTRA_CHANNEL) ?: "NIDO",
+        )
+        handler.removeCallbacks(safetyStop)
+        handler.postDelayed(safetyStop, MAX_ALIVE_MS)
       }
-    }
-    synchronized(lock) {
-      started = true
-      if (stopPending) {
-        stopPending = false
-        stopSelf()
-      }
+      ACTION_STOP -> finish()
+      else -> stopSelf()
     }
     return START_NOT_STICKY
   }
 
-  override fun onDestroy() {
-    synchronized(lock) {
-      started = false
-      stopPending = false
+  private fun goForeground(title: String, text: String, channelName: String) {
+    val notification = buildNotification(title, text, channelName)
+    runCatching {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+      } else {
+        startForeground(NOTIFICATION_ID, notification)
+      }
+    }.onFailure { stopSelf() }
+  }
+
+  private fun finish() {
+    handler.removeCallbacks(safetyStop)
+    runCatching {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+      } else {
+        @Suppress("DEPRECATION")
+        stopForeground(true)
+      }
     }
+    stopSelf()
+  }
+
+  override fun onDestroy() {
+    handler.removeCallbacks(safetyStop)
     super.onDestroy()
   }
 
-  companion object {
-    private const val ID = 0x1D1
-    private const val CHANNEL = "nido_answering"
-    private val lock = Any()
-    private var started = false
-    private var stopPending = false
-    private var requested = false
-    @Volatile private var title = "NIDO"
-    @Volatile private var text = ""
-    @Volatile private var channelName = "NIDO"
-
-    fun start(ctx: Context, title: String, text: String, channelName: String) {
-      this.title = title
-      this.text = text
-      this.channelName = channelName
-      synchronized(lock) { stopPending = false }
-      runCatching {
-        val i = Intent(ctx, AnswerKeepAliveService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(i) else ctx.startService(i)
-        synchronized(lock) { requested = true }
+  private fun buildNotification(title: String, text: String, channelName: String): Notification {
+    val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      val channel = NotificationChannel(CHANNEL_ID, channelName, NotificationManager.IMPORTANCE_LOW).apply {
+        setShowBadge(false)
       }
+      (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
+      Notification.Builder(this, CHANNEL_ID)
+    } else {
+      @Suppress("DEPRECATION")
+      Notification.Builder(this)
     }
-
-    fun stop(ctx: Context) {
-      synchronized(lock) {
-        if (!requested) return
-        requested = false
-        // Aún no es foreground: pararlo ahora haría que Android cerrara la
-        // app. onStartCommand lo para en cuanto lo sea.
-        if (!started) {
-          stopPending = true
-          return
-        }
-      }
-      runCatching { ctx.stopService(Intent(ctx, AnswerKeepAliveService::class.java)) }
+    val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+      flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
     }
-
-    private fun smallIcon(ctx: Context): Int {
-      val id = ctx.resources.getIdentifier("ic_stat_nido", "drawable", ctx.packageName)
-      return if (id != 0) id else ctx.applicationInfo.icon
+    launchIntent?.let {
+      builder.setContentIntent(
+        PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE),
+      )
     }
-
-    private fun notification(ctx: Context): Notification {
-      val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        val nm = ctx.getSystemService(NotificationManager::class.java)
-        nm?.createNotificationChannel(NotificationChannel(CHANNEL, channelName, NotificationManager.IMPORTANCE_LOW))
-        Notification.Builder(ctx, CHANNEL)
-      } else {
-        @Suppress("DEPRECATION")
-        Notification.Builder(ctx)
-      }
-      val launch = ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)
-        ?.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-      if (launch != null) {
-        builder.setContentIntent(
-          PendingIntent.getActivity(ctx, 0, launch, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT),
-        )
-      }
-      return builder
-        .setSmallIcon(smallIcon(ctx))
-        .setContentTitle(title)
-        .setContentText(text)
-        .setOngoing(true)
-        .setOnlyAlertOnce(true)
-        .build()
-    }
+    // El icono de NIDO (lo trae el módulo nido-p2p); si faltara, el de la app.
+    val icon = resources.getIdentifier("ic_stat_nido", "drawable", packageName).takeIf { it != 0 }
+      ?: applicationInfo.icon
+    return builder
+      .setSmallIcon(icon)
+      .setContentTitle(title)
+      .setContentText(text)
+      .setOngoing(true)
+      .setOnlyAlertOnce(true)
+      .setShowWhen(false)
+      .build()
   }
 }
