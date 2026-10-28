@@ -4,6 +4,17 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+### Fixed
+- **An answer is no longer lost when you leave the app.** While the AI
+  writes an answer, NIDO now shows a quiet "NIDO is answering…"
+  notification (an Android foreground service). Some phones closed NIDO a
+  few seconds after you switched apps, and the answer stopped half-way. It
+  starts with each visible answer and stops when it ends; no sound, no
+  pop-up. Pattern from BOAR's AnswerService (MIT). Needs the check on the
+  tablets (start an answer, switch apps, come back) before release.
+
 ## 0.1.54-alpha — 2026-10-23
 
 ### Fixed

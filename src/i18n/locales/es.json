@@ -1683,5 +1683,10 @@
     "failedTitle": "No se pudo borrar todo",
     "settingTitle": "Botón de pánico",
     "settingDesc": "Muestra un botón SOS en la pantalla principal. Mantenerlo 3 segundos borra todos los datos de NIDO de una vez, sin pedir huella ni confirmación. No se puede deshacer; haz antes un respaldo si quieres conservar algo."
+  },
+  "answering": {
+    "title": "NIDO está respondiendo…",
+    "text": "La respuesta sigue escribiéndose aunque salgas de la app.",
+    "channel": "Respuestas en curso"
   }
 }

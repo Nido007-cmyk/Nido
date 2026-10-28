@@ -1683,5 +1683,10 @@
     "failedTitle": "Could not erase everything",
     "settingTitle": "Panic button",
     "settingDesc": "Shows an SOS button on the main screen. Holding it for 3 seconds erases all NIDO data at once, without asking for fingerprint or confirmation. It cannot be undone; make a backup first if you want to keep anything."
+  },
+  "answering": {
+    "title": "NIDO is answering…",
+    "text": "The answer keeps being written even if you leave the app.",
+    "channel": "Answers in progress"
   }
 }

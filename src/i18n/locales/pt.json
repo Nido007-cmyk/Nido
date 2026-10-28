@@ -1683,5 +1683,10 @@
     "failedTitle": "Não foi possível apagar tudo",
     "settingTitle": "Botão de pânico",
     "settingDesc": "Mostra um botão SOS na tela principal. Segurá-lo por 3 segundos apaga todos os dados do NIDO de uma vez, sem pedir digital nem confirmação. Não pode ser desfeito; faça um backup antes se quiser guardar algo."
+  },
+  "answering": {
+    "title": "NIDO está respondendo…",
+    "text": "A resposta continua sendo escrita mesmo se você sair do app.",
+    "channel": "Respostas em andamento"
   }
 }
