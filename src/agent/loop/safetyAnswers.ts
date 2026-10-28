@@ -119,7 +119,9 @@ interface EmergencyEntry {
  */
 export const EMERGENCY_NUMBERS: readonly EmergencyEntry[] = [
   {
-    names: ["estados unidos", "eeuu", "ee uu", "usa", "united states", "the us", "the usa", "estados unidos da america", "eua"],
+    // Sin «usa» ni «eua» sueltos: «el número de emergencias que se usa aquí»
+    // no es una pregunta sobre Estados Unidos (auditoría 0.1.55).
+    names: ["estados unidos", "eeuu", "ee uu", "united states", "the us", "the usa", "estados unidos da america"],
     label: { es: "Estados Unidos", en: "the United States", pt: "nos Estados Unidos" },
     numbers: { es: "911", en: "911", pt: "911" },
     source: "CPSC de EE. UU., «What to Know About Generators» (2022)",
@@ -171,7 +173,7 @@ export const EMERGENCY_NUMBERS: readonly EmergencyEntry[] = [
       en: "112, free and 24 hours a day",
       pt: "112, gratuito e 24 horas",
     },
-    source: "ePortugal (gov.pt), «Contactos de emergência em Portugal»",
+    source: "gov.pt, «Contactos de emergência em Portugal»",
   },
   {
     names: ["brasil", "brazil"],

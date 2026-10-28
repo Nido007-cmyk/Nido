@@ -14,13 +14,7 @@ import type { Typography } from "./theme/typography";
 import { calmSpacing, calmRadii } from "./theme/calm";
 import { makeSurfaces } from "./theme/surfaces";
 import appConfig from "../../app.json";
-import { NetworkAuditCard } from "./NetworkAuditCard";
-import { SkillsCard } from "./SkillsCard";
-import { AgentPermissionsCard } from "./AgentPermissionsCard";
-import { ScheduledTasksCard } from "./ScheduledTasksCard";
-import { SecurityStatusCard } from "./SecurityStatusCard";
 import { BackupScreen } from "./BackupScreen";
-import { CrashReportCard } from "./CrashReportCard";
 import { LicensesScreen } from "./LicensesScreen";
 
 export function AboutScreen({ onClose }: { onClose: () => void }) {
@@ -84,16 +78,9 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
           <Text style={styles.paragraph}>{t("aboutScreen.airGappedBody")}</Text>
         </View>
 
-        {/* U3: el registro de red, visible para el usuario. */}
-        <NetworkAuditCard />
-
-        {/* U7: estado de seguridad comprobado en este teléfono. */}
-        <SecurityStatusCard />
-
-        {/* Si la app se cerró sola: motivo registrado por Android, copiable.
-            (La protección por hardware se movió a Ajustes → Seguridad.) */}
-        <CrashReportCard />
-
+        {/* 0.1.55: el registro de red, la comprobación de seguridad, el diagnóstico
+            de cierres, las habilidades, las tareas programadas y los permisos del
+            agente se movieron a Ajustes (Seguridad, Asistente y Diagnóstico). */}
         {/* U1: acceso a respaldo, clave de cifrado y rotación de clave. */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t("aboutScreen.backupTitle")}</Text>
@@ -110,15 +97,6 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
             <Text style={styles.actionBtnText}>{t("aboutScreen.backupOpen")}</Text>
           </Pressable>
         </View>
-
-        {/* U6: qué sabe hacer el agente. */}
-        <SkillsCard />
-
-        {/* U8: tareas que el agente ejecuta solo a una hora fija. */}
-        <ScheduledTasksCard />
-
-        {/* Historial de acciones y permisos por herramienta. */}
-        <AgentPermissionsCard />
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t("aboutScreen.limitsTitle")}</Text>

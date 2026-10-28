@@ -203,12 +203,14 @@ export function countMatchedTerms(text: string, terms: LexicalTerm[]): number {
  * The lexical relevance gate: keeps only BM25 hits covering enough of the
  * query's content terms, in their original BM25 order.
  */
-export function filterByTermCoverage<T extends { title: string; body: string }>(
+export function filterByTermCoverage<T extends { title: string; body: string; keys?: string }>(
   hits: T[],
   terms: LexicalTerm[]
 ): T[] {
   const required = requiredTermMatches(terms.length);
-  return hits.filter((h) => countMatchedTerms(`${h.title} ${h.body}`, terms) >= required);
+  // 0.1.55: packs v2 index the real questions each section answers (`keys`);
+  // a term found there counts like one in the text.
+  return hits.filter((h) => countMatchedTerms(h.keys ? `${h.title} ${h.body} ${h.keys}` : `${h.title} ${h.body}`, terms) >= required);
 }
 
 /**

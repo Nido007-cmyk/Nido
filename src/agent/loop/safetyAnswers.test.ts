@@ -98,3 +98,15 @@ describe("números de emergencia: solo los comprobados", () => {
     }
   });
 });
+
+describe("auditoría 0.1.55: «usa» como verbo no es Estados Unidos", () => {
+  it("«el número de emergencias que se usa aquí» pregunta el país, no responde el 911", () => {
+    const hit = matchSafetyAnswer("¿cuál es el número de emergencias que se usa aquí?", "es");
+    expect(hit?.kind).toBe("emergency-number");
+    expect(hit?.country).toBeUndefined();
+  });
+
+  it("Estados Unidos sigue respondiendo con su nombre", () => {
+    expect(matchSafetyAnswer("número de emergencias en Estados Unidos", "es")?.country).toBe("the United States");
+  });
+});

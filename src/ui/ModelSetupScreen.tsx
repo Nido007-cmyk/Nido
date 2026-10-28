@@ -60,13 +60,34 @@ import { makeSurfaces } from "./theme/surfaces";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 import { backupErrorCode } from "../security/backupErrors";
 import { ExactAlarmCard } from "./ExactAlarmCard";
+import { SecurityStatusCard } from "./SecurityStatusCard";
+import { NetworkAuditCard } from "./NetworkAuditCard";
+import { AgentPermissionsCard } from "./AgentPermissionsCard";
+import { SkillsCard } from "./SkillsCard";
+import { ScheduledTasksCard } from "./ScheduledTasksCard";
+import { CrashReportCard } from "./CrashReportCard";
+import { BackupScreen } from "./BackupScreen";
+import { matchesSearch } from "./navigation/search";
 
 const modelManager = new ModelManager();
 const LLM_EMBEDDING_KINDS: AssetKind[] = ["llm", "embedding"];
 
 type Props =
   | { mode: "required"; onReady: () => void; onKeyLossError?: (e: KeyLossError) => void }
-  | { mode: "optional"; onClose: () => void; onRelaunchWizard?: () => void; onOpenGuide?: () => void };
+  | OptionalProps;
+
+/** 0.1.55: Settings also opens Mi memoria, the execution telemetry and About. */
+type OptionalProps = {
+  mode: "optional";
+  onClose: () => void;
+  onRelaunchWizard?: () => void;
+  onOpenGuide?: () => void;
+  onOpenMemory?: () => void;
+  onOpenTelemetry?: () => void;
+  onOpenAbout?: () => void;
+  /** 0.1.55: only the knowledge packs (the Library tab embeds them). */
+  section?: "knowledge";
+};
 
 /**
  * ModelSetupScreen handles two operational modes:
@@ -139,6 +160,9 @@ export function ModelSetupScreen(props: Props) {
     }
   };
   const [resetting, setResetting] = useState(false);
+  // 0.1.55: buscador de Ajustes y la pantalla de clave/rotación (antes solo en Acerca de).
+  const [settingsQuery, setSettingsQuery] = useState("");
+  const [showBackupScreen, setShowBackupScreen] = useState(false);
   const [, forceRender] = useState(0);
   const [hapticsEnabled, setHapticsEnabledState] = useState(true);
   // TESTFIX-2026-10-08 (Fix 7): toggle de tareas delegadas (default OFF).
@@ -403,6 +427,33 @@ export function ModelSetupScreen(props: Props) {
     return <SetupWizardScreen onReady={p.onReady} onKeyLossError={p.onKeyLossError} />;
   }
 
+  if (showBackupScreen) {
+    return <BackupScreen onClose={() => setShowBackupScreen(false)} />;
+  }
+
+  // 0.1.55: Biblioteca › Packs: the same download / remove logic, without the rest of Settings.
+  if ((props as OptionalProps).section === "knowledge") {
+    return (
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.accordionScroll}>
+          <CorpusSettingsTab corpusItems={CORPUS_CATALOG} getRow={getRow} download={download} remove={remove} />
+        </ScrollView>
+        {toast && <Toast message={toast} onHide={() => setToast(null)} />}
+      </View>
+    );
+  }
+
+  // 0.1.55: grupos con título y buscador. Con búsqueda, los títulos de grupo
+  // se ocultan y las secciones que coinciden se abren solas.
+  const searching = settingsQuery.trim().length > 0;
+  const searchKey = searching ? "open" : "closed";
+  let matched = 0;
+  const match = (...texts: string[]) => {
+    const ok = matchesSearch(settingsQuery, ...texts);
+    if (ok) matched += 1;
+    return ok;
+  };
+
   // Optional mode: Settings Screen
   return (
     <View style={styles.container}>
@@ -411,7 +462,7 @@ export function ModelSetupScreen(props: Props) {
         <View style={styles.headerLeft}>
           <NidoMascot role="brand" size={36} />
           <View>
-            <Text style={styles.title}>{t("modelSetupScreen.header.title")}</Text>
+            <Text style={styles.title} accessibilityRole="header">{t("modelSetupScreen.header.title")}</Text>
             <Text style={styles.subtitle}>{t("modelSetupScreen.header.subtitle")}</Text>
           </View>
         </View>
@@ -426,361 +477,462 @@ export function ModelSetupScreen(props: Props) {
           <Text style={styles.closeBtnText}>{t("common.done")}</Text>
         </Pressable>
       </View>
+      <View style={styles.searchBox}>
+        <NidoIcon name="search" size={16} color={colors.text.dim} />
+        <TextInput
+          value={settingsQuery}
+          onChangeText={setSettingsQuery}
+          placeholder={t("settingsSearch.placeholder")}
+          placeholderTextColor={colors.text.dim}
+          accessibilityLabel={t("settingsSearch.label")}
+          style={styles.searchInput}
+          returnKeyType="search"
+        />
+        {searching && (
+          <Pressable onPress={() => setSettingsQuery("")} hitSlop={10} accessibilityRole="button" accessibilityLabel={t("settingsSearch.clear")} style={styles.searchClear}>
+            <NidoIcon name="close" size={14} color={colors.text.dim} />
+          </Pressable>
+        )}
+      </View>
 
-      <ScrollView contentContainerStyle={styles.accordionScroll}>
-        {/* 0.1.9: la protección por hardware, primera en Ajustes (antes
-            escondida a media pantalla de Acerca de). */}
-        <AccordionSection icon="security" title={t("modelSetupScreen.sections.security")}>
-          <HardwareProtectionCard />
-          <View style={styles.hapticRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.hapticRowLabel}>{t("settings.sealedHelloTitle")}</Text>
-              <Text style={styles.hapticRowValue}>{t("settings.sealedHelloDesc")}</Text>
-            </View>
-            <Switch
-              value={sealedHelloEnabled}
-              onValueChange={toggleSealedHello}
-              accessibilityLabel={t("settings.sealedHelloTitle")}
-              trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
-              thumbColor={colors.bg.card}
-            />
-          </View>
-          <View style={styles.hapticRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.hapticRowLabel}>{t("settings.ratchetV5Title")}</Text>
-              <Text style={styles.hapticRowValue}>{t("settings.ratchetV5Desc")}</Text>
-            </View>
-            <Switch
-              value={ratchetV5Enabled}
-              onValueChange={toggleRatchetV5}
-              accessibilityLabel={t("settings.ratchetV5Title")}
-              trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
-              thumbColor={colors.bg.card}
-            />
-          </View>
-          <View style={styles.hapticRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.hapticRowLabel}>{t("panic.settingTitle")}</Text>
-              <Text style={styles.hapticRowValue}>{t("panic.settingDesc")}</Text>
-            </View>
-            <Switch
-              value={panicEnabled}
-              onValueChange={togglePanic}
-              accessibilityLabel={t("panic.settingTitle")}
-              trackColor={{ false: colors.border.elevated, true: colors.crimson[500] }}
-              thumbColor={colors.bg.card}
-            />
-          </View>
-        </AccordionSection>
-
-        {/* 0.1.14: guía de usuario. */}
-        <AccordionSection icon="compass" title={t("guide.helpSection")}>
-          <View style={styles.guideCard}>
-            <Text style={styles.guideBody}>{t("guide.helpBody")}</Text>
-            <Pressable
-              style={styles.wizardBtn}
-              onPress={() => (props as { onOpenGuide?: () => void }).onOpenGuide?.()}
-              accessibilityRole="button"
-              accessibilityLabel={t("guide.helpButton")}
-            >
-              <Text style={styles.wizardBtnText}>{t("guide.helpButton")}</Text>
-            </Pressable>
-          </View>
-        </AccordionSection>
-
-        <AccordionSection icon="chat" title={t("modelSetupScreen.sections.tone")}>
-          <PersonalitySettings />
-        </AccordionSection>
-
-        <AccordionSection icon="models" title={t("modelSetupScreen.sections.models")}>
-          <Text style={styles.sectionHeading}>{t("modelSetupScreen.installedModels")}</Text>
-          <FlatList
-            data={[
-              ...MODEL_CATALOG.filter((m) => m.kind === "llm"),
-            ]}
-            keyExtractor={(m) => m.id}
-            scrollEnabled={false}
-            contentContainerStyle={styles.list}
-            renderItem={({ item }) => (
-              <CatalogItemCard
-                item={item}
-                row={getRow(item)}
-                isActive={activeIds[item.kind] === item.id}
-                onDownload={download}
-                onUse={useModel}
-                onRemove={remove}
-                activating={activatingId === item.id}
-                busy={activatingId !== null}
+      <ScrollView contentContainerStyle={styles.accordionScroll} keyboardShouldPersistTaps="handled">
+        {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.security")}</Text>}
+        {match(t("modelSetupScreen.sections.security"), t("vault.title"), t("vault.strictTitle"), t("settings.sealedHelloTitle"), t("settings.ratchetV5Title"), t("panic.settingTitle")) && (
+          <AccordionSection key={`1-${searchKey}`} defaultOpen={searching} icon="security" title={t("modelSetupScreen.sections.security")}>
+            <HardwareProtectionCard />
+            <View style={styles.hapticRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hapticRowLabel}>{t("settings.sealedHelloTitle")}</Text>
+                <Text style={styles.hapticRowValue}>{t("settings.sealedHelloDesc")}</Text>
+              </View>
+              <Switch
+                value={sealedHelloEnabled}
+                onValueChange={toggleSealedHello}
+                accessibilityLabel={t("settings.sealedHelloTitle")}
+                trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+                thumbColor={colors.bg.card}
               />
+            </View>
+            <View style={styles.hapticRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hapticRowLabel}>{t("settings.ratchetV5Title")}</Text>
+                <Text style={styles.hapticRowValue}>{t("settings.ratchetV5Desc")}</Text>
+              </View>
+              <Switch
+                value={ratchetV5Enabled}
+                onValueChange={toggleRatchetV5}
+                accessibilityLabel={t("settings.ratchetV5Title")}
+                trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+                thumbColor={colors.bg.card}
+              />
+            </View>
+            <View style={styles.hapticRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hapticRowLabel}>{t("panic.settingTitle")}</Text>
+                <Text style={styles.hapticRowValue}>{t("panic.settingDesc")}</Text>
+              </View>
+              <Switch
+                value={panicEnabled}
+                onValueChange={togglePanic}
+                accessibilityLabel={t("panic.settingTitle")}
+                trackColor={{ false: colors.border.elevated, true: colors.crimson[500] }}
+                thumbColor={colors.bg.card}
+              />
+            </View>
+          </AccordionSection>
+        )}
+        {match(t("settingsMore.checkSection"), t("securityStatus.title"), t("networkLog.title")) && (
+          <AccordionSection key={`101-${searchKey}`} defaultOpen={searching} icon="security" title={t("settingsMore.checkSection")}>
+            <SecurityStatusCard />
+            <NetworkAuditCard />
+          </AccordionSection>
+        )}
+        {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.assistant")}</Text>}
+        {match(t("modelSetupScreen.sections.tone"), t("personalitySettings.title"), t("personalitySettings.deepResearchTitle"), t("personalitySettings.adaptiveRoutingTitle"), t("personalitySettings.maxOutputTokens")) && (
+          <AccordionSection key={`2-${searchKey}`} defaultOpen={searching} icon="chat" title={t("modelSetupScreen.sections.tone")}>
+            <PersonalitySettings />
+          </AccordionSection>
+        )}
+        {match(t("settingsMore.agentSection"), t("agentPermissions.toolsTitle"), t("agentPermissions.historyTitle"), t("skillsCard.title")) && (
+          <AccordionSection key={`102-${searchKey}`} defaultOpen={searching} icon="activity" title={t("settingsMore.agentSection")}>
+            <AgentPermissionsCard />
+            <SkillsCard />
+          </AccordionSection>
+        )}
+        {match(t("scheduledTasks.title")) && (
+          <AccordionSection key={`103-${searchKey}`} defaultOpen={searching} icon="activity" title={t("scheduledTasks.title")}>
+            <ScheduledTasksCard />
+          </AccordionSection>
+        )}
+        {match(t("settings.delegationTitle")) && (
+          <AccordionSection key={`3-${searchKey}`} defaultOpen={searching} icon="activity" title={t("settings.delegationTitle")}>
+            <View style={styles.hapticRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hapticRowLabel}>{t("settings.delegationTitle")}</Text>
+                <Text style={styles.hapticRowValue}>{t("settings.delegationDesc")}</Text>
+              </View>
+              <Switch
+                value={delegationEnabled}
+                onValueChange={toggleDelegation}
+                trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+                thumbColor={colors.bg.card}
+              />
+            </View>
+          </AccordionSection>
+        )}
+        {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.models")}</Text>}
+        {match(t("modelSetupScreen.sections.models"), t("modelSetupScreen.installedModels")) && (
+          <AccordionSection key={`4-${searchKey}`} defaultOpen={searching} icon="models" title={t("modelSetupScreen.sections.models")}>
+            <Text style={styles.sectionHeading}>{t("modelSetupScreen.installedModels")}</Text>
+            <FlatList
+              data={[
+                ...MODEL_CATALOG.filter((m) => m.kind === "llm"),
+              ]}
+              keyExtractor={(m) => m.id}
+              scrollEnabled={false}
+              contentContainerStyle={styles.list}
+              renderItem={({ item }) => (
+                <CatalogItemCard
+                  item={item}
+                  row={getRow(item)}
+                  isActive={activeIds[item.kind] === item.id}
+                  onDownload={download}
+                  onUse={useModel}
+                  onRemove={remove}
+                  activating={activatingId === item.id}
+                  busy={activatingId !== null}
+                />
+              )}
+            />
+
+          </AccordionSection>
+        )}
+        {match(t("modelSetupScreen.sections.knowledgeBase"), t("corpusSettingsTab.downloadablePacks"), t("multilingual.title"), t("corpusSettingsTab.yourDocuments")) && (
+          <AccordionSection key={`5-${searchKey}`} defaultOpen={searching} icon="knowledge" title={t("modelSetupScreen.sections.knowledgeBase")}>
+            <CorpusSettingsTab
+              corpusItems={CORPUS_CATALOG}
+              getRow={getRow}
+              download={download}
+              remove={remove}
+            />
+          </AccordionSection>
+        )}
+        {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.memory")}</Text>}
+        {match(t("modelSetupScreen.sections.memory"), t("memorySettings.title"), t("exactAlarm.title"), t("settingsMore.openMemory")) && (
+          <AccordionSection key={`6-${searchKey}`} defaultOpen={searching} icon="memory" title={t("modelSetupScreen.sections.memory")}>
+            {(props as OptionalProps).onOpenMemory && (
+              <View style={styles.guideCard}>
+              <Text style={styles.guideBody}>{t("settingsMore.openMemoryDesc")}</Text>
+              <Pressable style={styles.wizardBtn} onPress={(props as OptionalProps).onOpenMemory} accessibilityRole="button" accessibilityLabel={t("settingsMore.openMemory")}>
+                <Text style={styles.wizardBtnText}>{t("settingsMore.openMemory")}</Text>
+              </Pressable>
+              </View>
             )}
-          />
-
-        </AccordionSection>
-
-        <AccordionSection icon="knowledge" title={t("modelSetupScreen.sections.knowledgeBase")}>
-          <CorpusSettingsTab
-            corpusItems={CORPUS_CATALOG}
-            getRow={getRow}
-            download={download}
-            remove={remove}
-          />
-        </AccordionSection>
-
-        <AccordionSection icon="memory" title={t("modelSetupScreen.sections.memory")}>
-          <MemorySettings />
-          {/* 0.1.32: ¿los recordatorios llegan a tiempo? (Android 12+) */}
-          <ExactAlarmCard />
-        </AccordionSection>
-
-        <AccordionSection icon="activity" title={t("modelSetupScreen.sections.telemetry")}>
-          <UsageStatsContent />
-        </AccordionSection>
-
-        {/* TESTFIX-2026-10-08 (Fix 7): tareas delegadas, default OFF. */}
-        <AccordionSection icon="activity" title={t("settings.delegationTitle")}>
-          <View style={styles.hapticRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.hapticRowLabel}>{t("settings.delegationTitle")}</Text>
-              <Text style={styles.hapticRowValue}>{t("settings.delegationDesc")}</Text>
+            <MemorySettings />
+            {/* 0.1.32: ¿los recordatorios llegan a tiempo? (Android 12+) */}
+            <ExactAlarmCard />
+          </AccordionSection>
+        )}
+        {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.appearance")}</Text>}
+        {match(t("modelSetupScreen.sections.displayTheme"), t("themeSelector.paletteTitle"), t("themeSelector.textTitle"), t("interfaceSettings.hapticFeedbackLabel")) && (
+          <AccordionSection key={`7-${searchKey}`} defaultOpen={searching} icon="appearance" title={t("modelSetupScreen.sections.displayTheme")}>
+            <View style={styles.themeSectionWrapper}>
+              <ThemeSelector />
             </View>
-            <Switch
-              value={delegationEnabled}
-              onValueChange={toggleDelegation}
-              trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
-              thumbColor={colors.bg.card}
-            />
-          </View>
-        </AccordionSection>
-
-        <AccordionSection icon="appearance" title={t("modelSetupScreen.sections.displayTheme")}>
-          <View style={styles.themeSectionWrapper}>
-            <ThemeSelector />
-          </View>
-          <View style={styles.hapticRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.hapticRowLabel}>{t("interfaceSettings.hapticFeedbackLabel")}</Text>
-              <Text style={styles.hapticRowValue}>{t("interfaceSettings.hapticFeedbackValue")}</Text>
-            </View>
-            <Switch
-              value={hapticsEnabled}
-              onValueChange={toggleHaptics}
-              trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
-              thumbColor={colors.bg.card}
-            />
-          </View>
-        </AccordionSection>
-
-        <AccordionSection icon="language" title={t("modelSetupScreen.sections.language")}>
-          <View style={styles.themeSectionWrapper}>
-            <LanguageSelector />
-          </View>
-        </AccordionSection>
-
-        <AccordionSection icon="mic" title={t("modelSetupScreen.sections.voice")}>
-          <VoiceSettings />
-        </AccordionSection>
-
-        {/* RECOVERY & DANGER ZONE SECTION */}
-        <AccordionSection icon="warning" title={t("modelSetupScreen.sections.recovery")}>
-          <View style={styles.recoveryContainer}>
-            {/* Setup Wizard Shortcut */}
-            <View style={styles.recoveryCard}>
-              <View style={styles.recoveryHeader}>
-                <NidoIcon name="wizard" size={18} />
-                <Text style={styles.recoveryTitle}>{t("modelSetupScreen.recovery.wizardTitle")}</Text>
+            <View style={styles.hapticRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hapticRowLabel}>{t("interfaceSettings.hapticFeedbackLabel")}</Text>
+                <Text style={styles.hapticRowValue}>{t("interfaceSettings.hapticFeedbackValue")}</Text>
               </View>
-              <Text style={styles.recoveryDesc}>{t("modelSetupScreen.recovery.wizardDesc")}</Text>
-              <Pressable
-                style={styles.wizardBtn}
-                onPress={() => onRelaunchWizard?.()}
-                disabled={!onRelaunchWizard}
-                accessibilityRole="button"
-                accessibilityLabel={t("modelSetupScreen.recovery.wizardButton")}
-                accessibilityState={{ disabled: !onRelaunchWizard }}
-              >
-                <Text style={styles.wizardBtnText}>{t("modelSetupScreen.recovery.wizardButton")}</Text>
-              </Pressable>
+              <Switch
+                value={hapticsEnabled}
+                onValueChange={toggleHaptics}
+                trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+                thumbColor={colors.bg.card}
+              />
             </View>
-
-            {/* Danger Zone Card */}
-            <View style={styles.dangerZoneCard}>
-              <View style={styles.dangerHeader}>
-                <View style={styles.dangerBadge}>
-                  <Text style={styles.dangerBadgeText}>{t("modelSetupScreen.recovery.dangerBadge")}</Text>
+          </AccordionSection>
+        )}
+        {match(t("modelSetupScreen.sections.language")) && (
+          <AccordionSection key={`8-${searchKey}`} defaultOpen={searching} icon="language" title={t("modelSetupScreen.sections.language")}>
+            <View style={styles.themeSectionWrapper}>
+              <LanguageSelector />
+            </View>
+          </AccordionSection>
+        )}
+        {match(t("modelSetupScreen.sections.voice"), t("voiceSettings.title"), t("voiceSettings.readAloudLabel")) && (
+          <AccordionSection key={`9-${searchKey}`} defaultOpen={searching} icon="mic" title={t("modelSetupScreen.sections.voice")}>
+            <VoiceSettings />
+          </AccordionSection>
+        )}
+        {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.backup")}</Text>}
+        {match(t("backup.screenTitle"), t("backup.createButton"), t("backup.restoreButton"), t("backup.showKey"), t("backup.rotateKey")) && (
+          <AccordionSection key={`104-${searchKey}`} defaultOpen={searching} icon="security" title={t("backup.screenTitle")}>
+            <View style={styles.recoveryContainer}>
+              {/* BACKUP 2026-10-07: respaldo y restauración de la base cifrada. */}
+              <View style={styles.recoveryCard}>
+                <View style={styles.recoveryHeader}>
+                  <NidoIcon name="security" size={18} />
+                  <Text style={styles.recoveryTitle}>{t("backup.screenTitle")}</Text>
                 </View>
-              </View>
-              <Text style={styles.dangerDesc}>{t("modelSetupScreen.recovery.dangerDesc")}</Text>
-              <Pressable
-                style={styles.dangerActionBtn}
-                onPress={() => {
-                  impact(ImpactFeedbackStyle.Heavy);
-                  setDangerModalVisible(true);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={t("modelSetupScreen.recovery.dangerButton")}
-                accessibilityHint={t("modelSetupScreen.recovery.dangerDesc")}
-              >
-                <Text style={styles.dangerActionBtnText}>{t("modelSetupScreen.recovery.dangerButton")}</Text>
-              </Pressable>
-            </View>
-
-            {/* BACKUP 2026-10-07: respaldo y restauración de la base cifrada. */}
-            <View style={styles.recoveryCard}>
-              <View style={styles.recoveryHeader}>
-                <NidoIcon name="security" size={18} />
-                <Text style={styles.recoveryTitle}>{t("backup.screenTitle")}</Text>
-              </View>
-              <Text style={styles.recoveryDesc}>
-                {t("backup.sectionDesc")}
-              </Text>
-              <Pressable accessibilityLabel={t("backup.createButton")}
-                style={styles.wizardBtn}
-                onPress={async () => {
-                  try {
-                    // TESTFIX-2026-10-08 (Fix 6): lógica extraída a
-                    // backupShare.ts para sacar el archivo de la carpeta
-                    // privada del app.
-                    const { createBackupFile } = await import("./backupShare");
-                    const { path, key, noLock } = await createBackupFile(t("backup.createButton"));
-                    // 2026-10-12: la clave se muestra en el modal copiable
-                    // compartido (BackupKeyModal), igual que en la pantalla
-                    // de respaldo. Antes salía en una alerta del sistema
-                    // cuyo texto no se puede copiar: el usuario solo podía
-                    // anotarla o fotografiarla (evidencia física). Compartir
-                    // sigue disponible en su propio botón de esta tarjeta.
-                    setLastBackupPath(path);
-                    // 0.1.29 (B-2): sin PIN en el teléfono, aviso visible
-                    // antes de la clave (misma política en todas las puertas).
-                    if (noLock) {
+                <Text style={styles.recoveryDesc}>
+                  {t("backup.sectionDesc")}
+                </Text>
+                <Pressable accessibilityLabel={t("backup.createButton")}
+                  style={styles.wizardBtn}
+                  onPress={async () => {
+                    try {
+                      // TESTFIX-2026-10-08 (Fix 6): lógica extraída a
+                      // backupShare.ts para sacar el archivo de la carpeta
+                      // privada del app.
+                      const { createBackupFile } = await import("./backupShare");
+                      const { path, key, noLock } = await createBackupFile(t("backup.createButton"));
+                      // 2026-10-12: la clave se muestra en el modal copiable
+                      // compartido (BackupKeyModal), igual que en la pantalla
+                      // de respaldo. Antes salía en una alerta del sistema
+                      // cuyo texto no se puede copiar: el usuario solo podía
+                      // anotarla o fotografiarla (evidencia física). Compartir
+                      // sigue disponible en su propio botón de esta tarjeta.
+                      setLastBackupPath(path);
+                      // 0.1.29 (B-2): sin PIN en el teléfono, aviso visible
+                      // antes de la clave (misma política en todas las puertas).
+                      if (noLock) {
+                        Alert.alert(
+                          t("backup.noLockTitle"),
+                          t("backup.noLockBody"),
+                          [{ text: t("backup.understood"), onPress: () => setBackupKeyModal({ dek: key, dest: path }) }],
+                          { cancelable: false },
+                        );
+                      } else {
+                        setBackupKeyModal({ dek: key, dest: path });
+                      }
+                    } catch (e) {
+                      Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.createFailed"));
+                    }
+                  }}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.wizardBtnText}>{t("backup.createButton")}</Text>
+                </Pressable>
+                <Pressable accessibilityLabel={t("backup.shareButton")}
+                  style={[styles.wizardBtn, { marginTop: 8 }]}
+                  onPress={async () => {
+                    try {
+                      const { findLatestBackup, shareBackupFile } = await import("./backupShare");
+                      const latest = await findLatestBackup();
+                      if (!latest) {
+                        Alert.alert(t("backup.noBackupsTitle"), t("backup.noBackupsBody"));
+                        return;
+                      }
+                      await shareBackupFile(latest);
+                    } catch (e) {
+                      Alert.alert(t("backup.errorTitle"), e instanceof Error && e.message === "sharing-unavailable"
+                        ? t("backup.sharingUnavailable")
+                        : t("backup.shareFailed"));
+                    }
+                  }}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.wizardBtnText}>{t("backup.shareButton")}</Text>
+                </Pressable>
+                {/* 2026-10-12: guardar en una carpeta (Descargas) también desde
+                    Ajustes; el menú Compartir de Android no ofrece guardar en
+                    archivos. Misma rutina que la pantalla de respaldo. */}
+                <Pressable accessibilityLabel={t("backup.saveToDownloads")}
+                  style={[styles.wizardBtn, { marginTop: 8 }]}
+                  onPress={async () => {
+                    try {
+                      const { findLatestBackup, saveBackupToFolder } = await import("./backupShare");
+                      const src = lastBackupPath ?? (await findLatestBackup());
+                      if (!src) {
+                        Alert.alert(t("backup.noBackupsTitle"), t("backup.noBackupsBody"));
+                        return;
+                      }
+                      const copied = await saveBackupToFolder(src);
+                      if (copied === null) {
+                        Alert.alert(t("backup.cancelledTitle"), t("backup.noPermission"));
+                        return;
+                      }
+                      Alert.alert(t("backup.savedTitle"), t("backup.savedBody", { files: copied.join("\n") }));
+                    } catch (e) {
+                      Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.saveFailed"));
+                    }
+                  }}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.wizardBtnText}>{t("backup.saveToDownloads")}</Text>
+                </Pressable>
+                <Pressable accessibilityLabel={t("backup.restoreButton")}
+                  style={[styles.wizardBtn, { marginTop: 8 }]}
+                  onPress={async () => {
+                    try {
+                      const DocumentPicker = await import("expo-document-picker");
+                      const result = await DocumentPicker.getDocumentAsync({
+                        type: "*/*",
+                        copyToCacheDirectory: true,
+                      });
+                      if (result.canceled) return;
+                      const uri = result.assets[0].uri;
+                      const { validateBackup, restoreBackup } = await import("../security/backup");
+                      const v = await validateBackup(uri);
+                      if (!v.valid) {
+                        Alert.alert(t("backup.invalidTitle"), v.reason ?? t("backup.invalidBody"));
+                        return;
+                      }
                       Alert.alert(
-                        t("backup.noLockTitle"),
-                        t("backup.noLockBody"),
-                        [{ text: t("backup.understood"), onPress: () => setBackupKeyModal({ dek: key, dest: path }) }],
-                        { cancelable: false },
-                      );
-                    } else {
-                      setBackupKeyModal({ dek: key, dest: path });
-                    }
-                  } catch (e) {
-                    Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.createFailed"));
-                  }
-                }}
-                accessibilityRole="button"
-              >
-                <Text style={styles.wizardBtnText}>{t("backup.createButton")}</Text>
-              </Pressable>
-              <Pressable accessibilityLabel={t("backup.shareButton")}
-                style={[styles.wizardBtn, { marginTop: 8 }]}
-                onPress={async () => {
-                  try {
-                    const { findLatestBackup, shareBackupFile } = await import("./backupShare");
-                    const latest = await findLatestBackup();
-                    if (!latest) {
-                      Alert.alert(t("backup.noBackupsTitle"), t("backup.noBackupsBody"));
-                      return;
-                    }
-                    await shareBackupFile(latest);
-                  } catch (e) {
-                    Alert.alert(t("backup.errorTitle"), e instanceof Error && e.message === "sharing-unavailable"
-                      ? t("backup.sharingUnavailable")
-                      : t("backup.shareFailed"));
-                  }
-                }}
-                accessibilityRole="button"
-              >
-                <Text style={styles.wizardBtnText}>{t("backup.shareButton")}</Text>
-              </Pressable>
-              {/* 2026-10-12: guardar en una carpeta (Descargas) también desde
-                  Ajustes; el menú Compartir de Android no ofrece guardar en
-                  archivos. Misma rutina que la pantalla de respaldo. */}
-              <Pressable accessibilityLabel={t("backup.saveToDownloads")}
-                style={[styles.wizardBtn, { marginTop: 8 }]}
-                onPress={async () => {
-                  try {
-                    const { findLatestBackup, saveBackupToFolder } = await import("./backupShare");
-                    const src = lastBackupPath ?? (await findLatestBackup());
-                    if (!src) {
-                      Alert.alert(t("backup.noBackupsTitle"), t("backup.noBackupsBody"));
-                      return;
-                    }
-                    const copied = await saveBackupToFolder(src);
-                    if (copied === null) {
-                      Alert.alert(t("backup.cancelledTitle"), t("backup.noPermission"));
-                      return;
-                    }
-                    Alert.alert(t("backup.savedTitle"), t("backup.savedBody", { files: copied.join("\n") }));
-                  } catch (e) {
-                    Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.saveFailed"));
-                  }
-                }}
-                accessibilityRole="button"
-              >
-                <Text style={styles.wizardBtnText}>{t("backup.saveToDownloads")}</Text>
-              </Pressable>
-              <Pressable accessibilityLabel={t("backup.restoreButton")}
-                style={[styles.wizardBtn, { marginTop: 8 }]}
-                onPress={async () => {
-                  try {
-                    const DocumentPicker = await import("expo-document-picker");
-                    const result = await DocumentPicker.getDocumentAsync({
-                      type: "*/*",
-                      copyToCacheDirectory: true,
-                    });
-                    if (result.canceled) return;
-                    const uri = result.assets[0].uri;
-                    const { validateBackup, restoreBackup } = await import("../security/backup");
-                    const v = await validateBackup(uri);
-                    if (!v.valid) {
-                      Alert.alert(t("backup.invalidTitle"), v.reason ?? t("backup.invalidBody"));
-                      return;
-                    }
-                    Alert.alert(
-                      t("backup.restoreTitle"),
-                      t("backup.restoreConfirm"),
-                      [
-                        { text: t("backup.cancel"), style: "cancel" },
-                        {
-                          text: t("backup.restoreConfirmButton"),
-                          style: "destructive",
-                          onPress: async () => {
-                            try {
-                              // FIX 2026-10-09 (RESTORE-BIOMETRIC): restauración es
-                              // destructiva (reemplaza todos los datos) → requiere
-                              // autenticación biométrica.
-                              const { unlockForSecret } = await import("../security/biometricGate");
-                              await unlockForSecret(t("backup.restoreTitle"));
-                              await restoreBackup(uri);
-                              Alert.alert(
-                                t("backup.restoreDoneTitle"),
-                                t("backup.restoreDoneBody"),
-                                [{ text: t("backup.ok") }]
-                              );
-                            } catch (e) {
-                              Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.restoreFailed"));
-                            }
+                        t("backup.restoreTitle"),
+                        t("backup.restoreConfirm"),
+                        [
+                          { text: t("backup.cancel"), style: "cancel" },
+                          {
+                            text: t("backup.restoreConfirmButton"),
+                            style: "destructive",
+                            onPress: async () => {
+                              try {
+                                // FIX 2026-10-09 (RESTORE-BIOMETRIC): restauración es
+                                // destructiva (reemplaza todos los datos) → requiere
+                                // autenticación biométrica.
+                                const { unlockForSecret } = await import("../security/biometricGate");
+                                await unlockForSecret(t("backup.restoreTitle"));
+                                await restoreBackup(uri);
+                                Alert.alert(
+                                  t("backup.restoreDoneTitle"),
+                                  t("backup.restoreDoneBody"),
+                                  [{ text: t("backup.ok") }]
+                                );
+                              } catch (e) {
+                                Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.restoreFailed"));
+                              }
+                            },
                           },
-                        },
-                      ]
-                    );
-                  } catch (e) {
-                    Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.pickerFailed"));
-                  }
-                }}
-                accessibilityRole="button"
-              >
-                <Text style={styles.wizardBtnText}>{t("backup.restoreButton")}</Text>
-              </Pressable>
-              <Pressable
-                style={styles.wizardBtn}
-                onPress={() => setRestoreKeyVisible(true)}
-                accessibilityRole="button"
-                accessibilityLabel={t("backup.restoreWithKeyButton")}
-              >
-                <Text style={styles.wizardBtnText}>{t("backup.restoreWithKeyButton")}</Text>
+                        ]
+                      );
+                    } catch (e) {
+                      Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.pickerFailed"));
+                    }
+                  }}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.wizardBtnText}>{t("backup.restoreButton")}</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.wizardBtn}
+                  onPress={() => setRestoreKeyVisible(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("backup.restoreWithKeyButton")}
+                >
+                  <Text style={styles.wizardBtnText}>{t("backup.restoreWithKeyButton")}</Text>
+                </Pressable>
+              </View>
+              <View style={styles.recoveryCard}>
+                <Text style={styles.recoveryDesc}>{t("settingsMore.backupKeyDesc")}</Text>
+                <Pressable style={styles.wizardBtn} onPress={() => setShowBackupScreen(true)} accessibilityRole="button" accessibilityLabel={t("settingsMore.openBackupKey")}>
+                  <Text style={styles.wizardBtnText}>{t("settingsMore.openBackupKey")}</Text>
+                </Pressable>
+              </View>
+            </View>
+          </AccordionSection>
+        )}
+        {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.diagnostics")}</Text>}
+        {match(t("modelSetupScreen.sections.telemetry"), t("settingsMore.openTelemetry"), t("executionTelemetry.title")) && (
+          <AccordionSection key={`10-${searchKey}`} defaultOpen={searching} icon="activity" title={t("modelSetupScreen.sections.telemetry")}>
+            {(props as OptionalProps).onOpenTelemetry && (
+              <View style={styles.guideCard}>
+              <Text style={styles.guideBody}>{t("settingsMore.openTelemetryDesc")}</Text>
+              <Pressable style={styles.wizardBtn} onPress={(props as OptionalProps).onOpenTelemetry} accessibilityRole="button" accessibilityLabel={t("settingsMore.openTelemetry")}>
+                <Text style={styles.wizardBtnText}>{t("settingsMore.openTelemetry")}</Text>
               </Pressable>
             </View>
-          </View>
-        </AccordionSection>
+            )}
+            <UsageStatsContent />
+          </AccordionSection>
+        )}
+        {match(t("settingsMore.crashSection"), t("crashReport.title")) && (
+          <AccordionSection key={`105-${searchKey}`} defaultOpen={searching} icon="activity" title={t("settingsMore.crashSection")}>
+            <CrashReportCard />
+          </AccordionSection>
+        )}
+        {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.help")}</Text>}
+        {match(t("guide.helpSection"), t("guide.helpButton")) && (
+          <AccordionSection key={`11-${searchKey}`} defaultOpen={searching} icon="compass" title={t("guide.helpSection")}>
+            <View style={styles.guideCard}>
+              <Text style={styles.guideBody}>{t("guide.helpBody")}</Text>
+              <Pressable
+                style={styles.wizardBtn}
+                onPress={() => (props as { onOpenGuide?: () => void }).onOpenGuide?.()}
+                accessibilityRole="button"
+                accessibilityLabel={t("guide.helpButton")}
+              >
+                <Text style={styles.wizardBtnText}>{t("guide.helpButton")}</Text>
+              </Pressable>
+            </View>
+          </AccordionSection>
+        )}
+        {match(t("settingsMore.aboutSection"), t("modelSetupScreen.recovery.wizardTitle"), t("aboutScreen.licensesTitle")) && (
+          <AccordionSection key={`106-${searchKey}`} defaultOpen={searching} icon="info" title={t("settingsMore.aboutSection")}>
+            <View style={styles.recoveryContainer}>
+              {/* Setup Wizard Shortcut */}
+              <View style={styles.recoveryCard}>
+                <View style={styles.recoveryHeader}>
+                  <NidoIcon name="wizard" size={18} />
+                  <Text style={styles.recoveryTitle}>{t("modelSetupScreen.recovery.wizardTitle")}</Text>
+                </View>
+                <Text style={styles.recoveryDesc}>{t("modelSetupScreen.recovery.wizardDesc")}</Text>
+                <Pressable
+                  style={styles.wizardBtn}
+                  onPress={() => onRelaunchWizard?.()}
+                  disabled={!onRelaunchWizard}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("modelSetupScreen.recovery.wizardButton")}
+                  accessibilityState={{ disabled: !onRelaunchWizard }}
+                >
+                  <Text style={styles.wizardBtnText}>{t("modelSetupScreen.recovery.wizardButton")}</Text>
+                </Pressable>
+              </View>
+
+            </View>
+            {(props as OptionalProps).onOpenAbout && (
+              <View style={styles.guideCard}>
+              <Text style={styles.guideBody}>{t("settingsMore.aboutDesc")}</Text>
+              <Pressable style={styles.wizardBtn} onPress={(props as OptionalProps).onOpenAbout} accessibilityRole="button" accessibilityLabel={t("settingsMore.openAbout")}>
+                <Text style={styles.wizardBtnText}>{t("settingsMore.openAbout")}</Text>
+              </Pressable>
+            </View>
+            )}
+          </AccordionSection>
+        )}
+        {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.danger")}</Text>}
+        {match(t("settingsGroups.danger"), t("modelSetupScreen.recovery.dangerButton")) && (
+          <AccordionSection key={`107-${searchKey}`} defaultOpen={searching} icon="warning" title={t("settingsGroups.danger")}>
+            <View style={styles.recoveryContainer}>
+              {/* Danger Zone Card */}
+              <View style={styles.dangerZoneCard}>
+                <View style={styles.dangerHeader}>
+                  <View style={styles.dangerBadge}>
+                    <Text style={styles.dangerBadgeText}>{t("modelSetupScreen.recovery.dangerBadge")}</Text>
+                  </View>
+                </View>
+                <Text style={styles.dangerDesc}>{t("modelSetupScreen.recovery.dangerDesc")}</Text>
+                <Pressable
+                  style={styles.dangerActionBtn}
+                  onPress={() => {
+                    impact(ImpactFeedbackStyle.Heavy);
+                    setDangerModalVisible(true);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("modelSetupScreen.recovery.dangerButton")}
+                  accessibilityHint={t("modelSetupScreen.recovery.dangerDesc")}
+                >
+                  <Text style={styles.dangerActionBtnText}>{t("modelSetupScreen.recovery.dangerButton")}</Text>
+                </Pressable>
+              </View>
+
+            </View>
+          </AccordionSection>
+        )}
+        {searching && matched === 0 && (
+          <Text style={styles.searchEmpty}>{t("settingsSearch.empty", { query: settingsQuery.trim() })}</Text>
+        )}
       </ScrollView>
 
       {/* A1: restaurar con la clave del respaldo.
@@ -909,6 +1061,32 @@ export function ModelSetupScreen(props: Props) {
 const getStyles = (colors: Colors, typography: Typography) => {
   const ui = makeSurfaces(colors, typography);
   return StyleSheet.create({
+  groupHeading: {
+    ...typography.ui.micro,
+    color: colors.text.dim,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    marginTop: 14,
+    marginBottom: 2,
+    marginLeft: 4,
+  },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minHeight: 44,
+    marginHorizontal: 16,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    backgroundColor: colors.bg.surface,
+  },
+  searchInput: { flex: 1, ...typography.ui.body, color: colors.text.primary, paddingVertical: 8 },
+  searchClear: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  searchEmpty: { ...typography.ui.body, color: colors.text.secondary, textAlign: "center", marginTop: 24 },
   container: ui.page,
   header: ui.topBar,
   headerLeft: {

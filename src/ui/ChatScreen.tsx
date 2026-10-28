@@ -5,6 +5,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { answerFromPackFacts } from "../rag/packs";
 import {
   View,
   Text,
@@ -17,6 +18,7 @@ import {
   AppState,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Linking,
 } from "react-native";
 import { VaultOfferBanner } from "./VaultOfferBanner";
 import { PanicButton } from "./components/PanicButton";
@@ -50,6 +52,7 @@ import {
   MemorySettings as MemorySettingsType,
   DEFAULT_MEMORY_SETTINGS,
   getDeepResearchMode,
+  setDeepResearchMode,
   getVoiceInputEnabled,
   getReadAloudEnabled,
   getAdaptiveRoutingEnabled,
@@ -130,6 +133,10 @@ import type { Typography } from "./theme/typography";
 import { spacing, radii } from "./theme/spacing";
 import { calmSpacing, calmRadii, calmType, calmShadows } from "./theme/calm";
 import { displayLang, formatInt } from "../utils/safeFormat";
+import { BottomTabBar } from "./navigation/BottomTabBar";
+import type { MainTab } from "./navigation/tabs";
+import { EmergencyScreen } from "./EmergencyScreen";
+import { LibraryScreen } from "./LibraryScreen";
 
 interface Message {
   id: string;
@@ -151,6 +158,8 @@ interface Message {
   timedOut?: boolean;
   interruptedByBackground?: boolean;
   feedback?: "up" | "down" | null;
+  /** 0.1.55: "Call" buttons under an emergency-number answer (verified facts). */
+  calls?: Array<{ value: string; label: string; tel: string }>;
 }
 
 const VERBATIM_MESSAGE_COUNT = 6;
@@ -205,6 +214,10 @@ export function ChatScreen({
   const [showMemoryManager, setShowMemoryManager] = useState(false);
   const [showExecutionTelemetry, setShowExecutionTelemetry] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  // 0.1.55: barra inferior. Ajustes y NIDO siguen siendo showSettings /
+  // showNido (sus efectos dependen de ellos); Emergencia y Biblioteca son
+  // pestañas nuevas. La pestaña visible sale de effectiveTab, más abajo.
+  const [activeTab, setActiveTab] = useState<MainTab>("chat");
   // 0.1.46: botón de pánico (opt-in en Ajustes). Se relee al cerrar Ajustes.
   // Cargar los interruptores aquí, al arrancar, también deja listos los del
   // P2P (saludo privado, v5) antes de la primera reconexión.
@@ -511,6 +524,17 @@ export function ChatScreen({
     setToast(t("chatScreen.toneChanged", { tone: `${getPersonality(next).icon} ${t(`personalities.${next}.label`)}` }));
   }, [personalityId, t]);
 
+  // 0.1.55: Investigación profunda también desde el chat (chip junto al
+  // cuadro de texto); sigue guardándose en Ajustes, que lo muestra igual.
+  const toggleDeepResearch = useCallback(async () => {
+    const next = !deepResearchModeRef.current;
+    deepResearchModeRef.current = next;
+    setDeepResearchEnabled(next);
+    impact(ImpactFeedbackStyle.Light);
+    setToast(t(next ? "chatScreen.researchOn" : "chatScreen.researchOff"));
+    await setDeepResearchMode(next).catch(() => {});
+  }, [t]);
+
   const initModels = useCallback(async () => {
     try {
       setLoadError(null);
@@ -720,6 +744,7 @@ export function ChatScreen({
     if (!action) return;
     if (action.action === "p2p") {
       setShowNido(true);
+      setActiveTab("nido");
       return;
     }
     await resetToNewChat();
@@ -877,18 +902,34 @@ export function ChatScreen({
       resetConversationState();
     }
     lastTurnLangRef.current = uiLang;
-    // 0.1.55: preguntas de seguridad con respuesta FIJA (monóxido de
-    // carbono, números de emergencia comprobados). Antes que todo lo demás:
-    // en estas, un error del modelo puede costar una vida. Lo pegado o
-    // compartido (inertRouting) no cuenta como pregunta.
+    // 0.1.55: preguntas de seguridad con respuesta FIJA, sin modelo. Orden:
+    // 1) monóxido de carbono (siempre primero: un error puede costar una vida);
+    // 2) números de emergencia desde los datos verificados de los packs
+    //    (23 países, con fuente y fecha); 3) la tabla fija de safetyAnswers
+    //    (8 países, o «¿en qué país estás?») solo si ningún pack respondió.
+    // Lo pegado o compartido (inertRouting) no cuenta como pregunta.
     const safetyHit = inertRouting ? null : matchSafetyAnswer(query, uiLang);
+    const coHit = safetyHit !== null && safetyHit.kind !== "emergency-number" ? safetyHit : null;
     const smallTalkHit = safetyHit === null && kbQueryMeta === null ? matchSmallTalk(query, uiLang) : null;
+    const factsHit =
+      coHit === null && kbQueryMeta === null && smallTalkHit === null && !inertRouting
+        ? await answerFromPackFacts(query, uiLang)
+        : null;
+    const numberHit = safetyHit !== null && safetyHit.kind === "emergency-number" && factsHit === null ? safetyHit : null;
     const kbAnswer =
-      safetyHit !== null ? safetyHit.text : kbQueryMeta !== null ? kbQueryMeta.answer : smallTalkHit?.text ?? null;
+      coHit !== null
+        ? coHit.text
+        : kbQueryMeta !== null
+          ? kbQueryMeta.answer
+          : smallTalkHit?.text ?? factsHit?.text ?? numberHit?.text ?? null;
     if (kbAnswer !== null) {
       assistantText = kbAnswer;
       setMessages((prev) =>
-        prev.map((m) => (m.id === assistantId ? { ...m, text: kbAnswer } : m))
+        prev.map((m) =>
+          m.id === assistantId
+            ? { ...m, text: kbAnswer, calls: kbQueryMeta === null && !smallTalkHit ? factsHit?.calls : undefined }
+            : m
+        )
       );
       notification(NotificationFeedbackType.Success);
 
@@ -931,7 +972,9 @@ export function ChatScreen({
         const sid = sessionId;
         const kbTitle = smallTalkHit
           ? smallTalkSessionTitle(smallTalkHit.lang)
-          : knowledgeSessionTitle(query, kbLocale);
+          : factsHit
+            ? factsHit.title
+            : knowledgeSessionTitle(query, kbLocale);
         await setSessionTitle(sid, kbTitle);
         await refreshSessions();
       }
@@ -1697,14 +1740,56 @@ export function ChatScreen({
     }
   }, [messages, generating, send, scrollToBottom]);
 
+  // Cerrar Ajustes: lo que antes hacía solo su botón LISTO, ahora también
+  // al cambiar de pestaña (voz, investigación profunda, modelo elegido).
+  const closeSettings = async () => {
+    setShowSettings(false);
+    getVoiceInputEnabled().then(setVoiceInputEnabledState);
+    // Deep Research is switched in Settings only.
+    const drMode = await getDeepResearchMode();
+    deepResearchModeRef.current = drMode;
+    setDeepResearchEnabled(drMode);
+    // Settings loads a newly chosen LLM itself; only re-run the full
+    // init (with its loading screen) if what's loaded doesn't match.
+    const llm = await resolveActiveModel("llm");
+    if (ready && llamaEngine.getModelInfo()?.filename === llm.filename) {
+      setActiveModel(llm);
+    } else {
+      initModels();
+    }
+  };
+
+  const effectiveTab: MainTab = showSettings ? "settings" : showNido ? "nido" : activeTab;
+
+  const selectTab = (tab: MainTab) => {
+    if (showSettings && tab !== "settings") void closeSettings();
+    setShowNido(tab === "nido");
+    setShowSettings(tab === "settings");
+    setShowGuide(false);
+    setShowKnowledgeBase(false);
+    setShowMemoryManager(false);
+    setShowExecutionTelemetry(false);
+    setShowAbout(false);
+    setDrawerOpen(false);
+    setActiveTab(tab);
+  };
+
+  const withTabs = (node: React.ReactNode) => (
+    <View style={styles.flex}>
+      <View style={styles.flex}>{node}</View>
+      <BottomTabBar active={effectiveTab} onSelect={selectTab} />
+    </View>
+  );
+
   const drawerItems: DrawerItem[] = [
+    { key: "emergency", icon: "warning", label: t("tabs.emergency"), onPress: () => selectTab("emergency") },
     { key: "guide", icon: "compass", label: t("guide.drawer"), onPress: () => setShowGuide(true) },
     { key: "prompts", icon: "ideas", label: t("chatScreen.drawerItems.prompts"), onPress: () => setShowPromptIdeas(true) },
-    { key: "knowledge", icon: "knowledge", label: t("chatScreen.drawerItems.myDocuments"), onPress: () => setShowKnowledgeBase(true) },
+    { key: "knowledge", icon: "knowledge", label: t("chatScreen.drawerItems.myDocuments"), onPress: () => selectTab("library") },
     { key: "memory", icon: "memory", label: t("chatScreen.drawerItems.memory"), onPress: () => setShowMemoryManager(true) },
-    { key: "settings", icon: "settings", label: t("chatScreen.drawerItems.settings"), onPress: () => setShowSettings(true) },
+    { key: "settings", icon: "settings", label: t("chatScreen.drawerItems.settings"), onPress: () => selectTab("settings") },
     { key: "telemetry", icon: "telemetry", label: t("chatScreen.drawerItems.telemetry"), onPress: () => setShowExecutionTelemetry(true) },
-    { key: "nido", icon: "pairing", label: "NIDO", onPress: () => setShowNido(true) },
+    { key: "nido", icon: "pairing", label: "NIDO", onPress: () => selectTab("nido") },
     { key: "about", icon: "info", label: t("chatScreen.drawerItems.about"), onPress: () => setShowAbout(true) },
   ];
 
@@ -1714,35 +1799,6 @@ export function ChatScreen({
 
   if (showGuide) {
     return <UserGuideScreen onClose={() => setShowGuide(false)} onTryExample={tryGuideExample} />;
-  }
-
-  if (showSettings) {
-    return (
-      <ModelSetupScreen
-        mode="optional"
-        onOpenGuide={() => {
-          setShowSettings(false);
-          setShowGuide(true);
-        }}
-        onClose={async () => {
-          setShowSettings(false);
-          getVoiceInputEnabled().then(setVoiceInputEnabledState);
-          // Deep Research is switched in Settings only.
-          const drMode = await getDeepResearchMode();
-          deepResearchModeRef.current = drMode;
-          setDeepResearchEnabled(drMode);
-          // Settings loads a newly chosen LLM itself; only re-run the full
-          // init (with its loading screen) if what's loaded doesn't match.
-          const llm = await resolveActiveModel("llm");
-          if (ready && llamaEngine.getModelInfo()?.filename === llm.filename) {
-            setActiveModel(llm);
-          } else {
-            initModels();
-          }
-        }}
-        onRelaunchWizard={onRelaunchWizard}
-      />
-    );
   }
 
   if (showExecutionTelemetry) {
@@ -1766,12 +1822,67 @@ export function ChatScreen({
     />
   ) : null;
 
-  if (showNido) {
-    return <NidoScreen onClose={() => setShowNido(false)} panicSlot={panicNode} />;
-  }
-
   if (showAbout) {
     return <AboutScreen onClose={() => setShowAbout(false)} />;
+  }
+
+  if (showSettings) {
+    return withTabs(
+      <ModelSetupScreen
+        mode="optional"
+        onOpenGuide={() => {
+          void closeSettings();
+          setActiveTab("library");
+          setShowGuide(true);
+        }}
+        onClose={async () => {
+          setActiveTab("chat");
+          await closeSettings();
+        }}
+        onRelaunchWizard={onRelaunchWizard}
+        onOpenMemory={() => setShowMemoryManager(true)}
+        onOpenTelemetry={() => setShowExecutionTelemetry(true)}
+        onOpenAbout={() => setShowAbout(true)}
+      />
+    );
+  }
+
+  if (showNido) {
+    return withTabs(
+      <NidoScreen
+        onClose={() => {
+          setShowNido(false);
+          setActiveTab("chat");
+        }}
+        panicSlot={panicNode}
+      />
+    );
+  }
+
+  if (activeTab === "emergency") {
+    return withTabs(
+      <EmergencyScreen
+        onAsk={(question) => {
+          // Como las ideas y los ejemplos de la guía: se escribe, no se envía solo.
+          selectTab("chat");
+          updateInput(question, "example");
+          requestAnimationFrame(() => inputRef.current?.focus());
+        }}
+        onOpenLibrary={() => selectTab("library")}
+      />
+    );
+  }
+
+  if (activeTab === "library") {
+    return withTabs(
+      <LibraryScreen
+        onOpenGuide={() => setShowGuide(true)}
+        onOpenPromptIdeas={() => {
+          selectTab("chat");
+          setShowPromptIdeas(true);
+        }}
+      />
+    );
   }
 
   const isDeepActive = deepResearchEnabled || deepResearchActive;
@@ -1793,7 +1904,6 @@ export function ChatScreen({
             refreshSessions();
             setDrawerOpen(true);
           }}
-          onCycleTone={cycleTone}
           onNewChat={resetToNewChat}
           panicSlot={panicNode}
         />
@@ -1921,6 +2031,33 @@ export function ChatScreen({
                       )
                     )}
                   </>
+                )}
+
+                {item.calls && item.calls.length > 0 && (
+                  <View style={styles.callRow}>
+                    {item.calls.map((c, i) => (
+                      <Pressable
+                        key={`${c.tel}-${i}`}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("emergency.callA11y", { number: c.value, label: c.label })}
+                        onPress={() => {
+                          impact(ImpactFeedbackStyle.Medium);
+                          // Abre el marcador con el número escrito; la llamada la hace la persona.
+                          void Linking.openURL(c.tel).catch(() => {});
+                        }}
+                        style={[
+                          styles.callBtn,
+                          i === 0
+                            ? { backgroundColor: colors.crimson[500], borderColor: colors.crimson[500] }
+                            : { backgroundColor: colors.bg.surface, borderColor: colors.border.default },
+                        ]}
+                      >
+                        <Text style={[styles.callBtnText, { color: i === 0 ? colors.text.inverse : colors.crimson[600] }]}>
+                          {`${t("emergency.call")} ${c.value}`}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
                 )}
 
                 {item.citations && item.citations.length > 0 && (
@@ -2196,6 +2333,38 @@ export function ChatScreen({
               </Text>
             </View>
           )}
+          {/* 0.1.55: tono e investigación, junto a donde se escribe (antes, en la cabecera y en Ajustes). */}
+          <View style={styles.modeChips}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("chatHeader.cycleTone")}
+              onPress={cycleTone}
+              disabled={generating}
+              style={[styles.modeChip, { borderColor: colors.border.default, backgroundColor: colors.bg.surface }]}
+            >
+              <Text style={[styles.modeChipText, { color: colors.text.primary }]} numberOfLines={1}>
+                {t("chatScreen.toneChip", { tone: t(`personalities.${personalityId}.label`) })}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="switch"
+              accessibilityState={{ checked: deepResearchEnabled }}
+              accessibilityLabel={t("chatHeader.deepResearch")}
+              onPress={() => void toggleDeepResearch()}
+              disabled={generating}
+              style={[
+                styles.modeChip,
+                deepResearchEnabled
+                  ? { borderColor: colors.emerald[500], backgroundColor: colors.emerald.bgSubtle }
+                  : { borderColor: colors.border.default, backgroundColor: colors.bg.surface },
+              ]}
+            >
+              <NidoIcon name="deep-research" size={14} />
+              <Text style={[styles.modeChipText, { color: deepResearchEnabled ? colors.emerald[600] : colors.text.primary }]}>
+                {t("chatScreen.researchChip")}
+              </Text>
+            </Pressable>
+          </View>
           <View style={[styles.inputRow, { backgroundColor: colors.bg.input, borderColor: colors.border.default }]}>
             {voiceInputEnabled && (
               <VoiceInputButton
@@ -2276,6 +2445,8 @@ export function ChatScreen({
           />
         )}
       </View>
+
+      {keyboardHeight === 0 && <BottomTabBar active="chat" onSelect={selectTab} />}
 
       <Drawer
         open={drawerOpen}
@@ -2556,6 +2727,21 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   stagedText: { flexShrink: 1, fontSize: 14, fontWeight: "600" },
   stagedDismiss: { padding: 4 },
   stagedHint: { fontSize: 12, paddingHorizontal: 4 },
+  callRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
+  callBtn: { minHeight: 44, paddingHorizontal: 16, borderRadius: 22, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  callBtnText: { ...typography.ui.titleSm },
+  modeChips: { flexDirection: "row", gap: 8, marginBottom: 8, flexWrap: "wrap" },
+  modeChip: {
+    minHeight: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    maxWidth: "70%",
+  },
+  modeChipText: { ...typography.ui.subtext, fontWeight: "600" },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
