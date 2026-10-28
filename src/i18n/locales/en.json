@@ -703,7 +703,11 @@
       "busy": "NIDO was busy. Try again in a few seconds.",
       "connection": "Couldn't connect to the other NIDO. Bring the devices closer, check Bluetooth or Wi-Fi, and make sure NIDO is open on both.",
       "generic": "Something went wrong with the connection ({{detail}}).",
-      "sessionInvalidated": "The NIDO session was closed when the data was erased. Close this screen and open it again."
+      "sessionInvalidated": "The NIDO session was closed when the data was erased. Close this screen and open it again.",
+      "privateCheckFailed": "I couldn't check whether this contact supports the private hello, so I didn't call and your identity never left the phone. Please try again.",
+      "privateOnlyOldContact": "\"Private hello only\" is on and this contact uses an old NIDO that doesn't support it, so I didn't call. Ask them to update, or turn the option off in Settings → Security.",
+      "privateOnlyNoTarget": "\"Private hello only\" is on: you can only call your contacts, from the contacts list.",
+      "privateOnlyPlainHello": "A call with a plain hello was refused (\"Private hello only\" is on)."
     },
     "back": "‹ Back",
     "online": "within reach",
@@ -828,7 +832,8 @@
     "disappearBadge": "disappearing",
     "disappearShort": "Timer: {{value}}",
     "v5Active": "new key per message",
-    "v5Missing": "This connection is not using per-message keys, although this contact used them before. If they did not turn it off, someone may have blocked it: reconnect, and check with them in person."
+    "v5Missing": "This connection is not using per-message keys, although this contact used them before. If they did not turn it off, someone may have blocked it: reconnect, and check with them in person.",
+    "oldNidoWarning": "Private hello not confirmed with this contact yet: until you connect with NIDO 0.1.49 or later on both phones, people nearby can see you are calling them."
   },
   "notifications": {
     "reminderChannel": "NIDO Reminders",
@@ -1065,7 +1070,9 @@
     "sealedHelloTitle": "Private hello",
     "sealedHelloDesc": "When this phone calls a paired NIDO that supports it, the first messages are sealed so nobody nearby can see who is calling. On by default; with an older NIDO nothing changes.",
     "ratchetV5Title": "New key per message + quantum-resistant",
-    "ratchetV5Desc": "Every message gets its own key, like Signal's Double Ratchet: a key stolen today does not open earlier messages. The session also mixes in ML-KEM-768, so traffic recorded today stays closed to future quantum computers. On by default; used when both phones have it. Applies from the next connection."
+    "ratchetV5Desc": "Every message gets its own key, like Signal's Double Ratchet: a key stolen today does not open earlier messages. The session also mixes in ML-KEM-768, so traffic recorded today stays closed to future quantum computers. On by default; used when both phones have it. Applies from the next connection.",
+    "privateHelloOnlyTitle": "Private hello only",
+    "privateHelloOnlyDesc": "Your phone never reveals who you are in the clear: it doesn't call contacts with an old NIDO (before 0.1.49) or devices that aren't your contacts, and it doesn't answer plain hellos. Off by default because it cuts off anyone who hasn't updated."
   },
   "backup": {
     "dekTitle": "Backup created",

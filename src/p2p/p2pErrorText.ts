@@ -37,6 +37,11 @@ const codeOf = (e: unknown): string => {
 /** Ordered: first match wins (specific before generic). */
 const RULES: Array<{ re: RegExp; key: string; group?: string }> = [
   { re: /Primero crea tu identidad NIDO/i, key: "noIdentity" },
+  // 0.1.55 (P-04): no se llamó para no revelar la identidad.
+  { re: /^Saludo privado: no pude comprobar/, key: "privateCheckFailed" },
+  { re: /^Solo saludo privado: este contacto usa un NIDO antiguo/, key: "privateOnlyOldContact" },
+  { re: /^Solo saludo privado: este dispositivo no es un contacto/, key: "privateOnlyNoTarget" },
+  { re: /^Solo saludo privado: rechazado un saludo en claro/, key: "privateOnlyPlainHello" },
   { re: /Ese es tu propio QR|Es mi propio dispositivo/i, key: "ownQr" },
   {
     re: /La clave (de firma )?del QR no es válida|El QR de NIDO está dañado|Clave de firma del contacto inválida|Versión de emparejamiento no soportada/i,
