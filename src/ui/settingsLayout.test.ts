@@ -96,3 +96,13 @@ describe("Ajustes por grupos (0.1.55)", () => {
     expect(CHAT).toContain("setDeepResearchMode(next)");
   });
 });
+
+describe("auditoría 0.1.55: orden de las respuestas fijas de seguridad", () => {
+  it("monóxido primero; números: pack verificado antes que la tabla fija", () => {
+    const i = (s: string) => CHAT.indexOf(s);
+    expect(i("const coHit")).toBeGreaterThan(-1);
+    expect(i("await answerFromPackFacts(query, uiLang)")).toBeLessThan(i("const numberHit"));
+    expect(CHAT).toContain('safetyHit.kind === "emergency-number" && factsHit === null');
+    expect(CHAT).toContain("smallTalkHit?.text ?? factsHit?.text ?? numberHit?.text ?? null");
+  });
+});

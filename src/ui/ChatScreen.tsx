@@ -71,6 +71,7 @@ import { planSend } from "../agent/input/sendPlan";
 import { runAgentLoop, assertPromptBudget, estimatePromptTokens } from "../agent/loop/agentLoop";
 import { buildToolHandlers, searchPhoneContacts } from "../agent/tools/handlers";
 import { matchSmallTalk, smallTalkSessionTitle } from "../agent/loop/smallTalk";
+import { matchSafetyAnswer } from "../agent/loop/safetyAnswers";
 import { agentFallbackText, toFallbackLang } from "../agent/loop/fallbackText";
 import { describePolicyConfirmation } from "../agent/policy/confirmText";
 import {
@@ -918,15 +919,26 @@ export function ChatScreen({
       resetConversationState();
     }
     lastTurnLangRef.current = uiLang;
-    const smallTalkHit = kbQueryMeta === null ? matchSmallTalk(query, uiLang) : null;
-    // 0.1.55: «¿a qué número llamo en Chile?» sale de los datos verificados
-    // del pack (fuente y fecha citadas), sin búsqueda ni modelo. Solo con un
-    // pack v2 instalado que cubra ese país; si no, el turno sigue igual.
+    // 0.1.55: preguntas de seguridad con respuesta FIJA, sin modelo. Orden:
+    // 1) monóxido de carbono (siempre primero: un error puede costar una vida);
+    // 2) números de emergencia desde los datos verificados de los packs
+    //    (23 países, con fuente y fecha); 3) la tabla fija de safetyAnswers
+    //    (8 países, o «¿en qué país estás?») solo si ningún pack respondió.
+    // Lo pegado o compartido (inertRouting) no cuenta como pregunta.
+    const safetyHit = inertRouting ? null : matchSafetyAnswer(query, uiLang);
+    const coHit = safetyHit !== null && safetyHit.kind !== "emergency-number" ? safetyHit : null;
+    const smallTalkHit = safetyHit === null && kbQueryMeta === null ? matchSmallTalk(query, uiLang) : null;
     const factsHit =
-      kbQueryMeta === null && smallTalkHit === null && !inertRouting
+      coHit === null && kbQueryMeta === null && smallTalkHit === null && !inertRouting
         ? await answerFromPackFacts(query, uiLang)
         : null;
-    const kbAnswer = kbQueryMeta !== null ? kbQueryMeta.answer : smallTalkHit?.text ?? factsHit?.text ?? null;
+    const numberHit = safetyHit !== null && safetyHit.kind === "emergency-number" && factsHit === null ? safetyHit : null;
+    const kbAnswer =
+      coHit !== null
+        ? coHit.text
+        : kbQueryMeta !== null
+          ? kbQueryMeta.answer
+          : smallTalkHit?.text ?? factsHit?.text ?? numberHit?.text ?? null;
     if (kbAnswer !== null) {
       assistantText = kbAnswer;
       setMessages((prev) =>
