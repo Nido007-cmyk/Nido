@@ -369,3 +369,143 @@ describe("catalog filename gate (engine load path)", () => {
     expect(err.reason).toBe("missing");
   });
 });
+
+// ---------------------------------------------------------------------------
+// 0.1.57 — outdated knowledge packs are kept, never deleted for being old.
+// After an app update the catalog declares a new size/SHA-256 for a pack. The
+// installed file is still exactly the bytes verified at its own install; it
+// may be the only copy of the emergency numbers on a phone with no signal.
+// ---------------------------------------------------------------------------
+
+describe("packs desactualizados (0.1.57)", () => {
+  const OLD_PACK = new Uint8Array(3000);
+  for (let i = 0; i < OLD_PACK.length; i++) OLD_PACK[i] = (i * 13 + 1) & 0xff;
+  const NEW_PACK = new Uint8Array(3500);
+  for (let i = 0; i < NEW_PACK.length; i++) NEW_PACK[i] = (i * 5 + 9) & 0xff;
+
+  const oldPack = {
+    id: "trust-test-pack",
+    kind: "corpus" as const,
+    format: "sqlite-pack" as const,
+    label: "Pack de prueba",
+    filename: "corpus/trust-test.sqlite",
+    sizeBytes: OLD_PACK.length,
+    sha256: sha256Of(OLD_PACK),
+    sourceUrl: "https://example.invalid/trust-test.sqlite",
+    license: "test",
+    description: "test fixture",
+    required: false,
+  };
+  // The catalog shipped with the app update.
+  const newPack = { ...oldPack, sizeBytes: NEW_PACK.length, sha256: sha256Of(NEW_PACK) };
+  const packPath = `${hoisted.DOCS}${oldPack.filename}`;
+
+  async function installOld(): Promise<void> {
+    hoisted.setApkBytes(OLD_PACK.slice());
+    resetInstallReconcileForTests();
+    await new ModelManager([oldPack]).installBundled(oldPack);
+    expect(hoisted.fileExists(packPath)).toBe(true);
+  }
+
+  it("con el catálogo nuevo, el pack viejo se queda, sin re-hash, marcado como desactualizado", async () => {
+    await installOld();
+    hoisted.base64Reads.length = 0;
+    resetInstallReconcileForTests();
+    const status = await new ModelManager([newPack]).statusOf(newPack);
+    expect(status.present).toBe(false);
+    expect(status.outdated).toBe(true);
+    expect(status.sizeOnDiskBytes).toBe(OLD_PACK.length);
+    expect(hoisted.fileExists(packPath)).toBe(true);
+    expect(hoisted.base64Reads.filter((p) => p === packPath)).toEqual([]);
+  });
+
+  it("también con el mismo tamaño y otra huella", async () => {
+    await installOld();
+    const sameSize = { ...oldPack, sha256: sha256Of(GOOD_BYTES) };
+    resetInstallReconcileForTests();
+    const v = await checkModelTrust(sameSize);
+    expect(v).toMatchObject({ trusted: false, reason: "outdated-pack", deleteFile: false, outdated: true });
+    expect(hoisted.fileExists(packPath)).toBe(true);
+  });
+
+  it("un pack reescrito con otros bytes no pasa por viejo: se borra como antes", async () => {
+    await installOld();
+    const tampered = OLD_PACK.slice();
+    tampered[10] ^= 0xff;
+    hoisted.writeFile(packPath, tampered, 9999);
+    resetInstallReconcileForTests();
+    const status = await new ModelManager([newPack]).statusOf(newPack);
+    expect(status.present).toBe(false);
+    expect(status.outdated).toBeUndefined();
+    expect(hoisted.fileExists(packPath)).toBe(false);
+  });
+
+  it("sin mtime comparable, solo un re-hash que coincide lo da por viejo", async () => {
+    await installOld();
+    hoisted.setMtime(packPath, 5555); // e.g. the file was touched; bytes unchanged
+    hoisted.base64Reads.length = 0;
+    resetInstallReconcileForTests();
+    const status = await new ModelManager([newPack]).statusOf(newPack);
+    expect(status.outdated).toBe(true);
+    expect(hoisted.base64Reads.filter((p) => p === packPath).length).toBeGreaterThan(0);
+  });
+
+  it("los modelos no cambian: un modelo de un catálogo viejo sigue sin ser de confianza y se borra", async () => {
+    const mgr = makeManager();
+    await mgr.installBundled(asset);
+    const newModel = { ...asset, sizeBytes: NEW_PACK.length, sha256: sha256Of(NEW_PACK) };
+    resetInstallReconcileForTests();
+    const status = await new ModelManager([newModel]).statusOf(newModel);
+    expect(status.present).toBe(false);
+    expect(status.outdated).toBeUndefined();
+    expect(hoisted.fileExists(modelPath)).toBe(false);
+  });
+
+  it("una descarga nueva que falla o se corta no hace perder la prueba del pack viejo", async () => {
+    const { recordInstall } = await import("./installState");
+    await installOld();
+    // The update starts (journal moves to "downloading" for the new version)…
+    await recordInstall(newPack.id, { status: "downloading", sizeBytes: newPack.sizeBytes, sha256: newPack.sha256 });
+    // …and fails.
+    await recordInstall(newPack.id, {
+      status: "failed",
+      sizeBytes: newPack.sizeBytes,
+      sha256: newPack.sha256,
+      failureCode: "network",
+      failureKind: "transient",
+    });
+    resetInstallReconcileForTests();
+    expect((await new ModelManager([newPack]).statusOf(newPack)).outdated).toBe(true);
+    expect(hoisted.fileExists(packPath)).toBe(true);
+
+    // A crash mid-download: reconcile marks it interrupted; the proof survives too.
+    await recordInstall(newPack.id, { status: "downloading", sizeBytes: newPack.sizeBytes, sha256: newPack.sha256 });
+    resetInstallReconcileForTests();
+    expect((await new ModelManager([newPack]).statusOf(newPack)).outdated).toBe(true);
+  });
+
+  it("cuando la versión nueva queda verificada, es la instalada y deja de estar desactualizada", async () => {
+    await installOld();
+    hoisted.setApkBytes(NEW_PACK.slice());
+    hoisted.setApkMtimeSec(3000);
+    resetInstallReconcileForTests();
+    const mgr = new ModelManager([newPack]);
+    await mgr.installBundled(newPack);
+    const status = await mgr.statusOf(newPack);
+    expect(status.present).toBe(true);
+    expect(status.outdated).toBeUndefined();
+  });
+
+  it("packFileState: actual, desactualizado o inutilizable", async () => {
+    const { packFileState } = await import("./modelTrust");
+    expect(await packFileState(newPack)).toBe("unusable"); // nothing on disk
+    await installOld();
+    resetInstallReconcileForTests();
+    expect(await packFileState(oldPack)).toBe("current");
+    expect(await packFileState(newPack)).toBe("outdated");
+    hoisted.writeFile(packPath, OLD_PACK.slice(0, 100), 9999); // truncated
+    expect(await packFileState(newPack)).toBe("unusable");
+    // A local pack (built by the user, no catalog size) opens as before.
+    expect(await packFileState({ ...oldPack, id: "local-x", sizeBytes: 0, sha256: "" })).toBe("current");
+  });
+});

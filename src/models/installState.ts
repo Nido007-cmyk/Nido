@@ -71,7 +71,32 @@ export interface InstallRecord {
   failureCode?: string;
   /** "permanent" | "transient" | "resource" when status === "failed". */
   failureKind?: string;
+  /**
+   * 0.1.57: proof of the last bytes verified at the final path, kept while
+   * the record moves on to "downloading"/"failed" (a re-download after the
+   * catalog changed). A knowledge pack whose file is still exactly those
+   * bytes stays usable — offline, it may be the only copy of the emergency
+   * numbers — and is shown as "update available" instead of being deleted.
+   * Absent on "installed" records: there the record itself is the proof.
+   */
+  verifiedFile?: VerifiedFileProof;
   updatedAt: number;
+}
+
+export interface VerifiedFileProof {
+  sizeBytes: number;
+  sha256: string;
+  mtimeMs?: number;
+}
+
+/** The last verified bytes recorded for this asset, if any. */
+export function verifiedProofOf(rec: InstallRecord | null | undefined): VerifiedFileProof | null {
+  if (!rec) return null;
+  if (rec.status === "installed") {
+    return rec.sha256 ? { sizeBytes: rec.sizeBytes, sha256: rec.sha256, mtimeMs: rec.mtimeMs } : null;
+  }
+  const v = rec.verifiedFile;
+  return v && typeof v.sha256 === "string" && v.sha256 && typeof v.sizeBytes === "number" ? v : null;
 }
 
 export interface InstallStateFile {
@@ -182,6 +207,13 @@ export async function recordInstall(
     if (merged.status !== "failed" && patch.failureCode === undefined) {
       merged.failureCode = undefined;
       merged.failureKind = undefined;
+    }
+    // Keep the proof of the bytes at the final path across a re-download:
+    // only staging is written until the atomic promote, so they are untouched.
+    if (merged.status === "installed") {
+      merged.verifiedFile = undefined;
+    } else if (prev) {
+      merged.verifiedFile = verifiedProofOf(prev) ?? undefined;
     }
     state.records[assetId] = merged;
     await saveInstallState(state);

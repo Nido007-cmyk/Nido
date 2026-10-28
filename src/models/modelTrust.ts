@@ -66,6 +66,8 @@ import {
   getInstallRecord,
   loadInstallState,
   recordInstall,
+  verifiedProofOf,
+  type InstallRecord,
 } from "./installState";
 import { CatalogModel, MODEL_CATALOG } from "./manifest";
 
@@ -108,7 +110,8 @@ export type TrustFailureReason =
   | "no-expected-sha256"
   | "checksum-mismatch"
   | "unverifiable"
-  | "unknown-model-file";
+  | "unknown-model-file"
+  | "outdated-pack";
 
 export class ModelNotTrustedError extends Error {
   readonly reason: TrustFailureReason;
@@ -129,6 +132,13 @@ export interface TrustVerdict {
    */
   deleteFile: boolean;
   sizeOnDiskBytes: number;
+  /**
+   * 0.1.57: a knowledge pack that is exactly the bytes verified at an earlier
+   * install, from an older catalog. Not trusted as the current version (so an
+   * update is offered), but never deleted: it stays usable until the new
+   * download is verified and promoted over it.
+   */
+  outdated?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -304,6 +314,11 @@ export async function checkModelTrust(asset: CatalogModel): Promise<TrustVerdict
     return { trusted: false, reason: "missing", deleteFile: false, sizeOnDiskBytes: 0 };
   }
   const sizeOnDisk = info.size ?? 0;
+  // Only packs read the journal this early: models keep the exact order of checks.
+  if (isKnowledgePack(asset) && (await isProvenOutdatedPack(asset, path, sizeOnDisk, mtimeMsOf(info), await getInstallRecord(asset.id)))) {
+    dlog(asset.id, "checkModelTrust: older verified pack — kept and usable, update available");
+    return { trusted: false, reason: "outdated-pack", deleteFile: false, sizeOnDiskBytes: sizeOnDisk, outdated: true };
+  }
   if (sizeOnDisk !== asset.sizeBytes) {
     // Exists but wrong size: interrupted/truncated/stale — can never be
     // trusted as-is; the caller deletes it so it can't be mistaken for a
@@ -356,6 +371,66 @@ export async function checkModelTrust(asset: CatalogModel): Promise<TrustVerdict
     mtimeMs: mtime ?? undefined,
   });
   return { trusted: true, reason: "ok", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
+}
+
+// ---------------------------------------------------------------------------
+// Outdated knowledge packs (0.1.57).
+//
+// When an app update ships a new catalog, an installed pack no longer matches
+// the new size/SHA-256. It used to be deleted on the next status check — even
+// offline, leaving the phone without the emergency numbers it had. A pack that
+// is still exactly the bytes verified at its own install (journal proof: size +
+// mtime, or a re-hash when the FS reports no mtime) is kept and used, shown as
+// "update available". Anything else still fails closed as before. Models are
+// not affected: they keep the strict gate.
+// ---------------------------------------------------------------------------
+
+export function isKnowledgePack(asset: Pick<CatalogModel, "kind" | "format">): boolean {
+  return asset.kind === "corpus" && asset.format === "sqlite-pack";
+}
+
+async function isProvenOutdatedPack(
+  asset: CatalogModel,
+  path: string,
+  sizeOnDisk: number,
+  mtime: number | null,
+  rec: InstallRecord | null
+): Promise<boolean> {
+  if (!isKnowledgePack(asset)) return false;
+  const proof = verifiedProofOf(rec);
+  if (!proof) return false;
+  // Proof of the current catalog version: not outdated (the normal gate decides).
+  if (proof.sizeBytes === asset.sizeBytes && sameSha(proof.sha256, asset.sha256)) return false;
+  if (sizeOnDisk !== proof.sizeBytes) return false;
+  if (proof.mtimeMs != null && mtime != null) {
+    if (proof.mtimeMs === mtime) return true;
+  }
+  // Rewritten since (or no mtime to compare): only a re-hash can prove it.
+  try {
+    return sameSha(await sha256OfFile(path, { assetId: asset.id, filename: asset.filename }), proof.sha256);
+  } catch (e) {
+    if (e instanceof DownloadFailure && e.code === "cancelled") throw e;
+    return false;
+  }
+}
+
+export type PackFileState = "current" | "outdated" | "unusable";
+
+/**
+ * Whether a knowledge pack's file can be opened: "current" (complete for the
+ * catalog, as before), "outdated" (older verified bytes, see above) or
+ * "unusable". Local packs (sizeBytes 0, built by the user) have no catalog
+ * entry to compare against and are "current" when present.
+ */
+export async function packFileState(asset: CatalogModel): Promise<PackFileState> {
+  await ensureInstallReconciled();
+  const path = assetPath(asset);
+  const info = await FileSystem.getInfoAsync(path).catch(() => null);
+  if (!info?.exists || info.isDirectory) return "unusable";
+  const size = info.size ?? 0;
+  if (asset.sizeBytes <= 0) return "current";
+  if (await isProvenOutdatedPack(asset, path, size, mtimeMsOf(info), await getInstallRecord(asset.id))) return "outdated";
+  return size === asset.sizeBytes ? "current" : "unusable";
 }
 
 /**

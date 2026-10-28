@@ -17,12 +17,13 @@
 import * as SQLite from "expo-sqlite";
 import * as FileSystem from "expo-file-system/legacy";
 import { CORPUS_CATALOG, MODEL_CATALOG, CatalogModel } from "../models/manifest";
+import { packFileState } from "../models/modelTrust";
 import { buildLexicalQuery, cosineSimilarityInt8, distinctFloor, DISTINCT_BG_TO, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM, pruneSemanticByMargin, pruneVectorHits } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
 import { guideTitleOf, markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId, sectionLikePattern, type PackSourceDoc } from "./packSource";
 import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "./embeddingProfile";
 import { packIndexIfReady, releaseAllIndexes, searchPackIndex } from "./vectorIndex";
-import { composeFactsAnswer, type FactLang, type FactsAnswer, type PackFact, type PackRegion } from "./packFacts";
+import { composeFactsAnswer, markOutdated, type FactLang, type FactsAnswer, type PackFact, type PackRegion } from "./packFacts";
 
 const PACK_CANDIDATES = 400;
 const REQUIRED_EMBEDDING_SHA256 = MODEL_CATALOG.find((m) => m.kind === "embedding" && m.required)!.sha256;
@@ -36,6 +37,14 @@ interface OpenPack {
   sizeBytes: number;
   /** Vector size declared by the pack (meta.dims), 384 if absent. */
   dims: number;
+  /** File mtime when opened: a replaced file (update promoted) is reopened. */
+  mtime: number | null;
+  /**
+   * 0.1.57: an older verified version of a catalog pack (the app was updated
+   * and the new pack isn't downloaded yet). Still used — offline it may be the
+   * only copy — and answers say a newer version exists.
+   */
+  outdated: boolean;
 }
 
 const openPacks = new Map<string, OpenPack>();
@@ -119,13 +128,20 @@ export async function closeAllPacks(): Promise<void> {
 async function openPack(pack: CatalogModel): Promise<OpenPack | null> {
   const uri = `${FileSystem.documentDirectory}${pack.filename}`;
   const info = await FileSystem.getInfoAsync(uri);
-  // Catalog packs must be complete; a local pack (sizeBytes 0) has nothing to compare against.
-  if (!info.exists || (pack.sizeBytes > 0 && info.size !== pack.sizeBytes)) {
+  if (!info.exists) {
     await closePack(pack.id);
     return null;
   }
+  const size = (info as { size?: number }).size ?? 0;
+  const mtime = (info as { modificationTime?: number }).modificationTime ?? null;
   const cached = openPacks.get(pack.id);
-  if (cached) return cached;
+  if (cached && cached.sizeBytes === size && cached.mtime === mtime) return cached;
+  if (cached) await closePack(pack.id);
+  // Catalog packs must be complete for the catalog, or an older version whose
+  // bytes were verified at install (0.1.57); a local pack (sizeBytes 0) has
+  // nothing to compare against.
+  const state = await packFileState(pack).catch(() => "unusable" as const);
+  if (state === "unusable") return null;
 
   const path = uri.replace(/^file:\/\//, "");
   const slash = path.lastIndexOf("/");
@@ -147,8 +163,10 @@ async function openPack(pack: CatalogModel): Promise<OpenPack | null> {
     db,
     formatVersion: Number(meta.formatVersion) > 0 ? Number(meta.formatVersion) : 1,
     modelSha256: String(meta.embeddingModelSha256 ?? ""),
-    sizeBytes: (info as { size?: number }).size ?? 0,
+    sizeBytes: size,
     dims: Number(meta.dims) > 0 ? Number(meta.dims) : 384,
+    mtime,
+    outdated: state === "outdated",
   };
   openPacks.set(pack.id, open);
   return open;
@@ -333,7 +351,7 @@ export async function answerFromPackFacts(text: string, lang: FactLang): Promise
       if (!open || open.formatVersion < 2) continue;
       const { regions, facts } = await packFacts(pack.id, open).catch(() => ({ regions: [], facts: [] }));
       const answer = composeFactsAnswer(text, lang, regions, facts);
-      if (answer) return answer;
+      if (answer) return open.outdated ? markOutdated(answer, lang, pack.label) : answer;
     }
   } catch (e) {
     console.warn("[packs] answerFromPackFacts:", e instanceof Error ? e.message : String(e));
@@ -346,15 +364,18 @@ export async function answerFromPackFacts(text: string, lang: FactLang): Promise
  * tab. A country covered by two packs keeps the first pack's numbers (the
  * catalog order), so one screen never mixes two sources. Never throws.
  */
-export async function loadAllPackFacts(): Promise<{ regions: PackRegion[]; facts: PackFact[] }> {
+export async function loadAllPackFacts(): Promise<{ regions: PackRegion[]; facts: PackFact[]; outdatedPacks: string[] }> {
   const regions: PackRegion[] = [];
   const facts: PackFact[] = [];
+  /** 0.1.57: labels of the packs used here that have a newer version to download. */
+  const outdatedPacks: string[] = [];
   const taken = new Set<string>();
   try {
     for (const pack of await knowledgePacks()) {
       const open = await openPack(pack).catch(() => null);
       if (!open || open.formatVersion < 2) continue;
       const data = await packFacts(pack.id, open).catch(() => ({ regions: [] as PackRegion[], facts: [] as PackFact[] }));
+      if (open.outdated && data.regions.some((r) => !taken.has(r.code))) outdatedPacks.push(pack.label);
       for (const r of data.regions) {
         if (taken.has(r.code)) continue;
         taken.add(r.code);
@@ -365,5 +386,5 @@ export async function loadAllPackFacts(): Promise<{ regions: PackRegion[]; facts
   } catch (e) {
     console.warn("[packs] loadAllPackFacts:", e instanceof Error ? e.message : String(e));
   }
-  return { regions, facts };
+  return { regions, facts, outdatedPacks };
 }

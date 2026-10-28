@@ -31,7 +31,8 @@
       "active": "Activo",
       "cached": "Descargado",
       "downloading": "Descargando",
-      "notOnDisk": "No descargado"
+      "notOnDisk": "No descargado",
+      "outdated": "Actualización disponible"
     },
     "calculating": "Calculando…",
     "compat": {
@@ -61,7 +62,9 @@
     "removeModelMessage": "Esto elimina el archivo local de pesos y libera {{size}}.",
     "removeModelTitle": "¿Eliminar los pesos del modelo?",
     "retryDownload": "🔄 Reintentar descarga",
-    "selectUse": "🔘 Seleccionar y usar"
+    "selectUse": "🔘 Seleccionar y usar",
+    "updateAsset": "⬆️ Actualizar",
+    "outdatedNote": "Hay una versión más nueva de este pack. Mientras tanto se sigue usando la que tienes, también sin conexión; la nueva solo la reemplaza cuando termina de descargarse y se comprueba."
   },
   "chatHeader": {
     "cycleTone": "Cambiar el tono del asistente",

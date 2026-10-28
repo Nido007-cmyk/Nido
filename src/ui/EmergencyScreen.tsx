@@ -17,7 +17,7 @@ import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { loadAllPackFacts } from "../rag/packs";
-import { emergencyCard, emergencyRegions, type FactLang, type PackFact, type PackRegion } from "../rag/packFacts";
+import { emergencyCard, emergencyRegions, outdatedPackNote, type FactLang, type PackFact, type PackRegion } from "../rag/packFacts";
 import { getEmergencyRegion, setEmergencyRegion } from "../models/settings";
 import { QUICK_GUIDES } from "./emergency/quickGuides";
 
@@ -39,7 +39,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
   const { t, i18n } = useTranslation();
   const lang = toFactLang(i18n.resolvedLanguage ?? i18n.language);
 
-  const [data, setData] = useState<{ regions: PackRegion[]; facts: PackFact[] } | null>(null);
+  const [data, setData] = useState<{ regions: PackRegion[]; facts: PackFact[]; outdatedPacks: string[] } | null>(null);
   const [code, setCode] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [question, setQuestion] = useState("");
@@ -178,6 +178,14 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
           </Text>
         )}
 
+        {card && data && data.outdatedPacks.length > 0 && (
+          // 0.1.57: the numbers come from an older pack kept on the phone.
+          <Pressable onPress={onOpenLibrary} style={styles.outdated} accessibilityRole="button" testID="emergency-outdated">
+            <NidoIcon name="warning" size={14} color={colors.text.accentAmber} />
+            <Text style={styles.outdatedText}>{data.outdatedPacks.map((p) => outdatedPackNote(lang, p)).join("\n")}</Text>
+          </Pressable>
+        )}
+
         <Text style={styles.disclaimer}>{t("emergency.disclaimer")}</Text>
 
         <View style={styles.card}>
@@ -290,6 +298,17 @@ const getStyles = (colors: Colors, typography: Typography) =>
     },
     cardTitle: { ...typography.ui.title, color: colors.text.heading },
     note: { ...typography.ui.subtext, color: colors.text.secondary },
+    outdated: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 8,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.amber.border,
+      backgroundColor: colors.amber.bgSubtle,
+    },
+    outdatedText: { ...typography.ui.subtext, color: colors.text.primary, flex: 1 },
     primaryBtn: {
       minHeight: 44,
       borderRadius: 12,
