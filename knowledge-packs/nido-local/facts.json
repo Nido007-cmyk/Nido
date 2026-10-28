@@ -400,6 +400,180 @@
     "são paulo",
     "rio de janeiro"
    ]
+  },
+  "GQ": {
+   "names": {
+    "es": "Guinea Ecuatorial",
+    "en": "Equatorial Guinea",
+    "pt": "Guiné Equatorial"
+   },
+   "in": {
+    "es": "en Guinea Ecuatorial",
+    "en": "in Equatorial Guinea",
+    "pt": "na Guiné Equatorial"
+   },
+   "aliases": [
+    "guinea ecuatorial",
+    "equatorial guinea",
+    "guiné equatorial",
+    "malabo",
+    "bata"
+   ]
+  },
+  "AD": {
+   "names": {
+    "es": "Andorra",
+    "en": "Andorra",
+    "pt": "Andorra"
+   },
+   "in": {
+    "es": "en Andorra",
+    "en": "in Andorra",
+    "pt": "em Andorra"
+   },
+   "aliases": [
+    "andorra",
+    "andorra la vella",
+    "andorra la vieja"
+   ]
+  },
+  "PH": {
+   "names": {
+    "es": "Filipinas",
+    "en": "the Philippines",
+    "pt": "Filipinas"
+   },
+   "in": {
+    "es": "en Filipinas",
+    "en": "in the Philippines",
+    "pt": "nas Filipinas"
+   },
+   "aliases": [
+    "filipinas",
+    "philippines",
+    "manila"
+   ]
+  },
+  "FR": {
+   "names": {
+    "es": "Francia",
+    "en": "France",
+    "pt": "França"
+   },
+   "in": {
+    "es": "en Francia",
+    "en": "in France",
+    "pt": "na França"
+   },
+   "aliases": [
+    "francia",
+    "france",
+    "frança",
+    "paris",
+    "parís"
+   ]
+  },
+  "IT": {
+   "names": {
+    "es": "Italia",
+    "en": "Italy",
+    "pt": "Itália"
+   },
+   "in": {
+    "es": "en Italia",
+    "en": "in Italy",
+    "pt": "na Itália"
+   },
+   "aliases": [
+    "italia",
+    "italy",
+    "itália",
+    "roma",
+    "rome"
+   ]
+  },
+  "DE": {
+   "names": {
+    "es": "Alemania",
+    "en": "Germany",
+    "pt": "Alemanha"
+   },
+   "in": {
+    "es": "en Alemania",
+    "en": "in Germany",
+    "pt": "na Alemanha"
+   },
+   "aliases": [
+    "alemania",
+    "germany",
+    "alemanha",
+    "deutschland",
+    "berlin",
+    "berlín"
+   ]
+  },
+  "GB": {
+   "names": {
+    "es": "Reino Unido",
+    "en": "the United Kingdom",
+    "pt": "Reino Unido"
+   },
+   "in": {
+    "es": "en Reino Unido",
+    "en": "in the United Kingdom",
+    "pt": "no Reino Unido"
+   },
+   "aliases": [
+    "reino unido",
+    "united kingdom",
+    "uk",
+    "inglaterra",
+    "england",
+    "gran bretana",
+    "gran bretaña",
+    "great britain",
+    "londres",
+    "london"
+   ]
+  },
+  "CA": {
+   "names": {
+    "es": "Canadá",
+    "en": "Canada",
+    "pt": "Canadá"
+   },
+   "in": {
+    "es": "en Canadá",
+    "en": "in Canada",
+    "pt": "no Canadá"
+   },
+   "aliases": [
+    "canada",
+    "canadá",
+    "toronto",
+    "vancouver",
+    "ottawa"
+   ]
+  },
+  "AU": {
+   "names": {
+    "es": "Australia",
+    "en": "Australia",
+    "pt": "Austrália"
+   },
+   "in": {
+    "es": "en Australia",
+    "en": "in Australia",
+    "pt": "na Austrália"
+   },
+   "aliases": [
+    "australia",
+    "austrália",
+    "sidney",
+    "sydney",
+    "melbourne",
+    "canberra"
+   ]
   }
  },
  "facts": [
@@ -1304,6 +1478,324 @@
     "url": "https://www.parana.pr.gov.br/Audio/193-em-quais-ocorrencias-o-numero-do-Corpo-de-Bombeiros-Militar-deve-ser-acionado",
     "quote": "193",
     "checked": "2026-10-27"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "GQ",
+   "value": "112",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Departamento de Estado de EE. UU., información del país (Guinea Ecuatorial)",
+    "url": "https://travel.state.gov/content/travel/en/international-travel/International-Travel-Country-Information-Pages/EquatorialGuinea.html",
+    "quote": "Dial 112 and 115 for fire related and medical emergencies.",
+    "checked": "2026-10-28"
+   },
+   "note": {
+    "es": "también el 115; el Departamento de Estado avisa de que estos números a menudo no están operativos",
+    "en": "also 115; the U.S. Department of State warns that these numbers are often not operational",
+    "pt": "também o 115; o Departamento de Estado dos EUA avisa que estes números muitas vezes não estão operacionais"
+   }
+  },
+  {
+   "key": "emergency.medical",
+   "region": "GQ",
+   "value": "115",
+   "label": {
+    "es": "emergencias médicas",
+    "en": "medical emergencies",
+    "pt": "emergências médicas"
+   },
+   "source": {
+    "title": "Departamento de Estado de EE. UU., información del país (Guinea Ecuatorial)",
+    "url": "https://travel.state.gov/content/travel/en/international-travel/International-Travel-Country-Information-Pages/EquatorialGuinea.html",
+    "quote": "Dial 112 and 115 for fire related and medical emergencies.",
+    "checked": "2026-10-28"
+   },
+   "note": {
+    "es": "también el 112; el Departamento de Estado avisa de que estos números a menudo no están operativos",
+    "en": "also 112; the U.S. Department of State warns that these numbers are often not operational",
+    "pt": "também o 112; o Departamento de Estado dos EUA avisa que estes números muitas vezes não estão operacionais"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "GQ",
+   "value": "114",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Departamento de Estado de EE. UU., información del país (Guinea Ecuatorial)",
+    "url": "https://travel.state.gov/content/travel/en/international-travel/International-Travel-Country-Information-Pages/EquatorialGuinea.html",
+    "quote": "Dial 113 and 114 for law enforcement related emergencies.",
+    "checked": "2026-10-28"
+   },
+   "note": {
+    "es": "también el 113; el Departamento de Estado avisa de que estos números a menudo no están operativos",
+    "en": "also 113; the U.S. Department of State warns that these numbers are often not operational",
+    "pt": "também o 113; o Departamento de Estado dos EUA avisa que estes números muitas vezes não estão operacionais"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "AD",
+   "value": "110",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Consulado General de España en Andorra la Vella, «Seguridad y otros aspectos»",
+    "url": "https://www.exteriores.gob.es/Consulados/andorra/es/ViajarA/Paginas/Seguridad-y-otros-aspectos.aspx",
+    "quote": "Policía: 110",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.medical",
+   "region": "AD",
+   "value": "116",
+   "label": {
+    "es": "emergencias médicas",
+    "en": "medical emergencies",
+    "pt": "emergências médicas"
+   },
+   "source": {
+    "title": "Consulado General de España en Andorra la Vella, «Seguridad y otros aspectos»",
+    "url": "https://www.exteriores.gob.es/Consulados/andorra/es/ViajarA/Paginas/Seguridad-y-otros-aspectos.aspx",
+    "quote": "Atención sanitaria urgente: 116",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "AD",
+   "value": "118",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Consulado General de España en Andorra la Vella, «Seguridad y otros aspectos»",
+    "url": "https://www.exteriores.gob.es/Consulados/andorra/es/ViajarA/Paginas/Seguridad-y-otros-aspectos.aspx",
+    "quote": "Bomberos/ambulancias: 118",
+    "checked": "2026-10-28"
+   },
+   "note": {
+    "es": "bomberos y ambulancias",
+    "en": "fire service and ambulances",
+    "pt": "bombeiros e ambulâncias"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "PH",
+   "value": "911",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Departamento del Interior y Gobierno Local de Filipinas (DILG), «One Number for All Emergencies: Unified 911 to Launch Nationwide»",
+    "url": "https://dilg.gov.ph/news/One-Number-for-All-Emergencies-Unified-911-to-Launch-Nationwide/NC-2025-1177",
+    "quote": "Beginning September 11, Filipinos facing emergencies will only need to dial one number: 911.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "FR",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Ministerio del Interior de Francia, «Les gestes qui sauvent»",
+    "url": "https://www.interieur.gouv.fr/actualites/actualites-du-ministere/gestes-qui-sauvent",
+    "quote": "Le 112 : numéro d'appel unique des urgences sur le territoire européen",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.medical",
+   "region": "FR",
+   "value": "15",
+   "label": {
+    "es": "emergencias médicas",
+    "en": "medical emergencies",
+    "pt": "emergências médicas"
+   },
+   "source": {
+    "title": "Ministerio del Interior de Francia, «Les gestes qui sauvent»",
+    "url": "https://www.interieur.gouv.fr/actualites/actualites-du-ministere/gestes-qui-sauvent",
+    "quote": "Le 15 : le Samu pour tout problème urgent de santé, c'est un secours médicalisé.",
+    "checked": "2026-10-28"
+   },
+   "note": {
+    "es": "SAMU",
+    "en": "SAMU",
+    "pt": "SAMU"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "FR",
+   "value": "17",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Ministerio del Interior de Francia, «Les gestes qui sauvent»",
+    "url": "https://www.interieur.gouv.fr/actualites/actualites-du-ministere/gestes-qui-sauvent",
+    "quote": "Le 17 : la police ou la gendarmerie pour tout problème de sécurité ou d'ordre public.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "FR",
+   "value": "18",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Ministerio del Interior de Francia, «Les gestes qui sauvent»",
+    "url": "https://www.interieur.gouv.fr/actualites/actualites-du-ministere/gestes-qui-sauvent",
+    "quote": "Le 18 : les sapeurs-pompiers pour tout problème de secours, notamment accident, incendie.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "IT",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Ministerio del Interior de Italia, «Numero di emergenza Unico Europeo 112»",
+    "url": "https://sdg.interno.gov.it/it/f5-numero-emergenza-unico-europeo-112",
+    "quote": "Puoi chiamare il numero di emergenza Unico Europeo, 112, gratuitamente da rete fissa o mobile",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "DE",
+   "value": "110",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Sitio oficial de la ciudad de Stuttgart, «Notdienste»",
+    "url": "https://www.stuttgart.de/service/notdienste/",
+    "quote": "Polizei, Unfall: Telefon 110",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "DE",
+   "value": "112",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Sitio oficial de la ciudad de Stuttgart, «Notdienste»",
+    "url": "https://www.stuttgart.de/service/notdienste/",
+    "quote": "Feuerwehr: Telefon 112",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.medical",
+   "region": "DE",
+   "value": "112",
+   "label": {
+    "es": "emergencias médicas",
+    "en": "medical emergencies",
+    "pt": "emergências médicas"
+   },
+   "source": {
+    "title": "Sitio oficial de la ciudad de Stuttgart, «Notdienste»",
+    "url": "https://www.stuttgart.de/service/notdienste/",
+    "quote": "Notarzt, Rettungsdienst: Telefon 112",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "GB",
+   "value": "999",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK, «999 and 112: the UK's national emergency numbers»",
+    "url": "https://gov.uk/guidance/999-and-112-the-uks-national-emergency-numbers",
+    "quote": "112 is the pan-European equivalent to 999 and can be used in the UK.",
+    "checked": "2026-10-28"
+   },
+   "note": {
+    "es": "también se puede usar el 112 en Reino Unido",
+    "en": "112 can also be used in the UK",
+    "pt": "também se pode usar o 112 no Reino Unido"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "CA",
+   "value": "911",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Canadá)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/canada",
+    "quote": "Call 911.",
+    "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "AU",
+   "value": "000",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Gobierno de Australia, Departamento de Infraestructura, «Emergency calls»",
+    "url": "https://www.infrastructure.gov.au/emergency-calls",
+    "quote": "Triple Zero (000) is the number most Australians will use to call police, fire or ambulance in an emergency situation.",
+    "checked": "2026-10-28"
    }
   }
  ]

@@ -4,6 +4,19 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+### Added
+- **NIDO Local: the emergency numbers table grows to 32 countries.** Nine
+  countries join the pack's checked facts table: Equatorial Guinea,
+  Andorra, the Philippines, France, Italy, Germany, the United Kingdom,
+  Canada and Australia. Every number keeps its official source, the exact
+  quote and the date it was checked. The new countries have no guides yet:
+  for them, NIDO answers from the verified table only. Japan stays out on
+  purpose, so it remains the example of a country NIDO has not checked and
+  will not guess. The rebuilt pack ships in knowledge-packs-v5 and its
+  catalog entry is re-signed.
+
 ## 0.1.57-alpha — 2026-10-28
 
 ### Fixed

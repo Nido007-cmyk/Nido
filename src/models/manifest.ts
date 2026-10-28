@@ -674,12 +674,12 @@ export const MODEL_CATALOG: CatalogModel[] = [
     format: "sqlite-pack",
     label: "NIDO Local: emergency numbers and alerts by country",
     filename: "corpus/nido-local.sqlite",
-    sizeBytes: 237568,
-    sha256: "02e1b594f58b4816d87b9758323b835515892a71c235679abcdee755ad823f24",
+    sizeBytes: 253952,
+    sha256: "af5fcf9d62265745c4c7d18cc5fce555b5f3f8ae5d5208b9d03d10b17ae2f37d",
     sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
-      "Checked emergency numbers for 23 countries in Latin America, Spain, Portugal and the US, each with its official source, plus what official alerts mean. Spanish and English. ~0.2MB.",
+      "Checked emergency numbers for 32 countries in the Americas, Europe, Africa, Asia and Oceania, each with its official source, plus what official alerts mean. Spanish and English. ~0.2MB.",
     required: false,
   },
   {
@@ -689,12 +689,12 @@ export const MODEL_CATALOG: CatalogModel[] = [
     format: "sqlite-pack",
     label: "NIDO Local (multilingual search)",
     filename: "corpus/nido-local-e5.sqlite",
-    sizeBytes: 237568,
-    sha256: "bac6511cbbfa1f9e326b0563f3959aaadbe1a88e496ceff8ffeef025ad2b29b4",
+    sizeBytes: 253952,
+    sha256: "f063922b72cdb50acdff8b737927e7d11c8ef4d2d9065d0c278d4099a1f828f0",
     sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local-e5.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
-      "Checked emergency numbers for 23 countries, each with its official source, plus what official alerts mean; searchable in Spanish, Portuguese and English. ~0.2MB.",
+      "Checked emergency numbers for 32 countries, each with its official source, plus what official alerts mean; searchable in Spanish, Portuguese and English. ~0.2MB.",
     required: false,
   },
   // Add more tested candidates / corpus packs here later (each needs a
