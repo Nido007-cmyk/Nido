@@ -272,10 +272,16 @@ class PackShareService {
 
     this.sendSessions.set(sessionId, session);
 
-    // Enviar OFFER
-    await this.sendFn(peerPkHex, "OFFER", sessionId, {
-      advertisement: session.advertisement,
-    });
+    // Enviar OFFER. 0.1.55: si no sale (contacto sin conexión), la sesión
+    // no se queda colgada como «oferta enviada»: se borra y se devuelve null.
+    try {
+      await this.sendFn(peerPkHex, "OFFER", sessionId, {
+        advertisement: session.advertisement,
+      });
+    } catch {
+      this.sendSessions.delete(sessionId);
+      return null;
+    }
 
     this.emit({ type: "transfer_updated", info: this.sendSessionToInfo(session) });
     return sessionId;

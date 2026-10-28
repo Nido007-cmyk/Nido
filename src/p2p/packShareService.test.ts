@@ -382,5 +382,18 @@ describe("0.1.55: compartir packs de verdad", () => {
     expect(events.some((e) => e.type === "offer_received")).toBe(false);
     expect(packShareService._getReceiveSession("sess-filt")).toBeUndefined();
   });
-});
 
+  it("si la oferta no sale, no queda una sesión colgada y offerPack devuelve null", async () => {
+    packShareService.setSendFunction(async () => {
+      throw new Error("Sin conexión con el contacto");
+    });
+    packShareService.setDataProvider(async () => ({
+      base64Data: Buffer.from("x").toString("base64"),
+      name: "P",
+      description: "",
+    }));
+    const id = await packShareService.offerPack("pack1", SENDER_PK);
+    expect(id).toBeNull();
+    expect(packShareService.listTransfers()).toHaveLength(0);
+  });
+});
