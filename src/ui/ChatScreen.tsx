@@ -5,6 +5,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { answerFromPackFacts } from "../rag/packs";
 import {
   View,
   Text,
@@ -877,7 +878,14 @@ export function ChatScreen({
     }
     lastTurnLangRef.current = uiLang;
     const smallTalkHit = kbQueryMeta === null ? matchSmallTalk(query, uiLang) : null;
-    const kbAnswer = kbQueryMeta !== null ? kbQueryMeta.answer : smallTalkHit?.text ?? null;
+    // 0.1.55: «¿a qué número llamo en Chile?» sale de los datos verificados
+    // del pack (fuente y fecha citadas), sin búsqueda ni modelo. Solo con un
+    // pack v2 instalado que cubra ese país; si no, el turno sigue igual.
+    const factsHit =
+      kbQueryMeta === null && smallTalkHit === null && !inertRouting
+        ? await answerFromPackFacts(query, uiLang)
+        : null;
+    const kbAnswer = kbQueryMeta !== null ? kbQueryMeta.answer : smallTalkHit?.text ?? factsHit?.text ?? null;
     if (kbAnswer !== null) {
       assistantText = kbAnswer;
       setMessages((prev) =>
@@ -924,7 +932,9 @@ export function ChatScreen({
         const sid = sessionId;
         const kbTitle = smallTalkHit
           ? smallTalkSessionTitle(smallTalkHit.lang)
-          : knowledgeSessionTitle(query, kbLocale);
+          : factsHit
+            ? factsHit.title
+            : knowledgeSessionTitle(query, kbLocale);
         await setSessionTitle(sid, kbTitle);
         await refreshSessions();
       }

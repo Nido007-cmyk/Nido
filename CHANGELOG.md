@@ -7,16 +7,27 @@ All notable changes to NIDO are recorded here. Versions follow
 ## Unreleased
 
 ### Added
-- **NIDO Local knowledge pack (first batch).** Guides by country, in Spanish
-  and English: the emergency numbers checked against an official source,
-  who issues warnings and what each official alert means — Cuba (Civil
-  Defense cyclone phases), Dominican Republic (9-1-1 and COE green, yellow
-  and red alerts), Puerto Rico (9-1-1, NWS watches and warnings) and Mexico
-  (911, the SIAT-CT hurricane colors and the SASMEX earthquake alert). 8
-  guides, about 0.1 MB, optional download; it can also be passed phone to
-  phone. Every guide cites its sources; for Cuba, whose Civil Defense
-  website could not be opened, the guide says so. Built in
-  knowledge-packs-v5; the catalog entry needs the maintainer's signature.
+- **NIDO Local knowledge pack: 23 countries.** Guides by country, in
+  Spanish and English, with the emergency numbers checked against an
+  official source: Cuba, Dominican Republic, Puerto Rico, Mexico, Guatemala,
+  Honduras, El Salvador, Nicaragua, Costa Rica, Panama, Colombia, Venezuela,
+  Ecuador, Peru, Bolivia, Chile, Argentina, Uruguay, Paraguay, Spain,
+  Portugal, Brazil and the United States. Where we could check it, also who
+  issues warnings and what each official alert means (Cuba's cyclone phases,
+  the COE alerts, NWS watches and warnings, Mexico's hurricane colors and
+  earthquake alert, Chile's SAE, Spain's ES-Alert, Brazil's Civil Defense
+  SMS, US Wireless Emergency Alerts). Optional download; it can also be
+  passed phone to phone. Built in knowledge-packs-v5; the catalog entry
+  needs the maintainer's signature.
+- **Emergency numbers answered from verified facts.** Ask "what number do I
+  call for an ambulance in Chile?" and, with NIDO Local installed, the answer
+  comes straight from the pack's facts table: the number you asked for first,
+  the others after, and the official source with the date it was checked. No
+  search ranking and no model in between, so it can't be made up.
+- **Weekly source check.** Every number in the packs is stored with the exact
+  quote from its official page; a weekly check reopens each page and flags
+  any quote that is gone, so a changed number is caught before the next
+  release.
 
 ## 0.1.54-alpha — 2026-10-23
 
