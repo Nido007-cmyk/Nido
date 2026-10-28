@@ -17,6 +17,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../theme/ThemeContext";
+import { NidoIcon } from "./icons/NidoIcon";
 import { impact, ImpactFeedbackStyle, notification, NotificationFeedbackType } from "../../services/haptics";
 
 export const PANIC_HOLD_MS = 3000;
@@ -79,6 +80,8 @@ export function PanicButton({ onWiped, onError }: Props) {
           overflow: "hidden",
           justifyContent: "center",
           alignItems: "center",
+          flexDirection: "row",
+          gap: 4,
           paddingHorizontal: 10,
         },
         fill: { position: "absolute", left: 0, top: 0, bottom: 0, backgroundColor: colors.crimson.border },
@@ -107,6 +110,8 @@ export function PanicButton({ onWiped, onError }: Props) {
         <Animated.View
           style={[styles.fill, { width: progress.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }) }]}
         />
+        {/* 0.1.56: a shield, not «SOS»: the Emergency tab is where you ask for help. */}
+        <NidoIcon name="security" size={14} color={colors.crimson[600]} />
         <Text style={styles.label}>{wiping ? t("panic.wiping") : t("panic.short")}</Text>
       </View>
     </Pressable>

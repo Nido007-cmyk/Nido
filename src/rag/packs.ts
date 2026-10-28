@@ -312,3 +312,30 @@ export async function answerFromPackFacts(text: string, lang: FactLang): Promise
   }
   return null;
 }
+
+/**
+ * 0.1.56: every verified fact of the installed v2 packs, for the Emergency
+ * tab. A country covered by two packs keeps the first pack's numbers (the
+ * catalog order), so one screen never mixes two sources. Never throws.
+ */
+export async function loadAllPackFacts(): Promise<{ regions: PackRegion[]; facts: PackFact[] }> {
+  const regions: PackRegion[] = [];
+  const facts: PackFact[] = [];
+  const taken = new Set<string>();
+  try {
+    for (const pack of await knowledgePacks()) {
+      const open = await openPack(pack).catch(() => null);
+      if (!open || open.formatVersion < 2) continue;
+      const data = await packFacts(pack.id, open).catch(() => ({ regions: [] as PackRegion[], facts: [] as PackFact[] }));
+      for (const r of data.regions) {
+        if (taken.has(r.code)) continue;
+        taken.add(r.code);
+        regions.push(r);
+        facts.push(...data.facts.filter((f) => f.region === r.code));
+      }
+    }
+  } catch (e) {
+    console.warn("[packs] loadAllPackFacts:", e instanceof Error ? e.message : String(e));
+  }
+  return { regions, facts };
+}

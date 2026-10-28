@@ -1678,10 +1678,66 @@
   "panic": {
     "buttonLabel": "Botão de pânico: segure 3 segundos para apagar tudo",
     "buttonHint": "Apaga todos os dados do NIDO: chats, contatos, chaves, memória e modelos. Não pode ser desfeito. Com o TalkBack, a ação de manter pressionado apaga na hora.",
-    "short": "SOS",
+    "short": "Apagar",
     "wiping": "Apagando",
     "failedTitle": "Não foi possível apagar tudo",
     "settingTitle": "Botão de pânico",
-    "settingDesc": "Mostra um botão SOS na tela principal. Segurá-lo por 3 segundos apaga todos os dados do NIDO de uma vez, sem pedir digital nem confirmação. Não pode ser desfeito; faça um backup antes se quiser guardar algo."
+    "settingDesc": "Mostra um botão de apagar (um escudo vermelho) na tela principal. Segurá-lo por 3 segundos apaga todos os dados do NIDO de uma vez, sem pedir digital nem confirmação. Não pode ser desfeito; faça um backup antes se quiser guardar algo."
+  },
+  "tabs": {
+    "chat": "Chat",
+    "emergency": "Emergência",
+    "library": "Biblioteca",
+    "nido": "NIDO",
+    "settings": "Ajustes"
+  },
+  "emergency": {
+    "title": "Emergência",
+    "changeCountry": "Mudar de país: {{name}}",
+    "chooseCountry": "Escolha seu país",
+    "call": "Ligar",
+    "callA11y": "Ligar para {{number}}, {{label}}",
+    "checked": "Verificado em {{date}} · {{source}}",
+    "noPackTitle": "Baixe o NIDO Local",
+    "noPackBody": "Para ver aqui os números de emergência verificados do seu país, baixe o pacote NIDO Local (cerca de 0,2 MB).",
+    "openLibrary": "Ir para a Biblioteca",
+    "noCountryTitle": "{{name}} ainda não está no NIDO Local",
+    "noCountryBody": "Escolha outro país ou pergunte no chat.",
+    "pickCountry": "Escolher país",
+    "describeLabel": "Descreva o que está acontecendo",
+    "describePlaceholder": "Ex.: meu filho engasgou",
+    "describeHint": "O NIDO responde com os guias do celular, sem internet.",
+    "ask": "Perguntar",
+    "quickGuides": "Guias rápidos",
+    "disclaimer": "Se alguém está em perigo, ligue primeiro. O NIDO não substitui os serviços de emergência.",
+    "close": "Fechar",
+    "guides": {
+      "cpr": "RCP",
+      "bleeding": "Hemorragia",
+      "choking": "Engasgo",
+      "burns": "Queimaduras",
+      "earthquake": "Terremoto",
+      "hurricane": "Furacão"
+    },
+    "questions": {
+      "cpr": "Como faço RCP em um adulto?",
+      "bleeding": "Como paro um sangramento grave?",
+      "choking": "O que faço se alguém engasgar?",
+      "burns": "O que faço com uma queimadura?",
+      "earthquake": "O que faço durante um terremoto?",
+      "hurricane": "Como me preparo para um furacão?"
+    }
+  },
+  "library": {
+    "title": "Biblioteca",
+    "tabDocuments": "Meus documentos",
+    "tabLearn": "Aprender",
+    "tabPacks": "Pacotes",
+    "packsHint": "Os pacotes de conhecimento são baixados e removidos em Ajustes › Sua biblioteca.",
+    "openPacks": "Abrir pacotes de conhecimento",
+    "learnTitle": "Aprenda a usar o NIDO",
+    "learnBody": "Um guia curto com exemplos que você pode tocar para testar cada função.",
+    "openGuide": "Abrir o guia",
+    "promptIdeas": "Ideias de prompts"
   }
 }

@@ -130,6 +130,10 @@ import type { Typography } from "./theme/typography";
 import { spacing, radii } from "./theme/spacing";
 import { calmSpacing, calmRadii, calmType, calmShadows } from "./theme/calm";
 import { displayLang, formatInt } from "../utils/safeFormat";
+import { BottomTabBar } from "./navigation/BottomTabBar";
+import type { MainTab } from "./navigation/tabs";
+import { EmergencyScreen } from "./EmergencyScreen";
+import { LibraryScreen } from "./LibraryScreen";
 
 interface Message {
   id: string;
@@ -205,6 +209,10 @@ export function ChatScreen({
   const [showMemoryManager, setShowMemoryManager] = useState(false);
   const [showExecutionTelemetry, setShowExecutionTelemetry] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  // 0.1.56: barra inferior. Ajustes y NIDO siguen siendo showSettings /
+  // showNido (sus efectos dependen de ellos); Emergencia y Biblioteca son
+  // pestañas nuevas. La pestaña visible sale de effectiveTab, más abajo.
+  const [activeTab, setActiveTab] = useState<MainTab>("chat");
   // 0.1.46: botón de pánico (opt-in en Ajustes). Se relee al cerrar Ajustes.
   // Cargar los interruptores aquí, al arrancar, también deja listos los del
   // P2P (saludo privado, v5) antes de la primera reconexión.
@@ -720,6 +728,7 @@ export function ChatScreen({
     if (!action) return;
     if (action.action === "p2p") {
       setShowNido(true);
+      setActiveTab("nido");
       return;
     }
     await resetToNewChat();
@@ -1700,14 +1709,56 @@ export function ChatScreen({
     }
   }, [messages, generating, send, scrollToBottom]);
 
+  // Cerrar Ajustes: lo que antes hacía solo su botón LISTO, ahora también
+  // al cambiar de pestaña (voz, investigación profunda, modelo elegido).
+  const closeSettings = async () => {
+    setShowSettings(false);
+    getVoiceInputEnabled().then(setVoiceInputEnabledState);
+    // Deep Research is switched in Settings only.
+    const drMode = await getDeepResearchMode();
+    deepResearchModeRef.current = drMode;
+    setDeepResearchEnabled(drMode);
+    // Settings loads a newly chosen LLM itself; only re-run the full
+    // init (with its loading screen) if what's loaded doesn't match.
+    const llm = await resolveActiveModel("llm");
+    if (ready && llamaEngine.getModelInfo()?.filename === llm.filename) {
+      setActiveModel(llm);
+    } else {
+      initModels();
+    }
+  };
+
+  const effectiveTab: MainTab = showSettings ? "settings" : showNido ? "nido" : activeTab;
+
+  const selectTab = (tab: MainTab) => {
+    if (showSettings && tab !== "settings") void closeSettings();
+    setShowNido(tab === "nido");
+    setShowSettings(tab === "settings");
+    setShowGuide(false);
+    setShowKnowledgeBase(false);
+    setShowMemoryManager(false);
+    setShowExecutionTelemetry(false);
+    setShowAbout(false);
+    setDrawerOpen(false);
+    setActiveTab(tab);
+  };
+
+  const withTabs = (node: React.ReactNode) => (
+    <View style={styles.flex}>
+      <View style={styles.flex}>{node}</View>
+      <BottomTabBar active={effectiveTab} onSelect={selectTab} />
+    </View>
+  );
+
   const drawerItems: DrawerItem[] = [
+    { key: "emergency", icon: "warning", label: t("tabs.emergency"), onPress: () => selectTab("emergency") },
     { key: "guide", icon: "compass", label: t("guide.drawer"), onPress: () => setShowGuide(true) },
     { key: "prompts", icon: "ideas", label: t("chatScreen.drawerItems.prompts"), onPress: () => setShowPromptIdeas(true) },
-    { key: "knowledge", icon: "knowledge", label: t("chatScreen.drawerItems.myDocuments"), onPress: () => setShowKnowledgeBase(true) },
+    { key: "knowledge", icon: "knowledge", label: t("chatScreen.drawerItems.myDocuments"), onPress: () => selectTab("library") },
     { key: "memory", icon: "memory", label: t("chatScreen.drawerItems.memory"), onPress: () => setShowMemoryManager(true) },
-    { key: "settings", icon: "settings", label: t("chatScreen.drawerItems.settings"), onPress: () => setShowSettings(true) },
+    { key: "settings", icon: "settings", label: t("chatScreen.drawerItems.settings"), onPress: () => selectTab("settings") },
     { key: "telemetry", icon: "telemetry", label: t("chatScreen.drawerItems.telemetry"), onPress: () => setShowExecutionTelemetry(true) },
-    { key: "nido", icon: "pairing", label: "NIDO", onPress: () => setShowNido(true) },
+    { key: "nido", icon: "pairing", label: "NIDO", onPress: () => selectTab("nido") },
     { key: "about", icon: "info", label: t("chatScreen.drawerItems.about"), onPress: () => setShowAbout(true) },
   ];
 
@@ -1720,28 +1771,17 @@ export function ChatScreen({
   }
 
   if (showSettings) {
-    return (
+    return withTabs(
       <ModelSetupScreen
         mode="optional"
         onOpenGuide={() => {
-          setShowSettings(false);
+          void closeSettings();
+          setActiveTab("library");
           setShowGuide(true);
         }}
         onClose={async () => {
-          setShowSettings(false);
-          getVoiceInputEnabled().then(setVoiceInputEnabledState);
-          // Deep Research is switched in Settings only.
-          const drMode = await getDeepResearchMode();
-          deepResearchModeRef.current = drMode;
-          setDeepResearchEnabled(drMode);
-          // Settings loads a newly chosen LLM itself; only re-run the full
-          // init (with its loading screen) if what's loaded doesn't match.
-          const llm = await resolveActiveModel("llm");
-          if (ready && llamaEngine.getModelInfo()?.filename === llm.filename) {
-            setActiveModel(llm);
-          } else {
-            initModels();
-          }
+          setActiveTab("chat");
+          await closeSettings();
         }}
         onRelaunchWizard={onRelaunchWizard}
       />
@@ -1770,11 +1810,46 @@ export function ChatScreen({
   ) : null;
 
   if (showNido) {
-    return <NidoScreen onClose={() => setShowNido(false)} panicSlot={panicNode} />;
+    return withTabs(
+      <NidoScreen
+        onClose={() => {
+          setShowNido(false);
+          setActiveTab("chat");
+        }}
+        panicSlot={panicNode}
+      />
+    );
   }
 
   if (showAbout) {
     return <AboutScreen onClose={() => setShowAbout(false)} />;
+  }
+
+  if (activeTab === "emergency") {
+    return withTabs(
+      <EmergencyScreen
+        onAsk={(question) => {
+          // Como las ideas y los ejemplos de la guía: se escribe, no se envía solo.
+          selectTab("chat");
+          updateInput(question, "example");
+          requestAnimationFrame(() => inputRef.current?.focus());
+        }}
+        onOpenLibrary={() => selectTab("library")}
+      />
+    );
+  }
+
+  if (activeTab === "library") {
+    return withTabs(
+      <LibraryScreen
+        onOpenGuide={() => setShowGuide(true)}
+        onOpenPromptIdeas={() => {
+          selectTab("chat");
+          setShowPromptIdeas(true);
+        }}
+        onOpenPacks={() => selectTab("settings")}
+      />
+    );
   }
 
   const isDeepActive = deepResearchEnabled || deepResearchActive;
@@ -2279,6 +2354,8 @@ export function ChatScreen({
           />
         )}
       </View>
+
+      {keyboardHeight === 0 && <BottomTabBar active="chat" onSelect={selectTab} />}
 
       <Drawer
         open={drawerOpen}
