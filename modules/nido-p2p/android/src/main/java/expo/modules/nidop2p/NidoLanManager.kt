@@ -7,6 +7,8 @@
 package expo.modules.nidop2p
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
@@ -80,6 +82,13 @@ class NidoLanManager(
 
     private val ADDRESS_RE = Regex("^LAN:(\\d{1,3}(?:\\.\\d{1,3}){3}):(\\d{1,5})$")
 
+    /**
+     * 0.1.55 (P-06): interfaces del punto de acceso que crea el propio
+     * teléfono (los nombres cambian por fabricante). Todas son de la radio
+     * Wi-Fi: nunca la de datos móviles (rmnet*, ccmni*, pdp*…).
+     */
+    private val HOTSPOT_IFACE_RE = Regex("^(ap|swlan|softap|wlan)\\d+$")
+
     fun isLanAddress(address: String): Boolean = address.startsWith(ADDRESS_PREFIX)
 
     /** true si la IPv4 es privada o link-local (nunca internet). */
@@ -144,6 +153,15 @@ class NidoLanManager(
   /** Arranca servidor + anuncio + descubrimiento. Idempotente. */
   @Synchronized
   fun start() {
+    // 0.1.55 (P-06): si cambió la red Wi-Fi (otra IP), el servidor enlazado
+    // a la IP vieja ya no recibe nada: se reabre (y se re-anuncia con el
+    // puerto nuevo).
+    val s = server
+    if (s != null && s.inetAddress?.isAnyLocalAddress == false && s.inetAddress != preferredBindAddress()) {
+      Log.i(TAG, "la red Wi-Fi cambió: se reabre el servidor LAN")
+      unregisterService()
+      stopServer()
+    }
     if (server == null) startServer()
     if (registrationListener == null) registerService()
     if (discoveryListener == null) startNsdDiscovery()
@@ -185,16 +203,62 @@ class NidoLanManager(
 
   // ------------------------------------------------------------ servidor
 
+  /**
+   * 0.1.55 (P-06): la IPv4 en la que escuchar. Primero la de la red Wi-Fi a
+   * la que está conectado el teléfono; si no hay, la del punto de acceso que
+   * crea él mismo. null si no hay ninguna de las dos.
+   */
+  private fun preferredBindAddress(): Inet4Address? {
+    try {
+      val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+      @Suppress("DEPRECATION")
+      val networks = if (cm != null) cm.allNetworks else emptyArray()
+      for (n in networks) {
+        if (cm == null) break
+        val caps = cm.getNetworkCapabilities(n) ?: continue
+        if (!caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) continue
+        val lp = cm.getLinkProperties(n) ?: continue
+        for (la in lp.linkAddresses) {
+          val a = la.address
+          if (a is Inet4Address && isLocalIpv4(a)) return a
+        }
+      }
+    } catch (_: Exception) {
+    }
+    try {
+      val ifaces = NetworkInterface.getNetworkInterfaces()?.toList() ?: emptyList()
+      for (ni in ifaces) {
+        if (!ni.isUp || ni.isLoopback || !HOTSPOT_IFACE_RE.matches(ni.name)) continue
+        for (a in ni.inetAddresses.toList()) {
+          if (a is Inet4Address && isLocalIpv4(a)) return a
+        }
+      }
+    } catch (_: Exception) {
+    }
+    return null
+  }
+
   private fun startServer() {
     val s = ServerSocket()
     s.reuseAddress = true
-    s.bind(InetSocketAddress(0)) // puerto efímero
+    // 0.1.55 (P-06): escuchar SOLO en la interfaz Wi-Fi (o en el punto de
+    // acceso propio), no en todas: así el servidor ni siquiera existe en la
+    // interfaz de datos móviles. Si no se encuentra (fabricante con nombres
+    // raros), se mantiene lo de antes: todas las interfaces, con el filtro
+    // de IP privada y misma subred de acceptLoop.
+    val bindTo = preferredBindAddress()
+    if (bindTo != null) {
+      s.bind(InetSocketAddress(bindTo, 0)) // puerto efímero
+    } else {
+      Log.w(TAG, "sin interfaz Wi-Fi ni punto de acceso identificados: se escucha en todas (con filtro de red local)")
+      s.bind(InetSocketAddress(0))
+    }
     server = s
     val t = Thread({ acceptLoop(s) }, "nido-lan-accept")
     t.isDaemon = true
     acceptThread = t
     t.start()
-    Log.i(TAG, "servidor LAN escuchando en el puerto ${s.localPort}")
+    Log.i(TAG, "servidor LAN escuchando en ${s.inetAddress?.hostAddress}:${s.localPort}")
   }
 
   private fun stopServer() {
