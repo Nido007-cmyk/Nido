@@ -13,8 +13,9 @@ All notable changes to NIDO are recorded here. Versions follow
     their source and date. "Call" opens the phone's dialer with the number
     typed in. "Describe what's happening" and quick guides (CPR, bleeding,
     choking, burns, earthquake, hurricane) write the question into the chat.
-  - **Library** (new) gathers your documents, the guide, prompt ideas and the
-    way to the knowledge packs.
+  - **Library** (new) gathers the knowledge packs (download, remove,
+    multilingual search), your documents, the guide and prompt ideas. The
+    packs are still in Settings too.
   - **Settings** is grouped into nine sections (security, assistant, models,
     memory, appearance, backup, diagnostics, help, danger zone) and has a
     search box. The security check, network log, crash diagnostics, agent
@@ -22,7 +23,8 @@ All notable changes to NIDO are recorded here. Versions follow
     About. Settings also opens My memory, the execution telemetry, About and
     the backup key screen.
   - **Chat:** tone and deep research are chips next to the input. Deep
-    research can now be switched on from the chat too.
+    research can now be switched on from the chat too. An emergency-number
+    answer comes with "Call" buttons; they open the dialer.
   - **Chat history** has a search box.
   - **Wipe button:** now a red shield labelled "Wipe" instead of "SOS", so it
     isn't mistaken for asking for help.

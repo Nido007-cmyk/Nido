@@ -37,6 +37,8 @@ export interface PackFact {
 
 export interface FactsAnswer {
   text: string;
+  /** 0.1.56: the numbers in the order the text gives them, for "Call" buttons. */
+  calls: Array<{ value: string; label: string; tel: string }>;
   region: string;
   facts: PackFact[];
   /** Short session title ("Emergencias en Chile"). */
@@ -186,7 +188,9 @@ export function composeFactsAnswer(text: string, lang: FactLang, regions: PackRe
     if (!prev || f.checked < prev) sources.set(f.sourceTitle, f.checked);
   }
   out.push("", ...[...sources].map(([title, checked]) => `${t.source}: ${title} (${t.checked} ${checked}).`));
-  return { text: out.join("\n"), region: region.code, facts: mine, title: t.title(name) };
+  const ordered = [...first, ...rest];
+  const calls = ordered.map((f) => ({ value: f.value, label: f.label[lang] ?? f.label.en ?? f.key, tel: telUri(f.value) }));
+  return { text: out.join("\n"), calls, region: region.code, facts: mine, title: t.title(name) };
 }
 
 // ---------------------------------------------------------------------------

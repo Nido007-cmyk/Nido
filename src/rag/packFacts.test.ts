@@ -61,6 +61,7 @@ describe("datos verificados de los packs (0.1.55)", () => {
     expect(a.text).toContain("• 133 — policía");
     expect(a.text).toMatch(/Fuente: Gobierno de Australia \(Smartraveller\), consejos de viaje \(Chile\) \(comprobado el \d{4}-\d{2}-\d{2}\)\./);
     expect(a.title).toBe("Emergencias en Chile");
+    expect(a.calls.map((c) => c.tel)).toEqual(["tel:131", "tel:133", "tel:132"]);
   });
 
   it("con un número único, ese es la respuesta para cualquier servicio", () => {

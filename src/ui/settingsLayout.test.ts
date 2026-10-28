@@ -79,6 +79,17 @@ describe("Ajustes por grupos (0.1.56)", () => {
     expect(CHAT.indexOf("if (showExecutionTelemetry)")).toBeLessThan(CHAT.indexOf("  if (showSettings) {"));
   });
 
+  it("la Biblioteca muestra los paquetes con la misma lógica que Ajustes", () => {
+    const LIB = readFileSync(new URL("./LibraryScreen.tsx", import.meta.url), "utf8");
+    expect(LIB).toContain('<ModelSetupScreen mode="optional" section="knowledge"');
+    expect(SETTINGS).toContain('section === "knowledge"');
+  });
+
+  it("la respuesta de números de emergencia trae botones para llamar", () => {
+    expect(CHAT).toContain("factsHit?.calls");
+    expect(CHAT).toContain("Linking.openURL(c.tel)");
+  });
+
   it("tono e investigación están junto al cuadro de texto", () => {
     expect(CHAT).toContain("chatScreen.toneChip");
     expect(CHAT).toContain("chatScreen.researchChip");

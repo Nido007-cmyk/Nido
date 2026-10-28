@@ -18,6 +18,7 @@ import {
   AppState,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Linking,
 } from "react-native";
 import { VaultOfferBanner } from "./VaultOfferBanner";
 import { PanicButton } from "./components/PanicButton";
@@ -156,6 +157,8 @@ interface Message {
   timedOut?: boolean;
   interruptedByBackground?: boolean;
   feedback?: "up" | "down" | null;
+  /** 0.1.56: "Call" buttons under an emergency-number answer (verified facts). */
+  calls?: Array<{ value: string; label: string; tel: string }>;
 }
 
 const VERBATIM_MESSAGE_COUNT = 6;
@@ -910,7 +913,11 @@ export function ChatScreen({
     if (kbAnswer !== null) {
       assistantText = kbAnswer;
       setMessages((prev) =>
-        prev.map((m) => (m.id === assistantId ? { ...m, text: kbAnswer } : m))
+        prev.map((m) =>
+          m.id === assistantId
+            ? { ...m, text: kbAnswer, calls: kbQueryMeta === null && !smallTalkHit ? factsHit?.calls : undefined }
+            : m
+        )
       );
       notification(NotificationFeedbackType.Success);
 
@@ -1862,7 +1869,6 @@ export function ChatScreen({
           selectTab("chat");
           setShowPromptIdeas(true);
         }}
-        onOpenPacks={() => selectTab("settings")}
       />
     );
   }
@@ -2013,6 +2019,33 @@ export function ChatScreen({
                       )
                     )}
                   </>
+                )}
+
+                {item.calls && item.calls.length > 0 && (
+                  <View style={styles.callRow}>
+                    {item.calls.map((c, i) => (
+                      <Pressable
+                        key={`${c.tel}-${i}`}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("emergency.callA11y", { number: c.value, label: c.label })}
+                        onPress={() => {
+                          impact(ImpactFeedbackStyle.Medium);
+                          // Abre el marcador con el número escrito; la llamada la hace la persona.
+                          void Linking.openURL(c.tel).catch(() => {});
+                        }}
+                        style={[
+                          styles.callBtn,
+                          i === 0
+                            ? { backgroundColor: colors.crimson[500], borderColor: colors.crimson[500] }
+                            : { backgroundColor: colors.bg.surface, borderColor: colors.border.default },
+                        ]}
+                      >
+                        <Text style={[styles.callBtnText, { color: i === 0 ? colors.text.inverse : colors.crimson[600] }]}>
+                          {`${t("emergency.call")} ${c.value}`}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
                 )}
 
                 {item.citations && item.citations.length > 0 && (
@@ -2682,6 +2715,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   stagedText: { flexShrink: 1, fontSize: 14, fontWeight: "600" },
   stagedDismiss: { padding: 4 },
   stagedHint: { fontSize: 12, paddingHorizontal: 4 },
+  callRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
+  callBtn: { minHeight: 44, paddingHorizontal: 16, borderRadius: 22, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  callBtnText: { ...typography.ui.titleSm },
   modeChips: { flexDirection: "row", gap: 8, marginBottom: 8, flexWrap: "wrap" },
   modeChip: {
     minHeight: 36,

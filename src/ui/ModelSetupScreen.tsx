@@ -85,6 +85,8 @@ type OptionalProps = {
   onOpenMemory?: () => void;
   onOpenTelemetry?: () => void;
   onOpenAbout?: () => void;
+  /** 0.1.56: only the knowledge packs (the Library tab embeds them). */
+  section?: "knowledge";
 };
 
 /**
@@ -427,6 +429,18 @@ export function ModelSetupScreen(props: Props) {
 
   if (showBackupScreen) {
     return <BackupScreen onClose={() => setShowBackupScreen(false)} />;
+  }
+
+  // 0.1.56: Biblioteca › Packs: the same download / remove logic, without the rest of Settings.
+  if ((props as OptionalProps).section === "knowledge") {
+    return (
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.accordionScroll}>
+          <CorpusSettingsTab corpusItems={CORPUS_CATALOG} getRow={getRow} download={download} remove={remove} />
+        </ScrollView>
+        {toast && <Toast message={toast} onHide={() => setToast(null)} />}
+      </View>
+    );
   }
 
   // 0.1.56: grupos con título y buscador. Con búsqueda, los títulos de grupo

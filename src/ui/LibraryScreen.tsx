@@ -5,8 +5,8 @@
  *
  * 0.1.56 — Library tab: your documents, learning NIDO, and the way to the
  * knowledge packs. It reuses the existing pieces (PersonalDocumentsManager,
- * the user guide, the prompt ideas, Settings › Your library) so no control
- * changes behaviour; only where it lives.
+ * the user guide, the prompt ideas and Settings' knowledge-pack list, embedded)
+ * so no control changes behaviour; only where it lives.
  */
 import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -16,26 +16,25 @@ import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { PersonalDocumentsManager } from "./PersonalDocumentsManager";
+import { ModelSetupScreen } from "./ModelSetupScreen";
 
 type Section = "documents" | "learn" | "packs";
 
 interface Props {
   onOpenGuide: () => void;
   onOpenPromptIdeas: () => void;
-  /** Settings › Your library (download / remove knowledge packs). */
-  onOpenPacks: () => void;
 }
 
-export function LibraryScreen({ onOpenGuide, onOpenPromptIdeas, onOpenPacks }: Props) {
+export function LibraryScreen({ onOpenGuide, onOpenPromptIdeas }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
-  const [section, setSection] = useState<Section>("documents");
+  const [section, setSection] = useState<Section>("packs");
 
   const tabs: Array<{ key: Section; label: string }> = [
+    { key: "packs", label: t("library.tabPacks") },
     { key: "documents", label: t("library.tabDocuments") },
     { key: "learn", label: t("library.tabLearn") },
-    { key: "packs", label: t("library.tabPacks") },
   ];
 
   return (
@@ -62,38 +61,32 @@ export function LibraryScreen({ onOpenGuide, onOpenPromptIdeas, onOpenPacks }: P
         })}
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-        {section === "documents" && <PersonalDocumentsManager />}
+      {section === "packs" ? (
+        // Same download / remove / multilingual-search logic as Settings, embedded.
+        <View style={styles.flex}>
+          <ModelSetupScreen mode="optional" section="knowledge" onClose={() => {}} />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+          {section === "documents" && <PersonalDocumentsManager />}
 
-        {section === "learn" && (
-          <View style={styles.card}>
-            <View style={styles.cardHead}>
-              <NidoIcon name="compass" size={20} color={colors.emerald[500]} />
-              <Text style={styles.cardTitle}>{t("library.learnTitle")}</Text>
+          {section === "learn" && (
+            <View style={styles.card}>
+              <View style={styles.cardHead}>
+                <NidoIcon name="compass" size={20} color={colors.emerald[500]} />
+                <Text style={styles.cardTitle}>{t("library.learnTitle")}</Text>
+              </View>
+              <Text style={styles.note}>{t("library.learnBody")}</Text>
+              <Pressable onPress={onOpenGuide} style={styles.primaryBtn} accessibilityRole="button">
+                <Text style={styles.primaryBtnText}>{t("library.openGuide")}</Text>
+              </Pressable>
+              <Pressable onPress={onOpenPromptIdeas} style={styles.secondaryBtn} accessibilityRole="button">
+                <Text style={styles.secondaryBtnText}>{t("library.promptIdeas")}</Text>
+              </Pressable>
             </View>
-            <Text style={styles.note}>{t("library.learnBody")}</Text>
-            <Pressable onPress={onOpenGuide} style={styles.primaryBtn} accessibilityRole="button">
-              <Text style={styles.primaryBtnText}>{t("library.openGuide")}</Text>
-            </Pressable>
-            <Pressable onPress={onOpenPromptIdeas} style={styles.secondaryBtn} accessibilityRole="button">
-              <Text style={styles.secondaryBtnText}>{t("library.promptIdeas")}</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {section === "packs" && (
-          <View style={styles.card}>
-            <View style={styles.cardHead}>
-              <NidoIcon name="knowledge" size={20} color={colors.emerald[500]} />
-              <Text style={styles.cardTitle}>{t("library.tabPacks")}</Text>
-            </View>
-            <Text style={styles.note}>{t("library.packsHint")}</Text>
-            <Pressable onPress={onOpenPacks} style={styles.primaryBtn} accessibilityRole="button">
-              <Text style={styles.primaryBtnText}>{t("library.openPacks")}</Text>
-            </Pressable>
-          </View>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -101,6 +94,7 @@ export function LibraryScreen({ onOpenGuide, onOpenPromptIdeas, onOpenPacks }: P
 const getStyles = (colors: Colors, typography: Typography) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg.black },
+    flex: { flex: 1, marginTop: 8 },
     title: { ...typography.ui.headline, color: colors.text.heading, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 },
     segment: {
       flexDirection: "row",
