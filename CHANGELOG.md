@@ -32,6 +32,13 @@ All notable changes to NIDO are recorded here. Versions follow
   whose private hello is not confirmed yet. Off by default because it cuts
   off contacts who have not updated. Tested in CI only; needs the two-phone
   check before release.
+- **Local Wi-Fi server on the Wi-Fi interface only.** While searching for
+  contacts, the Wi-Fi server used to listen on every network interface
+  (filtered by private address and subnet). It now listens only on the
+  Wi-Fi network the phone is on, or on the hotspot it is sharing, so it does
+  not exist on the mobile-data interface. With unusual interface names it
+  falls back to the previous behaviour. Needs the two-phone check (same
+  Wi-Fi, one phone as hotspot, Wi-Fi change mid-search) before release.
 
 ## 0.1.55-alpha — 2026-10-28
 

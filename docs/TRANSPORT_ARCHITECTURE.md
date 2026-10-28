@@ -143,6 +143,12 @@ same Wi-Fi network, or one phone sharing a hotspot (works without Internet).
 - **Local network only.** The native side refuses any address that is not
   private IPv4 (10/8, 172.16/12, 192.168/16) or link-local (169.254/16), both
   when dialing and when accepting. This transport cannot reach the Internet.
+  Since 0.1.55 the server listens only on the Wi-Fi interface (the network
+  the phone is connected to, or the hotspot it is sharing), not on every
+  interface, so it does not exist on the mobile-data interface at all. If
+  neither can be identified (unusual interface names), it falls back to all
+  interfaces with the private-address and same-subnet filters. If the Wi-Fi
+  network changes, the next search reopens the server on the new address.
 - **Discovery (§5).** mDNS/DNS-SD service `_nidop2p._tcp` with a random
   instance name per start (`nido-xxxxxxxx`), no TXT records, never the
   identity. Server and advertisement run only while the link screen is
