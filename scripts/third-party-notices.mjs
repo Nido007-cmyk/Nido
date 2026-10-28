@@ -27,7 +27,14 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { LICENSE_FILE_RE, VENDORED_DIRS, buildNotices, productionPackages, renderMarkdown } from "./lib/third-party-notices-lib.mjs";
+import {
+  LICENSE_FILE_RE,
+  NATIVE_COMPONENTS,
+  VENDORED_DIRS,
+  buildNotices,
+  productionPackages,
+  renderMarkdown,
+} from "./lib/third-party-notices-lib.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const args = new Set(process.argv.slice(2));
@@ -97,6 +104,8 @@ const notices = buildNotices(productionPackages(lock), readNotices, {
   // La licencia de la propia app (con el aviso de BOAR): también la enseña
   // la pantalla de licencias.
   appLicense: readFileSync(join(ROOT, "LICENSE"), "utf8").replace(/\r\n?/g, "\n").trim(),
+  // 0.1.55 (P-10): código nativo copiado en el repo, con su licencia del repo.
+  native: NATIVE_COMPONENTS.map((c) => ({ ...c, licenseText: readFileSync(join(ROOT, c.licenseFile), "utf8") })),
 });
 const json = JSON.stringify(notices) + "\n";
 const md = renderMarkdown(notices) + "\n";

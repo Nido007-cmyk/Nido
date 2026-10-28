@@ -8,6 +8,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   LICENSE_FILE_RE,
+  NATIVE_COMPONENTS,
   buildNotices,
   cleanText,
   normalizeLicense,
@@ -127,6 +128,25 @@ describe("buildNotices", () => {
     expect(md).toMatch(/NIDO uses it under \*\*BSD-3-Clause\*\*/);
     expect(md).toMatch(/### react@19\.0\.0 — LICENSE/);
     expect(md).toMatch(/Copyright \(c\) Meta/);
+  });
+});
+
+describe("0.1.55 (P-10): código nativo del repo y librerías Android", () => {
+  it("mlkem-native va con su licencia del repo, y el markdown explica dónde está la lista de Gradle", () => {
+    const native = NATIVE_COMPONENTS.map((c) => ({
+      ...c,
+      licenseText: readFileSync(new URL(`../../${c.licenseFile}`, import.meta.url), "utf8"),
+    }));
+    const n = buildNotices(productionPackages(lock), () => [], { native });
+    const ml = n.native.find((c) => c.name === "mlkem-native");
+    expect(ml).toMatchObject({ version: "2.0.0", license: "Apache-2.0 OR ISC OR MIT" });
+    expect(ml.licenseText).toBeUndefined();
+    expect(n.texts[ml.text]).toMatch(/Apache-2\.0 license OR the ISC license OR the MIT license/);
+    const md = renderMarkdown(n);
+    expect(md).toMatch(/\| mlkem-native \| 2\.0\.0 \| Apache-2\.0 OR ISC OR MIT \|/);
+    expect(md).toMatch(/### mlkem-native@2\.0\.0 — modules\/nido-p2p/);
+    expect(md).toMatch(/android-runtime-dependencies\.txt/);
+    expect(md).not.toMatch(/are not listed here yet/);
   });
 });
 
