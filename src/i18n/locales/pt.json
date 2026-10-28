@@ -1033,14 +1033,15 @@
     "decline": "Recusar",
     "cancel": "Cancelar",
     "retry": "Tentar novamente",
-    "noPeersTitle": "Sem contatos",
-    "noPeersMessage": "Você precisa de pelo menos um contato emparelhado para compartilhar packs.",
+    "noPeersTitle": "Nenhum contato conectado",
+    "noPeersMessage": "Conecte-se primeiro com um contato (aba Contatos) e tente de novo.",
     "offerFailedTitle": "Não foi possível enviar",
-    "offerFailedMessage": "Não foi possível preparar o envio do pacote.",
-    "unavailableTitle": "Ainda não disponível",
-    "unavailableMessage": "Compartilhar pacotes entre dispositivos ainda não está disponível nesta versão. Chegará numa próxima atualização.",
+    "offerFailedMessage": "Não foi possível enviar a oferta. Verifique se o contato continua conectado. Só é possível compartilhar os packs do catálogo do NIDO, exatamente como foram baixados.",
+    "unavailableTitle": "Ainda não está pronto",
+    "unavailableMessage": "O NIDO ainda está carregando sua identidade. Espere alguns segundos e tente de novo.",
     "tooLargeTitle": "Pacote grande demais",
-    "tooLargeMessage": "Este pacote tem {{size}} MB e o limite para compartilhar é {{max}} MB."
+    "tooLargeMessage": "Este pacote tem {{size}} MB e o limite para compartilhar é {{max}} MB.",
+    "choosePeerTitle": "Para quem você quer enviar?"
   },
   "voiceInputAlert": {
     "unavailableTitle": "Entrada de voz indisponível",

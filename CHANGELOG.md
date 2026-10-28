@@ -6,6 +6,16 @@ All notable changes to NIDO are recorded here. Versions follow
 
 ## Unreleased
 
+### Added
+- **Share a knowledge pack with a contact, without internet.** A NIDO can
+  now pass a catalog pack (for example NIDO Essentials, about 0.7 MB) to a
+  connected contact over Bluetooth or local Wi-Fi, from the Packs tab. The
+  receiver installs it only if it is byte-for-byte the file in NIDO's
+  signed catalog; anything else — a hand-made pack, a modified one — is not
+  offered and not installed. The previous pack stays in place if anything
+  fails. The transfer code existed since 0.1.4 but was never connected; the
+  Packs tab said so.
+
 ### Changed
 - **Every release checks its own reproducibility.** After publishing, the
   release workflow starts the reproducible-build check against the APK it
@@ -18,6 +28,12 @@ All notable changes to NIDO are recorded here. Versions follow
   the repository (mlkem-native 2.0.0, Apache-2.0 OR ISC OR MIT) with its
   license text. The license texts of the Android libraries are not
   reproduced yet.
+
+### Fixed
+- **Pack sharing no longer reports "complete" for a pack it did not
+  save** (when no installer was connected, the receiver said "complete").
+- **Choose the contact** when several are connected, instead of sending to
+  the first one in the list; only connected contacts are offered.
 
 ### Security
 - **Private hello: no identity in clear with contacts that support it.**
