@@ -433,6 +433,14 @@ export function NidoScreen({
         (peerPkHex, action, negotiationId, signed) =>
           m.sendNegotiationResponse(peerPkHex, action, negotiationId, signed)
       );
+      // 0.1.55: compartir packs del catálogo NIDO↔NIDO (antes el servicio
+      // existía pero nadie le daba envío, bytes ni importador).
+      try {
+        const { wirePackShare } = await import("../p2p/packShareApp");
+        await wirePackShare(m, id.pkHex);
+      } catch {
+        /* noop: la pestaña Packs dice que compartir no está disponible */
+      }
     } catch (e) {
       // F-2: pérdida de claves de identidad → recovery honesto, no
       // first-run falso ni regeneración silenciosa.
@@ -1784,7 +1792,11 @@ export function NidoScreen({
       {tab === "negociaciones" && <NegotiationsTab />}
       {tab === "packs" && (
         <PacksTab
-          peers={contacts.map((c) => ({ pkHex: c.pkHex, name: c.name }))}
+          // 0.1.55: solo contactos conectados ahora (un pack se envía por
+          // la sesión viva) y nunca revocados.
+          peers={contacts
+            .filter((c) => online.has(c.pkHex.toLowerCase()) && !revokedPks.has(c.pkHex.toLowerCase()))
+            .map((c) => ({ pkHex: c.pkHex, name: c.name }))}
           getPeerName={(pkHex) => {
             const contact = contacts.find((c) => c.pkHex.toLowerCase() === pkHex.toLowerCase());
             return contact?.name ?? pkHex.slice(0, 8);

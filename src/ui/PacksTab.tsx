@@ -85,9 +85,9 @@ export function PacksTab({ peers, getPeerName }: Props) {
 
   const handleSharePack = useCallback(
     async (packId: string) => {
-      // PACKS-2026-10-10: decir la verdad. El envío de packs aún no está
-      // conectado en la app (el servicio no tiene identidad, envío ni
-      // proveedor de datos), y el máximo por pack es MAX_PACK_SIZE_BYTES.
+      // PACKS-2026-10-10: decir la verdad. Si el servicio no está conectado
+      // (desde 0.1.55 lo conecta NidoScreen al arrancar la identidad), se
+      // dice; y el máximo por pack es MAX_PACK_SIZE_BYTES.
       // Antes, cualquier intento terminaba en "Verifica la conexión con el
       // peer", aunque la conexión estuviera bien.
       if (!packShareService.isReady()) {
@@ -109,15 +109,33 @@ export function PacksTab({ peers, getPeerName }: Props) {
         Alert.alert(t("packshare.noPeersTitle"), t("packshare.noPeersMessage"));
         return;
       }
-      // Si hay un solo peer, se envía directo. Con múltiples peers,
-      // una versión futura debería mostrar un selector.
-      const peer = peers[0];
+      // Un solo contacto conectado: directo. Con varios (0.1.55), se elige
+      // (Android admite dos opciones más «Cancelar» en un aviso).
+      let peer = peers[0];
+      if (peers.length > 1) {
+        const chosen = await new Promise<PeerOption | null>((resolve) => {
+          Alert.alert(
+            t("packshare.choosePeerTitle"),
+            undefined,
+            [
+              ...peers.slice(0, 2).map((p) => ({ text: p.name, onPress: () => resolve(p) })),
+              { text: t("packshare.cancel"), style: "cancel" as const, onPress: () => resolve(null) },
+            ],
+            { cancelable: true, onDismiss: () => resolve(null) },
+          );
+        });
+        if (!chosen) return;
+        peer = chosen;
+      }
       setProcessingId(packId);
       try {
         const sessionId = await packShareService.offerPack(packId, peer.pkHex);
         if (!sessionId) {
           Alert.alert(t("packshare.offerFailedTitle"), t("packshare.offerFailedMessage"));
         }
+      } catch {
+        // 0.1.55: la oferta no salió (contacto sin conexión).
+        Alert.alert(t("packshare.offerFailedTitle"), t("packshare.offerFailedMessage"));
       } finally {
         setProcessingId(null);
         refresh();

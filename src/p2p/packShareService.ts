@@ -116,6 +116,8 @@ class PackShareService {
   private sendFn: PackShareSendFn | null = null;
   private dataProvider: PackDataProvider | null = null;
   private importer: PackImporter | null = null;
+  /** 0.1.55: qué ofertas se enseñan (la app: solo packs del catálogo). */
+  private offerFilter: ((adv: PackAdvertisement) => boolean) | null = null;
 
   static getInstance(): PackShareService {
     if (!PackShareService.instance) {
@@ -151,6 +153,14 @@ class PackShareService {
   /** La capa de datos inyecta el importador de packs verificados. */
   setImporter(importer: PackImporter): void {
     this.importer = importer;
+  }
+
+  /**
+   * 0.1.55: filtro de ofertas entrantes. Una oferta que no pasa no se
+   * enseña ni se contesta (como si no hubiera llegado).
+   */
+  setOfferFilter(filter: ((adv: PackAdvertisement) => boolean) | null): void {
+    this.offerFilter = filter;
   }
 
   subscribe(handler: PackShareEventHandler): () => void {
@@ -392,6 +402,17 @@ class PackShareService {
     // No aceptar ofertas duplicadas
     if (this.receiveSessions.has(sessionId)) return;
 
+    // 0.1.55: solo las ofertas que la app sabe instalar.
+    if (this.offerFilter) {
+      let ok = false;
+      try {
+        ok = this.offerFilter(adv);
+      } catch {
+        ok = false;
+      }
+      if (!ok) return;
+    }
+
     const session = createReceiveSession(adv, this.myPkHex ?? "");
     this.receiveSessions.set(sessionId, session);
 
@@ -521,16 +542,21 @@ class PackShareService {
     }
 
     // ¡Integridad verificada! Importar el pack.
-    if (this.importer) {
-      const imported = await this.importer(
-        session.packId,
-        session.advertisement.name,
-        reassembled
-      );
-      if (!imported) {
-        this.failReceive(sessionId, session, "Error al importar el pack");
-        return;
-      }
+    // 0.1.55: sin importador NO se anuncia «completado»: antes se decía que
+    // el pack había llegado aunque no se guardaba en ninguna parte.
+    if (!this.importer) {
+      this.failReceive(sessionId, session, "Error al importar el pack");
+      return;
+    }
+    let imported = false;
+    try {
+      imported = await this.importer(session.packId, session.advertisement.name, reassembled);
+    } catch {
+      imported = false;
+    }
+    if (!imported) {
+      this.failReceive(sessionId, session, "Error al importar el pack");
+      return;
     }
 
     // Éxito: limpiar la sesión y notificar
@@ -636,6 +662,7 @@ class PackShareService {
     this.sendFn = null;
     this.dataProvider = null;
     this.importer = null;
+    this.offerFilter = null;
   }
 }
 

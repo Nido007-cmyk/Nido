@@ -103,6 +103,26 @@ download it:
 3. To offer it in the setup wizard, add its id to a tier's `corpusPackIds`
    (`TIERS` in the same file).
 
+## Passing a pack to another phone (no internet)
+
+Since 0.1.55 a NIDO can hand a catalog pack (for example NIDO Essentials,
+about 0.7 MB) to a connected contact over Bluetooth or local Wi-Fi: Packs tab
+→ Share. The rules:
+
+- Only **catalog packs** travel: the ones with a SHA-256 in NIDO's signed
+  catalog. Packs built by hand (`local-…`) are never offered.
+- The sender checks that its installed file still matches the catalog
+  SHA-256 before offering it.
+- The receiver only sees offers for catalog packs, and installs the file
+  only if its bytes match the catalog SHA-256 exactly — the same file it
+  would have downloaded. A pack with a single byte changed (say, an altered
+  first-aid instruction) is rejected.
+- The new file is written next to the old one and swapped in at the end; if
+  anything fails, the previous pack stays in place.
+- The two phones must run versions with the same catalog: a pack from a
+  different catalog version is refused.
+- Packs larger than 100 MB (the Wikipedia packs) cannot be shared this way.
+
 ## How the app searches a pack
 
 For each question, the pack's keyword index picks up to 400 candidate chunks, and
