@@ -9,9 +9,9 @@
  * de la IA puede matar. El modelo no las contesta: un modelo pequeño puede
  * decir «sí, con ventilación» a un generador en el garaje.
  *
- * Idea tomada de BOAR (Boar Cohazard, MIT, rferrari/boar-app); el texto y
- * las reglas son de NIDO, comprobados contra las fuentes oficiales que cita
- * cada respuesta (consultadas el 2026-10-27):
+ * La idea (no dejar que el modelo conteste estas preguntas) la vimos en
+ * BOAR; las reglas, los textos y el código son de NIDO, comprobados contra
+ * las fuentes oficiales que cita cada respuesta (consultadas el 2026-10-27):
  *
  *  - Monóxido de carbono: CPSC de EE. UU., «What to Know About Generators»
  *    (https://www.cpsc.gov/s3fs-public/468_WhattoKnowGenerators_2022_v5.pdf)
