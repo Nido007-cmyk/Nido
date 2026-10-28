@@ -4,6 +4,22 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+### Security
+- **Private hello: no identity in clear with contacts that support it.**
+  Automatic Bluetooth reconnection called the contact without naming it and
+  sent the old hello with the permanent identity in clear; it now seals like
+  a manual call. If the contact's private-hello mark cannot be read, NIDO no
+  longer falls back to the plain hello: it does not call and says why.
+- **New setting "Private hello only"** (Settings → Security, off by
+  default): this phone never states its identity in clear — it does not
+  call contacts on NIDO older than 0.1.49 or devices that are not contacts,
+  and it does not answer plain hellos. The contacts list now marks contacts
+  whose private hello is not confirmed yet. Off by default because it cuts
+  off contacts who have not updated. Tested in CI only; needs the two-phone
+  check before release.
+
 ## 0.1.55-alpha — 2026-10-28
 
 ### Added

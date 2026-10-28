@@ -57,6 +57,12 @@ import {
 } from "./crypto";
 import { getIdentity, getSigningKeypair, findContactByPk, listContacts } from "./store";
 import {
+  PRIVATE_CHECK_FAILED,
+  PRIVATE_ONLY_NO_TARGET,
+  PRIVATE_ONLY_OLD_CONTACT,
+  PRIVATE_ONLY_PLAIN_HELLO,
+} from "./privateHello";
+import {
   derivePairKey,
   isSealedFrame,
   openFromAnyContact,
@@ -1178,10 +1184,10 @@ export class NidoBluetoothTransport implements P2PTransport {
     }
     // P2P v4: ¿saludo sellado con este contacto? Se decide ANTES de abrir el
     // socket (no hay awaits entre esto y el registro del pendiente).
-    const sealTargetPk = opts?.targetPkHex ? await this.sealTargetFor(opts.targetPkHex) : undefined;
+    const sealTargetPk = await this.sealTargetFor(opts?.targetPkHex);
     if (this.pending.has(mac) || this.macToPk.has(mac)) {
       // Mientras se decidía, otro camino abrió el handshake: sumarse a él.
-      return this.connect(alias);
+      return this.connect(alias, opts);
     }
     return new Promise<P2PPeerInfo>((resolve, reject) => {
       const timer = this.armHelloTimeout(mac);
@@ -1546,17 +1552,41 @@ export class NidoBluetoothTransport implements P2PTransport {
     return { pk: out.contact.pk, pairKey: out.contact.pairKey, inner: out.inner };
   }
 
-  /** P2P v4: ¿llamar a este contacto con saludo sellado? */
-  private async sealTargetFor(targetPkHex: string): Promise<string | undefined> {
-    try {
-      const { isFeatureEnabled } = await import("../config/featureFlags");
-      if (!isFeatureEnabled("p2p.sealedHandshake")) return undefined;
-      const { isContactV4Capable } = await import("./store");
-      const pk = targetPkHex.toLowerCase();
-      return (await isContactV4Capable(pk)) ? pk : undefined;
-    } catch {
-      return undefined; // ante la duda, el saludo de siempre (v3)
+  /**
+   * P2P v4: ¿llamar con saludo sellado? Devuelve la pk del contacto si el
+   * saludo va sellado, o undefined si va el de siempre (v3, identidad en
+   * claro).
+   *
+   * 0.1.55 (P-04, cierre): falla CERRADO. Antes, cualquier error al leer la
+   * marca del contacto caía al saludo en claro, también con un contacto que
+   * ya había cerrado saludos sellados: justo lo que v4 promete evitar. Ahora,
+   * si no se puede comprobar, no se llama (se lanza y la UI lo explica).
+   * Con «Solo saludo privado» (p2p.privateHelloOnly) tampoco se llama a un
+   * contacto sin la marca ni a un dispositivo sin contacto conocido.
+   */
+  private async sealTargetFor(targetPkHex: string | undefined): Promise<string | undefined> {
+    const { isFeatureEnabled } = await import("../config/featureFlags");
+    const privateOnly = isFeatureEnabled("p2p.privateHelloOnly");
+    if (targetPkHex === undefined) {
+      if (privateOnly) throw new Error(PRIVATE_ONLY_NO_TARGET);
+      return undefined; // dispositivo sin contacto conocido: saludo de siempre
     }
+    const pk = targetPkHex.toLowerCase();
+    let capable: boolean;
+    try {
+      const { isContactV4Capable } = await import("./store");
+      capable = await isContactV4Capable(pk);
+    } catch {
+      throw new Error(PRIVATE_CHECK_FAILED);
+    }
+    if (!capable) {
+      if (privateOnly) throw new Error(PRIVATE_ONLY_OLD_CONTACT);
+      return undefined; // NIDO anterior a la 0.1.49: solo entiende v3
+    }
+    // El interruptor de siempre (apagarlo es la salida de emergencia si el
+    // saludo sellado fallara); «Solo saludo privado» lo implica.
+    if (!isFeatureEnabled("p2p.sealedHandshake") && !privateOnly) return undefined;
+    return pk;
   }
 
   /** WIFI-UX-2026-10-11: aviso informativo (no es un error). */
@@ -1627,6 +1657,15 @@ export class NidoBluetoothTransport implements P2PTransport {
         inner = opened.inner;
         sealedFromPk = opened.pk;
         pend.sealKey = opened.pairKey;
+      }
+      // 0.1.55 (P-04): con «Solo saludo privado», un saludo en claro no se
+      // contesta: nuestra respuesta iría también en claro y diría quiénes
+      // somos a cualquiera que escuche (y un HELLO en claro capturado de un
+      // contacto podía reenviarse para sacárnosla). Se comprueba ANTES de
+      // validar nada y sin responder.
+      if (sealedFromPk === undefined) {
+        const { isFeatureEnabled } = await import("../config/featureFlags");
+        if (isFeatureEnabled("p2p.privateHelloOnly")) throw new Error(PRIVATE_ONLY_PLAIN_HELLO);
       }
       const { hello, contact, myPkHex, pkLower } = await this.validatePeerHello(inner);
       if (sealedFromPk !== undefined && pkLower !== sealedFromPk) {
@@ -2276,7 +2315,10 @@ export class NidoBluetoothTransport implements P2PTransport {
       // Ahora un fallo reprograma el siguiente intento (acotado por
       // RECONNECT_MAX_ATTEMPTS). Un éxito borra reconnectAttempts en la
       // ruta de handshake completado.
-      void this.connect(mac).catch(() => {
+      // 0.1.55 (P-04): la reconexión sabe a QUIÉN llama. Antes llamaba sin
+      // contacto y salía el saludo en claro (identidad visible) aunque el
+      // contacto admitiera el sellado.
+      void this.connect(mac, { targetPkHex: pkHex }).catch(() => {
         if (this.stopped) return;
         if (this.macToPk.has(mac) || this.pending.has(mac)) return;
         this.scheduleReconnect(mac, pkHex);

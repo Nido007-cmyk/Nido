@@ -168,6 +168,7 @@ export function ModelSetupScreen(props: Props) {
   // TESTFIX-2026-10-08 (Fix 7): toggle de tareas delegadas (default OFF).
   const [delegationEnabled, setDelegationEnabledState] = useState(false);
   const [sealedHelloEnabled, setSealedHelloEnabledState] = useState(false);
+  const [privateHelloOnly, setPrivateHelloOnlyState] = useState(false);
   const [ratchetV5Enabled, setRatchetV5EnabledState] = useState(false);
   const [panicEnabled, setPanicEnabledState] = useState(false);
 
@@ -206,6 +207,7 @@ export function ModelSetupScreen(props: Props) {
       await loadFeatureFlags().catch(() => {});
       setDelegationEnabledState(isFeatureEnabled("delegation.enabled"));
       setSealedHelloEnabledState(isFeatureEnabled("p2p.sealedHandshake"));
+      setPrivateHelloOnlyState(isFeatureEnabled("p2p.privateHelloOnly"));
       setRatchetV5EnabledState(isFeatureEnabled("p2p.ratchetV5"));
       setPanicEnabledState(isFeatureEnabled("security.panicButton"));
     }).catch(() => {});
@@ -221,6 +223,18 @@ export function ModelSetupScreen(props: Props) {
       await setFeatureEnabled("p2p.sealedHandshake", value);
     } catch {
       setSealedHelloEnabledState(!value);
+    }
+  }, []);
+
+  // 0.1.55 (P-04): «Solo saludo privado». Apagado por defecto: encendido,
+  // los contactos con un NIDO anterior a la 0.1.49 se quedan sin conexión.
+  const togglePrivateHelloOnly = useCallback(async (value: boolean) => {
+    setPrivateHelloOnlyState(value);
+    try {
+      const { setFeatureEnabled } = await import("../config/featureFlags");
+      await setFeatureEnabled("p2p.privateHelloOnly", value);
+    } catch {
+      setPrivateHelloOnlyState(!value);
     }
   }, []);
 
@@ -497,7 +511,7 @@ export function ModelSetupScreen(props: Props) {
 
       <ScrollView contentContainerStyle={styles.accordionScroll} keyboardShouldPersistTaps="handled">
         {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.security")}</Text>}
-        {match(t("modelSetupScreen.sections.security"), t("vault.title"), t("vault.strictTitle"), t("settings.sealedHelloTitle"), t("settings.ratchetV5Title"), t("panic.settingTitle")) && (
+        {match(t("modelSetupScreen.sections.security"), t("vault.title"), t("vault.strictTitle"), t("settings.sealedHelloTitle"), t("settings.privateHelloOnlyTitle"), t("settings.ratchetV5Title"), t("panic.settingTitle")) && (
           <AccordionSection key={`1-${searchKey}`} defaultOpen={searching} icon="security" title={t("modelSetupScreen.sections.security")}>
             <HardwareProtectionCard />
             <View style={styles.hapticRow}>
@@ -509,6 +523,19 @@ export function ModelSetupScreen(props: Props) {
                 value={sealedHelloEnabled}
                 onValueChange={toggleSealedHello}
                 accessibilityLabel={t("settings.sealedHelloTitle")}
+                trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+                thumbColor={colors.bg.card}
+              />
+            </View>
+            <View style={styles.hapticRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hapticRowLabel}>{t("settings.privateHelloOnlyTitle")}</Text>
+                <Text style={styles.hapticRowValue}>{t("settings.privateHelloOnlyDesc")}</Text>
+              </View>
+              <Switch
+                value={privateHelloOnly}
+                onValueChange={togglePrivateHelloOnly}
+                accessibilityLabel={t("settings.privateHelloOnlyTitle")}
                 trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
                 thumbColor={colors.bg.card}
               />

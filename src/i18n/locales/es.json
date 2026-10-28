@@ -711,7 +711,11 @@
       "busy": "NIDO estaba ocupado. Vuelve a intentarlo en unos segundos.",
       "connection": "No se pudo conectar con el otro NIDO. Acerca los dispositivos, revisa el Bluetooth o la Wi-Fi y que NIDO esté abierto en los dos.",
       "generic": "Algo falló con la conexión ({{detail}}).",
-      "sessionInvalidated": "La sesión de NIDO se cerró al borrar los datos. Cierra esta pantalla y vuelve a abrirla."
+      "sessionInvalidated": "La sesión de NIDO se cerró al borrar los datos. Cierra esta pantalla y vuelve a abrirla.",
+      "privateCheckFailed": "No pude comprobar si este contacto admite el saludo privado, así que no llamé y tu identidad no salió del teléfono. Inténtalo de nuevo.",
+      "privateOnlyOldContact": "Tienes activado «Solo saludo privado» y este contacto usa un NIDO antiguo que no lo admite, así que no llamé. Pídele que actualice o apaga la opción en Ajustes → Seguridad.",
+      "privateOnlyNoTarget": "Tienes activado «Solo saludo privado»: solo se puede llamar a tus contactos, desde la lista de contactos.",
+      "privateOnlyPlainHello": "Se rechazó una llamada con saludo en claro (tienes activado «Solo saludo privado»)."
     },
     "back": "‹ Atrás",
     "online": "al alcance",
@@ -836,7 +840,8 @@
     "disappearBadge": "temporal",
     "disappearShort": "Temporal: {{value}}",
     "v5Active": "clave por mensaje",
-    "v5Missing": "Esta conexión no usa clave por mensaje, aunque este contacto ya la usaba. Si no la apagó, alguien pudo bloquearla: vuelve a conectar y compruébalo con él en persona."
+    "v5Missing": "Esta conexión no usa clave por mensaje, aunque este contacto ya la usaba. Si no la apagó, alguien pudo bloquearla: vuelve a conectar y compruébalo con él en persona.",
+    "oldNidoWarning": "Saludo privado aún sin confirmar con este contacto: hasta que se conecten con NIDO 0.1.49 o posterior en los dos teléfonos, quien esté cerca puede ver que le llamas."
   },
   "notifications": {
     "reminderChannel": "Recordatorios de NIDO",
@@ -1073,7 +1078,9 @@
     "sealedHelloTitle": "Saludo privado",
     "sealedHelloDesc": "Cuando este teléfono llama a un NIDO emparejado que lo soporta, los primeros mensajes van sellados y nadie cerca puede ver quién llama. Activado por defecto; con un NIDO viejo no cambia nada.",
     "ratchetV5Title": "Clave nueva por mensaje + resistencia cuántica",
-    "ratchetV5Desc": "Cada mensaje usa su propia clave, como el Double Ratchet de Signal: una clave robada hoy no abre los mensajes anteriores. Además la sesión mezcla ML-KEM-768, para que el tráfico grabado hoy siga cerrado ante ordenadores cuánticos futuros. Activado por defecto; se usa cuando los dos teléfonos lo tienen. Vale desde la siguiente conexión."
+    "ratchetV5Desc": "Cada mensaje usa su propia clave, como el Double Ratchet de Signal: una clave robada hoy no abre los mensajes anteriores. Además la sesión mezcla ML-KEM-768, para que el tráfico grabado hoy siga cerrado ante ordenadores cuánticos futuros. Activado por defecto; se usa cuando los dos teléfonos lo tienen. Vale desde la siguiente conexión.",
+    "privateHelloOnlyTitle": "Solo saludo privado",
+    "privateHelloOnlyDesc": "Tu teléfono nunca dice en claro quién eres: no llama a contactos con un NIDO antiguo (anterior a la 0.1.49) ni a dispositivos que no son tus contactos, y no contesta saludos en claro. Apagado por defecto porque deja sin conexión a quien no haya actualizado."
   },
   "backup": {
     "dekTitle": "Backup creado",

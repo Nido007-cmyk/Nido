@@ -183,6 +183,8 @@ export function NidoScreen({
   }, [contactCount]);
   /** PKs revocados (para filtrar de la lista de contactos). */
   const [revokedPks, setRevokedPks] = useState<Set<string>>(new Set());
+  // 0.1.55 (P-04): contactos que admiten el saludo privado (los demás llevan aviso).
+  const [v4Pks, setV4Pks] = useState<Set<string> | null>(null);
   /**
    * FIX 2026-10-09 (SEC-REVOCATION-FAILCLOSED): salud del almacenamiento
    * de revocaciones. Si es false, el banner de recuperación se muestra
@@ -284,6 +286,12 @@ export function NidoScreen({
   const loadContacts = useCallback(async () => {    try {
       const list = await listContacts();
       setContacts(list);
+      try {
+        const { listV4CapablePks } = await import("../p2p/store");
+        setV4Pks(await listV4CapablePks());
+      } catch {
+        setV4Pks(null); // sin dato: no se avisa (mejor callar que avisar mal)
+      }
       // FIX 2026-10-09: filtrar revocados de la vista.
       const revoked = new Set<string>();
       for (const c of list) {
@@ -1645,6 +1653,9 @@ export function NidoScreen({
                       {c.pkHex.slice(0, 16)}… ·{" "}
                       {isOnline ? t("nido.online") : t("nido.offline")}
                     </Text>
+                    {v4Pks && !v4Pks.has(c.pkHex.toLowerCase()) ? (
+                      <Text style={styles.contactSub}>{t("nido.oldNidoWarning")}</Text>
+                    ) : null}
                   </View>
                   {/* BUG-5-2026-10-06: botón para conectar probando MACs */}
                   {!isOnline && (

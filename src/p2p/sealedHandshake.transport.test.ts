@@ -23,11 +23,22 @@ import {
   HANDSHAKE_NONCE_BYTES,
 } from "./crypto";
 import { decodeBase64, encodeBase64 } from "./base64";
-import { NidoBluetoothTransport, buildHello, parseHello, type NidoP2PBindings } from "./nativeTransport";
+import {
+  NidoBluetoothTransport,
+  buildHello,
+  parseHello,
+  reconnectDelayMs,
+  type NidoP2PBindings,
+} from "./nativeTransport";
 import { buildConfirmV1, parseConfirm } from "./handshakeV3";
 import { makeMemoryHelloNonceCache } from "./nonceCache";
 import type { P2PTransportEvents } from "./transport";
 import { derivePairKey, openWithPairKey, parseSealed, sealHandshakeFrame } from "./sealedHandshake";
+import {
+  PRIVATE_CHECK_FAILED,
+  PRIVATE_ONLY_NO_TARGET,
+  PRIVATE_ONLY_OLD_CONTACT,
+} from "./privateHello";
 
 type KP = { publicKey: Uint8Array; secretKey: Uint8Array };
 // vi.hoisted corre antes de los imports: las claves se generan después, y los
@@ -37,7 +48,13 @@ const keys = vi.hoisted(() => ({
   meSign: null as unknown as KP,
   peer: null as unknown as KP,
   peerSign: null as unknown as KP,
-  state: { flag: false, capable: false, capabilityWrites: [] as Array<[string, boolean]> },
+  state: {
+    flag: false,
+    capable: false,
+    capableThrows: false,
+    privateOnly: false,
+    capabilityWrites: [] as Array<[string, boolean]>,
+  },
 }));
 keys.me = nacl.box.keyPair();
 keys.meSign = nacl.sign.keyPair();
@@ -64,7 +81,10 @@ vi.mock("./store", () => {
     getSigningKeypair: async () => keys.meSign,
     findContactByPk: async (pk: string) => (pk.toLowerCase() === peerContact().pkHex ? peerContact() : null),
     listContacts: async () => [peerContact()],
-    isContactV4Capable: async () => keys.state.capable,
+    isContactV4Capable: async () => {
+      if (keys.state.capableThrows) throw new Error("db locked");
+      return keys.state.capable;
+    },
     setContactV4Capable: async (pk: string, v: boolean) => {
       keys.state.capabilityWrites.push([pk, v]);
     },
@@ -73,7 +93,8 @@ vi.mock("./store", () => {
 });
 
 vi.mock("../config/featureFlags", () => ({
-  isFeatureEnabled: (f: string) => f === "p2p.sealedHandshake" && keys.state.flag,
+  isFeatureEnabled: (f: string) =>
+    (f === "p2p.sealedHandshake" && keys.state.flag) || (f === "p2p.privateHelloOnly" && keys.state.privateOnly),
 }));
 
 vi.mock("../agent/memory/memoryStore", () => {
@@ -183,6 +204,8 @@ describe("P2P v4 en el transporte", () => {
   beforeEach(() => {
     keys.state.flag = false;
     keys.state.capable = false;
+    keys.state.capableThrows = false;
+    keys.state.privateOnly = false;
     keys.state.capabilityWrites.length = 0;
     f = makeFake();
     ev = makeEvents();
@@ -357,6 +380,95 @@ describe("P2P v4 en el transporte", () => {
     await tick();
     expect(ev.handshakes).toEqual([PEER]);
     expect(keys.state.capabilityWrites).not.toContainEqual([PEER, false]);
+    await t.stopDiscovery();
+  });
+
+  /* ---------- 0.1.55 (P-04): cierre del saludo privado ---------- */
+
+  it("0.1.55: si no se puede comprobar la marca del contacto, NO se llama (antes salía el saludo en claro)", async () => {
+    keys.state.flag = true;
+    keys.state.capableThrows = true;
+    await t.startDiscovery(ev.events);
+    await expect(t.connect(MAC, { targetPkHex: PEER })).rejects.toThrow(PRIVATE_CHECK_FAILED);
+    expect(f.sent).toHaveLength(0);
+    await t.stopDiscovery();
+  });
+
+  it("0.1.55: la reconexión automática llama con saludo sellado a un contacto que lo admite", async () => {
+    keys.state.flag = true;
+    keys.state.capable = true;
+    await t.startDiscovery(ev.events);
+    // Ruta viva con el contacto (el handshake completo se prueba arriba).
+    (t as any).macToPk.set(MAC, PEER);
+    (t as any).pkToMac.set(PEER, MAC);
+    vi.useFakeTimers();
+    try {
+      f.emit("onDisconnected", { address: MAC } as never);
+      // Solo hasta el primer reintento (sin llegar al timeout del saludo).
+      await vi.advanceTimersByTimeAsync(reconnectDelayMs(0) + 50);
+    } finally {
+      vi.useRealTimers();
+    }
+    await tick();
+    expect(f.sent.length).toBeGreaterThanOrEqual(1);
+    // Antes: HELLO en claro con nuestra pk. Ahora: sobre sellado.
+    expect(wire(f.sent[0].base64)).not.toContain(ME);
+    expect(parseHello(openOurs(f.sent[0].base64, "hello")).pk).toBe(ME);
+    await t.stopDiscovery();
+  });
+
+  it("0.1.55 «Solo saludo privado»: no llama a un dispositivo sin contacto conocido", async () => {
+    keys.state.flag = true;
+    keys.state.privateOnly = true;
+    await t.startDiscovery(ev.events);
+    await expect(t.connect(STRANGER_MAC)).rejects.toThrow(PRIVATE_ONLY_NO_TARGET);
+    expect(f.sent).toHaveLength(0);
+    await t.stopDiscovery();
+  });
+
+  it("0.1.55 «Solo saludo privado»: no llama a un contacto con un NIDO antiguo", async () => {
+    keys.state.flag = true;
+    keys.state.privateOnly = true;
+    keys.state.capable = false;
+    await t.startDiscovery(ev.events);
+    await expect(t.connect(MAC, { targetPkHex: PEER })).rejects.toThrow(PRIVATE_ONLY_OLD_CONTACT);
+    expect(f.sent).toHaveLength(0);
+    await t.stopDiscovery();
+  });
+
+  it("0.1.55 «Solo saludo privado» implica sellar aunque el interruptor del saludo sellado esté apagado", async () => {
+    keys.state.flag = false;
+    keys.state.privateOnly = true;
+    keys.state.capable = true;
+    await t.startDiscovery(ev.events);
+    const p = t.connect(MAC, { targetPkHex: PEER }).catch(() => {});
+    await tick();
+    expect(f.sent).toHaveLength(1);
+    expect(wire(f.sent[0].base64)).not.toContain(ME);
+    await t.stopDiscovery();
+    await p;
+  });
+
+  it("0.1.55 «Solo saludo privado»: un saludo en claro de un contacto no recibe ni un byte", async () => {
+    keys.state.privateOnly = true;
+    await t.startDiscovery(ev.events);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    await tick();
+    f.emit("onFrame", { address: MAC, base64: encodeBase64(peerHelloPlain().bytes) } as never);
+    await tick();
+    expect(f.sent).toHaveLength(0);
+    expect(ev.handshakes).toHaveLength(0);
+    await t.stopDiscovery();
+  });
+
+  it("0.1.55: sin «Solo saludo privado», un saludo en claro se sigue contestando (NIDO antiguos no se quedan fuera)", async () => {
+    await t.startDiscovery(ev.events);
+    f.emit("onConnected", { address: MAC, name: "X", incoming: true } as never);
+    await tick();
+    f.emit("onFrame", { address: MAC, base64: encodeBase64(peerHelloPlain().bytes) } as never);
+    await tick();
+    expect(f.sent).toHaveLength(1);
+    expect(parseHello(decodeBase64(f.sent[0].base64)).pk).toBe(ME);
     await t.stopDiscovery();
   });
 });

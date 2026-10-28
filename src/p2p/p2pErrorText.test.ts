@@ -5,6 +5,12 @@
  */
 import { describe, expect, it } from "vitest";
 import { describeP2PError } from "./p2pErrorText";
+import {
+  PRIVATE_CHECK_FAILED,
+  PRIVATE_ONLY_NO_TARGET,
+  PRIVATE_ONLY_OLD_CONTACT,
+  PRIVATE_ONLY_PLAIN_HELLO,
+} from "./privateHello";
 import en from "../i18n/locales/en.json";
 import es from "../i18n/locales/es.json";
 import pt from "../i18n/locales/pt.json";
@@ -58,8 +64,15 @@ describe("describeP2PError", () => {
     expect(k(new Error("NidoMessenger invalidado por Clear All Data: se requiere una instancia nueva."))).toBe("sessionInvalidated");
   });
 
+  it("0.1.55 (P-04): los motivos de «no llamé para no revelar tu identidad»", () => {
+    expect(k(new Error(PRIVATE_CHECK_FAILED))).toBe("privateCheckFailed");
+    expect(k(new Error(PRIVATE_ONLY_OLD_CONTACT))).toBe("privateOnlyOldContact");
+    expect(k(new Error(PRIVATE_ONLY_NO_TARGET))).toBe("privateOnlyNoTarget");
+    expect(k(new Error(PRIVATE_ONLY_PLAIN_HELLO))).toBe("privateOnlyPlainHello");
+  });
+
   it("every key exists in every language, with its variables", () => {
-    const keys = ["noIdentity", "ownQr", "qrInvalid", "duplicateName", "noAddress", "contactSaveFailed", "revoked", "revokeUnsupported", "revokeRecoveryUnsupported", "sessionInvalidated", "versionMismatch", "bluetoothOff", "noRadio", "permission", "alreadyConnected", "busy", "connection", "generic"];
+    const keys = ["noIdentity", "ownQr", "qrInvalid", "duplicateName", "noAddress", "contactSaveFailed", "revoked", "revokeUnsupported", "revokeRecoveryUnsupported", "sessionInvalidated", "versionMismatch", "bluetoothOff", "noRadio", "permission", "alreadyConnected", "busy", "connection", "generic", "privateCheckFailed", "privateOnlyOldContact", "privateOnlyNoTarget", "privateOnlyPlainHello"];
     for (const loc of [es, en, pt] as Array<{ nido: { errors: Record<string, string> } }>) {
       for (const key of keys) expect(loc.nido.errors[key], key).toBeTruthy();
       expect(loc.nido.errors.duplicateName).toContain("{{name}}");
