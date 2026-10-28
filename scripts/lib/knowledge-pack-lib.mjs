@@ -283,3 +283,43 @@ export function validateFacts(doc, file = "facts.json") {
   }
   return { regions, facts };
 }
+
+/**
+ * Text normalization for the weekly source check: a quote still counts as
+ * present when only accents, case, punctuation spacing, typographic quotes or
+ * HTML entities changed on the official page.
+ */
+export function normalizeForQuote(text) {
+  return String(text)
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[‘’‚‛]/g, "'")
+    .replace(/[“”„«»]/g, '"')
+    .replace(/[‐-―]/g, "-")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+
+/** Visible text of an HTML page (scripts and styles dropped, entities decoded). */
+export function htmlToText(html) {
+  return String(html)
+    .replace(/<(script|style|noscript)\b[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/&([a-z]+);/gi, (m, n) => ENTITIES[n.toLowerCase()] ?? (/^[a-z](acute|grave|tilde|uml|circ|cedil)$/i.test(n) ? n[0] : m));
+}
+
+/** True when the quote (normalized) appears in the page text (normalized). */
+export function quoteIsPresent(pageText, quote) {
+  return normalizeForQuote(pageText).includes(normalizeForQuote(quote));
+}
+
+/** Days between a YYYY-MM-DD check date and `today` (a Date). */
+export function daysSince(checked, today = new Date()) {
+  return Math.floor((today.getTime() - Date.parse(`${checked}T00:00:00Z`)) / 86_400_000);
+}

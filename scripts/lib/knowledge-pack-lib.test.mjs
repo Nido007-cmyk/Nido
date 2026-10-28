@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { chunkGuide, chunkIntro, cleanIntro, parseArgs, parseGuide, quantizeInt8, splitQuestions, validateFacts, vitalListPages } from "./knowledge-pack-lib.mjs";
+import { chunkGuide, chunkIntro, cleanIntro, daysSince, htmlToText, parseArgs, quoteIsPresent, parseGuide, quantizeInt8, splitQuestions, validateFacts, vitalListPages } from "./knowledge-pack-lib.mjs";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -231,3 +231,21 @@ describe("formato v2 de los packs (0.1.55)", () => {
   });
 });
 
+
+describe("comprobación semanal de fuentes (0.1.55)", () => {
+  it("encuentra la cita aunque la página cambie tildes, comillas, mayúsculas o entidades", () => {
+    const html = "<html><script>var x='911'</script><p>Ante cualquier emergencia llama al&nbsp;9&#8209;1&#8209;1.</p><p>Polic&iacute;a:  911</p></html>";
+    const text = htmlToText(html);
+    expect(quoteIsPresent(text, "Ante cualquier emergencia llama al 9-1-1.")).toBe(true);
+    expect(quoteIsPresent(text, "Policía: 911")).toBe(true);
+    expect(quoteIsPresent("Call 911 or 118.", "Call 911 or 128.")).toBe(false);
+  });
+
+  it("no cuenta el texto de los scripts como contenido visible", () => {
+    expect(quoteIsPresent(htmlToText("<script>Bomberos: 132</script><p>otra cosa</p>"), "Bomberos: 132")).toBe(false);
+  });
+
+  it("calcula los días desde la última comprobación", () => {
+    expect(daysSince("2026-10-01", new Date("2026-10-28T12:00:00Z"))).toBe(27);
+  });
+});
