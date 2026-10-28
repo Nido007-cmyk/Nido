@@ -57,7 +57,9 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   against official sources (23 countries in the NIDO Local pack), each with
   its source and date. "Call" opens the dialer with the number typed in.
   Quick guides (CPR, bleeding, choking, burns, earthquake, hurricane) and
-  "describe what's happening" write the question into the chat.
+  "describe what's happening" write the question into the chat. When a
+  newer version of the pack exists, the one you have keeps working offline
+  and the app says an update is available.
 - **Five sections one tap away**: Chat, Emergency, Library, NIDO and
   Settings, in a bottom bar. Settings is grouped and has a search box.
 - **Shows its network use**: every download the app makes is logged and

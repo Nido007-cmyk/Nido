@@ -60,6 +60,8 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   uno con su fuente y su fecha. «Llamar» abre el marcador con el número
   escrito. Las guías rápidas (RCP, hemorragia, atragantamiento, quemaduras,
   terremoto, huracán) y «describe lo que pasa» escriben la pregunta en el chat.
+  Si sale una versión más nueva del pack, la que tienes sigue funcionando sin
+  conexión y la app avisa de que hay una actualización.
 - **Cinco secciones a un toque**: Chat, Emergencia, Biblioteca, NIDO y
   Ajustes, en una barra abajo. Ajustes está agrupado y tiene buscador.
 - **Muestra su uso de red**: cada descarga que hace la app queda registrada
