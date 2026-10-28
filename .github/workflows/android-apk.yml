@@ -244,6 +244,31 @@ jobs:
           echo "::notice title=ML-KEM nativo en el APK::$(echo $LIBS | tr ' ' ',')"
           echo "$LIBS" | grep -q '^lib/arm64-v8a/libnidomlkem\.so$'
 
+      - name: Android runtime dependencies (P-10)
+        # 0.1.55: las librerías Android que Gradle mete en el APK (AndroidX,
+        # Kotlin, SQLCipher, BouncyCastle…) no salen de npm y no estaban en
+        # THIRD_PARTY_NOTICES. Su árbol exacto, el de ESTA compilación, se
+        # guarda y se adjunta al release. Si falla, no tumba el APK.
+        working-directory: android
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --no-daemon -q \
+            > "$GITHUB_WORKSPACE/android-runtime-dependencies.txt"
+          N=$(grep -cE -- '--- [^ ]+:[^ ]+:' "$GITHUB_WORKSPACE/android-runtime-dependencies.txt" || true)
+          echo "::notice title=Dependencias Android en el APK::$N líneas de dependencia (archivo adjunto al release)"
+          grep -oiE '(org\.bouncycastle|net\.zetetic)[^ ]*' "$GITHUB_WORKSPACE/android-runtime-dependencies.txt" | sort -u | head -20 \
+            | while IFS= read -r l; do echo "::notice title=Dependencia nativa destacada::$l"; done
+
+      - name: Upload Android dependency list
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        continue-on-error: true
+        with:
+          name: nido-android-dependencies
+          path: android-runtime-dependencies.txt
+          if-no-files-found: warn
+
       - name: Upload APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -275,6 +300,8 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      # 0.1.55 (P-07): lanzar la compilación reproducible contra el release.
+      actions: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -376,3 +403,30 @@ jobs:
           npm sbom --sbom-format cyclonedx --package-lock-only --omit dev > nido-sbom.cdx.json
           test -s nido-sbom.cdx.json
           gh release upload "$TAG" nido-sbom.cdx.json --repo "$GITHUB_REPOSITORY"
+
+      # 0.1.55 (P-10): el árbol de librerías Android de esta compilación.
+      - name: Attach Android dependency list
+        if: steps.tag.outputs.publish == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          test -s dist/android-runtime-dependencies.txt
+          gh release upload "$TAG" dist/android-runtime-dependencies.txt --repo "$GITHUB_REPOSITORY"
+
+      # 0.1.55 (P-07): cada release se comprueba solo. Lanza dos
+      # compilaciones independientes del mismo commit y las compara con el
+      # APK recién publicado (reproducible.yml). Antes había que lanzarlo a
+      # mano. workflow_dispatch es de los pocos eventos que GITHUB_TOKEN sí
+      # puede disparar. Si falla el disparo, el release ya publicado no se toca.
+      - name: Start reproducible-build check against this release
+        if: steps.tag.outputs.publish == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          gh workflow run reproducible.yml --repo "$GITHUB_REPOSITORY" --ref main \
+            -f ref="$GITHUB_SHA" -f release_tag="$TAG"
+          echo "::notice title=Compilación reproducible::lanzada contra $TAG (commit $GITHUB_SHA)"

@@ -6,6 +6,19 @@ All notable changes to NIDO are recorded here. Versions follow
 
 ## Unreleased
 
+### Changed
+- **Every release checks its own reproducibility.** After publishing, the
+  release workflow starts the reproducible-build check against the APK it
+  just published (two independent builds of the same commit, compared file
+  by file, signature aside). Before, it had to be started by hand.
+- **Android libraries in the licenses.** Each release now carries
+  `android-runtime-dependencies.txt`, the exact list of Android libraries
+  (AndroidX, Kotlin, SQLCipher and what they pull in) compiled into that
+  APK. THIRD_PARTY_NOTICES now also lists the native ML-KEM code vendored in
+  the repository (mlkem-native 2.0.0, Apache-2.0 OR ISC OR MIT) with its
+  license text. The license texts of the Android libraries are not
+  reproduced yet.
+
 ### Security
 - **Private hello: no identity in clear with contacts that support it.**
   Automatic Bluetooth reconnection called the contact without naming it and
