@@ -37,6 +37,8 @@ export interface PackFact {
 
 export interface FactsAnswer {
   text: string;
+  /** 0.1.55: the numbers in the order the text gives them, for "Call" buttons. */
+  calls: Array<{ value: string; label: string; tel: string }>;
   region: string;
   facts: PackFact[];
   /** Short session title ("Emergencias en Chile"). */
@@ -186,5 +188,87 @@ export function composeFactsAnswer(text: string, lang: FactLang, regions: PackRe
     if (!prev || f.checked < prev) sources.set(f.sourceTitle, f.checked);
   }
   out.push("", ...[...sources].map(([title, checked]) => `${t.source}: ${title} (${t.checked} ${checked}).`));
-  return { text: out.join("\n"), region: region.code, facts: mine, title: t.title(name) };
+  const ordered = [...first, ...rest];
+  const calls = ordered.map((f) => ({ value: f.value, label: f.label[lang] ?? f.label.en ?? f.key, tel: telUri(f.value) }));
+  return { text: out.join("\n"), calls, region: region.code, facts: mine, title: t.title(name) };
+}
+
+// ---------------------------------------------------------------------------
+// 0.1.55: the Emergency tab — the same verified facts, laid out per country.
+
+export interface EmergencyNumber {
+  key: string;
+  value: string;
+  label: string;
+  note: string | null;
+  /** tel: URI with digits only ("9-1-1" → "tel:911"). */
+  tel: string;
+}
+
+export interface EmergencyCard {
+  code: string;
+  name: string;
+  /** "en Chile" / "in Chile" / "no Brasil". */
+  where: string;
+  /** Ambulance (or the single number) first, then police, fire, the rest. */
+  numbers: EmergencyNumber[];
+  sources: Array<{ title: string; url: string; checked: string }>;
+}
+
+const CARD_ORDER = [
+  "emergency.general",
+  "emergency.ambulance",
+  "emergency.medical",
+  "emergency.redcross",
+  "emergency.police",
+  "emergency.fire",
+  "emergency.emergencies",
+  "emergency.fire-municipal",
+  "emergency.civil-protection",
+  "emergency.tourist-police",
+];
+
+export function telUri(value: string): string {
+  return `tel:${value.replace(/[^\d+]/g, "")}`;
+}
+
+/** The country's verified numbers in calling order, or null when no pack covers it. */
+export function emergencyCard(code: string, lang: FactLang, regions: PackRegion[], facts: PackFact[]): EmergencyCard | null {
+  const region = regions.find((r) => r.code === code);
+  if (!region) return null;
+  const mine = facts.filter((f) => f.region === code && f.key.startsWith("emergency."));
+  if (mine.length === 0) return null;
+  const rank = (k: string) => {
+    const i = CARD_ORDER.indexOf(k);
+    return i === -1 ? CARD_ORDER.length : i;
+  };
+  const sorted = [...mine].sort((a, b) => rank(a.key) - rank(b.key));
+  const sources: EmergencyCard["sources"] = [];
+  for (const f of sorted) {
+    const prev = sources.find((s) => s.title === f.sourceTitle);
+    if (!prev) sources.push({ title: f.sourceTitle, url: f.sourceUrl, checked: f.checked });
+    else if (f.checked < prev.checked) prev.checked = f.checked;
+  }
+  return {
+    code,
+    name: region.names[lang] ?? region.names.en ?? code,
+    where: region.phrases[lang] ?? region.names[lang] ?? code,
+    numbers: sorted.map((f) => ({
+      key: f.key,
+      value: f.value,
+      label: f.label[lang] ?? f.label.en ?? f.key,
+      note: f.note[lang] ?? null,
+      tel: telUri(f.value),
+    })),
+    sources,
+  };
+}
+
+/** Countries that have at least one verified number, sorted by their name in `lang`. */
+export function emergencyRegions(lang: FactLang, regions: PackRegion[], facts: PackFact[]): Array<{ code: string; name: string }> {
+  const covered = new Set(facts.filter((f) => f.key.startsWith("emergency.")).map((f) => f.region));
+  return regions
+    .filter((r) => covered.has(r.code))
+    .map((r) => ({ code: r.code, name: r.names[lang] ?? r.names.en ?? r.code }))
+    .sort((a, b) => a.name.localeCompare(b.name, lang));
 }

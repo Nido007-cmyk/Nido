@@ -61,6 +61,7 @@ describe("datos verificados de los packs (0.1.55)", () => {
     expect(a.text).toContain("• 133 — policía");
     expect(a.text).toMatch(/Fuente: Gobierno de Australia \(Smartraveller\), consejos de viaje \(Chile\) \(comprobado el \d{4}-\d{2}-\d{2}\)\./);
     expect(a.title).toBe("Emergencias en Chile");
+    expect(a.calls.map((c) => c.tel)).toEqual(["tel:131", "tel:133", "tel:132"]);
   });
 
   it("con un número único, ese es la respuesta para cualquier servicio", () => {
@@ -96,5 +97,33 @@ describe("preguntas indexadas en la búsqueda léxica (packs v2)", () => {
     const hit = { title: "Chile: números de emergencia", body: "• 131 — emergencias médicas" };
     expect(filterByTermCoverage([hit], q.terms)).toHaveLength(0);
     expect(filterByTermCoverage([{ ...hit, keys: "cómo pido una ambulancia en Chile" }], q.terms)).toHaveLength(1);
+  });
+});
+
+describe("pestaña Emergencia (0.1.55)", () => {
+  it("ordena primero la ambulancia o el número único, y da el tel: solo con cifras", async () => {
+    const { emergencyCard } = await import("./packFacts");
+    const cl = emergencyCard("CL", "es", regions, facts)!;
+    expect(cl.where).toBe("en Chile");
+    expect(cl.numbers.map((n) => n.value)).toEqual(["131", "133", "132"]);
+    expect(cl.numbers[0].tel).toBe("tel:131");
+    const pr = emergencyCard("PR", "en", regions, facts)!;
+    expect(pr.numbers[0].tel).toBe("tel:911");
+    const gt = emergencyCard("GT", "es", regions, facts)!;
+    expect(gt.numbers[0].label).toBe("Cruz Roja");
+    expect(gt.sources).toHaveLength(1);
+  });
+
+  it("sin datos para el país no hay tarjeta", async () => {
+    const { emergencyCard } = await import("./packFacts");
+    expect(emergencyCard("JP", "es", regions, facts)).toBeNull();
+  });
+
+  it("lista los 23 países ordenados por su nombre en el idioma", async () => {
+    const { emergencyRegions } = await import("./packFacts");
+    const es = emergencyRegions("es", regions, facts);
+    expect(es).toHaveLength(23);
+    expect(es[0].name).toBe("Argentina");
+    expect(es.map((r) => r.code)).toContain("ES");
   });
 });
