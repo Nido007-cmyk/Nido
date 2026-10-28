@@ -39,12 +39,12 @@ describe("F-8 dependency pins", () => {
     const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
     const deps = pkg.dependencies;
     expect(deps["llama.rn"]).toBe("0.13.0-rc.7"); // native .so binary — the reviewed one
-    expect(deps["expo-secure-store"]).toBe("57.0.4"); // Keystore DEK wrapper
-    expect(deps["expo-sqlite"]).toBe("57.0.4"); // SQLCipher storage (fix concurrencia #49796)
-    expect(deps["expo-crypto"]).toBe("57.0.4"); // RNG/hash
-    expect(deps["expo-local-authentication"]).toBe("57.0.3"); // biometric gate
+    expect(deps["expo-secure-store"]).toBe("58.0.2"); // Keystore DEK wrapper
+    expect(deps["expo-sqlite"]).toBe("58.0.14"); // SQLCipher storage (fix concurrencia #49796)
+    expect(deps["expo-crypto"]).toBe("58.0.7"); // RNG/hash
+    expect(deps["expo-local-authentication"]).toBe("58.0.2"); // biometric gate
     expect(deps["tweetnacl"]).toBe("1.0.3"); // P2P crypto primitives
-    expect(deps["react-native"]).toBe("0.86.3"); // native framework
-    expect(deps["react"]).toBe("19.2.3"); // bundler framework
+    expect(deps["react-native"]).toBe("0.88.0"); // native framework
+    expect(deps["react"]).toBe("19.3.0"); // bundler framework
   });
 });
