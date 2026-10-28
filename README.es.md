@@ -55,9 +55,16 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
 - **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
   teléfonos emparejados, sin internet y sin servidor. El emparejamiento se
   hace en persona con un código QR.
+- **Tiene una pestaña Emergencia**: los números de emergencia de tu país,
+  comprobados en fuentes oficiales (23 países en el pack NIDO Local), cada
+  uno con su fuente y su fecha. «Llamar» abre el marcador con el número
+  escrito. Las guías rápidas (RCP, hemorragia, atragantamiento, quemaduras,
+  terremoto, huracán) y «describe lo que pasa» escriben la pregunta en el chat.
+- **Cinco secciones a un toque**: Chat, Emergencia, Biblioteca, NIDO y
+  Ajustes, en una barra abajo. Ajustes está agrupado y tiene buscador.
 - **Muestra su uso de red**: cada descarga que hace la app queda registrada
-  y visible en la pantalla Acerca de.
-- **Se mide a sí mismo, en el teléfono**: la pantalla Telemetría de ejecución (menú) muestra la
+  y visible en Ajustes › Seguridad y privacidad.
+- **Se mide a sí mismo, en el teléfono**: la pantalla Telemetría de ejecución (Ajustes › Diagnóstico) muestra la
   velocidad de generación, el tiempo hasta la primera palabra y cuánto tarda
   en decidir qué hacer con cada mensaje y cuántas órdenes no reconoció el
   router y acabaron en el modelo; todo se guarda en el teléfono y no se

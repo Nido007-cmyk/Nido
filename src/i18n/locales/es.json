@@ -70,7 +70,7 @@
     "localLlmCore": "Modelo local",
     "newChatSession": "Nuevo chat",
     "offline": "Offline",
-    "openDrawer": "Abrir el panel de navegación",
+    "openDrawer": "Historial de chats y atajos",
     "statusLine": "Sin conexión · privado"
   },
   "chatScreen": {
@@ -145,7 +145,11 @@
       "hintDraft": "Toca para hacerlo. Lo demás se queda en la caja para enviarlo aparte.",
       "runA11y": "Hacer: {{action}}",
       "dismiss": "Descartar"
-    }
+    },
+    "toneChip": "Tono: {{tone}}",
+    "researchChip": "Investigar",
+    "researchOn": "Investigación profunda activada",
+    "researchOff": "Investigación profunda desactivada"
   },
   "common": {
     "back": "Atrás",
@@ -171,7 +175,11 @@
     "newChat": "Nuevo chat",
     "recentSessions": "Chats recientes",
     "subtitle": "Tu agente. Tu mundo.",
-    "deleteSession": "Borrar chat: {{title}}"
+    "deleteSession": "Borrar chat: {{title}}",
+    "searchPlaceholder": "Buscar en tus chats",
+    "searchLabel": "Buscar en tus chats",
+    "noMatches": "Ningún chat coincide.",
+    "shortcuts": "Atajos"
   },
   "drawerFooterStats": {
     "disk": "DISCO",
@@ -1685,10 +1693,97 @@
   "panic": {
     "buttonLabel": "Botón de pánico: mantén 3 segundos para borrarlo todo",
     "buttonHint": "Borra todos los datos de NIDO: chats, contactos, claves, memoria y modelos. No se puede deshacer. Con TalkBack, la acción de mantener pulsado borra al instante.",
-    "short": "SOS",
+    "short": "Borrar",
     "wiping": "Borrando",
     "failedTitle": "No se pudo borrar todo",
     "settingTitle": "Botón de pánico",
-    "settingDesc": "Muestra un botón SOS en la pantalla principal. Mantenerlo 3 segundos borra todos los datos de NIDO de una vez, sin pedir huella ni confirmación. No se puede deshacer; haz antes un respaldo si quieres conservar algo."
+    "settingDesc": "Muestra un botón de borrado (un escudo rojo) en la pantalla principal. Mantenerlo 3 segundos borra todos los datos de NIDO de una vez, sin pedir huella ni confirmación. No se puede deshacer; haz antes un respaldo si quieres conservar algo."
+  },
+  "tabs": {
+    "chat": "Chat",
+    "emergency": "Emergencia",
+    "library": "Biblioteca",
+    "nido": "NIDO",
+    "settings": "Ajustes"
+  },
+  "emergency": {
+    "title": "Emergencia",
+    "changeCountry": "Cambiar de país: {{name}}",
+    "chooseCountry": "Elige tu país",
+    "call": "Llamar",
+    "callA11y": "Llamar al {{number}}, {{label}}",
+    "checked": "Comprobado el {{date}} · {{source}}",
+    "noPackTitle": "Descarga NIDO Local",
+    "noPackBody": "Para ver aquí los números de emergencia comprobados de tu país, descarga el pack NIDO Local (unos 0,2 MB).",
+    "openLibrary": "Ir a la Biblioteca",
+    "noCountryTitle": "{{name}} aún no está en NIDO Local",
+    "noCountryBody": "Elige otro país o pregunta en el chat.",
+    "pickCountry": "Elegir país",
+    "describeLabel": "Describe lo que pasa",
+    "describePlaceholder": "Ej.: mi hijo se atragantó",
+    "describeHint": "NIDO responde con las guías del teléfono, sin internet.",
+    "ask": "Preguntar",
+    "quickGuides": "Guías rápidas",
+    "disclaimer": "Si alguien está en peligro, llama primero. NIDO no sustituye a los servicios de emergencia.",
+    "close": "Cerrar",
+    "guides": {
+      "cpr": "RCP",
+      "bleeding": "Hemorragia",
+      "choking": "Atragantamiento",
+      "burns": "Quemaduras",
+      "earthquake": "Terremoto",
+      "hurricane": "Huracán"
+    },
+    "questions": {
+      "cpr": "¿Cómo hago la RCP a un adulto?",
+      "bleeding": "¿Cómo paro una hemorragia grave?",
+      "choking": "¿Qué hago si alguien se atraganta?",
+      "burns": "¿Qué hago con una quemadura?",
+      "earthquake": "¿Qué hago durante un terremoto?",
+      "hurricane": "¿Cómo me preparo para un huracán?"
+    }
+  },
+  "library": {
+    "title": "Biblioteca",
+    "tabDocuments": "Mis documentos",
+    "tabLearn": "Aprender",
+    "tabPacks": "Packs",
+    "packsHint": "Los paquetes de conocimiento se descargan y se borran en Ajustes › Tu biblioteca.",
+    "openPacks": "Abrir paquetes de conocimiento",
+    "learnTitle": "Aprende a usar NIDO",
+    "learnBody": "Una guía corta con ejemplos que puedes tocar para probar cada función.",
+    "openGuide": "Abrir la guía",
+    "promptIdeas": "Ideas de prompts"
+  },
+  "settingsGroups": {
+    "security": "Seguridad y privacidad",
+    "assistant": "Asistente",
+    "models": "Modelos y conocimiento",
+    "memory": "Memoria y chats",
+    "appearance": "Apariencia, idioma y voz",
+    "backup": "Respaldo",
+    "diagnostics": "Diagnóstico",
+    "help": "Ayuda e información",
+    "danger": "Zona de peligro"
+  },
+  "settingsSearch": {
+    "placeholder": "Buscar en ajustes",
+    "label": "Buscar en ajustes",
+    "empty": "Ningún ajuste coincide con «{{query}}».",
+    "clear": "Borrar la búsqueda"
+  },
+  "settingsMore": {
+    "checkSection": "Comprobación de seguridad y registro de red",
+    "agentSection": "Permisos y actividad del agente",
+    "openMemory": "Abrir Mi memoria",
+    "openMemoryDesc": "Datos, notas, personas y recordatorios que NIDO guarda de ti.",
+    "openTelemetry": "Abrir la telemetría de ejecución",
+    "openTelemetryDesc": "Velocidad, tiempos y memoria de cada respuesta. Exporta en JSON o CSV y evalúa modelos.",
+    "crashSection": "Diagnóstico de cierres",
+    "backupKeyDesc": "Ver tu clave de cifrado o rotarla.",
+    "openBackupKey": "Ver mi clave o rotarla",
+    "aboutSection": "Acerca de NIDO",
+    "aboutDesc": "Versión, privacidad, límites, código abierto y licencias.",
+    "openAbout": "Abrir Acerca de"
   }
 }

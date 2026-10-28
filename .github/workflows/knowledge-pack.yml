@@ -29,15 +29,18 @@ permissions:
   contents: write
 
 concurrency:
-  group: knowledge-pack-${{ github.ref }}-${{ inputs.pack || 'nido-esencial' }}
+  group: knowledge-pack-${{ github.ref }}-${{ inputs.pack || 'auto' }}
   cancel-in-progress: true
 
 env:
-  PACK: ${{ inputs.pack || 'nido-esencial' }}
-  # v3 is published and pinned by the signed catalog: never overwrite it.
-  RELEASE_TAG: knowledge-packs-v4
+  # A push to pack/<name> builds <name> when knowledge-packs/<name> exists
+  # (pack/nido-local → nido-local); otherwise NIDO Essentials.
+  PACK: ${{ inputs.pack || (startsWith(github.ref_name, 'pack/nido-local') && 'nido-local') || 'nido-esencial' }}
+  # v3 and v4 are published and pinned by the signed catalog: never
+  # overwrite them. v5 (0.1.55): NIDO Local.
+  RELEASE_TAG: knowledge-packs-v5
   # Fixed so a rebuild from the same text gives the same file.
-  BUILT_AT: '2026-10-23T00:00:00Z'
+  BUILT_AT: '2026-10-28T00:00:00Z'
   VITAL_BGE_URL: https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v1/wiki-vital5.sqlite
   VITAL_BGE_SHA256: d3b87d562baba3489f6878bf99783f50d504db94c347029771e53f6d1aecc666
   VITAL_E5_URL: https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/wiki-vital5-e5.sqlite
@@ -60,6 +63,7 @@ jobs:
           set -euo pipefail
           case "$PACK" in
             nido-esencial) NAME="NIDO Essentials: first aid, health, disasters and survival" ;;
+            nido-local) NAME="NIDO Local: emergency numbers and official alerts by country" ;;
             emergency-survival) NAME="Emergencies and survival" ;;
             *) NAME="$PACK" ;;
           esac
@@ -133,7 +137,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ "$KIND" = guides ]; then
+          if [ "$PACK" = nido-local ]; then
+            cat > "LICENSE-$PACK.txt" <<'TXT'
+          NIDO Local (nido-local) is written by NIDO
+          (https://github.com/Nido007-cmyk/Nido) from public information by the
+          authorities and organizations cited in each guide (US National Weather
+          Service, Government of Mexico, Dominican Republic 9-1-1 system and COE,
+          Puerto Rico 9-1-1, Cuba's Civil Defense as reported by EFE, Spanish
+          consulates and embassies). The text is licensed under CC BY 4.0
+          (https://creativecommons.org/licenses/by/4.0/): share and adapt it,
+          crediting NIDO and linking the license. The cited organizations did not
+          write or review these guides and do not endorse NIDO.
+          General information only. Alerts and numbers can change: always follow
+          your local authorities. In an emergency, call your local emergency number.
+          TXT
+          elif [ "$KIND" = guides ]; then
             cat > "LICENSE-$PACK.txt" <<'TXT'
           NIDO Essentials (nido-esencial) is written by NIDO
           (https://github.com/Nido007-cmyk/Nido) from public guidance by the

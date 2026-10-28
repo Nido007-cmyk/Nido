@@ -60,6 +60,25 @@ build/knowledge-pack/<id>.sqlite.json   its size, SHA-256, article and chunk cou
 
 El texto de Wikipedia es CC BY-SA 4.0; conserva la atribución si compartes un pack.
 
+### Formato v2: preguntas indexadas y datos verificados (0.1.55)
+
+Una guía de Markdown puede declarar en su cabecera `id` (igual en todos los
+idiomas, p. ej. `local-chile`), `region` (código ISO 3166-1), `verified` (fecha
+de la última comprobación) y `questions` (preguntas reales que responde,
+separadas por `|`). Cada sección puede añadir las suyas con una línea
+`<!-- preguntas: … | … -->`. Se indexan con la sección (texto y embedding) pero
+no se muestran; las preguntas de `retrieval-checks.json` deben ser distintas,
+para que la prueba siga midiendo la búsqueda de verdad.
+
+La carpeta del pack puede llevar `facts.json`: regiones (nombres, frase «en X»,
+alias) y datos, cada uno con `key`, `region`, `value`, `label` en es/en/pt y una
+`source` con `title`, `url`, la cita exacta (`quote`) de esa página y la fecha
+`checked`. El constructor rechaza un dato al que le falte algo. La app responde
+«¿a qué número llamo en X?» desde esta tabla, sin búsqueda ni modelo, y cita la
+fuente y la fecha. `scripts/check-pack-claims.mjs` vuelve a abrir cada fuente y
+comprueba que la cita sigue ahí; `.github/workflows/pack-claims.yml` lo ejecuta
+cada semana.
+
 ## Poner un pack en tu teléfono
 
 **Para probar, por USB** (un build de desarrollo de NIDO, depuración USB activada):

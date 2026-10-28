@@ -4,7 +4,7 @@
  * See LICENSE file for details.
  */
 
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, Pressable, Animated, Dimensions, ScrollView, Image } from "react-native";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTranslation } from "react-i18next";
@@ -15,6 +15,8 @@ import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { NidoIcon, type IconName } from "./components/icons/NidoIcon";
 import { spacing, radii } from "./theme/spacing";
+import { PrivateTextInput } from "./components/PrivateTextInput";
+import { filterByTitle } from "./navigation/search";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DRAWER_WIDTH = Math.min(310, SCREEN_WIDTH * 0.82);
@@ -59,6 +61,13 @@ export function Drawer({
   const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+
+  // 0.1.55: buscar en el historial (sin tildes ni mayúsculas).
+  const [query, setQuery] = useState("");
+  const shown = useMemo(() => filterByTitle(sessions ?? [], query), [sessions, query]);
+  useEffect(() => {
+    if (!open) setQuery("");
+  }, [open]);
 
   const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -120,8 +129,23 @@ export function Drawer({
           {sessions && sessions.length > 0 && (
             <>
               <Text style={styles.sectionHeading}>{t("drawer.recentSessions")}</Text>
+              {sessions.length > 3 && (
+                <View style={styles.searchBox}>
+                  <NidoIcon name="search" size={16} color={colors.text.dim} />
+                  <PrivateTextInput
+                    value={query}
+                    onChangeText={setQuery}
+                    placeholder={t("drawer.searchPlaceholder")}
+                    placeholderTextColor={colors.text.dim}
+                    accessibilityLabel={t("drawer.searchLabel")}
+                    style={styles.searchInput}
+                    returnKeyType="search"
+                  />
+                </View>
+              )}
+              {shown.length === 0 && <Text style={styles.noMatches}>{t("drawer.noMatches")}</Text>}
               <ScrollView style={styles.sessionList}>
-                {sessions.map((s) => {
+                {shown.map((s) => {
                   const active = s.id === activeSessionId;
                   return (
                     <Pressable accessibilityRole="button"
@@ -143,6 +167,7 @@ export function Drawer({
                       <Pressable accessibilityRole="button"
                         accessibilityLabel={t("drawer.deleteSession", { title: s.title })}
                         hitSlop={12}
+                        style={styles.deleteBtn}
                         onPress={(e) => {
                           e.stopPropagation();
                           handleAction(() => onDeleteSession?.(s.id));
@@ -159,6 +184,7 @@ export function Drawer({
           )}
 
           {/* Navigation Items */}
+          <Text style={styles.sectionHeading}>{t("drawer.shortcuts")}</Text>
           <View style={styles.itemList}>
             {items.map((item) => (
               <Pressable accessibilityRole="button"
@@ -237,7 +263,22 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     marginTop: 4,
     marginLeft: 4,
   },
-  sessionList: { maxHeight: 220 },
+  sessionList: { maxHeight: 260 },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    marginBottom: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    backgroundColor: colors.bg.surface,
+  },
+  searchInput: { flex: 1, ...typography.ui.body, color: colors.text.primary, paddingVertical: 8 },
+  noMatches: { ...typography.ui.subtext, color: colors.text.secondary, marginLeft: 4, marginBottom: 6 },
+  deleteBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   sessionRow: {
     flexDirection: "row",
     alignItems: "center",

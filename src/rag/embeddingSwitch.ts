@@ -42,6 +42,10 @@ const PACK_VARIANTS: Record<string, Record<string, string>> = {
     [DEFAULT_EMBEDDING_ID]: "nido-esencial",
     [MULTILINGUAL_EMBEDDING_ID]: "nido-esencial-e5",
   },
+  "nido-local": {
+    [DEFAULT_EMBEDDING_ID]: "nido-local",
+    [MULTILINGUAL_EMBEDDING_ID]: "nido-local-e5",
+  },
 };
 
 export function embeddingModelById(id: string): CatalogModel | undefined {
