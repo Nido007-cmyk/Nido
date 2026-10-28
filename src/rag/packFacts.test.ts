@@ -119,11 +119,11 @@ describe("pestaña Emergencia (0.1.55)", () => {
     expect(emergencyCard("JP", "es", regions, facts)).toBeNull();
   });
 
-  it("lista los 23 países ordenados por su nombre en el idioma", async () => {
+  it("lista los 32 países ordenados por su nombre en el idioma", async () => {
     const { emergencyRegions } = await import("./packFacts");
     const es = emergencyRegions("es", regions, facts);
-    expect(es).toHaveLength(23);
-    expect(es[0].name).toBe("Argentina");
+    expect(es).toHaveLength(32);
+    expect(es[0].name).toBe("Alemania");
     expect(es.map((r) => r.code)).toContain("ES");
   });
 });
