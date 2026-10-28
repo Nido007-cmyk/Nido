@@ -55,9 +55,16 @@ for (const [url, list] of byUrl) {
     unreachable.push(`${url} (${e.message}) — ${list.map((f) => `${f.region} ${f.key}`).join(", ")}`);
     continue;
   }
-  for (const f of list) {
-    if (!quoteIsPresent(text, f.source.quote)) missing.push(`${f.region} ${f.key} = ${f.value}: «${f.source.quote}» no aparece en ${url}`);
+  const gone = list.filter((f) => !quoteIsPresent(text, f.source.quote));
+  if (gone.length > 0 && gone.length === list.length) {
+    // Not one quote from this page is there: most likely we were served a
+    // different page (consent wall, bot block, script-only shell), not a
+    // changed number. Reported for a human to open, with what we got.
+    const snippet = text.replace(/\s+/g, " ").trim().slice(0, 160);
+    unreachable.push(`${url} (ninguna cita encontrada; ${text.length} caracteres: «${snippet}») — ${list.map((f) => `${f.region} ${f.key}`).join(", ")}`);
+    continue;
   }
+  for (const f of gone) missing.push(`${f.region} ${f.key} = ${f.value}: «${f.source.quote}» no aparece en ${url}`);
 }
 for (const f of facts) if (daysSince(f.source.checked) > maxAge) stale.push(`${f.region} ${f.key}: comprobado el ${f.source.checked}`);
 
