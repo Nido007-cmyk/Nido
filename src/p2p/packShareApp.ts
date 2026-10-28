@@ -37,7 +37,12 @@ function appDeps(): PackShareDeps {
     },
     docDir: FileSystem.documentDirectory ?? "",
     readBase64: (path) => FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.Base64 }),
-    writeBase64: (path, data) => FileSystem.writeAsStringAsync(path, data, { encoding: FileSystem.EncodingType.Base64 }),
+    writeBase64: async (path, data) => {
+      // Quien nunca descargó un pack no tiene aún la carpeta corpus/.
+      const dir = path.slice(0, path.lastIndexOf("/") + 1);
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
+      await FileSystem.writeAsStringAsync(path, data, { encoding: FileSystem.EncodingType.Base64 });
+    },
     move: (from, to) => FileSystem.moveAsync({ from, to }),
     remove: (path) => FileSystem.deleteAsync(path, { idempotent: true }),
     closePack: async (id) => {
