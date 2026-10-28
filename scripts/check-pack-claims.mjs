@@ -69,5 +69,12 @@ const lines = [
   stale.length ? `\n### Datos con más de ${maxAge} días sin revisar (${stale.length})\n${stale.map((m) => `- ${m}`).join("\n")}` : "",
 ].join("\n");
 console.log(lines);
+if (process.env.GITHUB_ACTIONS) {
+  // One annotation per kind of problem (GitHub caps how many a step can show).
+  const esc = (t) => t.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+  if (missing.length) console.log(`::error title=Citas que ya no aparecen (${missing.length})::${esc(missing.join("\n"))}`);
+  if (unreachable.length) console.log(`::warning title=Fuentes que no se pudieron abrir (${unreachable.length})::${esc(unreachable.join("\n"))}`);
+  if (stale.length) console.log(`::warning title=Datos sin revisar hace más de ${maxAge} días (${stale.length})::${esc(stale.join("\n"))}`);
+}
 if (process.env.GITHUB_STEP_SUMMARY) writeFileSync(process.env.GITHUB_STEP_SUMMARY, lines + "\n", { flag: "a" });
 process.exit(missing.length || (strict && (unreachable.length || stale.length)) ? 1 : 0);
