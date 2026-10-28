@@ -55,6 +55,8 @@ interface Settings {
   /** 0.1.51: the hardware-vault offer on the main screen: "never" or snoozed until (epoch ms). */
   vaultOfferNever?: boolean;
   vaultOfferSnoozeUntil?: number;
+  /** 0.1.55: country chosen on the Emergency tab (ISO 3166-1 alpha-2). */
+  emergencyRegion?: string;
 }
 
 export interface MemorySettings {
@@ -377,6 +379,30 @@ export function deviceDefaultLanguage(): LanguageId {
     // Intl unavailable: fall through to English default.
   }
   return "en";
+}
+
+/** Country code from the device locale ("es-CL" → "CL"), or null. */
+export function deviceRegion(): string | null {
+  try {
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+    const m = /[-_]([A-Za-z]{2})(?:$|[-_])/.exec(locale);
+    return m ? m[1].toUpperCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 0.1.55: the Emergency tab's country; the device's region until the user picks one. */
+export async function getEmergencyRegion(): Promise<string | null> {
+  const s = await readSettings();
+  return s.emergencyRegion ?? deviceRegion();
+}
+
+export async function setEmergencyRegion(code: string): Promise<void> {
+  if (!/^[A-Z]{2}$/.test(code)) return;
+  return mutateSettings((s) => {
+    s.emergencyRegion = code;
+  });
 }
 
 export async function getLanguageId(): Promise<LanguageId> {

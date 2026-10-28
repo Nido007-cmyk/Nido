@@ -25,7 +25,11 @@
     "subtitle": "Your agent. Your world.",
     "newChat": "New chat",
     "recentSessions": "Recent chats",
-    "deleteSession": "Delete chat: {{title}}"
+    "deleteSession": "Delete chat: {{title}}",
+    "searchPlaceholder": "Search your chats",
+    "searchLabel": "Search your chats",
+    "noMatches": "No chat matches.",
+    "shortcuts": "Shortcuts"
   },
   "catalogItemCard": {
     "calculating": "Calculating…",
@@ -405,7 +409,7 @@
     "deleteBusy": "A response is being sent. Wait a moment and try again."
   },
   "chatHeader": {
-    "openDrawer": "Open Navigation Drawer",
+    "openDrawer": "Chat history and shortcuts",
     "offline": "Offline",
     "localLlmCore": "Local model",
     "cycleTone": "Cycle Assistant Tone",
@@ -486,7 +490,11 @@
       "hintDraft": "Tap to do it. The rest stays in the box so you can send it separately.",
       "runA11y": "Do it: {{action}}",
       "dismiss": "Dismiss"
-    }
+    },
+    "toneChip": "Tone: {{tone}}",
+    "researchChip": "Research",
+    "researchOn": "Deep research on",
+    "researchOff": "Deep research off"
   },
   "aboutScreen": {
     "title": "About NIDO",
@@ -1678,11 +1686,98 @@
   "panic": {
     "buttonLabel": "Panic button: hold 3 seconds to erase everything",
     "buttonHint": "Erases all NIDO data: chats, contacts, keys, memory and models. It cannot be undone. With TalkBack, the long-press action erases at once.",
-    "short": "SOS",
+    "short": "Wipe",
     "wiping": "Erasing",
     "failedTitle": "Could not erase everything",
     "settingTitle": "Panic button",
-    "settingDesc": "Shows an SOS button on the main screen. Holding it for 3 seconds erases all NIDO data at once, without asking for fingerprint or confirmation. It cannot be undone; make a backup first if you want to keep anything."
+    "settingDesc": "Shows a wipe button (a red shield) on the main screen. Holding it for 3 seconds erases all NIDO data at once, without asking for fingerprint or confirmation. It cannot be undone; make a backup first if you want to keep anything."
+  },
+  "tabs": {
+    "chat": "Chat",
+    "emergency": "Emergency",
+    "library": "Library",
+    "nido": "NIDO",
+    "settings": "Settings"
+  },
+  "emergency": {
+    "title": "Emergency",
+    "changeCountry": "Change country: {{name}}",
+    "chooseCountry": "Choose your country",
+    "call": "Call",
+    "callA11y": "Call {{number}}, {{label}}",
+    "checked": "Checked on {{date}} · {{source}}",
+    "noPackTitle": "Download NIDO Local",
+    "noPackBody": "To see your country's checked emergency numbers here, download the NIDO Local pack (about 0.2 MB).",
+    "openLibrary": "Go to the Library",
+    "noCountryTitle": "{{name}} isn't in NIDO Local yet",
+    "noCountryBody": "Pick another country or ask in the chat.",
+    "pickCountry": "Choose country",
+    "describeLabel": "Describe what's happening",
+    "describePlaceholder": "E.g. my child is choking",
+    "describeHint": "NIDO answers from the guides on your phone, without internet.",
+    "ask": "Ask",
+    "quickGuides": "Quick guides",
+    "disclaimer": "If someone is in danger, call first. NIDO does not replace emergency services.",
+    "close": "Close",
+    "guides": {
+      "cpr": "CPR",
+      "bleeding": "Bleeding",
+      "choking": "Choking",
+      "burns": "Burns",
+      "earthquake": "Earthquake",
+      "hurricane": "Hurricane"
+    },
+    "questions": {
+      "cpr": "How do I do CPR on an adult?",
+      "bleeding": "How do I stop severe bleeding?",
+      "choking": "What do I do if someone is choking?",
+      "burns": "What do I do for a burn?",
+      "earthquake": "What do I do during an earthquake?",
+      "hurricane": "How do I prepare for a hurricane?"
+    }
+  },
+  "library": {
+    "title": "Library",
+    "tabDocuments": "My documents",
+    "tabLearn": "Learn",
+    "tabPacks": "Packs",
+    "packsHint": "Knowledge packs are downloaded and removed in Settings › Your library.",
+    "openPacks": "Open knowledge packs",
+    "learnTitle": "Learn to use NIDO",
+    "learnBody": "A short guide with examples you can tap to try each feature.",
+    "openGuide": "Open the guide",
+    "promptIdeas": "Prompt ideas"
+  },
+  "settingsGroups": {
+    "security": "Security and privacy",
+    "assistant": "Assistant",
+    "models": "Models and knowledge",
+    "memory": "Memory and chats",
+    "appearance": "Appearance, language and voice",
+    "backup": "Backup",
+    "diagnostics": "Diagnostics",
+    "help": "Help and information",
+    "danger": "Danger zone"
+  },
+  "settingsSearch": {
+    "placeholder": "Search settings",
+    "label": "Search settings",
+    "empty": "No setting matches “{{query}}”.",
+    "clear": "Clear the search"
+  },
+  "settingsMore": {
+    "checkSection": "Security check and network log",
+    "agentSection": "Agent permissions and activity",
+    "openMemory": "Open My memory",
+    "openMemoryDesc": "Facts, notes, people and reminders NIDO keeps about you.",
+    "openTelemetry": "Open execution telemetry",
+    "openTelemetryDesc": "Speed, timings and memory of every answer. Export as JSON or CSV and evaluate models.",
+    "crashSection": "Crash diagnostics",
+    "backupKeyDesc": "See your encryption key or rotate it.",
+    "openBackupKey": "See my key or rotate it",
+    "aboutSection": "About NIDO",
+    "aboutDesc": "Version, privacy, limits, open source and licenses.",
+    "openAbout": "Open About"
   },
   "answering": {
     "title": "NIDO is answering…",
