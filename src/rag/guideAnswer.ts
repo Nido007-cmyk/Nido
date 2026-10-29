@@ -19,7 +19,8 @@
  */
 import type { RetrievedChunk } from "./retrieve.types";
 import { parsePackChunkId, type PackSourceDoc } from "./packSource";
-import { detectTextLang, type GroundingLang } from "./grounding";
+import { detectTextLang, splitSentences, type GroundingLang } from "./grounding";
+import type { SentenceProvenance } from "./provenance";
 
 /** Packs whose guides are shown word for word (both embedding variants). */
 export function isEssentialsChunk(chunkId: string | undefined): boolean {
@@ -154,4 +155,28 @@ export function composeShortGuideAnswer(doc: PackSourceDoc, lang: GroundingLang)
   if (doc.source.trim()) out.push("", `${SOURCE[lang]}: ${doc.source.trim()}`);
   out.push("", CALL[lang]);
   return out.join("\n");
+}
+
+/**
+ * 0.1.61: procedencia de una respuesta de guía. Las partes de la guía son
+ * «guide»; el encabezado, el aviso de que sigue, las fuentes y «llama
+ * primero» son textos fijos de NIDO, no frases de la guía.
+ */
+export function guideAnswerProvenance(text: string): SentenceProvenance[] {
+  const fixedLine = (p: string) =>
+    Object.values(HEAD).some((h) => p.startsWith(h("\u0000").split("\u0000")[0])) ||
+    Object.values(HEAD_SHORT).some((h) => p.startsWith(h("\u0000").split("\u0000")[0])) ||
+    Object.values(MORE).includes(p) ||
+    Object.values(MORE_SHORT).includes(p) ||
+    Object.values(CALL).includes(p) ||
+    Object.values(SOURCE).some((s) => p.startsWith(`${s}: `));
+  const out: SentenceProvenance[] = [];
+  for (const para of text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)) {
+    if (fixedLine(para)) {
+      out.push({ text: para, origin: { kind: "fixed" } });
+      continue;
+    }
+    for (const s of splitSentences(para)) out.push({ text: s, origin: { kind: "guide" } });
+  }
+  return out;
 }

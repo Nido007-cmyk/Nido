@@ -52,6 +52,8 @@
  * Puro, sin dependencias, 100% testeable.
  */
 
+import type { SentenceProvenance } from "./provenance";
+
 export type GroundingLang = "es" | "en" | "pt";
 
 export type GroundingStatus =
@@ -78,6 +80,11 @@ export interface GroundingResult {
   removed: number;
   /** Frases conservadas. */
   kept: number;
+  /**
+   * 0.1.61: de dónde sale cada frase del texto final (provenance.ts). Ausente
+   * en «skipped» por modelo razonador o respuesta vacía.
+   */
+  sentences?: SentenceProvenance[];
 }
 
 // ------------------------------------------------------------- texto
@@ -368,8 +375,14 @@ export function verifyGroundedAnswer(
   lang: GroundingLang,
 ): GroundingResult {
   const trimmed = (answer ?? "").trim();
-  if (chunks.length === 0 || !trimmed) {
-    return { text: trimmed, status: "skipped", removed: 0, kept: 0 };
+  if (!trimmed) return { text: trimmed, status: "skipped", removed: 0, kept: 0 };
+  if (chunks.length === 0) {
+    // Sin fuentes: todo lo que dice es del modelo, salvo que diga no saber.
+    const sentences = splitSentences(trimmed).map((s) => ({
+      text: s,
+      origin: isAbstention(s) ? ({ kind: "abstain" } as const) : ({ kind: "model", reason: "no-sources" } as const),
+    }));
+    return { text: trimmed, status: "skipped", removed: 0, kept: 0, sentences };
   }
   // Modelos razonadores (bloques <think>): la UI los trata aparte; no se tocan.
   if (/<think>/i.test(trimmed)) {
@@ -397,11 +410,19 @@ export function verifyGroundedAnswer(
       return ok;
     });
     if (kept.length === 0) {
-      return { text: honestAbstention(chunks, lang), status: "abstained", removed, kept: 0 };
+      return abstainedResult(chunks, lang, removed);
     }
     let text = kept.join(" ");
-    if (removed > 0) text += `\n\n${NOTE.removed[lang].split("{{n}}").join(String(removed))}`;
-    return { text, status: "unverified", removed, kept: kept.length };
+    const langProv: SentenceProvenance[] = kept.map((s) => ({
+      text: s,
+      origin: isAbstention(s) ? { kind: "abstain" } : { kind: "model", reason: "unverified-language" },
+    }));
+    if (removed > 0) {
+      const note = NOTE.removed[lang].split("{{n}}").join(String(removed));
+      text += `\n\n${note}`;
+      langProv.push({ text: note, origin: { kind: "fixed" } });
+    }
+    return { text, status: "unverified", removed, kept: kept.length, sentences: langProv };
   }
 
   const chunkStemSets = chunkTexts.map((t) => new Set(contentStems(t)));
@@ -411,10 +432,12 @@ export function verifyGroundedAnswer(
   let abstained = false;
   let judgedKept = 0;
   const kept: string[] = [];
+  const prov: SentenceProvenance[] = [];
   for (const s of sentences) {
     if (isAbstention(s)) {
       abstained = true;
       kept.push(s);
+      prov.push({ text: s, origin: { kind: "abstain" } });
       continue;
     }
     const sup = sentenceSupport(s, chunkStemSets);
@@ -429,31 +452,52 @@ export function verifyGroundedAnswer(
       const src = closestSourceSentence(s, chunkSentences[sup.bestChunk]);
       if (src && negationCount(s.replace(/\[\d+\]/g, "")) !== negationCount(src)) {
         negationFixed++;
-        kept.push(addCitation(src, sup.bestChunk + 1));
+        const fixed = addCitation(src, sup.bestChunk + 1);
+        kept.push(fixed);
+        prov.push({ text: fixed, origin: { kind: "source", n: sup.bestChunk + 1, support: 1, negationFixed: true } });
         continue;
       }
     }
     // Enlace afirmación → fuente: si la frase no cita, se le pone la [n] de
     // la fuente que más palabras comparte con ella.
-    kept.push(
+    const out =
       !hasCitation(s) && sup.total >= MIN_JUDGED_TERMS && sup.bestChunk >= 0
         ? addCitation(s, sup.bestChunk + 1)
-        : s,
-    );
+        : s;
+    kept.push(out);
+    prov.push({
+      text: out,
+      origin:
+        sup.total >= MIN_JUDGED_TERMS && sup.bestChunk >= 0
+          ? { kind: "source", n: sup.bestChunk + 1, support: sup.support }
+          : { kind: "model", reason: "too-short-to-check" },
+    });
   }
 
   // Nada verificable sobrevivió (todo inventado, o solo "no lo sé"):
   // "no lo sé" honesto + lo que la fuente sí dice.
   if (judgedKept === 0 && (removed > 0 || abstained)) {
-    return { text: honestAbstention(chunks, lang), status: "abstained", removed, kept: 0 };
+    return abstainedResult(chunks, lang, removed);
   }
 
   let text = kept.join(" ").replace(/\s+\n/g, "\n").trim();
   if (removed > 0) {
-    text += `\n\n${NOTE.removed[lang].split("{{n}}").join(String(removed))}`;
-    return { text, status: "partial", removed, kept: kept.length };
+    const note = NOTE.removed[lang].split("{{n}}").join(String(removed));
+    text += `\n\n${note}`;
+    prov.push({ text: note, origin: { kind: "fixed" } });
+    return { text, status: "partial", removed, kept: kept.length, sentences: prov };
   }
-  return { text, status: "grounded", removed: 0, kept: kept.length };
+  return { text, status: "grounded", removed: 0, kept: kept.length, sentences: prov };
+}
+
+/** «No lo sé» honesto + lo que la fuente sí dice, con su procedencia. */
+function abstainedResult(chunks: GroundingChunk[], lang: GroundingLang, removed: number): GroundingResult {
+  const sentences: SentenceProvenance[] = [{ text: IDK_TEXT[lang], origin: { kind: "abstain" } }];
+  if (chunks.length > 0) {
+    sentences.push({ text: EXTRACT_INTRO[lang].split("{{title}}").join(chunks[0].title), origin: { kind: "fixed" } });
+    sentences.push({ text: extractiveSnippet(chunks[0], 0), origin: { kind: "source", n: 1, support: 1 } });
+  }
+  return { text: honestAbstention(chunks, lang), status: "abstained", removed, kept: 0, sentences };
 }
 
 // ------------------------------------------- "no lo sé" antes de generar

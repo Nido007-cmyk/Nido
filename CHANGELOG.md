@@ -4,6 +4,15 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+### Added
+- **Where each sentence comes from.** Under an answer's sources, a line now
+  says how many sentences come from the guide, from the sources, from a
+  fixed NIDO text, where NIDO says it doesn't know, and how many come from
+  the model with no source. A sentence the sources don't back is never
+  counted as coming from them.
+
 ## 0.1.60-alpha — 2026-10-29
 
 ### Added

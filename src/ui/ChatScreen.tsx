@@ -82,6 +82,8 @@ import {
   type GroundingStatus,
 } from "../rag/grounding";
 import { snapshot as loadMemorySnapshot } from "../agent/memory/memoryStore";
+import type { SentenceProvenance } from "../rag/provenance";
+import { guideAnswerProvenance } from "../rag/guideAnswer";
 import { getPersonality, PersonalityId, PERSONALITIES } from "../constants/personalities";
 import {
   createSession,
@@ -165,6 +167,8 @@ interface Message {
   calls?: Array<{ value: string; label: string; tel: string }>;
   /** 0.1.59: answer shown verbatim from this NIDO Essentials guide chunk ("Open the full guide"). */
   guideChunkId?: string;
+  /** 0.1.61: where each sentence comes from (src/rag/provenance.ts). In memory only for now. */
+  provenance?: SentenceProvenance[];
 }
 
 const VERBATIM_MESSAGE_COUNT = 6;
@@ -1572,17 +1576,20 @@ export function ChatScreen({
       //  - sin fuentes + pregunta de hechos → "no lo sé" honesto;
       //  - NEVER-SILENT: respuesta vacía → texto honesto, nunca burbuja vacía.
       let grounding: GroundingStatus | undefined;
+      let provenance: SentenceProvenance[] | undefined;
       if (!wasStopped) {
         // 0.1.34: si el modelo entró en bucle, queda solo la primera vez.
         let finalText = guideAnswered ? assistantText : trimRepetitionLoop(assistantText);
         if (guideAnswered) {
-          // Verbatim guide text: nothing to verify or trim.
+          // Verbatim guide text: nothing to verify or trim. Every sentence is the guide's (R1).
+          provenance = guideAnswerProvenance(finalText);
         } else if (!deepResearchModeRef.current && chunks.length > 0) {
           // 0.1.41 (prueba física, «¿qué es la inflación?»): se verificaba
           // el texto SIN recortar y el bucle volvía a la pantalla.
           const verified = verifyGroundedAnswer(finalText, chunks, uiLang);
           grounding = verified.status;
           if (verified.status !== "skipped") finalText = verified.text;
+          provenance = verified.sentences;
         } else if (
           !deepResearchModeRef.current &&
           noSourcesFound &&
@@ -1604,7 +1611,7 @@ export function ChatScreen({
 
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === assistantId ? { ...m, citations: chunks, stopped: wasStopped, noSourcesFound, grounding } : m
+          m.id === assistantId ? { ...m, citations: chunks, stopped: wasStopped, noSourcesFound, grounding, provenance } : m
         )
       );
       notification(wasStopped ? NotificationFeedbackType.Warning : NotificationFeedbackType.Success);
@@ -2164,7 +2171,7 @@ export function ChatScreen({
                 ) : null}
 
                 {item.citations && item.citations.length > 0 && (
-                  <SourceFootnotes citations={item.citations} grounding={item.grounding} />
+                  <SourceFootnotes citations={item.citations} grounding={item.grounding} provenance={item.provenance} />
                 )}
 
                 {/* Honest no-result (2026-09-28): deterministic note when
