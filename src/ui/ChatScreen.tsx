@@ -97,7 +97,8 @@ import {
   setMessageFeedback,
   ChatSession,
 } from "../services/chatHistory";
-import { generateSessionTitle, summarizeConversation } from "../services/summarize";
+import { summarizeConversation } from "../services/summarize";
+import { titleFromQuestion } from "../services/sessionTitle";
 import { PromptIdeasCarousel } from "./PromptIdeasCarousel";
 import { UserGuideScreen } from "./UserGuideScreen";
 import { GuideOnboarding } from "./GuideOnboarding";
@@ -1226,16 +1227,13 @@ export function ChatScreen({
 
         const agentSettings = memorySettingsRef.current;
         if (isNewSession && agentSettings.autoGenerateTitles) {
-          const sid = sessionId;
-          backgroundTaskRef.current = generateSessionTitle(query)
-            .then(async (title) => {
-              await setSessionTitle(sid, title);
-              await refreshSessions();
-            })
-            .catch(() => {})
-            .finally(() => {
-              backgroundTaskRef.current = null;
-            });
+          // 0.1.61: título sin modelo (sessionTitle.ts): no gasta batería ni
+          // borra de la caché el prefijo que reutiliza la siguiente pregunta.
+          const title = titleFromQuestion(query);
+          if (title) {
+            await setSessionTitle(sessionId, title).catch(() => {});
+            await refreshSessions();
+          }
         }
         await pruneSessions(agentSettings.maxSavedSessions);
       } catch (e: any) {
@@ -1662,16 +1660,12 @@ export function ChatScreen({
       const allMessages = [...priorMessages, userMsg, { ...userMsg, id: assistantId, role: "assistant" as const, text: assistantText }];
 
       if (isNewSession && settings.autoGenerateTitles && !wasStopped) {
-        const sid = sessionId;
-        backgroundTaskRef.current = generateSessionTitle(query)
-          .then(async (title) => {
-            await setSessionTitle(sid, title);
-            await refreshSessions();
-          })
-          .catch(() => {})
-          .finally(() => {
-            backgroundTaskRef.current = null;
-          });
+        // 0.1.61: título sin modelo (ver arriba).
+        const title = titleFromQuestion(query);
+        if (title) {
+          await setSessionTitle(sessionId, title).catch(() => {});
+          await refreshSessions();
+        }
       } else if (settings.autoSummarize && !wasStopped) {
         const totalTurns = Math.floor(allMessages.length / 2);
         if (totalTurns > settings.historyTurnThreshold) {

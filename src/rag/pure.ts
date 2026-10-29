@@ -473,7 +473,11 @@ export function assemblePrompt(
     ? `Context:\n${chunks.map((c, i) => `[${i + 1}] ${c.title}\n${c.body}`).join("\n\n")}\n\n`
     : "";
 
-  return `${instruction}${contextInstruction}${noSourcesInstruction} ${GROUNDING_INSTRUCTION}\n\n` +
+  // 0.1.61 (velocidad): lo que no cambia entre preguntas va primero
+  // (identidad, estilo, límites), lo que cambia según haya fuentes, al
+  // final. llama.rn reutiliza la caché del prefijo común con el turno
+  // anterior: así ese prefijo no se vuelve a leer en cada pregunta.
+  return `${instruction} ${GROUNDING_INSTRUCTION}${contextInstruction}${noSourcesInstruction}\n\n` +
     `${summarySection}${turnsSection}` +
     `${contextSection}` +
     `${hasContext ? `${GROUNDED_QUESTION_REMINDER}\n\n` : ""}` +
@@ -548,7 +552,8 @@ export function assembleChatMessages(
   const systemMessage: ChatMessage = {
     role: "system",
     content:
-      `${instruction}${contextInstruction}${noSourcesInstruction} ${GROUNDING_INSTRUCTION}${summarySection}`,
+      // 0.1.61 (velocidad): ver assemblePrompt; prefijo estable primero.
+      `${instruction} ${GROUNDING_INSTRUCTION}${contextInstruction}${noSourcesInstruction}${summarySection}`,
   };
 
   const historyMessages: ChatMessage[] = (history?.turns ?? []).map((t) => ({

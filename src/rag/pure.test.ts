@@ -402,3 +402,16 @@ describe("serializeEmbedding/deserializeEmbedding", () => {
     expect(restored.length).toBe(0);
   });
 });
+
+describe("0.1.61: prefijo estable del mensaje de sistema (caché de llama.rn)", () => {
+  it("con y sin fuentes, el sistema empieza igual: identidad, estilo y límites antes de lo que cambia", () => {
+    const sys = "You are Nido.";
+    const withSources = assembleChatMessages("q", [{ chunkId: "a", docId: "a", title: "T", body: "Body.", score: 1, matchType: "semantic" } as never], sys)[0].content;
+    const without = assembleChatMessages("q", [], sys)[0].content;
+    const noSources = assembleChatMessages("q", [], sys, undefined, undefined, true)[0].content;
+    let common = 0;
+    while (common < without.length && withSources[common] === without[common] && noSources[common] === without[common]) common++;
+    expect(withSources.slice(0, common)).toContain("no ability to control real-world devices");
+    expect(common).toBeGreaterThanOrEqual(without.length - 1);
+  });
+});

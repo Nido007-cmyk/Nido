@@ -6,6 +6,16 @@ All notable changes to NIDO are recorded here. Versions follow
 
 ## Unreleased
 
+### Changed
+- **The second question of a new chat starts answering sooner.** NIDO used
+  to ask the model for a chat title right after the first answer; that
+  erased the model's cached instructions, so the next question had to read
+  about 285 tokens again (about 36% of its prompt). The title now comes from
+  your first question, with no model and no battery spent. The model's
+  instructions are also ordered so the part that never changes stays cached
+  between questions with and without sources. Measured on NIDO's default
+  model ([docs/perf/PROMPT_CACHE_2026-10-29.md](https://github.com/Nido007-cmyk/Nido/blob/main/docs/perf/PROMPT_CACHE_2026-10-29.md)).
+
 ### Added
 - **Where each sentence comes from.** Under an answer's sources, a line now
   says how many sentences come from the guide, from the sources, from a
