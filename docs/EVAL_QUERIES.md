@@ -8,6 +8,10 @@ This document defines a fixed evaluation set and a reproducible way to run it
 on an Android device against different models and routing configurations, so
 their answers and costs can be compared side by side.
 
+Version 2 of the evaluation (first aid, emergency numbers, tools, honesty,
+attacks; 47 cases checked on every PR) is described in
+[eval/EVAL_V2.md](eval/EVAL_V2.md).
+
 There is no automated judge. The harness produces structured results
 (JSONL/CSV) that you grade by hand, using the grading notes below.
 

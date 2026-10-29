@@ -5,6 +5,9 @@
 Adopted 2026-09-27. They take priority over any future feature.
 No design decision may contradict them without explicit user review.
 
+How the assistant itself should behave (honesty, safety, privacy, its firm
+rules) is in [NIDO's constitution](NIDO_CONSTITUTION.md).
+
 ## 1. Independence from network, server and provider
 
 **No future component may assume that the Internet, a central server

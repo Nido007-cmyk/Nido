@@ -5,6 +5,9 @@
 Adoptados el 2026-09-27. Tienen prioridad sobre cualquier feature futura.
 Ninguna decisión de diseño puede contradecirlos sin revisión explícita del usuario.
 
+Cómo debe comportarse el propio asistente (honestidad, seguridad, privacidad
+y sus reglas firmes) está en [la constitución de NIDO](NIDO_CONSTITUTION.md).
+
 ## 1. Independencia de red, servidor y proveedor
 
 **Ningún componente futuro puede asumir que Internet, un servidor central

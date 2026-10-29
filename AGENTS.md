@@ -97,6 +97,10 @@ changes on `main`) goes with, in the same PR:
 4. If retrieval, models or packs changed: `docs/KNOWLEDGE_PACKS.md` /
    `docs/MODELS.md` and their `docs/es/` copies.
 5. If a roadmap item was done or added: `docs/ROADMAP.md` and `docs/es/ROADMAP.md`.
+6. If the change touches how the assistant behaves: check it against
+   [NIDO's constitution](docs/NIDO_CONSTITUTION.md). Changing a firm rule
+   means changing the constitution on purpose, with tests
+   (`docs/constitution-rules.json`, `scripts/check-constitution.mjs`).
 
 After the release: check that the published `app-release.apk.sha256` matches
 the asset's digest.

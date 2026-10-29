@@ -1,0 +1,122 @@
+[
+ {
+  "lang": "es",
+  "q": "mi abuelo se cayó, no responde y no respira, qué hago",
+  "expect": "RCP (reanimación) en adultos",
+  "case": "FA-01"
+ },
+ {
+  "lang": "es",
+  "q": "a qué ritmo se hacen las compresiones",
+  "expect": "RCP (reanimación) en adultos",
+  "case": "FA-02"
+ },
+ {
+  "lang": "es",
+  "q": "mi hijo de 3 años se atragantó con una uva y no puede toser",
+  "expect": "Atragantamiento",
+  "case": "FA-03"
+ },
+ {
+  "lang": "es",
+  "q": "un bebé de 6 meses se está ahogando con algo",
+  "expect": "Atragantamiento",
+  "case": "FA-04"
+ },
+ {
+  "lang": "es",
+  "q": "le sale mucha sangre de la pierna y no para",
+  "expect": "Hemorragias graves",
+  "case": "FA-05"
+ },
+ {
+  "lang": "es",
+  "q": "mi padre tiene un dolor fuerte en el pecho que le baja al brazo",
+  "expect": "Dolor de pecho",
+  "case": "FA-06"
+ },
+ {
+  "lang": "es",
+  "q": "se le cayó un lado de la cara y habla raro",
+  "expect": "Ictus",
+  "case": "FA-07"
+ },
+ {
+  "lang": "es",
+  "q": "está convulsionando, le meto algo en la boca?",
+  "expect": "Convulsiones",
+  "case": "FA-08"
+ },
+ {
+  "lang": "es",
+  "q": "mi hija se tomó un frasco de pastillas, la hago vomitar?",
+  "expect": "Intoxicaciones",
+  "case": "FA-09"
+ },
+ {
+  "lang": "es",
+  "q": "cómo preparo suero casero para la diarrea",
+  "expect": "Diarrea, vómitos",
+  "case": "FA-10"
+ },
+ {
+  "lang": "es",
+  "q": "me picó una abeja y se me está hinchando la cara y me cuesta respirar",
+  "expect": "Alergia grave",
+  "case": "FA-11"
+ },
+ {
+  "lang": "es",
+  "q": "le mordió una serpiente, le chupo el veneno?",
+  "expect": "Mordeduras y picaduras",
+  "case": "FA-12"
+ },
+ {
+  "lang": "en",
+  "q": "my friend collapsed and isn't breathing, what do I do",
+  "expect": "CPR for adults",
+  "case": "FA-13"
+ },
+ {
+  "lang": "en",
+  "q": "someone is choking on food and can't speak",
+  "expect": "Choking",
+  "case": "FA-14"
+ },
+ {
+  "lang": "en",
+  "q": "how do I stop heavy bleeding from an arm",
+  "expect": "Severe bleeding",
+  "case": "FA-15"
+ },
+ {
+  "lang": "en",
+  "q": "I burned my hand on the stove, should I put ice on it",
+  "expect": "Burns",
+  "case": "FA-16"
+ },
+ {
+  "lang": "en",
+  "q": "a diabetic person is shaking, sweating and confused",
+  "expect": "Low blood sugar",
+  "case": "FA-17"
+ },
+ {
+  "lang": "en",
+  "q": "signs of heat stroke and what to do",
+  "expect": "Heat stroke",
+  "case": "FA-18"
+ },
+ {
+  "lang": "pt",
+  "q": "meu pai está com dor forte no peito",
+  "expect": "Dolor de pecho",
+  "case": "FA-19"
+ },
+ {
+  "lang": "pt",
+  "q": "uma pessoa desmaiou e não respira",
+  "expect": "RCP (reanimación) en adultos",
+  "case": "FA-20"
+ }
+]
