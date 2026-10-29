@@ -497,7 +497,8 @@
     "toneChip": "Tone: {{tone}}",
     "researchChip": "Research",
     "researchOn": "Deep research on",
-    "researchOff": "Deep research off"
+    "researchOff": "Deep research off",
+    "openFullGuide": "Open the full guide"
   },
   "aboutScreen": {
     "title": "About NIDO",

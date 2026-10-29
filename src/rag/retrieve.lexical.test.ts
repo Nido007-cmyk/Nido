@@ -69,18 +69,20 @@ describe("buildLexicalQuery", () => {
   it("keeps content words and drops question framing", () => {
     expect(buildLexicalQuery("what is a black hole?")?.match).toBe('"black" OR "hole"');
     expect(buildLexicalQuery("Compare the French Revolution and the Industrial Revolution")?.match).toBe(
-      '"french" OR "revolution" OR "industrial"'
+      '"french" OR "frenc"* OR "revolution" OR "revoluti"* OR "industrial" OR "industri"*'
     );
   });
 
+  // 0.1.59: words of 6+ letters also match by their start ("adulto" → "adultos"):
+  // the index has no stemmer, and Spanish first aid questions missed their guide.
   it("adds the singular of plural words, but not of words that only look plural", () => {
-    expect(buildLexicalQuery("how do vaccines work")?.match).toBe('"vaccines" OR "vaccine"');
+    expect(buildLexicalQuery("how do vaccines work")?.match).toBe('"vaccines" OR "vaccine" OR "vaccin"*');
     expect(buildLexicalQuery("theories about viruses")?.match).toBe(
-      '"theories" OR "theory" OR "viruses" OR "viruse" OR "virus"'
+      '"theories" OR "theory" OR "theori"* OR "viruses" OR "viruse" OR "virus" OR "virus"*'
     );
     expect(buildLexicalQuery("volcanoes")?.terms[0].forms).toContain("volcano");
-    expect(buildLexicalQuery("explain photosynthesis")?.match).toBe('"photosynthesis"');
-    expect(buildLexicalQuery("virus analysis gas")?.match).toBe('"virus" OR "analysis" OR "gas"');
+    expect(buildLexicalQuery("explain photosynthesis")?.match).toBe('"photosynthesis" OR "photosynthes"*');
+    expect(buildLexicalQuery("virus analysis gas")?.match).toBe('"virus" OR "analysis" OR "analys"* OR "gas"');
   });
 
   it("returns null when nothing but filler is left, so lexical search is skipped", () => {
@@ -91,12 +93,12 @@ describe("buildLexicalQuery", () => {
 
   it("quotes every term, so FTS5 operator syntax in user input can't break the query", () => {
     const q = buildLexicalQuery('NEAR(black hole) AND "quasar" OR -pulsar* ^star');
-    expect(q?.match).toBe('"near" OR "black" OR "hole" OR "quasar" OR "pulsar" OR "star"');
+    expect(q?.match).toBe('"near" OR "black" OR "hole" OR "quasar" OR "quasa"* OR "pulsar" OR "pulsa"* OR "star"');
     expect(() => ftsQuery(q!.match, 5)).not.toThrow();
   });
 
   it("dedupes terms and caps their number", () => {
-    expect(buildLexicalQuery("volcano volcano volcanoes")?.terms).toEqual([{ forms: ["volcano"] }]);
+    expect(buildLexicalQuery("volcano volcano volcanoes")?.terms).toEqual([{ forms: ["volcano"], prefix: "volca" }]);
     const long = Array.from({ length: 20 }, (_, i) => `term${i}`).join(" ");
     expect(buildLexicalQuery(long)?.terms).toHaveLength(12);
   });

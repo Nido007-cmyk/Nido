@@ -152,7 +152,8 @@
     "toneChip": "Tono: {{tone}}",
     "researchChip": "Investigar",
     "researchOn": "Investigación profunda activada",
-    "researchOff": "Investigación profunda desactivada"
+    "researchOff": "Investigación profunda desactivada",
+    "openFullGuide": "Abrir la guía completa"
   },
   "common": {
     "back": "Atrás",

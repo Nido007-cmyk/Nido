@@ -497,7 +497,8 @@
     "toneChip": "Tom: {{tone}}",
     "researchChip": "Pesquisar",
     "researchOn": "Pesquisa profunda ativada",
-    "researchOff": "Pesquisa profunda desativada"
+    "researchOff": "Pesquisa profunda desativada",
+    "openFullGuide": "Abrir o guia completo"
   },
   "aboutScreen": {
     "title": "Sobre o NIDO",

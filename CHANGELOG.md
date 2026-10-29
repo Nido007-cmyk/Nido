@@ -7,6 +7,23 @@ All notable changes to NIDO are recorded here. Versions follow
 ## Unreleased
 
 ### Fixed
+- **First aid answers now show the guide exactly as written.** When a
+  NIDO Essentials guide is the clear best match for a question (CPR,
+  choking, burns, bleeding…), NIDO shows that guide's own text, with its
+  sources and an "Open the full guide" button, and no AI model rewrites it.
+  On a real tablet the model's summary of the chest-pain guide dropped a
+  "not" in the aspirin rule ("is bleeding" instead of "is not bleeding"),
+  and the choking answer told you to keep the person at your side and
+  watch. These answers are also instant: no model has to run.
+- **Model answers can't flip a "not" from the sources.** If a sentence in a
+  model answer copies a source sentence but loses or adds a negation ("no",
+  "never", "without", "not"…), it is replaced by the source sentence word
+  for word. A first aid step containing "no se lo ha prohibido" was also
+  being read as "I don't know"; that is fixed.
+- **The CPR question finds the CPR guide.** Question words like "how do I"
+  ("cómo hago", "o que faço") no longer count as topic words, and long
+  words also match their plural and longer forms ("adulto" finds
+  "adultos", "atraganta" finds "atragantamiento").
 - **A clearer message when the server has another version of a pack.** If
   the file on the server is bigger than this version of NIDO expects, the
   app no longer calls it "incomplete": it says it's a different version,
