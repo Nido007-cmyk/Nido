@@ -41,13 +41,14 @@ Documentamos qué está verificado, qué es experimental, qué está incompleto 
 - Continuar mejorando voz e interacción local
 - Pulir la experiencia en inglés, español y portugués
 - Mejorar accesibilidad y la experiencia del usuario nuevo
-- Ampliar las pruebas automatizadas y en dispositivos físicos
+- Ampliar las pruebas automatizadas y en dispositivos físicos (evaluación v2: 47 casos en cada cambio desde 0.1.60; después, que la evaluación en el teléfono pase por el mismo camino que el chat)
 
 ### Más adelante: Creciendo el ecosistema
 
 - Preparar NIDO para una distribución pública más amplia
-- Auditoría de seguridad independiente
-- Distribución mediante Google Play
+- Auditoría de seguridad independiente (solicitarla al Security Lab de OTF tras las pruebas en dos teléfonos; ver [DECISIONS.md](DECISIONS.md) D7)
+- Registrarse como desarrollador verificado de Android antes del despliegue global de Google en 2027 (D6)
+- F-Droid y después distribución mediante Google Play (D8)
 - Sitio web dedicado y documentación pública ampliada
 - Facilitar las contribuciones de la comunidad open source
 - Explorar nuevas capacidades completamente locales sin comprometer la arquitectura offline-first
