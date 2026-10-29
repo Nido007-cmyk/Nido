@@ -67,9 +67,17 @@ const CO_INDOOR_RE =
 
 const CO_WORD_RE = /\b(monoxido|carbon monoxide)\b/;
 
+// 0.1.60: aparatos que se usan DENTRO a propósito (caldera, calentador o
+// estufa de gas, chimenea) pero que, si fallan, producen monóxido. Solo
+// cuentan junto con síntomas: sin síntomas, «¿puedo usar la caldera en el
+// sótano?» no es un peligro y no debe recibir «Nunca lo uses dentro».
+// Por eso NO están en CO_DEVICE_RE (que también dispara ese aviso).
+const CO_SYMPTOM_ONLY_DEVICE_RE =
+  /\b(calentador(es)? (de|a) gas|calentador de agua|estufa(s)? (de|a) gas|calefactor(es)? (de|a) gas|caldera|calefon|chimenea|gas (heater|fire|fireplace|stove|furnace)|space heater|water heater|furnace|boiler|fireplace|aquecedor(es)? (de|a) gas|caldeira|lareira|fogao a gas)\b/;
+
 // Síntomas o alarma: entonces no es una pregunta de planificación.
 const CO_SYMPTOM_RE =
-  /\b(?:me duele la cabeza|dolor de cabeza|marea|nausea|vomit|confus|debil|desmay|alarma (?:de co |de monoxido )?(?:sono|suena|esta sonando)|headache|dizz|nause|confused|weak|faint|alarm (?:is )?(?:going off|beeping|sounding)|dor de cabeca|tontura|enjo|alarme (?:esta )?(?:tocando|disparou))/;
+  /\b(?:(?:me|nos|le|les|te) duele(?:n)? la cabeza|dolor de cabeza|marea|nausea|vomit|confus|debil|desmay|alarma (?:de co |de monoxido )?(?:sono|suena|esta sonando)|headache|dizz|nause|confused|weak|faint|alarm (?:is )?(?:going off|beeping|sounding)|dor de cabeca|tontura|enjo|alarme (?:esta )?(?:tocando|disparou))/;
 
 const CO_TEXT: Record<SafetyLang, string> = {
   es:
@@ -265,7 +273,7 @@ export function matchSafetyAnswer(userText: string, lang: SafetyLang): SafetyHit
   const device = CO_DEVICE_RE.test(folded);
   const indoor = CO_INDOOR_RE.test(folded);
   const coWord = CO_WORD_RE.test(folded);
-  if ((coWord || device) && CO_SYMPTOM_RE.test(folded)) {
+  if ((coWord || device || CO_SYMPTOM_ONLY_DEVICE_RE.test(folded)) && CO_SYMPTOM_RE.test(folded)) {
     return { kind: "co-symptoms", lang, text: CO_SYMPTOM_TEXT[lang], deterministic: true };
   }
   // Un coche, una moto o un motor solo cuentan si están encendidos o en marcha.
