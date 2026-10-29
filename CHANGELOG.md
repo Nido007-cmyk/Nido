@@ -4,7 +4,7 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
-## Unreleased
+## 0.1.61-alpha — 2026-10-29
 
 ### Changed
 - **The second question of a new chat starts answering sooner.** NIDO used
