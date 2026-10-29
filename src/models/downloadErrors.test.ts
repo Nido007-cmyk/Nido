@@ -103,6 +103,22 @@ describe("DownloadFailure honesty contract", () => {
     expect(f.canResume).toBe(false);
   });
 
+  it("sizeMismatch with MORE bytes than expected says it is another version, not an incomplete file (0.1.58)", () => {
+    // Seen on a tablet: NIDO 0.1.57 expected the 23-country NIDO Local (237,568 bytes)
+    // and the server already had the 32-country one (253,952 bytes).
+    const bigger = new DownloadFailure({ ...base, code: "sizeMismatch", kind: "permanent", canResume: false, bytesReceived: 253952, bytesExpected: 237568 });
+    expect(bigger.messageKey()).toBe("downloadErrors.sizeMismatchOtherVersion");
+    const msg = downloadFailureUserMessage(bigger);
+    expect(msg).toMatch(/different version/i);
+    expect(msg).toMatch(/Update NIDO/);
+    expect(msg).toContain("248.0 KB");
+    expect(msg).not.toMatch(/incomplete/i);
+    // Fewer bytes is still an incomplete download.
+    const smaller = new DownloadFailure({ ...base, code: "sizeMismatch", kind: "permanent", canResume: false, bytesReceived: 1000, bytesExpected: 237568 });
+    expect(smaller.messageKey()).toBe("downloadErrors.sizeMismatch");
+    expect(downloadFailureUserMessage(smaller)).toMatch(/incomplete/i);
+  });
+
   it("httpError message key splits by kind", () => {
     const t = new DownloadFailure({ ...base, code: "httpError", kind: "transient", canResume: false, httpStatus: 503 });
     const p = new DownloadFailure({ ...base, code: "httpError", kind: "permanent", canResume: false, httpStatus: 403 });

@@ -896,6 +896,7 @@
   "downloadErrors": {
     "checksumMismatch": "A verificação de integridade falhou (SHA-256 não confere), então o arquivo foi excluído. Tentar de novo baixa tudo desde o início.",
     "sizeMismatch": "O download falhou na verificação: recebido {{received}} de {{expected}}. O arquivo incompleto foi excluído, então tentar de novo começa do início.",
+    "sizeMismatchOtherVersion": "O arquivo no servidor é de uma versão diferente da que este NIDO espera (recebido {{received}}, esperado {{expected}}), então nada foi instalado. Atualize o NIDO para a versão mais recente e baixe de novo.",
     "notFound": "O arquivo não está mais disponível no servidor (HTTP {{status}}). Tentar de novo não vai resolver.",
     "httpErrorTransient": "O servidor retornou um erro (HTTP {{status}}) após {{received}} de {{expected}}. Você pode tentar de novo — pode funcionar mais tarde.",
     "httpErrorPermanent": "O servidor retornou um erro (HTTP {{status}}) após {{received}} de {{expected}}. Repetir a mesma requisição não vai ajudar.",

@@ -6,6 +6,13 @@ All notable changes to NIDO are recorded here. Versions follow
 
 ## Unreleased
 
+### Fixed
+- **A clearer message when the server has another version of a pack.** If
+  the file on the server is bigger than this version of NIDO expects, the
+  app no longer calls it "incomplete": it says it's a different version,
+  that nothing was installed, and that updating NIDO fixes it. Seen when a
+  phone on 0.1.57 tried to download the newer NIDO Local made for 0.1.58.
+
 ## 0.1.58-alpha — 2026-10-28
 
 ### Added

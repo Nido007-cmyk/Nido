@@ -896,6 +896,7 @@
   "downloadErrors": {
     "checksumMismatch": "The integrity check failed (SHA-256 mismatch), so the file was deleted. Retrying downloads it again from the start.",
     "sizeMismatch": "The download failed verification: received {{received}} of {{expected}}. The incomplete file was deleted, so retrying starts from the beginning.",
+    "sizeMismatchOtherVersion": "The file on the server is a different version from the one this NIDO expects (received {{received}}, expected {{expected}}), so nothing was installed. Update NIDO to the latest version and download it again.",
     "notFound": "The file is no longer available on the server (HTTP {{status}}). Retrying won't fix this.",
     "httpErrorTransient": "The server returned an error (HTTP {{status}}) after {{received}} of {{expected}}. You can retry — it may succeed later.",
     "httpErrorPermanent": "The server returned an error (HTTP {{status}}) after {{received}} of {{expected}}. Retrying the same request won't help.",

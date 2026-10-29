@@ -934,8 +934,8 @@ export function ChatScreen({
         : null;
     let numberHit = safetyHit !== null && safetyHit.kind === "emergency-number" && factsHit === null ? safetyHit : null;
     if (numberHit?.countryUnknown) {
-      // 0.1.57: list every country with checked numbers (the packs' 23, not
-      // only the built-in table's 8). Still a fixed text: no number guessed.
+      // 0.1.57: list every country with checked numbers (all the packs' countries,
+      // not only the built-in table's 8). Still a fixed text: no number guessed.
       const names = await packCountryNames(uiLang).catch(() => [] as string[]);
       if (names.length > 0) numberHit = { ...numberHit, text: unknownCountryText(uiLang, numberHit.countryUnknown.asked, names) };
     }

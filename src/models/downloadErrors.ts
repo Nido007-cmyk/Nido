@@ -134,6 +134,12 @@ export class DownloadFailure extends Error {
     if (this.code === "httpError") {
       return `downloadErrors.httpError${this.kind === "transient" ? "Transient" : "Permanent"}`;
     }
+    // 0.1.58: MORE bytes than the catalog expects is not an incomplete file —
+    // the server has a different version (e.g. a pack republished for a newer
+    // NIDO). The honest remedy is updating the app, not retrying.
+    if (this.code === "sizeMismatch" && this.bytesReceived > this.bytesExpected) {
+      return "downloadErrors.sizeMismatchOtherVersion";
+    }
     return `downloadErrors.${this.code}`;
   }
 
@@ -171,6 +177,8 @@ const EN_FALLBACK: Record<string, string> = {
     "The integrity check failed (SHA-256 mismatch), so the file was deleted. Retrying downloads it again from the start.",
   "downloadErrors.sizeMismatch":
     "The download failed verification: received {{received}} of {{expected}}. The incomplete file was deleted, so retrying starts from the beginning.",
+  "downloadErrors.sizeMismatchOtherVersion":
+    "The file on the server is a different version from the one this NIDO expects (received {{received}}, expected {{expected}}), so nothing was installed. Update NIDO to the latest version and download it again.",
   "downloadErrors.notFound":
     "The file is no longer available on the server (HTTP {{status}}). Retrying won't fix this.",
   "downloadErrors.httpErrorTransient":
