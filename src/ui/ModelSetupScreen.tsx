@@ -60,6 +60,7 @@ import { makeSurfaces } from "./theme/surfaces";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 import { backupErrorCode } from "../security/backupErrors";
 import { ExactAlarmCard } from "./ExactAlarmCard";
+import { DailySummaryCard } from "./DailySummaryCard";
 import { SecurityStatusCard } from "./SecurityStatusCard";
 import { NetworkAuditCard } from "./NetworkAuditCard";
 import { AgentPermissionsCard } from "./AgentPermissionsCard";
@@ -648,7 +649,7 @@ export function ModelSetupScreen(props: Props) {
           </AccordionSection>
         )}
         {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.memory")}</Text>}
-        {match(t("modelSetupScreen.sections.memory"), t("memorySettings.title"), t("exactAlarm.title"), t("settingsMore.openMemory")) && (
+        {match(t("modelSetupScreen.sections.memory"), t("memorySettings.title"), t("exactAlarm.title"), t("dailySummary.title"), t("settingsMore.openMemory")) && (
           <AccordionSection key={`6-${searchKey}`} defaultOpen={searching} icon="memory" title={t("modelSetupScreen.sections.memory")}>
             {(props as OptionalProps).onOpenMemory && (
               <View style={styles.guideCard}>
@@ -661,6 +662,8 @@ export function ModelSetupScreen(props: Props) {
             <MemorySettings />
             {/* 0.1.32: ¿los recordatorios llegan a tiempo? (Android 12+) */}
             <ExactAlarmCard />
+            {/* 0.1.60: el resumen diario es opcional (apagado por defecto). */}
+            <DailySummaryCard />
           </AccordionSection>
         )}
         {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.appearance")}</Text>}

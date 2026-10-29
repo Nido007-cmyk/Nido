@@ -1676,6 +1676,12 @@
     "off": "Android may delay your reminders by a few minutes while the phone is idle. To get them at the exact time, allow “Alarms & reminders” for NIDO.",
     "allow": "Allow exact alarms"
   },
+  "dailySummary": {
+    "title": "Daily summary",
+    "label": "Summary at 8:00",
+    "value": "A notification every morning with the date, your upcoming calendar events and how many facts you have saved. It is put together on your phone and never leaves it. It stays off unless you turn it on.",
+    "needsPermission": "To get it, allow NIDO's notifications in your phone settings."
+  },
   "licenses": {
     "title": "Licenses",
     "intro": "NIDO is open-source software. This is what each license that applies to the app, and to what you download with it, says. Links are for copying: NIDO does not open the internet.",

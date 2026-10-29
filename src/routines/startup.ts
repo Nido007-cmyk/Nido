@@ -21,6 +21,7 @@ import {
   initNotifications,
   notifyNow,
   refreshBriefingNotification,
+  cancelBriefingNotification,
   cancelReminderNotification,
   scheduleReminderNotification,
   reminderNotificationTitle,
@@ -28,11 +29,13 @@ import {
 import { upcomingEventsForBriefing } from "../agent/tools/handlers";
 import { formatDay } from "../agent/loop/toolRouter";
 
-/** Construye el texto del resumen diario. */
+/** Construye el texto del resumen diario, en el idioma de la app (0.1.60). */
 async function buildBriefingBody(): Promise<string> {
   const parts: string[] = [];
   const now = new Date();
-  parts.push(`Hoy es ${formatDay(now, "es")}.`);
+  const { getLanguageId } = await import("../models/settings");
+  const lang = await getLanguageId().catch(() => "es" as const);
+  parts.push(briefingDateLine(now, lang));
 
   // TOOLS-AUDIT 2026-10-11: el resumen respeta el interruptor "Listar
   // eventos del calendario" de Acerca de (antes lo ignoraba) y nunca pide
@@ -44,7 +47,7 @@ async function buildBriefingBody(): Promise<string> {
     // Si no se pueden leer los ajustes, no se toca el calendario (fail-closed).
     const disabled = await getDisabledToolNames().catch(() => null);
     if (disabled && !disabled.includes("list_calendar_events")) {
-      const events = await upcomingEventsForBriefing(5);
+      const events = await upcomingEventsForBriefing(5, lang);
       if (events) parts.push(events);
     }
   } catch {
@@ -54,7 +57,7 @@ async function buildBriefingBody(): Promise<string> {
   try {
     const snap = await memorySnapshot();
     const factCount = snap.facts?.length ?? 0;
-    if (factCount > 0) parts.push(`Tienes ${factCount} datos guardados en memoria.`);
+    if (factCount > 0) parts.push(briefingFactsLine(factCount, lang));
   } catch {
     // Sin memoria: no pasa nada.
   }
@@ -62,11 +65,24 @@ async function buildBriefingBody(): Promise<string> {
   return parts.join("\n");
 }
 
+/** 0.1.60: líneas del resumen en es/en/pt (antes solo en español). */
+export function briefingDateLine(now: Date, lang: "es" | "en" | "pt"): string {
+  const day = formatDay(now, lang);
+  return lang === "en" ? `Today is ${day}.` : lang === "pt" ? `Hoje é ${day}.` : `Hoy es ${day}.`;
+}
+
+export function briefingFactsLine(n: number, lang: "es" | "en" | "pt"): string {
+  if (lang === "en") return n === 1 ? "You have 1 fact saved in memory." : `You have ${n} facts saved in memory.`;
+  if (lang === "pt") return n === 1 ? "Você tem 1 dado salvo na memória." : `Você tem ${n} dados salvos na memória.`;
+  return n === 1 ? "Tienes 1 dato guardado en memoria." : `Tienes ${n} datos guardados en memoria.`;
+}
+
 /**
  * Corre una vez al arrancar:
  * 1. Inicializa notificaciones locales.
  * 2. Avisa los recordatorios vencidos (y los marca como cumplidos).
- * 3. (Re)programa el resumen diario de las 8:00.
+ * 3. (Re)programa el resumen diario de las 8:00 si la persona lo activó
+ *    (0.1.60: opcional y apagado por defecto); si no, lo quita.
  */
 export async function runStartupRoutines(): Promise<void> {
   const notifyOk = await initNotifications();
@@ -109,11 +125,36 @@ export async function runStartupRoutines(): Promise<void> {
   }
 
   try {
-    if (notifyOk) {
-      const body = await buildBriefingBody();
-      await refreshBriefingNotification(body);
-    }
+    if (notifyOk) await applyDailySummarySetting();
   } catch {
     // El resumen seguirá disponible dentro del chat.
   }
+}
+
+/**
+ * 0.1.60: programa o quita el resumen diario según el interruptor de
+ * Ajustes. Lo llaman el arranque y el propio interruptor. Sin poder leer
+ * los ajustes no se programa nada (fail-closed): nunca se avisa sin que la
+ * persona lo haya pedido.
+ */
+export async function applyDailySummarySetting(): Promise<void> {
+  const { getDailySummaryEnabled } = await import("../models/settings");
+  const enabled = await getDailySummaryEnabled().catch(() => false);
+  await decideDailySummary(enabled, {
+    schedule: async () => refreshBriefingNotification(await buildBriefingBody()),
+    cancel: cancelBriefingNotification,
+  });
+}
+
+/** Parte pura, para los tests: encendido → programa; apagado → quita. */
+export async function decideDailySummary(
+  enabled: boolean,
+  deps: { schedule: () => Promise<void>; cancel: () => Promise<void> },
+): Promise<"scheduled" | "cancelled"> {
+  if (enabled) {
+    await deps.schedule();
+    return "scheduled";
+  }
+  await deps.cancel();
+  return "cancelled";
 }
