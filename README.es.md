@@ -51,7 +51,8 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
 - **Sabe cosas sin internet**: una base de conocimiento integrada y un
   paquete opcional de Wikipedia (unos 50.000 artículos). Con la búsqueda
   multilingüe activada puedes preguntar en español, portugués o inglés, y las
-  respuestas muestran los artículos de donde salen; si nada de la base
+  respuestas muestran los artículos de donde salen, con una línea que cuenta
+  qué frases salen de ellos y cuáles del modelo sin fuente; si nada de la base
   encaja de verdad, no se muestra ninguna fuente.
 - **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
   teléfonos emparejados, sin internet y sin servidor. El emparejamiento se

@@ -50,7 +50,9 @@ device, encrypted. There are no accounts, no cloud and no analytics.
 - **Knows things offline**: a built-in knowledge base plus an optional
   Wikipedia pack (about 50,000 articles). With multilingual search on, you
   can ask in Spanish, Portuguese or English, and answers show the articles
-  they come from; when nothing in the base really matches, no source is shown.
+  they come from, with a line that counts which sentences come from them and
+  which come from the model with no source; when nothing in the base really
+  matches, no source is shown.
 - **Talks to another NIDO over Bluetooth**: encrypted messages between two
   paired phones, with no internet and no server. Pairing is done in person
   with a QR code.
