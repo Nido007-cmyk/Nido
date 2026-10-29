@@ -54,10 +54,12 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   paired phones, with no internet and no server. Pairing is done in person
   with a QR code.
 - **Has an Emergency tab**: your country's emergency numbers, checked
-  against official sources (23 countries in the NIDO Local pack), each with
+  against official sources (32 countries in the NIDO Local pack), each with
   its source and date. "Call" opens the dialer with the number typed in.
   Quick guides (CPR, bleeding, choking, burns, earthquake, hurricane) and
-  "describe what's happening" write the question into the chat. When a
+  "describe what's happening" write the question into the chat. First aid
+  questions are answered with the NIDO Essentials guide exactly as written,
+  with no AI model in between. When a
   newer version of the pack exists, the one you have keeps working offline
   and the app says an update is available.
 - **Five sections one tap away**: Chat, Emergency, Library, NIDO and

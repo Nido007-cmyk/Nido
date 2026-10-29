@@ -56,10 +56,12 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   teléfonos emparejados, sin internet y sin servidor. El emparejamiento se
   hace en persona con un código QR.
 - **Tiene una pestaña Emergencia**: los números de emergencia de tu país,
-  comprobados en fuentes oficiales (23 países en el pack NIDO Local), cada
+  comprobados en fuentes oficiales (32 países en el pack NIDO Local), cada
   uno con su fuente y su fecha. «Llamar» abre el marcador con el número
   escrito. Las guías rápidas (RCP, hemorragia, atragantamiento, quemaduras,
   terremoto, huracán) y «describe lo que pasa» escriben la pregunta en el chat.
+  Las preguntas de primeros auxilios se responden con la guía de NIDO Esencial
+  tal como está escrita, sin un modelo de IA en medio.
   Si sale una versión más nueva del pack, la que tienes sigue funcionando sin
   conexión y la app avisa de que hay una actualización.
 - **Cinco secciones a un toque**: Chat, Emergencia, Biblioteca, NIDO y
