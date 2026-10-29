@@ -4,6 +4,17 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+### Fixed
+- **Older versions of NIDO keep downloading their packs.** A new version of
+  a knowledge pack now always goes to a new release instead of replacing the
+  old file, and an automated check stops the catalog from pointing an
+  existing address at different bytes. (Replacing NIDO Local's file for
+  0.1.58 left 0.1.57 unable to download it.)
+- **The README had the Wikipedia pack's size wrong.** It has about 50,000
+  articles (49,832); the 116,000 it said was the number of search passages.
+
 ## 0.1.59-alpha — 2026-10-28
 
 ### Fixed

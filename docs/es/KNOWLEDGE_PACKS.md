@@ -116,6 +116,21 @@ queda. Un archivo de pack que cambió después de instalarse (cualquier otro
 contenido) no cuenta como versión anterior: se borra, como antes. Los modelos
 mantienen la comprobación estricta.
 
+## Publicar una versión nueva de un pack
+
+Un archivo de una release de NIDO publicada no se sustituye nunca. Cada versión
+de la app solo acepta los bytes exactos que nombra su propio catálogo firmado,
+así que sobrescribir un archivo en la misma dirección deja sin descarga a todas
+las apps anteriores que apuntan a él (pasó una vez: se republicó
+`knowledge-packs-v5/nido-local.sqlite` para la 0.1.58 y la 0.1.57 dejó de poder
+bajarlo). Una versión nueva de un pack va a una release nueva
+(`knowledge-packs-v6`, `v7`…): se cambia `RELEASE_TAG` en
+`.github/workflows/knowledge-pack.yml`, el `sourceUrl` de
+`src/models/manifest.ts` apunta a ella, se vuelve a firmar el catálogo y se
+añaden la dirección y la SHA-256 nuevas a `knowledge-packs/release-ledger.json`.
+Nunca se edita una línea existente: `src/models/packReleaseLedger.test.ts` falla
+si una dirección del catálogo que ya está en el registro tiene otra huella.
+
 ## Cómo la app busca en un pack
 
 Para cada pregunta, el índice de palabras clave del pack elige hasta 400 fragmentos

@@ -47,7 +47,7 @@ device, encrypted. There are no accounts, no cloud and no analytics.
 - **Answers from your documents**: import `.txt`, `.md`, `.csv`, `.json` or
   `.pdf` files and NIDO indexes them on the phone.
 - **Knows things offline**: a built-in knowledge base plus an optional
-  Wikipedia pack (about 116,000 articles). With multilingual search on, you
+  Wikipedia pack (about 50,000 articles). With multilingual search on, you
   can ask in Spanish, Portuguese or English, and answers show the articles
   they come from; when nothing in the base really matches, no source is shown.
 - **Talks to another NIDO over Bluetooth**: encrypted messages between two

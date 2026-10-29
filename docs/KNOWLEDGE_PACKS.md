@@ -140,6 +140,20 @@ stays. A pack file that changed after it was installed (any other bytes) is
 not treated as an older version: it is deleted, as before. Models keep the
 strict check.
 
+## Publishing a new version of a pack
+
+A file in a published NIDO release is never replaced. Each app version only
+accepts the exact bytes its own signed catalog names, so overwriting a file
+under the same address breaks every older app that points to it (it happened
+once, when `knowledge-packs-v5/nido-local.sqlite` was republished for 0.1.58
+and 0.1.57 could no longer download it). A new pack version goes to a new
+release tag (`knowledge-packs-v6`, `v7`…): set `RELEASE_TAG` in
+`.github/workflows/knowledge-pack.yml`, point the `sourceUrl` in
+`src/models/manifest.ts` to it, re-sign the catalog, and add the new address
+and SHA-256 to `knowledge-packs/release-ledger.json`. Never edit an existing
+line there: `src/models/packReleaseLedger.test.ts` fails if a catalog address
+already in the ledger has a different fingerprint.
+
 ## Passing a pack to another phone (no internet)
 
 Since 0.1.55 a NIDO can hand a catalog pack (for example NIDO Essentials,
