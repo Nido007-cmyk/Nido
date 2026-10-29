@@ -6,6 +6,13 @@ All notable changes to NIDO are recorded here. Versions follow
 
 ## Unreleased
 
+### Added
+- **Short version of a first aid guide, still in its own words.** Asking
+  "summarize the CPR guide" or "resúmeme la guía de quemaduras" shows the
+  start of that guide exactly as written, up to its first numbered steps,
+  says that the full guide is the reference and offers to open it. No AI
+  model rewrites a first aid guide, even when you ask for it shorter.
+
 ### Changed
 - **The 8:00 daily summary is now optional, and off unless you turn it on.**
   Before, NIDO scheduled it on its own as soon as notifications were

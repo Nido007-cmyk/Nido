@@ -13,7 +13,7 @@ import { guideTitleOf } from "./packSource";
 import { ANSWER_CONTEXT_CHUNKS } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
 import type { GroundingLang } from "./grounding";
-import { composeGuideAnswer, pickGuideChunk } from "./guideAnswer";
+import { composeGuideAnswer, pickGuideChunk, stripShortRequest, wantsShortGuide } from "./guideAnswer";
 
 export interface GuideAnswer {
   text: string;
@@ -32,13 +32,15 @@ export async function answerFromGuide(
 ): Promise<{ answer: GuideAnswer | null; retrieved: RetrievedChunk[] | null }> {
   let retrieved: RetrievedChunk[] | null = null;
   try {
-    retrieved = await retrieve(query, ANSWER_CONTEXT_CHUNKS);
+    // 0.1.60: «resúmeme la guía de RCP» busca por «la guía de RCP».
+    const short = wantsShortGuide(query);
+    retrieved = await retrieve(short ? stripShortRequest(query) : query, ANSWER_CONTEXT_CHUNKS);
     const pick = pickGuideChunk(retrieved, lang);
     if (!pick) return { answer: null, retrieved };
     const doc = await readPackSource(pick.chunkId);
     if (!doc) return { answer: null, retrieved };
     const sameGuide = retrieved.filter((c) => c !== pick && guideTitleOf(c.title) === doc.title);
-    return { answer: { text: composeGuideAnswer(doc, lang), chunks: [pick, ...sameGuide] }, retrieved };
+    return { answer: { text: composeGuideAnswer(doc, lang, { short }), chunks: [pick, ...sameGuide] }, retrieved };
   } catch (e) {
     console.warn("[guideAnswer]", e instanceof Error ? e.message : String(e));
     return { answer: null, retrieved };
