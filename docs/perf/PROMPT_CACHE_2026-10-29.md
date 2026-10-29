@@ -36,8 +36,19 @@ Tokens the second question had to read, three real question pairs:
 | Roman Empire → revolutions | 418 | 703 |
 
 About 285 fewer tokens (−36%) for the second question of every new chat,
-roughly 5 s at this CPU's speed, plus the title generation itself, which no
-longer runs. The title now comes from the first question
+plus the title generation itself, which no longer runs.
+
+Measured in seconds too (llama.cpp's prompt cache, which reuses the common
+prefix the same way): time to read the second question's prompt.
+
+| Pair | Cache kept | After the model title | No cache |
+| --- | --- | --- | --- |
+| photosynthesis → black hole | 10.8 s (510 tokens) | 16.2 s (795) | 15.5 s (797) |
+| inflation → earthquakes | 12.0 s (523) | 17.3 s (808) | 17.2 s (810) |
+| Roman Empire → revolutions | 8.8 s (418) | 13.2 s (703) | 13.7 s (705) |
+
+About 5 s less (−33%) on this CPU. A phone's speed differs, but the share
+saved is the same because the time follows the number of tokens. The title now comes from the first question
 (`src/services/sessionTitle.ts`).
 
 ## Change 2 — the system message puts what doesn't change first
