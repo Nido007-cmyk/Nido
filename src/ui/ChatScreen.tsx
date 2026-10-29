@@ -1322,7 +1322,9 @@ export function ChatScreen({
         );
       };
 
-      let chunks: RetrievedChunk[];
+      let chunks: RetrievedChunk[] = [];
+      // 0.1.59: answered word for word from a NIDO Essentials guide (no model).
+      let guideAnswered = false;
       // Honest no-result flag for THIS reply (2026-09-28): true only when
       // retrieval was actually attempted and returned zero chunks — never
       // for greetings/other retrieval-irrelevant tasks where no retrieval
@@ -1373,7 +1375,6 @@ export function ChatScreen({
         // mangled the choking steps on a real tablet). Retrieval runs once;
         // the fixed path below reuses it when no guide answers.
         let preRetrieved: RetrievedChunk[] | null = null;
-        let guideAnswered = false;
         if (!isRetrievalIrrelevant(classifyTask(query))) {
           setProcessing({ messageId: assistantId, status: "retrieving" });
           const g = await answerFromGuide(query, uiLang);
