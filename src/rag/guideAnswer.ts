@@ -62,6 +62,38 @@ const HEAD: Record<GroundingLang, (title: string) => string> = {
   en: (t) => `NIDO Essentials guide “${t}”, exactly as written (no model):`,
   pt: (t) => `Guia «${t}» do NIDO Essencial, exatamente como está escrito (sem modelo):`,
 };
+const HEAD_SHORT: Record<GroundingLang, (title: string) => string> = {
+  es: (t) => `Versión corta de la guía «${t}» de NIDO Esencial: su primera parte, tal como está escrita (sin modelo):`,
+  en: (t) => `Short version of the NIDO Essentials guide “${t}”: its first part, exactly as written (no model):`,
+  pt: (t) => `Versão curta do guia «${t}» do NIDO Essencial: a primeira parte, exatamente como está escrita (sem modelo):`,
+};
+const MORE_SHORT: Record<GroundingLang, string> = {
+  es: "Es solo el principio: la guía completa es la referencia. Toca «Abrir la guía completa».",
+  en: "This is only the beginning: the full guide is the reference. Tap “Open the full guide”.",
+  pt: "É só o começo: o guia completo é a referência. Toque em «Abrir o guia completo».",
+};
+
+/**
+ * 0.1.60 (decisión del plan, caso AT-04): «resúmeme la guía de RCP» no
+ * hace que un modelo reescriba la guía (R1 de la constitución). Se muestra
+ * su principio tal cual: las partes hasta el primer paso a paso numerado.
+ */
+const SHORT_REQUEST_RE =
+  /\b(res[uú]me(?:me|la|lo)?|resumen|resumida|en (?:pocas|dos) palabras|versi[oó]n (?:corta|breve|resumida)|m[aá]s corto|corto y r[aá]pido|summari[sz]e|summary|short version|in (?:a )?few words|tl;?dr|resuma|resumo|vers[aã]o (?:curta|resumida)|em poucas palavras)\b/i;
+
+export function wantsShortGuide(query: string): boolean {
+  return SHORT_REQUEST_RE.test(query ?? "");
+}
+
+/** La pregunta sin la petición de resumen, para buscar la guía por su tema. */
+export function stripShortRequest(query: string): string {
+  const out = (query ?? "").replace(new RegExp(SHORT_REQUEST_RE.source, "gi"), " ").replace(/\s+/g, " ").trim();
+  return out || query;
+}
+
+/** Hasta dónde llega la versión corta. */
+export const GUIDE_SHORT_MAX_CHARS = 1200;
+
 const MORE: Record<GroundingLang, string> = {
   es: "La guía sigue: toca «Abrir la guía completa».",
   en: "The guide goes on: tap “Open the full guide”.",
@@ -79,7 +111,8 @@ const CALL: Record<GroundingLang, string> = {
  * in order (none rewritten, none dropped in the middle), cut only between
  * parts when long, then the guide's sources and the call-first line.
  */
-export function composeGuideAnswer(doc: PackSourceDoc, lang: GroundingLang): string {
+export function composeGuideAnswer(doc: PackSourceDoc, lang: GroundingLang, opts: { short?: boolean } = {}): string {
+  if (opts.short) return composeShortGuideAnswer(doc, lang);
   const parts: string[] = [];
   let used = 0;
   let cut = false;
@@ -95,6 +128,29 @@ export function composeGuideAnswer(doc: PackSourceDoc, lang: GroundingLang): str
   }
   const out = [HEAD[lang](doc.title), "", parts.join("\n\n")];
   if (cut) out.push("", MORE[lang]);
+  if (doc.source.trim()) out.push("", `${SOURCE[lang]}: ${doc.source.trim()}`);
+  out.push("", CALL[lang]);
+  return out.join("\n");
+}
+
+/**
+ * Versión corta: las partes en orden hasta la primera con un paso a paso
+ * numerado («1. …»), incluida; si en las tres primeras no hay ninguna, las
+ * dos primeras. Nunca más de GUIDE_SHORT_MAX_CHARS salvo la primera parte,
+ * y siempre cortando entre partes, nunca dentro de una.
+ */
+export function composeShortGuideAnswer(doc: PackSourceDoc, lang: GroundingLang): string {
+  const bodies = doc.parts.map((p) => p.body.trim()).filter(Boolean);
+  const firstSteps = bodies.slice(0, 3).findIndex((b) => /^\s*1[.)]\s/m.test(b));
+  const wanted = firstSteps >= 0 ? firstSteps + 1 : Math.min(2, bodies.length);
+  const parts: string[] = [];
+  let used = 0;
+  for (const body of bodies.slice(0, wanted)) {
+    if (parts.length > 0 && used + body.length > GUIDE_SHORT_MAX_CHARS) break;
+    parts.push(body);
+    used += body.length;
+  }
+  const out = [HEAD_SHORT[lang](doc.title), "", parts.join("\n\n"), "", MORE_SHORT[lang]];
   if (doc.source.trim()) out.push("", `${SOURCE[lang]}: ${doc.source.trim()}`);
   out.push("", CALL[lang]);
   return out.join("\n");
