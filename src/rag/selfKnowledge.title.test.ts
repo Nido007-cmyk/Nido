@@ -108,13 +108,15 @@ describe("D/F3 deterministic self-knowledge titles", () => {
     expect(generateMock).not.toHaveBeenCalled();
   });
 
-  it("3. ordinary conversations keep existing model title behavior", () => {
+  it("3. ordinary conversations get a model-free title too (0.1.61)", () => {
     // summarize.ts still offers model-backed title generation...
     expect(typeof generateSessionTitle).toBe("function");
-    // ...and the non-deterministic ChatScreen branches (agent + normal
-    // chat) still use it: exactly the two remaining call sites.
+    // ...but since 0.1.61 the chat no longer calls it: the agent and normal
+    // chat branches title the session from the question (sessionTitle.ts),
+    // which keeps the KV cache prefix for the next question.
     const calls = CHAT_SCREEN_SRC.match(/generateSessionTitle\(query\)/g) ?? [];
-    expect(calls.length).toBe(2);
+    expect(calls.length).toBe(0);
+    expect((CHAT_SCREEN_SRC.match(/titleFromQuestion\(query\)/g) ?? []).length).toBe(2);
     // The model path itself is unchanged: it still invokes the model with
     // the user's first message.
     generateMock.mockResolvedValueOnce("Mocked Title");
