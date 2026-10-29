@@ -56,6 +56,8 @@ jobs:
             }
           '
       - run: npm run verify:pins
+      # 0.1.60: cada regla firme de la constitución tiene sus comprobaciones.
+      - run: node scripts/check-constitution.mjs --github
       - run: npm run verify:manifest-sig
       # Avisos de licencias de terceros (2026-10-14): se generan desde
       # node_modules para comprobar que el generador funciona y avisar si

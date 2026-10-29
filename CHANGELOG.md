@@ -7,6 +7,23 @@ All notable changes to NIDO are recorded here. Versions follow
 ## Unreleased
 
 ### Added
+- **NIDO's constitution.** A document that says how the assistant should
+  behave and why: what wins when being helpful, honest, safe and private
+  conflict, eight firm rules (first aid shown as written, emergency numbers
+  never guessed, confirmation before any action outside the app, pasted or
+  document text never taken as a command…) and how each one is checked.
+  CI now fails if a rule loses its check
+  ([docs/NIDO_CONSTITUTION.md](docs/NIDO_CONSTITUTION.md)).
+- **A bigger evaluation, checked on every change.** 118 test questions in
+  English, Spanish and Portuguese (first aid, emergency numbers, carbon
+  monoxide, tools, honesty, attacks); 47 run against the real code on every
+  change, and every first aid question has to find the right guide
+  ([docs/eval/EVAL_V2.md](docs/eval/EVAL_V2.md)). Its first run found the
+  three problems fixed below.
+- **Confirmation before actions, now proven tool by tool.** A test checks
+  that every tool with an effect outside the app asks you first, and that
+  text from a document, pack or note can't trigger an action without your
+  confirmation.
 - **Short version of a first aid guide, still in its own words.** Asking
   "summarize the CPR guide" or "resúmeme la guía de quemaduras" shows the
   start of that guide exactly as written, up to its first numbered steps,

@@ -101,6 +101,10 @@ de `package.json` en `main`) va acompañada, en el mismo PR, de:
    / `docs/MODELS.md` y sus copias en `docs/es/`.
 5. Si se completó o añadió algo del roadmap: `docs/ROADMAP.md` y
    `docs/es/ROADMAP.md`.
+6. Si el cambio toca cómo se comporta el asistente: revisarlo contra
+   [la constitución de NIDO](docs/es/NIDO_CONSTITUTION.md). Cambiar una regla
+   firme es cambiar la constitución a propósito, con tests
+   (`docs/constitution-rules.json`, `scripts/check-constitution.mjs`).
 
 Tras la release: comprobar que el `app-release.apk.sha256` publicado coincide
 con el digest del archivo.

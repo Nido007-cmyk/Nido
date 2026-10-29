@@ -135,6 +135,16 @@ jobs:
           # e5 is the multilingual model the app uses for Spanish and Portuguese.
           node scripts/check-pack-retrieval.mjs "build/knowledge-pack/$PACK-e5.sqlite" "$CHECKS" \
             --model assets/models/embedding-multilingual.gguf --top 3 --min 0.9 --github
+          # 0.1.60 (evaluación v2): las preguntas de primeros auxilios
+          # (casos FA-* de src/eval/cases/v2.json) tienen que acertar TODAS:
+          # --min 0.9 es un porcentaje global y dejaría pasar un fallo aquí.
+          FA="knowledge-packs/$PACK/first-aid-checks.json"
+          if [ -f "$FA" ]; then
+            node scripts/check-pack-retrieval.mjs "build/knowledge-pack/$PACK.sqlite" "$FA" \
+              --model assets/models/embedding.gguf --langs en --top 3 --min 1.0 --github
+            node scripts/check-pack-retrieval.mjs "build/knowledge-pack/$PACK-e5.sqlite" "$FA" \
+              --model assets/models/embedding-multilingual.gguf --top 3 --min 1.0 --github
+          fi
       - name: Upload to the draft release
         env:
           GH_TOKEN: ${{ github.token }}

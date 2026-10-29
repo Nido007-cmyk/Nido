@@ -1,0 +1,4 @@
+{
+ "_doc": "Casos de v2.json que fallan a sabiendas, cada uno con su issue. Si uno empieza a pasar, el test falla para que se quite de aquí.",
+ "failures": {}
+}
