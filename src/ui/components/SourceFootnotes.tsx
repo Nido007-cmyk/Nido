@@ -17,6 +17,7 @@ import type { Typography } from "../theme/typography";
 import { spacing, radii } from "../theme/spacing";
 import { parsePackChunkId } from "../../rag/packSource";
 import { SourceReader } from "./SourceReader";
+import { summarizeProvenance, type ProvenanceLang, type SentenceProvenance } from "../../rag/provenance";
 
 interface Props {
   citations: RetrievedChunk[];
@@ -27,6 +28,11 @@ interface Props {
    * comprobó de verdad (src/rag/grounding.ts).
    */
   grounding?: GroundingStatus;
+  /**
+   * 0.1.61: de dónde sale cada frase (provenance.ts). Se resume en una línea
+   * de texto real: «3 frases de la guía · 1 del modelo sin fuente».
+   */
+  provenance?: SentenceProvenance[];
 }
 
 const TITLE_KEY: Record<GroundingStatus, string> = {
@@ -37,15 +43,19 @@ const TITLE_KEY: Record<GroundingStatus, string> = {
   skipped: "sourceFootnotes.title",
 };
 
-export function SourceFootnotes({ citations, grounding }: Props) {
+export function SourceFootnotes({ citations, grounding, provenance }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   // 0.1.55: la guía entera, con la parte usada resaltada.
   const [readerChunkId, setReaderChunkId] = useState<string | null>(null);
 
   if (!citations || citations.length === 0) return null;
+
+  const uiLang = (i18n?.language ?? "").slice(0, 2);
+  const provLang: ProvenanceLang = uiLang === "es" || uiLang === "pt" ? uiLang : "en";
+  const provenanceSummary = provenance && provenance.length > 0 ? summarizeProvenance(provenance, provLang) : "";
 
   const toggle = (idx: number) => {
     impact(ImpactFeedbackStyle.Light);
@@ -65,6 +75,7 @@ export function SourceFootnotes({ citations, grounding }: Props) {
           similarity against the local index — an absolute match-strength
           measure, not confidence. The old fused-relative score rendered a
           weight-scheme-constant "50%" for any lone single-source chunk. */}
+      {provenanceSummary ? <Text style={styles.provenanceLine}>{provenanceSummary}</Text> : null}
       <Text style={styles.relevanceCaption}>{t("sourceFootnotes.relevanceCaption")}</Text>
 
       <View style={styles.chipsRow}>
@@ -138,6 +149,11 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  provenanceLine: {
+    ...typography.ui.caption,
+    color: colors.text.secondary,
+    fontWeight: "600",
   },
   headerLeft: {
     flexDirection: "row",
