@@ -34,6 +34,8 @@ interface Settings {
   hapticsEnabled?: boolean;
   voiceInputEnabled?: boolean;
   readAloudEnabled?: boolean;
+  /** 0.1.60: resumen diario de las 8:00. Opt-in (constitución §9). */
+  dailySummaryEnabled?: boolean;
   autoSummarize?: boolean;
   historyTurnThreshold?: number;
   maxSavedSessions?: number;
@@ -299,6 +301,23 @@ export async function getReadAloudEnabled(): Promise<boolean> {
 export async function setReadAloudEnabled(enabled: boolean): Promise<void> {
   return mutateSettings((s) => {
     s.readAloudEnabled = enabled;
+  });
+}
+
+/**
+ * 0.1.60: el resumen diario de las 8:00 es opcional y viene apagado. Antes
+ * se programaba solo en cuanto había permiso de notificaciones; la
+ * constitución de NIDO (§9) dice que las notificaciones son las que la
+ * persona pide.
+ */
+export async function getDailySummaryEnabled(): Promise<boolean> {
+  const s = await readSettings();
+  return s.dailySummaryEnabled ?? false;
+}
+
+export async function setDailySummaryEnabled(enabled: boolean): Promise<void> {
+  return mutateSettings((s) => {
+    s.dailySummaryEnabled = enabled;
   });
 }
 

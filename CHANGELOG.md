@@ -6,7 +6,15 @@ All notable changes to NIDO are recorded here. Versions follow
 
 ## Unreleased
 
+### Changed
+- **The 8:00 daily summary is now optional, and off unless you turn it on.**
+  Before, NIDO scheduled it on its own as soon as notifications were
+  allowed. Turn it on in Settings › What I remember › Daily summary.
+  NIDO's constitution says its notifications are the ones you ask for.
+
 ### Fixed
+- **The daily summary was always in Spanish.** It now uses the app's
+  language (English, Spanish or Portuguese).
 - **Older versions of NIDO keep downloading their packs.** A new version of
   a knowledge pack now always goes to a new release instead of replacing the
   old file, and an automated check stops the catalog from pointing an

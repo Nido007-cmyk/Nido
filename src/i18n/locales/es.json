@@ -1676,6 +1676,12 @@
     "off": "Android puede retrasar tus recordatorios unos minutos cuando el teléfono está en reposo. Para que lleguen a la hora exacta, permite «Alarmas y recordatorios» para NIDO.",
     "allow": "Permitir alarmas exactas"
   },
+  "dailySummary": {
+    "title": "Resumen diario",
+    "label": "Resumen a las 8:00",
+    "value": "Una notificación cada mañana con la fecha, tus próximos eventos del calendario y cuántos datos tienes guardados. Se prepara en el teléfono y no sale de él. Está apagado salvo que lo actives.",
+    "needsPermission": "Para recibirlo, permite las notificaciones de NIDO en los ajustes del teléfono."
+  },
   "licenses": {
     "title": "Licencias",
     "intro": "NIDO es software libre. Aquí está lo que dice cada licencia que aplica a la app y a lo que descargas con ella. Los enlaces son para copiarlos: NIDO no abre internet.",

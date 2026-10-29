@@ -834,7 +834,12 @@ const createCalendarEventHandler: ToolHandler = async (args) => {
  * la app y nunca devuelve textos de error/permiso (el resumen los mostraría
  * como si fueran eventos). Devuelve null si no hay nada que mostrar.
  */
-export async function upcomingEventsForBriefing(limit = 5): Promise<string | null> {
+export async function upcomingEventsForBriefing(limit = 5, lang?: RouterLang): Promise<string | null> {
+  // 0.1.60: el resumen diario salía en español para todos.
+  const T = (es: string, en: string, pt: string) => {
+    const l = lang ?? uiLang();
+    return l === "en" ? en : l === "pt" ? pt : es;
+  };
   try {
     const Calendar = await import("expo-calendar");
     const perm = await Calendar.getCalendarPermissions();
@@ -846,9 +851,9 @@ export async function upcomingEventsForBriefing(limit = 5): Promise<string | nul
     const events = await Calendar.listEvents(calendars, now, to);
     const upcoming = events.slice(0, limit).map((e: any) => {
       const s = e.startDate ? new Date(e.startDate) : null;
-      return `- «${e.title ?? L("(sin título)", "(untitled)", "(sem título)")}»${s ? ` — ${fmtDateTime(s.toISOString())}` : ""}${e.location ? ` @ ${e.location}` : ""}`;
+      return `- «${e.title ?? T("(sin título)", "(untitled)", "(sem título)")}»${s ? ` — ${fmtDateTime(s.toISOString())}` : ""}${e.location ? ` @ ${e.location}` : ""}`;
     });
-    return upcoming.length > 0 ? `Próximos eventos:\n${upcoming.join("\n")}` : null;
+    return upcoming.length > 0 ? `${T("Próximos eventos:", "Upcoming events:", "Próximos eventos:")}\n${upcoming.join("\n")}` : null;
   } catch {
     return null;
   }

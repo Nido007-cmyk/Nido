@@ -1676,6 +1676,12 @@
     "off": "O Android pode atrasar seus lembretes alguns minutos quando o telefone está em repouso. Para chegarem na hora exata, permita “Alarmes e lembretes” para o NIDO.",
     "allow": "Permitir alarmes exatos"
   },
+  "dailySummary": {
+    "title": "Resumo diário",
+    "label": "Resumo às 8:00",
+    "value": "Uma notificação toda manhã com a data, os próximos eventos da agenda e quantos dados você tem salvos. É preparado no telefone e não sai dele. Fica desligado a menos que você o ative.",
+    "needsPermission": "Para recebê-lo, permita as notificações do NIDO nas configurações do telefone."
+  },
   "licenses": {
     "title": "Licenças",
     "intro": "O NIDO é software livre. Aqui está o que diz cada licença que se aplica ao app e ao que você baixa com ele. Os links são para copiar: o NIDO não abre a internet.",

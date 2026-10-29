@@ -279,6 +279,15 @@ export async function notifyNow(title: string, body: string): Promise<void> {
  * la app no abra. El contenido se refresca en cada startup (híbrido).
  * Se llama al abrir la app para que el contenido esté fresco.
  */
+/** 0.1.60: quita el resumen diario programado (interruptor apagado). */
+export async function cancelBriefingNotification(): Promise<void> {
+  try {
+    await Notifications.cancelScheduledNotificationAsync(BRIEFING_IDENTIFIER);
+  } catch {
+    // Nada programado o sin permiso: no hay nada que quitar.
+  }
+}
+
 export async function refreshBriefingNotification(body: string): Promise<void> {
   try {
     await Notifications.cancelScheduledNotificationAsync(BRIEFING_IDENTIFIER);
