@@ -38,7 +38,8 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   el teléfono (llama.cpp mediante `llama.rn`).
 - **Recuerda por ti**: datos, notas y recordatorios, guardados en una base
   cifrada con SQLCipher. La clave vive en el Keystore de Android. Los
-  cumpleaños que le cuentas tienen recordatorio cada año.
+  cumpleaños que le cuentas tienen recordatorio cada año. Si lo activas,
+  recibes un resumen diario a las 8:00 (viene apagado).
 - **Actúa cuando se lo pides**: recordatorios (una vez, o cada día, semana,
   mes o año), cuentas atrás, notas, eventos de calendario, conversión de
   unidades, cálculos, abrir enlaces. Todo lo que tiene efecto fuera de la
@@ -61,7 +62,10 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   escrito. Las guías rápidas (RCP, hemorragia, atragantamiento, quemaduras,
   terremoto, huracán) y «describe lo que pasa» escriben la pregunta en el chat.
   Las preguntas de primeros auxilios se responden con la guía de NIDO Esencial
-  tal como está escrita, sin un modelo de IA en medio.
+  tal como está escrita, sin un modelo de IA en medio, también si pides una
+  versión corta (recibes el principio de la guía tal cual). Si describes
+  síntomas de monóxido de carbono cerca de un calentador, un generador o una
+  estufa, recibes un aviso fijo: salir al aire libre y pedir ayuda.
   Si sale una versión más nueva del pack, la que tienes sigue funcionando sin
   conexión y la app avisa de que hay una actualización.
 - **Cinco secciones a un toque**: Chat, Emergencia, Biblioteca, NIDO y

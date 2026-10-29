@@ -4,7 +4,7 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
-## Unreleased
+## 0.1.60-alpha — 2026-10-29
 
 ### Added
 - **NIDO's constitution.** A document that says how the assistant should
@@ -13,18 +13,18 @@ All notable changes to NIDO are recorded here. Versions follow
   never guessed, confirmation before any action outside the app, pasted or
   document text never taken as a command…) and how each one is checked.
   CI now fails if a rule loses its check
-  ([docs/NIDO_CONSTITUTION.md](docs/NIDO_CONSTITUTION.md)).
+  ([docs/NIDO_CONSTITUTION.md](https://github.com/Nido007-cmyk/Nido/blob/main/docs/NIDO_CONSTITUTION.md)).
 - **A bigger evaluation, checked on every change.** 118 test questions in
   English, Spanish and Portuguese (first aid, emergency numbers, carbon
   monoxide, tools, honesty, attacks); 47 run against the real code on every
   change, and every first aid question has to find the right guide
-  ([docs/eval/EVAL_V2.md](docs/eval/EVAL_V2.md)). Its first run found the
+  ([docs/eval/EVAL_V2.md](https://github.com/Nido007-cmyk/Nido/blob/main/docs/eval/EVAL_V2.md)). Its first run found the
   three problems fixed below.
 - **Confirmation before actions, now proven tool by tool.** A test checks
   that every tool with an effect outside the app asks you first, and that
   text from a document, pack or note can't trigger an action without your
   confirmation.
-- **A record of product decisions** ([docs/DECISIONS.md](docs/DECISIONS.md)):
+- **A record of product decisions** ([docs/DECISIONS.md](https://github.com/Nido007-cmyk/Nido/blob/main/docs/DECISIONS.md)):
   messages only between people paired in person, no relay server, first aid
   never rewritten, the daily summary opt-in, and the plan for Android's
   developer verification, an external audit and F-Droid, each with its

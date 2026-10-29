@@ -37,7 +37,8 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   (llama.cpp through `llama.rn`).
 - **Remembers for you**: facts, notes and reminders, stored in a database
   encrypted with SQLCipher. The key lives in the Android Keystore.
-  Birthdays you tell it get a reminder every year.
+  Birthdays you tell it get a reminder every year. An 8:00 daily summary is
+  available if you turn it on (it's off by default).
 - **Acts on your requests**: reminders (once, or every day, week, month or
   year), countdowns, notes, calendar events, unit conversions, arithmetic,
   opening links. Anything with an effect outside the app asks for your
@@ -59,7 +60,10 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   Quick guides (CPR, bleeding, choking, burns, earthquake, hurricane) and
   "describe what's happening" write the question into the chat. First aid
   questions are answered with the NIDO Essentials guide exactly as written,
-  with no AI model in between. When a
+  with no AI model in between, even when you ask for a short version (you
+  get the start of the guide as written). Describing carbon monoxide
+  symptoms near a heater, generator or stove gets a fixed warning to get
+  outside and call for help. When a
   newer version of the pack exists, the one you have keeps working offline
   and the app says an update is available.
 - **Five sections one tap away**: Chat, Emergency, Library, NIDO and
