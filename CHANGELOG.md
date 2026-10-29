@@ -4,7 +4,7 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
-## Unreleased
+## 0.1.59-alpha — 2026-10-28
 
 ### Fixed
 - **First aid answers now show the guide exactly as written.** When a
