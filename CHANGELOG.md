@@ -24,6 +24,11 @@ All notable changes to NIDO are recorded here. Versions follow
   that every tool with an effect outside the app asks you first, and that
   text from a document, pack or note can't trigger an action without your
   confirmation.
+- **A record of product decisions** ([docs/DECISIONS.md](docs/DECISIONS.md)):
+  messages only between people paired in person, no relay server, first aid
+  never rewritten, the daily summary opt-in, and the plan for Android's
+  developer verification, an external audit and F-Droid, each with its
+  reason and what would make us revisit it.
 - **Short version of a first aid guide, still in its own words.** Asking
   "summarize the CPR guide" or "resúmeme la guía de quemaduras" shows the
   start of that guide exactly as written, up to its first numbered steps,
