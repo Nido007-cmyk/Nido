@@ -1,0 +1,17 @@
+{
+  "about": "Every file NIDO's signed catalog downloads from a NIDO GitHub release, with the SHA-256 it was published with. A release file is never replaced: an installed app only accepts the exact bytes its own catalog names, so overwriting a file breaks every older app that points to it (it happened once: knowledge-packs-v5/nido-local was republished for 0.1.58 and 0.1.57 could no longer download it). A new version of a pack goes to a NEW release tag (knowledge-packs-v6, v7…) and gets a NEW line here. Never edit an existing line. src/models/packReleaseLedger.test.ts enforces it.",
+  "files": {
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v1/wiki-vital5.sqlite": "d3b87d562baba3489f6878bf99783f50d504db94c347029771e53f6d1aecc666",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf": "802c868f57ccddd2e0c80645c3db1cb96a1aa50986a057cbaee2526f6e474cde",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/wiki-vital5-e5.sqlite": "6eda30dfc736faaad2925ada3f346a51e0211e57353e9842ccb897885da33886",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v4/nido-esencial.sqlite": "15b661682526a3dcf2783d0a83a3a2499dd77843eb986d26100198cf2e0f36d5",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v4/nido-esencial-e5.sqlite": "16deebd24fc1f75f34bc0548ee3e0d8456d04fcc3d4511f88274a6e3df640a3e",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local.sqlite": "af5fcf9d62265745c4c7d18cc5fce555b5f3f8ae5d5208b9d03d10b17ae2f37d",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local-e5.sqlite": "f063922b72cdb50acdff8b737927e7d11c8ef4d2d9065d0c278d4099a1f828f0"
+  },
+  "replacedOnce": {
+    "about": "The bytes knowledge-packs-v5 served before it was republished (NIDO 0.1.57 and older expect these). Kept as a record of the mistake; never reuse this pattern.",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local.sqlite": "02e1b594f58b4816d87b9758323b835515892a71c235679abcdee755ad823f24",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local-e5.sqlite": "bac6511cbbfa1f9e326b0563f3959aaadbe1a88e496ceff8ffeef025ad2b29b4"
+  }
+}

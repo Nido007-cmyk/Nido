@@ -38,6 +38,10 @@ env:
   PACK: ${{ inputs.pack || (startsWith(github.ref_name, 'pack/nido-local') && 'nido-local') || 'nido-esencial' }}
   # v3 and v4 are published and pinned by the signed catalog: never
   # overwrite them. v5 (0.1.55): NIDO Local.
+  # A published release is never changed (apps only accept the exact bytes
+  # their catalog names). A new pack version needs a NEW tag here (v6, v7…),
+  # new sourceUrls in src/models/manifest.ts and new lines in
+  # knowledge-packs/release-ledger.json (checked by packReleaseLedger.test.ts).
   RELEASE_TAG: knowledge-packs-v5
   # Fixed so a rebuild from the same text gives the same file.
   BUILT_AT: '2026-10-28T00:00:00Z'
