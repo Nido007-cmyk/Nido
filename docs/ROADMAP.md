@@ -41,13 +41,14 @@ We document what is verified, experimental, incomplete, or still awaiting physic
 - Continue improving voice and local interaction
 - Polish the experience across English, Spanish and Portuguese
 - Improve accessibility and first-time-user experience
-- Expand automated and physical-device testing
+- Expand automated and physical-device testing (evaluation v2: 47 cases on every change since 0.1.60; next, phone runs through the same path as the chat)
 
 ### Later: Growing the ecosystem
 
 - Prepare NIDO for a broader public release
-- Independent security audit
-- Google Play distribution
+- Independent security audit (apply to the OTF Security Lab after the two-phone tests; see [DECISIONS.md](DECISIONS.md) D7)
+- Register as a verified Android developer before Google's 2027 rollout (D6)
+- F-Droid, then Google Play distribution (D8)
 - Dedicated website and expanded public documentation
 - Easier contribution workflows for the open-source community
 - Explore additional fully local capabilities without compromising the offline-first architecture
