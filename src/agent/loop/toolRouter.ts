@@ -625,7 +625,9 @@ function rangeLabel(word: string | undefined): CalendarRange {
 
 // ------------------------------------------------------------ mensajería
 
-const SEP = "(?:\\s*:\\s*|\\s+que diga\\s+|\\s+diciendo\\s+|\\s+que\\s+|\\s+saying\\s+|\\s+that\\s+|\\s+dizendo\\s+)";
+// 0.1.60: «diciendo que llego tarde» dejaba el texto «que llego tarde»: las
+// formas con «que» van antes que las cortas.
+const SEP = "(?:\\s*:\\s*|\\s+que diga\\s+|\\s+diciendo\\s+que\\s+|\\s+dizendo\\s+que\\s+|\\s+saying\\s+that\\s+|\\s+diciendo\\s+|\\s+que\\s+|\\s+saying\\s+|\\s+that\\s+|\\s+dizendo\\s+)";
 const NIDO_SEND_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   // 0.1.31 (auditoría del loop): la forma que la PROPIA app enseña cuando
   // falta el texto («Dímelo así: manda por nido a Ana que …») caía al
@@ -633,7 +635,8 @@ const NIDO_SEND_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   // a Ana: …» y «mándale a Ana por nido que …».
   { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?|escr[ií]bele)\\s+(?:por|v[ií]a|con)\\s+nido\\s+(?:a|para)\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "es" },
   { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?|escr[ií]bele)\\s+(?:a|para)\\s+(.+?)\\s+(?:por|v[ií]a|con)\\s+nido(?:${SEP}(.+))?$`, "is"), lang: "es" },
-  { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?|escr[ií]bele)\\s+(?:un\\s+)?mensaje\\s+(?:por|con|en|v[ií]a)\\s+nido\\s+(?:a|para)\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "es" },
+  // 0.1.60: también «mándale un mensaje NIDO a Ana…» y «…un mensaje de nido a…».
+  { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?|escr[ií]bele)\\s+(?:un\\s+)?mensaje\\s+(?:(?:por|con|en|v[ií]a|de)\\s+)?nido\\s+(?:a|para)\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "es" },
   { re: new RegExp(`^${POLITE}(?:m[aá]nda(?:le)?|env[ií]a(?:le)?)\\s+(?:a|para)\\s+(.+?)\\s+(?:un\\s+)?mensaje\\s+(?:por|con|en|v[ií]a)\\s+nido(?:${SEP}(.+))?$`, "is"), lang: "es" },
   { re: new RegExp(`^${POLITE}d[ií]le\\s+a\\s+(.+?)\\s+(?:por|v[ií]a)\\s+nido(?:${SEP}|\\s+)(.+)$`, "is"), lang: "es" },
   { re: new RegExp(`^${POLITE}send\\s+(?:a\\s+)?nido\\s+message\\s+to\\s+(.+?)(?:${SEP}(.+))?$`, "is"), lang: "en" },

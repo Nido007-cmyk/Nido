@@ -14,6 +14,16 @@ All notable changes to NIDO are recorded here. Versions follow
   0.1.58 left 0.1.57 unable to download it.)
 - **The README had the Wikipedia pack's size wrong.** It has about 50,000
   articles (49,832); the 116,000 it said was the number of search passages.
+- **Carbon monoxide warning with gas heaters, furnaces and fireplaces.** If
+  you mention one of them together with symptoms ("the gas heater is on and
+  we all have a headache"), NIDO now gives the carbon monoxide warning: get
+  everyone outside and call for help. Asking whether you can use them indoors,
+  with no symptoms, still gets no "never use it inside" warning, because they
+  are made for indoor use. "Nos duele la cabeza" now counts as a symptom too.
+- **"Send Ana a NIDO message saying that…" in more words.** "Mándale un
+  mensaje NIDO a Ana…" and "…un mensaje de nido a Ana…" are understood, and
+  "…diciendo que llego tarde" no longer sends "que llego tarde" with an
+  extra "que" (same for "saying that" and "dizendo que").
 
 ## 0.1.59-alpha — 2026-10-28
 
