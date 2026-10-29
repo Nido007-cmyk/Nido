@@ -123,6 +123,16 @@ const LEXICAL_STOPWORDS = new Set([
   "mismo", "misma", "donde", "dónde", "cuando", "cuándo", "cual", "cuál", "cuales",
   "quien", "quién", "porque", "porqué", "pues", "pero", "sino", "aunque", "si",
   "también", "tampoco", "ya", "todavía", "aún", "siempre", "nunca", "jamás",
+  // 0.1.59: question verbs and fillers ("¿cómo HAGO la RCP…?", "o que FAÇO…",
+  // "if SOMEONE is choking") carry no topic; as required terms they let a
+  // section that merely shares them win (the CPR question got the chest-pain
+  // guide). Tokens are accent-free here, so "faço" is "faco".
+  "hago", "hace", "hacer", "haces", "haga", "hagan", "hacemos", "puedo", "puede", "debo",
+  "debe", "deberia", "alguien", "algo", "someone", "somebody", "anyone",
+  "faco", "faz", "fazer", "faca", "posso", "pode", "devo", "deve", "alguem",
+  // Portuguese function words (the list above had none).
+  "um", "uma", "uns", "umas", "em", "com", "na", "nas", "da", "das", "dos", "ao", "aos",
+  "os", "e", "quando", "onde", "qual", "quais", "sem", "mais", "muito",
 ]);
 
 const MAX_LEXICAL_TERMS = 12;
@@ -134,6 +144,12 @@ export interface LexicalTerm {
    * index has no stemmer.
    */
   forms: string[];
+  /**
+   * 0.1.59: word start that also counts ("adult" for "adulto" → "adultos",
+   * "atragan" for "atraganta" → "atragantamiento"): the index has no stemmer
+   * for Spanish, so exact forms alone missed the right guide.
+   */
+  prefix?: string;
 }
 
 export interface LexicalQuery {
@@ -176,11 +192,12 @@ export function buildLexicalQuery(query: string): LexicalQuery | null {
     const forms = [token, ...singularsOf(token)];
     if (forms.some((f) => seen.has(f))) continue;
     forms.forEach((f) => seen.add(f));
-    terms.push({ forms });
+    const prefix = lexicalPrefixOf(token);
+    terms.push(prefix ? { forms, prefix } : { forms });
     if (terms.length >= MAX_LEXICAL_TERMS) break;
   }
   if (terms.length === 0) return null;
-  const match = terms.flatMap((t) => t.forms.map((f) => `"${f}"`)).join(" OR ");
+  const match = terms.flatMap((t) => [...t.forms.map((f) => `"${f}"`), ...(t.prefix ? [`"${t.prefix}"*`] : [])]).join(" OR ");
   return { match, terms };
 }
 
@@ -195,8 +212,19 @@ export function requiredTermMatches(termCount: number): number {
 }
 
 export function countMatchedTerms(text: string, terms: LexicalTerm[]): number {
-  const tokens = new Set(tokenize(text));
-  return terms.filter((term) => term.forms.some((f) => tokens.has(f))).length;
+  const list = tokenize(text);
+  const tokens = new Set(list);
+  return terms.filter((term) => term.forms.some((f) => tokens.has(f)) || (!!term.prefix && list.some((t) => t.startsWith(term.prefix!)))).length;
+}
+
+/**
+ * Word start used as a prefix match for long words: everything but the last
+ * two letters, at least five ("adulto" → "adult", "quemadura" → "quemadu").
+ * Short words keep exact matching (a 4-letter prefix matches too much).
+ */
+export function lexicalPrefixOf(token: string): string | undefined {
+  if (token.length < 6 || /\d/.test(token)) return undefined;
+  return token.slice(0, Math.max(5, token.length - 2));
 }
 
 /**

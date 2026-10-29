@@ -6,6 +6,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { answerFromPackFacts, packCountryNames } from "../rag/packs";
+import { answerFromGuide } from "../rag/guideAnswerRun";
 import {
   View,
   Text,
@@ -120,6 +121,7 @@ import { ReasoningPeek } from "./components/ReasoningPeek";
 import { splitThinking, stripThinking } from "../services/thinking";
 import { cleanCitations } from "../services/citations";
 import { SourceFootnotes } from "./components/SourceFootnotes";
+import { SourceReader } from "./components/SourceReader";
 import { onLaunchAction, registerShortcuts, takeLaunchAction } from "../services/launchActions";
 import { answerKnowledgeQueryWithCategory, toIdentityLocale, knowledgeSessionTitle } from "../rag/selfKnowledge";
 import { recordQueryStats, trackPeakRss, startAppMemoryTracking, QueryStats } from "../services/telemetry";
@@ -161,6 +163,8 @@ interface Message {
   feedback?: "up" | "down" | null;
   /** 0.1.55: "Call" buttons under an emergency-number answer (verified facts). */
   calls?: Array<{ value: string; label: string; tel: string }>;
+  /** 0.1.59: answer shown verbatim from this NIDO Essentials guide chunk ("Open the full guide"). */
+  guideChunkId?: string;
 }
 
 const VERBATIM_MESSAGE_COUNT = 6;
@@ -200,6 +204,8 @@ export function ChatScreen({
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
+  // 0.1.59: «Abrir la guía completa» under a verbatim guide answer.
+  const [guideReaderChunkId, setGuideReaderChunkId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [ready, setReady] = useState(false);
   const [loadStatus, setLoadStatus] = useState(t("chatScreen.initializingCore"));
@@ -1361,6 +1367,26 @@ export function ChatScreen({
         // directly by the fixed-model path below regardless of whether
         // adaptive routing is enabled, so a pure greeting like "wake up!"
         // never retrieves unrelated knowledge-base chunks either way.
+        // 0.1.59: first aid in the guide's own words. When a NIDO Essentials
+        // guide is the clear best match, its text is shown verbatim and no
+        // model runs (a small model dropped a «no» in the aspirin rule and
+        // mangled the choking steps on a real tablet). Retrieval runs once;
+        // the fixed path below reuses it when no guide answers.
+        let preRetrieved: RetrievedChunk[] | null = null;
+        let guideAnswered = false;
+        if (!isRetrievalIrrelevant(classifyTask(query))) {
+          setProcessing({ messageId: assistantId, status: "retrieving" });
+          const g = await answerFromGuide(query, uiLang);
+          preRetrieved = g.retrieved;
+          if (g.answer) {
+            guideAnswered = true;
+            assistantText = g.answer.text;
+            const guideText = g.answer.text;
+            const guideChunkId = g.answer.chunks[0]?.chunkId;
+            setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: guideText, guideChunkId } : m)));
+            chunks = g.answer.chunks;
+          }
+        }
         const runFixedModelChat = async (): Promise<{ chunks: RetrievedChunk[]; noSourcesFound: boolean }> => {
           let c: RetrievedChunk[];
           fixedTaskType = classifyTask(query);
@@ -1373,8 +1399,12 @@ export function ChatScreen({
             c = [];
           } else {
             retrievalAttempted = true;
-            setProcessing({ messageId: assistantId, status: "retrieving" });
-            c = await retrieve(query, ANSWER_CONTEXT_CHUNKS);
+            if (preRetrieved) {
+              c = preRetrieved;
+            } else {
+              setProcessing({ messageId: assistantId, status: "retrieving" });
+              c = await retrieve(query, ANSWER_CONTEXT_CHUNKS);
+            }
           }
           const noSources = retrievalAttempted && c.length === 0;
           // RAG-GROUNDING 2026-10-11 (Fase 3, "mejor no inventar"): pregunta
@@ -1431,7 +1461,9 @@ export function ChatScreen({
 
         const adaptiveRoutingEnabled = await getAdaptiveRoutingEnabled();
 
-        if (adaptiveRoutingEnabled) {
+        if (guideAnswered) {
+          noSourcesFound = false;
+        } else if (adaptiveRoutingEnabled) {
           try {
             const result = await runAdaptiveChat(
               { query, systemPrompt, styleReminder, history },
@@ -1541,8 +1573,10 @@ export function ChatScreen({
       let grounding: GroundingStatus | undefined;
       if (!wasStopped) {
         // 0.1.34: si el modelo entró en bucle, queda solo la primera vez.
-        let finalText = trimRepetitionLoop(assistantText);
-        if (!deepResearchModeRef.current && chunks.length > 0) {
+        let finalText = guideAnswered ? assistantText : trimRepetitionLoop(assistantText);
+        if (guideAnswered) {
+          // Verbatim guide text: nothing to verify or trim.
+        } else if (!deepResearchModeRef.current && chunks.length > 0) {
           // 0.1.41 (prueba física, «¿qué es la inflación?»): se verificaba
           // el texto SIN recortar y el bucle volvía a la pantalla.
           const verified = verifyGroundedAnswer(finalText, chunks, uiLang);
@@ -2115,6 +2149,19 @@ export function ChatScreen({
                   </View>
                 )}
 
+                {item.guideChunkId ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => {
+                      impact(ImpactFeedbackStyle.Light);
+                      setGuideReaderChunkId(item.guideChunkId ?? null);
+                    }}
+                    style={[styles.callBtn, { alignSelf: "flex-start", marginTop: 8, backgroundColor: colors.emerald[500], borderColor: colors.emerald[500] }]}
+                  >
+                    <Text style={[styles.callBtnText, { color: colors.text.inverse }]}>{t("chatScreen.openFullGuide")}</Text>
+                  </Pressable>
+                ) : null}
+
                 {item.citations && item.citations.length > 0 && (
                   <SourceFootnotes citations={item.citations} grounding={item.grounding} />
                 )}
@@ -2502,6 +2549,7 @@ export function ChatScreen({
       </View>
 
       {keyboardHeight === 0 && <BottomTabBar active="chat" onSelect={selectTab} />}
+      <SourceReader chunkId={guideReaderChunkId} onClose={() => setGuideReaderChunkId(null)} />
 
       <Drawer
         open={drawerOpen}

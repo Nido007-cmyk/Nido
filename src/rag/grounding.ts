@@ -187,7 +187,11 @@ export function splitSentences(text: string): string[] {
 const IDK_RE = new RegExp(
   [
     // es
-    "\\bno (lo )?s[eé](?![\\p{L}])",
+    // «no sé» / «no lo sé». Without the accent only «no lo se»: a bare
+    // «no se» is the reflexive in «su médico no se lo ha prohibido», which
+    // made a first aid step count as "I don't know" (0.1.59).
+    "\\bno (lo )?sé(?![\\p{L}])",
+    "\\bno lo se(?![\\p{L}])",
     "\\bno (tengo|encuentro|encontr[eé]|hay) (esa |la |suficiente |ninguna )?informaci[oó]n",
     "\\blas fuentes no (lo |la )?(mencionan|dicen|contienen|incluyen|explican|hablan)",
     "\\bno (se )?(menciona|explica|aparece) en las fuentes",
@@ -325,6 +329,39 @@ function numbersIn(text: string): Set<string> {
   return new Set((text.match(/\d[\d.,]*\d|\d{2,}/g) ?? []).map((n) => n.replace(/[.,]/g, "")));
 }
 
+// ------------------------------------------------ negaciones (0.1.59)
+
+/**
+ * Negation words. They are not content words, so the support check above is
+ * blind to them: «no está sangrando» → «está sangrando» kept 100% support.
+ * Seen on a tablet in the aspirin rule of the chest-pain guide.
+ */
+const NEGATION_RE = /(?<![\p{L}])(no|nunca|jam[aá]s|ni|sin|tampoco|ning[uú]n[oa]?|nada|not|never|nor|without|none|n[aã]o|nem|sem|nenhum[a]?)(?![\p{L}])|n['’]t(?![\p{L}])/giu;
+
+export function negationCount(text: string): number {
+  return (text.match(NEGATION_RE) ?? []).length;
+}
+
+/**
+ * The source sentence that shares the most content words with `sentence`
+ * (at least 3), or null. Used to compare negations sentence by sentence.
+ */
+export function closestSourceSentence(sentence: string, sourceSentences: string[]): string | null {
+  const want = new Set(contentStems(sentence));
+  let best: string | null = null;
+  let bestHits = 0;
+  for (const src of sourceSentences) {
+    const hits = new Set(contentStems(src).filter((w) => want.has(w))).size;
+    if (hits > bestHits) {
+      bestHits = hits;
+      best = src;
+    }
+  }
+  // Only a sentence that is mostly a copy of ONE source sentence is compared
+  // (85% of its content words): one that merges two would lose the other.
+  return bestHits >= MIN_JUDGED_TERMS && want.size > 0 && bestHits / want.size >= 0.85 ? best : null;
+}
+
 export function verifyGroundedAnswer(
   answer: string,
   chunks: GroundingChunk[],
@@ -368,7 +405,9 @@ export function verifyGroundedAnswer(
   }
 
   const chunkStemSets = chunkTexts.map((t) => new Set(contentStems(t)));
+  const chunkSentences = chunks.map((c) => splitSentences(c.body.trim()).map((x) => x.replace(/^[-•*\d.)\s]+/, "").trim()).filter(Boolean));
   let removed = 0;
+  let negationFixed = 0; // counted for tests and logs; replaced sentences are verbatim, so still "grounded"
   let abstained = false;
   let judgedKept = 0;
   const kept: string[] = [];
@@ -384,6 +423,16 @@ export function verifyGroundedAnswer(
       continue;
     }
     if (sup.total >= MIN_JUDGED_TERMS) judgedKept++;
+    // 0.1.59: a sentence that copies a source sentence but flips a negation
+    // is replaced by the source sentence itself, word for word.
+    if (sup.total >= MIN_JUDGED_TERMS && sup.bestChunk >= 0) {
+      const src = closestSourceSentence(s, chunkSentences[sup.bestChunk]);
+      if (src && negationCount(s.replace(/\[\d+\]/g, "")) !== negationCount(src)) {
+        negationFixed++;
+        kept.push(addCitation(src, sup.bestChunk + 1));
+        continue;
+      }
+    }
     // Enlace afirmación → fuente: si la frase no cita, se le pone la [n] de
     // la fuente que más palabras comparte con ella.
     kept.push(
