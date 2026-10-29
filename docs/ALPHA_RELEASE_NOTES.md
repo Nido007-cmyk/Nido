@@ -20,7 +20,10 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - On by default since 0.1.49 (when both phones support them): a sealed "private hello", a new key for every message (Double Ratchet) and ML-KEM-768 in every connection
 - New interface (0.1.55): a bottom bar with Chat, Emergency, Library, NIDO and Settings; Settings grouped into nine sections with a search box; chat history search
 - Emergency tab (0.1.55): checked emergency numbers for 32 countries since 0.1.58 (NIDO Local pack, each with its official source and check date), one-tap dialing (the person presses call), quick guides
-- First aid answers in the guide's own words (0.1.59): when a NIDO Essentials guide is the clear match, its text is shown exactly as written, with its sources and an "Open the full guide" button, and no model rewrites it
+- First aid answers in the guide's own words (0.1.59): when a NIDO Essentials guide is the clear match, its text is shown exactly as written, with its sources and an "Open the full guide" button, and no model rewrites it; asking for a short version (0.1.60) shows the start of the guide as written
+- Carbon monoxide warnings: running a generator, grill or brazier indoors gets a fixed warning; since 0.1.60, symptoms (headache, dizziness, nausea) with a gas heater, furnace, boiler or fireplace get the "get outside and call for help" warning
+- NIDO's constitution (0.1.60): how the assistant must behave, with eight firm rules checked by automated tests on every change, and 118 evaluation questions (47 run on every change)
+- Optional daily summary at 8:00, off unless you turn it on (0.1.60)
 - Packs keep working when a newer version comes out (0.1.57): the pack you have stays usable offline, marked "Update available", and is replaced only once the new one has downloaded and been verified
 - Optional wipe button (a red shield; it used to say "SOS") and an incognito keyboard
 - Encrypted on-device storage
