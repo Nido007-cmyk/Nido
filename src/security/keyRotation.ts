@@ -27,13 +27,13 @@
  * - Nunca loggear DEKs
  * - Borrar DEK viejo de memoria con fill(0)
  * - Biométrico obligatorio
- * - TRADEOFF: el staging (rekey-staging.json) guarda el DEK nuevo en
- *   plaintext (directorio privado de la app, vida corta). En dispositivo
- *   rooteado es extraíble. Alternativa (cifrar staging con DEK viejo)
- *   añade complejidad; documentado como riesgo aceptado.
+ * - El staging (rekey-staging.json) va CIFRADO con una llave guardada en
+ *   SecureStore (Keystore de Android): ver stagingSeal.ts. Hasta 0.1.62 iba
+ *   en claro (riesgo aceptado); la auditoría del 29-10-2026 lo cerró.
  */
 
 import { getDatabaseKeyHex } from "../privacy/keyManager";
+import { openStaging, sealStaging, secureStagingKeyStore, type StagingKeyStore } from "./stagingSeal";
 import { requireUnlock } from "./biometricGate";
 import { MANAGED_DB_NAMES, getCurrentDriver } from "./secureDatabase";
 
@@ -68,7 +68,8 @@ export async function rotateAllDatabaseKeys(
   openDb: (path: string, dekHex: string) => Promise<{ exec: (sql: string) => Promise<void>; close: () => Promise<void> }>,
   storeDek: (dekHex: string) => Promise<void>,
   stagingPath?: string,
-  unlockReason: string = DEFAULT_UNLOCK_REASON
+  unlockReason: string = DEFAULT_UNLOCK_REASON,
+  stagingKeys: StagingKeyStore = secureStagingKeyStore
 ): Promise<RekeyResult> {
   // 1. Biométrico obligatorio.
   // FIX 2026-10-09: distinguir cancelación de error real.
@@ -118,13 +119,13 @@ export async function rotateAllDatabaseKeys(
   const FS = await import("expo-file-system/legacy");
   const staging = stagingPath ?? `${FS.documentDirectory}rekey-staging.json`;
   try {
-    await FS.writeAsStringAsync(staging, JSON.stringify({
+    await FS.writeAsStringAsync(staging, await sealStaging(JSON.stringify({
       newDekHex,
       oldDekHex,
       dbPaths,
       rekeyed: [] as string[],
       at: Date.now(),
-    }));
+    }), stagingKeys));
   } catch {
     return { ok: false, error: "No se pudo crear el staging (fail-closed)", code: "staging" };
   }
@@ -142,13 +143,13 @@ export async function rotateAllDatabaseKeys(
       rekeyedPaths.push(dbPath);
       // Persistir progreso: si crashea aquí, el recovery sabe cuáles converger.
       try {
-        await FS.writeAsStringAsync(staging, JSON.stringify({
+        await FS.writeAsStringAsync(staging, await sealStaging(JSON.stringify({
           newDekHex,
           oldDekHex,
           dbPaths,
           rekeyed: rekeyedPaths,
           at: Date.now(),
-        }));
+        }), stagingKeys));
       } catch { /* noop: el staging original sigue válido */ }
     }
 
@@ -195,7 +196,8 @@ export async function rotateDatabaseKey(
   openDb: (path: string, dekHex: string) => Promise<{ exec: (sql: string) => Promise<void>; close: () => Promise<void> }>,
   storeDek: (dekHex: string) => Promise<void>,
   stagingPath?: string,
-  unlockReason: string = DEFAULT_UNLOCK_REASON
+  unlockReason: string = DEFAULT_UNLOCK_REASON,
+  stagingKeys: StagingKeyStore = secureStagingKeyStore
 ): Promise<RekeyResult> {
   // 1. Biométrico obligatorio.
   // FIX 2026-10-09: distinguir cancelación de error real.
@@ -228,11 +230,11 @@ export async function rotateDatabaseKey(
   const FS = await import("expo-file-system/legacy");
   const staging = stagingPath ?? `${FS.documentDirectory}rekey-staging.json`;
   try {
-    await FS.writeAsStringAsync(staging, JSON.stringify({
+    await FS.writeAsStringAsync(staging, await sealStaging(JSON.stringify({
       newDekHex,
       dbPath,
       at: Date.now(),
-    }));
+    }), stagingKeys));
   } catch {
     return { ok: false, error: "No se pudo crear el staging (fail-closed)", code: "staging" };
   }
@@ -289,14 +291,18 @@ export async function rotateDatabaseKey(
 export async function checkStaleRekeyStaging(
   stagingPath: string,
   storeDek: (dekHex: string) => Promise<void>,
-  openDb: (path: string, dekHex: string) => Promise<{ exec: (sql: string) => Promise<void>; close: () => Promise<void> }>
+  openDb: (path: string, dekHex: string) => Promise<{ exec: (sql: string) => Promise<void>; close: () => Promise<void> }>,
+  stagingKeys: StagingKeyStore = secureStagingKeyStore
 ): Promise<{ recovered: boolean; error?: string }> {
   try {
     const FS = await import("expo-file-system/legacy");
     const info = await FS.getInfoAsync(stagingPath);
     if (!info.exists) return { recovered: false };
     
-    const raw = await FS.readAsStringAsync(stagingPath);
+    // Cifrado desde la auditoría del 29-10-2026; uno en claro (0.1.62 o
+    // antes) se lee igual. Sin la llave se lanza y el archivo NO se borra:
+    // el próximo arranque lo reintenta (el catch de abajo).
+    const raw = await openStaging(await FS.readAsStringAsync(stagingPath), stagingKeys);
     const parsed = JSON.parse(raw);
     const newDekHex = parsed.newDekHex;
     const oldDekHex: unknown = parsed.oldDekHex;

@@ -55,8 +55,10 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   qué frases salen de ellos y cuáles del modelo sin fuente; si nada de la base
   encaja de verdad, no se muestra ninguna fuente.
 - **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
-  teléfonos emparejados, sin internet y sin servidor. El emparejamiento se
-  hace en persona con un código QR.
+  teléfonos emparejados, sin internet y sin servidor. Para emparejar pegas
+  el código del otro teléfono (el texto de su QR); un contacto aparece como
+  verificado solo después de comparar las huellas los dos, en persona o por
+  llamada, y pulsar Verificar.
 - **Tiene una pestaña Emergencia**: los números de emergencia de tu país,
   comprobados en fuentes oficiales (32 países en el pack NIDO Local), cada
   uno con su fuente y su fecha. «Llamar» abre el marcador con el número

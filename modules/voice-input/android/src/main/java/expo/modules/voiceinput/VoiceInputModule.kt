@@ -10,6 +10,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -30,6 +31,14 @@ import expo.modules.kotlin.modules.ModuleDefinition
  * de-Googled builds with no such service. isAvailable() reflects this
  * honestly rather than pretending to work; the JS side (src/voice/VoiceInput.ts)
  * surfaces it as an "unavailable" state instead of a silent failure.
+ *
+ * Audit 2026-10-29: "prefer offline" is a request, not a guarantee. On
+ * Android 12+ (API 31) the system can say whether an ON-DEVICE recognizer
+ * exists (isOnDeviceRecognitionAvailable) and create one
+ * (createOnDeviceSpeechRecognizer), which by contract never sends audio
+ * off the phone. engineState() reports "onDevice", "system" or "none";
+ * startListening(onDeviceOnly) refuses with E_ON_DEVICE_UNAVAILABLE instead
+ * of silently falling back to a recognizer that may go online.
  *
  * A cross-device guarantee (e.g. a bundled whisper.cpp model) would need a
  * separate, much larger native binding — not attempted here; see
@@ -55,7 +64,18 @@ class VoiceInputModule : Module() {
       }
     }
 
-    AsyncFunction("startListening") { promise: Promise ->
+    AsyncFunction("engineState") { promise: Promise ->
+      val context = appContext.reactContext
+      if (context == null) {
+        promise.resolve("none")
+        return@AsyncFunction
+      }
+      mainHandler.post {
+        promise.resolve(engineStateOf(context))
+      }
+    }
+
+    AsyncFunction("startListening") { onDeviceOnly: Boolean, promise: Promise ->
       val context = appContext.reactContext
       if (context == null) {
         promise.reject("E_NO_CONTEXT", "No React context available", null)
@@ -68,7 +88,7 @@ class VoiceInputModule : Module() {
       ) == PackageManager.PERMISSION_GRANTED
 
       if (hasPermission) {
-        beginListening(context, promise)
+        beginListening(context, onDeviceOnly, promise)
         return@AsyncFunction
       }
 
@@ -80,7 +100,7 @@ class VoiceInputModule : Module() {
       permissions.askForPermissions({ result ->
         val granted = result[Manifest.permission.RECORD_AUDIO]?.status == PermissionsStatus.GRANTED
         if (granted) {
-          beginListening(context, promise)
+          beginListening(context, onDeviceOnly, promise)
         } else {
           promise.reject("E_PERMISSION_DENIED", "Microphone permission denied", null)
         }
@@ -102,11 +122,32 @@ class VoiceInputModule : Module() {
     }
   }
 
-  private fun beginListening(context: Context, promise: Promise) {
+  private fun onDeviceAvailable(context: Context): Boolean =
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+      SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
+
+  private fun engineStateOf(context: Context): String = when {
+    onDeviceAvailable(context) -> "onDevice"
+    SpeechRecognizer.isRecognitionAvailable(context) -> "system"
+    else -> "none"
+  }
+
+  private fun beginListening(context: Context, onDeviceOnly: Boolean, promise: Promise) {
     mainHandler.post {
       try {
         recognizer?.destroy()
-        recognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
+        recognizer = null
+        val onDevice = onDeviceAvailable(context)
+        if (onDeviceOnly && !onDevice) {
+          promise.reject("E_ON_DEVICE_UNAVAILABLE", "No on-device speech recognizer on this phone", null)
+          return@post
+        }
+        val created = if (onDevice && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+          SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
+        } else {
+          SpeechRecognizer.createSpeechRecognizer(context)
+        }
+        recognizer = created.apply {
           setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {}
 

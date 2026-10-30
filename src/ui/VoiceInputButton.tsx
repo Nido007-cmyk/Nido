@@ -9,7 +9,8 @@ import { useTranslation } from "react-i18next";
 import { Pressable, Text, StyleSheet, Animated, Alert, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { NidoIcon } from "./components/icons/NidoIcon";
-import { isVoiceInputAvailable, startListening, stopListening, VoiceEvent } from "../voice/VoiceInput";
+import { voiceInputAvailability, startListening, stopListening, VoiceEvent } from "../voice/VoiceInput";
+import type { VoiceAvailability } from "../voice/voicePolicy";
 import { useTheme } from "./theme/ThemeContext";
 
 interface Props {
@@ -73,12 +74,15 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
   const { colors } = useTheme();
   // Garden-palette aura: emerald -> gold (theme-aware, replaces the old neon rainbow).
   const auraColors: [string, string] = [colors.emerald[400], colors.nidoIcon.gold];
-  const [available, setAvailable] = useState<boolean | null>(null);
+  const [availability, setAvailability] = useState<VoiceAvailability | null>(null);
+  const available = availability == null ? null : availability.available;
   const [listening, setListening] = useState(false);
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    isVoiceInputAvailable().then(setAvailable).catch(() => setAvailable(false));
+    voiceInputAvailability()
+      .then(setAvailability)
+      .catch(() => setAvailability({ available: false, reason: "noRecognizer" }));
   }, []);
 
   useEffect(() => {
@@ -97,10 +101,12 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
   }, [listening, pulse]);
 
   const handlePress = async () => {
-    if (available === false) {
+    if (availability && !availability.available) {
       Alert.alert(
         t("voiceInputAlert.unavailableTitle"),
-        t("voiceInputAlert.unavailableMessage")
+        availability.reason === "onlineOnly"
+          ? t("voiceInputAlert.onlineOnlyMessage")
+          : t("voiceInputAlert.unavailableMessage")
       );
       return;
     }

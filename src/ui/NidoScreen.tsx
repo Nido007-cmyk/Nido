@@ -1550,7 +1550,7 @@ export function NidoScreen({
                   <Text style={styles.contactName}>{c.name}</Text>
                   <Text style={styles.contactSub}>
                     {online.has(c.pkHex.toLowerCase()) ? t("nido.online") : t("nido.offline")}
-                    {c.verified ? t("nido.verifiedSuffix") : ""}
+                    {c.verified ? t("nido.verifiedSuffix") : t("nido.unverifiedSuffix")}
                   </Text>
                 </View>
                 <Text style={styles.chevron}>›</Text>
@@ -1661,6 +1661,7 @@ export function NidoScreen({
                     <Text style={styles.contactSub} selectable>
                       {c.pkHex.slice(0, 16)}… ·{" "}
                       {isOnline ? t("nido.online") : t("nido.offline")}
+                      {c.verified ? t("nido.verifiedSuffix") : t("nido.unverifiedSuffix")}
                     </Text>
                     {v4Pks && !v4Pks.has(c.pkHex.toLowerCase()) ? (
                       <Text style={styles.contactSub}>{t("nido.oldNidoWarning")}</Text>
@@ -1685,6 +1686,40 @@ export function NidoScreen({
                           ? t("nido.connecting")
                           : t("nido.connect")}
                       </Text>
+                    </Pressable>
+                  )}
+                  {/* Lecciones de Signal/Briar (2026-10-29): comparar la huella. */}
+                  {!c.verified && (
+                    <Pressable
+                      onPress={async () => {
+                        let theirs = "";
+                        try {
+                          theirs = mRef.current.contactFingerprint(c);
+                        } catch {
+                          setNotice(t("nido.verifyFailed"));
+                          return;
+                        }
+                        const ok = await showSecureAlert({
+                          title: t("nido.verifyTitle", { name: c.name }),
+                          message: t("nido.verifyBody", { name: c.name, theirs, mine: fingerprint }),
+                          cancelLabel: t("common.cancel"),
+                          confirmLabel: t("nido.verifyConfirm"),
+                          cancelable: true,
+                        });
+                        if (!ok) return;
+                        try {
+                          await mRef.current.setContactVerified(c.pkHex, true);
+                          await loadContacts();
+                          setNotice(t("nido.verifiedNotice", { name: c.name }));
+                        } catch (e) {
+                          setNotice(e instanceof Error ? p2pErr(e) : t("nido.verifyFailed"));
+                        }
+                      }}
+                      style={styles.smallBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("nido.verifyContact", { name: c.name })}
+                    >
+                      <Text style={styles.smallBtnText}>{t("nido.verify")}</Text>
                     </Pressable>
                   )}
                   {/* FIX 2026-10-09 (CR-4): revocar contacto */}

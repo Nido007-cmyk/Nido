@@ -1203,7 +1203,7 @@ const nidoPairHandler: ToolHandler = async (args) => {
       disambiguation === "replace"
         ? " La identidad anterior quedó retirada en todas partes: murieron sus rutas, sesiones y mensajes pendientes; los mensajes antiguos siguen legibles."
         : "";
-    return `Contacto «${contact.name}» emparejado y verificado. Ya pueden enviarse mensajes cifrados de NIDO a NIDO, sin internet.${replacedNote}`;
+    return `Contacto «${contact.name}» emparejado, sin verificar todavía. Ya pueden enviarse mensajes cifrados de NIDO a NIDO, sin internet. Para verificarlo, comparen la huella en persona y pulsa «Verificar» en NIDO › Contactos.${replacedNote}`;
   } catch (e) {
     if (e instanceof StaleReplaceConflictError) {
       // UNIT B concurrency closure: otro Replace retiró ya la identidad

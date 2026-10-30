@@ -449,3 +449,42 @@ describe("PackShareService: auditoría 2026-10-29", () => {
     expect(packShareService._getReceiveSession("sess-dec")).toBeUndefined();
   });
 });
+
+describe("PackShareService: cuota de ofertas por contacto", () => {
+  it("un contacto no puede tener más de 3 ofertas sin aceptar; caducan a los 30 minutos", async () => {
+    const { MAX_PENDING_OFFERS_PER_PEER, OFFER_TTL_MS } = await import("./packShareService");
+    packShareService._reset();
+    packShareService.setLocalIdentity(RECEIVER_PK);
+    packShareService.setSendFunction(async () => {});
+    const offers: string[] = [];
+    packShareService.subscribe((e) => {
+      if (e.type === "offer_received") offers.push(e.info.sessionId);
+    });
+    for (let i = 0; i < MAX_PENDING_OFFERS_PER_PEER + 2; i++) {
+      await packShareService.handleEnvelope(
+        makeEnvelope(SENDER_PK, "OFFER", `flood-${i}`, { advertisement: makeValidAdvertisement() }),
+      );
+    }
+    expect(offers).toHaveLength(MAX_PENDING_OFFERS_PER_PEER);
+
+    // Otro contacto no queda bloqueado por el primero.
+    const OTHER = "c".repeat(64);
+    await packShareService.handleEnvelope(
+      makeEnvelope(OTHER, "OFFER", "other-1", { advertisement: { ...makeValidAdvertisement(), senderId: OTHER } }),
+    );
+    expect(offers).toContain("other-1");
+
+    // Pasados 30 minutos sin aceptar, las ofertas viejas se olvidan.
+    const realNow = Date.now;
+    try {
+      Date.now = () => realNow() + OFFER_TTL_MS + 1000;
+      await packShareService.handleEnvelope(
+        makeEnvelope(SENDER_PK, "OFFER", "flood-late", { advertisement: makeValidAdvertisement() }),
+      );
+    } finally {
+      Date.now = realNow;
+    }
+    expect(offers).toContain("flood-late");
+    expect(packShareService._getReceiveSession("flood-0")).toBeUndefined();
+  });
+});

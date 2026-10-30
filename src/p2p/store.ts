@@ -227,6 +227,17 @@ async function migrateOn(db: Awaited<ReturnType<typeof getMemoryDb>>): Promise<v
     "UPDATE p2p_messages SET identity_change_cause='orphaned_destination' " +
       "WHERE failure_reason='identity_changed' AND identity_change_cause IS NULL",
   );
+  // Lecciones de Signal/Briar (2026-10-29): hasta 0.1.62 todo contacto se
+  // guardaba como «verificado» y la pantalla lo decía, aunque nadie hubiera
+  // comparado la huella (el código se pega como texto y puede llegar por
+  // cualquier canal). La primera vez que existe la columna verified_at, los
+  // contactos anteriores pasan a «sin verificar»: es lo que de verdad son.
+  try {
+    await db.execAsync("ALTER TABLE p2p_contacts ADD COLUMN verified_at INTEGER");
+    await db.execAsync("UPDATE p2p_contacts SET verified = 0 WHERE verified_at IS NULL");
+  } catch (e) {
+    if (!/duplicate column name/i.test(String((e as Error)?.message ?? e))) throw e;
+  }
   // Migración F-2: registra qué clave pública de firma Ed25519 pertenece a
   // nuestra identidad (se rellena al generar la clave de firma). Sin este
   // marcador no se podría distinguir "identidad antigua que nunca tuvo clave
@@ -514,7 +525,9 @@ export interface P2PContact {
 }
 
 /**
- * Añade o actualiza un contacto emparejado (verificado por QR).
+ * Añade o actualiza un contacto emparejado. Entra SIN verificar: el código
+ * de emparejamiento es texto y puede llegar por cualquier canal. Solo
+ * setContactVerified (las dos personas compararon la huella) lo marca.
  * `sigPkHex` es la clave de firma Ed25519 del contacto (QR v2); sin ella
  * el handshake v2 no puede autenticarse y falla cerrado.
  *
@@ -532,13 +545,17 @@ export async function saveContact(pkHex: string, name: string, sigPkHex?: string
   await writeMemoryTransaction(async (db) => {
     await migrateOn(db);
     await db.runAsync(
-      "INSERT INTO p2p_contacts (pk_hex, name, verified, sig_pk) VALUES (?, ?, 1, ?) " +
+      "INSERT INTO p2p_contacts (pk_hex, name, verified, sig_pk) VALUES (?, ?, 0, ?) " +
         // UNIT B (§8 Q10): si la pk coincide con una fila superseded, la
         // ceremonia explícita la restaura ("la identidad volvió"): se
         // limpia el retiro. Solo un emparejamiento explícito llega aquí.
         // CRYPTO-AUDIT-2026-10-11: un QR v1 (sin clave de firma) nunca borra
         // la clave de firma ya verificada de un contacto (degradación).
-        "ON CONFLICT(pk_hex) DO UPDATE SET name=excluded.name, verified=1, " +
+        "ON CONFLICT(pk_hex) DO UPDATE SET name=excluded.name, " +
+        // Lecciones de Signal/Briar (2026-10-29): re-emparejar no verifica.
+        // Se conserva la verificación solo si la clave de firma no cambia.
+        "verified=CASE WHEN COALESCE(excluded.sig_pk, p2p_contacts.sig_pk) IS p2p_contacts.sig_pk " +
+        "THEN p2p_contacts.verified ELSE 0 END, " +
         "sig_pk=COALESCE(excluded.sig_pk, p2p_contacts.sig_pk), " +
         "superseded_by=NULL, superseded_at=NULL",
       [pk, label, sig],
@@ -561,6 +578,25 @@ function normalizeSigPk(sigPkHex?: string | null): string | null {
  * Elimina un contacto pareado por su pk. También limpia sus mensajes
  * (inbox/outbox/conversación) y nonces. Usado desde la UI para "desparear".
  */
+/**
+ * Marca (o desmarca) un contacto como verificado: las dos personas
+ * compararon la huella en persona o por un canal en el que confían. Es lo
+ * único que pone verified=1.
+ */
+export async function setContactVerified(pkHex: string, verified: boolean): Promise<boolean> {
+  const pk = toHex(fromHex(pkHex));
+  let changed = 0;
+  await writeMemoryTransaction(async (db) => {
+    await migrateOn(db);
+    const res = await db.runAsync(
+      "UPDATE p2p_contacts SET verified = ?, verified_at = ? WHERE pk_hex = ? AND superseded_by IS NULL",
+      [verified ? 1 : 0, verified ? Date.now() : null, pk],
+    );
+    changed = Number(res?.changes ?? 0);
+  });
+  return changed > 0;
+}
+
 export async function deleteContact(pkHex: string): Promise<void> {
   const pk = toHex(fromHex(pkHex)); // valida y normaliza
   await writeMemoryTransaction(async (db) => {
@@ -670,10 +706,14 @@ export async function commitRepair(c: RepairCommit): Promise<{ superseded: strin
       }
     }
     await db.runAsync(
-      "INSERT INTO p2p_contacts (pk_hex, name, verified, sig_pk) VALUES (?, ?, 1, ?) " +
+      "INSERT INTO p2p_contacts (pk_hex, name, verified, sig_pk) VALUES (?, ?, 0, ?) " +
         // CRYPTO-AUDIT-2026-10-11: un QR v1 (sin clave de firma) nunca borra
         // la clave de firma ya verificada de un contacto (degradación).
-        "ON CONFLICT(pk_hex) DO UPDATE SET name=excluded.name, verified=1, " +
+        "ON CONFLICT(pk_hex) DO UPDATE SET name=excluded.name, " +
+        // Lecciones de Signal/Briar (2026-10-29): re-emparejar no verifica.
+        // Se conserva la verificación solo si la clave de firma no cambia.
+        "verified=CASE WHEN COALESCE(excluded.sig_pk, p2p_contacts.sig_pk) IS p2p_contacts.sig_pk " +
+        "THEN p2p_contacts.verified ELSE 0 END, " +
         "sig_pk=COALESCE(excluded.sig_pk, p2p_contacts.sig_pk), " +
         "superseded_by=NULL, superseded_at=NULL",
       [newPk, label, sig],

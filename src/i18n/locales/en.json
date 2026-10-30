@@ -305,7 +305,12 @@
     "unavailable": "Unavailable on this device",
     "unavailableNote": "No system speech-recognition service was found — common on GrapheneOS / de-Googled builds. An embedded whisper.cpp model would remove this dependency but is a separate project on the scale of the llama.rn integration itself; not implemented in this version.",
     "readAloudLabel": "Read aloud",
-    "readAloudValue": "Reads the assistant's responses using the system voice (no internet)."
+    "readAloudValue": "Reads the assistant's responses using the system voice (no internet).",
+    "engineOnDevice": "On-device recognizer: the audio stays on this phone",
+    "engineSystem": "Only the system voice service (Google’s or the manufacturer’s): it may send the audio over the internet",
+    "onDeviceOnlyLabel": "On-device recognition only",
+    "onDeviceOnlyValue": "When on, dictation only works if your phone can recognize speech without the internet (Android 12 or later with an on-device recognizer). If you turn it off, NIDO can use the system voice service, which may send your audio over the internet.",
+    "onlineOnlyNote": "This phone has no on-device speech recognizer, so dictation is off. If you accept that the system service may send your audio over the internet, turn off “On-device recognition only”."
   },
   "interfaceSettings": {
     "hapticFeedbackLabel": "Haptic feedback",
@@ -727,6 +732,14 @@
     "offline": "out of reach",
     "offlineQueued": "out of reach · messages are queued encrypted",
     "verifiedSuffix": " · ✓ verified",
+    "unverifiedSuffix": " · not verified",
+    "verify": "Verify",
+    "verifyContact": "Verify {{name}}’s fingerprint",
+    "verifyTitle": "Verify {{name}}",
+    "verifyBody": "Ask {{name}} to open “My code” in their NIDO and read their fingerprint aloud, in person or on a call where you recognize their voice.\n\nIt has to be exactly:\n{{theirs}}\n\nYour fingerprint, for {{name}} to check:\n{{mine}}\n\nMark it only if they match. If they don’t, don’t trust this contact: someone could be in the middle.",
+    "verifyConfirm": "They match",
+    "verifiedNotice": "✓ {{name}} verified.",
+    "verifyFailed": "Couldn’t verify this contact.",
     "linkActive": "🟢 Link active",
     "linkStopped": "⚪ Link stopped",
     "tabChats": "Chats",
@@ -790,7 +803,7 @@
     "sendMessage": "Send message",
     "retryNotice": "Retrying delivery of the message…",
     "sendAgainNotice": "Sending as a new message…",
-    "pairedNotice": "✓ {{name}} paired. Verify their fingerprint in person.",
+    "pairedNotice": "✓ {{name}} paired, not verified yet. Compare fingerprints, then tap “Verify”.",
     "connectedNotice": "✓ Connected with {{alias}}.",
     "copiedNotice": "✓ {{label}} copied.",
     "pairBindingWasRetired": "Note: this identity (“{{name}}”) was retired before by a re-pair. Confirming will restore it as your contact — its previously failed messages stay failed and will not be resent on their own.",
@@ -1052,6 +1065,7 @@
   "voiceInputAlert": {
     "unavailableTitle": "Voice input unavailable",
     "unavailableMessage": "No on-device speech recognition service was found on this device (common on GrapheneOS / de-Googled builds). Type your question instead.",
+    "onlineOnlyMessage": "This phone can’t recognize speech without the internet, and NIDO is set not to send your audio anywhere. Type your question, or allow the system voice service in Settings › Voice (it may send the audio over the internet).",
     "startLabel": "Dictate by voice",
     "stopLabel": "Stop dictation"
   },

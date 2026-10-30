@@ -4,6 +4,28 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+### Security
+Lessons from every public audit of Signal and Briar, matched against NIDO
+([docs/DECISIONS.md](https://github.com/Nido007-cmyk/Nido/blob/main/docs/DECISIONS.md), D12).
+- **Contacts are no longer shown as "verified" unless you verified them.**
+  Until 0.1.62 every paired contact showed "✓ verified", although nobody
+  had compared fingerprints and the pairing code can arrive over any
+  channel. Now a contact is "not verified" until you compare fingerprints
+  (in person or on a call) and tap **Verify**. Contacts you already had
+  start as "not verified".
+- **Voice dictation only uses a recognizer that runs on the phone**, by
+  default (Android 12 or later, when the phone has one). If your phone only
+  has the system speech service, which may send audio over the internet,
+  dictation stays off unless you turn off Settings › Voice › "On-device
+  recognition only".
+- **The key rotation file is encrypted.** While a key rotation runs, the
+  file that lets NIDO recover from a crash no longer holds the old and new
+  keys in clear; it is encrypted with a key kept in the Android Keystore.
+- **Pack offers have a quota:** at most 3 unaccepted offers per contact and
+  10 in total; unaccepted offers are forgotten after 30 minutes.
+
 ## 0.1.62-alpha — 2026-10-29
 
 ### Security

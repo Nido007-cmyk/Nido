@@ -5,6 +5,8 @@
  */
 
 import { requireOptionalNativeModule, EventSubscription } from "expo-modules-core";
+import { getVoiceOnDeviceOnly } from "../models/settings";
+import { parseEngineState, voiceAvailability, type VoiceAvailability, type VoiceEngineState } from "./voicePolicy";
 
 export type VoiceEvent =
   | { type: "start" }
@@ -15,7 +17,8 @@ export type VoiceEvent =
 
 interface VoiceInputNativeModule {
   isAvailable(): Promise<boolean>;
-  startListening(): Promise<void>;
+  engineState(): Promise<string>;
+  startListening(onDeviceOnly: boolean): Promise<void>;
   stopListening(): Promise<void>;
   addListener(eventName: string, listener: (event: any) => void): EventSubscription;
 }
@@ -29,18 +32,30 @@ const VoiceInputNative = requireOptionalNativeModule<VoiceInputNativeModule>("Vo
  * builds with no such service installed. Returns false there rather than
  * pretending to work.
  */
-export async function isVoiceInputAvailable(): Promise<boolean> {
-  if (!VoiceInputNative) return false;
+export async function voiceEngineState(): Promise<VoiceEngineState> {
+  if (!VoiceInputNative) return "none";
   try {
-    return await VoiceInputNative.isAvailable();
+    return parseEngineState(await VoiceInputNative.engineState());
   } catch {
-    return false;
+    return "none";
   }
 }
 
+/** Si el dictado puede usarse ahora, con el ajuste «solo en el teléfono». */
+export async function voiceInputAvailability(): Promise<VoiceAvailability> {
+  const [state, onDeviceOnly] = await Promise.all([voiceEngineState(), getVoiceOnDeviceOnly().catch(() => true)]);
+  return voiceAvailability(state, onDeviceOnly);
+}
+
+export async function isVoiceInputAvailable(): Promise<boolean> {
+  return (await voiceInputAvailability()).available;
+}
+
 /**
- * Starts one listening session, requesting on-device (offline) recognition
- * via EXTRA_PREFER_OFFLINE (see modules/voice-input). Resolves with the
+ * Starts one listening session. With «solo en el teléfono» (the default) the
+ * native side uses the on-device recognizer or refuses; otherwise it prefers
+ * the on-device one and falls back to the system service with
+ * EXTRA_PREFER_OFFLINE (see modules/voice-input). Resolves with the
  * final transcript once the recognizer reports a result, or null on
  * error/cancel. `onEvent` is optional, for UI feedback (e.g. partial
  * results, listening state) beyond the final resolved text.
@@ -75,7 +90,10 @@ export function startListening(onEvent?: (event: VoiceEvent) => void): Promise<s
       })
     );
 
-    VoiceInputNative.startListening().catch(() => finish(null));
+    getVoiceOnDeviceOnly()
+      .catch(() => true)
+      .then((onDeviceOnly) => VoiceInputNative.startListening(onDeviceOnly))
+      .catch(() => finish(null));
   });
 }
 

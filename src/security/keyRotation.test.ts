@@ -13,9 +13,15 @@ vi.mock("./biometricGate", () => ({
 }));
 
 // Mock keyManager
+const vaultSettings = vi.hoisted(() => new Map<string, string>());
 vi.mock("../privacy/keyManager", () => ({
   getDatabaseKeyHex: vi.fn(),
   registerKeyLossProbe: vi.fn(),
+  readVaultSetting: async (k: string) => vaultSettings.get(k) ?? null,
+  writeVaultSetting: async (k: string, v: string | null) => {
+    if (v === null) vaultSettings.delete(k);
+    else vaultSettings.set(k, v);
+  },
 }));
 
 // Mock secureDatabase (evita ciclo con keyManager en tests)
