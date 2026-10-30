@@ -4,7 +4,7 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
-## Unreleased
+## 0.1.63-alpha — 2026-10-29
 
 ### Security
 Lessons from every public audit of Signal and Briar, matched against NIDO
