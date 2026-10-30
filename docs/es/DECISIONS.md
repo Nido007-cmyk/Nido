@@ -190,10 +190,19 @@ hecho:
 - **Sigue abierto, y se dice:** el texto de un PDF lo extrae una librería
   nativa antes de que NIDO pueda medirlo, así que un PDF hostil todavía
   puede gastar mucha memoria dentro de esa librería; el tamaño de un respaldo
-  deja ver más o menos cuántos datos tiene; y la gestión de sesiones de NIDO
-  (no solo su ratchet) debería revisarse contra ataques de «clon» como el que
-  se encontró en Sesame de Signal (2023). Eso es para la auditoría externa
-  (D7).
+  deja ver más o menos cuántos datos tiene.
+- **Clones de sesión, revisado el mismo día:** el fallo de Sesame en Signal
+  (Cremers, Jacomme y Naska, USENIX 2023) era que una sesión vieja volvía a
+  ser la activa al descifrar un mensaje, así que un clon con un estado
+  antiguo podía volver. NIDO no tiene ese camino: guarda como mucho una
+  sesión viva y una candidata por contacto, una candidata solo existe tras
+  un handshake firmado con la clave de identidad, y al promocionarse la
+  vieja desaparece para siempre (`src/p2p/messenger.ts`, `handleFrame`; test
+  «una sesión sustituida no se reactiva nunca»). Las sesiones no se guardan
+  en disco: una conexión nueva siempre necesita un handshake firmado nuevo.
+  Lo que ningún diseño de sesiones arregla es un clon que también tiene la
+  clave de identidad; detectarlo (la segunda propuesta del artículo) pide
+  cambiar el protocolo y queda para la auditoría externa (D7).
 - **Se revisa si:** algún día se plantean presentaciones remotas de
   contactos: antes necesitan un camino real hasta la verificación plena, y
   nada que confíe en quien presenta (CVE-2023-33983 de Briar).
