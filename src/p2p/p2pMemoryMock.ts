@@ -321,7 +321,10 @@ export function makeP2PMemoryDb(mem: P2PMem) {
         if (existing) {
           existing.name = name as string;
           // CRYPTO-AUDIT-2026-10-11: espejo de COALESCE(excluded.sig_pk, sig_pk).
-          existing.sig_pk = sig ?? existing.sig_pk;
+          const nextSig = sig ?? existing.sig_pk;
+          // Re-emparejar con otra clave de firma pierde la verificación.
+          if (nextSig !== existing.sig_pk) existing.verified = 0;
+          existing.sig_pk = nextSig;
           // UNIT B: re-pair con la misma pk la restaura (defensivo).
           existing.superseded_by = null;
           existing.superseded_at = null;
@@ -329,7 +332,7 @@ export function makeP2PMemoryDb(mem: P2PMem) {
           mem.contacts.push({
             pk_hex: pk as string,
             name: name as string,
-            verified: 1,
+            verified: 0,
             sig_pk: sig ?? null,
             superseded_by: null,
             superseded_at: null,
@@ -379,6 +382,12 @@ export function makeP2PMemoryDb(mem: P2PMem) {
           | (Record<string, unknown> & { pk_hex: string })
           | undefined;
         if (c) c[cap[1]] = value;
+        return ok(c ? 1 : 0);
+      }
+      if (sql.includes("UPDATE p2p_contacts SET verified = ?")) {
+        const [v, _at, pk] = params as Array<number | string | null>;
+        const c = mem.contacts.find((x) => x.pk_hex === pk && x.superseded_by === null);
+        if (c) c.verified = Number(v) ? 1 : 0;
         return ok(c ? 1 : 0);
       }
       if (sql.includes("UPDATE p2p_contacts SET name")) {

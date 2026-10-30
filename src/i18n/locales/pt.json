@@ -305,7 +305,12 @@
     "unavailable": "Indisponível neste dispositivo",
     "unavailableNote": "Nenhum serviço de reconhecimento de voz do sistema foi encontrado — comum em builds GrapheneOS / sem Google. Um modelo whisper.cpp embarcado eliminaria essa dependência, mas é um projeto separado do porte da própria integração com o llama.rn; não implementado nesta versão.",
     "readAloudLabel": "Leitura em voz alta",
-    "readAloudValue": "Lê as respostas do assistente usando a voz do sistema (sem internet)."
+    "readAloudValue": "Lê as respostas do assistente usando a voz do sistema (sem internet).",
+    "engineOnDevice": "Reconhecedor no telefone: o áudio não sai daqui",
+    "engineSystem": "Só o serviço de voz do sistema (do Google ou do fabricante): pode enviar o áudio pela internet",
+    "onDeviceOnlyLabel": "Só reconhecimento no telefone",
+    "onDeviceOnlyValue": "Ligado, o ditado só funciona se o seu telefone puder reconhecer a voz sem internet (Android 12 ou posterior com reconhecedor no telefone). Se desligar, o NIDO pode usar o serviço de voz do sistema, que pode enviar o seu áudio pela internet.",
+    "onlineOnlyNote": "Este telefone não tem reconhecedor de voz no telefone, então o ditado está desligado. Se aceitar que o serviço do sistema possa enviar o seu áudio pela internet, desligue «Só reconhecimento no telefone»."
   },
   "interfaceSettings": {
     "hapticFeedbackLabel": "Feedback tátil",
@@ -727,6 +732,14 @@
     "offline": "fora de alcance",
     "offlineQueued": "fora de alcance · as mensagens ficam em fila criptografada",
     "verifiedSuffix": " · ✓ verificado",
+    "unverifiedSuffix": " · não verificado",
+    "verify": "Verificar",
+    "verifyContact": "Verificar a impressão digital de {{name}}",
+    "verifyTitle": "Verificar {{name}}",
+    "verifyBody": "Peça a {{name}} que abra «Meu código» no NIDO e leia a impressão digital em voz alta, pessoalmente ou numa ligação em que você reconheça a voz.\n\nTem que ser exatamente:\n{{theirs}}\n\nSua impressão digital, para {{name}} conferir:\n{{mine}}\n\nMarque só se coincidirem. Se não coincidirem, não confie neste contato: alguém pode estar no meio.",
+    "verifyConfirm": "Coincidem",
+    "verifiedNotice": "✓ {{name}} verificado.",
+    "verifyFailed": "Não foi possível verificar este contato.",
     "linkActive": "🟢 Enlace ativo",
     "linkStopped": "⚪ Enlace parado",
     "tabChats": "Conversas",
@@ -768,7 +781,7 @@
     "sendMessage": "Enviar mensagem",
     "retryNotice": "Tentando a entrega da mensagem novamente…",
     "sendAgainNotice": "Enviando como nova mensagem…",
-    "pairedNotice": "✓ {{name}} emparelhado. Verifique a impressão digital pessoalmente.",
+    "pairedNotice": "✓ {{name}} emparelhado, ainda não verificado. Comparem a impressão digital e toque em «Verificar».",
     "connectedNotice": "✓ Conectado com {{alias}}.",
     "copiedNotice": "✓ {{label}} copiado.",
     "pairBindingWasRetired": "Nota: esta identidade (“{{name}}”) foi aposentada antes por um re-emparelhamento. Confirmar a restaurará como seu contato — suas mensagens falhadas anteriores continuam falhadas e não serão reenviadas sozinhas.",
@@ -1052,6 +1065,7 @@
   "voiceInputAlert": {
     "unavailableTitle": "Entrada de voz indisponível",
     "unavailableMessage": "Nenhum serviço de reconhecimento de voz foi encontrado neste dispositivo (comum em GrapheneOS / builds sem Google). Digite sua pergunta.",
+    "onlineOnlyMessage": "Este telefone não consegue reconhecer a voz sem internet, e o NIDO está configurado para não enviar o seu áudio para fora. Digite a sua pergunta, ou permita o serviço de voz do sistema em Ajustes › Voz (pode enviar o áudio pela internet).",
     "startLabel": "Ditar por voz",
     "stopLabel": "Parar o ditado"
   },

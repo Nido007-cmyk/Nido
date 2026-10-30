@@ -93,6 +93,7 @@ export interface PackTransferInfo {
   progress: number;
   /** Tamaño en bytes */
   sizeBytes: number;
+
   /** Error si state=failed */
   error?: string;
   updatedAt: number;
@@ -106,6 +107,14 @@ export type PackShareEvent =
   | { type: "offer_declined"; info: PackTransferInfo };
 
 type PackShareEventHandler = (event: PackShareEvent) => void;
+
+
+/** Ofertas sin aceptar que un mismo contacto puede tener a la vez. */
+export const MAX_PENDING_OFFERS_PER_PEER = 3;
+/** Ofertas sin aceptar en total, de todos los contactos. */
+export const MAX_PENDING_OFFERS_TOTAL = 10;
+/** Una oferta que nadie acepta en este tiempo se olvida. */
+export const OFFER_TTL_MS = 30 * 60 * 1000;
 
 class PackShareService {
   private static instance: PackShareService | null = null;
@@ -417,6 +426,20 @@ class PackShareService {
     // No aceptar ofertas duplicadas
     if (this.receiveSessions.has(sessionId)) return;
 
+    // Lecciones de Briar (ETH 2023: un contacto tumbaba la app de todos sus
+    // contactos; cuota por contacto propuesta para Mailbox): las ofertas sin
+    // aceptar caducan y cada contacto tiene un máximo de ofertas pendientes.
+    this.expireUnacceptedOffers();
+    const sender = adv.senderId.toLowerCase();
+    let pendingFromSender = 0;
+    let pendingTotal = 0;
+    for (const [id, s] of this.receiveSessions) {
+      if (this.acceptedReceives.has(id)) continue;
+      pendingTotal++;
+      if (s.advertisement.senderId.toLowerCase() === sender) pendingFromSender++;
+    }
+    if (pendingFromSender >= MAX_PENDING_OFFERS_PER_PEER || pendingTotal >= MAX_PENDING_OFFERS_TOTAL) return;
+
     // 0.1.55: solo las ofertas que la app sabe instalar.
     if (this.offerFilter) {
       let ok = false;
@@ -648,6 +671,15 @@ class PackShareService {
       // Error de envío: se reintentará cuando llegue el próximo ACK
       // o cuando la UI reintente manualmente
     });
+  }
+
+  /** Borra las ofertas que nadie aceptó en OFFER_TTL_MS. */
+  private expireUnacceptedOffers(now = Date.now()): void {
+    for (const [id, s] of this.receiveSessions) {
+      if (!this.acceptedReceives.has(id) && now - s.startedAt > OFFER_TTL_MS) {
+        this.receiveSessions.delete(id);
+      }
+    }
   }
 
   /** Limpia sesiones en estado terminal (para la UI). */

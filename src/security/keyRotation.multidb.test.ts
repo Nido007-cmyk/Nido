@@ -12,8 +12,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // 2. El staging lista todas las rutas (no una sola)
 // 3. Si el keystore falla, revierte TODAS las DBs
 
+const vaultSettings = vi.hoisted(() => new Map<string, string>());
 vi.mock("../privacy/keyManager", () => ({
   getDatabaseKeyHex: vi.fn().mockResolvedValue("a".repeat(64)),
+  // El archivo de rotación va cifrado con una llave en SecureStore.
+  readVaultSetting: async (k: string) => vaultSettings.get(k) ?? null,
+  writeVaultSetting: async (k: string, v: string | null) => {
+    if (v === null) vaultSettings.delete(k);
+    else vaultSettings.set(k, v);
+  },
 }));
 
 vi.mock("./biometricGate", () => ({
@@ -83,12 +90,16 @@ describe("rotateAllDatabaseKeys", () => {
     // 1 staging inicial + 3 actualizaciones de progreso (una por DB)
     expect(mockWrite).toHaveBeenCalledTimes(4);
     const [, content] = mockWrite.mock.calls[0];
-    const parsed = JSON.parse(content as string);
+    // En disco no hay claves en claro: el contenido va cifrado.
+    expect(content as string).not.toContain("a".repeat(64));
+    expect(content as string).not.toContain("42".repeat(32));
+    const { openStaging } = await import("./stagingSeal");
+    const parsed = JSON.parse(await openStaging(content as string));
     expect(parsed.dbPaths).toHaveLength(3);
     expect(parsed.dbPaths[0]).toContain("nido_memory.db");
     // El último staging debe listar las 3 como rekeyed
     const [, lastContent] = mockWrite.mock.calls[3];
-    const lastParsed = JSON.parse(lastContent as string);
+    const lastParsed = JSON.parse(await openStaging(lastContent as string));
     expect(lastParsed.rekeyed).toHaveLength(3);
   });
 

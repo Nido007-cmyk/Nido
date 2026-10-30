@@ -7,7 +7,7 @@
     "R3": { "status": "done", "tests": ["src/agent/loop/safetyAnswers.test.ts", "src/eval/evalV2.deterministic.test.ts"], "evalCases": ["EN-*"] },
     "R4": { "status": "done", "tests": ["src/agent/policy/externalEffects.test.ts"], "evalCases": ["TO-19", "TO-20"] },
     "R5": { "status": "done", "tests": ["src/agent/policy/untrustedContent.test.ts"], "evalCases": ["AT-01", "AT-02", "AT-08"] },
-    "R6": { "status": "partial", "tests": [], "evalCases": [], "docs": ["docs/NETWORK_AUDIT.md", "scripts/offline-proof/README.md"], "pendingWork": "Voice input may go online without an offline recognizer (docs/WHISPER_PLAN.md); offline-proof is manual." },
+    "R6": { "status": "partial", "tests": ["src/voice/voicePolicy.test.ts", "src/privacy/networkAudit.persist.test.ts"], "evalCases": [], "docs": ["docs/NETWORK_AUDIT.md", "scripts/offline-proof/README.md"], "pendingWork": "offline-proof is manual; the system speech service stays available as an opt-in (Settings › Voice) until real offline voice lands (docs/WHISPER_PLAN.md)." },
     "R7": { "status": "review-only", "tests": [], "evalCases": [], "why": "Checked in PR review and in the tablet checklist." },
     "R8": { "status": "partial", "tests": ["src/rag/grounding.test.ts"], "evalCases": ["HO-*"], "pendingWork": "Per-sentence provenance label." }
   }

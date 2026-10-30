@@ -43,7 +43,7 @@ Every local Wi-Fi connection also appears in the network log.
 
 ## Voice input
 
-Voice dictation uses the speech recognition service installed on your phone. NIDO asks it to work offline, but that service belongs to your phone's manufacturer or to Google and may process audio according to its own policy. If that matters to you, type instead.
+By default, voice dictation only works with a speech recognizer that runs on your phone (Android 12 or later, when the phone has one), so the audio never leaves it. If your phone only has the system speech service (Google's or the manufacturer's), dictation stays off unless you turn off Settings › Voice › "On-device recognition only". That service may send your audio over the internet and process it according to its own policy.
 
 ## Permissions
 
@@ -116,7 +116,7 @@ Cada conexión por Wi-Fi local también aparece en el registro de red.
 
 ## Entrada por voz
 
-El dictado usa el servicio de reconocimiento de voz instalado en tu teléfono. NIDO le pide trabajar sin conexión, pero ese servicio pertenece al fabricante de tu teléfono o a Google y puede procesar el audio según su propia política. Si eso te importa, escribe en lugar de dictar.
+Por defecto, el dictado solo funciona con un reconocedor de voz que trabaja en tu teléfono (Android 12 o posterior, si el teléfono lo tiene), así que el audio no sale de él. Si tu teléfono solo tiene el servicio de voz del sistema (de Google o del fabricante), el dictado queda apagado salvo que apagues Ajustes › Voz › «Solo reconocimiento en el teléfono». Ese servicio puede mandar tu audio a internet y tratarlo según su propia política.
 
 ## Permisos
 

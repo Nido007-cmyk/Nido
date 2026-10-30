@@ -37,11 +37,12 @@ archivo (y la [constitución](NIDO_CONSTITUTION.md) si toca una regla firme).
 - **Se revisa si:** nunca por defecto; se puede ofrecer una vez en la
   configuración inicial.
 
-### D4. Los mensajes solo viajan entre personas que se conocieron en persona
+### D4. Los mensajes solo viajan entre contactos emparejados
 
 - **Decisión:** la mensajería de NIDO, y cualquier reenvío futuro por otros
-  teléfonos (malla), funciona solo entre contactos emparejados con el QR.
-  Nunca para cualquier teléfono cercano.
+  teléfonos (malla), funciona solo entre contactos emparejados con su
+  código. Nunca para cualquier teléfono cercano. Si algún día se construye
+  el reenvío, solo pasará por contactos con la huella verificada (ver D12).
 - **Por qué:** las mallas abiertas a extraños dejan ver quién habla con quién.
   El propio documento de bitchat dice que los metadatos son su punto débil (un
   identificador que no rota, anuncios en claro). Bridgefy se rompió dos veces,
@@ -149,14 +150,50 @@ archivo (y la [constitución](NIDO_CONSTITUTION.md) si toca una regla firme).
   sigue pidiendo confirmación (regla firme R4), así que ese borde no puede
   actuar solo. Bajar el umbral apartaría lo escrito de verdad con teclados
   de gestos.
-- **El dictado por voz** usa el reconocedor del teléfono y le pide trabajar
-  sin conexión; es una petición, no una garantía. Está dicho en PRIVACY.md y
-  en la constitución (R6). La voz offline de verdad es `docs/WHISPER_PLAN.md`.
-- **La rotación de clave** escribe la clave vieja y la nueva en un archivo del
-  directorio privado de la app durante los segundos que dura, para que un
-  cierre inesperado no deje la base ilegible. En un teléfono rooteado se
-  puede leer en esos segundos. Pasarlo al Keystore de Android cambia la
-  recuperación tras un cierre y se hará junto con una prueba en un teléfono
-  físico.
-- **Se revisa si:** Android o React Native ofrecen un evento de pegar; llega
-  la voz offline de verdad; el archivo de la rotación pasa al Keystore.
+- ~~El dictado por voz~~ y ~~el archivo de la rotación de clave~~: cerrados el
+  mismo día (ver D12).
+- **Se revisa si:** Android o React Native ofrecen un evento de pegar.
+
+### D12. Lecciones de las auditorías de Signal y Briar
+
+La investigación del dueño sobre todas las auditorías públicas de Signal y
+Briar (29 de octubre de 2026) cruzó sus hallazgos con los de NIDO. Decidido y
+hecho:
+
+- **Un contacto solo está verificado cuando las dos personas compararon la
+  huella.** El código de emparejamiento de NIDO es texto y puede llegar por
+  cualquier canal, pero hasta la 0.1.62 todo contacto se guardaba y se
+  mostraba como «verificado». Briar dejó esto abierto para los contactos
+  remotos (OTF-005, retest de 2024), y en un estudio de 2016 el 75 % de los
+  usuarios de Signal creía haber verificado sin hacerlo. Ahora un contacto
+  está «sin verificar» hasta que alguien pulsa Verificar después de comparar
+  la huella que muestra «Mi código» en el otro teléfono, y los contactos que
+  ya existían empiezan «sin verificar». Emparejar no cambia; solo lo que la
+  app afirma.
+- **El dictado por voz solo usa un reconocedor en el teléfono por defecto.**
+  El único hallazgo High de Briar (Cure53, 2017) fue un solo canal saliéndose
+  del perímetro (el DNS de RSS fuera de Tor). «Preferir sin conexión» pasa a
+  ser «en el teléfono o nada», salvo que la persona lo apague en Ajustes ›
+  Voz.
+- **El archivo de la rotación de clave va cifrado** con una llave guardada en
+  el Keystore de Android (por SecureStore). Signal Desktop tuvo la clave de
+  su base en un `config.json` en claro seis años (2018–2024).
+- **Las ofertas de packs tienen cuota:** como mucho 3 ofertas sin aceptar por
+  contacto y 10 en total, que se olvidan a los 30 minutos (la denegación de
+  servicio de Briar por un contacto malicioso, ETH 2023).
+- **Comprobado, nada que arreglar hoy:** las capturas de pantalla están
+  bloqueadas (FLAG_SECURE) y los toques bajo la capa de otra app se ignoran
+  (`filterTouchesWhenObscured`, más capas ocultas en Android 12+), el único
+  componente exportado es el acceso rápido de la barra de ajustes (protegido
+  por un permiso del sistema), y nada que se abra desde fuera de NIDO puede
+  borrar ni enviar nada.
+- **Sigue abierto, y se dice:** el texto de un PDF lo extrae una librería
+  nativa antes de que NIDO pueda medirlo, así que un PDF hostil todavía
+  puede gastar mucha memoria dentro de esa librería; el tamaño de un respaldo
+  deja ver más o menos cuántos datos tiene; y la gestión de sesiones de NIDO
+  (no solo su ratchet) debería revisarse contra ataques de «clon» como el que
+  se encontró en Sesame de Signal (2023). Eso es para la auditoría externa
+  (D7).
+- **Se revisa si:** algún día se plantean presentaciones remotas de
+  contactos: antes necesitan un camino real hasta la verificación plena, y
+  nada que confíe en quien presenta (CVE-2023-33983 de Briar).

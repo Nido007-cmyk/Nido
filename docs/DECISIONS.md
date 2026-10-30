@@ -37,11 +37,12 @@ rule).
   allowed.
 - **Revisit when:** never by default; it can be offered once during setup.
 
-### D4. Messages travel only between people who met in person
+### D4. Messages travel only between paired contacts
 
 - **Decision:** NIDO messaging, and any future relaying of messages through
-  other phones (mesh), works only between contacts paired with the QR code.
-  Never for any nearby phone.
+  other phones (mesh), works only between contacts paired with their code.
+  Never for any nearby phone. Any relaying, if it is ever built, only goes
+  through contacts whose fingerprint was verified (see D12).
 - **Why:** meshes open to strangers expose who talks to whom. bitchat's own
   whitepaper calls metadata its weakest point (a sender ID that never
   rotates, announcements in clear). Bridgefy was broken twice, the second time
@@ -142,14 +143,45 @@ rule).
   like typing. Every action with effects outside the app still asks for
   confirmation (firm rule R4), so the edge can't act on its own. Lowering
   the threshold would fence real typing from gesture keyboards.
-- **Voice dictation** uses the phone's recognizer and asks it to work
-  offline; that is a request, not a guarantee. It is stated in
-  PRIVACY.md and in the constitution (R6). Real offline voice is
-  `docs/WHISPER_PLAN.md`.
-- **Key rotation** writes the old and new key to a file in the app's private
-  directory for the seconds the rotation lasts, so a crash can't leave the
-  database unreadable. On a rooted phone it can be read during those
-  seconds. Moving it to the Android Keystore changes crash recovery and will
-  be done together with a test on a physical phone.
-- **Revisit when:** Android or React Native expose a paste event; real
-  offline voice lands; the rotation staging moves to the Keystore.
+- ~~Voice dictation~~ and ~~the key rotation file~~: closed the same day
+  (see D12).
+- **Revisit when:** Android or React Native expose a paste event.
+
+### D12. Lessons from Signal's and Briar's audits
+
+The owner's research on every public audit of Signal and Briar (October 29,
+2026) matched their findings with NIDO's. Decided and done:
+
+- **A contact is verified only when the two people compared fingerprints.**
+  NIDO's pairing code is text and can arrive over any channel, but until
+  0.1.62 every contact was saved and shown as "verified". Briar left this
+  open for remote contacts (OTF-005, 2024 retest), and in a 2016 study 75 %
+  of Signal users believed they had verified when they hadn't. Now a contact
+  is "not verified" until someone taps Verify after comparing the
+  fingerprint shown in the other phone's "My code", and existing contacts
+  start as "not verified". Pairing doesn't change; only what the app claims.
+- **Voice dictation only uses an on-device recognizer by default.** Briar's
+  only High finding (Cure53, 2017) was one channel leaving the perimeter
+  (RSS DNS outside Tor). "Prefer offline" is now "on-device or nothing",
+  unless the person turns that off in Settings › Voice.
+- **The key rotation file is encrypted** with a key kept in the Android
+  Keystore (through SecureStore). Signal Desktop kept its database key in a
+  plain `config.json` for six years (2018–2024).
+- **Pack offers have a quota:** at most 3 unaccepted offers per contact and
+  10 in total, forgotten after 30 minutes (Briar's denial of service by a
+  malicious contact, ETH 2023).
+- **Checked, nothing to fix today:** screen capture is blocked (FLAG_SECURE)
+  and touches under another app's overlay are ignored
+  (`filterTouchesWhenObscured`, plus hidden overlays on Android 12+), the
+  only exported component is the quick-settings tile (protected by a system
+  permission), and nothing opened from outside NIDO can wipe or send
+  anything.
+- **Still open, stated:** the PDF text is extracted by a native library
+  before NIDO can measure it, so a hostile PDF can still use a lot of memory
+  inside that library; the size of a backup shows roughly how much data it
+  holds; and NIDO's session handling (not only its ratchet) should be checked
+  against "clone" attacks like the one found in Signal's Sesame (2023). That
+  is for the external audit (D7).
+- **Revisit when:** remote contact introductions are ever considered: they
+  need a real path to full verification first, and nothing that trusts the
+  introducer (Briar's CVE-2023-33983).

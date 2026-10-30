@@ -112,7 +112,7 @@ describe("NidoMessenger", () => {
     await expect(m.pairWith(mine)).rejects.toThrow("propio");
   });
 
-  it("pairWith guarda el contacto verificado", async () => {
+  it("pairWith guarda el contacto SIN verificar (el código puede llegar por cualquier canal)", async () => {
     const m = new NidoMessenger();
     await m.ensureIdentity();
     const peerId = generateIdentity();
@@ -120,7 +120,7 @@ describe("NidoMessenger", () => {
     const contact = await m.pairWith(encodePairingPayload("Beto", peerId.publicKey, peerSign.publicKey));
     expect(contact).not.toBeNull();
     expect(contact!.name).toBe("Beto");
-    expect(contact!.verified).toBe(true);
+    expect(contact!.verified).toBe(false);
     expect((await m.contacts()).map((c) => c.name)).toEqual(["Beto"]);
   });
 

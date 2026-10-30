@@ -20,6 +20,7 @@
 import { isFeatureEnabled } from "../config/featureFlags";
 import {
   fingerprint,
+  fromHex,
   generateEphemeral,
   generateIdentity,
   toHex,
@@ -41,6 +42,7 @@ import {
   clearRepairIntent,
   commitRepair,
   deleteContact,
+  setContactVerified,
   resolveContactByName,
   failAllOutbox,
   findContactByPk,
@@ -910,6 +912,23 @@ export class NidoMessenger {
   async contacts(): Promise<P2PContact[]> {
     this.assertLive();
     return listContacts();
+  }
+
+  /**
+   * Huella de un contacto, la misma que su NIDO muestra en «Mi código». Para
+   * compararla en voz alta antes de marcarlo como verificado.
+   */
+  contactFingerprint(contact: Pick<P2PContact, "pkHex" | "sigPkHex">): string {
+    return fingerprint(fromHex(contact.pkHex), contact.sigPkHex ? fromHex(contact.sigPkHex) : null);
+  }
+
+  /**
+   * Lecciones de Signal/Briar (2026-10-29): la persona confirma que comparó
+   * la huella. Es lo único que marca un contacto como verificado.
+   */
+  async setContactVerified(pkHex: string, verified: boolean): Promise<boolean> {
+    this.assertLive();
+    return setContactVerified(pkHex, verified);
   }
 
   /**

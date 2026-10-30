@@ -12,8 +12,14 @@ import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { makeSurfaces, MIN_TOUCH } from "./theme/surfaces";
 import { NidoIcon } from "./components/icons/NidoIcon";
-import { isVoiceInputAvailable } from "../voice/VoiceInput";
-import { getVoiceInputEnabled, setVoiceInputEnabled } from "../models/settings";
+import { voiceEngineState } from "../voice/VoiceInput";
+import type { VoiceEngineState } from "../voice/voicePolicy";
+import {
+  getVoiceInputEnabled,
+  setVoiceInputEnabled,
+  getVoiceOnDeviceOnly,
+  setVoiceOnDeviceOnly,
+} from "../models/settings";
 import {
   getReadAloudEnabled,
   setReadAloudEnabled,
@@ -27,7 +33,8 @@ export function VoiceSettings() {
   const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
-  const [voiceAvailable, setVoiceAvailable] = useState<boolean | null>(null);
+  const [engine, setEngine] = useState<VoiceEngineState | null>(null);
+  const [onDeviceOnly, setOnDeviceOnly] = useState(true);
   const [enabled, setEnabled] = useState(true);
   // FIX 2026-10-09 (UI-AUDIT): exponer el switch de lectura en voz alta.
   // El backend (src/voice/tts.ts, expo-speech offline) y los 3 call sites
@@ -35,7 +42,8 @@ export function VoiceSettings() {
   const [readAloud, setReadAloud] = useState(false);
 
   useEffect(() => {
-    isVoiceInputAvailable().then(setVoiceAvailable).catch(() => setVoiceAvailable(false));
+    voiceEngineState().then(setEngine).catch(() => setEngine("none"));
+    getVoiceOnDeviceOnly().then(setOnDeviceOnly).catch(() => {});
     getVoiceInputEnabled().then(setEnabled);
     getReadAloudEnabled().then(setReadAloud);
   }, []);
@@ -48,6 +56,16 @@ export function VoiceSettings() {
     } catch {
       // FIX 2026-10-09 (UI-AUDIT/F4): revertir si no se pudo persistir.
       setEnabled(prev);
+    }
+  };
+
+  const toggleOnDeviceOnly = async (value: boolean) => {
+    const prev = onDeviceOnly;
+    setOnDeviceOnly(value);
+    try {
+      await setVoiceOnDeviceOnly(value);
+    } catch {
+      setOnDeviceOnly(prev);
     }
   };
 
@@ -82,16 +100,34 @@ export function VoiceSettings() {
         <View style={{ flex: 1 }}>
           <Text style={styles.rowLabel}>{t("voiceSettings.speechEngineLabel")}</Text>
           <Text style={styles.rowValue}>
-            {voiceAvailable == null
+            {engine == null
               ? t("voiceSettings.checking")
-              : voiceAvailable
-                ? t("voiceSettings.available")
-                : t("voiceSettings.unavailable")}
+              : engine === "onDevice"
+                ? t("voiceSettings.engineOnDevice")
+                : engine === "system"
+                  ? t("voiceSettings.engineSystem")
+                  : t("voiceSettings.unavailable")}
           </Text>
         </View>
       </View>
-      {voiceAvailable === false && (
-        <Text style={styles.note}>{t("voiceSettings.unavailableNote")}</Text>
+      {engine === "none" && <Text style={styles.note}>{t("voiceSettings.unavailableNote")}</Text>}
+
+      {/* Auditoría 2026-10-29: solo el reconocedor del teléfono, salvo que la persona elija otra cosa. */}
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.rowLabel}>{t("voiceSettings.onDeviceOnlyLabel")}</Text>
+          <Text style={styles.rowValue}>{t("voiceSettings.onDeviceOnlyValue")}</Text>
+        </View>
+        <Switch
+          value={onDeviceOnly}
+          onValueChange={toggleOnDeviceOnly}
+          trackColor={{ false: colors.border.elevated, true: colors.emerald[400] }}
+          thumbColor={colors.bg.card}
+          accessibilityLabel={t("voiceSettings.onDeviceOnlyLabel")}
+        />
+      </View>
+      {engine === "system" && onDeviceOnly && (
+        <Text style={styles.note}>{t("voiceSettings.onlineOnlyNote")}</Text>
       )}
 
       {/* FIX 2026-10-09 (UI-AUDIT): lectura en voz alta (TTS offline). */}

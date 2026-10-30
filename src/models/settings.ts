@@ -33,6 +33,8 @@ interface Settings {
   maxTokens?: number;
   hapticsEnabled?: boolean;
   voiceInputEnabled?: boolean;
+  /** Dictation only with the phone's on-device recognizer (default true). */
+  voiceOnDeviceOnly?: boolean;
   readAloudEnabled?: boolean;
   /** 0.1.60: resumen diario de las 8:00. Opt-in (constitución §9). */
   dailySummaryEnabled?: boolean;
@@ -289,6 +291,23 @@ export async function getVoiceInputEnabled(): Promise<boolean> {
 export async function setVoiceInputEnabled(enabled: boolean): Promise<void> {
   return mutateSettings((s) => {
     s.voiceInputEnabled = enabled;
+  });
+}
+
+/**
+ * Auditoría 2026-10-29 (y lección de Briar: un solo canal fuera del
+ * perímetro rompe la promesa entera): el dictado solo usa el reconocedor que
+ * funciona EN el teléfono. El servicio del sistema puede mandar el audio a
+ * internet; usarlo es una decisión de la persona. Default true.
+ */
+export async function getVoiceOnDeviceOnly(): Promise<boolean> {
+  const s = await readSettings();
+  return s.voiceOnDeviceOnly ?? true;
+}
+
+export async function setVoiceOnDeviceOnly(onDeviceOnly: boolean): Promise<void> {
+  return mutateSettings((s) => {
+    s.voiceOnDeviceOnly = onDeviceOnly;
   });
 }
 

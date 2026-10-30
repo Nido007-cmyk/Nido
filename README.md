@@ -54,8 +54,10 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   which come from the model with no source; when nothing in the base really
   matches, no source is shown.
 - **Talks to another NIDO over Bluetooth**: encrypted messages between two
-  paired phones, with no internet and no server. Pairing is done in person
-  with a QR code.
+  paired phones, with no internet and no server. To pair, you paste the
+  other phone's code (the text of its QR); a contact shows as verified only
+  after you both compare fingerprints, in person or on a call, and tap
+  Verify.
 - **Has an Emergency tab**: your country's emergency numbers, checked
   against official sources (32 countries in the NIDO Local pack), each with
   its source and date. "Call" opens the dialer with the number typed in.
