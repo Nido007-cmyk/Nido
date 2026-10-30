@@ -70,7 +70,7 @@ export function hexOfBytes(buf: ArrayBuffer | Uint8Array): string {
   return out;
 }
 
-async function readFileBytes(uri: string): Promise<Uint8Array> {
+async function readFileBytes(uri: string): Promise<Uint8Array<ArrayBuffer>> {
   const base64 = await FileSystem.readAsStringAsync(uri, {
     encoding: FileSystem.EncodingType.Base64,
   });
@@ -96,7 +96,7 @@ async function sha256File(uri: string): Promise<string | null> {
   try {
     const { default: Crypto } = await import("expo-crypto");
     const bytes = await readFileBytes(uri);
-    const digest = await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, bytes);
+    const digest = await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, bytes as Uint8Array<ArrayBuffer>);
     return hexOfBytes(digest);
   } catch {
     return null;
@@ -408,7 +408,7 @@ export async function validateBackup(uri: string): Promise<BackupValidation> {
     // sobrescribía la base viva.
     let trialOpenOk = false;
     let manifestVerified = false;
-    let manifestInfo: BackupManifestInfo | undefined;
+    let parsedInfo: BackupManifestInfo | undefined;
     let dekPresent = false;
     try {
       const { getDatabaseKeyHex, applyDatabaseKey } = await import("../privacy/keyManager");
@@ -472,8 +472,8 @@ export async function validateBackup(uri: string): Promise<BackupValidation> {
         if (typeof manifest.sha256 !== "string" || !manifest.sha256) {
           return { valid: false, reason: "El manifest no incluye SHA-256 válido (no se puede verificar integridad)." };
         }
-        manifestInfo = backupManifestInfo(manifest);
-        if (manifestInfo.tooNew) {
+        parsedInfo = backupManifestInfo(manifest);
+        if (parsedInfo.tooNew) {
           return { valid: false, reason: "Este respaldo es de una versión más nueva de NIDO. Actualiza NIDO para restaurarlo." };
         }
         // Manifest nuevo: SHA-256 real de los bytes. Manifest de 0.1.61 o
@@ -517,7 +517,7 @@ export async function validateBackup(uri: string): Promise<BackupValidation> {
           "No se pudo verificar el backup: no abre con la clave de este dispositivo y no trae un manifest válido.",
       };
     }
-    return { valid: true, sizeBytes: size, ...(manifestInfo ? { info: manifestInfo } : {}) };
+    return { valid: true, sizeBytes: size, ...(parsedInfo ? { info: parsedInfo } : {}) };
   } catch (e) {
     return { valid: false, reason: e instanceof Error ? e.message : "Error desconocido." };
   }

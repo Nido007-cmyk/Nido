@@ -11,9 +11,10 @@ import en from "../i18n/locales/en.json";
 import pt from "../i18n/locales/pt.json";
 import { formatBackupDate, restoreConfirmText } from "./restoreNotice";
 
-function tOf(locale: { backup: Record<string, string> }) {
+function tOf(locale: unknown) {
+  const backup = (locale as { backup: Record<string, unknown> }).backup;
   return (key: string, vars: Record<string, string> = {}) => {
-    const raw = locale.backup[key.replace(/^backup\./, "")];
+    const raw = backup[key.replace(/^backup\./, "")];
     if (typeof raw !== "string") throw new Error(`falta ${key}`);
     return raw.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? "");
   };
