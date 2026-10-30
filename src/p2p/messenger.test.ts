@@ -338,6 +338,61 @@ describe("NidoMessenger", () => {
   });
 });
 
+describe("Clones de sesión (Cremers, Jacomme y Naska, USENIX 2023)", () => {
+  /**
+   * El fallo de Sesame (Signal): una sesión vieja que descifraba un mensaje
+   * volvía a ser la activa, y un «clon» con un estado antiguo podía volver a
+   * la conversación. NIDO guarda como mucho una sesión viva y una candidata
+   * por contacto; la candidata solo llega con un handshake firmado con la
+   * clave de identidad, y al promocionarse la vieja desaparece. Este test
+   * fija que una sesión sustituida nunca vuelve, por muchos frames que lleguen
+   * con ella, y que tampoco estropea la nueva.
+   */
+  it("una sesión sustituida no se reactiva nunca, ni rompe la nueva", async () => {
+    const m = new NidoMessenger();
+    const { pkHex: myPk } = await m.ensureIdentity();
+    const peerId = generateIdentity();
+    const peerSign = generateSigningKeypair();
+    await m.pairWith(encodePairingPayload("Beto", peerId.publicKey, peerSign.publicKey));
+    const contact = (await m.contacts())[0];
+    const peerPk = toHex(peerId.publicKey);
+
+    const open = async () => {
+      const mine = m.newHandshakeEphemeral();
+      const theirs = generateEphemeral();
+      const [myNonce, peerNonce] = freshNonces();
+      await m.completeHandshake(contact.pkHex, mine.secretKey, theirs.publicKey, myNonce, peerNonce);
+      return P2PSession.fromHandshakeV2(theirs.secretKey, mine.publicKey, myPk, peerNonce, myNonce);
+    };
+
+    // Sesión 1 viva; un «clon» se queda con una copia de su estado.
+    const old = await open();
+    await m.handleFrame(peerPk, old.pack(makeEnvelope("session_confirm", "c1", peerId.publicKey, myPk, {})));
+
+    // El peer real abre la sesión 2 y la promociona.
+    const fresh = await open();
+    await m.handleFrame(peerPk, fresh.pack(makeEnvelope("session_confirm", "c2", peerId.publicKey, myPk, {})));
+
+    // El clon insiste con la sesión vieja: nada entra y nada cambia.
+    for (let i = 0; i < 5; i++) {
+      const out = await m.handleFrame(
+        peerPk,
+        old.pack(makeEnvelope("chat", `clone-${i}`, peerId.publicKey, myPk, { text: "soy el clon" })),
+      );
+      expect(out).toBeNull();
+    }
+    // La sesión nueva sigue funcionando.
+    const ok = await m.handleFrame(
+      peerPk,
+      fresh.pack(makeEnvelope("chat", "real-1", peerId.publicKey, myPk, { text: "soy el real" })),
+    );
+    expect(ok?.type).toBe("chat");
+    const texts = (await m.readInbox()).map((x) => x.text);
+    expect(texts).toContain("soy el real");
+    expect(texts).not.toContain("soy el clon");
+  });
+});
+
 describe("R6: invalidación del messenger en Clear All Data", () => {
   /** Transporte espía: registra si discovery llegó a arrancar. */
   function spyTransport() {

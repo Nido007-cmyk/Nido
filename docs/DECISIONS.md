@@ -179,9 +179,19 @@ The owner's research on every public audit of Signal and Briar (October 29,
 - **Still open, stated:** the PDF text is extracted by a native library
   before NIDO can measure it, so a hostile PDF can still use a lot of memory
   inside that library; the size of a backup shows roughly how much data it
-  holds; and NIDO's session handling (not only its ratchet) should be checked
-  against "clone" attacks like the one found in Signal's Sesame (2023). That
-  is for the external audit (D7).
+  holds.
+- **Session clones, checked the same day:** the flaw found in Signal's Sesame
+  (Cremers, Jacomme and Naska, USENIX 2023) was that an old session became
+  the active one again when it decrypted a message, so a clone with old
+  state could come back. NIDO doesn't have that path: it keeps at most one
+  live session and one candidate per contact, a candidate only exists after
+  a handshake signed with the identity key, and when it is promoted the old
+  session is gone for good (`src/p2p/messenger.ts`, `handleFrame`; test
+  "una sesión sustituida no se reactiva nunca"). Sessions aren't stored on
+  disk: a new connection always needs a new signed handshake. What no
+  session design fixes is a clone that also has the identity key; detecting
+  that (the paper's second proposal) would need a protocol change and is
+  for the external audit (D7).
 - **Revisit when:** remote contact introductions are ever considered: they
   need a real path to full verification first, and nothing that trusts the
   introducer (Briar's CVE-2023-33983).
