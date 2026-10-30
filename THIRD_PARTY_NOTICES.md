@@ -9,7 +9,7 @@ The list covers every package that `package-lock.json` does not mark as developm
 
 AI models and knowledge packs are not part of the app: they are downloaded separately and keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as `android-runtime-dependencies.txt` (see below).
 
-Source: `package-lock.json sha256:208cfe563117` · 589 packages.
+Source: `package-lock.json sha256:377dbcdcd836` · 590 packages.
 
 ## License elections
 
@@ -317,7 +317,6 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | expo-modules-core | 57.0.23 | MIT |
 | expo-modules-jsi | 57.1.2 | MIT |
 | expo-notifications | 57.0.23 | MIT |
-| expo-pdf-text-extract | 1.1.0 | MIT |
 | expo-secure-store | 57.0.4 | MIT |
 | expo-server | 57.0.3 | MIT |
 | expo-sharing | 57.0.23 | MIT |
@@ -451,6 +450,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | modules/nido-keyvault | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-launch | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-p2p | 0.1.0 | MIT (NIDO's own module) |
+| modules/nido-pdf-text | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-secure-dialog | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-vectors | 0.1.0 | MIT (NIDO's own module) |
 | modules/ram-monitor | 0.1.0 | MIT (NIDO's own module) |
@@ -465,6 +465,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | nido-keyvault | local | MIT (NIDO's own module) |
 | nido-launch | local | MIT (NIDO's own module) |
 | nido-p2p | local | MIT (NIDO's own module) |
+| nido-pdf-text | local | MIT (NIDO's own module) |
 | nido-secure-dialog | local | MIT (NIDO's own module) |
 | nido-vectors | local | MIT (NIDO's own module) |
 | node-forge | 1.4.0 | (BSD-3-Clause OR GPL-2.0) (used under BSD-3-Clause) |
@@ -8755,32 +8756,6 @@ SOFTWARE.
 The MIT License (MIT)
 
 Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-### expo-pdf-text-extract@1.1.0 — LICENSE
-
-```text
-MIT License
-
-Copyright (c) 2024 Pathik Gandhi
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
