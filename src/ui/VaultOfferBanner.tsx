@@ -54,6 +54,9 @@ export function VaultOfferBanner() {
     setBusy(true);
     setMessage(null);
     try {
+      // D9 (29-10-2026): sin un respaldo reciente no se activa.
+      const { assertRecentBackup } = await import("../security/vaultBackupGate");
+      await assertRecentBackup();
       await activateVault(
         { title: t("vault.promptTitle"), subtitle: t("vault.promptSubtitle") },
         { title: t("vault.promptTitle"), subtitle: t("vault.promptVerify") },
@@ -64,7 +67,9 @@ export function VaultOfferBanner() {
     } catch (e) {
       const code = (e as { code?: string } | null)?.code;
       setMessage(
-        code === "E_NO_SECURE_LOCK"
+        code === "E_NO_RECENT_BACKUP"
+          ? t("vault.errNeedBackup")
+          : code === "E_NO_SECURE_LOCK"
           ? t("vault.errNoLock")
           : code === "E_CANCELLED"
             ? t("lockScreen.cancelled")

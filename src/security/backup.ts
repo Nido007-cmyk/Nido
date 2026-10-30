@@ -239,6 +239,10 @@ export async function createBackup(destinationUri: string): Promise<string> {
   const manifestUri = `${destinationUri}.manifest.json`;
   await FileSystem.writeAsStringAsync(manifestUri, JSON.stringify(manifest, null, 2));
 
+  // D9 (29-10-2026): la bóveda solo se activa con un respaldo reciente.
+  const { recordBackupMade } = await import("./vaultBackupGate");
+  await recordBackupMade();
+
   return destinationUri;
 }
 

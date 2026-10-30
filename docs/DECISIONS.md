@@ -117,9 +117,13 @@ rule).
   used in families have no screen lock at all, and there the vault can't be
   turned on. Without the vault the database is still encrypted with a random
   256-bit key kept in the Android Keystore.
-- **Revisit when:** turning the vault on can first make sure there is a
-  recent backup whose key the person has saved. Then it can be on by
-  default for phones with a screen lock.
+- **Update, same day:** turning the vault on now requires a backup from the
+  last 30 days (the app records when a backup is made). It still can't be on
+  silently by default: wrapping the key with a Keystore key that needs the
+  fingerprint or PIN requires the person to authenticate, so the vault is
+  always a step the person takes.
+- **Revisit when:** Android lets an authentication-bound key wrap data
+  without a prompt, or NIDO's setup gets a first-run security step.
 
 ### D10. "Private hello only" stays off by default
 

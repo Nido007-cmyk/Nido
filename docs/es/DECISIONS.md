@@ -122,9 +122,14 @@ archivo (y la [constitución](NIDO_CONSTITUTION.md) si toca una regla firme).
   tablets de uso familiar no tienen bloqueo de pantalla, y ahí la bóveda no
   se puede encender. Sin la bóveda, la base sigue cifrada con una clave
   aleatoria de 256 bits guardada en el Keystore de Android.
-- **Se revisa si:** al encender la bóveda se puede comprobar antes que hay un
-  respaldo reciente cuya clave la persona guardó. Entonces puede venir
-  encendida en los teléfonos con bloqueo de pantalla.
+- **Actualización, el mismo día:** activar la bóveda ahora exige un respaldo
+  de los últimos 30 días (la app anota cuándo se hace un respaldo). Sigue sin
+  poder venir encendida en silencio: envolver la clave con una llave del
+  Keystore que pide huella o PIN exige que la persona se autentique, así que
+  la bóveda siempre es un paso que da la persona.
+- **Se revisa si:** Android permite que una llave atada a la autenticación
+  cifre sin pedirla, o la configuración inicial de NIDO gana un paso de
+  seguridad.
 
 ### D10. «Solo saludo privado» sigue apagado por defecto
 
