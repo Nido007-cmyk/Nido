@@ -88,6 +88,7 @@ export function HardwareProtectionCard() {
   const describeError = useCallback(
     (e: unknown): string => {
       const code = (e as { code?: string } | null)?.code;
+      if (code === "E_NO_RECENT_BACKUP") return t("vault.errNeedBackup");
       if (code === "E_NO_SECURE_LOCK") return t("vault.errNoLock");
       if (code === "E_UNSUPPORTED") return t("vault.errUnsupported");
       if (code === "E_CANCELLED") return t("lockScreen.cancelled");
@@ -101,6 +102,9 @@ export function HardwareProtectionCard() {
     setBusy(true);
     setMessage(null);
     try {
+      // D9 (29-10-2026): sin un respaldo reciente no se activa.
+      const { assertRecentBackup } = await import("../security/vaultBackupGate");
+      await assertRecentBackup();
       await activateVault(prompt, verifyPrompt);
       setMessage(t("vault.activated"));
     } catch (e) {

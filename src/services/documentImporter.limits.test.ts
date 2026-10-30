@@ -15,6 +15,7 @@ interface World {
   failEmbedAt: number;
   pdfText: string;
   pdfCalls: number;
+  pdfMaxChars: number[];
 }
 const world = ((globalThis as Record<string, unknown>).__nidoImportWorld ??= {
   files: new Map(),
@@ -24,18 +25,34 @@ const world = ((globalThis as Record<string, unknown>).__nidoImportWorld ??= {
   failEmbedAt: -1,
   pdfText: "",
   pdfCalls: 0,
+  pdfMaxChars: [],
 }) as World;
 const W = () => (globalThis as Record<string, unknown>).__nidoImportWorld as World;
 
 vi.mock("expo-document-picker", () => ({ getDocumentAsync: async () => ({ canceled: true }) }));
 vi.mock("expo-sharing", () => ({ shareAsync: async () => {} }));
-vi.mock("expo-pdf-text-extract", () => ({
-  extractText: async () => {
-    const w = W();
-    w.pdfCalls++;
-    return w.pdfText;
-  },
-}));
+// El módulo nativo con topes (modules/nido-pdf-text): como él, se para en
+// cuanto el texto pasa de maxChars, sin devolver el texto entero.
+vi.mock("./pdfText", () => {
+  class PdfTextError extends Error {
+    constructor(
+      readonly code: string,
+      message: string,
+    ) {
+      super(message);
+    }
+  }
+  return {
+    PdfTextError,
+    extractPdfTextCapped: async (_uri: string, maxChars: number) => {
+      const w = W();
+      w.pdfCalls++;
+      w.pdfMaxChars.push(maxChars);
+      if (w.pdfText.length > maxChars) throw new PdfTextError("TEXT_TOO_LARGE", "too large");
+      return w.pdfText;
+    },
+  };
+});
 vi.mock("expo-file-system/legacy", () => ({
   readAsStringAsync: async (uri: string) => W().files.get(uri) ?? "",
   writeAsStringAsync: async () => {},
@@ -82,6 +99,7 @@ beforeEach(() => {
   world.failEmbedAt = -1;
   world.pdfText = "";
   world.pdfCalls = 0;
+  world.pdfMaxChars.length = 0;
 });
 
 const asset = (name: string, size?: number) => ({ uri: `file:///${name}`, name, size }) as never;
@@ -156,6 +174,15 @@ describe("auditoría 2026-10-29: bomba de descompresión en PDF", () => {
     ).rejects.toMatchObject({ code: "tooManyChunks" });
     expect(world.pdfCalls).toBe(2);
     expect(world.inserted).toEqual([]);
+    // El segundo PDF solo tiene permiso para lo que queda del tope, no para todo.
+    expect(world.pdfMaxChars[1]).toBeLessThan(world.pdfMaxChars[0]);
+  });
+
+  it("el lector nativo recibe el tope de texto, así que nunca devuelve más", async () => {
+    world.pdfText = "a".repeat(1000);
+    await M.importDocuments([asset("ok.pdf", 10)], "x");
+    expect(world.pdfMaxChars[0]).toBe(M.maxCharsForChunks(M.MAX_IMPORT_CHUNKS) + 200);
+    expect(M.estimateChunkCount(M.maxCharsForChunks(M.MAX_IMPORT_CHUNKS))).toBe(M.MAX_IMPORT_CHUNKS);
   });
 
   it("un PDF normal sigue entrando", async () => {

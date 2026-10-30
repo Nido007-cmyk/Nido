@@ -117,9 +117,13 @@ rule).
   used in families have no screen lock at all, and there the vault can't be
   turned on. Without the vault the database is still encrypted with a random
   256-bit key kept in the Android Keystore.
-- **Revisit when:** turning the vault on can first make sure there is a
-  recent backup whose key the person has saved. Then it can be on by
-  default for phones with a screen lock.
+- **Update, same day:** turning the vault on now requires a backup from the
+  last 30 days (the app records when a backup is made). It still can't be on
+  silently by default: wrapping the key with a Keystore key that needs the
+  fingerprint or PIN requires the person to authenticate, so the vault is
+  always a step the person takes.
+- **Revisit when:** Android lets an authentication-bound key wrap data
+  without a prompt, or NIDO's setup gets a first-run security step.
 
 ### D10. "Private hello only" stays off by default
 
@@ -176,10 +180,13 @@ The owner's research on every public audit of Signal and Briar (October 29,
   only exported component is the quick-settings tile (protected by a system
   permission), and nothing opened from outside NIDO can wipe or send
   anything.
-- **Still open, stated:** the PDF text is extracted by a native library
-  before NIDO can measure it, so a hostile PDF can still use a lot of memory
-  inside that library; the size of a backup shows roughly how much data it
-  holds.
+- **Still open, stated:** the size of a backup shows roughly how much data
+  it holds.
+- ~~The PDF text was extracted by a native library before NIDO could measure
+  it.~~ Closed: NIDO's own module (`modules/nido-pdf-text`) parses with
+  temp-file buffers, refuses more than 3,000 pages and stops reading as soon
+  as the text passes what still fits in the import limit, even in the middle
+  of one huge page.
 - **Session clones, checked the same day:** the flaw found in Signal's Sesame
   (Cremers, Jacomme and Naska, USENIX 2023) was that an old session became
   the active one again when it decrypted a message, so a clone with old

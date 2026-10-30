@@ -4,6 +4,20 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+### Security
+- **A hostile PDF can no longer fill the phone's memory inside the PDF
+  reader.** NIDO now reads PDFs with its own module: it refuses more than
+  3,000 pages and stops reading as soon as the text passes what still fits in
+  the import limit, even in the middle of one huge page. Before, the library
+  returned the whole text at once and NIDO could only measure it afterwards.
+  It uses the same PDF engine as before (PdfBox-Android).
+- **Hardware protection now asks for a recent backup first.** Turning on the
+  vault requires a backup from the last 30 days: if you ever removed the
+  screen lock, Android would delete the vault key and only a backup with its
+  key could bring your data back. Before, the backup was only recommended.
+
 ## 0.1.63-alpha — 2026-10-29
 
 ### Security
