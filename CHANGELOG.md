@@ -4,6 +4,44 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+### Security
+Fixes from the owner's security audit of 2026-10-29 (no critical or high
+findings; these are the medium and low ones that needed no policy decision).
+- **The network log now survives restarts.** The privacy policy and the
+  About screen promised a log you could check, but it was only kept until
+  the app closed. It is now stored in the encrypted database (the latest 500
+  entries) and erased with everything else.
+- **A PDF that unpacks into a huge amount of text is refused before it can
+  fill the phone's memory.** The text is measured right after it is read,
+  before it is split into pieces, and an import of several files stops as
+  soon as the total is too big.
+- **A paired contact can no longer push pieces of a pack you didn't
+  accept.** Nothing was ever installed without your acceptance and the
+  catalog check, but the pieces were kept in memory.
+- **Restoring a backup says what will happen.** The confirmation now says
+  the backup's date and that anything deleted since then (chats, notes,
+  documents, removed contacts) comes back; revoked contacts stay revoked.
+  Restoring with the backup key now asks for that confirmation too. A backup
+  made by a newer NIDO format is refused instead of being read as an old
+  one.
+- **The backup checksum is now the real SHA-256 of the file.** Before, the
+  value only detected corruption; it didn't match `sha256sum`. Older backups
+  are still accepted.
+- **The backup file size limit (100 MB) is also checked when a portable
+  backup is unpacked.**
+- **15 launcher badge permissions are removed from the APK.** A library
+  brings them for icon badges, which NIDO doesn't use.
+- **The Spanish privacy policy** now lists the on-device telemetry and the
+  optional list of unrecognized commands, as the English one did.
+
+### Decided
+- The hardware vault stays an offer, "Private hello only" stays off by
+  default, and three known limits are stated (short pastes, voice dictation,
+  the key rotation staging file), with what would change each one
+  ([docs/DECISIONS.md](https://github.com/Nido007-cmyk/Nido/blob/main/docs/DECISIONS.md), D9–D11).
+
 ## 0.1.61-alpha — 2026-10-29
 
 ### Changed

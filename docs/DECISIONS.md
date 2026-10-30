@@ -102,3 +102,54 @@ rule).
   people but asks for a 14-day closed test with 12 testers first.
 - **Revisit when:** F-Droid's review raises a blocker (for example, how it
   treats downloading models and packs).
+
+### D9. The hardware vault stays an offer, not the default
+
+- **Decision:** keep the hardware vault (the database key wrapped by a
+  Keystore key that needs the fingerprint or PIN) off by default, offered on
+  the main screen since 0.1.51 (asked by the owner's security audit of
+  2026-10-29).
+- **Why:** the vault needs a screen lock, and Android deletes its key if the
+  screen lock is removed: from then on the data only come back from a
+  backup. Turning it on silently would put people's data one settings change
+  away from loss, without them having chosen it. Many phones and tablets
+  used in families have no screen lock at all, and there the vault can't be
+  turned on. Without the vault the database is still encrypted with a random
+  256-bit key kept in the Android Keystore.
+- **Revisit when:** turning the vault on can first make sure there is a
+  recent backup whose key the person has saved. Then it can be on by
+  default for phones with a screen lock.
+
+### D10. "Private hello only" stays off by default
+
+- **Decision:** keep the strict initiator mode (Settings → Security →
+  "Private hello only") off by default.
+- **Why:** private hello is already on by default since 0.1.49, and the
+  phone remembers which contacts support it. The public key still goes in
+  clear only with a contact on a NIDO older than 0.1.49, or one paired before
+  0.1.49 that has not connected since 0.1.45. The strict mode only adds
+  refusing those contacts. Turning it on for everyone would cut those
+  people off with no warning, and NIDO is meant to work when it matters.
+- **Revisit when:** the two-phone tests of private hello have passed (see
+  D7). After that, turning it on by default can be tied to a warning that
+  names which contacts would be cut off.
+
+### D11. Known limits from the 2026-10-29 audit, kept and stated
+
+- **Short pastes count as typed.** Android doesn't tell an app that text was
+  pasted. NIDO treats a block of 24 or more characters with spaces as pasted
+  (and fences it from the router), so pasting a few words at a time looks
+  like typing. Every action with effects outside the app still asks for
+  confirmation (firm rule R4), so the edge can't act on its own. Lowering
+  the threshold would fence real typing from gesture keyboards.
+- **Voice dictation** uses the phone's recognizer and asks it to work
+  offline; that is a request, not a guarantee. It is stated in
+  PRIVACY.md and in the constitution (R6). Real offline voice is
+  `docs/WHISPER_PLAN.md`.
+- **Key rotation** writes the old and new key to a file in the app's private
+  directory for the seconds the rotation lasts, so a crash can't leave the
+  database unreadable. On a rooted phone it can be read during those
+  seconds. Moving it to the Android Keystore changes crash recovery and will
+  be done together with a test on a physical phone.
+- **Revisit when:** Android or React Native expose a paste event; real
+  offline voice lands; the rotation staging moves to the Keystore.

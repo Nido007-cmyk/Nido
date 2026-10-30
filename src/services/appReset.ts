@@ -4,6 +4,7 @@
  * See LICENSE file for details.
  */
 
+import { networkAudit } from "../privacy/networkAudit";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Notifications from "expo-notifications";
 import { llamaEngine } from "../inference/LlamaEngine";
@@ -211,11 +212,17 @@ export async function resetAllAppData(): Promise<void> {
   // atraviesa el wipe: espera detrás de la puerta. El writer del ciclo N+1
   // va DETRÁS del reset, nunca concurrente con el borrado.
   beginWipeGate();
+  // Auditoría 2026-10-29: el registro de red vive en la base que se borra.
+  // Durante el borrado no escribe (lo pendiente acabaría en la base nueva)
+  // y su memoria se vacía. Si el borrado falla sigue sin escribir: el
+  // próximo arranque lo reanuda (recoverInterruptedWipe).
+  networkAudit.beginWipe();
   try {
     await resetAllAppDataInner();
     // Éxito: la puerta se abre y lo en espera continúa en el ciclo nuevo,
     // ya con la DEK rotada y la caché restablecida.
     endWipeGate();
+    networkAudit.endWipe();
   } catch (err) {
     // Fail-closed: lo en espera recibe el error del wipe en vez de operar
     // sobre un estado a medias. El próximo resetAllAppData instala una

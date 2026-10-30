@@ -45,7 +45,11 @@ export function NetworkAuditCard() {
 
   useEffect(() => {
     setEntries(networkAudit.list());
-    return networkAudit.onEntry(() => setEntries(networkAudit.list()));
+    const off = networkAudit.onEntry(() => setEntries(networkAudit.list()));
+    // Auditoría 2026-10-29: las entradas de sesiones anteriores están en la
+    // base cifrada; se cargan al abrir la tarjeta.
+    networkAudit.hydrate().then(() => setEntries(networkAudit.list()));
+    return off;
   }, []);
 
   // networkAudit.list() ya devuelve las más recientes primero.

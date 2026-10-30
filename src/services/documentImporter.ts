@@ -79,6 +79,25 @@ export interface ImportProgress {
   chunkCount?: number;
 }
 
+/**
+ * Auditoría 2026-10-29: cuántos trozos daría un texto de esta longitud, sin
+ * trocearlo. Sirve para rechazar un texto enorme ANTES de crear miles de
+ * trozos en memoria (un PDF pequeño puede descomprimirse en cientos de MB de
+ * texto). Coincide con chunkText: 1 trozo hasta CHUNK_CHARS y después uno
+ * cada CHUNK_CHARS − OVERLAP_CHARS caracteres.
+ */
+export function estimateChunkCount(length: number): number {
+  if (length <= 0) return 0;
+  if (length <= CHUNK_CHARS) return 1;
+  return 1 + Math.ceil((length - CHUNK_CHARS) / (CHUNK_CHARS - OVERLAP_CHARS));
+}
+
+function tooManyChunks(count: number): DocImportError {
+  return new DocImportError("tooManyChunks", `Too much text: about ${count} chunks.`, {
+    max: String(MAX_IMPORT_CHUNKS),
+  });
+}
+
 function chunkText(text: string): string[] {
   const trimmed = text.trim();
   if (trimmed.length === 0) return [];
@@ -142,6 +161,10 @@ async function parseFileContent(
 
   if (ext === "pdf") {
     const text = await extractPdf(file.uri, filename);
+    // Auditoría 2026-10-29 (bomba de descompresión): el tamaño del archivo
+    // no dice cuánto texto sale. Se mide aquí, antes de trocear nada.
+    const estimated = estimateChunkCount(text.trim().length);
+    if (estimated > MAX_IMPORT_CHUNKS) throw tooManyChunks(estimated);
     return [{ title: fallbackTitle, source: filename, body: text }];
   }
 
@@ -218,10 +241,16 @@ export async function importDocuments(
   onProgress?.({ stage: "reading" });
   const allDocs: ParsedDoc[] = [];
   let totalSizeBytes = 0;
+  let estimatedChunks = 0;
   for (const file of files) {
     totalSizeBytes += file.size ?? 0;
     const fallbackTitle = file.name.replace(/\.[^.]+$/, "");
-    allDocs.push(...(await parseFileContent(file, fallbackTitle)));
+    const docs = await parseFileContent(file, fallbackTitle);
+    // Se corta en cuanto la suma pasa del tope, sin leer los archivos que
+    // quedan ni trocear lo leído.
+    for (const d of docs) estimatedChunks += estimateChunkCount(d.body.trim().length);
+    if (estimatedChunks > MAX_IMPORT_CHUNKS) throw tooManyChunks(estimatedChunks);
+    allDocs.push(...docs);
   }
 
   onProgress?.({ stage: "chunking" });

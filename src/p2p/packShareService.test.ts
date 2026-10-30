@@ -397,3 +397,55 @@ describe("0.1.55: compartir packs de verdad", () => {
     expect(packShareService.listTransfers()).toHaveLength(0);
   });
 });
+
+describe("PackShareService: auditoría 2026-10-29", () => {
+  it("un contacto no puede empujar trozos de un pack que no se aceptó", async () => {
+    packShareService._reset();
+    packShareService.setLocalIdentity(RECEIVER_PK);
+    const sent: string[] = [];
+    packShareService.setSendFunction(async (_peer, action) => {
+      sent.push(action);
+    });
+    let imported = false;
+    packShareService.setImporter(async () => {
+      imported = true;
+      return true;
+    });
+
+    const base64Data = Buffer.from("contenido empujado").toString("base64");
+    const adv: PackAdvertisement = {
+      id: "pushed",
+      name: "Empujado",
+      description: "",
+      sizeBytes: Math.ceil((base64Data.length * 3) / 4),
+      hash: createHash("sha256").update(base64Data, "utf8").digest("hex"),
+      chunkCount: 1,
+      senderId: SENDER_PK,
+    };
+    await packShareService.handleEnvelope(makeEnvelope(SENDER_PK, "OFFER", "sess-push", { advertisement: adv }));
+
+    // Sin aceptar: trozo y COMPLETE se ignoran.
+    const chunk = { packId: "pushed", index: 0, total: 1, data: base64Data, hash: "" };
+    await packShareService.handleEnvelope(makeEnvelope(SENDER_PK, "CHUNK", "sess-push", { chunk }));
+    await packShareService.handleEnvelope(makeEnvelope(SENDER_PK, "COMPLETE", "sess-push", {}));
+    expect(packShareService._getReceiveSession("sess-push")?.received.size ?? 0).toBe(0);
+    expect(sent).not.toContain("CHUNK_ACK");
+    expect(imported).toBe(false);
+
+    // Tras aceptar, el mismo trozo sí entra.
+    await packShareService.acceptOffer("sess-push");
+    await packShareService.handleEnvelope(makeEnvelope(SENDER_PK, "CHUNK", "sess-push", { chunk }));
+    expect(sent).toContain("CHUNK_ACK");
+  });
+
+  it("rechazar la oferta olvida la aceptación", async () => {
+    packShareService._reset();
+    packShareService.setLocalIdentity(RECEIVER_PK);
+    packShareService.setSendFunction(async () => {});
+    await packShareService.handleEnvelope(
+      makeEnvelope(SENDER_PK, "OFFER", "sess-dec", { advertisement: makeValidAdvertisement() }),
+    );
+    await packShareService.declineOffer("sess-dec");
+    expect(packShareService._getReceiveSession("sess-dec")).toBeUndefined();
+  });
+});

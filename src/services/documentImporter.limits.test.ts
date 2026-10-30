@@ -13,6 +13,8 @@ interface World {
   deleted: string[];
   created: string[];
   failEmbedAt: number;
+  pdfText: string;
+  pdfCalls: number;
 }
 const world = ((globalThis as Record<string, unknown>).__nidoImportWorld ??= {
   files: new Map(),
@@ -20,12 +22,20 @@ const world = ((globalThis as Record<string, unknown>).__nidoImportWorld ??= {
   deleted: [],
   created: [],
   failEmbedAt: -1,
+  pdfText: "",
+  pdfCalls: 0,
 }) as World;
 const W = () => (globalThis as Record<string, unknown>).__nidoImportWorld as World;
 
 vi.mock("expo-document-picker", () => ({ getDocumentAsync: async () => ({ canceled: true }) }));
 vi.mock("expo-sharing", () => ({ shareAsync: async () => {} }));
-vi.mock("expo-pdf-text-extract", () => ({ extractText: async () => "" }));
+vi.mock("expo-pdf-text-extract", () => ({
+  extractText: async () => {
+    const w = W();
+    w.pdfCalls++;
+    return w.pdfText;
+  },
+}));
 vi.mock("expo-file-system/legacy", () => ({
   readAsStringAsync: async (uri: string) => W().files.get(uri) ?? "",
   writeAsStringAsync: async () => {},
@@ -70,6 +80,8 @@ beforeEach(() => {
   world.deleted.length = 0;
   world.created.length = 0;
   world.failEmbedAt = -1;
+  world.pdfText = "";
+  world.pdfCalls = 0;
 });
 
 const asset = (name: string, size?: number) => ({ uri: `file:///${name}`, name, size }) as never;
@@ -110,5 +122,46 @@ describe("document import limits", () => {
     expect(c.id).toMatch(/^custom-/);
     expect(world.inserted).toHaveLength(1);
     expect(world.deleted).toEqual([]);
+  });
+
+  it("estimateChunkCount coincide con el troceado real", async () => {
+    for (const len of [1, 1999, 2000, 2001, 3800, 3801, 10_000, 123_457]) {
+      world.files.set("file:///n.txt", "a".repeat(len));
+      world.inserted.length = 0;
+      await M.importDocuments([asset("n.txt", len)], "n");
+      expect(world.inserted.length).toBe(M.estimateChunkCount(len));
+    }
+    expect(M.estimateChunkCount(0)).toBe(0);
+  });
+});
+
+describe("auditoría 2026-10-29: bomba de descompresión en PDF", () => {
+  it("un PDF pequeño que da demasiado texto se rechaza antes de trocear", async () => {
+    // 1 MB de archivo, pero el texto extraído da ~11 000 trozos.
+    world.pdfText = "palabra ".repeat(2_500_000);
+    await expect(M.importDocuments([asset("bomba.pdf", 1024 * 1024)], "x")).rejects.toMatchObject({
+      code: "tooManyChunks",
+      vars: { max: String(M.MAX_IMPORT_CHUNKS) },
+    });
+    expect(world.inserted).toEqual([]);
+    expect(world.created).toEqual([]);
+  });
+
+  it("varios archivos: se para en cuanto la suma pasa del tope, sin leer los demás", async () => {
+    // Cada PDF da ~2 800 trozos: cabe uno, el segundo pasa del tope.
+    world.pdfText = "a".repeat(5_000_000);
+    expect(M.estimateChunkCount(5_000_000)).toBeLessThan(M.MAX_IMPORT_CHUNKS);
+    await expect(
+      M.importDocuments([asset("a.pdf", 10), asset("b.pdf", 10), asset("c.pdf", 10)], "x"),
+    ).rejects.toMatchObject({ code: "tooManyChunks" });
+    expect(world.pdfCalls).toBe(2);
+    expect(world.inserted).toEqual([]);
+  });
+
+  it("un PDF normal sigue entrando", async () => {
+    world.pdfText = "Texto de un PDF normal. ".repeat(200);
+    const c = await M.importDocuments([asset("ok.pdf", 50_000)], "PDF");
+    expect(c.id).toMatch(/^custom-/);
+    expect(world.inserted.length).toBe(M.estimateChunkCount(world.pdfText.trim().length));
   });
 });

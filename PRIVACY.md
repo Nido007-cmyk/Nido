@@ -2,7 +2,7 @@
 
 *Política de privacidad — versión en español más abajo.*
 
-Last updated: 2026-10-21 (0.1.45). Applies to the NIDO Android app built from this repository.
+Last updated: 2026-10-29 (after 0.1.61). Applies to the NIDO Android app built from this repository.
 
 ## Summary
 
@@ -13,6 +13,7 @@ NIDO runs on your phone. It has no accounts, no analytics, no advertising and no
 - Chats, notes, reminders, memories and the documents you import.
 - The AI models and knowledge packs you download.
 - Your NIDO identity keys and the list of phones you paired with.
+- The network log (see below).
 - On-device measurements for the Execution Telemetry screen: timings, and which path each message took (handled by NIDO's router or by the AI model, and which tool). They contain no message text.
 - Only if you turn it on (it is off by default): the last 50 commands NIDO's router did not recognize, so you can review them. Turning the option off deletes them.
 
@@ -25,7 +26,7 @@ NIDO never uses the internet except when you start a download:
 - **AI models**, fetched from Hugging Face.
 - **Knowledge packs and the built-in corpus**, fetched from GitHub.
 
-Those services see your IP address and which file you requested, as with any download, and apply their own privacy policies. NIDO sends no account, identifier or content with the request. Every connection is recorded in the network log inside the app (About → Network log), so you can check this yourself.
+Those services see your IP address and which file you requested, as with any download, and apply their own privacy policies. NIDO sends no account, identifier or content with the request. Every connection is recorded in the network log inside the app (About → Network log), so you can check this yourself. The log is kept in the encrypted database and survives restarts (the latest 500 entries); up to 0.1.61 it was only kept until the app closed. It never contains your content: only the server and path, size, time and result.
 
 ## Phone-to-phone (Bluetooth and local Wi-Fi)
 
@@ -74,7 +75,7 @@ Changes to this policy are made in this file and recorded in the repository hist
 
 # Política de privacidad
 
-Última actualización: 2026-10-21 (0.1.45). Aplica a la app NIDO para Android compilada desde este repositorio.
+Última actualización: 2026-10-29 (después de 0.1.61). Aplica a la app NIDO para Android compilada desde este repositorio.
 
 ## Resumen
 
@@ -85,6 +86,9 @@ NIDO funciona en tu teléfono. No tiene cuentas, ni analítica, ni publicidad, n
 - Chats, notas, recordatorios, memorias y los documentos que importas.
 - Los modelos de IA y paquetes de conocimiento que descargas.
 - Tus claves de identidad NIDO y la lista de teléfonos emparejados.
+- Mediciones en el teléfono para la pantalla de Telemetría de ejecución: tiempos, y por qué camino fue cada mensaje (lo resolvió el enrutador de NIDO o el modelo de IA, y con qué herramienta). No contienen el texto de los mensajes.
+- Solo si lo activas (viene apagado): las últimas 50 órdenes que el enrutador de NIDO no reconoció, para que puedas revisarlas. Al apagar la opción se borran.
+- El registro de red (ver más abajo).
 
 Estos datos se guardan en una base de datos cifrada (SQLCipher). La clave de cifrado se guarda en el Keystore de Android. El respaldo automático en la nube de Android está desactivado para la app.
 
@@ -95,7 +99,7 @@ NIDO nunca usa internet salvo cuando tú inicias una descarga:
 - **Modelos de IA**, desde Hugging Face.
 - **Paquetes de conocimiento y el corpus integrado**, desde GitHub.
 
-Esos servicios ven tu dirección IP y qué archivo pediste, como en cualquier descarga, y aplican sus propias políticas de privacidad. NIDO no envía ninguna cuenta, identificador ni contenido con la petición. Cada conexión queda anotada en el registro de red dentro de la app (Acerca de → Registro de red), para que puedas comprobarlo.
+Esos servicios ven tu dirección IP y qué archivo pediste, como en cualquier descarga, y aplican sus propias políticas de privacidad. NIDO no envía ninguna cuenta, identificador ni contenido con la petición. Cada conexión queda anotada en el registro de red dentro de la app (Acerca de → Registro de red), para que puedas comprobarlo. El registro se guarda en la base cifrada y sobrevive a los reinicios (las últimas 500 entradas); hasta 0.1.61 solo duraba hasta cerrar la app. Nunca contiene tu contenido: solo el servidor y la ruta, el tamaño, la hora y el resultado.
 
 ## De teléfono a teléfono (Bluetooth y Wi-Fi local)
 

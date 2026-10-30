@@ -33,6 +33,8 @@ import { BackupError } from "./backupErrors";
 const DB_NAME = "nido_memory.db";
 const KNOWLEDGE_DB_NAME = "nido_knowledge.db";
 const BACKUP_VERSION = 1;
+/** Tope de un respaldo portable (.nidobackup.json): evita agotar la memoria. */
+export const MAX_BUNDLE_BYTES = 100 * 1024 * 1024;
 // A14: misma versión que package.json y el tag del release.
 const APP_VERSION = "0.1.61";
 // SQLCipher magic header: "SQLite format 3\0" — los primeros 16 bytes
@@ -60,29 +62,89 @@ async function getDbPath(): Promise<string> {
   return `${dir}SQLite/${DB_NAME}`;
 }
 
+/** Hex en minúsculas de unos bytes. */
+export function hexOfBytes(buf: ArrayBuffer | Uint8Array): string {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  let out = "";
+  for (let i = 0; i < bytes.length; i++) out += bytes[i].toString(16).padStart(2, "0");
+  return out;
+}
+
+async function readFileBytes(uri: string): Promise<Uint8Array> {
+  const base64 = await FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
 /**
- * Calcula SHA-256 de un archivo (para el manifest).
- * Usa crypto nativo si está disponible, sino retorna null.
+ * SHA-256 real de los bytes del archivo (para el manifest). Null si no se
+ * puede calcular.
+ *
+ * Auditoría 2026-10-29: hasta 0.1.61 el manifest guardaba otra cosa. Los
+ * bytes se pasaban como texto a digestStringAsync, que los codifica en UTF-8:
+ * cada byte ≥ 0x80 entraba como dos, así que el valor no era el SHA-256 del
+ * archivo (no coincidía con `sha256sum`). Detectaba igual la corrupción,
+ * porque se calculaba igual al crear y al comprobar, pero el nombre mentía.
+ * Los manifests nuevos llevan `sha256Kind: "bytes"`; los viejos se siguen
+ * comprobando con legacySha256File.
  */
 async function sha256File(uri: string): Promise<string | null> {
   try {
     const { default: Crypto } = await import("expo-crypto");
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    // expo-crypto trabaja con strings; para archivos grandes esto es costoso
-    // pero los backups de NIDO son pequeños (<100MB típico).
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      Array.from(bytes).map(b => String.fromCharCode(b)).join(""),
-      { encoding: Crypto.CryptoEncoding.HEX }
-    );
+    const bytes = await readFileBytes(uri);
+    const digest = await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, bytes);
+    return hexOfBytes(digest);
   } catch {
     return null;
   }
+}
+
+/** El cálculo de 0.1.61 y anteriores, solo para comprobar respaldos viejos. */
+async function legacySha256File(uri: string): Promise<string | null> {
+  try {
+    const { default: Crypto } = await import("expo-crypto");
+    const bytes = await readFileBytes(uri);
+    let latin1 = "";
+    for (let i = 0; i < bytes.length; i++) latin1 += String.fromCharCode(bytes[i]);
+    return await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, latin1, {
+      encoding: Crypto.CryptoEncoding.HEX,
+    });
+  } catch {
+    return null;
+  }
+}
+
+/** Valor del manifest con el que se comprueba un archivo (nuevo o viejo). */
+export const SHA256_KIND_BYTES = "bytes";
+
+/**
+ * Auditoría 2026-10-29: lo que dice el manifest de un respaldo, para avisar
+ * antes de restaurar. Restaurar devuelve los datos tal como estaban ese día:
+ * lo que borraste después (chats, notas, contactos que quitaste) vuelve. Los
+ * contactos REVOCADOS siguen revocados: esa lista vive fuera de la base
+ * (revoked-peers.json) y restaurar no la toca.
+ */
+export interface BackupManifestInfo {
+  /** ISO de cuando se hizo, si el manifest lo trae y es una fecha. */
+  createdAt: string | null;
+  /** Versión de NIDO que lo hizo, si la trae. */
+  appVersion: string | null;
+  /** Formato del manifest; null si falta. */
+  version: number | null;
+  /** Formato más nuevo que el que esta versión sabe leer. */
+  tooNew: boolean;
+}
+
+export function backupManifestInfo(manifest: unknown): BackupManifestInfo {
+  const m = (manifest && typeof manifest === "object" ? manifest : {}) as Record<string, unknown>;
+  const created = typeof m.createdAt === "string" && !Number.isNaN(Date.parse(m.createdAt)) ? m.createdAt : null;
+  const appVersion = typeof m.appVersion === "string" && m.appVersion.length <= 40 ? m.appVersion : null;
+  const version = typeof m.version === "number" && Number.isInteger(m.version) ? m.version : null;
+  return { createdAt: created, appVersion, version, tooNew: version !== null && version > BACKUP_VERSION };
 }
 
 /**
@@ -170,6 +232,7 @@ export async function createBackup(destinationUri: string): Promise<string> {
     knowledgeBackupPath: knowledgeBackedUp ? knowledgeDest : null,
     appVersion: APP_VERSION,
     sha256: await sha256File(destinationUri),
+    sha256Kind: SHA256_KIND_BYTES,
     // FIX 2026-10-09 (K1): fingerprint del DEK para detectar key mismatch en restore.
     dekFingerprint,
   };
@@ -260,13 +323,13 @@ export async function exportDatabaseKey(): Promise<string> {
  *   decía 500MB pero el código siempre fue 100MB)
  * - NEW-H-2: valida la forma del manifest (no solo JSON.parse)
  */
-async function validateBundle(bundleUri: string): Promise<{ valid: boolean; sizeBytes?: number; reason?: string }> {
+async function validateBundle(bundleUri: string): Promise<BackupValidation> {
   const info = await FileSystem.getInfoAsync(bundleUri);
   if (!info.exists) {
     return { valid: false, reason: "El archivo no existe." };
   }
   const size = (info as any).size ?? 0;
-  if (size > 100 * 1024 * 1024) {
+  if (size > MAX_BUNDLE_BYTES) {
     return { valid: false, reason: "El bundle es demasiado grande." };
   }
   if (size < 100) {
@@ -294,8 +357,12 @@ async function validateBundle(bundleUri: string): Promise<{ valid: boolean; size
   if (typeof m.sha256 !== "string" || typeof m.dekFingerprint !== "string") {
     return { valid: false, reason: "El manifest está incompleto (falta SHA o fingerprint)." };
   }
+  const mInfo = backupManifestInfo(m);
+  if (mInfo.tooNew) {
+    return { valid: false, reason: "Este respaldo es de una versión más nueva de NIDO. Actualiza NIDO para restaurarlo." };
+  }
 
-  return { valid: true, sizeBytes: size };
+  return { valid: true, sizeBytes: size, info: mInfo };
 }
 
 /**
@@ -306,7 +373,15 @@ async function validateBundle(bundleUri: string): Promise<{ valid: boolean; size
  * BK-4 FIX: antes solo verificaba existencia y tamaño. Ahora verifica
  * el header mágico para descartar archivos que no son bases SQLite.
  */
-export async function validateBackup(uri: string): Promise<{ valid: boolean; sizeBytes?: number; reason?: string }> {
+export interface BackupValidation {
+  valid: boolean;
+  sizeBytes?: number;
+  reason?: string;
+  /** Lo que dice el manifest, si había uno (para avisar antes de restaurar). */
+  info?: BackupManifestInfo;
+}
+
+export async function validateBackup(uri: string): Promise<BackupValidation> {
   try {
     // FIX 2026-10-09 (NEW-CR-1): si es un bundle, validar el contenido extraído.
     // Antes rechazaba el bundle por no tener header SQLite.
@@ -333,6 +408,7 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
     // sobrescribía la base viva.
     let trialOpenOk = false;
     let manifestVerified = false;
+    let manifestInfo: BackupManifestInfo | undefined;
     let dekPresent = false;
     try {
       const { getDatabaseKeyHex, applyDatabaseKey } = await import("../privacy/keyManager");
@@ -396,7 +472,14 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
         if (typeof manifest.sha256 !== "string" || !manifest.sha256) {
           return { valid: false, reason: "El manifest no incluye SHA-256 válido (no se puede verificar integridad)." };
         }
-        const actualSha = await sha256File(uri);
+        manifestInfo = backupManifestInfo(manifest);
+        if (manifestInfo.tooNew) {
+          return { valid: false, reason: "Este respaldo es de una versión más nueva de NIDO. Actualiza NIDO para restaurarlo." };
+        }
+        // Manifest nuevo: SHA-256 real de los bytes. Manifest de 0.1.61 o
+        // anterior (sin sha256Kind): el cálculo de entonces.
+        const actualSha =
+          manifest.sha256Kind === SHA256_KIND_BYTES ? await sha256File(uri) : await legacySha256File(uri);
         if (!actualSha) {
           return { valid: false, reason: "No se pudo verificar la integridad (SHA-256)." };
         }
@@ -434,7 +517,7 @@ export async function validateBackup(uri: string): Promise<{ valid: boolean; siz
           "No se pudo verificar el backup: no abre con la clave de este dispositivo y no trae un manifest válido.",
       };
     }
-    return { valid: true, sizeBytes: size };
+    return { valid: true, sizeBytes: size, ...(manifestInfo ? { info: manifestInfo } : {}) };
   } catch (e) {
     return { valid: false, reason: e instanceof Error ? e.message : "Error desconocido." };
   }
@@ -637,6 +720,13 @@ export async function createPortableBundle(backupUri: string): Promise<string> {
  * Retorna la URI del .db extraído.
  */
 export async function extractPortableBundle(bundleUri: string, destDir: string): Promise<string> {
+  // Auditoría 2026-10-29: el mismo tope que validateBundle, aquí también.
+  // Hoy toda llamada valida antes, pero esta función no debe fiarse de eso.
+  const info = await FileSystem.getInfoAsync(bundleUri);
+  const size = (info as { size?: number }).size;
+  if (!info.exists || typeof size !== "number" || size > MAX_BUNDLE_BYTES) {
+    throw new BackupError("invalid", "El bundle no existe o es demasiado grande.");
+  }
   const raw = await FileSystem.readAsStringAsync(bundleUri);
   const bundle = JSON.parse(raw);
   if (bundle.format !== "nidobackup") {
