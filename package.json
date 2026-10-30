@@ -1,6 +1,6 @@
 {
   "name": "nido-app",
-  "version": "0.1.61",
+  "version": "0.1.62",
   "description": "NIDO — your offline agent: a personal AI assistant that runs entirely on your Android phone. No internet after setup (only downloads you start), local Wi-Fi or Bluetooth only to talk to another NIDO, encrypted on-device memory.",
   "license": "MIT",
   "main": "index.ts",

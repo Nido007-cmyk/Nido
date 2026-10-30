@@ -26,7 +26,7 @@ NIDO never uses the internet except when you start a download:
 - **AI models**, fetched from Hugging Face.
 - **Knowledge packs and the built-in corpus**, fetched from GitHub.
 
-Those services see your IP address and which file you requested, as with any download, and apply their own privacy policies. NIDO sends no account, identifier or content with the request. Every connection is recorded in the network log inside the app (About → Network log), so you can check this yourself. The log is kept in the encrypted database and survives restarts (the latest 500 entries); up to 0.1.61 it was only kept until the app closed. It never contains your content: only the server and path, size, time and result.
+Those services see your IP address and which file you requested, as with any download, and apply their own privacy policies. NIDO sends no account, identifier or content with the request. Every connection is recorded in the network log inside the app (Settings › Security and privacy › Security check and network log), so you can check this yourself. The log is kept in the encrypted database and survives restarts (the latest 500 entries); up to 0.1.61 it was only kept until the app closed. It never contains your content: only the server and path, size, time and result.
 
 ## Phone-to-phone (Bluetooth and local Wi-Fi)
 
@@ -99,7 +99,7 @@ NIDO nunca usa internet salvo cuando tú inicias una descarga:
 - **Modelos de IA**, desde Hugging Face.
 - **Paquetes de conocimiento y el corpus integrado**, desde GitHub.
 
-Esos servicios ven tu dirección IP y qué archivo pediste, como en cualquier descarga, y aplican sus propias políticas de privacidad. NIDO no envía ninguna cuenta, identificador ni contenido con la petición. Cada conexión queda anotada en el registro de red dentro de la app (Acerca de → Registro de red), para que puedas comprobarlo. El registro se guarda en la base cifrada y sobrevive a los reinicios (las últimas 500 entradas); hasta 0.1.61 solo duraba hasta cerrar la app. Nunca contiene tu contenido: solo el servidor y la ruta, el tamaño, la hora y el resultado.
+Esos servicios ven tu dirección IP y qué archivo pediste, como en cualquier descarga, y aplican sus propias políticas de privacidad. NIDO no envía ninguna cuenta, identificador ni contenido con la petición. Cada conexión queda anotada en el registro de red dentro de la app (Ajustes › Seguridad y privacidad › Comprobación de seguridad y registro de red), para que puedas comprobarlo. El registro se guarda en la base cifrada y sobrevive a los reinicios (las últimas 500 entradas); hasta 0.1.61 solo duraba hasta cerrar la app. Nunca contiene tu contenido: solo el servidor y la ruta, el tamaño, la hora y el resultado.
 
 ## De teléfono a teléfono (Bluetooth y Wi-Fi local)
 

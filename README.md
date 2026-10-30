@@ -70,8 +70,9 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   and the app says an update is available.
 - **Five sections one tap away**: Chat, Emergency, Library, NIDO and
   Settings, in a bottom bar. Settings is grouped and has a search box.
-- **Shows its network use**: every download the app makes is logged and
-  visible in Settings › Security and privacy.
+- **Shows its network use**: every download the app makes, and every local
+  Wi-Fi connection to another NIDO, is logged and visible in Settings ›
+  Security and privacy; the log is kept across restarts.
 - **Measures itself, on the phone**: the Execution Telemetry screen (Settings › Diagnostics) shows generation
   speed, time to first word, how long request routing takes and how many
   commands the router missed and sent to the model, recorded locally and

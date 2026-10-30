@@ -71,8 +71,9 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   conexión y la app avisa de que hay una actualización.
 - **Cinco secciones a un toque**: Chat, Emergencia, Biblioteca, NIDO y
   Ajustes, en una barra abajo. Ajustes está agrupado y tiene buscador.
-- **Muestra su uso de red**: cada descarga que hace la app queda registrada
-  y visible en Ajustes › Seguridad y privacidad.
+- **Muestra su uso de red**: cada descarga que hace la app, y cada conexión
+  por Wi-Fi local con otro NIDO, queda registrada y visible en Ajustes ›
+  Seguridad y privacidad; el registro se conserva entre reinicios.
 - **Se mide a sí mismo, en el teléfono**: la pantalla Telemetría de ejecución (Ajustes › Diagnóstico) muestra la
   velocidad de generación, el tiempo hasta la primera palabra y cuánto tarda
   en decidir qué hacer con cada mensaje y cuántas órdenes no reconoció el

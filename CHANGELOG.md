@@ -4,7 +4,7 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
-## Unreleased
+## 0.1.62-alpha — 2026-10-29
 
 ### Security
 Fixes from the owner's security audit of 2026-10-29 (no critical or high
@@ -12,7 +12,9 @@ findings; these are the medium and low ones that needed no policy decision).
 - **The network log now survives restarts.** The privacy policy and the
   About screen promised a log you could check, but it was only kept until
   the app closed. It is now stored in the encrypted database (the latest 500
-  entries) and erased with everything else.
+  entries) and erased with everything else. The policy also named the wrong place
+  for it: it is in Settings › Security and privacy › Security check and
+  network log.
 - **A PDF that unpacks into a huge amount of text is refused before it can
   fill the phone's memory.** The text is measured right after it is read,
   before it is split into pieces, and an import of several files stops as
