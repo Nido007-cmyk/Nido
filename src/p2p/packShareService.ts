@@ -111,6 +111,13 @@ class PackShareService {
   private static instance: PackShareService | null = null;
   private sendSessions = new Map<string, PackSendSession>();
   private receiveSessions = new Map<string, PackShareSession>();
+  /**
+   * Auditoría 2026-10-29: ofertas que el usuario ACEPTÓ. Hasta ahora un
+   * contacto emparejado podía empujar trozos de un pack sin que se aceptara
+   * la oferta: no se instalaba nada, pero se guardaban en memoria y se
+   * verificaban (memoria y batería). Sin aceptación, los trozos se ignoran.
+   */
+  private acceptedReceives = new Set<string>();
   private handlers = new Set<PackShareEventHandler>();
   private myPkHex: string | null = null;
   private sendFn: PackShareSendFn | null = null;
@@ -313,6 +320,7 @@ class PackShareService {
     if (!session || !this.sendFn) return false;
 
     const senderPkHex = session.advertisement.senderId;
+    this.acceptedReceives.add(sessionId);
     await this.sendFn(senderPkHex, "ACCEPT", sessionId, {});
     // El estado cambia a "receiving" cuando llegue el primer chunk
     this.emit({
@@ -332,6 +340,7 @@ class PackShareService {
     const senderPkHex = session.advertisement.senderId;
     await this.sendFn(senderPkHex, "DECLINE", sessionId, {}).catch(() => {});
     this.receiveSessions.delete(sessionId);
+    this.acceptedReceives.delete(sessionId);
     this.emit({
       type: "offer_declined",
       info: {
@@ -466,6 +475,8 @@ class PackShareService {
 
     // Verificar que el chunk viene del sender correcto
     if (session.advertisement.senderId.toLowerCase() !== senderPkHex) return;
+    // Sin aceptación del usuario no se guarda nada.
+    if (!this.acceptedReceives.has(sessionId)) return;
 
     const chunk = data.chunk as PackChunk;
     if (!chunk || typeof chunk !== "object") return;
@@ -532,6 +543,7 @@ class PackShareService {
     const session = this.receiveSessions.get(sessionId);
     if (!session) return;
     if (session.advertisement.senderId.toLowerCase() !== senderPkHex) return;
+    if (!this.acceptedReceives.has(sessionId)) return;
 
     // Reensamblar y verificar SHA-256
     const chunks = Array.from(session.received.values());
@@ -664,6 +676,7 @@ class PackShareService {
   _reset(): void {
     this.sendSessions.clear();
     this.receiveSessions.clear();
+    this.acceptedReceives.clear();
     this.myPkHex = null;
     this.sendFn = null;
     this.dataProvider = null;

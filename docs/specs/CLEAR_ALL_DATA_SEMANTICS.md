@@ -44,13 +44,11 @@ plus Keystore peeks; any survivor (or any unverifiable path) throws
 
 ### Gaps in the current implementation (must be closed to meet this spec)
 
-1. **Network audit log is not wiped.** `networkAudit` keeps entries in memory and
-   `resetAllAppData()` never calls `networkAudit.clear()`. Today the log dies
-   with the process, so the *effect* is a wipe — but NETWORK_AUDIT_SCREEN.md
-   requires the log to be **persisted in the SQLCipher DB** (500-event ring
-   buffer). The moment that persistence lands, this wipe MUST cover it:
-   `networkAudit.clear()` + DB deletion must both happen. The spec below
-   defines it as destroyed either way.
+1. ~~**Network audit log is not wiped.**~~ Closed (audit 2026-10-29). The log
+   is now persisted in the SQLCipher memory DB (`network_audit`, newest 500
+   rows), so deleting the DB deletes it. `resetAllAppData()` calls
+   `networkAudit.beginWipe()` (memory emptied, no writes, so nothing pending
+   lands in the new DB) and `networkAudit.endWipe()` after a successful wipe.
 2. **Confirmation UI understates the consequences.** The current danger modal
    (`modelSetupScreen.dangerModal`) lists models, embeddings and chat history —
    it does **not** name the P2P identity destruction, the agent memory loss

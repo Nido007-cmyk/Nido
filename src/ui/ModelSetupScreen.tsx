@@ -98,7 +98,7 @@ type OptionalProps = {
 export function ModelSetupScreen(props: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // Final audit (0.1.16): backup errors in the app language (they used to
   // reach the user as backup.ts's Spanish message). Unknown errors: as before.
   const backupErrorText = (e: unknown, fallbackKey: string): string => {
@@ -146,6 +146,24 @@ export function ModelSetupScreen(props: Props) {
       const result = await DocumentPicker.getDocumentAsync({ type: "*/*", copyToCacheDirectory: true });
       if (result.canceled) return;
       const uri = result.assets[0].uri;
+      // Auditoría 2026-10-29: antes de reemplazar nada, decir de cuándo es el
+      // respaldo y qué vuelve. Solo un respaldo portable trae su manifest
+      // dentro; con un .db suelto el aviso va sin fecha.
+      const { validateBackup } = await import("../security/backup");
+      const { restoreConfirmText } = await import("../security/restoreNotice");
+      const info = uri.endsWith(".nidobackup.json") ? (await validateBackup(uri)).info : undefined;
+      const confirmed = await new Promise<boolean>((resolve) =>
+        Alert.alert(
+          t("backup.restoreTitle"),
+          restoreConfirmText(t, info, i18n.language),
+          [
+            { text: t("backup.cancel"), style: "cancel", onPress: () => resolve(false) },
+            { text: t("backup.restoreConfirmButton"), style: "destructive", onPress: () => resolve(true) },
+          ],
+          { cancelable: true, onDismiss: () => resolve(false) },
+        ),
+      );
+      if (!confirmed) return;
       // 0.1.29 (B-2): misma política que el resto de puertas de respaldo:
       // sin PIN en el teléfono no hay nada que la puerta pueda proteger y
       // bloquear dejaba al usuario sin poder restaurar nunca.
@@ -812,9 +830,10 @@ export function ModelSetupScreen(props: Props) {
                         Alert.alert(t("backup.invalidTitle"), v.reason ?? t("backup.invalidBody"));
                         return;
                       }
+                      const { restoreConfirmText } = await import("../security/restoreNotice");
                       Alert.alert(
                         t("backup.restoreTitle"),
-                        t("backup.restoreConfirm"),
+                        restoreConfirmText(t, v.info, i18n.language),
                         [
                           { text: t("backup.cancel"), style: "cancel" },
                           {

@@ -107,3 +107,56 @@ archivo (y la [constitución](NIDO_CONSTITUTION.md) si toca una regla firme).
   probadores.
 - **Se revisa si:** la revisión de F-Droid encuentra un bloqueo (por ejemplo,
   cómo trata la descarga de modelos y packs).
+
+### D9. La bóveda de hardware sigue siendo una oferta, no lo de serie
+
+- **Decisión:** la bóveda de hardware (la clave de la base envuelta por una
+  llave del Keystore que pide la huella o el PIN) sigue apagada por defecto,
+  ofrecida en la pantalla principal desde 0.1.51 (lo preguntó la auditoría de
+  seguridad del dueño del 29 de octubre de 2026).
+- **Por qué:** la bóveda necesita un bloqueo de pantalla, y Android borra su
+  llave si se quita ese bloqueo: desde ese momento los datos solo vuelven con
+  un respaldo. Encenderla sin preguntar dejaría los datos de la gente a un
+  cambio de ajustes de perderse, sin haberlo elegido. Muchos teléfonos y
+  tablets de uso familiar no tienen bloqueo de pantalla, y ahí la bóveda no
+  se puede encender. Sin la bóveda, la base sigue cifrada con una clave
+  aleatoria de 256 bits guardada en el Keystore de Android.
+- **Se revisa si:** al encender la bóveda se puede comprobar antes que hay un
+  respaldo reciente cuya clave la persona guardó. Entonces puede venir
+  encendida en los teléfonos con bloqueo de pantalla.
+
+### D10. «Solo saludo privado» sigue apagado por defecto
+
+- **Decisión:** el modo estricto del iniciador (Ajustes → Seguridad → «Solo
+  saludo privado») sigue apagado por defecto.
+- **Por qué:** el saludo privado ya viene activado desde 0.1.49, y el
+  teléfono recuerda qué contactos lo soportan. La clave pública solo va en
+  claro con un contacto que tenga un NIDO anterior a la 0.1.49, o uno
+  emparejado antes de la 0.1.49 que no se haya conectado desde la 0.1.45. El
+  modo estricto solo añade rechazar a esos contactos. Encenderlo para todos
+  los dejaría sin conexión sin avisar, y NIDO está para funcionar cuando
+  importa.
+- **Se revisa si:** las pruebas del saludo privado en dos teléfonos salen
+  bien (ver D7). Después, encenderlo por defecto puede ir con un aviso que
+  diga qué contactos se quedarían sin conexión.
+
+### D11. Límites conocidos de la auditoría del 29 de octubre, que se quedan y se dicen
+
+- **Lo pegado en trozos cortos cuenta como escrito.** Android no avisa a una
+  app de que se pegó texto. NIDO toma como pegado un bloque de 24 caracteres
+  o más con espacios (y lo aparta del enrutador), así que pegar unas pocas
+  palabras cada vez parece escribir. Toda acción con efecto fuera de la app
+  sigue pidiendo confirmación (regla firme R4), así que ese borde no puede
+  actuar solo. Bajar el umbral apartaría lo escrito de verdad con teclados
+  de gestos.
+- **El dictado por voz** usa el reconocedor del teléfono y le pide trabajar
+  sin conexión; es una petición, no una garantía. Está dicho en PRIVACY.md y
+  en la constitución (R6). La voz offline de verdad es `docs/WHISPER_PLAN.md`.
+- **La rotación de clave** escribe la clave vieja y la nueva en un archivo del
+  directorio privado de la app durante los segundos que dura, para que un
+  cierre inesperado no deje la base ilegible. En un teléfono rooteado se
+  puede leer en esos segundos. Pasarlo al Keystore de Android cambia la
+  recuperación tras un cierre y se hará junto con una prueba en un teléfono
+  físico.
+- **Se revisa si:** Android o React Native ofrecen un evento de pegar; llega
+  la voz offline de verdad; el archivo de la rotación pasa al Keystore.
