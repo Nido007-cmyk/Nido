@@ -176,10 +176,13 @@ The owner's research on every public audit of Signal and Briar (October 29,
   only exported component is the quick-settings tile (protected by a system
   permission), and nothing opened from outside NIDO can wipe or send
   anything.
-- **Still open, stated:** the PDF text is extracted by a native library
-  before NIDO can measure it, so a hostile PDF can still use a lot of memory
-  inside that library; the size of a backup shows roughly how much data it
-  holds.
+- **Still open, stated:** the size of a backup shows roughly how much data
+  it holds.
+- ~~The PDF text was extracted by a native library before NIDO could measure
+  it.~~ Closed: NIDO's own module (`modules/nido-pdf-text`) parses with
+  temp-file buffers, refuses more than 3,000 pages and stops reading as soon
+  as the text passes what still fits in the import limit, even in the middle
+  of one huge page.
 - **Session clones, checked the same day:** the flaw found in Signal's Sesame
   (Cremers, Jacomme and Naska, USENIX 2023) was that an old session became
   the active one again when it decrypted a message, so a clone with old

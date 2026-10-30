@@ -7,7 +7,7 @@
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import { extractText as extractPdfText } from "expo-pdf-text-extract";
+import { extractPdfTextCapped, PdfTextError } from "./pdfText";
 import { embeddingEngine } from "../rag/embed";
 import {
   getDbEpoch,
@@ -31,7 +31,7 @@ import {
  * - .json: if it matches the same {title, source, body}[] shape used by the
  *   app's own downloadable corpus packs (assets/corpus/*.json), each entry
  *   is imported as its own doc; otherwise the whole file is chunked as text.
- * - .pdf: embedded/selectable text only, via expo-pdf-text-extract (Apache
+ * - .pdf: embedded/selectable text only, via modules/nido-pdf-text (Apache
  *   PDFBox-Android on-device, no network, no OCR). Scanned/image-only PDFs
  *   extract to empty text - there's no OCR step. Password-protected PDFs
  *   are rejected with a clear error rather than attempted.
@@ -58,6 +58,8 @@ export const SUPPORTED_MIME_TYPES = [
 export const MAX_IMPORT_TEXT_FILE_BYTES = 25 * 1024 * 1024;
 export const MAX_IMPORT_PDF_FILE_BYTES = 100 * 1024 * 1024;
 export const MAX_IMPORT_CHUNKS = 4000;
+/** Más páginas que esto no se leen (un libro largo tiene ~1000). */
+export const MAX_IMPORT_PDF_PAGES = 3000;
 
 export type DocImportErrorCode = "tooLarge" | "tooManyChunks" | "pdfPassword" | "pdfUnreadable" | "noText";
 
@@ -90,6 +92,12 @@ export function estimateChunkCount(length: number): number {
   if (length <= 0) return 0;
   if (length <= CHUNK_CHARS) return 1;
   return 1 + Math.ceil((length - CHUNK_CHARS) / (CHUNK_CHARS - OVERLAP_CHARS));
+}
+
+/** Caracteres que caben en `chunks` trozos (lo inverso de estimateChunkCount). */
+export function maxCharsForChunks(chunks: number): number {
+  if (chunks <= 0) return 0;
+  return CHUNK_CHARS + (chunks - 1) * (CHUNK_CHARS - OVERLAP_CHARS);
 }
 
 function tooManyChunks(count: number): DocImportError {
@@ -133,20 +141,28 @@ type ParsedDoc = { title: string; source: string; body: string };
  * this importer has no password-prompt UI, so there's nothing useful to do
  * with an encrypted PDF beyond telling the user why it was skipped.
  */
-async function extractPdf(uri: string, filename: string): Promise<string> {
+async function extractPdf(uri: string, filename: string, maxChars: number): Promise<string> {
   try {
-    return await extractPdfText(uri);
-  } catch (e: any) {
-    if (e?.code === "PASSWORD_REQUIRED" || e?.code === "INCORRECT_PASSWORD") {
+    // Auditoría 2026-10-29: el módulo nativo se para en `maxChars` (lo que
+    // aún cabe en el tope de trozos) y rechaza PDFs con demasiadas páginas,
+    // antes de que el texto llegue entero a la memoria.
+    return await extractPdfTextCapped(uri, maxChars, MAX_IMPORT_PDF_PAGES);
+  } catch (e) {
+    const code = e instanceof PdfTextError ? e.code : "PDF_EXTRACTION_ERROR";
+    if (code === "PASSWORD_REQUIRED") {
       throw new DocImportError("pdfPassword", `"${filename}" is password-protected - password-protected PDFs aren't supported.`, { name: filename });
     }
-    throw new DocImportError("pdfUnreadable", `Couldn't read "${filename}": ${e?.message ?? e}`, { name: filename });
+    if (code === "TEXT_TOO_LARGE" || code === "TOO_MANY_PAGES") {
+      throw tooManyChunks(MAX_IMPORT_CHUNKS + 1);
+    }
+    throw new DocImportError("pdfUnreadable", `Couldn't read "${filename}": ${e instanceof Error ? e.message : String(e)}`, { name: filename });
   }
 }
 
 async function parseFileContent(
   file: DocumentPicker.DocumentPickerAsset,
-  fallbackTitle: string
+  fallbackTitle: string,
+  chunksLeft: number = MAX_IMPORT_CHUNKS
 ): Promise<ParsedDoc[]> {
   const filename = file.name;
   const ext = filename.toLowerCase().split(".").pop();
@@ -160,7 +176,7 @@ async function parseFileContent(
   }
 
   if (ext === "pdf") {
-    const text = await extractPdf(file.uri, filename);
+    const text = await extractPdf(file.uri, filename, maxCharsForChunks(chunksLeft) + OVERLAP_CHARS);
     // Auditoría 2026-10-29 (bomba de descompresión): el tamaño del archivo
     // no dice cuánto texto sale. Se mide aquí, antes de trocear nada.
     const estimated = estimateChunkCount(text.trim().length);
@@ -245,7 +261,7 @@ export async function importDocuments(
   for (const file of files) {
     totalSizeBytes += file.size ?? 0;
     const fallbackTitle = file.name.replace(/\.[^.]+$/, "");
-    const docs = await parseFileContent(file, fallbackTitle);
+    const docs = await parseFileContent(file, fallbackTitle, MAX_IMPORT_CHUNKS - estimatedChunks);
     // Se corta en cuanto la suma pasa del tope, sin leer los archivos que
     // quedan ni trocear lo leído.
     for (const d of docs) estimatedChunks += estimateChunkCount(d.body.trim().length);

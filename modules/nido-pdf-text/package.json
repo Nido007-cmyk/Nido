@@ -1,0 +1,7 @@
+{
+  "name": "nido-pdf-text",
+  "version": "0.1.0",
+  "description": "Local Expo module: PDF text extraction with hard limits on text and pages (PdfBox-Android, temp-file memory). Consumed via src/services/pdfText.ts.",
+  "main": "index.ts",
+  "license": "MIT"
+}

@@ -187,10 +187,14 @@ hecho:
   componente exportado es el acceso rápido de la barra de ajustes (protegido
   por un permiso del sistema), y nada que se abra desde fuera de NIDO puede
   borrar ni enviar nada.
-- **Sigue abierto, y se dice:** el texto de un PDF lo extrae una librería
-  nativa antes de que NIDO pueda medirlo, así que un PDF hostil todavía
-  puede gastar mucha memoria dentro de esa librería; el tamaño de un respaldo
-  deja ver más o menos cuántos datos tiene.
+- **Sigue abierto, y se dice:** el tamaño de un respaldo deja ver más o menos
+  cuántos datos tiene.
+- ~~El texto de un PDF lo extraía una librería nativa antes de que NIDO
+  pudiera medirlo.~~ Cerrado: el módulo propio de NIDO
+  (`modules/nido-pdf-text`) analiza el PDF con búferes en archivos
+  temporales, rechaza más de 3.000 páginas y deja de leer en cuanto el texto
+  pasa de lo que aún cabe en el tope de la importación, también a mitad de
+  una página enorme.
 - **Clones de sesión, revisado el mismo día:** el fallo de Sesame en Signal
   (Cremers, Jacomme y Naska, USENIX 2023) era que una sesión vieja volvía a
   ser la activa al descifrar un mensaje, así que un clon con un estado
