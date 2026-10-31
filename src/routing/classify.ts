@@ -75,18 +75,44 @@ const CREATIVE_RE = new RegExp(
     // es
     "\\b(?:dame|sugi[eé]reme|sugiere|prop[oó]n(?:me)?|recomi[eé]ndame)\\s+(?:\\d+\\s+|unas?\\s+|algunas?\\s+|dos\\s+|tres\\s+|cinco\\s+)?ideas?\\b",
     "\\bqu[eé]\\s+puedo\\s+(?:cocinar|preparar|hacer\\s+de\\s+(?:comer|cenar|desayunar))\\b",
-    "\\b(?:escr[ií]be(?:me)?|inv[eé]nta(?:me)?)\\s+(?:un|una)\\s+(?:poema|cuento|historia|canci[oó]n|carta)\\b",
+    "\\b(?:escr[ií]be(?:me)?|inv[eé]nta(?:me)?|redacta(?:me)?|crea(?:me)?)\\s+(?:un|una)\\s+(?:poema|cuento|historia|canci[oó]n|carta)\\b",
+    // 2026-10-30 (prueba física): «Cuéntame un cuento largo sobre un zorro
+    // que vive en un faro» no era creativo para esta lista y la respuesta
+    // quedó capturada por un documento del propio usuario. La familia de
+    // «cuéntame» entra SOLO con el objeto creado detrás (un cuento, una
+    // historia…): «cuéntame el número de emergencias de Chile» sigue
+    // siendo una pregunta de datos y va a datos.
+    "\\bcu[eé]nta(?:me|nos)?\\s+(?:un|una)\\s+(?:cuento|historia|relato|leyenda|f[aá]bula)\\b",
+    "\\bme\\s+cu[eé]ntas\\s+(?:un|una)\\s+(?:cuento|historia|relato|leyenda|f[aá]bula)\\b",
+    "\\b(?:n[aá]rra(?:me)?|relata(?:me)?)\\s+(?:un|una)\\s+(?:cuento|historia|relato|leyenda|f[aá]bula)\\b",
     // en
     "\\b(?:give\\s+me|suggest|brainstorm)\\s+(?:\\d+\\s+|some\\s+|a\\s+few\\s+|two\\s+|three\\s+|five\\s+)?ideas?\\b",
     "\\bwhat\\s+can\\s+i\\s+(?:cook|make\\s+for\\s+(?:dinner|lunch|breakfast))\\b",
     "\\bwrite\\s+(?:me\\s+)?(?:a|an)\\s+(?:poem|story|song|letter)\\b",
+    "\\btell\\s+(?:me\\s+)?(?:a|an)\\s+(?:story|tale)\\b",
     // pt
     "\\b(?:me\\s+d[aáê]|sugira|sugere)\\s+(?:\\d+\\s+|algumas\\s+|umas\\s+|duas\\s+|tr[eê]s\\s+)?ideias?\\b",
     "\\bo\\s+que\\s+(?:eu\\s+)?posso\\s+(?:cozinhar|preparar|fazer\\s+para\\s+(?:o\\s+)?(?:jantar|almo[cç]o))\\b",
     "\\b(?:escreva|escreve)\\s+(?:um|uma)\\s+(?:poema|hist[oó]ria|can[cç][aã]o|carta)\\b",
+    "\\bconta(?:-me)?\\s+(?:um|uma)\\s+(?:conto|hist[oó]ria|f[aá]bula|lenda)\\b",
+    "\\bconte(?:-me)?\\s+(?:um|uma)\\s+(?:conto|hist[oó]ria|f[aá]bula|lenda)\\b",
   ].join("|"),
   "i",
 );
+
+/**
+ * ¿Es una petición de CREACIÓN (un cuento, un poema, unas ideas…)? Es la
+ * misma regla que clasifica el turno como conversación; se exporta porque
+ * ChatScreen la consulta también DESPUÉS de generar, con las fuentes ya
+ * traídas: si la petición es creativa, el verificador de anclaje no puede
+ * sustituir la creación por el «no lo sé» con extracto aunque un documento
+ * case por palabras sueltas (2026-10-30, prueba física del dueño). El
+ * objeto creado manda sobre el verbo: «cuéntame el número de emergencias
+ * de Chile» NO es creativa y sigue yendo a datos.
+ */
+export function isCreativeRequest(query: string): boolean {
+  return CREATIVE_RE.test((query ?? "").trim());
+}
 
 export function classifyTask(query: string): TaskType {
   const trimmed = query.trim();

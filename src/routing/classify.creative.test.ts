@@ -9,7 +9,7 @@
 // «[1] Quesadilla [2] Ginataang langka». Pedir ideas o un texto creativo
 // no se busca: lo responde el modelo.
 import { describe, expect, it } from "vitest";
-import { classifyTask, isRetrievalIrrelevant } from "./classify";
+import { classifyTask, isCreativeRequest, isRetrievalIrrelevant } from "./classify";
 
 describe("peticiones creativas sin búsqueda offline", () => {
   it.each([
@@ -29,4 +29,37 @@ describe("peticiones creativas sin búsqueda offline", () => {
       expect(isRetrievalIrrelevant(classifyTask(q))).toBe(false);
     },
   );
+});
+
+// 2026-10-30 (prueba física, Tab A9+): «Cuéntame un cuento largo sobre un
+// zorro que vive en un faro» no casaba con ninguna forma creativa y el
+// turno se iba a búsqueda; el acta importada por el propio usuario casó
+// al 85 % y el verificador sustituyó el cuento por su extracto. La
+// familia de «cuéntame» tiene que ser creativa — pero solo con el objeto
+// creado detrás: el objeto manda, no el verbo.
+describe("la familia de «cuéntame»: creativa solo con objeto creado", () => {
+  it.each([
+    "Cuéntame un cuento largo sobre un zorro que vive en un faro",
+    "¿Me cuentas una historia de piratas?",
+    "Cuéntanos una leyenda",
+    "Nárrame un relato corto",
+    "redacta un cuento sobre el invierno",
+    "tell me a story about a dragon",
+    "Conta-me um conto",
+    "Conte uma história",
+  ])("%s", (q) => {
+    expect(isRetrievalIrrelevant(classifyTask(q))).toBe(true);
+    expect(isCreativeRequest(q)).toBe(true);
+  });
+
+  it.each([
+    // El objeto es un dato, no una creación: sigue yendo a datos.
+    "cuéntame el número de emergencias de Chile",
+    "Cuéntame el número de habitaciones del hotel",
+    "dime el número de emergencias de Chile",
+    "tell me the emergency number for Chile",
+  ])("%s", (q) => {
+    expect(isRetrievalIrrelevant(classifyTask(q))).toBe(false);
+    expect(isCreativeRequest(q)).toBe(false);
+  });
 });

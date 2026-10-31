@@ -35,7 +35,7 @@ import { llamaEngine } from "../inference/LlamaEngine";
 import { embeddingEngine } from "../rag/embed";
 import { retrieve, assemblePrompt, RetrievedChunk, ConversationTurn } from "../rag/retrieve";
 import { assembleChatMessages, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
-import { classifyTask, isRetrievalIrrelevant } from "../routing/classify";
+import { classifyTask, isRetrievalIrrelevant, isCreativeRequest } from "../routing/classify";
 import type { TaskType } from "../routing/types";
 import { onSeedProgress, seedKnowledgeBaseIfEmpty } from "../rag/seedCorpus";
 import { MODEL_CATALOG, CORPUS_CATALOG, REQUIRED_MODELS, CatalogModel } from "../models/manifest";
@@ -1612,6 +1612,19 @@ export function ChatScreen({
         if (guideAnswered) {
           // Verbatim guide text: nothing to verify or trim. Every sentence is the guide's (R1).
           provenance = guideAnswerProvenance(finalText);
+        } else if (!deepResearchModeRef.current && chunks.length > 0 && isCreativeRequest(query)) {
+          // 2026-10-30 (prueba física del dueño): petición creativa
+          // («Cuéntame un cuento largo sobre un zorro que vive en un
+          // faro») con documentos que casan solo por palabras sueltas —
+          // el acta importada por el propio usuario traía zorro y faro y
+          // salía al 85 %. El verificador juzgaba el cuento como una
+          // respuesta de hechos sin apoyo y lo sustituía entero por el
+          // «no lo sé» con extracto literal: la foto del dueño enseñó el
+          // extracto del acta en lugar del cuento. Una creación no se
+          // ancla a fuentes: el texto queda tal cual. Las preguntas de
+          // hechos con fuentes se verifican igual que antes —
+          // isCreativeRequest exige el objeto creado, así que «cuéntame
+          // el número de emergencias de Chile» no entra por esta rama.
         } else if (!deepResearchModeRef.current && chunks.length > 0) {
           // 0.1.41 (prueba física, «¿qué es la inflación?»): se verificaba
           // el texto SIN recortar y el bucle volvía a la pantalla.
