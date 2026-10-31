@@ -69,26 +69,25 @@ export function NegotiationCard({
   const expiresIn = Math.max(0, proposal.expiresAt - Date.now());
   const expiresMinutes = Math.ceil(expiresIn / 60000);
 
-  // Human-readable scope labels. NOTE: these are intentionally NOT read via
-  // i18n returnObjects — i18next's default nsSeparator (":") corrupts the
-  // lookup for keys containing ":" (its returnObjects path re-translates each
-  // nested key, so "read:notes" is parsed as namespace "…read" + key "notes").
-  // The fixed technical scope set is mapped here directly, bilingual.
-  const SCOPE_LABELS: Record<string, { es: string; en: string }> = {
-    "read:notes": { es: "Leer notas", en: "Read notes" },
-    "read:knowledge": { es: "Leer base de conocimiento", en: "Read knowledge base" },
-    "read:contacts": { es: "Leer contactos", en: "Read contacts" },
-    "read:reminders": { es: "Leer recordatorios", en: "Read reminders" },
-    "write:notes": { es: "Escribir notas", en: "Write notes" },
-    "write:reminder": { es: "Crear recordatorios", en: "Create reminders" },
-    "write:reminders": { es: "Crear recordatorios", en: "Create reminders" },
-  };
+  // Human-readable scope labels, read from the locale resources
+  // (negotiationCard.scopeLabels.* in es/en/pt). They are NOT read via
+  // t() on the leaf key: the scope names contain ":" ("read:notes")
+  // and i18next's nsSeparator would parse the leaf as a namespace.
+  // Fetching the parent object with getResource avoids the leaf
+  // parsing entirely. Auditoría completa 2026-10-31 (F9-01): the
+  // previous hard-coded es/en map showed ENGLISH labels to
+  // Portuguese users on this consent surface, with the pt
+  // translations already written in the locales and unused.
   const scopeLabel = (scope: string): string => {
-    const entry = SCOPE_LABELS[scope];
-    if (entry) {
-      return i18n.language?.startsWith("es") ? entry.es : entry.en;
-    }
-    return scope;
+    const lang = i18n.language ?? "en";
+    const labels =
+      (i18n.getResource(lang, "translation", "negotiationCard.scopeLabels") as
+        | Record<string, string>
+        | undefined) ??
+      (i18n.getResource("en", "translation", "negotiationCard.scopeLabels") as
+        | Record<string, string>
+        | undefined);
+    return labels?.[scope] ?? scope;
   };
 
   const toggleScope = (scope: string) => {
