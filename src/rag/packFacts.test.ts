@@ -51,6 +51,23 @@ describe("datos verificados de los packs (0.1.55)", () => {
     expect(emergencyQuestionKind("qué tiempo hace en Chile")).toBeNull();
   });
 
+  it("auditoría 2026-10-31 (F1 B-3): una pregunta larga con sus señales entra en la ruta de datos", () => {
+    expect(
+      emergencyQuestionKind("por favor dime cual es el numero de telefono de emergencias para llamar a la policia en chile ahora mismo gracias"),
+    ).toBe("police");
+    // Larga y sin señal de número: sigue sin ser pregunta.
+    expect(
+      emergencyQuestionKind("cuéntame con calma la historia de los bomberos voluntarios de Chile y de cómo empezaron hace ya muchos años atrás"),
+    ).toBeNull();
+  });
+
+  it("auditoría 2026-10-31 (F1 B-7): con dos servicios, encabeza el nombrado primero", () => {
+    expect(emergencyQuestionKind("número de ambulancia y de policía en Chile")).toBe("ambulance");
+    expect(emergencyQuestionKind("número de policía y de ambulancia en Chile")).toBe("police");
+    const a = composeFactsAnswer("número de ambulancia y de policía en Chile", "es", regions, facts)!;
+    expect(a.text.split("\n")[0]).toBe("En Chile, para una ambulancia:");
+  });
+
   it("responde con el número pedido primero, los demás después y la fuente con fecha", () => {
     const a = composeFactsAnswer("¿a qué número llamo para una ambulancia en Chile?", "es", regions, facts)!;
     expect(a.region).toBe("CL");

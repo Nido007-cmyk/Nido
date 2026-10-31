@@ -121,8 +121,22 @@ const NUMBER_CUES = / (numero|numeros|telefono|telefonos|tel|llamo|llamar|llamas
 export function emergencyQuestionKind(text: string): ServiceKind | null {
   const folded = foldText(text);
   const words = folded.trim().split(" ").filter(Boolean);
-  if (words.length === 0 || words.length > 16) return null;
-  const kinds = SERVICE_WORDS.filter(([, re]) => re.test(folded)).map(([k]) => k);
+  if (words.length === 0) return null;
+  // Auditoría completa 2026-10-31 (F1 B-3): el tope de 16 palabras
+  // dejaba fuera preguntas largas con todas las señales («por favor
+  // dime cuál es el número de teléfono de emergencias para llamar a
+  // la policía en Chile ahora mismo, gracias», 21 palabras). La
+  // guarda real contra frases que no preguntan es la señal de número
+  // de abajo, no la longitud: sin señal, una frase larga sigue sin
+  // ser pregunta.
+  // F1 B-7: los servicios se ordenan por su mención en el texto, no
+  // por el orden fijo de la tabla: «número de ambulancia y de
+  // policía» encabeza la ambulancia, que es lo que se nombró primero.
+  const kinds = SERVICE_WORDS
+    .map(([k, re]) => ({ k, at: folded.search(re) }))
+    .filter((h) => h.at >= 0)
+    .sort((a, b) => a.at - b.at)
+    .map((h) => h.k);
   if (kinds.length === 0) return null;
   // "policía en Chile" is a request on its own; longer phrases need a cue
   // ("número", "llamo", "phone"…) so "la historia de los bomberos de Chile" isn't one.
