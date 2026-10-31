@@ -19,7 +19,16 @@ const PATTERNS: Array<{ type: TaskType; test: RegExp }> = [
   { type: "summarize", test: /\b(summarize|summarise|summary of|tl;?dr)\b/i },
   { type: "translate", test: /\btranslate\b/i },
   { type: "code", test: /```|\b(write (a |some )?code|debug this|refactor|fix this function|regex for)\b/i },
-  { type: "calculate", test: /\b(calculate|compute|how much is)\b|\d+\s*[+\-*/×÷]\s*\d/i },
+  // Auditoría completa 2026-10-31 (F1 B-2): el operador desnudo
+  // también casaba dentro de cadenas de números con guion o barra:
+  // «what happened on 2026-10-31» y «555-1234» clasificaban como
+  // cuenta, y en la vía adaptativa eso apaga la búsqueda local. Las
+  // guardas espejan la doctrina de la ruta de cálculo (una fecha
+  // con barras no es una división; un teléfono con guiones no es
+  // una resta): el operador no puede formar parte de una cadena
+  // número-separador-número, y la resta pegada exige un lado corto
+  // (la resta con espacios sí vale con lados largos).
+  { type: "calculate", test: /\b(calculate|compute|how much is)\b|(?<!\d)(?<!\d[-/])\d+\s*[+*/×÷]\s*\d+(?!\d)(?![-/]\d)|(?<!\d)(?<!\d[-/])(?:\d+\s+-\s+\d+|\d{1,2}\s*-\s*\d{1,2})(?!\d)(?![-/]\d)/i },
   { type: "extract", test: /\b(extract|list all|pull out|find every)\b/i },
 ];
 

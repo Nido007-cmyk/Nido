@@ -133,6 +133,16 @@ describe("classifyTask", () => {
     expect(classifyTask("Calculate the compound interest on $500")).toBe("calculate");
   });
 
+  it("auditoría 2026-10-31 (F1 B-2): una fecha o un teléfono no son una cuenta", () => {
+    expect(classifyTask("what happened on 2026-10-31")).not.toBe("calculate");
+    expect(classifyTask("call me at 555-1234")).not.toBe("calculate");
+    expect(classifyTask("the meeting is on 31/10/2026")).not.toBe("calculate");
+    // Las cuentas de verdad siguen clasificando como cuenta.
+    expect(classifyTask("what is 12 - 5")).toBe("calculate");
+    expect(classifyTask("12-5")).toBe("calculate");
+    expect(classifyTask("100 / 4")).toBe("calculate");
+  });
+
   it("detects code", () => {
     expect(classifyTask("Write some code to reverse a linked list")).toBe("code");
     expect(classifyTask("```js\nconst x = 1;\n```")).toBe("code");
