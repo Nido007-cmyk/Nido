@@ -156,6 +156,25 @@ export function backupManifestInfo(manifest: unknown): BackupManifestInfo {
  * M3 FIX: incluye nido_knowledge.db además de nido_memory.db.
  */
 export async function createBackup(destinationUri: string): Promise<string> {
+  // Auditoría completa 2026-10-31 (F3-15): si la creación muere a
+  // mitad, los ficheros parciales no se quedan con el nombre válido:
+  // findLatestBackup ofrece el respaldo más reciente por nombre y un
+  // parcial pasaría por bueno hasta que alguien intentara restaurarlo.
+  try {
+    return await createBackupInner(destinationUri);
+  } catch (e) {
+    for (const uri of [destinationUri, `${destinationUri}.manifest.json`, knowledgeBackupUriFor(destinationUri)]) {
+      try {
+        await FileSystem.deleteAsync(uri, { idempotent: true });
+      } catch {
+        /* best-effort */
+      }
+    }
+    throw e;
+  }
+}
+
+async function createBackupInner(destinationUri: string): Promise<string> {
   const dir = FileSystem.documentDirectory;
   if (!dir) throw new BackupError("storage", "No se pudo acceder al almacenamiento.");
   const dbPath = `${dir}SQLite/${DB_NAME}`;
@@ -807,6 +826,20 @@ async function restoreExtracted(actualUri: string): Promise<void> {
 export async function createPortableBundle(backupUri: string): Promise<string> {
   const manifestUri = `${backupUri}.manifest.json`;
   const knowledgeUri = knowledgeBackupUriFor(backupUri);
+
+  // Auditoría completa 2026-10-31 (F3-15): el tope de 100 MB se
+  // comprueba ANTES de cargar los ficheros enteros en memoria, no
+  // solo al validar un bundle ya creado: crear uno gigante era la
+  // manera de llegar al problema que el tope dice evitar.
+  let totalBytes = 0;
+  for (const uri of [backupUri, knowledgeUri, manifestUri]) {
+    const inf = await FileSystem.getInfoAsync(uri);
+    if (inf.exists) totalBytes += (inf as { size?: number }).size ?? 0;
+  }
+  // El bundle infla los bytes (base64, ~4/3) más el envoltorio JSON.
+  if (totalBytes * 1.4 > MAX_BUNDLE_BYTES) {
+    throw new BackupError("invalid", "El respaldo es demasiado grande para compartirlo como un solo archivo.");
+  }
 
   const manifestRaw = await FileSystem.readAsStringAsync(manifestUri);
   const dbBase64 = await FileSystem.readAsStringAsync(backupUri, {

@@ -569,3 +569,45 @@ describe("backup.ts — auditoría completa 2026-10-31 (F3-16): la limpieza post
     expect(deleted).toEqual([]);
   });
 });
+
+describe("backup.ts — auditoría completa 2026-10-31 (F3-15): nada parcial con nombre válido", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sqlx.sql = [];
+    sqlx.failWith = null;
+    sqlx.allowOpen = true;
+    kdbx.sql = [];
+    kdbx.failWith = null;
+    (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: true, size: 5000 });
+    (FileSystem.copyAsync as any).mockResolvedValue(undefined);
+    (FileSystem.deleteAsync as any).mockResolvedValue(undefined);
+    (FileSystem.readAsStringAsync as any).mockResolvedValue("QUJD");
+  });
+
+  afterEach(() => {
+    sqlx.allowOpen = false;
+  });
+
+  it("si crear el respaldo muere a mitad, los parciales se borran", async () => {
+    (FileSystem.writeAsStringAsync as any).mockImplementation(async (uri: string) => {
+      if (uri.endsWith(".manifest.json")) throw new Error("disco lleno");
+    });
+    const { createBackup } = await import("./backup");
+    await expect(createBackup("/mock/nido-backup-T.db")).rejects.toThrow(/disco lleno/);
+    const deleted = (FileSystem.deleteAsync as any).mock.calls.map((c: any[]) => c[0]);
+    expect(deleted).toEqual(
+      expect.arrayContaining([
+        "/mock/nido-backup-T.db",
+        "/mock/nido-backup-T.db.manifest.json",
+        "/mock/nido-backup-T.knowledge.db",
+      ]),
+    );
+  });
+
+  it("el bundle comprueba el tope antes de leer los ficheros enteros", async () => {
+    (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: true, size: 90_000_000 });
+    const { createPortableBundle } = await import("./backup");
+    await expect(createPortableBundle("/mock/nido-backup-T.db")).rejects.toThrow(/demasiado grande/);
+    expect(FileSystem.readAsStringAsync).not.toHaveBeenCalled();
+  });
+});
