@@ -139,6 +139,15 @@ jobs:
         # Never ship an APK from code that doesn't typecheck.
         run: npm run typecheck
 
+      - name: SQLCipher real para la batería (F6-01)
+        # Auditoría completa 2026-10-31 (F6-01): la única prueba
+        # contra SQLCipher real (sqlcipherReal.test.ts) se saltaba
+        # en CI por no estar el módulo de Python, y la batería
+        # contaba ese salto en silencio. La rueda con binario lo
+        # trae compilado: instalarla convierte el salto en una
+        # ejecución real contra el cifrado de verdad.
+        run: python3 -m pip install --quiet sqlcipher3-binary
+
       - name: Unit tests (CICD-01 gate)
         # Never ship an APK from code with failing tests.
         run: npm test
