@@ -76,17 +76,29 @@ OCR that merely compiles is not OCR that works, and this
 codebase does not call unproven native code done. This
 environment has:
 
-- **No JDK**: `which java` finds nothing, and a full-filesystem
-  search for `bin/java` finds nothing — Gradle cannot run at all.
 - **No NDK**: the Android SDK present (`~/workspace/android-sdk`,
   from another project's work) has platforms 35/36, build-tools
-  and platform-tools, but no `ndk/` directory.
-- **No device or emulator** attached to run a build on, and this
-  app copy has no generated `android/` project.
+  and platform-tools, but no `ndk/` directory — and
+  tesseract4android's native code (Tesseract/Leptonica) cannot
+  compile without it.
+- **No device or emulator** attached to run a build on (no
+  emulator or system images in the SDK either), and this app
+  copy has no generated `android/` project.
+
+Correction (2026-10-31, after the tanda closed): the first
+version of this section also claimed "no JDK on disk". That was
+wrong — a Temurin JDK 17 has existed at `~/workspace/jdk-17`
+since 2026-08-18; the build-time search missed it and its probe
+result only arrived after the tanda was committed. The JDK
+alone does not unblock anything here: without the NDK the
+native code cannot compile, and without a device the result
+could not be proven anyway — the block stands on those two
+grounds, which were and are verified. The error is recorded,
+not erased, because this document is evidence.
 
 So the native module is designed and its seam is live, and the
-build is left — deliberately, not silently — to a lane with a
-JDK, the SDK/NDK and a phone. Estimated work there: the module
+build is left — deliberately, not silently — to a lane with the
+NDK and a phone. Estimated work there: the module
 itself is small (one recognize call); the real cost is the
 tessdata bundling decision (three languages ≈ 3 × ~2–4 MB in
 tessdata_fast), the PDF-page rendering path, and device proof
