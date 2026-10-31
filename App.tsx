@@ -255,25 +255,19 @@ function AppContent() {
   };
 
   /**
-   * R13: un Clear All Data interrumpido (Android mató el proceso a mitad)
-   * debe reanudarse y verificarse ANTES de que cualquier rutina toque las
-   * bases, los modelos o la UI normal. Si la recuperación falla, fail
-   * closed: no se entra al estado normal con restos a medias.
+   * FIX 2026-10-09 (CR-2): verificar si hay un staging de rekey pendiente
+   * de un crash anterior. Si el rekey se interrumpió, completar la
+   * recuperación antes de abrir la DB.
+   *
+   * Auditoría completa 2026-10-31 (F3-01): esta comprobación vivía SOLO
+   * dentro de runWipeRecovery, así que un corte a mitad de
+   * rotateAllDatabaseKeys sin borrado de por medio dejaba las bases con
+   * la DEK nueva y el Keystore con la vieja, sin ruta de recuperación en
+   * el arranque normal, aunque el propio keyRotation.ts dice de esta
+   * función que «debe llamarse al arranque». Ahora la llaman las dos
+   * vías de arranque (normal y recuperación de borrado).
    */
-  const runWipeRecovery = async () => {
-    setWipeError(null);
-    setScreen("wipe-recovering");
-    try {
-      await recoverInterruptedWipe();
-    } catch (e) {
-      setWipeError(e instanceof Error ? e.message : String(e));
-      setScreen("wipe-blocked");
-      return;
-    }
-    if (await enterKeyLossIfNeeded()) return;
-    // FIX 2026-10-09 (CR-2): verificar si hay un staging de rekey pendiente
-    // de un crash anterior. Si el rekey se interrumpió, completar la
-    // recuperación antes de abrir la DB.
+  const recoverStaleRekeyIfAny = async () => {
     try {
       const { checkStaleRekeyStaging } = await import("./src/security/keyRotation");
       const FS = await import("expo-file-system/legacy");
@@ -310,6 +304,26 @@ function AppContent() {
       // rotar manualmente desde BackupScreen. Log para diagnóstico.
       console.warn("[startup] checkStaleRekeyStaging falló:", e instanceof Error ? e.message : e);
     }
+  };
+
+  /**
+   * R13: un Clear All Data interrumpido (Android mató el proceso a mitad)
+   * debe reanudarse y verificarse ANTES de que cualquier rutina toque las
+   * bases, los modelos o la UI normal. Si la recuperación falla, fail
+   * closed: no se entra al estado normal con restos a medias.
+   */
+  const runWipeRecovery = async () => {
+    setWipeError(null);
+    setScreen("wipe-recovering");
+    try {
+      await recoverInterruptedWipe();
+    } catch (e) {
+      setWipeError(e instanceof Error ? e.message : String(e));
+      setScreen("wipe-blocked");
+      return;
+    }
+    if (await enterKeyLossIfNeeded()) return;
+    await recoverStaleRekeyIfAny();
     await finishStartup();
   };
 
@@ -330,6 +344,11 @@ function AppContent() {
       return;
     }
     if (await enterKeyLossIfNeeded()) return;
+    // Auditoría completa 2026-10-31 (F3-01): la recuperación de un rekey
+    // interrumpido también corre en el arranque normal, no solo tras un
+    // borrado interrumpido; si no, el staging quedaba sin procesar y las
+    // bases inaccesibles con la DEK vieja en el Keystore.
+    await recoverStaleRekeyIfAny();
     await finishStartup();
   };
 
