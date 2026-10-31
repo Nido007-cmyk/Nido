@@ -120,11 +120,78 @@ describe("respuesta desde la guía, sin modelo (0.1.59)", () => {
     expect(text.split("\n")[0]).toBe(
       "Guía «Intoxicaciones, venenos y monóxido de carbono» de NIDO Esencial, desde el apartado que responde a tu pregunta, tal como está escrita (sin modelo):",
     );
-    expect(text).not.toContain("Si tragó un tóxico");
+    // D-1 (2026-10-31, decisión del dueño): la primera sección ya no
+    // se pierde al anclar; viaja delante del apartado que casó. La
+    // queja física de 2026-10-30 era que la respuesta ABRÍA en el
+    // apartado equivocado como si fuera el pedido: la cabecera sigue
+    // diciendo que el texto que responde es el del apartado anclado,
+    // y el orden es primera sección, apartado que casó y el resto.
+    expect(text).toContain("Si tragó un tóxico");
+    expect(text.indexOf("Si tragó un tóxico")).toBeLessThan(text.indexOf("Síntomas del monóxido de carbono"));
     expect(text).toContain("Síntomas del monóxido de carbono\nDolor de cabeza, mareo, náuseas y confusión.");
     expect(text).toContain("Qué hacer ante el monóxido");
     expect(text).toContain("Fuentes de la guía: NIDO — Intoxicaciones");
     expect(text).toContain("llama primero al número de emergencias");
+  });
+
+  // D-1 (2026-10-31): al anclar, la primera sección viaja delante en
+  // las tres lenguas, y ni ella ni el apartado que casó caen por el
+  // tope aunque juntos lo superen.
+  it("D-1: la primera sección viaja delante del apartado anclado (es, en, pt)", () => {
+    const casos = [
+      {
+        lang: "es" as const,
+        primera: "Avisos de la guía\nSi la persona no respira, llama primero.",
+        pedida: "El apartado pedido\nLo que responde a la pregunta.",
+        cabecera: "desde el apartado que responde a tu pregunta",
+      },
+      {
+        lang: "en" as const,
+        primera: "Guide warnings\nIf the person is not breathing, call first.",
+        pedida: "The asked section\nWhat answers the question.",
+        cabecera: "from the section that answers your question",
+      },
+      {
+        lang: "pt" as const,
+        primera: "Avisos do guia\nSe a pessoa não respira, ligue primeiro.",
+        pedida: "O trecho pedido\nO que responde à pergunta.",
+        cabecera: "a partir do trecho que responde à sua pergunta",
+      },
+    ];
+    for (const c of casos) {
+      const doc = {
+        title: "Guía D-1",
+        source: "",
+        parts: [
+          { id: 1, body: c.primera, used: false },
+          { id: 2, body: "Otro apartado\nNo pedido.", used: false },
+          { id: 3, body: c.pedida, used: true },
+        ],
+      };
+      const text = composeGuideAnswer(doc, c.lang);
+      expect(text.split("\n")[0]).toContain(c.cabecera);
+      expect(text).toContain(c.primera);
+      expect(text).toContain(c.pedida);
+      expect(text.indexOf(c.primera)).toBeLessThan(text.indexOf(c.pedida));
+      expect(text).not.toContain("Otro apartado");
+    }
+  });
+
+  it("D-1: con ancla, el tope nunca corta ni la primera sección ni la pedida", () => {
+    const doc = {
+      title: "Guía larga D-1",
+      source: "",
+      parts: [
+        { id: 1, body: `Primera\n${"a".repeat(1500)}`, used: false },
+        { id: 2, body: `Pedida\n${"b".repeat(1500)}`, used: true },
+        { id: 3, body: `Tercera\n${"c".repeat(1500)}`, used: false },
+      ],
+    };
+    const text = composeGuideAnswer(doc, "es");
+    expect(text).toContain("Primera");
+    expect(text).toContain("Pedida");
+    expect(text).not.toContain("Tercera");
+    expect(text).toContain("La guía sigue");
   });
 
   it("con el apartado usado en primer lugar, la respuesta es la de siempre", () => {

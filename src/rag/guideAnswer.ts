@@ -162,6 +162,15 @@ const CALL: Record<GroundingLang, string> = {
  * still verbatim and in order with the same cut rules; only the heading
  * changes, to say where the text starts. If the matched part is the
  * first (or none is marked), the answer is exactly what it was before.
+ *
+ * 2026-10-31 (D-1, decisión del dueño): anclar perdía la primera
+ * sección de la guía, que es la que trae el marco y los avisos que
+ * valen para la guía entera. La cura de la auditoría de arreglos,
+ * adoptada por el dueño: al anclar, la primera sección viaja siempre
+ * delante (cabecera anclada, primera sección, el apartado que casó y
+ * lo que sigue, todo literal y en orden), y el apartado que casó
+ * nunca es el que cae por el tope de longitud. Queda asentado para
+ * la revisión línea a línea de Claude del martes 2026-11-03.
  */
 export function composeGuideAnswer(doc: PackSourceDoc, lang: GroundingLang, opts: { short?: boolean; packId?: string } = {}): string {
   if (opts.short) return composeShortGuideAnswer(doc, lang, opts.packId);
@@ -170,12 +179,16 @@ export function composeGuideAnswer(doc: PackSourceDoc, lang: GroundingLang, opts
     .map((p) => ({ body: p.body.trim(), used: p.used }))
     .filter((x) => x.body.length > 0);
   const anchor = bodies.findIndex((x) => x.used);
-  const shown = anchor > 0 ? bodies.slice(anchor) : bodies;
+  const shown = anchor > 0 ? [bodies[0], ...bodies.slice(anchor)] : bodies;
   const parts: string[] = [];
   let used = 0;
   let cut = false;
+  // En modo anclado entran siempre las dos primeras piezas de
+  // `shown` (la primera sección y el apartado que casó): el tope
+  // solo corta desde la tercera.
+  const mustShow = anchor > 0 ? Math.min(2, shown.length) : 1;
   for (const x of shown) {
-    if (parts.length > 0 && used + x.body.length > GUIDE_MAX_CHARS) {
+    if (parts.length >= mustShow && used + x.body.length > GUIDE_MAX_CHARS) {
       cut = true;
       break;
     }
