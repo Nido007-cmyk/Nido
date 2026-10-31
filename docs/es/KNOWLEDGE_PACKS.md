@@ -93,7 +93,10 @@ y portugués. Las ediciones corregidas de `nido-local`, `nido-crisis` y
 `nido-viaje` se publicaron en la release `knowledge-packs-v7` con la
 0.1.66: en `nido-local` cada dato queda citado a una fuente oficial
 alcanzable, y en `nido-crisis` y `nido-viaje` se corrigieron los
-metadatos de recuperación de una guía de cada uno.
+metadatos de recuperación de una guía de cada uno. Una edición
+corregida más de `nido-local` se publicó en la release
+`knowledge-packs-v8` con la 0.1.67: su dato de Portugal cita ahora la
+frase exacta de su fuente.
 
 ### Formato v2: preguntas indexadas y datos verificados (0.1.55)
 

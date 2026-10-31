@@ -4,6 +4,62 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.67-alpha - 2026-10-31
+
+### The full audit
+
+- **The whole app was audited end to end, and this version carries
+  the fixes.** Code, security, data storage, the knowledge packs,
+  the signed download catalogue, the test suite itself, the build
+  pipelines, the public pages and all three languages were examined:
+  124 findings. 88 of them are fixed in this version and proven by
+  tests; the ones that remain are recorded with their cause (design
+  work and verification programmes, not defects left unmentioned).
+  The full automated suite passes: 4,711 tests in 300 files, plus
+  the component suite.
+- **The signed catalogue now signs more of every entry.** The
+  maintainer signature used to cover only part of each download
+  entry, so a changed licence, capability list or architecture
+  profile would have passed it. It now covers 14 fields of every
+  entry, and the model pin check compares fingerprints against the
+  publishers' own APIs instead of only checking that a file answers.
+- **An anchored guide always keeps its first section in front.**
+  When an answer is anchored to one section of a guide, the guide's
+  opening section now always travels with it, as the anchoring was
+  designed to do.
+
+### Data and backups
+
+- **Backups and restores fail out loud instead of half-way.** A
+  backup now consolidates both databases or reports its failure;
+  restoring never overwrites the live database without a safety
+  copy; an interrupted encryption key rotation is also recovered on
+  a normal start; and the app now counts a backup for the hardware
+  vault's 30-day rule when it leaves the phone, which is when it
+  protects you. What the backup keeps is also what the app now says
+  it keeps, in Spanish, English and Portuguese.
+- **The total delete proves itself.** Deleting everything now
+  verifies that the private prompt, the hardware key and the
+  rotation staging key are really gone, and a failed import no
+  longer leaves orphaned pieces behind for the next one.
+
+### Answers
+
+- **Two generations at once no longer share the model's memory.**
+  Starting a second answer while one is running used to let them
+  write into the same context; generations are now serialized.
+- **Numbers and consent read correctly.** The converter no longer
+  reads "1,000" as 1, an expired negotiation now answers "expired",
+  consent scope labels appear in your own language, and internal
+  error texts no longer reach the alert dialogs.
+
+### Knowledge packs
+
+- **Corrected edition of NIDO Local** (knowledge-packs-v8): the
+  Portugal fact now quotes the exact phrase of its official source,
+  and the pack's own control questions were rewritten so they
+  measure the search honestly.
+
 ## 0.1.66-alpha - 2026-10-31
 
 ### Knowledge packs

@@ -91,6 +91,9 @@ of `nido-local`, `nido-crisis` and `nido-viaje` were published in the
 release `knowledge-packs-v7` with 0.1.66: in `nido-local` every fact is
 cited to a reachable official source, and in `nido-crisis` and
 `nido-viaje` the search metadata of one guide in each was corrected.
+A further corrected edition of `nido-local` was published in the
+release `knowledge-packs-v8` with 0.1.67: its Portugal fact now
+quotes the exact phrase of its source.
 
 ### Format v2: indexed questions and verified facts (0.1.55)
 
