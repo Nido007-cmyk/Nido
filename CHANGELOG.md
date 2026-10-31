@@ -76,7 +76,7 @@ All notable changes to NIDO are recorded here. Versions follow
 
 ### Project information
 
-- Project information: the About screen now includes the "NIDO
+- The About screen now includes the "NIDO
   development" card, with the project's public addresses for those
   who have asked how to make a voluntary contribution. NIDO remains
   free and complete without contributing anything, and a
