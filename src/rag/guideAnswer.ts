@@ -63,6 +63,17 @@ const HEAD: Record<GroundingLang, (title: string) => string> = {
   en: (t) => `NIDO Essentials guide “${t}”, exactly as written (no model):`,
   pt: (t) => `Guia «${t}» do NIDO Essencial, exatamente como está escrito (sem modelo):`,
 };
+/**
+ * 2026-10-30 (prueba física): «Sintomas del monoxide of carbono?» trajo
+ * la guía correcta, pero servida desde el primer apartado — los tóxicos
+ * tragados — y no desde el de los síntomas preguntados. Cuando el
+ * apartado que casó no es el primero, la cabecera lo dice con honestidad.
+ */
+const HEAD_ANCHORED: Record<GroundingLang, (title: string) => string> = {
+  es: (t) => `Guía «${t}» de NIDO Esencial, desde el apartado que responde a tu pregunta, tal como está escrita (sin modelo):`,
+  en: (t) => `NIDO Essentials guide “${t}”, from the section that answers your question, exactly as written (no model):`,
+  pt: (t) => `Guia «${t}» do NIDO Essencial, a partir do trecho que responde à sua pergunta, exatamente como está escrito (sem modelo):`,
+};
 const HEAD_SHORT: Record<GroundingLang, (title: string) => string> = {
   es: (t) => `Versión corta de la guía «${t}» de NIDO Esencial: su primera parte, tal como está escrita (sin modelo):`,
   en: (t) => `Short version of the NIDO Essentials guide “${t}”: its first part, exactly as written (no model):`,
@@ -111,23 +122,34 @@ const CALL: Record<GroundingLang, string> = {
  * The answer text: a heading naming the guide, then its parts verbatim and
  * in order (none rewritten, none dropped in the middle), cut only between
  * parts when long, then the guide's sources and the call-first line.
+ *
+ * 2026-10-30: the parts start at the one retrieval matched (the part
+ * packSource marks `used`), not always at the guide's first section —
+ * asking for carbon-monoxide symptoms used to open the guide at its
+ * swallowed-toxics section. From the matched part on, everything is
+ * still verbatim and in order with the same cut rules; only the heading
+ * changes, to say where the text starts. If the matched part is the
+ * first (or none is marked), the answer is exactly what it was before.
  */
 export function composeGuideAnswer(doc: PackSourceDoc, lang: GroundingLang, opts: { short?: boolean } = {}): string {
   if (opts.short) return composeShortGuideAnswer(doc, lang);
+  const bodies = doc.parts
+    .map((p) => ({ body: p.body.trim(), used: p.used }))
+    .filter((x) => x.body.length > 0);
+  const anchor = bodies.findIndex((x) => x.used);
+  const shown = anchor > 0 ? bodies.slice(anchor) : bodies;
   const parts: string[] = [];
   let used = 0;
   let cut = false;
-  for (const p of doc.parts) {
-    const body = p.body.trim();
-    if (!body) continue;
-    if (parts.length > 0 && used + body.length > GUIDE_MAX_CHARS) {
+  for (const x of shown) {
+    if (parts.length > 0 && used + x.body.length > GUIDE_MAX_CHARS) {
       cut = true;
       break;
     }
-    parts.push(body);
-    used += body.length;
+    parts.push(x.body);
+    used += x.body.length;
   }
-  const out = [HEAD[lang](doc.title), "", parts.join("\n\n")];
+  const out = [anchor > 0 ? HEAD_ANCHORED[lang](doc.title) : HEAD[lang](doc.title), "", parts.join("\n\n")];
   if (cut) out.push("", MORE[lang]);
   if (doc.source.trim()) out.push("", `${SOURCE[lang]}: ${doc.source.trim()}`);
   out.push("", CALL[lang]);
@@ -165,6 +187,7 @@ export function composeShortGuideAnswer(doc: PackSourceDoc, lang: GroundingLang)
 export function guideAnswerProvenance(text: string): SentenceProvenance[] {
   const fixedLine = (p: string) =>
     Object.values(HEAD).some((h) => p.startsWith(h("\u0000").split("\u0000")[0])) ||
+    Object.values(HEAD_ANCHORED).some((h) => p.startsWith(h("\u0000").split("\u0000")[0])) ||
     Object.values(HEAD_SHORT).some((h) => p.startsWith(h("\u0000").split("\u0000")[0])) ||
     Object.values(MORE).includes(p) ||
     Object.values(MORE_SHORT).includes(p) ||

@@ -7,7 +7,7 @@
  * texts are the real NIDO Essentials ones seen on the tablet.
  */
 import { describe, it, expect } from "vitest";
-import { composeGuideAnswer, GUIDE_MAX_CHARS, isEssentialsChunk, pickGuideChunk } from "./guideAnswer";
+import { composeGuideAnswer, guideAnswerProvenance, GUIDE_MAX_CHARS, isEssentialsChunk, pickGuideChunk } from "./guideAnswer";
 import { closestSourceSentence, negationCount, verifyGroundedAnswer } from "./grounding";
 import { buildLexicalQuery, countMatchedTerms } from "./pure";
 
@@ -69,6 +69,60 @@ describe("respuesta desde la guía, sin modelo (0.1.59)", () => {
     expect(text).not.toContain("Apartado 3");
     expect(text.length).toBeLessThan(GUIDE_MAX_CHARS + 400);
     expect(text).toContain("Open the full guide");
+  });
+
+  // 2026-10-30 (prueba física): «Sintomas del monoxide of carbono?» trajo
+  // la guía correcta servida desde su primer apartado (los tóxicos
+  // tragados), no desde el de los síntomas pedidos. El apartado que casó
+  // ya venía marcado (`used`) desde packSource: ahora manda el arranque.
+  it("si el apartado que casó no es el primero, la guía empieza en él, literal, con cabecera honesta", () => {
+    const doc = {
+      title: "Intoxicaciones, venenos y monóxido de carbono",
+      source: "NIDO — Intoxicaciones",
+      parts: [
+        { id: 1, body: "Si tragó un tóxico\nQué hacer si alguien tragó un tóxico.", used: false },
+        { id: 2, body: "Síntomas del monóxido de carbono\nDolor de cabeza, mareo, náuseas y confusión.", used: true },
+        { id: 3, body: "Qué hacer ante el monóxido\nSal al aire libre y llama al número de emergencias.", used: false },
+      ],
+    };
+    const text = composeGuideAnswer(doc, "es");
+    expect(text.split("\n")[0]).toBe(
+      "Guía «Intoxicaciones, venenos y monóxido de carbono» de NIDO Esencial, desde el apartado que responde a tu pregunta, tal como está escrita (sin modelo):",
+    );
+    expect(text).not.toContain("Si tragó un tóxico");
+    expect(text).toContain("Síntomas del monóxido de carbono\nDolor de cabeza, mareo, náuseas y confusión.");
+    expect(text).toContain("Qué hacer ante el monóxido");
+    expect(text).toContain("Fuentes de la guía: NIDO — Intoxicaciones");
+    expect(text).toContain("llama primero al número de emergencias");
+  });
+
+  it("con el apartado usado en primer lugar, la respuesta es la de siempre", () => {
+    const doc = {
+      title: "Guía X",
+      source: "",
+      parts: [
+        { id: 1, body: "Primero.", used: true },
+        { id: 2, body: "Segundo.", used: false },
+      ],
+    };
+    const text = composeGuideAnswer(doc, "es");
+    expect(text.split("\n")[0]).toBe("Guía «Guía X» de NIDO Esencial, tal como está escrita (sin modelo):");
+    expect(text).toContain("Primero.");
+    expect(text).toContain("Segundo.");
+  });
+
+  it("la cabecera anclada cuenta como texto fijo en la procedencia, no como frase de la guía", () => {
+    const doc = {
+      title: "Guide X",
+      source: "",
+      parts: [
+        { id: 1, body: "First.", used: false },
+        { id: 2, body: "Second.", used: true },
+      ],
+    };
+    const prov = guideAnswerProvenance(composeGuideAnswer(doc, "en"));
+    expect(prov[0].origin.kind).toBe("fixed");
+    expect(prov.some((p) => p.origin.kind === "guide" && p.text === "Second.")).toBe(true);
   });
 });
 
