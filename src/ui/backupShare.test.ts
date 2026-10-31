@@ -43,6 +43,11 @@ vi.mock("../security/backup", () => ({
   createBackup: vi.fn(),
   exportDatabaseKey: vi.fn(async () => "test-key"),
   createPortableBundle: vi.fn(async (uri: string) => uri.replace(/\.db$/, ".nidobackup.json")),
+  // La función real está fijada en backup.test.ts (A2): "X.db" ->
+  // "X.knowledge.db". Aquí se reproduce su contrato para probar que
+  // backupShare la usa en vez de concatenar el nombre a mano.
+  knowledgeBackupUriFor: (uri: string) =>
+    /\.db$/.test(uri) ? uri.replace(/\.db$/, ".knowledge.db") : `${uri}.knowledge.db`,
 }));
 
 import { shareBackupFile, findLatestBackup, saveBackupToFolder } from "./backupShare";
@@ -96,12 +101,21 @@ describe("saveBackupToFolder (guardar en carpeta, 2026-10-12)", () => {
   });
 
   it("copia db + manifest + knowledge cuando los tres existen", async () => {
-    getInfoAsync.mockResolvedValue({ exists: true });
+    // F3-02: el mock de existencia responde por NOMBRE, como el disco
+    // real: solo existen los tres ficheros que createBackup escribe.
+    // Con el nombre equivocado ("X.db.knowledge.db") el conocimiento
+    // no se encontraba y esta prueba quedaba en rojo.
+    const existing = new Set([
+      src,
+      `${src}.manifest.json`,
+      src.replace(/\.db$/, ".knowledge.db"),
+    ]);
+    getInfoAsync.mockImplementation(async (uri: string) => ({ exists: existing.has(uri) }));
     const copied = await saveBackupToFolder(src);
     expect(copied).toEqual([
       "nido-backup-2026-10-09T01-01-29.db",
       "nido-backup-2026-10-09T01-01-29.db.manifest.json",
-      "nido-backup-2026-10-09T01-01-29.db.knowledge.db",
+      "nido-backup-2026-10-09T01-01-29.knowledge.db",
     ]);
     expect(writeAsStringAsync).toHaveBeenCalledTimes(3);
   });

@@ -20,7 +20,7 @@
 
 import * as Sharing from "expo-sharing";
 import * as FS from "expo-file-system/legacy";
-import { createBackup, exportDatabaseKey } from "../security/backup";
+import { createBackup, exportDatabaseKey, knowledgeBackupUriFor } from "../security/backup";
 import { BackupError } from "../security/backupErrors";
 
 export interface CreatedBackup {
@@ -73,8 +73,13 @@ export async function saveBackupToFolder(sourcePath: string): Promise<string[] |
   if (!perms.granted) return null;
   // FIX 2026-10-09 (C1): copiar los 3 archivos (db + manifest + knowledge).
   // Si no, K1/K2/K3 no protegen el flujo de Descargas.
+  // Auditoría completa 2026-10-31 (F3-02): el nombre del acompañante de
+  // conocimiento sale de knowledgeBackupUriFor, la única fuente (A2).
+  // Aquí se buscaba "X.db.knowledge.db" por concatenación, un fichero
+  // que createBackup nunca escribe ("X.knowledge.db"): el guardado en
+  // Descargas nunca copiaba el conocimiento, en silencio.
   const filesToCopy = [sourcePath];
-  for (const extra of [`${sourcePath}.manifest.json`, `${sourcePath}.knowledge.db`]) {
+  for (const extra of [`${sourcePath}.manifest.json`, knowledgeBackupUriFor(sourcePath)]) {
     try {
       const info = await FS.getInfoAsync(extra);
       if (info.exists) filesToCopy.push(extra);
