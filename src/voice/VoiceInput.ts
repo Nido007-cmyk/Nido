@@ -60,23 +60,41 @@ export async function isVoiceInputAvailable(): Promise<boolean> {
  * error/cancel. `onEvent` is optional, for UI feedback (e.g. partial
  * results, listening state) beyond the final resolved text.
  */
+/**
+ * Auditoría completa 2026-10-31 (F1 M-4): margen tras el fin de la
+ * voz. El reconocedor emite primero el fin (onEndOfSpeech) y después
+ * el resultado o el error, así que no se puede resolver en el fin
+ * sin romper el dictado normal; pero si tras el fin no llega ni
+ * resultado ni error (el usuario paró con otro toque y el nativo
+ * solo emitió el fin), la promesa quedaba colgada para siempre y
+ * los oyentes vivos. Pasado este margen sin desenlace, la sesión
+ * se cierra con null y los oyentes se quitan: un resultado tardío
+ * ya no puede llamar a onEvent con la sesión muerta.
+ */
+const END_GRACE_MS = 1000;
+
 export function startListening(onEvent?: (event: VoiceEvent) => void): Promise<string | null> {
   if (!VoiceInputNative) return Promise.resolve(null);
 
   return new Promise((resolve) => {
     const subscriptions: EventSubscription[] = [];
     let resolved = false;
+    let endTimer: ReturnType<typeof setTimeout> | null = null;
 
     const finish = (text: string | null) => {
       if (resolved) return;
       resolved = true;
+      if (endTimer) clearTimeout(endTimer);
       subscriptions.forEach((s) => s.remove());
       resolve(text);
     };
 
     subscriptions.push(
       VoiceInputNative.addListener("onSpeechStart", () => onEvent?.({ type: "start" })),
-      VoiceInputNative.addListener("onSpeechEnd", () => onEvent?.({ type: "end" })),
+      VoiceInputNative.addListener("onSpeechEnd", () => {
+        onEvent?.({ type: "end" });
+        if (!endTimer) endTimer = setTimeout(() => finish(null), END_GRACE_MS);
+      }),
       VoiceInputNative.addListener("onPartialResults", (e: { text: string }) =>
         onEvent?.({ type: "partial", text: e.text })
       ),
