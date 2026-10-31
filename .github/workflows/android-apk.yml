@@ -255,6 +255,15 @@ jobs:
         # y no como la lista que su nombre promete. El informe de Gradle se
         # captura en crudo y el activo se recorta a su sección: el árbol de
         # releaseRuntimeClasspath y su leyenda, sin códigos de color.
+        # Auditoría completa 2026-10-31 (F7-02 y F7-03): B-3 limpiaba el
+        # formato pero ninguna guarda distinguía un árbol exacto de uno
+        # truncado o de la salida de un Gradle fallido (la única era
+        # test -s en el adjunto). Ahora el recorte se ancla al encabezado
+        # real «Project ':app'», el sed quita toda secuencia CSI (no solo
+        # las SGR terminadas en m), el separador tras el encabezado se
+        # conserva, y el paso falla sin escribir el activo si falta la
+        # línea de la configuración, la leyenda de Gradle al final o un
+        # mínimo de líneas de dependencia.
         working-directory: android
         continue-on-error: true
         shell: bash
@@ -262,16 +271,24 @@ jobs:
           set -o pipefail
           RAW="$RUNNER_TEMP/android-runtime-dependencies.raw.txt"
           OUT="$GITHUB_WORKSPACE/android-runtime-dependencies.txt"
+          TMP="$RUNNER_TEMP/android-runtime-dependencies.tmp.txt"
           ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --no-daemon -q --console=plain \
             > "$RAW"
-          sed 's/\x1b\[[0-9;]*m//g' "$RAW" \
-            | awk '/^-+$/{sep=$0; next} /^Project /{print sep; print; show=1; next} show' \
-            > "$OUT"
-          N=$(grep -cE -- '--- [^ ]+:[^ ]+:' "$OUT" || true)
+          sed 's/\x1b\[[0-9;?]*[A-Za-z]//g' "$RAW" \
+            | awk '/^Project .:app.$/{show=1} show' \
+            > "$TMP"
+          fail() { echo "::error title=Dependencias Android::$1"; exit 1; }
+          head -1 "$TMP" | grep -qE "^Project .:app.$" || fail "no aparece el encabezado Project ':app'"
+          grep -q '^releaseRuntimeClasspath - ' "$TMP" || fail "falta la línea de la configuración releaseRuntimeClasspath"
+          grep -q '^(c) - ' "$TMP" || fail "falta la leyenda de Gradle (c)"
+          grep -q '^(\*) - ' "$TMP" || fail "falta la leyenda de Gradle (*)"
+          tail -n 6 "$TMP" | grep -qE '^\((c|\*)\) - ' || fail "la leyenda no está al final: informe truncado"
+          N=$(grep -cE -- '--- [^ ]+:[^ ]+:' "$TMP" || true)
+          [ "$N" -ge 100 ] || fail "solo $N líneas de dependencia (mínimo 100): informe sospechoso"
+          mv "$TMP" "$OUT"
           echo "::notice title=Dependencias Android en el APK::$N líneas de dependencia (archivo adjunto al release)"
           grep -oiE '(org\.bouncycastle|net\.zetetic)[^ ]*' "$OUT" | sort -u | head -20 \
             | while IFS= read -r l; do echo "::notice title=Dependencia nativa destacada::$l"; done
-
       - name: Upload Android dependency list
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         continue-on-error: true
@@ -423,7 +440,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
+          # Auditoría completa 2026-10-31 (F7-02): test -s solo
+          # distingue vacío de no vacío; el adjunto exige el mismo
+          # contenido que el paso generador ya validó.
           test -s dist/android-runtime-dependencies.txt
+          head -1 dist/android-runtime-dependencies.txt | grep -qE "^Project .:app.$"
+          grep -q '^(\*) - ' dist/android-runtime-dependencies.txt
           gh release upload "$TAG" dist/android-runtime-dependencies.txt --repo "$GITHUB_REPOSITORY"
 
       # 0.1.55 (P-07): cada release se comprueba solo. Lanza dos
