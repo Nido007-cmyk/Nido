@@ -574,6 +574,708 @@
     "melbourne",
     "canberra"
    ]
+  },
+  "JP": {
+   "names": {
+    "es": "Japón",
+    "en": "Japan",
+    "pt": "Japão"
+   },
+   "in": {
+    "es": "en Japón",
+    "en": "in Japan",
+    "pt": "no Japão"
+   },
+   "aliases": [
+    "japon",
+    "japón",
+    "japan",
+    "japão",
+    "tokio",
+    "tokyo",
+    "kioto",
+    "kyoto"
+   ]
+  },
+  "BZ": {
+   "names": {
+    "es": "Belice",
+    "en": "Belize",
+    "pt": "Belize"
+   },
+   "in": {
+    "es": "en Belice",
+    "en": "in Belize",
+    "pt": "em Belize"
+   },
+   "aliases": [
+    "belice",
+    "belize",
+    "belmopan"
+   ]
+  },
+  "BS": {
+   "names": {
+    "es": "Bahamas",
+    "en": "the Bahamas",
+    "pt": "Bahamas"
+   },
+   "in": {
+    "es": "en Bahamas",
+    "en": "in the Bahamas",
+    "pt": "nas Bahamas"
+   },
+   "aliases": [
+    "bahamas",
+    "nasau",
+    "nassau"
+   ]
+  },
+  "JM": {
+   "names": {
+    "es": "Jamaica",
+    "en": "Jamaica",
+    "pt": "Jamaica"
+   },
+   "in": {
+    "es": "en Jamaica",
+    "en": "in Jamaica",
+    "pt": "na Jamaica"
+   },
+   "aliases": [
+    "jamaica",
+    "kingston"
+   ]
+  },
+  "TT": {
+   "names": {
+    "es": "Trinidad y Tobago",
+    "en": "Trinidad and Tobago",
+    "pt": "Trinidad e Tobago"
+   },
+   "in": {
+    "es": "en Trinidad y Tobago",
+    "en": "in Trinidad and Tobago",
+    "pt": "em Trinidad e Tobago"
+   },
+   "aliases": [
+    "trinidad y tobago",
+    "trinidad and tobago",
+    "trinidad e tobago",
+    "puerto españa",
+    "port of spain"
+   ]
+  },
+  "IE": {
+   "names": {
+    "es": "Irlanda",
+    "en": "Ireland",
+    "pt": "Irlanda"
+   },
+   "in": {
+    "es": "en Irlanda",
+    "en": "in Ireland",
+    "pt": "na Irlanda"
+   },
+   "aliases": [
+    "irlanda",
+    "ireland",
+    "dublin",
+    "dublín"
+   ]
+  },
+  "NL": {
+   "names": {
+    "es": "Países Bajos",
+    "en": "the Netherlands",
+    "pt": "Países Baixos"
+   },
+   "in": {
+    "es": "en Países Bajos",
+    "en": "in the Netherlands",
+    "pt": "nos Países Baixos"
+   },
+   "aliases": [
+    "paises bajos",
+    "países bajos",
+    "netherlands",
+    "holanda",
+    "holland",
+    "amsterdam",
+    "ámsterdam"
+   ]
+  },
+  "BE": {
+   "names": {
+    "es": "Bélgica",
+    "en": "Belgium",
+    "pt": "Bélgica"
+   },
+   "in": {
+    "es": "en Bélgica",
+    "en": "in Belgium",
+    "pt": "na Bélgica"
+   },
+   "aliases": [
+    "belgica",
+    "bélgica",
+    "belgium",
+    "bruselas",
+    "brussels",
+    "bruxelas"
+   ]
+  },
+  "CH": {
+   "names": {
+    "es": "Suiza",
+    "en": "Switzerland",
+    "pt": "Suíça"
+   },
+   "in": {
+    "es": "en Suiza",
+    "en": "in Switzerland",
+    "pt": "na Suíça"
+   },
+   "aliases": [
+    "suiza",
+    "switzerland",
+    "suíça",
+    "berna",
+    "bern",
+    "zurich",
+    "zúrich"
+   ]
+  },
+  "AT": {
+   "names": {
+    "es": "Austria",
+    "en": "Austria",
+    "pt": "Áustria"
+   },
+   "in": {
+    "es": "en Austria",
+    "en": "in Austria",
+    "pt": "na Áustria"
+   },
+   "aliases": [
+    "austria",
+    "áustria",
+    "viena",
+    "vienna"
+   ]
+  },
+  "SE": {
+   "names": {
+    "es": "Suecia",
+    "en": "Sweden",
+    "pt": "Suécia"
+   },
+   "in": {
+    "es": "en Suecia",
+    "en": "in Sweden",
+    "pt": "na Suécia"
+   },
+   "aliases": [
+    "suecia",
+    "sweden",
+    "suécia",
+    "estocolmo",
+    "stockholm"
+   ]
+  },
+  "NO": {
+   "names": {
+    "es": "Noruega",
+    "en": "Norway",
+    "pt": "Noruega"
+   },
+   "in": {
+    "es": "en Noruega",
+    "en": "in Norway",
+    "pt": "na Noruega"
+   },
+   "aliases": [
+    "noruega",
+    "norway",
+    "oslo"
+   ]
+  },
+  "DK": {
+   "names": {
+    "es": "Dinamarca",
+    "en": "Denmark",
+    "pt": "Dinamarca"
+   },
+   "in": {
+    "es": "en Dinamarca",
+    "en": "in Denmark",
+    "pt": "na Dinamarca"
+   },
+   "aliases": [
+    "dinamarca",
+    "denmark",
+    "copenhague",
+    "copenhagen"
+   ]
+  },
+  "FI": {
+   "names": {
+    "es": "Finlandia",
+    "en": "Finland",
+    "pt": "Finlândia"
+   },
+   "in": {
+    "es": "en Finlandia",
+    "en": "in Finland",
+    "pt": "na Finlândia"
+   },
+   "aliases": [
+    "finlandia",
+    "finland",
+    "finlândia",
+    "helsinki",
+    "helsinquia"
+   ]
+  },
+  "IS": {
+   "names": {
+    "es": "Islandia",
+    "en": "Iceland",
+    "pt": "Islândia"
+   },
+   "in": {
+    "es": "en Islandia",
+    "en": "in Iceland",
+    "pt": "na Islândia"
+   },
+   "aliases": [
+    "islandia",
+    "iceland",
+    "islândia",
+    "reikiavik",
+    "reykjavik"
+   ]
+  },
+  "PL": {
+   "names": {
+    "es": "Polonia",
+    "en": "Poland",
+    "pt": "Polônia"
+   },
+   "in": {
+    "es": "en Polonia",
+    "en": "in Poland",
+    "pt": "na Polônia"
+   },
+   "aliases": [
+    "polonia",
+    "poland",
+    "polônia",
+    "varsovia",
+    "warsaw"
+   ]
+  },
+  "CZ": {
+   "names": {
+    "es": "Chequia",
+    "en": "Czechia",
+    "pt": "Chéquia"
+   },
+   "in": {
+    "es": "en Chequia",
+    "en": "in Czechia",
+    "pt": "na Chéquia"
+   },
+   "aliases": [
+    "chequia",
+    "czechia",
+    "republica checa",
+    "república checa",
+    "czech republic",
+    "praga",
+    "prague"
+   ]
+  },
+  "GR": {
+   "names": {
+    "es": "Grecia",
+    "en": "Greece",
+    "pt": "Grécia"
+   },
+   "in": {
+    "es": "en Grecia",
+    "en": "in Greece",
+    "pt": "na Grécia"
+   },
+   "aliases": [
+    "grecia",
+    "greece",
+    "grécia",
+    "atenas",
+    "athens"
+   ]
+  },
+  "HU": {
+   "names": {
+    "es": "Hungría",
+    "en": "Hungary",
+    "pt": "Hungria"
+   },
+   "in": {
+    "es": "en Hungría",
+    "en": "in Hungary",
+    "pt": "na Hungria"
+   },
+   "aliases": [
+    "hungria",
+    "hungría",
+    "hungary",
+    "budapest"
+   ]
+  },
+  "HR": {
+   "names": {
+    "es": "Croacia",
+    "en": "Croatia",
+    "pt": "Croácia"
+   },
+   "in": {
+    "es": "en Croacia",
+    "en": "in Croatia",
+    "pt": "na Croácia"
+   },
+   "aliases": [
+    "croacia",
+    "croatia",
+    "croácia",
+    "zagreb"
+   ]
+  },
+  "SK": {
+   "names": {
+    "es": "Eslovaquia",
+    "en": "Slovakia",
+    "pt": "Eslováquia"
+   },
+   "in": {
+    "es": "en Eslovaquia",
+    "en": "in Slovakia",
+    "pt": "na Eslováquia"
+   },
+   "aliases": [
+    "eslovaquia",
+    "slovakia",
+    "eslováquia",
+    "bratislava"
+   ]
+  },
+  "SI": {
+   "names": {
+    "es": "Eslovenia",
+    "en": "Slovenia",
+    "pt": "Eslovênia"
+   },
+   "in": {
+    "es": "en Eslovenia",
+    "en": "in Slovenia",
+    "pt": "na Eslovênia"
+   },
+   "aliases": [
+    "eslovenia",
+    "slovenia",
+    "eslovênia",
+    "liubliana",
+    "ljubljana"
+   ]
+  },
+  "TR": {
+   "names": {
+    "es": "Turquía",
+    "en": "Türkiye",
+    "pt": "Turquia"
+   },
+   "in": {
+    "es": "en Turquía",
+    "en": "in Türkiye",
+    "pt": "na Turquia"
+   },
+   "aliases": [
+    "turquia",
+    "turquía",
+    "turkiye",
+    "türkiye",
+    "turkey",
+    "estambul",
+    "istanbul",
+    "ankara"
+   ]
+  },
+  "EE": {
+   "names": {
+    "es": "Estonia",
+    "en": "Estonia",
+    "pt": "Estônia"
+   },
+   "in": {
+    "es": "en Estonia",
+    "en": "in Estonia",
+    "pt": "na Estônia"
+   },
+   "aliases": [
+    "estonia",
+    "estônia",
+    "tallin",
+    "tallinn"
+   ]
+  },
+  "NZ": {
+   "names": {
+    "es": "Nueva Zelanda",
+    "en": "New Zealand",
+    "pt": "Nova Zelândia"
+   },
+   "in": {
+    "es": "en Nueva Zelanda",
+    "en": "in New Zealand",
+    "pt": "na Nova Zelândia"
+   },
+   "aliases": [
+    "nueva zelanda",
+    "new zealand",
+    "nova zelândia",
+    "wellington",
+    "auckland"
+   ]
+  },
+  "KR": {
+   "names": {
+    "es": "Corea del Sur",
+    "en": "South Korea",
+    "pt": "Coreia do Sul"
+   },
+   "in": {
+    "es": "en Corea del Sur",
+    "en": "in South Korea",
+    "pt": "na Coreia do Sul"
+   },
+   "aliases": [
+    "corea del sur",
+    "south korea",
+    "coreia do sul",
+    "seul",
+    "seúl",
+    "seoul"
+   ]
+  },
+  "IN": {
+   "names": {
+    "es": "India",
+    "en": "India",
+    "pt": "Índia"
+   },
+   "in": {
+    "es": "en la India",
+    "en": "in India",
+    "pt": "na Índia"
+   },
+   "aliases": [
+    "india",
+    "índia",
+    "nueva delhi",
+    "new delhi",
+    "bombay",
+    "mumbai"
+   ]
+  },
+  "TH": {
+   "names": {
+    "es": "Tailandia",
+    "en": "Thailand",
+    "pt": "Tailândia"
+   },
+   "in": {
+    "es": "en Tailandia",
+    "en": "in Thailand",
+    "pt": "na Tailândia"
+   },
+   "aliases": [
+    "tailandia",
+    "thailand",
+    "tailândia",
+    "bangkok"
+   ]
+  },
+  "ID": {
+   "names": {
+    "es": "Indonesia",
+    "en": "Indonesia",
+    "pt": "Indonésia"
+   },
+   "in": {
+    "es": "en Indonesia",
+    "en": "in Indonesia",
+    "pt": "na Indonésia"
+   },
+   "aliases": [
+    "indonesia",
+    "indonésia",
+    "yakarta",
+    "jakarta",
+    "bali"
+   ]
+  },
+  "VN": {
+   "names": {
+    "es": "Vietnam",
+    "en": "Vietnam",
+    "pt": "Vietnã"
+   },
+   "in": {
+    "es": "en Vietnam",
+    "en": "in Vietnam",
+    "pt": "no Vietnã"
+   },
+   "aliases": [
+    "vietnam",
+    "vietnã",
+    "hanoi",
+    "hanói"
+   ]
+  },
+  "SG": {
+   "names": {
+    "es": "Singapur",
+    "en": "Singapore",
+    "pt": "Singapura"
+   },
+   "in": {
+    "es": "en Singapur",
+    "en": "in Singapore",
+    "pt": "em Singapura"
+   },
+   "aliases": [
+    "singapur",
+    "singapore",
+    "singapura"
+   ]
+  },
+  "MY": {
+   "names": {
+    "es": "Malasia",
+    "en": "Malaysia",
+    "pt": "Malásia"
+   },
+   "in": {
+    "es": "en Malasia",
+    "en": "in Malaysia",
+    "pt": "na Malásia"
+   },
+   "aliases": [
+    "malasia",
+    "malaysia",
+    "malásia",
+    "kuala lumpur"
+   ]
+  },
+  "IL": {
+   "names": {
+    "es": "Israel",
+    "en": "Israel",
+    "pt": "Israel"
+   },
+   "in": {
+    "es": "en Israel",
+    "en": "in Israel",
+    "pt": "em Israel"
+   },
+   "aliases": [
+    "israel",
+    "tel aviv",
+    "jerusalen",
+    "jerusalém",
+    "jerusalem"
+   ]
+  },
+  "AE": {
+   "names": {
+    "es": "Emiratos Árabes Unidos",
+    "en": "the United Arab Emirates",
+    "pt": "Emirados Árabes Unidos"
+   },
+   "in": {
+    "es": "en Emiratos Árabes Unidos",
+    "en": "in the United Arab Emirates",
+    "pt": "nos Emirados Árabes Unidos"
+   },
+   "aliases": [
+    "emiratos arabes unidos",
+    "emiratos árabes unidos",
+    "united arab emirates",
+    "emirados árabes unidos",
+    "dubai",
+    "dubái",
+    "abu dabi",
+    "abu dhabi"
+   ]
+  },
+  "ZA": {
+   "names": {
+    "es": "Sudáfrica",
+    "en": "South Africa",
+    "pt": "África do Sul"
+   },
+   "in": {
+    "es": "en Sudáfrica",
+    "en": "in South Africa",
+    "pt": "na África do Sul"
+   },
+   "aliases": [
+    "sudafrica",
+    "sudáfrica",
+    "south africa",
+    "áfrica do sul",
+    "johannesburgo",
+    "johannesburg",
+    "ciudad del cabo",
+    "cape town"
+   ]
+  },
+  "KE": {
+   "names": {
+    "es": "Kenia",
+    "en": "Kenya",
+    "pt": "Quênia"
+   },
+   "in": {
+    "es": "en Kenia",
+    "en": "in Kenya",
+    "pt": "no Quênia"
+   },
+   "aliases": [
+    "kenia",
+    "kenya",
+    "quênia",
+    "nairobi"
+   ]
+  },
+  "NG": {
+   "names": {
+    "es": "Nigeria",
+    "en": "Nigeria",
+    "pt": "Nigéria"
+   },
+   "in": {
+    "es": "en Nigeria",
+    "en": "in Nigeria",
+    "pt": "na Nigéria"
+   },
+   "aliases": [
+    "nigeria",
+    "nigéria",
+    "lagos",
+    "abuya",
+    "abuja"
+   ]
   }
  },
  "facts": [
@@ -1796,6 +2498,1380 @@
     "url": "https://www.infrastructure.gov.au/emergency-calls",
     "quote": "Triple Zero (000) is the number most Australians will use to call police, fire or ambulance in an emergency situation.",
     "checked": "2026-10-28"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "JP",
+   "value": "110",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Embajada de Australia en Japón, información consular",
+    "url": "https://japan.embassy.gov.au/tkyo/consular.html",
+    "quote": "Police | 110",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "JP",
+   "value": "119",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Embajada de Australia en Japón, información consular",
+    "url": "https://japan.embassy.gov.au/tkyo/consular.html",
+    "quote": "Fire | 119",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "JP",
+   "value": "119",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "Embajada de Australia en Japón, información consular",
+    "url": "https://japan.embassy.gov.au/tkyo/consular.html",
+    "quote": "Ambulance | 119",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "BZ",
+   "value": "911",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Belice)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/belize",
+    "quote": "Call 911.",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "BS",
+   "value": "911",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Bahamas)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/bahamas",
+    "quote": "Call 911 or 919.",
+    "checked": "2026-10-30"
+   },
+   "note": {
+    "es": "también el 919",
+    "en": "also 919",
+    "pt": "também o 919"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "JM",
+   "value": "110",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Jamaica)",
+    "url": "https://www.gov.uk/foreign-travel-advice/jamaica/print",
+    "quote": "Ambulance: 110",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "JM",
+   "value": "110",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Jamaica)",
+    "url": "https://www.gov.uk/foreign-travel-advice/jamaica/print",
+    "quote": "Fire: 110",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "JM",
+   "value": "119",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Jamaica)",
+    "url": "https://www.gov.uk/foreign-travel-advice/jamaica/print",
+    "quote": "Police: 119",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "TT",
+   "value": "990",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Trinidad y Tobago)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/trinidad-and-tobago",
+    "quote": "Call 990.",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "TT",
+   "value": "811",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Trinidad y Tobago)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/trinidad-and-tobago",
+    "quote": "Call 811 or 990.",
+    "checked": "2026-10-30"
+   },
+   "note": {
+    "es": "también el 990",
+    "en": "also 990",
+    "pt": "também o 990"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "TT",
+   "value": "999",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Trinidad y Tobago)",
+    "url": "https://www.smartraveller.gov.au/destinations/americas/trinidad-and-tobago",
+    "quote": "Call 999.",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "IE",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Gobierno de Australia (Smartraveller), consejos de viaje (Irlanda)",
+    "url": "https://www.smartraveller.gov.au/destinations/europe/ireland",
+    "quote": "Call 112.",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "NL",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "The Hague International Centre (La Haya), emergencias y líneas de ayuda",
+    "url": "https://www.thehagueinternationalcentre.nl/living-in-the-hague-region/daily-life/emergencies-and-help-lines",
+    "quote": "In case of an emergency, you should call 112.",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "BE",
+   "value": "101",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Departamento de Estado de EE. UU., consejos de viaje (Bélgica)",
+    "url": "https://travel.state.gov/content/travel/en/traveladvisories/traveladvisories/belgium-travel-advisory.html",
+    "quote": "You may report crimes to the local police by dialing 101.",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "BE",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Departamento de Estado de EE. UU., consejos de viaje (Bélgica)",
+    "url": "https://travel.state.gov/content/travel/en/traveladvisories/traveladvisories/belgium-travel-advisory.html",
+    "quote": "Dial 112 for all other emergencies.",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "BE",
+   "value": "100",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "Departamento de Estado de EE. UU., consejos de viaje (Bélgica)",
+    "url": "https://travel.state.gov/content/travel/en/traveladvisories/traveladvisories/belgium-travel-advisory.html",
+    "quote": "Dial 112 or 100 for ambulance",
+    "checked": "2026-10-30"
+   },
+   "note": {
+    "es": "también el 112",
+    "en": "also 112",
+    "pt": "também o 112"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "CH",
+   "value": "117",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Turismo de Suiza (myswitzerland.com), números de emergencia",
+    "url": "https://www.myswitzerland.com/en-ae/planning/about-switzerland/general-facts/emergency/safer-travel/",
+    "quote": "Police: 117",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "CH",
+   "value": "118",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Turismo de Suiza (myswitzerland.com), números de emergencia",
+    "url": "https://www.myswitzerland.com/en-ae/planning/about-switzerland/general-facts/emergency/safer-travel/",
+    "quote": "Fire-service: 118",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "CH",
+   "value": "144",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "Turismo de Suiza (myswitzerland.com), números de emergencia",
+    "url": "https://www.myswitzerland.com/en-ae/planning/about-switzerland/general-facts/emergency/safer-travel/",
+    "quote": "Ambulance: 144",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.poison",
+   "region": "CH",
+   "value": "145",
+   "label": {
+    "es": "centro de toxicología",
+    "en": "poison control centre",
+    "pt": "centro de toxicologia"
+   },
+   "source": {
+    "title": "Turismo de Suiza (myswitzerland.com), números de emergencia",
+    "url": "https://www.myswitzerland.com/en-ae/planning/about-switzerland/general-facts/emergency/safer-travel/",
+    "quote": "Tox-Zentrum: 145",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "CH",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Turismo de Suiza (myswitzerland.com), números de emergencia",
+    "url": "https://www.myswitzerland.com/en-ae/planning/about-switzerland/general-facts/emergency/safer-travel/",
+    "quote": "European Emergeny no: 112",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "AT",
+   "value": "122",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Ciudad de Viena (wien.gv.at), contactos de emergencia",
+    "url": "https://www.wien.gv.at/en/content/contact-emergency",
+    "quote": "Fire brigade | 122",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "AT",
+   "value": "144",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "Ciudad de Viena (wien.gv.at), contactos de emergencia",
+    "url": "https://www.wien.gv.at/en/content/contact-emergency",
+    "quote": "Ambulance service | 144",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "AT",
+   "value": "133",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Ciudad de Viena (wien.gv.at), contactos de emergencia",
+    "url": "https://www.wien.gv.at/en/content/contact-emergency",
+    "quote": "Police | 133",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "AT",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Ciudad de Viena (wien.gv.at), contactos de emergencia",
+    "url": "https://www.wien.gv.at/en/content/contact-emergency",
+    "quote": "European emergency number | 112",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.poison",
+   "region": "AT",
+   "value": "01 406 43 43",
+   "label": {
+    "es": "centro de toxicología",
+    "en": "poison control centre",
+    "pt": "centro de toxicologia"
+   },
+   "source": {
+    "title": "Ciudad de Viena (wien.gv.at), contactos de emergencia",
+    "url": "https://www.wien.gv.at/en/content/contact-emergency",
+    "quote": "Expert assistance in cases of poisoning | 01 406 43 43",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "SE",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Suecia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/sweden/getting-help",
+    "quote": "Telephone: 112 (ambulance, fire, police)",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "NO",
+   "value": "110",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Noruega)",
+    "url": "https://www.gov.uk/foreign-travel-advice/norway/getting-help",
+    "quote": "Fire: 110",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "NO",
+   "value": "112",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Noruega)",
+    "url": "https://www.gov.uk/foreign-travel-advice/norway/getting-help",
+    "quote": "Police: 112",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "NO",
+   "value": "113",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Noruega)",
+    "url": "https://www.gov.uk/foreign-travel-advice/norway/getting-help",
+    "quote": "Ambulance: 113",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "DK",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Dinamarca)",
+    "url": "https://www.gov.uk/foreign-travel-advice/denmark/getting-help",
+    "quote": "Telephone: 112 (ambulance, fire, police).",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "FI",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Finlandia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/finland/getting-help",
+    "quote": "Telephone: 112 (ambulance, fire, police)",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "IS",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Islandia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/iceland/getting-help",
+    "quote": "Telephone: 112 (ambulance, fire, police)",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "PL",
+   "value": "999",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Polonia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/poland/getting-help",
+    "quote": "Ambulance: 999",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "PL",
+   "value": "998",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Polonia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/poland/getting-help",
+    "quote": "Fire: 998",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "PL",
+   "value": "997",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Polonia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/poland/getting-help",
+    "quote": "Police: 997",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "CZ",
+   "value": "150",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Oficina Estatal de Seguridad Nuclear de Chequia (SÚJB), instrucciones en caso de emergencia",
+    "url": "https://sujb.gov.cz/en/instructions-emergency",
+    "quote": "150 – Fire and rescue service of the Czech Republic",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.medical",
+   "region": "CZ",
+   "value": "155",
+   "label": {
+    "es": "emergencias médicas",
+    "en": "medical emergencies",
+    "pt": "emergências médicas"
+   },
+   "source": {
+    "title": "Oficina Estatal de Seguridad Nuclear de Chequia (SÚJB), instrucciones en caso de emergencia",
+    "url": "https://sujb.gov.cz/en/instructions-emergency",
+    "quote": "155 – Emergency medical services",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "CZ",
+   "value": "158",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Oficina Estatal de Seguridad Nuclear de Chequia (SÚJB), instrucciones en caso de emergencia",
+    "url": "https://sujb.gov.cz/en/instructions-emergency",
+    "quote": "158 – Police of CR or 156 – Municipal police",
+    "checked": "2026-10-30"
+   },
+   "note": {
+    "es": "la policía municipal es el 156",
+    "en": "municipal police is 156",
+    "pt": "a polícia municipal é o 156"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "CZ",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Oficina Estatal de Seguridad Nuclear de Chequia (SÚJB), instrucciones en caso de emergencia",
+    "url": "https://sujb.gov.cz/en/instructions-emergency",
+    "quote": "The Single European Emergency Call Number 112",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "GR",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Grecia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/greece/getting-help",
+    "quote": "Telephone: 112 (ambulance, fire, police)",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "HU",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Hungría)",
+    "url": "https://www.gov.uk/foreign-travel-advice/hungary/getting-help",
+    "quote": "Telephone: 112 (ambulance, fire, police)",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "HR",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Croacia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/croatia/getting-help",
+    "quote": "Telephone: 112 (ambulance, fire, police)",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "SK",
+   "value": "155",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Eslovaquia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/slovakia/getting-help",
+    "quote": "Ambulance: 155",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "SK",
+   "value": "150",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Eslovaquia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/slovakia/getting-help",
+    "quote": "Fire: 150",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "SK",
+   "value": "158",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Eslovaquia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/slovakia/getting-help",
+    "quote": "Police: 158",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "SI",
+   "value": "113",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Eslovenia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/slovenia/getting-help",
+    "quote": "Police: 113",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "SI",
+   "value": "112",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Eslovenia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/slovenia/getting-help",
+    "quote": "Ambulance, fire and mountain rescue: 112",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "SI",
+   "value": "112",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Eslovenia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/slovenia/getting-help",
+    "quote": "Ambulance, fire and mountain rescue: 112",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "TR",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Turquía)",
+    "url": "https://www.gov.uk/foreign-travel-advice/turkey/getting-help",
+    "quote": "Telephone: 112 (ambulance, fire, police)",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "EE",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Estonia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/estonia/getting-help",
+    "quote": "Telephone: 112 (ambulance, fire, police)",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "NZ",
+   "value": "111",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "Policía de Nueva Zelanda, guía de seguridad para visitantes",
+    "url": "https://www.police.govt.nz/advice/personal-community/keeping-safe/visitors-safety-guide",
+    "quote": "The emergency number for fire, ambulance and police is 111",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "KR",
+   "value": "112",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "Embajada de Australia en Corea del Sur, información consular",
+    "url": "https://southkorea.embassy.gov.au/seol/consular.html",
+    "quote": "POLICE | 112",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "KR",
+   "value": "119",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "Embajada de Australia en Corea del Sur, información consular",
+    "url": "https://southkorea.embassy.gov.au/seol/consular.html",
+    "quote": "FIRE | 119",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "KR",
+   "value": "119",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "Embajada de Australia en Corea del Sur, información consular",
+    "url": "https://southkorea.embassy.gov.au/seol/consular.html",
+    "quote": "AMBULANCE | 119",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "IN",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (India)",
+    "url": "https://www.gov.uk/foreign-travel-advice/india/getting-help",
+    "quote": "Telephone: 112 (ambulance, fire, police)",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "TH",
+   "value": "191",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Tailandia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/thailand/getting-help",
+    "quote": "Telephone: 191 (ambulance, fire, police)",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "TH",
+   "value": "1669",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Tailandia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/thailand/getting-help",
+    "quote": "Ambulance: 1669",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "TH",
+   "value": "199",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Tailandia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/thailand/getting-help",
+    "quote": "Fire: 199",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "TH",
+   "value": "191",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Tailandia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/thailand/getting-help",
+    "quote": "Police: 191",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "ID",
+   "value": "118",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Indonesia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/indonesia/getting-help",
+    "quote": "Ambulance: 118",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "ID",
+   "value": "112",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Indonesia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/indonesia/getting-help",
+    "quote": "Fire: 112",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "ID",
+   "value": "110",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Indonesia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/indonesia/getting-help",
+    "quote": "Police: 110",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "VN",
+   "value": "115",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Vietnam)",
+    "url": "https://www.gov.uk/foreign-travel-advice/vietnam/getting-help",
+    "quote": "Ambulance: 115",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "VN",
+   "value": "114",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Vietnam)",
+    "url": "https://www.gov.uk/foreign-travel-advice/vietnam/getting-help",
+    "quote": "Fire: 114",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "VN",
+   "value": "113",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Vietnam)",
+    "url": "https://www.gov.uk/foreign-travel-advice/vietnam/getting-help",
+    "quote": "Police: 113",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "SG",
+   "value": "995",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Singapur)",
+    "url": "https://www.gov.uk/foreign-travel-advice/singapore/getting-help",
+    "quote": "Ambulance and fire: 995",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "SG",
+   "value": "995",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Singapur)",
+    "url": "https://www.gov.uk/foreign-travel-advice/singapore/getting-help",
+    "quote": "Ambulance and fire: 995",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "SG",
+   "value": "999",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Singapur)",
+    "url": "https://www.gov.uk/foreign-travel-advice/singapore/getting-help",
+    "quote": "Police: 999",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "MY",
+   "value": "999",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Malasia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/malaysia/getting-help",
+    "quote": "Police and ambulance: 999",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "MY",
+   "value": "999",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Malasia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/malaysia/getting-help",
+    "quote": "Police and ambulance: 999",
+    "checked": "2026-10-30"
+   },
+   "note": {
+    "es": "desde un móvil también se puede marcar el 112",
+    "en": "from a mobile phone, 112 can also be dialled",
+    "pt": "de um celular, também se pode discar o 112"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "MY",
+   "value": "994",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Malasia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/malaysia/getting-help",
+    "quote": "Fire: 994",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "IL",
+   "value": "101",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Israel)",
+    "url": "https://www.gov.uk/foreign-travel-advice/israel/getting-help",
+    "quote": "Ambulance: 101",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "IL",
+   "value": "102",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Israel)",
+    "url": "https://www.gov.uk/foreign-travel-advice/israel/getting-help",
+    "quote": "Fire: 102",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "IL",
+   "value": "100",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Israel)",
+    "url": "https://www.gov.uk/foreign-travel-advice/israel/getting-help",
+    "quote": "Police: 100",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "AE",
+   "value": "998",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Emiratos Árabes Unidos)",
+    "url": "https://www.gov.uk/foreign-travel-advice/united-arab-emirates/getting-help",
+    "quote": "Ambulance: 998",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "AE",
+   "value": "997",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Emiratos Árabes Unidos)",
+    "url": "https://www.gov.uk/foreign-travel-advice/united-arab-emirates/getting-help",
+    "quote": "Fire: 997",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "AE",
+   "value": "999",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Emiratos Árabes Unidos)",
+    "url": "https://www.gov.uk/foreign-travel-advice/united-arab-emirates/getting-help",
+    "quote": "Police: 999",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "ZA",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Sudáfrica)",
+    "url": "https://www.gov.uk/foreign-travel-advice/south-africa/getting-help",
+    "quote": "All emergencies from mobiles: 112",
+    "checked": "2026-10-30"
+   },
+   "note": {
+    "es": "desde móviles",
+    "en": "from mobile phones",
+    "pt": "de celulares"
+   }
+  },
+  {
+   "key": "emergency.ambulance",
+   "region": "ZA",
+   "value": "10177",
+   "label": {
+    "es": "ambulancia",
+    "en": "ambulance",
+    "pt": "ambulância"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Sudáfrica)",
+    "url": "https://www.gov.uk/foreign-travel-advice/south-africa/getting-help",
+    "quote": "Ambulance and fire: 10177",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.fire",
+   "region": "ZA",
+   "value": "10177",
+   "label": {
+    "es": "bomberos",
+    "en": "fire department",
+    "pt": "bombeiros"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Sudáfrica)",
+    "url": "https://www.gov.uk/foreign-travel-advice/south-africa/getting-help",
+    "quote": "Ambulance and fire: 10177",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.police",
+   "region": "ZA",
+   "value": "10111",
+   "label": {
+    "es": "policía",
+    "en": "police",
+    "pt": "polícia"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Sudáfrica)",
+    "url": "https://www.gov.uk/foreign-travel-advice/south-africa/getting-help",
+    "quote": "Police: 10111",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "KE",
+   "value": "999",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Kenia)",
+    "url": "https://www.gov.uk/foreign-travel-advice/kenya/getting-help",
+    "quote": "Telephone: 999 (ambulance, fire, police)",
+    "checked": "2026-10-30"
+   }
+  },
+  {
+   "key": "emergency.general",
+   "region": "NG",
+   "value": "112",
+   "label": {
+    "es": "emergencias (número único)",
+    "en": "emergencies (single number)",
+    "pt": "emergências (número único)"
+   },
+   "source": {
+    "title": "GOV.UK (FCDO), consejos de viaje (Nigeria)",
+    "url": "https://www.gov.uk/foreign-travel-advice/nigeria/getting-help",
+    "quote": "Telephone: 112 (ambulance, fire, police)",
+    "checked": "2026-10-30"
    }
   }
  ]
