@@ -39,7 +39,6 @@ describe("P-F1: open_app detrás de la puerta de confirmación", () => {
   it("cada esquema permitido confirmado abre el enlace normalizado", async () => {
     const cases: Array<[string, string]> = [
       ["https://nido.example/x", "https://nido.example/x"],
-      ["http://nido.example/x", "http://nido.example/x"],
       ["tel:+15551234567", "tel:+15551234567"],
       ["sms:+15551234567", "sms:+15551234567"],
       ["mailto:hola@nido.example", "mailto:hola@nido.example"],
@@ -59,11 +58,18 @@ describe("P-F1: open_app detrás de la puerta de confirmación", () => {
     await h["open_app"]({ link: "HTTPS://NIDO.EXAMPLE/X" });
     expect(openURL).toHaveBeenCalledWith("https://NIDO.EXAMPLE/X");
     openURL.mockClear();
-    await h["open_app"]({ link: "HtTp://nido.example" });
-    expect(openURL).toHaveBeenCalledWith("http://nido.example");
-    openURL.mockClear();
     await h["open_app"]({ link: "TEL:+15551234567" });
     expect(openURL).toHaveBeenCalledWith("tel:+15551234567");
+  });
+
+  it("F2-11: http se rechaza con su motivo propio, en cualquier capitalización", async () => {
+    const h = buildToolHandlers({ requestConfirm: async () => true });
+    for (const link of ["http://nido.example/x", "HtTp://nido.example", "HTTP://NIDO.EXAMPLE"]) {
+      openURL.mockClear();
+      const out = await h["open_app"]({ link });
+      expect(openURL).not.toHaveBeenCalled();
+      expect(out).toMatch(/http sin cifrar|unencrypted http/);
+    }
   });
 
   it("espacios al inicio/final se recortan antes de clasificar", async () => {
@@ -177,13 +183,9 @@ describe("P-F1: open_app detrás de la puerta de confirmación", () => {
 });
 
 describe("P-F1: clasificador puro de enlaces", () => {
-  it("permite los 5 esquemas y normaliza mayúsculas", () => {
+  it("permite los 4 esquemas y normaliza mayúsculas; http ya no (F2-11)", () => {
     expect(classifyOpenAppTarget("https://x")).toMatchObject({ ok: true, scheme: "https" });
-    expect(classifyOpenAppTarget("HTTP://x")).toMatchObject({
-      ok: true,
-      scheme: "http",
-      normalized: "http://x",
-    });
+    expect(classifyOpenAppTarget("HTTP://x")).toEqual({ ok: false, reason: "insecure-http" });
     expect(classifyOpenAppTarget("TEL:+1")).toMatchObject({ ok: true, scheme: "tel" });
     expect(classifyOpenAppTarget("Sms:+1")).toMatchObject({ ok: true, scheme: "sms" });
     expect(classifyOpenAppTarget("MAILTO:a@b.c")).toMatchObject({ ok: true, scheme: "mailto" });

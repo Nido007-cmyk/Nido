@@ -13,8 +13,12 @@
  *
  * 1. Never silently — the handler is wrapped in `withConfirmation`
  *    (see confirm.ts / handlers.ts); no confirmation, no `openURL`.
- * 2. Allowlist only — exactly https, http, tel, sms, mailto. Anything
+ * 2. Allowlist only — exactly https, tel, sms, mailto. Anything
  *    else fails closed, including tricks against the scheme check.
+ *    Plain http is rejected with its own reason (full audit
+ *    2026-10-31, F2-11): the same page almost always exists over
+ *    https, and sending the user to an unencrypted page from a
+ *    model-suggested link is a risk with no upside.
  *
  * The classifier is pure and synchronous so it can be unit-tested
  * deterministically; both the confirm-dialog `describe` and the inner
@@ -25,7 +29,6 @@
 /** Schemes an agent may hand to the OS. Nothing else reaches Linking. */
 export const OPEN_APP_ALLOWED_SCHEMES = [
   "https",
-  "http",
   "tel",
   "sms",
   "mailto",
@@ -38,6 +41,7 @@ export type OpenAppRejectReason =
   | "empty"
   | "no-scheme"
   | "scheme-not-allowed"
+  | "insecure-http"
   | "unsafe-chars";
 
 export type OpenAppClassification =
@@ -108,6 +112,10 @@ export function classifyOpenAppTarget(
   const m = SCHEME_RE.exec(target);
   if (!m) return { ok: false, reason: "no-scheme" };
   const scheme = m[1].toLowerCase();
+  // F2-11: http gets its own reason so the refusal explains itself
+  // (unencrypted; ask for the https version) instead of a generic
+  // "scheme not allowed".
+  if (scheme === "http") return { ok: false, reason: "insecure-http" };
   if (!(OPEN_APP_ALLOWED_SCHEMES as readonly string[]).includes(scheme)) {
     return { ok: false, reason: "scheme-not-allowed" };
   }

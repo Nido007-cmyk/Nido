@@ -900,12 +900,13 @@
     "confirmPayloadChanged": "Blocked for security: the payload of “{{tool}}” changed after confirmation. The action was NOT executed.",
     "openAppTitle": "Open external link",
     "openAppMessage": "Open this link outside NIDO?\n\n{{target}}",
-    "openAppRejected": "NIDO can't open this link ({{reason}}). Allowed schemes: https, http, tel, sms, mailto.",
+    "openAppRejected": "NIDO can't open this link ({{reason}}). Allowed schemes: https, tel, sms, mailto.",
     "openAppReason": {
       "empty": "it's empty",
       "no-scheme": "it doesn't start with a valid scheme",
       "scheme-not-allowed": "its scheme isn't allowed",
-      "unsafe-chars": "it contains unsafe characters"
+      "unsafe-chars": "it contains unsafe characters",
+      "insecure-http": "it is an unencrypted http link; the https version is the one to open"
     },
     "pairDisambiguationTitle": "Disambiguate pairing",
     "pairAmbiguousAsk": "This code is for “{{name}}” (fingerprint {{fingerprint}}), but you already have {{count}} live contact(s) with that name under a DIFFERENT identity: {{candidates}}. A name is not an identity — I cannot assume this is the same person.\n\nTell me explicitly (in chat):\n• “replace” — the same person with a new device: retire the old identity everywhere (destructive);\n• “different person” — a different person: give me a unique name for the new contact;\n• “cancel” — do nothing.\n\nIf you don't choose, I cancel. Nothing has been paired yet.",

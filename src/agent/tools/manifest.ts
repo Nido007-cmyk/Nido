@@ -87,7 +87,8 @@ export const LOCAL_TOOLS: ToolDefinition[] = [
     name: "open_app",
     description:
       "Abre un enlace explícito fuera de NIDO (navegador, marcador, mensajes o correo). " +
-      "REQUIERE confirmación explícita del usuario. Solo esquemas permitidos: https, http, tel, sms, mailto. " +
+      "REQUIERE confirmación explícita del usuario. Solo esquemas permitidos: https, tel, sms, mailto " +
+      "(http se rechaza: sin cifrar). " +
       "Cualquier otro esquema, enlace malformado o vacío se rechaza sin abrir nada.",
     parameters: {
       link: {

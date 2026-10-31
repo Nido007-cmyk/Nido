@@ -22,7 +22,8 @@
  *   lo haya visto nunca.
  * - open_app (P-F1): entrega un enlace al SO (navegador, marcador,
  *   mensajería, correo) y cambia al usuario de app; solo esquemas
- *   explícitamente permitidos (https, http, tel, sms, mailto), todo lo
+ *   explícitamente permitidos (https, tel, sms, mailto; http se
+ *   rechaza por inseguro desde la auditoría F2-11), todo lo
  *   demás falla cerrado antes de cualquier acción externa.
  * - nido_approve_task / nido_reject_task (M-6): decidir sobre una tarea
  *   remota encolada convierte trabajo pendiente en trabajo decidido; es

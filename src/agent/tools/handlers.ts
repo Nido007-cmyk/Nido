@@ -118,11 +118,13 @@ const EN_CONFIRM_FALLBACK: Record<string, string> = {
   "agentConfirm.openAppTitle": "Open external link",
   "agentConfirm.openAppMessage": "Open this link outside NIDO?\n\n{{target}}",
   "agentConfirm.openAppRejected":
-    "NIDO can't open this link ({{reason}}). Allowed schemes: https, http, tel, sms, mailto.",
+    "NIDO can't open this link ({{reason}}). Allowed schemes: https, tel, sms, mailto.",
   "agentConfirm.openAppReason.empty": "it's empty",
   "agentConfirm.openAppReason.no-scheme": "it doesn't start with a valid scheme",
   "agentConfirm.openAppReason.scheme-not-allowed": "its scheme isn't allowed",
   "agentConfirm.openAppReason.unsafe-chars": "it contains unsafe characters",
+  "agentConfirm.openAppReason.insecure-http":
+    "it is an unencrypted http link; the https version is the one to open",
 };
 /** Idioma vigente de la UI para formatear fechas en los diálogos. */
 function confirmLang(): RouterLang {

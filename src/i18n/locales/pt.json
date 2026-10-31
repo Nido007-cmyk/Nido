@@ -900,12 +900,13 @@
     "confirmPayloadChanged": "Bloqueado por segurança: o conteúdo de “{{tool}}” mudou após a sua confirmação. A ação NÃO foi executada.",
     "openAppTitle": "Abrir link externo",
     "openAppMessage": "Abrir este link fora do NIDO?\n\n{{target}}",
-    "openAppRejected": "O NIDO não pode abrir este link ({{reason}}). Esquemas permitidos: https, http, tel, sms, mailto.",
+    "openAppRejected": "O NIDO não pode abrir este link ({{reason}}). Esquemas permitidos: https, tel, sms, mailto.",
     "openAppReason": {
       "empty": "está vazio",
       "no-scheme": "não começa com um esquema válido",
       "scheme-not-allowed": "seu esquema não é permitido",
-      "unsafe-chars": "contém caracteres inseguros"
+      "unsafe-chars": "contém caracteres inseguros",
+      "insecure-http": "é um link http sem criptografia; a que se deve abrir é a versão https"
     },
     "pairDisambiguationTitle": "Esclarecer emparelhamento",
     "pairAmbiguousAsk": "Este código é de “{{name}}” (impressão digital {{fingerprint}}), mas você já tem {{count}} contato(s) ativo(s) com esse nome sob uma identidade DIFERENTE: {{candidates}}. Um nome não é uma identidade: não posso presumir que é a mesma pessoa.\n\nDiga explicitamente (no chat):\n• “replace” — a mesma pessoa com um dispositivo novo: retira a identidade antiga em todos os lugares (destrutivo);\n• “different person” — outra pessoa: dê um nome único para o novo contato;\n• “cancel” — não fazer nada.\n\nSe você não escolher, eu cancelo. Nada foi emparelhado ainda.",
