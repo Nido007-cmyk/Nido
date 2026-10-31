@@ -249,16 +249,27 @@ jobs:
         # Kotlin, SQLCipher, BouncyCastle…) no salen de npm y no estaban en
         # THIRD_PARTY_NOTICES. Su árbol exacto, el de ESTA compilación, se
         # guarda y se adjunta al release. Si falla, no tumba el APK.
+        # Auditoría profesional 2026-10-31 (B-3): el activo salía con el
+        # diario de configuración de Expo pegado delante (versiones, plugins
+        # y códigos ANSI), así que se leía como un registro de construcción
+        # y no como la lista que su nombre promete. El informe de Gradle se
+        # captura en crudo y el activo se recorta a su sección: el árbol de
+        # releaseRuntimeClasspath y su leyenda, sin códigos de color.
         working-directory: android
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --no-daemon -q \
-            > "$GITHUB_WORKSPACE/android-runtime-dependencies.txt"
-          N=$(grep -cE -- '--- [^ ]+:[^ ]+:' "$GITHUB_WORKSPACE/android-runtime-dependencies.txt" || true)
+          RAW="$RUNNER_TEMP/android-runtime-dependencies.raw.txt"
+          OUT="$GITHUB_WORKSPACE/android-runtime-dependencies.txt"
+          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --no-daemon -q --console=plain \
+            > "$RAW"
+          sed 's/\x1b\[[0-9;]*m//g' "$RAW" \
+            | awk '/^-+$/{sep=$0; next} /^Project /{print sep; print; show=1; next} show' \
+            > "$OUT"
+          N=$(grep -cE -- '--- [^ ]+:[^ ]+:' "$OUT" || true)
           echo "::notice title=Dependencias Android en el APK::$N líneas de dependencia (archivo adjunto al release)"
-          grep -oiE '(org\.bouncycastle|net\.zetetic)[^ ]*' "$GITHUB_WORKSPACE/android-runtime-dependencies.txt" | sort -u | head -20 \
+          grep -oiE '(org\.bouncycastle|net\.zetetic)[^ ]*' "$OUT" | sort -u | head -20 \
             | while IFS= read -r l; do echo "::notice title=Dependencia nativa destacada::$l"; done
 
       - name: Upload Android dependency list
