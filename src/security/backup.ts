@@ -36,7 +36,7 @@ const BACKUP_VERSION = 1;
 /** Tope de un respaldo portable (.nidobackup.json): evita agotar la memoria. */
 export const MAX_BUNDLE_BYTES = 100 * 1024 * 1024;
 // A14: misma versión que package.json y el tag del release.
-const APP_VERSION = "0.1.65";
+const APP_VERSION = "0.1.66";
 // SQLCipher magic header: "SQLite format 3\0" — los primeros 16 bytes
 const SQLITE_MAGIC = "SQLite format 3\0";
 

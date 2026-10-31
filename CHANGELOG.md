@@ -4,6 +4,38 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.66-alpha - 2026-10-31
+
+### Knowledge packs
+
+- **Corrected editions of three guide packs** (knowledge-packs-v7):
+  NIDO Local, NIDO Crisis and NIDO Road Travel. In NIDO Local, every
+  fact is now backed by a reachable official source: the Argentina
+  107 and Philippines 911 numbers have a new official backing, and
+  three facts that cited press reports now cite the official source
+  itself. In NIDO Crisis and NIDO Road Travel, the search metadata
+  of two guides was fixed, so their own questions find them again.
+- **A written decision on burn cooling.** The pack documentation
+  now records why NIDO Essentials says to cool a burn for at least
+  10 minutes and NIDO Children and Babies says 20 minutes: each
+  guide follows its own cited source, and the two do not contradict
+  each other.
+
+### Fixes
+
+- **The app no longer asks for the launcher badge permission.** It
+  came from a library bundled with notifications; no part of NIDO
+  uses launcher badges, and the permission is now blocked like the
+  rest of that family.
+- **The project's own pages tell the truth.** The README in both
+  languages says the Local pack covers 69 countries and gives the
+  current test count, and the alpha notes record that 0.1.64 passed
+  the owner's physical round on his tablet.
+- **The Android dependencies file is the list it promises.** The
+  release file `android-runtime-dependencies.txt` now contains only
+  the dependency tree, without the build log that came attached
+  to it.
+
 ## 0.1.65-alpha — 2026-10-31
 
 ### Answers
