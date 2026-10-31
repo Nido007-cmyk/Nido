@@ -20,7 +20,8 @@ cerrada y cubierta por tests de regresión (`src/services/appReset.test.ts`).
 
 | Almacén | Fichero | Contenido destruido |
 |---|---|---|
-| Base de conocimiento (`src/rag/db.ts`) | `<doc>/SQLite/aoair_knowledge.db` | Sesiones y mensajes de chat, chunks y embeddings del corpus/colecciones, telemetría de ejecución |
+| Base de conocimiento (`src/rag/db.ts`) | `<doc>/SQLite/nido_knowledge.db` | Sesiones y mensajes de chat, chunks y embeddings del corpus/colecciones, telemetría de ejecución: los documentos importados y los ficheros personales viven aquí troceados, así que se destruyen con la misma totalidad que chats y memoria |
+| Nombre heredado de la base de conocimiento | `<doc>/SQLite/aoair_knowledge.db` | Base anterior al renombrado; se borra y se verifica en la misma pasada |
 | Base de memoria (`src/agent/memory/memoryStore.ts`) | `<doc>/SQLite/nido_memory.db` | Memoria del agente — hechos, preferencias, personas, registro diario, notas, recordatorios — **y** todas las tablas P2P: identidad del dispositivo, contactos emparejados, mensajes de entrada/salida |
 
 Para cada base, el borrado elimina también sus ficheros auxiliares:
@@ -35,6 +36,10 @@ marcador `.sqlcipher`. La eliminación usa la ruta real de
 | `nido_db_key` | Clave de cifrado (DEK) de SQLCipher compartida por ambas bases. Se borra con el nuevo `deleteDatabaseKey()` (`src/privacy/keyManager.ts`); el borrado usa `deleteItemAsync` de SecureStore, que en Android elimina la entrada cifrada: es la ruta de borrado correcta, porque SecureStore gestiona internamente su propia clave maestra del Keystore (compartida, sin material de usuario) y no hay una entrada de Keystore por clave que borrar a mano. |
 | `nido_p2p_sk` | Clave privada de identidad P2P (X25519). Se borra con el existente `deleteP2PPrivateKey()`. |
 | `nido_p2p_sign_sk` | Clave privada de firma P2P (Ed25519). Se borra con el existente `deleteP2PSigningKey()`. |
+| Blob de la bóveda | La clave de las bases envuelta por la bóveda de hardware (decisión D9). Se borra dentro del mismo `deleteDatabaseKey()`; su ausencia se verifica con `readVaultBlob()`. |
+| KEK de hardware | La clave de cifrado de claves de la bóveda en el Keystore de Android. Se borra con `deleteVaultKek()`; desde la auditoría completa (F2-01) el borrado además *verifica* su ausencia con `vaultStatus().kekExists`. |
+
+El borrado elimina y verifica también las claves de ajustes de SecureStore con estado del usuario: el ajuste de bloqueo estricto de la bóveda, el marcador del último respaldo de D9 (`LAST_BACKUP_KEY`; F2-02), la llave del archivo de rotación (F2-06) y el prompt personalizado del usuario bajo su clave `nido_private_`, cuyo borrado se verifica en modo fail-closed (F2-03).
 
 Borrar la DEK es lo que hace el borrado robusto frente a recuperación
 forense: aunque un fichero de base borrado se recuperara del flash, sin
@@ -49,8 +54,10 @@ con la clave borrada.
 |---|---|
 | `<doc>/settings.json` | Todos los ajustes del usuario (borrado vía `clearSettings()`; la próxima lectura usa los valores por defecto) |
 | `<doc>/models/` | Pesos de modelos descargados (GGUF del LLM + embedding) |
-| `<doc>/corpus/` | Packs de conocimiento y colecciones importadas |
+| `<doc>/corpus/` | Packs de conocimiento descargados (packs SQLite, corpus JSON, índices vectoriales, temporales de packs compartidos). Las colecciones importadas *no* están aquí: viven en la base de conocimiento de arriba |
 | `<doc>/eval/` | Ficheros de resultados de evaluación en dispositivo (pueden contener texto de consultas) |
+| `<doc>/nido-install-state.json`, `<doc>/feature-flags.json`, `<doc>/revoked-peers.json`, `<doc>/rekey-staging.json` | Diario de instalación, interruptores de funciones a fábrica, pares revocados y el archivo cifrado de staging de la rotación, más los temporales de escritura atómica (`settings.json.tmp`, `nido-install-state.json.tmp`, `revoked-peers.json.tmp`; F2-04) |
+| `<doc>/nido-backup-*.db` y acompañantes, `<doc>/restored.db*` | Respaldos locales hechos desde Ajustes y restos de restauración portable, por prefijo |
 | `<cache>/` | Ficheros temporales de exportación entregados al share sheet del SO |
 
 El estado de descargas en memoria también se restablece
@@ -63,7 +70,7 @@ activo observe un fichero borrado.
 1. Liberar contextos nativos de inferencia/embedding, cerrar packs de conocimiento.
 2. Restablecer el estado de descargas en memoria.
 3. Cerrar y borrar ambas bases (conocimiento, luego memoria).
-4. Borrar las tres claves del Keystore; restablecer la caché de DEK en memoria.
+4. Borrar las claves del Keystore y de SecureStore listadas arriba; restablecer la caché de DEK en memoria.
 5. Borrar los directorios models / corpus / eval / cache y `settings.json`.
 6. **Verificar** — ver abajo.
 
@@ -95,6 +102,12 @@ configuración (la comprobación de modelos requeridos falla sin modelos).
 - **Ficheros que el usuario exportó explícitamente** vía el share sheet del
   SO (fuera de los directorios de la app) — una vez entregados a otra app,
   están fuera de alcance.
+- **El portapapeles del sistema** — el texto que el usuario copió (mensajes,
+  el código de emparejamiento) permanece en el portapapeles de Android hasta
+  que el usuario o el sistema lo limpia; el borrado no lo alcanza. La llave
+  del respaldo es la excepción: la app la borra del portapapeles por sí
+  misma a los 60 segundos de copiarla (`copySecret`). PRIVACY.md declara
+  este alcance.
 
 ## Verificación
 
