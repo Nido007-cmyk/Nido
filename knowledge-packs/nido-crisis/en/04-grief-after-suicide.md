@@ -5,7 +5,7 @@ lang: en
 sources: CDC, "About Suicide Prevention" and "Grief" (How Right Now); Samaritans, support after losing someone to suicide; Support After Suicide Partnership and NHS, "Help is at Hand"
 id: crisis-duelo-por-suicidio
 verified: 2026-10-30
-questions: my friend lost his brother to suicide, how can I help | I lost my partner to suicide and I feel guilty | what should I not say to someone bereaved by suicide | is it normal to feel angry after a suicide in the family | how do I explain a suicide in the family to my children | what do I say to my kids when a relative took his own life
+questions: my friend lost his brother to suicide, how can I help | I lost my partner to suicide and I feel guilty | what should I not say to someone bereaved by suicide | is it normal to feel angry after a suicide in the family | how do I explain a suicide in the family to my children | what do I say to my kids when a relative took his own life | how do I talk to my kids about a suicide in the family | should I tell my children the truth about how their uncle died
 ---
 Losing someone to suicide is a different kind of grief: alongside the pain there is often guilt ("could I have prevented it?"), unanswered questions, anger, shame, or a guilty sense of relief if the person had been suffering greatly. All of that is common in this grief, and it does not mean you are doing it wrong or that you loved them any less. Suicide has many causes that come together; it is not the fault of one person, or of one conversation that didn't happen.
 
@@ -18,7 +18,7 @@ Losing someone to suicide is a different kind of grief: alongside the pain there
 - **Watch over them with care.** People bereaved by suicide are at higher risk of depression and of having suicidal thoughts themselves. If you see they cannot cope with daily life after some time, withdraw completely, or talk about wanting to die, help them find professional support or a crisis line, just as you would for anyone else at risk.
 
 ## If you are the one who has lost them
-<!-- questions: how do I tell my children that someone in the family died by suicide | explaining a family suicide to kids, what do I say -->
+<!-- questions: how do I tell my children that someone in the family died by suicide | explaining a family suicide to kids, what do I say | what words can I use to explain a family suicide to a young child | my children keep asking how their grandfather died and it was suicide, what do I answer -->
 - **There is no timetable.** There will be bearable days and days that break open months later, sometimes because of a song or a smell. That is not going backwards: it is the shape of this grief.
 - **Talk about it with people who can listen,** and if you can, find a group of people who have lost someone the same way: being understood without having to explain helps a great deal. Ask your country's crisis line or health services about suicide bereavement groups.
 - **Look after the basics, even at minimum level:** sleep, eating something simple, getting out into daylight, small routines. Grief exhausts the body.
