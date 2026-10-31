@@ -74,12 +74,19 @@ one-line intro, the closing note) are folded into a neighbour. The pack's
 license and attribution say the text was written by NIDO from the cited
 sources (CC BY 4.0).
 
-`knowledge-packs/nido-esencial/` is NIDO's own pack: 58 guides in Spanish and
-58 in English on first aid, health at home, disasters and survival, written
-from Red Cross, AHA, WHO, UNICEF, CDC, FEMA and other public guidance (each
-guide cites its sources). `scripts/check-pack-retrieval.mjs` checks that real
-questions (`retrieval-checks.json`) find the right guide, and CI
-(`.github/workflows/knowledge-pack.yml`) builds and checks it.
+`knowledge-packs/nido-esencial/` is NIDO's own pack: 58 guides in each of
+Spanish, English and Portuguese (Portuguese added in 0.1.65) on first aid,
+health at home, disasters and survival, written from Red Cross, AHA, WHO,
+UNICEF, CDC, FEMA and other public guidance (each guide cites its sources).
+`scripts/check-pack-retrieval.mjs` checks that real questions
+(`retrieval-checks.json`) find the right guide, and CI
+(`.github/workflows/knowledge-pack.yml`) builds and checks it. It is the
+first of a family of guide packs, all published together in the release
+`knowledge-packs-v6`: `nido-local` (emergency numbers and alerts for 69
+countries, in Spanish and English, with a verified-facts table),
+`nido-ninos`, `nido-crisis` (with verified crisis lines for 14 countries),
+`nido-sin-servicios`, `nido-hogar`, `nido-desastres`, `nido-campo` and
+`nido-viaje`, each in Spanish, English and Portuguese.
 
 ### Format v2: indexed questions and verified facts (0.1.55)
 
@@ -157,7 +164,7 @@ already in the ledger has a different fingerprint.
 ## Passing a pack to another phone (no internet)
 
 Since 0.1.55 a NIDO can hand a catalog pack (for example NIDO Essentials,
-about 0.7 MB) to a connected contact over Bluetooth or local Wi-Fi: Packs tab
+about 1.1 MB) to a connected contact over Bluetooth or local Wi-Fi: Packs tab
 → Share. The rules:
 
 - Only **catalog packs** travel: the ones with a SHA-256 in NIDO's signed

@@ -49,7 +49,10 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
 - **Responde con tus documentos**: importa archivos `.txt`, `.md`, `.csv`,
   `.json` o `.pdf` y NIDO los indexa en el teléfono.
 - **Sabe cosas sin internet**: una base de conocimiento integrada y un
-  paquete opcional de Wikipedia (unos 50.000 artículos). Con la búsqueda
+  paquete opcional de Wikipedia (unos 50.000 artículos) y nueve paquetes
+  de guías opcionales escritos por NIDO (Esencial, Local, Niños, Crisis,
+  Sin Servicios, Hogar Seguro, Desastres, Campo y Viaje), con números de
+  emergencia verificados de 69 países. Con la búsqueda
   multilingüe activada puedes preguntar en español, portugués o inglés, y las
   respuestas muestran los artículos de donde salen, con una línea que cuenta
   qué frases salen de ellos y cuáles del modelo sin fuente; si nada de la base

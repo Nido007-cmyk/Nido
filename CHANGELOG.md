@@ -4,6 +4,52 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.65-alpha — 2026-10-31
+
+### Answers
+
+- **An answer no longer dies when you leave the app.** Writing continues
+  in the background; if the system kills the process mid-answer, the
+  chat keeps a note that the answer was cut, instead of silence.
+  Before, leaving the app cancelled the answer and nothing was saved.
+- **Asking for a story is creation again.** "Tell me a story"
+  ("cuéntame un cuento", "conte-me uma história") is understood as a
+  creative request even when you have imported documents; before, a
+  document about a similar topic could swallow the request and answer
+  with its facts instead.
+- **Emergency numbers answer in mixed languages.** Asking a country's
+  emergency number with words from two languages now takes the fixed
+  route and answers from the checked table; when a country is not
+  covered, NIDO says how many countries the installed packs cover
+  instead of guessing.
+- **Guide answers open at the section you asked about.** A question
+  about carbon monoxide symptoms opens the guide at its symptoms
+  section, not at the first one.
+
+### Knowledge packs
+
+- **Seven new guide packs**, each in Spanish, English and Portuguese:
+  NIDO Children and Babies, NIDO Crisis, NIDO Without Utilities, NIDO
+  Safe Home, NIDO Disasters, NIDO Field and Animals and NIDO Road
+  Travel.
+- **NIDO Essentials is now also in Portuguese**: 174 guides, 58 per
+  language.
+- **NIDO Local now covers 69 countries** (155 checked numbers), and
+  the Emergency tab has a crisis-lines card fed by the NIDO Crisis
+  pack (verified lines for 14 countries).
+- **Guides are served in the language you read them in.** Before, the
+  Portuguese text of a guide could come back in Spanish; and NIDO
+  Children and Babies now answers with the guide's own words, like
+  NIDO Essentials does.
+
+### Project information
+
+- Project information: the About screen now includes the "NIDO
+  development" card, with the project's public addresses for those
+  who have asked how to make a voluntary contribution. NIDO remains
+  free and complete without contributing anything, and a
+  contribution grants no advantages and unlocks no features.
+
 ## 0.1.64-alpha — 2026-10-29
 
 ### Security

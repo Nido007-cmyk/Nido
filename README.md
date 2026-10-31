@@ -48,7 +48,10 @@ device, encrypted. There are no accounts, no cloud and no analytics.
 - **Answers from your documents**: import `.txt`, `.md`, `.csv`, `.json` or
   `.pdf` files and NIDO indexes them on the phone.
 - **Knows things offline**: a built-in knowledge base plus an optional
-  Wikipedia pack (about 50,000 articles). With multilingual search on, you
+  Wikipedia pack (about 50,000 articles) and nine optional guide packs
+  written by NIDO (Essentials, Local, Children and Babies, Crisis,
+  Without Utilities, Safe Home, Disasters, Field and Animals, Road
+  Travel), with checked emergency numbers for 69 countries. With multilingual search on, you
   can ask in Spanish, Portuguese or English, and answers show the articles
   they come from, with a line that counts which sentences come from them and
   which come from the model with no source; when nothing in the base really

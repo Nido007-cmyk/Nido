@@ -79,6 +79,18 @@ fuente y la fecha. `scripts/check-pack-claims.mjs` vuelve a abrir cada fuente y
 comprueba que la cita sigue ahí; `.github/workflows/pack-claims.yml` lo ejecuta
 cada semana.
 
+### Los packs de guías de NIDO
+
+Los packs de guías se construyen desde carpetas de guías Markdown
+(`knowledge-packs/<id>/`) con el mismo constructor, y se publican juntos
+en la release `knowledge-packs-v6`: `nido-esencial` (58 guías en cada uno
+de español, inglés y portugués; el portugués llegó en la 0.1.65),
+`nido-local` (números de emergencia y avisos de 69 países, en español e
+inglés, con su tabla de datos verificados), `nido-ninos`, `nido-crisis`
+(con las líneas de crisis verificadas de 14 países), `nido-sin-servicios`,
+`nido-hogar`, `nido-desastres`, `nido-campo` y `nido-viaje`, cada uno en
+español, inglés y portugués.
+
 ## Poner un pack en tu teléfono
 
 **Para probar, por USB** (un build de desarrollo de NIDO, depuración USB activada):
