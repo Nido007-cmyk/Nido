@@ -76,6 +76,15 @@ export function parseNumberToken(token: string): number[] {
   return [decimal];
 }
 
+/**
+ * Las lecturas de un token con los decimales que cada una afirma
+ * (la pareja que la comparación de cifras necesita: el valor solo
+ * no dice si «16,4» promete un decimal o ninguno).
+ */
+export function tokenReadings(token: string): Array<{ value: number; decimals: number }> {
+  return parseNumberToken(token).map((value) => ({ value, decimals: decimalsOf(token, value) }));
+}
+
 /** Decimales con los que una lectura afirma su valor («26,5» → 1; la lectura de miles → 0). */
 function decimalsOf(token: string, value: number): number {
   const t = token.replace(/[.,]+$/, "");

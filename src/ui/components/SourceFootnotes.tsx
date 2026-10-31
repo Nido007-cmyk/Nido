@@ -19,6 +19,7 @@ import { parsePackChunkId } from "../../rag/packSource";
 import { SourceReader } from "./SourceReader";
 import { sourceAccent } from "./sourceColors";
 import { summarizeProvenance, type ProvenanceLang, type SentenceProvenance } from "../../rag/provenance";
+import type { NumberConflict } from "../../rag/sourceCheck";
 
 interface Props {
   citations: RetrievedChunk[];
@@ -34,6 +35,12 @@ interface Props {
    * de texto real: «3 frases de la guía · 1 del modelo sin fuente».
    */
   provenance?: SentenceProvenance[];
+  /**
+   * Programa bounty, tanda 8: contradicciones de cifras contra las
+   * fuentes (src/rag/sourceCheck.ts). Se enseña la frase de la FUENTE
+   * para que el usuario juzgue con ella delante.
+   */
+  numberConflicts?: NumberConflict[];
 }
 
 const TITLE_KEY: Record<GroundingStatus, string> = {
@@ -44,7 +51,7 @@ const TITLE_KEY: Record<GroundingStatus, string> = {
   skipped: "sourceFootnotes.title",
 };
 
-export function SourceFootnotes({ citations, grounding, provenance }: Props) {
+export function SourceFootnotes({ citations, grounding, provenance, numberConflicts }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t, i18n } = useTranslation();
@@ -77,6 +84,13 @@ export function SourceFootnotes({ citations, grounding, provenance }: Props) {
           measure, not confidence. The old fused-relative score rendered a
           weight-scheme-constant "50%" for any lone single-source chunk. */}
       {provenanceSummary ? <Text style={styles.provenanceLine}>{provenanceSummary}</Text> : null}
+      {/* Programa bounty, tanda 8: la caja de comprobación enseña lo
+          que la fuente dice cuando una cifra de la respuesta discrepa. */}
+      {(numberConflicts ?? []).map((conflict, i) => (
+        <Text key={`conflict-${i}`} style={styles.provenanceLine}>
+          {t("sourceFootnotes.numberConflict", { source: conflict.sourceSentence })}
+        </Text>
+      ))}
       <Text style={styles.relevanceCaption}>{t("sourceFootnotes.relevanceCaption")}</Text>
 
       <View style={styles.chipsRow}>

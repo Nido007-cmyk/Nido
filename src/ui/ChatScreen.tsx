@@ -139,6 +139,7 @@ import { SourceFootnotes } from "./components/SourceFootnotes";
 import { EvidenceFirstCard } from "./components/EvidenceFirstCard";
 import { sourceAccent } from "./components/sourceColors";
 import { buildEvidenceCard, type EvidenceCardData } from "../rag/evidenceCard";
+import { findNumberConflicts, type NumberConflict } from "../rag/sourceCheck";
 import { SourceReader } from "./components/SourceReader";
 import { onLaunchAction, registerShortcuts, takeLaunchAction } from "../services/launchActions";
 import { answerKnowledgeQueryWithCategory, toIdentityLocale, knowledgeSessionTitle } from "../rag/selfKnowledge";
@@ -199,6 +200,14 @@ interface Message {
    * como siempre, sin la tarjeta.
    */
   evidenceFirst?: EvidenceCardData;
+  /**
+   * Programa bounty, tanda 8: las contradicciones de cifras contra
+   * las fuentes (src/rag/sourceCheck.ts), que SourceFootnotes enseña
+   * citando la frase de la fuente. Solo se calculan en la ruta
+   * «unverified», donde las cifras llegan sin el juicio de la tanda 1.
+   * En memoria, como evidenceFirst.
+   */
+  numberConflicts?: NumberConflict[];
 }
 
 const VERBATIM_MESSAGE_COUNT = 6;
@@ -1734,10 +1743,25 @@ export function ChatScreen({
       // la mano — es el único punto donde las dos cosas conviven.
       const evidenceFirst = chunks.length > 0 ? buildEvidenceCard(chunks, query) : null;
 
+      // Programa bounty, tanda 8: la caja de comprobación de fuentes
+      // (sourceCheck.ts) — solo en la ruta sin verificación, donde
+      // ninguna otra puerta ha juzgado las cifras contra las fuentes.
+      const numberConflicts =
+        grounding === "unverified" && chunks.length > 0 ? findNumberConflicts(assistantText, chunks) : [];
+
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId
-            ? { ...m, citations: chunks, stopped: wasStopped, noSourcesFound, grounding, provenance, evidenceFirst: evidenceFirst ?? undefined }
+            ? {
+                ...m,
+                citations: chunks,
+                stopped: wasStopped,
+                noSourcesFound,
+                grounding,
+                provenance,
+                evidenceFirst: evidenceFirst ?? undefined,
+                numberConflicts: numberConflicts.length > 0 ? numberConflicts : undefined,
+              }
             : m
         )
       );
@@ -2341,7 +2365,7 @@ export function ChatScreen({
                 ) : null}
 
                 {item.citations && item.citations.length > 0 && (
-                  <SourceFootnotes citations={item.citations} grounding={item.grounding} provenance={item.provenance} />
+                  <SourceFootnotes citations={item.citations} grounding={item.grounding} provenance={item.provenance} numberConflicts={item.numberConflicts} />
                 )}
 
                 {/* Honest no-result (2026-09-28): deterministic note when

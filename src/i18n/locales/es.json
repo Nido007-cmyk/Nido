@@ -663,7 +663,8 @@
     "titleUnverified": "Fuentes consultadas · sin verificación automática (otro idioma)",
     "relevanceCaption": "Los números indican fuerza de coincidencia absoluta con el índice offline, no confianza.",
     "readWhole": "Leer la guía entera",
-    "evidenceFirst": "Fuente principal"
+    "evidenceFirst": "Fuente principal",
+    "numberConflict": "Una cifra de la respuesta no coincide con la fuente, que dice: «{{source}}»"
   },
   "systemMonitor": {},
   "time": {

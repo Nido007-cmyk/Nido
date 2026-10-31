@@ -117,3 +117,21 @@ describe("SourceFootnotes: color por fuente (bounty, tanda 1)", () => {
     expect(twos.some((st) => st.color === "#B07C2A")).toBe(true);
   });
 });
+
+describe("SourceFootnotes: caja de comprobación (bounty, tanda 8)", () => {
+  it("con conflictos, la nota de la caja sale bajo la respuesta", async () => {
+    await render(
+      <SourceFootnotes
+        citations={citations}
+        grounding="unverified"
+        numberConflicts={[{ unit: "km", sourceSentence: "El telescopio Hubble orbita a unos 600 km." }]}
+      />
+    );
+    expect(screen.getByText("sourceFootnotes.numberConflict")).toBeTruthy();
+  });
+
+  it("sin conflictos, ninguna nota de la caja", async () => {
+    await render(<SourceFootnotes citations={citations} grounding="unverified" />);
+    expect(screen.queryByText("sourceFootnotes.numberConflict")).toBeNull();
+  });
+});

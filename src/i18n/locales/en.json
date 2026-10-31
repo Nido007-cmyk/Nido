@@ -531,7 +531,8 @@
     "localIndex": "Local index",
     "relevanceCaption": "Numbers are absolute match strength against the offline index — not confidence.",
     "readWhole": "Read the whole guide",
-    "evidenceFirst": "Main source"
+    "evidenceFirst": "Main source",
+    "numberConflict": "One figure in the answer does not match the source, which says: “{{source}}”"
   },
   "promptIdeasCarousel": {
     "title": "Try asking",

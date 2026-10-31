@@ -531,7 +531,8 @@
     "localIndex": "Índice local",
     "relevanceCaption": "Os números indicam força de correspondência absoluta com o índice offline, não confiança.",
     "readWhole": "Ler o guia inteiro",
-    "evidenceFirst": "Fonte principal"
+    "evidenceFirst": "Fonte principal",
+    "numberConflict": "Um número da resposta não coincide com a fonte, que diz: «{{source}}»"
   },
   "promptIdeasCarousel": {
     "title": "Experimente perguntar",
