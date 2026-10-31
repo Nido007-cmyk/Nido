@@ -50,6 +50,27 @@ describe("isHealthQuestion (puerta léxica)", () => {
   it("un tema suelto sin pregunta ni situación no cierra la puerta", () => {
     expect(isHealthQuestion("fiebre amarilla")).toBe(false);
     expect(isHealthQuestion("asma")).toBe(false);
+    expect(isHealthQuestion("dosis")).toBe(false);
+    expect(isHealthQuestion("paracetamol")).toBe(false);
+  });
+
+  it("el campo de medicamentos y dosis dispara la puerta (F-B2)", () => {
+    expect(isHealthQuestion("necesito saber la dosis de amoxicilina para mi hija de 6 años")).toBe(true);
+    expect(isHealthQuestion("¿cada cuántas horas puedo tomar ibuprofeno?")).toBe(true);
+    expect(isHealthQuestion("How many milligrams of aspirin can an adult take in one day?")).toBe(true);
+    expect(isHealthQuestion("What is the right dosage of acetaminophen for a toddler?")).toBe(true);
+    expect(isHealthQuestion("qual é a dosagem certa de dipirona para uma criança de 20 quilos?")).toBe(true);
+    expect(isHealthQuestion("posso dar paracetamol ao meu filho com 15 quilos?")).toBe(true);
+  });
+
+  it("el campo nuevo no crea falsos positivos: cuento, ensayo y homógrafos", () => {
+    // Sin señal de pregunta ni situación, la dosis de un cuento no cierra.
+    expect(isHealthQuestion("estoy escribiendo un cuento donde una enfermera calcula la dosis de un medicamento")).toBe(false);
+    // El veto de contexto sigue mandando sobre los términos nuevos.
+    expect(isHealthQuestion("write an essay about the history of aspirin and how it changed medicine")).toBe(false);
+    // «Remediar» una fuga no es un medicamento: «remedio» quedó fuera del
+    // léxico portugués a propósito (ver la nota en emergencyGate.ts).
+    expect(isHealthQuestion("como remediar um vazamento em casa?")).toBe(false);
   });
 
   it("los falsos positivos conocidos quedan fuera", () => {

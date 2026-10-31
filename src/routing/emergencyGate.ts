@@ -94,6 +94,14 @@ export function isEmergencyText(text: string, lang: GateLang): boolean {
  * `w` = palabra entera; `p` = principio de palabra (familias: sangr-,
  * vomit-, engasg-). Listas revisables a propósito: la puerta es
  * léxica y sus errores se corrigen editando la lista, no el modelo.
+ *
+ * Al final de cada lista `w` va el campo de MEDICAMENTOS Y DOSIS
+ * (cierre de F-B2, evaluación ciega 01: «¿qué dosis de paracetamol…?»
+ * no traía ningún término y caía al modelo). Fuera a propósito, por
+ * el casado por prefijo de `isHealthQuestion`: «pill»/«tablet» en
+ * inglés atraparían «pillar»/«tabletop», «remedio» en portugués
+ * atraparía el verbo «remediar» (arreglar una fuga) y «pastilla» en
+ * español la «pastilla de jabón» — homógrafos que no son salud.
  */
 const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
   es: {
@@ -106,6 +114,8 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       "gastroenteritis", "deshidratacion", "parto", "rcp", "hipertension", "sarpullido", "electrocucion",
       "dolor de cabeza", "dolor de pecho", "dolor de espalda", "dolor abdominal", "dolor de muelas",
       "primeros auxilios", "golpe de calor", "presion arterial",
+      "dosis", "dosificacion", "medicamento", "medicamentos", "medicacion", "medicina", "medicinas",
+      "paracetamol", "ibuprofeno", "aspirina", "amoxicilina", "omeprazol", "metamizol", "miligramos",
     ],
     p: ["sangr", "vomit", "quemadur", "herid", "alergic", "diabetic", "atragant", "convuls", "desmay"],
   },
@@ -118,6 +128,8 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       "urticaria", "anemia", "appendicitis", "pneumonia", "bronchitis", "dehydration", "labour", "labor", "cpr",
       "hypertension", "electrocution", "headache", "toothache",
       "chest pain", "back pain", "abdominal pain", "first aid", "heat stroke", "blood pressure",
+      "dose", "dosage", "medication", "medications", "medicine", "milligrams",
+      "paracetamol", "acetaminophen", "ibuprofen", "aspirin", "amoxicillin",
     ],
     p: ["bleed", "vomit", "burn", "wound", "allerg", "chok", "convuls", "sangr"],
   },
@@ -131,6 +143,8 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       "hipertensao", "eletrocucao",
       "dor de cabeca", "dor no peito", "dor nas costas", "dor abdominal", "dor de dente",
       "primeiros socorros", "pressao arterial",
+      "dose", "dosagem", "medicamento", "medicamentos",
+      "paracetamol", "ibuprofeno", "aspirina", "dipirona", "amoxicilina", "miligramas",
     ],
     p: ["sangr", "vomit", "queimadur", "ferid", "alergic", "diabetic", "engasg", "convuls", "desmai"],
   },
