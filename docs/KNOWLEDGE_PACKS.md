@@ -74,8 +74,9 @@ one-line intro, the closing note) are folded into a neighbour. The pack's
 license and attribution say the text was written by NIDO from the cited
 sources (CC BY 4.0).
 
-`knowledge-packs/nido-esencial/` is NIDO's own pack: 58 guides in Spanish and
-58 in English on first aid, health at home, disasters and survival, written
+`knowledge-packs/nido-esencial/` is NIDO's own pack: 58 guides in Spanish,
+58 in English and 58 in Portuguese on first aid, health at home, disasters
+and survival, written
 from Red Cross, AHA, WHO, UNICEF, CDC, FEMA and other public guidance (each
 guide cites its sources). `scripts/check-pack-retrieval.mjs` checks that real
 questions (`retrieval-checks.json`) find the right guide, and CI

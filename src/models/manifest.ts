@@ -644,7 +644,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     sha256: "15b661682526a3dcf2783d0a83a3a2499dd77843eb986d26100198cf2e0f36d5",
     sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v4/nido-esencial.sqlite",
     license: "CC BY 4.0 (NIDO)",
-    description: "116 offline guides (58 in Spanish, 58 in English) on first aid, health at home, disasters and survival. ~0.7MB.",
+    description: "174 offline guides (58 in Spanish, 58 in English, 58 in Portuguese) on first aid, health at home, disasters and survival. ~0.7MB.",
     required: false,
   },
   {
@@ -660,7 +660,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v4/nido-esencial-e5.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
-      "116 offline guides on first aid, health at home, disasters and survival, searchable in Spanish, Portuguese and English. ~0.7MB.",
+      "174 offline guides on first aid, health at home, disasters and survival, searchable in Spanish, Portuguese and English. ~0.7MB.",
     required: false,
   },
   {
