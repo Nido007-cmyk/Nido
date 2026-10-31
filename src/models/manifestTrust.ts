@@ -10,10 +10,15 @@
  * Threat model (honest): the SHA-256 pins in manifest.ts are baked into the
  * APK, so they're already as trustworthy as the APK signature itself. What
  * signing the manifest adds is *maintainer attestation as an independent
- * artifact*: the signature proves the exact catalog bytes (ids, URLs,
- * revisions, pins) were reviewed and signed by the holder of the NIDO
- * manifest signing key. A PR or compromised step that edits manifest.ts
- * without re-signing fails CI and fails closed at app startup.
+ * artifact*: the signature proves the exact signed catalog fields (ids,
+ * kinds, filenames, URLs, revisions, pins, sizes, licenses, routing
+ * capabilities, architecture profiles, default context lengths and
+ * bundled flags) were reviewed and signed by the holder of the NIDO
+ * manifest signing key. A PR or compromised step that edits any of
+ * those fields in manifest.ts without re-signing fails CI and fails
+ * closed at app startup. Only the two display texts (label,
+ * description) sit outside the signature, deliberately, and tests pin
+ * that boundary field by field.
  *
  * Design:
  * - Ed25519. Private key lives ONLY in ~/workspace/user/keystores/
@@ -36,9 +41,18 @@ import type { CatalogModel } from "./manifest";
 export const NIDO_MANIFEST_PUBLIC_KEY_BASE64 =
   "C13ur7mfREYSjJKOE0RS5YISBVtupxxaHpmomeBa+Co=";
 
-/** Integrity-relevant fields. Display-only fields (label, description) are
- *  deliberately excluded: rewording a label must not invalidate the
- *  signature, but changing a URL, pin, or size must. */
+/** Fields the signature covers. Until the full audit of 2026-10-31
+ *  (F5-01) this list stopped at the download integrity fields and
+ *  the comment here implied only label and description sat outside;
+ *  in fact license, capabilities, arch, defaultNCtx and bundled
+ *  were outside too, and they are not display text: license is the
+ *  legal attribution the app shows, capabilities decide which
+ *  model serves each routing role and which prompt template runs,
+ *  arch feeds the RAM pre-flight. By the owner's order of
+ *  2026-10-31 the signed surface now covers every field with a
+ *  behavioral or legal effect. The only fields outside are label
+ *  and description, the two display texts: rewording them must not
+ *  invalidate the signature, and changing anything else must. */
 const SIGNED_FIELDS = [
   "id",
   "kind",
@@ -49,6 +63,11 @@ const SIGNED_FIELDS = [
   "revision",
   "format",
   "required",
+  "license",
+  "capabilities",
+  "arch",
+  "defaultNCtx",
+  "bundled",
 ] as const;
 
 /**

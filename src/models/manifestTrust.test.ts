@@ -69,6 +69,62 @@ describe("canonicalCatalogJSON", () => {
   });
 });
 
+describe("superficie firmada (F5-01, orden del dueño 2026-10-31)", () => {
+  // Catálogo de juguete firmado con la clave de prueba. Antes de
+  // ampliar SIGNED_FIELDS, cambiar la licencia o los roles dejaba
+  // la firma válida (mutaciones N12 y N13 de la faceta 5): ahora
+  // cada campo con efecto conductual o legal la rompe, y solo los
+  // dos textos de escaparate quedan fuera a propósito.
+  const base: any[] = [
+    {
+      id: "toy-model",
+      kind: "llm",
+      filename: "models/toy.gguf",
+      sizeBytes: 10,
+      sha256: "abc",
+      sourceUrl: "https://example.invalid/toy.gguf",
+      revision: "0123abcd",
+      format: "json",
+      required: true,
+      license: "Apache-2.0",
+      label: "Toy",
+      description: "A toy model.",
+      capabilities: { roles: ["fast"], usesChatTemplate: true, sampling: { topP: 0.8, topK: 20 } },
+      arch: { nLayer: 28, nKvHeads: 2, headDim: 128 },
+      defaultNCtx: 4096,
+      bundled: false,
+    },
+  ];
+  const sig = () => signWithTestKey(base);
+  const verifies = (catalog: any[], signature: string) =>
+    nacl.sign.detached.verify(
+      new TextEncoder().encode(canonicalCatalogJSON(catalog)),
+      b64ToBytes(signature),
+      b64ToBytes(testPubB64),
+    );
+  const mutated = (patch: Record<string, unknown>): any[] => [{ ...base[0], ...patch }];
+
+  it("la firma cubre licencia, capabilities, arch, defaultNCtx y bundled", () => {
+    const signature = sig();
+    expect(verifies(base, signature)).toBe(true);
+    expect(verifies(mutated({ license: "MIT" }), signature)).toBe(false);
+    expect(
+      verifies(mutated({ capabilities: { roles: ["general"], usesChatTemplate: true, sampling: { topP: 0.8, topK: 20 } } }), signature),
+    ).toBe(false);
+    expect(
+      verifies(mutated({ capabilities: { roles: ["fast"], usesChatTemplate: false, sampling: { topP: 0.8, topK: 20 } } }), signature),
+    ).toBe(false);
+    expect(verifies(mutated({ arch: { nLayer: 32, nKvHeads: 2, headDim: 128 } }), signature)).toBe(false);
+    expect(verifies(mutated({ defaultNCtx: 2048 }), signature)).toBe(false);
+    expect(verifies(mutated({ bundled: true }), signature)).toBe(false);
+  });
+
+  it("label y description siguen fuera a propósito: cambiarlos no invalida", () => {
+    const signature = sig();
+    expect(verifies(mutated({ label: "Otro nombre", description: "Otra descripción." }), signature)).toBe(true);
+  });
+});
+
 describe("verifyCatalogSignature", () => {
   it("Ed25519 round-trip works with the shared canonicalization", () => {
     // Proves canonicalCatalogJSON is a sound signing input: sign with an
