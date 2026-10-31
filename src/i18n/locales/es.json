@@ -660,7 +660,8 @@
     "titleAbstained": "Hay fuentes, pero no responden exactamente a esto",
     "titleUnverified": "Fuentes consultadas · sin verificación automática (otro idioma)",
     "relevanceCaption": "Los números indican fuerza de coincidencia absoluta con el índice offline, no confianza.",
-    "readWhole": "Leer la guía entera"
+    "readWhole": "Leer la guía entera",
+    "evidenceFirst": "Fuente principal"
   },
   "systemMonitor": {},
   "time": {

@@ -17,6 +17,7 @@ import type { Typography } from "../theme/typography";
 import { spacing, radii } from "../theme/spacing";
 import { parsePackChunkId } from "../../rag/packSource";
 import { SourceReader } from "./SourceReader";
+import { sourceAccent } from "./sourceColors";
 import { summarizeProvenance, type ProvenanceLang, type SentenceProvenance } from "../../rag/provenance";
 
 interface Props {
@@ -81,6 +82,11 @@ export function SourceFootnotes({ citations, grounding, provenance }: Props) {
       <View style={styles.chipsRow}>
         {citations.map((c, i) => {
           const isExpanded = expandedIndex === i;
+          // Programa bounty, tanda 1: color por fuente — la píldora de
+          // cada fuente lleva su acento, el mismo que tiñe su marcador
+          // [n] en la respuesta (sourceColors.ts). El número sigue ahí:
+          // el color nunca es la única señal.
+          const accent = sourceAccent(colors, i);
           return (
             <View key={i} style={styles.cardWrapper}>
               <Pressable accessibilityRole="button"
@@ -88,8 +94,8 @@ export function SourceFootnotes({ citations, grounding, provenance }: Props) {
                 onPress={() => toggle(i)}
                 hitSlop={4}
               >
-                <View style={styles.chipIndexPill}>
-                  <Text style={styles.chipIndexText}>{i + 1}</Text>
+                <View style={[styles.chipIndexPill, { backgroundColor: accent.subtle }]}>
+                  <Text style={[styles.chipIndexText, { color: accent.solid }]}>{i + 1}</Text>
                 </View>
                 <Text style={styles.chipTitle} numberOfLines={1}>
                   {c.title}

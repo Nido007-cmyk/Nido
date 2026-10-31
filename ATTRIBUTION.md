@@ -63,6 +63,18 @@ not affiliated with or endorsed by the Wikimedia Foundation.
 license texts are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md),
 and the same list is readable inside the app (About → Licenses).
 
+## Adapted from the poidh #31 bounty entries (2026-10-31)
+
+Ideas and algorithms adapted — reimplemented in NIDO's own TypeScript,
+no code copied verbatim — from the winning and shortlisted entries of
+the poidh bounty #31 ("Build the Best Offline AI Research App for
+Android"), gathered with their licenses verified at the source:
+
+| What | Source | License | Where it lives in NIDO |
+|---|---|---|---|
+| Citation post-check: an answer's figures must come from the evidence, allowing honest rounding and scale ("16.4 million" for 16,431,599) | Commonplace by 0xPD33 (`citations.rs`, `evidence.rs`) | Apache-2.0 | `src/rag/evidenceNumbers.ts`, used by `src/rag/grounding.ts` |
+| Evidence first: the main source's card, with its best-answering sentence, above the answer; a colour per source shared by its citation markers | Commonplace by 0xPD33 (`AnswerViews.kt`, `evidence.rs`) | Apache-2.0 | `src/rag/evidenceCard.ts`, `src/ui/components/EvidenceFirstCard.tsx`, `src/ui/components/sourceColors.ts` |
+
 ## Using NIDO's code? Keep the notice
 
 NIDO is MIT-licensed. You may use, copy, modify and distribute it. The one

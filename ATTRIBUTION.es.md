@@ -65,6 +65,18 @@ los textos de sus licencias están en
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), y la misma lista se puede
 leer dentro de la app (Acerca de → Licencias).
 
+## Adaptado de las entradas de la bounty poidh #31 (2026-10-31)
+
+Ideas y algoritmos adaptados — reimplementados en el TypeScript propio
+de NIDO, sin código copiado literal — de la entrada ganadora y las
+finalistas de la bounty poidh #31 («Build the Best Offline AI Research
+App for Android»), reunidos con sus licencias verificadas en la fuente:
+
+| Qué | Origen | Licencia | Dónde vive en NIDO |
+|---|---|---|---|
+| Post-chequeo de citas: las cifras de una respuesta tienen que salir de la evidencia, con su redondeo y escala honestos («16,4 millones» por 16.431.599) | Commonplace de 0xPD33 (`citations.rs`, `evidence.rs`) | Apache-2.0 | `src/rag/evidenceNumbers.ts`, usado por `src/rag/grounding.ts` |
+| Evidencia primero: la tarjeta de la fuente principal, con su frase que mejor responde, encima de la respuesta; un color por fuente compartido por sus marcadores de cita | Commonplace de 0xPD33 (`AnswerViews.kt`, `evidence.rs`) | Apache-2.0 | `src/rag/evidenceCard.ts`, `src/ui/components/EvidenceFirstCard.tsx`, `src/ui/components/sourceColors.ts` |
+
 ## ¿Usas código de NIDO? Conserva el aviso
 
 NIDO tiene licencia MIT. Puedes usarlo, copiarlo, modificarlo y distribuirlo.

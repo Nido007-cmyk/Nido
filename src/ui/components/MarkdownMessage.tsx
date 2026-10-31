@@ -13,6 +13,12 @@ import { spacing, radii } from "../theme/spacing";
 interface Props {
   content: string;
   isStreaming?: boolean;
+  /**
+   * Programa bounty, tanda 1 (color por fuente): el color de cada
+   * fuente por su número de cita — citationColors[0] tiñe «[1]», etc.
+   * Sin la lista, los marcadores se pintan como texto normal.
+   */
+  citationColors?: string[];
 }
 
 interface Block {
@@ -152,13 +158,31 @@ function CodeBlockView({
   );
 }
 
-export function MarkdownMessage({ content, isStreaming }: Props) {
+export function MarkdownMessage({ content, isStreaming, citationColors }: Props) {
   const { colors, typography } = useTheme();
   const blocks = parseBlocks(content);
 
   const renderInline = (text: string) => {
-    const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*)/g);
+    const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*|\[\d+\])/g);
     return parts.map((part, index) => {
+      // Marcador de cita con el color de su fuente (el número manda:
+      // quien no distinga el color sigue pudiendo seguir el [n] hasta
+      // la píldora del mismo número en las notas de fuentes).
+      const cite = /^\[(\d+)\]$/.exec(part);
+      if (cite && citationColors) {
+        const color = citationColors[Number(cite[1]) - 1];
+        if (color) {
+          return (
+            <Text
+              key={index}
+              style={[typography.ui.bodyLg, { color, fontWeight: "800" }]}
+              selectable
+            >
+              {part}
+            </Text>
+          );
+        }
+      }
       if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
         const codeSnippet = part.slice(1, -1);
         return (

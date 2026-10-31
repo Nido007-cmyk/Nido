@@ -129,6 +129,9 @@ import { ReasoningPeek } from "./components/ReasoningPeek";
 import { splitThinking, stripThinking } from "../services/thinking";
 import { cleanCitations } from "../services/citations";
 import { SourceFootnotes } from "./components/SourceFootnotes";
+import { EvidenceFirstCard } from "./components/EvidenceFirstCard";
+import { sourceAccent } from "./components/sourceColors";
+import { buildEvidenceCard, type EvidenceCardData } from "../rag/evidenceCard";
 import { SourceReader } from "./components/SourceReader";
 import { onLaunchAction, registerShortcuts, takeLaunchAction } from "../services/launchActions";
 import { answerKnowledgeQueryWithCategory, toIdentityLocale, knowledgeSessionTitle } from "../rag/selfKnowledge";
@@ -181,6 +184,14 @@ interface Message {
   guideChunkId?: string;
   /** 0.1.61: where each sentence comes from (src/rag/provenance.ts). In memory only for now. */
   provenance?: SentenceProvenance[];
+  /**
+   * Programa bounty, tanda 1: la tarjeta de evidencia primero
+   * (src/rag/evidenceCard.ts) — la fuente principal y su frase que
+   * mejor responde, pintada encima de la respuesta. En memoria, como
+   * provenance: una sesión reabierta enseña el texto y sus fuentes
+   * como siempre, sin la tarjeta.
+   */
+  evidenceFirst?: EvidenceCardData;
 }
 
 const VERBATIM_MESSAGE_COUNT = 6;
@@ -1677,9 +1688,16 @@ export function ChatScreen({
         }
       }
 
+      // Programa bounty, tanda 1: la tarjeta de evidencia se calcula
+      // aquí, al cerrar la respuesta, con la pregunta y las fuentes en
+      // la mano — es el único punto donde las dos cosas conviven.
+      const evidenceFirst = chunks.length > 0 ? buildEvidenceCard(chunks, query) : null;
+
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === assistantId ? { ...m, citations: chunks, stopped: wasStopped, noSourcesFound, grounding, provenance } : m
+          m.id === assistantId
+            ? { ...m, citations: chunks, stopped: wasStopped, noSourcesFound, grounding, provenance, evidenceFirst: evidenceFirst ?? undefined }
+            : m
         )
       );
       notification(wasStopped ? NotificationFeedbackType.Warning : NotificationFeedbackType.Success);
@@ -2170,6 +2188,13 @@ export function ChatScreen({
                   />
                 ) : (
                   <>
+                    {/* Programa bounty, tanda 1: evidencia primero — la
+                        fuente principal encima de la respuesta. Solo
+                        existe al cerrar (se calcula con las citas), así
+                        que durante el streaming no aparece ni empuja. */}
+                    {item.role === "assistant" && item.evidenceFirst ? (
+                      <EvidenceFirstCard card={item.evidenceFirst} />
+                    ) : null}
                     {split?.thinking && reasoningShown && (
                       <Text style={[styles.reasoningText, { color: colors.text.dim, borderLeftColor: colors.border.default }]}>
                         {split.thinking}
@@ -2193,7 +2218,11 @@ export function ChatScreen({
                       item.role === "user" ? (
                         <Text style={[styles.userText, { color: colors.text.inverse }]}>{shownText}</Text>
                       ) : (
-                        <MarkdownMessage content={shownText} isStreaming={isStreamingThis} />
+                        <MarkdownMessage
+                          content={shownText}
+                          isStreaming={isStreamingThis}
+                          citationColors={item.citations?.map((_, i) => sourceAccent(colors, i).solid)}
+                        />
                       )
                     )}
                   </>

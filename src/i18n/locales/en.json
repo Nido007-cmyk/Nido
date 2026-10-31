@@ -528,7 +528,8 @@
     "titleUnverified": "Sources consulted · not auto-checked (different language)",
     "localIndex": "Local index",
     "relevanceCaption": "Numbers are absolute match strength against the offline index — not confidence.",
-    "readWhole": "Read the whole guide"
+    "readWhole": "Read the whole guide",
+    "evidenceFirst": "Main source"
   },
   "promptIdeasCarousel": {
     "title": "Try asking",

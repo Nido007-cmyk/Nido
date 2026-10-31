@@ -528,7 +528,8 @@
     "titleUnverified": "Fontes consultadas · sem verificação automática (outro idioma)",
     "localIndex": "Índice local",
     "relevanceCaption": "Os números indicam força de correspondência absoluta com o índice offline, não confiança.",
-    "readWhole": "Ler o guia inteiro"
+    "readWhole": "Ler o guia inteiro",
+    "evidenceFirst": "Fonte principal"
   },
   "promptIdeasCarousel": {
     "title": "Experimente perguntar",

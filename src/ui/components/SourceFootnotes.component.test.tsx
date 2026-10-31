@@ -96,3 +96,24 @@ describe("SourceFootnotes: provenance line", () => {
     expect(toJSON()).toBeNull();
   });
 });
+
+describe("SourceFootnotes: color por fuente (bounty, tanda 1)", () => {
+  const two = [
+    citations[0],
+    { chunkId: "pack:nido-esencial:13", docId: "d2", title: "Fiebre", body: "Medir la temperatura…", score: 1, rawScore: 0.7, matchType: "semantic" },
+  ];
+
+  function flatStyle(el: any) {
+    const s = el.props.style;
+    return Object.assign({}, ...(Array.isArray(s) ? s : [s]));
+  }
+
+  it("cada píldora lleva el acento de su fuente, distinto del de la otra", async () => {
+    await render(<SourceFootnotes citations={two} grounding="grounded" />);
+    const one = flatStyle(screen.getByText("1"));
+    const twos = screen.getAllByText("2").map(flatStyle);
+    // La píldora de la fuente 1: esmeralda del mock; la de la 2: ámbar.
+    expect(one.color).toBe("#227A35");
+    expect(twos.some((st) => st.color === "#B07C2A")).toBe(true);
+  });
+});
