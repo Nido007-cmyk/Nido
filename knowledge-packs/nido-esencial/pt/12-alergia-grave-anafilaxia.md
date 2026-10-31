@@ -3,17 +3,19 @@ title: Alergia grave (anafilaxia)
 category: Primeiros socorros
 lang: pt
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020; IFRC 2020
-questions: reação alérgica grave depois de comer, com a garganta fechando | sinais de anafilaxia e o que fazer na hora | comeu amendoim e ficou com dificuldade de respirar | inchaço na boca e falta de ar depois de comer algo
+questions: reação alérgica grave depois de comer, com a garganta fechando | sinais de anafilaxia e o que fazer na hora | comeu amendoim e ficou com dificuldade de respirar | inchaço na boca e falta de ar depois de comer algo | comeu camarão e ficou com o rosto inchado e a garganta apertando | alergia a frutos do mar com coceira no corpo todo e aperto na garganta | reação alérgica forte a um remédio, com urticária e a respiração difícil | depois de comer, os lábios incharam e veio a falta de ar, o que fazer
 ---
 A anafilaxia é uma reação alérgica grave que pode matar em minutos. Costuma aparecer pouco depois de um alimento (castanhas e nozes, frutos do mar, ovo, leite), uma picada de abelha ou vespa, ou um medicamento.
 
 ## Sinais
+<!-- perguntas: como reconheço uma reação alérgica grave | quais são os sintomas da anafilaxia -->
 - Dificuldade para respirar, chiado, voz rouca, sensação de que a garganta está fechando.
 - Inchaço dos lábios, da língua, do rosto ou da garganta.
 - Urticária ou coceira pelo corpo todo, vermelhidão.
 - Tontura, desmaio, pele pálida e fria (choque), vômitos ou dor de barriga.
 
 ## O que fazer
+<!-- perguntas: o que fazer na hora diante de uma alergia grave | quando e como usar o autoinjetor de epinefrina -->
 1. Ligue imediatamente para o número de emergência.
 2. Se a pessoa tiver um autoinjetor de adrenalina (epinefrina, por exemplo EpiPen), ajude-a a usá-lo na coxa, pelo lado externo (pode atravessar a roupa). Siga as instruções do aparelho e mantenha-o pressionado pelo tempo indicado.
 3. Se após 5–10 minutos não houver melhora, a ajuda ainda não tiver chegado e houver um segundo autoinjetor, pode-se aplicar outra dose.
@@ -22,6 +24,7 @@ A anafilaxia é uma reação alérgica grave que pode matar em minutos. Costuma 
 6. Mesmo que melhore, ela deve ir ao hospital: a reação pode voltar horas depois.
 
 ## Picadas de abelha
+<!-- perguntas: picada de abelha com inchaço e falta de ar é alergia grave? | reação alérgica a picada de inseto, o que fazer -->
 Retire o ferrão o quanto antes, raspando ou pinçando. Lave com água e sabão e aplique frio.
 
 ## Importante
