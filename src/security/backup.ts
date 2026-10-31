@@ -167,12 +167,18 @@ export async function createBackup(destinationUri: string): Promise<string> {
   }
 
   // 1. Checkpoint WAL: consolidar -wal en el archivo principal.
-  // Si falla, continuamos (el backup puede estar incompleto pero no corrupto).
+  // Auditoría completa 2026-10-31 (F3-03): si el checkpoint falla, NO
+  // se continúa. Copiar en caliente sin consolidar puede dejar fuera
+  // justo lo último escrito, y el respaldo nacería incompleto en
+  // silencio; un respaldo que no se pudo hacer se dice, no se finge.
   try {
     const db = await getDatabase();
     await db.execAsync(WAL_CHECKPOINT_SQL);
-  } catch {
-    // Log silencioso: el checkpoint es best-effort.
+  } catch (e) {
+    throw new BackupError(
+      "storage",
+      `No se pudo consolidar la base antes del respaldo: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
 
   // 2. Copiar la base principal.
@@ -198,16 +204,27 @@ export async function createBackup(destinationUri: string): Promise<string> {
   }
 
   // 3. Copiar la base de conocimiento si existe (M3).
+  // Auditoría completa 2026-10-31 (F3-03): el conocimiento también se
+  // consolida antes de copiar, con SU conexión (la de rag/db), y un
+  // fallo ya no se traga: si la base existe y no se pudo respaldar,
+  // el respaldo entero falla en voz alta en vez de nacer sin el
+  // conocimiento y con un manifest que lo calla.
   const knowledgeDest = knowledgeBackupUriFor(destinationUri);
   let knowledgeBackedUp = false;
   try {
     const kInfo = await FileSystem.getInfoAsync(knowledgePath);
     if (kInfo.exists) {
+      const { getDb } = await import("../rag/db");
+      const kdb = await getDb();
+      await kdb.execAsync(WAL_CHECKPOINT_SQL);
       await FileSystem.copyAsync({ from: knowledgePath, to: knowledgeDest });
       knowledgeBackedUp = true;
     }
-  } catch {
-    // Best-effort: si no hay base de conocimiento, continuar.
+  } catch (e) {
+    throw new BackupError(
+      "storage",
+      `No se pudo respaldar la base de conocimiento: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
 
   // 4. Crear manifest con metadata y checksum.

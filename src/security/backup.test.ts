@@ -48,6 +48,19 @@ vi.mock("./databaseManager", () => ({
   closeDatabase: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Auditoría 2026-10-31 (F3-03): la conexión de la base de conocimiento
+// es la de rag/db; su checkpoint se registra aquí.
+const kdbx = vi.hoisted(() => ({ sql: [] as string[], failWith: null as string | null, events: [] as string[] }));
+vi.mock("../rag/db", () => ({
+  getDb: async () => ({
+    execAsync: async (q: string) => {
+      kdbx.sql.push(q);
+      kdbx.events.push("checkpoint-conocimiento");
+      if (kdbx.failWith) throw new Error(kdbx.failWith);
+    },
+  }),
+}));
+
 import * as FileSystem from "expo-file-system/legacy";
 import { validateBackup, exportDatabaseKey } from "./backup";
 
@@ -185,6 +198,54 @@ describe("backup.ts — auditoría ofensiva 2026-10-12 (0.1.29)", () => {
     expect(deleted).toEqual(
       expect.arrayContaining(["/mock/restored.db", "/mock/restored.db.manifest.json", "/mock/restored.knowledge.db"]),
     );
+  });
+});
+
+describe("backup.ts — auditoría completa 2026-10-31 (F3-03): respaldos consolidados o en voz alta", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sqlx.sql = [];
+    sqlx.failWith = null;
+    sqlx.allowOpen = true;
+    kdbx.sql = [];
+    kdbx.failWith = null;
+    kdbx.events = [];
+    (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: true, size: 5000 });
+  });
+
+  it("si el checkpoint de la base principal falla, no hay respaldo", async () => {
+    const dm = await import("./databaseManager");
+    (dm.getDatabase as any).mockResolvedValueOnce({
+      execAsync: async () => {
+        throw new Error("checkpoint boom");
+      },
+    });
+    const { createBackup } = await import("./backup");
+    await expect(createBackup("/mock/nido-backup-T.db")).rejects.toThrow(/consolidar la base/);
+    expect(FileSystem.copyAsync).not.toHaveBeenCalled();
+  });
+
+  it("el conocimiento se consolida con su conexión antes de copiarse", async () => {
+    (FileSystem.copyAsync as any).mockImplementation(async (args: { from: string }) => {
+      if (args.from.endsWith("nido_knowledge.db")) kdbx.events.push("copia-conocimiento");
+    });
+    const { createBackup } = await import("./backup");
+    await createBackup("/mock/nido-backup-T.db");
+    expect(kdbx.sql).toContain("PRAGMA wal_checkpoint(TRUNCATE);");
+    expect(kdbx.events.indexOf("checkpoint-conocimiento")).toBeGreaterThanOrEqual(0);
+    expect(kdbx.events.indexOf("checkpoint-conocimiento")).toBeLessThan(
+      kdbx.events.indexOf("copia-conocimiento"),
+    );
+  });
+
+  it("si el checkpoint del conocimiento falla, el respaldo falla en voz alta", async () => {
+    kdbx.failWith = "knowledge boom";
+    const { createBackup } = await import("./backup");
+    try {
+      await expect(createBackup("/mock/nido-backup-T.db")).rejects.toThrow(/base de conocimiento/);
+    } finally {
+      kdbx.failWith = null;
+    }
   });
 });
 
