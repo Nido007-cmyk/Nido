@@ -630,7 +630,8 @@ export const MODEL_CATALOG: CatalogModel[] = [
     required: false,
   },
   {
-    // NIDO Esencial: 58 guides in Spanish + 58 in English (first aid, health
+    // NIDO Esencial: 58 guides in each of Spanish, English and Portuguese
+    // (first aid, health
     // at home, disasters, survival) written by NIDO from IFRC, Red Cross, AHA,
     // WHO, UNICEF, CDC, Ready.gov and other public guidance
     // (knowledge-packs/nido-esencial, built and checked by
@@ -640,11 +641,11 @@ export const MODEL_CATALOG: CatalogModel[] = [
     format: "sqlite-pack",
     label: "NIDO Essentials: first aid, health, disasters, survival",
     filename: "corpus/nido-esencial.sqlite",
-    sizeBytes: 716800,
-    sha256: "15b661682526a3dcf2783d0a83a3a2499dd77843eb986d26100198cf2e0f36d5",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v4/nido-esencial.sqlite",
+    sizeBytes: 1138688,
+    sha256: "790a992c0559f45e66dd9b5255bed5dea8ce9434b6793bcd787d2656c1cb09ce",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-esencial.sqlite",
     license: "CC BY 4.0 (NIDO)",
-    description: "116 offline guides (58 in Spanish, 58 in English) on first aid, health at home, disasters and survival. ~0.7MB.",
+    description: "174 offline guides (58 each in Spanish, English and Portuguese) on first aid, health at home, disasters and survival. ~1.1MB.",
     required: false,
   },
   {
@@ -655,31 +656,31 @@ export const MODEL_CATALOG: CatalogModel[] = [
     format: "sqlite-pack",
     label: "NIDO Essentials (multilingual search)",
     filename: "corpus/nido-esencial-e5.sqlite",
-    sizeBytes: 716800,
-    sha256: "16deebd24fc1f75f34bc0548ee3e0d8456d04fcc3d4511f88274a6e3df640a3e",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v4/nido-esencial-e5.sqlite",
+    sizeBytes: 1138688,
+    sha256: "9f729bd77bcb0c0c26f18bb40e7c0ee5126eed75b8b4363d8d0cdf6281c094b4",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-esencial-e5.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
-      "116 offline guides on first aid, health at home, disasters and survival, searchable in Spanish, Portuguese and English. ~0.7MB.",
+      "174 offline guides on first aid, health at home, disasters and survival, searchable in Spanish, Portuguese and English. ~1.1MB.",
     required: false,
   },
   {
-    // NIDO Local (0.1.55): guides by country in Spanish + English for 23
-    // countries — checked emergency numbers (facts table with source, quote
-    // and date: pack format v2) and what each official alert means.
-    // knowledge-packs/nido-local, built and checked by
-    // .github/workflows/knowledge-pack.yml (109 real questions, ≥ 90 % top 3).
+    // NIDO Local (0.1.55; grown in 0.1.65): guides by country in Spanish +
+    // English for 69 countries — checked emergency numbers (facts table
+    // with source, quote and date: pack format v2) and what each official
+    // alert means. knowledge-packs/nido-local, built and checked by
+    // .github/workflows/knowledge-pack.yml.
     id: "nido-local",
     kind: "corpus",
     format: "sqlite-pack",
     label: "NIDO Local: emergency numbers and alerts by country",
     filename: "corpus/nido-local.sqlite",
-    sizeBytes: 253952,
-    sha256: "af5fcf9d62265745c4c7d18cc5fce555b5f3f8ae5d5208b9d03d10b17ae2f37d",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local.sqlite",
+    sizeBytes: 294912,
+    sha256: "b8123b6083ba224962e70eeb9bc02ecbca3c0fda497c3d31a912316f101a2047",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-local.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
-      "Checked emergency numbers for 32 countries in the Americas, Europe, Africa, Asia and Oceania, each with its official source, plus what official alerts mean. Spanish and English. ~0.2MB.",
+      "Checked emergency numbers for 69 countries in the Americas, Europe, Africa, Asia and Oceania, each with its official source, plus what official alerts mean. Spanish and English. ~0.3MB.",
     required: false,
   },
   {
@@ -689,12 +690,237 @@ export const MODEL_CATALOG: CatalogModel[] = [
     format: "sqlite-pack",
     label: "NIDO Local (multilingual search)",
     filename: "corpus/nido-local-e5.sqlite",
-    sizeBytes: 253952,
-    sha256: "f063922b72cdb50acdff8b737927e7d11c8ef4d2d9065d0c278d4099a1f828f0",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local-e5.sqlite",
+    sizeBytes: 294912,
+    sha256: "b08132fe9cd050b420d7ad7d89ee06038e666f405e9dce18a7bc82a9827699e8",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-local-e5.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
-      "Checked emergency numbers for 32 countries, each with its official source, plus what official alerts mean; searchable in Spanish, Portuguese and English. ~0.2MB.",
+      "Checked emergency numbers for 69 countries, each with its official source, plus what official alerts mean; searchable in Spanish, Portuguese and English. ~0.3MB.",
+    required: false,
+  },
+  {
+    // NIDO Niños (0.1.65): first aid and health for babies and children,
+    // organised by age, in Spanish, English and Portuguese.
+    // knowledge-packs/nido-ninos, built and checked by
+    // .github/workflows/knowledge-pack.yml.
+    id: "nido-ninos",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Children and Babies: first aid and health by age",
+    filename: "corpus/nido-ninos.sqlite",
+    sizeBytes: 290816,
+    sha256: "d9c767a807fb5a59de9f638f7bb58bf690d1fe6e297a57d1ab251cff03969b9a",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-ninos.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "18 offline guides (6 each in Spanish, English and Portuguese) on first aid and health for babies and children, organised by age. ~0.3MB.",
+    required: false,
+  },
+  {
+    // Same guides with multilingual-e5 vectors (src/rag/embeddingSwitch.ts).
+    id: "nido-ninos-e5",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Children and Babies (multilingual search)",
+    filename: "corpus/nido-ninos-e5.sqlite",
+    sizeBytes: 290816,
+    sha256: "aa95a7c44271b634b8d8eb1ed45ddb6bb77be89c1fe5a85af999479495af2343",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-ninos-e5.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "18 offline guides on first aid and health for babies and children, organised by age, searchable in Spanish, Portuguese and English. ~0.3MB.",
+    required: false,
+  },
+  {
+    // NIDO Crisis (0.1.65): guides for the hardest moments and verified
+    // crisis lines for 14 countries (facts table with source, quote and
+    // date: pack format v2). knowledge-packs/nido-crisis, built and
+    // checked by .github/workflows/knowledge-pack.yml.
+    id: "nido-crisis",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Crisis: support in the hardest moments",
+    filename: "corpus/nido-crisis.sqlite",
+    sizeBytes: 233472,
+    sha256: "4138f6d3036a1511f14ebebaa6fe053c9b09c5345f53d75ac18facadb3c442a5",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-crisis.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "12 offline guides (4 each in Spanish, English and Portuguese) for the hardest moments: when someone talks about dying, panic attacks and grief, with verified crisis lines for 14 countries. ~0.2MB.",
+    required: false,
+  },
+  {
+    // Same guides with multilingual-e5 vectors (src/rag/embeddingSwitch.ts).
+    id: "nido-crisis-e5",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Crisis (multilingual search)",
+    filename: "corpus/nido-crisis-e5.sqlite",
+    sizeBytes: 233472,
+    sha256: "93bd5f12a45409688210c8801c89c9f11f5c5f0be5489e65bc4d39fe63e76d1d",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-crisis-e5.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "12 offline guides for the hardest moments: when someone talks about dying, panic attacks and grief, with verified crisis lines for 14 countries; searchable in Spanish, Portuguese and English. ~0.2MB.",
+    required: false,
+  },
+  {
+    // NIDO Sin Servicios (0.1.65): living at home without water,
+    // electricity or gas, in Spanish, English and Portuguese.
+    // knowledge-packs/nido-sin-servicios, built and checked by
+    // .github/workflows/knowledge-pack.yml.
+    id: "nido-sin-servicios",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Without Utilities: at home when services fail",
+    filename: "corpus/nido-sin-servicios.sqlite",
+    sizeBytes: 270336,
+    sha256: "fee95e7e61e2d9ad81e9d3a94aa1ca7f21904cce698e19257a4b73e6455710fe",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-sin-servicios.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "18 offline guides (6 each in Spanish, English and Portuguese) on living at home when the services fail: without water, electricity or gas. ~0.3MB.",
+    required: false,
+  },
+  {
+    // Same guides with multilingual-e5 vectors (src/rag/embeddingSwitch.ts).
+    id: "nido-sin-servicios-e5",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Without Utilities (multilingual search)",
+    filename: "corpus/nido-sin-servicios-e5.sqlite",
+    sizeBytes: 270336,
+    sha256: "43ac93c2041ebc003bd220c0361e40f1efd8c7ac376e550a3a1e37b4f7c6dac1",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-sin-servicios-e5.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "18 offline guides on living at home when the services fail: without water, electricity or gas; searchable in Spanish, Portuguese and English. ~0.3MB.",
+    required: false,
+  },
+  {
+    // NIDO Hogar Seguro (0.1.65): preventing and answering the dangers
+    // of the house, in Spanish, English and Portuguese.
+    // knowledge-packs/nido-hogar, built and checked by
+    // .github/workflows/knowledge-pack.yml.
+    id: "nido-hogar",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Safe Home: preventing dangers at home",
+    filename: "corpus/nido-hogar.sqlite",
+    sizeBytes: 290816,
+    sha256: "c9cab0fdb26a6a3640f0d24322c163d798ba971b992abf50410d0e6f69065c5c",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-hogar.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "21 offline guides (7 each in Spanish, English and Portuguese) on preventing and answering the dangers of the house. ~0.3MB.",
+    required: false,
+  },
+  {
+    // Same guides with multilingual-e5 vectors (src/rag/embeddingSwitch.ts).
+    id: "nido-hogar-e5",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Safe Home (multilingual search)",
+    filename: "corpus/nido-hogar-e5.sqlite",
+    sizeBytes: 290816,
+    sha256: "61099ad28c98a79c7ca919ba8a5c1f564e6137371290371d644c378ef3e29966",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-hogar-e5.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "21 offline guides on preventing and answering the dangers of the house, searchable in Spanish, Portuguese and English. ~0.3MB.",
+    required: false,
+  },
+  {
+    // NIDO Desastres (0.1.65): specific disasters by region, in Spanish,
+    // English and Portuguese. knowledge-packs/nido-desastres, built and
+    // checked by .github/workflows/knowledge-pack.yml.
+    id: "nido-desastres",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Disasters: guides by region",
+    filename: "corpus/nido-desastres.sqlite",
+    sizeBytes: 294912,
+    sha256: "c9241f9fcdde9c8c74844cd7df15a13857d77e406c7780b7b73a9ffb9a93923a",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-desastres.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "18 offline guides (6 each in Spanish, English and Portuguese) on specific disasters by region, beyond the Essentials pack. ~0.3MB.",
+    required: false,
+  },
+  {
+    // Same guides with multilingual-e5 vectors (src/rag/embeddingSwitch.ts).
+    id: "nido-desastres-e5",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Disasters (multilingual search)",
+    filename: "corpus/nido-desastres-e5.sqlite",
+    sizeBytes: 294912,
+    sha256: "3bde004bb81546bdd80d4574d4035b4d3d68031afe83fc7dbb2454b27b52f739",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-desastres-e5.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "18 offline guides on specific disasters by region, beyond the Essentials pack, searchable in Spanish, Portuguese and English. ~0.3MB.",
+    required: false,
+  },
+  {
+    // NIDO Campo (0.1.65): life in the country and with animals, in
+    // Spanish, English and Portuguese. knowledge-packs/nido-campo, built
+    // and checked by .github/workflows/knowledge-pack.yml.
+    id: "nido-campo",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Field and Animals: country life and animals",
+    filename: "corpus/nido-campo.sqlite",
+    sizeBytes: 327680,
+    sha256: "5f62d994843d599cef77c43688759730420d2539d7aa231b4454208e349c34cc",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-campo.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description: "18 offline guides (6 each in Spanish, English and Portuguese) on life in the country and with animals. ~0.3MB.",
+    required: false,
+  },
+  {
+    // Same guides with multilingual-e5 vectors (src/rag/embeddingSwitch.ts).
+    id: "nido-campo-e5",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Field and Animals (multilingual search)",
+    filename: "corpus/nido-campo-e5.sqlite",
+    sizeBytes: 327680,
+    sha256: "644196d28a0e030c9fe1551146c25e96fa37b282dd1ba504c99829d71f751139",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-campo-e5.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description:
+      "18 offline guides on life in the country and with animals, searchable in Spanish, Portuguese and English. ~0.3MB.",
+    required: false,
+  },
+  {
+    // NIDO Viaje (0.1.65): the road and car travel, in Spanish, English
+    // and Portuguese. knowledge-packs/nido-viaje, built and checked by
+    // .github/workflows/knowledge-pack.yml.
+    id: "nido-viaje",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Road Travel: the road and car trips",
+    filename: "corpus/nido-viaje.sqlite",
+    sizeBytes: 241664,
+    sha256: "a6f4608b59ee6add7f9cf147a9d76c03b8460ec4e0d4a4d14d029f82dd74c086",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-viaje.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description: "18 offline guides (6 each in Spanish, English and Portuguese) for the road and car travel. ~0.2MB.",
+    required: false,
+  },
+  {
+    // Same guides with multilingual-e5 vectors (src/rag/embeddingSwitch.ts).
+    id: "nido-viaje-e5",
+    kind: "corpus",
+    format: "sqlite-pack",
+    label: "NIDO Road Travel (multilingual search)",
+    filename: "corpus/nido-viaje-e5.sqlite",
+    sizeBytes: 241664,
+    sha256: "e27777f2a902d6c5f3452446212d25471df5822fa82c04e3b5ae2cf724f3d020",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-viaje-e5.sqlite",
+    license: "CC BY 4.0 (NIDO)",
+    description: "18 offline guides for the road and car travel, searchable in Spanish, Portuguese and English. ~0.2MB.",
     required: false,
   },
   // Add more tested candidates / corpus packs here later (each needs a
