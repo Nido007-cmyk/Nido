@@ -226,8 +226,12 @@ function findCountry(folded: string): EmergencyEntry | null {
 /**
  * ¿Nombra un lugar («… en Alemania», «… in Germany», «… na Argentina»)
  * que no está en la tabla? «en mi país» no cuenta: se pregunta cuál.
+ * Auditoría completa 2026-10-31 (F1 B-6): «en casa» y «in home»
+ * tampoco nombran país alguno y se respondían como si se hubiera
+ * nombrado uno desconocido («No tengo el número de ese país…»);
+ * quedan fuera igual que «mi país».
  */
-const OTHER_COUNTRY_RE = /\b(emergenci\w*|urgenci\w*|emergency|numero|number|telefono|telefone)\b.*\b(en|in|no|na|em)\s+(?!mi |my |meu |minha |el mio)[a-z]{3,}/;
+const OTHER_COUNTRY_RE = /\b(emergenci\w*|urgenci\w*|emergency|numero|number|telefono|telefone)\b.*\b(en|in|no|na|em)\s+(?!mi |my |meu |minha |el mio|casa\b|home\b)[a-z]{3,}/;
 
 function emergencyText(lang: SafetyLang, folded: string): SafetyHit {
   const e = findCountry(folded);

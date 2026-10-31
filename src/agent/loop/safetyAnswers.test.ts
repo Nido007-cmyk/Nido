@@ -117,6 +117,14 @@ describe("pregunta mezclada ES/PT + «emergency» (2026-10-30)", () => {
     expect(h.countryUnknown).toEqual({ asked: true });
   });
 
+  it("auditoría 2026-10-31 (F1 B-6): «en casa» no nombra ningún país y se pregunta cuál", () => {
+    const h = matchSafetyAnswer("cual es el numero de emergencias en casa", "es")!;
+    expect(h.kind).toBe("emergency-number");
+    expect(h.countryUnknown).toEqual({ asked: false });
+    const home = matchSafetyAnswer("what is the emergency number in home", "en")!;
+    expect(home.countryUnknown).toEqual({ asked: false });
+  });
+
   it("«Numero de emergency in Spain?» responde el número comprobado de España", () => {
     const h = matchSafetyAnswer("Numero de emergency in Spain?", "es")!;
     expect(h.kind).toBe("emergency-number");
