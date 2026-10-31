@@ -5,6 +5,7 @@
  */
 
 import { networkAudit } from "../privacy/networkAudit";
+import { beginTelemetryWipe, endTelemetryWipe } from "../inference/telemetry";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Notifications from "expo-notifications";
 import { llamaEngine } from "../inference/LlamaEngine";
@@ -229,12 +230,17 @@ export async function resetAllAppData(): Promise<void> {
   // y su memoria se vacía. Si el borrado falla sigue sin escribir: el
   // próximo arranque lo reanuda (recoverInterruptedWipe).
   networkAudit.beginWipe();
+  // F3-13: la telemetría de inferencia recibe la misma guarda: sus
+  // escrituras en vuelo no pueden resucitar eventos del mundo borrado
+  // en la base nueva.
+  beginTelemetryWipe();
   try {
     await resetAllAppDataInner();
     // Éxito: la puerta se abre y lo en espera continúa en el ciclo nuevo,
     // ya con la DEK rotada y la caché restablecida.
     endWipeGate();
     networkAudit.endWipe();
+    endTelemetryWipe();
   } catch (err) {
     // Fail-closed: lo en espera recibe el error del wipe en vez de operar
     // sobre un estado a medias. El próximo resetAllAppData instala una

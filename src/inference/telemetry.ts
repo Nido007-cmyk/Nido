@@ -75,13 +75,38 @@ CREATE TABLE IF NOT EXISTS inference_telemetry (
   n_predict INTEGER NOT NULL
 );`;
 
+/**
+ * Auditoría completa 2026-10-31 (F3-13): guarda de borrado, espejo de
+ * la de networkAudit (auditoría 2026-10-29). persistEvent es
+ * fire-and-forget: un evento del mundo anterior al borrado podía
+ * completar su escritura DESPUÉS del wipe y resucitar telemetría
+ * vieja dentro de la base nueva. Mientras el borrado está en curso
+ * no se persiste nada y el anillo en memoria se vacía; los eventos
+ * registrados antes del borrado pero escritos durante él se
+ * descartan al comprobar la marca tras la espera.
+ */
+let telemetryWiping = false;
+
+export function beginTelemetryWipe(): void {
+  telemetryWiping = true;
+  ring.length = 0;
+}
+
+export function endTelemetryWipe(): void {
+  telemetryWiping = false;
+}
+
 async function persistEvent(e: InferenceTelemetryEvent): Promise<void> {
+  const recordedWhileWiping = telemetryWiping;
   // Best-effort: telemetry must never break inference. Any failure here
   // (no DB in tests, DB locked, wiped) is silently swallowed — the
   // in-memory ring buffer above remains the source of truth for the session.
   try {
     const { getDatabase } = await import("../security/databaseManager");
     const db = await getDatabase();
+    // F3-13: si el borrado empezó antes del registro o durante la
+    // espera, este evento es del mundo borrado: no entra en la base nueva.
+    if (recordedWhileWiping || telemetryWiping) return;
     await db.execAsync(TELEMETRY_DDL);
     await db.runAsync(
       `INSERT INTO inference_telemetry
