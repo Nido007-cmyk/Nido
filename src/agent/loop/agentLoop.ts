@@ -413,19 +413,31 @@ export function finalizeResponse(text: string): string | null {
  * otro bloque), agregar una línea de confirmación para que el usuario
  * siempre vea que la mutación ocurrió.
  */
-const MUTATING_TOOLS: Record<string, string> = {
-  remember_fact: "Guardado en memoria.",
+const MUTATING_TOOLS: Record<string, Record<"es" | "en" | "pt", { text: string; said: string }>> = {
+  // Auditoría completa 2026-10-31 (F1 B-8): la confirmación y su
+  // comprobación de «ya lo dijo» existían solo en español: sobre una
+  // respuesta en inglés se añadía «Guardado en memoria.» y sobre una
+  // que ya decía «saved» se duplicaba en español. Ahora cada idioma
+  // tiene su texto y su marca.
+  remember_fact: {
+    es: { text: "Guardado en memoria.", said: "guardado" },
+    en: { text: "Saved to memory.", said: "saved" },
+    pt: { text: "Guardado na memória.", said: "guardado" },
+  },
 };
 
 export function appendMutationConfirmation(
   response: string,
-  toolUses: AgentToolUse[]
+  toolUses: AgentToolUse[],
+  lang: "es" | "en" | "pt" = "es"
 ): string {
   const used = new Set(toolUses.map((t) => t.name));
   const confirmations: string[] = [];
-  for (const [tool, msg] of Object.entries(MUTATING_TOOLS)) {
-    if (used.has(tool) && !response.toLowerCase().includes("guardado")) {
-      confirmations.push(msg);
+  const lower = response.toLowerCase();
+  for (const [tool, byLang] of Object.entries(MUTATING_TOOLS)) {
+    const c = byLang[lang] ?? byLang.es;
+    if (used.has(tool) && !lower.includes(c.said)) {
+      confirmations.push(c.text);
     }
   }
   if (confirmations.length === 0) return response;
@@ -1253,12 +1265,12 @@ async function runAgentLoopCore(
         continue;
       }
       const final = finalizeResponse(text);
-      if (final !== null) return { response: appendMutationConfirmation(final, toolUses), intent, toolUses };
+      if (final !== null) return { response: appendMutationConfirmation(final, toolUses, options.lang ?? "es"), intent, toolUses };
       // T-echo-2026-10-06: el modelo solo repitió la directiva interna.
       // Un único reintento con instrucción mínima; si falla, respuesta segura.
       messages.push({ role: "user", content: REPAIR_DIRECTIVE });
       const retry = await generateOnce();
-      return { response: appendMutationConfirmation(finalizeResponse(retry) ?? safeFallback(), toolUses), intent, toolUses };
+      return { response: appendMutationConfirmation(finalizeResponse(retry) ?? safeFallback(), toolUses, options.lang ?? "es"), intent, toolUses };
     }
 
     const observations: string[] = [];
@@ -1293,5 +1305,5 @@ async function runAgentLoopCore(
   }
 
   // Se agotaron los pasos con herramientas pendientes: devolver lo último limpio.
-  return { response: appendMutationConfirmation(finalizeResponse(lastText) ?? safeFallback(), toolUses), intent, toolUses };
+  return { response: appendMutationConfirmation(finalizeResponse(lastText) ?? safeFallback(), toolUses, options.lang ?? "es"), intent, toolUses };
 }

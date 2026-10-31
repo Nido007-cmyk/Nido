@@ -10,11 +10,32 @@ import {
   stripToolBlocks,
   stripEchoedInstruction,
   finalizeResponse,
+  appendMutationConfirmation,
   runAgentLoop,
   buildSystemPrompt,
   estimatePromptTokens,
   type AgentEngine,
 } from "./agentLoop";
+
+describe("appendMutationConfirmation (F1 B-8)", () => {
+  const used = [{ name: "remember_fact", result: "ok" }] as never;
+
+  it("confirma en el idioma del turno, no siempre en español", () => {
+    expect(appendMutationConfirmation("Done.", used, "en")).toBe("Done.\n\nSaved to memory.");
+    expect(appendMutationConfirmation("Pronto.", used, "pt")).toBe("Pronto.\n\nGuardado na memória.");
+    expect(appendMutationConfirmation("Listo.", used, "es")).toBe("Listo.\n\nGuardado en memoria.");
+    expect(appendMutationConfirmation("Listo.", used)).toBe("Listo.\n\nGuardado en memoria.");
+  });
+
+  it("no duplica si la respuesta ya evidenció el guardado en su idioma", () => {
+    expect(appendMutationConfirmation("Saved it for you.", used, "en")).toBe("Saved it for you.");
+    expect(appendMutationConfirmation("Ya quedó guardado.", used, "es")).toBe("Ya quedó guardado.");
+  });
+
+  it("sin herramientas mutantes no añade nada", () => {
+    expect(appendMutationConfirmation("Hola.", [], "en")).toBe("Hola.");
+  });
+});
 
 describe("parseToolCalls", () => {
   it("extrae un bloque tool válido", () => {
