@@ -17,7 +17,7 @@ import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { loadAllPackFacts } from "../rag/packs";
-import { emergencyCard, emergencyRegions, outdatedPackNote, type FactLang, type PackFact, type PackRegion } from "../rag/packFacts";
+import { crisisCard, emergencyCard, emergencyRegions, outdatedPackNote, type FactLang, type PackFact, type PackRegion } from "../rag/packFacts";
 import { getEmergencyRegion, setEmergencyRegion } from "../models/settings";
 import { QUICK_GUIDES } from "./emergency/quickGuides";
 
@@ -58,6 +58,8 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
 
   const countries = useMemo(() => (data ? emergencyRegions(lang, data.regions, data.facts) : []), [data, lang]);
   const card = useMemo(() => (data && code ? emergencyCard(code, lang, data.regions, data.facts) : null), [data, code, lang]);
+  // The country's verified crisis line (NIDO Crisis pack), when it has one.
+  const crisis = useMemo(() => (data && code ? crisisCard(code, lang, data.regions, data.facts) : null), [data, code, lang]);
   const hasPack = countries.length > 0;
   const countryName = card?.name ?? countries.find((c) => c.code === code)?.name ?? code ?? "";
 
@@ -176,6 +178,37 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
           <Text style={styles.source}>
             {t("emergency.checked", { date: source.checked, source: source.title })}
           </Text>
+        )}
+
+        {crisis && (
+          <View style={styles.card} testID="emergency-crisis">
+            <Text style={styles.cardTitle}>{t("emergency.crisisTitle")}</Text>
+            {crisis.lines.map((n) => (
+              <Pressable
+                key={n.key}
+                onPress={() => call(n.tel)}
+                style={styles.crisisRow}
+                accessibilityRole="button"
+                accessibilityLabel={t("emergency.callA11y", { number: n.value, label: n.label })}
+              >
+                <View style={styles.crisisText}>
+                  <Text style={styles.tileLabel} numberOfLines={2}>
+                    {n.label}
+                  </Text>
+                  <Text style={styles.tileNumber}>{n.value}</Text>
+                  {n.note ? (
+                    <Text style={styles.tileNote} numberOfLines={3}>
+                      {n.note}
+                    </Text>
+                  ) : null}
+                </View>
+                <Text style={styles.crisisCall}>{t("emergency.call")}</Text>
+              </Pressable>
+            ))}
+            {crisis.sources[0] && (
+              <Text style={styles.source}>{t("emergency.checked", { date: crisis.sources[0].checked, source: crisis.sources[0].title })}</Text>
+            )}
+          </View>
         )}
 
         {card && data && data.outdatedPacks.length > 0 && (
@@ -347,6 +380,9 @@ const getStyles = (colors: Colors, typography: Typography) =>
     tileLabel: { ...typography.ui.subtext, color: colors.text.secondary },
     tileNumber: { fontSize: 24, lineHeight: 30, fontWeight: "800", color: colors.text.primary, fontVariant: ["tabular-nums"] },
     tileNote: { ...typography.ui.caption, color: colors.text.secondary },
+    crisisRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 4 },
+    crisisText: { flex: 1, gap: 2 },
+    crisisCall: { ...typography.ui.titleSm, color: colors.crimson[500] },
     source: { ...typography.ui.caption, color: colors.text.secondary },
     disclaimer: { ...typography.ui.caption, color: colors.text.secondary },
     askRow: { flexDirection: "row", alignItems: "center", gap: 8 },

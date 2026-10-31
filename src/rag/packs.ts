@@ -23,7 +23,7 @@ import type { RetrievedChunk } from "./retrieve.types";
 import { guideTitleOf, markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId, sectionLikePattern, type PackSourceDoc } from "./packSource";
 import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "./embeddingProfile";
 import { packIndexIfReady, releaseAllIndexes, searchPackIndex } from "./vectorIndex";
-import { composeFactsAnswer, emergencyRegions, markOutdated, type FactLang, type FactsAnswer, type PackFact, type PackRegion } from "./packFacts";
+import { composeCrisisAnswer, composeFactsAnswer, emergencyRegions, markOutdated, mergePackFacts, type FactLang, type FactsAnswer, type PackFact, type PackRegion } from "./packFacts";
 
 const PACK_CANDIDATES = 400;
 const REQUIRED_EMBEDDING_SHA256 = MODEL_CATALOG.find((m) => m.kind === "embedding" && m.required)!.sha256;
@@ -342,7 +342,9 @@ async function packFacts(packId: string, open: OpenPack): Promise<{ regions: Pac
 /**
  * 0.1.55: "what number do I call in X?" answered from the verified facts of
  * the installed packs (source and date cited), or null to follow the normal
- * path. The first pack that covers the country answers. Never throws.
+ * path. The first pack that covers the country answers. A crisis-line
+ * question is answered from the same tables (the `crisis.*` facts) when no
+ * emergency number was asked for. Never throws.
  */
 export async function answerFromPackFacts(text: string, lang: FactLang): Promise<FactsAnswer | null> {
   try {
@@ -350,7 +352,7 @@ export async function answerFromPackFacts(text: string, lang: FactLang): Promise
       const open = await openPack(pack).catch(() => null);
       if (!open || open.formatVersion < 2) continue;
       const { regions, facts } = await packFacts(pack.id, open).catch(() => ({ regions: [], facts: [] }));
-      const answer = composeFactsAnswer(text, lang, regions, facts);
+      const answer = composeFactsAnswer(text, lang, regions, facts) ?? composeCrisisAnswer(text, lang, regions, facts);
       if (answer) return open.outdated ? markOutdated(answer, lang, pack.label) : answer;
     }
   } catch (e) {
@@ -362,31 +364,31 @@ export async function answerFromPackFacts(text: string, lang: FactLang): Promise
 /**
  * 0.1.55: every verified fact of the installed v2 packs, for the Emergency
  * tab. A country covered by two packs keeps the first pack's numbers (the
- * catalog order), so one screen never mixes two sources. Never throws.
+ * catalog order), so one screen never mixes two sources; the merge rule
+ * itself (and its one exception, the `crisis.*` family) lives in
+ * packFacts.ts › mergePackFacts. Never throws.
  */
 export async function loadAllPackFacts(): Promise<{ regions: PackRegion[]; facts: PackFact[]; outdatedPacks: string[] }> {
-  const regions: PackRegion[] = [];
-  const facts: PackFact[] = [];
-  /** 0.1.57: labels of the packs used here that have a newer version to download. */
-  const outdatedPacks: string[] = [];
-  const taken = new Set<string>();
+  const perPack: Array<{ regions: PackRegion[]; facts: PackFact[] }> = [];
+  /** Parallel to perPack: label and outdated flag of each pack read. */
+  const packMeta: Array<{ label: string; outdated: boolean }> = [];
   try {
     for (const pack of await knowledgePacks()) {
       const open = await openPack(pack).catch(() => null);
       if (!open || open.formatVersion < 2) continue;
       const data = await packFacts(pack.id, open).catch(() => ({ regions: [] as PackRegion[], facts: [] as PackFact[] }));
-      if (open.outdated && data.regions.some((r) => !taken.has(r.code))) outdatedPacks.push(pack.label);
-      for (const r of data.regions) {
-        if (taken.has(r.code)) continue;
-        taken.add(r.code);
-        regions.push(r);
-        facts.push(...data.facts.filter((f) => f.region === r.code));
-      }
+      perPack.push(data);
+      packMeta.push({ label: pack.label, outdated: !!open.outdated });
     }
   } catch (e) {
     console.warn("[packs] loadAllPackFacts:", e instanceof Error ? e.message : String(e));
   }
-  return { regions, facts, outdatedPacks };
+  const merged = mergePackFacts(perPack);
+  // 0.1.57: labels of the packs used here (owners of at least one region)
+  // that have a newer version to download.
+  const owners = new Set(merged.regionOwner);
+  const outdatedPacks = packMeta.filter((m, i) => m.outdated && owners.has(i)).map((m) => m.label);
+  return { regions: merged.regions, facts: merged.facts, outdatedPacks };
 }
 
 /**

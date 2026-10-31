@@ -128,6 +128,106 @@ describe("pestaña Emergencia (0.1.55)", () => {
   });
 });
 
+describe("líneas de crisis (familia crisis.*): el consumidor que faltaba", () => {
+  // Los datos reales verificados del pack NIDO Crisis (muestra de la
+  // auditoría 2026-10-30: ES 024 · US 988 · MX 800-911-2000).
+  const crisisRegions: PackRegion[] = [
+    { code: "ES", names: { es: "España", en: "Spain", pt: "Espanha" }, phrases: { es: "en España", en: "in Spain", pt: "em Espanha" }, aliases: ["España", "Spain", "Espanha"] },
+    { code: "US", names: { es: "Estados Unidos", en: "United States", pt: "Estados Unidos" }, phrases: { es: "en Estados Unidos", en: "in the United States", pt: "nos Estados Unidos" }, aliases: ["Estados Unidos", "United States", "USA"] },
+    { code: "MX", names: { es: "México", en: "Mexico", pt: "México" }, phrases: { es: "en México", en: "in Mexico", pt: "no México" }, aliases: ["México", "Mexico"] },
+  ];
+  const crisisFacts: PackFact[] = [
+    {
+      region: "ES", key: "crisis.hotline", value: "024",
+      label: { es: "línea de atención a la conducta suicida", en: "suicide prevention line", pt: "linha de prevenção do suicídio" }, note: {},
+      sourceTitle: "Ministerio de Sanidad", sourceUrl: "https://www.sanidad.gob.es/", quote: "El 024 es un servicio de alcance nacional", checked: "2026-10-30",
+    },
+    {
+      region: "US", key: "crisis.hotline", value: "988",
+      label: { es: "línea de crisis y suicidio", en: "suicide and crisis lifeline", pt: "linha de crise e suicídio" }, note: {},
+      sourceTitle: "SAMHSA", sourceUrl: "https://www.samhsa.gov/", quote: "988 offers 24/7 judgment-free support", checked: "2026-10-30",
+    },
+    {
+      region: "MX", key: "crisis.hotline", value: "800-911-2000",
+      label: { es: "Línea de la Vida", en: "Lifeline", pt: "Linha da Vida" }, note: {},
+      sourceTitle: "CONASAMA", sourceUrl: "https://www.gob.mx/conasama", quote: "llama al 800-911-2000", checked: "2026-10-30",
+    },
+  ];
+
+  it("distingue una pregunta de crisis de una de emergencias", async () => {
+    const { crisisQuestionKind } = await import("./packFacts");
+    expect(crisisQuestionKind("¿cuál es la línea de crisis de España?")).toBe(true);
+    expect(crisisQuestionKind("what is the suicide hotline in the United States?")).toBe(true);
+    expect(crisisQuestionKind("quiero quitarme la vida, ¿a quién llamo en México?")).toBe(true);
+    expect(crisisQuestionKind("número de emergencias de España")).toBe(false);
+    expect(crisisQuestionKind("cuéntame la historia de los bomberos de Chile")).toBe(false);
+    expect(crisisQuestionKind("qué tiempo hace en España")).toBe(false);
+  });
+
+  it("responde con la línea del país, su fuente con fecha y el botón de llamada", async () => {
+    const { composeCrisisAnswer } = await import("./packFacts");
+    const a = composeCrisisAnswer("¿cuál es la línea de crisis de España?", "es", crisisRegions, crisisFacts)!;
+    expect(a.region).toBe("ES");
+    expect(a.text.split("\n")[0]).toBe("Línea de crisis en España:");
+    expect(a.text).toContain("• 024 — línea de atención a la conducta suicida");
+    expect(a.text).toContain("Fuente: Ministerio de Sanidad (comprobado el 2026-10-30).");
+    expect(a.title).toBe("Línea de crisis en España");
+    expect(a.calls).toEqual([{ value: "024", label: "línea de atención a la conducta suicida", tel: "tel:024" }]);
+    const us = composeCrisisAnswer("suicide hotline in the United States", "en", crisisRegions, crisisFacts)!;
+    expect(us.text).toContain("• 988 — suicide and crisis lifeline");
+    expect(us.calls[0].tel).toBe("tel:988");
+  });
+
+  it("una expresión de crisis con país también recibe la línea", async () => {
+    const { composeCrisisAnswer } = await import("./packFacts");
+    const a = composeCrisisAnswer("quiero quitarme la vida, ¿a quién llamo en México?", "es", crisisRegions, crisisFacts)!;
+    expect(a.region).toBe("MX");
+    expect(a.text).toContain("800-911-2000");
+    expect(a.calls[0].tel).toBe("tel:8009112000");
+  });
+
+  it("sin pregunta de crisis, o sin línea para el país, no responde", async () => {
+    const { composeCrisisAnswer } = await import("./packFacts");
+    expect(composeCrisisAnswer("número de emergencias de España", "es", crisisRegions, crisisFacts)).toBeNull();
+    expect(composeCrisisAnswer("línea de crisis de Japón", "es", crisisRegions, crisisFacts)).toBeNull();
+    expect(composeCrisisAnswer("línea de crisis", "es", crisisRegions, crisisFacts)).toBeNull();
+  });
+
+  it("la tarjeta de crisis de la pestaña Emergencia trae la línea y su fuente", async () => {
+    const { crisisCard } = await import("./packFacts");
+    const es = crisisCard("ES", "es", crisisRegions, crisisFacts)!;
+    expect(es.lines.map((l) => l.value)).toEqual(["024"]);
+    expect(es.lines[0].tel).toBe("tel:024");
+    expect(es.sources).toEqual([{ title: "Ministerio de Sanidad", url: "https://www.sanidad.gob.es/", checked: "2026-10-30" }]);
+    expect(crisisCard("JP", "es", crisisRegions, crisisFacts)).toBeNull();
+  });
+
+  it("la fusión no duplica regiones: el dueño manda en emergencias y crisis se suma a su región", async () => {
+    const { mergePackFacts, crisisCard: cc, emergencyCard: ec, emergencyRegions: er } = await import("./packFacts");
+    const localDef: PackRegion = { code: "ES", names: { es: "España" }, phrases: { es: "en España" }, aliases: ["España"] };
+    const crisisDef: PackRegion = { code: "ES", names: { es: "España (crisis)" }, phrases: { es: "en España" }, aliases: ["España"] };
+    const emg = (region: string, key: string, value: string): PackFact => ({
+      region, key, value, label: { es: key }, note: {}, sourceTitle: "Local", sourceUrl: "https://example.org/", quote: value, checked: "2026-10-30",
+    });
+    const merged = mergePackFacts([
+      { regions: [localDef], facts: [emg("ES", "emergency.general", "112")] },
+      // NIDO Crisis repite la definición de ES (la de Local gana) y trae un
+      // número de emergencias rival que NO debe entrar, más su línea.
+      { regions: [crisisDef], facts: [emg("ES", "emergency.police", "999"), crisisFacts[0]] },
+      // Un tercer pack con la misma línea no la duplica: manda el primero.
+      { regions: [], facts: [{ ...crisisFacts[0], value: "111" }] },
+    ]);
+    expect(merged.regions.map((r) => r.code)).toEqual(["ES"]);
+    expect(merged.regions[0].names.es).toBe("España");
+    expect(merged.regionOwner).toEqual([0]);
+    expect(merged.facts.map((f) => `${f.key}=${f.value}`)).toEqual(["emergency.general=112", "crisis.hotline=024"]);
+    expect(cc("ES", "es", merged.regions, merged.facts)?.lines[0].value).toBe("024");
+    expect(ec("ES", "es", merged.regions, merged.facts)?.numbers.map((n) => n.value)).toEqual(["112"]);
+    // La lista de países de la pestaña sigue mandada por emergencias.
+    expect(er("es", merged.regions, merged.facts).map((r) => r.code)).toEqual(["ES"]);
+  });
+});
+
 describe("respuestas desde un pack desactualizado (0.1.57)", () => {
   it("mantiene los números y la fecha de la fuente, y avisa de que hay una versión más nueva", async () => {
     const { markOutdated } = await import("./packFacts");

@@ -1749,6 +1749,7 @@
     "call": "Llamar",
     "callA11y": "Llamar al {{number}}, {{label}}",
     "checked": "Comprobado el {{date}} · {{source}}",
+    "crisisTitle": "Línea de crisis",
     "noPackTitle": "Descarga NIDO Local",
     "noPackBody": "Para ver aquí los números de emergencia comprobados de tu país, descarga el pack NIDO Local (unos 0,2 MB).",
     "openLibrary": "Ir a la Biblioteca",

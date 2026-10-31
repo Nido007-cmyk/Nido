@@ -1749,6 +1749,7 @@
     "call": "Call",
     "callA11y": "Call {{number}}, {{label}}",
     "checked": "Checked on {{date}} · {{source}}",
+    "crisisTitle": "Crisis line",
     "noPackTitle": "Download NIDO Local",
     "noPackBody": "To see your country's checked emergency numbers here, download the NIDO Local pack (about 0.2 MB).",
     "openLibrary": "Go to the Library",

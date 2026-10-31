@@ -22,10 +22,35 @@ import { parsePackChunkId, type PackSourceDoc } from "./packSource";
 import { detectTextLang, splitSentences, type GroundingLang } from "./grounding";
 import type { SentenceProvenance } from "./provenance";
 
-/** Packs whose guides are shown word for word (both embedding variants). */
+/**
+ * Packs whose guides are shown word for word (both embedding variants),
+ * with the name the answer's heading gives them in each language.
+ *
+ * Only first-aid packs, by the doctrine in this file's header: the literal
+ * route exists because a small model can drop a "no", and in first aid
+ * that is not acceptable. NIDO Niños IS first aid (choking, burns, fever
+ * in babies), so it travels the same route; the other guide packs (home,
+ * field, crisis, disasters…) keep the model path — the route opens pack
+ * by pack, on this doctrine, never by family resemblance.
+ */
+const LITERAL_GUIDE_PACKS: Record<string, Record<GroundingLang, string>> = {
+  "nido-esencial": { es: "NIDO Esencial", en: "NIDO Essentials", pt: "NIDO Essencial" },
+  "nido-ninos": { es: "NIDO Niños", en: "NIDO Niños", pt: "NIDO Niños" },
+};
+
+function basePackId(packId: string): string {
+  return packId.replace(/-e5$/, "");
+}
+
 export function isEssentialsChunk(chunkId: string | undefined): boolean {
   const ref = parsePackChunkId(chunkId);
-  return !!ref && /^nido-esencial(-e5)?$/.test(ref.packId);
+  return !!ref && !!LITERAL_GUIDE_PACKS[basePackId(ref.packId)];
+}
+
+/** Heading name of a literal-route pack in the reader's language (Essentials when unknown). */
+function literalPackName(packId: string | undefined, lang: GroundingLang): string {
+  const names = (packId && LITERAL_GUIDE_PACKS[basePackId(packId)]) || LITERAL_GUIDE_PACKS["nido-esencial"];
+  return names[lang];
 }
 
 /**
@@ -65,10 +90,10 @@ export function pickGuideChunk(chunks: RetrievedChunk[], lang: GroundingLang): R
   return best;
 }
 
-const HEAD: Record<GroundingLang, (title: string) => string> = {
-  es: (t) => `Guía «${t}» de NIDO Esencial, tal como está escrita (sin modelo):`,
-  en: (t) => `NIDO Essentials guide “${t}”, exactly as written (no model):`,
-  pt: (t) => `Guia «${t}» do NIDO Essencial, exatamente como está escrito (sem modelo):`,
+const HEAD: Record<GroundingLang, (title: string, pack: string) => string> = {
+  es: (t, pack) => `Guía «${t}» de ${pack}, tal como está escrita (sin modelo):`,
+  en: (t, pack) => `${pack} guide “${t}”, exactly as written (no model):`,
+  pt: (t, pack) => `Guia «${t}» do ${pack}, exatamente como está escrito (sem modelo):`,
 };
 /**
  * 2026-10-30 (prueba física): «Sintomas del monoxide of carbono?» trajo
@@ -76,15 +101,15 @@ const HEAD: Record<GroundingLang, (title: string) => string> = {
  * tragados — y no desde el de los síntomas preguntados. Cuando el
  * apartado que casó no es el primero, la cabecera lo dice con honestidad.
  */
-const HEAD_ANCHORED: Record<GroundingLang, (title: string) => string> = {
-  es: (t) => `Guía «${t}» de NIDO Esencial, desde el apartado que responde a tu pregunta, tal como está escrita (sin modelo):`,
-  en: (t) => `NIDO Essentials guide “${t}”, from the section that answers your question, exactly as written (no model):`,
-  pt: (t) => `Guia «${t}» do NIDO Essencial, a partir do trecho que responde à sua pergunta, exatamente como está escrito (sem modelo):`,
+const HEAD_ANCHORED: Record<GroundingLang, (title: string, pack: string) => string> = {
+  es: (t, pack) => `Guía «${t}» de ${pack}, desde el apartado que responde a tu pregunta, tal como está escrita (sin modelo):`,
+  en: (t, pack) => `${pack} guide “${t}”, from the section that answers your question, exactly as written (no model):`,
+  pt: (t, pack) => `Guia «${t}» do ${pack}, a partir do trecho que responde à sua pergunta, exatamente como está escrito (sem modelo):`,
 };
-const HEAD_SHORT: Record<GroundingLang, (title: string) => string> = {
-  es: (t) => `Versión corta de la guía «${t}» de NIDO Esencial: su primera parte, tal como está escrita (sin modelo):`,
-  en: (t) => `Short version of the NIDO Essentials guide “${t}”: its first part, exactly as written (no model):`,
-  pt: (t) => `Versão curta do guia «${t}» do NIDO Essencial: a primeira parte, exatamente como está escrita (sem modelo):`,
+const HEAD_SHORT: Record<GroundingLang, (title: string, pack: string) => string> = {
+  es: (t, pack) => `Versión corta de la guía «${t}» de ${pack}: su primera parte, tal como está escrita (sin modelo):`,
+  en: (t, pack) => `Short version of the ${pack} guide “${t}”: its first part, exactly as written (no model):`,
+  pt: (t, pack) => `Versão curta do guia «${t}» do ${pack}: a primeira parte, exatamente como está escrita (sem modelo):`,
 };
 const MORE_SHORT: Record<GroundingLang, string> = {
   es: "Es solo el principio: la guía completa es la referencia. Toca «Abrir la guía completa».",
@@ -138,8 +163,9 @@ const CALL: Record<GroundingLang, string> = {
  * changes, to say where the text starts. If the matched part is the
  * first (or none is marked), the answer is exactly what it was before.
  */
-export function composeGuideAnswer(doc: PackSourceDoc, lang: GroundingLang, opts: { short?: boolean } = {}): string {
-  if (opts.short) return composeShortGuideAnswer(doc, lang);
+export function composeGuideAnswer(doc: PackSourceDoc, lang: GroundingLang, opts: { short?: boolean; packId?: string } = {}): string {
+  if (opts.short) return composeShortGuideAnswer(doc, lang, opts.packId);
+  const pack = literalPackName(opts.packId, lang);
   const bodies = doc.parts
     .map((p) => ({ body: p.body.trim(), used: p.used }))
     .filter((x) => x.body.length > 0);
@@ -156,7 +182,7 @@ export function composeGuideAnswer(doc: PackSourceDoc, lang: GroundingLang, opts
     parts.push(x.body);
     used += x.body.length;
   }
-  const out = [anchor > 0 ? HEAD_ANCHORED[lang](doc.title) : HEAD[lang](doc.title), "", parts.join("\n\n")];
+  const out = [anchor > 0 ? HEAD_ANCHORED[lang](doc.title, pack) : HEAD[lang](doc.title, pack), "", parts.join("\n\n")];
   if (cut) out.push("", MORE[lang]);
   if (doc.source.trim()) out.push("", `${SOURCE[lang]}: ${doc.source.trim()}`);
   out.push("", CALL[lang]);
@@ -169,7 +195,7 @@ export function composeGuideAnswer(doc: PackSourceDoc, lang: GroundingLang, opts
  * dos primeras. Nunca más de GUIDE_SHORT_MAX_CHARS salvo la primera parte,
  * y siempre cortando entre partes, nunca dentro de una.
  */
-export function composeShortGuideAnswer(doc: PackSourceDoc, lang: GroundingLang): string {
+export function composeShortGuideAnswer(doc: PackSourceDoc, lang: GroundingLang, packId?: string): string {
   const bodies = doc.parts.map((p) => p.body.trim()).filter(Boolean);
   const firstSteps = bodies.slice(0, 3).findIndex((b) => /^\s*1[.)]\s/m.test(b));
   const wanted = firstSteps >= 0 ? firstSteps + 1 : Math.min(2, bodies.length);
@@ -180,7 +206,7 @@ export function composeShortGuideAnswer(doc: PackSourceDoc, lang: GroundingLang)
     parts.push(body);
     used += body.length;
   }
-  const out = [HEAD_SHORT[lang](doc.title), "", parts.join("\n\n"), "", MORE_SHORT[lang]];
+  const out = [HEAD_SHORT[lang](doc.title, literalPackName(packId, lang)), "", parts.join("\n\n"), "", MORE_SHORT[lang]];
   if (doc.source.trim()) out.push("", `${SOURCE[lang]}: ${doc.source.trim()}`);
   out.push("", CALL[lang]);
   return out.join("\n");
@@ -192,10 +218,14 @@ export function composeShortGuideAnswer(doc: PackSourceDoc, lang: GroundingLang)
  * primero» son textos fijos de NIDO, no frases de la guía.
  */
 export function guideAnswerProvenance(text: string): SentenceProvenance[] {
+  // A heading is fixed text whichever literal-route pack it names: the
+  // prefix up to the guide title, tried with every pack's display name.
+  const packNames = Object.values(LITERAL_GUIDE_PACKS).flatMap((names) => Object.values(names));
+  const headPrefixes = [HEAD, HEAD_ANCHORED, HEAD_SHORT].flatMap((table) =>
+    Object.values(table).flatMap((h) => packNames.map((name) => h("\u0000", name).split("\u0000")[0])),
+  );
   const fixedLine = (p: string) =>
-    Object.values(HEAD).some((h) => p.startsWith(h("\u0000").split("\u0000")[0])) ||
-    Object.values(HEAD_ANCHORED).some((h) => p.startsWith(h("\u0000").split("\u0000")[0])) ||
-    Object.values(HEAD_SHORT).some((h) => p.startsWith(h("\u0000").split("\u0000")[0])) ||
+    headPrefixes.some((pre) => p.startsWith(pre)) ||
     Object.values(MORE).includes(p) ||
     Object.values(MORE_SHORT).includes(p) ||
     Object.values(CALL).includes(p) ||

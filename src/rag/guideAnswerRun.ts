@@ -9,7 +9,7 @@
  */
 import { retrieve } from "./retrieve";
 import { readPackSource } from "./packs";
-import { guideTitleOf } from "./packSource";
+import { guideTitleOf, parsePackChunkId } from "./packSource";
 import { ANSWER_CONTEXT_CHUNKS } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
 import type { GroundingLang } from "./grounding";
@@ -40,7 +40,10 @@ export async function answerFromGuide(
     const doc = await readPackSource(pick.chunkId);
     if (!doc) return { answer: null, retrieved };
     const sameGuide = retrieved.filter((c) => c !== pick && guideTitleOf(c.title) === doc.title);
-    return { answer: { text: composeGuideAnswer(doc, lang, { short }), chunks: [pick, ...sameGuide] }, retrieved };
+    return {
+      answer: { text: composeGuideAnswer(doc, lang, { short, packId: parsePackChunkId(pick.chunkId)?.packId }), chunks: [pick, ...sameGuide] },
+      retrieved,
+    };
   } catch (e) {
     console.warn("[guideAnswer]", e instanceof Error ? e.message : String(e));
     return { answer: null, retrieved };

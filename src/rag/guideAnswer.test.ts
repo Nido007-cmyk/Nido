@@ -29,6 +29,28 @@ describe("respuesta desde la guía, sin modelo (0.1.59)", () => {
     expect(isEssentialsChunk("corpus-standard:1")).toBe(false);
   });
 
+  it("la vía literal también cubre NIDO Niños (primeros auxilios), y ningún otro pack de guías", () => {
+    expect(isEssentialsChunk("pack:nido-ninos:3")).toBe(true);
+    expect(isEssentialsChunk("pack:nido-ninos-e5:3")).toBe(true);
+    expect(isEssentialsChunk("pack:nido-hogar:3")).toBe(false);
+    expect(isEssentialsChunk("pack:nido-crisis:3")).toBe(false);
+    expect(isEssentialsChunk("pack:nido-campo-e5:3")).toBe(false);
+    expect(isEssentialsChunk("pack:nido-desastres:3")).toBe(false);
+    const kid = chunk("pack:nido-ninos-e5:3", "Atragantamiento en bebés — Qué hacer", "Qué hacer\n- Sostén al bebé boca abajo sobre tu antebrazo.", 0.9);
+    expect(pickGuideChunk([kid], "es")?.chunkId).toBe(kid.chunkId);
+  });
+
+  it("la cabecera nombra el pack dueño de la guía, y sin packId sigue diciendo Esencial", () => {
+    const doc = { title: "Quemaduras en niños", source: "NIDO — Quemaduras", parts: [{ id: 1, body: "Enfría la quemadura con agua fresca.", used: true }] };
+    expect(composeGuideAnswer(doc, "es", { packId: "nido-ninos-e5" }).split("\n")[0]).toBe(
+      "Guía «Quemaduras en niños» de NIDO Niños, tal como está escrita (sin modelo):",
+    );
+    expect(composeGuideAnswer(doc, "es").split("\n")[0]).toBe("Guía «Quemaduras en niños» de NIDO Esencial, tal como está escrita (sin modelo):");
+    // La cabecera de Niños también es texto fijo en la procedencia, no frase de la guía.
+    const prov = guideAnswerProvenance(composeGuideAnswer(doc, "es", { packId: "nido-ninos" }));
+    expect(prov[0].origin.kind).toBe("fixed");
+  });
+
   it("el caso de la tablet: un trozo solo léxico (dolor de pecho) no gana a la guía de RCP", () => {
     const got = pickGuideChunk([
       chunk("pack:nido-esencial-e5:230", "Dolor de pecho e infarto — Qué hacer", CHEST, undefined, "lexical"),

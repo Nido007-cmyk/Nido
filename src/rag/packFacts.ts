@@ -296,3 +296,159 @@ export function emergencyRegions(lang: FactLang, regions: PackRegion[], facts: P
     .map((r) => ({ code: r.code, name: r.names[lang] ?? r.names.en ?? r.code }))
     .sort((a, b) => a.name.localeCompare(b.name, lang));
 }
+
+// ---------------------------------------------------------------------------
+// Merging the installed packs' facts for the surfaces above.
+//
+// Each region is defined by ONE pack: the first that carries it (catalog
+// order), and that owner's facts for the region are the region's data — a
+// screen never mixes two sources for the same number. One exception, by
+// family: facts outside `emergency.*` (the `crisis.*` hotlines) are not a
+// rival source for the region's numbers, they are another datum of the
+// same region, so a pack that does not own the region can still add them
+// (first pack wins per region+key: a hotline is never shown twice). That
+// is what lets NIDO Crisis's lines reach the Emergency tab although NIDO
+// Local owns every region they belong to.
+
+export function mergePackFacts(perPack: Array<{ regions: PackRegion[]; facts: PackFact[] }>): {
+  regions: PackRegion[];
+  facts: PackFact[];
+  /** regionOwner[i] = index in `perPack` of the pack that defined regions[i]. */
+  regionOwner: number[];
+} {
+  const regions: PackRegion[] = [];
+  const facts: PackFact[] = [];
+  const regionOwner: number[] = [];
+  const taken = new Set<string>();
+  const seenFact = new Set<string>();
+  perPack.forEach((data, packIndex) => {
+    for (const r of data.regions) {
+      if (taken.has(r.code)) continue;
+      taken.add(r.code);
+      regions.push(r);
+      regionOwner.push(packIndex);
+      for (const f of data.facts) {
+        if (f.region !== r.code) continue;
+        facts.push(f);
+        seenFact.add(`${f.region}|${f.key}`);
+      }
+    }
+    for (const f of data.facts) {
+      if (f.key.startsWith("emergency.")) continue;
+      if (!taken.has(f.region)) continue;
+      const id = `${f.region}|${f.key}`;
+      if (seenFact.has(id)) continue;
+      seenFact.add(id);
+      facts.push(f);
+    }
+  });
+  return { regions, facts, regionOwner };
+}
+
+// ---------------------------------------------------------------------------
+// Crisis lines (family `crisis.*`): the verified hotline of a country, from
+// the NIDO Crisis pack. The Crisis guides send the reader to "the verified
+// data table" of the pack; these are its consumers — the fixed chat route
+// (composeCrisisAnswer) and the Emergency tab (crisisCard) — so the table
+// the guides name can actually be seen.
+
+const CRISIS_LINE_CUES =
+  / (linea de la vida|linea de crisis|linea de ayuda|telefono de crisis|telefono de ayuda|numero de crisis|crisis line|suicide (line|hotline|helpline)|helpline|hotline|lifeline|linha de crise|linha de ajuda|telefone de crise) /;
+const CRISIS_INTENT_CUES =
+  / (suicid\w*|autolesion\w*|quitarme la vida|quitarse la vida|quiero morir|quiere morir|no quiero vivir|hacerse dano|self harm|kill myself|end my life) /;
+
+/**
+ * The text asks for a crisis line, or says someone may be in crisis. A
+ * plain emergency-number question ("número de emergencias de España") is
+ * not one: the emergency route answers that, unchanged.
+ */
+export function crisisQuestionKind(text: string): boolean {
+  const folded = foldText(text);
+  const words = folded.trim().split(" ").filter(Boolean);
+  if (words.length === 0 || words.length > 24) return false;
+  return CRISIS_LINE_CUES.test(folded) || CRISIS_INTENT_CUES.test(folded);
+}
+
+const CT: Record<
+  FactLang,
+  { head: (where: string) => string; care: string; source: string; checked: string; title: (name: string) => string }
+> = {
+  es: {
+    head: (where) => `Línea de crisis ${where}:`,
+    care: "Si hay peligro ahora mismo, llama también al número de emergencias.",
+    source: "Fuente",
+    checked: "comprobado el",
+    title: (name) => `Línea de crisis en ${name}`,
+  },
+  en: {
+    head: (where) => `Crisis line ${where}:`,
+    care: "If someone is in danger right now, call the emergency number too.",
+    source: "Source",
+    checked: "checked on",
+    title: (name) => `Crisis line in ${name}`,
+  },
+  pt: {
+    head: (where) => `Linha de crise ${where}:`,
+    care: "Se houver perigo agora mesmo, ligue também para o número de emergência.",
+    source: "Fonte",
+    checked: "verificado em",
+    title: (name) => `Linha de crise em ${name}`,
+  },
+};
+
+function factSources(facts: PackFact[]): Array<{ title: string; url: string; checked: string }> {
+  const sources: Array<{ title: string; url: string; checked: string }> = [];
+  for (const f of facts) {
+    const prev = sources.find((s) => s.title === f.sourceTitle);
+    if (!prev) sources.push({ title: f.sourceTitle, url: f.sourceUrl, checked: f.checked });
+    else if (f.checked < prev.checked) prev.checked = f.checked;
+  }
+  return sources;
+}
+
+/**
+ * The answer to a crisis-line question from verified facts, or null when
+ * the text isn't one or no installed pack carries a line for the country.
+ */
+export function composeCrisisAnswer(text: string, lang: FactLang, regions: PackRegion[], facts: PackFact[]): FactsAnswer | null {
+  if (!crisisQuestionKind(text)) return null;
+  const region = findRegion(text, regions);
+  if (!region) return null;
+  const mine = facts.filter((f) => f.region === region.code && f.key.startsWith("crisis."));
+  if (mine.length === 0) return null;
+  const t = CT[lang];
+  const where = region.phrases[lang] ?? region.names[lang] ?? region.code;
+  const name = region.names[lang] ?? region.code;
+  const out: string[] = [t.head(where), ...mine.map((f) => line(f, lang)), "", t.care];
+  out.push("", ...factSources(mine).map((s) => `${t.source}: ${s.title} (${t.checked} ${s.checked}).`));
+  const calls = mine.map((f) => ({ value: f.value, label: f.label[lang] ?? f.label.en ?? f.key, tel: telUri(f.value) }));
+  return { text: out.join("\n"), calls, region: region.code, facts: mine, title: t.title(name) };
+}
+
+export interface CrisisCard {
+  code: string;
+  name: string;
+  /** The country's verified crisis lines, in the pack's order. */
+  lines: EmergencyNumber[];
+  sources: Array<{ title: string; url: string; checked: string }>;
+}
+
+/** The country's verified crisis lines for the Emergency tab, or null when no pack carries any. */
+export function crisisCard(code: string, lang: FactLang, regions: PackRegion[], facts: PackFact[]): CrisisCard | null {
+  const region = regions.find((r) => r.code === code);
+  if (!region) return null;
+  const mine = facts.filter((f) => f.region === code && f.key.startsWith("crisis."));
+  if (mine.length === 0) return null;
+  return {
+    code,
+    name: region.names[lang] ?? region.names.en ?? code,
+    lines: mine.map((f) => ({
+      key: f.key,
+      value: f.value,
+      label: f.label[lang] ?? f.label.en ?? f.key,
+      note: f.note[lang] ?? null,
+      tel: telUri(f.value),
+    })),
+    sources: factSources(mine),
+  };
+}
