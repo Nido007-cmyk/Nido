@@ -29,6 +29,7 @@ import {
   writeVaultSetting,
 } from "../privacy/keyManager";
 import { LAST_BACKUP_KEY } from "../security/vaultBackupGate";
+import { STAGING_KEY_NAME } from "../security/stagingSeal";
 
 const MODELS_DIR = `${FileSystem.documentDirectory}models`;
 const CORPUS_DIR = `${FileSystem.documentDirectory}corpus`;
@@ -307,6 +308,14 @@ async function resetAllAppDataInner(): Promise<void> {
   } catch {
     /* sin SecureStore: nada que borrar; el paso 4 lo juzga igual */
   }
+  // Auditoría completa 2026-10-31 (F2-06): la llave que sella el
+  // archivo de la rotación (rekey-staging.json) también muere. El
+  // archivo ya se borraba; su llave sobrevivía en SecureStore.
+  try {
+    await writeVaultSetting(STAGING_KEY_NAME, null);
+  } catch {
+    /* sin SecureStore: nada que borrar; el paso 4 lo juzga igual */
+  }
   resetMemoryKeyCache();
 
   // 3. Ficheros y directorios de datos.
@@ -361,6 +370,9 @@ async function resetAllAppDataInner(): Promise<void> {
   // F2-02: la marca D9 no puede sobrevivir al borrado.
   if ((await readVaultSetting(LAST_BACKUP_KEY)) !== null)
     survivors.push(`secureStore:${LAST_BACKUP_KEY}`);
+  // F2-06: tampoco la llave de sellado del staging de rotación.
+  if ((await readVaultSetting(STAGING_KEY_NAME)) !== null)
+    survivors.push(`secureStore:${STAGING_KEY_NAME}`);
   if ((await loadP2PPrivateKey()) !== null) survivors.push("keystore:nido_p2p_sk");
   if ((await loadP2PSigningKey()) !== null) survivors.push("keystore:nido_p2p_sign_sk");
   // 5. Notificaciones del SO: ni programadas ni ya presentadas (bandeja)

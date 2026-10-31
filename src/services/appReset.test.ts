@@ -339,6 +339,16 @@ describe("resetAllAppData (Clear All Data)", () => {
     expect(await readVaultSetting(LAST_BACKUP_KEY)).toBeNull();
   });
 
+  it("auditoría 2026-10-31 (F2-06): la llave de sellado del staging de rotación muere con el borrado", async () => {
+    await seedKeys();
+    seedFullDevice();
+    const { secureStagingKeyStore } = await import("../security/stagingSeal");
+    await secureStagingKeyStore.set("ab".repeat(32));
+    expect(await secureStagingKeyStore.get()).not.toBeNull();
+    await resetAllAppData();
+    expect(await secureStagingKeyStore.get()).toBeNull();
+  });
+
   it("0.1.47: si un respaldo local sobrevive, el wipe falla en voz alta", async () => {
     await seedKeys();
     seedFullDevice();
