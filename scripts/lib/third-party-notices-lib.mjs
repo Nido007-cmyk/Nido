@@ -44,6 +44,14 @@ export const LICENSE_FALLBACKS = [
     match: /^(?:@react-native\/|metro(?:-|$)|ob1$|hermes-compiler$|react-devtools-core$)/,
     from: "react-native",
   },
+  {
+    // Auditoría completa 2026-10-31 (F7-05): los binarios de
+    // plataforma de lightningcss no traen fichero, pero son el
+    // mismo proyecto y la misma licencia (MPL-2.0) que el paquete
+    // principal, que sí lo trae.
+    match: /^lightningcss-/,
+    from: "lightningcss",
+  },
 ];
 
 /**

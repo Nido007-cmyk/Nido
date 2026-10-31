@@ -11274,6 +11274,34 @@ This Source Code Form is "Incompatible With Secondary Licenses", as
 defined by the Mozilla Public License, v. 2.0.
 ```
 
+### lightningcss-android-arm64@1.33.0
+
+Ships no license file; same project, copyright holder and license as `lightningcss`, whose notice applies (see above).
+
+### lightningcss-darwin-arm64@1.33.0
+
+Ships no license file; same project, copyright holder and license as `lightningcss`, whose notice applies (see above).
+
+### lightningcss-darwin-x64@1.33.0
+
+Ships no license file; same project, copyright holder and license as `lightningcss`, whose notice applies (see above).
+
+### lightningcss-freebsd-x64@1.33.0
+
+Ships no license file; same project, copyright holder and license as `lightningcss`, whose notice applies (see above).
+
+### lightningcss-linux-arm-gnueabihf@1.33.0
+
+Ships no license file; same project, copyright holder and license as `lightningcss`, whose notice applies (see above).
+
+### lightningcss-linux-arm64-gnu@1.33.0
+
+Ships no license file; same project, copyright holder and license as `lightningcss`, whose notice applies (see above).
+
+### lightningcss-linux-arm64-musl@1.33.0
+
+Ships no license file; same project, copyright holder and license as `lightningcss`, whose notice applies (see above).
+
 ### lightningcss-linux-x64-gnu@1.33.0 — LICENSE
 
 ```text
@@ -12029,6 +12057,14 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 This Source Code Form is "Incompatible With Secondary Licenses", as
 defined by the Mozilla Public License, v. 2.0.
 ```
+
+### lightningcss-win32-arm64-msvc@1.33.0
+
+Ships no license file; same project, copyright holder and license as `lightningcss`, whose notice applies (see above).
+
+### lightningcss-win32-x64-msvc@1.33.0
+
+Ships no license file; same project, copyright holder and license as `lightningcss`, whose notice applies (see above).
 
 ### llama.rn@0.13.0-rc.7 — LICENSE
 
@@ -17720,15 +17756,6 @@ These packages declare a license in their `package.json` but ship no license fil
 - fsevents@2.3.3
 - imurmurhash@0.1.4
 - jimp-compact@0.16.1
-- lightningcss-android-arm64@1.33.0
-- lightningcss-darwin-arm64@1.33.0
-- lightningcss-darwin-x64@1.33.0
-- lightningcss-freebsd-x64@1.33.0
-- lightningcss-linux-arm-gnueabihf@1.33.0
-- lightningcss-linux-arm64-gnu@1.33.0
-- lightningcss-linux-arm64-musl@1.33.0
-- lightningcss-win32-arm64-msvc@1.33.0
-- lightningcss-win32-x64-msvc@1.33.0
 - stream-buffers@2.2.0
 - structured-headers@0.4.1
 
