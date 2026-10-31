@@ -3,6 +3,7 @@ title: CPR for adults and older children
 category: First aid
 lang: en
 sources: AHA Guidelines for CPR and Emergency Cardiovascular Care 2025; American Red Cross; IFRC First Aid Guidelines 2020
+questions: someone collapsed and stopped breathing, how do I start CPR | how to revive an adult who is not breathing | a person is unconscious and not breathing, what do I do first | when should I start CPR on an adult | my dad fainted and is not breathing
 ---
 If someone collapses, does not respond and is not breathing normally (or is only gasping), their heart has probably stopped. Every minute without CPR sharply lowers the chance of survival. Starting quickly matters most: do not be afraid of doing it "wrong"; doing nothing is worse.
 

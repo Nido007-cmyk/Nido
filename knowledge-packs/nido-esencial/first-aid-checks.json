@@ -110,13 +110,13 @@
  {
   "lang": "pt",
   "q": "meu pai está com dor forte no peito",
-  "expect": "Dolor de pecho",
+  "expect": "Dor no peito e infarto",
   "case": "FA-19"
  },
  {
   "lang": "pt",
   "q": "uma pessoa desmaiou e não respira",
-  "expect": "RCP (reanimación) en adultos",
+  "expect": "RCP (reanimação cardiopulmonar) em adultos e crianças maiores",
   "case": "FA-20"
  }
 ]
