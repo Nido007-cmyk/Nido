@@ -63,9 +63,20 @@ vi.mock("llama.rn", () => ({
     return ctx;
   },
 }));
+// Bounty tanda 3: el CrashGuard persiste en un JSON junto a los
+// modelos; el mock guarda los ficheros en memoria para poder sembrarlo.
+const fsStore = new Map<string, string>();
 vi.mock("expo-file-system/legacy", () => ({
   documentDirectory: "file:///docs/",
   getInfoAsync: async () => ({ exists: true, size: 1_000_000 }),
+  readAsStringAsync: async (path: string) => {
+    const v = fsStore.get(path);
+    if (v === undefined) throw new Error("File not found");
+    return v;
+  },
+  writeAsStringAsync: async (path: string, data: string) => {
+    fsStore.set(path, data);
+  },
 }));
 let mockTotalRamBytes = 12 * 1024 ** 3;
 let mockRssBytes = 1024 ** 3;
@@ -95,6 +106,7 @@ beforeEach(() => {
   initCalls.length = 0;
   rejectInit = null;
   mockReplyText = "Hi";
+  fsStore.clear();
 });
 
 describe("RAM-2026-10-11: perfiles de memoria del LLM", () => {
@@ -252,6 +264,53 @@ describe("LlamaEngine load/unload", () => {
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
     expect(engine.isLoaded).toBe(true);
+  });
+});
+
+describe("Bounty tanda 3: escalera de memoria y CrashGuard", () => {
+  // Costes con la arquitectura por defecto y el fichero de 1 MB del
+  // mock: ctx 4096 ≈ 698 MB · 3072 ≈ 602 MB. Disponible = total − RSS
+  // − 2 GiB de reserva.
+  it("baja un peldaño de contexto en vez de rechazar cuando el techo no cabe", async () => {
+    mockTotalRamBytes = 2 * 1024 ** 3 + 650_000_000; // ≈650 MB libres: 4096 no, 3072 sí
+    mockRssBytes = 0;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(engine.isLoaded).toBe(true);
+    expect(initCalls[0].n_ctx).toBe(3072);
+  });
+
+  it("un choque sin confirmar reduce el presupuesto de la siguiente carga, y generar confirma", async () => {
+    // ≈800 MB libres: a factor 1 el 4096 cabría; el pendiente de un
+    // proceso muerto cuenta un choque (factor 0,8 → 640 MB) y baja a 3072.
+    mockTotalRamBytes = 2 * 1024 ** 3 + 800_000_000;
+    mockRssBytes = 0;
+    fsStore.set(
+      "file:///docs/nido-crash-guard.json",
+      JSON.stringify({ crashes: 0, pending: { model: "models/a.gguf", nCtx: 4096, at: 1 } })
+    );
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls[0].n_ctx).toBe(3072);
+    // El intento nuevo quedó persistido como pendiente…
+    const during = JSON.parse(fsStore.get("file:///docs/nido-crash-guard.json")!) as {
+      crashes: number;
+      pending: unknown;
+    };
+    expect(during.crashes).toBe(1);
+    expect(during.pending).not.toBeNull();
+    // …y la primera generación que termina bien lo confirma todo
+    // (la completion del mock solo se asienta al detener, como siempre).
+    const gen = engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 30));
+    await engine.stop();
+    await expect(gen).resolves.toBe("Hi");
+    await new Promise((r) => setTimeout(r, 0));
+    const after = JSON.parse(fsStore.get("file:///docs/nido-crash-guard.json")!) as {
+      crashes: number;
+      pending: unknown;
+    };
+    expect(after).toEqual({ crashes: 0, pending: null });
   });
 });
 

@@ -7,6 +7,13 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { initLlama, LlamaContext, type CompletionResponseFormat } from "llama.rn";
 import { checkRamBudget, readRamSnapshot, toGb } from "./ramBudget";
+import {
+  confirmCrashGuardRecord,
+  parseCrashGuardRecord,
+  planContext,
+  settleCrashGuardRecord,
+  type CrashGuardRecord,
+} from "./memoryLadder";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
 import { withStage } from "../utils/stageError";
@@ -183,6 +190,8 @@ export interface LoadedModelInfo {
   sampling?: ModelSamplingDefaults;
   /** Estudio de modelos: quitar la cadena <think> del texto final. */
   stripReasoning?: boolean;
+  /** Bounty tanda 3: nota de la escalera/CrashGuard si el plan degradó. */
+  contextNote?: string;
 }
 
 /**
@@ -247,6 +256,9 @@ export class LlamaEngine {
   // conjunto, no una sola — generate() ahora va por la cola pero stop()
   // puede interrumpir desde fuera.
   private inFlight: Set<Promise<unknown>> = new Set();
+  // Bounty tanda 3 (CrashGuard): el registro persistido, leído una vez
+  // y cacheado; null = aún no leído. Ver memoryLadder.ts.
+  private crashGuard: CrashGuardRecord | null = null;
 
   private enqueue<T>(task: () => Promise<T>): Promise<T> {
     const run = this.queue.then(task);
@@ -255,6 +267,65 @@ export class LlamaEngine {
       () => {}
     );
     return run;
+  }
+
+  // ---- CrashGuard (bounty tanda 3; la lógica pura vive en
+  // memoryLadder.ts). Todo a prueba de fallos: si el fichero no se
+  // puede leer o escribir, el motor sigue exactamente como antes.
+
+  private crashGuardPath(): string {
+    return `${FileSystem.documentDirectory}nido-crash-guard.json`;
+  }
+
+  private async crashGuardRead(): Promise<CrashGuardRecord> {
+    if (this.crashGuard) return this.crashGuard;
+    let record: CrashGuardRecord = { crashes: 0, pending: null };
+    try {
+      const raw = await FileSystem.readAsStringAsync(this.crashGuardPath());
+      record = parseCrashGuardRecord(raw);
+    } catch {
+      // Sin fichero (primera vez) o ilegible: registro vacío.
+    }
+    this.crashGuard = record;
+    return record;
+  }
+
+  private async crashGuardWrite(record: CrashGuardRecord): Promise<void> {
+    this.crashGuard = record;
+    try {
+      await FileSystem.writeAsStringAsync(this.crashGuardPath(), JSON.stringify(record));
+    } catch {
+      // La memoria en proceso manda; el siguiente arranque reintenta.
+    }
+  }
+
+  /**
+   * Al abrir una carga: asienta el registro (un pendiente con el
+   * proceso muerto cuenta como choque; con un modelo vivo, ese
+   * pendiente es el modelo cargado y se confirma) y devuelve el
+   * factor de seguridad que manda en el plan de esta carga.
+   */
+  private async crashGuardSettle(): Promise<number> {
+    const before = await this.crashGuardRead();
+    const { record, safety } = settleCrashGuardRecord(before, { modelAlive: this.context !== null });
+    if (record !== before) await this.crashGuardWrite(record);
+    return safety;
+  }
+
+  /** Deja el intento en vuelo persistido ANTES de crear el contexto. */
+  private async crashGuardMarkPending(model: string, nCtx: number): Promise<void> {
+    const record = await this.crashGuardRead();
+    await this.crashGuardWrite({ crashes: record.crashes, pending: { model, nCtx, at: Date.now() } });
+  }
+
+  /**
+   * Una generación que termina bien confirma la carga: contador a
+   * cero y sin pendiente. Sin escritura cuando no hay nada que limpiar.
+   */
+  private crashGuardConfirm(): void {
+    const record = this.crashGuard;
+    if (!record || (record.crashes === 0 && record.pending === null)) return;
+    void this.crashGuardWrite(confirmCrashGuardRecord(record));
   }
 
   load(modelFilename: string, opts?: { nCtx?: number; nThreads?: number }): Promise<void> {
@@ -268,8 +339,16 @@ export class LlamaEngine {
     const catalogEntry: CatalogModel | undefined = MODEL_CATALOG.find(
       (m) => m.filename === modelFilename
     );
-    const nCtx = opts?.nCtx ?? catalogEntry?.defaultNCtx ?? 4096;
+    // Bounty tanda 3: el contexto pedido es el TECHO. Sin opción
+    // explícita, la escalera de memoria (memoryLadder.ts) puede bajar
+    // peldaños en el pre-flight hasta que el plan quepa; con opción
+    // explícita manda ella, como siempre. El CrashGuard asienta su
+    // registro al abrir la carga y su factor entra en el plan.
+    const explicitCtx = opts?.nCtx !== undefined;
+    const requestedCtx = opts?.nCtx ?? catalogEntry?.defaultNCtx ?? 4096;
+    let nCtx = requestedCtx;
     const nThreads = opts?.nThreads ?? 4;
+    const crashSafety = await this.crashGuardSettle();
 
     // ChatScreen re-mounts (and calls load() again) every time Settings is
     // closed, even if the user didn't touch the model — re-initializing the
@@ -306,25 +385,57 @@ export class LlamaEngine {
     // del RSS para evitar falsos negativos ("no cabe" cuando sí cabría
     // tras liberar).
     const snapshot = readRamSnapshot();
-    const spec = {
+    const specBase = {
       fileSizeBytes,
-      nCtx,
       nLayer: catalogEntry?.arch?.nLayer,
       nKvHeads: catalogEntry?.arch?.nKvHeads,
       headDim: catalogEntry?.arch?.headDim,
     };
-    const verdict = snapshot ? checkRamBudget(spec, snapshot) : null;
+    const spec = { ...specBase, nCtx };
+    let verdict = snapshot ? checkRamBudget(spec, snapshot) : null;
+    // La escalera solo actúa sin opción explícita y con lectura de
+    // RAM: elige el peldaño mayor que cabe bajo el techo pedido, con
+    // el presupuesto reducido por el CrashGuard si hubo un choque.
+    let contextNote = "";
+    if (!explicitCtx && snapshot) {
+      const plan = planContext(specBase, snapshot, { ceiling: requestedCtx, safety: crashSafety });
+      if (plan) {
+        nCtx = plan.nCtx;
+        verdict = plan.verdict;
+        contextNote = plan.note;
+      }
+    }
     if (verdict && !verdict.fits) {
       throw new Error(
         `"${modelFilename}" needs roughly ${toGb(verdict.totalBytes)}GB of RAM, but this ` +
           `device only has about ${toGb(verdict.availableBytes)}GB free (of ${toGb(verdict.totalRamBytes)}GB total). ` +
-          `Try a smaller model from Settings > Tone & Model.`
+          `Try a smaller model from Settings > Tone & Model.` +
+          (contextNote ? ` (${contextNote})` : "")
       );
+    }
+
+    // Segundo atajo tras planificar: el modelo ya cargado puede estar
+    // justo en el peldaño elegido aunque el techo pedido sea otro
+    // (cargó degradado en un arranque justo de RAM); recargarlo al
+    // mismo contexto efectivo sería el coste que el primer atajo evita.
+    if (
+      this.context &&
+      this.modelInfo?.filename === modelFilename &&
+      this.modelInfo.nCtx === nCtx &&
+      this.modelInfo.nThreads === nThreads
+    ) {
+      return;
     }
 
     // Release any previously loaded model (e.g. actually switching models
     // from Settings) so we don't leak the old context's native memory.
     await this.unloadNow();
+
+    // CrashGuard: el intento queda persistido ANTES de crear el
+    // contexto — si el proceso muere dentro de initLlama (la muerte
+    // por memoria no deja traza en JS), el siguiente arranque lo
+    // cuenta. Se confirma en la primera generación que termina bien.
+    await this.crashGuardMarkPending(modelFilename, nCtx);
 
     try {
       // RAM-2026-10-11: primer perfil que llama.cpp acepte (ver
@@ -350,6 +461,7 @@ export class LlamaEngine {
         nCtx,
         nThreads,
         memoryProfile: loadedProfile,
+        ...(contextNote ? { contextNote } : {}),
         noThink: catalogEntry?.capabilities?.noThink,
         sampling: catalogEntry?.capabilities?.sampling,
         stripReasoning: catalogEntry?.capabilities?.stripReasoning,
@@ -457,7 +569,10 @@ export class LlamaEngine {
         });
     this.generationChain = run.catch(() => {});
     try {
-      return await run;
+      const text = await run;
+      // CrashGuard: la carga que genera queda confirmada.
+      this.crashGuardConfirm();
+      return text;
     } finally {
       this.generationsInLine--;
     }
