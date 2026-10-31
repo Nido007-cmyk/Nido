@@ -32,6 +32,17 @@ import {
 import nacl from "tweetnacl";
 import { toHex } from "./crypto";
 
+// Auditoría completa 2026-10-31 (F6-05): para ejercer proposeTo de
+// verdad hace falta la clave de firma; se sustituye SOLO esa función
+// del store (el resto del módulo queda real) por un par efímero.
+vi.mock("./store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./store")>();
+  return {
+    ...actual,
+    getSigningKeypair: async () => nacl.sign.keyPair(),
+  };
+});
+
 describe("Protocolo v2: negotiation message type", () => {
   it("PROTOCOL_VERSION es 2", () => {
     expect(PROTOCOL_VERSION).toBe(2);
@@ -545,12 +556,18 @@ describe("NEGOTIATION-INIT 2026-10-07: proposeTo", () => {
   });
 
   it("P2P-3 FIX: default scope es send:message (no chat inválido)", async () => {
-    // Verificar que el default no sea "chat" inspeccionando el código fuente
-    // (el scope "chat" causa auto-reject en p2pAuthorization.ts)
-    const src = await import("./negotiationService");
-    // El fix cambió el default de ["chat"] a ["send:message"]
-    // Este test documenta la expectativa; la verificación real es en código.
-    expect(true).toBe(true);
+    // Auditoría completa 2026-10-31 (F6-05): la aserción anterior era
+    // expect(true).toBe(true): si el default volviera a ["chat"],
+    // ninguna prueba se pondría roja y el auto-rechazo de
+    // p2pAuthorization volvería en silencio. Ahora se propone SIN
+    // scopes y se comprueba la propuesta creada de verdad.
+    negotiationService.setSendFunction(async () => true);
+    const result = await negotiationService.proposeTo("cd".repeat(32), "Ayúdame con las notas");
+    expect(result.sent).toBe(true);
+    const session = negotiationService
+      .listSessions()
+      .find((s) => s.proposalId === result.proposalId);
+    expect(session?.proposal.requestedScopes).toEqual(["send:message"]);
   });
 });
 
