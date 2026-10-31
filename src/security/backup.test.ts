@@ -50,6 +50,29 @@ vi.mock("./databaseManager", () => ({
   closeDatabase: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Auditoría 2026-10-31 (F3-08): expo-crypto determinista para poder
+// fijar huellas SHA en las pruebas (la real depende del nativo).
+const cryptox = vi.hoisted(() => ({
+  digestBytes: (bytes: Uint8Array): ArrayBuffer => {
+    const out = new Uint8Array(32);
+    bytes.forEach((b, i) => {
+      out[i % 32] = (out[i % 32] + b * 7 + i) & 0xff;
+    });
+    return out.buffer as ArrayBuffer;
+  },
+  hexOf: (bytes: Uint8Array): string =>
+    [...bytes].map((b) => b.toString(16).padStart(2, "0")).join(""),
+}));
+vi.mock("expo-crypto", () => ({
+  default: {
+    CryptoDigestAlgorithm: { SHA256: "SHA256" },
+    CryptoEncoding: { HEX: "HEX" },
+    digest: async (_algo: string, bytes: Uint8Array) => cryptox.digestBytes(bytes),
+    digestStringAsync: async (_algo: string, s: string) =>
+      cryptox.hexOf(new Uint8Array(cryptox.digestBytes(new TextEncoder().encode(s)))),
+  },
+}));
+
 // Auditoría 2026-10-31 (F3-03): la conexión de la base de conocimiento
 // es la de rag/db; su checkpoint se registra aquí.
 const kdbx = vi.hoisted(() => ({ sql: [] as string[], failWith: null as string | null, events: [] as string[] }));
@@ -390,6 +413,101 @@ describe("backup.ts — auditoría completa 2026-10-31 (F3-07): el conocimiento 
     expect(mainMove).toBeGreaterThanOrEqual(0);
     expect(rollback, "la principal se revierte desde su copia previa").toBeGreaterThan(mainMove);
     // Y el conocimiento vivo no se tocó.
+    expect(events.some((e) => e.endsWith(`->${knowledgeDbPath}`))).toBe(false);
+  });
+});
+
+describe("backup.ts — auditoría completa 2026-10-31 (F3-08): huella del conocimiento en el manifest", () => {
+  const backupUri = "/mock/nido-backup-T.db";
+  const knowledgeBackupUri = "/mock/nido-backup-T.knowledge.db";
+  const knowledgeDbPath = "/mock/SQLite/nido_knowledge.db";
+  const MAIN_B64 = btoa("contenido de la base principal de prueba");
+  const KNOW_B64 = btoa("contenido de la base de conocimiento de prueba");
+  const events: string[] = [];
+
+  const shaOfB64 = (b64: string) => {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return cryptox.hexOf(new Uint8Array(cryptox.digestBytes(bytes)));
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    events.length = 0;
+    sqlx.sql = [];
+    sqlx.failWith = null;
+    sqlx.allowOpen = true;
+    kdbx.sql = [];
+    kdbx.failWith = null;
+    (FileSystem.copyAsync as any).mockImplementation(async (args: { from: string; to: string }) => {
+      events.push(`copy:${args.from}->${args.to}`);
+    });
+    (FileSystem.moveAsync as any).mockImplementation(async (args: { from: string; to: string }) => {
+      events.push(`move:${args.from}->${args.to}`);
+    });
+    (FileSystem.deleteAsync as any).mockResolvedValue(undefined);
+    (FileSystem.readDirectoryAsync as any).mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    sqlx.allowOpen = false;
+  });
+
+  it("createBackup declara la huella del conocimiento en el manifest", async () => {
+    (FileSystem.getInfoAsync as any).mockResolvedValue({ exists: true, size: 5000 });
+    (FileSystem.readAsStringAsync as any).mockImplementation(async (uri: string) =>
+      uri === knowledgeBackupUri ? KNOW_B64 : MAIN_B64,
+    );
+    const written: Record<string, string> = {};
+    (FileSystem.writeAsStringAsync as any).mockImplementation(async (uri: string, content: string) => {
+      written[uri] = content;
+    });
+    const { createBackup } = await import("./backup");
+    await createBackup(backupUri);
+    const manifest = JSON.parse(written[`${backupUri}.manifest.json`]);
+    expect(manifest.knowledgeSha256).toBe(shaOfB64(KNOW_B64));
+    expect(manifest.sha256).toBe(shaOfB64(MAIN_B64));
+    expect(manifest.knowledgeSha256).not.toBe(manifest.sha256);
+  });
+
+  function manifestWith(kbSha: string): string {
+    return JSON.stringify({
+      version: 1,
+      appVersion: "0.1.65",
+      sha256: shaOfB64(MAIN_B64),
+      sha256Kind: "bytes",
+      dekFingerprint: cryptox.hexOf(
+        new Uint8Array(cryptox.digestBytes(new TextEncoder().encode("ab".repeat(32)))),
+      ),
+      knowledgeSha256: kbSha,
+    });
+  }
+
+  function setupRestore(kbSha: string) {
+    (FileSystem.getInfoAsync as any).mockImplementation(async (uri: string) => {
+      if (uri === `${knowledgeBackupUri}.manifest.json`) return { exists: false };
+      return { exists: true, size: 5000 };
+    });
+    (FileSystem.readAsStringAsync as any).mockImplementation(async (uri: string) => {
+      if (uri === `${backupUri}.manifest.json`) return manifestWith(kbSha);
+      if (uri === knowledgeBackupUri) return KNOW_B64;
+      return MAIN_B64;
+    });
+    (FileSystem.writeAsStringAsync as any).mockResolvedValue(undefined);
+  }
+
+  it("restaurar con la huella del conocimiento correcta pasa", async () => {
+    setupRestore(shaOfB64(KNOW_B64));
+    const { restoreBackup } = await import("./backup");
+    await expect(restoreBackup(backupUri)).resolves.toBeUndefined();
+    expect(events.some((e) => e.endsWith(`->${knowledgeDbPath}`) && e.startsWith("move:"))).toBe(true);
+  });
+
+  it("restaurar con la huella del conocimiento distinta aborta y no toca el conocimiento vivo", async () => {
+    setupRestore("00".repeat(32));
+    const { restoreBackup } = await import("./backup");
+    await expect(restoreBackup(backupUri)).rejects.toThrow(/conocimiento está corrupto/);
     expect(events.some((e) => e.endsWith(`->${knowledgeDbPath}`))).toBe(false);
   });
 });

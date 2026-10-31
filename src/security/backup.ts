@@ -250,6 +250,11 @@ export async function createBackup(destinationUri: string): Promise<string> {
     appVersion: APP_VERSION,
     sha256: await sha256File(destinationUri),
     sha256Kind: SHA256_KIND_BYTES,
+    // Auditoría completa 2026-10-31 (F3-08): huella del acompañante de
+    // conocimiento. Sin ella nadie comprobaba su contenido: la base
+    // principal llevaba SHA en el manifest, el conocimiento no, y su
+    // validación al restaurar no busca manifest propio.
+    knowledgeSha256: knowledgeBackedUp ? await sha256File(knowledgeDest) : null,
     // FIX 2026-10-09 (K1): fingerprint del DEK para detectar key mismatch en restore.
     dekFingerprint,
   };
@@ -701,6 +706,24 @@ async function restoreExtracted(actualUri: string): Promise<void> {
       if (!kbValidation.valid) {
         await rollbackMain();
         throw new BackupError("invalid", `El respaldo de conocimiento no es válido: ${kbValidation.reason}`);
+      }
+      // F3-08: si el manifest de la principal declara la huella del
+      // conocimiento, se comprueba antes de reemplazar nada. Los
+      // respaldos anteriores no la declaran y se aceptan como antes
+      // (la apertura de prueba ya juzgó el acompañante).
+      try {
+        const mRaw = await FileSystem.readAsStringAsync(`${actualUri}.manifest.json`);
+        const m = JSON.parse(mRaw);
+        if (typeof m?.knowledgeSha256 === "string" && m.knowledgeSha256) {
+          const actualKbSha = await sha256File(knowledgeBackupUri);
+          if (!actualKbSha || actualKbSha.toLowerCase() !== m.knowledgeSha256.toLowerCase()) {
+            await rollbackMain();
+            throw new BackupError("invalid", "El respaldo de conocimiento está corrupto (SHA-256 no coincide).");
+          }
+        }
+      } catch (e) {
+        if (e instanceof BackupError) throw e;
+        // Sin manifest legible no hay huella que comprobar.
       }
       const curInfo = await FileSystem.getInfoAsync(knowledgeDbPath);
       if (curInfo.exists) {
