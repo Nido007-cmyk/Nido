@@ -42,7 +42,7 @@ env:
   # their catalog names). A new pack version needs a NEW tag here (v6, v7…),
   # new sourceUrls in src/models/manifest.ts and new lines in
   # knowledge-packs/release-ledger.json (checked by packReleaseLedger.test.ts).
-  RELEASE_TAG: knowledge-packs-v7
+  RELEASE_TAG: knowledge-packs-v8
   # Fixed so a rebuild from the same text gives the same file.
   BUILT_AT: '2026-10-28T00:00:00Z'
   VITAL_BGE_URL: https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v1/wiki-vital5.sqlite
