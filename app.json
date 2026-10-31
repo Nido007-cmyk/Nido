@@ -24,7 +24,10 @@
         "android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.WAKE_LOCK",
-        "android.permission.SCHEDULE_EXACT_ALARM"
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.READ_CONTACTS"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#0A0E0A",
@@ -104,6 +107,18 @@
             "targetSdkVersion": 36,
             "buildToolsVersion": "36.0.0"
           }
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "NIDO usa tu calendario solo cuando se lo pides, para leer o crear eventos en tu teléfono. Nada sale del dispositivo."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "NIDO usa tus contactos solo cuando se lo pides, para encontrar a quién escribir o llamar desde tu teléfono. Nada sale del dispositivo."
         }
       ]
     ],
