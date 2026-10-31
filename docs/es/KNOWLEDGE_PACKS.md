@@ -173,6 +173,37 @@ añaden la dirección y la SHA-256 nuevas a `knowledge-packs/release-ledger.json
 Nunca se edita una línea existente: `src/models/packReleaseLedger.test.ts` falla
 si una dirección del catálogo que ya está en el registro tiene otra huella.
 
+## La ficha de edición
+
+Cada construcción escribe una **ficha de edición** junto al pack —
+`<pack>.sqlite.edition.json` — y el resumen de la construcción
+(`<pack>.sqlite.json`, el documento del que el catálogo firmado
+toma el tamaño y la SHA-256) nombra la huella de la propia ficha,
+la edición y su estado. La ficha es el registro editorial de la
+edición, el estándar de catálogo de Blobs (ver ATTRIBUTION.md):
+de qué edición de la fuente se construyó y su bloqueo, los
+derechos de redistribución, los idiomas realmente presentes, el
+editor, la política de actualización, los recuentos de documentos
+y registros, el tamaño del archivo, la huella del paquete, una
+**huella normalizada del conjunto de registros** (que identifica
+exactamente qué registros entraron, sin hashear gigabytes en un
+teléfono), la atribución, las limitaciones conocidas y los
+**casos de recuperación versionados** que prueban la edición
+(cada fichero de casos con su SHA-256 y su recuento).
+
+La mitad de la ficha es humana y la otra mitad calculada. La
+humana vive en un **descriptor `edition.json`** en el propio
+árbol del pack (o con `--edition FILE`): edición de la fuente,
+derechos, política de actualización, limitaciones conocidas y los
+ficheros de casos. El constructor calcula el resto y valida el
+conjunto: una ficha a la que le falta algo se escribe igualmente,
+marcada **`draft`** (borrador); una completa es
+**`release-ready`** (lista). Borrador es el estado honesto del
+registro para las ediciones planeadas o sin revisar: nunca se
+presenta como lista. Una edición publicada sigue inmutable (ver
+el registro de liberaciones arriba): un pack corregido es una
+edición nueva con una ficha nueva, nunca una editada.
+
 ## Pasar un pack a otro teléfono (sin internet)
 
 Desde la 0.1.56, un NIDO puede pasar un pack del catálogo (por ejemplo

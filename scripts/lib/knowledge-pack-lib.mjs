@@ -22,10 +22,11 @@ Builds an offline knowledge pack from Wikipedia article introductions.
   --threads N        embedding workers (default 4)
   --embedding MODEL  bge (default: the app's English search model) or e5 (multilingual search)
   --built-at ISO     fixed build date for meta.builtAt (so rebuilds are byte-identical)
+  --edition FILE     edition-card descriptor (default: edition.json in the guides dir, if any)
   -h, --help         show this help`;
 
 export function parseArgs(argv) {
-  const opts = { level: 5, titlesFile: undefined, limit: undefined, id: undefined, name: undefined, out: "build/knowledge-pack", chunkChars: 600, maxChunks: 3, threads: 4, embedding: "bge", builtAt: undefined, guidesDir: undefined, help: false };
+  const opts = { level: 5, titlesFile: undefined, limit: undefined, id: undefined, name: undefined, out: "build/knowledge-pack", chunkChars: 600, maxChunks: 3, threads: 4, embedding: "bge", builtAt: undefined, guidesDir: undefined, editionFile: undefined, help: false };
   const num = (v, flag) => {
     const n = Number(v);
     if (!Number.isInteger(n) || n <= 0) throw new Error(`${flag} must be a positive whole number`);
@@ -52,6 +53,7 @@ export function parseArgs(argv) {
       case "--threads": opts.threads = num(needs(), a); break;
       case "--embedding": opts.embedding = needs(); if (!["bge", "e5"].includes(opts.embedding)) throw new Error("--embedding must be bge or e5"); break;
       case "--built-at": opts.builtAt = needs(); if (Number.isNaN(Date.parse(opts.builtAt))) throw new Error("--built-at must be an ISO date"); break;
+      case "--edition": opts.editionFile = needs(); break;
       case "-h":
       case "--help": opts.help = true; break;
       default: throw new Error(`unknown option ${a}`);

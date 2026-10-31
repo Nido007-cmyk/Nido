@@ -20,6 +20,7 @@ import { DatabaseSync } from "node:sqlite";
 import { dirname, join, resolve } from "node:path";
 import { readdirSync } from "node:fs";
 import { chunkGuide, chunkIntro, cleanIntro, parseArgs, parseGuide, quantizeInt8, USAGE, validateFacts, vitalListPages } from "./lib/knowledge-pack-lib.mjs";
+import { buildEditionCard, editionCardDigest, recordsDigest } from "./lib/pack-edition-lib.mjs";
 
 const WIKI_API = "https://en.wikipedia.org/w/api.php";
 const USER_AGENT = "NIDO-knowledge-pack-builder/1.0 (https://github.com/arsrs91-png/NIDO)";
@@ -341,7 +342,74 @@ async function main() {
   }, opts.guidesDir ? { guides: pages, regions: factsDoc.regions, facts: factsDoc.facts } : {});
   const size = statSync(outFile).size;
   const sha = await sha256File(outFile);
-  const summary = { id: opts.id, file: outFile, sizeBytes: size, sha256: sha, articles: pages.length, chunks: chunks.length };
+
+  // La ficha de edición (tanda 5 del programa bounty; lib/pack-edition
+  // -lib.mjs): el descriptor humano vive en edition.json del árbol del
+  // pack (o en --edition FILE); lo demás lo calcula esta construcción.
+  // La ficha se escribe junto al paquete y su huella entra en el
+  // resumen — junto a la firma, porque el catálogo firmado se
+  // alimenta de este resumen.
+  const descriptorFile = opts.editionFile ?? (opts.guidesDir ? join(opts.guidesDir, "edition.json") : null);
+  let descriptor = {};
+  if (descriptorFile && existsSync(descriptorFile)) {
+    descriptor = JSON.parse(readFileSync(descriptorFile, "utf8"));
+    log(`edition descriptor: ${descriptorFile}`);
+  } else if (descriptorFile) {
+    log(`edition descriptor not found (${descriptorFile}): the card will be a draft`);
+  }
+  const checks = [];
+  for (const rel of descriptor.checkFiles ?? []) {
+    const checkPath = descriptorFile ? join(dirname(descriptorFile), rel) : rel;
+    if (!existsSync(checkPath)) throw new Error(`edition descriptor names a missing checks file: ${checkPath}`);
+    const parsed = JSON.parse(readFileSync(checkPath, "utf8"));
+    checks.push({
+      file: rel,
+      sha256: await sha256File(checkPath),
+      cases: Array.isArray(parsed) ? parsed.length : 0,
+    });
+  }
+  const languages = opts.guidesDir
+    ? [...new Set(pages.map((g) => g.lang))].sort()
+    : [descriptor.languages ?? "en"].flat();
+  const { card, errors } = buildEditionCard({
+    descriptor,
+    computed: {
+      packId: opts.id,
+      builtAt: opts.builtAt ?? new Date().toISOString(),
+      languages,
+      documentCount: pages.length,
+      recordCount: chunks.length,
+      ...(opts.guidesDir ? { factsCount: factsDoc.facts.length } : {}),
+      archiveSizeBytes: size,
+      packageSha256: sha,
+      recordsSha256: recordsDigest(chunks),
+      attribution: opts.guidesDir
+        ? "Written by NIDO (https://github.com/Nido007-cmyk/Nido) from public guidance by the organizations cited in each guide."
+        : "Compiled by NIDO (https://github.com/Nido007-cmyk/Nido) from Wikipedia article introductions (https://www.wikipedia.org, CC BY-SA 4.0).",
+      license: opts.guidesDir ? "CC BY 4.0 (NIDO)" : "CC BY-SA 4.0 (Wikipedia)",
+      checks,
+      embeddingModel: EMBEDDING_MODEL.name,
+      embeddingModelSha256: EMBEDDING_MODEL.sha256,
+    },
+  });
+  writeFileSync(`${outFile}.edition.json`, `${JSON.stringify(card, null, 2)}\n`);
+  if (card.state === "release-ready") {
+    log(`edition card: ${card.edition} (release-ready)`);
+  } else {
+    log(`edition card: DRAFT — ${errors.join("; ")}`);
+  }
+
+  const summary = {
+    id: opts.id,
+    file: outFile,
+    sizeBytes: size,
+    sha256: sha,
+    articles: pages.length,
+    chunks: chunks.length,
+    edition: card.edition,
+    editionState: card.state,
+    editionCardSha256: editionCardDigest(card),
+  };
   writeFileSync(`${outFile}.json`, `${JSON.stringify(summary, null, 2)}\n`);
   log(`done: ${outFile}`);
   console.log(JSON.stringify(summary, null, 2));

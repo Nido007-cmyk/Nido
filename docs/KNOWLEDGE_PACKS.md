@@ -168,6 +168,34 @@ and SHA-256 to `knowledge-packs/release-ledger.json`. Never edit an existing
 line there: `src/models/packReleaseLedger.test.ts` fails if a catalog address
 already in the ledger has a different fingerprint.
 
+## The edition card
+
+Every build writes an **edition card** next to the pack —
+`<pack>.sqlite.edition.json` — and the build summary
+(`<pack>.sqlite.json`, the document the signed catalog takes the
+size and SHA-256 from) names the card's own digest, the edition
+and its state. The card is the edition's editorial record, the
+catalog standard of Blobs (see ATTRIBUTION.md): what source
+edition it was built from and its lock, the redistribution
+rights, the languages actually present, the publisher, the update
+policy, the document and record counts, the archive size, the
+package digest, a **normalized digest of the record set** (which
+identifies exactly which records went in, without hashing
+gigabytes on a phone), the attribution, the known limitations,
+and the **versioned retrieval cases** that test the edition
+(each checks file with its SHA-256 and case count).
+
+Half the card is human, half is computed. The human half lives in
+an **`edition.json` descriptor** in the pack's own tree (or
+`--edition FILE`): source edition, rights, update policy, known
+limitations and the checks files. The builder computes the rest
+and validates the whole: a card missing anything is written
+anyway, marked **`draft`**; a complete one is **`release-ready`**.
+Draft is the registry's honest state for planned or unreviewed
+editions — it is never presented as ready. A published edition
+stays immutable (see the release ledger above): a corrected pack
+is a new edition with a new card, never an edited one.
+
 ## Passing a pack to another phone (no internet)
 
 Since 0.1.56 a NIDO can hand a catalog pack (for example NIDO Essentials,
