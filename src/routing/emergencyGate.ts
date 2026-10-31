@@ -36,6 +36,23 @@
  * auxilios) y NIDO Crisis (líneas de crisis). El id puede llevar el
  * sufijo de embeddings «-e5» (la convención de guideAnswer.ts).
  *
+ * 3. LA EMERGENCIA VIVA CONTADA TAMBIÉN ES PUERTA (cierre de
+ *    evaluaciones, 2026-10-31; hallazgo F-B1 de la evaluación ciega
+ *    01, docs/BLIND_EVAL.md). La corrida 01 midió que las emergencias
+ *    vivas sin pack caían al modelo: la puerta léxica conoce
+ *    diagnósticos («ahogamiento») pero la gente cuenta el suceso
+ *    («se está ahogando», «no puede respirar», alguien agarrándose
+ *    el pecho, humo saliendo de la cocina). `isEmergencySituation`
+ *    es esa otra cara de la puerta: signos tal cual se cuentan,
+ *    gerundios y tercera persona incluidos, sin exigir señal de
+ *    pregunta — quien lo cuenta no pregunta, pide ayuda. Donde la
+ *    puerta de salud manda (sin fuentes, o sin evidencia de salud)
+ *    manda también esta cara, y sirve el mismo texto seguro: con la
+ *    guía instalada responde la guía por recuperación; sin ella,
+ *    ninguna emergencia queda a la improvisación del modelo. La
+ *    cura se mide contra un conjunto ciego FRESCO (corrida 02), no
+ *    contra el conjunto 01 que la destapó (regla del sello).
+ *
  * Puro, sin dependencias de UI, 100% testeable.
  */
 
@@ -54,11 +71,20 @@ export type GateLang = FactLang;
  * ¿Es este texto una emergencia para las rutas fijas? Los mismos
  * detectores que send() consulta al abrir: la tabla de seguridad
  * (monóxido y números de emergencia), la clase de pregunta de número
- * de emergencia de los packs y la clase de pregunta de crisis.
+ * de emergencia de los packs y la clase de pregunta de crisis. Desde
+ * el cierre de F-B1 también la emergencia viva contada
+ * (`isEmergencySituation`): su respuesta es la guía por recuperación
+ * o el texto seguro fijo, y tampoco debe hacer cola tras una
+ * generación en curso.
  */
 export function isEmergencyText(text: string, lang: GateLang): boolean {
   if (!text || text.trim().length === 0) return false;
-  return matchSafetyAnswer(text, lang) !== null || emergencyQuestionKind(text) !== null || crisisQuestionKind(text);
+  return (
+    matchSafetyAnswer(text, lang) !== null ||
+    emergencyQuestionKind(text) !== null ||
+    crisisQuestionKind(text) ||
+    isEmergencySituation(text)
+  );
 }
 
 // ------------------------------------------------------- puerta de salud
@@ -151,6 +177,81 @@ export function isHealthQuestion(text: string): boolean {
   );
   if (!hasTerm) return false;
   return SITUATION_CUES.some((c) => folded.includes(c) || text.includes(c));
+}
+
+// -------------------------------------------- situación de emergencia
+
+/**
+ * Signos de una emergencia VIVA, contados tal cual se ven, ya
+ * plegados. Frases, no temas: cada entrada describe el suceso en
+ * curso (respiración que falta, atragantamiento o ahogamiento en
+ * gerundio, inconsciencia, el pecho agarrado, humo o fuego en un
+ * lugar, un sangrado que no para). Las formas con contracción
+ * inglesa van en su forma plegada («can t breathe» es lo que queda
+ * de "can't breathe" tras plegar). Listas revisables, como las de
+ * salud: un signo nuevo se añade aquí, no al modelo.
+ */
+const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
+  es: [
+    "no puede respirar", "no pueden respirar", "no respira", "no respiran", "sin respirar",
+    "dejo de respirar", "paro de respirar",
+    "se esta ahogando", "esta ahogandose", "ahogandose", "se ahoga",
+    "se esta atragantando", "atragantandose",
+    "esta inconsciente", "quedo inconsciente", "no responde",
+    "se agarra el pecho", "agarrandose el pecho", "se aprieta el pecho",
+    "humo saliendo", "saliendo humo", "sale humo", "hay humo", "hay fuego",
+    "salen llamas", "saliendo llamas", "esta ardiendo",
+    "sangrando mucho", "no para de sangrar", "esta convulsionando",
+  ],
+  en: [
+    "not breathing", "is not breathing", "stopped breathing", "no longer breathing",
+    "can t breathe", "cant breathe", "cannot breathe",
+    "is choking", "choking on", "started choking", "is drowning",
+    "clutching his chest", "clutching her chest", "clutching my chest", "clutching their chest",
+    "is unconscious", "was unconscious", "found unconscious", "not responding", "lost consciousness",
+    "smoke coming", "smoke pouring", "full of smoke", "there is a fire", "there s a fire",
+    "house on fire", "kitchen on fire", "building on fire", "car on fire", "room on fire",
+    "bleeding a lot", "bleeding heavily", "won t stop bleeding",
+  ],
+  pt: [
+    "nao esta respirando", "nao respira", "nao respiram", "parou de respirar", "sem respirar",
+    "deixou de respirar",
+    "esta engasgando", "engasgando", "engasgou",
+    "esta inconsciente", "ficou inconsciente", "nao responde",
+    "segurando o peito", "apertando o peito", "mao no peito",
+    "fumaca saindo", "saindo fumaca", "tem fogo", "pegando fogo", "em chamas", "saindo chamas",
+    "sangrando muito", "nao para de sangrar", "esta convulsionando",
+  ],
+};
+
+/**
+ * Contextos que vetan la cara de emergencia: marcos de ficción o
+ * ensayo y metáforas asentadas. La emergencia real no se presenta
+ * como «historia sobre…» ni se ahoga «en un vaso de agua».
+ */
+const EMERGENCY_VETOES = [
+  ...HEALTH_EXCLUSIONS,
+  "historia sobre", "cuento sobre", "cuento de", "novela sobre", "poema sobre",
+  "story about", "essay about", "poem about", "novel about",
+  "conto sobre", "poema sobre",
+  "en un vaso de agua", "en deudas", "in debt", "em dividas",
+];
+
+const ALL_SIGNS: string[] = Object.values(EMERGENCY_SIGNS).flat();
+
+/**
+ * ¿Cuenta el texto una emergencia viva en curso? Léxico puro de
+ * signos: basta UN signo (el suceso ES la situación; no se exige
+ * señal de pregunta) y ningún veto de contexto. Ver la cabecera,
+ * punto 3: donde manda la puerta de salud manda también esta cara,
+ * con el mismo texto seguro.
+ */
+export function isEmergencySituation(text: string): boolean {
+  if (!text) return false;
+  const folded = foldText(text);
+  if (folded.trim().length === 0) return false;
+  if (EMERGENCY_VETOES.some((x) => folded.includes(` ${x} `) || folded.includes(` ${x}`))) return false;
+  return ALL_SIGNS.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`));
 }
 
 // ------------------------------------------------------- texto seguro

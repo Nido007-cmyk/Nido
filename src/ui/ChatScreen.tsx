@@ -40,6 +40,7 @@ import {
   hasHealthEvidence,
   healthSafeProvenance,
   healthSafeText,
+  isEmergencySituation,
   isEmergencyText,
   isHealthQuestion,
 } from "../routing/emergencyGate";
@@ -1500,7 +1501,10 @@ export function ChatScreen({
           // seguro fijo, sin generar. Va ANTES del "no lo sé" de hechos:
           // para salud el texto seguro es el específico (llama si es
           // urgencia; la guía está en el pack Esencial), no el genérico.
-          if (noSources && isHealthQuestion(query)) {
+          // Cierre de evaluaciones 2026-10-31 (F-B1): la emergencia
+          // viva contada (isEmergencySituation) entra por la misma
+          // puerta — sin guía que la cubra, tampoco cae al modelo.
+          if (noSources && (isHealthQuestion(query) || isEmergencySituation(query))) {
             const safe = healthSafeText(uiLang);
             assistantText = safe;
             setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: safe } : m)));
@@ -1706,7 +1710,8 @@ export function ChatScreen({
           // "no lo sé" genérico — una pregunta de salud sin fuentes (la
           // ruta adaptativa no tiene la puerta previa de la ruta fija)
           // cae al texto seguro, nunca a lo que el modelo haya escrito.
-          if (isHealthQuestion(query) && finalText !== healthSafeText(uiLang)) {
+          // F-B1: la emergencia viva contada manda igual que la pregunta.
+          if ((isHealthQuestion(query) || isEmergencySituation(query)) && finalText !== healthSafeText(uiLang)) {
             finalText = healthSafeText(uiLang);
             provenance = healthSafeProvenance(finalText);
           } else if (isFactualQuestion(query) && finalText !== noSourcesAnswer(uiLang)) {
@@ -1725,7 +1730,7 @@ export function ChatScreen({
           !deepResearchModeRef.current &&
           chunks.length > 0 &&
           (grounding === "unverified" || grounding === "abstained") &&
-          isHealthQuestion(query) &&
+          (isHealthQuestion(query) || isEmergencySituation(query)) &&
           !hasHealthEvidence(chunks)
         ) {
           finalText = healthSafeText(uiLang);

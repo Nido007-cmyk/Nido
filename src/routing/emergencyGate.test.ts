@@ -5,7 +5,13 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { hasHealthEvidence, healthSafeText, isEmergencyText, isHealthQuestion } from "./emergencyGate";
+import {
+  hasHealthEvidence,
+  healthSafeText,
+  isEmergencySituation,
+  isEmergencyText,
+  isHealthQuestion,
+} from "./emergencyGate";
 import type { RetrievedChunk } from "../rag/retrieve";
 
 describe("isEmergencyText (emergencia primero)", () => {
@@ -14,6 +20,12 @@ describe("isEmergencyText (emergencia primero)", () => {
     expect(isEmergencyText("¿cuál es el número de emergencias de Chile?", "es")).toBe(true);
     expect(isEmergencyText("¿cuál es la línea de crisis de España?", "es")).toBe(true);
     expect(isEmergencyText("what is the emergency number in France?", "en")).toBe(true);
+  });
+
+  it("la emergencia viva contada tampoco hace cola (F-B1)", () => {
+    expect(isEmergencyText("mi hijo se está ahogando con un hueso de pollo", "es")).toBe(true);
+    expect(isEmergencyText("a man collapsed outside and is not breathing", "en")).toBe(true);
+    expect(isEmergencyText("o meu pai desmaiou e não está respirando", "pt")).toBe(true);
   });
 
   it("lo que no es emergencia no se adelanta", () => {
@@ -48,6 +60,42 @@ describe("isHealthQuestion (puerta léxica)", () => {
     expect(isHealthQuestion("¿qué fue la fiebre del oro en California?")).toBe(false);
     expect(isHealthQuestion("escribe un cuento sobre un niño con fiebre")).toBe(false);
     expect(isHealthQuestion("¿qué es la fotosíntesis?")).toBe(false);
+  });
+});
+
+describe("isEmergencySituation (la emergencia contada, F-B1)", () => {
+  it("signos tal cual se cuentan, en las tres lenguas y sin preguntar", () => {
+    // Respiración que falta, en primera y en tercera persona.
+    expect(isEmergencySituation("Mi hijo se está ahogando con un hueso de pollo y no puede respirar")).toBe(true);
+    expect(isEmergencySituation("Hay un hombre tirado en la acera que no respira")).toBe(true);
+    expect(isEmergencySituation("A man collapsed at the stop and he is not breathing")).toBe(true);
+    expect(isEmergencySituation("O meu pai desmaiou e não está respirando")).toBe(true);
+    // El signo visto, no el diagnóstico.
+    expect(isEmergencySituation("She is clutching her chest and sweating a lot")).toBe(true);
+    expect(isEmergencySituation("Mi abuelo no responde cuando le hablo")).toBe(true);
+    expect(isEmergencySituation("O bebé engasgou com um pedaço de pão")).toBe(true);
+    // Humo y fuego en un lugar.
+    expect(isEmergencySituation("Sale humo por la ventana de la cocina, ¿qué hago?")).toBe(true);
+    expect(isEmergencySituation("There is smoke coming out of the basement")).toBe(true);
+    expect(isEmergencySituation("Está saindo fumaça do apartamento ao lado")).toBe(true);
+  });
+
+  it("una pregunta de salud ordinaria no es una situación de emergencia", () => {
+    expect(isEmergencySituation("mi hijo tiene fiebre, ¿qué hago?")).toBe(false);
+    expect(isEmergencySituation("¿qué dosis de paracetamol le doy a un niño?")).toBe(false);
+    expect(isEmergencySituation("What are the symptoms of dehydration in babies?")).toBe(false);
+    expect(isEmergencySituation("¿cuál es el número de emergencias de Chile?")).toBe(false);
+    expect(isEmergencySituation("")).toBe(false);
+    expect(isEmergencySituation("   ")).toBe(false);
+  });
+
+  it("ficción, ensayo y metáfora no disparan la cara de emergencia", () => {
+    expect(isEmergencySituation("Estoy escribiendo una historia sobre un pirata que no respira bajo el agua")).toBe(false);
+    expect(isEmergencySituation("I'm writing an essay about the history of choking hazards in toys")).toBe(false);
+    expect(isEmergencySituation("Cuéntame un cuento sobre un dragón que echa humo por la boca")).toBe(false);
+    expect(isEmergencySituation("Desde que perdió el trabajo se ahoga en un vaso de agua")).toBe(false);
+    expect(isEmergencySituation("The striker is on fire this season, three goals again")).toBe(false);
+    expect(isEmergencySituation("Estou a escrever um conto sobre um dragão que cospe fogo")).toBe(false);
   });
 });
 
