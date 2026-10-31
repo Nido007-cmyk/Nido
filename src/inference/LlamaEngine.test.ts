@@ -314,6 +314,30 @@ describe("Bounty tanda 3: escalera de memoria y CrashGuard", () => {
   });
 });
 
+describe("Bounty tanda 8: la frase cortada", () => {
+  it("una generación que consume su presupuesto devuelve el texto cerrado en frase completa", async () => {
+    mockReplyText = "La primera frase está completa. La segunda quedó cort";
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const gen = engine.generate({ prompt: "hola", nPredict: 1 });
+    await new Promise((r) => setTimeout(r, 30));
+    await engine.stop();
+    await expect(gen).resolves.toBe("La primera frase está completa.");
+    expect(engine.lastGenerationWasCut).toBe(true);
+  });
+
+  it("con presupuesto de sobra, el texto vuelve entero y sin marca de corte", async () => {
+    mockReplyText = "La primera frase está completa. La segunda quedó cort";
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const gen = engine.generate({ prompt: "hola", nPredict: 64 });
+    await new Promise((r) => setTimeout(r, 30));
+    await engine.stop();
+    await expect(gen).resolves.toBe("La primera frase está completa. La segunda quedó cort");
+    expect(engine.lastGenerationWasCut).toBe(false);
+  });
+});
+
 describe("P1.2 sampling presets", () => {
   it("resolveSampling: no preset, no overrides -> old 0.7 default", () => {
     expect(resolveSampling({})).toEqual({ temperature: 0.7, topK: undefined, topP: undefined, minP: undefined, repeatPenalty: undefined });

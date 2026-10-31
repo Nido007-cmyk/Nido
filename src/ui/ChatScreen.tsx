@@ -148,6 +148,7 @@ import { recordExecution } from "../services/executionTelemetry";
 import { recordRouterSample, type StageDropReason } from "../services/routerStats";
 import { looksLikeMissedCommand, recordMissedPhrase } from "../services/missedPhrases";
 import { trimRepetitionLoop } from "../inference/repetitionGuard";
+import { trimToCompleteSentences } from "../inference/completeSentences";
 import { getMemoryInfo } from "ram-monitor";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
@@ -1672,7 +1673,11 @@ export function ChatScreen({
       let provenance: SentenceProvenance[] | undefined;
       if (!wasStopped) {
         // 0.1.34: si el modelo entró en bucle, queda solo la primera vez.
-        let finalText = guideAnswered ? assistantText : trimRepetitionLoop(assistantText);
+        // Bounty tanda 8: una generación cortada (el usuario detuvo o
+        // se agotó el presupuesto) no enseña una frase a medias.
+        let finalText = guideAnswered
+          ? assistantText
+          : trimToCompleteSentences(trimRepetitionLoop(assistantText), wasStopped || llamaEngine.lastGenerationWasCut);
         if (guideAnswered) {
           // Verbatim guide text: nothing to verify or trim. Every sentence is the guide's (R1).
           provenance = guideAnswerProvenance(finalText);

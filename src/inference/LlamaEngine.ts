@@ -19,6 +19,7 @@ import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
 import { withStage } from "../utils/stageError";
 import { recordInferenceEvent, type TelemetryStopReason } from "./telemetry";
 import { findRepetitionLoop, trimRepetitionLoop } from "./repetitionGuard";
+import { trimToCompleteSentences } from "./completeSentences";
 import { parseGemmaReasoning } from "./gemmaReasoning";
 import type { ModelSamplingDefaults } from "../routing/types";
 
@@ -259,6 +260,17 @@ export class LlamaEngine {
   // Bounty tanda 3 (CrashGuard): el registro persistido, leído una vez
   // y cacheado; null = aún no leído. Ver memoryLadder.ts.
   private crashGuard: CrashGuardRecord | null = null;
+  /**
+   * Bounty tanda 8: ¿consumió la última generación todo su
+   * presupuesto de tokens? Lo lee ChatScreen al cerrar la respuesta
+   * para aplicar la regla de la frase completa sobre el texto
+   * transmitido; las generaciones van en serie (generationChain),
+   * así que al asentarse una, el dato es de esa.
+   */
+  private lastCut = false;
+  get lastGenerationWasCut(): boolean {
+    return this.lastCut;
+  }
 
   private enqueue<T>(task: () => Promise<T>): Promise<T> {
     const run = this.queue.then(task);
@@ -676,6 +688,14 @@ export class LlamaEngine {
         const { text } = await started.completion;
         const settled = text ?? started.getFull();
         const raw = guardLoops ? trimRepetitionLoop(settled) : settled;
+        // Bounty tanda 8 (frase cortada): si la generación consumió
+        // todo su presupuesto de tokens, el texto devuelto se cierra
+        // en su última frase completa y el hecho queda registrado
+        // para quien enseña el texto en vivo (ChatScreen), que aplica
+        // la misma regla sobre lo transmitido. La salida estructurada
+        // (guardLoops=false) jamás se recorta.
+        this.lastCut = tokenCount >= nPredict;
+        const completed = guardLoops ? trimToCompleteSentences(raw, this.lastCut) : raw;
         // Safety net (Qwen3 lane + estudio de modelos): for a noThink
         // model whose native layer ignored enable_thinking=false, and
         // for stripReasoning models (LFM2.5) whose chain-of-thought is
@@ -684,8 +704,8 @@ export class LlamaEngine {
         // <think> block. Streamed tokens are NOT retroactively
         // changed — this only guarantees a clean settled result.
         return this.modelInfo?.noThink || this.modelInfo?.stripReasoning
-          ? parseGemmaReasoning(raw).answer
-          : raw;
+          ? parseGemmaReasoning(completed).answer
+          : completed;
       } finally {
         this.inFlight.delete(started.completion);
         if (started.timer) clearTimeout(started.timer);
