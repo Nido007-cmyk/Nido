@@ -1,0 +1,272 @@
+[
+ {
+  "lang": "es",
+  "q": "cuántos litros de agua necesita mi familia de cuatro para tres días",
+  "expect": "Guardar agua en casa: cuánta y cómo conservarla"
+ },
+ {
+  "lang": "es",
+  "q": "dónde guardo las garrafas de agua en casa",
+  "expect": "Guardar agua en casa: cuánta y cómo conservarla"
+ },
+ {
+  "lang": "es",
+  "q": "qué hago con el agua almacenada cuando cumple seis meses",
+  "expect": "Guardar agua en casa: cuánta y cómo conservarla"
+ },
+ {
+  "lang": "es",
+  "q": "el queso duro de la nevera sigue bueno tras un día sin luz",
+  "expect": "Comida sin refrigerador: qué aguanta, qué se tira"
+ },
+ {
+  "lang": "es",
+  "q": "puedo comerme una lata hinchada si huele bien",
+  "expect": "Comida sin refrigerador: qué aguanta, qué se tira"
+ },
+ {
+  "lang": "es",
+  "q": "las sobras de arroz de ayer sin nevera se pueden comer",
+  "expect": "Comida sin refrigerador: qué aguanta, qué se tira"
+ },
+ {
+  "lang": "es",
+  "q": "no tengo cocina, cómo hago una comida caliente",
+  "expect": "Cocinar sin gas ni electricidad"
+ },
+ {
+  "lang": "es",
+  "q": "un calentador de vela sirve para cocinar carne cruda",
+  "expect": "Cocinar sin gas ni electricidad"
+ },
+ {
+  "lang": "es",
+  "q": "puedo poner la parrilla de carbón en el garaje para cocinar",
+  "expect": "Cocinar sin gas ni electricidad"
+ },
+ {
+  "lang": "es",
+  "q": "se fue la luz de noche, con qué me alumbro sin riesgo",
+  "expect": "Luz segura sin electricidad"
+ },
+ {
+  "lang": "es",
+  "q": "dejé una vela encendida en el salón y me fui a dormir",
+  "expect": "Luz segura sin electricidad"
+ },
+ {
+  "lang": "es",
+  "q": "qué luz de emergencia compro para un apagón",
+  "expect": "Luz segura sin electricidad"
+ },
+ {
+  "lang": "es",
+  "q": "hace mucho frío y no funciona la calefacción de casa",
+  "expect": "Calor en casa sin calefacción"
+ },
+ {
+  "lang": "es",
+  "q": "cómo tapo las rendijas de las puertas para que no se vaya el calor",
+  "expect": "Calor en casa sin calefacción"
+ },
+ {
+  "lang": "es",
+  "q": "mi bebé duerme en una habitación muy fría, qué hago",
+  "expect": "Calor en casa sin calefacción"
+ },
+ {
+  "lang": "es",
+  "q": "mi casa pasa de 35 grados en la ola de calor y no tengo aire",
+  "expect": "Casa fresca sin aire acondicionado en una ola de calor"
+ },
+ {
+  "lang": "es",
+  "q": "debo abrir las ventanas de día o de noche con la ola de calor",
+  "expect": "Casa fresca sin aire acondicionado en una ola de calor"
+ },
+ {
+  "lang": "es",
+  "q": "el ventilador me refresca igual con 42 grados",
+  "expect": "Casa fresca sin aire acondicionado en una ola de calor"
+ },
+ {
+  "lang": "en",
+  "q": "how many gallons does a family of four need for two weeks",
+  "expect": "Storing water at home: how much and how to keep it safe"
+ },
+ {
+  "lang": "en",
+  "q": "where should I keep my stored water containers",
+  "expect": "Storing water at home: how much and how to keep it safe"
+ },
+ {
+  "lang": "en",
+  "q": "my water I stored at home is six months old, what do I do",
+  "expect": "Storing water at home: how much and how to keep it safe"
+ },
+ {
+  "lang": "en",
+  "q": "is the cheddar in my fridge still good after a day without power",
+  "expect": "Food without a refrigerator: what keeps and what to throw out"
+ },
+ {
+  "lang": "en",
+  "q": "can I eat from a swollen can if it smells fine",
+  "expect": "Food without a refrigerator: what keeps and what to throw out"
+ },
+ {
+  "lang": "en",
+  "q": "can I eat yesterday's leftover rice with no fridge",
+  "expect": "Food without a refrigerator: what keeps and what to throw out"
+ },
+ {
+  "lang": "en",
+  "q": "no stove at all, how do I make a hot meal",
+  "expect": "Cooking with no gas or electricity"
+ },
+ {
+  "lang": "en",
+  "q": "will a candle warmer cook raw chicken",
+  "expect": "Cooking with no gas or electricity"
+ },
+ {
+  "lang": "en",
+  "q": "can I put the charcoal grill in the garage to cook",
+  "expect": "Cooking with no gas or electricity"
+ },
+ {
+  "lang": "en",
+  "q": "the power went out at night, what is the safest way to see",
+  "expect": "Safe light with no electricity"
+ },
+ {
+  "lang": "en",
+  "q": "I left a candle burning in the living room and went to bed",
+  "expect": "Safe light with no electricity"
+ },
+ {
+  "lang": "en",
+  "q": "what emergency light should I buy for blackouts",
+  "expect": "Safe light with no electricity"
+ },
+ {
+  "lang": "en",
+  "q": "it is freezing and my home heating stopped working",
+  "expect": "Staying warm at home with no heating"
+ },
+ {
+  "lang": "en",
+  "q": "how do I stop drafts under doors to keep heat in",
+  "expect": "Staying warm at home with no heating"
+ },
+ {
+  "lang": "en",
+  "q": "my baby sleeps in a very cold room, what should I do",
+  "expect": "Staying warm at home with no heating"
+ },
+ {
+  "lang": "en",
+  "q": "my home is over 95 degrees in the heatwave and I have no AC",
+  "expect": "Keeping your home cool without air conditioning in a heatwave"
+ },
+ {
+  "lang": "en",
+  "q": "should I open windows during the day or at night in a heatwave",
+  "expect": "Keeping your home cool without air conditioning in a heatwave"
+ },
+ {
+  "lang": "en",
+  "q": "does a fan still cool me at 108 degrees",
+  "expect": "Keeping your home cool without air conditioning in a heatwave"
+ },
+ {
+  "lang": "pt",
+  "q": "quantos litros minha família de quatro precisa para três dias",
+  "expect": "Guardar água em casa: quanto e como conservar"
+ },
+ {
+  "lang": "pt",
+  "q": "onde guardo os galões de água em casa",
+  "expect": "Guardar água em casa: quanto e como conservar"
+ },
+ {
+  "lang": "pt",
+  "q": "minha água guardada fez seis meses, o que faço",
+  "expect": "Guardar água em casa: quanto e como conservar"
+ },
+ {
+  "lang": "pt",
+  "q": "o queijo duro da geladeira ainda presta depois de um dia sem luz",
+  "expect": "Comida sem geladeira: o que aguenta e o que jogar fora"
+ },
+ {
+  "lang": "pt",
+  "q": "posso comer de uma lata inchada se o cheiro estiver bom",
+  "expect": "Comida sem geladeira: o que aguenta e o que jogar fora"
+ },
+ {
+  "lang": "pt",
+  "q": "posso comer a sobra de arroz de ontem sem geladeira",
+  "expect": "Comida sem geladeira: o que aguenta e o que jogar fora"
+ },
+ {
+  "lang": "pt",
+  "q": "não tenho fogão, como faço uma refeição quente",
+  "expect": "Cozinhar sem gás nem eletricidade"
+ },
+ {
+  "lang": "pt",
+  "q": "um aquecedor de vela cozinha carne crua",
+  "expect": "Cozinhar sem gás nem eletricidade"
+ },
+ {
+  "lang": "pt",
+  "q": "posso colocar a churrasqueira a carvão na garagem para cozinhar",
+  "expect": "Cozinhar sem gás nem eletricidade"
+ },
+ {
+  "lang": "pt",
+  "q": "faltou luz de noite, como ilumino sem risco",
+  "expect": "Luz segura sem eletricidade"
+ },
+ {
+  "lang": "pt",
+  "q": "deixei uma vela acesa na sala e fui dormir",
+  "expect": "Luz segura sem eletricidade"
+ },
+ {
+  "lang": "pt",
+  "q": "que luz de emergência compro para quedas de energia",
+  "expect": "Luz segura sem eletricidade"
+ },
+ {
+  "lang": "pt",
+  "q": "está muito frio e o aquecimento de casa parou de funcionar",
+  "expect": "Manter o calor em casa sem aquecimento"
+ },
+ {
+  "lang": "pt",
+  "q": "como tampo as frestas das portas para o calor não sair",
+  "expect": "Manter o calor em casa sem aquecimento"
+ },
+ {
+  "lang": "pt",
+  "q": "meu bebê dorme num cômodo muito frio, o que faço",
+  "expect": "Manter o calor em casa sem aquecimento"
+ },
+ {
+  "lang": "pt",
+  "q": "minha casa passa de 35 graus na onda de calor e não tenho ar-condicionado",
+  "expect": "Casa fresca sem ar-condicionado numa onda de calor"
+ },
+ {
+  "lang": "pt",
+  "q": "devo abrir as janelas de dia ou de noite na onda de calor",
+  "expect": "Casa fresca sem ar-condicionado numa onda de calor"
+ },
+ {
+  "lang": "pt",
+  "q": "o ventilador refresca igual com 42 graus",
+  "expect": "Casa fresca sem ar-condicionado numa onda de calor"
+ }
+]
