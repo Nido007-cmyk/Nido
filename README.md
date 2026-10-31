@@ -62,7 +62,7 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   after you both compare fingerprints, in person or on a call, and tap
   Verify.
 - **Has an Emergency tab**: your country's emergency numbers, checked
-  against official sources (32 countries in the NIDO Local pack), each with
+  against official sources (69 countries in the NIDO Local pack), each with
   its source and date. "Call" opens the dialer with the number typed in.
   Quick guides (CPR, bleeding, choking, burns, earthquake, hurricane) and
   "describe what's happening" write the question into the chat. First aid
@@ -128,7 +128,7 @@ The interface is available in English, Spanish and Portuguese.
 
 ## Status
 
-Alpha, October 2026. The project has more than 3,700 automated tests and
+Alpha, October 2026. The project has more than 4,500 automated tests and
 runs type checking and the test suite on every change. What automated tests
 cannot cover is behaviour on real hardware, so the headline flows are also
 exercised on physical Galaxy tablets: chat and agent tools, memory,

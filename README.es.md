@@ -63,7 +63,7 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   verificado solo después de comparar las huellas los dos, en persona o por
   llamada, y pulsar Verificar.
 - **Tiene una pestaña Emergencia**: los números de emergencia de tu país,
-  comprobados en fuentes oficiales (32 países en el pack NIDO Local), cada
+  comprobados en fuentes oficiales (69 países en el pack NIDO Local), cada
   uno con su fuente y su fecha. «Llamar» abre el marcador con el número
   escrito. Las guías rápidas (RCP, hemorragia, atragantamiento, quemaduras,
   terremoto, huracán) y «describe lo que pasa» escriben la pregunta en el chat.
@@ -132,7 +132,7 @@ La interfaz está disponible en español, inglés y portugués.
 
 ## Estado
 
-Alfa, octubre de 2026. El proyecto tiene más de 3700 pruebas automáticas y
+Alfa, octubre de 2026. El proyecto tiene más de 4500 pruebas automáticas y
 ejecuta la comprobación de tipos y la batería de pruebas en cada cambio. Lo
 que las pruebas automáticas no cubren es el comportamiento en hardware real,
 así que los flujos principales también se prueban en tabletas Galaxy
