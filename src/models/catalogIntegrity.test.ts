@@ -191,6 +191,63 @@ describe("real MODEL_CATALOG — every entry passes the pre-network gate", () =>
       ["encyclopedia", ["corpus-standard", "corpus-full", "nido-esencial", "wiki-vital5"]],
     ]);
   });
+
+  it("auditoría 2026-10-31 (F5-01, mitad de detección): licencias y capabilities fuera de la firma, fijadas", () => {
+    // La firma NO cubre license ni capabilities (ver F5-01: ampliar
+    // SIGNED_FIELDS exige re-firmar y es decisión del dueño con
+    // Claude). Mientras tanto, esta fijación es la red de detección:
+    // N12 (una licencia cambiada a MIT) y N13 (roles y plantilla
+    // del modelo por defecto) pasaban con la firma en verde.
+    const licenses: Record<string, string> = {};
+    for (const m of MODEL_CATALOG) licenses[m.id] = m.license;
+    expect(licenses).toEqual({
+      "phi-3.5-mini-instruct-q4km": "MIT",
+      "bge-small-en-v1.5-q8": "MIT",
+      "multilingual-e5-small-q8": "MIT",
+      "qwen2.5-1.5b-instruct-q4km": "Apache-2.0",
+      "qwen2.5-0.5b-instruct-q4km": "Apache-2.0",
+      "qwen2.5-0.5b-instruct-q5km": "Apache-2.0",
+      "qwen3-0.6b-q4km": "Apache-2.0",
+      "qwen2.5-7b-instruct-q4km": "Apache-2.0",
+      "lfm2.5-8b-a1b-q4km": "LFM Open License v1.0",
+      "gemma-4-e4b-it-q4_0": "Apache-2.0",
+      "corpus-standard": "CC BY-SA 4.0 (Wikipedia)",
+      "corpus-full": "CC BY-SA 4.0 (Wikipedia)",
+      "wiki-vital5": "CC BY-SA 4.0 (Wikipedia)",
+      "wiki-vital5-e5": "CC BY-SA 4.0 (Wikipedia; compiled by NIDO)",
+      "nido-esencial": "CC BY 4.0 (NIDO)",
+      "nido-esencial-e5": "CC BY 4.0 (NIDO)",
+      "nido-local": "CC BY 4.0 (NIDO)",
+      "nido-local-e5": "CC BY 4.0 (NIDO)",
+      "nido-ninos": "CC BY 4.0 (NIDO)",
+      "nido-ninos-e5": "CC BY 4.0 (NIDO)",
+      "nido-crisis": "CC BY 4.0 (NIDO)",
+      "nido-crisis-e5": "CC BY 4.0 (NIDO)",
+      "nido-sin-servicios": "CC BY 4.0 (NIDO)",
+      "nido-sin-servicios-e5": "CC BY 4.0 (NIDO)",
+      "nido-hogar": "CC BY 4.0 (NIDO)",
+      "nido-hogar-e5": "CC BY 4.0 (NIDO)",
+      "nido-desastres": "CC BY 4.0 (NIDO)",
+      "nido-desastres-e5": "CC BY 4.0 (NIDO)",
+      "nido-campo": "CC BY 4.0 (NIDO)",
+      "nido-campo-e5": "CC BY 4.0 (NIDO)",
+      "nido-viaje": "CC BY 4.0 (NIDO)",
+      "nido-viaje-e5": "CC BY 4.0 (NIDO)",
+    });
+    // Capabilities enteras de los dos modelos requeridos (el LLM
+    // por defecto y el embedding por defecto): roles, plantilla y
+    // muestreo deciden el comportamiento del enrutado.
+    const requiredCaps: Record<string, unknown> = {};
+    for (const m of REQUIRED_MODELS) requiredCaps[m.id] = m.capabilities;
+    expect(requiredCaps).toEqual({
+      "bge-small-en-v1.5-q8": { roles: ["embedding"] },
+      "qwen2.5-1.5b-instruct-q4km": {
+        roles: ["fast"],
+        usesChatTemplate: true,
+        sampling: { topP: 0.8, topK: 20 },
+      },
+    });
+  });
 });
 
 describe("gate fail-closed behavior (synthetic contracts)", () => {
