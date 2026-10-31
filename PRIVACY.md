@@ -63,7 +63,7 @@ By default, voice dictation only works with a speech recognizer that runs on you
 ## Your controls
 
 - Delete any chat, memory, document or contact from inside the app.
-- Erase everything from Settings → Danger zone, or by uninstalling the app. This also deletes the local backups made from Settings; copies you saved elsewhere (Downloads, another app) are outside NIDO and stay.
+- Erase everything from Settings → Danger zone, or by uninstalling the app. This also deletes the local backups made from Settings; copies you saved elsewhere (Downloads, another app) are outside NIDO and stay. Text you copied to the system clipboard (for example the pairing code, which carries your name and public keys) is also outside NIDO: erasing does not clear the clipboard. The backup key is the exception: NIDO wipes it from the clipboard itself, 60 seconds after copying it.
 - Optional panic button (Settings → Security): holding it for 3 seconds erases all NIDO data at once, without asking for a fingerprint.
 - NIDO asks your keyboard not to learn from what you type in it (incognito keyboard). Major keyboards respect this; NIDO cannot force one that ignores it.
 - Create an encrypted backup and keep the key yourself. If you lose the key, nobody can recover the data, including the maintainers.
@@ -141,7 +141,7 @@ Por defecto, el dictado solo funciona con un reconocedor de voz que trabaja en t
 ## Tus controles
 
 - Borra cualquier chat, memoria, documento o contacto desde la app.
-- Borra todo desde Ajustes → Zona de peligro, o desinstalando la app. Eso borra también los respaldos locales hechos desde Ajustes; las copias que guardaste fuera (Descargas, otra app) quedan fuera de NIDO y siguen ahí.
+- Borra todo desde Ajustes → Zona de peligro, o desinstalando la app. Eso borra también los respaldos locales hechos desde Ajustes; las copias que guardaste fuera (Descargas, otra app) quedan fuera de NIDO y siguen ahí. El texto que copiaste al portapapeles del sistema (por ejemplo el código de emparejamiento, que lleva tu nombre y tus claves públicas) también queda fuera de NIDO: el borrado no limpia el portapapeles. La llave del respaldo es la excepción: NIDO la borra del portapapeles por sí mismo, 60 segundos después de copiarla.
 - Botón de pánico opcional (Ajustes → Seguridad): mantenerlo 3 segundos borra todos los datos de NIDO de una vez, sin pedir huella.
 - NIDO pide a tu teclado que no aprenda de lo que escribes en la app (teclado incógnito). Los teclados principales lo respetan; NIDO no puede obligar a uno que lo ignore.
 - Crea un respaldo cifrado y guarda tú la clave. Si pierdes la clave, nadie puede recuperar los datos, tampoco quienes mantienen el proyecto.
