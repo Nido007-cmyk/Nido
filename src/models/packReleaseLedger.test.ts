@@ -44,4 +44,22 @@ describe("archivos de las releases de NIDO: nunca se sustituyen", () => {
       expect(url).toMatch(/^https:\/\/github\.com\/Nido007-cmyk\/Nido\/releases\/download\/knowledge-packs-v\d+\/[\w.-]+$/);
     }
   });
+
+  it("auditoría 2026-10-31 (F5-04): las líneas de la última release casan en conjunto con el catálogo", () => {
+    // La dirección contraria a la primera prueba: una línea extra
+    // bien formada con una URL inexistente de la última release
+    // (mutación N10 de la faceta) pasaba el libro entero. Las
+    // releases viejas conservan líneas históricas sin entrada
+    // actual en el catálogo, así que la igualdad de conjuntos se
+    // exige solo sobre la etiqueta más nueva presente en el libro.
+    const tagOf = (url: string) => Number(/knowledge-packs-v(\d+)\//.exec(url)?.[1] ?? 0);
+    const latest = Math.max(...Object.keys(ledger.files).map(tagOf));
+    const ledgerLatest = Object.keys(ledger.files)
+      .filter((u) => tagOf(u) === latest)
+      .sort();
+    const catalogLatest = [...new Set(catalogFiles.map((f) => f.url))]
+      .filter((u) => tagOf(u) === latest)
+      .sort();
+    expect(ledgerLatest).toEqual(catalogLatest);
+  });
 });
