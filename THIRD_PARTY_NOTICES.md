@@ -9,7 +9,7 @@ The list covers every package that `package-lock.json` does not mark as developm
 
 AI models and knowledge packs are not part of the app: they are downloaded separately and keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as `android-runtime-dependencies.txt` (see below).
 
-Source: `package-lock.json sha256:da70d4455b5b` · 590 packages.
+Source: `package-lock.json sha256:93eda6a08f6b` · 589 packages.
 
 ## License elections
 
@@ -108,10 +108,10 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | @babel/template | 7.29.7 | MIT |
 | @babel/traverse | 7.29.8 | MIT |
 | @babel/types | 7.29.8 | MIT |
-| @expo/cli | 57.0.30 | MIT |
+| @expo/cli | 57.0.32 | MIT |
 | @expo/code-signing-certificates | 0.0.6 | MIT |
 | @expo/config | 57.0.10 | MIT |
-| @expo/config-plugins | 57.0.10 | MIT |
+| @expo/config-plugins | 57.0.11 | MIT |
 | @expo/config-types | 57.0.2 | MIT |
 | @expo/devcert | 1.2.2 | MIT |
 | @expo/devtools | 57.0.1 | MIT |
@@ -129,11 +129,11 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | @expo/metro-config | 57.0.13 | MIT |
 | @expo/metro-file-map | 57.0.4 | MIT |
 | @expo/osascript | 2.8.1 | MIT |
-| @expo/package-manager | 1.14.1 | MIT |
+| @expo/package-manager | 1.14.2 | MIT |
 | @expo/plist | 0.8.1 | MIT |
 | @expo/prebuild-config | 57.0.19 | MIT |
 | @expo/require-utils | 57.0.6 | MIT |
-| @expo/router-server | 57.0.12 | MIT |
+| @expo/router-server | 57.0.14 | MIT |
 | @expo/schema-utils | 57.0.2 | MIT |
 | @expo/sdk-runtime-versions | 1.0.0 | MIT |
 | @expo/spawn-async | 1.8.0 | MIT |
@@ -221,7 +221,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | babel-plugin-syntax-hermes-parser | 0.36.0 | MIT |
 | babel-plugin-transform-flow-enums | 0.0.2 | MIT |
 | babel-preset-current-node-syntax | 1.2.0 | MIT |
-| babel-preset-expo | 57.0.15 | MIT |
+| babel-preset-expo | 57.0.16 | MIT |
 | babel-preset-jest | 29.6.3 | MIT |
 | badgin | 1.2.3 | MIT |
 | balanced-match | 1.0.2 | MIT |
@@ -297,11 +297,11 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | etag | 1.8.1 | MIT |
 | event-target-shim | 5.0.1 | MIT |
 | exact-alarm | local | MIT (NIDO's own module) |
-| expo | 57.0.29 | MIT |
+| expo | 57.0.31 | MIT |
 | expo-application | 57.0.3 | MIT |
 | expo-asset | 57.0.20 | MIT |
 | expo-build-properties | 57.0.22 | MIT |
-| expo-calendar | 57.0.5 | MIT |
+| expo-calendar | 57.0.6 | MIT |
 | expo-clipboard | 57.0.2 | MIT |
 | expo-constants | 57.0.22 | MIT |
 | expo-contacts | 57.0.8 | MIT |
@@ -314,12 +314,12 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | expo-linear-gradient | 57.0.2 | MIT |
 | expo-local-authentication | 57.0.3 | MIT |
 | expo-modules-autolinking | 57.0.16 | MIT |
-| expo-modules-core | 57.0.23 | MIT |
-| expo-modules-jsi | 57.1.2 | MIT |
-| expo-notifications | 57.0.23 | MIT |
+| expo-modules-core | 57.0.24 | MIT |
+| expo-modules-jsi | 57.1.3 | MIT |
+| expo-notifications | 57.0.24 | MIT |
 | expo-secure-store | 57.0.4 | MIT |
 | expo-server | 57.0.3 | MIT |
-| expo-sharing | 57.0.23 | MIT |
+| expo-sharing | 57.0.24 | MIT |
 | expo-speech | 57.0.3 | MIT |
 | expo-splash-screen | 57.0.10 | MIT |
 | expo-sqlite | 57.0.4 | MIT |
@@ -360,7 +360,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | html-parse-stringify | 4.0.1 | MIT |
 | http-errors | 2.0.1 | MIT |
 | https-proxy-agent | 7.0.6 | MIT |
-| i18next | 26.4.5 | MIT |
+| i18next | 26.5.11 | MIT |
 | ignore | 5.3.2 | MIT |
 | imurmurhash | 0.1.4 | MIT |
 | inflight | 1.0.6 | ISC |
@@ -468,7 +468,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | nido-pdf-text | local | MIT (NIDO's own module) |
 | nido-secure-dialog | local | MIT (NIDO's own module) |
 | nido-vectors | local | MIT (NIDO's own module) |
-| node-forge | 1.4.0 | (BSD-3-Clause OR GPL-2.0) (used under BSD-3-Clause) |
+| node-forge | 1.4.2 | (BSD-3-Clause OR GPL-2.0) (used under BSD-3-Clause) |
 | node-int64 | 0.4.0 | MIT |
 | node-releases | 2.0.57 | MIT |
 | normalize-path | 3.0.0 | MIT |
@@ -510,10 +510,10 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | range-parser | 1.2.1 | MIT |
 | react | 19.2.3 | MIT |
 | react-devtools-core | 6.1.5 | MIT |
-| react-i18next | 17.0.16 | MIT |
+| react-i18next | 17.1.9 | MIT |
 | react-is | 18.3.1 | MIT |
 | react-native | 0.86.3 | MIT |
-| react-native-safe-area-context | 5.10.1 | MIT |
+| react-native-safe-area-context | 5.11.0 | MIT |
 | react-refresh | 0.14.2 | MIT |
 | regenerate | 1.4.2 | MIT |
 | regenerate-unicode-properties | 10.2.2 | MIT |
@@ -589,7 +589,6 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | update-browserslist-db | 1.3.3 | MIT |
 | use-sync-external-store | 1.7.0 | MIT |
 | utils-merge | 1.0.1 | MIT |
-| uuid | 7.0.3 | MIT |
 | validate-npm-package-name | 5.0.1 | ISC |
 | vary | 1.1.2 | MIT |
 | vlq | 1.0.1 | MIT |
@@ -606,7 +605,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | write-file-atomic | 4.0.2 | ISC |
 | ws | 7.5.13 | MIT |
 | ws | 8.22.0 | MIT |
-| xcode | 3.0.1 | Apache-2.0 |
+| xcode | 4.0.0 | Apache-2.0 |
 | xml2js | 0.6.0 | MIT |
 | xmlbuilder | 11.0.1 | MIT |
 | xmlbuilder | 15.1.1 | MIT |
@@ -2753,7 +2752,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### @expo/cli@57.0.30 — LICENSE
+### @expo/cli@57.0.32 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -2831,7 +2830,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/config-plugins@57.0.10 — LICENSE
+### @expo/config-plugins@57.0.11 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3301,7 +3300,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/package-manager@1.14.1 — LICENSE
+### @expo/package-manager@1.14.2 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3405,7 +3404,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/router-server@57.0.12 — LICENSE
+### @expo/router-server@57.0.14 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -5488,7 +5487,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### babel-preset-expo@57.0.15 — LICENSE
+### babel-preset-expo@57.0.16 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8256,7 +8255,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo@57.0.29 — LICENSE
+### expo@57.0.31 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8360,7 +8359,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-calendar@57.0.5 — LICENSE
+### expo-calendar@57.0.6 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8698,7 +8697,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-modules-core@57.0.23 — LICENSE
+### expo-modules-core@57.0.24 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8724,7 +8723,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-modules-jsi@57.1.2 — LICENSE
+### expo-modules-jsi@57.1.3 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8750,7 +8749,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-notifications@57.0.23 — LICENSE
+### expo-notifications@57.0.24 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8828,7 +8827,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-sharing@57.0.23 — LICENSE
+### expo-sharing@57.0.24 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -9952,7 +9951,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### i18next@26.4.5 — LICENSE
+### i18next@26.5.11 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -13496,7 +13495,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### node-forge@1.4.0 — LICENSE
+### node-forge@1.4.2 — LICENSE
 
 ```text
 You may use the Forge project under the terms of either the BSD License or the
@@ -14722,7 +14721,7 @@ SOFTWARE.
 
 Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
 
-### react-i18next@17.0.16 — LICENSE
+### react-i18next@17.1.9 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -14800,7 +14799,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### react-native-safe-area-context@5.10.1 — LICENSE
+### react-native-safe-area-context@5.11.0 — LICENSE
 
 ```text
 MIT License
@@ -16614,32 +16613,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### uuid@7.0.3 — LICENSE.md
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2010-2016 Robert Kieffer and other contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
 ### validate-npm-package-name@5.0.1 — LICENSE
 
 ```text
@@ -16942,7 +16915,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### xcode@3.0.1 — LICENSE
+### xcode@4.0.0 — LICENSE
 
 ```text
 Apache License
@@ -17148,7 +17121,7 @@ Apache License
    limitations under the License.
 ```
 
-### xcode@3.0.1 — NOTICE
+### xcode@4.0.0 — NOTICE
 
 ```text
 Apache Cordova
