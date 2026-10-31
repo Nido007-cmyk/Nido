@@ -573,6 +573,19 @@ function unitWord(raw: string): string {
   return /^grad[oe]s?$/.test(w) ? "grados" : w;
 }
 
+/**
+ * Auditoría completa 2026-10-31 (F1 M-2): un separador seguido de
+ * exactamente tres cifras («1,000», «1.000», «12,500») es ambiguo:
+ * ¿mil con separador de miles o uno con tres decimales? La ruta de
+ * cálculo ya lo rechaza (normalizeCalcText devuelve null); la de
+ * conversión lo leía siempre como decimal y «convierte 1,000 metros
+ * a kilómetros» respondía 0,001 km en vez de 1 km o de preguntar.
+ * Con la ambigüedad presente no hay acción determinista.
+ */
+export function isAmbiguousThousandsNumber(raw: string): boolean {
+  return /^-?\d+[.,]\d{3}$/.test(raw.trim());
+}
+
 // ----------------------------------------------------------- calendario
 
 // 0.1.31: «desta semana» (pt) — «minha agenda desta semana» caía al modelo.
@@ -950,6 +963,7 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   for (const { re, inv } of CONVERT_RULES) {
     const m = re.exec(t);
     if (!m) continue;
+    if (isAmbiguousThousandsNumber(inv ? m[2] : m[1])) break;
     const value = Number((inv ? m[2] : m[1]).replace(",", "."));
     try {
       convertUnits(value, unitWord(inv ? m[3] : m[2]), unitWord(inv ? m[1] : m[3]));
@@ -968,6 +982,9 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   for (const { re, lang, inv } of CONVERT_RULES) {
     const m = re.exec(t);
     if (!m) continue;
+    // F1 M-2: número ambiguo (separador de miles o decimal): sin
+    // acción determinista, igual que en la ruta de cálculo.
+    if (isAmbiguousThousandsNumber(inv ? m[2] : m[1])) return null;
     // inv: la pregunta nombra primero la unidad DESTINO ("cuántos pies son
     // 2 metros" → grupos: destino, valor, origen).
     const value = Number((inv ? m[2] : m[1]).replace(",", "."));

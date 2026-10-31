@@ -94,6 +94,15 @@ describe("extractToolAction — conversiones", () => {
     expect(extractToolAction("5 manzanas a peras", NOW)).toBeNull();
   });
 
+  it("auditoría 2026-10-31 (F1 M-2): el separador de miles ambiguo no se enruta, como en la calculadora", () => {
+    expect(extractToolAction("convierte 1,000 metros a kilometros", NOW)).toBeNull();
+    expect(extractToolAction("convierte 1.000 metros a kilometros", NOW)).toBeNull();
+    expect(extractToolAction("cuántos kilometros son 1,000 metros", NOW)).toBeNull();
+    // Sin ambigüedad: cuatro decimales sí es un decimal, y se convierte.
+    expect(extractToolAction("convierte 1,0005 metros a kilometros", NOW)).toMatchObject({ kind: "convert", value: 1.0005 });
+    expect(extractToolAction("convierte 1000 metros a kilometros", NOW)).toMatchObject({ kind: "convert", value: 1000 });
+  });
+
   // 0.1.19: la forma de pregunta ("cuántos pies son 2 metros") caía al modelo.
   it.each([
     ["cuántos pies son 2 metros", 2, "metros", "pies", "es"],
