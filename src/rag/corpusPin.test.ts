@@ -5,7 +5,7 @@
  */
 
 /**
- * bundledCorpusIntegrity.test.ts — auditoría completa 2026-10-31
+ * corpusPin.test.ts — auditoría completa 2026-10-31
  * (F5-05): el corpus empaquetado (assets/corpus/corpus.json, los
  * 300 documentos que seedCorpus siembra en cada arranque) no
  * tenía huella declarada en ningún sitio: alterarlo dejaba
