@@ -24,6 +24,9 @@ on:
       pack:
         description: 'Pack in knowledge-packs/: a title list (name without .txt) or a guides folder'
         default: 'nido-esencial'
+      release_tag:
+        description: 'Draft release tag for the built packs (a published tag is never reused)'
+        default: 'knowledge-packs-v7'
 
 permissions:
   contents: write
@@ -36,13 +39,17 @@ env:
   # A push to pack/<name> builds <name> when knowledge-packs/<name> exists
   # (pack/nido-local → nido-local); otherwise NIDO Essentials.
   PACK: ${{ inputs.pack || (startsWith(github.ref_name, 'pack/nido-local') && 'nido-local') || 'nido-esencial' }}
-  # v3 and v4 are published and pinned by the signed catalog: never
-  # overwrite them. v5 (0.1.55): NIDO Local.
+  # v3, v4, v5 and v6 are published and pinned by the signed catalog:
+  # never overwrite them. v5 (0.1.55): NIDO Local. v6: the set the
+  # signed catalog in this tree offers.
   # A published release is never changed (apps only accept the exact bytes
-  # their catalog names). A new pack version needs a NEW tag here (v6, v7…),
+  # their catalog names). A new pack version needs a NEW tag here (v7, v8…),
   # new sourceUrls in src/models/manifest.ts and new lines in
   # knowledge-packs/release-ledger.json (checked by packReleaseLedger.test.ts).
-  RELEASE_TAG: knowledge-packs-v5
+  # Full audit 2026-10-31 (F7-07): the tag was pinned to v5, so this
+  # workflow could not produce what the signed catalog offers; it is
+  # now a dispatch input defaulting to v7.
+  RELEASE_TAG: ${{ inputs.release_tag || 'knowledge-packs-v7' }}
   # Fixed so a rebuild from the same text gives the same file.
   BUILT_AT: '2026-10-28T00:00:00Z'
   VITAL_BGE_URL: https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v1/wiki-vital5.sqlite
