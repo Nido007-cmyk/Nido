@@ -243,8 +243,12 @@ const TOOL_CALL_RE = /```tool\s*\n([\s\S]*?)```/g;
 const PYTHON_TOOL_CALL_RE = /```python\s*\n([\s\S]*?)```/g;
 /** Nombre de función seguido de paréntesis: create_reminder(...), save_note(...) */
 const PYTHON_FN_RE = /^(\w+)\s*\(\s*([\s\S]*)\)\s*$/;
-/** Argumento kwarg: name="value" o name='value' */
-const PYTHON_KWARG_RE = /(\w+)\s*=\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g;
+/** Argumento kwarg: name="value", name='value' o literales (número,
+ *  booleano, None). Auditoría completa 2026-10-31 (F1 M-7): antes solo
+ *  se capturaban las cadenas y los demás argumentos se perdían en
+ *  silencio: la llamada se despachaba incompleta (day=15, hour=9
+ *  desaparecían y la herramienta decidía con sus valores por defecto). */
+const PYTHON_KWARG_RE = /(\w+)\s*=\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|-?\d+(?:\.\d+)?|True|False|None|true|false|null)(?![\w])/g;
 
 export interface ParsedToolCall {
   name: string;
@@ -298,11 +302,20 @@ function parsePythonToolCall(body: string): ParsedToolCall | null {
   let km: RegExpExecArray | null;
   while ((km = PYTHON_KWARG_RE.exec(argsText)) !== null) {
     const key = km[1];
-    let val = km[2];
-    // Quitar comillas externas y desescapar.
-    const quote = val[0];
-    val = val.slice(1, -1).replace(new RegExp("\\\\" + quote, "g"), quote).replace(/\\n/g, "\n");
-    args[key] = val;
+    const raw = km[2];
+    if (raw[0] === "\"" || raw[0] === "'") {
+      // Quitar comillas externas y desescapar.
+      const quote = raw[0];
+      args[key] = raw.slice(1, -1).replace(new RegExp("\\\\" + quote, "g"), quote).replace(/\\n/g, "\n");
+    } else if (raw === "True" || raw === "true") {
+      args[key] = true;
+    } else if (raw === "False" || raw === "false") {
+      args[key] = false;
+    } else if (raw === "None" || raw === "null") {
+      args[key] = null;
+    } else {
+      args[key] = Number(raw);
+    }
   }
   if (!name) return null;
   return { name, arguments: args };

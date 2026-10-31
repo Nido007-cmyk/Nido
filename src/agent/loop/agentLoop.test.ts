@@ -53,6 +53,21 @@ describe("parseToolCalls", () => {
     expect(calls[0].arguments).toEqual({ text: "mom birthday", at: "2027-03-15T00:00:00" });
   });
 
+  it("auditoría 2026-10-31 (F1 M-7): la llamada estilo python conserva los argumentos que no son cadenas", () => {
+    const text =
+      '```python\ncreate_calendar_event(title="dentista", day=15, hour=9, all_day=False, note=None, ratio=2.5)\n```';
+    const calls = parseToolCalls(text);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].arguments).toEqual({
+      title: "dentista",
+      day: 15,
+      hour: 9,
+      all_day: false,
+      note: null,
+      ratio: 2.5,
+    });
+  });
+
   it("prefiere formato tool cuando ambos existen", () => {
     const text =
       '```tool\n{"name": "device_time", "arguments": {}}\n```\n```python\ndevice_time()\n```';
