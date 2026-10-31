@@ -56,6 +56,14 @@ const DOC_LEFTOVER_FILES = new Set([
   "revoked-peers.json.tmp",
   "feature-flags.json",
   "rekey-staging.json",
+  // Auditoría completa 2026-10-31 (F2-04): los temporales de la
+  // escritura atómica de settings.json y del journal de instalación.
+  // settings.json y nido-install-state.json sí se borran y se
+  // verifican, pero sus .tmp quedaban fuera del inventario: un corte
+  // entre la escritura del temporal y el renombrado dejaba una copia
+  // completa de los ajustes fuera del borrado verificado.
+  "settings.json.tmp",
+  "nido-install-state.json.tmp",
 ]);
 function isDocLeftover(name: string): boolean {
   return name.startsWith("nido-backup-") || name.startsWith("restored.db") || DOC_LEFTOVER_FILES.has(name);

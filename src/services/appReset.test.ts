@@ -317,6 +317,15 @@ describe("resetAllAppData (Clear All Data)", () => {
     for (const f of leftovers) expect(fsExists(f), `${f} debe haber desaparecido`).toBe(false);
   });
 
+  it("auditoría 2026-10-31 (F2-04): borra también los .tmp de settings y del journal", async () => {
+    await seedKeys();
+    seedFullDevice();
+    const tmps = [`${DOC}settings.json.tmp`, `${DOC}nido-install-state.json.tmp`];
+    for (const f of tmps) fsx.files.set(f, "x");
+    await resetAllAppData();
+    for (const f of tmps) expect(fsExists(f), `${f} debe haber desaparecido`).toBe(false);
+  });
+
   it("0.1.47: si un respaldo local sobrevive, el wipe falla en voz alta", async () => {
     await seedKeys();
     seedFullDevice();
