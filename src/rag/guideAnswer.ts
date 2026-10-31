@@ -43,19 +43,26 @@ export const GUIDE_MAX_CHARS = 2600;
  * The Essentials chunk to answer from, or null. It has to be the strongest
  * semantic match of all the sources (not just any Essentials chunk), above
  * GUIDE_MIN_SCORE. Among Essentials chunks of near-equal strength, the one
- * written in the reader's language wins (Portuguese readers get Spanish:
- * the pack has guides in Spanish and English).
+ * written in the reader's language wins when the pack carries that language
+ * (the packs are trilingual now: a Portuguese reader gets the Portuguese
+ * guide, not the Spanish twin). When the pack has no guide in the reader's
+ * language, the honest fallback: Spanish for a Portuguese reader (as
+ * before the pack had Portuguese), else the strongest chunk.
  */
 export function pickGuideChunk(chunks: RetrievedChunk[], lang: GroundingLang): RetrievedChunk | null {
   const scored = chunks.filter((c) => typeof c.rawScore === "number");
   if (scored.length === 0) return null;
   const best = scored.reduce((a, b) => ((b.rawScore as number) > (a.rawScore as number) ? b : a));
   if (!isEssentialsChunk(best.chunkId) || (best.rawScore as number) < GUIDE_MIN_SCORE) return null;
-  const want: GroundingLang = lang === "pt" ? "es" : lang;
   const close = scored.filter(
     (c) => isEssentialsChunk(c.chunkId) && (best.rawScore as number) - (c.rawScore as number) <= 0.03,
   );
-  return close.find((c) => detectTextLang(`${c.title}. ${c.body}`) === want) ?? best;
+  const prefs: GroundingLang[] = lang === "pt" ? ["pt", "es"] : [lang];
+  for (const want of prefs) {
+    const hit = close.find((c) => detectTextLang(`${c.title}. ${c.body}`) === want);
+    if (hit) return hit;
+  }
+  return best;
 }
 
 const HEAD: Record<GroundingLang, (title: string) => string> = {

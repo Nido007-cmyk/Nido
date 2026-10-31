@@ -111,6 +111,17 @@ describe("choosing the model", () => {
     expect(m.embeddingIdForPack("wiki-vital5")).toBe(DEFAULT_EMBEDDING_ID);
     expect(m.embeddingIdForPack("corpus-full")).toBeNull();
   });
+
+  it("the seven packs of the 2026-10-30 programme resolve their e5 twin both ways", () => {
+    for (const base of ["nido-ninos", "nido-crisis", "nido-desastres", "nido-sin-servicios", "nido-campo", "nido-viaje", "nido-hogar"]) {
+      expect(m.packIdForEmbedding(base, MULTILINGUAL_EMBEDDING_ID)).toBe(`${base}-e5`);
+      expect(m.packIdForEmbedding(`${base}-e5`, MULTILINGUAL_EMBEDDING_ID)).toBe(`${base}-e5`);
+      expect(m.packIdForEmbedding(`${base}-e5`, DEFAULT_EMBEDDING_ID)).toBe(base);
+      expect(m.packIdForEmbedding(base, DEFAULT_EMBEDDING_ID)).toBe(base);
+      expect(m.embeddingIdForPack(`${base}-e5`)).toBe(MULTILINGUAL_EMBEDDING_ID);
+      expect(m.embeddingIdForPack(base)).toBe(DEFAULT_EMBEDDING_ID);
+    }
+  });
 });
 
 describe("switchEmbeddingModel — order and recovery", () => {

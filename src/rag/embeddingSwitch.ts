@@ -46,6 +46,38 @@ const PACK_VARIANTS: Record<string, Record<string, string>> = {
     [DEFAULT_EMBEDDING_ID]: "nido-local",
     [MULTILINGUAL_EMBEDDING_ID]: "nido-local-e5",
   },
+  // The seven guide packs of the 2026-10-30 programme: without an entry
+  // here the resolver maps each pack to itself for every model, so with
+  // multilingual search on, the app would query their bge vectors with
+  // e5 vectors and their -e5 twin would never be the chosen download.
+  "nido-ninos": {
+    [DEFAULT_EMBEDDING_ID]: "nido-ninos",
+    [MULTILINGUAL_EMBEDDING_ID]: "nido-ninos-e5",
+  },
+  "nido-crisis": {
+    [DEFAULT_EMBEDDING_ID]: "nido-crisis",
+    [MULTILINGUAL_EMBEDDING_ID]: "nido-crisis-e5",
+  },
+  "nido-desastres": {
+    [DEFAULT_EMBEDDING_ID]: "nido-desastres",
+    [MULTILINGUAL_EMBEDDING_ID]: "nido-desastres-e5",
+  },
+  "nido-sin-servicios": {
+    [DEFAULT_EMBEDDING_ID]: "nido-sin-servicios",
+    [MULTILINGUAL_EMBEDDING_ID]: "nido-sin-servicios-e5",
+  },
+  "nido-campo": {
+    [DEFAULT_EMBEDDING_ID]: "nido-campo",
+    [MULTILINGUAL_EMBEDDING_ID]: "nido-campo-e5",
+  },
+  "nido-viaje": {
+    [DEFAULT_EMBEDDING_ID]: "nido-viaje",
+    [MULTILINGUAL_EMBEDDING_ID]: "nido-viaje-e5",
+  },
+  "nido-hogar": {
+    [DEFAULT_EMBEDDING_ID]: "nido-hogar",
+    [MULTILINGUAL_EMBEDDING_ID]: "nido-hogar-e5",
+  },
 };
 
 export function embeddingModelById(id: string): CatalogModel | undefined {

@@ -52,6 +52,15 @@ describe("respuesta desde la guía, sin modelo (0.1.59)", () => {
     expect(pickGuideChunk([en, es], "pt")?.chunkId).toBe(es.chunkId);
   });
 
+  it("el lector portugués recibe la guía en portugués cuando el pack la trae, y en español cuando no la trae", () => {
+    const en = chunk("pack:nido-esencial-e5:300", "CPR for adults and older children — Before you start", "Before you start\n- Make sure the place is safe. Tap their shoulders and shout.", 0.9);
+    const es = chunk("pack:nido-esencial-e5:8", "RCP (reanimación) en adultos y niños mayores — Antes de empezar", "Antes de empezar\n- Comprueba que el lugar es seguro. Toca sus hombros y háblale fuerte.", 0.89);
+    const pt = chunk("pack:nido-esencial-e5:400", "RCP (reanimação) em adultos e crianças maiores — Antes de começar", "Antes de começar\n- Veja se o local é seguro e se a pessoa não responde. Toque nos ombros dela e fale alto com ela.", 0.88);
+    expect(pickGuideChunk([en, es, pt], "pt")?.chunkId).toBe(pt.chunkId);
+    // Sin gemela portuguesa entre las cercanas, el retroceso honesto es la española.
+    expect(pickGuideChunk([en, es], "pt")?.chunkId).toBe(es.chunkId);
+  });
+
   it("el texto sale tal cual: «no está sangrando» se mantiene, con la fuente y el aviso de llamar", () => {
     const text = composeGuideAnswer({ title: "Dolor de pecho e infarto", source: "NIDO — Dolor de pecho e infarto (basado en: AHA…)", parts: [{ id: 1, body: CHEST, used: true }] }, "es");
     expect(text).toContain("no es alérgico a la aspirina, no está sangrando y su médico no se lo ha prohibido");
