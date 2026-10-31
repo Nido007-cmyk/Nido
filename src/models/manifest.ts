@@ -679,7 +679,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
-      "Checked emergency numbers for 32 countries in the Americas, Europe, Africa, Asia and Oceania, each with its official source, plus what official alerts mean. Spanish and English. ~0.2MB.",
+      "Checked emergency numbers for 69 countries in the Americas, Europe, Africa, Asia and Oceania, each with its official source, plus what official alerts mean. Spanish and English. ~0.2MB.",
     required: false,
   },
   {
@@ -694,7 +694,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local-e5.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
-      "Checked emergency numbers for 32 countries, each with its official source, plus what official alerts mean; searchable in Spanish, Portuguese and English. ~0.2MB.",
+      "Checked emergency numbers for 69 countries, each with its official source, plus what official alerts mean; searchable in Spanish, Portuguese and English. ~0.2MB.",
     required: false,
   },
   // Add more tested candidates / corpus packs here later (each needs a
