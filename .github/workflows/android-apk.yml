@@ -340,6 +340,7 @@ jobs:
             docs/ALPHA_RELEASE_NOTES.md
             scripts/generate-sbom.mjs
             scripts/lib/third-party-notices-lib.mjs
+            scripts/repair-release-assets.sh
           sparse-checkout-cone-mode: false
 
       - name: Decide release tag
@@ -360,11 +361,29 @@ jobs:
             echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # Sin condición de publish (F7-06): la rama de reparación también
+      # necesita los artefactos de esta corrida (la lista de
+      # dependencias sale de aquí). En la rama de publicación es la
+      # misma descarga de siempre.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        if: steps.tag.outputs.publish == 'true'
         with:
           path: dist
           merge-multiple: true
+
+      # Auditoría completa 2026-10-31 (F7-06): si la release ya existe
+      # (publish=false), los adjuntos con continue-on-error de la
+      # primera pasada no se reintentaban jamás y la release quedaba
+      # incompleta en silencio. Este paso comprueba los activos
+      # esperados y adjunta los que falten (el SBOM se regenera del
+      # lockfile; la lista sale del artefacto de esta corrida). Sin
+      # continue-on-error: una release que no se puede reparar debe
+      # verse como un run en rojo, no como otro silencio.
+      - name: Repair missing release assets
+        if: steps.tag.outputs.publish == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: bash scripts/repair-release-assets.sh "$TAG" dist
 
       - name: Verify checksum
         if: steps.tag.outputs.publish == 'true'
