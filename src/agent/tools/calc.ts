@@ -265,5 +265,11 @@ export function formatNumber(value: number): string {
   if (isApproximate(value)) return String(Number(value.toPrecision(15)));
   if (Number.isInteger(value)) return String(value);
   // 10 decimales significativos como máximo, sin ceros de relleno.
-  return String(Number(value.toFixed(10)));
+  const fixed = String(Number(value.toFixed(10)));
+  // Auditoría completa 2026-10-31 (F1 B-1): por debajo de 1e-10 el
+  // redondeo a 10 decimales colapsa a «0» y la calculadora afirmaba
+  // que el resultado era cero. Se cae a notación con cifras
+  // significativas (1e-11 se muestra como 1e-11), nunca a cero falso.
+  if (fixed === "0" && value !== 0) return String(Number(value.toPrecision(6)));
+  return fixed;
 }

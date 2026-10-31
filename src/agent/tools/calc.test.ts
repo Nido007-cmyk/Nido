@@ -64,4 +64,12 @@ describe("formatNumber", () => {
     expect(formatNumber(0.1 + 0.2)).toBe("0.3");
     expect(formatNumber(42)).toBe("42");
   });
+
+  it("auditoría 2026-10-31 (F1 B-1): un resultado diminuto no se presenta como cero", () => {
+    expect(formatNumber(1e-11)).toBe("1e-11");
+    expect(formatNumber(-2.5e-12)).toBe("-2.5e-12");
+    expect(formatNumber(0)).toBe("0");
+    // En el borde: 1e-10 ya se mostraba en notación breve y no cambia.
+    expect(formatNumber(0.0000000001)).toBe("1e-10");
+  });
 });
