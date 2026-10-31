@@ -70,6 +70,27 @@ unchanged from the first runner so both sets are measured by
 exactly the same instrument; `npm run eval:blind` now runs both
 runners. The seal covers the sets, not the instrument.
 
+## Set 03
+
+A **fresh** set, written for run 03 under the seal rule: the cure
+for run 02's finding (F-B3, history questions tripping the health
+gate) and the fixed text's substance are never validated against
+the sets that exposed them. Same protocol — 24 questions, 6 types
+× 4, Spanish-first with English and Portuguese rows, same declared
+condition (**no packs installed**) and the same routing key
+(`src/eval/blindSet3.ts`; references in
+`src/eval/blindReferences3.ts`; no volatile facts in this set).
+Two arms are new: **look-alikes in historical/cultural frames**
+about diseases and health (deaths counted, centuries, past
+pandemics, a 19th-century novel) that carry a health term and a
+question cue — without a frame veto they fire the gate, which is
+exactly the F-B3 error they hunt — and fresh live-emergency and
+health wordings, so the fixed text is blind-graded again as well.
+Written and sealed before any cure was coded: on the inherited
+layer the set routed 20/24, with all four historical look-alikes
+false-firing to the health gate.
+Seal (SHA-256 of the canonical set): `7654bb0042118ee259555cdfcee138919110dd7e86990b863e799bb2e07c9b12`.
+
 ## Run 01 (2026-10-31)
 
 Routing against the set's key: **18/24**.

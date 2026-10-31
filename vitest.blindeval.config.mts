@@ -5,6 +5,6 @@ import { defineConfig } from "vitest/config";
 // `npm test` (which excludes *.run.test.ts by pattern).
 export default defineConfig({
   test: {
-    include: ["src/eval/blindRun.run.test.ts", "src/eval/blindRun2.run.test.ts"],
+    include: ["src/eval/blindRun.run.test.ts", "src/eval/blindRun2.run.test.ts", "src/eval/blindRun3.run.test.ts"],
   },
 });
