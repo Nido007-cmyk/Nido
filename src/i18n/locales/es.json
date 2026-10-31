@@ -220,7 +220,10 @@
     "subtitle_one": "Conjunto v{{version}} · {{count}} consulta",
     "subtitle_other": "Conjunto v{{version}} · {{count}} consultas",
     "summary": "{{queries}} consultas × {{configs}} configuraciones = {{total}} respuestas",
-    "title": "Evaluación"
+    "title": "Evaluación",
+    "runFailedBody": "La evaluación no pudo completarse.",
+    "exportFailedBody": "No se pudo exportar el resultado.",
+    "pbkdf2FailedBody": "La prueba de derivación de clave no pudo completarse."
   },
   "executionTelemetry": {
     "router": {
@@ -281,7 +284,8 @@
       "clear": "Borrar frases",
       "stateOn": "Activado",
       "stateOff": "Desactivado"
-    }
+    },
+    "exportFailedBody": "No se pudo exportar la telemetría."
   },
   "interfaceSettings": {
     "hapticFeedbackLabel": "Respuesta háptica",
@@ -512,7 +516,9 @@
     "stageReading": "Leyendo archivos…",
     "emptyTitle": "Tu biblioteca está vacía",
     "emptyDescription": "Agrega tus documentos y Nido podrá buscar en ellos sin conexión. Todo queda en tu dispositivo.",
-    "emptyAction": "Agregar documentos"
+    "emptyAction": "Agregar documentos",
+    "importFailedBody": "No se pudo importar el documento. Revisa que el archivo sea válido e inténtalo de nuevo.",
+    "exportFailedBody": "No se pudo exportar el documento."
   },
   "personalities": {
     "custom": {

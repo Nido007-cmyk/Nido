@@ -266,7 +266,9 @@
     "exporting": "Exportando…",
     "emptyTitle": "Sua biblioteca está vazia",
     "emptyDescription": "Adicione seus documentos e o Nido poderá pesquisá-los offline. Tudo fica no seu dispositivo.",
-    "emptyAction": "Adicionar documentos"
+    "emptyAction": "Adicionar documentos",
+    "importFailedBody": "Não foi possível importar o documento. Verifique se o arquivo é válido e tente de novo.",
+    "exportFailedBody": "Não foi possível exportar o documento."
   },
   "memorySettings": {
     "title": "Histórico de conversas e memória",
@@ -649,7 +651,8 @@
       "clear": "Apagar frases",
       "stateOn": "Ligado",
       "stateOff": "Desligado"
-    }
+    },
+    "exportFailedBody": "Não foi possível exportar a telemetria."
   },
   "evaluation": {
     "title": "Avaliação",
@@ -678,7 +681,10 @@
     "pbkdf2Run": "▶ Executar benchmark PBKDF2",
     "pbkdf2Running": "Executando benchmark PBKDF2…",
     "pbkdf2Saved": "Salvo em {{path}} · provisório: {{verdict}}",
-    "pbkdf2Title": "Benchmark PBKDF2 (quarentena — não é cripto de produção)"
+    "pbkdf2Title": "Benchmark PBKDF2 (quarentena — não é cripto de produção)",
+    "runFailedBody": "A avaliação não pôde ser concluída.",
+    "exportFailedBody": "Não foi possível exportar o resultado.",
+    "pbkdf2FailedBody": "O teste de derivação de chave não pôde ser concluído."
   },
   "lockScreen": {
     "title": "NIDO bloqueado",

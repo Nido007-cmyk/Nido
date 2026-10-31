@@ -109,7 +109,7 @@ export function EvaluationScreen({ onClose, chatBusy, deviceRequest }: Props) {
         : await runEvaluation({ configs: chosen, ...callbacks });
       setRun(result);
     } catch (e: any) {
-      Alert.alert(t("evaluation.runFailedTitle"), e?.message ?? String(e));
+      Alert.alert(t("evaluation.runFailedTitle"), t("evaluation.runFailedBody"));
     } finally {
       setRunning(false);
       setStopping(false);
@@ -130,7 +130,7 @@ export function EvaluationScreen({ onClose, chatBusy, deviceRequest }: Props) {
     try {
       await exportEvalResults(run, format);
     } catch (e: any) {
-      Alert.alert(t("evaluation.exportFailedTitle"), e?.message ?? String(e));
+      Alert.alert(t("evaluation.exportFailedTitle"), t("evaluation.exportFailedBody"));
     }
   };
 
@@ -156,7 +156,7 @@ export function EvaluationScreen({ onClose, chatBusy, deviceRequest }: Props) {
     } catch (e: any) {
       // Detenido por el usuario o al salir: no es un fallo.
       if (!(e instanceof Pbkdf2BenchAborted)) {
-        Alert.alert(t("evaluation.pbkdf2FailedTitle"), e?.message ?? String(e));
+        Alert.alert(t("evaluation.pbkdf2FailedTitle"), t("evaluation.pbkdf2FailedBody"));
       }
     } finally {
       setBenchRunning(false);

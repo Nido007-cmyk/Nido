@@ -266,7 +266,9 @@
     "exporting": "Exporting…",
     "emptyTitle": "Your library is empty",
     "emptyDescription": "Add your documents and Nido will search them offline. Everything stays on your device.",
-    "emptyAction": "Add documents"
+    "emptyAction": "Add documents",
+    "importFailedBody": "The document could not be imported. Check that the file is valid and try again.",
+    "exportFailedBody": "The document could not be exported."
   },
   "memorySettings": {
     "title": "Chat history & memory",
@@ -649,7 +651,8 @@
       "clear": "Delete phrases",
       "stateOn": "On",
       "stateOff": "Off"
-    }
+    },
+    "exportFailedBody": "The telemetry could not be exported."
   },
   "evaluation": {
     "title": "Evaluation",
@@ -678,7 +681,10 @@
     "pbkdf2Run": "▶ Run PBKDF2 benchmark",
     "pbkdf2Running": "Running PBKDF2 benchmark…",
     "pbkdf2Saved": "Saved to {{path}} · provisional: {{verdict}}",
-    "pbkdf2Title": "PBKDF2 benchmark (quarantine — not production crypto)"
+    "pbkdf2Title": "PBKDF2 benchmark (quarantine — not production crypto)",
+    "runFailedBody": "The evaluation could not be completed.",
+    "exportFailedBody": "The result could not be exported.",
+    "pbkdf2FailedBody": "The key derivation test could not be completed."
   },
   "lockScreen": {
     "title": "NIDO locked",

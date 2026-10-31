@@ -58,7 +58,7 @@ import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { makeSurfaces } from "./theme/surfaces";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
-import { backupErrorCode } from "../security/backupErrors";
+import { backupErrorText } from "./backupErrorText";
 import { ExactAlarmCard } from "./ExactAlarmCard";
 import { DailySummaryCard } from "./DailySummaryCard";
 import { SecurityStatusCard } from "./SecurityStatusCard";
@@ -100,12 +100,11 @@ export function ModelSetupScreen(props: Props) {
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t, i18n } = useTranslation();
   // Final audit (0.1.16): backup errors in the app language (they used to
-  // reach the user as backup.ts's Spanish message). Unknown errors: as before.
-  const backupErrorText = (e: unknown, fallbackKey: string): string => {
-    const code = backupErrorCode(e);
-    if (code) return t(`backup.errors.${code}`);
-    return e instanceof Error ? e.message : t(fallbackKey);
-  };
+  // reach the user as backup.ts's Spanish message).
+  // Auditoría completa 2026-10-31 (F9-03): la función vive ahora en
+  // ./backupErrorText, compartida con BackupScreen, y el error sin
+  // código ya no enseña el mensaje interno crudo: enseña el genérico
+  // localizado de la operación.
   const requiredMode = props.mode === "required";
   const [presence, setPresence] = useState<Record<string, boolean>>({});
   const [outdatedIds, setOutdatedIds] = useState<Record<string, boolean>>({});
@@ -174,7 +173,7 @@ export function ModelSetupScreen(props: Props) {
       setRestoreKeyText("");
       Alert.alert(t("backup.restoreDoneTitle"), t("backup.restoreDoneBody"), [{ text: t("backup.ok") }]);
     } catch (e) {
-      Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.restoreFailed"));
+      Alert.alert(t("backup.errorTitle"), backupErrorText(e, t, "backup.restoreFailed"));
     } finally {
       setRestoreKeyBusy(false);
     }
@@ -758,7 +757,7 @@ export function ModelSetupScreen(props: Props) {
                         setBackupKeyModal({ dek: key, dest: path });
                       }
                     } catch (e) {
-                      Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.createFailed"));
+                      Alert.alert(t("backup.errorTitle"), backupErrorText(e, t, "backup.createFailed"));
                     }
                   }}
                   accessibilityRole="button"
@@ -806,7 +805,7 @@ export function ModelSetupScreen(props: Props) {
                       }
                       Alert.alert(t("backup.savedTitle"), t("backup.savedBody", { files: copied.join("\n") }));
                     } catch (e) {
-                      Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.saveFailed"));
+                      Alert.alert(t("backup.errorTitle"), backupErrorText(e, t, "backup.saveFailed"));
                     }
                   }}
                   accessibilityRole="button"
@@ -853,14 +852,14 @@ export function ModelSetupScreen(props: Props) {
                                   [{ text: t("backup.ok") }]
                                 );
                               } catch (e) {
-                                Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.restoreFailed"));
+                                Alert.alert(t("backup.errorTitle"), backupErrorText(e, t, "backup.restoreFailed"));
                               }
                             },
                           },
                         ]
                       );
                     } catch (e) {
-                      Alert.alert(t("backup.errorTitle"), backupErrorText(e, "backup.pickerFailed"));
+                      Alert.alert(t("backup.errorTitle"), backupErrorText(e, t, "backup.pickerFailed"));
                     }
                   }}
                   accessibilityRole="button"

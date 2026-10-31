@@ -71,7 +71,10 @@ export function PersonalDocumentsManager() {
       const code = typeof e?.code === "string" && e?.name === "DocImportError" ? e.code : null;
       Alert.alert(
         t("personalDocumentsManager.importFailedTitle"),
-        code ? t(`personalDocumentsManager.errors.${code}`, e.vars ?? {}) : e?.message ?? String(e),
+        // Auditoría completa 2026-10-31 (F9-03): sin código, el
+        // genérico localizado; el mensaje interno crudo ya no llega
+        // a la alerta.
+        (code ? t(`personalDocumentsManager.errors.${code}`, e.vars ?? {}) : t("personalDocumentsManager.importFailedBody")) as string,
       );
     } finally {
       setImportProgress(null);
@@ -117,7 +120,7 @@ export function PersonalDocumentsManager() {
     try {
       await exportCollection(collection);
     } catch (e: any) {
-      Alert.alert(t("personalDocumentsManager.exportFailedTitle"), e?.message ?? String(e));
+      Alert.alert(t("personalDocumentsManager.exportFailedTitle"), t("personalDocumentsManager.exportFailedBody"));
     } finally {
       setBusyId(null);
     }

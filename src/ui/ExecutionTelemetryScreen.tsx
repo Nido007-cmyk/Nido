@@ -125,7 +125,7 @@ export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
     try {
       await exportExecutionTelemetry(format);
     } catch (e: any) {
-      Alert.alert(t("executionTelemetry.exportFailedTitle"), e?.message ?? String(e));
+      Alert.alert(t("executionTelemetry.exportFailedTitle"), t("executionTelemetry.exportFailedBody"));
     } finally {
       setExporting(false);
     }

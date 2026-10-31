@@ -25,6 +25,7 @@ import {
 } from "react-native";
 import { BackupKeyModal } from "./BackupKeyModal";
 import { saveBackupToFolder } from "./backupShare";
+import { backupErrorText } from "./backupErrorText";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import { makeSurfaces } from "./theme/surfaces";
@@ -76,7 +77,7 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
       // K4: modal copiable en vez de Alert (el texto de Alert no se puede copiar).
       revealKey(key, dest, noLock);
     } catch (e) {
-      Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.createFailed"));
+      Alert.alert(t("backup.errorTitle"), backupErrorText(e, t, "backup.createFailed"));
     } finally {
       setBusy(false);
     }
@@ -154,7 +155,7 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
                 );
               }
             } catch (e) {
-              Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.rotateFailed"));
+              Alert.alert(t("backup.errorTitle"), backupErrorText(e, t, "backup.rotateFailed"));
             } finally {
               setBusy(false);
             }
@@ -181,7 +182,7 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
       }
       Alert.alert(t("backup.savedTitle"), t("backup.savedBody", { files: copied.join("\n") }));
     } catch (e) {
-      Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.saveFailed"));
+      Alert.alert(t("backup.errorTitle"), backupErrorText(e, t, "backup.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -205,7 +206,7 @@ export function BackupScreen({ onClose }: { onClose: () => void }) {
       // respaldo: el texto de un Alert no se puede copiar.
       revealKey(key, "", noLock);
     } catch (e) {
-      Alert.alert(t("backup.errorTitle"), e instanceof Error ? e.message : t("backup.keyFailed"));
+      Alert.alert(t("backup.errorTitle"), backupErrorText(e, t, "backup.keyFailed"));
     } finally {
       setBusy(false);
     }
