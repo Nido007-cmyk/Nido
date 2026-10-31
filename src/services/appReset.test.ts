@@ -326,6 +326,19 @@ describe("resetAllAppData (Clear All Data)", () => {
     for (const f of tmps) expect(fsExists(f), `${f} debe haber desaparecido`).toBe(false);
   });
 
+  it("auditoría 2026-10-31 (F2-02): la marca del último respaldo (puerta D9) muere con el borrado", async () => {
+    await seedKeys();
+    seedFullDevice();
+    const { recordBackupMade, LAST_BACKUP_KEY } = await import("../security/vaultBackupGate");
+    const { readVaultSetting } = await import("../privacy/keyManager");
+    await recordBackupMade();
+    expect(await readVaultSetting(LAST_BACKUP_KEY)).not.toBeNull();
+    await resetAllAppData();
+    // Si la marca sobreviviera, la bóveda podría activarse en el
+    // teléfono recién borrado como si hubiera un respaldo reciente.
+    expect(await readVaultSetting(LAST_BACKUP_KEY)).toBeNull();
+  });
+
   it("0.1.47: si un respaldo local sobrevive, el wipe falla en voz alta", async () => {
     await seedKeys();
     seedFullDevice();

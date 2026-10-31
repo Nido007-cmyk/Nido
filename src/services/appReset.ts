@@ -25,7 +25,10 @@ import {
   loadP2PSigningKey,
   peekDatabaseKey,
   readVaultBlob,
+  readVaultSetting,
+  writeVaultSetting,
 } from "../privacy/keyManager";
+import { LAST_BACKUP_KEY } from "../security/vaultBackupGate";
 
 const MODELS_DIR = `${FileSystem.documentDirectory}models`;
 const CORPUS_DIR = `${FileSystem.documentDirectory}corpus`;
@@ -294,6 +297,16 @@ async function resetAllAppDataInner(): Promise<void> {
   }
   await deleteP2PPrivateKey();
   await deleteP2PSigningKey();
+  // Auditoría completa 2026-10-31 (F2-02): la marca del último respaldo
+  // (la fecha que satisface la puerta D9 de la bóveda) también muere.
+  // Si sobrevivía, un teléfono recién borrado podía activar la bóveda
+  // como si tuviera un respaldo de menos de 30 días que ya no existe.
+  // Su ausencia se verifica en el paso 4.
+  try {
+    await writeVaultSetting(LAST_BACKUP_KEY, null);
+  } catch {
+    /* sin SecureStore: nada que borrar; el paso 4 lo juzga igual */
+  }
   resetMemoryKeyCache();
 
   // 3. Ficheros y directorios de datos.
@@ -345,6 +358,9 @@ async function resetAllAppDataInner(): Promise<void> {
   await checkLeftovers(survivors);
   if ((await peekDatabaseKey()) !== null) survivors.push("keystore:nido_db_key");
   if ((await readVaultBlob()) !== null) survivors.push("keystore:nido_db_key_wrapped_v1");
+  // F2-02: la marca D9 no puede sobrevivir al borrado.
+  if ((await readVaultSetting(LAST_BACKUP_KEY)) !== null)
+    survivors.push(`secureStore:${LAST_BACKUP_KEY}`);
   if ((await loadP2PPrivateKey()) !== null) survivors.push("keystore:nido_p2p_sk");
   if ((await loadP2PSigningKey()) !== null) survivors.push("keystore:nido_p2p_sign_sk");
   // 5. Notificaciones del SO: ni programadas ni ya presentadas (bandeja)
