@@ -11,8 +11,20 @@ vi.mock("expo-speech", () => ({
   stop: vi.fn().mockResolvedValue(undefined),
   getAvailableVoicesAsync: vi.fn().mockResolvedValue([]),
 }));
+vi.mock("../i18n", () => ({ default: { language: "es" } }));
 
-import { cleanForSpeech } from "./tts";
+import { cleanForSpeech, speechLocaleFor } from "./tts";
+
+describe("speechLocaleFor (F1 M-3)", () => {
+  it("cada idioma de la app lee con su variante regional", () => {
+    expect(speechLocaleFor("es")).toBe("es-MX");
+    expect(speechLocaleFor("en")).toBe("en-US");
+    expect(speechLocaleFor("pt")).toBe("pt-BR");
+    expect(speechLocaleFor("pt-BR")).toBe("pt-BR");
+    expect(speechLocaleFor("de")).toBe("en-US");
+    expect(speechLocaleFor(undefined)).toBe("en-US");
+  });
+});
 
 describe("cleanForSpeech", () => {
   it("elimina bloques de código", () => {

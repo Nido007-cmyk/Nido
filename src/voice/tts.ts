@@ -12,24 +12,44 @@
  */
 
 import * as Speech from "expo-speech";
+import i18n from "../i18n";
 
-let cachedVoiceId: string | null | undefined;
+/**
+ * Auditoría completa 2026-10-31 (F1 M-3): la lectura forzaba siempre
+ * voz y locale es-MX, con la app en inglés o en portugués el texto se
+ * leía con voz española y resultaba difícil de entender. El locale de
+ * lectura sale ahora del idioma de la app, con la variante regional
+ * que la app ya usa como referencia en cada idioma.
+ */
+const SPEECH_LOCALES: Record<string, string> = {
+  es: "es-MX",
+  en: "en-US",
+  pt: "pt-BR",
+};
 
-/** Elige la mejor voz en español disponible en el dispositivo. */
-async function pickSpanishVoice(): Promise<string | undefined> {
-  if (cachedVoiceId !== undefined) return cachedVoiceId ?? undefined;
+export function speechLocaleFor(appLanguage: string | null | undefined): string {
+  const base = (appLanguage ?? "").toLowerCase().split("-")[0];
+  // Sin idioma conocido manda la lengua de respaldo declarada (en).
+  return SPEECH_LOCALES[base] ?? "en-US";
+}
+
+const voiceCache = new Map<string, string | null>();
+
+/** Elige la mejor voz del idioma de lectura disponible en el dispositivo. */
+async function pickVoice(locale: string): Promise<string | undefined> {
+  const cached = voiceCache.get(locale);
+  if (cached !== undefined) return cached ?? undefined;
   try {
     const voices = await Speech.getAvailableVoicesAsync();
-    const es = voices.filter((v) => v.language?.toLowerCase().startsWith("es"));
+    const lang = locale.toLowerCase();
+    const prefix = lang.split("-")[0];
+    const same = voices.filter((v) => v.language?.toLowerCase().startsWith(prefix));
     const pick =
-      es.find((v) => v.language.toLowerCase().startsWith("es-mx")) ??
-      es.find((v) => v.language.toLowerCase().startsWith("es-es")) ??
-      es.find((v) => v.language.toLowerCase().startsWith("es-us")) ??
-      es[0];
-    cachedVoiceId = pick?.identifier ?? null;
+      same.find((v) => v.language.toLowerCase().startsWith(lang)) ?? same[0];
+    voiceCache.set(locale, pick?.identifier ?? null);
     return pick?.identifier;
   } catch {
-    cachedVoiceId = null;
+    voiceCache.set(locale, null);
     return undefined;
   }
 }
@@ -47,15 +67,16 @@ export function cleanForSpeech(text: string): string {
     .slice(0, 2000);
 }
 
-/** Lee un texto en voz alta con voz en español. Corta lo anterior. */
+/** Lee un texto en voz alta en el idioma de la app. Corta lo anterior. */
 export async function speakAloud(text: string): Promise<void> {
   const clean = cleanForSpeech(text);
   if (!clean) return;
   try {
     await Speech.stop();
-    const voice = await pickSpanishVoice();
+    const locale = speechLocaleFor(i18n.language);
+    const voice = await pickVoice(locale);
     Speech.speak(clean, {
-      language: "es-MX",
+      language: locale,
       voice,
       rate: 1.0,
       pitch: 1.0,
