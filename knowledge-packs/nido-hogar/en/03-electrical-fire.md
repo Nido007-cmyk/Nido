@@ -5,7 +5,7 @@ lang: en
 sources: USFA (U.S. Fire Administration, FEMA), appliance and electrical fire safety; NFPA, electrical safety tips
 id: hogar-incendio-electrico
 verified: 2026-10-30
-questions: an outlet is sparking, what should I do | I smell burning but cannot find where from | my circuit breaker keeps tripping, is that dangerous
+questions: an outlet is sparking, what should I do | I smell burning but cannot find where from | my circuit breaker keeps tripping, is that dangerous | can I use water on an electrical appliance that is on fire | a plugged-in appliance caught fire, how do I put it out safely
 ---
 An electrical fire often starts with no flames at all: a damaged cord, an overloaded outlet or a failing appliance heats whatever is near it until it catches. The warning signs come before the fire; take them seriously.
 

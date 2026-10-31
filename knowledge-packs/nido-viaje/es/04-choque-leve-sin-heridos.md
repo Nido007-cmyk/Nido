@@ -5,7 +5,7 @@ lang: es
 sources: Revista DGT, «He tenido un accidente. ¿Qué hago?» y «¿Qué hacer ante un accidente de tráfico en el extranjero?»; Ministerio de Transportes de Brasil / Policía Rodoviária Federal, preguntas frecuentes sobre accidentes en carreteras federales (DAT)
 id: viaje-choque-leve
 verified: 2026-10-30
-questions: tuve un golpe leve sin heridos, qué datos pido | cómo se rellena el parte amistoso | qué fotos hago después de un choque leve
+questions: tuve un golpe leve sin heridos, qué datos pido | cómo se rellena el parte amistoso | qué fotos hago después de un choque leve | me chocaron por detrás en un semáforo y solo hay daños en los coches | golpe por alcance en un semáforo, qué hago si nadie salió herido
 ---
 Un golpe leve, sin heridos y con los coches funcionando, se resuelve sobre todo con papeles bien hechos. La guía de accidente de tráfico de NIDO Esencial cubre el caso con heridos; esta cubre el tuyo: seguridad primero, pruebas después y el parte sin bloquear la vía.
 

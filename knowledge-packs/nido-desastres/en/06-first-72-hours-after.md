@@ -5,7 +5,7 @@ lang: en
 sources: Canadian Red Cross, three ways to help after a disaster; Ready.gov (FEMA), water, earthquakes and emergency plan; CENAPRED (Mexico)
 id: desastres-72-horas
 verified: 2026-10-30
-questions: how do I organise the first three days after a disaster with no services | help may take 72 hours to arrive what do we do meanwhile | how do I ration our stored water and food after a disaster | how do I help my neighbours in the first days with no power or water
+questions: how do I organise the first three days after a disaster with no services | help may take 72 hours to arrive what do we do meanwhile | how do I ration our stored water and food after a disaster | how do I help my neighbours in the first days with no power or water | no power or water at home and rescuers cannot reach us for days | the first 72 hours we are on our own: water, food and light
 ---
 After a major disaster, organised help can take 72 or more hours to reach your neighbourhood. In that time, your home and your street run on what you had stored and on what you organise among neighbours. The family plan and go-bag guides in the Essentials pack say what to have; this guide says how to organise those days.
 

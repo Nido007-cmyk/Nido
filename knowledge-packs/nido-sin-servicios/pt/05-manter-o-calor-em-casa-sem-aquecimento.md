@@ -5,7 +5,7 @@ lang: pt
 sources: CDC, tempestades de inverno e como se proteger durante uma queda de energia; Cruz Vermelha Americana, tempestades de inverno
 id: sinservicios-calor-sin-calefaccion
 verified: 2026-10-30
-questions: como mantenho o calor em casa se o aquecimento falhar | o que faço para não passar frio numa queda de energia no inverno | posso aquecer a casa com o forno ou um fogareiro de camping
+questions: como mantenho o calor em casa se o aquecimento falhar | o que faço para não passar frio numa queda de energia no inverno | posso aquecer a casa com o forno ou um fogareiro de camping | a casa está gelada porque o aquecimento parou de funcionar | muito frio dentro de casa e sem aquecimento, como nos aquecemos
 ---
 Se o aquecimento falhar com frio lá fora, o objetivo não é aquecer a casa inteira: é conservar o calor que existe e manter as pessoas aquecidas. O guia de abrigo e calor corporal do NIDO Essencial cobre o frio ao ar livre; este é para dentro de casa.
 

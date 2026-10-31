@@ -5,7 +5,7 @@ lang: en
 sources: Revista DGT (Spain), "He tenido un accidente. ¿Qué hago?" and "¿Qué hacer ante un accidente de tráfico en el extranjero?"; Brazil Ministry of Transport / Federal Highway Police, FAQ on accidents on federal highways (DAT)
 id: viaje-choque-leve
 verified: 2026-10-30
-questions: I had a minor crash with no injuries, what details do I ask for | how do I fill in the friendly accident statement | what photos should I take after a minor crash
+questions: I had a minor crash with no injuries, what details do I ask for | how do I fill in the friendly accident statement | what photos should I take after a minor crash | someone rear-ended me at a red light and nobody is hurt | fender bender at a stoplight, only the cars are damaged
 ---
 A minor bump, with nobody hurt and both cars still driveable, is mostly settled with well-made paperwork. The road traffic crash guide in NIDO Essentials covers the case with injuries; this one covers yours: safety first, evidence next, and the statement form without blocking the road.
 

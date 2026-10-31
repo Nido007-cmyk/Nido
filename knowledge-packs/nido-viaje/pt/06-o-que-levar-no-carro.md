@@ -5,7 +5,7 @@ lang: pt
 sources: NHTSA, conselhos de viagem de verão e de inverno («Stock Your Vehicle»); DGT (Espanha), «¿Qué documentación debes llevar en tu vehículo?» e recomendações de trânsito; Ready.gov (FEMA), viagens de inverno
 id: viaje-equipo-documentos
 verified: 2026-10-30
-questions: o que devo levar sempre no carro | quais documentos são obrigatórios no carro | o que coloco no kit de emergência do carro
+questions: o que devo levar sempre no carro | quais documentos são obrigatórios no carro | o que coloco no kit de emergência do carro | como preparo o carro antes de uma viagem longa | checklist do carro para pegar a estrada: kit e documentos
 ---
 Um carro preparado transforma uma pane em uma espera. Esta é a lista para uma viagem de estrada: o equipamento para aguentar e pedir ajuda, e os documentos que vão pedir se você for parado ou se algo acontecer.
 

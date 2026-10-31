@@ -5,7 +5,7 @@ lang: en
 sources: CDC, "About Suicide Prevention" and "Grief" (How Right Now); Samaritans, support after losing someone to suicide; Support After Suicide Partnership and NHS, "Help is at Hand"
 id: crisis-duelo-por-suicidio
 verified: 2026-10-30
-questions: my friend lost his brother to suicide, how can I help | I lost my partner to suicide and I feel guilty | what should I not say to someone bereaved by suicide | is it normal to feel angry after a suicide in the family
+questions: my friend lost his brother to suicide, how can I help | I lost my partner to suicide and I feel guilty | what should I not say to someone bereaved by suicide | is it normal to feel angry after a suicide in the family | how do I explain a suicide in the family to my children | what do I say to my kids when a relative took his own life
 ---
 Losing someone to suicide is a different kind of grief: alongside the pain there is often guilt ("could I have prevented it?"), unanswered questions, anger, shame, or a guilty sense of relief if the person had been suffering greatly. All of that is common in this grief, and it does not mean you are doing it wrong or that you loved them any less. Suicide has many causes that come together; it is not the fault of one person, or of one conversation that didn't happen.
 
