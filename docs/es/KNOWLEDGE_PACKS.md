@@ -60,6 +60,41 @@ build/knowledge-pack/<id>.sqlite.json   its size, SHA-256, article and chunk cou
 
 El texto de Wikipedia es CC BY-SA 4.0; conserva la atribución si compartes un pack.
 
+### Los packs de guías de NIDO
+
+El constructor también acepta guías en Markdown en vez de títulos de
+Wikipedia:
+
+```bash
+npm run pack:build -- --guides knowledge-packs/nido-esencial --id nido-esencial --embedding e5
+```
+
+Cada guía es un fichero `.md` con cabecera (`title`, `lang`, `sources` y,
+si hace falta, `category`) y secciones que empiezan con `##`. Cada sección
+se convierte en uno o más trozos llamados «Título de la guía — Sección»;
+las secciones muy cortas (una introducción de una línea, la nota de
+cierre) se pliegan en una vecina. La licencia y la atribución del pack
+dicen que el texto lo escribió NIDO desde las fuentes citadas (CC BY 4.0).
+
+`knowledge-packs/nido-esencial/` es el pack propio de NIDO: 58 guías en
+cada uno de español, inglés y portugués (el portugués llegó en la 0.1.65)
+de primeros auxilios, salud en casa, desastres y supervivencia, escritas
+desde la Cruz Roja, la AHA, la OMS, UNICEF, los CDC, FEMA y otras guías
+públicas (cada guía cita sus fuentes). `scripts/check-pack-retrieval.mjs`
+comprueba que las preguntas reales (`retrieval-checks.json`) encuentran
+la guía correcta, y CI (`.github/workflows/knowledge-pack.yml`) lo
+construye y lo comprueba. Es el primero de una familia de packs de guías,
+todos publicados juntos en la release `knowledge-packs-v6`: `nido-local`
+(números de emergencia y avisos de 69 países, en español e inglés, con su
+tabla de datos verificados), `nido-ninos`, `nido-crisis` (con las líneas
+de crisis verificadas de 14 países), `nido-sin-servicios`, `nido-hogar`,
+`nido-desastres`, `nido-campo` y `nido-viaje`, cada uno en español, inglés
+y portugués. Las ediciones corregidas de `nido-local`, `nido-crisis` y
+`nido-viaje` se publicaron en la release `knowledge-packs-v7` con la
+0.1.66: en `nido-local` cada dato queda citado a una fuente oficial
+alcanzable, y en `nido-crisis` y `nido-viaje` se corrigieron los
+metadatos de recuperación de una guía de cada uno.
+
 ### Formato v2: preguntas indexadas y datos verificados (0.1.55)
 
 Una guía de Markdown puede declarar en su cabecera `id` (igual en todos los
@@ -79,21 +114,9 @@ fuente y la fecha. `scripts/check-pack-claims.mjs` vuelve a abrir cada fuente y
 comprueba que la cita sigue ahí; `.github/workflows/pack-claims.yml` lo ejecuta
 cada semana.
 
-### Los packs de guías de NIDO
-
-Los packs de guías se construyen desde carpetas de guías Markdown
-(`knowledge-packs/<id>/`) con el mismo constructor, y se publican juntos
-en la release `knowledge-packs-v6`: `nido-esencial` (58 guías en cada uno
-de español, inglés y portugués; el portugués llegó en la 0.1.65),
-`nido-local` (números de emergencia y avisos de 69 países, en español e
-inglés, con su tabla de datos verificados), `nido-ninos`, `nido-crisis`
-(con las líneas de crisis verificadas de 14 países), `nido-sin-servicios`,
-`nido-hogar`, `nido-desastres`, `nido-campo` y `nido-viaje`, cada uno en
-español, inglés y portugués. Las ediciones corregidas de `nido-local`,
-`nido-crisis` y `nido-viaje` se publicaron en la release
-`knowledge-packs-v7` con la 0.1.66: en `nido-local` cada dato queda
-citado a una fuente oficial alcanzable, y en `nido-crisis` y `nido-viaje`
-se corrigieron los metadatos de recuperación de una guía de cada uno.
+Un pack v2 (`meta.formatVersion = 2`) añade las tablas `guides`, `regions`
+y `facts` y la columna `chunks.keys`; las versiones antiguas de la app lo
+siguen leyendo como antes.
 
 ## Poner un pack en tu teléfono
 
@@ -146,6 +169,29 @@ bajarlo). Una versión nueva de un pack va a una release nueva
 añaden la dirección y la SHA-256 nuevas a `knowledge-packs/release-ledger.json`.
 Nunca se edita una línea existente: `src/models/packReleaseLedger.test.ts` falla
 si una dirección del catálogo que ya está en el registro tiene otra huella.
+
+## Pasar un pack a otro teléfono (sin internet)
+
+Desde la 0.1.56, un NIDO puede pasar un pack del catálogo (por ejemplo
+NIDO Esencial, unos 1,1 MB) a un contacto conectado por Bluetooth o Wi-Fi
+local: pestaña Packs → Compartir. Las reglas:
+
+- Solo viajan los **packs del catálogo**: los que tienen un SHA-256 en el
+  catálogo firmado de NIDO. Los construidos a mano (`local-…`) nunca se
+  ofrecen.
+- Quien envía comprueba que su fichero instalado sigue coincidiendo con
+  el SHA-256 del catálogo antes de ofrecerlo.
+- Quien recibe solo ve ofertas de packs del catálogo, e instala el
+  fichero solo si sus bytes coinciden exactamente con el SHA-256 del
+  catálogo: el mismo fichero que habría descargado. Un pack con un solo
+  byte cambiado (por ejemplo, una instrucción de primeros auxilios
+  alterada) se rechaza.
+- El fichero nuevo se escribe junto al viejo y se intercambia al final;
+  si algo falla, el pack anterior se queda en su sitio.
+- Los dos teléfonos deben llevar versiones con el mismo catálogo: un
+  pack de otra versión del catálogo se rechaza.
+- Los packs de más de 100 MB (los de Wikipedia) no se pueden compartir
+  así.
 
 ## Cómo la app busca en un pack
 
