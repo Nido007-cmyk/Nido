@@ -60,6 +60,15 @@ describe("reminders — dates that don't exist or already passed", () => {
   it("today's date without a time stays today if it's still ahead", () => {
     expect(at(parseReminderDateTime("algo el 12 de octubre", NOW))).toBe("2026-10-12 09:00");
   });
+  it("auditoría 2026-10-31 (F1 M-1): una fecha nombrada ya pasada hoy va a su próximo año, no a mañana", () => {
+    const march15at10 = new Date(2026, 2, 15, 10, 0);
+    expect(at(parseReminderDateTime("algo el 15 de marzo a las 9", march15at10))).toBe("2027-03-15 09:00");
+    expect(at(parseReminderDateTime("algo el 15 de marzo", march15at10))).toBe("2027-03-15 09:00");
+    // El control: el 16 sí es mañana de verdad.
+    expect(at(parseReminderDateTime("algo el 16 de marzo a las 9", march15at10))).toBe("2026-03-16 09:00");
+    // Y una hora suelta sin fecha sigue rodando a mañana, como siempre.
+    expect(at(parseReminderDateTime("algo a las 9", march15at10))).toBe("2026-03-16 09:00");
+  });
   it.each(["algo el 31 de febrero", "algo a las 25", "algo a las 12:75", "algo en 0 minutos", "algo en -5 minutos"])(
     "%s → no date",
     (text) => {

@@ -819,6 +819,11 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
 
   let targetDate: Date | null = null;
   let explicitYear = false;
+  // Auditoría completa 2026-10-31 (F1 M-1): día y mes nombrados sin año
+  // («el 15 de marzo»). Si su hora ya pasó hoy, su próxima ocurrencia
+  // es el año que viene, no mañana: el rollover genérico de abajo
+  // inventaba el 16 de marzo, un día que el usuario no nombró.
+  let namedMonthDay: { month: number; day: number } | null = null;
 
   // "mañana" / "tomorrow"
   // 0.1.8: portugués (amanhã / hoje), sin \b tras letras acentuadas.
@@ -877,6 +882,7 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
         targetDate = d;
         explicitYear = true;
       } else {
+        namedMonthDay = { month, day };
         for (let y = now.getFullYear(); y <= now.getFullYear() + 8 && !targetDate; y++) {
           const d = build(y);
           if (!d) continue;
@@ -950,8 +956,22 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
 
   // M2 FIX 2026-10-07: si la fecha resultante ya pasó, mover al día siguiente.
   // "recuérdame hoy a las 6" a las 20:00 no debe crear recordatorio para las 18:00.
+  // F1 M-1: con día y mes nombrados, «ya pasó» rueda a la próxima
+  // ocurrencia (el mismo día y mes del año en que vuelva a caer en el
+  // futuro, con su hora), nunca a mañana.
   if (targetDate.getTime() <= now.getTime()) {
-    targetDate.setDate(targetDate.getDate() + 1);
+    if (namedMonthDay) {
+      const { month, day } = namedMonthDay;
+      let rolled: Date | null = null;
+      for (let y = targetDate.getFullYear(); y <= targetDate.getFullYear() + 8 && !rolled; y++) {
+        const d = new Date(targetDate);
+        d.setFullYear(y, month, day);
+        if (d.getMonth() === month && d.getDate() === day && d.getTime() > now.getTime()) rolled = d;
+      }
+      if (rolled) targetDate = rolled;
+    } else {
+      targetDate.setDate(targetDate.getDate() + 1);
+    }
   }
 
   return targetDate.toISOString();
