@@ -2,10 +2,10 @@
 title: Chile: emergency numbers and the SAE alert on your phone
 category: Emergencies by country
 lang: en
-sources: Australian Government (Smartraveller), travel advice (Chile); El Mostrador, "Alerta SAE: así funciona el sistema de Senapred" (2025)
+sources: Australian Government (Smartraveller), travel advice (Chile); SENAPRED, "Pruebas SAE" (the system and its delivery to the cell phones in the risk zone); SUBTEL, "Sistema de Alerta de Emergencias será obligatorio para todos los teléfonos y redes móviles del país" (pop-up window, distinctive sound and vibration at the maximum audible level)
 id: local-chile
 region: CL
-verified: 2026-10-28
+verified: 2026-10-31
 questions: what number do I call if something happens in Chile | how do I get an ambulance in Chile | police phone number in Chile
 ---
 In Chile, the checked emergency numbers are: 133 (police), 131 (medical emergencies), 132 (fire department). They are for real emergencies: if you can, say where you are first.
