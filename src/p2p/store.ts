@@ -180,6 +180,31 @@ let migratedEpoch = -1;
  * writer obsoleto tras Clear All Data falla ANTES de tocar la base y nunca
  * la reabre. Las lecturas usan migrate() (sin guard: solo leen).
  */
+/**
+ * Migración verified_at: la columna nueva y el reseteo honesto de los
+ * contactos anteriores, como dos pasos separados.
+ *
+ * Auditoría completa 2026-10-31 (F3-05): antes el ALTER y el UPDATE
+ * compartían un solo try. Si el proceso moría entre ambos, la
+ * siguiente pasada veía «duplicate column name» en el ALTER, lo
+ * tragaba como «ya migrado» y el UPDATE no corría nunca: contactos
+ * con verified = 1 y verified_at NULL para siempre, justo el estado
+ * que la migración quería corregir. Ahora el UPDATE es incondicional
+ * e idempotente: solo toca filas con verified_at NULL, y los
+ * escritores vivos nunca dejan ese estado (setContactVerified fija
+ * verified y verified_at a la vez; los contactos nacen con 0).
+ */
+export async function applyVerifiedAtMigration(db: {
+  execAsync: (sql: string) => Promise<void>;
+}): Promise<void> {
+  try {
+    await db.execAsync("ALTER TABLE p2p_contacts ADD COLUMN verified_at INTEGER");
+  } catch (e) {
+    if (!/duplicate column name/i.test(String((e as Error)?.message ?? e))) throw e;
+  }
+  await db.execAsync("UPDATE p2p_contacts SET verified = 0 WHERE verified_at IS NULL");
+}
+
 async function migrateOn(db: Awaited<ReturnType<typeof getMemoryDb>>): Promise<void> {
   // Se lee el epoch antes del DDL y se sella ese mismo valor después: si
   // Clear All Data se colara en medio, el sello no cubre el ciclo nuevo y
@@ -232,12 +257,7 @@ async function migrateOn(db: Awaited<ReturnType<typeof getMemoryDb>>): Promise<v
   // comparado la huella (el código se pega como texto y puede llegar por
   // cualquier canal). La primera vez que existe la columna verified_at, los
   // contactos anteriores pasan a «sin verificar»: es lo que de verdad son.
-  try {
-    await db.execAsync("ALTER TABLE p2p_contacts ADD COLUMN verified_at INTEGER");
-    await db.execAsync("UPDATE p2p_contacts SET verified = 0 WHERE verified_at IS NULL");
-  } catch (e) {
-    if (!/duplicate column name/i.test(String((e as Error)?.message ?? e))) throw e;
-  }
+  await applyVerifiedAtMigration(db);
   // Migración F-2: registra qué clave pública de firma Ed25519 pertenece a
   // nuestra identidad (se rellena al generar la clave de firma). Sin este
   // marcador no se podría distinguir "identidad antigua que nunca tuvo clave

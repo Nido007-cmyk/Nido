@@ -51,7 +51,7 @@ vi.mock("../agent/memory/memoryStore", async () => {
   return p2pMemoryStoreModule(mem);
 });
 
-import { deleteIdentity, getIdentity, getSigningKeypair, saveIdentity, P2PIdentityKeyLossError, saveMessage, getConversation, saveContact, claimHelloNonce, pruneHelloNonceCache, clearHelloNonceCache, deleteHelloNoncesForPeer, saveInboundMessageWithAckLog, getDeliveryAckLogEntry, hasDeliveryAckLogEntry, pruneDeliveryAckLog, messageExists, getOutboundMessage, getSentOutbox, markOutboundDelivered, markOutboundFailed, incrementAckAttempts, resetOutboundForRetry, failPeerOutbox, recoverSentOutboxToQueued, recordLateAck, getLateAckRecord } from "./store";
+import { deleteIdentity, getIdentity, getSigningKeypair, saveIdentity, P2PIdentityKeyLossError, saveMessage, getConversation, saveContact, claimHelloNonce, pruneHelloNonceCache, clearHelloNonceCache, deleteHelloNoncesForPeer, saveInboundMessageWithAckLog, getDeliveryAckLogEntry, hasDeliveryAckLogEntry, pruneDeliveryAckLog, messageExists, getOutboundMessage, getSentOutbox, markOutboundDelivered, markOutboundFailed, incrementAckAttempts, resetOutboundForRetry, failPeerOutbox, recoverSentOutboxToQueued, recordLateAck, getLateAckRecord, applyVerifiedAtMigration } from "./store";
 
 beforeEach(() => {
   resetP2PMem(mem);
@@ -139,6 +139,42 @@ describe("p2p/store: la privada nunca vive en la base", () => {
     // Tras recuperarse: el MISMO par, no uno regenerado.
     const kp2 = await getSigningKeypair();
     expect(toHex(kp2.publicKey)).toBe(pub1);
+  });
+});
+
+describe("p2p/store: migración verified_at (auditoría 2026-10-31, F3-05)", () => {
+  function fakeDb(alterError: Error | null) {
+    const calls: string[] = [];
+    return {
+      calls,
+      execAsync: async (sql: string) => {
+        calls.push(sql);
+        if (alterError && sql.includes("ADD COLUMN verified_at")) throw alterError;
+      },
+    };
+  }
+
+  it("base fresca: ALTER primero y UPDATE después", async () => {
+    const db = fakeDb(null);
+    await applyVerifiedAtMigration(db);
+    expect(db.calls).toEqual([
+      "ALTER TABLE p2p_contacts ADD COLUMN verified_at INTEGER",
+      "UPDATE p2p_contacts SET verified = 0 WHERE verified_at IS NULL",
+    ]);
+  });
+
+  it("corte anterior entre ALTER y UPDATE: el UPDATE corre igual en la siguiente pasada", async () => {
+    // Estado que dejaba el corte: la columna ya existe (el ALTER da
+    // «duplicate column name») pero el UPDATE nunca corrió. Con el try
+    // compartido antiguo, el UPDATE quedaba tragado para siempre.
+    const db = fakeDb(new Error("duplicate column name: verified_at"));
+    await applyVerifiedAtMigration(db);
+    expect(db.calls).toContain("UPDATE p2p_contacts SET verified = 0 WHERE verified_at IS NULL");
+  });
+
+  it("un error del ALTER que no es duplicado se propaga", async () => {
+    const db = fakeDb(new Error("database is locked"));
+    await expect(applyVerifiedAtMigration(db)).rejects.toThrow("database is locked");
   });
 });
 
