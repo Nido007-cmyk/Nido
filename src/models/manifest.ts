@@ -669,15 +669,18 @@ export const MODEL_CATALOG: CatalogModel[] = [
     // English for 69 countries — checked emergency numbers (facts table
     // with source, quote and date: pack format v2) and what each official
     // alert means. knowledge-packs/nido-local, built and checked by
-    // .github/workflows/knowledge-pack.yml.
+    // .github/workflows/knowledge-pack.yml. Corrected edition in
+    // 0.1.66 (knowledge-packs-v7): the Argentina 107 and Philippines
+    // 911 facts are backed by reachable official sources, and three
+    // facts that cited press reports now cite the official source.
     id: "nido-local",
     kind: "corpus",
     format: "sqlite-pack",
     label: "NIDO Local: emergency numbers and alerts by country",
     filename: "corpus/nido-local.sqlite",
-    sizeBytes: 294912,
-    sha256: "b8123b6083ba224962e70eeb9bc02ecbca3c0fda497c3d31a912316f101a2047",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-local.sqlite",
+    sizeBytes: 303104,
+    sha256: "98393e837fe7880712d7cfd0bb5a5ff76691e4595385ac8574c267c27208e2f0",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v7/nido-local.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
       "Checked emergency numbers for 69 countries in the Americas, Europe, Africa, Asia and Oceania, each with its official source, plus what official alerts mean. Spanish and English. ~0.3MB.",
@@ -690,9 +693,9 @@ export const MODEL_CATALOG: CatalogModel[] = [
     format: "sqlite-pack",
     label: "NIDO Local (multilingual search)",
     filename: "corpus/nido-local-e5.sqlite",
-    sizeBytes: 294912,
-    sha256: "b08132fe9cd050b420d7ad7d89ee06038e666f405e9dce18a7bc82a9827699e8",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-local-e5.sqlite",
+    sizeBytes: 303104,
+    sha256: "3477ba173f1f31003e9c700c95c45e28fc9988a255e92fc93c826d0e5ce40f31",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v7/nido-local-e5.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
       "Checked emergency numbers for 69 countries, each with its official source, plus what official alerts mean; searchable in Spanish, Portuguese and English. ~0.3MB.",
@@ -735,15 +738,17 @@ export const MODEL_CATALOG: CatalogModel[] = [
     // NIDO Crisis (0.1.65): guides for the hardest moments and verified
     // crisis lines for 14 countries (facts table with source, quote and
     // date: pack format v2). knowledge-packs/nido-crisis, built and
-    // checked by .github/workflows/knowledge-pack.yml.
+    // checked by .github/workflows/knowledge-pack.yml. Search
+    // metadata of the grief guide corrected in 0.1.66
+    // (knowledge-packs-v7).
     id: "nido-crisis",
     kind: "corpus",
     format: "sqlite-pack",
     label: "NIDO Crisis: support in the hardest moments",
     filename: "corpus/nido-crisis.sqlite",
     sizeBytes: 233472,
-    sha256: "4138f6d3036a1511f14ebebaa6fe053c9b09c5345f53d75ac18facadb3c442a5",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-crisis.sqlite",
+    sha256: "2169f1290a2f696039697ffcb276536fef59c73281b987aab559973e88cde627",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v7/nido-crisis.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
       "12 offline guides (4 each in Spanish, English and Portuguese) for the hardest moments: when someone talks about dying, panic attacks and grief, with verified crisis lines for 14 countries. ~0.2MB.",
@@ -757,8 +762,8 @@ export const MODEL_CATALOG: CatalogModel[] = [
     label: "NIDO Crisis (multilingual search)",
     filename: "corpus/nido-crisis-e5.sqlite",
     sizeBytes: 233472,
-    sha256: "93bd5f12a45409688210c8801c89c9f11f5c5f0be5489e65bc4d39fe63e76d1d",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-crisis-e5.sqlite",
+    sha256: "70e73fa2dc80f80bb699702af4ff958818d63373160853f3138b090602f6a5e3",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v7/nido-crisis-e5.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
       "12 offline guides for the hardest moments: when someone talks about dying, panic attacks and grief, with verified crisis lines for 14 countries; searchable in Spanish, Portuguese and English. ~0.2MB.",
@@ -896,15 +901,16 @@ export const MODEL_CATALOG: CatalogModel[] = [
   {
     // NIDO Viaje (0.1.65): the road and car travel, in Spanish, English
     // and Portuguese. knowledge-packs/nido-viaje, built and checked by
-    // .github/workflows/knowledge-pack.yml.
+    // .github/workflows/knowledge-pack.yml. Search metadata of the
+    // minor crash guide corrected in 0.1.66 (knowledge-packs-v7).
     id: "nido-viaje",
     kind: "corpus",
     format: "sqlite-pack",
     label: "NIDO Road Travel: the road and car trips",
     filename: "corpus/nido-viaje.sqlite",
     sizeBytes: 241664,
-    sha256: "a6f4608b59ee6add7f9cf147a9d76c03b8460ec4e0d4a4d14d029f82dd74c086",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-viaje.sqlite",
+    sha256: "051b11805f154b84da4f7d88664428cb991ed18d0ae920dae67971074d95f791",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v7/nido-viaje.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description: "18 offline guides (6 each in Spanish, English and Portuguese) for the road and car travel. ~0.2MB.",
     required: false,
@@ -917,8 +923,8 @@ export const MODEL_CATALOG: CatalogModel[] = [
     label: "NIDO Road Travel (multilingual search)",
     filename: "corpus/nido-viaje-e5.sqlite",
     sizeBytes: 241664,
-    sha256: "e27777f2a902d6c5f3452446212d25471df5822fa82c04e3b5ae2cf724f3d020",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-viaje-e5.sqlite",
+    sha256: "28c4bf3996b10d8bdc09f8b8470eb0a9606d90f8d2236b82b3ffa7975a038709",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v7/nido-viaje-e5.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description: "18 offline guides for the road and car travel, searchable in Spanish, Portuguese and English. ~0.2MB.",
     required: false,
