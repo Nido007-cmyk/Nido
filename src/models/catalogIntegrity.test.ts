@@ -178,6 +178,19 @@ describe("real MODEL_CATALOG — every entry passes the pre-network gate", () =>
     expect(encyclopedia).toBeDefined();
     expect(encyclopedia!.corpusPackIds).toContain("wiki-vital5");
   });
+
+  it("auditoría 2026-10-31 (F5-02): la composición entera de TIERS está fijada", () => {
+    // La firma cubre MODEL_CATALOG, no TIERS. Sin esta fijación,
+    // quitar un pack de un nivel (N17: nido-esencial fuera de
+    // standard) dejaba la firma y toda la suite en verde, y el
+    // nivel instalaría sin lo que su descripción promete.
+    expect(TIERS.map((t) => [t.id, t.corpusPackIds])).toEqual([
+      ["minimum", []],
+      ["standard", ["corpus-standard", "nido-esencial"]],
+      ["full", ["corpus-standard", "corpus-full", "nido-esencial"]],
+      ["encyclopedia", ["corpus-standard", "corpus-full", "nido-esencial", "wiki-vital5"]],
+    ]);
+  });
 });
 
 describe("gate fail-closed behavior (synthetic contracts)", () => {
