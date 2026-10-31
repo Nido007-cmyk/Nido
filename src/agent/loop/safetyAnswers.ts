@@ -203,8 +203,15 @@ export const EMERGENCY_NUMBERS: readonly EmergencyEntry[] = [
   },
 ];
 
+// 2026-10-30 (prueba física): la pregunta del dueño venía mezclada —
+// «Numero de emergency in Japan?» — y no casaba con ninguna rama: la
+// española exigía la palabra española y la inglesa la frase inglesa
+// entera. Entran las mezclas razonables: sustantivo de pregunta en
+// español o portugués con «emergency» en inglés. La forma sigue siendo
+// la de siempre (número/teléfono de emergencia delante): «emergency»
+// suelto en otra frase («my emergency contact») no entra.
 const EMERGENCY_Q_RE =
-  /\b(numero|telefono|tel)s? (de |del |para )?(las? )?(emergencias?|urgencias?|policia|ambulancia|bomberos)\b|\ba (que|cual) numero (llamo|llamar|marco|marcar)\b|\bemergency (number|phone|line)s?\b|\bwhat number (do i|should i|to) (call|dial)\b|\bnumber (for|to call) (the )?(police|ambulance|fire)\b|\bnumeros? de (emergencia|urgencia)\b|\b(qual|que) numero (ligar|eu ligo|discar)\b|\btelefone de emergencia\b/;
+  /\b(numero|telefono|tel)s? (de |del |para )?(las? )?(emergencias?|urgencias?|emergency|policia|ambulancia|bomberos)\b|\ba (que|cual) numero (llamo|llamar|marco|marcar)\b|\bemergency (number|phone|line)s?\b|\bwhat number (do i|should i|to) (call|dial)\b|\bnumber (for|to call) (the )?(police|ambulance|fire)\b|\bnumeros? de (emergencia|urgencia)\b|\b(qual|que) numero (ligar|eu ligo|discar)\b|\btelefone (de |da )?(emergencia|emergency)\b/;
 
 function findCountry(folded: string): EmergencyEntry | null {
   for (const e of EMERGENCY_NUMBERS) {
@@ -246,19 +253,25 @@ function emergencyText(lang: SafetyLang, folded: string): SafetyHit {
  */
 export function unknownCountryText(lang: SafetyLang, asked: boolean, knownNames: readonly string[]): string {
   const known = knownNames.join(", ");
+  // 2026-10-30 (prueba física): el dueño contó los nombres de la lista en
+  // su foto y preguntó cuántos eran — el texto enumeraba sin decir la
+  // cifra. La cifra sale de la propia lista que llega (los países de los
+  // packs instalados cuando ChatScreen rehace el texto), nunca de una
+  // constante: si los packs crecen, el número crece solo.
+  const count = knownNames.length;
   return (
     lang === "en"
       ? (asked
           ? "I don't have that country's emergency number checked against an official source, so I won't guess. Look for it on the local government's website or ask someone nearby."
           : "Which country are you in? I'll tell you the number.") +
-        `\n\nCountries checked so far: ${known}.`
+        `\n\nCountries checked so far (${count}): ${known}.`
       : lang === "pt"
         ? (asked
             ? "Não tenho o número de emergência desse país conferido numa fonte oficial, então não vou chutar. Procure no site do governo local ou pergunte a alguém por perto."
-            : "Em que país você está? Eu digo o número.") + `\n\nPaíses conferidos até agora: ${known}.`
+            : "Em que país você está? Eu digo o número.") + `\n\nPaíses conferidos até agora (${count}): ${known}.`
         : (asked
             ? "No tengo el número de emergencias de ese país comprobado en una fuente oficial, así que no lo voy a adivinar. Búscalo en la web del gobierno local o pregunta a alguien cercano."
-            : "¿En qué país estás? Te digo el número.") + `\n\nPaíses comprobados por ahora: ${known}.`
+            : "¿En qué país estás? Te digo el número.") + `\n\nPaíses comprobados por ahora (${count}): ${known}.`
   );
 }
 

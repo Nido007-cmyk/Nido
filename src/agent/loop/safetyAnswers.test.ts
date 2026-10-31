@@ -99,6 +99,37 @@ describe("números de emergencia: solo los comprobados", () => {
   });
 });
 
+// 2026-10-30 (prueba física): la pregunta llegó mezclada, tal como la
+// escribió el dueño en su foto: «Numero de emergency in Japan?». Ninguna
+// rama la casaba y la respuesta fija nunca disparaba.
+describe("pregunta mezclada ES/PT + «emergency» (2026-10-30)", () => {
+  it("«Numero de emergency in Japan?» entra y marca país no comprobado nombrado", () => {
+    const h = matchSafetyAnswer("Numero de emergency in Japan?", "es")!;
+    expect(h.kind).toBe("emergency-number");
+    expect(h.country).toBeUndefined();
+    expect(h.countryUnknown).toEqual({ asked: true });
+    expect(h.text).not.toMatch(/\b(911|112|999)\b/);
+  });
+
+  it("«Telefone de emergency no Japão?» entra en portugués", () => {
+    const h = matchSafetyAnswer("Telefone de emergency no Japão?", "pt")!;
+    expect(h.kind).toBe("emergency-number");
+    expect(h.countryUnknown).toEqual({ asked: true });
+  });
+
+  it("«Numero de emergency in Spain?» responde el número comprobado de España", () => {
+    const h = matchSafetyAnswer("Numero de emergency in Spain?", "es")!;
+    expect(h.kind).toBe("emergency-number");
+    expect(h.country).toBe("Spain");
+    expect(h.text).toMatch(/112/);
+  });
+
+  it("«emergency» sin la forma de pregunta de número no dispara la ruta", () => {
+    expect(matchSafetyAnswer("this is my emergency contact", "en")).toBeNull();
+    expect(matchSafetyAnswer("tengo una emergency en casa", "es")).toBeNull();
+  });
+});
+
 describe("auditoría 0.1.55: «usa» como verbo no es Estados Unidos", () => {
   it("«el número de emergencias que se usa aquí» pregunta el país, no responde el 911", () => {
     const hit = matchSafetyAnswer("¿cuál es el número de emergencias que se usa aquí?", "es");
@@ -126,12 +157,20 @@ describe("país sin número comprobado: lista de los packs (0.1.57)", () => {
     expect(matchSafetyAnswer("número de emergencias en México", "es")!.countryUnknown).toBeUndefined();
   });
 
+  it("la cifra de países sale de la lista que llega, nunca de una constante", async () => {
+    const { unknownCountryText } = await import("./safetyAnswers");
+    expect(unknownCountryText("es", true, ["Chile"])).toContain("(1): Chile.");
+    expect(unknownCountryText("es", true, ["A", "B", "C", "D", "E", "F", "G", "H"])).toContain("(8):");
+    expect(unknownCountryText("en", true, ["Chile", "Peru"])).toContain("Countries checked so far (2):");
+    expect(unknownCountryText("pt", true, ["Chile", "Peru", "Brasil"])).toContain("Países conferidos até agora (3):");
+  });
+
   it("con la lista de los packs sigue sin adivinar y nombra todos los países", async () => {
     const { unknownCountryText } = await import("./safetyAnswers");
     const t = unknownCountryText("es", true, ["Argentina", "Chile", "Uruguay"]);
     expect(t).toContain("no lo voy a adivinar");
-    expect(t).toContain("Países comprobados por ahora: Argentina, Chile, Uruguay.");
+    expect(t).toContain("Países comprobados por ahora (3): Argentina, Chile, Uruguay.");
     expect(t).not.toMatch(/\b\d{3}\b/);
-    expect(unknownCountryText("en", false, ["Chile"])).toBe("Which country are you in? I'll tell you the number.\n\nCountries checked so far: Chile.");
+    expect(unknownCountryText("en", false, ["Chile"])).toBe("Which country are you in? I'll tell you the number.\n\nCountries checked so far (1): Chile.");
   });
 });
