@@ -220,8 +220,13 @@ describe("backup.ts — auditoría ofensiva 2026-10-12 (0.1.29)", () => {
     const { restoreBackup } = await import("./backup");
     await expect(restoreBackup("/mock/x.nidobackup.json")).rejects.toBeTruthy();
     const deleted = (FileSystem.deleteAsync as any).mock.calls.map((c: unknown[]) => c[0]);
+    // F3-19: los nombres extraídos llevan sufijo único tras el prefijo.
     expect(deleted).toEqual(
-      expect.arrayContaining(["/mock/restored.db", "/mock/restored.db.manifest.json", "/mock/restored.knowledge.db"]),
+      expect.arrayContaining([
+        expect.stringMatching(/^\/mock\/restored\.db-[a-z0-9-]+$/),
+        expect.stringMatching(/^\/mock\/restored\.db-[a-z0-9-]+\.manifest\.json$/),
+        expect.stringMatching(/^\/mock\/restored\.db-[a-z0-9-]+\.knowledge\.db$/),
+      ]),
     );
   });
 });

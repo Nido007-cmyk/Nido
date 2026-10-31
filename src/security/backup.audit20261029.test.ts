@@ -29,6 +29,14 @@ vi.mock("expo-file-system/legacy", () => ({
   writeAsStringAsync: async (uri: string, data: string) => {
     fsx.files.set(uri, data);
   },
+  moveAsync: async ({ from, to }: { from: string; to: string }) => {
+    // F3-19 (auditoría 2026-10-31): la extracción escribe a un temporal
+    // y renombra; el renombrado mueve la entrada en el mapa.
+    const data = fsx.files.get(from);
+    if (data === undefined) throw new Error("no file");
+    fsx.files.delete(from);
+    fsx.files.set(to, data);
+  },
   copyAsync: async () => {},
   deleteAsync: async () => {},
 }));
@@ -159,12 +167,21 @@ describe("tope de extractPortableBundle", () => {
     fsx.files.set("/mock/big.nidobackup.json", "{}");
     fsx.sizes.set("/mock/big.nidobackup.json", MAX_BUNDLE_BYTES + 1);
     await expect(extractPortableBundle("/mock/big.nidobackup.json", "/mock/")).rejects.toMatchObject({ code: "invalid" });
-    expect(fsx.files.has("/mock/restored.db")).toBe(false);
+    expect([...fsx.files.keys()].some((k) => k.startsWith("/mock/restored"))).toBe(false);
   });
 
   it("un bundle normal se extrae", async () => {
     const bundle = { format: "nidobackup", version: 1, manifest: { sha256: "a" }, db: "QUJD", knowledge: null };
     fsx.files.set("/mock/ok.nidobackup.json", JSON.stringify(bundle));
-    expect(await extractPortableBundle("/mock/ok.nidobackup.json", "/mock/")).toBe("/mock/restored.db");
+    // F3-19: nombre único con el prefijo de siempre, sin temporales a la vista.
+    const uri = await extractPortableBundle("/mock/ok.nidobackup.json", "/mock/");
+    expect(uri).toMatch(/^\/mock\/restored\.db-[a-z0-9-]+$/);
+    expect(fsx.files.has(uri)).toBe(true);
+    expect(fsx.files.has(`${uri}.manifest.json`)).toBe(true);
+    expect([...fsx.files.keys()].some((k) => k.includes(".tmp-"))).toBe(false);
+    // Y una segunda extracción no pisa la primera.
+    const uri2 = await extractPortableBundle("/mock/ok.nidobackup.json", "/mock/");
+    expect(uri2).not.toBe(uri);
+    expect(fsx.files.has(uri)).toBe(true);
   });
 });

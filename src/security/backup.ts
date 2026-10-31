@@ -854,22 +854,33 @@ export async function extractPortableBundle(bundleUri: string, destDir: string):
     throw new BackupError("invalid", "Formato de bundle no reconocido");
   }
 
-  const dbUri = `${destDir.replace(/\/+$/, "")}/restored.db`;
+  // Auditoría completa 2026-10-31 (F3-19): la extracción ya no usa el
+  // nombre fijo restored.db ni escribe directo sobre el nombre final.
+  // El nombre fijo hacía colisionar dos extracciones y dejaba un
+  // restored.db parcial con nombre válido si el proceso moría a
+  // mitad; ahora cada extracción lleva un sufijo único (el prefijo
+  // restored.db se conserva: el borrado total y la limpieza
+  // post-restauración lo recogen por prefijo) y cada fichero se
+  // escribe a un temporal y se renombra.
+  const uniq = `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`;
+  const dbUri = `${destDir.replace(/\/+$/, "")}/restored.db-${uniq}`;
+  const writeAtomic = async (uri: string, content: string, base64: boolean) => {
+    const tmp = `${uri}.tmp-${uniq}`;
+    await FileSystem.writeAsStringAsync(
+      tmp,
+      content,
+      base64 ? { encoding: FileSystem.EncodingType.Base64 } : undefined,
+    );
+    await FileSystem.moveAsync({ from: tmp, to: uri });
+  };
   // FIX 2026-10-09 (B1): argumentos en orden correcto (uri, contenido).
   // Estaban invertidos: el blob base64 iba como URI y el path como contenido.
-  await FileSystem.writeAsStringAsync(dbUri, bundle.db, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
+  await writeAtomic(dbUri, bundle.db, true);
 
-  await FileSystem.writeAsStringAsync(
-    `${dbUri}.manifest.json`,
-    JSON.stringify(bundle.manifest, null, 2)
-  );
+  await writeAtomic(`${dbUri}.manifest.json`, JSON.stringify(bundle.manifest, null, 2), false);
 
   if (bundle.knowledge) {
-    await FileSystem.writeAsStringAsync(knowledgeBackupUriFor(dbUri), bundle.knowledge, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
+    await writeAtomic(knowledgeBackupUriFor(dbUri), bundle.knowledge, true);
   }
 
   return dbUri;
