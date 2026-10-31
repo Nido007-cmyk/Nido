@@ -248,6 +248,18 @@ export function extractDateISO(text: string, lang: "es" | "en" | "pt" = "es"): s
   // únicamente (el punto es decimal en "cuesta 3.5": fail-closed).
   const mNum = /(?<!\d)(\d{1,2})[/-](\d{1,2})(?:[/-](\d{4}|\d{2}))?(?!\d)/.exec(text);
   if (mNum) {
+    // Auditoría completa 2026-10-31 (F1 B-5): sin año, «1/2» también
+    // es la fracción de una receta: «lleva 1/2 taza de azúcar»
+    // creaba un recordatorio el 1 de febrero. Si lo que sigue es
+    // una unidad de medida, es fracción, no fecha. Sin unidad la
+    // ambigüedad queda (un cumpleaños «el 5/11» no lleva unidad):
+    // manda la fecha, que es el comportamiento asentado de M6.
+    if (!mNum[3]) {
+      const after = text.slice(mNum.index + mNum[0].length);
+      if (/^\s+(?:de\s+|of\s+)?(tazas?|cups?|x[ií]caras?|cucharadas?|cucharaditas?|colher(?:es|adas?)?|kilos?|kg|gramos?|gramas?|litros?|liters?|ml|horas?|hours?|minutos?|minutes?)\b/i.test(after)) {
+        return null;
+      }
+    }
     const a = parseInt(mNum[1], 10);
     const b = parseInt(mNum[2], 10);
     // Desambiguación: si un lado pasa de 12, ese lado es el día. Si

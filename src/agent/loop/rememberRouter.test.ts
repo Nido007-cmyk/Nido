@@ -122,6 +122,15 @@ describe("rememberRouter: consultas vs guardados (FIX 2026-10-07)", () => {
     expect(d.getDate()).toBe(15);
   });
 
+  it("auditoría 2026-10-31 (F1 B-5): una fracción con su unidad no es una fecha", () => {
+    expect(extractDateISO("lleva 1/2 taza de azucar", "es")).toBeNull();
+    expect(extractDateISO("lleva 3/4 de taza de harina", "es")).toBeNull();
+    expect(extractDateISO("add 1/2 cup of sugar", "en")).toBeNull();
+    expect(extractDateISO("espera 1/2 hora", "es")).toBeNull();
+    // La fecha numérica sin unidad sigue viva (el cumpleaños de M6).
+    expect(extractDateISO("mi cumpleaños es el 05/11", "es")).not.toBeNull();
+  });
+
   it("0.1.20 (M6): fechas numéricas D/M (ES) y M/D (EN), con y sin año", () => {
     const dm = extractDateISO("mi cumpleaños es el 05/11", "es");
     expect(dm).not.toBeNull();
