@@ -78,11 +78,11 @@
     "deepResearchActive": "Investigación profunda activa",
     "localLlmCore": "Modelo local",
     "newChatSession": "Nuevo chat",
-    "offline": "Offline",
     "openDrawer": "Historial de chats y atajos",
     "statusLine": "Sin conexión · privado"
   },
   "chatScreen": {
+    "roleAssistant": "🎭 NIDO",
     "copied": "Copiado",
     "copyResponse": "Copiar respuesta",
     "deepResearchBanner": "Investigación profunda · Descomponiendo → Buscando offline → Sintetizando",
@@ -114,8 +114,6 @@
       "researching": "🔬 Investigando la subpregunta {{index}}/{{count}}…",
       "synthesizing": "🔬 Armando la respuesta…"
     },
-    "roleAssistant": "🎭 NIDO",
-    "roleYou": "Tú",
     "sendMessage": "Enviar mensaje",
     "showReasoning": "Mostrar razonamiento",
     "stageTimedOut": "Un paso de la investigación tardó demasiado y se cortó",
@@ -162,7 +160,6 @@
     "openFullGuide": "Abrir la guía completa"
   },
   "common": {
-    "back": "Atrás",
     "cancel": "Cancelar",
     "close": "Cerrar",
     "deny": "Denegar",
@@ -333,10 +330,7 @@
   "knowledgeBaseScreen": {
     "title": "Mis documentos"
   },
-  "policyAsk": {
-    "title": "Confirmar acción",
-    "risk": "Riesgo"
-  },
+  "policyAsk": {},
   "memoryManager": {
     "repeatMonth": "Se repite cada mes",
     "repeatYear": "Se repite cada año",
@@ -502,7 +496,6 @@
     "chunkCount_other": "{{count}} fragmentos",
     "docCount_one": "{{count}} documento",
     "docCount_other": "{{count}} documentos",
-    "empty": "Aún no hay colecciones personalizadas.",
     "exportButton": "Exportar / Compartir",
     "exportFailedTitle": "Falló la exportación",
     "exporting": "Exportando…",
@@ -663,27 +656,15 @@
     "relevanceCaption": "Los números indican fuerza de coincidencia absoluta con el índice offline, no confianza.",
     "readWhole": "Leer la guía entera"
   },
-  "systemMonitor": {
-    "diskLabel": "Almacenamiento en disco (límite: 50 GB)",
-    "exceeded": "⚠️ EXCEDIDO",
-    "noRssNote": "La lectura de memoria en vivo no está disponible en esta versión.",
-    "ramLabel": "Memoria RSS del proceso (límite: 12 GB)",
-    "title": "Estado en vivo"
-  },
+  "systemMonitor": {},
   "time": {
     "daysAgo": "hace {{count}} d",
     "hoursAgo": "hace {{count}} h",
     "justNow": "ahora mismo",
     "minutesAgo": "hace {{count}} min"
   },
-  "usageStatsScreen": {
-    "back": "‹ Atrás",
-    "live": "EN VIVO",
-    "subtitle": "Hardware y uso",
-    "title": "Telemetría del sistema"
-  },
+  "usageStatsScreen": {},
   "voiceSettings": {
-    "available": "SpeechRecognizer de Android (en el dispositivo cuando esté disponible)",
     "checking": "Verificando…",
     "enabledLabel": "Entrada de voz",
     "enabledValue": "Muestra el botón del micrófono en el chat para dictar mensajes.",
@@ -815,10 +796,7 @@
     "pairedNotice": "✓ {{name}} emparejado, sin verificar. Comparen la huella y pulsa «Verificar».",
     "connectedNotice": "✓ Conectado con {{alias}}.",
     "copiedNotice": "✓ {{label}} copiado.",
-    "pairBindingWasRetired": "Nota: esta identidad (“{{name}}”) fue retirada antes por un re-emparejamiento. Confirmar la restaurará como tu contacto — sus mensajes fallidos anteriores siguen fallidos y no se reenviarán solos.",
     "pairDisambiguationTitle": "Elige cómo emparejar",
-    "pairAmbiguousAsk": "Este código es para “{{name}}” (huella {{fingerprint}}), pero ya tienes {{count}} contacto(s) activo(s) con ese nombre bajo una identidad DISTINTA: {{candidates}}. Un nombre no es una identidad — no puedo asumir que es la misma persona.\n\nDime explícitamente (en el chat):\n• “reemplazar” — la misma persona con un dispositivo nuevo: retira la identidad anterior en todas partes (destructivo);\n• “otra persona” — una persona distinta: dame un nombre único para el nuevo contacto;\n• “cancelar” — no hacer nada.\n\nSi no eliges, cancelo. Nada se ha emparejado aún.",
-    "pairInvalidChoice": "Desambiguación inválida “{{choice}}”: usa reemplazar, otra_persona o cancelar.",
     "pairDisambiguationBody": "“{{name}}” ya es uno de tus contactos, pero este código es una identidad DISTINTA (huella {{fingerprint}}). Elige explícitamente — nada se reemplaza en silencio.",
     "pairReplaceAction": "Reemplazar",
     "pairDifferentPersonAction": "Otra persona",
@@ -988,7 +966,6 @@
     "latency": "Latencia",
     "reasons": "Motivos",
     "routingFailed": "El enrutamiento volvió a tu modelo normal en el último mensaje.",
-    "emptyRouting": "Aún no hay decisiones registradas.",
     "engineTitle": "Motor",
     "engineModel": "Modelo",
     "ctxWindow": "Ventana de contexto",
@@ -1086,7 +1063,6 @@
     "documentLabel": "Documento adjunto (no confiable):",
     "documentMeta": "{{bytes}} bytes · SHA-512 {{hash}}",
     "allowOnce": "Permitir una vez",
-    "deny": "Denegar",
     "scope": {
       "task:answer": "Responder una pregunta",
       "task:summarize": "Resumir un documento",
@@ -1791,8 +1767,6 @@
     "tabDocuments": "Mis documentos",
     "tabLearn": "Aprender",
     "tabPacks": "Packs",
-    "packsHint": "Los paquetes de conocimiento se descargan y se borran en Ajustes › Tu biblioteca.",
-    "openPacks": "Abrir paquetes de conocimiento",
     "learnTitle": "Aprende a usar NIDO",
     "learnBody": "Una guía corta con ejemplos que puedes tocar para probar cada función.",
     "openGuide": "Abrir la guía",

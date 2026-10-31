@@ -3,7 +3,6 @@
     "done": "DONE",
     "cancel": "Cancel",
     "close": "Close",
-    "back": "Back",
     "remove": "Remove",
     "retry": "Retry",
     "dismiss": "Dismiss",
@@ -102,19 +101,8 @@
     "settings": "Settings",
     "setupWizard": "Setup Wizard"
   },
-  "usageStatsScreen": {
-    "back": "‹ Back",
-    "title": "System telemetry",
-    "subtitle": "Hardware and usage",
-    "live": "LIVE"
-  },
-  "systemMonitor": {
-    "title": "Live status",
-    "diskLabel": "Disk Storage (Cap: 50GB)",
-    "ramLabel": "Process RSS Memory (Cap: 12GB)",
-    "exceeded": "⚠️ EXCEEDED",
-    "noRssNote": "Live memory readout isn't available in this build."
-  },
+  "usageStatsScreen": {},
+  "systemMonitor": {},
   "drawerFooterStats": {
     "ram": "RAM",
     "disk": "DISK",
@@ -270,7 +258,6 @@
     "stageReading": "Reading files…",
     "stageChunking": "Splitting into chunks…",
     "stageEmbedding": "Embedding {{current}}/{{total}}…",
-    "empty": "No custom collections yet.",
     "docCount_one": "{{count}} doc",
     "docCount_other": "{{count}} docs",
     "chunkCount_one": "{{count}} chunk",
@@ -301,7 +288,6 @@
     "enabledValue": "Show the microphone button in the chat to dictate messages.",
     "speechEngineLabel": "Speech-to-text engine",
     "checking": "Checking…",
-    "available": "Android SpeechRecognizer (on-device when available)",
     "unavailable": "Unavailable on this device",
     "unavailableNote": "No system speech-recognition service was found — common on GrapheneOS / de-Googled builds. An embedded whisper.cpp model would remove this dependency but is a separate project on the scale of the llama.rn integration itself; not implemented in this version.",
     "readAloudLabel": "Read aloud",
@@ -359,10 +345,7 @@
   "knowledgeBaseScreen": {
     "title": "My documents"
   },
-  "policyAsk": {
-    "title": "Confirm action",
-    "risk": "Risk"
-  },
+  "policyAsk": {},
   "memoryManager": {
     "repeatMonth": "Repeats every month",
     "repeatYear": "Repeats every year",
@@ -418,7 +401,6 @@
   },
   "chatHeader": {
     "openDrawer": "Chat history and shortcuts",
-    "offline": "Offline",
     "localLlmCore": "Local model",
     "cycleTone": "Cycle Assistant Tone",
     "newChatSession": "New chat",
@@ -427,6 +409,7 @@
     "statusLine": "Offline · private"
   },
   "chatScreen": {
+    "roleAssistant": "🎭 NIDO",
     "initializingCore": "Starting NIDO…",
     "mountingWeights": "Loading the model…",
     "indexingKnowledgeBase": "Indexing new knowledge for offline search…",
@@ -455,8 +438,6 @@
       "researching": "🔬 Researching sub-question {{index}}/{{count}}…",
       "synthesizing": "🔬 Putting the answer together…"
     },
-    "roleYou": "You",
-    "roleAssistant": "🎭 NIDO",
     "stoppedByUser": "Stopped by user",
     "retry": "Retry",
     "deepResearchBanner": "Deep research · Breaking down → Searching offline → Synthesizing",
@@ -814,10 +795,7 @@
     "pairedNotice": "✓ {{name}} paired, not verified yet. Compare fingerprints, then tap “Verify”.",
     "connectedNotice": "✓ Connected with {{alias}}.",
     "copiedNotice": "✓ {{label}} copied.",
-    "pairBindingWasRetired": "Note: this identity (“{{name}}”) was retired before by a re-pair. Confirming will restore it as your contact — its previously failed messages stay failed and will not be resent on their own.",
     "pairDisambiguationTitle": "Choose how to pair",
-    "pairAmbiguousAsk": "This code is for “{{name}}” (fingerprint {{fingerprint}}), but you already have {{count}} live contact(s) with that name under a DIFFERENT identity: {{candidates}}. A name is not an identity — I cannot assume this is the same person.\n\nTell me explicitly (in chat):\n• “replace” — the same person with a new device: retire the old identity everywhere (destructive);\n• “different person” — a different person: give me a unique name for the new contact;\n• “cancel” — do nothing.\n\nIf you don't choose, I cancel. Nothing has been paired yet.",
-    "pairInvalidChoice": "Invalid disambiguation “{{choice}}”: use replace, different_person or cancel.",
     "pairDisambiguationBody": "“{{name}}” is already one of your contacts, but this code is a DIFFERENT identity (fingerprint {{fingerprint}}). Choose explicitly — nothing is replaced silently.",
     "pairReplaceAction": "Replace",
     "pairDifferentPersonAction": "Different person",
@@ -988,7 +966,6 @@
     "latency": "Latency",
     "reasons": "Reasons",
     "routingFailed": "Routing fell back to your normal model for the last message.",
-    "emptyRouting": "No routing decision recorded yet.",
     "engineTitle": "Engine",
     "engineModel": "Model",
     "ctxWindow": "Context window",
@@ -1086,7 +1063,6 @@
     "documentLabel": "Attached document (untrusted):",
     "documentMeta": "{{bytes}} bytes · SHA-512 {{hash}}",
     "allowOnce": "Allow once",
-    "deny": "Deny",
     "scope": {
       "task:answer": "Answer a question",
       "task:summarize": "Summarize a document",
@@ -1791,8 +1767,6 @@
     "tabDocuments": "My documents",
     "tabLearn": "Learn",
     "tabPacks": "Packs",
-    "packsHint": "Knowledge packs are downloaded and removed in Settings › Your library.",
-    "openPacks": "Open knowledge packs",
     "learnTitle": "Learn to use NIDO",
     "learnBody": "A short guide with examples you can tap to try each feature.",
     "openGuide": "Open the guide",

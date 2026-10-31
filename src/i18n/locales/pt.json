@@ -3,7 +3,6 @@
     "done": "PRONTO",
     "cancel": "Cancelar",
     "close": "Fechar",
-    "back": "Voltar",
     "remove": "Remover",
     "retry": "Tentar novamente",
     "dismiss": "Dispensar",
@@ -102,19 +101,8 @@
     "settings": "Configurações",
     "setupWizard": "Assistente de Configuração"
   },
-  "usageStatsScreen": {
-    "back": "‹ Voltar",
-    "title": "Telemetria do sistema",
-    "subtitle": "Hardware e uso",
-    "live": "AO VIVO"
-  },
-  "systemMonitor": {
-    "title": "Status ao vivo",
-    "diskLabel": "Armazenamento em Disco (Limite: 50GB)",
-    "ramLabel": "Memória RSS do Processo (Limite: 12GB)",
-    "exceeded": "⚠️ EXCEDIDO",
-    "noRssNote": "A leitura de memória ao vivo não está disponível nesta versão."
-  },
+  "usageStatsScreen": {},
+  "systemMonitor": {},
   "drawerFooterStats": {
     "ram": "RAM",
     "disk": "DISCO",
@@ -182,7 +170,7 @@
     "steps": {
       "device": "Dispositivo",
       "model": "Modelo",
-      "download": "Download",
+      "download": "Baixar",
       "ready": "Pronto"
     },
     "step1": {
@@ -270,7 +258,6 @@
     "stageReading": "Lendo arquivos…",
     "stageChunking": "Dividindo em trechos…",
     "stageEmbedding": "Gerando embeddings {{current}}/{{total}}…",
-    "empty": "Nenhuma coleção personalizada ainda.",
     "docCount_one": "{{count}} documento",
     "docCount_other": "{{count}} documentos",
     "chunkCount_one": "{{count}} trecho",
@@ -301,7 +288,6 @@
     "enabledValue": "Mostra o botão de microfone no chat para ditar mensagens.",
     "speechEngineLabel": "Mecanismo de reconhecimento de voz",
     "checking": "Verificando…",
-    "available": "Android SpeechRecognizer (no dispositivo quando disponível)",
     "unavailable": "Indisponível neste dispositivo",
     "unavailableNote": "Nenhum serviço de reconhecimento de voz do sistema foi encontrado — comum em builds GrapheneOS / sem Google. Um modelo whisper.cpp embarcado eliminaria essa dependência, mas é um projeto separado do porte da própria integração com o llama.rn; não implementado nesta versão.",
     "readAloudLabel": "Leitura em voz alta",
@@ -359,10 +345,7 @@
   "knowledgeBaseScreen": {
     "title": "Meus documentos"
   },
-  "policyAsk": {
-    "title": "Confirmar ação",
-    "risk": "Risco"
-  },
+  "policyAsk": {},
   "memoryManager": {
     "repeatMonth": "Repete todo mês",
     "repeatYear": "Repete todo ano",
@@ -418,7 +401,6 @@
   },
   "chatHeader": {
     "openDrawer": "Histórico de conversas e atalhos",
-    "offline": "Offline",
     "localLlmCore": "Modelo local",
     "cycleTone": "Alternar tom do assistente",
     "newChatSession": "Novo chat",
@@ -427,6 +409,7 @@
     "statusLine": "Sem conexão · privado"
   },
   "chatScreen": {
+    "roleAssistant": "🎭 NIDO",
     "initializingCore": "Iniciando o NIDO…",
     "mountingWeights": "Carregando o modelo…",
     "indexingKnowledgeBase": "Indexando conhecimento novo para busca offline…",
@@ -455,8 +438,6 @@
       "researching": "🔬 Pesquisando subpergunta {{index}}/{{count}}…",
       "synthesizing": "🔬 Montando a resposta…"
     },
-    "roleYou": "Você",
-    "roleAssistant": "🎭 NIDO",
     "stoppedByUser": "Interrompido pelo usuário",
     "retry": "Tentar novamente",
     "deepResearchBanner": "Pesquisa profunda · Dividindo → Buscando offline → Sintetizando",
@@ -792,10 +773,7 @@
     "pairedNotice": "✓ {{name}} emparelhado, ainda não verificado. Comparem a impressão digital e toque em «Verificar».",
     "connectedNotice": "✓ Conectado com {{alias}}.",
     "copiedNotice": "✓ {{label}} copiado.",
-    "pairBindingWasRetired": "Nota: esta identidade (“{{name}}”) foi aposentada antes por um re-emparelhamento. Confirmar a restaurará como seu contato — suas mensagens falhadas anteriores continuam falhadas e não serão reenviadas sozinhas.",
     "pairDisambiguationTitle": "Escolha como emparelhar",
-    "pairAmbiguousAsk": "Este código é para “{{name}}” (impressão digital {{fingerprint}}), mas você já tem {{count}} contato(s) ativo(s) com esse nome sob uma identidade DIFERENTE: {{candidates}}. Um nome não é uma identidade — não posso presumir que seja a mesma pessoa.\n\nDiga-me explicitamente (no chat):\n• “substituir” — a mesma pessoa com um dispositivo novo: aposenta a identidade anterior em todos os lugares (destrutivo);\n• “outra pessoa” — uma pessoa diferente: dê-me um nome único para o novo contato;\n• “cancelar” — não fazer nada.\n\nSe você não escolher, cancelo. Nada foi emparelhado ainda.",
-    "pairInvalidChoice": "Desambiguação inválida “{{choice}}”: use substituir, outra_pessoa ou cancelar.",
     "pairDisambiguationBody": "“{{name}}” já é um dos seus contatos, mas este código é uma identidade DIFERENTE (impressão digital {{fingerprint}}). Escolha explicitamente — nada é substituído em silêncio.",
     "pairReplaceAction": "Substituir",
     "pairDifferentPersonAction": "Outra pessoa",
@@ -988,11 +966,10 @@
     "latency": "Latência",
     "reasons": "Motivos",
     "routingFailed": "O roteamento voltou ao seu modelo normal na última mensagem.",
-    "emptyRouting": "Nenhuma decisão registrada ainda.",
     "engineTitle": "Motor",
     "engineModel": "Modelo",
     "ctxWindow": "Janela de contexto",
-    "threads": "Threads",
+    "threads": "Conversas",
     "license": "Licença",
     "inference": "Inferência",
     "emptyEngine": "Nenhum modelo carregado."
@@ -1091,7 +1068,6 @@
       "task:summarize": "Resumir um documento anexado",
       "task:remember": "Salvar um fato em área isolada"
     },
-    "deny": "Negar",
     "requestTask": "Pedir tarefa",
     "taskCancel": "Cancelar",
     "taskDescriptionLabel": "Descreva a tarefa:",
@@ -1645,7 +1621,7 @@
           },
           {
             "id": "backup",
-            "title": "Backup",
+            "title": "Cópia de segurança",
             "what": "Guarde uma cópia criptografada dos seus dados para não perdê-los se trocar de tablet.",
             "steps": [
               "$t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.recovery) → Backup → $t(backup.createButton).",
@@ -1791,8 +1767,6 @@
     "tabDocuments": "Meus documentos",
     "tabLearn": "Aprender",
     "tabPacks": "Pacotes",
-    "packsHint": "Os pacotes de conhecimento são baixados e removidos em Ajustes › Sua biblioteca.",
-    "openPacks": "Abrir pacotes de conhecimento",
     "learnTitle": "Aprenda a usar o NIDO",
     "learnBody": "Um guia curto com exemplos que você pode tocar para testar cada função.",
     "openGuide": "Abrir o guia",
@@ -1804,7 +1778,7 @@
     "models": "Modelos e conhecimento",
     "memory": "Memória e conversas",
     "appearance": "Aparência, idioma e voz",
-    "backup": "Backup",
+    "backup": "Cópia de segurança",
     "diagnostics": "Diagnóstico",
     "help": "Ajuda e informação",
     "danger": "Zona de perigo"
