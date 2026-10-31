@@ -29,7 +29,7 @@ on:
         default: 'knowledge-packs-v7'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: knowledge-pack-${{ github.ref }}-${{ inputs.pack || 'auto' }}
@@ -60,6 +60,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
