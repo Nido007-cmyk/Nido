@@ -884,6 +884,34 @@ export async function deleteCustomCollection(id: string): Promise<void> {
   });
 }
 
+/**
+ * Auditoría completa 2026-10-31 (F3-17): trozos cuya colección no
+ * existe. La importación inserta los trozos primero y crea la fila de
+ * la colección al final; su catch limpia si el error ocurre en vida,
+ * pero si el proceso muere a mitad quedan trozos con un collection_id
+ * sin fila: invisibles en búsqueda y en la lista, fuera del
+ * presupuesto de almacenamiento (que suma colecciones) y sin ruta de
+ * borrado, porque deleteCustomCollection parte de la fila. Esta
+ * barrida los elimina con la misma limpieza por trozo (fts y
+ * embeddings incluidos). Devuelve cuántos trozos se quitaron.
+ */
+export async function deleteOrphanCollectionChunks(opts?: WriteOptions): Promise<number> {
+  let removed = 0;
+  await writeTransaction(async (txn) => {
+    const rows = await txn.getAllAsync<{ chunk_id: string }>(
+      `SELECT chunk_id FROM chunks WHERE collection_id IS NOT NULL
+        AND collection_id NOT IN (SELECT id FROM custom_collections)`,
+    );
+    for (const r of rows) {
+      await txn.runAsync(`DELETE FROM chunks WHERE chunk_id = ?`, [r.chunk_id]);
+      await txn.runAsync(`DELETE FROM chunks_fts WHERE chunk_id = ?`, [r.chunk_id]);
+      await txn.runAsync(`DELETE FROM chunk_embeddings WHERE chunk_id = ?`, [r.chunk_id]);
+      removed++;
+    }
+  }, opts);
+  return removed;
+}
+
 export async function getCollectionDocs(
   id: string
 ): Promise<Array<{ title: string; source: string; body: string }>> {

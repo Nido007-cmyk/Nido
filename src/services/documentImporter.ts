@@ -15,6 +15,7 @@ import {
   insertChunkWithoutEmbedding,
   createCustomCollection,
   deleteCustomCollection,
+  deleteOrphanCollectionChunks,
   setCustomCollectionActive,
   listCustomCollections,
   getCollectionDocs,
@@ -297,6 +298,10 @@ export async function importDocuments(
   }
 
   try {
+    // F3-17: antes de insertar, barrer los trozos huérfanos de una
+    // importación anterior muerta a mitad. Best-effort: si la barrida
+    // falla, la importación sigue y la próxima lo reintenta.
+    await deleteOrphanCollectionChunks({ lifecycleEpoch: runEpoch }).catch(() => {});
     for (let i = 0; i < chunks.length; i++) {
       onProgress?.({ stage: "embedding", chunkIndex: i, chunkCount: chunks.length });
       const chunk = chunks[i];

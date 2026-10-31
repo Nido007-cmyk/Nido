@@ -12,6 +12,8 @@ interface World {
   inserted: string[];
   deleted: string[];
   created: string[];
+  sweeps: number;
+  order: string[];
   failEmbedAt: number;
   pdfText: string;
   pdfCalls: number;
@@ -22,6 +24,8 @@ const world = ((globalThis as Record<string, unknown>).__nidoImportWorld ??= {
   inserted: [],
   deleted: [],
   created: [],
+  sweeps: 0,
+  order: [],
   failEmbedAt: -1,
   pdfText: "",
   pdfCalls: 0,
@@ -71,9 +75,16 @@ vi.mock("../rag/db", () => ({
   getDbEpoch: () => 1,
   insertChunk: async (c: { chunkId: string }) => {
     W().inserted.push(c.chunkId);
+    W().order.push("insert");
   },
   insertChunkWithoutEmbedding: async (c: { chunkId: string }) => {
     W().inserted.push(c.chunkId);
+    W().order.push("insert");
+  },
+  deleteOrphanCollectionChunks: async () => {
+    W().sweeps++;
+    W().order.push("sweep");
+    return 0;
   },
   createCustomCollection: async (c: { id: string }) => {
     W().created.push(c.id);
@@ -96,6 +107,8 @@ beforeEach(() => {
   world.inserted.length = 0;
   world.deleted.length = 0;
   world.created.length = 0;
+  world.sweeps = 0;
+  world.order.length = 0;
   world.failEmbedAt = -1;
   world.pdfText = "";
   world.pdfCalls = 0;
@@ -122,6 +135,14 @@ describe("document import limits", () => {
     world.files.set("file:///empty.txt", "   ");
     await expect(M.importDocuments([asset("empty.txt", 3)], "x")).rejects.toMatchObject({ code: "noText" });
     expect(world.created).toEqual([]);
+  });
+
+  it("auditoría 2026-10-31 (F3-17): cada importación barre primero los trozos huérfanos de la anterior", async () => {
+    world.files.set("file:///doc.txt", "palabra ".repeat(50));
+    await M.importDocuments([asset("doc.txt", 400)], "Mi doc");
+    expect(world.sweeps).toBe(1);
+    expect(world.order[0]).toBe("sweep");
+    expect(world.order.indexOf("insert")).toBeGreaterThan(0);
   });
 
   it("a failure half way removes what was already inserted", async () => {
