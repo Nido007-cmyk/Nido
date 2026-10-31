@@ -157,6 +157,28 @@ describe("healthSafeText", () => {
     expect(healthSafeText("en")).toContain("call your emergency number");
     expect(healthSafeText("pt")).toContain("ligue agora mesmo");
   });
+
+  it("paridad trilingüe contada y lo esencial trazado a las guías (sustancia)", () => {
+    const texts = (["es", "en", "pt"] as const).map((lang) => healthSafeText(lang));
+    // Misma estructura: 6 bloques y 6 pasos numerados en cada lengua.
+    for (const text of texts) {
+      expect(text.split("\n\n")).toHaveLength(6);
+      expect(text.match(/^\d\. /gm)).toHaveLength(6);
+    }
+    // Longitudes de la misma familia (ninguna lengua queda en el suelo viejo).
+    const words = texts.map((t) => t.split(/\s+/).length);
+    for (const w of words) {
+      expect(w).toBeGreaterThan(250);
+      expect(Math.abs(w - words[0]) / words[0]).toBeLessThan(0.15);
+    }
+    // Lo esencial de las guías, en cada lengua: RCP, presión, atragantamiento, dosis por prospecto.
+    expect(healthSafeText("es")).toContain("centro del pecho");
+    expect(healthSafeText("en")).toContain("center of the chest");
+    expect(healthSafeText("pt")).toContain("centro do peito");
+    expect(healthSafeText("es")).toContain("prospecto del medicamento");
+    expect(healthSafeText("en")).toContain("medicine's leaflet");
+    expect(healthSafeText("pt")).toContain("bula do medicamento");
+  });
 });
 
 describe("hasHealthEvidence", () => {

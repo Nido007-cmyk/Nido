@@ -66,6 +66,21 @@
  *    en una emergencia. La cura se mide contra un conjunto ciego
  *    FRESCO (corrida 03), no contra el conjunto 02 que la destapó.
  *
+ * 5. EL TEXTO SEGURO TAMBIÉN ENSEÑA LO ESENCIAL (sustancia del
+ *    texto fijo, 2026-10-31; medida de las corridas ciegas 01 y
+ *    02). El texto anterior era un suelo honesto pero mínimo —
+ *    puntuó 38,9 % (01) y 41,7 %/33,3 % (02) contra la frontera
+ *    porque no decía nada de la situación. El texto nuevo mantiene
+ *    la honestidad y añade, en orden: los signos que hacen urgente
+ *    una situación, los gestos universales paso a paso, lo que no
+ *    hay que hacer y la regla de las dosis. LÍMITE DURO: cada
+ *    afirmación se traza línea a línea a las guías del propio pack
+ *    Esencial (ver el comentario junto a HEALTH_SAFE_TEXT); nada de
+ *    contenido clínico nuevo. Sin números de teléfono escritos (la
+ *    prueba de la casa lo prohíbe: el número cambia por país) y con
+ *    el ritmo de la RCP en palabras, no en dígitos, por la misma
+ *    regla. La mejora se mide contra el conjunto FRESCO 03.
+ *
  * Puro, sin dependencias de UI, 100% testeable.
  */
 
@@ -338,26 +353,127 @@ export function isEmergencySituation(text: string): boolean {
 
 // ------------------------------------------------------- texto seguro
 
+/**
+ * El texto seguro fijo, en las tres lenguas con la MISMA estructura
+ * (la paridad se cuenta en las pruebas): honestidad, signos de
+ * urgencia, seis pasos en orden, lo que no hay que hacer, la regla
+ * de las dosis y el cierre del pack. Cada afirmación se traza a las
+ * guías del pack Esencial (knowledge-packs/nido-esencial), cuyo
+ * contenido está verificado contra sus fuentes oficiales:
+ *
+ * - Llamar, nombrar a una persona concreta, decir dónde y qué pasa,
+ *   no colgar hasta que lo digan; de lado si no responde pero
+ *   respira, vigilando: guías 01 y 11.
+ * - RCP en el centro del pecho, fuerte y rápido (el ritmo, en
+ *   palabras por la regla de no escribir números largos): guía 02.
+ * - Sangrado: presión directa y no retirar el paño empapado: guía 06.
+ * - Atragantamiento: tose fuerte → animar, sin golpes ni agua;
+ *   grave → 5 golpes en la espalda y 5 abdominales; bebé → 5 y 5
+ *   en el pecho, nunca abdominales: guía 05.
+ * - Quemadura: agua corriente fresca al menos 10 minutos: guía 08.
+ * - Signos de urgencia (cuándo llamar): guía 29.
+ * - No dar comida ni bebida a quien no traga bien (01), no provocar
+ *   el vómito ni dar leche o aceite a quien tragó un tóxico (21),
+ *   no mover a quien cayó de altura o puede tener el cuello o la
+ *   espalda lesionados salvo peligro (01 y 10), no sacar objetos
+ *   clavados (06).
+ * - Dosis: la del prospecto según edad y peso; aspirina no antes
+ *   de los 16 años: guía 25.
+ *
+ * Fuera a propósito, y consta aquí: la aspirina en el dolor de
+ * pecho (guía 14) lleva cuatro condiciones que un texto genérico
+ * no puede comprobar, y el torniquete (guía 06) cede su sitio a la
+ * presión, que es el gesto universal. Son contenido de la guía con
+ * el pack instalado, no de este suelo sin pack.
+ */
 const HEALTH_SAFE_TEXT: Record<GateLang, string> = {
   es:
     "Esto es una pregunta de salud y en este teléfono no hay ninguna guía verificada de NIDO que la responda, " +
-    "así que prefiero no contestar de memoria: un consejo de salud inventado puede hacer daño.\n\n" +
-    "Si es una urgencia (dolor en el pecho, dificultad para respirar, un sangrado que no para, pérdida de " +
-    "conciencia), llama ahora mismo al número de emergencias o pide a alguien que llame.\n\n" +
+    "así que no voy a contestar de memoria: un consejo de salud inventado puede hacer daño.\n\n" +
+    "Es urgencia si la persona no responde o está muy confusa o somnolienta, le cuesta mucho respirar, tiene " +
+    "dolor o presión fuerte en el pecho, la cara torcida, un brazo débil o el habla rara, un sangrado que no " +
+    "para, convulsiones, o un dolor de cabeza repentino y fortísimo.\n\n" +
+    "Si es una urgencia, actúa en este orden:\n" +
+    "1. Si puedes, llama ahora mismo al número de emergencias de donde estás; si no puedes, grita a una " +
+    "persona concreta que llame. Di dónde estás y qué pasa, y no cuelgues hasta que te lo digan.\n" +
+    "2. Si la persona no responde pero respira con normalidad, ponla de lado y comprueba sin parar que sigue " +
+    "respirando.\n" +
+    "3. Si no responde y no respira con normalidad, túmbala boca arriba en el suelo y empuja fuerte y rápido " +
+    "en el centro del pecho, de cien a ciento veinte veces por minuto, dejando que el pecho suba del todo, " +
+    "sin parar hasta que respire o llegue la ayuda.\n" +
+    "4. Si sangra mucho, aprieta la herida con un paño limpio y no lo retires aunque se empape: pon otro " +
+    "encima y sigue apretando.\n" +
+    "5. Si se está atragantando y tose con fuerza, anímala a seguir tosiendo, sin golpes ni agua. Si no puede " +
+    "hablar ni toser con fuerza, inclínala hacia delante: 5 golpes secos entre los omóplatos y 5 compresiones " +
+    "en el abdomen, alternando. En un bebé: 5 golpes en la espalda y 5 compresiones en el pecho, nunca en el " +
+    "abdomen.\n" +
+    "6. Si hay una quemadura, enfríala con agua corriente fresca durante al menos 10 minutos.\n\n" +
+    "No hagas esto: no des comida ni bebida a una persona inconsciente, mareada o que traga mal; no provoques " +
+    "el vómito a quien haya tragado algo tóxico, ni le des leche o aceite; no muevas a quien haya caído de " +
+    "una altura o pueda tener lesionados el cuello o la espalda, salvo que donde está corra peligro; no " +
+    "saques un objeto clavado en una herida.\n\n" +
+    "Si tu pregunta es por una dosis: la dosis depende de la edad y del peso, y está en el prospecto del " +
+    "medicamento; síguelo tal cual, no improvises otra, y no des aspirina a menores de 16 años.\n\n" +
     "Las guías oficiales de primeros auxilios de NIDO Esencial se guardan en el teléfono al descargar el pack " +
     "en Biblioteca › Packs: con él, estas preguntas se responden con la guía delante, sin conexión.",
   en:
-    "This is a health question and this phone holds no verified NIDO guide that answers it, so I'd rather " +
-    "not answer from memory: made-up health advice can do harm.\n\n" +
-    "If this is an emergency (chest pain, trouble breathing, bleeding that won't stop, loss of " +
-    "consciousness), call your emergency number right now or ask someone to call.\n\n" +
+    "This is a health question and this phone holds no verified NIDO guide that answers it, so I will not " +
+    "answer from memory: made-up health advice can do harm.\n\n" +
+    "It is an emergency if the person does not respond or is very confused or drowsy, is struggling to " +
+    "breathe, has strong chest pain or pressure, a drooping face, a weak arm or slurred speech, bleeding " +
+    "that will not stop, seizures, or a sudden, worst-ever headache.\n\n" +
+    "If it is an emergency, act in this order:\n" +
+    "1. If you can, call your emergency number right now for wherever you are; if you cannot, shout at one " +
+    "specific person to call. Say where you are and what is happening, and do not hang up until they tell " +
+    "you to.\n" +
+    "2. If the person does not respond but is breathing normally, roll them onto their side and keep " +
+    "checking that they are still breathing.\n" +
+    "3. If they do not respond and are not breathing normally, lay them on their back on the floor and push " +
+    "hard and fast in the center of the chest, one hundred to one hundred and twenty times a minute, letting " +
+    "the chest come fully back up, without stopping until they breathe or help arrives.\n" +
+    "4. If they are bleeding heavily, press on the wound with a clean cloth and do not lift it off even if " +
+    "it soaks through: put another cloth on top and keep pressing.\n" +
+    "5. If they are choking and coughing hard, encourage them to keep coughing, with no blows and no water. " +
+    "If they cannot speak or cough with force, lean them forward: 5 sharp blows between the shoulder blades " +
+    "and 5 thrusts on the abdomen, alternating. For a baby: 5 blows on the back and 5 thrusts on the chest, " +
+    "never on the abdomen.\n" +
+    "6. If there is a burn, cool it under cool running water for at least 10 minutes.\n\n" +
+    "Do not do these things: do not give food or drink to someone unconscious, dizzy or swallowing badly; " +
+    "do not make someone who swallowed something toxic vomit, and do not give them milk or oil; do not move " +
+    "someone who has fallen from a height or may have injured their neck or back, unless where they are is " +
+    "dangerous; do not pull out an object stuck in a wound.\n\n" +
+    "If your question is about a dose: the dose depends on age and weight, and it is printed in the " +
+    "medicine's leaflet; follow it exactly, do not improvise another, and do not give aspirin to anyone " +
+    "under 16.\n\n" +
     "The official first-aid guides of NIDO Essentials live on the phone once you download the pack in " +
     "Library › Packs: with it, these questions are answered with the guide in front, no connection needed.",
   pt:
     "Isto é uma pergunta de saúde e neste telefone não há nenhum guia verificado do NIDO que a responda, " +
-    "por isso prefiro não responder de memória: um conselho de saúde inventado pode fazer mal.\n\n" +
-    "Se for uma urgência (dor no peito, dificuldade para respirar, um sangramento que não para, perda de " +
-    "consciência), ligue agora mesmo para o número de emergência ou peça a alguém que ligue.\n\n" +
+    "por isso não vou responder de memória: um conselho de saúde inventado pode fazer mal.\n\n" +
+    "É urgência se a pessoa não responde ou está muito confusa ou sonolenta, tem muita dificuldade para " +
+    "respirar, tem dor ou pressão forte no peito, a cara torta, um braço fraco ou a fala estranha, um " +
+    "sangramento que não para, convulsões, ou uma dor de cabeça súbita e fortíssima.\n\n" +
+    "Se for uma urgência, aja nesta ordem:\n" +
+    "1. Se puder, ligue agora mesmo para o número de emergência de onde está; se não puder, grite a uma " +
+    "pessoa concreta que ligue. Diga onde está e o que se passa, e não desligue até lhe dizerem.\n" +
+    "2. Se a pessoa não responde mas respira normalmente, vire-a de lado e verifique sem parar se continua " +
+    "a respirar.\n" +
+    "3. Se não responde e não respira normalmente, deite-a de costas no chão e empurre com força e depressa " +
+    "no centro do peito, de cem a cento e vinte vezes por minuto, deixando o peito voltar a subir por " +
+    "completo, sem parar até ela respirar ou a ajuda chegar.\n" +
+    "4. Se sangra muito, aperte a ferida com um pano limpo e não o retire mesmo que encharque: ponha outro " +
+    "por cima e continue a apertar.\n" +
+    "5. Se está a engasgar e tosse com força, incentive-a a continuar a tossir, sem pancadas nem água. Se " +
+    "não consegue falar nem tossir com força, incline-a para a frente: 5 pancadas secas entre as omoplatas " +
+    "e 5 compressões no abdómen, alternando. Num bebé: 5 pancadas nas costas e 5 compressões no peito, " +
+    "nunca no abdómen.\n" +
+    "6. Se houver uma queimadura, arrefeça-a com água corrente fresca durante pelo menos 10 minutos.\n\n" +
+    "Não faça isto: não dê comida nem bebida a uma pessoa inconsciente, tonta ou que engole mal; não " +
+    "provoque o vómito a quem engoliu algo tóxico, nem lhe dê leite ou óleo; não mova quem caiu de uma " +
+    "altura ou pode ter lesionado o pescoço ou as costas, salvo se onde está corre perigo; não retire um " +
+    "objeto espetado numa ferida.\n\n" +
+    "Se a sua pergunta é por uma dose: a dose depende da idade e do peso, e está na bula do medicamento; " +
+    "siga-a tal qual, não improvise outra, e não dê aspirina a menores de 16 anos.\n\n" +
     "Os guias oficiais de primeiros socorros do NIDO Essencial ficam guardados no telefone ao baixar o " +
     "pacote em Biblioteca › Pacotes: com ele, estas perguntas são respondidas com o guia à frente, sem conexão.",
 };
