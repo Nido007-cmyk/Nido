@@ -1007,10 +1007,32 @@ async function runAgentLoopCore(
     const { savePerson, saveFact, saveReminder } = await import("../memory/memoryStore");
     const { extractDateISO } = await import("./rememberRouter");
     const saved: Array<{ name: string; relationship?: string }> = [];
+    // Auditoría completa 2026-10-31 (F1 B-10): cada guardado lleva su
+    // captura, como la rama de recordatorios. Antes un fallo en la
+    // segunda persona dejaba la primera persistida, el turno salía por
+    // la captura genérica y al reintentar la frase la primera persona
+    // se duplicaba.
+    const failedNames: string[] = [];
     for (const ex of personExtractions) {
-      saved.push(
-        await savePerson({ name: ex.name, relationship: ex.relationship, notes: ex.notes })
-      );
+      try {
+        saved.push(
+          await savePerson({ name: ex.name, relationship: ex.relationship, notes: ex.notes })
+        );
+      } catch {
+        failedNames.push(ex.name);
+      }
+    }
+    if (saved.length === 0) {
+      return {
+        response: routerMessage("personSaveFailed", reminderLang),
+        intent,
+        toolUses: [
+          {
+            name: "save_person",
+            result: "Fallo al guardar personas: ninguna quedó guardada.",
+          },
+        ],
+      };
     }
     const relOf = (p: (typeof saved)[number]) => (p.relationship ? ` (${p.relationship})` : "");
     // LOOP-2 FIX 2026-10-07: si el texto también contiene una fecha (ej: cumpleaños),
@@ -1018,15 +1040,22 @@ async function runAgentLoopCore(
     let extraNote = "";
     const dueAt = extractDateISO(userText, reminderLang);
     if (dueAt) {
-      await saveFact({
-        content: userText.trim(),
-        category: "general",
-        source: "user",
-      });
-      // 0.1.37 (auditoría): con «Recordatorios» apagado no se crea ni se
-      // programa ningún aviso (el dato sí se guarda). Y un cumpleaños se
-      // repite cada año, igual que por la ruta de los hechos.
-      if (fastPathAllowed("create_reminder")) {
+      let factSaved = true;
+      try {
+        await saveFact({
+          content: userText.trim(),
+          category: "general",
+          source: "user",
+        });
+      } catch {
+        factSaved = false;
+      }
+      if (!factSaved) {
+        extraNote = " " + routerMessage("factSaveFailed", reminderLang);
+      } else if (fastPathAllowed("create_reminder")) {
+        // 0.1.37 (auditoría): con «Recordatorios» apagado no se crea ni se
+        // programa ningún aviso (el dato sí se guarda). Y un cumpleaños se
+        // repite cada año, igual que por la ruta de los hechos.
         const yearly = /cumplea[ñn]os|birthday|anivers[aá]rio/i.test(userText);
         const reminder = await saveReminder({
           text: `${saved.map((p) => p.name).join(" y ")}: ${userText.trim()}`,
@@ -1040,6 +1069,9 @@ async function runAgentLoopCore(
         } catch { /* best-effort */ }
         extraNote = routerMessage(yearly ? "factReminderYearlyNote" : "personDateNote", reminderLang);
       }
+    }
+    if (failedNames.length) {
+      extraNote += routerMessage("personSavePartial", reminderLang, { names: failedNames.join(", ") });
     }
     return {
       response:
@@ -1087,11 +1119,27 @@ async function runAgentLoopCore(
   if (extraction) {
     const { saveFact, saveReminder } = await import("../memory/memoryStore");
     const { extractDateISO } = await import("./rememberRouter");
-    await saveFact({
-      content: extraction.content,
-      category: extraction.category,
-      source: "user",
-    });
+    // F1 B-10: espejo de la rama de recordatorios (FIX 2026-10-09): un
+    // fallo de la base aquí no tumba el turno con un error genérico;
+    // se responde honestamente que no se guardó.
+    try {
+      await saveFact({
+        content: extraction.content,
+        category: extraction.category,
+        source: "user",
+      });
+    } catch (e) {
+      return {
+        response: routerMessage("factSaveFailed", reminderLang),
+        intent,
+        toolUses: [
+          {
+            name: "remember_fact",
+            result: `Fallo al guardar hecho: ${e instanceof Error ? e.message : String(e)}`,
+          },
+        ],
+      };
+    }
     // FIX 2026-10-07: si el hecho contiene una fecha, crear recordatorio
     // automáticamente. Antes solo se guardaba el texto y Reminders quedaba
     // vacío (el usuario tenía que pedir el recordatorio por separado).

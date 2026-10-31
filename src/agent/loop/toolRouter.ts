@@ -1106,6 +1106,9 @@ type Key =
   | "reminderWillNotify"
   | "reminderSaveFailed"
   | "personSaved"
+  | "personSaveFailed"
+  | "personSavePartial"
+  | "factSaveFailed"
   | "personDateNote"
   | "selfNameSaved"
   | "noteDeleted"
@@ -1138,6 +1141,23 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: "Listo, recordaré a {{name}}{{rel}}.",
     en: "Done, I'll remember {{name}}{{rel}}.",
     pt: "Pronto, vou lembrar de {{name}}{{rel}}.",
+  },
+  // Auditoría completa 2026-10-31 (F1 B-10): fallos honestos de los
+  // guardados de memoria, espejo de reminderSaveFailed.
+  personSaveFailed: {
+    es: "No pude guardar a esa persona por un problema con la base de datos. Inténtalo de nuevo.",
+    en: "I couldn't save that person because of a database problem. Please try again.",
+    pt: "Não consegui salvar essa pessoa por um problema no banco de dados. Tente de novo.",
+  },
+  personSavePartial: {
+    es: " No pude guardar a {{names}} por un problema con la base de datos; las demás personas sí quedaron guardadas, no hace falta repetirlas.",
+    en: " I couldn't save {{names}} because of a database problem; the other people were saved, no need to repeat them.",
+    pt: " Não consegui salvar {{names}} por um problema no banco de dados; as outras pessoas foram salvas, não precisa repeti-las.",
+  },
+  factSaveFailed: {
+    es: "No pude guardar eso en mi memoria por un problema con la base de datos. Inténtalo de nuevo.",
+    en: "I couldn't save that to my memory because of a database problem. Please try again.",
+    pt: "Não consegui salvar isso na minha memória por um problema no banco de dados. Tente de novo.",
   },
   personDateNote: {
     es: " También guardé la fecha como recordatorio.",

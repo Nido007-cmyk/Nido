@@ -49,10 +49,12 @@ const data = vi.hoisted(() => ({
   notes: [] as Array<{ id: string; title: string; body: string }>,
   calls: [] as Array<{ name: string; args: Record<string, unknown> }>,
   confirms: [] as Array<{ tool: string }>,
+  failSaveFor: [] as string[],
 }));
 
 vi.mock("../memory/memoryStore", () => ({
   savePerson: vi.fn(async (p: { name: string; relationship?: string; notes?: string }) => {
+    if (data.failSaveFor.includes(p.name)) throw new Error("disco lleno (simulado)");
     data.people.push(p);
     return p;
   }),
@@ -195,6 +197,7 @@ beforeEach(() => {
   data.notes.length = 0;
   data.calls.length = 0;
   data.confirms.length = 0;
+  data.failSaveFor.length = 0;
   choiceStore.current = null;
 });
 
@@ -460,6 +463,18 @@ describe("composición — cálculo, conversiones, hora y plan semanal", () => {
 });
 
 describe("composición — personas y decisiones de diseño fijadas", () => {
+  it("auditoría 2026-10-31 (F1 B-10): si el segundo guardado de persona falla, el primero queda y la respuesta lo dice", async () => {
+    const engine = fakeEngine();
+    data.failSaveFor.push("Max");
+    const t = await send("mis hijos se llaman Leo y Max", "es", engine);
+    expect(t.route).toBe("agent");
+    expect(data.people.map((p) => p.name)).toEqual(["Leo"]);
+    expect(t.response).toContain("recordaré a Leo");
+    expect(t.response).toContain("No pude guardar a Max");
+    expect(t.response).toContain("no hace falta repetirlas");
+    expect(engine.calls).toHaveLength(0);
+  });
+
   it("«Mi hermano se llama Pedro» se guarda y se responde por parentesco", async () => {
     const engine = fakeEngine();
     const t1 = await send("Mi hermano se llama Pedro", "es", engine);
