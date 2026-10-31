@@ -3,6 +3,7 @@ title: Banheiro e lixo de emergência (saneamento)
 category: Sobrevivência
 lang: pt
 sources: OMS y UNICEF, agua, saneamiento e higiene en emergencias; Proyecto Esfera; Ready.gov
+questions: como improvisar um banheiro quando falta água | banheiro de emergência em casa durante um desastre | o que fazer com o lixo e as fezes sem saneamento | higiene e saneamento improvisados numa emergência
 ---
 Quando não há água corrente ou o esgoto falha, as fezes mal geridas são uma das maiores causas de doença após um desastre.
 

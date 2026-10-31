@@ -3,6 +3,7 @@ title: RCP (reanimação cardiopulmonar) em adultos e crianças maiores
 category: Primeiros socorros
 lang: pt
 sources: AHA, Guías de RCP y atención cardiovascular de emergencia 2025; Cruz Roja Americana; IFRC, Directrices de primeros auxilios 2020
+questions: um homem desmaiou e parou de respirar, o que fazer | como reanimar um adulto que não respira | pessoa caída e sem respirar, como fazer a massagem cardíaca | quando começo a RCP num adulto inconsciente
 ---
 Se uma pessoa desmaia, não responde e não respira normalmente (ou só respira com dificuldade), é provável que o coração dela tenha parado. Cada minuto sem RCP reduz muito a chance de sobrevivência. Começar rápido é o mais importante: não tenha medo de fazer "errado"; não fazer nada é pior.
 

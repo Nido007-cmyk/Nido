@@ -3,6 +3,7 @@ title: Hemorragias graves: como estancar o sangramento
 category: Primeiros socorros
 lang: pt
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020; IFRC 2020
+questions: sangramento forte na perna que não estanca | como parar uma hemorragia grave com as mãos | cortou fundo e está sangrando muito, o que fazer | apertar o ferimento para estancar o sangue funciona
 ---
 Uma pessoa pode morrer por perda de sangue em poucos minutos. Uma hemorragia é grave se o sangue sai em jato ou sem parar, se encharca a roupa ou os curativos, ou se a pessoa fica tonta, pálida ou confusa. Aja na hora.
 

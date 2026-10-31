@@ -3,6 +3,7 @@ title: Primeiros socorros psicológicos
 category: Primeiros socorros
 lang: pt
 sources: OMS, Primeros Auxilios Psicológicos: guía para trabajadores de campo (2011); IFRC Centro de Apoyo Psicosocial; Cruz Roja
+questions: como consolar quem perdeu a casa numa enchente | o que falar para alguém em choque depois de um desastre | como ajudar emocionalmente uma vítima de acidente | primeiras palavras para acalmar uma pessoa desesperada
 ---
 Após um acidente, um desastre ou uma notícia ruim, as pessoas podem ficar em choque, com medo, confusas ou paralisadas. Não é preciso ser psicólogo para ajudar nem para consolar alguém. A OMS resume em três verbos: **observar, escutar e conectar**.
 

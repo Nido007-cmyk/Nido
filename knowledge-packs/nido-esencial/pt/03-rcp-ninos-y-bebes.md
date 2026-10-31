@@ -3,6 +3,7 @@ title: RCP em crianças e bebês
 category: Primeiros socorros
 lang: pt
 sources: AHA, Guías de RCP 2025 (soporte vital pediátrico); Cruz Roja Americana; IFRC 2020
+questions: minha criança parou de respirar, como reanimar | como fazer RCP numa criança pequena | filho desacordado e sem respirar, o que faço primeiro | massagem cardíaca em bebê, como se faz
 ---
 Nas crianças, a parada cardíaca costuma acontecer por falta de ar (afogamento, engasgo, sufocamento). Por isso, em crianças e bebês as ventilações são mais importantes do que em adultos. Mesmo assim, se você não souber fazê-las, faça as compressões: é sempre melhor do que nada.
 

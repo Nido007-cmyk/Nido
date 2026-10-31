@@ -3,6 +3,7 @@ title: Afogamento e resgate na água
 category: Primeiros socorros
 lang: pt
 sources: AHA y Cruz Roja Americana, directrices 2024; Consejo Europeo de Resucitación (ERC), guías 2021; OMS, prevención de ahogamientos; Cruz Roja Canadiense 2020
+questions: criança retirada da água inconsciente, o que fazer | como socorrer alguém que quase se afogou | pessoa se afogando, como resgatar sem me colocar em perigo | depois de sair da piscina desacordada, a criança precisa de hospital
 ---
 Quem está se afogando quase nunca grita nem faz sinais: afunda em silêncio, em segundos.
 

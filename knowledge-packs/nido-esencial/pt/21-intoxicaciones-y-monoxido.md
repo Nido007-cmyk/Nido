@@ -3,6 +3,7 @@ title: Intoxicações, venenos e monóxido de carbono
 category: Primeiros socorros
 lang: pt
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; OMS; CDC, monóxido de carbono
+questions: suspeita de monóxido de carbono em casa, com dor de cabeça em todos | cheiro de gás e gente passando mal, o que fazer primeiro | sinais de intoxicação por monóxido de carbono | vazamento de gás em casa, quais são os primeiros passos
 ---
 ## Se alguém engoliu algo tóxico
 (Medicamentos, água sanitária e outros produtos de limpeza, plantas, cogumelos, álcool, pilhas-botão...)

@@ -3,6 +3,7 @@ title: Hipotermia e congelamento
 category: Primeiros socorros
 lang: pt
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020; Wilderness Medical Society
+questions: pessoa tremendo sem parar depois de horas no frio e na chuva | como aquecer alguém com hipotermia sem fazer mal | dedos brancos e duros de frio, como tratar o congelamento | sinais de hipotermia depois de ficar molhado no frio
 ---
 ## Hipotermia
 O corpo esfria abaixo do normal. Pode acontecer com frio, vento, chuva ou após cair na água, mesmo sem temperaturas abaixo de zero.

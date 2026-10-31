@@ -3,6 +3,7 @@ title: Como agir em uma emergência
 category: Primeiros socorros
 lang: pt
 sources: Federación Internacional de la Cruz Roja (IFRC), Directrices internacionales de primeros auxilios 2020; Cruz Roja Canadiense, directrices 2020; AHA y Cruz Roja Americana, directrices de primeros auxilios 2024
+questions: o que faço primeiro ao chegar onde alguém se machucou | quais são os primeiros passos para socorrer uma pessoa | vi um acidente, como ajudo a vítima | a pessoa está ferida no chão, por onde começo o atendimento
 ---
 Diante de qualquer emergência, siga três passos nesta ordem: PROTEGER, AVISAR e SOCORRER. Mantenha a calma: alguns segundos para pensar evitam erros.
 

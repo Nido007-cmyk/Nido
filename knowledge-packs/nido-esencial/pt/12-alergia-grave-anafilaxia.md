@@ -3,6 +3,7 @@ title: Alergia grave (anafilaxia)
 category: Primeiros socorros
 lang: pt
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020; IFRC 2020
+questions: reação alérgica grave depois de comer, com a garganta fechando | sinais de anafilaxia e o que fazer na hora | comeu amendoim e ficou com dificuldade de respirar | inchaço na boca e falta de ar depois de comer algo
 ---
 A anafilaxia é uma reação alérgica grave que pode matar em minutos. Costuma aparecer pouco depois de um alimento (castanhas e nozes, frutos do mar, ovo, leite), uma picada de abelha ou vespa, ou um medicamento.
 

@@ -3,6 +3,7 @@ title: Tsunami
 category: Desastres
 lang: pt
 sources: UNESCO Comisión Oceanográfica Intergubernamental; NOAA, programa TsunamiReady; Ready.gov (FEMA)
+questions: o mar recuou e expôs o fundo da praia, isso é perigoso | sinais de que um tsunami está chegando | a água do mar sumiu de repente, o que devo fazer | para onde fugir se vier um tsunami
 ---
 Um tsunami é uma série de ondas gigantes, normalmente causadas por um terremoto no mar. Elas podem chegar em minutos.
 

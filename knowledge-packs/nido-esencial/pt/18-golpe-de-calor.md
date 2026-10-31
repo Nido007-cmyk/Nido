@@ -3,6 +3,7 @@ title: Insolação grave e exaustão pelo calor
 category: Primeiros socorros
 lang: pt
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; OMS, calor y salud; Cruz Roja Canadiense 2020
+questions: passou mal no calor, com a pele quente e falando confuso | sinais de insolação grave e como resfriar a pessoa | desmaiou trabalhando no sol forte, o que fazer | corpo muito quente e confusão mental depois do sol
 ---
 O calor pode matar. A insolação grave (golpe de calor) é uma emergência: o corpo já não consegue se resfriar sozinho.
 
