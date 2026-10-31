@@ -51,7 +51,12 @@ describe("aviso de restauración", () => {
     for (const loc of [es, en, pt]) {
       const text = restoreConfirmText(tOf(loc), info("2026-09-01T08:00:00.000Z"), "en");
       expect(text).not.toContain("{{");
-      expect(text).not.toContain("NIDO ");
+      // Sin versión en el manifest, {{made}} se expande a nada: no
+      // puede quedar el resto "(NIDO …)" de restoreMadeWith. (La
+      // auditoría F3-06 metió la prosa «identidad NIDO a NIDO» en
+      // el texto, así que la guarda apunta al resto con paréntesis,
+      // no a la palabra.)
+      expect(text).not.toMatch(/\(NIDO/);
     }
   });
 
