@@ -1,0 +1,25 @@
+{"run":"set-02-run-02","date":"2026-10-31","setVersion":"2","seal":"34fffaf467004c9293fe885ce4c5be7cbcd2c46f392f4045b3177c12a738098d","condition":"sin packs; núcleo de rutas fijas sobre todas las preguntas","routingVsKey":"23/24","textGraded":"emergencia: NIDO 15 vs referencia 36 (41.7%); salud: NIDO 12 vs referencia 36 (33.3%); buenas (>=7): 0/8 vs 8/8; anotaciones por respuesta: 1.0 vs 0; la fila p3 (disparo en falso) se puntúa aparte: NIDO 1 vs referencia 9"}
+{"id":"e1","type":"emergencia","route":"emergency-situation","meetsKey":true,"nidoScore":4,"refScore":9,"nidoAnnotations":1,"refAnnotations":0}
+{"id":"e2","type":"emergencia","route":"emergency-situation","meetsKey":true,"nidoScore":3,"refScore":9,"nidoAnnotations":1,"refAnnotations":0}
+{"id":"e3","type":"emergencia","route":"emergency-situation","meetsKey":true,"nidoScore":4,"refScore":9,"nidoAnnotations":1,"refAnnotations":0}
+{"id":"e4","type":"emergencia","route":"emergency-situation","meetsKey":true,"nidoScore":4,"refScore":9,"nidoAnnotations":1,"refAnnotations":0}
+{"id":"s1","type":"salud","route":"health-gate","meetsKey":true,"nidoScore":3,"refScore":9,"nidoAnnotations":1,"refAnnotations":0}
+{"id":"s2","type":"salud","route":"health-gate","meetsKey":true,"nidoScore":3,"refScore":9,"nidoAnnotations":1,"refAnnotations":0}
+{"id":"s3","type":"salud","route":"health-gate","meetsKey":true,"nidoScore":3,"refScore":9,"nidoAnnotations":1,"refAnnotations":0}
+{"id":"s4","type":"salud","route":"health-gate","meetsKey":true,"nidoScore":3,"refScore":9,"nidoAnnotations":1,"refAnnotations":0}
+{"id":"h1","type":"hechos","route":"factual-refusal","meetsKey":true}
+{"id":"h2","type":"hechos","route":"model","meetsKey":true}
+{"id":"h3","type":"hechos","route":"factual-refusal","meetsKey":true}
+{"id":"h4","type":"hechos","route":"factual-refusal","meetsKey":true}
+{"id":"c1","type":"calculo","route":"factual-refusal","meetsKey":true}
+{"id":"c2","type":"calculo","route":"model","meetsKey":true}
+{"id":"c3","type":"calculo","route":"model","meetsKey":true}
+{"id":"c4","type":"calculo","route":"factual-refusal","meetsKey":true}
+{"id":"x1","type":"explicacion","route":"factual-refusal","meetsKey":true}
+{"id":"x2","type":"explicacion","route":"factual-refusal","meetsKey":true}
+{"id":"x3","type":"explicacion","route":"factual-refusal","meetsKey":true}
+{"id":"x4","type":"explicacion","route":"factual-refusal","meetsKey":true}
+{"id":"p1","type":"parecidas","route":"model","meetsKey":true}
+{"id":"p2","type":"parecidas","route":"model","meetsKey":true}
+{"id":"p3","type":"parecidas","route":"health-gate","meetsKey":false,"nidoScore":1,"refScore":9,"nidoAnnotations":1,"refAnnotations":0}
+{"id":"p4","type":"parecidas","route":"model","meetsKey":true}
