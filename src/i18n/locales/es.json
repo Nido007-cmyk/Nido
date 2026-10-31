@@ -93,7 +93,7 @@
     "initializingCore": "Iniciando NIDO…",
     "inputPlaceholder": "Pregunta lo que sea…",
     "noRelevantOfflineSources": "No se encontraron fuentes offline relevantes para esta pregunta.",
-    "interruptedByBackground": "En pausa: la app pasó a segundo plano. Pregunta de nuevo para continuar.",
+    "interrupted": "Respuesta cortada: la app se cerró antes de que terminara. Pregunta de nuevo para continuar.",
     "messageReused": "Mensaje copiado a la entrada",
     "modelDownloadComplete": "✅ Descarga de «{{label}}» completa",
     "mountingWeights": "Cargando el modelo…",

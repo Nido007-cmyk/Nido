@@ -467,7 +467,7 @@
     "rateHelpful": "Helpful",
     "rateUnhelpful": "Unhelpful",
     "stageTimedOut": "A research step took too long and was cut short",
-    "interruptedByBackground": "Paused — app was backgrounded. Ask again to continue.",
+    "interrupted": "Reply cut short: the app closed before it finished. Ask again to continue.",
     "emptyTitle": "Hi, I'm NIDO",
     "emptySubtitle": "Your private agent. Everything stays on this device.",
     "privacyHint": "Private · nothing leaves this device",

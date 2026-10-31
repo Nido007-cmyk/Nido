@@ -295,23 +295,40 @@ per-step latency numbers.
   cancellation path), then marks the interrupted message with a distinct
   badge ("⏸ paused, app was backgrounded") so it reads as explained-and-
   retriable, not broken. This is the first AppState handling anywhere in the
-  app.
+  app. (That cancel-on-background behavior was superseded on 2026-10-30 —
+  see the policy note in the deferred list below.)
 
 **Unresolved / deferred, on purpose:**
 
 - No timeout is applied to regular (non-Deep-Research) chat generation —
   revisit once Phase 3's `InferenceBudget` gives a principled per-task value
   instead of an arbitrary constant.
-- Backgrounding policy is "always cancel," per the teammate's explicit
-  recommendation. Not configurable yet — no setting to change this behavior.
+- Backgrounding policy was "always cancel," per the teammate's explicit
+  recommendation. **Superseded on 2026-10-30 by the owner's physical
+  evidence (Tab A9+, on 0.1.64):** a long story asked in chat and left in
+  the background died in silence — no finished reply, no partial text, no
+  notice — while 0.1.37, which had no such cancellation, finished its
+  reply alone in the background. The policy now is: an in-flight
+  generation is NOT cancelled by backgrounding; it keeps running under
+  the "NIDO is answering" foreground service (0.1.55), which exists to
+  protect the process while it generates. The `AppState` listener no
+  longer stops anything; it only saves the text generated so far into
+  the reply's history row, which is born marked `interrupted` when the
+  send starts and is unmarked when the generation finishes
+  (`chatHistory.addAssistantDraft` / `finishAssistantMessage`). If the
+  process dies mid-generation, reopening the chat shows the partial
+  reply with an honest "cut short" badge, or the badge alone if no token
+  had arrived — never silence. Still not configurable: there is no
+  setting for this; it is simply the behavior.
 - `estimatedTokensPerSecond`/`estimatedMemoryMb` in `ModelCapabilities`
   remain unset for all curated models — no benchmarked data exists yet (see
   §11); still correctly deferred rather than invented.
 
 Typecheck and the full test suite (32 tests) pass. Not yet tested on a real
-device — background-cancellation behavior in particular should be verified
-hands-on (background the app mid-generation, confirm the badge appears and
-the model context is actually released, not just that the promise resolves).
+device — the backgrounding behavior in particular should be verified
+hands-on (background the app mid-generation and confirm the reply
+finishes; kill the process mid-generation and confirm the partial reply
+and its "cut short" badge survive reopening).
 
 **Phase 3 — deterministic routing policy: done.**
 

@@ -467,7 +467,7 @@
     "rateHelpful": "Útil",
     "rateUnhelpful": "Não útil",
     "stageTimedOut": "Uma etapa da pesquisa demorou demais e foi interrompida",
-    "interruptedByBackground": "Pausado — o app foi para segundo plano. Pergunte novamente para continuar.",
+    "interrupted": "Resposta cortada: o app fechou antes de terminar. Pergunte de novo para continuar.",
     "emptyTitle": "Olá, sou NIDO",
     "emptySubtitle": "Seu agente privado. Tudo fica neste dispositivo.",
     "privacyHint": "Privado · nada sai deste dispositivo",

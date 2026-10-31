@@ -88,6 +88,10 @@ import { getPersonality, PersonalityId, PERSONALITIES } from "../constants/perso
 import {
   createSession,
   addMessage as persistMessage,
+  addAssistantDraft,
+  updateAssistantDraft,
+  finishAssistantMessage,
+  deleteMessage,
   getMessages as getSessionMessages,
   listSessions,
   deleteSession,
@@ -162,7 +166,13 @@ interface Message {
   grounding?: GroundingStatus;
   stopped?: boolean;
   timedOut?: boolean;
-  interruptedByBackground?: boolean;
+  /**
+   * La respuesta quedó a medias y así consta en el historial: el proceso
+   * murió a mitad de la generación (2026-10-30, prueba física del dueño).
+   * Al reabrir, la burbuja enseña el texto parcial con su aviso, o solo el
+   * aviso si no llegó ningún token. Ver chatHistory.addAssistantDraft.
+   */
+  interrupted?: boolean;
   feedback?: "up" | "down" | null;
   /** 0.1.55: "Call" buttons under an emergency-number answer (verified facts). */
   calls?: Array<{ value: string; label: string; tel: string }>;
@@ -391,6 +401,11 @@ export function ChatScreen({
     processingRef.current = processing;
   }, [processing]);
 
+  const activeSessionIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeSessionIdRef.current = activeSessionId;
+  }, [activeSessionId]);
+
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
       setKeyboardHeight(e.endCoordinates.height);
@@ -476,7 +491,7 @@ export function ChatScreen({
           const latest = ss[0];
           const records = await getSessionMessages(latest.id);
           followBottom.current = true;
-          setMessages(records.map((r) => ({ id: r.id, role: r.role, text: r.text, feedback: r.feedback })));
+          setMessages(records.map((r) => ({ id: r.id, role: r.role, text: r.text, feedback: r.feedback, interrupted: r.interrupted })));
           setActiveSessionId(latest.id);
           sessionSummaryRef.current = latest.summary ?? null;
         }
@@ -719,31 +734,33 @@ export function ChatScreen({
   }, []);
 
   /**
-   * Per docs/ADAPTIVE_ROUTING.md §14: no AppState handling existed anywhere
-   * in the app before this — an in-flight generation (or, once the
-   * execution engine exists, a multi-step routing pipeline) would just keep
-   * burning CPU/battery invisibly if the user backgrounded the app, with no
-   * cancellation and no way to know it happened. Default policy: background
-   * -> stop immediately (reusing the exact same stop path as the Stop
-   * button — no second cancellation mechanism), mark the in-progress
-   * message as interrupted so it's visibly explained rather than silently
-   * truncated, and let the user retry by just asking again.
+   * 2026-10-30 (prueba física del dueño, Tab A9+): la política anterior de
+   * docs/ADAPTIVE_ROUTING.md §14 («al pasar a segundo plano, cancelar
+   * siempre») queda DEROGADA. Su foto enseñó su mensaje sin respuesta, sin
+   * texto parcial y sin aviso: el listener cancelaba la generación al
+   * salir, y el aviso vivía solo en este estado de React, que se perdió
+   * con el proceso. La 0.1.37, sin listener, terminaba la respuesta sola
+   * en segundo plano. Política nueva: la generación en curso NO se
+   * cancela al salir — sigue bajo el servicio «NIDO está respondiendo»
+   * (answerKeepAlive, 0.1.55), que existe para proteger el proceso
+   * mientras genera. Este listener ya no detiene nada: solo guarda en la
+   * fila borrador del historial lo generado hasta el momento (la marca de
+   * interrumpida sigue puesta), para que si Android mata el proceso en
+   * segundo plano, al reabrir quede la respuesta a medias con su aviso
+   * honesto en vez de un hueco. Si el proceso sobrevive, la generación
+   * termina y finishAssistantMessage guarda el texto final sin marca.
    */
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
       if (nextState !== "background") return;
       if (!sendTaskRef.current) return;
-      const interruptedId = processingRef.current?.messageId;
-      stopAndAwaitGeneration().then(() => {
-        if (interruptedId) {
-          setMessages((prev) =>
-            prev.map((m) => (m.id === interruptedId ? { ...m, interruptedByBackground: true } : m))
-          );
-        }
-      });
+      const inFlightId = processingRef.current?.messageId;
+      if (!inFlightId || !activeSessionIdRef.current) return;
+      const partial = messagesRef.current.find((m) => m.id === inFlightId)?.text ?? "";
+      void updateAssistantDraft(inFlightId, partial).catch(() => {});
     });
     return () => sub.remove();
-  }, [stopAndAwaitGeneration]);
+  }, []);
 
   const resetToNewChat = useCallback(async () => {
     await stopAndAwaitGeneration();
@@ -801,7 +818,7 @@ export function ChatScreen({
     await cancelBackgroundTask();
     const records = await getSessionMessages(id);
     followBottom.current = true;
-    setMessages(records.map((r) => ({ id: r.id, role: r.role, text: r.text, feedback: r.feedback })));
+    setMessages(records.map((r) => ({ id: r.id, role: r.role, text: r.text, feedback: r.feedback, interrupted: r.interrupted })));
     setActiveSessionId(id);
     choiceStoreRef.current.current = null;
     resetConversationState();
@@ -890,6 +907,13 @@ export function ChatScreen({
     // reference `item.id` directly as answer_feedback's foreign key later,
     // rather than needing a separate id-mapping step.
     await persistMessage(sessionId, "user", query, userMsg.id);
+    // 2026-10-30: la fila de la respuesta nace ya, vacía y marcada como
+    // interrumpida. La completa finishAssistantMessage al terminar la
+    // generación, o la borra deleteMessage si no hubo respuesta; si el
+    // proceso muere antes, la fila queda y al reabrir hay aviso en vez de
+    // silencio. Un fallo de esta escritura no bloquea la respuesta:
+    // finishAssistantMessage es un upsert y la guarda igual al final.
+    await addAssistantDraft(sessionId, assistantId).catch(() => {});
 
     setMessages((prev) => [...prev, userMsg, { id: assistantId, role: "assistant", text: "" }]);
     setProcessing({ messageId: assistantId, status: "retrieving" });
@@ -993,7 +1017,9 @@ export function ChatScreen({
       }).catch(() => {});
 
       if (kbAnswer.trim().length > 0) {
-        await persistMessage(sessionId, "assistant", kbAnswer, assistantId);
+        await finishAssistantMessage(sessionId, assistantId, kbAnswer);
+      } else {
+        await deleteMessage(assistantId);
       }
 
       const kbSettings = memorySettingsRef.current;
@@ -1222,7 +1248,9 @@ export function ChatScreen({
         }).catch(() => {});
 
         if (assistantText.trim().length > 0) {
-          await persistMessage(sessionId, "assistant", assistantText, assistantId);
+          await finishAssistantMessage(sessionId, assistantId, assistantText);
+        } else {
+          await deleteMessage(assistantId);
         }
 
         const agentSettings = memorySettingsRef.current;
@@ -1243,6 +1271,9 @@ export function ChatScreen({
             m.id === assistantId ? { ...m, text: `Error: ${e?.message ?? e}` } : m
           )
         );
+        // El error se enseña en pantalla pero no se persiste (como hasta
+        // ahora): la fila borrador de esta respuesta desaparece.
+        void deleteMessage(assistantId).catch(() => {});
         recordExecution({
           adaptiveRoutingUsed: false,
           modelId: baseModelId,
@@ -1653,7 +1684,9 @@ export function ChatScreen({
       }).catch(() => {});
 
       if (assistantText.trim().length > 0) {
-        await persistMessage(sessionId, "assistant", assistantText, assistantId);
+        await finishAssistantMessage(sessionId, assistantId, assistantText);
+      } else {
+        await deleteMessage(assistantId);
       }
 
       const settings = memorySettingsRef.current;
@@ -1707,6 +1740,9 @@ export function ChatScreen({
           m.id === assistantId ? { ...m, text: `Error: ${e?.message ?? e}` } : m
         )
       );
+      // El error se enseña en pantalla pero no se persiste (como hasta
+      // ahora): la fila borrador de esta respuesta desaparece.
+      void deleteMessage(assistantId).catch(() => {});
       // Minimal failure record — adaptiveTelemetry is scoped inside the
       // inner try block above, not accessible here, so this can't say
       // whether adaptive routing was involved; still worth capturing that
@@ -2193,10 +2229,10 @@ export function ChatScreen({
                   </View>
                 )}
 
-                {item.interruptedByBackground && (
+                {item.interrupted && (
                   <View style={[styles.stoppedBadge, styles.stoppedBadgeRow, { backgroundColor: colors.amber.bgSubtle, borderColor: colors.amber.border }]}>
                     <NidoIcon name="pause" size={12} color={colors.text.accentAmber} />
-                    <Text style={[styles.stoppedTag, { color: colors.text.accentAmber }]}>{t("chatScreen.interruptedByBackground")}</Text>
+                    <Text style={[styles.stoppedTag, { color: colors.text.accentAmber }]}>{t("chatScreen.interrupted")}</Text>
                   </View>
                 )}
 

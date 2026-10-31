@@ -340,26 +340,45 @@ hecho.**
   nueva ruta de cancelación), luego marca el mensaje interrumpido con una
   insignia distinta ("⏸ paused, app was backgrounded") para que se lea
   como explicado-y-reintentable, no roto. Este es el primer manejo de
-  AppState en cualquier lugar de la app.
+  AppState en cualquier lugar de la app. (Ese comportamiento de cancelar
+  al pasar a segundo plano quedó derogado el 2026-10-30 — ver la nota de
+  política en la lista de diferidos de abajo.)
 
 **Sin resolver / diferido, a propósito:**
 
 - No se aplica timeout a la generación de chat regular (no Deep Research)
   — revisar una vez que el `InferenceBudget` de la Fase 3 dé un valor por
   tarea con fundamento en lugar de una constante arbitraria.
-- La política de backgrounding es "siempre cancelar", según la
-  recomendación explícita del compañero. Aún no configurable — no hay
-  ajuste para cambiar este comportamiento.
+- La política de backgrounding era "siempre cancelar", según la
+  recomendación explícita del compañero. **Derogada el 2026-10-30 por la
+  evidencia física del dueño (Tab A9+, con la 0.1.64):** un cuento largo
+  pedido en el chat y dejado en segundo plano murió en silencio — sin
+  respuesta terminada, sin texto parcial y sin aviso — mientras la
+  0.1.37, que no tenía esa cancelación, terminaba su respuesta sola en
+  segundo plano. La política ahora es: una generación en curso NO se
+  cancela al pasar a segundo plano; sigue bajo el servicio en primer
+  plano «NIDO está respondiendo» (0.1.55), que existe para proteger el
+  proceso mientras genera. El listener de `AppState` ya no detiene nada;
+  solo guarda el texto generado hasta el momento en la fila del
+  historial de la respuesta, que nace marcada `interrupted` al empezar
+  el envío y pierde la marca cuando la generación termina
+  (`chatHistory.addAssistantDraft` / `finishAssistantMessage`). Si el
+  proceso muere a mitad de la generación, al reabrir el chat se ve la
+  respuesta parcial con su aviso honesto de «respuesta cortada», o solo
+  el aviso si no había llegado ningún token — nunca silencio. Sigue sin
+  ser configurable: no hay ajuste para esto; es simplemente el
+  comportamiento.
 - `estimatedTokensPerSecond`/`estimatedMemoryMb` en `ModelCapabilities`
   siguen sin fijar para todos los modelos curados — aún no existen datos
   benchmarkeados (ver §11); sigue correctamente diferido en lugar de
   inventado.
 
 El typecheck y la suite completa de tests (32 tests) pasan. Aún no probado
-en un dispositivo real — el comportamiento de cancelación en background en
-particular debería verificarse a mano (poner la app en background a mitad
-de generación, confirmar que aparece la insignia y que el contexto del
-modelo realmente se libera, no solo que la promesa se resuelve).
+en un dispositivo real — el comportamiento en segundo plano en particular
+debería verificarse a mano (poner la app en background a mitad de
+generación y confirmar que la respuesta termina; matar el proceso a
+mitad de generación y confirmar que la respuesta parcial y su aviso de
+«respuesta cortada» sobreviven a la reapertura).
 
 **Fase 3 — política de enrutamiento determinista: hecha.**
 

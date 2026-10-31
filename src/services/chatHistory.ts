@@ -22,6 +22,14 @@ export interface ChatMessageRecord {
   createdAt: number;
   /** null = no rating given. Present so reopening a past session restores previously-given thumbs. */
   feedback: "up" | "down" | null;
+  /**
+   * La respuesta quedó a medias: el proceso murió a mitad de la generación
+   * (2026-10-30, prueba física del dueño). La fila nace marcada al empezar
+   * la generación (addAssistantDraft) y finishAssistantMessage quita la
+   * marca al terminar; si la marca sigue al reabrir, el chat enseña el
+   * texto parcial con su aviso, o solo el aviso si no llegó ningún token.
+   */
+  interrupted: boolean;
 }
 
 function newId(): string {
@@ -69,8 +77,9 @@ export async function getMessages(sessionId: string): Promise<ChatMessageRecord[
     text: string;
     created_at: number;
     rating: "up" | "down" | null;
+    interrupted: number;
   }>(
-    `SELECT m.id, m.session_id, m.role, m.text, m.created_at, f.rating
+    `SELECT m.id, m.session_id, m.role, m.text, m.created_at, f.rating, m.interrupted
      FROM chat_messages m
      LEFT JOIN answer_feedback f ON f.message_id = m.id
      WHERE m.session_id = ? ORDER BY m.created_at ASC`,
@@ -83,6 +92,7 @@ export async function getMessages(sessionId: string): Promise<ChatMessageRecord[
     text: r.text,
     createdAt: r.created_at,
     feedback: r.rating,
+    interrupted: r.interrupted === 1,
   }));
 }
 
@@ -109,6 +119,65 @@ export async function addMessage(
       [id, sessionId, role, text, now]
     );
     await txn.runAsync(`UPDATE chat_sessions SET updated_at = ? WHERE id = ?`, [now, sessionId]);
+  });
+}
+
+/**
+ * 2026-10-30 (prueba física del dueño, Tab A9+): la fila de la respuesta
+ * nace al EMPEZAR la generación, vacía y marcada como interrumpida. Antes
+ * el mensaje del asistente solo se guardaba al terminar y solo si tenía
+ * texto: si la app salía a segundo plano y Android mataba el proceso, no
+ * quedaba ni la respuesta parcial ni el aviso — la foto del dueño enseñó
+ * su pregunta sin nada debajo. Con la fila nacida, la muerte del proceso
+ * deja el aviso (y el texto parcial, si el listener de segundo plano llegó
+ * a guardarlo con updateAssistantDraft).
+ */
+export async function addAssistantDraft(sessionId: string, id: string): Promise<void> {
+  // R2: ver addMessage (misma transacción guardada).
+  const now = Date.now();
+  await writeTransaction(async (txn) => {
+    await txn.runAsync(
+      `INSERT INTO chat_messages (id, session_id, role, text, created_at, interrupted) VALUES (?, ?, 'assistant', '', ?, 1)`,
+      [id, sessionId, now]
+    );
+    await txn.runAsync(`UPDATE chat_sessions SET updated_at = ? WHERE id = ?`, [now, sessionId]);
+  });
+}
+
+/** Lo generado hasta ahora, sin quitar la marca: sigue sin haber terminado. */
+export async function updateAssistantDraft(id: string, text: string): Promise<void> {
+  await writeTransaction(async (txn) => {
+    await txn.runAsync(`UPDATE chat_messages SET text = ? WHERE id = ?`, [text, id]);
+  });
+}
+
+/**
+ * La generación terminó: texto final guardado y marca quitada. Es un
+ * upsert para valer igual si la fila borrador no llegó a crearse (un fallo
+ * de escritura al empezar no puede costar la respuesta ya generada).
+ */
+export async function finishAssistantMessage(sessionId: string, id: string, text: string): Promise<void> {
+  // R2: ver addMessage (misma transacción guardada).
+  const now = Date.now();
+  await writeTransaction(async (txn) => {
+    await txn.runAsync(
+      `INSERT INTO chat_messages (id, session_id, role, text, created_at, interrupted) VALUES (?, ?, 'assistant', ?, ?, 0)
+       ON CONFLICT(id) DO UPDATE SET text = excluded.text, interrupted = 0`,
+      [id, sessionId, text, now]
+    );
+    await txn.runAsync(`UPDATE chat_sessions SET updated_at = ? WHERE id = ?`, [now, sessionId]);
+  });
+}
+
+/**
+ * La generación terminó sin respuesta que guardar (vacía o con error): la
+ * fila borrador desaparece, como si nunca se hubiera persistido nada — el
+ * comportamiento de siempre para esos casos.
+ */
+export async function deleteMessage(id: string): Promise<void> {
+  await writeTransaction(async (txn) => {
+    await txn.runAsync(`DELETE FROM answer_feedback WHERE message_id = ?`, [id]);
+    await txn.runAsync(`DELETE FROM chat_messages WHERE id = ?`, [id]);
   });
 }
 

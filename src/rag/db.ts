@@ -398,7 +398,8 @@ async function openAndMigrate(): Promise<SecureDbHandle> {
       session_id TEXT NOT NULL REFERENCES chat_sessions(id),
       role TEXT NOT NULL,
       text TEXT NOT NULL,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      interrupted INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_chat_messages_session
       ON chat_messages(session_id, created_at);
@@ -508,6 +509,16 @@ async function openAndMigrate(): Promise<SecureDbHandle> {
     if (!routerColumns.some((c) => c.name === col)) {
       await db.execAsync(`ALTER TABLE router_samples ADD COLUMN ${col} TEXT`);
     }
+  }
+
+  // 2026-10-30 (prueba física del dueño): la respuesta del asistente nace
+  // como fila marcada «interrupted» al empezar la generación y la marca se
+  // quita al terminar (chatHistory). Si el proceso muere a mitad, la marca
+  // queda y el aviso sobrevive a la reapertura. Las instalaciones nuevas
+  // tienen la columna por el CREATE TABLE; las existentes, por este ALTER.
+  const msgColumns = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(chat_messages)`);
+  if (!msgColumns.some((c) => c.name === "interrupted")) {
+    await db.execAsync(`ALTER TABLE chat_messages ADD COLUMN interrupted INTEGER NOT NULL DEFAULT 0`);
   }
 
   // Storage budget (upstream item 4, adapted): track last access for LRU eviction.
