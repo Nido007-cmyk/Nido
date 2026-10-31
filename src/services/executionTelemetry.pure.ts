@@ -9,7 +9,13 @@
  * and export formatting, kept separate from executionTelemetry.ts (which
  * pulls in expo-sqlite/expo-file-system/expo-sharing) so this stays
  * unit-testable under plain Node/vitest, same pattern as src/rag/pure.ts.
+ *
+ * Auditoría 2026-10-31 (F3-18): newExecutionId importa p2p/crypto, que
+ * solo arrastra tweetnacl (JS puro, sin módulos nativos) y su PRNG
+ * seguro ya instalado a nivel de módulo: la mitad «pure» sigue libre
+ * de módulos nativos.
  */
+import { randomNonce, toHex } from "../p2p/crypto";
 
 export type ModelResidency = "cold" | "switched" | "resident";
 export type ExecutionOutcome = "success" | "failure" | "cancelled";
@@ -38,7 +44,10 @@ export interface ExecutionTelemetryRecord {
 }
 
 export function newExecutionId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  // Auditoría completa 2026-10-31 (F3-18): como los ids de sesión de
+  // chatHistory: 8 bytes del PRNG seguro en vez de Math.random() en
+  // base 36 de 6 caracteres (36^6, colisiones plausibles).
+  return `${Date.now()}-${toHex(randomNonce(8))}`;
 }
 
 export function toExecutionRow(

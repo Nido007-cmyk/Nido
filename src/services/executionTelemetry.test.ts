@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { executionRecordsToJson, executionRecordsToCsv, ExecutionTelemetryRecord } from "./executionTelemetry.pure";
+import { executionRecordsToJson, executionRecordsToCsv, ExecutionTelemetryRecord, newExecutionId } from "./executionTelemetry.pure";
 
 function record(overrides: Partial<ExecutionTelemetryRecord> = {}): ExecutionTelemetryRecord {
   return {
@@ -75,5 +75,17 @@ describe("executionRecordsToCsv", () => {
   it("handles an empty record list by emitting just the header", () => {
     const csv = executionRecordsToCsv([]);
     expect(csv.split("\n")).toHaveLength(1);
+  });
+});
+
+describe("newExecutionId (auditoría 2026-10-31, F3-18)", () => {
+  it("lleva 16 hex del PRNG seguro tras la fecha, no 6 base36 de Math.random", () => {
+    expect(newExecutionId()).toMatch(/^\d+-[0-9a-f]{16}$/);
+  });
+
+  it("no repite en 2000 ids seguidos", () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 2000; i++) seen.add(newExecutionId());
+    expect(seen.size).toBe(2000);
   });
 });

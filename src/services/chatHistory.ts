@@ -5,6 +5,7 @@
  */
 
 import { getDb, writeTransaction } from "../rag/db";
+import { randomNonce, toHex } from "../p2p/crypto";
 
 export interface ChatSession {
   id: string;
@@ -33,7 +34,11 @@ export interface ChatMessageRecord {
 }
 
 function newId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  // Auditoría completa 2026-10-31 (F3-18): el sufijo era
+  // Math.random() en base 36 de 6 caracteres (36^6): colisiones
+  // plausibles entre sesiones del mismo milisegundo y aleatoriedad
+  // débil. Ahora 8 bytes del PRNG seguro (el de p2p/crypto, T-009).
+  return `${Date.now()}-${toHex(randomNonce(8))}`;
 }
 
 export async function createSession(title = "New chat"): Promise<ChatSession> {

@@ -43,6 +43,7 @@ import {
   finishAssistantMessage,
   deleteMessage,
   getMessages,
+  createSession,
 } from "./chatHistory";
 
 beforeEach(() => {
@@ -95,5 +96,13 @@ describe("ciclo de vida de la respuesta interrumpida", () => {
     expect(msgs[0].interrupted).toBe(true);
     expect(msgs[1].interrupted).toBe(false);
     expect(msgs[1].feedback).toBe("up");
+  });
+
+  it("auditoría 2026-10-31 (F3-18): los ids de sesión llevan el PRNG seguro y no se repiten", async () => {
+    const a = await createSession("una");
+    const b = await createSession("otra");
+    expect(a.id).toMatch(/^\d+-[0-9a-f]{16}$/);
+    expect(b.id).toMatch(/^\d+-[0-9a-f]{16}$/);
+    expect(a.id).not.toBe(b.id);
   });
 });
