@@ -8,35 +8,21 @@ import { llamaEngine } from "../inference/LlamaEngine";
 import { ConversationTurn } from "../rag/pure";
 
 /**
- * Both of these reuse the single shared llama.cpp context (llamaEngine),
- * which can only run one completion at a time — they are NOT safe to run
- * concurrently with the main chat generation or with each other. Callers
- * (ChatScreen) are responsible for treating these as cancellable background
- * tasks: if the user sends a new message while one is still running, call
- * llamaEngine.stop() first (see ChatScreen's backgroundTaskRef handling).
+ * summarizeConversation reuses the single shared llama.cpp context
+ * (llamaEngine), which runs one completion at a time: it is NOT
+ * safe to run concurrently with the main chat generation. Callers
+ * (ChatScreen) are responsible for treating it as a cancellable
+ * background task: if the user sends a new message while it is
+ * still running, call llamaEngine.stop() first (see ChatScreen's
+ * backgroundTaskRef handling). (El motor además serializa los
+ * generate() desde la auditoría de 2026-10-31, M-6.)
+ *
+ * Auditoría completa 2026-10-31 (I-1): generateSessionTitle, la
+ * vía muerta de títulos por modelo sustituida en 0.1.61 por
+ * titleFromQuestion, se retira: ningún llamante la usaba y su
+ * presencia sugería una ruta viva que no existe. La historia
+ * queda en git y en los comentarios de selfKnowledge.ts.
  */
-
-export async function generateSessionTitle(firstUserMessage: string): Promise<string> {
-  // P1.4: messages+jinja when the GGUF ships a template, else the legacy
-  // hand-built prompt.
-  const instruction =
-    `Generate a short 3-5 word title (no punctuation, no quotes) for a chat ` +
-    `that starts with the message below.`;
-  const promptParams = llamaEngine.hasEmbeddedChatTemplate()
-    ? {
-        messages: [
-          { role: "system", content: instruction },
-          { role: "user", content: firstUserMessage },
-        ],
-      }
-    : {
-        prompt:
-          `${instruction}\n"${firstUserMessage}"\n\nTitle:`,
-      };
-  const text = await llamaEngine.generate({ ...promptParams, nPredict: 16, temperature: 0.3, samplingPreset: "factual" });
-  const title = text.trim().replace(/^["']|["']$/g, "").split("\n")[0].slice(0, 60);
-  return title || "New chat";
-}
 
 export async function summarizeConversation(
   turns: ConversationTurn[],

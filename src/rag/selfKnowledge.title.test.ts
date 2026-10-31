@@ -40,7 +40,7 @@ import {
   titleForKnowledgeCategory,
   classifyKnowledgeQuery,
 } from "./selfKnowledge";
-import { generateSessionTitle } from "../services/summarize";
+import * as summarizeModule from "../services/summarize";
 import { APP_DISPLAY_NAME } from "../brand";
 
 const CHAT_SCREEN_SRC = fs.readFileSync(
@@ -108,25 +108,20 @@ describe("D/F3 deterministic self-knowledge titles", () => {
     expect(generateMock).not.toHaveBeenCalled();
   });
 
-  it("3. ordinary conversations get a model-free title too (0.1.61)", () => {
-    // summarize.ts still offers model-backed title generation...
-    expect(typeof generateSessionTitle).toBe("function");
-    // ...but since 0.1.61 the chat no longer calls it: the agent and normal
-    // chat branches title the session from the question (sessionTitle.ts),
+  it("3. ordinary conversations get a model-free title too (0.1.61; vía retirada en la auditoría I-1)", () => {
+    // Hasta la auditoría completa de 2026-10-31 (I-1), summarize.ts
+    // aún exportaba generateSessionTitle sin ningún llamante: la
+    // vía de títulos por modelo llevaba muerta desde 0.1.61 y su
+    // presencia sugería una ruta viva. Retirada; esta prueba fija
+    // la retirada y lo que la sustituyó.
+    expect((summarizeModule as Record<string, unknown>).generateSessionTitle).toBeUndefined();
+    expect(typeof summarizeModule.summarizeConversation).toBe("function");
+    // The chat titles sessions from the question (sessionTitle.ts),
     // which keeps the KV cache prefix for the next question.
     const calls = CHAT_SCREEN_SRC.match(/generateSessionTitle\(query\)/g) ?? [];
     expect(calls.length).toBe(0);
     expect((CHAT_SCREEN_SRC.match(/titleFromQuestion\(query\)/g) ?? []).length).toBe(2);
-    // The model path itself is unchanged: it still invokes the model with
-    // the user's first message.
-    generateMock.mockResolvedValueOnce("Mocked Title");
-    return expect(generateSessionTitle("hello world")).resolves.toBe(
-      "Mocked Title"
-    ).then(() => {
-      expect(generateMock).toHaveBeenCalledTimes(1);
-      const prompt = String(generateMock.mock.calls[0][0].prompt);
-      expect(prompt).toContain("hello world");
-    });
+    expect(generateMock).not.toHaveBeenCalled();
   });
 
   it("4. titles are coherent across en/es/pt", () => {
