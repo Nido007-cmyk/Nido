@@ -109,9 +109,15 @@ function sqlcipherAvailable(): Promise<boolean> {
 }
 
 describe("SQLCipher real", () => {
-  it("migración con nuestras sentencias: datos, integridad y sin plaintext", async () => {
+  it("migración con nuestras sentencias: datos, integridad y sin plaintext", async (ctx) => {
     if (!(await sqlcipherAvailable())) {
-      console.warn("[sqlcipherReal] python3+sqlcipher3 no disponible: test omitido.");
+      // Auditoría completa 2026-10-31 (F6-01): la omisión por
+      // disponibilidad se declara como SALTADA, no como pasada: un
+      // return temprano contaba esta verificación (la única contra
+      // SQLCipher real) como verde en la línea final de la batería
+      // sin haberse ejecutado.
+      console.warn("[sqlcipherReal] python3+sqlcipher3 no disponible: test saltado.");
+      ctx.skip();
       return;
     }
     const work = mkdtempSync(join(tmpdir(), "nido-sqlcipher-"));
