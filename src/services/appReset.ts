@@ -373,6 +373,18 @@ async function resetAllAppDataInner(): Promise<void> {
   // F2-06: tampoco la llave de sellado del staging de rotación.
   if ((await readVaultSetting(STAGING_KEY_NAME)) !== null)
     survivors.push(`secureStore:${STAGING_KEY_NAME}`);
+  // Auditoría completa 2026-10-31 (F2-01): la KEK de hardware se borra
+  // en el paso 2 sin comprobar el resultado, y deleteVaultKek traga el
+  // fallo del módulo nativo. Aquí se verifica contra el propio módulo:
+  // si sigue viendo una KEK, el wipe no declara éxito. Sin módulo
+  // nativo no hay KEK posible (vaultStatus devuelve null).
+  try {
+    const { vaultStatus } = await import("../security/keyVault");
+    const st = await vaultStatus();
+    if (st && st.kekExists) survivors.push("keystore:KEK de hardware (bóveda)");
+  } catch {
+    survivors.push("keystore:KEK de hardware (no verificable)");
+  }
   if ((await loadP2PPrivateKey()) !== null) survivors.push("keystore:nido_p2p_sk");
   if ((await loadP2PSigningKey()) !== null) survivors.push("keystore:nido_p2p_sign_sk");
   // 5. Notificaciones del SO: ni programadas ni ya presentadas (bandeja)

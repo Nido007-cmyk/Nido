@@ -349,6 +349,51 @@ describe("resetAllAppData (Clear All Data)", () => {
     expect(await secureStagingKeyStore.get()).toBeNull();
   });
 
+  it("auditoría 2026-10-31 (F2-01): si la KEK de hardware no se borra, el wipe falla en voz alta", async () => {
+    await seedKeys();
+    seedFullDevice();
+    const { setKeyVaultNativeForTests } = await import("../security/keyVault");
+    const state = { kek: true };
+    setKeyVaultNativeForTests({
+      getStatus: async () => ({ supported: true, kekExists: state.kek, securityLevel: "tee", apiLevel: 34 }),
+      ensureKek: async () => ({ supported: true, kekExists: true, securityLevel: "tee", apiLevel: 34 }),
+      wrapWithAuth: async (b: string) => b,
+      unwrapWithAuth: async (b: string) => b,
+      // Sabotaje: el borrado nativo «funciona» pero la KEK sigue ahí,
+      // como cuando deleteKek falla y deleteVaultKek traga el error.
+      deleteKek: async () => {},
+      terminateProcess: async () => {},
+    });
+    try {
+      await expect(resetAllAppData()).rejects.toThrow("KEK de hardware");
+    } finally {
+      setKeyVaultNativeForTests(undefined);
+    }
+  });
+
+  it("auditoría 2026-10-31 (F2-01): con la KEK borrada de verdad, el wipe pasa", async () => {
+    await seedKeys();
+    seedFullDevice();
+    const { setKeyVaultNativeForTests } = await import("../security/keyVault");
+    const state = { kek: true };
+    setKeyVaultNativeForTests({
+      getStatus: async () => ({ supported: true, kekExists: state.kek, securityLevel: "tee", apiLevel: 34 }),
+      ensureKek: async () => ({ supported: true, kekExists: true, securityLevel: "tee", apiLevel: 34 }),
+      wrapWithAuth: async (b: string) => b,
+      unwrapWithAuth: async (b: string) => b,
+      deleteKek: async () => {
+        state.kek = false;
+      },
+      terminateProcess: async () => {},
+    });
+    try {
+      await expect(resetAllAppData()).resolves.toBeUndefined();
+      expect(state.kek).toBe(false);
+    } finally {
+      setKeyVaultNativeForTests(undefined);
+    }
+  });
+
   it("0.1.47: si un respaldo local sobrevive, el wipe falla en voz alta", async () => {
     await seedKeys();
     seedFullDevice();
