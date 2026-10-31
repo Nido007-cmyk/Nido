@@ -13,7 +13,7 @@ import { closeAllPacks } from "../rag/packs";
 import { resetDatabase, KNOWLEDGE_DB_NAME, LEGACY_KNOWLEDGE_DB_NAME } from "../rag/db";
 import { clearMemoryDb, resetMemoryKeyCache, MEMORY_DB_NAME } from "../agent/memory/memoryStore";
 import { resetDownloadState, cancelAllDownloads } from "./downloadManager";
-import { clearSettings } from "../models/settings";
+import { clearSettings, customPromptStillStored } from "../models/settings";
 import { installStatePath } from "../models/installState";
 import { beginP2PDataReset, completeP2PDataReset } from "./nidoMessenger";
 import { beginWipeGate, endWipeGate } from "../security/secureDatabase";
@@ -385,6 +385,12 @@ async function resetAllAppDataInner(): Promise<void> {
   } catch {
     survivors.push("keystore:KEK de hardware (no verificable)");
   }
+  // Auditoría completa 2026-10-31 (F2-03): el prompt privado vive en
+  // SecureStore y clearSettings lo borra sin comprobar el resultado.
+  // Se verifica su ausencia: es texto del usuario y no puede
+  // sobrevivir a un borrado que promete totalidad.
+  if (await customPromptStillStored())
+    survivors.push("secureStore:nido_private_custom_prompt");
   if ((await loadP2PPrivateKey()) !== null) survivors.push("keystore:nido_p2p_sk");
   if ((await loadP2PSigningKey()) !== null) survivors.push("keystore:nido_p2p_sign_sk");
   // 5. Notificaciones del SO: ni programadas ni ya presentadas (bandeja)

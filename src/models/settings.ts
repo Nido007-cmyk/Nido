@@ -177,6 +177,24 @@ export async function clearSettings(): Promise<void> {
   return run;
 }
 
+/**
+ * Auditoría completa 2026-10-31 (F2-03): ¿sigue guardado el prompt
+ * privado? clearSettings lo borra sin comprobar el resultado (su
+ * false se ignora), así que el borrado total lo verifica con esta
+ * lectura cruda, sin el efecto lateral de migración de
+ * getCustomSystemPrompt. Si la lectura no se puede hacer, devuelve
+ * true: lo no comprobable se trata como superviviente (fail-closed).
+ */
+export async function customPromptStillStored(): Promise<boolean> {
+  try {
+    const km = await import("../privacy/keyManager");
+    const v = await km.readPrivateSetting(CUSTOM_PROMPT_KEY);
+    return typeof v === "string" && v.length > 0;
+  } catch {
+    return true;
+  }
+}
+
 /** The user's chosen model for this kind, or null to fall back to the default. */
 export async function getActiveModelId(kind: AssetKind): Promise<string | null> {
   const s = await readSettings();

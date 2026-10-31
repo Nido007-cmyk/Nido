@@ -394,6 +394,18 @@ describe("resetAllAppData (Clear All Data)", () => {
     }
   });
 
+  it("auditoría 2026-10-31 (F2-03): el prompt privado no sobrevive al borrado", async () => {
+    await seedKeys();
+    seedFullDevice();
+    const { setCustomSystemPrompt, getCustomSystemPrompt, customPromptStillStored } =
+      await import("../models/settings");
+    await setCustomSystemPrompt("prompt privado de prueba");
+    expect(await customPromptStillStored()).toBe(true);
+    await resetAllAppData();
+    expect(await customPromptStillStored()).toBe(false);
+    expect(await getCustomSystemPrompt()).toBe("");
+  });
+
   it("0.1.47: si un respaldo local sobrevive, el wipe falla en voz alta", async () => {
     await seedKeys();
     seedFullDevice();
