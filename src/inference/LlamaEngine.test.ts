@@ -178,19 +178,55 @@ describe("LlamaEngine load/unload", () => {
     expect(engine.getModelInfo()?.filename).toBe("models/b.gguf");
   });
 
-  it("F3-2026-10-06: two concurrent generate() calls both settle; unload waits for both", async () => {
+  it("F3-2026-10-06 + M-6: dos generate() a la vez se asientan; unload espera a la que corre y la encolada falla sin colgarse", async () => {
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
-    // Two generations started without awaiting — both must resolve (no hang),
-    // and unload must wait for both (no release while generating).
+    // M-6 (auditoría 2026-10-31): ya no corren dos completions a la
+    // vez sobre el contexto (la caché KV es compartida). La primera
+    // corre; la segunda espera en la cadena de generaciones. unload
+    // detiene la que corre y libera; la encolada arranca después
+    // contra un contexto liberado y rechaza con «model not loaded»
+    // en vez de colgarse o de generar sobre un contexto muerto.
     const r1 = engine.generate({ prompt: "one" });
     const r2 = engine.generate({ prompt: "two" });
     await engine.unload();
     await expect(r1).resolves.toBe("Hi");
-    await expect(r2).resolves.toBe("Hi");
+    await expect(r2).rejects.toThrow("model not loaded");
     expect(created[0].released).toBe(true);
     expect(created[0].releasedWhileGenerating).toBe(false);
     expect(engine.isLoaded).toBe(false);
+  });
+
+  it("M-6: dos generate() concurrentes corren en serie, cada una con su texto", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const ctx = created[0];
+    const origCompletion = ctx.completion;
+    let active = 0;
+    let maxActive = 0;
+    const starts: string[] = [];
+    ctx.completion = (params, onToken) => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      starts.push(String((params as { prompt?: string }).prompt ?? ""));
+      return origCompletion(params, onToken).finally(() => { active--; });
+    };
+    const r1 = engine.generate({ prompt: "one" });
+    const r2 = engine.generate({ prompt: "two" });
+    // Dar tiempo a que arranquen las que puedan arrancar: solo la
+    // primera debe haber empezado.
+    await new Promise((r) => setTimeout(r, 30));
+    expect(starts).toEqual(["one"]);
+    expect(maxActive).toBe(1);
+    // Al detener la primera (como hace stop en la app), se asienta
+    // y solo entonces arranca la segunda.
+    await engine.stop();
+    await expect(r1).resolves.toBe("Hi");
+    await new Promise((r) => setTimeout(r, 30));
+    expect(starts).toEqual(["one", "two"]);
+    await engine.stop();
+    await expect(r2).resolves.toBe("Hi");
+    expect(maxActive).toBe(1);
   });
 
   it("refuses to load with a clear RAM error when the model does not fit", async () => {

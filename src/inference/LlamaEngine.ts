@@ -373,6 +373,10 @@ export class LlamaEngine {
   }
 
   private async unloadNow() {
+    // M-6 (2026-10-31): invalidar primero a las generaciones que
+    // esperan turno en la cadena; la descarga espera solo a las
+    // que ya corren (inFlight), como siempre.
+    this.generationEpoch++;
     // Stop takes effect between tokens, so a completion still processing its
     // prompt can run on for a while; wait for all rather than release under
     // them. F3-2026-10-06: espera al conjunto completo, no solo a la última.
@@ -408,6 +412,58 @@ export class LlamaEngine {
   }
 
   /**
+   * Auditoría completa 2026-10-31 (M-6): cadena de generaciones. El
+   * contexto de llama.cpp es UNO y su caché KV también: dos
+   * generate() a la vez arrancaban dos completions sobre el mismo
+   * contexto y los tokens podían contaminarse entre respuestas;
+   * la disciplina quedaba delegada a cada llamante. Ahora el motor
+   * serializa: cada generate() espera a que el anterior se asiente
+   * antes de arrancar el suyo.
+   *
+   * La cadena NO es la cola de carga (enqueue): esa sigue libre
+   * para que un unload() pueda ejecutar su unloadNow() y detener
+   * la generación en vuelo (la razón de F3-2026-10-06). Una
+   * generación encolada tras un unload arranca contra un contexto
+   * ya liberado y falla con «model not loaded», sin colgarse.
+   */
+  private generationChain: Promise<unknown> = Promise.resolve();
+  /**
+   * Época de generación: unloadNow la avanza. Solo la consultan las
+   * generaciones que ESPERAN turno en la cadena: si la época cambió
+   * mientras esperaban, su contexto ya no existe y fallan con
+   * «model not loaded» en vez de arrancar sobre lo que haya venido
+   * después. La descarga no espera a las encoladas: las invalida.
+   */
+  private generationEpoch = 0;
+  /** Generaciones en la cadena (corriendo o esperando), contadas al llamar. */
+  private generationsInLine = 0;
+
+  async generate(options: GenerateOptions): Promise<string> {
+    const isHead = this.generationsInLine === 0;
+    this.generationsInLine++;
+    const epoch = this.generationEpoch;
+    // La cabeza llama directamente: su cuerpo corre síncrono hasta
+    // encolar el arranque en la cola de carga, en el mismo orden de
+    // llamada de siempre (un unload() posterior queda detrás de su
+    // arranque y la detiene como antes). Las demás esperan a la
+    // cadena y comprueban la época al llegar su turno.
+    const run = isHead
+      ? this.generateOnce(options)
+      : this.generationChain.then(() => {
+          if (epoch !== this.generationEpoch) {
+            throw new Error("LlamaEngine: model not loaded");
+          }
+          return this.generateOnce(options);
+        });
+    this.generationChain = run.catch(() => {});
+    try {
+      return await run;
+    } finally {
+      this.generationsInLine--;
+    }
+  }
+
+  /**
    * F3-2026-10-06: generate() está serializado respecto a load()/unload()
    * durante el *arranque* de la completion (la cola garantiza que no se
    * interleavea con un unload). La espera de la completion ocurre FUERA de
@@ -415,8 +471,11 @@ export class LlamaEngine {
    * posterior (encolado detrás) nunca podría ejecutar su unloadNow() para
    * detener la generación → deadlock. unloadNow() detiene y espera todas
    * las completions en vuelo vía el conjunto inFlight.
+   * M-6 (2026-10-31): respecto a OTROS generate(), la serialización
+   * la da generationChain (ver generate): nunca hay dos completions
+   * vivas a la vez sobre el contexto.
    */
-  async generate({
+  private async generateOnce({
     prompt,
     messages,
     nPredict = 512,
