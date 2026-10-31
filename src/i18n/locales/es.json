@@ -1109,7 +1109,9 @@
     "ratchetV5Title": "Clave nueva por mensaje + resistencia cuántica",
     "ratchetV5Desc": "Cada mensaje usa su propia clave, como el Double Ratchet de Signal: una clave robada hoy no abre los mensajes anteriores. Además la sesión mezcla ML-KEM-768, para que el tráfico grabado hoy siga cerrado ante ordenadores cuánticos futuros. Activado por defecto; se usa cuando los dos teléfonos lo tienen. Vale desde la siguiente conexión.",
     "privateHelloOnlyTitle": "Solo saludo privado",
-    "privateHelloOnlyDesc": "Tu teléfono nunca dice en claro quién eres: no llama a contactos con un NIDO antiguo (anterior a la 0.1.49) ni a dispositivos que no son tus contactos, y no contesta saludos en claro. Apagado por defecto porque deja sin conexión a quien no haya actualizado."
+    "privateHelloOnlyDesc": "Tu teléfono nunca dice en claro quién eres: no llama a contactos con un NIDO antiguo (anterior a la 0.1.49) ni a dispositivos que no son tus contactos, y no contesta saludos en claro. Apagado por defecto porque deja sin conexión a quien no haya actualizado.",
+    "recoveredTitle": "Ajustes restablecidos",
+    "recoveredNotice": "Tus ajustes estaban dañados y volvieron a los valores de fábrica. Revisa tus ajustes, incluidas las herramientas que hubieras apagado: pudieron volver a encenderse."
   },
   "backup": {
     "dekTitle": "Backup creado",

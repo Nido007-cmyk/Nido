@@ -88,17 +88,59 @@ function freshDefaults(): Settings {
   return { ...DEFAULT_SETTINGS, activeModelId: {} };
 }
 
+// Auditoría completa 2026-10-31 (F3-10): marcador durable de
+// «los ajustes se restablecieron solos». Vive junto a settings.json,
+// lo escribe la lectura que degrada y lo consume una sola vez la
+// pantalla principal. Borrarlo sin leerlo es imposible desde este
+// módulo: takeSettingsRecoveryNotice es la única salida.
+const RECOVERY_MARKER_PATH = `${FileSystem.documentDirectory}settings-recovered.json`;
+
+async function noteSettingsRecovered(): Promise<void> {
+  try {
+    await FileSystem.writeAsStringAsync(
+      RECOVERY_MARKER_PATH,
+      JSON.stringify({ at: new Date().toISOString() }),
+    );
+  } catch {
+    // Ni el marcador puede romper la lectura de ajustes.
+  }
+}
+
+/**
+ * Devuelve la fecha del restablecimiento silencioso y borra el
+ * marcador (aviso de un solo uso), o null si no hubo ninguno.
+ */
+export async function takeSettingsRecoveryNotice(): Promise<string | null> {
+  try {
+    const info = await FileSystem.getInfoAsync(RECOVERY_MARKER_PATH);
+    if (!info.exists) return null;
+    const raw = JSON.parse(await FileSystem.readAsStringAsync(RECOVERY_MARKER_PATH));
+    await FileSystem.deleteAsync(RECOVERY_MARKER_PATH, { idempotent: true });
+    return typeof raw?.at === "string" ? raw.at : "";
+  } catch {
+    return null;
+  }
+}
+
 async function readSettings(): Promise<Settings> {
   let raw: unknown;
+  let sawFile = false;
   try {
     const info = await FileSystem.getInfoAsync(SETTINGS_PATH);
     if (!info.exists) return freshDefaults();
+    sawFile = true;
     raw = JSON.parse(await FileSystem.readAsStringAsync(SETTINGS_PATH));
   } catch {
     // Fichero ilegible (JSON corrupto, E/S): degradar a defaults, como
     // antes. La versión se chequea FUERA de este try: un format_version
     // desconocido o más nuevo nunca degrada en silencio — falla cerrado
     // con SettingsVersionError.
+    // Auditoría completa 2026-10-31 (F3-10): la degradación ya no es
+    // muda. Los defaults cambian cosas de seguridad (una herramienta
+    // apagada vuelve encendida), así que si el fichero EXISTÍA y no
+    // se pudo leer, se deja un marcador durable que la pantalla
+    // principal consume una sola vez para avisar al usuario.
+    if (sawFile) await noteSettingsRecovered();
     return freshDefaults();
   }
   const parsed: Settings =

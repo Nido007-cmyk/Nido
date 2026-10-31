@@ -10,6 +10,7 @@ import { answerFromGuide } from "../rag/guideAnswerRun";
 import {
   View,
   Text,
+  Alert,
   Pressable,
   FlatList,
   StyleSheet,
@@ -58,6 +59,7 @@ import {
   getVoiceInputEnabled,
   getReadAloudEnabled,
   getAdaptiveRoutingEnabled,
+  takeSettingsRecoveryNotice,
 } from "../models/settings";
 import { runDeepResearch, ResearchProgress } from "../services/orchestrator";
 import { runAdaptiveChat } from "../services/adaptiveChat";
@@ -246,6 +248,24 @@ export function ChatScreen({
   // Cargar los interruptores aquí, al arrancar, también deja listos los del
   // P2P (saludo privado, v5) antes de la primera reconexión.
   const [panicEnabled, setPanicEnabled] = useState(false);
+  // Auditoría completa 2026-10-31 (F3-10): si settings.json estaba
+  // dañado y los ajustes volvieron a los valores de fábrica en
+  // silencio, el marcador durable se consume aquí, una sola vez,
+  // y el usuario se entera (una herramienta apagada pudo volver
+  // encendida sin que nadie lo dijera).
+  useEffect(() => {
+    let alive = true;
+    takeSettingsRecoveryNotice()
+      .then((at) => {
+        if (alive && at !== null) {
+          Alert.alert(t("settings.recoveredTitle"), t("settings.recoveredNotice"));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
   useEffect(() => {
     if (showSettings) return;
     let alive = true;

@@ -1109,7 +1109,9 @@
     "ratchetV5Title": "New key per message + quantum-resistant",
     "ratchetV5Desc": "Every message gets its own key, like Signal's Double Ratchet: a key stolen today does not open earlier messages. The session also mixes in ML-KEM-768, so traffic recorded today stays closed to future quantum computers. On by default; used when both phones have it. Applies from the next connection.",
     "privateHelloOnlyTitle": "Private hello only",
-    "privateHelloOnlyDesc": "Your phone never reveals who you are in the clear: it doesn't call contacts with an old NIDO (before 0.1.49) or devices that aren't your contacts, and it doesn't answer plain hellos. Off by default because it cuts off anyone who hasn't updated."
+    "privateHelloOnlyDesc": "Your phone never reveals who you are in the clear: it doesn't call contacts with an old NIDO (before 0.1.49) or devices that aren't your contacts, and it doesn't answer plain hellos. Off by default because it cuts off anyone who hasn't updated.",
+    "recoveredTitle": "Settings reset",
+    "recoveredNotice": "Your settings were damaged and went back to the factory defaults. Please review your settings, including any tools you had turned off: they may be on again."
   },
   "backup": {
     "dekTitle": "Backup created",
