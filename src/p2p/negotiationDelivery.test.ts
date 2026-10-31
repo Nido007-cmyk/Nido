@@ -350,6 +350,23 @@ describe("Negotiation delivery fail-closed", () => {
     expect(eventTypes()).not.toContain("accepted");
   });
 
+  it("auditoría 2026-10-31 (F6-03): propuesta que llega ya expirada → la razón es «expired», sin carreras", async () => {
+    // Determinista: la propuesta nace expirada (ttl negativo) y el
+    // registro la deja directamente en EXPIRED, el estado al que la
+    // carrera de la prueba anterior solo llegaba a veces. La razón
+    // debe ser la expiración, no la transición inválida.
+    const id = await proposeSession("born-expired", -1000);
+    expect(getSession(id)?.state).toBe("EXPIRED");
+    let calls = 0;
+    sendImpl = async () => {
+      calls++;
+      return true;
+    };
+    const res = await negotiationService.acceptSession(id);
+    expect(res).toEqual({ sent: false, reason: "expired" });
+    expect(calls).toBe(0);
+  });
+
   it("segundo accept tras ACCEPTED → invalid_transition", async () => {
     const id = await proposeSession("terminal");
     await negotiationService.acceptSession(id);

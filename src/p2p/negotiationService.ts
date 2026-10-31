@@ -457,12 +457,17 @@ class NegotiationService {
       // no apilar una segunda respuesta.
       return { sent: false, reason: "already_sending" };
     }
-    if (!isValidTransition(session.state, targetState)) {
-      return { sent: false, reason: "invalid_transition" };
-    }
+    // Auditoría completa 2026-10-31 (F6-03): la expiración se comprueba
+    // ANTES que la transición, como ya hacía retrySend. Al revés, una
+    // sesión que el registro marcó EXPIRED al llegar tarde devolvía
+    // «invalid_transition» y la razón que ve la interfaz dependía de
+    // una carrera de tiempos, no del estado.
     if (isExpired(session.proposal)) {
       this.expireSession(session);
       return { sent: false, reason: "expired" };
+    }
+    if (!isValidTransition(session.state, targetState)) {
+      return { sent: false, reason: "invalid_transition" };
     }
 
     session.sending = true;
