@@ -60,9 +60,13 @@ GitHub Actions (`.github/workflows/android-apk.yml`, step
    signingConfig into `android/app/build.gradle` during `expo prebuild`,
    used only when the `NIDO_UPLOAD_STORE_FILE` Gradle property exists.
 
-If the secrets are absent, the build falls back to Expo's default **debug**
-signing — the same behavior as before this identity existed. Nothing is
-silently assumed: a debug-signed APK is still a debug-signed APK.
+In CI, absent secrets are fatal: the workflow checks for them and
+refuses to produce a release APK at all (android-apk.yml, "FATAL
+(CICD-02)"), and the plugin aborts the prebuild if it cannot inject
+the release signingConfig. Only a local build without the Gradle
+properties falls back to Expo's default **debug** signing — the same
+behavior as before this identity existed. Nothing is silently
+assumed: a debug-signed APK is still a debug-signed APK.
 
 Local builds: put the four `NIDO_UPLOAD_*` properties in your own
 `~/.gradle/gradle.properties` (never in the repo) to sign locally with the

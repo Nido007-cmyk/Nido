@@ -14,8 +14,9 @@ const { withAppBuildGradle } = require("@expo/config-plugins");
  * In CI these come from the NIDO_UPLOAD_* GitHub Secrets (see
  * .github/workflows/android-apk.yml and docs/SIGNING.md).
  *
- * Without them, release builds keep Expo's default debug signing, so anyone
- * can still build the app from source.
+ * Without them, a local release build keeps Expo's default debug
+ * signing, so anyone can still build the app from source; CI has no
+ * such fallback (the workflow aborts when the secrets are absent).
  */
 function withReleaseSigning(config) {
   return withAppBuildGradle(config, (config) => {
