@@ -18,6 +18,7 @@ Losing someone to suicide is a different kind of grief: alongside the pain there
 - **Watch over them with care.** People bereaved by suicide are at higher risk of depression and of having suicidal thoughts themselves. If you see they cannot cope with daily life after some time, withdraw completely, or talk about wanting to die, help them find professional support or a crisis line, just as you would for anyone else at risk.
 
 ## If you are the one who has lost them
+<!-- questions: how do I tell my children that someone in the family died by suicide | explaining a family suicide to kids, what do I say -->
 - **There is no timetable.** There will be bearable days and days that break open months later, sometimes because of a song or a smell. That is not going backwards: it is the shape of this grief.
 - **Talk about it with people who can listen,** and if you can, find a group of people who have lost someone the same way: being understood without having to explain helps a great deal. Ask your country's crisis line or health services about suicide bereavement groups.
 - **Look after the basics, even at minimum level:** sleep, eating something simple, getting out into daylight, small routines. Grief exhausts the body.
