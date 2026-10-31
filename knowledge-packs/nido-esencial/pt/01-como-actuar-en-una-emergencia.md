@@ -21,6 +21,7 @@ Diante de qualquer emergência, siga três passos nesta ordem: PROTEGER, AVISAR 
 - Sem sinal: envie alguém para buscar ajuda ou use rádio, sinais de socorro ou mensagens do NIDO para contatos próximos.
 
 ## 3. Socorrer: o que verificar primeiro
+<!-- perguntas: cheguei primeiro ao local de um acidente, o que verifico na vítima | por onde começo a atender uma pessoa ferida -->
 1. A pessoa responde? Fale alto e toque nos ombros dela: "Você está me ouvindo?".
 2. Ela respira normalmente? Observe o peito, escute e sinta por no máximo 10 segundos. Respirar com dificuldade, aos solavancos, NÃO é respirar normalmente.
 3. Está sangrando muito? Uma hemorragia grave deve ser atendida na hora, com pressão direta.

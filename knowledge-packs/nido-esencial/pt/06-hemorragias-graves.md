@@ -8,6 +8,7 @@ questions: sangramento forte na perna que não estanca | como parar uma hemorrag
 Uma pessoa pode morrer por perda de sangue em poucos minutos. Uma hemorragia é grave se o sangue sai em jato ou sem parar, se encharca a roupa ou os curativos, ou se a pessoa fica tonta, pálida ou confusa. Aja na hora.
 
 ## Passo a passo
+<!-- perguntas: corte na perna sangrando sem parar | sangue que não estanca depois de um corte, o que faço -->
 1. Ligue (ou peça que liguem) para o número de emergência.
 2. Coloque luvas ou um saco plástico, se tiver; se não tiver, não espere.
 3. Pressão direta: aperte forte sobre o ferimento com gaze, um pano limpo ou, se não houver nada, com a mão. Aperte com as duas mãos e o peso do corpo.

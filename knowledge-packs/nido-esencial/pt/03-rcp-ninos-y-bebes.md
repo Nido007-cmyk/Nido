@@ -8,6 +8,7 @@ questions: minha criança parou de respirar, como reanimar | como fazer RCP numa
 Nas crianças, a parada cardíaca costuma acontecer por falta de ar (afogamento, engasgo, sufocamento). Por isso, em crianças e bebês as ventilações são mais importantes do que em adultos. Mesmo assim, se você não souber fazê-las, faça as compressões: é sempre melhor do que nada.
 
 ## Criança (de 1 ano até a puberdade)
+<!-- perguntas: meu filho pequeno não acorda e não está respirando | criança de poucos anos sem respirar, como reanimo -->
 1. Se não responder e não respirar normalmente, peça que liguem para a emergência e tragam um DEA. Se estiver sozinho e ninguém viu o desmaio, faça cerca de 2 minutos de RCP e depois ligue.
 2. Compressões com a base de uma mão (ou das duas, se a criança for grande) no centro do peito.
 3. Profundidade: um terço do peito, cerca de 5 cm. Ritmo: 100 a 120 por minuto.

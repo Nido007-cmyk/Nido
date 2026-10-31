@@ -23,6 +23,7 @@ questions: suspeita de monóxido de carbono em casa, com dor de cabeça em todos
 Saia e leve os demais para o ar livre, só se for seguro. Não entre em ambientes fechados com gás tóxico sem proteção.
 
 ## Monóxido de carbono (CO)
+<!-- perguntas: cheiro de gás em casa e todos com dor de cabeça e tontura | suspeita de vazamento de gás com a família passando mal -->
 É um gás que não se vê nem se sente pelo cheiro. É produzido por fogões, braseiros, aquecedores a gás, geradores e carros em lugares fechados. Mata muitas pessoas após desastres e no inverno.
 Sinais: dor de cabeça, tontura, náuseas, cansaço, confusão. Costuma afetar várias pessoas (e animais de estimação) da mesma casa ao mesmo tempo, e elas melhoram ao sair.
 1. Saia para o ar livre imediatamente e leve todos. Abra portas e janelas, se isso não atrasar você.

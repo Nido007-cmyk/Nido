@@ -8,6 +8,7 @@ questions: um homem desmaiou e parou de respirar, o que fazer | como reanimar um
 Se uma pessoa desmaia, não responde e não respira normalmente (ou só respira com dificuldade), é provável que o coração dela tenha parado. Cada minuto sem RCP reduz muito a chance de sobrevivência. Começar rápido é o mais importante: não tenha medo de fazer "errado"; não fazer nada é pior.
 
 ## Antes de começar
+<!-- perguntas: um homem caiu no chão e parou de respirar | pessoa desmaiada que não respira, faço massagem cardíaca? -->
 - Verifique se o local é seguro.
 - Toque nos ombros da pessoa e fale alto. Se ela não responder, veja se respira normalmente (por no máximo 10 segundos).
 - Peça a alguém que ligue para o número de emergência e traga um desfibrilador (DEA). Se estiver sozinho, ligue você mesmo no viva-voz e comece.

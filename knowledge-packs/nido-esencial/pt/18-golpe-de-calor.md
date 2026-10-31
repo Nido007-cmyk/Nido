@@ -15,6 +15,7 @@ Sinais: suor abundante, cansaço, tontura, dor de cabeça, náuseas, cãibras, p
 4. Se não melhorar em 30 minutos ou piorar, ligue para o número de emergência.
 
 ## Insolação grave (emergência)
+<!-- perguntas: trabalhou o dia todo no sol e agora fala sem sentido, com o corpo fervendo | pessoa confusa e muito quente depois de esforço no calor -->
 Sinais: confusão, comportamento estranho, fala enrolada, desmaio ou convulsões; pele muito quente (seca ou suada); temperatura muito alta.
 1. Ligue para o número de emergência.
 2. Resfrie-a imediatamente, sem esperar: o melhor é colocar o corpo (do pescoço para baixo) em água fria ou com gelo. Cuide para que a cabeça fique fora da água.

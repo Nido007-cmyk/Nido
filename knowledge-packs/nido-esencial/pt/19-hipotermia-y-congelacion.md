@@ -6,6 +6,7 @@ sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz 
 questions: pessoa tremendo sem parar depois de horas no frio e na chuva | como aquecer alguém com hipotermia sem fazer mal | dedos brancos e duros de frio, como tratar o congelamento | sinais de hipotermia depois de ficar molhado no frio
 ---
 ## Hipotermia
+<!-- perguntas: ficou horas na chuva fria tremendo sem parar | como aqueço alguém gelado que não para de tremer -->
 O corpo esfria abaixo do normal. Pode acontecer com frio, vento, chuva ou após cair na água, mesmo sem temperaturas abaixo de zero.
 Sinais: tremores fortes, pele fria e pálida, falta de coordenação, fala lenta, confusão, sono. Nos casos graves, a pessoa para de tremer: é um sinal pior, não melhor.
 
