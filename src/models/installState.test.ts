@@ -168,4 +168,25 @@ describe("installState journal", () => {
     expect(files.has(`${installStatePath()}.tmp`)).toBe(false);
     expect(files.has(installStatePath())).toBe(true);
   });
+
+  it("auditoría 2026-10-31 (F3-12): dos registros a la vez no se pisan", async () => {
+    await Promise.all([
+      recordInstall("modelo-a", { status: "installed", sizeBytes: 10, sha256: "a" }),
+      recordInstall("modelo-b", { status: "installed", sizeBytes: 20, sha256: "b" }),
+    ]);
+    const state = await loadInstallState();
+    expect(state.records["modelo-a"]?.sha256).toBe("a");
+    expect(state.records["modelo-b"]?.sha256).toBe("b");
+  });
+
+  it("auditoría 2026-10-31 (F3-12): un borrado y un registro a la vez quedan los dos", async () => {
+    await recordInstall("viejo", { status: "installed", sizeBytes: 1, sha256: "x" });
+    await Promise.all([
+      clearInstallRecord("viejo"),
+      recordInstall("nuevo", { status: "installed", sizeBytes: 2, sha256: "y" }),
+    ]);
+    const state = await loadInstallState();
+    expect(state.records["viejo"]).toBeUndefined();
+    expect(state.records["nuevo"]?.sha256).toBe("y");
+  });
 });

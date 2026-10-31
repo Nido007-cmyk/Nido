@@ -183,6 +183,22 @@ export async function getInstallRecord(assetId: string): Promise<InstallRecord |
 }
 
 /**
+ * Auditoría completa 2026-10-31 (F3-12): todas las mutaciones del
+ * journal pasan por esta cola. recordInstall y clearInstallRecord
+ * hacen leer, modificar y guardar; sin serializar, dos llamadas a la
+ * vez (descargas de varios modelos en paralelo) leían el mismo
+ * estado y la última escritura borraba el registro de la otra: un
+ * modelo instalado perdía su asiento y volvía como «sin verificar».
+ * Es el patrón de la cola de settings.ts.
+ */
+let journalQueue: Promise<unknown> = Promise.resolve();
+function mutateJournal(op: () => Promise<void>): Promise<void> {
+  const run = journalQueue.then(op);
+  journalQueue = run.catch(() => {});
+  return run;
+}
+
+/**
  * Merges a patch into the asset's record (creating it if absent) and
  * persists the journal. Best-effort: a journal write failure is logged,
  * not thrown — the caller continues, and the missing record degrades to
@@ -193,41 +209,45 @@ export async function recordInstall(
   patch: Partial<Omit<InstallRecord, "assetId" | "updatedAt">> &
     Pick<InstallRecord, "status" | "sizeBytes" | "sha256">
 ): Promise<void> {
-  try {
-    const state = await loadInstallState();
-    const prev = state.records[assetId];
-    const merged: InstallRecord = {
-      ...prev,
-      ...patch,
-      assetId,
-      updatedAt: Date.now(),
-    };
-    // A transition away from "failed" clears stale failure info unless the
-    // patch explicitly carries new failure details.
-    if (merged.status !== "failed" && patch.failureCode === undefined) {
-      merged.failureCode = undefined;
-      merged.failureKind = undefined;
+  return mutateJournal(async () => {
+    try {
+      const state = await loadInstallState();
+      const prev = state.records[assetId];
+      const merged: InstallRecord = {
+        ...prev,
+        ...patch,
+        assetId,
+        updatedAt: Date.now(),
+      };
+      // A transition away from "failed" clears stale failure info unless the
+      // patch explicitly carries new failure details.
+      if (merged.status !== "failed" && patch.failureCode === undefined) {
+        merged.failureCode = undefined;
+        merged.failureKind = undefined;
+      }
+      // Keep the proof of the bytes at the final path across a re-download:
+      // only staging is written until the atomic promote, so they are untouched.
+      if (merged.status === "installed") {
+        merged.verifiedFile = undefined;
+      } else if (prev) {
+        merged.verifiedFile = verifiedProofOf(prev) ?? undefined;
+      }
+      state.records[assetId] = merged;
+      await saveInstallState(state);
+    } catch (e) {
+      console.warn(`[installState] journal write failed for ${assetId}: ${e}`);
     }
-    // Keep the proof of the bytes at the final path across a re-download:
-    // only staging is written until the atomic promote, so they are untouched.
-    if (merged.status === "installed") {
-      merged.verifiedFile = undefined;
-    } else if (prev) {
-      merged.verifiedFile = verifiedProofOf(prev) ?? undefined;
-    }
-    state.records[assetId] = merged;
-    await saveInstallState(state);
-  } catch (e) {
-    console.warn(`[installState] journal write failed for ${assetId}: ${e}`);
-  }
+  });
 }
 
 export async function clearInstallRecord(assetId: string): Promise<void> {
-  try {
-    const state = await loadInstallState();
-    delete state.records[assetId];
-    await saveInstallState(state);
-  } catch (e) {
-    console.warn(`[installState] journal clear failed for ${assetId}: ${e}`);
-  }
+  return mutateJournal(async () => {
+    try {
+      const state = await loadInstallState();
+      delete state.records[assetId];
+      await saveInstallState(state);
+    } catch (e) {
+      console.warn(`[installState] journal clear failed for ${assetId}: ${e}`);
+    }
+  });
 }
