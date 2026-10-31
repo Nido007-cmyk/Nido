@@ -167,7 +167,7 @@ already in the ledger has a different fingerprint.
 
 ## Passing a pack to another phone (no internet)
 
-Since 0.1.55 a NIDO can hand a catalog pack (for example NIDO Essentials,
+Since 0.1.56 a NIDO can hand a catalog pack (for example NIDO Essentials,
 about 1.1 MB) to a connected contact over Bluetooth or local Wi-Fi: Packs tab
 → Share. The rules:
 
