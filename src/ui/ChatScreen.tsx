@@ -36,6 +36,13 @@ import { embeddingEngine } from "../rag/embed";
 import { retrieve, assemblePrompt, RetrievedChunk, ConversationTurn } from "../rag/retrieve";
 import { assembleChatMessages, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
 import { classifyTask, isRetrievalIrrelevant, isCreativeRequest } from "../routing/classify";
+import {
+  hasHealthEvidence,
+  healthSafeProvenance,
+  healthSafeText,
+  isEmergencyText,
+  isHealthQuestion,
+} from "../routing/emergencyGate";
 import type { TaskType } from "../routing/types";
 import { onSeedProgress, seedKnowledgeBaseIfEmpty } from "../rag/seedCorpus";
 import { MODEL_CATALOG, CORPUS_CATALOG, REQUIRED_MODELS, CatalogModel } from "../models/manifest";
@@ -1478,6 +1485,17 @@ export function ChatScreen({
             }
           }
           const noSources = retrievalAttempted && c.length === 0;
+          // Programa bounty, tanda 2 (puerta léxica de salud, patrón de
+          // LabRat): pregunta de salud + ninguna fuente → el texto
+          // seguro fijo, sin generar. Va ANTES del "no lo sé" de hechos:
+          // para salud el texto seguro es el específico (llama si es
+          // urgencia; la guía está en el pack Esencial), no el genérico.
+          if (noSources && isHealthQuestion(query)) {
+            const safe = healthSafeText(uiLang);
+            assistantText = safe;
+            setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: safe } : m)));
+            return { chunks: c, noSourcesFound: noSources };
+          }
           // RAG-GROUNDING 2026-10-11 (Fase 3, "mejor no inventar"): pregunta
           // de hechos + ninguna fuente → "no lo sé" honesto y determinista,
           // sin generar. Pedírselo al 0.5B por prompt no basta: inventa igual.
@@ -1669,13 +1687,36 @@ export function ChatScreen({
           grounding = verified.status;
           if (verified.status !== "skipped") finalText = verified.text;
           provenance = verified.sentences;
-        } else if (
+        } else if (!deepResearchModeRef.current && noSourcesFound) {
+          // Programa bounty, tanda 2: la puerta de salud manda sobre el
+          // "no lo sé" genérico — una pregunta de salud sin fuentes (la
+          // ruta adaptativa no tiene la puerta previa de la ruta fija)
+          // cae al texto seguro, nunca a lo que el modelo haya escrito.
+          if (isHealthQuestion(query) && finalText !== healthSafeText(uiLang)) {
+            finalText = healthSafeText(uiLang);
+            provenance = healthSafeProvenance(finalText);
+          } else if (isFactualQuestion(query) && finalText !== noSourcesAnswer(uiLang)) {
+            finalText = noSourcesAnswer(uiLang);
+          }
+        }
+        // Programa bounty, tanda 2 (puerta de salud, segunda salida):
+        // con fuentes que NO son de salud, las salidas que dejan texto
+        // del modelo en pie («unverified»: la lengua no dejó juzgarlo)
+        // o que enseñan el extracto de esa fuente como respuesta
+        // («abstained») caen también al texto seguro si la pregunta es
+        // de salud y ningún chunk es de un pack de salud. Lo
+        // «grounded»/«partial» no se toca: está verificado frase a
+        // frase contra sus fuentes, no es memoria del modelo.
+        if (
           !deepResearchModeRef.current &&
-          noSourcesFound &&
-          isFactualQuestion(query) &&
-          finalText !== noSourcesAnswer(uiLang)
+          chunks.length > 0 &&
+          (grounding === "unverified" || grounding === "abstained") &&
+          isHealthQuestion(query) &&
+          !hasHealthEvidence(chunks)
         ) {
-          finalText = noSourcesAnswer(uiLang);
+          finalText = healthSafeText(uiLang);
+          provenance = healthSafeProvenance(finalText);
+          grounding = "abstained";
         }
         if (stripThinking(finalText).trim().length === 0) {
           finalText = agentFallbackText("emptyAnswer", uiLang);
@@ -1832,12 +1873,43 @@ export function ChatScreen({
   // session switch can wait for it to actually finish. Only the entry point
   // sets sendTaskRef; send() doesn't need to know about it.
   const handleSend = useCallback(() => {
+    // Programa bounty, tanda 2: con una generación en curso el envío
+    // normal NO entra. send() lo rechazaría igualmente, pero llamarlo
+    // pisaría sendTaskRef — que es justo lo que stopAndAwaitGeneration
+    // espera — y la generación viva quedaría sin su promesa. La única
+    // vía de envío con generación en curso es la de emergencia, abajo.
+    if (generating) return;
     followBottom.current = true;
     scrollToBottom(true);
     sendTaskRef.current = send().finally(() => {
       sendTaskRef.current = null;
     });
-  }, [send, scrollToBottom]);
+  }, [send, scrollToBottom, generating]);
+
+  // Programa bounty, tanda 2 (emergencia primero, pieza 06 de Field
+  // Atlas): lo de emergencia no hace cola. Si lo tecleado durante una
+  // generación casa con los detectores de las rutas fijas
+  // (emergencyGate.isEmergencyText), la pantalla ofrece enviarlo ya:
+  // se detiene y se ESPERA la generación en curso por la vía de
+  // stopAndAwaitGeneration (la misma de cambiar de sesión, que deja la
+  // respuesta vieja asentada con su marca de detenida) y, cuando el
+  // estado «generating» cae, el efecto envía el texto por el camino
+  // normal — donde la ruta fija lo pinta al instante y primero.
+  const emergencyPendingRef = useRef(false);
+  const handleEmergencySend = useCallback(async () => {
+    if (!isEmergencyText(inputValueRef.current, toFallbackLang(i18n.resolvedLanguage ?? i18n.language))) return;
+    emergencyPendingRef.current = true;
+    impact(ImpactFeedbackStyle.Heavy);
+    await stopAndAwaitGeneration();
+  }, [stopAndAwaitGeneration, i18n]);
+  useEffect(() => {
+    if (generating || !emergencyPendingRef.current) return;
+    emergencyPendingRef.current = false;
+    // Si al asentarse la generación el texto ya no es la emergencia
+    // (se editó o se cambió de sesión), no se envía nada.
+    if (!isEmergencyText(inputValueRef.current, toFallbackLang(i18n.resolvedLanguage ?? i18n.language))) return;
+    handleSend();
+  }, [generating, handleSend, i18n]);
 
   // 0.1.38: el toque en el chip es el commit. Si el texto, el idioma o el
   // modo cambiaron desde que se preparó, el chip ya no vale (cae en silencio).
@@ -2591,13 +2663,18 @@ export function ChatScreen({
               onChangeText={(next) => updateInput(next)}
               placeholder={t("chatScreen.inputPlaceholder")}
               placeholderTextColor={colors.text.dim}
-              editable={ready && !generating}
+              // Programa bounty, tanda 2: se puede ESCRIBIR durante la
+              // generación (antes: editable solo sin generar), para que
+              // una emergencia se pueda teclear sin esperar. Enviar
+              // sigue cerrado (handleSend no entra generando); la única
+              // salida es el botón de emergencia de abajo.
+              editable={ready}
               onSubmitEditing={handleSend}
               returnKeyType="send"
               multiline={true}
               maxLength={4000}
             />
-            {generating ? (
+            {generating && (
               <Pressable accessibilityRole="button"
                 style={styles.stopBtn}
                 onPress={stopGeneration}
@@ -2611,7 +2688,22 @@ export function ChatScreen({
                   <NidoIcon name="stop" size={16} color={colors.text.inverse} />
                 )}
               </Pressable>
-            ) : (
+            )}
+            {/* Programa bounty, tanda 2: el envío de emergencia solo
+                existe mientras se genera Y lo tecleado es una
+                emergencia para las rutas fijas; en cualquier otro
+                momento la fila es la de siempre. */}
+            {generating && isEmergencyText(input, toFallbackLang(i18n.resolvedLanguage ?? i18n.language)) ? (
+              <Pressable accessibilityRole="button"
+                style={styles.emergencySendBtn}
+                onPress={() => void handleEmergencySend()}
+                hitSlop={8}
+                accessibilityLabel={t("chatScreen.emergencySend")}
+              >
+                <NidoIcon name="send" size={16} color={colors.text.inverse} />
+              </Pressable>
+            ) : null}
+            {!generating && (
               <Pressable accessibilityRole="button"
                 style={[styles.sendBtn, (!ready || !input.trim()) && styles.sendBtnDisabled]}
                 onPress={handleSend}
@@ -2999,6 +3091,17 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     backgroundColor: colors.crimson[600],
     alignItems: "center",
     justifyContent: "center",
+  },
+  // Programa bounty, tanda 2: el envío de emergencia junto al de
+  // detener — mismo tamaño, carmesí más vivo y la flecha de enviar.
+  emergencySendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.crimson[500],
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 6,
   },
   stopBtnText: {
     color: colors.text.inverse,

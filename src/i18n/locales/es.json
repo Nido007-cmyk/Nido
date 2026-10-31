@@ -118,6 +118,7 @@
     "showReasoning": "Mostrar razonamiento",
     "stageTimedOut": "Un paso de la investigación tardó demasiado y se cortó",
     "stopGeneration": "Detener la generación",
+    "emergencySend": "Enviar como emergencia",
     "stoppedByUser": "Detenido por el usuario",
     "retry": "Reintentar",
     "stopping": "Deteniendo… (terminando el paso actual)",

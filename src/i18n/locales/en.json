@@ -434,6 +434,7 @@
     "inputPlaceholder": "Ask anything…",
     "noRelevantOfflineSources": "No relevant offline sources found for this question.",
     "stopGeneration": "Stop generation",
+    "emergencySend": "Send as emergency",
     "sendMessage": "Send message",
     "research": {
       "decomposing": "🔬 Breaking question into sub-questions…",

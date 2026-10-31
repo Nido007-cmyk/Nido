@@ -76,6 +76,7 @@ App for Android»), reunidos con sus licencias verificadas en la fuente:
 |---|---|---|---|
 | Post-chequeo de citas: las cifras de una respuesta tienen que salir de la evidencia, con su redondeo y escala honestos («16,4 millones» por 16.431.599) | Commonplace de 0xPD33 (`citations.rs`, `evidence.rs`) | Apache-2.0 | `src/rag/evidenceNumbers.ts`, usado por `src/rag/grounding.ts` |
 | Evidencia primero: la tarjeta de la fuente principal, con su frase que mejor responde, encima de la respuesta; un color por fuente compartido por sus marcadores de cita | Commonplace de 0xPD33 (`AnswerViews.kt`, `evidence.rs`) | Apache-2.0 | `src/rag/evidenceCard.ts`, `src/ui/components/EvidenceFirstCard.tsx`, `src/ui/components/sourceColors.ts` |
+| Emergencia primero + puerta léxica de salud: una emergencia tecleada a mitad de generación la interrumpe y la responden las rutas fijas al instante; una pregunta de salud sin pasaje de un pack de salud cae a un texto seguro fijo, nunca a la memoria del modelo | Field Atlas de 0x94t3z (`docs/emergency.md`) y el fork LabRat de r4topunk (patrón descrito en su README) | Apache-2.0 / MIT | `src/routing/emergencyGate.ts`, cableado en `src/ui/ChatScreen.tsx` |
 
 ## ¿Usas código de NIDO? Conserva el aviso
 

@@ -74,6 +74,7 @@ Android"), gathered with their licenses verified at the source:
 |---|---|---|---|
 | Citation post-check: an answer's figures must come from the evidence, allowing honest rounding and scale ("16.4 million" for 16,431,599) | Commonplace by 0xPD33 (`citations.rs`, `evidence.rs`) | Apache-2.0 | `src/rag/evidenceNumbers.ts`, used by `src/rag/grounding.ts` |
 | Evidence first: the main source's card, with its best-answering sentence, above the answer; a colour per source shared by its citation markers | Commonplace by 0xPD33 (`AnswerViews.kt`, `evidence.rs`) | Apache-2.0 | `src/rag/evidenceCard.ts`, `src/ui/components/EvidenceFirstCard.tsx`, `src/ui/components/sourceColors.ts` |
+| Emergency first + health lexical gate: an emergency typed mid-generation preempts it and is answered by the fixed routes at once; a health question with no health-pack passage falls to a fixed safe text, never to the model's memory | Field Atlas by 0x94t3z (`docs/emergency.md`) and the LabRat fork by r4topunk (pattern described in its README) | Apache-2.0 / MIT | `src/routing/emergencyGate.ts`, wired in `src/ui/ChatScreen.tsx` |
 
 ## Using NIDO's code? Keep the notice
 

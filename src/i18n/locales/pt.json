@@ -434,6 +434,7 @@
     "inputPlaceholder": "Pergunte qualquer coisa…",
     "noRelevantOfflineSources": "Nenhuma fonte offline relevante encontrada para esta pergunta.",
     "stopGeneration": "Parar geração",
+    "emergencySend": "Enviar como emergência",
     "sendMessage": "Enviar mensagem",
     "research": {
       "decomposing": "🔬 Dividindo a pergunta em subperguntas…",
