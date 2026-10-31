@@ -22,6 +22,18 @@
 //   3. Reachability: HTTP HEAD (falling back to a single-byte ranged GET
 //      for servers that reject HEAD) against each pinned URL, anonymously.
 //      Any 4xx/5xx or network failure FAILS the script.
+//   4. Digests (full audit 2026-10-31, F5-03): reachability alone proved
+//      a substituted file would pass — a 200 says nothing about bytes.
+//      For GitHub release assets the release API's per-asset digest and
+//      size are compared with the catalog; for Hugging Face files the
+//      model tree API's LFS sha256 and size are. A mismatch FAILS. When
+//      an API cannot answer (network, rate limit, no digest published),
+//      the asset is reported as digest-unverified (warning), never
+//      silently counted as verified; hosts without a digest API stay
+//      reachability-only and the summary says how many of each kind
+//      were checked. The app still verifies the sha256 after every
+//      download — this step exists so a wrong file is caught before a
+//      user ever downloads it, not after.
 //
 // Honest errors: DNS/connection/timeout failures are reported as NETWORK
 // with the underlying cause code (ENOTFOUND, ECONNREFUSED, ETIMEDOUT…),
@@ -184,6 +196,94 @@ async function checkReachable(asset, url) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// --- Digest comparison (F5-03) -------------------------------------------
+// Returns one of:
+//   { kind: "verified" }                    digest and size match the catalog
+//   { kind: "mismatch", detail }            the served bytes are NOT the pinned ones
+//   { kind: "unverified", detail }          no digest API answer for this asset
+//   { kind: "not-applicable" }              host without a digest API
+
+const githubReleaseCache = new Map(); // "owner/repo@tag" -> assets[] | Error
+
+async function githubReleaseAssets(owner, repo, tag) {
+  const key = `${owner}/${repo}@${tag}`;
+  if (githubReleaseCache.has(key)) {
+    const cached = githubReleaseCache.get(key);
+    if (cached instanceof Error) throw cached;
+    return cached;
+  }
+  try {
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/tags/${tag}`, {
+      headers: { "User-Agent": USER_AGENT, Accept: "application/vnd.github+json" },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (!res.ok) throw new Error(`GitHub API HTTP ${res.status}`);
+    const body = await res.json();
+    const assets = Array.isArray(body.assets) ? body.assets : [];
+    githubReleaseCache.set(key, assets);
+    return assets;
+  } catch (e) {
+    githubReleaseCache.set(key, e);
+    throw e;
+  }
+}
+
+async function checkDigest(asset, url) {
+  const gh = /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/releases\/download\/([^/]+)\/(.+)$/.exec(url);
+  if (gh) {
+    const [, owner, repo, tag, name] = gh;
+    let assets;
+    try {
+      assets = await githubReleaseAssets(owner, repo, tag);
+    } catch (e) {
+      return { kind: "unverified", detail: `GitHub API: ${e.message}` };
+    }
+    const found = assets.find((a) => a.name === name);
+    if (!found) return { kind: "mismatch", detail: `asset ${name} not in release ${tag}` };
+    if (typeof found.size === "number" && found.size !== asset.sizeBytes)
+      return { kind: "mismatch", detail: `size ${found.size} != catalog ${asset.sizeBytes}` };
+    if (typeof found.digest === "string" && found.digest.startsWith("sha256:")) {
+      const remote = found.digest.slice("sha256:".length);
+      if (remote !== asset.sha256)
+        return { kind: "mismatch", detail: `sha256 ${remote} != catalog ${asset.sha256}` };
+      return { kind: "verified" };
+    }
+    return { kind: "unverified", detail: "release asset has no published digest; size compared only" };
+  }
+  const hf = /^https:\/\/huggingface\.co\/([^/]+)\/([^/]+)\/resolve\/([^/]+)\/(.+)$/.exec(url);
+  if (hf) {
+    const [, owner, repo, rev, path] = hf;
+    try {
+      // The tree API answers for directories, not for a file path
+      // (a file path 404s): list the file's parent directory at the
+      // pinned revision and pick the entry by its exact path. The
+      // LFS pointer's oid IS the file's sha256.
+      const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+      const treeUrl = `https://huggingface.co/api/models/${owner}/${repo}/tree/${rev}${dir ? `/${dir}` : ""}`;
+      const res = await fetch(treeUrl, {
+        headers: { "User-Agent": USER_AGENT },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (!res.ok) return { kind: "unverified", detail: `HF API HTTP ${res.status}` };
+      const body = await res.json();
+      const entry = (Array.isArray(body) ? body : []).find((e) => e && e.path === path);
+      if (!entry) return { kind: "unverified", detail: "file not in HF tree response" };
+      if (typeof entry.size === "number" && entry.size !== asset.sizeBytes)
+        return { kind: "mismatch", detail: `size ${entry.size} != catalog ${asset.sizeBytes}` };
+      const remote = entry.lfs?.oid ?? entry.lfs?.sha256;
+      if (typeof remote === "string") {
+        if (remote !== asset.sha256)
+          return { kind: "mismatch", detail: `sha256 ${remote} != catalog ${asset.sha256}` };
+        return { kind: "verified" };
+      }
+      return { kind: "unverified", detail: "no LFS oid in HF tree entry; size compared only" };
+    } catch (e) {
+      return { kind: "unverified", detail: `HF API: ${e.message}` };
+    }
+  }
+  return { kind: "not-applicable" };
+}
+
 async function main() {
   console.log("Loading src/models/manifest.ts …");
   const { MODEL_CATALOG, pinnedSourceUrl } = await loadManifest();
@@ -191,6 +291,7 @@ async function main() {
 
   checkConsistency(MODEL_CATALOG);
 
+  const digestCounts = { verified: 0, unverified: 0, notApplicable: 0 };
   for (const asset of MODEL_CATALOG) {
     const url = pinnedSourceUrl(asset);
     const tag = `[${asset.id}]`;
@@ -198,6 +299,23 @@ async function main() {
     process.stdout.write(`${tag} HEAD ${url} … `);
     const { ok, status } = await checkReachable(asset, url);
     console.log(ok ? `OK (${status})` : `FAIL (${status ?? "network"})`);
+    if (ok) {
+      const digest = await checkDigest(asset, url);
+      if (digest.kind === "verified") {
+        digestCounts.verified++;
+        console.log(`${tag} digest OK (sha256 y tamaño casan con el catálogo)`);
+      } else if (digest.kind === "mismatch") {
+        fail(`entry ${asset.id}: DIGEST mismatch for ${url}: ${digest.detail}`);
+        console.log(`${tag} digest FAIL: ${digest.detail}`);
+      } else if (digest.kind === "unverified") {
+        digestCounts.unverified++;
+        warn(`entry ${asset.id}: digest not verified (${digest.detail})`);
+        console.log(`${tag} digest not verified (${digest.detail})`);
+      } else {
+        digestCounts.notApplicable++;
+        console.log(`${tag} digest: sin API de huellas para este host (solo alcanzabilidad)`);
+      }
+    }
     // Be polite to hosts; tiny pause between entries.
     await sleep(300);
   }
@@ -208,6 +326,10 @@ async function main() {
     console.log(
       `PASS: ${MODEL_CATALOG.length} pins verified` +
         (warnings.length ? ` (${warnings.length} warning${warnings.length === 1 ? "" : "s"})` : "")
+    );
+    console.log(
+      `Digests: ${digestCounts.verified} verificados contra su API, ` +
+        `${digestCounts.unverified} sin verificar, ${digestCounts.notApplicable} solo alcanzabilidad`
     );
     process.exit(0);
   }
