@@ -50,7 +50,7 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   `.json` o `.pdf` y NIDO los indexa en el teléfono.
 - **Sabe cosas sin internet**: una base de conocimiento integrada y un
   paquete opcional de Wikipedia (unos 50.000 artículos) y nueve paquetes
-  de guías opcionales escritos por NIDO (Esencial, Local, Niños, Crisis,
+  de guías opcionales escritos por NIDO (Esencial, Local, Niños y Bebés, Crisis,
   Sin Servicios, Hogar Seguro, Desastres, Campo y Viaje), con números de
   emergencia verificados de 69 países. Con la búsqueda
   multilingüe activada puedes preguntar en español, portugués o inglés, y las
@@ -128,7 +128,7 @@ La interfaz está disponible en español, inglés y portugués.
   datos pide tu huella o PIN.
 
 [Política de privacidad](PRIVACY.md) · [términos de uso](TERMS.md). Más detalle: [endurecimiento de privacidad](docs/es/PRIVACY.md) · [arquitectura criptográfica](docs/es/CRYPTO_ARCHITECTURE.md) ·
-[modelo de amenazas](docs/THREAT_MODEL_SUMMARY.md) · [reportar una vulnerabilidad](SECURITY.es.md)
+[modelo de amenazas](docs/es/THREAT_MODEL.md) · [reportar una vulnerabilidad](SECURITY.es.md)
 
 ## Estado
 
