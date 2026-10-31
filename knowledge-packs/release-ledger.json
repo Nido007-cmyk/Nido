@@ -25,7 +25,13 @@
     "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-campo.sqlite": "5f62d994843d599cef77c43688759730420d2539d7aa231b4454208e349c34cc",
     "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-campo-e5.sqlite": "644196d28a0e030c9fe1551146c25e96fa37b282dd1ba504c99829d71f751139",
     "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-viaje.sqlite": "a6f4608b59ee6add7f9cf147a9d76c03b8460ec4e0d4a4d14d029f82dd74c086",
-    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-viaje-e5.sqlite": "e27777f2a902d6c5f3452446212d25471df5822fa82c04e3b5ae2cf724f3d020"
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v6/nido-viaje-e5.sqlite": "e27777f2a902d6c5f3452446212d25471df5822fa82c04e3b5ae2cf724f3d020",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v7/nido-local.sqlite": "98393e837fe7880712d7cfd0bb5a5ff76691e4595385ac8574c267c27208e2f0",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v7/nido-local-e5.sqlite": "3477ba173f1f31003e9c700c95c45e28fc9988a255e92fc93c826d0e5ce40f31",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v7/nido-crisis.sqlite": "2169f1290a2f696039697ffcb276536fef59c73281b987aab559973e88cde627",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v7/nido-crisis-e5.sqlite": "70e73fa2dc80f80bb699702af4ff958818d63373160853f3138b090602f6a5e3",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v7/nido-viaje.sqlite": "051b11805f154b84da4f7d88664428cb991ed18d0ae920dae67971074d95f791",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v7/nido-viaje-e5.sqlite": "28c4bf3996b10d8bdc09f8b8470eb0a9606d90f8d2236b82b3ffa7975a038709"
   },
   "replacedOnce": {
     "about": "The bytes knowledge-packs-v5 served before it was republished (NIDO 0.1.57 and older expect these). Kept as a record of the mistake; never reuse this pattern.",
