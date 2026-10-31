@@ -13,6 +13,13 @@
  * estaba en la lista de bloqueados ni lo declara ningún fichero de la casa:
  * entra solo por el manifiesto de la AAR de ShortcutBadger al fusionarse.
  * Se bloquea también y la cuenta de la familia pasa a 16.
+ *
+ * Auditoría completa 2026-10-31 (F2-05): READ_EXTERNAL_STORAGE y
+ * WRITE_EXTERNAL_STORAGE (con maxSdkVersion 32) entran por el manifiesto
+ * de la librería expo-file-system. NIDO solo toca su propio directorio y
+ * carpetas que el usuario elige con el selector del sistema (SAF), así
+ * que ninguno de los dos hace falta: se bloquean igual que el resto de
+ * permisos heredados que la app no usa.
  */
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
@@ -27,6 +34,11 @@ describe("permisos bloqueados", () => {
   it("bloquea los 16 permisos de insignias de fabricantes", () => {
     const badges = [...blocked].filter((p) => /launcher|badge|badger|home\.permission/i.test(p));
     expect(badges).toHaveLength(16);
+  });
+
+  it("bloquea el almacenamiento externo heredado de expo-file-system (F2-05)", () => {
+    expect(blocked.has("android.permission.READ_EXTERNAL_STORAGE")).toBe(true);
+    expect(blocked.has("android.permission.WRITE_EXTERNAL_STORAGE")).toBe(true);
   });
 
   it("no bloquea ningún permiso que NIDO declara", () => {
