@@ -39,6 +39,7 @@ E em qualquer país, numa viagem longa vale levar também:
 - Se você cruzar para outro país, confira antes quais documentos extras ele exige: alguns pedem um certificado internacional de seguro (a antiga Carta Verde) e uma permissão internacional para dirigir.
 
 ## Antes de sair
+<!-- perguntas: o que preparo e confiro no carro antes de uma viagem longa | lista de preparação do carro para viajar -->
 - Confira pressão e sulcos dos pneus (inclusive o estepe), níveis de óleo, freios e limpadores, luzes e bateria.
 - Tanque o mais cheio que der, e avise alguém sobre a sua rota e o horário previsto de chegada.
 

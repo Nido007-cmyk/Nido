@@ -14,6 +14,7 @@ A minor bump, with nobody hurt and both cars still driveable, is mostly settled 
 - Turn on the hazard lights and mark the scene if you will be stopped on the road.
 
 ## 2. Get out of the traffic flow
+<!-- questions: another car hit mine from behind at a red light, nobody got hurt | bumped from behind at a traffic light, only bodywork damage -->
 - First, get to a safe place on the road to exchange details.
 - Before moving them, if it is safe, take the position photos (below).
 
