@@ -10,7 +10,6 @@ import { answerFromGuide } from "../rag/guideAnswerRun";
 import {
   View,
   Text,
-  Alert,
   Pressable,
   FlatList,
   StyleSheet,
@@ -258,7 +257,14 @@ export function ChatScreen({
     takeSettingsRecoveryNotice()
       .then((at) => {
         if (alive && at !== null) {
-          Alert.alert(t("settings.recoveredTitle"), t("settings.recoveredNotice"));
+          // Por el diálogo seguro, como todo aviso de esta pantalla:
+          // la guarda R3 la mantiene sin el Alert de React Native.
+          void showSecureAlert({
+            title: t("settings.recoveredTitle"),
+            message: t("settings.recoveredNotice"),
+            cancelLabel: t("common.close"),
+            confirmLabel: t("common.done"),
+          }).catch(() => {});
         }
       })
       .catch(() => {});
