@@ -17,6 +17,26 @@ import {
   type AgentEngine,
 } from "./agentLoop";
 
+describe("prompt y directivas en portugués (F1 M-5 = F9-02)", () => {
+  it("buildSystemPrompt en pt presenta a NIDO en portugués", () => {
+    const p = buildSystemPrompt("conversar", "", "pt");
+    expect(p).toContain("Você é o NIDO");
+    expect(p).toContain("Você fala português");
+    expect(p).not.toContain("Hablas español");
+    expect(p).not.toContain("Eres NIDO");
+  });
+
+  it("el eco de la directiva de continuación en pt o en se elimina igual que el de es", () => {
+    expect(
+      stripEchoedInstruction("[diretiva de formato: gere sua resposta final ao usuário em português; não emita blocos de ferramenta]"),
+    ).toBe("");
+    expect(
+      stripEchoedInstruction("[format directive: generate your final answer to the user in English; do not emit tool blocks]"),
+    ).toBe("");
+    expect(stripEchoedInstruction("A resposta certa.")).toBe("A resposta certa.");
+  });
+});
+
 describe("appendMutationConfirmation (F1 B-8)", () => {
   const used = [{ name: "remember_fact", result: "ok" }] as never;
 
