@@ -503,7 +503,7 @@ export function buildSystemPrompt(
   const today = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
-  // 0.1.8: sin Intl (CRASH-2026-10-10, ver reminderFormat.ts).
+  // 0.1.8: sin Intl (CRASH-2026-10-10, ver el formato sin Intl en toolRouter.ts).
   const todayLong = `${formatDay(today, lang)}${lang === "en" ? "," : " de"} ${today.getFullYear()}`;
 
   // use_skill only exists in the actuar list — don't advertise skills
@@ -957,7 +957,7 @@ async function runAgentLoopCore(
     // CALENDAR-FIX 2026-10-07: mostrar fecha si se parseó, ser honesto si no.
     // FIX 2026-10-09 (I2): usar el idioma actual, no "es" hardcodeado.
     // CRASH-2026-10-10: sin Intl (toLocale* con opciones pasa por JNI en
-    // Hermes/Android y un fallo ahí cierra la app). Ver reminderFormat.ts.
+    // Hermes/Android y un fallo ahí cierra la app). Ver el formato sin Intl en toolRouter.ts.
     // 0.1.14: respuesta en el idioma del usuario (antes siempre en español).
     // 0.1.32: si se repite, «cada lunes a las 9:00» en vez de una fecha.
     const dateStr = reminderAction.dueAt

@@ -1417,7 +1417,7 @@ const MONTHS: Record<RouterLang, string[]> = {
 };
 
 /**
- * CRASH-2026-10-10 (reminderFormat.ts): toLocale*String con opciones pasa
+ * CRASH-2026-10-10: toLocale*String con opciones pasa
  * por Intl/JNI en Hermes-Android y un fallo ahí cierra la app. Aquí solo
  * getters de Date.
  */

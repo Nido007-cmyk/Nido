@@ -198,7 +198,7 @@ export function fmtDateTime(iso: string | null): string {
   if (!iso) return L("sin fecha", "no date", "sem data");
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  // 0.1.8: sin Intl (CRASH-2026-10-10, ver reminderFormat.ts): en Hermes
+  // 0.1.8: sin Intl (CRASH-2026-10-10, ver el formato sin Intl en toolRouter.ts): en Hermes
   // para Android toLocale*String con opciones pasa por JNI y puede cerrar
   // la app. Solo getters de Date.
   const lang = uiLang();
