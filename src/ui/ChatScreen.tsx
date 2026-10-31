@@ -2406,10 +2406,10 @@ export function ChatScreen({
             <View style={styles.emptyState}>
               <NidoMascot role="guide" size={120} />
               <Text style={[styles.emptyTitle, { color: colors.text.heading }]}>
-                {t("chatScreen.emptyTitle", "Hola, soy NIDO")}
+                {t("chatScreen.emptyTitle", "Hi, I'm NIDO")}
               </Text>
               <Text style={[styles.emptySubtitle, { color: colors.text.dim }]}>
-                {t("chatScreen.emptySubtitle", "Tu agente privado. Todo queda en este dispositivo.")}
+                {t("chatScreen.emptySubtitle", "Your private agent. Everything stays on this device.")}
               </Text>
               {/* Rediseño 2026-10-10: sugerencias tocables para que el
                   usuario sepa qué puede pedir. Solo rellenan el campo. */}
