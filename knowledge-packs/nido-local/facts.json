@@ -2781,9 +2781,9 @@
     "pt": "polícia"
    },
    "source": {
-    "title": "Turismo de Suiza (myswitzerland.com), números de emergencia",
-    "url": "https://www.myswitzerland.com/en-ae/planning/about-switzerland/general-facts/emergency/safer-travel/",
-    "quote": "Police: 117",
+    "title": "OFCOM (admin.ch), quién recibe mi llamada de emergencia",
+    "url": "https://www.geo.admin.ch/en/dataset-21072025",
+    "quote": "police, emergency call 117",
     "checked": "2026-10-30"
    }
   },
@@ -2797,9 +2797,9 @@
     "pt": "bombeiros"
    },
    "source": {
-    "title": "Turismo de Suiza (myswitzerland.com), números de emergencia",
-    "url": "https://www.myswitzerland.com/en-ae/planning/about-switzerland/general-facts/emergency/safer-travel/",
-    "quote": "Fire-service: 118",
+    "title": "OFCOM (admin.ch), quién recibe mi llamada de emergencia",
+    "url": "https://www.geo.admin.ch/en/dataset-21072025",
+    "quote": "fire, alarm center 118",
     "checked": "2026-10-30"
    }
   },
@@ -2813,9 +2813,9 @@
     "pt": "ambulância"
    },
    "source": {
-    "title": "Turismo de Suiza (myswitzerland.com), números de emergencia",
-    "url": "https://www.myswitzerland.com/en-ae/planning/about-switzerland/general-facts/emergency/safer-travel/",
-    "quote": "Ambulance: 144",
+    "title": "OFCOM (admin.ch), quién recibe mi llamada de emergencia",
+    "url": "https://www.geo.admin.ch/en/dataset-21072025",
+    "quote": "ambulance, emergency call 144",
     "checked": "2026-10-30"
    }
   },
@@ -2829,9 +2829,9 @@
     "pt": "centro de toxicologia"
    },
    "source": {
-    "title": "Turismo de Suiza (myswitzerland.com), números de emergencia",
-    "url": "https://www.myswitzerland.com/en-ae/planning/about-switzerland/general-facts/emergency/safer-travel/",
-    "quote": "Tox-Zentrum: 145",
+    "title": "Tox Info Suisse (toxinfo.ch), centro oficial de información toxicológica de Suiza",
+    "url": "https://www.toxinfo.ch/portrait_en",
+    "quote": "via the emergency number 145",
     "checked": "2026-10-30"
    }
   },
@@ -2845,9 +2845,9 @@
     "pt": "emergências (número único)"
    },
    "source": {
-    "title": "Turismo de Suiza (myswitzerland.com), números de emergencia",
-    "url": "https://www.myswitzerland.com/en-ae/planning/about-switzerland/general-facts/emergency/safer-travel/",
-    "quote": "European Emergeny no: 112",
+    "title": "OFCOM (admin.ch), quién recibe mi llamada de emergencia",
+    "url": "https://www.geo.admin.ch/en/dataset-21072025",
+    "quote": "European emergency service 112",
     "checked": "2026-10-30"
    }
   },
