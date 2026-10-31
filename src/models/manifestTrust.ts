@@ -66,7 +66,19 @@ export function canonicalCatalogJSON(catalog: CatalogModel[]): string {
     }
     return obj;
   });
-  entries.sort((x, y) => String(x.id).localeCompare(String(y.id)));
+  // Auditoría completa 2026-10-31 (F5-06): el orden entre entradas
+  // lo decide una comparación por puntos de código, no localeCompare.
+  // localeCompare depende de la configuración regional del motor
+  // (Node con ICU frente a Hermes en el teléfono): con un id futuro
+  // que hiciera diverger el orden, la app rechazaría un catálogo
+  // bien firmado. Con los ids actuales ambas dan el mismo orden y
+  // la forma canónica no cambia ni un byte (la firma comiteada
+  // sigue verificando sin re-firmar).
+  entries.sort((x, y) => {
+    const a = String(x.id);
+    const b = String(y.id);
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
   return JSON.stringify(entries);
 }
 

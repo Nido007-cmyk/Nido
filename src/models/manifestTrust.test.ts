@@ -51,6 +51,15 @@ describe("canonicalCatalogJSON", () => {
     expect(canonicalCatalogJSON(a)).toBe(canonicalCatalogJSON(b));
   });
 
+  it("auditoría 2026-10-31 (F5-06): el orden de entradas es por puntos de código, no por locale", () => {
+    // localeCompare (en) ordenaría a-1 pegado a A-1 e intercalando
+    // mayúsculas; la forma canónica exige el orden de puntos de
+    // código, idéntico en Node y en Hermes: A(65) < Z(90) < a(97) < b(98).
+    const mk = (id: string) => ({ id, sha256: "y", sizeBytes: 1, sourceUrl: "u", kind: "llm" }) as any;
+    const parsed = JSON.parse(canonicalCatalogJSON([mk("b-1"), mk("a-1"), mk("Z-1"), mk("A-1")]));
+    expect(parsed.map((e: any) => e.id)).toEqual(["A-1", "Z-1", "a-1", "b-1"]);
+  });
+
   it("ignores display-only fields but includes integrity fields", () => {
     const base: any[] = [{ id: "a", sha256: "y", label: "one", description: "d1", sizeBytes: 1, sourceUrl: "u", kind: "llm" }];
     const relabeled: any[] = [{ id: "a", sha256: "y", label: "two", description: "d2", sizeBytes: 1, sourceUrl: "u", kind: "llm" }];
