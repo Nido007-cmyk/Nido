@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { chunkGuide, chunkIntro, cleanIntro, daysSince, htmlToText, parseArgs, quoteIsPresent, parseGuide, quantizeInt8, splitQuestions, validateFacts, vitalListPages } from "./knowledge-pack-lib.mjs";
+import { chunkGuide, chunkIntro, cleanIntro, daysSince, htmlToText, parseArgs, publishBuiltFileSync, quoteIsPresent, parseGuide, quantizeInt8, splitQuestions, tempSiblingPath, validateFacts, vitalListPages, writeFileAtomicSync } from "./knowledge-pack-lib.mjs";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -247,5 +247,42 @@ describe("comprobación semanal de fuentes (0.1.55)", () => {
 
   it("calcula los días desde la última comprobación", () => {
     expect(daysSince("2026-10-01", new Date("2026-10-28T12:00:00Z"))).toBe(27);
+  });
+});
+
+describe("publicación atómica del constructor (bounty, tanda 8)", () => {
+  it("escribir atómico deja el contenido y ningún temporal; y republicar reemplaza", async () => {
+    const { mkdtempSync, readFileSync, existsSync, rmSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const dir = mkdtempSync(join(tmpdir(), "nido-atomic-"));
+    try {
+      const dest = join(dir, "pack.sqlite.json");
+      writeFileAtomicSync(dest, "{\"v\":1}\n");
+      expect(readFileSync(dest, "utf8")).toBe("{\"v\":1}\n");
+      expect(existsSync(tempSiblingPath(dest))).toBe(false);
+      writeFileAtomicSync(dest, "{\"v\":2}\n");
+      expect(readFileSync(dest, "utf8")).toBe("{\"v\":2}\n");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("publicar un construido renombra el temporal y la edición anterior sobrevive hasta ese instante", async () => {
+    const { mkdtempSync, readFileSync, writeFileSync, existsSync, rmSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const dir = mkdtempSync(join(tmpdir(), "nido-atomic-"));
+    try {
+      const dest = join(dir, "pack.sqlite");
+      writeFileSync(dest, "EDICIÓN BUENA");
+      const tmp = tempSiblingPath(dest);
+      writeFileSync(tmp, "EDICIÓN NUEVA A MITAD");
+      // La construcción en curso no ha tocado la edición buena:
+      expect(readFileSync(dest, "utf8")).toBe("EDICIÓN BUENA");
+      publishBuiltFileSync(tmp, dest);
+      expect(readFileSync(dest, "utf8")).toBe("EDICIÓN NUEVA A MITAD");
+      expect(existsSync(tmp)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

@@ -51,6 +51,11 @@ tokenizador pone el texto en minúsculas) y no afecta a los embeddings.
 Cada paso se cachea en `build/knowledge-pack/<id>/`, así que si la construcción se
 detiene puedes ejecutar el mismo comando de nuevo y continúa donde lo dejó.
 
+La publicación es atómica: el pack y sus JSON laterales se construyen sobre un
+hermano `.tmp` y se renombran sobre el destino solo cuando están completos, así
+que una construcción que falla a mitad nunca destruye la edición buena que ya
+estaba en esa ruta.
+
 El resultado:
 
 ```

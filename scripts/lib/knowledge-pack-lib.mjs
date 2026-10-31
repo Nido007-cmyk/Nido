@@ -4,7 +4,8 @@
  * See LICENSE file for details.
  */
 
-// Pure helpers for scripts/build-knowledge-pack.mjs (tested in knowledge-pack-lib.test.mjs).
+// Pure helpers for scripts/build-knowledge-pack.mjs (tested in knowledge-pack-lib.test.mjs),
+// plus, at the end, the two atomic-publish helpers (the only impure ones).
 
 export const USAGE = `usage: node scripts/build-knowledge-pack.mjs [options]
 
@@ -326,4 +327,31 @@ export function quoteIsPresent(pageText, quote) {
 /** Days between a YYYY-MM-DD check date and `today` (a Date). */
 export function daysSince(checked, today = new Date()) {
   return Math.floor((today.getTime() - Date.parse(`${checked}T00:00:00Z`)) / 86_400_000);
+}
+
+// ---------------------------------------------------------------------------
+// Publicación atómica (bounty, tanda 8; regla de corpus de Blobs,
+// Apache-2.0: el constructor publica por temporal + renombrado).
+// Hasta aquí, writePack borraba la salida y construía en sitio: una
+// construcción que fallaba a mitad dejaba la ruta SIN la edición
+// buena anterior. Ahora todo se construye sobre el hermano temporal
+// y solo se renombra cuando está cerrado y completo.
+
+import { renameSync, writeFileSync } from "node:fs";
+
+/** La ruta hermana temporal sobre la que se construye antes de publicar. */
+export function tempSiblingPath(path) {
+  return `${path}.tmp`;
+}
+
+/** Escribe el contenido en el temporal y lo renombra sobre el destino. */
+export function writeFileAtomicSync(path, data) {
+  const tmp = tempSiblingPath(path);
+  writeFileSync(tmp, data);
+  renameSync(tmp, path);
+}
+
+/** Publica un fichero ya construido en su temporal renombrándolo. */
+export function publishBuiltFileSync(tmpPath, path) {
+  renameSync(tmpPath, path);
 }

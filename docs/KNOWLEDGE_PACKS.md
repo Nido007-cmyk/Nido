@@ -50,6 +50,10 @@ tokenizer lowercases text) and doesn't affect the embeddings.
 Every step is cached in `build/knowledge-pack/<id>/`, so if the build stops you
 can run the same command again and it continues where it left off.
 
+Publishing is atomic: the pack and its JSON sidecars are built on a `.tmp`
+sibling and renamed over the destination only when complete, so a build that
+fails halfway never destroys the good edition already sitting at that path.
+
 The result:
 
 ```

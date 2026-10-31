@@ -19,7 +19,7 @@ import { createReadStream, existsSync, mkdirSync, readFileSync, appendFileSync, 
 import { DatabaseSync } from "node:sqlite";
 import { dirname, join, resolve } from "node:path";
 import { readdirSync } from "node:fs";
-import { chunkGuide, chunkIntro, cleanIntro, parseArgs, parseGuide, quantizeInt8, USAGE, validateFacts, vitalListPages } from "./lib/knowledge-pack-lib.mjs";
+import { chunkGuide, chunkIntro, cleanIntro, parseArgs, parseGuide, publishBuiltFileSync, quantizeInt8, tempSiblingPath, USAGE, validateFacts, vitalListPages, writeFileAtomicSync } from "./lib/knowledge-pack-lib.mjs";
 import { buildEditionCard, editionCardDigest, recordsDigest } from "./lib/pack-edition-lib.mjs";
 
 const WIKI_API = "https://en.wikipedia.org/w/api.php";
@@ -202,8 +202,14 @@ async function embedChunks(chunks, cacheFile, threads) {
 }
 
 function writePack(file, opts, chunks, vectors, meta, extra = {}) {
-  rmSync(file, { force: true });
-  const db = new DatabaseSync(file);
+  // Bounty tanda 8 (regla de Blobs): se construye sobre el temporal
+  // y se publica renombrando al cerrar. Antes se borraba la salida y
+  // se construía en sitio: una construcción fallida a mitad dejaba
+  // la ruta sin la edición buena anterior. La anterior sobrevive
+  // hasta el renombrado.
+  const tmpFile = tempSiblingPath(file);
+  rmSync(tmpFile, { force: true });
+  const db = new DatabaseSync(tmpFile);
   // Format v2 adds, without changing anything an older app reads: the guide
   // of each chunk and its search keys (chunks.guide, chunks.keys, also in the
   // full-text index), the guides themselves, and the verified facts.
@@ -240,6 +246,7 @@ function writePack(file, opts, chunks, vectors, meta, extra = {}) {
   for (const [k, v] of Object.entries(meta)) setMeta.run(k, String(v));
   db.exec("VACUUM");
   db.close();
+  publishBuiltFileSync(tmpFile, file);
 }
 
 async function main() {
@@ -392,7 +399,7 @@ async function main() {
       embeddingModelSha256: EMBEDDING_MODEL.sha256,
     },
   });
-  writeFileSync(`${outFile}.edition.json`, `${JSON.stringify(card, null, 2)}\n`);
+  writeFileAtomicSync(`${outFile}.edition.json`, `${JSON.stringify(card, null, 2)}\n`);
   if (card.state === "release-ready") {
     log(`edition card: ${card.edition} (release-ready)`);
   } else {
@@ -410,7 +417,7 @@ async function main() {
     editionState: card.state,
     editionCardSha256: editionCardDigest(card),
   };
-  writeFileSync(`${outFile}.json`, `${JSON.stringify(summary, null, 2)}\n`);
+  writeFileAtomicSync(`${outFile}.json`, `${JSON.stringify(summary, null, 2)}\n`);
   log(`done: ${outFile}`);
   console.log(JSON.stringify(summary, null, 2));
 }
