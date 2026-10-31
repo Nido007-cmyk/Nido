@@ -664,7 +664,15 @@ async function restoreExtracted(actualUri: string): Promise<void> {
   // junto a la principal para no dejarlas de épocas distintas.
   // FIX 2026-10-09 (NEW3-H-1): usar actualUri (para bundles, el knowledge
   // se extrajo junto al .db, no junto al .nidobackup.json).
-  try {
+  // Auditoría completa 2026-10-31 (F3-07): si el respaldo TRAE base de
+  // conocimiento, su restauración ya no es best-effort silencioso: se
+  // valida en voz alta, se guarda copia previa de la viva (como la
+  // principal) y se reemplaza por temporal y renombrado; si algo
+  // falla se revierten las dos bases para no dejarlas de épocas
+  // distintas. Lo único que sigue en silencio es el respaldo SIN
+  // conocimiento, que es una forma legítima: no se toca.
+  let knowledgeSafetyCopy: string | null = null;
+  {
     // A2: nombre canónico; se acepta también el sufijo antiguo por si el
     // usuario conserva archivos extraídos con una versión anterior.
     let knowledgeBackupUri = knowledgeBackupUriFor(actualUri);
@@ -682,20 +690,56 @@ async function restoreExtracted(actualUri: string): Promise<void> {
       // dbPath.replace() producía "nido_memory_knowledge.db" (huérfano).
       const dir = FileSystem.documentDirectory;
       const knowledgeDbPath = `${dir}SQLite/${KNOWLEDGE_DB_NAME}`;
+      const rollbackMain = async () => {
+        if (hasSafetyCopy) {
+          try {
+            await FileSystem.copyAsync({ from: safetyCopy, to: dbPath });
+          } catch { /* rollback best-effort */ }
+        }
+      };
       const kbValidation = await validateBackup(knowledgeBackupUri);
-      if (kbValidation.valid) {
-        await FileSystem.copyAsync({ from: knowledgeBackupUri, to: knowledgeDbPath });
+      if (!kbValidation.valid) {
+        await rollbackMain();
+        throw new BackupError("invalid", `El respaldo de conocimiento no es válido: ${kbValidation.reason}`);
+      }
+      const curInfo = await FileSystem.getInfoAsync(knowledgeDbPath);
+      if (curInfo.exists) {
+        knowledgeSafetyCopy = `${knowledgeDbPath}.pre-restore-${timestamp}`;
+        try {
+          await FileSystem.copyAsync({ from: knowledgeDbPath, to: knowledgeSafetyCopy });
+        } catch (e) {
+          knowledgeSafetyCopy = null;
+          await rollbackMain();
+          throw new BackupError(
+            "storage",
+            `No se pudo guardar una copia de la base de conocimiento actual: ${e instanceof Error ? e.message : String(e)}`,
+          );
+        }
+      }
+      const tmpKb = `${dir}SQLite/nido-restore-k-${timestamp}.db`;
+      try {
+        await FileSystem.copyAsync({ from: knowledgeBackupUri, to: tmpKb });
+        await FileSystem.moveAsync({ from: tmpKb, to: knowledgeDbPath });
+      } catch (e) {
+        try {
+          await FileSystem.deleteAsync(tmpKb, { idempotent: true });
+        } catch { /* best-effort */ }
+        if (knowledgeSafetyCopy) {
+          try {
+            await FileSystem.copyAsync({ from: knowledgeSafetyCopy, to: knowledgeDbPath });
+          } catch { /* rollback best-effort */ }
+        }
+        await rollbackMain();
+        throw new BackupError("rollback", `Falló la restauración del conocimiento y se revirtió: ${e instanceof Error ? e.message : "error desconocido"}`);
       }
     }
-  } catch {
-    // Best-effort: si no hay knowledge backup, continuar.
   }
 
   // 6. A12 (auditoría 2026-10-10): conservar SOLO la copia de seguridad de
   // esta restauración. Antes cada restauración dejaba una copia completa de
   // la base que nunca se borraba. La copia actual se mantiene porque la
   // base restaurada aún no se ha reabierto (la app debe reiniciarse).
-  if (hasSafetyCopy) {
+  if (hasSafetyCopy || knowledgeSafetyCopy) {
     try {
       const readDir = (FileSystem as { readDirectoryAsync?: (uri: string) => Promise<string[]> })
         .readDirectoryAsync;
@@ -704,8 +748,14 @@ async function restoreExtracted(actualUri: string): Promise<void> {
         const dirUri = dbPath.slice(0, slash + 1);
         const prefix = `${dbPath.slice(slash + 1)}.pre-restore-`;
         const keep = safetyCopy.slice(slash + 1);
+        // F3-07: la misma poda para las copias previas del conocimiento.
+        const kbPrefix = `${KNOWLEDGE_DB_NAME}.pre-restore-`;
+        const kbKeep = knowledgeSafetyCopy ? knowledgeSafetyCopy.slice(slash + 1) : null;
         for (const name of await readDir(dirUri)) {
           if (name.startsWith(prefix) && name !== keep) {
+            await FileSystem.deleteAsync(`${dirUri}${name}`, { idempotent: true });
+          }
+          if (name.startsWith(kbPrefix) && name !== kbKeep) {
             await FileSystem.deleteAsync(`${dirUri}${name}`, { idempotent: true });
           }
         }

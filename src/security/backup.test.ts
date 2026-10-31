@@ -329,3 +329,67 @@ describe("backup.ts — auditoría completa 2026-10-31 (F3-04): restaurar sin de
     expect(copies.some((c: any) => String(c.to).includes("nido-restore-"))).toBe(true);
   });
 });
+
+describe("backup.ts — auditoría completa 2026-10-31 (F3-07): el conocimiento se restaura con la misma red", () => {
+  const backupUri = "/mock/nido-backup-T.db";
+  const knowledgeBackupUri = "/mock/nido-backup-T.knowledge.db";
+  const dbPath = "/mock/SQLite/nido_memory.db";
+  const knowledgeDbPath = "/mock/SQLite/nido_knowledge.db";
+  const events: string[] = [];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    events.length = 0;
+    sqlx.sql = [];
+    sqlx.failWith = null;
+    sqlx.allowOpen = true;
+    (FileSystem.getInfoAsync as any).mockImplementation(async (uri: string) => {
+      if (uri.endsWith(".manifest.json")) return { exists: false };
+      return { exists: true, size: 5000 };
+    });
+    (FileSystem.copyAsync as any).mockImplementation(async (args: { from: string; to: string }) => {
+      events.push(`copy:${args.from}->${args.to}`);
+    });
+    (FileSystem.moveAsync as any).mockImplementation(async (args: { from: string; to: string }) => {
+      events.push(`move:${args.from}->${args.to}`);
+    });
+    (FileSystem.deleteAsync as any).mockResolvedValue(undefined);
+    (FileSystem.readDirectoryAsync as any).mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    sqlx.allowOpen = false;
+  });
+
+  it("copia previa del conocimiento vivo antes de reemplazarlo, y reemplazo por renombrado", async () => {
+    const { restoreBackup } = await import("./backup");
+    await expect(restoreBackup(backupUri)).resolves.toBeUndefined();
+    const safety = events.findIndex(
+      (e) => e.startsWith(`copy:${knowledgeDbPath}->`) && e.includes(".pre-restore-"),
+    );
+    const kbMove = events.findIndex((e) => e.endsWith(`->${knowledgeDbPath}`) && e.startsWith("move:"));
+    expect(safety, "debe existir copia previa del conocimiento").toBeGreaterThanOrEqual(0);
+    expect(kbMove, "el conocimiento se reemplaza por renombrado").toBeGreaterThan(safety);
+    expect(events[kbMove]).toContain("nido-restore-k-");
+    // Nunca copia directa sobre la base de conocimiento viva.
+    expect(events.some((e) => e === `copy:${knowledgeBackupUri}->${knowledgeDbPath}`)).toBe(false);
+  });
+
+  it("un respaldo de conocimiento inválido aborta y revierte también la principal", async () => {
+    (FileSystem.getInfoAsync as any).mockImplementation(async (uri: string) => {
+      if (uri.endsWith(".manifest.json")) return { exists: false };
+      if (uri === knowledgeBackupUri) return { exists: true, size: 100 }; // demasiado pequeño: inválido
+      return { exists: true, size: 5000 };
+    });
+    const { restoreBackup } = await import("./backup");
+    await expect(restoreBackup(backupUri)).rejects.toThrow(/conocimiento no es válido/);
+    const mainMove = events.findIndex((e) => e.endsWith(`->${dbPath}`) && e.startsWith("move:"));
+    const rollback = events.findIndex(
+      (e, i) => i > mainMove && e.startsWith("copy:") && e.includes(".pre-restore-") && e.endsWith(`->${dbPath}`),
+    );
+    expect(mainMove).toBeGreaterThanOrEqual(0);
+    expect(rollback, "la principal se revierte desde su copia previa").toBeGreaterThan(mainMove);
+    // Y el conocimiento vivo no se tocó.
+    expect(events.some((e) => e.endsWith(`->${knowledgeDbPath}`))).toBe(false);
+  });
+});
