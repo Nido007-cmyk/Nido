@@ -4,7 +4,7 @@
  * See LICENSE file for details.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock expo-file-system/legacy
 vi.mock("expo-file-system/legacy", () => ({
@@ -12,6 +12,8 @@ vi.mock("expo-file-system/legacy", () => ({
   EncodingType: { UTF8: "utf8", Base64: "base64" },
   getInfoAsync: vi.fn(),
   copyAsync: vi.fn(),
+  moveAsync: vi.fn(),
+  readDirectoryAsync: vi.fn().mockResolvedValue([]),
   writeAsStringAsync: vi.fn(),
   readAsStringAsync: vi.fn(),
   deleteAsync: vi.fn(),
@@ -277,5 +279,53 @@ describe("backup.ts — 0.1.47: los mensajes temporales no van en los respaldos"
     const { createBackup } = await import("./backup");
     await expect(createBackup("/mock/nido-backup-T.db")).rejects.toThrow(/preparar el respaldo/);
     expect(FileSystem.deleteAsync).toHaveBeenCalledWith("/mock/nido-backup-T.db", { idempotent: true });
+  });
+});
+
+describe("backup.ts — auditoría completa 2026-10-31 (F3-04): restaurar sin dejar la base a medias", () => {
+  const backupUri = "/mock/nido-backup-T.db";
+  const dbPath = "/mock/SQLite/nido_memory.db";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sqlx.sql = [];
+    sqlx.failWith = null;
+    sqlx.allowOpen = true; // la apertura de prueba debe poder pasar
+    (FileSystem.getInfoAsync as any).mockImplementation(async (uri: string) => {
+      if (uri.endsWith(".manifest.json")) return { exists: false };
+      if (uri.endsWith(".knowledge.db")) return { exists: false };
+      return { exists: true, size: 5000 };
+    });
+    (FileSystem.copyAsync as any).mockResolvedValue(undefined);
+    (FileSystem.moveAsync as any).mockResolvedValue(undefined);
+    (FileSystem.deleteAsync as any).mockResolvedValue(undefined);
+    (FileSystem.readDirectoryAsync as any).mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    sqlx.allowOpen = false;
+  });
+
+  it("si la copia de seguridad previa falla, se aborta sin tocar la base viva", async () => {
+    (FileSystem.copyAsync as any).mockImplementation(async (args: { from: string; to: string }) => {
+      if (args.to.includes(".pre-restore-")) throw new Error("sin espacio");
+    });
+    const { restoreBackup } = await import("./backup");
+    await expect(restoreBackup(backupUri)).rejects.toThrow(/copia de la base actual/);
+    const copies = (FileSystem.copyAsync as any).mock.calls.map((c: any[]) => c[0]);
+    expect(copies.some((c: any) => c.to === dbPath)).toBe(false);
+    expect(FileSystem.moveAsync).not.toHaveBeenCalled();
+  });
+
+  it("el reemplazo es por temporal y renombrado, nunca copia directa sobre la base viva", async () => {
+    const { restoreBackup } = await import("./backup");
+    await expect(restoreBackup(backupUri)).resolves.toBeUndefined();
+    const moves = (FileSystem.moveAsync as any).mock.calls.map((c: any[]) => c[0]);
+    expect(moves).toHaveLength(1);
+    expect(moves[0].to).toBe(dbPath);
+    expect(moves[0].from).toContain("nido-restore-");
+    const copies = (FileSystem.copyAsync as any).mock.calls.map((c: any[]) => c[0]);
+    expect(copies.some((c: any) => c.to === dbPath)).toBe(false);
+    expect(copies.some((c: any) => String(c.to).includes("nido-restore-"))).toBe(true);
   });
 });

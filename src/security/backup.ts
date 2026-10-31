@@ -601,6 +601,11 @@ async function restoreExtracted(actualUri: string): Promise<void> {
   const dbPath = await getDbPath();
 
   // 2. Hacer copia de seguridad de la base actual.
+  // Auditoría completa 2026-10-31 (F3-04): si la base existe y su
+  // copia de seguridad FALLA, se aborta ANTES de tocar la base viva.
+  // Antes el catch tragaba el fallo de la copia igual que el caso
+  // «no hay base», y la restauración sobrescribía sin red: si el
+  // reemplazo fallaba después, no quedaba rollback posible.
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const safetyCopy = `${dbPath}.pre-restore-${timestamp}`;
   let hasSafetyCopy = false;
@@ -610,8 +615,11 @@ async function restoreExtracted(actualUri: string): Promise<void> {
       await FileSystem.copyAsync({ from: dbPath, to: safetyCopy });
       hasSafetyCopy = true;
     }
-  } catch {
-    // Si no hay base actual, no hay nada que respaldar.
+  } catch (e) {
+    throw new BackupError(
+      "storage",
+      `No se pudo guardar una copia de la base actual antes de restaurar: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
 
   // 3. Cerrar la conexión antes de reemplazar el archivo (BK-2).
@@ -628,9 +636,20 @@ async function restoreExtracted(actualUri: string): Promise<void> {
   }
 
   // 4. Reemplazar el archivo. Si falla, rollback automático (BK-3).
+  // Auditoría completa 2026-10-31 (F3-04): el reemplazo ya no copia
+  // encima de la base viva. Se copia a un temporal vecino (prefijo
+  // nido-restore-, que el borrado total ya sabe recoger si un corte
+  // lo deja huérfano) y se renombra sobre la base: el renombrado en
+  // el mismo directorio es atómico. La copia directa antigua, si el
+  // proceso moría a mitad, dejaba la base viva truncada.
+  const tmpRestore = `${dbPath.slice(0, dbPath.lastIndexOf("/") + 1)}nido-restore-${timestamp}.db`;
   try {
-    await FileSystem.copyAsync({ from: actualUri, to: dbPath });
+    await FileSystem.copyAsync({ from: actualUri, to: tmpRestore });
+    await FileSystem.moveAsync({ from: tmpRestore, to: dbPath });
   } catch (e) {
+    try {
+      await FileSystem.deleteAsync(tmpRestore, { idempotent: true });
+    } catch { /* best-effort */ }
     // Rollback: restaurar la copia de seguridad.
     if (hasSafetyCopy) {
       try {
