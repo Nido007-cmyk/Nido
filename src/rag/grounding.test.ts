@@ -255,3 +255,80 @@ describe("isFactualQuestion / noSourcesAnswer (el 'no lo sé' antes de generar)"
     expect(noSourcesAnswer("pt")).toContain("prefiro não inventar");
   });
 });
+
+// ---------------------------------------------------------------
+// Programa bounty, tanda 1: post-chequeo de cifras (evidenceNumbers).
+// Una cifra inventada tumba la frase aunque sus palabras estén
+// apoyadas; el redondeo honesto (26,5 por 26,52; 16,4 millones por
+// 16.431.599) no se toca, en la misma lengua y entre lenguas.
+
+const CITY_ES: GroundingChunk = {
+  title: "San Aurelio",
+  body:
+    "San Aurelio se fundó en 1804 junto al río Claro. El censo contó 16.431.599 habitantes: " +
+    "más de 16 millones de personas en el área metropolitana. La dosis habitual del jarabe " +
+    "es 26,52 miligramos por toma.",
+};
+
+const CITY_EN: GroundingChunk = {
+  title: "San Aurelio",
+  body:
+    "San Aurelio was founded in 1804 by the Claro river. The census counted 16,431,599 " +
+    "inhabitants in the metropolitan area. The usual dose of the syrup is 26.52 milligrams.",
+};
+
+describe("verifyGroundedAnswer — post-chequeo de cifras (bounty, tanda 1)", () => {
+  it("un año inventado tumba la frase aunque el apoyo léxico la pasaba", () => {
+    const r = verifyGroundedAnswer("San Aurelio se fundó en 1904 junto al río Claro.", [CITY_ES], "es");
+    expect(r.text).not.toContain("1904");
+    expect(r.removed).toBe(1);
+    // Era la única frase juzgable: queda la abstención honesta.
+    expect(r.status).toBe("abstained");
+  });
+
+  it("un recuento inventado también cae", () => {
+    const r = verifyGroundedAnswer(
+      "San Aurelio se fundó en 1804 junto al río Claro. El censo contó 20 millones de habitantes en el área metropolitana.",
+      [CITY_ES],
+      "es",
+    );
+    expect(r.status).toBe("partial");
+    expect(r.removed).toBe(1);
+    expect(r.text).toContain("1804");
+    expect(r.text).not.toContain("20 millones");
+  });
+
+  it("el redondeo honesto y la escala se conservan", () => {
+    const r = verifyGroundedAnswer(
+      "La dosis habitual del jarabe es 26,5 miligramos por toma. El censo contó 16,4 millones de habitantes en el área metropolitana.",
+      [CITY_ES],
+      "es",
+    );
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toContain("26,5");
+    expect(r.text).toContain("16,4 millones");
+  });
+
+  it("entre lenguas: «16,4 millones» ya no cae contra «16,431,599» (falso positivo retirado)", () => {
+    const r = verifyGroundedAnswer(
+      "San Aurelio se fundó en 1804 junto al río Claro. El censo contó 16,4 millones de habitantes en el área metropolitana.",
+      [CITY_EN],
+      "es",
+    );
+    expect(r.status).toBe("unverified");
+    expect(r.removed).toBe(0);
+    expect(r.text).toContain("16,4 millones");
+  });
+
+  it("entre lenguas: la cifra inventada sigue cayendo", () => {
+    const r = verifyGroundedAnswer(
+      "San Aurelio se fundó en 1804 junto al río Claro. El censo contó 20 millones de habitantes en el área metropolitana.",
+      [CITY_EN],
+      "es",
+    );
+    expect(r.status).toBe("unverified");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("20 millones");
+  });
+});

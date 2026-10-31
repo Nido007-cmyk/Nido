@@ -39,6 +39,11 @@
  *    fuentes delante — antes no se puede saber si el modelo se ciñó.
  *  - Cada frase conservada sin cita recibe la [n] de la fuente que más la
  *    respalda (enlace afirmación → fuente, determinista).
+ *  - Post-chequeo de cifras (programa bounty, tanda 1; lógica adaptada
+ *    de Commonplace, Apache-2.0): cada cifra de la respuesta tiene que
+ *    salir de la evidencia, con su redondeo honesto (evidenceNumbers.ts).
+ *    Una cifra inventada tumba la frase en las dos rutas, la de la misma
+ *    lengua y la de lengua cruzada.
  *  - Si la respuesta está en otro idioma que las fuentes (pregunta en
  *    español, corpus en inglés), la comparación léxica no es válida: no se
  *    inventa un veredicto. Solo se comprueban cifras (iguales en todos los
@@ -53,6 +58,7 @@
  */
 
 import type { SentenceProvenance } from "./provenance";
+import { evidenceNumberValues, sentenceNumbersSupported } from "./evidenceNumbers";
 
 export type GroundingLang = "es" | "en" | "pt";
 
@@ -331,10 +337,11 @@ function addCitation(sentence: string, n: number): string {
   return `${m[1].trimEnd()} [${n}]${m[2] ?? ""}`;
 }
 
-/** Cifras de 2+ dígitos que aparecen en un texto (años, cantidades). */
-function numbersIn(text: string): Set<string> {
-  return new Set((text.match(/\d[\d.,]*\d|\d{2,}/g) ?? []).map((n) => n.replace(/[.,]/g, "")));
-}
+/**
+ * Cifras de la evidencia (tanda 1 del programa bounty, evidenceNumbers.ts):
+ * los valores que las fuentes afirman, contra los que se juzga cada
+ * cifra de la respuesta — con redondeo y escala, no por dígitos.
+ */
 
 // ------------------------------------------------ negaciones (0.1.59)
 
@@ -398,14 +405,17 @@ export function verifyGroundedAnswer(
   const sourceLang = detectTextLang(chunkTexts.join(" "));
   const sameLanguage = answerLang === null || sourceLang === null || answerLang === sourceLang;
 
+  const evidenceNums = evidenceNumberValues(chunkTexts);
+
   if (!sameLanguage) {
     // Sin comparación léxica válida: solo cifras (independientes del idioma).
-    const sourceNumbers = numbersIn(chunkTexts.join(" "));
+    // Tanda 1 del programa bounty: la comparación ya no es por dígitos
+    // exactos — «16,4 millones» es la misma cifra que «16,431,599» —
+    // sino por valor con redondeo y escala (evidenceNumbers.ts).
     let removed = 0;
     const kept = sentences.filter((s) => {
       if (isAbstention(s)) return true;
-      const nums = [...numbersIn(s)];
-      const ok = nums.every((n) => sourceNumbers.has(n));
+      const ok = sentenceNumbersSupported(s, evidenceNums);
       if (!ok) removed++;
       return ok;
     });
@@ -441,6 +451,16 @@ export function verifyGroundedAnswer(
       continue;
     }
     const sup = sentenceSupport(s, chunkStemSets);
+    // Tanda 1 del programa bounty (post-chequeo de citas de Commonplace):
+    // una cifra que no sale de la evidencia tumba la frase aunque sus
+    // palabras estén apoyadas — «fundada en 1904» contra la fuente
+    // «1804» pasaba con el apoyo léxico solo, porque la cifra errónea
+    // contaba como una palabra nueva más. Vale el redondeo honesto:
+    // «26,5» por 26,52 y «16,4 millones» por 16.431.599 no se tocan.
+    if (!sentenceNumbersSupported(s, evidenceNums)) {
+      removed++;
+      continue;
+    }
     if (!isSupported(sup)) {
       removed++;
       continue;
