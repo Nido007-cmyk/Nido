@@ -359,6 +359,27 @@ export function mergePackFacts(perPack: Array<{ regions: PackRegion[]; facts: Pa
   return { regions, facts, regionOwner };
 }
 
+/**
+ * Auditoría completa 2026-10-31 (F1 S-1): la respuesta de crisis
+ * sobre el conjunto FUSIONADO de packs, con el índice del pack
+ * dueño de la región respondida (para la marca de desactualizado).
+ * Es la regla de la pestaña de Emergencia aplicada al chat: la
+ * región manda del primer pack que la define y los hechos
+ * crisis.* de cualquier pack se suman. Devuelve null si ni
+ * fusionando hay línea para la región de la pregunta.
+ */
+export function composeMergedCrisisAnswer(
+  text: string,
+  lang: FactLang,
+  perPack: Array<{ regions: PackRegion[]; facts: PackFact[] }>,
+): { answer: FactsAnswer; ownerIndex: number } | null {
+  const merged = mergePackFacts(perPack);
+  const answer = composeCrisisAnswer(text, lang, merged.regions, merged.facts);
+  if (!answer) return null;
+  const regionIdx = merged.regions.findIndex((r) => r.code === answer.region);
+  return { answer, ownerIndex: regionIdx >= 0 ? merged.regionOwner[regionIdx] : -1 };
+}
+
 // ---------------------------------------------------------------------------
 // Crisis lines (family `crisis.*`): the verified hotline of a country, from
 // the NIDO Crisis pack. The Crisis guides send the reader to "the verified

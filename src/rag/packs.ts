@@ -23,7 +23,7 @@ import type { RetrievedChunk } from "./retrieve.types";
 import { guideTitleOf, markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId, sectionLikePattern, type PackSourceDoc } from "./packSource";
 import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "./embeddingProfile";
 import { packIndexIfReady, releaseAllIndexes, searchPackIndex } from "./vectorIndex";
-import { composeCrisisAnswer, composeFactsAnswer, emergencyRegions, markOutdated, mergePackFacts, type FactLang, type FactsAnswer, type PackFact, type PackRegion } from "./packFacts";
+import { composeCrisisAnswer, composeFactsAnswer, composeMergedCrisisAnswer, emergencyRegions, markOutdated, mergePackFacts, type FactLang, type FactsAnswer, type PackFact, type PackRegion } from "./packFacts";
 
 const PACK_CANDIDATES = 400;
 const REQUIRED_EMBEDDING_SHA256 = MODEL_CATALOG.find((m) => m.kind === "embedding" && m.required)!.sha256;
@@ -348,12 +348,33 @@ async function packFacts(packId: string, open: OpenPack): Promise<{ regions: Pac
  */
 export async function answerFromPackFacts(text: string, lang: FactLang): Promise<FactsAnswer | null> {
   try {
+    const perPack: Array<{ regions: PackRegion[]; facts: PackFact[] }> = [];
+    const packMeta: Array<{ label: string; outdated: boolean }> = [];
     for (const pack of await knowledgePacks()) {
       const open = await openPack(pack).catch(() => null);
       if (!open || open.formatVersion < 2) continue;
       const { regions, facts } = await packFacts(pack.id, open).catch(() => ({ regions: [], facts: [] }));
       const answer = composeFactsAnswer(text, lang, regions, facts) ?? composeCrisisAnswer(text, lang, regions, facts);
       if (answer) return open.outdated ? markOutdated(answer, lang, pack.label) : answer;
+      perPack.push({ regions, facts });
+      packMeta.push({ label: pack.label, outdated: !!open.outdated });
+    }
+    // Auditoría completa 2026-10-31 (F1 S-1): la pestaña de
+    // Emergencia fusiona los packs (la región es del primer pack
+    // que la define y los hechos crisis.* de los demás se suman),
+    // pero el chat componía pack a pack: una línea de crisis cuyo
+    // hecho vive en un pack que no define esa región se veía en la
+    // pestaña y el chat no la podía responder. Con los datos de
+    // hoy no pasa (el pack de Crisis define sus 14 regiones y sus
+    // 14 líneas), pero la divergencia es estructural: si ningún
+    // pack responde solo, se compone la respuesta de crisis sobre
+    // el conjunto fusionado, con la misma regla que la pestaña.
+    if (perPack.length > 1) {
+      const fallback = composeMergedCrisisAnswer(text, lang, perPack);
+      if (fallback) {
+        const meta = packMeta[fallback.ownerIndex];
+        return meta?.outdated ? markOutdated(fallback.answer, lang, meta.label) : fallback.answer;
+      }
     }
   } catch (e) {
     console.warn("[packs] answerFromPackFacts:", e instanceof Error ? e.message : String(e));

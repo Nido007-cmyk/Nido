@@ -259,3 +259,46 @@ describe("respuestas desde un pack desactualizado (0.1.57)", () => {
     expect(markOutdated(a, "pt", "NIDO Local").text).toContain("versão anterior do pacote «NIDO Local»");
   });
 });
+
+describe("F1 S-1: la línea de crisis cruzada entre packs (chat frente a pestaña)", () => {
+  // El escenario de la sospecha: el pack A define la región CL y no
+  // trae línea de crisis; el pack B trae la línea de crisis de CL
+  // pero no define la región. Pack a pack (el chat antes) ninguno
+  // responde; fusionando (la pestaña, y ahora también el chat) sí.
+  const regionCL: PackRegion = {
+    code: "CL",
+    names: { es: "Chile", en: "Chile", pt: "Chile" },
+    phrases: { es: "en Chile", en: "in Chile", pt: "no Chile" },
+    aliases: ["Chile"],
+  };
+  const crisisCL: PackFact = {
+    region: "CL", key: "crisis.hotline", value: "*4141",
+    label: { es: "línea de prevención del suicidio", en: "suicide prevention line", pt: "linha de prevenção do suicídio" }, note: {},
+    sourceTitle: "Ministerio de Salud de Chile", sourceUrl: "https://www.minsal.cl/", quote: "la Línea de Prevención del Suicidio *4141", checked: "2026-10-30",
+  };
+  const packA = { regions: [regionCL], facts: [] as PackFact[] };
+  const packB = { regions: [] as PackRegion[], facts: [crisisCL] };
+  const pregunta = "¿cuál es la línea de crisis de Chile?";
+
+  it("pack a pack no hay respuesta (así era el chat); fusionando sí (la pestaña)", async () => {
+    const { composeCrisisAnswer, composeMergedCrisisAnswer } = await import("./packFacts");
+    expect(composeCrisisAnswer(pregunta, "es", packA.regions, packA.facts)).toBeNull();
+    expect(composeCrisisAnswer(pregunta, "es", packB.regions, packB.facts)).toBeNull();
+    const out = composeMergedCrisisAnswer(pregunta, "es", [packA, packB]);
+    expect(out).not.toBeNull();
+    expect(out?.answer.region).toBe("CL");
+    expect(out?.answer.text).toContain("*4141");
+    expect(out?.answer.calls).toEqual([
+      { value: "*4141", label: "línea de prevención del suicidio", tel: "tel:4141" },
+    ]);
+    // El dueño de la región es el pack A (índice 0): su etiqueta es
+    // la que manda para la marca de desactualizado.
+    expect(out?.ownerIndex).toBe(0);
+  });
+
+  it("sin línea para la región ni fusionando hay respuesta", async () => {
+    const { composeMergedCrisisAnswer } = await import("./packFacts");
+    expect(composeMergedCrisisAnswer("¿cuál es la línea de crisis de Chile?", "es", [packA, { regions: [], facts: [] }])).toBeNull();
+    expect(composeMergedCrisisAnswer("número de emergencias de Chile", "es", [packA, packB])).toBeNull();
+  });
+});
