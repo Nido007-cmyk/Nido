@@ -72,6 +72,7 @@
     "eval:device": "node scripts/eval-device.mjs",
     "eval:summary": "node scripts/eval-summary.mjs",
     "eval:local": "vitest run --config vitest.eval.config.mts",
+    "eval:blind": "vitest run --config vitest.blindeval.config.mts",
     "pack:build": "node scripts/build-knowledge-pack.mjs",
     "pack:push": "node scripts/push-knowledge-pack.mjs",
     "test:components": "jest",
