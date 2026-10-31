@@ -361,6 +361,11 @@ describe("p2p/store: N6 — outbox, ack log y auditoría", () => {
     expect((await getOutboundMessage("p3"))?.status).toBe("queued");
   });
 
+  // Auditoría completa 2026-10-31 (F6-02): la inserción de las
+  // 10_005 entradas tarda 7 a 11 segundos medidos en esta máquina y
+  // el límite por defecto (5 s) mataba la prueba antes de sus
+  // aserciones, también aislada: la garantía quedaba sin verificar.
+  // Timeout explícito y holgado; la garantía no cambia.
   it("pruneDeliveryAckLog: solo por edad, nunca por volumen", async () => {
     const now = Date.now();
     const old = now - 91 * 86_400_000;
@@ -380,7 +385,7 @@ describe("p2p/store: N6 — outbox, ack log y auditoría", () => {
     expect(await hasDeliveryAckLogEntry("old-1")).toBe(false);
     expect(await hasDeliveryAckLogEntry("vol-0")).toBe(true);
     expect(await hasDeliveryAckLogEntry("vol-10004")).toBe(true);
-  });
+  }, 60_000);
 
   it("recordLateAck / getLateAckRecord: auditoría de ACKs tardíos", async () => {
     await recordLateAck("lz-1", TAG, 1234);
