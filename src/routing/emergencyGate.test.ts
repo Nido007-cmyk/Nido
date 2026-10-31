@@ -82,6 +82,24 @@ describe("isHealthQuestion (puerta léxica)", () => {
     expect(isHealthQuestion("escribe un cuento sobre un niño con fiebre")).toBe(false);
     expect(isHealthQuestion("¿qué es la fotosíntesis?")).toBe(false);
   });
+
+  it("el marco histórico veta la puerta (F-B3): el pasado no es una situación", () => {
+    // El caso que destapó el hallazgo en la corrida 02 y sus primos
+    // del conjunto 03: término de salud + señal, pero marco pasado.
+    expect(isHealthQuestion("Qual foi a febre espanhola de 1918 e quantas pessoas matou?")).toBe(false);
+    expect(isHealthQuestion("¿Cuántas personas murieron de fiebre tifoidea durante la Primera Guerra Mundial?")).toBe(false);
+    expect(isHealthQuestion("How many people died in the flu pandemic of 1918?")).toBe(false);
+    expect(isHealthQuestion("Como a pandemia de gripe de 1957 afetou as cidades do Brasil?")).toBe(false);
+    expect(isHealthQuestion("Num romance do século XIX, a personagem morre de pneumonia em poucos dias; isso era comum naquela época?")).toBe(false);
+    // El marco al principio de la frase también veta.
+    expect(isHealthQuestion("Historia de la fiebre en el siglo XIX, ¿cómo se trataba?")).toBe(false);
+    // Año sin verbo en pasado ni marco: no veta por sí solo.
+    expect(isHealthQuestion("tengo fiebre desde 2023 y no se me quita, ¿qué puede ser?")).toBe(true);
+    // La salud presente sigue disparando con los mismos textos de siempre.
+    expect(isHealthQuestion("mi hijo tiene fiebre, ¿qué hago?")).toBe(true);
+    expect(isHealthQuestion("¿qué dosis de paracetamol le puedo dar a un niño de 4 años?")).toBe(true);
+    expect(isHealthQuestion("o que fazer se meu filho está com febre?")).toBe(true);
+  });
 });
 
 describe("isEmergencySituation (la emergencia contada, F-B1)", () => {
@@ -117,6 +135,14 @@ describe("isEmergencySituation (la emergencia contada, F-B1)", () => {
     expect(isEmergencySituation("Desde que perdió el trabajo se ahoga en un vaso de agua")).toBe(false);
     expect(isEmergencySituation("The striker is on fire this season, three goals again")).toBe(false);
     expect(isEmergencySituation("Estou a escrever um conto sobre um dragão que cospe fogo")).toBe(false);
+  });
+
+  it("el marco histórico también veta la cara de emergencia (F-B3)", () => {
+    expect(isEmergencySituation("En la novela, un hombre no respira y nadie lo ayuda")).toBe(false);
+    expect(isEmergencySituation("In the film, a man is not breathing and nobody helps him")).toBe(false);
+    // La emergencia viva de siempre sigue disparando.
+    expect(isEmergencySituation("Sale humo por la ventana de la cocina, ¿qué hago?")).toBe(true);
+    expect(isEmergencySituation("Mi hijo se está ahogando con un hueso de pollo y no puede respirar")).toBe(true);
   });
 });
 

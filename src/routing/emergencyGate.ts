@@ -53,6 +53,19 @@
  *    cura se mide contra un conjunto ciego FRESCO (corrida 02), no
  *    contra el conjunto 01 que la destapó (regla del sello).
  *
+ * 4. EL PASADO NO ES UNA SITUACIÓN (arreglo F-B3, 2026-10-31;
+ *    hallazgo de la corrida ciega 02). Una pregunta de historia
+ *    sobre una enfermedad («Qual foi a febre espanhola de 1918 e
+ *    quantas pessoas matou?») trae término de salud y señal de
+ *    pregunta, y la puerta disparaba: los vetos solo cubrían el
+ *    marco explícito «história de…». `hasHistoricalFrame` reconoce
+ *    el marco histórico o cultural (siglos, muertes contadas,
+ *    pandemias nombradas, novelas y películas, y el patrón año +
+ *    verbo en pasado) y veta las DOS caras de la puerta: quien
+ *    pregunta por el pasado no está en una situación de salud ni
+ *    en una emergencia. La cura se mide contra un conjunto ciego
+ *    FRESCO (corrida 03), no contra el conjunto 02 que la destapó.
+ *
  * Puro, sin dependencias de UI, 100% testeable.
  */
 
@@ -163,6 +176,59 @@ const HEALTH_EXCLUSIONS = [
 ];
 
 /**
+ * Marcos históricos o culturales, ya plegados (arreglo F-B3, punto 4
+ * de la cabecera): la pregunta es SOBRE el pasado de una enfermedad
+ * o de la salud — siglos y épocas, muertes contadas, pandemias y
+ * plagas nombradas, guerras mundiales, novelas y películas — y no
+ * sobre una situación presente. Frases, como todo el léxico de la
+ * casa: un marco nuevo se añade aquí, no al modelo. La comparación
+ * se hace sobre el texto con espacios a ambos lados, así que un
+ * marco al principio de la frase también veta (los vetos antiguos
+ * exigían un espacio delante y dejaban pasar «Historia de…» a secas
+ * al abrir la pregunta).
+ */
+const HISTORY_FRAMES = [
+  "historia de", "historia del", "historia sobre", "en la historia", "a lo largo de la historia",
+  "siglo", "murieron", "fallecieron", "cuantas personas murieron", "cuantos murieron",
+  "gripe espanola", "peste negra", "peste bubonica", "en aquella epoca", "antiguamente",
+  "en la antiguedad", "primera guerra mundial", "segunda guerra mundial",
+  "en una novela", "en la novela", "en una pelicula",
+  "history of", "history about", "in history", "throughout history",
+  "century", "how many people died", "how many died", "people died",
+  "spanish flu", "black death", "bubonic plague", "in those days", "back then",
+  "in ancient times", "first world war", "second world war",
+  "in a novel", "in the novel", "in a film", "in the film", "in a movie", "in the movie",
+  "historia do", "historia da", "na historia", "ao longo da historia",
+  "seculo", "morreram", "quantas pessoas morreram", "quantos morreram", "pessoas morreram",
+  "gripe espanhola", "peste bubonica", "naquela epoca", "antigamente",
+  "na antiguidade", "primeira guerra mundial", "segunda guerra mundial",
+  "num romance", "no romance", "num filme", "no filme",
+];
+
+/**
+ * Verbos en pasado que, junto a un año, cuentan el suceso como
+ * pasado («a pandemia de gripe de 1957 afetou…»): el año solo no
+ * veta — una situación presente puede nombrar un año («tengo
+ * fiebre desde 2023») — pero año + pasado sí es marco histórico.
+ */
+const HISTORY_PAST_MARKERS = [
+  " fue ", " foi ", " was ", " were ", " died", " happened",
+  " murieron", " fallecieron", " morreram",
+  " afetou", " afecto", " passou", " paso ", " ocorreu", " ocurrio",
+  " causou", " causo ", " deixou", " dejo ", " comecou", " comenzo",
+  " terminou", " termino ", " acabou", " acabo ",
+];
+
+const PAST_YEAR = /\b(1[0-9]{3}|20[0-2][0-9])\b/;
+
+/** ¿Lleva el texto (ya plegado) un marco histórico o cultural? */
+function hasHistoricalFrame(folded: string): boolean {
+  const hay = ` ${folded} `;
+  if (HISTORY_FRAMES.some((x) => hay.includes(` ${x} `))) return true;
+  return PAST_YEAR.test(folded) && HISTORY_PAST_MARKERS.some((m) => hay.includes(m));
+}
+
+/**
  * Señales de que el texto PREGUNTA o CUENTA una situación (la puerta
  * no se cierra sobre un tema suelto: «fiebre amarilla» a secas sigue
  * su camino; «mi hijo tiene fiebre» o «¿qué es la fiebre?» no).
@@ -186,6 +252,7 @@ export function isHealthQuestion(text: string): boolean {
   const folded = foldText(text);
   if (folded.trim().length === 0) return false;
   if (HEALTH_EXCLUSIONS.some((x) => folded.includes(` ${x} `) || folded.includes(` ${x}`))) return false;
+  if (hasHistoricalFrame(folded)) return false;
   const hasTerm = ALL_TERMS.some(
     ({ w, p }) => w.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`)) || p.some((t) => folded.includes(` ${t}`)),
   );
@@ -265,6 +332,7 @@ export function isEmergencySituation(text: string): boolean {
   const folded = foldText(text);
   if (folded.trim().length === 0) return false;
   if (EMERGENCY_VETOES.some((x) => folded.includes(` ${x} `) || folded.includes(` ${x}`))) return false;
+  if (hasHistoricalFrame(folded)) return false;
   return ALL_SIGNS.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`));
 }
 
