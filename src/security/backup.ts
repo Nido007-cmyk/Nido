@@ -314,14 +314,22 @@ export async function cleanupAfterSuccessfulRestore(): Promise<number> {
     if (!dir) return 0;
     const sqliteDir = `${dir}SQLite/`;
     const names = await FileSystem.readDirectoryAsync(sqliteDir).catch(() => [] as string[]);
-    const copies = names.filter((n) => n.startsWith(`${DB_NAME}.pre-restore-`));
-    const leftovers = (await FileSystem.readDirectoryAsync(dir).catch(() => [] as string[])).filter((n) =>
-      n.startsWith("restored.db"),
+    const copies = names.filter(
+      (n) => n.startsWith(`${DB_NAME}.pre-restore-`) || n.startsWith(`${KNOWLEDGE_DB_NAME}.pre-restore-`),
+    );
+    const leftovers = (await FileSystem.readDirectoryAsync(dir).catch(() => [] as string[])).filter(
+      (n) => n.startsWith("restored.db") || n.startsWith("restored.knowledge.db"),
     );
     if (copies.length === 0 && leftovers.length === 0) return 0;
     // Solo si la base actual abre y se puede leer.
     const db = await getDatabase();
     await db.getFirstAsync("SELECT count(*) AS n FROM sqlite_master;");
+    // Auditoría completa 2026-10-31 (F3-16): contar tablas no prueba
+    // que la base restaurada esté sana: una base corrupta puede
+    // responder al conteo y aun así la limpieza borraba la única
+    // copia previa buena. Se exige además PRAGMA integrity_check.
+    const integrity = await db.getAllAsync<{ integrity_check: string }>("PRAGMA integrity_check;");
+    if (!integrity || integrity.length !== 1 || integrity[0].integrity_check !== "ok") return 0;
     for (const n of copies) await FileSystem.deleteAsync(`${sqliteDir}${n}`, { idempotent: true });
     for (const n of leftovers) await FileSystem.deleteAsync(`${dir}${n}`, { idempotent: true });
     return copies.length + leftovers.length;

@@ -511,3 +511,56 @@ describe("backup.ts — auditoría completa 2026-10-31 (F3-08): huella del conoc
     expect(events.some((e) => e.endsWith(`->${knowledgeDbPath}`))).toBe(false);
   });
 });
+
+describe("backup.ts — auditoría completa 2026-10-31 (F3-16): la limpieza post-restauración exige integridad", () => {
+  const deleted: string[] = [];
+
+  function setupCleanup(integrity: string) {
+    deleted.length = 0;
+    (FileSystem.readDirectoryAsync as any).mockImplementation(async (uri: string) => {
+      if (uri === "/mock/SQLite/") {
+        return [
+          "nido_memory.db.pre-restore-2026-01-01",
+          "nido_knowledge.db.pre-restore-2026-01-01",
+          "nido_memory.db",
+        ];
+      }
+      return ["restored.db", "restored.knowledge.db", "settings.json"];
+    });
+    (FileSystem.deleteAsync as any).mockImplementation(async (uri: string) => {
+      deleted.push(uri);
+    });
+    return import("./databaseManager").then((dm) => {
+      (dm.getDatabase as any).mockResolvedValue({
+        execAsync: vi.fn(),
+        getFirstAsync: async () => ({ n: 10 }),
+        getAllAsync: async () => [{ integrity_check: integrity }],
+      });
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("con la base íntegra borra las copias previas de las dos bases y los restos de extracción", async () => {
+    await setupCleanup("ok");
+    const { cleanupAfterSuccessfulRestore } = await import("./backup");
+    await expect(cleanupAfterSuccessfulRestore()).resolves.toBe(4);
+    expect(deleted).toEqual(
+      expect.arrayContaining([
+        "/mock/SQLite/nido_memory.db.pre-restore-2026-01-01",
+        "/mock/SQLite/nido_knowledge.db.pre-restore-2026-01-01",
+        "/mock/restored.db",
+        "/mock/restored.knowledge.db",
+      ]),
+    );
+  });
+
+  it("con la base corrupta no borra nada: la copia previa es la única red", async () => {
+    await setupCleanup("database disk image is malformed");
+    const { cleanupAfterSuccessfulRestore } = await import("./backup");
+    await expect(cleanupAfterSuccessfulRestore()).resolves.toBe(0);
+    expect(deleted).toEqual([]);
+  });
+});
