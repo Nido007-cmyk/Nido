@@ -204,3 +204,30 @@ against questions in Spanish, English and Portuguese, including questions with
 no answer in the base. At the chosen value (0.03), wrong sources dropped from
 20 % to 10 % on the built-in base and from 33 % to 22 % with the Vital pack,
 with no correct answers lost.
+
+## Content decisions
+
+### Burn cooling: at least 10 minutes in Essentials, 20 minutes in Children (decided 2026-10-31)
+
+The Essentials burn guide says to cool a burn under running water for **at
+least 10 minutes**; the Children burn guide says **20 minutes**. Both figures
+stay, by the decision recorded here, because each guide follows its own cited
+source and the two do not contradict each other in practice:
+
+- Essentials cites the Red Cross family. The IFRC *International First Aid,
+  Resuscitation and Education Guidelines 2020* set the key action for burns
+  as: "Cool the burn with running water for at least 10 minutes, ideally 20
+  minutes." The guide states that floor.
+- The Children guide cites the NHS. *Burns and scalds* (NHS, page last
+  reviewed 31 March 2026) instructs: "Hold the burn or scald under cool
+  running water for 20 minutes. Do this as soon as possible, within 3 hours
+  of it happening." The guide follows that fixed instruction whole,
+  including the 3-hour window, for the reader it serves.
+
+Twenty minutes satisfies "at least 10 minutes", so a reader who cools a
+child's burn by the Children guide also meets the Essentials floor. The
+Children guide already carries a note naming the difference and telling the
+reader to follow its 20 minutes for a child. Rule for future guides: state
+the figure of the source you cite; where two packs cover the same act for
+different readers, the specific guide carries its own source's figure and a
+note pointing at the difference, instead of forcing one number on both.

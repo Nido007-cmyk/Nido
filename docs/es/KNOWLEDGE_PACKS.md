@@ -163,3 +163,32 @@ con preguntas en español, inglés y portugués, incluidas preguntas sin respues
 en la base. Con el valor elegido (0.03), las fuentes falsas bajaron del 20 % al
 10 % en la base integrada y del 33 % al 22 % con el pack Vital, sin perder
 ninguna respuesta correcta.
+
+## Decisiones de contenido
+
+### Enfriado de quemaduras: al menos 10 minutos en Esencial, 20 minutos en Niños (decidido el 2026-10-31)
+
+La guía de quemaduras de Esencial dice enfriar la quemadura bajo agua
+corriente **al menos 10 minutos**; la guía de quemaduras en niños dice
+**20 minutos**. Las dos cifras se quedan, por la decisión que aquí se
+registra, porque cada guía sigue su propia fuente citada y las dos no se
+contradicen en la práctica:
+
+- Esencial cita a la familia de la Cruz Roja. Las *International First Aid,
+  Resuscitation and Education Guidelines 2020* de la IFRC fijan la acción
+  clave para quemaduras así: «Cool the burn with running water for at least
+  10 minutes, ideally 20 minutes». La guía recoge ese mínimo.
+- La guía de Niños cita al NHS. *Burns and scalds* (NHS, página revisada
+  por última vez el 31 de marzo de 2026) instruye: «Hold the burn or scald
+  under cool running water for 20 minutes. Do this as soon as possible,
+  within 3 hours of it happening». La guía sigue esa instrucción fija
+  entera, incluida la ventana de 3 horas, para el lector al que sirve.
+
+Veinte minutos cumple «al menos 10 minutos», así que quien enfría la
+quemadura de un niño según la guía de Niños también cumple el mínimo de
+Esencial. La guía de Niños ya lleva una nota que nombra la diferencia y
+dice seguir sus 20 minutos para un niño. Regla para guías futuras: recoge
+la cifra de la fuente que citas; donde dos packs cubran el mismo acto para
+lectores distintos, la guía específica lleva la cifra de su propia fuente
+y una nota que señale la diferencia, en vez de forzar una sola cifra en
+ambas.
