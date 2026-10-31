@@ -332,22 +332,36 @@ describe("Negotiation delivery fail-closed", () => {
   });
 
   it("expiración durante el intento → no se envía, sesión a EXPIRED", async () => {
-    const id = await proposeSession("expiry", 120); // expira en 120ms
-    await new Promise((r) => setTimeout(r, 250)); // deja que expire
-    let calls = 0;
-    sendImpl = async () => {
-      calls++;
-      return true;
-    };
-    events = [];
+    // Tiempo falso acotado a esta prueba (cierre de evaluaciones
+    // 2026-10-31): con reloj de pared, el registro del PROPOSE tenía
+    // que ganarle a un TTL de 120 ms y la expiración se dejaba a una
+    // espera real de 250 ms — bajo carga, la verificación de firmas
+    // del registro podía pasar de 120 ms y la sesión nacía EXPIRED,
+    // con lo que la prueba medía la carga de la máquina, no el
+    // servicio. Aquí el reloj solo avanza cuando la prueba lo avanza:
+    // se propone con el mismo TTL, se avanza más allá, y acceptSession
+    // observa la expiración. Se mide exactamente lo mismo.
+    vi.useFakeTimers();
+    try {
+      const id = await proposeSession("expiry", 120); // expira a los 120 ms (reloj falso)
+      vi.advanceTimersByTime(250); // ya expiró, sin espera real
+      let calls = 0;
+      sendImpl = async () => {
+        calls++;
+        return true;
+      };
+      events = [];
 
-    const res = await negotiationService.acceptSession(id);
+      const res = await negotiationService.acceptSession(id);
 
-    expect(res).toEqual({ sent: false, reason: "expired" });
-    expect(calls).toBe(0); // jamás se intenta enviar una respuesta expirada
-    expect(getSession(id)?.state).toBe("EXPIRED");
-    expect(eventTypes()).toContain("expired");
-    expect(eventTypes()).not.toContain("accepted");
+      expect(res).toEqual({ sent: false, reason: "expired" });
+      expect(calls).toBe(0); // jamás se intenta enviar una respuesta expirada
+      expect(getSession(id)?.state).toBe("EXPIRED");
+      expect(eventTypes()).toContain("expired");
+      expect(eventTypes()).not.toContain("accepted");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("auditoría 2026-10-31 (F6-03): propuesta que llega ya expirada → la razón es «expired», sin carreras", async () => {
@@ -415,59 +429,79 @@ describe("Negotiation delivery fail-closed", () => {
   });
 
   it("ACCEPT tardío sobre propuesta expirada → EXPIRED, sin transición", async () => {
-    const id = await proposeSession("late-accept", 120);
-    await new Promise((r) => setTimeout(r, 250)); // la propuesta expira
-    const session = getSession(id)!;
-    expect(session.state).toBe("PROPOSED"); // aún no podada
+    // Tiempo falso acotado (cierre de evaluaciones 2026-10-31): esta
+    // era la aserción que caía bajo carga — con reloj de pared, el
+    // registro del PROPOSE podía tardar más que el TTL de 120 ms y la
+    // sesión nacía EXPIRED, así que «aún no podada» leía la carga de
+    // la máquina. Con el reloj falso, la sesión nace PROPOSED sí o sí
+    // y el tiempo pasa solo cuando la prueba lo avanza; la expiración
+    // sigue siendo perezosa (nada transiciona la sesión sola).
+    vi.useFakeTimers();
+    try {
+      const id = await proposeSession("late-accept", 120);
+      vi.advanceTimersByTime(250); // la propuesta expira (reloj falso)
+      const session = getSession(id)!;
+      expect(session.state).toBe("PROPOSED"); // aún no podada
 
-    const lateAccept = signNegotiationMessage(
-      aliceKeys.secretKey,
-      alicePkHex,
-      "ACCEPT",
-      session.proposal.proposalId,
-      session.proposal
-    );
-    events = [];
-    await negotiationService.handleEnvelope({
-      v: PROTOCOL_VERSION,
-      type: "negotiation" as P2PMessageType,
-      id: `msg-${id}-LATE-ACCEPT`,
-      from: alicePkHex,
-      to: bobPkHex,
-      ts: Date.now(),
-      payload: { action: "ACCEPT", negotiationId: id, signed: lateAccept },
-    } as never);
+      const lateAccept = signNegotiationMessage(
+        aliceKeys.secretKey,
+        alicePkHex,
+        "ACCEPT",
+        session.proposal.proposalId,
+        session.proposal
+      );
+      events = [];
+      await negotiationService.handleEnvelope({
+        v: PROTOCOL_VERSION,
+        type: "negotiation" as P2PMessageType,
+        id: `msg-${id}-LATE-ACCEPT`,
+        from: alicePkHex,
+        to: bobPkHex,
+        ts: Date.now(),
+        payload: { action: "ACCEPT", negotiationId: id, signed: lateAccept },
+      } as never);
 
-    expect(getSession(id)?.state).toBe("EXPIRED");
-    expect(eventTypes()).toContain("expired");
-    expect(eventTypes()).not.toContain("accepted");
+      expect(getSession(id)?.state).toBe("EXPIRED");
+      expect(eventTypes()).toContain("expired");
+      expect(eventTypes()).not.toContain("accepted");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("COUNTER tardío sobre propuesta expirada → EXPIRED, sin transición", async () => {
-    const id = await proposeSession("late-counter", 120);
-    await new Promise((r) => setTimeout(r, 250));
-    const session = getSession(id)!;
+    // Tiempo falso acotado, como en las dos pruebas hermanas de
+    // arriba (cierre de evaluaciones 2026-10-31): mismo TTL de
+    // 120 ms y mismo avance de 250, sin reloj de pared.
+    vi.useFakeTimers();
+    try {
+      const id = await proposeSession("late-counter", 120);
+      vi.advanceTimersByTime(250);
+      const session = getSession(id)!;
 
-    const lateCounter = signNegotiationMessage(
-      aliceKeys.secretKey,
-      alicePkHex,
-      "COUNTER",
-      session.proposal.proposalId,
-      { ...session.proposal, requestedScopes: ["read:notes"] }
-    );
-    events = [];
-    await negotiationService.handleEnvelope({
-      v: PROTOCOL_VERSION,
-      type: "negotiation" as P2PMessageType,
-      id: `msg-${id}-LATE-COUNTER`,
-      from: alicePkHex,
-      to: bobPkHex,
-      ts: Date.now(),
-      payload: { action: "COUNTER", negotiationId: id, signed: lateCounter },
-    } as never);
+      const lateCounter = signNegotiationMessage(
+        aliceKeys.secretKey,
+        alicePkHex,
+        "COUNTER",
+        session.proposal.proposalId,
+        { ...session.proposal, requestedScopes: ["read:notes"] }
+      );
+      events = [];
+      await negotiationService.handleEnvelope({
+        v: PROTOCOL_VERSION,
+        type: "negotiation" as P2PMessageType,
+        id: `msg-${id}-LATE-COUNTER`,
+        from: alicePkHex,
+        to: bobPkHex,
+        ts: Date.now(),
+        payload: { action: "COUNTER", negotiationId: id, signed: lateCounter },
+      } as never);
 
-    expect(getSession(id)?.state).toBe("EXPIRED");
-    expect(eventTypes()).not.toContain("counter_received");
+      expect(getSession(id)?.state).toBe("EXPIRED");
+      expect(eventTypes()).not.toContain("counter_received");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("respuesta entrante limpia el pendingSend al cerrar la sesión", async () => {
