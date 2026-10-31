@@ -39,10 +39,14 @@ import {
 import { isPermissionFlowActive } from "./src/p2p/permissionGuard";
 import { loadFeatureFlags } from "./src/config/featureFlags";
 
+// Auditoría completa 2026-10-31 (F1 B-9): la carga arranca en el
+// ámbito del módulo, pero nadie esperaba la promesa y la garantía
+// quedaba en el aire: finishStartup, el embudo de todas las vías de
+// arranque, espera featureFlagsReady antes de mostrar pantalla alguna.
 // 0.1.46: los interruptores (saludo privado, v5, pánico…) se cargan al
 // arrancar, antes de cualquier reconexión P2P: un handshake lee el de v5 de
 // forma síncrona y no debe ver todavía los valores por defecto.
-void loadFeatureFlags();
+const featureFlagsReady: Promise<void> = loadFeatureFlags();
 
 const modelManager = new ModelManager();
 
@@ -221,6 +225,9 @@ function AppContent() {
 
   /** Arranque normal: rutinas, modelos y gate biométrico. */
   const finishStartup = async () => {
+    // F1 B-9: los interruptores deben estar hidratados antes de entrar
+    // en la app; loadFeatureFlags nunca lanza (fail-open a defaults).
+    await featureFlagsReady;
     initHaptics();
     // Historial de acciones del agente: guardarlo en la base cifrada.
     void import("./src/agent/actionLogStore")
