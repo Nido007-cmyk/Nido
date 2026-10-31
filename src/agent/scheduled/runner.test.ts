@@ -51,6 +51,18 @@ function deps(over: Partial<RunnerDeps> = {}): RunnerDeps {
 beforeEach(() => __resetRunnerForTests());
 
 describe("scheduled task runner", () => {
+  it("auditoría 2026-10-31 (F1 B-4): si guardar el avance de una tarea falla, la tanda sigue con las demás", async () => {
+    const d = deps({
+      getDueTasks: vi.fn(async () => [task({ id: "t1" }), task({ id: "t2" })]),
+      updateTaskAfterRun: vi.fn(async (id: string) => {
+        if (id === "t1") throw new Error("disco lleno (simulado)");
+      }),
+    });
+    const results = await runDueTasks(d);
+    expect(results.map((r) => r.taskId)).toEqual(["t1", "t2"]);
+    expect(d.recordTaskRun).toHaveBeenCalledTimes(2);
+  });
+
   it("gives the task only its allowed tools and never the forbidden ones", () => {
     const h = handlersForTask(task(), deps().allHandlers);
     expect(Object.keys(h)).toEqual(["list_notes"]);

@@ -124,7 +124,17 @@ export async function runDueTasks(deps: RunnerDeps): Promise<TaskRunResult[]> {
       } catch {
         // Sin historial la tarea igual avanza: lo importante es no repetirla.
       }
-      await deps.updateTaskAfterRun(task.id, result.completedAt, nextRunAt);
+      // Auditoría completa 2026-10-31 (F1 B-4): esta escritura iba sin
+      // captura: si fallaba, runDueTasks rechazaba entero y las demás
+      // tareas vencidas de la tanda nunca corrían ni quedaban
+      // registradas. Espejo de la captura de recordTaskRun: la tanda
+      // sigue; la tarea afectada podrá repetirse, pero no arrastra a
+      // las demás.
+      try {
+        await deps.updateTaskAfterRun(task.id, result.completedAt, nextRunAt);
+      } catch {
+        // La tanda continúa con la siguiente tarea.
+      }
       if (deps.scheduleNext) await deps.scheduleNext(task, nextRunAt).catch(() => {});
       if (task.notifyOnComplete && deps.notify) await deps.notify(task, result).catch(() => {});
       results.push(result);
