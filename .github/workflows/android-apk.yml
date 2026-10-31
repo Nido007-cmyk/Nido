@@ -338,6 +338,8 @@ jobs:
             package-lock.json
             CHANGELOG.md
             docs/ALPHA_RELEASE_NOTES.md
+            scripts/generate-sbom.mjs
+            scripts/lib/third-party-notices-lib.mjs
           sparse-checkout-cone-mode: false
 
       - name: Decide release tag
@@ -421,6 +423,12 @@ jobs:
       # Blindaje 0.1.44: lista de componentes (SBOM, formato CycloneDX) de
       # las dependencias de producción, generada del lockfile y adjunta al
       # release. Si falla, el release ya publicado no se toca.
+      # Auditoría completa 2026-10-31 (F7-04): «npm sbom» (con o sin
+      # --package-lock-only) omite la mayor parte del árbol y deja
+      # fuera react y react-native: 221 componentes frente a los 590
+      # paquetes de producción del lockfile. El SBOM se genera ahora
+      # desde el lockfile con scripts/generate-sbom.mjs, que falla si
+      # el conjunto sale recortado.
       - name: Attach SBOM
         if: steps.tag.outputs.publish == 'true'
         continue-on-error: true
@@ -428,7 +436,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          npm sbom --sbom-format cyclonedx --package-lock-only --omit dev > nido-sbom.cdx.json
+          node scripts/generate-sbom.mjs nido-sbom.cdx.json
           test -s nido-sbom.cdx.json
           gh release upload "$TAG" nido-sbom.cdx.json --repo "$GITHUB_REPOSITORY"
 
