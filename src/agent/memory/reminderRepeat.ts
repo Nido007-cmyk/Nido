@@ -7,11 +7,15 @@
 /**
  * Recordatorios que se repiten (0.1.32). Puro, sin dependencias.
  *
- * Solo dos ritmos, los que el sistema puede programar sin la app abierta
- * (disparadores DAILY y WEEKLY de expo-notifications): cada día a una
- * hora, o cada semana un día a una hora. «Cada mes»/«cada año» siguen sin
- * soporte y el loop lo dice (nunca se guarda en silencio como si se
- * repitiera).
+ * Los ritmos de sistema, los que se pueden programar sin la app
+ * abierta (disparadores DAILY y WEEKLY de expo-notifications): cada
+ * día a una hora, o cada semana un día a una hora. Desde la 0.1.35,
+ * «cada mes» y «cada año» también tienen soporte, por otra vía: se
+ * guardan como repeticiones de calendario (isCalendarRepeat,
+ * addCalendar) en su propia tabla, no como disparadores del sistema.
+ * (Cabecera corregida por la auditoría completa 2026-10-31, F1 I-2:
+ * el texto anterior seguía diciendo que mes y año no tenían
+ * soporte.)
  */
 
 export type ReminderRepeat = "day" | "week" | "month" | "year";
