@@ -8,7 +8,7 @@ Um DEA (desfibrilador externo automático) é um aparelho que analisa o coraçã
 
 ## Passo a passo
 1. Ligue-o (pelo botão ou ao abrir a tampa) e siga as instruções dele.
-2. Abra o peito da pessoa. Se estiver molhado, seque. Se tiver muito pelo, raspe, se o DEA trouxer lâmina.
+2. Descubra o peito da pessoa. Se estiver molhado, seque. Se tiver muito pelo, raspe, se o DEA trouxer lâmina.
 3. Cole as pás como mostra o desenho: uma abaixo da clavícula direita e a outra no lado esquerdo, abaixo da axila.
 4. Deixe o aparelho analisar: diga em voz alta "Ninguém toque na pessoa!".
 5. Se ele indicar o choque: garanta que ninguém esteja tocando na pessoa e aperte o botão (alguns aplicam o choque sozinhos).

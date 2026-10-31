@@ -18,7 +18,7 @@ Se você se perdeu e alguém sabe aonde você ia, normalmente o melhor é **fica
 
 ## Sinais no terreno (pouco confiáveis sozinhos)
 - O musgo e a orientação dos galhos variam muito: não confie só neles.
-- Seguir um rio rio abaixo costuma levar a povoações, mas pode levar a cachoeiras e barrancos: vá com cuidado.
+- Seguir um rio abaixo costuma levar a povoações, mas pode levar a cachoeiras e barrancos: vá com cuidado.
 - Caminhos, cabos elétricos e cercas costumam levar a algum lugar habitado.
 
 ## Caminhar em linha reta

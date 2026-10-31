@@ -9,7 +9,7 @@ Os furacões (também chamados de ciclones ou tufões) trazem vento muito forte,
 ## Antes da temporada
 - Descubra se você está em área de evacuação e qual é a sua rota.
 - Prepare reservas para 2 semanas, medicamentos e a mochila de emergência.
-- Revise o telhado, pode árvores próximas e tenha material para proteger as janelas (persianas ou tábuas).
+- Revise o telhado, pode árvores próximas e tenha material para proteger as janelas (persianas de proteção ou tábuas).
 
 ## Quando ele se aproximar (aviso)
 - Acompanhe os avisos oficiais no rádio ou em fontes oficiais.

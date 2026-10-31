@@ -15,7 +15,7 @@ Pensada para 72 horas fora de casa.
 - Apito para pedir ajuda.
 - Máscaras (poeira, fumaça, cinzas).
 - Manta térmica, roupa de frio, capa de chuva, calçado resistente.
-- Canivete ou ferramenta multifuncional, fita adesiva larga, corda.
+- Canivete ou ferramenta multifuncional, fita adesiva reforçada, corda.
 - Isqueiro e fósforos em saco estanque.
 - Higiene: sabão, gel desinfetante, papel higiênico, absorventes, sacos de lixo.
 - Cópias de documentos em saco impermeável, dinheiro em notas pequenas.
