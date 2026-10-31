@@ -137,6 +137,23 @@ describe("document import limits", () => {
     expect(world.created).toEqual([]);
   });
 
+  it("bounty tanda 6: un PDF escaneado (sin capa de texto) se nombra por su causa, no como «sin texto»", async () => {
+    world.pdfText = ""; // la extracción devuelve vacío: páginas como imagen
+    await expect(M.importDocuments([asset("escaneado.pdf", 1000)], "x")).rejects.toMatchObject({
+      code: "scannedNoOcr",
+      vars: { name: "escaneado.pdf" },
+    });
+    expect(world.created).toEqual([]);
+  });
+
+  it("bounty tanda 6: un PDF escaneado junto a un texto bueno no envenena la importación", async () => {
+    world.pdfText = "";
+    world.files.set("file:///notas.txt", "palabra ".repeat(50));
+    await M.importDocuments([asset("escaneado.pdf", 1000), asset("notas.txt", 400)], "Mixta");
+    expect(world.created.length).toBe(1);
+    expect(world.inserted.length).toBeGreaterThan(0);
+  });
+
   it("auditoría 2026-10-31 (F3-17): cada importación barre primero los trozos huérfanos de la anterior", async () => {
     world.files.set("file:///doc.txt", "palabra ".repeat(50));
     await M.importDocuments([asset("doc.txt", 400)], "Mi doc");

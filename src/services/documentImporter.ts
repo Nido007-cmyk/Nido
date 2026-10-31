@@ -8,6 +8,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { extractPdfTextCapped, PdfTextError } from "./pdfText";
+import { isOcrAvailable } from "./ocr";
 import { embeddingEngine } from "../rag/embed";
 import {
   getDbEpoch,
@@ -34,8 +35,12 @@ import {
  *   is imported as its own doc; otherwise the whole file is chunked as text.
  * - .pdf: embedded/selectable text only, via modules/nido-pdf-text (Apache
  *   PDFBox-Android on-device, no network, no OCR). Scanned/image-only PDFs
- *   extract to empty text - there's no OCR step. Password-protected PDFs
- *   are rejected with a clear error rather than attempted.
+ *   extract to empty text - there's no OCR step yet: the seam is
+ *   src/services/ocr.ts and the native module's design (and why it is
+ *   not built) is docs/OCR_DESIGN.md; an all-scanned import says so
+ *   (error code scannedNoOcr) instead of a generic "no text".
+ *   Password-protected PDFs are rejected with a clear error rather
+ *   than attempted.
  */
 
 const CHARS_PER_TOKEN = 4; // rough English-text heuristic, no tokenizer on-device
@@ -62,7 +67,7 @@ export const MAX_IMPORT_CHUNKS = 4000;
 /** Más páginas que esto no se leen (un libro largo tiene ~1000). */
 export const MAX_IMPORT_PDF_PAGES = 3000;
 
-export type DocImportErrorCode = "tooLarge" | "tooManyChunks" | "pdfPassword" | "pdfUnreadable" | "noText";
+export type DocImportErrorCode = "tooLarge" | "tooManyChunks" | "pdfPassword" | "pdfUnreadable" | "noText" | "scannedNoOcr";
 
 /** Error with a code the screen shows in the app language (message: for logs). */
 export class DocImportError extends Error {
@@ -160,10 +165,21 @@ async function extractPdf(uri: string, filename: string, maxChars: number): Prom
   }
 }
 
+/**
+ * El error de una importación que no dio ningún texto: si algún PDF
+ * entró vacío (escaneado, sin capa de texto) y esta versión no trae
+ * OCR, el error lo nombra (scannedNoOcr); si no, el genérico de
+ * siempre. Pura, para probarla sin el importador entero.
+ */
+export function emptyImportErrorCode(emptyPdfNames: string[], ocrAvailable: boolean): DocImportErrorCode {
+  return emptyPdfNames.length > 0 && !ocrAvailable ? "scannedNoOcr" : "noText";
+}
+
 async function parseFileContent(
   file: DocumentPicker.DocumentPickerAsset,
   fallbackTitle: string,
-  chunksLeft: number = MAX_IMPORT_CHUNKS
+  chunksLeft: number = MAX_IMPORT_CHUNKS,
+  sink?: { emptyPdfNames: string[] }
 ): Promise<ParsedDoc[]> {
   const filename = file.name;
   const ext = filename.toLowerCase().split(".").pop();
@@ -178,6 +194,11 @@ async function parseFileContent(
 
   if (ext === "pdf") {
     const text = await extractPdf(file.uri, filename, maxCharsForChunks(chunksLeft) + OVERLAP_CHARS);
+    // Un PDF sin capa de texto (escaneado) extrae vacío: se anota
+    // para que una importación sin nada importable lo nombre
+    // (emptyImportErrorCode), no para fallar aquí — en una
+    // importación mixta los demás ficheros siguen entrando.
+    if (text.trim().length === 0) sink?.emptyPdfNames.push(filename);
     // Auditoría 2026-10-29 (bomba de descompresión): el tamaño del archivo
     // no dice cuánto texto sale. Se mide aquí, antes de trocear nada.
     const estimated = estimateChunkCount(text.trim().length);
@@ -257,12 +278,13 @@ export async function importDocuments(
 
   onProgress?.({ stage: "reading" });
   const allDocs: ParsedDoc[] = [];
+  const sink = { emptyPdfNames: [] as string[] };
   let totalSizeBytes = 0;
   let estimatedChunks = 0;
   for (const file of files) {
     totalSizeBytes += file.size ?? 0;
     const fallbackTitle = file.name.replace(/\.[^.]+$/, "");
-    const docs = await parseFileContent(file, fallbackTitle, MAX_IMPORT_CHUNKS - estimatedChunks);
+    const docs = await parseFileContent(file, fallbackTitle, MAX_IMPORT_CHUNKS - estimatedChunks, sink);
     // Se corta en cuanto la suma pasa del tope, sin leer los archivos que
     // quedan ni trocear lo leído.
     for (const d of docs) estimatedChunks += estimateChunkCount(d.body.trim().length);
@@ -287,9 +309,19 @@ export async function importDocuments(
   });
 
   // Nothing to import (scanned PDF without text, empty file): say so instead
-  // of creating an empty collection that looks imported.
+  // of creating an empty collection that looks imported. If a PDF came
+  // back empty and this build has no OCR, the error names the cause:
+  // the day modules/nido-ocr exists, the OCR pass over those pages
+  // plugs in before this point and this branch stops firing for them.
   if (chunks.length === 0) {
-    throw new DocImportError("noText", "No text found in the selected files.");
+    const code = emptyImportErrorCode(sink.emptyPdfNames, await isOcrAvailable());
+    throw new DocImportError(
+      code,
+      code === "scannedNoOcr"
+        ? `"${sink.emptyPdfNames[0]}" looks like a scanned PDF and this build has no OCR.`
+        : "No text found in the selected files.",
+      code === "scannedNoOcr" ? { name: sink.emptyPdfNames[0] } : {}
+    );
   }
   if (chunks.length > MAX_IMPORT_CHUNKS) {
     throw new DocImportError("tooManyChunks", `Too much text: ${chunks.length} chunks.`, {

@@ -244,7 +244,8 @@
       "tooManyChunks": "Too much text to import at once (max {{max}} pieces). Import fewer files or split them.",
       "pdfPassword": "“{{name}}” is password-protected and can't be imported.",
       "pdfUnreadable": "Couldn't read “{{name}}”.",
-      "noText": "No text found in the files (a PDF scanned as an image?)."
+      "noText": "No text found in the files (a PDF scanned as an image?).",
+      "scannedNoOcr": "“{{name}}” looks like a scanned PDF (its pages are images) and this build of NIDO has no text recognition (OCR), so it couldn't be imported. Try the original PDF with selectable text, or a text file."
     },
     "hint": "Import your own .txt, .md, .csv, .json, or .pdf notes — indexed on this device only, never uploaded anywhere. PDFs need selectable text (scanned/image-only pages won't extract — there's no OCR), and password-protected PDFs aren't supported.",
     "nameRequiredTitle": "Name required",

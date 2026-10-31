@@ -244,7 +244,8 @@
       "tooManyChunks": "Há texto demais para importar de uma vez (máximo {{max}} trechos). Importe menos arquivos ou divida-os.",
       "pdfPassword": "“{{name}}” é protegido por senha e não pode ser importado.",
       "pdfUnreadable": "Não foi possível ler “{{name}}”.",
-      "noText": "Nenhum texto encontrado nos arquivos (um PDF escaneado como imagem?)."
+      "noText": "Nenhum texto encontrado nos arquivos (um PDF escaneado como imagem?).",
+      "scannedNoOcr": "“{{name}}” parece um PDF digitalizado (as páginas são imagens) e esta versão do NIDO não traz reconhecimento de texto (OCR), por isso não foi possível importar. Tente o PDF original com texto selecionável ou um arquivo de texto."
     },
     "hint": "Importe suas próprias notas em .txt, .md, .csv, .json ou .pdf — indexadas apenas neste dispositivo, nunca enviadas a lugar nenhum. PDFs precisam de texto selecionável (páginas digitalizadas/somente imagem não são extraídas — não há OCR), e PDFs protegidos por senha não são suportados.",
     "nameRequiredTitle": "Nome obrigatório",

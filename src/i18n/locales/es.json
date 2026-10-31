@@ -495,7 +495,8 @@
       "tooManyChunks": "Hay demasiado texto para importar de una vez (máximo {{max}} fragmentos). Importa menos archivos o divídelos.",
       "pdfPassword": "«{{name}}» está protegido con contraseña; no se puede importar.",
       "pdfUnreadable": "No se pudo leer «{{name}}».",
-      "noText": "No se encontró texto en los archivos (¿un PDF escaneado como imagen?)."
+      "noText": "No se encontró texto en los archivos (¿un PDF escaneado como imagen?).",
+      "scannedNoOcr": "«{{name}}» parece un PDF escaneado (las páginas son imágenes) y esta versión de NIDO no trae reconocimiento de texto (OCR), así que no se pudo importar. Prueba con el PDF original con texto seleccionable o con un archivo de texto."
     },
     "chunkCount_one": "{{count}} fragmento",
     "chunkCount_other": "{{count}} fragmentos",
