@@ -281,9 +281,14 @@ async function createBackupInner(destinationUri: string): Promise<string> {
   await FileSystem.writeAsStringAsync(manifestUri, JSON.stringify(manifest, null, 2));
 
   // D9 (29-10-2026): la bóveda solo se activa con un respaldo reciente.
-  const { recordBackupMade } = await import("./vaultBackupGate");
-  await recordBackupMade();
-
+  // Auditoría completa 2026-10-31 (F3-09): crear el fichero en el
+  // directorio privado NO cuenta como respaldo para la puerta: la
+  // fecha se registra cuando el respaldo sale de verdad, en
+  // saveBackupToFolder (backupShare), porque un fichero que nunca
+  // salió del aparato no sobrevive a la pérdida que D9 protege.
+  // La hoja de compartir de Android no confirma la entrega, así que
+  // compartir tampoco registra: la puerta pide el guardado en
+  // carpeta, y los textos de la bóveda lo dicen así.
   return destinationUri;
 }
 

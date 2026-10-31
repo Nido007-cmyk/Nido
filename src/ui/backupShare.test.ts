@@ -50,6 +50,11 @@ vi.mock("../security/backup", () => ({
     /\.db$/.test(uri) ? uri.replace(/\.db$/, ".knowledge.db") : `${uri}.knowledge.db`,
 }));
 
+const recordBackupMadeSpy = vi.fn(async (..._args: unknown[]) => {});
+vi.mock("../security/vaultBackupGate", () => ({
+  recordBackupMade: (...args: unknown[]) => recordBackupMadeSpy(...args),
+}));
+
 import { shareBackupFile, findLatestBackup, saveBackupToFolder } from "./backupShare";
 
 describe("backupShare (Fix 6)", () => {
@@ -127,11 +132,19 @@ describe("saveBackupToFolder (guardar en carpeta, 2026-10-12)", () => {
     expect(writeAsStringAsync).toHaveBeenCalledTimes(1);
   });
 
+  it("F3-09: registrar la fecha de la puerta D9 solo cuando el guardado termina", async () => {
+    getInfoAsync.mockResolvedValue({ exists: false });
+    await saveBackupToFolder(src);
+    expect(recordBackupMadeSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("devuelve null sin copiar nada si no se concede el permiso", async () => {
     requestDirectoryPermissionsAsync.mockResolvedValue({ granted: false });
     const copied = await saveBackupToFolder(src);
     expect(copied).toBeNull();
     expect(createFileAsync).not.toHaveBeenCalled();
     expect(writeAsStringAsync).not.toHaveBeenCalled();
+    // F3-09: un guardado cancelado no alimenta la puerta D9.
+    expect(recordBackupMadeSpy).not.toHaveBeenCalled();
   });
 });

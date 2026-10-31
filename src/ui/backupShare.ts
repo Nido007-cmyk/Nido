@@ -101,6 +101,14 @@ export async function saveBackupToFolder(sourcePath: string): Promise<string[] |
     });
     copied.push(fileName);
   }
+  // Auditoría completa 2026-10-31 (F3-09): SOLO aquí se registra la
+  // fecha del respaldo para la puerta D9 de la bóveda. Guardar en
+  // una carpeta elegida por el usuario es la única salida con
+  // confirmación real: crear el fichero en el directorio privado no
+  // saca nada del aparato, y la hoja de compartir de Android no
+  // avisa de si el destino guardó algo.
+  const { recordBackupMade } = await import("../security/vaultBackupGate");
+  await recordBackupMade();
   return copied;
 }
 
