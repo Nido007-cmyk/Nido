@@ -53,6 +53,11 @@ By default, voice dictation only works with a speech recognizer that runs on you
 - **Location** (on older Android versions): required by Android to scan for Bluetooth devices. NIDO does not read your location.
 - **Microphone**: voice input, only while you hold dictation open.
 - **Notifications**: reminders, and a notice when a NIDO message arrives with the app in the background. The message notice never shows who wrote or what: only "New NIDO message", hidden on the lock screen.
+- **Exact alarms**: so a reminder fires at the time you set, not when Android finds it convenient. Android asks you to allow this in its own settings screen.
+- **"NIDO is answering" service**: a foreground service Android shows while the on-device model finishes an answer with the app in the background; it stops when the answer ends. Declared to Android as a special use, with that sentence as its stated purpose.
+- **Battery exemption, only if you accept it**: Android's own dialog asks; without it Android freezes NIDO in the background after a while and the phone-to-phone link drops.
+- **Start after reboot** (inherited from the notifications library): so scheduled reminders are re-armed after the phone restarts.
+- **Vibrate** (inherited from the haptics library): the small vibration on confirmations and the panic button.
 - **Calendar and contacts**, if you grant them: so the agent can read them on the phone when you ask. They are not uploaded.
 
 ## Your controls
@@ -126,6 +131,11 @@ Por defecto, el dictado solo funciona con un reconocedor de voz que trabaja en t
 - **Ubicación** (en versiones antiguas de Android): Android la exige para buscar dispositivos Bluetooth. NIDO no lee tu ubicación.
 - **Micrófono**: entrada por voz, solo mientras dictas.
 - **Notificaciones**: recordatorios y un aviso cuando llega un mensaje NIDO con la app en segundo plano. El aviso nunca muestra quién escribe ni qué: solo «Nuevo mensaje NIDO», y oculto en la pantalla de bloqueo.
+- **Alarmas exactas**: para que un recordatorio suene a la hora que fijaste, no cuando Android lo crea oportuno. Android te pide permitirlo en su propia pantalla de ajustes.
+- **Servicio «NIDO está respondiendo»**: un servicio en primer plano que Android muestra mientras el modelo del teléfono termina una respuesta con la app en segundo plano; se detiene cuando la respuesta acaba. Declarado ante Android como uso especial, con esa frase como finalidad escrita.
+- **Exención de batería, solo si la aceptas**: lo pide un diálogo del propio Android; sin él, Android congela NIDO en segundo plano al rato y el enlace entre teléfonos se corta.
+- **Arranque tras reiniciar** (heredado de la librería de notificaciones): para que los recordatorios programados se rearmen después de reiniciar el teléfono.
+- **Vibración** (heredada de la librería de háptica): la vibración breve en las confirmaciones y el botón de pánico.
 - **Calendario y contactos**, si los concedes: para que el agente los lea en el teléfono cuando se lo pides. No se suben a ningún lado.
 
 ## Tus controles
