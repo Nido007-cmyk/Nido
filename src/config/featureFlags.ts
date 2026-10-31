@@ -97,35 +97,57 @@ async function flagsPath(): Promise<string> {
   return `${documentDirectory ?? ""}${FLAGS_PATH_SUFFIX}`;
 }
 
-/** Persist a flag value. Best-effort: failures keep the in-memory value. */
+/**
+ * Persist a flag value. Best-effort: failures keep the in-memory value.
+ *
+ * Auditoría completa 2026-10-31 (F3-11): la escritura era directa y
+ * sin cola, al contrario que settings.ts. Un corte a mitad dejaba el
+ * JSON roto y loadFeatureFlags cae a los valores de fábrica en
+ * silencio (fail-open: p2p.privateHelloOnly, que el usuario había
+ * encendido, volvía a apagado sin decirlo), y dos cambios casi a la
+ * vez se pisaban (leer, modificar, escribir sin serializar). Ahora:
+ * cola de escritura y temporal más renombrado, el mismo patrón.
+ */
+let flagsWriteQueue: Promise<unknown> = Promise.resolve();
 export async function setFeatureEnabled(
   flag: FeatureFlag,
   value: boolean
 ): Promise<void> {
   overrides.set(flag, value);
-  try {
-    const path = await flagsPath();
-    const { readAsStringAsync, writeAsStringAsync, getInfoAsync } = await import(
-      "expo-file-system/legacy"
-    );
-    let current: Record<string, boolean> = {};
+  const run = flagsWriteQueue.then(async () => {
     try {
-      const info = await getInfoAsync(path);
-      if (info.exists) {
-        const raw = await readAsStringAsync(path);
-        const parsed: unknown = JSON.parse(raw);
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          current = parsed as Record<string, boolean>;
+      const path = await flagsPath();
+      const FS = await import("expo-file-system/legacy");
+      const { readAsStringAsync, writeAsStringAsync, getInfoAsync } = FS;
+      let current: Record<string, boolean> = {};
+      try {
+        const info = await getInfoAsync(path);
+        if (info.exists) {
+          const raw = await readAsStringAsync(path);
+          const parsed: unknown = JSON.parse(raw);
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            current = parsed as Record<string, boolean>;
+          }
         }
+      } catch {
+        // Corrupt file: overwrite with current overrides.
       }
+      current[flag] = value;
+      const json = JSON.stringify(current);
+      const move = typeof FS.moveAsync === "function" ? FS.moveAsync : undefined;
+      if (!move) {
+        await writeAsStringAsync(path, json);
+        return;
+      }
+      const tmp = `${path}.tmp`;
+      await writeAsStringAsync(tmp, json);
+      await move({ from: tmp, to: path });
     } catch {
-      // Corrupt file: overwrite with current overrides.
+      // Disk unavailable: in-memory value stands for this session.
     }
-    current[flag] = value;
-    await writeAsStringAsync(path, JSON.stringify(current));
-  } catch {
-    // Disk unavailable: in-memory value stands for this session.
-  }
+  });
+  flagsWriteQueue = run.catch(() => {});
+  return run;
 }
 
 /** Hydrate overrides from disk. Call once at startup. Never throws. */

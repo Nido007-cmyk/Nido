@@ -12,6 +12,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  */
 
 const files = new Map<string, string>();
+const writes: string[] = [];
 
 vi.mock("expo-file-system/legacy", () => ({
   documentDirectory: "file:///doc/",
@@ -22,7 +23,14 @@ vi.mock("expo-file-system/legacy", () => ({
     return c;
   },
   writeAsStringAsync: async (path: string, content: string) => {
+    writes.push(path);
     files.set(path, content);
+  },
+  moveAsync: async ({ from, to }: { from: string; to: string }) => {
+    const c = files.get(from);
+    if (c === undefined) throw new Error("not found");
+    files.delete(from);
+    files.set(to, c);
   },
 }));
 
@@ -84,5 +92,34 @@ describe("0.1.49: valores de fábrica", () => {
     const ff = await import("./featureFlags");
     ff.resetFeatureFlagsForTests();
     expect(ff.isFeatureEnabled("p2p.privateHelloOnly")).toBe(false);
+  });
+});
+
+describe("auditoría completa 2026-10-31 (F3-11): escritura atómica y serializada", () => {
+  beforeEach(() => {
+    files.clear();
+    writes.length = 0;
+    resetFeatureFlagsForTests();
+  });
+
+  it("escribe a un temporal y renombra: nunca directo sobre el fichero bueno", async () => {
+    await setFeatureEnabled("p2p.privateHelloOnly", true);
+    expect(writes).toContain("file:///doc/feature-flags.json.tmp");
+    expect(writes).not.toContain("file:///doc/feature-flags.json");
+    expect(files.has("file:///doc/feature-flags.json.tmp")).toBe(false);
+    expect(JSON.parse(files.get("file:///doc/feature-flags.json")!)).toEqual({
+      "p2p.privateHelloOnly": true,
+    });
+  });
+
+  it("dos cambios a la vez no se pisan: los dos quedan guardados", async () => {
+    await Promise.all([
+      setFeatureEnabled("p2p.privateHelloOnly", true),
+      setFeatureEnabled("security.panicButton", true),
+    ]);
+    resetFeatureFlagsForTests();
+    await loadFeatureFlags();
+    expect(isFeatureEnabled("p2p.privateHelloOnly")).toBe(true);
+    expect(isFeatureEnabled("security.panicButton")).toBe(true);
   });
 });
