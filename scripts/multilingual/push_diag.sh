@@ -8,7 +8,19 @@ for f in parity.json calibration-builtin.json calibration-builtin.md calibration
          wiki-vital5-e5.sqlite.json multilingual-e5-small-q8_0.gguf.sha256; do
   [ -f "$W/$f" ] && cp "$W/$f" "$D/"
 done
-for f in "$DIAG"/*; do [ -f "$f" ] && tail -c 60000 "$f" > "$D/logs/$(basename "$f")"; done
+# Auditoría completa 2026-10-31 (F7-09): lista de admisión. Antes se
+# copiaba la cola de TODO fichero que cayera en $DIAG, así que un
+# registro nuevo (o un volcado accidental) se publicaba en la rama
+# sin que nadie lo decidiera. Ahora solo viajan los registros del
+# propio pipeline, por su nombre exacto (y los server-*.log de los
+# servidores de embeddings); cualquier otro fichero se queda en el
+# runner. Al añadir un paso nuevo al workflow, su registro se suma
+# aquí a propósito o no se publica.
+DIAG_ALLOWLIST="00-runner.txt 10-build.log 20-pip-freeze.txt 20-python.log 30-download.log 40-convert.log 50-fetch.log 60-servers.log 70-parity.log 80-calibrate-builtin.log 90-calibrate-vital.log 95-pack.log 97-release.log"
+for name in $DIAG_ALLOWLIST; do
+  [ -f "$DIAG/$name" ] && tail -c 60000 "$DIAG/$name" > "$D/logs/$name"
+done
+for f in "$DIAG"/server-*.log; do [ -f "$f" ] && tail -c 60000 "$f" > "$D/logs/$(basename "$f")"; done
 cat > "$D/README.md" <<EOF
 Run ${GITHUB_RUN_ID} on ${GITHUB_SHA} (${GITHUB_REF_NAME}) — $(date -u)
 E5 revision: ${E5_RESOLVED_REVISION:-?}  GGUF sha256: ${E5_SHA256:-?}
