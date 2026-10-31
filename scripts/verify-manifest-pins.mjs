@@ -198,7 +198,7 @@ async function main() {
     process.stdout.write(`${tag} HEAD ${url} … `);
     const { ok, status } = await checkReachable(asset, url);
     console.log(ok ? `OK (${status})` : `FAIL (${status ?? "network"})`);
-    // Be polite to hosts; 10 entries, tiny pause between them.
+    // Be polite to hosts; tiny pause between entries.
     await sleep(300);
   }
 
