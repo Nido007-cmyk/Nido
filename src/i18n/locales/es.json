@@ -23,7 +23,13 @@
     "privacyBody": "NIDO no tiene cuentas, ni analítica, ni servidores propios. Las únicas conexiones que hace son las descargas que tú inicias (modelos y paquetes de conocimiento), y aparecen en el registro de red de arriba. La política de privacidad y los términos de uso completos están en PRIVACY.md y TERMS.md del repositorio.",
     "licensesTitle": "Licencias",
     "licensesBody": "Qué licencia tiene NIDO, cada modelo de IA, el texto de Wikipedia que trae y las librerías con las que está hecho.",
-    "licensesOpen": "Ver licencias"
+    "licensesOpen": "Ver licencias",
+    "developmentTitle": "Desarrollo de NIDO",
+    "developmentBody": "NIDO es un proyecto gratuito e independiente. Su desarrollo y mantenimiento se sostienen sin publicidad, sin cuentas y sin funciones de pago. Para quienes han preguntado cómo contribuir, el proyecto dispone de estas direcciones para aportaciones voluntarias en USDC o en otros tokens compatibles. Una aportación no otorga ventajas, no desbloquea funciones y no crea una cuenta. Las aportaciones se realizan desde la billetera de cada persona; NIDO no procesa pagos ni verifica transacciones dentro de la aplicación. Envía únicamente a través de la red indicada: una transferencia enviada por la red incorrecta puede perderse de forma permanente.",
+    "developmentSolanaLabel": "USDC u otro token compatible · Solana",
+    "developmentBaseLabel": "USDC u otro token compatible · Base",
+    "developmentCopy": "Copiar",
+    "developmentCopied": "Dirección copiada"
   },
   "catalogItemCard": {
     "activeNote": "En uso actualmente",

@@ -16,6 +16,48 @@ import { makeSurfaces } from "./theme/surfaces";
 import appConfig from "../../app.json";
 import { BackupScreen } from "./BackupScreen";
 import { LicensesScreen } from "./LicensesScreen";
+import QRCode from "qrcode";
+import { SUPPORT_ADDRESSES, copySupportAddress, type SupportAddress } from "./aboutSupport";
+
+/**
+ * QR dibujado con Views, como en NidoScreen (qrcode es JS puro, sin
+ * dependencias nativas nuevas). El contenido del QR es la dirección
+ * misma, carácter a carácter, leída de la fuente única de aboutSupport.
+ */
+function QrViews({ text, size = 120 }: { text: string; size?: number }) {
+  const modules = useMemo(() => {
+    try {
+      const qr = QRCode.create(text, { errorCorrectionLevel: "M" });
+      const n = qr.modules.size as number;
+      const data = qr.modules.data as Uint8Array | number[];
+      return { n, data };
+    } catch {
+      return null;
+    }
+  }, [text]);
+  if (!modules) return null;
+  const cell = size / modules.n;
+  const rows: React.ReactNode[] = [];
+  for (let r = 0; r < modules.n; r++) {
+    const cells: React.ReactNode[] = [];
+    for (let c = 0; c < modules.n; c++) {
+      const dark = modules.data[r * modules.n + c] === 1;
+      cells.push(
+        <View key={c} style={{ width: cell, height: cell, backgroundColor: dark ? "#111" : "#fff" }} />,
+      );
+    }
+    rows.push(
+      <View key={r} style={{ flexDirection: "row" }}>
+        {cells}
+      </View>,
+    );
+  }
+  return (
+    <View style={{ backgroundColor: "#fff", padding: 10, borderRadius: 8 }}>
+      <View style={{ width: size, height: size }}>{rows}</View>
+    </View>
+  );
+}
 
 export function AboutScreen({ onClose }: { onClose: () => void }) {
   const { colors, typography } = useTheme();
@@ -29,6 +71,19 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
   const handleClose = () => {
     impact(ImpactFeedbackStyle.Light);
     onClose();
+  };
+
+  // 2026-10-30: confirmación breve tras copiar una dirección de la
+  // tarjeta de desarrollo; solo se muestra si el portapapeles aceptó.
+  const [copiedId, setCopiedId] = useState<SupportAddress["id"] | null>(null);
+  const handleCopyAddress = async (entry: SupportAddress) => {
+    impact(ImpactFeedbackStyle.Light);
+    try {
+      await copySupportAddress(entry.address);
+      setCopiedId(entry.id);
+    } catch {
+      // Sin confirmación si el portapapeles falló: no se anuncia lo que no pasó.
+    }
   };
 
   if (showBackup) {
@@ -126,6 +181,52 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
           </View>
         </View>
 
+        {/* 2026-10-30: información del proyecto, no una petición — las
+            direcciones para quienes han preguntado cómo contribuir al
+            desarrollo. Sin avisos, sin recompensas, sin desbloqueos: la
+            app solo las muestra y las copia; no procesa pagos ni hace
+            llamadas de red por esta tarjeta. Las direcciones viven una
+            sola vez en aboutSupport.ts y todo (texto, QR, copiar) lee
+            de ahí. */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{t("aboutScreen.developmentTitle")}</Text>
+          <Text style={styles.paragraph}>{t("aboutScreen.developmentBody")}</Text>
+          {SUPPORT_ADDRESSES.map((entry) => {
+            const networkName = entry.id === "solana" ? "Solana" : "Base";
+            return (
+              <View key={entry.id} style={styles.supportBlock}>
+                <Text style={styles.supportLabel}>
+                  {t(entry.id === "solana" ? "aboutScreen.developmentSolanaLabel" : "aboutScreen.developmentBaseLabel")}
+                </Text>
+                <Pressable
+                  testID={`about-support-address-${entry.id}`}
+                  style={styles.repoBox}
+                  onPress={() => void handleCopyAddress(entry)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t("aboutScreen.developmentCopy")} · ${networkName}`}
+                >
+                  <Text style={styles.repoText}>{entry.address}</Text>
+                </Pressable>
+                <View style={styles.supportQr}>
+                  <QrViews text={entry.address} />
+                </View>
+                <Pressable
+                  testID={`about-support-copy-${entry.id}`}
+                  style={styles.actionBtn}
+                  onPress={() => void handleCopyAddress(entry)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t("aboutScreen.developmentCopy")} · ${networkName}`}
+                >
+                  <Text style={styles.actionBtnText}>{t("aboutScreen.developmentCopy")}</Text>
+                </Pressable>
+                {copiedId === entry.id && (
+                  <Text style={styles.supportCopied}>{t("aboutScreen.developmentCopied")}</Text>
+                )}
+              </View>
+            );
+          })}
+        </View>
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t("aboutScreen.licensesTitle")}</Text>
           <Text style={styles.paragraph}>{t("aboutScreen.licensesBody")}</Text>
@@ -206,6 +307,24 @@ const getStyles = (colors: Colors, typography: Typography) => {
     repoText: {
       ...typography.mono.xs,
       color: colors.text.accentEmerald,
+    },
+    supportBlock: {
+      marginTop: calmSpacing.comfortable,
+      gap: calmSpacing.tight,
+    },
+    supportLabel: {
+      ...typography.ui.caption,
+      color: colors.text.secondary,
+      fontWeight: "700",
+    },
+    supportQr: {
+      alignItems: "center",
+      paddingVertical: calmSpacing.tight,
+    },
+    supportCopied: {
+      ...typography.ui.micro,
+      color: colors.emerald[600],
+      fontWeight: "700",
     },
   });
 };

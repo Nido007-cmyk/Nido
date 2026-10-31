@@ -529,7 +529,13 @@
     "privacyBody": "NIDO has no accounts, no analytics and no servers of its own. The only connections it makes are the downloads you start (models and knowledge packs), and they are listed in the network log above. The full privacy policy and terms of use are in PRIVACY.md and TERMS.md in the repository.",
     "licensesTitle": "Licenses",
     "licensesBody": "The license of NIDO, of each AI model, of the Wikipedia text it carries and of the libraries it is built with.",
-    "licensesOpen": "View licenses"
+    "licensesOpen": "View licenses",
+    "developmentTitle": "NIDO development",
+    "developmentBody": "NIDO is a free, independent project. Its development and maintenance are sustained without advertising, accounts, or paid features. For those who have asked how to contribute, the project provides these addresses for voluntary contributions in USDC or other compatible tokens. A contribution provides no advantages, unlocks no features, and creates no account. Contributions are made from each person's own wallet; NIDO does not process payments or verify transactions inside the app. Send only through the indicated network: a transfer sent through the wrong network may be permanently lost.",
+    "developmentSolanaLabel": "USDC or another compatible token · Solana",
+    "developmentBaseLabel": "USDC or another compatible token · Base",
+    "developmentCopy": "Copy",
+    "developmentCopied": "Address copied"
   },
   "sourceFootnotes": {
     "title": "Offline sources consulted",
