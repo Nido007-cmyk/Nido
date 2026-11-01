@@ -313,6 +313,21 @@ describe("composición — conocimiento y charla (las capas previas a la puerta)
     const ana = await send("¿cuál es el número de Ana?", "es", fakeEngine());
     expect(ana.route).toBe("agent");
   });
+
+  it("Núcleo 3: «¿Recuerdas qué dice el contrato…?» va a conocimiento, no muere en el respaldo de guardado", async () => {
+    // Antes: REMEMBER_PATTERNS la clasificaba recordar, ningún
+    // extractor de memoria traía nada (el dato vive en el documento,
+    // no en los hechos) y el turno caía al respaldo «No pude guardar
+    // eso automáticamente…» — la ruta de conocimiento ni corría.
+    const engine = fakeEngine();
+    const t = await send("¿Recuerdas qué dice el contrato sobre las vacaciones?", "es", engine);
+    expect(t.route).toBe("knowledge");
+    expect(t.response ?? "").not.toContain("No pude guardar");
+    expect(engine.calls).toHaveLength(0);
+    // La memoria genuina sigue yendo al agente como siempre.
+    const mem = await send("¿Recuerdas cuál es mi color favorito?", "es", fakeEngine());
+    expect(mem.route).toBe("agent");
+  });
 });
 
 describe("composición — recordatorios y temporizadores de la guía", () => {

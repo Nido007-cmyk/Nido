@@ -365,3 +365,28 @@ describe("classifyIntent — Núcleo 3: el número de un servicio público no es
     expect(classifyIntent(text)).toBe("actuar");
   });
 });
+
+describe("classifyIntent — Núcleo 3: «¿Recuerdas qué dice el documento…?» no es memoria", () => {
+  it.each([
+    "¿Recuerdas qué dice el contrato sobre las vacaciones?",
+    "¿Recuerdas qué dice la receta sobre la dosis?",
+    "¿Te acuerdas qué dice el papel de la cita?",
+    "Do you remember what the contract says about vacation?",
+    "Você lembra o que a receita diz sobre a dose?",
+  ])("%p → conversar (ruta de conocimiento con el documento)", (text) => {
+    expect(classifyIntent(text)).toBe("conversar");
+  });
+
+  it.each([
+    // La memoria genuina no se mueve: las cuatro marcas del veto
+    // (apertura + interrogativa + verbo de contenido + documento)
+    // no se juntan en ninguna de estas.
+    "¿Cómo se llama mi mamá?",
+    "¿Recuerdas cuál es mi color favorito?",
+    "Recuerda que mi cumple es en mayo",
+    "¿Qué sabes de mí?",
+    "¿Recuerdas qué día es mi cumpleaños?",
+  ])("%p → recordar", (text) => {
+    expect(classifyIntent(text)).toBe("recordar");
+  });
+});

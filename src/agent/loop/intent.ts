@@ -37,6 +37,45 @@ import { normalizeForRouting } from "./routingText";
 
 export type AgentIntent = "conversar" | "recordar" | "actuar";
 
+/**
+ * Núcleo 3 (resto clasificador de ADV2-09, forma «¿Recuerdas qué…?»):
+ * una pregunta sobre el CONTENIDO de un documento que por cortesía
+ * empieza como memoria («¿Recuerdas qué dice el contrato sobre las
+ * vacaciones?»). No pide recordar nada: pide lo que el documento
+ * dice, y el dato vive en el documento importado, no en los hechos
+ * guardados. Sin esta lectura, REMEMBER_PATTERNS la clasifica
+ * recordar, ningún extractor de memoria trae nada (no hay hecho que
+ * traer), el modelo no llama herramientas y el turno muere en el
+ * respaldo de guardado («No pude guardar eso automáticamente…»):
+ * el respaldo equivocado servido con confianza, y la ruta de
+ * conocimiento — la que sí puede responder desde el documento —
+ * nunca corre. La forma es deliberadamente estrecha, cuatro marcas
+ * a la vez: apertura de recuerdo + interrogativa + verbo de
+ * contenido (dice/diz/says…) + sustantivo de documento de lista
+ * cerrada + forma de pregunta. Precio declarado en la preparación:
+ * un hecho GUARDADO sobre el contenido de un documento («la carta
+ * dice que…») preguntado en esta forma exacta pierde la respuesta
+ * desde memoria y va a conocimiento.
+ */
+const DOC_RECALL_OPEN_RE = /\b(recuerdas|te acuerdas|acuerdas|do you remember|você lembra|voce lembra|lembra)\b/i;
+// La interrogativa no puede cerrar con \b: en JS «é» no es carácter
+// de palabra y «qué» jamás tendría borde detrás. Guarda de letra en
+// su lugar, que además bloquea «quero» y «qualquer».
+const DOC_RECALL_INTER_RE = /\b(qu[eé]|o que|qual|quais|what)(?![a-záéíóúüñç])/i;
+const DOC_RECALL_VERB_RE = /\b(dice|diz|says|dec[ií]a|pone|reza|indica)\b/i;
+const DOC_RECALL_NOUN_RE =
+  /\b(contrato|documento|receta|papel|carta|manual|informe|certificado|factura|folleto|contract|document|recipe|letter|paper|report|receita|relat[oó]rio)\b/i;
+
+export function isDocumentRecallQuestion(rawText: string, normalized: string): boolean {
+  if (!/[¿?]/.test(rawText ?? "")) return false;
+  return (
+    DOC_RECALL_OPEN_RE.test(normalized) &&
+    DOC_RECALL_INTER_RE.test(normalized) &&
+    DOC_RECALL_VERB_RE.test(normalized) &&
+    DOC_RECALL_NOUN_RE.test(normalized)
+  );
+}
+
 const REMEMBER_PATTERNS: RegExp[] = [
   /recuerda( que|te)?/i,
   /acu[eé]rdate/i,
@@ -257,7 +296,12 @@ export function classifyIntent(text: string): AgentIntent {
   // llamar» = acción, no memoria; «qué tengo el lunes» = agenda).
   if (extractTimerAction(t)) return "actuar";
   if (ACT_PATTERNS.some((re) => re.test(t))) return "actuar";
-  if (REMEMBER_PATTERNS.some((re) => re.test(t))) return "recordar";
+  // Núcleo 3: veto quirúrgico en este único asiento — la pregunta
+  // sobre un documento no entra por la puerta de memoria; el flujo
+  // sigue y, sin extractor que la reclame, cae a conversar y a la
+  // ruta de conocimiento con el documento (ver isDocumentRecallQuestion).
+  const docRecallQ = isDocumentRecallQuestion(text, t);
+  if (!docRecallQ && REMEMBER_PATTERNS.some((re) => re.test(t))) return "recordar";
   // 0.1.22: resto de detectores del pre-router del loop (ver arriba).
   if (extractReminderAction(t)) return "actuar";
   // 0.1.32: fecha sin contenido → el loop pregunta qué recordar.
