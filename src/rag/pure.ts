@@ -254,6 +254,113 @@ const DEMONSTRATIVE_TOKENS = new Set([
   "isso", "isto", "esse", "essa",
 ]);
 
+// H-08: vocabulary of the inheritance guard. POINTING adds the anaphoric
+// family to the demonstratives ("¿y el otro?", "what is IT?"): a question
+// built around one of these refers to the conversation by construction.
+// WH carries the interrogative frame of an attribute question ("¿cuánto
+// cuesta?", "which room?") — checked on folded tokens, so most of these
+// are stopwords for term purposes and live here separately.
+const POINTING_TOKENS = new Set([
+  ...DEMONSTRATIVE_TOKENS,
+  "otro", "otra", "otros", "otras",
+  "outro", "outra", "outros", "outras",
+  "other", "another", "it",
+]);
+const WH_TOKENS = new Set([
+  "que", "cual", "cuales", "cuanto", "cuantos", "cuanta", "cuantas", "cuando", "donde", "como", "quien", "quienes",
+  "qual", "quais", "quanto", "quantos", "quando", "onde", "quem",
+  "what", "when", "where", "which", "who", "whom", "whose", "why", "how",
+]);
+
+/** Folded, punctuation-free rendering for frame matching ("¿Qué es…?" → "que es …"). */
+function foldedText(text: string): string {
+  return text
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * A definitional frame names its own subject and stands alone ("¿Qué es
+ * la fotosíntesis?", "o que é…?", "what is…?"): inheriting the previous
+ * topic into it can only contaminate. es/pt share the folded "que es/e"
+ * shape (pt folds é→e, são→sao).
+ */
+function isDefinitionalFrame(query: string): boolean {
+  const s = foldedText(query);
+  if (/^(y |e |and )?(o )?que (es|son|significa|significan|e|sao)\b/.test(s)) return true;
+  if (/^(and )?what (is|are)\b/.test(s)) return true;
+  if (/^what does\b/.test(s) && /\bmean\b/.test(s)) return true;
+  return false;
+}
+
+/**
+ * A capitalized content token past the first word that the anchor never
+ * mentioned is a new proper entity ("¿Y en PORTUGAL?" after the dentist):
+ * the follow-up opens its own topic. Sentence-initial capitalization is
+ * orthography, not a name, so the first token is exempt; the comparison
+ * is on folded tokens, so case and accents can't smuggle the entity in
+ * or out.
+ */
+function introducesNewEntity(query: string, anchor: string): boolean {
+  const anchorTokens = new Set(tokenize(anchor));
+  const raw = query.split(/[^\p{L}\p{N}]+/u).filter((t) => t.length > 0);
+  for (let i = 1; i < raw.length; i++) {
+    if (!/^\p{Lu}/u.test(raw[i])) continue;
+    const folded = tokenize(raw[i])[0];
+    if (!folded || folded.length < 3 || LEXICAL_STOPWORDS.has(folded)) continue;
+    if (!anchorTokens.has(folded)) return true;
+  }
+  return false;
+}
+
+/** Shared content stem between the thin question and the anchor, in the house's own forms/prefix machinery. */
+function sharesContentStem(query: string, anchor: string): boolean {
+  const qa = buildLexicalQuery(query);
+  const qb = buildLexicalQuery(anchor);
+  if (!qa || !qb) return false;
+  const anchorForms = new Set(qb.terms.flatMap((t) => t.forms));
+  const anchorPrefixes = qb.terms.map((t) => t.prefix).filter((p): p is string => !!p);
+  return qa.terms.some(
+    (t) =>
+      t.forms.some((f) => anchorForms.has(f)) ||
+      (!!t.prefix && [...anchorForms].some((f) => f.startsWith(t.prefix!))) ||
+      anchorPrefixes.some((p) => t.forms.some((f) => f.startsWith(p)))
+  );
+}
+
+/**
+ * H-08 guard: may the thin question inherit the anchor's topic?
+ *
+ * The adversary's cheap guard — a shared stem or a demonstrative — is
+ * necessary but not sufficient: the round's own follow-up ("¿En qué
+ * sala?", no shared stem, no demonstrative) and the fragment chains
+ * people actually type ("¿Y mañana?", "¿y para niños?") carry neither,
+ * so those two legs alone would amputate R-03 (measured on the tip: 9
+ * legitimate chains inherit today with neither leg). The guard therefore
+ * inherits when ANY elliptical signal is present — pointing word
+ * (anaphoric/demonstrative), shared stem, interrogative attribute frame,
+ * or a bare fragment of at most one content term ("¿Y mañana?" cannot
+ * name a new subject: it has no term to name it with) — and refuses when
+ * the thin question brings its own topic instead: a new proper entity
+ * (veto that also overrides a pointing word: "¿Y eso en Portugal?"
+ * points at a place, not at the conversation) or a definitional frame
+ * whose subject is neither pointed at nor the anchor's own.
+ */
+function inheritanceAllowed(query: string, anchor: string): boolean {
+  const tokens = tokenize(query);
+  const pointing = tokens.some((t) => POINTING_TOKENS.has(t));
+  const stem = sharesContentStem(query, anchor);
+  if (isDefinitionalFrame(query) && !pointing && !stem) return false;
+  if (introducesNewEntity(query, anchor)) return false;
+  if (pointing || stem) return true;
+  if (tokens.some((t) => WH_TOKENS.has(t))) return true;
+  return (buildLexicalQuery(query)?.terms.length ?? 0) <= 1;
+}
+
 /**
  * R-03 (physical round 0.1.68): deterministic query contextualization for
  * retrieval — no model, no invented terms.
@@ -276,6 +383,11 @@ const DEMONSTRATIVE_TOKENS = new Set([
  * A trailing user turn identical to the query is skipped: callers build
  * the history from the message list, which may already include the
  * question being asked.
+ *
+ * H-08: inheritance is guarded by `inheritanceAllowed` against the very
+ * anchor that would be appended — a thin question that opens its own
+ * topic (new entity, definition) searches alone instead of dragging the
+ * previous subject into both retrieval and the literal guide.
  */
 export function contextualizeQuery(query: string, history?: ConversationHistory | null): string {
   const termCount = buildLexicalQuery(query)?.terms.length ?? 0;
@@ -288,6 +400,7 @@ export function contextualizeQuery(query: string, history?: ConversationHistory 
     const turn = turns[i];
     if (turn.role !== "user") continue;
     if (turn.text.trim().toLowerCase() === self) continue;
+    if (!inheritanceAllowed(query, turn.text)) return query;
     return `${query} ${turn.text}`;
   }
   return query;

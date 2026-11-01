@@ -771,3 +771,125 @@ describe("contextualizeQuery (R-03): el seguimiento desnudo hereda el tema", () 
     expect(terms).not.toContain("extremo");
   });
 });
+
+describe("contextualizeQuery (H-08): la herencia lleva guarda de tema", () => {
+  // Dos columnas de frases tal como la gente encadena las vueltas.
+  // Columna A — cambio de asunto: la pregunta fina trae su propio tema
+  // (una entidad nueva o un marco de definición) y NO debe arrastrar el
+  // anterior. Columna B — elipsis verdadera: la pregunta fina no se
+  // entiende sin el tema anterior y la herencia se conserva.
+  const tras = (prev: string) => ({
+    turns: [
+      { role: "user" as const, text: prev },
+      { role: "assistant" as const, text: "…" },
+    ],
+  });
+  const CITA = "¿Qué día y a qué hora es la cita del dentista?";
+  const CONSULTA = "Qual é o dia e a hora da consulta do dentista?";
+  const DENTIST_EN = "What day and time is the dentist appointment?";
+
+  // ——— Columna A: la contaminación se corta ———
+
+  it("A: «¿Y en Portugal?» tras la cita NO hereda (la sonda de la adversaria)", () => {
+    expect(contextualizeQuery("¿Y en Portugal?", tras(CITA))).toBe("¿Y en Portugal?");
+  });
+
+  it("A: «¿Cuál es la capital de Francia?» tras la cita NO hereda (entidad nueva)", () => {
+    expect(contextualizeQuery("¿Cuál es la capital de Francia?", tras(CITA))).toBe(
+      "¿Cuál es la capital de Francia?"
+    );
+  });
+
+  it("A: «¿Qué es la fotosíntesis?» tras la cita NO hereda (marco de definición)", () => {
+    expect(contextualizeQuery("¿Qué es la fotosíntesis?", tras(CITA))).toBe("¿Qué es la fotosíntesis?");
+  });
+
+  it("A: el demostrativo no salva a la entidad nueva — «¿Y eso en Portugal?» NO hereda", () => {
+    expect(contextualizeQuery("¿Y eso en Portugal?", tras(CITA))).toBe("¿Y eso en Portugal?");
+  });
+
+  it("A: «¿Y en Portugal?» tras reservar un hotel NO hereda el hotel", () => {
+    expect(contextualizeQuery("¿Y en Portugal?", tras("Reservé en el hotel Miramar"))).toBe(
+      "¿Y en Portugal?"
+    );
+  });
+
+  it("A en: «And in Portugal?» after the appointment does NOT inherit", () => {
+    expect(contextualizeQuery("And in Portugal?", tras(DENTIST_EN))).toBe("And in Portugal?");
+  });
+
+  it("A en: «What is photosynthesis?» after the appointment does NOT inherit", () => {
+    expect(contextualizeQuery("What is photosynthesis?", tras(DENTIST_EN))).toBe(
+      "What is photosynthesis?"
+    );
+  });
+
+  it("A pt: «E em Portugal?» após a consulta NÃO herda", () => {
+    expect(contextualizeQuery("E em Portugal?", tras(CONSULTA))).toBe("E em Portugal?");
+  });
+
+  it("A pt: «O que é a fotossíntese?» após a consulta NÃO herda", () => {
+    expect(contextualizeQuery("O que é a fotossíntese?", tras(CONSULTA))).toBe(
+      "O que é a fotossíntese?"
+    );
+  });
+
+  // ——— Columna B: la herencia legítima se conserva ———
+
+  it("B: «¿Y mañana?» tras la cita hereda (fragmento deíctico)", () => {
+    expect(contextualizeQuery("¿Y mañana?", tras(CITA))).toBe(`¿Y mañana? ${CITA}`);
+  });
+
+  it("B: «¿y para niños?» tras el precio del museo hereda (fragmento)", () => {
+    const prev = "¿Cuánto cuesta la entrada al museo?";
+    expect(contextualizeQuery("¿y para niños?", tras(prev))).toBe(`¿y para niños? ${prev}`);
+  });
+
+  it("B: «¿Y el otro?» tras la cita hereda (anafórico)", () => {
+    expect(contextualizeQuery("¿Y el otro?", tras(CITA))).toBe(`¿Y el otro? ${CITA}`);
+  });
+
+  it("B: «¿Cuánto cuesta?» tras el hotel hereda (pregunta de atributo)", () => {
+    const prev = "Reservé en el hotel Miramar";
+    expect(contextualizeQuery("¿Cuánto cuesta?", tras(prev))).toBe(`¿Cuánto cuesta? ${prev}`);
+  });
+
+  it("B: raíz compartida — «¿Y el tren de vuelta?» tras el tren hereda", () => {
+    const prev = "¿Cuánto cuesta el tren a Sevilla?";
+    expect(contextualizeQuery("¿Y el tren de vuelta?", tras(prev))).toBe(
+      `¿Y el tren de vuelta? ${prev}`
+    );
+  });
+
+  it("B: «¿Qué es esto?» tras la cita hereda (la definición señala a la conversación)", () => {
+    expect(contextualizeQuery("¿Qué es esto?", tras(CITA))).toBe(`¿Qué es esto? ${CITA}`);
+  });
+
+  it("B en: «Which room?» after the appointment inherits", () => {
+    expect(contextualizeQuery("Which room?", tras(DENTIST_EN))).toBe(
+      `Which room? ${DENTIST_EN}`
+    );
+  });
+
+  it("B en: «What is it?» after the appointment inherits (points at the conversation)", () => {
+    expect(contextualizeQuery("What is it?", tras(CITA))).toBe(`What is it? ${CITA}`);
+  });
+
+  it("B pt: «Em que sala?» após a consulta herda", () => {
+    expect(contextualizeQuery("Em que sala?", tras(CONSULTA))).toBe(`Em que sala? ${CONSULTA}`);
+  });
+
+  it("B pt: «E no sábado?» após a consulta herda (fragmento)", () => {
+    expect(contextualizeQuery("E no sábado?", tras(CONSULTA))).toBe(`E no sábado? ${CONSULTA}`);
+  });
+
+  it("fuera de la clase fina ayer y hoy: «¿y cuánto cuesta la noche?» (3 términos) no pasa por la herencia", () => {
+    // Medido sobre el tip: nunca fue fina — es autosuficiente y recupera
+    // por sus propios términos. La guarda no ensancha la clase fina:
+    // hacerlo reabriría la dilución que H-08 denuncia.
+    const prev = "Reservé en el hotel Miramar";
+    expect(contextualizeQuery("¿y cuánto cuesta la noche?", tras(prev))).toBe(
+      "¿y cuánto cuesta la noche?"
+    );
+  });
+});
