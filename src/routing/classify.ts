@@ -15,10 +15,24 @@ import { TaskType } from "./types";
  * input always produces the same plan.
  */
 const PATTERNS: Array<{ type: TaskType; test: RegExp }> = [
-  { type: "compare", test: /\b(compare|versus|vs\.?|difference between|which is better)\b/i },
-  { type: "summarize", test: /\b(summarize|summarise|summary of|tl;?dr)\b/i },
-  { type: "translate", test: /\btranslate\b/i },
-  { type: "code", test: /```|\b(write (a |some )?code|debug this|refactor|fix this function|regex for)\b/i },
+  // Núcleo 3 · N-06 (auditoría 2026-11-01): gemelos es/pt de cada
+  // patrón, con el inventario cerrado de la preparación. Solo
+  // `translate` y `code` cambian CONDUCTA (están en
+  // isRetrievalIrrelevant: en es/pt esas peticiones arrastraban
+  // recuperación que no necesitan); compare/summarize/extract son
+  // etiqueta de telemetría. El gemelo de code exige verbo ancla,
+  // espejo del EN («write code», nunca «code» a secas): «¿Cuál es el
+  // código postal de Madrid?» es una pregunta de datos y sigue chat.
+  { type: "compare", test: /\b(compare|versus|vs\.?|difference between|which is better)\b|\b(compara|compare)\b|\b(diferencia entre|diferença entre)\b|\b(cu[aá]l es mejor|qual [eé] melhor)\b/i },
+  // El tallo `resum` caza resume/resumen/resumir/resuma/resumo.
+  // Colisión declarada y aceptada en la preparación: «¿cuál es el
+  // resumen de emergencias de Chile?» gana la etiqueta summarize —
+  // sin conducta (no es retrieval-irrelevant), no pierde su ruta.
+  { type: "summarize", test: /\b(summarize|summarise|summary of|tl;?dr)\b|\bresum/i },
+  // El tallo `tradu[csz]` caza traduce/traducir/traducción,
+  // traduzir/tradução y el dictado «traduse» (la raíz queda «tradus»).
+  { type: "translate", test: /\b(translate|translation)\b|\btradu[csz]/i },
+  { type: "code", test: /```|\b(write (a |some )?code|debug this|refactor|fix this function|regex for)\b|\b(?:escribe|escribir|escriba|crea|crear|escreve|escrever|escreva|cria|criar)\s+(?:un\s+|um\s+|uma\s+)?(?:c[oó]digo|programa|script)\b|\b(?:depura|depurar|refactoriza|refactorizar|refatora|refatorar)\b|\b(?:corrige|arregla|corrija)\s+(?:esta|este|essa)\s+(?:funci[oó]n|fun[cç][aã]o)\b|\b(?:regex|expresi[oó]n regular|express[aã]o regular)\s+(?:for|para)\b/i },
   // Auditoría completa 2026-10-31 (F1 B-2): el operador desnudo
   // también casaba dentro de cadenas de números con guion o barra:
   // «what happened on 2026-10-31» y «555-1234» clasificaban como
@@ -29,7 +43,7 @@ const PATTERNS: Array<{ type: TaskType; test: RegExp }> = [
   // número-separador-número, y la resta pegada exige un lado corto
   // (la resta con espacios sí vale con lados largos).
   { type: "calculate", test: /\b(calculate|compute|how much is)\b|(?<!\d)(?<!\d[-/])\d+\s*[+*/×÷]\s*\d+(?!\d)(?![-/]\d)|(?<!\d)(?<!\d[-/])(?:\d+\s+-\s+\d+|\d{1,2}\s*-\s*\d{1,2})(?!\d)(?![-/]\d)/i },
-  { type: "extract", test: /\b(extract|list all|pull out|find every)\b/i },
+  { type: "extract", test: /\b(extract|list all|pull out|find every)\b|\b(extrae|extraer|extraia|extrair)\b|\b(saca|lista|encuentra|liste|puxe)\s+todas\b/i },
 ];
 
 // Matches ONE greeting phrase, trailing punctuation only - not the whole

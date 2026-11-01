@@ -226,4 +226,32 @@ describe("classifyTask", () => {
       expect(classifyTask("¿A qué hora es la cita?")).not.toBe("conversation");
     });
   });
+
+  // Núcleo 3 · N-06: gemelos es/pt de PATTERNS. Conducta solo en
+  // translate y code (apagan recuperación); el resto es etiqueta.
+  describe("N-06 · gemelos es/pt", () => {
+    it("translate: formas es/pt, la cortés y el dictado con la c caída", () => {
+      expect(classifyTask("Traduce esto al inglés")).toBe("translate");
+      expect(classifyTask("¿Puedes traducirme esto al inglés, por favor?")).toBe("translate");
+      expect(classifyTask("Traduse esto al ingles, es para la escuela")).toBe("translate");
+      expect(classifyTask("Traduz isso para o português")).toBe("translate");
+      expect(isRetrievalIrrelevant(classifyTask("Traduce esto al inglés"))).toBe(true);
+    });
+    it("code: verbo ancla en es/pt", () => {
+      expect(classifyTask("Escribe código para sumar dos números")).toBe("code");
+      expect(classifyTask("Depura esta función que no compila")).toBe("code");
+      expect(classifyTask("Escreva um código em Python")).toBe("code");
+      expect(isRetrievalIrrelevant(classifyTask("Depura esta función que no compila"))).toBe(true);
+    });
+    it("negativa fixturada: «¿Cuál es el código postal de Madrid?» sigue chat", () => {
+      expect(classifyTask("¿Cuál es el código postal de Madrid?")).toBe("chat");
+    });
+    it("etiquetas: summarize, extract y compare en es/pt", () => {
+      expect(classifyTask("Resume el Quijote en tres líneas")).toBe("summarize");
+      expect(classifyTask("Resuma este texto, por favor")).toBe("summarize");
+      expect(classifyTask("Extrae todas las fechas de este texto")).toBe("extract");
+      expect(classifyTask("Compara el iPhone con el Galaxy")).toBe("compare");
+      expect(classifyTask("¿Cuál es la diferencia entre un virus y una bacteria?")).toBe("compare");
+    });
+  });
 });
