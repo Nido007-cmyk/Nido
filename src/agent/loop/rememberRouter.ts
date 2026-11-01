@@ -683,6 +683,31 @@ export function extractImplicitFact(userText: string): RememberExtraction | null
 }
 
 /**
+ * N-11: ¿el contenido capturado ES una pregunta? La guardia anterior
+ * probaba INTERROGATIVE_START_RE sobre el contenido tal cual, pero la
+ * regex está anclada al inicio y el contenido conserva el «¿» inicial:
+ * «Recuérdame: ¿cuál es la capital de Perú?» guardaba la pregunta como
+ * hecho (medido). Los extractores hermanos se protegen con
+ * looksLikeQuestion; este era el único que no. Regla: se pelan los
+ * «¿¡» iniciales y se prueba el inicio; y si el contenido TERMINA en
+ * «?» con una palabra interrogativa entre sus 3 primeras palabras,
+ * también es pregunta. Un hecho que CONTIENE una interrogativa sin
+ * serlo («mi hijo siempre pregunta por qué salen las estrellas», sin
+ * «?» final) se sigue guardando: la palabra desnuda «que» es
+ * complementante en los tres idiomas y no cuenta como interrogativa.
+ */
+export function isInterrogativeContent(content: string): boolean {
+  const c = (content ?? "").trim().replace(/^[¿¡]+/, "").trim();
+  if (!c) return false;
+  if (INTERROGATIVE_START_RE.test(c)) return true;
+  if (/\?\s*$/.test(c)) {
+    const words = c.split(/\s+/).slice(0, 3);
+    return words.some((w) => w.toLowerCase() !== "que" && INTERROGATIVE_START_RE.test(w));
+  }
+  return false;
+}
+
+/**
  * Intenta extraer un hecho de memoria del texto del usuario de forma
  * determinística. Retorna null si no hay un patrón explícito.
  *
@@ -718,7 +743,7 @@ export function extractRememberFact(userText: string): RememberExtraction | null
       // capital de Francia" — al dejar de ser recordatorio (guardia
       // interrogativa) caía aquí y la PREGUNTA se guardaba como hecho.
       // Una pregunta no es un hecho: mismo corte que en recordatorios.
-      if (content.length >= 3 && !INTERROGATIVE_START_RE.test(content) && stripDateWords(content).trim().length >= 3) {
+      if (content.length >= 3 && !isInterrogativeContent(content) && stripDateWords(content).trim().length >= 3) {
         return {
           content,
           category: detectCategory(content),

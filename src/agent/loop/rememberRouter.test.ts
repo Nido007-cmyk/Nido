@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { extractRememberFact, extractImplicitFact, isMemoryQuery, extractDateISO, extractPerson, extractPeople, extractSelfName } from "./rememberRouter";
+import { extractRememberFact, extractImplicitFact, isMemoryQuery, extractDateISO, extractPerson, extractPeople, extractSelfName, isInterrogativeContent } from "./rememberRouter";
 import { classifyIntent } from "./intent";
 
 describe("rememberRouter: extracción determinística", () => {
@@ -412,4 +412,24 @@ describe("0.1.41 — dieta y alergias propias, también con muletilla delante", 
       expect(extractImplicitFact(input)).toBeNull();
     },
   );
+});
+
+describe("N-11 — la «¿» inicial no derrota a la guardia interrogativa", () => {
+  it("la pregunta tras el gatillo no se guarda como hecho (caso de la auditoría)", () => {
+    expect(extractRememberFact("Recuérdame: ¿cuál es la capital de Perú?")).toBeNull();
+    expect(extractRememberFact("Recuerda: ¿cuál es la capital de Perú?")).toBeNull();
+    expect(extractRememberFact("Recuérdame ¿cuándo es la reunión?")).toBeNull();
+  });
+
+  it("isInterrogativeContent: pela la apertura y mira las 3 primeras palabras", () => {
+    expect(isInterrogativeContent("¿cuál es la capital de Perú?")).toBe(true);
+    expect(isInterrogativeContent("la cita es ¿cuándo dijiste?")).toBe(false);
+    expect(isInterrogativeContent("mi hijo siempre pregunta por qué salen las estrellas")).toBe(false);
+    expect(isInterrogativeContent("la capital de Perú es Lima")).toBe(false);
+  });
+
+  it("controles: el hecho con interrogativa dentro y el declarativo se siguen guardando", () => {
+    expect(extractRememberFact("Recuerda que mi hijo siempre pregunta por qué salen las estrellas")).not.toBeNull();
+    expect(extractRememberFact("Recuerda que la capital de Perú es Lima")).not.toBeNull();
+  });
 });
