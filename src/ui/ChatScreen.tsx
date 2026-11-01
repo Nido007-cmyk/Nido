@@ -37,6 +37,7 @@ import { retrieve, assemblePrompt, RetrievedChunk, ConversationTurn } from "../r
 import { assembleChatMessages, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
 import { classifyTask, isRetrievalIrrelevant, isCreativeRequest } from "../routing/classify";
 import {
+  gatePreemptsDeepResearch,
   hasHealthEvidence,
   healthSafeProvenance,
   healthSafeText,
@@ -1424,7 +1425,22 @@ export function ChatScreen({
       // existing QueryStats consumers see no shape change for those.
       let adaptiveTelemetry: Partial<QueryStats> | null = null;
 
-      if (deepResearchModeRef.current) {
+      // R-07 (ronda física de la 0.1.68): la puerta de emergencia/salud
+      // manda también sobre Investigar. Hasta aquí, un turno con el modo
+      // profundo activo entraba en runDeepResearch ANTES de que ninguna
+      // puerta mirara el texto, y una emergencia dictada que el detector
+      // sí reconocía salía como tema de investigación. Si la puerta
+      // dispara, el turno sigue la ruta protegida normal (guía literal →
+      // ruta fija/adaptativa con sus puertas y post-chequeos) y el modo
+      // queda activo para el siguiente turno no emergente: la decisión
+      // es por turno (deepTurn), sin tocar el conmutador del usuario.
+      // La vía de «emergencia primero» (handleEmergencySend) desemboca
+      // en este mismo send(), así que aterriza protegida por la misma
+      // decisión.
+      const gateHit = gatePreemptsDeepResearch(query, uiLang);
+      let deepTurn = deepResearchModeRef.current && !gateHit;
+      let deepServed = false;
+      if (deepTurn) {
         // Deep Research Mode is completely separate from adaptive routing
         // and untouched by it — orchestrator.ts's own sequential pipeline,
         // same as before this integration.
@@ -1438,20 +1454,32 @@ export function ChatScreen({
             setProcessing({ messageId: assistantId, status: "thinking", label: researchStageLabel(p, t) });
           },
           onToken,
-          () => stopRequestedRef.current
+          () => stopRequestedRef.current,
+          uiLang
         );
-        chunks = result.citations;
-        // Deep Research always runs a retrieval pass per sub-question, so
-        // "all passes returned nothing" is the honest signal here.
-        noSourcesFound = result.noSourcesFound ?? result.citations.length === 0;
-        // FIX 2026-10-09 (H-1): flush del buffer de tokens en Deep Research.
-        flushTokenBuffer();
-        if (result.timedOut) {
-          setMessages((prev) =>
-            prev.map((m) => (m.id === assistantId ? { ...m, timedOut: true } : m))
-          );
+        if (result.emergencyIntercepted) {
+          // Segunda red (orchestrator.ts): la descomposición destapó la
+          // emergencia que la puerta no vio en la pregunta tal cual. La
+          // investigación se abandona y el turno cae a la ruta protegida
+          // de abajo, con deepTurn ya en false para que los post-chequeos
+          // de la puerta juzguen también este turno.
+          deepTurn = false;
+        } else {
+          chunks = result.citations;
+          // Deep Research always runs a retrieval pass per sub-question, so
+          // "all passes returned nothing" is the honest signal here.
+          noSourcesFound = result.noSourcesFound ?? result.citations.length === 0;
+          // FIX 2026-10-09 (H-1): flush del buffer de tokens en Deep Research.
+          flushTokenBuffer();
+          if (result.timedOut) {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantId ? { ...m, timedOut: true } : m))
+            );
+          }
+          deepServed = true;
         }
-      } else {
+      }
+      if (!deepServed) {
         // classifyTask/isRetrievalIrrelevant are the same deterministic,
         // tested rule router.ts uses (src/routing/classify.ts) — reused
         // directly by the fixed-model path below regardless of whether
@@ -1666,8 +1694,12 @@ export function ChatScreen({
       const wasStopped = stopRequestedRef.current;
 
       // RAG-GROUNDING 2026-10-11: punto ÚNICO de decisión tras generar
-      // (fijo y adaptativo; Deep Research tiene su propia síntesis y solo
-      // recibe la red de "nunca vacío"). Aquí se sabe a la vez qué dijo el
+      // (fijo y adaptativo; un turno servido por Deep Research — deepTurn —
+      // tiene su propia síntesis y solo recibe la red de "nunca vacío").
+      // R-07: las cercas miran deepTurn, no el conmutador: un turno que la
+      // puerta desvió a la ruta protegida SÍ pasa por estos post-chequeos
+      // aunque el modo Investigar siga activo para el siguiente turno.
+      // Aquí se sabe a la vez qué dijo el
       // modelo y qué dicen las fuentes:
       //  - con fuentes → se quitan frases sin respaldo; si no queda nada,
       //    "no lo sé" + extracto literal de la fuente (grounding.ts);
@@ -1685,7 +1717,7 @@ export function ChatScreen({
         if (guideAnswered) {
           // Verbatim guide text: nothing to verify or trim. Every sentence is the guide's (R1).
           provenance = guideAnswerProvenance(finalText);
-        } else if (!deepResearchModeRef.current && chunks.length > 0 && isCreativeRequest(query)) {
+        } else if (!deepTurn && chunks.length > 0 && isCreativeRequest(query)) {
           // 2026-10-30 (prueba física del dueño): petición creativa
           // («Cuéntame un cuento largo sobre un zorro que vive en un
           // faro») con documentos que casan solo por palabras sueltas —
@@ -1698,14 +1730,14 @@ export function ChatScreen({
           // hechos con fuentes se verifican igual que antes —
           // isCreativeRequest exige el objeto creado, así que «cuéntame
           // el número de emergencias de Chile» no entra por esta rama.
-        } else if (!deepResearchModeRef.current && chunks.length > 0) {
+        } else if (!deepTurn && chunks.length > 0) {
           // 0.1.41 (prueba física, «¿qué es la inflación?»): se verificaba
           // el texto SIN recortar y el bucle volvía a la pantalla.
           const verified = verifyGroundedAnswer(finalText, chunks, uiLang);
           grounding = verified.status;
           if (verified.status !== "skipped") finalText = verified.text;
           provenance = verified.sentences;
-        } else if (!deepResearchModeRef.current && noSourcesFound) {
+        } else if (!deepTurn && noSourcesFound) {
           // Programa bounty, tanda 2: la puerta de salud manda sobre el
           // "no lo sé" genérico — una pregunta de salud sin fuentes (la
           // ruta adaptativa no tiene la puerta previa de la ruta fija)
@@ -1727,7 +1759,7 @@ export function ChatScreen({
         // «grounded»/«partial» no se toca: está verificado frase a
         // frase contra sus fuentes, no es memoria del modelo.
         if (
-          !deepResearchModeRef.current &&
+          !deepTurn &&
           chunks.length > 0 &&
           (grounding === "unverified" || grounding === "abstained") &&
           (isHealthQuestion(query) || isEmergencySituation(query)) &&
