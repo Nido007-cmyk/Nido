@@ -9,7 +9,8 @@
  * call), "describe what's happening" into the chat, and quick guides.
  */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme/ThemeContext";
 import type { Colors } from "./theme/colors";
