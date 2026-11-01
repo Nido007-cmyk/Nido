@@ -215,14 +215,22 @@ describe("nextChunkToSend / markChunkAcked", () => {
     expect(chunk1).not.toBeNull();
     expect(chunk1!.index).toBe(1);
 
-    // ACK del chunk 1 → completo
-    const allAcked2 = markChunkAcked(session, 1);
-    // Puede haber más chunks dependiendo del tamaño
-    if (session.chunks.length === 2) {
-      expect(allAcked2).toBe(true);
-      expect(nextChunkToSend(session)).toBeNull();
-      expect(sendProgress(session)).toBe(1);
+    // ACK de todos los trozos restantes, en bucle, y la finalización
+    // afirmada FUERA de todo condicional (B-resto B-02): el test afirma
+    // la propiedad («al acusar todo, la sesión está completa»), no el
+    // accidente («con este fixture salen 2»). Antes las tres aserciones
+    // vivían dentro de `if (session.chunks.length === 2)`: bastaba que
+    // PACK_CHUNK_SIZE bajara para que el test siguiera verde sin
+    // afirmar la finalización. El fixture garantiza ≥ 2 trozos por
+    // construcción (los datos crudos exceden PACK_CHUNK_SIZE, así que
+    // su base64 siempre pasa de un trozo).
+    let allAcked = false;
+    for (let i = 1; i < session.chunks.length; i++) {
+      allAcked = markChunkAcked(session, i);
     }
+    expect(allAcked).toBe(true);
+    expect(nextChunkToSend(session)).toBeNull();
+    expect(sendProgress(session)).toBe(1);
   });
 
   it("no envía si no está en ACCEPTED", async () => {
