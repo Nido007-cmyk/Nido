@@ -319,3 +319,24 @@ describe("classifyIntent — N-01 (auditoría 2026-11-01): la puerta se arregla 
     expect(classifyIntent("¿Puedes recordarme que mi cumple es en mayo?")).not.toBe("actuar");
   });
 });
+
+describe("classifyIntent — N-04: el typo de dictado en el verbo gatillo ruta", () => {
+  it.each([
+    "Recueda que tengo sita el lunes",
+    "No olvide que el martes pago la renta",
+  ])("%p → recordar", (text) => {
+    expect(classifyIntent(text)).toBe("recordar");
+  });
+
+  it.each([
+    "recuedame comprar leche mañana",
+  ])("%p → actuar", (text) => {
+    expect(classifyIntent(text)).toBe("actuar");
+  });
+
+  it("las palabras reales con la misma raíz no se mueven", () => {
+    expect(classifyIntent("Recuerdo que tengo dentista mañana")).toBe("conversar");
+    expect(classifyIntent("Recordando los viejos tiempos")).toBe("conversar");
+    expect(classifyIntent("el recordatorio de las 3")).toBe("conversar");
+  });
+});

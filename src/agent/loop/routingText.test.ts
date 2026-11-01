@@ -45,3 +45,29 @@ describe("normalizeForRouting", () => {
     expect(normalizeForRouting("")).toBe("");
   });
 });
+
+describe("normalizeForRouting — N-04: reparación acotada del verbo gatillo", () => {
+  it("repara el typo inconfundible con contexto de orden", () => {
+    expect(normalizeForRouting("Recueda que tengo sita el lunes")).toBe("Recuerda que tengo sita el lunes");
+    expect(normalizeForRouting("recuedame comprar leche mañana")).toBe("recuerdame comprar leche mañana");
+    expect(normalizeForRouting("acuedate de apagar la estufa")).toBe("acuerdate de apagar la estufa");
+    expect(normalizeForRouting("lemba de comprar leite amanhã")).toBe("lembra de comprar leite amanhã");
+    expect(normalizeForRouting("No olvide que el martes pago la renta")).toBe("No olvides que el martes pago la renta");
+    expect(normalizeForRouting("Remembr to call John tomorrow")).toBe("Remember to call John tomorrow");
+    expect(normalizeForRouting("¿Recuedas cuando es el cumpleaños de mamá?")).toBe("¿Recuerdas cuando es el cumpleaños de mamá?");
+  });
+
+  it("las palabras reales jamás se «reparan»", () => {
+    expect(normalizeForRouting("Recuerdo que tengo dentista mañana")).toBe("Recuerdo que tengo dentista mañana");
+    expect(normalizeForRouting("Recordando los viejos tiempos")).toBe("Recordando los viejos tiempos");
+    expect(normalizeForRouting("el acuerdo que firmamos ayer")).toBe("el acuerdo que firmamos ayer");
+    expect(normalizeForRouting("Olvido todo lo que me dicen")).toBe("Olvido todo lo que me dicen");
+  });
+
+  it("sin contexto de orden, o en mitad de frase, no se toca nada", () => {
+    expect(normalizeForRouting("por favor recueda eso mañana")).toBe("recueda eso mañana");
+    expect(normalizeForRouting("el recordatorio de las 3")).toBe("el recordatorio de las 3");
+    expect(normalizeForRouting("recueda")).toBe("recueda");
+    expect(normalizeForRouting("recueda el papel")).toBe("recueda el papel");
+  });
+});
