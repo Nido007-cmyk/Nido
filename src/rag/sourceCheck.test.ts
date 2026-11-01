@@ -120,3 +120,68 @@ describe("findNumberConflicts (la caja de comprobación)", () => {
     expect(conflicts[0].sourceSentence).toContain("520-555-0147");
   });
 });
+
+// Segunda adversaria, ADV2-03/04: el suelo de dos sustantivas
+// disparaba con palabras de función y pares de otro subtema, y a
+// la vez dejaba escapar la omisión canónica de una sola palabra.
+// La frase enseñada ha de traer la categoría del dato, las de
+// función no son tema, y una sustantiva ajena a la categoría basta
+// cuando la categoría misma se comparte.
+describe("findNumberConflicts — segunda adversaria ADV2-03/04 (la omisión exige tema Y categoría)", () => {
+  it("ADV2-03 FP-1: «sala»+«está» NO cuelga la sala 214 de la respuesta sobre la sala de espera", () => {
+    expect(
+      findNumberConflicts("La sala de espera está en la planta baja, junto a la entrada principal.", [
+        chunk("La sala 214 está en el segundo piso."),
+      ])
+    ).toEqual([]);
+  });
+
+  it("ADV2-03 FP-2: «mercado»+«pueblo» NO cuelga los 300 puestos al día de mercado (la frase no trae ningún día)", () => {
+    expect(
+      findNumberConflicts("El día de mercado es el más animado del pueblo.", [
+        chunk("El mercado del pueblo reúne 300 puestos cada semana y abre 12 horas."),
+      ])
+    ).toEqual([]);
+  });
+
+  it("ADV2-03 guarda: tema de dos sustantivas sin la categoría en la frase fuente tampoco avisa", () => {
+    expect(
+      findNumberConflicts("El día de la fiesta es el más alegre del pueblo.", [
+        chunk("La fiesta del pueblo reúne 300 invitados cada año."),
+      ])
+    ).toEqual([]);
+  });
+
+  it("ADV2-03 guarda: compartir solo la palabra de la categoría (sin sustantiva ajena) no basta", () => {
+    expect(
+      findNumberConflicts("La sala es la de siempre.", [chunk("La sala 214 está en el segundo piso.")])
+    ).toEqual([]);
+  });
+
+  it("ADV2-04: la omisión verdadera de una sola sustantiva («emergencia») SÍ enseña el 911", () => {
+    const conflicts = findNumberConflicts("El teléfono es el número de emergencia, como siempre.", [
+      chunk("El número de emergencia en México es el 911."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].omission).toBe(true);
+    expect(conflicts[0].sourceSentence).toContain("911");
+  });
+
+  it("ADV2-04 en portugués: «é o número de emergência» también enseña el 911", () => {
+    const conflicts = findNumberConflicts("O telefone é o número de emergência, como sempre.", [
+      chunk("O número de emergência no México é o 911."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].omission).toBe(true);
+    expect(conflicts[0].sourceSentence).toContain("911");
+  });
+
+  it("ADV2-04 en inglés: «the emergency number» también enseña el 911", () => {
+    const conflicts = findNumberConflicts("The phone is the emergency number, as always.", [
+      chunk("The emergency number in Mexico is 911."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].omission).toBe(true);
+    expect(conflicts[0].sourceSentence).toContain("911");
+  });
+});

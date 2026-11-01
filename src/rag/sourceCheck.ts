@@ -30,7 +30,11 @@
  * enseña la frase fuente con el dato y rompe el silencio. La
  * adversaria de la cadena (H-03) acotó su «mismo tema»: la omisión
  * exige DOS palabras sustantivas compartidas, y los genéricos de
- * categoría («número», «año», «día»…) no cuentan como tema.
+ * categoría («número», «año», «día»…) no cuentan como tema. La
+ * segunda adversaria (ADV2-03/04) cerró el suelo por los dos lados:
+ * las palabras de función tampoco son tema, la frase enseñada ha
+ * de traer la categoría del dato omitido, y una sustantiva ajena a
+ * la categoría basta cuando la categoría misma se comparte.
  *
  * Estricta a propósito (la precisión es el producto; el recuerdo
  * bajo es aceptado y declarado, como en Field Atlas):
@@ -171,12 +175,111 @@ const GENERIC_TOPIC_WORDS = new Set([
   "anos", "year", "years", "dias", "days",
 ]);
 
-/** Palabras compartidas que son tema sustantivo (las genéricas no cuentan). */
+/**
+ * Palabras de FUNCIÓN de 4+ letras (segunda adversaria, ADV2-03):
+ * el filtro de «contenido» era la longitud, y «está» contaba como
+ * tema sustantivo — «sala»+«está» colgaban la sala 214 de una
+ * respuesta sobre la sala de espera que no debía cifra alguna.
+ * Demostrativos, formas de estar y preposiciones/conjunciones
+ * corrientes (es/en/pt) no son tema: por lista, no por longitud.
+ */
+const FUNCTION_TOPIC_WORDS = new Set([
+  // es/pt: demostrativos y formas de estar
+  "esta", "este", "esto", "estas", "estos", "estan", "estaba", "estaban", "estao", "estava",
+  "esa", "ese", "eso", "esas", "esos", "aquel", "aquella", "isto", "isso",
+  // es/pt: preposiciones y conjunciones
+  "para", "como", "cada", "sobre", "entre", "desde", "hasta", "hacia", "durante",
+  "porque", "aunque", "cuando", "donde", "mientras", "contra", "segun", "quando", "enquanto",
+  // en: función corriente
+  "with", "from", "that", "this", "these", "those", "there", "their",
+  "about", "would", "could", "should", "been", "were", "does", "what", "when", "where", "which", "while",
+]);
+
+/** Palabras compartidas que son tema sustantivo (las genéricas y las de función no cuentan). */
 function substantiveSharedWords(a: string, b: string): number {
   const bw = contentWords(b);
   let n = 0;
-  for (const w of contentWords(a)) if (bw.has(w) && !GENERIC_TOPIC_WORDS.has(w)) n++;
+  for (const w of contentWords(a)) if (bw.has(w) && !GENERIC_TOPIC_WORDS.has(w) && !FUNCTION_TOPIC_WORDS.has(w)) n++;
   return n;
+}
+
+/** La familia de cada categoría de dato (para exigir que la frase enseñada TRAIGA ese dato). */
+const CATEGORY_FAMILY: Record<string, string> = {
+  telefono: "phone", telefonos: "phone", phone: "phone", phones: "phone",
+  numero: "phone", numeros: "phone", number: "phone", numbers: "phone",
+  telefone: "phone", telefones: "phone",
+  sala: "room", room: "room",
+  hora: "hour", horas: "hour", hour: "hour", hours: "hour",
+  fecha: "date", date: "date",
+  dia: "day", dias: "day", day: "day", days: "day",
+  dosis: "dose", dose: "dose", doses: "dose",
+};
+
+/** Las palabras de cada familia de dato (la categoría y sus nombres, es/en/pt). */
+const FAMILY_WORDS: Record<string, readonly string[]> = {
+  phone: [
+    "telefono", "telefonos", "telefone", "telefones", "phone", "phones",
+    "numero", "numeros", "number", "numbers", "linea", "line",
+  ],
+  room: ["sala", "salas", "room", "rooms"],
+  hour: ["hora", "horas", "hour", "hours"],
+  date: ["fecha", "fechas", "date", "dates", "data"],
+  day: ["dia", "dias", "day", "days", "data"],
+  dose: ["dosis", "dose", "doses"],
+};
+
+const DATE_NAME_RE =
+  /\b(lunes|martes|miercoles|jueves|viernes|sabado|sabados|domingo|domingos|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda|terca|quarta|quinta|sexta|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/;
+
+/** Las palabras de una frase, plegadas, como conjunto. */
+function wordSet(sentence: string): Set<string> {
+  return new Set(foldWord(sentence).split(/[^a-zñ]+/).filter(Boolean));
+}
+
+/** ¿Trae el texto una ristra de ≥ 7 dígitos (la forma de un teléfono)? */
+function hasPhoneCluster(sentence: string): boolean {
+  const clusters = sentence.match(/\d[\d .-]*\d/g) ?? [];
+  return clusters.some((c) => c.replace(/\D/g, "").length >= 7);
+}
+
+/**
+ * ¿TRAE la frase fuente el dato de la categoría omitida? (segunda
+ * adversaria, ADV2-03: la segunda pata que la cura de H-03 declinó
+ * y la medición demostró necesaria). Compartir tema no basta: la
+ * frase de los 300 puestos comparte «mercado» y «pueblo» con la
+ * respuesta y no contiene ningún día que enseñar.
+ */
+function sourceCarriesCategory(sentence: string, category: string): boolean {
+  const family = CATEGORY_FAMILY[category];
+  if (!family) return true; // categoría fuera del mapa (el conjunto es cerrado): manda la vara anterior
+  const words = wordSet(sentence);
+  const has = (ws: readonly string[]) => ws.some((w) => words.has(w));
+  switch (family) {
+    case "phone":
+      return (
+        hasPhoneCluster(sentence) ||
+        has(["telefono", "telefonos", "telefone", "telefones", "phone", "phones", "numero", "numeros", "number", "numbers", "llame", "llama", "llamar", "call", "ligar", "discar"])
+      );
+    case "room":
+      return has(["sala", "salas", "room", "rooms"]);
+    case "hour":
+      return has(["hora", "horas", "hour", "hours"]) || /\d{1,2}:\d{2}/.test(sentence);
+    case "date":
+    case "day":
+      return (
+        has(["fecha", "fechas", "date", "dates", "data", "dia", "dias", "day", "days"]) ||
+        DATE_NAME_RE.test(foldWord(sentence)) ||
+        /\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/.test(sentence)
+      );
+    case "dose":
+      return (
+        has(["dosis", "dose", "doses"]) ||
+        /\d+(?:[.,]\d+)?\s*(ml|mg|mcg|kg|g|miligramos?|gramos?|comprimidos?|pastillas?|cucharadas?|cucharaditas?|gotas|tabletas?|capsulas?|unidades?)\b/.test(
+          foldWord(sentence),
+        )
+      );
+  }
+  return true;
 }
 
 function sameFigure(a: FigureMeasure, b: FigureMeasure): boolean {
@@ -292,19 +395,38 @@ export function findNumberConflicts(answerText: string, chunks: readonly Retriev
     // genérico como «número» o «año» — no es tema: la red le colgó
     // la cifra de un museo a una frase cualitativa sobre visitantes
     // que no omitía ningún dato debido.
+    // Segunda adversaria (ADV2-03/04) acota el suelo en las dos
+    // direcciones: la frase enseñada ha de TRAER la categoría del
+    // dato (sourceCarriesCategory) y las palabras de función no
+    // cuentan como tema (FUNCTION_TOPIC_WORDS); y con UNA sustantiva
+    // ajena a la categoría basta si la categoría misma se comparte
+    // («emergencia» + «número») — el suelo de dos a secas dejaba
+    // escapar el 911, el dato canónico de R-05.
+    const familyWords = new Set(FAMILY_WORDS[CATEGORY_FAMILY[category] ?? ""] ?? []);
+    const answerWords = wordSet(answerSentence);
     let source: string | null = null;
     let bestTopic = 0;
     let bestShared = 0;
     for (const s of digitSentences) {
+      if (!sourceCarriesCategory(s, category)) continue;
       const topic = substantiveSharedWords(answerSentence, s);
       const shared = sharedContentWords(answerSentence, s);
+      const sWords = wordSet(s);
+      const categoryShared = [...familyWords].some((w) => answerWords.has(w) && sWords.has(w));
+      let nonCatTopic = 0;
+      if (categoryShared) {
+        const bw = contentWords(s);
+        for (const w of contentWords(answerSentence))
+          if (bw.has(w) && !GENERIC_TOPIC_WORDS.has(w) && !FUNCTION_TOPIC_WORDS.has(w) && !familyWords.has(w)) nonCatTopic++;
+      }
+      if (topic < 2 && !(nonCatTopic >= 1 && categoryShared)) continue;
       if (topic > bestTopic || (topic === bestTopic && shared > bestShared)) {
         bestTopic = topic;
         bestShared = shared;
         source = s;
       }
     }
-    if (!source || bestTopic < 2) continue;
+    if (!source) continue;
     const dedupe = `omission:${category}:${source.slice(0, 40)}`;
     if (seen.has(dedupe)) continue;
     seen.add(dedupe);
