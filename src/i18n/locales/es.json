@@ -502,6 +502,8 @@
     },
     "chunkCount_one": "{{count}} fragmento",
     "chunkCount_other": "{{count}} fragmentos",
+    "noTextWarning_one": "{{count}} documento no aportó texto: {{names}}",
+    "noTextWarning_other": "{{count}} documentos no aportaron texto: {{names}}",
     "docCount_one": "{{count}} documento",
     "docCount_other": "{{count}} documentos",
     "exportButton": "Exportar / Compartir",

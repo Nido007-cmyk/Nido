@@ -262,6 +262,8 @@
     "stageOcr": "Recognizing text (OCR)…",
     "stageChunking": "Splitting into chunks…",
     "stageEmbedding": "Embedding {{current}}/{{total}}…",
+    "noTextWarning_one": "{{count}} document added no text: {{names}}",
+    "noTextWarning_other": "{{count}} documents added no text: {{names}}",
     "docCount_one": "{{count}} doc",
     "docCount_other": "{{count}} docs",
     "chunkCount_one": "{{count}} chunk",

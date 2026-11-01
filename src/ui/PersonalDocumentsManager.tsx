@@ -18,6 +18,7 @@ import {
   setCustomCollectionActive,
   deleteCustomCollection,
   ImportProgress,
+  ImportWarning,
 } from "../services/documentImporter";
 import { CustomCollection } from "../rag/db";
 import { NidoIcon } from "./components/icons/NidoIcon";
@@ -43,6 +44,10 @@ export function PersonalDocumentsManager() {
   const [newName, setNewName] = useState("");
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // R-06 P5: los ficheros sin texto de la última importación de
+  // cada colección, por id — la tarjeta los nombra en vez de que
+  // la importación «con éxito» los calle.
+  const [warningsById, setWarningsById] = useState<Record<string, ImportWarning[]>>({});
 
   const refresh = useCallback(async () => {
     setCollections(await listCustomCollections());
@@ -63,8 +68,11 @@ export function PersonalDocumentsManager() {
 
     setImportProgress({ stage: "reading" });
     try {
-      await importDocuments(files, name, setImportProgress);
+      const imported = await importDocuments(files, name, setImportProgress);
       setNewName("");
+      if (imported.importWarnings.length > 0) {
+        setWarningsById((prev) => ({ ...prev, [imported.id]: imported.importWarnings }));
+      }
       await refresh();
     } catch (e: any) {
       // 0.1.18: known import errors in the app language.
@@ -188,6 +196,16 @@ export function PersonalDocumentsManager() {
               {t("personalDocumentsManager.docCount", { count: c.docCount })} · {" "}
               {t("personalDocumentsManager.chunkCount", { count: c.chunkCount })} · {formatBytes(c.sizeBytes)}
             </Text>
+            {(warningsById[c.id]?.length ?? 0) > 0 && (
+              <Text style={styles.collectionWarning}>
+                {t("personalDocumentsManager.noTextWarning", {
+                  count: warningsById[c.id].length,
+                  names: warningsById[c.id]
+                    .map((w) => (w.ocrCode ? `${w.name} (${w.ocrCode})` : w.name))
+                    .join(", "),
+                })}
+              </Text>
+            )}
             <View style={styles.collectionActions}>
               <Pressable accessibilityRole="button" onPress={() => handleExport(c)} disabled={busyId === c.id} style={styles.exportBtn}>
                 {busyId === c.id ? (
@@ -260,6 +278,7 @@ const getStyles = (colors: Colors) =>
     collectionHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     collectionName: { color: colors.text.primary, fontSize: 14, fontWeight: "600", flex: 1 },
     collectionMeta: { color: colors.text.accentEmerald, fontSize: 11 },
+    collectionWarning: { color: colors.amber[600], fontSize: 11, lineHeight: 15 },
     collectionActions: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 },
     exportBtn: { backgroundColor: colors.emerald.bgSubtle, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6 },
     exportBtnText: { color: colors.text.accentEmerald, fontSize: 12, fontWeight: "600" },

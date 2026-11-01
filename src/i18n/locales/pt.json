@@ -262,6 +262,8 @@
     "stageOcr": "Reconhecendo o texto (OCR)…",
     "stageChunking": "Dividindo em trechos…",
     "stageEmbedding": "Gerando embeddings {{current}}/{{total}}…",
+    "noTextWarning_one": "{{count}} documento não trouxe texto: {{names}}",
+    "noTextWarning_other": "{{count}} documentos não trouxeram texto: {{names}}",
     "docCount_one": "{{count}} documento",
     "docCount_other": "{{count}} documentos",
     "chunkCount_one": "{{count}} trecho",
