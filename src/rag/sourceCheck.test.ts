@@ -89,4 +89,34 @@ describe("findNumberConflicts (la caja de comprobación)", () => {
       findNumberConflicts("El teléfono es el número de emergencia.", [chunk("El teléfono de la oficina atiende de día.")])
     ).toEqual([]);
   });
+
+  // Revisión adversaria de la cadena, H-03: la red de omisión
+  // disparaba con UNA sola palabra compartida, y le colgaba a una
+  // frase cualitativa correcta la cifra de otro tema. El suelo de
+  // tema pasa a ser dos palabras sustantivas compartidas; los
+  // genéricos (número, año, día y familia) no cuentan como tema.
+  it("Adversaria H-03: «El número de visitantes creció mucho ese año» contra el museo NO es omisión", () => {
+    expect(
+      findNumberConflicts("El número de visitantes creció mucho ese año.", [
+        chunk("En 2019 el museo recibió 250000 visitantes."),
+      ])
+    ).toEqual([]);
+  });
+
+  it("Adversaria H-03: compartir solo el genérico «número» tampoco es tema", () => {
+    expect(
+      findNumberConflicts("El número de alumnos creció mucho.", [
+        chunk("El número de visitantes llegó a 250000 en 2019."),
+      ])
+    ).toEqual([]);
+  });
+
+  it("Adversaria H-03: con dos palabras sustantivas compartidas la omisión verdadera sigue avisando", () => {
+    const conflicts = findNumberConflicts("El teléfono para reservar la mesa es el número del restaurante.", [
+      chunk("Para reservar la mesa llame al 520-555-0147."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].omission).toBe(true);
+    expect(conflicts[0].sourceSentence).toContain("520-555-0147");
+  });
 });

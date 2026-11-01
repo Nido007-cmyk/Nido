@@ -27,7 +27,10 @@
  * número de emergencia» no trae cifra alguna que discrepe — el dato
  * debido simplemente no está, y la fuente sí lo trae. Si la regla
  * del dato pedido del verificador estimó mal la señal, esta red
- * enseña la frase fuente con el dato y rompe el silencio.
+ * enseña la frase fuente con el dato y rompe el silencio. La
+ * adversaria de la cadena (H-03) acotó su «mismo tema»: la omisión
+ * exige DOS palabras sustantivas compartidas, y los genéricos de
+ * categoría («número», «año», «día»…) no cuentan como tema.
  *
  * Estricta a propósito (la precisión es el producto; el recuerdo
  * bajo es aceptado y declarado, como en Field Atlas):
@@ -156,6 +159,26 @@ function sharedContentWords(a: string, b: string): number {
   return n;
 }
 
+/**
+ * Sustantivos genéricos de alta frecuencia: nombran la CATEGORÍA de
+ * un dato, no un tema. Compartir solo «número» (o «año», «día» y
+ * familia) con una frase fuente no la hace «del mismo tema»
+ * (adversaria H-03). Solo las formas que contentWords puede dar
+ * (≥4 letras, plegadas); «año»/«día»/«day» ya caen por longitud.
+ */
+const GENERIC_TOPIC_WORDS = new Set([
+  "numero", "numeros", "number", "numbers",
+  "anos", "year", "years", "dias", "days",
+]);
+
+/** Palabras compartidas que son tema sustantivo (las genéricas no cuentan). */
+function substantiveSharedWords(a: string, b: string): number {
+  const bw = contentWords(b);
+  let n = 0;
+  for (const w of contentWords(a)) if (bw.has(w) && !GENERIC_TOPIC_WORDS.has(w)) n++;
+  return n;
+}
+
 function sameFigure(a: FigureMeasure, b: FigureMeasure): boolean {
   const asSet = new Set([b.value]);
   if (roundsFromEvidence(a.value, a.decimals, asSet)) return true;
@@ -264,16 +287,24 @@ export function findNumberConflicts(answerText: string, chunks: readonly Retriev
     // primer «mismo tema» a secas, a la pregunta del teléfono se le
     // enseñaría la frase de la cita (comparte «cita») en vez de la
     // del número (comparte «para cambiar la cita»).
+    // Adversaria H-03: el tema se mide en palabras SUSTANTIVAS y el
+    // suelo es DOS. Una sola palabra compartida — y menos aún un
+    // genérico como «número» o «año» — no es tema: la red le colgó
+    // la cifra de un museo a una frase cualitativa sobre visitantes
+    // que no omitía ningún dato debido.
     let source: string | null = null;
+    let bestTopic = 0;
     let bestShared = 0;
     for (const s of digitSentences) {
+      const topic = substantiveSharedWords(answerSentence, s);
       const shared = sharedContentWords(answerSentence, s);
-      if (shared > bestShared) {
+      if (topic > bestTopic || (topic === bestTopic && shared > bestShared)) {
+        bestTopic = topic;
         bestShared = shared;
         source = s;
       }
     }
-    if (!source) continue;
+    if (!source || bestTopic < 2) continue;
     const dedupe = `omission:${category}:${source.slice(0, 40)}`;
     if (seen.has(dedupe)) continue;
     seen.add(dedupe);
