@@ -211,6 +211,11 @@ export async function clearSettings(): Promise<void> {
   // the file right after the reset.
   const run = settingsQueue.then(async () => {
     await FileSystem.deleteAsync(SETTINGS_PATH, { idempotent: true });
+    // También el marcador de recuperación (F3-10): si sobreviviera a
+    // este borrado, el primer montaje mostraría el aviso «tus ajustes
+    // estaban dañados» sobre un estado que no viene de ningún daño,
+    // viene del borrado (revisión de la 0.1.67, F-REV-2).
+    await FileSystem.deleteAsync(RECOVERY_MARKER_PATH, { idempotent: true });
     // También el ajuste privado cifrado (prompt personalizado).
     const km = await import("../privacy/keyManager").catch(() => null);
     await km?.writePrivateSetting(CUSTOM_PROMPT_KEY, null).catch(() => false);

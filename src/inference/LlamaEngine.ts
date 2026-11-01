@@ -331,6 +331,19 @@ export class LlamaEngine {
   }
 
   /**
+   * Borrado total (Clear All Data): olvida el registro en memoria.
+   * El wipe borra `nido-crash-guard.json` del disco, pero este
+   * singleton conserva su copia en proceso y la siguiente carga la
+   * reescribiría tal cual, resucitando estado del mundo borrado
+   * (el mismo motivo por el que el wipe restablece los interruptores
+   * en memoria). Tras esta llamada, la próxima lectura parte del
+   * registro vacío: el fichero ya no existe.
+   */
+  resetCrashGuardMemory(): void {
+    this.crashGuard = null;
+  }
+
+  /**
    * Una generación que termina bien confirma la carga: contador a
    * cero y sin pendiente. Sin escritura cuando no hay nada que limpiar.
    */

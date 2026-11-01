@@ -56,7 +56,11 @@ const WIPE_MARKER = `${FileSystem.documentDirectory}.nido-wipe-in-progress`;
 //   contactos revocados, los interruptores y el estado de una rotación.
 // - En SQLite/: la copia previa a cada restauración (*.pre-restore-*) y los
 //   temporales de "restaurar con clave" (nido-restore-*).
-const DOC_LEFTOVER_FILES = new Set([
+// Exportado (con los dos predicados de abajo) para la guardia de
+// censo permanente (wipeCensus.test.ts): aquella prueba escanea los
+// productores de ficheros del código entero y exige que cada nombre
+// esté recogido AQUÍ, en esta única lista canónica — no en una copia.
+export const DOC_LEFTOVER_FILES = new Set([
   "revoked-peers.json",
   "revoked-peers.json.tmp",
   "feature-flags.json",
@@ -69,11 +73,38 @@ const DOC_LEFTOVER_FILES = new Set([
   // completa de los ajustes fuera del borrado verificado.
   "settings.json.tmp",
   "nido-install-state.json.tmp",
+  // Revisión de la 0.1.67 (F-REV-1 y F-REV-2) + censo completo del
+  // carril F-REV: productores que nacieron sin que nadie los añadiera
+  // a este inventario. La familia es de INVENTARIO, no de mecanismo:
+  // cada arreglo que crea un fichero debe darlo de alta aquí (la
+  // guardia de censo lo hace cumplir).
+  // - El temporal de la escritura atómica de los interruptores
+  //   (F3-11): una copia completa de feature-flags.json.
+  "feature-flags.json.tmp",
+  // - El marcador durable de «ajustes restablecidos» (F3-10): si
+  //   sobrevivía, la app recién borrada abría con el aviso falso de
+  //   «tus ajustes estaban dañados» (clearSettings ya lo borra
+  //   también en su capa; aquí queda inventariado y verificado).
+  "settings-recovered.json",
+  // - El registro del CrashGuard del motor (programa bounty, tanda
+  //   3): conteo de choques y factor en curso. Su copia en memoria se
+  //   olvida en el paso 3 (resetCrashGuardMemory), como la de los
+  //   interruptores.
+  "nido-crash-guard.json",
+  // - La traza del último crash que el módulo nativo ram-monitor
+  //   escribe en la raíz de filesDir (Kotlin): el borrado JS no lo
+  //   veía porque ningún código TS lo nombraba.
+  "nido-last-crash.txt",
 ]);
-function isDocLeftover(name: string): boolean {
-  return name.startsWith("nido-backup-") || name.startsWith("restored.db") || DOC_LEFTOVER_FILES.has(name);
+export function isDocLeftover(name: string): boolean {
+  // Todo nombre «restored…» es un artefacto de extracción de respaldo:
+  // restored.db-<único> y sus acompañantes (.manifest.json,
+  // .tmp-<único> y el .knowledge.db que knowledgeBackupUriFor deriva
+  // sustituyendo el sufijo, incluida la forma heredada
+  // restored.knowledge.db, que NO casa con el prefijo «restored.db»).
+  return name.startsWith("nido-backup-") || name.startsWith("restored") || DOC_LEFTOVER_FILES.has(name);
 }
-function isSqliteLeftover(name: string): boolean {
+export function isSqliteLeftover(name: string): boolean {
   return name.includes(".pre-restore-") || name.startsWith("nido-restore-");
 }
 async function listDir(dir: string): Promise<string[] | null> {
@@ -344,6 +375,14 @@ async function resetAllAppDataInner(): Promise<void> {
     resetFeatureFlagsInMemory();
   } catch {
     /* sin módulo: nada en memoria */
+  }
+  // Carril F-REV: el registro del CrashGuard también vive en memoria
+  // en el singleton del motor; sin este olvido, la siguiente carga lo
+  // reescribiría al disco ya borrado con el conteo del mundo anterior.
+  try {
+    llamaEngine.resetCrashGuardMemory();
+  } catch {
+    /* motor sin CrashGuard (tests): nada en memoria */
   }
 
   // 4. Verificación: todo lo anterior debe haber desaparecido. Si algo
