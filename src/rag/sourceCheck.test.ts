@@ -185,3 +185,171 @@ describe("findNumberConflicts — segunda adversaria ADV2-03/04 (la omisión exi
     expect(conflicts[0].sourceSentence).toContain("911");
   });
 });
+
+describe("C-08: las unidades de Esencial y los rangos entran en la caja", () => {
+  it("las gotas disparan en letra y en dígito, con y sin calificador de litro", () => {
+    const conLitro = [chunk("Para desinfectar el agua clara usa 2 gotas por litro.")];
+    const letra = findNumberConflicts("Échale ocho gotas de lejía por litro.", conLitro);
+    expect(letra).toHaveLength(1);
+    expect(letra[0].unit).toBe("gotas/l");
+    const digito = findNumberConflicts("Échale 8 gotas de lejía por litro.", conLitro);
+    expect(digito).toHaveLength(1);
+    expect(digito[0].unit).toBe("gotas/l");
+    const sinCalificador = findNumberConflicts("Échale doce gotas.", [chunk("Échale 2 gotas.")]);
+    expect(sinCalificador).toHaveLength(1);
+    expect(sinCalificador[0].unit).toBe("gotas");
+  });
+
+  it("el % dispara fuera del rango de la guía y calla dentro", () => {
+    const fuente = [chunk("El hipoclorito al 5–6 % desinfecta el suelo.")];
+    const fuera = findNumberConflicts("Usa lejía al 20 % para desinfectar el suelo.", fuente);
+    expect(fuera).toHaveLength(1);
+    expect(fuera[0].unit).toBe("%");
+    expect(findNumberConflicts("Usa lejía al 6 % para desinfectar el suelo.", fuente)).toEqual([]);
+  });
+
+  it("los días se juzgan contra el rango: 30 dispara, 12 calla dentro, 3 dispara por medidas y no por omisión", () => {
+    const fuente = [chunk("El zinc se da durante 10 a 14 días.")];
+    const fuera = findNumberConflicts("El zinc se da durante 30 días.", fuente);
+    expect(fuera).toHaveLength(1);
+    expect(fuera[0].unit).toBe("dias");
+    expect(findNumberConflicts("El zinc se da durante 12 días.", fuente)).toEqual([]);
+    // El rebote histórico: «3» no es cifra juzgable y la frase acertaba
+    // por la rama de omisión. Con «días» en la tabla dispara por la vía
+    // de medidas, sin nota de omisión.
+    const tres = findNumberConflicts("El zinc se da durante 3 días.", fuente);
+    expect(tres).toHaveLength(1);
+    expect(tres[0].unit).toBe("dias");
+    expect(tres[0].omission).toBeFalsy();
+  });
+
+  it("la frecuencia se juzga en veces/día: «tres veces al día» ES «cada 8 horas» y NO es «cada 6 horas»", () => {
+    // La preparación §2.3 manda: 3 contra 24/8 = 3, misma cifra. (La
+    // tabla de §2.2 pedía «conflicto» para este par; el diseño y los
+    // controles de supervivencia mandan lo contrario: es el control.)
+    expect(
+      findNumberConflicts("El jarabe se da tres veces al día.", [chunk("El jarabe se da cada 8 horas.")])
+    ).toEqual([]);
+    const conflicto = findNumberConflicts("El jarabe se da tres veces al día.", [
+      chunk("El jarabe se da cada 6 horas."),
+    ]);
+    expect(conflicto).toHaveLength(1);
+    expect(conflicto[0].unit).toBe("veces/dia");
+    const digito = findNumberConflicts("El jarabe se da 2 veces al día.", [
+      chunk("El jarabe se da cada 8 horas."),
+    ]);
+    expect(digito).toHaveLength(1);
+    expect(digito[0].unit).toBe("veces/dia");
+  });
+
+  it("las cucharas se convierten con la vara declarada (cucharadita 5 ml, cucharada 15 ml)", () => {
+    const conflicto = findNumberConflicts("Ponle 12 cucharaditas de azúcar.", [
+      chunk("Ponle 6 cucharaditas rasas de azúcar."),
+    ]);
+    expect(conflicto).toHaveLength(1);
+    expect(conflicto[0].unit).toBe("ml");
+    // En letra, por el portillo estrecho: «dos cucharadas» = 30 ml.
+    const letra = findNumberConflicts("Échale dos cucharadas de azúcar.", [chunk("Échale 10 ml de azúcar.")]);
+    expect(letra).toHaveLength(1);
+    expect(letra[0].unit).toBe("ml");
+    // «Media cucharadita» (la sal del suero) se vuelve visible: 2,5 ml.
+    const media = findNumberConflicts("Ponle 2 cucharaditas de sal.", [
+      chunk("Ponle media cucharadita de sal."),
+    ]);
+    expect(media).toHaveLength(1);
+    expect(media[0].unit).toBe("ml");
+  });
+
+  it("la dosis correcta en sus tres ropas no se acusa (dígito = letra = la guía)", () => {
+    expect(
+      findNumberConflicts("Ponle 6 cucharaditas de azúcar.", [chunk("Ponle seis cucharaditas de azúcar.")])
+    ).toEqual([]);
+    expect(
+      findNumberConflicts("Ponle seis cucharaditas de azúcar.", [chunk("Ponle 6 cucharaditas rasas de azúcar.")])
+    ).toEqual([]);
+  });
+
+  it("los comprimidos se juzgan también de una cifra (1 contra 2 es el conflicto que importa)", () => {
+    const letra = findNumberConflicts("Toma cuatro comprimidos.", [chunk("Toma 2 comprimidos.")]);
+    expect(letra).toHaveLength(1);
+    expect(letra[0].unit).toBe("comprimidos");
+    const una = findNumberConflicts("Toma 1 comprimido.", [chunk("Toma 2 comprimidos.")]);
+    expect(una).toHaveLength(1);
+    expect(una[0].unit).toBe("comprimidos");
+  });
+
+  it("«veces» a secas no forma medida: es multiplicador, no frecuencia", () => {
+    expect(
+      findNumberConflicts("El faro está a 5 veces la distancia de la boya.", [
+        chunk("El faro emite 3 veces al día su señal sobre la boya."),
+      ])
+    ).toEqual([]);
+  });
+
+  it("las gotas en un vaso y las gotas por litro no se comparan (unidades distintas = sin juicio)", () => {
+    const fuente = [chunk("Pon 2 gotas por litro de agua.")];
+    expect(findNumberConflicts("Ponle 2 gotas en el vaso.", fuente)).toEqual([]);
+    expect(findNumberConflicts("Ponle 8 gotas en el vaso.", fuente)).toEqual([]);
+  });
+
+  it("el intervalo «cada N años» se compara consigo mismo", () => {
+    const conflicto = findNumberConflicts("El refuerzo va cada 10 años.", [
+      chunk("El refuerzo va cada 5 años."),
+    ]);
+    expect(conflicto).toHaveLength(1);
+    expect(conflicto[0].unit).toBe("cada-años");
+    expect(
+      findNumberConflicts("El refuerzo va cada 10 años.", [chunk("El refuerzo va cada 10 años.")])
+    ).toEqual([]);
+  });
+
+  it("la vara por kilo: «ml por kilo» se juzga como ml/kg", () => {
+    const conflicto = findNumberConflicts("La dosis es de 5 ml por kilo de peso.", [
+      chunk("La dosis es de 2 ml por kilo de peso."),
+    ]);
+    expect(conflicto).toHaveLength(1);
+    expect(conflicto[0].unit).toBe("ml/kg");
+  });
+
+  it("la semana convertida (7 días exactos) hace comparables semanas y días", () => {
+    const conflicto = findNumberConflicts("El tratamiento dura 2 semanas.", [
+      chunk("El tratamiento dura 10 días."),
+    ]);
+    expect(conflicto).toHaveLength(1);
+    expect(conflicto[0].unit).toBe("dias");
+    expect(
+      findNumberConflicts("El tratamiento dura 2 semanas.", [chunk("El tratamiento dura 14 días.")])
+    ).toEqual([]);
+  });
+
+  it("el rango ya no acusa a su interior ni a un rango que lo solapa", () => {
+    expect(
+      findNumberConflicts("Calienta el agua a 39 °C.", [chunk("Calienta el agua tibia entre 37 y 40 °C.")])
+    ).toEqual([]);
+    expect(
+      findNumberConflicts("Calienta el agua entre 38 y 42 °C.", [
+        chunk("Calienta el agua tibia entre 37 y 40 °C."),
+      ])
+    ).toEqual([]);
+  });
+
+  it("los controles que ya disparaban siguen disparando idénticos (km, minutos)", () => {
+    const km = findNumberConflicts("La ruta mide 5 km.", [chunk("La ruta mide 3 km.")]);
+    expect(km).toHaveLength(1);
+    expect(km[0].unit).toBe("km");
+    const min = findNumberConflicts("Espera 30 min antes de salir.", [chunk("Espera 45 min antes de salir.")]);
+    expect(min).toHaveLength(1);
+    expect(min[0].unit).toBe("minutos");
+  });
+
+  it("el seto se juzga como valor llano (imperfección declarada, no se cura en silencio)", () => {
+    // Decisión declarada de la preparación §2.3-D: sin maquinaria de
+    // setos. «Más de 2 semanas» vale 14 días llanos y contra «10 días»
+    // dispara en el borde; la fixture lo documenta tal cual.
+    const conflicto = findNumberConflicts("El agua dura más de 2 semanas.", [
+      chunk("El agua dura 10 días."),
+    ]);
+    expect(conflicto).toHaveLength(1);
+    expect(conflicto[0].unit).toBe("dias");
+  });
+});

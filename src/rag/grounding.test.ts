@@ -998,3 +998,25 @@ describe("verifyGroundedAnswer — post-chequeo de cifras (bounty, tanda 1)", ()
     expect(r.text).not.toContain("20 millones");
   });
 });
+
+describe("C-08: el rango de la guía ya no hace abstenerse a su propia respuesta", () => {
+  const GUIA19: GroundingChunk = {
+    title: "Quemaduras",
+    body: "Sumerge la zona en agua tibia (entre 37 y 40 °C) durante 20 a 30 minutos.",
+  };
+
+  it("la respuesta exacta de la guía (" +
+    "39 °C, 25 minutos) se queda: ni abstiene ni se recorta", () => {
+    const r = verifyGroundedAnswer("Sumerge la zona en agua a 39 °C durante 25 minutos.", [GUIA19], "es");
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toContain("39 °C");
+    expect(r.text).toContain("25 minutos");
+  });
+
+  it("la cifra fuera del rango sigue cayendo (la cura no abre la puerta)", () => {
+    const r = verifyGroundedAnswer("Sumerge la zona en agua a 45 °C durante 25 minutos.", [GUIA19], "es");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("45 °C");
+  });
+});

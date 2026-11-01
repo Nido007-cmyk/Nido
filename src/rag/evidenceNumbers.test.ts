@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 import {
   evidenceNumberValues,
+  evidenceRanges,
   numberTokens,
   parseNumberToken,
   roundsFromEvidence,
@@ -85,5 +86,33 @@ describe("sentenceNumbersSupported", () => {
     expect(sentenceNumbersSupported("Llega en el capítulo 3.", new Set())).toBe(true);
     expect(sentenceNumbersSupported("Se fundó en 1804 [2].", ev)).toBe(true);
     expect(sentenceNumbersSupported("Sin cifras en esta frase.", new Set())).toBe(true);
+  });
+});
+
+describe("C-08: los rangos de la evidencia sostienen su interior", () => {
+  const guia19 = "Sumerge la zona en agua tibia (entre 37 y 40 °C) durante 20 a 30 minutos. La lejía va al 5–6 %.";
+
+  it("evidenceRanges extrae «entre N y M», «N a M» y «N–M»", () => {
+    const ranges = evidenceRanges([guia19]);
+    expect(ranges).toHaveLength(3);
+    expect(ranges).toEqual(
+      expect.arrayContaining([
+        { min: 37, max: 40 },
+        { min: 20, max: 30 },
+        { min: 5, max: 6 },
+      ])
+    );
+    expect(evidenceRanges(["Sin rangos en esta frase, solo 42 sueltos."])).toEqual([]);
+  });
+
+  it("un valor dentro de cualquier rango de la evidencia está sostenido; fuera, no", () => {
+    const ev = evidenceNumberValues([guia19]);
+    const ranges = evidenceRanges([guia19]);
+    // Sin rangos, la red sigue ciega: 39 no es ni 37 ni 40 (el falso
+    // positivo histórico). Con los rangos pasados, el interior vale.
+    expect(sentenceNumbersSupported("Sumerge la zona en agua a 39 °C.", ev)).toBe(false);
+    expect(sentenceNumbersSupported("Sumerge la zona en agua a 39 °C durante 25 minutos.", ev, ranges)).toBe(true);
+    expect(sentenceNumbersSupported("Sumerge la zona en agua a 40 °C.", ev, ranges)).toBe(true);
+    expect(sentenceNumbersSupported("Sumerge la zona en agua a 45 °C durante 25 minutos.", ev, ranges)).toBe(false);
   });
 });
