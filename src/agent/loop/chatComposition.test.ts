@@ -619,6 +619,27 @@ describe("composición — elección pendiente entre turnos (0.1.25)", () => {
     expect(engine.calls).toHaveLength(0);
   });
 
+  it("Núcleo 3 · N-10 (pin de diseño): la elección pendiente NO sobrevive a la muerte de la app", async () => {
+    // Asentado como es en la preparación: la elección pendiente vive
+    // solo en memoria (el ChoiceStore del proceso); ningún estado
+    // pendiente se persiste, así que una app que muere y renace
+    // arranca sin pendiente y la réplica huérfana («la primera») se
+    // trata como mensaje nuevo — no resuelve nada ni borra nada.
+    // Esto fija la conducta deliberadamente: si algún día se
+    // persiste la elección, esta fixture es la que debe cambiar.
+    seedTwoNotes();
+    const engine = fakeEngine();
+    await send("delete the birthday note", "en", engine);
+    expect(choiceStore.current).not.toBeNull();
+    // Muerte del proceso: el almacén que nace con la app nueva está vacío.
+    choiceStore.current = null;
+    const orphan = await send("la primera", "es", engine);
+    expect(orphan.route).toBe("knowledge");
+    expect(callsOf("delete_note")).toHaveLength(0);
+    expect(data.notes).toHaveLength(2);
+    expect(engine.calls).toHaveLength(0);
+  });
+
   it("la respuesta por ordinal consume la elección (inglés)", async () => {
     seedTwoNotes();
     const engine = fakeEngine();
