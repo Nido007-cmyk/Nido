@@ -16,7 +16,6 @@
  * creación aditiva al abrir.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { DatabaseSync } from "node:sqlite";
 import { copyFileSync, rmSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -43,20 +42,13 @@ vi.mock("expo-file-system/legacy", () => ({
 vi.mock("../models/settings", () => ({
   getActiveModelId: async () => null,
 }));
-vi.mock("../privacy/keyManager", () => ({
-  registerKeyLossProbe: () => {},
-  getDatabaseKeyHex: async () => "ab".repeat(32),
-  applyDatabaseKey: async (
-    db: { execAsync(s: string): Promise<void>; getFirstAsync(s: string): Promise<unknown> },
-    keyHex: string | null
-  ) => {
-    if (!keyHex) return;
-    await db.execAsync(`PRAGMA key = "x'${keyHex}'";`);
-    await db.getFirstAsync("SELECT count(*) AS n FROM sqlite_master;");
-  },
-}));
+vi.mock("../privacy/keyManager", async () => {
+  const { fakeKeyManagerModule } = await import("../security/secureDbTestHarness");
+  return fakeKeyManagerModule();
+});
 
 import { setSecureDbTestDriver } from "../security/secureDatabase";
+import { makeNodeSqliteHandle } from "../security/secureDbTestHarness";
 import {
   createCustomCollection,
   deleteCustomCollection,
@@ -71,50 +63,6 @@ import {
 
 let tmpDirs: string[] = [];
 
-function makeHandle(dbPath: string) {
-  const sqlite = new DatabaseSync(dbPath);
-  let keyApplied = false;
-  const bind = (params?: unknown[]) => (params ?? []) as never[];
-  return {
-    execAsync: async (sql: string) => {
-      if (/^\s*PRAGMA\s+key/i.test(sql)) {
-        keyApplied = true;
-        return;
-      }
-      sqlite.exec(sql);
-    },
-    getAllAsync: async <T>(sql: string, params?: unknown[]): Promise<T[]> => {
-      if (/cipher_version/i.test(sql)) return [{ cipher_version: "4.9.0-fake" }] as T[];
-      return sqlite.prepare(sql).all(...bind(params)) as T[];
-    },
-    getFirstAsync: async <T>(sql: string, params?: unknown[]): Promise<T | null> => {
-      if (/cipher_version/i.test(sql)) return { cipher_version: "4.9.0-fake" } as T;
-      if (/FROM\s+sqlite_master/i.test(sql) && !keyApplied) throw new Error("file is not a database (sin clave)");
-      return (sqlite.prepare(sql).get(...bind(params)) ?? null) as T | null;
-    },
-    runAsync: async (sql: string, params?: unknown[]) => {
-      if (params && params.length > 0) {
-        const info = sqlite.prepare(sql).run(...bind(params));
-        return { lastInsertRowId: Number(info.lastInsertRowid), changes: Number(info.changes) };
-      }
-      sqlite.exec(sql);
-      return { lastInsertRowId: 0, changes: 0 };
-    },
-    withTransactionAsync: async (fn: () => Promise<void>) => {
-      sqlite.exec("BEGIN");
-      try {
-        await fn();
-        sqlite.exec("COMMIT");
-      } catch (e) {
-        sqlite.exec("ROLLBACK");
-        throw e;
-      }
-    },
-    closeAsync: async () => {
-      sqlite.close();
-    },
-  };
-}
 
 function useFreshDb(): string {
   const dir = mkdtempSync(join(tmpdir(), "nido-warn-"));
@@ -123,7 +71,7 @@ function useFreshDb(): string {
   copyFileSync(join(FIX, "knowledge.v1.db"), dbPath);
   setSecureDbTestDriver({
     dbDir: () => `${fx.DOC}SQLite/`,
-    openDb: async () => makeHandle(dbPath),
+    openDb: async () => makeNodeSqliteHandle(dbPath, { transactional: true }),
     exists: async (path: string) => !path.endsWith(".migtmp") && !path.endsWith(".sqlcipher"),
     remove: async () => {},
     rename: async () => {

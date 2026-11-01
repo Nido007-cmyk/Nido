@@ -58,37 +58,14 @@ vi.mock("expo-file-system/legacy", () => ({
   deleteAsync: async () => {},
 }));
 
-// keyManager fiel: mismo handshake que db.version.test.ts.
-vi.mock("../privacy/keyManager", () => ({
-
-  registerKeyLossProbe: () => {},
-  getDatabaseKeyHex: async () => "ab".repeat(32),
-  applyDatabaseKey: async (
-    db: {
-      execAsync(s: string): Promise<void>;
-      getAllAsync(s: string): Promise<Array<{ cipher_version?: string }>>;
-      getFirstAsync(s: string): Promise<unknown>;
-      closeAsync(): Promise<void>;
-    },
-    keyHex: string | null,
-  ) => {
-    if (!keyHex) return;
-    if (!/^[0-9a-f]{64}$/i.test(keyHex)) {
-      await db.closeAsync().catch(() => {});
-      throw new Error("formato de clave inválido (fail-closed)");
-    }
-    await db.execAsync(`PRAGMA key = "x'${keyHex.toLowerCase()}'";`);
-    const rows = await db.getAllAsync("PRAGMA cipher_version;");
-    if (!rows?.[0]?.cipher_version) {
-      await db.closeAsync().catch(() => {});
-      throw new Error("sin SQLCipher: fail-closed");
-    }
-    await db.getFirstAsync("SELECT count(*) AS n FROM sqlite_master;");
-  },
-}));
+vi.mock("../privacy/keyManager", async () => {
+  const { fakeKeyManagerModule } = await import("../security/secureDbTestHarness");
+  return fakeKeyManagerModule();
+});
 
 // Código REAL bajo prueba.
 import { setSecureDbTestDriver } from "../security/secureDatabase";
+import { makeNodeSqliteHandle } from "../security/secureDbTestHarness";
 import { KnowledgeDbVersionError } from "../security/formatVersion";
 import { getDb, resetDatabase, writeTransaction } from "./db";
 import { listRouterSamples, recordRouterSample } from "../services/routerStats";
@@ -114,52 +91,6 @@ function stageFixture(name: string): string {
   return tmp;
 }
 
-function makeHandle(dbPath: string) {
-  const sqlite = new DatabaseSync(dbPath);
-  let keyApplied = false;
-  return {
-    execAsync: async (sql: string) => {
-      if (/^\s*PRAGMA\s+key/i.test(sql)) {
-        keyApplied = true;
-        return; // no-op en node:sqlite
-      }
-      sqlite.exec(sql);
-    },
-    getAllAsync: async <T>(sql: string, params?: unknown[]): Promise<T[]> => {
-      if (/cipher_version/i.test(sql)) return [{ cipher_version: "4.9.0-fake" }] as T[];
-      return (sqlite.prepare(sql).all as (...a: unknown[]) => unknown[])(...(params ?? [])) as T[];
-    },
-    getFirstAsync: async <T>(sql: string, params?: unknown[]): Promise<T | null> => {
-      if (/cipher_version/i.test(sql)) return { cipher_version: "4.9.0-fake" } as T;
-      if (/FROM\s+sqlite_master/i.test(sql) && !keyApplied) {
-        // Sin PRAGMA key la base "cifrada" no se puede leer: probeDatabaseKind
-        // la clasifica como encrypted (como una base SQLCipher real).
-        throw new Error("file is not a database (sin clave)");
-      }
-      const row = (sqlite.prepare(sql).get as (...a: unknown[]) => unknown)(...(params ?? []));
-      return (row ?? null) as T | null;
-    },
-    runAsync: async (sql: string, params?: unknown[]) => {
-      if (params && params.length > 0) {
-        const info = (
-          sqlite.prepare(sql).run as (...a: unknown[]) => {
-            changes: number;
-            lastInsertRowid: number;
-          }
-        )(...params);
-        return { lastInsertRowId: info.lastInsertRowid, changes: info.changes };
-      }
-      sqlite.exec(sql);
-      return { lastInsertRowId: 0, changes: 0 };
-    },
-    withTransactionAsync: async (fn: () => Promise<void>) => {
-      await fn();
-    },
-    closeAsync: async () => {
-      sqlite.close();
-    },
-  };
-}
 
 /** El driver "ve" el fixture como la base existente (sin tmp ni marker). */
 function useFixture(name: string): string {
@@ -168,7 +99,7 @@ function useFixture(name: string): string {
     dbDir: () => `${fx.DOC}SQLite/`,
     openDb: async (path: string) => {
       if (!path.includes("nido_knowledge.db")) throw new Error(`DB inesperada: ${path}`);
-      return makeHandle(dbPath);
+      return makeNodeSqliteHandle(dbPath);
     },
     exists: async (path: string) => !path.endsWith(".migtmp") && !path.endsWith(".sqlcipher"),
     remove: async () => {},
