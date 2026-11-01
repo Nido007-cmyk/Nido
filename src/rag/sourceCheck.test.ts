@@ -200,6 +200,16 @@ describe("C-08: las unidades de Esencial y los rangos entran en la caja", () => 
     expect(sinCalificador[0].unit).toBe("gotas");
   });
 
+  it("las gotas se juzgan también de una cifra (1 gota contra 2 por litro es el conflicto que importa)", () => {
+    const fuente = [chunk("Para desinfectar el agua clara usa 2 gotas por litro.")];
+    const digito = findNumberConflicts("Échale 1 gota por litro.", fuente);
+    expect(digito).toHaveLength(1);
+    expect(digito[0].unit).toBe("gotas/l");
+    const letra = findNumberConflicts("Échale una gota por litro.", fuente);
+    expect(letra).toHaveLength(1);
+    expect(letra[0].unit).toBe("gotas/l");
+  });
+
   it("el % dispara fuera del rango de la guía y calla dentro", () => {
     const fuente = [chunk("El hipoclorito al 5–6 % desinfecta el suelo.")];
     const fuera = findNumberConflicts("Usa lejía al 20 % para desinfectar el suelo.", fuente);
