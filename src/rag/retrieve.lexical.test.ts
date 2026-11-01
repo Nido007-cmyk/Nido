@@ -67,14 +67,19 @@ const titles = (chunks: Array<{ title: string }>) => chunks.map((c) => c.title);
 
 describe("buildLexicalQuery", () => {
   it("keeps content words and drops question framing", () => {
-    expect(buildLexicalQuery("what is a black hole?")?.match).toBe('"black" OR "hole"');
+    expect(buildLexicalQuery("what is a black hole?")?.match).toBe('"black" OR "blac"* OR "hole"');
     expect(buildLexicalQuery("Compare the French Revolution and the Industrial Revolution")?.match).toBe(
-      '"french" OR "frenc"* OR "revolution" OR "revoluti"* OR "industrial" OR "industri"*'
+      '"french" OR "fren"* OR "revolution" OR "revoluti"* OR "industrial" OR "industri"*'
     );
   });
 
   // 0.1.59: words of 6+ letters also match by their start ("adulto" → "adultos"):
   // the index has no stemmer, and Spanish first aid questions missed their guide.
+  // C-03: five-letter words join in with a four-letter start ("quemo" → "quem"),
+  // so a family's first-person verb reaches the guide's noun ("quemaduras").
+  // Four literal expectations moved with that measured widening ("black",
+  // "french", "virus", "quasar"/"pulsar"); every corpus behaviour below is
+  // unchanged.
   it("adds the singular of plural words, but not of words that only look plural", () => {
     expect(buildLexicalQuery("how do vaccines work")?.match).toBe('"vaccines" OR "vaccine" OR "vaccin"*');
     expect(buildLexicalQuery("theories about viruses")?.match).toBe(
@@ -82,7 +87,15 @@ describe("buildLexicalQuery", () => {
     );
     expect(buildLexicalQuery("volcanoes")?.terms[0].forms).toContain("volcano");
     expect(buildLexicalQuery("explain photosynthesis")?.match).toBe('"photosynthesis" OR "photosynthes"*');
-    expect(buildLexicalQuery("virus analysis gas")?.match).toBe('"virus" OR "analysis" OR "analys"* OR "gas"');
+    expect(buildLexicalQuery("virus analysis gas")?.match).toBe('"virus" OR "viru"* OR "analysis" OR "analys"* OR "gas"');
+  });
+
+  it("matches five-letter words by a four-letter start, and leaves the gerund gap as measured", () => {
+    expect(buildLexicalQuery("me quemo")?.match).toBe('"quemo" OR "quem"*');
+    // The gerund and the noun diverge at the tenth letter ("atragantando" /
+    // "atragantamiento"), so the prefix does not bridge them, before or after
+    // C-03; the choking guide is reached through its `questions:` keys.
+    expect(buildLexicalQuery("atragantando")?.match).toBe('"atragantando" OR "atragantan"*');
   });
 
   it("returns null when nothing but filler is left, so lexical search is skipped", () => {
@@ -93,7 +106,7 @@ describe("buildLexicalQuery", () => {
 
   it("quotes every term, so FTS5 operator syntax in user input can't break the query", () => {
     const q = buildLexicalQuery('NEAR(black hole) AND "quasar" OR -pulsar* ^star');
-    expect(q?.match).toBe('"near" OR "black" OR "hole" OR "quasar" OR "quasa"* OR "pulsar" OR "pulsa"* OR "star"');
+    expect(q?.match).toBe('"near" OR "black" OR "blac"* OR "hole" OR "quasar" OR "quas"* OR "pulsar" OR "puls"* OR "star"');
     expect(() => ftsQuery(q!.match, 5)).not.toThrow();
   });
 

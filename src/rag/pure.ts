@@ -223,12 +223,16 @@ export function countMatchedTerms(text: string, terms: LexicalTerm[]): number {
 
 /**
  * Word start used as a prefix match for long words: everything but the last
- * two letters, at least five ("adulto" → "adult", "quemadura" → "quemadu").
+ * two letters, at least four ("adulto" → "adult", "quemadura" → "quemadu").
  * Short words keep exact matching (a 4-letter prefix matches too much).
+ * C-03: five-letter words join in ("quemo" → "quem"), because a family's
+ * first-person verb ("me quemo") must reach the guide's noun ("quemaduras");
+ * measured in the C-03 preparation, the wider step (floor 4 at ≥4 letters)
+ * widened the one-term gate and is not taken.
  */
 export function lexicalPrefixOf(token: string): string | undefined {
-  if (token.length < 6 || /\d/.test(token)) return undefined;
-  return token.slice(0, Math.max(5, token.length - 2));
+  if (token.length < 5 || /\d/.test(token)) return undefined;
+  return token.slice(0, Math.max(4, token.length - 2));
 }
 
 /**
