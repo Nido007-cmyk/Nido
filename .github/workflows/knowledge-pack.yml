@@ -154,6 +154,17 @@ jobs:
             node scripts/check-pack-retrieval.mjs "build/knowledge-pack/$PACK-e5.sqlite" "$FA" \
               --model assets/models/embedding-multilingual.gguf --top 3 --min 1.0 --github
           fi
+      - name: Local never shrinks below the last published set
+        if: env.PACK == 'nido-local'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Correction 0.1.68: the v9 draft built from the app tree's old
+          # facts copy carried 32 regions / 71 facts against v8's
+          # published 69 / 155, and no internal-consistency check could
+          # see it. The floor recorded in the release ledger is compared
+          # against the built tables here, before anything is uploaded.
+          node scripts/check-pack-floor.mjs "build/knowledge-pack/$PACK.sqlite" "build/knowledge-pack/$PACK-e5.sqlite"
       - name: Upload to the draft release
         env:
           GH_TOKEN: ${{ github.token }}

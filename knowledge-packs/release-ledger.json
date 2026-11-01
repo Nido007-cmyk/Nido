@@ -37,6 +37,12 @@
     "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v9/nido-local.sqlite": "7ef730b3857ea0fa331d025c7c221862b2182fe4c7f05122eb82cd14c18b3708",
     "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v9/nido-local-e5.sqlite": "fa4c802818d061bc1ad01e8683e48b31b8a9a5adbc7e4f9ed0d35e25a0bf56b5"
   },
+  "localPublishedFloor": {
+    "about": "Measured table counts of the newest PUBLISHED NIDO Local set, read from its published sqlite files. A candidate Local whose regions or facts fall below these numbers would silently take checked emergency numbers away from everyone who updates, so it must never ship. (Near-miss 2026-10-31: the knowledge-packs-v9 draft was built from the app tree, whose facts table was still the old 32-region / 71-fact copy, against v8's published 69 / 155; the publication stopped at its own pre-flight gate.) Enforced by scripts/lib/pack-floor-lib.test.mjs on the source candidate and by scripts/check-pack-floor.mjs on the built bytes (the knowledge-pack workflow runs it before upload). Advance tag and counts ONLY when a newer Local set is actually published, with the counts measured from the published files.",
+    "tag": "knowledge-packs-v8",
+    "regions": 69,
+    "facts": 155
+  },
   "replacedOnce": {
     "about": "The bytes knowledge-packs-v5 served before it was republished (NIDO 0.1.57 and older expect these). Kept as a record of the mistake; never reuse this pattern.",
     "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v5/nido-local.sqlite": "02e1b594f58b4816d87b9758323b835515892a71c235679abcdee755ad823f24",
