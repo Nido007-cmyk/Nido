@@ -34,8 +34,8 @@
     "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v7/nido-viaje-e5.sqlite": "28c4bf3996b10d8bdc09f8b8470eb0a9606d90f8d2236b82b3ffa7975a038709",
     "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v8/nido-local.sqlite": "096125a6c74decf0c0ed0fd07eb460de3b1d8180c8e2c1fe3b3fd585a378ca3b",
     "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v8/nido-local-e5.sqlite": "6aaacb111e5b9547b6cc0281371c975ceb08feadbf515e8a1657a4888c4e8bea",
-    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v9/nido-local.sqlite": "7ef730b3857ea0fa331d025c7c221862b2182fe4c7f05122eb82cd14c18b3708",
-    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v9/nido-local-e5.sqlite": "fa4c802818d061bc1ad01e8683e48b31b8a9a5adbc7e4f9ed0d35e25a0bf56b5"
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v9/nido-local.sqlite": "df5f050bd96600d825dc6e1263673a93863973a63714fc9c744558c884957ddc",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v9/nido-local-e5.sqlite": "1647431996507545093904985af807b318d6127935b311c51dbab01cde22aa3c"
   },
   "localPublishedFloor": {
     "about": "Measured table counts of the newest PUBLISHED NIDO Local set, read from its published sqlite files. A candidate Local whose regions or facts fall below these numbers would silently take checked emergency numbers away from everyone who updates, so it must never ship. (Near-miss 2026-10-31: the knowledge-packs-v9 draft was built from the app tree, whose facts table was still the old 32-region / 71-fact copy, against v8's published 69 / 155; the publication stopped at its own pre-flight gate.) Enforced by scripts/lib/pack-floor-lib.test.mjs on the source candidate and by scripts/check-pack-floor.mjs on the built bytes (the knowledge-pack workflow runs it before upload). Advance tag and counts ONLY when a newer Local set is actually published, with the counts measured from the published files.",
