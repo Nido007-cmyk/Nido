@@ -44,6 +44,7 @@ import {
   safeJsonParse,
 } from "../../security/databaseManager";
 import { isCalendarRepeat, isReminderRepeat, nextOccurrence, type ReminderRepeat } from "./reminderRepeat";
+import { factAttribute, attributeValuesMatch } from "./factAttribute";
 
 const DB_NAME = "nido_memory.db";
 /** Nombre del fichero de la base de memoria (lo necesita appReset para verificar el borrado). */
@@ -130,6 +131,25 @@ export async function saveFact(input: {
       ]);
     });
     return { ...existing, content: merged, updatedAt };
+  }
+  // N-02: si el Jaccard no cazó nada, la pasada de atributo sobre los
+  // facts de la misma fuente (factAttribute.ts): los duplicados entre
+  // idiomas miden 0,00–0,25 y conviven — incluido el contradictorio.
+  // Misma clave y mismo valor (o multivaluado): se fusiona en esa
+  // fila. Misma clave de valor único con valor distinto: es una
+  // corrección y gana lo nuevo. Sin clave: se guarda como siempre.
+  const attrHit = await findAttributeFact(content, input.source ?? "user");
+  if (attrHit) {
+    const newContent = attrHit.replace ? content : mergeFactContent(content, attrHit.fact.content);
+    const updatedAt = new Date().toISOString();
+    await writeMemoryTransaction(async (db) => {
+      await db.runAsync("UPDATE facts SET content = ?, updated_at = ? WHERE id = ?;", [
+        newContent,
+        updatedAt,
+        attrHit.fact.id,
+      ]);
+    });
+    return { ...attrHit.fact, content: newContent, updatedAt };
   }
   const fact: Fact = {
     id: newId(),
@@ -237,6 +257,34 @@ export async function findSimilarFact(
     if (factSimilarity(content, f.content) >= 0.75) return f;
   }
   return null;
+}
+
+/**
+ * N-02: busca un fact de la misma fuente que instancia el mismo
+ * atributo cerrado que el contenido entrante. Devuelve si hay que
+ * fusionar en su fila (replace=false) o si es una corrección sobre un
+ * atributo de valor único (replace=true: gana lo nuevo). La acotación
+ * por fuente es la de R1, heredada: un fact de un peer nunca absorbe
+ * ni reemplaza uno del dueño, ni al revés.
+ */
+async function findAttributeFact(
+  content: string,
+  onlySource: Fact["source"]
+): Promise<{ fact: Fact; replace: boolean } | null> {
+  const incoming = factAttribute(content);
+  if (!incoming) return null;
+  const facts = await getFacts(500);
+  let replaceCandidate: Fact | null = null;
+  for (const f of facts) {
+    if (f.source !== onlySource) continue;
+    const stored = factAttribute(f.content);
+    if (!stored || stored.key !== incoming.key) continue;
+    if (!incoming.singleValued) return { fact: f, replace: false };
+    if (attributeValuesMatch(incoming, stored)) return { fact: f, replace: false };
+    // Corrección posible; se sigue por si otra fila sí fusiona.
+    if (!replaceCandidate) replaceCandidate = f;
+  }
+  return replaceCandidate ? { fact: replaceCandidate, replace: true } : null;
 }
 
 export async function getFacts(limit = 100): Promise<Fact[]> {
