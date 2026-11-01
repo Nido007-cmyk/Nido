@@ -472,7 +472,7 @@
     "stageTimedOut": "Uma etapa da pesquisa demorou demais e foi interrompida",
     "interrupted": "Resposta cortada: o app fechou antes de terminar. Pergunte de novo para continuar.",
     "emptyTitle": "Olá, sou NIDO",
-    "emptySubtitle": "Seu agente privado. Tudo fica neste dispositivo.",
+    "emptySubtitle": "Seu agente privado. O NIDO só se conecta quando você pedir.",
     "privacyHint": "Privado · nada sai deste dispositivo",
     "suggestions": {
       "reminder": {
@@ -515,7 +515,7 @@
     "buildDevelopment": "BUILD DE DESENVOLVIMENTO",
     "buildRelease": "BUILD DE RELEASE",
     "airGappedTitle": "Privado por design",
-    "airGappedBody": "O NIDO é seu assistente pessoal de IA que funciona inteiramente no seu telefone — sem conta, sem nuvem, sem servidores. Suas perguntas, documentos e conversas ficam neste dispositivo.",
+    "airGappedBody": "O NIDO é seu assistente pessoal de IA que funciona inteiramente no seu telefone — sem conta, sem nuvem, sem servidores. Suas perguntas e seus documentos ficam neste dispositivo. As mensagens que você envia aos seus contatos pareados viajam criptografadas, de telefone a telefone, sem passar por nenhum servidor.",
     "hardwareTitle": "Feito para o seu telefone",
     "hardwareBody": "O NIDO foi projetado para rodar em um telefone: mantém baixo o uso de memória e monitora o armazenamento para que o app seja rápido e responsivo.",
     "benchmarkTitle": "Meça você mesmo",
@@ -529,7 +529,7 @@
     "limitsTitle": "Conheça os limites",
     "limitsBody": "O NIDO executa modelos de IA dentro do seu telefone. Eles podem errar ou inventar dados, e os modelos menores com mais frequência. Não dependa só do NIDO para decisões de saúde, jurídicas, financeiras ou de segurança: consulte um profissional ou uma fonte confiável.",
     "privacyTitle": "Privacidade e termos",
-    "privacyBody": "O NIDO não tem contas, nem análise de uso, nem servidores próprios. As únicas conexões que faz são os downloads que você inicia (modelos e pacotes de conhecimento), e elas aparecem no registro de rede acima. A política de privacidade e os termos de uso completos estão em PRIVACY.md e TERMS.md no repositório.",
+    "privacyBody": "O NIDO não tem contas, nem análise de uso, nem servidores próprios. Ele só se conecta quando você pedir: os downloads que você inicia (modelos e pacotes de conhecimento) e as mensagens com seus contatos pareados, que viajam criptografadas entre telefones por Bluetooth ou pela sua rede local. Cada conexão fica registrada: você pode vê-la em Configurações → «Verificação de segurança e registro de rede». A política de privacidade e os termos de uso completos estão em PRIVACY.md e TERMS.md no repositório.",
     "licensesTitle": "Licenças",
     "licensesBody": "A licença do NIDO, de cada modelo de IA, do texto da Wikipédia que ele traz e das bibliotecas com que é feito.",
     "licensesOpen": "Ver licenças",

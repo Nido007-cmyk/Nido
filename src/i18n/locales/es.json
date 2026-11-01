@@ -1,6 +1,6 @@
 {
   "aboutScreen": {
-    "airGappedBody": "NIDO es tu asistente personal de IA que funciona por completo en tu teléfono — sin cuenta, sin nube, sin servidores. Tus preguntas, documentos y chats se quedan en este dispositivo.",
+    "airGappedBody": "NIDO es tu asistente personal de IA que funciona por completo en tu teléfono — sin cuenta, sin nube, sin servidores. Tus preguntas y tus documentos se quedan en este dispositivo. Los mensajes que envías a tus contactos emparejados viajan cifrados, de teléfono a teléfono, sin pasar por ningún servidor.",
     "airGappedTitle": "Privado por diseño",
     "benchmarkBody": "NIDO mide cada respuesta en tu propio teléfono: tiempo de carga del modelo, tiempo hasta el primer token, tokens/s, pico de memoria y qué fuentes se usaron. Ejecuta la evaluación integrada desde Telemetría de ejecución → 🧪 Evaluar para comparar cualquier modelo instalado con las mismas preguntas, o contrólala desde una computadora con npm run eval:device.",
     "benchmarkTitle": "Mídelo tú mismo",
@@ -20,7 +20,7 @@
     "limitsTitle": "Conoce sus límites",
     "limitsBody": "NIDO ejecuta modelos de IA dentro de tu teléfono. Pueden equivocarse o inventar datos, y los modelos más pequeños con más frecuencia. No dependas solo de NIDO para decisiones de salud, legales, financieras o de seguridad: consulta a un profesional o una fuente confiable.",
     "privacyTitle": "Privacidad y términos",
-    "privacyBody": "NIDO no tiene cuentas, ni analítica, ni servidores propios. Las únicas conexiones que hace son las descargas que tú inicias (modelos y paquetes de conocimiento), y aparecen en el registro de red de arriba. La política de privacidad y los términos de uso completos están en PRIVACY.md y TERMS.md del repositorio.",
+    "privacyBody": "NIDO no tiene cuentas, ni analítica, ni servidores propios. Solo se conecta cuando tú se lo pides: las descargas que tú inicias (modelos y paquetes de conocimiento) y los mensajes con tus contactos emparejados, que viajan cifrados entre teléfonos por Bluetooth o tu red local. Cada conexión queda registrada: puedes verla en Ajustes → «Comprobación de seguridad y registro de red». La política de privacidad y los términos de uso completos están en PRIVACY.md y TERMS.md del repositorio.",
     "licensesTitle": "Licencias",
     "licensesBody": "Qué licencia tiene NIDO, cada modelo de IA, el texto de Wikipedia que trae y las librerías con las que está hecho.",
     "licensesOpen": "Ver licencias",
@@ -124,7 +124,7 @@
     "stopping": "Deteniendo… (terminando el paso actual)",
     "toneChanged": "Tono: {{tone}}",
     "emptyTitle": "Hola, soy NIDO",
-    "emptySubtitle": "Tu agente privado. Todo queda en este dispositivo.",
+    "emptySubtitle": "Tu agente privado. NIDO solo se conecta cuando tú se lo pides.",
     "privacyHint": "Privado · nada sale de este dispositivo",
     "suggestions": {
       "reminder": {

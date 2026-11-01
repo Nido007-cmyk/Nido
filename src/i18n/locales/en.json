@@ -472,7 +472,7 @@
     "stageTimedOut": "A research step took too long and was cut short",
     "interrupted": "Reply cut short: the app closed before it finished. Ask again to continue.",
     "emptyTitle": "Hi, I'm NIDO",
-    "emptySubtitle": "Your private agent. Everything stays on this device.",
+    "emptySubtitle": "Your private agent. NIDO only connects when you ask it to.",
     "privacyHint": "Private · nothing leaves this device",
     "suggestions": {
       "reminder": {
@@ -515,7 +515,7 @@
     "buildDevelopment": "DEVELOPMENT BUILD",
     "buildRelease": "RELEASE BUILD",
     "airGappedTitle": "Private by design",
-    "airGappedBody": "NIDO is your personal AI assistant that runs entirely on your phone — no account, no cloud, no servers. Your questions, documents, and chats stay on this device.",
+    "airGappedBody": "NIDO is your personal AI assistant that runs entirely on your phone — no account, no cloud, no servers. Your questions and your documents stay on this device. Messages you send to your paired contacts travel encrypted, phone to phone, never through a server.",
     "hardwareTitle": "Built for your phone",
     "hardwareBody": "NIDO is designed to run on a phone: it keeps memory use low and watches storage so the app stays fast and responsive.",
     "benchmarkTitle": "Measure it yourself",
@@ -529,7 +529,7 @@
     "limitsTitle": "Know its limits",
     "limitsBody": "NIDO runs AI models inside your phone. They can be wrong or make things up, and smaller models more often. Do not rely on NIDO alone for health, legal, financial or safety decisions: check with a professional or a trusted source.",
     "privacyTitle": "Privacy and terms",
-    "privacyBody": "NIDO has no accounts, no analytics and no servers of its own. The only connections it makes are the downloads you start (models and knowledge packs), and they are listed in the network log above. The full privacy policy and terms of use are in PRIVACY.md and TERMS.md in the repository.",
+    "privacyBody": "NIDO has no accounts, no analytics and no servers of its own. It only connects when you ask it to: the downloads you start (models and knowledge packs) and messages with your paired contacts, which travel encrypted between phones over Bluetooth or your local network. Every connection is recorded: you can see it in Settings → \"Security check and network log\". The full privacy policy and terms of use are in PRIVACY.md and TERMS.md in the repository.",
     "licensesTitle": "Licenses",
     "licensesBody": "The license of NIDO, of each AI model, of the Wikipedia text it carries and of the libraries it is built with.",
     "licensesOpen": "View licenses",
