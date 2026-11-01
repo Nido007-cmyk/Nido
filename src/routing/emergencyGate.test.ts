@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  gatePreemptsDeepResearch,
   hasHealthEvidence,
   healthSafeText,
   isEmergencySituation,
@@ -143,6 +144,68 @@ describe("isEmergencySituation (la emergencia contada, F-B1)", () => {
     // La emergencia viva de siempre sigue disparando.
     expect(isEmergencySituation("Sale humo por la ventana de la cocina, ¿qué hago?")).toBe(true);
     expect(isEmergencySituation("Mi hijo se está ahogando con un hueso de pollo y no puede respirar")).toBe(true);
+  });
+});
+
+describe("R-07: la frase exacta de la ronda y la tolerancia al ruido de dictado", () => {
+  it("la frase exacta recibida en el aparato dispara las tres caras", () => {
+    // El dictado convirtió «alguien» en «argument»: la palabra ajena
+    // no estorba al signo, que estaba entero.
+    const exacta = "Que hago si argument se esta atragantando?";
+    expect(isEmergencySituation(exacta)).toBe(true);
+    expect(isEmergencyText(exacta, "es")).toBe(true);
+    expect(isHealthQuestion(exacta)).toBe(true);
+  });
+
+  it("una letra caída dentro de la palabra-signo ya no la vuelve invisible (cara por raíz)", () => {
+    // Sin la «a» inicial y sin una vocal en medio: las frases exactas
+    // fallaban en las tres caras; la raíz casa por principio de palabra.
+    expect(isEmergencySituation("se esta tragantando")).toBe(true);
+    expect(isEmergencySituation("se esta atragantndo")).toBe(true);
+    expect(isEmergencyText("se esta tragantando", "es")).toBe(true);
+    expect(isEmergencyText("se esta atragantndo", "es")).toBe(true);
+    // Los equivalentes de dictado en inglés y portugués.
+    expect(isEmergencySituation("my toddler is chokng on a grape")).toBe(true);
+    expect(isEmergencySituation("o bebê está engasgndo com um pedaço de pão")).toBe(true);
+  });
+
+  it("los sinónimos que faltaban: asfixia y respiración que cuesta", () => {
+    expect(isEmergencySituation("se está asfixiando, ¿qué hago?")).toBe(true);
+    expect(isEmergencySituation("le cuesta mucho respirar")).toBe(true);
+    expect(isEmergencySituation("a mi padre le cuesta respirar desde hace un rato")).toBe(true);
+    expect(isEmergencySituation("she is struggling to breathe")).toBe(true);
+    expect(isEmergencySituation("ele tem dificuldade para respirar")).toBe(true);
+  });
+
+  it("la cara por raíz no abre falsos positivos: debate, ficción e historia quedan fuera", () => {
+    expect(isEmergencySituation("¿cómo gano un argumento en un debate?")).toBe(false);
+    expect(isEmergencyText("¿cómo gano un argumento en un debate?", "es")).toBe(false);
+    expect(isEmergencySituation("escribe un cuento sobre un niño que se atraganta")).toBe(false);
+    expect(isEmergencySituation("¿qué fue la gripe española de 1918?")).toBe(false);
+    expect(isEmergencyText("¿qué fue la gripe española de 1918?", "es")).toBe(false);
+    expect(isEmergencySituation("En la novela, un hombre se atraganta en la cena")).toBe(false);
+  });
+});
+
+describe("gatePreemptsDeepResearch (R-07: la decisión antes de la bifurcación)", () => {
+  it("emergencia o salud con Investigar activo: el turno va protegido", () => {
+    expect(gatePreemptsDeepResearch("Que hago si argument se esta atragantando?", "es")).toBe(true);
+    expect(gatePreemptsDeepResearch("mi hijo tiene fiebre, ¿qué hago?", "es")).toBe(true);
+    expect(gatePreemptsDeepResearch("my daughter is choking, how do I help her?", "en")).toBe(true);
+    expect(gatePreemptsDeepResearch("o que fazer se meu filho está com febre?", "pt")).toBe(true);
+  });
+
+  it("una pregunta de investigación ordinaria no se desvía", () => {
+    expect(gatePreemptsDeepResearch("¿cuáles son los efectos del cambio climático en el Mediterráneo?", "es")).toBe(false);
+    expect(gatePreemptsDeepResearch("what were the causes of the First World War?", "en")).toBe(false);
+    expect(gatePreemptsDeepResearch("", "es")).toBe(false);
+    expect(gatePreemptsDeepResearch("   ", "es")).toBe(false);
+  });
+
+  it("el pasado no se desvía: el veto histórico sigue mandando sobre la decisión", () => {
+    expect(gatePreemptsDeepResearch("¿cuántas personas murieron de gripe en 1918?", "es")).toBe(false);
+    expect(gatePreemptsDeepResearch("Qual foi a febre espanhola de 1918 e quantas pessoas matou?", "pt")).toBe(false);
+    expect(gatePreemptsDeepResearch("How many people died in the flu pandemic of 1918?", "en")).toBe(false);
   });
 });
 

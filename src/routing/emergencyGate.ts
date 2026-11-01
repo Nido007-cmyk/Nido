@@ -81,6 +81,22 @@
  *    el ritmo de la RCP en palabras, no en dígitos, por la misma
  *    regla. La mejora se mide contra el conjunto FRESCO 03.
  *
+ * 6. LA PUERTA MANDA TAMBIÉN SOBRE INVESTIGAR (R-07, ronda física
+ *    de la 0.1.68). Con el modo Investigación profunda activo, el
+ *    turno entraba en ese pipeline antes de que ninguna puerta
+ *    mirara el texto: una emergencia dictada («¿qué hago si alguien
+ *    se está atragantando?», con el «alguien» del dictado convertido
+ *    en «argument») salió como tema de investigación, en inglés y
+ *    sobre un debate. El detector SÍ disparaba con la frase exacta;
+ *    lo que faltaba era consultarlo. `gatePreemptsDeepResearch` es
+ *    la decisión única que ChatScreen aplica antes de la bifurcación
+ *    profunda y que el pipeline reaplica tras descomponer. La misma
+ *    ronda midió la fragilidad a nivel de letra: una letra caída
+ *    dentro de la palabra-signo rompía las frases exactas en las
+ *    tres caras — de ahí la cara por raíz de `isEmergencySituation`
+ *    (punto junto a EMERGENCY_STEMS) y las frases de respiración que
+ *    faltaban («le cuesta mucho respirar», «se está asfixiando»).
+ *
  * Puro, sin dependencias de UI, 100% testeable.
  */
 
@@ -293,6 +309,7 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "dejo de respirar", "paro de respirar",
     "se esta ahogando", "esta ahogandose", "ahogandose", "se ahoga",
     "se esta atragantando", "atragantandose",
+    "cuesta respirar", "cuesta mucho respirar",
     "esta inconsciente", "quedo inconsciente", "no responde",
     "se agarra el pecho", "agarrandose el pecho", "se aprieta el pecho",
     "humo saliendo", "saliendo humo", "sale humo", "hay humo", "hay fuego",
@@ -303,6 +320,7 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "not breathing", "is not breathing", "stopped breathing", "no longer breathing",
     "can t breathe", "cant breathe", "cannot breathe",
     "is choking", "choking on", "started choking", "is drowning",
+    "struggling to breathe", "hard to breathe", "difficulty breathing",
     "clutching his chest", "clutching her chest", "clutching my chest", "clutching their chest",
     "is unconscious", "was unconscious", "found unconscious", "not responding", "lost consciousness",
     "smoke coming", "smoke pouring", "full of smoke", "there is a fire", "there s a fire",
@@ -313,6 +331,7 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "nao esta respirando", "nao respira", "nao respiram", "parou de respirar", "sem respirar",
     "deixou de respirar",
     "esta engasgando", "engasgando", "engasgou",
+    "dificuldade para respirar", "dificuldade em respirar",
     "esta inconsciente", "ficou inconsciente", "nao responde",
     "segurando o peito", "apertando o peito", "mao no peito",
     "fumaca saindo", "saindo fumaca", "tem fogo", "pegando fogo", "em chamas", "saindo chamas",
@@ -336,6 +355,30 @@ const EMERGENCY_VETOES = [
 const ALL_SIGNS: string[] = Object.values(EMERGENCY_SIGNS).flat();
 
 /**
+ * Raíces de situación (R-07, ronda física de la 0.1.68): la cara de
+ * frases exactas de arriba no tolera el ruido del dictado por voz —
+ * una sola letra caída dentro de la palabra-signo («tragantando»,
+ * «atragantndo») la dejaba invisible en las tres caras. Esta segunda
+ * cara casa por principio de palabra, el mismo patrón de prefijos de
+ * `HEALTH_TERMS.*.p`: «atragant» cubre la familia entera y sus
+ * pretéritos, «tragant» la misma palabra sin la primera letra (el
+ * error de dictado medido) y «asfixi» el sinónimo que las frases no
+ * traían («se está asfixiando»). Inglés y portugués llevan sus
+ * equivalentes («chok»/«asphyxi»/«suffocat», «engasg»/«asfixi»).
+ * Las raíces son específicas del atragantamiento y la asfixia: no
+ * comparten principio con temas cotidianos, y los vetos de contexto
+ * y el marco histórico se aplican ANTES, igual que con las frases —
+ * el pasado y la ficción siguen sin disparar.
+ */
+const EMERGENCY_STEMS: Record<GateLang, string[]> = {
+  es: ["atragant", "tragant", "asfixi"],
+  en: ["chok", "asphyxi", "suffocat"],
+  pt: ["engasg", "asfixi"],
+};
+
+const ALL_STEMS: string[] = Object.values(EMERGENCY_STEMS).flat();
+
+/**
  * ¿Cuenta el texto una emergencia viva en curso? Léxico puro de
  * signos: basta UN signo (el suceso ES la situación; no se exige
  * señal de pregunta) y ningún veto de contexto. Ver la cabecera,
@@ -348,7 +391,31 @@ export function isEmergencySituation(text: string): boolean {
   if (folded.trim().length === 0) return false;
   if (EMERGENCY_VETOES.some((x) => folded.includes(` ${x} `) || folded.includes(` ${x}`))) return false;
   if (hasHistoricalFrame(folded)) return false;
-  return ALL_SIGNS.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`));
+  return (
+    ALL_SIGNS.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`)) ||
+    ALL_STEMS.some((t) => folded.includes(` ${t}`))
+  );
+}
+
+// -------------------------------------- la puerta manda sobre Investigar
+
+/**
+ * ¿Debe este turno ir por la ruta protegida aunque el modo
+ * Investigación profunda esté activo? (R-07, ronda física de la
+ * 0.1.68: con Investigar activo, send() entraba en el pipeline de
+ * investigación ANTES de que ninguna puerta mirara el texto, y una
+ * emergencia dictada — que `isEmergencyText` sí reconocía — salía
+ * como tema de investigación, en inglés y sobre otro tema.) La
+ * decisión es la unión de las dos caras que la ruta normal ya
+ * consulta: la de emergencia (`isEmergencyText`, que incluye la
+ * situación viva contada) y la de salud (`isHealthQuestion`). Es la
+ * función que ChatScreen consulta antes de la bifurcación profunda
+ * y la que el propio pipeline vuelve a consultar tras descomponer:
+ * una sola definición para que las dos redes no diverjan.
+ */
+export function gatePreemptsDeepResearch(text: string, lang: GateLang): boolean {
+  if (!text || text.trim().length === 0) return false;
+  return isEmergencyText(text, lang) || isHealthQuestion(text);
 }
 
 // ------------------------------------------------------- texto seguro
