@@ -1129,7 +1129,52 @@ describe("ADV3 — la unión cifra↔tipo dentro de la frase compuesta", () => {
     expect(r.text).toContain("sala 214");
     expect(r.text).not.toContain("número de la sala es el 520-555-0147");
   });
+
+  it("control: en la frase compuesta, la afirmación CORRECTA de sala se conserva", () => {
+    const r = verifyGroundedAnswer("La cita es en la sala 214.", [DOC_CLINICA_A02], "es", "¿En qué sala es la cita?");
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("La cita es en la sala 214");
+  });
+
+  it("control: en la frase compuesta, la afirmación CORRECTA de fecha se conserva", () => {
+    const r = verifyGroundedAnswer(
+      "La cita es el martes 10 de noviembre de 2026.",
+      [DOC_CLINICA_A02],
+      "es",
+      "¿Qué día es la cita?",
+    );
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("La cita es el martes 10 de noviembre de 2026");
+  });
+
+  it("control: en la frase compuesta, la afirmación CORRECTA de hora se conserva", () => {
+    const r = verifyGroundedAnswer("La cita es a las 9:30.", [DOC_CLINICA_A02], "es", "¿A qué hora es la cita?");
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("La cita es a las 9:30");
+  });
+
+  it("control: el mismo documento con los datos en frases separadas conserva la afirmación correcta", () => {
+    const r = verifyGroundedAnswer("La cita es en la sala 214.", [DOC_CLINICA_SEPARADO], "es", "¿En qué sala es la cita?");
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("La cita es en la sala 214");
+  });
+
+  it("control: el mismo documento con los datos en frases separadas caza la afirmación cruzada (paridad compuesto↔separado)", () => {
+    const r = verifyGroundedAnswer("La sala es la 10.", [DOC_CLINICA_SEPARADO], "es", "¿En qué sala es la cita?");
+    expect(r.text).toContain("sala 214");
+    expect(r.text).not.toContain("sala es la 10");
+  });
 });
+
+const DOC_CLINICA_SEPARADO: GroundingChunk = {
+  title: "nota",
+  body:
+    "La cita es el martes 10 de noviembre de 2026. " +
+    "La cita es a las 9:30 de la mañana. " +
+    "La cita es en la sala 214, segundo piso. " +
+    "Tome el jarabe de 5 ml dos veces al día, después de comer. " +
+    "Para cambiar la cita llame al 520-555-0147.",
+};
 
 describe("ADV3 — el puente no sirve el teléfono de otra entidad", () => {
   it("R1 (es): el teléfono de la clínica no se sirve como respuesta por la farmacia", () => {

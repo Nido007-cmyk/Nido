@@ -762,6 +762,84 @@ function significantDigitGroups(text: string): string[] {
   return out;
 }
 
+/**
+ * Los tokens de cifra de una frase UNIDOS al tipo (ADV3, A3-01), en
+ * orden de aparición: una cifra de una frase portadora cuenta como
+ * cifra DEL TIPO solo si está unida a un ancla del tipo dentro de
+ * la misma frase. Las anclas, sobre los tokens plegados (la misma
+ * tokenización de foldedTokens, aquí con posición en el texto):
+ * - De forma (se unen a sí mismas, sin ventana): la ristra
+ *   telefónica (los grupos de hasPhoneForm) a phone; la ristra de
+ *   tarjeta (isCardCluster) a card; el token H:MM a hour; la forma
+ *   d/m[/aaaa] a date.
+ * - De medida (dosis): la unidad de DOSE_MEASURE_RE une el token
+ *   numérico inmediatamente anterior (distancia 1: «5 ml»).
+ * - De palabra: cada palabra de TYPE_NEAR_WORDS[T] (y, para date,
+ *   cada nombre de DATE_NAME_RE) une los grupos cuyo ancla cae en
+ *   la ventana [i−3, i+2] alrededor del grupo — más estrecha que la
+ *   del portador ([i−5, i+2]): la unión juzga identidad, el
+ *   portador solo presencia, y la identidad exige más cercanía.
+ * La unión es por tipo e independiente: un grupo puede unirse a
+ * dos tipos si cae en las ventanas de dos anclas, y unirse a un
+ * tipo no lo desune de otro.
+ */
+function boundDigitTokens(sentence: string, type: DatumType): string[] {
+  const folded = foldForCues(sentence);
+  const toks: { text: string; index: number }[] = [];
+  for (const m of folded.matchAll(/[a-zñ]+|\d+(?:[.,]\d+)?/g)) toks.push({ text: m[0], index: m.index ?? 0 });
+
+  // Tramos que se unen a sí mismos, sobre el texto plegado.
+  const formSpans: { start: number; end: number }[] = [];
+  const spanOf = (m: RegExpMatchArray): { start: number; end: number } => {
+    const start = m.index ?? 0;
+    return { start, end: start + m[0].length };
+  };
+  if (type === "phone" || type === "card") {
+    for (const m of folded.matchAll(/\d[\d .-]*\d/g)) {
+      if (type === "phone" && m[0].replace(/\D/g, "").length >= 7 && !isCardCluster(m[0])) formSpans.push(spanOf(m));
+      if (type === "card" && isCardCluster(m[0])) formSpans.push(spanOf(m));
+    }
+  }
+  if (type === "hour") for (const m of folded.matchAll(/\d{1,2}:\d{2}/g)) formSpans.push(spanOf(m));
+  if (type === "date") for (const m of folded.matchAll(/\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g)) formSpans.push(spanOf(m));
+  // La medida une su número: el tramo del número dentro de cada
+  // caza de DOSE_MEASURE_RE.
+  if (type === "dose") {
+    for (const m of folded.matchAll(new RegExp(DOSE_MEASURE_RE.source, "g"))) {
+      const num = /^\d+(?:[.,]\d+)?/.exec(m[0]);
+      if (num) formSpans.push({ start: m.index ?? 0, end: (m.index ?? 0) + num[0].length });
+    }
+  }
+
+  const nearWords = type === "phone" ? null : new Set(TYPE_NEAR_WORDS[type]);
+  const out: string[] = [];
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i];
+    if (!/\d/.test(t.text)) continue;
+    const end = t.index + t.text.length;
+    let bound = formSpans.some((s) => t.index < s.end && s.start < end);
+    if (!bound && nearWords) {
+      for (let j = Math.max(0, i - 3); j <= Math.min(toks.length - 1, i + 2) && !bound; j++) {
+        if (j === i) continue;
+        if (nearWords.has(toks[j].text)) bound = true;
+        else if (type === "date" && DATE_NAME_RE.test(toks[j].text)) bound = true;
+      }
+    }
+    if (bound) out.push(t.text);
+  }
+  return out;
+}
+
+/**
+ * Los grupos significativos de la frase unidos al tipo, en orden de
+ * aparición (ADV3, A3-01): la materia de digitsMatchType desde esta
+ * tanda. Sin deduplicar: la deduplicación la hace el llamador donde
+ * hoy la hace.
+ */
+function boundDigitGroups(sentence: string, type: DatumType): string[] {
+  return boundDigitTokens(sentence, type).flatMap((t) => significantDigitGroups(t));
+}
+
 /** La firma de cifras de una frase (para el empate: mismo dato repetido, o datos distintos). */
 function digitSignature(text: string): string {
   return [...new Set(significantDigitGroups(text))].sort().join(",");
@@ -777,16 +855,26 @@ function digitsMatchType(sentence: string, type: DatumType, recs: SourceSentence
   if (carriers.length === 0) return false;
   const mine = [...new Set(significantDigitGroups(sentence))];
   if (mine.length === 0) return false;
-  const typeGroups = new Set(carriers.flatMap((r) => significantDigitGroups(r.text)));
+  // ADV3 (A3-01): el conjunto del tipo ya no es «todas las cifras
+  // de la frase portadora», sino solo las UNIDAS al tipo dentro de
+  // cada portadora (boundDigitGroups): en una frase compuesta, la
+  // sala ya no hereda el día ni la dosis hereda la sala. Si ninguna
+  // cifra juzgable se une al tipo, el conjunto es vacío y la
+  // afirmación con cifras de otro dato es infractora.
+  const typeGroups = new Set(carriers.flatMap((r) => boundDigitGroups(r.text, type)));
   if (mine.every((g) => typeGroups.has(g))) return true;
   // La misma cifra con otro agrupamiento («1.234» por «1234») o el
   // dato a medias («termina en 4417»): concatenación igual o sufijo.
+  // La ristra del portador se construye SOLO con sus tokens unidos
+  // al tipo (en orden); la de la afirmación no cambia: la
+  // afirmación es de un solo dato y su concatenación entera es su
+  // dato.
   const concat = (t: string) => (t.replace(/\[\d+\]/g, " ").match(/\d+/g) ?? []).join("").replace(/^0+(?=\d)/, "");
   const myConcat = concat(sentence);
   return (
     myConcat.length >= 4 &&
     carriers.some((r) => {
-      const c = concat(r.text);
+      const c = boundDigitTokens(r.text, type).join("").replace(/^0+(?=\d)/, "");
       return c === myConcat || c.endsWith(myConcat);
     })
   );
