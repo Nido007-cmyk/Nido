@@ -391,6 +391,86 @@ describe("R-04 — idioma por frase (el documento trilingüe de la ronda)", () =
   });
 });
 
+// ---------------------------------------------------------------
+// Ronda física 0.1.68, R-05: la pregunta del teléfono contra el
+// documento de la ronda. En la sesión real la recuperación mezcló el
+// documento con la guía de crisis (de ahí salían «teléfono»,
+// «número» y «emergencia» para que el apoyo por unión aprobara la
+// frase falsa); la fixture reproduce esa mezcla.
+
+const CRISIS: GroundingChunk = {
+  title: "Línea de crisis",
+  body:
+    "Si estás en crisis, llama al teléfono de ayuda de la línea de crisis. " +
+    "El número de emergencia en México es 911. " +
+    "También puedes llamar a la línea de crisis y prevención del suicidio al 988.",
+};
+
+const FALSE_TELEFONO = "El teléfono para cambiar la cita es el número de emergencia.";
+const PREGUNTA_TELEFONO = "¿Qué teléfono aparece para cambiar la cita?";
+
+describe("R-05 — la regla del dato pedido (el teléfono de la ronda)", () => {
+  it("la falsedad sin cifras se sustituye por la frase fuente que trae el número", () => {
+    const r = verifyGroundedAnswer(FALSE_TELEFONO, [DOC_TRILINGUE, CRISIS], "es", PREGUNTA_TELEFONO);
+    expect(r.text).toContain("520-555-0147");
+    expect(r.text).not.toContain("número de emergencia");
+    expect(r.status).toBe("grounded");
+    expect(r.sentences?.[0].origin.kind).toBe("source");
+  });
+
+  it("regresión: la respuesta que SÍ da el número queda intacta (y no se sustituye por la gemela portuguesa)", () => {
+    const r = verifyGroundedAnswer(
+      "El teléfono para cambiar la cita es el 520-555-0147.",
+      [DOC_TRILINGUE, CRISIS],
+      "es",
+      PREGUNTA_TELEFONO,
+    );
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toContain("El teléfono para cambiar la cita es el 520-555-0147");
+    expect(r.text).not.toContain("ligue");
+  });
+
+  it("la respuesta sin dato ni afirmación («Traiga su tarjeta…») queda intacta", () => {
+    const r = verifyGroundedAnswer(
+      "Traiga su tarjeta y la lista de medicamentos.",
+      [DOC_TRILINGUE, CRISIS],
+      "es",
+      PREGUNTA_TELEFONO,
+    );
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toContain("Traiga su tarjeta y la lista de medicamentos");
+  });
+
+  it("sin cifra temática en la evidencia, la regla NO actúa (la doble condición es su seguro)", () => {
+    // La evidencia da el vocabulario para que la frase pase el apoyo,
+    // pero no trae cifra alguna: afirmar sin dar no se puede corregir
+    // con una frase fuente que no existe, y la regla se queda quieta.
+    const sinCifras: GroundingChunk = {
+      title: "Clínica San Rafael",
+      body:
+        "Para cambiar la cita, el teléfono de la clínica atiende de lunes a viernes. " +
+        "El número de emergencia interno se marca en recepción.",
+    };
+    const r = verifyGroundedAnswer(FALSE_TELEFONO, [sinCifras], "es", PREGUNTA_TELEFONO);
+    expect(r.text).toContain("número de emergencia");
+  });
+
+  it("sin pregunta (llamadas antiguas de 3 argumentos), la regla tampoco actúa", () => {
+    const r = verifyGroundedAnswer(FALSE_TELEFONO, [DOC_TRILINGUE, CRISIS], "es");
+    expect(r.text).toContain("número de emergencia");
+  });
+
+  it("rama de lengua cruzada: con fuentes solo en inglés, la frase falsa se sustituye por la que trae el número", () => {
+    const soloEn: GroundingChunk = { title: "documento-prueba-ocr", body: DOC_EN };
+    const r = verifyGroundedAnswer(FALSE_TELEFONO, [soloEn], "es", PREGUNTA_TELEFONO);
+    expect(r.text).toContain("520-555-0147");
+    expect(r.text).not.toContain("número de emergencia");
+    expect(r.status).toBe("grounded");
+  });
+});
+
 describe("verifyGroundedAnswer — post-chequeo de cifras (bounty, tanda 1)", () => {
   it("un año inventado tumba la frase aunque el apoyo léxico la pasaba", () => {
     const r = verifyGroundedAnswer("San Aurelio se fundó en 1904 junto al río Claro.", [CITY_ES], "es");

@@ -56,6 +56,12 @@
  *    de la pregunta se sustituye por esa gemela; sin gemela, se retira.
  *    Detectar sin actuar era el fallo: el pie ya decía «otro idioma» y
  *    la frase se servía igual.
+ *  - El dato pedido (R-05, misma ronda): si la pregunta pide un dato
+ *    que se da en cifras y la evidencia lo trae, una frase que afirma
+ *    qué es ese dato SIN darlo («el teléfono es el número de
+ *    emergencia») se sustituye por la frase fuente que lo trae. Las
+ *    puertas de cifras juzgan cifras presentes; esta juzga la
+ *    ausencia del dato debido.
  *
  * Limitación honesta: es una heurística léxica (sin modelo de NLI, que no
  * cabe en el presupuesto de RAM). Detecta afirmaciones con vocabulario
@@ -518,6 +524,14 @@ export type ForeignCopyFix =
 export function foreignCopyFix(sentence: string, recs: SourceSentenceRec[], lang: GroundingLang): ForeignCopyFix {
   const copy = bestCopySource(sentence, recs);
   if (!copy) return null;
+  // Una copia cuyo idioma SÍ tiene veredicto claro y es el de la
+  // pregunta ya está en el idioma correcto: no se toca. Sin esta
+  // guarda, la gemela portuguesa del teléfono («…ligue para
+  // 520-555-0147», de veredicto null y con «para» puntuando como
+  // pista española) podía ganar el duelo de pistas y sustituir a la
+  // frase española CORRECTA por la portuguesa (bug cazado por la
+  // fixture de R-05 antes de publicar este carril).
+  if (detectTextLang(copy.text) === lang) return null;
   const twin = findSourceTwin(copy, recs, lang);
   if (twin) return { kind: "replace", text: twin.text, chunk: twin.chunk };
   const copyLang = detectTextLang(copy.text);
@@ -525,10 +539,155 @@ export function foreignCopyFix(sentence: string, recs: SourceSentenceRec[], lang
   return null;
 }
 
+// ------------------------------------------- el dato pedido (R-05)
+
+/**
+ * Ronda física 0.1.68, R-05: a «¿Qué teléfono aparece para cambiar la
+ * cita?» la respuesta fue «El teléfono para cambiar la cita es el
+ * número de emergencia» — afirma qué es el dato sin darlo, mientras
+ * la fuente traía impreso «…llame al 520-555-0147». Ninguna puerta
+ * juzgaba el hueco: la de cifras itera las cifras DE LA RESPUESTA
+ * (cero cifras → verdad vacua) y la de contradicciones solo contrasta
+ * cifras presentes en ambos lados. La falsedad por sustitución sin
+ * cifras no tenía puerta; esta es la suya.
+ *
+ * La regla del dato pedido: si la pregunta pide un dato que se da en
+ * cifras (doble condición: señal en la pregunta Y cifra temática en
+ * la evidencia), una frase conservada que afirma la identidad de ese
+ * dato sin dar ninguna cifra se sustituye por la frase fuente que lo
+ * trae (el precedente de sustitución verbatim de 0.1.59) y las
+ * demás que hagan lo mismo se retiran. Si alguna frase conservada YA
+ * da el dato, la regla no toca nada: afirmar junto al dato dado es
+ * hablar del dato, no sustituirlo.
+ */
+
+// Señales de «la pregunta pide un dato»: la base de NUMBER_CUES
+// (packFacts.ts: teléfono, número, llamar…) ampliada con
+// cuánto/cuándo/hora/día/sala. Sobre el texto plegado (sin acentos).
+const DATUM_QUESTION_RE =
+  /\b(numero|numeros|telefono|telefonos|tel|llamo|llamar|llamas|llama|marco|marcar|linea|number|numbers|phone|call|dial|hotline|telefone|telefones|ligo|ligar|discar|disco|contacto|contact|cuanto|cuanta|cuantos|cuantas|cuando|hora|horas|dia|dias|sala)\b/;
+
+// La categoría del dato en la RESPUESTA (de qué dato afirma ser).
+const DATUM_CATEGORY_RE =
+  /\b(telefono|telefonos|numero|numeros|phone|phones|number|numbers|telefone|telefones|linea|line|dosis|dose|hora|horas|hour|hours|dia|dias|day|fecha|date|sala|room)\b/;
+
+// La cópula que convierte la mención en afirmación de identidad
+// («es el número de…»). Sobre texto plegado «é» se vuelve «e», que
+// queda fuera a propósito: la «e» suelta portuguesa es «y», no
+// cópula, y casaría de más.
+const DATUM_COPULA_RE = /\b(es|son|era|eran|fue|fueron|is|are|was|were|foi|foram|sao)\b/;
+
+// Preguntas «de teléfono» a efectos de la forma del dato (un teléfono
+// es una ristra larga de dígitos, no una cifra con unidad).
+const PHONE_QUESTION_RE =
+  /\b(telefono|telefonos|phone|phones|telefone|telefones|numero|numeros|number|numbers|llamar|llama|llamo|call|dial|ligar|ligo|linea|hotline)\b/;
+
+function foldForCues(text: string): string {
+  return stripAccents((text ?? "").toLowerCase());
+}
+
+/** ¿Trae la frase alguna cifra juzgable? (La vara de evidenceNumbers: 2+ dígitos o parte decimal.) */
+function hasJudgedDigit(sentence: string): boolean {
+  return numberTokens(sentence).some((t) => {
+    const digits = t.replace(/[.,]/g, "");
+    return digits.length >= 2 || /[.,]\d/.test(t);
+  });
+}
+
+/** ¿Trae el texto una ristra de ≥ 7 dígitos (la forma de un teléfono)? «9:30» o «2026» no lo son. */
+function hasPhoneCluster(text: string): boolean {
+  const clusters = text.match(/\d[\d .-]*\d/g) ?? [];
+  return clusters.some((c) => c.replace(/\D/g, "").length >= 7);
+}
+
+/**
+ * Cuánto casa una frase con la pregunta a efectos del dato: 2 por
+ * raíz de contenido compartida, +3 si la pregunta es de teléfono y la
+ * frase trae la ristra telefónica (la forma del dato también es tema:
+ * es lo único que empareja pregunta y fuente entre idiomas).
+ */
+function datumScore(sentence: string, queryStems: Set<string>, phoneQuestion: boolean): number {
+  let shared = 0;
+  for (const w of new Set(contentStems(sentence))) if (queryStems.has(w)) shared++;
+  return 2 * shared + (phoneQuestion && hasPhoneCluster(sentence) ? 3 : 0);
+}
+
+/**
+ * La frase fuente que trae EL dato que la pregunta pide: la de mayor
+ * datumScore entre las que llevan cifras juzgables, con un mínimo de
+ * 2 (una raíz compartida con la pregunta, o la forma telefónica por
+ * sí sola). Null si la evidencia no contiene ese dato.
+ */
+function pickDatumSentence(query: string, recs: SourceSentenceRec[]): SourceSentenceRec | null {
+  const queryStems = new Set(contentStems(query));
+  const phoneQuestion = PHONE_QUESTION_RE.test(foldForCues(query));
+  let best: SourceSentenceRec | null = null;
+  let bestScore = 0;
+  for (const rec of recs) {
+    if (!hasJudgedDigit(rec.text)) continue;
+    const score = datumScore(rec.text, queryStems, phoneQuestion);
+    if (score >= 2 && score > bestScore) {
+      bestScore = score;
+      best = rec;
+    }
+  }
+  return best;
+}
+
+/** ¿Afirma la frase qué es el dato (categoría + cópula) sin dar ninguna cifra? */
+function assertsDatumIdentity(sentence: string): boolean {
+  if (hasJudgedDigit(sentence)) return false;
+  const folded = foldForCues(sentence);
+  return DATUM_CATEGORY_RE.test(folded) && DATUM_COPULA_RE.test(folded);
+}
+
+/**
+ * Aplica la regla del dato pedido sobre las frases conservadas (kept
+ * y prov caminan juntos): sustituye al primer infractor por la frase
+ * fuente del dato y retira los demás infractores. Devuelve cuántas
+ * frases se retiraron de más y si hubo sustitución. Sin pregunta, sin
+ * señal en ella o sin el dato en la evidencia: no toca nada.
+ */
+export function applyDatumRule(
+  kept: string[],
+  prov: SentenceProvenance[],
+  query: string,
+  recs: SourceSentenceRec[],
+): { removedExtra: number; replaced: boolean } {
+  const none = { removedExtra: 0, replaced: false };
+  if (!query || !DATUM_QUESTION_RE.test(foldForCues(query))) return none;
+  const datum = pickDatumSentence(query, recs);
+  if (!datum) return none;
+  const queryStems = new Set(contentStems(query));
+  const phoneQuestion = PHONE_QUESTION_RE.test(foldForCues(query));
+  const delivered = kept.some(
+    (s, i) => prov[i].origin.kind !== "abstain" && hasJudgedDigit(s) && datumScore(s, queryStems, phoneQuestion) >= 2,
+  );
+  if (delivered) return none;
+  const offenders: number[] = [];
+  kept.forEach((s, i) => {
+    if (prov[i].origin.kind !== "abstain" && assertsDatumIdentity(s)) offenders.push(i);
+  });
+  if (offenders.length === 0) return none;
+  const first = offenders[0];
+  const fixed = addCitation(datum.text, datum.chunk + 1);
+  kept[first] = fixed;
+  prov[first] = { text: fixed, origin: { kind: "source", n: datum.chunk + 1, support: 1 } };
+  let removedExtra = 0;
+  for (const i of offenders.slice(1).reverse()) {
+    kept.splice(i, 1);
+    prov.splice(i, 1);
+    removedExtra++;
+  }
+  return { removedExtra, replaced: true };
+}
+
 export function verifyGroundedAnswer(
   answer: string,
   chunks: GroundingChunk[],
   lang: GroundingLang,
+  /** La pregunta del usuario (R-05: la regla del dato pedido la necesita; sin ella, la regla no actúa). */
+  query = "",
 ): GroundingResult {
   const trimmed = (answer ?? "").trim();
   if (!trimmed) return { text: trimmed, status: "skipped", removed: 0, kept: 0 };
@@ -603,6 +762,11 @@ export function verifyGroundedAnswer(
       kept.push(s);
       langProv.push({ text: s, origin: { kind: "model", reason: "unverified-language" } });
     }
+    // R-05: la regla del dato pedido también manda en esta rama — la
+    // puerta de cifras sola no basta contra una falsedad sin cifras.
+    const datumFix = applyDatumRule(kept, langProv, query, sourceRecs);
+    removed += datumFix.removedExtra;
+    if (datumFix.replaced) sourceFixed++;
     if (kept.length === 0) {
       return abstainedResult(chunks, lang, removed);
     }
@@ -691,6 +855,20 @@ export function verifyGroundedAnswer(
           ? { kind: "source", n: sup.bestChunk + 1, support: sup.support }
           : { kind: "model", reason: "too-short-to-check" },
     });
+  }
+
+  // R-05: la regla del dato pedido sobre lo conservado — la falsedad
+  // por sustitución sin cifras pasó todas las puertas de arriba
+  // (cifras vacua, apoyo por unión de chunks). El recuento de
+  // juzgadas se rehace si la regla tocó algo: una sustitución cuenta
+  // como conservada de la fuente; una retirada, como retirada.
+  const datumFix = applyDatumRule(kept, prov, query, sourceRecs);
+  removed += datumFix.removedExtra;
+  if (datumFix.removedExtra > 0 || datumFix.replaced) {
+    judgedKept = kept.reduce(
+      (acc, s, i) => acc + (prov[i].origin.kind !== "abstain" && new Set(contentStems(s)).size >= MIN_JUDGED_TERMS ? 1 : 0),
+      0,
+    );
   }
 
   // Nada verificable sobrevivió (todo inventado, o solo "no lo sé"):

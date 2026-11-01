@@ -1751,7 +1751,7 @@ export function ChatScreen({
         } else if (!deepTurn && chunks.length > 0) {
           // 0.1.41 (prueba física, «¿qué es la inflación?»): se verificaba
           // el texto SIN recortar y el bucle volvía a la pantalla.
-          const verified = verifyGroundedAnswer(finalText, chunks, uiLang);
+          const verified = verifyGroundedAnswer(finalText, chunks, uiLang, query);
           grounding = verified.status;
           if (verified.status !== "skipped") finalText = verified.text;
           provenance = verified.sentences;

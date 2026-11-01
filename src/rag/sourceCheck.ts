@@ -22,6 +22,13 @@
  * respuesta. No cambia ni una palabra de la respuesta: la nota es
  * de la app, no del modelo.
  *
+ * R-05 (ronda 0.1.68) añade el caso inverso: la OMISIÓN. La caja
+ * nació para cifras que discrepan; la respuesta «el teléfono es el
+ * número de emergencia» no trae cifra alguna que discrepe — el dato
+ * debido simplemente no está, y la fuente sí lo trae. Si la regla
+ * del dato pedido del verificador estimó mal la señal, esta red
+ * enseña la frase fuente con el dato y rompe el silencio.
+ *
  * Estricta a propósito (la precisión es el producto; el recuerdo
  * bajo es aceptado y declarado, como en Field Atlas):
  *  - Misma unidad normalizada, sin convertir nunca (km ≠ millas).
@@ -45,6 +52,13 @@ export interface NumberConflict {
   unit: string;
   /** La frase de la FUENTE, que es la que se enseña (recortada). */
   sourceSentence: string;
+  /**
+   * R-05: true si no es una contradicción sino una OMISIÓN — la
+   * respuesta nombra la categoría del dato (el teléfono, la dosis…)
+   * sin darlo, y la fuente sí lo trae en cifras. `unit` lleva
+   * entonces la categoría del dato, no una unidad.
+   */
+  omission?: boolean;
 }
 
 /** Unidades sin conversión: cada forma aceptada mapea a su canónica. */
@@ -134,6 +148,14 @@ function sharesTopic(a: string, b: string): boolean {
   return false;
 }
 
+/** Cuántas palabras de contenido comparten dos frases (para elegir la fuente que enseñar). */
+function sharedContentWords(a: string, b: string): number {
+  const bw = contentWords(b);
+  let n = 0;
+  for (const w of contentWords(a)) if (bw.has(w)) n++;
+  return n;
+}
+
 function sameFigure(a: FigureMeasure, b: FigureMeasure): boolean {
   const asSet = new Set([b.value]);
   if (roundsFromEvidence(a.value, a.decimals, asSet)) return true;
@@ -153,6 +175,33 @@ const APPROXIMATION =
 const MAX_CONFLICTS = 2;
 const SOURCE_SENTENCE_MAX = 220;
 
+/** ¿Trae la frase alguna cifra juzgable? (La vara de evidenceNumbers: 2+ dígitos o parte decimal.) */
+function hasJudgedDigit(sentence: string): boolean {
+  return numberTokens(sentence).some((t) => {
+    const digits = t.replace(/[.,]/g, "");
+    return digits.length >= 2 || /[.,]\d/.test(t);
+  });
+}
+
+/** Categorías de dato que se dan en cifras (R-05), sobre palabras plegadas. */
+const DATUM_CATEGORY_WORDS = new Set([
+  "telefono", "telefonos", "numero", "numeros", "phone", "phones", "number", "numbers",
+  "telefone", "telefones", "dosis", "dose", "doses", "hora", "horas", "hour", "hours",
+  "fecha", "date", "dia", "dias", "day", "days", "sala", "room",
+]);
+
+/** La primera categoría de dato que la frase nombra, o null. */
+function datumCategoryOf(sentence: string): string | null {
+  for (const w of foldWord(sentence).split(/[^a-zñ]+/)) {
+    if (DATUM_CATEGORY_WORDS.has(w)) return w;
+  }
+  return null;
+}
+
+function clipSourceSentence(s: string): string {
+  return s.length > SOURCE_SENTENCE_MAX ? `${s.slice(0, SOURCE_SENTENCE_MAX - 1)}…` : s;
+}
+
 /**
  * Las contradicciones cifra a cifra entre la respuesta y sus
  * fuentes. Vacío en la inmensa mayoría (así debe ser: la ausencia
@@ -161,13 +210,18 @@ const SOURCE_SENTENCE_MAX = 220;
 export function findNumberConflicts(answerText: string, chunks: readonly RetrievedChunk[]): NumberConflict[] {
   if (!answerText || chunks.length === 0) return [];
   const sourceSentences: Array<{ text: string; measures: FigureMeasure[] }> = [];
+  // R-05: las frases fuente con cifras juzgables aunque no lleven
+  // unidad («…llame al 520-555-0147» no tiene medida y hoy ni entraba
+  // en la caja): son la evidencia del caso de omisión.
+  const digitSentences: string[] = [];
   for (const chunk of chunks) {
     for (const s of splitSentences(chunk.body)) {
       const measures = measuresIn(s);
       if (measures.length > 0) sourceSentences.push({ text: s, measures });
+      if (hasJudgedDigit(s)) digitSentences.push(s);
     }
   }
-  if (sourceSentences.length === 0) return [];
+  if (sourceSentences.length === 0 && digitSentences.length === 0) return [];
 
   const conflicts: NumberConflict[] = [];
   const seen = new Set<string>();
@@ -191,6 +245,39 @@ export function findNumberConflicts(answerText: string, chunks: readonly Retriev
         }
       }
     }
+  }
+
+  // R-05, el caso inverso (la red): la falsedad por OMISIÓN. Una frase
+  // de la respuesta que nombra la categoría del dato sin dar ninguna
+  // cifra («el teléfono … es el número de emergencia»), cuando una
+  // fuente trae ese dato en cifras y del mismo tema: se enseña la
+  // frase fuente, como en las contradicciones. No retira nada de la
+  // respuesta; rompe el silencio si la regla del dato pedido del
+  // verificador (grounding.ts) estimó mal la señal.
+  for (const answerSentence of splitSentences(answerText)) {
+    if (conflicts.length >= MAX_CONFLICTS) break;
+    if (APPROXIMATION.test(answerSentence)) continue;
+    const category = datumCategoryOf(answerSentence);
+    if (!category) continue;
+    if (measuresIn(answerSentence).length > 0 || hasJudgedDigit(answerSentence)) continue;
+    // La fuente que se enseña es la de MAYOR tema compartido: con el
+    // primer «mismo tema» a secas, a la pregunta del teléfono se le
+    // enseñaría la frase de la cita (comparte «cita») en vez de la
+    // del número (comparte «para cambiar la cita»).
+    let source: string | null = null;
+    let bestShared = 0;
+    for (const s of digitSentences) {
+      const shared = sharedContentWords(answerSentence, s);
+      if (shared > bestShared) {
+        bestShared = shared;
+        source = s;
+      }
+    }
+    if (!source) continue;
+    const dedupe = `omission:${category}:${source.slice(0, 40)}`;
+    if (seen.has(dedupe)) continue;
+    seen.add(dedupe);
+    conflicts.push({ unit: category, sourceSentence: clipSourceSentence(source), omission: true });
   }
   return conflicts;
 }

@@ -62,4 +62,31 @@ describe("findNumberConflicts (la caja de comprobación)", () => {
     expect(findNumberConflicts("Una respuesta sin cifras.", [chunk("Tampoco hay cifras aquí.")])).toEqual([]);
     expect(findNumberConflicts("Hay 600 km de costa.", [])).toEqual([]);
   });
+
+  // R-05: el caso inverso — la respuesta nombra el dato sin darlo y
+  // la fuente sí lo trae. La frase enseñada es la del número, no la
+  // primera que comparta una palabra.
+  it("R-05 omisión: «el teléfono es el número de emergencia» contra la fuente que trae el teléfono", () => {
+    const doc =
+      "Su cita es el martes 10 de noviembre de 2026 a las 9:30 de la mañana, en la sala 214, segundo piso. " +
+      "Para cambiar la cita llame al 520-555-0147.";
+    const conflicts = findNumberConflicts("El teléfono para cambiar la cita es el número de emergencia.", [chunk(doc)]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].omission).toBe(true);
+    expect(conflicts[0].sourceSentence).toContain("520-555-0147");
+  });
+
+  it("R-05 omisión: si la respuesta SÍ da el número, no hay aviso", () => {
+    const doc = "Para cambiar la cita llame al 520-555-0147.";
+    expect(findNumberConflicts("El teléfono para cambiar la cita es el 520-555-0147.", [chunk(doc)])).toEqual([]);
+  });
+
+  it("R-05 omisión: sin categoría de dato en la respuesta, o sin cifras del tema en la fuente, no hay aviso", () => {
+    expect(
+      findNumberConflicts("La respuesta es muy interesante y completa.", [chunk("El dato es 42 y nada más.")])
+    ).toEqual([]);
+    expect(
+      findNumberConflicts("El teléfono es el número de emergencia.", [chunk("El teléfono de la oficina atiende de día.")])
+    ).toEqual([]);
+  });
 });
