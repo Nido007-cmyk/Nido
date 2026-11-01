@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { findNumberConflicts } from "./sourceCheck";
+import { findDateConflicts, findNumberConflicts } from "./sourceCheck";
 import type { RetrievedChunk } from "./retrieve";
 
 const chunk = (body: string): RetrievedChunk =>
@@ -351,5 +351,32 @@ describe("C-08: las unidades de Esencial y los rangos entran en la caja", () => 
     ]);
     expect(conflicto).toHaveLength(1);
     expect(conflicto[0].unit).toBe("dias");
+  });
+});
+
+describe("findDateConflicts (C-07: la caja aprende fechas)", () => {
+  const NOTA =
+    "La cita de seguimiento es el martes 10 de noviembre de 2026 a las 9:30 en la sala 214. Toma el jarabe dos veces al día.";
+  const REF = new Date(2026, 10, 1); // domingo 1 de noviembre de 2026
+
+  it("R4: «el miércoles 10» contra el martes de la nota — la nota enseña la frase de la fuente", () => {
+    const conflicts = findDateConflicts("eso fue el miércoles 10", [chunk(NOTA)], REF);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("fecha");
+    expect(conflicts[0].sourceSentence).toContain("martes 10 de noviembre");
+  });
+
+  it("R5: «ayer» contra la absoluta dispara; la honesta en inglés no", () => {
+    const conflicts = findDateConflicts("su cita es ayer", [chunk(NOTA)], REF);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("fecha");
+    expect(findDateConflicts("that's on Tuesday the 10th", [chunk(NOTA)], REF)).toEqual([]);
+  });
+
+  it("R1: el lunes con fecha completa, emparejado con la nota, enseña su frase", () => {
+    const conflicts = findDateConflicts("La cita es el lunes 10 de noviembre de 2026.", [chunk(NOTA)], REF);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("fecha");
+    expect(conflicts[0].sourceSentence).toContain("martes 10 de noviembre");
   });
 });

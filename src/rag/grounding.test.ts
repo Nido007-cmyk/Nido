@@ -1035,3 +1035,59 @@ describe("C-08: el rango de la guía ya no hace abstenerse a su propia respuesta
     expect(r.text).not.toContain("45 °C");
   });
 });
+
+describe("C-07: el verificador aprende fechas y días de semana", () => {
+  // La nota clínica de la ronda del dueño: la cita es el MARTES 10 de
+  // noviembre de 2026 (ancla del sistema: getDay() === 2).
+  const NOTA_C07: GroundingChunk = {
+    title: "Nota clínica",
+    body: "La cita de seguimiento es el martes 10 de noviembre de 2026 a las 9:30 en la sala 214. Toma el jarabe dos veces al día.",
+  };
+  const REF_C07 = new Date(2026, 10, 1); // domingo 1 de noviembre de 2026
+
+  it("el caso grave muere: «lunes 10 de noviembre de 2026» contra la fuente que dice martes", () => {
+    const r = verifyGroundedAnswer(
+      "La cita es el lunes 10 de noviembre de 2026 a las 9:30 en la sala 214.",
+      [NOTA_C07],
+      "es",
+      "¿Qué día es la cita?",
+      REF_C07,
+    );
+    expect(r.status).not.toBe("grounded");
+    expect(r.text).not.toContain("lunes");
+    // El control honesto, palabra a palabra salvo el día, se funda:
+    const ok = verifyGroundedAnswer(
+      "La cita es el martes 10 de noviembre de 2026 a las 9:30 en la sala 214.",
+      [NOTA_C07],
+      "es",
+      "¿Qué día es la cita?",
+      REF_C07,
+    );
+    expect(ok.status).toBe("grounded");
+    expect(ok.text).toContain("martes");
+  });
+
+  it("la relativa sellada muere: «su cita es ayer» con la cita dentro de 9 días", () => {
+    const r = verifyGroundedAnswer("Su cita es ayer.", [NOTA_C07], "es", "¿Cuándo es la cita?", REF_C07);
+    expect(r.status).not.toBe("grounded");
+    expect(r.text).not.toContain("ayer");
+  });
+
+  it("el documento de oro del dueño: la respuesta fiel se funda entera (contrato A6-37)", () => {
+    const doc: GroundingChunk = {
+      title: "Nota de la clínica",
+      body: "La cita de seguimiento es el martes 10 de noviembre de 2026 a las 9:30, en la sala 214, segundo piso. Toma el jarabe, 5 ml dos veces al día después de comer. Teléfono de la clínica: 520-555-0147.",
+    };
+    const r = verifyGroundedAnswer(
+      "Su cita es el martes 10 de noviembre de 2026 a las 9:30, en la sala 214, segundo piso. Toma el jarabe, 5 ml dos veces al día después de comer. El teléfono de la clínica es el 520-555-0147.",
+      [doc],
+      "es",
+      "¿Qué dice la nota de la clínica?",
+      REF_C07,
+    );
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toContain("martes 10 de noviembre de 2026");
+    expect(r.text).toContain("520-555-0147");
+  });
+});
