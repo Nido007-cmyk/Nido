@@ -102,15 +102,18 @@ async function semanticSearch(
 ): Promise<RetrievedChunk[]> {
   const db = await getDb();
 
+  // P-01 paso 1 (cuerpos desacoplados): la pasada de puntuación NO trae
+  // title/body — arrastrar el texto de cada fila para puntuar vectores
+  // multiplicaba el coste de cruzar el puente por consulta. Se puntúa
+  // sobre (chunk_id, doc_id, collection_id, embedding) y el texto de los
+  // supervivientes se hidrata después, por chunk_id.
   const rows = await db.getAllAsync<{
     chunk_id: string;
     doc_id: string;
-    title: string;
-    body: string;
     collection_id: string | null;
     embedding: Uint8Array;
   }>(
-    `SELECT c.chunk_id, c.doc_id, c.title, c.body, c.collection_id, e.embedding
+    `SELECT e.chunk_id, c.doc_id, c.collection_id, e.embedding
      FROM chunk_embeddings e
      JOIN chunks c ON c.chunk_id = e.chunk_id
      LEFT JOIN custom_collections cc ON cc.id = c.collection_id
@@ -121,8 +124,6 @@ async function semanticSearch(
   const scored: Array<{
     chunkId: string;
     docId: string;
-    title: string;
-    body: string;
     sourceKind: "user" | "builtin";
     score: number;
     matchType: "semantic";
@@ -147,8 +148,6 @@ async function semanticSearch(
     scored.push({
       chunkId: r.chunk_id,
       docId: r.doc_id,
-      title: r.title,
-      body: r.body,
       // R-03: provenance for the fusion's personal-corpus reserve.
       sourceKind: r.collection_id ? ("user" as const) : ("builtin" as const),
       score,
@@ -169,8 +168,23 @@ async function semanticSearch(
   );
   const gated = filterByMinScore(scored, floor);
   // BUG-2-2026-10-06 (structural): poda por margen sobre cosenos crudos.
-  // El gap predice relevancia mejor que el valor absoluto.
-  return pruneSemanticByMargin(gated, profile.margin).slice(0, limit);
+  // El gap predice relevancia mejor que el valor absoluto. La poda y el
+  // corte trabajan sobre puntuaciones: la lógica no cambia por no
+  // arrastrar el texto.
+  const survivors = pruneSemanticByMargin(gated, profile.margin).slice(0, limit);
+  if (survivors.length === 0) return [];
+  // Hidratación: solo los supervivientes cruzan con su texto.
+  const ids = survivors.map((s) => s.chunkId);
+  const textRows = await db.getAllAsync<{ chunk_id: string; title: string | null; body: string }>(
+    `SELECT chunk_id, title, body FROM chunks WHERE chunk_id IN (${ids.map(() => "?").join(",")})`,
+    ids
+  );
+  const textById = new Map(textRows.map((t) => [t.chunk_id, t]));
+  return survivors.map((s) => ({
+    ...s,
+    title: textById.get(s.chunkId)?.title ?? "",
+    body: textById.get(s.chunkId)?.body ?? "",
+  }));
 }
 
 /**
