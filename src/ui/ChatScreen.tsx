@@ -1983,7 +1983,13 @@ export function ChatScreen({
               text: m.role === "assistant" ? stripThinking(m.text) : m.text,
             }));
             const previousSummary = sessionSummaryRef.current;
-            backgroundTaskRef.current = summarizeConversation(turnsToSummarize, previousSummary)
+            // Núcleo 3 · N-09: el resumen se calcula en segundo plano
+            // tras la respuesta, así que el turno SIGUIENTE usa este
+            // resumen y el de ESTE turno es el de la ronda anterior —
+            // retraso de una ronda declarado en summarize.ts, diseño
+            // y no defecto. El idioma de la instrucción es el de la
+            // conversación (uiLang), no siempre inglés.
+            backgroundTaskRef.current = summarizeConversation(turnsToSummarize, previousSummary, uiLang)
               .then(async (summary) => {
                 sessionSummaryRef.current = summary;
                 await setSessionSummary(sid, summary);
