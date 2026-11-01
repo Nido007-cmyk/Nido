@@ -46,7 +46,8 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   taken as a command, and when a message holds more than one request, NIDO
   shows the command as a button and waits for your tap.
 - **Answers from your documents**: import `.txt`, `.md`, `.csv`, `.json` or
-  `.pdf` files and NIDO indexes them on the phone.
+  `.pdf` files, and now images and scanned PDFs too, whose text NIDO
+  reads on the phone itself, and NIDO indexes them on the phone.
 - **Knows things offline**: a built-in knowledge base plus an optional
   Wikipedia pack (about 50,000 articles) and nine optional guide packs
   written by NIDO (Essentials, Local, Children and Babies, Crisis,

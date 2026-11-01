@@ -90,7 +90,8 @@ comprueba que las preguntas reales (`retrieval-checks.json`) encuentran
 la guía correcta, y CI (`.github/workflows/knowledge-pack.yml`) lo
 construye y lo comprueba. Es el primero de una familia de packs de guías,
 todos publicados juntos en la release `knowledge-packs-v6`: `nido-local`
-(números de emergencia y avisos de 69 países, en español e inglés, con su
+(números de emergencia y avisos de 69 países, en español e inglés, y en
+portugués desde knowledge-packs-v9, con su
 tabla de datos verificados), `nido-ninos`, `nido-crisis` (con las líneas
 de crisis verificadas de 14 países), `nido-sin-servicios`, `nido-hogar`,
 `nido-desastres`, `nido-campo` y `nido-viaje`, cada uno en español, inglés
@@ -102,6 +103,14 @@ metadatos de recuperación de una guía de cada uno. Una edición
 corregida más de `nido-local` se publicó en la release
 `knowledge-packs-v8` con la 0.1.67: su dato de Portugal cita ahora la
 frase exacta de su fuente.
+Una edición trilingüe de `nido-local` se publica en la release
+`knowledge-packs-v9` con la 0.1.68: sus 23 guías de países existen
+ahora también en portugués (la paridad de dígitos con los originales
+en español se comprobó guía a guía), y sus preguntas de control
+crecen a 165 (56 en español, 53 en inglés, 56 en portugués), con la
+recuperación en 164 de 165 sobre la construcción medida (el único
+fallo, una pregunta por el número de bomberos de La Habana que no
+nombra a Cuba, queda asentado como punto débil conocido).
 
 ### Formato v2: preguntas indexadas y datos verificados (0.1.55)
 

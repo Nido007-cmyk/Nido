@@ -4,6 +4,85 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.68-alpha - 2026-10-31
+
+### Reading documents
+
+- **NIDO reads photos and scans now.** Importing an image or a
+  scanned PDF runs text recognition entirely on the phone
+  (Tesseract, with its English, Spanish and Portuguese data
+  hash-checked before the engine starts) and indexes the text
+  with its provenance marked, so an answer can say it came from a
+  scan. In a build without the recognition module, a scanned PDF
+  names its cause instead of importing empty. A file's kind is
+  decided by its own bytes, not by its name.
+- **Imports no longer eat each other.** Starting a second import
+  while one is running used to let the second one's cleanup
+  delete the first one's pieces mid-flight; the cleanup now knows
+  which collections are in flight and leaves them alone.
+
+### Answers
+
+- **The evidence leads.** The main source's card, with its
+  best-answering sentence, now sits above the answer, and each
+  source keeps one colour across the card and its markers. A
+  post-check compares the answer's figures against the evidence:
+  a figure that contradicts its source is flagged under the
+  answer with the source's own sentence quoted.
+- **An emergency typed mid-generation is answered at once.** It
+  used to wait, unsendable, until the running answer finished; it
+  now preempts it and takes the fixed routes immediately. The
+  emergency gate also hears a live emergency told as a story, not
+  only as a question, and the health gate now knows medicines and
+  doses, so those questions no longer fall to the model's memory.
+  A question about history no longer trips the gate: asking how
+  many people the 1918 flu killed is not an emergency.
+- **The fixed safety text carries the guides' substance.** When
+  no guide can answer, the fixed text now gives the urgency signs
+  that mean call now, six universal steps, what not to do, and
+  the rule for doses (age and weight, the leaflet, no aspirin
+  under 16), every line traced to NIDO's own Essentials guides.
+  It still invents no numbers and dials nothing by itself.
+- **Blind evaluation is now an installed practice.** Sealed sets
+  of questions are judged blind against frontier reference
+  answers. On the third fresh set the routing reaches 24 of 24;
+  the fixed text's own ceiling is recorded with the results, not
+  hidden.
+- **The model load plans for the phone it is on.** Instead of
+  refusing when the preferred context does not fit, the load
+  takes the largest context that fits, and a load that never
+  confirmed itself shrinks the next attempt's budget.
+
+### Knowledge packs
+
+- **NIDO Local is trilingual** (knowledge-packs-v9): its 23
+  country guides now exist in Portuguese too, each checked digit
+  by digit against the Spanish original, and the pack's control
+  questions grow to 165 (56 Spanish, 53 English, 56 Portuguese).
+  Retrieval on the measured build passes 164 of 165; the one
+  miss is recorded in the pack documentation.
+- **Every pack build now writes an edition card beside the
+  signature**: source edition, rights, languages, counts and
+  record digests, so what was published can be checked against
+  what was built. The builder also publishes by writing a
+  temporary file and renaming it, so a failed build never
+  destroys the good edition.
+
+### Data
+
+- **The total delete collects the whole family.** Two files the
+  app could leave behind (a settings recovery marker and a
+  half-written flags file) survived a total delete; the delete's
+  inventory is now a census of every file the app can produce,
+  and a guard test fails if a new producer is ever left out of
+  it.
+
+### Project information
+
+- The "NIDO development" card in About (0.1.65) remains the
+  project's note on voluntary contributions; NIDO is free and
+  complete without contributing anything.
+
 ## 0.1.67-alpha - 2026-10-31
 
 ### The full audit

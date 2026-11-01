@@ -87,7 +87,8 @@ UNICEF, CDC, FEMA and other public guidance (each guide cites its sources).
 (`.github/workflows/knowledge-pack.yml`) builds and checks it. It is the
 first of a family of guide packs, all published together in the release
 `knowledge-packs-v6`: `nido-local` (emergency numbers and alerts for 69
-countries, in Spanish and English, with a verified-facts table),
+countries, in Spanish and English, and in Portuguese since
+knowledge-packs-v9, with a verified-facts table),
 `nido-ninos`, `nido-crisis` (with verified crisis lines for 14 countries),
 `nido-sin-servicios`, `nido-hogar`, `nido-desastres`, `nido-campo` and
 `nido-viaje`, each in Spanish, English and Portuguese. Corrected editions
@@ -98,6 +99,14 @@ cited to a reachable official source, and in `nido-crisis` and
 A further corrected edition of `nido-local` was published in the
 release `knowledge-packs-v8` with 0.1.67: its Portugal fact now
 quotes the exact phrase of its source.
+A trilingual edition of `nido-local` is published in the release
+`knowledge-packs-v9` with 0.1.68: its 23 country guides now exist
+in Portuguese as well (digit parity with the Spanish originals
+checked guide by guide), and its control questions grow to 165
+(56 Spanish, 53 English, 56 Portuguese), with retrieval passing
+164 of 165 on the measured build (the one miss, a question about
+Havana's fire number that does not name Cuba, is recorded as a
+known weak point).
 
 ### Format v2: indexed questions and verified facts (0.1.55)
 

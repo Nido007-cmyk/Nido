@@ -47,7 +47,8 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   app nunca se toma como una orden, y si un mensaje trae más de una petición,
   NIDO muestra la orden como un botón y espera a que lo toques.
 - **Responde con tus documentos**: importa archivos `.txt`, `.md`, `.csv`,
-  `.json` o `.pdf` y NIDO los indexa en el teléfono.
+  `.json` o `.pdf`, y ahora también imágenes y PDF escaneados, cuyo texto
+  NIDO lee en el propio teléfono, y NIDO los indexa en el teléfono.
 - **Sabe cosas sin internet**: una base de conocimiento integrada y un
   paquete opcional de Wikipedia (unos 50.000 artículos) y nueve paquetes
   de guías opcionales escritos por NIDO (Esencial, Local, Niños y Bebés, Crisis,
