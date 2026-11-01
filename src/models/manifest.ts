@@ -674,18 +674,21 @@ export const MODEL_CATALOG: CatalogModel[] = [
     // 911 facts are backed by reachable official sources, and three
     // facts that cited press reports now cite the official source.
     // Corrected edition in 0.1.67 (knowledge-packs-v8): the Portugal
-    // fact now quotes its source's exact phrase.
+    // fact now quotes its source's exact phrase. Trilingual edition
+    // in 0.1.68 (knowledge-packs-v9): the 23 country guides now
+    // exist in Portuguese too, digit parity with the Spanish
+    // originals checked guide by guide.
     id: "nido-local",
     kind: "corpus",
     format: "sqlite-pack",
     label: "NIDO Local: emergency numbers and alerts by country",
     filename: "corpus/nido-local.sqlite",
-    sizeBytes: 303104,
-    sha256: "096125a6c74decf0c0ed0fd07eb460de3b1d8180c8e2c1fe3b3fd585a378ca3b",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v8/nido-local.sqlite",
+    sizeBytes: 331776,
+    sha256: "3587e98dfbf743f565e3e22f0261478dda72572fa33d2daee641a187e5628f45",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v9/nido-local.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
-      "Checked emergency numbers for 69 countries in the Americas, Europe, Africa, Asia and Oceania, each with its official source, plus what official alerts mean. Spanish and English. ~0.3MB.",
+      "Checked emergency numbers for 69 countries in the Americas, Europe, Africa, Asia and Oceania, each with its official source, plus what official alerts mean. Spanish, English and Portuguese. ~0.3MB.",
     required: false,
   },
   {
@@ -695,9 +698,9 @@ export const MODEL_CATALOG: CatalogModel[] = [
     format: "sqlite-pack",
     label: "NIDO Local (multilingual search)",
     filename: "corpus/nido-local-e5.sqlite",
-    sizeBytes: 303104,
-    sha256: "6aaacb111e5b9547b6cc0281371c975ceb08feadbf515e8a1657a4888c4e8bea",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v8/nido-local-e5.sqlite",
+    sizeBytes: 331776,
+    sha256: "2e09a8da20db724c6dda565ce85d620bbe44535ea7c3012d121ab7a2636818b6",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v9/nido-local-e5.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
       "Checked emergency numbers for 69 countries, each with its official source, plus what official alerts mean; searchable in Spanish, Portuguese and English. ~0.3MB.",
