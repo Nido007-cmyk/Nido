@@ -12,6 +12,7 @@ import {
   buildLexicalQuery,
   contextualizeQuery,
   degradableGenTokens,
+  dropUnfoundedCorpus,
   fitChunksToBudget,
   serializeEmbedding,
   deserializeEmbedding,
@@ -891,5 +892,90 @@ describe("contextualizeQuery (H-08): la herencia lleva guarda de tema", () => {
     expect(contextualizeQuery("¿y cuánto cuesta la noche?", tras(prev))).toBe(
       "¿y cuánto cuesta la noche?"
     );
+  });
+});
+
+describe("dropUnfoundedCorpus (C-05): las dos señales de la caída honesta", () => {
+  const hit = (title: string, body: string) => ({ title, body });
+  const termsOf = (q: string) => buildLexicalQuery(q)!.terms;
+
+  // La forma de D2: el pool solo comparte las dos palabras genéricas de la
+  // pregunta (prepara, casa, en los 10 fragmentos) y los dos términos del
+  // tema (suero, oral) no existen en el corpus (df 0).
+  const d2Pool = Array.from({ length: 10 }, (_, i) =>
+    hit(`Fases del ciclón ${i}`, "En casa se prepara la fase de respuesta y se guarda el agua en casa.")
+  );
+
+  it("señal A: el corpus sin el tema cae entero (la forma de D2)", () => {
+    const terms = termsOf("¿Cómo se prepara el suero oral en casa?");
+    const served = d2Pool.slice(0, 6);
+    expect(dropUnfoundedCorpus(d2Pool, served, terms, { query: "¿Cómo se prepara el suero oral en casa?" })).toEqual([]);
+  });
+
+  it("señal A: calla cuando un servido casa un término discriminativo", () => {
+    const terms = termsOf("número de emergencias en Cuba suero");
+    // cuba: df 2/10 (discriminativo, ≤ pool/2); suero: df 0; numero/emergencias: genéricos.
+    const pool = [
+      hit("Cuba emergencias", "El número de emergencias en Cuba es el 104."),
+      hit("Cuba fases", "El número de emergencias y las fases en Cuba."),
+      ...Array.from({ length: 8 }, (_, i) => hit(`Genérico ${i}`, "El número de emergencias del país.")),
+    ];
+    const served = [pool[0], pool[2]];
+    expect(dropUnfoundedCorpus(pool, served, terms, {})).toEqual(served);
+  });
+
+  it("señal A: las guardas de pool y de términos no disparan", () => {
+    const terms = termsOf("¿Cómo se prepara el suero oral en casa?");
+    // Pool < 8: estadística insuficiente, la conducta de hoy no cambia.
+    const small = d2Pool.slice(0, 5);
+    expect(dropUnfoundedCorpus(small, small.slice(0, 2), terms, {})).toEqual(small.slice(0, 2));
+    // Pregunta de < 3 términos: la señal no se forma.
+    const twoTerms = termsOf("emergencia suero");
+    expect(twoTerms.length).toBe(2);
+    expect(dropUnfoundedCorpus(d2Pool, d2Pool.slice(0, 3), twoTerms, {})).toEqual(d2Pool.slice(0, 3));
+  });
+
+  it("señal A: sin término ausente no dispara (la variante enterrada es de C-02/C-03)", () => {
+    const terms = termsOf("¿Cuál es el número de emergencias en Cuba?");
+    // cuba existe en el pool (df 3) pero ningún servido lo casa: el ranking
+    // lo enterró. Sin df 0 no hay firma de «corpus sin tema»: no cae.
+    const pool = [
+      ...Array.from({ length: 3 }, (_, i) => hit(`Cuba ${i}`, "El número de emergencias en Cuba y sus fases.")),
+      ...Array.from({ length: 7 }, (_, i) => hit(`Otro ${i}`, "El número de emergencias del territorio.")),
+    ];
+    const served = pool.slice(3, 6);
+    expect(dropUnfoundedCorpus(pool, served, terms, {})).toEqual(served);
+  });
+
+  // La forma de T2: el único término sin casar nombra el tipo de dato
+  // (dirección) y ese tipo no existe en el pool (df 0/7).
+  const t2Pool = [
+    hit("Cuba: quién avisa", "Según el Consulado de España en La Habana, desde un teléfono móvil se marca un 7 delante."),
+    hit("Cuba: fases", "El consulado de España avisa y La Habana escucha la radio."),
+    ...Array.from({ length: 5 }, (_, i) => hit(`España ${i}`, "España y sus avisos a los viajeros.")),
+  ];
+
+  it("señal B: el tipo de dato ausente hace caer la recuperación (la forma de T2)", () => {
+    const q = "¿Cuál es la dirección del consulado de España en La Habana?";
+    const served = t2Pool.slice(0, 2);
+    expect(dropUnfoundedCorpus(t2Pool, served, termsOf(q), { query: q })).toEqual([]);
+  });
+
+  it("señal B: calla cuando el corpus sí trae el tipo (df > 0, la señal se apaga sola)", () => {
+    const q = "¿Cuál es la dirección del consulado de España en La Habana?";
+    const pool = [...t2Pool, hit("Guía de La Habana", "La dirección del consulado aparece en la guía oficial.")];
+    const served = pool.slice(0, 2);
+    expect(dropUnfoundedCorpus(pool, served, termsOf(q), { query: q })).toEqual(served);
+  });
+
+  it("señal B: la exención del corpus del usuario y la forma interrogativa mandan", () => {
+    const q = "¿Cuál es la dirección del consulado de España en La Habana?";
+    const served = t2Pool.slice(0, 2);
+    // Un fragmento servido es del usuario: la señal B no cae nada.
+    expect(dropUnfoundedCorpus(t2Pool, served, termsOf(q), { query: q, servedFromUser: [true, false] })).toEqual(served);
+    // Sin forma de pregunta de dato no hay señal, aunque el tipo falte (df 0).
+    const explain = "explicame el precio de la luz en España";
+    const pool = Array.from({ length: 6 }, (_, i) => hit(`Luz ${i}`, "La luz en España y su consumo en el hogar."));
+    expect(dropUnfoundedCorpus(pool, pool.slice(0, 2), termsOf(explain), { query: explain })).toEqual(pool.slice(0, 2));
   });
 });
