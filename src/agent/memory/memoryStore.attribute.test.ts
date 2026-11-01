@@ -20,7 +20,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -42,81 +41,18 @@ vi.mock("expo-file-system/legacy", () => ({
   deleteAsync: async () => {},
 }));
 
-// keyManager fiel: mismo handshake que memoryStore.r1.test.ts.
-vi.mock("../../privacy/keyManager", () => ({
-  registerKeyLossProbe: () => {},
-  getDatabaseKeyHex: async () => "ab".repeat(32),
-  applyDatabaseKey: async (
-    db: {
-      execAsync(s: string): Promise<void>;
-      getAllAsync(s: string): Promise<Array<{ cipher_version?: string }>>;
-      getFirstAsync(s: string): Promise<unknown>;
-      closeAsync(): Promise<void>;
-    },
-    keyHex: string | null,
-  ) => {
-    if (!keyHex) return;
-    if (!/^[0-9a-f]{64}$/i.test(keyHex)) {
-      await db.closeAsync().catch(() => {});
-      throw new Error("formato de clave inválido (fail-closed)");
-    }
-    await db.execAsync(`PRAGMA key = "x'${keyHex.toLowerCase()}'";`);
-    const rows = await db.getAllAsync("PRAGMA cipher_version;");
-    if (!rows?.[0]?.cipher_version) {
-      await db.closeAsync().catch(() => {});
-      throw new Error("sin SQLCipher: fail-closed");
-    }
-    await db.getFirstAsync("SELECT count(*) AS n FROM sqlite_master;");
-  },
-}));
+vi.mock("../../privacy/keyManager", async () => {
+  const { fakeKeyManagerModule } = await import("../../security/secureDbTestHarness");
+  return fakeKeyManagerModule();
+});
 
 // Código REAL bajo prueba.
 import { setSecureDbTestDriver } from "../../security/secureDatabase";
+import { makeNodeSqliteHandle } from "../../security/secureDbTestHarness";
 import { getMemoryDb, clearMemoryDb, saveFact, getFacts } from "./memoryStore";
 
 let tmpDirs: string[] = [];
 
-function makeHandle(dbPath: string) {
-  const sqlite = new DatabaseSync(dbPath);
-  return {
-    execAsync: async (sql: string) => {
-      if (/^\s*PRAGMA\s+key/i.test(sql)) return; // no-op en node:sqlite
-      sqlite.exec(sql);
-    },
-    getAllAsync: async <T>(sql: string, params?: unknown[]): Promise<T[]> => {
-      if (/cipher_version/i.test(sql)) return [{ cipher_version: "4.9.0-fake" }] as T[];
-      const stmt = sqlite.prepare(sql);
-      const args = (params ?? []) as Array<string | number | bigint | Buffer | null>;
-      return (args.length ? stmt.all(...args) : stmt.all()) as T[];
-    },
-    getFirstAsync: async <T>(sql: string, params?: unknown[]): Promise<T | null> => {
-      if (/cipher_version/i.test(sql)) return { cipher_version: "4.9.0-fake" } as T;
-      const stmt = sqlite.prepare(sql);
-      const args = (params ?? []) as Array<string | number | bigint | Buffer | null>;
-      const row = args.length ? stmt.get(...args) : stmt.get();
-      return (row ?? null) as T | null;
-    },
-    runAsync: async (sql: string, params?: unknown[]) => {
-      if (params && params.length > 0) {
-        const info = (
-          sqlite.prepare(sql).run as (...a: unknown[]) => {
-            changes: number;
-            lastInsertRowid: number;
-          }
-        )(...params);
-        return { lastInsertRowId: info.lastInsertRowid, changes: info.changes };
-      }
-      sqlite.exec(sql);
-      return { lastInsertRowId: 0, changes: 0 };
-    },
-    withTransactionAsync: async (fn: () => Promise<void>) => {
-      await fn();
-    },
-    closeAsync: async () => {
-      sqlite.close();
-    },
-  };
-}
 
 /** Base fresca por test: el migrate real crea el schema. */
 function useFreshDb(): void {
@@ -127,7 +63,7 @@ function useFreshDb(): void {
     dbDir: () => `${fx.DOC}SQLite/`,
     openDb: async (path: string) => {
       if (!path.includes("nido_memory.db")) throw new Error(`DB inesperada: ${path}`);
-      return makeHandle(dbPath);
+      return makeNodeSqliteHandle(dbPath);
     },
     exists: async (path: string) =>
       path.includes("nido_memory.db") ? existsSync(dbPath) : false,
