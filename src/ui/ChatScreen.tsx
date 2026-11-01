@@ -75,7 +75,7 @@ import { speakAloud } from "../voice/tts";
 import { showSecureAlert } from "nido-secure-dialog";
 // NIDO agent: loop agéntico local con herramientas (Fase A).
 import { classifyIntent } from "../agent/loop/intent";
-import { isGenericMemoryQuestionShape, memoryFullCoverageHit, memoryGateHit } from "../agent/loop/memoryQuery";
+import { isGenericMemoryQuestionShape, memoryFullCoverageHit, memoryGateHit, memoryProbeWitness } from "../agent/loop/memoryQuery";
 import { beginUserTurn, choiceTurnKind, resetConversationState, type ChoiceStore } from "../agent/loop/toolRouter";
 import { applyEdit, type InputSource, type Segment } from "../agent/input/provenance";
 import { planSend } from "../agent/input/sendPlan";
@@ -1133,6 +1133,12 @@ export function ChatScreen({
     // sonda se salta: una pregunta en modo investigación es para
     // investigar, no para atajarla con un hecho guardado.
     let probedMemory: Awaited<ReturnType<typeof loadMemorySnapshot>> | null = null;
+    // ADV2-09: el testigo de la sonda (ver memoryProbeWitness). Vive
+    // con la snapshot que lo probó y vale true por defecto: solo lo
+    // estrecha una promoción de ESTA sonda cuyo hecho no contenga el
+    // dato pedido. Los turnos que el clasificador ruta «recordar»
+    // conservan el testigo de H-06 sin tocar.
+    let probeWitness = true;
     if (
       agentIntent === "conversar" &&
       !inertRouting &&
@@ -1147,6 +1153,7 @@ export function ChatScreen({
         // La snapshot de la sonda se reutiliza como loadMemory del
         // loop: no se paga dos veces en los turnos que entran.
         probedMemory = snap;
+        probeWitness = memoryProbeWitness(query, snap);
       }
     }
     // 0.1.25: si hay una elección pendiente («¿cuál nota?»), la
@@ -1301,7 +1308,12 @@ export function ChatScreen({
         // prompt no se descarta: el pipeline de chat no ve la memoria
         // y la re-respondería a ciegas. La elección pendiente sube a
         // «actuar», nunca a «recordar»: su red queda como estaba.
-        if (!stopRequestedRef.current && agentExitNeedsGroundingNet(agentResult, query, agentIntent === "recordar")) {
+        // Adversaria-2 ADV2-09 (2026-11-01): cuando la promoción vino
+        // de la sonda, el testigo se estrecha — el hecho que promovió
+        // debe contener el dato pedido (probeWitness, calculado con
+        // la snapshot en la sonda); sin ese dato, la prosa vuelve a
+        // pasar por la red como cualquier turno sin suelo.
+        if (!stopRequestedRef.current && agentExitNeedsGroundingNet(agentResult, query, agentIntent === "recordar" && probeWitness)) {
           divertedToChatNet = true;
           assistantText = "";
         }

@@ -36,7 +36,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { classifyIntent } from "./intent";
-import { isGenericMemoryQuestionShape, memoryGateHit, memoryFullCoverageHit } from "./memoryQuery";
+import { isGenericMemoryQuestionShape, memoryGateHit, memoryFullCoverageHit, memoryProbeWitness } from "./memoryQuery";
 import { runAgentLoop, agentExitNeedsGroundingNet, type AgentEngine } from "./agentLoop";
 import { isFactualQuestion, noSourcesAnswer } from "../../rag/grounding";
 import { choiceTurnKind, resolveChoiceReply, type ChoiceStore } from "./toolRouter";
@@ -166,6 +166,9 @@ async function send(
 
   let intent = classifyIntent(text);
   let probedSnapshot: ReturnType<typeof snapshotFromStore> | null = null;
+  // ADV2-09: el testigo de la sonda, como en ChatScreen (true salvo
+  // que la promoción de esta sonda no traiga el dato en su hecho).
+  let probeWitness = true;
   // ADV2-10: espejo EXACTO de la sonda real (ChatScreen.tsx:1138–1151):
   // la snapshot se carga con la forma genérica O con forma de pregunta,
   // y la promoción es (forma && hit fuerte) || cobertura total. Antes
@@ -182,6 +185,7 @@ async function send(
     if ((isGenericMemoryQuestionShape(text) && memoryGateHit(text, snap)) || memoryFullCoverageHit(text, snap)) {
       intent = "recordar";
       probedSnapshot = snap;
+      probeWitness = memoryProbeWitness(text, snap);
     }
   }
   // 0.1.25: espejo de la puerta de ChatScreen — con elección
@@ -220,7 +224,9 @@ async function send(
   // de hechos, el «no lo sé» de grounding.ts, sin generar.
   // Adversaria H-06: el testigo es la intención de ruta de ESTE espejo
   // (tras la sonda), como en ChatScreen es agentIntent.
-  if (agentExitNeedsGroundingNet(result, text, intent === "recordar")) {
+  // ADV2-09: y cuando la promoción vino de la sonda, el dato debe
+  // vivir en el hecho que promovió (probeWitness), igual que allí.
+  if (agentExitNeedsGroundingNet(result, text, intent === "recordar" && probeWitness)) {
     const sources = opts.netSources ?? [];
     if (sources.length > 0) {
       return { route: "agent" as Route, response: sources.join("\n"), toolUses: result.toolUses, loopResponse: result.response, netted: true };
@@ -936,5 +942,78 @@ describe("composición — ADV2-10: el espejo aprende la cobertura total de la s
     const t = await send("¿Dónde está la clave del wifi?", "es", engine);
     expect(t.route).toBe("knowledge");
     expect(engine.calls).toHaveLength(0);
+  });
+});
+
+describe("composición — ADV2-09: el testigo de la sonda exige el dato en el hecho", () => {
+  const HORARIO_REAL = "CLÍNICA SAN RAFAEL — Horario de atención: de 8:00 a 18:00, de lunes a viernes.";
+
+  /** Motor que responde una prosa fija (la que el modelo serviría
+   *  leyendo la memoria inyectada en su prompt). */
+  function proseEngine(text: string): AgentEngine & { calls: unknown[][] } {
+    const calls: unknown[][] = [];
+    return {
+      calls,
+      generate: vi.fn(async (args: unknown) => {
+        calls.push([args]);
+        return text;
+      }),
+    };
+  }
+
+  it("W1: hit fuerte sin el dato en el hecho — la prosa inventada SÍ se desvía a la red", async () => {
+    // La sonda promueve por solape (clínica, trabaja, hermano ≥ 2),
+    // pero el hecho no contiene ningún horario: el testigo no nace
+    // y la red sirve la fuente con el horario verdadero en vez de
+    // la invención del modelo. Con la herramienta de memoria
+    // desactivada, como en la fixture de H-06.
+    data.facts.push({ content: "Mi hermano trabaja en la clínica San Rafael", category: "general" });
+    const engine = proseEngine("La clínica atiende de 7 de la mañana a 3 de la tarde.");
+    setDisabledTools(["remember_fact"]);
+    let t;
+    try {
+      t = await send("¿Qué horario tiene la clínica donde trabaja mi hermano?", "es", engine, { netSources: [HORARIO_REAL] });
+    } finally {
+      setDisabledTools([]);
+    }
+    expect(t.netted).toBe(true);
+    expect(t.response).toBe(HORARIO_REAL);
+    expect(t.response).not.toContain("7 de la mañana");
+  });
+
+  it("W2: cobertura total con el hecho del cajón — la prosa inventada SÍ se desvía a la red", async () => {
+    // El hecho contiene las dos palabras de la pregunta («horario»,
+    // «clínica») y ninguna hora: la palabra no es el dato. Sin el
+    // espejo de ADV2-10 esta familia ni siquiera se veía aquí.
+    data.facts.push({ content: "Guardo el horario de la clínica en el cajón de la cocina", category: "general" });
+    const engine = proseEngine("La clínica atiende de 7 de la mañana a 3 de la tarde.");
+    setDisabledTools(["remember_fact"]);
+    let t;
+    try {
+      t = await send("¿Cuál es el horario de la clínica?", "es", engine, { netSources: [HORARIO_REAL] });
+    } finally {
+      setDisabledTools([]);
+    }
+    expect(t.netted).toBe(true);
+    expect(t.response).toBe(HORARIO_REAL);
+    expect(t.response).not.toContain("7 de la mañana");
+  });
+
+  it("G3: la clave pedida y la clave en el hecho — la prosa desde la memoria sigue exenta", async () => {
+    // La otra cara del diseño (a): el dato SÍ vive en el hecho que
+    // promueve, así que el testigo nace y la red no toca la prosa,
+    // ni con la herramienta desactivada (el diseño (b) la desviaba:
+    // medido y rechazado en la preparación).
+    data.facts.push({ content: "La clave del wifi está apuntada en un papel: 4829", category: "general" });
+    const engine = proseEngine("La clave del wifi es 4829.");
+    setDisabledTools(["remember_fact"]);
+    let t;
+    try {
+      t = await send("¿Cuál es la clave del wifi?", "es", engine, { netSources: [HORARIO_REAL] });
+    } finally {
+      setDisabledTools([]);
+    }
+    expect(t.netted).toBeFalsy();
+    expect(t.response).toBe("La clave del wifi es 4829.");
   });
 });

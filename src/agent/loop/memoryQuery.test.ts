@@ -7,9 +7,12 @@
 import { describe, it, expect } from "vitest";
 import {
   answerMemoryQuery,
+  factHasDatumInstance,
   isGenericMemoryQuestionShape,
   isMemoryStyleQuery,
   memoryGateHit,
+  memoryProbeWitness,
+  questionDatumClasses,
   scoreMemoryFacts,
   type MemoryQueryData,
 } from "./memoryQuery";
@@ -218,5 +221,83 @@ describe("0.1.41 — «Que sabes de mi ?» con espacio antes del signo (prueba f
   it.each(["Que sabes de mi ?", "qué recuerdas de mí", "Cuando es mi cumpleaños ?"])("%s", (q) => {
     expect(isMemoryStyleQuery(q)).toBe(true);
     expect(answerMemoryQuery(q, mem, "es")).toBeTruthy();
+  });
+});
+
+describe("ADV2-09 — el testigo de la sonda exige el dato en el hecho (batería medida de la preparación)", () => {
+  const memOf = (facts: string[]): MemoryQueryData => ({
+    facts: facts.map((content) => ({ content, category: "general" })),
+    people: [],
+  });
+
+  it("W1–W6: el hecho nombra el tema pero no contiene el dato — no hay testigo", () => {
+    // W1 (hit fuerte): el hecho habla de la clínica y del hermano, sin horario.
+    expect(
+      memoryProbeWitness("¿Qué horario tiene la clínica donde trabaja mi hermano?", memOf(["Mi hermano trabaja en la clínica San Rafael"])),
+    ).toBe(false);
+    // W2 (cobertura): el hecho del cajón dice «horario» y no contiene ninguna hora.
+    expect(
+      memoryProbeWitness("¿Cuál es el horario de la clínica?", memOf(["Guardo el horario de la clínica en el cajón de la cocina"])),
+    ).toBe(false);
+    // W3: la tarjeta nombrada sin su número.
+    expect(
+      memoryProbeWitness("¿Cuál es el número de la tarjeta?", memOf(["El número de la tarjeta está en el papel del cajón"])),
+    ).toBe(false);
+    // W4 (EN): «clinic hours» en el cajón, sin horas.
+    expect(
+      memoryProbeWitness("What are the opening hours of the clinic?", memOf(["I keep the clinic hours in the kitchen drawer"])),
+    ).toBe(false);
+    // W5 (PT): «horário» na gaveta, sem hora nenhuma.
+    expect(
+      memoryProbeWitness("Qual é o horário da clínica?", memOf(["Guardo o horário da clínica na gaveta da cozinha"])),
+    ).toBe(false);
+    // W6: la clave nombrada sin la clave.
+    expect(
+      memoryProbeWitness("¿Cuál es la clave del wifi?", memOf(["La clave del wifi está en un papel en la cocina"])),
+    ).toBe(false);
+  });
+
+  it("G1–G3: la exención de H-06 queda donde el diseño la dejó", () => {
+    // G1: sin clase de dato pedida, el testigo no cambia (fixture H-06).
+    expect(
+      memoryProbeWitness("¿Qué le compré a mi esposa el año pasado?", memOf(["Le compré una pulsera a mi esposa el año pasado"])),
+    ).toBe(true);
+    // G2: cumpleaños con la fecha (mes nombrado) en el hecho.
+    expect(
+      memoryProbeWitness("¿Cuándo es el cumpleaños de mi mamá?", memOf(["El cumpleaños de mi mamá es el 15 de marzo"])),
+    ).toBe(true);
+    // G3: la clave pedida y la clave (dígitos) en el hecho.
+    expect(
+      memoryProbeWitness("¿Cuál es la clave del wifi?", memOf(["La clave del wifi está apuntada en un papel: 4829"])),
+    ).toBe(true);
+  });
+
+  it("el mismo hecho con el dato dentro sí gana el testigo (la instancia, por clase)", () => {
+    // Hora como H:MM y como rango, en las tres lenguas de la casa.
+    expect(factHasDatumInstance("La clínica atiende de 8:00 a 18:00", "time")).toBe(true);
+    expect(factHasDatumInstance("The clinic is open from 9 to 5", "time")).toBe(true);
+    expect(factHasDatumInstance("A clínica abre das 8 às 18", "time")).toBe(true);
+    expect(factHasDatumInstance("La cita es a las 12 pm", "time")).toBe(true);
+    // Número como corrida de dígitos con separadores.
+    expect(factHasDatumInstance("El número de la tarjeta es 1234-5678", "number")).toBe(true);
+    expect(factHasDatumInstance("El teléfono de la clínica es 520-555-0147", "number")).toBe(true);
+    // Fecha como mes, como ISO y como d/m; un año suelto no es fecha.
+    expect(factHasDatumInstance("Mi cumpleaños es el 3 de mayo", "date")).toBe(true);
+    expect(factHasDatumInstance("La cita quedó para 2026-11-10", "date")).toBe(true);
+    expect(factHasDatumInstance("La revisión es el 10/11", "date")).toBe(true);
+    expect(factHasDatumInstance("Eso pasó en 2026", "date")).toBe(false);
+    // La palabra de la clase nunca es la instancia.
+    expect(factHasDatumInstance("Guardo el horario en el cajón", "time")).toBe(false);
+    expect(factHasDatumInstance("El número está en el papel", "number")).toBe(false);
+  });
+
+  it("las clases pedidas se leen de la pregunta, cerradas y trilingües", () => {
+    expect(questionDatumClasses("¿Cuál es el horario de la clínica?")).toEqual(["time"]);
+    expect(questionDatumClasses("¿Cuál es el número de la tarjeta?")).toEqual(["number"]);
+    expect(questionDatumClasses("¿Cuándo es el cumpleaños de mi mamá?")).toEqual(["date"]);
+    expect(questionDatumClasses("What are the opening hours?")).toEqual(["time"]);
+    expect(questionDatumClasses("Qual é o horário da clínica?")).toEqual(["time"]);
+    expect(questionDatumClasses("¿Qué le compré a mi esposa el año pasado?")).toEqual([]);
+    expect(questionDatumClasses("¿Dónde está la clave del wifi?")).toEqual(["number"]);
   });
 });

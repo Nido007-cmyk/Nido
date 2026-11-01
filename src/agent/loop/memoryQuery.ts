@@ -288,6 +288,113 @@ export function memoryFullCoverageHit(userText: string, mem: MemoryQueryData): b
   return tokenCount >= 2 && score === tokenCount;
 }
 
+// ---------------------------------- ADV2-09: el testigo exige el dato
+
+/**
+ * Segunda adversaria, ADV2-09: el testigo de H-06 se gana por la
+ * FORMA del turno, y dos de las puertas que lo otorgan (la sonda:
+ * hit fuerte y cobertura total) deciden por solape de tokens con un
+ * hecho — sin mirar si el dato preguntado vive en ese hecho. Con la
+ * herramienta de memoria desactivada (un estado que el producto
+ * ofrece), la capa determinista no corre y la prosa inventada sobre
+ * un dato que NO está en la memoria salía exenta de la red: el
+ * hecho del cajón dice «horario» y no contiene ninguna hora.
+ *
+ * Diseño (a), el medido en la preparación contra el (b): cuando la
+ * promoción viene de la sonda, el testigo exige además que el hecho
+ * que promueve contenga una INSTANCIA de la clase de dato pedida —
+ * la instancia es el dato, no la palabra de la clase. Sin clase
+ * reconocida en la pregunta, el testigo no cambia: la exención de
+ * H-06 queda intacta. (El diseño (b) — sin testigo cuando la
+ * herramienta está apagada — se midió y se rechazó: volteaba la
+ * fixture asentada del propio H-06 en ese mismo estado.)
+ *
+ * Alcance declarado: solo las promociones de la sonda. Los turnos
+ * que el clasificador ruta «recordar» conservan el testigo de
+ * siempre; esa puerta es otra familia (Núcleo 3). La clase
+ * «lugar/dirección» no entra: no es comprobable con una instancia
+ * cerrada (los lugares son vocabulario abierto).
+ */
+export type MemoryDatumClass = "time" | "number" | "date";
+
+/** Palabras-gatillo por clase, cerradas y trilingües (tokens de la
+ *  pregunta plegada; las formas son la palabra y sus plurales o
+ *  flexiones del mismo concepto, nada más). */
+const DATUM_TRIGGER_WORDS: Record<MemoryDatumClass, readonly string[]> = {
+  time: [
+    "horario", "horarios", "hora", "horas", "hour", "hours",
+    "abre", "abren", "cierra", "cierran", "opening", "schedule",
+  ],
+  number: [
+    "numero", "numeros", "telefono", "telefone", "tarjeta", "cartao",
+    "clave", "codigo", "number", "numbers", "phone", "card", "code", "senha",
+  ],
+  date: [
+    "cuando", "fecha", "cumpleanos", "aniversario",
+    "when", "date", "birthday", "quando",
+  ],
+};
+
+/** Meses (tokens plegados, es/en/pt): una fecha nombrada ES una
+ *  instancia de fecha; un año suelto no lo es. */
+const MONTH_TOKENS = new Set([
+  "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+  "septiembre", "setiembre", "octubre", "noviembre", "diciembre",
+  "january", "february", "march", "april", "may", "june", "july", "august",
+  "september", "october", "november", "december",
+  "janeiro", "fevereiro", "marco", "maio", "junho", "julho",
+  "setembro", "outubro", "novembro", "dezembro",
+]);
+
+/** La instancia de cada clase dentro del hecho (texto plegado):
+ *  hora = H:MM, «12 am/pm» o un rango («de 8 a 18», «from 9 to 5»,
+ *  «das 8 às 18»); número = corrida de ≥3 dígitos con separadores;
+ *  fecha = ISO, d/m o un mes nombrado (este último se prueba por
+ *  token en factHasDatumInstance). */
+const DATUM_INSTANCE_RES: Record<MemoryDatumClass, readonly RegExp[]> = {
+  time: [
+    /\b\d{1,2}:\d{2}\b/,
+    /\b\d{1,2}\s*(?:am|pm)\b/,
+    /\bde\s+\d{1,2}\s+a\s+\d{1,2}\b/,
+    /\bdas\s+\d{1,2}\s+as\s+\d{1,2}\b/,
+    /\bfrom\s+\d{1,2}\s+to\s+\d{1,2}\b/,
+  ],
+  number: [/\d(?:[\s.\-]?\d){2,}/],
+  date: [/\b\d{4}-\d{2}-\d{2}\b/, /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/],
+};
+
+/** ¿Contiene el hecho una instancia de la clase pedida? */
+export function factHasDatumInstance(fact: string, cls: MemoryDatumClass): boolean {
+  const f = fold(fact);
+  if (DATUM_INSTANCE_RES[cls].some((re) => re.test(f))) return true;
+  if (cls === "date") return f.split(/[^a-z0-9]+/).some((w) => MONTH_TOKENS.has(w));
+  return false;
+}
+
+/** Las clases de dato que la pregunta pide (vacío = ninguna). */
+export function questionDatumClasses(question: string): MemoryDatumClass[] {
+  const tokens = new Set(fold(question).split(/[^a-z0-9]+/).filter((w) => w.length > 0));
+  return (Object.keys(DATUM_TRIGGER_WORDS) as MemoryDatumClass[]).filter((cls) =>
+    DATUM_TRIGGER_WORDS[cls].some((w) => tokens.has(w)),
+  );
+}
+
+/**
+ * El testigo de una promoción de la sonda: ¿puede este turno
+ * eximirse de la red como «respondido desde la memoria»? La misma
+ * fuente de puntuación que la puerta y la respuesta
+ * (scoreMemoryFacts): el hecho que promueve es su mejor hecho. Si
+ * la pregunta no pide ninguna clase cerrada, el testigo es el de
+ * siempre (true). Si la pide, el hecho debe contener el dato.
+ */
+export function memoryProbeWitness(question: string, mem: MemoryQueryData): boolean {
+  const classes = questionDatumClasses(question);
+  if (classes.length === 0) return true;
+  const { fact } = scoreMemoryFacts(mem, question);
+  if (!fact) return true;
+  return classes.some((cls) => factHasDatumInstance(fact, cls));
+}
+
 export function isGenericMemoryQuestionShape(userText: string): boolean {
   const t = (userText ?? "").trim();
   if (!t) return false;
