@@ -85,9 +85,18 @@ const ACT_PATTERNS: RegExp[] = [
   /lee la nota/i,
   /abre (la app|el)?/i,
   /\babrir\b/i,
-  /qu[eé] hora es/i,
-  /qu[eé] fecha es/i,
-  /qu[eé] d[ií]a es hoy/i,
+  // R-06 (ronda física 0.1.68): los patrones de reloj y fecha casan SOLO la
+  // pregunta desnuda («¿qué hora es?» ± coletillas corteses), anclada de
+  // principio a fin. «¿A qué hora es la cita?» pregunta CUÁNDO es un evento,
+  // no la hora del aparato: sin anclar, una sola letra («hora» contra
+  // «horas») mandaba el turno al loop, donde el documento del usuario es
+  // invisible y el modelo inventó la cita con la fecha de hoy. El objeto
+  // tras «es» descalifica — el espejo de /cu[áa]ndo tengo/, donde el objeto
+  // de agenda es justo lo que casa. El texto llega normalizado
+  // (normalizeForRouting ya quitó las muletillas de arranque).
+  /^[¿¡]?\s*(?:dime\s+|decime\s+)?qu[ée] hora es(?:\s+(?:ahora(?:\s+mismo)?|hoy))?(?:[,\s]+(?:por favor|porfa|please))?\s*[?!]?$/i,
+  /^[¿¡]?\s*(?:dime\s+|decime\s+)?qu[ée] fecha es(?:\s+hoy)?(?:[,\s]+(?:por favor|porfa|please))?\s*[?!]?$/i,
+  /qu[ée] d[ií]a es hoy(?:[,\s]+(?:por favor|porfa|please))?\s*[?!]?$/i,
   // "Recuerda / no olvides / acuérdate de" + infinitivo = recordatorio (acción),
   // no memoria: "recuerda comprar pan" ≠ "recuerda que mi cumple es en mayo".
   /\brecuerda +[a-záéíóúñü]+(ar|er|ir)\b/i,
@@ -97,7 +106,9 @@ const ACT_PATTERNS: RegExp[] = [
   /\bremind me\b/i,
   /\btake a note\b/i,
   /\bopen the app\b/i,
-  /\bwhat time is it\b/i,
+  // R-06: gemelo inglés del anclaje — «what time is the movie» es pregunta
+  // por un evento, no la hora del aparato.
+  /^[¿¡]?\s*what time is it(?:\s+(?:right\s+)?now)?(?:[,\s]+please)?\s*[?!]?$/i,
   // Fase B: calculadora, conversiones, calendario, contactos, llamadas, archivos.
   /\bcalcula\b/i,
   /cu[áa]nto es/i,
@@ -176,14 +187,16 @@ const ACT_PATTERNS: RegExp[] = [
   /\bmy calendar\b/i,
   /\bin my contacts\b/i,
   /\bopen https?:/i,
-  /\bwhat(?:'s| is) (the date|today's date)\b/i,
+  // R-06: ídem fecha en inglés — «what is the date of the concert» no casa.
+  /^[¿¡]?\s*what(?:'s| is) (?:the date|today's date)(?:\s+today)?\s*[?!]?$/i,
   /\bwhat(?:'s| is) \d/i,
   /\bpair(ing)? (with|code)\b/i,
   // Portugués.
   /\blembr[ae]-me\b/i,
   // 0.1.14: "me lembra de ligar…" (recordatorio). "me lembra que X" es memoria.
   /\bme lembr[ae]\b(?!\s+que\b)/i,
-  /\bque horas s[aã]o\b/i,
+  // R-06: gemelo portugués del anclaje (fin de frase, ± «agora»/cortesía).
+  /que horas s[aã]o(?:\s+agora)?(?:[,\s]+(?:por favor|faz favor))?\s*[?!]?$/i,
   /\b(envia|enviar|manda)\b.{0,30}\bmensagem\b/i,
   /\bguarda (uma )?nota\b/i,
   /\bquanto [eé]\s/i,

@@ -246,3 +246,44 @@ describe("0.1.14 — intenciones en portugués y cuentas", () => {
     expect(classifyIntent("não esqueça que tenho dentista na sexta")).toBe("recordar");
   });
 });
+
+describe("R-06 (ronda 0.1.68) — reloj y fecha solo en la pregunta desnuda", () => {
+  it.each([
+    // Las cadenas exactas de la ronda: con objeto, la cita/película/vuelo
+    // preguntan CUÁNDO es un evento; no son la hora del aparato y no deben
+    // caer al loop, donde el documento del usuario es invisible.
+    "¿Qué día y a qué hora es la cita?",
+    "¿a qué hora es la película?",
+    "¿a qué hora es el vuelo?",
+    "¿a qué fecha es el pago?",
+    "what time is the movie",
+    "what is the date of the concert",
+  ])("%p → conversar", (text) => {
+    expect(classifyIntent(text)).toBe("conversar");
+  });
+
+  it.each([
+    // La pregunta desnuda (± coletillas corteses) sigue siendo la hora
+    // del aparato: herramienta device_time.
+    "¿qué hora es?",
+    "qué hora es",
+    "¿Qué hora es, por favor?",
+    "¿qué hora es ahora?",
+    "dime qué hora es",
+    "¿Qué horas son?",
+    "¿qué fecha es hoy?",
+    "¿qué día es hoy?",
+    "what time is it",
+    "what's today's date",
+    "que horas são",
+  ])("%p → actuar", (text) => {
+    expect(classifyIntent(text)).toBe("actuar");
+  });
+
+  it("sin regresión en las familias vecinas", () => {
+    expect(classifyIntent("recuérdame a las 5")).toBe("actuar");
+    // El patrón de agenda con objeto sigue mandando (no se tocó).
+    expect(classifyIntent("¿cuándo tengo la cita?")).toBe("actuar");
+    expect(classifyIntent("¿qué tengo el lunes?")).toBe("actuar");
+  });
+});
