@@ -8,7 +8,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { extractPdfTextCapped, PdfTextError } from "./pdfText";
-import { isOcrAvailable, recognizeImageText, recognizeScannedPdfText, OCR_PROVENANCE_NOTE, OcrLang } from "./ocr";
+import { isOcrAvailable, recognizeImageText, recognizeScannedPdfText, OCR_PROVENANCE_NOTE, OcrError, OcrLang } from "./ocr";
 import { attachmentKind, KIND_SAMPLE_BYTES } from "./attachmentPolicy";
 import { embeddingEngine } from "../rag/embed";
 import {
@@ -169,7 +169,74 @@ type ParsedDoc = { title: string; source: string; body: string; ocr?: boolean };
 interface ImportSink {
   emptyPdfNames: string[];
   ocrFailedNames: string[];
+  /**
+   * R-06 P5: PDF sin capa de texto cuyo OCR SÍ corrió y devolvió
+   * vacío (no rechazó: resolvió sin texto). Se anota aparte de
+   * ocrFailedNames a propósito: el error de vacío total distingue
+   * «resolvió vacío» (noText) de «la llamada rechazó» (ocrFailed)
+   * — esa distinción es la que separa las ramas del fallo en el
+   * aparato — y esta lista da el nombre a los avisos por fichero.
+   */
+  ocrEmptyNames: string[];
   noOcrImageNames: string[];
+  /**
+   * La huella de cada rechazo de OCR, por nombre de fichero: el
+   * código del OcrError y su mensaje acotado. Antes de R-06 P5 el
+   * catch del importador tiraba el error entero y ni el código ni
+   * el mensaje sobrevivían a ninguna superficie.
+   */
+  ocrErrorByName: Map<string, { code: string; message: string }>;
+}
+
+/** Tope del mensaje de error de OCR que se conserva: el del módulo nativo, sin contenido del usuario. */
+const OCR_ERROR_MESSAGE_MAX = 200;
+
+/**
+ * Anota un rechazo de OCR conservando su huella (código y mensaje
+ * acotado del OcrError), en vez del catch desnudo que lo enterraba.
+ */
+function noteOcrFailure(sink: ImportSink | undefined, filename: string, e: unknown): void {
+  if (!sink) return;
+  sink.ocrFailedNames.push(filename);
+  const code = e instanceof OcrError ? e.code : "OCR_FAILED";
+  const message = (e instanceof Error ? e.message : String(e)).slice(0, OCR_ERROR_MESSAGE_MAX);
+  sink.ocrErrorByName.set(filename, { code, message });
+}
+
+/**
+ * Por qué un fichero no aportó texto a una importación con éxito
+ * (R-06 P5): el aviso que la Biblioteca enseña en la colección.
+ * `ocrFailed` lleva la huella del rechazo (código y mensaje del
+ * nativo, acotado); `ocrEmpty` es un OCR que corrió y volvió sin
+ * texto; `imageNoOcr`, una imagen en una versión sin el módulo.
+ */
+export type ImportWarningReason = "ocrFailed" | "ocrEmpty" | "imageNoOcr" | "noText";
+
+export interface ImportWarning {
+  name: string;
+  reason: ImportWarningReason;
+  ocrCode?: string;
+  ocrMessage?: string;
+}
+
+/** La colección creada por una importación, con los avisos por fichero sin texto de esa importación. */
+export interface ImportedCollection extends CustomCollection {
+  importWarnings: ImportWarning[];
+}
+
+/** El aviso de un fichero, leído de los sumideros de su importación. */
+function importWarningFor(name: string, sink: ImportSink): ImportWarning {
+  if (sink.ocrFailedNames.includes(name)) {
+    const detail = sink.ocrErrorByName.get(name);
+    return {
+      name,
+      reason: "ocrFailed",
+      ...(detail ? { ocrCode: detail.code, ocrMessage: detail.message } : {}),
+    };
+  }
+  if (sink.ocrEmptyNames.includes(name)) return { name, reason: "ocrEmpty" };
+  if (sink.noOcrImageNames.includes(name)) return { name, reason: "imageNoOcr" };
+  return { name, reason: "noText" };
 }
 
 /** El entorno de reconocimiento de UNA importación: idioma de la app y si esta versión trae el módulo. */
@@ -299,8 +366,8 @@ async function parseFileContent(
     try {
       const text = await recognizeImageText(file.uri, env.lang);
       return [{ title: fallbackTitle, source: filename, body: text, ocr: true }];
-    } catch {
-      sink?.ocrFailedNames.push(filename);
+    } catch (e) {
+      noteOcrFailure(sink, filename, e);
       return [{ title: fallbackTitle, source: filename, body: "" }];
     }
   }
@@ -335,11 +402,18 @@ async function parseFileContent(
         const ocrText = await recognizeScannedPdfText(file.uri, env.lang);
         if (ocrText.trim().length > 0) {
           docs.push({ title: fallbackTitle, source: filename, body: ocrText, ocr: true });
+        } else if (text.trim().length === 0) {
+          // R-06 P5: sin capa de texto y el OCR volvió vacío — el
+          // fichero se anota para que los avisos lo nombren (antes
+          // este caso no anotaba nada y el PDF entraba como
+          // documento sin haber aportado ni un chunk, en silencio).
+          sink?.ocrEmptyNames.push(filename);
         }
-      } catch {
+      } catch (e) {
         // El texto de la capa (si lo hay) sigue valiendo; si no lo
-        // hay, el nombre queda anotado para el error de vacío.
-        sink?.ocrFailedNames.push(filename);
+        // hay, el nombre y la huella del rechazo quedan anotados
+        // para el error de vacío y para los avisos.
+        noteOcrFailure(sink, filename, e);
       }
     }
     return docs;
@@ -426,7 +500,7 @@ export function importDocuments(
   files: DocumentPicker.DocumentPickerAsset[],
   collectionName: string,
   onProgress?: (p: ImportProgress) => void
-): Promise<CustomCollection> {
+): Promise<ImportedCollection> {
   const run = importChain.then(() => importDocumentsSerial(files, collectionName, onProgress));
   // La cadena nunca muere: el fallo lo recibe el llamante en `run`,
   // no la cadena que ordena a las importaciones siguientes.
@@ -438,7 +512,7 @@ async function importDocumentsSerial(
   files: DocumentPicker.DocumentPickerAsset[],
   collectionName: string,
   onProgress?: (p: ImportProgress) => void
-): Promise<CustomCollection> {
+): Promise<ImportedCollection> {
   const collectionId = `custom-${Date.now()}-${slug(collectionName)}`;
   // Token de ciclo de vida de ESTA importación (ver seedCorpus.seedNow): si
   // Clear All Data avanza el ciclo a mitad, los inserts pendientes y la
@@ -448,7 +522,14 @@ async function importDocumentsSerial(
 
   onProgress?.({ stage: "reading" });
   const allDocs: ParsedDoc[] = [];
-  const sink: ImportSink = { emptyPdfNames: [], ocrFailedNames: [], noOcrImageNames: [] };
+  const sink: ImportSink = {
+    emptyPdfNames: [],
+    ocrFailedNames: [],
+    ocrEmptyNames: [],
+    noOcrImageNames: [],
+    ocrErrorByName: new Map(),
+  };
+  const importWarnings: ImportWarning[] = [];
   // El reconocimiento se prepara una vez por importación: si esta
   // versión no trae el módulo, el idioma ni se lee (el camino sin
   // OCR es exactamente el de siempre). models/settings se importa
@@ -470,6 +551,13 @@ async function importDocumentsSerial(
     // quedan ni trocear lo leído.
     for (const d of docs) estimatedChunks += estimateChunkCount(d.body.trim().length);
     if (estimatedChunks > MAX_IMPORT_CHUNKS) throw tooManyChunks(estimatedChunks);
+    // R-06 P5: un fichero cuyos documentos no dan ni un trozo queda
+    // nombrado como aviso de ESTA importación aunque tenga éxito —
+    // antes, con un solo fichero bueno al lado, su fracaso no se
+    // nombraba en ninguna parte.
+    if (docs.every((d) => d.body.trim().length === 0)) {
+      importWarnings.push(importWarningFor(file.name, sink));
+    }
     allDocs.push(...docs);
   }
 
@@ -508,10 +596,16 @@ async function importDocumentsSerial(
       );
     }
     if (sink.ocrFailedNames.length > 0) {
+      const name = sink.ocrFailedNames[0];
+      // R-06 P5: el error nombrado conserva la huella del rechazo
+      // (código y mensaje acotado del nativo) en sus vars y en su
+      // mensaje de registro — es lo que separa «la llamada rechazó»
+      // de «resolvió vacía» fuera del aparato.
+      const detail = sink.ocrErrorByName.get(name);
       throw new DocImportError(
         "ocrFailed",
-        `"${sink.ocrFailedNames[0]}" couldn't be read even with OCR.`,
-        { name: sink.ocrFailedNames[0] }
+        `"${name}" couldn't be read even with OCR${detail ? ` (${detail.code}: ${detail.message})` : ""}.`,
+        detail ? { name, ocrCode: detail.code, ocrMessage: detail.message } : { name }
       );
     }
     const code = emptyImportErrorCode(sink.emptyPdfNames, ocrAvailable);
@@ -579,7 +673,7 @@ async function importDocumentsSerial(
   }
 
   const [created] = (await listCustomCollections()).filter((c) => c.id === collectionId);
-  return created;
+  return { ...created, importWarnings };
 }
 
 export { listCustomCollections, setCustomCollectionActive, deleteCustomCollection };
