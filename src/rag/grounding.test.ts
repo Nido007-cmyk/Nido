@@ -471,6 +471,143 @@ describe("R-05 — la regla del dato pedido (el teléfono de la ronda)", () => {
   });
 });
 
+// ---------------------------------------------------------------
+// Revisión adversaria de la cadena, H-02: la cura de R-05 podía
+// entregar EL DATO EQUIVOCADO con sello «grounded». La bonificación
+// de forma telefónica (+3) se activaba ante cualquier pregunta con
+// «número», y a «¿Cuál es el número de la tarjeta?» la sustitución
+// trajo el teléfono de la clínica como si fuera el de la tarjeta.
+// La sonda de la adversaria, como fixture permanente: el dato
+// pedido y el dato entregado han de ser el mismo tipo de dato.
+
+const DOC_TARJETA: GroundingChunk = {
+  title: "documento-prueba-ocr",
+  body:
+    "Tarjeta del paciente. El número de la tarjeta se consulta en recepción. " +
+    "La línea de atención atiende de lunes a viernes. " +
+    "Termina en 4417, como se lee en el reverso. " +
+    "Para cambiar la cita llame al 520-555-0147. " +
+    "El número de emergencia es el 911.",
+};
+
+const DOC_TARJETA_EN: GroundingChunk = {
+  title: "documento-prueba-ocr",
+  body:
+    "Patient card. The card number can be checked at reception. " +
+    "The helpline is open Monday to Friday. " +
+    "It ends in 4417, as printed on the back. " +
+    "To change the appointment call 520-555-0147. " +
+    "The emergency number is 911.",
+};
+
+const DOC_TARJETA_PT: GroundingChunk = {
+  title: "documento-prueba-ocr",
+  body:
+    "Cartão do paciente. O número do cartão consulta-se na receção. " +
+    "A linha de atendimento funciona de segunda a sexta. " +
+    "Termina em 4417, como se lê no verso. " +
+    "Para mudar a consulta ligue para 520-555-0147. " +
+    "O número de emergência é o 911.",
+};
+
+describe("Adversaria H-02 — el dato entregado es el dato pedido, o no hay sustitución", () => {
+  it("la sonda de la adversaria: «¿Cuál es el número de la tarjeta?» NO recibe el teléfono de la clínica", () => {
+    const r = verifyGroundedAnswer(
+      "El número de la tarjeta es el número de la línea.",
+      [DOC_TARJETA],
+      "es",
+      "¿Cuál es el número de la tarjeta?",
+    );
+    expect(r.text).not.toContain("520-555-0147");
+    expect(r.text).not.toContain("Para cambiar la cita llame");
+    expect(r.sentences?.some((s) => s.origin.kind === "source" && s.text.includes("520-555-0147"))).toBe(false);
+  });
+
+  it("gemela en inglés: «What is the card number?» tampoco recibe el teléfono", () => {
+    const r = verifyGroundedAnswer(
+      "The card number is the helpline number.",
+      [DOC_TARJETA_EN],
+      "en",
+      "What is the card number?",
+    );
+    expect(r.text).not.toContain("520-555-0147");
+    expect(r.text).not.toContain("To change the appointment call");
+  });
+
+  it("gemela en portugués: «Qual é o número do cartão?» tampoco recibe el teléfono", () => {
+    const r = verifyGroundedAnswer(
+      "O número do cartão é o número da linha.",
+      [DOC_TARJETA_PT],
+      "pt",
+      "Qual é o número do cartão?",
+    );
+    expect(r.text).not.toContain("520-555-0147");
+    expect(r.text).not.toContain("Para mudar a consulta ligue");
+  });
+
+  it("la señal genérica SÍ desbloquea el dato que comparte el tema sustantivo (el número de emergencias)", () => {
+    const emergencias: GroundingChunk = {
+      title: "Línea de ayuda",
+      body: "El número de emergencia en México es 911. La línea de ayuda atiende siempre.",
+    };
+    const r = verifyGroundedAnswer(
+      "El número de emergencias es el número de la línea.",
+      [emergencias],
+      "es",
+      "¿Cuál es el número de emergencias?",
+    );
+    expect(r.text).toContain("911");
+    expect(r.text).not.toContain("número de la línea");
+    expect(r.status).toBe("grounded");
+  });
+
+  it("la señal telefónica específica sigue sustituyendo en inglés (pregunta de teléfono de verdad)", () => {
+    // Como en la sesión de la ronda, la recuperación mezcla el
+    // documento con la guía de crisis: de ahí sale el vocabulario
+    // (phone/number/emergency) que sostiene la frase falsa.
+    const crisisEn: GroundingChunk = {
+      title: "Crisis line",
+      body:
+        "If you are in crisis, call the helpline phone. " +
+        "The emergency number in Mexico is 911. " +
+        "You can also call the crisis and suicide prevention line at 988.",
+    };
+    const soloEn: GroundingChunk = { title: "documento-prueba-ocr", body: DOC_EN };
+    const r = verifyGroundedAnswer(
+      "The phone number to change the appointment is the emergency number.",
+      [soloEn, crisisEn],
+      "en",
+      "What is the phone number to change the appointment?",
+    );
+    expect(r.text).toContain("520-555-0147");
+    expect(r.text).not.toContain("emergency number");
+    expect(r.status).toBe("grounded");
+  });
+
+  it("la señal telefónica específica sigue sustituyendo en portugués", () => {
+    // La cópula presente portuguesa («é») se pliega a «e» y queda
+    // fuera de DATUM_COPULA_RE a propósito (es la conjunción); la
+    // gemela usa «foi», la cópula que la RE sí cubre.
+    const crisisPt: GroundingChunk = {
+      title: "Linha de crise",
+      body:
+        "Se estiver em crise, ligue para o telefone de ajuda da linha de crise. " +
+        "O número de emergência no México é 911. " +
+        "Também pode ligar para a linha de crise e prevenção do suicídio no 988.",
+    };
+    const soloPt: GroundingChunk = { title: "documento-prueba-ocr", body: DOC_PT };
+    const r = verifyGroundedAnswer(
+      "O telefone para mudar a consulta foi o número de emergência.",
+      [soloPt, crisisPt],
+      "pt",
+      "Qual é o telefone para mudar a consulta?",
+    );
+    expect(r.text).toContain("520-555-0147");
+    expect(r.text).not.toContain("número de emergência");
+    expect(r.status).toBe("grounded");
+  });
+});
+
 describe("verifyGroundedAnswer — post-chequeo de cifras (bounty, tanda 1)", () => {
   it("un año inventado tumba la frase aunque el apoyo léxico la pasaba", () => {
     const r = verifyGroundedAnswer("San Aurelio se fundó en 1904 junto al río Claro.", [CITY_ES], "es");

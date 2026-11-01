@@ -578,9 +578,13 @@ const DATUM_CATEGORY_RE =
 const DATUM_COPULA_RE = /\b(es|son|era|eran|fue|fueron|is|are|was|were|foi|foram|sao)\b/;
 
 // Preguntas «de teléfono» a efectos de la forma del dato (un teléfono
-// es una ristra larga de dígitos, no una cifra con unidad).
+// es una ristra larga de dígitos, no una cifra con unidad). SOLO
+// señales de teléfono o de llamada: «número/number» a secas NO está
+// (adversaria H-02) — cualquier pregunta por un número (el de la
+// tarjeta, el de la sala) activaba la forma telefónica, y la regla
+// podía entregar un teléfono como si fuera ese otro dato.
 const PHONE_QUESTION_RE =
-  /\b(telefono|telefonos|phone|phones|telefone|telefones|numero|numeros|number|numbers|llamar|llama|llamo|call|dial|ligar|ligo|linea|hotline)\b/;
+  /\b(telefono|telefonos|phone|phones|telefone|telefones|llamar|llama|llamo|call|dial|ligar|ligo|discar|disco|linea|hotline)\b/;
 
 function foldForCues(text: string): string {
   return stripAccents((text ?? "").toLowerCase());
@@ -600,6 +604,35 @@ function hasPhoneCluster(text: string): boolean {
   return clusters.some((c) => c.replace(/\D/g, "").length >= 7);
 }
 
+/** Cuántas raíces de contenido comparte la frase con la pregunta. */
+function sharedStemCount(sentence: string, queryStems: Set<string>): number {
+  let shared = 0;
+  for (const w of new Set(contentStems(sentence))) if (queryStems.has(w)) shared++;
+  return shared;
+}
+
+/**
+ * Las raíces-etiqueta del dato (número, teléfono y familia): prueban
+ * que una frase HABLA de un dato, no de CUÁL. Como «tema sustantivo
+ * compartido» no cuentan (adversaria H-02: la frase del 911 comparte
+ * «número» con «¿cuál es el número de la tarjeta?» y no por eso trae
+ * el dato de la tarjeta). Se derivan con el propio stem() para que
+ * las formas es/en/pt caigan en la misma raíz que produce el conteo.
+ */
+const GENERIC_DATUM_STEMS = new Set(
+  ["numero", "numeros", "number", "numbers", "telefono", "telefonos", "phone", "phones", "telefone", "telefones"].map(
+    stem,
+  ),
+);
+
+/** Raíces compartidas con la pregunta que son tema sustantivo (no la etiqueta del dato). */
+function substantiveStemCount(sentence: string, queryStems: Set<string>): number {
+  let shared = 0;
+  for (const w of new Set(contentStems(sentence)))
+    if (queryStems.has(w) && !GENERIC_DATUM_STEMS.has(w)) shared++;
+  return shared;
+}
+
 /**
  * Cuánto casa una frase con la pregunta a efectos del dato: 2 por
  * raíz de contenido compartida, +3 si la pregunta es de teléfono y la
@@ -607,16 +640,19 @@ function hasPhoneCluster(text: string): boolean {
  * es lo único que empareja pregunta y fuente entre idiomas).
  */
 function datumScore(sentence: string, queryStems: Set<string>, phoneQuestion: boolean): number {
-  let shared = 0;
-  for (const w of new Set(contentStems(sentence))) if (queryStems.has(w)) shared++;
-  return 2 * shared + (phoneQuestion && hasPhoneCluster(sentence) ? 3 : 0);
+  return 2 * sharedStemCount(sentence, queryStems) + (phoneQuestion && hasPhoneCluster(sentence) ? 3 : 0);
 }
 
 /**
  * La frase fuente que trae EL dato que la pregunta pide: la de mayor
- * datumScore entre las que llevan cifras juzgables, con un mínimo de
- * 2 (una raíz compartida con la pregunta, o la forma telefónica por
- * sí sola). Null si la evidencia no contiene ese dato.
+ * datumScore entre las ELEGIBLES. Elegible = lleva cifras juzgables
+ * y es el mismo tipo de dato que se pide (adversaria H-02): comparte
+ * al menos una raíz sustantiva con la pregunta, o trae la forma
+ * telefónica ante una pregunta de teléfono de verdad (la vía que
+ * empareja entre idiomas, donde puede no haber raíces que
+ * compartir). «Algún dígito temático» ya no basta: sin elegible, la
+ * evidencia no contiene ese dato y no hay sustitución que hacer —
+ * y menos con el dato de otro. Null si no hay elegible.
  */
 function pickDatumSentence(query: string, recs: SourceSentenceRec[]): SourceSentenceRec | null {
   const queryStems = new Set(contentStems(query));
@@ -625,6 +661,8 @@ function pickDatumSentence(query: string, recs: SourceSentenceRec[]): SourceSent
   let bestScore = 0;
   for (const rec of recs) {
     if (!hasJudgedDigit(rec.text)) continue;
+    const phoneForm = phoneQuestion && hasPhoneCluster(rec.text);
+    if (substantiveStemCount(rec.text, queryStems) === 0 && !phoneForm) continue;
     const score = datumScore(rec.text, queryStems, phoneQuestion);
     if (score >= 2 && score > bestScore) {
       bestScore = score;
