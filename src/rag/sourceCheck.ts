@@ -36,6 +36,21 @@
  * de traer la categoría del dato omitido, y una sustantiva ajena a
  * la categoría basta cuando la categoría misma se comparte.
  *
+ * C-08 (cadena «Arregla todo») le enseña las unidades en las que
+ * Esencial dosifica: %, gotas (con su calificador «por litro»),
+ * comprimidos, días/semanas/meses/años, ml/kg y mg/kg, las cucharas
+ * y la frecuencia diaria. Y los rangos: «10 a 14 días» funde en una
+ * medida {min, max} — el valor dentro del rango es la misma cifra,
+ * el de fuera contradice, y rango contra rango con solape basta.
+ * Tres varas de conversión, declaradas y escritas en el código (la
+ * excepción a la regla de no convertir): cucharadita = 5 ml y
+ * cucharada = 15 ml (el estándar culinario que las recetas de tipo
+ * OMS presuponen; entre cucharas el factor se cancela), semana =
+ * 7 días exactos, y «cada N horas» = 24/N veces al día. Las gotas
+ * jamás se convierten a ml (su volumen depende del gotero y de la
+ * concentración) y «veces» a secas no es unidad: sin marco diario
+ * explícito es multiplicador («5 veces la distancia»), no dosis.
+ *
  * Estricta a propósito (la precisión es el producto; el recuerdo
  * bajo es aceptado y declarado, como en Field Atlas):
  *  - Misma unidad normalizada, sin convertir nunca (km ≠ millas).
@@ -52,7 +67,7 @@
 
 import type { RetrievedChunk } from "./retrieve";
 import { splitSentences } from "./grounding";
-import { numberTokens, roundsFromEvidence, tokenReadings } from "./evidenceNumbers";
+import { numberTokens, parseNumberToken, roundsFromEvidence, tokenReadings } from "./evidenceNumbers";
 
 export interface NumberConflict {
   /** La unidad normalizada en la que discrepan («km»). */
@@ -86,7 +101,81 @@ const UNITS: Record<string, string> = {
   minutos: "minutos", minuto: "minutos", minutes: "minutos", minute: "minutos", min: "minutos",
   segundos: "segundos", segundo: "segundos", seconds: "segundos", second: "segundos",
   habitantes: "habitantes", personas: "personas", people: "personas",
+  // C-08: las unidades de dosis y duración de Esencial.
+  "%": "%", percent: "%",
+  gotas: "gotas", drops: "gotas",
+  comprimido: "comprimidos", comprimidos: "comprimidos",
+  tableta: "comprimidos", tabletas: "comprimidos",
+  pastilla: "comprimidos", pastillas: "comprimidos",
+  tablet: "comprimidos", tablets: "comprimidos",
+  pill: "comprimidos", pills: "comprimidos",
+  día: "dias", días: "dias", dia: "dias", dias: "dias", day: "dias", days: "dias",
+  mes: "meses", meses: "meses", month: "meses", months: "meses",
+  año: "años", años: "años", ano: "años", anos: "años", year: "años", years: "años",
 };
+
+/**
+ * Conversiones con vara declarada (C-08): cucharas a ml con el
+ * estándar culinario (cucharadita 5, cucharada 15) y semanas a días
+ * exactos (×7). Meses y años no se convierten (28–31 y 365/366 no
+ * son exactos): viven en UNITS y se comparan en su unidad. Las
+ * cucharas portuguesas («colher de chá / de sopa») son de dos
+ * palabras y las resuelve resolveUnit, no esta tabla.
+ */
+const CONVERT: Record<string, { unit: string; factor: number }> = {
+  cucharadita: { unit: "ml", factor: 5 },
+  cucharaditas: { unit: "ml", factor: 5 },
+  cucharada: { unit: "ml", factor: 15 },
+  cucharadas: { unit: "ml", factor: 15 },
+  teaspoon: { unit: "ml", factor: 5 },
+  teaspoons: { unit: "ml", factor: 5 },
+  tablespoon: { unit: "ml", factor: 15 },
+  tablespoons: { unit: "ml", factor: 15 },
+  semana: { unit: "dias", factor: 7 },
+  semanas: { unit: "dias", factor: 7 },
+  week: { unit: "dias", factor: 7 },
+  weeks: { unit: "dias", factor: 7 },
+};
+
+/**
+ * Números en letra, con portillo estrecho (C-08): tabla cerrada de
+ * las tres lenguas (las claves van plegadas, como todo lo que se
+ * compara contra la frase plegada: «três» llega como «tres») más
+ * media/medio/half/meia = 0,5. Solo alimentan measuresIn cuando la
+ * palabra siguiente es una unidad de DOSIS (DOSE_UNIT_WORDS) o el
+ * marco de frecuencia diaria: «dos personas» sigue sin juzgarse.
+ * Riesgo declarado: «una» es artículo y dosis a la vez («compró una
+ * cucharada de plata» formaría {15 ml}); el guarda de tema y la
+ * rareza lo hacen aceptable.
+ */
+const WORD_NUMBERS: Record<string, number> = {
+  un: 1, una: 1, uno: 1, one: 1, um: 1, uma: 1,
+  dos: 2, dois: 2, duas: 2, two: 2,
+  tres: 3, three: 3,
+  cuatro: 4, quatro: 4, four: 4,
+  cinco: 5, five: 5,
+  seis: 6, six: 6,
+  siete: 7, sete: 7, seven: 7,
+  ocho: 8, oito: 8, eight: 8,
+  nueve: 9, nove: 9, nine: 9,
+  diez: 10, dez: 10, ten: 10,
+  once: 11, onze: 11, eleven: 11,
+  doce: 12, doze: 12, twelve: 12,
+  media: 0.5, medio: 0.5, half: 0.5, meia: 0.5,
+};
+
+/** Las unidades de dosis que un número en letra puede tocar (el portillo). */
+const DOSE_UNIT_WORDS = new Set([
+  "cucharadita", "cucharaditas", "cucharada", "cucharadas",
+  "teaspoon", "teaspoons", "tablespoon", "tablespoons",
+  "colher", "colheres",
+  "gotas", "drops",
+  "comprimido", "comprimidos", "tableta", "tabletas",
+  "pastilla", "pastillas", "tablet", "tablets", "pill", "pills",
+]);
+
+/** Toda palabra que nombra una unidad o su conversión: no es tema. */
+const UNIT_WORDS = new Set([...Object.keys(UNITS), ...Object.keys(CONVERT), "colher", "colheres"]);
 
 const SCALE_WORDS: Record<string, number> = {
   mil: 1e3, miles: 1e3, thousand: 1e3,
@@ -98,10 +187,118 @@ interface FigureMeasure {
   value: number;
   decimals: number;
   unit: string;
+  /** C-08: si la medida es un rango fundido («10 a 14 días»), sus extremos ya convertidos. */
+  min?: number;
+  max?: number;
 }
 
 const foldWord = (w: string): string =>
   w.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+/** Las palabras que siguen a una posición de la frase plegada (la ventana de la caja). */
+function wordsAfter(folded: string, at: number): string[] {
+  return folded
+    .slice(at, at + 40)
+    .split(/[^a-z°%]+/)
+    .filter(Boolean);
+}
+
+const PER_LITRE_WORDS = ["litro", "litros", "litre", "litres", "liter", "liters"];
+const PER_KILO_WORDS = ["kilo", "kilos", "kg", "quilo", "quilos"];
+
+/**
+ * La unidad que sigue a una cifra, en la disciplina de siempre: se
+ * miran hasta 3 palabras y se saltan las de escala («miles de» es
+ * escala; «miles» a secas, millas). C-08 añade las formas que la
+ * disciplina no veía: «por ciento / por cento», las cucharas
+ * portuguesas de dos palabras («colher de chá / de sopa»), las
+ * conversiones de CONVERT y los calificadores: gotas con «por
+ * litro» tras la medida → gotas/l (la búsqueda del calificador mira
+ * hasta 6 palabras: la frase de la guía es «gotas de lejía por
+ * litro», con el «de lejía» en medio), y ml/mg con «por kilo» o
+ * «/kg» pegado → ml/kg, mg/kg.
+ */
+function resolveUnit(words: readonly string[]): { unit: string; factor: number } | undefined {
+  for (let i = 0; i < Math.min(words.length, 3); i++) {
+    const w = words[i];
+    if (w === "miles" && words[i + 1] === "de") continue; // «miles de…»: escala
+    if (w === "por" && (words[i + 1] === "ciento" || words[i + 1] === "cento")) return { unit: "%", factor: 1 };
+    if (w === "colher" || w === "colheres") {
+      if (words[i + 1] === "de" && words[i + 2] === "cha") return { unit: "ml", factor: 5 };
+      if (words[i + 1] === "de" && words[i + 2] === "sopa") return { unit: "ml", factor: 15 };
+      return undefined;
+    }
+    const conv = CONVERT[w];
+    if (conv) return { unit: conv.unit, factor: conv.factor };
+    const canonical = UNITS[w];
+    if (canonical !== undefined) {
+      let unit = canonical;
+      if (unit === "gotas") {
+        for (let j = i + 1; j < Math.min(words.length - 1, i + 6); j++) {
+          if ((words[j] === "por" || words[j] === "per") && PER_LITRE_WORDS.includes(words[j + 1])) {
+            unit = "gotas/l";
+            break;
+          }
+        }
+      }
+      if (
+        (unit === "ml" || unit === "mg") &&
+        (words[i + 1] === "kg" ||
+          ((words[i + 1] === "por" || words[i + 1] === "per") && PER_KILO_WORDS.includes(words[i + 2] ?? "")))
+      ) {
+        unit = `${unit}/kg`;
+      }
+      return { unit, factor: 1 };
+    }
+    if (SCALE_WORDS[w] !== undefined) continue;
+    return undefined;
+  }
+  return undefined;
+}
+
+/** Las duraciones que «cada N …» convierte en intervalo (canónica cada-<unidad>). */
+const INTERVAL_UNITS: Record<string, { unit: string; factor: number }> = {
+  dia: { unit: "dias", factor: 1 },
+  dias: { unit: "dias", factor: 1 },
+  day: { unit: "dias", factor: 1 },
+  days: { unit: "dias", factor: 1 },
+  semana: { unit: "dias", factor: 7 },
+  semanas: { unit: "dias", factor: 7 },
+  week: { unit: "dias", factor: 7 },
+  weeks: { unit: "dias", factor: 7 },
+  mes: { unit: "meses", factor: 1 },
+  meses: { unit: "meses", factor: 1 },
+  month: { unit: "meses", factor: 1 },
+  months: { unit: "meses", factor: 1 },
+  ano: { unit: "años", factor: 1 },
+  anos: { unit: "años", factor: 1 },
+  year: { unit: "años", factor: 1 },
+  years: { unit: "años", factor: 1 },
+  minuto: { unit: "minutos", factor: 1 },
+  minutos: { unit: "minutos", factor: 1 },
+  minute: { unit: "minutos", factor: 1 },
+  minutes: { unit: "minutos", factor: 1 },
+  segundo: { unit: "segundos", factor: 1 },
+  segundos: { unit: "segundos", factor: 1 },
+  second: { unit: "segundos", factor: 1 },
+  seconds: { unit: "segundos", factor: 1 },
+};
+
+const WORD_NUMBER_ALT = Object.keys(WORD_NUMBERS)
+  .sort((a, b) => b.length - a.length)
+  .join("|");
+const RANGE_RES = [
+  /(\d+(?:[.,]\d+)?)\s*(?:[-–—]|\ba\b|\bto\b|\baté\b)\s*(\d+(?:[.,]\d+)?)/g,
+  /\bentre\s+(\d+(?:[.,]\d+)?)\s+(?:y|e|and)\s+(\d+(?:[.,]\d+)?)/g,
+];
+const CADA_HOURS_RE = /\b(?:cada|every)\s+(\d+(?:[.,]\d+)?)\s+(horas|hora|hours|hour|h)\b/g;
+const CADA_INTERVAL_RE = /\b(?:cada|every)\s+(\d+(?:[.,]\d+)?)\s+([a-z]+)\b/g;
+const FREQ_FRAME_RE = new RegExp(
+  `\\b(\\d+(?:[.,]\\d+)?|${WORD_NUMBER_ALT})\\s+(veces|times|vezes)\\s+(al dia|por dia|a day|per day|ao dia)\\b`,
+  "g",
+);
+const WORD_NUMBER_RE = new RegExp(`\\b(${WORD_NUMBER_ALT})\\b`, "g");
+const DIGIT_TOKEN_RE = /\d[\d.,]*\d|\d/g;
 
 /**
  * Las medidas (valor + unidad) de una frase. El valor queda COMO SE
@@ -111,30 +308,102 @@ const foldWord = (w: string): string =>
  * solo se saltan para encontrar la unidad («16,4 millones de
  * habitantes»); «miles» es unidad (millas, en inglés) salvo que le
  * siga «de», que es escala en español.
+ *
+ * C-08 ordena la extracción en pre-pasos que CONSUMEN su tramo de
+ * frase, para que la pasada general no vuelva a juzgar esas cifras
+ * con otra ropa: (1) los rangos funden sus extremos — si el 10 y el
+ * 14 quedaran sueltos, «12 días» chocaría contra el 10 en vez de
+ * caer dentro; (2) «cada N horas» vale 24/N veces al día y su cifra
+ * no queda además como horas sueltas; (3) «cada N <duración>» forma
+ * el intervalo cada-<unidad>; (4) el marco «N veces al día» (dígito
+ * o letra) forma la frecuencia; (5) los números en letra tocan solo
+ * unidades de dosis. Las conversiones declaradas (CONVERT) se
+ * aplican al valor ya aquí: el factor se cancela entre iguales y
+ * contra ml/días manda la vara.
  */
 function measuresIn(sentence: string): FigureMeasure[] {
   const out: FigureMeasure[] = [];
-  const tokens = numberTokens(sentence);
-  const folded = ` ${foldWord(sentence)} `;
-  for (const token of tokens) {
-    const at = folded.indexOf(foldWord(token));
-    if (at < 0) continue;
-    const after = folded.slice(at + token.length, at + token.length + 24);
-    const words = after.split(/[^a-z°%]+/).filter(Boolean);
-    let unit: string | undefined;
-    for (let i = 0; i < Math.min(words.length, 3); i++) {
-      const w = words[i];
-      if (w === "miles" && words[i + 1] === "de") continue; // «miles de…»: escala
-      if (UNITS[w] !== undefined) {
-        unit = UNITS[w];
-        break;
-      }
-      if (SCALE_WORDS[w] !== undefined) continue;
-      break;
+  const folded = ` ${foldWord(sentence).replace(/\[\d+\]/g, (m) => " ".repeat(m.length))} `;
+  const consumed: Array<readonly [number, number]> = [];
+  const isConsumed = (at: number): boolean => consumed.some(([a, b]) => at >= a && at < b);
+  const consume = (at: number, len: number): void => {
+    consumed.push([at, at + len]);
+  };
+
+  // (1) Rangos: «10 a 14 días», «entre 37 y 40 °C», «5–6 %».
+  for (const re of RANGE_RES) {
+    for (const m of folded.matchAll(re)) {
+      const at = m.index;
+      if (isConsumed(at)) continue;
+      const lo = parseNumberToken(m[1]);
+      const hi = parseNumberToken(m[2]);
+      if (lo.length === 0 || hi.length === 0) continue;
+      const resolved = resolveUnit(wordsAfter(folded, at + m[0].length));
+      if (!resolved) continue; // sin unidad tras el rango no hay rango que juzgar
+      const min = Math.min(lo[0], hi[0]) * resolved.factor;
+      const max = Math.max(lo[0], hi[0]) * resolved.factor;
+      if (max <= min) continue;
+      out.push({ value: min, decimals: 0, unit: resolved.unit, min, max });
+      consume(at, m[0].length);
     }
-    if (!unit) continue;
+  }
+
+  // (2) «Cada N horas» = 24/N veces al día, con la tolerancia de
+  // redondeo de siempre (cada 5 horas = 4,8 ≈ 5).
+  for (const m of folded.matchAll(CADA_HOURS_RE)) {
+    const at = m.index;
+    if (isConsumed(at)) continue;
+    const n = parseNumberToken(m[1])[0];
+    if (!n) continue;
+    const value = 24 / n;
+    out.push({ value, decimals: Number.isInteger(value) ? 0 : 1, unit: "veces/dia" });
+    consume(at, m[0].length);
+  }
+
+  // (3) «Cada N <duración>» = intervalo cada-<unidad>.
+  for (const m of folded.matchAll(CADA_INTERVAL_RE)) {
+    const at = m.index;
+    if (isConsumed(at)) continue;
+    const base = INTERVAL_UNITS[m[2]];
+    if (!base) continue;
+    const n = parseNumberToken(m[1])[0];
+    if (n === undefined) continue;
+    out.push({ value: n * base.factor, decimals: 0, unit: `cada-${base.unit}` });
+    consume(at, m[0].length);
+  }
+
+  // (4) El marco de frecuencia diaria, en dígito o en letra.
+  for (const m of folded.matchAll(FREQ_FRAME_RE)) {
+    const at = m.index;
+    if (isConsumed(at)) continue;
+    const raw = m[1];
+    const reading = /^\d/.test(raw) ? tokenReadings(raw)[0] : { value: WORD_NUMBERS[raw], decimals: 0 };
+    if (!reading) continue;
+    out.push({ value: reading.value, decimals: reading.decimals, unit: "veces/dia" });
+    consume(at, m[0].length);
+  }
+
+  // (5) Números en letra que tocan una unidad de dosis.
+  for (const m of folded.matchAll(WORD_NUMBER_RE)) {
+    const at = m.index;
+    if (isConsumed(at)) continue;
+    const words = wordsAfter(folded, at + m[0].length);
+    if (words.length === 0 || !DOSE_UNIT_WORDS.has(words[0])) continue;
+    const resolved = resolveUnit(words);
+    if (!resolved) continue;
+    out.push({ value: WORD_NUMBERS[m[1]] * resolved.factor, decimals: 0, unit: resolved.unit });
+    consume(at, m[0].length);
+  }
+
+  // La pasada general: cada cifra con su unidad, como siempre.
+  for (const m of folded.matchAll(DIGIT_TOKEN_RE)) {
+    const at = m.index;
+    if (isConsumed(at)) continue;
+    const token = m[0];
+    const resolved = resolveUnit(wordsAfter(folded, at + token.length));
+    if (!resolved) continue;
     for (const reading of tokenReadings(token)) {
-      out.push({ value: reading.value, decimals: reading.decimals, unit });
+      out.push({ value: reading.value * resolved.factor, decimals: reading.decimals, unit: resolved.unit });
     }
   }
   return out;
@@ -145,7 +414,7 @@ function contentWords(sentence: string): Set<string> {
   return new Set(
     foldWord(sentence)
       .split(/[^a-zñ]+/)
-      .filter((w) => w.length >= 4 && UNITS[w] === undefined && SCALE_WORDS[w] === undefined)
+      .filter((w) => w.length >= 4 && !UNIT_WORDS.has(w) && SCALE_WORDS[w] === undefined)
   );
 }
 
@@ -283,6 +552,19 @@ function sourceCarriesCategory(sentence: string, category: string): boolean {
 }
 
 function sameFigure(a: FigureMeasure, b: FigureMeasure): boolean {
+  // C-08: el juicio de rangos. Un valor dentro del rango ajeno — con
+  // la tolerancia de redondeo a la precisión con que se afirma — es
+  // la misma cifra; fuera, contradice. Rango contra rango con
+  // solape basta (declarado): dos guías que se pisan no se acusan.
+  const aRange = a.min !== undefined && a.max !== undefined ? { min: a.min, max: a.max } : null;
+  const bRange = b.min !== undefined && b.max !== undefined ? { min: b.min, max: b.max } : null;
+  if (aRange && bRange) return aRange.min <= bRange.max && bRange.min <= aRange.max;
+  const range = aRange ?? bRange;
+  if (range) {
+    const plain = aRange ? b : a;
+    const tol = 0.5 * Math.pow(10, -plain.decimals) + 1e-9;
+    return plain.value >= range.min - tol && plain.value <= range.max + tol;
+  }
   const asSet = new Set([b.value]);
   if (roundsFromEvidence(a.value, a.decimals, asSet)) return true;
   const bsSet = new Set([a.value]);
