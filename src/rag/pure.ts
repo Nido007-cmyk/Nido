@@ -263,24 +263,100 @@ const ABSENT_DATUM_TYPE_FORMS = new Set([
 ]);
 
 /**
- * C-05: the datum-question frame of signal B ("¿cuál es…?", "¿qué…?",
- * "what is…?", "qual é…?"), read on folded tokens so accents and
- * punctuation can't hide it. A leading conjunction is skipped
- * ("¿Y cuál es…?").
+ * C-05b: filler tokens a sentence may open with before its frame —
+ * conjunctions, the preposition of "¿A qué…?" and spoken openers
+ * ("Oye,…"). At most MAX_FRAME_FILLER_SKIP of them are skipped: the
+ * frame must sit at the sentence's opening, never anywhere in its
+ * text — that is the written bound of signal B's frame hunt.
  */
-function isDatumQuestion(query: string): boolean {
-  const tokens = tokenize(query);
-  const start = tokens[0] === "y" || tokens[0] === "e" || tokens[0] === "and" ? 1 : 0;
-  const a = tokens[start];
-  const b = tokens[start + 1];
+const FRAME_FILLER_TOKENS = new Set([
+  "y", "e", "and", "a",
+  "oye", "oiga", "mira", "bueno", "hola", "hey", "olha", "oi",
+]);
+const MAX_FRAME_FILLER_SKIP = 3;
+
+function frameTokens(tokens: string[]): string[] {
+  let i = 0;
+  while (i < tokens.length && i < MAX_FRAME_FILLER_SKIP && FRAME_FILLER_TOKENS.has(tokens[i])) i++;
+  return tokens.slice(i);
+}
+
+/**
+ * C-05b: procedure openers. A sentence governed by one of these asks
+ * what to DO; a datum type mentioned inside it rides along — it is
+ * not the datum being asked for (adversaria-8, A8-03: "¿Qué hago si
+ * no me llega el correo de confirmación?" carries "correo" past a
+ * procedure frame and C-05's bare "¿qué…?" frame fired on it).
+ */
+const PROCEDURE_AFTER_QUE = new Set([
+  "hago", "hacemos", "hacer", "debo", "debemos", "puedo", "podemos", "tengo", "tenemos",
+]);
+
+function opensProcedureFrame(tokens: string[]): boolean {
+  const a = tokens[0];
+  const b = tokens[1];
+  const c = tokens[2];
+  return (
+    a === "como" ||
+    a === "how" ||
+    (a === "que" && (b === "se" ? c === "hace" || c === "hacen" : PROCEDURE_AFTER_QUE.has(b as string))) ||
+    (a === "o" && b === "que" && (c === "fazer" || c === "faco")) ||
+    (a === "what" && (b === "do" || b === "should"))
+  );
+}
+
+/**
+ * C-05b: spoken need openers — the dictated form of asking for a
+ * datum ("Necesito la dirección del consulado…", adversaria-8 A8-02).
+ */
+const NEED_FRAME_TOKENS = new Set(["necesito", "quiero", "busco", "preciso"]);
+
+function opensDatumFrame(tokens: string[]): boolean {
+  const a = tokens[0];
+  const b = tokens[1];
   return (
     a === "que" ||
     (a === "cual" && b === "es") ||
     (a === "cuales" && b === "son") ||
     (a === "what" && (b === "is" || b === "are")) ||
     (a === "qual" && b === "e") ||
-    (a === "quais" && b === "sao")
+    (a === "quais" && b === "sao") ||
+    NEED_FRAME_TOKENS.has(a as string) ||
+    (a === "i" && b === "need") ||
+    (a === "eu" && b === "preciso")
   );
+}
+
+/**
+ * C-05: the datum-question frame of signal B ("¿cuál es…?", "¿qué…?",
+ * "what is…?", "qual é…?"), read on folded tokens so accents and
+ * punctuation can't hide it.
+ *
+ * C-05b re-seats it after adversaria-8 showed the first form missing
+ * the settled game's inventory in both directions. The frame is now
+ * hunted PER SENTENCE, in the sentence that carries the type term —
+ * never across the whole text at once (A8-02: under dictation an
+ * opener rides first and the type lands in a second sentence, where
+ * its own sentence does open as a datum request). The inventory
+ * gains the forms the game demonstrates: "¿A qué + tipo…?" behaves
+ * exactly like its "¿Cuál es…?" twin (A8-01) and the spoken need
+ * form counts as asking. And a procedure opener VETOES the signal
+ * even with a type term riding along (A8-03) — the datum has to be
+ * ASKED, not mentioned; a procedure opening in the first sentence
+ * makes the whole question a procedure question.
+ */
+function isDatumQuestion(query: string): boolean {
+  const sentences = query
+    .split(/[.!?;\n]+/)
+    .map((s) => tokenize(s))
+    .filter((t) => t.length > 0);
+  if (sentences.length === 0) return false;
+  if (opensProcedureFrame(frameTokens(sentences[0]))) return false;
+  return sentences.some((tokens) => {
+    if (!tokens.some((t) => ABSENT_DATUM_TYPE_FORMS.has(t))) return false;
+    const start = frameTokens(tokens);
+    return !opensProcedureFrame(start) && opensDatumFrame(start);
+  });
 }
 
 interface TokenizedText {
@@ -321,7 +397,9 @@ export interface UnfoundedCorpusOptions {
  *   (df > 0, unmatched) does NOT fire it — that is C-02/C-03 territory.
  * - Signal B, "the datum type asked for does not exist here": a datum
  *   question (isDatumQuestion) whose type term (ABSENT_DATUM_TYPE_FORMS)
- *   has df 0 in this corpus's pool makes the corpus fall. Exemption: if
+ *   has df 0 in this corpus's pool makes the corpus fall. Since C-05b
+ *   the frame is hunted per sentence and a procedure opener vetoes it
+ *   — see isDatumQuestion. Exemption: if
  *   any served hit is from the user's own corpus, signal B drops
  *   nothing — a personal document can carry the datum without naming
  *   its type ("Consulado de España, Calle Zanja 123…" matches like the
