@@ -433,3 +433,27 @@ describe("N-11 — la «¿» inicial no derrota a la guardia interrogativa", () 
     expect(extractRememberFact("Recuerda que la capital de Perú es Lima")).not.toBeNull();
   });
 });
+
+describe("Pieza 5 — «guarda <hecho>: <valor>» sin «que» (imperativo con dos puntos)", () => {
+  it("la forma medida guarda el hecho entero, con su valor", () => {
+    const r = extractRememberFact("Guarda el teléfono de la clínica: 520-555-0147");
+    expect(r).not.toBeNull();
+    expect(r?.content).toBe("el teléfono de la clínica: 520-555-0147");
+  });
+
+  it("las cautelas de colisión aguantan", () => {
+    // Sin dos puntos no hay marco: es una orden doméstica, no un hecho.
+    expect(extractRememberFact("Guarda la ropa en el cajón")).toBeNull();
+    // El sujeto de nota es de NOTE_SAVE_RULES: el extractor de hechos no lo caza.
+    expect(extractRememberFact("Guarda una nota: comprar pan")).toBeNull();
+    // Las formas con «que» siguen por su patrón de siempre.
+    expect(extractRememberFact("Guarda que el wifi es 1234")?.content).toBe("el wifi es 1234");
+    expect(extractRememberFact("Guarda en tu memoria que el wifi es 1234")?.content).toBe("el wifi es 1234");
+  });
+
+  it("un sujeto largo con dos puntos es prosa, no este imperativo", () => {
+    expect(
+      extractRememberFact("Guarda todos los papeles que firmamos el año pasado en la oficina: están en la caja")
+    ).toBeNull();
+  });
+});

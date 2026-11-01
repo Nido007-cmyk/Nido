@@ -751,5 +751,34 @@ export function extractRememberFact(userText: string): RememberExtraction | null
       }
     }
   }
-  return null;
+  // Pieza 5 (2026-11-01): «guarda <hecho>: <valor>» sin «que» — el
+  // imperativo con dos puntos («Guarda el teléfono de la clínica:
+  // 520-555-0147») no lo cazaba ningún patrón y caía al modelo. Marco
+  // propio, tras los patrones: las formas con «que» ya volvieron arriba.
+  return extractGuardaColonFact(trimmed);
+}
+
+/** Sujeto de nota: «guarda una nota: …» es NOTE_SAVE (toolRouter), no hecho. */
+const NOTE_SUBJECT_RE = /^(?:una?\s+)?(?:nota|apunte|recado)\b/i;
+
+function extractGuardaColonFact(trimmed: string): RememberExtraction | null {
+  const m = /^gu[aá]rda(?:te)?\s+(.+)$/i.exec(trimmed);
+  if (!m) return null;
+  const rest = m[1];
+  const colon = rest.indexOf(":");
+  if (colon < 0) return null; // sin dos puntos no hay marco: «guarda la ropa…»
+  const subject = rest.slice(0, colon).trim();
+  const value = rest.slice(colon + 1).trim();
+  if (!subject || !value) return null;
+  if (NOTE_SUBJECT_RE.test(subject)) return null;
+  // Las formas ya cubiertas por patrones no se reinterpretan aquí.
+  if (/^(?:que\b|en\s+(?:tu|la)\s+memoria\b)/i.test(subject)) return null;
+  // El sujeto del marco es corto («el teléfono de la clínica»): un
+  // sujeto largo con dos puntos es prosa, no este imperativo.
+  if (subject.split(/\s+/).length > 6) return null;
+  const content = `${subject}: ${value}`;
+  if (content.length < 3 || isInterrogativeContent(content) || stripDateWords(content).trim().length < 3) {
+    return null;
+  }
+  return { content, category: detectCategory(content) };
 }

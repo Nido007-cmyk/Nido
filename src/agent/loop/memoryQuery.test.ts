@@ -137,7 +137,7 @@ describe("batería trilingüe: consultas genéricas EN/PT", () => {
 // respuesta nunca discrepen. Umbral aprobado: score >= 2, o score == 1
 // cuando la pregunta tiene un único término de contenido.
 describe("Pieza 4 (resto de ADV-M1) — la forma fusionada también pasa la puerta genérica", () => {
-  const MEM_MAMA = { facts: [{ content: "Tu mamá se llama Marta." }], people: [] };
+  const MEM_MAMA = { facts: [{ content: "Tu mamá se llama Marta.", category: "general" }], people: [] };
   it("isGenericMemoryQuestionShape des-fusiona: «¿cómo se llama mima?» es forma genérica", () => {
     expect(isGenericMemoryQuestionShape("¿Cómo se llama mima?")).toBe(true);
     expect(isGenericMemoryQuestionShape("¿Cómo se llama mi mamá?")).toBe(true);
