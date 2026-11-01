@@ -153,6 +153,8 @@ const DIR_SCOPED: Record<string, string> = {
   "pending.json": "eval/ (EVAL_REQUESTS_DIR cuelga de EVAL_RESULTS_DIR)",
   "status.json": "eval/ (las *.status.json de deviceEvalRequest)",
   "resume.json": "models/ (cola de <modelo>.gguf.resume.json, modelTrust)",
+  "execution_telemetry.json":
+    "cache/ (exportExecutionTelemetry lo escribe en cacheDirectory; appReset borra CACHE_DIR entero — SEC-04 lo conserva por nombre en su barrido, pero el borrado total no lo deja)",
 };
 
 /**
