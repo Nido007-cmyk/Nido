@@ -1010,6 +1010,62 @@ function pickDatumSentence(query: string, recs: SourceSentenceRec[]): SourceSent
 }
 
 /**
+ * Las raíces-dueño de un teléfono nombradas en su frase (ADV3,
+ * A3-04): de quién dice la frase que es el teléfono, leído con
+ * medios cerrados sobre los tokens plegados:
+ * - Gobierno tras el nombre del dato: tras una palabra-nombre
+ *   (teléfono/numero/phone/line…), si dentro de los 2 tokens
+ *   siguientes aparece una preposición de posesión (de, del, da,
+ *   do, das, dos, of — el «the» de «number of the X» es el
+ *   artículo que se salta, no la preposición), las raíces de
+ *   contenido de las 3 palabras de contenido siguientes son
+ *   dueño: «el teléfono de la clínica San Rafael» →
+ *   {clinica, san, rafael}.
+ * - Posesivo inglés delante del nombre: «the clinic's phone»
+ *   deja tokens clinic, s, phone — la raíz 2 tokens antes del
+ *   nombre es dueño.
+ * Las etiquetas genéricas (GENERIC_DATUM_STEMS) nunca son dueño.
+ * Sin construcción de dueño, el conjunto es vacío.
+ */
+const PHONE_NAME_WORDS = new Set([
+  "telefono", "telefonos", "telefone", "telefones", "phone", "phones",
+  "linea", "line", "hotline", "numero", "numeros", "number", "numbers",
+]);
+const PHONE_OWNER_PREPS = new Set(["de", "del", "da", "do", "das", "dos", "of"]);
+
+function phoneOwnerStems(sentence: string): Set<string> {
+  const toks = foldedTokens(sentence);
+  const owners = new Set<string>();
+  const addContentStem = (tok: string): boolean => {
+    if (!/^[a-zñ]+$/.test(tok)) return false;
+    const stems = contentStems(tok);
+    if (stems.length === 0) return false;
+    if (!GENERIC_DATUM_STEMS.has(stems[0])) owners.add(stems[0]);
+    return true;
+  };
+  for (let k = 0; k < toks.length; k++) {
+    if (!PHONE_NAME_WORDS.has(toks[k])) continue;
+    // Posesivo inglés: «… clinic s phone …».
+    if (k >= 2 && toks[k - 1] === "s") addContentStem(toks[k - 2]);
+    // Gobierno: preposición dentro de los 2 tokens siguientes.
+    let prep = -1;
+    for (let m = k + 1; m <= Math.min(toks.length - 1, k + 2); m++) {
+      if (PHONE_OWNER_PREPS.has(toks[m])) {
+        prep = m;
+        break;
+      }
+    }
+    if (prep === -1) continue;
+    let collected = 0;
+    for (let j = prep + 1; j < toks.length && collected < 3; j++) {
+      if (/\d/.test(toks[j])) break;
+      if (addContentStem(toks[j])) collected++;
+    }
+  }
+  return owners;
+}
+
+/**
  * El puente de ADV2-02 (segunda adversaria): «¿Cuál es el número de
  * la clínica?» no trae palabra-señal de teléfono ni comparte raíces
  * con la frase del teléfono, y la sustitución moría en los tres
@@ -1039,6 +1095,14 @@ function phoneDatumBridge(
   if (phoneRecs.length !== 1) return null;
   const evidenceStems = new Set(recs.flatMap((r) => contentStems(r.text)));
   if (!substantive.some((s) => evidenceStems.has(s))) return null;
+  // ADV3 (A3-04): si la frase del teléfono nombra como dueño a una
+  // entidad y ninguna de sus raíces es la pedida, el teléfono es
+  // de OTRA entidad: el puente no lo sirve como respuesta (servía
+  // el de la clínica ante la pregunta por la farmacia). Sin dueño
+  // nombrado — la forma de ADV2-02 — la guardia no bloquea nada, y
+  // cualquier solape basta para dejarlo disparar.
+  const owners = phoneOwnerStems(phoneRecs[0].text);
+  if (owners.size > 0 && ![...owners].some((s) => substantive.includes(s))) return null;
   return phoneRecs[0];
 }
 

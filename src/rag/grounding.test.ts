@@ -1218,4 +1218,34 @@ describe("ADV3 — el puente no sirve el teléfono de otra entidad", () => {
     );
     expect(r.text).not.toContain("520-555-0147");
   });
+
+  it("control: dueño = entidad pedida — el puente SÍ dispara y entrega el teléfono de la farmacia", () => {
+    const fuente: GroundingChunk = {
+      title: "nota",
+      body: "La farmacia está en la planta baja del hospital. El teléfono de la farmacia es el 520-555-0147.",
+    };
+    const r = verifyGroundedAnswer(
+      "El número de la farmacia es el que viene en la nota.",
+      [fuente],
+      "es",
+      "¿Cuál es el número de la farmacia?",
+    );
+    expect(r.text).toContain("520-555-0147");
+    expect(r.text).not.toContain("es el que viene en la nota");
+  });
+
+  it("control: dueño = entidad pedida con descriptor («clínica San Rafael») — dispara y entrega el teléfono", () => {
+    const fuente: GroundingChunk = {
+      title: "nota",
+      body: "La clínica está en la planta baja del hospital. El teléfono de la clínica San Rafael es el 520-555-0147.",
+    };
+    const r = verifyGroundedAnswer(
+      "El número de la clínica es el que viene en la nota.",
+      [fuente],
+      "es",
+      "¿Cuál es el número de la clínica?",
+    );
+    expect(r.text).toContain("520-555-0147");
+    expect(r.text).not.toContain("es el que viene en la nota");
+  });
 });
