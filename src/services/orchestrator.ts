@@ -8,6 +8,7 @@ import { llamaEngine } from "../inference/LlamaEngine";
 import { withBoundedRepair } from "../agent/loop/structuredOutput";
 import { retrieve, assemblePrompt, RetrievedChunk, ConversationHistory } from "../rag/retrieve";
 import { assembleChatMessages } from "../rag/pure";
+import { gatePreemptsDeepResearch, type GateLang } from "../routing/emergencyGate";
 
 /**
  * "Deep Research Mode" — a sequential multi-pass pipeline over the SAME
@@ -43,6 +44,14 @@ export interface ResearchResult {
    * note; the synthesis prompt also gets nudged via researchSubQuestion.
    */
   noSourcesFound?: boolean;
+  /**
+   * R-07 second net: true when the emergency/health gate fired on the
+   * original question or on a decomposed sub-question AFTER decompose
+   * ran. The pipeline is abandoned before any research pass and the UI
+   * serves the turn through the protected route instead (guide
+   * verbatim / fixed path with its gates). `answer` is empty.
+   */
+  emergencyIntercepted?: boolean;
 }
 
 /**
@@ -63,13 +72,29 @@ export interface ResearchSubResult {
  * research to synthesize. Returning this instead of calling the synthesis
  * LLM guarantees the model is never invited to fabricate a "well-reasoned,
  * cited" answer from empty perspectives.
+ *
+ * R-07: localized es/en/pt like the chat route's fixed texts — before,
+ * this honest floor existed ONLY in English, so a Spanish-speaking user
+ * in Deep Research got an English dead end. Same structure in the three
+ * languages (parity is counted in the tests), no citation markers.
  */
-export function noSourcesResearchAnswer(): string {
-  return (
+const NO_SOURCES_RESEARCH_ANSWER: Record<GateLang, string> = {
+  en:
     "I couldn't find any relevant sources in the offline index, so I can't " +
     "produce a sourced research answer for this question. You can import " +
-    "relevant documents into the knowledge base, or try rephrasing the question."
-  );
+    "relevant documents into the knowledge base, or try rephrasing the question.",
+  es:
+    "No encontré ninguna fuente relevante en el índice sin conexión, así que no puedo " +
+    "producir una respuesta de investigación con fuentes para esta pregunta. Puedes importar " +
+    "documentos relevantes a la base de conocimiento, o intentar reformular la pregunta.",
+  pt:
+    "Não encontrei nenhuma fonte relevante no índice offline, por isso não posso " +
+    "produzir uma resposta de pesquisa com fontes para esta pergunta. Pode importar " +
+    "documentos relevantes para a base de conhecimento, ou tentar reformular a pergunta.",
+};
+
+export function noSourcesResearchAnswer(lang: GateLang = "en"): string {
+  return NO_SOURCES_RESEARCH_ANSWER[lang];
 }
 
 /**
@@ -114,12 +139,111 @@ export function renumberPerspectiveCitations(
  * (an empty "cite sources" instruction is exactly the dangling framing that
  * nudges a small model toward inventing content to fill it).
  */
+/**
+ * Fixed scaffolding of the synthesis, per UI language (R-07): before,
+ * every string here was hard English, so with the interface in Spanish
+ * the synthesis was steered in English and answered in English. The
+ * English texts are the originals, unchanged; es/pt carry the same
+ * instructions with an explicit answer-language order, following the
+ * chat route's pattern of localized fixed texts.
+ */
+const SYNTH_TEXT: Record<
+  GateLang,
+  {
+    fallbackSystem: string;
+    synthesizing: string;
+    perspective: (n: number, subQuestion: string) => string;
+    sourcesTag: (n: number) => string;
+    noSourcesTag: string;
+    citationInstruction: string;
+    noCitationInstruction: string;
+    originalQuestion: string;
+    closing: string;
+    answerLabel: string;
+  }
+> = {
+  en: {
+    fallbackSystem: "You are an offline research assistant.",
+    synthesizing: " You are synthesizing multiple research perspectives into one answer.",
+    perspective: (n, subQuestion) => `Perspective ${n} (${subQuestion})`,
+    sourcesTag: (n) => `[sources: ${n}]`,
+    noSourcesTag: `[sources: none — generated without local sources]`,
+    citationInstruction:
+      ` Cite sources as [n] ONLY for claims that a perspective itself ` +
+      `sourced — copy each citation number exactly as it appears in that ` +
+      `perspective (citation numbers are already global across all ` +
+      `perspectives): never invent citation numbers and never renumber ` +
+      `them. A perspective ` +
+      `marked [sources: none] was generated without any local sources: ` +
+      `never present its claims as backed by local sources; attribute them ` +
+      `to general knowledge, or say the local index had nothing on that part.`,
+    noCitationInstruction:
+      ` No perspective had any local sources, so write the answer without ` +
+      `citations and without implying that local sources support it.`,
+    originalQuestion: "Original question:",
+    closing:
+      `Compare these perspectives, reconcile any conflicts, and write one unified, ` +
+      `well-reasoned answer.`,
+    answerLabel: "Answer:",
+  },
+  es: {
+    fallbackSystem: "Eres un asistente de investigación sin conexión.",
+    synthesizing: " Estás sintetizando varias perspectivas de investigación en una sola respuesta.",
+    perspective: (n, subQuestion) => `Perspectiva ${n} (${subQuestion})`,
+    sourcesTag: (n) => `[fuentes: ${n}]`,
+    noSourcesTag: `[fuentes: ninguna — generada sin fuentes locales]`,
+    citationInstruction:
+      ` Cita las fuentes como [n] SOLO para las afirmaciones que una perspectiva ` +
+      `haya respaldado ella misma con fuentes — copia cada número de cita exactamente ` +
+      `como aparece en esa perspectiva (los números de cita ya son globales entre ` +
+      `todas las perspectivas): nunca inventes números de cita ni los renumeres. ` +
+      `Una perspectiva marcada [fuentes: ninguna] se generó sin ninguna fuente ` +
+      `local: nunca presentes sus afirmaciones como respaldadas por fuentes locales; ` +
+      `atribúyelas al conocimiento general, o di que el índice local no tenía nada ` +
+      `sobre esa parte.`,
+    noCitationInstruction:
+      ` Ninguna perspectiva tuvo fuentes locales, así que escribe la respuesta sin ` +
+      `citas y sin dar a entender que las fuentes locales la respaldan.`,
+    originalQuestion: "Pregunta original:",
+    closing:
+      `Compara estas perspectivas, reconcilia cualquier conflicto y escribe una ` +
+      `única respuesta bien razonada, en español.`,
+    answerLabel: "Respuesta:",
+  },
+  pt: {
+    fallbackSystem: "És um assistente de pesquisa offline.",
+    synthesizing: " Estás a sintetizar várias perspectivas de pesquisa numa única resposta.",
+    perspective: (n, subQuestion) => `Perspectiva ${n} (${subQuestion})`,
+    sourcesTag: (n) => `[fontes: ${n}]`,
+    noSourcesTag: `[fontes: nenhuma — gerada sem fontes locais]`,
+    citationInstruction:
+      ` Cita as fontes como [n] APENAS para as afirmações que uma perspectiva ` +
+      `tenha respaldado ela mesma com fontes — copia cada número de citação ` +
+      `exatamente como aparece nessa perspectiva (os números de citação já são ` +
+      `globais entre todas as perspectivas): nunca inventes números de citação nem ` +
+      `os renumeres. Uma perspectiva marcada [fontes: nenhuma] foi gerada sem ` +
+      `nenhuma fonte local: nunca apresentes as suas afirmações como respaldadas ` +
+      `por fontes locais; atribui-as ao conhecimento geral, ou diz que o índice ` +
+      `local não tinha nada sobre essa parte.`,
+    noCitationInstruction:
+      ` Nenhuma perspectiva teve fontes locais, por isso escreve a resposta sem ` +
+      `citações e sem dar a entender que as fontes locais a respaldam.`,
+    originalQuestion: "Pergunta original:",
+    closing:
+      `Compara estas perspectivas, reconcilia qualquer conflito e escreve uma ` +
+      `única resposta bem fundamentada, em português.`,
+    answerLabel: "Resposta:",
+  },
+};
+
 /** Shared content for buildSynthesisPrompt / buildSynthesisMessages (P1.4). */
 function synthesisParts(
   originalQuery: string,
   subResults: ResearchSubResult[],
-  systemPrompt: string | undefined
+  systemPrompt: string | undefined,
+  lang: GateLang = "en"
 ): { system: string; user: string } {
+  const txt = SYNTH_TEXT[lang];
   const anySources = subResults.some((r) => r.sourceCount > 0);
   // R2: cumulative global offset per perspective — footnote [n] in the UI
   // is allChunks[n-1], i.e. perspective i's chunk k sits at
@@ -129,56 +253,39 @@ function synthesisParts(
     .map((r, i) => {
       const renumbered = renumberPerspectiveCitations(r.answer, globalOffset, r.sourceCount);
       const text =
-        `Perspective ${i + 1} (${r.subQuestion}) ` +
-        (r.sourceCount > 0
-          ? `[sources: ${r.sourceCount}]`
-          : `[sources: none — generated without local sources]`) +
+        `${txt.perspective(i + 1, r.subQuestion)} ` +
+        (r.sourceCount > 0 ? txt.sourcesTag(r.sourceCount) : txt.noSourcesTag) +
         `:\n${renumbered}`;
       globalOffset += r.sourceCount;
       return text;
     })
     .join("\n\n");
   const instruction =
-    systemPrompt && systemPrompt.trim().length > 0
-      ? systemPrompt.trim()
-      : "You are an offline research assistant.";
-  const citationInstruction = anySources
-    ? ` Cite sources as [n] ONLY for claims that a perspective itself ` +
-      `sourced — copy each citation number exactly as it appears in that ` +
-      `perspective (citation numbers are already global across all ` +
-      `perspectives): never invent citation numbers and never renumber ` +
-      `them. A perspective ` +
-      `marked [sources: none] was generated without any local sources: ` +
-      `never present its claims as backed by local sources; attribute them ` +
-      `to general knowledge, or say the local index had nothing on that part.`
-    : ` No perspective had any local sources, so write the answer without ` +
-      `citations and without implying that local sources support it.`;
-  const system =
-    `${instruction} You are synthesizing multiple research perspectives into one answer.` +
-    citationInstruction;
-  const user =
-    `Original question: ${originalQuery}\n\n${perspectives}\n\n` +
-    `Compare these perspectives, reconcile any conflicts, and write one unified, ` +
-    `well-reasoned answer.`;
+    systemPrompt && systemPrompt.trim().length > 0 ? systemPrompt.trim() : txt.fallbackSystem;
+  const citationInstruction = anySources ? txt.citationInstruction : txt.noCitationInstruction;
+  const system = `${instruction}${txt.synthesizing}` + citationInstruction;
+  const user = `${txt.originalQuestion} ${originalQuery}\n\n${perspectives}\n\n` + txt.closing;
   return { system, user };
 }
 
 export function buildSynthesisPrompt(
   originalQuery: string,
   subResults: ResearchSubResult[],
-  systemPrompt: string | undefined
+  systemPrompt: string | undefined,
+  lang: GateLang = "en"
 ): string {
-  const { system, user } = synthesisParts(originalQuery, subResults, systemPrompt);
-  return `${system}\n\n${user}\n\nAnswer:`;
+  const { system, user } = synthesisParts(originalQuery, subResults, systemPrompt, lang);
+  return `${system}\n\n${user}\n\n${SYNTH_TEXT[lang].answerLabel}`;
 }
 
 /** P1.4: messages form of the synthesis prompt for models with a chat template. */
 export function buildSynthesisMessages(
   originalQuery: string,
   subResults: ResearchSubResult[],
-  systemPrompt: string | undefined
+  systemPrompt: string | undefined,
+  lang: GateLang = "en"
 ): { role: string; content: string }[] {
-  const { system, user } = synthesisParts(originalQuery, subResults, systemPrompt);
+  const { system, user } = synthesisParts(originalQuery, subResults, systemPrompt, lang);
   return [
     { role: "system", content: system },
     { role: "user", content: user },
@@ -192,29 +299,70 @@ export function buildSynthesisMessages(
 // but the user manually stopping it. 2 minutes is deliberately generous.
 const STAGE_TIMEOUT_MS = 120_000;
 
-async function decompose(query: string, onTimeout: () => void): Promise<string[]> {
+/**
+ * Decompose scaffolding per UI language (R-07): the instruction was
+ * hard English, so a Spanish question was decomposed under English
+ * orders (and the round's run drifted to an English topic). The
+ * English text is the original, unchanged; es/pt ask for the
+ * sub-questions in the UI language.
+ */
+const DECOMPOSE_TEXT: Record<
+  GateLang,
+  { instruction: string; question: string; subQuestions: string; repair: (error: string) => string }
+> = {
+  en: {
+    instruction:
+      `Break this research question into 2-3 focused sub-questions that ` +
+      `together cover it well (e.g. technical analysis, counter-arguments, ` +
+      `practical implications — whichever fit this question). One per line, ` +
+      `no numbering, no extra commentary.`,
+    question: "Question",
+    subQuestions: "Sub-questions",
+    repair: (error) =>
+      `\n\nYour previous output failed validation: ${error}. Output one sub-question per line, no numbering, no extra commentary.`,
+  },
+  es: {
+    instruction:
+      `Divide esta pregunta de investigación en 2-3 subpreguntas concretas que ` +
+      `juntas la cubran bien (por ejemplo análisis técnico, contraargumentos, ` +
+      `implicaciones prácticas — las que encajen con esta pregunta). Una por ` +
+      `línea, sin numeración y sin comentarios extra. Escribe las subpreguntas en español.`,
+    question: "Pregunta",
+    subQuestions: "Subpreguntas",
+    repair: (error) =>
+      `\n\nTu respuesta anterior no superó la validación: ${error}. Escribe una subpregunta por línea, sin numeración y sin comentarios extra.`,
+  },
+  pt: {
+    instruction:
+      `Divide esta pergunta de pesquisa em 2-3 subperguntas concretas que ` +
+      `juntas a cubram bem (por exemplo análise técnica, contra-argumentos, ` +
+      `implicações práticas — as que servirem a esta pergunta). Uma por linha, ` +
+      `sem numeração e sem comentários extra. Escreve as subperguntas em português.`,
+    question: "Pergunta",
+    subQuestions: "Subperguntas",
+    repair: (error) =>
+      `\n\nA tua resposta anterior não passou na validação: ${error}. Escreve uma subpergunta por linha, sem numeração e sem comentários extra.`,
+  },
+};
+
+async function decompose(query: string, onTimeout: () => void, lang: GateLang = "en"): Promise<string[]> {
   // P1.4-2026-10-08: real chat template when the GGUF ships one; the
   // hand-built "Question:/Sub-questions:" shape is the fallback for
   // models without an embedded template.
-  const instruction =
-    `Break this research question into 2-3 focused sub-questions that ` +
-    `together cover it well (e.g. technical analysis, counter-arguments, ` +
-    `practical implications — whichever fit this question). One per line, ` +
-    `no numbering, no extra commentary.`;
+  const txt = DECOMPOSE_TEXT[lang];
+  const instruction = txt.instruction;
   const useTemplate = llamaEngine.hasEmbeddedChatTemplate();
   const buildParams = (repairError?: string) => {
-    const suffix = repairError
-      ? `\n\nYour previous output failed validation: ${repairError}. Output one sub-question per line, no numbering, no extra commentary.`
-      : "";
+    const suffix = repairError ? txt.repair(repairError) : "";
     return useTemplate
       ? {
           messages: [
             { role: "system", content: instruction },
-            { role: "user", content: `Question: ${query}${suffix}` },
+            { role: "user", content: `${txt.question}: ${query}${suffix}` },
           ],
         }
       : {
-          prompt: `${instruction}\n\nQuestion: ${query}\n\nSub-questions:${suffix}`,
+          prompt: `${instruction}\n\n${txt.question}: ${query}\n\n${txt.subQuestions}:${suffix}`,
         };
   };
   const parseLines = (text: string): string[] =>
@@ -284,13 +432,14 @@ async function synthesize(
   systemPrompt: string | undefined,
   maxTokens: number,
   onToken: (piece: string) => void,
-  onTimeout: () => void
+  onTimeout: () => void,
+  lang: GateLang = "en"
 ): Promise<string> {
   // P1.4: messages+jinja when the GGUF ships a template, else the legacy
   // hand-built string.
   const promptParams = llamaEngine.hasEmbeddedChatTemplate()
-    ? { messages: buildSynthesisMessages(originalQuery, subResults, systemPrompt) }
-    : { prompt: buildSynthesisPrompt(originalQuery, subResults, systemPrompt) };
+    ? { messages: buildSynthesisMessages(originalQuery, subResults, systemPrompt, lang) }
+    : { prompt: buildSynthesisPrompt(originalQuery, subResults, systemPrompt, lang) };
   return llamaEngine.generate({
     ...promptParams,
     nPredict: maxTokens,
@@ -309,7 +458,8 @@ export async function runDeepResearch(
   maxTokens: number,
   onProgress?: (p: ResearchProgress) => void,
   onToken?: (piece: string) => void,
-  shouldStop?: () => boolean
+  shouldStop?: () => boolean,
+  lang: GateLang = "en"
 ): Promise<ResearchResult> {
   let timedOut = false;
   const markTimedOut = () => {
@@ -317,7 +467,20 @@ export async function runDeepResearch(
   };
 
   onProgress?.({ stage: "decomposing" });
-  const subQuestions = await decompose(query, markTimedOut);
+  const subQuestions = await decompose(query, markTimedOut, lang);
+
+  // R-07 second net (physical round of 0.1.68): ChatScreen already
+  // checks the gate BEFORE this pipeline, but the decomposition itself
+  // can surface the emergency the gate read differently in the raw
+  // question — and this pipeline used to reclassify NOTHING between
+  // the question and the synthesis. The original question and every
+  // sub-question go through the same gate decision; on a hit the
+  // research is abandoned before any retrieval pass and the caller
+  // serves the protected route. The emergency never becomes a
+  // "research topic".
+  if ([query, ...subQuestions].some((t) => gatePreemptsDeepResearch(t, lang))) {
+    return { answer: "", subQuestions, citations: [], timedOut, emergencyIntercepted: true };
+  }
 
   const subResults: ResearchSubResult[] = [];
   const allChunks: RetrievedChunk[] = [];
@@ -343,7 +506,7 @@ export async function runDeepResearch(
   // exactly what invited fabrication. noSourcesFound stays true so the UI
   // renders its deterministic note as well.
   if (allChunks.length === 0) {
-    return { answer: noSourcesResearchAnswer(), subQuestions, citations: allChunks, timedOut, noSourcesFound: true };
+    return { answer: noSourcesResearchAnswer(lang), subQuestions, citations: allChunks, timedOut, noSourcesFound: true };
   }
 
   onProgress?.({ stage: "synthesizing" });
@@ -357,7 +520,8 @@ export async function runDeepResearch(
     systemPrompt,
     maxTokens,
     onToken ?? (() => {}),
-    markTimedOut
+    markTimedOut,
+    lang
   );
 
   return { answer, subQuestions, citations: allChunks, timedOut, noSourcesFound: allChunks.length === 0 };

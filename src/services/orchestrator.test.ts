@@ -33,7 +33,7 @@ vi.mock("../rag/retrieve", () => ({
   assemblePrompt: () => "mock sub-question prompt",
 }));
 
-import { runDeepResearch, buildSynthesisPrompt, noSourcesResearchAnswer } from "./orchestrator";
+import { runDeepResearch, buildSynthesisPrompt, buildSynthesisMessages, noSourcesResearchAnswer } from "./orchestrator";
 
 interface Chunk {
   id: string;
@@ -258,6 +258,157 @@ describe("P1.4 chat template on all paths", () => {
     expect(joined).toMatch(/sources:\s*none/i);
     expect(joined).toMatch(/never present its claims as backed by local sources/i);
     expect(str).toContain("sq1");
+  });
+});
+
+describe("R-07 — segunda red: la emergencia no se vuelve tema de investigación", () => {
+  beforeEach(() => {
+    mockHasTemplate = false;
+  });
+
+  it("la pregunta original dispara tras descomponer: se abandona antes de recuperar nada", async () => {
+    // La descomposición devuelve subpreguntas inocuas sobre la frase
+    // exacta de la ronda; la red mira TAMBIÉN la pregunta original.
+    generateMock.mockImplementation(async (opts: { prompt: string }) => {
+      if (opts.prompt.startsWith("Divide esta pregunta de investigación")) {
+        return "¿Qué es un argumento?\n¿Cómo se estructura un debate?";
+      }
+      return "mock answer";
+    });
+    retrieveMock.mockResolvedValue([chunk(1)]);
+    const result = await runDeepResearch(
+      "Que hago si argument se esta atragantando?",
+      undefined,
+      undefined,
+      200,
+      undefined,
+      undefined,
+      undefined,
+      "es"
+    );
+    expect(result.emergencyIntercepted).toBe(true);
+    expect(result.answer).toBe("");
+    expect(result.citations).toHaveLength(0);
+    // Ninguna pasada de investigación ni de síntesis: solo descompuso.
+    expect(retrieveMock).not.toHaveBeenCalled();
+    expect(generateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("una subpregunta de emergencia destapada al descomponer también abandona el pipeline", async () => {
+    // La pregunta tal cual no dispara la puerta; una de las
+    // subpreguntas que el modelo escribió sí nombra la emergencia.
+    generateMock.mockImplementation(async (opts: { prompt: string }) => {
+      if (opts.prompt.startsWith("Divide esta pregunta de investigación")) {
+        return "¿Qué es un debate académico?\nqué hacer si alguien se esta atragantando";
+      }
+      return "mock answer";
+    });
+    retrieveMock.mockResolvedValue([chunk(1)]);
+    const result = await runDeepResearch(
+      "Quiero investigar cómo se organiza un debate",
+      undefined,
+      undefined,
+      200,
+      undefined,
+      undefined,
+      undefined,
+      "es"
+    );
+    expect(result.emergencyIntercepted).toBe(true);
+    expect(retrieveMock).not.toHaveBeenCalled();
+  });
+
+  it("una investigación ordinaria no se intercepta", async () => {
+    const prompts = scriptPipeline([[chunk(1)], [chunk(2)], [chunk(3)]]);
+    const result = await runDeepResearch("query", undefined, undefined, 200);
+    expect(result.emergencyIntercepted).toBeUndefined();
+    expect(result.answer).toBe("mock answer");
+    expect(synthesisPrompts(prompts)).toHaveLength(1);
+  });
+
+  it("la historia no se intercepta: el veto histórico manda también tras descomponer", async () => {
+    const prompts = scriptPipeline([[chunk(1)], [chunk(2)], [chunk(3)]]);
+    const result = await runDeepResearch(
+      "How many people died in the flu pandemic of 1918?",
+      undefined,
+      undefined,
+      200
+    );
+    expect(result.emergencyIntercepted).toBeUndefined();
+    expect(synthesisPrompts(prompts)).toHaveLength(1);
+  });
+});
+
+describe("R-07 — el idioma llega al pipeline (andamiaje localizado)", () => {
+  beforeEach(() => {
+    mockHasTemplate = false;
+  });
+
+  it("sin fuentes en español: la respuesta honesta sale en español y la descomposición se pidió en español", async () => {
+    const prompts: string[] = [];
+    generateMock.mockImplementation(async (opts: { prompt: string }) => {
+      prompts.push(opts.prompt);
+      if (opts.prompt.startsWith("Divide esta pregunta de investigación")) {
+        return "¿Qué beneficios tiene?\n¿Qué riesgos tiene?";
+      }
+      return "respuesta";
+    });
+    retrieveMock.mockResolvedValue([]);
+    const result = await runDeepResearch(
+      "¿qué efectos tiene?",
+      undefined,
+      undefined,
+      200,
+      undefined,
+      undefined,
+      undefined,
+      "es"
+    );
+    expect(result.noSourcesFound).toBe(true);
+    expect(result.answer).toBe(noSourcesResearchAnswer("es"));
+    expect(result.answer).toContain("No encontré ninguna fuente");
+    // La instrucción de descomposición fue la española.
+    expect(prompts[0]).toContain("Pregunta: ¿qué efectos tiene?");
+  });
+
+  it("noSourcesResearchAnswer: paridad trilingüe, determinista y sin citas", () => {
+    const langs = ["es", "en", "pt"] as const;
+    const texts = langs.map((l) => noSourcesResearchAnswer(l));
+    for (const [i, l] of langs.entries()) {
+      expect(noSourcesResearchAnswer(l)).toBe(texts[i]);
+      expect(texts[i].length).toBeGreaterThan(50);
+      expect(texts[i]).not.toMatch(/\[\d+\]/);
+    }
+    // Tres textos distintos, uno por lengua.
+    expect(new Set(texts).size).toBe(3);
+    expect(noSourcesResearchAnswer("pt")).toContain("Não encontrei nenhuma fonte");
+    // Sin argumento sigue siendo el inglés de siempre (compatibilidad).
+    expect(noSourcesResearchAnswer()).toBe(noSourcesResearchAnswer("en"));
+  });
+
+  it("buildSynthesisPrompt localizado: etiquetas y orden de idioma en es/pt, inglés intacto", () => {
+    const subs = [
+      { subQuestion: "sq1", answer: "a1 [1]", sourceCount: 1 },
+      { subQuestion: "sq2", answer: "a2", sourceCount: 0 },
+    ];
+    const es = buildSynthesisPrompt("q", subs, undefined, "es");
+    expect(es).toContain("Perspectiva 1 (sq1)");
+    expect(es).toContain("[fuentes: 1]");
+    expect(es).toContain("[fuentes: ninguna");
+    expect(es).toContain("Pregunta original: q");
+    expect(es).toContain("en español");
+    const pt = buildSynthesisPrompt("q", subs, undefined, "pt");
+    expect(pt).toContain("Perspectiva 1 (sq1)");
+    expect(pt).toContain("[fontes: 1]");
+    expect(pt).toContain("Pergunta original: q");
+    expect(pt).toContain("em português");
+    const en = buildSynthesisPrompt("q", subs, undefined);
+    expect(en).toContain("Perspective 1 (sq1)");
+    expect(en).toContain("[sources: 1]");
+    expect(en).toContain("Original question: q");
+    // La forma messages lleva el mismo contenido localizado.
+    const msgsEs = buildSynthesisMessages("q", subs, undefined, "es");
+    expect(msgsEs.map((m) => m.content).join("\n")).toContain("Pregunta original: q");
   });
 });
 
