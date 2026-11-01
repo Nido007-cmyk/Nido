@@ -315,7 +315,7 @@ export function isOrderLead(rawLead: string): boolean {
   const lead = rawLead.trim().replace(/[,:;]+$/, "").trim();
   if (!lead) return true;
   if (
-    /^(?:(?:por\s+favor|porfa|oye|hey|hola|ok|okay|vale|bueno|please|hi|nido|ei|olá|ola|mejor|better|melhor|no|n[aã]o|y|and|e|tambi[eé]n|also|tamb[eé]m|entonces|then|ent[aã]o|ahora|now|agora|can\s+you|could\s+you|would\s+you|will\s+you|puedes|podr[ií]as|me\s+puedes|me\s+podr[ií]as|pode|voc[eê]\s+pode)[,!.]?\s*)+$/i.test(lead)
+    /^(?:(?:por\s+favor|porfa|oye|hey|hola|ok|okay|vale|bueno|please|hi|nido|ei|olá|ola|mejor|better|melhor|no|n[aã]o|y|and|e|tambi[eé]n|also|tamb[eé]m|entonces|then|ent[aã]o|ahora|now|agora|can\s+you|could\s+you|would\s+you|will\s+you|puedes|podr[ií]as|me\s+puedes|me\s+podr[ií]as|pode|voc[eê]|voc[eê]\s+pode)[,!.]?\s*)+$/i.test(lead)
   ) {
     return true;
   }
@@ -426,6 +426,49 @@ export function extractReminderAction(userText: string, now: Date = new Date()):
   return { text, dueAt: first.toISOString(), repeat: spec.repeat };
 }
 
+/**
+ * N-01 (auditoría 2026-11-01): verbos que toman subordinada con «que» /
+ * «that». SOLO tras uno de estos se pela el complementante inicial de la
+ * captura antes de la guardia interrogativa: pelarlo tras cualquier verbo
+ * cambiaría familias ajenas (temporizadores, «ten en cuenta que…»). El
+ * conjunto es cerrado a propósito y se contrasta con el verbo capturado
+ * m[1], no con el texto entero.
+ */
+const QUE_TAKING_VERB_RE =
+  /^(?:recu[ée]rdame|me\s+recuerdas|me\s+(?:puedes|podr[ií]as)\s+recordar|(?:puedes|podr[ií]as)\s+recordarme|av[íi]same|me\s+avisas|despi[ée]rtame|remind\s+me(?:\s+to)?)$/i;
+
+/**
+ * N-01 (residuo declarado): verbos de enunciado en tercera persona que
+ * nunca encabezan una tarea. Tras pelar el complementante y SIN fecha
+ * parseada, un contenido que empieza por uno de estos es una pregunta
+ * disfrazada («recuérdame que significa esto»), no un recordatorio. Los
+ * subjuntivos de tarea (compre, pague, llame, saque) y la primera persona
+ * (tengo, salgo, te llamo) NO están: siguen creando.
+ */
+const RESIDUE_HEAD_RE =
+  /^(?:significa|es|son|está|están|parece|resulta|dice)(?![\p{L}])/iu;
+
+/**
+ * N-01 (costura con recordar): fecha de calendario DECLARADA — día y mes
+ * con nombre, en las formas que este mismo fichero ya reconoce en
+ * stripDateWords y en el parser («15 de marzo», «15 de março»,
+ * «March 15th»). Las fechas relativas de tarea («mañana», «el viernes»,
+ * «a las 3») NO casan: son el tiempo de la tarea, no el dato de un hecho.
+ */
+const STATED_DATE_RE =
+  /(?:\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)|\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?)/iu;
+
+/** Los verbos de la familia de recordar dentro del conjunto de N-01:
+ *  los únicos cuyo «que» puede ser un hecho disfrazado (avisar y
+ *  despertar siempre encargan una tarea). */
+const QUE_FACT_FAMILY_RE =
+  /^(?:recu[ée]rdame|me\s+recuerdas|me\s+(?:puedes|podr[ií]as)\s+recordar|(?:puedes|podr[ií]as)\s+recordarme|remind\s+me(?:\s+to)?)$/i;
+
+/** Marcadores de evento en primera persona: la MISMA lista que la vía
+ *  «recuerda que…» de extractReminderCore usa para decidir que un
+ *  contenido con fecha es un recordatorio y no un hecho. */
+const FIRST_PERSON_EVENT_RE = /\b(?:tengo|debo|hay que|tenho|preciso|i have|i need)\b/i;
+
 function extractReminderCore(userText: string): ReminderAction | null {
   lastMissingText = null;
   // 0.1.41: la forma de pregunta llega entre signos («¿me recuerdas mañana
@@ -457,11 +500,16 @@ function extractReminderCore(userText: string): ReminderAction | null {
   // El intent clasificador ya marca estos como "actuar", pero el router no los capturaba.
   // 0.1.14 (guía): "remind me to …" y portugués "me lembra de …" /
   // "lembre-me de …". "me lembra que X" es memoria, no recordatorio.
+  // N-01: el infinitivo portugués («pode me lembrar de…», «você pode me
+  // lembrar de…») nunca casaba: «me lembr[ae]» comía «lembra» y la «r»
+  // final rompía el \s+ que la regex exige detrás; y «você» desnudo como
+  // lead moría en isOrderLead. Las alternativas de infinitivo van ANTES
+  // que «me lembr[ae]» y heredan su requisito de fecha (lista de abajo).
   // 0.1.20 (P3-11): verbos de AVISO — «avísame a las 3 de estudiar»,
   // «despiértame a las 7», «me acorde às 7», «wake me at 7» creaban
   // nada: caían al modelo. El verbo va en su grupo para saber si es un
   // aviso (su texto puede ser la propia orden cuando no hay tarea).
-  const m = /((?:agr[ée]game|cr[ée]ame|ponme|crea)(?=\s+(?:una?\s+)?(?:cita|recordatorio|aviso|alarma)(?![a-záéíóúñ]))|(?:pon|agrega|a[ñn]ade|programa)(?=\s+(?:una?\s+)?(?:cita|recordatorio|aviso)(?![a-záéíóúñ]))|recu[ée]rdame|me\s+recuerdas|me\s+(?:puedes|podr[ií]as)\s+recordar|(?:puedes|podr[ií]as)\s+recordarme|me\s+(?:avisas|puedes\s+avisar|podr[ií]as\s+avisar)|remember me to|remind me(?: to)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|faz|fa[çc]a)\s+um\s+lembrete|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|define|defina)\s+um\s+alarme(?:\s+para)?|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
+  const m = /((?:agr[ée]game|cr[ée]ame|ponme|crea)(?=\s+(?:una?\s+)?(?:cita|recordatorio|aviso|alarma)(?![a-záéíóúñ]))|(?:pon|agrega|a[ñn]ade|programa)(?=\s+(?:una?\s+)?(?:cita|recordatorio|aviso)(?![a-záéíóúñ]))|recu[ée]rdame|me\s+recuerdas|me\s+(?:puedes|podr[ií]as)\s+recordar|(?:puedes|podr[ií]as)\s+recordarme|me\s+(?:avisas|puedes\s+avisar|podr[ií]as\s+avisar)|remember me to|remind me(?: to)?|(?:voc[eê]\s+)?(?:pode|podes|poderia)\s+me\s+lembrar(?!\s+que\b)(?:\s+de)?|me\s+lembrar(?!\s+que\b)(?:\s+de)?|me lembr[ae](?!\s+que\b)(?: de)?|lembr[ae]-me(?: de)?|av[íi]same|despi[ée]rtame|despertame|me\s+avisa|me\s+acorde|acorda-me|wake\s+me(?:\s+up)?|let\s+me\s+know|pon(?:me)?\s+una\s+alarma|set\s+(?:a|an|my)\s+(?:reminder|alarm)(?:\s+for)?|no\s+me\s+dejes\s+olvidar|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|faz|fa[çc]a)\s+um\s+lembrete|(?:me\s+)?(?:p[õo]e|coloca|cria|crie|define|defina)\s+um\s+alarme(?:\s+para)?|que\s+no\s+se\s+me\s+olvide|don'?t\s+let\s+me\s+forget(?:\s+to)?)\s+(?:una?\s+)?(?:cita|recordatorio|reminder)?\s*(.+)/i.exec(trimmed);
   if (!m) return null;
   // 0.1.37 (auditoría): el verbo tiene que abrir la orden. Delante solo
   // cabe una fecha («mañana recuérdame…») o una cortesía («oye, …»). Así
@@ -502,6 +550,42 @@ function extractReminderCore(userText: string): ReminderAction | null {
     .replace(/^when\s+it'?s\s+/i, "at ")
     .replace(/^quando\s+(?:forem|for)\s+/i, "às ");
 
+  // N-01 (auditoría 2026-11-01): «recuérdame QUE compre leche mañana»,
+  // «avísame QUE saque la ropa a las 3», «remind me THAT I have…» morían
+  // aquí: la guardia casa el complementante «que» por su «qu[ée]» y
+  // descartaba la captura entera como si fuera una pregunta (la regex SÍ
+  // traía la forma cortés; la fecha nunca era el bloqueo). Se pela UN
+  // complementante inicial solo tras los verbos del conjunto cerrado, y
+  // solo si lo que sigue no abre con palabra interrogativa (doble control
+  // sobre la captura cruda: «…que cómo se llama la capital» — dictado sin
+  // acentos, la «cómo» sobrevive como palabra — sigue sin crear nada).
+  let strippedComplementizer = false;
+  if (QUE_TAKING_VERB_RE.test(m[1].trim())) {
+    const after = /^(?:que|that)\s+(.+)/i.exec(text);
+    if (after) {
+      if (INTERROGATIVE_START_RE.test(after[1])) return null;
+      text = after[1].trim();
+      strippedComplementizer = true;
+      // N-01 (costura con recordar, la doctrina de la vía «recuerda
+      // que…» aplicada a la captura pelada): si el contenido trae una
+      // fecha de calendario DECLARADA y ningún evento en primera
+      // persona, es un hecho disfrazado de recordatorio («recuérdame
+      // que el cumpleaños de mi mamá es el 15 de marzo…» — el ejemplo
+      // del carrusel, fijado en el aparato en 0.1.34): esta vía devuelve
+      // null y decide memoria, que guarda el hecho limpio y crea el
+      // aviso desde su rama. Con evento («…que tengo la cita el 15 de
+      // marzo») o con fecha relativa de tarea («…que compre leche
+      // mañana»), el recordatorio se crea aquí.
+      if (
+        QUE_FACT_FAMILY_RE.test(m[1].trim()) &&
+        STATED_DATE_RE.test(text) &&
+        !FIRST_PERSON_EVENT_RE.test(text)
+      ) {
+        return null;
+      }
+    }
+  }
+
   // 0.1.19 (sonda de routing): "recuérdame cómo se llama la capital de
   // Francia" es una PREGUNTA: creaba un recordatorio basura con el texto
   // de la pregunta y nadie la respondía. Si el texto empieza con palabra
@@ -522,9 +606,15 @@ function extractReminderCore(userText: string): ReminderAction | null {
   // tía» caía al modelo y no se creaba nada. Las formas de pregunta («me
   // recuerdas…», «me avisas…», «puedes recordarme…») solo valen con fecha:
   // sin ella, «¿me recuerdas?» o «me recuerdas a mi padre» no son avisos.
-  if (!dueAt && /^(?:me\s+recuerdas|me\s+(?:puedes|podr[ií]as)\s+recordar|(?:puedes|podr[ií]as)\s+recordarme|me\s+(?:avisas|puedes\s+avisar|podr[ií]as\s+avisar))$/i.test(m[1].trim())) {
+  if (!dueAt && /^(?:me\s+recuerdas|me\s+(?:puedes|podr[ií]as)\s+recordar|(?:puedes|podr[ií]as)\s+recordarme|me\s+(?:avisas|puedes\s+avisar|podr[ií]as\s+avisar)|me\s+lembrar(?:\s+de)?|(?:voc[eê]\s+)?(?:pode|podes|poderia)\s+me\s+lembrar(?:\s+de)?)$/i.test(m[1].trim())) {
     return null;
   }
+  // N-01 (residuo declarado del diseño): pelado el complementante, si no
+  // se parseó fecha y el contenido abre con un verbo de enunciado que
+  // nunca encabeza una tarea («recuérdame que significa esto»), no es un
+  // recordatorio: es la pregunta que la guardia ya no puede ver. Solo
+  // actúa sobre capturas peladas; el resto de familias no se toca.
+  if (strippedComplementizer && !dueAt && RESIDUE_HEAD_RE.test(text)) return null;
   // Limpiar la fecha del texto para que no quede duplicada.
   if (dueAt) {
     text = stripDateWords(text);
@@ -539,7 +629,7 @@ function extractReminderCore(userText: string): ReminderAction | null {
   // 0.1.32: puede haber varios («para el lunes de pagar…» → «para de pagar…»).
   // 0.1.41 (prueba física): «avísame en 20 minutos que saque la ropa» dejaba
   // el título «que saque la ropa»; el «que» de enlace tampoco es contenido.
-  text = text.replace(/^(?:(?:para|de|que|to|for|about|sobre|do|da)\s+)+/i, "").trim();
+  text = text.replace(/^(?:(?:para|de|que|that|to|for|about|sobre|do|da)\s+)+/i, "").trim();
 
   // F6 (auditoría 2026-10-10): "recuérdame mañana" dejaba el texto vacío
   // tras quitar la fecha. Sin texto no hay recordatorio: que decida el modelo.
