@@ -1091,3 +1091,86 @@ describe("C-07: el verificador aprende fechas y días de semana", () => {
     expect(r.text).toContain("520-555-0147");
   });
 });
+
+describe("ADV3 — la unión cifra↔tipo dentro de la frase compuesta", () => {
+  it("R1: «la sala es la 10» (la sala = el día) es infractora y se sustituye por la frase del dato", () => {
+    const r = verifyGroundedAnswer("La sala es la 10.", [DOC_CLINICA_A02], "es", "¿En qué sala es la cita?");
+    expect(r.text).toContain("sala 214");
+    expect(r.text).not.toContain("sala es la 10");
+  });
+
+  it("R2: «la fecha es el 214» (la fecha = la sala) es infractora y se sustituye por la frase del dato", () => {
+    const r = verifyGroundedAnswer("La fecha es el 214.", [DOC_CLINICA_A02], "es", "¿Qué día es la cita?");
+    expect(r.text).toContain("10 de noviembre");
+    expect(r.text).not.toContain("fecha es el 214");
+  });
+
+  it("R3: «la dosis es 214 ml» (la dosis = la sala) es infractora y se sustituye por la frase fuente", () => {
+    const fuente: GroundingChunk = {
+      title: "nota",
+      body: "Tome 5 ml de jarabe dos veces al día en la sala 214.",
+    };
+    const r = verifyGroundedAnswer("La dosis es 214 ml.", [fuente], "es", "¿Cuál es la dosis del jarabe?");
+    expect(r.text).toContain("5 ml");
+    expect(r.text).not.toContain("214 ml");
+  });
+
+  it("R4: el teléfono servido como número de la sala es infractor y se sustituye por la frase fuente", () => {
+    const fuente: GroundingChunk = {
+      title: "nota",
+      body: "El teléfono de la sala 214 es el 520-555-0147.",
+    };
+    const r = verifyGroundedAnswer(
+      "El número de la sala es el 520-555-0147.",
+      [fuente],
+      "es",
+      "¿Cuál es el número de la sala?",
+    );
+    expect(r.text).toContain("sala 214");
+    expect(r.text).not.toContain("número de la sala es el 520-555-0147");
+  });
+});
+
+describe("ADV3 — el puente no sirve el teléfono de otra entidad", () => {
+  it("R1 (es): el teléfono de la clínica no se sirve como respuesta por la farmacia", () => {
+    const fuente: GroundingChunk = {
+      title: "nota",
+      body: "La farmacia está en la planta baja del hospital. El teléfono de la clínica es el 520-555-0147.",
+    };
+    const r = verifyGroundedAnswer(
+      "El número de la farmacia es el de la planta baja del hospital.",
+      [fuente],
+      "es",
+      "¿Cuál es el número de la farmacia?",
+    );
+    expect(r.text).not.toContain("520-555-0147");
+  });
+
+  it("R2 (en): the clinic's phone is not served as the pharmacy's number", () => {
+    const fuente: GroundingChunk = {
+      title: "note",
+      body: "The pharmacy is on the ground floor of the hospital. The clinic's phone is 520-555-0147.",
+    };
+    const r = verifyGroundedAnswer(
+      "The pharmacy's number is the one on the ground floor of the hospital.",
+      [fuente],
+      "en",
+      "What is the pharmacy's number?",
+    );
+    expect(r.text).not.toContain("520-555-0147");
+  });
+
+  it("R3 (pt, con «foi»): o telefone da clínica não se serve como resposta pela farmácia", () => {
+    const fuente: GroundingChunk = {
+      title: "nota",
+      body: "A farmácia fica no rés-do-chão do hospital. O telefone da clínica é o 520-555-0147.",
+    };
+    const r = verifyGroundedAnswer(
+      "O número da farmácia foi o do rés-do-chão do hospital.",
+      [fuente],
+      "pt",
+      "Qual é o número da farmácia?",
+    );
+    expect(r.text).not.toContain("520-555-0147");
+  });
+});

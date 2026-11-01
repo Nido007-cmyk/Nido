@@ -321,3 +321,28 @@ describe("ADV2-09 — el testigo de la sonda exige el dato en el hecho (batería
     expect(questionDatumClasses("¿Dónde está la clave del wifi?")).toEqual(["number"]);
   });
 });
+
+describe("ADV3 — el testigo de la sonda exige TODAS las clases pedidas", () => {
+  const memOf = (facts: string[]): MemoryQueryData => ({
+    facts: facts.map((content) => ({ content, category: "general" })),
+    people: [],
+  });
+
+  it("R1: horario + teléfono pedidos, el hecho solo trae el horario — no hay testigo", () => {
+    expect(
+      memoryProbeWitness("¿Cuál es el horario y el teléfono de la clínica?", memOf(["El horario de la clínica es de 9 a 18."])),
+    ).toBe(false);
+  });
+
+  it("R2: fecha + número pedidos, el hecho solo trae el número — no hay testigo", () => {
+    expect(
+      memoryProbeWitness("¿Cuándo vence el número de socio?", memOf(["Su número de socio es el 12345."])),
+    ).toBe(false);
+  });
+
+  it("R3 (en): hours + phone asked, the fact only brings the hours — no witness", () => {
+    expect(
+      memoryProbeWitness("What are the clinic's hours and phone number?", memOf(["The clinic is open from 9 to 5."])),
+    ).toBe(false);
+  });
+});
