@@ -3,8 +3,12 @@
 // See LICENSE file for details.
 
 /**
- * withLlamaTrim.js — P-02 (auditoría de rendimiento 2026-11-01): el
- * escalón prudente de llama.rn no se empaqueta.
+ * withLlamaTrim.js — P-02 + P-04 + P-05 (auditoría de rendimiento
+ * 2026-11-01): los recortes de empaquetado del APK. Este primer
+ * bloque es P-02: el escalón prudente de llama.rn no se empaqueta.
+ * Las listas de P-04 (tablas PQC de BouncyCastle) y P-05 (mapas CJK
+ * de fontbox) viven más abajo, junto a PACKAGING_EXCLUDES, con su
+ * porqué cada una.
  *
  * El APK llevaba 7 parejas de variantes de llama.rn. La app fija
  * `n_gpu_layers: 0` (src/inference/LlamaEngine.ts) y nunca pide el
@@ -41,7 +45,7 @@
  * exclusiones elimina una variante EN SILENCIO — la escalera cubre
  * al usuario y nadie lo notaría sin la comprobación.
  */
-const { withAppBuildGradle } = require("@expo/config-plugins");
+const { withAppBuildGradle, withGradleProperties } = require("@expo/config-plugins");
 
 /** La pareja que sale (principal + JNI), con su ruta dentro del APK. */
 const TRIMMED_JNI_LIBS = [
@@ -55,7 +59,61 @@ const KEPT_LLAMA_LIBS = ["librnllama.so", "librnllama_jni.so"];
 /** Los 4 assets HTP viven bajo este prefijo dentro del APK. */
 const HTP_ASSET_PATTERN = "assets/ggml-hexagon/**";
 
+/**
+ * P-04: las 5 tablas de parámetros PQC de BouncyCastle (Picnic/SIKE,
+ * 4.138.070 B deflactados en el APK) no tienen ningún consumidor —
+ * grep de BouncyCastle|bcprov|addProvider|Picnic|SIKE en el árbol:
+ * cero — y el portador (pdfbox-android, vía su manejador JCE) registra
+ * los algoritmos perezosamente: sin tablas, un uso hipotético fallaría
+ * en voz alta, nunca en silencio. Las CLASES se quedan (viven en el
+ * dex) y los dos ficheros x509/ también: el patrón es solo `pqc/**`.
+ */
+const PQC_PATTERN = "org/bouncycastle/pqc/**";
+
+/**
+ * P-05: los mapas CJK de fontbox (88 ficheros, 1.201.763 B
+ * almacenados) son inalcanzables para un producto es/en/pt. Es la
+ * regla ENMENDADA de la preparación: su lista literal dejaba dentro
+ * los prefijos reales `GBpc-`, `KSCms-`, `KSCpc-`, `B5pc-` (29.497 B,
+ * los diez ficheros que el anexo de corrección del encargo enumera),
+ * porque pedía `GB-`, `KSC-` y `*B5-*`, que no casa con `B5pc-`.
+ * Aquí van las familias de la preparación MÁS esos 4 prefijos. El
+ * juez no es esta lista sino el listado: tras la exclusión, en
+ * `cmap/` quedan exactamente Identity-H, Identity-V, H, V — los
+ * genéricos H y V sobreviven a cualquier versión de la regla y se
+ * conservan como Identity-* (el juez original de la preparación no
+ * los contaba y por eso también quedó enmendado).
+ */
+const CMAP_DIR = "assets/com/tom_roush/fontbox/resources/cmap";
+const CMAP_PATTERNS = [
+  `${CMAP_DIR}/Adobe-*`,
+  `${CMAP_DIR}/Uni*`,
+  `${CMAP_DIR}/*RKSJ-*`,
+  `${CMAP_DIR}/*B5*`,
+  `${CMAP_DIR}/CNS-*`,
+  `${CMAP_DIR}/EUC-*`,
+  `${CMAP_DIR}/GB*`,
+  `${CMAP_DIR}/KSC*`,
+];
+
+/** Los únicos ficheros que quedan en cmap/ tras la exclusión. */
+const CMAP_KEPT = ["Identity-H", "Identity-V", "H", "V"];
+
+/**
+ * La lista plana de exclusiones de empaquetado (P-02 HTP + P-04 +
+ * P-05). Viaja por DOS asientos a la vez: la propiedad
+ * `android.packagingOptions.excludes` de gradle.properties — el
+ * gancho que el propio android/app/build.gradle generado aplica
+ * sobre `android.packagingOptions` — y el bloque `resources` del
+ * gradle que este plugin añade. AGP no admite negaciones en
+ * excludes: la lista enumera y el diff de listado juzga.
+ */
+const PACKAGING_EXCLUDES = [PQC_PATTERN, ...CMAP_PATTERNS, HTP_ASSET_PATTERN];
+
 const MARKER = "NIDO: recorte de llama.rn (plugins/withLlamaTrim.js)";
+
+/** La propiedad de gradle.properties que el gancho de la plantilla aplica. */
+const PACKAGING_PROPERTY_KEY = "android.packagingOptions.excludes";
 
 /**
  * Casación de patrones de empaquetado estilo Ant (`**` cruza
@@ -87,13 +145,43 @@ function applyLlamaTrimBlock(gradle) {
     throw new Error("[withLlamaTrim] app/build.gradle sin bloque android { }");
   }
   const jniList = TRIMMED_JNI_LIBS.map((p) => `                "${p}"`).join(",\n");
+  const resList = PACKAGING_EXCLUDES.map((p) => `                "${p}"`).join(",\n");
   return (
     gradle.replace(/\s*$/, "\n") +
-    `\n// ${MARKER}\nandroid {\n    packagingOptions {\n        jniLibs {\n            excludes += [\n${jniList}\n            ]\n        }\n        resources {\n            excludes += [\n                "${HTP_ASSET_PATTERN}"\n            ]\n        }\n    }\n    sourceSets {\n        main {\n            assets {\n                exclude "ggml-hexagon/**"\n            }\n        }\n    }\n}\n`
+    `\n// ${MARKER}\nandroid {\n    packagingOptions {\n        jniLibs {\n            excludes += [\n${jniList}\n            ]\n        }\n        resources {\n            excludes += [\n${resList}\n            ]\n        }\n    }\n    sourceSets {\n        main {\n            assets {\n                exclude "ggml-hexagon/**"\n            }\n        }\n    }\n}\n`
   );
 }
 
+/**
+ * Fusiona PACKAGING_EXCLUDES en la propiedad
+ * `android.packagingOptions.excludes` de gradle.properties (la lista
+ * que el bucle de la plantilla en app/build.gradle vuelca sobre
+ * `android.packagingOptions`). Conserva lo que ya hubiera, no duplica
+ * y es idempotente. Función pura sobre los ítems del mod
+ * (withGradleProperties), probada en el test del plugin.
+ */
+function applyPackagingProperty(items) {
+  const out = items.slice();
+  const idx = out.findIndex((it) => it && it.type === "property" && it.key === PACKAGING_PROPERTY_KEY);
+  if (idx === -1) {
+    out.push({ type: "property", key: PACKAGING_PROPERTY_KEY, value: PACKAGING_EXCLUDES.join(",") });
+    return out;
+  }
+  const existing = String(out[idx].value || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const merged = existing.slice();
+  for (const p of PACKAGING_EXCLUDES) if (!merged.includes(p)) merged.push(p);
+  out[idx] = { ...out[idx], value: merged.join(",") };
+  return out;
+}
+
 function withLlamaTrim(config) {
+  config = withGradleProperties(config, (c) => {
+    c.modResults = applyPackagingProperty(c.modResults);
+    return c;
+  });
   return withAppBuildGradle(config, (c) => {
     c.modResults.contents = applyLlamaTrimBlock(c.modResults.contents);
     return c;
@@ -102,9 +190,15 @@ function withLlamaTrim(config) {
 
 module.exports = withLlamaTrim;
 module.exports.applyLlamaTrimBlock = applyLlamaTrimBlock;
+module.exports.applyPackagingProperty = applyPackagingProperty;
 module.exports.matchPackagingPattern = matchPackagingPattern;
 module.exports.isExcluded = isExcluded;
 module.exports.TRIMMED_JNI_LIBS = TRIMMED_JNI_LIBS;
 module.exports.KEPT_LLAMA_LIBS = KEPT_LLAMA_LIBS;
 module.exports.HTP_ASSET_PATTERN = HTP_ASSET_PATTERN;
+module.exports.PQC_PATTERN = PQC_PATTERN;
+module.exports.CMAP_PATTERNS = CMAP_PATTERNS;
+module.exports.CMAP_KEPT = CMAP_KEPT;
+module.exports.PACKAGING_EXCLUDES = PACKAGING_EXCLUDES;
+module.exports.PACKAGING_PROPERTY_KEY = PACKAGING_PROPERTY_KEY;
 module.exports.MARKER = MARKER;

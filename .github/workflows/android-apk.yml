@@ -253,6 +253,23 @@ jobs:
           echo "::notice title=ML-KEM nativo en el APK::$(echo $LIBS | tr ' ' ',')"
           echo "$LIBS" | grep -q '^lib/arm64-v8a/libnidomlkem\.so$'
 
+      - name: Recortes de APK en el listado (P-02/P-04/P-05)
+        # P-resto (auditoría de rendimiento 2026-11-01): el juez de los
+        # recortes de empaquetado de plugins/withLlamaTrim.js es el
+        # listado del APK reconstruido, no la lista de exclusiones: un
+        # error tipográfico en una lista elimina una variante en
+        # silencio (la escalera de llama.rn degrada sin ruido) o no
+        # elimina nada. Este paso falla la build si la pareja
+        # hexagon_opencl o los assets HTP siguen dentro, si falta
+        # alguna de las 12 librnllama que se quedan, si queda alguna
+        # entrada org/bouncycastle/pqc/, si los x509 se movieron o si
+        # cmap/ no queda exactamente en Identity-H, Identity-V, H, V.
+        # Un llama.rn o pdfbox futuro que renombre entradas lo canta
+        # aquí, en la primera build.
+        shell: bash
+        run: |
+          python3 scripts/check-apk-trims.py android/app/build/outputs/apk/release/app-release.apk
+
       - name: Android runtime dependencies (P-10)
         # 0.1.55: las librerías Android que Gradle mete en el APK (AndroidX,
         # Kotlin, SQLCipher, BouncyCastle…) no salen de npm y no estaban en
