@@ -572,8 +572,13 @@ export function foreignCopyFix(sentence: string, recs: SourceSentenceRec[], lang
 // Señales de «la pregunta pide un dato»: la base de NUMBER_CUES
 // (packFacts.ts: teléfono, número, llamar…) ampliada con
 // cuánto/cuándo/hora/día/sala. Sobre el texto plegado (sin acentos).
+// ADV2-A: entran room/hora/fecha/dosis en sus formas en/pt además de
+// las es — la lista era española y una pregunta inglesa de sala
+// («what room…») ni siquiera llegaba a la regla. Añadir una señal
+// solo deja que la regla CONSIDERE la pregunta: la sustitución
+// sigue necesitando infractor y dato del tipo en la evidencia.
 const DATUM_QUESTION_RE =
-  /\b(numero|numeros|telefono|telefonos|tel|llamo|llamar|llamas|llama|marco|marcar|linea|number|numbers|phone|call|dial|hotline|telefone|telefones|ligo|ligar|discar|disco|contacto|contact|cuanto|cuanta|cuantos|cuantas|cuando|hora|horas|dia|dias|sala)\b/;
+  /\b(numero|numeros|telefono|telefonos|tel|llamo|llamar|llamas|llama|marco|marcar|linea|number|numbers|phone|call|dial|hotline|telefone|telefones|ligo|ligar|discar|disco|contacto|contact|cuanto|cuanta|cuantos|cuantas|cuando|hora|horas|hour|hours|dia|dias|sala|room|rooms|dosis|dose|doses|fecha|fechas|date|dates|data)\b/;
 
 // La categoría del dato en la RESPUESTA (de qué dato afirma ser).
 const DATUM_CATEGORY_RE =
@@ -612,6 +617,195 @@ function hasPhoneCluster(text: string): boolean {
   return clusters.some((c) => c.replace(/\D/g, "").length >= 7);
 }
 
+/**
+ * ¿Es la ristra una TARJETA y no un teléfono? (segunda adversaria,
+ * ADV2-01): 15–16 dígitos agrupados como se imprimen las tarjetas
+ * (4-4-4-4, 4-6-5 o la ristra corrida) casan el conteo de dígitos
+ * de «forma telefónica», y la regla servía el número de la tarjeta
+ * como teléfono de la clínica. Un teléfono no se imprime así.
+ */
+function isCardCluster(cluster: string): boolean {
+  const digits = cluster.replace(/\D/g, "");
+  if (digits.length !== 15 && digits.length !== 16) return false;
+  const groups = cluster
+    .trim()
+    .split(/[\s.-]+/)
+    .filter(Boolean)
+    .map((g) => g.replace(/\D/g, "").length);
+  if (groups.length === 1) return true;
+  const key = groups.join("-");
+  return key === "4-4-4-4" || key === "4-6-5";
+}
+
+/** La forma telefónica de verdad: ristra de ≥7 dígitos que NO es una tarjeta. */
+function hasPhoneForm(text: string): boolean {
+  const clusters = text.match(/\d[\d .-]*\d/g) ?? [];
+  return clusters.some((c) => c.replace(/\D/g, "").length >= 7 && !isCardCluster(c));
+}
+
+/** ¿Trae el texto una ristra con forma de tarjeta? */
+function hasCardForm(text: string): boolean {
+  const clusters = text.match(/\d[\d .-]*\d/g) ?? [];
+  return clusters.some((c) => isCardCluster(c));
+}
+
+// ---------------------------------------------------------------
+// El TIPO del dato (segunda adversaria ADV2-01 + corrida de Grok
+// ADV-G1/G2). La regla comparaba CIFRAS, no tipos: el empate entre
+// dos datos se rompía por el orden de la fuente, y una afirmación
+// con las cifras de OTRO dato (el teléfono servido como número de
+// tarjeta; el 911 servido como teléfono de la cita) pasaba sellada
+// porque «las cifras están en la fuente». Desde esta tanda, cuando
+// la pregunta nombra un tipo concreto, el dato servido y las
+// cifras afirmadas han de ser DE ESE TIPO.
+
+type DatumType = "phone" | "card" | "room" | "hour" | "date" | "dose";
+
+/**
+ * Palabra → tipo, sobre texto plegado. «número/number» NO está: es
+ * la etiqueta genérica, no un tipo — «¿cuál es el número de…?» solo
+ * gana tipo cuando nombra el dato (tarjeta, sala, hora…). El tipo
+ * de un texto es el de su PRIMERA palabra de tipo: «el teléfono de
+ * la sala» pide un teléfono; «la sala del teléfono», una sala.
+ */
+const DATUM_TYPE_BY_WORD = new Map<string, DatumType>();
+for (const w of ["tarjeta", "tarjetas", "cartao", "cartoes", "card", "cards"]) DATUM_TYPE_BY_WORD.set(w, "card");
+for (const w of ["sala", "salas", "room", "rooms"]) DATUM_TYPE_BY_WORD.set(w, "room");
+for (const w of ["hora", "horas", "hour", "hours"]) DATUM_TYPE_BY_WORD.set(w, "hour");
+for (const w of ["fecha", "fechas", "date", "dates", "data", "dia", "dias", "day", "days"])
+  DATUM_TYPE_BY_WORD.set(w, "date");
+for (const w of ["dosis", "dose", "doses"]) DATUM_TYPE_BY_WORD.set(w, "dose");
+for (const w of [
+  "telefono", "telefonos", "telefone", "telefones", "phone", "phones", "linea", "line", "hotline",
+  "llamar", "llama", "llamo", "call", "dial", "ligar", "ligo", "discar", "disco",
+])
+  DATUM_TYPE_BY_WORD.set(w, "phone");
+
+/** El tipo de dato que el texto nombra primero, o null si solo usa la etiqueta genérica. */
+function datumTypeOfText(text: string): DatumType | null {
+  for (const w of foldForCues(text).split(/[^a-zñ0-9]+/)) {
+    const t = DATUM_TYPE_BY_WORD.get(w);
+    if (t) return t;
+  }
+  return null;
+}
+
+/** Las palabras que nombran cada tipo junto a su cifra (la forma sola no basta: sala, fecha, dosis). */
+const TYPE_NEAR_WORDS: Record<Exclude<DatumType, "phone">, readonly string[]> = {
+  card: ["tarjeta", "tarjetas", "cartao", "cartoes", "card", "cards"],
+  room: ["sala", "salas", "room", "rooms"],
+  hour: ["hora", "horas", "hour", "hours"],
+  date: ["fecha", "fechas", "date", "dates", "data", "dia", "dias", "day", "days"],
+  dose: ["dosis", "dose", "doses"],
+};
+
+/** Tokens de un texto plegado, palabras y cifras en orden (para la cercanía palabra↔cifra). */
+function foldedTokens(text: string): string[] {
+  return foldForCues(text).match(/[a-zñ]+|\d+(?:[.,]\d+)?/g) ?? [];
+}
+
+/** ¿Nombra la frase el tipo a ≤5 palabras antes (o ≤2 después) de una cifra? */
+function namesTypeNearDigit(sentence: string, typeWords: readonly string[]): boolean {
+  const set = new Set(typeWords);
+  const toks = foldedTokens(sentence);
+  for (let i = 0; i < toks.length; i++) {
+    if (!/\d/.test(toks[i])) continue;
+    for (let j = Math.max(0, i - 5); j <= Math.min(toks.length - 1, i + 2); j++) {
+      if (j !== i && set.has(toks[j])) return true;
+    }
+  }
+  return false;
+}
+
+const DATE_NAME_RE =
+  /\b(lunes|martes|miercoles|jueves|viernes|sabado|sabados|domingo|domingos|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda|terca|quarta|quinta|sexta|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/;
+
+const DOSE_MEASURE_RE =
+  /\d+(?:[.,]\d+)?\s*(ml|mg|mcg|kg|g|miligramos?|gramos?|comprimidos?|pastillas?|cucharadas?|cucharaditas?|gotas|tabletas?|capsulas?|unidades?)\b/;
+
+/** ¿Trae la frase un dato DEL TIPO (su forma, o su nombre junto a la cifra)? */
+function carriesDatumOfType(sentence: string, type: DatumType): boolean {
+  switch (type) {
+    case "phone":
+      return hasPhoneForm(sentence);
+    case "card":
+      return hasCardForm(sentence) || namesTypeNearDigit(sentence, TYPE_NEAR_WORDS.card);
+    case "room":
+      return namesTypeNearDigit(sentence, TYPE_NEAR_WORDS.room);
+    case "hour":
+      return /\d{1,2}:\d{2}/.test(sentence) || namesTypeNearDigit(sentence, TYPE_NEAR_WORDS.hour);
+    case "date":
+      return (
+        (DATE_NAME_RE.test(foldForCues(sentence)) && /\d/.test(sentence)) ||
+        /\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/.test(sentence) ||
+        namesTypeNearDigit(sentence, TYPE_NEAR_WORDS.date)
+      );
+    case "dose":
+      return DOSE_MEASURE_RE.test(foldForCues(sentence)) || namesTypeNearDigit(sentence, TYPE_NEAR_WORDS.dose);
+  }
+}
+
+/**
+ * Los grupos de dígitos significativos de un texto, normalizados
+ * (sin ceros a la izquierda). De un decimal solo cuenta la parte
+ * entera: la fracción es el territorio del redondeo honesto (la
+ * doctrina de la tanda 1), y un grupo suelto de un dígito no juzga
+ * (la vara de hasJudgedDigit).
+ */
+function significantDigitGroups(text: string): string[] {
+  const out: string[] = [];
+  for (const tok of text.replace(/\[\d+\]/g, " ").match(/\d+(?:[.,]\d+)?/g) ?? []) {
+    if (/[.,]/.test(tok)) out.push(tok.split(/[.,]/)[0].replace(/^0+(?=\d)/, ""));
+    else if (tok.length >= 2) out.push(tok.replace(/^0+(?=\d)/, ""));
+  }
+  return out;
+}
+
+/** La firma de cifras de una frase (para el empate: mismo dato repetido, o datos distintos). */
+function digitSignature(text: string): string {
+  return [...new Set(significantDigitGroups(text))].sort().join(",");
+}
+
+/**
+ * ¿Casan las cifras significativas de la frase con un dato DEL TIPO
+ * en la evidencia? (ADV-G1/G2: estar en la fuente no basta — el 911
+ * está en la fuente y no es el teléfono de la cita.)
+ */
+function digitsMatchType(sentence: string, type: DatumType, recs: SourceSentenceRec[]): boolean {
+  const carriers = recs.filter((r) => carriesDatumOfType(r.text, type));
+  if (carriers.length === 0) return false;
+  const mine = [...new Set(significantDigitGroups(sentence))];
+  if (mine.length === 0) return false;
+  const typeGroups = new Set(carriers.flatMap((r) => significantDigitGroups(r.text)));
+  if (mine.every((g) => typeGroups.has(g))) return true;
+  // La misma cifra con otro agrupamiento («1.234» por «1234») o el
+  // dato a medias («termina en 4417»): concatenación igual o sufijo.
+  const concat = (t: string) => (t.replace(/\[\d+\]/g, " ").match(/\d+/g) ?? []).join("").replace(/^0+(?=\d)/, "");
+  const myConcat = concat(sentence);
+  return (
+    myConcat.length >= 4 &&
+    carriers.some((r) => {
+      const c = concat(r.text);
+      return c === myConcat || c.endsWith(myConcat);
+    })
+  );
+}
+
+/**
+ * La afirmación CON cifras del tipo pedido pero con las cifras de
+ * otro dato (ADV-G1/G2): nombra el tipo con cópula, trae cifras
+ * juzgables y ninguna casa con un dato de ese tipo en la evidencia.
+ * La pierna que faltaba: la regla solo juzgaba la afirmación SIN
+ * cifras, y la de cifras se fiaba del chequeo de presencia.
+ */
+function isTypedDatumOffender(sentence: string, type: DatumType, recs: SourceSentenceRec[]): boolean {
+  if (!hasJudgedDigit(sentence)) return false;
+  const folded = foldForCues(sentence);
+  if (!DATUM_CATEGORY_RE.test(folded) || !DATUM_COPULA_RE.test(folded)) return false;
+  if (datumTypeOfText(sentence) !== type) return false;
+  return !digitsMatchType(sentence, type, recs);
+}
+
 /** Cuántas raíces de contenido comparte la frase con la pregunta. */
 function sharedStemCount(sentence: string, queryStems: Set<string>): number {
   let shared = 0;
@@ -648,7 +842,9 @@ function substantiveStemCount(sentence: string, queryStems: Set<string>): number
  * es lo único que empareja pregunta y fuente entre idiomas).
  */
 function datumScore(sentence: string, queryStems: Set<string>, phoneQuestion: boolean): number {
-  return 2 * sharedStemCount(sentence, queryStems) + (phoneQuestion && hasPhoneCluster(sentence) ? 3 : 0);
+  // La bonificación de forma es de la forma TELEFÓNICA (ADV2-01):
+  // una ristra de tarjeta ya no suma como si fuera un teléfono.
+  return 2 * sharedStemCount(sentence, queryStems) + (phoneQuestion && hasPhoneForm(sentence) ? 3 : 0);
 }
 
 /**
@@ -661,23 +857,100 @@ function datumScore(sentence: string, queryStems: Set<string>, phoneQuestion: bo
  * compartir). «Algún dígito temático» ya no basta: sin elegible, la
  * evidencia no contiene ese dato y no hay sustitución que hacer —
  * y menos con el dato de otro. Null si no hay elegible.
+ *
+ * ADV2-A (segunda adversaria, ADV2-01): con TIPO pedido, la
+ * elegibilidad es traer un dato DE ESE TIPO — la frase del teléfono
+ * ya no compite en una pregunta de sala por compartir «cambiar» y
+ * «cita». Y el empate en la cima entre datos DISTINTOS se resuelve
+ * a favor de «sin sustitución» en las dos vías: antes ganaba el
+ * primero en la fuente y el dato servido lo decidía el orden del
+ * papel, no la pregunta (la acotación que la adversaria sugirió y
+ * Grok midió en su corrida: desempate por tipo, no por aparición).
  */
 function pickDatumSentence(query: string, recs: SourceSentenceRec[]): SourceSentenceRec | null {
   const queryStems = new Set(contentStems(query));
   const phoneQuestion = PHONE_QUESTION_RE.test(foldForCues(query));
+  const askedType = datumTypeOfText(query);
+  const digitRecs = recs.filter((r) => hasJudgedDigit(r.text));
+
+  if (askedType) {
+    const carriers = digitRecs.filter((r) => carriesDatumOfType(r.text, askedType));
+    if (carriers.length === 0) return null;
+    let bestScore = -1;
+    let best: SourceSentenceRec[] = [];
+    for (const rec of carriers) {
+      const score = datumScore(rec.text, queryStems, phoneQuestion);
+      if (score > bestScore) {
+        bestScore = score;
+        best = [rec];
+      } else if (score === bestScore) {
+        best.push(rec);
+      }
+    }
+    if (best.length > 1 && best.some((r) => digitSignature(r.text) !== digitSignature(best[0].text))) return null;
+    if (bestScore >= 2) return best[0];
+    // Sin puntuación léxica (pregunta y fuente sin idioma común), el
+    // tipo es el único puente: vale si el portador es único; con
+    // varios y sin desempate honesto, no se sustituye.
+    return carriers.length === 1 ? best[0] : null;
+  }
+
   let best: SourceSentenceRec | null = null;
   let bestScore = 0;
-  for (const rec of recs) {
-    if (!hasJudgedDigit(rec.text)) continue;
-    const phoneForm = phoneQuestion && hasPhoneCluster(rec.text);
+  const tops: SourceSentenceRec[] = [];
+  for (const rec of digitRecs) {
+    const phoneForm = phoneQuestion && hasPhoneForm(rec.text);
     if (substantiveStemCount(rec.text, queryStems) === 0 && !phoneForm) continue;
     const score = datumScore(rec.text, queryStems, phoneQuestion);
-    if (score >= 2 && score > bestScore) {
-      bestScore = score;
-      best = rec;
+    if (score >= 2) {
+      if (score > bestScore) {
+        bestScore = score;
+        tops.length = 0;
+        tops.push(rec);
+        best = rec;
+      } else if (score === bestScore) {
+        tops.push(rec);
+      }
     }
   }
-  return best;
+  if (tops.length > 0) {
+    if (tops.some((r) => digitSignature(r.text) !== digitSignature(tops[0].text))) return null;
+    return best;
+  }
+  return phoneDatumBridge(query, recs, digitRecs, queryStems, phoneQuestion);
+}
+
+/**
+ * El puente de ADV2-02 (segunda adversaria): «¿Cuál es el número de
+ * la clínica?» no trae palabra-señal de teléfono ni comparte raíces
+ * con la frase del teléfono, y la sustitución moría en los tres
+ * idiomas — el rodeo quedaba sellado o la app declaraba no saber
+ * con el número impreso en la fuente. La forma humana de pedir un
+ * teléfono es «el número de <entidad>»: si la pregunta pide «el
+ * número» de una entidad que la evidencia nombra, no nombra ningún
+ * tipo concreto, ningún candidato con cifras comparte tema con
+ * ella y la evidencia trae UN solo dato con forma telefónica, ese
+ * es el dato pedido. Cualquier competencia lo cierra (la tarjeta
+ * que comparte «tarjeta», la sala que comparte «sala»): es la
+ * orilla estrecha que no reabre H-02.
+ */
+function phoneDatumBridge(
+  query: string,
+  recs: SourceSentenceRec[],
+  digitRecs: SourceSentenceRec[],
+  queryStems: Set<string>,
+  phoneQuestion: boolean,
+): SourceSentenceRec | null {
+  if (phoneQuestion) return null;
+  if (!/\b(numero|numeros|number|numbers)\b/.test(foldForCues(query))) return null;
+  const substantive = [...queryStems].filter((s) => !GENERIC_DATUM_STEMS.has(s));
+  if (substantive.length === 0) return null;
+  if (digitRecs.some((r) => substantiveStemCount(r.text, queryStems) > 0)) return null;
+  const phoneRecs = digitRecs.filter((r) => hasPhoneForm(r.text));
+  if (phoneRecs.length !== 1) return null;
+  const evidenceStems = new Set(recs.flatMap((r) => contentStems(r.text)));
+  if (!substantive.some((s) => evidenceStems.has(s))) return null;
+  return phoneRecs[0];
 }
 
 /** ¿Afirma la frase qué es el dato (categoría + cópula) sin dar ninguna cifra? */
@@ -693,6 +966,11 @@ function assertsDatumIdentity(sentence: string): boolean {
  * fuente del dato y retira los demás infractores. Devuelve cuántas
  * frases se retiraron de más y si hubo sustitución. Sin pregunta, sin
  * señal en ella o sin el dato en la evidencia: no toca nada.
+ *
+ * ADV2-A añade la segunda pierna (ADV-G1/G2): la afirmación CON
+ * cifras del tipo pedido pero con las cifras de otro dato también
+ * es infractora — se sustituye por el dato del tipo, o se retira si
+ * la evidencia no trae ese tipo o si otra frase ya lo entregó bien.
  */
 export function applyDatumRule(
   kept: string[],
@@ -702,30 +980,84 @@ export function applyDatumRule(
 ): { removedExtra: number; replaced: boolean } {
   const none = { removedExtra: 0, replaced: false };
   if (!query || !DATUM_QUESTION_RE.test(foldForCues(query))) return none;
+  const askedType = datumTypeOfText(query);
   const datum = pickDatumSentence(query, recs);
-  if (!datum) return none;
   const queryStems = new Set(contentStems(query));
   const phoneQuestion = PHONE_QUESTION_RE.test(foldForCues(query));
-  const delivered = kept.some(
-    (s, i) => prov[i].origin.kind !== "abstain" && hasJudgedDigit(s) && datumScore(s, queryStems, phoneQuestion) >= 2,
-  );
-  if (delivered) return none;
-  const offenders: number[] = [];
-  kept.forEach((s, i) => {
-    if (prov[i].origin.kind !== "abstain" && assertsDatumIdentity(s)) offenders.push(i);
-  });
-  if (offenders.length === 0) return none;
-  const first = offenders[0];
-  const fixed = addCitation(datum.text, datum.chunk + 1);
-  kept[first] = fixed;
-  prov[first] = { text: fixed, origin: { kind: "source", n: datum.chunk + 1, support: 1 } };
   let removedExtra = 0;
-  for (const i of offenders.slice(1).reverse()) {
-    kept.splice(i, 1);
-    prov.splice(i, 1);
-    removedExtra++;
+  let replaced = false;
+
+  const typedOffender = (s: string): boolean => askedType !== null && isTypedDatumOffender(s, askedType, recs);
+
+  // «Ya entregado»: una frase conservada con cifras que casa con la
+  // pregunta. Cuando la pregunta pide un tipo, la afirmación con las
+  // cifras de OTRO dato («el teléfono es el 911») no cuenta como
+  // entrega: es el infractor, no el testigo que apaga la regla.
+  const delivered = kept.some(
+    (s, i) =>
+      prov[i].origin.kind !== "abstain" &&
+      hasJudgedDigit(s) &&
+      datumScore(s, queryStems, phoneQuestion) >= 2 &&
+      !typedOffender(s),
+  );
+  if (!delivered && datum) {
+    const offenders: number[] = [];
+    kept.forEach((s, i) => {
+      if (prov[i].origin.kind !== "abstain" && assertsDatumIdentity(s)) offenders.push(i);
+    });
+    if (offenders.length > 0) {
+      const first = offenders[0];
+      const fixed = addCitation(datum.text, datum.chunk + 1);
+      kept[first] = fixed;
+      prov[first] = { text: fixed, origin: { kind: "source", n: datum.chunk + 1, support: 1 } };
+      replaced = true;
+      for (const i of offenders.slice(1).reverse()) {
+        kept.splice(i, 1);
+        prov.splice(i, 1);
+        removedExtra++;
+      }
+    }
   }
-  return { removedExtra, replaced: true };
+
+  // La afirmación CON cifras del tipo equivocado (ADV-G1/G2).
+  if (askedType) {
+    const offenders: number[] = [];
+    kept.forEach((s, i) => {
+      if (prov[i].origin.kind !== "abstain" && typedOffender(s)) offenders.push(i);
+    });
+    if (offenders.length > 0) {
+      const deliveredNow = kept.some(
+        (s, i) =>
+          !offenders.includes(i) &&
+          prov[i].origin.kind !== "abstain" &&
+          hasJudgedDigit(s) &&
+          digitsMatchType(s, askedType, recs) &&
+          (carriesDatumOfType(s, askedType) || datumTypeOfText(s) === askedType),
+      );
+      if (!deliveredNow && datum) {
+        const first = offenders[0];
+        const fixed = addCitation(datum.text, datum.chunk + 1);
+        kept[first] = fixed;
+        prov[first] = { text: fixed, origin: { kind: "source", n: datum.chunk + 1, support: 1 } };
+        replaced = true;
+        for (const i of offenders.slice(1).reverse()) {
+          kept.splice(i, 1);
+          prov.splice(i, 1);
+          removedExtra++;
+        }
+      } else {
+        // Ya hay entrega buena (o no hay dato del tipo que servir):
+        // la afirmación falsa se retira, no se sustituye.
+        for (const i of offenders.slice().reverse()) {
+          kept.splice(i, 1);
+          prov.splice(i, 1);
+          removedExtra++;
+        }
+      }
+    }
+  }
+
+  return replaced || removedExtra > 0 ? { removedExtra, replaced } : none;
 }
 
 export function verifyGroundedAnswer(

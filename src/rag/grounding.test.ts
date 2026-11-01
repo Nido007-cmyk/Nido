@@ -638,6 +638,311 @@ describe("Adversaria H-02 — el dato entregado es el dato pedido, o no hay sust
   });
 });
 
+// ---------------------------------------------------------------
+// Segunda adversaria (ADV2-01, ADV2-02) + corrida de Grok
+// (ADV-G1/G2): la regla comparaba CIFRAS, no TIPOS de dato. El
+// empate entre dos datos lo rompía el orden de la fuente, una
+// ristra de tarjeta contaba como teléfono, la pregunta humana sin
+// palabra-señal («el número de la clínica») no desbloqueaba nada,
+// y la afirmación CON las cifras de otro dato (el teléfono como
+// número de tarjeta; el 911 como teléfono de la cita) pasaba
+// sellada porque «las cifras están en la fuente». Las sondas de
+// ambas revisiones, como fixtures permanentes.
+
+const DOC_SALA: GroundingChunk = {
+  title: "nota",
+  body:
+    "Clínica San Rafael. " +
+    "Para cambiar la cita llame al 520-555-0147. " +
+    "La consulta es en la sala 214 del segundo piso. " +
+    "El teléfono de la sala de espera es el de la nota.",
+};
+const DOC_SALA_INV: GroundingChunk = {
+  title: "nota",
+  body:
+    "Clínica San Rafael. " +
+    "La consulta es en la sala 214 del segundo piso. " +
+    "Para cambiar la cita llame al 520-555-0147. " +
+    "El teléfono de la sala de espera es el de la nota.",
+};
+const RODEO_SALA = "La sala de la cita es la que viene en la nota.";
+
+describe("Segunda adversaria ADV2-01 — el dato servido es del tipo pedido, no el primero de la fuente", () => {
+  it("pregunta de sala con la frase del teléfono primero: sirve la sala, no el teléfono", () => {
+    const r = verifyGroundedAnswer(RODEO_SALA, [DOC_SALA], "es", "¿En qué sala es la cita?");
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("sala 214");
+    expect(r.text).not.toContain("520-555-0147");
+  });
+
+  it("pregunta de sala con la frase de la sala primero: sirve la sala (el desenlace ya no depende del orden)", () => {
+    const r = verifyGroundedAnswer(RODEO_SALA, [DOC_SALA_INV], "es", "¿En qué sala es la cita?");
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("sala 214");
+    expect(r.text).not.toContain("520-555-0147");
+  });
+
+  it("la forma dictada completa («¿En qué sala es la cita para cambiar?») tampoco recibe el teléfono", () => {
+    const r = verifyGroundedAnswer(RODEO_SALA, [DOC_SALA], "es", "¿En qué sala es la cita para cambiar?");
+    expect(r.text).toContain("sala 214");
+    expect(r.text).not.toContain("520-555-0147");
+  });
+
+  it("la forma cortés («¿Me podría decir en qué sala es la cita, por favor?») sirve la sala", () => {
+    const r = verifyGroundedAnswer(RODEO_SALA, [DOC_SALA], "es", "¿Me podría decir en qué sala es la cita, por favor?");
+    expect(r.text).toContain("sala 214");
+    expect(r.text).not.toContain("520-555-0147");
+  });
+
+  it("el dictado sin signos ni acentos («en que sala es la cita») sirve la sala", () => {
+    const r = verifyGroundedAnswer(RODEO_SALA, [DOC_SALA], "es", "en que sala es la cita");
+    expect(r.text).toContain("sala 214");
+    expect(r.text).not.toContain("520-555-0147");
+  });
+
+  it("en inglés: «What room is the appointment in?» sirve la sala, no el teléfono", () => {
+    const docEn: GroundingChunk = {
+      title: "note",
+      body:
+        "San Rafael Clinic. " +
+        "To change the appointment call 520-555-0147. " +
+        "The consultation is in room 214 on the second floor. " +
+        "The waiting room phone is the one on the note.",
+    };
+    const r = verifyGroundedAnswer("The appointment room is the one on the note.", [docEn], "en", "What room is the appointment in?");
+    expect(r.text).toContain("room 214");
+    expect(r.text).not.toContain("520-555-0147");
+  });
+
+  it("la ristra de la tarjeta NO es el teléfono de la clínica (vaya primero o después)", () => {
+    const ristra: GroundingChunk = {
+      title: "nota",
+      body:
+        "Tarjeta del paciente de la línea de atención: 4485 2211 0098 4417. " +
+        "Para cambiar la cita llame al 520-555-0147. " +
+        "El teléfono de la clínica atiende de lunes a viernes.",
+    };
+    const r = verifyGroundedAnswer(
+      "El teléfono de la clínica es el número de la línea.",
+      [ristra],
+      "es",
+      "¿Cuál es el teléfono de la clínica?",
+    );
+    expect(r.text).toContain("520-555-0147");
+    expect(r.text).not.toContain("4485 2211 0098 4417");
+
+    const ristraInv: GroundingChunk = {
+      title: "nota",
+      body:
+        "Para cambiar la cita llame al 520-555-0147. " +
+        "Tarjeta del paciente de la línea de atención: 4485 2211 0098 4417. " +
+        "El teléfono de la clínica atiende de lunes a viernes.",
+    };
+    const r2 = verifyGroundedAnswer(
+      "El teléfono de la clínica es el número de la línea.",
+      [ristraInv],
+      "es",
+      "¿Cuál es el teléfono de la clínica?",
+    );
+    expect(r2.text).toContain("520-555-0147");
+    expect(r2.text).not.toContain("4485 2211 0098 4417");
+  });
+
+  it("empate entre datos distintos sin tipo que desempate: no se sustituye", () => {
+    // «El número de la cita» empata la frase del teléfono y la de la
+    // sala (una raíz cada una): la regla no elige por orden; el
+    // rodeo se queda como está en vez de servirse un dato al azar.
+    const empate: GroundingChunk = {
+      title: "nota",
+      body:
+        "La nota trae el número de la cita. " +
+        "Para cambiar la cita llame al 520-555-0147. " +
+        "La sala 214 es la de la cita.",
+    };
+    const r = verifyGroundedAnswer("El número de la cita es el de la nota.", [empate], "es", "¿Cuál es el número de la cita?");
+    expect(r.text).toContain("es el de la nota");
+    expect(r.text).not.toContain("520-555-0147");
+    expect(r.text).not.toContain("sala 214");
+  });
+});
+
+const DOC_CLINICA_A02: GroundingChunk = {
+  title: "nota",
+  body:
+    "Clínica San Rafael. " +
+    "Su cita es el martes 10 de noviembre de 2026 a las 9:30 de la mañana, en la sala 214, segundo piso. " +
+    "Tome el jarabe de 5 ml dos veces al día, después de comer. " +
+    "Para cambiar la cita llame al 520-555-0147.",
+};
+
+describe("Segunda adversaria ADV2-02 — «el número de la clínica» también es pregunta de teléfono", () => {
+  it("es: sin palabra-señal, la sustitución entrega el teléfono", () => {
+    const r = verifyGroundedAnswer(
+      "El número de la clínica es el que viene en la nota.",
+      [DOC_CLINICA_A02, CRISIS],
+      "es",
+      "¿Cuál es el número de la clínica?",
+    );
+    expect(r.text).toContain("520-555-0147");
+    expect(r.text).not.toContain("es el que viene en la nota");
+    expect(r.status).toBe("grounded");
+  });
+
+  it("en: «What's the clinic's number?» recibe el teléfono", () => {
+    const docEn: GroundingChunk = {
+      title: "note",
+      body:
+        "San Rafael Clinic. " +
+        "Your appointment is on Tuesday, November 10, 2026 at 9:30 in the morning, in room 214, second floor. " +
+        "Take 5 ml of the syrup twice a day, after meals. " +
+        "To change the appointment call 520-555-0147.",
+    };
+    const crisisEn: GroundingChunk = {
+      title: "Crisis line",
+      body:
+        "If you are in crisis, call the helpline phone. " +
+        "The emergency number in Mexico is 911. " +
+        "You can also call the crisis and suicide prevention line at 988.",
+    };
+    const r = verifyGroundedAnswer(
+      "The clinic's number is the one on the note.",
+      [docEn, crisisEn],
+      "en",
+      "What's the clinic's number?",
+    );
+    expect(r.text).toContain("520-555-0147");
+    expect(r.text).not.toContain("is the one on the note");
+  });
+
+  it("pt: «Qual é o número da clínica?» recibe el teléfono", () => {
+    const docPt: GroundingChunk = {
+      title: "nota",
+      body:
+        "Clínica San Rafael. " +
+        "A sua consulta é na terça-feira, 10 de novembro de 2026 às 9:30 da manhã, na sala 214, segundo andar. " +
+        "Tome 5 ml do xarope duas vezes ao dia, depois das refeições. " +
+        "Para mudar a consulta ligue para 520-555-0147.",
+    };
+    const crisisPt: GroundingChunk = {
+      title: "Linha de crise",
+      body:
+        "Se estiver em crise, ligue para o telefone de ajuda da linha de crise. " +
+        "O número de emergência no México é 911. " +
+        "Também pode ligar para a linha de crise e prevenção do suicídio no 988.",
+    };
+    const r = verifyGroundedAnswer(
+      "O número da clínica foi o que saiu na nota.",
+      [docPt, crisisPt],
+      "pt",
+      "Qual é o número da clínica?",
+    );
+    expect(r.text).toContain("520-555-0147");
+    expect(r.text).not.toContain("foi o que saiu na nota");
+  });
+});
+
+const DOC_TARJETA_G1: GroundingChunk = {
+  title: "nota",
+  body:
+    "Clínica San Rafael. " +
+    "Para cambiar la cita llame al 520-555-0147. " +
+    "El número de la tarjeta del paciente es 1234-5678.",
+};
+
+describe("Grok ADV-G1/G2 — la afirmación CON cifras ha de casar con un dato del tipo pedido", () => {
+  it("ADV-G1: «el número de la tarjeta es el 520-555-0147» se sustituye por la tarjeta de la fuente", () => {
+    const r = verifyGroundedAnswer(
+      "El número de la tarjeta es el 520-555-0147.",
+      [DOC_TARJETA_G1],
+      "es",
+      "¿Cuál es el número de la tarjeta?",
+    );
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("1234-5678");
+    expect(r.text).not.toContain("520-555-0147");
+    expect(r.sentences?.[0].origin.kind).toBe("source");
+  });
+
+  it("ADV-G1 dictado: sin acentos ni signos, el mismo desenlace", () => {
+    const r = verifyGroundedAnswer(
+      "El numero de la tarjeta es el 520-555-0147.",
+      [DOC_TARJETA_G1],
+      "es",
+      "cual es el numero de la tarjeta",
+    );
+    expect(r.text).toContain("1234-5678");
+    expect(r.text).not.toContain("520-555-0147");
+  });
+
+  it("ADV-G1 en inglés: «The card number is 520-555-0147» se sustituye por la tarjeta", () => {
+    const docEn: GroundingChunk = {
+      title: "note",
+      body:
+        "San Rafael Clinic. " +
+        "To change the appointment call 520-555-0147. " +
+        "The patient's card number is 1234-5678.",
+    };
+    const r = verifyGroundedAnswer("The card number is 520-555-0147.", [docEn], "en", "What is the card number?");
+    expect(r.text).toContain("1234-5678");
+    expect(r.text).not.toContain("520-555-0147");
+  });
+
+  it("guarda: la afirmación de tarjeta con las cifras BUENAS queda intacta", () => {
+    const r = verifyGroundedAnswer(
+      "El número de la tarjeta es el 1234-5678.",
+      [DOC_TARJETA_G1],
+      "es",
+      "¿Cuál es el número de la tarjeta?",
+    );
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toContain("1234-5678");
+  });
+
+  it("ADV-G2: «El telefono es el 911» ante la pregunta del teléfono de la cita se sustituye por el teléfono", () => {
+    const r = verifyGroundedAnswer(
+      "El telefono es el 911.",
+      [DOC_CLINICA_A02, CRISIS],
+      "es",
+      "cual es el telefono para cambiar la cita",
+    );
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("520-555-0147");
+    expect(r.text).not.toContain("es el 911");
+  });
+
+  it("ADV-G2 en portugués: «O telefone foi o 911» se sustituye por el teléfono", () => {
+    const docPt: GroundingChunk = {
+      title: "nota",
+      body:
+        "Clínica San Rafael. " +
+        "A sua consulta é na terça-feira, 10 de novembro de 2026 às 9:30 da manhã, na sala 214, segundo andar. " +
+        "Para mudar a consulta ligue para 520-555-0147.",
+    };
+    const crisisPt: GroundingChunk = {
+      title: "Linha de crise",
+      body:
+        "Se estiver em crise, ligue para o telefone de ajuda da linha de crise. " +
+        "O número de emergência no México é 911. " +
+        "Também pode ligar para a linha de crise e prevenção do suicídio no 988.",
+    };
+    const r = verifyGroundedAnswer("O telefone foi o 911.", [docPt, crisisPt], "pt", "qual é o telefone para mudar a consulta");
+    expect(r.text).toContain("520-555-0147");
+    expect(r.text).not.toContain("foi o 911");
+  });
+
+  it("ADV-G2 mixto: con la entrega buena al lado, la afirmación falsa se retira y basta", () => {
+    const r = verifyGroundedAnswer(
+      "El telefono es el 911. Para cambiar la cita llame al 520-555-0147.",
+      [DOC_CLINICA_A02, CRISIS],
+      "es",
+      "cual es el telefono para cambiar la cita",
+    );
+    expect(r.text).toContain("520-555-0147");
+    expect(r.text).not.toContain("911");
+  });
+});
+
 describe("verifyGroundedAnswer — post-chequeo de cifras (bounty, tanda 1)", () => {
   it("un año inventado tumba la frase aunque el apoyo léxico la pasaba", () => {
     const r = verifyGroundedAnswer("San Aurelio se fundó en 1904 junto al río Claro.", [CITY_ES], "es");
