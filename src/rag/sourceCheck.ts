@@ -104,7 +104,7 @@ const UNITS: Record<string, string> = {
   habitantes: "habitantes", personas: "personas", people: "personas",
   // C-08: las unidades de dosis y duración de Esencial.
   "%": "%", percent: "%",
-  gotas: "gotas", drops: "gotas",
+  gota: "gotas", gotas: "gotas", drop: "gotas", drops: "gotas",
   comprimido: "comprimidos", comprimidos: "comprimidos",
   tableta: "comprimidos", tabletas: "comprimidos",
   pastilla: "comprimidos", pastillas: "comprimidos",
@@ -170,7 +170,7 @@ const DOSE_UNIT_WORDS = new Set([
   "cucharadita", "cucharaditas", "cucharada", "cucharadas",
   "teaspoon", "teaspoons", "tablespoon", "tablespoons",
   "colher", "colheres",
-  "gotas", "drops",
+  "gota", "gotas", "drops",
   "comprimido", "comprimidos", "tableta", "tabletas",
   "pastilla", "pastillas", "tablet", "tablets", "pill", "pills",
 ]);
