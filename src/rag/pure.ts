@@ -282,16 +282,53 @@ function frameTokens(tokens: string[]): string[] {
 }
 
 /**
- * C-05b: procedure openers. A sentence governed by one of these asks
- * what to DO; a datum type mentioned inside it rides along — it is
- * not the datum being asked for (adversaria-8, A8-03: "¿Qué hago si
- * no me llega el correo de confirmación?" carries "correo" past a
- * procedure frame and C-05's bare "¿qué…?" frame fired on it).
+ * C-05c: what follows "qué" classifies the frame BY STRUCTURE, not by
+ * a verb inventory. C-05b's veto enumerated the procedure verbs it
+ * knew ({hago, hacer, debo, puedo, tengo…}) and adversaria-9 (A9-01)
+ * showed the family outgrows any such list: "¿Qué pasa / ocurre /
+ * sucede / debería / hay…?" fell exactly like A8-03. The datum form
+ * is told apart by what "qué" carries:
+ * - the datum TYPE itself right after "qué" ("¿Qué dirección es…?",
+ *   "¿Qué precio tiene…?"): the type is the thing being asked for;
+ * - the copula ("es"/"son") followed — past its article — by the
+ *   type ("¿Qué es la dirección…?"): datum again. What follows the
+ *   copula decides, not the copula: "¿Qué es necesario hacer…?"
+ *   carries an obligation adjective there, not the type, and is a
+ *   procedure question.
+ * Anything else after "qué" — any verb, in any tense or mood
+ * ("pasa", "hago", "toca", "se produce", "hay", "haría falta") —
+ * makes the sentence ask what HAPPENS or what is DONE; a type term
+ * inside it rides along, mentioned, not asked for. The only literals
+ * here are frame words (the copula, the articles), never event
+ * verbs: a sixth event verb needs no edit, because it is read the
+ * same way as the five adversaria-9 named.
  */
-const PROCEDURE_AFTER_QUE = new Set([
-  "hago", "hacemos", "hacer", "debo", "debemos", "puedo", "podemos", "tengo", "tenemos",
-]);
+const COPULA_AFTER_QUE = new Set(["es", "son"]);
+const ARTICLES_AFTER_COPULA = new Set(["el", "la", "los", "las", "un", "una", "unos", "unas", "lo"]);
 
+function queFrameIsDatum(tokens: string[]): boolean {
+  const b = tokens[1];
+  if (b === undefined) return false;
+  if (ABSENT_DATUM_TYPE_FORMS.has(b)) return true;
+  if (!COPULA_AFTER_QUE.has(b)) return false;
+  let i = 2;
+  while (i < tokens.length && ARTICLES_AFTER_COPULA.has(tokens[i])) i++;
+  return i < tokens.length && ABSENT_DATUM_TYPE_FORMS.has(tokens[i]);
+}
+
+/**
+ * Procedure openers. A sentence governed by one of these asks what
+ * to DO or what HAPPENS; a datum type mentioned inside it rides
+ * along — it is not the datum being asked for (adversaria-8, A8-03:
+ * "¿Qué hago si no me llega el correo de confirmación?" carries
+ * "correo" past a procedure frame and C-05's bare "¿qué…?" frame
+ * fired on it). Since C-05c the "qué" branch is the structural
+ * negative of queFrameIsDatum — a "qué" sentence that does not
+ * carry its datum in datum position IS the procedure/event frame —
+ * and the remaining branches are the non-"qué" openers ("cómo",
+ * "how", "o que fazer/faço", "what do/should"), frame literals
+ * whose settled prices (B-1) this tanda does not renegotiate.
+ */
 function opensProcedureFrame(tokens: string[]): boolean {
   const a = tokens[0];
   const b = tokens[1];
@@ -299,7 +336,7 @@ function opensProcedureFrame(tokens: string[]): boolean {
   return (
     a === "como" ||
     a === "how" ||
-    (a === "que" && (b === "se" ? c === "hace" || c === "hacen" : PROCEDURE_AFTER_QUE.has(b as string))) ||
+    (a === "que" && tokens.length >= 2 && !queFrameIsDatum(tokens)) ||
     (a === "o" && b === "que" && (c === "fazer" || c === "faco")) ||
     (a === "what" && (b === "do" || b === "should"))
   );
@@ -315,7 +352,7 @@ function opensDatumFrame(tokens: string[]): boolean {
   const a = tokens[0];
   const b = tokens[1];
   return (
-    a === "que" ||
+    (a === "que" && queFrameIsDatum(tokens)) ||
     (a === "cual" && b === "es") ||
     (a === "cuales" && b === "son") ||
     (a === "what" && (b === "is" || b === "are")) ||
@@ -344,6 +381,18 @@ function opensDatumFrame(tokens: string[]): boolean {
  * even with a type term riding along (A8-03) — the datum has to be
  * ASKED, not mentioned; a procedure opening in the first sentence
  * makes the whole question a procedure question.
+ *
+ * C-05c re-seats the "qué" frame after adversaria-9 (A9-01): the
+ * bare "¿qué…?" datum frame plus an enumerated procedure veto read
+ * the INVENTORY, not the class — the veto covered exactly the verbs
+ * it listed and every other event verb fell. The frame is now
+ * structural (queFrameIsDatum): a "¿qué…?" sentence is a datum
+ * question only when the type itself follows "qué" or follows its
+ * copula; any other "qué" opening is the event/procedure frame, in
+ * the per-sentence hunt and in the first-sentence veto alike. The
+ * settled prices stand as measured: "cómo"/"how" stay on the veto
+ * side (B-1), the veto stays positional (B-2) and the need frame
+ * still counts only inside its own sentence (B-3).
  */
 function isDatumQuestion(query: string): boolean {
   const sentences = query
