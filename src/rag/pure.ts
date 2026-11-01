@@ -50,6 +50,33 @@ export function cosineSimilarityInt8(query: Float32Array, bytes: Uint8Array): nu
   return dot / (Math.sqrt(normQ) * Math.sqrt(normV));
 }
 
+/**
+ * P-01 paso 1: cuantiza UN vector para ALMACENARLO con la convención de
+ * los packs de conocimiento (quantizeInt8 de
+ * scripts/lib/knowledge-pack-lib.mjs): escala simétrica por vector
+ * max|v| / 127 (1 si el vector es cero, que así no divide por cero) y
+ * componentes redondeadas con Math.round. La escala NO se guarda: se
+ * cancela en el coseno, que es lo único para lo que los vectores
+ * almacenados se usan (cosineSimilarityInt8). Devuelve bytes nuevos de
+ * longitud = dimensión: una cuarta parte de los dim*4 del float32.
+ * Espejo exacto de la convención de packs — la fixture
+ * pure.quantizeInt8.test.ts exige acuerdo byte a byte con aquella.
+ */
+export function quantizeVectorInt8(vec: Float32Array): Uint8Array {
+  let max = 0;
+  for (let i = 0; i < vec.length; i++) {
+    const a = Math.abs(vec[i]);
+    if (a > max) max = a;
+  }
+  const scale = max > 0 ? max / 127 : 1;
+  const out = new Uint8Array(vec.length);
+  const codes = new Int8Array(out.buffer);
+  for (let i = 0; i < vec.length; i++) {
+    codes[i] = Math.round(vec[i] / scale);
+  }
+  return out;
+}
+
 // bge-small-en-v1.5 cosine similarity heuristic: below this, a chunk isn't
 // actually about the query, it's just whatever happened to be "closest" out
 // of everything in the knowledge base - brute-force top-K with no floor

@@ -21,6 +21,7 @@ import {
   KnowledgeDbVersionError,
   checkFormatVersion,
 } from "../security/formatVersion";
+import { quantizeVectorInt8 } from "./pure";
 
 /** Nombre pre-rebrand del fichero (era pre-rebrand "aoair"). Solo para migración y borrado. */
 const LEGACY_DB_NAME = "aoair_knowledge.db";
@@ -380,7 +381,11 @@ async function openAndMigrate(): Promise<SecureDbHandle> {
 
     CREATE TABLE IF NOT EXISTS chunk_embeddings (
       chunk_id TEXT PRIMARY KEY REFERENCES chunks(chunk_id),
-      -- embedding stored as raw float32 blob for brute-force cosine search
+      -- embedding: el formato se autodescribe por la longitud de la fila
+      -- (dim*4 B = float32 · dim B = int8, P-01 paso 1) y el lector sirve
+      -- ambos; el sello meta 'embedding_storage_format' fija el formato
+      -- de ESCRITURA vigente (ver el bloque P-01 junto a
+      -- insertEmbeddingForModel).
       embedding BLOB NOT NULL,
       dim INTEGER NOT NULL
     );
@@ -691,9 +696,14 @@ export async function insertChunk(
       `INSERT OR REPLACE INTO chunks_fts (chunk_id, doc_id, title, body) VALUES (?, ?, ?, ?)`,
       [chunk.chunkId, chunk.docId, chunk.title, chunk.body]
     );
+    // P-01 paso 1: con el sello en int8 la escritura cuantiza al
+    // almacenar; en float32 los bytes son exactamente los de siempre.
+    const format = await readVectorStorageFormat(txn);
+    const bytes =
+      format === "int8" ? quantizeVectorInt8(embedding) : new Uint8Array(embedding.buffer);
     await txn.runAsync(
       `INSERT OR REPLACE INTO chunk_embeddings (chunk_id, embedding, dim) VALUES (?, ?, ?)`,
-      [chunk.chunkId, new Uint8Array(embedding.buffer), embedding.length]
+      [chunk.chunkId, bytes, embedding.length]
     );
   }, opts);
 }
@@ -824,14 +834,141 @@ export async function insertEmbeddingForModel(
       "SELECT value FROM meta WHERE key = 'embedding_model_sha256';"
     );
     if (stamp?.value !== modelSha256) return;
+    // P-01 paso 1: el mismo sello de formato que en insertChunk — con
+    // int8 se cuantiza al almacenar; en float32, los bytes de siempre.
+    const format = await readVectorStorageFormat(txn);
+    const bytes =
+      format === "int8"
+        ? quantizeVectorInt8(embedding)
+        : new Uint8Array(embedding.buffer, embedding.byteOffset, embedding.byteLength);
     await txn.runAsync(
       `INSERT OR REPLACE INTO chunk_embeddings (chunk_id, embedding, dim)
        SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM chunks WHERE chunk_id = ?)`,
-      [chunkId, new Uint8Array(embedding.buffer, embedding.byteOffset, embedding.byteLength), embedding.length, chunkId]
+      [chunkId, bytes, embedding.length, chunkId]
     );
     stored = true;
   }, opts);
   return stored;
+}
+
+// ---------------------------------------------------------------------------
+// P-01 paso 1 · Formato de almacenamiento de los vectores (sello en meta)
+//
+// Dos formatos conviven y el lector (semanticSearch, retrieve.ts) los
+// sirve sin distinguir la tabla: float32 (dim*4 B por fila, el histórico)
+// e int8 (dim B por fila, la cuarta parte). Cada fila LEÍDA se
+// autodescribe por su longitud; el sello meta 'embedding_storage_format'
+// fija solo el formato de ESCRITURA: ausente = float32. Los dos únicos
+// productores (insertChunk, insertEmbeddingForModel) leen el sello
+// DENTRO de su transacción y cuantizan al almacenar cuando dice int8.
+// La migración de lo ya almacenado vive en vectorFormatMigration.ts y
+// usa las piezas de abajo; al drenar el último float32, el sello se
+// voltea a int8 y las escrituras nuevas nacen ya cuantizadas.
+// ---------------------------------------------------------------------------
+
+/** Clave meta del sello de formato de escritura de vectores. */
+export const VECTOR_STORAGE_FORMAT_KEY = "embedding_storage_format";
+
+export type VectorStorageFormat = "float32" | "int8";
+
+/** El sello dentro de una transacción/handle dado; ausente = float32. */
+async function readVectorStorageFormat(db: SecureDbHandle): Promise<VectorStorageFormat> {
+  const row = await db.getFirstAsync<{ value: string }>(
+    "SELECT value FROM meta WHERE key = ?;",
+    [VECTOR_STORAGE_FORMAT_KEY]
+  );
+  return row?.value === "int8" ? "int8" : "float32";
+}
+
+/** El formato de ESCRITURA vigente (el de lectura se autodescribe por fila). */
+export async function getVectorStorageFormat(): Promise<VectorStorageFormat> {
+  const db = await getDb();
+  return readVectorStorageFormat(db);
+}
+
+/**
+ * Filas aún en float32: el progreso de la migración ES este conteo (una
+ * fila es float32 si su longitud es dim*4; convertida mide dim).
+ */
+export async function countFloat32VectorRows(): Promise<number> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ n: number }>(
+    "SELECT COUNT(*) AS n FROM chunk_embeddings WHERE length(embedding) = dim * 4;"
+  );
+  return row?.n ?? 0;
+}
+
+/** Un lote de filas float32 por convertir, en orden estable de fila. */
+export async function listFloat32VectorBatch(
+  limit: number
+): Promise<Array<{ chunkId: string; embedding: Uint8Array; dim: number }>> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ chunk_id: string; embedding: Uint8Array; dim: number }>(
+    `SELECT chunk_id, embedding, dim FROM chunk_embeddings
+     WHERE length(embedding) = dim * 4 ORDER BY rowid LIMIT ?`,
+    [limit]
+  );
+  return rows.map((r) => ({ chunkId: r.chunk_id, embedding: r.embedding, dim: r.dim }));
+}
+
+/**
+ * Aplica un lote ya cuantizado en UNA transacción que revalida DENTRO el
+ * sello de modelo que la migración capturó para ese lote: si un cambio
+ * de modelo (resetEmbeddingsForModel) aterrizó entretanto, no escribe
+ * nada y devuelve false — y como el reset borra todas las filas, la
+ * migración simplemente termina, sin filas y sin error. Cada UPDATE
+ * exige que la fila siga en float32: lo ya convertido no se re-convierte
+ * (idempotencia por construcción, no por memoria del proceso).
+ */
+export async function storeQuantizedVectorBatch(
+  updates: Array<{ chunkId: string; bytes: Uint8Array }>,
+  expectedModelSha256: string | null,
+  opts?: WriteOptions
+): Promise<boolean> {
+  let applied = false;
+  await writeTransaction(async (txn) => {
+    const stamp = await txn.getFirstAsync<{ value: string }>(
+      "SELECT value FROM meta WHERE key = 'embedding_model_sha256';"
+    );
+    if ((stamp?.value ?? null) !== expectedModelSha256) return;
+    for (const u of updates) {
+      await txn.runAsync(
+        `UPDATE chunk_embeddings SET embedding = ?
+         WHERE chunk_id = ? AND length(embedding) = dim * 4`,
+        [u.bytes, u.chunkId]
+      );
+    }
+    applied = true;
+  }, opts);
+  return applied;
+}
+
+/**
+ * Cierra la migración: con el modelo intacto y el conteo de float32 en
+ * cero — recontado DENTRO de la misma transacción — fija el sello de
+ * escritura en int8. Devuelve false (sin tocar nada) si el modelo cambió
+ * o queda alguna fila float32.
+ */
+export async function sealVectorStorageInt8(
+  expectedModelSha256: string | null,
+  opts?: WriteOptions
+): Promise<boolean> {
+  let sealed = false;
+  await writeTransaction(async (txn) => {
+    const stamp = await txn.getFirstAsync<{ value: string }>(
+      "SELECT value FROM meta WHERE key = 'embedding_model_sha256';"
+    );
+    if ((stamp?.value ?? null) !== expectedModelSha256) return;
+    const left = await txn.getFirstAsync<{ n: number }>(
+      "SELECT COUNT(*) AS n FROM chunk_embeddings WHERE length(embedding) = dim * 4;"
+    );
+    if ((left?.n ?? 0) !== 0) return;
+    await txn.runAsync("INSERT OR REPLACE INTO meta (key, value) VALUES (?, 'int8');", [
+      VECTOR_STORAGE_FORMAT_KEY,
+    ]);
+    sealed = true;
+  }, opts);
+  return sealed;
 }
 
 export interface CustomCollection {

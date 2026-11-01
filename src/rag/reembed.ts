@@ -64,6 +64,15 @@ export function reembedMissing(): Promise<ReembedProgress> {
   if (current) return current;
   current = run().finally(() => {
     current = null;
+    // P-01 paso 1: con los vectores completos, la migración de formato
+    // (float32 → int8) recoge lo que quede por convertir en la misma
+    // apertura, sin tocar ninguna pantalla. Import dinámico y errores
+    // tragados a propósito: la migración nunca puede romper el arranque
+    // ni el reembebido — si no corre en esta apertura, corre en la
+    // siguiente, porque su progreso es el conteo de filas float32.
+    void import("./vectorFormatMigration")
+      .then((m) => m.migrateVectorStorageFormat())
+      .catch(() => undefined);
   });
   return current;
 }
