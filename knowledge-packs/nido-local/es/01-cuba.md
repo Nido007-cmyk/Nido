@@ -2,10 +2,10 @@
 title: Cuba: números de emergencia y fases ante ciclones
 category: Emergencias por país
 lang: es
-sources: Consulado General de España en La Habana, «Seguridad y otros aspectos» (números de emergencia); comunicados del Estado Mayor Nacional de la Defensa Civil de Cuba recogidos por la agencia EFE (fases ciclónicas); Servicio Nacional de Meteorología de EE. UU. (NWS), «Consejos de seguridad: huracanes» (qué hacer)
+sources: Consulado General de España en La Habana, «Seguridad y otros aspectos» (números de emergencia); Instituto de Meteorología de Cuba (INSMET), «Generalidades de los ciclones tropicales» (las cuatro fases ciclónicas que establece el Estado Mayor Nacional de la Defensa Civil, con sus plazos); Servicio Nacional de Meteorología de EE. UU. (NWS), «Consejos de seguridad: huracanes» (qué hacer)
 id: local-cuba
 region: CU
-verified: 2026-10-28
+verified: 2026-10-31
 questions: a qué número llamo si pasa algo en Cuba | cómo pido una ambulancia en Cuba | qué hago cuando anuncian un ciclón en Cuba
 ---
 En Cuba, los números de emergencia son 104 ambulancia, 105 bomberos y 106 policía (Policía Nacional Revolucionaria). Según el Consulado de España en La Habana, desde un teléfono móvil se marca un 7 delante.
@@ -25,4 +25,4 @@ El Estado Mayor Nacional de la Defensa Civil decreta las fases ante un ciclón t
 - Nunca uses un generador, un fogón de carbón o un brasero dentro de casa: el monóxido de carbono mata (ver la guía de intoxicaciones y monóxido de carbono de NIDO Esencial).
 
 ## Importante
-Las fases y lo que piden pueden cambiar: sigue siempre lo que anuncie la Defensa Civil por la radio y la televisión. No pudimos consultar directamente una web oficial de la Defensa Civil; las fases se describen según sus comunicados publicados por EFE.
+Las fases y lo que piden pueden cambiar: sigue siempre lo que anuncie la Defensa Civil por la radio y la televisión. Las fases se describen según la página oficial del Instituto de Meteorología de Cuba (INSMET), que recoge las fases que establece el Estado Mayor Nacional de la Defensa Civil.

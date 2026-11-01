@@ -2,10 +2,10 @@
 title: Cuba: emergency numbers and hurricane phases
 category: Emergencies by country
 lang: en
-sources: Consulate General of Spain in Havana, "Seguridad y otros aspectos" (emergency numbers); statements by Cuba's National Civil Defense Staff reported by the EFE news agency (cyclone phases); US National Weather Service (NWS), "Hurricane Safety Tips" (what to do)
+sources: Consulate General of Spain in Havana, "Seguridad y otros aspectos" (emergency numbers); Cuban Institute of Meteorology (INSMET), "Generalidades de los ciclones tropicales" (the four cyclone phases established by the National Civil Defense Staff, with their time frames); US National Weather Service (NWS), "Hurricane Safety Tips" (what to do)
 id: local-cuba
 region: CU
-verified: 2026-10-28
+verified: 2026-10-31
 questions: what number do I call if something happens in Cuba | how do I get an ambulance in Cuba | what to do when a cyclone is announced in Cuba
 ---
 In Cuba, the emergency numbers are 104 for an ambulance, 105 for the fire department and 106 for the police (Policía Nacional Revolucionaria). According to the Spanish Consulate in Havana, from a mobile phone you dial a 7 first.
@@ -25,4 +25,4 @@ Cuba's National Civil Defense Staff declares the phases for a tropical cyclone, 
 - Never use a generator, a charcoal stove or a brazier indoors: carbon monoxide kills (see the NIDO Essentials guide on poisoning and carbon monoxide).
 
 ## Important
-Phases and what they ask of you can change: always follow what the Civil Defense announces on radio and television. We could not consult an official Civil Defense website directly; the phases are described from its statements as published by EFE.
+Phases and what they ask of you can change: always follow what the Civil Defense announces on radio and television. The phases are described from the official page of Cuba's Institute of Meteorology (INSMET), which sets out the phases established by the National Civil Defense Staff.
