@@ -430,6 +430,22 @@ describe("C-05c · la familia del veto sobre el pack real (Local): «¿Qué + ve
     expect(founded.length).toBe(0);
   });
 
+  it("atribución (C-05c, 2.3 del juego): «¿Qué sigue si no me llega la dirección del hotel?» cae por la señal A y no por el veto: sin query cae igual, porque el tema no está en Local («hotel» y «dirección» a df 0 en su pool de 12)", () => {
+    // La adversaria la trae en su familia 2 con desenlace fundados =
+    // puerta; medida al cierre, su caída es de la señal A (la forma de
+    // D2: términos ausentes del pool y ningún servido casa un término
+    // discriminativo), que esta tanda no toca y que en la base caía
+    // igual. La prueba de atribución es la de exclusión de la serie:
+    // sin query la señal B no puede formarse y el corpus cae lo mismo;
+    // con la cura, la señal B ya no se funda sobre esta forma (en la
+    // base el veto enumerado tampoco la cubría: caía por las dos).
+    const q = "¿Qué sigue si no me llega la dirección del hotel?";
+    const { pool, gated, founded, terms } = packSearch(local, q);
+    expect(gated.length).toBe(4);
+    expect(founded.length).toBe(0);
+    expect(dropUnfoundedCorpus(pool, gated, terms, {})).toEqual([]);
+  });
+
   it("controles 7.4/7.5/7.6 (en, sin exposición en esta superficie): fundados = puerta = 0, como en la base", () => {
     for (const q of [
       "What happens if the confirmation email doesn't arrive?",
