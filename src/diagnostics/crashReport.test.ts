@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { formatCrashReport, latestFailure, isFailureExit, type CrashReportLike } from "./crashReport";
+import { formatCrashReport, latestFailure, isFailureExit, maskCrashCrumbs, type CrashReportLike } from "./crashReport";
 
 const base = { status: 0, importance: 100, pssKb: 0, rssKb: 0, trace: null, description: null };
 
@@ -44,6 +44,50 @@ describe("crashReport", () => {
     const text = formatCrashReport({ sdkInt: 29, device: "x", lastCrash: null, exits: [] }, "1");
     expect(text).toContain("(sin registros)");
     expect(text).toContain("(ninguno)");
+  });
+
+  it("SEC-05: el bloque lastCrash sale saneado — clases y marcos sí, rutas y fragmentos no", () => {
+    const jsonFragment = `{"coleccion":"Recetas secretas de la abuela","docs":[{"title":"sopa de la casa","body":"texto largo del documento importado por la persona"}]}`;
+    const longFrame =
+      "	at expo.modules.kotlin.functions.AsyncFunctionComponent.dispatchAsyncFunctionInPromiseWithExtremelyLongGeneratedName(AsyncFunctionComponent.kt:2147483647)";
+    const lastCrash = [
+      "time=1700000000000",
+      "thread=main",
+      "java.io.FileNotFoundException: /data/user/0/team.nido.app/cache/recetas-de-la-abuela.pdf: open failed: ENOENT (No such file or directory)",
+      "	at expo.modules.filesystem.FileSystemModule.readAsStringAsync(FileSystemModule.kt:123)",
+      longFrame,
+      `Caused by: org.json.JSONException: Value ${jsonFragment} of type java.lang.String cannot be converted to JSONObject at character 212`,
+      "	at org.json.JSONTokener.syntaxError(JSONTokener.java:384)",
+      "java.lang.IllegalStateException: file is not a database",
+    ].join("\n");
+    const text = formatCrashReport({ sdkInt: 35, device: "x", lastCrash, exits: [] }, "1");
+    // Se conserva todo lo que diagnostica:
+    expect(text).toContain("java.io.FileNotFoundException");
+    expect(text).toContain("org.json.JSONException");
+    expect(text).toContain("at expo.modules.filesystem.FileSystemModule.readAsStringAsync(FileSystemModule.kt:123)");
+    expect(text).toContain(longFrame); // los marcos largos legítimos quedan exentos del tope
+    expect(text).toContain("file is not a database");
+    expect(text).toContain("at character 212"); // la posición del error JSON se conserva
+    expect(text).toContain("<ruta>");
+    expect(text).toContain("{<contenido>}");
+    // No sale ni la ruta ni el nombre del fichero ni el fragmento del usuario:
+    expect(text).not.toContain("/data/user/0/team.nido.app");
+    expect(text).not.toContain("recetas-de-la-abuela.pdf");
+    expect(text).not.toContain("Recetas secretas de la abuela");
+    expect(text).not.toContain("sopa de la casa");
+  });
+
+  it("SEC-05: maskCrashCrumbs acota las líneas de mensaje y respeta marcos y cabeceras", () => {
+    const longMessage = `java.lang.RuntimeException: ${"x".repeat(300)}`;
+    const masked = maskCrashCrumbs(longMessage);
+    expect(masked.length).toBe(161); // 160 + la «…»
+    expect(masked.endsWith("…")).toBe(true);
+    expect(maskCrashCrumbs("time=1700000000000")).toBe("time=1700000000000");
+    expect(maskCrashCrumbs("thread=main")).toBe("thread=main");
+    const frame = `\tat a.b.C(${"F".repeat(200)}.kt:1)`;
+    expect(maskCrashCrumbs(frame)).toBe(frame); // marco: exento del tope
+    expect(maskCrashCrumbs("visita file:///cache/export.json y content://docs/9")).toBe("visita <ruta> y <ruta>");
+    expect(maskCrashCrumbs("array [1, 2] corto")).toBe("array [1, 2] corto"); // ≤40: intacto
   });
 
   it("con rótulos localizados, el informe sale en ese idioma (auditoría 2026-10-12)", () => {

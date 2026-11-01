@@ -1330,7 +1330,7 @@
   },
   "crashReport": {
     "title": "Diagnóstico de falhas",
-    "body": "Se o NIDO fechou sozinho, aqui aparece o motivo registrado pelo Android. Copie o relatório e cole num relato de erro: ele não inclui suas mensagens, notas nem memória.",
+    "body": "Se o NIDO fechou sozinho, aqui aparece o motivo registrado pelo Android. Copie o relatório e cole num relato de erro: ele não inclui suas mensagens, notas nem memória; um rastro pode trazer o nome de um arquivo ou um caminho técnico.",
     "lastFailure": "Última falha: {{reason}} ({{when}} UTC)",
     "lastJsCrash": "Uma falha do app foi registrada.",
     "none": "Nenhuma falha registrada.",

@@ -11,6 +11,8 @@
  * (falta de memoria, fallo nativo, fallo Java/JS…) y se puede copiar el
  * informe para pegarlo en un issue. No necesita cable ni adb. El informe
  * no contiene mensajes, notas ni memoria: solo motivos y pilas de llamadas.
+ * Matiz (SEC-05): una traza puede traer el nombre de un fichero o una ruta
+ * técnica; el bloque del último fallo se sanea al copiar (maskCrashCrumbs).
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";

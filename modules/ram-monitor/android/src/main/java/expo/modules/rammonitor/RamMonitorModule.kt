@@ -108,7 +108,7 @@ class RamMonitorModule : Module() {
           append("thread=").append(thread.name).append('\n')
           append(Log.getStackTraceString(error))
         }
-        File(dir, CRASH_FILE).writeText(text.take(MAX_CRASH_CHARS))
+        File(dir, CRASH_FILE).writeText(scrubCrashText(text).take(MAX_CRASH_CHARS))
       } catch (_: Throwable) {
         // Nunca impedir el comportamiento normal de cierre.
       }
@@ -116,6 +116,21 @@ class RamMonitorModule : Module() {
     }
     crashRecorderInstalled = true
   }
+
+  /**
+   * SEC-05, capa A (al escribir): corta del texto del fallo las rutas del
+   * sistema de ficheros y las URIs file:/content: — la miga que el mensaje
+   * de una IOException arrastra (ruta absoluta y nombre del fichero de la
+   * persona). Los marcos nunca contienen estas formas (son nombres de
+   * clase), así que la pila sobrevive entera y el mensaje conserva su
+   * forma. Nada más se toca aquí: el fragmento de las JSONException lo
+   * sanea la capa B en JS (maskCrashCrumbs, con tests); recortarlo en
+   * Kotlin sin arnés de tests nativos sería el riesgo contrario.
+   */
+  private fun scrubCrashText(text: String): String =
+    text
+      .replace(Regex("""/(data|storage|sdcard|mnt|vendor)/[^\s:]*"""), "<ruta>")
+      .replace(Regex("""(file|content)://[^\s]*"""), "<ruta>")
 
   private fun readLastCrash(ctx: Context?): String? {
     if (ctx == null) return null
