@@ -212,3 +212,69 @@ describe("R-06 P5: avisos por fichero sin texto", () => {
     expect(result.importWarnings).toEqual([]);
   });
 });
+
+describe("Adversaria H-01: la vía OCR se nombra por fichero, aporte lo que aporte la capa", () => {
+  it("PDF mixto (capa parcial) cuyo OCR rechaza: éxito, su chunk entra y el aviso nombra el rechazo", async () => {
+    world.pdfText = "Portada del informe anual. Ejercicio 2026."; // solo la portada trae capa
+    world.pdfOcrError = new OcrError("OCR_FAILED", "Couldn't recognize the PDF's pages: native boom");
+    const result = await M.importDocuments([asset("mixto.pdf", 2000)], "Mixto");
+    expect(world.created).toHaveLength(1);
+    expect(world.inserted).toHaveLength(1); // el chunk de la capa de texto
+    expect(result.importWarnings).toEqual([
+      {
+        name: "mixto.pdf",
+        reason: "ocrFailed",
+        ocrCode: "OCR_FAILED",
+        ocrMessage: "Couldn't recognize the PDF's pages: native boom",
+      },
+    ]);
+  });
+
+  it("PDF mixto cuyo OCR resuelve vacío: éxito y aviso ocrEmpty — las páginas escaneadas no quedan en silencio", async () => {
+    world.pdfText = "Portada del informe anual. Ejercicio 2026.";
+    world.pdfOcrText = ""; // el OCR corrió y volvió sin texto
+    const result = await M.importDocuments([asset("mixto.pdf", 2000)], "Mixto");
+    expect(world.created).toHaveLength(1);
+    expect(world.inserted).toHaveLength(1);
+    expect(result.importWarnings).toEqual([{ name: "mixto.pdf", reason: "ocrEmpty" }]);
+  });
+
+  it("PDF mixto cuyo OCR sí lee las páginas escaneadas: entran los dos textos y no hay aviso", async () => {
+    world.pdfText = "Portada del informe anual. Ejercicio 2026.";
+    world.pdfOcrText = "Página escaneada con el balance del ejercicio.";
+    const result = await M.importDocuments([asset("mixto.pdf", 2000)], "Mixto");
+    expect(world.inserted).toHaveLength(2);
+    expect(result.importWarnings).toEqual([]);
+  });
+
+  it("PDF de solo texto en una versión sin OCR: entra por su capa y no gana avisos nuevos", async () => {
+    world.ocrAvailable = false;
+    world.pdfText = "palabra ".repeat(50);
+    const result = await M.importDocuments([asset("informe.pdf", 400)], "Informe");
+    expect(world.created).toHaveLength(1);
+    expect(result.importWarnings).toEqual([]);
+  });
+
+  it("imagen escaneada con OCR bueno: entra su texto y no hay aviso", async () => {
+    world.imageOcrText = "CLINICA SAN RAFAEL. Su cita es el martes.";
+    const result = await M.importDocuments([asset("foto.png", 1000)], "Foto");
+    expect(world.inserted).toHaveLength(1);
+    expect(result.importWarnings).toEqual([]);
+  });
+
+  it("costura: PDF de solo texto con OCR disponible — la vía vuelve «» sin páginas que leer y el aviso nombra su resultado", async () => {
+    // Comportamiento asentado de la costura, documentado como el de
+    // la no-deduplicación de arriba: recognizeScannedPdfText
+    // devuelve "" tanto si no hay páginas escaneadas (el nativo ni
+    // arranca el motor: no hay nada que leer) como si las hay y no
+    // se leyó nada de ellas — la costura devuelve solo el texto y
+    // no distingue ambos casos. El aviso nombra el resultado de la
+    // vía OCR del fichero; separar los dos casos exige que el
+    // nativo informe de las páginas intentadas (otro carril).
+    world.pdfText = "palabra ".repeat(50);
+    world.pdfOcrText = "";
+    const result = await M.importDocuments([asset("informe.pdf", 400)], "Informe");
+    expect(world.created).toHaveLength(1);
+    expect(result.importWarnings).toEqual([{ name: "informe.pdf", reason: "ocrEmpty" }]);
+  });
+});

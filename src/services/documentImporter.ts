@@ -170,12 +170,15 @@ interface ImportSink {
   emptyPdfNames: string[];
   ocrFailedNames: string[];
   /**
-   * R-06 P5: PDF sin capa de texto cuyo OCR SÍ corrió y devolvió
-   * vacío (no rechazó: resolvió sin texto). Se anota aparte de
-   * ocrFailedNames a propósito: el error de vacío total distingue
-   * «resolvió vacío» (noText) de «la llamada rechazó» (ocrFailed)
-   * — esa distinción es la que separa las ramas del fallo en el
-   * aparato — y esta lista da el nombre a los avisos por fichero.
+   * El OCR de páginas de un PDF que SÍ corrió y devolvió vacío
+   * (no rechazó: resolvió sin texto), aporte lo que aporte su
+   * capa de texto (Adversaria H-01: antes solo se anotaba sin
+   * capa, y el PDF mixto callaba sus páginas escaneadas). Se
+   * anota aparte de ocrFailedNames a propósito: el error de
+   * vacío total distingue «resolvió vacío» (noText) de «la
+   * llamada rechazó» (ocrFailed) — esa distinción es la que
+   * separa las ramas del fallo en el aparato — y esta lista da
+   * el nombre a los avisos por fichero.
    */
   ocrEmptyNames: string[];
   noOcrImageNames: string[];
@@ -402,11 +405,18 @@ async function parseFileContent(
         const ocrText = await recognizeScannedPdfText(file.uri, env.lang);
         if (ocrText.trim().length > 0) {
           docs.push({ title: fallbackTitle, source: filename, body: ocrText, ocr: true });
-        } else if (text.trim().length === 0) {
-          // R-06 P5: sin capa de texto y el OCR volvió vacío — el
-          // fichero se anota para que los avisos lo nombren (antes
-          // este caso no anotaba nada y el PDF entraba como
-          // documento sin haber aportado ni un chunk, en silencio).
+        } else {
+          // Adversaria H-01: la vía OCR de este fichero corrió y
+          // volvió sin texto — se anota SIEMPRE, aporte lo que
+          // aporte la capa de texto. La condición anterior (solo
+          // sin capa) dejaba el PDF mixto en silencio: la portada
+          // daba su chunk y las páginas escaneadas que no se
+          // leyeron no se nombraban en ninguna parte. La costura
+          // devuelve «» también cuando no hay páginas escaneadas
+          // que leer (el nativo ni arranca el motor): el aviso
+          // nombra el resultado de la vía, sin distinguir ese
+          // caso — separarlo exige que el nativo informe de las
+          // páginas intentadas, que no es asunto de este fichero.
           sink?.ocrEmptyNames.push(filename);
         }
       } catch (e) {
@@ -551,11 +561,19 @@ async function importDocumentsSerial(
     // quedan ni trocear lo leído.
     for (const d of docs) estimatedChunks += estimateChunkCount(d.body.trim().length);
     if (estimatedChunks > MAX_IMPORT_CHUNKS) throw tooManyChunks(estimatedChunks);
-    // R-06 P5: un fichero cuyos documentos no dan ni un trozo queda
-    // nombrado como aviso de ESTA importación aunque tenga éxito —
-    // antes, con un solo fichero bueno al lado, su fracaso no se
-    // nombraba en ninguna parte.
-    if (docs.every((d) => d.body.trim().length === 0)) {
+    // R-06 P5 + Adversaria H-01: el aviso de un fichero nace de
+    // DOS suelos — que sus documentos no den ni un trozo (el de
+    // R-06 P5) o que su vía OCR haya quedado nombrada en los
+    // sumideros (rechazó o volvió vacía), aporte lo que aporte
+    // la capa de texto: sin el segundo suelo, el PDF mixto
+    // importaba «con éxito» callando que sus páginas escaneadas
+    // no entraron. Un fichero puede aportar chunks Y llevar
+    // aviso; la importación no se convierte en fracaso por ello.
+    if (
+      sink.ocrFailedNames.includes(file.name) ||
+      sink.ocrEmptyNames.includes(file.name) ||
+      docs.every((d) => d.body.trim().length === 0)
+    ) {
       importWarnings.push(importWarningFor(file.name, sink));
     }
     allDocs.push(...docs);
