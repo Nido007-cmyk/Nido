@@ -54,9 +54,13 @@ const fx = vi.hoisted(() => {
   let id = 0;
   function makeHandle() {
     const hid = ++id;
+    // Guarda keyApplied (B-01, D2 curada en esta suite): sin PRAGMA key
+    // previo, sqlite_master no se lee — como en SQLCipher real.
+    let keyApplied = false;
     return {
       execAsync: async (sql: string) => {
         execLog.push(`RUN ${sql}`);
+        if (/^\s*PRAGMA\s+key/i.test(sql)) keyApplied = true;
       },
       getAllAsync: async <T,>(sql: string): Promise<T[]> => {
         execLog.push(`GETALL ${sql}`);
@@ -66,6 +70,9 @@ const fx = vi.hoisted(() => {
       },
       getFirstAsync: async <T,>(sql: string): Promise<T | null> => {
         execLog.push(`GETFIRST ${sql}`);
+        if (/FROM\s+sqlite_master/i.test(sql) && !keyApplied) {
+          throw new Error("file is not a database (sin clave)");
+        }
         if (sql.includes("schema_version")) return { value: "1" } as unknown as T;
         if (sql.includes("count(*)")) return { n: 1 } as unknown as T;
         if (sql.includes("integrity_check")) return { integrity_check: "ok" } as unknown as T;
@@ -86,68 +93,40 @@ const fx = vi.hoisted(() => {
   }
 
   function makeDriver() {
-    return {
-      dbDir: () => `${DOC}SQLite/`,
-      openDb: async (path: string) => {
+    return makeFakeFsDriver({
+      files,
+      makeHandle: () => makeHandle(),
+      docDir: DOC,
+      onOpen: (path, fs) => {
         opens.push(path);
-        files.set(path, "db-bytes");
         // Marcar como cifrada para evitar migraciones en tests.
         if (path.endsWith(".db")) {
-          files.set(`${path}.sqlcipher`, "marker");
+          fs.set(`${path}.sqlcipher`, "marker");
         }
-        return makeHandle();
       },
-      exists: async (path: string) => files.has(path),
-      remove: async (path: string) => {
-        removedPaths.push(path);
-        files.delete(path);
-      },
-      rename: async () => {
-        throw new Error("rename no usado");
-      },
-      writeFile: async (path: string, content: string) => {
-        files.set(path, content);
-      },
-    };
+      onRemove: (path) => { removedPaths.push(path); },
+      renameError: "rename no usado",
+    });
   }
 
   return { DOC, files, opens, closes, removedPaths, execLog, sabotage, reset, makeDriver };
 });
 
 // keyManager simulado con sabotaje configurable.
-vi.mock("../privacy/keyManager", () => ({
-  registerKeyLossProbe: () => {},
-  getDatabaseKeyHex: async () => {
-    if (fx.sabotage.keyFails) throw new Error("Keystore simulado: fallo de lectura");
-    if (fx.sabotage.secureStoreFails) throw new Error("SecureStore simulado: no disponible");
-    return "ab".repeat(32);
-  },
-  applyDatabaseKey: async (
-    db: {
-      execAsync(s: string): Promise<void>;
-      getAllAsync(s: string): Promise<Array<{ cipher_version?: string }>>;
-      getFirstAsync(s: string): Promise<unknown>;
-      closeAsync(): Promise<void>;
+vi.mock("../privacy/keyManager", async () => {
+  const { fakeKeyManagerModule } = await import("./secureDbTestHarness");
+  return fakeKeyManagerModule({
+    getDatabaseKeyHex: async () => {
+      if (fx.sabotage.keyFails) throw new Error("Keystore simulado: fallo de lectura");
+      if (fx.sabotage.secureStoreFails) throw new Error("SecureStore simulado: no disponible");
+      return "ab".repeat(32);
     },
-    keyHex: string | null,
-  ) => {
-    if (!keyHex) return;
-    if (!/^[0-9a-f]{64}$/i.test(keyHex)) {
-      await db.closeAsync().catch(() => {});
-      throw new Error("formato de clave inválido (fail-closed)");
-    }
-    await db.execAsync(`PRAGMA key = "x'${keyHex.toLowerCase()}'";`);
-    const rows = await db.getAllAsync("PRAGMA cipher_version;");
-    if (!rows?.[0]?.cipher_version) {
-      await db.closeAsync().catch(() => {});
-      throw new Error("sin SQLCipher: fail-closed");
-    }
-    await db.getFirstAsync("SELECT count(*) AS n FROM sqlite_master;");
-  },
-}));
+  });
+});
 
 // Código REAL bajo prueba.
 import { setSecureDbTestDriver, DbLifecycleEndedError } from "./secureDatabase";
+import { makeFakeFsDriver } from "./secureDbTestHarness";
 import {
   getDatabase,
   writeTransaction,

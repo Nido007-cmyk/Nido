@@ -124,25 +124,13 @@ const fx = vi.hoisted(() => {
   }
 
   function makeDriver() {
-    return {
-      dbDir: () => `${DOC}SQLite/`,
-      openDb: async (path: string) => {
-        opens.push(path);
-        files.set(path, "db-bytes");
-        return makeHandle();
-      },
-      exists: async (path: string) => files.has(path),
-      remove: async (path: string) => {
-        removedPaths.push(path);
-        files.delete(path);
-      },
-      rename: async () => {
-        throw new Error("rename no usado en estos tests");
-      },
-      writeFile: async (path: string, content: string) => {
-        files.set(path, content);
-      },
-    };
+    return makeFakeFsDriver({
+      files,
+      makeHandle: () => makeHandle(),
+      docDir: DOC,
+      onOpen: (path) => { opens.push(path); },
+      onRemove: (path) => { removedPaths.push(path); },
+    });
   }
 
   return {
@@ -192,37 +180,15 @@ vi.mock("expo-file-system/legacy", () => ({
 // keyManager falso pero fiel: aplica la clave con el mismo handshake
 // (formato hex, PRAGMA key, exige cipher_version, lectura de prueba) para no
 // relajar el fail-closed en los tests.
-vi.mock("../privacy/keyManager", () => ({
-
-  registerKeyLossProbe: () => {},
-  getDatabaseKeyHex: async () => "ab".repeat(32),
-  applyDatabaseKey: async (
-    db: {
-      execAsync(s: string): Promise<void>;
-      getAllAsync(s: string): Promise<Array<{ cipher_version?: string }>>;
-      getFirstAsync(s: string): Promise<unknown>;
-      closeAsync(): Promise<void>;
-    },
-    keyHex: string | null,
-  ) => {
-    if (!keyHex) return;
-    if (!/^[0-9a-f]{64}$/i.test(keyHex)) {
-      await db.closeAsync().catch(() => {});
-      throw new Error("formato de clave inválido (fail-closed)");
-    }
-    await db.execAsync(`PRAGMA key = "x'${keyHex.toLowerCase()}'";`);
-    const rows = await db.getAllAsync("PRAGMA cipher_version;");
-    if (!rows?.[0]?.cipher_version) {
-      await db.closeAsync().catch(() => {});
-      throw new Error("sin SQLCipher: fail-closed");
-    }
-    await db.getFirstAsync("SELECT count(*) AS n FROM sqlite_master;");
-  },
-}));
+vi.mock("../privacy/keyManager", async () => {
+  const { fakeKeyManagerModule } = await import("../security/secureDbTestHarness");
+  return fakeKeyManagerModule();
+});
 
 // secureDatabase REAL (ensureEncryptedDatabase + deleteManagedDatabase +
 // DbLifecycleEndedError reales) con el driver falso inyectado.
 import { setSecureDbTestDriver, DbLifecycleEndedError } from "../security/secureDatabase";
+import { makeFakeFsDriver } from "../security/secureDbTestHarness";
 import { getDb, writeTransaction, resetDatabase } from "./db";
 import { getMemoryDb, clearMemoryDb, saveFact } from "../agent/memory/memoryStore";
 

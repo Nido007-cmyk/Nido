@@ -29,7 +29,7 @@
  */
 import { DatabaseSync } from "node:sqlite";
 import { vi } from "vitest";
-import type { SecureDbHandle } from "./secureDatabase";
+import type { SecureDbDriver, SecureDbHandle } from "./secureDatabase";
 
 type KeyManagerModule = typeof import("../privacy/keyManager");
 
@@ -134,6 +134,56 @@ export function makeNodeSqliteHandle(
     },
     closeAsync: async () => {
       sqlite.close();
+    },
+  };
+}
+
+export interface FakeFsDriverOptions {
+  /** El «disco» de la suite: mapa ruta → contenido, compartido con sus mocks de FS. */
+  files: Map<string, string>;
+  /** Fábrica del handle guionizado de la suite (su escenario; no se unifica). */
+  makeHandle: (path: string) => SecureDbHandle;
+  /** Directorio de documentos del mundo falso. Por defecto `file:///docs/`. */
+  docDir?: string;
+  /** Contenido que `openDb` deja en `files` al abrir. Por defecto `"db-bytes"`. */
+  bytesOnOpen?: string;
+  /** Compuerta previa a la apertura (retenciones de apertura de wipeTerminal). */
+  beforeOpen?: (path: string) => Promise<void>;
+  /** Registro y efectos de la apertura (log de `opens`, marcador `.sqlcipher`…). */
+  onOpen?: (path: string, files: Map<string, string>) => void;
+  /** Registro del borrado (log de `removedPaths`). El borrado en sí siempre ocurre. */
+  onRemove?: (path: string) => void;
+  /** Mensaje del `rename` cuando la suite no lo usa. */
+  renameError?: string;
+}
+
+/**
+ * El driver de la Familia B: un `SecureDbDriver` sobre un sistema de
+ * ficheros en memoria. La cáscara era idéntica en las cuatro suites
+ * (dbDir, exists por mapa, remove que borra, writeFile que guarda,
+ * rename que lanza «no usado»); lo que varía — el handle guionizado,
+ * los registros, las compuertas — entra como opciones nombradas.
+ */
+export function makeFakeFsDriver(options: FakeFsDriverOptions): SecureDbDriver {
+  const docDir = options.docDir ?? "file:///docs/";
+  return {
+    dbDir: () => `${docDir}SQLite/`,
+    openDb: async (path: string) => {
+      await options.beforeOpen?.(path);
+      options.onOpen?.(path, options.files);
+      options.files.set(path, options.bytesOnOpen ?? "db-bytes");
+      return options.makeHandle(path);
+    },
+    exists: async (path: string) => options.files.has(path),
+    remove: async (path: string) => {
+      options.onRemove?.(path);
+      options.files.delete(path);
+    },
+    rename: async () => {
+      throw new Error(options.renameError ?? "rename no usado en estos tests");
+    },
+    writeFile: async (path: string, content: string) => {
+      options.files.set(path, content);
     },
   };
 }

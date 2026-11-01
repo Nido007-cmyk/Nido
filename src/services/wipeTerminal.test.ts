@@ -165,28 +165,18 @@ const fx = vi.hoisted(() => {
   }
 
   function makeDriver() {
-    return {
-      dbDir: () => `${DOC}SQLite/`,
-      openDb: async (path: string) => {
+    return makeFakeFsDriver({
+      files,
+      makeHandle: () => makeHandle(),
+      docDir: DOC,
+      beforeOpen: async () => {
         if (holdOpen) {
           signalOpenStarted?.();
           await openGate;
         }
-        opens.push(path);
-        files.set(path, "db-bytes");
-        return makeHandle();
       },
-      exists: async (path: string) => files.has(path),
-      remove: async (path: string) => {
-        files.delete(path);
-      },
-      rename: async () => {
-        throw new Error("rename no usado en estos tests");
-      },
-      writeFile: async (path: string, content: string) => {
-        files.set(path, content);
-      },
-    };
+      onOpen: (path) => { opens.push(path); },
+    });
   }
 
   return {
@@ -285,6 +275,7 @@ import {
   deleteP2PSigningKey,
 } from "../privacy/keyManager";
 import { setSecureDbTestDriver, DbLifecycleEndedError, getWipeGate } from "../security/secureDatabase";
+import { makeFakeFsDriver } from "../security/secureDbTestHarness";
 import { resetAllAppData } from "./appReset";
 import {
   getDb,
