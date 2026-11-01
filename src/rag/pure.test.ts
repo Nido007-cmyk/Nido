@@ -978,4 +978,45 @@ describe("dropUnfoundedCorpus (C-05): las dos señales de la caída honesta", ()
     const pool = Array.from({ length: 6 }, (_, i) => hit(`Luz ${i}`, "La luz en España y su consumo en el hogar."));
     expect(dropUnfoundedCorpus(pool, pool.slice(0, 2), termsOf(explain), { query: explain })).toEqual(pool.slice(0, 2));
   });
+
+  it("señal B (C-05b): la forma «¿A qué + tipo…?» dispara como su gemela «¿Cuál es…?» (A8-01)", () => {
+    // Pool < 8 a propósito: la señal A no puede ser la causa. El
+    // fragmento casa solicitud+visa y el tipo (correo) no existe en el
+    // pool; solo el marco decide, y «a qué» no lo formaba.
+    const pool = [
+      hit("Solicitud de la visa", "La solicitud de la visa se manda con el pasaporte y la foto en la ventanilla."),
+      ...Array.from({ length: 4 }, (_, i) => hit(`Trámites ${i}`, "Los trámites y sus fases en la oficina.")),
+    ];
+    const served = pool.slice(0, 1);
+    const gemela = "¿Cuál es el correo para la solicitud de la visa?";
+    expect(dropUnfoundedCorpus(pool, served, termsOf(gemela), { query: gemela })).toEqual([]);
+    const aQue = "¿A qué correo mando la solicitud de la visa?";
+    expect(dropUnfoundedCorpus(pool, served, termsOf(aQue), { query: aQue })).toEqual([]);
+  });
+
+  it("señal B (C-05b): el veto de procedimiento — el tipo mencionado de pasada no hace caer la respuesta (A8-03)", () => {
+    // La forma construida de la adversaria-8: una respuesta real de la
+    // casa que sí responde cómo proceder. «¿Qué hago si…?» es el marco
+    // de procedimiento y «correo» va de pasada: la señal B calla.
+    const q = "¿Qué hago si no me llega el correo de confirmación?";
+    const pool = [
+      hit("Aviso de confirmación", "Si no te llega el aviso, revisa el buzón y espera la confirmación unas horas."),
+      ...Array.from({ length: 4 }, (_, i) => hit(`Avisos ${i}`, "Los avisos y sus fases de entrega.")),
+    ];
+    const served = pool.slice(0, 1);
+    expect(dropUnfoundedCorpus(pool, served, termsOf(q), { query: q })).toEqual(served);
+  });
+
+  it("señal B (C-05b): bajo dictado, el marco se busca en la frase que lleva el tipo (A8-02)", () => {
+    // «Oye, ¿dónde queda eso?» abre y el tipo va en la segunda oración,
+    // gobernado por «Necesito»: la frase que lleva el tipo sí abre como
+    // pregunta de dato dictada, y la señal dispara como en T2.
+    const q = "Oye, ¿dónde queda eso? Necesito la dirección del consulado de España en La Habana, es para un trámite.";
+    const pool = [
+      hit("Consulado de España en La Habana", "El consulado de España en La Habana atiende el trámite de la visa; la cita queda registrada donde indica la oficina."),
+      ...Array.from({ length: 4 }, (_, i) => hit(`Oficinas ${i}`, "Las oficinas y sus avisos a los viajeros.")),
+    ];
+    const served = pool.slice(0, 1);
+    expect(dropUnfoundedCorpus(pool, served, termsOf(q), { query: q })).toEqual([]);
+  });
 });

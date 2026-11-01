@@ -128,6 +128,17 @@ describe("C-05 · la caída honesta contra Local (sin Esencial)", () => {
     expect(matchedForms(served[0], terms)).toEqual(["numero", "emergencias", "mexico"]);
   });
 
+  it("A8-03 (C-05b): «¿Qué hago si no me llega el correo de confirmación?» pide un procedimiento, no el dato: la señal B no retira lo que la puerta sirve", () => {
+    // La adversaria-8 lo demostró sobre el pack publicado: la puerta
+    // sirve 1 (Brasil: las alertas por SMS casan llega+confirmacion) y
+    // el marco ancho de la señal B («¿Qué…?» + el tipo de pasada) lo
+    // retiraba. El tipo va mencionado, no preguntado: con el veto de
+    // procedimiento la conducta vuelve a ser la de la base.
+    const { gated, founded } = packSearch(local, "¿Qué hago si no me llega el correo de confirmación?");
+    expect(gated.length).toBe(1);
+    expect(founded.length).toBe(gated.length);
+  });
+
   it("caso borde declarado: «¿qué hago en una emergencia?» no forma la señal y la conducta de hoy no cambia", () => {
     // Con la guarda de ≥ 3 términos la señal A no se forma (la pregunta
     // deja un solo término, «emergencia»): la caída ahí sería decisión
@@ -225,5 +236,51 @@ describe("C-05 · la pierna del dispositivo: exención del usuario y guarda de p
     expect(pool.length).toBeLessThan(8);
     expect(gated.length).toBe(2);
     expect(served.length).toBe(gated.length);
+  });
+
+  it("A8-01 (C-05b): «¿A qué correo…?» cae exactamente como su gemela «¿Cuál es el correo…?»", () => {
+    // Construcción de la adversaria-8 (pierna del dispositivo, pool < 8:
+    // la señal A queda descartada como causa): un fragmento de la casa
+    // que casa solicitud+visa pasa la puerta. Con la gemela cae por la
+    // señal B (correo a df 0); con la forma «a qué» el marco no se
+    // formaba y el fragmento se servía — la única diferencia es la
+    // palabra inicial.
+    const docs = [
+      {
+        title: "Solicitud de la visa",
+        body: "La solicitud de la visa se manda con el pasaporte y la foto en la ventanilla.",
+        user: false,
+      },
+    ];
+    const db = deviceDb(docs);
+    const gemela = deviceSearch(db, docs, "¿Cuál es el correo para la solicitud de la visa?");
+    expect(gemela.gated.length).toBe(1);
+    expect(gemela.served).toEqual([]);
+    const aQue = deviceSearch(db, docs, "¿A qué correo mando la solicitud de la visa?");
+    expect(aQue.gated.length).toBe(1);
+    expect(aQue.served).toEqual([]);
+  });
+
+  it("A8-02 (C-05b): bajo dictado (abridor y el tipo en la segunda oración) la señal B alcanza la pregunta de dato como en T2", () => {
+    // La misma construcción sobre un solo estado: el fragmento de la
+    // casa casa los términos del tema (consulado, España, La Habana,
+    // trámite) sin nombrar el tipo. Con la forma T2 al inicio cae; con
+    // el dictado («Oye,…» y «Necesito la dirección…» en la segunda
+    // oración) el marco anclado al inicio de la cadena no lo alcanzaba
+    // y el fragmento se servía.
+    const docs = [
+      {
+        title: "Consulado de España en La Habana",
+        body: "El consulado de España en La Habana atiende el trámite de la visa; la cita queda registrada donde indica la oficina y se pide cuando necesito renovar.",
+        user: false,
+      },
+    ];
+    const db = deviceDb(docs);
+    const t2 = deviceSearch(db, docs, "¿Cuál es la dirección del consulado de España en La Habana?");
+    expect(t2.gated.length).toBe(1);
+    expect(t2.served).toEqual([]);
+    const dictada = deviceSearch(db, docs, "Oye, ¿dónde queda eso? Necesito la dirección del consulado de España en La Habana, es para un trámite.");
+    expect(dictada.gated.length).toBe(1);
+    expect(dictada.served).toEqual([]);
   });
 });
