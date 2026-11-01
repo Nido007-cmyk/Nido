@@ -498,7 +498,7 @@ describe("Núcleo 3 · N-08 — QC de la descomposición y citas honestas", () =
     let n = 0;
     retrieveMock.mockImplementation(async () => [chunk(++n)]);
     const result = await runDeepResearch("What are the trade-offs?", undefined, undefined, 200);
-    expect(result.citations.map((c) => c.id)).toEqual(["c2"]);
+    expect(result.citations.map((c) => (c as unknown as Chunk).id)).toEqual(["c2"]);
     expect(result.answer).toContain("[1]");
     expect(result.answer).not.toContain("[2]");
   });
