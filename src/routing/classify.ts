@@ -137,6 +137,16 @@ const CREATIVE_RE = new RegExp(
     // siendo una pregunta de datos y va a datos.
     "\\bcu[eé]nta(?:me|nos)?\\s+(?:un|una)\\s+(?:cuento|historia|relato|leyenda|f[aá]bula)\\b",
     "\\bme\\s+cu[eé]ntas\\s+(?:un|una)\\s+(?:cuento|historia|relato|leyenda|f[aá]bula)\\b",
+    // Núcleo 3 · N-07 (auditoría 2026-11-01): la forma cortés de
+    // pregunta fuera de la familia «cuentas» no entraba («¿Me
+    // escribes un poema sobre el mar?» → false). Mismo precedente
+    // que la familia cuentas: manda el OBJETO creado, con la lista
+    // cerrada de objetos; el verbo conjugado tras «me» o tras
+    // «puedes» solo abre si el objeto es de la lista — «¿Me escribes
+    // la lista de la compra?» sigue false y «¿Me cuentas el número
+    // de emergencias…?» también (cuentas no está en estos verbos).
+    "\\bme\\s+(?:escribes|inventas|redactas|creas)\\s+(?:un|una)\\s+(?:poema|cuento|historia|canci[oó]n|carta|chiste|adivinanza|relato|leyenda|f[aá]bula)\\b",
+    "\\b(?:me\\s+)?puedes\\s+escribir(?:me)?\\s+(?:un|una)\\s+(?:poema|cuento|historia|canci[oó]n|carta|chiste|adivinanza|relato|leyenda|f[aá]bula)\\b",
     "\\b(?:n[aá]rra(?:me)?|relata(?:me)?)\\s+(?:un|una)\\s+(?:cuento|historia|relato|leyenda|f[aá]bula)\\b",
     // en
     "\\b(?:give\\s+me|suggest|brainstorm)\\s+(?:\\d+\\s+|some\\s+|a\\s+few\\s+|two\\s+|three\\s+|five\\s+)?ideas?\\b",
@@ -147,6 +157,10 @@ const CREATIVE_RE = new RegExp(
     "\\b(?:me\\s+d[aáê]|sugira|sugere)\\s+(?:\\d+\\s+|algumas\\s+|umas\\s+|duas\\s+|tr[eê]s\\s+)?ideias?\\b",
     "\\bo\\s+que\\s+(?:eu\\s+)?posso\\s+(?:cozinhar|preparar|fazer\\s+para\\s+(?:o\\s+)?(?:jantar|almo[cç]o))\\b",
     "\\b(?:escreva|escreve)\\s+(?:um|uma)\\s+(?:poema|hist[oó]ria|can[cç][aã]o|carta)\\b",
+    // N-07 (pt): el infinitivo tras la cortesía («Podes escrever um
+    // poema…?» → false; la forma «Você me escreve…» ya entraba por
+    // subcadena de escreve). Mismo guarda: objeto creado de la lista.
+    "\\b(?:podes|pode|posso)\\s+(?:me\\s+)?escrever\\s+(?:um|uma)\\s+(?:poema|conto|hist[oó]ria|can[cç][aã]o|carta)\\b",
     "\\bconta(?:-me)?\\s+(?:um|uma)\\s+(?:conto|hist[oó]ria|f[aá]bula|lenda)\\b",
     "\\bconte(?:-me)?\\s+(?:um|uma)\\s+(?:conto|hist[oó]ria|f[aá]bula|lenda)\\b",
   ].join("|"),

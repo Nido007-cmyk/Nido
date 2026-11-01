@@ -63,3 +63,32 @@ describe("la familia de «cuéntame»: creativa solo con objeto creado", () => {
     expect(isCreativeRequest(q)).toBe(false);
   });
 });
+
+// Núcleo 3 · N-07: la petición creativa en forma cortés de pregunta.
+// La familia «cuentas» ya entraba (2026-10-30) y el inglés cortés
+// también (por subcadena); el hueco medido era es «me + verbo
+// conjugado» fuera de cuentas y pt el infinitivo tras cortesía.
+describe("N-07 · creativo cortés", () => {
+  it.each([
+    "¿Me escribes un poema sobre el mar?",
+    "¿Me inventas una historia corta?",
+    "¿Puedes escribirme un poema?",
+    "¿Me puedes escribir un cuento?",
+    "Podes escrever um poema sobre o mar?",
+    // Controles que ya entraban y no se tocan:
+    "¿Me cuentas un cuento de miedo?",
+    "Can you write me a poem about the sea?",
+    "Você me escreve um poema sobre o mar?",
+  ])("%s", (q) => {
+    expect(isCreativeRequest(q)).toBe(true);
+  });
+
+  it.each([
+    // Negativas obligadas de la preparación: consulta de guía y
+    // objeto que no es creación.
+    "¿Me cuentas el número de emergencias de Chile?",
+    "¿Me escribes la lista de la compra?",
+  ])("%s", (q) => {
+    expect(isCreativeRequest(q)).toBe(false);
+  });
+});
