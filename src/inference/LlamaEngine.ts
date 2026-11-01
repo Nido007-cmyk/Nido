@@ -656,13 +656,38 @@ export class LlamaEngine {
     const guardLoops = responseFormat === undefined && grammar === undefined;
     let streamed = "";
     let loopCut = false;
+    // M4 (crash nativo): la parada por bucle ya NO se pide con
+    // stopCompletion() desde dentro del callback de token — esa
+    // llamada es reentrante: toca la maquinaria nativa de la
+    // completion mientras su propio callback está en la pila, y es
+    // uno de los tres gatillos sospechosos del diagnóstico. La
+    // guarda solo marca y programa la parada para el siguiente
+    // macrotask, entre tokens y con la generación aún en vuelo.
+    // El comportamiento observable no cambia: onToken deja de
+    // reenviar en cuanto loopCut se marca (abajo) y el texto final
+    // se recorta con trimRepetitionLoop igual que antes; lo único
+    // que se mueve es QUIÉN y DESDE DÓNDE se llama a stopCompletion.
+    let loopStopScheduled = false;
+    // Se pone a true cuando esta generación se asienta: una parada
+    // programada que dispare tarde no debe tocar la completion de
+    // OTRA generación posterior sobre el mismo contexto.
+    let generationSettled = false;
     const watchLoop = (piece: string) => {
       if (!guardLoops) return;
       streamed += piece;
       if (loopCut || tokenCount % 8 !== 0) return;
       if (findRepetitionLoop(streamed)) {
         loopCut = true;
-        void this.context?.stopCompletion();
+        if (!loopStopScheduled) {
+          loopStopScheduled = true;
+          setTimeout(() => {
+            if (generationSettled) return;
+            // Envuelto como en unloadNow: stopCompletion cambió su
+            // retorno entre RCs (FIX-2026-10-07); Promise.resolve
+            // admite promesa o undefined.
+            void Promise.resolve(this.context?.stopCompletion()).catch(() => {});
+          }, 0);
+        }
       }
     };
     const wrappedOnToken = onToken
@@ -728,6 +753,9 @@ export class LlamaEngine {
           ? parseGemmaReasoning(completed).answer
           : completed;
       } finally {
+        // M4: desde aquí, la parada diferida de la guarda de
+        // repetición ya no puede disparar contra este contexto.
+        generationSettled = true;
         this.inFlight.delete(started.completion);
         if (started.timer) clearTimeout(started.timer);
       }

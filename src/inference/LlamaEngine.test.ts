@@ -669,4 +669,72 @@ describe("Crash nativo: puerta nativa y guarda de repetición", () => {
     expect(isNativeGateTaken()).toBe(false);
   });
 
+  it("M4: la guarda de repetición no llama a stopCompletion desde el callback de token; la parada diferida llega y el texto se recorta igual", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const ctx = created[0];
+    // Completion falsa que emite token a token (el mock de la casa
+    // emite todo de golpe y la guarda solo mira cada 8 tokens) y solo
+    // se asienta cuando stopCompletion la detiene.
+    const pieces = ["Ejemplos de plantas que conozco son ", ...Array.from({ length: 40 }, () => "las aluminosas, ")];
+    let tokensSent = 0;
+    let stopCalls = 0;
+    let stopInsideCallback = false;
+    let emitting = false;
+    let timer: ReturnType<typeof setInterval> | null = null;
+    let settle: ((v: { text: string }) => void) | null = null;
+    let settled = false;
+    ctx.completion = (_params, onToken) =>
+      new Promise<{ text: string }>((resolve) => {
+        settle = resolve;
+        let i = 0;
+        timer = setInterval(() => {
+          if (i >= pieces.length) {
+            if (timer) clearInterval(timer);
+            timer = null;
+            if (!settled) {
+              settled = true;
+              settle?.({ text: pieces.join("") });
+            }
+            return;
+          }
+          emitting = true;
+          tokensSent++;
+          onToken({ token: pieces[i++] });
+          emitting = false;
+        }, 2);
+      });
+    ctx.stopCompletion = async () => {
+      stopCalls++;
+      if (emitting) stopInsideCallback = true;
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+      if (!settled) {
+        settled = true;
+        // Como llama.cpp: se asienta un momento después de la parada.
+        setTimeout(() => settle?.({ text: pieces.slice(0, tokensSent).join("") }), 1);
+      }
+    };
+
+    const forwarded: string[] = [];
+    const gen = engine.generate({ prompt: "plantas", onToken: (p) => forwarded.push(p) });
+    await new Promise((r) => setTimeout(r, 150));
+    const callsWhileGenerating = stopCalls;
+    const inside = stopInsideCallback;
+    await engine.stop(); // seguridad: asienta la generación pase lo que pase
+    const text = await gen;
+
+    // La propiedad M4: ninguna parada se pidió con el callback de
+    // token en la pila; la parada diferida sí llegó (una sola) con la
+    // generación en vuelo.
+    expect(inside).toBe(false);
+    expect(callsWhileGenerating).toBe(1);
+    // El comportamiento observable no cambia: el texto final es el de
+    // siempre (primera aparición + «…») y lo transmitido se cortó al
+    // detectarse el bucle, antes de que la generación se asentara.
+    expect(text).toBe("Ejemplos de plantas que conozco son las aluminosas…");
+    expect(forwarded.length).toBeLessThan(tokensSent);
+  });
 });
