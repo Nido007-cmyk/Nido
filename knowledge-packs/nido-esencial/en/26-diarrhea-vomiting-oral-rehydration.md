@@ -3,6 +3,7 @@ title: Diarrhea, vomiting and homemade oral rehydration solution
 category: Health at home
 lang: en
 sources: WHO and UNICEF, treatment of diarrhoea and oral rehydration salts; WHO IMCI
+questions: how do i make homemade oral rehydration solution, ors | how much salt and how much sugar go in a liter of ors | my child has diarrhea and vomiting, what do i give him | what are the signs of dehydration in a child | como preparo o soro oral caseiro | quantas colheres de açúcar e de sal vão no soro caseiro
 ---
 Diarrhea kills through dehydration, especially young children and older people. The solution is simple: replace water and salts.
 

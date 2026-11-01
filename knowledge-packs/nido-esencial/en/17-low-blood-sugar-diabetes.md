@@ -3,6 +3,7 @@ title: Low blood sugar (hypoglycemia) and diabetes
 category: First aid
 lang: en
 sources: Canadian Red Cross guidelines 2020; AHA and American Red Cross 2024
+questions: what do i do if a diabetic's blood sugar drops too low | how many grams of sugar or glucose do i give for low blood sugar | how often can i repeat the sugar dose if there is no improvement | what are the signs of low blood sugar in a diabetic | o que faço se o açúcar de um diabético baixar demais | quantos gramas de glicose dou numa hipoglicemia
 ---
 A person with diabetes (especially if they use insulin) can have low blood sugar if they skipped a meal, exercised more, or took too much insulin.
 

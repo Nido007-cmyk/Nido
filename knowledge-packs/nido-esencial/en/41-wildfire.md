@@ -3,6 +3,7 @@ title: Wildfire
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA); American Red Cross; CAL FIRE "Ready, Set, Go!"; WHO, wildfire smoke
+questions: what do i do in a wildfire | should i evacuate as soon as warned or wait in a wildfire | what do i do if the fire traps me inside my car | which mask protects against wildfire smoke | o que faço num incêndio florestal | o que faço se o fogo me apanhar dentro do carro
 ---
 Wildfires move very fast, especially with wind and uphill.
 

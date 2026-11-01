@@ -3,6 +3,7 @@ title: Mental health, stress and crisis
 category: Health at home
 lang: en
 sources: WHO, "Doing What Matters in Times of Stress" (2020); IFRC Reference Centre for Psychosocial Support; WHO mhGAP guide
+questions: what can i do to calm anxiety and stress | simple who techniques for managing stress | someone tells me they want to end their life, what do i do | is it normal for my child to be badly affected after a disaster | o que posso fazer para acalmar a ansiedade e o estresse | alguém me diz que quer tirar a própria vida, o que faço
 ---
 Emergencies, uncertainty and loss affect the mind as much as the body. After an earthquake, a flood or another disaster it is common to feel anxious, be unable to sleep, or keep reliving what happened. Feeling fear, sadness or anger is a normal reaction to something abnormal.
 

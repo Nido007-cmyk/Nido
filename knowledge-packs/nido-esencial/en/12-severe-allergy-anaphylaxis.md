@@ -3,6 +3,7 @@ title: Severe allergic reaction (anaphylaxis)
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020; IFRC 2020
+questions: my daughter had a severe allergic reaction to a peanut and can't breathe | how do i use an epipen, the epinephrine auto-injector | a bee stung me and my face is swelling up, what do i do | when do i give a second dose of epinephrine | o que faço numa alergia grave, não consegue respirar | como uso a caneta de adrenalina
 ---
 Anaphylaxis is a severe allergic reaction that can kill within minutes. It usually appears soon after a food (nuts, shellfish, egg, milk), a bee or wasp sting, or a medicine.
 

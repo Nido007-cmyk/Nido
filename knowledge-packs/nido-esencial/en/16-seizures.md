@@ -3,6 +3,7 @@ title: Seizures and epileptic fits
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020
+questions: what do i do if someone has a seizure | should i put something in their mouth during a seizure | how long does a seizure last and when should i call 911 | my child has seizures when he has a fever, what do i do | o que faço se alguém tiver uma convulsão | pode pôr alguma coisa na boca durante uma convulsão
 ---
 During a seizure the person goes stiff, jerks and does not respond. It usually lasts less than 2 or 3 minutes. Your goal is to keep them from getting hurt.
 

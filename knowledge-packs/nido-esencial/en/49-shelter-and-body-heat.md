@@ -3,6 +3,7 @@ title: Shelter and keeping warm
 category: Survival
 lang: en
 sources: Wilderness Medical Society, hypothermia prevention; Red Cross; search-and-rescue survival manuals
+questions: how do i keep my body warm when it is cold | how do i insulate myself from the cold ground when sleeping outside | where is a good place to put an emergency shelter | how do i make a simple shelter with a tarp or plastic sheet | como mantenho o calor do corpo no frio | como me isolo do chão frio ao dormir fora
 ---
 In cold, wind or rain, shelter is more urgent than water or food.
 

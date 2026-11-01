@@ -3,6 +3,7 @@ title: Safe water: finding it and making it drinkable
 category: Survival
 lang: en
 sources: WHO, household water treatment; CDC, making water safe in an emergency; Eawag, solar water disinfection (SODIS)
+questions: how do i make water safe to drink in an emergency | how many drops of bleach do i put in a liter of water | how long do i need to boil water to make it drinkable | what is solar water disinfection, sodis | where can i find water in an emergency at home | como torno a água potável numa emergência | quantas gotas de lixívia ponho por litro de água
 ---
 Untreated water can carry diarrhea, cholera, typhoid and parasites. If in doubt, treat it.
 

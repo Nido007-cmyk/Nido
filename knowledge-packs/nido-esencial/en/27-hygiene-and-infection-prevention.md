@@ -3,6 +3,7 @@ title: Hygiene and infection prevention
 category: Health at home
 lang: en
 sources: WHO, hand hygiene; WHO and UNICEF, water, sanitation and hygiene (WASH); CDC
+questions: how do i wash my hands properly with soap | when should i wash my hands | what ratio of bleach to water do i use to disinfect surfaces | what are the who five keys to safer food | como lavar bem as mãos | quando devo lavar as mãos
 ---
 Washing your hands with soap is one of the cheapest and most effective ways to avoid illnesses such as diarrhea and respiratory infections.
 

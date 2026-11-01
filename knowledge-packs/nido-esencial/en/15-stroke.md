@@ -3,6 +3,7 @@ title: Stroke
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020
+questions: how do i know if it is a stroke, what are the fast signs | one side of her face droops and her speech is slurred, what do i do | what are the warning signs of a stroke | can i give aspirin to someone having a stroke | como sei se é um derrame cerebral, um avc | um lado do rosto caiu e a fala está enrolada, o que faço
 ---
 In a stroke, part of the brain loses its blood supply. Treatment works much better in the first hours: recognize it fast.
 

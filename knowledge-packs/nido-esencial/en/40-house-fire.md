@@ -3,6 +3,7 @@ title: Fire at home or in a building
 category: Disasters
 lang: en
 sources: NFPA (National Fire Protection Association); Ready.gov (FEMA); American Red Cross
+questions: what do i do if there is a fire in my house | how do i get out of a house fire with a lot of smoke | should i open a door that feels hot during a fire | what do i do if my clothes catch fire, stop drop and roll | o que faço se houver um incêndio em casa | como saio de um incêndio com muita fumaça
 ---
 In a fire you may have only 2 minutes to get out. Smoke kills more people than flames.
 
@@ -29,6 +30,7 @@ In a fire you may have only 2 minutes to get out. Smoke kills more people than f
 **Stop, drop and roll**, covering your face with your hands, until the flames are out. Then cool the burn with water.
 
 ## Cooking oil fire
+<!-- questions: the pan caught fire with oil, what do i do | can i throw water on a grease fire in the kitchen | how do i put out a cooking oil fire in a pan -->
 Turn off the heat and cover the pan with a lid or a damp (not wet) cloth. **Never throw water on it.**
 
 ## Using an extinguisher
