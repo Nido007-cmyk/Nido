@@ -1162,10 +1162,23 @@ export { listCustomCollections, setCustomCollectionActive, deleteCustomCollectio
  * sheet so the user picks the transport (Bluetooth, Nearby Share, a file
  * manager, etc.) themselves.
  */
+/**
+ * SEC-04: exportaciones de colección vivas en ESTE proceso. El JSON de
+ * exportCollection lleva el texto completo de la colección y vive en la
+ * caché; si el proceso muere con la hoja de compartir abierta, su finally
+ * no corre y el JSON en claro queda huérfano hasta que Android limpie la
+ * caché. El prefijo reservado `nido-export-` hace identificable todo
+ * huérfano futuro, este registro protege una exportación en curso, y
+ * sweepOrphanedCollectionExports() (abajo) recoge al arrancar lo que un
+ * proceso anterior dejó.
+ */
+const liveCollectionExports = new Set<string>();
+
 export async function exportCollection(collection: CustomCollection): Promise<void> {
   const docs = await getCollectionDocs(collection.id);
   const json = JSON.stringify(docs, null, 2);
-  const path = `${FileSystem.cacheDirectory}${slug(collection.name)}.json`;
+  const path = `${FileSystem.cacheDirectory}nido-export-${slug(collection.name)}.json`;
+  liveCollectionExports.add(path);
   await FileSystem.writeAsStringAsync(path, json);
 
   try {
@@ -1178,8 +1191,49 @@ export async function exportCollection(collection: CustomCollection): Promise<vo
       throw new Error("Sharing isn't available on this device");
     }
   } finally {
+    liveCollectionExports.delete(path);
     // El JSON exportado puede contener documentos del usuario: no dejarlo
     // en caché tras compartir (el usuario ya eligió el destino).
     await FileSystem.deleteAsync(path, { idempotent: true }).catch(() => {});
   }
+}
+
+/** Nombres de caché que el barrido conserva siempre (telemetría de ejecución: solo metadatos, por su diseño). */
+const CACHE_SWEEP_KEEP = new Set(["execution_telemetry.json"]);
+
+/**
+ * SEC-04: barrido de exportaciones huérfanas al arrancar. Borra los *.json
+ * de nivel superior de la caché que ningún proceso vivo posee: por el
+ * censo cerrado de escritores de caché en release (exportCollection,
+ * exportExecutionTelemetry de nombre fijo — conservado — y las copias del
+ * selector de documentos, que no son *.json de nivel superior), todo *.json
+ * de un proceso anterior es un resto sin dueño: su único dueño era el
+ * finally de la exportación que lo escribió. Nunca entra en
+ * subdirectorios, respeta el registro de vivas y traga los errores por
+ * fichero; una caché ilegible devuelve 0. Devuelve cuántos borró.
+ */
+export async function sweepOrphanedCollectionExports(): Promise<number> {
+  const cacheDir = FileSystem.cacheDirectory;
+  if (!cacheDir) return 0;
+  let names: string[];
+  try {
+    names = await FileSystem.readDirectoryAsync(cacheDir);
+  } catch {
+    return 0;
+  }
+  let deleted = 0;
+  for (const name of names) {
+    if (!name.endsWith(".json") || CACHE_SWEEP_KEEP.has(name)) continue;
+    const path = `${cacheDir}${name}`;
+    if (liveCollectionExports.has(path)) continue;
+    try {
+      const info = await FileSystem.getInfoAsync(path);
+      if (info.isDirectory) continue;
+      await FileSystem.deleteAsync(path, { idempotent: true });
+      deleted++;
+    } catch {
+      // Por fichero: un resto que no se puede borrar no bloquea el resto.
+    }
+  }
+  return deleted;
 }

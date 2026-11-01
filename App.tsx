@@ -27,6 +27,7 @@ import { ThemeProvider, useTheme } from "./src/ui/theme";
 import { initHaptics } from "./src/services/haptics";
 import { runStartupRoutines } from "./src/routines/startup";
 import { wipeInterrupted, recoverInterruptedWipe } from "./src/services/appReset";
+import { sweepOrphanedCollectionExports } from "./src/services/documentImporter";
 import { getDatabaseKeyHex, KeyLossError } from "./src/privacy/keyManager";
 import { KeyLossRecoveryScreen } from "./src/ui/KeyLossRecoveryScreen";
 import { routeStartupError } from "./src/ui/keyLossRecovery";
@@ -397,6 +398,11 @@ function AppContent() {
 
   useEffect(() => {
     runStartupGate();
+    // SEC-04: recoger los JSON de exportación que un proceso anterior
+    // dejó huérfanos en caché (su finally no corrió). Sin await: no
+    // bloquea el arranque, no toca la base ni la clave, y limpia aunque
+    // la puerta biométrica siga cerrada.
+    void sweepOrphanedCollectionExports().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
