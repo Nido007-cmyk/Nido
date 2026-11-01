@@ -15,9 +15,9 @@ const factsFile = fileURLToPath(new URL("../../knowledge-packs/nido-local/facts.
 
 describe("el suelo publicado de NIDO Local (corrección 0.1.68)", () => {
   it("el suelo sale del registro y pertenece a un set publicado entero", () => {
-    // v8 is the newest published Local set; its measured tables are the
+    // v9 is the newest published Local set; its measured tables are the
     // floor every candidate is compared against.
-    expect(localFloorFromLedger(ledger, ledgerFile)).toEqual({ tag: "knowledge-packs-v8", regions: 69, facts: 155 });
+    expect(localFloorFromLedger(ledger, ledgerFile)).toEqual({ tag: "knowledge-packs-v9", regions: 69, facts: 155 });
   });
 
   it("un suelo sin registro, sin conteos o de un set no publicado no vale", () => {
@@ -45,8 +45,8 @@ describe("el suelo publicado de NIDO Local (corrección 0.1.68)", () => {
     // The exact counts the stopped v9 draft carried in its meta.
     const floor = localFloorFromLedger(ledger, ledgerFile);
     expect(floorViolations({ regions: 32, facts: 71 }, floor)).toEqual([
-      "regions 32 < 69 (published floor: knowledge-packs-v8)",
-      "facts 71 < 155 (published floor: knowledge-packs-v8)",
+      "regions 32 < 69 (published floor: knowledge-packs-v9)",
+      "facts 71 < 155 (published floor: knowledge-packs-v9)",
     ]);
     // At the floor or above it, there is nothing to report.
     expect(floorViolations({ regions: 69, facts: 155 }, floor)).toEqual([]);
