@@ -272,7 +272,7 @@ async function main() {
         chunks.push({
           title: c.heading ? `${g.title} — ${c.heading}` : g.title,
           body: c.body,
-          source: `NIDO — ${g.title} (${g.lang === "es" ? "basado en" : "based on"}: ${g.sources})`,
+          source: `NIDO — ${g.title} (${g.lang === "es" ? "basado en" : g.lang === "pt" ? "baseado em" : "based on"}: ${g.sources})`,
           guide: pages.length,
           keys: c.questions.join("\n"),
         });
