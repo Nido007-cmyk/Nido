@@ -490,6 +490,41 @@ async function openAndMigrate(): Promise<SecureDbHandle> {
       created_at INTEGER NOT NULL,
       last_accessed INTEGER NOT NULL DEFAULT 0
     );
+
+    -- C-06: identidad de los documentos importados. Una fila por
+    -- documento que entró, con la huella SHA-256 de su contenido
+    -- extraído (normalización v1 del importador): es el registro que
+    -- impide que reimportar duplique en silencio. Tabla aditiva con
+    -- IF NOT EXISTS (mismo patrón que router_missed): no mueve el
+    -- schema_version de formato y muere con el fichero en el borrado
+    -- total, sin filas nuevas que inventariar.
+    CREATE TABLE IF NOT EXISTS custom_collection_docs (
+      collection_id TEXT NOT NULL REFERENCES custom_collections(id),
+      doc_id TEXT NOT NULL,
+      fingerprint TEXT NOT NULL,
+      file_name TEXT NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'import',
+      PRIMARY KEY (collection_id, doc_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_custom_collection_docs_fp
+      ON custom_collection_docs(fingerprint);
+
+    -- H-11: los avisos de importación persisten con su colección en
+    -- vez de morir con la pantalla que los vio nacer. Una fila por
+    -- (colección, fichero, razón); la escritura reemplaza por fichero
+    -- (el desenlace nuevo de un fichero sustituye al viejo) y el
+    -- borrado de la colección cascada dentro de su transacción.
+    CREATE TABLE IF NOT EXISTS custom_collection_warnings (
+      collection_id TEXT NOT NULL REFERENCES custom_collections(id),
+      file_name TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      ocr_code TEXT,
+      ocr_message TEXT,
+      detail TEXT,
+      previous_name TEXT,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY (collection_id, file_name, reason)
+    );
     -- L1 - contrato de versionado: cada apertura estampa y exige
     -- schema_version. major desconocido / ausente / corrupto → fail-closed
     -- con KnowledgeDbVersionError; nunca se opera sobre un esquema que no se
@@ -880,6 +915,12 @@ export async function deleteCustomCollection(id: string): Promise<void> {
       await txn.runAsync(`DELETE FROM chunks_fts WHERE chunk_id = ?`, [r.chunk_id]);
       await txn.runAsync(`DELETE FROM chunk_embeddings WHERE chunk_id = ?`, [r.chunk_id]);
     }
+    // H-11/C-06: los avisos y las huellas de la colección mueren con
+    // ella, dentro de la misma transacción — un aviso sin colección
+    // sería un huérfano y una huella sin colección bloquearía para
+    // siempre la reimportación de un documento que ya no está.
+    await txn.runAsync(`DELETE FROM custom_collection_warnings WHERE collection_id = ?`, [id]);
+    await txn.runAsync(`DELETE FROM custom_collection_docs WHERE collection_id = ?`, [id]);
     await txn.runAsync(`DELETE FROM custom_collections WHERE id = ?`, [id]);
   });
 }
@@ -938,4 +979,229 @@ export async function getCollectionDocs(
     [id]
   );
   return rows.map((r) => ({ title: r.title, body: r.body, source: r.source ?? "" }));
+}
+
+/**
+ * C-06: los trozos de una colección en orden de inserción, que es el
+ * orden en que el importador los escribió (empezando por el trozo 0
+ * de cada documento). Lo lee el registro perezoso de huellas para
+ * reconstruir el cuerpo de cada documento ya importado cosiendo los
+ * trozos por su solape.
+ */
+export interface CollectionChunkRow {
+  doc_id: string;
+  chunk_id: string;
+  title: string;
+  body: string;
+  source: string;
+}
+
+export async function listCollectionChunks(collectionId: string): Promise<CollectionChunkRow[]> {
+  const db = await getDb();
+  return db.getAllAsync<CollectionChunkRow>(
+    `SELECT doc_id, chunk_id, title, body, source FROM chunks
+     WHERE collection_id = ? ORDER BY rowid`,
+    [collectionId]
+  );
+}
+
+/**
+ * H-11: un aviso de importación tal como se guarda. `reason` es una
+ * cadena opaca para esta capa — el vocabulario cerrado (ocrFailed,
+ * ocrEmpty, imageNoOcr, noText, alreadyImported, similarImported)
+ * vive en el importador, que es quien produce y consume los avisos;
+ * aquí solo se persiste y se devuelve intacto.
+ */
+export interface StoredImportWarning {
+  name: string;
+  reason: string;
+  ocrCode?: string;
+  ocrMessage?: string;
+  /** C-06: la colección donde el documento ya vive. */
+  detail?: string;
+  /** C-06: el nombre con el que el documento ya estaba. */
+  previousName?: string;
+}
+
+/**
+ * H-11: persiste los avisos de una importación contra su colección
+ * con la regla de reemplazo por fichero: primero se borran las filas
+ * de los ficheros del lote en esa colección y luego se insertan los
+ * avisos nuevos — el desenlace nuevo de un fichero sustituye a
+ * cualquier aviso viejo del mismo fichero (una reimportación limpia
+ * borra su aviso anterior sin tocar los de otros ficheros).
+ */
+export async function recordImportWarnings(
+  collectionId: string,
+  fileNames: readonly string[],
+  warnings: readonly StoredImportWarning[],
+  opts?: WriteOptions
+): Promise<void> {
+  await writeTransaction(async (txn) => {
+    for (const name of fileNames) {
+      await txn.runAsync(
+        `DELETE FROM custom_collection_warnings WHERE collection_id = ? AND file_name = ?`,
+        [collectionId, name]
+      );
+    }
+    const now = Date.now();
+    for (const w of warnings) {
+      await txn.runAsync(
+        `INSERT INTO custom_collection_warnings
+           (collection_id, file_name, reason, ocr_code, ocr_message, detail, previous_name, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          collectionId,
+          w.name,
+          w.reason,
+          w.ocrCode ?? null,
+          w.ocrMessage ?? null,
+          w.detail ? w.detail : null,
+          w.previousName ?? null,
+          now,
+        ]
+      );
+    }
+  }, opts);
+}
+
+/**
+ * H-11: los avisos persistidos de un conjunto de colecciones, en
+ * orden de inserción por colección. Las colecciones sin avisos no
+ * aparecen en el mapa devuelto.
+ */
+export async function listImportWarnings(
+  collectionIds: readonly string[]
+): Promise<Record<string, StoredImportWarning[]>> {
+  if (collectionIds.length === 0) return {};
+  const db = await getDb();
+  const placeholders = collectionIds.map(() => "?").join(", ");
+  const rows = await db.getAllAsync<{
+    collection_id: string;
+    file_name: string;
+    reason: string;
+    ocr_code: string | null;
+    ocr_message: string | null;
+    detail: string | null;
+    previous_name: string | null;
+  }>(
+    `SELECT collection_id, file_name, reason, ocr_code, ocr_message, detail, previous_name
+     FROM custom_collection_warnings WHERE collection_id IN (${placeholders}) ORDER BY rowid`,
+    [...collectionIds]
+  );
+  const out: Record<string, StoredImportWarning[]> = {};
+  for (const r of rows) {
+    const warning: StoredImportWarning = { name: r.file_name, reason: r.reason };
+    if (r.ocr_code) warning.ocrCode = r.ocr_code;
+    if (r.ocr_message) warning.ocrMessage = r.ocr_message;
+    if (r.detail) warning.detail = r.detail;
+    if (r.previous_name) warning.previousName = r.previous_name;
+    (out[r.collection_id] ??= []).push(warning);
+  }
+  return out;
+}
+
+/**
+ * H-11: el «Descartar» de la tarjeta borra solo el grupo (colección,
+ * razón) que la persona ha visto y descartado; los demás grupos de
+ * la misma colección quedan intactos.
+ */
+export async function dismissImportWarnings(
+  collectionId: string,
+  reason: string,
+  opts?: WriteOptions
+): Promise<void> {
+  await writeTransaction(async (txn) => {
+    await txn.runAsync(
+      `DELETE FROM custom_collection_warnings WHERE collection_id = ? AND reason = ?`,
+      [collectionId, reason]
+    );
+  }, opts);
+}
+
+/** C-06: una huella registrada de un documento importado. */
+export interface DocFingerprintRow {
+  docId: string;
+  fingerprint: string;
+  fileName: string;
+  /** import = entró en una importación normal; registry = lo
+   *  registró el registro perezoso de lo ya importado; forced =
+   *  copia que entró con «importar de todos modos». */
+  kind: "import" | "registry" | "forced";
+}
+
+/** C-06: una huella registrada con el nombre de su colección. */
+export interface AllDocFingerprintRow extends DocFingerprintRow {
+  collectionId: string;
+  collectionName: string;
+}
+
+/**
+ * C-06: registra las huellas de los documentos que acaban de entrar
+ * en una colección (reemplaza las filas de esos documentos: la fila
+ * de un documento describe su última entrada).
+ */
+export async function recordCollectionDocFingerprints(
+  collectionId: string,
+  rows: readonly DocFingerprintRow[],
+  opts?: WriteOptions
+): Promise<void> {
+  if (rows.length === 0) return;
+  await writeTransaction(async (txn) => {
+    for (const r of rows) {
+      await txn.runAsync(
+        `INSERT OR REPLACE INTO custom_collection_docs
+           (collection_id, doc_id, fingerprint, file_name, kind)
+         VALUES (?, ?, ?, ?, ?)`,
+        [collectionId, r.docId, r.fingerprint, r.fileName, r.kind]
+      );
+    }
+  }, opts);
+}
+
+/** C-06: todas las huellas registradas, con su colección. */
+export async function listAllCollectionDocFingerprints(): Promise<AllDocFingerprintRow[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{
+    collection_id: string;
+    doc_id: string;
+    fingerprint: string;
+    file_name: string;
+    kind: string;
+    collection_name: string;
+  }>(
+    `SELECT d.collection_id, d.doc_id, d.fingerprint, d.file_name, d.kind,
+            c.name AS collection_name
+     FROM custom_collection_docs d
+     JOIN custom_collections c ON c.id = d.collection_id
+     ORDER BY d.rowid`
+  );
+  return rows.map((r) => ({
+    collectionId: r.collection_id,
+    collectionName: r.collection_name,
+    docId: r.doc_id,
+    fingerprint: r.fingerprint,
+    fileName: r.file_name,
+    kind: (r.kind === "registry" || r.kind === "forced" ? r.kind : "import") as DocFingerprintRow["kind"],
+  }));
+}
+
+/** Lee una clave de la tabla meta (null si no está). */
+export async function getMetaValue(key: string): Promise<string | null> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ value: string }>(
+    `SELECT value FROM meta WHERE key = ?`,
+    [key]
+  );
+  return row?.value ?? null;
+}
+
+/** Escribe una clave de la tabla meta. */
+export async function setMetaValue(key: string, value: string, opts?: WriteOptions): Promise<void> {
+  await writeTransaction(async (txn) => {
+    await txn.runAsync(
+      `INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)`,
+      [key, value]
+    );
+  }, opts);
 }
