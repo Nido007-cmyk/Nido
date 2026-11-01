@@ -12,6 +12,7 @@ import {
   isEmergencySituation,
   isEmergencyText,
   isHealthQuestion,
+  type GateLang,
 } from "./emergencyGate";
 import type { RetrievedChunk } from "../rag/retrieve";
 
@@ -235,6 +236,75 @@ describe("H-05 (adversaria): la raíz sola no declara la situación — la metá
     // subpregunta por la segunda red se acepta tal cual, y esta
     // aserción fija que la cura de H-05 no la deshace por detrás.
     expect(gatePreemptsDeepResearch("¿Qué se debe hacer ante un atragantamiento?", "es")).toBe(true);
+  });
+});
+
+describe("ADV2-07 + ADV-E1 (segunda adversaria / Grok): la puerta aprende víctimas y eventos", () => {
+  it("ADV2-07: la víctima corriente del parte, en participio, declara en las caras del suceso", () => {
+    // La tabla exacta de la adversaria: antes de esta pieza, las
+    // cuatro caras salían en falso; la frontera entera era la lista.
+    for (const [q, lang] of [
+      ["Hay un señor atragantado en el restaurante.", "es"],
+      ["Un vecino quedó atragantado con una espina de pescado.", "es"],
+      ["Um cliente engasgado com um osso no restaurante.", "pt"],
+      ["Patient choking in the waiting room.", "en"],
+    ] as Array<[string, GateLang]>) {
+      expect(isEmergencySituation(q), q).toBe(true);
+      expect(isEmergencyText(q, lang), q).toBe(true);
+      expect(gatePreemptsDeepResearch(q, lang), q).toBe(true);
+    }
+    // La forma telegráfica sin víctima nombrada: la cara nueva.
+    expect(isEmergencySituation("Choking at table four!")).toBe(true);
+    // Control con la misma forma y víctima de la lista vieja.
+    expect(isEmergencySituation("Hay un hombre atragantado en el restaurante.")).toBe(true);
+  });
+
+  it("ADV-E1: los eventos que no son atragantamiento declaran (desmayo, ahogamiento, inconsciencia)", () => {
+    for (const q of [
+      "El conductor se desmayó en la calle.",
+      "Mi papá se ahogó con un hueso.",
+      "Hay una señora atragantada en el restaurante.",
+      "Alguien se desmayó en la calle.",
+      "Paciente inconsciente en la camilla.",
+      "atragantado",
+    ]) {
+      expect(isEmergencySituation(q), q).toBe(true);
+    }
+  });
+
+  it("el cruce víctima × evento entra entero por el diseño", () => {
+    for (const q of [
+      "Mi madre se desmayó en la cocina.",
+      "The patient fainted in the waiting room.",
+      "O cliente desmaiou no restaurante.",
+      "El bebé se ahogó con un juguete.",
+      "My wife fainted at the store.",
+      "Mi abuelo está inconsciente.",
+      "Los niños se están atragantando.",
+      "El señor se desvaneció en la calle.",
+      "La señora se está ahogando.",
+      "Grandma passed out at church.",
+      "O paciente está engasgado com um osso.",
+    ]) {
+      expect(isEmergencySituation(q), q).toBe(true);
+    }
+  });
+
+  it("la cara telegráfica distingue el parte del tema: el sustantivo abstracto a secas sigue fuera", () => {
+    expect(isEmergencySituation("atragantamiento")).toBe(false);
+    // Precio nombrado de la cara: el fragmento que es título o pie
+    // («Choking.», «Drowning.») cae hacia la emergencia.
+    expect(isEmergencySituation("Choking.")).toBe(true);
+    expect(isEmergencySituation("Drowning.")).toBe(true);
+  });
+
+  it("los temas de los tallos nuevos quedan fuera: la pregunta y las metáforas asentadas no declaran", () => {
+    expect(isEmergencySituation("¿Qué es el desmayo?")).toBe(false);
+    expect(isEmergencySituation("Estoy ahogado en deudas.")).toBe(false);
+    expect(isEmergencySituation("Me estoy ahogando en un vaso de agua.")).toBe(false);
+    expect(isEmergencySituation("Estou me afogando em dívidas.")).toBe(false);
+    // La ventana aguanta donde la cara permisiva no aguantaba.
+    expect(isEmergencySituation("My teacher explained why people choke in exams")).toBe(false);
   });
 });
 

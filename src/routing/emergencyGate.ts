@@ -114,6 +114,23 @@
  *    (golfers, players, students) no son señal a propósito. Las
  *    frases-signo exactas no cambian: siguen disparando solas.
  *
+ * 8. LA FRONTERA NO ES LA LISTA CERRADA DE VÍCTIMAS NI EL ÚNICO
+ *    EVENTO (ADV2-07 + ADV-E1, segunda adversaria y corrida de
+ *    Grok, 2026-11-01). La cura de H-05 dejó fuera emergencias
+ *    reales en dos dimensiones medidas: la víctima nombrada con el
+ *    sustantivo corriente de un parte (señor, vecino, cliente,
+ *    paciente, patient…) en forma de participio o telegráfica, y
+ *    los eventos que no son atragantamiento (desmayo, ahogamiento,
+ *    inconsciencia, con sus tallos y frases-signo en las tres
+ *    lenguas). La pieza ensancha las LISTAS con el criterio escrito
+ *    junto a cada una — no la ventana: la cara permisiva sin
+ *    ventana de la corrida externa se midió y se rechazó (reabre
+ *    la metáfora entera y ni así ve las formas telegráficas). Y
+ *    nace la cara telegráfica: el parte dictado a secas («atragan-
+ *    tado», «Choking at table four!») declara por su forma —
+ *    mensaje cortísimo, sin pregunta, con la palabra-signo en
+ *    participio, gerundio o estado, y sin marcadores de tema.
+ *
  * Puro, sin dependencias de UI, 100% testeable.
  */
 
@@ -345,6 +362,10 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "dejo de respirar", "paro de respirar",
     "se esta ahogando", "esta ahogandose", "ahogandose", "se ahoga",
     "se esta atragantando", "atragantandose",
+    // ADV-E1: los eventos nuevos también se cuentan con frase-signo
+    // (el suceso ya ocurrió y se nombra en pasado, sin víctima cerca
+    // que la cara por raíz pueda leer).
+    "se desmayo", "se ahogo", "se desvanecio",
     "cuesta respirar", "cuesta mucho respirar",
     "esta inconsciente", "quedo inconsciente", "no responde",
     "se agarra el pecho", "agarrandose el pecho", "se aprieta el pecho",
@@ -359,6 +380,8 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "struggling to breathe", "hard to breathe", "difficulty breathing",
     "clutching his chest", "clutching her chest", "clutching my chest", "clutching their chest",
     "is unconscious", "was unconscious", "found unconscious", "not responding", "lost consciousness",
+    // ADV-E1: «passed out», la frase-signo corriente del desmayo.
+    "passed out",
     "smoke coming", "smoke pouring", "full of smoke", "there is a fire", "there s a fire",
     "house on fire", "kitchen on fire", "building on fire", "car on fire", "room on fire",
     "bleeding a lot", "bleeding heavily", "won t stop bleeding",
@@ -367,6 +390,8 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "nao esta respirando", "nao respira", "nao respiram", "parou de respirar", "sem respirar",
     "deixou de respirar",
     "esta engasgando", "engasgando", "engasgou",
+    // ADV-E1: os eventos novos em português («desmaiou», «se afogou»).
+    "desmaiou", "se afogou",
     "dificuldade para respirar", "dificuldade em respirar",
     "esta inconsciente", "ficou inconsciente", "nao responde",
     "segurando o peito", "apertando o peito", "mao no peito",
@@ -407,12 +432,17 @@ const ALL_SIGNS: string[] = Object.values(EMERGENCY_SIGNS).flat();
  * el pasado y la ficción siguen sin disparar. Desde H-05 la raíz
  * tampoco dispara sola: exige el contexto de cuerpo de
  * `stemHitHasBodyContext` (punto 7 de la cabecera), porque «chok»
- * sí comparte principio con una metáfora cotidiana.
+ * sí comparte principio con una metáfora cotidiana. ADV-E1 añade
+ * los tallos de los otros eventos del parte (desmayo, ahogamiento,
+ * inconsciencia — es/en/pt), que heredan la misma disciplina: sin
+ * contexto de cuerpo o forma telegráfica no declaran, y los vetos
+ * cerrados ya cubren sus metáforas asentadas («en deudas», «em
+ * dividas», «en un vaso de agua»).
  */
 const EMERGENCY_STEMS: Record<GateLang, string[]> = {
-  es: ["atragant", "tragant", "asfixi"],
-  en: ["chok", "asphyxi", "suffocat"],
-  pt: ["engasg", "asfixi"],
+  es: ["atragant", "tragant", "asfixi", "desmay", "ahog", "inconscient"],
+  en: ["chok", "asphyxi", "suffocat", "faint", "drown", "unconsc"],
+  pt: ["engasg", "asfixi", "desmai", "afog", "inconscient"],
 };
 
 const ALL_STEMS: string[] = Object.values(EMERGENCY_STEMS).flat();
@@ -447,6 +477,23 @@ const STEM_BODY_SIGNALS = [
   "abuelo", "abuela", "grandfather", "grandmother",
   "hombre", "mujer", "homem", "mulher", "persona", "pessoa", "person",
   "ayuda", "ajuda", "help", "socorro", "auxilio",
+  // ADV2-07: a quién le pasa, nombrado por relación o por papel en
+  // un parte — el criterio de inclusión de la lista. Los sustantivos
+  // corrientes del parte dictado (señor/a, vecino/a, cliente,
+  // paciente, encargado/a, conductor/a, pasajero/a, huésped,
+  // compañero/a) y la familia que el dictado dice sin pasar por la
+  // lista vieja (papá, mamá, hermano/a, esposo/a…). Las formas
+  // irregulares entran como entradas propias: children, kid, kids.
+  // Fuera, como desde H-05: los sustantivos de clase que son el
+  // sujeto natural de la metáfora de rendimiento (golfers, players,
+  // students) y los pronombres sueltos.
+  "senor", "senora", "vecino", "vecina", "cliente", "paciente", "patient", "customer",
+  "encargado", "encargada", "conductor", "conductora", "pasajero", "pasajera",
+  "huesped", "companero", "companera",
+  "papa", "mama", "hermano", "hermana", "irmao", "irma",
+  "esposo", "esposa", "marido", "husband", "wife", "brother", "sister",
+  "amigo", "amiga",
+  "children", "kid", "kids",
 ];
 
 /**
@@ -483,6 +530,52 @@ function stemHitHasBodyContext(folded: string): boolean {
 }
 
 /**
+ * Marcadores de TEMA para la cara telegráfica: un fragmento que los
+ * trae es un título, un pie o una pregunta de prevención, no un
+ * parte — por mucho que su palabra-signo venga en participio.
+ */
+const TELEGRAPHIC_TOPIC_MARKERS = [
+  "hazard", "peligro", "riesgo", "risco", "perigo",
+  "video", "foto", "photo", "pregunta", "question",
+  "historia", "titulo", "title", "libro", "book",
+];
+
+/** Formas de la palabra-signo que un parte telegráfico usa:
+ *  participio, gerundio o estado (las terminaciones de las tres
+ *  lenguas y las dos palabras de estado, que no terminan así). */
+const TELEGRAPHIC_FORM_ENDINGS = ["ando", "endo", "indo", "ado", "ada", "ados", "adas", "ing", "ed"];
+const TELEGRAPHIC_STATE_WORDS = new Set(["inconsciente", "inconscientes", "unconscious"]);
+
+/**
+ * La cara telegráfica (ADV2-07 + ADV-E1, punto 8 de la cabecera):
+ * el parte dictado a secas — «atragantado», «Choking at table
+ * four!» — no trae auxiliar, ni enclítico, ni víctima nombrada que
+ * la ventana pueda leer, y sin embargo ES el suceso. Declara por
+ * su forma, toda a la vez: mensaje sin signos de pregunta, de
+ * cinco palabras o menos, con una palabra-signo en forma de
+ * participio, gerundio o estado, y sin marcadores de tema. El
+ * sustantivo abstracto («atragantamiento») no es forma válida: un
+ * título de guía de una palabra sigue fuera. Precio nombrado: un
+ * fragmento telegráfico que sea título o pie («Choking.»,
+ * «Drowning.») cae hacia la emergencia, en la dirección aceptada.
+ */
+function stemHitIsTelegraphic(folded: string): boolean {
+  if (folded.includes("?") || folded.includes("¿")) return false;
+  const words = folded
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, ""))
+    .filter((w) => w.length > 0);
+  if (words.length === 0 || words.length > 5) return false;
+  if (words.some((w) => TELEGRAPHIC_TOPIC_MARKERS.includes(w))) return false;
+  return words.some(
+    (w) =>
+      ALL_STEMS.some((s) => w.startsWith(s)) &&
+      (TELEGRAPHIC_FORM_ENDINGS.some((e) => w.endsWith(e)) || TELEGRAPHIC_STATE_WORDS.has(w)),
+  );
+}
+
+/**
  * Señales de primera persona o de petición de instrucción que
  * corroboran la familia «chok» cuando es el único término que
  * casa en la puerta de salud (ver el uso en `isHealthQuestion`):
@@ -514,7 +607,8 @@ export function isEmergencySituation(text: string): boolean {
   if (hasHistoricalFrame(folded)) return false;
   return (
     ALL_SIGNS.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`)) ||
-    (ALL_STEMS.some((t) => folded.includes(` ${t}`)) && stemHitHasBodyContext(folded))
+    (ALL_STEMS.some((t) => folded.includes(` ${t}`)) && stemHitHasBodyContext(folded)) ||
+    stemHitIsTelegraphic(folded)
   );
 }
 
