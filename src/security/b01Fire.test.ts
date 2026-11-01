@@ -24,6 +24,7 @@
  * En el árbol (paso 15) vive en src/security/b01Fire.test.ts.
  */
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -75,7 +76,7 @@ import {
   setTestSecureBackend,
   storeDatabaseKeyHex,
 } from "../privacy/keyManager";
-import { rotateAllDatabaseKeys } from "./keyRotation";
+import { checkStaleRekeyStaging, rotateAllDatabaseKeys } from "./keyRotation";
 import {
   ensureEncryptedDatabase,
   MANAGED_DB_NAMES,
@@ -83,7 +84,7 @@ import {
   setSecureDbTestDriver,
   type SecureDbDriver,
 } from "./secureDatabase";
-import type { StagingKeyStore } from "./stagingSeal";
+import { sealStaging, type StagingKeyStore } from "./stagingSeal";
 import { makeRealSqlcipherDriver, sqlcipherEngineAvailable } from "./testing/realSqlcipherDriver";
 import { cleanupFreshDirs, expectPlainSqliteRejects, freshDir } from "./testing/b01Utils";
 
@@ -329,6 +330,439 @@ describeEngine("B-01 · prueba de fuego de rotación contra el motor real", () =
         expect(await readSentinel(driver, name, OLD_DEK)).toBe(secretFor(name));
         await expectOpenRejected(driver, name, attemptedNew!);
       }
+    },
+  );
+});
+
+// ---------------------------------------------------------------------------
+// B-01 · paso 6b — convergencia de checkStaleRekeyStaging contra el motor real
+//
+// La definición real de «rancio» que esta suite documenta en vez de
+// probar una ficción: el código NO compara ninguna edad (el campo
+// `at: Date.now()` del staging no se lee en ningún sitio). Rancio =
+// el fichero rekey-staging.json EXISTE cuando el arranque corre la
+// comprobación; al arrancar no hay rotación en curso posible, así que
+// todo staging presente es el resto de una rotación muerta. Lo
+// «fresco» está protegido por cableado (nadie llama a la comprobación
+// fuera del arranque), no por cerrojos ni marcas de tiempo.
+//
+// Inventario: diez casos (S1, S2, S3, S4, S5, S5-bis, S6, S7, S8a,
+// S8b) en nueve `it`: S5 y S5-bis comparten un `it` en dos fases con
+// directorios frescos — el diseño lo permite expresamente para la
+// variante y ninguna fase absorbe a la otra: cada una afirma su
+// desenlace entero. S7 lleva también sus dos formas en un `it`.
+// Todo desenlace se afirma por reapertura (la clave nueva abre y la
+// vieja ya no — o al revés), por el texto exacto del resultado o por
+// huella sha256; nunca contando cadenas «PRAGMA rekey».
+// ---------------------------------------------------------------------------
+
+const STG_NEW = "bb".repeat(32);
+const STG_FOREIGN = "ee".repeat(32);
+
+function sha256OfFile(p: string): string {
+  return createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+}
+
+async function rekeyDbTo(
+  driver: SecureDbDriver,
+  dbPath: string,
+  fromDek: string,
+  toDek: string,
+): Promise<void> {
+  const db = await productionOpenDb(driver)(dbPath, fromDek);
+  try {
+    await db.exec(`PRAGMA rekey = "x'${toDek}'";`);
+  } finally {
+    await db.close();
+  }
+}
+
+async function writeSealedStaging(
+  dir: string,
+  keys: StagingKeyStore,
+  staging: Record<string, unknown>,
+): Promise<string> {
+  const p = path.join(dir, "rekey-staging.json");
+  fs.writeFileSync(p, await sealStaging(JSON.stringify(staging), keys), "utf8");
+  return p;
+}
+
+/** storeDek de captura: anota llamadas Y guarda de verdad (el almacén es el backend en memoria). */
+function makeStoreDek() {
+  const calls: string[] = [];
+  const fn = async (dekHex: string) => {
+    calls.push(dekHex);
+    await storeDatabaseKeyHex(dekHex);
+  };
+  return { calls, fn };
+}
+
+const pathsOf = (dir: string) => MANAGED_DB_NAMES.map((n) => path.join(dir, n));
+
+describeEngine("B-01 · convergencia de staging de rotación interrumpida (checkStaleRekeyStaging)", () => {
+  beforeAll(() => {
+    setTestSecureBackend(createMemorySecureBackend());
+  });
+
+  afterAll(() => {
+    setSecureDbTestDriver(null);
+    setTestSecureBackend(null);
+    cleanupFreshDirs();
+  });
+
+  it(
+    "S1 · control sin staging: no hay fichero ⇒ { recovered: false } sin error y sin tocar el almacén",
+    { timeout: 240_000 },
+    async () => {
+      const dir = freshDir("stg-s1");
+      const driver = makeRealSqlcipherDriver(dir);
+      setSecureDbTestDriver(driver);
+      await seedAll(driver, OLD_DEK);
+      await storeDatabaseKeyHex(OLD_DEK);
+      const store = makeStoreDek();
+
+      const res = await checkStaleRekeyStaging(
+        path.join(dir, "rekey-staging.json"),
+        store.fn,
+        productionOpenDb(driver),
+        memoryStagingKeys(),
+      );
+      expect(res.recovered).toBe(false);
+      expect(res.error).toBeUndefined();
+      expect(store.calls).toHaveLength(0);
+      for (const name of MANAGED_DB_NAMES) {
+        expect(await readSentinel(driver, name, OLD_DEK)).toBe(secretFor(name));
+      }
+    },
+  );
+
+  it(
+    "S2 · crash antes del rekey (rekeyed: []): la convergencia COMPLETA el rekey, guarda la nueva y borra el staging",
+    { timeout: 240_000 },
+    async () => {
+      const dir = freshDir("stg-s2");
+      const driver = makeRealSqlcipherDriver(dir);
+      setSecureDbTestDriver(driver);
+      await seedAll(driver, OLD_DEK);
+      await storeDatabaseKeyHex(OLD_DEK);
+      const store = makeStoreDek();
+      const keys = memoryStagingKeys();
+      const stagingPath = await writeSealedStaging(dir, keys, {
+        newDekHex: STG_NEW,
+        oldDekHex: OLD_DEK,
+        dbPaths: pathsOf(dir),
+        rekeyed: [],
+        at: Date.now(),
+      });
+
+      const res = await checkStaleRekeyStaging(stagingPath, store.fn, productionOpenDb(driver), keys);
+      expect(res.recovered).toBe(true);
+      expect(store.calls).toEqual([STG_NEW]);
+      expect(fs.existsSync(stagingPath)).toBe(false);
+      for (const name of MANAGED_DB_NAMES) {
+        expect(await readSentinel(driver, name, STG_NEW)).toBe(secretFor(name));
+        await expectOpenRejected(driver, name, OLD_DEK);
+      }
+    },
+  );
+
+  it(
+    "S3 · crash después del rekey de todas, antes de guardar: guarda la nueva una vez y borra el staging",
+    { timeout: 240_000 },
+    async () => {
+      const dir = freshDir("stg-s3");
+      const driver = makeRealSqlcipherDriver(dir);
+      setSecureDbTestDriver(driver);
+      await seedAll(driver, OLD_DEK);
+      for (const p of pathsOf(dir)) await rekeyDbTo(driver, p, OLD_DEK, STG_NEW);
+      await storeDatabaseKeyHex(OLD_DEK);
+      const store = makeStoreDek();
+      const keys = memoryStagingKeys();
+      const stagingPath = await writeSealedStaging(dir, keys, {
+        newDekHex: STG_NEW,
+        oldDekHex: OLD_DEK,
+        dbPaths: pathsOf(dir),
+        rekeyed: pathsOf(dir),
+        at: Date.now(),
+      });
+
+      const res = await checkStaleRekeyStaging(stagingPath, store.fn, productionOpenDb(driver), keys);
+      expect(res.recovered).toBe(true);
+      expect(store.calls).toEqual([STG_NEW]);
+      expect(fs.existsSync(stagingPath)).toBe(false);
+      for (const name of MANAGED_DB_NAMES) {
+        expect(await readSentinel(driver, name, STG_NEW)).toBe(secretFor(name));
+        await expectOpenRejected(driver, name, OLD_DEK);
+      }
+    },
+  );
+
+  it(
+    "S4 · crash a mitad (PARTIAL-REKEY): 1 de 3 con la nueva — las 2 restantes se re-cifran en la comprobación",
+    { timeout: 240_000 },
+    async () => {
+      const dir = freshDir("stg-s4");
+      const driver = makeRealSqlcipherDriver(dir);
+      setSecureDbTestDriver(driver);
+      await seedAll(driver, OLD_DEK);
+      const paths = pathsOf(dir);
+      await rekeyDbTo(driver, paths[0], OLD_DEK, STG_NEW);
+      await storeDatabaseKeyHex(OLD_DEK);
+      const store = makeStoreDek();
+      const keys = memoryStagingKeys();
+      const stagingPath = await writeSealedStaging(dir, keys, {
+        newDekHex: STG_NEW,
+        oldDekHex: OLD_DEK,
+        dbPaths: paths,
+        rekeyed: [paths[0]],
+        at: Date.now(),
+      });
+
+      const res = await checkStaleRekeyStaging(stagingPath, store.fn, productionOpenDb(driver), keys);
+      expect(res.recovered).toBe(true);
+      expect(store.calls).toEqual([STG_NEW]);
+      expect(fs.existsSync(stagingPath)).toBe(false);
+      // La sonda final es la de S2: un rekey que no rotara de verdad
+      // (B6-bis) dejaría una base con la vieja y esta lectura lo caza.
+      for (const name of MANAGED_DB_NAMES) {
+        expect(await readSentinel(driver, name, STG_NEW)).toBe(secretFor(name));
+        await expectOpenRejected(driver, name, OLD_DEK);
+      }
+    },
+  );
+
+  it(
+    "S5 + S5-bis · una base inaccesible con ambas claves: el orden de dbPaths decide qué se re-cifra antes del fallo (dos fases)",
+    { timeout: 240_000 },
+    async () => {
+      // — Fase S5: la inaccesible va PRIMERA. Nada se re-cifra: el
+      // fallo llega antes que cualquier rekey y el almacén no se toca.
+      {
+        const dir = freshDir("stg-s5");
+        const driver = makeRealSqlcipherDriver(dir);
+        setSecureDbTestDriver(driver);
+        await seedAll(driver, OLD_DEK);
+        const paths = pathsOf(dir);
+        await rekeyDbTo(driver, paths[0], OLD_DEK, STG_FOREIGN);
+        await storeDatabaseKeyHex(OLD_DEK);
+        const store = makeStoreDek();
+        const keys = memoryStagingKeys();
+        const stagingPath = await writeSealedStaging(dir, keys, {
+          newDekHex: STG_NEW,
+          oldDekHex: OLD_DEK,
+          dbPaths: paths,
+          rekeyed: [],
+          at: Date.now(),
+        });
+        const foreignBefore = sha256OfFile(paths[0]);
+
+        const res = await checkStaleRekeyStaging(stagingPath, store.fn, productionOpenDb(driver), keys);
+        expect(res.recovered).toBe(false);
+        expect(res.error ?? "").toContain("DB inaccesible:");
+        expect(res.error ?? "").toContain("(fail-closed)");
+        expect(fs.existsSync(stagingPath)).toBe(false); // el staging SÍ se borra en esta rama
+        expect(store.calls).toHaveLength(0);
+        expect(await getDatabaseKeyHex()).toBe(OLD_DEK);
+        expect(sha256OfFile(paths[0])).toBe(foreignBefore);
+        expect(await readSentinel(driver, MANAGED_DB_NAMES[0], STG_FOREIGN)).toBe(secretFor(MANAGED_DB_NAMES[0]));
+        for (const name of MANAGED_DB_NAMES.slice(1)) {
+          expect(await readSentinel(driver, name, OLD_DEK)).toBe(secretFor(name)); // no re-cifradas
+        }
+      }
+
+      // — Fase S5-bis (variante registrada): la inaccesible va ÚLTIMA.
+      // Por el orden del bucle, las anteriores que abran con la vieja
+      // YA habrán sido re-cifradas a la nueva cuando el fallo llega, y
+      // como storeDek nunca se llama, quedan con una clave que el
+      // almacén no tiene: su puerta pasa a ser la recuperación de
+      // pérdida de clave. Propiedad real y áspera del orden de
+      // iteración, afirmada tal cual se leyó y el motor confirma.
+      {
+        const dir = freshDir("stg-s5bis");
+        const driver = makeRealSqlcipherDriver(dir);
+        setSecureDbTestDriver(driver);
+        await seedAll(driver, OLD_DEK);
+        const paths = pathsOf(dir);
+        await rekeyDbTo(driver, paths[2], OLD_DEK, STG_FOREIGN);
+        await storeDatabaseKeyHex(OLD_DEK);
+        const store = makeStoreDek();
+        const keys = memoryStagingKeys();
+        const stagingPath = await writeSealedStaging(dir, keys, {
+          newDekHex: STG_NEW,
+          oldDekHex: OLD_DEK,
+          dbPaths: paths,
+          rekeyed: [],
+          at: Date.now(),
+        });
+        const foreignBefore = sha256OfFile(paths[2]);
+
+        const res = await checkStaleRekeyStaging(stagingPath, store.fn, productionOpenDb(driver), keys);
+        expect(res.recovered).toBe(false);
+        expect(res.error ?? "").toContain("DB inaccesible:");
+        expect(store.calls).toHaveLength(0);
+        expect(await getDatabaseKeyHex()).toBe(OLD_DEK); // el almacén sigue con la vieja
+        // Las dos anteriores YA están con la nueva, que el almacén no tiene:
+        for (const name of MANAGED_DB_NAMES.slice(0, 2)) {
+          expect(await readSentinel(driver, name, STG_NEW)).toBe(secretFor(name));
+          await expectOpenRejected(driver, name, OLD_DEK);
+        }
+        expect(sha256OfFile(paths[2])).toBe(foreignBefore);
+        expect(await readSentinel(driver, MANAGED_DB_NAMES[2], STG_FOREIGN)).toBe(secretFor(MANAGED_DB_NAMES[2]));
+      }
+    },
+  );
+
+  it(
+    "S6 · sellado sin su llave: el staging NO se toca y el reintento del próximo arranque converge",
+    { timeout: 240_000 },
+    async () => {
+      const dir = freshDir("stg-s6");
+      const driver = makeRealSqlcipherDriver(dir);
+      setSecureDbTestDriver(driver);
+      await seedAll(driver, OLD_DEK);
+      for (const p of pathsOf(dir)) await rekeyDbTo(driver, p, OLD_DEK, STG_NEW);
+      await storeDatabaseKeyHex(OLD_DEK);
+      const store = makeStoreDek();
+      const keysSeal = memoryStagingKeys();
+      const stagingPath = await writeSealedStaging(dir, keysSeal, {
+        newDekHex: STG_NEW,
+        oldDekHex: OLD_DEK,
+        dbPaths: pathsOf(dir),
+        rekeyed: pathsOf(dir),
+        at: Date.now(),
+      });
+      const sealedBefore = sha256OfFile(stagingPath);
+
+      // La comprobación corre con OTRO almacén de sellado, vacío.
+      const res1 = await checkStaleRekeyStaging(
+        stagingPath,
+        store.fn,
+        productionOpenDb(driver),
+        memoryStagingKeys(),
+      );
+      expect(res1.recovered).toBe(false);
+      expect(res1.error ?? "").toContain("No está la llave del archivo de rotación");
+      expect(sha256OfFile(stagingPath)).toBe(sealedBefore); // intacto, deliberado
+      expect(store.calls).toHaveLength(0);
+
+      // Segunda mitad: con el almacén de sellado restaurado, converge como en S3.
+      const res2 = await checkStaleRekeyStaging(stagingPath, store.fn, productionOpenDb(driver), keysSeal);
+      expect(res2.recovered).toBe(true);
+      expect(store.calls).toEqual([STG_NEW]);
+      expect(fs.existsSync(stagingPath)).toBe(false);
+    },
+  );
+
+  it(
+    "S7 · staging corrupto, en sus dos formas reales: el parseado-inválido se borra; los bytes basura permanecen",
+    { timeout: 240_000 },
+    async () => {
+      // (a) Sobre sellado válido cuyo contenido parseado carece de newDekHex.
+      {
+        const dir = freshDir("stg-s7a");
+        const driver = makeRealSqlcipherDriver(dir);
+        setSecureDbTestDriver(driver);
+        await seedAll(driver, OLD_DEK);
+        await storeDatabaseKeyHex(OLD_DEK);
+        const store = makeStoreDek();
+        const keys = memoryStagingKeys();
+        const stagingPath = await writeSealedStaging(dir, keys, {
+          oldDekHex: OLD_DEK,
+          dbPaths: pathsOf(dir),
+          rekeyed: [],
+          at: Date.now(),
+        });
+        const res = await checkStaleRekeyStaging(stagingPath, store.fn, productionOpenDb(driver), keys);
+        expect(res.recovered).toBe(false);
+        expect(res.error).toBe("Staging corrupto, eliminado");
+        expect(fs.existsSync(stagingPath)).toBe(false);
+        expect(store.calls).toHaveLength(0);
+        expect(await getDatabaseKeyHex()).toBe(OLD_DEK);
+      }
+
+      // (b) Bytes basura: ni JSON ni sobre sellado. El catch general
+      // devuelve el error y el fichero PERMANECE (solo la rama
+      // «parseado pero inválido» borra).
+      {
+        const dir = freshDir("stg-s7b");
+        const driver = makeRealSqlcipherDriver(dir);
+        setSecureDbTestDriver(driver);
+        await seedAll(driver, OLD_DEK);
+        await storeDatabaseKeyHex(OLD_DEK);
+        const store = makeStoreDek();
+        const stagingPath = path.join(dir, "rekey-staging.json");
+        fs.writeFileSync(stagingPath, "esto no es json ni un sobre sellado {{{", "utf8");
+        const res = await checkStaleRekeyStaging(
+          stagingPath,
+          store.fn,
+          productionOpenDb(driver),
+          memoryStagingKeys(),
+        );
+        expect(res.recovered).toBe(false);
+        expect(typeof res.error).toBe("string");
+        expect((res.error ?? "").length).toBeGreaterThan(0);
+        expect(fs.existsSync(stagingPath)).toBe(true);
+        expect(store.calls).toHaveLength(0);
+      }
+    },
+  );
+
+  it(
+    "S8a · staging legacy en claro, crash antes del rekey: staging eliminado, keystore intacto",
+    { timeout: 240_000 },
+    async () => {
+      const dir = freshDir("stg-s8a");
+      const driver = makeRealSqlcipherDriver(dir);
+      setSecureDbTestDriver(driver);
+      await seedAll(driver, OLD_DEK);
+      await storeDatabaseKeyHex(OLD_DEK);
+      const store = makeStoreDek();
+      const paths = pathsOf(dir);
+      // Formato viejo (≤0.1.62): JSON SIN sellar, dbPath en singular, sin oldDekHex.
+      const stagingPath = path.join(dir, "rekey-staging.json");
+      fs.writeFileSync(stagingPath, JSON.stringify({ newDekHex: STG_NEW, dbPath: paths[0] }), "utf8");
+
+      const res = await checkStaleRekeyStaging(
+        stagingPath,
+        store.fn,
+        productionOpenDb(driver),
+        memoryStagingKeys(),
+      );
+      expect(res.recovered).toBe(false);
+      expect(res.error).toBe("Crash antes del rekey; staging eliminado, keystore intacto");
+      expect(fs.existsSync(stagingPath)).toBe(false);
+      expect(store.calls).toHaveLength(0);
+      expect(await getDatabaseKeyHex()).toBe(OLD_DEK);
+      expect(await readSentinel(driver, MANAGED_DB_NAMES[0], OLD_DEK)).toBe(secretFor(MANAGED_DB_NAMES[0]));
+      await expectOpenRejected(driver, MANAGED_DB_NAMES[0], STG_NEW);
+    },
+  );
+
+  it(
+    "S8b · staging legacy en claro, rekey ya hecho: se guarda la nueva y se borra el staging (contrato CR3-NEW)",
+    { timeout: 240_000 },
+    async () => {
+      const dir = freshDir("stg-s8b");
+      const driver = makeRealSqlcipherDriver(dir);
+      setSecureDbTestDriver(driver);
+      await seedAll(driver, OLD_DEK);
+      const paths = pathsOf(dir);
+      await rekeyDbTo(driver, paths[0], OLD_DEK, STG_NEW);
+      await storeDatabaseKeyHex(OLD_DEK);
+      const store = makeStoreDek();
+      const stagingPath = path.join(dir, "rekey-staging.json");
+      fs.writeFileSync(stagingPath, JSON.stringify({ newDekHex: STG_NEW, dbPath: paths[0] }), "utf8");
+
+      const res = await checkStaleRekeyStaging(
+        stagingPath,
+        store.fn,
+        productionOpenDb(driver),
+        memoryStagingKeys(),
+      );
+      expect(res.recovered).toBe(true);
+      expect(store.calls).toEqual([STG_NEW]);
+      expect(fs.existsSync(stagingPath)).toBe(false);
+      expect(await readSentinel(driver, MANAGED_DB_NAMES[0], STG_NEW)).toBe(secretFor(MANAGED_DB_NAMES[0]));
     },
   );
 });
