@@ -22,8 +22,10 @@
  * app-switcher (Recents) — es comportamiento inherente del flag en
  * Android, no una medida separada.
  *
- * Verificación física pendiente: Tab A9+ (screenshot + screen recording
- * bloqueados en build release/Hermes).
+ * Verificación física PENDIENTE (Tab A9+, build publicada): (1) captura
+ * con Encendido + Bajar volumen bloqueada o en negro; (2) miniatura de
+ * Recientes en negro. Hasta que el dueño la corra, esto sigue pendiente:
+ * los tests del plugin solo prueban la inyección, no el efecto.
  */
 const { withMainActivity } = require("@expo/config-plugins");
 
