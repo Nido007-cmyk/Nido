@@ -49,6 +49,29 @@ describe("olvidar algo de la memoria: respuesta honesta, nunca un «listo» fals
   it.each(["forget it", "forget about it", "olvida eso", "esqueça isso"])("%s no es una orden de memoria", (s) => {
     expect(extractToolAction(s)?.kind).not.toBe("memoryForgetHelp");
   });
+  // ADV-M2 (2026-11-01): once formas más quedaban en silencio — familias
+  // elimina/quita/apaga enteras, «borra de MI memoria», el objeto
+  // directo «el hecho» y el objeto primero en es/en. Todas devuelven la
+  // misma guía honesta; ninguna promete un borrado que no existe.
+  it.each([
+    ["Borra el hecho de la clínica", "es"],
+    ["Elimina de la memoria el teléfono", "es"],
+    ["Elimina el hecho de la clínica", "es"],
+    ["Elimina de tu memoria el teléfono", "es"],
+    ["Quita de la memoria el teléfono", "es"],
+    ["Quita el hecho de la clínica", "es"],
+    ["Apaga de la memoria el teléfono", "es"],
+    ["Borra de mi memoria el teléfono", "es"],
+    ["Elimina mi dirección de la memoria", "es"],
+    ["Borra la dirección de la memoria", "es"],
+    ["Delete my address from your memory", "en"],
+  ])("ADV-M2: %s → guía de borrado", (s, lang) => {
+    expect(extractToolAction(s)).toMatchObject({ kind: "memoryForgetHelp", lang });
+  });
+  it("ningún patrón nuevo le roba «borra el temporizador» a la cancelación", () => {
+    expect(extractToolAction("borra el temporizador")).toMatchObject({ kind: "reminderDelete" });
+    expect(extractToolAction("quita el temporizador")).toMatchObject({ kind: "reminderDelete" });
+  });
   it("el mensaje existe en los tres idiomas y nombra la pantalla", () => {
     expect(routerMessage("memoryForgetHelp", "es")).toContain("Mi memoria");
     expect(routerMessage("memoryForgetHelp", "en")).toContain("My Memory");

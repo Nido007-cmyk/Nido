@@ -381,9 +381,20 @@ const TIMER_CANCEL_RULES: Array<{ re: RegExp; q: string; lang: RouterLang }> = [
 ];
 
 const MEMORY_FORGET_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
-  { re: /^(?:olvida|olv[ií]date de|borra de tu memoria|borra de la memoria)\s+(?!(?:eso|esto|lo)$).{2,}/i, lang: "es" },
+  { re: /^(?:olvida|olv[ií]date de|borra de (?:tu|mi|la) memoria)\s+(?!(?:eso|esto|lo)$).{2,}/i, lang: "es" },
+  // ADV-M2 (2026-11-01): las familias elimina/quita/apaga con «de la
+  // memoria» quedaban en silencio (el modelo asentía sin borrar nada).
+  // Misma guía honesta, misma guardia: un resto que es solo «eso» no
+  // dispara («déjalo» no es una orden de memoria).
+  { re: /^(?:elimina|quita|apaga|borra)\s+de\s+(?:la|tu|mi)\s+memoria\s+(?!(?:eso|esto|lo)$).{2,}/i, lang: "es" },
+  // El objeto directo «el hecho»: «borra el hecho de la clínica».
+  { re: /^(?:borra|elimina|quita)\s+(?:el|ese|este)\s+hecho\s+(?!(?:eso|esto|lo)$).{2,}/i, lang: "es" },
+  // Objeto primero, memoria al final: «elimina mi dirección de la memoria».
+  { re: /^(?:borra|elimina|quita|apaga)\s+(?:mi|tu|la|el|esa|esta)\s+.{2,}?\s+de\s+(?:la|tu|mi)\s+memoria$/i, lang: "es" },
   // «forget it» / «forget about it» es «déjalo», no una orden de memoria.
   { re: /^(?:forget|delete from your memory|erase from your memory)\s+(?!(?:it|that|about it|about that|this)$).{2,}/i, lang: "en" },
+  // EN con el objeto primero: «delete my address from your memory».
+  { re: /^(?:delete|erase|remove)\s+(?:my|the)\s+.{2,}?\s+from\s+(?:your|the)\s+memory$/i, lang: "en" },
   { re: /^(?:esque[cç]a|esquece|apaga da sua mem[oó]ria|apague da mem[oó]ria)\s+(?!(?:isso|isto)$).{2,}/i, lang: "pt" },
 ];
 
