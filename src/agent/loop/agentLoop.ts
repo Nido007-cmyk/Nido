@@ -413,29 +413,74 @@ function normalizeForEcho(s: string): string {
  * frases clave; elimina las oraciones que las contengan. Devuelve el
  * texto limpio, o "" si no queda nada aprovechable. Pura y testeable.
  */
+/**
+ * Parte en oraciones conservando su puntuación final y descarta las que
+ * el predicado marca (recibe la oración ya normalizada). Lo comparten las
+ * dos guardas de limpieza de la respuesta: eco de directivas y narración.
+ */
+function dropSentences(text: string, isBad: (normalized: string) => boolean): string {
+  const sentences = text.match(/[^.!?\n]+[.!?]+|[^.!?\n]+/g) ?? [];
+  const kept = sentences
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && !isBad(normalizeForEcho(s)));
+  return kept.join(" ").replace(/\s+/g, " ").trim();
+}
+
 export function stripEchoedInstruction(text: string): string {
   if (!ECHO_KEY_PHRASES.some((p) => normalizeForEcho(text).includes(p))) {
     return text.trim();
   }
-  // Parte en oraciones conservando su puntuación final.
-  const sentences = text.match(/[^.!?\n]+[.!?]+|[^.!?\n]+/g) ?? [];
-  const kept = sentences
-    .map((s) => s.trim())
-    .filter((s) => {
-      if (!s) return false;
-      const n = normalizeForEcho(s);
-      return !ECHO_KEY_PHRASES.some((p) => n.includes(p));
-    });
-  return kept.join(" ").replace(/\s+/g, " ").trim();
+  return dropSentences(text, (n) => ECHO_KEY_PHRASES.some((p) => n.includes(p)));
+}
+
+/**
+ * R-06 (ronda física 0.1.68): la guarda de eco caza al loro que repite la
+ * directiva, pero no al modelo que DELIBERA en prosa sobre las
+ * herramientas: en dispositivo escribió «Ainda que não tenham usado uma
+ * ferramenta, a cita atual é…» como si fuera la respuesta. La narración
+ * parafraseada no contiene ninguna frase de ECHO_KEY_PHRASES («usado uma
+ * ferramenta» ≠ «blocos de ferramenta»), así que necesita su propia
+ * guarda. Patrones sobre el texto NORMALIZADO (normalizeForEcho), anclados
+ * al marco verbal de uso — verbo de usar (pasado, gerundio o presente de
+ * deliberación, negaciones incluidas porque la negación va delante y no
+ * rompe la cadena) + herramienta genérica en es/en/pt. El marco es lo que
+ * protege la prosa legítima SOBRE herramientas: «Para cambiar la rueda
+ * necesitas una herramienta: el gato» no trae verbo de uso y queda
+ * intacta, igual que «el uso de herramientas…» (posesivo, sin marco).
+ */
+const TOOL_NARRATION_PATTERNS: RegExp[] = [
+  // es («usé» y el subjuntivo «use» normalizan a "use"; «usó» a "uso").
+  /\b(?:usado|usaron|usaste|usamos|usando|uso|use)\s+(?:ninguna\s+)?(?:una\s+|la\s+|las\s+)?herramientas?\b/,
+  /\busar\s+(?:ninguna\s+herramienta|herramientas)\b/,
+  // pt («tenham usado uma ferramenta» casa por «usado uma ferramenta»).
+  /\b(?:usado|usaram|usou|usando|uso|use)\s+(?:nenhuma\s+)?(?:uma\s+|a\s+|as\s+)?ferramentas?\b/,
+  /\busar\s+(?:nenhuma\s+ferramenta|ferramentas)\b/,
+  // en («used a tool», «using the tool», «use a tool»).
+  /\b(?:used|using)\s+(?:any\s+|a\s+|the\s+)?tools?\b/,
+  /\buse\s+(?:any\s+|a\s+|the\s+)?tool\b/,
+];
+
+/**
+ * Elimina las oraciones que narran el (no) uso de herramientas por parte
+ * del propio asistente. Devuelve el texto limpio, o "" si no queda nada
+ * aprovechable (finalizeResponse lo convierte en reintento/respaldo).
+ * Pura y testeable.
+ */
+export function stripToolNarration(text: string): string {
+  if (!TOOL_NARRATION_PATTERNS.some((re) => re.test(normalizeForEcho(text)))) {
+    return text.trim();
+  }
+  return dropSentences(text, (n) => TOOL_NARRATION_PATTERNS.some((re) => re.test(n)));
 }
 
 /**
  * Limpieza final de una respuesta del modelo: quita bloques de
- * herramienta y ecos de la directiva interna. Devuelve null si no queda
- * nada aprovechable. Pura y testeable.
+ * herramienta, ecos de la directiva interna y narración sobre el uso de
+ * herramientas. Devuelve null si no queda nada aprovechable. Pura y
+ * testeable.
  */
 export function finalizeResponse(text: string): string | null {
-  const cleaned = stripEchoedInstruction(stripToolBlocks(text));
+  const cleaned = stripToolNarration(stripEchoedInstruction(stripToolBlocks(text)));
   return cleaned.length > 0 ? cleaned : null;
 }
 

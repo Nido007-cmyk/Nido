@@ -9,6 +9,7 @@ import {
   parseToolCalls,
   stripToolBlocks,
   stripEchoedInstruction,
+  stripToolNarration,
   finalizeResponse,
   appendMutationConfirmation,
   runAgentLoop,
@@ -463,6 +464,54 @@ describe("T-echo-2026-10-06: eco de la directiva interna", () => {
     // La directiva nueva es meta-lingüística entre corchetes, no imperativo conversacional.
     expect(injected).toContain("[directiva de formato:");
     expect(injected).not.toMatch(/Continúa: si ya tienes lo necesario/);
+  });
+});
+
+describe("R-06 (ronda 0.1.68): narración sobre el uso de herramientas", () => {
+  it("elimina la frase exacta de la ronda (pt) y finalizeResponse manda el respaldo", () => {
+    // La oración ES toda la respuesta: al caer, no queda contenido y
+    // finalizeResponse devuelve null (reintento de reparación / respaldo).
+    const fuga =
+      "Ainda que não tenham usado uma ferramenta, a cita atual é no sábado, 31 de outubro de 2026, às 23:00.";
+    expect(stripToolNarration(fuga)).toBe("");
+    expect(finalizeResponse(fuga)).toBeNull();
+  });
+
+  it("elimina el equivalente en español y en inglés", () => {
+    expect(
+      stripToolNarration("Aunque no haya usado una herramienta, tu cita es el martes.")
+    ).toBe("");
+    expect(stripToolNarration("I haven't used a tool for this.")).toBe("");
+  });
+
+  it("conserva la prosa buena y quita solo la oración que narra", () => {
+    const mixed = "No usé ninguna herramienta para esto. Tu recordatorio quedó guardado para las 5.";
+    expect(stripToolNarration(mixed)).toBe("Tu recordatorio quedó guardado para las 5.");
+    expect(finalizeResponse(mixed)).toBe("Tu recordatorio quedó guardado para las 5.");
+  });
+
+  it("no toca la prosa legítima SOBRE herramientas (sin marco verbal de uso)", () => {
+    const llave = "Para cambiar la rueda necesitas una herramienta: el gato.";
+    expect(stripToolNarration(llave)).toBe(llave);
+    expect(finalizeResponse(llave)).toBe(llave);
+    // Posesivo sin marco de uso: conocimiento, no deliberación.
+    expect(stripToolNarration("El uso de herramientas distingue a varios primates.")).toBe(
+      "El uso de herramientas distingue a varios primates."
+    );
+  });
+
+  it("runAgentLoop reintenta si el modelo solo narra sobre herramientas", async () => {
+    const engine = fakeEngine([
+      "Ainda que não tenham usado uma ferramenta, a cita atual é no sábado.",
+      "Tu cita es el martes 10 de noviembre a las 9:30.",
+    ]);
+    const result = await runAgentLoop("¿qué día y a qué hora es la cita?", {
+      engine,
+      handlers: {},
+      loadMemory: async () => null,
+    });
+    expect(result.response).toBe("Tu cita es el martes 10 de noviembre a las 9:30.");
+    expect(engine.calls).toHaveLength(2);
   });
 });
 
