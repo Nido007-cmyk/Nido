@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 import {
   detectTextLang,
+  honestAbstention,
   isAbstention,
   isFactualQuestion,
   noSourcesAnswer,
@@ -287,6 +288,108 @@ const CITY_EN: GroundingChunk = {
     "San Aurelio was founded in 1804 by the Claro river. The census counted 16,431,599 " +
     "inhabitants in the metropolitan area. The usual dose of the syrup is 26.52 milligrams.",
 };
+
+// ---------------------------------------------------------------
+// Ronda física 0.1.68, R-04: el documento REAL de la ronda (Clínica
+// San Rafael; el mismo texto en es/en/pt — la fuente está en
+// ~/workspace/your_files/prueba-ocr-0168/) entra como UN solo chunk.
+// La recuperación fue correcta; el modelo copió el bloque portugués
+// y el verificador lo sirvió sellado: su noción de idioma era por
+// chunk y el estado «sin verificar» no tenía consecuencia.
+
+const DOC_ES =
+  "Su cita es el martes 10 de noviembre de 2026 a las 9:30 de la mañana, en la sala 214, segundo piso. " +
+  "Traiga su tarjeta y la lista de medicamentos. " +
+  "Tome el jarabe de 5 ml dos veces al día, después de comer. " +
+  "Para cambiar la cita llame al 520-555-0147.";
+const DOC_EN =
+  "Your appointment is on Tuesday, November 10, 2026 at 9:30 in the morning, in room 214, second floor. " +
+  "Bring your card and your medication list. " +
+  "Take 5 ml of the syrup twice a day, after meals. " +
+  "To change the appointment call 520-555-0147.";
+const DOC_PT =
+  "A sua consulta é na terça-feira, 10 de novembro de 2026 às 9:30 da manhã, na sala 214, segundo andar. " +
+  "Traga o seu cartão e a lista de medicamentos. " +
+  "Tome 5 ml do xarope duas vezes ao dia, depois das refeições. " +
+  "Para mudar a consulta ligue para 520-555-0147.";
+
+const DOC_TRILINGUE: GroundingChunk = {
+  title: "documento-prueba-ocr",
+  body: `CLÍNICA SAN RAFAEL. ESPAÑOL — Recordatorio de cita. ${DOC_ES} ENGLISH — Appointment reminder. ${DOC_EN} PORTUGUÊS — Lembrete de consulta. ${DOC_PT}`,
+};
+
+const PT_JARABE = "Tome 5 ml do xarope duas vezes ao dia, depois das refeições.";
+const ES_JARABE = "Tome el jarabe de 5 ml dos veces al día, después de comer.";
+
+describe("R-04 — idioma por frase (el documento trilingüe de la ronda)", () => {
+  it("copia literal portuguesa, pregunta en español ⇒ sale la gemela española, verbatim y citada", () => {
+    const r = verifyGroundedAnswer(PT_JARABE, [DOC_TRILINGUE], "es");
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toBe("Tome el jarabe de 5 ml dos veces al día, después de comer [1].");
+    expect(r.sentences?.[0].origin.kind).toBe("source");
+  });
+
+  it("el híbrido REAL del aparato («dos veces» en español dentro de la frase portuguesa) también se sustituye", () => {
+    // La respuesta exacta de la tablet: «Tome 5 ml dos veces ao dia,
+    // depois das refeições» — ni siquiera es la frase portuguesa pura.
+    const r = verifyGroundedAnswer("Tome 5 ml dos veces ao dia, depois das refeições.", [DOC_TRILINGUE], "es");
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("Tome el jarabe de 5 ml dos veces al día, después de comer [1].");
+    expect(r.text).not.toContain("refeições");
+  });
+
+  it("simétrico: copia española con pregunta en portugués ⇒ sale la gemela portuguesa (no se «corrige» hacia el español)", () => {
+    const r = verifyGroundedAnswer(ES_JARABE, [DOC_TRILINGUE], "pt");
+    expect(r.status).toBe("grounded");
+    expect(r.text).toBe("Tome 5 ml do xarope duas vezes ao dia, depois das refeições [1].");
+  });
+
+  it("sin gemela en el idioma de la pregunta ⇒ la copia se retira y manda la abstención honesta", () => {
+    const sinEs: GroundingChunk = {
+      title: "documento-prueba-ocr",
+      body: `ENGLISH — Appointment reminder. ${DOC_EN} PORTUGUÊS — Lembrete de consulta. ${DOC_PT}`,
+    };
+    const r = verifyGroundedAnswer(PT_JARABE, [sinEs], "es");
+    expect(r.status).toBe("abstained");
+    expect(r.text).not.toContain("xarope");
+    expect(r.text).toContain("No lo sé con certeza");
+  });
+
+  it("la respuesta española correcta sobre el chunk mixto queda intacta (sin regresión)", () => {
+    const r = verifyGroundedAnswer(ES_JARABE, [DOC_TRILINGUE], "es");
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toBe("Tome el jarabe de 5 ml dos veces al día, después de comer [1].");
+  });
+
+  it("rama de lengua cruzada: la copia que vive en las fuentes se retira (sin gemela) o se sustituye (con gemela)", () => {
+    // Fuentes con veredicto claro en inglés (la fotosíntesis) + la frase
+    // portuguesa como chunk propio: la respuesta en portugués cae en la
+    // rama cruzada y la copia SÍ se puede juzgar ahí.
+    const ptChunk: GroundingChunk = { title: "documento-prueba-ocr", body: PT_JARABE };
+    const sinGemela = verifyGroundedAnswer(PT_JARABE, [PHOTOSYNTHESIS, ptChunk], "es");
+    expect(sinGemela.status).toBe("abstained");
+    expect(sinGemela.text).not.toContain("xarope");
+
+    const esChunk: GroundingChunk = { title: "documento-prueba-ocr", body: ES_JARABE };
+    const conGemela = verifyGroundedAnswer(PT_JARABE, [PHOTOSYNTHESIS, ptChunk, esChunk], "es");
+    expect(conGemela.status).toBe("grounded");
+    expect(conGemela.text).toBe("Tome el jarabe de 5 ml dos veces al día, después de comer [3].");
+  });
+
+  it("el extracto de la abstención prefiere las frases del idioma de la pregunta", () => {
+    const ptPrimero: GroundingChunk = {
+      title: "documento-prueba-ocr",
+      body: `PORTUGUÊS — Lembrete de consulta. ${DOC_PT} ESPAÑOL — Recordatorio de cita. ${DOC_ES}`,
+    };
+    const es = honestAbstention([ptPrimero], "es");
+    expect(es).toContain("Su cita es el martes 10 de noviembre de 2026");
+    expect(es).not.toContain("terça-feira");
+    const pt = honestAbstention([ptPrimero], "pt");
+    expect(pt).toContain("A sua consulta é na terça-feira");
+  });
+});
 
 describe("verifyGroundedAnswer — post-chequeo de cifras (bounty, tanda 1)", () => {
   it("un año inventado tumba la frase aunque el apoyo léxico la pasaba", () => {

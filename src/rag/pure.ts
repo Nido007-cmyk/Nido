@@ -846,7 +846,13 @@ const GROUNDED_CONTEXT_INSTRUCTION =
 
 /** Recordatorio corto pegado a la pregunta (lo último que lee el modelo). */
 const GROUNDED_QUESTION_REMINDER =
-  "Answer only from the sources above, citing [n]. If they don't contain the answer, say you don't know.";
+  "Answer only from the sources above, citing [n], in the language of the question. " +
+  // R-05: la orden que faltaba — el dato pedido se da tal cual, no se
+  // habla de él («el teléfono es el número de emergencia» no es dar el
+  // teléfono). R-04: el idioma de la respuesta se repite AQUÍ, pegado a
+  // las fuentes, y no solo en el sistema.
+  "If the question asks for a detail the sources give (a number, a date, an amount), give it exactly as it is written. " +
+  "If they don't contain the answer, say you don't know.";
 
 const GROUNDING_INSTRUCTION =
   "You have no ability to control real-world devices or take physical actions - no alarms, " +

@@ -48,6 +48,14 @@
  *    español, corpus en inglés), la comparación léxica no es válida: no se
  *    inventa un veredicto. Solo se comprueban cifras (iguales en todos los
  *    idiomas) y citas; el estado queda "unverified" y la UI lo dice.
+ *  - Idioma por frase (R-04, ronda 0.1.68): un chunk puede mezclar
+ *    idiomas (un documento importado con el mismo texto en es/en/pt) y
+ *    el modelo copia la frase gemela en el idioma equivocado; el apoyo
+ *    léxico la aprueba porque la frase ESTÁ en el chunk. Ahora una copia
+ *    literal cuya gemela con las mismas cifras puntúe mejor en el idioma
+ *    de la pregunta se sustituye por esa gemela; sin gemela, se retira.
+ *    Detectar sin actuar era el fallo: el pie ya decía «otro idioma» y
+ *    la frase se servía igual.
  *
  * Limitación honesta: es una heurística léxica (sin modelo de NLI, que no
  * cabe en el presupuesto de RAM). Detecta afirmaciones con vocabulario
@@ -58,7 +66,7 @@
  */
 
 import type { SentenceProvenance } from "./provenance";
-import { evidenceNumberValues, sentenceNumbersSupported } from "./evidenceNumbers";
+import { evidenceNumberValues, numberTokens, parseNumberToken, sentenceNumbersSupported } from "./evidenceNumbers";
 
 export type GroundingLang = "es" | "en" | "pt";
 
@@ -185,6 +193,19 @@ export function detectTextLang(text: string): GroundingLang | null {
   return best;
 }
 
+/**
+ * Cuántas palabras pista de `lang` trae el texto, sin umbrales. La regla
+ * de idioma por frase (R-04) compara puntuaciones entre dos frases
+ * concretas en vez de pedir un veredicto absoluto: hay frases clínicas
+ * cortas cuyo idioma detectTextLang no se atreve a decir (la del jarabe
+ * en español da null: su única pista es «el») y aun así su gemela
+ * portuguesa puntúa más en portugués que ella.
+ */
+export function langHintCount(text: string, lang: GroundingLang): number {
+  const hints = LANG_HINTS[lang];
+  return words(text).filter((w) => hints.has(w)).length;
+}
+
 /** Divide en frases conservando la puntuación final y las citas [n]. */
 export function splitSentences(text: string): string[] {
   const parts = text
@@ -300,8 +321,17 @@ const EXTRACT_INTRO: Record<GroundingLang, string> = {
 };
 
 /** Primeras frases literales de la fuente principal, citadas. */
-export function extractiveSnippet(chunk: GroundingChunk, index: number, maxChars = 320): string {
-  const sentences = splitSentences(chunk.body.trim());
+export function extractiveSnippet(chunk: GroundingChunk, index: number, maxChars = 320, lang?: GroundingLang | null): string {
+  let sentences = splitSentences(chunk.body.trim());
+  if (lang) {
+    // R-04: en un chunk multilingüe el extracto prefiere las frases del
+    // idioma de la pregunta (antes salían las primeras del chunk,
+    // acertaran o no con el idioma de quien pregunta).
+    const own = sentences.filter((s) => detectTextLang(s) === lang);
+    if (own.length > 0) {
+      sentences = [...own, ...sentences.filter((s) => detectTextLang(s) !== lang)];
+    }
+  }
   let out = "";
   for (const s of sentences) {
     if (out && out.length + s.length + 1 > maxChars) break;
@@ -315,7 +345,7 @@ export function extractiveSnippet(chunk: GroundingChunk, index: number, maxChars
 export function honestAbstention(chunks: GroundingChunk[], lang: GroundingLang): string {
   if (chunks.length === 0) return IDK_TEXT[lang];
   const intro = EXTRACT_INTRO[lang].split("{{title}}").join(chunks[0].title);
-  return `${IDK_TEXT[lang]}\n\n${intro}\n${extractiveSnippet(chunks[0], 0)}`;
+  return `${IDK_TEXT[lang]}\n\n${intro}\n${extractiveSnippet(chunks[0], 0, 320, lang)}`;
 }
 
 /** Quita citas [n] que no corresponden a ninguna fuente (el modelo inventa números). */
@@ -376,6 +406,125 @@ export function closestSourceSentence(sentence: string, sourceSentences: string[
   return bestHits >= MIN_JUDGED_TERMS && want.size > 0 && bestHits / want.size >= 0.85 ? best : null;
 }
 
+// ------------------------------------------- idioma por frase (R-04)
+
+/** Una frase de las fuentes, con el chunk del que sale. */
+export interface SourceSentenceRec {
+  text: string;
+  chunk: number;
+}
+
+/** Todas las lecturas de todas las cifras de un texto, como conjunto. */
+function numberValueSet(text: string): Set<number> {
+  const out = new Set<number>();
+  for (const token of numberTokens(text)) {
+    for (const v of parseNumberToken(token)) out.add(v);
+  }
+  return out;
+}
+
+function sameNumbers(a: Set<number>, b: Set<number>): boolean {
+  if (a.size !== b.size) return false;
+  for (const v of a) if (!b.has(v)) return false;
+  return true;
+}
+
+/**
+ * La frase fuente de la que `sentence` es copia (literal o casi), o null.
+ * Umbrales propios, no los de closestSourceSentence: el 85 % está
+ * calibrado para la negación dentro de la misma lengua, y una copia
+ * entre lenguas hermanas pierde raíces por el camino («veces» → «vece»
+ * contra «vezes» → «veze»: el híbrido real de la ronda comparte 5/6 de
+ * sus raíces con su fuente portuguesa y aun así ES una copia). Se
+ * exige: ≥ 3 raíces compartidas, ≥ 75 % de las raíces de la frase
+ * salen de ESA fuente, y la frase cubre ≥ 50 % de las raíces de la
+ * fuente (un fragmento suelto de una frase larga no cuenta como copia).
+ */
+function bestCopySource(sentence: string, recs: SourceSentenceRec[]): SourceSentenceRec | null {
+  const want = new Set(contentStems(sentence));
+  if (want.size < MIN_JUDGED_TERMS) return null;
+  let best: SourceSentenceRec | null = null;
+  let bestScore = 0;
+  for (const rec of recs) {
+    const srcStems = new Set(contentStems(rec.text));
+    let hits = 0;
+    for (const w of want) if (srcStems.has(w)) hits++;
+    if (hits < MIN_JUDGED_TERMS) continue;
+    const ofSentence = hits / want.size;
+    const ofSource = hits / Math.max(1, srcStems.size);
+    if (ofSentence < 0.75 || ofSource < 0.5) continue;
+    const score = ofSentence + ofSource;
+    if (score > bestScore) {
+      bestScore = score;
+      best = rec;
+    }
+  }
+  return best;
+}
+
+/**
+ * La gemela de `copy` en el idioma de la pregunta: otra frase fuente
+ * con LAS MISMAS cifras, solape léxico real con la copia (≥ 3 raíces y
+ * ≥ 1/3 del conjunto menor) y mejor puntuación de pistas en el idioma
+ * de la pregunta que la propia copia. El empate de pistas solo vale si
+ * la candidata SÍ tiene veredicto claro en el idioma de la pregunta y
+ * la copia no (la frase del teléfono: «para» puntúa en las dos, pero
+ * solo la española tiene veredicto «es»). Una candidata con veredicto
+ * claro de un tercer idioma nunca es la gemela.
+ */
+function findSourceTwin(copy: SourceSentenceRec, recs: SourceSentenceRec[], lang: GroundingLang): SourceSentenceRec | null {
+  const nums = numberValueSet(copy.text);
+  const copyStems = new Set(contentStems(copy.text));
+  const copyHints = langHintCount(copy.text, lang);
+  const copyLang = detectTextLang(copy.text);
+  let best: SourceSentenceRec | null = null;
+  let bestOverlap = 0;
+  for (const cand of recs) {
+    if (cand === copy) continue;
+    const candLang = detectTextLang(cand.text);
+    if (candLang !== null && candLang !== lang) continue;
+    if (!sameNumbers(numberValueSet(cand.text), nums)) continue;
+    const candStems = new Set(contentStems(cand.text));
+    let overlap = 0;
+    for (const w of candStems) if (copyStems.has(w)) overlap++;
+    if (overlap < MIN_JUDGED_TERMS) continue;
+    if (overlap * 3 < Math.min(candStems.size, copyStems.size)) continue;
+    const hints = langHintCount(cand.text, lang);
+    const wins = hints > copyHints || (hints === copyHints && candLang === lang && copyLang !== lang);
+    if (!wins) continue;
+    if (overlap > bestOverlap) {
+      bestOverlap = overlap;
+      best = cand;
+    }
+  }
+  return best;
+}
+
+export type ForeignCopyFix =
+  | { kind: "replace"; text: string; chunk: number }
+  | { kind: "remove" }
+  | null;
+
+/**
+ * R-04: qué hacer con una frase que copia a las fuentes en un idioma
+ * que no es el de la pregunta. Con gemela en el idioma de la pregunta,
+ * se sustituye por ella (verbatim, con su cita). Sin gemela, solo se
+ * retira si la copia es de otro idioma con veredicto claro; si el
+ * idioma de la copia no se distingue del de la pregunta, la frase se
+ * deja en paz (el detector es tímido con frases cortas y la frase
+ * puede ser legítima). Si la frase no copia a ninguna fuente, null:
+ * no es asunto de esta regla.
+ */
+export function foreignCopyFix(sentence: string, recs: SourceSentenceRec[], lang: GroundingLang): ForeignCopyFix {
+  const copy = bestCopySource(sentence, recs);
+  if (!copy) return null;
+  const twin = findSourceTwin(copy, recs, lang);
+  if (twin) return { kind: "replace", text: twin.text, chunk: twin.chunk };
+  const copyLang = detectTextLang(copy.text);
+  if (copyLang !== null && copyLang !== lang) return { kind: "remove" };
+  return null;
+}
+
 export function verifyGroundedAnswer(
   answer: string,
   chunks: GroundingChunk[],
@@ -407,38 +556,71 @@ export function verifyGroundedAnswer(
 
   const evidenceNums = evidenceNumberValues(chunkTexts);
 
+  // Las frases de las fuentes, por chunk (la negación de 0.1.59 las usa
+  // por chunk; la regla de idioma de R-04 las recorre todas con su chunk).
+  const chunkSentences = chunks.map((c) => splitSentences(c.body.trim()).map((x) => x.replace(/^[-•*\d.)\s]+/, "").trim()).filter(Boolean));
+  const sourceRecs: SourceSentenceRec[] = [];
+  chunkSentences.forEach((ss, i) => {
+    for (const text of ss) sourceRecs.push({ text, chunk: i });
+  });
+
   if (!sameLanguage) {
     // Sin comparación léxica válida: solo cifras (independientes del idioma).
     // Tanda 1 del programa bounty: la comparación ya no es por dígitos
     // exactos — «16,4 millones» es la misma cifra que «16,431,599» —
     // sino por valor con redondeo y escala (evidenceNumbers.ts).
+    // R-04: la copia literal en el idioma equivocado SÍ se puede juzgar
+    // en esta rama (copia y gemela no necesitan comparación léxica
+    // general), y se juzga: sustituida por su gemela o retirada. Si al
+    // final no queda ninguna frase «del modelo», el estado ya no es
+    // «unverified»: lo que queda es verbatim de las fuentes.
     let removed = 0;
-    const kept = sentences.filter((s) => {
-      if (isAbstention(s)) return true;
-      const ok = sentenceNumbersSupported(s, evidenceNums);
-      if (!ok) removed++;
-      return ok;
-    });
+    let sourceFixed = 0;
+    const kept: string[] = [];
+    const langProv: SentenceProvenance[] = [];
+    for (const s of sentences) {
+      if (isAbstention(s)) {
+        kept.push(s);
+        langProv.push({ text: s, origin: { kind: "abstain" } });
+        continue;
+      }
+      if (!sentenceNumbersSupported(s, evidenceNums)) {
+        removed++;
+        continue;
+      }
+      const fix = foreignCopyFix(s, sourceRecs, lang);
+      if (fix?.kind === "remove") {
+        removed++;
+        continue;
+      }
+      if (fix?.kind === "replace") {
+        const fixed = addCitation(fix.text, fix.chunk + 1);
+        kept.push(fixed);
+        langProv.push({ text: fixed, origin: { kind: "source", n: fix.chunk + 1, support: 1 } });
+        sourceFixed++;
+        continue;
+      }
+      kept.push(s);
+      langProv.push({ text: s, origin: { kind: "model", reason: "unverified-language" } });
+    }
     if (kept.length === 0) {
       return abstainedResult(chunks, lang, removed);
     }
     let text = kept.join(" ");
-    const langProv: SentenceProvenance[] = kept.map((s) => ({
-      text: s,
-      origin: isAbstention(s) ? { kind: "abstain" } : { kind: "model", reason: "unverified-language" },
-    }));
     if (removed > 0) {
       const note = NOTE.removed[lang].split("{{n}}").join(String(removed));
       text += `\n\n${note}`;
       langProv.push({ text: note, origin: { kind: "fixed" } });
     }
-    return { text, status: "unverified", removed, kept: kept.length, sentences: langProv };
+    const anyModel = langProv.some((p) => p.origin.kind === "model");
+    const status: GroundingStatus = anyModel ? "unverified" : sourceFixed > 0 ? (removed > 0 ? "partial" : "grounded") : "unverified";
+    return { text, status, removed, kept: kept.length, sentences: langProv };
   }
 
   const chunkStemSets = chunkTexts.map((t) => new Set(contentStems(t)));
-  const chunkSentences = chunks.map((c) => splitSentences(c.body.trim()).map((x) => x.replace(/^[-•*\d.)\s]+/, "").trim()).filter(Boolean));
   let removed = 0;
   let negationFixed = 0; // counted for tests and logs; replaced sentences are verbatim, so still "grounded"
+  let languageFixed = 0; // R-04: copias sustituidas por su gemela en el idioma de la pregunta
   let abstained = false;
   let judgedKept = 0;
   const kept: string[] = [];
@@ -463,6 +645,23 @@ export function verifyGroundedAnswer(
     }
     if (!isSupported(sup)) {
       removed++;
+      continue;
+    }
+    // R-04: una copia literal en el idioma equivocado pasa el apoyo
+    // (la frase ESTÁ en el chunk, en su bloque de otro idioma). Antes
+    // de la negación: la gemela trae la negación de la fuente, así que
+    // sustituir por ella es estrictamente mejor que comparar negaciones.
+    const langFix = foreignCopyFix(s, sourceRecs, lang);
+    if (langFix?.kind === "remove") {
+      removed++;
+      continue;
+    }
+    if (langFix?.kind === "replace") {
+      if (sup.total >= MIN_JUDGED_TERMS) judgedKept++;
+      languageFixed++;
+      const fixed = addCitation(langFix.text, langFix.chunk + 1);
+      kept.push(fixed);
+      prov.push({ text: fixed, origin: { kind: "source", n: langFix.chunk + 1, support: 1 } });
       continue;
     }
     if (sup.total >= MIN_JUDGED_TERMS) judgedKept++;
@@ -515,7 +714,7 @@ function abstainedResult(chunks: GroundingChunk[], lang: GroundingLang, removed:
   const sentences: SentenceProvenance[] = [{ text: IDK_TEXT[lang], origin: { kind: "abstain" } }];
   if (chunks.length > 0) {
     sentences.push({ text: EXTRACT_INTRO[lang].split("{{title}}").join(chunks[0].title), origin: { kind: "fixed" } });
-    sentences.push({ text: extractiveSnippet(chunks[0], 0), origin: { kind: "source", n: 1, support: 1 } });
+    sentences.push({ text: extractiveSnippet(chunks[0], 0, 320, lang), origin: { kind: "source", n: 1, support: 1 } });
   }
   return { text: honestAbstention(chunks, lang), status: "abstained", removed, kept: 0, sentences };
 }
