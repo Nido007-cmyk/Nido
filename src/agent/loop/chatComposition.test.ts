@@ -22,13 +22,20 @@
  *   4. runAgentLoop con handlers grabadores, proveedores de notas y
  *      recordatorios en memoria, agenda de contactos doble y
  *      confirmación grabada (el usuario confirma: onConfirm → true)
+ *   5. R-06 P2: la red a la salida del agente — si el loop salió por el
+ *      modelo sin herramientas ante una pregunta
+ *      (agentExitNeedsGroundingNet, la decisión real), el turno cae a
+ *      la red de chat: recuperar (aquí, las fuentes que el test declara
+ *      en netSources); con fuentes, la respuesta fundada; sin fuentes
+ *      y pregunta de hechos, el «no lo sé» determinista.
  * Si nada abre, el turno va a «conocimiento» (aquí: ruta marcada, sin
  * motor — la ruta RAG/modelo no es el objeto de estos tests).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { classifyIntent } from "./intent";
 import { isGenericMemoryQuestionShape, memoryGateHit } from "./memoryQuery";
-import { runAgentLoop, type AgentEngine } from "./agentLoop";
+import { runAgentLoop, agentExitNeedsGroundingNet, type AgentEngine } from "./agentLoop";
+import { isFactualQuestion, noSourcesAnswer } from "../../rag/grounding";
 import { choiceTurnKind, resolveChoiceReply, type ChoiceStore } from "./toolRouter";
 import { answerKnowledgeQueryWithCategory } from "../../rag/selfKnowledge";
 import { matchSmallTalk } from "./smallTalk";
@@ -142,7 +149,12 @@ function snapshotFromStore() {
 type Route = "knowledge" | "smalltalk" | "agent";
 
 /** Un turno del chat, tal como lo compone ChatScreen. */
-async function send(text: string, lang: Lang, engine: AgentEngine, opts: { deepResearch?: boolean } = {}) {
+async function send(
+  text: string,
+  lang: Lang,
+  engine: AgentEngine,
+  opts: { deepResearch?: boolean; netSources?: string[] } = {}
+) {
   const kb = answerKnowledgeQueryWithCategory(text, lang);
   if (kb) return { route: "knowledge" as Route, response: kb.answer, toolUses: [] as Array<{ name: string }> };
   const st = matchSmallTalk(text, lang);
@@ -185,6 +197,22 @@ async function send(text: string, lang: Lang, engine: AgentEngine, opts: { deepR
       return true;
     },
   });
+  // R-06 P2: espejo de la red de ChatScreen. La decisión es la real
+  // (agentExitNeedsGroundingNet); lo simulado es solo el interior de
+  // la rama de chat, con sus dos salidas deterministas: con fuentes,
+  // la vía fundada sirve la frase de la fuente (como sirvió la ruta
+  // fija verificada la pregunta de la ronda); sin fuentes y pregunta
+  // de hechos, el «no lo sé» de grounding.ts, sin generar.
+  if (agentExitNeedsGroundingNet(result, text)) {
+    const sources = opts.netSources ?? [];
+    if (sources.length > 0) {
+      return { route: "agent" as Route, response: sources.join("\n"), toolUses: result.toolUses, loopResponse: result.response, netted: true };
+    }
+    if (isFactualQuestion(text)) {
+      return { route: "agent" as Route, response: noSourcesAnswer(lang), toolUses: result.toolUses, loopResponse: result.response, netted: true };
+    }
+    return { route: "agent" as Route, response: "RESPUESTA DEL MODELO DE CHAT", toolUses: result.toolUses, loopResponse: result.response, netted: true };
+  }
   return { route: "agent" as Route, response: result.response, toolUses: result.toolUses };
 }
 
@@ -763,5 +791,57 @@ describe("composición — paridad es/en/pt de las rutas deterministas", () => {
       const deterministic = t.response !== null && engine.calls.length === 0;
       expect(deterministic, `«${text}» (${lang}) cayó al modelo/conocimiento`).toBe(true);
     }
+  });
+});
+
+describe("composición — R-06 P2: la red a la salida del agente", () => {
+  // El documento de la ronda (el papel de la Clínica San Rafael), tal
+  // como lo indexó el OCR: una sola frase con el teléfono de la cita.
+  const DOCUMENTO =
+    "CLÍNICA SAN RAFAEL — Recordatorio de cita. Su cita es el martes 10 de noviembre de 2026 a las 9:30 de la mañana, en la sala 214, segundo piso. Para cambiar la cita llame al 520-555-0147.";
+
+  it("la siguiente trampa: pregunta clasificada «actuar» con documento recuperable ⇒ la fundada, no el texto del loop", async () => {
+    const engine = fakeEngine();
+    // «el número de» la manda a actuar (patrón de contactos); el modelo
+    // no actúa y el loop sale por su respaldo, sin herramientas. Antes
+    // de la red, ese texto era la respuesta; ahora la red recupera el
+    // documento y la respuesta final es la fundada.
+    const t = await send("¿Cuál es el número de teléfono para cambiar la cita?", "es", engine, {
+      netSources: [DOCUMENTO],
+    });
+    expect(t.netted).toBe(true);
+    expect(t.response).toContain("520-555-0147");
+    expect(t.response).toBe(DOCUMENTO);
+    expect(t.loopResponse).toBeTruthy();
+    expect(t.response).not.toBe(t.loopResponse);
+  });
+
+  it("la misma pregunta sin fuentes ⇒ el «no lo sé» determinista, no el respaldo del loop", async () => {
+    const engine = fakeEngine();
+    const t = await send("¿Cuál es el número de teléfono para cambiar la cita?", "es", engine);
+    expect(t.netted).toBe(true);
+    expect(t.response).toBe(noSourcesAnswer("es"));
+    expect(t.response).not.toBe(t.loopResponse);
+  });
+
+  it("un turno que SÍ usó una herramienta pasa intacto, aunque haya fuentes esperando", async () => {
+    const engine = fakeEngine();
+    // «¿Qué tengo agendado el martes?» lo responde la memoria
+    // determinista del loop (memory_query): herramienta usada, la red
+    // no entra ni con el documento declarado.
+    const t = await send("¿Qué tengo agendado el martes?", "es", engine, { netSources: [DOCUMENTO] });
+    expect(t.netted).toBeFalsy();
+    expect(t.toolUses.map((u) => u.name)).toContain("memory_query");
+    expect(t.response).not.toContain("520-555-0147");
+  });
+
+  it("un turno «actuar» sin forma de pregunta pasa intacto", async () => {
+    const engine = fakeEngine();
+    // Orden sin forma de pregunta: el loop sale por su respaldo (el
+    // modelo no llamó a nadie) y ese fracaso honesto es la respuesta.
+    const t = await send("llama a Juan y pregúntale por la cita", "es", engine, { netSources: [DOCUMENTO] });
+    expect(t.netted).toBeFalsy();
+    expect(t.response).toBeTruthy();
+    expect(t.response).not.toContain("520-555-0147");
   });
 });

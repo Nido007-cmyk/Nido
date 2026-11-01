@@ -61,6 +61,7 @@ import {
 import { classifyIntent, type AgentIntent } from "./intent";
 import { matchCanned } from "./cannedResponses";
 import { recordInferenceEvent } from "../../inference/telemetry";
+import { isFactualQuestion } from "../../rag/grounding";
 import { generateToolCallJson } from "./toolCallJson";
 import { validateStructuredOutput } from "./structuredOutput";
 import { extractRememberFact } from "./rememberRouter";
@@ -230,6 +231,58 @@ interface RoutingTrace {
   modelTools: string[];
   retry: AgentRouting["retry"];
   fallback: AgentRouting["fallback"];
+}
+
+/**
+ * R-06 P2 (ronda física de la 0.1.68): forma de pregunta, en el sentido
+ * ancho — signos de interrogación o arranque interrogativo (es/en/pt,
+ * el mismo vocabulario de INTERROGATIVE_START_RE en actionRouter.ts).
+ * Una orden con forma de pregunta («¿puedes llamarme a las 8?») también
+ * la tiene: por eso la forma sola no basta para desviar un turno que
+ * acabó en respaldo (ver agentExitNeedsGroundingNet).
+ */
+const QUESTION_START_RE =
+  /^\s*[¿¡]?\s*(?:c[óo]mo|qu[ée]|qui[ée]n(?:es)?|cu[áa]ndo|d[óo]nde|cu[áa]l(?:es)?|por\s*qu[ée]|how|what|who|whom|when|where|which|why|como|qual|quais|quando|onde|quem)(?![\p{L}])/iu;
+
+export function hasQuestionShape(text: string): boolean {
+  const t = (text ?? "").trim();
+  if (!t) return false;
+  return /[¿?]/.test(t) || QUESTION_START_RE.test(t);
+}
+
+/**
+ * R-06 P2 (ronda física de la 0.1.68): la red a la salida del agente.
+ * El loop no tiene búsqueda en la base de conocimiento, ni puertas de
+ * fundado, ni «no lo sé» determinista: una pregunta de conocimiento que
+ * un patrón del clasificador cuele a esta rama (la trampa de «qué hora
+ * es» de la ronda; la siguiente será otra) sale inventada o con un
+ * «no supe qué acción hacer» ante una pregunta que el documento del
+ * usuario sí responde. Esta es la decisión, pura y compartida entre
+ * ChatScreen y los tests de composición: ¿el turno salió del loop sin
+ * que se resolviera nada, ante una pregunta?
+ *
+ * Condiciones, todas a la vez:
+ * - salió por el modelo (routing.route === "model"): las salidas
+ *   deterministas («fixed», memoria, plantillas) no se tocan;
+ * - ninguna herramienta se ejecutó (toolUses vacío): un turno que
+ *   mutó algo — o que leyó algo: notas, contactos, la hora del
+ *   aparato — pasa intacto, su respuesta ya tiene suelo;
+ * - la consulta tiene forma de pregunta y:
+ *   - si el loop sirvió su prosa (sin respaldo), basta la forma: esa
+ *     prosa es la que inventó la cita de la ronda;
+ *   - si el loop acabó en un texto de respaldo («no supe qué acción
+ *     hacer», «no entendí»), solo se desvía cuando la pregunta es de
+ *     hechos (isFactualQuestion): una orden con forma de pregunta que
+ *     no se pudo ejecutar conserva su fracaso honesto, pero una
+ *     pregunta de hechos con ese texto es un desvío mal clasificado
+ *     por definición, y la red de chat es su sitio.
+ */
+export function agentExitNeedsGroundingNet(result: AgentLoopResult, query: string): boolean {
+  if (result.toolUses.length > 0) return false;
+  const routing = result.routing;
+  if (!routing || routing.route !== "model") return false;
+  if (routing.fallback) return isFactualQuestion(query);
+  return hasQuestionShape(query);
 }
 
 const DEFAULT_MAX_STEPS = 3;

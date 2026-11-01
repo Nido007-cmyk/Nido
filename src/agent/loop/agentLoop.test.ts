@@ -15,7 +15,10 @@ import {
   runAgentLoop,
   buildSystemPrompt,
   estimatePromptTokens,
+  agentExitNeedsGroundingNet,
+  hasQuestionShape,
   type AgentEngine,
+  type AgentLoopResult,
 } from "./agentLoop";
 
 describe("prompt y directivas en portugués (F1 M-5 = F9-02)", () => {
@@ -512,6 +515,79 @@ describe("R-06 (ronda 0.1.68): narración sobre el uso de herramientas", () => {
     });
     expect(result.response).toBe("Tu cita es el martes 10 de noviembre a las 9:30.");
     expect(engine.calls).toHaveLength(2);
+  });
+});
+
+describe("R-06 P2 (ronda 0.1.68): la red a la salida del agente", () => {
+  const result = (over: Partial<AgentLoopResult>): AgentLoopResult => ({
+    response: "texto del turno",
+    intent: "actuar",
+    toolUses: [],
+    routing: { route: "model", modelTools: [], retry: null, fallback: null },
+    ...over,
+  });
+
+  it("hasQuestionShape: signos o arranque interrogativo, en los tres idiomas", () => {
+    expect(hasQuestionShape("¿Qué día y a qué hora es la cita?")).toBe(true);
+    expect(hasQuestionShape("what time is the meeting")).toBe(true);
+    expect(hasQuestionShape("Qual é o número para remarcar?")).toBe(true);
+    expect(hasQuestionShape("llama a Juan y dile que venga")).toBe(false);
+    expect(hasQuestionShape("la reunión es el martes")).toBe(false);
+    expect(hasQuestionShape("")).toBe(false);
+  });
+
+  it("prosa del modelo sin herramientas ante una pregunta: la red caza el turno", () => {
+    // La salida de la ronda, tal cual la etiquetaría el loop si la
+    // pregunta le llega con intención interna de conversación (sonda o
+    // elección pendiente): prosa, cero herramientas, sin respaldo.
+    expect(agentExitNeedsGroundingNet(result({}), "¿Qué día y a qué hora es la cita?")).toBe(true);
+    expect(agentExitNeedsGroundingNet(result({}), "what time is the appointment")).toBe(true);
+  });
+
+  it("la misma prosa sin forma de pregunta pasa intacta", () => {
+    expect(agentExitNeedsGroundingNet(result({}), "llama a Juan y pregúntale por la cita")).toBe(false);
+  });
+
+  it("un turno que usó una herramienta pasa intacto, aunque sea pregunta", () => {
+    // La hora desnuda legítima: device_time ejecutó y su resultado es
+    // el suelo de la respuesta; la red no lo toca.
+    const withTool = result({ toolUses: [{ name: "device_time", result: "martes, 9:41" }] });
+    expect(agentExitNeedsGroundingNet(withTool, "¿qué hora es?")).toBe(false);
+    const mutated = result({ toolUses: [{ name: "create_reminder", result: "Recordatorio creado." }] });
+    expect(agentExitNeedsGroundingNet(mutated, "¿Puedes crear un recordatorio para mañana?")).toBe(false);
+  });
+
+  it("las salidas deterministas no son «por modelo»: intactas", () => {
+    const fixed = result({ deterministic: true, routing: { route: "fixed", modelTools: [], retry: null, fallback: null } });
+    expect(agentExitNeedsGroundingNet(fixed, "¿qué puedes hacer?")).toBe(false);
+    const memory = result({
+      routing: { route: "memory_query", modelTools: [], retry: null, fallback: null },
+      toolUses: [{ name: "memory_query", result: "Tu mamá se llama Marta." }],
+    });
+    expect(agentExitNeedsGroundingNet(memory, "¿cómo se llama mi mamá?")).toBe(false);
+    expect(agentExitNeedsGroundingNet(result({ routing: undefined }), "¿qué día es la cita?")).toBe(false);
+  });
+
+  it("respaldo + pregunta de hechos: la red también (es un desvío mal clasificado)", () => {
+    // La trampa orgánica de hoy: la pregunta casa un patrón de acción,
+    // el modelo no actúa, el loop sirve «no supe qué acción hacer» —
+    // con el documento presente, la respuesta fundada es la correcta.
+    const failed = result({
+      routing: { route: "model", modelTools: [], retry: "nudge", fallback: "actionFailed" },
+    });
+    expect(agentExitNeedsGroundingNet(failed, "¿Cuál es el número de teléfono para cambiar la cita?")).toBe(true);
+    const memFailed = result({
+      routing: { route: "model", modelTools: [], retry: "nudge", fallback: "memoryFailed" },
+    });
+    expect(agentExitNeedsGroundingNet(memFailed, "¿Qué día es la revisión del coche?")).toBe(true);
+  });
+
+  it("respaldo + orden con forma de pregunta (no de hechos): el fracaso honesto se queda", () => {
+    const failed = result({
+      routing: { route: "model", modelTools: [], retry: "nudge", fallback: "actionFailed" },
+    });
+    expect(agentExitNeedsGroundingNet(failed, "¿Puedes llamarme a las 8?")).toBe(false);
+    expect(agentExitNeedsGroundingNet(failed, "¿me puedes despertar a las 7?")).toBe(false);
   });
 });
 

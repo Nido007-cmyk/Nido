@@ -79,7 +79,7 @@ import { isGenericMemoryQuestionShape, memoryFullCoverageHit, memoryGateHit } fr
 import { beginUserTurn, choiceTurnKind, resetConversationState, type ChoiceStore } from "../agent/loop/toolRouter";
 import { applyEdit, type InputSource, type Segment } from "../agent/input/provenance";
 import { planSend } from "../agent/input/sendPlan";
-import { runAgentLoop, assertPromptBudget, estimatePromptTokens } from "../agent/loop/agentLoop";
+import { runAgentLoop, assertPromptBudget, estimatePromptTokens, agentExitNeedsGroundingNet } from "../agent/loop/agentLoop";
 import { buildToolHandlers, searchPhoneContacts } from "../agent/tools/handlers";
 import { matchSmallTalk, smallTalkSessionTitle } from "../agent/loop/smallTalk";
 import { matchSafetyAnswer, unknownCountryText } from "../agent/loop/safetyAnswers";
@@ -1170,6 +1170,10 @@ export function ChatScreen({
         void recordMissedPhrase(query, { route: "chat", modelTools: [], retry: null, fallback: null }).catch(() => {});
       }
     }
+    // R-06 P2: si la red a la salida del agente desvía el turno, la rama
+    // no retorna: el turno cae al pipeline de chat de abajo, que es
+    // quien lo persiste, lo mide y lo cierra (sin duplicar efectos).
+    let divertedToChatNet = false;
     if (agentIntent === "recordar" || agentIntent === "actuar") {
       setProcessing({ messageId: assistantId, status: "thinking" });
       // 0.1.33: ¿respondió el modelo o el código? Solo se cuenta, el
@@ -1273,53 +1277,75 @@ export function ChatScreen({
           // no reconoció, para revisarla uno mismo (Diagnóstico).
           void recordMissedPhrase(query, routing).catch(() => {});
         }
-        setMessages((prev) =>
-          prev.map((m) => (m.id === assistantId ? { ...m, text: assistantText } : m))
-        );
-        notification(NotificationFeedbackType.Success);
-
-        const agentDurationMs = performance.now() - startTime;
-        recordQueryStats({
-          tokensGenerated,
-          durationMs: agentDurationMs,
-          ttftMs,
-          tokPerSec: 0,
-          peakRssBytes: peakRss.stop(),
-          timestamp: Date.now(),
-          totalLatencyMs: agentDurationMs,
-          modelId: baseModelId,
-          taskType: "chat",
-          adaptiveRoutingUsed: false,
-          retrievalUsed: false,
-          outcome: "success",
-        });
-        recordExecution({
-          modelId: baseModelId,
-          taskType: "chat",
-          adaptiveRoutingUsed: false,
-          retrievalUsed: false,
-          totalLatencyMs: agentDurationMs,
-          tokensGenerated,
-          outcome: "success",
-        }).catch(() => {});
-
-        if (assistantText.trim().length > 0) {
-          await finishAssistantMessage(sessionId, assistantId, assistantText);
-        } else {
-          await deleteMessage(assistantId);
+        // R-06 P2 (ronda física 0.1.68): la red a la salida del agente.
+        // Si el loop salió por el modelo sin ejecutar ninguna
+        // herramienta ante una pregunta (agentExitNeedsGroundingNet),
+        // su texto NO se persiste: dentro del loop el documento del
+        // usuario es invisible y ninguna puerta de fundado juzga la
+        // salida — así nació la cita inventada de la ronda. El turno
+        // cae al pipeline de chat de abajo, que recupera con la
+        // conversación a la vista (R-03), responde por la vía fundada
+        // con fuentes o sirve el «no lo sé» determinista si la pregunta
+        // es de hechos y no hay fuentes, y cierra el turno con su
+        // propia persistencia, telemetría y lectura en voz alta: aquí
+        // no se duplica ningún efecto. Lo que el router dejó registrado
+        // arriba (la muestra y la frase perdida) queda: el desvío del
+        // clasificador ocurrió y la telemetría lo sigue contando.
+        // Si el usuario detuvo esta generación, la red no se aplica:
+        // no nace una generación nueva a su espalda.
+        if (!stopRequestedRef.current && agentExitNeedsGroundingNet(agentResult, query)) {
+          divertedToChatNet = true;
+          assistantText = "";
         }
+        if (!divertedToChatNet) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, text: assistantText } : m))
+          );
+          notification(NotificationFeedbackType.Success);
 
-        const agentSettings = memorySettingsRef.current;
-        if (isNewSession && agentSettings.autoGenerateTitles) {
-          // 0.1.61: título sin modelo (sessionTitle.ts): no gasta batería ni
-          // borra de la caché el prefijo que reutiliza la siguiente pregunta.
-          const title = titleFromQuestion(query);
-          if (title) {
-            await setSessionTitle(sessionId, title).catch(() => {});
-            await refreshSessions();
+          const agentDurationMs = performance.now() - startTime;
+          recordQueryStats({
+            tokensGenerated,
+            durationMs: agentDurationMs,
+            ttftMs,
+            tokPerSec: 0,
+            peakRssBytes: peakRss.stop(),
+            timestamp: Date.now(),
+            totalLatencyMs: agentDurationMs,
+            modelId: baseModelId,
+            taskType: "chat",
+            adaptiveRoutingUsed: false,
+            retrievalUsed: false,
+            outcome: "success",
+          });
+          recordExecution({
+            modelId: baseModelId,
+            taskType: "chat",
+            adaptiveRoutingUsed: false,
+            retrievalUsed: false,
+            totalLatencyMs: agentDurationMs,
+            tokensGenerated,
+            outcome: "success",
+          }).catch(() => {});
+
+          if (assistantText.trim().length > 0) {
+            await finishAssistantMessage(sessionId, assistantId, assistantText);
+          } else {
+            await deleteMessage(assistantId);
           }
+
+          const agentSettings = memorySettingsRef.current;
+          if (isNewSession && agentSettings.autoGenerateTitles) {
+            // 0.1.61: título sin modelo (sessionTitle.ts): no gasta batería ni
+            // borra de la caché el prefijo que reutiliza la siguiente pregunta.
+            const title = titleFromQuestion(query);
+            if (title) {
+              await setSessionTitle(sessionId, title).catch(() => {});
+              await refreshSessions();
+            }
+          }
+          await pruneSessions(agentSettings.maxSavedSessions);
         }
-        await pruneSessions(agentSettings.maxSavedSessions);
       } catch (e: any) {
         peakRss.stop();
         setMessages((prev) =>
@@ -1342,12 +1368,19 @@ export function ChatScreen({
       } finally {
         // La rama agéntica retorna antes del finally general: limpia su
         // propio estado para no dejar el botón de enviar bloqueado.
-        setGenerating(false);
-        setStopping(false);
-        setProcessing(null);
-        setLiveTokPerSec(null);
+        // R-06 P2: si la red desvió el turno, el estado NO se limpia
+        // aquí: el pipeline de chat sigue con el turno vivo y su propio
+        // finally es quien lo cierra.
+        if (!divertedToChatNet) {
+          setGenerating(false);
+          setStopping(false);
+          setProcessing(null);
+          setLiveTokPerSec(null);
+        }
       }
       // Lectura en voz alta (Fase C): solo si el usuario la activó.
+      // (Con la red, assistantText va vacío y esto no se dispara: la
+      // lectura del pipeline de chat lee la respuesta final.)
       if (assistantText.trim().length > 0) {
         getReadAloudEnabled()
           .then((enabled) => {
@@ -1355,7 +1388,7 @@ export function ChatScreen({
           })
           .catch(() => {});
       }
-      return;
+      if (!divertedToChatNet) return;
     }
 
     try {
