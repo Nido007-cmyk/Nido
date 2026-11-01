@@ -46,6 +46,7 @@ export const GUIDE_MODULES: GuideModuleSpec[] = [
     id: "start",
     lessons: [
       { id: "chat", routes: ["smallTalk", "smallTalk", "smallTalk"] },
+      { id: "emergency", routes: ["knowledge"] },
       {
         id: "quick",
         tools: ["device_time", "calculate", "convert_units"],
@@ -75,7 +76,9 @@ export const GUIDE_MODULES: GuideModuleSpec[] = [
     id: "knowledge",
     lessons: [
       { id: "wikipedia", routes: ["knowledge", "knowledge"] },
+      { id: "research", routes: ["knowledge", "knowledge"] },
       { id: "documents", routes: ["knowledge"] },
+      { id: "scanned", routes: ["knowledge"] },
       { id: "multilingual" },
       { id: "linksFiles", tools: ["open_app", "read_picked_file"], routes: ["tool:openLink", "tool:pickFile"] },
     ],

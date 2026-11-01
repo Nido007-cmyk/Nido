@@ -1462,6 +1462,21 @@
             "tip": "Para todo o resto o NIDO usa seu modelo de IA, que vive no seu dispositivo: pode levar alguns segundos."
           },
           {
+            "id": "emergency",
+            "title": "Emergências",
+            "what": "A aba $t(tabs.emergency) traz os números verificados do seu país e guias rápidos de primeiros socorros: a um toque, sem internet e sem abrir o chat.",
+            "steps": [
+              "Escolha seu país em $t(emergency.pickCountry): os números saem do guia Local guardado no seu telefone, com a fonte e a data de verificação à mostra.",
+              "Toque no número grande ou em um serviço do mosaico: o discador do telefone abre com o número digitado. Quem liga é você, ao tocar em ligar.",
+              "Sem sair da aba, escreva o que está acontecendo em «$t(emergency.describeLabel)» e toque em Perguntar: a pergunta vai para o chat e é respondida com os guias do telefone.",
+              "Ou toque em um dos $t(emergency.quickGuides): RCP, hemorragia, engasgo, queimaduras, terremoto e furacão."
+            ],
+            "examples": [
+              "qual é o número de emergência no México?"
+            ],
+            "tip": "Sem o pacote Local (na $t(tabs.library), cerca de 0,2 MB) a aba não consegue mostrar os números do seu país. E se um dia você escrever uma emergência no chat, mesmo sem pacotes o NIDO responde com um texto de segurança fixo: não inventa uma resposta."
+          },
+          {
             "id": "quick",
             "title": "Hora, contas e conversões",
             "what": "Respostas exatas: a hora vem do dispositivo e as contas são feitas pelo app, não pelo modelo de IA.",
@@ -1556,6 +1571,22 @@
             "tip": "Pergunte normalmente; se não encontrar nada, tente a palavra-chave. Para ter 50.000 artigos baixe “Wikipedia Vital” em $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.knowledgeBase)."
           },
           {
+            "id": "research",
+            "title": "Pesquisar a fundo",
+            "what": "Um modo do chat para perguntas com várias partes: divide a pergunta em partes, busca cada uma no que o NIDO sabe sem internet e monta uma única resposta com suas fontes. Por isso demora mais que uma resposta normal.",
+            "steps": [
+              "Toque no chip «$t(chatScreen.researchChip)», ao lado do campo de escrita: ele fica ligado para suas próximas perguntas e é salvo como qualquer outra configuração.",
+              "Escreva e envie sua pergunta: você verá o trabalho por etapas — dividir a pergunta, pesquisar cada parte e montar a resposta.",
+              "Se demorar demais, interrompa com o botão de parar do chat: a mensagem fica marcada como «$t(chatScreen.stoppedByUser)».",
+              "Se com o chip ligado você escrever uma emergência, o NIDO não a pesquisa: ela sai pela rota de emergência, e o chip continua ligado para a próxima pergunta."
+            ],
+            "examples": [
+              "por que se formam os furacões e como um furacão se move pelo oceano?",
+              "compara o clima de Tucson com o de Phoenix no verão"
+            ],
+            "tip": "Use para perguntas complexas ou com comparações. Para um dado solto, pergunte sem o chip: o chat normal responde antes."
+          },
+          {
             "id": "documents",
             "title": "Seus documentos",
             "what": "Importe seus documentos e pergunte sobre eles.",
@@ -1567,7 +1598,22 @@
             "examples": [
               "o que meu documento diz sobre a renovação?"
             ],
-            "tip": "PDFs precisam de texto selecionável: digitalizações como imagem não podem ser lidas."
+            "tip": "PDFs digitalizados como imagem também são lidos: o NIDO reconhece o texto deles no telefone (a próxima lição explica)."
+          },
+          {
+            "id": "scanned",
+            "title": "Papéis e fotos: documentos digitalizados",
+            "what": "Um PDF digitalizado ou a foto de um papel impresso também podem ser importados: o NIDO lê o texto no seu telefone e depois você pergunta sobre ele como sobre qualquer documento.",
+            "steps": [
+              "Vá em $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.knowledgeBase) → $t(corpusSettingsTab.yourDocuments), como com qualquer documento.",
+              "Dê um nome à coleção e importe o PDF digitalizado ou a imagem: você verá a etapa «$t(personalDocumentsManager.stageOcr)» durante a leitura.",
+              "Pergunte no chat sobre o conteúdo: a resposta sai do seu documento e mostra a fonte.",
+              "PDFs protegidos por senha não podem ser importados: use antes uma cópia sem senha."
+            ],
+            "examples": [
+              "o que meu documento diz sobre a dose do xarope?"
+            ],
+            "tip": "Se uma página não pôde ser lida, a importação avisa com o nome do arquivo: nada falha em silêncio. A leitura é de texto impresso: manuscrito, fotos tortas ou borradas e tabelas podem sair errados. Se um número importa, compare com o papel."
           },
           {
             "id": "multilingual",

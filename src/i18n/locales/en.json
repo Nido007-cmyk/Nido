@@ -1462,6 +1462,21 @@
             "tip": "For everything else NIDO uses its AI model, which lives on your device: it can take a few seconds."
           },
           {
+            "id": "emergency",
+            "title": "Emergencies",
+            "what": "The $t(tabs.emergency) tab holds your country's checked numbers and quick first-aid guides: one tap away, no internet and no need to open the chat.",
+            "steps": [
+              "Pick your country with $t(emergency.pickCountry): the numbers come from the Local guide stored on your phone, with its source and check date on show.",
+              "Tap the big number or a service in the grid: your phone's dialer opens with the number typed in. You make the call by pressing call.",
+              "Right on the tab, type what's happening in “$t(emergency.describeLabel)” and tap Ask: the question goes to the chat and is answered from the guides on your phone.",
+              "Or tap one of the $t(emergency.quickGuides): CPR, bleeding, choking, burns, earthquake and hurricane."
+            ],
+            "examples": [
+              "what is the emergency number in Mexico?"
+            ],
+            "tip": "Without the Local pack (in the $t(tabs.library), about 0.2 MB) the tab can't show your country's numbers. And if you ever type an emergency in the chat, even with no packs NIDO answers with a fixed safety text: it doesn't make an answer up."
+          },
+          {
             "id": "quick",
             "title": "Time, math and conversions",
             "what": "Exact answers: the time comes from your device and the math is done by the app, not the AI model.",
@@ -1556,6 +1571,22 @@
             "tip": "Just ask normally; if nothing comes up, try the keyword. For 50,000 articles download “Wikipedia Vital” in $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.knowledgeBase)."
           },
           {
+            "id": "research",
+            "title": "Research in depth",
+            "what": "A chat mode for questions with several parts: it splits the question into parts, looks each one up in what NIDO knows offline and puts together a single answer with its sources. That's why it takes longer than a normal answer.",
+            "steps": [
+              "Tap the “$t(chatScreen.researchChip)” chip, next to the writing field: it stays on for your next questions, and it is saved like any other setting.",
+              "Type and send your question: you'll see the work in stages — breaking the question down, researching each part and putting the answer together.",
+              "If it takes too long, stop it with the chat's stop button: the message is marked “$t(chatScreen.stoppedByUser)”.",
+              "If you type an emergency while the chip is on, NIDO doesn't research it: it takes the emergency route, and the chip stays on for your next question."
+            ],
+            "examples": [
+              "why do hurricanes form and how does a hurricane move across the ocean?",
+              "compare summer weather in Tucson and Phoenix"
+            ],
+            "tip": "Use it for complex questions or comparisons. For a single fact, ask without the chip: the normal chat answers sooner."
+          },
+          {
             "id": "documents",
             "title": "Your documents",
             "what": "Import your documents and ask about them.",
@@ -1567,7 +1598,22 @@
             "examples": [
               "what does my document say about the renewal?"
             ],
-            "tip": "PDFs need selectable text: scanned images can't be read."
+            "tip": "Image-scanned PDFs are read too: NIDO recognizes their text on the phone (the next lesson explains how)."
+          },
+          {
+            "id": "scanned",
+            "title": "Paper and photos: scanned documents",
+            "what": "A scanned PDF or a photo of a printed page can be imported too: NIDO reads the text on your phone and then you ask about it like any other document.",
+            "steps": [
+              "Go to $t(chatScreen.drawerItems.settings) → $t(modelSetupScreen.sections.knowledgeBase) → $t(corpusSettingsTab.yourDocuments), just like any document.",
+              "Name the collection and import the scanned PDF or the image: you'll see the “$t(personalDocumentsManager.stageOcr)” step while it is read.",
+              "Ask in the chat about its content: the answer comes from your document and shows the source.",
+              "Password-protected PDFs can't be imported: use an unprotected copy first."
+            ],
+            "examples": [
+              "what does my document say about the syrup dose?"
+            ],
+            "tip": "If a page couldn't be read, the import warns you with the file's name: nothing fails in silence. Reading works on printed text: handwriting, crooked or blurry photos and tables can come out wrong. If a figure matters, check it against the paper."
           },
           {
             "id": "multilingual",
