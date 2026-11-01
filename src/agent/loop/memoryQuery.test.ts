@@ -136,6 +136,26 @@ describe("batería trilingüe: consultas genéricas EN/PT", () => {
 // que la rama 5 cita Y alimenta memoryGateHit, para que puerta y
 // respuesta nunca discrepen. Umbral aprobado: score >= 2, o score == 1
 // cuando la pregunta tiene un único término de contenido.
+describe("Pieza 4 (resto de ADV-M1) — la forma fusionada también pasa la puerta genérica", () => {
+  const MEM_MAMA = { facts: [{ content: "Tu mamá se llama Marta." }], people: [] };
+  it("isGenericMemoryQuestionShape des-fusiona: «¿cómo se llama mima?» es forma genérica", () => {
+    expect(isGenericMemoryQuestionShape("¿Cómo se llama mima?")).toBe(true);
+    expect(isGenericMemoryQuestionShape("¿Cómo se llama mi mamá?")).toBe(true);
+  });
+  it("memoryGateHit puntúa la pregunta des-fusionada: «mamá» es el término de contenido", () => {
+    // «cómo» y «llama» son stopwords: sin des-fusionar, «mima» no casa
+    // con nada (score 0); des-fusionada, «mamá» es el único término y
+    // la puerta entra por su regla de término único.
+    expect(memoryGateHit("¿Cómo se llama mima?", MEM_MAMA)).toBe(true);
+    expect(scoreMemoryFacts(MEM_MAMA, "¿Cómo se llama mima?")).toMatchObject({ score: 1, tokenCount: 1 });
+    expect(scoreMemoryFacts(MEM_MAMA, "¿Cómo se llama mi mamá?")).toMatchObject({ score: 1, tokenCount: 1 });
+  });
+  it("la vía principal no se mueve: la respuesta sigue citando el hecho", () => {
+    expect(answerMemoryQuery("¿Cómo se llama mi mamá?", MEM_MAMA, "es")).toBe("Tu mamá se llama Marta.");
+    expect(answerMemoryQuery("¿Cómo se llama mima?", MEM_MAMA, "es")).toBe("Tu mamá se llama Marta.");
+  });
+});
+
 describe("0.1.23 — scoreMemoryFacts / memoryGateHit / forma genérica", () => {
   it("scoreMemoryFacts devuelve el mejor hecho, su score y el conteo de términos", () => {
     expect(scoreMemoryFacts(MEM, "¿cuál es mi color favorito?")).toEqual({

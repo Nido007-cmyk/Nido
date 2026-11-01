@@ -187,7 +187,13 @@ export interface MemoryFactScore {
  * entra al loop — puerta y respuesta nunca discrepan (0.1.23).
  */
 export function scoreMemoryFacts(mem: MemoryQueryData, question: string): MemoryFactScore {
-  const tokens = fold(question)
+  // Pieza 4 (resto de ADV-M1): la pregunta se des-fusiona antes de
+  // puntuar («mima» → «mi mamá»), como ya hacía la vía de respuesta.
+  // Esta función es la ÚNICA fuente de puntuación (puerta, respuesta y
+  // testigo de ADV2): sin el plegado aquí, la sonda de la puerta no ve
+  // el término «mamá» y la forma fusionada no entra pese a tener el
+  // hecho guardado. Idempotente sobre texto ya des-fusionado.
+  const tokens = fold(unfuseMi(question))
     .split(/[^a-z0-9]+/)
     // >= 3: «car» y «cor» son términos de búsqueda reales en EN/PT.
     .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
@@ -396,7 +402,10 @@ export function memoryProbeWitness(question: string, mem: MemoryQueryData): bool
 }
 
 export function isGenericMemoryQuestionShape(userText: string): boolean {
-  const t = (userText ?? "").trim();
+  // Pieza 4 (resto de ADV-M1): paridad con la puerta real — la forma se
+  // juzga sobre el texto des-fusionado («¿cómo se llama mima?» trae
+  // «mi» tras des-fusionar), igual que isMemoryStyleQuery.
+  const t = unfuseMi((userText ?? "").trim());
   if (!t) return false;
   const isQuestion = /^\s*¿/.test(t) || /\?\s*$/.test(t);
   return isQuestion && FIRST_PERSON_RE.test(t);
@@ -448,7 +457,7 @@ const MI_FUSIONS: Record<string, string> = {
 const MI_FUSION_RE =
   /(^|\s)(mimam[aá]|mima|mipap[aá]|mipa|mimadre|mipadre|mihijo|mihija|mihermano|mihermana|miesposo|miesposa|miabuelo|miabuela)(?=\s|$|[?.,!])/gi;
 
-function unfuseMi(text: string): string {
+export function unfuseMi(text: string): string {
   return text.replace(MI_FUSION_RE, (_m, pre: string, w: string) => pre + (MI_FUSIONS[w.toLowerCase()] ?? w));
 }
 
