@@ -496,7 +496,9 @@
       "pdfPassword": "«{{name}}» está protegido con contraseña; no se puede importar.",
       "pdfUnreadable": "No se pudo leer «{{name}}».",
       "noText": "No se encontró texto en los archivos (¿un PDF escaneado como imagen?).",
-      "scannedNoOcr": "«{{name}}» parece un PDF escaneado (las páginas son imágenes) y esta versión de NIDO no trae reconocimiento de texto (OCR), así que no se pudo importar. Prueba con el PDF original con texto seleccionable o con un archivo de texto."
+      "scannedNoOcr": "«{{name}}» parece un PDF escaneado (las páginas son imágenes) y esta versión de NIDO no trae reconocimiento de texto (OCR), así que no se pudo importar. Prueba con el PDF original con texto seleccionable o con un archivo de texto.",
+      "imageNoOcr": "«{{name}}» es una imagen y esta versión de NIDO no trae reconocimiento de texto (OCR), así que no se pudo importar.",
+      "ocrFailed": "«{{name}}» no se pudo leer ni con el reconocimiento de texto (OCR)."
     },
     "chunkCount_one": "{{count}} fragmento",
     "chunkCount_other": "{{count}} fragmentos",
@@ -505,7 +507,7 @@
     "exportButton": "Exportar / Compartir",
     "exportFailedTitle": "Falló la exportación",
     "exporting": "Exportando…",
-    "hint": "Importa tus propias notas .txt, .md, .csv, .json o .pdf: se indexan solo en este dispositivo, nunca se suben a ningún lado. Los PDF necesitan texto seleccionable (las páginas escaneadas o solo con imágenes no se extraen, no hay OCR) y no se admiten PDF protegidos con contraseña.",
+    "hint": "Importa tus propias notas .txt, .md, .csv, .json o .pdf, o imágenes de texto impreso: se indexan solo en este aparato, nunca se suben a ningún sitio. Las páginas escaneadas de los PDF y las imágenes se leen con reconocimiento de texto (OCR) en el propio aparato, y los PDF con contraseña no están soportados.",
     "importFailedTitle": "Falló la importación",
     "namePlaceholder": "Nombre de la colección (p. ej., Especificaciones del proyecto)",
     "nameRequiredMessage": "Dale un nombre a esta colección antes de importar.",
@@ -515,6 +517,7 @@
     "removeConfirmTitle": "¿Eliminar esta colección?",
     "stageChunking": "Dividiendo en fragmentos…",
     "stageEmbedding": "Generando embeddings {{current}}/{{total}}…",
+    "stageOcr": "Reconociendo el texto (OCR)…",
     "stageReading": "Leyendo archivos…",
     "emptyTitle": "Tu biblioteca está vacía",
     "emptyDescription": "Agrega tus documentos y Nido podrá buscar en ellos sin conexión. Todo queda en tu dispositivo.",

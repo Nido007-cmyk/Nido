@@ -8,7 +8,8 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { extractPdfTextCapped, PdfTextError } from "./pdfText";
-import { isOcrAvailable } from "./ocr";
+import { isOcrAvailable, recognizeImageText, recognizeScannedPdfText, OCR_PROVENANCE_NOTE, OcrLang } from "./ocr";
+import { attachmentKind, KIND_SAMPLE_BYTES } from "./attachmentPolicy";
 import { embeddingEngine } from "../rag/embed";
 import {
   getDbEpoch,
@@ -33,12 +34,17 @@ import {
  * - .json: if it matches the same {title, source, body}[] shape used by the
  *   app's own downloadable corpus packs (assets/corpus/*.json), each entry
  *   is imported as its own doc; otherwise the whole file is chunked as text.
- * - .pdf: embedded/selectable text only, via modules/nido-pdf-text (Apache
- *   PDFBox-Android on-device, no network, no OCR). Scanned/image-only PDFs
- *   extract to empty text - there's no OCR step yet: the seam is
- *   src/services/ocr.ts and the native module's design (and why it is
- *   not built) is docs/OCR_DESIGN.md; an all-scanned import says so
- *   (error code scannedNoOcr) instead of a generic "no text".
+ * - .pdf: embedded/selectable text via modules/nido-pdf-text (Apache
+ *   PDFBox-Android on-device, no network). Scanned pages (the whole
+ *   PDF, or loose pages inside a mixed one) go through OCR via
+ *   modules/nido-ocr (src/services/ocr.ts; design in
+ *   docs/OCR_DESIGN.md) and enter as their own doc, marked with
+ *   its OCR provenance. In a build without the module, an
+ *   all-scanned import says so (error code scannedNoOcr) instead
+ *   of a generic "no text".
+ * - images (jpg/png/webp/gif/bmp/heic/heif/avif, by extension or by
+ *   their own bytes via attachmentPolicy): printed text read with
+ *   the same on-device OCR, provenance marked the same way.
  *   Password-protected PDFs are rejected with a clear error rather
  *   than attempted.
  */
@@ -53,7 +59,20 @@ export const SUPPORTED_MIME_TYPES = [
   "text/csv",
   "application/json",
   "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/bmp",
+  "image/heic",
+  "image/heif",
+  "image/avif",
 ];
+
+/** Extensiones que el selector puede dar a una imagen (el despacho final lo deciden los bytes, attachmentPolicy). */
+const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif", "avif"]);
+/** Extensiones de texto ya despachadas por su rama: no hace falta clasificarlas por magia. */
+const TEXT_DISPATCH_EXTENSIONS = new Set(["txt", "md", "markdown", "csv", "json", "html", "htm", "xml", "log"]);
 
 /**
  * Offensive audit (0.1.18): limits. A 300 MB log picked by mistake was read
@@ -67,7 +86,15 @@ export const MAX_IMPORT_CHUNKS = 4000;
 /** Más páginas que esto no se leen (un libro largo tiene ~1000). */
 export const MAX_IMPORT_PDF_PAGES = 3000;
 
-export type DocImportErrorCode = "tooLarge" | "tooManyChunks" | "pdfPassword" | "pdfUnreadable" | "noText" | "scannedNoOcr";
+export type DocImportErrorCode =
+  | "tooLarge"
+  | "tooManyChunks"
+  | "pdfPassword"
+  | "pdfUnreadable"
+  | "noText"
+  | "scannedNoOcr"
+  | "imageNoOcr"
+  | "ocrFailed";
 
 /** Error with a code the screen shows in the app language (message: for logs). */
 export class DocImportError extends Error {
@@ -82,7 +109,7 @@ export class DocImportError extends Error {
 }
 
 export interface ImportProgress {
-  stage: "reading" | "chunking" | "embedding";
+  stage: "reading" | "ocr" | "chunking" | "embedding";
   chunkIndex?: number;
   chunkCount?: number;
 }
@@ -136,7 +163,64 @@ function csvToText(raw: string): string {
     .join("\n");
 }
 
-type ParsedDoc = { title: string; source: string; body: string };
+type ParsedDoc = { title: string; source: string; body: string; ocr?: boolean };
+
+/** Lo que una importación va anotando para nombrar su error si al final no entra nada. */
+interface ImportSink {
+  emptyPdfNames: string[];
+  ocrFailedNames: string[];
+  noOcrImageNames: string[];
+}
+
+/** El entorno de reconocimiento de UNA importación: idioma de la app y si esta versión trae el módulo. */
+interface ImportEnv {
+  lang: OcrLang;
+  ocrAvailable: boolean;
+  onProgress?: (p: ImportProgress) => void;
+}
+
+const BASE64_SHAPE = /^[A-Za-z0-9+/=\s]+$/;
+
+function base64ToBytes(b64: string): Uint8Array {
+  const clean = b64.replace(/[^A-Za-z0-9+/=]/g, "");
+  const out = new Uint8Array(Math.floor((clean.length * 3) / 4));
+  let o = 0;
+  for (let i = 0; i + 4 <= clean.length; i += 4) {
+    const n =
+      (BASE64_ALPHABET.indexOf(clean[i]) << 18) |
+      (BASE64_ALPHABET.indexOf(clean[i + 1]) << 12) |
+      (BASE64_ALPHABET.indexOf(clean[i + 2]) << 6) |
+      BASE64_ALPHABET.indexOf(clean[i + 3]);
+    out[o++] = (n >> 16) & 0xff;
+    if (clean[i + 2] !== "=") out[o++] = (n >> 8) & 0xff;
+    if (clean[i + 3] !== "=") out[o++] = n & 0xff;
+  }
+  return out.slice(0, o);
+}
+
+const BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/**
+ * Los primeros bytes de un fichero, para clasificarlo por su magia
+ * (attachmentPolicy) cuando la extensión no lo despacha. Un lector
+ * que ignora las opciones de rango (el de las pruebas) devuelve el
+ * texto tal cual: sus primeros bytes sirven igual.
+ */
+async function readKindSample(uri: string): Promise<Uint8Array | null> {
+  try {
+    const raw = await FileSystem.readAsStringAsync(uri, {
+      encoding: "base64" as FileSystem.EncodingType,
+      position: 0,
+      length: KIND_SAMPLE_BYTES * 2,
+    });
+    if (!BASE64_SHAPE.test(raw.trim())) {
+      return new TextEncoder().encode(raw.slice(0, KIND_SAMPLE_BYTES));
+    }
+    return base64ToBytes(raw).slice(0, KIND_SAMPLE_BYTES);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * PDFs are binary - reading them with readAsStringAsync (used for every
@@ -179,12 +263,49 @@ async function parseFileContent(
   file: DocumentPicker.DocumentPickerAsset,
   fallbackTitle: string,
   chunksLeft: number = MAX_IMPORT_CHUNKS,
-  sink?: { emptyPdfNames: string[] }
+  sink?: ImportSink,
+  env?: ImportEnv
 ): Promise<ParsedDoc[]> {
   const filename = file.name;
-  const ext = filename.toLowerCase().split(".").pop();
+  const ext = filename.toLowerCase().split(".").pop() ?? "";
 
-  const limit = ext === "pdf" ? MAX_IMPORT_PDF_FILE_BYTES : MAX_IMPORT_TEXT_FILE_BYTES;
+  // El despacho lo decide la extensión conocida o, si no, los
+  // propios bytes del fichero (attachmentPolicy): una imagen
+  // llamada .bin o un PDF llamado .data van por su camino.
+  let kind: "pdf" | "image" | "text" | "unsupported" | null = null;
+  if (ext === "pdf") kind = "pdf";
+  else if (IMAGE_EXTENSIONS.has(ext)) kind = "image";
+  else if (TEXT_DISPATCH_EXTENSIONS.has(ext)) kind = "text";
+  else {
+    const sample = await readKindSample(file.uri);
+    if (sample) kind = attachmentKind(filename, sample).kind;
+  }
+
+  if (kind === "image") {
+    if (file.size != null && file.size > MAX_IMPORT_TEXT_FILE_BYTES) {
+      throw new DocImportError("tooLarge", `"${filename}" is too large (${file.size} bytes).`, {
+        name: filename,
+        max: String(Math.round(MAX_IMPORT_TEXT_FILE_BYTES / (1024 * 1024))),
+      });
+    }
+    // Una imagen entra por su texto impreso, leído en el aparato.
+    // Sin el módulo en esta versión, se anota para nombrarla si la
+    // importación entera queda vacía (error imageNoOcr).
+    if (!env?.ocrAvailable) {
+      sink?.noOcrImageNames.push(filename);
+      return [{ title: fallbackTitle, source: filename, body: "" }];
+    }
+    env.onProgress?.({ stage: "ocr" });
+    try {
+      const text = await recognizeImageText(file.uri, env.lang);
+      return [{ title: fallbackTitle, source: filename, body: text, ocr: true }];
+    } catch {
+      sink?.ocrFailedNames.push(filename);
+      return [{ title: fallbackTitle, source: filename, body: "" }];
+    }
+  }
+
+  const limit = kind === "pdf" ? MAX_IMPORT_PDF_FILE_BYTES : MAX_IMPORT_TEXT_FILE_BYTES;
   if (file.size != null && file.size > limit) {
     throw new DocImportError("tooLarge", `"${filename}" is too large (${file.size} bytes).`, {
       name: filename,
@@ -192,7 +313,7 @@ async function parseFileContent(
     });
   }
 
-  if (ext === "pdf") {
+  if (kind === "pdf") {
     const text = await extractPdf(file.uri, filename, maxCharsForChunks(chunksLeft) + OVERLAP_CHARS);
     // Un PDF sin capa de texto (escaneado) extrae vacío: se anota
     // para que una importación sin nada importable lo nombre
@@ -203,7 +324,25 @@ async function parseFileContent(
     // no dice cuánto texto sale. Se mide aquí, antes de trocear nada.
     const estimated = estimateChunkCount(text.trim().length);
     if (estimated > MAX_IMPORT_CHUNKS) throw tooManyChunks(estimated);
-    return [{ title: fallbackTitle, source: filename, body: text }];
+    const docs: ParsedDoc[] = [{ title: fallbackTitle, source: filename, body: text }];
+    // Las páginas escaneadas del PDF (todas si no hay capa de
+    // texto; las sueltas si es mixto) pasan por OCR cuando la
+    // versión trae el módulo, y el texto reconocido entra como
+    // documento propio, con su procedencia marcada al trocear.
+    if (env?.ocrAvailable) {
+      env.onProgress?.({ stage: "ocr" });
+      try {
+        const ocrText = await recognizeScannedPdfText(file.uri, env.lang);
+        if (ocrText.trim().length > 0) {
+          docs.push({ title: fallbackTitle, source: filename, body: ocrText, ocr: true });
+        }
+      } catch {
+        // El texto de la capa (si lo hay) sigue valiendo; si no lo
+        // hay, el nombre queda anotado para el error de vacío.
+        sink?.ocrFailedNames.push(filename);
+      }
+    }
+    return docs;
   }
 
   const raw = await FileSystem.readAsStringAsync(file.uri);
@@ -309,13 +448,24 @@ async function importDocumentsSerial(
 
   onProgress?.({ stage: "reading" });
   const allDocs: ParsedDoc[] = [];
-  const sink = { emptyPdfNames: [] as string[] };
+  const sink: ImportSink = { emptyPdfNames: [], ocrFailedNames: [], noOcrImageNames: [] };
+  // El reconocimiento se prepara una vez por importación: si esta
+  // versión no trae el módulo, el idioma ni se lee (el camino sin
+  // OCR es exactamente el de siempre). models/settings se importa
+  // aquí dentro a propósito: cargarlo arriba arrastraría su
+  // superficie de ficheros a los mundos de prueba del importador.
+  const ocrAvailable = await isOcrAvailable();
+  let lang: OcrLang = "en";
+  if (ocrAvailable) {
+    lang = (await (await import("../models/settings")).getLanguageId()) as OcrLang;
+  }
+  const env: ImportEnv = { lang, ocrAvailable, onProgress };
   let totalSizeBytes = 0;
   let estimatedChunks = 0;
   for (const file of files) {
     totalSizeBytes += file.size ?? 0;
     const fallbackTitle = file.name.replace(/\.[^.]+$/, "");
-    const docs = await parseFileContent(file, fallbackTitle, MAX_IMPORT_CHUNKS - estimatedChunks, sink);
+    const docs = await parseFileContent(file, fallbackTitle, MAX_IMPORT_CHUNKS - estimatedChunks, sink, env);
     // Se corta en cuanto la suma pasa del tope, sin leer los archivos que
     // quedan ni trocear lo leído.
     for (const d of docs) estimatedChunks += estimateChunkCount(d.body.trim().length);
@@ -327,7 +477,12 @@ async function importDocumentsSerial(
   const chunks: { chunkId: string; docId: string; title: string; body: string; source: string }[] = [];
   allDocs.forEach((doc, docIndex) => {
     const docId = `${collectionId}-doc${docIndex}-${slug(doc.title)}`;
-    const pieces = chunkText(doc.body);
+    // El texto reconocido lleva su procedencia DENTRO del cuerpo:
+    // viaja con cada trozo y con sus citas (el OCR puede
+    // equivocarse; quien lo lea, que lo sepa).
+    const body =
+      doc.ocr && doc.body.trim().length > 0 ? `${OCR_PROVENANCE_NOTE[env.lang]}\n\n${doc.body}` : doc.body;
+    const pieces = chunkText(body);
     pieces.forEach((body, i) => {
       chunks.push({
         chunkId: `${docId}-c${i}`,
@@ -340,12 +495,26 @@ async function importDocumentsSerial(
   });
 
   // Nothing to import (scanned PDF without text, empty file): say so instead
-  // of creating an empty collection that looks imported. If a PDF came
-  // back empty and this build has no OCR, the error names the cause:
-  // the day modules/nido-ocr exists, the OCR pass over those pages
-  // plugs in before this point and this branch stops firing for them.
+  // of creating an empty collection that looks imported. The error
+  // names the cause: an image in a build without OCR, a recognition
+  // that failed, a scanned PDF in a build without OCR, or plain
+  // no text — in that order.
   if (chunks.length === 0) {
-    const code = emptyImportErrorCode(sink.emptyPdfNames, await isOcrAvailable());
+    if (sink.noOcrImageNames.length > 0) {
+      throw new DocImportError(
+        "imageNoOcr",
+        `"${sink.noOcrImageNames[0]}" is an image and this build has no OCR.`,
+        { name: sink.noOcrImageNames[0] }
+      );
+    }
+    if (sink.ocrFailedNames.length > 0) {
+      throw new DocImportError(
+        "ocrFailed",
+        `"${sink.ocrFailedNames[0]}" couldn't be read even with OCR.`,
+        { name: sink.ocrFailedNames[0] }
+      );
+    }
+    const code = emptyImportErrorCode(sink.emptyPdfNames, ocrAvailable);
     throw new DocImportError(
       code,
       code === "scannedNoOcr"

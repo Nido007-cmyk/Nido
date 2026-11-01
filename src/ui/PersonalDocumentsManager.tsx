@@ -157,6 +157,7 @@ export function PersonalDocumentsManager() {
         {importProgress && (
           <Text style={styles.progressText}>
             {importProgress.stage === "reading" && t("personalDocumentsManager.stageReading")}
+            {importProgress.stage === "ocr" && t("personalDocumentsManager.stageOcr")}
             {importProgress.stage === "chunking" && t("personalDocumentsManager.stageChunking")}
             {importProgress.stage === "embedding" &&
               t("personalDocumentsManager.stageEmbedding", {

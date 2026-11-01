@@ -245,9 +245,11 @@
       "pdfPassword": "“{{name}}” é protegido por senha e não pode ser importado.",
       "pdfUnreadable": "Não foi possível ler “{{name}}”.",
       "noText": "Nenhum texto encontrado nos arquivos (um PDF escaneado como imagem?).",
-      "scannedNoOcr": "“{{name}}” parece um PDF digitalizado (as páginas são imagens) e esta versão do NIDO não traz reconhecimento de texto (OCR), por isso não foi possível importar. Tente o PDF original com texto selecionável ou um arquivo de texto."
+      "scannedNoOcr": "“{{name}}” parece um PDF digitalizado (as páginas são imagens) e esta versão do NIDO não traz reconhecimento de texto (OCR), por isso não foi possível importar. Tente o PDF original com texto selecionável ou um arquivo de texto.",
+      "imageNoOcr": "“{{name}}” é uma imagem e esta versão do NIDO não traz reconhecimento de texto (OCR), por isso não foi possível importar.",
+      "ocrFailed": "“{{name}}” não pôde ser lido nem com o reconhecimento de texto (OCR)."
     },
-    "hint": "Importe suas próprias notas em .txt, .md, .csv, .json ou .pdf — indexadas apenas neste dispositivo, nunca enviadas a lugar nenhum. PDFs precisam de texto selecionável (páginas digitalizadas/somente imagem não são extraídas — não há OCR), e PDFs protegidos por senha não são suportados.",
+    "hint": "Importe suas próprias notas em .txt, .md, .csv, .json ou .pdf, ou imagens de texto impresso — indexadas apenas neste aparelho, nunca enviadas a lugar nenhum. As páginas digitalizadas dos PDFs e as imagens são lidas com reconhecimento de texto (OCR) no próprio aparelho, e PDFs protegidos por senha não são suportados.",
     "nameRequiredTitle": "Nome obrigatório",
     "nameRequiredMessage": "Dê um nome a esta coleção antes de importar.",
     "importFailedTitle": "Falha na importação",
@@ -257,6 +259,7 @@
     "namePlaceholder": "Nome da coleção (ex.: Especificações do Projeto)",
     "pickButton": "Selecionar Arquivos e Importar",
     "stageReading": "Lendo arquivos…",
+    "stageOcr": "Reconhecendo o texto (OCR)…",
     "stageChunking": "Dividindo em trechos…",
     "stageEmbedding": "Gerando embeddings {{current}}/{{total}}…",
     "docCount_one": "{{count}} documento",

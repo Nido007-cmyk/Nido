@@ -245,9 +245,11 @@
       "pdfPassword": "“{{name}}” is password-protected and can't be imported.",
       "pdfUnreadable": "Couldn't read “{{name}}”.",
       "noText": "No text found in the files (a PDF scanned as an image?).",
-      "scannedNoOcr": "“{{name}}” looks like a scanned PDF (its pages are images) and this build of NIDO has no text recognition (OCR), so it couldn't be imported. Try the original PDF with selectable text, or a text file."
+      "scannedNoOcr": "“{{name}}” looks like a scanned PDF (its pages are images) and this build of NIDO has no text recognition (OCR), so it couldn't be imported. Try the original PDF with selectable text, or a text file.",
+      "imageNoOcr": "“{{name}}” is an image and this build of NIDO has no text recognition (OCR), so it couldn't be imported.",
+      "ocrFailed": "“{{name}}” could not be read even with text recognition (OCR)."
     },
-    "hint": "Import your own .txt, .md, .csv, .json, or .pdf notes — indexed on this device only, never uploaded anywhere. PDFs need selectable text (scanned/image-only pages won't extract — there's no OCR), and password-protected PDFs aren't supported.",
+    "hint": "Import your own .txt, .md, .csv, .json, or .pdf notes, or images of printed text — indexed on this device only, never uploaded anywhere. Scanned PDF pages and images are read with on-device text recognition (OCR), and password-protected PDFs aren't supported.",
     "nameRequiredTitle": "Name required",
     "nameRequiredMessage": "Give this collection a name before importing.",
     "importFailedTitle": "Import failed",
@@ -257,6 +259,7 @@
     "namePlaceholder": "Collection name (e.g. Project Specs)",
     "pickButton": "Pick Files & Import",
     "stageReading": "Reading files…",
+    "stageOcr": "Recognizing text (OCR)…",
     "stageChunking": "Splitting into chunks…",
     "stageEmbedding": "Embedding {{current}}/{{total}}…",
     "docCount_one": "{{count}} doc",

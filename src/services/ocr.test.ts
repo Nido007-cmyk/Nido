@@ -5,7 +5,16 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { _setOcrNativeForTests, isOcrAvailable, recognizeImageText, TESSDATA_LANG } from "./ocr";
+import {
+  _setOcrNativeForTests,
+  isOcrAvailable,
+  OCR_PROVENANCE_NOTE,
+  recognizeImageText,
+  recognizePdfPagesText,
+  recognizeScannedPdfText,
+  sanitizeOcrPages,
+  TESSDATA_LANG,
+} from "./ocr";
 
 describe("la costura de OCR", () => {
   it("sin módulo nativo (todas las versiones actuales): no disponible y error UNAVAILABLE", async () => {
@@ -44,5 +53,60 @@ describe("la costura de OCR", () => {
       message: "tesseract init failed",
     });
     _setOcrNativeForTests(null);
+  });
+});
+
+describe("la costura de páginas de PDF (carril OCR 2026-10-31)", () => {
+  it("sin módulo o sin la entrada de páginas: UNAVAILABLE", async () => {
+    _setOcrNativeForTests(null);
+    await expect(recognizeScannedPdfText("file:///doc.pdf", "es")).rejects.toMatchObject({ code: "UNAVAILABLE" });
+    _setOcrNativeForTests({ recognize: async () => "" });
+    await expect(recognizeScannedPdfText("file:///doc.pdf", "es")).rejects.toMatchObject({ code: "UNAVAILABLE" });
+    _setOcrNativeForTests(null);
+  });
+
+  it("con módulo, pasa las páginas saneadas y el código tessdata", async () => {
+    const seen: Array<[string, number[], string]> = [];
+    _setOcrNativeForTests({
+      recognize: async () => "",
+      recognizePdfPages: async (uri, pages, tessdataLang) => {
+        seen.push([uri, pages, tessdataLang]);
+        return "páginas reconocidas";
+      },
+    });
+    await expect(recognizePdfPagesText("file:///doc.pdf", [3, 1, 3, -2, 2.5], "es")).resolves.toBe(
+      "páginas reconocidas",
+    );
+    expect(seen).toEqual([["file:///doc.pdf", [1, 3], "spa"]]);
+    await expect(recognizeScannedPdfText("file:///doc.pdf", "pt")).resolves.toBe("páginas reconocidas");
+    expect(seen[1]).toEqual(["file:///doc.pdf", [], "por"]);
+    _setOcrNativeForTests(null);
+  });
+
+  it("un fallo del módulo en páginas se traduce a OCR_FAILED", async () => {
+    _setOcrNativeForTests({
+      recognize: async () => "",
+      recognizePdfPages: async () => {
+        throw new Error("renderer died");
+      },
+    });
+    await expect(recognizeScannedPdfText("file:///doc.pdf", "en")).rejects.toMatchObject({
+      code: "OCR_FAILED",
+      message: "renderer died",
+    });
+    _setOcrNativeForTests(null);
+  });
+
+  it("sanitizeOcrPages aplica el tope de la política de adjuntos (30)", () => {
+    const many = Array.from({ length: 45 }, (_, i) => i);
+    expect(sanitizeOcrPages(many)).toHaveLength(30);
+    expect(sanitizeOcrPages([])).toEqual([]);
+  });
+
+  it("la marca de procedencia existe en los tres idiomas y nombra el OCR", () => {
+    for (const lang of ["es", "en", "pt"] as const) {
+      expect(OCR_PROVENANCE_NOTE[lang]).toContain("OCR");
+      expect(OCR_PROVENANCE_NOTE[lang].length).toBeGreaterThan(20);
+    }
   });
 });
