@@ -36,7 +36,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { classifyIntent } from "./intent";
-import { isGenericMemoryQuestionShape, memoryGateHit } from "./memoryQuery";
+import { isGenericMemoryQuestionShape, memoryGateHit, memoryFullCoverageHit } from "./memoryQuery";
 import { runAgentLoop, agentExitNeedsGroundingNet, type AgentEngine } from "./agentLoop";
 import { isFactualQuestion, noSourcesAnswer } from "../../rag/grounding";
 import { choiceTurnKind, resolveChoiceReply, type ChoiceStore } from "./toolRouter";
@@ -166,9 +166,20 @@ async function send(
 
   let intent = classifyIntent(text);
   let probedSnapshot: ReturnType<typeof snapshotFromStore> | null = null;
-  if (intent === "conversar" && !opts.deepResearch && isGenericMemoryQuestionShape(text)) {
+  // ADV2-10: espejo EXACTO de la sonda real (ChatScreen.tsx:1138–1151):
+  // la snapshot se carga con la forma genérica O con forma de pregunta,
+  // y la promoción es (forma && hit fuerte) || cobertura total. Antes
+  // el espejo solo conocía la primera pierna y la familia de cobertura
+  // — la que promueve sin primera persona — era invisible para esta
+  // batería. Criterio permanente: toda rama nueva de la sonda real
+  // entra a este espejo en la misma tanda que la crea.
+  if (
+    intent === "conversar" &&
+    !opts.deepResearch &&
+    (isGenericMemoryQuestionShape(text) || /^\s*¿|\?\s*$/.test(text))
+  ) {
     const snap = snapshotFromStore();
-    if (memoryGateHit(text, snap)) {
+    if ((isGenericMemoryQuestionShape(text) && memoryGateHit(text, snap)) || memoryFullCoverageHit(text, snap)) {
       intent = "recordar";
       probedSnapshot = snap;
     }
@@ -897,6 +908,33 @@ describe("composición — Adversaria H-06: la memoria servida en prosa sobreviv
     const t = await send("¿Qué le compré a mi esposa el año pasado?", "es", engine, { netSources: [DOCUMENTO] });
     expect(t.netted).toBeFalsy();
     expect(t.response).toBe("Según lo que me contaste: «Le compré una pulsera a mi esposa el año pasado».");
+    expect(engine.calls).toHaveLength(0);
+  });
+});
+
+describe("composición — ADV2-10: el espejo aprende la cobertura total de la sonda real", () => {
+  it("P1: «¿Dónde está la clave del wifi?» entra por cobertura y la capa determinista cita el hecho", async () => {
+    // La pregunta no lleva primera persona: la puerta real la promueve
+    // porque TODOS sus términos viven en un hecho guardado
+    // (memoryFullCoverageHit, ChatScreen.tsx:1145). Antes de esta
+    // pieza el espejo ni importaba esa función: la familia entera era
+    // invisible para la batería de composición (ADV2-10).
+    data.facts.push({ content: "La clave del wifi está apuntada en un papel: 4829", category: "general" });
+    const engine = fakeEngine();
+    const t = await send("¿Dónde está la clave del wifi?", "es", engine);
+    expect(t.route).toBe("agent");
+    expect(t.netted).toBeFalsy();
+    expect(t.response).toBe("Según lo que me contaste: «La clave del wifi está apuntada en un papel: 4829».");
+    expect(engine.calls).toHaveLength(0);
+  });
+
+  it("P4 (negativo): la misma pregunta contra el hecho de la clave del coche NO promueve en ningún mundo", async () => {
+    // Cobertura parcial (clave sí, wifi no): ni la puerta real ni el
+    // espejo la suben; el turno sigue su ruta de conocimiento.
+    data.facts.push({ content: "La clave del coche está en el gancho de la entrada", category: "general" });
+    const engine = fakeEngine();
+    const t = await send("¿Dónde está la clave del wifi?", "es", engine);
+    expect(t.route).toBe("knowledge");
     expect(engine.calls).toHaveLength(0);
   });
 });
