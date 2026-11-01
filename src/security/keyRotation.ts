@@ -185,98 +185,6 @@ export async function rotateAllDatabaseKeys(
 }
 
 /**
- * Rota la DEK de la base de datos.
- * @param dbPath Ruta a la base de datos
- * @param openDb Función que abre la DB con un DEK hex (inyectable para tests)
- * @param storeDek Función que guarda el DEK en Keystore (inyectable para tests)
- * @param stagingPath Ruta del archivo de staging (inyectable para tests)
- */
-export async function rotateDatabaseKey(
-  dbPath: string,
-  openDb: (path: string, dekHex: string) => Promise<{ exec: (sql: string) => Promise<void>; close: () => Promise<void> }>,
-  storeDek: (dekHex: string) => Promise<void>,
-  stagingPath?: string,
-  unlockReason: string = DEFAULT_UNLOCK_REASON,
-  stagingKeys: StagingKeyStore = secureStagingKeyStore
-): Promise<RekeyResult> {
-  // 1. Biométrico obligatorio.
-  // FIX 2026-10-09: distinguir cancelación de error real.
-  try {
-    await requireUnlock(unlockReason);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "";
-    if (/cancel|cancelled|dismissed|user_cancel/i.test(msg)) {
-      return { ok: false, error: "Autenticación cancelada", code: "authCancelled" };
-    }
-    return { ok: false, error: `No se pudo autenticar: ${msg || "error desconocido"}`, code: "authFailed" };
-  }
-
-  // 2. Cargar DEK actual
-  const oldDekHex = await getDatabaseKeyHex();
-  if (!oldDekHex) {
-    return { ok: false, error: "No hay clave actual (fail-closed)", code: "noKey" };
-  }
-
-  // 3. Generar nuevo DEK
-  const { getRandomBytesAsync } = await import("expo-crypto");
-  const newDekBytes = await getRandomBytesAsync(32);
-  const newDekHex = Array.from(newDekBytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  newDekBytes.fill(0);
-
-  // FIX 2026-10-09 (CR-3): staging antes del rekey. Si la app crashea entre
-  // el rekey y el keystore write, el staging permite recuperar.
-  const FS = await import("expo-file-system/legacy");
-  const staging = stagingPath ?? `${FS.documentDirectory}rekey-staging.json`;
-  try {
-    await FS.writeAsStringAsync(staging, await sealStaging(JSON.stringify({
-      newDekHex,
-      dbPath,
-      at: Date.now(),
-    }), stagingKeys));
-  } catch {
-    return { ok: false, error: "No se pudo crear el staging (fail-closed)", code: "staging" };
-  }
-
-  let db: { exec: (sql: string) => Promise<void>; close: () => Promise<void> } | null = null;
-  try {
-    // 4. Abrir con DEK viejo y hacer rekey
-    db = await openDb(dbPath, oldDekHex);
-    await db.exec(`PRAGMA rekey = "x'${newDekHex}'";`);
-
-    // 5. Guardar nuevo DEK en Keystore
-    try {
-      await storeDek(newDekHex);
-    } catch (storeErr) {
-      try {
-        await db.exec(`PRAGMA rekey = "x'${oldDekHex}'";`);
-      } catch { /* noop */ }
-      // FIX 2026-10-09 (CR3-NEW2): borrar staging en el path de revert.
-      // Si no, un checkStaleRekeyStaging posterior escribiría el DEK nuevo
-      // en el keystore mientras la DB tiene el viejo → brick.
-      try {
-        await FS.deleteAsync(staging, { idempotent: true });
-      } catch { /* noop */ }
-      return { ok: false, error: "No se pudo guardar la nueva clave; se revirtió el cambio", code: "storeFailed" };
-    }
-
-    // 6. Éxito: borrar staging
-    try {
-      await FS.deleteAsync(staging, { idempotent: true });
-    } catch { /* noop */ }
-
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Error desconocido" };
-  } finally {
-    if (db) {
-      try { await db.close(); } catch { /* noop */ }
-    }
-  }
-}
-
-/**
  * FIX 2026-10-09 (CR-3, CR3-NEW): verifica si hay un staging pendiente de una
  * rotación interrumpida por crash.
  *
@@ -307,7 +215,7 @@ export async function checkStaleRekeyStaging(
     const newDekHex = parsed.newDekHex;
     const oldDekHex: unknown = parsed.oldDekHex;
     // FIX 2026-10-09 (CR2-MULTIDB): staging puede tener dbPaths (array) o
-    // dbPath (string, formato legacy de rotateDatabaseKey). Normalizar.
+    // dbPath (string, formato legacy de la rotación unitaria retirada). Normalizar.
     const dbPaths: string[] = Array.isArray(parsed.dbPaths)
       ? parsed.dbPaths
       : (typeof parsed.dbPath === "string" ? [parsed.dbPath] : []);
