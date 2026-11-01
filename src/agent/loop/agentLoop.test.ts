@@ -591,6 +591,76 @@ describe("R-06 P2 (ronda 0.1.68): la red a la salida del agente", () => {
   });
 });
 
+describe("Adversaria H-06 (2026-11-01): la red no descarta la memoria servida en prosa", () => {
+  const prose = (over: Partial<AgentLoopResult> = {}): AgentLoopResult => ({
+    response: "Le compraste una pulsera a tu esposa el año pasado.",
+    intent: "conversar",
+    toolUses: [],
+    routing: { route: "model", modelTools: [], retry: null, fallback: null },
+    ...over,
+  });
+
+  it("la sonda de la adversaria: recuerdo respondido desde la memoria inyectada sobrevive con testigo", () => {
+    // La salida exacta de la sonda: prosa del modelo, sin herramientas
+    // ni respaldo, ante la pregunta de recuerdo. El turno entró como
+    // memoria (el llamador lo rutó «recordar»): la prosa respondía al
+    // suelo inyectado en el prompt, no al vacío — no se desvía.
+    expect(
+      agentExitNeedsGroundingNet(prose(), "¿Qué le compré a mi esposa el año pasado?", true)
+    ).toBe(false);
+  });
+
+  it("la misma sonda SIN testigo sigue cayendo a la red (control: la trampa original no se abre)", () => {
+    expect(agentExitNeedsGroundingNet(prose(), "¿Qué le compré a mi esposa el año pasado?")).toBe(true);
+    expect(agentExitNeedsGroundingNet(prose(), "¿Qué le compré a mi esposa el año pasado?", false)).toBe(true);
+  });
+
+  it("gemelas de recuerdo en inglés y portugués: con testigo sobreviven, sin testigo caen", () => {
+    expect(agentExitNeedsGroundingNet(prose(), "What did I buy my wife last year?", true)).toBe(false);
+    expect(agentExitNeedsGroundingNet(prose(), "What did I buy my wife last year?")).toBe(true);
+    expect(agentExitNeedsGroundingNet(prose(), "O que eu comprei para minha esposa no ano passado?", true)).toBe(false);
+    expect(agentExitNeedsGroundingNet(prose(), "O que eu comprei para minha esposa no ano passado?")).toBe(true);
+  });
+
+  it("la exención no es un salvoconducto por lo que el modelo escriba: prosa que CITA la memoria ante una pregunta de documento, sin testigo, cae", () => {
+    // El testigo nace de la ruta del llamador, no del texto: una
+    // respuesta que se envuelve en «según tu memoria…» ante la
+    // pregunta del documento de la ronda sigue cayendo igual.
+    const wrapped = prose({ response: "Según tu memoria, la cita es el martes a las 9:30." });
+    expect(agentExitNeedsGroundingNet(wrapped, "¿Qué día y a qué hora es la cita?")).toBe(true);
+    expect(agentExitNeedsGroundingNet(wrapped, "¿Qué día y a qué hora es la cita?", false)).toBe(true);
+  });
+
+  it("la costura dura: pregunta de hechos sobre un hecho guardado, respondida MAL en prosa — la red no juzga contenido (decisión asentada)", () => {
+    // La memoria dice «15 de marzo»; el modelo sirvió «20 de marzo»
+    // desde el prompt que SÍ traía el hecho. La red juzga si había
+    // suelo, no si la lectura fue fiel: suelo había (la memoria
+    // inyectada), así que no desvía — desviar no corrige la fecha,
+    // porque el pipeline de chat tampoco ve la memoria y cambiaría
+    // una respuesta probablemente buena por un «no lo sé» seguro. La
+    // exactitud literal de las formas canónicas es de la capa
+    // determinista (answerMemoryQuery cita el hecho verbatim).
+    const wrong = prose({ response: "El cumpleaños de tu madre es el 20 de marzo." });
+    expect(agentExitNeedsGroundingNet(wrong, "¿Cuándo es el cumpleaños de mi madre?", true)).toBe(false);
+  });
+
+  it("la exención es solo de la rama de prosa: respaldo + pregunta de hechos cae aunque el turno sea de memoria", () => {
+    // Un respaldo no es una respuesta de memoria que salvar: es el
+    // aviso de fallo del loop. Con testigo y todo, la regla de P2
+    // para respaldos queda intacta.
+    const memFailed = prose({
+      routing: { route: "model", modelTools: [], retry: "nudge", fallback: "memoryFailed" },
+    });
+    expect(agentExitNeedsGroundingNet(memFailed, "¿Qué día es la revisión del coche?", true)).toBe(true);
+    const actFailed = prose({
+      routing: { route: "model", modelTools: [], retry: "nudge", fallback: "actionFailed" },
+    });
+    expect(
+      agentExitNeedsGroundingNet(actFailed, "¿Cuál es el número de teléfono para cambiar la cita?", true)
+    ).toBe(true);
+  });
+});
+
 describe("P1.2 intent-based sampling presets", () => {
   it("conversar -> preset chat", async () => {
     const engine = fakeEngine(["Hola, ¿en qué te ayudo?"]);

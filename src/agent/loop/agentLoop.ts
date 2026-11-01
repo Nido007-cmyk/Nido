@@ -276,12 +276,37 @@ export function hasQuestionShape(text: string): boolean {
  *     no se pudo ejecutar conserva su fracaso honesto, pero una
  *     pregunta de hechos con ese texto es un desvío mal clasificado
  *     por definición, y la red de chat es su sitio.
+ *
+ * Adversaria H-06 (2026-11-01): la rama de prosa tiene UNA exención, y
+ * se gana por la FORMA del turno, nunca por lo que el modelo escribió.
+ * El loop inyecta la memoria guardada en el prompt: ante un turno que
+ * el llamador rutó como memoria — classifyIntent dijo «recordar», o la
+ * sonda de memoria lo subió con hit (la snapshot probó que el dato
+ * guardado existe) — la prosa sin herramientas puede estar respondiendo
+ * a ESE suelo, no inventando sin suelo. Desviarla la re-responde un
+ * pipeline que no ve la memoria: la red castigaba justo las preguntas
+ * para las que la memoria existe. El testigo (memoryTurn) lo calcula
+ * el llamador desde su decisión de ruta, anterior a la generación: ni
+ * el texto de la respuesta ni nada que el modelo diga puede fabricarlo.
+ * La exención es SOLO de la rama de prosa: un respaldo no es una
+ * respuesta de memoria que salvar (es el aviso de fallo del propio
+ * loop) y sigue cayendo por la regla de hechos, lleve el testigo o no.
+ * Y la red sigue sin juzgar CONTENIDO: si el modelo lee mal un hecho
+ * guardado que tenía delante, ese error es de la familia ordinaria del
+ * modelo — la exactitud literal de las formas canónicas ya es trabajo
+ * de la capa determinista (answerMemoryQuery cita el hecho); desviar
+ * no lo corrige, porque el pipeline de chat tampoco ve la memoria.
  */
-export function agentExitNeedsGroundingNet(result: AgentLoopResult, query: string): boolean {
+export function agentExitNeedsGroundingNet(
+  result: AgentLoopResult,
+  query: string,
+  memoryTurn = false
+): boolean {
   if (result.toolUses.length > 0) return false;
   const routing = result.routing;
   if (!routing || routing.route !== "model") return false;
   if (routing.fallback) return isFactualQuestion(query);
+  if (memoryTurn) return false;
   return hasQuestionShape(query);
 }
 

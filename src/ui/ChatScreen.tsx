@@ -1293,7 +1293,15 @@ export function ChatScreen({
         // clasificador ocurrió y la telemetría lo sigue contando.
         // Si el usuario detuvo esta generación, la red no se aplica:
         // no nace una generación nueva a su espalda.
-        if (!stopRequestedRef.current && agentExitNeedsGroundingNet(agentResult, query)) {
+        // Adversaria H-06 (2026-11-01): el testigo de turno de memoria
+        // es ESTA decisión de ruta (agentIntent === "recordar": el
+        // clasificador lo dijo, o la sonda de arriba lo subió con hit
+        // y probedMemory guarda la snapshot que lo probó). Con él, la
+        // prosa que el modelo sirvió desde la memoria inyectada en su
+        // prompt no se descarta: el pipeline de chat no ve la memoria
+        // y la re-respondería a ciegas. La elección pendiente sube a
+        // «actuar», nunca a «recordar»: su red queda como estaba.
+        if (!stopRequestedRef.current && agentExitNeedsGroundingNet(agentResult, query, agentIntent === "recordar")) {
           divertedToChatNet = true;
           assistantText = "";
         }

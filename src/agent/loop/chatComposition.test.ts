@@ -28,6 +28,9 @@
  *      la red de chat: recuperar (aquí, las fuentes que el test declara
  *      en netSources); con fuentes, la respuesta fundada; sin fuentes
  *      y pregunta de hechos, el «no lo sé» determinista.
+ *      Adversaria H-06: el espejo pasa el mismo testigo que ChatScreen
+ *      (la intención de ruta del turno: «recordar» = memoria), y la
+ *      prosa servida desde la memoria inyectada no se desvía.
  * Si nada abre, el turno va a «conocimiento» (aquí: ruta marcada, sin
  * motor — la ruta RAG/modelo no es el objeto de estos tests).
  */
@@ -43,6 +46,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { classifyTask, isRetrievalIrrelevant } from "../../routing/classify";
+import { setDisabledTools } from "../tools/toolPermissions";
 
 /** 0.1.25: la elección pendiente compartida por los turnos de un test. */
 const choiceStore: ChoiceStore = { current: null };
@@ -203,7 +207,9 @@ async function send(
   // la vía fundada sirve la frase de la fuente (como sirvió la ruta
   // fija verificada la pregunta de la ronda); sin fuentes y pregunta
   // de hechos, el «no lo sé» de grounding.ts, sin generar.
-  if (agentExitNeedsGroundingNet(result, text)) {
+  // Adversaria H-06: el testigo es la intención de ruta de ESTE espejo
+  // (tras la sonda), como en ChatScreen es agentIntent.
+  if (agentExitNeedsGroundingNet(result, text, intent === "recordar")) {
     const sources = opts.netSources ?? [];
     if (sources.length > 0) {
       return { route: "agent" as Route, response: sources.join("\n"), toolUses: result.toolUses, loopResponse: result.response, netted: true };
@@ -843,5 +849,54 @@ describe("composición — R-06 P2: la red a la salida del agente", () => {
     expect(t.netted).toBeFalsy();
     expect(t.response).toBeTruthy();
     expect(t.response).not.toContain("520-555-0147");
+  });
+});
+
+describe("composición — Adversaria H-06: la memoria servida en prosa sobrevive a la red", () => {
+  const DOCUMENTO =
+    "CLÍNICA SAN RAFAEL — Recordatorio de cita. Su cita es el martes 10 de noviembre de 2026 a las 9:30 de la mañana, en la sala 214, segundo piso. Para cambiar la cita llame al 520-555-0147.";
+
+  /** Motor que responde una prosa fija (la que el modelo serviría
+   *  leyendo la memoria inyectada en su prompt). */
+  function proseEngine(text: string): AgentEngine & { calls: unknown[][] } {
+    const calls: unknown[][] = [];
+    return {
+      calls,
+      generate: vi.fn(async (args: unknown) => {
+        calls.push([args]);
+        return text;
+      }),
+    };
+  }
+
+  it("la sonda de la adversaria, extremo a extremo: la prosa desde la memoria inyectada NO se desvía ni con el documento esperando", async () => {
+    // El hecho vive en la memoria. La pregunta clasifica «conversar» y
+    // entra al loop SOLO por la sonda con hit (la ruta del turno es
+    // «recordar» en el llamador; dentro, la intención sigue siendo
+    // conversación). Con la herramienta de memoria desactivada por el
+    // usuario, la vía determinista no corre y el modelo responde la
+    // prosa desde la memoria de su prompt: route «model», sin
+    // herramientas ni respaldo — la forma exacta que la red se comía.
+    data.facts.push({ content: "Le compré una pulsera a mi esposa el año pasado", category: "general" });
+    const engine = proseEngine("Le compraste una pulsera a tu esposa el año pasado.");
+    setDisabledTools(["remember_fact"]);
+    let t;
+    try {
+      t = await send("¿Qué le compré a mi esposa el año pasado?", "es", engine, { netSources: [DOCUMENTO] });
+    } finally {
+      setDisabledTools([]);
+    }
+    expect(t.netted).toBeFalsy();
+    expect(t.response).toBe("Le compraste una pulsera a tu esposa el año pasado.");
+    expect(t.response).not.toContain("520-555-0147");
+  });
+
+  it("la misma pregunta con la herramienta activa la responde la capa determinista, verbatim, sin modelo ni red", async () => {
+    data.facts.push({ content: "Le compré una pulsera a mi esposa el año pasado", category: "general" });
+    const engine = fakeEngine();
+    const t = await send("¿Qué le compré a mi esposa el año pasado?", "es", engine, { netSources: [DOCUMENTO] });
+    expect(t.netted).toBeFalsy();
+    expect(t.response).toBe("Según lo que me contaste: «Le compré una pulsera a mi esposa el año pasado».");
+    expect(engine.calls).toHaveLength(0);
   });
 });
