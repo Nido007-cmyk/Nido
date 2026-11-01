@@ -97,6 +97,23 @@
  *    (punto junto a EMERGENCY_STEMS) y las frases de respiración que
  *    faltaban («le cuesta mucho respirar», «se está asfixiando»).
  *
+ * 7. LA RAÍZ SOLA NO DECLARA LA SITUACIÓN (H-05, revisión
+ *    adversaria de la cadena, 2026-11-01). La cara por raíz cazaba
+ *    también la metáfora: «Why do golfers choke under pressure?»
+ *    salía situación de emergencia (y cerraba la puerta de salud)
+ *    porque «chok» casa por principio de palabra y el sujeto
+ *    genérico de la metáfora no se distingue de una víctima por la
+ *    raíz sola. Desde este arreglo la raíz exige CONTEXTO DE
+ *    CUERPO (ver `stemHitHasBodyContext`): la construcción del
+ *    suceso en curso (auxiliar ante la palabra-signo, enclítico
+ *    reflexivo) o una víctima o petición de ayuda cerca de la
+ *    palabra-signo. Las formas dictadas medidas en la ronda —
+ *    «se esta tragantando», «se esta atragantndo», «my toddler is
+ *    chokng», «o bebê está engasgndo» — traen todas ese contexto y
+ *    siguen disparando; los sujetos genéricos de la metáfora
+ *    (golfers, players, students) no son señal a propósito. Las
+ *    frases-signo exactas no cambian: siguen disparando solas.
+ *
  * Puro, sin dependencias de UI, 100% testeable.
  */
 
@@ -284,9 +301,28 @@ export function isHealthQuestion(text: string): boolean {
   if (folded.trim().length === 0) return false;
   if (HEALTH_EXCLUSIONS.some((x) => folded.includes(` ${x} `) || folded.includes(` ${x}`))) return false;
   if (hasHistoricalFrame(folded)) return false;
-  const hasTerm = ALL_TERMS.some(
-    ({ w, p }) => w.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`)) || p.some((t) => folded.includes(` ${t}`)),
-  );
+  // H-05: la familia inglesa «chok» comparte raíz con la metáfora
+  // deportiva («choke under pressure» = fallar bajo presión), así
+  // que cuando es el ÚNICO término que casa, no basta: la puerta
+  // exige el contexto de cuerpo de la cara de situación o una
+  // señal de primera persona («how do I stop choking?» sigue
+  // dentro; «why do golfers choke…?» queda fuera). Las demás
+  // familias — «atragant» y «engasg» incluidas — no comparten esa
+  // homografía en su uso asentado y su casado no se toca: la
+  // pregunta instructiva genérica sobre atragantamiento sigue
+  // cerrando esta puerta como hasta ahora.
+  const chokOnlyHit =
+    folded.includes(" chok") &&
+    !ALL_TERMS.some(
+      ({ w, p }) =>
+        w.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`)) ||
+        p.some((t) => t !== "chok" && folded.includes(` ${t}`)),
+    );
+  const hasTerm = chokOnlyHit
+    ? stemHitHasBodyContext(folded) || CHOKE_FIRST_PERSON_CUES.some((c) => folded.includes(c))
+    : ALL_TERMS.some(
+        ({ w, p }) => w.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`)) || p.some((t) => folded.includes(` ${t}`)),
+      );
   if (!hasTerm) return false;
   return SITUATION_CUES.some((c) => folded.includes(c) || text.includes(c));
 }
@@ -368,7 +404,10 @@ const ALL_SIGNS: string[] = Object.values(EMERGENCY_SIGNS).flat();
  * Las raíces son específicas del atragantamiento y la asfixia: no
  * comparten principio con temas cotidianos, y los vetos de contexto
  * y el marco histórico se aplican ANTES, igual que con las frases —
- * el pasado y la ficción siguen sin disparar.
+ * el pasado y la ficción siguen sin disparar. Desde H-05 la raíz
+ * tampoco dispara sola: exige el contexto de cuerpo de
+ * `stemHitHasBodyContext` (punto 7 de la cabecera), porque «chok»
+ * sí comparte principio con una metáfora cotidiana.
  */
 const EMERGENCY_STEMS: Record<GateLang, string[]> = {
   es: ["atragant", "tragant", "asfixi"],
@@ -379,11 +418,93 @@ const EMERGENCY_STEMS: Record<GateLang, string[]> = {
 const ALL_STEMS: string[] = Object.values(EMERGENCY_STEMS).flat();
 
 /**
+ * Auxiliares que, justo antes de la palabra-signo, forman la
+ * construcción del suceso en curso que el dictado produce: «se
+ * esta tragantando», «is chokng», «estou engasgando». Los plurales
+ * genéricos («are»/«were») quedan fuera a propósito: son los
+ * auxiliares de los sujetos de clase de la metáfora («golfers are
+ * choking under pressure» no gana contexto por ellos).
+ */
+const STEM_AUX_WORDS = new Set(["is", "was", "am", "esta", "estoy", "estou", "se"]);
+
+/**
+ * Víctimas y peticiones de ayuda que, CERCA de la palabra-signo
+ * (tres palabras a cada lado), la atan a un cuerpo: quien dicta
+ * una emergencia nombra a quién le pasa («mi hijo», «o bebê»,
+ * «someone», «ayuda»). Fuera a propósito: pronombres y posesivos
+ * sueltos («he choked on stage» también los trae, y es la
+ * metáfora del escenario) y los sustantivos de clase genérica
+ * (golfers, players, students), que son el sujeto natural de la
+ * metáfora deportiva. El casado es por palabra exacta o por
+ * principio de palabra solo con señales de 4+ letras: «son» no
+ * puede cazar «song».
+ */
+const STEM_BODY_SIGNALS = [
+  "alguien", "alguem", "someone", "somebody",
+  "bebe", "nino", "nina", "crianca", "baby", "toddler", "child",
+  "hijo", "hija", "filho", "filha", "son", "daughter",
+  "padre", "madre", "pai", "mae", "mother", "father",
+  "abuelo", "abuela", "grandfather", "grandmother",
+  "hombre", "mujer", "homem", "mulher", "persona", "pessoa", "person",
+  "ayuda", "ajuda", "help", "socorro", "auxilio",
+];
+
+/**
+ * ¿Trae alguna palabra-signo (principio de palabra de ALL_STEMS)
+ * contexto de cuerpo en el texto ya plegado? (H-05, punto 7 de la
+ * cabecera.) Tres formas, todas leídas sobre la palabra-signo
+ * misma o su vecindad inmediata:
+ *
+ * - la construcción progresiva o reflexiva: auxiliar justo antes
+ *   («se esta tragantando», «my toddler is chokng» — ahí manda
+ *   también la víctima), el enclítico pegado al gerundio
+ *   («atragantandose», «ahogandome») o el «se» suelto tras él
+ *   («engasgando se»);
+ * - una señal de víctima o ayuda a tres palabras o menos.
+ *
+ * La metáfora sin víctima («why do golfers choke under pressure»,
+ * «she choked on stage», «se me atragantan las matemáticas») no
+ * trae ninguna de las tres y la raíz, sola, ya no basta.
+ */
+function stemHitHasBodyContext(folded: string): boolean {
+  const words = folded.trim().split(/\s+/).filter((w) => w.length > 0);
+  for (let i = 0; i < words.length; i++) {
+    if (!ALL_STEMS.some((s) => words[i].startsWith(s))) continue;
+    if (i > 0 && STEM_AUX_WORDS.has(words[i - 1])) return true;
+    if (words[i].endsWith("ndose") || words[i].endsWith("ndome") || words[i].endsWith("ndonos")) return true;
+    if (words[i + 1] === "se") return true;
+    const from = Math.max(0, i - 3);
+    const to = Math.min(words.length - 1, i + 3);
+    for (let j = from; j <= to; j++) {
+      if (STEM_BODY_SIGNALS.some((s) => words[j] === s || (s.length >= 4 && words[j].startsWith(s)))) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Señales de primera persona o de petición de instrucción que
+ * corroboran la familia «chok» cuando es el único término que
+ * casa en la puerta de salud (ver el uso en `isHealthQuestion`):
+ * «how do I stop choking?» es primeros auxilios en primera
+ * persona, no metáfora. Los posesivos quedan fuera (no prueban
+ * cuerpo: «my teacher asked why golfers choke»).
+ */
+const CHOKE_FIRST_PERSON_CUES = [
+  " i ", " estoy ", " estou ", " que hago ", " o que fazer ",
+  " what should ", " how do i ", " how can i ",
+];
+
+/**
  * ¿Cuenta el texto una emergencia viva en curso? Léxico puro de
  * signos: basta UN signo (el suceso ES la situación; no se exige
- * señal de pregunta) y ningún veto de contexto. Ver la cabecera,
- * punto 3: donde manda la puerta de salud manda también esta cara,
- * con el mismo texto seguro.
+ * señal de pregunta) y ningún veto de contexto. La cara por raíz,
+ * en cambio, exige además el contexto de cuerpo de
+ * `stemHitHasBodyContext` (H-05, punto 7 de la cabecera): la raíz
+ * nació para el ruido de dictado DENTRO de un suceso contado, no
+ * como detector de tema. Ver la cabecera, punto 3: donde manda la
+ * puerta de salud manda también esta cara, con el mismo texto
+ * seguro.
  */
 export function isEmergencySituation(text: string): boolean {
   if (!text) return false;
@@ -393,7 +514,7 @@ export function isEmergencySituation(text: string): boolean {
   if (hasHistoricalFrame(folded)) return false;
   return (
     ALL_SIGNS.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`)) ||
-    ALL_STEMS.some((t) => folded.includes(` ${t}`))
+    (ALL_STEMS.some((t) => folded.includes(` ${t}`)) && stemHitHasBodyContext(folded))
   );
 }
 

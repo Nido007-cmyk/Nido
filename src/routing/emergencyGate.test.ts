@@ -187,6 +187,57 @@ describe("R-07: la frase exacta de la ronda y la tolerancia al ruido de dictado"
   });
 });
 
+describe("H-05 (adversaria): la raíz sola no declara la situación — la metáfora no es una emergencia", () => {
+  it("la sonda exacta de la adversaria: «choke» deportivo no dispara ninguna cara", () => {
+    // «Choke under pressure» es fallar bajo presión: sujeto genérico
+    // de clase, verbo en presente simple, sin víctima ni cuerpo.
+    const q = "Why do golfers choke under pressure in finals?";
+    expect(isEmergencySituation(q)).toBe(false);
+    expect(isHealthQuestion(q)).toBe(false);
+    expect(isEmergencyText(q, "en")).toBe(false);
+    expect(gatePreemptsDeepResearch(q, "en")).toBe(false);
+  });
+
+  it("gemelas de la metáfora: escenario, examen, deporte portugués y «atragantarse» un tema", () => {
+    expect(isEmergencySituation("She choked on stage and forgot her lines")).toBe(false);
+    expect(isEmergencySituation("I choked during the exam and left half of it blank")).toBe(false);
+    expect(isEmergencySituation("por que os jogadores engasgam sob pressão?")).toBe(false);
+    expect(isEmergencySituation("se me atragantan las matemáticas")).toBe(false);
+    // La cara de SITUACIÓN queda curada en las tres lenguas (la
+    // corroboración mira las raíces de todas). La puerta de SALUD
+    // solo se acotó para «chok» — el resto nombrado y su porqué
+    // van en el informe del carril y en la fixture siguiente.
+  });
+
+  it("las variantes dictadas medidas siguen disparando: el contexto de cuerpo las sostiene", () => {
+    // Auxiliar ante la palabra-signo.
+    expect(isEmergencySituation("he is chokng")).toBe(true);
+    expect(isEmergencySituation("se esta tragantando")).toBe(true);
+    expect(isEmergencySituation("se esta atragantndo")).toBe(true);
+    // Víctima nombrada cerca de la palabra-signo.
+    expect(isEmergencySituation("my toddler is chokng on a grape")).toBe(true);
+    expect(isEmergencySituation("o bebê está engasgndo com um pedaço de pão")).toBe(true);
+    expect(isEmergencySituation("my baby is suffocatng")).toBe(true);
+    // Enclítico reflexivo pegado al gerundio.
+    expect(isEmergencySituation("Atragantándose")).toBe(true);
+    // El caso del conjunto ciego v2: pretérito con «se» antes de la raíz.
+    expect(isEmergencySituation("mi hijo de 3 años se atragantó con una uva y no puede toser")).toBe(true);
+    // La puerta de salud con la familia «chok» y cuerpo presente sigue cerrando.
+    expect(isHealthQuestion("my daughter is choking, how do I help her?")).toBe(true);
+    expect(isHealthQuestion("How do I stop choking?")).toBe(true);
+  });
+
+  it("la pregunta instructiva genérica sobre atragantamiento sigue cerrando la puerta de salud", () => {
+    // La familia «atragant» no comparte la homografía de «chok» y
+    // su casado en isHealthQuestion NO se tocó en H-05 — también
+    // porque el dueño excluyó H-04 el 2026-11-01 («lo de la
+    // investigación solo déjala así»): la desviación de esta
+    // subpregunta por la segunda red se acepta tal cual, y esta
+    // aserción fija que la cura de H-05 no la deshace por detrás.
+    expect(gatePreemptsDeepResearch("¿Qué se debe hacer ante un atragantamiento?", "es")).toBe(true);
+  });
+});
+
 describe("gatePreemptsDeepResearch (R-07: la decisión antes de la bifurcación)", () => {
   it("emergencia o salud con Investigar activo: el turno va protegido", () => {
     expect(gatePreemptsDeepResearch("Que hago si argument se esta atragantando?", "es")).toBe(true);
