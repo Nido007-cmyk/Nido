@@ -72,7 +72,7 @@
  */
 
 import type { SentenceProvenance } from "./provenance";
-import { evidenceNumberValues, numberTokens, parseNumberToken, sentenceNumbersSupported } from "./evidenceNumbers";
+import { evidenceNumberValues, evidenceRanges, numberTokens, parseNumberToken, sentenceNumbersSupported } from "./evidenceNumbers";
 
 export type GroundingLang = "es" | "en" | "pt";
 
@@ -1092,6 +1092,10 @@ export function verifyGroundedAnswer(
   const sameLanguage = answerLang === null || sourceLang === null || answerLang === sourceLang;
 
   const evidenceNums = evidenceNumberValues(chunkTexts);
+  // C-08: los rangos de la evidencia sostienen su interior («39 °C»
+  // contra «entre 37 y 40 °C»): sin esto, la respuesta exacta de la
+  // guía abstenía por no ser ni el mínimo ni el máximo.
+  const chunkRanges = evidenceRanges(chunkTexts);
 
   // Las frases de las fuentes, por chunk (la negación de 0.1.59 las usa
   // por chunk; la regla de idioma de R-04 las recorre todas con su chunk).
@@ -1121,7 +1125,7 @@ export function verifyGroundedAnswer(
         langProv.push({ text: s, origin: { kind: "abstain" } });
         continue;
       }
-      if (!sentenceNumbersSupported(s, evidenceNums)) {
+      if (!sentenceNumbersSupported(s, evidenceNums, chunkRanges)) {
         removed++;
         continue;
       }
@@ -1181,7 +1185,7 @@ export function verifyGroundedAnswer(
     // «1804» pasaba con el apoyo léxico solo, porque la cifra errónea
     // contaba como una palabra nueva más. Vale el redondeo honesto:
     // «26,5» por 26,52 y «16,4 millones» por 16.431.599 no se tocan.
-    if (!sentenceNumbersSupported(s, evidenceNums)) {
+    if (!sentenceNumbersSupported(s, evidenceNums, chunkRanges)) {
       removed++;
       continue;
     }

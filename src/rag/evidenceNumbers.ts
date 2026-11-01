@@ -129,6 +129,50 @@ export function evidenceNumberValues(texts: readonly string[]): Set<number> {
   return out;
 }
 
+/** Un rango que la evidencia afirma («entre 37 y 40 °C», «10 a 14 días», «5–6 %»). */
+export interface EvidenceRange {
+  min: number;
+  max: number;
+}
+
+/**
+ * Los rangos de la evidencia (C-08): «N a M», «N–M» y «entre N y M»
+ * (unidores `a`, `to`, `até`, guiones, y `y/e/and` solo tras «entre»,
+ * que es donde la prosa los usa como rango y no como enumeración).
+ * Un valor dentro de un rango está tan afirmado como sus extremos:
+ * antes de esto, la respuesta exacta de la guía («39 °C» contra
+ * «entre 37 y 40 °C») moría por no ser ni 37 ni 40. Los extremos se
+ * leen con la primera lectura del token, la misma para ambos: un
+ * token ambiguo («1.234») no mezcla lecturas dentro del rango.
+ */
+export function evidenceRanges(texts: readonly string[]): EvidenceRange[] {
+  const out: EvidenceRange[] = [];
+  const patterns = [
+    /(\d+(?:[.,]\d+)?)\s*(?:[-–—]|\ba\b|\bto\b|\baté\b)\s*(\d+(?:[.,]\d+)?)/g,
+    /\bentre\s+(\d+(?:[.,]\d+)?)\s+(?:y|e|and)\s+(\d+(?:[.,]\d+)?)/g,
+  ];
+  for (const text of texts) {
+    const noCites = text.replace(/\[\d+\]/g, " ");
+    for (const re of patterns) {
+      for (const m of noCites.matchAll(re)) {
+        const lo = parseNumberToken(m[1]);
+        const hi = parseNumberToken(m[2]);
+        if (lo.length === 0 || hi.length === 0) continue;
+        const min = Math.min(lo[0], hi[0]);
+        const max = Math.max(lo[0], hi[0]);
+        if (max > min) out.push({ min, max });
+      }
+    }
+  }
+  return out;
+}
+
+/** ¿Cae `value`, a la precisión con que se afirma, dentro de algún rango de la evidencia? */
+function withinEvidenceRanges(value: number, decimals: number, ranges: readonly EvidenceRange[]): boolean {
+  const tol = 0.5 * Math.pow(10, -decimals) + 1e-9;
+  return ranges.some((r) => value >= r.min - tol && value <= r.max + tol);
+}
+
 /** Una cifra se juzga si tiene 2+ dígitos o trae parte decimal (ver cabecera). */
 function isJudged(token: string): boolean {
   const digits = token.replace(/[.,]/g, "");
@@ -138,12 +182,21 @@ function isJudged(token: string): boolean {
 /**
  * ¿Salen de la evidencia TODAS las cifras juzgables de la frase?
  * Las citas [n] no son cifras de la frase (se retiran antes de mirar).
+ * C-08: un valor dentro de un rango de la evidencia también está
+ * sostenido (los rangos se pasan aparte; sin ellos, la red juzga como
+ * siempre: por valores sueltos).
  */
-export function sentenceNumbersSupported(sentence: string, evidence: ReadonlySet<number>): boolean {
+export function sentenceNumbersSupported(
+  sentence: string,
+  evidence: ReadonlySet<number>,
+  ranges: readonly EvidenceRange[] = [],
+): boolean {
   for (const token of numberTokens(sentence)) {
     if (!isJudged(token)) continue;
     const readings = parseNumberToken(token);
-    const ok = readings.some((v) => roundsFromEvidence(v, decimalsOf(token, v), evidence));
+    const ok = readings.some(
+      (v) => roundsFromEvidence(v, decimalsOf(token, v), evidence) || withinEvidenceRanges(v, decimalsOf(token, v), ranges),
+    );
     if (!ok) return false;
   }
   return true;

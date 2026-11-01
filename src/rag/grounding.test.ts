@@ -1007,15 +1007,30 @@ describe("C-08: el rango de la guía ya no hace abstenerse a su propia respuesta
 
   it("la respuesta exacta de la guía (" +
     "39 °C, 25 minutos) se queda: ni abstiene ni se recorta", () => {
-    const r = verifyGroundedAnswer("Sumerge la zona en agua a 39 °C durante 25 minutos.", [GUIA19], "es");
+    const r = verifyGroundedAnswer(
+      "Para las quemaduras, sumerge la zona en agua tibia a 39 °C durante 25 minutos.",
+      [GUIA19],
+      "es",
+    );
     expect(r.status).toBe("grounded");
     expect(r.removed).toBe(0);
     expect(r.text).toContain("39 °C");
     expect(r.text).toContain("25 minutos");
+    // Y cada valor interior basta por sí solo, en la frase desnuda:
+    // es la red de cifras la que ha cambiado (antes: 39 no era ni 37
+    // ni 40, y 25 no era ni 20 ni 30; ambas frases abstenían).
+    expect(verifyGroundedAnswer("Sumerge la zona en agua a 39 °C.", [GUIA19], "es").status).toBe("grounded");
+    expect(verifyGroundedAnswer("Sumerge la zona en agua durante 25 minutos.", [GUIA19], "es").status).toBe(
+      "grounded",
+    );
   });
 
   it("la cifra fuera del rango sigue cayendo (la cura no abre la puerta)", () => {
-    const r = verifyGroundedAnswer("Sumerge la zona en agua a 45 °C durante 25 minutos.", [GUIA19], "es");
+    const r = verifyGroundedAnswer(
+      "Para las quemaduras, sumerge la zona en agua tibia a 45 °C durante 25 minutos.",
+      [GUIA19],
+      "es",
+    );
     expect(r.removed).toBe(1);
     expect(r.text).not.toContain("45 °C");
   });
