@@ -345,4 +345,19 @@ describe("ADV3 — el testigo de la sonda exige TODAS las clases pedidas", () =>
       memoryProbeWitness("What are the clinic's hours and phone number?", memOf(["The clinic is open from 9 to 5."])),
     ).toBe(false);
   });
+
+  it("control: las dos clases en el mismo hecho (horario y teléfono) — el testigo SÍ exime", () => {
+    expect(
+      memoryProbeWitness(
+        "¿Cuál es el horario y el teléfono de la clínica?",
+        memOf(["El horario de la clínica es de 9 a 18 y su teléfono es el 520-555-0147."]),
+      ),
+    ).toBe(true);
+  });
+
+  it("control: las dos clases en el mismo hecho (número y fecha) — el testigo SÍ exime", () => {
+    expect(
+      memoryProbeWitness("¿Cuándo vence el número de socio?", memOf(["El número de socio 12345 vence el 10 de noviembre."])),
+    ).toBe(true);
+  });
 });

@@ -391,14 +391,18 @@ export function questionDatumClasses(question: string): MemoryDatumClass[] {
  * fuente de puntuación que la puerta y la respuesta
  * (scoreMemoryFacts): el hecho que promueve es su mejor hecho. Si
  * la pregunta no pide ninguna clase cerrada, el testigo es el de
- * siempre (true). Si la pide, el hecho debe contener el dato.
+ * siempre (true). Si la pide, el hecho debe contener TODAS las
+ * clases pedidas (ADV3, A3-05): la exención cubre el turno entero,
+ * y con el SOME de antes una sola clase presente dejaba la
+ * ausente sin red. Con una sola clase, every ≡ some: el
+ * desenlace de las preguntas de una clase no cambia.
  */
 export function memoryProbeWitness(question: string, mem: MemoryQueryData): boolean {
   const classes = questionDatumClasses(question);
   if (classes.length === 0) return true;
   const { fact } = scoreMemoryFacts(mem, question);
   if (!fact) return true;
-  return classes.some((cls) => factHasDatumInstance(fact, cls));
+  return classes.every((cls) => factHasDatumInstance(fact, cls));
 }
 
 export function isGenericMemoryQuestionShape(userText: string): boolean {
