@@ -111,6 +111,15 @@ function sqlcipherAvailable(): Promise<boolean> {
 describe("SQLCipher real", () => {
   it("migración con nuestras sentencias: datos, integridad y sin plaintext", async (ctx) => {
     if (!(await sqlcipherAvailable())) {
+      // B-resto B-03: en CI la instalación de sqlcipher3-binary está
+      // garantizada por los dos workflows antes de correr la batería:
+      // si aun así falta el módulo, la única corrida contra el motor
+      // real debe FALLAR, no desaparecer como saltada.
+      if (process.env.CI) {
+        throw new Error(
+          "[sqlcipherReal] python3+sqlcipher3 no disponible en CI: la corrida contra SQLCipher real no puede saltarse donde la instalación está garantizada."
+        );
+      }
       // Auditoría completa 2026-10-31 (F6-01): la omisión por
       // disponibilidad se declara como SALTADA, no como pasada: un
       // return temprano contaba esta verificación (la única contra

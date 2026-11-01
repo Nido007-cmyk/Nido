@@ -146,7 +146,7 @@ jobs:
         # contaba ese salto en silencio. La rueda con binario lo
         # trae compilado: instalarla convierte el salto en una
         # ejecución real contra el cifrado de verdad.
-        run: python3 -m pip install --quiet sqlcipher3-binary
+        run: python3 -m pip install --quiet sqlcipher3-binary==0.6.0
 
       - name: Unit tests (CICD-01 gate)
         # Never ship an APK from code with failing tests.

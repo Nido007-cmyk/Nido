@@ -33,7 +33,7 @@ jobs:
       - run: npm ci
       # Auditoría completa 2026-10-31 (F6-01): que la prueba contra
       # SQLCipher real corra también aquí y no se salte en silencio.
-      - run: python3 -m pip install --quiet sqlcipher3-binary
+      - run: python3 -m pip install --quiet sqlcipher3-binary==0.6.0
       - run: npm run verify:deps
       - run: npm run typecheck
       # Recuento verificable: los reportes JSON alimentan el aviso de abajo.
