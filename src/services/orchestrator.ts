@@ -345,6 +345,101 @@ const DECOMPOSE_TEXT: Record<
   },
 };
 
+/**
+ * Núcleo 3 · N-08 (auditoría 2026-11-01): control de calidad de la
+ * descomposición. Lo que el modelo devuelve se aceptaba entero:
+ * la misma pregunta repetida tres veces consumía tres pasadas de
+ * recuperación e investigación (el 0.5B entra en bucle pese a la
+ * penalización de repetición: 0.1.34 ya lo documentó), y una
+ * subpregunta en deriva total se investigaba y citaba como si
+ * fuera del tema. Dos reglas baratas, sin modelo:
+ * - Dedup por línea plegada (minúsculas, sin acentos): la repetida
+ *   cuenta una vez.
+ * - Deriva: una línea sin NINGÚN token de contenido en común con la
+ *   pregunta (tokens plegados de ≥4 letras fuera de palabras
+ *   función) se descarta — solo si sobrevive al menos una línea;
+ *   si todas caerían, se conserva el parse tal cual. Fallo seguro:
+ *   el QC nunca deja la investigación con menos de lo que hay.
+ * - Excepción de seguridad (medida al implementar, contra la
+ *   fixture de R-07): una línea que la puerta interceptaría JAMÁS
+ *   se descarta por deriva. La segunda red de R-07 lee las
+ *   subpreguntas TAL CUAL salen de descomponer; si el QC se
+ *   tragara la línea de la emergencia («qué hacer si alguien se
+ *   esta atragantando» no comparte tokens con «…un debate»), la
+ *   red no la vería y la emergencia se investigaría. La línea se
+ *   conserva y la red hace su trabajo: aborta el pipeline.
+ */
+const QC_STOPWORDS = new Set([
+  "para", "como", "sobre", "entre", "cuando", "donde", "porque", "este", "esta", "esto", "esos", "esas",
+  "cual", "desde", "hasta", "what", "which", "when", "where", "about", "with", "from", "that", "this",
+  "does", "have", "qual", "quais", "mais",
+]);
+
+function foldQc(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function contentTokensQc(s: string): Set<string> {
+  return new Set(
+    foldQc(s)
+      .split(/[^a-z0-9ñ]+/)
+      .filter((w) => w.length >= 4 && !QC_STOPWORDS.has(w)),
+  );
+}
+
+function qcSubQuestions(lines: string[], query: string, lang: GateLang): string[] {
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+  for (const l of lines) {
+    const key = foldQc(l).replace(/[^a-z0-9ñ]+/g, " ").trim();
+    if (!seen.has(key)) {
+      seen.add(key);
+      deduped.push(l);
+    }
+  }
+  const qTokens = contentTokensQc(query);
+  if (qTokens.size === 0) return deduped;
+  const onTopic = deduped.filter((l) => {
+    // La línea que la puerta intercepta no es deriva descartable:
+    // es la señal de la segunda red (ver la cabecera del QC).
+    if (gatePreemptsDeepResearch(l, lang)) return true;
+    for (const t of contentTokensQc(l)) if (qTokens.has(t)) return true;
+    return false;
+  });
+  return onTopic.length > 0 ? onTopic : deduped;
+}
+
+/**
+ * Núcleo 3 · N-08: citas honestas. ResearchResult.citations volvía
+ * como la unión de TODO lo recuperado, citara la síntesis o no, y
+ * la pantalla dibuja esa lista como las notas al pie de la
+ * respuesta: fuentes que la respuesta no cita figuraban como su
+ * respaldo. Ahora la lista devuelta es solo lo que la respuesta
+ * final cita de verdad (marcadores globales [n] sobre allChunks),
+ * con los marcadores renumerados a la lista filtrada; si la
+ * respuesta no cita nada, la lista va vacía. Como el reestructurado
+ * que ya hace synthesize, el texto final puede diferir del
+ * transmitido token a token: manda el devuelto.
+ */
+function honestCitations(
+  answer: string,
+  allChunks: RetrievedChunk[],
+): { answer: string; citations: RetrievedChunk[] } {
+  const cited = new Set<number>();
+  for (const m of answer.matchAll(/\[(\d{1,3})\]/g)) {
+    const n = Number(m[1]);
+    if (n >= 1 && n <= allChunks.length) cited.add(n);
+  }
+  if (cited.size === 0) return { answer, citations: [] };
+  const ordered = [...cited].sort((a, b) => a - b);
+  const renum = new Map(ordered.map((oldIdx, i) => [oldIdx, i + 1] as const));
+  const renumbered = answer.replace(/\[(\d{1,3})\]/g, (whole, d: string) => {
+    const nn = renum.get(Number(d));
+    return nn ? `[${nn}]` : whole;
+  });
+  return { answer: renumbered, citations: ordered.map((i) => allChunks[i - 1]) };
+}
+
 async function decompose(query: string, onTimeout: () => void, lang: GateLang = "en"): Promise<string[]> {
   // P1.4-2026-10-08: real chat template when the GGUF ships one; the
   // hand-built "Question:/Sub-questions:" shape is the fallback for
@@ -386,7 +481,10 @@ async function decompose(query: string, onTimeout: () => void, lang: GateLang = 
     attempt: () => llamaEngine.generate({ ...buildParams(), ...genOpts }),
     repair: (_bad, error) => llamaEngine.generate({ ...buildParams(error), ...genOpts }),
     validate: (text) => {
-      const lines = parseLines(text);
+      // N-08: el QC (dedupe + deriva) corre dentro de la validación,
+      // así el reparo acotado y el fallback [query] de siempre cubren
+      // también el parse que el QC dejara vacío.
+      const lines = qcSubQuestions(parseLines(text), query, lang);
       return lines.length > 0
         ? { ok: true as const, value: lines }
         : { ok: false as const, error: "no sub-questions extracted (need 1-3 lines)" };
@@ -524,5 +622,10 @@ export async function runDeepResearch(
     lang
   );
 
-  return { answer, subQuestions, citations: allChunks, timedOut, noSourcesFound: allChunks.length === 0 };
+  // N-08: las citas que salen son las que la respuesta cita de
+  // verdad, renumeradas (ver honestCitations). Los retornos
+  // tempranos de arriba (parado, sin fuentes, interceptado) no
+  // pasan por aquí y no cambian.
+  const honest = honestCitations(answer, allChunks);
+  return { answer: honest.answer, subQuestions, citations: honest.citations, timedOut, noSourcesFound: allChunks.length === 0 };
 }

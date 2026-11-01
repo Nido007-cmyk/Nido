@@ -119,13 +119,17 @@ describe("D/F5 — partial evidence", () => {
 });
 
 describe("D/F5 — legitimate synthesis preserved", () => {
-  it("evidence present: synthesis runs, returns the model answer, citations intact", async () => {
+  it("evidence present: synthesis runs, returns the model answer; citations follow what the answer cites (N-08)", async () => {
     const prompts = scriptPipeline([[chunk(1)], [chunk(2)], [chunk(3)]]);
     const result = await runDeepResearch("query", undefined, undefined, 200);
     expect(result.noSourcesFound).toBe(false);
     expect(synthesisPrompts(prompts)).toHaveLength(1);
     expect(result.answer).toBe("mock answer");
-    expect(result.citations).toHaveLength(3);
+    // Núcleo 3 · N-08: «mock answer» no cita ningún marcador, así
+    // que la lista de respaldo va vacía aunque se recuperaron tres
+    // chunks (antes volvía la unión entera: la pantalla la dibujaba
+    // como notas al pie de una respuesta que no las citaba).
+    expect(result.citations).toHaveLength(0);
   });
 
   it("conflicting evidence: perspectives are kept and conflicts reconciled", async () => {
@@ -447,5 +451,55 @@ describe("P1.5 decompose bounded repair", () => {
     const result = await runDeepResearch("query", undefined, undefined, 200);
     // Sin sub-preguntas válidas: research corre sobre la query original.
     expect(result.answer).toBeDefined();
+  });
+});
+
+describe("Núcleo 3 · N-08 — QC de la descomposición y citas honestas", () => {
+  function scriptDecompose(lines: string, synthesisAnswer: string) {
+    generateMock.mockImplementation(async (opts: { prompt: string }) => {
+      const p = opts.prompt ?? "";
+      if (p.startsWith("Break this research question")) return lines;
+      if (p.includes(SYNTH_MARKER)) return synthesisAnswer;
+      return "mock answer";
+    });
+  }
+
+  it("la pregunta repetida tres veces consume UNA pasada de recuperación, no tres", async () => {
+    scriptDecompose(
+      "What is photosynthesis?\nWhat is photosynthesis?\nWhat is photosynthesis?",
+      "Final answer [1]."
+    );
+    retrieveMock.mockResolvedValue([chunk(1)]);
+    const result = await runDeepResearch("What is photosynthesis?", undefined, undefined, 200);
+    expect(result.subQuestions).toHaveLength(1);
+    expect(retrieveMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("la subpregunta en deriva total se descarta si otra sobrevive", async () => {
+    scriptDecompose(
+      "How does photosynthesis work in plants?\nWhat is the capital of France?",
+      "Final answer [1]."
+    );
+    retrieveMock.mockResolvedValue([chunk(1)]);
+    const result = await runDeepResearch("How does photosynthesis work in plants?", undefined, undefined, 200);
+    expect(result.subQuestions).toEqual(["How does photosynthesis work in plants?"]);
+    expect(retrieveMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("fallo seguro: si TODAS derivan, el parse se conserva entero", async () => {
+    scriptDecompose("What is the capital of France?\nWho wrote Don Quixote?", "Final answer [1].");
+    retrieveMock.mockResolvedValue([chunk(1)]);
+    const result = await runDeepResearch("How does photosynthesis work in plants?", undefined, undefined, 200);
+    expect(result.subQuestions).toHaveLength(2);
+  });
+
+  it("las citas devueltas son solo las citadas por la síntesis, renumeradas", async () => {
+    scriptDecompose("What are the benefits?\nWhat are the risks?", "Only the second source backs this [2].");
+    let n = 0;
+    retrieveMock.mockImplementation(async () => [chunk(++n)]);
+    const result = await runDeepResearch("What are the trade-offs?", undefined, undefined, 200);
+    expect(result.citations.map((c) => c.id)).toEqual(["c2"]);
+    expect(result.answer).toContain("[1]");
+    expect(result.answer).not.toContain("[2]");
   });
 });

@@ -24,6 +24,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // into global offsets across the concatenated footnote list, structurally,
 // before the synthesis LLM ever sees them. The model is instructed to copy
 // the (already global) numbers exactly — it does no renumbering.
+//
+// Núcleo 3 · N-08 (enmienda de contrato, 2026-11-01): la lista que
+// runDeepResearch DEVUELVE ya no es la unión concatenada sino solo
+// los chunks que la respuesta final cita, con los marcadores
+// renumerados a esa lista. El invariante de arriba se conserva y se
+// refuerza: todo [n] mostrado resuelve al chunk de su perspectiva,
+// y toda nota al pie mostrada está citada de verdad.
 
 const generateMock = vi.fn();
 const retrieveMock = vi.fn();
@@ -121,15 +128,21 @@ describe("R2 — conflicting perspectives resolve to their own chunks", () => {
     );
     const result = await runDeepResearch("q", undefined, undefined, 200);
 
-    // Footnotes are the concatenated allChunks: [a1, a2, b1].
-    expect(result.citations.map((c) => c.chunkId)).toEqual(["a1", "a2", "b1"]);
+    // Núcleo 3 · N-08 (contrato nuevo, declarado): las notas al pie
+    // ya no son la unión de allChunks sino SOLO lo que la respuesta
+    // cita — a2 quedó recuperado pero no citado y sale de la lista;
+    // los marcadores se renumeran (el [3] global pasa a [2]). El
+    // invariante de R2 no cambia: cada marcador resuelve al chunk
+    // de SU perspectiva.
+    expect(result.citations.map((c) => c.chunkId)).toEqual(["a1", "b1"]);
 
     const { out } = resolveDisplayedCitations(result.answer, result.citations);
     const byChunk = new Map(out.map((r) => [r.chunkId, r.n]));
-    // Sub-Q1's claim still cites its own chunk; sub-Q2's claim now cites
-    // footnote 3 — ITS chunk — never footnote 1.
+    // Sub-Q1's claim still cites its own chunk; sub-Q2's claim cites
+    // ITS chunk — footnote 2 tras la renumeración de N-08 — never
+    // footnote 1.
     expect(byChunk.get("a1")).toBe(1);
-    expect(byChunk.get("b1")).toBe(3);
+    expect(byChunk.get("b1")).toBe(2);
     expect(out.filter((r) => r.n === 1).map((r) => r.chunkId)).toEqual(["a1"]);
   });
 
@@ -140,7 +153,9 @@ describe("R2 — conflicting perspectives resolve to their own chunks", () => {
       [[chunk("a1")], [chunk("b1"), chunk("b2")], [chunk("c1"), chunk("c2")]]
     );
     const result = await runDeepResearch("q", undefined, undefined, 200);
-    expect(result.citations.map((c) => c.chunkId)).toEqual(["a1", "b1", "b2", "c1", "c2"]);
+    // N-08: c1 se recuperó pero la respuesta no lo cita: fuera de la
+    // lista; el [5] global se renumera a [4] y sigue resolviendo a c2.
+    expect(result.citations.map((c) => c.chunkId)).toEqual(["a1", "b1", "b2", "c2"]);
 
     const { out } = resolveDisplayedCitations(result.answer, result.citations);
     const ids = out.map((r) => r.chunkId);
@@ -156,7 +171,9 @@ describe("R2 — conflicting perspectives resolve to their own chunks", () => {
       [[chunk("a1"), chunk("a2")], []]
     );
     const result = await runDeepResearch("q", undefined, undefined, 200);
-    expect(result.citations.map((c) => c.chunkId)).toEqual(["a1", "a2"]);
+    // N-08: solo [1] (a1) queda citado en la respuesta; a2 se
+    // recuperó sin citarse y no figura como respaldo.
+    expect(result.citations.map((c) => c.chunkId)).toEqual(["a1"]);
 
     // The synthesis prompt must still mark the perspective as sourceless…
     const prompt = buildSynthesisPrompt("q", [
