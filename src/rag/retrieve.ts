@@ -9,6 +9,7 @@ import { embeddingEngine } from "./embed";
 import {
   buildLexicalQuery,
   cosineSimilarity,
+  cosineSimilarityInt8,
   distinctFloor,
   dropUnfoundedCorpus,
   filterByMinScore,
@@ -82,7 +83,17 @@ async function lexicalSearch(query: string, limit: number): Promise<RetrievedChu
   );
 }
 
-/** Brute-force cosine search over stored embeddings; fine at knowledge-base scale on-device. */
+/**
+ * Brute-force cosine search over stored embeddings; fine at knowledge-base
+ * scale on-device.
+ *
+ * P-01 paso 1: el formato almacenado se autodescribe por la longitud de la
+ * fila — `dim * 4` bytes = float32, `dim` bytes = int8 — y cada fila se
+ * decodifica con su precisión. La base mixta (migración a medias) es un
+ * estado válido y permanente, no un error: el lector sirve igual sobre
+ * ella. La consulta queda siempre en float32; en el brazo int8 la escala
+ * por vector se cancela en el coseno (cosineSimilarityInt8).
+ */
 async function semanticSearch(
   query: string,
   queryVec: Float32Array,
@@ -106,23 +117,44 @@ async function semanticSearch(
      WHERE c.collection_id IS NULL OR cc.active = 1`
   );
 
-  const scored = rows.map((r) => {
-    const vec = new Float32Array(
-      r.embedding.buffer,
-      r.embedding.byteOffset,
-      r.embedding.byteLength / 4
-    );
-    return {
+  const dim = queryVec.length;
+  const scored: Array<{
+    chunkId: string;
+    docId: string;
+    title: string;
+    body: string;
+    sourceKind: "user" | "builtin";
+    score: number;
+    matchType: "semantic";
+  }> = [];
+  for (const r of rows) {
+    const len = r.embedding.byteLength;
+    let score: number;
+    if (len === dim * 4) {
+      const vec = new Float32Array(r.embedding.buffer, r.embedding.byteOffset, dim);
+      score = cosineSimilarity(queryVec, vec);
+    } else if (len === dim) {
+      score = cosineSimilarityInt8(queryVec, r.embedding);
+    } else {
+      // Ni float32 ni int8 para la dimensión vigente: la fila está
+      // corrupta. Se excluye con aviso — jamás un coseno calculado sobre
+      // una longitud equivocada, que puntuaría basura en silencio.
+      console.warn(
+        `[rag] vector excluido: chunk ${r.chunk_id} trae ${len} B; se esperaban ${dim * 4} B (float32) o ${dim} B (int8).`
+      );
+      continue;
+    }
+    scored.push({
       chunkId: r.chunk_id,
       docId: r.doc_id,
       title: r.title,
       body: r.body,
       // R-03: provenance for the fusion's personal-corpus reserve.
       sourceKind: r.collection_id ? ("user" as const) : ("builtin" as const),
-      score: cosineSimilarity(queryVec, vec),
+      score,
       matchType: "semantic" as const,
-    };
-  });
+    });
+  }
 
   scored.sort((a, b) => b.score - a.score);
   // H1-2026-10-06: umbral más alto para queries de un solo término.

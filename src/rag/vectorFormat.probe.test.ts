@@ -383,10 +383,10 @@ function toRetrieved(id: string, sourceKind: SourceKind, score: number): Retriev
     docId: `${id}-doc`,
     title: `titulo-${id}`,
     body: `cuerpo-${id}`,
-    source: "semantic",
     sourceKind,
     score,
     rawScore: score,
+    matchType: "semantic",
   };
 }
 
@@ -449,8 +449,8 @@ function buildRun(scn: Scenario, profile: EmbeddingProfile, streamSeed: number):
   if (lexicalById) {
     for (const [id, raw] of Object.entries(lexicalById)) {
       const base = toRetrieved(id, id.startsWith("h") ? "pack" : "builtin", raw);
-      lexicalFloat.push({ ...base, source: "lexical" });
-      lexicalInt8.push({ ...base, source: "lexical" });
+      lexicalFloat.push({ ...base, matchType: "lexical" });
+      lexicalInt8.push({ ...base, matchType: "lexical" });
     }
   }
   const fusedF = fuseRetrievalResults(lexicalFloat, semF, 6, undefined, profile.minSimilarity);
