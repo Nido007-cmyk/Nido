@@ -99,7 +99,9 @@ describe("datos verificados de los packs (0.1.55)", () => {
 
   it("sin país, o con un país que el pack no cubre, no responde (sigue el camino normal)", () => {
     expect(composeFactsAnswer("número de emergencias", "es", regions, facts)).toBeNull();
-    expect(composeFactsAnswer("emergency number in Japan", "en", regions, facts)).toBeNull();
+    // La tabla de la línea de packs cubre 69 países (Japón entre ellos,
+    // desde la v8); el ejemplo sin cobertura es Mongolia.
+    expect(composeFactsAnswer("emergency number in Mongolia", "en", regions, facts)).toBeNull();
   });
 
   it("cada número que la app puede decir está en la cita de su fuente", () => {
@@ -133,13 +135,13 @@ describe("pestaña Emergencia (0.1.55)", () => {
 
   it("sin datos para el país no hay tarjeta", async () => {
     const { emergencyCard } = await import("./packFacts");
-    expect(emergencyCard("JP", "es", regions, facts)).toBeNull();
+    expect(emergencyCard("MN", "es", regions, facts)).toBeNull();
   });
 
-  it("lista los 32 países ordenados por su nombre en el idioma", async () => {
+  it("lista los 69 países ordenados por su nombre en el idioma", async () => {
     const { emergencyRegions } = await import("./packFacts");
     const es = emergencyRegions("es", regions, facts);
-    expect(es).toHaveLength(32);
+    expect(es).toHaveLength(69);
     expect(es[0].name).toBe("Alemania");
     expect(es.map((r) => r.code)).toContain("ES");
   });
