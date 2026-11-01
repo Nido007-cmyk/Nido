@@ -32,6 +32,28 @@ describe("DEDUP-2026-10-08: deduplicación de facts", () => {
   });
 });
 
+describe("N-03 — el plegado de diacríticos en la comparación (la ñ protegida)", () => {
+  it("el mismo hecho con y sin acentos es idéntico al comparar", () => {
+    expect(factSimilarity("mi hija se llama Lucía", "mi hija se llama Lucia")).toBe(1);
+    expect(factSimilarity("vivo en Málaga", "vivo en Malaga")).toBe(1);
+    expect(factSimilarity("se llama Rubén", "se llama Ruben")).toBe(1);
+    expect(normalizeFactText("Mi hija se llama Lucía")).toBe("mi hija se llama lucia");
+  });
+
+  it("la ñ NO se pliega: «un año» y «un ano» son hechos distintos", () => {
+    expect(factSimilarity("mi hijo cumple un año", "mi hijo cumple un ano")).toBeCloseTo(0.67, 2);
+    expect(factSimilarity("mi hijo cumple un año", "mi hijo cumple un ano")).toBeLessThan(0.75);
+    expect(normalizeFactText("El niño cumple un año")).toContain("año");
+  });
+
+  it("los pares que ya se resolvían no se mueven", () => {
+    // Corrección 3/5 de mayo: sigue siendo el mismo hecho corregido.
+    expect(factSimilarity("mi cumpleaños es el 3 de mayo", "mi cumpleaños es el 5 de mayo")).toBeGreaterThanOrEqual(0.75);
+    // Distintos de verdad: siguen distintos.
+    expect(factSimilarity("mi perro se llama Rocky", "mi perro se llama Toby")).toBeLessThan(0.75);
+  });
+});
+
 describe("0.1.41 — una corrección no se pierde al deduplicar", () => {
   it("«3 de mayo» corrige a «5 de mayo» (antes ganaba el viejo y NIDO seguía diciendo 5)", () => {
     expect(factSimilarity("Mi cumpleaños es el 3 de mayo", "Mi cumpleaños es el 5 de mayo")).toBeGreaterThanOrEqual(0.75);

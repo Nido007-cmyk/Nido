@@ -172,11 +172,30 @@ export function mergeFactContent(incoming: string, stored: string): string {
   return incoming;
 }
 
-/** Normaliza un texto para comparar facts: minúsculas, sin puntuación, espacios simples. */
+/**
+ * Normaliza un texto para COMPARAR facts: minúsculas, sin puntuación,
+ * espacios simples y diacríticos plegados.
+ *
+ * N-03: «Lucía» y «Lucia» son el mismo hecho escrito dos veces (con y
+ * sin acentos) y, sin plegar, su Jaccard caía a 0,67 < 0,75: el
+ * duplicado convivía. Se pliega con la receta de la casa (NFD + fuera
+ * marcas U+0300–U+036F) en este único punto, por el que pasan
+ * findSimilarFact, mergeFactContent y factSimilarity. La «ñ» se
+ * protege con un marcador antes de plegar y se restaura después:
+ * «un año» y «un ano» son hechos distintos y NO deben colisionar.
+ * Esto solo normaliza la comparación — el contenido guardado
+ * conserva la ortografía del usuario; esta función nunca produce
+ * el texto que se persiste.
+ */
+const ENYE_MARK = "\uE001";
 export function normalizeFactText(s: string): string {
   return (s ?? "")
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\u00F1/g, ENYE_MARK)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\uE001/g, "\u00F1")
     .replace(/\s+/g, " ")
     .trim();
 }
