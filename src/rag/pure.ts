@@ -407,6 +407,53 @@ export function contextualizeQuery(query: string, history?: ConversationHistory 
 }
 
 /**
+ * C-02 (2026-11-01): per-corpus normalization of ONE source's raw BM25
+ * scores, applied by each lexical source to its own candidate list
+ * BEFORE the lists are merged for fuseRetrievalResults. BM25's scale is
+ * a property of the corpus that produced it (index size, term
+ * statistics), not of relevance: merging raw lists and normalizing by
+ * the single merged maximum let whichever corpus happened to run "hot"
+ * crown the answer — on the prep's judged battery the raw winner was
+ * wrong in 4 of 18 queries (a cactus chunk over the right guide, a
+ * volcano and a rugby guide likewise), and the merged maximum came from
+ * a different corpus almost at random (device 7, Local 7, Esencial 4).
+ *
+ * The measured cure (prep C-02, clean + human-phrasing batteries):
+ * z-score within the corpus, squashed by a sigmoid into (0,1). It
+ * crowned the right source in 13/13 judged queries whose correct chunk
+ * reached the fusion; the audit's own candidate, per-corpus maximum,
+ * scored worse than raw (8/18 vs 9/18) because it hands every corpus's
+ * best — including a weak corpus's best — the same full weight. The
+ * sigmoid (vs plain z clipped at 0) keeps below-mean candidates
+ * nonzero and internally ordered. `rawScore` is not touched: the fused
+ * `score` remains an order-only relative rank (see the honesty contract
+ * on fuseRetrievalResults).
+ *
+ * Guard for degenerate lists (the prep's guard, with its stated purpose
+ * made arithmetically real): with fewer than 3 candidates, or a spread
+ * of ~0, a z-score manufactures confidence out of noise (two nearly
+ * tied scores would land at sigmoid(±1); a lone score would carry
+ * almost full weight — the N1 pathology this guard exists to prevent).
+ * Such a source is scaled by its own maximum CAPPED AT THE NEUTRAL
+ * POINT (sigmoid(0) = 0.5): relative gaps survive proportionally, but
+ * its best cannot outrank a genuine standout from a healthy corpus.
+ * When the degenerate source is the only source, the fusion's own
+ * max-normalization rescales the cap away, so lone-corpus behavior is
+ * unchanged.
+ */
+export function normalizeCorpusScores<T extends { score: number }>(chunks: T[]): T[] {
+  if (chunks.length === 0) return [];
+  const scores = chunks.map((c) => c.score);
+  const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const spread = Math.sqrt(scores.reduce((a, b) => a + (b - mean) * (b - mean), 0) / scores.length);
+  if (chunks.length < 3 || spread <= 1e-6) {
+    const max = Math.max(...scores, 1e-9);
+    return chunks.map((c) => ({ ...c, score: 0.5 * (c.score / max) }));
+  }
+  return chunks.map((c) => ({ ...c, score: 1 / (1 + Math.exp(-((c.score - mean) / spread))) }));
+}
+
+/**
  * Weighted-sum fusion of two already-scored, already-relevance-filtered
  * result sets into one ranked list. Each source is normalized to its own
  * max score before weighting so lexical (BM25, unbounded) and semantic

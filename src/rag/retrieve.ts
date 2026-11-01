@@ -13,6 +13,7 @@ import {
   filterByMinScore,
   filterByTermCoverage,
   fuseRetrievalResults,
+  normalizeCorpusScores,
   pruneSemanticByMargin,
 } from "./pure";
 import { BGE_SMALL_EN_PROFILE, embeddingProfileForSha, semanticFloor, type EmbeddingProfile } from "./embeddingProfile";
@@ -53,16 +54,21 @@ async function lexicalSearch(query: string, limit: number): Promise<RetrievedChu
      ORDER BY rank LIMIT ?`,
     [lexicalQuery.match, limit * LEXICAL_CANDIDATE_MULTIPLIER]
   );
-  return filterByTermCoverage(rows, lexicalQuery.terms).slice(0, limit).map((r) => ({
-    chunkId: r.chunk_id,
-    docId: r.doc_id,
-    title: r.title,
-    body: r.body,
-    // R-03: provenance for the fusion's personal-corpus reserve.
-    sourceKind: r.collection_id ? ("user" as const) : ("builtin" as const),
-    score: -r.rank, // bm25() returns lower-is-better; invert for consistent "higher is better"
-    matchType: "lexical" as const,
-  }));
+  // C-02: this index is ONE corpus — normalize its BM25 scores against
+  // its own distribution (z-score + sigmoid) before the list is merged
+  // with the packs' lists, whose raw BM25 scales are not comparable.
+  return normalizeCorpusScores(
+    filterByTermCoverage(rows, lexicalQuery.terms).slice(0, limit).map((r) => ({
+      chunkId: r.chunk_id,
+      docId: r.doc_id,
+      title: r.title,
+      body: r.body,
+      // R-03: provenance for the fusion's personal-corpus reserve.
+      sourceKind: r.collection_id ? ("user" as const) : ("builtin" as const),
+      score: -r.rank, // bm25() returns lower-is-better; invert for consistent "higher is better"
+      matchType: "lexical" as const,
+    }))
+  );
 }
 
 /** Brute-force cosine search over stored embeddings; fine at knowledge-base scale on-device. */
