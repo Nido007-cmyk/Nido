@@ -38,6 +38,18 @@ export type { ModelResidency, ExecutionOutcome, ExecutionTelemetryRecord } from 
 export { executionRecordsToJson, executionRecordsToCsv } from "./executionTelemetry.pure";
 
 /** Fire-and-forget from the caller's point of view is NOT this function's job — it awaits the insert, but never throws in a way that should block a chat response; callers should call this after the user already has their answer, not in the critical path. */
+/**
+ * Tope de filas de execution_telemetry (P-06, auditoría de
+ * rendimiento 2026-11-01): la ventana mayor que la casa lee es la
+ * exportación (1.000; la lista por defecto lee 200), así que guardar
+ * más que eso compra cero y la tabla solo crece — del orden de
+ * 0,5 MB por cada 1.000 ejecuciones, sin límite, en un aparato que
+ * vive sin conexión y sin nadie que la pode. Sin agregado guardado,
+ * a propósito: nada lee agregados históricos de esta tabla; lo que
+ * se pierde son filas que nadie abría.
+ */
+const EXECUTION_TELEMETRY_MAX_ROWS = 1000;
+
 export async function recordExecution(record: Omit<ExecutionTelemetryRecord, "id" | "createdAt">): Promise<void> {
   // R2: por el ciclo de vida guardado: telemetría obsoleta no puede recrear
   // la base tras Clear All Data.
@@ -53,6 +65,17 @@ export async function recordExecution(record: Omit<ExecutionTelemetryRecord, "id
         tokens_generated, tok_per_sec, peak_rss_bytes, outcome, error_message
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       row
+    );
+    // La poda viaja DENTRO de la misma transacción que la inserción:
+    // una fila nueva nunca queda sin podar ni una poda sin su fila.
+    // El desempate por id hace el corte determinista cuando dos
+    // filas comparten milisegundo (la lectura ordena por created_at).
+    await txn.runAsync(
+      `DELETE FROM execution_telemetry WHERE id NOT IN (
+         SELECT id FROM execution_telemetry
+         ORDER BY created_at DESC, id DESC LIMIT ?
+       )`,
+      [EXECUTION_TELEMETRY_MAX_ROWS]
     );
   });
 }
