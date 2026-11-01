@@ -137,6 +137,29 @@ describe("R-07 composición — el turno con Investigar activo", () => {
   });
 });
 
+// Núcleo 3: la pregunta SOBRE el número de emergencias no es una
+// emergencia viva. Antes de la cura, la puerta la interceptaba por
+// la clase de número heredada de isEmergencyText y el turno de
+// Investigar moría sin responder lo que el dato pide (el número
+// vive en las guías locales: es pregunta de conocimiento).
+describe("Núcleo 3 — el número preguntado no preempta; el suceso vivo sí", () => {
+  it("«¿cuál es el número de emergencias en México?» ya no preempta la puerta", () => {
+    expect(gatePreemptsDeepResearch("¿cuál es el número de emergencias en México?", "es")).toBe(false);
+    expect(gatePreemptsDeepResearch("¿Cuál es el número de la policía en México?", "es")).toBe(false);
+  });
+
+  it("con Investigar activo, la pregunta del número se investiga como tema de conocimiento", async () => {
+    scriptEngine("¿Cuál es el número de emergencias en México?\n¿Qué otros servicios de emergencia hay?");
+    const r = await routeTurn("¿cuál es el número de emergencias en México?", true, "es");
+    expect(r.route).toBe("deep");
+  });
+
+  it("controles que siguen preemptando: la situación viva y la fixture congelada de H-04", () => {
+    expect(gatePreemptsDeepResearch("mi hijo se está atragantando, ¿cuál es el número de emergencias?", "es")).toBe(true);
+    expect(gatePreemptsDeepResearch("¿Qué se debe hacer ante un atragantamiento?", "es")).toBe(true);
+  });
+});
+
 describe("R-07 cableado — ChatScreen consulta la puerta antes de la bifurcación", () => {
   const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../ui/ChatScreen.tsx"), "utf8");
 

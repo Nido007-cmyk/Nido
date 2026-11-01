@@ -130,7 +130,15 @@ const ACT_PATTERNS: RegExp[] = [
   /escr[íi]bele/i,
   /busca (el )?contacto/i,
   /en mis contactos/i,
-  /el (tel[ée]fono|n[úu]mero) de/i,
+  // Núcleo 3 (hallazgo vecino de la preparación S-02): el número de
+  // un servicio público no es el teléfono de un contacto. Sin la
+  // guarda, «¿cuál es el número de emergencias en México?» casaba
+  // este patrón, clasificaba actuar y moría sin extractor: la forma
+  // más obvia de pedir el dato era justo la que no llegaba a la
+  // respuesta de conocimiento. La lista es cerrada (los servicios
+  // cuyos números llevan las guías locales): emergencias, policía,
+  // bomberos. «El número de Ana» sigue siendo contacto.
+  /el (tel[ée]fono|n[úu]mero) de (?!emergencias?\b|la polic[íi]a\b|los bomberos\b)/i,
   /lee (el |este |mi )?archivo/i,
   /analiza (el |este )?archivo/i,
   /\bcalculate\b/i,

@@ -340,3 +340,28 @@ describe("classifyIntent — N-04: el typo de dictado en el verbo gatillo ruta",
     expect(classifyIntent("el recordatorio de las 3")).toBe("conversar");
   });
 });
+
+describe("classifyIntent — Núcleo 3: el número de un servicio público no es un contacto", () => {
+  it.each([
+    "¿cuál es el número de emergencias en México?",
+    "¿cuál es el número de emergencias?",
+    "dime el número de emergencias de México",
+    "¿Cuál es el número de la policía en México?",
+    "¿Me das el número de los bomberos?",
+    // Las gemelas en/pt ya clasificaban bien: controles.
+    "what is the emergency number in Mexico?",
+    "Qual é o número de emergência no México?",
+  ])("%p → conversar (ruta de conocimiento)", (text) => {
+    expect(classifyIntent(text)).toBe("conversar");
+  });
+
+  it.each([
+    // El contacto de una persona sigue siendo actuar.
+    "¿cuál es el número de Ana?",
+    "¿cuál es el teléfono de mi mamá?",
+    // La orden de llamar sigue siendo actuar, también a la policía.
+    "llama a la policía",
+  ])("%p → actuar", (text) => {
+    expect(classifyIntent(text)).toBe("actuar");
+  });
+});

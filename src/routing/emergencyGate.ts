@@ -667,16 +667,39 @@ export function isEmergencySituation(text: string): boolean {
  * investigación ANTES de que ninguna puerta mirara el texto, y una
  * emergencia dictada — que `isEmergencyText` sí reconocía — salía
  * como tema de investigación, en inglés y sobre otro tema.) La
- * decisión es la unión de las dos caras que la ruta normal ya
- * consulta: la de emergencia (`isEmergencyText`, que incluye la
+ * decisión nació como la unión de las dos caras que la ruta normal
+ * ya consulta: la de emergencia (`isEmergencyText`, que incluye la
  * situación viva contada) y la de salud (`isHealthQuestion`). Es la
  * función que ChatScreen consulta antes de la bifurcación profunda
  * y la que el propio pipeline vuelve a consultar tras descomponer:
- * una sola definición para que las dos redes no diverjan.
+ * una sola definición para que las dos redes no diverjan. Desde
+ * Núcleo 3 la unión excluye la clase de pregunta de número de
+ * emergencias (ver el cuerpo): preguntar POR el número no es un
+ * suceso y no abandona la investigación.
  */
 export function gatePreemptsDeepResearch(text: string, lang: GateLang): boolean {
   if (!text || text.trim().length === 0) return false;
-  return isEmergencyText(text, lang) || isHealthQuestion(text);
+  // Núcleo 3 (hallazgo vecino de la preparación S-02): la pregunta
+  // SOBRE el número de emergencias no es una emergencia. Hasta hoy
+  // la unión heredaba de isEmergencyText la clase de pregunta de
+  // número de los packs y la tabla fija de números, así que
+  // «¿cuál es el número de emergencias en México?» abandonaba la
+  // investigación profunda como si fuera un suceso vivo y perdía
+  // la respuesta de conocimiento. La preempción queda en lo que sí
+  // es suceso o riesgo: la situación viva contada, la pregunta de
+  // crisis, la de salud (la fixture congelada de H-04 entra por
+  // esta cara y no se mueve) y la tabla de seguridad en sus clases
+  // de monóxido — la clase «emergency-number» ya no preempta por
+  // sí sola. isEmergencyText NO cambia: su papel en la pantalla
+  // (ofrecer enviar ya el mensaje de emergencia mientras se genera)
+  // es otro y sigue igual.
+  const safety = matchSafetyAnswer(text, lang);
+  return (
+    isHealthQuestion(text) ||
+    crisisQuestionKind(text) ||
+    isEmergencySituation(text) ||
+    (safety !== null && safety.kind !== "emergency-number")
+  );
 }
 
 // ------------------------------------------------------- texto seguro

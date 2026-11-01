@@ -298,6 +298,21 @@ describe("composición — conocimiento y charla (las capas previas a la puerta)
     expect(data.reminders).toHaveLength(0);
     expect(engine.calls).toHaveLength(0);
   });
+
+  it("Núcleo 3: «¿cuál es el número de emergencias en México?» es conocimiento, no un contacto", async () => {
+    // Antes: el patrón «el número de» de contactos la clasificaba
+    // actuar, el loop no encontraba extractor y el turno moría sin
+    // respuesta. El número vive en las guías locales: es la ruta de
+    // conocimiento la que lo sirve (response null = sigue a la
+    // recuperación, como la capital de España de arriba).
+    const engine = fakeEngine();
+    const t = await send("¿cuál es el número de emergencias en México?", "es", engine);
+    expect(t.route).toBe("knowledge");
+    expect(engine.calls).toHaveLength(0);
+    // El contacto de una persona sigue yendo al agente.
+    const ana = await send("¿cuál es el número de Ana?", "es", fakeEngine());
+    expect(ana.route).toBe("agent");
+  });
 });
 
 describe("composición — recordatorios y temporizadores de la guía", () => {
