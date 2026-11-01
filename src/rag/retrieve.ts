@@ -10,6 +10,7 @@ import {
   buildLexicalQuery,
   cosineSimilarity,
   distinctFloor,
+  dropUnfoundedCorpus,
   filterByMinScore,
   filterByTermCoverage,
   fuseRetrievalResults,
@@ -54,11 +55,21 @@ async function lexicalSearch(query: string, limit: number): Promise<RetrievedChu
      ORDER BY rank LIMIT ?`,
     [lexicalQuery.match, limit * LEXICAL_CANDIDATE_MULTIPLIER]
   );
+  // C-05: presence signals over the gate's output — if this corpus does
+  // not contain the topic (or the datum type asked for), it serves
+  // nothing, so the honest no-source fall downstream can be reached
+  // instead of a plausible neighbour being cited. Signal B exempts the
+  // user's own documents: they can carry the datum without naming it.
+  const gated = filterByTermCoverage(rows, lexicalQuery.terms);
+  const founded = dropUnfoundedCorpus(rows, gated, lexicalQuery.terms, {
+    query,
+    servedFromUser: gated.map((r) => r.collection_id !== null),
+  });
   // C-02: this index is ONE corpus — normalize its BM25 scores against
   // its own distribution (z-score + sigmoid) before the list is merged
   // with the packs' lists, whose raw BM25 scales are not comparable.
   return normalizeCorpusScores(
-    filterByTermCoverage(rows, lexicalQuery.terms).slice(0, limit).map((r) => ({
+    founded.slice(0, limit).map((r) => ({
       chunkId: r.chunk_id,
       docId: r.doc_id,
       title: r.title,

@@ -18,7 +18,7 @@ import * as SQLite from "expo-sqlite";
 import * as FileSystem from "expo-file-system/legacy";
 import { CORPUS_CATALOG, MODEL_CATALOG, CatalogModel } from "../models/manifest";
 import { packFileState } from "../models/modelTrust";
-import { buildLexicalQuery, cosineSimilarityInt8, distinctFloor, DISTINCT_BG_TO, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM, normalizeCorpusScores, pruneSemanticByMargin, pruneVectorHits } from "./pure";
+import { buildLexicalQuery, cosineSimilarityInt8, distinctFloor, DISTINCT_BG_TO, dropUnfoundedCorpus, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM, normalizeCorpusScores, pruneSemanticByMargin, pruneVectorHits } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
 import { guideTitleOf, markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId, sectionLikePattern, type PackSourceDoc } from "./packSource";
 import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "./embeddingProfile";
@@ -228,11 +228,19 @@ export async function searchPacks(
           )
         : [];
       if (lexicalQuery) {
+        // C-05: presence signals PER PACK, over the gate's output — a
+        // pack that does not contain the topic (or the datum type asked
+        // for) serves nothing, so the question can reach the honest
+        // no-source fall instead of citing a plausible neighbour. Packs
+        // are always house corpus: signal B's user exemption never
+        // applies here.
+        const gated = filterByTermCoverage(rows, lexicalQuery.terms);
+        const founded = dropUnfoundedCorpus(rows, gated, lexicalQuery.terms, { query });
         // C-02: normalize PER PACK — each pack is its own corpus with
         // its own BM25 scale; normalizing over the union of packs (or
         // not at all) would re-create the cross-scale inversion this
         // normalization exists to cure.
-        const packLexical = filterByTermCoverage(rows, lexicalQuery.terms).slice(0, limit).map((r) => toChunk(r, -r.rank, "lexical"));
+        const packLexical = founded.slice(0, limit).map((r) => toChunk(r, -r.rank, "lexical"));
         lexical.push(...normalizeCorpusScores(packLexical));
       }
       // F4-2026-10-06: sin queryVec (JSI de embedding ausente) se omite

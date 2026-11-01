@@ -249,6 +249,133 @@ export function filterByTermCoverage<T extends { title: string; body: string; ke
   return hits.filter((h) => countMatchedTerms(h.keys ? `${h.title} ${h.body} ${h.keys}` : `${h.title} ${h.body}`, terms) >= required);
 }
 
+/**
+ * C-05: folded forms of the datum types the offline corpora do not carry
+ * by editorial design (C-09: Local stores numbers and phases, not postal
+ * addresses or prices). "mail" is the form "e-mail" leaves after
+ * tokenizing. This closed list grows ONLY by adding a word here together
+ * with its fixture — never by silent analogy.
+ */
+const ABSENT_DATUM_TYPE_FORMS = new Set([
+  "direccion", "direcciones", "address", "endereco", "enderecos",
+  "correo", "email", "mail",
+  "precio", "precios", "price", "preco", "precos",
+]);
+
+/**
+ * C-05: the datum-question frame of signal B ("¿cuál es…?", "¿qué…?",
+ * "what is…?", "qual é…?"), read on folded tokens so accents and
+ * punctuation can't hide it. A leading conjunction is skipped
+ * ("¿Y cuál es…?").
+ */
+function isDatumQuestion(query: string): boolean {
+  const tokens = tokenize(query);
+  const start = tokens[0] === "y" || tokens[0] === "e" || tokens[0] === "and" ? 1 : 0;
+  const a = tokens[start];
+  const b = tokens[start + 1];
+  return (
+    a === "que" ||
+    (a === "cual" && b === "es") ||
+    (a === "cuales" && b === "son") ||
+    (a === "what" && (b === "is" || b === "are")) ||
+    (a === "qual" && b === "e") ||
+    (a === "quais" && b === "sao")
+  );
+}
+
+interface TokenizedText {
+  list: string[];
+  set: Set<string>;
+}
+
+function termMatchesTokens(tok: TokenizedText, term: LexicalTerm): boolean {
+  // The same match countMatchedTerms makes, over pre-tokenized text.
+  if (term.forms.some((f) => tok.set.has(f))) return true;
+  const prefix = term.prefix;
+  return prefix !== undefined && tok.list.some((t) => t.startsWith(prefix));
+}
+
+export interface UnfoundedCorpusOptions {
+  /** Raw question, for signal B's datum frame; without it, signal B cannot form. */
+  query?: string;
+  /** Aligned with `served`: true when that hit comes from the user's own corpus (signal B exemption). */
+  servedFromUser?: readonly boolean[];
+}
+
+/**
+ * C-05: the presence signals behind ChatScreen's honest no-source fall.
+ * The coverage gate above keeps any hit covering most of the question's
+ * terms, without asking whether the matched terms are the ones that
+ * matter — so a question with no source in the corpus still got a
+ * plausible neighbour as its citation, and the fall (which needs zero
+ * chunks) was never reached. This post-filter runs after the gate at
+ * both lexical call sites; the decision is PER CORPUS (each corpus falls
+ * or serves on its own, and the fusion only receives what survives):
+ *
+ * - Signal A, "this corpus does not contain the topic": with a pool of
+ *   ≥ 8 candidates and a question of ≥ 3 terms, if some term does not
+ *   exist in the pool (df 0) and no served hit matches any DISCRIMINATIVE
+ *   term (0 < df ≤ pool/2), the corpus falls whole. Guards: a small pool
+ *   is not enough statistics, and with < 3 terms an absent term carries
+ *   no signature. A term that exists but was buried by the ranking
+ *   (df > 0, unmatched) does NOT fire it — that is C-02/C-03 territory.
+ * - Signal B, "the datum type asked for does not exist here": a datum
+ *   question (isDatumQuestion) whose type term (ABSENT_DATUM_TYPE_FORMS)
+ *   has df 0 in this corpus's pool makes the corpus fall. Exemption: if
+ *   any served hit is from the user's own corpus, signal B drops
+ *   nothing — a personal document can carry the datum without naming
+ *   its type ("Consulado de España, Calle Zanja 123…" matches like the
+ *   guide does), and the house already prefers the personal corpus
+ *   (R-03). If a future pack DOES carry the type, its df rises above 0
+ *   and the signal switches itself off.
+ *
+ * The semantic leg is exempt by design: its absolute floor is its
+ * guard, and lexical coverage would break the pt↔es rescue it exists
+ * for. Nothing here touches BM25 ranking or C-02's normalization —
+ * presence per corpus is decided before either sees the list.
+ */
+export function dropUnfoundedCorpus<T extends { title: string; body: string; keys?: string }>(
+  pool: T[],
+  served: T[],
+  terms: LexicalTerm[],
+  options: UnfoundedCorpusOptions = {}
+): T[] {
+  if (served.length === 0) return served;
+  const textOf = (h: T) => (h.keys ? `${h.title} ${h.body} ${h.keys}` : `${h.title} ${h.body}`);
+  const tokenized = new Map<T, TokenizedText>();
+  const tokOf = (h: T): TokenizedText => {
+    let tok = tokenized.get(h);
+    if (!tok) {
+      const list = tokenize(textOf(h));
+      tok = { list, set: new Set(list) };
+      tokenized.set(h, tok);
+    }
+    return tok;
+  };
+  const dfOf = (term: LexicalTerm): number => pool.reduce((n, h) => n + (termMatchesTokens(tokOf(h), term) ? 1 : 0), 0);
+
+  // Signal A — "this corpus does not contain the topic".
+  if (pool.length >= 8 && terms.length >= 3) {
+    const dfs = terms.map(dfOf);
+    if (dfs.some((d) => d === 0)) {
+      const half = pool.length / 2;
+      const discriminativeMatched = served.some((h) =>
+        terms.some((term, i) => dfs[i] > 0 && dfs[i] <= half && termMatchesTokens(tokOf(h), term))
+      );
+      if (!discriminativeMatched) return [];
+    }
+  }
+
+  // Signal B — "the datum type asked for does not exist here".
+  if (options.query !== undefined && isDatumQuestion(options.query)) {
+    const typeTerm = terms.find((t) => t.forms.some((f) => ABSENT_DATUM_TYPE_FORMS.has(f)));
+    if (typeTerm && dfOf(typeTerm) === 0 && !(options.servedFromUser?.some(Boolean) ?? false)) {
+      return [];
+    }
+  }
+  return served;
+}
+
 // Demonstratives (accent-free tokens, as `tokenize` produces them): a
 // question built around one of these points at the conversation, not at
 // itself ("¿y eso cuánto cuesta?").

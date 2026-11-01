@@ -77,17 +77,18 @@ function packDb(pack: string, langs: string[]): DatabaseSync {
 function ftsPool(db: DatabaseSync, match: string): Row[] {
   return db
     .prepare("SELECT title, body, keys, bm25(chunks_fts) AS rank FROM chunks_fts WHERE chunks_fts MATCH ? ORDER BY rank LIMIT 400")
-    .all(match) as Row[];
+    .all(match) as unknown as Row[];
 }
 
 /** El pipeline léxico de packs.ts con la señal de C-05 tras la puerta. */
 function packSearch(db: DatabaseSync, query: string, limit = 12) {
   const lq = buildLexicalQuery(query);
-  if (!lq) return { pool: [] as Row[], gated: [] as Row[], served: [] as Row[], terms: [] as LexicalTerm[] };
+  if (!lq) return { pool: [] as Row[], gated: [] as Row[], founded: [] as Row[], served: [] as Row[], terms: [] as LexicalTerm[] };
   const pool = ftsPool(db, lq.match);
   const gated = filterByTermCoverage(pool, lq.terms);
-  const served = dropUnfoundedCorpus(pool, gated, lq.terms, { query }).slice(0, limit);
-  return { pool, gated, served, terms: lq.terms };
+  const founded = dropUnfoundedCorpus(pool, gated, lq.terms, { query });
+  const served = founded.slice(0, limit);
+  return { pool, gated, founded, served, terms: lq.terms };
 }
 
 const matchedForms = (r: Row, terms: LexicalTerm[]) =>
@@ -114,15 +115,15 @@ describe("C-05 · la caída honesta contra Local (sin Esencial)", () => {
   });
 
   it("control Cuba: el vecino que SÍ es la respuesta sigue sirviéndose, con los 3 términos en cabeza", () => {
-    const { gated, served, terms } = packSearch(local, "¿Cuál es el número de emergencias en Cuba?");
-    expect(served.length).toBe(gated.length);
+    const { gated, founded, served, terms } = packSearch(local, "¿Cuál es el número de emergencias en Cuba?");
+    expect(founded.length).toBe(gated.length);
     expect(served.length).toBeGreaterThan(0);
     expect(matchedForms(served[0], terms)).toEqual(["numero", "emergencias", "cuba"]);
   });
 
   it("control México: ídem, 3 términos en cabeza y ninguna señal se forma", () => {
-    const { gated, served, terms } = packSearch(local, "¿Cuál es el número de emergencias en México?");
-    expect(served.length).toBe(gated.length);
+    const { gated, founded, served, terms } = packSearch(local, "¿Cuál es el número de emergencias en México?");
+    expect(founded.length).toBe(gated.length);
     expect(served.length).toBeGreaterThan(0);
     expect(matchedForms(served[0], terms)).toEqual(["numero", "emergencias", "mexico"]);
   });
@@ -131,17 +132,17 @@ describe("C-05 · la caída honesta contra Local (sin Esencial)", () => {
     // Con la guarda de ≥ 3 términos la señal A no se forma (la pregunta
     // deja un solo término, «emergencia»): la caída ahí sería decisión
     // editorial, no de esta señal. La fixture documenta la conducta.
-    const { gated, served, terms } = packSearch(local, "¿qué hago en una emergencia?");
+    const { gated, founded, terms } = packSearch(local, "¿qué hago en una emergencia?");
     expect(terms.length).toBe(1);
     expect(gated.length).toBeGreaterThan(0);
-    expect(served.length).toBe(gated.length);
+    expect(founded.length).toBe(gated.length);
   });
 });
 
 describe("C-05 · la señal es por corpus (Esencial no cae con Local)", () => {
   it("D2 con Esencial: la guía 26 es la respuesta y su corpus no cae", () => {
-    const { gated, served } = packSearch(esencial, "¿Cómo se prepara el suero oral en casa?");
-    expect(served.length).toBe(gated.length);
+    const { gated, founded, served } = packSearch(esencial, "¿Cómo se prepara el suero oral en casa?");
+    expect(founded.length).toBe(gated.length);
     expect(served.some((r) => r.title.includes("suero oral"))).toBe(true);
   });
 
@@ -153,9 +154,9 @@ describe("C-05 · la señal es por corpus (Esencial no cae con Local)", () => {
     // señal B no lo cubre). La fixture fija el resto: estirar la señal
     // para cazarlo sería otra decisión, no esta cura.
     const q = "¿Cuánto cuesta una ambulancia?";
-    const { gated, served } = packSearch(esencial, q);
+    const { gated, founded, served } = packSearch(esencial, q);
     expect(gated.length).toBe(5);
-    expect(served.length).toBe(gated.length);
+    expect(founded.length).toBe(gated.length);
     expect(served.map((r) => r.title.split(" — ")[0])).toEqual(
       expect.arrayContaining([
         expect.stringContaining("Shock"),
