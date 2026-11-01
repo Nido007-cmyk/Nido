@@ -9,9 +9,11 @@ import {
   cosineSimilarity,
   assemblePrompt,
   assembleChatMessages,
+  fitChunksToBudget,
   serializeEmbedding,
   deserializeEmbedding,
 } from "./pure";
+import { assertPromptBudget, estimatePromptTokens } from "../agent/loop/agentLoop";
 import { classifyTask, isRetrievalIrrelevant } from "../routing/classify";
 import type { RetrievedChunk } from "./retrieve.types";
 
@@ -413,5 +415,154 @@ describe("0.1.61: prefijo estable del mensaje de sistema (caché de llama.rn)", 
     while (common < without.length && withSources[common] === without[common] && noSources[common] === without[common]) common++;
     expect(withSources.slice(0, common)).toContain("no ability to control real-world devices");
     expect(common).toBeGreaterThanOrEqual(without.length - 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// R-01 (ronda física 0.1.68): presupuesto de contexto en la ruta fija.
+// El escenario de la ronda: chat con una respuesta de guía larga en el
+// historial + el documento importado; la pregunta de la cita moría con
+// «prompt excede el contexto del modelo (estimado 3565 tokens + 512 a
+// generar > nCtx 3072) en chat-directo» porque la ruta fija ensamblaba
+// sin presupuesto y applyContextBudget no sabe recortar fuentes.
+// ---------------------------------------------------------------------------
+
+const R01_NCTX = 3072;
+const R01_RESERVE = 512;
+
+/** Cuerpo de frases completas y repetibles, ~71 caracteres por frase. */
+function sentenceBody(marker: string, sentences: number): string {
+  return `El dato ${marker} queda en la sala doscientos catorce del segundo piso. `.repeat(sentences);
+}
+
+function r01Chunk(id: string, title: string, body: string): RetrievedChunk {
+  return { chunkId: id, docId: id, title, body, score: 1, matchType: "hybrid" };
+}
+
+/** Render de las entradas tal como lo hacen los dos ensambladores. */
+function renderedEntries(chunks: RetrievedChunk[]): string {
+  return chunks.map((c, i) => `[${i + 1}] ${c.title}\n${c.body}`).join("\n\n");
+}
+
+describe("fitChunksToBudget (R-01)", () => {
+  it("no toca la lista cuando todo cabe", () => {
+    const fixedText = "F".repeat(600);
+    const chunks = [r01Chunk("1", "Doc 1", sentenceBody("a", 6)), r01Chunk("2", "Doc 2", sentenceBody("b", 6))];
+    const out = fitChunksToBudget(chunks, fixedText, R01_NCTX, R01_RESERVE);
+    expect(out).toHaveLength(2);
+    expect(out[0].body).toBe(chunks[0].body);
+    expect(out[1].body).toBe(chunks[1].body);
+  });
+
+  it("descarta fragmentos desde el final (menor rango primero) hasta que cabe", () => {
+    const fixedText = "F".repeat(1500);
+    const chunks = [1, 2, 3, 4].map((n) =>
+      r01Chunk(String(n), `Doc ${n}`, sentenceBody(`m${n}`, 34))
+    );
+    const out = fitChunksToBudget(chunks, fixedText, R01_NCTX, R01_RESERVE);
+    expect(out.map((c) => c.title)).toEqual(["Doc 1", "Doc 2"]);
+    expect(out[0].body).toBe(chunks[0].body);
+    expect(out[1].body).toBe(chunks[1].body);
+    expect(
+      estimatePromptTokens(fixedText + renderedEntries(out)) + R01_RESERVE
+    ).toBeLessThanOrEqual(R01_NCTX);
+  });
+
+  it("con un solo fragmento gigante, trunca el cuerpo por la última frase completa que cabe", () => {
+    const fixedText = "F".repeat(1500);
+    const big = r01Chunk("1", "Doc Grande", sentenceBody("g", 120));
+    const out = fitChunksToBudget([big], fixedText, R01_NCTX, R01_RESERVE);
+    expect(out).toHaveLength(1);
+    expect(out[0].body.length).toBeLessThan(big.body.length);
+    expect(big.body.startsWith(out[0].body)).toBe(true);
+    expect(out[0].body.endsWith(".")).toBe(true);
+    // El fragmento original no se muta.
+    expect(big.body).toBe(sentenceBody("g", 120));
+    expect(
+      estimatePromptTokens(fixedText + renderedEntries(out)) + R01_RESERVE
+    ).toBeLessThanOrEqual(R01_NCTX);
+  });
+
+  it("devuelve [] cuando ni un fragmento mínimo cabe (manda el «sin fuentes»)", () => {
+    const fixedText = "F".repeat(9000);
+    const chunks = [r01Chunk("1", "Doc 1", sentenceBody("a", 6))];
+    expect(fitChunksToBudget(chunks, fixedText, R01_NCTX, R01_RESERVE)).toEqual([]);
+  });
+});
+
+describe("ruta fija con presupuesto (R-01): el escenario de la ronda", () => {
+  const query = "¿Qué día y a qué horas es la cita?";
+  const chunks: RetrievedChunk[] = [
+    r01Chunk("1", "Documento de la cita", sentenceBody("cita", 25)),
+    r01Chunk("2", "Doc 2", sentenceBody("dos", 25)),
+    r01Chunk("3", "Doc 3", sentenceBody("tres", 25)),
+    r01Chunk("4", "Doc 4", sentenceBody("cuatro", 25)),
+  ];
+  const history = {
+    turns: [
+      { role: "user" as const, text: "Quiero la guía completa del tema" },
+      { role: "assistant" as const, text: sentenceBody("GUIA", 36) },
+      { role: "user" as const, text: "Vale, gracias" },
+      { role: "assistant" as const, text: "De nada, aquí estoy." },
+    ],
+  };
+
+  it("sin presupuesto reproduce el fallo: la aserción lanza el error de la ronda", () => {
+    const messages = assembleChatMessages(query, chunks, undefined, history);
+    const joined = messages.map((m) => m.content).join("\n");
+    expect(() =>
+      assertPromptBudget([{ role: "user", content: joined }], R01_NCTX, R01_RESERVE, "chat-directo")
+    ).toThrow(/prompt excede el contexto/);
+  });
+
+  it("con presupuesto responde dentro de la ventana, conserva el rango 1 y el turno reciente", () => {
+    const messages = assembleChatMessages(query, chunks, undefined, history, undefined, false, {
+      nCtx: R01_NCTX,
+      reserveGeneration: R01_RESERVE,
+    });
+    const joined = messages.map((m) => m.content).join("\n");
+    expect(() =>
+      assertPromptBudget([{ role: "user", content: joined }], R01_NCTX, R01_RESERVE, "chat-directo")
+    ).not.toThrow();
+    // La fuente principal (el documento) sobrevive al recorte.
+    expect(joined).toContain("Documento de la cita");
+    // El fragmento de menor rango es el que se sacrifica.
+    expect(joined).not.toContain("Doc 4");
+    // El historial viejo (la guía) se corta antes que las fuentes; el
+    // turno más reciente se conserva.
+    expect(joined).not.toContain("GUIA");
+    expect(joined).toContain("De nada, aquí estoy.");
+  });
+
+  it("la vía sin plantilla (assemblePrompt) con presupuesto también cabe y conserva el rango 1", () => {
+    const prompt = assemblePrompt(query, chunks, undefined, history, undefined, false, {
+      nCtx: R01_NCTX,
+      reserveGeneration: R01_RESERVE,
+    });
+    expect(estimatePromptTokens(prompt) + R01_RESERVE).toBeLessThanOrEqual(R01_NCTX);
+    expect(prompt).toContain("Documento de la cita");
+    expect(prompt).not.toContain("Doc 4");
+  });
+
+  it("regresión: con ventana amplia y conversación corta, el resultado es idéntico al de sin presupuesto", () => {
+    const shortChunks = [r01Chunk("1", "Doc 1", sentenceBody("a", 2))];
+    const shortHistory = {
+      turns: [
+        { role: "user" as const, text: "hola" },
+        { role: "assistant" as const, text: "hola, ¿qué tal?" },
+      ],
+    };
+    const withBudget = assembleChatMessages("¿qué es X?", shortChunks, "You are Nido.", shortHistory, undefined, false, {
+      nCtx: 4096,
+      reserveGeneration: 512,
+    });
+    const withoutBudget = assembleChatMessages("¿qué es X?", shortChunks, "You are Nido.", shortHistory);
+    expect(withBudget).toEqual(withoutBudget);
+    expect(
+      assemblePrompt("¿qué es X?", shortChunks, "You are Nido.", shortHistory, undefined, false, {
+        nCtx: 4096,
+        reserveGeneration: 512,
+      })
+    ).toBe(assemblePrompt("¿qué es X?", shortChunks, "You are Nido.", shortHistory));
   });
 });

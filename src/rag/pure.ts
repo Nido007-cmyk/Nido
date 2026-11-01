@@ -12,7 +12,11 @@
  */
 import type { RetrievedChunk } from "./retrieve.types";
 // P2.3: pure context-budget manager (no native deps — safe for this module).
-import { applyContextBudget, budgetConfigFor } from "../agent/loop/contextBudget";
+import {
+  applyContextBudget,
+  budgetConfigFor,
+  defaultTokenCounter,
+} from "../agent/loop/contextBudget";
 
 export function cosineSimilarity(a: Float32Array, b: Float32Array): number {
   let dot = 0;
@@ -403,6 +407,70 @@ export interface ConversationHistory {
   turns?: ConversationTurn[];
 }
 
+/** How both assemblers render the chunk list inside the prompt. */
+function renderChunkEntries(chunks: RetrievedChunk[]): string {
+  return chunks.map((c, i) => `[${i + 1}] ${c.title}\n${c.body}`).join("\n\n");
+}
+
+/** Offsets just past the end of each complete sentence in `text`. */
+function sentenceEndOffsets(text: string): number[] {
+  const ends: number[] = [];
+  const re = /[.!?…]+["»”')\]]*(?:\s+|$)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    ends.push(m.index + m[0].length);
+    if (m[0].length === 0) re.lastIndex++;
+  }
+  return ends;
+}
+
+/**
+ * R-01 (ronda física 0.1.68): recorta la lista de fragmentos recuperados
+ * hasta que el prompt cabe en la ventana con la reserva de generación.
+ *
+ * applyContextBudget (P2.3) solo sabe recortar HISTORIAL: las fuentes
+ * viajan dentro del mensaje actual, que trata como atómico, así que con
+ * una guía larga en el historial + un documento importado (4 fragmentos
+ * de 2.000 caracteres ≈ 87 % de una ventana de 3072) el prompt desbordaba
+ * y la ruta fija moría en assertPromptBudget con el error crudo.
+ *
+ * Política de recorte, en orden: se descartan fragmentos desde el final
+ * (menor rango primero); el fragmento de mayor rango nunca se descarta —
+ * si es el único que queda y aún no cabe, se trunca su cuerpo por la
+ * última frase completa que quepa; si ni un fragmento mínimo cabe, se
+ * devuelve [] y manda el comportamiento «sin fuentes» del llamador.
+ * Nunca se toca el sistema ni la pregunta (viven en `fixedText`).
+ *
+ * `fixedText` es todo el prompt EXCEPTO las entradas de fragmentos
+ * renderizadas (sistema + historial + pregunta + marco): la estimación
+ * es por longitud total, así que el orden de concatenación no importa.
+ */
+export function fitChunksToBudget(
+  chunks: RetrievedChunk[],
+  fixedText: string,
+  nCtx: number,
+  reserveGeneration: number
+): RetrievedChunk[] {
+  if (chunks.length === 0) return chunks;
+  const fits = (list: RetrievedChunk[]): boolean =>
+    defaultTokenCounter(fixedText + renderChunkEntries(list)) + reserveGeneration <= nCtx;
+  if (fits(chunks)) return chunks;
+  let kept = chunks.slice();
+  while (kept.length > 1 && !fits(kept)) kept = kept.slice(0, -1);
+  if (fits(kept)) return kept;
+  // Queda un solo fragmento (el de mayor rango) y aún no cabe: truncar su
+  // cuerpo por frases completas, de la más larga a la más corta que quepa.
+  const top = kept[0];
+  const ends = sentenceEndOffsets(top.body);
+  for (let i = ends.length - 1; i >= 0; i--) {
+    const body = top.body.slice(0, ends[i]).trimEnd();
+    if (body.length === 0) continue;
+    const candidate = [{ ...top, body }];
+    if (fits(candidate)) return candidate;
+  }
+  return [];
+}
+
 /**
  * `systemPrompt` sets the assistant's tone/style/length (see
  * src/constants/personalities.ts) - the citation instruction is always
@@ -428,60 +496,90 @@ export function assemblePrompt(
   systemPrompt?: string,
   history?: ConversationHistory,
   styleReminder?: string,
-  noSourcesFoundNote: boolean = false
+  noSourcesFoundNote: boolean = false,
+  // R-01: optional context budget, same shape as assembleChatMessages'.
+  // When provided, turns are dropped oldest-first and then the chunks are
+  // fitted (fitChunksToBudget) until the prompt + reserve fit nCtx; when
+  // absent, behavior is exactly as before.
+  budget?: { nCtx: number; reserveGeneration: number }
 ): string {
-  const instruction =
-    systemPrompt && systemPrompt.trim().length > 0
-      ? systemPrompt.trim()
-      : "You are an offline research assistant.";
+  const buildPrompt = (
+    cs: RetrievedChunk[],
+    turns: ConversationTurn[] | undefined
+  ): string => {
+    const instruction =
+      systemPrompt && systemPrompt.trim().length > 0
+        ? systemPrompt.trim()
+        : "You are an offline research assistant.";
 
-  const summarySection =
-    history?.summary && history.summary.trim().length > 0
-      ? `Summary of earlier conversation:\n${history.summary.trim()}\n\n`
+    const summarySection =
+      history?.summary && history.summary.trim().length > 0
+        ? `Summary of earlier conversation:\n${history.summary.trim()}\n\n`
+        : "";
+
+    const turnsSection =
+      turns && turns.length > 0
+        ? `Recent conversation:\n${turns
+            .map((t) => `${t.role === "user" ? "User" : "Assistant"}: ${t.text}`)
+            .join("\n")}\n\n`
+        : "";
+
+    // With zero retrieved chunks (a greeting/calculate/translate/code task
+    // per isRetrievalIrrelevant, or a "chat"-type query retrieve() genuinely
+    // found nothing relevant for), the whole context/citation framing is
+    // omitted entirely rather than left as an empty "Context:\n\n" section -
+    // an empty-but-present section still tells the model there's supposed to
+    // be something there and to "cite sources as [n]", which is exactly the
+    // kind of dangling framing that nudges a small model toward inventing
+    // content to fill it instead of just answering conversationally.
+    const hasContext = cs.length > 0;
+    const contextInstruction = hasContext ? GROUNDED_CONTEXT_INSTRUCTION : "";
+    // Honest no-result behavior: retrieval ran and found nothing relevant.
+    // FIX 2026-10-09 (Phase 3): the 0.5B model hallucinates confidently when
+    // permitted to answer from "general knowledge". Require honest "I don't
+    // know" for factual questions without sources instead.
+    const noSourcesInstruction =
+      noSourcesFoundNote && !hasContext
+        ? " No relevant sources were found in the offline index for this question. " +
+          "Do NOT invent facts. If this is a factual question you cannot answer " +
+          "reliably without sources, say honestly that you don't know the answer " +
+          "and suggest what the user could check. Only answer from general knowledge " +
+          "for non-factual requests (opinions, creative writing, simple calculations)."
+        : "";
+    const contextSection = hasContext
+      ? `Context:\n${renderChunkEntries(cs)}\n\n`
       : "";
 
-  const turnsSection =
-    history?.turns && history.turns.length > 0
-      ? `Recent conversation:\n${history.turns
-          .map((t) => `${t.role === "user" ? "User" : "Assistant"}: ${t.text}`)
-          .join("\n")}\n\n`
-      : "";
+    // 0.1.61 (velocidad): lo que no cambia entre preguntas va primero
+    // (identidad, estilo, límites), lo que cambia según haya fuentes, al
+    // final. llama.rn reutiliza la caché del prefijo común con el turno
+    // anterior: así ese prefijo no se vuelve a leer en cada pregunta.
+    return `${instruction} ${GROUNDING_INSTRUCTION}${contextInstruction}${noSourcesInstruction}\n\n` +
+      `${summarySection}${turnsSection}` +
+      `${contextSection}` +
+      `${hasContext ? `${GROUNDED_QUESTION_REMINDER}\n\n` : ""}` +
+      `Question: ${userQuery}${styleSection(styleReminder)}\n\nAnswer:`;
+  };
 
-  // With zero retrieved chunks (a greeting/calculate/translate/code task
-  // per isRetrievalIrrelevant, or a "chat"-type query retrieve() genuinely
-  // found nothing relevant for), the whole context/citation framing is
-  // omitted entirely rather than left as an empty "Context:\n\n" section -
-  // an empty-but-present section still tells the model there's supposed to
-  // be something there and to "cite sources as [n]", which is exactly the
-  // kind of dangling framing that nudges a small model toward inventing
-  // content to fill it instead of just answering conversationally.
-  const hasContext = chunks.length > 0;
-  const contextInstruction = hasContext ? GROUNDED_CONTEXT_INSTRUCTION : "";
-  // Honest no-result behavior: retrieval ran and found nothing relevant.
-  // FIX 2026-10-09 (Phase 3): the 0.5B model hallucinates confidently when
-  // permitted to answer from "general knowledge". Require honest "I don't
-  // know" for factual questions without sources instead.
-  const noSourcesInstruction =
-    noSourcesFoundNote && !hasContext
-      ? " No relevant sources were found in the offline index for this question. " +
-        "Do NOT invent facts. If this is a factual question you cannot answer " +
-        "reliably without sources, say honestly that you don't know the answer " +
-        "and suggest what the user could check. Only answer from general knowledge " +
-        "for non-factual requests (opinions, creative writing, simple calculations)."
-      : "";
-  const contextSection = hasContext
-    ? `Context:\n${chunks.map((c, i) => `[${i + 1}] ${c.title}\n${c.body}`).join("\n\n")}\n\n`
-    : "";
-
-  // 0.1.61 (velocidad): lo que no cambia entre preguntas va primero
-  // (identidad, estilo, límites), lo que cambia según haya fuentes, al
-  // final. llama.rn reutiliza la caché del prefijo común con el turno
-  // anterior: así ese prefijo no se vuelve a leer en cada pregunta.
-  return `${instruction} ${GROUNDING_INSTRUCTION}${contextInstruction}${noSourcesInstruction}\n\n` +
-    `${summarySection}${turnsSection}` +
-    `${contextSection}` +
-    `${hasContext ? `${GROUNDED_QUESTION_REMINDER}\n\n` : ""}` +
-    `Question: ${userQuery}${styleSection(styleReminder)}\n\nAnswer:`;
+  let prompt = buildPrompt(chunks, history?.turns);
+  if (!budget) return prompt;
+  const fitsBudget = (p: string, reserve: number): boolean =>
+    defaultTokenCounter(p) + reserve <= budget.nCtx;
+  if (fitsBudget(prompt, budget.reserveGeneration)) return prompt;
+  // R-01 cut order: oldest history first, then lowest-ranked chunks; the
+  // system prompt and the question are never cut. The chunks are fitted
+  // at the caller's own reserve: if even that cannot make the core fit,
+  // the prompt is returned as small as it gets and the caller's budget
+  // assert remains the honest final guard (nearly unreachable).
+  let turns = history?.turns ? [...history.turns] : undefined;
+  while (turns && turns.length > 0 && !fitsBudget(prompt, budget.reserveGeneration)) {
+    turns = turns.slice(1);
+    prompt = buildPrompt(chunks, turns);
+  }
+  if (fitsBudget(prompt, budget.reserveGeneration)) return prompt;
+  const fixedText = prompt.replace(renderChunkEntries(chunks), "");
+  const fitted = fitChunksToBudget(chunks, fixedText, budget.nCtx, budget.reserveGeneration);
+  return buildPrompt(fitted, turns);
 }
 
 export interface ChatMessage {
@@ -521,55 +619,89 @@ export function assembleChatMessages(
       ? systemPrompt.trim()
       : "You are an offline research assistant.";
 
-  const hasContext = chunks.length > 0;
-  const contextInstruction = hasContext ? GROUNDED_CONTEXT_INSTRUCTION : "";
-  // Honest no-result behavior - see assemblePrompt for the rationale.
-  // FIX 2026-10-09 (Phase 3): the 0.5B model hallucinates confidently when
-  // permitted to answer from "general knowledge". Instead of allowing it,
-  // require an honest "I don't know" for factual questions without sources.
-  const noSourcesInstruction =
-    noSourcesFoundNote && !hasContext
-      ? " No relevant sources were found in the offline index for this question. " +
-        "Do NOT invent facts. If this is a factual question you cannot answer " +
-        "reliably without sources, say honestly that you don't know the answer " +
-        "and suggest what the user could check. Only answer from general knowledge " +
-        "for non-factual requests (opinions, creative writing, simple calculations)."
-      : "";
-  // RAG-GROUNDING 2026-10-11: las fuentes van en el turno del usuario,
-  // PEGADAS a la pregunta, no al final del mensaje de sistema (donde el
-  // historial las separaba de la pregunta). Un modelo pequeño atiende sobre
-  // todo a lo último que lee ("Lost in the Middle", Liu et al. 2023): las
-  // fuentes y la regla de ceñirse a ellas quedan justo antes de generar.
-  const sourcesBlock = hasContext
-    ? `Sources:\n${chunks.map((c, i) => `[${i + 1}] ${c.title}\n${c.body}`).join("\n\n")}\n\n` +
-      `${GROUNDED_QUESTION_REMINDER}\n\nQuestion: `
-    : "";
   const summarySection =
     history?.summary && history.summary.trim().length > 0
       ? `\n\nSummary of earlier conversation:\n${history.summary.trim()}`
       : "";
 
-  const systemMessage: ChatMessage = {
-    role: "system",
-    content:
-      // 0.1.61 (velocidad): ver assemblePrompt; prefijo estable primero.
-      `${instruction} ${GROUNDING_INSTRUCTION}${contextInstruction}${noSourcesInstruction}${summarySection}`,
+  // R-01: system and current-user are built from a chunk list so the
+  // budget path can rebuild them with the fitted list. With the original
+  // list the output is byte-identical to before.
+  const buildSystemMessage = (cs: RetrievedChunk[]): ChatMessage => {
+    const hasContext = cs.length > 0;
+    const contextInstruction = hasContext ? GROUNDED_CONTEXT_INSTRUCTION : "";
+    // Honest no-result behavior - see assemblePrompt for the rationale.
+    // FIX 2026-10-09 (Phase 3): the 0.5B model hallucinates confidently when
+    // permitted to answer from "general knowledge". Instead of allowing it,
+    // require an honest "I don't know" for factual questions without sources.
+    const noSourcesInstruction =
+      noSourcesFoundNote && !hasContext
+        ? " No relevant sources were found in the offline index for this question. " +
+          "Do NOT invent facts. If this is a factual question you cannot answer " +
+          "reliably without sources, say honestly that you don't know the answer " +
+          "and suggest what the user could check. Only answer from general knowledge " +
+          "for non-factual requests (opinions, creative writing, simple calculations)."
+        : "";
+    return {
+      role: "system",
+      content:
+        // 0.1.61 (velocidad): ver assemblePrompt; prefijo estable primero.
+        `${instruction} ${GROUNDING_INSTRUCTION}${contextInstruction}${noSourcesInstruction}${summarySection}`,
+    };
   };
+
+  const buildCurrentUser = (cs: RetrievedChunk[]): ChatMessage => {
+    // RAG-GROUNDING 2026-10-11: las fuentes van en el turno del usuario,
+    // PEGADAS a la pregunta, no al final del mensaje de sistema (donde el
+    // historial las separaba de la pregunta). Un modelo pequeño atiende sobre
+    // todo a lo último que lee ("Lost in the Middle", Liu et al. 2023): las
+    // fuentes y la regla de ceñirse a ellas quedan justo antes de generar.
+    const sourcesBlock =
+      cs.length > 0
+        ? `Sources:\n${renderChunkEntries(cs)}\n\n` +
+          `${GROUNDED_QUESTION_REMINDER}\n\nQuestion: `
+        : "";
+    return {
+      role: "user",
+      content: `${sourcesBlock}${userQuery}${styleSection(styleReminder)}`,
+    };
+  };
+
+  let systemMessage = buildSystemMessage(chunks);
+  let currentUser = buildCurrentUser(chunks);
 
   const historyMessages: ChatMessage[] = (history?.turns ?? []).map((t) => ({
     role: t.role,
     content: t.text,
   }));
 
-  const currentUser: ChatMessage = {
-    role: "user",
-    content: `${sourcesBlock}${userQuery}${styleSection(styleReminder)}`,
-  };
-
   // P2.3: when a budget is provided, cut history recent-first instead of
   // hoping it fits. System stays pinned; generation headroom is reserved.
   let keptHistory = historyMessages;
   if (budget) {
+    // R-01: applyContextBudget can only cut HISTORY — if system + current
+    // + reserve overflow on their own it throws and the whole turn dies
+    // (the round's raw "prompt excede el contexto" error: long guide in
+    // history + imported document, sources alone ≈ 87% of a 3072
+    // window). Only in that case, fit the chunks first — at the caller's
+    // own reserve, so the invariant prompt + reserve ≤ nCtx is preserved
+    // whenever it is achievable; history then fills whatever room is
+    // left, as before. If even a fitted core cannot fit, applyContextBudget
+    // still throws, exactly as before: the honest final guard.
+    const coreOverflows =
+      defaultTokenCounter(systemMessage.content) +
+        defaultTokenCounter(currentUser.content) +
+        budget.reserveGeneration >
+      budget.nCtx;
+    if (coreOverflows) {
+      const fixedText =
+        systemMessage.content +
+        "\n" +
+        currentUser.content.replace(renderChunkEntries(chunks), "");
+      const fitted = fitChunksToBudget(chunks, fixedText, budget.nCtx, budget.reserveGeneration);
+      systemMessage = buildSystemMessage(fitted);
+      currentUser = buildCurrentUser(fitted);
+    }
     const budgeted = applyContextBudget(
       systemMessage,
       historyMessages,

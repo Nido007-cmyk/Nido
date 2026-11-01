@@ -1560,26 +1560,38 @@ export function ChatScreen({
           // repetición). Antes no se pasaba ninguno y el 0.5B corría sin
           // penalización: bucle «las aluminosas, las aluminosas…».
           const sampling = { samplingPreset: c.length > 0 ? ("factual" as const) : ("chat" as const) };
-          const directMessages = useChatTemplate
-            ? assembleChatMessages(query, c, systemPrompt, history, styleReminder, noSources)
-            : undefined;
-          const directPrompt = useChatTemplate
-            ? undefined
-            : assemblePrompt(query, c, systemPrompt, history, styleReminder, noSources);
-          const promptText = useChatTemplate ? directMessages!.map((m) => m.content).join("\n") : directPrompt!;
+          // R-01 (ronda física 0.1.68): el presupuesto se calcula ANTES de
+          // ensamblar y llega a las dos vías. Antes esta ruta llamaba sin
+          // `budget` y el único control era la aserción final: con una
+          // guía larga en el historial + un documento importado, el
+          // prompt desbordaba la ventana (3565 estimados + 512 > 3072) y
+          // el usuario veía el error crudo «prompt excede el contexto».
+          // Ahora los ensambladores recortan historial y, si ni así
+          // cabe, las fuentes (fitChunksToBudget en src/rag/pure.ts).
           const nCtx = llamaEngine.getModelInfo()?.nCtx ?? 4096;
           // Estudio de modelos (2026-10-12): piso de generación del
           // modelo cargado — un modelo que razona (LFM2.5) con el
           // presupuesto normal puede gastar todos los tokens pensando
-          // y no responder nunca. El piso se recorta a lo que el
-          // contexto admite tras el prompt, y la aserción de abajo
-          // sigue siendo la guarda final.
+          // y no responder nunca.
           const loadedEntry = MODEL_CATALOG.find((m) => m.filename === llamaEngine.getModelInfo()?.filename);
           const genFloor = loadedEntry?.capabilities?.minGenerationTokens ?? 0;
-          const genTokens = Math.min(
-            Math.max(maxTokens, genFloor),
-            Math.max(512, nCtx - estimatePromptTokens(promptText) - 64)
-          );
+          const desiredGen = Math.max(maxTokens, genFloor);
+          const budget = { nCtx, reserveGeneration: desiredGen };
+          const directMessages = useChatTemplate
+            ? assembleChatMessages(query, c, systemPrompt, history, styleReminder, noSources, budget)
+            : undefined;
+          const directPrompt = useChatTemplate
+            ? undefined
+            : assemblePrompt(query, c, systemPrompt, history, styleReminder, noSources, budget);
+          const promptText = useChatTemplate ? directMessages!.map((m) => m.content).join("\n") : directPrompt!;
+          // R-01: suelo de generación degradable — si tras el recorte el
+          // prompt no deja 512 tokens, el suelo baja por peldaños
+          // (512 → 256 → 128 → 64) y se genera con lo que cabe, en vez de
+          // forzar 512 y morir en la aserción de abajo (que se queda como
+          // guarda final para el caso irreducible).
+          const availableGen = nCtx - estimatePromptTokens(promptText) - 64;
+          const genFloorStep = [512, 256, 128, 64].find((s) => s <= availableGen) ?? 64;
+          const genTokens = Math.min(desiredGen, Math.max(genFloorStep, availableGen));
           const genInput = useChatTemplate
             ? { messages: directMessages!, nPredict: genTokens, onToken, ...sampling }
             : { prompt: directPrompt!, nPredict: genTokens, onToken, ...sampling };
