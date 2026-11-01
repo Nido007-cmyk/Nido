@@ -12,7 +12,7 @@
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { EVAL_SET_V2 } from "./evalSetV2";
+import { EVAL_SET_V2, foldForEval } from "./evalSetV2";
 
 const root = (p: string) => fileURLToPath(new URL(`../../${p}`, import.meta.url));
 
@@ -57,5 +57,15 @@ describe("evaluación v2: los casos son verdad", () => {
 
   it("cada región de los casos existe en NIDO Local", () => {
     for (const c of EVAL_SET_V2) if (c.expect.region) expect(REGIONS).toContain(c.expect.region);
+  });
+
+  it("caracterización de foldForEval (B-resto B-07): solo quita tildes y mayúsculas; puntuación y blanco intactos", () => {
+    // Corpus compartido con las caracterizaciones de foldSearch
+    // (search.test.ts) y de foldText (packFacts.test.ts): sobre estas
+    // mismas líneas las tres recetas DIFIEREN a propósito — esta es
+    // la más conservadora de las tres — y cada casa afirma la salida
+    // exacta de la suya.
+    expect(foldForEval("¡Emergencia, MÉDICO!")).toBe("¡emergencia, medico!");
+    expect(foldForEval("Calle   50\tNorte")).toBe("calle   50\tnorte");
   });
 });

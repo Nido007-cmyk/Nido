@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { composeFactsAnswer, emergencyQuestionKind, findRegion, type PackFact, type PackRegion } from "./packFacts";
+import { composeFactsAnswer, emergencyQuestionKind, findRegion, foldText, type PackFact, type PackRegion } from "./packFacts";
 
 // The real NIDO Local data, read the way the app reads the pack's tables.
 const doc = JSON.parse(readFileSync(new URL("../../knowledge-packs/nido-local/facts.json", import.meta.url), "utf8"));
@@ -302,5 +302,29 @@ describe("F1 S-1: la línea de crisis cruzada entre packs (chat frente a pestañ
     const { composeMergedCrisisAnswer } = await import("./packFacts");
     expect(composeMergedCrisisAnswer("¿cuál es la línea de crisis de Chile?", "es", [packA, { regions: [], facts: [] }])).toBeNull();
     expect(composeMergedCrisisAnswer("número de emergencias de Chile", "es", [packA, packB])).toBeNull();
+  });
+});
+
+describe("recetas de plegado (B-resto B-07): caracterización, sin fusionar", () => {
+  it("foldText: la puntuación se vuelve espacio, el blanco se normaliza y el resultado va envuelto en espacios", () => {
+    // Corpus compartido con las caracterizaciones de foldSearch
+    // (search.test.ts) y de foldForEval (evalSetV2.test.ts): sobre
+    // estas mismas líneas las tres recetas DIFIEREN a propósito —
+    // las otras dos conservan la puntuación — y cada casa afirma la
+    // salida exacta de la suya. La semántica de foldText alimenta la
+    // puerta de emergencias: si esta receta deriva, este test cae.
+    expect(foldText("¡Emergencia, MÉDICO!")).toBe(" emergencia medico ");
+    expect(foldText("Calle   50\tNorte")).toBe(" calle 50 norte ");
+  });
+
+  it("foldKeepCase conserva el caso: un alias con mayúsculas solo casa escrito igual", () => {
+    // foldKeepCase no se exporta: se caracteriza por su camino
+    // observable en findRegion. Un alias con mayúsculas ("SAMU") se
+    // busca con la receta que conserva el caso, así que el texto en
+    // minúsculas NO casa — donde la receta de foldText (que baja a
+    // minúsculas) sí casaría. Esa divergencia es deliberada.
+    const samu: PackRegion[] = [{ code: "BR", names: {}, phrases: {}, aliases: ["SAMU"] }];
+    expect(findRegion("llama al SAMU por favor", samu)?.code).toBe("BR");
+    expect(findRegion("llama al samu por favor", samu)).toBeNull();
   });
 });

@@ -23,4 +23,16 @@ describe("búsqueda en historial y ajustes (0.1.55)", () => {
     expect(filterByTitle(chats, " ")).toBe(chats);
     expect(filterByTitle(chats, "MOCHILA").map((c) => c.title)).toEqual(["Lista de la mochila"]);
   });
+
+  it("caracterización de foldSearch (B-resto B-07): conserva la puntuación y colapsa el blanco", () => {
+    // Corpus compartido con las caracterizaciones de foldText
+    // (packFacts.test.ts) y de foldForEval (evalSetV2.test.ts): sobre
+    // estas mismas líneas las tres recetas DIFIEREN a propósito —
+    // foldText convierte la puntuación en espacios y envuelve el
+    // resultado en espacios; foldForEval ni siquiera colapsa el
+    // blanco — y cada casa afirma la salida exacta de la suya, para
+    // que cualquier deriva futura ponga la batería en rojo.
+    expect(foldSearch("¡Emergencia, MÉDICO!")).toBe("¡emergencia, medico!");
+    expect(foldSearch("Calle   50\tNorte")).toBe("calle 50 norte");
+  });
 });
