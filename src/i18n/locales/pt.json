@@ -1326,7 +1326,12 @@
     "fmtNoRecords": "(sem registros)",
     "fmtTraceLabel": "  rastro:",
     "fmtLastCrashTitle": "== Última falha Java/JS ==",
-    "fmtNone": "(nenhuma)"
+    "fmtNone": "(nenhuma)",
+    "nativeDiedGenerating": "A última morte nativa foi gerando: {{model}} · nCtx {{nCtx}} · perfil {{profile}} · indexação em curso: {{reembed}}",
+    "nativeDiedIdle": "A última morte nativa não foi gerando: {{model}} · nCtx {{nCtx}} · perfil {{profile}} · indexação em curso: {{reembed}}",
+    "nativeYes": "sim",
+    "nativeNo": "não",
+    "nativeHold": "Após essa falha, a indexação em segundo plano fica desativada durante esta sessão."
   },
   "vault": {
     "offerTitle": "Proteja seus dados com sua digital ou PIN",

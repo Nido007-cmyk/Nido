@@ -1326,7 +1326,12 @@
     "fmtNoRecords": "(no records)",
     "fmtTraceLabel": "  trace:",
     "fmtLastCrashTitle": "== Latest Java/JS crash ==",
-    "fmtNone": "(none)"
+    "fmtNone": "(none)",
+    "nativeDiedGenerating": "The last native death happened while generating: {{model}} · nCtx {{nCtx}} · profile {{profile}} · background indexing running: {{reembed}}",
+    "nativeDiedIdle": "The last native death did not happen while generating: {{model}} · nCtx {{nCtx}} · profile {{profile}} · background indexing running: {{reembed}}",
+    "nativeYes": "yes",
+    "nativeNo": "no",
+    "nativeHold": "After that failure, background indexing is off for this session."
   },
   "vault": {
     "offerTitle": "Protect your data with your fingerprint or PIN",

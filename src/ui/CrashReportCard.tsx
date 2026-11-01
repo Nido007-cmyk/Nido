@@ -13,7 +13,7 @@
  * no contiene mensajes, notas ni memoria: solo motivos y pilas de llamadas.
  */
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { useTranslation } from "react-i18next";
@@ -24,6 +24,11 @@ import type { Typography } from "./theme/typography";
 import { calmSpacing } from "./theme/calm";
 import { makeSurfaces } from "./theme/surfaces";
 import { formatCrashReport, latestFailure } from "../diagnostics/crashReport";
+import {
+  isBackgroundIndexingHeld,
+  readNativeSessionRecord,
+  type NativeSessionRecord,
+} from "../diagnostics/nativeSession";
 import appConfig from "../../app.json";
 
 export function CrashReportCard() {
@@ -32,6 +37,21 @@ export function CrashReportCard() {
   const { t } = useTranslation();
   const [report, setReport] = useState<CrashReport | null>(() => getCrashReport());
   const [copied, setCopied] = useState(false);
+  // M2 (crash nativo): el veredicto del cruce del registro de sesión
+  // («murió generando · indexado en curso: sí/no · perfil · nCtx») y
+  // M3: si esta sesión corre con el indexado de fondo desactivado
+  // por aquella muerte, la tarjeta lo dice.
+  const [session, setSession] = useState<NativeSessionRecord | null>(null);
+  const [backgroundHeld] = useState(() => isBackgroundIndexingHeld());
+  useEffect(() => {
+    let cancelled = false;
+    void readNativeSessionRecord().then((record) => {
+      if (!cancelled) setSession(record);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const failure = report ? latestFailure(report) : null;
   const hasData = !!report && (failure !== null || report.lastCrash !== null);
@@ -74,6 +94,17 @@ export function CrashReportCard() {
             ? t("crashReport.lastJsCrash")
             : t("crashReport.none")}
       </Text>
+      {session?.verdict && (
+        <Text style={styles.status}>
+          {t(session.verdict.diedGenerating ? "crashReport.nativeDiedGenerating" : "crashReport.nativeDiedIdle", {
+            model: session.verdict.model,
+            nCtx: session.verdict.nCtx,
+            profile: session.verdict.memoryProfile ?? "—",
+            reembed: t(session.verdict.reembedRunning ? "crashReport.nativeYes" : "crashReport.nativeNo"),
+          })}
+        </Text>
+      )}
+      {backgroundHeld && <Text style={styles.status}>{t("crashReport.nativeHold")}</Text>}
       {hasData && (
         <View style={styles.row}>
           <Pressable

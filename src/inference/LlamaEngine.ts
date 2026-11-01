@@ -6,7 +6,18 @@
 
 import * as FileSystem from "expo-file-system/legacy";
 import { initLlama, LlamaContext, type CompletionResponseFormat } from "llama.rn";
+import * as RamMonitor from "ram-monitor";
 import { checkRamBudget, readRamSnapshot, toGb } from "./ramBudget";
+import {
+  crossNativeSessionRecord,
+  holdBackgroundIndexingForSession,
+  parseNativeSessionRecord,
+  resetBackgroundIndexingHold,
+  NATIVE_SESSION_FILENAME,
+  type NativeSessionRecord,
+} from "../diagnostics/nativeSession";
+import type { CrashReportLike, ExitInfoLike } from "../diagnostics/crashReport";
+import { lastReembedProgress } from "../rag/reembed";
 import {
   confirmCrashGuardRecord,
   parseCrashGuardRecord,
@@ -239,6 +250,25 @@ export function llmInitParamsForProfile(
 export const LLM_MEMORY_PROFILES: readonly LlmMemoryProfile[] = ["kv-q8", "small-batch", "default"];
 
 /**
+ * M2 (crash nativo): el último cierre del proceso según Android, o
+ * null si el build nativo no lo soporta o aún no hubo cierres. Se lee
+ * por el namespace con guarda de tipo: builds anteriores del módulo
+ * ram-monitor no exponen getCrashReport, y su ausencia significa
+ * «sin cruce», nunca un error.
+ */
+function latestExitInfo(): ExitInfoLike | null {
+  try {
+    const fn = (RamMonitor as { getCrashReport?: unknown }).getCrashReport;
+    if (typeof fn !== "function") return null;
+    const report = (fn as () => CrashReportLike | null)();
+    if (!report || !Array.isArray(report.exits) || report.exits.length === 0) return null;
+    return [...report.exits].sort((a, b) => b.timestamp - a.timestamp)[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Thin wrapper around llama.rn. Loads a GGUF model with mmap so weights
  * stream from disk rather than being fully resident, keeping peak RAM under
  * the model's working-set size (weights touched + KV cache), not the full
@@ -261,6 +291,23 @@ export class LlamaEngine {
   // Bounty tanda 3 (CrashGuard): el registro persistido, leído una vez
   // y cacheado; null = aún no leído. Ver memoryLadder.ts.
   private crashGuard: CrashGuardRecord | null = null;
+  // M2+M3 (crash nativo): el registro de sesión nativa, leído una vez
+  // y cacheado; null = aún no leído o inexistente. El cruce con el
+  // último cierre corre una sola vez por proceso (en el primer
+  // asentamiento del CrashGuard). Ver diagnostics/nativeSession.ts.
+  private nativeSession: NativeSessionRecord | null = null;
+  private nativeSessionCrossDone = false;
+  // Las operaciones sobre el registro van ENCADENADAS: una
+  // generación rápida puede asentarse antes de que la escritura de
+  // su arranque aterrice, y el orden arranque→cierre debe sobrevivir
+  // a eso (si la muerte llega a mitad, el cierre nunca se encadena).
+  // La época invalida las operaciones en vuelo tras un borrado total.
+  private nativeSessionChain: Promise<void> = Promise.resolve();
+  private nativeSessionEpoch = 0;
+  // El sustituto de la variante nativa (getBackendDevicesInfo) se pide
+  // una vez por proceso, fuera del camino caliente.
+  private backendSummaryPromise: Promise<void> | null = null;
+  private backendSummary: string | null = null;
   /**
    * Bounty tanda 8: ¿consumió la última generación todo su
    * presupuesto de tokens? Lo lee ChatScreen al cerrar la respuesta
@@ -319,7 +366,17 @@ export class LlamaEngine {
    * factor de seguridad que manda en el plan de esta carga.
    */
   private async crashGuardSettle(): Promise<number> {
-    const before = await this.crashGuardRead();
+    let before = await this.crashGuardRead();
+    // M3 (crash nativo): el cruce corre primero, una vez por proceso.
+    // Si la última muerte fue CRASH_NATIVE con una generación en
+    // vuelo, el choque se cuenta aquí y el pendiente de aquella carga
+    // se consume en el mismo gesto — la muerte se cuenta una vez, y
+    // el factor resultante es el que planifica esta carga.
+    const adjusted = await this.nativeSessionCross(before);
+    if (adjusted) {
+      before = adjusted;
+      await this.crashGuardWrite(adjusted);
+    }
     const { record, safety } = settleCrashGuardRecord(before, { modelAlive: this.context !== null });
     if (record !== before) await this.crashGuardWrite(record);
     return safety;
@@ -352,6 +409,159 @@ export class LlamaEngine {
     const record = this.crashGuard;
     if (!record || (record.crashes === 0 && record.pending === null)) return;
     void this.crashGuardWrite(confirmCrashGuardRecord(record));
+  }
+
+  // ---- Registro de sesión nativa (M2+M3 del diagnóstico del crash;
+  // la lógica pura vive en diagnostics/nativeSession.ts). Todo a
+  // prueba de fallos, como el CrashGuard: si el fichero no se puede
+  // leer o escribir, el motor sigue exactamente como antes.
+
+  private nativeSessionPath(): string {
+    return `${FileSystem.documentDirectory}${NATIVE_SESSION_FILENAME}`;
+  }
+
+  private async nativeSessionRead(): Promise<NativeSessionRecord | null> {
+    if (this.nativeSession) return this.nativeSession;
+    try {
+      const raw = await FileSystem.readAsStringAsync(this.nativeSessionPath());
+      this.nativeSession = parseNativeSessionRecord(raw);
+    } catch {
+      // Sin fichero (nadie ha generado aún) o ilegible: sin registro.
+      this.nativeSession = null;
+    }
+    return this.nativeSession;
+  }
+
+  private async nativeSessionWrite(record: NativeSessionRecord): Promise<void> {
+    this.nativeSession = record;
+    try {
+      await FileSystem.writeAsStringAsync(this.nativeSessionPath(), JSON.stringify(record));
+    } catch {
+      // La memoria en proceso manda; el siguiente arranque reintenta.
+    }
+  }
+
+  /**
+   * M2: al empezar una generación, el registro se sobrescribe con los
+   * metadatos de ESTA generación y la bandera puesta. Es un disparo
+   * sin espera (generate no aguarda al disco) y el contenido es solo
+   * de sesión: modelo, contexto, perfil, estado del re-indexado y el
+   * resumen de dispositivos — nunca el prompt ni la respuesta. El
+   * veredicto y el cierre ya cruzado del registro anterior se
+   * conservan: son la historia que la tarjeta enseña.
+   */
+  /** Encadena una operación sobre el registro (ver nativeSessionChain). */
+  private nativeSessionOp(op: () => Promise<void>): void {
+    const epoch = this.nativeSessionEpoch;
+    this.nativeSessionChain = this.nativeSessionChain
+      .then(() => (epoch === this.nativeSessionEpoch ? op() : undefined))
+      .catch(() => {});
+  }
+
+  private nativeSessionMarkStart(): void {
+    const info = this.modelInfo;
+    if (!info) return;
+    this.nativeSessionOp(async () => {
+      const prev = await this.nativeSessionRead();
+      const reembed = lastReembedProgress();
+      const record: NativeSessionRecord = {
+        at: Date.now(),
+        model: info.filename,
+        nCtx: info.nCtx,
+        nThreads: info.nThreads,
+        memoryProfile: info.memoryProfile ?? null,
+        reembed: { running: reembed.running, done: reembed.done, total: reembed.total },
+        generating: true,
+        backend: this.backendSummary,
+        crossedExitAt: prev?.crossedExitAt ?? null,
+        verdict: prev?.verdict ?? null,
+      };
+      await this.nativeSessionWrite(record);
+      // El resumen de dispositivos llega tarde la primera vez: si el
+      // registro ya quedó escrito sin él, se le añade solo ese campo.
+      await this.refreshBackendSummary();
+      if (this.backendSummary && this.nativeSession === record && record.backend === null) {
+        await this.nativeSessionWrite({ ...record, backend: this.backendSummary });
+      }
+    });
+  }
+
+  /**
+   * La generación se asentó: la bandera cae. Si el proceso muere
+   * generando, esta limpieza nunca corre y la bandera queda puesta
+   * en disco — esa es exactamente la señal que el cruce lee.
+   */
+  private nativeSessionMarkEnd(): void {
+    this.nativeSessionOp(async () => {
+      const record = this.nativeSession;
+      if (!record || !record.generating) return;
+      await this.nativeSessionWrite({ ...record, generating: false });
+    });
+  }
+
+  /**
+   * El sustituto de la variante nativa cargada (la rc.7 no expone
+   * getter): getBackendDevicesInfo() una vez por proceso, en segundo
+   * plano. Cualquier fallo deja el campo en null, sin más coste.
+   */
+  private refreshBackendSummary(): Promise<void> {
+    if (!this.backendSummaryPromise) {
+      this.backendSummaryPromise = (async () => {
+        try {
+          const mod = (await import("llama.rn")) as { getBackendDevicesInfo?: unknown };
+          if (typeof mod.getBackendDevicesInfo !== "function") return;
+          const devices = await (
+            mod.getBackendDevicesInfo as () => Promise<
+              Array<{ backend: string; type: string; deviceName: string }>
+            >
+          )();
+          if (!Array.isArray(devices) || devices.length === 0) return;
+          this.backendSummary = devices
+            .map((d) => `${d.backend}/${d.type}/${d.deviceName}`)
+            .join(", ")
+            .slice(0, 200);
+        } catch {
+          // Best-effort: el registro vive sin el sustituto.
+        }
+      })();
+    }
+    return this.backendSummaryPromise;
+  }
+
+  /**
+   * M2+M3: el cruce del registro con el último cierre, una vez por
+   * proceso, al abrir la primera carga (antes de asentar el
+   * CrashGuard, para que el factor de ESTA carga ya lo recoja).
+   * Devuelve el registro del CrashGuard ajustado cuando la muerte se
+   * cuenta aquí — con el pendiente consumido, para que el
+   * asentamiento normal no la cuente una segunda vez — o null si el
+   * cruce no contó nada.
+   */
+  private async nativeSessionCross(crashRecord: CrashGuardRecord): Promise<CrashGuardRecord | null> {
+    if (this.nativeSessionCrossDone) return null;
+    this.nativeSessionCrossDone = true;
+    const record = await this.nativeSessionRead();
+    if (!record) return null;
+    const cross = crossNativeSessionRecord(record, latestExitInfo());
+    if (cross.record !== record) await this.nativeSessionWrite(cross.record);
+    if (cross.holdBackground) holdBackgroundIndexingForSession();
+    if (!cross.countedNativeCrash) return null;
+    return { crashes: Math.min(crashRecord.crashes + 1, 10), pending: null };
+  }
+
+  /**
+   * Borrado total (Clear All Data): olvida el registro en memoria y
+   * la degradación de la sesión. El wipe borra el fichero del disco
+   * (inventario de appReset.ts), pero este singleton conserva su
+   * copia y la siguiente generación la reescribiría tal cual,
+   * resucitando estado del mundo borrado — el mismo motivo que
+   * resetCrashGuardMemory.
+   */
+  resetNativeSessionMemory(): void {
+    this.nativeSession = null;
+    this.nativeSessionCrossDone = false;
+    this.nativeSessionEpoch++;
+    resetBackgroundIndexingHold();
   }
 
   load(modelFilename: string, opts?: { nCtx?: number; nThreads?: number }): Promise<void> {
@@ -583,6 +793,10 @@ export class LlamaEngine {
     // vuelo o encolada. Se suelta en el finally, asentada la
     // generación; el contador de la puerta refleja generationsInLine.
     nativeGateBegin();
+    // M2 (crash nativo): el registro de sesión se sobrescribe al
+    // empezar, con la bandera de «generación en vuelo» puesta; es un
+    // disparo sin espera fuera del camino de tokens.
+    this.nativeSessionMarkStart();
     const isHead = this.generationsInLine === 0;
     this.generationsInLine++;
     const epoch = this.generationEpoch;
@@ -607,6 +821,10 @@ export class LlamaEngine {
       return text;
     } finally {
       this.generationsInLine--;
+      // M2: la bandera del registro cae solo cuando la ÚLTIMA
+      // generación en línea se asienta (una encolada ya escribió su
+      // propio registro con la bandera puesta).
+      if (this.generationsInLine === 0) this.nativeSessionMarkEnd();
       nativeGateEnd();
     }
   }

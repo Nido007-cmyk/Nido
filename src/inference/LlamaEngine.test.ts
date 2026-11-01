@@ -80,12 +80,16 @@ vi.mock("expo-file-system/legacy", () => ({
 }));
 let mockTotalRamBytes = 12 * 1024 ** 3;
 let mockRssBytes = 1024 ** 3;
+// M2+M3 (crash nativo): el informe de cierres simulado; null = el
+// build no lo soporta (sin cruce, comportamiento de siempre).
+let mockCrashReport: unknown = null;
 // Texto que la completion falsa emite/resuelve (los tests de noThink lo
 // cambian por una respuesta con bloque <think>).
 let mockReplyText = "Hi";
 vi.mock("ram-monitor", () => ({
   getDeviceTotalRamBytes: () => mockTotalRamBytes,
   getMemoryInfo: () => ({ rssBytes: mockRssBytes }),
+  getCrashReport: () => mockCrashReport,
 }));
 // The integrity gate is covered by src/models/modelTrust.test.ts; here it
 // is stubbed so engine behavior is tested in isolation.
@@ -95,6 +99,11 @@ vi.mock("../models/modelTrust", () => ({
 
 import { LlamaEngine, resolveSampling, SAMPLING_PRESETS } from "./LlamaEngine";
 import { isNativeGateTaken } from "./nativeGate";
+import {
+  isBackgroundIndexingHeld,
+  resetBackgroundIndexingHold,
+  type NativeSessionRecord,
+} from "../diagnostics/nativeSession";
 
 const live = () => created.filter((c) => !c.released);
 
@@ -107,7 +116,9 @@ beforeEach(() => {
   initCalls.length = 0;
   rejectInit = null;
   mockReplyText = "Hi";
+  mockCrashReport = null;
   fsStore.clear();
+  resetBackgroundIndexingHold();
 });
 
 describe("RAM-2026-10-11: perfiles de memoria del LLM", () => {
@@ -312,6 +323,168 @@ describe("Bounty tanda 3: escalera de memoria y CrashGuard", () => {
       pending: unknown;
     };
     expect(after).toEqual({ crashes: 0, pending: null });
+  });
+});
+
+describe("Crash nativo M2+M3: registro de sesión y CrashGuard que aprende", () => {
+  const SESSION_PATH = "file:///docs/nido-native-session.json";
+  const GUARD_PATH = "file:///docs/nido-crash-guard.json";
+
+  const readSession = (): NativeSessionRecord =>
+    JSON.parse(fsStore.get(SESSION_PATH)!) as NativeSessionRecord;
+  const readGuard = (): { crashes: number; pending: unknown } =>
+    JSON.parse(fsStore.get(GUARD_PATH)!) as { crashes: number; pending: unknown };
+
+  /** El registro que dejaría una generación muerta a mitad en el arranque anterior. */
+  function seedDeadGeneration(generating: boolean): void {
+    fsStore.set(
+      SESSION_PATH,
+      JSON.stringify({
+        at: 1_000,
+        model: "models/a.gguf",
+        nCtx: 4096,
+        nThreads: 4,
+        memoryProfile: "kv-q8",
+        reembed: { running: true, done: 120, total: 900 },
+        generating,
+        backend: null,
+        crossedExitAt: null,
+        verdict: null,
+      }),
+    );
+    fsStore.set(GUARD_PATH, JSON.stringify({ crashes: 0, pending: null }));
+  }
+
+  function seedExit(reason: string, timestamp = 2_000): void {
+    mockCrashReport = {
+      lastCrash: null,
+      sdkInt: 36,
+      device: "SM-X218U",
+      exits: [
+        {
+          timestamp,
+          reason,
+          description: null,
+          status: reason === "CRASH_NATIVE" ? 11 : 0,
+          importance: 100,
+          pssKb: 0,
+          rssKb: 526 * 1024,
+          trace: null,
+        },
+      ],
+    };
+  }
+
+  it("el registro se escribe al empezar a generar y la bandera cae al asentarse", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const gen = engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 30));
+    // En vuelo: la bandera está puesta y el registro es de ESTA generación.
+    const during = readSession();
+    expect(during.generating).toBe(true);
+    expect(during.model).toBe("models/a.gguf");
+    expect(during.nCtx).toBe(4096);
+    expect(during.nThreads).toBe(4);
+    expect(during.memoryProfile).toBe("kv-q8");
+    await engine.stop();
+    await expect(gen).resolves.toBe("Hi");
+    await new Promise((r) => setTimeout(r, 10));
+    expect(readSession().generating).toBe(false);
+  });
+
+  it("el registro no filtra contenido del usuario: solo metadatos de sesión", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const gen = engine.generate({ prompt: "SECRETO-DE-PRUEBA-123 cuéntame de mi familia" });
+    await new Promise((r) => setTimeout(r, 30));
+    await engine.stop();
+    await expect(gen).resolves.toBe("Hi");
+    const raw = fsStore.get(SESSION_PATH)!;
+    expect(raw).not.toContain("SECRETO-DE-PRUEBA-123");
+    expect(raw).not.toContain("familia");
+  });
+
+  it("una generación que nunca se asienta deja la bandera puesta (la muerte simulada)", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const gen = engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 30));
+    // Sin stop(): la promesa no se asienta y el registro conserva la
+    // bandera — exactamente el estado que el cruce lee tras un crash.
+    expect(readSession().generating).toBe(true);
+    await engine.stop();
+    await expect(gen).resolves.toBe("Hi");
+  });
+
+  it("arranque tras CRASH_NATIVE generando: choque ×0,8 contado una vez, fondo apagado y veredicto asentado", async () => {
+    // ≈800 MB libres: a factor 1 el 4096 cabría; el choque aprendido
+    // (×0,8) baja el plan a 3072, como un choque del CrashGuard.
+    mockTotalRamBytes = 2 * 1024 ** 3 + 800_000_000;
+    mockRssBytes = 0;
+    seedDeadGeneration(true);
+    // La carga que murió dejó su pendiente sin confirmar: el cruce lo
+    // consume, para que la misma muerte no se cuente dos veces.
+    fsStore.set(
+      GUARD_PATH,
+      JSON.stringify({ crashes: 0, pending: { model: "models/a.gguf", nCtx: 4096, at: 900 } }),
+    );
+    seedExit("CRASH_NATIVE");
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls[0].n_ctx).toBe(3072);
+    expect(readGuard().crashes).toBe(1);
+    expect(isBackgroundIndexingHeld()).toBe(true);
+    const session = readSession();
+    expect(session.crossedExitAt).toBe(2_000);
+    expect(session.verdict).toMatchObject({
+      exitAt: 2_000,
+      diedGenerating: true,
+      reembedRunning: true,
+      nCtx: 4096,
+      memoryProfile: "kv-q8",
+    });
+    // Y la primera generación buena de la sesión confirma el choque
+    // aprendido como cualquier otro (el contador vuelve a cero).
+    const gen = engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 30));
+    await engine.stop();
+    await expect(gen).resolves.toBe("Hi");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(readGuard().crashes).toBe(0);
+  });
+
+  it("arranque tras CRASH_NATIVE sin generar: veredicto sin choque ni apagado", async () => {
+    seedDeadGeneration(false);
+    seedExit("CRASH_NATIVE");
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(readGuard().crashes).toBe(0);
+    expect(isBackgroundIndexingHeld()).toBe(false);
+    expect(readSession().verdict).toMatchObject({ diedGenerating: false, reembedRunning: true });
+  });
+
+  it("arranque tras LOW_MEMORY con la bandera puesta: sin reacción M3 (fenómeno aparte)", async () => {
+    seedDeadGeneration(true);
+    seedExit("LOW_MEMORY");
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(readGuard().crashes).toBe(0);
+    expect(isBackgroundIndexingHeld()).toBe(false);
+    const session = readSession();
+    expect(session.verdict).toBeNull();
+    expect(session.generating).toBe(false);
+    expect(session.crossedExitAt).toBe(2_000);
+  });
+
+  it("sin informe de cierres (build sin soporte): la carga sigue como siempre", async () => {
+    seedDeadGeneration(true);
+    mockCrashReport = null;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(engine.isLoaded).toBe(true);
+    expect(readGuard().crashes).toBe(0);
+    expect(isBackgroundIndexingHeld()).toBe(false);
   });
 });
 
