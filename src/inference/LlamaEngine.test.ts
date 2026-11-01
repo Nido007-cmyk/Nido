@@ -21,6 +21,8 @@ let inFlightInits = 0;
 const initCalls: Array<Record<string, unknown>> = [];
 let rejectInit: ((p: Record<string, unknown>) => boolean) | null = null;
 let maxConcurrentInits = 0;
+// H-09/H-10: puerta del resumen de dispositivos (ver getBackendDevicesInfo).
+let backendGate: Promise<void> | null = null;
 
 vi.mock("llama.rn", () => ({
   initLlama: async (params: { model: string } & Record<string, unknown>) => {
@@ -62,10 +64,44 @@ vi.mock("llama.rn", () => ({
     created.push(ctx);
     return ctx;
   },
+  // H-09/H-10: el sustituto de variante (getBackendDevicesInfo) existe
+  // en este mock para poder ejercer la cola del registro; la puerta
+  // `backendGate` lo retiene cuando un test quiere decidir cuándo
+  // «llega» el resumen de dispositivos.
+  getBackendDevicesInfo: async () => {
+    if (backendGate) await backendGate;
+    return [{ backend: "CPU", type: "cpu", deviceName: "Probe" }];
+  },
 }));
 // Bounty tanda 3: el CrashGuard persiste en un JSON junto a los
 // modelos; el mock guarda los ficheros en memoria para poder sembrarlo.
 const fsStore = new Map<string, string>();
+// H-09/H-10: compuerta de aterrizaje para las escrituras del registro
+// de sesión nativa SOLO (el resto de ficheros aterriza al instante).
+// En modo «manual» cada escritura queda retenida hasta que el test la
+// aterriza (flush) o la descarta (drop = el proceso murió antes);
+// `failSessionWrites` las hace rechazar (disco lleno). Es el arnés de
+// la sonda de la preparación nido-prep-h09h10, hecho permanente.
+const SESSION_PATH_SUFFIX = "nido-native-session.json";
+let sessionWriteMode: "auto" | "manual" = "auto";
+let failSessionWrites = false;
+let pendingSessionWrites: Array<{ path: string; data: string; resolve: () => void }> = [];
+function flushNextSessionWrite(): boolean {
+  const w = pendingSessionWrites.shift();
+  if (!w) return false;
+  fsStore.set(w.path, w.data);
+  w.resolve();
+  return true;
+}
+function flushAllSessionWrites(): void {
+  while (flushNextSessionWrite()) {
+    /* drena */
+  }
+}
+/** La muerte del proceso: lo que no aterrizó, no aterriza nunca. */
+function dropSessionWrites(): void {
+  pendingSessionWrites = [];
+}
 vi.mock("expo-file-system/legacy", () => ({
   documentDirectory: "file:///docs/",
   getInfoAsync: async () => ({ exists: true, size: 1_000_000 }),
@@ -75,6 +111,14 @@ vi.mock("expo-file-system/legacy", () => ({
     return v;
   },
   writeAsStringAsync: async (path: string, data: string) => {
+    if (path.endsWith(SESSION_PATH_SUFFIX)) {
+      if (failSessionWrites) throw new Error("ENOSPC simulado");
+      if (sessionWriteMode === "manual") {
+        return new Promise<void>((resolve) => {
+          pendingSessionWrites.push({ path, data, resolve });
+        });
+      }
+    }
     fsStore.set(path, data);
   },
 }));
@@ -118,6 +162,10 @@ beforeEach(() => {
   mockReplyText = "Hi";
   mockCrashReport = null;
   fsStore.clear();
+  sessionWriteMode = "auto";
+  failSessionWrites = false;
+  pendingSessionWrites = [];
+  backendGate = null;
   resetBackgroundIndexingHold();
 });
 
@@ -356,22 +404,25 @@ describe("Crash nativo M2+M3: registro de sesión y CrashGuard que aprende", () 
   }
 
   function seedExit(reason: string, timestamp = 2_000): void {
+    seedExits([{ reason, timestamp }]);
+  }
+
+  /** H-09: el informe con la LISTA de cierres tal como Android la entrega. */
+  function seedExits(list: Array<{ reason: string; timestamp: number }>): void {
     mockCrashReport = {
       lastCrash: null,
       sdkInt: 36,
       device: "SM-X218U",
-      exits: [
-        {
-          timestamp,
-          reason,
-          description: null,
-          status: reason === "CRASH_NATIVE" ? 11 : 0,
-          importance: 100,
-          pssKb: 0,
-          rssKb: 526 * 1024,
-          trace: null,
-        },
-      ],
+      exits: list.map(({ reason, timestamp }) => ({
+        timestamp,
+        reason,
+        description: null,
+        status: reason === "CRASH_NATIVE" ? 11 : 0,
+        importance: 100,
+        pssKb: 0,
+        rssKb: 526 * 1024,
+        trace: null,
+      })),
     };
   }
 
@@ -485,6 +536,130 @@ describe("Crash nativo M2+M3: registro de sesión y CrashGuard que aprende", () 
     expect(engine.isLoaded).toBe(true);
     expect(readGuard().crashes).toBe(0);
     expect(isBackgroundIndexingHeld()).toBe(false);
+  });
+
+  // H-09+H-10 (adversaria 2026-11-01; diseño en nido-prep-h09h10):
+  // la secuencia completa y los bordes de la bandera, con el arnés de
+  // aterrizaje de la sonda hecho permanente.
+  it("H-09 E1 · muerte → inocente → arranque que importa: el cruce elige la muerte y la reacción M3 entera sobrevive", async () => {
+    seedDeadGeneration(true);
+    // Android entrega la lista con el inocente DELANTE (es el más
+    // reciente: abrió, miró, cerró sin cargar modelo).
+    seedExits([
+      { reason: "USER_REQUESTED", timestamp: 3_000 },
+      { reason: "CRASH_NATIVE", timestamp: 2_000 },
+    ]);
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(readGuard().crashes).toBe(1);
+    expect(isBackgroundIndexingHeld()).toBe(true);
+    const session = readSession();
+    expect(session.crossedExitAt).toBe(2_000);
+    expect(session.generating).toBe(false);
+    expect(session.verdict).toMatchObject({
+      exitAt: 2_000,
+      diedGenerating: true,
+      reembedRunning: true,
+      nCtx: 4096,
+      memoryProfile: "kv-q8",
+    });
+  });
+
+  it("H-10 E2 · resto nombrado W1 fixturado: si la escritura de arranque no aterrizó, el registro calla — sin veredicto inventado; el conteo lo salva el pendiente del CrashGuard, no el cruce", async () => {
+    fsStore.set(GUARD_PATH, JSON.stringify({ crashes: 0, pending: null }));
+    const a = new LlamaEngine();
+    await a.load("models/a.gguf");
+    sessionWriteMode = "manual"; // a partir de aquí, nada aterriza sin el test
+    const gen = a.generate({ prompt: "hola" });
+    gen.catch(() => {});
+    await new Promise((r) => setTimeout(r, 40));
+    // La verdad de esta generación iba en la escritura retenida.
+    expect(pendingSessionWrites.length).toBeGreaterThanOrEqual(1);
+    expect(JSON.parse(pendingSessionWrites[0].data).generating).toBe(true);
+    // MUERTE generando: lo retenido se pierde con el proceso.
+    dropSessionWrites();
+    seedExits([{ reason: "CRASH_NATIVE", timestamp: Date.now() + 60_000 }]);
+    sessionWriteMode = "auto";
+    const b = new LlamaEngine();
+    await b.load("models/a.gguf");
+    // El resto, asentado tal como es: sin registro no hay cruce ni
+    // veredicto (la ventana de UNA escritura por borde no la cierra
+    // ningún diseño JS: no hay API síncrona en expo-file-system).
+    expect(fsStore.has(SESSION_PATH)).toBe(false);
+    expect(isBackgroundIndexingHeld()).toBe(false);
+    // El conteo sobrevive por OTRO instrumento: el pendiente que la
+    // carga muerta dejó en el CrashGuard.
+    expect(readGuard().crashes).toBe(1);
+    // Limpieza del banco: el «proceso muerto» se asienta al final para
+    // no dejar la puerta nativa tomada a los tests siguientes (en el
+    // aparato, ese proceso ya no existe y su puerta muere con él).
+    await a.stop();
+    await expect(gen).resolves.toBe("Hi");
+  });
+
+  it("H-10 E3 · la caída de la bandera ya no espera al resumen de dispositivos (W3→cola): aterriza con el resumen retenido, y el adjunto posterior no resucita la bandera", async () => {
+    fsStore.set(GUARD_PATH, JSON.stringify({ crashes: 0, pending: null }));
+    let releaseBackend!: () => void;
+    backendGate = new Promise<void>((r) => {
+      releaseBackend = r;
+    });
+    sessionWriteMode = "manual";
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    const gen = engine.generate({ prompt: "hola" });
+    gen.catch(() => {});
+    await new Promise((r) => setTimeout(r, 40));
+    // La op de arranque es UNA escritura: aterriza y la op termina,
+    // sin esperar a que el resumen de dispositivos resuelva.
+    expect(pendingSessionWrites).toHaveLength(1);
+    expect(JSON.parse(pendingSessionWrites[0].data).generating).toBe(true);
+    flushNextSessionWrite();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(pendingSessionWrites).toHaveLength(0);
+    await engine.stop();
+    await expect(gen).resolves.toBe("Hi");
+    await new Promise((r) => setTimeout(r, 10));
+    // La caída de la bandera YA está en la cola aunque el resumen
+    // sigue retenido: una escritura, y es la del cierre.
+    expect(pendingSessionWrites).toHaveLength(1);
+    expect(JSON.parse(pendingSessionWrites[0].data).generating).toBe(false);
+    flushNextSessionWrite();
+    expect(readSession().generating).toBe(false);
+    // El resumen llega tarde: su adjunto se encola DESPUÉS y escribe
+    // sobre el registro asentado — la bandera no resucita.
+    releaseBackend();
+    await new Promise((r) => setTimeout(r, 10));
+    flushAllSessionWrites();
+    await new Promise((r) => setTimeout(r, 10));
+    const settled = readSession();
+    expect(settled.generating).toBe(false);
+    expect(settled.backend).toBe("CPU/cpu/Probe");
+  });
+
+  it("H-10 E4 · el divorcio W4 curado: una escritura rechazada no deja la caché mintiendo — la siguiente generación parte del registro de DISCO", async () => {
+    // El registro de una generación muerta generando, sin cruzar.
+    seedDeadGeneration(true);
+    seedExit("CRASH_NATIVE");
+    failSessionWrites = true; // el disco rechaza la escritura del cruce
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    // La reacción en proceso sí ocurrió (conteo y apagado); lo que
+    // falló fue solo su persistencia.
+    expect(readGuard().crashes).toBe(1);
+    expect(isBackgroundIndexingHeld()).toBe(true);
+    expect(readSession().crossedExitAt).toBeNull(); // en disco, el cruce nunca aterrizó
+    failSessionWrites = false;
+    const gen = engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 30));
+    await engine.stop();
+    await expect(gen).resolves.toBe("Hi");
+    await new Promise((r) => setTimeout(r, 10));
+    // La generación nueva conservó la historia DEL DISCO (sin cruzar,
+    // sin veredicto), no la que la escritura rechazada dejó en memoria.
+    const session = readSession();
+    expect(session.generating).toBe(false);
+    expect(session.crossedExitAt).toBeNull();
+    expect(session.verdict).toBeNull();
   });
 });
 

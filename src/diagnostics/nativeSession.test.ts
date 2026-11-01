@@ -85,7 +85,7 @@ describe("parseNativeSessionRecord", () => {
 
 describe("crossNativeSessionRecord (M2: la próxima muerte se auto-identifica)", () => {
   it("CRASH_NATIVE con generación en vuelo: veredicto «murió generando», choque contado y fondo apagado", () => {
-    const cross = crossNativeSessionRecord(crashBRecord(), exit("CRASH_NATIVE", 2_000));
+    const cross = crossNativeSessionRecord(crashBRecord(), [exit("CRASH_NATIVE", 2_000)]);
     expect(cross.countedNativeCrash).toBe(true);
     expect(cross.holdBackground).toBe(true);
     expect(cross.record.generating).toBe(false);
@@ -102,7 +102,7 @@ describe("crossNativeSessionRecord (M2: la próxima muerte se auto-identifica)",
 
   it("CRASH_NATIVE sin generación en vuelo: hay veredicto, pero ni choque ni apagado (M3 solo castiga generando)", () => {
     const record = crashBRecord({ generating: false, reembed: { running: true, done: 5, total: 900 } });
-    const cross = crossNativeSessionRecord(record, exit("CRASH_NATIVE", 2_000));
+    const cross = crossNativeSessionRecord(record, [exit("CRASH_NATIVE", 2_000)]);
     expect(cross.countedNativeCrash).toBe(false);
     expect(cross.holdBackground).toBe(false);
     expect(cross.record.verdict?.diedGenerating).toBe(false);
@@ -111,7 +111,7 @@ describe("crossNativeSessionRecord (M2: la próxima muerte se auto-identifica)",
   });
 
   it("LOW_MEMORY con la misma bandera puesta: sin conteo, sin apagado, sin veredicto (fenómeno aparte)", () => {
-    const cross = crossNativeSessionRecord(crashBRecord(), exit("LOW_MEMORY", 2_000));
+    const cross = crossNativeSessionRecord(crashBRecord(), [exit("LOW_MEMORY", 2_000)]);
     expect(cross.countedNativeCrash).toBe(false);
     expect(cross.holdBackground).toBe(false);
     expect(cross.record.verdict).toBeNull();
@@ -122,7 +122,7 @@ describe("crossNativeSessionRecord (M2: la próxima muerte se auto-identifica)",
   });
 
   it("USER_REQUESTED tampoco dispara la reacción M3", () => {
-    const cross = crossNativeSessionRecord(crashBRecord(), exit("USER_REQUESTED", 2_000));
+    const cross = crossNativeSessionRecord(crashBRecord(), [exit("USER_REQUESTED", 2_000)]);
     expect(cross.countedNativeCrash).toBe(false);
     expect(cross.holdBackground).toBe(false);
     expect(cross.record.verdict).toBeNull();
@@ -130,15 +130,15 @@ describe("crossNativeSessionRecord (M2: la próxima muerte se auto-identifica)",
 
   it("un cierre anterior al inicio de la generación registrada no es su muerte: no se cruza", () => {
     const record = crashBRecord();
-    const cross = crossNativeSessionRecord(record, exit("CRASH_NATIVE", 500));
+    const cross = crossNativeSessionRecord(record, [exit("CRASH_NATIVE", 500)]);
     expect(cross.record).toBe(record);
     expect(cross.countedNativeCrash).toBe(false);
   });
 
   it("el mismo cierre no se cruza dos veces (idempotente entre arranques)", () => {
-    const first = crossNativeSessionRecord(crashBRecord(), exit("CRASH_NATIVE", 2_000));
+    const first = crossNativeSessionRecord(crashBRecord(), [exit("CRASH_NATIVE", 2_000)]);
     expect(first.countedNativeCrash).toBe(true);
-    const second = crossNativeSessionRecord(first.record, exit("CRASH_NATIVE", 2_000));
+    const second = crossNativeSessionRecord(first.record, [exit("CRASH_NATIVE", 2_000)]);
     expect(second.record).toBe(first.record);
     expect(second.countedNativeCrash).toBe(false);
     expect(second.holdBackground).toBe(false);
@@ -152,13 +152,65 @@ describe("crossNativeSessionRecord (M2: la próxima muerte se auto-identifica)",
   });
 
   it("un cruce posterior sin crash no pisa el veredicto de la muerte nativa anterior", () => {
-    const first = crossNativeSessionRecord(crashBRecord(), exit("CRASH_NATIVE", 2_000));
+    const first = crossNativeSessionRecord(crashBRecord(), [exit("CRASH_NATIVE", 2_000)]);
     // Una generación nueva en la sesión siguiente y una cosecha de fondo después.
     const nextGen: NativeSessionRecord = { ...first.record, at: 3_000, generating: true, verdict: first.record.verdict };
-    const cross = crossNativeSessionRecord(nextGen, exit("LOW_MEMORY", 4_000));
+    const cross = crossNativeSessionRecord(nextGen, [exit("LOW_MEMORY", 4_000)]);
     expect(cross.record.verdict?.exitAt).toBe(2_000);
     expect(cross.record.verdict?.diedGenerating).toBe(true);
     expect(cross.countedNativeCrash).toBe(false);
+  });
+
+  // H-09 (adversaria 2026-11-01, preparación nido-prep-h09h10): el
+  // cruce miraba solo el cierre MÁS RECIENTE, así que un arranque
+  // inocente que abría y cerraba entre la muerte y la primera carga
+  // consumía el cruce y la muerte nativa desaparecía del instrumento.
+  // La cura es de selección: la muerte del proceso que escribió el
+  // registro es el PRIMER cierre posterior a su `at`; los posteriores
+  // son de otros procesos y no dicen nada de esta generación.
+  it("H-09 F1 · muerte → inocente → arranque que importa: se cruza la muerte, no el inocente", () => {
+    const exits = [exit("USER_REQUESTED", 3_000), exit("CRASH_NATIVE", 2_000)];
+    for (const list of [exits, [...exits].reverse()]) {
+      const cross = crossNativeSessionRecord(crashBRecord(), list);
+      expect(cross.countedNativeCrash).toBe(true);
+      expect(cross.holdBackground).toBe(true);
+      expect(cross.record.generating).toBe(false);
+      expect(cross.record.crossedExitAt).toBe(2_000);
+      expect(cross.record.verdict).toMatchObject({
+        exitAt: 2_000,
+        diedGenerating: true,
+        reembedRunning: true,
+        nCtx: 3072,
+      });
+    }
+  });
+
+  it("H-09 F2 · el cruce enmascarado no envenena: repetir la lista no asienta el «no murió generando» tardío", () => {
+    const list = [exit("USER_REQUESTED", 3_000), exit("CRASH_NATIVE", 2_000)];
+    const first = crossNativeSessionRecord(crashBRecord(), list);
+    expect(first.record.verdict?.diedGenerating).toBe(true);
+    // La misma lista otra vez (otro arranque): nada cambia, y ningún
+    // camino produce el diedGenerating:false que asentaría cruzar la
+    // muerte verdadera contra el registro ya asentado por el inocente.
+    const second = crossNativeSessionRecord(first.record, list);
+    expect(second.record).toBe(first.record);
+    expect(second.countedNativeCrash).toBe(false);
+    expect(second.record.verdict?.diedGenerating).toBe(true);
+  });
+
+  it("H-09 F3 · si el primer cierre posterior es inocente, ESA fue la muerte de este registro: se cruza en silencio", () => {
+    // El proceso del registro murió de USER_REQUESTED@2000; la
+    // CRASH_NATIVE@3000 es de un proceso POSTERIOR cuyo registro no
+    // es este: ni veredicto, ni conteo, ni apagado.
+    const cross = crossNativeSessionRecord(crashBRecord(), [
+      exit("USER_REQUESTED", 2_000),
+      exit("CRASH_NATIVE", 3_000),
+    ]);
+    expect(cross.record.crossedExitAt).toBe(2_000);
+    expect(cross.record.generating).toBe(false);
+    expect(cross.record.verdict).toBeNull();
+    expect(cross.countedNativeCrash).toBe(false);
+    expect(cross.holdBackground).toBe(false);
   });
 });
 

@@ -16,7 +16,7 @@ import {
   NATIVE_SESSION_FILENAME,
   type NativeSessionRecord,
 } from "../diagnostics/nativeSession";
-import type { CrashReportLike, ExitInfoLike } from "../diagnostics/crashReport";
+import type { CrashReportLike } from "../diagnostics/crashReport";
 import { lastReembedProgress } from "../rag/reembed";
 import {
   confirmCrashGuardRecord,
@@ -250,19 +250,21 @@ export function llmInitParamsForProfile(
 export const LLM_MEMORY_PROFILES: readonly LlmMemoryProfile[] = ["kv-q8", "small-batch", "default"];
 
 /**
- * M2 (crash nativo): el último cierre del proceso según Android, o
- * null si el build nativo no lo soporta o aún no hubo cierres. Se lee
- * por el namespace con guarda de tipo: builds anteriores del módulo
- * ram-monitor no exponen getCrashReport, y su ausencia significa
- * «sin cruce», nunca un error.
+ * M2 (crash nativo): los cierres del proceso según Android, tal como
+ * el módulo los entrega (sin ordenar: la selección del cierre que
+ * mató al proceso del registro vive en la función pura del cruce),
+ * o null si el build nativo no lo soporta o aún no hubo cierres. Se
+ * lee por el namespace con guarda de tipo: builds anteriores del
+ * módulo ram-monitor no exponen getCrashReport, y su ausencia
+ * significa «sin cruce», nunca un error.
  */
-function latestExitInfo(): ExitInfoLike | null {
+function recentExitsInfo(): CrashReportLike["exits"] | null {
   try {
     const fn = (RamMonitor as { getCrashReport?: unknown }).getCrashReport;
     if (typeof fn !== "function") return null;
     const report = (fn as () => CrashReportLike | null)();
     if (!report || !Array.isArray(report.exits) || report.exits.length === 0) return null;
-    return [...report.exits].sort((a, b) => b.timestamp - a.timestamp)[0] ?? null;
+    return report.exits;
   } catch {
     return null;
   }
@@ -292,8 +294,8 @@ export class LlamaEngine {
   // y cacheado; null = aún no leído. Ver memoryLadder.ts.
   private crashGuard: CrashGuardRecord | null = null;
   // M2+M3 (crash nativo): el registro de sesión nativa, leído una vez
-  // y cacheado; null = aún no leído o inexistente. El cruce con el
-  // último cierre corre una sola vez por proceso (en el primer
+  // y cacheado; null = aún no leído o inexistente. El cruce con los
+  // cierres registrados corre una sola vez por proceso (en el primer
   // asentamiento del CrashGuard). Ver diagnostics/nativeSession.ts.
   private nativeSession: NativeSessionRecord | null = null;
   private nativeSessionCrossDone = false;
@@ -433,11 +435,20 @@ export class LlamaEngine {
   }
 
   private async nativeSessionWrite(record: NativeSessionRecord): Promise<void> {
-    this.nativeSession = record;
+    // H-10 (W4): la caché se asigna DESPUÉS de que la escritura
+    // aterrice. Asignarla antes dejaba memoria y disco contando
+    // historias distintas durante todo el proceso si la escritura
+    // rechazaba (disco lleno): la caché afirmaba un registro que el
+    // disco no tenía, y la siguiente operación partía de esa mentira.
+    // Si rechaza, la caché conserva el registro anterior — el mismo
+    // que el disco tiene — y la operación siguiente reintenta desde
+    // ese suelo. El fail-soft se mantiene: ningún error de este
+    // fichero puede romper la generación.
     try {
       await FileSystem.writeAsStringAsync(this.nativeSessionPath(), JSON.stringify(record));
+      this.nativeSession = record;
     } catch {
-      // La memoria en proceso manda; el siguiente arranque reintenta.
+      // La memoria conserva el registro de disco; el siguiente arranque reintenta.
     }
   }
 
@@ -477,12 +488,26 @@ export class LlamaEngine {
         verdict: prev?.verdict ?? null,
       };
       await this.nativeSessionWrite(record);
-      // El resumen de dispositivos llega tarde la primera vez: si el
-      // registro ya quedó escrito sin él, se le añade solo ese campo.
-      await this.refreshBackendSummary();
-      if (this.backendSummary && this.nativeSession === record && record.backend === null) {
-        await this.nativeSessionWrite({ ...record, backend: this.backendSummary });
-      }
+      // El resumen de dispositivos llega tarde la primera vez, y su
+      // espera NO puede vivir dentro de esta op (H-10, W3): alargaba
+      // la cola que la caída de la bandera de ESTA generación espera
+      // detrás, ensanchando la ventana en que una muerte posterior
+      // se leería como «murió generando» sin serlo. La op de arranque
+      // es una sola escritura; se asegura de que el resumen se esté
+      // pidiendo y el adjunto viaja en su propia op, detrás de lo que
+      // ya estuviera encolado (la guarda de identidad la hace segura:
+      // solo escribe si la caché sigue siendo este registro y el
+      // campo sigue vacío, así nunca resucita una bandera caída ni
+      // pisa una generación más nueva).
+      void this.refreshBackendSummary().then(() => {
+        const summary = this.backendSummary;
+        if (!summary) return;
+        this.nativeSessionOp(async () => {
+          const current = this.nativeSession;
+          if (!current || current.at !== record.at || current.backend !== null) return;
+          await this.nativeSessionWrite({ ...current, backend: summary });
+        });
+      });
     });
   }
 
@@ -529,8 +554,8 @@ export class LlamaEngine {
   }
 
   /**
-   * M2+M3: el cruce del registro con el último cierre, una vez por
-   * proceso, al abrir la primera carga (antes de asentar el
+   * M2+M3: el cruce del registro con los cierres registrados, una vez
+   * por proceso, al abrir la primera carga (antes de asentar el
    * CrashGuard, para que el factor de ESTA carga ya lo recoja).
    * Devuelve el registro del CrashGuard ajustado cuando la muerte se
    * cuenta aquí — con el pendiente consumido, para que el
@@ -542,7 +567,7 @@ export class LlamaEngine {
     this.nativeSessionCrossDone = true;
     const record = await this.nativeSessionRead();
     if (!record) return null;
-    const cross = crossNativeSessionRecord(record, latestExitInfo());
+    const cross = crossNativeSessionRecord(record, recentExitsInfo());
     if (cross.record !== record) await this.nativeSessionWrite(cross.record);
     if (cross.holdBackground) holdBackgroundIndexingForSession();
     if (!cross.countedNativeCrash) return null;

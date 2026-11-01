@@ -188,7 +188,13 @@ class RamMonitorModule : Module() {
     if (ctx == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return emptyList()
     return try {
       val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-      am.getHistoricalProcessExitReasons(ctx.packageName, 0, 5).map { info ->
+      // Ventana de 10 (H-09, adversaria 2026-11-01): el cruce de M2
+      // elige el PRIMER cierre posterior al registro, y cada arranque
+      // inocente posterior a una muerte empuja esa muerte una
+      // posición hacia fuera de la ventana. Con 5, cinco aperturas
+      // bastaban para borrarla de toda superficie; 10 duplica el
+      // margen con el mismo coste de lectura.
+      am.getHistoricalProcessExitReasons(ctx.packageName, 0, 10).map { info ->
         mapOf(
           "timestamp" to info.timestamp,
           "reason" to reasonName(info.reason),

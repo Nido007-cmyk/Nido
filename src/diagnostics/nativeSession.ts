@@ -26,16 +26,35 @@
  *   registro del CrashGuard); aquí viven el tipo, la lectura tolerante
  *   y el cruce, puros y testeables.
  *
- * - EL CRUCE: al arrancar, el registro se cruza con el último cierre
- *   que registró Android (ApplicationExitInfo, vía ram-monitor). Si
- *   ese cierre es posterior al inicio de la generación registrada y
- *   aún no se había cruzado, el cruce asienta el veredicto: murió o no
- *   murió generando, y si el indexado corría. El veredicto es lo que
- *   la tarjeta de cierres enseña («murió generando · indexado en
- *   curso: sí · perfil kv-q8 · nCtx 3072»). La variante nativa cargada
- *   no es legible desde el JS de llama.rn rc.7 (sin getter en el
- *   binding): el campo `backend` guarda como sustituto el resumen de
- *   getBackendDevicesInfo() de la sesión, una vez por sesión.
+ * - EL CRUCE: al arrancar, el registro se cruza con los cierres que
+ *   registró Android (ApplicationExitInfo, vía ram-monitor). El
+ *   proceso que escribió el registro murió UNA vez: su muerte es el
+ *   PRIMER cierre posterior al inicio de la generación registrada
+ *   (H-09, adversaria 2026-11-01: mirar solo el más reciente dejaba
+ *   que un arranque inocente —abrir, mirar, cerrar— consumiera el
+ *   cruce y la muerte verdadera desapareciera del instrumento; y
+ *   cruzar cierres viejos a destiempo asentaría «no murió generando»
+ *   sobre una muerte que sí lo fue, porque el cruce inocente ya bajó
+ *   la bandera). Si ese primer cierre aún no se había cruzado, el
+ *   cruce asienta el veredicto: murió o no murió generando, y si el
+ *   indexado corría. El veredicto es lo que la tarjeta de cierres
+ *   enseña («murió generando · indexado en curso: sí · perfil kv-q8 ·
+ *   nCtx 3072»). La variante nativa cargada no es legible desde el JS
+ *   de llama.rn rc.7 (sin getter en el binding): el campo `backend`
+ *   guarda como sustituto el resumen de getBackendDevicesInfo() de
+ *   la sesión, una vez por sesión.
+ *
+ * - EL LÍMITE DEL INSTRUMENTO (H-10, resto nombrado): el registro se
+ *   escribe de forma asíncrona y ningún diseño JS puede escribir
+ *   DESPUÉS de muerto el proceso: queda una ventana de UNA escritura
+ *   en cada borde de la generación. Si la muerte cae dentro de la
+ *   escritura que abre la generación, el disco describe la generación
+ *   anterior (o ninguna) y el cruce calla o juzga aquella; si cae
+ *   dentro de la que la cierra, el veredicto puede decir «murió
+ *   generando» de una generación ya asentada. La cola de escrituras
+ *   está estrechada a una por operación y la caché solo afirma lo que
+ *   el disco ya tiene (LlamaEngine), pero la ventana no es cero:
+ *   ningún veredicto de este instrumento es prueba por sí solo.
  *
  * - M3 — LA REACCIÓN: si el cruce dice CRASH_NATIVE con generación en
  *   vuelo, la muerte cuenta un choque en el CrashGuard (su factor
@@ -162,14 +181,34 @@ export interface NativeSessionCrossing {
 }
 
 /**
- * Cruza el registro con el ÚLTIMO cierre del proceso. Reglas:
+ * H-09: el cierre que mató al proceso que escribió el registro — el
+ * PRIMERO posterior a su `at` (la lista llega en cualquier orden; la
+ * selección es por instante, no por posición). Los cierres
+ * posteriores a ese son de procesos posteriores y no dicen nada de
+ * esta generación; los anteriores son historia vieja. null si ningún
+ * cierre es posterior (el proceso del registro sigue vivo o su
+ * muerte aún no consta).
+ */
+export function pickExitForRecord(
+  exits: readonly ExitInfoLike[],
+  record: NativeSessionRecord,
+): ExitInfoLike | null {
+  let chosen: ExitInfoLike | null = null;
+  for (const e of exits) {
+    if (e.timestamp <= record.at) continue;
+    if (!chosen || e.timestamp < chosen.timestamp) chosen = e;
+  }
+  return chosen;
+}
+
+/**
+ * Cruza el registro con la LISTA de cierres del proceso. Reglas:
  *
- * - Sin cierre, cierre ya cruzado, o cierre ANTERIOR al inicio de la
- *   generación registrada (ese cierre no es la muerte de este
- *   registro: es historia vieja o el mismo proceso sigue vivo): nada.
- * - Un cierre posterior y no cruzado asienta el registro: la bandera
- *   de generación cae (aquel proceso ya no existe) y el cierre queda
- *   marcado como cruzado para no contarlo dos veces.
+ * - Sin cierre posterior a la generación registrada, o ese primer
+ *   cierre ya cruzado: nada.
+ * - El primer cierre posterior y no cruzado asienta el registro: la
+ *   bandera de generación cae (aquel proceso ya no existe) y el
+ *   cierre queda marcado como cruzado para no contarlo dos veces.
  * - Solo CRASH_NATIVE produce veredicto; con generación en vuelo,
  *   además cuenta el choque y apaga el fondo (M3). Cualquier otro
  *   motivo (LOW_MEMORY, USER_REQUESTED…) se cruza en silencio: no
@@ -177,22 +216,23 @@ export interface NativeSessionCrossing {
  */
 export function crossNativeSessionRecord(
   record: NativeSessionRecord,
-  latestExit: ExitInfoLike | null,
+  exits: readonly ExitInfoLike[] | null,
 ): NativeSessionCrossing {
   const none: NativeSessionCrossing = { record, countedNativeCrash: false, holdBackground: false };
-  if (!latestExit) return none;
-  if (record.crossedExitAt === latestExit.timestamp) return none;
-  if (latestExit.timestamp <= record.at) return none;
+  if (!exits || exits.length === 0) return none;
+  const exit = pickExitForRecord(exits, record);
+  if (!exit) return none;
+  if (record.crossedExitAt === exit.timestamp) return none;
   const crossed: NativeSessionRecord = {
     ...record,
-    crossedExitAt: latestExit.timestamp,
+    crossedExitAt: exit.timestamp,
     generating: false,
   };
-  if (latestExit.reason !== "CRASH_NATIVE") {
+  if (exit.reason !== "CRASH_NATIVE") {
     return { record: crossed, countedNativeCrash: false, holdBackground: false };
   }
   const verdict: NativeSessionVerdict = {
-    exitAt: latestExit.timestamp,
+    exitAt: exit.timestamp,
     diedGenerating: record.generating,
     reembedRunning: record.reembed.running,
     model: record.model,
