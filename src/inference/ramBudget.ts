@@ -4,7 +4,7 @@
  * See LICENSE file for details.
  */
 
-import { getDeviceTotalRamBytes, getMemoryInfo } from "ram-monitor";
+import { getDeviceTotalRamBytes, getMemoryInfo, getProcessorCount } from "ram-monitor";
 
 /**
  * NIDO's RAM pre-flight for native model loads — pure and unit-testable.
@@ -176,6 +176,39 @@ export function readRamSnapshot(): RamSnapshot | null {
     const totalRamBytes = getDeviceTotalRamBytes();
     if (totalRamBytes <= 0) return null;
     return { totalRamBytes, rssBytes: getMemoryInfo().rssBytes };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * P-03 (auditoría de rendimiento 2026-11-01): hilos de generación
+ * según los núcleos reales del aparato. Hasta aquí el default era la
+ * constante 4 sin mirar el aparato: en uno de 4 núcleos, 4 hilos
+ * nativos se disputan el procesador con Hermes, la UI y el sistema;
+ * en uno ancho, sus núcleos sobraban. La política es pura y de
+ * suelo/techo duros (2 y 6), porque `availableProcessors()` puede
+ * sobrecontar en aparatos virtualizados o muy viejos y porque en
+ * big.LITTLE más hilos que núcleos útiles solo añade contención.
+ *
+ * Sin sonda (null, o una lectura rota) manda el 4 de siempre: cero
+ * cambio de conducta en builds sin la función nativa. La clase 7–8
+ * nace con 4 — la de la Tab A9+ (SD 695: 2×A78 + 6×A55) — y solo la
+ * curva de tok/s medida en el aparato podrá subirla a 5–6 después;
+ * esta función no la promete.
+ */
+export function defaultThreadsForCores(cores: number | null): number {
+  if (cores === null || !Number.isFinite(cores) || cores <= 0) return 4;
+  if (cores <= 4) return 2;
+  if (cores <= 6) return 3;
+  if (cores <= 8) return 4;
+  return 6;
+}
+
+/** Lee los núcleos vía ram-monitor; null si la sonda no está o falla. */
+export function readProcessorCount(): number | null {
+  try {
+    return getProcessorCount();
   } catch {
     return null;
   }

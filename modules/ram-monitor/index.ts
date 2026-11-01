@@ -39,6 +39,7 @@ export interface CrashReport {
 interface RamMonitorNativeModule {
   getMemoryInfo(): MemoryInfo;
   getDeviceTotalRamBytes(): number;
+  getProcessorCount?(): number;
   installCrashRecorder?(): boolean;
   getCrashReport?(): CrashReport;
   clearCrashReport?(): boolean;
@@ -56,6 +57,15 @@ export function getDeviceTotalRamBytes(): number {
     return RamMonitor.getDeviceTotalRamBytes();
   } catch {
     return 0;
+  }
+}
+
+/** Logical cores on this device (P-03) — null if the native build predates the probe. */
+export function getProcessorCount(): number | null {
+  try {
+    return RamMonitor.getProcessorCount?.() ?? null;
+  } catch {
+    return null;
   }
 }
 

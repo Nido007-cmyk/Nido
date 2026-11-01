@@ -8,9 +8,11 @@ import { describe, it, expect, vi } from "vitest";
 
 let mockTotalRam = 0;
 let mockRss = 0;
+let mockCores: number | null = null;
 vi.mock("ram-monitor", () => ({
   getDeviceTotalRamBytes: () => mockTotalRam,
   getMemoryInfo: () => ({ rssBytes: mockRss, totalPssBytes: mockRss }),
+  getProcessorCount: () => mockCores,
 }));
 
 import {
@@ -18,6 +20,8 @@ import {
   estimateContextBytes,
   checkRamBudget,
   readRamSnapshot,
+  defaultThreadsForCores,
+  readProcessorCount,
   toGb,
 } from "./ramBudget";
 
@@ -148,5 +152,46 @@ describe("readRamSnapshot", () => {
     mockTotalRam = 0;
     mockRss = 0;
     expect(readRamSnapshot()).toBeNull();
+  });
+});
+
+describe("defaultThreadsForCores (P-03)", () => {
+  it("sin sonda manda el 4 de siempre: cero cambio de conducta", () => {
+    expect(defaultThreadsForCores(null)).toBe(4);
+  });
+
+  it("una lectura rota (0, negativa, NaN) cuenta como sin sonda", () => {
+    expect(defaultThreadsForCores(0)).toBe(4);
+    expect(defaultThreadsForCores(-2)).toBe(4);
+    expect(defaultThreadsForCores(Number.NaN)).toBe(4);
+  });
+
+  it("≤4 núcleos → 2: los hilos nativos no se disputan el aparato con la UI", () => {
+    expect(defaultThreadsForCores(1)).toBe(2);
+    expect(defaultThreadsForCores(2)).toBe(2);
+    expect(defaultThreadsForCores(4)).toBe(2);
+  });
+
+  it("5–6 núcleos → 3: la mitad, redondeando a la baja", () => {
+    expect(defaultThreadsForCores(5)).toBe(3);
+    expect(defaultThreadsForCores(6)).toBe(3);
+  });
+
+  it("7–8 núcleos → 4 al nacer (la clase de la Tab A9+); subir a 5–6 es de la curva, no de esta tabla", () => {
+    expect(defaultThreadsForCores(7)).toBe(4);
+    expect(defaultThreadsForCores(8)).toBe(4);
+  });
+
+  it(">8 núcleos → techo 6: big.LITTLE no convierte núcleos de sobra en contención", () => {
+    expect(defaultThreadsForCores(9)).toBe(6);
+    expect(defaultThreadsForCores(12)).toBe(6);
+    expect(defaultThreadsForCores(16)).toBe(6);
+  });
+
+  it("la sonda se lee del módulo y su ausencia llega como null", () => {
+    mockCores = 8;
+    expect(readProcessorCount()).toBe(8);
+    mockCores = null;
+    expect(readProcessorCount()).toBeNull();
   });
 });

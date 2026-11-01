@@ -7,7 +7,7 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { initLlama, LlamaContext, type CompletionResponseFormat } from "llama.rn";
 import * as RamMonitor from "ram-monitor";
-import { checkRamBudget, readRamSnapshot, toGb } from "./ramBudget";
+import { checkRamBudget, defaultThreadsForCores, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
 import {
   crossNativeSessionRecord,
   holdBackgroundIndexingForSession,
@@ -608,7 +608,10 @@ export class LlamaEngine {
     const explicitCtx = opts?.nCtx !== undefined;
     const requestedCtx = opts?.nCtx ?? catalogEntry?.defaultNCtx ?? 4096;
     let nCtx = requestedCtx;
-    const nThreads = opts?.nThreads ?? 4;
+    // P-03: sin opción explícita, los hilos salen de los núcleos
+    // reales del aparato (política en ramBudget.ts); la opción
+    // explícita sigue mandando, como manda con nCtx.
+    const nThreads = opts?.nThreads ?? defaultThreadsForCores(readProcessorCount());
     const crashSafety = await this.crashGuardSettle();
 
     // ChatScreen re-mounts (and calls load() again) every time Settings is

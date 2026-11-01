@@ -94,6 +94,12 @@ class RamMonitorModule : Module() {
     Function("getDeviceTotalRamBytes") {
       readDeviceTotalRamBytes()
     }
+
+    // Logical cores on this device, for the inference thread policy
+    // (P-03): without it the app pinned 4 threads blind on every device.
+    Function("getProcessorCount") {
+      Runtime.getRuntime().availableProcessors()
+    }
   }
 
   private fun installCrashRecorder() {

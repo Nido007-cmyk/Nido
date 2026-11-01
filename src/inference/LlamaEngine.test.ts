@@ -127,6 +127,8 @@ let mockRssBytes = 1024 ** 3;
 // M2+M3 (crash nativo): el informe de cierres simulado; null = el
 // build no lo soporta (sin cruce, comportamiento de siempre).
 let mockCrashReport: unknown = null;
+// P-03: los núcleos que la sonda nativa «ve»; null = build sin sonda.
+let mockProcessorCount: number | null = null;
 // Texto que la completion falsa emite/resuelve (los tests de noThink lo
 // cambian por una respuesta con bloque <think>).
 let mockReplyText = "Hi";
@@ -134,6 +136,7 @@ vi.mock("ram-monitor", () => ({
   getDeviceTotalRamBytes: () => mockTotalRamBytes,
   getMemoryInfo: () => ({ rssBytes: mockRssBytes }),
   getCrashReport: () => mockCrashReport,
+  getProcessorCount: () => mockProcessorCount,
 }));
 // The integrity gate is covered by src/models/modelTrust.test.ts; here it
 // is stubbed so engine behavior is tested in isolation.
@@ -161,6 +164,7 @@ beforeEach(() => {
   rejectInit = null;
   mockReplyText = "Hi";
   mockCrashReport = null;
+  mockProcessorCount = null;
   fsStore.clear();
   sessionWriteMode = "auto";
   failSessionWrites = false;
@@ -1084,5 +1088,42 @@ describe("Crash nativo: puerta nativa y guarda de repetición", () => {
     // detectarse el bucle, antes de que la generación se asentara.
     expect(text).toBe("Ejemplos de plantas que conozco son las aluminosas…");
     expect(forwarded.length).toBeLessThan(tokensSent);
+  });
+});
+
+describe("P-03: hilos según los núcleos reales", () => {
+  it("sin sonda (null) carga con 4, el default de siempre", async () => {
+    mockProcessorCount = null;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(engine.getModelInfo()?.nThreads).toBe(4);
+  });
+
+  it("aparato estrecho (4 núcleos): la política baja a 2 sin opción explícita", async () => {
+    mockProcessorCount = 4;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(engine.getModelInfo()?.nThreads).toBe(2);
+  });
+
+  it("aparato ancho (12 núcleos): la política sube al techo de 6", async () => {
+    mockProcessorCount = 12;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(engine.getModelInfo()?.nThreads).toBe(6);
+  });
+
+  it("la clase de la Tab A9+ (8 núcleos) nace con 4", async () => {
+    mockProcessorCount = 8;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(engine.getModelInfo()?.nThreads).toBe(4);
+  });
+
+  it("la opción explícita nThreads manda sobre la derivación", async () => {
+    mockProcessorCount = 4; // la política diría 2
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf", { nThreads: 5 });
+    expect(engine.getModelInfo()?.nThreads).toBe(5);
   });
 });
