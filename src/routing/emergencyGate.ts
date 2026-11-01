@@ -131,6 +131,25 @@
  *    mensaje cortísimo, sin pregunta, con la palabra-signo en
  *    participio, gerundio o estado, y sin marcadores de tema.
  *
+ * 9. EL PREFIJO SIN RESTO DECLARABA CUERPOS QUE NO HAY (ADV2-08 +
+ *    ADV-E2, 2026-11-01). El casado de señales por principio de
+ *    palabra cazaba «helpful» por «help», «babysitter» por «baby»
+ *    y «personal» por «person»: desde este arreglo la señal casa
+ *    solo si la palabra ES la señal o la señal + resto ∈ {s, es}
+ *    (el plural; los femeninos van como entradas propias). Y dos
+ *    vetos nuevos cierran el tema de seguridad de producto
+ *    («choking hazard» y sus formas) y el modismo «choke back»,
+ *    que no tiene gemelo físico. Lo demás de la familia queda
+ *    como PRECIO DECLARADO y fixturado, sin código: la metáfora
+ *    familiar («my son choked at his piano recital») y la
+ *    metáfora con auxiliar de ADV-E2 («se atragantó en el
+ *    debate») — esta última medida sin cura limpia: la pierna
+ *    que la deja pasar (el «se» auxiliar) es la misma que
+ *    sostiene la forma real «Se atragantó con una espina», y la
+ *    frase metafórica es idéntica, palabra a palabra, a su
+ *    gemela verdadera; todo veto de marco vetaría la emergencia
+ *    real con esa frase exacta.
+ *
  * Puro, sin dependencias de UI, 100% testeable.
  */
 
@@ -411,6 +430,21 @@ const EMERGENCY_VETOES = [
   "story about", "essay about", "poem about", "novel about",
   "conto sobre", "poema sobre",
   "en un vaso de agua", "en deudas", "in debt", "em dividas",
+  // ADV2-08: el TEMA de seguridad de producto no es un suceso —
+  // una consulta de prevención con la víctima nombrada («choking
+  // hazard for toddlers») declaraba situación viva y adelantaba
+  // la ruta protegida. (Su cara de salud, sellada por la familia
+  // de H-04, no se toca: estos vetos solo mandan sobre la cara de
+  // situación, como todos los de esta lista.)
+  "choking hazard",
+  "peligro de atragantamiento", "riesgo de atragantamiento",
+  "peligro de asfixia", "riesgo de asfixia",
+  "risco de engasgo", "perigo de asfixia",
+  // ADV2-08: el modismo «choke back» (contener las lágrimas o la
+  // risa) no tiene gemelo físico — nadie «choke back» un objeto —
+  // y el auxiliar que trae («was choking back…») le daba contexto
+  // de cuerpo a una frase sin cuerpo.
+  "choke back", "choking back", "choked back",
 ];
 
 const ALL_SIGNS: string[] = Object.values(EMERGENCY_SIGNS).flat();
@@ -465,9 +499,12 @@ const STEM_AUX_WORDS = new Set(["is", "was", "am", "esta", "estoy", "estou", "se
  * sueltos («he choked on stage» también los trae, y es la
  * metáfora del escenario) y los sustantivos de clase genérica
  * (golfers, players, students), que son el sujeto natural de la
- * metáfora deportiva. El casado es por palabra exacta o por
- * principio de palabra solo con señales de 4+ letras: «son» no
- * puede cazar «song».
+ * metáfora deportiva. El casado (ADV2-08) es por palabra exacta
+ * —sin la puntuación pegada— o por la señal + resto ∈ {s, es}
+ * (el plural): «son» no caza «song», y desde el arreglo «help»
+ * tampoco caza «helpful», ni «baby» a «babysitter», ni «person»
+ * a «personal» — el prefijo sin resto declaraba cuerpos que no
+ * hay. Los femeninos van como entradas propias de la lista.
  */
 const STEM_BODY_SIGNALS = [
   "alguien", "alguem", "someone", "somebody",
@@ -523,7 +560,11 @@ function stemHitHasBodyContext(folded: string): boolean {
     const from = Math.max(0, i - 3);
     const to = Math.min(words.length - 1, i + 3);
     for (let j = from; j <= to; j++) {
-      if (STEM_BODY_SIGNALS.some((s) => words[j] === s || (s.length >= 4 && words[j].startsWith(s)))) return true;
+      // La palabra sin su puntuación pegada («hijo.» cuenta como
+      // «hijo», como contaba con el casado por principio) y la
+      // regla del resto de ADV2-08: la señal, o la señal + s/es.
+      const w = words[j].replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "");
+      if (STEM_BODY_SIGNALS.some((s) => w === s || w === `${s}s` || w === `${s}es`)) return true;
     }
   }
   return false;
@@ -603,7 +644,12 @@ export function isEmergencySituation(text: string): boolean {
   if (!text) return false;
   const folded = foldText(text);
   if (folded.trim().length === 0) return false;
-  if (EMERGENCY_VETOES.some((x) => folded.includes(` ${x} `) || folded.includes(` ${x}`))) return false;
+  // El pajar va acolchado: un veto que ABRE el mensaje («Choking
+  // hazard for toddlers…», ADV2-08) también veta — sin el acolchado
+  // el casado exigía un espacio delante y el tema en posición cero
+  // se colaba. Es el mismo patrón de hasHistoricalFrame.
+  const vetoHay = ` ${folded} `;
+  if (EMERGENCY_VETOES.some((x) => vetoHay.includes(` ${x} `) || vetoHay.includes(` ${x}`))) return false;
   if (hasHistoricalFrame(folded)) return false;
   return (
     ALL_SIGNS.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`)) ||

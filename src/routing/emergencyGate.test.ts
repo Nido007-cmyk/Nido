@@ -308,6 +308,60 @@ describe("ADV2-07 + ADV-E1 (segunda adversaria / Grok): la puerta aprende vícti
   });
 });
 
+describe("ADV2-08 + ADV-E2: precisión de prefijos, dos vetos y los precios declarados", () => {
+  it("el prefijo sin resto deja de declarar: «helpful», «babysitter» y «personal» no son cuerpos", () => {
+    expect(isEmergencySituation("The babysitter choked during the school play.")).toBe(false);
+    expect(isEmergencySituation("This helpful video explains choking hazards for kids.")).toBe(false);
+    expect(isEmergencySituation("My personal trainer choked at the competition.")).toBe(false);
+    // Y la cara de salud de «personal» cae con él: su único
+    // «contexto» era el prefijo (efecto medido y declarado, en la
+    // dirección segura, vía stemHitHasBodyContext en la pierna chok).
+    expect(isHealthQuestion("My personal trainer choked at the competition.")).toBe(false);
+  });
+
+  it("los plurales reales siguen entrando por la regla del resto (s / es)", () => {
+    expect(isEmergencySituation("Hay niños atragantados en el patio.")).toBe(true);
+    expect(isEmergencySituation("Las mujeres se desmayaron en la sala.")).toBe(true);
+    expect(isEmergencySituation("Los niños se están atragantando.")).toBe(true);
+  });
+
+  it("el veto de tema cierra el tema de seguridad de producto, abra o no el mensaje", () => {
+    // En posición cero: sin el pajar acolchado el veto no casaba.
+    expect(isEmergencySituation("Choking hazard for toddlers is real.")).toBe(false);
+    // Con la víctima nombrada al lado del tallo — sin el veto, la
+    // ventana la ataría a un cuerpo y declararía el «suceso».
+    expect(isEmergencySituation("Este juguete tiene peligro de atragantamiento para bebés.")).toBe(false);
+    expect(isEmergencySituation("Este brinquedo tem risco de engasgo para bebês.")).toBe(false);
+  });
+
+  it("el veto del modismo cierra «choke back»: contener las lágrimas no es una obstrucción", () => {
+    expect(isEmergencySituation("She was choking back tears during the speech.")).toBe(false);
+    expect(isEmergencySituation("He choked back a laugh during the meeting.")).toBe(false);
+  });
+
+  it("PRECIOS declarados, fixturados como disparo aceptado — nadie los «arregla» en silencio", () => {
+    // 08-5, la metáfora familiar: la víctima es real en la lista y
+    // el tallo es real; la propia adversaria la contó como precio.
+    expect(isEmergencySituation("My son choked at his piano recital.")).toBe(true);
+    // ADV-E2, la metáfora con auxiliar: idéntica, palabra a
+    // palabra, a su gemela real — todo veto de marco vetaría la
+    // emergencia verdadera con la misma frase (ver §6.3 del diseño
+    // y el punto 9 de la cabecera del módulo).
+    expect(isEmergencySituation("Se atragantó en el debate.")).toBe(true);
+    expect(isEmergencySituation("Se atragantó en el partido.")).toBe(true);
+    // La gemela real que veta cualquier cura de E2: sigue dentro.
+    expect(isEmergencySituation("Se atragantó con una espina")).toBe(true);
+    // X-09, el precio que trae el tallo «drown»: los vetos de deuda
+    // cubren la forma asentada; esta va por la pierna del auxiliar.
+    expect(isEmergencySituation("He is drowning in work emails.")).toBe(true);
+    // X-12/X-22, fragmentos de tema con víctima nombrada: precio
+    // preexistente, sin cambio — la alternativa (excluir las
+    // formas-sustantivo del tallo) mataría la forma real de abajo.
+    expect(isEmergencySituation("Atragantamiento en bebés.")).toBe(true);
+    expect(isEmergencySituation("Mi hijo tiene un atragantamiento.")).toBe(true);
+  });
+});
+
 describe("gatePreemptsDeepResearch (R-07: la decisión antes de la bifurcación)", () => {
   it("emergencia o salud con Investigar activo: el turno va protegido", () => {
     expect(gatePreemptsDeepResearch("Que hago si argument se esta atragantando?", "es")).toBe(true);
