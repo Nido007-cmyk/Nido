@@ -256,7 +256,7 @@ describe("búsqueda por palabras de las guías rápidas (0.1.59)", () => {
   it("«¿Cómo hago la RCP a un adulto?»: sin «hago», y «adulto» encuentra «adultos»", () => {
     const q = buildLexicalQuery("¿Cómo hago la RCP a un adulto?")!;
     expect(q.terms.map((t) => t.forms[0])).toEqual(["rcp", "adulto"]);
-    expect(q.match).toContain('"adult"*');
+    expect(q.match).toContain('"adul"*');
     expect(countMatchedTerms("RCP (reanimación) en adultos y niños mayores", q.terms)).toBe(2);
   });
 
