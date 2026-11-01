@@ -35,4 +35,14 @@ export interface RetrievedChunk extends ChunkRecord {
    */
   rawScore?: number;
   matchType: "lexical" | "semantic" | "hybrid";
+  /**
+   * Adversaria H-07: este fragmento es un RESTO — fitChunksToBudget lo
+   * truncó por frases para que el prompt cupiera en la ventana. Sin la
+   * marca, el resto viajaba como si fuera la fuente entera: la pantalla
+   * lo enseñaba completo (enseñaba otro objeto, en realidad) y el
+   * verificador juzgaba contra el cuerpo entero que el modelo nunca
+   * vio. Solo lo pone fitChunksToBudget, sobre la copia que devuelve;
+   * el fragmento de la recuperación nunca lleva esta marca.
+   */
+  truncated?: boolean;
 }

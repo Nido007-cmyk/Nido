@@ -91,6 +91,14 @@ export type GroundingStatus =
 export interface GroundingChunk {
   title: string;
   body: string;
+  /**
+   * Adversaria H-07: este fragmento es un resto truncado por el
+   * presupuesto de contexto (fitChunksToBudget). El verificador juzga
+   * contra el cuerpo que recibe — que en la ruta fija ya es el resto
+   * que el modelo vio, no la fuente entera — y la marca queda visible
+   * en su entrada para que ningún consumidor lo trate como completo.
+   */
+  truncated?: boolean;
 }
 
 export interface GroundingResult {

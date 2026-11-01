@@ -34,7 +34,7 @@ import { useTranslation } from "react-i18next";
 import { llamaEngine } from "../inference/LlamaEngine";
 import { embeddingEngine } from "../rag/embed";
 import { retrieve, assemblePrompt, RetrievedChunk, ConversationTurn } from "../rag/retrieve";
-import { assembleChatMessages, contextualizeQuery, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
+import { assembleChatMessages, contextualizeQuery, degradableGenTokens, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
 import { classifyTask, isRetrievalIrrelevant, isCreativeRequest } from "../routing/classify";
 import {
   gatePreemptsDeepResearch,
@@ -1459,6 +1459,9 @@ export function ChatScreen({
       };
 
       let chunks: RetrievedChunk[] = [];
+      // Adversaria H-12: la ruta fija generó con el suelo degradado por
+      // falta de espacio (la respuesta salió acortada y lleva su nota).
+      let fixedGenSpaceCut = false;
       // 0.1.59: answered word for word from a NIDO Essentials guide (no model).
       let guideAnswered = false;
       // Honest no-result flag for THIS reply (2026-09-28): true only when
@@ -1551,7 +1554,7 @@ export function ChatScreen({
             chunks = g.answer.chunks;
           }
         }
-        const runFixedModelChat = async (): Promise<{ chunks: RetrievedChunk[]; noSourcesFound: boolean }> => {
+        const runFixedModelChat = async (): Promise<{ chunks: RetrievedChunk[]; noSourcesFound: boolean; genSpaceCut: boolean }> => {
           let c: RetrievedChunk[];
           fixedTaskType = classifyTask(query);
           // Honest no-result (2026-09-28): retrievalAttempted is true only
@@ -1583,7 +1586,7 @@ export function ChatScreen({
             const safe = healthSafeText(uiLang);
             assistantText = safe;
             setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: safe } : m)));
-            return { chunks: c, noSourcesFound: noSources };
+            return { chunks: c, noSourcesFound: noSources, genSpaceCut: false };
           }
           // RAG-GROUNDING 2026-10-11 (Fase 3, "mejor no inventar"): pregunta
           // de hechos + ninguna fuente → "no lo sé" honesto y determinista,
@@ -1592,7 +1595,7 @@ export function ChatScreen({
             const idk = noSourcesAnswer(uiLang);
             assistantText = idk;
             setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: idk } : m)));
-            return { chunks: c, noSourcesFound: noSources };
+            return { chunks: c, noSourcesFound: noSources, genSpaceCut: false };
           }
           setProcessing({ messageId: assistantId, status: "thinking" });
           // Use the model's own chat template when its file ships one; the
@@ -1624,21 +1627,31 @@ export function ChatScreen({
           const genFloor = loadedEntry?.capabilities?.minGenerationTokens ?? 0;
           const desiredGen = Math.max(maxTokens, genFloor);
           const budget = { nCtx, reserveGeneration: desiredGen };
+          // Adversaria H-07: si el presupuesto ajusta las fuentes, la
+          // lista que vuelve de esta ruta es LA QUE ENTRÓ en el prompt
+          // (con sus marcas de truncado) — el verificador, la tarjeta de
+          // evidencia y las citas juzgan y enseñan esa, no la original
+          // de la recuperación, que el modelo quizá nunca vio entera.
+          let fittedChunks: RetrievedChunk[] | undefined;
+          const onFitted = (fitted: RetrievedChunk[]): void => {
+            fittedChunks = fitted;
+          };
           const directMessages = useChatTemplate
-            ? assembleChatMessages(query, c, systemPrompt, history, styleReminder, noSources, budget)
+            ? assembleChatMessages(query, c, systemPrompt, history, styleReminder, noSources, budget, onFitted)
             : undefined;
           const directPrompt = useChatTemplate
             ? undefined
-            : assemblePrompt(query, c, systemPrompt, history, styleReminder, noSources, budget);
+            : assemblePrompt(query, c, systemPrompt, history, styleReminder, noSources, budget, onFitted);
           const promptText = useChatTemplate ? directMessages!.map((m) => m.content).join("\n") : directPrompt!;
           // R-01: suelo de generación degradable — si tras el recorte el
           // prompt no deja 512 tokens, el suelo baja por peldaños
           // (512 → 256 → 128 → 64) y se genera con lo que cabe, en vez de
           // forzar 512 y morir en la aserción de abajo (que se queda como
-          // guarda final para el caso irreducible).
+          // guarda final para el caso irreducible). La cuenta vive en
+          // degradableGenTokens (pura, fixturada); H-12: si el espacio
+          // obligó al recorte, la respuesta servida lleva su nota.
           const availableGen = nCtx - estimatePromptTokens(promptText) - 64;
-          const genFloorStep = [512, 256, 128, 64].find((s) => s <= availableGen) ?? 64;
-          const genTokens = Math.min(desiredGen, Math.max(genFloorStep, availableGen));
+          const { genTokens, spaceCut } = degradableGenTokens(desiredGen, availableGen);
           const genInput = useChatTemplate
             ? { messages: directMessages!, nPredict: genTokens, onToken, ...sampling }
             : { prompt: directPrompt!, nPredict: genTokens, onToken, ...sampling };
@@ -1646,7 +1659,7 @@ export function ChatScreen({
           await llamaEngine.generate(genInput);
           // 5.1: flush final del buffer de tokens.
           flushTokenBuffer();
-          return { chunks: c, noSourcesFound: noSources };
+          return { chunks: fittedChunks ?? c, noSourcesFound: noSources, genSpaceCut: spaceCut };
         };
 
         const adaptiveRoutingEnabled = await getAdaptiveRoutingEnabled();
@@ -1687,6 +1700,7 @@ export function ChatScreen({
               const fixed = await runFixedModelChat();
               chunks = fixed.chunks;
               noSourcesFound = fixed.noSourcesFound;
+              fixedGenSpaceCut = fixed.genSpaceCut;
             } else {
               chunks = result.citations;
               // Executor reports retrievalAttempted; paired with zero
@@ -1739,11 +1753,13 @@ export function ChatScreen({
             const fixedFallback = await runFixedModelChat();
             chunks = fixedFallback.chunks;
             noSourcesFound = fixedFallback.noSourcesFound;
+            fixedGenSpaceCut = fixedFallback.genSpaceCut;
           }
         } else {
           const fixedPlain = await runFixedModelChat();
           chunks = fixedPlain.chunks;
           noSourcesFound = fixedPlain.noSourcesFound;
+          fixedGenSpaceCut = fixedPlain.genSpaceCut;
         }
       }
       // FIX 2026-10-09 (C2): flush del buffer de tokens en el path adaptivo.
@@ -1837,6 +1853,28 @@ export function ChatScreen({
             prev.map((m) => (m.id === assistantId ? { ...m, text: finalText } : m))
           );
         }
+      }
+
+      // Adversaria H-12: si la ruta fija generó con el suelo degradado
+      // por falta de espacio, la respuesta servida lo dice con la nota
+      // de la casa. Va DESPUÉS de la verificación (la nota es texto de
+      // la casa, no se juzga contra las fuentes) y solo si el texto
+      // servido sigue siendo el del modelo: ni texto seguro, ni el «no
+      // lo sé» determinista, ni la abstención con extracto (en esos
+      // casos la respuesta del modelo no es la que se sirve y la nota
+      // mentiría sobre ella), ni un turno detenido por el usuario.
+      if (
+        fixedGenSpaceCut &&
+        !wasStopped &&
+        grounding !== "abstained" &&
+        assistantText.trim().length > 0 &&
+        assistantText !== healthSafeText(uiLang) &&
+        assistantText !== noSourcesAnswer(uiLang)
+      ) {
+        assistantText = `${assistantText}\n\n${agentFallbackText("spaceShortened", uiLang)}`;
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, text: assistantText } : m))
+        );
       }
 
       // Programa bounty, tanda 1: la tarjeta de evidencia se calcula

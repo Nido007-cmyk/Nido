@@ -11,6 +11,7 @@ import {
   assembleChatMessages,
   buildLexicalQuery,
   contextualizeQuery,
+  degradableGenTokens,
   fitChunksToBudget,
   serializeEmbedding,
   deserializeEmbedding,
@@ -566,6 +567,122 @@ describe("ruta fija con presupuesto (R-01): el escenario de la ronda", () => {
         reserveGeneration: 512,
       })
     ).toBe(assemblePrompt("¿qué es X?", shortChunks, "You are Nido.", shortHistory));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Adversaria H-07 + H-12 (2026-11-01): el presupuesto no mutila en
+// silencio ni acorta sin nota. La sonda de la adversaria: señuelo de
+// 2.309 caracteres en el rango 1 y el fragmento bueno y corto en el 2,
+// con una ventana donde no caben los dos — el ajuste dejaba [señuelo]
+// truncado a 113 caracteres SIN MARCA y sacrificaba el bueno por rango.
+// ---------------------------------------------------------------------------
+
+/** Frase de ~113 caracteres, como las del señuelo de la sonda. */
+const H07_SENTENCE =
+  "La pintura al óleo sobre lienzo exige capas muy finas, secado lento entre mano y mano, y barniz final mate. ";
+
+function h07Chunk(id: string, title: string, body: string): RetrievedChunk {
+  return { chunkId: id, docId: id, title, body, score: 1, matchType: "hybrid" };
+}
+
+describe("fitChunksToBudget (adversaria H-07): ni muñones ni restos sin marca", () => {
+  // Sala total de caracteres: (3072 − 512 − 50) × 3 ≈ 7.530. Con este
+  // fixedText quedan ~140 para las entradas: el señuelo solo entra
+  // truncado a ~una frase (~5 % de su cuerpo) y el bueno entra entero.
+  const TIGHT_FIXED = "F".repeat(7390);
+  const decoyBody = H07_SENTENCE.repeat(21).trimEnd();
+  const goodBody = "La cita es el martes 10 de noviembre a las 9:30 en la sala 214 del segundo piso.";
+
+  it("la sonda de la adversaria: el señuelo mutilado no entra — entra el fragmento bueno, entero", () => {
+    const decoy = h07Chunk("1", "Pintura al óleo", decoyBody);
+    const good = h07Chunk("2", "Documento de la cita", goodBody);
+    const out = fitChunksToBudget([decoy, good], TIGHT_FIXED, R01_NCTX, R01_RESERVE);
+    expect(out.map((c) => c.title)).toEqual(["Documento de la cita"]);
+    expect(out[0].body).toBe(goodBody);
+    expect(out[0].truncated).toBeUndefined();
+  });
+
+  it("un resto por debajo de utilidad no entra ni solo: [] antes que un muñón", () => {
+    const decoy = h07Chunk("1", "Pintura al óleo", decoyBody);
+    expect(fitChunksToBudget([decoy], TIGHT_FIXED, R01_NCTX, R01_RESERVE)).toEqual([]);
+  });
+
+  it("el truncado que sí entra viaja marcado, por frases completas y sin mutar el original", () => {
+    const fixedText = "F".repeat(1500);
+    const big = h07Chunk("1", "Doc Grande", H07_SENTENCE.repeat(80));
+    const out = fitChunksToBudget([big], fixedText, R01_NCTX, R01_RESERVE);
+    expect(out).toHaveLength(1);
+    expect(out[0].truncated).toBe(true);
+    expect(out[0].body.length).toBeLessThan(big.body.length);
+    expect(big.body.startsWith(out[0].body)).toBe(true);
+    expect(out[0].body.endsWith(".")).toBe(true);
+    expect(big.truncated).toBeUndefined();
+    expect(
+      estimatePromptTokens(fixedText + renderedEntries(out)) + R01_RESERVE
+    ).toBeLessThanOrEqual(R01_NCTX);
+  });
+
+  it("sacrificado el primero inutilizable, el segundo entra como resto útil marcado", () => {
+    // Sala de ~345 caracteres para las entradas: el señuelo es de
+    // frases de ~400 — ni su primera frase cabe, así que no puede
+    // entrar ni como resto; el segundo, de frases cortas, entra
+    // truncado por encima del suelo de utilidad (≥ 320).
+    const midFixed = "F".repeat(7185);
+    const longSentence =
+      "La pintura al óleo sobre lienzo, trabajada con capas muy finas y secado lento entre mano y mano, " +
+      "con veladuras sucesivas de color y un barniz final mate que protege la superficie durante décadas " +
+      "de exposición continua a la luz de la sala principal del taller de restauración. ";
+    const decoy = h07Chunk("1", "Pintura al óleo", longSentence.repeat(6).trimEnd());
+    const big = h07Chunk("2", "Doc Grande", "El óleo exige capas finas y secado lento entre manos. ".repeat(80));
+    const out = fitChunksToBudget([decoy, big], midFixed, R01_NCTX, R01_RESERVE);
+    expect(out.map((c) => c.title)).toEqual(["Doc Grande"]);
+    expect(out[0].truncated).toBe(true);
+    expect(out[0].body.length).toBeGreaterThanOrEqual(320);
+  });
+
+  it("los ensambladores avisan qué lista entró (onFitted) y el prompt lleva exactamente esa", () => {
+    let fitted: RetrievedChunk[] | undefined;
+    const messages = assembleChatMessages(
+      "¿Qué día es la cita?",
+      [
+        h07Chunk("1", "Doc 1", H07_SENTENCE.repeat(30)),
+        h07Chunk("2", "Doc 2", H07_SENTENCE.repeat(30)),
+        h07Chunk("3", "Doc 3", H07_SENTENCE.repeat(30)),
+      ],
+      undefined,
+      undefined,
+      undefined,
+      false,
+      { nCtx: R01_NCTX, reserveGeneration: R01_RESERVE },
+      (f) => {
+        fitted = f;
+      }
+    );
+    expect(fitted).toBeDefined();
+    expect(fitted!.length).toBeGreaterThan(0);
+    expect(fitted!.length).toBeLessThan(3);
+    const joined = messages.map((m) => m.content).join("\n");
+    for (const c of fitted!) expect(joined).toContain(c.title);
+    expect(joined).not.toContain("Doc 3");
+  });
+});
+
+describe("degradableGenTokens (adversaria H-12): el suelo degradado se sabe", () => {
+  it("sin aprieto: lo pedido, sin marca de recorte", () => {
+    expect(degradableGenTokens(512, 2000)).toEqual({ genTokens: 512, spaceCut: false });
+  });
+
+  it("el camino de degradación a 64: genera con 64 y el recorte por espacio queda marcado", () => {
+    expect(degradableGenTokens(512, 30)).toEqual({ genTokens: 64, spaceCut: true });
+  });
+
+  it("degradación intermedia: lo que cabe, marcado", () => {
+    expect(degradableGenTokens(1024, 300)).toEqual({ genTokens: 300, spaceCut: true });
+  });
+
+  it("un tope propio del usuario no es recorte por espacio (sin nota)", () => {
+    expect(degradableGenTokens(200, 300)).toEqual({ genTokens: 200, spaceCut: false });
   });
 });
 

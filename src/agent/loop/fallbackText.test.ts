@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { agentFallbackText, toFallbackLang, type FallbackKind } from "./fallbackText";
 
 describe("fallbackText — nunca silencio, nunca un éxito fingido", () => {
-  const kinds: FallbackKind[] = ["notUnderstood", "actionFailed", "memoryFailed", "emptyAnswer"];
+  const kinds: FallbackKind[] = ["notUnderstood", "actionFailed", "memoryFailed", "emptyAnswer", "spaceShortened"];
 
   it("cada texto existe en es/en/pt y no está vacío", () => {
     for (const k of kinds) {
@@ -29,6 +29,19 @@ describe("fallbackText — nunca silencio, nunca un éxito fingido", () => {
   it("el fallo de una acción no habla de guardar (evidencia: 'Call' → 'No pude guardar eso')", () => {
     expect(agentFallbackText("actionFailed", "es")).not.toMatch(/guardar/i);
     expect(agentFallbackText("actionFailed", "en")).not.toMatch(/save/i);
+  });
+
+  it("la nota de respuesta acortada (H-12) existe, difiere por idioma y nombra el espacio", () => {
+    const es = agentFallbackText("spaceShortened", "es");
+    const en = agentFallbackText("spaceShortened", "en");
+    const pt = agentFallbackText("spaceShortened", "pt");
+    expect(new Set([es, en, pt]).size).toBe(3);
+    expect(es).toMatch(/acortar/i);
+    expect(es).toMatch(/espacio/i);
+    expect(en).toMatch(/shorten/i);
+    expect(en).toMatch(/space/i);
+    expect(pt).toMatch(/encurtar/i);
+    expect(pt).toMatch(/espaço/i);
   });
 
   it("toFallbackLang normaliza etiquetas de la UI", () => {

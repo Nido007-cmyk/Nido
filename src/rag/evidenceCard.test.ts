@@ -59,4 +59,13 @@ describe("buildEvidenceCard", () => {
     expect((card?.excerpt.length ?? 0)).toBeLessThanOrEqual(340);
     expect(card?.excerpt).toContain(card?.highlight ?? "");
   });
+
+  it("adversaria H-07: la tarjeta sabe si su fuente es un resto truncado", () => {
+    const whole = buildEvidenceCard([chunk(BODY)], "¿qué captura la clorofila?");
+    expect(whole?.truncated).toBe(false);
+    const remainder = buildEvidenceCard([chunk(BODY, { truncated: true })], "¿qué captura la clorofila?");
+    expect(remainder?.truncated).toBe(true);
+    // El pasaje sale del resto recibido, no de otra versión de la fuente.
+    expect(remainder?.excerpt).toBe(whole?.excerpt);
+  });
 });

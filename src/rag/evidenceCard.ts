@@ -31,6 +31,13 @@ export interface EvidenceCardData {
   highlight: string;
   /** El pasaje alrededor de la frase resaltada, acotado. */
   excerpt: string;
+  /**
+   * Adversaria H-07: la fuente principal es un resto truncado por el
+   * presupuesto de contexto — el pasaje que la tarjeta enseña es el que
+   * el modelo vio, y este dato lo dice, para que la tarjeta no lo
+   * presente como la fuente entera.
+   */
+  truncated: boolean;
 }
 
 /** Términos de contenido de un texto: minúsculas sin acentos, 4+ letras, raíz aproximada. */
@@ -102,5 +109,5 @@ export function buildEvidenceCard(chunks: readonly RetrievedChunk[], query: stri
     }
   }
   const excerpt = sentences.slice(lo, hi + 1).join(" ");
-  return { chunkId: top.chunkId, title: top.title, highlight, excerpt };
+  return { chunkId: top.chunkId, title: top.title, highlight, excerpt, truncated: top.truncated ?? false };
 }

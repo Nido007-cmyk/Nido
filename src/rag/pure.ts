@@ -514,11 +514,26 @@ function sentenceEndOffsets(text: string): number[] {
  * y la ruta fija moría en assertPromptBudget con el error crudo.
  *
  * Política de recorte, en orden: se descartan fragmentos desde el final
- * (menor rango primero); el fragmento de mayor rango nunca se descarta —
- * si es el único que queda y aún no cabe, se trunca su cuerpo por la
- * última frase completa que quepa; si ni un fragmento mínimo cabe, se
- * devuelve [] y manda el comportamiento «sin fuentes» del llamador.
- * Nunca se toca el sistema ni la pregunta (viven en `fixedText`).
+ * (menor rango primero); el fragmento de mayor rango nunca se descarta
+ * por rango — si es el único que queda y aún no cabe, se trunca su cuerpo
+ * por la última frase completa que quepa; si ni un fragmento mínimo
+ * cabe, se devuelve [] y manda el comportamiento «sin fuentes» del
+ * llamador. Nunca se toca el sistema ni la pregunta (viven en
+ * `fixedText`).
+ *
+ * Adversaria H-07 (2026-11-01): la política anterior era rango a ciegas
+ * hasta el muñón — la sonda dejó un señuelo de 2.309 caracteres truncado
+ * a 113 SIN MARCA mientras el fragmento bueno caía por rango, y el
+ * resto pasaba por fuente completa ante la pantalla y el verificador.
+ * Ahora: (1) todo truncado viaja marcado (`truncated: true` sobre la
+ * copia devuelta; el original no se muta); (2) un resto solo entra si
+ * conserva utilidad (isUsefulRemainder): mutilar un fragmento de miles
+ * de caracteres a ~100 no es «entrar» — ese fragmento se sacrifica
+ * TAMBIÉN y el siguiente de la lista tiene su oportunidad de entrar
+ * entero o como resto útil. La protección de rango queda intacta donde
+ * nació: el descarte desde el final nunca toca al primero de la lista
+ * que se está ajustando; lo que cambia es que un primero que solo puede
+ * entrar como muñón ya no bloquea a los demás.
  *
  * `fixedText` es todo el prompt EXCEPTO las entradas de fragmentos
  * renderizadas (sistema + historial + pregunta + marco): la estimación
@@ -534,20 +549,67 @@ export function fitChunksToBudget(
   const fits = (list: RetrievedChunk[]): boolean =>
     defaultTokenCounter(fixedText + renderChunkEntries(list)) + reserveGeneration <= nCtx;
   if (fits(chunks)) return chunks;
-  let kept = chunks.slice();
-  while (kept.length > 1 && !fits(kept)) kept = kept.slice(0, -1);
-  if (fits(kept)) return kept;
-  // Queda un solo fragmento (el de mayor rango) y aún no cabe: truncar su
-  // cuerpo por frases completas, de la más larga a la más corta que quepa.
-  const top = kept[0];
-  const ends = sentenceEndOffsets(top.body);
-  for (let i = ends.length - 1; i >= 0; i--) {
-    const body = top.body.slice(0, ends[i]).trimEnd();
-    if (body.length === 0) continue;
-    const candidate = [{ ...top, body }];
-    if (fits(candidate)) return candidate;
+  let candidates = chunks.slice();
+  while (candidates.length > 0) {
+    let kept = candidates.slice();
+    while (kept.length > 1 && !fits(kept)) kept = kept.slice(0, -1);
+    if (fits(kept)) return kept;
+    // Queda un solo fragmento (el primero de los candidatos) y aún no
+    // cabe entero: truncar su cuerpo por frases completas, de la más
+    // larga a la más corta que quepa. El primer resto que cabe es el
+    // más largo posible; si ni ese llega al suelo de utilidad, ningún
+    // resto más corto lo hará (ambas medidas menguan juntas).
+    const top = kept[0];
+    const ends = sentenceEndOffsets(top.body);
+    let admitted: RetrievedChunk[] | null = null;
+    for (let i = ends.length - 1; i >= 0; i--) {
+      const body = top.body.slice(0, ends[i]).trimEnd();
+      if (body.length === 0) continue;
+      const candidate = [{ ...top, body, truncated: true }];
+      if (fits(candidate)) {
+        admitted = isUsefulRemainder(body, top.body) ? candidate : null;
+        break;
+      }
+    }
+    if (admitted) return admitted;
+    // Este fragmento no puede entrar ni entero ni como resto útil: se
+    // sacrifica y el ajuste se reintenta con los que quedan.
+    candidates = candidates.slice(1);
   }
   return [];
+}
+
+/**
+ * Suelo de utilidad de un resto truncado (H-07): conserva al menos
+ * MIN_REMAINDER_CHARS caracteres — el tamaño del extracto literal que
+ * la casa ya trata como «lo mínimo que se puede enseñar de una fuente»
+ * (extractiveSnippet en grounding.ts, 320) — o al menos una cuarta
+ * parte de su cuerpo original. Por debajo de ambas, el resto es un
+ * muñón: no sostiene solo una respuesta fundada.
+ */
+const MIN_REMAINDER_CHARS = 320;
+
+function isUsefulRemainder(keptBody: string, originalBody: string): boolean {
+  return keptBody.length >= MIN_REMAINDER_CHARS || keptBody.length * 4 >= originalBody.length;
+}
+
+/**
+ * R-01 / adversaria H-12: el suelo de generación degradable de la ruta
+ * fija, como función pura para poder fixturarlo (ChatScreen es RN y no
+ * se unit-testa en esta batería). Si tras el recorte el prompt no deja
+ * 512 tokens, el suelo baja por peldaños (512 → 256 → 128 → 64) y se
+ * genera con lo que cabe en vez de forzar 512 y morir en la aserción.
+ * `spaceCut` dice la verdad que H-12 pide contar: la generación quedó
+ * por debajo de lo que el turno pedía POR FALTA DE ESPACIO (no por el
+ * ajuste del usuario, que vive dentro de desiredGen).
+ */
+export function degradableGenTokens(
+  desiredGen: number,
+  availableGen: number
+): { genTokens: number; spaceCut: boolean } {
+  const step = [512, 256, 128, 64].find((s) => s <= availableGen) ?? 64;
+  const genTokens = Math.min(desiredGen, Math.max(step, availableGen));
+  return { genTokens, spaceCut: genTokens < desiredGen };
 }
 
 /**
@@ -580,7 +642,13 @@ export function assemblePrompt(
   // When provided, turns are dropped oldest-first and then the chunks are
   // fitted (fitChunksToBudget) until the prompt + reserve fit nCtx; when
   // absent, behavior is exactly as before.
-  budget?: { nCtx: number; reserveGeneration: number }
+  budget?: { nCtx: number; reserveGeneration: number },
+  // Adversaria H-07: cuando el presupuesto ajusta las fuentes, el
+  // llamador recibe LA LISTA QUE ENTRÓ de verdad (con sus marcas de
+  // truncado), para que quien juzga después — verificador, tarjeta de
+  // evidencia, citas — juzgue lo que el modelo vio y no la lista
+  // original de la recuperación. Sin ajuste, no se invoca.
+  onFitted?: (fitted: RetrievedChunk[]) => void
 ): string {
   const buildPrompt = (
     cs: RetrievedChunk[],
@@ -658,6 +726,7 @@ export function assemblePrompt(
   if (fitsBudget(prompt, budget.reserveGeneration)) return prompt;
   const fixedText = prompt.replace(renderChunkEntries(chunks), "");
   const fitted = fitChunksToBudget(chunks, fixedText, budget.nCtx, budget.reserveGeneration);
+  onFitted?.(fitted);
   return buildPrompt(fitted, turns);
 }
 
@@ -691,7 +760,10 @@ export function assembleChatMessages(
   // P2.3-2026-10-08: optional context budget. When provided, history turns
   // are cut recent-first (never silently overflowing the native context);
   // when absent, behavior is exactly as before (all turns appended).
-  budget?: { nCtx: number; reserveGeneration: number }
+  budget?: { nCtx: number; reserveGeneration: number },
+  // Adversaria H-07: ver el mismo parámetro en assemblePrompt — la lista
+  // ajustada que entró en el prompt, para quien juzga después.
+  onFitted?: (fitted: RetrievedChunk[]) => void
 ): ChatMessage[] {
   const instruction =
     systemPrompt && systemPrompt.trim().length > 0
@@ -778,6 +850,7 @@ export function assembleChatMessages(
         "\n" +
         currentUser.content.replace(renderChunkEntries(chunks), "");
       const fitted = fitChunksToBudget(chunks, fixedText, budget.nCtx, budget.reserveGeneration);
+      onFitted?.(fitted);
       systemMessage = buildSystemMessage(fitted);
       currentUser = buildCurrentUser(fitted);
     }

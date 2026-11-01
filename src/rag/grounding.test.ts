@@ -86,6 +86,36 @@ describe("verifyGroundedAnswer — evidencia de la fotosíntesis", () => {
   });
 });
 
+describe("verifyGroundedAnswer — adversaria H-07: el juez ve el resto, no la fuente entera", () => {
+  // El resto que el modelo vio de verdad: la frase de la sala quedó
+  // FUERA del truncado. Contra este cuerpo, la frase de la sala no
+  // tiene respaldo — antes el verificador recibía la fuente completa y
+  // la daba por fundada aunque el modelo nunca la hubiera leído.
+  const REMAINDER = {
+    title: "Documento de la cita",
+    body: "La cita es el martes 10 de noviembre de 2026 a las 9:30 de la mañana. Debe llegar quince minutos antes para el registro.",
+    truncated: true,
+  };
+  const FULL = {
+    title: "Documento de la cita",
+    body: "La cita es el martes 10 de noviembre de 2026 a las 9:30 de la mañana. La cita es en la sala 214 del segundo piso. Debe llegar quince minutos antes para el registro.",
+  };
+  const ANSWER = "La cita es el martes 10 de noviembre de 2026 a las 9:30 [1]. La cita es en la sala 214 [1].";
+
+  it("con el resto marcado, la frase de la parte cortada no pasa por fundada", () => {
+    const r = verifyGroundedAnswer(ANSWER, [REMAINDER], "es", "¿Qué día y a qué hora es la cita?");
+    expect(r.status).toBe("partial");
+    expect(r.text).toContain("martes 10 de noviembre");
+    expect(r.text).not.toContain("214");
+  });
+
+  it("control: contra la fuente entera, las dos frases quedan y el veredicto es grounded", () => {
+    const r = verifyGroundedAnswer(ANSWER, [FULL], "es", "¿Qué día y a qué hora es la cita?");
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("214");
+  });
+});
+
 describe("verifyGroundedAnswer — paráfrasis fieles NO se castigan", () => {
   it.each([
     "Photosynthesis converts light energy into chemical energy.",

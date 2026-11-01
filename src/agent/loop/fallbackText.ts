@@ -20,7 +20,12 @@
 
 export type FallbackLang = "es" | "en" | "pt";
 
-export type FallbackKind = "notUnderstood" | "actionFailed" | "memoryFailed" | "emptyAnswer";
+export type FallbackKind =
+  | "notUnderstood"
+  | "actionFailed"
+  | "memoryFailed"
+  | "emptyAnswer"
+  | "spaceShortened";
 
 const TEXTS: Record<FallbackKind, Record<FallbackLang, string>> = {
   notUnderstood: {
@@ -54,6 +59,16 @@ const TEXTS: Record<FallbackKind, Record<FallbackLang, string>> = {
     es: "No pude generar una respuesta esta vez. ¿Puedes intentarlo de nuevo o decirlo de otra forma?",
     en: "I couldn't generate an answer this time. Could you try again or rephrase it?",
     pt: "Não consegui gerar uma resposta desta vez. Pode tentar de novo ou dizer de outra forma?",
+  },
+  // Adversaria H-12: la ruta fija degrada el suelo de generación cuando
+  // el prompt llena la ventana (512 → 64). La respuesta sale, pero
+  // acortada POR ESPACIO — y la vara de la casa es decir lo que hizo,
+  // no acortar en silencio. Nota corta que se añade a la respuesta
+  // servida solo cuando el espacio obligó al recorte.
+  spaceShortened: {
+    es: "Nota: tuve que acortar esta respuesta porque en este turno quedó poco espacio para escribir.",
+    en: "Note: I had to shorten this answer because this turn ran low on space.",
+    pt: "Nota: tive de encurtar esta resposta porque neste turno ficou pouco espaço para escrever.",
   },
 };
 
