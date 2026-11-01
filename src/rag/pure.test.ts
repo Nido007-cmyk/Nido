@@ -1019,4 +1019,236 @@ describe("dropUnfoundedCorpus (C-05): las dos señales de la caída honesta", ()
     const served = pool.slice(0, 1);
     expect(dropUnfoundedCorpus(pool, served, termsOf(q), { query: q })).toEqual([]);
   });
+
+  // ── C-05c: la familia del veto, no su lista (A9-01) ─────────────────
+  // A9-01 (adversaria-9): el veto de C-05b cubre los verbos que enumera
+  // y no la familia «¿Qué + verbo…?». En todas estas construcciones el
+  // pool es < 8 (la señal A descartada como causa por construcción) y el
+  // servido casa un término discriminativo del tema (confirmación,
+  // consulado, solicitud) con el tipo a df 0: solo el marco decide.
+  const poolAviso = [
+    hit("Aviso de confirmación", "Si no te llega el aviso, revisa el buzón y espera la confirmación unas horas."),
+    ...Array.from({ length: 4 }, (_, i) => hit(`Avisos ${i}`, "Los avisos y sus fases de entrega.")),
+  ];
+  const poolConsulado = [
+    hit("Consulado de España en La Habana", "El consulado de España en La Habana atiende el trámite de la visa; la cita queda registrada donde indica la oficina."),
+    ...Array.from({ length: 4 }, (_, i) => hit(`Oficinas ${i}`, "Las oficinas y sus avisos a los viajeros.")),
+  ];
+  const poolVisa = [
+    hit("Solicitud de la visa", "La solicitud de la visa se manda con el pasaporte y la foto en la ventanilla."),
+    ...Array.from({ length: 4 }, (_, i) => hit(`Trámites ${i}`, "Los trámites y sus fases en la oficina.")),
+  ];
+  const senal = (pool: Array<{ title: string; body: string }>, q: string) =>
+    dropUnfoundedCorpus(pool, pool.slice(0, 1), termsOf(q), { query: q });
+
+  it("señal B (C-05c, §3.6): la forma dañina construida con «pasa» — la respuesta de la casa que sí responde qué hacer si el aviso no llega no cae", () => {
+    // La gemela de la fixture de A8-03 de arriba con el verbo cambiado:
+    // sobre la base de arranque caía (la señal B la retiraba), que es el
+    // daño de A8-03 reproducido con otro verbo sobre una respuesta
+    // verdadera, sin vecinos incidentales que lo disculpen.
+    const q = "¿Qué pasa si no me llega el correo de confirmación?";
+    expect(senal(poolAviso, q)).toEqual(poolAviso.slice(0, 1));
+  });
+
+  // La batería de familia del §5 del encargo, nacida por regla: tres
+  // clases de verbo (suceso, obligación —con «hacer», y la impersonal
+  // sin «hacer»—, modo/procedimiento) × dos tiempos (presente y
+  // condicional) × tres términos de tipo del vocabulario cerrado
+  // llevados de pasada (correo, dirección, precio: el dato mencionado
+  // dentro de la pregunta, nunca pedido). La regla de generación es
+  // esta tabla: 20 formas de verbo × 3 cláusulas = 60 preguntas, y cada
+  // una debe dar fundada = puerta (aquí: la señal no retira el servido).
+  // Sobre la base de arranque caían 45 (todo el suceso, la obligación no
+  // enumerada y el modo en condicional); las 15 con verbos del
+  // inventario viejo (debo hacer, tengo que hacer, hago, hacemos, se
+  // hace) ya servían y son el control interno de la batería.
+  const CLAUSULAS_FAMILIA: Array<{ tipo: string; texto: (v: string) => string; pool: typeof poolAviso }> = [
+    { tipo: "correo", texto: (v) => `¿Qué ${v} si no me llega el correo de confirmación?`, pool: poolAviso },
+    { tipo: "dirección", texto: (v) => `¿Qué ${v} si no tengo la dirección del consulado?`, pool: poolConsulado },
+    { tipo: "precio", texto: (v) => `¿Qué ${v} si sube el precio del trámite?`, pool: poolVisa },
+  ];
+  const FORMAS_FAMILIA: Array<{ clase: string; forma: string }> = [
+    { clase: "suceso presente", forma: "pasa" },
+    { clase: "suceso presente", forma: "ocurre" },
+    { clase: "suceso presente", forma: "sucede" },
+    { clase: "suceso condicional", forma: "pasaría" },
+    { clase: "suceso condicional", forma: "ocurriría" },
+    { clase: "suceso condicional", forma: "sucedería" },
+    { clase: "obligación presente", forma: "debo hacer" },
+    { clase: "obligación presente", forma: "tengo que hacer" },
+    { clase: "obligación presente", forma: "hay que hacer" },
+    { clase: "obligación condicional", forma: "debería hacer" },
+    { clase: "obligación condicional", forma: "tendría que hacer" },
+    { clase: "obligación condicional", forma: "habría que hacer" },
+    { clase: "obligación impersonal", forma: "se debe" },
+    { clase: "obligación impersonal", forma: "se debería" },
+    { clase: "modo presente", forma: "hago" },
+    { clase: "modo presente", forma: "hacemos" },
+    { clase: "modo presente", forma: "se hace" },
+    { clase: "modo condicional", forma: "haría" },
+    { clase: "modo condicional", forma: "se haría" },
+    { clase: "modo condicional", forma: "haríamos" },
+  ];
+  for (const { clase, forma } of FORMAS_FAMILIA) {
+    for (const clausula of CLAUSULAS_FAMILIA) {
+      it(`familia (C-05c) ${clase}: «¿Qué ${forma}…» con ${clausula.tipo} de pasada no funda la señal B`, () => {
+        const q = clausula.texto(forma);
+        expect(senal(clausula.pool, q)).toEqual(clausula.pool.slice(0, 1));
+      });
+    }
+  }
+
+  // Las formas de la familia 2 del juego de la adversaria de C-05c,
+  // regeneradas con su regla y su sesgo (ningún verbo de esta lista
+  // estaba en el inventario viejo del veto ni en los ejemplos del
+  // encargo): si la cura es la clase, las cubre sin haberlas visto en
+  // la batería de arriba. Sobre la base de arranque caían las 14.
+  const FORMAS_ADVERSARIA: Array<{ q: string; pool: typeof poolAviso }> = [
+    { q: "¿Qué acontece si no me llega el correo de confirmación?", pool: poolAviso },
+    { q: "¿Qué se produce si no me llega el correo de confirmación?", pool: poolAviso },
+    { q: "¿Qué acontecería si no me llegara el correo de confirmación?", pool: poolAviso },
+    { q: "¿Qué seguiría si no me llegara el correo de confirmación?", pool: poolAviso },
+    { q: "¿Qué toca hacer si no me llega el correo de confirmación?", pool: poolAviso },
+    { q: "¿Qué toca si no me llega el correo de confirmación?", pool: poolAviso },
+    { q: "¿Qué hace falta si no tengo la dirección del consulado?", pool: poolConsulado },
+    { q: "¿Qué haría falta si no tuviera la dirección del consulado?", pool: poolConsulado },
+    { q: "¿Qué procede si no me llega el correo de confirmación?", pool: poolAviso },
+    { q: "¿Qué aplica si no me llega el correo de confirmación?", pool: poolAviso },
+    { q: "¿Qué procedería si no me llegara el correo de confirmación?", pool: poolAviso },
+    { q: "¿Qué se produciría si subiera el precio del trámite?", pool: poolVisa },
+    { q: "¿Qué se necesita si el precio del trámite cambia a última hora?", pool: poolVisa },
+    { q: "¿Qué se recomienda si el precio de la cita sube?", pool: poolVisa },
+  ];
+  for (const { q, pool } of FORMAS_ADVERSARIA) {
+    it(`familia regenerada (C-05c): «${q}» no funda la señal B`, () => {
+      expect(senal(pool, q)).toEqual(pool.slice(0, 1));
+    });
+  }
+
+  it("señal B (C-05c, 6.7): «¿Qué es necesario hacer si no me llega el correo de confirmación?» sirve: tras la cópula no hay tipo, hay obligación — es procedimiento", () => {
+    // La gemela de desenlace opuesto de 6.6: sobre la base caía, porque
+    // el marco desnudo «¿qué…?» fundaba con el tipo de pasada. El par se
+    // juzga junto: la regla lee qué sigue a la cópula, no la cópula.
+    const q = "¿Qué es necesario hacer si no me llega el correo de confirmación?";
+    expect(senal(poolAviso, q)).toEqual(poolAviso.slice(0, 1));
+  });
+
+  // Las formas de dato genuino, intocables (§5, precio expreso): su
+  // desenlace medido sobre la base de arranque no cambia en ninguna
+  // dirección. Todas caen (la señal dispara) salvo donde se asienta
+  // otra cosa con su porqué.
+  it("control dato (C-05c, 6.6): «¿Qué es la dirección del consulado de España en La Habana?» cae: tras la cópula va el tipo", () => {
+    const q = "¿Qué es la dirección del consulado de España en La Habana?";
+    expect(senal(poolConsulado, q)).toEqual([]);
+  });
+
+  it("control dato (C-05c, 6.3): «¿Qué dirección tiene el consulado de España en La Habana?» cae: el tipo va tras «qué» y «tiene» llega después del tipo", () => {
+    const q = "¿Qué dirección tiene el consulado de España en La Habana?";
+    expect(senal(poolConsulado, q)).toEqual([]);
+  });
+
+  it("control dato (C-05c, 6.9): «¿Qué precio es el del trámite de la visa?» cae como su clase de dato con el dato ausente", () => {
+    const q = "¿Qué precio es el del trámite de la visa?";
+    expect(senal(poolVisa, q)).toEqual([]);
+  });
+
+  it("control dato (C-05c, 6.10): «¿Qué precio tiene el trámite de la visa?» cae como su clase de dato con el dato ausente", () => {
+    const q = "¿Qué precio tiene el trámite de la visa?";
+    expect(senal(poolVisa, q)).toEqual([]);
+  });
+
+  it("control dato (C-05c, 3.6): «Necesito la dirección del consulado de España en La Habana.» sola dispara: la necesidad con el tipo dentro de su frase funda la señal", () => {
+    const q = "Necesito la dirección del consulado de España en La Habana.";
+    expect(senal(poolConsulado, q)).toEqual([]);
+  });
+
+  // Resto nombrado medido en la base de arranque (fuera de la sede de
+  // esta tanda): las plurales «correos»/«emails»/«mails» no forman la
+  // señal porque la caza del tipo dentro de isDatumQuestion es por
+  // token exacto y el vocabulario cerrado no lista el plural de
+  // correo/email/mail (sí los de dirección/precio: «direcciones»,
+  // «precios»). Las tres sirven sobre la construcción de la
+  // adversaria-8 en la base, y esta tanda —que no toca el vocabulario—
+  // las fija con ese desenlace como controles de no-movimiento.
+  it("control resto (C-05c, 3.10): «¿Cuáles son los correos de contacto para la solicitud de la visa?» sirve como en la base: «correos» no es token del vocabulario cerrado", () => {
+    const q = "¿Cuáles son los correos de contacto para la solicitud de la visa?";
+    expect(senal(poolVisa, q)).toEqual(poolVisa.slice(0, 1));
+  });
+
+  it("control resto (C-05c, 3.11): «What are the contact emails for the visa application?» sirve como en la base: «emails» no es token del vocabulario cerrado", () => {
+    const q = "What are the contact emails for the visa application?";
+    expect(senal(poolVisa, q)).toEqual(poolVisa.slice(0, 1));
+  });
+
+  it("control resto (C-05c, 3.12): «Quais são os e-mails de contato para o pedido de visto?» sirve como en la base: «mails» no es token del vocabulario cerrado", () => {
+    const q = "Quais são os e-mails de contato para o pedido de visto?";
+    expect(senal(poolVisa, q)).toEqual(poolVisa.slice(0, 1));
+  });
+
+  it("control (C-05c, 6.8): «¿Qué hay en el correo que me llegó de la oficina?» no se veta como procedimiento: con el servido del usuario, la exención lo sirve", () => {
+    const q = "¿Qué hay en el correo que me llegó de la oficina?";
+    const served = poolAviso.slice(0, 1);
+    expect(dropUnfoundedCorpus(poolAviso, served, termsOf(q), { query: q, servedFromUser: [true] })).toEqual(served);
+  });
+
+  // Los tres precios declarados de C-05b, re-fixturados como controles
+  // (§4 del encargo; adversaria-9 los midió B-1 5/5, B-2 3/3, B-3 3/3 y
+  // la cota de rellenos en sus dos lados): la cura estructural no los
+  // renegocia.
+  it("precio B-1 (C-05c, 5.1): «¿Cómo es la dirección del consulado de España en La Habana?» se sirve: «cómo» queda del lado del veto", () => {
+    const q = "¿Cómo es la dirección del consulado de España en La Habana?";
+    expect(senal(poolConsulado, q)).toEqual(poolConsulado.slice(0, 1));
+  });
+
+  it("precio B-1 (C-05c, 5.2): «How is the address of the consulate of Spain in Havana?» se sirve y su gemela «What is the address…?» cae: el precio es bilingüe", () => {
+    const how = "How is the address of the consulate of Spain in Havana?";
+    expect(senal(poolConsulado, how)).toEqual(poolConsulado.slice(0, 1));
+    const what = "What is the address of the consulate of Spain in Havana?";
+    expect(senal(poolConsulado, what)).toEqual([]);
+  });
+
+  it("precio B-1 por frase (C-05c, 5.3): «Quiero resolver un trámite de la visa. ¿Cómo es el correo para la solicitud?» tampoco funda la señal", () => {
+    const q = "Quiero resolver un trámite de la visa. ¿Cómo es el correo para la solicitud?";
+    expect(senal(poolVisa, q)).toEqual(poolVisa.slice(0, 1));
+  });
+
+  it("precio B-2 (C-05c, 5.4): la mixta con primer marco de procedimiento queda vetada entera, aunque su segunda frase sola dispararía", () => {
+    const q = "¿Qué hago si no me llega el aviso de la cita? Necesito la dirección del consulado de España en La Habana.";
+    expect(senal(poolConsulado, q)).toEqual(poolConsulado.slice(0, 1));
+  });
+
+  it("precio B-2 espejo (C-05c, 5.5): dato primero y procedimiento después sí dispara: el veto es posicional, no de contenido", () => {
+    const q = "Necesito la dirección del consulado de España en La Habana. ¿Qué hago si no me llega el aviso de la cita?";
+    expect(senal(poolConsulado, q)).toEqual([]);
+  });
+
+  it("precio B-3 (C-05c, 5.6): la necesidad de otra cosa con el tipo mencionado en otra frase se sirve: la apertura de necesidad sola no dispara", () => {
+    const q = "Necesito renovar el pasaporte esta semana. La carta llegó al correo de la oficina.";
+    expect(senal(poolAviso, q)).toEqual(poolAviso.slice(0, 1));
+  });
+
+  it("precio B-3 (C-05c, 5.7): «Necesito el correo de la oficina para renovar el pasaporte.» dispara: el tipo dentro de la frase de necesidad", () => {
+    const q = "Necesito el correo de la oficina para renovar el pasaporte.";
+    expect(senal(poolAviso, q)).toEqual([]);
+  });
+
+  it("precio B-3 (C-05c, 5.8): «Necesito el correo de confirmación.» en declarativo cuenta como petición a efectos de la señal y dispara", () => {
+    const q = "Necesito el correo de confirmación.";
+    expect(senal(poolAviso, q)).toEqual([]);
+  });
+
+  it("cota de rellenos (C-05c, 5.9): con tres rellenos apilados el marco se alcanza y la señal dispara", () => {
+    const q = "Oye, bueno, mira, necesito la dirección del consulado de España en La Habana.";
+    expect(dropUnfoundedCorpus(t2Pool, t2Pool.slice(0, 2), termsOf(q), { query: q })).toEqual([]);
+  });
+
+  it("cota de rellenos (C-05c, 5.10): con cuatro rellenos el marco queda fuera y el fragmento se sirve", () => {
+    const q = "Oye, bueno, mira, hola, necesito la dirección del consulado de España en La Habana.";
+    expect(dropUnfoundedCorpus(t2Pool, t2Pool.slice(0, 2), termsOf(q), { query: q })).toEqual(t2Pool.slice(0, 2));
+  });
+
+  it("cota de rellenos (C-05c, 5.11): con cinco rellenos también se sirve: la cota vigente es 3", () => {
+    const q = "Oye, bueno, mira, hola, hey, necesito la dirección del consulado de España en La Habana.";
+    expect(dropUnfoundedCorpus(t2Pool, t2Pool.slice(0, 2), termsOf(q), { query: q })).toEqual(t2Pool.slice(0, 2));
+  });
 });

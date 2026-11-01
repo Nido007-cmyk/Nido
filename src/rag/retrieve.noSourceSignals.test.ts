@@ -284,3 +284,161 @@ describe("C-05 · la pierna del dispositivo: exención del usuario y guarda de p
     expect(dictada.served).toEqual([]);
   });
 });
+
+describe("C-05c · la familia del veto sobre el pack real (Local): «¿Qué + verbo…?» no pide el dato", () => {
+  // A9-01 (adversaria-9 sobre C-05b): el veto de procedimiento de C-05b
+  // enumeraba los verbos que conocía ({hago, hacer, debo, puedo, tengo…})
+  // y la familia de la pregunta de suceso/procedimiento con el tipo de
+  // pasada es más ancha que la lista: con «pasa», «ocurre», «sucede»,
+  // «debería» y «hay» la puerta servía y la señal B lo retiraba todo,
+  // exactamente el daño de A8-03 con otro verbo. Las cinco formas,
+  // literales del §3 del encargo, medidas sobre la base de arranque
+  // (b38564c): puerta 2/1/1/1/1, fundados 0 en las cinco.
+  it("A9-01 §3.1: «¿Qué pasa si no me llega el correo de confirmación?» — puerta 2, fundados 2 (Brasil SMS y México ciclones no caen)", () => {
+    const { gated, founded } = packSearch(local, "¿Qué pasa si no me llega el correo de confirmación?");
+    expect(gated.length).toBe(2);
+    expect(founded.length).toBe(2);
+  });
+
+  it("A9-01 §3.2: «¿Qué ocurre si no me llega el correo de confirmación?» — puerta 1, fundados 1", () => {
+    const { gated, founded } = packSearch(local, "¿Qué ocurre si no me llega el correo de confirmación?");
+    expect(gated.length).toBe(1);
+    expect(founded.length).toBe(1);
+  });
+
+  it("A9-01 §3.3: «¿Qué sucede si no me llega el correo de confirmación?» — puerta 1, fundados 1", () => {
+    const { gated, founded } = packSearch(local, "¿Qué sucede si no me llega el correo de confirmación?");
+    expect(gated.length).toBe(1);
+    expect(founded.length).toBe(1);
+  });
+
+  it("A9-01 §3.4: «¿Qué debería hacer si no me llega el correo de confirmación?» — puerta 1, fundados 1 (la obligación en condicional también es la familia)", () => {
+    const { gated, founded } = packSearch(local, "¿Qué debería hacer si no me llega el correo de confirmación?");
+    expect(gated.length).toBe(1);
+    expect(founded.length).toBe(1);
+  });
+
+  it("A9-01 §3.5: «¿Qué hay que hacer si no me llega el correo de confirmación?» — puerta 1, fundados 1 (la obligación impersonal también)", () => {
+    const { gated, founded } = packSearch(local, "¿Qué hay que hacer si no me llega el correo de confirmación?");
+    expect(gated.length).toBe(1);
+    expect(founded.length).toBe(1);
+  });
+
+  // La batería de familia del §5 del encargo, en su pierna de pack real:
+  // formas generadas por la regla de la clase (suceso y modo en
+  // condicional, obligación no enumerada) con la cláusula del correo.
+  // Sobre la base medían puerta 1 y fundados 0: la regla estructural las
+  // cubre sin haberlas visto, o no es la clase.
+  const familiaPack: Array<[string, number]> = [
+    ["¿Qué pasaría si no me llega el correo de confirmación?", 1],
+    ["¿Qué ocurriría si no me llega el correo de confirmación?", 1],
+    ["¿Qué sucedería si no me llega el correo de confirmación?", 1],
+    ["¿Qué tendría que hacer si no me llega el correo de confirmación?", 1],
+    ["¿Qué habría que hacer si no me llega el correo de confirmación?", 1],
+    ["¿Qué haría si no me llega el correo de confirmación?", 1],
+    ["¿Qué se haría si no me llega el correo de confirmación?", 1],
+  ];
+  for (const [q, puerta] of familiaPack) {
+    it(`familia (pack): «${q}» — puerta ${puerta}, fundados = puerta`, () => {
+      const { gated, founded } = packSearch(local, q);
+      expect(gated.length).toBe(puerta);
+      expect(founded.length).toBe(gated.length);
+    });
+  }
+
+  // Dictado real (regla permanente de la casa): la forma sin signos ni
+  // mayúscula y la de la letra duplicada miden como sus gemelas limpias
+  // (§3.1 y §3.2) tras la cura — sobre la base coincidían con ellas en
+  // el desenlace de la señal (las dos caían), así que la cláusula doble
+  // del juego las juzga por su gemela.
+  it("dictado 7.8: «qué pasa si no me llega el correo de confirmación» (sin signos) — puerta 2, fundados 2, como su gemela limpia", () => {
+    const { gated, founded } = packSearch(local, "qué pasa si no me llega el correo de confirmación");
+    expect(gated.length).toBe(2);
+    expect(founded.length).toBe(2);
+  });
+
+  it("dictado 7.10: «¿Qué ocurrre si no me llega el correo de confirmación?» (letra duplicada) — puerta 1, fundados 1, como su gemela limpia", () => {
+    const { gated, founded } = packSearch(local, "¿Qué ocurrre si no me llega el correo de confirmación?");
+    expect(gated.length).toBe(1);
+    expect(founded.length).toBe(1);
+  });
+
+  // Resto de ruido nombrado en la base (cláusula doble del juego,
+  // familia 7): la cortesía «Disculpe,…» y la cola «Es que estoy
+  // esperando un trámite» ya difieren de su gemela limpia EN LA PUERTA
+  // sobre la base de arranque (puerta 0: el término añadido rompe la
+  // cobertura), así que no hay fragmento que la señal pueda retirar ni
+  // hoy ni tras la cura; la fixture fija fundada = puerta y el resto
+  // queda asentado aquí, no contra la cura.
+  it("dictado 7.7 (resto de ruido de puerta, medido en la base): «Disculpe, ¿qué sucede si no me llega el correo de confirmación?» — puerta 0, fundados = puerta", () => {
+    const { gated, founded } = packSearch(local, "Disculpe, ¿qué sucede si no me llega el correo de confirmación?");
+    expect(gated.length).toBe(0);
+    expect(founded.length).toBe(gated.length);
+  });
+
+  it("dictado 7.9 (resto de ruido de puerta, medido en la base): «Oye, ¿qué ocurre si no me llega el correo de confirmación? Es que estoy esperando un trámite.» — puerta 0, fundados = puerta", () => {
+    const { gated, founded } = packSearch(local, "Oye, ¿qué ocurre si no me llega el correo de confirmación? Es que estoy esperando un trámite.");
+    expect(gated.length).toBe(0);
+    expect(founded.length).toBe(gated.length);
+  });
+
+  // Controles de la familia sobre el pack real: desenlaces medidos sobre
+  // la base de arranque que la cura no puede mover en ninguna dirección.
+  it("control 3.1: «¿Qué dirección es la del consulado de España en La Habana?» cae como su gemela T2 (puerta 2, fundados 0): el tipo tras «qué» con su cópula ES el dato", () => {
+    const { gated, founded } = packSearch(local, "¿Qué dirección es la del consulado de España en La Habana?");
+    expect(gated.length).toBe(2);
+    expect(founded.length).toBe(0);
+  });
+
+  it("control 4.3 (el asma limita la cura por el otro lado): «¿Qué hago si a mi hijo le cuesta respirar?» — 9 por la puerta, 9 tras la señal, la guía de asma en cabeza", () => {
+    const { gated, founded, served } = packSearch(esencial, "¿Qué hago si a mi hijo le cuesta respirar?");
+    expect(gated.length).toBe(9);
+    expect(founded.length).toBe(9);
+    expect(served[0].title).toContain("asma");
+  });
+
+  it("control 4.2 (el viento): «¿Cuál es la dirección del viento durante un huracán?» — en Esencial la B calla (4 fundados, huracanes en cabeza); en Local el tipo falta de verdad y cae por diseño", () => {
+    const es = packSearch(esencial, "¿Cuál es la dirección del viento durante un huracán?");
+    expect(es.founded.length).toBe(4);
+    expect(es.served[0].title).toContain("Huracanes");
+    const lo = packSearch(local, "¿Cuál es la dirección del viento durante un huracán?");
+    expect(lo.gated.length).toBe(1);
+    expect(lo.founded.length).toBe(0);
+  });
+
+  it("control 2.18: «No me llegó el correo de confirmación. ¿Qué procede?» — el modo en segunda frase no funda la señal (puerta 1, fundados 1)", () => {
+    const { gated, founded } = packSearch(local, "No me llegó el correo de confirmación. ¿Qué procede?");
+    expect(gated.length).toBe(1);
+    expect(founded.length).toBe(1);
+  });
+
+  it("control 7.1 (gemela pt del núcleo): «O que acontece se o e-mail de confirmação não chegar?» sirve como en la base (puerta 1, fundados 1): la cura española no toca el portugués", () => {
+    const { gated, founded } = packSearch(local, "O que acontece se o e-mail de confirmação não chegar?");
+    expect(gated.length).toBe(1);
+    expect(founded.length).toBe(1);
+  });
+
+  it("control 7.2 (pt, obligación): «O que devo fazer se o e-mail de confirmação não chegar?» — fundados = puerta, como en la base", () => {
+    const { gated, founded } = packSearch(local, "O que devo fazer se o e-mail de confirmação não chegar?");
+    expect(gated.length).toBe(6);
+    expect(founded.length).toBe(gated.length);
+  });
+
+  it("control 7.3 (pt, necesidad dictada): «Preciso do endereço do consulado da Espanha em Havana.» cae como en la base (puerta 1, fundados 0): su desenlace es el de su marco, no el de esta cura", () => {
+    const { gated, founded } = packSearch(local, "Preciso do endereço do consulado da Espanha em Havana.");
+    expect(gated.length).toBe(1);
+    expect(founded.length).toBe(0);
+  });
+
+  it("controles 7.4/7.5/7.6 (en, sin exposición en esta superficie): fundados = puerta = 0, como en la base", () => {
+    for (const q of [
+      "What happens if the confirmation email doesn't arrive?",
+      "What should I do if the confirmation email doesn't arrive?",
+      "I need the address of the consulate of Spain in Havana.",
+    ]) {
+      const { gated, founded } = packSearch(local, q);
+      expect(gated.length).toBe(0);
+      expect(founded.length).toBe(gated.length);
+    }
+  });
+});
