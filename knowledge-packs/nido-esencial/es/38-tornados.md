@@ -3,6 +3,7 @@ title: Tornados
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA); Servicio Meteorológico Nacional de EE. UU. (NOAA); Cruz Roja Americana
+questions: dónde me refugio si viene un tornado | qué hago en un tornado si estoy en el coche | cuáles son las señales de que viene un tornado | sirve refugiarse bajo un puente en un tornado | onde me abrigo se vier um tornado | o que faço num tornado se estiver no carro
 ---
 Un tornado es una columna de aire que gira con violencia. Puede formarse en minutos.
 

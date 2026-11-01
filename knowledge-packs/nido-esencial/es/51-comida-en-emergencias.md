@@ -3,6 +3,7 @@ title: Comida en emergencias
 category: Supervivencia
 lang: es
 sources: Ready.gov (FEMA), seguridad alimentaria en emergencias; USDA; OMS, cinco claves para la inocuidad de los alimentos
+questions: qué comida guardo en casa para una emergencia | cuánto tiempo dura la comida en el frigorífico sin luz | qué alimentos hay que tirar tras un apagón | se pueden comer plantas o setas silvestres si tengo hambre | que comida guardo em casa para uma emergência | quanto tempo dura a comida na geladeira sem luz
 ---
 Una persona sana puede aguantar semanas sin comer, pero no sin agua. No comas si tienes muy poca agua: digerir consume líquido.
 

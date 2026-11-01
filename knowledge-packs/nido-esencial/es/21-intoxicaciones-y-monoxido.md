@@ -3,6 +3,7 @@ title: Intoxicaciones, venenos y monóxido de carbono
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; OMS; CDC, monóxido de carbono
+questions: mi hijo se tragó lejía, qué hago | qué hago si alguien se intoxica con medicamentos | se debe provocar el vómito si traga un producto tóxico | mi hijo se tragó una pila de botón, qué hago | mi hijo se tragó una moneda, qué hago | meu filho engoliu água sanitária, o que faço | o que faço se alguém se intoxicar com remédios
 ---
 ## Si alguien tragó algo tóxico
 (Medicamentos, lejía y otros productos de limpieza, plantas, setas, alcohol, pilas de botón...)
@@ -22,6 +23,7 @@ sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; OMS; 
 Sal tú y saca a los demás al aire libre solo si es seguro. No entres en espacios cerrados con gas tóxico sin protección.
 
 ## Monóxido de carbono (CO)
+<!-- preguntas: huele a gas y nos duele la cabeza a todos, será monóxido de carbono | cuáles son los signos del monóxido de carbono | por qué no se puede usar un generador dentro de casa -->
 Es un gas que no se ve ni se huele. Lo producen estufas, braseros, calentadores de gas, generadores y coches en lugares cerrados. Mata a muchas personas tras los desastres y en invierno.
 Signos: dolor de cabeza, mareo, náuseas, cansancio, confusión. Suele afectar a varias personas (y mascotas) de la misma casa a la vez, y mejoran al salir.
 1. Sal al aire libre de inmediato y saca a todos. Abre puertas y ventanas si no te retrasa.

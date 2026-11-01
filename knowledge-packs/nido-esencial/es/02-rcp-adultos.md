@@ -3,6 +3,7 @@ title: RCP (reanimación) en adultos y niños mayores
 category: Primeros auxilios
 lang: es
 sources: AHA, Guías de RCP y atención cardiovascular de emergencia 2025; Cruz Roja Americana; IFRC, Directrices de primeros auxilios 2020
+questions: cómo hago rcp a un adulto | una persona se desplomó y no respira, qué hago | a qué ritmo se hacen las compresiones del pecho | cuántas compresiones y respiraciones se dan en la rcp | como faço massagem cardíaca num adulto | uma pessoa desmaiou e não respira, o que faço
 ---
 Si una persona se desploma, no responde y no respira normal (o solo boquea), su corazón probablemente se ha parado. Cada minuto sin RCP baja mucho la posibilidad de sobrevivir. Empezar rápido es lo más importante: no tengas miedo de hacerlo "mal"; no hacer nada es peor.
 

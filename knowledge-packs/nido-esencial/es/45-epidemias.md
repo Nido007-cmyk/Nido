@@ -3,6 +3,7 @@ title: Epidemias y brotes de enfermedades
 category: Desastres
 lang: es
 sources: OMS, preparación ante pandemias y brotes; CDC; IFRC
+questions: qué medidas funcionan contra casi todas las infecciones en una epidemia | cómo cuido a un enfermo en casa durante un brote | cómo se previene el dengue después de una inundación | qué reservas guardo para dos semanas en casa | que medidas funcionam numa epidemia | como cuido de um doente em casa durante um surto
 ---
 ## Medidas que funcionan contra casi todas las infecciones
 - Lávate las manos a menudo con agua y jabón.

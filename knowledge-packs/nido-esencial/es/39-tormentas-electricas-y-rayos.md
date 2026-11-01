@@ -3,6 +3,7 @@ title: Tormentas eléctricas y rayos
 category: Desastres
 lang: es
 sources: Servicio Meteorológico Nacional de EE. UU. (NOAA), seguridad ante rayos; Cruz Roja Americana; AHA 2024
+questions: qué hago si me pilla una tormenta eléctrica al aire libre | cuánto tiempo espero tras el último trueno para salir | se puede tocar a una persona a la que le cayó un rayo | cayó um raio numa pessoa, o que faço | o que faço numa tempestade elétrica ao ar livre
 ---
 **Si oyes truenos, estás lo bastante cerca para que te caiga un rayo.** No hay ningún lugar seguro al aire libre durante una tormenta.
 

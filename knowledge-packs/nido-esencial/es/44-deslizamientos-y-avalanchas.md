@@ -3,6 +3,7 @@ title: Deslizamientos de tierra y avalanchas
 category: Desastres
 lang: es
 sources: USGS, deslizamientos; Ready.gov (FEMA); Cruz Roja Americana
+questions: cuáles son las señales de aviso de un deslizamiento de tierra | qué hago si me atrapa una avalancha de nieve | cuántos minutos son clave para rescatar a alguien de una avalancha | quais são os sinais de alerta de um deslizamento de terra | o que faço se uma avalanche me apanhar
 ---
 ## Deslizamientos de tierra y flujos de lodo
 Son más probables tras lluvias fuertes, incendios o terremotos, en laderas empinadas y cauces.

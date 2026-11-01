@@ -3,6 +3,7 @@ title: Botiquín de primeros auxilios
 category: Salud en casa
 lang: es
 sources: Cruz Roja Americana, contenido del botiquín; IFRC; Cruz Roja Española
+questions: qué debe llevar un botiquín de primeros auxilios | qué medicamentos básicos guardo en el botiquín | cada cuánto tiempo se revisa el botiquín | o que deve ter um kit de primeiros socorros | o que coloco na caixa de primeiros socorros
 ---
 Ten un botiquín en casa, otro en el coche y uno pequeño en la mochila de emergencia. Revísalo cada 6 meses y repón lo caducado.
 

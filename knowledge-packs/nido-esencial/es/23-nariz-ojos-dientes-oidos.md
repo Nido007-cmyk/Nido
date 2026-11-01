@@ -3,6 +3,7 @@ title: Sangrado de nariz, ojos, dientes y oídos
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020
+questions: cómo paro una hemorragia de nariz | le entró algo en el ojo, qué hago | se le cayó un diente de un golpe, se puede salvar | cuánto tiempo aprieto la nariz si le sangra | como paro um sangramento no nariz | entrou alguma coisa no olho dele, o que faço
 ---
 ## Sangrado de nariz
 1. Siéntate y echa la cabeza un poco hacia delante (no hacia atrás: la sangre iría a la garganta).
@@ -17,6 +18,7 @@ sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz 
 - Golpe en el ojo: frío envuelto en tela sin apretar. Si ve mal, ve doble o tiene mucho dolor, a urgencias.
 
 ## Diente arrancado (adulto)
+<!-- preguntas: se le arrancó un diente de un golpe, dónde lo guardo | en qué se guarda un diente arrancado hasta llegar al dentista | se recoloca un diente de leche -->
 1. Coge el diente por la corona (la parte blanca), nunca por la raíz.
 2. Si está sucio, enjuágalo con agua menos de 10 segundos, sin frotar.
 3. Si la persona está despierta y colabora, intenta recolocarlo en su hueco y que muerda una gasa.

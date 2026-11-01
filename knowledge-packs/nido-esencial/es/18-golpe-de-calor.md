@@ -3,6 +3,7 @@ title: Golpe de calor y agotamiento por calor
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; OMS, calor y salud; Cruz Roja Canadiense 2020
+questions: qué hago en un golpe de calor | cómo enfrío rápido a alguien con golpe de calor | cuál es la diferencia entre agotamiento por calor y golpe de calor | está muy caliente y confundido por el calor, qué hago | o que faço num golpe de calor, uma insolação | como resfrio rápido alguém com golpe de calor
 ---
 El calor puede matar. El golpe de calor es una emergencia: el cuerpo ya no puede enfriarse solo.
 

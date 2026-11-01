@@ -3,6 +3,7 @@ title: RCP en niños y bebés
 category: Primeros auxilios
 lang: es
 sources: AHA, Guías de RCP 2025 (soporte vital pediátrico); Cruz Roja Americana; IFRC 2020
+questions: cómo hago rcp a un bebé | mi bebé no respira, qué hago | cómo hago rcp a un niño de 3 años | cómo se hacen las compresiones a un bebé | se puede usar el desfibrilador en un niño | como faço rcp num bebé | meu bebé não respira, o que faço
 ---
 En niños, el paro cardíaco suele deberse a falta de aire (ahogamiento, atragantamiento, asfixia). Por eso, en niños y bebés las respiraciones son más importantes que en adultos. Aun así, si no sabes darlas, haz compresiones: siempre es mejor que nada.
 

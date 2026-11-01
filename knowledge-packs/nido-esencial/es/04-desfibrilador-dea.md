@@ -3,6 +3,7 @@ title: Cómo usar un desfibrilador (DEA)
 category: Primeros auxilios
 lang: es
 sources: AHA, Guías 2025; Cruz Roja Americana; IFRC 2020
+questions: cómo se usa un desfibrilador | dónde pongo los parches del desfibrilador | hay un dea cerca, cómo lo uso | cada cuánto analiza el corazón el desfibrilador | como uso um desfibrilador | onde coloco os adesivos do desfibrilador
 ---
 Un DEA (desfibrilador externo automático) es un aparato que analiza el corazón y, si hace falta, da una descarga. Está hecho para que lo use cualquiera: te habla y te dice qué hacer. Solo da descarga si el corazón la necesita. Suele haberlos en aeropuertos, estaciones, centros comerciales, gimnasios y oficinas (busca el símbolo de un corazón con un rayo).
 

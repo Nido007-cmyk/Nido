@@ -3,6 +3,7 @@ title: Salud mental, estrés y crisis
 category: Salud en casa
 lang: es
 sources: OMS, "Doing What Matters in Times of Stress" (2020); IFRC Centro de Apoyo Psicosocial; OMS, guía mhGAP
+questions: qué puedo hacer para calmar la ansiedad y el estrés | técnicas sencillas para manejar el estrés | alguien me dice que quiere quitarse la vida, qué hago | es normal que mi hijo esté muy afectado tras el desastre | o que posso fazer para acalmar a ansiedade e o estresse | alguém me diz que quer tirar a própria vida, o que faço
 ---
 Las emergencias, la incertidumbre y las pérdidas afectan a la mente tanto como al cuerpo. Después de un terremoto, una inundación u otro desastre es frecuente tener ansiedad, no poder dormir o revivir lo ocurrido. Sentir miedo, tristeza o rabia es una reacción normal ante algo anormal.
 

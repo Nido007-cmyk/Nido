@@ -3,6 +3,7 @@ title: Comunicarse cuando no hay internet ni cobertura
 category: Supervivencia
 lang: es
 sources: Ready.gov (FEMA), plan de comunicación; IFRC, Restablecimiento del Contacto entre Familiares; NIDO
+questions: cómo me comunico con mi familia si no hay internet ni cobertura | pasan los mensajes de texto cuando las llamadas no funcionan | cómo busca la cruz roja a los familiares desaparecidos | nido puede mandar mensajes por bluetooth sin internet | como me comunico com a minha família sem internet nem cobertura | as mensagens de texto passam quando as chamadas não funcionam
 ---
 Tras un desastre, las redes de teléfono e internet suelen caerse o saturarse. Ten varios caminos preparados.
 

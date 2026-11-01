@@ -3,6 +3,7 @@ title: Olas de calor y frío extremo
 category: Desastres
 lang: es
 sources: OMS, calor y salud; Ready.gov (FEMA); CDC, frío extremo
+questions: qué hago en una ola de calor | cómo protejo a las personas mayores en una ola de calor | se puede calentar la casa con un brasero o un generador | qué hago si me quedo atrapado en el coche en la nieve | o que faço numa onda de calor | posso aquecer a casa com um braseiro
 ---
 ## Ola de calor
 - Pasa las horas de más calor en el lugar más fresco: habitaciones bajas, a la sombra, o lugares públicos con aire acondicionado ("refugios climáticos").

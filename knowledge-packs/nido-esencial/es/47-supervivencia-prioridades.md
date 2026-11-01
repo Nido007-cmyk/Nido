@@ -3,6 +3,7 @@ title: Supervivencia: las prioridades
 category: Supervivencia
 lang: es
 sources: Cruz Roja; Ready.gov (FEMA); manuales de supervivencia y búsqueda y rescate (NASAR, Wilderness Medical Society)
+questions: cuáles son las prioridades en una situación de supervivencia | qué es la regla de los tres en supervivencia | qué significa para y piensa, el método stop | cuánto tiempo se aguanta sin agua y sin comida | quais são as prioridades numa situação de sobrevivência | o que é a regra dos três em sobrevivência
 ---
 En una situación de supervivencia, lo más peligroso es el pánico y gastar energía en lo que no importa. Ordena tus prioridades.
 
