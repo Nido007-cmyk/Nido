@@ -48,6 +48,36 @@ export function packIdPrefix(packId: string): string {
   return `wiki-${packId}-`;
 }
 
+function seedSlug(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+/**
+ * Ids de siembra ÚNICOS para una lista de documentos, en el orden de la
+ * lista. Los títulos se repiten entre las lenguas del corpus («Cuba» es
+ * el título español, portugués e inglés de tres documentos distintos) y
+ * insertChunk es INSERT OR REPLACE, así que un id ingenuo
+ * `prefijo + slug(título)` sobrescribe en silencio los documentos
+ * anteriores: con el corpus de 858, 96 no llegaban nunca al índice. El
+ * primer documento conserva el id llano — todo id asignado antes de este
+ * cambio queda exactamente igual — y los duplicados posteriores llevan
+ * sufijo «-2», «-3», …
+ */
+export function uniqueSeedIds(prefix: string, titles: readonly string[]): string[] {
+  const used = new Set<string>();
+  return titles.map((title) => {
+    const base = `${prefix}${seedSlug(title)}`;
+    let id = base;
+    let n = 2;
+    while (used.has(id)) {
+      id = `${base}-${n}`;
+      n += 1;
+    }
+    used.add(id);
+    return id;
+  });
+}
+
 /**
  * @param expected    documentos que deberían estar indexados
  * @param existingIds ids ya presentes (filas sin collection_id)

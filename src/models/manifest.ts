@@ -717,7 +717,7 @@ export const TIERS: TierDefinition[] = [
   {
     id: "minimum",
     label: "Minimum",
-    description: "Models only. Uses the built-in 300-topic knowledge base — no extra download.",
+    description: "Models only. Uses the built-in 858-topic knowledge base (Wikipedia snapshot of 1 November 2026) — no extra download.",
     corpusPackIds: [],
   },
   {
