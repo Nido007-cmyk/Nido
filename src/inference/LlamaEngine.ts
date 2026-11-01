@@ -19,6 +19,7 @@ import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
 import { withStage } from "../utils/stageError";
 import { recordInferenceEvent, type TelemetryStopReason } from "./telemetry";
 import { findRepetitionLoop, trimRepetitionLoop } from "./repetitionGuard";
+import { nativeGateBegin, nativeGateEnd } from "./nativeGate";
 import { trimToCompleteSentences } from "./completeSentences";
 import { parseGemmaReasoning } from "./gemmaReasoning";
 import type { ModelSamplingDefaults } from "../routing/types";
@@ -576,6 +577,12 @@ export class LlamaEngine {
   private generationsInLine = 0;
 
   async generate(options: GenerateOptions): Promise<string> {
+    // M1 (crash nativo): la puerta se toma al llamar, de forma
+    // síncrona y sin esperar a nadie — el indexado de fondo consulta
+    // la puerta por chunk y cede en cuanto ve una generación en
+    // vuelo o encolada. Se suelta en el finally, asentada la
+    // generación; el contador de la puerta refleja generationsInLine.
+    nativeGateBegin();
     const isHead = this.generationsInLine === 0;
     this.generationsInLine++;
     const epoch = this.generationEpoch;
@@ -600,6 +607,7 @@ export class LlamaEngine {
       return text;
     } finally {
       this.generationsInLine--;
+      nativeGateEnd();
     }
   }
 

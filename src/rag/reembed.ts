@@ -16,9 +16,13 @@
  * - Never mixes models: each vector is written only if the base is still
  *   stamped with the model that computed it (insertEmbeddingForModel).
  * - One run at a time (single flight).
+ * - Native gate (M1, crash diagnosis): never computes while a generation
+ *   is in flight — parks per chunk and resumes when it settles
+ *   (src/inference/nativeGate.ts).
  */
 import { embeddingEngine } from "./embed";
 import { countChunkVectors, getDbEpoch, insertEmbeddingForModel, listChunksWithoutEmbedding } from "./db";
+import { isNativeGateTaken, waitForNativeGateFree } from "../inference/nativeGate";
 
 export interface ReembedProgress {
   done: number;
@@ -74,6 +78,12 @@ async function run(): Promise<ReembedProgress> {
     emit({ done, total, running: false });
     return last;
   }
+  // M1 (crash nativo): con una generación en vuelo, este arranque no
+  // empieza — computar embeddings a la vez que el otro contexto
+  // decodifica es el solape que la puerta existe para evitar. La
+  // deuda sigue ahí y el siguiente arranque la recoge, como tras
+  // cualquier parada.
+  if (isNativeGateTaken()) return last;
   emit({ done, total, running: true });
   let previousFirst: string | null = null;
   try {
@@ -88,6 +98,16 @@ async function run(): Promise<ReembedProgress> {
       if (batch[0].chunkId === previousFirst) break;
       previousFirst = batch[0].chunkId;
       for (const chunk of batch) {
+        // M1: si una generación arrancó a mitad de tanda, aparcarse
+        // ANTES del siguiente embedding y reanudar cuando la puerta
+        // se libere. La generación nunca espera a este bucle: cede
+        // en ≤ 1 embedding (el que ya estuviera en vuelo).
+        if (isNativeGateTaken()) {
+          await waitForNativeGateFree();
+          // La espera pudo cruzar un borrado total o un cambio de
+          // modelo: revalidar con la misma regla del bucle exterior.
+          if (getDbEpoch() !== epoch || embeddingEngine.loadedModelSha256 !== sha) return finish(done, total);
+        }
         const vec = await embeddingEngine.embedPassage(`${chunk.title}\n${chunk.body}`);
         if (embeddingEngine.loadedModelSha256 !== sha) return finish(done, total);
         const ok = await insertEmbeddingForModel(chunk.chunkId, vec, sha, { lifecycleEpoch: epoch });

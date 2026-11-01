@@ -23,6 +23,7 @@ import type { RetrievedChunk } from "./retrieve.types";
 import { guideTitleOf, markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId, sectionLikePattern, type PackSourceDoc } from "./packSource";
 import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "./embeddingProfile";
 import { packIndexIfReady, releaseAllIndexes, searchPackIndex } from "./vectorIndex";
+import { isNativeGateTaken } from "../inference/nativeGate";
 import { composeCrisisAnswer, composeFactsAnswer, composeMergedCrisisAnswer, emergencyRegions, markOutdated, mergePackFacts, type FactLang, type FactsAnswer, type PackFact, type PackRegion } from "./packFacts";
 
 const PACK_CANDIDATES = 400;
@@ -292,8 +293,15 @@ export async function searchPacks(
  */
 export async function prepareVectorIndexes(modelSha256: string | null, profile: EmbeddingProfile): Promise<void> {
   if (!modelSha256 || profile.id === BGE_SMALL_EN_PROFILE.id) return;
+  // M1 (crash nativo): construir índices es trabajo de fondo lanzado
+  // en la misma tormenta de arranque que el re-indexado; con una
+  // generación en vuelo se difiere entero (es barato cuando los
+  // índices ya existen y se relanza en cada arranque) y, si la
+  // generación llega a mitad, se cede entre packs.
+  if (isNativeGateTaken()) return;
   try {
     for (const pack of await knowledgePacks()) {
+      if (isNativeGateTaken()) break;
       const open = await openPack(pack).catch(() => null);
       if (!open || open.modelSha256 !== modelSha256) continue;
       await packIndexIfReady(pack, open.sizeBytes, open.dims);

@@ -94,6 +94,7 @@ vi.mock("../models/modelTrust", () => ({
 }));
 
 import { LlamaEngine, resolveSampling, SAMPLING_PRESETS } from "./LlamaEngine";
+import { isNativeGateTaken } from "./nativeGate";
 
 const live = () => created.filter((c) => !c.released);
 
@@ -635,4 +636,37 @@ describe("estudio de modelos: sampling por modelo y stripReasoning", () => {
     expect("top_k" in params).toBe(false);
     expect("top_p" in params).toBe(false);
   });
+});
+
+// Crash nativo (2026-10-31): M1 (la puerta que generate marca para
+// que el indexado de fondo ceda) y M4 (la guarda de repetición ya no
+// llama a stopCompletion desde dentro del callback de token).
+describe("Crash nativo: puerta nativa y guarda de repetición", () => {
+  it("M1: generate toma la puerta al llamar y la suelta al asentarse; dos en vuelo la mantienen tomada", async () => {
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(isNativeGateTaken()).toBe(false);
+    const r1 = engine.generate({ prompt: "one" });
+    // Tomada de forma síncrona, al llamar: el fondo que consulte la
+    // puerta desde este instante ya ve la generación.
+    expect(isNativeGateTaken()).toBe(true);
+    const r2 = engine.generate({ prompt: "two" });
+    await new Promise((r) => setTimeout(r, 30)); // la primera ya corre (patrón de la casa)
+    await engine.stop();
+    await expect(r1).resolves.toBe("Hi");
+    // La primera se asentó, pero la segunda llamó a generate y su
+    // marca sigue: la puerta es un contador, no un booleano.
+    expect(isNativeGateTaken()).toBe(true);
+    await new Promise((r) => setTimeout(r, 30)); // que arranque la segunda
+    await engine.stop();
+    await expect(r2).resolves.toBe("Hi");
+    expect(isNativeGateTaken()).toBe(false);
+  });
+
+  it("M1: una generación que falla al arrancar (sin modelo) también suelta la puerta", async () => {
+    const engine = new LlamaEngine();
+    await expect(engine.generate({ prompt: "x" })).rejects.toThrow("model not loaded");
+    expect(isNativeGateTaken()).toBe(false);
+  });
+
 });

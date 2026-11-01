@@ -5,6 +5,7 @@
  */
 
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { isNativeGateTaken, nativeGateBegin, nativeGateEnd } from "../inference/nativeGate";
 
 type Chunk = { chunkId: string; title: string; body: string };
 type World = {
@@ -135,5 +136,23 @@ describe("reembedMissing", () => {
     await m.reembedMissing();
     // one batch, then the same first chunk comes back → stop
     expect(W().embedded.length).toBeLessThanOrEqual(24);
+  });
+
+  it("M1: con la puerta tomada desde el primer chunk no incrusta nada; el siguiente arranque completa la deuda", async () => {
+    nativeGateBegin(); // una generación en vuelo antes de arrancar
+    try {
+      const parked = await m.reembedMissing();
+      // Termina «aparcado»: sin correr y sin tocar un solo chunk.
+      expect(parked.running).toBe(false);
+      expect(W().embedded).toHaveLength(0);
+      expect(W().vectors.size).toBe(0);
+    } finally {
+      nativeGateEnd();
+    }
+    expect(isNativeGateTaken()).toBe(false);
+    const done = await m.reembedMissing();
+    expect(done).toEqual({ done: 60, total: 60, running: false });
+    expect(W().embedded).toHaveLength(60);
+    expect(W().vectors.size).toBe(60);
   });
 });
