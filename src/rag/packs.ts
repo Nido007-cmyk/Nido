@@ -214,6 +214,8 @@ export async function searchPacks(
         docId: `pack:${pack.id}:${r.title}`,
         title: r.title,
         body: r.body,
+        // R-03: provenance for the fusion's personal-corpus reserve.
+        sourceKind: "pack" as const,
         score,
         matchType,
       });

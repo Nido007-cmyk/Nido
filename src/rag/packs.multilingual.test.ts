@@ -101,7 +101,8 @@ describe("searchPacks — multilingual (full vector search)", () => {
   });
 
   it("uses e5's (higher) pack floor and the app's per-source limit", async () => {
-    await packs.searchPacks("¿qué es la inflación?", new Float32Array([1, 0]), 12, e5Opts());
+    // Dos términos de contenido (inflación, desempleo) → piso base.
+    await packs.searchPacks("¿qué es la inflación y el desempleo?", new Float32Array([1, 0]), 12, e5Opts());
     // 0.1.36: primero el fondo (sin piso, 50), luego la búsqueda real.
     expect(W().searchCalls).toEqual([
       { floor: -1, limit: 51 },
@@ -109,6 +110,10 @@ describe("searchPacks — multilingual (full vector search)", () => {
     ]);
     await packs.searchPacks("inflación", new Float32Array([1, 0]), 12, e5Opts());
     expect(W().searchCalls[3].floor).toBe(profiles.MULTILINGUAL_E5_SMALL_PROFILE.packMinSimilaritySingleTerm);
+    // R-03: «¿qué es la inflación?» tiene UN término de contenido
+    // (inflación) aunque tenga cuatro palabras: piso de término único.
+    await packs.searchPacks("¿qué es la inflación?", new Float32Array([1, 0]), 12, e5Opts());
+    expect(W().searchCalls[5].floor).toBe(profiles.MULTILINGUAL_E5_SMALL_PROFILE.packMinSimilaritySingleTerm);
   });
 
   it("a question made only of stopwords still gets the vector search", async () => {

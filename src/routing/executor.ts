@@ -27,7 +27,7 @@
 import { llamaEngine } from "../inference/LlamaEngine";
 import { withBoundedRepair } from "../agent/loop/structuredOutput";
 import { retrieve } from "../rag/retrieve";
-import { assemblePrompt, assembleChatMessages, ConversationHistory, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
+import { assemblePrompt, assembleChatMessages, contextualizeQuery, ConversationHistory, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
 import type { RetrievedChunk } from "../rag/retrieve.types";
 import { RoutingPlan, RoutingStep } from "./router";
 import { VerificationStatus } from "./types";
@@ -242,7 +242,11 @@ export async function executeRoutingPlan(
 
     switch (step.type) {
       case "retrieve": {
-        citations = await retrieve(input.query, ANSWER_CONTEXT_CHUNKS);
+        // R-03: retrieval sees the conversation — a thin follow-up
+        // ("¿En qué sala?") inherits the previous question's terms. The
+        // generate step below still uses input.query verbatim: only the
+        // search is contextualized, never what the user asked.
+        citations = await retrieve(contextualizeQuery(input.query, input.history), ANSWER_CONTEXT_CHUNKS);
         retrievalAttempted = true;
         stepsExecuted++;
         break;

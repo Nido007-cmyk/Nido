@@ -56,12 +56,22 @@ describe("embedding profiles", () => {
     expect(embeddingProfileForSha(undefined)).toBe(BGE_SMALL_EN_PROFILE);
   });
 
-  it("single-term rule = one whitespace-separated word, like the calibration", () => {
+  it("single-term rule = at most one CONTENT term (R-03; before, raw words)", () => {
     expect(isSingleTermQuery("hola")).toBe(true);
     expect(isSingleTermQuery("  fotosíntesis  ")).toBe(true);
     expect(isSingleTermQuery("")).toBe(true);
-    expect(isSingleTermQuery("¿qué es la fotosíntesis?")).toBe(false);
+    // The old rule counted raw words, so these read as 3-4 word queries
+    // and the reinforced floors never applied — yet each carries exactly
+    // one content term, like the round's «¿En qué sala?» (→ Sala Bosworth).
+    expect(isSingleTermQuery("¿qué es la fotosíntesis?")).toBe(true);
+    expect(isSingleTermQuery("¿En qué sala?")).toBe(true);
+    // Two or more content terms keep the base floor.
+    expect(isSingleTermQuery("hola qué tal")).toBe(false);
+    expect(isSingleTermQuery("¿qué día y a qué hora es la cita?")).toBe(false);
     expect(semanticFloor(MULTILINGUAL_E5_SMALL_PROFILE, "hola")).toBe(MULTILINGUAL_E5_SMALL_PROFILE.minSimilaritySingleTerm);
+    expect(semanticFloor(MULTILINGUAL_E5_SMALL_PROFILE, "¿En qué sala?")).toBe(
+      MULTILINGUAL_E5_SMALL_PROFILE.minSimilaritySingleTerm
+    );
     expect(semanticFloor(MULTILINGUAL_E5_SMALL_PROFILE, "hola qué tal")).toBe(MULTILINGUAL_E5_SMALL_PROFILE.minSimilarity);
   });
 });

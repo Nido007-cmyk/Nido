@@ -75,3 +75,23 @@ describe("answerFromGuide (F6-09)", () => {
     expect(out).toEqual({ answer: null, retrieved: null });
   });
 });
+
+describe("answerFromGuide: la consulta contextualizada (R-03)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("recupera con la consulta contextualizada que pasa el llamador, no con la cruda", async () => {
+    retrieveMock.mockResolvedValue([OTHER]);
+    const contextualizada = "¿En qué sala? ¿Qué día y a qué horas es la cita?";
+    const out = await answerFromGuide("¿En qué sala?", "es", contextualizada);
+    expect(retrieveMock).toHaveBeenCalledWith(contextualizada, 4);
+    expect(out.retrieved).toEqual([OTHER]);
+  });
+
+  it("sin consulta contextualizada, recupera con la pregunta tal cual (comportamiento previo)", async () => {
+    retrieveMock.mockResolvedValue([OTHER]);
+    await answerFromGuide("qué es el corazón", "es");
+    expect(retrieveMock).toHaveBeenCalledWith("qué es el corazón", 4);
+  });
+});

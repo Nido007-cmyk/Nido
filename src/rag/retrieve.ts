@@ -42,9 +42,10 @@ async function lexicalSearch(query: string, limit: number): Promise<RetrievedChu
     doc_id: string;
     title: string;
     body: string;
+    collection_id: string | null;
     rank: number;
   }>(
-    `SELECT f.chunk_id, f.doc_id, f.title, f.body, bm25(chunks_fts) AS rank
+    `SELECT f.chunk_id, f.doc_id, f.title, f.body, c.collection_id, bm25(chunks_fts) AS rank
      FROM chunks_fts f
      JOIN chunks c ON c.chunk_id = f.chunk_id
      LEFT JOIN custom_collections cc ON cc.id = c.collection_id
@@ -57,6 +58,8 @@ async function lexicalSearch(query: string, limit: number): Promise<RetrievedChu
     docId: r.doc_id,
     title: r.title,
     body: r.body,
+    // R-03: provenance for the fusion's personal-corpus reserve.
+    sourceKind: r.collection_id ? ("user" as const) : ("builtin" as const),
     score: -r.rank, // bm25() returns lower-is-better; invert for consistent "higher is better"
     matchType: "lexical" as const,
   }));
@@ -76,9 +79,10 @@ async function semanticSearch(
     doc_id: string;
     title: string;
     body: string;
+    collection_id: string | null;
     embedding: Uint8Array;
   }>(
-    `SELECT c.chunk_id, c.doc_id, c.title, c.body, e.embedding
+    `SELECT c.chunk_id, c.doc_id, c.title, c.body, c.collection_id, e.embedding
      FROM chunk_embeddings e
      JOIN chunks c ON c.chunk_id = e.chunk_id
      LEFT JOIN custom_collections cc ON cc.id = c.collection_id
@@ -96,6 +100,8 @@ async function semanticSearch(
       docId: r.doc_id,
       title: r.title,
       body: r.body,
+      // R-03: provenance for the fusion's personal-corpus reserve.
+      sourceKind: r.collection_id ? ("user" as const) : ("builtin" as const),
       score: cosineSimilarity(queryVec, vec),
       matchType: "semantic" as const,
     };

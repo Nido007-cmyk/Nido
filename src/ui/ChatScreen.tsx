@@ -34,7 +34,7 @@ import { useTranslation } from "react-i18next";
 import { llamaEngine } from "../inference/LlamaEngine";
 import { embeddingEngine } from "../rag/embed";
 import { retrieve, assemblePrompt, RetrievedChunk, ConversationTurn } from "../rag/retrieve";
-import { assembleChatMessages, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
+import { assembleChatMessages, contextualizeQuery, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
 import { classifyTask, isRetrievalIrrelevant, isCreativeRequest } from "../routing/classify";
 import {
   gatePreemptsDeepResearch,
@@ -1373,6 +1373,12 @@ export function ChatScreen({
         .slice(-VERBATIM_MESSAGE_COUNT)
         .map((m) => ({ role: m.role, text: m.role === "assistant" ? stripThinking(m.text) : m.text }));
       const history = { summary: sessionSummaryRef.current, turns: verbatimTurns };
+      // R-03 (ronda física 0.1.68): la consulta de recuperación se
+      // construye UNA vez con la conversación a la vista — un
+      // seguimiento fino («¿En qué sala?») hereda los términos de la
+      // pregunta anterior. La pregunta original sigue siendo la que se
+      // enseña y la que responde el modelo; solo cambia la búsqueda.
+      const retrievalQuery = contextualizeQuery(query, history);
 
       let firstToken = true;
       let firstTokenTime = 0;
@@ -1493,7 +1499,7 @@ export function ChatScreen({
         let preRetrieved: RetrievedChunk[] | null = null;
         if (!isRetrievalIrrelevant(classifyTask(query))) {
           setProcessing({ messageId: assistantId, status: "retrieving" });
-          const g = await answerFromGuide(query, uiLang);
+          const g = await answerFromGuide(query, uiLang, retrievalQuery);
           preRetrieved = g.retrieved;
           if (g.answer) {
             guideAnswered = true;
@@ -1520,7 +1526,7 @@ export function ChatScreen({
               c = preRetrieved;
             } else {
               setProcessing({ messageId: assistantId, status: "retrieving" });
-              c = await retrieve(query, ANSWER_CONTEXT_CHUNKS);
+              c = await retrieve(retrievalQuery, ANSWER_CONTEXT_CHUNKS);
             }
           }
           const noSources = retrievalAttempted && c.length === 0;

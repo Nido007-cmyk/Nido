@@ -19,8 +19,11 @@
  * chosen so the share of unanswerable questions that still pull in
  * "sources" is not higher than with bge today.
  *
- * Pure, no dependencies.
+ * Pure; its only dependency is the lexical tokenizer in ./pure (which does
+ * not import this module).
  */
+
+import { buildLexicalQuery } from "./pure";
 
 export interface EmbeddingProfile {
   id: "bge-small-en" | "multilingual-e5-small";
@@ -114,9 +117,21 @@ export function embeddingProfileForSha(sha256: string | null | undefined): Embed
   return profile ?? BGE_SMALL_EN_PROFILE;
 }
 
-/** Same rule as the calibration: one word (whitespace-separated) or less. */
+/**
+ * Weak-query rule: at most one CONTENT term.
+ *
+ * R-03 (physical round 0.1.68): this used to count raw whitespace-separated
+ * words — the calibration's shorthand — so "¿En qué sala?" counted as a
+ * 3-word query and the reinforced single-term floors never applied, even
+ * though the question carries exactly one content term (`sala`) and the
+ * semantic gate is precisely what must be strictest there. The count now
+ * comes from buildLexicalQuery (stopwords and question framing removed,
+ * the same terms the lexical gate uses). The calibration's intent is
+ * unchanged — a weak query needs stronger evidence — only its measure
+ * stopped counting "¿", "en" and "qué" as signal.
+ */
 export function isSingleTermQuery(query: string): boolean {
-  return query.trim().split(/\s+/).filter(Boolean).length <= 1;
+  return (buildLexicalQuery(query)?.terms.length ?? 0) <= 1;
 }
 
 export function semanticFloor(profile: EmbeddingProfile, query: string): number {

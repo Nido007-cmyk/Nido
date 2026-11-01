@@ -245,6 +245,54 @@ export function filterByTermCoverage<T extends { title: string; body: string; ke
   return hits.filter((h) => countMatchedTerms(h.keys ? `${h.title} ${h.body} ${h.keys}` : `${h.title} ${h.body}`, terms) >= required);
 }
 
+// Demonstratives (accent-free tokens, as `tokenize` produces them): a
+// question built around one of these points at the conversation, not at
+// itself ("¿y eso cuánto cuesta?").
+const DEMONSTRATIVE_TOKENS = new Set([
+  "eso", "ese", "esa", "esto", "este", "esta", "ello", "esos", "esas", "estos", "estas", "aquel", "aquella",
+  "that", "this",
+  "isso", "isto", "esse", "essa",
+]);
+
+/**
+ * R-03 (physical round 0.1.68): deterministic query contextualization for
+ * retrieval — no model, no invented terms.
+ *
+ * Retrieval used to receive the raw question only, so an elliptical
+ * follow-up lost its anchor: after asking about an appointment, "¿En qué
+ * sala?" searched for `sala` alone and BM25 crowned the Wikipedia article
+ * "Sala Bosworth" over the user's imported note ("sala 214"). When the
+ * question is THIN — at most 2 content terms, or built around a
+ * demonstrative with at most 3 — the retrieval query becomes this
+ * question + the previous user question: `buildLexicalQuery` unions and
+ * dedupes their terms downstream (capped by MAX_LEXICAL_TERMS), and the
+ * semantic side embeds the same string. The current question goes FIRST
+ * so its own terms can never be evicted by that cap — with the anchor
+ * first, a long previous question could fill all 12 slots and drop the
+ * very term the user just asked about, recreating this bug. The original
+ * question is still what the user sees and what the model answers; only
+ * the search changes.
+ *
+ * A trailing user turn identical to the query is skipped: callers build
+ * the history from the message list, which may already include the
+ * question being asked.
+ */
+export function contextualizeQuery(query: string, history?: ConversationHistory | null): string {
+  const termCount = buildLexicalQuery(query)?.terms.length ?? 0;
+  const hasDemonstrative = tokenize(query).some((t) => DEMONSTRATIVE_TOKENS.has(t));
+  const thin = termCount <= 2 || (hasDemonstrative && termCount <= 3);
+  if (!thin) return query;
+  const turns = history?.turns ?? [];
+  const self = query.trim().toLowerCase();
+  for (let i = turns.length - 1; i >= 0; i--) {
+    const turn = turns[i];
+    if (turn.role !== "user") continue;
+    if (turn.text.trim().toLowerCase() === self) continue;
+    return `${query} ${turn.text}`;
+  }
+  return query;
+}
+
 /**
  * Weighted-sum fusion of two already-scored, already-relevance-filtered
  * result sets into one ranked list. Each source is normalized to its own
@@ -298,17 +346,48 @@ export function fuseRetrievalResults(
   normalize(lexical, weights.lexical, false);
   normalize(semantic, weights.semantic, true);
 
+  const sorted = Array.from(byId.values()).sort((a, b) => b.score - a.score);
+
   // At most MAX_CHUNKS_PER_ARTICLE per title, so one article's chunks can't crowd out a
   // second topic (knowledge packs store up to 3 chunks per article).
   const perTitle = new Map<string, number>();
   const out: RetrievedChunk[] = [];
-  for (const c of Array.from(byId.values()).sort((a, b) => b.score - a.score)) {
+  for (const c of sorted) {
     const key = c.title.trim().toLowerCase();
     const n = perTitle.get(key) ?? 0;
     if (n >= MAX_CHUNKS_PER_ARTICLE) continue;
     perTitle.set(key, n + 1);
     out.push(c);
     if (out.length >= topK) break;
+  }
+
+  // R-03 (physical round 0.1.68): personal-corpus reserve. A chunk from
+  // the user's own documents that passed its gates (it is in the fusion
+  // inputs at all only because it did) must not be crowded out of the
+  // top-K by the encyclopedia: if no user chunk made the cut, the best
+  // one takes a slot, displacing the weakest non-user chunk when that
+  // chunk's fused score is at most ×1.25 the user chunk's — scores are
+  // normalized per source, so a modest fused gap is not evidence the
+  // user's paper matters less to their own question. The per-article cap
+  // still applies, and the absolute raw-score gate below still runs
+  // after the reserve: a reserved chunk that fails it is dropped there.
+  const PERSONAL_RESERVE_FACTOR = 1.25;
+  if (topK > 0 && !out.some((c) => c.sourceKind === "user")) {
+    const bestUser = sorted.find((c) => c.sourceKind === "user");
+    if (bestUser) {
+      const key = bestUser.title.trim().toLowerCase();
+      const titleCount = perTitle.get(key) ?? 0;
+      const insertAt = out.findIndex((c) => c.score <= bestUser.score);
+      if (titleCount < MAX_CHUNKS_PER_ARTICLE) {
+        if (out.length < topK) {
+          out.splice(insertAt === -1 ? out.length : insertAt, 0, bestUser);
+        } else if (out.length > 0 && out[out.length - 1].score <= bestUser.score * PERSONAL_RESERVE_FACTOR) {
+          out.pop();
+          const at = out.findIndex((c) => c.score <= bestUser.score);
+          out.splice(at === -1 ? out.length : at, 0, bestUser);
+        }
+      }
+    }
   }
   // H2-2026-10-06: gate absoluto post-fusión. La fusión es re-ranking
   // relativo; un chunk semántico con rawScore bajo (pero "mejor de un mal

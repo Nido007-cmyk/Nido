@@ -9,6 +9,8 @@ import {
   cosineSimilarity,
   assemblePrompt,
   assembleChatMessages,
+  buildLexicalQuery,
+  contextualizeQuery,
   fitChunksToBudget,
   serializeEmbedding,
   deserializeEmbedding,
@@ -564,5 +566,91 @@ describe("ruta fija con presupuesto (R-01): el escenario de la ronda", () => {
         reserveGeneration: 512,
       })
     ).toBe(assemblePrompt("¿qué es X?", shortChunks, "You are Nido.", shortHistory));
+  });
+});
+
+describe("contextualizeQuery (R-03): el seguimiento desnudo hereda el tema", () => {
+  // La conversación de la ronda: primero la cita, después la sala a secas.
+  const history = {
+    turns: [
+      { role: "user" as const, text: "¿Qué día y a qué horas es la cita?" },
+      { role: "assistant" as const, text: "Su cita es el martes 10 de noviembre de 2026 a las 9:30 de la mañana." },
+    ],
+  };
+
+  it("seguimiento fino + historial ⇒ la consulta de recuperación une los términos de las dos preguntas", () => {
+    const effective = contextualizeQuery("¿En qué sala?", history);
+    expect(effective).toBe("¿En qué sala? ¿Qué día y a qué horas es la cita?");
+    // La unión de términos de contenido es lo que la puerta léxica ve:
+    // «sala» ya no viaja sola, y la cobertura exige también «cita».
+    const terms = buildLexicalQuery(effective)!.terms.map((t) => t.forms[0]);
+    expect(terms).toEqual(expect.arrayContaining(["sala", "cita", "dia", "horas"]));
+  });
+
+  it("pregunta autosuficiente (≥ 3 términos de contenido) ⇒ sin cambios aunque haya historial", () => {
+    expect(contextualizeQuery("¿Qué día y a qué horas es la cita?", history)).toBe(
+      "¿Qué día y a qué horas es la cita?"
+    );
+    expect(contextualizeQuery("¿Cómo se hace la maniobra de Heimlich en adultos?", history)).toBe(
+      "¿Cómo se hace la maniobra de Heimlich en adultos?"
+    );
+  });
+
+  it("sin historial, o sin preguntas previas del usuario ⇒ sin cambios", () => {
+    expect(contextualizeQuery("¿En qué sala?")).toBe("¿En qué sala?");
+    expect(contextualizeQuery("¿En qué sala?", null)).toBe("¿En qué sala?");
+    expect(contextualizeQuery("¿En qué sala?", { turns: [] })).toBe("¿En qué sala?");
+    expect(
+      contextualizeQuery("¿En qué sala?", { turns: [{ role: "assistant" as const, text: "Hola, ¿en qué puedo ayudar?" }] })
+    ).toBe("¿En qué sala?");
+  });
+
+  it("el turno actual al final del historial no se usa como su propio ancla", () => {
+    // Los llamadores construyen el historial desde la lista de mensajes,
+    // que ya puede incluir la pregunta en curso como último turno.
+    const withSelf = {
+      turns: [
+        { role: "user" as const, text: "¿Qué día y a qué horas es la cita?" },
+        { role: "assistant" as const, text: "El martes 10 a las 9:30." },
+        { role: "user" as const, text: "¿En qué sala?" },
+      ],
+    };
+    expect(contextualizeQuery("¿En qué sala?", withSelf)).toBe(
+      "¿En qué sala? ¿Qué día y a qué horas es la cita?"
+    );
+  });
+
+  it("un demostrativo ancla aunque la pregunta tenga 3 términos de contenido", () => {
+    const viajes = {
+      turns: [
+        { role: "user" as const, text: "¿Cuánto cuesta el tren a Sevilla?" },
+        { role: "assistant" as const, text: "Cuesta 40 euros." },
+      ],
+    };
+    // «incluye», «desayuno», «cena»: 3 términos de contenido («esta»
+    // es palabra vacía) — sin el demostrativo la pregunta pasaría por
+    // autosuficiente y perdería el tren del que se habla.
+    expect(contextualizeQuery("¿Esta incluye desayuno y cena?", viajes)).toBe(
+      "¿Esta incluye desayuno y cena? ¿Cuánto cuesta el tren a Sevilla?"
+    );
+  });
+
+  it("el tope de términos léxicos se respeta aunque el ancla sea larga", () => {
+    const longAnchor = {
+      turns: [
+        {
+          role: "user" as const,
+          text: "Cuéntame la historia completa del ferrocarril transiberiano y de sus locomotoras de vapor rusas antiguas cruzando Siberia durante el invierno extremo",
+        },
+        { role: "assistant" as const, text: "…" },
+      ],
+    };
+    const effective = contextualizeQuery("¿En qué sala?", longAnchor);
+    const terms = buildLexicalQuery(effective)!.terms.map((t) => t.forms[0]);
+    expect(terms.length).toBeLessThanOrEqual(12);
+    // «sala», el término de la pregunta actual, sobrevive al tope…
+    expect(terms).toContain("sala");
+    // …y lo que el tope sacrifica es la cola del ancla, no la pregunta.
+    expect(terms).not.toContain("extremo");
   });
 });

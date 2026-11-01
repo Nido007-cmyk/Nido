@@ -5,7 +5,14 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { filterByMinScore, fuseRetrievalResults, MIN_SEMANTIC_SIMILARITY } from "./pure";
+import {
+  buildLexicalQuery,
+  contextualizeQuery,
+  filterByMinScore,
+  filterByTermCoverage,
+  fuseRetrievalResults,
+  MIN_SEMANTIC_SIMILARITY,
+} from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
 
 /**
@@ -184,5 +191,154 @@ describe("pruneByScoreMargin", () => {
     // Todos iguales: sin señal de gap, conservar todo.
     const uniform = [chunk("a", 0.7), chunk("b", 0.7), chunk("c", 0.7)];
     expect(pruneByScoreMargin(uniform, 0.4, 1)).toHaveLength(3);
+  });
+});
+
+describe("fuseRetrievalResults: reserva del corpus personal (R-03)", () => {
+  const k = (
+    id: string,
+    score: number,
+    sourceKind: RetrievedChunk["sourceKind"],
+    matchType: RetrievedChunk["matchType"] = "lexical"
+  ): RetrievedChunk => ({ chunkId: id, docId: id, title: `Doc ${id}`, body: `Body ${id}`, score, matchType, sourceKind });
+
+  it("el mejor chunk del usuario desplaza al no-usuario más débil dentro del factor ×1,25", () => {
+    // Puntuaciones BM25 sintéticas; tras normalizar: p1 .5, p2 .475,
+    // p3 .45, u1 .4. Sin reserva, u1 (0,8× el mejor) queda fuera del top 3.
+    const lexical = [k("p1", 10, "pack"), k("p2", 9.5, "pack"), k("p3", 9, "pack"), k("u1", 8, "user")];
+    const result = fuseRetrievalResults(lexical, [], 3);
+    expect(result.map((c) => c.chunkId)).toEqual(["p1", "p2", "u1"]);
+    expect(result[2].sourceKind).toBe("user");
+  });
+
+  it("no empuja un chunk del usuario muy por debajo del que desplazaría", () => {
+    // u1 normaliza a .15; el último del top 3 (.45) supera .15 × 1,25.
+    const lexical = [k("p1", 10, "pack"), k("p2", 9.5, "pack"), k("p3", 9, "pack"), k("u1", 3, "user")];
+    expect(fuseRetrievalResults(lexical, [], 3).map((c) => c.chunkId)).toEqual(["p1", "p2", "p3"]);
+  });
+
+  it("si un chunk del usuario ya está en el topK, no desplaza a nadie", () => {
+    const lexical = [k("u1", 10, "user"), k("p1", 9, "pack"), k("p2", 8, "pack")];
+    const result = fuseRetrievalResults(lexical, [], 2);
+    expect(result.map((c) => c.chunkId)).toEqual(["u1", "p1"]);
+    expect(result[0].sourceKind).toBe("user");
+  });
+
+  it("rellena un hueco libre cuando el tope por artículo dejó la lista corta", () => {
+    const same = (id: string, score: number): RetrievedChunk => ({
+      chunkId: id, docId: id, title: "Guía repetida", body: `Body ${id}`, score, matchType: "lexical", sourceKind: "pack",
+    });
+    // Tres trozos del mismo artículo de pack: el tope de 2 por título
+    // deja la lista en 2 de 4 huecos; la reserva mete el del usuario.
+    const lexical = [same("t1", 10), same("t2", 9.5), same("t3", 9), k("u1", 5, "user")];
+    expect(fuseRetrievalResults(lexical, [], 4).map((c) => c.chunkId)).toEqual(["t1", "t2", "u1"]);
+  });
+
+  it("la reserva no resucita un chunk que la puerta absoluta de rawScore rechaza", () => {
+    // El chunk del usuario entra por la reserva (su .39 fusionado está
+    // dentro del ×1,25 del .45 que desplaza), pero su coseno crudo
+    // (0,55) está bajo el piso absoluto (0,60): la puerta post-fusión
+    // manda y el chunk no se sirve. «Pasó sus puertas» incluye esta.
+    const lexical = [k("p1", 10, "pack"), k("p2", 9, "pack")];
+    const semantic = [k("s1", 0.7, "pack", "semantic"), k("u1", 0.55, "user", "semantic")];
+    const result = fuseRetrievalResults(lexical, semantic, 3);
+    expect(result.map((c) => c.chunkId)).toEqual(["p1", "s1"]);
+    expect(result.some((c) => c.chunkId === "u1")).toBe(false);
+  });
+});
+
+describe("la ronda R-03: «¿En qué sala?» contra la fixture del documento importado", () => {
+  // La mecánica real de retrieve() sin base de datos: puerta de
+  // cobertura (filterByTermCoverage) sobre candidatos BM25 sintéticos y
+  // fusión. Las puntuaciones imitan lo que vio la tablet: los artículos
+  // «de sala» puntúan más alto que el papel del usuario en BM25 crudo.
+  interface Row {
+    chunkId: string;
+    title: string;
+    body: string;
+    bm25: number;
+    sourceKind: RetrievedChunk["sourceKind"];
+  }
+  const ROWS: Row[] = [
+    {
+      chunkId: "doc-cita",
+      title: "documento-prueba-ocr",
+      body: "CLINICA SAN RAFAEL. Recordatorio de cita. Su cita es el martes 10 de noviembre de 2026 a las 9:30 de la mañana, en la sala 214, segundo piso. Traiga su tarjeta y la lista de medicamentos.",
+      bm25: 5,
+      sourceKind: "user",
+    },
+    {
+      chunkId: "wiki-bosworth",
+      title: "Sala Bosworth",
+      body: "La Sala Bosworth es una sala de exposiciones dedicada a Bosworth, pintor de Ohio. La sala alberga su obra y la sala abre a diario.",
+      bm25: 10,
+      sourceKind: "pack",
+    },
+    {
+      chunkId: "wiki-scala",
+      title: "La Scala",
+      body: "La Scala es un teatro de ópera de Milán, la sala más famosa del mundo; su sala principal acoge dos mil espectadores.",
+      bm25: 9,
+      sourceKind: "pack",
+    },
+    {
+      chunkId: "doc-receta",
+      title: "Mi receta de pan",
+      body: "Harina, agua, sal y levadura. Amasar bien y hornear cuarenta minutos.",
+      bm25: 7,
+      sourceKind: "user",
+    },
+  ];
+
+  function searchLexically(query: string): RetrievedChunk[] {
+    const lq = buildLexicalQuery(query)!;
+    const gated = filterByTermCoverage(ROWS, lq.terms)
+      .map((r) => ({
+        chunkId: r.chunkId,
+        docId: r.chunkId,
+        title: r.title,
+        body: r.body,
+        score: r.bm25,
+        matchType: "lexical" as const,
+        sourceKind: r.sourceKind,
+      }))
+      .sort((a, b) => b.score - a.score);
+    return fuseRetrievalResults(gated, [], 4);
+  }
+
+  it("ANTES: la pregunta cruda corona a «Sala Bosworth» y el documento queda último", () => {
+    const result = searchLexically("¿En qué sala?");
+    expect(result[0].title).toBe("Sala Bosworth");
+    expect(result[result.length - 1].chunkId).toBe("doc-cita");
+  });
+
+  it("DESPUÉS: la consulta contextualizada trae el documento, primero y sin los señuelos", () => {
+    const history = {
+      turns: [
+        { role: "user" as const, text: "¿Qué día y a qué horas es la cita?" },
+        { role: "assistant" as const, text: "Su cita es el martes 10 de noviembre de 2026 a las 9:30 de la mañana." },
+      ],
+    };
+    const result = searchLexically(contextualizeQuery("¿En qué sala?", history));
+    expect(result.map((c) => c.chunkId)).toEqual(["doc-cita"]);
+    expect(result[0].body).toContain("sala 214");
+    // La reserva no empuja documentos del usuario que no casan con la
+    // pregunta: la receta ni siquiera supera la puerta de cobertura.
+    expect(result.some((c) => c.chunkId === "doc-receta")).toBe(false);
+  });
+
+  it("el seguimiento con contexto explícito no cambia: ya era autosuficiente", () => {
+    const history = {
+      turns: [
+        { role: "user" as const, text: "¿Qué día y a qué horas es la cita?" },
+        { role: "assistant" as const, text: "Su cita es el martes 10 de noviembre de 2026 a las 9:30 de la mañana." },
+      ],
+    };
+    // La pregunta de la ronda que sí acertó en la tablet: trae sus
+    // propios términos (sala, cita, documento) y recupera igual con o
+    // sin contextualizar.
+    const q = "¿En qué sala es la cita del documento?";
+    expect(contextualizeQuery(q, history)).toBe(q);
+    expect(searchLexically(q).map((c) => c.chunkId)).toEqual(["doc-cita"]);
   });
 });

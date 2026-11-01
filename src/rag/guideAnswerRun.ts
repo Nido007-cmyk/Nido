@@ -25,16 +25,22 @@ export interface GuideAnswer {
  * Retrieves once. Returns the guide answer when a NIDO Essentials guide is
  * the clear best match, else null plus the retrieved chunks so the normal
  * path can reuse them instead of searching again.
+ *
+ * `retrievalQuery` (R-03) is the conversation-contextualized form of
+ * `query` built by the caller (contextualizeQuery in pure.ts): retrieval
+ * runs with it, while guide picking and the short-guide rewrite keep
+ * working on the question as asked.
  */
 export async function answerFromGuide(
   query: string,
   lang: GroundingLang,
+  retrievalQuery?: string,
 ): Promise<{ answer: GuideAnswer | null; retrieved: RetrievedChunk[] | null }> {
   let retrieved: RetrievedChunk[] | null = null;
   try {
     // 0.1.60: «resúmeme la guía de RCP» busca por «la guía de RCP».
     const short = wantsShortGuide(query);
-    retrieved = await retrieve(short ? stripShortRequest(query) : query, ANSWER_CONTEXT_CHUNKS);
+    retrieved = await retrieve(short ? stripShortRequest(query) : (retrievalQuery ?? query), ANSWER_CONTEXT_CHUNKS);
     const pick = pickGuideChunk(retrieved, lang);
     if (!pick) return { answer: null, retrieved };
     const doc = await readPackSource(pick.chunkId);
