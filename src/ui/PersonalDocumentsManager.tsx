@@ -17,8 +17,12 @@ import {
   listCustomCollections,
   setCustomCollectionActive,
   deleteCustomCollection,
+  listImportWarnings,
+  dismissImportWarnings,
+  ensureImportFingerprintRegistry,
   ImportProgress,
   ImportWarning,
+  ImportWarningReason,
 } from "../services/documentImporter";
 import { CustomCollection } from "../rag/db";
 import { NidoIcon } from "./components/icons/NidoIcon";
@@ -27,6 +31,52 @@ import { EmptyState } from "./components/calm/EmptyState";
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes < 0) return "0KB";
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${(bytes / 1024).toFixed(0)}KB`;
+}
+
+/** Orden en que la tarjeta enseña los grupos de avisos: primero lo que no se pudo leer. */
+const WARNING_REASON_ORDER: ImportWarningReason[] = [
+  "ocrFailed",
+  "ocrEmpty",
+  "imageNoOcr",
+  "noText",
+  "alreadyImported",
+  "similarImported",
+];
+
+interface WarningGroup {
+  reason: ImportWarningReason;
+  /** C-06: la colección del parecido/duplicado; los grupos de identidad se separan por ella. */
+  detail?: string;
+  warnings: ImportWarning[];
+}
+
+/**
+ * H-11: los avisos de una colección se agrupan por razón — cada
+ * grupo con SU cadena (la superficie anterior fundía todas las
+ * razones en una sola frase «no aportó texto», ADV2-05). Los grupos
+ * de identidad se separan además por la colección que nombran.
+ */
+function groupWarnings(warnings: ImportWarning[]): WarningGroup[] {
+  const groups: WarningGroup[] = [];
+  for (const reason of WARNING_REASON_ORDER) {
+    const ofReason = warnings.filter((w) => w.reason === reason);
+    if (ofReason.length === 0) continue;
+    if (reason === "alreadyImported" || reason === "similarImported") {
+      const byDetail = new Map<string, ImportWarning[]>();
+      for (const w of ofReason) {
+        const key = w.detail ?? "";
+        const arr = byDetail.get(key);
+        if (arr) arr.push(w);
+        else byDetail.set(key, [w]);
+      }
+      for (const [detail, ws] of byDetail) {
+        groups.push({ reason, detail: detail || undefined, warnings: ws });
+      }
+    } else {
+      groups.push({ reason, warnings: ofReason });
+    }
+  }
+  return groups;
 }
 
 /**
@@ -44,18 +94,52 @@ export function PersonalDocumentsManager() {
   const [newName, setNewName] = useState("");
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  // R-06 P5: los ficheros sin texto de la última importación de
-  // cada colección, por id — la tarjeta los nombra en vez de que
-  // la importación «con éxito» los calle.
+  // H-11: los avisos de cada colección, por id, LEÍDOS DE LA BASE
+  // en cada refresh — persisten con su colección y sobreviven a la
+  // pantalla que vio la importación (antes vivían en este estado y
+  // morían al salir; y la siembra desde el resultado se ha retirado:
+  // el refresh es el único dueño de este mapa).
   const [warningsById, setWarningsById] = useState<Record<string, ImportWarning[]>>({});
+  // C-06: el «importar de todos modos» del caso 1-total vive solo
+  // en el momento: la app no conserva el fichero tras importar, así
+  // que la acción guarda lote y nombre en memoria junto a la
+  // colección que ya guarda el duplicado, y muere con la pantalla.
+  const [forceRetryById, setForceRetryById] = useState<
+    Record<string, { files: Parameters<typeof importDocuments>[0]; name: string }>
+  >({});
 
   const refresh = useCallback(async () => {
-    setCollections(await listCustomCollections());
+    // C-06: la apertura de la Biblioteca es el momento del registro
+    // perezoso (una sola vez; best-effort, nunca bloquea la lista).
+    await ensureImportFingerprintRegistry().catch(() => {});
+    const cols = await listCustomCollections();
+    setCollections(cols);
+    try {
+      setWarningsById(await listImportWarnings(cols.map((c) => c.id)));
+    } catch {
+      // Si la lectura de avisos falla, la tarjeta conserva los que
+      // ya enseñaba en vez de vaciar la superficie.
+    }
   }, []);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  const alertImportError = useCallback(
+    (e: any) => {
+      // 0.1.18: known import errors in the app language.
+      const code = typeof e?.code === "string" && e?.name === "DocImportError" ? e.code : null;
+      Alert.alert(
+        t("personalDocumentsManager.importFailedTitle"),
+        // Auditoría completa 2026-10-31 (F9-03): sin código, el
+        // genérico localizado; el mensaje interno crudo ya no llega
+        // a la alerta.
+        (code ? t(`personalDocumentsManager.errors.${code}`, e.vars ?? {}) : t("personalDocumentsManager.importFailedBody")) as string,
+      );
+    },
+    []
+  );
 
   const handleImport = useCallback(async () => {
     const name = newName.trim();
@@ -70,24 +154,92 @@ export function PersonalDocumentsManager() {
     try {
       const imported = await importDocuments(files, name, setImportProgress);
       setNewName("");
-      if (imported.importWarnings.length > 0) {
-        setWarningsById((prev) => ({ ...prev, [imported.id]: imported.importWarnings }));
+      if (imported.duplicateImport) {
+        // Nada entró: la colección devuelta es la que ya guarda el
+        // duplicado, y su tarjeta ofrece forzar la copia ahora.
+        setForceRetryById((prev) => ({ ...prev, [imported.id]: { files, name } }));
       }
       await refresh();
     } catch (e: any) {
-      // 0.1.18: known import errors in the app language.
-      const code = typeof e?.code === "string" && e?.name === "DocImportError" ? e.code : null;
-      Alert.alert(
-        t("personalDocumentsManager.importFailedTitle"),
-        // Auditoría completa 2026-10-31 (F9-03): sin código, el
-        // genérico localizado; el mensaje interno crudo ya no llega
-        // a la alerta.
-        (code ? t(`personalDocumentsManager.errors.${code}`, e.vars ?? {}) : t("personalDocumentsManager.importFailedBody")) as string,
-      );
+      alertImportError(e);
     } finally {
       setImportProgress(null);
     }
-  }, [newName, refresh]);
+  }, [newName, refresh, alertImportError]);
+
+  const handleImportAnyway = useCallback(
+    async (collectionId: string) => {
+      const pending = forceRetryById[collectionId];
+      if (!pending) return;
+      setImportProgress({ stage: "reading" });
+      try {
+        await importDocuments(pending.files, pending.name, setImportProgress, {
+          forceDuplicates: true,
+        });
+        setForceRetryById((prev) => {
+          const next = { ...prev };
+          delete next[collectionId];
+          return next;
+        });
+        await refresh();
+      } catch (e: any) {
+        alertImportError(e);
+      } finally {
+        setImportProgress(null);
+      }
+    },
+    [forceRetryById, refresh, alertImportError]
+  );
+
+  const handleDismissWarnings = useCallback(
+    async (collectionId: string, reason: ImportWarningReason) => {
+      await dismissImportWarnings(collectionId, reason).catch(() => {});
+      if (reason === "alreadyImported") {
+        // Descartar el aviso de identidad retira también la acción
+        // del momento: la persona ya ha decidido que no la quiere.
+        setForceRetryById((prev) => {
+          const next = { ...prev };
+          delete next[collectionId];
+          return next;
+        });
+      }
+      await refresh();
+    },
+    [refresh]
+  );
+
+  /** La línea de un grupo de avisos, con la cadena de SU razón. */
+  const warningLine = useCallback(
+    (group: WarningGroup): string => {
+      const names = group.warnings
+        .map((w) => {
+          if (group.reason === "ocrFailed") return w.ocrCode ? `${w.name} (${w.ocrCode})` : w.name;
+          if (group.reason === "alreadyImported" || group.reason === "similarImported") {
+            return w.previousName && w.previousName !== w.name ? `${w.name} (${w.previousName})` : w.name;
+          }
+          return w.name;
+        })
+        .join(", ");
+      const count = group.warnings.length;
+      switch (group.reason) {
+        case "ocrFailed":
+          return t("personalDocumentsManager.warningOcrFailed", { count, names });
+        case "ocrEmpty":
+          return t("personalDocumentsManager.warningOcrEmpty", { count, names });
+        case "imageNoOcr":
+          return t("personalDocumentsManager.warningImageNoOcr", { count, names });
+        case "alreadyImported":
+          return group.detail
+            ? t("personalDocumentsManager.warningAlreadyImported", { count, names, detail: group.detail })
+            : t("personalDocumentsManager.warningAlreadyHere", { count, names });
+        case "similarImported":
+          return t("personalDocumentsManager.warningSimilarImported", { count, names, detail: group.detail ?? "" });
+        default:
+          return t("personalDocumentsManager.noTextWarning", { count, names });
+      }
+    },
+    []
+  );
 
   const handleToggle = useCallback(
     async (collection: CustomCollection, active: boolean) => {
@@ -196,15 +348,28 @@ export function PersonalDocumentsManager() {
               {t("personalDocumentsManager.docCount", { count: c.docCount })} · {" "}
               {t("personalDocumentsManager.chunkCount", { count: c.chunkCount })} · {formatBytes(c.sizeBytes)}
             </Text>
-            {(warningsById[c.id]?.length ?? 0) > 0 && (
-              <Text style={styles.collectionWarning}>
-                {t("personalDocumentsManager.noTextWarning", {
-                  count: warningsById[c.id].length,
-                  names: warningsById[c.id]
-                    .map((w) => (w.ocrCode ? `${w.name} (${w.ocrCode})` : w.name))
-                    .join(", "),
-                })}
-              </Text>
+            {groupWarnings(warningsById[c.id] ?? []).map((group, gi) => (
+              <View key={`${group.reason}-${group.detail ?? ""}-${gi}`} style={styles.warningRow}>
+                <Text style={[styles.collectionWarning, styles.warningText]}>{warningLine(group)}</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => handleDismissWarnings(c.id, group.reason)}
+                  hitSlop={8}
+                  style={styles.dismissBtn}
+                >
+                  <Text style={styles.dismissText}>{t("common.dismiss")}</Text>
+                </Pressable>
+              </View>
+            ))}
+            {forceRetryById[c.id] && (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => handleImportAnyway(c.id)}
+                disabled={!!importProgress}
+                style={styles.importAnywayBtn}
+              >
+                <Text style={styles.importAnywayText}>{t("personalDocumentsManager.importAnyway")}</Text>
+              </Pressable>
             )}
             <View style={styles.collectionActions}>
               <Pressable accessibilityRole="button" onPress={() => handleExport(c)} disabled={busyId === c.id} style={styles.exportBtn}>
@@ -279,6 +444,12 @@ const getStyles = (colors: Colors) =>
     collectionName: { color: colors.text.primary, fontSize: 14, fontWeight: "600", flex: 1 },
     collectionMeta: { color: colors.text.accentEmerald, fontSize: 11 },
     collectionWarning: { color: colors.amber[600], fontSize: 11, lineHeight: 15 },
+    warningRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+    warningText: { flex: 1 },
+    dismissBtn: { paddingVertical: 2 },
+    dismissText: { color: colors.text.accentEmerald, fontSize: 11, fontWeight: "600" },
+    importAnywayBtn: { alignSelf: "flex-start", paddingVertical: 2 },
+    importAnywayText: { color: colors.text.accentEmerald, fontSize: 11, fontWeight: "700" },
     collectionActions: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 },
     exportBtn: { backgroundColor: colors.emerald.bgSubtle, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6 },
     exportBtnText: { color: colors.text.accentEmerald, fontSize: 12, fontWeight: "600" },
