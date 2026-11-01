@@ -68,6 +68,7 @@
 import type { RetrievedChunk } from "./retrieve";
 import { splitSentences } from "./grounding";
 import { numberTokens, parseNumberToken, roundsFromEvidence, tokenReadings } from "./evidenceNumbers";
+import { dateConflictForSentence, parseSourceDateSentences } from "./dates";
 
 export interface NumberConflict {
   /** La unidad normalizada en la que discrepan («km»). */
@@ -713,6 +714,41 @@ export function findNumberConflicts(answerText: string, chunks: readonly Retriev
     if (seen.has(dedupe)) continue;
     seen.add(dedupe);
     conflicts.push({ unit: category, sourceSentence: clipSourceSentence(source), omission: true });
+  }
+  return conflicts;
+}
+
+/**
+ * C-07: la caja aprende fechas. La hermana de findNumberConflicts con
+ * la misma forma de nota (`unit: "fecha"`): el juicio vive en
+ * dates.ts (R1–R5) y aquí solo se convierte en aviso cuando hay una
+ * frase de la fuente emparejada que enseñar — sin frase que enseñar
+ * no hay aviso (un R1 sin pareja lo retira la pierna del verificador
+ * en la ruta verificada; la caja es la red de la ruta sin verificar y
+ * su contrato es enseñar la fuente). Mismo tope que su hermana; en la
+ * costura de ChatScreen las cifras van primero y ganan el empate.
+ */
+export function findDateConflicts(
+  answerText: string,
+  chunks: readonly RetrievedChunk[],
+  referenceDate: Date = new Date(),
+): NumberConflict[] {
+  if (!answerText || chunks.length === 0) return [];
+  const sources = parseSourceDateSentences(
+    chunks.flatMap((c) => splitSentences(c.body)),
+    referenceDate,
+  );
+  if (!sources.some((s) => s.mentions.length > 0)) return [];
+  const conflicts: NumberConflict[] = [];
+  const seen = new Set<string>();
+  for (const answerSentence of splitSentences(answerText)) {
+    const info = dateConflictForSentence(answerSentence, sources, referenceDate);
+    if (!info?.sourceSentence) continue;
+    const dedupe = `fecha:${info.sourceSentence.slice(0, 40)}`;
+    if (seen.has(dedupe)) continue;
+    seen.add(dedupe);
+    conflicts.push({ unit: "fecha", sourceSentence: clipSourceSentence(info.sourceSentence) });
+    if (conflicts.length >= MAX_CONFLICTS) return conflicts;
   }
   return conflicts;
 }
