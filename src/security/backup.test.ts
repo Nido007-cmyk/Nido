@@ -19,10 +19,13 @@ vi.mock("expo-file-system/legacy", () => ({
   deleteAsync: vi.fn(),
 }));
 
-vi.mock("../privacy/keyManager", () => ({
-  getDatabaseKeyHex: vi.fn().mockResolvedValue("ab".repeat(32)),
-  applyDatabaseKey: vi.fn().mockResolvedValue(undefined),
-}));
+// keyManager: el compuesto nombrado del arnés (B-01, paso 4) — la DEK
+// reprogramable y el handshake como doble mudo DECLARADO: el db falso
+// de esta suite no puede ejecutar el real.
+vi.mock("../privacy/keyManager", async () => {
+  const { backupKeyManagerModule } = await import("./secureDbTestHarness");
+  return backupKeyManagerModule();
+});
 
 // 0.1.47: la copia del respaldo se abre para quitar los mensajes temporales.
 const sqlx = vi.hoisted(() => ({ sql: [] as string[], failWith: null as string | null, allowOpen: false }));

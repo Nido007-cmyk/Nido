@@ -164,8 +164,7 @@ export interface FakeFsDriverOptions {
  * rename que lanza «no usado»); lo que varía — el handle guionizado,
  * los registros, las compuertas — entra como opciones nombradas.
  */
-export function makeFakeFsDriver(options: FakeFsDriverOptions): SecureDbDriver {
-  const docDir = options.docDir ?? "file:///docs/";
+export function makeFakeFsDriver(options: FakeFsDriverOptions): SecureDbDriver {  const docDir = options.docDir ?? "file:///docs/";
   return {
     dbDir: () => `${docDir}SQLite/`,
     openDb: async (path: string) => {
@@ -185,5 +184,33 @@ export function makeFakeFsDriver(options: FakeFsDriverOptions): SecureDbDriver {
     writeFile: async (path: string, content: string) => {
       options.files.set(path, content);
     },
+  };
+}
+
+/**
+ * El handshake como DOBLE MUDO DECLARADO (B-01, D5): no verifica nada
+ * y existe SOLO para las suites cuyo `db` falso no puede ejecutar el
+ * handshake real (las de backup: su db tiene exec/close y nada más).
+ * La ceguera queda escrita aquí, con nombre, en vez de escondida como
+ * un `async () => {}` anónimo en cada suite.
+ */
+export const declaredMuteApplyDatabaseKey = async (): Promise<void> => {};
+
+export interface BackupKeyManagerOptions {
+  /** DEK que la lectura devuelve. Por defecto la de fixture «ab»×32; `null` = sin clave en el teléfono. */
+  dekHex?: string | null;
+}
+
+/**
+ * Composición `keyManager` de las suites de backup: la lectura de la
+ * DEK como `vi.fn` (una suite la reprograma por test) y el handshake
+ * como el doble mudo declarado de arriba — su db simulado no tiene
+ * `getAllAsync`/`getFirstAsync` y el real no podría ni ejecutarse.
+ */
+export function backupKeyManagerModule(options: BackupKeyManagerOptions = {}): Record<string, unknown> {
+  const dekHex = "dekHex" in options ? options.dekHex : "ab".repeat(32);
+  return {
+    getDatabaseKeyHex: vi.fn(async () => dekHex),
+    applyDatabaseKey: declaredMuteApplyDatabaseKey,
   };
 }

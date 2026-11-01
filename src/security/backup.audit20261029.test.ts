@@ -52,11 +52,13 @@ vi.mock("expo-crypto", () => ({
     digestStringAsync: async (_a: string, s: string) => createHash("sha256").update(s, "utf8").digest("hex"),
   },
 }));
-vi.mock("../privacy/keyManager", () => ({
-  // Sin clave en el teléfono: la validación del .db se apoya en el manifest.
-  getDatabaseKeyHex: async () => null,
-  applyDatabaseKey: async () => {},
-}));
+// keyManager: el compuesto nombrado del arnés (B-01, paso 4), sin clave
+// en el teléfono: la validación del .db se apoya en el manifest, y el
+// handshake queda como doble mudo DECLARADO en el arnés.
+vi.mock("../privacy/keyManager", async () => {
+  const { backupKeyManagerModule } = await import("./secureDbTestHarness");
+  return backupKeyManagerModule({ dekHex: null });
+});
 vi.mock("expo-sqlite", () => ({ openDatabaseAsync: async () => undefined }));
 vi.mock("./secureDatabase", () => ({ WAL_CHECKPOINT_SQL: "PRAGMA wal_checkpoint(TRUNCATE);" }));
 vi.mock("./databaseManager", () => ({ getDatabase: async () => ({}), closeDatabase: async () => {} }));
