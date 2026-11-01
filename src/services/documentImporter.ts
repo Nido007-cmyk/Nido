@@ -257,14 +257,45 @@ export async function pickDocuments(): Promise<DocumentPicker.DocumentPickerAsse
 }
 
 /**
+ * Colecciones cuya importación está en vuelo en este proceso (carril
+ * F-REV): la importación inserta sus trozos antes de crear la fila de
+ * la colección, así que durante el vuelo esos trozos parecen huérfanos
+ * a la barrida de F3-17. El registro se pasa a la barrida como
+ * exclusión para que sea segura en sí misma, llame quien la llame.
+ */
+const inFlightCollectionIds = new Set<string>();
+
+/** Cadena que serializa las importaciones (ver importDocuments). */
+let importChain: Promise<unknown> = Promise.resolve();
+
+/**
  * Imports one or more already-picked files as a single named collection:
  * reads each file, splits into docs (see parseFileContent), chunks each doc,
  * embeds every chunk on-device (sequentially - the shared llama.cpp
  * embedding context can't run concurrent embeddings), and inserts into the
  * FTS5 + vector tables tagged with this collection's id so it can be
  * toggled or deleted as a unit later.
+ *
+ * Las importaciones van EN SERIE, una tras otra (sonda del carril
+ * F-REV): el llamante de la UI no tenía guarda de reentrada y dos
+ * importaciones concurrentes dejaban que la barrida inicial de la
+ * segunda borrara los trozos en vuelo de la primera, que nacía
+ * declarando trozos que no tenía. El epoch de ciclo de vida se
+ * captura cuando la importación arranca de verdad, tras la espera.
  */
-export async function importDocuments(
+export function importDocuments(
+  files: DocumentPicker.DocumentPickerAsset[],
+  collectionName: string,
+  onProgress?: (p: ImportProgress) => void
+): Promise<CustomCollection> {
+  const run = importChain.then(() => importDocumentsSerial(files, collectionName, onProgress));
+  // La cadena nunca muere: el fallo lo recibe el llamante en `run`,
+  // no la cadena que ordena a las importaciones siguientes.
+  importChain = run.catch(() => {});
+  return run;
+}
+
+async function importDocumentsSerial(
   files: DocumentPicker.DocumentPickerAsset[],
   collectionName: string,
   onProgress?: (p: ImportProgress) => void
@@ -329,11 +360,19 @@ export async function importDocuments(
     });
   }
 
+  // Desde aquí hay trozos en vuelo sin fila de colección: este id
+  // queda registrado para que ninguna barrida lo tome por huérfano
+  // (carril F-REV), y se desregistra al salir, nazca o muera la
+  // importación — si muere, el catch de abajo ya limpió sus trozos.
+  inFlightCollectionIds.add(collectionId);
   try {
     // F3-17: antes de insertar, barrer los trozos huérfanos de una
     // importación anterior muerta a mitad. Best-effort: si la barrida
     // falla, la importación sigue y la próxima lo reintenta.
-    await deleteOrphanCollectionChunks({ lifecycleEpoch: runEpoch }).catch(() => {});
+    await deleteOrphanCollectionChunks({
+      lifecycleEpoch: runEpoch,
+      excludeCollectionIds: [...inFlightCollectionIds],
+    }).catch(() => {});
     for (let i = 0; i < chunks.length; i++) {
       onProgress?.({ stage: "embedding", chunkIndex: i, chunkCount: chunks.length });
       const chunk = chunks[i];
@@ -366,6 +405,8 @@ export async function importDocuments(
     // taking space forever. Remove them (best-effort) and report the error.
     await deleteCustomCollection(collectionId).catch(() => {});
     throw e;
+  } finally {
+    inFlightCollectionIds.delete(collectionId);
   }
 
   const [created] = (await listCustomCollections()).filter((c) => c.id === collectionId);

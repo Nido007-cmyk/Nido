@@ -895,12 +895,29 @@ export async function deleteCustomCollection(id: string): Promise<void> {
  * barrida los elimina con la misma limpieza por trozo (fts y
  * embeddings incluidos). Devuelve cuántos trozos se quitaron.
  */
-export async function deleteOrphanCollectionChunks(opts?: WriteOptions): Promise<number> {
+export async function deleteOrphanCollectionChunks(
+  opts?: WriteOptions & {
+    /**
+     * Colecciones vivas cuya fila aún no existe porque su importación
+     * está en vuelo (documentImporter las registra antes de insertar):
+     * sus trozos no son huérfanos y la barrida no debe tocarlos. Sin
+     * esta exclusión, la barrida de una segunda importación se comía
+     * los trozos en vuelo de la primera (sonda del carril F-REV).
+     */
+    excludeCollectionIds?: readonly string[];
+  },
+): Promise<number> {
   let removed = 0;
+  const excluded = opts?.excludeCollectionIds ?? [];
+  const exclusion =
+    excluded.length > 0
+      ? `AND collection_id NOT IN (${excluded.map(() => "?").join(", ")})`
+      : "";
   await writeTransaction(async (txn) => {
     const rows = await txn.getAllAsync<{ chunk_id: string }>(
       `SELECT chunk_id FROM chunks WHERE collection_id IS NOT NULL
-        AND collection_id NOT IN (SELECT id FROM custom_collections)`,
+        AND collection_id NOT IN (SELECT id FROM custom_collections) ${exclusion}`,
+      [...excluded],
     );
     for (const r of rows) {
       await txn.runAsync(`DELETE FROM chunks WHERE chunk_id = ?`, [r.chunk_id]);
