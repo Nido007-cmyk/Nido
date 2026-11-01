@@ -684,7 +684,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     label: "NIDO Local: emergency numbers and alerts by country",
     filename: "corpus/nido-local.sqlite",
     sizeBytes: 376832,
-    sha256: "7ef730b3857ea0fa331d025c7c221862b2182fe4c7f05122eb82cd14c18b3708",
+    sha256: "df5f050bd96600d825dc6e1263673a93863973a63714fc9c744558c884957ddc",
     sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v9/nido-local.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
@@ -699,7 +699,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
     label: "NIDO Local (multilingual search)",
     filename: "corpus/nido-local-e5.sqlite",
     sizeBytes: 376832,
-    sha256: "fa4c802818d061bc1ad01e8683e48b31b8a9a5adbc7e4f9ed0d35e25a0bf56b5",
+    sha256: "1647431996507545093904985af807b318d6127935b311c51dbab01cde22aa3c",
     sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v9/nido-local-e5.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
