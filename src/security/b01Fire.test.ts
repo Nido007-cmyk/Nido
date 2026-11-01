@@ -85,6 +85,7 @@ import {
 } from "./secureDatabase";
 import type { StagingKeyStore } from "./stagingSeal";
 import { makeRealSqlcipherDriver, sqlcipherEngineAvailable } from "./testing/realSqlcipherDriver";
+import { cleanupFreshDirs, expectPlainSqliteRejects, freshDir } from "./testing/b01Utils";
 
 const execFileAsync = promisify(execFile);
 
@@ -100,13 +101,6 @@ if (!ENGINE_OK && process.env.CI) {
   throw new Error("B-01: python3/sqlcipher3 no disponible bajo CI — la cobertura real no puede saltarse.");
 }
 const describeEngine = ENGINE_OK ? describe : describe.skip;
-
-const workRoots: string[] = [];
-function freshDir(tag: string): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `nido-b01-${tag}-`));
-  workRoots.push(dir);
-  return dir;
-}
 
 function memoryStagingKeys(): StagingKeyStore {
   let stored: string | null = null;
@@ -167,23 +161,6 @@ function productionOpenDb(driver: SecureDbDriver) {
   };
 }
 
-/** sqlite3 ESTÁNDAR (el de Python, sin SQLCipher) debe rechazar el fichero. */
-async function expectPlainSqliteRejects(file: string, sentinel: string): Promise<void> {
-  const script =
-    "import sqlite3,sys\n" +
-    "try:\n" +
-    "    c=sqlite3.connect(sys.argv[1])\n" +
-    "    c.execute('SELECT count(*) FROM sqlite_master')\n" +
-    "    print('ABRIO-EN-CLARO')\n" +
-    "except Exception as e:\n" +
-    "    print('RECHAZA:', e)\n";
-  const { stdout } = await execFileAsync("python3", ["-c", script, file]);
-  expect(stdout).toContain("RECHAZA:");
-  const bytes = fs.readFileSync(file);
-  expect(bytes.includes(Buffer.from(sentinel, "utf8"))).toBe(false);
-  expect(bytes.subarray(0, 16).toString("latin1")).not.toContain("SQLite format 3");
-}
-
 describeEngine("B-01 · prueba de fuego de rotación contra el motor real", () => {
   beforeAll(() => {
     setTestSecureBackend(createMemorySecureBackend());
@@ -192,7 +169,7 @@ describeEngine("B-01 · prueba de fuego de rotación contra el motor real", () =
   afterAll(() => {
     setSecureDbTestDriver(null);
     setTestSecureBackend(null);
-    for (const dir of workRoots) fs.rmSync(dir, { recursive: true, force: true });
+    cleanupFreshDirs();
   });
 
   it(
