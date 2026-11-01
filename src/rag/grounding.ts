@@ -73,6 +73,7 @@
 
 import type { SentenceProvenance } from "./provenance";
 import { evidenceNumberValues, evidenceRanges, numberTokens, parseNumberToken, sentenceNumbersSupported } from "./evidenceNumbers";
+import { dateConflictForSentence, parseSourceDateSentences } from "./dates";
 
 export type GroundingLang = "es" | "en" | "pt";
 
@@ -1066,6 +1067,15 @@ export function verifyGroundedAnswer(
   lang: GroundingLang,
   /** La pregunta del usuario (R-05: la regla del dato pedido la necesita; sin ella, la regla no actúa). */
   query = "",
+  /**
+   * C-07: la fecha del turno contra la que se juzgan las fechas de la
+   * respuesta (R1–R5 de dates.ts). Opcional: sin ella, el día de hoy.
+   * ChatScreen pasa la marca temporal del mensaje del usuario cuando
+   * el mensaje la lleva; si no, el instante de finalización. Las
+   * relativas («ayer», «mañana») se juzgan contra ese día, que es lo
+   * que el humano quiso decir.
+   */
+  referenceDate: Date = new Date(),
 ): GroundingResult {
   const trimmed = (answer ?? "").trim();
   if (!trimmed) return { text: trimmed, status: "skipped", removed: 0, kept: 0 };
@@ -1104,6 +1114,9 @@ export function verifyGroundedAnswer(
   chunkSentences.forEach((ss, i) => {
     for (const text of ss) sourceRecs.push({ text, chunk: i });
   });
+  // C-07: las menciones de fecha de las fuentes, parseadas una sola
+  // vez: la pierna de fechas juzga cada frase contra ellas (dates.ts).
+  const sourceDateSentences = parseSourceDateSentences(chunkSentences.flat(), referenceDate);
 
   if (!sameLanguage) {
     // Sin comparación léxica válida: solo cifras (independientes del idioma).
@@ -1126,6 +1139,12 @@ export function verifyGroundedAnswer(
         continue;
       }
       if (!sentenceNumbersSupported(s, evidenceNums, chunkRanges)) {
+        removed++;
+        continue;
+      }
+      // C-07: las fechas son independientes del idioma, como las
+      // cifras — la pierna de fechas también juzga en esta rama.
+      if (dateConflictForSentence(s, sourceDateSentences, referenceDate)) {
         removed++;
         continue;
       }
@@ -1186,6 +1205,18 @@ export function verifyGroundedAnswer(
     // contaba como una palabra nueva más. Vale el redondeo honesto:
     // «26,5» por 26,52 y «16,4 millones» por 16.431.599 no se tocan.
     if (!sentenceNumbersSupported(s, evidenceNums, chunkRanges)) {
+      removed++;
+      continue;
+    }
+    // C-07: la pierna de fechas, cosida tras el juicio de cifras de la
+    // frase — una mención falsa por calendario (R1) o contradicha por
+    // la fuente (R4/R5) retira la frase como una cifra falsa, porque
+    // es una cifra falsa con nombre de día. Vive AL LADO de la
+    // maquinaria de cifras y no depende de sus interiores
+    // (digitsMatchType / carriesDatumOfType, terreno de ADV3): su
+    // único juez es dates.ts, y ni el apoyo léxico ni la tolerancia
+    // ±1 de las cifras la salvan ni la condenan.
+    if (dateConflictForSentence(s, sourceDateSentences, referenceDate)) {
       removed++;
       continue;
     }

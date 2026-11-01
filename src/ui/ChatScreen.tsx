@@ -141,7 +141,7 @@ import { SourceFootnotes } from "./components/SourceFootnotes";
 import { EvidenceFirstCard } from "./components/EvidenceFirstCard";
 import { sourceAccent } from "./components/sourceColors";
 import { buildEvidenceCard, type EvidenceCardData } from "../rag/evidenceCard";
-import { findNumberConflicts, type NumberConflict } from "../rag/sourceCheck";
+import { findDateConflicts, findNumberConflicts, type NumberConflict } from "../rag/sourceCheck";
 import { SourceReader } from "./components/SourceReader";
 import { onLaunchAction, registerShortcuts, takeLaunchAction } from "../services/launchActions";
 import { answerKnowledgeQueryWithCategory, toIdentityLocale, knowledgeSessionTitle } from "../rag/selfKnowledge";
@@ -1820,7 +1820,19 @@ export function ChatScreen({
         } else if (!deepTurn && chunks.length > 0) {
           // 0.1.41 (prueba física, «¿qué es la inflación?»): se verificaba
           // el texto SIN recortar y el bucle volvía a la pantalla.
-          const verified = verifyGroundedAnswer(finalText, chunks, uiLang, query);
+          // C-07: la fecha del turno — la marca temporal que el mensaje
+          // del usuario lleva en su propio id (Date.now() al crearse);
+          // si no parsea, el instante de finalización. Las relativas
+          // se juzgan contra el día del mensaje, que es lo que el
+          // humano quiso decir (una conversación que cruza medianoche
+          // no mueve el «ayer» del usuario).
+          const verified = verifyGroundedAnswer(
+            finalText,
+            chunks,
+            uiLang,
+            query,
+            new Date(Number(userMsg.id.split("-")[0]) || Date.now()),
+          );
           grounding = verified.status;
           if (verified.status !== "skipped") finalText = verified.text;
           provenance = verified.sentences;
@@ -1897,8 +1909,20 @@ export function ChatScreen({
       // Programa bounty, tanda 8: la caja de comprobación de fuentes
       // (sourceCheck.ts) — solo en la ruta sin verificación, donde
       // ninguna otra puerta ha juzgado las cifras contra las fuentes.
+      // C-07: la caja también avisa de fechas (findDateConflicts), en
+      // la misma costura y con el tope total intacto (2 notas; las
+      // cifras van primero y ganan el empate — decisión declarada).
       const numberConflicts =
-        grounding === "unverified" && chunks.length > 0 ? findNumberConflicts(assistantText, chunks) : [];
+        grounding === "unverified" && chunks.length > 0
+          ? [
+              ...findNumberConflicts(assistantText, chunks),
+              ...findDateConflicts(
+                assistantText,
+                chunks,
+                new Date(Number(userMsg.id.split("-")[0]) || Date.now()),
+              ),
+            ].slice(0, 2)
+          : [];
 
       setMessages((prev) =>
         prev.map((m) =>
