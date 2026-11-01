@@ -524,8 +524,11 @@ function abstainedResult(chunks: GroundingChunk[], lang: GroundingLang, removed:
 
 const FACTUAL_QUESTION_RE = new RegExp(
   [
-    // es
-    "^[¿¡]?\\s*(qu[eé] (es|son|fue|fueron|significa|causa|hace)|qui[eé]n(es)? (es|son|fue|fueron|invent[oó]|descubri[oó]|escribi[oó])|cu[aá]ndo|d[oó]nde|cu[aá]l(es)? (es|son|fue)|cu[aá]nt[oa]s?|por qu[eé]|c[oó]mo (funciona|funcionan|se (forma|hace|produce))|expl[ií]ca(me)?|define)(?![\\p{L}\\p{N}])",
+    // es («qué día»/«qué fecha» añadidos por R-06-P3: la pregunta de la
+    // ronda —«¿Qué día y a qué hora es la cita?»— no era "de hechos" para
+    // esta red y el «no lo sé» determinista no habría disparado ni en la
+    // rama protegida)
+    "^[¿¡]?\\s*(qu[eé] (es|son|fue|fueron|significa|causa|hace)|qu[eé] (d[ií]a|fecha)|qui[eé]n(es)? (es|son|fue|fueron|invent[oó]|descubri[oó]|escribi[oó])|cu[aá]ndo|d[oó]nde|cu[aá]l(es)? (es|son|fue)|cu[aá]nt[oa]s?|por qu[eé]|c[oó]mo (funciona|funcionan|se (forma|hace|produce))|expl[ií]ca(me)?|define)(?![\\p{L}\\p{N}])",
     // en
     "^\\s*(what (is|are|was|were|does|causes)|who (is|was|were|invented|discovered|wrote)|when (is|was|were|did)|where (is|are|was|were)|which|how (many|much|does|do|is)|why|explain|define)(?![\\p{L}\\p{N}])",
     // pt

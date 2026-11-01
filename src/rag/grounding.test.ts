@@ -249,6 +249,17 @@ describe("isFactualQuestion / noSourcesAnswer (el 'no lo sé' antes de generar)"
     expect(isFactualQuestion(q)).toBe(false);
   });
 
+  it("R-06-P3: «qué día» y «qué fecha» SÍ son preguntas de hechos (la cita de la ronda)", () => {
+    // Ejecutado en el diagnóstico R-06: antes de esta forma, la pregunta
+    // exacta de la ronda daba false y ni el «no lo sé» habría disparado.
+    expect(isFactualQuestion("¿Qué día y a qué hora es la cita?")).toBe(true);
+    expect(isFactualQuestion("¿Qué día es hoy?")).toBe(true);
+    expect(isFactualQuestion("¿Qué fecha es la cita?")).toBe(true);
+    // Una orden con «día» no se vuelve pregunta de hechos por la forma nueva.
+    expect(isFactualQuestion("pon la cita el martes")).toBe(false);
+    expect(isFactualQuestion("apunta el día de la cita en el calendario")).toBe(false);
+  });
+
   it("respuesta honesta sin fuentes en los 3 idiomas", () => {
     expect(noSourcesAnswer("es")).toContain("prefiero no inventar");
     expect(noSourcesAnswer("en")).toContain("rather not make up");
