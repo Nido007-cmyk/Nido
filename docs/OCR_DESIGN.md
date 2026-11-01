@@ -57,6 +57,13 @@ house template (Expo module, Kotlin, no network):
   `7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2`
   is recorded there; `spa` and `por` must be hashed and recorded
   **in this file** before the first build that bundles them.
+  Recorded 2026-10-31 (OCR lane), downloaded from the pinned
+  revision above; the `eng` file's hash reproduces Field Atlas's
+  recorded value exactly, which anchors the set:
+  `spa.traineddata` (2,294,433 bytes) SHA-256
+  `6f2e04d02774a18f01bed44b1111f2cd7f3ba7ac9dc4373cd3f898a40ea6b464`;
+  `por.traineddata` (1,982,756 bytes) SHA-256
+  `c4932b937207a9514b7514d518b931a99938c02a28a5a5a553f8599ed58b7deb`.
   Data ships inside the app (no first-use download), checked
   before initialisation, licenses bundled beside it like Field
   Atlas bundles them.
@@ -103,3 +110,29 @@ itself is small (one recognize call); the real cost is the
 tessdata bundling decision (three languages ≈ 3 × ~2–4 MB in
 tessdata_fast), the PDF-page rendering path, and device proof
 with real scans in es/en/pt.
+
+## Built (OCR lane, 2026-10-31) — status addendum, history above untouched
+
+The lane this section waited for ran: Temurin JDK 17 installed,
+the NDKs the build asks for (27.1.12297006, 27.0.12077973)
+installed into the house SDK by AGP itself, and
+`modules/nido-ocr` written to this design: `recognize` and
+`recognizePdfPages` (0-based pages; an empty list means the
+module finds the scanned pages itself with PDFBox, capped at
+`MAX_OCR_PAGES = 30`; PdfRenderer at 300 DPI), the three
+traineddata bundled as module assets (their SHA-256 are the ones
+recorded in this doc), copied to `noBackupFilesDir` and
+hash-verified before the engine starts. The importer integration
+landed as designed (images in the picker, scanned pages through
+OCR, provenance note inside the recognized text, progress and
+errors in es/en/pt). Verified here: full TS battery and
+typecheck (see the lane checkpoint for the lines), and a real
+`assembleRelease` (arm64-v8a) whose APK was opened and checked:
+the module's classes in the dex, `libtesseract.so` /
+`libleptonica.so` / `libjpeg.so` / `libpngx.so` for arm64-v8a,
+and the three traineddata inside with hashes matching this
+document exactly (APK 153,683,550 B, sha256
+`d6765d26741bf1425383b52d3e2797149485383adb6463ff0bc185c1d17c9fdf`,
+debug-signed as local builds here are). NOT verified: OCR
+running on a real phone with real scans — that is the owner's
+physical round, and nothing in this addendum claims it.
