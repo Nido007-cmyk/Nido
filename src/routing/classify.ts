@@ -60,15 +60,45 @@ function isGreeting(trimmed: string): boolean {
 }
 
 const CONVERSATION_RE =
-  /\b(tell me a joke|make me laugh|another joke|who are you|what are you|your name|how old are you|where are you from|what time is it|what(?:'s| is) the (time|date|day)|cu[eé]ntame un chiste|hazme re[ií]r|otro chiste|qui[eé]n eres|qu[eé] eres|c[oó]mo te llamas|cu[aá]ntos a[ñn]os tienes|de d[oó]nde eres|qu[eé] hora es|qu[eé] fecha es|qu[eé] d[ií]a es hoy)\b/i;
+  /\b(tell me a joke|make me laugh|another joke|who are you|what are you|your name|how old are you|where are you from|cu[eé]ntame un chiste|hazme re[ií]r|otro chiste|qui[eé]n eres|qu[eé] eres|c[oó]mo te llamas|cu[aá]ntos a[ñn]os tienes|de d[oó]nde eres)\b/i;
+
+/**
+ * Núcleo 3 · N-05 (auditoría 2026-11-01): la hora/fecha DESNUDA sale de
+ * CONVERSATION_RE a un conjunto ANCLADO propio, espejo del que R-06
+ * selló en intent.ts. Sin anclar, «¿Qué hora es en Tokio?» y «¿Qué
+ * fecha es el concierto?» clasificaban `conversation` y la recuperación
+ * se apagaba para preguntas que sí tienen respuesta en las fuentes; y
+ * el portugués ni siquiera tenía la forma desnuda. Anclado de principio
+ * a fin: el objeto tras «es» («…es la cita», «…es en Tokio») descalifica
+ * — la pregunta deja de ser charla y recupera. Se admite el saludo
+ * inicial («Hola, ¿qué hora es?» era conversación por la vía antigua y
+ * no se degrada) y las coletillas corteses, como en intent.ts. Paridad:
+ * es/en como en intent y pt nuevo («que horas são», «que dia é hoje»)
+ * por decisión de paridad de la preparación. Los dos ficheros mantienen
+ * sus copias a propósito (no comparten código, como hoy).
+ */
+const BARE_TIME_DATE_RE = new RegExp(
+  [
+    "^(?:(?:hola|buenas|buenos d[ií]as|buenas tardes|buenas noches|hello|hi|hey|bom dia|boa tarde|boa noite)[,!\\s]+)?[¿¡]?\\s*(?:dime\\s+|decime\\s+)?qu[eé] hora es(?:\\s+(?:ahora(?:\\s+mismo)?|hoy))?(?:[,\\s]+(?:por favor|porfa|please))?\\s*[?!]?$",
+    "^(?:(?:hola|buenas|buenos d[ií]as|buenas tardes|buenas noches|hello|hi|hey|bom dia|boa tarde|boa noite)[,!\\s]+)?[¿¡]?\\s*(?:dime\\s+|decime\\s+)?qu[eé] fecha es(?:\\s+hoy)?(?:[,\\s]+(?:por favor|porfa|please))?\\s*[?!]?$",
+    "^(?:(?:hola|buenas|buenos d[ií]as|buenas tardes|buenas noches|hello|hi|hey|bom dia|boa tarde|boa noite)[,!\\s]+)?[¿¡]?\\s*qu[eé] d[ií]a es hoy(?:[,\\s]+(?:por favor|porfa|please))?\\s*[?!]?$",
+    "^[¿¡]?\\s*what time is it(?:\\s+(?:right\\s+)?now)?(?:[,\\s]+please)?\\s*[?!]?$",
+    "^[¿¡]?\\s*what(?:'s| is) the (?:time|date|day)(?:\\s+today)?\\s*[?!]?$",
+    "^[¿¡]?\\s*what day is (?:it|today)(?:\\s+today)?\\s*[?!]?$",
+    "^(?:(?:hola|buenas|buenos d[ií]as|buenas tardes|buenas noches|hello|hi|hey|bom dia|boa tarde|boa noite)[,!\\s]+)?[¿¡]?\\s*que horas s[aã]o(?:\\s+agora)?\\s*[?!]?$",
+    "^(?:(?:hola|buenas|buenos d[ií]as|buenas tardes|buenas noches|hello|hi|hey|bom dia|boa tarde|boa noite)[,!\\s]+)?[¿¡]?\\s*que dia [eé] hoje\\s*[?!]?$",
+  ].join("|"),
+  "i",
+);
 
 /**
  * A query counts as conversation (chit-chat) if it matches conversational
- * patterns about the assistant itself, jokes, or time/date - things that
- * never benefit from knowledge-base retrieval.
+ * patterns about the assistant itself, jokes, or the BARE time/date
+ * question (anchored set above) - things that never benefit from
+ * knowledge-base retrieval.
  */
 function isConversation(trimmed: string): boolean {
-  return CONVERSATION_RE.test(trimmed);
+  return CONVERSATION_RE.test(trimmed) || BARE_TIME_DATE_RE.test(trimmed);
 }
 
 /**

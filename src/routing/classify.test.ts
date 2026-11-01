@@ -200,4 +200,30 @@ describe("classifyTask", () => {
     const q = "Compare Rust and Go";
     expect(classifyTask(q)).toBe(classifyTask(q));
   });
+
+  // Núcleo 3 · N-05: hora/fecha desnuda anclada (espejo de R-06 en
+  // intent.ts). La desnuda es conversación y apaga la recuperación;
+  // con zona, evento u objeto tras «es» deja de serlo y la recupera.
+  describe("N-05 · hora/fecha anclada", () => {
+    it("la desnuda sigue conversation en es/en y entra en pt (paridad)", () => {
+      expect(classifyTask("¿Qué hora es?")).toBe("conversation");
+      expect(classifyTask("What time is it?")).toBe("conversation");
+      expect(classifyTask("Que horas são?")).toBe("conversation");
+      expect(classifyTask("¿Qué día es hoy?")).toBe("conversation");
+      expect(classifyTask("Que dia é hoje?")).toBe("conversation");
+    });
+    it("con saludo o coletilla cortés sigue conversation (no se degrada)", () => {
+      expect(classifyTask("Hola, ¿qué hora es?")).toBe("conversation");
+      expect(classifyTask("¿Qué hora es, por favor?")).toBe("conversation");
+    });
+    it("con zona o evento NO es conversation: la recuperación se enciende", () => {
+      expect(classifyTask("¿Qué hora es en Tokio?")).not.toBe("conversation");
+      expect(classifyTask("What time is it in Tokyo?")).not.toBe("conversation");
+      expect(classifyTask("¿Qué fecha es el concierto?")).not.toBe("conversation");
+      expect(isRetrievalIrrelevant(classifyTask("¿Qué hora es en Tokio?"))).toBe(false);
+    });
+    it("el objeto tras «es» descalifica: «¿A qué hora es la cita?» no es conversation", () => {
+      expect(classifyTask("¿A qué hora es la cita?")).not.toBe("conversation");
+    });
+  });
 });
