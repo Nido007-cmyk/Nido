@@ -40,7 +40,7 @@ vi.mock("expo-file-system/legacy", () => ({
   },
 }));
 
-import { getActiveModelId, takeSettingsRecoveryNotice } from "./settings";
+import { clearSettings, getActiveModelId, takeSettingsRecoveryNotice } from "./settings";
 
 const SETTINGS = `${fx.DOC}settings.json`;
 const MARKER = `${fx.DOC}settings-recovered.json`;
@@ -78,6 +78,18 @@ describe("aviso de ajustes restablecidos (F3-10)", () => {
   });
 
   it("sin marcador, el consumo devuelve null", async () => {
+    expect(await takeSettingsRecoveryNotice()).toBeNull();
+  });
+
+  it("revisión 0.1.67 (F-REV-2): clearSettings se lleva también el marcador", async () => {
+    // El marcador es del módulo de ajustes: su borrado deliberado no
+    // puede dejar detrás un aviso de «ajustes dañados» pendiente.
+    fx.files.set(SETTINGS, "{roto");
+    await getActiveModelId("llm");
+    expect(fx.files.has(MARKER)).toBe(true);
+    await clearSettings();
+    expect(fx.files.has(SETTINGS)).toBe(false);
+    expect(fx.files.has(MARKER)).toBe(false);
     expect(await takeSettingsRecoveryNotice()).toBeNull();
   });
 });

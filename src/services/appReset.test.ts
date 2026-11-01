@@ -326,6 +326,51 @@ describe("resetAllAppData (Clear All Data)", () => {
     for (const f of tmps) expect(fsExists(f), `${f} debe haber desaparecido`).toBe(false);
   });
 
+  it("revisión 0.1.67 (F-REV-1): el .tmp de feature-flags tampoco puede sobrevivir al borrado", async () => {
+    await seedKeys();
+    seedFullDevice();
+    // featureFlags.ts escribe `${path}.tmp` antes de renombrar (F3-11):
+    // una muerte del proceso en esa ventana deja esta copia completa de
+    // los interruptores. Era la sonda de la revisión adversaria de la
+    // 0.1.67, asentada como prueba permanente por el carril F-REV.
+    fsx.files.set(`${DOC}feature-flags.json.tmp`, "{\"panic\":true}");
+    await resetAllAppData();
+    expect(fsExists(`${DOC}feature-flags.json.tmp`), "feature-flags.json.tmp debe haber desaparecido").toBe(false);
+  });
+
+  it("revisión 0.1.67 (F-REV-2): el marcador settings-recovered.json tampoco puede sobrevivir al borrado", async () => {
+    await seedKeys();
+    seedFullDevice();
+    // Si el marcador (F3-10) sobreviviera, la app recién borrada
+    // abriría con el aviso falso de «tus ajustes estaban dañados».
+    // Era la segunda sonda de la revisión, asentada como permanente.
+    fsx.files.set(`${DOC}settings-recovered.json`, "{\"at\":1760000000000}");
+    await resetAllAppData();
+    expect(fsExists(`${DOC}settings-recovered.json`), "settings-recovered.json debe haber desaparecido").toBe(false);
+  });
+
+  it("carril F-REV (censo completo): crash-guard, traza nativa y acompañantes restored también mueren", async () => {
+    await seedKeys();
+    seedFullDevice();
+    // El censo de productores del carril F-REV encontró, más allá de
+    // los dos fallos de la revisión: el registro del CrashGuard del
+    // motor, la traza del último crash del módulo nativo ram-monitor
+    // y las formas del acompañante de conocimiento de una extracción
+    // (knowledgeBackupUriFor sustituye el sufijo .db: ni la forma
+    // heredada restored.knowledge.db ni la única casan con el antiguo
+    // prefijo restored.db a secas).
+    const family = [
+      `${DOC}nido-crash-guard.json`,
+      `${DOC}nido-last-crash.txt`,
+      `${DOC}restored.knowledge.db`,
+      `${DOC}restored.db-m1abc-zz9.knowledge.db`,
+      `${DOC}restored.db-m1abc-zz9.tmp-m1abc-zz9`,
+    ];
+    for (const f of family) fsx.files.set(f, "x");
+    await resetAllAppData();
+    for (const f of family) expect(fsExists(f), `${f} debe haber desaparecido`).toBe(false);
+  });
+
   it("auditoría 2026-10-31 (F2-02): la marca del último respaldo (puerta D9) muere con el borrado", async () => {
     await seedKeys();
     seedFullDevice();
