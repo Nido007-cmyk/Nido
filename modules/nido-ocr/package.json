@@ -1,0 +1,1 @@
+{"description":"Local Expo module: on-device OCR for imported documents (Tesseract via tesseract4android, language data bundled, no network). Consumed via src/services/ocr.ts.","license":"MIT","main":"index.ts","name":"nido-ocr","version":"0.1.0"}

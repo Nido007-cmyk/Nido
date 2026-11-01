@@ -1,0 +1,40 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.nidoocr'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.nidoocr"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+// The OCR engine resolves ONCE from its group-restricted JitPack
+// repository and is verified by SHA-256 (see docs/OCR_DESIGN.md);
+// the module itself never touches the network at runtime.
+repositories {
+  maven {
+    url = uri('https://jitpack.io')
+    content {
+      includeGroup 'cz.adaptech.tesseract4android'
+    }
+  }
+}
+
+dependencies {
+  // Tesseract 5.5.1 + Leptonica (Apache-2.0), pinned as Field Atlas
+  // pins it; AAR SHA-256 recorded in docs/OCR_DESIGN.md.
+  implementation 'cz.adaptech.tesseract4android:tesseract4android:4.9.0'
+  // Same PDF engine and version as modules/nido-pdf-text: here it
+  // only reads each page's text layer to find the scanned pages.
+  implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
+}
