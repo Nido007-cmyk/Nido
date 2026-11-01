@@ -93,7 +93,12 @@ vi.mock("./pdfText", () => {
   }
   return { PdfTextError, extractPdfTextCapped: async () => "" };
 });
-vi.mock("./ocr", () => ({ isOcrAvailable: async () => false }));
+vi.mock("./ocr", () => ({
+  isOcrAvailable: async () => false,
+  // C-06: el importador reconstruye cuerpos desde los trozos al
+  // detectar duplicados; la tabla de notas forma parte de su mundo.
+  OCR_PROVENANCE_NOTE: { es: "OCR (prueba).", en: "OCR (test).", pt: "OCR (teste)." },
+}));
 vi.mock("../models/settings", () => ({
   getActiveModelId: async () => null,
 }));

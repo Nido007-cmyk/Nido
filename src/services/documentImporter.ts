@@ -21,8 +21,20 @@ import {
   setCustomCollectionActive,
   listCustomCollections,
   getCollectionDocs,
+  getMetaValue,
+  setMetaValue,
+  listAllCollectionDocFingerprints,
+  listCollectionChunks,
+  recordCollectionDocFingerprints,
+  recordImportWarnings,
+  listImportWarnings as listImportWarningsInDb,
+  dismissImportWarnings as dismissImportWarningsInDb,
   CustomCollection,
+  AllDocFingerprintRow,
+  DocFingerprintRow,
+  StoredImportWarning,
 } from "../rag/db";
+import { sha256Hex } from "../models/sha256";
 
 /**
  * User-supplied document import for the local knowledge base (Settings >
@@ -213,18 +225,55 @@ function noteOcrFailure(sink: ImportSink | undefined, filename: string, e: unkno
  * nativo, acotado); `ocrEmpty` es un OCR que corrió y volvió sin
  * texto; `imageNoOcr`, una imagen en una versión sin el módulo.
  */
-export type ImportWarningReason = "ocrFailed" | "ocrEmpty" | "imageNoOcr" | "noText";
+export type ImportWarningReason =
+  | "ocrFailed"
+  | "ocrEmpty"
+  | "imageNoOcr"
+  | "noText"
+  /** C-06: el contenido ya vive en la biblioteca y no ha entrado. */
+  | "alreadyImported"
+  /** C-06: el contenido entra, pero es casi igual a un documento ya presente. */
+  | "similarImported";
 
 export interface ImportWarning {
   name: string;
   reason: ImportWarningReason;
   ocrCode?: string;
   ocrMessage?: string;
+  /**
+   * C-06 (alreadyImported/similarImported): la colección donde el
+   * documento ya vive. Ausente cuando la única copia está en la
+   * misma colección sobre la que cuelga el aviso.
+   */
+  detail?: string;
+  /**
+   * C-06: el nombre de fichero que el documento ya tenía — un
+   * fichero renombrado se avisa con AMBOS nombres para que la
+   * persona encuentre el original.
+   */
+  previousName?: string;
 }
 
 /** La colección creada por una importación, con los avisos por fichero sin texto de esa importación. */
 export interface ImportedCollection extends CustomCollection {
   importWarnings: ImportWarning[];
+  /**
+   * C-06, caso 1 con el lote entero: todo documento con contenido
+   * ya vivía en la biblioteca, así que NO se ha creado colección
+   * alguna y esta es la que ya guarda el primer duplicado. No es un
+   * error: la tarjeta ofrece «importar de todos modos» en el momento.
+   */
+  duplicateImport?: boolean;
+}
+
+/** Opciones extra de una importación (C-06). */
+export interface ImportDocumentsOptions {
+  /**
+   * «Importar de todos modos»: la persona, delante del aviso de
+   * idéntico, pide la copia a sabiendas. Sin esta opción, un
+   * documento cuyo contenido ya vive en la biblioteca no entra.
+   */
+  forceDuplicates?: boolean;
 }
 
 /** El aviso de un fichero, leído de los sumideros de su importación. */
@@ -240,6 +289,198 @@ function importWarningFor(name: string, sink: ImportSink): ImportWarning {
   if (sink.ocrEmptyNames.includes(name)) return { name, reason: "ocrEmpty" };
   if (sink.noOcrImageNames.includes(name)) return { name, reason: "imageNoOcr" };
   return { name, reason: "noText" };
+}
+
+/** H-11: los avisos persistidos de unas colecciones, leídos de la base. */
+export async function listImportWarnings(
+  collectionIds: readonly string[]
+): Promise<Record<string, ImportWarning[]>> {
+  const stored = await listImportWarningsInDb(collectionIds);
+  const out: Record<string, ImportWarning[]> = {};
+  for (const [id, warnings] of Object.entries(stored)) {
+    out[id] = warnings.map((w) => ({ ...w, reason: w.reason as ImportWarningReason }));
+  }
+  return out;
+}
+
+/** H-11: descarta un grupo de avisos (colección, razón) ya vistos. */
+export async function dismissImportWarnings(
+  collectionId: string,
+  reason: ImportWarningReason
+): Promise<void> {
+  await dismissImportWarningsInDb(collectionId, reason);
+}
+
+// ---------------------------------------------------------------------------
+// C-06: identidad por huella del contenido extraído
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalización v1 de la identidad: recorta los extremos y colapsa
+ * cada racha de blancos (espacios, tabuladores, saltos) a un solo
+ * espacio. Es la forma canónica sobre la que se huella un documento:
+ * dos copias del mismo texto separadas por un salto de línea de más
+ * son el mismo documento.
+ *
+ * Desviación declarada del papel de diseño (que huellaba
+ * título + "\n" + cuerpo): la huella es del CUERPO solo. Con el
+ * título dentro, un fichero renombrado — cuyo título derivado cambia
+ * con el nombre — escaparía del caso idéntico, y el propio papel
+ * pide que el renombrado avise con ambos nombres; el falso positivo
+ * que el papel acepta (dos documentos plantilla con el mismo texto
+ * son el mismo documento) solo se cumple con el cuerpo solo.
+ */
+export function normalizeContentText(text: string): string {
+  return text.trim().replace(/\s+/g, " ");
+}
+
+/**
+ * La huella de identidad de un documento: SHA-256 del cuerpo
+ * normalizado (v1). Un cuerpo vacío o de solo blancos no tiene
+ * identidad (null): los ficheros sin texto siguen el camino de los
+ * avisos, nunca el de los duplicados. Salvedad OCR declarada: la
+ * huella de un documento reconocido es la de ESE texto reconocido —
+ * dos lecturas del mismo papel pueden diferir y no casar; eso
+ * degrada a «no detectado», nunca a un falso duplicado.
+ */
+export function docContentFingerprint(body: string): string | null {
+  const normalized = normalizeContentText(body);
+  if (normalized.length === 0) return null;
+  return sha256Hex(new TextEncoder().encode(normalized));
+}
+
+/** La huella de un trozo, sobre la misma normalización v1. */
+function chunkFingerprint(piece: string): string {
+  return sha256Hex(new TextEncoder().encode(normalizeContentText(piece)));
+}
+
+/** C-06: fracción de trozos compartidos a partir de la cual un documento nuevo se dice parecido a uno presente. */
+const SIMILARITY_THRESHOLD = 0.9;
+
+/** Intersección con multiplicidad de dos listas de huellas de trozo. */
+function sharedChunkCount(a: readonly string[], b: readonly string[]): number {
+  const counts = new Map<string, number>();
+  for (const f of a) counts.set(f, (counts.get(f) ?? 0) + 1);
+  let shared = 0;
+  for (const f of b) {
+    const n = counts.get(f) ?? 0;
+    if (n > 0) {
+      shared++;
+      counts.set(f, n - 1);
+    }
+  }
+  return shared;
+}
+
+let ocrNotePrefixes: string[] | null = null;
+
+/**
+ * Reconstruye el cuerpo de un documento desde sus trozos guardados:
+ * quita la nota de procedencia OCR del primer trozo (el importador
+ * la antepone al cuerpo antes de trocear) y cose cada trozo
+ * siguiente por su solape — trozo_i empieza OVERLAP_CHARS antes del
+ * final del anterior, así que aporta desde ese desplazamiento.
+ * Los prefijos se calculan perezosos, al primer uso: a nivel de
+ * módulo romperían los mundos de prueba que simulan ./ocr sin la
+ * tabla de notas.
+ */
+function reconstructDocBody(bodies: readonly string[]): string {
+  if (bodies.length === 0) return "";
+  ocrNotePrefixes ??= Object.values(OCR_PROVENANCE_NOTE).map((note) => `${note}\n\n`);
+  let first = bodies[0];
+  for (const prefix of ocrNotePrefixes) {
+    if (first.startsWith(prefix)) {
+      first = first.slice(prefix.length);
+      break;
+    }
+  }
+  let out = first;
+  for (let i = 1; i < bodies.length; i++) out += bodies[i].slice(OVERLAP_CHARS);
+  return out;
+}
+
+/** Marca en meta de que el registro perezoso ya corrió (la clave lleva la versión de la normalización). */
+const REGISTRY_MARK_KEY = "import_fp_registry_v1";
+
+/**
+ * C-06: el registro perezoso de lo importado ANTES de la cura. Las
+ * colecciones viejas no tienen filas de huella: se reconstruye el
+ * cuerpo de cada documento cosiendo sus trozos y se registra su
+ * huella (kind "registry"), SIN BORRAR NADA — los gemelos que ya
+ * vivían duplicados quedan avisados por nombre en la colección de
+ * la copia posterior; borrar la copia es la acción de la persona.
+ *
+ * Corre una sola vez (marca en meta), es best-effort entero — el
+ * patrón de la barrida de huérfanos: si algo falla no se pone la
+ * marca y se reintenta en la próxima apertura o importación, y un
+ * fallo del registro nunca tumba ni la importación ni la Biblioteca.
+ */
+export async function ensureImportFingerprintRegistry(opts?: {
+  lifecycleEpoch?: number;
+}): Promise<void> {
+  try {
+    if (await getMetaValue(REGISTRY_MARK_KEY)) return;
+    const writeOpts =
+      opts?.lifecycleEpoch != null ? { lifecycleEpoch: opts.lifecycleEpoch } : undefined;
+    const collections = await listCustomCollections();
+    const createdAtById = new Map(collections.map((c) => [c.id, c.createdAt]));
+    const existing = await listAllCollectionDocFingerprints();
+    const have = new Set(existing.map((r) => `${r.collectionId}${r.docId}`));
+    const byFp = new Map<string, AllDocFingerprintRow[]>();
+    const group = (r: AllDocFingerprintRow) => {
+      const arr = byFp.get(r.fingerprint);
+      if (arr) arr.push(r);
+      else byFp.set(r.fingerprint, [r]);
+    };
+    existing.forEach(group);
+    for (const c of collections) {
+      const chunks = await listCollectionChunks(c.id);
+      const byDoc = new Map<string, typeof chunks>();
+      for (const ch of chunks) {
+        const arr = byDoc.get(ch.doc_id);
+        if (arr) arr.push(ch);
+        else byDoc.set(ch.doc_id, [ch]);
+      }
+      const rows: DocFingerprintRow[] = [];
+      for (const [docId, parts] of byDoc) {
+        if (have.has(`${c.id}${docId}`)) continue;
+        const fp = docContentFingerprint(reconstructDocBody(parts.map((p) => p.body)));
+        if (!fp) continue;
+        const row: DocFingerprintRow = {
+          docId,
+          fingerprint: fp,
+          fileName: parts[0]?.source ?? "",
+          kind: "registry",
+        };
+        rows.push(row);
+        group({ ...row, collectionId: c.id, collectionName: c.name });
+      }
+      if (rows.length > 0) await recordCollectionDocFingerprints(c.id, rows, writeOpts);
+    }
+    // Gemelos ya vivos (entre colecciones o dentro de una): aviso en
+    // la copia posterior nombrando a la primera; nada se borra.
+    for (const rows of byFp.values()) {
+      if (rows.length < 2) continue;
+      const sorted = [...rows].sort(
+        (a, b) =>
+          (createdAtById.get(a.collectionId) ?? 0) - (createdAtById.get(b.collectionId) ?? 0) ||
+          a.docId.localeCompare(b.docId)
+      );
+      const first = sorted[0];
+      for (const extra of sorted.slice(1)) {
+        const warning: StoredImportWarning = {
+          name: extra.fileName,
+          reason: "alreadyImported",
+          ...(extra.collectionId !== first.collectionId ? { detail: first.collectionName } : {}),
+          previousName: first.fileName,
+        };
+        await recordImportWarnings(extra.collectionId, [extra.fileName], [warning], writeOpts);
+      }
+    }
+    await setMetaValue(REGISTRY_MARK_KEY, "1", writeOpts);
+  } catch {
+    // Best-effort: sin marca, se reintenta la próxima vez.
+  }
 }
 
 /** El entorno de reconocimiento de UNA importación: idioma de la app y si esta versión trae el módulo. */
@@ -509,9 +750,10 @@ let importChain: Promise<unknown> = Promise.resolve();
 export function importDocuments(
   files: DocumentPicker.DocumentPickerAsset[],
   collectionName: string,
-  onProgress?: (p: ImportProgress) => void
+  onProgress?: (p: ImportProgress) => void,
+  opts?: ImportDocumentsOptions
 ): Promise<ImportedCollection> {
-  const run = importChain.then(() => importDocumentsSerial(files, collectionName, onProgress));
+  const run = importChain.then(() => importDocumentsSerial(files, collectionName, onProgress, opts));
   // La cadena nunca muere: el fallo lo recibe el llamante en `run`,
   // no la cadena que ordena a las importaciones siguientes.
   importChain = run.catch(() => {});
@@ -521,7 +763,8 @@ export function importDocuments(
 async function importDocumentsSerial(
   files: DocumentPicker.DocumentPickerAsset[],
   collectionName: string,
-  onProgress?: (p: ImportProgress) => void
+  onProgress?: (p: ImportProgress) => void,
+  opts?: ImportDocumentsOptions
 ): Promise<ImportedCollection> {
   const collectionId = `custom-${Date.now()}-${slug(collectionName)}`;
   // Token de ciclo de vida de ESTA importación (ver seedCorpus.seedNow): si
@@ -531,15 +774,18 @@ async function importDocumentsSerial(
   const runEpoch = getDbEpoch();
 
   onProgress?.({ stage: "reading" });
-  const allDocs: ParsedDoc[] = [];
-  const sink: ImportSink = {
-    emptyPdfNames: [],
-    ocrFailedNames: [],
-    ocrEmptyNames: [],
-    noOcrImageNames: [],
-    ocrErrorByName: new Map(),
-  };
-  const importWarnings: ImportWarning[] = [];
+  // ADV2-06: los sumideros son POR FICHERO, no uno del lote indexado
+  // por nombre. Con un sumidero único, dos ficheros del mismo nombre
+  // en un lote heredaban el uno la marca del otro: el «informe.pdf»
+  // sano salía avisado ocrFailed con el código y el mensaje del
+  // gemelo que sí falló (y escapaba de su propio ocrEmpty). Cada
+  // fichero lleva su sumidero y su desenlace viaja con él.
+  interface FileOutcome {
+    name: string;
+    sink: ImportSink;
+    docs: ParsedDoc[];
+  }
+  const outcomes: FileOutcome[] = [];
   // El reconocimiento se prepara una vez por importación: si esta
   // versión no trae el módulo, el idioma ni se lee (el camino sin
   // OCR es exactamente el de siempre). models/settings se importa
@@ -556,33 +802,211 @@ async function importDocumentsSerial(
   for (const file of files) {
     totalSizeBytes += file.size ?? 0;
     const fallbackTitle = file.name.replace(/\.[^.]+$/, "");
+    const sink: ImportSink = {
+      emptyPdfNames: [],
+      ocrFailedNames: [],
+      ocrEmptyNames: [],
+      noOcrImageNames: [],
+      ocrErrorByName: new Map(),
+    };
     const docs = await parseFileContent(file, fallbackTitle, MAX_IMPORT_CHUNKS - estimatedChunks, sink, env);
     // Se corta en cuanto la suma pasa del tope, sin leer los archivos que
-    // quedan ni trocear lo leído.
+    // quedan ni trocear lo leído. (La cuenta es previa a la
+    // deduplicación a propósito: conservadora — un lote de puros
+    // duplicados enormes se corta aquí aunque luego no entrara nada.)
     for (const d of docs) estimatedChunks += estimateChunkCount(d.body.trim().length);
     if (estimatedChunks > MAX_IMPORT_CHUNKS) throw tooManyChunks(estimatedChunks);
-    // R-06 P5 + Adversaria H-01: el aviso de un fichero nace de
-    // DOS suelos — que sus documentos no den ni un trozo (el de
-    // R-06 P5) o que su vía OCR haya quedado nombrada en los
-    // sumideros (rechazó o volvió vacía), aporte lo que aporte
-    // la capa de texto: sin el segundo suelo, el PDF mixto
-    // importaba «con éxito» callando que sus páginas escaneadas
-    // no entraron. Un fichero puede aportar chunks Y llevar
-    // aviso; la importación no se convierte en fracaso por ello.
-    if (
-      sink.ocrFailedNames.includes(file.name) ||
-      sink.ocrEmptyNames.includes(file.name) ||
-      docs.every((d) => d.body.trim().length === 0)
-    ) {
-      importWarnings.push(importWarningFor(file.name, sink));
-    }
-    allDocs.push(...docs);
+    outcomes.push({ name: file.name, sink, docs });
   }
+
+  // C-06: antes de trocear nada, el registro perezoso de lo ya
+  // importado (best-effort) y la detección por huella — lo idéntico
+  // no llega ni al embedding.
+  await ensureImportFingerprintRegistry({ lifecycleEpoch: runEpoch });
+  const force = opts?.forceDuplicates === true;
+  interface ParsedEntry {
+    fileName: string;
+    doc: ParsedDoc;
+    fingerprint: string | null;
+  }
+  const entries: ParsedEntry[] = outcomes.flatMap((o) =>
+    o.docs.map((doc) => ({ fileName: o.name, doc, fingerprint: docContentFingerprint(doc.body) }))
+  );
+  const accepted: ParsedEntry[] = [];
+  const dupByFile = new Map<string, { collections: Set<string>; previousName: string }>();
+  const similarByFile = new Map<string, { detail: string; previousName: string }>();
+  let existingCollections: CustomCollection[] = [];
+  if (!force) {
+    existingCollections = await listCustomCollections();
+    const liveRows = await listAllCollectionDocFingerprints();
+    const liveByFp = new Map<string, AllDocFingerprintRow[]>();
+    for (const r of liveRows) {
+      const arr = liveByFp.get(r.fingerprint);
+      if (arr) arr.push(r);
+      else liveByFp.set(r.fingerprint, [r]);
+    }
+    // Candidatos a parecido: los documentos ya presentes, con las
+    // huellas de sus trozos reconstruidos (cosidos y sin la nota de
+    // procedencia, igual que se trocearía su cuerpo hoy).
+    interface SimilarCandidate {
+      collectionName: string;
+      fileName: string;
+      chunkFps: string[];
+    }
+    const existingSimilar: SimilarCandidate[] = [];
+    for (const c of existingCollections) {
+      const stored = await listCollectionChunks(c.id);
+      const byDoc = new Map<string, typeof stored>();
+      for (const ch of stored) {
+        const arr = byDoc.get(ch.doc_id);
+        if (arr) arr.push(ch);
+        else byDoc.set(ch.doc_id, [ch]);
+      }
+      for (const parts of byDoc.values()) {
+        existingSimilar.push({
+          collectionName: c.name,
+          fileName: parts[0]?.source ?? "",
+          chunkFps: chunkText(reconstructDocBody(parts.map((p) => p.body))).map(chunkFingerprint),
+        });
+      }
+    }
+    const batchSeen = new Map<string, string>();
+    const acceptedSimilar: SimilarCandidate[] = [];
+    for (const e of entries) {
+      const fp = e.fingerprint;
+      if (fp) {
+        const liveHits = liveByFp.get(fp);
+        const batchHit = batchSeen.get(fp);
+        if (liveHits || batchHit) {
+          let rec = dupByFile.get(e.fileName);
+          if (!rec) {
+            rec = {
+              collections: new Set<string>(),
+              previousName: liveHits?.[0]?.fileName ?? batchHit!,
+            };
+            dupByFile.set(e.fileName, rec);
+          }
+          for (const h of liveHits ?? []) rec.collections.add(h.collectionName);
+          continue;
+        }
+        // Parecido (≥ 90 % de trozos idénticos): entra como copia
+        // nueva, avisada con el mejor parecido. Borde declarado:
+        // un documento de UN solo trozo editado comparte 0 trozos
+        // y esta red no lo ve — el idéntico exacto, que es el daño
+        // medido de C-06, queda cazado siempre por la huella.
+        const chunkFps = chunkText(e.doc.body).map(chunkFingerprint);
+        let best: { fraction: number; cand: SimilarCandidate } | null = null;
+        for (const cand of [...existingSimilar, ...acceptedSimilar]) {
+          const denom = Math.max(chunkFps.length, cand.chunkFps.length);
+          if (denom === 0) continue;
+          const fraction = sharedChunkCount(chunkFps, cand.chunkFps) / denom;
+          if (fraction >= SIMILARITY_THRESHOLD && (!best || fraction > best.fraction)) {
+            best = { fraction, cand };
+          }
+        }
+        if (best && !similarByFile.has(e.fileName)) {
+          similarByFile.set(e.fileName, {
+            detail: best.cand.collectionName,
+            previousName: best.cand.fileName,
+          });
+        }
+        batchSeen.set(fp, e.fileName);
+        acceptedSimilar.push({ collectionName, fileName: e.fileName, chunkFps });
+      }
+      accepted.push(e);
+    }
+  } else {
+    accepted.push(...entries);
+  }
+
+  // Los avisos del lote, por fichero y en el orden del lote.
+  const buildWarnings = (excludeCollectionName?: string): ImportWarning[] => {
+    const warnings: ImportWarning[] = [];
+    // Los avisos de identidad se emiten UNA vez por nombre: dos
+    // outcomes pueden compartir nombre (el mismo fichero dos veces,
+    // o gemelos del mismo nombre) y sus duplicados se agregan en un
+    // solo registro — emitirlo dos veces duplicaría la fila
+    // persistida (y rompería su clave primaria).
+    const identityWarned = new Set<string>();
+    for (const o of outcomes) {
+      // R-06 P5 + Adversaria H-01: el aviso OCR/sin-texto de un
+      // fichero nace de DOS suelos — que sus documentos no den ni
+      // un trozo (el de R-06 P5) o que su vía OCR haya quedado
+      // nombrada en SU sumidero (rechazó o volvió vacía), aporte
+      // lo que aporte la capa de texto: sin el segundo suelo, el
+      // PDF mixto importaba «con éxito» callando que sus páginas
+      // escaneadas no entraron. Un fichero puede aportar chunks Y
+      // llevar aviso; la importación no se convierte en fracaso.
+      if (
+        o.sink.ocrFailedNames.length > 0 ||
+        o.sink.ocrEmptyNames.length > 0 ||
+        o.docs.every((d) => d.body.trim().length === 0)
+      ) {
+        warnings.push(importWarningFor(o.name, o.sink));
+      }
+      if (!identityWarned.has(o.name)) {
+        const dup = dupByFile.get(o.name);
+        if (dup) {
+          identityWarned.add(o.name);
+          const names = [...dup.collections].filter((n) => n !== excludeCollectionName);
+          warnings.push({
+            name: o.name,
+            reason: "alreadyImported",
+            ...(names.length > 0 ? { detail: names.join(", ") } : {}),
+            previousName: dup.previousName,
+          });
+        }
+        const sim = similarByFile.get(o.name);
+        if (sim) {
+          identityWarned.add(o.name);
+          warnings.push({
+            name: o.name,
+            reason: "similarImported",
+            detail: sim.detail,
+            previousName: sim.previousName,
+          });
+        }
+      }
+    }
+    return warnings;
+  };
+
+  // C-06, caso 1 con el lote entero: todo lo que traía contenido ya
+  // vivía en la biblioteca. No nace colección ni es un error: los
+  // avisos se cuelgan de la colección que ya guarda el primer
+  // duplicado y se devuelve ESA colección marcada, para que la
+  // tarjeta ofrezca «importar de todos modos» en el momento.
+  if (accepted.length === 0 && dupByFile.size > 0) {
+    const liveRows = await listAllCollectionDocFingerprints();
+    const targetEntry = entries.find(
+      (e) => e.fingerprint && liveRows.some((r) => r.fingerprint === e.fingerprint)
+    );
+    const targetRow = targetEntry
+      ? liveRows.find((r) => r.fingerprint === targetEntry.fingerprint)
+      : undefined;
+    const target = targetRow
+      ? existingCollections.find((c) => c.id === targetRow.collectionId)
+      : undefined;
+    if (targetRow && target) {
+      const warnings = buildWarnings(target.name);
+      await recordImportWarnings(
+        target.id,
+        outcomes.map((o) => o.name),
+        warnings,
+        { lifecycleEpoch: runEpoch }
+      );
+      return { ...target, importWarnings: warnings, duplicateImport: true };
+    }
+  }
+  const importWarnings = buildWarnings();
 
   onProgress?.({ stage: "chunking" });
   const chunks: { chunkId: string; docId: string; title: string; body: string; source: string }[] = [];
-  allDocs.forEach((doc, docIndex) => {
+  const acceptedDocIds: string[] = [];
+  accepted.forEach((entry, docIndex) => {
+    const doc = entry.doc;
     const docId = `${collectionId}-doc${docIndex}-${slug(doc.title)}`;
+    acceptedDocIds.push(docId);
     // El texto reconocido lleva su procedencia DENTRO del cuerpo:
     // viaja con cada trozo y con sus citas (el OCR puede
     // equivocarse; quien lo lea, que lo sepa).
@@ -606,33 +1030,41 @@ async function importDocumentsSerial(
   // that failed, a scanned PDF in a build without OCR, or plain
   // no text — in that order.
   if (chunks.length === 0) {
-    if (sink.noOcrImageNames.length > 0) {
+    // ADV2-06: también el error de vacío total lee los desenlaces
+    // POR FICHERO en el orden del lote — el primer fichero sin OCR,
+    // el primer rechazo con SU código y SU mensaje (nunca los de un
+    // gemelo del mismo nombre), los PDF vacíos de todos.
+    const firstNoOcrImage = outcomes.find((o) => o.sink.noOcrImageNames.length > 0);
+    if (firstNoOcrImage) {
+      const name = firstNoOcrImage.sink.noOcrImageNames[0];
       throw new DocImportError(
         "imageNoOcr",
-        `"${sink.noOcrImageNames[0]}" is an image and this build has no OCR.`,
-        { name: sink.noOcrImageNames[0] }
+        `"${name}" is an image and this build has no OCR.`,
+        { name }
       );
     }
-    if (sink.ocrFailedNames.length > 0) {
-      const name = sink.ocrFailedNames[0];
+    const firstOcrFailure = outcomes.find((o) => o.sink.ocrFailedNames.length > 0);
+    if (firstOcrFailure) {
+      const name = firstOcrFailure.sink.ocrFailedNames[0];
       // R-06 P5: el error nombrado conserva la huella del rechazo
       // (código y mensaje acotado del nativo) en sus vars y en su
       // mensaje de registro — es lo que separa «la llamada rechazó»
       // de «resolvió vacía» fuera del aparato.
-      const detail = sink.ocrErrorByName.get(name);
+      const detail = firstOcrFailure.sink.ocrErrorByName.get(name);
       throw new DocImportError(
         "ocrFailed",
         `"${name}" couldn't be read even with OCR${detail ? ` (${detail.code}: ${detail.message})` : ""}.`,
         detail ? { name, ocrCode: detail.code, ocrMessage: detail.message } : { name }
       );
     }
-    const code = emptyImportErrorCode(sink.emptyPdfNames, ocrAvailable);
+    const emptyPdfNames = outcomes.flatMap((o) => o.sink.emptyPdfNames);
+    const code = emptyImportErrorCode(emptyPdfNames, ocrAvailable);
     throw new DocImportError(
       code,
       code === "scannedNoOcr"
-        ? `"${sink.emptyPdfNames[0]}" looks like a scanned PDF and this build has no OCR.`
+        ? `"${emptyPdfNames[0]}" looks like a scanned PDF and this build has no OCR.`
         : "No text found in the selected files.",
-      code === "scannedNoOcr" ? { name: sink.emptyPdfNames[0] } : {}
+      code === "scannedNoOcr" ? { name: emptyPdfNames[0] } : {}
     );
   }
   if (chunks.length > MAX_IMPORT_CHUNKS) {
@@ -676,11 +1108,35 @@ async function importDocumentsSerial(
       id: collectionId,
       name: collectionName,
       sourceFilename: files.map((f) => f.name).join(", "),
-      docCount: allDocs.length,
+      docCount: accepted.length,
       chunkCount: chunks.length,
       sizeBytes: totalSizeBytes,
     };
     await createCustomCollection(collection, { lifecycleEpoch: runEpoch });
+    // C-06 + H-11: con la colección ya nacida, se registran las
+    // huellas de lo que entró y se persisten los avisos del lote —
+    // dentro del mismo try: si el ciclo de vida murió a mitad, el
+    // catch borra la colección y la cascada se lleva ambas filas.
+    const fingerprintRows: DocFingerprintRow[] = [];
+    accepted.forEach((entry, i) => {
+      if (entry.fingerprint) {
+        fingerprintRows.push({
+          docId: acceptedDocIds[i],
+          fingerprint: entry.fingerprint,
+          fileName: entry.fileName,
+          kind: force ? "forced" : "import",
+        });
+      }
+    });
+    await recordCollectionDocFingerprints(collectionId, fingerprintRows, {
+      lifecycleEpoch: runEpoch,
+    });
+    await recordImportWarnings(
+      collectionId,
+      outcomes.map((o) => o.name),
+      importWarnings,
+      { lifecycleEpoch: runEpoch }
+    );
   } catch (e) {
     // Half-imported chunks had no collection row: invisible in search but
     // taking space forever. Remove them (best-effort) and report the error.

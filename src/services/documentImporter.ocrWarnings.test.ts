@@ -112,6 +112,17 @@ vi.mock("../rag/db", () => ({
   setCustomCollectionActive: async () => {},
   listCustomCollections: async () => W().created.map((id) => ({ id })),
   getCollectionDocs: async () => [],
+  // C-06/H-11: en este mundo el registro ya corrió (meta puesta) y
+  // no hay huellas vivas: la deduplicación entre importaciones no
+  // actúa; la de dentro del lote sí (viaja en memoria del importador).
+  getMetaValue: async () => "1",
+  setMetaValue: async () => {},
+  listAllCollectionDocFingerprints: async () => [],
+  listCollectionChunks: async () => [],
+  recordCollectionDocFingerprints: async () => {},
+  recordImportWarnings: async () => {},
+  listImportWarnings: async () => ({}),
+  dismissImportWarnings: async () => {},
 }));
 
 type M = typeof import("./documentImporter");
@@ -203,13 +214,20 @@ describe("R-06 P5: avisos por fichero sin texto", () => {
     expect(result.importWarnings).toEqual([]);
   });
 
-  it("dos ficheros de texto idénticos dan 2 chunks: no hay deduplicación al importar", async () => {
+  it("dos ficheros con el mismo contenido en un lote dan 1 chunk: el segundo cae en idéntico (C-06)", async () => {
+    // Hasta C-06 este test documentaba lo contrario («no hay
+    // deduplicación al importar», con 2 chunks y sin avisos): era el
+    // comportamiento asentado y es exactamente el que la tanda
+    // cambia. La identidad es el contenido extraído, así que b.txt
+    // —mismo cuerpo, otro nombre— no entra y queda avisado.
     const text = "palabra ".repeat(50);
     world.files.set("file:///a.txt", text);
     world.files.set("file:///b.txt", text);
     const result = await M.importDocuments([asset("a.txt", 400), asset("b.txt", 400)], "Gemelos");
-    expect(world.inserted).toHaveLength(2);
-    expect(result.importWarnings).toEqual([]);
+    expect(world.inserted).toHaveLength(1);
+    expect(result.importWarnings).toEqual([
+      { name: "b.txt", reason: "alreadyImported", previousName: "a.txt" },
+    ]);
   });
 });
 

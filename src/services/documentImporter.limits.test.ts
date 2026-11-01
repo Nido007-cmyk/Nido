@@ -95,6 +95,15 @@ vi.mock("../rag/db", () => ({
   setCustomCollectionActive: async () => {},
   listCustomCollections: async () => W().created.map((id) => ({ id })),
   getCollectionDocs: async () => [],
+  // C-06/H-11: stubs inertes — este mundo mide límites, no identidad.
+  getMetaValue: async () => "1",
+  setMetaValue: async () => {},
+  listAllCollectionDocFingerprints: async () => [],
+  listCollectionChunks: async () => [],
+  recordCollectionDocFingerprints: async () => {},
+  recordImportWarnings: async () => {},
+  listImportWarnings: async () => ({}),
+  dismissImportWarnings: async () => {},
 }));
 
 type M = typeof import("./documentImporter");
