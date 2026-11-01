@@ -287,3 +287,35 @@ describe("R-06 (ronda 0.1.68) — reloj y fecha solo en la pregunta desnuda", ()
     expect(classifyIntent("¿qué tengo el lunes?")).toBe("actuar");
   });
 });
+
+describe("classifyIntent — N-01 (auditoría 2026-11-01): la puerta se arregla sola", () => {
+  // intent.ts no se tocó: la puerta consulta el MISMO extractor que el
+  // loop (0.1.22), así que la familia del «que» complementante sube a
+  // «actuar» por el arreglo de extractReminderCore, sin código nuevo aquí.
+  it.each([
+    "¿Puedes recordarme que compre leche mañana?",
+    "Puedes recordarme que compre leche mañana",
+    "Oye, ¿puedes recordarme que compre leche mañana?",
+    "¿Podrías recordarme que pague la luz el viernes?",
+    "Avísame que saque la ropa a las 3",
+    "Despiértame que salgo a las 7",
+    "Remind me que compre leche mañana",
+    "Pode me lembrar de comprar leite amanhã?",
+    "Você pode me lembrar de comprar leite amanhã?",
+    "Você me lembra de comprar leite amanhã?",
+  ])("%p → actuar", (text) => {
+    expect(classifyIntent(text)).toBe("actuar");
+  });
+
+  it("«¿Me recuerdas que llame al médico mañana?» conserva la etiqueta de su familia («recordar»)", () => {
+    // Como «recuérdame que tengo dentista mañana» (fijado arriba): la
+    // etiqueta de la puerta no decide el desenlace — el loop consulta el
+    // extractor y crea el recordatorio; la composición lo afirma entero.
+    expect(classifyIntent("¿Me recuerdas que llame al médico mañana?")).toBe("recordar");
+  });
+
+  it("la costura con recordar no se mueve: el hecho con fecha declarada sigue «recordar»", () => {
+    expect(classifyIntent("recuérdame que el cumpleaños de mi mamá es el 15 de marzo")).toBe("recordar");
+    expect(classifyIntent("¿Puedes recordarme que mi cumple es en mayo?")).not.toBe("actuar");
+  });
+});

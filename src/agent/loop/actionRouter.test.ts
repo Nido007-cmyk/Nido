@@ -444,3 +444,160 @@ describe("0.1.20 (P3-16) — temporizador", () => {
     expect(extractTimerAction("recuérdame en 10 minutos comprar pan")).toBeNull();
   });
 });
+
+describe("N-01 (auditoría 2026-11-01) — el «que» complementante no es una pregunta", () => {
+  // Las fechas se afirman contra el reloj real (el núcleo parsea sin
+  // `now`): «mañana» es el día siguiente a las 9:00.
+  const expectTomorrow9 = (dueAt: string | null) => {
+    expect(dueAt).not.toBeNull();
+    const d = new Date(dueAt!);
+    const t = new Date();
+    t.setDate(t.getDate() + 1);
+    expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([t.getFullYear(), t.getMonth(), t.getDate()]);
+    expect(d.getHours()).toBe(9);
+    expect(d.getMinutes()).toBe(0);
+  };
+  const expectNextAt = (dueAt: string | null, hour: number) => {
+    expect(dueAt).not.toBeNull();
+    const d = new Date(dueAt!);
+    expect(d.getHours()).toBe(hour);
+    expect(d.getMinutes()).toBe(0);
+    expect(d.getTime()).toBeGreaterThan(Date.now() - 60_000);
+    expect(d.getTime()).toBeLessThan(Date.now() + 25 * 3600_000);
+  };
+
+  it("la forma cortés con «que» crea (con signos y en dictado sin signos)", () => {
+    for (const phrase of [
+      "¿Puedes recordarme que compre leche mañana?",
+      "Puedes recordarme que compre leche mañana",
+    ]) {
+      const r = extractReminderAction(phrase);
+      expect(r).not.toBeNull();
+      expect(r!.text).toBe("compre leche");
+      expectTomorrow9(r!.dueAt);
+    }
+  });
+
+  it("«¿Podrías recordarme que pague la luz el viernes?» crea para el viernes a las 9", () => {
+    const r = extractReminderAction("¿Podrías recordarme que pague la luz el viernes?");
+    expect(r).not.toBeNull();
+    expect(r!.text).toBe("pague la luz");
+    const d = new Date(r!.dueAt!);
+    expect(d.getDay()).toBe(5);
+    expect(d.getHours()).toBe(9);
+    expect(d.getTime()).toBeGreaterThan(Date.now() - 60_000);
+    expect(d.getTime()).toBeLessThan(Date.now() + 8 * 24 * 3600_000);
+  });
+
+  it("«Recuérdame que compre leche mañana» crea (antes: null y hecho espurio)", () => {
+    const r = extractReminderAction("Recuérdame que compre leche mañana");
+    expect(r).not.toBeNull();
+    expect(r!.text).toBe("compre leche");
+    expectTomorrow9(r!.dueAt);
+  });
+
+  it("«¿Me recuerdas que llame al médico mañana?» crea", () => {
+    const r = extractReminderAction("¿Me recuerdas que llame al médico mañana?");
+    expect(r).not.toBeNull();
+    expect(r!.text).toBe("llame al médico");
+    expectTomorrow9(r!.dueAt);
+  });
+
+  it("«Avísame que saque la ropa a las 3» crea para la siguiente ocurrencia de las 15:00", () => {
+    const r = extractReminderAction("Avísame que saque la ropa a las 3");
+    expect(r).not.toBeNull();
+    expect(r!.text).toBe("saque la ropa");
+    expectNextAt(r!.dueAt, 15);
+  });
+
+  it("«Despiértame que salgo a las 7» crea para la siguiente ocurrencia de las 7:00", () => {
+    const r = extractReminderAction("Despiértame que salgo a las 7");
+    expect(r).not.toBeNull();
+    expect(r!.text).toContain("salgo");
+    expectNextAt(r!.dueAt, 7);
+  });
+
+  it("el dictado sin acentos entra entero: «Recuerdame que compre la leche manana»", () => {
+    const r = extractReminderAction("Recuerdame que compre la leche manana");
+    expect(r).not.toBeNull();
+    expect(r!.text).toContain("leche");
+    expectTomorrow9(r!.dueAt);
+  });
+
+  it("«Puedes recordarme que te llamo mañana» crea con título «te llamo» (aceptado: es lo pedido)", () => {
+    const r = extractReminderAction("Puedes recordarme que te llamo mañana");
+    expect(r).not.toBeNull();
+    expect(r!.text).toBe("te llamo");
+    expectTomorrow9(r!.dueAt);
+  });
+
+  it("la mezcla del hogar entra: «Remind me que compre leche mañana»", () => {
+    const r = extractReminderAction("Remind me que compre leche mañana");
+    expect(r).not.toBeNull();
+    expect(r!.text).toBe("compre leche");
+    expectTomorrow9(r!.dueAt);
+  });
+
+  it("inglés: «Remind me that I have a dentist tomorrow» crea SIN el «that» en el título", () => {
+    const r = extractReminderAction("Remind me that I have a dentist tomorrow");
+    expect(r).not.toBeNull();
+    expect(r!.text).toBe("I have a dentist");
+    expectTomorrow9(r!.dueAt);
+  });
+
+  it("portugués: el infinitivo «lembrar» crea con fecha (las tres formas)", () => {
+    for (const phrase of [
+      "Pode me lembrar de comprar leite amanhã?",
+      "Você pode me lembrar de comprar leite amanhã?",
+      "Você me lembra de comprar leite amanhã?",
+    ]) {
+      const r = extractReminderAction(phrase);
+      expect(r).not.toBeNull();
+      expect(r!.text).toBe("comprar leite");
+      expectTomorrow9(r!.dueAt);
+    }
+  });
+
+  it("portugués: el infinitivo sin fecha NO crea (requisito 0.1.41, como las formas de pregunta)", () => {
+    expect(extractReminderAction("Pode me lembrar de comprar leite")).toBeNull();
+    expect(extractReminderAction("Você pode me lembrar de comprar leite")).toBeNull();
+  });
+
+  it("las preguntas disfrazadas siguen sin crear (guardia y doble control)", () => {
+    expect(extractReminderAction("¿Puedes recordarme qué significa esto?")).toBeNull();
+    expect(extractReminderAction("¿Puedes recordarme cómo se llama la capital de Francia?")).toBeNull();
+    expect(extractReminderAction("¿Puedes recordarme que cómo se llama la capital?")).toBeNull();
+  });
+
+  it("el residuo declarado: «Recuérdame que significa esto» (sin fecha) no crea", () => {
+    expect(extractReminderAction("Recuérdame que significa esto")).toBeNull();
+  });
+
+  it("el hecho disfrazado sin fecha declarada no crea: «…que mi cumple es en mayo»", () => {
+    expect(extractReminderAction("¿Puedes recordarme que mi cumple es en mayo?")).toBeNull();
+  });
+
+  it("la costura con recordar: hecho con fecha declarada y sin evento → decide memoria (null)", () => {
+    // El ejemplo del carrusel (0.1.34, fijado en el aparato): el hecho
+    // se guarda limpio y el aviso nace de la rama de hechos.
+    expect(extractReminderAction("Recuérdame que el cumpleaños de mi mamá es el 15 de marzo")).toBeNull();
+  });
+
+  it("la costura con recordar: el mismo marco CON evento en primera persona sí crea aquí", () => {
+    const r = extractReminderAction("Recuérdame que tengo la cita el 15 de marzo");
+    expect(r).not.toBeNull();
+    expect(r!.text).toBe("tengo la cita");
+    const d = new Date(r!.dueAt!);
+    expect(d.getMonth()).toBe(2);
+    expect(d.getDate()).toBe(15);
+  });
+
+  it("controles: las formas que ya entraban no se mueven", () => {
+    expect(extractReminderAction("Puedes recordarme comprar leche mañana")).not.toBeNull();
+    expect(extractReminderAction("Recuérdame mañana que compre leche")).not.toBeNull();
+    expect(extractReminderAction("¿Me recuerdas mañana que llame al médico?")).not.toBeNull();
+    expect(extractReminderAction("Avísame en 20 minutos que saque la ropa")).not.toBeNull();
+    expect(extractReminderAction("Can you remind me to buy milk tomorrow?")).not.toBeNull();
+    expect(extractReminderAction("Me lembra de comprar leite amanhã")).not.toBeNull();
+  });
+});

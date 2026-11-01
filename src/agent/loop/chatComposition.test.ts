@@ -1017,3 +1017,41 @@ describe("composición — ADV2-09: el testigo de la sonda exige el dato en el h
     expect(t.response).toBe("La clave del wifi es 4829.");
   });
 });
+
+describe("composición — N-01 (anexo, pieza 2): la fixture DOBLE del «que» complementante", () => {
+  // La aserción que el anexo suma a la tanda: antes del arreglo,
+  // «Recuérdame que compre leche mañana» no creaba recordatorio Y la
+  // rama de hechos guardaba la tarea como hecho («compre leche
+  // mañana», medido con extractRememberFact en la sonda). El dique es
+  // la precedencia del loop (recordatorio antes que hechos): las dos
+  // mitades se afirman juntas o la tanda queda verde a medias.
+  it("crea el recordatorio Y no queda guardado el hecho espurio", async () => {
+    const engine = fakeEngine();
+    const t = await send("Recuérdame que compre leche mañana", "es", engine);
+    expect(t.route).toBe("agent");
+    expect(data.reminders).toHaveLength(1);
+    expect(data.reminders[0].text).toBe("compre leche");
+    expect(data.facts).toHaveLength(0);
+    expect(engine.calls).toHaveLength(0);
+  });
+
+  it("la gemela dictada sin acentos, mismo desenlace doble", async () => {
+    const engine = fakeEngine();
+    const t = await send("Recuerdame que compre la leche manana", "es", engine);
+    expect(t.route).toBe("agent");
+    expect(data.reminders).toHaveLength(1);
+    expect(data.reminders[0].text).toContain("leche");
+    expect(data.facts).toHaveLength(0);
+    expect(engine.calls).toHaveLength(0);
+  });
+
+  it("«¿Me recuerdas que llame al médico mañana?» crea el recordatorio en el loop (etiqueta «recordar»)", async () => {
+    const engine = fakeEngine();
+    const t = await send("¿Me recuerdas que llame al médico mañana?", "es", engine);
+    expect(t.route).toBe("agent");
+    expect(data.reminders).toHaveLength(1);
+    expect(data.reminders[0].text).toBe("llame al médico");
+    expect(data.facts).toHaveLength(0);
+    expect(engine.calls).toHaveLength(0);
+  });
+});
