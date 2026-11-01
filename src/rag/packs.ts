@@ -24,6 +24,7 @@ import { guideTitleOf, markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId, section
 import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "./embeddingProfile";
 import { packIndexIfReady, releaseAllIndexes, searchPackIndex } from "./vectorIndex";
 import { isNativeGateTaken } from "../inference/nativeGate";
+import { isBackgroundIndexingHeld } from "../diagnostics/nativeSession";
 import { composeCrisisAnswer, composeFactsAnswer, composeMergedCrisisAnswer, emergencyRegions, markOutdated, mergePackFacts, type FactLang, type FactsAnswer, type PackFact, type PackRegion } from "./packFacts";
 
 const PACK_CANDIDATES = 400;
@@ -293,6 +294,9 @@ export async function searchPacks(
  */
 export async function prepareVectorIndexes(modelSha256: string | null, profile: EmbeddingProfile): Promise<void> {
   if (!modelSha256 || profile.id === BGE_SMALL_EN_PROFILE.id) return;
+  // M3 (crash nativo): con el fondo apagado por la muerte de la
+  // sesión anterior, tampoco se construyen índices esta sesión.
+  if (isBackgroundIndexingHeld()) return;
   // M1 (crash nativo): construir índices es trabajo de fondo lanzado
   // en la misma tormenta de arranque que el re-indexado; con una
   // generación en vuelo se difiere entero (es barato cuando los

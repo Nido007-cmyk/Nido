@@ -6,6 +6,11 @@
 
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { isNativeGateTaken, nativeGateBegin, nativeGateEnd } from "../inference/nativeGate";
+import {
+  holdBackgroundIndexingForSession,
+  isBackgroundIndexingHeld,
+  resetBackgroundIndexingHold,
+} from "../diagnostics/nativeSession";
 
 type Chunk = { chunkId: string; title: string; body: string };
 type World = {
@@ -154,5 +159,21 @@ describe("reembedMissing", () => {
     expect(done).toEqual({ done: 60, total: 60, running: false });
     expect(W().embedded).toHaveLength(60);
     expect(W().vectors.size).toBe(60);
+  });
+
+  it("M3: con el fondo apagado por la muerte de la sesión anterior no incrusta nada; al olvidarse el apagado, la deuda se completa", async () => {
+    holdBackgroundIndexingForSession();
+    try {
+      const held = await m.reembedMissing();
+      expect(held.running).toBe(false);
+      expect(W().embedded).toHaveLength(0);
+      expect(W().vectors.size).toBe(0);
+    } finally {
+      resetBackgroundIndexingHold();
+    }
+    expect(isBackgroundIndexingHeld()).toBe(false);
+    const done = await m.reembedMissing();
+    expect(done).toEqual({ done: 60, total: 60, running: false });
+    expect(W().embedded).toHaveLength(60);
   });
 });

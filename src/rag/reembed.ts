@@ -23,6 +23,7 @@
 import { embeddingEngine } from "./embed";
 import { countChunkVectors, getDbEpoch, insertEmbeddingForModel, listChunksWithoutEmbedding } from "./db";
 import { isNativeGateTaken, waitForNativeGateFree } from "../inference/nativeGate";
+import { isBackgroundIndexingHeld } from "../diagnostics/nativeSession";
 
 export interface ReembedProgress {
   done: number;
@@ -70,6 +71,13 @@ export function reembedMissing(): Promise<ReembedProgress> {
 async function run(): Promise<ReembedProgress> {
   const sha = embeddingEngine.loadedModelSha256;
   if (!sha) return last;
+  // M3 (crash nativo): si el arranque cruzó una muerte CRASH_NATIVE
+  // con una generación en vuelo, el indexado de fondo queda
+  // desactivado toda la sesión — no se repite contra la siguiente
+  // generación la tormenta que pudo firmar aquella muerte. La deuda
+  // sigue ahí y el próximo arranque la recoge, como tras cualquier
+  // parada.
+  if (isBackgroundIndexingHeld()) return last;
   const epoch = getDbEpoch();
   const counts = await countChunkVectors();
   let done = counts.withVector;
