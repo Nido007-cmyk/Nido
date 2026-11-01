@@ -177,7 +177,12 @@ describe("hybrid ranking with real lexical hits", () => {
     const semantic: RetrievedChunk[] = [
       { chunkId: "s1", docId: "s1", title: "DNA", body: "", score: 0.65, matchType: "semantic" },
     ];
-    expect(lexicalSearch("How does DNA replication work?")).toEqual([]);
+    // La premisa «sin resultados léxicos» se mide contra el corpus real:
+    // hasta C-01 la pregunta era «How does DNA replication work?», pero
+    // con el corpus de 858 documentos el artículo «Protein» (que trata la
+    // replicación del ADN) ya supera la puerta léxica y la premisa dejó
+    // de ser cierta. Una pregunta fuera del corpus la mantiene honesta.
+    expect(lexicalSearch("How do I change a bicycle tire?")).toEqual([]);
     expect(titles(fuseRetrievalResults([], semantic, 6))).toEqual(["DNA"]);
   });
 });
