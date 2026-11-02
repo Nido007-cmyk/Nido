@@ -3,7 +3,7 @@
 # Knowledge packs
 
 NIDO responde desde una base de conocimiento offline en el teléfono. Siempre tiene
-la pequeña integrada (unos 5.300 artículos cortos derivados de Wikipedia). Un
+la pequeña integrada (unos 5.900 artículos cortos derivados de Wikipedia). Un
 **knowledge pack** añade muchos más artículos en un solo archivo listo para usar:
 texto, un índice de búsqueda por palabras clave y embeddings, todo construido en un
 ordenador para que el teléfono no tenga que indexar nada.

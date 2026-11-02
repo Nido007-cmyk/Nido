@@ -6,7 +6,7 @@
 
 import * as FileSystem from "expo-file-system/legacy";
 import { getDb, getDbEpoch, insertChunk, insertChunkWithoutEmbedding, deleteSeedChunks, ChunkRecord } from "./db";
-import { planSeed } from "./seedPlan";
+import { planSeed, uniqueSeedIds } from "./seedPlan";
 import { publishStatus } from "./corpusIndexStatus";
 export { getCorpusIndexStatus, onCorpusIndexStatus } from "./corpusIndexStatus";
 export type { CorpusIndexStatus } from "./corpusIndexStatus";
@@ -15,12 +15,20 @@ import minimumCorpus from "../../assets/corpus/corpus.json";
 import { CORPUS_CATALOG } from "../models/manifest";
 
 /**
+ * Date of the Wikipedia snapshot the bundled corpus was captured from
+ * (C-09): the real capture date, written here because corpus.json is a
+ * bare array of documents with no room for metadata.
+ */
+export const CORPUS_SNAPSHOT_DATE = "2026-11-01";
+
+/**
  * Knowledge base sources, layered:
  *
  * 1. APP_TOPIC_DOCS — a handful of docs about the app's own architecture
  *    (useful for the bounty's own eval questions about MoE/mmap/RAM budgeting).
- * 2. minimumCorpus (assets/corpus/corpus.json) — 300 Wikipedia-derived docs,
- *    bundled directly in the JS bundle, always present, no download needed.
+ * 2. minimumCorpus (assets/corpus/corpus.json) — 858 Wikipedia-derived
+ *    docs (snapshot of 2026-11-01, see CORPUS_SNAPSHOT_DATE), bundled
+ *    directly in the JS bundle, always present, no download needed.
  * 3. Downloaded corpus packs (CORPUS_CATALOG entries, "standard"/"full"
  *    tiers) — read from disk if the user downloaded them via Settings or
  *    the first-run tier picker; skipped if not present.
@@ -33,10 +41,6 @@ import { CORPUS_CATALOG } from "../models/manifest";
  * whatever embedding model actually ships.
  */
 type SeedDoc = { id: string; title: string; source: string; body: string; packId?: string };
-
-function slug(title: string): string {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
 
 const APP_TOPIC_DOCS: SeedDoc[] = [
   {
@@ -119,9 +123,11 @@ const APP_TOPIC_DOCS: SeedDoc[] = [
   },
 ];
 
-const MINIMUM_CORPUS_DOCS: SeedDoc[] = (
-  minimumCorpus as Array<{ title: string; source: string; body: string }>
-).map((d) => ({ ...d, id: `wiki-min-${slug(d.title)}` }));
+const MINIMUM_CORPUS_DOCS: SeedDoc[] = (() => {
+  const raw = minimumCorpus as Array<{ title: string; source: string; body: string }>;
+  const ids = uniqueSeedIds("wiki-min-", raw.map((d) => d.title));
+  return raw.map((d, i) => ({ ...d, id: ids[i] }));
+})();
 
 async function loadDownloadedCorpusPacks(): Promise<{ docs: SeedDoc[]; removedPackIds: string[] }> {
   const docs: SeedDoc[] = [];
@@ -140,9 +146,10 @@ async function loadDownloadedCorpusPacks(): Promise<{ docs: SeedDoc[]; removedPa
     try {
       const raw = await FileSystem.readAsStringAsync(path);
       const parsed = JSON.parse(raw) as Array<{ title: string; source: string; body: string }>;
-      for (const d of parsed) {
-        docs.push({ ...d, id: `wiki-${pack.id}-${slug(d.title)}`, packId: pack.id });
-      }
+      const ids = uniqueSeedIds(`wiki-${pack.id}-`, parsed.map((d) => d.title));
+      parsed.forEach((d, i) => {
+        docs.push({ ...d, id: ids[i], packId: pack.id });
+      });
     } catch (e) {
       console.warn(`Failed to load corpus pack ${pack.id}:`, e);
     }

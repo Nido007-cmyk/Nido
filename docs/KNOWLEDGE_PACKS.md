@@ -3,7 +3,7 @@
 # Knowledge packs
 
 NIDO answers from an offline knowledge base on the phone. It always has the small
-built-in one (about 5,300 short Wikipedia-derived articles). A **knowledge pack**
+built-in one (about 5,900 short Wikipedia-derived articles). A **knowledge pack**
 adds many more articles in one ready-made file: text, a keyword search index and
 embeddings, all built on a computer so the phone doesn't have to index anything.
 
