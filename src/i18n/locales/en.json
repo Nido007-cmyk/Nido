@@ -1394,7 +1394,7 @@
   },
   "multilingual": {
     "title": "Spanish & Portuguese search",
-    "body": "Understands questions in Spanish and Portuguese and finds the right articles even when they're written in English. Downloads a 126 MB model and rebuilds the search index in the background; keyword search keeps working meanwhile. Everything stays on this device.",
+    "body": "Understands questions in Spanish and Portuguese and finds the right articles even when they're written in English. Downloads a 126 MB model and rebuilds the search index in the background; keyword search keeps working meanwhile. All of this happens on this device.",
     "statusOn": "On: multilingual search model in use.",
     "statusOff": "Off: English-only search model.",
     "downloading": "Downloading the model… {{pct}}%",

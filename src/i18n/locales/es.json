@@ -1394,7 +1394,7 @@
   },
   "multilingual": {
     "title": "Búsqueda en español y portugués",
-    "body": "Entiende preguntas en español y portugués y encuentra los artículos correctos aunque estén escritos en inglés. Descarga un modelo de 126 MB y rehace el índice de búsqueda en segundo plano; mientras tanto la búsqueda por palabras sigue funcionando. Todo se queda en este dispositivo.",
+    "body": "Entiende preguntas en español y portugués y encuentra los artículos correctos aunque estén escritos en inglés. Descarga un modelo de 126 MB y rehace el índice de búsqueda en segundo plano; mientras tanto la búsqueda por palabras sigue funcionando. Todo esto pasa en este dispositivo.",
     "statusOn": "Activada: se usa el modelo de búsqueda multilingüe.",
     "statusOff": "Desactivada: modelo de búsqueda solo en inglés.",
     "downloading": "Descargando el modelo… {{pct}}%",

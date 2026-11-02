@@ -1394,7 +1394,7 @@
   },
   "multilingual": {
     "title": "Busca em espanhol e português",
-    "body": "Entende perguntas em espanhol e português e encontra os artigos certos mesmo quando estão escritos em inglês. Baixa um modelo de 126 MB e refaz o índice de busca em segundo plano; enquanto isso a busca por palavras continua funcionando. Tudo fica neste dispositivo.",
+    "body": "Entende perguntas em espanhol e português e encontra os artigos certos mesmo quando estão escritos em inglês. Baixa um modelo de 126 MB e refaz o índice de busca em segundo plano; enquanto isso a busca por palavras continua funcionando. Tudo isso acontece neste dispositivo.",
     "statusOn": "Ativada: usando o modelo de busca multilíngue.",
     "statusOff": "Desativada: modelo de busca só em inglês.",
     "downloading": "Baixando o modelo… {{pct}}%",
