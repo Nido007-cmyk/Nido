@@ -1,1 +1,8 @@
-{"guides":[],"program":"Reverificación clínica del pack Esencial (puerta R-00, 2026-11-02)","rule":"El conjunto de guías selladas solo crece, y solo en una tanda con su ledger (chequeo (a) de R00-5: scripts/check-seal-ratchet.mjs). Cada tanda que sella actualiza esta lista en el mismo commit que su verification-ledger.json."}
+{
+  "guides": [
+    "esencial-rcp-adultos",
+    "esencial-rcp-ninos-y-bebes"
+  ],
+  "program": "Reverificación clínica del pack Esencial (puerta R-00, 2026-11-02)",
+  "rule": "El conjunto de guías selladas solo crece, y solo en una tanda con su ledger (chequeo (a) de R00-5: scripts/check-seal-ratchet.mjs). Cada tanda que sella actualiza esta lista en el mismo commit que su verification-ledger.json."
+}
