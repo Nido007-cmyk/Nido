@@ -16,7 +16,7 @@ Céu muito escuro ou esverdeado, granizo grande, uma nuvem baixa e giratória, u
 - **Casa pré-fabricada, trailer ou barraca**: não são seguros. Vá para um prédio sólido próximo antes que ele chegue.
 - **No carro**: se puder, dirija até um prédio resistente. Se não houver tempo, fique com o cinto colocado, abaixe-se abaixo das janelas e cubra a cabeça; ou, se houver uma área claramente mais baixa que a estrada, deite-se nela cobrindo a cabeça.
 - Não se refugie debaixo de uma ponte.
-- Não tente ultrapassar um tornado em zonas urbanas ou com tráfego.
+- Não tente ultrapassar um tornado em zonas urbanas ou com trânsito.
 
 ## Depois
 - Cuidado com cabos caídos, vidros, pregos e prédios danificados.

@@ -5,7 +5,7 @@ lang: pt
 sources: AHA, Guias 2025; Cruz Vermelha Americana; IFRC 2020
 questions: como usar o desfibrilador dea | onde coloco os adesivos do desfibrilador | o dea dá o choque sozinho | desfibrilador em criança, pode usar
 ---
-Um DEA (desfibrilador externo automático) é um aparelho que analisa o coração e, se for preciso, dá uma descarga. Foi feito para qualquer pessoa usar: ele fala e diz o que fazer. Só dá descarga se o coração precisar. Costuma haver em aeroportos, estações, shoppings, academias e escritórios (procure o símbolo de um coração com um raio).
+Um DEA (desfibrilador externo automático) é um aparelho que analisa o coração e, se for preciso, aplica um choque. Foi feito para qualquer pessoa usar: ele fala e diz o que fazer. Só aplica um choque se o coração precisar. Costuma haver em aeroportos, estações, shoppings, academias e escritórios (procure o símbolo de um coração com um raio).
 
 ## Passos
 1. Ligue-o (botão ou ao abrir a tampa) e siga o que ele diz.

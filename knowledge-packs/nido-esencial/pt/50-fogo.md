@@ -19,8 +19,8 @@ O fogo dá calor e luz, permite ferver água, cozinhar e fazer sinais. Mas tamb�
 Recolha o dobro do que você acha que precisa. A madeira morta que não toca o solo costuma estar mais seca.
 
 ## Acender
-- Coloque a mecha inicial no centro e os gravetos por cima em forma de tipi, deixando uma abertura para acender pelo lado do vento.
-- Acenda a mecha inicial por baixo e sopre suavemente. Adicione gravetos aos poucos e depois lenha mais grossa.
+- Coloque a isca no centro e os gravetos por cima em forma de tipi, deixando uma abertura para acender pelo lado do vento.
+- Acenda a isca por baixo e sopre suavemente. Adicione gravetos aos poucos e depois lenha mais grossa.
 - Formas de acender: isqueiro, fósforos (guarde-os em saco estanque), barra de ferrocério (funciona molhada), lupa ou o fundo de uma lata polida ao sol, pilha de 9 V friccionada contra lã de aço.
 
 ## Segurança
