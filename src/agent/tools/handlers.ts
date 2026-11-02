@@ -90,7 +90,7 @@ const EN_CONFIRM_FALLBACK: Record<string, string> = {
     "Pair “{{name}}” as a DIFFERENT PERSON named “{{newName}}”?\nFingerprint: {{fingerprint}}\n\nBoth identities stay live. Confirm only if you scanned this code in person.",
   "agentConfirm.pairCancelled": "Pairing cancelled — nothing was written.",
   "agentConfirm.pairInvalidChoice":
-    "Invalid disambiguation “{{choice}}”: use replace, different_person or cancel.",
+    "The answer \"{{choice}}\" doesn't settle the pairing question: nothing has been done. Ask again and accept only \"replace\" (the same person with a new phone), \"different person\" (a different person) or \"cancel\" (do nothing).",
   // M-6: diálogos de decisión sobre tareas remotas encoladas.
   "agentConfirm.approveTaskTitle": "Approve NIDO task",
   "agentConfirm.approveTaskMessage":

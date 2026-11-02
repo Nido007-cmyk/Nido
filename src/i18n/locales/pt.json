@@ -919,7 +919,7 @@
     "pairReplaceConfirmMessage": "SUBSTITUIR a identidade de “{{name}}”?\nImpressão digital: {{fingerprint}}\n\nIsso retira a identidade antiga EM TODOS OS LUGARES: suas rotas, sessões e mensagens pendentes são perdidas, e a caixa de saída pendente é marcada como falha. As mensagens antigas continuam legíveis. Não pode ser desfeito. Confirme apenas se verificou este código pessoalmente.",
     "pairDifferentPersonConfirmMessage": "Emparelhar “{{name}}” como uma PESSOA DIFERENTE chamada “{{newName}}”?\nImpressão digital: {{fingerprint}}\n\nAmbas as identidades continuam ativas. Confirme apenas se escaneou este código pessoalmente.",
     "pairCancelled": "Emparelhamento cancelado: nada foi gravado.",
-    "pairInvalidChoice": "Opção “{{choice}}” inválida: use replace, different_person ou cancel.",
+    "pairInvalidChoice": "A resposta «{{choice}}» não esclarece o pareamento: nada foi feito. Pergunte de novo e aceite apenas «replace» (a mesma pessoa, outro telefone), «different person» (outra pessoa) ou «cancel» (não fazer nada).",
     "pairBindingWasRetired": "Nota: esta identidade já foi emparelhada como “{{name}}” e depois retirada. Se confirmar, ela voltará a ficar ativa."
   },
   "downloadErrors": {
