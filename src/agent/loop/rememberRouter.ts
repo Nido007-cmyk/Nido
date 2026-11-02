@@ -514,8 +514,11 @@ export function extractPeople(userText: string): PersonExtraction[] {
   }
 
   // "my mom's name is Mary", "my brother is called John"
+  // B12 (barrido «revisa todo», clase 1): la lista gana los parentescos
+  // extendidos (uncle/aunt/grandfather/grandmother/cousin/nephew/
+  // niece) que es y pt ya creaban y REL_GROUPS ya sabe resolver.
   const m3 = new RegExp(
-    `my (mom|dad|mother|father|brother|sister|husband|wife|son|daughter|boyfriend|girlfriend|friend)(?:'s name)? is (?:called )?(${NAME_SRC})`,
+    `my (mom|dad|mother|father|brother|sister|husband|wife|son|daughter|boyfriend|girlfriend|friend|uncle|aunt|grandfather|grandmother|cousin|nephew|niece)(?:'s name)? is (?:called )?(${NAME_SRC})`,
     "i"
   ).exec(trimmed);
   if (m3) {

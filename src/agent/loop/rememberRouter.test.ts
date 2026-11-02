@@ -500,3 +500,30 @@ describe("B17 — «setiembre» en extractDateISO", () => {
     expect(extractDateISO("el 15 de septiembre", "es")).toContain("-09-15");
   });
 });
+
+// B12 (barrido «revisa todo», clase 1 · MEDIA-BAJA): la lista en de
+// extractPeople no traía los parentescos extendidos — «my uncle is
+// called Peter» y «my grandmother is called Mary» no creaban la
+// ficha (IN10/IN11: []), mientras es y pt sí. El hecho genérico se
+// guardaba igual; lo que se perdía era la ficha de persona, que
+// REL_GROUPS ya sabe resolver en los tres idiomas.
+describe("B12 — parentescos extendidos en en en extractPeople", () => {
+  it("uncle y grandmother crean su ficha (IN10/IN11)", () => {
+    expect(extractPeople("my uncle is called Peter")).toEqual([{ name: "Peter", relationship: "uncle" }]);
+    expect(extractPeople("my grandmother is called Mary")).toEqual([{ name: "Mary", relationship: "grandmother" }]);
+  });
+
+  it("aunt, grandfather, cousin, nephew y niece también", () => {
+    expect(extractPeople("my aunt's name is Lucy")).toEqual([{ name: "Lucy", relationship: "aunt" }]);
+    expect(extractPeople("my grandfather is called Joe")).toEqual([{ name: "Joe", relationship: "grandfather" }]);
+    expect(extractPeople("my cousin is called Sam")).toEqual([{ name: "Sam", relationship: "cousin" }]);
+    expect(extractPeople("my nephew is called Tom")).toEqual([{ name: "Tom", relationship: "nephew" }]);
+    expect(extractPeople("my niece is called Amy")).toEqual([{ name: "Amy", relationship: "niece" }]);
+  });
+
+  it("suelo: es, pt y la en básica no se mueven (IN12/IN13/IN14)", () => {
+    expect(extractPeople("mi tío se llama Pedro")).toEqual([{ name: "Pedro", relationship: "tío" }]);
+    expect(extractPeople("meu tio se chama Pedro")).toEqual([{ name: "Pedro", relationship: "tío" }]);
+    expect(extractPeople("my mom's name is Mary")).toEqual([{ name: "Mary", relationship: "mom" }]);
+  });
+});
