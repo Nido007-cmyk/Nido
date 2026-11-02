@@ -4,6 +4,476 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.69-alpha - 2026-11-01
+
+### Answers
+
+- **The requested fact is judged by its kind.** When a question
+  asks for a specific fact, only source sentences that carry that
+  kind of fact compete (a room, a time, a date, a dose, a phone);
+  a 15–16 digit card string no longer has the shape of a phone,
+  and a tie between facts with different digit shapes is no
+  longer broken by order — nothing is substituted. A kept
+  sentence that names the requested kind but carries figures
+  matching no fact of that kind in the evidence is replaced by
+  the true fact or withdrawn, and no longer counts as a delivery
+  that silences the check. A single carrier of the kind serves
+  even across languages. (Suite at close: 5,067 tests.)
+- **The omission check needs a topic and a category.** Function
+  words no longer count as shared topic, and the sentence the
+  source card teaches must carry the omitted fact's category;
+  one substantive foreign word suffices when the category is
+  shared, so the canonical emergency-number omission warns again
+  with the true sentence. (Suite at close: 5,067 tests.)
+- **The memory witness demands the datum in the promoting
+  fact.** A memory-probe promotion now computes a witness from
+  the saved facts themselves: for time, number and date
+  questions the promoting fact must contain an instance of that
+  class (a clock time, a digit run, a named or numeric date),
+  not just the word for it; without the witness the grounding
+  net judges the prose as before. The composition mirror
+  computes the same witness. (Suite at close: 5,086 tests.)
+- **Scores are normalised per corpus before fusion.** Each
+  lexical source z-scores its own (gate-filtered) candidate list
+  and squashes it through a sigmoid before the mix, per pack and
+  for the device index alike, never over the union; raw scores
+  and the fusion itself are untouched. A degenerate source
+  (fewer than 3 candidates or no spread) is scaled by its
+  maximum capped at the neutral point, so a lone weak chunk
+  cannot crown over a genuine hit from another corpus; with a
+  single source in play the order is unchanged. (Suite at
+  close: 5,274 tests.)
+- **The coverage gate stops killing real questions.** Every
+  Esencial guide now carries a `questions:` key with the
+  family's own phrasing (dictation forms, house synonyms
+  child/kid and alacrán/escorpión, the brand names families
+  use — Tylenol, EpiPen — in the English keys, plus 1–2
+  Portuguese bridge questions per guide), and the lexical
+  prefix P1 matches five-letter words by their start, so
+  "me quemo" reaches the burns guide. Guides with their own
+  emergency section carry section keys too, so the answering
+  chunk itself passes the gate. Measured on the real gate:
+  clean battery 4/14 to 14/14, human phrasing 4/11 to 11/11,
+  Portuguese bridge 0/2 to 2/2; all eighteen dead questions
+  revive and no control moved. Declared price: the wheel
+  question now admits exactly one guide ("Terremoto", via
+  the shared `camb*` prefix), frozen in the permanent
+  fixture as the only tolerated admission; the fever guide
+  has no mg/kg table and no key pretends it does. The
+  Portuguese edition of Esencial is still its own batch
+  (C-04); the bridge keys are the measured interim.
+  (Suite at close: 5,280 tests.)
+- **The check now compares measures in their unit and inside
+  their range.** The grounding check learns the units the
+  first-aid guides use (%, drops, tablets, days, months,
+  years, with the dose qualifiers drops/l and ml/kg·mg/kg),
+  converts the written measures (a teaspoon is 5 ml, a
+  tablespoon 15 ml, a week is 7 days), reads "every N hours"
+  as 24/N times a day and figures written out in words on
+  the dose path, and fuses evidence ranges so a figure
+  inside a range counts as the same figure. A dose or
+  duration the source does not support no longer passes —
+  a "3 days" claim with no measures behind it no longer
+  slips through by omission — and the guide answer whose
+  figure sits inside its range is no longer dropped as
+  unfounded. Declared remainder: a short sentence carrying
+  two figures inside one range can still be held back by
+  the check's lexical novelty rule, which counts figures
+  as content terms; measured and named in the batch
+  report, it stands for the fresh verification to judge.
+  Closing micro-batch C-08b (on the A5-03 defect the
+  adversary caught inside this cure) adds the singular of
+  the drop to the tables: "1 gota" and "una gota" now fire
+  like "1 comprimido", in digits and in words, and "1 drop"
+  forms its measure; declared remainder: "one drop"
+  written out in English still does not pass the
+  number-words gate — the literal border of the registered
+  scope, named in the C-08 montage beside Q-ADV5.
+  (Suite at close of C-08: 5,299 tests; with C-08b:
+  5,337 tests.)
+- **Dates are checked against the calendar, not just the
+  digits.** The verifier gains a calendar of its own
+  (grammars in Spanish, English and Portuguese) and a date
+  leg beside the figures: a claim whose weekday contradicts
+  the source ("Monday, November 10, 2026" against a note
+  that says Tuesday) is withdrawn like a wrong figure, and
+  relative dates are judged against the day of the turn —
+  an appointment sealed as "yesterday" no longer grounds
+  itself. Declared remainders: the conflicts box only shows
+  a date conflict when the source has a paired sentence to
+  show (the verifier leg still withdraws the unpaired one),
+  and a date that does not exist in its named year (Sunday,
+  February 29, 2026) is left unfixed and unjudged by the
+  date rules — it never rolls into March 1; both stand for
+  the fresh verification to judge.
+  (Suite at close: 5,317 tests.)
+- **Digits bind to their own datum kind inside a sentence.**
+  The typed-datum rule now counts a figure for a kind only
+  when it is bound to that kind's anchor within the same
+  sentence: a measure word binds the number right before it,
+  type words and date names bind nearby figures inside a
+  tightened window, and phone, card, clock and date forms
+  bind themselves. A compound appointment sentence therefore
+  no longer lends its figures across kinds — the room is not
+  sealed as the day of the month, the date is not the room
+  number, the dose is not 214 ml — and a crossed claim is
+  replaced by the carrier sentence, as with separate
+  sentences. The phone bridge gains an owner guard: when the
+  only phone in the evidence names an owner other than the
+  entity asked about, the bridge does not fire and that phone
+  is not served as the answer. The memory-probe witness now
+  requires EVERY requested datum class (time, number, date)
+  in the promoting fact, not just one; with a single class or
+  none, its outcome is unchanged. Declared prices: a figure
+  legitimately far from its type word stays unbound (the
+  substitution serves the whole carrier sentence, where the
+  true datum lives); owners named outside the closed
+  constructions are not seen; two classes split across two
+  facts lose the exemption and go through the net.
+  (Suite at close: 5,336 tests.)
+- **When a pack holds no source for what is asked, it falls
+  to the honest answer.** Two presence signals now sit behind
+  the coverage gate, decided per corpus: if a question's
+  topic term appears nowhere in a large candidate pool and
+  nothing served matches a distinctive term, that corpus
+  returns nothing instead of lending a neighbour guide; and
+  when a datum-shaped question (which address, what price,
+  which email) names a datum kind that appears nowhere in
+  the pool, that corpus falls too — unless a served item
+  comes from the user's own documents, which are exempt.
+  What has a source is answered as before, measured after
+  the cure: "what do I do if my child has trouble breathing"
+  serves the asthma guide at its head (9 through the gate,
+  9 after the signal), and the wind-direction question keeps
+  its hurricane guide, the datum-kind term being present in
+  that corpus. Named remainder (A4-02): "How much does an
+  ambulance cost?" still admits exactly the same five
+  fragments (guides 11, 12, 21, 35, 41), now pinned by a
+  fixture so the admitted set cannot change in silence; the
+  signals do not stretch to catch it, by design.
+  (Suite at close: 5,353 tests.)
+- **The datum frame is read per sentence, and procedure
+  vetoes it.** After adversarial pass 8 caught the datum
+  signal's frame disagreeing with the settled probe set
+  in both directions, the frame is now searched per
+  sentence — bounded to the sentence carrying the datum
+  kind, after at most three filler tokens from a closed
+  list — and its inventory gains the "a qué" form and
+  the dictated need ("necesito", "i need", "eu preciso":
+  asking for the datum as a need is asking for it). A
+  procedure opener ("qué hago…", "how…", "o que
+  fazer…") vetoes the signal even when a datum kind is
+  mentioned in passing, so "what do I do if the
+  confirmation email never arrives?" keeps the answer
+  the gate served, while the consulate question still
+  falls and the symmetric-damage controls do not move.
+  Declared price: the first-frame veto is deliberately
+  conservative — a mixed question that opens as
+  procedure is served whole even if it later asks a
+  genuine datum question. (Suite at close: 5,359 tests.)
+
+### Emergencies and Research
+
+- **The emergency gate hears victims and events together.** The
+  body-signal list grows (neighbour, patient, passenger, family
+  in dictation forms, children/kids as their own entries) and
+  the stems gain fainted / drowned / unconscious in Spanish,
+  English and Portuguese under the same body-context discipline;
+  a new telegraphic face covers subject-less reports with a sign
+  word in participle or state form. Filler matches are cut by
+  the remainder rule ("helpful", "babysitter", "personal" no
+  longer declare a situation), and new vetoes cover product
+  safety topics ("choking hazard") and the "choke back" idiom.
+  Measured: 0/11 to 11/11 on the demonstrated set, no control
+  moved. (Suite at close: 5,086 tests.)
+
+### Reading documents
+
+- **Import warnings persist, each with its own reason.** A new
+  additive table keeps every file's warning (reason, recognition
+  code and message, previous name) inside the existing knowledge
+  database; the collection card reads them from the database on
+  every refresh, replaces them per file on reimport, cascades on
+  collection delete, and dismisses by (collection, reason)
+  group. The single lumped "gave no text" sentence is gone: each
+  reason carries its own string in Spanish, English and
+  Portuguese. (Suite at close: 5,042 tests.)
+- **A document's identity is the fingerprint of its content.**
+  Imports are deduplicated on the SHA-256 of the normalised body
+  before chunking and embedding: an identical file (renamed or
+  not) does not enter and is not an error — the warning names
+  the collection and the name it already lives under; a file at
+  90% or more shared chunks enters whole as a new copy, flagged
+  as similar, never silently substituted; a pre-existing
+  duplicate registry is built lazily, best-effort, and deletes
+  nothing. Recognition sinks are per file, so two files with the
+  same name no longer inherit each other's marks. (Suite at
+  close: 5,042 tests.)
+- **The built-in encyclopedia grows from 300 to 858
+  topics, and no seeded document is lost.** 540 new
+  Wikipedia introductions across 185 concepts in Spanish,
+  English and Portuguese (300→858 documents with 18
+  capital annexes), captured from a table rebuilt
+  independently of the original manifest and verified
+  title by title against the Wikipedia API (555/555
+  exist; the two concept drifts resolved in the table,
+  not in the capture: Spanish "Ballenas" is captured as
+  "Mysticeti", "Cambio climático global" as
+  "Calentamiento global"). Every captured document
+  carries its canonical datum inside its first 3,000
+  characters (522 directly, 18 through their capital's
+  annex). The 300 published documents stay byte-identical
+  and the downloadable levels do not change. Seeding now
+  derives a unique id per document: the old derivation
+  produced 762 distinct ids for 858 documents and 96
+  were silently overwritten at seeding time (INSERT OR
+  REPLACE), one of them already published; the 300
+  published ids are exactly unchanged. The snapshot date
+  is the real capture date, 1 November 2026 (C-09).
+  Declared remainders for the fresh verification, all in
+  retrieval terrain and pinned by a permanent fixture
+  with the measured outcomes: the Portuguese "Austrália"
+  crowns for the Spanish and English capital questions
+  (the served answer is correct, in the sister language);
+  the coverage gate withdraws the correct Quixote
+  documents for the framed "who wrote… according to the
+  corpus" questions; and the fixed local harness loses
+  hit@1 (60%→40%) and MRR (0.600→0.483) to competition
+  from correctly seeded documents, the expected document
+  staying in the top 3. (Suite at close, knowledge-packs
+  repo: 4,335 tests.)
+
+### Knowledge packs
+
+- **Esencial's Portuguese edition gains its source,
+  and knowledge-packs-v10 is built from it.** The 58
+  first-aid guides now exist in the packs repo as a
+  full pt-BR mirror of the Spanish — digit parity
+  58/58 net and raw, structural mirror exact, every
+  figure checked against the truth table in its seat
+  (guide 26's oral serum with its half teaspoon of
+  salt, guide 48's 5–6% bleach at 2 drops per litre)
+  — and the candidate measures 174 guides (58/58/58),
+  566 chunks (Spanish 192, English 183, Portuguese
+  191) and 1,146,880 bytes per file, both model files
+  reproduced byte-for-byte from the tip's sources.
+  Retrieval checks after the batch: bge (English, as
+  CI) 64/64; e5 across the three languages 196/202
+  (Spanish 66/69, English 62/64, Portuguese 68/69 —
+  the single Portuguese miss is named in the batch
+  report and its Spanish twin fails the same way
+  against pre-existing Spanish, so it is pack
+  retrieval behaviour, not a Portuguese defect).
+  Portuguese chunks are now attributed «baseado em»
+  in the built artefact. The published v6 asset
+  already served these 174 guides; what was missing
+  was their source — a v10 built without it would
+  have shipped 116 guides. Declared: the strict
+  first-aid battery (min 1.0) reads 32/38 — see "What
+  this version does not claim"; and the builder's
+  embedding cache, keyed only by chunk count, is a
+  named charge for a later batch (every candidate
+  measured here was rebuilt with the cache cleared).
+  (Suite at close, knowledge-packs repo: 4,331/4,335
+  tests in 267 files — the four misses are wall-clock
+  assertions in foreign zones, shown flaky in
+  isolation; tsc clean.)
+
+### Privacy and security
+
+- **The Emergency screen's field uses the private input.** The
+  last raw text field in the app now goes through the incognito
+  input like every other screen, and a permanent guard test
+  fails if any future field imports the raw input again.
+  (Suite at close: 5,093 tests.)
+- **Orphaned collection exports are swept at start.** Exports
+  write a registered live name and keep their content and share
+  dialog; at start, a fire-and-forget sweep removes top-level
+  export files that are neither live nor the named telemetry
+  file, without touching subdirectories, the database or the
+  key, and without blocking start — it cleans even while the
+  biometric gate is still closed. (Suite at close: 5,093 tests.)
+- **Crash text is scrubbed in two layers.** The native layer
+  scrubs the session record before it is written; the report
+  formatter masks file paths, brace and bracket content runs and
+  over-long message lines in the crash block only, keeping
+  classes, frames and the diagnostic message. The card says, in
+  Spanish, English and Portuguese, that the report is cleaned
+  before it can be copied. Declared residue: conservative, not
+  hermetic — a short user string inside the first characters of
+  a message, outside braces, can still pass. (Suite at close:
+  5,093 tests.)
+- **PRIVACY.md says what the biometric gate is, and names the
+  Bluetooth window.** Biometrics are an access gate checked by
+  Android (NIDO never sees a fingerprint or a face; without a
+  screen lock the app warns and does not offer it), and pairing
+  can make the device's name visible for up to five minutes.
+  Policy text only; the "Last updated" line is the version
+  lane's. (Suite at close: 5,093 tests.)
+- **The secure-screen header names its two physical checks.**
+  Comment only: the FLAG_SECURE plugin's note now lists exactly
+  what the owner's round verifies on the published build
+  (screenshot gesture blocked or black; Recents thumbnail
+  black). No behaviour change. (Suite at close: 5,093 tests.)
+
+### Reminders and memory
+
+- **"Remind me that…" creates the reminder, and saves no false
+  fact.** The reminder extractor now peels one complementiser
+  after the closed verb set in Spanish, English and Portuguese
+  (polite, dictated and mixed forms included), with a double
+  interrogative guard and a closed residue list; English titles
+  no longer carry the "that". The composition suite pins the
+  double outcome: the reminder is created and the spurious fact
+  ("compre leche mañana") is not saved. Declared seam: a
+  remember-family capture carrying a declared calendar date and
+  no event marker is decided by memory, the same outcome the
+  "remember that…" path gives it today. (Suite at close: 5,126
+  tests.)
+- **Facts fold accents, keep the ñ, and replace by attribute.**
+  Fact comparison folds diacritics with the ñ protected by a
+  private marker, so Lucía and Lucia merge while "año" and "ano"
+  stay apart. A bounded attribute pass in the save path gives a
+  single-value attribute's new value the place of the old one
+  instead of letting both live. A typo in the trigger verb is
+  repaired only under four locks (position, not a real word, a
+  single distance-1 candidate between QWERTY neighbours, an
+  order context behind it). (Suite at close: 5,206 tests.)
+- **Forgetting works in the eleven real forms.** Every silent
+  forget form now returns the memory-forget guide instead of
+  falling through, with the "eso/esto" guard intact and the
+  timer safe: "borra el temporizador" still deletes the timer,
+  because the timer rules run first. The fused-question repair
+  also reaches the generic memory shape and the fact scoring
+  ("¿cómo se llama mima?" scores "mamá"). The frame "Guarda el
+  teléfono de la clínica: 520-555-0147" saves the whole fact
+  without a "que"; note subjects are not caught by it and "Anota
+  que…" still saves a note. Spanish frame measured; the English
+  and Portuguese colon forms are a named remainder, not built.
+  (Suite at close: 5,206 tests.)
+- **Classifiers send each question to its place.** Bare time and
+  date are answered at once from an anchored set mirrored from
+  the router (greetings and polite tails allowed, Portuguese
+  parity new), while a time with a place, event or object
+  retrieves again. Task patterns gain Spanish and Portuguese
+  twins (translate, code) with labels for summarize, extract and
+  compare; "código postal" stays chat. Polite creative frames
+  enter creation in Spanish and Portuguese. The emergency-number
+  family leaves the contact pattern for the knowledge route via
+  a closed public-services guard, and the research gate narrows
+  only in the number class — the emergency text check itself is
+  untouched; "¿cuál es el número de Ana?" stays an action.
+  "¿Recuerdas qué…?" with a document noun leaves memory for the
+  document route, genuine memory untouched. (Suite at close:
+  5,261 tests.)
+- **Research cites only what it cites, and summaries keep the
+  beginning.** Decomposition deduplicates folded lines and
+  discards drift lines only when another survives — a line the
+  emergency gate intercepts is never drift-discarded, and the
+  sealed emergency fixture passes unedited. Citations are the
+  chunks the final answer actually cites, renumbered to the
+  filtered list; no citations, empty list. Session summaries are
+  progressive, in chunks from the first turn, in the
+  conversation's language. A pending choice still dies with the
+  process, now pinned by a composition test as the design.
+  (Suite at close: 5,261 tests.)
+
+### Data and stability
+
+- **The encrypted layer, measured against the real engine
+  (B-01):** key rotation is asserted by reopening against
+  real SQLCipher, the migration matrix (ten states, with a
+  live WAL and built interruptions) and the staging
+  convergence (ten cases) run against the engine, and the
+  shared test harness imports the real handshake in 13
+  suites without moving a single count or a single
+  assertion. No production changes.
+- **The house, cleaned on the inside (B-resto):** two dead
+  pieces removed, with their death proven by two routes
+  before deleting (the rotation function nobody called,
+  with its test, and the brand module nobody read, with
+  its directory); the live rotation is asserted by
+  reopening after the deletion (21/21 with the fire
+  suite, the multidb one and the boot-wiring one); a new
+  guard hunts emergency-guide keys missing in any
+  language against the live source (36/36 today); the CI
+  branch can no longer skip the run against the real
+  engine; the download wake-lock semantics, pinned by
+  its test with its named deviation; and the staging's
+  historical-format branch is kept as a written decision,
+  working. Arithmetic re-summed from the whole diff:
+  +1 net file, +7 tests, jest delta 0.
+
+### Performance
+
+- **The user database's vectors, in int8 (P-01 step 1):**
+  each stored vector goes from 1,536 B (float32) to
+  384 B (int8) — measured on disk over a test database:
+  199,680 B → 49,920 B in 130 vectors; at 20,000 chunks,
+  a saving of 23,040,000 B in the user database alone.
+  Aptitude was measured before touching code with its
+  probe (p99 |Δcos| 0.000782 against the 0.01 bar; 28/28
+  served sets identical; the R-03/R-04 literals
+  re-proven in float32, mixed and migrated). Dual reader
+  by length, no schema change; the corrupt-length row
+  is excluded with a named warning; bodies leave the
+  scoring `SELECT` and hydrate only for the survivors;
+  an `embedding_storage_format` stamp and an in-place
+  migration by batches, idempotent and resumable, that
+  parks during generation; new writes are born in int8
+  from the only two producers.
+- **The APK weight cuts, with their table judged exact
+  piece by piece over the published 0.1.68 APK:** the
+  `hexagon_opencl` pair and llama's HTP assets leave
+  through a three-layer packaging plugin (18,167,464 B);
+  BouncyCastle's 5 post-quantum tables leave through
+  the exclusions property (4,138,070 B stored; the
+  decompressed figure, 8,164,531 B, is not the saving);
+  fontbox's CJK maps leave through the amended rule,
+  with the correction annex's ten files inside the
+  count and exact survivors Identity-H, Identity-V, H,
+  V (1,201,763 B). **Total: 23,507,297 B**, confirmed by
+  the second route (the simulated APK removes 99
+  entries summing exactly the total; the 397,060 B of
+  file difference are structural ZIP overhead). The
+  listing's judge lives in CI (`check-apk-trims.py`)
+  and fails the build if anything cut returns or
+  anything kept goes missing. Generation threads come
+  from the device's real cores (no probe → 4 · ≤4 → 2 ·
+  5–6 → 3 · 7–8 → 4 · >8 → 6; the explicit option always
+  wins). Execution telemetry prunes itself to the 1,000
+  most recent rows inside the same transaction as the
+  insert, proven against real SQLite. P-07 verified
+  without code: zero diff over P-01's ground, and its
+  accounting is not charged here.
+
+### Surface
+
+- **About tells the truth about the network** in all three
+  languages: it no longer promises that everything stays on
+  this device, and its referral names the real section in
+  each language, verified by program. **The guide teaches
+  Emergency, Deep research and Scanned documents** — 12 new
+  examples executed by the real routers, 129/129 with
+  hygiene — and the documents tip stops denying that image
+  scans are read. **Small-text contrast meets its bar pair
+  by pair**, recomputed to the hundredth (worst corrected
+  pair: 4.61 on hover, bar 4.5). **Touch targets reach the
+  house bar**: composer buttons and microphone 44×44, mode
+  chips, footer and country selector at 44 effective or
+  more, and the panic box grows 32→44 high with its hold
+  gesture byte-identical (3-second hold, release cancels,
+  proven by the full-file diff). **Key-store errors speak
+  plainly** in the three languages (the "Fail-closed:"
+  segment replaced in exactly 24 strings, nothing else in
+  them touched), **the benchmark text drops its developer
+  clause** while keeping the in-app route, and **the
+  pairing notice answers in the words its question
+  offered**, in both sites, with the accepted tokens
+  unchanged byte by byte. Battery 5,583/5,583 in 337 files
+  (+12, all from the new guide examples); jest 13/13
+  suites, 52/52; tsc 0. Tip `b2ebdf4`.
+
 ## 0.1.68-alpha - 2026-10-31
 
 ### Reading documents
