@@ -4,7 +4,7 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
-## 0.1.69-alpha - 2026-11-01
+## 0.1.69-alpha - 2026-11-02
 
 ### Answers
 
@@ -485,6 +485,20 @@ All notable changes to NIDO are recorded here. Versions follow
   unchanged byte by byte. Battery 5,583/5,583 in 337 files
   (+12, all from the new guide examples); jest 13/13
   suites, 52/52; tsc 0. Tip `b2ebdf4`.
+
+### Project information
+
+- The "NIDO development" card in About (0.1.65) remains the
+  project's note on voluntary contributions; NIDO is free and
+  complete without contributing anything.
+- The signed download catalogue is re-signed over what the
+  CI published: its signature covers 14 fields of each of
+  the 32 entries, and NIDO Essentials now points at
+  knowledge-packs-v10 — 174 guides, 58 in each of Spanish,
+  English and Portuguese. The v10 files were counted from
+  the published release itself (174 guides, 566 chunks,
+  1,146,880 bytes per file) before the catalogue moved, and
+  NIDO Local stays on knowledge-packs-v9.
 
 ## 0.1.68-alpha - 2026-10-31
 
