@@ -307,3 +307,47 @@ describe("ADV-J-C2 · R6: la gemela con nombre declara la convención del turno"
     expect(judge("El control es el 10/11/2026.", ["La cita es el 10 de noviembre de 2026."])).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------
+// ADV-J-C3 (hallazgo nuevo de la adversaria del bloque del juez):
+// la caja no enseñaba conflicto cuando la fecha difería SOLO en
+// el año. El juicio compartido lo saltaba dos veces: el par
+// numérico caía en la puerta de compatibilidad de año de R6 (lo
+// que no empareja en año no se acusa) y el par con nombre ni
+// entraba en R6. R7 juzga el año contradicho: día y mes de
+// acuerdo y los dos años escritos y distintos. El año AUSENTE
+// sigue siendo territorio de R3 (se toma prestado, no se acusa).
+
+describe("ADV-J-C3 · R7: el año contradicho se juzga en las dos formas", () => {
+  it("numérico: «25/12/2027» contra «25/12/2026» es conflicto de año", () => {
+    const c = judge("El control es el 25/12/2027.", ["El control es el 25/12/2026."]);
+    expect(c?.kind).toBe("anio");
+    expect(c?.sourceSentence).toContain("25/12/2026");
+  });
+
+  it("con nombre: «25 de diciembre de 2027» contra «…de 2026» es conflicto de año", () => {
+    const c = judge("El control es el 25 de diciembre de 2027.", ["El control es el 25 de diciembre de 2026."]);
+    expect(c?.kind).toBe("anio");
+    expect(c?.sourceSentence).toContain("25 de diciembre de 2026");
+  });
+
+  it("la fiel del mismo año no se acusa en ninguna forma", () => {
+    expect(judge("El control es el 25/12/2026.", ["El control es el 25/12/2026."])).toBeNull();
+    expect(judge("El control es el 25 de diciembre de 2026.", ["El control es el 25 de diciembre de 2026."])).toBeNull();
+  });
+
+  it("el año solo en un lado no se juzga (R3 sigue mandando sobre el ausente)", () => {
+    expect(judge("El control es el 25/12.", ["El control es el 25/12/2027."])).toBeNull();
+    expect(judge("El control es el 25 de diciembre.", ["El control es el 25 de diciembre de 2027."])).toBeNull();
+    expect(judge("El control es el 25/12/2027.", ["El control es el 25/12."])).toBeNull();
+  });
+
+  it("si la fuente trae las dos ediciones, la respuesta puede citar la suya: no se acusa", () => {
+    expect(
+      judge("El control es el 25/12/2027.", [
+        "El control del año pasado fue el 25/12/2026.",
+        "El control de este año es el 25/12/2027.",
+      ]),
+    ).toBeNull();
+  });
+});

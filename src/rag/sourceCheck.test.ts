@@ -502,3 +502,36 @@ describe("ADV-J-C2: la caja enseña la transpuesta cuando la fuente trae la geme
     expect(findDateConflicts("El control es el 10/11/2026.", [chunk(NOTA_GEMELA)], REF_GEMELA)).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------
+// ADV-J-C3 (adversaria del bloque del juez): la caja no enseñaba
+// el conflicto cuando la fecha difería SOLO en el año, en forma
+// numérica (la puerta de compatibilidad de R6) ni con nombre
+// (fuera de R6). El juicio nuevo vive en dates.ts (R7); aquí se
+// convierte en aviso en las dos formas.
+
+describe("ADV-J-C3: la caja enseña el conflicto de año en las dos formas", () => {
+  const REF_ANIO = new Date(2026, 10, 2);
+
+  it("numérico: «25/12/2027» contra «25/12/2026» enseña la frase verdadera", () => {
+    const conflicts = findDateConflicts("El control es el 25/12/2027.", [chunk("El control es el 25/12/2026.")], REF_ANIO);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("fecha");
+    expect(conflicts[0].sourceSentence).toContain("25/12/2026");
+  });
+
+  it("con nombre: «25 de diciembre de 2027» contra «…de 2026» enseña la frase verdadera", () => {
+    const conflicts = findDateConflicts(
+      "El control es el 25 de diciembre de 2027.",
+      [chunk("El control es el 25 de diciembre de 2026.")],
+      REF_ANIO,
+    );
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("fecha");
+    expect(conflicts[0].sourceSentence).toContain("25 de diciembre de 2026");
+  });
+
+  it("la fiel del mismo año no enseña nada", () => {
+    expect(findDateConflicts("El control es el 25/12/2026.", [chunk("El control es el 25/12/2026.")], REF_ANIO)).toEqual([]);
+  });
+});

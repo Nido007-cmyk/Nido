@@ -76,6 +76,10 @@
  *    Lo que ninguna vía fija queda ambiguo y no se fuerza: la
  *    transposición pelada «11/10» contra «10/11», sin más contexto,
  *    trae las mismas dos lecturas en los dos lados.
+ *  - R7 · El año contradicho (ADV-J-C3): día y mes de acuerdo y los
+ *    dos años escritos y distintos → conflicto, en forma numérica
+ *    y con nombre. R3 sigue mandando sobre el año ausente: un lado
+ *    sin año no se acusa por esta regla.
  */
 
 export interface DateMention {
@@ -396,7 +400,7 @@ export function parseSourceDateSentences(
   return sentences.map((text) => ({ text, mentions: parseDateMentions(text, referenceDate) }));
 }
 
-export type DateConflictKind = "interna" | "dia" | "relativa" | "numerica";
+export type DateConflictKind = "interna" | "dia" | "relativa" | "numerica" | "anio";
 
 export interface DateConflictInfo {
   kind: DateConflictKind;
@@ -442,7 +446,7 @@ function sharesTopicRoot(a: string, b: string): boolean {
 
 /**
  * Juzga UNA frase de la respuesta contra las menciones de la fuente.
- * Devuelve el primer conflicto (orden R1 → R4 → R5) o null. Las
+ * Devuelve el primer conflicto (orden R1 → R4 → R6 → R7 → R5) o null. Las
  * afirmaciones con cláusula de fecha solo viven o mueren por esta
  * pierna: ni la tolerancia ±1 de las cifras ni el apoyo léxico las
  * salvan ni las condenan aquí.
@@ -597,6 +601,38 @@ export function dateConflictForSentence(
       );
       if (share) return { kind: "numerica", sourceSentence: sentence };
     }
+  }
+
+  // R7 · El año contradicho (ADV-J-C3). Día y mes de acuerdo bajo
+  // las lecturas fijadas y los dos años ESCRITOS y distintos: no
+  // hay ambigüedad que proteger — R3 cubre el año AUSENTE (se toma
+  // prestado), no el año que un lado escribe contra el otro. R6
+  // saltaba el par numérico por su puerta de compatibilidad (lo
+  // que no empareja en año no se acusaba) y el par con nombre ni
+  // entraba en R6: la caja no enseñaba el conflicto en ninguna de
+  // las dos formas, aunque el verificador retirara la frase por
+  // otras piernas. Si alguna mención de la fuente trae la fecha
+  // ENTERA de la respuesta (día, mes y año), no se acusa: la
+  // respuesta puede estar citando esa.
+  for (const a of ans) {
+    if (a.kind !== "calendario") continue;
+    const ca = fixedCands(a, ans).map((c) => ({ ...c, y: a.num || a.hasYear ? c.y : null }));
+    if (!ca.some((x) => x.y !== null)) continue;
+    let clashSentence: string | null = null;
+    let absolved = false;
+    for (const { m: s, sentence } of srcAll) {
+      if (s.kind !== "calendario") continue;
+      const cs = fixedCands(s, srcMentions).map((c) => ({ ...c, y: s.num || s.hasYear ? c.y : null }));
+      if (ca.some((x) => cs.some((y) => x.d === y.d && x.m === y.m && x.y !== null && x.y === y.y))) {
+        absolved = true;
+      } else if (
+        clashSentence === null &&
+        ca.some((x) => cs.some((y) => x.d === y.d && x.m === y.m && x.y !== null && y.y !== null && x.y !== y.y))
+      ) {
+        clashSentence = sentence;
+      }
+    }
+    if (!absolved && clashSentence !== null) return { kind: "anio", sourceSentence: clashSentence };
   }
 
   // R5 · Relativa contra absoluta (emparejamiento conservador).

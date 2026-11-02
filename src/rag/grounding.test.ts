@@ -988,6 +988,27 @@ describe("T-J5 — la fecha numérica transpuesta se retira cuando el contexto d
     expect(f.status).toBe("grounded");
     expect(f.removed).toBe(0);
   });
+
+  it("ADV-J-C3: el año cambiado no sella ni en numérico ni con nombre (el desenlace no cambia; lo nuevo es que la caja lo enseña)", () => {
+    const numerica = verifyGroundedAnswer(
+      "El control es el 25/12/2027.",
+      [{ title: "nota", body: "El control es el 25/12/2026." }],
+      "es",
+      "¿Cuándo es el control?",
+      new Date(2026, 10, 1),
+    );
+    expect(numerica.status).toBe("abstained");
+    expect(numerica.removed).toBe(1);
+    const conNombre = verifyGroundedAnswer(
+      "El control es el 25 de diciembre de 2027.",
+      [{ title: "nota", body: "El control es el 25 de diciembre de 2026." }],
+      "es",
+      "¿Cuándo es el control?",
+      new Date(2026, 10, 1),
+    );
+    expect(conNombre.status).toBe("abstained");
+    expect(conNombre.removed).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------
