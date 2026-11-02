@@ -519,7 +519,7 @@
     "hardwareTitle": "Feito para o seu telefone",
     "hardwareBody": "O NIDO foi projetado para rodar em um telefone: mantém baixo o uso de memória e monitora o armazenamento para que o app seja rápido e responsivo.",
     "benchmarkTitle": "Meça você mesmo",
-    "benchmarkBody": "O NIDO mede cada resposta no seu próprio celular: tempo de carregamento do modelo, tempo até o primeiro token, tokens/s, pico de memória e quais fontes foram usadas. Rode a avaliação embutida em Telemetria de Execução → 🧪 Avaliar para comparar qualquer modelo instalado nas mesmas perguntas, ou comande pelo computador com npm run eval:device.",
+    "benchmarkBody": "O NIDO mede cada resposta no seu próprio celular: tempo de carregamento do modelo, tempo até o primeiro token, tokens/s, pico de memória e quais fontes foram usadas. Rode a avaliação embutida em Telemetria de Execução → 🧪 Avaliar para comparar qualquer modelo instalado nas mesmas perguntas.",
     "repoTitle": "Código aberto",
     "repoBody": "Código aberto (Licença MIT).",
     "repoUrl": "github.com/Nido007-cmyk/Nido",

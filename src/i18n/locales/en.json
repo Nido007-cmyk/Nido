@@ -519,7 +519,7 @@
     "hardwareTitle": "Built for your phone",
     "hardwareBody": "NIDO is designed to run on a phone: it keeps memory use low and watches storage so the app stays fast and responsive.",
     "benchmarkTitle": "Measure it yourself",
-    "benchmarkBody": "NIDO measures every answer on your own phone: model load time, time to first token, tokens/sec, peak memory and which sources were used. Run the built-in evaluation from Execution Telemetry → 🧪 Evaluate to compare any installed model on the same questions, or drive it from a computer with npm run eval:device.",
+    "benchmarkBody": "NIDO measures every answer on your own phone: model load time, time to first token, tokens/sec, peak memory and which sources were used. Run the built-in evaluation from Execution Telemetry → 🧪 Evaluate to compare any installed model on the same questions.",
     "repoTitle": "Open source",
     "repoBody": "Open source (MIT License).",
     "repoUrl": "github.com/Nido007-cmyk/Nido",

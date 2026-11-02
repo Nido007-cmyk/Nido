@@ -2,7 +2,7 @@
   "aboutScreen": {
     "airGappedBody": "NIDO es tu asistente personal de IA que funciona por completo en tu teléfono — sin cuenta, sin nube, sin servidores. Tus preguntas y tus documentos se quedan en este dispositivo. Los mensajes que envías a tus contactos emparejados viajan cifrados, de teléfono a teléfono, sin pasar por ningún servidor.",
     "airGappedTitle": "Privado por diseño",
-    "benchmarkBody": "NIDO mide cada respuesta en tu propio teléfono: tiempo de carga del modelo, tiempo hasta el primer token, tokens/s, pico de memoria y qué fuentes se usaron. Ejecuta la evaluación integrada desde Telemetría de ejecución → 🧪 Evaluar para comparar cualquier modelo instalado con las mismas preguntas, o contrólala desde una computadora con npm run eval:device.",
+    "benchmarkBody": "NIDO mide cada respuesta en tu propio teléfono: tiempo de carga del modelo, tiempo hasta el primer token, tokens/s, pico de memoria y qué fuentes se usaron. Ejecuta la evaluación integrada desde Telemetría de ejecución → 🧪 Evaluar para comparar cualquier modelo instalado con las mismas preguntas.",
     "benchmarkTitle": "Mídelo tú mismo",
     "buildDevelopment": "COMPILACIÓN DE DESARROLLO",
     "buildRelease": "COMPILACIÓN DE LANZAMIENTO",
