@@ -3,7 +3,6 @@ title: Hacer fuego de forma segura
 category: Supervivencia
 lang: es
 sources: Manuales de supervivencia y servicios forestales; Ready.gov (FEMA); NFPA
-questions: cómo hago fuego de forma segura | cuáles son los tres materiales para encender un fuego, yesca, ramitas y leña | cómo se apaga del todo un fuego | se puede hacer fuego dentro de una tienda o una cueva cerrada | como faço fogo com segurança | quais são os três materiais para acender uma fogueira
 ---
 El fuego da calor, luz, permite hervir agua, cocinar y hacer señales. Pero también causa incendios forestales: úsalo solo cuando sea necesario y seguro, y nunca en épocas o zonas prohibidas salvo para salvar una vida.
 

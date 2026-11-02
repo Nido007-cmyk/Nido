@@ -3,7 +3,6 @@ title: Mochila de emergencia y reservas en casa
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA), kit básico de emergencia; Cruz Roja Americana; IFRC
-questions: qué lleva la mochila de emergencia | cuántos litros de agua por persona y día se guardan | qué comida se mete en la mochila de emergencia | cada cuánto se revisa la mochila de emergencia | o que vai na mochila de emergência | quantos litros de água por pessoa guardo
 ---
 ## Mochila para salir (una por persona, lista junto a la puerta)
 Pensada para 72 horas fuera de casa.

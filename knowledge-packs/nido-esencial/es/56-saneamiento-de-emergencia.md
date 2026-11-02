@@ -3,7 +3,6 @@ title: Baño y basura de emergencia (saneamiento)
 category: Supervivencia
 lang: es
 sources: OMS y UNICEF, agua, saneamiento e higiene en emergencias; Proyecto Esfera; Ready.gov
-questions: cómo hago un baño de emergencia en casa sin agua | a qué distancia de un pozo se hace una letrina | con qué se cubre el cubo del baño de emergencia | cómo me lavo las manos sin agua corriente | como faço um banheiro de emergência em casa sem água | a que distância de um poço se faz uma latrina
 ---
 Cuando no hay agua corriente o el alcantarillado falla, las heces mal gestionadas son una de las mayores causas de enfermedad tras un desastre.
 

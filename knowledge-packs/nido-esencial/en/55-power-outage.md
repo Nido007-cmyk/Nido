@@ -3,7 +3,6 @@ title: Long power outage
 category: Survival
 lang: en
 sources: Ready.gov (FEMA), power outages; CDC; American Red Cross
-questions: what do i do during a long power outage, a blackout | how far from the house should i place a generator, how many feet | does insulin keep a few days out of the fridge | what should i unplug when the power goes out so it doesn't get damaged | o que faço durante um apagão longo | a quantos metros da casa fica o gerador
 ---
 ## Prepare
 - Flashlights and batteries (better than candles), a battery radio, charged power banks.

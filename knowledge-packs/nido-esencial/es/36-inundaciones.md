@@ -3,7 +3,6 @@ title: Inundaciones
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA); Servicio Meteorológico Nacional de EE. UU., "Turn Around Don't Drown"; Cruz Roja Americana; OMS
-questions: qué hago en una inundación | cuántos centímetros de agua en movimiento arrastran un coche | se puede cruzar a pie el agua que corre | qué hago si el agua sube alrededor de mi coche | o que faço numa inundação | quantos centímetros de água arrastam um carro
 ---
 Las inundaciones son el desastre más frecuente. La mayoría de las muertes ocurren en vehículos y al intentar cruzar agua.
 

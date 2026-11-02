@@ -3,7 +3,6 @@ title: Golpes en la cabeza, el cuello o la espalda
 category: Primeros auxilios
 lang: es
 sources: Cruz Roja Canadiense, directrices 2020; AHA y Cruz Roja Americana 2024; IFRC 2020
-questions: se dio un golpe en la cabeza, qué hago | cuándo es grave un golpe en la cabeza | se puede mover a una persona con lesión de cuello o espalda | vomitó después de un golpe en la cabeza, es grave | o que faço se bater a cabeça | pode mover uma pessoa com lesão na coluna
 ---
 ## Cuándo sospechar una lesión de columna
 - Accidente de tráfico, atropello, caída desde más altura que la propia persona, zambullida en aguas poco profundas.

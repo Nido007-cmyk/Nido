@@ -3,7 +3,6 @@ title: Poisoning, toxic substances and carbon monoxide
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; WHO; CDC, carbon monoxide
-questions: my child swallowed bleach, what do i do | what do i do if someone is poisoned by medicines | should i make them vomit after swallowing something toxic | my child swallowed a button battery, what do i do | my child swallowed a coin, what do i do | meu filho engoliu água sanitária, o que faço | o que faço se alguém se intoxicar com remédios
 ---
 ## If someone swallowed something toxic
 (Medicines, bleach and other cleaning products, plants, mushrooms, alcohol, button batteries...)
@@ -23,7 +22,6 @@ questions: my child swallowed bleach, what do i do | what do i do if someone is 
 Get yourself and others into fresh air only if it is safe. Do not enter closed spaces with toxic gas without protection.
 
 ## Carbon monoxide (CO)
-<!-- questions: we all have headaches and feel dizzy at home, could it be carbon monoxide | what are the signs of carbon monoxide poisoning | why can't i run a generator inside the house -->
 A gas you cannot see or smell. It comes from stoves, braziers, gas heaters, generators and cars in closed spaces. It kills many people after disasters and in winter.
 Signs: headache, dizziness, nausea, tiredness, confusion. It often affects several people (and pets) in the same home at once, and they get better when they go outside.
 1. Go outside at once and get everyone out. Open doors and windows if it doesn't delay you.

@@ -3,7 +3,6 @@ title: Aprender más: cursos y recursos fiables
 category: Supervivencia
 lang: es
 sources: IFRC; Cruz Roja y Media Luna Roja; AHA; OMS
-questions: dónde puedo hacer un curso de primeros auxilios | qué es lo primero que hay que aprender de primeros auxilios | hay una aplicación de primeros auxilios que funcione sin conexión | cada cuánto se repasa lo aprendido en primeros auxilios | onde posso fazer um curso de primeiros socorros | o que aprender primeiro em primeiros socorros
 ---
 Estas guías ayudan, pero **nada sustituye a un curso práctico de primeros auxilios**: practicar la RCP con un muñeco y usar un desfibrilador de entrenamiento da la confianza para actuar de verdad.
 

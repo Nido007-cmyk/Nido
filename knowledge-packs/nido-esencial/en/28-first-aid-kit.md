@@ -3,7 +3,6 @@ title: First aid kit
 category: Health at home
 lang: en
 sources: American Red Cross, first aid kit contents; IFRC; Spanish Red Cross
-questions: what should be in a first aid kit | what basic medicines should i keep in a first aid kit | how often should i check and restock my first aid kit | o que deve ter um kit de primeiros socorros | o que coloco na caixa de primeiros socorros
 ---
 Keep a kit at home, another in the car and a small one in your emergency bag. Check it every 6 months and replace expired items.
 

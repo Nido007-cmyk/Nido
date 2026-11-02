@@ -3,7 +3,6 @@ title: CPR for adults and older children
 category: First aid
 lang: en
 sources: AHA Guidelines for CPR and Emergency Cardiovascular Care 2025; American Red Cross; IFRC First Aid Guidelines 2020
-questions: how do i do cpr on an adult | how deep and how fast should chest compressions be | can i do cpr with compressions only and no breaths | when do i stop doing cpr | como faço rcp massagem cardíaca em um adulto | com que profundidade e ritmo faço as compressões
 ---
 If someone collapses, does not respond and is not breathing normally (or is only gasping), their heart has probably stopped. Every minute without CPR sharply lowers the chance of survival. Starting quickly matters most: do not be afraid of doing it "wrong"; doing nothing is worse.
 

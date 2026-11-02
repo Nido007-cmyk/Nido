@@ -3,7 +3,6 @@ title: Learn more: courses and trusted resources
 category: Survival
 lang: en
 sources: IFRC; Red Cross and Red Crescent; AHA; WHO
-questions: where can i take a first aid course | what should i learn first in first aid | is there a first aid app that works offline | how often should i review what i learned in first aid | onde posso fazer um curso de primeiros socorros | o que aprender primeiro em primeiros socorros
 ---
 These guides help, but **nothing replaces a hands-on first aid course**: practicing CPR on a manikin and using a training defibrillator gives you the confidence to act for real.
 

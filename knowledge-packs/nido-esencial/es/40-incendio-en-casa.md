@@ -3,7 +3,6 @@ title: Incendio en casa o en un edificio
 category: Desastres
 lang: es
 sources: NFPA (Asociación Nacional de Protección contra Incendios); Ready.gov (FEMA); Cruz Roja Americana
-questions: qué hago si hay un incendio en mi casa | cómo salgo de un incendio con mucho humo | se abre una puerta que está caliente en un incendio | qué hago si se me prende la ropa con fuego | o que faço se houver um incêndio em casa | como saio de um incêndio com muita fumaça
 ---
 En un incendio puede que solo tengas 2 minutos para salir. El humo mata más que las llamas.
 
@@ -30,7 +29,6 @@ En un incendio puede que solo tengas 2 minutos para salir. El humo mata más que
 **Para, tírate al suelo y rueda**, cubriéndote la cara con las manos, hasta apagar las llamas. Después, enfría la quemadura con agua.
 
 ## Fuego de aceite en la cocina
-<!-- preguntas: se prendió la sartén con aceite, qué hago | se le echa agua a un fuego de aceite en la cocina | cómo apago un fuego de aceite en la sartén -->
 Apaga el fuego de la cocina y tapa la sartén con una tapa o un trapo húmedo (no mojado). **Nunca le eches agua.**
 
 ## Usar un extintor

@@ -3,7 +3,6 @@ title: Incendio forestal
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA); Cruz Roja Americana; CalFire "Ready, Set, Go"; OMS, humo de incendios
-questions: qué hago en un incendio forestal | hay que evacuar en cuanto avisan o se espera en un incendio forestal | qué hago si el fuego me atrapa dentro del coche | qué mascarilla protege del humo de un incendio | o que faço num incêndio florestal | o que faço se o fogo me apanhar dentro do carro
 ---
 Los incendios forestales avanzan muy deprisa, sobre todo con viento y cuesta arriba.
 

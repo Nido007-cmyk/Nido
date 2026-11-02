@@ -3,7 +3,6 @@ title: CPR for children and babies
 category: First aid
 lang: en
 sources: AHA CPR Guidelines 2025 (pediatric life support); American Red Cross; IFRC 2020
-questions: how do i do cpr on a baby | how do i do cpr on a 3 year old child | how deep are compressions for a baby under one year | how do i do cpr on my baby who is not breathing | como faço rcp em um bebê | como faço rcp numa criança de 3 anos
 ---
 In children, cardiac arrest is usually caused by lack of air (drowning, choking, suffocation). That is why rescue breaths matter more for children and babies than for adults. Even so, if you cannot give breaths, do compressions: it is always better than nothing.
 

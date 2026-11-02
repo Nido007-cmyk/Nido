@@ -3,7 +3,6 @@ title: Dolor de pecho e infarto
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020
-questions: le duele el pecho, será un infarto | qué hago si creo que alguien tiene un infarto | cuánta aspirina se da en un dolor de pecho | el dolor de pecho se le va al brazo, qué hago | o que faço se sentir dor no peito | dor no peito pode ser infarto, o que faço
 ---
 En un infarto, cada minuto cuenta. No esperes a ver si se pasa.
 

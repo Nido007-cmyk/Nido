@@ -3,7 +3,6 @@ title: Psychological first aid
 category: First aid
 lang: en
 sources: WHO, Psychological First Aid: Guide for Field Workers (2011); IFRC Reference Centre for Psychosocial Support; Red Cross
-questions: how do i help someone badly shaken after an accident | what do i say to a person who just went through something terrible | what are look, listen and link in psychological first aid | how do i comfort someone in crisis after bad news | o que digo a alguém que acabou de viver algo terrível | como ajudo alguém muito abalado depois de um acidente
 ---
 After an accident, a disaster or bad news, people may be in shock, frightened, confused or frozen. You don't need to be a psychologist to help or comfort someone. The WHO sums it up in three words: **look, listen and link**.
 

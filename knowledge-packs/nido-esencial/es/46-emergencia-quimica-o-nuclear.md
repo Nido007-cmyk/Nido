@@ -3,7 +3,6 @@ title: Emergencia química, nuclear o radiológica
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA), emergencias por radiación y químicas; CDC; OIEA; OMS
-questions: qué hago en una emergencia química o nuclear | qué significa entra, quédate dentro y mantente informado | cuándo se toma el yoduro de potasio | cómo se quita la ropa contaminada en un escape químico | o que faço numa emergência química ou nuclear | quando se toma o iodeto de potássio
 ---
 Si hay un escape químico o radiactivo cerca, la regla básica es: **entra, quédate dentro y mantente informado**.
 

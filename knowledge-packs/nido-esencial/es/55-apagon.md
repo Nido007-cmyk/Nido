@@ -3,7 +3,6 @@ title: Apagón o corte de luz prolongado
 category: Supervivencia
 lang: es
 sources: Ready.gov (FEMA), cortes de electricidad; CDC; Cruz Roja Americana
-questions: qué hago durante un apagón largo o corte de luz | a cuántos metros de la casa se pone un generador | la insulina aguanta unos días fuera de la nevera | qué aparatos desenchufo cuando se va la luz para que no se quemen | o que faço durante um apagão longo | a quantos metros da casa fica o gerador
 ---
 ## Prepárate
 - Linternas y pilas (mejor que velas), radio a pilas, baterías externas cargadas.

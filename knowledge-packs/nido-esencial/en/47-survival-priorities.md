@@ -3,7 +3,6 @@ title: Survival: the priorities
 category: Survival
 lang: en
 sources: Red Cross; Ready.gov (FEMA); survival and search-and-rescue manuals (NASAR, Wilderness Medical Society)
-questions: what are the priorities in a survival situation | what is the rule of threes in survival | what does the stop method mean, sit think observe plan | how long can a person last without water and without food | quais são as prioridades numa situação de sobrevivência | o que é a regra dos três em sobrevivência
 ---
 In a survival situation, the biggest dangers are panic and spending energy on things that don't matter. Put your priorities in order.
 

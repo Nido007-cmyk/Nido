@@ -3,7 +3,6 @@ title: Finding your way without GPS
 category: Survival
 lang: en
 sources: Land navigation and orienteering manuals; search-and-rescue organizations
-questions: how do i find my way without gps or a compass | how do i find north using the north star, polaris | what is the shadow stick method for finding direction | if i am lost, is it better to move or stay put | como me oriento sem gps nem bússola | como encontro o norte com a estrela polar
 ---
 ## First: move or stay?
 If you are lost and someone knows where you were going, the best choice is usually to **stay put** in a visible place: you'll be found sooner. Move only if you are in danger or know for sure where to go.

@@ -3,7 +3,6 @@ title: Refugio y mantener el calor corporal
 category: Supervivencia
 lang: es
 sources: Wilderness Medical Society, prevención de hipotermia; Cruz Roja; manuales de supervivencia de búsqueda y rescate
-questions: cómo mantengo el calor corporal cuando hace frío | cómo me aíslo del suelo frío al dormir fuera | dónde es buen sitio para poner un refugio | cómo hago un refugio sencillo con una lona | como mantenho o calor do corpo no frio | como me isolo do chão frio ao dormir fora
 ---
 Con frío, viento o lluvia, el refugio es más urgente que el agua o la comida.
 

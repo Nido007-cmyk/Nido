@@ -3,7 +3,6 @@ title: Agua segura: encontrarla y potabilizarla
 category: Supervivencia
 lang: es
 sources: OMS, tratamiento del agua en el hogar; CDC, cómo hacer el agua segura en emergencias; Eawag, desinfección solar (SODIS)
-questions: cómo potabilizo el agua en una emergencia | cuántas gotas de lejía se echan por litro de agua | cuánto tiempo hay que hervir el agua para beberla | qué es la desinfección solar del agua, el sodis | onde encontro água numa emergência em casa | como torno a água potável numa emergência | quantas gotas de lixívia ponho por litro de água
 ---
 El agua no tratada puede transmitir diarrea, cólera, tifus y parásitos. Si dudas, trátala.
 

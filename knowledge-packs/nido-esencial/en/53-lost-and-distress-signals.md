@@ -3,7 +3,6 @@ title: Lost: distress signals and helping rescuers find you
 category: Survival
 lang: en
 sources: Search-and-rescue organizations (NASAR); ICAO, ground-to-air signals; Alpine distress signal; Ready.gov
-questions: what do i do if i get lost in the mountains or the woods | what does three of anything mean in distress signals | how do i signal sos with a flashlight or a whistle | what does the y arm signal to a helicopter mean, both arms up | o que faço se me perder na montanha ou na floresta | o que significa o número três nos sinais de socorro
 ---
 ## If you get lost in the mountains, forest or countryside
 1. **Stop.** Don't keep walking: the more you move, the bigger the search area.

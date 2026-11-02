@@ -3,7 +3,6 @@ title: Emergency go-bag and supplies at home
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA), basic disaster supplies kit; American Red Cross; IFRC
-questions: what goes in an emergency go bag | how much water per person per day should i store, how many liters | what food should i pack in the emergency go bag | how often should i check the go bag supplies | o que vai na mochila de emergência | quantos litros de água por pessoa devo guardar
 ---
 ## Go-bag (one per person, ready by the door)
 Meant for 72 hours away from home.

@@ -3,7 +3,6 @@ title: Ictus (derrame cerebral)
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020
-questions: cómo sé si es un ictus, un derrame cerebral | se le cae un lado de la cara y habla raro, qué hago | cuáles son los signos de un derrame cerebral | qué es la regla rápido para el ictus | como sei se é um derrame cerebral, um avc | um lado do rosto caiu e a fala está estranha, o que faço
 ---
 En un ictus, una parte del cerebro se queda sin sangre. El tratamiento funciona mucho mejor en las primeras horas: reconócelo rápido.
 

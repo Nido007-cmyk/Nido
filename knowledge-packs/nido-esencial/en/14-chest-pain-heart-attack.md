@@ -3,7 +3,6 @@ title: Chest pain and heart attack
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020
-questions: he has chest pain, could it be a heart attack | what do i do if i think someone is having a heart attack | how much aspirin do i give an adult for chest pain | his chest pain spreads to his arm, what do i do | o que faço se sentir dor no peito | dor no peito pode ser infarto, o que faço
 ---
 In a heart attack, every minute counts. Do not wait to see if it passes.
 

@@ -3,7 +3,6 @@ title: Food in emergencies
 category: Survival
 lang: en
 sources: Ready.gov (FEMA), food safety in emergencies; USDA; WHO, Five Keys to Safer Food
-questions: what food should i store at home for an emergency | how long does food keep in the fridge without power | what food should i throw away after a power outage | can i eat wild plants or mushrooms if i am hungry | que comida guardo em casa para uma emergência | quanto tempo dura a comida na geladeira sem luz
 ---
 A healthy person can go weeks without food, but not without water. Don't eat if you have very little water: digestion uses up fluid.
 

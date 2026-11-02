@@ -3,7 +3,6 @@ title: Tsunami
 category: Desastres
 lang: es
 sources: UNESCO Comisión Oceanográfica Intergubernamental; NOAA, programa TsunamiReady; Ready.gov (FEMA)
-questions: cómo sé que viene un tsunami sin alarma | a qué altura hay que subir ante un tsunami | el mar se retiró de golpe de la playa, qué hago | cuánto dura el peligro de un tsunami, son varias olas | como sei que vem um tsunami sem alarme | a que altura devo subir diante de um tsunami
 ---
 Un tsunami es una serie de olas gigantes, normalmente causadas por un terremoto en el mar. Pueden llegar en minutos.
 
