@@ -10,6 +10,7 @@ Si algo bloquea la garganta, la persona no puede respirar. Fíjate en esto: si t
 - Anímala a seguir tosiendo. No le des golpes ni agua. Quédate a su lado y vigila.
 
 ## Grave en adultos y niños mayores de 1 año
+<!-- preguntas: cómo se hace la maniobra de Heimlich | maniobra de Heimlich en un adulto que se atraganta | se atragantó y no puede respirar, cómo hago la maniobra -->
 Las guías de 2025 recomiendan alternar golpes en la espalda y compresiones abdominales:
 1. Colócate a su lado y un poco detrás. Inclina a la persona hacia delante sujetándola por el pecho.
 2. Da 5 golpes fuertes entre los omóplatos con el talón de la mano.

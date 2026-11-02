@@ -5,6 +5,7 @@ lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; WHO; CDC, carbon monoxide
 ---
 ## If someone swallowed something toxic
+<!-- questions: my child drank bleach, what do I do | child swallowed bleach | my toddler drank a cleaning product, what to do -->
 (Medicines, bleach and other cleaning products, plants, mushrooms, alcohol, button batteries...)
 1. If they don't respond, have trouble breathing or have a seizure: call the emergency number.
 2. If they are fine: call the poison control center or your country's emergency number. Have the container at hand.

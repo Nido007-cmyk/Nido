@@ -29,6 +29,7 @@ Se uma pessoa desaba, não responde e não respira normalmente (ou só ofega), o
 - Se não souber ou não quiser, faça só compressões sem parar: em adultos funciona bem.
 
 ## Quando parar
+<!-- perguntas: de quanto em quanto tempo revezar na massagem | posso parar a massagem para descansar | quando parar a rcp -->
 - Quando chegar um desfibrilador (use-o de imediato, ver o guia do DEA).
 - Quando a pessoa começar a respirar normalmente ou se mexer.
 - Quando o serviço de emergência chegar e assumir.

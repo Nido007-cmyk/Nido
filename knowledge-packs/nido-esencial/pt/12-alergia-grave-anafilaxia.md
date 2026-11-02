@@ -14,6 +14,7 @@ A anafilaxia é uma reação alérgica grave que pode matar em minutos. Costuma 
 - Tontura, desmaio, pele pálida e fria (choque), vômitos ou dor de barriga.
 
 ## O que fazer
+<!-- perguntas: apliquei a caneta e ele não melhora, e agora | dei a adrenalina e ele não melhora, posso repetir | depois da caneta ele continua mal, o que fazer -->
 1. Ligue de imediato para o número de emergência.
 2. Se a pessoa tiver um autoinjetor de adrenalina (epinefrina, por exemplo EpiPen), ajude-a a usá-lo na coxa, pela parte externa (pode atravessar a roupa). Siga as instruções do aparelho e segure-o apertado pelo tempo que ele indicar.
 3. Se em 5 a 10 minutos não melhorar, a ajuda ainda não tiver chegado e houver um segundo autoinjetor, pode-se aplicar outra dose.

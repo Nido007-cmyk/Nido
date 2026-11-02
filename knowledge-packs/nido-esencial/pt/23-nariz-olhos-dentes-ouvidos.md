@@ -12,6 +12,7 @@ questions: nariz sangrando, como parar | caiu algo no olho, como lavar | dente c
 4. Procure atendimento médico se não parar após 15 minutos de pressão contínua, se foi por uma batida forte na cabeça, ou se a pessoa tomar anticoagulantes e sangrar muito.
 
 ## Algo no olho
+<!-- perguntas: entrou químico no olho, lavo por quanto tempo | caiu produto químico no olho, quanto tempo lavar | químico no olho, o que fazer -->
 - Poeira ou areia: não esfregue. Lave com água limpa abundante ou soro.
 - Um objeto cravado: não o tire. Cubra os dois olhos com cuidado (para que não se mexam) sem apertar e vá à emergência.
 - Químicos: lave com água corrente por pelo menos 15 minutos e vá à emergência.

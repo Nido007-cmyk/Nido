@@ -8,6 +8,7 @@ questions: o que fazer em caso de queimadura | me queimei com água fervendo, o 
 Resfriar logo uma queimadura com água reduz o dano e a dor. É o mais importante.
 
 ## Passos
+<!-- perguntas: ele se queimou, qual é a primeira coisa | queimadura, o que fazer primeiro | me queimei, por onde começo -->
 1. Afaste a pessoa da fonte de calor. Se a roupa estiver pegando fogo: que ela pare, se jogue no chão e role (ou cubra-a com um cobertor).
 2. Resfrie a queimadura com água corrente fresca (não gelada) por pelo menos 10 minutos, o quanto antes. Funciona mesmo que já tenham passado alguns minutos.
 3. Enquanto resfria, tire anéis, relógios e roupas apertadas da região antes que inche. Não arranque a roupa grudada na pele.
@@ -30,6 +31,7 @@ Resfriar logo uma queimadura com água reduz o dano e a dor. É o mais important
 - For um bebê, uma criança pequena ou uma pessoa idosa.
 
 ## Queimaduras químicas
+<!-- perguntas: caiu produto químico no olho dele, quanto tempo lavo | químico no olho, por quanto tempo enxaguar | entrou produto químico nos olhos, o que fazer -->
 Tire a roupa contaminada (com luvas) e lave com muita água corrente por bastante tempo. Nos olhos, lave sem parar por pelo menos 15 minutos e procure ajuda.
 
 ## Queimaduras pequenas

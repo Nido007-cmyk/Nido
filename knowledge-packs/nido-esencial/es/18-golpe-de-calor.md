@@ -14,6 +14,7 @@ Signos: sudor abundante, cansancio, mareo, dolor de cabeza, náuseas, calambres,
 4. Si no mejora en 30 minutos o empeora, llama al número de emergencias.
 
 ## Golpe de calor (emergencia)
+<!-- preguntas: insolación con confusión y piel muy caliente | golpe de calor, qué hago | piel muy caliente y confusión, qué le pasa -->
 Signos: confusión, comportamiento raro, habla torpe, desmayo o convulsiones; piel muy caliente (seca o sudada); temperatura muy alta.
 1. Llama al número de emergencias.
 2. Enfríala de inmediato, sin esperar: lo mejor es meter el cuerpo (del cuello para abajo) en agua fría o con hielo. Vigila que la cabeza quede fuera del agua.

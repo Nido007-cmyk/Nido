@@ -21,6 +21,7 @@ Se não houver água e sabão, use gel com pelo menos 60 % de álcool. Se não h
 - Depois de tocar animais ou lixo.
 
 ## Se alguém em casa estiver doente
+<!-- perguntas: como desinfetar a bancada e as superfícies com água sanitária | como limpar as superfícies da cozinha com água sanitária | qual a mistura de água sanitária para desinfetar superfícies -->
 - Se for uma infecção respiratória: que use máscara perto dos outros, ventile a casa, tussa no cotovelo.
 - Use toalhas, copos e talheres separados.
 - Lave roupas e lençóis com água quente e sabão.

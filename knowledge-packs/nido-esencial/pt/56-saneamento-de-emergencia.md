@@ -8,6 +8,7 @@ questions: banheiro de emergência em casa sem água | latrina no quintal, a que
 Quando não há água corrente ou o esgoto falha, as fezes mal geridas são uma das maiores causas de doença depois de um desastre.
 
 ## Vaso de emergência em casa
+<!-- perguntas: como faço com o banheiro se ficamos sem água encanada | sem água encanada, como usar o banheiro | banheiro sem água em casa, o que fazer -->
 - Se não houver água para a caixa de descarga ou o esgoto puder estar danificado, não dê descarga.
 - Use um balde com tampa (ou o próprio vaso) forrado com dois sacos de lixo resistentes.
 - Depois de cada uso, cubra com um punhado de material secante: serragem, areia de gato, terra seca, cinza ou cal. Reduz o cheiro e as moscas.

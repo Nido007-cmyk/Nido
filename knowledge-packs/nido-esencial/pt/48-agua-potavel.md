@@ -20,6 +20,7 @@ A água não tratada pode transmitir diarreia, cólera, tifo e parasitas. Na dú
 - Não beba água do mar nem urina: desidratam mais.
 
 ## Como tornar potável
+<!-- perguntas: a água sanitária daqui é de quanto por cento para por na água | qual a concentração da água sanitária para tratar a água | pus as gotas na água, quanto tempo espero para beber | depois de por as gotas, quanto tempo espero -->
 **1. Primeiro, clareie-a.** Se estiver turva, deixe-a repousar e coe-a com um pano limpo ou filtro de café.
 
 **2. Escolha um método:**
