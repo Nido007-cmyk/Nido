@@ -7,7 +7,7 @@
       "verified": "2026-11-02",
       "hashClinico": "198302a6e837473540bc8c871b5e7e12a955a8445d427c3a1f793e56eef4faf6",
       "preparador": "carril R1-1 (tanda piloto de reverificación, 2026-11-02)",
-      "auditor": "adversaria independiente de la cadena (pendiente tras el cierre de la tanda)",
+      "auditor": "auditoría independiente de la cadena (adversaria de R1-1), informe nido-audit-r1-1-2026-11-02: APTO CON CARGOS, recomendación de firma SÍ; firma asentada por el carril de ampliación del dossier con ese papel como respaldo, 2026-11-02",
       "filas": [
         {
           "tema": "02",
@@ -210,7 +210,7 @@
       "verified": "2026-11-02",
       "hashClinico": "ddaee0e4e6c475c690860042e112b78895093a6161c54be14bdcfad1b54f8224",
       "preparador": "carril R1-1 (tanda piloto de reverificación, 2026-11-02)",
-      "auditor": "adversaria independiente de la cadena (pendiente tras el cierre de la tanda)",
+      "auditor": "auditoría independiente de la cadena (adversaria de R1-1), informe nido-audit-r1-1-2026-11-02: APTO CON CARGOS, recomendación de firma SÍ; firma asentada por el carril de ampliación del dossier con ese papel como respaldo, 2026-11-02",
       "filas": [
         {
           "tema": "02",
@@ -413,7 +413,7 @@
       "verified": "2026-11-02",
       "hashClinico": "5520b8bae67def32ccc4a38c8374926361ded23fee247af36422b1f9809a6f83",
       "preparador": "carril R1-1 (tanda piloto de reverificación, 2026-11-02)",
-      "auditor": "adversaria independiente de la cadena (pendiente tras el cierre de la tanda)",
+      "auditor": "auditoría independiente de la cadena (adversaria de R1-1), informe nido-audit-r1-1-2026-11-02: APTO CON CARGOS, recomendación de firma SÍ; firma asentada por el carril de ampliación del dossier con ese papel como respaldo, 2026-11-02",
       "filas": [
         {
           "tema": "02",
@@ -616,7 +616,7 @@
       "verified": "2026-11-02",
       "hashClinico": "6364849a75da6a64cb272282af039c257964c90fe84eb20ca41ad0bbbf9e5bff",
       "preparador": "carril R1-1 (tanda piloto de reverificación, 2026-11-02)",
-      "auditor": "adversaria independiente de la cadena (pendiente tras el cierre de la tanda)",
+      "auditor": "auditoría independiente de la cadena (adversaria de R1-1), informe nido-audit-r1-1-2026-11-02: APTO CON CARGOS, recomendación de firma SÍ; firma asentada por el carril de ampliación del dossier con ese papel como respaldo, 2026-11-02",
       "filas": [
         {
           "tema": "03",
@@ -766,6 +766,22 @@
           "tema": "03",
           "guia": "esencial-rcp-ninos-y-bebes",
           "idioma": "es",
+          "afirmacionId": "03-A09b",
+          "textoLiteral": "Cabeza en posición neutra (no la eches muy hacia atrás).",
+          "tipo": "técnica",
+          "institucion": "Federación Internacional de Sociedades de la Cruz Roja y de la Media Luna Roja (IFRC)",
+          "documento": "International first aid, resuscitation, and education guidelines 2020",
+          "edicion": "Edición 2020; PDF oficial del Global First Aid Reference Centre (documento D2 del dossier del programa)",
+          "identificador": "IFRC, International first aid, resuscitation, and education guidelines 2020 (PDF oficial; sin ISBN en la copia del dossier)",
+          "localizador": "Recursos de habilidades de RCP, «Performing rescue breaths», paso 1 para el bebé menor de 1 año (p. 410 de la capa de texto del PDF); corroboración en p. 148: «For a baby, tilt their head slightly to a neutral position and lift their chin.»",
+          "citaLiteral": "Open the baby's airway by gently moving their head into a neutral position and lifting their chin.",
+          "fechaComprobacion": "2026-11-02",
+          "desenlace": "sostenida"
+        },
+        {
+          "tema": "03",
+          "guia": "esencial-rcp-ninos-y-bebes",
+          "idioma": "es",
           "afirmacionId": "03-A10",
           "textoLiteral": "30 compresiones y 2 respiraciones si estás solo.",
           "tipo": "proporción",
@@ -803,7 +819,7 @@
       "verified": "2026-11-02",
       "hashClinico": "91a98fc7d1a5f6520735e26f30661e5af1ea4962825de72469cd07fe869a226b",
       "preparador": "carril R1-1 (tanda piloto de reverificación, 2026-11-02)",
-      "auditor": "adversaria independiente de la cadena (pendiente tras el cierre de la tanda)",
+      "auditor": "auditoría independiente de la cadena (adversaria de R1-1), informe nido-audit-r1-1-2026-11-02: APTO CON CARGOS, recomendación de firma SÍ; firma asentada por el carril de ampliación del dossier con ese papel como respaldo, 2026-11-02",
       "filas": [
         {
           "tema": "03",
@@ -953,6 +969,22 @@
           "tema": "03",
           "guia": "esencial-rcp-ninos-y-bebes",
           "idioma": "en",
+          "afirmacionId": "03-A09b",
+          "textoLiteral": "Head in a neutral position (do not tilt it far back).",
+          "tipo": "técnica",
+          "institucion": "Federación Internacional de Sociedades de la Cruz Roja y de la Media Luna Roja (IFRC)",
+          "documento": "International first aid, resuscitation, and education guidelines 2020",
+          "edicion": "Edición 2020; PDF oficial del Global First Aid Reference Centre (documento D2 del dossier del programa)",
+          "identificador": "IFRC, International first aid, resuscitation, and education guidelines 2020 (PDF oficial; sin ISBN en la copia del dossier)",
+          "localizador": "Recursos de habilidades de RCP, «Performing rescue breaths», paso 1 para el bebé menor de 1 año (p. 410 de la capa de texto del PDF); corroboración en p. 148: «For a baby, tilt their head slightly to a neutral position and lift their chin.»",
+          "citaLiteral": "Open the baby's airway by gently moving their head into a neutral position and lifting their chin.",
+          "fechaComprobacion": "2026-11-02",
+          "desenlace": "sostenida"
+        },
+        {
+          "tema": "03",
+          "guia": "esencial-rcp-ninos-y-bebes",
+          "idioma": "en",
           "afirmacionId": "03-A10",
           "textoLiteral": "30 compressions and 2 breaths if you are alone.",
           "tipo": "proporción",
@@ -990,7 +1022,7 @@
       "verified": "2026-11-02",
       "hashClinico": "4555b51c71af1ad605f43f9f6857f5c63b82a9d5e99e74f557696cb3a4d1f585",
       "preparador": "carril R1-1 (tanda piloto de reverificación, 2026-11-02)",
-      "auditor": "adversaria independiente de la cadena (pendiente tras el cierre de la tanda)",
+      "auditor": "auditoría independiente de la cadena (adversaria de R1-1), informe nido-audit-r1-1-2026-11-02: APTO CON CARGOS, recomendación de firma SÍ; firma asentada por el carril de ampliación del dossier con ese papel como respaldo, 2026-11-02",
       "filas": [
         {
           "tema": "03",
@@ -1135,6 +1167,22 @@
           "citaLiteral": "Infant: Make complete seal over infant's mouth and nose.",
           "fechaComprobacion": "2026-11-02",
           "desenlace": "sostenida con contexto"
+        },
+        {
+          "tema": "03",
+          "guia": "esencial-rcp-ninos-y-bebes",
+          "idioma": "pt",
+          "afirmacionId": "03-A09b",
+          "textoLiteral": "Cabeça em posição neutra (não a jogue muito para trás).",
+          "tipo": "técnica",
+          "institucion": "Federación Internacional de Sociedades de la Cruz Roja y de la Media Luna Roja (IFRC)",
+          "documento": "International first aid, resuscitation, and education guidelines 2020",
+          "edicion": "Edición 2020; PDF oficial del Global First Aid Reference Centre (documento D2 del dossier del programa)",
+          "identificador": "IFRC, International first aid, resuscitation, and education guidelines 2020 (PDF oficial; sin ISBN en la copia del dossier)",
+          "localizador": "Recursos de habilidades de RCP, «Performing rescue breaths», paso 1 para el bebé menor de 1 año (p. 410 de la capa de texto del PDF); corroboración en p. 148: «For a baby, tilt their head slightly to a neutral position and lift their chin.»",
+          "citaLiteral": "Open the baby's airway by gently moving their head into a neutral position and lifting their chin.",
+          "fechaComprobacion": "2026-11-02",
+          "desenlace": "sostenida"
         },
         {
           "tema": "03",
