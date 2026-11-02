@@ -268,6 +268,118 @@ function findBirthdayFact(
   return null;
 }
 
+/** Conjunciones que parten un hecho en cláusulas: la de cada lengua,
+ *  como token suelto. La coma NO parte: «el cumpleaños de mi abuela,
+ *  que vive en Tucson, es el 15 de marzo» es una sola cláusula con
+ *  incisos, y partirla dejaría el ancla sin su fecha. */
+const CLAUSE_CONJUNCTIONS = new Set(["e", "y", "and"]);
+
+interface FactToken {
+  text: string;
+  start: number;
+  end: number;
+}
+
+/** Tokens de un hecho con su posición: palabras (letras/dígitos, con
+ *  el guion interno de «brother-in-law»), como los corta la pasada de
+ *  findBirthdayFact. */
+function factTokens(text: string): FactToken[] {
+  const out: FactToken[] = [];
+  const re = /[\p{L}0-9]+(?:-[\p{L}0-9]+)*/gu;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    out.push({ text: m[0], start: m.index, end: m.index + m[0].length });
+  }
+  return out;
+}
+
+/** ADV-F3-C1 (adversaria de formas III): el hecho ÚNICO que guarda
+ *  DOS cumpleaños («o aniversário do meu avô é 20 de junho e o da
+ *  minha avó é 15 de março») servía la fecha de la PRIMERA cláusula
+ *  a la segunda persona, con la etiqueta mezclada — la selección del
+ *  hecho es correcta (trae los dos datos), pero la extracción se
+ *  ataba al hecho entero: extractDateISO sacaba su primera fecha y
+ *  el «who» pt su primera palabra que casaba en plegado. La cura
+ *  ata la extracción al SEGMENTO servido: la cláusula —entre
+ *  conjunciones— que contiene la palabra que casó (el nombre de la
+ *  ficha o el parentesco, localizado con la misma disciplina de dos
+ *  pasadas de findBirthdayFact: exacta, luego plegada con la guardia
+ *  avô/avó). Devuelve también esa palabra tal como está escrita,
+ *  para que el posesivo pt salga del segmento servido. Sin ancla
+ *  localizada (el hecho vino de las notas, sin nombre ni parentesco
+ *  escritos), null: manda el hecho entero, como hasta hoy. Si el
+ *  segmento no trae fecha, birthdayAnswer cita ESE segmento — nunca
+ *  afirma la fecha de la otra cláusula. */
+function birthdayServingSlice(
+  fact: string,
+  opts: { personName?: string; rel?: string }
+): { slice: string; word: string | null } | null {
+  const tokens = factTokens(fact);
+  let anchorIdx = -1;
+  let word: string | null = null;
+  if (opts.personName) {
+    const nameWords = factTokens(opts.personName).map((t) => fold(t.text));
+    if (nameWords.length) {
+      outer: for (let i = 0; i + nameWords.length <= tokens.length; i++) {
+        for (let j = 0; j < nameWords.length; j++) {
+          if (fold(tokens[i + j]!.text) !== nameWords[j]) continue outer;
+        }
+        anchorIdx = i;
+        break;
+      }
+    }
+  }
+  if (anchorIdx < 0 && opts.rel) {
+    const rel = opts.rel;
+    anchorIdx = tokens.findIndex((tk) => exactSameRel(tk.text, rel));
+    if (anchorIdx < 0) {
+      const relLow = rel.trim().toLowerCase();
+      anchorIdx = tokens.findIndex((tk) => {
+        const wLow = tk.text.trim().toLowerCase();
+        if ((relLow === "avô" || relLow === "avó") && (wLow === "avô" || wLow === "avó") && wLow !== relLow) {
+          return false;
+        }
+        return sameRel(tk.text, rel);
+      });
+    }
+    if (anchorIdx >= 0) word = tokens[anchorIdx]!.text;
+  }
+  if (anchorIdx < 0) return null;
+  const slice = clauseSlice(fact, tokens, tokens[anchorIdx]!.start, tokens[anchorIdx]!.end);
+  return slice ? { slice, word } : null;
+}
+
+/** La cláusula de un hecho que contiene el tramo [from, to): desde
+ *  la conjunción anterior hasta la siguiente, como tokens sueltos. */
+function clauseSlice(fact: string, tokens: FactToken[], from: number, to: number): string {
+  let start = 0;
+  let end = fact.length;
+  for (const tk of tokens) {
+    if (tk.end <= from && CLAUSE_CONJUNCTIONS.has(tk.text.toLowerCase())) start = tk.end;
+    if (tk.start >= to && CLAUSE_CONJUNCTIONS.has(tk.text.toLowerCase())) {
+      end = tk.start;
+      break;
+    }
+  }
+  return fact.slice(start, end).replace(/^[\s,;]+|[\s,;]+$/g, "");
+}
+
+/** ADV-F3-C1, asiento propio (medido al ejecutar esta tanda, en las
+ *  tres lenguas): la selección de la rama SELF casa el hecho
+ *  combinado por «mi cumplea» esté donde esté, y la extracción
+ *  sacaba la primera fecha — con el cumpleaños de la abuela primero
+ *  en el hecho, «¿cuándo es mi cumpleaños?» servía el 15 de marzo
+ *  como propio. Mismo remedio: la cláusula que contiene la frase de
+ *  primera persona que casó en la selección (la misma regex). */
+const SELF_BDAY_PHRASE_RE = /mi cumplea|my birthday|meu anivers/i;
+
+function birthdaySelfSlice(fact: string): string | null {
+  const m = SELF_BDAY_PHRASE_RE.exec(fact);
+  if (!m) return null;
+  const slice = clauseSlice(fact, factTokens(fact), m.index, m.index + m[0].length);
+  return slice || null;
+}
+
 function birthdayAnswer(fact: string, who: string | null, lang: MemoryQueryLang): string {
   const iso = extractDateISO(fact, lang);
   if (iso) {
@@ -701,6 +813,12 @@ export function answerMemoryQuery(
     const rel = bdayPersonQ[1].trim();
     const person = findPersonByRel(mem, rel);
     const fact = findBirthdayFact(mem, { rel, personName: person?.name });
+    // ADV-F3-C1 (adversaria de formas III): si el hecho guarda dos
+    // cumpleaños, se sirve el SEGMENTO de la persona preguntada
+    // (birthdayServingSlice): la fecha sale de su cláusula y la
+    // palabra que manda el posesivo es la de ese segmento. Sin
+    // segmento localizado, el hecho entero, como hasta hoy.
+    const served = fact ? birthdayServingSlice(fact, { rel, personName: person?.name }) : null;
     // ADV-F2-C4 (adversaria de formas II): el «who» pt calculaba el
     // posesivo del token PREGUNTADO (ptPossessive(rel)) y servía
     // «sua avo» con la fecha del abuelo — la clase exacta de
@@ -708,17 +826,20 @@ export function answerMemoryQuery(
     // rama 1 desde F-C2, el género sale del registro SERVIDO: la
     // ficha que la rama ya trajo o, sin ficha, la palabra de
     // parentesco tal como está escrita en el hecho servido.
-    const factRel = fact?.split(/[^\p{L}]+/u).find((w) => w && sameRel(w, rel));
+    const factRel = served?.word ?? fact?.split(/[^\p{L}]+/u).find((w) => w && sameRel(w, rel));
     const servedRel = ptServingRel(person?.relationship ?? factRel, rel);
     // 0.1.24 (auditoría, H-13): en EN el «who» abre la frase
     // («{{who}}'s birthday is on…») y salía en minúscula («your
     // mom's birthday…»); en ES/PT va tras «de», en minúscula bien.
-    if (fact) return birthdayAnswer(fact, lang === "en" ? `Your ${rel}` : lang === "pt" ? `${ptPossessive(servedRel).toLowerCase()} ${rel}` : `tu ${rel}`, lang);
+    if (fact) return birthdayAnswer(served?.slice ?? fact, lang === "en" ? `Your ${rel}` : lang === "pt" ? `${ptPossessive(servedRel).toLowerCase()} ${rel}` : `tu ${rel}`, lang);
     return msg("notKnown", lang);
   }
   if (BDAY_SELF_Q_RES.some((re) => re.test(t))) {
     const fact = findBirthdayFact(mem, { self: true });
-    if (fact) return birthdayAnswer(fact, null, lang);
+    // ADV-F3-C1, asiento propio: en el hecho combinado se sirve la
+    // cláusula de la frase propia (birthdaySelfSlice), no la primera
+    // fecha del hecho; sin frase localizada, el hecho entero.
+    if (fact) return birthdayAnswer(birthdaySelfSlice(fact) ?? fact, null, lang);
     return msg("notKnown", lang);
   }
 
