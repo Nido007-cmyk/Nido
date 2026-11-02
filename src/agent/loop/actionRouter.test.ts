@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { extractCalcAction, extractReminderAction, extractTimerAction, extractWeeklyPlanAction, generateWeeklyPlan } from "./actionRouter";
+import { extractCalcAction, extractReminderAction, extractTimerAction, extractWeeklyPlanAction, generateWeeklyPlan, parseReminderDateTime } from "./actionRouter";
 
 describe("actionRouter: calculadora (FIX 2026-10-07)", () => {
   it("extrae 'cuánto es 245 * 38'", () => {
@@ -645,5 +645,45 @@ describe("B13 — palabras-número pt en el tiempo relativo de recordatorios", (
       label: null,
       durationMs: 7_200_000,
     });
+  });
+});
+
+// B14 (barrido «revisa todo», clase 1 · MEDIA-BAJA): la gramática de
+// hora de recordatorios solo aceptaba «a las|at|às» — la 1, la única
+// hora singular y la más dictada con este marco, no parseaba:
+// «a la 1 de la tarde» y «à 1 da tarde» daban dueAt: null. Sondas
+// AR07/AR10; suelo AR08/AR09/AR11 (plural es/pt y «at 1 pm»).
+describe("B14 — hora singular «a la 1» / «à 1» en recordatorios", () => {
+  const NOW = new Date("2026-11-02T10:00:00");
+
+  it("es: «a la 1 de la tarde» parsea a las 13:00 (AR07)", () => {
+    const iso = parseReminderDateTime("recuérdame a la 1 de la tarde de llamar a Ana", NOW);
+    expect(iso).not.toBeNull();
+    const d = new Date(iso!);
+    expect(d.getHours()).toBe(13);
+    expect(d.getDate()).toBe(NOW.getDate());
+  });
+
+  it("pt: «à 1 da tarde» parsea a las 13:00 (AR10)", () => {
+    const iso = parseReminderDateTime("me lembra à 1 da tarde de ligar para a Ana", NOW);
+    expect(iso).not.toBeNull();
+    const d = new Date(iso!);
+    expect(d.getHours()).toBe(13);
+    expect(d.getDate()).toBe(NOW.getDate());
+  });
+
+  it("la hora singular no queda en el texto del recordatorio", () => {
+    const r = extractReminderAction("recuérdame a la 1 de la tarde de llamar a Ana", NOW);
+    expect(r).not.toBeNull();
+    expect(r!.text.toLowerCase()).not.toContain("a la 1");
+  });
+
+  it("suelo: el plural es/pt y «at 1 pm» no se mueven (AR08/AR09/AR11)", () => {
+    const es = new Date(parseReminderDateTime("recuérdame a las 10 de llamar a Ana", NOW)!);
+    expect(es.getHours()).toBe(10);
+    const pt = new Date(parseReminderDateTime("me lembra às 10 de ligar para a Ana", NOW)!);
+    expect(pt.getHours()).toBe(10);
+    const en = new Date(parseReminderDateTime("remind me at 1 pm to call Ana", NOW)!);
+    expect(en.getHours()).toBe(13);
   });
 });

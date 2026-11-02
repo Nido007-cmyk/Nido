@@ -713,7 +713,10 @@ export function stripDateWords(input: string): string {
       .replace(/(?:(?<![\p{L}])(?:el|em|no|on)\s+)?(?<![\p{L}\d])\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)(?:\s+de(?:l)?\s+\d{4})?(?![\p{L}])/giu, "")
       .replace(/(?:(?<![\p{L}])on\s+)?(?<![\p{L}])(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?(?![\p{L}\d])/giu, "")
       .replace(/\ba\s+las\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
+      // B14: el singular «a la 1» / «à 1», espejo de las dos anteriores.
+      .replace(/\ba\s+la\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
       .replace(/(?<![\p{L}])às\s+\d{1,2}(:\d{2})?\s*(am|pm|h)?\b/giu, "")
+      .replace(/(?<![\p{L}])à\s+\d{1,2}(:\d{2})?\s*(am|pm|h)?\b/giu, "")
       .replace(/\bat\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
       // TESTFIX-2026-10-08: limpiar tiempo relativo ("en 2 minutos" no es
       // parte del texto del recordatorio). FIX 2026-10-08: \s* para "1minuto".
@@ -997,7 +1000,10 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
   // Antes: sin día → return null aunque hubiera hora explícita → mismo
   // bucle de "¿para cuándo?" (evidencia física). Ahora se asume hoy;
   // el rollover M2 la mueve a mañana si ya pasó.
-  const timeMatch = /(?:a\s+las|at|às)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.exec(t);
+  // B14 (barrido «revisa todo», clase 1): el singular «a la»/«à» entra
+  // junto al plural — la 1 es la única hora singular y la más dictada
+  // con este marco; sin él, «a la 1 de la tarde» daba dueAt: null.
+  const timeMatch = /(?:a\s+las|a\s+la|at|às|à)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.exec(t);
   if (!targetDate && (timeMatch || noon || midnight)) {
     targetDate = new Date(now);
   }
