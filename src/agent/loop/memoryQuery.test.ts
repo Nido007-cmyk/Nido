@@ -442,3 +442,47 @@ describe("B9 — colisión avô/avó: la forma acentuada manda sobre el pliegue"
     expect(answerMemoryQuery("¿cómo se llama mi abuela?", es, "es")).toContain("Todavía no me has contado eso");
   });
 });
+
+// B8 (barrido «revisa todo», clase 1 · MEDIA-ALTA; semilla 2 de la
+// adversaria de G-M1-R1): la extracción del nombre dentro del hecho
+// buscaba el literal «se llama»: quien dictó su memoria en pt («se
+// chama») o en en («name is») guardó el dato y la app le decía que
+// no se lo había contado, en ninguna dirección. Sondas MQ33–MQ36;
+// suelo MQ31/MQ32 (el hecho es sirve a es y a en).
+describe("B8 — el hecho dictado en pt o en en se sirve por la rama de nombre", () => {
+  const PT_FACT: MemoryQueryData = {
+    facts: [{ content: "minha mãe se chama Maria", category: "general" }],
+    people: [],
+  };
+  const EN_FACT: MemoryQueryData = {
+    facts: [{ content: "my mom's name is Ana", category: "general" }],
+    people: [],
+  };
+  const ES_FACT: MemoryQueryData = {
+    facts: [{ content: "Mi mamá se llama Ana", category: "general" }],
+    people: [],
+  };
+
+  it("hecho pt, pregunta pt canónica y por la forma nueva (MQ33/MQ34)", () => {
+    expect(answerMemoryQuery("como se chama minha mãe?", PT_FACT, "pt")).toBe("Sua mãe se chama Maria.");
+    expect(answerMemoryQuery("qual é o nome da minha mãe?", PT_FACT, "pt")).toBe("Sua mãe se chama Maria.");
+  });
+
+  it("hecho en, pregunta en y pregunta es (MQ35/MQ36)", () => {
+    expect(answerMemoryQuery("what's my mom's name?", EN_FACT, "en")).toBe("Your mom's name is Ana.");
+    expect(answerMemoryQuery("¿cómo se llama mi mamá?", EN_FACT, "es")).toBe("Tu mamá se llama Ana.");
+  });
+
+  it("hecho en con «is called»", () => {
+    const called: MemoryQueryData = {
+      facts: [{ content: "my uncle is called Peter", category: "general" }],
+      people: [],
+    };
+    expect(answerMemoryQuery("what's my uncle's name?", called, "en")).toBe("Your uncle's name is Peter.");
+  });
+
+  it("suelo: el hecho es sirve a es y a en como hoy (MQ31/MQ32)", () => {
+    expect(answerMemoryQuery("¿cómo se llama mi mamá?", ES_FACT, "es")).toBe("Tu mamá se llama Ana.");
+    expect(answerMemoryQuery("what's my mom's name?", ES_FACT, "en")).toBe("Your mom's name is Ana.");
+  });
+});

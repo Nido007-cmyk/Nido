@@ -154,6 +154,11 @@ function msg(key: string, lang: MemoryQueryLang, vars: Record<string, string> = 
 
 const BIRTHDAY_RE = /cumplea[ñn]os|aniversario|birthday|aniversário/i;
 
+/** La cláusula que trae un nombre dentro de un hecho, por lengua del
+ *  hecho (B8): «se llama» (es), «se chama» (pt), «name is» /
+ *  «is called» (en). */
+const NAME_CLAUSE_RE = /se llama|se chama|name is|is called/i;
+
 /** Hecho de cumpleaños de una persona (por nombre o parentesco) o propio. */
 function findBirthdayFact(
   mem: MemoryQueryData,
@@ -542,12 +547,18 @@ export function answerMemoryQuery(
     const person = findPersonByRel(mem, rel);
     if (person) return msg("personName", lang, { rel, name: person.name });
     // Puede estar como hecho («mi mamá se llama Marta» con gatillo).
+    // B8 (barrido «revisa todo», clase 1; semilla 2 de la adversaria
+    // de G-M1-R1): la cláusula que trae el nombre se reconoce en la
+    // lengua del HECHO, no solo en español — «se chama» (pt) y
+    // «name is» / «is called» (en) guardan el mismo dato y la app
+    // decía «no me lo has contado» en ninguna dirección. La
+    // canónica es el suelo: el hecho es sirve como hasta hoy.
     const fact = mem.facts.find(
-      (f) => BIRTHDAY_RE.test(f.content) === false && fold(f.content).includes("se llama")
+      (f) => BIRTHDAY_RE.test(f.content) === false && NAME_CLAUSE_RE.test(f.content)
         && fold(f.content).split(/[^a-z0-9-]+/).some((w) => w && sameRel(w, rel))
     );
     if (fact) {
-      const m = /se llama\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/u.exec(fact.content);
+      const m = /(?:se llama|se chama|name is|is called)\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content);
       if (m) return msg("personName", lang, { rel, name: m[1] });
     }
     return msg("notKnown", lang);
