@@ -648,6 +648,44 @@ describe("B13 — palabras-número pt en el tiempo relativo de recordatorios", (
   });
 });
 
+// Cobertura adoptada de B13 (medida por la adversaria de formas como
+// cobertura nombrada, fuera de la familia declarada en|in|em): el
+// prefijo pt «daqui a» creaba la acción con dueAt: null y el texto
+// íntegro. La cadena lo adopta como pieza de la misma familia.
+describe("B13 cobertura adoptada — el prefijo pt «daqui a» en el tiempo relativo", () => {
+  const diffMs = (text: string): number => {
+    const before = Date.now();
+    const r = extractReminderAction(text);
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).not.toBeNull();
+    return new Date(r!.dueAt!).getTime() - before;
+  };
+  const near = (text: string, ms: number) => {
+    const d = diffMs(text);
+    expect(d).toBeGreaterThan(ms - 10_000);
+    expect(d).toBeLessThan(ms + 120_000);
+  };
+
+  it("«daqui a duas horas» crea el recordatorio con su hora y el texto limpio", () => {
+    near("me lembra daqui a duas horas de ligar para o banco", 2 * 3_600_000);
+    const r = extractReminderAction("me lembra daqui a duas horas de ligar para o banco");
+    expect(r!.text.toLowerCase()).not.toContain("daqui");
+    expect(r!.text.toLowerCase()).not.toContain("duas horas");
+    expect(r!.text.toLowerCase()).toContain("ligar para o banco");
+  });
+
+  it("el prefijo en dígito y en otras unidades: «daqui a 2 horas», «daqui a três dias»", () => {
+    near("me lembra daqui a 2 horas de ligar para o banco", 2 * 3_600_000);
+    near("me lembra daqui a três dias de ligar para o banco", 3 * 24 * 3_600_000);
+  });
+
+  it("suelo: la familia de B13 no se mueve y «daqui a pouco» no inventa hora", () => {
+    near("me lembra em duas horas de regar as plantas", 2 * 3_600_000);
+    const r = extractReminderAction("me lembra daqui a pouco de sair");
+    if (r) expect(r.dueAt).toBeNull();
+  });
+});
+
 // B14 (barrido «revisa todo», clase 1 · MEDIA-BAJA): la gramática de
 // hora de recordatorios solo aceptaba «a las|at|às» — la 1, la única
 // hora singular y la más dictada con este marco, no parseaba:

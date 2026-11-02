@@ -727,6 +727,10 @@ export function stripDateWords(input: string): string {
       // B13: portugués en letra ("em duas horas"), espejo de la de
       // palabras es/en de abajo: la hora no es parte del texto.
       .replace(/\bem\s+(um|uma|dois|duas|três|tres|quatro|cinco|seis|sete|oito|nove|dez|quinze|vinte|trinta|meia)\s*(minutos?|min|horas?|h|dias?|d|semanas?)\b/gi, "")
+      // Cobertura adoptada de B13: el prefijo «daqui a», en dígito y
+      // en letra, sale del texto como salen los demás relativos.
+      .replace(/\bdaqui\s+a\s+\d+\s*(minutos?|min|horas?|h|dias?|d|semanas?)\b/gi, "")
+      .replace(/\bdaqui\s+a\s+(um|uma|dois|duas|três|tres|quatro|cinco|seis|sete|oito|nove|dez|quinze|vinte|trinta|meia)\s*(minutos?|min|horas?|h|dias?|d|semanas?)\b/gi, "")
       .replace(/\ben\s+(uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
       // M3 FIX: limpiar hora suelta después de día ("el viernes 10" → el 10 es la hora).
       .replace(/\b(\d{1,2})(:\d{2})?\s*(am|pm)?\s*$/gi, "")
@@ -757,7 +761,11 @@ const NUMBER_WORDS: Record<string, number> = {
  */
 function parseRelativeTime(t: string, now: Date): Date | null {
   // FIX 2026-10-08: \s* entre número y unidad para "1minuto" (sin espacio).
-  const m = /\b(?:en|in|em)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half|um|uma|dois|duas|três|quatro|sete|oito|nove|dez|vinte|trinta|meia)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/i.exec(t);
+  // Cobertura adoptada de B13 (adversaria de formas): el prefijo pt
+  // «daqui a» («daqui a duas horas») quedaba fuera de la familia de
+  // prefijos (en|in|em) y el recordatorio nacía con dueAt: null; la
+  // cadena lo adopta como pieza de la misma familia.
+  const m = /\b(?:en|in|em|daqui a)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half|um|uma|dois|duas|três|quatro|sete|oito|nove|dez|vinte|trinta|meia)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/i.exec(t);
   if (!m) return null;
 
   const rawNum = m[1].toLowerCase();
