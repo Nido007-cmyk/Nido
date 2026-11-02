@@ -16,13 +16,21 @@ vi.mock("download-wake-lock", () => ({
 import { holdWakeLockForDownload } from "./downloadWakeLock";
 
 /**
- * B-resto B-08: la semántica PROPIA del envoltorio, fijada tal como el
- * código la lee hoy (caracterización, no rediseño). Hasta aquí solo la
+ * B-resto B-08: la semántica PROPIA del envoltorio. Hasta aquí solo la
  * cubría de refilón downloadManager.test.ts a través del manager; lo
- * que ningún test fijaba vive solo en downloadWakeLock.ts: la
- * deduplicación por Set, la liberación nativa solo al soltar el último
- * activo, la idempotencia de la función devuelta y el fallo nativo
- * tragado con el activo ya registrado antes del intento de adquirir.
+ * que ningún test fijaba vive solo en downloadWakeLock.ts: el conteo de
+ * agarres, la liberación nativa solo al soltar el último handle vivo,
+ * la idempotencia de la función devuelta y el fallo nativo tragado con
+ * el activo ya registrado antes del intento de adquirir.
+ *
+ * Historia: esta batería nació como caracterización de la semántica
+ * del Set (contaba activos, no handles) con la desviación nombrada en
+ * el test 2. La compleción de B-08 (cadena post-0.1.69, 2026-11-02)
+ * trajo el conteo por handle: el test 2 y el intercalado fijan la
+ * semántica CORREGIDA, y la expectativa final del test 5 se corrigió
+ * con ellos (soltar también el segundo handle de asset-1 antes de
+ * esperar el release nativo, conservando sus cinco propósitos). El
+ * resto de la batería sigue siendo caracterización fiel.
  */
 describe("downloadWakeLock — semántica del envoltorio", () => {
   let held: Array<() => void>;
@@ -37,7 +45,7 @@ describe("downloadWakeLock — semántica del envoltorio", () => {
   });
 
   afterEach(() => {
-    // Drenar todo lo sujetado: el Set es estado de módulo y no debe
+    // Drenar todo lo sujetado: el conteo es estado de módulo y no debe
     // filtrarse entre tests.
     for (const release of held.splice(0)) release();
     warnSpy.mockRestore();
@@ -56,25 +64,36 @@ describe("downloadWakeLock — semántica del envoltorio", () => {
     expect(releaseMock).toHaveBeenCalledTimes(1);
   });
 
-  it("doble sujeción del mismo activo: un solo nativo al sujetar; el Set cuenta activos, no handles", () => {
-    // DESVIACIÓN NOMBRADA (B-resto B-08): el censo de la tanda (§4.4.1)
-    // afirmaba que liberar el primer handle NO suelta el bloqueo
-    // nativo. Medido contra el código, eso no se sostiene: el Set
-    // deduplica la ADQUISICIÓN por activo (un solo acquire), pero no
-    // lleva cuenta de handles — liberar CUALQUIERA de los dos handles
-    // retira el activo del Set y, si era el único, libera el nativo;
-    // el otro handle queda como no-op. Este test fija el
-    // comportamiento REAL, tal como el código lo lee hoy: corregirlo
-    // (conteo por handle) sería rediseñar el envoltorio, fuera de
-    // esta tanda. Hoy es latente, no vivo: el único llamador
-    // (downloadManager) deduplica por activo con su mapa inFlight y
-    // nunca sujeta el mismo activo dos veces a la vez.
+  it("doble sujeción del mismo activo: un solo nativo al sujetar; el conteo es por handle, no por activo", () => {
+    // CORRECCIÓN (B-08 completada, cadena post-0.1.69): la semántica
+    // anterior contaba activos en un Set — liberar cualquiera de los
+    // dos handles retiraba el activo y, si era el único, liberaba el
+    // nativo dejando el otro handle como no-op (desviación nombrada
+    // en esta misma batería desde B-resto). Con el conteo por handle,
+    // el primer release solo descuenta: el nativo se libera cuando el
+    // último handle vivo suelta. Era latente, no vivo: el único
+    // llamador (downloadManager) deduplica por activo con su mapa
+    // inFlight y nunca sujeta el mismo activo dos veces a la vez;
+    // la corrección cierra el riesgo simétrico de mañana.
     const first = hold("asset-1");
     const second = hold("asset-1");
     expect(acquireMock).toHaveBeenCalledTimes(1);
     first();
-    expect(releaseMock).toHaveBeenCalledTimes(1);
+    expect(releaseMock).not.toHaveBeenCalled();
     second();
+    expect(releaseMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("agarres intercalados A, A, B: el nativo cae solo cuando suelta el último handle vivo", () => {
+    const a1 = hold("asset-1");
+    const a2 = hold("asset-1");
+    const b = hold("asset-2");
+    expect(acquireMock).toHaveBeenCalledTimes(1);
+    a1();
+    expect(releaseMock).not.toHaveBeenCalled();
+    a2();
+    expect(releaseMock).not.toHaveBeenCalled();
+    b();
     expect(releaseMock).toHaveBeenCalledTimes(1);
   });
 
@@ -105,19 +124,26 @@ describe("downloadWakeLock — semántica del envoltorio", () => {
     }).not.toThrow();
     expect(warnSpy).toHaveBeenCalled();
     expect(acquireMock).toHaveBeenCalledTimes(1);
-    // El activo quedó en el Set antes del intento: ni su segunda
+    // El activo quedó registrado antes del intento: ni su segunda
     // sujeción ni la de otro activo reintentan la adquisición.
-    hold("asset-1");
+    const release1b = hold("asset-1");
     const release2 = hold("asset-2");
     expect(acquireMock).toHaveBeenCalledTimes(1);
-    // Y al soltar el último, el release nativo se intenta igualmente,
-    // aunque la adquisición hubiera fallado: el código lo lee así hoy.
+    // Conteo (B-08 completada): soltados el primer handle de asset-1
+    // y el de asset-2, sigue vivo el segundo handle de asset-1, así
+    // que el nativo aún no se libera. (La expectativa original de
+    // este test esperaba el release ya aquí: codificaba la semántica
+    // del Set, que retiraba el activo al soltar cualquier handle.)
     release1!();
     release2();
+    expect(releaseMock).not.toHaveBeenCalled();
+    // Y al soltar el último, el release nativo se intenta igualmente,
+    // aunque la adquisición hubiera fallado.
+    release1b();
     expect(releaseMock).toHaveBeenCalledTimes(1);
   });
 
-  it("el fallo nativo al liberar se traga, y el activo ya salió del Set antes del intento", () => {
+  it("el fallo nativo al liberar se traga, y el activo ya salió del registro antes del intento", () => {
     const release = hold("asset-1");
     expect(acquireMock).toHaveBeenCalledTimes(1);
     releaseMock.mockImplementation(() => {
@@ -125,8 +151,8 @@ describe("downloadWakeLock — semántica del envoltorio", () => {
     });
     expect(() => release()).not.toThrow();
     expect(warnSpy).toHaveBeenCalled();
-    // El activo salió del Set antes de intentar el release: sujetarlo
-    // de nuevo vuelve a adquirir el nativo desde cero.
+    // El activo salió del registro antes de intentar el release:
+    // sujetarlo de nuevo vuelve a adquirir el nativo desde cero.
     releaseMock.mockReset();
     hold("asset-1");
     expect(acquireMock).toHaveBeenCalledTimes(2);
