@@ -790,9 +790,18 @@ const DATE_NAME_RE =
  * no estaban en ninguna de las dos tablas y la dosis fiel de un
  * inhalador o un spray nasal se seguía retirando, con la infiel
  * ciega en la otra dirección; la pt las escribe igual.
+ * ADV-R-C1 (adversaria del carril de restos): la palabra de la
+ * dosis en sí quedó fuera en las tres lenguas — es «inhalación/
+ * inhalaciones», pt «inalação/inalações», en «inhalation/
+ * inhalations» (las claves van plegadas, como todo lo que se
+ * compara contra la frase plegada): la fiel es se retiraba igual
+ * que la infiel y la caja daba [] ante la dosis cambiada. El
+ * censo de familia se cerró sobre el paradigma nombrado: las
+ * guías servidas no dosifican el inhalador con ninguna otra
+ * palabra de esta familia (grep cero sobre el corpus es/en/pt).
  */
 const DOSE_MEASURE_RE =
-  /\d+(?:[.,]\d+)?\s*(ml|mg|mcg|kg|g|miligramos?|gramos?|comprimidos?|pastillas?|cucharadas?|cucharaditas?|colheres?|gotas|tabletas?|capsulas?|unidades?|teaspoons?|tablespoons?|tablets?|pills?|capsules?|drops?|puffs?|sprays?|units?|milligrams?|grams?|milliliters?|millilitres?)\b/;
+  /\d+(?:[.,]\d+)?\s*(ml|mg|mcg|kg|g|miligramos?|gramos?|comprimidos?|pastillas?|cucharadas?|cucharaditas?|colheres?|gotas|tabletas?|capsulas?|unidades?|teaspoons?|tablespoons?|tablets?|pills?|capsules?|drops?|puffs?|sprays?|inhalaciones|inhalacion|inalacoes|inalacao|inhalations?|units?|milligrams?|grams?|milliliters?|millilitres?)\b/;
 
 /** ¿Trae la frase un dato DEL TIPO (su forma, o su nombre junto a la cifra)? */
 function carriesDatumOfType(sentence: string, type: DatumType): boolean {

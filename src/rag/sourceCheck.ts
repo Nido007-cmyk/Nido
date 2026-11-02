@@ -118,6 +118,14 @@ const UNITS: Record<string, string> = {
   // del juez (DOSE_MEASURE_RE): sin «puffs»/«sprays» la caja no
   // parseaba la medida y la dosis cambiada no enseñaba conflicto.
   puff: "puffs", puffs: "puffs", spray: "sprays", sprays: "sprays",
+  // ADV-R-C1: la palabra de la dosis del inhalador en las tres
+  // lenguas (claves plegadas: «inhalación» llega «inhalacion»,
+  // «inalações» llega «inalacoes»), canónica única de familia
+  // como «gotas» — sin ella la caja no parseaba la medida y la
+  // dosis cambiada con la palabra propia no enseñaba.
+  inhalacion: "inhalaciones", inhalaciones: "inhalaciones",
+  inalacao: "inhalaciones", inalacoes: "inhalaciones",
+  inhalation: "inhalaciones", inhalations: "inhalaciones",
   comprimido: "comprimidos", comprimidos: "comprimidos",
   tableta: "comprimidos", tabletas: "comprimidos",
   pastilla: "comprimidos", pastillas: "comprimidos",

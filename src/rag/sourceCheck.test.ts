@@ -481,6 +481,48 @@ describe("ADV-J-C1: la caja enseña la dosis de inhalador cambiada", () => {
 });
 
 // ---------------------------------------------------------------
+// ADV-R-C1 (adversaria del carril de restos): «inhalaciones» y su
+// paradigma (pt «inalações», en «inhalations») no estaban en las
+// UNITS — la caja no parseaba la medida y la dosis cambiada con
+// la palabra propia daba []. Entran con canónica única de
+// familia («inhalaciones»), en paridad con DOSE_MEASURE_RE.
+
+describe("ADV-R-C1: la caja enseña la dosis cambiada con la palabra del inhalador", () => {
+  it("4 inhalaciones contra 2: un conflicto con la unidad y la frase de la fuente", () => {
+    const conflicts = findNumberConflicts("La dosis del inhalador es 4 inhalaciones dos veces al día.", [
+      chunk("Guía del inhalador. Tome 2 inhalaciones dos veces al día."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("inhalaciones");
+    expect(conflicts[0].sourceSentence).toContain("2 inhalaciones");
+  });
+
+  it("la fiel es (2 inhalaciones) no enseña nada", () => {
+    expect(
+      findNumberConflicts("La dosis del inhalador es 2 inhalaciones dos veces al día.", [
+        chunk("Guía del inhalador. Tome 2 inhalaciones dos veces al día."),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("3 inalações contra 2: un conflicto con la unidad de la familia", () => {
+    const conflicts = findNumberConflicts("A dose do inalador é 3 inalações duas vezes ao dia.", [
+      chunk("Guia do inalador. Use 2 inalações duas vezes ao dia."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("inhalaciones");
+  });
+
+  it("3 inhalations contra 2: un conflicto con la unidad de la familia", () => {
+    const conflicts = findNumberConflicts("The inhaler dose is 3 inhalations twice a day.", [
+      chunk("Inhaler guide. Take 2 inhalations twice a day."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("inhalaciones");
+  });
+});
+
+// ---------------------------------------------------------------
 // ADV-J-C2 (adversaria del bloque del juez): la caja callaba ante
 // la transpuesta cuando la fuente escribía la fecha con nombre y
 // con número — la gemela con nombre no declaraba la convención

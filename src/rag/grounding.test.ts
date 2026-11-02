@@ -776,6 +776,62 @@ describe("ADV-J-C1 — puffs y sprays se juzgan como dosis", () => {
 });
 
 // ---------------------------------------------------------------
+// ADV-R-C1 (adversaria del carril de restos sobre ADV-J-C1): la
+// familia entró por sus palabras en («puffs»/«sprays») pero la
+// palabra de la dosis en sí quedó fuera de las dos tablas en las
+// tres lenguas — es «inhalaciones», pt «inalações», en
+// «inhalations»: la fiel es se retiraba (abstained, removed 1)
+// y la infiel caía igual, sin discriminación. El paradigma
+// completo entra en DOSE_MEASURE_RE y en las UNITS de la caja.
+
+describe("ADV-R-C1 — la dosis nombrada «inhalaciones/inalações/inhalations» se juzga", () => {
+  const GUIA_ES: GroundingChunk = {
+    title: "guia",
+    body: "Guía del inhalador. Tome 2 inhalaciones dos veces al día.",
+  };
+  const GUIA_PT: GroundingChunk = {
+    title: "guia",
+    body: "Guia do inalador. Use 2 inalações duas vezes ao dia.",
+  };
+  const GUIA_EN: GroundingChunk = {
+    title: "guide",
+    body: "Inhaler guide. Take 2 inhalations twice a day.",
+  };
+
+  it("la fiel es (2 inhalaciones, su fuente exacta) sella fundada, retiradas 0", () => {
+    const r = verifyGroundedAnswer("La dosis es 2 inhalaciones.", [GUIA_ES], "es", "¿Cuál es la dosis?");
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toContain("2 inhalaciones");
+  });
+
+  it("la infiel es (4 inhalaciones contra 2) se retira", () => {
+    const r = verifyGroundedAnswer("La dosis es 4 inhalaciones.", [GUIA_ES], "es", "¿Cuál es la dosis?");
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("4 inhalaciones");
+  });
+
+  it("la fiel pt (2 inalações) sella fundada y la infiel (3) se retira", () => {
+    const f = verifyGroundedAnswer("A dose é 2 inalações.", [GUIA_PT], "pt", "Qual é a dose?");
+    expect(f.status).toBe("grounded");
+    expect(f.removed).toBe(0);
+    const u = verifyGroundedAnswer("A dose é 3 inalações.", [GUIA_PT], "pt", "Qual é a dose?");
+    expect(u.status).toBe("abstained");
+    expect(u.removed).toBe(1);
+  });
+
+  it("la fiel en (2 inhalations) sella fundada y la infiel (3) se retira", () => {
+    const f = verifyGroundedAnswer("The dose is 2 inhalations.", [GUIA_EN], "en", "What is the dose?");
+    expect(f.status).toBe("grounded");
+    expect(f.removed).toBe(0);
+    const u = verifyGroundedAnswer("The dose is 3 inhalations.", [GUIA_EN], "en", "What is the dose?");
+    expect(u.status).toBe("abstained");
+    expect(u.removed).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------
 // T-J7 (barrido «revisa todo», J7): la corrección de negación de
 // 0.1.59 no llegaba a la frase corta — la vía de copia exige ≥3
 // aciertos y el 85 %, y una frase de 2 raíces nunca llega: «El
