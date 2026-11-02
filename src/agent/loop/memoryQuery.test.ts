@@ -635,3 +635,33 @@ describe("B7 — ABOUT_ME: pt lembra/guardou/salvou y en have saved/stored", () 
     expect(answerMemoryQuery("o que você sabe sobre mim?", MEM, "pt")).toContain("Marta");
   });
 });
+
+// B5+B6 (barrido «revisa todo», clase 1 · BAJA): dos formas en que
+// faltaban en su familia — REL «what is my dad called?» (MQ07:
+// notKnown con la ficha) y BDAY «when's my mom's birthday?»
+// contraído (MQ21: el patrón exigía «when is»). Suelo MQ22 y la
+// REL canónica en.
+describe("B5+B6 — REL en «called» y BDAY en «when's»", () => {
+  const DAD: MemoryQueryData = { facts: [], people: [{ name: "Luis", relationship: "papá" }] };
+  const BDAY: MemoryQueryData = {
+    facts: [{ content: "el cumpleaños de mi mamá es el 15 de marzo", category: "event" }],
+    people: [],
+  };
+
+  it("«what is my dad called?» y su contraída sirven la ficha (MQ07)", () => {
+    expect(answerMemoryQuery("what is my dad called?", DAD, "en")).toBe("Your dad's name is Luis.");
+    expect(answerMemoryQuery("what's my dad called?", DAD, "en")).toBe("Your dad's name is Luis.");
+    expect(isMemoryStyleQuery("what is my dad called?")).toBe(true);
+  });
+
+  it("«when's my mom's birthday?» sirve la plantilla (MQ21)", () => {
+    const r = answerMemoryQuery("when's my mom's birthday?", BDAY, "en");
+    expect(r).toContain("March 15");
+    expect(isMemoryStyleQuery("when's my mom's birthday?")).toBe(true);
+  });
+
+  it("suelo: «when is…» y la REL canónica no se mueven (MQ22)", () => {
+    expect(answerMemoryQuery("when is my mom's birthday?", BDAY, "en")).toContain("March 15");
+    expect(answerMemoryQuery("what's my dad's name?", DAD, "en")).toBe("Your dad's name is Luis.");
+  });
+});

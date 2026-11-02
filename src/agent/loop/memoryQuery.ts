@@ -294,6 +294,8 @@ const REL_NAME_Q_RES: RegExp[] = [
   // «what is the name of my mom» caían al modelo sin memoria guardada.
   /what is my ([a-z -]+?)'?s name(?:[,\s]+please)?\??$/i,
   /what is the name of my ([a-z -]+?)(?:[,\s]+please)?\??$/i,
+  // B5 (barrido «revisa todo», clase 1): la forma «called» de REL en.
+  /what(?:'s| is) my ([a-z -]+?) called(?:[,\s]+please)?\??$/i,
   /como se chama (?:a )?(?:minha?|meu) ([a-záéíóúãõçô ]+?)(?:[,\s]+por favor)?\??$/i,
   // G-M1-R1 (post-0.1.69, cruce de Grok): la forma española «¿cuál es
   // el nombre de mi X?» y su espejo portugués no estaban — la inglesa
@@ -326,7 +328,9 @@ const SELF_NAME_Q_RES: RegExp[] = [
 ];
 const BDAY_PERSON_Q_RES: RegExp[] = [
   /cu[aá]ndo es el cumplea[ñn]os de mi ([a-záéíóúñü ]+?)\??$/i,
-  /when is my ([a-z -]+?)'?s birthday\??$/i,
+  // B6 (barrido «revisa todo», clase 1): la contraída «when's» entra
+  // junto a «when is», como SELF y REL ya traían la suya.
+  /when(?:'s| is) my ([a-z -]+?)'?s birthday\??$/i,
   /quando (?:é|e) o anivers[aá]rio d[aeo] (?:minha?|meu) ([a-záéíóúãõç ]+?)\??$/i,
 ];
 const BDAY_SELF_Q_RES: RegExp[] = [
