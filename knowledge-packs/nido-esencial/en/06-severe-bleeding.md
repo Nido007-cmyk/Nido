@@ -3,6 +3,8 @@ title: Severe bleeding: how to stop it
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020; IFRC 2020
+id: esencial-hemorragias-graves
+verified: 2026-11-02
 ---
 A person can bleed to death in a few minutes. Bleeding is severe if blood spurts or keeps flowing, soaks clothes or bandages, or if the person becomes dizzy, pale or confused. Act at once.
 

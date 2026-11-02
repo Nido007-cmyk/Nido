@@ -3,6 +3,8 @@ title: Shock, desmayos y posición lateral de seguridad
 category: Primeros auxilios
 lang: es
 sources: Cruz Roja Canadiense, directrices 2020; AHA y Cruz Roja Americana 2024; IFRC 2020
+id: esencial-shock-y-desmayos
+verified: 2026-11-02
 ---
 ## Posición lateral de seguridad
 Para una persona que no responde pero respira normal (y sin sospecha de lesión de columna):

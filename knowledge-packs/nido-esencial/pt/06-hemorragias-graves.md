@@ -3,6 +3,8 @@ title: Hemorragias graves: como parar o sangramento
 category: Primeiros socorros
 lang: pt
 sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense 2020; IFRC 2020
+id: esencial-hemorragias-graves
+verified: 2026-11-02
 questions: como parar um sangramento forte na perna | está saindo muito sangue e não para, o que eu faço | como fazer um torniquete | sangue jorrando de um corte, o que fazer
 ---
 Uma pessoa pode morrer sangrando em poucos minutos. Uma hemorragia é grave se o sangue sai em jato ou sem parar, se encharca a roupa ou os curativos, ou se a pessoa fica tonta, pálida ou confusa. Aja de imediato.

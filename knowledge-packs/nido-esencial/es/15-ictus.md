@@ -3,6 +3,8 @@ title: Ictus (derrame cerebral)
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020
+id: esencial-ictus
+verified: 2026-11-02
 ---
 En un ictus, una parte del cerebro se queda sin sangre. El tratamiento funciona mucho mejor en las primeras horas: reconócelo rápido.
 

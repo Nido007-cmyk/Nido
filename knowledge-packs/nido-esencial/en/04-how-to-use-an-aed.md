@@ -3,6 +3,8 @@ title: How to use a defibrillator (AED)
 category: First aid
 lang: en
 sources: AHA Guidelines 2025; American Red Cross; IFRC 2020
+id: esencial-desfibrilador-dea
+verified: 2026-11-02
 ---
 An AED (automated external defibrillator) checks the heart and gives a shock if needed. It is made for anyone to use: it talks to you and tells you what to do. It only shocks if the heart needs it. You often find them in airports, stations, shopping centers, gyms and offices (look for a heart with a lightning bolt).
 

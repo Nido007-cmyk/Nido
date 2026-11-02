@@ -3,6 +3,8 @@ title: Stroke
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020
+id: esencial-ictus
+verified: 2026-11-02
 ---
 In a stroke, part of the brain loses its blood supply. Treatment works much better in the first hours: recognize it fast.
 

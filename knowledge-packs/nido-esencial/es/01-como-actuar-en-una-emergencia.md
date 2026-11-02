@@ -3,6 +3,8 @@ title: Cómo actuar en una emergencia
 category: Primeros auxilios
 lang: es
 sources: Federación Internacional de la Cruz Roja (IFRC), Directrices internacionales de primeros auxilios 2020; Cruz Roja Canadiense, directrices 2020; AHA y Cruz Roja Americana, directrices de primeros auxilios 2024
+id: esencial-como-actuar-en-una-emergencia
+verified: 2026-11-02
 ---
 Ante cualquier emergencia, sigue tres pasos en este orden: PROTEGER, AVISAR y SOCORRER. Mantén la calma: unos segundos para pensar evitan errores.
 

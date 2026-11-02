@@ -3,6 +3,8 @@ title: AVC (derrame cerebral)
 category: Primeiros socorros
 lang: pt
 sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense 2020
+id: esencial-ictus
+verified: 2026-11-02
 questions: sinais de derrame: a boca torta e a fala enrolada | como reconhecer um avc rápido | um lado do rosto caiu e a fala está estranha | avc, o que fazer nos primeiros minutos
 ---
 Num AVC, uma parte do cérebro fica sem sangue. O tratamento funciona muito melhor nas primeiras horas: reconheça rápido.
