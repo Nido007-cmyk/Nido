@@ -1773,7 +1773,7 @@
     "modelsTitle": "AI models and knowledge packs",
     "modelsBody": "They are not inside the app: they are downloaded from their publishers when you choose them, and each keeps its own license.",
     "knowledgeTitle": "Wikipedia text",
-    "knowledgeBody": "The app carries 300 Wikipedia article introductions, and the optional knowledge packs carry more. Text by Wikipedia contributors (wikipedia.org), licensed under CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0). Every answer that uses it shows its article URL. The Wikipedia packs compiled by NIDO are shared under the same license; the NIDO Essentials guides, written by NIDO, are CC BY 4.0. NIDO is not affiliated with the Wikimedia Foundation.",
+    "knowledgeBody": "The app carries 858 Wikipedia article introductions, and the optional knowledge packs carry more. Text by Wikipedia contributors (wikipedia.org), licensed under CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0). Every answer that uses it shows its article URL. The Wikipedia packs compiled by NIDO are shared under the same license; the NIDO Essentials guides, written by NIDO, are CC BY 4.0. NIDO is not affiliated with the Wikimedia Foundation.",
     "embeddingNote": "The multilingual search model (multilingual-e5-small, by intfloat) is MIT, Copyright (c) Microsoft Corporation; NIDO publishes its GGUF conversion with that notice.",
     "thirdPartyTitle": "Third-party software",
     "thirdPartyBody_one": "{{count}} open-source package. Tap one to read its license.",
