@@ -126,3 +126,58 @@ describe("el juicio de fechas R1–R5 (C-07)", () => {
     expect(judge("Llame antes del viernes.", doc)).toBeNull();
   });
 });
+
+// A6-40 (FV-1, opción (i)): la familia ordinal inglesa queda fijada
+// como comportamiento aceptado. Las gramáticas de dates.ts aceptan el
+// sufijo ordinal opcional (st|nd|rd|th) tras el día y la mención de
+// emparejamiento («Tuesday the 10th»); la ruta existía solo en el
+// código y en la medida de FV-1, sin una sola fixture. El defecto era
+// la falta de asiento, no la conducta: producción intacta. El ancla
+// es la misma de C-07: el 10 de noviembre de 2026 es MARTES.
+describe("ordinales ingleses: comportamiento aceptado (A6-40, FV-1)", () => {
+  it("parse, mes primero: «November 10th, 2026» crea la mención completa", () => {
+    const m = parseDateMentions("The appointment is on November 10th, 2026.", REF);
+    expect(m).toHaveLength(1);
+    expect(m[0].day).toEqual({ y: 2026, m: 11, d: 10 });
+    expect(m[0].hasYear).toBe(true);
+    expect(m[0].kind).toBe("calendario");
+  });
+
+  it("la familia de sufijos sobre la misma gramática, cada uno con su fecha exacta", () => {
+    const day = (t: string) => parseDateMentions(t, REF)[0]?.day;
+    expect(day("November 1st, 2026")).toEqual({ y: 2026, m: 11, d: 1 });
+    expect(day("November 2nd, 2026")).toEqual({ y: 2026, m: 11, d: 2 });
+    expect(day("November 3rd, 2026")).toEqual({ y: 2026, m: 11, d: 3 });
+    expect(day("November 21st, 2026")).toEqual({ y: 2026, m: 11, d: 21 });
+    expect(day("November 23rd, 2026")).toEqual({ y: 2026, m: 11, d: 23 });
+  });
+
+  it("parse, emparejamiento: «Tuesday the 10th» crea la mención de emparejamiento", () => {
+    const m = parseDateMentions("The appointment is on Tuesday the 10th.", REF);
+    expect(m).toHaveLength(1);
+    expect(m[0].weekday).toBe(2); // martes
+    expect(m[0].dom).toBe(10);
+    expect(m[0].day).toBeNull(); // emparejamiento: sin ancla absoluta en la frase
+    expect(m[0].kind).toBe("calendario");
+  });
+
+  it("conflicto falso: «Monday, November 10th, 2026» se acusa (el 10 es martes)", () => {
+    const src = ["The follow-up appointment is on November 10, 2026 at 9:30."];
+    expect(judge("The appointment is on Monday, November 10th, 2026.", src)).not.toBeNull();
+  });
+
+  it("conflicto honesto: «Tuesday, November 10th, 2026» no se acusa", () => {
+    const src = ["The follow-up appointment is on November 10, 2026 at 9:30."];
+    expect(judge("The appointment is on Tuesday, November 10th, 2026.", src)).toBeNull();
+  });
+
+  it("control sin ordinal: «November 10, 2026» conserva exactamente el desenlace de hoy", () => {
+    const bare = parseDateMentions("The appointment is on November 10, 2026.", REF);
+    const ordinal = parseDateMentions("The appointment is on November 10th, 2026.", REF);
+    expect(bare).toHaveLength(1);
+    expect(bare[0].day).toEqual({ y: 2026, m: 11, d: 10 });
+    expect(bare[0].day).toEqual(ordinal[0].day);
+    expect(bare[0].hasYear).toBe(true);
+    expect(bare[0].kind).toBe("calendario");
+  });
+});
