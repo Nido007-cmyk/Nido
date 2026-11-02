@@ -115,7 +115,7 @@ function detectCategory(content: string): RememberExtraction["category"] {
   const lower = content.toLowerCase();
   // Eventos: fechas, cumpleaños, aniversarios, citas.
   if (
-    /cumplea[ñn]os|aniversario|\d{1,2} de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)|el \d{1,2}\/\d{1,2}|cita|reuni[óo]n|evento/i.test(
+    /cumplea[ñn]os|aniversario|\d{1,2} de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)|el \d{1,2}\/\d{1,2}|cita|reuni[óo]n|evento/i.test(
       content
     )
   ) {
@@ -213,7 +213,7 @@ export function reminderTitleForFact(content: string): string {
 
 const MESES: Record<string, number> = {
   enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
-  julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
+  julio: 6, agosto: 7, septiembre: 8, setiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
   // Portugués (batería trilingüe 0.1.20): sin estos nombres, «15 de
   // março» nunca parseaba y el cumpleaños PT no generaba recordatorio.
   janeiro: 0, fevereiro: 1, "março": 2, maio: 4, junho: 5, julho: 6,
@@ -226,7 +226,7 @@ const MESES: Record<string, number> = {
  */
 export function extractDateISO(text: string, lang: "es" | "en" | "pt" = "es"): string | null {
   // Español: "15 de marzo"
-  const mEs = /(\d{1,2}) de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|maio|junho|julho|setembro|outubro|novembro|dezembro)/i.exec(text);
+  const mEs = /(\d{1,2}) de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|maio|junho|julho|setembro|outubro|novembro|dezembro)/i.exec(text);
   if (mEs) {
     const day = parseInt(mEs[1], 10);
     const month = MESES[mEs[2].toLowerCase()];

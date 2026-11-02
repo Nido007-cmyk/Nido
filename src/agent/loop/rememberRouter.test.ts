@@ -483,3 +483,20 @@ describe("B11 — extracción pt «guarda na memória que…» y calco en", () =
     expect(extractRememberFact("guarda uma nota: comprar pão")).toBeNull();
   });
 });
+
+// B17 (barrido «revisa todo», clase 1 · MEDIA-BAJA): «setiembre» no
+// estaba en la gramática de extractDateISO — el cumpleaños dictado
+// con la variante no creaba su recordatorio (IN18: null). dates.ts,
+// stripDateWords en su otra lista y MONTH_LOOKUP sí la traen; la
+// mitad de actionRouter va en la fixture de ese fichero (IN20).
+describe("B17 — «setiembre» en extractDateISO", () => {
+  it("«el 15 de setiembre» extrae el 15 de septiembre (IN18)", () => {
+    const iso = extractDateISO("el cumpleaños de mi mamá es el 15 de setiembre", "es");
+    expect(iso).not.toBeNull();
+    expect(iso).toContain("-09-15");
+  });
+
+  it("suelo: «septiembre» no se mueve", () => {
+    expect(extractDateISO("el 15 de septiembre", "es")).toContain("-09-15");
+  });
+});

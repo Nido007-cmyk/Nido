@@ -710,7 +710,7 @@ export function stripDateWords(input: string): string {
       .replace(/(?<![\p{L}])(mañana|manana|tomorrow|hoy|today|amanhã|amanha|hoje)(?![\p{L}])/giu, "")
       // 0.1.35: fecha de calendario («el 15 de marzo», «em 15 de março»,
       // «on March 15th»): el título del aviso quedaba con la fecha dentro.
-      .replace(/(?:(?<![\p{L}])(?:el|em|no|on)\s+)?(?<![\p{L}\d])\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)(?:\s+de(?:l)?\s+\d{4})?(?![\p{L}])/giu, "")
+      .replace(/(?:(?<![\p{L}])(?:el|em|no|on)\s+)?(?<![\p{L}\d])\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)(?:\s+de(?:l)?\s+\d{4})?(?![\p{L}])/giu, "")
       .replace(/(?:(?<![\p{L}])on\s+)?(?<![\p{L}])(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?(?![\p{L}\d])/giu, "")
       .replace(/\ba\s+las\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
       // B14: el singular «a la 1» / «à 1», espejo de las dos anteriores.
@@ -955,14 +955,14 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
   if (!targetDate) {
     const meses: Record<string, number> = {
       enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
-      julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
+      julio: 6, agosto: 7, septiembre: 8, setiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
       january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
       july: 6, august: 7, september: 8, october: 9, november: 10, december: 11,
       // 0.1.8: portugués.
       janeiro: 0, fevereiro: 1, "março": 2, marco: 2, maio: 4, junho: 5,
       julho: 6, setembro: 8, outubro: 9, novembro: 10, dezembro: 11,
     };
-    const mEs = /(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)(?:\s+de(?:l)?\s+(\d{4}))?/i.exec(t);
+    const mEs = /(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)(?:\s+de(?:l)?\s+(\d{4}))?/i.exec(t);
     const mEn = /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?/i.exec(t);
     let month: number | undefined, day: number | undefined, year: number | undefined;
     if (mEs) { day = parseInt(mEs[1], 10); month = meses[mEs[2].toLowerCase()]; year = mEs[3] ? parseInt(mEs[3], 10) : undefined; }

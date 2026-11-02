@@ -687,3 +687,28 @@ describe("B14 — hora singular «a la 1» / «à 1» en recordatorios", () => {
     expect(en.getHours()).toBe(13);
   });
 });
+
+// B17 (barrido «revisa todo», clase 1 · MEDIA-BAJA): «setiembre»
+// tampoco estaba en la gramática de parseReminderDateTime — «el 15
+// de setiembre a las 9» daba MAÑANA a las 9 (IN20): fecha equivocada
+// en silencio. Con la palabra, la fecha nombrada manda y rueda a su
+// próxima ocurrencia como su gemela «septiembre».
+describe("B17 — «setiembre» en parseReminderDateTime", () => {
+  const NOW = new Date("2026-11-02T10:00:00");
+
+  it("«el 15 de setiembre a las 9» es el 15 de septiembre a las 9, no mañana (IN20)", () => {
+    const iso = parseReminderDateTime("recuérdame el 15 de setiembre a las 9 de llamar a Ana", NOW);
+    expect(iso).not.toBeNull();
+    const d = new Date(iso!);
+    expect(d.getMonth()).toBe(8);
+    expect(d.getDate()).toBe(15);
+    expect(d.getHours()).toBe(9);
+  });
+
+  it("suelo: «septiembre» da la misma forma", () => {
+    const d = new Date(parseReminderDateTime("recuérdame el 15 de septiembre a las 9 de llamar a Ana", NOW)!);
+    expect(d.getMonth()).toBe(8);
+    expect(d.getDate()).toBe(15);
+    expect(d.getHours()).toBe(9);
+  });
+});
