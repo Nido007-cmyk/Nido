@@ -81,7 +81,7 @@ Changes to this policy are made in this file and recorded in the repository hist
 
 # Política de privacidad
 
-Última actualización: 2026-10-29 (después de 0.1.61). Aplica a la app NIDO para Android compilada desde este repositorio.
+Última actualización: 2026-11-01 (después de 0.1.69). Aplica a la app NIDO para Android compilada desde este repositorio.
 
 ## Resumen
 
