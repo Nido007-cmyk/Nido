@@ -576,6 +576,99 @@ describe("T-J1 — la afirmación tipada abre la regla del dato sin señal en la
 });
 
 // ---------------------------------------------------------------
+// T-J2 (barrido «revisa todo», J2): la cópula portuguesa «é»
+// quedaba fuera de DATUM_COPULA_RE por su pliegue («é» → «e», la
+// conjunción), y con ella TODA afirmación tipada en pt quedaba
+// exenta de la pierna: la dosis falsa de un dígito se sellaba en pt
+// mientras su gemela es se retiraba desde A3-03. La cura lee el
+// token acentuado antes del pliegue (hasDatumCopula), sin abrir la
+// conjunción «e», y trae «colher(es)» a DOSE_MEASURE_RE: sin la
+// unidad, la dosis fiel pt (la nota J8 del barrido) solo se salvaba
+// por la exclusión, no por juicio — con la cópula curada y la
+// unidad ausente, la pierna la habría retirado siendo fiel.
+// La misma cópula alimenta la pierna de identidad sin cifras
+// (assertsDatumIdentity): su gemela pt de R-05 también quedaba
+// exenta y aquí se cura con su fixture.
+// R2-11 queda fijado como PARIDAD, no como retirada: su 30 falso
+// está unido a la dosis en la evidencia («a calda leva 30 ml») y la
+// doctrina de cifras unidas al tipo lo rescata — medido idéntico en
+// es, cuya fixture gemela lo bloquea: la vara de J2 es que pt se
+// juzgue como es, no que pt se juzgue más que es.
+
+describe("T-J2 — la cópula pt «é» entra en la pierna tipada (y en la de identidad)", () => {
+  const PT_DOSE: GroundingChunk = {
+    title: "nota",
+    body: "Dose do xarope. Tome 5 colheres de sopa por dia.",
+  };
+  const PT_G08: GroundingChunk = {
+    title: "nota",
+    body: "Dose do xarope. Tome 20 colheres de sopa por dia.",
+  };
+  const Q_PT = "Qual é a dose do xarope?";
+
+  it("la dosis falsa de un dígito en pt se retira, como su gemela es desde A3-03", () => {
+    const r = verifyGroundedAnswer("A dose do xarope é 9 colheres de sopa por dia.", [PT_DOSE], "pt", Q_PT);
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("9 colheres");
+    expect(r.text).toContain("Tome 5 colheres de sopa por dia.");
+  });
+
+  it("G08, el control fiel obligatorio: la dosis correcta pt sella POR JUICIO, retiradas 0", () => {
+    const r = verifyGroundedAnswer("A dose do xarope é 20 colheres de sopa por dia.", [PT_G08], "pt", Q_PT);
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toContain("20 colheres de sopa");
+  });
+
+  it("la dosis falsa rescatada solo por una cifra que no es dosis se sustituye por el dato verdadero", () => {
+    const chunk: GroundingChunk = {
+      title: "nota",
+      body: "Dose do xarope. Tome 20 colheres de sopa por dia. O frasco mede 30 centímetros.",
+    };
+    const r = verifyGroundedAnswer("A dose do xarope é 30 colheres de sopa por dia.", [chunk], "pt", Q_PT);
+    expect(r.status).toBe("grounded");
+    expect(r.text).toBe("Tome 20 colheres de sopa por dia [1].");
+    expect(r.sentences?.[0].origin.kind).toBe("source");
+  });
+
+  it("R2-11 en paridad: el 30 unido a otra dosis en la evidencia rescata en pt como en es", () => {
+    const pt: GroundingChunk = {
+      title: "nota",
+      body: "Dose do xarope. Tome 20 colheres de sopa por dia. A calda leva 30 ml.",
+    };
+    const es: GroundingChunk = {
+      title: "nota",
+      body: "Dosis del jarabe. Tome 20 cucharadas de sopa al día. La salsa lleva 30 ml.",
+    };
+    const rPt = verifyGroundedAnswer("A dose do xarope é 30 colheres de sopa por dia.", [pt], "pt", Q_PT);
+    const rEs = verifyGroundedAnswer("La dosis del jarabe es 30 cucharadas de sopa al día.", [es], "es", "¿Cuál es la dosis del jarabe?");
+    expect(rPt.status).toBe("grounded");
+    expect(rEs.status).toBe("grounded");
+  });
+
+  it("la identidad sin cifras en pt se sustituye por el dato, como R-05 en es", () => {
+    const doc: GroundingChunk = {
+      title: "doc",
+      body:
+        "O telefone da clínica atende de segunda a sexta. " +
+        "Para mudar a consulta ligue para 520-555-0147. O número de emergência é o 911.",
+    };
+    const r = verifyGroundedAnswer("O telefone da clínica é o número de emergência.", [doc], "pt", "Qual é o telefone da clínica?");
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("520-555-0147");
+    expect(r.text).not.toContain("número de emergência");
+    expect(r.sentences?.[0].origin.kind).toBe("source");
+  });
+
+  it("guarda de la conjunción: la «e» portuguesa no se abre — la fiel con «e» y sin «é» no se toca", () => {
+    const r = verifyGroundedAnswer("A dose do xarope, 20 colheres de sopa e água por dia.", [PT_G08], "pt", Q_PT);
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------
 // Ronda física 0.1.68, R-05: la pregunta del teléfono contra el
 // documento de la ronda. En la sesión real la recuperación mezcló el
 // documento con la guía de crisis (de ahí salían «teléfono»,

@@ -597,6 +597,24 @@ const DATUM_CATEGORY_RE =
 // cópula, y casaría de más.
 const DATUM_COPULA_RE = /\b(es|son|era|eran|fue|fueron|is|are|was|were|foi|foram|sao)\b/;
 
+/**
+ * T-J2 (barrido «revisa todo», J2): la cópula de la afirmación,
+ * con la portuguesa «é» leída ANTES del pliegue. La lista de arriba
+ * corre sobre texto plegado, donde «é» ya es «e» — la conjunción
+ * —, y por esa exclusión deliberada TODA afirmación tipada en
+ * portugués quedaba exenta de la pierna: la dosis falsa de un
+ * dígito se sellaba fundada en pt mientras su gemela es se retiraba
+ * desde A3-03. La salida no es meter «e» en la lista (abriría la
+ * conjunción), sino mirar el token acentuado en el texto sin
+ * plegar: «é» suelto, con fronteras de no-letra, es cópula en pt y
+ * no existe como palabra en es. Dentro de palabra («café») no
+ * caza: la letra anterior lo cierra.
+ */
+function hasDatumCopula(sentence: string): boolean {
+  if (DATUM_COPULA_RE.test(foldForCues(sentence))) return true;
+  return /(?:^|[^\p{L}])é(?![\p{L}])/u.test((sentence ?? "").toLowerCase());
+}
+
 // Preguntas «de teléfono» a efectos de la forma del dato (un teléfono
 // es una ristra larga de dígitos, no una cifra con unidad). SOLO
 // señales de teléfono o de llamada: «número/number» a secas NO está
@@ -727,8 +745,14 @@ function namesTypeNearDigit(sentence: string, typeWords: readonly string[]): boo
 const DATE_NAME_RE =
   /\b(lunes|martes|miercoles|jueves|viernes|sabado|sabados|domingo|domingos|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda|terca|quarta|quinta|sexta|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/;
 
+/**
+ * Las unidades que unen una cifra a la dosis. T-J2 trajo
+ * «colher(es)» pt: sin ella, la dosis fiel portuguesa (G08) solo se
+ * salvaba por la exclusión de «é», no por juicio. T-J6 completa la
+ * tabla con las unidades en.
+ */
 const DOSE_MEASURE_RE =
-  /\d+(?:[.,]\d+)?\s*(ml|mg|mcg|kg|g|miligramos?|gramos?|comprimidos?|pastillas?|cucharadas?|cucharaditas?|gotas|tabletas?|capsulas?|unidades?)\b/;
+  /\d+(?:[.,]\d+)?\s*(ml|mg|mcg|kg|g|miligramos?|gramos?|comprimidos?|pastillas?|cucharadas?|cucharaditas?|colheres?|gotas|tabletas?|capsulas?|unidades?)\b/;
 
 /** ¿Trae la frase un dato DEL TIPO (su forma, o su nombre junto a la cifra)? */
 function carriesDatumOfType(sentence: string, type: DatumType): boolean {
@@ -925,7 +949,7 @@ function digitsMatchType(sentence: string, type: DatumType, recs: SourceSentence
  */
 function isTypedDatumOffender(sentence: string, type: DatumType, recs: SourceSentenceRec[]): boolean {
   const folded = foldForCues(sentence);
-  if (!DATUM_CATEGORY_RE.test(folded) || !DATUM_COPULA_RE.test(folded)) return false;
+  if (!DATUM_CATEGORY_RE.test(folded) || !hasDatumCopula(sentence)) return false;
   if (datumTypeOfText(sentence) !== type) return false;
   // A3-03 (decisión de FV-1): la clase DOSIS no hereda la exención
   // de un dígito de hasJudgedDigit. Sin esta pierna, «La dosis es
@@ -1166,7 +1190,7 @@ function phoneDatumBridge(
 function assertsDatumIdentity(sentence: string): boolean {
   if (hasJudgedDigit(sentence)) return false;
   const folded = foldForCues(sentence);
-  return DATUM_CATEGORY_RE.test(folded) && DATUM_COPULA_RE.test(folded);
+  return DATUM_CATEGORY_RE.test(folded) && hasDatumCopula(sentence);
 }
 
 /**
