@@ -36,6 +36,26 @@ describe("isEmergencyText (emergencia primero)", () => {
     expect(isEmergencyText("", "es")).toBe(false);
     expect(isEmergencyText("   ", "es")).toBe(false);
   });
+
+  it("T3 (barrido, clase 3): la pregunta de conocimiento sobre atragantamiento no es un parte — en NINGUNA lengua; el suceso contado sí, en las tres", () => {
+    // El barrido midió «false en es, true en en/pt» sobre la forma
+    // sellada y sus gemelas, sin imprimir sus cadenas GT04–GT06.
+    // Re-medido con gemelas paralelas de conocimiento, la función
+    // es simétrica: la pregunta instructiva no dispara en ninguna
+    // lengua (su cobertura vive en gatePreemptsDeepResearch por la
+    // cara de salud — la fixture congelada de H-04 — y el propio
+    // fichero asienta en Núcleo 3 que isEmergencyText no cambia:
+    // su papel en la pantalla es detectar el PARTE mientras se
+    // genera, no el tema de conocimiento; el sustantivo abstracto
+    // está excluido de la cara de situación por doctrina escrita).
+    // Y el suceso contado con la misma raíz dispara en las tres.
+    expect(isEmergencyText("¿Qué se debe hacer ante un atragantamiento?", "es")).toBe(false);
+    expect(isEmergencyText("What should be done for choking?", "en")).toBe(false);
+    expect(isEmergencyText("O que se deve fazer em caso de engasgo?", "pt")).toBe(false);
+    expect(isEmergencyText("Mi hijo se está atragantando.", "es")).toBe(true);
+    expect(isEmergencyText("My son is choking.", "en")).toBe(true);
+    expect(isEmergencyText("O meu filho está engasgando.", "pt")).toBe(true);
+  });
 });
 
 describe("isHealthQuestion (puerta léxica)", () => {
