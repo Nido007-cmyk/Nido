@@ -93,9 +93,9 @@ The interface is available in English, Spanish and Portuguese.
    [latest release](https://github.com/Nido007-cmyk/Nido/releases).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
-4. On first launch NIDO downloads its language model, between 0.5 and 1 GB
-   depending on your phone's memory. This is the only time it needs the
-   internet.
+4. On first launch NIDO downloads its language model, between about 0.4
+   and 1.1 GB depending on your phone's memory and language. This is the
+   only time it needs the internet.
 
 ## Privacy and security
 
@@ -129,7 +129,7 @@ The interface is available in English, Spanish and Portuguese.
 
 ## Status
 
-Alpha, October 2026. The project has more than 4,500 automated tests and
+Alpha, October 2026. The project has more than 5,800 automated tests and
 runs type checking and the test suite on every change. What automated tests
 cannot cover is behaviour on real hardware, so the headline flows are also
 exercised on physical Galaxy tablets: chat and agent tools, memory,

@@ -95,8 +95,9 @@ La interfaz está disponible en español, inglés y portugués.
    [última versión](https://github.com/Nido007-cmyk/Nido/releases).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
-4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,5 y
-   1 GB según la memoria del teléfono. Es la única vez que necesita internet.
+4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y
+   1,1 GB aproximadamente según la memoria y el idioma del teléfono. Es la
+   única vez que necesita internet.
 
 ## Privacidad y seguridad
 
@@ -133,7 +134,7 @@ La interfaz está disponible en español, inglés y portugués.
 
 ## Estado
 
-Alfa, octubre de 2026. El proyecto tiene más de 4500 pruebas automáticas y
+Alfa, octubre de 2026. El proyecto tiene más de 5800 pruebas automáticas y
 ejecuta la comprobación de tipos y la batería de pruebas en cada cambio. Lo
 que las pruebas automáticas no cubren es el comportamiento en hardware real,
 así que los flujos principales también se prueban en tabletas Galaxy
