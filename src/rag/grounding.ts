@@ -786,9 +786,13 @@ const DATE_NAME_RE =
  * ninguna frase de la fuente ligaba su dígito y el dato quedaba
  * sin portador. La caja ya normalizaba estas unidades; esta tabla
  * solo aprende a reconocerlas junto a la cifra (es/pt/en).
+ * ADV-J-C1 completa la familia del inhalador: «puffs» y «sprays»
+ * no estaban en ninguna de las dos tablas y la dosis fiel de un
+ * inhalador o un spray nasal se seguía retirando, con la infiel
+ * ciega en la otra dirección; la pt las escribe igual.
  */
 const DOSE_MEASURE_RE =
-  /\d+(?:[.,]\d+)?\s*(ml|mg|mcg|kg|g|miligramos?|gramos?|comprimidos?|pastillas?|cucharadas?|cucharaditas?|colheres?|gotas|tabletas?|capsulas?|unidades?|teaspoons?|tablespoons?|tablets?|pills?|capsules?|drops?|units?|milligrams?|grams?|milliliters?|millilitres?)\b/;
+  /\d+(?:[.,]\d+)?\s*(ml|mg|mcg|kg|g|miligramos?|gramos?|comprimidos?|pastillas?|cucharadas?|cucharaditas?|colheres?|gotas|tabletas?|capsulas?|unidades?|teaspoons?|tablespoons?|tablets?|pills?|capsules?|drops?|puffs?|sprays?|units?|milligrams?|grams?|milliliters?|millilitres?)\b/;
 
 /** ¿Trae la frase un dato DEL TIPO (su forma, o su nombre junto a la cifra)? */
 function carriesDatumOfType(sentence: string, type: DatumType): boolean {

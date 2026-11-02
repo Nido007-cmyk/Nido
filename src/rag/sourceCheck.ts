@@ -114,6 +114,10 @@ const UNITS: Record<string, string> = {
   // C-08: las unidades de dosis y duración de Esencial.
   "%": "%", percent: "%",
   gota: "gotas", gotas: "gotas", drop: "gotas", drops: "gotas",
+  // ADV-J-C1: la familia del inhalador, en paridad con la tabla
+  // del juez (DOSE_MEASURE_RE): sin «puffs»/«sprays» la caja no
+  // parseaba la medida y la dosis cambiada no enseñaba conflicto.
+  puff: "puffs", puffs: "puffs", spray: "sprays", sprays: "sprays",
   comprimido: "comprimidos", comprimidos: "comprimidos",
   tableta: "comprimidos", tabletas: "comprimidos",
   pastilla: "comprimidos", pastillas: "comprimidos",

@@ -447,3 +447,35 @@ describe("T-J5: la caja enseña la fecha numérica transpuesta cuando el context
     expect(findDateConflicts("La cita con el dentista es el 10/11/2026.", [chunk(NOTA_NUM)], REF_NUM)).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------
+// ADV-J-C1 (adversaria del bloque del juez): «puffs» y «sprays»
+// entran también en las UNITS de esta caja — sin ellas la medida
+// no se parseaba y la dosis cambiada no enseñaba conflicto. (La
+// caja exige tema compartido, como con toda unidad: las frases
+// comparten inhalador y pauta, no solo la unidad.)
+
+describe("ADV-J-C1: la caja enseña la dosis de inhalador cambiada", () => {
+  it("3 puffs contra 2: un conflicto con la unidad y la frase de la fuente", () => {
+    const conflicts = findNumberConflicts("The inhaler dose is 3 puffs twice a day.", [
+      chunk("Inhaler guide. Take 2 puffs twice a day."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("puffs");
+    expect(conflicts[0].sourceSentence).toContain("2 puffs");
+  });
+
+  it("la fiel (2 puffs) no enseña nada", () => {
+    expect(
+      findNumberConflicts("The inhaler dose is 2 puffs twice a day.", [chunk("Inhaler guide. Take 2 puffs twice a day.")]),
+    ).toEqual([]);
+  });
+
+  it("4 sprays contra 2: un conflicto con su unidad", () => {
+    const conflicts = findNumberConflicts("The nasal spray dose is 4 sprays once a day.", [
+      chunk("Nasal spray guide. Use 2 sprays once a day."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("sprays");
+  });
+});

@@ -719,6 +719,63 @@ describe("T-J6 — la dosis en inglés se juzga con su tabla completa", () => {
 });
 
 // ---------------------------------------------------------------
+// ADV-J-C1 (adversaria del bloque del juez sobre T-J6): «puffs» y
+// «sprays» no existían en NINGUNA tabla — la dosis fiel del
+// inhalador se retiraba (abstención con retiradas 1, medida sobre
+// el arreglo de G06: la fuente no nombra «dose» junto a la cifra y
+// el dato quedaba sin portador) y la infiel era ciega en la otra
+// dirección. Las dos unidades entran en DOSE_MEASURE_RE y en las
+// UNITS de la caja en el mismo commit, con la paridad por suelo.
+// La pt escribe «puffs» igual y la juzga por la misma tabla.
+
+describe("ADV-J-C1 — puffs y sprays se juzgan como dosis", () => {
+  const GUIA_PUFFS: GroundingChunk = {
+    title: "guide",
+    body: "Inhaler guide. Take 2 puffs twice a day.",
+  };
+  const GUIA_SPRAYS: GroundingChunk = {
+    title: "guide",
+    body: "Nasal spray guide. Use 2 sprays in each nostril once a day.",
+  };
+
+  it("la fiel en (2 puffs, su fuente exacta) sella fundada, retiradas 0", () => {
+    const r = verifyGroundedAnswer("The dose is 2 puffs.", [GUIA_PUFFS], "en", "What is the dose?");
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toContain("2 puffs");
+  });
+
+  it("la infiel en (3 puffs contra 2) se retira", () => {
+    const r = verifyGroundedAnswer("The dose is 3 puffs.", [GUIA_PUFFS], "en", "What is the dose?");
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("3 puffs");
+  });
+
+  it("la fiel en (2 sprays) sella fundada y la infiel (4 sprays) se retira", () => {
+    const f = verifyGroundedAnswer("The dose is 2 sprays.", [GUIA_SPRAYS], "en", "What is the dose?");
+    expect(f.status).toBe("grounded");
+    expect(f.removed).toBe(0);
+    const u = verifyGroundedAnswer("The dose is 4 sprays.", [GUIA_SPRAYS], "en", "What is the dose?");
+    expect(u.status).toBe("abstained");
+    expect(u.removed).toBe(1);
+  });
+
+  it("la pt juzga «puffs» por la misma tabla: la fiel sella y la infiel se retira", () => {
+    const guia: GroundingChunk = {
+      title: "guia",
+      body: "Guia do inalador. Use 2 puffs duas vezes ao dia.",
+    };
+    const f = verifyGroundedAnswer("A dose é 2 puffs.", [guia], "pt", "Qual é a dose?");
+    expect(f.status).toBe("grounded");
+    expect(f.removed).toBe(0);
+    const u = verifyGroundedAnswer("A dose é 3 puffs.", [guia], "pt", "Qual é a dose?");
+    expect(u.status).toBe("abstained");
+    expect(u.removed).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------
 // T-J7 (barrido «revisa todo», J7): la corrección de negación de
 // 0.1.59 no llegaba a la frase corta — la vía de copia exige ≥3
 // aciertos y el 85 %, y una frase de 2 raíces nunca llega: «El
