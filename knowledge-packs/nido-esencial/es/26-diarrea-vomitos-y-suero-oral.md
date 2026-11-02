@@ -13,7 +13,7 @@ Lo mejor son los sobres de sales de rehidratación oral (SRO) de farmacia o de u
 - 1 litro de agua potable (hervida y enfriada, o tratada).
 - 6 cucharaditas rasas de azúcar.
 - Media cucharadita rasa de sal.
-Mezcla hasta que se disuelva. Debe saber como mucho como una lágrima: si está más salado, añade agua. Úsalo en las 24 horas siguientes.
+Mezcla hasta que se disuelva. Úsalo en las 24 horas siguientes.
 
 ## Cómo darlo
 - Dalo a sorbos pequeños y frecuentes, o con cucharita a los niños, aunque vomite: espera 10 minutos y sigue más despacio.

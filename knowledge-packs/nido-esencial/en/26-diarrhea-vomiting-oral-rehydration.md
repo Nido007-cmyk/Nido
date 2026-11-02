@@ -13,7 +13,7 @@ Best are oral rehydration salts (ORS) sachets from a pharmacy or health center. 
 - 1 liter of safe water (boiled and cooled, or treated).
 - 6 level teaspoons of sugar.
 - Half a level teaspoon of salt.
-Stir until dissolved. It should taste no saltier than tears: if it does, add water. Use it within 24 hours.
+Stir until dissolved. Use it within 24 hours.
 
 ## How to give it
 - Give small, frequent sips, or by teaspoon for children, even if they vomit: wait 10 minutes and continue more slowly.

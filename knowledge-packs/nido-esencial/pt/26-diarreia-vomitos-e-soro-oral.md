@@ -15,7 +15,7 @@ O melhor são os pacotes de sais de reidratação oral (SRO) de farmácia ou de 
 - 1 litro de água potável (fervida e resfriada, ou tratada).
 - 6 colheres de chá rasas de açúcar.
 - Meia colher de chá rasa de sal.
-Misture até dissolver. Deve ter gosto no máximo de uma lágrima: se estiver mais salgado, acrescente água. Use nas 24 horas seguintes.
+Misture até dissolver. Use nas 24 horas seguintes.
 
 ## Como dar
 - Dê em goles pequenos e frequentes, ou de colherinha para as crianças, mesmo que vomite: espere 10 minutos e continue mais devagar.
