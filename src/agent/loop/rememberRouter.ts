@@ -114,23 +114,27 @@ const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
 function detectCategory(content: string): RememberExtraction["category"] {
   const lower = content.toLowerCase();
   // Eventos: fechas, cumpleaños, aniversarios, citas.
+  // B16 (barrido «revisa todo», clase 1): la familia era es-céntrica —
+  // «birthday»/«aniversário» y los meses en/pt caían a «general». Solo
+  // metadatos: el recordatorio por fecha sale de extractDateISO, no
+  // de la categoría.
   if (
-    /cumplea[ñn]os|aniversario|\d{1,2} de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)|el \d{1,2}\/\d{1,2}|cita|reuni[óo]n|evento/i.test(
+    /cumplea[ñn]os|aniversario|anivers[aá]rio|birthday|\d{1,2} de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|maio|junho|julho|setembro|outubro|novembro|dezembro)|(?:january|february|march|april|may|june|july|august|september|october|november|december) \d{1,2}|el \d{1,2}\/\d{1,2}|cita|reuni[óo]n|evento/i.test(
       content
     )
   ) {
     return "event";
   }
   // Preferencias: "me gusta", "prefiero", "no me gusta" y las reglas que
-  // valen «desde ahora» (0.1.41).
+  // valen «desde ahora» (0.1.41). B16: «i like» / «eu gosto» entran.
   if (
-    /me gusta|prefiero|no me gusta|odio|amo|favorit/i.test(lower) ||
+    /me gusta|prefiero|no me gusta|odio|amo|favorit|\bi like\b|eu gosto/i.test(lower) ||
     /^(?:a partir de (?:ahora|hoy|agora)|de ahora en adelante|desde ahora|from now on|going forward|de agora em diante|daqui (?:em|pra) frente)\b/i.test(lower)
   ) {
     return "preference";
   }
-  // Metas: "quiero", "mi objetivo", "mi meta".
-  if (/quiero|mi objetivo|mi meta|prop[óo]sito/i.test(lower)) {
+  // Metas: "quiero", "mi objetivo", "mi meta". B16: «i want» / «eu quero».
+  if (/quiero|mi objetivo|mi meta|prop[óo]sito|\bi want\b|eu quero/i.test(lower)) {
     return "goal";
   }
   return "general";

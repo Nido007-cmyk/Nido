@@ -527,3 +527,33 @@ describe("B12 — parentescos extendidos en en en extractPeople", () => {
     expect(extractPeople("my mom's name is Mary")).toEqual([{ name: "Mary", relationship: "mom" }]);
   });
 });
+
+// B16 (barrido «revisa todo», clase 1 · MENOR, T-CAT): detectCategory
+// era es-céntrica en sus tres familias — el cumpleaños en/pt caía a
+// «general» (IN06/IN08), «i like»/«eu gosto» no eran preference
+// (R3-08/R3-09) e «i want»/«eu quero» no eran goal (R3-11/R3-12).
+// Solo metadatos: el recordatorio automático por fecha no depende
+// de la categoría (usa extractDateISO). Suelo es ×3 (IN07/R3-07/
+// R3-10).
+describe("B16 — detectCategory trilingüe en sus tres familias", () => {
+  it("evento: birthday en y aniversário pt son «event» (IN06/IN08)", () => {
+    expect(extractRememberFact("remember that my mom's birthday is March 15")?.category).toBe("event");
+    expect(extractRememberFact("lembre que o aniversário da minha mãe é 15 de março")?.category).toBe("event");
+  });
+
+  it("preferencia: «i like» y «eu gosto» son «preference» (R3-08/R3-09)", () => {
+    expect(extractRememberFact("remember that i like coffee without sugar")?.category).toBe("preference");
+    expect(extractRememberFact("lembre que eu gosto de café sem açúcar")?.category).toBe("preference");
+  });
+
+  it("meta: «i want» y «eu quero» son «goal» (R3-11/R3-12)", () => {
+    expect(extractRememberFact("remember that i want to learn piano this year")?.category).toBe("goal");
+    expect(extractRememberFact("lembre que eu quero aprender piano este ano")?.category).toBe("goal");
+  });
+
+  it("suelo: las tres familias es no se mueven (IN07/R3-07/R3-10)", () => {
+    expect(extractRememberFact("recuerda que el cumpleaños de mi mamá es el 15 de marzo")?.category).toBe("event");
+    expect(extractRememberFact("recuerda que me gusta el café sin azúcar")?.category).toBe("preference");
+    expect(extractRememberFact("recuerda que quiero aprender piano este año")?.category).toBe("goal");
+  });
+});
