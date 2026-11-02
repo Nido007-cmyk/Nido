@@ -192,7 +192,16 @@ describe("hybrid ranking with real lexical hits", () => {
     const semantic: RetrievedChunk[] = [
       { chunkId: "s1", docId: "s1", title: "DNA", body: "", score: 0.65, matchType: "semantic" },
     ];
-    expect(lexicalSearch("How does DNA replication work?")).toEqual([]);
+    // La premisa «sin resultados léxicos» se mide contra el corpus real:
+    // hasta C-01 la pregunta era «How does DNA replication work?», pero
+    // con el corpus de 858 documentos el artículo «Protein» (que trata la
+    // replicación del ADN) ya supera la puerta léxica y la premisa dejó
+    // de ser cierta. En la línea de packs la sustituta fue la rueda de
+    // bicicleta; al traer el arreglo a este árbol (2026-11-01) esa
+    // también mide falsa aquí: el «Tallinn–Tartu GP» del nivel completo
+    // supera la puerta de ESTE árbol. La forma que queda es una
+    // pregunta doméstica medida vacía en los tres niveles.
+    expect(lexicalSearch("How do I unclog my bathroom sink?")).toEqual([]);
     expect(titles(fuseRetrievalResults([], semantic, 6))).toEqual(["DNA"]);
   });
 });
