@@ -561,6 +561,45 @@ describe("ADV-F2-C1 — el marco «el nombre de… es» / «the name of… is» 
   });
 });
 
+// ADV-F2-C2 (adversaria de formas II, MENOR): la extracción se comía
+// la conjunción que sigue a un nombre de una palabra — «Seu pai se
+// chama João e.» — porque el grupo opcional de segunda palabra la
+// aceptaba como segundo nombre. Preexistente en la base en el
+// asiento clásico y heredado por las alternativas de marco. La
+// captura para ante la conjunción suelta (pt «e», es «y», en «and»)
+// sin romper los nombres compuestos legítimos.
+describe("ADV-F2-C2 — la extracción no se come la conjunción tras el nombre", () => {
+  it("marco pt: «…é João e ele mora…» sirve «João»", () => {
+    const mem: MemoryQueryData = { facts: [{ content: "o nome do meu pai é João e ele mora em Lisboa", category: "general" }], people: [] };
+    expect(answerMemoryQuery("qual é o nome do meu pai?", mem, "pt")).toBe("Seu pai se chama João.");
+  });
+
+  it("cláusula pt: «…se chama Maria e mora…» sirve «Maria»", () => {
+    const mem: MemoryQueryData = { facts: [{ content: "minha mãe se chama Maria e mora em Lisboa", category: "general" }], people: [] };
+    expect(answerMemoryQuery("como se chama minha mãe?", mem, "pt")).toBe("Sua mãe se chama Maria.");
+  });
+
+  it("es «y» y en «and» paran igual en el asiento clásico", () => {
+    const es: MemoryQueryData = { facts: [{ content: "mi papá se llama Juan y vive en Tucson", category: "general" }], people: [] };
+    expect(answerMemoryQuery("¿cómo se llama mi papá?", es, "es")).toBe("Tu papá se llama Juan.");
+    const en: MemoryQueryData = { facts: [{ content: "my dad's name is John and he lives in Tucson", category: "general" }], people: [] };
+    expect(answerMemoryQuery("what is my dad's name?", en, "en")).toBe("Your dad's name is John.");
+  });
+
+  it("suelo: los nombres compuestos se siguen sirviendo enteros", () => {
+    const pt: MemoryQueryData = { facts: [{ content: "o nome do meu pai é João Pedro", category: "general" }], people: [] };
+    expect(answerMemoryQuery("qual é o nome do meu pai?", pt, "pt")).toBe("Seu pai se chama João Pedro.");
+    const es: MemoryQueryData = { facts: [{ content: "mi mamá se llama María José", category: "general" }], people: [] };
+    expect(answerMemoryQuery("¿cómo se llama mi mamá?", es, "es")).toBe("Tu mamá se llama María José.");
+    const en: MemoryQueryData = { facts: [{ content: "my mom's name is Mary Ann", category: "general" }], people: [] };
+    expect(answerMemoryQuery("what is my mom's name?", en, "en")).toBe("Your mom's name is Mary Ann.");
+    // La mirada es de palabra entera: «Elena» empieza por «e» y no
+    // es la conjunción — el compuesto se sirve entero.
+    const elena: MemoryQueryData = { facts: [{ content: "mi mamá se llama María Elena", category: "general" }], people: [] };
+    expect(answerMemoryQuery("¿cómo se llama mi mamá?", elena, "es")).toBe("Tu mamá se llama María Elena.");
+  });
+});
+
 // ADV-F-C2 (adversaria de formas, MENOR): el posesivo pt se calculaba
 // del token de la pregunta: con el dictado sin acento «minha avo» y
 // solo el abuelo guardado, la respuesta servía «Sua avo se chama

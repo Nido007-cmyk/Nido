@@ -666,11 +666,16 @@ export function answerMemoryQuery(
       // «chama-se» trae el nombre tras el reflexivo, y en el marco
       // «o nome d… é» el nombre va tras la cópula, al final.
       // ADV-F2-C1: los marcos es/en extraen igual, tras su cópula.
+      // ADV-F2-C2: el segundo término de la captura no puede ser la
+      // conjunción suelta («e» pt, «y» es, «and» en): «…se chama
+      // João e ele mora…» servía «João e». La mirada exige la palabra
+      // entera, así los nombres compuestos legítimos («María Elena»,
+      // «Mary Ann», «João Pedro») se siguen sirviendo enteros.
       const m =
-        /(?:se llama|se chama|chama-se|name is|is called)\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content) ??
-        /^o nome\b[^.!?]*?(?<![\p{L}])é\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content) ??
-        /^el nombre\b[^.!?]*?(?<![\p{L}])es\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content) ??
-        /^the name\b[^.!?]*?(?<![\p{L}])is\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content);
+        /(?:se llama|se chama|chama-se|name is|is called)\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: (?!(?:e|y|and)(?![\p{L}]))[\p{L}]+)?)/iu.exec(fact.content) ??
+        /^o nome\b[^.!?]*?(?<![\p{L}])é\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: (?!(?:e|y|and)(?![\p{L}]))[\p{L}]+)?)/iu.exec(fact.content) ??
+        /^el nombre\b[^.!?]*?(?<![\p{L}])es\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: (?!(?:e|y|and)(?![\p{L}]))[\p{L}]+)?)/iu.exec(fact.content) ??
+        /^the name\b[^.!?]*?(?<![\p{L}])is\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: (?!(?:e|y|and)(?![\p{L}]))[\p{L}]+)?)/iu.exec(fact.content);
       // ADV-F-C2, asiento del hecho: la palabra de parentesco tal
       // como está escrita en el hecho (con su acento) es el registro
       // servido en este asiento; de ella sale el género del posesivo.
