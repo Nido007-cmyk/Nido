@@ -395,7 +395,11 @@ const MEMORY_FORGET_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: /^(?:forget|delete from your memory|erase from your memory)\s+(?!(?:it|that|about it|about that|this)$).{2,}/i, lang: "en" },
   // EN con el objeto primero: «delete my address from your memory».
   { re: /^(?:delete|erase|remove)\s+(?:my|the)\s+.{2,}?\s+from\s+(?:your|the)\s+memory$/i, lang: "en" },
-  { re: /^(?:esque[cç]a|esquece|apaga da sua mem[oó]ria|apague da mem[oó]ria)\s+(?!(?:isso|isto)$).{2,}/i, lang: "pt" },
+  { re: /^(?:esque[cç]a|esquece|apaga da (?:sua )?mem[oó]ria|apague da mem[oó]ria)\s+(?!(?:isso|isto)$).{2,}/i, lang: "pt" },
+  // B18 (barrido «revisa todo», clase 1): PT con el objeto primero,
+  // espejo de es/en: «apaga meu endereço da memória» y «exclui meu
+  // endereço da memória» daban null y la orden caía al modelo.
+  { re: /^(?:apaga|apague|exclui|exclua|elimina|deleta|remove)\s+(?:meu|minha|o|a|esse|essa|este|esta)\s+.{2,}?\s+da\s+(?:sua\s+)?mem[oó]ria$/i, lang: "pt" },
 ];
 
 // --------------------------------------------------------------- tiempo
