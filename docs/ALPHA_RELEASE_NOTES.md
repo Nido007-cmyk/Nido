@@ -12,7 +12,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 
 ## What's working
 
-- Offline AI chat, 100% on-device, with a catalog of models from 0.4 GB to 5 GB (Qwen 2.5 0.5B / 1.5B / 7B, Qwen3 0.6B, Phi-3.5 mini, LFM 2.5, Gemma) — pick what your phone can run
+- Offline AI chat, 100% on-device, with a catalog of models from 0.4 GB to about 5.2 GB (Qwen 2.5 0.5B / 1.5B / 7B, Qwen3 0.6B, Phi-3.5 mini, LFM 2.5, Gemma) — pick what your phone can run
 - Reminders with local notifications: once, or every day, week, month or year; countdowns ("how many days until…"); birthdays you save get a yearly reminder
 - Encrypted memory of facts, people and notes, with a "My Memory" screen to review and delete them
 - Answers from your own documents and from an offline knowledge base, with an optional Wikipedia pack and optional multilingual search (Spanish, English, Portuguese)
@@ -22,7 +22,7 @@ NIDO is a private, offline-first personal AI assistant for Android. This is an *
 - Emergency tab (0.1.55): checked emergency numbers for 69 countries (32 in 0.1.58, 69 since 0.1.65; NIDO Local pack, each with its official source and check date), one-tap dialing (the person presses call), quick guides; since 0.1.65 a crisis-lines card shows the verified lines of the NIDO Crisis pack (14 countries)
 - First aid answers in the guide's own words (0.1.59): when a NIDO Essentials guide is the clear match, its text is shown exactly as written, with its sources and an "Open the full guide" button, and no model rewrites it; asking for a short version (0.1.60) shows the start of the guide as written
 - Carbon monoxide warnings: running a generator, grill or brazier indoors gets a fixed warning; since 0.1.60, symptoms (headache, dizziness, nausea) with a gas heater, furnace, boiler or fireplace get the "get outside and call for help" warning
-- NIDO's constitution (0.1.60): how the assistant must behave, with eight firm rules checked by automated tests on every change, and 118 evaluation questions (47 run on every change)
+- NIDO's constitution (0.1.60): how the assistant must behave, with eight firm rules checked by automated tests on every change, and 118 evaluation questions, now permanent tests in the suite
 - Optional daily summary at 8:00, off unless you turn it on (0.1.60)
 - A hostile PDF can no longer fill the phone's memory: NIDO's own PDF reader refuses more than 3,000 pages and stops as soon as the text reaches what fits in the import limit (0.1.64); turning on the hardware vault now asks for a backup from the last 30 days first (0.1.64)
 - Answers keep being written when you leave the app (0.1.65): generation continues in the background, and if the system kills the process mid-answer the chat keeps a note that the answer was cut, instead of silence
