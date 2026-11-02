@@ -729,6 +729,34 @@ describe("T-J3 — los números en letra se juzgan en el verificador, como en la
 });
 
 // ---------------------------------------------------------------
+// T-J4 (barrido «revisa todo», J4): las fracciones eran invisibles
+// para AMBAS gemelas — «1/4 taza» contra «1/2 taza» salía sellada
+// del juez (R2-06) y sin conflicto en la caja (R2-07, fijado en
+// sourceCheck.test.ts). Los tokens de una fracción son dígitos
+// únicos y ninguna gramática los unía; desde esta tanda
+// evidenceNumbers los lee como un valor n/d tras su tabla cerrada.
+
+describe("T-J4 — las fracciones se juzgan en el verificador", () => {
+  const RECETA: GroundingChunk = {
+    title: "receta",
+    body: "Receta de la abuela. Añade 1/2 taza de azúcar a la mezcla y remueve bien.",
+  };
+
+  it("R2-06: «1/4 taza» contra «1/2 taza» ya no sale sellada", () => {
+    const r = verifyGroundedAnswer("Añade 1/4 taza de azúcar a la mezcla.", [RECETA], "es", "¿Cómo se prepara la mezcla?");
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("1/4 taza");
+  });
+
+  it("control fiel: la fracción correcta sella como antes", () => {
+    const r = verifyGroundedAnswer("Añade 1/2 taza de azúcar a la mezcla.", [RECETA], "es", "¿Cómo se prepara la mezcla?");
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------
 // Ronda física 0.1.68, R-05: la pregunta del teléfono contra el
 // documento de la ronda. En la sesión real la recuperación mezcló el
 // documento con la guía de crisis (de ahí salían «teléfono»,

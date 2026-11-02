@@ -41,14 +41,50 @@
  *    letra no se juzga, como en la caja. Las tablas viven aquí
  *    desde esta tanda y la caja las importa: una sola fuente para
  *    las dos superficies.
+ *  - T-J4 (barrido «revisa todo», J4): las FRACCIONES de cocina
+ *    («1/4 taza») son cifras con valor n/d. La gramática es
+ *    estrecha a propósito: denominador de la tabla cerrada de
+ *    cocina (2, 3, 4, 5, 6, 8, 10, 12, 16) y numerador menor —
+ *    fuera de ahí, un «a/b» es una fecha d/m o una razón y sus
+ *    partes vuelven a ser tokens sueltos, como siempre. Una
+ *    fracción siempre se juzga: es el dato entero, no un dígito
+ *    suelto.
  *
  * Puro, sin dependencias, 100% testeable.
  */
 
-/** Cifras candidatas de un texto, como tokens crudos («16.431.599», «26,5»). */
+/**
+ * El valor de un token «a/b» como fracción de cocina, o null si no
+ * lo es (T-J4): denominador de la tabla cerrada y numerador menor
+ * que el denominador. «10/11» no es una fracción (11 no está en la
+ * tabla): es una fecha o una razón, y no se funde en un valor.
+ */
+const FRACTION_DENOMINATORS = new Set([2, 3, 4, 5, 6, 8, 10, 12, 16]);
+
+export function fractionValue(token: string): number | null {
+  const m = /^(\d+)\/(\d+)$/.exec(token);
+  if (!m) return null;
+  const n = Number(m[1]);
+  const d = Number(m[2]);
+  if (!FRACTION_DENOMINATORS.has(d) || n >= d) return null;
+  return n / d;
+}
+
+/** Cifras candidatas de un texto, como tokens crudos («16.431.599», «26,5», «1/4»). */
 export function numberTokens(text: string): string[] {
   const noCites = text.replace(/\[\d+\]/g, " ");
-  return noCites.match(/\d[\d.,]*\d|\d/g) ?? [];
+  const out: string[] = [];
+  for (const m of noCites.matchAll(/\d+\/\d+(?![\d/])|\d[\d.,]*\d|\d/g)) {
+    const tok = m[0];
+    if (tok.includes("/") && fractionValue(tok) === null) {
+      // No es fracción de cocina (una fecha d/m, una razón): sus
+      // partes vuelven a ser tokens sueltos, como hasta hoy.
+      out.push(...(tok.match(/\d+/g) ?? []));
+    } else {
+      out.push(tok);
+    }
+  }
+  return out;
 }
 
 /**
@@ -56,6 +92,10 @@ export function numberTokens(text: string): string[] {
  * notación es ambigua entre decimal y miles en alguna de las lenguas.
  */
 export function parseNumberToken(token: string): number[] {
+  if (token.includes("/")) {
+    const f = fractionValue(token);
+    return f === null ? [] : [f];
+  }
   const t = token.replace(/[.,]+$/, "");
   if (!/^\d[\d.,]*$/.test(t)) return [];
   const dots = (t.match(/\./g) ?? []).length;
@@ -98,6 +138,9 @@ export function tokenReadings(token: string): Array<{ value: number; decimals: n
 
 /** Decimales con los que una lectura afirma su valor («26,5» → 1; la lectura de miles → 0). */
 function decimalsOf(token: string, value: number): number {
+  // T-J4: una fracción afirma su valor con 2 decimales de vara
+  // («1/3» vale por «0,33» y no por «0» ni por «1»).
+  if (token.includes("/")) return 2;
   const t = token.replace(/[.,]+$/, "");
   const dots = (t.match(/\./g) ?? []).length;
   const commas = (t.match(/,/g) ?? []).length;
@@ -274,6 +317,8 @@ function withinEvidenceRanges(value: number, decimals: number, ranges: readonly 
 
 /** Una cifra se juzga si tiene 2+ dígitos o trae parte decimal (ver cabecera). */
 function isJudged(token: string): boolean {
+  // T-J4: una fracción siempre se juzga — es el dato entero.
+  if (token.includes("/")) return true;
   const digits = token.replace(/[.,]/g, "");
   return digits.length >= 2 || /[.,]\d/.test(token);
 }

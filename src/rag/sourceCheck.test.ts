@@ -390,3 +390,38 @@ describe("findDateConflicts (C-07: la caja aprende fechas)", () => {
     expect(conflicts[0].sourceSentence).toContain("martes 10 de noviembre");
   });
 });
+
+// ---------------------------------------------------------------
+// T-J4 (barrido «revisa todo», J4): las fracciones eran invisibles
+// también en esta superficie («1/4 taza» contra «1/2 taza» no
+// marcaba nada: R2-07). measuresIn gana la gramática de fracciones
+// compartida con el juez y UNITS gana la taza — sin la unidad la
+// fracción no tenía medida que juzgar, y los dígitos en tazas se
+// miden con ella desde la misma tanda, por la misma razón.
+
+describe("T-J4: las fracciones se juzgan en la caja", () => {
+  const RECETA = "Receta de la abuela. Añade 1/2 taza de azúcar a la mezcla y remueve bien.";
+
+  it("«1/4 taza» contra «1/2 taza» marca conflicto de tazas y enseña la fuente", () => {
+    const conflicts = findNumberConflicts("Añade 1/4 taza de azúcar a la mezcla.", [chunk(RECETA)]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("tazas");
+    expect(conflicts[0].sourceSentence).toContain("1/2 taza");
+  });
+
+  it("la fracción fiel no marca nada", () => {
+    expect(findNumberConflicts("Añade 1/2 taza de azúcar a la mezcla.", [chunk(RECETA)])).toEqual([]);
+  });
+
+  it("los dígitos en tazas también se miden desde esta tanda", () => {
+    const conflicts = findNumberConflicts("Añade 2 tazas de azúcar a la mezcla.", [
+      chunk("Receta de la abuela. Añade 3 tazas de azúcar a la mezcla y remueve bien."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("tazas");
+  });
+
+  it("«10/11» no es una fracción: no se funde ni marca por la vía de fracciones", () => {
+    expect(findNumberConflicts("La cita es el 10/11 en la sala.", [chunk("La cita es el 11/10 en la sala.")])).toEqual([]);
+  });
+});

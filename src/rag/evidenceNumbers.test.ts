@@ -158,3 +158,37 @@ describe("T-J3: los números en letra con portillo se juzgan como cifras", () =>
     expect(sentenceNumbersSupported("Añade media cucharadita de sal.", new Set())).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------
+// T-J4 (barrido «revisa todo», J4): las fracciones de cocina son
+// cifras. La gramática es la tabla cerrada de denominadores con
+// numerador menor; fuera de ella («10/11») el token se parte en
+// sus dígitos sueltos, como siempre — una fecha d/m no se funde
+// en un valor.
+
+describe("T-J4: las fracciones de cocina se juzgan como cifras", () => {
+  it("la fracción falsa no pasa; la fiel sí", () => {
+    const ev = evidenceNumberValues(["Añade 1/2 taza de azúcar a la mezcla."]);
+    expect(sentenceNumbersSupported("Añade 1/4 taza de azúcar a la mezcla.", ev)).toBe(false);
+    expect(sentenceNumbersSupported("Añade 1/2 taza de azúcar a la mezcla.", ev)).toBe(true);
+    expect(sentenceNumbersSupported("Añade 3/4 taza de azúcar a la mezcla.", ev)).toBe(false);
+  });
+
+  it("fracción y decimal se sostienen el uno al otro", () => {
+    const ev = evidenceNumberValues(["Añade 1/2 taza de azúcar a la mezcla."]);
+    expect(sentenceNumbersSupported("Añade 0,5 tazas de azúcar a la mezcla.", ev)).toBe(true);
+    const evDec = evidenceNumberValues(["Añade 0,25 tazas de azúcar a la mezcla."]);
+    expect(sentenceNumbersSupported("Añade 1/4 taza de azúcar a la mezcla.", evDec)).toBe(true);
+  });
+
+  it("«10/11» no es una fracción: se parte en dígitos y no crea ningún valor fundido", () => {
+    expect(numberTokens("La cita es el 10/11.")).toEqual(["10", "11"]);
+    expect(evidenceNumberValues(["La cita es el 10/11."]).has(10 / 11)).toBe(false);
+    const ev = evidenceNumberValues(["El 10 de noviembre y el 11 de octubre."]);
+    expect(sentenceNumbersSupported("La cita es el 10/11.", ev)).toBe(true);
+  });
+
+  it("la fecha con año «10/11/2026» tampoco se funde", () => {
+    expect(numberTokens("La cita es el 10/11/2026.")).toEqual(["10", "11", "2026"]);
+  });
+});

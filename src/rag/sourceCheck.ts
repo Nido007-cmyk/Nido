@@ -72,6 +72,7 @@ import {
   parseNumberToken,
   roundsFromEvidence,
   tokenReadings,
+  fractionValue,
   WORD_NUMBERS,
   DOSE_UNIT_WORDS,
   WORD_NUMBER_ALT,
@@ -121,6 +122,11 @@ const UNITS: Record<string, string> = {
   día: "dias", días: "dias", dia: "dias", dias: "dias", day: "dias", days: "dias",
   mes: "meses", meses: "meses", month: "meses", months: "meses",
   año: "años", años: "años", ano: "años", anos: "años", year: "años", years: "años",
+  // T-J4: la taza, la unidad en la que las fracciones de cocina se
+  // afirman («1/2 taza») — sin ella la fracción no tenía medida que
+  // juzgar en esta superficie. Los dígitos en tazas se miden con
+  // ella desde la misma tanda, por la misma razón.
+  taza: "tazas", tazas: "tazas", cup: "tazas", cups: "tazas", xicara: "tazas", xicaras: "tazas",
 };
 
 /**
@@ -275,6 +281,8 @@ const FREQ_FRAME_RE = new RegExp(
 );
 const WORD_NUMBER_RE = new RegExp(`\\b(${WORD_NUMBER_ALT})\\b`, "g");
 const DIGIT_TOKEN_RE = /\d[\d.,]*\d|\d/g;
+/** T-J4: las fracciones «a/b» candidatas (la validez la decide fractionValue). */
+const FRACTION_TOKEN_RE = /\d+\/\d+(?![\d/])/g;
 
 /**
  * Las medidas (valor + unidad) de una frase. El valor queda COMO SE
@@ -356,6 +364,22 @@ function measuresIn(sentence: string): FigureMeasure[] {
     const reading = /^\d/.test(raw) ? tokenReadings(raw)[0] : { value: WORD_NUMBERS[raw], decimals: 0 };
     if (!reading) continue;
     out.push({ value: reading.value, decimals: reading.decimals, unit: "veces/dia" });
+    consume(at, m[0].length);
+  }
+
+  // (4.5) T-J4: las fracciones con unidad («1/4 taza»), con la
+  // gramática compartida con el juez (evidenceNumbers: tabla de
+  // denominadores de cocina y numerador menor; «10/11» no es una
+  // fracción y no se funde). Consumen su tramo: el «1» y el «4» no
+  // vuelven a juzgarse sueltos en la pasada general.
+  for (const m of folded.matchAll(FRACTION_TOKEN_RE)) {
+    const at = m.index;
+    if (isConsumed(at)) continue;
+    const value = fractionValue(m[0]);
+    if (value === null) continue;
+    const resolved = resolveUnit(wordsAfter(folded, at + m[0].length));
+    if (!resolved) continue;
+    out.push({ value: value * resolved.factor, decimals: 2, unit: resolved.unit });
     consume(at, m[0].length);
   }
 
