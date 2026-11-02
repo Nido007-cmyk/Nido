@@ -763,6 +763,28 @@ function significantDigitGroups(text: string): string[] {
 }
 
 /**
+ * A3-03 (decisión de FV-1): la normalización de UNA cifra sin la
+ * vara de longitud de significantDigitGroups — de un decimal solo
+ * cuenta la parte entera (la misma doctrina) y se quitan los ceros
+ * a la izquierda, pero el dígito único SÍ produce grupo. La consume
+ * SOLO la pierna tipada DOSIS dentro de digitsMatchType: en una
+ * afirmación tipada dosis el dígito único es el dato entero («9 ml»
+ * contra «5 ml»), y la razón de la exención — el ruido de cifras
+ * sueltas en prosa — no aplica dentro de una frase que la propia
+ * regla ya tipó. La vara general no se toca: fuera de esa pierna,
+ * significantDigitGroups y hasJudgedDigit siguen mandando.
+ */
+function digitGroupKeepingSingle(tok: string): string {
+  const intPart = /[.,]/.test(tok) ? tok.split(/[.,]/)[0] : tok;
+  return intPart.replace(/^0+(?=\d)/, "");
+}
+
+/** Los grupos de cifra de un texto con la normalización de A3-03 (el dígito único cuenta). */
+function digitGroupsKeepingSingle(text: string): string[] {
+  return (text.replace(/\[\d+\]/g, " ").match(/\d+(?:[.,]\d+)?/g) ?? []).map(digitGroupKeepingSingle);
+}
+
+/**
  * Los tokens de cifra de una frase UNIDOS al tipo (ADV3, A3-01), en
  * orden de aparición: una cifra de una frase portadora cuenta como
  * cifra DEL TIPO solo si está unida a un ancla del tipo dentro de
@@ -853,7 +875,11 @@ function digitSignature(text: string): string {
 function digitsMatchType(sentence: string, type: DatumType, recs: SourceSentenceRec[]): boolean {
   const carriers = recs.filter((r) => carriesDatumOfType(r.text, type));
   if (carriers.length === 0) return false;
-  const mine = [...new Set(significantDigitGroups(sentence))];
+  // A3-03: en la pierna DOSIS los grupos se computan con la
+  // normalización que conserva el dígito único (en la afirmación y
+  // en las portadoras): sin ella, «mine» salía vacío ante «9 ml» y
+  // la comparación ni distinguía la dosis falsa de la fiel.
+  const mine = [...new Set(type === "dose" ? digitGroupsKeepingSingle(sentence) : significantDigitGroups(sentence))];
   if (mine.length === 0) return false;
   // ADV3 (A3-01): el conjunto del tipo ya no es «todas las cifras
   // de la frase portadora», sino solo las UNIDAS al tipo dentro de
@@ -861,7 +887,11 @@ function digitsMatchType(sentence: string, type: DatumType, recs: SourceSentence
   // sala ya no hereda el día ni la dosis hereda la sala. Si ninguna
   // cifra juzgable se une al tipo, el conjunto es vacío y la
   // afirmación con cifras de otro dato es infractora.
-  const typeGroups = new Set(carriers.flatMap((r) => boundDigitGroups(r.text, type)));
+  const typeGroups = new Set(
+    carriers.flatMap((r) =>
+      type === "dose" ? boundDigitTokens(r.text, type).map(digitGroupKeepingSingle) : boundDigitGroups(r.text, type),
+    ),
+  );
   if (mine.every((g) => typeGroups.has(g))) return true;
   // La misma cifra con otro agrupamiento («1.234» por «1234») o el
   // dato a medias («termina en 4417»): concatenación igual o sufijo.
@@ -888,10 +918,17 @@ function digitsMatchType(sentence: string, type: DatumType, recs: SourceSentence
  * cifras, y la de cifras se fiaba del chequeo de presencia.
  */
 function isTypedDatumOffender(sentence: string, type: DatumType, recs: SourceSentenceRec[]): boolean {
-  if (!hasJudgedDigit(sentence)) return false;
   const folded = foldForCues(sentence);
   if (!DATUM_CATEGORY_RE.test(folded) || !DATUM_COPULA_RE.test(folded)) return false;
   if (datumTypeOfText(sentence) !== type) return false;
+  // A3-03 (decisión de FV-1): la clase DOSIS no hereda la exención
+  // de un dígito de hasJudgedDigit. Sin esta pierna, «La dosis es
+  // 9 ml» contra «Tome 5 ml…» salía sellada fundada: la regla ni
+  // miraba la frase porque su única cifra no era «juzgable». En la
+  // afirmación tipada dosis cualquier cifra cuenta; fuera de ella
+  // (prosa, y sala/hora/fecha/teléfono/tarjeta) la vara general de
+  // hasJudgedDigit queda intacta.
+  if (!hasJudgedDigit(sentence) && !(type === "dose" && /\d/.test(sentence))) return false;
   return !digitsMatchType(sentence, type, recs);
 }
 

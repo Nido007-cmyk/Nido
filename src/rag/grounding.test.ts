@@ -422,6 +422,70 @@ describe("R-04 — idioma por frase (el documento trilingüe de la ronda)", () =
 });
 
 // ---------------------------------------------------------------
+// A3-03 (decisión de FV-1): la clase DOSIS no hereda la exención de
+// un dígito. La vara general (hasJudgedDigit: 2+ dígitos o decimal)
+// se queda para las cifras de prosa, pero en la afirmación tipada
+// dosis el dígito único ES el dato entero: «La dosis es 9 ml»
+// contra «Tome 5 ml…» se sellaba fundada, retiradas 0, porque
+// isTypedDatumOffender salía en su primera línea sin mirar la
+// frase. Desenlaces medidos sobre el árbol: la dosis falsa se
+// RETIRA (la portadora de un dígito no entra en digitRecs y no hay
+// sustitución que servir; la abstención honesta cita la fuente
+// verdadera), la fiel queda intacta.
+
+describe("A3-03 — la dosis de un dígito sí se juzga en la pierna tipada", () => {
+  const ES_NOTA: GroundingChunk = {
+    title: "nota",
+    body: "Tome el jarabe de 5 ml dos veces al día, después de comer.",
+  };
+  const EN_NOTE: GroundingChunk = {
+    title: "note",
+    body: "Take 5 ml of the syrup twice a day, after meals.",
+  };
+  const Q_ES = "¿Cuál es la dosis del jarabe?";
+  const Q_EN = "What is the dose of the syrup?";
+
+  it("el caso A3-03: «La dosis es 9 ml» contra «Tome 5 ml…» ya no sale sellada: se retira", () => {
+    const r = verifyGroundedAnswer("La dosis es 9 ml.", [ES_NOTA], "es", Q_ES);
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("9 ml");
+    expect(r.text).toContain("Tome el jarabe de 5 ml dos veces al día, después de comer.");
+  });
+
+  it("control fiel: «La dosis es 5 ml» contra la misma fuente queda fundada, retiradas 0", () => {
+    const r = verifyGroundedAnswer("La dosis es 5 ml.", [ES_NOTA], "es", Q_ES);
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toBe("La dosis es 5 ml.");
+  });
+
+  it("gemela EN: «The dose is 9 ml» contra «Take 5 ml…» tiene el mismo desenlace que el caso", () => {
+    const r = verifyGroundedAnswer("The dose is 9 ml.", [EN_NOTE], "en", Q_EN);
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("9 ml");
+    expect(r.text).toContain("Take 5 ml of the syrup twice a day, after meals.");
+  });
+
+  it("control de prosa: la frase no tipada con un dígito único suelto conserva el desenlace de hoy", () => {
+    // «2 veces» no es la cifra de la fuente ni la frase está tipada
+    // dosis: la exención de un dígito sigue viva fuera de la dosis.
+    const r = verifyGroundedAnswer("Después de comer, tome el jarabe 2 veces al día.", [ES_NOTA], "es", Q_ES);
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toBe("Después de comer, tome el jarabe 2 veces al día [1].");
+  });
+
+  it("control de dos cifras: «La dosis es 12 ml» contra «Tome 5 ml…» se sigue juzgando como hoy", () => {
+    const r = verifyGroundedAnswer("La dosis es 12 ml.", [ES_NOTA], "es", Q_ES);
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("12 ml");
+  });
+});
+
+// ---------------------------------------------------------------
 // Ronda física 0.1.68, R-05: la pregunta del teléfono contra el
 // documento de la ronda. En la sesión real la recuperación mezcló el
 // documento con la guía de crisis (de ahí salían «teléfono»,
