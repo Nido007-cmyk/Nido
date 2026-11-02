@@ -621,7 +621,9 @@ const CAL_CREATE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: new RegExp(`^${POLITE}(?:schedule|create an event|add (?:an? )?(?:event|appointment)(?: to my calendar)?|put on my calendar)(?::)?\\s+(.+)$`, "is"), lang: "en" },
   // 0.1.31: «add a meeting on monday at 9» / «marca reunião segunda às 9»
   // caían al conocimiento. El título conserva la palabra (meeting/reunião).
-  { re: new RegExp(`^${POLITE}add\\s+(?:a|an)\\s+((?:meeting|call|appointment|event)\\s+.+)$`, "is"), lang: "en" },
+  // B15 (barrido «revisa todo», clase 1): «create» entra junto a «add» —
+  // «create a meeting…» daba null mientras «create an event» sí vivía.
+  { re: new RegExp(`^${POLITE}(?:add|create)\\s+(?:a|an)\\s+((?:meeting|call|appointment|event)\\s+.+)$`, "is"), lang: "en" },
   { re: new RegExp(`^${POLITE}(?:marca|marque|agenda)\\s+(?:uma\\s+|um\\s+)?((?:reuni[aã]o|consulta|encontro|compromisso)\\s+.+)$`, "is"), lang: "pt" },
   { re: new RegExp(`^${POLITE}(?:agende|marca um compromisso|marque um compromisso|cria um evento|crie um evento|adiciona um evento|adicione um evento)(?::)?\\s+(.+)$`, "is"), lang: "pt" },
 ];

@@ -887,3 +887,31 @@ describe("0.1.24 (auditoría de alcanzabilidad, H-4) — notas entre idiomas", (
     expect(out.response).toContain("couldn't find");
   });
 });
+
+// B15 (barrido «revisa todo», clase 1 · BAJA): la familia en de
+// CAL_CREATE traía «create an event» pero la de meeting/call exigía
+// «add» — «create a meeting tomorrow at 9» daba null (TR41) y caía
+// al modelo, con sus dos verbos trilingües ya vivos en las gemelas.
+// Suelo TR42/TR43 (add a meeting / create an event) y TR40/TR44.
+describe("B15 — «create a meeting» en CAL_CREATE", () => {
+  it("«create a meeting tomorrow at 9» crea el evento (TR41)", () => {
+    const a = extractToolAction("create a meeting tomorrow at 9", NOW) as Extract<ToolAction, { kind: "calendarCreate" }>;
+    expect(a).not.toBeNull();
+    expect(a.kind).toBe("calendarCreate");
+    expect(a.title).toBe("meeting");
+    expect(a.lang).toBe("en");
+    const d = new Date(a.start!);
+    expect(d.getDate()).toBe(12);
+    expect(d.getHours()).toBe(9);
+  });
+
+  it("suelo: «add a meeting» y «create an event» no se mueven (TR42/TR43)", () => {
+    expect(extractToolAction("add a meeting tomorrow at 9", NOW)).toMatchObject({ kind: "calendarCreate", title: "meeting", lang: "en" });
+    expect(extractToolAction("create an event tomorrow at 9", NOW)).toMatchObject({ kind: "calendarCreate", lang: "en" });
+  });
+
+  it("suelo: las gemelas es/pt no se mueven (TR40/TR44)", () => {
+    expect(extractToolAction("agrega una reunión el lunes a las 9", NOW)).toMatchObject({ kind: "calendarCreate", title: "reunión", lang: "es" });
+    expect(extractToolAction("adiciona uma reunião segunda às 9", NOW)).toMatchObject({ kind: "calendarCreate", title: "reunião", lang: "pt" });
+  });
+});
