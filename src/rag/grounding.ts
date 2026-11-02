@@ -749,10 +749,14 @@ const DATE_NAME_RE =
  * Las unidades que unen una cifra a la dosis. T-J2 trajo
  * «colher(es)» pt: sin ella, la dosis fiel portuguesa (G08) solo se
  * salvaba por la exclusión de «é», no por juicio. T-J6 completa la
- * tabla con las unidades en.
+ * tabla con las unidades en y las formas métricas escritas: sin
+ * «tablets» la dosis CORRECTA en inglés (G06) se retiraba, porque
+ * ninguna frase de la fuente ligaba su dígito y el dato quedaba
+ * sin portador. La caja ya normalizaba estas unidades; esta tabla
+ * solo aprende a reconocerlas junto a la cifra (es/pt/en).
  */
 const DOSE_MEASURE_RE =
-  /\d+(?:[.,]\d+)?\s*(ml|mg|mcg|kg|g|miligramos?|gramos?|comprimidos?|pastillas?|cucharadas?|cucharaditas?|colheres?|gotas|tabletas?|capsulas?|unidades?)\b/;
+  /\d+(?:[.,]\d+)?\s*(ml|mg|mcg|kg|g|miligramos?|gramos?|comprimidos?|pastillas?|cucharadas?|cucharaditas?|colheres?|gotas|tabletas?|capsulas?|unidades?|teaspoons?|tablespoons?|tablets?|pills?|capsules?|drops?|units?|milligrams?|grams?|milliliters?|millilitres?)\b/;
 
 /** ¿Trae la frase un dato DEL TIPO (su forma, o su nombre junto a la cifra)? */
 function carriesDatumOfType(sentence: string, type: DatumType): boolean {

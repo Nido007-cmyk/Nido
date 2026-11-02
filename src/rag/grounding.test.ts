@@ -669,6 +669,56 @@ describe("T-J2 — la cópula pt «é» entra en la pierna tipada (y en la de id
 });
 
 // ---------------------------------------------------------------
+// T-J6 (barrido «revisa todo», J6): DOSE_MEASURE_RE solo traía
+// unidades es (+colheres de T-J2): la dosis CORRECTA en inglés se
+// retiraba («The dose of the syrup is 20 tablets.» contra su
+// fuente exacta: abstención) — sin unidad reconocida, ninguna
+// frase ligaba su dígito y el dato quedaba sin portador. La tabla
+// se completa con las unidades en y las formas métricas escritas,
+// que la caja ya normalizaba. La pt no pidió más: «comprimidos»
+// ya era vocabulario compartido (control incluido).
+
+describe("T-J6 — la dosis en inglés se juzga con su tabla completa", () => {
+  const GUIA_TABLETS: GroundingChunk = {
+    title: "guide",
+    body: "Syrup guide. Take 20 tablets once a day with food.",
+  };
+
+  it("G06: la fiel en (20 tablets, su fuente exacta) sella fundada", () => {
+    const r = verifyGroundedAnswer("The dose of the syrup is 20 tablets.", [GUIA_TABLETS], "en", "What is the dose of the syrup?");
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toContain("20 tablets");
+  });
+
+  it("la infiel en (30 tablets contra 20) se retira", () => {
+    const r = verifyGroundedAnswer("The dose of the syrup is 30 tablets.", [GUIA_TABLETS], "en", "What is the dose of the syrup?");
+    expect(r.status).toBe("abstained");
+    expect(r.text).not.toContain("30 tablets");
+  });
+
+  it("la fiel en con otra unidad de la tabla (capsules, cifra de un dígito con dosis) sella", () => {
+    const chunk: GroundingChunk = {
+      title: "guide",
+      body: "Capsule guide. Take 2 capsules twice a day, with water.",
+    };
+    const r = verifyGroundedAnswer("The dose is 2 capsules.", [chunk], "en", "What is the dose?");
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("2 capsules");
+  });
+
+  it("control pt: la fiel en comprimidos sella como antes de la tanda", () => {
+    const chunk: GroundingChunk = {
+      title: "guia",
+      body: "Dose do xarope. Tome 20 comprimidos por dia, com água.",
+    };
+    const r = verifyGroundedAnswer("A dose do xarope é 20 comprimidos por dia.", [chunk], "pt", "Qual é a dose do xarope?");
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("20 comprimidos");
+  });
+});
+
+// ---------------------------------------------------------------
 // T-J3 (barrido «revisa todo», J3): los números en letra eran
 // invisibles para el juez y visibles para la caja — «cinco veces
 // al día» contra «dos veces al día» salía sellado fundado mientras
