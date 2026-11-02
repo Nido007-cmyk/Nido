@@ -852,6 +852,145 @@ describe("ADV-F3-C1 — el hecho con dos cumpleaños sirve el segmento de cada p
   });
 });
 
+// ADV-F4-C1 (adversaria de formas IV · MEDIA-BAJA): el hecho
+// combinado partido por PUNTO (o punto y coma) reproducía
+// ADV-F3-C1 entero — clauseSlice solo cortaba en conjunciones y
+// el segmento volvía a ser el hecho entero, con su primera fecha.
+// Dos frases en un solo hecho es una forma tan real de guardar
+// los dos datos como la de la conjunción. La cura corta también
+// en la puntuación de frase sobre el texto crudo, con guardas
+// medidas: el decimal, la inicial y el título no parten un
+// segmento sano, y la coma-inciso sigue sin partir.
+describe("ADV-F4-C1 — el hecho con dos cumpleaños partido por punto sirve el segmento de cada persona", () => {
+  const ptDot: MemoryQueryData = {
+    people: [],
+    facts: [{ content: "o aniversário do meu avô é 20 de junho. O da minha avó é 15 de março.", category: "event" }],
+  };
+  const esDot: MemoryQueryData = {
+    people: [],
+    facts: [{ content: "el cumpleaños de mi abuelo es el 20 de junio. El de mi abuela es el 15 de marzo.", category: "event" }],
+  };
+  const enDot: MemoryQueryData = {
+    people: [],
+    facts: [{ content: "my grandfather's birthday is June 20. My grandmother's birthday is March 15.", category: "event" }],
+  };
+
+  it("pt/es/en por punto: cada pregunta sirve SU fecha", () => {
+    const ava = answerMemoryQuery("quando é o aniversário da minha avó?", ptDot, "pt");
+    expect(ava).toContain("15 de março");
+    expect(ava).not.toContain("20 de junho");
+    const avo = answerMemoryQuery("quando é o aniversário do meu avô?", ptDot, "pt");
+    expect(avo).toContain("20 de junho");
+    expect(avo).not.toContain("15 de março");
+    const abuela = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", esDot, "es");
+    expect(abuela).toContain("15 de marzo");
+    expect(abuela).not.toContain("20 de junio");
+    const gm = answerMemoryQuery("when is my grandmother's birthday?", enDot, "en");
+    expect(gm).toContain("March 15");
+    expect(gm).not.toContain("June 20");
+  });
+
+  it("es por punto y coma: la abuela sirve SU 15 de marzo", () => {
+    const esSemi: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuelo es el 20 de junio; el de mi abuela es el 15 de marzo", category: "event" }],
+    };
+    const r = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", esSemi, "es");
+    expect(r).toContain("15 de marzo");
+    expect(r).not.toContain("20 de junio");
+  });
+
+  it("asiento propio partido por punto: mi fecha, no la de la abuela (es/pt/en)", () => {
+    const selfEs: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuela es el 15 de marzo. Mi cumpleaños es el 5 de mayo.", category: "event" }],
+    };
+    const rEs = answerMemoryQuery("¿cuándo es mi cumpleaños?", selfEs, "es");
+    expect(rEs).toContain("5 de mayo");
+    expect(rEs).not.toContain("15 de marzo");
+    const selfPt: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "o aniversário da minha avó é 15 de março. O meu aniversário é 5 de maio.", category: "event" }],
+    };
+    const rPt = answerMemoryQuery("quando é o meu aniversário?", selfPt, "pt");
+    expect(rPt).toContain("5 de maio");
+    expect(rPt).not.toContain("15 de março");
+    const selfEn: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "my grandmother's birthday is March 15. My birthday is May 5.", category: "event" }],
+    };
+    const rEn = answerMemoryQuery("when is my birthday?", selfEn, "en");
+    expect(rEn).toContain("May 5");
+    expect(rEn).not.toContain("March 15");
+  });
+
+  it("el segundo segmento sin fecha, partido por punto, cita SU segmento (pt)", () => {
+    const sinFecha: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "o aniversário do meu avô é 20 de junho. O da minha avó eu ainda não sei.", category: "event" }],
+    };
+    const r = answerMemoryQuery("quando é o aniversário da minha avó?", sinFecha, "pt");
+    expect(r).toContain("ainda não sei");
+    expect(r).not.toContain("20 de junho");
+    expect(r).not.toContain("O aniversário de");
+  });
+
+  it("guardas: el decimal «3.5», el título «Dr.» y «p. ej.» no parten un segmento sano", () => {
+    const decimal: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuelo es el 20 de junio y el de mi abuela, que sacó 3.5 en el examen, es el 15 de marzo", category: "event" }],
+    };
+    const rDec = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", decimal, "es");
+    expect(rDec).toContain("El cumpleaños de tu abuela es el");
+    expect(rDec).toContain("15 de marzo");
+    const titulo: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuelo, el Dr. Pérez, es el 20 de junio y el de mi abuela es el 15 de marzo", category: "event" }],
+    };
+    const rTit = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuelo?", titulo, "es");
+    expect(rTit).toContain("El cumpleaños de tu abuelo es el");
+    expect(rTit).toContain("20 de junio");
+    const pej: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuela, p. ej. la de Tucson, es el 15 de marzo y el de mi abuelo es el 20 de junio", category: "event" }],
+    };
+    const rPej = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", pej, "es");
+    expect(rPej).toContain("El cumpleaños de tu abuela es el");
+    expect(rPej).toContain("15 de marzo");
+  });
+
+  it("suelo: el inciso con comas dentro del hecho partido por punto no parte ni captura", () => {
+    const inciso: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuelo es el 20 de junio. El de mi abuela, que vive en Tucson, es el 15 de marzo.", category: "event" }],
+    };
+    const r = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", inciso, "es");
+    expect(r).toContain("El cumpleaños de tu abuela es el");
+    expect(r).toContain("15 de marzo");
+    expect(r).not.toContain("20 de junio");
+  });
+
+  it("suelo: el hecho simple con punto final sirve la plantilla byte a byte", () => {
+    const simple: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi tío es el 3 de octubre.", category: "event" }],
+    };
+    expect(answerMemoryQuery("¿cuándo es el cumpleaños de mi tío?", simple, "es")).toBe(
+      "El cumpleaños de tu tío es el domingo, 3 de octubre."
+    );
+  });
+
+  it("la elipsis entre cláusulas cuenta como un solo corte (es)", () => {
+    const elipsis: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuelo es el 20 de junio... el de mi abuela es el 15 de marzo", category: "event" }],
+    };
+    const r = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", elipsis, "es");
+    expect(r).toContain("15 de marzo");
+    expect(r).not.toContain("20 de junio");
+  });
+});
+
 // B1+B2 (barrido «revisa todo», clase 1 · MEDIA): SELF se quedó sin
 // la forma que G-M1-R1 dio a REL — «¿cuál es mi nombre?» y «what is
 // my name?» (sin contraer) caían al modelo teniendo el hecho

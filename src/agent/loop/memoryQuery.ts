@@ -301,7 +301,7 @@ function factTokens(text: string): FactToken[] {
  *  ataba al hecho entero: extractDateISO sacaba su primera fecha y
  *  el «who» pt su primera palabra que casaba en plegado. La cura
  *  ata la extracción al SEGMENTO servido: la cláusula —entre
- *  conjunciones— que contiene la palabra que casó (el nombre de la
+ *  conjunciones o frases (ADV-F4-C1)— que contiene la palabra que casó (el nombre de la
  *  ficha o el parentesco, localizado con la misma disciplina de dos
  *  pasadas de findBirthdayFact: exacta, luego plegada con la guardia
  *  avô/avó). Devuelve también esa palabra tal como está escrita,
@@ -349,17 +349,72 @@ function birthdayServingSlice(
   return slice ? { slice, word } : null;
 }
 
+/** Títulos y abreviaturas cuya punto NO cierra frase dentro de un
+ *  hecho («el Dr. Pérez», «p. ej.»): si cortaran, el segmento del
+ *  ancla perdería su fecha y la respuesta degradaría a cita. */
+const SENTENCE_ABBREVS = new Set(["dr", "dra", "sr", "sra", "srta", "mr", "mrs", "ms", "st", "ej"]);
+
+/** ADV-F4-C1 (adversaria de formas IV · MEDIA-BAJA): cortes de
+ *  FRASE en el texto crudo — punto y punto y coma — como posiciones
+ *  {start, after} (el segmento anterior acaba en start, sin la
+ *  puntuación; el siguiente empieza en after). La segmentación de
+ *  ADV-F3-C1 solo cortaba en conjunciones y el hecho combinado
+ *  partido por punto reproducía el defecto entero: dos frases en
+ *  un solo hecho («…es el 20 de junio. El de mi abuela es el 15 de
+ *  marzo.») es una forma tan real de guardar los dos datos como
+ *  la de la conjunción. Guardas del punto, medidas una a una:
+ *  decimal («3.5»: dígito a ambos lados) no corta; la palabra
+ *  previa de una sola letra (iniciales, «p.») no corta; la palabra
+ *  previa en SENTENCE_ABBREVS («Dr.», «ej.») no corta. Una corrida
+ *  de puntos (elipsis) cuenta como un solo corte tras la corrida.
+ *  Un corte falso solo puede ENCOGER el segmento del ancla — el
+ *  desenlace peor es la cita honesta, nunca la fecha ajena. */
+function sentenceBreaks(fact: string): { start: number; after: number }[] {
+  const out: { start: number; after: number }[] = [];
+  for (let i = 0; i < fact.length; i++) {
+    const ch = fact[i]!;
+    if (ch === ";") {
+      out.push({ start: i, after: i + 1 });
+      continue;
+    }
+    if (ch !== ".") continue;
+    let j = i;
+    while (fact[j + 1] === ".") j++;
+    const after = j + 1;
+    let k = i;
+    while (k > 0 && /[\p{L}]/u.test(fact[k - 1]!)) k--;
+    const prevWord = fact.slice(k, i).toLowerCase();
+    const prevChar = fact[i - 1];
+    const nextChar = fact[after];
+    const decimal =
+      j === i && prevChar !== undefined && /\d/.test(prevChar) && nextChar !== undefined && /\d/.test(nextChar);
+    if (!decimal && prevWord.length !== 1 && !SENTENCE_ABBREVS.has(prevWord)) {
+      out.push({ start: i, after });
+    }
+    i = j;
+  }
+  return out;
+}
+
 /** La cláusula de un hecho que contiene el tramo [from, to): desde
- *  la conjunción anterior hasta la siguiente, como tokens sueltos. */
+ *  la frontera anterior hasta la siguiente, donde frontera es la
+ *  conjunción suelta de tokens o el corte de frase del texto crudo
+ *  (ADV-F4-C1). Un corte de frase solo cuenta si separa dos tramos
+ *  con contenido: el punto final del hecho no es frontera y el
+ *  segmento servido queda byte a byte como antes de esta tanda. */
 function clauseSlice(fact: string, tokens: FactToken[], from: number, to: number): string {
   let start = 0;
   let end = fact.length;
   for (const tk of tokens) {
-    if (tk.end <= from && CLAUSE_CONJUNCTIONS.has(tk.text.toLowerCase())) start = tk.end;
-    if (tk.start >= to && CLAUSE_CONJUNCTIONS.has(tk.text.toLowerCase())) {
-      end = tk.start;
-      break;
-    }
+    if (tk.end <= from && CLAUSE_CONJUNCTIONS.has(tk.text.toLowerCase())) start = Math.max(start, tk.end);
+    if (tk.start >= to && CLAUSE_CONJUNCTIONS.has(tk.text.toLowerCase())) end = Math.min(end, tk.start);
+  }
+  for (const b of sentenceBreaks(fact)) {
+    const hasBefore = tokens.some((tk) => tk.start < b.start);
+    const hasAfter = tokens.some((tk) => tk.start >= b.after);
+    if (!hasBefore || !hasAfter) continue;
+    if (b.after <= from) start = Math.max(start, b.after);
+    if (b.start >= to) end = Math.min(end, b.start);
   }
   return fact.slice(start, end).replace(/^[\s,;]+|[\s,;]+$/g, "");
 }
