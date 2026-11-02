@@ -487,6 +487,45 @@ describe("B8 — el hecho dictado en pt o en en se sirve por la rama de nombre",
   });
 });
 
+// ADV-F-C1 (adversaria del carril de formas, MEDIA-BAJA): la familia
+// B8 aún no servía dos redacciones pt comunes del hecho — el
+// reflexivo «chama-se» y el marco «o nome d… é» — medidas con el
+// dato y el parentesco presentes: la app decía «no me lo has
+// contado» teniéndolo, el mismo desenlace que B8 vino a cerrar.
+describe("ADV-F-C1 — el hecho pt con «chama-se» y con «o nome d… é» se sirve", () => {
+  const CHAMA_SE: MemoryQueryData = {
+    facts: [{ content: "a minha mãe chama-se Maria", category: "general" }],
+    people: [],
+  };
+  const NOME_PAI: MemoryQueryData = {
+    facts: [{ content: "o nome do meu pai é João", category: "general" }],
+    people: [],
+  };
+  const NOME_MAE: MemoryQueryData = {
+    facts: [{ content: "o nome da minha mãe é Maria", category: "general" }],
+    people: [],
+  };
+
+  it("«a minha mãe chama-se Maria» sirve la ficha por las dos preguntas", () => {
+    expect(answerMemoryQuery("como se chama minha mãe?", CHAMA_SE, "pt")).toBe("Sua mãe se chama Maria.");
+    expect(answerMemoryQuery("qual é o nome da minha mãe?", CHAMA_SE, "pt")).toBe("Sua mãe se chama Maria.");
+  });
+
+  it("«o nome do meu pai é João» y «o nome da minha mãe é Maria» sirven su ficha", () => {
+    expect(answerMemoryQuery("qual é o nome do meu pai?", NOME_PAI, "pt")).toBe("Seu pai se chama João.");
+    expect(answerMemoryQuery("qual é o nome da minha mãe?", NOME_MAE, "pt")).toBe("Sua mãe se chama Maria.");
+  });
+
+  it("guardias: el marco sin cópula no sirve, y el hecho de una persona no sirve a otra", () => {
+    const semCopula: MemoryQueryData = {
+      facts: [{ content: "o nome do meu pai está na agenda", category: "general" }],
+      people: [],
+    };
+    expect(answerMemoryQuery("qual é o nome do meu pai?", semCopula, "pt")).toContain("Você ainda não me contou isso");
+    expect(answerMemoryQuery("qual é o nome do meu pai?", NOME_MAE, "pt")).toContain("Você ainda não me contou isso");
+  });
+});
+
 // B1+B2 (barrido «revisa todo», clase 1 · MEDIA): SELF se quedó sin
 // la forma que G-M1-R1 dio a REL — «¿cuál es mi nombre?» y «what is
 // my name?» (sin contraer) caían al modelo teniendo el hecho

@@ -172,8 +172,13 @@ const BIRTHDAY_RE = /cumplea[ñn]os|aniversario|birthday|aniversário/i;
 
 /** La cláusula que trae un nombre dentro de un hecho, por lengua del
  *  hecho (B8): «se llama» (es), «se chama» (pt), «name is» /
- *  «is called» (en). */
-const NAME_CLAUSE_RE = /se llama|se chama|name is|is called/i;
+ *  «is called» (en). ADV-F-C1 (adversaria de formas): dos redacciones
+ *  pt comunes quedaban fuera — el reflexivo «chama-se» («a minha mãe
+ *  chama-se Maria») y el marco «o nome d… é» («o nome do meu pai é
+ *  João») — y la app decía «no me lo has contado» teniéndolo. La
+ *  alternativa del marco exige la cópula «é» como palabra suelta
+ *  (miradas con \p{L}: \b no ve las letras acentuadas). */
+const NAME_CLAUSE_RE = /se llama|se chama|chama-se|name is|is called|^o nome\b[^.!?]*?(?<![\p{L}])é(?![\p{L}])/iu;
 
 /** Hecho de cumpleaños de una persona (por nombre o parentesco) o propio. */
 function findBirthdayFact(
@@ -591,7 +596,12 @@ export function answerMemoryQuery(
         && fold(f.content).split(/[^a-z0-9-]+/).some((w) => w && sameRel(w, rel))
     );
     if (fact) {
-      const m = /(?:se llama|se chama|name is|is called)\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content);
+      // ADV-F-C1: la extracción espeja las cláusulas del selector —
+      // «chama-se» trae el nombre tras el reflexivo, y en el marco
+      // «o nome d… é» el nombre va tras la cópula, al final.
+      const m =
+        /(?:se llama|se chama|chama-se|name is|is called)\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content) ??
+        /^o nome\b[^.!?]*?(?<![\p{L}])é\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content);
       if (m) return msg("personName", lang, { rel, name: m[1], poss: ptPossessive(rel) });
     }
     return msg("notKnown", lang);
