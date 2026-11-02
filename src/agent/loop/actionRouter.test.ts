@@ -601,3 +601,49 @@ describe("N-01 (auditoría 2026-11-01) — el «que» complementante no es una p
     expect(extractReminderAction("Me lembra de comprar leite amanhã")).not.toBeNull();
   });
 });
+
+// B13 (barrido «revisa todo», clase 1 · MEDIA): las palabras-número
+// pt no estaban en el tiempo relativo de recordatorios — «me lembra
+// em duas horas…» creaba el recordatorio SIN hora (dueAt: null, un
+// recordatorio que no suena), mientras su gemela del temporizador
+// (TIMER_NUMBER_WORDS) sí trae pt y la misma frase sonaba 2 h.
+// Sondas AR03 (el hueco) y AR04/AR05 (los suelos).
+describe("B13 — palabras-número pt en el tiempo relativo de recordatorios", () => {
+  // extractReminderCore usa su propio «ahora» (el now inyectado en
+  // extractReminderAction solo gobierna la lógica de repetición):
+  // la medida es la distancia al momento de la llamada, con ventana.
+  const diffMs = (text: string): number => {
+    const before = Date.now();
+    const r = extractReminderAction(text);
+    expect(r).not.toBeNull();
+    expect(r!.dueAt).not.toBeNull();
+    return new Date(r!.dueAt!).getTime() - before;
+  };
+  const near = (text: string, ms: number) => {
+    const d = diffMs(text);
+    expect(d).toBeGreaterThan(ms - 10_000);
+    expect(d).toBeLessThan(ms + 120_000);
+  };
+
+  it("«em duas horas» crea el recordatorio con su hora (AR03)", () => {
+    near("me lembra em duas horas de regar as plantas", 2 * 3_600_000);
+    const r = extractReminderAction("me lembra em duas horas de regar as plantas");
+    expect(r!.text.toLowerCase()).not.toContain("duas horas");
+  });
+
+  it("otras palabras pt: «em três dias», «em meia hora», «em vinte minutos»", () => {
+    near("me lembra em três dias de ligar para o banco", 3 * 24 * 3_600_000);
+    near("me lembra em meia hora de sair", 30 * 60_000);
+    near("me lembra em vinte minutos de sair", 20 * 60_000);
+  });
+
+  it("suelo: el dígito pt (AR04), la letra es/en y el temporizador pt (AR05) no se mueven", () => {
+    near("me lembra em 2 horas de regar as plantas", 2 * 3_600_000);
+    near("recuérdame en dos horas regar las plantas", 2 * 3_600_000);
+    near("remind me in two hours to water the plants", 2 * 3_600_000);
+    expect(extractTimerAction("coloca um temporizador de duas horas")).toEqual({
+      label: null,
+      durationMs: 7_200_000,
+    });
+  });
+});

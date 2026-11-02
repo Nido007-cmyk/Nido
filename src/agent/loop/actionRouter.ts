@@ -721,6 +721,9 @@ export function stripDateWords(input: string): string {
       .replace(/\bin\s+\d+\s*(minutes?|min|hours?|hrs?|h|days?|d|weeks?|w)\b/gi, "")
       // 0.1.14: portugués "em 2 horas".
       .replace(/\bem\s+\d+\s*(minutos?|min|horas?|h|dias?|d|semanas?)\b/gi, "")
+      // B13: portugués en letra ("em duas horas"), espejo de la de
+      // palabras es/en de abajo: la hora no es parte del texto.
+      .replace(/\bem\s+(um|uma|dois|duas|três|tres|quatro|cinco|seis|sete|oito|nove|dez|quinze|vinte|trinta|meia)\s*(minutos?|min|horas?|h|dias?|d|semanas?)\b/gi, "")
       .replace(/\ben\s+(uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
       // M3 FIX: limpiar hora suelta después de día ("el viernes 10" → el 10 es la hora).
       .replace(/\b(\d{1,2})(:\d{2})?\s*(am|pm)?\s*$/gi, "")
@@ -728,7 +731,11 @@ export function stripDateWords(input: string): string {
       .trim();
 }
 
-/** Palabras numéricas ES/EN para tiempos relativos ("en dos minutos"). */
+/** Palabras numéricas ES/EN/PT para tiempos relativos ("en dos minutos").
+ *  B13 (barrido «revisa todo», clase 1): el portugués no estaba — «em
+ *  duas horas» creaba el recordatorio SIN hora; la tabla gemela del
+ *  temporizador (TIMER_NUMBER_WORDS) sí lo traía. Las palabras pt son
+ *  las mismas de esa tabla, para que las dos superficies no diverjan. */
 const NUMBER_WORDS: Record<string, number> = {
   uno: 1, una: 1, one: 1, dos: 2, two: 2, tres: 3, three: 3,
   cuatro: 4, four: 4, cinco: 5, five: 5, seis: 6, six: 6,
@@ -736,6 +743,8 @@ const NUMBER_WORDS: Record<string, number> = {
   diez: 10, ten: 10, once: 11, eleven: 11, doce: 12, twelve: 12,
   quince: 15, fifteen: 15, veinte: 20, twenty: 20,
   treinta: 30, thirty: 30, "media": 0.5, "half": 0.5,
+  um: 1, uma: 1, dois: 2, duas: 2, "três": 3, quatro: 4, sete: 7,
+  oito: 8, nove: 9, dez: 10, vinte: 20, trinta: 30, "meia": 0.5,
 };
 
 /**
@@ -745,7 +754,7 @@ const NUMBER_WORDS: Record<string, number> = {
  */
 function parseRelativeTime(t: string, now: Date): Date | null {
   // FIX 2026-10-08: \s* entre número y unidad para "1minuto" (sin espacio).
-  const m = /\b(?:en|in|em)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/i.exec(t);
+  const m = /\b(?:en|in|em)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half|um|uma|dois|duas|três|quatro|sete|oito|nove|dez|vinte|trinta|meia)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/i.exec(t);
   if (!m) return null;
 
   const rawNum = m[1].toLowerCase();
