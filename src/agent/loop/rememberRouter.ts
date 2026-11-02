@@ -52,6 +52,11 @@ const EXTRACTION_PATTERNS: Array<{ re: RegExp; group: number }> = [
   // NOTA: solo captura si hay "que" explícito después de "memoria",
   // para evitar capturar cláusulas de propósito como "para que me avises".
   { re: /gu[aá]rda\w*( esto| eso|lo|la)? en (tu |la )?memoria que[:\s]+(.+)/i, group: 3 },
+  // B11 (barrido «revisa todo», clase 1): el espejo pt de la forma
+  // anterior, «guarda na memória que X», y el calco en, «save in your
+  // memory that X» — la misma exigencia de «que»/«that» explícito.
+  { re: /guard[ae]\w* na mem[óo]ria que[:\s]+(.+)/i, group: 1 },
+  { re: /\bsave (?:this |that |it )?in your memory(?: that)?[:\s]+(.+)/i, group: 1 },
   // "memoriza que X" / "memoriza: X"
   { re: /memoriza(?:\s+que)?[:\s]+(.+)/i, group: 1 },
   // 0.1.42 (barrido de 5 871 frases): formas frecuentes que caían a
@@ -758,8 +763,10 @@ export function extractRememberFact(userText: string): RememberExtraction | null
   return extractGuardaColonFact(trimmed);
 }
 
-/** Sujeto de nota: «guarda una nota: …» es NOTE_SAVE (toolRouter), no hecho. */
-const NOTE_SUBJECT_RE = /^(?:una?\s+)?(?:nota|apunte|recado)\b/i;
+/** Sujeto de nota: «guarda una nota: …» es NOTE_SAVE (toolRouter), no hecho.
+ *  B11 (vecina medida): la guarda no conocía el artículo pt «uma» y
+ *  «guarda uma nota: X» guardaba X como hecho de memoria. */
+const NOTE_SUBJECT_RE = /^(?:(?:una?|uma)\s+)?(?:nota|apunte|recado)\b/i;
 
 function extractGuardaColonFact(trimmed: string): RememberExtraction | null {
   const m = /^gu[aá]rda(?:te)?\s+(.+)$/i.exec(trimmed);

@@ -401,3 +401,16 @@ describe("B1+B2 — classifyIntent trae la forma SELF a recordar", () => {
     expect(classifyIntent("what is my name?")).toBe("recordar");
   });
 });
+
+// B11 (barrido «revisa todo», IN03/IN04): «guarda na memória que…»
+// clasificaba «conversar» — la forma natural pt de guardado no
+// estaba en REMEMBER_PATTERNS —, y el calco en «save in your
+// memory that…» tampoco. La es «guarda esto en tu memoria» ya
+// clasificaba recordar; el suelo «guarda (uma) nota» sigue actuar.
+describe("B11 — classifyIntent trae «guarda na memória» a recordar", () => {
+  it("pt y el calco en clasifican recordar; la nota sigue actuar", () => {
+    expect(classifyIntent("guarda na memória que o leite acabou")).toBe("recordar");
+    expect(classifyIntent("save in your memory that the milk ran out")).toBe("recordar");
+    expect(classifyIntent("guarda uma nota: comprar pão")).toBe("actuar");
+  });
+});

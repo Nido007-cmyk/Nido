@@ -457,3 +457,29 @@ describe("Pieza 5 — «guarda <hecho>: <valor>» sin «que» (imperativo con do
     ).toBeNull();
   });
 });
+
+// B11 (barrido «revisa todo», clase 1 · MEDIA): la forma natural pt
+// de guardado, «guarda na memória que…», no estaba en la extracción:
+// el hecho caía al modelo. Sondas IN03 (clasificación, en
+// intent.test.ts) e IN04 (el calco en). Vecina medida en esta tanda:
+// la guarda de sujeto de nota de la forma con dos puntos no conocía
+// el artículo pt «uma» y «guarda uma nota: X» guardaba X como hecho;
+// la guarda lo reconoce y la forma vuelve a ser nota, no hecho.
+describe("B11 — extracción pt «guarda na memória que…» y calco en", () => {
+  it("pt: captura el hecho tras «guarda na memória que»", () => {
+    const r = extractRememberFact("guarda na memória que o leite acabou");
+    expect(r).not.toBeNull();
+    expect(r!.content.toLowerCase()).toContain("o leite acabou");
+  });
+
+  it("en: captura el hecho tras «save in your memory that»", () => {
+    const r = extractRememberFact("save in your memory that the milk ran out");
+    expect(r).not.toBeNull();
+    expect(r!.content.toLowerCase()).toContain("the milk ran out");
+    expect(r!.content.toLowerCase()).not.toContain("memory");
+  });
+
+  it("suelo: «guarda uma nota: …» no se extrae como hecho de memoria", () => {
+    expect(extractRememberFact("guarda uma nota: comprar pão")).toBeNull();
+  });
+});

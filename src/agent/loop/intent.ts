@@ -83,6 +83,12 @@ const REMEMBER_PATTERNS: RegExp[] = [
   /^(?:que\s+)?no se te (?:olvide|pase)\b/i,
   // Tolerante a enclíticos y acentos: "guárdalo/guardala en tu memoria"
   /gu[aá]rda\w* (esto |eso )?en (tu |la )?memoria/i,
+  // B11 (barrido «revisa todo», clase 1): la forma natural pt de
+  // guardado, «guarda na memória que…», no estaba en ningún idioma
+  // de esta lista (la pt solo traía lembra/manda/quiero…), y el calco
+  // en «save in your memory that…» tampoco.
+  /\bguard[ae]\w* (isso |isto )?na mem[óo]ria\b/i,
+  /\bsave (this |that |it )?in your memory\b/i,
   /memoriza/i,
   // 0.1.42 (barrido): las mismas formas que rememberRouter.
   /\btoma(?:r)? en cuenta que\b/i,
