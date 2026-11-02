@@ -124,8 +124,7 @@ al dispositivo directamente.
 ## Después de instalar: la app no es usable de inmediato — falta un paso
 
 El primer arranque muestra una **pantalla de configuración obligatoria y única**
-que descarga el modelo por defecto (Qwen2.5-1.5B + un modelo de embeddings,
-alrededor de 1 GB en total) — este es el único acceso a red requerido por la
+que descarga el modelo por defecto (Qwen2.5-1.5B en teléfonos con RAM suficiente, Qwen2.5-0.5B en los más pequeños, más un modelo de embeddings — alrededor de 0,4 a 1,1 GB en total según el dispositivo) — este es el único acceso a red requerido por la
 app, y la app está bloqueada detrás de él
 (`ModelManager.requiredModelsPresent()` en `src/models/ModelManager.ts` decide
 si se muestra la pantalla de chat o el asistente de configuración). Si estás
