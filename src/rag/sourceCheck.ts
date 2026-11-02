@@ -66,7 +66,7 @@
  */
 
 import type { RetrievedChunk } from "./retrieve";
-import { splitSentences } from "./grounding";
+import { isCardCluster, splitSentences } from "./grounding";
 import {
   numberTokens,
   parseNumberToken,
@@ -512,7 +512,11 @@ function wordSet(sentence: string): Set<string> {
 /** ¿Trae el texto una ristra de ≥ 7 dígitos (la forma de un teléfono)? */
 function hasPhoneCluster(sentence: string): boolean {
   const clusters = sentence.match(/\d[\d .-]*\d/g) ?? [];
-  return clusters.some((c) => c.replace(/\D/g, "").length >= 7);
+  // T1 (barrido «revisa todo», clase 3): la guarda de tarjeta de la
+  // gemela del verificador (isCardCluster, ADV2-01) llega por fin a
+  // esta copia: una ristra que ES una tarjeta no es forma de
+  // teléfono, aquí tampoco.
+  return clusters.some((c) => c.replace(/\D/g, "").length >= 7 && !isCardCluster(c));
 }
 
 /**
@@ -528,11 +532,22 @@ function sourceCarriesCategory(sentence: string, category: string): boolean {
   const words = wordSet(sentence);
   const has = (ws: readonly string[]) => ws.some((w) => words.has(w));
   switch (family) {
-    case "phone":
-      return (
-        hasPhoneCluster(sentence) ||
-        has(["telefono", "telefonos", "telefone", "telefones", "phone", "phones", "numero", "numeros", "number", "numbers", "llame", "llama", "llamar", "call", "ligar", "discar"])
-      );
+    case "phone": {
+      if (hasPhoneCluster(sentence)) return true;
+      // T1, la otra mitad del asiento: la frase de la tarjeta
+      // también entraba por la palabra genérica «número», y la caja
+      // la enseñaba como el teléfono omitido («…tarjeta de la
+      // clínica es 4111 1111 1111 1111», omission: true). Con una
+      // ristra-tarjeta presente y sin ristra telefónica de verdad,
+      // la palabra genérica no rescata: solo las palabras propias
+      // de teléfono cuentan. El suelo del 911 queda intacto: su
+      // ristra no es tarjeta y «número» sigue bastando.
+      const clusters = sentence.match(/\d[\d .-]*\d/g) ?? [];
+      if (clusters.some((c) => isCardCluster(c))) {
+        return has(["telefono", "telefonos", "telefone", "telefones", "phone", "phones", "llame", "llama", "llamar", "call", "ligar", "discar"]);
+      }
+      return has(["telefono", "telefonos", "telefone", "telefones", "phone", "phones", "numero", "numeros", "number", "numbers", "llame", "llama", "llamar", "call", "ligar", "discar"]);
+    }
     case "room":
       return has(["sala", "salas", "room", "rooms"]);
     case "hour":

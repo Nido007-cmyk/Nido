@@ -535,3 +535,36 @@ describe("ADV-J-C3: la caja enseña el conflicto de año en las dos formas", () 
     expect(findDateConflicts("El control es el 25/12/2026.", [chunk("El control es el 25/12/2026.")], REF_ANIO)).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------
+// T1 (barrido «revisa todo», clase 3, C3-T01): la caja enseñaba la
+// TARJETA como el teléfono omitido — la guarda isCardCluster de
+// ADV2-01 nunca llegó a esta gemela: hasPhoneCluster contaba la
+// ristra-tarjeta como forma de teléfono y la palabra genérica
+// «número» la rescataba en sourceCarriesCategory. El par medido
+// del barrido, tal cual.
+
+describe("T1: la tarjeta no se enseña como teléfono omitido", () => {
+  const RESPUESTA = "El teléfono de la clínica es el número de emergencias.";
+  const TARJETA = "El número de la tarjeta de la clínica es 4111 1111 1111 1111.";
+  const TELEFONO = "El teléfono de la clínica es 612 345 678.";
+
+  it("el par del barrido: la fuente de la tarjeta sola ya no enseña teléfono omitido", () => {
+    expect(findNumberConflicts(RESPUESTA, [chunk(TARJETA)])).toEqual([]);
+  });
+
+  it("el suelo: el teléfono verdadero sí se enseña como omisión", () => {
+    const conflicts = findNumberConflicts(RESPUESTA, [chunk(TELEFONO)]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("telefono");
+    expect(conflicts[0].omission).toBe(true);
+    expect(conflicts[0].sourceSentence).toContain("612 345 678");
+  });
+
+  it("con las dos frases en la fuente, la que se enseña es la del teléfono, no la de la tarjeta", () => {
+    const conflicts = findNumberConflicts(RESPUESTA, [chunk(`${TARJETA} ${TELEFONO}`)]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].sourceSentence).toContain("612 345 678");
+    expect(conflicts[0].sourceSentence).not.toContain("4111");
+  });
+});

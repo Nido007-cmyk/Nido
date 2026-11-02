@@ -681,7 +681,7 @@ function hasPhoneCluster(text: string): boolean {
  * de «forma telefónica», y la regla servía el número de la tarjeta
  * como teléfono de la clínica. Un teléfono no se imprime así.
  */
-function isCardCluster(cluster: string): boolean {
+export function isCardCluster(cluster: string): boolean {
   const digits = cluster.replace(/\D/g, "");
   if (digits.length !== 15 && digits.length !== 16) return false;
   const groups = cluster
