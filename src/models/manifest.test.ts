@@ -77,4 +77,39 @@ describe("TIERS", () => {
     for (const id of byId.standard) expect(byId.full.has(id)).toBe(true);
     for (const id of byId.full) expect(byId.encyclopedia.has(id)).toBe(true);
   });
+
+  it("each tier's written download size approximates its real catalog sum (D-2 ratchet)", () => {
+    // D-2 (puertas P-7, 2026-11-01): the three tier descriptions carried
+    // the published approximations (~1.3MB / ~3.7MB / ~165MB) while the
+    // catalog's own sizeBytes summed higher (1.752.772 / 4.283.497 /
+    // 167.930.985 B) — every written figure sat BELOW the real download.
+    // This ratchet recomputes each tier's sum from the catalog itself
+    // and holds the written «~» figure to what «~» may honestly promise,
+    // in decimal MB (the unit the descriptions are written in): never
+    // below the real sum, and never more than 5 % above it. A future
+    // size change that leaves a stale phrase in place fails here
+    // instead of drifting silently.
+    const sizeById = new Map(CORPUS_CATALOG.map((c) => [c.id, c.sizeBytes]));
+    for (const tier of TIERS) {
+      if (tier.corpusPackIds.length === 0) continue;
+      const realBytes = tier.corpusPackIds.reduce(
+        (sum, id) => sum + (sizeById.get(id) ?? 0),
+        0
+      );
+      const written = tier.description.match(/\(~([\d.]+)MB extra download\)/);
+      expect(
+        written,
+        `tier ${tier.id}: description carries no «(~X MB extra download)» figure`
+      ).not.toBeNull();
+      const writtenBytes = Number(written![1]) * 1_000_000;
+      expect(
+        writtenBytes,
+        `tier ${tier.id}: written figure is below its real catalog sum`
+      ).toBeGreaterThanOrEqual(realBytes);
+      expect(
+        writtenBytes,
+        `tier ${tier.id}: written figure is more than 5% above its real catalog sum`
+      ).toBeLessThanOrEqual(realBytes * 1.05);
+    }
+  });
 });
