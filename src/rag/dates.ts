@@ -34,6 +34,14 @@
  *    posterior a la referencia (lectura declarada; el uso real es
  *    ambiguo y si el dueño prefiere no juzgarla, se apaga esa forma
  *    sin tocar el resto).
+ *  - T-J5: la forma numérica «d/m[/aaaa]» no declara su convención
+ *    («10/11» es el 10 de noviembre o el 11 de octubre). La mención
+ *    guarda sus lecturas y solo se fija cuando una lectura es
+ *    imposible (un componente > 12) o el contexto la decide (R6).
+ *    Sin año exige ancla de fecha delante («el 10/11»): un «a/b»
+ *    suelto es una fracción o una razón. Y en la zona ambigua con
+ *    forma de fracción de cocina (la gramática de T-J4), sin año
+ *    manda la fracción: «el 1/2» no crea mención de fecha.
  *
  * Reglas de juicio (dateConflictForSentence):
  *  - R1 · Consistencia interna: mención con día de semana + día + mes
@@ -55,6 +63,16 @@
  *    absoluta de la fuente solo si (a) la fuente tiene exactamente
  *    una mención de fecha, o (b) las frases comparten ≥1 raíz
  *    sustantiva (el tema). Sin emparejamiento no hay juicio.
+ *  - R6 · Numérica (T-J5): un par en el que alguna mención es
+ *    numérica se juzga por candidatos: si alguna lectura de la
+ *    respuesta ES la fecha de la fuente, no se acusa; si ninguna lo
+ *    es y comparten un componente (o los dos cruzados: la
+ *    transposición), hay conflicto. Las lecturas se fijan por
+ *    imposibilidad, por la convención que cualquier numérica
+ *    inequívoca del turno declara, o por una gemela con nombre del
+ *    mismo lado. Lo que ninguna vía fija queda ambiguo y no se
+ *    fuerza: la transposición pelada «11/10» contra «10/11», sin
+ *    más contexto, trae las mismas dos lecturas en los dos lados.
  */
 
 export interface DateMention {
@@ -71,6 +89,12 @@ export interface DateMention {
    */
   dom?: number;
   month?: number;
+  /**
+   * T-J5: los componentes crudos de una mención numérica «a/b[/aaaa]»
+   * tal como se escribieron, sin convención aplicada; `year` es el
+   * año escrito (las formas de 2 dígitos ya van expandidas) o null.
+   */
+  num?: { a: number; b: number; year: number | null };
 }
 
 interface SpanMention extends DateMention {
@@ -205,6 +229,58 @@ export function parseDateMentions(text: string, referenceDate: Date): DateMentio
     }
   }
 
+  // — Pasada A2: absolutas numéricas «a/b[/aaaa]» (T-J5) —
+  // La forma numérica no declara su convención: la mención guarda
+  // los componentes crudos (num) y solo fija dom/mes cuando una
+  // lectura es imposible. Sin año exige ancla de fecha delante
+  // («el 10/11», «on 10/11»): un «a/b» suelto es una fracción o una
+  // razón, no una fecha. Y en la zona ambigua con forma de fracción
+  // de cocina (denominadores de la gramática de T-J4, duplicados
+  // aquí como se duplican las tablas entre capas), sin año manda
+  // la fracción: «el 1/2» no crea mención.
+  const FRACTION_DENOMINATORS = new Set([2, 3, 4, 5, 6, 8, 10, 12, 16]);
+  const NUM_ANCHOR_RE = /(?:^|\s)(el|del|la|on|dia|de)\s$/;
+  const numRe = /(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/g;
+  for (const match of t.matchAll(numRe)) {
+    const start = match.index ?? 0;
+    const end = start + match[0].length;
+    if (overlaps(start, end)) continue;
+    const a = parseInt(match[1], 10);
+    const b = parseInt(match[2], 10);
+    if (a === 0 || b === 0 || a > 31 || b > 31) continue;
+    if (a > 12 && b > 12) continue; // ninguna de las dos lecturas es una fecha
+    let year: number | null = null;
+    if (match[3]) {
+      const y = parseInt(match[3], 10);
+      year = match[3].length === 2 ? 2000 + y : y;
+    }
+    if (year === null) {
+      if (a <= 12 && b <= 12 && a < b && FRACTION_DENOMINATORS.has(b)) continue; // forma de fracción
+      if (!NUM_ANCHOR_RE.test(t.slice(Math.max(0, start - 7), start))) continue;
+    }
+    let dom: number | undefined;
+    let month: number | undefined;
+    if (a > 12) {
+      dom = a;
+      month = b;
+    } else if (b > 12) {
+      dom = b;
+      month = a;
+    }
+    push({
+      day: year !== null && dom !== undefined && month !== undefined ? validDay(year, month, dom) : null,
+      weekday: null,
+      hasYear: year !== null,
+      kind: "calendario",
+      text: match[0],
+      dom,
+      month,
+      num: { a, b, year },
+      start,
+      end,
+    });
+  }
+
   // — Pasada B: días de semana (relativos, pegados a una absoluta, o
   //    con día suelto; sueltos sin ancla = decorativos, no crean nada) —
   const wdRe = new RegExp(`${BOUND_L}(${WEEKDAY_ALT})${BOUND_R}`, "g");
@@ -317,7 +393,7 @@ export function parseSourceDateSentences(
   return sentences.map((text) => ({ text, mentions: parseDateMentions(text, referenceDate) }));
 }
 
-export type DateConflictKind = "interna" | "dia" | "relativa";
+export type DateConflictKind = "interna" | "dia" | "relativa" | "numerica";
 
 export interface DateConflictInfo {
   kind: DateConflictKind;
@@ -414,6 +490,83 @@ export function dateConflictForSentence(
     for (const { m: s, sentence } of srcAll) {
       if (s.weekday === null) continue;
       if (paired(a, s) && s.weekday !== a.weekday) return { kind: "dia", sourceSentence: sentence };
+    }
+  }
+
+  // R6 · Numérica contra su pareja (T-J5). Los candidatos de una
+  // mención — la fecha que puede ser — : la de nombre fija la suya;
+  // la numérica ambigua trae las dos lecturas hasta que el contexto
+  // la fija.
+  type DayCand = { d: number; m: number; y: number | null };
+  const rawCands = (mm: DateMention): DayCand[] => {
+    if (mm.num) {
+      const { a, b, year } = mm.num;
+      if (a > 12) return [{ d: a, m: b, y: year }];
+      if (b > 12) return [{ d: b, m: a, y: year }];
+      return [
+        { d: a, m: b, y: year },
+        { d: b, m: a, y: year },
+      ];
+    }
+    const d = domOf(mm);
+    const mo = monOf(mm);
+    if (d === null || mo === null) return [];
+    return [{ d, m: mo, y: mm.day?.y ?? null }];
+  };
+  // La convención del turno: cualquier numérica con una lectura
+  // imposible la declara para todas (un «25/12» en la fuente decide
+  // que el documento escribe d/m). Decisores contradictorios la
+  // dejan sin declarar.
+  let convention: "dm" | "md" | null = null;
+  {
+    let dm = false;
+    let md = false;
+    for (const mm of [...ans, ...srcAll.map((x) => x.m)]) {
+      if (!mm.num) continue;
+      if (mm.num.a > 12) dm = true;
+      if (mm.num.b > 12) md = true;
+    }
+    if (dm !== md) convention = dm ? "dm" : "md";
+  }
+  const fixedCands = (mm: DateMention, side: readonly DateMention[]): DayCand[] => {
+    const cands = rawCands(mm);
+    if (cands.length < 2 || !mm.num) return cands;
+    if (convention) {
+      const want =
+        convention === "dm" ? { d: mm.num.a, m: mm.num.b } : { d: mm.num.b, m: mm.num.a };
+      return cands.filter((c) => c.d === want.d && c.m === want.m);
+    }
+    // Una gemela con nombre del mismo lado fija la lectura que
+    // coincide con ella.
+    for (const named of side) {
+      if (named.num) continue;
+      const nd = domOf(named);
+      const nm = monOf(named);
+      if (nd === null || nm === null) continue;
+      const hit = cands.filter((c) => c.d === nd && c.m === nm);
+      if (hit.length > 0) return hit;
+    }
+    return cands;
+  };
+  const srcMentions = srcAll.map((x) => x.m);
+  for (const a of ans) {
+    const ca = fixedCands(a, ans);
+    if (ca.length === 0) continue;
+    for (const { m: s, sentence } of srcAll) {
+      if (!a.num && !s.num) continue; // R6 solo juzga pares con una numérica
+      const cs = fixedCands(s, srcMentions);
+      if (cs.length === 0) continue;
+      const compat = (x: DayCand, y: DayCand): boolean => x.y === null || y.y === null || x.y === y.y;
+      const agree = ca.some((x) => cs.some((y) => compat(x, y) && x.d === y.d && x.m === y.m));
+      if (agree) continue;
+      const share = ca.some((x) =>
+        cs.some(
+          (y) =>
+            compat(x, y) &&
+            (x.d === y.d || x.m === y.m || (x.d === y.m && x.m === y.d && x.d !== x.m)),
+        ),
+      );
+      if (share) return { kind: "numerica", sourceSentence: sentence };
     }
   }
 

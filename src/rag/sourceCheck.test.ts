@@ -425,3 +425,25 @@ describe("T-J4: las fracciones se juzgan en la caja", () => {
     expect(findNumberConflicts("La cita es el 10/11 en la sala.", [chunk("La cita es el 11/10 en la sala.")])).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------
+// T-J5 (barrido «revisa todo», J5): el juicio de fechas numéricas
+// vive en dates.ts (R6) y es compartido — la caja lo convierte en
+// aviso con la frase de la fuente, como con las demás fechas.
+
+describe("T-J5: la caja enseña la fecha numérica transpuesta cuando el contexto decide", () => {
+  const NOTA_NUM =
+    "Nota de la clínica. La cita con el dentista es el 10/11/2026 en la sala de espera. La receta caduca el 25/12/2026.";
+  const REF_NUM = new Date(2026, 10, 2);
+
+  it("con un inequívoco d/m en la fuente, la nota enseña la frase verdadera", () => {
+    const conflicts = findDateConflicts("La cita con el dentista es el 11/10/2026.", [chunk(NOTA_NUM)], REF_NUM);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("fecha");
+    expect(conflicts[0].sourceSentence).toContain("10/11/2026");
+  });
+
+  it("la misma fecha que la fuente no enseña nada", () => {
+    expect(findDateConflicts("La cita con el dentista es el 10/11/2026.", [chunk(NOTA_NUM)], REF_NUM)).toEqual([]);
+  });
+});

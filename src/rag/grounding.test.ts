@@ -757,6 +757,54 @@ describe("T-J4 — las fracciones se juzgan en el verificador", () => {
 });
 
 // ---------------------------------------------------------------
+// T-J5 (barrido «revisa todo», J5): la fecha numérica transpuesta
+// se sellaba — los dígitos son los mismos y dates.ts no tenía
+// gramática «d/m». El juicio compartido (R6 de dates.ts, fijado en
+// dates.test.ts) llega aquí por la pierna de fechas: cuando el
+// contexto decide la convención, la frase se retira; la
+// transposición pelada queda asentada como ambigüedad medida en
+// dates.test.ts y no se fuerza.
+
+describe("T-J5 — la fecha numérica transpuesta se retira cuando el contexto decide", () => {
+  it("con un inequívoco d/m en la fuente, «11/10» contra «10/11» ya no sale sellada", () => {
+    const chunk: GroundingChunk = {
+      title: "nota",
+      body:
+        "Nota de la clínica. La cita con el dentista es el 10/11/2026 en la sala de espera. " +
+        "La receta caduca el 25/12/2026.",
+    };
+    const r = verifyGroundedAnswer(
+      "La cita con el dentista es el 11/10/2026.",
+      [chunk],
+      "es",
+      "¿Cuándo es la cita con el dentista?",
+      new Date(2026, 10, 2),
+    );
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("11/10/2026");
+  });
+
+  it("control fiel: la misma fecha numérica que la fuente sella como antes", () => {
+    const chunk: GroundingChunk = {
+      title: "nota",
+      body:
+        "Nota de la clínica. La cita con el dentista es el 10/11/2026 en la sala de espera. " +
+        "La receta caduca el 25/12/2026.",
+    };
+    const r = verifyGroundedAnswer(
+      "La cita con el dentista es el 10/11/2026.",
+      [chunk],
+      "es",
+      "¿Cuándo es la cita con el dentista?",
+      new Date(2026, 10, 2),
+    );
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------
 // Ronda física 0.1.68, R-05: la pregunta del teléfono contra el
 // documento de la ronda. En la sesión real la recuperación mezcló el
 // documento con la guía de crisis (de ahí salían «teléfono»,

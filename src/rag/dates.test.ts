@@ -181,3 +181,76 @@ describe("ordinales ingleses: comportamiento aceptado (A6-40, FV-1)", () => {
     expect(bare[0].kind).toBe("calendario");
   });
 });
+
+// ---------------------------------------------------------------
+// T-J5 (barrido «revisa todo», J5): la forma numérica «d/m[/aaaa]»
+// no existía en la gramática — la transposición «11/10» contra
+// «10/11» se sellaba porque los dígitos son los mismos y ninguna
+// pierna los leía como fecha. La mención numérica guarda sus dos
+// lecturas; R6 juzga cuando el contexto las fija (lectura única,
+// convención declarada por un inequívoco del turno, gemela con
+// nombre) y no fuerza lo ambiguo de verdad.
+
+describe("T-J5: las fechas numéricas se parsean con sus lecturas", () => {
+  it("la ambigua guarda los componentes crudos y no fija día", () => {
+    const ms = parseDateMentions("La cita es el 10/11/2026.", REF);
+    expect(ms).toHaveLength(1);
+    expect(ms[0].num).toEqual({ a: 10, b: 11, year: 2026 });
+    expect(ms[0].day).toBeNull();
+    expect(ms[0].hasYear).toBe(true);
+    expect(ms[0].kind).toBe("calendario");
+  });
+
+  it("la de lectura única se fija entera (13 solo puede ser el día; tras la barra, el mes va primero)", () => {
+    const dm = parseDateMentions("La cita es el 13/10/2026.", REF);
+    expect(dm[0].day).toEqual({ y: 2026, m: 10, d: 13 });
+    const md = parseDateMentions("The appointment is 10/13/2026.", REF);
+    expect(md[0].day).toEqual({ y: 2026, m: 10, d: 13 });
+  });
+
+  it("sin año exige ancla: «el 10/11» sí; un «a/b» suelto, no", () => {
+    expect(parseDateMentions("La cita es el 10/11.", REF)).toHaveLength(1);
+    expect(parseDateMentions("quedan 10/11 por revisar", REF)).toEqual([]);
+  });
+
+  it("la fracción de cocina no es una fecha, ni con ancla", () => {
+    expect(parseDateMentions("Añade 1/2 taza de azúcar a la mezcla.", REF)).toEqual([]);
+    expect(parseDateMentions("Añade el 1/2 de la harina.", REF)).toEqual([]);
+  });
+
+  it("el día de semana se pega a la numérica como a la de nombre (R1 la juzga)", () => {
+    expect(judge("La cita es el lunes 13/10/2026.", ["La cita es el 13/10/2026."])?.kind).toBe("interna");
+    expect(judge("La cita es el martes 13/10/2026.", ["La cita es el 13/10/2026."])).toBeNull();
+  });
+});
+
+describe("T-J5 · R6: la transposición se juzga cuando el contexto decide", () => {
+  it("con un inequívoco en la fuente (25/12: escribe d/m), la transpuesta es conflicto", () => {
+    const c = judge("La cita con el dentista es el 11/10/2026.", [
+      "La cita con el dentista es el 10/11/2026.",
+      "La receta caduca el 25/12/2026.",
+    ]);
+    expect(c?.kind).toBe("numerica");
+    expect(c?.sourceSentence).toContain("10/11/2026");
+  });
+
+  it("la transposición pelada, sin contexto, trae las mismas lecturas en los dos lados: no se fuerza", () => {
+    expect(
+      judge("La cita con el dentista es el 11/10/2026.", ["La cita con el dentista es el 10/11/2026."]),
+    ).toBeNull();
+  });
+
+  it("la misma fecha en las dos convenciones acuerda: «10/13» contra «13/10» no es conflicto", () => {
+    expect(judge("La cita es el 10/13/2026.", ["La cita es el 13/10/2026."])).toBeNull();
+  });
+
+  it("el componente cambiado contra una lectura única comparte mes y no acuerda: conflicto", () => {
+    expect(judge("La cita es el 11/10/2026.", ["La cita es el 13/10/2026."])?.kind).toBe("numerica");
+  });
+
+  it("fechas sin ningún componente compartido no se cruzan (la doctrina R2 sigue)", () => {
+    expect(
+      judge("La cita es el 5/6/2027.", ["La cita es el 13/10/2026.", "La receta caduca el 25/12/2026."]),
+    ).toBeNull();
+  });
+});
