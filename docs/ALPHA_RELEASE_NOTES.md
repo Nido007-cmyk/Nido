@@ -260,7 +260,7 @@ Fixes from the 2026-10-10 code audit:
 ## Known limitations
 
 - The 0.5B model is small and will sometimes give wrong or made-up answers. Since 0.1.36 NIDO shows no source when nothing in its knowledge base really matches, but the model can still answer wrongly from its own knowledge.
-- On low-end phones the first word of a long answer can take a while (about 20 seconds measured on a Galaxy Tab A9+ when several sources are used).
+- On low-end phones the first word of a long answer can take a while (about 20 seconds measured on a Galaxy Tab A9+ running 0.1.68, when several sources are used; 0.1.69 has not been measured on a device yet).
 - P2P Bluetooth behavior varies by phone manufacturer. See the in-app troubleshooting guide if you have connection issues.
 - **A backup restored on a new installation needs the exported key.** If you reinstall or change phones, a backup can be restored with the exported database key. Without that key a backup cannot be opened anywhere, so keep the key somewhere safe and separate from the backup file.
 - **Voice input uses Android's system speech recognizer** with the prefer-offline flag. On devices without an offline model, the system service may process audio online.
@@ -271,7 +271,7 @@ Fixes from the 2026-10-10 code audit:
 - **Reproducible build, checked by CI only.** Two independent builds on GitHub match in all files except the signature (1,555 files for 0.1.51, which includes the native ML-KEM library). Since 0.1.55 every published release starts this check automatically against its own APK (the run is linked from the Actions tab). Nobody outside the project has rebuilt it yet; the check (`.github/workflows/reproducible.yml`, `scripts/compare-apk.py`) is public so anyone can.
 - **The hardware vault is off by default.** Turn it on in Settings → Security for the strongest protection of your data.
 - Builds are checked by automated tests, and the headline flows (chat and agent tools, memory, reminders and notifications, notes, and two-device P2P messaging, including airplane mode) are also exercised on physical hardware (Galaxy Tab A9+). Not every change is device-tested before every pre-release.
-- **0.1.69 has not been tested on a physical phone yet.** The fix batch passed the automated tests and independent verification only; the owner's round on his tablets runs before this version is published.
+- **0.1.69 has not been tested on a physical phone yet.** The fix batch passed the automated tests and independent verification only; the owner's round on his tablets runs on this build, now published, and anything it finds feeds the next alpha.
 - **0.1.68 has not been tested on a physical phone yet.** On-device recognition of real scans, the evidence-first answers and the widened emergency gate passed the automated tests and independent audits only; the owner's round on his tablets is still pending. (Note added 2026-11-01: that was true when 0.1.68 shipped. The owner's round ran on 31 October 2026: 0.1.68 was installed as an update on his Galaxy Tab A9+ and worked well, and on-device recognition of a test document, the Local pack in Portuguese and interrupting a long answer were exercised on the device.)
 - **0.1.67 has not been tested on a physical phone yet.** The audit fixes passed the automated tests only; the owner's round on his tablets is still pending.
 - **0.1.66 has not been tested on a physical phone yet.** The corrected pack editions and the badge permission fix passed the automated tests and audits only; the owner's round on his tablets is still pending.
