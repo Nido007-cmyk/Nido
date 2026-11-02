@@ -254,3 +254,56 @@ describe("T-J5 · R6: la transposición se juzga cuando el contexto decide", () 
     ).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------
+// ADV-J-C2 (adversaria del bloque del juez sobre T-J5): la gemela
+// con nombre fijaba la lectura SOLO en su lado (fixedCands) y la
+// respuesta conservaba sus dos lecturas — la coincidente la
+// absolvía siempre: «11/10» contra una fuente que escribe la fecha
+// con nombre y con número (la forma común) sellaba en el juez y la
+// caja callaba, medido en los tres arreglos. Desde esta tanda la
+// gemela declara la convención del turno como la numérica
+// inequívoca, con su misma doctrina: decisores contradictorios la
+// dejan sin declarar y lo no fijado no se fuerza.
+
+describe("ADV-J-C2 · R6: la gemela con nombre declara la convención del turno", () => {
+  it("la gemela en la MISMA frase fuente: la transpuesta es conflicto", () => {
+    const c = judge("El control es el 11/10/2026.", [
+      "El control es el 10/11/2026, el 10 de noviembre de 2026.",
+    ]);
+    expect(c?.kind).toBe("numerica");
+  });
+
+  it("la gemela en OTRA frase de la fuente: la transpuesta es conflicto", () => {
+    const c = judge("El control es el 11/10/2026.", [
+      "La cita es el 10 de noviembre de 2026.",
+      "El control es el 10/11/2026.",
+    ]);
+    expect(c?.kind).toBe("numerica");
+    expect(c?.sourceSentence).toContain("10 de noviembre");
+  });
+
+  it("la fiel bajo la convención que la gemela declara no se acusa", () => {
+    expect(
+      judge("El control es el 10/11/2026.", [
+        "La cita es el 10 de noviembre de 2026.",
+        "El control es el 10/11/2026.",
+      ]),
+    ).toBeNull();
+  });
+
+  it("decisores con nombre en las dos direcciones: la convención no se declara y no se fuerza", () => {
+    expect(
+      judge("El control es el 11/10/2026.", [
+        "El control es el 10/11/2026.",
+        "La cita es el 10 de noviembre de 2026.",
+        "La revisión es el 11 de octubre de 2026.",
+      ]),
+    ).toBeNull();
+  });
+
+  it("la fuente SOLO con nombre sigue sin fijar la numérica de la respuesta (suelo de la adversaria)", () => {
+    expect(judge("El control es el 11/10/2026.", ["La cita es el 10 de noviembre de 2026."])).toBeNull();
+    expect(judge("El control es el 10/11/2026.", ["La cita es el 10 de noviembre de 2026."])).toBeNull();
+  });
+});

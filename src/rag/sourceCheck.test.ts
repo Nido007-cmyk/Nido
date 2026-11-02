@@ -479,3 +479,26 @@ describe("ADV-J-C1: la caja enseña la dosis de inhalador cambiada", () => {
     expect(conflicts[0].unit).toBe("sprays");
   });
 });
+
+// ---------------------------------------------------------------
+// ADV-J-C2 (adversaria del bloque del juez): la caja callaba ante
+// la transpuesta cuando la fuente escribía la fecha con nombre y
+// con número — la gemela con nombre no declaraba la convención
+// del turno y la respuesta conservaba la lectura que la absolvía.
+// El juicio vive en dates.ts (R6); aquí se convierte en aviso.
+
+describe("ADV-J-C2: la caja enseña la transpuesta cuando la fuente trae la gemela con nombre", () => {
+  const NOTA_GEMELA = "Nota de la clínica. La cita es el 10 de noviembre de 2026. El control es el 10/11/2026.";
+  const REF_GEMELA = new Date(2026, 10, 2);
+
+  it("la transpuesta enseña la frase de la fuente con la fecha verdadera", () => {
+    const conflicts = findDateConflicts("El control es el 11/10/2026.", [chunk(NOTA_GEMELA)], REF_GEMELA);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("fecha");
+    expect(conflicts[0].sourceSentence).toContain("10 de noviembre");
+  });
+
+  it("la misma fecha que la fuente no enseña nada", () => {
+    expect(findDateConflicts("El control es el 10/11/2026.", [chunk(NOTA_GEMELA)], REF_GEMELA)).toEqual([]);
+  });
+});

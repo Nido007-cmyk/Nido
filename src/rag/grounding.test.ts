@@ -962,6 +962,32 @@ describe("T-J5 — la fecha numérica transpuesta se retira cuando el contexto d
     expect(r.status).toBe("grounded");
     expect(r.removed).toBe(0);
   });
+
+  it("ADV-J-C2: la fuente que escribe la fecha con nombre y con número ya no deja sellar la transpuesta", () => {
+    const chunk: GroundingChunk = {
+      title: "nota",
+      body: "Nota de la clínica. La cita es el 10 de noviembre de 2026. El control es el 10/11/2026.",
+    };
+    const r = verifyGroundedAnswer(
+      "El control es el 11/10/2026.",
+      [chunk],
+      "es",
+      "¿Cuándo es el control?",
+      new Date(2026, 10, 2),
+    );
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("11/10/2026");
+    const f = verifyGroundedAnswer(
+      "El control es el 10/11/2026.",
+      [chunk],
+      "es",
+      "¿Cuándo es el control?",
+      new Date(2026, 10, 2),
+    );
+    expect(f.status).toBe("grounded");
+    expect(f.removed).toBe(0);
+  });
 });
 
 // ---------------------------------------------------------------

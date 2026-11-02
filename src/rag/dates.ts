@@ -70,9 +70,12 @@
  *    transposición), hay conflicto. Las lecturas se fijan por
  *    imposibilidad, por la convención que cualquier numérica
  *    inequívoca del turno declara, o por una gemela con nombre del
- *    mismo lado. Lo que ninguna vía fija queda ambiguo y no se
- *    fuerza: la transposición pelada «11/10» contra «10/11», sin
- *    más contexto, trae las mismas dos lecturas en los dos lados.
+ *    mismo lado — que desde ADV-J-C2 declara además la convención
+ *    del turno por esa misma vía: antes fijaba solo su lado y la
+ *    respuesta conservaba la lectura coincidente que la absolvía.
+ *    Lo que ninguna vía fija queda ambiguo y no se fuerza: la
+ *    transposición pelada «11/10» contra «10/11», sin más contexto,
+ *    trae las mismas dos lecturas en los dos lados.
  */
 
 export interface DateMention {
@@ -525,6 +528,32 @@ export function dateConflictForSentence(
       if (!mm.num) continue;
       if (mm.num.a > 12) dm = true;
       if (mm.num.b > 12) md = true;
+    }
+    // ADV-J-C2: la gemela con nombre declara la convención del
+    // turno por la misma vía. Una numérica ambigua con una gemela
+    // con nombre EN SU MISMO LADO cuya fecha es una de sus dos
+    // lecturas fija el orden (la primera componente es el día, o
+    // el mes); la numérica simétrica («10/10») no declara nada.
+    // Antes la gemela solo fijaba las menciones de su propio lado
+    // (fixedCands) y la respuesta conservaba la lectura
+    // coincidente que la absolvía siempre: «11/10» contra «10/11»
+    // + «10 de noviembre» sellaba en el juez y la caja callaba.
+    // Los decisores contradictorios — de cualquier vía — la dejan
+    // sin declarar, la doctrina de arriba.
+    const sides: ReadonlyArray<readonly DateMention[]> = [ans, srcAll.map((x) => x.m)];
+    for (const side of sides) {
+      for (const mm of side) {
+        if (!mm.num || mm.num.a === mm.num.b) continue;
+        const { a, b } = mm.num;
+        for (const named of side) {
+          if (named.num) continue;
+          const nd = domOf(named);
+          const nm = monOf(named);
+          if (nd === null || nm === null) continue;
+          if (a === nd && b === nm) dm = true;
+          if (a === nm && b === nd) md = true;
+        }
+      }
     }
     if (dm !== md) convention = dm ? "dm" : "md";
   }
