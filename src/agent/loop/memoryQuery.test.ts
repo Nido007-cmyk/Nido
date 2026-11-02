@@ -991,6 +991,127 @@ describe("ADV-F4-C1 — el hecho con dos cumpleaños partido por punto sirve el 
   });
 });
 
+// Cobertura medida de la adversaria de formas V (ataque 4): los
+// separadores «!» y «?» reproducían el cruce de ADV-F4-C1 entero,
+// porque sentenceBreaks no los conocía — sin conjunción el
+// segmento volvía a ser el hecho entero con su primera fecha.
+// «!» es forma real de dictado con énfasis; «?» dentro de un
+// hecho guardado es forma rara pero posible. La cura es el mismo
+// aparato: los dos signos cortan como el punto, con la guarda del
+// inciso (el signo seguido de coma es pregunta entre paréntesis,
+// no cierre de frase).
+describe("FORMAS VI — el hecho con dos cumpleaños partido por «!» o «?» sirve el segmento de cada persona", () => {
+  const esBang: MemoryQueryData = {
+    people: [],
+    facts: [{ content: "el cumpleaños de mi abuelo es el 20 de junio! El de mi abuela es el 15 de marzo.", category: "event" }],
+  };
+  const ptBang: MemoryQueryData = {
+    people: [],
+    facts: [{ content: "o aniversário do meu avô é 20 de junho! O da minha avó é 15 de março.", category: "event" }],
+  };
+  const enBang: MemoryQueryData = {
+    people: [],
+    facts: [{ content: "my grandfather's birthday is June 20! My grandmother's birthday is March 15.", category: "event" }],
+  };
+
+  it("«!» persona es/pt/en: cada pregunta sirve SU fecha", () => {
+    const abuela = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", esBang, "es");
+    expect(abuela).toBe("El cumpleaños de tu abuela es el lunes, 15 de marzo.");
+    const abuelo = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuelo?", esBang, "es");
+    expect(abuelo).toContain("20 de junio");
+    expect(abuelo).not.toContain("15 de marzo");
+    const ava = answerMemoryQuery("quando é o aniversário da minha avó?", ptBang, "pt");
+    expect(ava).toContain("15 de março");
+    expect(ava).not.toContain("20 de junho");
+    const gm = answerMemoryQuery("when is my grandmother's birthday?", enBang, "en");
+    expect(gm).toContain("March 15");
+    expect(gm).not.toContain("June 20");
+  });
+
+  it("«?» persona es: la abuela sirve SU 15 de marzo", () => {
+    const esQ: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuelo es el 20 de junio? El de mi abuela es el 15 de marzo.", category: "event" }],
+    };
+    const r = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", esQ, "es");
+    expect(r).toContain("15 de marzo");
+    expect(r).not.toContain("20 de junio");
+  });
+
+  it("«!» asiento propio es/pt/en: mi fecha, no la de la abuela", () => {
+    const selfEs: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuela es el 15 de marzo! Mi cumpleaños es el 5 de mayo.", category: "event" }],
+    };
+    const rEs = answerMemoryQuery("¿cuándo es mi cumpleaños?", selfEs, "es");
+    expect(rEs).toContain("5 de mayo");
+    expect(rEs).not.toContain("15 de marzo");
+    const selfPt: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "o aniversário da minha avó é 15 de março! O meu aniversário é 5 de maio.", category: "event" }],
+    };
+    const rPt = answerMemoryQuery("quando é o meu aniversário?", selfPt, "pt");
+    expect(rPt).toContain("5 de maio");
+    expect(rPt).not.toContain("15 de março");
+    const selfEn: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "my grandmother's birthday is March 15! My birthday is May 5.", category: "event" }],
+    };
+    const rEn = answerMemoryQuery("when is my birthday?", selfEn, "en");
+    expect(rEn).toContain("May 5");
+    expect(rEn).not.toContain("March 15");
+  });
+
+  it("«?» asiento propio es: mi 5 de mayo, no el 15 de marzo", () => {
+    const selfQ: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuela es el 15 de marzo? Mi cumpleaños es el 5 de mayo.", category: "event" }],
+    };
+    const r = answerMemoryQuery("¿cuándo es mi cumpleaños?", selfQ, "es");
+    expect(r).toContain("5 de mayo");
+    expect(r).not.toContain("15 de marzo");
+  });
+
+  it("la corrida de signos («?!») es un solo corte (es)", () => {
+    const corrida: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuelo es el 20 de junio?! El de mi abuela es el 15 de marzo.", category: "event" }],
+    };
+    const r = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", corrida, "es");
+    expect(r).toContain("15 de marzo");
+    expect(r).not.toContain("20 de junio");
+  });
+
+  it("suelo: la pregunta entre paréntesis («¿sabes?») no parte la cláusula y su fecha se sirve", () => {
+    const combinado: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuelo es el 20 de junio. El de mi abuela, ¿sabes?, es el 15 de marzo.", category: "event" }],
+    };
+    const rComb = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", combinado, "es");
+    expect(rComb).toContain("El cumpleaños de tu abuela es el");
+    expect(rComb).toContain("15 de marzo");
+    expect(rComb).not.toContain("20 de junio");
+    const solo: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "me contó que el cumpleaños de mi abuela, ¿sabes?, es el 15 de marzo", category: "event" }],
+    };
+    const rSolo = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", solo, "es");
+    expect(rSolo).toContain("El cumpleaños de tu abuela es el");
+    expect(rSolo).toContain("15 de marzo");
+  });
+
+  it("suelo: la pregunta guardada como hecho entero se cita, sin fecha inventada", () => {
+    const pregunta: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "¿cuándo es el cumpleaños de mi abuela?", category: "event" }],
+    };
+    const r = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", pregunta, "es");
+    expect(r).toContain("Según lo que me contaste");
+    expect(r).not.toContain("20 de junio");
+    expect(r).not.toContain("15 de marzo");
+  });
+});
+
 // B1+B2 (barrido «revisa todo», clase 1 · MEDIA): SELF se quedó sin
 // la forma que G-M1-R1 dio a REL — «¿cuál es mi nombre?» y «what is
 // my name?» (sin contraer) caían al modelo teniendo el hecho

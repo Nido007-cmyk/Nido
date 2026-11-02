@@ -368,13 +368,36 @@ const SENTENCE_ABBREVS = new Set(["dr", "dra", "sr", "sra", "srta", "mr", "mrs",
  *  previa en SENTENCE_ABBREVS («Dr.», «ej.») no corta. Una corrida
  *  de puntos (elipsis) cuenta como un solo corte tras la corrida.
  *  Un corte falso solo puede ENCOGER el segmento del ancla — el
- *  desenlace peor es la cita honesta, nunca la fecha ajena. */
+ *  desenlace peor es la cita honesta, nunca la fecha ajena.
+ *
+ *  Cobertura medida de la adversaria de formas V (ataque 4): «!»
+ *  y «?» cierran frase con el mismo daño tras ellos — el hecho
+ *  partido por «!» («…es el 20 de junio! El de mi abuela…»)
+ *  reproducía el cruce entero, en el asiento propio con la fecha
+ *  ajena afirmada como cumpleaños del usuario. «!» es forma real
+ *  de dictado con énfasis; «?» dentro de un hecho guardado es
+ *  forma rara (una pregunta guardada como hecho). Una corrida de
+ *  signos («?!», «!!») es un solo corte tras la corrida. Guarda
+ *  del inciso, de la misma familia que las del punto: el signo
+ *  seguido de coma es inciso entre signos («¿sabes?», «¡claro!»)
+ *  dentro de la cláusula — la coma-inciso de siempre — y no
+ *  corta, así el hecho con pregunta legítima entre paréntesis
+ *  sigue sirviendo la fecha de su cláusula por plantilla; sin la
+ *  coma, un corte de más solo encoge el segmento (cita honesta),
+ *  nunca afirma la fecha ajena. */
 function sentenceBreaks(fact: string): { start: number; after: number }[] {
   const out: { start: number; after: number }[] = [];
   for (let i = 0; i < fact.length; i++) {
     const ch = fact[i]!;
     if (ch === ";") {
       out.push({ start: i, after: i + 1 });
+      continue;
+    }
+    if (ch === "!" || ch === "?") {
+      let j = i;
+      while (fact[j + 1] === "!" || fact[j + 1] === "?") j++;
+      if (fact[j + 1] !== ",") out.push({ start: i, after: j + 1 });
+      i = j;
       continue;
     }
     if (ch !== ".") continue;
