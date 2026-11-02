@@ -425,7 +425,11 @@ All notable changes to NIDO are recorded here. Versions follow
 - **The APK weight cuts, with their table judged exact
   piece by piece over the published 0.1.68 APK:** the
   `hexagon_opencl` pair and llama's HTP assets leave
-  through a three-layer packaging plugin (18,167,464 B);
+  through the packaging plugin (the pair through its
+  jniLibs layer; the HTP assets through a fourth layer
+  that prunes the merged-assets intermediate, because
+  the packaging exclusions never reached them in the
+  real build — 18,167,464 B);
   BouncyCastle's 5 post-quantum tables leave through
   the exclusions property (4,138,070 B stored; the
   decompressed figure, 8,164,531 B, is not the saving);
@@ -435,7 +439,15 @@ All notable changes to NIDO are recorded here. Versions follow
   V (1,201,763 B). **Total: 23,507,297 B**, confirmed by
   the second route (the simulated APK removes 99
   entries summing exactly the total; the 397,060 B of
-  file difference are structural ZIP overhead). The
+  file difference are structural ZIP overhead) and by
+  the third route, the real binary: CI run 41381127115
+  built the corrected tip, the listing judge passed on
+  the built APK, and its listing drops exactly those
+  99 entries with the same stored bytes (the built file
+  itself is 20,784,147 B lighter than the 0.1.68 file —
+  the difference against the total is the JS bundle's
+  growth with the 858-article corpus, +2,801,136 B
+  stored, plus ZIP structure). The
   listing's judge lives in CI (`check-apk-trims.py`)
   and fails the build if anything cut returns or
   anything kept goes missing. Generation threads come
