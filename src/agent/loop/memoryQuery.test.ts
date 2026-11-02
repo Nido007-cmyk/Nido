@@ -486,3 +486,34 @@ describe("B8 — el hecho dictado en pt o en en se sirve por la rama de nombre",
     expect(answerMemoryQuery("what's my mom's name?", ES_FACT, "en")).toBe("Your mom's name is Ana.");
   });
 });
+
+// B1+B2 (barrido «revisa todo», clase 1 · MEDIA): SELF se quedó sin
+// la forma que G-M1-R1 dio a REL — «¿cuál es mi nombre?» y «what is
+// my name?» (sin contraer) caían al modelo teniendo el hecho
+// guardado. Sondas MQ15/MQ38/IN01 y MQ17/MQ39; suelo MQ14/MQ16 (las
+// canónicas «¿cómo me llamo?» / «what's my name?»).
+describe("B1+B2 — SELF: «cuál es mi nombre» es y «what is my name» en", () => {
+  const ME: MemoryQueryData = {
+    facts: [{ content: "Me llamo Ruben", category: "general" }],
+    people: [],
+  };
+
+  it("la forma es sirve el nombre y la puerta la reconoce (MQ15/MQ38)", () => {
+    expect(answerMemoryQuery("¿cuál es mi nombre?", ME, "es")).toBe("Te llamas Ruben.");
+    expect(isMemoryStyleQuery("¿cuál es mi nombre?")).toBe(true);
+    expect(answerMemoryQuery("cual es mi nombre", ME, "es")).toBe("Te llamas Ruben.");
+  });
+
+  it("la forma en sin contraer sirve el nombre y la puerta la reconoce (MQ17/MQ39)", () => {
+    expect(answerMemoryQuery("what is my name?", ME, "en")).toBe("Your name is Ruben.");
+    expect(isMemoryStyleQuery("what is my name?")).toBe(true);
+  });
+
+  it("suelo: las canónicas no se mueven y sin el dato la respuesta es la honesta", () => {
+    expect(answerMemoryQuery("¿cómo me llamo?", ME, "es")).toBe("Te llamas Ruben.");
+    expect(answerMemoryQuery("what's my name?", ME, "en")).toBe("Your name is Ruben.");
+    const empty: MemoryQueryData = { facts: [], people: [] };
+    expect(answerMemoryQuery("¿cuál es mi nombre?", empty, "es")).toContain("Todavía no me has contado eso");
+    expect(answerMemoryQuery("what is my name?", empty, "en")).toContain("You haven't told me that yet");
+  });
+});

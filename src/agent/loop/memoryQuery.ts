@@ -297,6 +297,12 @@ const SELF_NAME_Q_RES: RegExp[] = [
   /what'?s my name\??$/i,
   /como (?:eu )?me chamo\??$/i,
   /qual (?:é|e) (?:o )?meu nome\??$/i,
+  // B1+B2 (barrido «revisa todo», clase 1): SELF se quedó sin la
+  // forma que G-M1-R1 dio a REL y que REL en ganó en la 0.1.34 —
+  // «¿cuál es mi nombre?» y «what is my name?» caían al modelo
+  // (puerta false, classifyIntent «conversar») teniendo el hecho.
+  /¿?cu[aá]l es mi nombre\??$/i,
+  /what is my name\??$/i,
 ];
 const BDAY_PERSON_Q_RES: RegExp[] = [
   /cu[aá]ndo es el cumplea[ñn]os de mi ([a-záéíóúñü ]+?)\??$/i,

@@ -390,3 +390,14 @@ describe("classifyIntent — Núcleo 3: «¿Recuerdas qué dice el documento…?
     expect(classifyIntent(text)).toBe("recordar");
   });
 });
+
+// B1+B2 (barrido «revisa todo», IN01): «¿cuál es mi nombre?» y
+// «what is my name?» clasificaban «conversar» y caían al modelo
+// teniendo el nombre guardado; con la forma en SELF_NAME_Q_RES la
+// puerta compartida (isMemoryStyleQuery) las trae a «recordar».
+describe("B1+B2 — classifyIntent trae la forma SELF a recordar", () => {
+  it("es y en entran en la ruta de memoria", () => {
+    expect(classifyIntent("¿cuál es mi nombre?")).toBe("recordar");
+    expect(classifyIntent("what is my name?")).toBe("recordar");
+  });
+});
