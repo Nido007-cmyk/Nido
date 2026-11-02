@@ -237,6 +237,22 @@ const REL_NAME_Q_RES: RegExp[] = [
   /what is my ([a-z -]+?)'?s name\??$/i,
   /what is the name of my ([a-z -]+?)\??$/i,
   /como se chama (?:a )?minha? ([a-záéíóúãõç ]+?)\??$/i,
+  // G-M1-R1 (post-0.1.69, cruce de Grok): la forma española «¿cuál es
+  // el nombre de mi X?» y su espejo portugués no estaban — la inglesa
+  // entró en el barrido de paridad de la 0.1.34 y estas no. Sin patrón,
+  // la pregunta caía a la rama genérica (punto 5), que solo puntúa
+  // hechos: con el nombre guardado SOLO como ficha de persona, la
+  // respuesta era «no me lo has contado» teniéndolo. Con el patrón, la
+  // forma entra en la rama 1, donde la ficha se sirve por
+  // findPersonByRel con la misma respuesta que da el hecho — el
+  // asiento equivalente que la ficha 12 de la estantería nombra.
+  // scoreMemoryFacts NO se toca: es la única fuente de puntuación de
+  // la puerta y del testigo de ADV2, y moverla movería otras rutas.
+  // Cola de cortesía («…, por favor») como en las formas de hora y
+  // fecha de intent.ts; el dictado sin acentos ni signos casa por las
+  // clases (cu[aá]l, (?:é|e)) y la des-fusión previa (unfuseMi).
+  /¿?cu[aá]l es el nombre de mi ([a-záéíóúñü ]+?)(?:[,\s]+(?:por favor|porfa))?\??$/i,
+  /qual (?:é|e) o nome d[aeo] (?:minha?|meu) ([a-záéíóúãõç ]+?)(?:[,\s]+por favor)?\??$/i,
 ];
 const SELF_NAME_Q_RES: RegExp[] = [
   /¿?c[oó]mo me llamo\??$/i,

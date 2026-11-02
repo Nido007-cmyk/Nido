@@ -361,3 +361,46 @@ describe("ADV3 — el testigo de la sonda exige TODAS las clases pedidas", () =>
     ).toBe(true);
   });
 });
+
+// G-M1-R1 (post-0.1.69, cruce de Grok): la forma «¿cuál es el nombre
+// de mi X?» no tenía patrón en español (su gemela inglesa entró en la
+// 0.1.34) y la ficha de persona no puntúa en la rama genérica: con el
+// nombre guardado SOLO como ficha, la respuesta era «no me lo has
+// contado» teniéndolo. La cura mete la forma (y su espejo portugués)
+// en REL_NAME_Q_RES: la pregunta entra en la rama 1 y la ficha se
+// sirve por findPersonByRel, con la misma respuesta que da el hecho.
+describe("G-M1-R1 — «¿cuál es el nombre de mi X?» entra en la ruta de nombre (es/pt)", () => {
+  const CARD: MemoryQueryData = { facts: [], people: [{ name: "Ana", relationship: "mamá" }] };
+  const FACT: MemoryQueryData = {
+    facts: [{ content: "Mi mamá se llama Ana", category: "general" }],
+    people: [],
+  };
+
+  it("la puerta reconoce la forma: isMemoryStyleQuery en es y en pt", () => {
+    expect(isMemoryStyleQuery("¿cuál es el nombre de mi mamá?")).toBe(true);
+    expect(isMemoryStyleQuery("qual é o nome da minha mãe?")).toBe(true);
+  });
+
+  it("con el nombre SOLO como ficha: sirve la ficha, no el «no me lo has contado»", () => {
+    expect(answerMemoryQuery("¿cuál es el nombre de mi mamá?", CARD, "es")).toBe("Tu mamá se llama Ana.");
+    expect(answerMemoryQuery("qual é o nome da minha mãe?", CARD, "pt")).toBe("Sua mãe se chama Ana.");
+  });
+
+  it("con el nombre como hecho: la misma respuesta que da la forma canónica", () => {
+    expect(answerMemoryQuery("¿cuál es el nombre de mi mamá?", FACT, "es")).toBe("Tu mamá se llama Ana.");
+    expect(answerMemoryQuery("¿cómo se llama mi mamá?", FACT, "es")).toBe("Tu mamá se llama Ana.");
+  });
+
+  it("variantes reales: fusionada, dictada sin signos y con cortesía", () => {
+    expect(answerMemoryQuery("¿cuál es el nombre de mima?", CARD, "es")).toBe("Tu mamá se llama Ana.");
+    expect(answerMemoryQuery("cual es el nombre de mi mama", CARD, "es")).toBe("Tu mama se llama Ana.");
+    expect(answerMemoryQuery("¿cuál es el nombre de mi mamá, por favor?", CARD, "es")).toBe("Tu mamá se llama Ana.");
+  });
+
+  it("guardias: sin el dato en ningún almacenamiento, honesto; lo que no es memoria sigue null", () => {
+    const empty: MemoryQueryData = { facts: [], people: [] };
+    expect(answerMemoryQuery("¿cuál es el nombre de mi mamá?", empty, "es")).toContain("Todavía no me has contado eso");
+    expect(answerMemoryQuery("¿cuál es el nombre de mi papá?", CARD, "es")).toContain("Todavía no me has contado eso");
+    expect(answerMemoryQuery("¿cuál es el nombre de la capital de Francia?", CARD, "es")).toBeNull();
+  });
+});
