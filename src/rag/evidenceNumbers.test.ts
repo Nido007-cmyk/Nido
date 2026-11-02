@@ -116,3 +116,45 @@ describe("C-08: los rangos de la evidencia sostienen su interior", () => {
     expect(sentenceNumbersSupported("Sumerge la zona en agua a 45 °C durante 25 minutos.", ev, ranges)).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------
+// T-J3 (barrido «revisa todo», J3): los números en letra tras los
+// portillos de la caja (frecuencia diaria y unidad de dosis) son
+// cifras para el juez — antes sellaba «cinco veces al día» contra
+// «dos veces al día» mientras la caja marcaba el conflicto. Letra y
+// dígito se juzgan en el mismo conjunto de valores, en las dos
+// direcciones. Fuera de los portillos la letra no se juzga.
+
+describe("T-J3: los números en letra con portillo se juzgan como cifras", () => {
+  it("la frecuencia en letra falsa no pasa; la fiel sí, en letra y en dígito", () => {
+    const ev = evidenceNumberValues(["Tome el jarabe dos veces al día, después de comer."]);
+    expect(sentenceNumbersSupported("Tome el jarabe cinco veces al día, después de comer.", ev)).toBe(false);
+    expect(sentenceNumbersSupported("Tome el jarabe dos veces al día, después de comer.", ev)).toBe(true);
+    expect(sentenceNumbersSupported("Tome el jarabe 12 veces al día, después de comer.", ev)).toBe(false);
+  });
+
+  it("la dosis en letra falsa no pasa (es/en/pt de la tabla)", () => {
+    expect(sentenceNumbersSupported("Tome cinco comprimidos al día.", evidenceNumberValues(["Tome dos comprimidos al día."]))).toBe(false);
+    expect(sentenceNumbersSupported("Take five tablets a day.", evidenceNumberValues(["Take two tablets a day."]))).toBe(false);
+    expect(sentenceNumbersSupported("Tome cinco comprimidos por dia.", evidenceNumberValues(["Tome dois comprimidos por dia."]))).toBe(false);
+  });
+
+  it("letra y dígito se sostienen el uno al otro (la misma cifra, otra ropa)", () => {
+    const evLetra = evidenceNumberValues(["Tome doce comprimidos al día."]);
+    expect(sentenceNumbersSupported("Tome 12 comprimidos al día.", evLetra)).toBe(true);
+    expect(sentenceNumbersSupported("Tome doce comprimidos al día.", evLetra)).toBe(true);
+    const evDigito = evidenceNumberValues(["Tome 12 comprimidos al día."]);
+    expect(sentenceNumbersSupported("Tome doce comprimidos al día.", evDigito)).toBe(true);
+  });
+
+  it("fuera de los portillos la letra sigue sin juzgarse", () => {
+    expect(sentenceNumbersSupported("Había dos personas en la sala.", new Set())).toBe(true);
+    expect(sentenceNumbersSupported("El grupo tiene cinco miembros.", new Set())).toBe(true);
+  });
+
+  it("«media» tras el portillo de dosis vale 0,5", () => {
+    const ev = evidenceNumberValues(["Añade media cucharadita de sal."]);
+    expect(sentenceNumbersSupported("Añade media cucharadita de sal.", ev)).toBe(true);
+    expect(sentenceNumbersSupported("Añade media cucharadita de sal.", new Set())).toBe(false);
+  });
+});

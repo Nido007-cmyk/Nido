@@ -67,7 +67,15 @@
 
 import type { RetrievedChunk } from "./retrieve";
 import { splitSentences } from "./grounding";
-import { numberTokens, parseNumberToken, roundsFromEvidence, tokenReadings } from "./evidenceNumbers";
+import {
+  numberTokens,
+  parseNumberToken,
+  roundsFromEvidence,
+  tokenReadings,
+  WORD_NUMBERS,
+  DOSE_UNIT_WORDS,
+  WORD_NUMBER_ALT,
+} from "./evidenceNumbers";
 import { dateConflictForSentence, parseSourceDateSentences } from "./dates";
 
 export interface NumberConflict {
@@ -139,41 +147,11 @@ const CONVERT: Record<string, { unit: string; factor: number }> = {
 };
 
 /**
- * Números en letra, con portillo estrecho (C-08): tabla cerrada de
- * las tres lenguas (las claves van plegadas, como todo lo que se
- * compara contra la frase plegada: «três» llega como «tres») más
- * media/medio/half/meia = 0,5. Solo alimentan measuresIn cuando la
- * palabra siguiente es una unidad de DOSIS (DOSE_UNIT_WORDS) o el
- * marco de frecuencia diaria: «dos personas» sigue sin juzgarse.
- * Riesgo declarado: «una» es artículo y dosis a la vez («compró una
- * cucharada de plata» formaría {15 ml}); el guarda de tema y la
- * rareza lo hacen aceptable.
+ * Las tablas de números en letra (WORD_NUMBERS, DOSE_UNIT_WORDS,
+ * WORD_NUMBER_ALT) viven desde T-J3 en evidenceNumbers.ts y se
+ * importan: una sola fuente para las dos superficies — el juez las
+ * consume con los mismos portillos que esta caja (C-08).
  */
-const WORD_NUMBERS: Record<string, number> = {
-  un: 1, una: 1, uno: 1, one: 1, um: 1, uma: 1,
-  dos: 2, dois: 2, duas: 2, two: 2,
-  tres: 3, three: 3,
-  cuatro: 4, quatro: 4, four: 4,
-  cinco: 5, five: 5,
-  seis: 6, six: 6,
-  siete: 7, sete: 7, seven: 7,
-  ocho: 8, oito: 8, eight: 8,
-  nueve: 9, nove: 9, nine: 9,
-  diez: 10, dez: 10, ten: 10,
-  once: 11, onze: 11, eleven: 11,
-  doce: 12, doze: 12, twelve: 12,
-  media: 0.5, medio: 0.5, half: 0.5, meia: 0.5,
-};
-
-/** Las unidades de dosis que un número en letra puede tocar (el portillo). */
-const DOSE_UNIT_WORDS = new Set([
-  "cucharadita", "cucharaditas", "cucharada", "cucharadas",
-  "teaspoon", "teaspoons", "tablespoon", "tablespoons",
-  "colher", "colheres",
-  "gota", "gotas", "drops",
-  "comprimido", "comprimidos", "tableta", "tabletas",
-  "pastilla", "pastillas", "tablet", "tablets", "pill", "pills",
-]);
 
 /** Toda palabra que nombra una unidad o su conversión: no es tema. */
 const UNIT_WORDS = new Set([...Object.keys(UNITS), ...Object.keys(CONVERT), "colher", "colheres"]);
@@ -285,9 +263,6 @@ const INTERVAL_UNITS: Record<string, { unit: string; factor: number }> = {
   seconds: { unit: "segundos", factor: 1 },
 };
 
-const WORD_NUMBER_ALT = Object.keys(WORD_NUMBERS)
-  .sort((a, b) => b.length - a.length)
-  .join("|");
 const RANGE_RES = [
   /(\d+(?:[.,]\d+)?)\s*(?:[-–—]|\ba\b|\bto\b|\baté\b)\s*(\d+(?:[.,]\d+)?)/g,
   /\bentre\s+(\d+(?:[.,]\d+)?)\s+(?:y|e|and)\s+(\d+(?:[.,]\d+)?)/g,

@@ -30,6 +30,17 @@
  *  - Los enteros de un solo dígito no se juzgan (numeración de
  *    listas, «capítulo 3», «1» suelto): demasiado ruido, y la vía
  *    léxica ya juzga el resto de la frase.
+ *  - T-J3 (barrido «revisa todo», J3): los números EN LETRA con los
+ *    portillos de la caja (sourceCheck, C-08) — la frecuencia diaria
+ *    («cinco veces al día») y la unidad de dosis pegada («cinco
+ *    comprimidos») — también son cifras de la evidencia y de la
+ *    respuesta. Sin esto, el juez sellaba «cinco veces al día»
+ *    contra «dos veces al día» mientras la caja marcaba el
+ *    conflicto: la dosis y la frecuencia dictadas en letra son
+ *    habla natural. Fuera de los portillos («dos personas») la
+ *    letra no se juzga, como en la caja. Las tablas viven aquí
+ *    desde esta tanda y la caja las importa: una sola fuente para
+ *    las dos superficies.
  *
  * Puro, sin dependencias, 100% testeable.
  */
@@ -125,6 +136,94 @@ export function evidenceNumberValues(texts: readonly string[]): Set<number> {
     for (const token of numberTokens(text)) {
       for (const v of parseNumberToken(token)) out.add(v);
     }
+    // T-J3: también los valores en letra tras sus portillos.
+    for (const r of sentenceWordReadings(text)) out.add(r.value);
+  }
+  return out;
+}
+
+// ------------------------------------------------- números en letra
+
+/**
+ * Números en letra, con portillo estrecho (C-08, heredado de la
+ * caja): tabla cerrada de las tres lenguas (las claves van
+ * plegadas, como todo lo que se compara contra la frase plegada:
+ * «três» llega como «tres») más media/medio/half/meia = 0,5. Solo
+ * alimentan el juicio cuando la palabra siguiente es una unidad de
+ * DOSIS (DOSE_UNIT_WORDS) o el marco de frecuencia diaria: «dos
+ * personas» sigue sin juzgarse. Riesgo declarado (el de la caja):
+ * «una» es artículo y dosis a la vez («compró una cucharada de
+ * plata» formaría la lectura 1); el guarda de tema y la rareza lo
+ * hacen aceptable.
+ */
+export const WORD_NUMBERS: Record<string, number> = {
+  un: 1, una: 1, uno: 1, one: 1, um: 1, uma: 1,
+  dos: 2, dois: 2, duas: 2, two: 2,
+  tres: 3, three: 3,
+  cuatro: 4, quatro: 4, four: 4,
+  cinco: 5, five: 5,
+  seis: 6, six: 6,
+  siete: 7, sete: 7, seven: 7,
+  ocho: 8, oito: 8, eight: 8,
+  nueve: 9, nove: 9, nine: 9,
+  diez: 10, dez: 10, ten: 10,
+  once: 11, onze: 11, eleven: 11,
+  doce: 12, doze: 12, twelve: 12,
+  media: 0.5, medio: 0.5, half: 0.5, meia: 0.5,
+};
+
+/** Las unidades de dosis que un número en letra puede tocar (el portillo). */
+export const DOSE_UNIT_WORDS = new Set([
+  "cucharadita", "cucharaditas", "cucharada", "cucharadas",
+  "teaspoon", "teaspoons", "tablespoon", "tablespoons",
+  "colher", "colheres",
+  "gota", "gotas", "drops",
+  "comprimido", "comprimidos", "tableta", "tabletas",
+  "pastilla", "pastillas", "tablet", "tablets", "pill", "pills",
+]);
+
+export const WORD_NUMBER_ALT = Object.keys(WORD_NUMBERS)
+  .sort((a, b) => b.length - a.length)
+  .join("|");
+
+const WORD_FREQ_FRAME_RE = new RegExp(
+  `\\b(${WORD_NUMBER_ALT})\\s+(veces|times|vezes)\\s+(al dia|por dia|a day|per day|ao dia)\\b`,
+  "g",
+);
+const WORD_NUMBER_SCAN_RE = new RegExp(`\\b(${WORD_NUMBER_ALT})\\b`, "g");
+
+const foldForWords = (s: string): string =>
+  (s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+/**
+ * Las lecturas en letra de UNA frase, tras los dos portillos de la
+ * caja: el marco de frecuencia diaria y la unidad de dosis pegada.
+ * El valor va como se afirma (5 por «cinco», 0,5 con 1 decimal por
+ * «media»): la comparación de siempre (redondeo y escala contra la
+ * evidencia) hace el resto, y letra contra dígito se juzgan en el
+ * mismo conjunto de valores — «12 comprimidos» vale por «doce
+ * comprimidos» y al revés.
+ */
+export function sentenceWordReadings(sentence: string): Array<{ value: number; decimals: number }> {
+  const folded = foldForWords(sentence).replace(/\[\d+\]/g, " ");
+  const out: Array<{ value: number; decimals: number }> = [];
+  const consumed: Array<readonly [number, number]> = [];
+  const push = (raw: string, at: number, len: number): void => {
+    const value = WORD_NUMBERS[raw];
+    if (value === undefined) return;
+    out.push({ value, decimals: Number.isInteger(value) ? 0 : 1 });
+    consumed.push([at, at + len]);
+  };
+  for (const m of folded.matchAll(WORD_FREQ_FRAME_RE)) push(m[1], m.index ?? 0, m[0].length);
+  for (const m of folded.matchAll(WORD_NUMBER_SCAN_RE)) {
+    const at = m.index ?? 0;
+    if (consumed.some(([a, b]) => at >= a && at < b)) continue;
+    const next = folded
+      .slice(at + m[0].length, at + m[0].length + 40)
+      .split(/[^a-zñ]+/)
+      .filter(Boolean)[0];
+    if (next === undefined || !DOSE_UNIT_WORDS.has(next)) continue;
+    push(m[1], at, m[0].length);
   }
   return out;
 }
@@ -198,6 +297,13 @@ export function sentenceNumbersSupported(
       (v) => roundsFromEvidence(v, decimalsOf(token, v), evidence) || withinEvidenceRanges(v, decimalsOf(token, v), ranges),
     );
     if (!ok) return false;
+  }
+  // T-J3: las lecturas en letra tras sus portillos se juzgan contra
+  // el mismo conjunto de valores (que ya trae las de la evidencia).
+  for (const r of sentenceWordReadings(sentence)) {
+    if (!roundsFromEvidence(r.value, r.decimals, evidence) && !withinEvidenceRanges(r.value, r.decimals, ranges)) {
+      return false;
+    }
   }
   return true;
 }

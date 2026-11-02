@@ -669,6 +669,66 @@ describe("T-J2 — la cópula pt «é» entra en la pierna tipada (y en la de id
 });
 
 // ---------------------------------------------------------------
+// T-J3 (barrido «revisa todo», J3): los números en letra eran
+// invisibles para el juez y visibles para la caja — «cinco veces
+// al día» contra «dos veces al día» salía sellado fundado mientras
+// findNumberConflicts marcaba el conflicto (G02/G03/R2-14 del
+// barrido). La cura lleva las lecturas en letra de la caja a la
+// evidencia del juez (evidenceNumbers, con sus dos portillos:
+// frecuencia diaria y unidad de dosis), y letra y dígito se juzgan
+// en el mismo conjunto de valores.
+
+describe("T-J3 — los números en letra se juzgan en el verificador, como en la caja", () => {
+  const JARABE: GroundingChunk = {
+    title: "guía",
+    body: "Jarabe para la tos. Tome el jarabe dos veces al día, después de comer.",
+  };
+  const COMP: GroundingChunk = {
+    title: "guía",
+    body: "Comprimidos para el dolor. Tome dos comprimidos al día, con agua.",
+  };
+
+  it("G02: «cinco veces al día» contra «dos veces al día» ya no sale sellada", () => {
+    const r = verifyGroundedAnswer("Tome el jarabe cinco veces al día, después de comer.", [JARABE], "es", "¿Cómo se toma el jarabe?");
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("cinco veces");
+  });
+
+  it("G03: «cinco comprimidos» contra «dos comprimidos» ya no sale sellada", () => {
+    const r = verifyGroundedAnswer("Tome cinco comprimidos al día, con agua.", [COMP], "es", "¿Cómo se toman los comprimidos?");
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+  });
+
+  it("R2-14 (en): «five tablets» contra «two tablets» ya no sale sellada", () => {
+    const chunk: GroundingChunk = { title: "guide", body: "Tablets for pain. Take two tablets a day, with water." };
+    const r = verifyGroundedAnswer("Take five tablets a day, with water.", [chunk], "en", "How do I take the tablets?");
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+  });
+
+  it("control fiel: la frecuencia en letra correcta sella como antes", () => {
+    const r = verifyGroundedAnswer("Tome el jarabe dos veces al día, después de comer.", [JARABE], "es", "¿Cómo se toma el jarabe?");
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+  });
+
+  it("cruce de ropa: la respuesta en dígito contra la evidencia en letra se sostiene (y la falsa cae)", () => {
+    const chunk: GroundingChunk = {
+      title: "guía",
+      body: "Jarabe para la tos. Tome el jarabe doce veces al día, después de comer.",
+    };
+    const fiel = verifyGroundedAnswer("Tome el jarabe 12 veces al día, después de comer.", [chunk], "es", "¿Cómo se toma el jarabe?");
+    expect(fiel.status).toBe("grounded");
+    expect(fiel.removed).toBe(0);
+    const falsa = verifyGroundedAnswer("Tome el jarabe doce veces al día, después de comer.", [JARABE], "es", "¿Cómo se toma el jarabe?");
+    expect(falsa.status).toBe("abstained");
+    expect(falsa.removed).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------
 // Ronda física 0.1.68, R-05: la pregunta del teléfono contra el
 // documento de la ronda. En la sesión real la recuperación mezcló el
 // documento con la guía de crisis (de ahí salían «teléfono»,
