@@ -564,6 +564,69 @@ describe("ADV-F-C2 — el posesivo pt sale de la ficha servida, no de la pregunt
   });
 });
 
+// ADV-F2-C3+C4+C5 (adversaria de formas II — el asiento de
+// cumpleaños, curado ACOPLADO en un solo commit, como mandaba la
+// advertencia: la «ô» entra junto a la guardia, nunca antes):
+// C3 (MEDIA) findBirthdayFact buscaba solo por coincidencia plegada
+// y servía la fecha del abuelo como cumpleaños de la abuela; C4
+// (MENOR) el «who» pt salía de la pregunta («sua avo» con la fecha
+// del abuelo); C5 (MEDIA-BAJA) la clase del patrón pt de cumpleaños
+// no traía «ô» y la pregunta por el abuelo nunca entraba en la rama.
+describe("ADV-F2-C3+C4+C5 — cumpleaños pt: guardia, posesivo del registro y la «ô»", () => {
+  const onlyGrandpa: MemoryQueryData = {
+    people: [{ name: "José", relationship: "avô" }],
+    facts: [{ content: "o aniversário do meu avô é 20 de junho", category: "event" }],
+  };
+  const onlyGrandma: MemoryQueryData = {
+    people: [{ name: "María", relationship: "avó" }],
+    facts: [{ content: "o aniversário da minha avó é 20 de junho", category: "event" }],
+  };
+
+  it("C3: el par cruzado da el honesto en las DOS direcciones", () => {
+    expect(answerMemoryQuery("quando é o aniversário da minha avó?", onlyGrandpa, "pt")).toContain("Você ainda não me contou isso");
+    expect(answerMemoryQuery("quando é o aniversário do meu avô?", onlyGrandma, "pt")).toContain("Você ainda não me contou isso");
+  });
+
+  it("C5: la pregunta por el abuelo entra en la rama y sirve SU fecha por plantilla", () => {
+    const r = answerMemoryQuery("quando é o aniversário do meu avô?", onlyGrandpa, "pt");
+    expect(r).toContain("O aniversário de seu avô é em");
+    expect(r).toContain("20 de junho");
+  });
+
+  it("C4: sin acento, el posesivo sale del registro servido (ficha y hecho)", () => {
+    const ficha = answerMemoryQuery("quando é o aniversário da minha avo?", onlyGrandpa, "pt");
+    expect(ficha).toContain("O aniversário de seu avo é em");
+    expect(ficha).toContain("20 de junho");
+    const hecho: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "o aniversário do meu avô é 20 de junho", category: "event" }],
+    };
+    expect(answerMemoryQuery("quando é o aniversário da minha avo?", hecho, "pt")).toContain("O aniversário de seu avo é em");
+  });
+
+  it("suelo: con los dos guardados, cada pregunta sirve su fecha", () => {
+    const both: MemoryQueryData = {
+      people: [
+        { name: "José", relationship: "avô" },
+        { name: "María", relationship: "avó" },
+      ],
+      facts: [
+        { content: "o aniversário do meu avô é 20 de junho", category: "event" },
+        { content: "o aniversário da minha avó é 15 de março", category: "event" },
+      ],
+    };
+    const avo = answerMemoryQuery("quando é o aniversário do meu avô?", both, "pt");
+    expect(avo).toContain("seu avô");
+    expect(avo).toContain("20 de junho");
+    const ava = answerMemoryQuery("quando é o aniversário da minha avó?", both, "pt");
+    expect(ava).toContain("sua avó");
+    expect(ava).toContain("15 de março");
+    // Suelo declarado de la adversaria: la abuela guardada y la
+    // pregunta sin acento sirven «sua avo» con su fecha.
+    expect(answerMemoryQuery("quando é o aniversário da minha avo?", onlyGrandma, "pt")).toContain("O aniversário de sua avo é em");
+  });
+});
+
 // B1+B2 (barrido «revisa todo», clase 1 · MEDIA): SELF se quedó sin
 // la forma que G-M1-R1 dio a REL — «¿cuál es mi nombre?» y «what is
 // my name?» (sin contraer) caían al modelo teniendo el hecho

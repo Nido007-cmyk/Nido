@@ -229,10 +229,29 @@ function findBirthdayFact(
     if (hit) return hit.content;
   }
   if (opts.rel) {
-    const hit = candidates.find((f) => {
-      const words = fold(f.content).split(/[^a-z0-9-]+/);
-      return words.some((w) => w && sameRel(w, opts.rel!));
-    });
+    const rel = opts.rel;
+    // ADV-F2-C3 (adversaria de formas II): este buscador carecía de la
+    // disciplina de findPersonByRel — buscaba solo por coincidencia
+    // PLEGADA y, con solo el abuelo guardado, servía su fecha como
+    // cumpleaños de la abuela (la colisión de B9 viva aquí). La misma
+    // cura en dos pasadas: EXACTA primero (la grafía acentuada manda:
+    // avô ≠ avó) y plegada después con la guardia del par — si
+    // pregunta y hecho traen las dos formas acentuadas y no son la
+    // misma, no hay match y el desenlace es el honesto.
+    const rawWords = (c: string) => c.toLowerCase().split(/[^a-záéíóúàâêôãõçñü0-9-]+/);
+    const exact = candidates.find((f) => rawWords(f.content).some((w) => w && exactSameRel(w, rel)));
+    if (exact) return exact.content;
+    const relLow = rel.trim().toLowerCase();
+    const hit = candidates.find((f) =>
+      rawWords(f.content).some((w) => {
+        if (!w) return false;
+        const wLow = w.trim().toLowerCase();
+        if ((relLow === "avô" || relLow === "avó") && (wLow === "avô" || wLow === "avó") && wLow !== relLow) {
+          return false;
+        }
+        return sameRel(w, rel);
+      })
+    );
     if (hit) return hit.content;
   }
   // Las notas de la ficha de la persona también pueden traer la frase.
@@ -371,7 +390,13 @@ const BDAY_PERSON_Q_RES: RegExp[] = [
   // B6 (barrido «revisa todo», clase 1): la contraída «when's» entra
   // junto a «when is», como SELF y REL ya traían la suya.
   /when(?:'s| is) my ([a-z -]+?)'?s birthday\??$/i,
-  /quando (?:é|e) o anivers[aá]rio d[aeo] (?:minha?|meu) ([a-záéíóúãõç ]+?)\??$/i,
+  // ADV-F2-C5 (adversaria de formas II): la clase pt no traía «ô» y
+  // la pregunta por el abuelo nunca entraba en la rama (caía a la cita
+  // en crudo), asimetría con sus gemelas de REL_NAME_Q_RES. La «ô»
+  // entra JUNTO a la guardia de findBirthdayFact (ADV-F2-C3), nunca
+  // antes: sin ella, la dirección simétrica del servicio cruzado
+  // quedaba expuesta en cuanto la pregunta entrara.
+  /quando (?:é|e) o anivers[aá]rio d[aeo] (?:minha?|meu) ([a-záéíóúãõçô ]+?)\??$/i,
 ];
 const BDAY_SELF_Q_RES: RegExp[] = [
   /cu[aá]ndo es mi cumplea[ñn]os\??$/i,
@@ -662,10 +687,19 @@ export function answerMemoryQuery(
     const rel = bdayPersonQ[1].trim();
     const person = findPersonByRel(mem, rel);
     const fact = findBirthdayFact(mem, { rel, personName: person?.name });
+    // ADV-F2-C4 (adversaria de formas II): el «who» pt calculaba el
+    // posesivo del token PREGUNTADO (ptPossessive(rel)) y servía
+    // «sua avo» con la fecha del abuelo — la clase exacta de
+    // ADV-F-C2 en la plantilla que aquel cargo no midió. Como en la
+    // rama 1 desde F-C2, el género sale del registro SERVIDO: la
+    // ficha que la rama ya trajo o, sin ficha, la palabra de
+    // parentesco tal como está escrita en el hecho servido.
+    const factRel = fact?.split(/[^\p{L}]+/u).find((w) => w && sameRel(w, rel));
+    const servedRel = ptServingRel(person?.relationship ?? factRel, rel);
     // 0.1.24 (auditoría, H-13): en EN el «who» abre la frase
     // («{{who}}'s birthday is on…») y salía en minúscula («your
     // mom's birthday…»); en ES/PT va tras «de», en minúscula bien.
-    if (fact) return birthdayAnswer(fact, lang === "en" ? `Your ${rel}` : lang === "pt" ? `${ptPossessive(rel).toLowerCase()} ${rel}` : `tu ${rel}`, lang);
+    if (fact) return birthdayAnswer(fact, lang === "en" ? `Your ${rel}` : lang === "pt" ? `${ptPossessive(servedRel).toLowerCase()} ${rel}` : `tu ${rel}`, lang);
     return msg("notKnown", lang);
   }
   if (BDAY_SELF_Q_RES.some((re) => re.test(t))) {
