@@ -8,7 +8,7 @@ questions: como fazer soro caseiro para diarreia | quais são os sinais de desid
 A diarreia mata por desidratação, sobretudo em crianças pequenas e idosos. A solução é simples: repor água e sais.
 
 ## Soro oral (sais de reidratação oral)
-<!-- perguntas: quanta água vai no soro caseiro | como sei se o soro ficou no ponto | o soro de ontem ainda serve | quanto tempo dura o soro caseiro depois de pronto -->
+<!-- perguntas: quanta água vai no soro caseiro | como sei se o soro ficou no ponto | o soro de ontem ainda serve | quanto tempo dura o soro caseiro depois de pronto | como saber se o soro caseiro está no ponto certo | o soro tem de saber a lágrima, como confirmo | posso guardar o soro caseiro para amanhã | o soro que sobrou de ontem ainda pode beber -->
 O melhor são os pacotes de sais de reidratação oral (SRO) de farmácia ou de um posto de saúde. Prepare-os conforme o pacote.
 
 **Se não houver pacotes, a receita caseira da OMS:**
