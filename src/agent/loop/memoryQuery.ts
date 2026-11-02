@@ -336,8 +336,11 @@ const BDAY_SELF_Q_RES: RegExp[] = [
 ];
 const ABOUT_ME_Q_RES: RegExp[] = [
   /qu[eé] (?:sabes|recuerdas|tienes guardado|has guardado) (?:de|sobre) m[ií]\??$/i,
-  /what do you (?:know|remember) about me\??$/i,
-  /o que (?:você|voce) sabe sobre mim\??$/i,
+  // B7 (barrido «revisa todo», clase 1): en gana «have saved/stored»
+  // y pt los verbos que le faltaban (solo traía «sabe»): «lembra»,
+  // «guardou» y «salvou» daban null — salían de la ruta de memoria.
+  /what do you (?:know|remember|have saved|have stored) about me\??$/i,
+  /o que (?:você|voce) (?:sabe|lembra|guardou|salvou) sobre mim\??$/i,
 ];
 /**
  * Primera persona (rama genérica de answerMemoryQuery, punto 5).

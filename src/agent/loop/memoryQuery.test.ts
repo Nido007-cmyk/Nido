@@ -603,3 +603,35 @@ describe("B4 — colas de cortesía en las formas clásicas de REL_NAME (es/en/p
     expect(answerMemoryQuery("como se chama minha mãe?", CARDS, "pt")).toBe("Sua mãe se chama Maria.");
   });
 });
+
+// B7 (barrido «revisa todo», clase 1 · MEDIA-BAJA): ABOUT_ME pt solo
+// traía «sabe» — «o que você lembra sobre mim?» y «o que você
+// guardou sobre mim?» daban NULL (MQ29/MQ30), ni siquiera el
+// notKnown: salían de la ruta de memoria y caían al modelo. En en,
+// «what do you have saved about me?» tampoco existía (MQ27). Suelo
+// MQ25/MQ26/MQ28 (las canónicas ×3 listan lo guardado).
+describe("B7 — ABOUT_ME: pt lembra/guardou/salvou y en have saved/stored", () => {
+  it("pt: «lembra» y «guardou» listan lo guardado (MQ29/MQ30)", () => {
+    const lembra = answerMemoryQuery("o que você lembra sobre mim?", MEM, "pt");
+    expect(lembra).not.toBeNull();
+    expect(lembra).toContain("Marta");
+    const guardou = answerMemoryQuery("o que você guardou sobre mim?", MEM, "pt");
+    expect(guardou).not.toBeNull();
+    expect(guardou).toContain("Toyota");
+    expect(isMemoryStyleQuery("o que você lembra sobre mim?")).toBe(true);
+    expect(isMemoryStyleQuery("o que você guardou sobre mim?")).toBe(true);
+  });
+
+  it("en: «what do you have saved about me?» lista lo guardado (MQ27)", () => {
+    const r = answerMemoryQuery("what do you have saved about me?", MEM, "en");
+    expect(r).not.toBeNull();
+    expect(r).toContain("Marta");
+    expect(isMemoryStyleQuery("what do you have saved about me?")).toBe(true);
+  });
+
+  it("suelo: las canónicas de los tres idiomas no se mueven", () => {
+    expect(answerMemoryQuery("¿qué sabes de mí?", MEM, "es")).toContain("Marta");
+    expect(answerMemoryQuery("what do you know about me?", MEM, "en")).toContain("Marta");
+    expect(answerMemoryQuery("o que você sabe sobre mim?", MEM, "pt")).toContain("Marta");
+  });
+});
