@@ -15,6 +15,7 @@ import {
   exportExecutionTelemetry,
   ExecutionTelemetryRecord,
 } from "../services/executionTelemetry";
+import { outcomeColor } from "./ExecutionTelemetryScreen.pure";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
@@ -65,11 +66,8 @@ function residencyIcon(residency: ExecutionTelemetryRecord["modelResidency"]): s
   return "—";
 }
 
-function outcomeColor(colors: Colors, outcome: ExecutionTelemetryRecord["outcome"]): string {
-  if (outcome === "failure") return colors.crimson[400];
-  if (outcome === "cancelled") return colors.text.accentAmber ?? colors.amber[400];
-  return colors.text.accentEmerald;
-}
+// outcomeColor vive en ExecutionTelemetryScreen.pure.ts (H-A11-1:
+// la regla de S-03 aplicada a la rama «cancelled», con su fixture).
 
 /**
  * Phase 7 (docs/ADAPTIVE_ROUTING.md) — dedicated diagnostic/comparison
