@@ -161,5 +161,18 @@ describe("puerta de cobertura del Esencial (C-03)", () => {
     expect(admitted("en", "¿Quién escribió Don Quijote?")).toEqual([]);
     expect(admitted("es", "asdfghjkl qwerty")).toEqual([]);
     expect(admitted("en", "asdfghjkl qwerty")).toEqual([]);
+    // Trinquete de H-A4-1 (recomendado por FV-1, que juzgó el precio
+    // ACEPTADO): la familia N-3 — una pregunta sin guía en el corpus —
+    // tolera exactamente estas cinco admisiones por tallos compartidos,
+    // medidas por ADV4 y re-medidas por FV-1 (ficheros 25, 38, 41, 42 y
+    // 49, en orden de fichero). La clase tolerada no puede crecer en
+    // silencio: si una admisión nueva entra, esto salta antes que el daño.
+    expect(admitted("es", "¿Cómo aumento las ventas de mi tienda?")).toEqual([
+      "Fiebre en adultos y niños",
+      "Tornados",
+      "Incendio forestal",
+      "Erupción volcánica y ceniza",
+      "Refugio y mantener el calor corporal",
+    ]);
   });
 });
