@@ -1112,6 +1112,132 @@ describe("FORMAS VI — el hecho con dos cumpleaños partido por «!» o «?» s
   });
 });
 
+// ADV-F6-C1 (adversaria de formas VI · MEDIA-BAJA): la guarda del
+// inciso de FORMAS VI (signo seguido de coma no corta) apagaba
+// también el separador de frase real con la coma PEGADA al signo y
+// sin conjunción tras ella («…es el 20 de junio!, el de mi abuela
+// es el 15 de marzo»): sin corte, el segmento volvía a ser el hecho
+// entero y la plantilla afirmaba la fecha ajena, en los dos
+// asientos y las tres lenguas. La guarda exige ahora la FORMA del
+// inciso: el tramo de cláusula que el signo cerraría no trae fecha
+// ya servida (en el inciso la fecha va siempre después del signo).
+// Suelos: el inciso con apertura («¿sabes?,») y el inciso en sin
+// apertura («you know?,») siguen sirviendo por plantilla, también
+// en la segunda cláusula tras conjunción.
+describe("ADV-F6-C1 — el separador con la coma pegada al signo corta; el inciso sigue protegido", () => {
+  it("persona es/pt/en con «!»,: cada pregunta sirve SU fecha", () => {
+    const es: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuelo es el 20 de junio!, el de mi abuela es el 15 de marzo", category: "event" }],
+    };
+    expect(answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", es, "es")).toBe(
+      "El cumpleaños de tu abuela es el lunes, 15 de marzo."
+    );
+    const abuelo = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuelo?", es, "es");
+    expect(abuelo).toContain("20 de junio");
+    expect(abuelo).not.toContain("15 de marzo");
+    const pt: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "o aniversário do meu avô é 20 de junho!, o da minha avó é 15 de março", category: "event" }],
+    };
+    const ava = answerMemoryQuery("quando é o aniversário da minha avó?", pt, "pt");
+    expect(ava).toContain("15 de março");
+    expect(ava).not.toContain("20 de junho");
+    const en: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "my grandfather's birthday is June 20!, my grandmother's birthday is March 15", category: "event" }],
+    };
+    const gm = answerMemoryQuery("when is my grandmother's birthday?", en, "en");
+    expect(gm).toContain("March 15");
+    expect(gm).not.toContain("June 20");
+  });
+
+  it("persona es con «?»,: la abuela sirve SU 15 de marzo", () => {
+    const es: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuelo es el 20 de junio?, el de mi abuela es el 15 de marzo", category: "event" }],
+    };
+    const r = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", es, "es");
+    expect(r).toContain("15 de marzo");
+    expect(r).not.toContain("20 de junio");
+  });
+
+  it("asiento propio es/pt/en con «!»,: mi fecha, no la de la abuela", () => {
+    const selfEs: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuela es el 15 de marzo!, mi cumpleaños es el 5 de mayo", category: "event" }],
+    };
+    expect(answerMemoryQuery("¿cuándo es mi cumpleaños?", selfEs, "es")).toBe(
+      "Tu cumpleaños es el miércoles, 5 de mayo."
+    );
+    const selfPt: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "o aniversário da minha avó é 15 de março!, o meu aniversário é 5 de maio", category: "event" }],
+    };
+    const rPt = answerMemoryQuery("quando é o meu aniversário?", selfPt, "pt");
+    expect(rPt).toContain("5 de maio");
+    expect(rPt).not.toContain("15 de março");
+    const selfEn: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "my grandmother's birthday is March 15!, my birthday is May 5", category: "event" }],
+    };
+    const rEn = answerMemoryQuery("when is my birthday?", selfEn, "en");
+    expect(rEn).toContain("May 5");
+    expect(rEn).not.toContain("March 15");
+  });
+
+  it("la «¡» que abre la frase no protege el separador con coma pegada", () => {
+    const es: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "¡El cumpleaños de mi abuelo es el 20 de junio!, el de mi abuela es el 15 de marzo", category: "event" }],
+    };
+    const r = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", es, "es");
+    expect(r).toContain("15 de marzo");
+    expect(r).not.toContain("20 de junio");
+  });
+
+  it("suelo: el inciso con apertura convive con un separador real en el mismo hecho", () => {
+    const f: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "me contó que el cumpleaños de mi abuela, ¿sabes?, es el 15 de marzo! El de mi abuelo es el 20 de junio.", category: "event" }],
+    };
+    const abuela = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", f, "es");
+    expect(abuela).toContain("El cumpleaños de tu abuela es el");
+    expect(abuela).toContain("15 de marzo");
+    const abuelo = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuelo?", f, "es");
+    expect(abuelo).toContain("20 de junio");
+    expect(abuelo).not.toContain("15 de marzo");
+  });
+
+  it("suelo: el inciso en sin apertura («you know?,») sirve por plantilla, también tras conjunción", () => {
+    const solo: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "my grandmother's birthday, you know?, is March 15", category: "event" }],
+    };
+    const rSolo = answerMemoryQuery("when is my grandmother's birthday?", solo, "en");
+    expect(rSolo).toContain("birthday is on");
+    expect(rSolo).toContain("March 15");
+    const segunda: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "my grandfather's birthday is June 20 and my grandmother's birthday, you know?, is March 15", category: "event" }],
+    };
+    const rSeg = answerMemoryQuery("when is my grandmother's birthday?", segunda, "en");
+    expect(rSeg).toContain("birthday is on");
+    expect(rSeg).toContain("March 15");
+    expect(rSeg).not.toContain("June 20");
+  });
+
+  it("suelo: el inciso pt sin apertura en la segunda cláusula («sabes?,») sirve su fecha", () => {
+    const pt: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "o aniversário do meu avô é 20 de junho e o da minha avó, sabes?, é 15 de março", category: "event" }],
+    };
+    const r = answerMemoryQuery("quando é o aniversário da minha avó?", pt, "pt");
+    expect(r).toContain("15 de março");
+    expect(r).not.toContain("20 de junho");
+  });
+});
+
 // B1+B2 (barrido «revisa todo», clase 1 · MEDIA): SELF se quedó sin
 // la forma que G-M1-R1 dio a REL — «¿cuál es mi nombre?» y «what is
 // my name?» (sin contraer) caían al modelo teniendo el hecho

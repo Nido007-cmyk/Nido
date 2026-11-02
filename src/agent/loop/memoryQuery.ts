@@ -384,7 +384,51 @@ const SENTENCE_ABBREVS = new Set(["dr", "dra", "sr", "sra", "srta", "mr", "mrs",
  *  corta, así el hecho con pregunta legítima entre paréntesis
  *  sigue sirviendo la fecha de su cláusula por plantilla; sin la
  *  coma, un corte de más solo encoge el segmento (cita honesta),
- *  nunca afirma la fecha ajena. */
+ *  nunca afirma la fecha ajena.
+ *
+ *  ADV-F6-C1 (adversaria de formas VI · MEDIA-BAJA): la guarda
+ *  del inciso apagaba también el separador de frase real con la
+ *  coma PEGADA al signo y sin conjunción tras ella («…es el 20
+ *  de junio!, el de mi abuela es el 15 de marzo»): dictado que
+ *  dicta la coma tras exclamar, o escritura en lista — y tras
+ *  esa forma el cruce entero volvía, en los dos asientos y las
+ *  tres lenguas. La guarda exige ahora la FORMA del inciso: el
+ *  tramo de cláusula que el signo cerraría (desde el último
+ *  corte de frase o la última conjunción) NO trae fecha ya
+ *  servida — en el inciso la fecha de la cláusula va siempre
+ *  DESPUÉS del signo («¿sabes?, es el 15 de marzo», «you know?,
+ *  is March 15»), y en el separador la cláusula ya está completa
+ *  con su fecha. La alternativa del signo de apertura en la
+ *  cláusula se midió y se descartó como discriminador: la «¡»
+ *  que abre la frase exclamativa misma («¡El cumpleaños de mi
+ *  abuelo es el 20 de junio!, el de mi abuela…») la cumple sin
+ *  ser inciso, y todo inciso medido queda cubierto por la
+ *  ausencia de fecha. La propiedad de seguridad manda igual: un
+ *  corte de más solo encoge el segmento (cita honesta). */
+/** ADV-F6-C1: ¿el tramo de cláusula que un signo en `pos`
+ *  cerraría ya trae fecha servida? El tramo va desde la última
+ *  frontera aceptada (corte de frase ya asentado o conjunción
+ *  suelta) hasta el signo. Con fecha, la cláusula está completa
+ *  y el signo es separador aunque lleve la coma pegada; sin
+ *  fecha, es la forma del inciso (su fecha va después del signo)
+ *  y la guarda lo protege. La presencia se mide con el mismo
+ *  extractor que sirve la fecha (extractDateISO cubre las tres
+ *  lenguas y la forma numérica sin depender del idioma). */
+function clauseServesDateBefore(
+  fact: string,
+  pos: number,
+  breaks: { after: number }[]
+): boolean {
+  let start = 0;
+  for (const b of breaks) if (b.after <= pos) start = Math.max(start, b.after);
+  for (const tk of factTokens(fact)) {
+    if (tk.end <= pos && CLAUSE_CONJUNCTIONS.has(tk.text.toLowerCase())) {
+      start = Math.max(start, tk.end);
+    }
+  }
+  return extractDateISO(fact.slice(start, pos)) !== null;
+}
+
 function sentenceBreaks(fact: string): { start: number; after: number }[] {
   const out: { start: number; after: number }[] = [];
   for (let i = 0; i < fact.length; i++) {
@@ -396,7 +440,12 @@ function sentenceBreaks(fact: string): { start: number; after: number }[] {
     if (ch === "!" || ch === "?") {
       let j = i;
       while (fact[j + 1] === "!" || fact[j + 1] === "?") j++;
-      if (fact[j + 1] !== ",") out.push({ start: i, after: j + 1 });
+      // La coma tras el signo solo apaga el corte si el tramo que
+      // el signo cerraría tiene la forma del inciso: sin fecha ya
+      // servida (ADV-F6-C1). Con la cláusula completa, corta.
+      if (fact[j + 1] !== "," || clauseServesDateBefore(fact, i, out)) {
+        out.push({ start: i, after: j + 1 });
+      }
       i = j;
       continue;
     }
