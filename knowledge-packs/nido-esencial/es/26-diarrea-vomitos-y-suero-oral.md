@@ -3,6 +3,8 @@ title: Diarrea, vómitos y suero oral casero
 category: Salud en casa
 lang: es
 sources: OMS y UNICEF, tratamiento de la diarrea y sales de rehidratación oral; OMS, AIEPI
+id: esencial-diarrea-vomitos-y-suero-oral
+verified: 2026-11-02
 ---
 La diarrea mata por deshidratación, sobre todo a niños pequeños y mayores. La solución es sencilla: reponer agua y sales.
 

@@ -3,6 +3,8 @@ title: Diarreia, vômitos e soro oral caseiro
 category: Saúde em casa
 lang: pt
 sources: OMS e UNICEF, tratamento da diarreia e sais de reidratação oral; OMS, AIDPI
+id: esencial-diarrea-vomitos-y-suero-oral
+verified: 2026-11-02
 questions: como fazer soro caseiro para diarreia | quais são os sinais de desidratação numa criança | meu filho está com diarreia e vomitando, o que eu dou para ele | como preparar o soro de reidratação oral em casa
 ---
 A diarreia mata por desidratação, sobretudo em crianças pequenas e idosos. A solução é simples: repor água e sais.

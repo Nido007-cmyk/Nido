@@ -3,6 +3,8 @@ title: Diarrhea, vomiting and homemade oral rehydration solution
 category: Health at home
 lang: en
 sources: WHO and UNICEF, treatment of diarrhoea and oral rehydration salts; WHO IMCI
+id: esencial-diarrea-vomitos-y-suero-oral
+verified: 2026-11-02
 ---
 Diarrhea kills through dehydration, especially young children and older people. The solution is simple: replace water and salts.
 
