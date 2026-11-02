@@ -3,6 +3,8 @@ title: Severe allergic reaction (anaphylaxis)
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020; IFRC 2020
+id: esencial-alergia-grave-anafilaxia
+verified: 2026-11-02
 ---
 Anaphylaxis is a severe allergic reaction that can kill within minutes. It usually appears soon after a food (nuts, shellfish, egg, milk), a bee or wasp sting, or a medicine.
 

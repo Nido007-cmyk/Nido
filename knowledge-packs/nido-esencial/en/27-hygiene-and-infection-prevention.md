@@ -3,6 +3,8 @@ title: Hygiene and infection prevention
 category: Health at home
 lang: en
 sources: WHO, hand hygiene; WHO and UNICEF, water, sanitation and hygiene (WASH); CDC
+id: esencial-higiene-y-prevencion-de-infecciones
+verified: 2026-11-02
 ---
 Washing your hands with soap is one of the cheapest and most effective ways to avoid illnesses such as diarrhea and respiratory infections.
 

@@ -3,6 +3,8 @@ title: Alergia grave (anafilaxia)
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020; IFRC 2020
+id: esencial-alergia-grave-anafilaxia
+verified: 2026-11-02
 ---
 La anafilaxia es una reacción alérgica grave que puede matar en minutos. Suele aparecer poco después de un alimento (frutos secos, marisco, huevo, leche), una picadura de abeja o avispa, o un medicamento.
 

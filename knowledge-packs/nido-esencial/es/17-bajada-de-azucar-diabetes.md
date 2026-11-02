@@ -3,6 +3,8 @@ title: Bajada de azúcar (hipoglucemia) y diabetes
 category: Primeros auxilios
 lang: es
 sources: Cruz Roja Canadiense, directrices 2020; AHA y Cruz Roja Americana 2024
+id: esencial-bajada-de-azucar-diabetes
+verified: 2026-11-02
 ---
 Una persona con diabetes (sobre todo si usa insulina) puede tener una bajada de azúcar si no comió, hizo más ejercicio o se puso demasiada insulina.
 

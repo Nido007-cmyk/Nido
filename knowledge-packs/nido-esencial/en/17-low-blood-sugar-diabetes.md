@@ -3,6 +3,8 @@ title: Low blood sugar (hypoglycemia) and diabetes
 category: First aid
 lang: en
 sources: Canadian Red Cross guidelines 2020; AHA and American Red Cross 2024
+id: esencial-bajada-de-azucar-diabetes
+verified: 2026-11-02
 ---
 A person with diabetes (especially if they use insulin) can have low blood sugar if they skipped a meal, exercised more, or took too much insulin.
 

@@ -3,6 +3,8 @@ title: Dor no peito e infarto
 category: Primeiros socorros
 lang: pt
 sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense 2020
+id: esencial-dolor-de-pecho-infarto
+verified: 2026-11-02
 questions: meu pai está com dor forte no peito | dor no peito que vai para o braço, pode ser infarto | quanto de aspirina dou numa suspeita de infarto | aperto no peito e suor frio, o que fazer
 ---
 Num infarto, cada minuto conta. Não espere para ver se passa.

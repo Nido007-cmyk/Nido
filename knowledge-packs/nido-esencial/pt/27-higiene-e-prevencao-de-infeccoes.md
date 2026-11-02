@@ -3,6 +3,8 @@ title: Higiene e prevenção de infecções
 category: Saúde em casa
 lang: pt
 sources: OMS, higiene das mãos; OMS e UNICEF, água, saneamento e higiene (WASH); CDC
+id: esencial-higiene-y-prevencion-de-infecciones
+verified: 2026-11-02
 questions: como lavar as mãos do jeito certo | quanto tempo esfregar as mãos com sabão | desinfetar a casa com água sanitária, qual a mistura | as regras de comida segura da oms, quais são
 ---
 Lavar as mãos com sabão é uma das formas mais baratas e eficazes de evitar doenças como a diarreia e as infecções respiratórias.

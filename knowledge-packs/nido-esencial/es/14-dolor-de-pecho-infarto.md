@@ -3,6 +3,8 @@ title: Dolor de pecho e infarto
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020
+id: esencial-dolor-de-pecho-infarto
+verified: 2026-11-02
 ---
 En un infarto, cada minuto cuenta. No esperes a ver si se pasa.
 

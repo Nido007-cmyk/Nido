@@ -3,6 +3,8 @@ title: Chest pain and heart attack
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020
+id: esencial-dolor-de-pecho-infarto
+verified: 2026-11-02
 ---
 In a heart attack, every minute counts. Do not wait to see if it passes.
 

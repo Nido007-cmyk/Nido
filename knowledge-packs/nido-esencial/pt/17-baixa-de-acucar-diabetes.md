@@ -3,6 +3,8 @@ title: Baixa de açúcar (hipoglicemia) e diabetes
 category: Primeiros socorros
 lang: pt
 sources: Cruz Vermelha Canadense, diretrizes 2020; AHA e Cruz Vermelha Americana 2024
+id: esencial-bajada-de-azucar-diabetes
+verified: 2026-11-02
 questions: diabético tremendo e suando, o que dou | quanto de açúcar dou numa baixa de glicose | baixa de açúcar, espero quanto tempo para repetir | pessoa com diabetes desmaiou, posso dar suco
 ---
 Uma pessoa com diabetes (sobretudo se usa insulina) pode ter uma baixa de açúcar se não comeu, fez mais exercício ou aplicou insulina demais.
