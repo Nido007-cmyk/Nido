@@ -154,11 +154,42 @@ function sha256File(path) {
   });
 }
 
-async function embedChunks(chunks, cacheFile, threads) {
+// The exact string a chunk is embedded as. Format v2: the real questions a
+// chunk answers are embedded with it (the reader never sees them; they help
+// a question in other words find it). Single source for that string: the
+// cache manifest below hashes it too, so the two can never drift apart.
+function embeddingText(chunk) {
+  const keys = chunk.keys ? `\n${chunk.keys}` : "";
+  return `${EMBEDDING_MODEL.passagePrefix}${chunk.title}\n${chunk.body}${keys}`;
+}
+
+// The embeddings cache is named by CONTENT, not by chunk count: the
+// manifest hashes every chunk's exact embedding string, in order, plus the
+// model's sha256 and the vector dims. Editing a chunk's text or keys,
+// reordering chunks or changing the model yields a different file name and
+// a full re-embed; identical content keeps hitting the cache, and resuming
+// an interrupted run still works because the name now guarantees the
+// content the resume count presupposes. (Named by count alone, the cache
+// silently paired the previous source's vectors with the new text by
+// position: a lane build could measure the cache instead of the source
+// and call it green.)
+function embeddingCacheKey(chunks, dims) {
+  const h = createHash("sha256");
+  h.update(`model ${EMBEDDING_MODEL.sha256} dims ${dims} chunks ${chunks.length}\n`);
+  for (const c of chunks) {
+    const s = embeddingText(c);
+    h.update(`${s.length}\n`);
+    h.update(s);
+  }
+  return h.digest("hex").slice(0, 16);
+}
+
+async function embedChunks(chunks, cacheFile, threads, cacheKey) {
   // Cache: raw float32 vectors appended in chunk order.
   const dims = 384;
   const have = existsSync(cacheFile) ? Math.floor(statSync(cacheFile).size / (dims * 4)) : 0;
-  log(`embeddings: ${have} cached, ${chunks.length - have} to compute`);
+  const cacheState = have === chunks.length ? "hit" : have === 0 ? "miss" : "partial";
+  log(`embeddings: ${have} cached, ${chunks.length - have} to compute (cache key ${cacheKey} · ${cacheState})`);
   if (have < chunks.length) {
     const { getLlama } = await import("node-llama-cpp");
     const llama = await getLlama({ gpu: false });
@@ -173,11 +204,7 @@ async function embedChunks(chunks, cacheFile, threads) {
       await Promise.all(
         contexts.map(async (ctx, w) => {
           for (let j = w; j < group.length; j += threads) {
-            // Format v2: the real questions a chunk answers are embedded with
-            // it (the reader never sees them; they help a question in other
-            // words find it).
-            const keys = group[j].keys ? `\n${group[j].keys}` : "";
-            vectors[j] = (await ctx.getEmbeddingFor(`${EMBEDDING_MODEL.passagePrefix}${group[j].title}\n${group[j].body}${keys}`)).vector;
+            vectors[j] = (await ctx.getEmbeddingFor(embeddingText(group[j]))).vector;
           }
         })
       );
@@ -195,6 +222,14 @@ async function embedChunks(chunks, cacheFile, threads) {
     }
     await Promise.all(contexts.map((c) => c.dispose()));
     await model.dispose();
+  }
+  // Size guard: the file must hold exactly one vector per chunk. A longer
+  // file used to be truncated in silence by the Float32Array view below,
+  // and a shorter one only surfaced as an accidental range error.
+  const expectedBytes = chunks.length * dims * 4;
+  const actualBytes = existsSync(cacheFile) ? statSync(cacheFile).size : 0;
+  if (actualBytes !== expectedBytes) {
+    throw new Error(`embeddings cache ${cacheFile} holds ${actualBytes} bytes, expected ${expectedBytes} (${chunks.length} chunks × ${dims} dims)`);
   }
   const raw = readFileSync(cacheFile);
   return new Float32Array(raw.buffer, raw.byteOffset, chunks.length * dims);
@@ -294,7 +329,8 @@ async function main() {
   log(`${chunks.length} chunks`);
 
   await ensureEmbeddingModel();
-  const vectors = await embedChunks(chunks, join(work, `embeddings-${chunks.length}.f32`), opts.threads);
+  const cacheKey = embeddingCacheKey(chunks, 384);
+  const vectors = await embedChunks(chunks, join(work, `embeddings-${cacheKey}.f32`), opts.threads, cacheKey);
 
   const outFile = resolve(opts.out, `${opts.id}.sqlite`);
   mkdirSync(dirname(outFile), { recursive: true });
