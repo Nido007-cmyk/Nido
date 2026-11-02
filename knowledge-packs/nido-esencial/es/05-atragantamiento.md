@@ -3,6 +3,8 @@ title: Atragantamiento en adultos, niños y bebés
 category: Primeros auxilios
 lang: es
 sources: AHA, Guías 2025 (atragantamiento); Cruz Roja Americana; IFRC 2020
+id: esencial-atragantamiento
+verified: 2026-11-02
 ---
 Si algo bloquea la garganta, la persona no puede respirar. Fíjate en esto: si tose con fuerza, está consiguiendo aire; si no puede hablar, toser ni respirar, o se lleva las manos al cuello, es grave.
 

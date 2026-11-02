@@ -3,6 +3,8 @@ title: Sangrado de nariz, ojos, dientes y oídos
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020
+id: esencial-nariz-ojos-dientes-oidos
+verified: 2026-11-02
 ---
 ## Sangrado de nariz
 1. Siéntate y echa la cabeza un poco hacia delante (no hacia atrás: la sangre iría a la garganta).

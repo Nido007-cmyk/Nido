@@ -3,6 +3,8 @@ title: Safe water: finding it and making it drinkable
 category: Survival
 lang: en
 sources: WHO, household water treatment; CDC, making water safe in an emergency; Eawag, solar water disinfection (SODIS)
+id: esencial-agua-potable
+verified: 2026-11-02
 ---
 Untreated water can carry diarrhea, cholera, typhoid and parasites. If in doubt, treat it.
 

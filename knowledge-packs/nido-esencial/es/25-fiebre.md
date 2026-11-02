@@ -3,6 +3,8 @@ title: Fiebre en adultos y niños
 category: Salud en casa
 lang: es
 sources: OMS, Atención Integrada a las Enfermedades Prevalentes de la Infancia (AIEPI); Cruz Roja Canadiense 2020; NHS
+id: esencial-fiebre
+verified: 2026-11-02
 ---
 La fiebre (38 °C o más) es una defensa del cuerpo contra una infección. Casi siempre es leve, pero hay que saber cuándo es grave.
 

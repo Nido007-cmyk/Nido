@@ -3,6 +3,8 @@ title: Quemaduras
 category: Primeros auxilios
 lang: es
 sources: Cruz Roja Canadiense, directrices 2020; IFRC 2020; AHA y Cruz Roja Americana 2024
+id: esencial-quemaduras
+verified: 2026-11-02
 ---
 Enfriar pronto una quemadura con agua reduce el daño y el dolor. Es lo más importante.
 

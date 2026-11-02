@@ -3,6 +3,8 @@ title: Fever in adults and children
 category: Health at home
 lang: en
 sources: WHO, Integrated Management of Childhood Illness (IMCI); Canadian Red Cross 2020; NHS
+id: esencial-fiebre
+verified: 2026-11-02
 ---
 Fever (38 °C / 100.4 °F or higher) is the body's defense against infection. It is almost always mild, but you need to know when it is serious.
 

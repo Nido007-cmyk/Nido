@@ -3,6 +3,8 @@ title: Febre em adultos e crianças
 category: Saúde em casa
 lang: pt
 sources: OMS, Atenção Integrada às Doenças Prevalentes da Infância (AIDPI); Cruz Vermelha Canadense 2020; NHS
+id: esencial-fiebre
+verified: 2026-11-02
 questions: o que fazer se meu filho tem febre de 39 graus | quanto de paracetamol dou para uma criança de 20 quilos | febre em bebê de 2 meses, é perigoso | como baixar a febre de uma criança em casa
 ---
 A febre (38 °C ou mais) é uma defesa do corpo contra uma infecção. Quase sempre é leve, mas é preciso saber quando é grave.

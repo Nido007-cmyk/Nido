@@ -3,6 +3,8 @@ title: Choking in adults, children and babies
 category: First aid
 lang: en
 sources: AHA Guidelines 2025 (choking); American Red Cross; IFRC 2020
+id: esencial-atragantamiento
+verified: 2026-11-02
 ---
 If something blocks the throat, the person cannot breathe. Watch for this: if they cough forcefully, they are getting air; if they cannot speak, cough or breathe, or clutch their throat, it is serious.
 

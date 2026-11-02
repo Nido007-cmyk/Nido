@@ -3,6 +3,8 @@ title: Sangramento no nariz, olhos, dentes e ouvidos
 category: Primeiros socorros
 lang: pt
 sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense 2020
+id: esencial-nariz-ojos-dientes-oidos
+verified: 2026-11-02
 questions: nariz sangrando, como parar | caiu algo no olho, como lavar | dente caiu inteiro com uma batida, o que faço com ele | inseto entrou no ouvido, como tirar
 ---
 ## Sangramento no nariz

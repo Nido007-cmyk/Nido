@@ -3,6 +3,8 @@ title: Burns
 category: First aid
 lang: en
 sources: Canadian Red Cross guidelines 2020; IFRC 2020; AHA and American Red Cross 2024
+id: esencial-quemaduras
+verified: 2026-11-02
 ---
 Cooling a burn with water early reduces damage and pain. It is the most important step.
 

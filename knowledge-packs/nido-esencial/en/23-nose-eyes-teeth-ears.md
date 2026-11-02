@@ -3,6 +3,8 @@ title: Nosebleeds, eyes, teeth and ears
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020
+id: esencial-nariz-ojos-dientes-oidos
+verified: 2026-11-02
 ---
 ## Nosebleed
 1. Sit down and lean the head slightly forward (not back: the blood would run into the throat).

@@ -3,6 +3,8 @@ title: Água segura: como encontrá-la e tratá-la
 category: Sobrevivência
 lang: pt
 sources: OMS, tratamento da água em casa; CDC, como tornar a água segura em emergências; Eawag, desinfecção solar (SODIS)
+id: esencial-agua-potable
+verified: 2026-11-02
 questions: como purificar a água com água sanitária | quantas gotas de água sanitária por litro de água | água turva, como tornar potável | ferver a água por quanto tempo
 ---
 A água não tratada pode transmitir diarreia, cólera, tifo e parasitas. Na dúvida, trate-a.

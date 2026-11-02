@@ -3,6 +3,8 @@ title: Agua segura: encontrarla y potabilizarla
 category: Supervivencia
 lang: es
 sources: OMS, tratamiento del agua en el hogar; CDC, cómo hacer el agua segura en emergencias; Eawag, desinfección solar (SODIS)
+id: esencial-agua-potable
+verified: 2026-11-02
 ---
 El agua no tratada puede transmitir diarrea, cólera, tifus y parásitos. Si dudas, trátala.
 

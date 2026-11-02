@@ -3,6 +3,8 @@ title: Engasgo em adultos, crianças e bebês
 category: Primeiros socorros
 lang: pt
 sources: AHA, Guias 2025 (engasgo); Cruz Vermelha Americana; IFRC 2020
+id: esencial-atragantamiento
+verified: 2026-11-02
 questions: meu filho engasgou com uma uva e não consegue tossir | como desengasgar um bebê | manobra de heimlich, como faz | alguém engasgou e não consegue falar nem respirar | um bebê engasgado, como desengasgar
 ---
 Se algo bloqueia a garganta, a pessoa não consegue respirar. Repare nisto: se tosse com força, ela está conseguindo ar; se não consegue falar, tossir nem respirar, ou leva as mãos ao pescoço, é grave.
