@@ -517,3 +517,52 @@ describe("B1+B2 — SELF: «cuál es mi nombre» es y «what is my name» en", (
     expect(answerMemoryQuery("what is my name?", empty, "en")).toContain("You haven't told me that yet");
   });
 });
+
+// B3+B10 (barrido «revisa todo», clase 1 · MEDIA/MENOR, una tanda):
+// B3 — las formas clásicas pt de REL_NAME y BDAY_PERSON solo admitían
+// «minha»: «meu pai» quedaba huérfano (MQ10: notKnown con la ficha;
+// MQ23: el cumpleaños caía a la cita literal en vez de la plantilla;
+// R2-17). B10 = ADV-GM1-C1 — la plantilla pt personName usaba el
+// posesivo invariante «Sua»: «qual é o nome do meu pai?» servía
+// «Sua pai se chama Luís.» (MQ11, verbatim de la adversaria), y el
+// mismo «sua» dormía en la plantilla de cumpleaños, inalcanzable
+// hasta que B3 abriera los parentescos masculinos: por eso van
+// juntos. Suelo MQ12 («Sua mãe») y el cumpleaños femenino.
+describe("B3+B10 — «meu» en las formas clásicas pt y posesivo según el parentesco", () => {
+  const PAI: MemoryQueryData = { facts: [], people: [{ name: "Luís", relationship: "pai" }] };
+  const MAE: MemoryQueryData = { facts: [], people: [{ name: "Maria", relationship: "mãe" }] };
+
+  it("REL clásico con «meu»: sirve la ficha (MQ10) y con el posesivo que toca (MQ11)", () => {
+    expect(answerMemoryQuery("como se chama meu pai?", PAI, "pt")).toBe("Seu pai se chama Luís.");
+    expect(answerMemoryQuery("qual é o nome do meu pai?", PAI, "pt")).toBe("Seu pai se chama Luís.");
+    expect(isMemoryStyleQuery("como se chama meu pai?")).toBe(true);
+  });
+
+  it("BDAY con «meu»: la plantilla de cumpleaños, no la cita literal (MQ23)", () => {
+    const fact: MemoryQueryData = {
+      facts: [{ content: "o aniversário do meu pai é 15 de março", category: "event" }],
+      people: [],
+    };
+    const r = answerMemoryQuery("quando é o aniversário do meu pai?", fact, "pt");
+    expect(r).toContain("O aniversário de seu pai é em");
+    expect(r).toContain("15 de março");
+    expect(isMemoryStyleQuery("quando é o aniversário do meu pai?")).toBe(true);
+  });
+
+  it("el abuelo también: «Seu avô» por la forma acentuada", () => {
+    const avo: MemoryQueryData = { facts: [], people: [{ name: "José", relationship: "avô" }] };
+    expect(answerMemoryQuery("qual é o nome do meu avô?", avo, "pt")).toBe("Seu avô se chama José.");
+  });
+
+  it("suelo: lo femenino no se mueve (MQ12 y el cumpleaños con «minha»)", () => {
+    expect(answerMemoryQuery("qual é o nome da minha mãe?", MAE, "pt")).toBe("Sua mãe se chama Maria.");
+    expect(answerMemoryQuery("como se chama minha mãe?", MAE, "pt")).toBe("Sua mãe se chama Maria.");
+    const fact: MemoryQueryData = {
+      facts: [{ content: "o aniversário da minha mãe é 3 de maio", category: "event" }],
+      people: [],
+    };
+    const maeBday = answerMemoryQuery("quando é o aniversário da minha mãe?", fact, "pt");
+    expect(maeBday).toContain("O aniversário de sua mãe é em");
+    expect(maeBday).toContain("3 de maio");
+  });
+});

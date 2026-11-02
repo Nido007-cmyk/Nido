@@ -116,7 +116,7 @@ const STR: Record<string, Record<MemoryQueryLang, string>> = {
   personName: {
     es: "Tu {{rel}} se llama {{name}}.",
     en: "Your {{rel}}'s name is {{name}}.",
-    pt: "Sua {{rel}} se chama {{name}}.",
+    pt: "{{poss}} {{rel}} se chama {{name}}.",
   },
   selfName: { es: "Te llamas {{name}}.", en: "Your name is {{name}}.", pt: "Você se chama {{name}}." },
   birthday: {
@@ -150,6 +150,22 @@ function msg(key: string, lang: MemoryQueryLang, vars: Record<string, string> = 
   let s = STR[key][lang];
   for (const [k, v] of Object.entries(vars)) s = s.split(`{{${k}}}`).join(v);
   return s;
+}
+
+/** Posesivo pt según el género del parentesco (B10 = ADV-GM1-C1):
+ *  la plantilla usaba «Sua» invariante y, abierto «meu» por B3,
+ *  servía «Sua pai». La forma acentuada manda en el par avô/avó; el
+ *  resto va por la lista masculina; lo no listado conserva «Sua»,
+ *  que es el suelo de hoy. es «Tu» y en «Your» son neutros. */
+const PT_MASC_REL = new Set([
+  "pai", "irmao", "tio", "filho", "esposo", "marido", "sogro",
+  "neto", "sobrinho", "primo", "cunhado", "namorado", "amigo",
+]);
+function ptPossessive(rel: string): "Seu" | "Sua" {
+  const low = rel.trim().toLowerCase();
+  if (low === "avô") return "Seu";
+  if (low === "avó") return "Sua";
+  return PT_MASC_REL.has(fold(rel)) ? "Seu" : "Sua";
 }
 
 const BIRTHDAY_RE = /cumplea[ñn]os|aniversario|birthday|aniversário/i;
@@ -274,7 +290,7 @@ const REL_NAME_Q_RES: RegExp[] = [
   // «what is the name of my mom» caían al modelo sin memoria guardada.
   /what is my ([a-z -]+?)'?s name\??$/i,
   /what is the name of my ([a-z -]+?)\??$/i,
-  /como se chama (?:a )?minha? ([a-záéíóúãõçô ]+?)\??$/i,
+  /como se chama (?:a )?(?:minha?|meu) ([a-záéíóúãõçô ]+?)\??$/i,
   // G-M1-R1 (post-0.1.69, cruce de Grok): la forma española «¿cuál es
   // el nombre de mi X?» y su espejo portugués no estaban — la inglesa
   // entró en el barrido de paridad de la 0.1.34 y estas no. Sin patrón,
@@ -307,7 +323,7 @@ const SELF_NAME_Q_RES: RegExp[] = [
 const BDAY_PERSON_Q_RES: RegExp[] = [
   /cu[aá]ndo es el cumplea[ñn]os de mi ([a-záéíóúñü ]+?)\??$/i,
   /when is my ([a-z -]+?)'?s birthday\??$/i,
-  /quando (?:é|e) o anivers[aá]rio d[aeo] minha? ([a-záéíóúãõç ]+?)\??$/i,
+  /quando (?:é|e) o anivers[aá]rio d[aeo] (?:minha?|meu) ([a-záéíóúãõç ]+?)\??$/i,
 ];
 const BDAY_SELF_Q_RES: RegExp[] = [
   /cu[aá]ndo es mi cumplea[ñn]os\??$/i,
@@ -551,7 +567,7 @@ export function answerMemoryQuery(
   if (relNameQ) {
     const rel = relNameQ[1].trim();
     const person = findPersonByRel(mem, rel);
-    if (person) return msg("personName", lang, { rel, name: person.name });
+    if (person) return msg("personName", lang, { rel, name: person.name, poss: ptPossessive(rel) });
     // Puede estar como hecho («mi mamá se llama Marta» con gatillo).
     // B8 (barrido «revisa todo», clase 1; semilla 2 de la adversaria
     // de G-M1-R1): la cláusula que trae el nombre se reconoce en la
@@ -565,7 +581,7 @@ export function answerMemoryQuery(
     );
     if (fact) {
       const m = /(?:se llama|se chama|name is|is called)\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content);
-      if (m) return msg("personName", lang, { rel, name: m[1] });
+      if (m) return msg("personName", lang, { rel, name: m[1], poss: ptPossessive(rel) });
     }
     return msg("notKnown", lang);
   }
@@ -589,7 +605,7 @@ export function answerMemoryQuery(
     // 0.1.24 (auditoría, H-13): en EN el «who» abre la frase
     // («{{who}}'s birthday is on…») y salía en minúscula («your
     // mom's birthday…»); en ES/PT va tras «de», en minúscula bien.
-    if (fact) return birthdayAnswer(fact, lang === "en" ? `Your ${rel}` : lang === "pt" ? `sua ${rel}` : `tu ${rel}`, lang);
+    if (fact) return birthdayAnswer(fact, lang === "en" ? `Your ${rel}` : lang === "pt" ? `${ptPossessive(rel).toLowerCase()} ${rel}` : `tu ${rel}`, lang);
     return msg("notKnown", lang);
   }
   if (BDAY_SELF_Q_RES.some((re) => re.test(t))) {
