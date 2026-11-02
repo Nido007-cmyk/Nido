@@ -78,7 +78,7 @@ export function PanicButton({ onWiped, onError }: Props) {
       StyleSheet.create({
         btn: {
           minWidth: 44,
-          height: 32,
+          height: 44,
           borderRadius: 16,
           borderWidth: 1,
           borderColor: colors.crimson[500],

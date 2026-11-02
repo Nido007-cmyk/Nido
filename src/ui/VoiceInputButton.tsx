@@ -158,11 +158,11 @@ export function VoiceInputButton({ disabled, onTranscript }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  container: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   btn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
   },

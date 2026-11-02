@@ -2832,6 +2832,7 @@ export function ChatScreen({
               accessibilityLabel={t("chatHeader.cycleTone")}
               onPress={cycleTone}
               disabled={generating}
+              hitSlop={4}
               style={[styles.modeChip, { borderColor: colors.border.default, backgroundColor: colors.bg.surface }]}
             >
               <Text style={[styles.modeChipText, { color: colors.text.primary }]} numberOfLines={1}>
@@ -2844,6 +2845,7 @@ export function ChatScreen({
               accessibilityLabel={t("chatHeader.deepResearch")}
               onPress={() => void toggleDeepResearch()}
               disabled={generating}
+              hitSlop={4}
               style={[
                 styles.modeChip,
                 deepResearchEnabled
@@ -3157,7 +3159,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     alignItems: "center",
     gap: 4,
     paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingVertical: 12,
     borderRadius: radii.xs,
     borderWidth: 1,
   },
@@ -3245,7 +3247,7 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   callBtnText: { ...typography.ui.titleSm },
   modeChips: { flexDirection: "row", gap: 8, marginBottom: 8, flexWrap: "wrap" },
   modeChip: {
-    minHeight: 36,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -3280,9 +3282,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     textAlignVertical: "center",
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.emerald[600],
     alignItems: "center",
     justifyContent: "center",
@@ -3297,9 +3299,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     marginLeft: 2,
   },
   stopBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.crimson[600],
     alignItems: "center",
     justifyContent: "center",
@@ -3307,9 +3309,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   // Programa bounty, tanda 2: el envío de emergencia junto al de
   // detener — mismo tamaño, carmesí más vivo y la flecha de enviar.
   emergencySendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.crimson[500],
     alignItems: "center",
     justifyContent: "center",

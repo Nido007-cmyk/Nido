@@ -309,7 +309,7 @@ const getStyles = (colors: Colors, typography: Typography) =>
     header: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 },
     title: { ...typography.ui.headline, color: colors.text.heading, flex: 1 },
     countryBtn: {
-      minHeight: 40,
+      minHeight: 44,
       maxWidth: 200,
       flexDirection: "row",
       alignItems: "center",
