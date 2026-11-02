@@ -719,6 +719,59 @@ describe("T-J6 — la dosis en inglés se juzga con su tabla completa", () => {
 });
 
 // ---------------------------------------------------------------
+// T-J7 (barrido «revisa todo», J7): la corrección de negación de
+// 0.1.59 no llegaba a la frase corta — la vía de copia exige ≥3
+// aciertos y el 85 %, y una frase de 2 raíces nunca llega: «El
+// paciente está sangrando.» contra su fuente «El paciente no está
+// sangrando.» salía TAL CUAL, sellada y sin cita (G15/R2-09). La
+// gemela corta (closestShortCopySentence) exige la copia entera
+// raíz a raíz y deja fuera el tema compartido y la raíz sola.
+
+describe("T-J7 — la corrección de negación alcanza a la copia corta", () => {
+  const NOTA_NEG: GroundingChunk = {
+    title: "nota",
+    body: "Nota de urgencias. El paciente no está sangrando. El paciente está en la cama.",
+  };
+  const NOTA_AFIR: GroundingChunk = {
+    title: "nota",
+    body: "Nota de urgencias. El paciente está sangrando. El paciente está en la cama.",
+  };
+  const Q_SANGRA = "¿El paciente está sangrando?";
+
+  it("G15: la corta con la negación quitada se sustituye por la frase de la fuente, literal", () => {
+    const r = verifyGroundedAnswer("El paciente está sangrando.", [NOTA_NEG], "es", Q_SANGRA);
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("El paciente no está sangrando");
+    expect(r.sentences?.[0].origin).toMatchObject({ kind: "source", negationFixed: true });
+  });
+
+  it("la corta con la negación AÑADIDA se sustituye igual (la fuente afirmativa manda)", () => {
+    const r = verifyGroundedAnswer("El paciente no está sangrando.", [NOTA_AFIR], "es", Q_SANGRA);
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("El paciente está sangrando");
+    expect(r.text).not.toContain("no está sangrando");
+    expect(r.sentences?.[0].origin).toMatchObject({ kind: "source", negationFixed: true });
+  });
+
+  it("las fieles cortas no se tocan: la negada fiel conserva su forma y la afirmativa fiel, la suya", () => {
+    const neg = verifyGroundedAnswer("El paciente no está sangrando.", [NOTA_NEG], "es", Q_SANGRA);
+    expect(neg.text).toBe("El paciente no está sangrando.");
+    const afir = verifyGroundedAnswer("El paciente está sangrando.", [NOTA_AFIR], "es", Q_SANGRA);
+    expect(afir.text).toBe("El paciente está sangrando.");
+  });
+
+  it("un tema compartido dentro de una frase larga no es una copia: no se sustituye", () => {
+    const chunk: GroundingChunk = {
+      title: "nota",
+      body: "Nota de urgencias. El paciente está sangrando mucho y necesita ayuda urgente ahora mismo en la sala.",
+    };
+    const r = verifyGroundedAnswer("El paciente está sangrando.", [chunk], "es", Q_SANGRA);
+    expect(r.text).toBe("El paciente está sangrando.");
+    expect(r.sentences?.[0].origin.kind).toBe("model");
+  });
+});
+
+// ---------------------------------------------------------------
 // T-J3 (barrido «revisa todo», J3): los números en letra eran
 // invisibles para el juez y visibles para la caja — «cinco veces
 // al día» contra «dos veces al día» salía sellado fundado mientras

@@ -421,6 +421,38 @@ export function closestSourceSentence(sentence: string, sourceSentences: string[
   return bestHits >= MIN_JUDGED_TERMS && want.size > 0 && bestHits / want.size >= 0.85 ? best : null;
 }
 
+/**
+ * La copia corta (T-J7, barrido «revisa todo» J7): la gemela breve
+ * de closestSourceSentence para la pierna de negación. Una frase de
+ * 2 raíces nunca llega a la vía principal (exige ≥3 aciertos y el
+ * 85 %), así que «El paciente está sangrando.» contra «El paciente
+ * no está sangrando.» salía TAL CUAL, sellada y sin cita. La copia
+ * corta exige la copia entera: TODAS las raíces de la respuesta
+ * están en la frase fuente, y esa frase no es mucho más larga (las
+ * raíces de la respuesta son al menos la mitad de las suyas). Un
+ * tema compartido dentro de una frase larga no es una copia y no
+ * se toca; una raíz sola es demasiado poco y queda fuera.
+ */
+export function closestShortCopySentence(sentence: string, candidates: string[]): string | null {
+  const want = new Set(contentStems(sentence));
+  if (want.size < 2) return null;
+  let best: string | null = null;
+  let bestRatio = 0;
+  for (const cand of candidates) {
+    const have = new Set(contentStems(cand));
+    let hits = 0;
+    for (const s of want) if (have.has(s)) hits++;
+    if (hits < want.size) continue;
+    const ratio = hits / Math.max(1, have.size);
+    if (ratio < 0.5) continue;
+    if (ratio > bestRatio) {
+      bestRatio = ratio;
+      best = cand;
+    }
+  }
+  return best;
+}
+
 // ------------------------------------------- idioma por frase (R-04)
 
 /** Una frase de las fuentes, con el chunk del que sale. */
@@ -1543,8 +1575,14 @@ export function verifyGroundedAnswer(
     if (sup.total >= MIN_JUDGED_TERMS) judgedKept++;
     // 0.1.59: a sentence that copies a source sentence but flips a negation
     // is replaced by the source sentence itself, word for word.
-    if (sup.total >= MIN_JUDGED_TERMS && sup.bestChunk >= 0) {
-      const src = closestSourceSentence(s, chunkSentences[sup.bestChunk]);
+    // T-J7: la vía principal exige el umbral de juzgadas y deja
+    // fuera a la copia corta por construcción; la gemela corta
+    // (closestShortCopySentence) la alcanza sin bajar la vara: solo
+    // entra cuando la copia está demostrada raíz a raíz.
+    if (sup.bestChunk >= 0) {
+      const src =
+        (sup.total >= MIN_JUDGED_TERMS ? closestSourceSentence(s, chunkSentences[sup.bestChunk]) : null) ??
+        closestShortCopySentence(s, chunkSentences[sup.bestChunk]);
       if (src && negationCount(s.replace(/\[\d+\]/g, "")) !== negationCount(src)) {
         negationFixed++;
         const fixed = addCitation(src, sup.bestChunk + 1);
