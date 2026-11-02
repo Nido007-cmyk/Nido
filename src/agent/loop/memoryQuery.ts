@@ -309,43 +309,63 @@ function factTokens(text: string): FactToken[] {
  *  localizada (el hecho vino de las notas, sin nombre ni parentesco
  *  escritos), null: manda el hecho entero, como hasta hoy. Si el
  *  segmento no trae fecha, birthdayAnswer cita ESE segmento — nunca
- *  afirma la fecha de la otra cláusula. */
+ *  afirma la fecha de la otra cláusula.
+ *
+ *  ADV-PC1-C1 (adversaria de PC-1): el ancla puede ocurrir más
+ *  de una vez — la persona preguntada mencionada antes, sin
+ *  fecha, en un inciso o apositivo dentro de la cláusula de
+ *  otro («…, el esposo de mi abuela, …») o en una cláusula
+ *  previa por comas — y la primera mención capturaba el asiento:
+ *  commaSubSlice recibía un tramo sin fecha y el cruce de PC-1
+ *  sobrevivía entero. Se recogen TODAS las ocurrencias con la
+ *  misma disciplina de dos pasadas y manda la primera cuyo
+ *  subtramo de comas trae su fecha (pickAnchorSpan); si ninguna
+ *  la trae, la primera, como hasta hoy. */
 function birthdayServingSlice(
   fact: string,
   opts: { personName?: string; rel?: string }
 ): { slice: string; word: string | null } | null {
   const tokens = factTokens(fact);
-  let anchorIdx = -1;
-  let word: string | null = null;
+  let spans: { from: number; to: number }[] = [];
+  let relIdxs: number[] = [];
   if (opts.personName) {
     const nameWords = factTokens(opts.personName).map((t) => fold(t.text));
     if (nameWords.length) {
-      outer: for (let i = 0; i + nameWords.length <= tokens.length; i++) {
+      for (let i = 0; i + nameWords.length <= tokens.length; i++) {
+        let matches = true;
         for (let j = 0; j < nameWords.length; j++) {
-          if (fold(tokens[i + j]!.text) !== nameWords[j]) continue outer;
+          if (fold(tokens[i + j]!.text) !== nameWords[j]) {
+            matches = false;
+            break;
+          }
         }
-        anchorIdx = i;
-        break;
+        if (matches) {
+          spans.push({ from: tokens[i]!.start, to: tokens[i + nameWords.length - 1]!.end });
+        }
       }
     }
   }
-  if (anchorIdx < 0 && opts.rel) {
+  if (!spans.length && opts.rel) {
     const rel = opts.rel;
-    anchorIdx = tokens.findIndex((tk) => exactSameRel(tk.text, rel));
-    if (anchorIdx < 0) {
+    relIdxs = tokens.flatMap((tk, i) => (exactSameRel(tk.text, rel) ? [i] : []));
+    if (!relIdxs.length) {
       const relLow = rel.trim().toLowerCase();
-      anchorIdx = tokens.findIndex((tk) => {
+      relIdxs = tokens.flatMap((tk, i) => {
         const wLow = tk.text.trim().toLowerCase();
         if ((relLow === "avô" || relLow === "avó") && (wLow === "avô" || wLow === "avó") && wLow !== relLow) {
-          return false;
+          return [];
         }
-        return sameRel(tk.text, rel);
+        return sameRel(tk.text, rel) ? [i] : [];
       });
     }
-    if (anchorIdx >= 0) word = tokens[anchorIdx]!.text;
+    spans = relIdxs.map((i) => ({ from: tokens[i]!.start, to: tokens[i]!.end }));
   }
-  if (anchorIdx < 0) return null;
-  const slice = clauseSlice(fact, tokens, tokens[anchorIdx]!.start, tokens[anchorIdx]!.end);
+  if (!spans.length) return null;
+  // ADV-PC1-C1: con más de una ocurrencia, manda la primera cuyo
+  // subtramo de comas trae su fecha; si ninguna, la primera.
+  const chosen = pickAnchorSpan(fact, tokens, spans);
+  const word = relIdxs.length ? tokens[relIdxs[chosen]!]!.text : null;
+  const slice = clauseSlice(fact, tokens, spans[chosen]!.from, spans[chosen]!.to);
   return slice ? { slice, word } : null;
 }
 
@@ -494,13 +514,18 @@ function sentenceBreaks(fact: string): { start: number; after: number }[] {
  *  decimal de la familia del punto. Un subtramo de más solo
  *  puede ENCOGER lo servido hacia la cláusula del ancla —
  *  nunca trae la fecha de otra cláusula. */
-function commaSubSlice(
+/** Los subtramos de comas dentro del segmento [start, end) y el
+ *  que contiene el tramo [from, to): la troceada cruda de
+ *  commaSubSlice, sin su juicio de fecha. Sin comas en el
+ *  segmento (la de entre dígitos no cuenta), null: hay un solo
+ *  tramo posible y es el segmento entero. */
+function commaSubRange(
   fact: string,
   start: number,
   end: number,
   from: number,
   to: number
-): string | null {
+): { s: number; e: number } | null {
   const ranges: { s: number; e: number }[] = [];
   let prev = start;
   for (let i = start + 1; i < end; i++) {
@@ -515,7 +540,17 @@ function commaSubSlice(
   }
   if (!ranges.length) return null;
   ranges.push({ s: prev, e: end });
-  const mine = ranges.find((r) => from >= r.s && to <= r.e);
+  return ranges.find((r) => from >= r.s && to <= r.e) ?? null;
+}
+
+function commaSubSlice(
+  fact: string,
+  start: number,
+  end: number,
+  from: number,
+  to: number
+): string | null {
+  const mine = commaSubRange(fact, start, end, from, to);
   if (!mine) return null;
   const text = fact.slice(mine.s, mine.e);
   if (extractDateISO(text) === null) return null;
@@ -528,7 +563,16 @@ function commaSubSlice(
  *  (ADV-F4-C1). Un corte de frase solo cuenta si separa dos tramos
  *  con contenido: el punto final del hecho no es frontera y el
  *  segmento servido queda byte a byte como antes de esta tanda. */
-function clauseSlice(fact: string, tokens: FactToken[], from: number, to: number): string {
+/** Las fronteras del segmento de un tramo [from, to): la
+ *  delimitación asentada de clauseSlice (conjunciones sueltas y
+ *  cortes de frase con contenido a ambos lados), sin el juicio
+ *  de comas. */
+function clauseBounds(
+  fact: string,
+  tokens: FactToken[],
+  from: number,
+  to: number
+): { start: number; end: number } {
   let start = 0;
   let end = fact.length;
   for (const tk of tokens) {
@@ -542,10 +586,83 @@ function clauseSlice(fact: string, tokens: FactToken[], from: number, to: number
     if (b.after <= from) start = Math.max(start, b.after);
     if (b.start >= to) end = Math.min(end, b.start);
   }
+  return { start, end };
+}
+
+function clauseSlice(fact: string, tokens: FactToken[], from: number, to: number): string {
+  const { start, end } = clauseBounds(fact, tokens, from, to);
   // PC-1: dentro del segmento, el subtramo de comas del ancla
   // manda si trae su fecha; si no, el segmento entero, como
   // hasta hoy (ver commaSubSlice).
   return commaSubSlice(fact, start, end, from, to) ?? fact.slice(start, end).replace(/^[\s,;]+|[\s,;]+$/g, "");
+}
+
+/** ADV-PC1-C1 (adversaria de PC-1): ¿la cláusula propia de
+ *  ESTA ocurrencia del ancla trae fecha extraíble? Su tramo es
+ *  el subtramo de comas que la contiene si su segmento va
+ *  troceado por comas, y su segmento entero si no (la cláusula
+ *  tras la conjunción de la forma mixta: «…, el cumpleaños de
+ *  mi abuelo es el 20 de junio y el de mi abuela es el 15 de
+ *  marzo»). La vara es la de siempre: extractDateISO, el mismo
+ *  extractor que sirve la fecha, como en commaSubSlice y en
+ *  clauseServesDateBefore. */
+function anchorSpanHasDate(
+  fact: string,
+  tokens: FactToken[],
+  from: number,
+  to: number
+): boolean {
+  const { start, end } = clauseBounds(fact, tokens, from, to);
+  const mine = commaSubRange(fact, start, end, from, to);
+  const text = mine ? fact.slice(mine.s, mine.e) : fact.slice(start, end);
+  return extractDateISO(text) !== null;
+}
+
+/** ADV-PC1-C1: la condición de captura de la PRIMERA mención —
+ *  su segmento va unido por comas y su propio subtramo de comas
+ *  no trae fecha, así que commaSubSlice devuelve null y el
+ *  segmento entero (con la fecha de otro) es lo que se sirve.
+ *  Sin comas en su segmento no hay captura de esta familia: la
+ *  mención previa separada por conjunción o por punto degrada
+ *  a la cita honesta de su segmento, y esa cita no se toca. */
+function anchorCommaCaptured(
+  fact: string,
+  tokens: FactToken[],
+  from: number,
+  to: number
+): boolean {
+  const { start, end } = clauseBounds(fact, tokens, from, to);
+  const mine = commaSubRange(fact, start, end, from, to);
+  if (!mine) return false;
+  return extractDateISO(fact.slice(mine.s, mine.e)) === null;
+}
+
+/** ADV-PC1-C1: qué ocurrencia del ancla manda. Si la primera
+ *  mención no está capturada por las comas, la primera, byte a
+ *  byte como hasta hoy — la selección no se mueve fuera de la
+ *  superficie del cargo. Si lo está (el apositivo o el inciso
+ *  dentro de la cláusula de otro, la cláusula previa por
+ *  comas), manda la primera ocurrencia posterior cuya cláusula
+ *  propia trae su fecha: esa es la que clauseSlice debe
+ *  recibir, porque es la única a la que puede servir su tramo.
+ *  Si ninguna la trae, la primera, como hasta hoy. La frontera
+ *  F-1 no vive aquí: su forma es de una sola ocurrencia, o su
+ *  cláusula preguntada no trae fecha en ningún tramo
+ *  (condición asentada), así que ninguna ocurrencia supera el
+ *  juicio y su desenlace queda intacto; y los residuos
+ *  R-A…R-D son de una sola ocurrencia o de cláusula sin tramo
+ *  con fecha, así que tampoco se mueven. */
+function pickAnchorSpan(
+  fact: string,
+  tokens: FactToken[],
+  spans: { from: number; to: number }[]
+): number {
+  if (spans.length < 2) return 0;
+  if (!anchorCommaCaptured(fact, tokens, spans[0]!.from, spans[0]!.to)) return 0;
+  for (let k = 1; k < spans.length; k++) {
+    if (anchorSpanHasDate(fact, tokens, spans[k]!.from, spans[k]!.to)) return k;
+  }
+  return 0;
 }
 
 /** ADV-F3-C1, asiento propio (medido al ejecutar esta tanda, en las
@@ -558,9 +675,20 @@ function clauseSlice(fact: string, tokens: FactToken[], from: number, to: number
 const SELF_BDAY_PHRASE_RE = /mi cumplea|my birthday|meu anivers/i;
 
 function birthdaySelfSlice(fact: string): string | null {
-  const m = SELF_BDAY_PHRASE_RE.exec(fact);
-  if (!m) return null;
-  const slice = clauseSlice(fact, factTokens(fact), m.index, m.index + m[0].length);
+  // ADV-PC1-C1: la frase propia puede ocurrir más de una vez;
+  // entre sus ocurrencias manda la misma selección del asiento
+  // persona (pickAnchorSpan): la primera cuyo subtramo de comas
+  // trae su fecha, y si ninguna, la primera, como hasta hoy.
+  const re = new RegExp(SELF_BDAY_PHRASE_RE.source, "gi");
+  const spans: { from: number; to: number }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(fact)) !== null) {
+    spans.push({ from: m.index, to: m.index + m[0].length });
+  }
+  if (!spans.length) return null;
+  const tokens = factTokens(fact);
+  const chosen = spans[pickAnchorSpan(fact, tokens, spans)]!;
+  const slice = clauseSlice(fact, tokens, chosen.from, chosen.to);
   return slice || null;
 }
 

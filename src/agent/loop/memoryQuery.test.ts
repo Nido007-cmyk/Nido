@@ -1377,6 +1377,133 @@ describe("PC-1 — el hecho con dos cumpleaños separado solo por comas sirve la
   });
 });
 
+// ADV-PC1-C1 (adversaria de PC-1, 2026-11-02 · cargo numerado
+// para la pasada): la MENCION PREVIA sin fecha captura el ancla.
+// Si la persona preguntada aparece mencionada antes en el hecho
+// — un inciso o un apositivo dentro de la cláusula de otro, o
+// una cláusula previa unida por comas — el asiento anclaba en
+// esa primera mención y commaSubSlice nunca recibía el tramo
+// bueno: la cláusula propia, íntegra en un solo tramo de comas
+// y CON su fecha, quedaba sin servir, y el cruce de PC-1
+// sobrevivía entero (medido por la adversaria en es/pt/en,
+// byte a byte el desenlace de la base 82a121c: no es regresión
+// de PC-1, es la ocurrencia elegida). NO comparte la condición
+// de F-1: aquí la cláusula preguntada SÍ trae su fecha en su
+// tramo. La cura vive en la selección de la ocurrencia: entre
+// las menciones del ancla manda la primera cuyo subtramo de
+// comas trae fecha extraíble (la vara de extractDateISO, la de
+// clauseServesDateBefore y commaSubSlice); si ninguna la trae,
+// la primera mención, byte a byte como hasta hoy — por eso los
+// controles por conjunción y por punto de abajo degradan a la
+// misma cita honesta de siempre: su cláusula propia no va en
+// un tramo de comas y este cargo no los toca.
+describe("ADV-PC1-C1 — la mención previa sin fecha no captura el ancla: manda la ocurrencia cuyo tramo de comas trae su fecha", () => {
+  it("es apositivo: «el esposo de mi abuela» dentro de la cláusula del abuelo no captura; la abuela sirve SU 15 de marzo y el dueño del apositivo conserva su 20 de junio", () => {
+    const apositivo: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuelo, el esposo de mi abuela, es el 20 de junio, el de mi abuela es el 15 de marzo", category: "event" }],
+    };
+    const abuela = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", apositivo, "es");
+    expect(abuela).toContain("15 de marzo");
+    expect(abuela).not.toContain("20 de junio");
+    const abuelo = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuelo?", apositivo, "es");
+    expect(abuelo).toContain("20 de junio");
+    expect(abuelo).not.toContain("15 de marzo");
+  });
+
+  it("es espejo del apositivo: «la esposa de mi abuelo» primero; el abuelo sirve SU 20 de junio y la abuela conserva su 15 de marzo", () => {
+    const espejo: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuela, la esposa de mi abuelo, es el 15 de marzo, el de mi abuelo es el 20 de junio", category: "event" }],
+    };
+    const abuelo = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuelo?", espejo, "es");
+    expect(abuelo).toContain("20 de junio");
+    expect(abuelo).not.toContain("15 de marzo");
+    const abuela = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", espejo, "es");
+    expect(abuela).toContain("15 de marzo");
+    expect(abuela).not.toContain("20 de junio");
+  });
+
+  it("es inciso en la cláusula ajena: «el favorito de mi abuela» no captura; la abuela sirve SU 15 de marzo", () => {
+    const inciso: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuelo, el favorito de mi abuela, es el 20 de junio, el de mi abuela es el 15 de marzo", category: "event" }],
+    };
+    const abuela = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", inciso, "es");
+    expect(abuela).toContain("15 de marzo");
+    expect(abuela).not.toContain("20 de junio");
+    const abuelo = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuelo?", inciso, "es");
+    expect(abuelo).toContain("20 de junio");
+    expect(abuelo).not.toContain("15 de marzo");
+  });
+
+  it("es cláusula previa por comas: «la casa de mi abuela es grande» no captura; la abuela sirve SU 15 de marzo", () => {
+    const previa: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "la casa de mi abuela es grande, el cumpleaños de mi abuelo es el 20 de junio, el de mi abuela es el 15 de marzo", category: "event" }],
+    };
+    const abuela = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", previa, "es");
+    expect(abuela).toContain("15 de marzo");
+    expect(abuela).not.toContain("20 de junio");
+    const abuelo = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuelo?", previa, "es");
+    expect(abuelo).toContain("20 de junio");
+    expect(abuelo).not.toContain("15 de marzo");
+  });
+
+  it("es mixta: la mención previa por comas no captura aunque la cláusula propia vaya unida por conjunción", () => {
+    const mixta: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "la casa de mi abuela es grande, el cumpleaños de mi abuelo es el 20 de junio y el de mi abuela es el 15 de marzo", category: "event" }],
+    };
+    const abuela = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", mixta, "es");
+    expect(abuela).toContain("15 de marzo");
+    expect(abuela).not.toContain("20 de junio");
+  });
+
+  it("pt inciso: «o favorito da minha avó» não captura; a avó serve o SEU 15 de março", () => {
+    const incisoPt: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "o aniversário do meu avô, o favorito da minha avó, é 20 de junho, o da minha avó é 15 de março", category: "event" }],
+    };
+    const ava = answerMemoryQuery("quando é o aniversário da minha avó?", incisoPt, "pt");
+    expect(ava).toContain("15 de março");
+    expect(ava).not.toContain("20 de junho");
+    const avo = answerMemoryQuery("quando é o aniversário do meu avô?", incisoPt, "pt");
+    expect(avo).toContain("20 de junho");
+    expect(avo).not.toContain("15 de março");
+  });
+
+  it("en inciso: «my grandmother's favorite» does not capture; grandmother serves HER March 15", () => {
+    const incisoEn: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "my grandfather's birthday, my grandmother's favorite, is June 20, my grandmother's birthday is March 15", category: "event" }],
+    };
+    const gm = answerMemoryQuery("when is my grandmother's birthday?", incisoEn, "en");
+    expect(gm).toContain("March 15");
+    expect(gm).not.toContain("June 20");
+    const gf = answerMemoryQuery("when is my grandfather's birthday?", incisoEn, "en");
+    expect(gf).toContain("June 20");
+    expect(gf).not.toContain("March 15");
+  });
+
+  it("suelo: con la mención previa separada por conjunción o por punto, el desenlace sigue siendo la cita honesta del segmento equivocado, byte a byte", () => {
+    const porConjuncion: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "la casa de mi abuela es grande y el cumpleaños de mi abuelo es el 20 de junio y el de mi abuela es el 15 de marzo", category: "event" }],
+    };
+    expect(answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", porConjuncion, "es")).toBe(
+      "Según lo que me contaste: «la casa de mi abuela es grande»."
+    );
+    const porPunto: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "la casa de mi abuela es grande. El cumpleaños de mi abuelo es el 20 de junio, el de mi abuela es el 15 de marzo", category: "event" }],
+    };
+    expect(answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", porPunto, "es")).toBe(
+      "Según lo que me contaste: «la casa de mi abuela es grande»."
+    );
+  });
+});
+
 // B1+B2 (barrido «revisa todo», clase 1 · MEDIA): SELF se quedó sin
 // la forma que G-M1-R1 dio a REL — «¿cuál es mi nombre?» y «what is
 // my name?» (sin contraer) caían al modelo teniendo el hecho
