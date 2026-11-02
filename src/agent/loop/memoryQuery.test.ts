@@ -566,3 +566,40 @@ describe("B3+B10 — «meu» en las formas clásicas pt y posesivo según el par
     expect(maeBday).toContain("3 de maio");
   });
 });
+
+// B4 (barrido «revisa todo», clase 1 · MEDIA-BAJA): las formas
+// clásicas de REL_NAME no traían cola de cortesía — solo los
+// patrones nuevos de G-M1-R1 — y el dictado con «por favor» /
+// «please» es habla común en los tres idiomas. Sondas MQ03/MQ08/
+// MQ13: con el nombre solo como ficha, las tres daban notKnown.
+describe("B4 — colas de cortesía en las formas clásicas de REL_NAME (es/en/pt)", () => {
+  const CARDS: MemoryQueryData = {
+    facts: [],
+    people: [
+      { name: "Ana", relationship: "mamá" },
+      { name: "Luis", relationship: "papá" },
+      { name: "Maria", relationship: "mãe" },
+    ],
+  };
+
+  it("es: «¿cómo se llama mi mamá, por favor?» sirve la ficha (MQ03)", () => {
+    expect(answerMemoryQuery("¿cómo se llama mi mamá, por favor?", CARDS, "es")).toBe("Tu mamá se llama Ana.");
+    expect(isMemoryStyleQuery("¿cómo se llama mi mamá, por favor?")).toBe(true);
+  });
+
+  it("en: «what's my dad's name, please?» sirve la ficha (MQ08)", () => {
+    expect(answerMemoryQuery("what's my dad's name, please?", CARDS, "en")).toBe("Your dad's name is Luis.");
+    expect(isMemoryStyleQuery("what's my dad's name, please?")).toBe(true);
+  });
+
+  it("pt: «como se chama minha mãe, por favor?» sirve la ficha (MQ13)", () => {
+    expect(answerMemoryQuery("como se chama minha mãe, por favor?", CARDS, "pt")).toBe("Sua mãe se chama Maria.");
+    expect(isMemoryStyleQuery("como se chama minha mãe, por favor?")).toBe(true);
+  });
+
+  it("suelo: las formas sin cortesía no se mueven", () => {
+    expect(answerMemoryQuery("¿cómo se llama mi mamá?", CARDS, "es")).toBe("Tu mamá se llama Ana.");
+    expect(answerMemoryQuery("what's my dad's name?", CARDS, "en")).toBe("Your dad's name is Luis.");
+    expect(answerMemoryQuery("como se chama minha mãe?", CARDS, "pt")).toBe("Sua mãe se chama Maria.");
+  });
+});

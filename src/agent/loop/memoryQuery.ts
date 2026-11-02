@@ -284,13 +284,17 @@ export function memoryGateHit(userText: string, mem: MemoryQueryData): boolean {
  * mi mamá?» caía al conocimiento y citaba el Metro de Madrid).
  */
 const REL_NAME_Q_RES: RegExp[] = [
-  /¿?c[oó]mo se llama mi ([a-záéíóúñü ]+?)\??$/i,
-  /what'?s my ([a-z -]+?)'?s name\??$/i,
+  // B4 (barrido «revisa todo», clase 1): las formas clásicas ganan la
+  // cola de cortesía que los patrones nuevos de G-M1-R1 ya traían —
+  // el dictado con «por favor»/«please» es habla común en los tres
+  // idiomas y caía a notKnown con la ficha guardada.
+  /¿?c[oó]mo se llama mi ([a-záéíóúñü ]+?)(?:[,\s]+(?:por favor|porfa))?\??$/i,
+  /what'?s my ([a-z -]+?)'?s name(?:[,\s]+please)?\??$/i,
   // 0.1.34 (barrido de paridad): «what is my mom's name» (sin contraer) y
   // «what is the name of my mom» caían al modelo sin memoria guardada.
-  /what is my ([a-z -]+?)'?s name\??$/i,
-  /what is the name of my ([a-z -]+?)\??$/i,
-  /como se chama (?:a )?(?:minha?|meu) ([a-záéíóúãõçô ]+?)\??$/i,
+  /what is my ([a-z -]+?)'?s name(?:[,\s]+please)?\??$/i,
+  /what is the name of my ([a-z -]+?)(?:[,\s]+please)?\??$/i,
+  /como se chama (?:a )?(?:minha?|meu) ([a-záéíóúãõçô ]+?)(?:[,\s]+por favor)?\??$/i,
   // G-M1-R1 (post-0.1.69, cruce de Grok): la forma española «¿cuál es
   // el nombre de mi X?» y su espejo portugués no estaban — la inglesa
   // entró en el barrido de paridad de la 0.1.34 y estas no. Sin patrón,
