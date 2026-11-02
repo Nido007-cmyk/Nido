@@ -18,7 +18,7 @@ The copyright notice and the MIT license text are preserved in `LICENSE`.
 - New agent layer: `src/agent/` (encrypted persistent memory,
   local tools, think→act→observe loop)
 - `src/privacy/networkAudit.ts`: network audit (immutable log)
-- Encrypted database and settings (SQLCipher + Android Keystore)
+- Encrypted database (SQLCipher + Android Keystore); app settings live in a private on-device file
 - `allowBackup=false`: out of Google backup
 - Removed: Hugging Face model browser (leaked interests over the network)
   and development screens. Telemetry is on-device only: timings and
@@ -45,8 +45,8 @@ Licenses below were verified at the source on 2026-10-14 (see
 | multilingual-e5-small (intfloat; Wang et al., arXiv:2402.05672) | MIT, Copyright (c) Microsoft Corporation | the GGUF in the `knowledge-packs-v2` release is NIDO's conversion; the MIT notice travels in `LICENSE-ATTRIBUTION.txt` next to it |
 | LFM2.5-8B-A1B (Liquid AI) | LFM Open License v1.0 | not Apache/MIT: commercial use is licensed only to entities under USD 10M annual revenue (§5); redistributing it requires giving a copy of the license (§4). NIDO does not redistribute it: the app downloads it from Liquid AI's own repository |
 
-**Wikipedia text (CC BY-SA 4.0).** The app *does* ship Wikipedia text: 300
-article introductions bundled in the APK (`assets/corpus/corpus.json`), plus
+**Wikipedia text (CC BY-SA 4.0).** The app *does* ship Wikipedia text: **858
+article introductions** bundled in the APK (`assets/corpus/corpus.json`), plus
 the optional downloadable packs (`corpus-standard`, `corpus-full`,
 `wiki-vital5`, `wiki-vital5-e5`). Text by Wikipedia contributors,
 https://www.wikipedia.org, licensed under Creative Commons

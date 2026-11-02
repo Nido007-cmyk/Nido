@@ -18,7 +18,7 @@ El aviso de copyright y el texto de la licencia MIT se conservan en `LICENSE`.
 - Capa de agente nueva: `src/agent/` (memoria persistente cifrada,
   herramientas locales, bucle pensar→actuar→observar)
 - `src/privacy/networkAudit.ts`: auditoría de red (registro inmutable)
-- Base de datos y ajustes cifrados (SQLCipher + Android Keystore)
+- Base de datos cifrada (SQLCipher + Keystore de Android); los ajustes viven en un fichero privado en el dispositivo
 - `allowBackup=false`: fuera del backup de Google
 - Eliminado: buscador de modelos en Hugging Face (filtraba intereses por red)
   y pantallas de desarrollo. La telemetría es solo local: tiempos y
@@ -46,7 +46,7 @@ licencias de abajo se verificaron en su origen el 2026-10-14 (ver
 | LFM2.5-8B-A1B (Liquid AI) | LFM Open License v1.0 | no es Apache/MIT: el uso comercial solo se licencia a entidades con menos de 10 millones de USD de ingresos anuales (§5); redistribuirlo exige entregar copia de la licencia (§4). NIDO no lo redistribuye: la app lo descarga del repositorio de Liquid AI |
 
 **Texto de Wikipedia (CC BY-SA 4.0).** La app *sí* lleva texto de Wikipedia:
-300 introducciones de artículos dentro del APK (`assets/corpus/corpus.json`),
+**858 introducciones de artículos** dentro del APK (`assets/corpus/corpus.json`),
 además de los paquetes opcionales que se descargan (`corpus-standard`,
 `corpus-full`, `wiki-vital5`, `wiki-vital5-e5`). Texto de los colaboradores
 de Wikipedia, https://www.wikipedia.org, con licencia Creative Commons
