@@ -404,3 +404,41 @@ describe("G-M1-R1 — «¿cuál es el nombre de mi X?» entra en la ruta de nomb
     expect(answerMemoryQuery("¿cuál es el nombre de la capital de Francia?", CARD, "es")).toBeNull();
   });
 });
+
+// B9 (barrido «revisa todo», clase 1 · ALTA): avô y avó pliegan a la
+// misma forma («avo») y los dos grupos de REL_GROUPS la contienen:
+// findPersonByRel devolvía el primer match y, guardado el abuelo
+// antes que la abuela, «minha avó» servía el nombre del abuelo como
+// si fuera la abuela. Sonda del barrido: MQ37.
+describe("B9 — colisión avô/avó: la forma acentuada manda sobre el pliegue", () => {
+  const BOTH: MemoryQueryData = {
+    facts: [],
+    people: [
+      { name: "José", relationship: "avô" },
+      { name: "María", relationship: "avó" },
+    ],
+  };
+
+  it("preguntando por la abuela sirve a la abuela, no al abuelo guardado antes (MQ37)", () => {
+    expect(answerMemoryQuery("como se chama minha avó?", BOTH, "pt")).toBe("Sua avó se chama María.");
+  });
+
+  it("preguntando por el abuelo sirve al abuelo", () => {
+    const r = answerMemoryQuery("qual é o nome do meu avô?", BOTH, "pt");
+    expect(r).toContain("José");
+    expect(r).not.toContain("María");
+  });
+
+  it("sin abuela guardada, la pregunta por la abuela es honesta: no sirve al abuelo", () => {
+    const onlyGrandpa: MemoryQueryData = { facts: [], people: [{ name: "José", relationship: "avô" }] };
+    expect(answerMemoryQuery("como se chama minha avó?", onlyGrandpa, "pt")).toContain("Você ainda não me contou isso");
+  });
+
+  it("suelo: la abuela sola sirve bien (R2-18) y el español no se mueve", () => {
+    const onlyGrandma: MemoryQueryData = { facts: [], people: [{ name: "María", relationship: "avó" }] };
+    expect(answerMemoryQuery("como se chama minha avó?", onlyGrandma, "pt")).toBe("Sua avó se chama María.");
+    const es: MemoryQueryData = { facts: [], people: [{ name: "Pedro", relationship: "abuelo" }] };
+    expect(answerMemoryQuery("¿cómo se llama mi abuelo?", es, "es")).toBe("Tu abuelo se llama Pedro.");
+    expect(answerMemoryQuery("¿cómo se llama mi abuela?", es, "es")).toContain("Todavía no me has contado eso");
+  });
+});

@@ -47,8 +47,8 @@ const REL_GROUPS: string[][] = [
   ["esposo", "marido", "husband"],
   ["hijo", "son", "filho"],
   ["hija", "daughter", "filha"],
-  ["abuelo", "grandfather", "avo"],
-  ["abuela", "grandmother", "avo"],
+  ["abuelo", "grandfather", "avo", "avô"],
+  ["abuela", "grandmother", "avo", "avó"],
   ["tio", "uncle"],
   ["tia", "aunt"],
   ["primo", "cousin"],
@@ -75,8 +75,41 @@ function sameRel(a: string, b: string): boolean {
   return REL_GROUPS.some((g) => g.includes(fa) && g.includes(fb));
 }
 
+/** Coincidencia de parentesco SIN plegar acentos (solo minúsculas):
+ *  «avô» y «avó» se distinguen solo por el acento y el pliegue los
+ *  funde en «avo»; los grupos llevan las dos formas acentuadas para
+ *  que esta pasada las mantenga separadas. */
+function exactSameRel(a: string, b: string): boolean {
+  const la = a.trim().toLowerCase();
+  const lb = b.trim().toLowerCase();
+  if (la === lb) return true;
+  return REL_GROUPS.some((g) => g.includes(la) && g.includes(lb));
+}
+
 function findPersonByRel(mem: MemoryQueryData, rel: string) {
-  return mem.people.find((p) => p.relationship && sameRel(p.relationship, rel)) ?? null;
+  // B9 (barrido «revisa todo», clase 1): con el abuelo (avô) guardado
+  // antes que la abuela (avó), «minha avó» servía el nombre del abuelo
+  // como si fuera la abuela — los dos grupos contienen «avo» plegado
+  // y find devolvía el primer match. Primera pasada EXACTA, sin
+  // plegar: si la forma dictada distingue (avô ≠ avó, sinónimos con
+  // su grafía), manda ella. La pasada plegada queda para lo demás
+  // (sinónimos entre idiomas, dictado sin acentos) con un solo
+  // guardia: si pregunta y ficha traen las dos formas acentuadas del
+  // par avô/avó y no son la misma, no hay match — sin abuela
+  // guardada, la respuesta es la honesta, no el abuelo.
+  const exact = mem.people.find((p) => p.relationship && exactSameRel(p.relationship, rel));
+  if (exact) return exact;
+  const relLow = rel.trim().toLowerCase();
+  return (
+    mem.people.find((p) => {
+      if (!p.relationship) return false;
+      const pLow = p.relationship.trim().toLowerCase();
+      if ((relLow === "avô" || relLow === "avó") && (pLow === "avô" || pLow === "avó") && pLow !== relLow) {
+        return false;
+      }
+      return sameRel(p.relationship, rel);
+    }) ?? null
+  );
 }
 
 const STR: Record<string, Record<MemoryQueryLang, string>> = {
@@ -236,7 +269,7 @@ const REL_NAME_Q_RES: RegExp[] = [
   // «what is the name of my mom» caían al modelo sin memoria guardada.
   /what is my ([a-z -]+?)'?s name\??$/i,
   /what is the name of my ([a-z -]+?)\??$/i,
-  /como se chama (?:a )?minha? ([a-záéíóúãõç ]+?)\??$/i,
+  /como se chama (?:a )?minha? ([a-záéíóúãõçô ]+?)\??$/i,
   // G-M1-R1 (post-0.1.69, cruce de Grok): la forma española «¿cuál es
   // el nombre de mi X?» y su espejo portugués no estaban — la inglesa
   // entró en el barrido de paridad de la 0.1.34 y estas no. Sin patrón,
@@ -252,7 +285,7 @@ const REL_NAME_Q_RES: RegExp[] = [
   // fecha de intent.ts; el dictado sin acentos ni signos casa por las
   // clases (cu[aá]l, (?:é|e)) y la des-fusión previa (unfuseMi).
   /¿?cu[aá]l es el nombre de mi ([a-záéíóúñü ]+?)(?:[,\s]+(?:por favor|porfa))?\??$/i,
-  /qual (?:é|e) o nome d[aeo] (?:minha?|meu) ([a-záéíóúãõç ]+?)(?:[,\s]+por favor)?\??$/i,
+  /qual (?:é|e) o nome d[aeo] (?:minha?|meu) ([a-záéíóúãõçô ]+?)(?:[,\s]+por favor)?\??$/i,
 ];
 const SELF_NAME_Q_RES: RegExp[] = [
   /¿?c[oó]mo me llamo\??$/i,
