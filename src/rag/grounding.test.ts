@@ -486,6 +486,96 @@ describe("A3-03 — la dosis de un dígito sí se juzga en la pierna tipada", ()
 });
 
 // ---------------------------------------------------------------
+// T-J1 (barrido «revisa todo», J1): la pierna tipada entera estaba
+// cerrada por la pregunta — el mismo par de A3-03 se retiraba con
+// «¿Cuál es la dosis del jarabe?» y salía sellado fundado, con cita,
+// con «¿Cómo se toma el jarabe?» (la forma natural de preguntar por
+// una dosis), y también cuando la cifra falsa vivía en otra frase
+// de la evidencia. La cura mueve el ALCANCE de la pierna tipada, no
+// su vara: la afirmación ya tipada en la propia frase (categoría +
+// cópula + tipo) abre la regla aunque la pregunta no traiga señal.
+// La pierna de identidad sin cifras conserva la doble condición de
+// R-05, y sin pregunta la regla sigue sin actuar: ambas fronteras
+// quedan fijadas aquí como decisión, no como olvido.
+
+describe("T-J1 — la afirmación tipada abre la regla del dato sin señal en la pregunta", () => {
+  const NOTA: GroundingChunk = {
+    title: "nota",
+    body:
+      "La dosis del jarabe se toma con la comida. " +
+      "Tome el jarabe de 5 ml dos veces al día, después de comer.",
+  };
+  const NOTA_AYUNO: GroundingChunk = {
+    title: "nota",
+    body:
+      "La dosis del jarabe se toma con la comida. " +
+      "Tome el jarabe de 5 ml dos veces al día, después de comer. " +
+      "Ayune 9 horas antes de la primera toma.",
+  };
+  const FALSA = "La dosis del jarabe es 9 ml con la comida.";
+  const FIEL = "La dosis del jarabe es 5 ml con la comida.";
+  const Q_COMO = "¿Cómo se toma el jarabe?";
+
+  it("el par de A3-03 con pregunta sin señal se retira, como con la pregunta de dosis", () => {
+    const r = verifyGroundedAnswer(FALSA, [NOTA], "es", Q_COMO);
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("9 ml");
+    expect(r.text).toContain("Tome el jarabe de 5 ml dos veces al día, después de comer.");
+  });
+
+  it("la cifra falsa que vive en otra frase de la evidencia tampoco sella la dosis", () => {
+    const r = verifyGroundedAnswer(FALSA, [NOTA_AYUNO], "es", Q_COMO);
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("9 ml");
+  });
+
+  it("con señal pero sin tipo («¿cuánto jarabe…?») la afirmación tipada también se juzga", () => {
+    const r = verifyGroundedAnswer(FALSA, [NOTA], "es", "¿Cuánto jarabe hay que tomar?");
+    expect(r.status).toBe("abstained");
+    expect(r.removed).toBe(1);
+    expect(r.text).not.toContain("9 ml");
+  });
+
+  it("control fiel bajo la misma forma de pregunta: la dosis correcta sella como antes", () => {
+    const r = verifyGroundedAnswer(FIEL, [NOTA], "es", Q_COMO);
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+    expect(r.text).toBe("La dosis del jarabe es 5 ml con la comida [1].");
+  });
+
+  it("control de prosa: la frase no tipada con dígito único sigue fuera de la pierna", () => {
+    const r = verifyGroundedAnswer("Después de comer, tome el jarabe 2 veces al día.", [NOTA], "es", Q_COMO);
+    expect(r.status).toBe("grounded");
+    expect(r.removed).toBe(0);
+  });
+
+  it("la pierna de identidad SIN cifras conserva su puerta: sin señal en la pregunta no actúa", () => {
+    const doc: GroundingChunk = {
+      title: "documento",
+      body:
+        "Recordatorio de cita. Su cita es el martes 10 de noviembre de 2026. " +
+        "Para cambiar la cita llame al 520-555-0147. El número de emergencia es el 911.",
+    };
+    const r = verifyGroundedAnswer(
+      "El teléfono para cambiar la cita es el número de emergencia.",
+      [doc],
+      "es",
+      "¿Cómo cambio la cita?",
+    );
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("número de emergencia");
+  });
+
+  it("sin pregunta (llamadas antiguas de 3 argumentos), la regla sigue sin actuar", () => {
+    const r = verifyGroundedAnswer(FALSA, [NOTA], "es");
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("9 ml");
+  });
+});
+
+// ---------------------------------------------------------------
 // Ronda física 0.1.68, R-05: la pregunta del teléfono contra el
 // documento de la ronda. En la sesión real la recuperación mezcló el
 // documento con la guía de crisis (de ahí salían «teléfono»,

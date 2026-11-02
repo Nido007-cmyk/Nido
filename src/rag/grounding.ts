@@ -568,6 +568,12 @@ export function foreignCopyFix(sentence: string, recs: SourceSentenceRec[], lang
  * demás que hagan lo mismo se retiran. Si alguna frase conservada YA
  * da el dato, la regla no toca nada: afirmar junto al dato dado es
  * hablar del dato, no sustituirlo.
+ *
+ * T-J1 (barrido «revisa todo»): la doble condición sigue mandando
+ * en esta pierna de identidad sin cifras. La pierna tipada (la
+ * afirmación CON cifras que no casan con su tipo) ya no depende de
+ * la señal de la pregunta: su perímetro nuevo está asentado en el
+ * docstring de applyDatumRule.
  */
 
 // Señales de «la pregunta pide un dato»: la base de NUMBER_CUES
@@ -974,15 +980,16 @@ function datumScore(sentence: string, queryStems: Set<string>, phoneQuestion: bo
 }
 
 /**
- * La frase fuente que trae EL dato que la pregunta pide: la de mayor
- * datumScore entre las ELEGIBLES. Elegible = lleva cifras juzgables
- * y es el mismo tipo de dato que se pide (adversaria H-02): comparte
- * al menos una raíz sustantiva con la pregunta, o trae la forma
- * telefónica ante una pregunta de teléfono de verdad (la vía que
- * empareja entre idiomas, donde puede no haber raíces que
- * compartir). «Algún dígito temático» ya no basta: sin elegible, la
- * evidencia no contiene ese dato y no hay sustitución que hacer —
- * y menos con el dato de otro. Null si no hay elegible.
+ * La frase fuente que trae EL dato DEL TIPO pedido: la de mayor
+ * datumScore entre las portadoras del tipo. Elegible = lleva
+ * cifras juzgables y es el mismo tipo de dato que se pide
+ * (adversaria H-02): comparte al menos una raíz sustantiva con la
+ * pregunta, o trae la forma telefónica ante una pregunta de
+ * teléfono de verdad (la vía que empareja entre idiomas, donde
+ * puede no haber raíces que compartir). «Algún dígito temático» ya
+ * no basta: sin elegible, la evidencia no contiene ese dato y no
+ * hay sustitución que hacer — y menos con el dato de otro. Null si
+ * no hay elegible.
  *
  * ADV2-A (segunda adversaria, ADV2-01): con TIPO pedido, la
  * elegibilidad es traer un dato DE ESE TIPO — la frase del teléfono
@@ -992,34 +999,46 @@ function datumScore(sentence: string, queryStems: Set<string>, phoneQuestion: bo
  * primero en la fuente y el dato servido lo decidía el orden del
  * papel, no la pregunta (la acotación que la adversaria sugirió y
  * Grok midió en su corrida: desempate por tipo, no por aparición).
+ *
+ * T-J1 extrae esta pierna de pickDatumSentence para que la regla
+ * pueda pedir el dato de un tipo que no viene de la pregunta sino
+ * de la propia afirmación juzgada (el tipo se pasa, no se lee).
  */
+function pickTypedDatumSentence(
+  type: DatumType,
+  queryStems: Set<string>,
+  phoneQuestion: boolean,
+  recs: SourceSentenceRec[],
+): SourceSentenceRec | null {
+  const digitRecs = recs.filter((r) => hasJudgedDigit(r.text));
+  const carriers = digitRecs.filter((r) => carriesDatumOfType(r.text, type));
+  if (carriers.length === 0) return null;
+  let bestScore = -1;
+  let best: SourceSentenceRec[] = [];
+  for (const rec of carriers) {
+    const score = datumScore(rec.text, queryStems, phoneQuestion);
+    if (score > bestScore) {
+      bestScore = score;
+      best = [rec];
+    } else if (score === bestScore) {
+      best.push(rec);
+    }
+  }
+  if (best.length > 1 && best.some((r) => digitSignature(r.text) !== digitSignature(best[0].text))) return null;
+  if (bestScore >= 2) return best[0];
+  // Sin puntuación léxica (pregunta y fuente sin idioma común), el
+  // tipo es el único puente: vale si el portador es único; con
+  // varios y sin desempate honesto, no se sustituye.
+  return carriers.length === 1 ? best[0] : null;
+}
+
 function pickDatumSentence(query: string, recs: SourceSentenceRec[]): SourceSentenceRec | null {
   const queryStems = new Set(contentStems(query));
   const phoneQuestion = PHONE_QUESTION_RE.test(foldForCues(query));
   const askedType = datumTypeOfText(query);
   const digitRecs = recs.filter((r) => hasJudgedDigit(r.text));
 
-  if (askedType) {
-    const carriers = digitRecs.filter((r) => carriesDatumOfType(r.text, askedType));
-    if (carriers.length === 0) return null;
-    let bestScore = -1;
-    let best: SourceSentenceRec[] = [];
-    for (const rec of carriers) {
-      const score = datumScore(rec.text, queryStems, phoneQuestion);
-      if (score > bestScore) {
-        bestScore = score;
-        best = [rec];
-      } else if (score === bestScore) {
-        best.push(rec);
-      }
-    }
-    if (best.length > 1 && best.some((r) => digitSignature(r.text) !== digitSignature(best[0].text))) return null;
-    if (bestScore >= 2) return best[0];
-    // Sin puntuación léxica (pregunta y fuente sin idioma común), el
-    // tipo es el único puente: vale si el portador es único; con
-    // varios y sin desempate honesto, no se sustituye.
-    return carriers.length === 1 ? best[0] : null;
-  }
+  if (askedType) return pickTypedDatumSentence(askedType, queryStems, phoneQuestion, recs);
 
   let best: SourceSentenceRec | null = null;
   let bestScore = 0;
@@ -1154,13 +1173,35 @@ function assertsDatumIdentity(sentence: string): boolean {
  * Aplica la regla del dato pedido sobre las frases conservadas (kept
  * y prov caminan juntos): sustituye al primer infractor por la frase
  * fuente del dato y retira los demás infractores. Devuelve cuántas
- * frases se retiraron de más y si hubo sustitución. Sin pregunta, sin
- * señal en ella o sin el dato en la evidencia: no toca nada.
+ * frases se retiraron de más y si hubo sustitución. Sin pregunta o
+ * sin el dato en la evidencia: no toca nada.
  *
  * ADV2-A añade la segunda pierna (ADV-G1/G2): la afirmación CON
  * cifras del tipo pedido pero con las cifras de otro dato también
  * es infractora — se sustituye por el dato del tipo, o se retira si
  * la evidencia no trae ese tipo o si otra frase ya lo entregó bien.
+ *
+ * T-J1 (barrido «revisa todo», J1) — EL PERÍMETRO NUEVO, decidido
+ * con su demostración: hasta esta tanda la regla entera estaba
+ * cerrada por la pregunta — sin señal de dato en ella
+ * (DATUM_QUESTION_RE), la pierna tipada ni corría, y el par de
+ * A3-03 volvía a sellarse fundado en cuanto la pregunta era «¿Cómo
+ * se toma el jarabe?» en vez de «¿Cuál es la dosis?» (la forma
+ * natural de preguntar por una dosis). La vara del juez no se
+ * mueve; se mueve su ALCANCE, y solo en la pierna tipada: una
+ * afirmación que ya viene tipada en la propia frase (categoría +
+ * cópula + tipo nombrables por ella misma) y cuyas cifras no casan
+ * con ningún dato de ese tipo en la evidencia es infractora la
+ * pregunte lo que pregunte — la cuádruple condición de
+ * isTypedDatumOffender (nombra su tipo, afirma identidad con
+ * cópula, trae cifras, y esas cifras FALLAN contra el tipo) es tan
+ * estrecha como la señal que antes se exigía a la pregunta. La
+ * pierna de identidad SIN cifras conserva la doble condición de
+ * R-05 intacta (señal en la pregunta Y cifra temática en la
+ * evidencia): afirmar sin dar ningún número es otra clase de
+ * falsedad, con otro riesgo, y su puerta no se abre aquí. Sin
+ * pregunta (las llamadas antiguas de 3 argumentos), la regla sigue
+ * sin actuar: no hay turno al que responder.
  */
 export function applyDatumRule(
   kept: string[],
@@ -1169,13 +1210,77 @@ export function applyDatumRule(
   recs: SourceSentenceRec[],
 ): { removedExtra: number; replaced: boolean } {
   const none = { removedExtra: 0, replaced: false };
-  if (!query || !DATUM_QUESTION_RE.test(foldForCues(query))) return none;
+  if (!query) return none;
+  const querySignal = DATUM_QUESTION_RE.test(foldForCues(query));
   const askedType = datumTypeOfText(query);
-  const datum = pickDatumSentence(query, recs);
   const queryStems = new Set(contentStems(query));
   const phoneQuestion = PHONE_QUESTION_RE.test(foldForCues(query));
   let removedExtra = 0;
   let replaced = false;
+
+  // La pierna tipada (ADV-G1/G2), generalizada por tipo: cada
+  // afirmación infractora se sustituye por el dato DE SU TIPO si
+  // ninguna frase lo entregó bien, o se retira. Con un solo tipo
+  // en juego (el de la pregunta, el camino de siempre) el desenlace
+  // es el de antes, frase a frase.
+  const runTypedLeg = (
+    resolveType: (s: string) => DatumType | null,
+    datumForType: (t: DatumType) => SourceSentenceRec | null,
+  ): void => {
+    const offenders: { i: number; type: DatumType }[] = [];
+    kept.forEach((s, i) => {
+      if (prov[i].origin.kind === "abstain") return;
+      const t = resolveType(s);
+      if (t && isTypedDatumOffender(s, t, recs)) offenders.push({ i, type: t });
+    });
+    if (offenders.length === 0) return;
+    const offenderIdx = new Set(offenders.map((o) => o.i));
+    const typesInOrder: DatumType[] = [];
+    for (const o of offenders) if (!typesInOrder.includes(o.type)) typesInOrder.push(o.type);
+    const replaceAt = new Map<number, SourceSentenceRec>();
+    const removeIdx = new Set<number>();
+    for (const t of typesInOrder) {
+      const group = offenders.filter((o) => o.type === t);
+      const deliveredNow = kept.some(
+        (s, i) =>
+          !offenderIdx.has(i) &&
+          prov[i].origin.kind !== "abstain" &&
+          hasJudgedDigit(s) &&
+          digitsMatchType(s, t, recs) &&
+          (carriesDatumOfType(s, t) || datumTypeOfText(s) === t),
+      );
+      const datumT = deliveredNow ? null : datumForType(t);
+      if (!deliveredNow && datumT) {
+        replaceAt.set(group[0].i, datumT);
+        for (const o of group.slice(1)) removeIdx.add(o.i);
+      } else {
+        for (const o of group) removeIdx.add(o.i);
+      }
+    }
+    for (const [i, datumT] of replaceAt) {
+      const fixed = addCitation(datumT.text, datumT.chunk + 1);
+      kept[i] = fixed;
+      prov[i] = { text: fixed, origin: { kind: "source", n: datumT.chunk + 1, support: 1 } };
+      replaced = true;
+    }
+    for (const i of [...removeIdx].sort((a, b) => b - a)) {
+      kept.splice(i, 1);
+      prov.splice(i, 1);
+      removedExtra++;
+    }
+  };
+
+  // Sin señal en la pregunta, solo corre la pierna tipada, con el
+  // tipo que cada afirmación nombra de sí misma (T-J1).
+  if (!querySignal) {
+    runTypedLeg(
+      (s) => datumTypeOfText(s),
+      (t) => pickTypedDatumSentence(t, queryStems, phoneQuestion, recs),
+    );
+    return replaced || removedExtra > 0 ? { removedExtra, replaced } : none;
+  }
+
+  const datum = pickDatumSentence(query, recs);
 
   const typedOffender = (s: string): boolean => askedType !== null && isTypedDatumOffender(s, askedType, recs);
 
@@ -1209,42 +1314,19 @@ export function applyDatumRule(
     }
   }
 
-  // La afirmación CON cifras del tipo equivocado (ADV-G1/G2).
+  // La afirmación CON cifras del tipo equivocado (ADV-G1/G2). Con
+  // tipo pedido, ese y solo ese; con señal pero sin tipo («¿cuánto
+  // jarabe…?»), el de cada afirmación, como en la vía sin señal.
   if (askedType) {
-    const offenders: number[] = [];
-    kept.forEach((s, i) => {
-      if (prov[i].origin.kind !== "abstain" && typedOffender(s)) offenders.push(i);
-    });
-    if (offenders.length > 0) {
-      const deliveredNow = kept.some(
-        (s, i) =>
-          !offenders.includes(i) &&
-          prov[i].origin.kind !== "abstain" &&
-          hasJudgedDigit(s) &&
-          digitsMatchType(s, askedType, recs) &&
-          (carriesDatumOfType(s, askedType) || datumTypeOfText(s) === askedType),
-      );
-      if (!deliveredNow && datum) {
-        const first = offenders[0];
-        const fixed = addCitation(datum.text, datum.chunk + 1);
-        kept[first] = fixed;
-        prov[first] = { text: fixed, origin: { kind: "source", n: datum.chunk + 1, support: 1 } };
-        replaced = true;
-        for (const i of offenders.slice(1).reverse()) {
-          kept.splice(i, 1);
-          prov.splice(i, 1);
-          removedExtra++;
-        }
-      } else {
-        // Ya hay entrega buena (o no hay dato del tipo que servir):
-        // la afirmación falsa se retira, no se sustituye.
-        for (const i of offenders.slice().reverse()) {
-          kept.splice(i, 1);
-          prov.splice(i, 1);
-          removedExtra++;
-        }
-      }
-    }
+    runTypedLeg(
+      () => askedType,
+      () => datum,
+    );
+  } else {
+    runTypedLeg(
+      (s) => datumTypeOfText(s),
+      (t) => pickTypedDatumSentence(t, queryStems, phoneQuestion, recs),
+    );
   }
 
   return replaced || removedExtra > 0 ? { removedExtra, replaced } : none;
