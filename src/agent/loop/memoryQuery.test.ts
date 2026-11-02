@@ -1238,6 +1238,145 @@ describe("ADV-F6-C1 — el separador con la coma pegada al signo corta; el incis
   });
 });
 
+// PC-1 (pre-censo de la puerta de barrido, 2026-11-02 · cargo
+// confirmado que detiene la cadena): el hecho combinado separado
+// SOLO POR COMAS — sin signo, sin punto, sin conjunción — servía
+// la fecha de la primera cláusula con fecha a la segunda persona,
+// en los dos asientos y las tres lenguas (cinco desenlaces
+// cruzados medidos por el pre-censo sobre 82a121c). La
+// segmentación por conjunciones y por frase de las formas III–VI
+// no desenlaza la coma, y la paráfrasis de la frontera F-5
+// («cita honesta, nunca la fecha ajena») quedó refutada por la
+// medida: la plantilla AFIRMABA la fecha ajena. La cura no
+// convierte la coma en corte — su oficio de inciso es suelo
+// asentado de ADV-F3-C1 —: dentro del segmento, el subtramo de
+// comas que contiene el ancla manda si trae SU fecha
+// (commaSubSlice); sin fecha en su subtramo, el segmento entero
+// sigue mandando, y con él la frontera F-1, fixturada abajo en
+// su desenlace asentado para que nadie la «cure» de paso.
+describe("PC-1 — el hecho con dos cumpleaños separado solo por comas sirve la fecha de cada persona", () => {
+  const esComas: MemoryQueryData = {
+    people: [],
+    facts: [{ content: "El cumpleaños de mi abuelo es el 20 de junio, el de mi abuela es el 15 de marzo", category: "event" }],
+  };
+  const ptComas: MemoryQueryData = {
+    people: [],
+    facts: [{ content: "O aniversário do meu avô é 20 de junho, o da minha avó é 15 de março", category: "event" }],
+  };
+  const enComas: MemoryQueryData = {
+    people: [],
+    facts: [{ content: "My grandfather's birthday is June 20, my grandmother's birthday is March 15", category: "event" }],
+  };
+
+  it("es persona: la abuela sirve SU 15 de marzo; el abuelo, su 20 de junio ya no solo por posición", () => {
+    const abuela = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", esComas, "es");
+    expect(abuela).toContain("15 de marzo");
+    expect(abuela).not.toContain("20 de junio");
+    const abuelo = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuelo?", esComas, "es");
+    expect(abuelo).toContain("20 de junio");
+    expect(abuelo).not.toContain("15 de marzo");
+  });
+
+  it("pt persona: a avó serve o SEU 15 de março; o avô, o seu 20 de junho", () => {
+    const ava = answerMemoryQuery("quando é o aniversário da minha avó?", ptComas, "pt");
+    expect(ava).toContain("sua avó");
+    expect(ava).toContain("15 de março");
+    expect(ava).not.toContain("20 de junho");
+    const avo = answerMemoryQuery("quando é o aniversário do meu avô?", ptComas, "pt");
+    expect(avo).toContain("seu avô");
+    expect(avo).toContain("20 de junho");
+    expect(avo).not.toContain("15 de março");
+  });
+
+  it("en persona: grandmother serves HER March 15; grandfather, his June 20", () => {
+    const gm = answerMemoryQuery("when is my grandmother's birthday?", enComas, "en");
+    expect(gm).toContain("March 15");
+    expect(gm).not.toContain("June 20");
+    const gf = answerMemoryQuery("when is my grandfather's birthday?", enComas, "en");
+    expect(gf).toContain("June 20");
+    expect(gf).not.toContain("March 15");
+  });
+
+  it("es asiento propio invertido: mi fecha es el 3 de mayo, no el 15 de marzo de la abuela", () => {
+    const selfInv: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "El cumpleaños de mi abuela es el 15 de marzo, mi cumpleaños es el 3 de mayo", category: "event" }],
+    };
+    const r = answerMemoryQuery("¿cuándo es mi cumpleaños?", selfInv, "es");
+    expect(r).toContain("3 de mayo");
+    expect(r).not.toContain("15 de marzo");
+  });
+
+  it("pt/en asiento propio por comas: mi fecha, no la de la abuela", () => {
+    const ptSelf: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "o aniversário da minha avó é 15 de março, o meu aniversário é 5 de maio", category: "event" }],
+    };
+    const rPt = answerMemoryQuery("quando é o meu aniversário?", ptSelf, "pt");
+    expect(rPt).toContain("5 de maio");
+    expect(rPt).not.toContain("15 de março");
+    const enSelf: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "my grandmother's birthday is March 15, my birthday is May 5", category: "event" }],
+    };
+    const rEn = answerMemoryQuery("when is my birthday?", enSelf, "en");
+    expect(rEn).toContain("May 5");
+    expect(rEn).not.toContain("March 15");
+  });
+
+  it("cadena de tres cláusulas por comas: cada asiento sirve SU fecha", () => {
+    const tres: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuelo es el 20 de junio, el de mi abuela es el 15 de marzo, mi cumpleaños es el 3 de mayo", category: "event" }],
+    };
+    const abuela = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", tres, "es");
+    expect(abuela).toContain("15 de marzo");
+    expect(abuela).not.toContain("20 de junio");
+    const propio = answerMemoryQuery("¿cuándo es mi cumpleaños?", tres, "es");
+    expect(propio).toContain("3 de mayo");
+    expect(propio).not.toContain("15 de marzo");
+    expect(propio).not.toContain("20 de junio");
+    const abuelo = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuelo?", tres, "es");
+    expect(abuelo).toContain("20 de junio");
+    expect(abuelo).not.toContain("15 de marzo");
+  });
+
+  it("el ancla por nombre ata igual entre comas: Marta y Rosa", () => {
+    const byName: MemoryQueryData = {
+      people: [
+        { name: "Marta", relationship: "mamá" },
+        { name: "Rosa", relationship: "tía" },
+      ],
+      facts: [{ content: "el cumpleaños de Marta es el 15 de marzo, el de Rosa es el 20 de junio", category: "event" }],
+    };
+    const mama = answerMemoryQuery("¿cuándo es el cumpleaños de mi mamá?", byName, "es");
+    expect(mama).toContain("15 de marzo");
+    expect(mama).not.toContain("20 de junio");
+    const tia = answerMemoryQuery("¿cuándo es el cumpleaños de mi tía?", byName, "es");
+    expect(tia).toContain("20 de junio");
+    expect(tia).not.toContain("15 de marzo");
+  });
+
+  it("suelo: el inciso con decimal de coma («3,5») no parte la cláusula ni deja el ancla sin fecha", () => {
+    const inciso: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuela, que sacó 3,5 en el examen, es el 15 de marzo", category: "event" }],
+    };
+    const r = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuela?", inciso, "es");
+    expect(r).toContain("El cumpleaños de tu abuela es el");
+    expect(r).toContain("15 de marzo");
+  });
+
+  it("frontera asentada F-1 (ADV-F7-C1), NO es este cargo: la primera cláusula sin fecha cerrada por signo con coma pegada sigue sirviendo la fecha de la segunda", () => {
+    const frontera: MemoryQueryData = {
+      people: [],
+      facts: [{ content: "el cumpleaños de mi abuelo!, el de mi abuela es el 15 de marzo", category: "event" }],
+    };
+    const r = answerMemoryQuery("¿cuándo es el cumpleaños de mi abuelo?", frontera, "es");
+    expect(r).toContain("15 de marzo");
+  });
+});
+
 // B1+B2 (barrido «revisa todo», clase 1 · MEDIA): SELF se quedó sin
 // la forma que G-M1-R1 dio a REL — «¿cuál es mi nombre?» y «what is
 // my name?» (sin contraer) caían al modelo teniendo el hecho

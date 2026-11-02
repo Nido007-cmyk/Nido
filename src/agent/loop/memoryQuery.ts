@@ -468,6 +468,60 @@ function sentenceBreaks(fact: string): { start: number; after: number }[] {
   return out;
 }
 
+/** PC-1 (pre-censo de la puerta de barrido, 2026-11-02): dentro
+ *  del segmento que clauseSlice ya delimitó (conjunciones y
+ *  cortes de frase), la COMA sigue sin partir cláusulas — el
+ *  inciso es su oficio asentado (suelo de ADV-F3-C1: «…, que
+ *  vive en Tucson, …» no deja el ancla sin fecha) — pero el
+ *  hecho combinado unido SOLO por comas («El cumpleaños de mi
+ *  abuelo es el 20 de junio, el de mi abuela es el 15 de
+ *  marzo») dejaba el segmento en el tramo entero y la
+ *  extracción servía la fecha de la PRIMERA cláusula con fecha
+ *  a cualquier asiento, afirmada por plantilla. La cura no
+ *  parte nada: si el subtramo de comas que contiene el ancla
+ *  trae SU fecha, se sirve ese subtramo — la fecha dentro del
+ *  tramo de comas de la persona es la suya, esté donde esté la
+ *  cláusula —; si no la trae (inciso, título, paréntesis), null
+ *  y manda el segmento entero como hasta hoy, y con él sus
+ *  desenlaces asentados: el inciso sirve la fecha tras sus
+ *  comas y la frontera F-1 (primera cláusula SIN fecha cerrada
+ *  por signo con coma pegada) sigue sirviendo la fecha de la
+ *  segunda, porque su subtramo tampoco trae fecha y distinguir
+ *  ese caso es el aparato diferido que su tanda nombró. La
+ *  presencia se mide con el mismo extractor que sirve la
+ *  fecha, como en clauseServesDateBefore. La coma entre
+ *  dígitos («3,5») no es frontera ni aquí: es la guarda
+ *  decimal de la familia del punto. Un subtramo de más solo
+ *  puede ENCOGER lo servido hacia la cláusula del ancla —
+ *  nunca trae la fecha de otra cláusula. */
+function commaSubSlice(
+  fact: string,
+  start: number,
+  end: number,
+  from: number,
+  to: number
+): string | null {
+  const ranges: { s: number; e: number }[] = [];
+  let prev = start;
+  for (let i = start + 1; i < end; i++) {
+    if (fact[i] !== ",") continue;
+    const before = fact[i - 1];
+    const afterCh = fact[i + 1];
+    if (before !== undefined && afterCh !== undefined && /\d/.test(before) && /\d/.test(afterCh)) {
+      continue;
+    }
+    ranges.push({ s: prev, e: i });
+    prev = i + 1;
+  }
+  if (!ranges.length) return null;
+  ranges.push({ s: prev, e: end });
+  const mine = ranges.find((r) => from >= r.s && to <= r.e);
+  if (!mine) return null;
+  const text = fact.slice(mine.s, mine.e);
+  if (extractDateISO(text) === null) return null;
+  return text.replace(/^[\s,;]+|[\s,;]+$/g, "");
+}
+
 /** La cláusula de un hecho que contiene el tramo [from, to): desde
  *  la frontera anterior hasta la siguiente, donde frontera es la
  *  conjunción suelta de tokens o el corte de frase del texto crudo
@@ -488,7 +542,10 @@ function clauseSlice(fact: string, tokens: FactToken[], from: number, to: number
     if (b.after <= from) start = Math.max(start, b.after);
     if (b.start >= to) end = Math.min(end, b.start);
   }
-  return fact.slice(start, end).replace(/^[\s,;]+|[\s,;]+$/g, "");
+  // PC-1: dentro del segmento, el subtramo de comas del ancla
+  // manda si trae su fecha; si no, el segmento entero, como
+  // hasta hoy (ver commaSubSlice).
+  return commaSubSlice(fact, start, end, from, to) ?? fact.slice(start, end).replace(/^[\s,;]+|[\s,;]+$/g, "");
 }
 
 /** ADV-F3-C1, asiento propio (medido al ejecutar esta tanda, en las
