@@ -3,16 +3,18 @@ title: RCP em adultos e crianças maiores
 category: Primeiros socorros
 lang: pt
 sources: AHA, Guias de RCP e atendimento cardiovascular de emergência 2025; Cruz Vermelha Americana; IFRC, Diretrizes de primeiros socorros 2020
-questions: como fazer rcp em um adulto | meu pai desmaiou e não respira, o que eu faço | a que ritmo faço as compressões no peito | quantas compressões e quantas respirações na rcp | pessoa não responde e não respira, o que eu faço
+questions: como fazer rcp em um adulto | meu pai desmaiou e não respira, o que eu faço | a que ritmo faço as compressões no peito | quantas compressões e quantas respirações na rcp | pessoa não responde e não respira, o que eu faço | meu avô caiu no chão e não respira | minha mãe caiu, não responde e não respira, o que eu faço | ele caiu e parou de respirar, o que fazer
 ---
 Se uma pessoa desaba, não responde e não respira normalmente (ou só ofega), o coração dela provavelmente parou. Cada minuto sem RCP reduz muito a chance de sobreviver. Começar rápido é o mais importante: não tenha medo de fazer "errado"; não fazer nada é pior.
 
 ## Antes de começar
+<!-- perguntas: uma pessoa desmaiou e não respira | meu amigo desmaiou e não está respirando, o que eu faço | caiu, não responde e não respira, o que fazer | desmaiou e não respira, o que eu faço -->
 - Confira se o local é seguro.
 - Toque nos ombros dela e fale alto. Se não responder, olhe se ela respira normalmente (no máximo 10 segundos).
 - Peça a alguém que ligue para o número de emergência e traga um desfibrilador (DEA). Se estiver sozinho, ligue você no viva-voz e comece.
 
 ## Compressões no peito
+<!-- perguntas: um homem caiu na rua e não respira | ele desabou e não está respirando -->
 1. Deite a pessoa de costas sobre uma superfície dura (o chão).
 2. Ajoelhe-se ao lado dela. Coloque a base de uma mão no centro do peito (metade inferior do esterno) e a outra mão por cima.
 3. Braços retos e ombros bem acima das mãos. Empurre para baixo com o peso do corpo.

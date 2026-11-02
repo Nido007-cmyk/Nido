@@ -15,6 +15,7 @@ Resfriar logo uma queimadura com água reduz o dano e a dor. É o mais important
 5. Para a dor, podem servir analgésicos comuns, se a pessoa puder tomá-los.
 
 ## O que NÃO fazer
+<!-- perguntas: posso colocar gelo na queimadura | queimei a mão no fogão, coloco gelo | passar gelo ou água gelada na queimadura, pode | me queimei, posso pôr gelo -->
 - Não coloque gelo nem água gelada.
 - Não passe pasta de dente, óleo, manteiga, ovo nem remédios caseiros em queimaduras graves.
 - Não estoure as bolhas.
