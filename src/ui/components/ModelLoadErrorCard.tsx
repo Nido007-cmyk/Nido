@@ -151,7 +151,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     letterSpacing: 0.5,
   },
   badgeTextAmber: {
-    color: colors.text.accentAmber,
+    // S-03: texto ámbar menudo — en Daylight, el ámbar corregido
+    // (amber.600); accentAmber queda para iconos y titulares.
+    color: colors.id === "daylight" ? colors.amber[600] : colors.text.accentAmber,
   },
   badgeTextDanger: {
     color: colors.crimson[400],

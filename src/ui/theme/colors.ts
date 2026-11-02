@@ -17,9 +17,20 @@ import { ThemeId } from "../../models/settings";
 /**
  * Tier 2 visual direction (frozen 2026-09-27): Daylight is the primary
  * reference, Night Garden the designed dark theme. Tokens transcribed
- * verbatim from ~/workspace/nido-visual-audit/mockups/tier2/ (TIER2_NOTES.md
- * Part B — all contrast pairs measured PASS). Mapped onto the shared Colors
- * shape so existing semantic slots keep working.
+ * from ~/workspace/nido-visual-audit/mockups/tier2/ (TIER2_NOTES.md
+ * Part B). Mapped onto the shared Colors shape so existing semantic
+ * slots keep working.
+ *
+ * 2026-11-01 (tanda S, S-03): a WCAG recomputation over these tokens
+ * found the small-text greys and the Daylight amber text colour below
+ * AA on the darker surfaces, so the header no longer claims every pair
+ * passes. Corrected in place: text.muted and text.dim in both themes
+ * (margin values for the 9–10 px text they carry) and Daylight
+ * amber.600 (the colour amber text uses in Daylight). text.accentAmber
+ * in Daylight stays the icon, border and large-heading amber and is
+ * never body or micro text (3.64 at best as text). Night crimson.600
+ * keeps its token value; its named small-text uses take crimson.400 in
+ * Night instead (PanicButton label, ChatScreen call buttons).
  */
 export const daylightTheme = {
   id: "daylight" as ThemeId,
@@ -53,8 +64,8 @@ export const daylightTheme = {
     primary: "#1E241D",
     heading: "#1E241D",
     secondary: "#5A6357",
-    muted: "#676C65",
-    dim: "#6B7268",
+    muted: "#5A5E58",
+    dim: "#595F57",
     inverse: "#FFFFFF",
     accentEmerald: "#4A6B4F",
     accentCyan: "#4A6B4F",
@@ -94,7 +105,7 @@ export const daylightTheme = {
   amber: {
     400: "#C99A4A",
     500: "#B07C2A",
-    600: "#8F6420",
+    600: "#875E1E",
     bgSubtle: "rgba(176, 124, 42, 0.12)",
     border: "rgba(176, 124, 42, 0.35)",
   },
@@ -140,8 +151,8 @@ export const nightGardenTheme = {
     primary: "#EDEBE3",
     heading: "#EDEBE3",
     secondary: "#A8B09F",
-    muted: "#8A9185",
-    dim: "#7E8878",
+    muted: "#A1A69D",
+    dim: "#A0A79B",
     inverse: "#10140F",
     accentEmerald: "#9DBE8C",
     accentCyan: "#9DBE8C",

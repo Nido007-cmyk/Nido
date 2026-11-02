@@ -68,6 +68,11 @@ export function PanicButton({ onWiped, onError }: Props) {
     timer.current = setTimeout(() => void wipe(), PANIC_HOLD_MS);
   }, [cancel, progress, wipe, wiping]);
 
+  // S-03: la etiqueta es texto carmesí menudo. En Night, crimson.600
+  // como texto no llega a AA (2.83–4.02) y crimson.400 sí (4.65–6.62),
+  // sin tocar ningún token; en Daylight crimson.600 pasa y se queda.
+  const crimsonTextColor = colors.id === "nightgarden" ? colors.crimson[400] : colors.crimson[600];
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -85,7 +90,7 @@ export function PanicButton({ onWiped, onError }: Props) {
           paddingHorizontal: 10,
         },
         fill: { position: "absolute", left: 0, top: 0, bottom: 0, backgroundColor: colors.crimson.border },
-        label: { color: colors.crimson[600], fontSize: 12, fontWeight: "700" },
+        label: { color: crimsonTextColor, fontSize: 12, fontWeight: "700" },
       }),
     [colors],
   );
@@ -111,7 +116,7 @@ export function PanicButton({ onWiped, onError }: Props) {
           style={[styles.fill, { width: progress.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }) }]}
         />
         {/* 0.1.55: a shield, not «SOS»: the Emergency tab is where you ask for help. */}
-        <NidoIcon name="security" size={14} color={colors.crimson[600]} />
+        <NidoIcon name="security" size={14} color={crimsonTextColor} />
         <Text style={styles.label}>{wiping ? t("panic.wiping") : t("panic.short")}</Text>
       </View>
     </Pressable>

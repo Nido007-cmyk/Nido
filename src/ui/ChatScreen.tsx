@@ -248,6 +248,13 @@ export function ChatScreen({
 }) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  // S-03 (contraste AA): en Daylight el texto ámbar menudo usa el ámbar
+  // corregido (amber.600); accentAmber queda para iconos, bordes y
+  // titulares grandes. En Night accentAmber pasa como texto y se queda.
+  // Y el texto carmesí menudo en Night usa crimson.400, que pasa en las
+  // cuatro superficies sin tocar el token crimson.600.
+  const amberTextColor = colors.id === "daylight" ? colors.amber[600] : colors.text.accentAmber;
+  const crimsonTextColor = colors.id === "nightgarden" ? colors.crimson[400] : colors.crimson[600];
   const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   // 0.1.59: «Abrir la guía completa» under a verbatim guide answer.
@@ -2524,7 +2531,7 @@ export function ChatScreen({
                             : { backgroundColor: colors.bg.surface, borderColor: colors.border.default },
                         ]}
                       >
-                        <Text style={[styles.callBtnText, { color: i === 0 ? colors.text.inverse : colors.crimson[600] }]}>
+                        <Text style={[styles.callBtnText, { color: i === 0 ? colors.text.inverse : crimsonTextColor }]}>
                           {`${t("emergency.call")} ${c.value}`}
                         </Text>
                       </Pressable>
@@ -2554,14 +2561,14 @@ export function ChatScreen({
                     on non-empty text so stopped/empty replies don't show it. */}
                 {item.noSourcesFound && item.text.length > 0 && (
                   <View style={[styles.stoppedBadge, { backgroundColor: colors.amber.bgSubtle, borderColor: colors.amber.border }]}>
-                    <Text style={[styles.stoppedTag, { color: colors.text.accentAmber }]}>{t("chatScreen.noRelevantOfflineSources")}</Text>
+                    <Text style={[styles.stoppedTag, { color: amberTextColor }]}>{t("chatScreen.noRelevantOfflineSources")}</Text>
                   </View>
                 )}
 
                 {item.stopped && (
                   <View style={[styles.stoppedBadge, styles.stoppedBadgeRow, { backgroundColor: colors.amber.bgSubtle, borderColor: colors.amber.border }]}>
-                    <NidoIcon name="stop" size={12} color={colors.text.accentAmber} />
-                    <Text style={[styles.stoppedTag, { color: colors.text.accentAmber }]}>{t("chatScreen.stoppedByUser")}</Text>
+                    <NidoIcon name="stop" size={12} color={amberTextColor} />
+                    <Text style={[styles.stoppedTag, { color: amberTextColor }]}>{t("chatScreen.stoppedByUser")}</Text>
                   </View>
                 )}
 
@@ -2569,15 +2576,15 @@ export function ChatScreen({
                   // §4D glyph mapping (2026-10-05): ⏱ → NidoIcon "warning".
                   // Amber attention tag; meaning preserved, no longer text-only.
                   <View style={[styles.stoppedBadge, styles.stoppedBadgeRow, { backgroundColor: colors.amber.bgSubtle, borderColor: colors.amber.border }]}>
-                    <NidoIcon name="warning" size={12} color={colors.text.accentAmber} />
-                    <Text style={[styles.stoppedTag, { color: colors.text.accentAmber }]}>{t("chatScreen.stageTimedOut")}</Text>
+                    <NidoIcon name="warning" size={12} color={amberTextColor} />
+                    <Text style={[styles.stoppedTag, { color: amberTextColor }]}>{t("chatScreen.stageTimedOut")}</Text>
                   </View>
                 )}
 
                 {item.interrupted && (
                   <View style={[styles.stoppedBadge, styles.stoppedBadgeRow, { backgroundColor: colors.amber.bgSubtle, borderColor: colors.amber.border }]}>
-                    <NidoIcon name="pause" size={12} color={colors.text.accentAmber} />
-                    <Text style={[styles.stoppedTag, { color: colors.text.accentAmber }]}>{t("chatScreen.interrupted")}</Text>
+                    <NidoIcon name="pause" size={12} color={amberTextColor} />
+                    <Text style={[styles.stoppedTag, { color: amberTextColor }]}>{t("chatScreen.interrupted")}</Text>
                   </View>
                 )}
 

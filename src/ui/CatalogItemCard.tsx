@@ -470,7 +470,9 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   compatAmberText: {
     ...typography.mono.xs,
-    color: colors.text.accentAmber,
+    // S-03: texto ámbar menudo — en Daylight, el ámbar corregido
+    // (amber.600); accentAmber queda para iconos y titulares.
+    color: colors.id === "daylight" ? colors.amber[600] : colors.text.accentAmber,
     fontWeight: "700",
   },
   compatRed: {
@@ -519,7 +521,8 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   badgeTextAmber: {
     ...typography.mono.xs,
     fontSize: 9,
-    color: colors.text.accentAmber,
+    // S-03: texto ámbar menudo — en Daylight, el ámbar corregido.
+    color: colors.id === "daylight" ? colors.amber[600] : colors.text.accentAmber,
     fontWeight: "800",
   },
   errorIcon: {
@@ -597,7 +600,8 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
   },
   metricEtaText: {
     ...typography.mono.xs,
-    color: colors.text.accentAmber,
+    // S-03: texto ámbar menudo — en Daylight, el ámbar corregido.
+    color: colors.id === "daylight" ? colors.amber[600] : colors.text.accentAmber,
     fontWeight: "600",
     fontVariant: ["tabular-nums"],
   },
