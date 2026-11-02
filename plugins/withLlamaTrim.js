@@ -33,17 +33,41 @@
  * prebuild y solo los plugins sobreviven; y los assets HTP los copia
  * la tarea `syncRNLlamaHtpAssets` del propio llama.rn en cada build
  * (desde node_modules a app/src/main/assets), así que borrar la
- * carpeta a mano no sobrevive ni a un build. La exclusión va en tres
- * capas, cada una suficiente donde aplica:
+ * carpeta a mano no sobrevive ni a un build. La exclusión va en
+ * capas (la cuarta es la que cierra los assets en el binario real;
+ * su párrafo va tras el del juez):
  *  1. `packagingOptions.jniLibs.excludes` para la pareja .so.
  *  2. `packagingOptions.resources.excludes` para los assets HTP.
  *  3. `sourceSets.main.assets.exclude` para que mergeAssets ni los
  *     recoja de la carpeta que la tarea de sincronía rellena.
+ *  4. La poda del intermedio fusionado, en el `doLast` de
+ *     `merge<Variant>Assets` (P-02 assets + P-05 enteros).
  * El juez final no es este fichero: es el diff de listado del APK
  * reconstruido, cableado en CI (paso «Recortes de APK en el listado»
  * de android-apk.yml), porque un error tipográfico en una lista de
  * exclusiones elimina una variante EN SILENCIO — la escalera cubre
  * al usuario y nadie lo notaría sin la comprobación.
+ *
+ * CUARTA CAPA (tanda del mecanismo, 2026-11-01; cargo de la corrida
+ * 41375422202): en el binario real, las capas 2 y 3 NO alcanzan a los
+ * assets. La corrida lo midió: la pareja JNI salió (capa 1) y las
+ * tablas PQC salieron (la propiedad, porque son recursos Java dentro
+ * de un jar), pero los 4 `.so` HTP y los ~100 mapas cmap/ entraron
+ * enteros. Los cmap llegan fusionados desde el AAR de fontbox y los
+ * HTP los copia `syncRNLlamaHtpAssets` a `src/main/assets` en tiempo
+ * de build; las tareas de fusión de assets de AGP no consultan ni
+ * `packagingOptions.resources.excludes` ni el `sourceSets` de la app
+ * para ese material. La cura actúa donde ya no hay origen que
+ * distinga: el intermedio de assets YA fusionados. El bloque gradle
+ * engancha `merge<Variant>Assets` y, en su `doLast` — antes de que
+ * `compress<Variant>Assets` y `package<Variant>` lo consuman — borra
+ * el directorio `ggml-hexagon/` entero y todo fichero de `cmap/` que
+ * no sea uno de los 4 supervivientes. La tarea se declara nunca
+ * al día (`upToDateWhen { false }`): si la fusión se saltara por
+ * incremental, el `doLast` no correría y el intermedio sin podar
+ * llegaría al APK en silencio; la fusión es una copia barata y se
+ * repite siempre. Si el asiento no aparece o un borrado falla, la
+ * build cae en voz alta (GradleException), nunca pasa sin podar.
  */
 const { withAppBuildGradle, withGradleProperties } = require("@expo/config-plugins");
 
@@ -100,6 +124,16 @@ const CMAP_PATTERNS = [
 const CMAP_KEPT = ["Identity-H", "Identity-V", "H", "V"];
 
 /**
+ * Las rutas de P-02/P-05 DENTRO del intermedio de assets fusionados
+ * (la cuarta capa): el intermedio no lleva el prefijo `assets/` del
+ * APK — es el árbol que luego se empaqueta bajo `assets/` — así que
+ * se derivan de las constantes de arriba quitando ese prefijo, para
+ * que una sola fuente mande en las dos formas de la misma ruta.
+ */
+const HTP_MERGED_DIR = HTP_ASSET_PATTERN.replace(/^assets\//, "").replace(/\/\*\*$/, "");
+const CMAP_MERGED_DIR = CMAP_DIR.replace(/^assets\//, "");
+
+/**
  * La lista plana de exclusiones de empaquetado (P-02 HTP + P-04 +
  * P-05). Viaja por DOS asientos a la vez: la propiedad
  * `android.packagingOptions.excludes` de gradle.properties — el
@@ -146,9 +180,40 @@ function applyLlamaTrimBlock(gradle) {
   }
   const jniList = TRIMMED_JNI_LIBS.map((p) => `                "${p}"`).join(",\n");
   const resList = PACKAGING_EXCLUDES.map((p) => `                "${p}"`).join(",\n");
+  const cmapKeptList = CMAP_KEPT.map((n) => `"${n}"`).join(", ");
+  // La cuarta capa (ver la cabecera): poda del intermedio de assets
+  // ya fusionados en el doLast de merge<Variant>Assets. Sin `${` en
+  // el Groovy generado salvo las literales inyectadas desde las
+  // constantes de arriba: una sola fuente para cada ruta.
+  const pruneBlock = `
+// ${MARKER} · poda del intermedio fusionado (P-02 assets + P-05)
+tasks.matching { t -> ["mergeReleaseAssets", "mergeDebugAssets"].contains(t.name) }.configureEach { t ->
+    t.outputs.upToDateWhen { false }
+    t.doLast {
+        def mergedAssetsDir = t.outputs.files.files.find { f -> f.isDirectory() }
+        if (mergedAssetsDir == null) {
+            throw new GradleException("[withLlamaTrim] mergeAssets sin directorio de salida: la poda no tiene asiento")
+        }
+        def htpMergedDir = new File(mergedAssetsDir, "${HTP_MERGED_DIR}")
+        if (htpMergedDir.isDirectory() && !htpMergedDir.deleteDir()) {
+            throw new GradleException("[withLlamaTrim] no se pudo podar " + htpMergedDir)
+        }
+        def cmapKept = [${cmapKeptList}]
+        def cmapMergedDir = new File(mergedAssetsDir, "${CMAP_MERGED_DIR}")
+        if (cmapMergedDir.isDirectory()) {
+            cmapMergedDir.listFiles().each { f ->
+                if (f.isFile() && !cmapKept.contains(f.name) && !f.delete()) {
+                    throw new GradleException("[withLlamaTrim] no se pudo podar " + f)
+                }
+            }
+        }
+    }
+}
+`;
   return (
     gradle.replace(/\s*$/, "\n") +
-    `\n// ${MARKER}\nandroid {\n    packagingOptions {\n        jniLibs {\n            excludes += [\n${jniList}\n            ]\n        }\n        resources {\n            excludes += [\n${resList}\n            ]\n        }\n    }\n    sourceSets {\n        main {\n            assets {\n                exclude "ggml-hexagon/**"\n            }\n        }\n    }\n}\n`
+    `\n// ${MARKER}\nandroid {\n    packagingOptions {\n        jniLibs {\n            excludes += [\n${jniList}\n            ]\n        }\n        resources {\n            excludes += [\n${resList}\n            ]\n        }\n    }\n    sourceSets {\n        main {\n            assets {\n                exclude "ggml-hexagon/**"\n            }\n        }\n    }\n}\n` +
+    pruneBlock
   );
 }
 
@@ -199,6 +264,8 @@ module.exports.HTP_ASSET_PATTERN = HTP_ASSET_PATTERN;
 module.exports.PQC_PATTERN = PQC_PATTERN;
 module.exports.CMAP_PATTERNS = CMAP_PATTERNS;
 module.exports.CMAP_KEPT = CMAP_KEPT;
+module.exports.HTP_MERGED_DIR = HTP_MERGED_DIR;
+module.exports.CMAP_MERGED_DIR = CMAP_MERGED_DIR;
 module.exports.PACKAGING_EXCLUDES = PACKAGING_EXCLUDES;
 module.exports.PACKAGING_PROPERTY_KEY = PACKAGING_PROPERTY_KEY;
 module.exports.MARKER = MARKER;

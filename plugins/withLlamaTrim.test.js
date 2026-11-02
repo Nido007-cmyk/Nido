@@ -27,6 +27,9 @@ const {
   HTP_ASSET_PATTERN,
   PACKAGING_EXCLUDES,
   PACKAGING_PROPERTY_KEY,
+  CMAP_KEPT,
+  HTP_MERGED_DIR,
+  CMAP_MERGED_DIR,
 } = withLlamaTrim;
 
 const CMAP_DIR = "assets/com/tom_roush/fontbox/resources/cmap";
@@ -243,5 +246,50 @@ describe("withLlamaTrim · P-04/P-05", () => {
   it("el bloque gradle lleva la lista plana entera en resources", () => {
     const out = applyLlamaTrimBlock("android {\n}\n");
     for (const p of PACKAGING_EXCLUDES) expect(out).toContain(`"${p}"`);
+  });
+});
+
+// La cuarta capa nace del fuego real de la corrida 41375422202: las
+// capas 2 y 3 no alcanzan a los assets fusionados (AAR de fontbox +
+// la copia de syncRNLlamaHtpAssets), así que el bloque poda el
+// intermedio de merge<Variant>Assets. Estos tests fijan el asiento
+// (las dos variantes), el nunca-al-día que garantiza que el doLast
+// corre, y que las rutas y la lista de supervivientes del Groovy
+// generado son las mismas constantes que juzga el resto del fichero.
+describe("withLlamaTrim · poda del intermedio fusionado", () => {
+  it("las rutas fusionadas derivan de las del APK quitando assets/", () => {
+    expect(HTP_ASSET_PATTERN).toBe(`assets/${HTP_MERGED_DIR}/**`);
+    expect(HTP_MERGED_DIR).toBe("ggml-hexagon");
+    expect(CMAP_DIR).toBe(`assets/${CMAP_MERGED_DIR}`);
+    expect(CMAP_MERGED_DIR).toBe("com/tom_roush/fontbox/resources/cmap");
+  });
+
+  it("el bloque engancha merge de release y debug, nunca al día, y poda en doLast", () => {
+    const out = applyLlamaTrimBlock("android {\n}\n");
+    expect(out).toContain('"mergeReleaseAssets"');
+    expect(out).toContain('"mergeDebugAssets"');
+    expect(out).toContain("upToDateWhen { false }");
+    expect(out).toContain("doLast");
+    expect(out).toContain("deleteDir()");
+    // Fail-closed: sin asiento o con un borrado fallido, la build cae.
+    expect(out).toContain("GradleException");
+  });
+
+  it("el Groovy generado poda el directorio HTP entero y cmap/ salvo los 4", () => {
+    const out = applyLlamaTrimBlock("android {\n}\n");
+    expect(out).toContain(`new File(mergedAssetsDir, "${HTP_MERGED_DIR}")`);
+    expect(out).toContain(`new File(mergedAssetsDir, "${CMAP_MERGED_DIR}")`);
+    // La lista de supervivientes del Groovy es CMAP_KEPT, en su orden.
+    const keptLine = out.split("\n").find((l) => l.includes("def cmapKept"));
+    expect(keptLine).toBeDefined();
+    for (const n of CMAP_KEPT) expect(keptLine).toContain(`"${n}"`);
+    expect(CMAP_KEPT).toEqual(["Identity-H", "Identity-V", "H", "V"]);
+  });
+
+  it("la poda no nombra la pareja genérica ni ningún otro lib de llama", () => {
+    const out = applyLlamaTrimBlock("android {\n}\n");
+    const prune = out.slice(out.indexOf("poda del intermedio fusionado"));
+    for (const kept of KEPT_LLAMA_LIBS) expect(prune).not.toContain(kept);
+    expect(prune).not.toContain("librnllama");
   });
 });
