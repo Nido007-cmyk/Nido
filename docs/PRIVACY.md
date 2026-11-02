@@ -33,8 +33,9 @@ Real hashes are pinned during the release process
 ### 5. sha256 verification after download (`ModelManager`)
 - Assets ≤ 256 MB (embeddings, corpus): sha256 verification **mandatory**
   after download; mismatch = file deleted + error.
-- Multi-GB LLMs: on-demand verification from Settings
-  (`verifyChecksum()` already existed; verifying GBs in JS would OOM).
+- Multi-GB LLMs: verification inside the download flow
+  (`ModelManager.verifyChecksum`); a manual verify button in Settings
+  is still pending.
 
 ### 6. Network-less agent layer by construction
 - `src/agent/tools/manifest.ts`: local tools only. Rule:
@@ -43,18 +44,37 @@ Real hashes are pinned during the release process
 - `src/agent/tools/dispatcher.ts`: deterministic validation — the model
   cannot invoke nonexistent tools or invent parameters.
 
+### 7. SQLCipher build, key in the Android Keystore (`src/security/databaseManager.ts`)
+The database always opens with the SQLCipher variant of expo-sqlite and
+fails closed when the key is unavailable (`databaseManager.ts:21`). The
+key is a random 256-bit value generated on first launch and held by the
+Android Keystore (`src/privacy/keyManager.ts:400`). In 0.1.69 the
+database was proven against the real SQLCipher engine.
+
+### 8. `rag/db.ts` migrated to the same encryption (`src/rag/db.ts`)
+`src/rag/db.ts:335` opens encrypted, with a plaintext→SQLCipher
+migration that fails closed. `settings.ts` has not migrated — it is
+the remaining item in Pending below.
+
+### 9. Biometric lock (`src/security/biometricGate.ts`)
+Opening the app can be gated by fingerprint or face; the user-facing
+description is in the root `PRIVACY.md`.
+
+### 10. Audit screen (`src/ui/NetworkAuditCard.tsx`)
+Settings › Security and privacy shows the network audit log
+(`networkAudit.list()`); the log has persisted across restarts
+since 0.1.62.
+
 ## Pending (later phases)
 
-- [ ] **SQLCipher**: `src/agent/memory/memoryStore.ts` already emits
-      `PRAGMA key` and fails closed if SQLite doesn't ship cipher.
-      Missing: build with the SQLCipher variant of expo-sqlite + key
-      generated in Android Keystore on first launch.
-- [ ] **Migrate `rag/db.ts` and `settings.ts`** to the same encryption.
+- [ ] **Migrate `settings.ts`** to the same encryption: `settings.json`
+      still lives in plain text in the app's private storage
+      (`src/models/settings.ts:80`).
 - [ ] **On-device voice**: replace `modules/voice-input`
       (system SpeechRecognizer) with whisper.cpp.
-- [ ] **Biometric lock** when opening the app.
-- [ ] **Audit screen** in Settings (list `networkAudit.list()`).
-- [ ] **"Verify integrity" button** in Settings → Models for large LLMs.
+- [ ] **"Verify integrity" button** in Settings → Models for large LLMs:
+      `verifyChecksum()` runs inside the download flow, but no screen
+      calls it as a manual check yet.
 
 ## P2P transport security notes
 

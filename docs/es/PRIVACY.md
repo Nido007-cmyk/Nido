@@ -34,8 +34,9 @@ Los hashes reales se fijan en el proceso de release
 ### 5. Verificación sha256 tras descargar (`ModelManager`)
 - Assets ≤ 256 MB (embeddings, corpus): sha256 **obligatorio** tras la
   descarga; mismatch = archivo eliminado + error.
-- LLMs multi-GB: verificación bajo demanda desde Ajustes
-  (`verifyChecksum()` ya existía; verificar GBs en JS haría OOM).
+- LLMs multi-GB: verificación dentro del flujo de descarga
+  (`ModelManager.verifyChecksum`); un botón manual de verificación en
+  Ajustes sigue pendiente.
 
 ### 6. Capa de agente sin red por construcción
 - `src/agent/tools/manifest.ts`: solo herramientas locales. Regla:
@@ -44,18 +45,38 @@ Los hashes reales se fijan en el proceso de release
 - `src/agent/tools/dispatcher.ts`: validación determinista — el modelo
   no puede invocar herramientas inexistentes ni inventar parámetros.
 
+### 7. Build SQLCipher, clave en el Keystore de Android (`src/security/databaseManager.ts`)
+La base se abre siempre con la variante SQLCipher de expo-sqlite y
+falla cerrado cuando la clave no está disponible
+(`databaseManager.ts:21`). La clave es un valor aleatorio de 256 bits
+generado al primer arranque y custodiado por el Keystore de Android
+(`src/privacy/keyManager.ts:400`). En la 0.1.69 la base se probó
+contra el motor SQLCipher real.
+
+### 8. `rag/db.ts` migrado al mismo cifrado (`src/rag/db.ts`)
+`src/rag/db.ts:335` abre cifrado, con una migración de texto plano a
+SQLCipher que falla cerrado. `settings.ts` no ha migrado: es el punto
+que queda en Pendiente, abajo.
+
+### 9. Bloqueo biométrico (`src/security/biometricGate.ts`)
+La apertura de la app puede exigir huella o rostro; la descripción
+para el usuario está en la `PRIVACY.md` de la raíz.
+
+### 10. Pantalla de auditoría (`src/ui/NetworkAuditCard.tsx`)
+Ajustes › Seguridad y privacidad muestra el registro de auditoría de
+red (`networkAudit.list()`); el registro persiste entre reinicios
+desde la 0.1.62.
+
 ## Pendiente (fases siguientes)
 
-- [ ] **SQLCipher**: `src/agent/memory/memoryStore.ts` ya emite
-      `PRAGMA key` y falla cerrado si el SQLite no trae cipher.
-      Falta: build con la variante SQLCipher de expo-sqlite + clave
-      generada en Android Keystore al primer arranque.
-- [ ] **Migrar `rag/db.ts` y `settings.ts`** al mismo cifrado.
+- [ ] **Migrar `settings.ts`** al mismo cifrado: `settings.json` sigue
+      en claro en el almacenamiento privado de la app
+      (`src/models/settings.ts:80`).
 - [ ] **Voz on-device**: reemplazar `modules/voice-input`
       (SpeechRecognizer del sistema) por whisper.cpp.
-- [ ] **Bloqueo biométrico** al abrir la app.
-- [ ] **Pantalla de auditoría** en Ajustes (listar `networkAudit.list()`).
-- [ ] **Botón "verificar integridad"** en Ajustes → Modelos para LLMs grandes.
+- [ ] **Botón «verificar integridad»** en Ajustes → Modelos para LLMs
+      grandes: `verifyChecksum()` corre dentro del flujo de descarga,
+      pero ninguna pantalla lo invoca aún como comprobación manual.
 
 ## Notas de seguridad del transporte P2P
 
