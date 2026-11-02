@@ -214,11 +214,10 @@ export async function checkStaleRekeyStaging(
     const parsed = JSON.parse(raw);
     const newDekHex = parsed.newDekHex;
     const oldDekHex: unknown = parsed.oldDekHex;
-    // FIX 2026-10-09 (CR2-MULTIDB): staging puede tener dbPaths (array) o
-    // dbPath (string, formato legacy de la rotación unitaria retirada). Normalizar.
-    const dbPaths: string[] = Array.isArray(parsed.dbPaths)
-      ? parsed.dbPaths
-      : (typeof parsed.dbPath === "string" ? [parsed.dbPath] : []);
+    // Solo se lee dbPaths (array): es lo único que escribe el escritor
+    // vivo, rotateAllDatabaseKeys. La alternativa singular del formato
+    // legacy se retiró tras cumplirse su condición (cadena post-0.1.69).
+    const dbPaths: string[] = Array.isArray(parsed.dbPaths) ? parsed.dbPaths : [];
     if (!newDekHex || typeof newDekHex !== "string" || dbPaths.length === 0) {
       await FS.deleteAsync(stagingPath, { idempotent: true }).catch(() => {});
       return { recovered: false, error: "Staging corrupto, eliminado" };

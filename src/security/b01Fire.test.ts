@@ -708,7 +708,7 @@ describeEngine("B-01 · convergencia de staging de rotación interrumpida (check
   );
 
   it(
-    "S8a · staging legacy en claro, crash antes del rekey: staging eliminado, keystore intacto",
+    "S8a · staging en claro sin oldDekHex, crash antes del rekey: staging eliminado, keystore intacto",
     { timeout: 240_000 },
     async () => {
       const dir = freshDir("stg-s8a");
@@ -718,9 +718,10 @@ describeEngine("B-01 · convergencia de staging de rotación interrumpida (check
       await storeDatabaseKeyHex(OLD_DEK);
       const store = makeStoreDek();
       const paths = pathsOf(dir);
-      // Formato viejo (≤0.1.62): JSON SIN sellar, dbPath en singular, sin oldDekHex.
+      // Staging en claro (la tolerancia de lectura lo admite), formato
+      // actual dbPaths, sin oldDekHex: la pierna CR3-NEW (probe-open).
       const stagingPath = path.join(dir, "rekey-staging.json");
-      fs.writeFileSync(stagingPath, JSON.stringify({ newDekHex: STG_NEW, dbPath: paths[0] }), "utf8");
+      fs.writeFileSync(stagingPath, JSON.stringify({ newDekHex: STG_NEW, dbPaths: [paths[0]] }), "utf8");
 
       const res = await checkStaleRekeyStaging(
         stagingPath,
@@ -739,7 +740,7 @@ describeEngine("B-01 · convergencia de staging de rotación interrumpida (check
   );
 
   it(
-    "S8b · staging legacy en claro, rekey ya hecho: se guarda la nueva y se borra el staging (contrato CR3-NEW)",
+    "S8b · staging en claro sin oldDekHex, rekey ya hecho: se guarda la nueva y se borra el staging (contrato CR3-NEW)",
     { timeout: 240_000 },
     async () => {
       const dir = freshDir("stg-s8b");
@@ -751,7 +752,7 @@ describeEngine("B-01 · convergencia de staging de rotación interrumpida (check
       await storeDatabaseKeyHex(OLD_DEK);
       const store = makeStoreDek();
       const stagingPath = path.join(dir, "rekey-staging.json");
-      fs.writeFileSync(stagingPath, JSON.stringify({ newDekHex: STG_NEW, dbPath: paths[0] }), "utf8");
+      fs.writeFileSync(stagingPath, JSON.stringify({ newDekHex: STG_NEW, dbPaths: [paths[0]] }), "utf8");
 
       const res = await checkStaleRekeyStaging(
         stagingPath,
