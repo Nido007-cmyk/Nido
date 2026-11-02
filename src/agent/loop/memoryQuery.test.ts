@@ -526,6 +526,44 @@ describe("ADV-F-C1 — el hecho pt con «chama-se» y con «o nome d… é» se 
   });
 });
 
+// ADV-F-C2 (adversaria de formas, MENOR): el posesivo pt se calculaba
+// del token de la pregunta: con el dictado sin acento «minha avo» y
+// solo el abuelo guardado, la respuesta servía «Sua avo se chama
+// José.» — nombre y persona correctos, posesivo contra la ficha
+// servida («avô»), que la app sí conoce. El género sale ahora del
+// registro servido (ficha o hecho); la forma acentuada no se mueve.
+describe("ADV-F-C2 — el posesivo pt sale de la ficha servida, no de la pregunta", () => {
+  const onlyGrandpa: MemoryQueryData = { facts: [], people: [{ name: "José", relationship: "avô" }] };
+
+  it("asiento de la ficha: «minha avo» sin acento sirve el posesivo del abuelo", () => {
+    expect(answerMemoryQuery("como se chama minha avo?", onlyGrandpa, "pt")).toBe("Seu avo se chama José.");
+    const both: MemoryQueryData = {
+      facts: [],
+      people: [
+        { name: "José", relationship: "avô" },
+        { name: "María", relationship: "avó" },
+      ],
+    };
+    expect(answerMemoryQuery("como se chama minha avo?", both, "pt")).toBe("Seu avo se chama José.");
+    const onlyGrandma: MemoryQueryData = { facts: [], people: [{ name: "María", relationship: "avó" }] };
+    expect(answerMemoryQuery("como se chama minha avo?", onlyGrandma, "pt")).toBe("Sua avo se chama María.");
+  });
+
+  it("asiento del hecho: la palabra del hecho, con su acento, manda", () => {
+    const fact: MemoryQueryData = {
+      facts: [{ content: "meu avô se chama José", category: "general" }],
+      people: [],
+    };
+    expect(answerMemoryQuery("como se chama minha avo?", fact, "pt")).toBe("Seu avo se chama José.");
+  });
+
+  it("suelo: la forma acentuada queda idéntica, y la ficha sin acento conserva el suelo de B9", () => {
+    expect(answerMemoryQuery("qual é o nome do meu avô?", onlyGrandpa, "pt")).toBe("Seu avô se chama José.");
+    const unaccentedCard: MemoryQueryData = { facts: [], people: [{ name: "José", relationship: "avo" }] };
+    expect(answerMemoryQuery("como se chama minha avo?", unaccentedCard, "pt")).toBe("Sua avo se chama José.");
+  });
+});
+
 // B1+B2 (barrido «revisa todo», clase 1 · MEDIA): SELF se quedó sin
 // la forma que G-M1-R1 dio a REL — «¿cuál es mi nombre?» y «what is
 // my name?» (sin contraer) caían al modelo teniendo el hecho

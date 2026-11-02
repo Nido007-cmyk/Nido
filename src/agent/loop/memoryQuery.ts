@@ -168,6 +168,41 @@ function ptPossessive(rel: string): "Seu" | "Sua" {
   return PT_MASC_REL.has(fold(rel)) ? "Seu" : "Sua";
 }
 
+/** Forma pt canónica de cada grupo de REL_GROUPS, en su mismo orden:
+ *  el parentesco de un registro servido (ficha o hecho), dicho en la
+ *  lengua de la plantilla. «pareja» no trae forma pt en su grupo. */
+const REL_PT_CANON: (string | null)[] = [
+  "mãe", "pai", "irmão", "irmã", "esposa", "marido", "filho", "filha",
+  "avô", "avó", "tio", "tia", "primo", "prima", "amigo", "amiga",
+  "namorado", "namorada", "cunhado", "cunhada", "sogro", "sogra",
+  "neto", "neta", "sobrinho", "sobrinha", null,
+];
+
+/** ADV-F-C2 (adversaria de formas): el posesivo pt se calculaba del
+ *  token de la PREGUNTA, y con el dictado sin acento («minha avo») la
+ *  respuesta servía «Sua avo se chama José.» — posesivo femenino para
+ *  el abuelo, contra la propia ficha («avô»), que la app sí conoce.
+ *  El género sale ahora del registro SERVIDO: si su parentesco, en su
+ *  grafía exacta, pertenece a un solo grupo, manda la forma canónica
+ *  pt de ese grupo. Si la grafía es ambigua entre grupos («avo»
+ *  plegado, «cousin», «friend») o no hay registro, manda el token
+ *  preguntado: ese es el suelo declarado por la tanda B9. */
+function ptServingRel(servedRel: string | undefined, askedRel: string): string {
+  if (servedRel) {
+    const low = servedRel.trim().toLowerCase();
+    let hit = -1;
+    let hits = 0;
+    REL_GROUPS.forEach((g, i) => {
+      if (g.includes(low)) {
+        hit = i;
+        hits += 1;
+      }
+    });
+    if (hits === 1 && REL_PT_CANON[hit]) return REL_PT_CANON[hit]!;
+  }
+  return askedRel;
+}
+
 const BIRTHDAY_RE = /cumplea[ñn]os|aniversario|birthday|aniversário/i;
 
 /** La cláusula que trae un nombre dentro de un hecho, por lengua del
@@ -583,7 +618,7 @@ export function answerMemoryQuery(
   if (relNameQ) {
     const rel = relNameQ[1].trim();
     const person = findPersonByRel(mem, rel);
-    if (person) return msg("personName", lang, { rel, name: person.name, poss: ptPossessive(rel) });
+    if (person) return msg("personName", lang, { rel, name: person.name, poss: ptPossessive(ptServingRel(person.relationship, rel)) });
     // Puede estar como hecho («mi mamá se llama Marta» con gatillo).
     // B8 (barrido «revisa todo», clase 1; semilla 2 de la adversaria
     // de G-M1-R1): la cláusula que trae el nombre se reconoce en la
@@ -602,7 +637,11 @@ export function answerMemoryQuery(
       const m =
         /(?:se llama|se chama|chama-se|name is|is called)\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content) ??
         /^o nome\b[^.!?]*?(?<![\p{L}])é\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content);
-      if (m) return msg("personName", lang, { rel, name: m[1], poss: ptPossessive(rel) });
+      // ADV-F-C2, asiento del hecho: la palabra de parentesco tal
+      // como está escrita en el hecho (con su acento) es el registro
+      // servido en este asiento; de ella sale el género del posesivo.
+      const factRel = fact.content.split(/[^\p{L}]+/u).find((w) => w && sameRel(w, rel));
+      if (m) return msg("personName", lang, { rel, name: m[1], poss: ptPossessive(ptServingRel(factRel, rel)) });
     }
     return msg("notKnown", lang);
   }
