@@ -107,6 +107,11 @@ checked guide by guide), and its control questions grow to 165
 164 of 165 on the measured build (the one miss, a question about
 Havana's fire number that does not name Cuba, is recorded as a
 known weak point).
+A rebuilt edition of `nido-esencial` is published in the release
+`knowledge-packs-v10` with 0.1.69: its Portuguese guides were
+recreated from their own source (174 guides in the three
+languages), after the Portuguese edition was found to derive
+from the Spanish text. `nido-local` stays at its v9 edition.
 
 ### Format v2: indexed questions and verified facts (0.1.55)
 
