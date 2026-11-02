@@ -44,13 +44,23 @@ import { buildLexicalQuery, filterByTermCoverage } from "./pure";
  * encuadre («según el corpus», «according to the corpus», «segundo o
  * corpus») que el artículo no contiene, y la forma verbal no casa
  * («escribió» ≠ «escrita»; «wrote» ≠ «written»). Medido: es — el
- * artículo casa 1/4 términos con 2 exigidos y Cervantes 0/4; en — 2/5
- * con 3 exigidos; pt — 2/6 y 1/6 con 3 exigidos. Resultado tras la
+ * artículo casa 1/4 términos con 2 exigidos y Cervantes 1/4; en — 2/5
+ * con 3 exigidos; pt — 2/6 y Cervantes 2/6 con 3 exigidos. Resultado tras la
  * puerta: es corona a «Wolfgang Amadeus Mozart» (casa «escribió» y
  * «según»: 2/4) y en/pt se quedan sin fuentes. La palanca es la puerta
  * y las formas de término (pure.ts), terreno expresamente fuera de
  * esta tanda; la fixture fija el resultado MEDIDO exacto, en crudo y
  * tras la puerta, para que cualquier cambio se vea.
+ *
+ * CORRECCIÓN 2026-11-01 (carril de versión, firmada): esta cabecera
+ * decía «Cervantes 0/4» (es) y «1/6» (pt) para el documento de
+ * Cervantes. La adversaria de C-01 (A-C01-ADV-01) y FV-1 midieron el
+ * Cervantes de cada lengua contra su propia pregunta: es 1/4 · pt
+ * 2/6; el 0/4 y el 1/6 viejos miden el Cervantes INGLÉS contra las
+ * preguntas española y portuguesa. Ningún desenlace se mueve (1 < 2
+ * y 2 < 3: la puerta retira a Cervantes en las tres lenguas con las
+ * cifras viejas o con las medidas). Corrección de solo texto: la
+ * fixture no afirma coberturas en código.
  */
 
 type Doc = { title: string; source: string; body: string };
