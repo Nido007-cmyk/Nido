@@ -212,8 +212,14 @@ const BIRTHDAY_RE = /cumplea[ñn]os|aniversario|birthday|aniversário/i;
  *  chama-se Maria») y el marco «o nome d… é» («o nome do meu pai é
  *  João») — y la app decía «no me lo has contado» teniéndolo. La
  *  alternativa del marco exige la cópula «é» como palabra suelta
- *  (miradas con \p{L}: \b no ve las letras acentuadas). */
-const NAME_CLAUSE_RE = /se llama|se chama|chama-se|name is|is called|^o nome\b[^.!?]*?(?<![\p{L}])é(?![\p{L}])/iu;
+ *  (miradas con \p{L}: \b no ve las letras acentuadas).
+ *  ADV-F2-C1 (adversaria de formas II): el marco solo existía en pt —
+ *  «el nombre de mi padre es Juan» y «the name of my dad is John»
+ *  daban notKnown con el dato presente, el desenlace exacto de B8 en
+ *  las otras dos lenguas. Las alternativas es/en espejan la pt: el
+ *  marco al inicio del hecho y su cópula («es» / «is») como palabra
+ *  suelta, para que ni «esposa» ni «sister» la falsifiquen. */
+const NAME_CLAUSE_RE = /se llama|se chama|chama-se|name is|is called|^o nome\b[^.!?]*?(?<![\p{L}])é(?![\p{L}])|^el nombre\b[^.!?]*?(?<![\p{L}])es(?![\p{L}])|^the name\b[^.!?]*?(?<![\p{L}])is(?![\p{L}])/iu;
 
 /** Hecho de cumpleaños de una persona (por nombre o parentesco) o propio. */
 function findBirthdayFact(
@@ -659,9 +665,12 @@ export function answerMemoryQuery(
       // ADV-F-C1: la extracción espeja las cláusulas del selector —
       // «chama-se» trae el nombre tras el reflexivo, y en el marco
       // «o nome d… é» el nombre va tras la cópula, al final.
+      // ADV-F2-C1: los marcos es/en extraen igual, tras su cópula.
       const m =
         /(?:se llama|se chama|chama-se|name is|is called)\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content) ??
-        /^o nome\b[^.!?]*?(?<![\p{L}])é\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content);
+        /^o nome\b[^.!?]*?(?<![\p{L}])é\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content) ??
+        /^el nombre\b[^.!?]*?(?<![\p{L}])es\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content) ??
+        /^the name\b[^.!?]*?(?<![\p{L}])is\s+([A-ZÁÉÍÓÚÑÜÀÂÊÔÃÕÇ][\p{L}]+(?: [\p{L}]+)?)/iu.exec(fact.content);
       // ADV-F-C2, asiento del hecho: la palabra de parentesco tal
       // como está escrita en el hecho (con su acento) es el registro
       // servido en este asiento; de ella sale el género del posesivo.

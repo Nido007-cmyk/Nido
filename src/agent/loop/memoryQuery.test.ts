@@ -526,6 +526,41 @@ describe("ADV-F-C1 — el hecho pt con «chama-se» y con «o nome d… é» se 
   });
 });
 
+// ADV-F2-C1 (adversaria de formas II, MEDIA-BAJA): el marco con
+// cópula solo existía en pt tras ADV-F-C1 — «el nombre de mi padre
+// es Juan» y «the name of my dad is John» daban notKnown con el dato
+// presente. El marco entra en es y en, con las guardias cruzadas de
+// la familia fixturadas en las tres lenguas.
+describe("ADV-F2-C1 — el marco «el nombre de… es» / «the name of… is» ya sirve", () => {
+  it("el hecho en marco es sirve a la pregunta es", () => {
+    const mem: MemoryQueryData = { facts: [{ content: "el nombre de mi padre es Juan", category: "general" }], people: [] };
+    expect(answerMemoryQuery("¿cuál es el nombre de mi padre?", mem, "es")).toBe("Tu padre se llama Juan.");
+  });
+
+  it("el hecho en marco en sirve a la pregunta en", () => {
+    const mem: MemoryQueryData = { facts: [{ content: "the name of my dad is John", category: "general" }], people: [] };
+    expect(answerMemoryQuery("what is the name of my dad?", mem, "en")).toBe("Your dad's name is John.");
+  });
+
+  it("guardias cruzadas: el hecho de una persona no sirve a otra, en las tres lenguas", () => {
+    const pt: MemoryQueryData = { facts: [{ content: "o nome do meu pai é João", category: "general" }], people: [] };
+    expect(answerMemoryQuery("qual é o nome da minha mãe?", pt, "pt")).toContain("Você ainda não me contou isso");
+    const es: MemoryQueryData = { facts: [{ content: "el nombre de mi padre es Juan", category: "general" }], people: [] };
+    expect(answerMemoryQuery("¿cuál es el nombre de mi madre?", es, "es")).toContain("Todavía no me has contado eso");
+    const en: MemoryQueryData = { facts: [{ content: "the name of my dad is John", category: "general" }], people: [] };
+    expect(answerMemoryQuery("what is the name of my mom?", en, "en")).toContain("You haven't told me that yet");
+    const esM: MemoryQueryData = { facts: [{ content: "el nombre de mi madre es Ana", category: "general" }], people: [] };
+    expect(answerMemoryQuery("¿cuál es el nombre de mi padre?", esM, "es")).toContain("Todavía no me has contado eso");
+  });
+
+  it("sin cópula el marco no entra (es), y la cópula dentro de palabra no falsifica («esposa»)", () => {
+    const sinCopula: MemoryQueryData = { facts: [{ content: "el nombre de mi padre Juan", category: "general" }], people: [] };
+    expect(answerMemoryQuery("¿cuál es el nombre de mi padre?", sinCopula, "es")).toContain("Todavía no me has contado eso");
+    const esposa: MemoryQueryData = { facts: [{ content: "el nombre de mi esposa es Carmen", category: "general" }], people: [] };
+    expect(answerMemoryQuery("¿cuál es el nombre de mi esposa?", esposa, "es")).toBe("Tu esposa se llama Carmen.");
+  });
+});
+
 // ADV-F-C2 (adversaria de formas, MENOR): el posesivo pt se calculaba
 // del token de la pregunta: con el dictado sin acento «minha avo» y
 // solo el abuelo guardado, la respuesta servía «Sua avo se chama
