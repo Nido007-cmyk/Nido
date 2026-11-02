@@ -799,8 +799,12 @@ const DATE_NAME_RE =
  * censo de familia se cerró sobre el paradigma nombrado: las
  * guías servidas no dosifican el inhalador con ninguna otra
  * palabra de esta familia (grep cero sobre el corpus es/en/pt).
+ * RES-R1: la regex se exporta porque la caja la consume — la
+ * rama «dose» de sourceCarriesCategory tenía una tercera lista
+ * propia, solo-es, ciega al enseñar omisiones; desde esta tanda
+ * la familia es una sola y vive aquí.
  */
-const DOSE_MEASURE_RE =
+export const DOSE_MEASURE_RE =
   /\d+(?:[.,]\d+)?\s*(ml|mg|mcg|kg|g|miligramos?|gramos?|comprimidos?|pastillas?|cucharadas?|cucharaditas?|colheres?|gotas|tabletas?|capsulas?|unidades?|teaspoons?|tablespoons?|tablets?|pills?|capsules?|drops?|puffs?|sprays?|inhalaciones|inhalacion|inalacoes|inalacao|inhalations?|units?|milligrams?|grams?|milliliters?|millilitres?)\b/;
 
 /** ¿Trae la frase un dato DEL TIPO (su forma, o su nombre junto a la cifra)? */

@@ -523,6 +523,88 @@ describe("ADV-R-C1: la caja enseña la dosis cambiada con la palabra del inhalad
 });
 
 // ---------------------------------------------------------------
+// RES-R1 (adversaria del carril de restos): la rama «dose» de
+// sourceCarriesCategory tenía una tercera lista de dosis,
+// solo-es, y la OMISIÓN de dosis era ciega a «tablets» (en),
+// «colheres» (pt) y «puffs» (en): con arreglos idénticos a los
+// del control «ml», que sí enseña, daba []. La lista local dejó
+// de existir: la rama consume la familia completa de la gemela
+// (DOSE_MEASURE_RE), y estas fixtures fijan la omisión por
+// lengua con el suelo de «ml» intacto. (Los arreglos llevan
+// cifra juzgable en la frase portadora: la red de omisión solo
+// mira esas frases, por su puerta de diseño — la vara de
+// hasJudgedDigit, igual para toda unidad.)
+
+describe("RES-R1: la omisión de dosis se enseña con la familia completa", () => {
+  it("el suelo es (10 ml) sigue enseñando la omisión", () => {
+    const conflicts = findNumberConflicts("La dosis del jarabe es la habitual de la noche.", [
+      chunk("El paciente toma 10 ml de jarabe por la noche."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("dosis");
+    expect(conflicts[0].omission).toBe(true);
+    expect(conflicts[0].sourceSentence).toContain("10 ml");
+  });
+
+  it("el suelo en (10 ml) sigue enseñando la omisión", () => {
+    const conflicts = findNumberConflicts("The dose of the syrup is the usual one at night.", [
+      chunk("The patient takes 10 ml of syrup at night."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("dose");
+    expect(conflicts[0].omission).toBe(true);
+  });
+
+  it("en con «tablets» la omisión ya enseña", () => {
+    const conflicts = findNumberConflicts("The dose of the syrup is the usual one at night.", [
+      chunk("The patient takes 12 tablets of syrup at night."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("dose");
+    expect(conflicts[0].omission).toBe(true);
+    expect(conflicts[0].sourceSentence).toContain("12 tablets");
+  });
+
+  it("pt con «colheres» la omisión ya enseña", () => {
+    const conflicts = findNumberConflicts("A dose do xarope é a habitual da noite.", [
+      chunk("O paciente toma 12 colheres de xarope à noite."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("dose");
+    expect(conflicts[0].omission).toBe(true);
+    expect(conflicts[0].sourceSentence).toContain("12 colheres");
+  });
+
+  it("en con «puffs» la omisión ya enseña", () => {
+    const conflicts = findNumberConflicts("The inhaler dose is the usual one at night.", [
+      chunk("The patient takes 2 puffs from the inhaler at night, about 10 minutes before bed."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("dose");
+    expect(conflicts[0].omission).toBe(true);
+    expect(conflicts[0].sourceSentence).toContain("2 puffs");
+  });
+
+  it("es con «inhalaciones» la omisión ya enseña (la familia tras ADV-R-C1)", () => {
+    const conflicts = findNumberConflicts("La dosis del inhalador es la habitual de la noche.", [
+      chunk("El paciente toma 2 inhalaciones del inhalador por la noche, unos 10 minutos antes de dormir."),
+    ]);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].unit).toBe("dosis");
+    expect(conflicts[0].omission).toBe(true);
+    expect(conflicts[0].sourceSentence).toContain("2 inhalaciones");
+  });
+
+  it("una cifra con palabra fuera de la familia sigue sin enseñar (la rama discrimina)", () => {
+    expect(
+      findNumberConflicts("La dosis del jarabe es la habitual de la noche.", [
+        chunk("El paciente toma 10 sesiones de jarabe por la noche."),
+      ]),
+    ).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------
 // ADV-J-C2 (adversaria del bloque del juez): la caja callaba ante
 // la transpuesta cuando la fuente escribía la fecha con nombre y
 // con número — la gemela con nombre no declaraba la convención

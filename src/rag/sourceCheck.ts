@@ -66,7 +66,7 @@
  */
 
 import type { RetrievedChunk } from "./retrieve";
-import { isCardCluster, splitSentences } from "./grounding";
+import { DOSE_MEASURE_RE, isCardCluster, splitSentences } from "./grounding";
 import {
   numberTokens,
   parseNumberToken,
@@ -568,12 +568,17 @@ function sourceCarriesCategory(sentence: string, category: string): boolean {
         /\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/.test(sentence)
       );
     case "dose":
-      return (
-        has(["dosis", "dose", "doses"]) ||
-        /\d+(?:[.,]\d+)?\s*(ml|mg|mcg|kg|g|miligramos?|gramos?|comprimidos?|pastillas?|cucharadas?|cucharaditas?|gotas|tabletas?|capsulas?|unidades?)\b/.test(
-          foldWord(sentence),
-        )
-      );
+      // RES-R1 (adversaria del carril de restos): esta rama tenía
+      // una TERCERA lista de dosis, solo-es — con «ml» la omisión
+      // enseñaba, con «tablets» (en), «colheres» (pt) y «puffs»
+      // (en) daba [] con arreglos idénticos: las tres listas no
+      // eran la misma ni tras ADV-J-C1. La lista local deja de
+      // existir: la rama consume DOSE_MEASURE_RE, la familia
+      // completa de la gemela del verificador (tras ADV-R-C1,
+      // también la inhaladora), y la paridad queda por
+      // construcción — el plegado de esta caja y el de la gemela
+      // son la misma operación (minúsculas + NFD sin marcas).
+      return has(["dosis", "dose", "doses"]) || DOSE_MEASURE_RE.test(foldWord(sentence));
   }
   return true;
 }
