@@ -61,6 +61,30 @@ describe("datos verificados de los packs (0.1.55)", () => {
     ).toBeNull();
   });
 
+  it("pre-censo PC2-3: los verbos de llamada tienen su forma en las tres lenguas", () => {
+    // Llamar, marcar/discar, telefonear y, en portugués, chamar:
+    // la familia de verbos entera, no solo las dos sondas con «chamar».
+    expect(emergencyQuestionKind("¿cómo hago para llamar a una ambulancia en Chile?")).toBe("ambulance");
+    expect(emergencyQuestionKind("¿a qué número llamo para una ambulancia en Chile?")).toBe("ambulance");
+    expect(emergencyQuestionKind("¿qué número marco para los bomberos en Chile?")).toBe("fire");
+    expect(emergencyQuestionKind("¿qué número marca para los bomberos en Chile?")).toBe("fire");
+    expect(emergencyQuestionKind("¿cómo telefonear a una ambulancia en Chile?")).toBe("ambulance");
+    expect(emergencyQuestionKind("how do I call an ambulance in Chile?")).toBe("ambulance");
+    expect(emergencyQuestionKind("what number do I dial for the fire department in Chile?")).toBe("fire");
+    expect(emergencyQuestionKind("how do I telephone an ambulance in Chile?")).toBe("ambulance");
+    expect(emergencyQuestionKind("qual o número para ligar para uma ambulância no Brasil?")).toBe("ambulance");
+    expect(emergencyQuestionKind("qual número discar para os bombeiros no Brasil?")).toBe("fire");
+    expect(emergencyQuestionKind("como telefonar para uma ambulância no Brasil?")).toBe("ambulance");
+    expect(emergencyQuestionKind("como faço para chamar uma ambulância no Brasil?")).toBe("ambulance");
+    expect(emergencyQuestionKind("como chamar a polícia no Brasil?")).toBe("police");
+    expect(emergencyQuestionKind("como chamo a polícia no Brasil?")).toBe("police");
+    expect(emergencyQuestionKind("por favor liga para os bombeiros no Brasil agora")).toBe("fire");
+    expect(emergencyQuestionKind("por favor disca para os bombeiros no Brasil agora")).toBe("fire");
+    // F-PF10 queda como está: «urgent care» nombra una clínica de
+    // atención no urgente, no el servicio de urgencias; no se asienta.
+    expect(emergencyQuestionKind("urgent care number in Spain")).toBeNull();
+  });
+
   it("auditoría 2026-10-31 (F1 B-7): con dos servicios, encabeza el nombrado primero", () => {
     expect(emergencyQuestionKind("número de ambulancia y de policía en Chile")).toBe("ambulance");
     expect(emergencyQuestionKind("número de policía y de ambulancia en Chile")).toBe("police");

@@ -115,7 +115,7 @@ const SERVICE_WORDS: Array<[ServiceKind, RegExp]> = [
   ["general", / (emergencia|emergencias|emergency|emergencies|emergencias|socorro|auxilio|urgencia|urgencias|911|112|9 1 1) /],
 ];
 
-const NUMBER_CUES = / (numero|numeros|telefono|telefonos|tel|llamo|llamar|llamas|llama|marco|marcar|linea|number|numbers|phone|call|dial|hotline|telefone|telefones|ligo|ligar|discar|disco|contacto|contact) /;
+const NUMBER_CUES = / (numero|numeros|telefono|telefonos|tel|llamo|llamar|llamas|llama|telefonear|marco|marca|marcar|linea|number|numbers|phone|call|dial|telephone|hotline|telefone|telefones|telefonar|ligo|liga|ligas|ligar|disca|discas|discar|disco|chamo|chama|chamas|chamar|contacto|contact) /;
 
 /** Which emergency service the question asks for, or null when it isn't asking for an emergency number. */
 export function emergencyQuestionKind(text: string): ServiceKind | null {
