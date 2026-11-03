@@ -3,6 +3,8 @@ title: Comida en emergencias
 category: Supervivencia
 lang: es
 sources: Ready.gov (FEMA), seguridad alimentaria en emergencias; USDA; OMS, cinco claves para la inocuidad de los alimentos
+id: esencial-comida-en-emergencias
+verified: 2026-11-02
 ---
 Una persona sana puede aguantar semanas sin comer, pero no sin agua. No comas si tienes muy poca agua: digerir consume líquido.
 

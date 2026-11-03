@@ -3,6 +3,8 @@ title: Food in emergencies
 category: Survival
 lang: en
 sources: Ready.gov (FEMA), food safety in emergencies; USDA; WHO, Five Keys to Safer Food
+id: esencial-comida-en-emergencias
+verified: 2026-11-02
 ---
 A healthy person can go weeks without food, but not without water. Don't eat if you have very little water: digestion uses up fluid.
 

@@ -3,6 +3,8 @@ title: Apagón o corte de luz prolongado
 category: Supervivencia
 lang: es
 sources: Ready.gov (FEMA), cortes de electricidad; CDC; Cruz Roja Americana
+id: esencial-apagon
+verified: 2026-11-02
 ---
 ## Prepárate
 - Linternas y pilas (mejor que velas), radio a pilas, baterías externas cargadas.

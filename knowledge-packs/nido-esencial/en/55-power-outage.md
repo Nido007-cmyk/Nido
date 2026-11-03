@@ -3,6 +3,8 @@ title: Long power outage
 category: Survival
 lang: en
 sources: Ready.gov (FEMA), power outages; CDC; American Red Cross
+id: esencial-apagon
+verified: 2026-11-02
 ---
 ## Prepare
 - Flashlights and batteries (better than candles), a battery radio, charged power banks.

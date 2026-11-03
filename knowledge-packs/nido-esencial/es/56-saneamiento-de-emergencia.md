@@ -3,6 +3,8 @@ title: Baño y basura de emergencia (saneamiento)
 category: Supervivencia
 lang: es
 sources: OMS y UNICEF, agua, saneamiento e higiene en emergencias; Proyecto Esfera; Ready.gov
+id: esencial-saneamiento-de-emergencia
+verified: 2026-11-02
 ---
 Cuando no hay agua corriente o el alcantarillado falla, las heces mal gestionadas son una de las mayores causas de enfermedad tras un desastre.
 

@@ -3,6 +3,8 @@ title: Apagão ou corte de luz prolongado
 category: Sobrevivência
 lang: pt
 sources: Ready.gov (FEMA), cortes de eletricidade; CDC; Cruz Vermelha Americana
+id: esencial-apagon
+verified: 2026-11-02
 questions: apagão longo, o que desligar e o que fazer | gerador em casa, a que distância da janela | insulina sem geladeira, quanto tempo aguenta | sem luz, como conservar a comida
 ---
 ## Prepare-se

@@ -3,6 +3,8 @@ title: Perdido: señales de socorro y cómo ayudar a que te encuentren
 category: Supervivencia
 lang: es
 sources: Organizaciones de búsqueda y rescate (NASAR); OACI, señales tierra-aire; Club Alpino, señal de socorro alpina; Ready.gov
+id: esencial-perdido-y-senales-de-socorro
+verified: 2026-11-02
 ---
 ## Si te pierdes en la montaña, el bosque o el campo
 1. **Para.** No sigas caminando: cuanto más te muevas, más grande es la zona de búsqueda.

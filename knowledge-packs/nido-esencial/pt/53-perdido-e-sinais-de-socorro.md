@@ -3,6 +3,8 @@ title: Perdido: sinais de socorro e como ajudar a que o encontrem
 category: Sobrevivência
 lang: pt
 sources: Organizações de busca e resgate (NASAR); OACI, sinais terra-ar; Clube Alpino, sinal de socorro alpino; Ready.gov
+id: esencial-perdido-y-senales-de-socorro
+verified: 2026-11-02
 questions: me perdi na montanha, o que faço primeiro | sinal de socorro com apito, como é | sinais no chão para aviões, o que significam | criança perdida, o que ensinar a ela
 ---
 ## Se você se perder na montanha, na mata ou no campo

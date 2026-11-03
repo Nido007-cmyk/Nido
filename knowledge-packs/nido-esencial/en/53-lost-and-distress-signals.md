@@ -3,6 +3,8 @@ title: Lost: distress signals and helping rescuers find you
 category: Survival
 lang: en
 sources: Search-and-rescue organizations (NASAR); ICAO, ground-to-air signals; Alpine distress signal; Ready.gov
+id: esencial-perdido-y-senales-de-socorro
+verified: 2026-11-02
 ---
 ## If you get lost in the mountains, forest or countryside
 1. **Stop.** Don't keep walking: the more you move, the bigger the search area.

@@ -3,6 +3,8 @@ title: Emergency toilet and waste (sanitation)
 category: Survival
 lang: en
 sources: WHO and UNICEF, water, sanitation and hygiene in emergencies; Sphere Project; Ready.gov
+id: esencial-saneamiento-de-emergencia
+verified: 2026-11-02
 ---
 When there is no running water or the sewer fails, badly managed feces are one of the biggest causes of illness after a disaster.
 

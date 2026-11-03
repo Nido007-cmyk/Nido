@@ -3,6 +3,8 @@ title: Banheiro e lixo de emergência (saneamento)
 category: Sobrevivência
 lang: pt
 sources: OMS e UNICEF, água, saneamento e higiene em emergências; Projeto Esfera; Ready.gov
+id: esencial-saneamiento-de-emergencia
+verified: 2026-11-02
 questions: banheiro de emergência em casa sem água | latrina no quintal, a que distância do poço | higiene depois de um desastre, como montar | lixo e fezes depois do desastre, onde guardar
 ---
 Quando não há água corrente ou o esgoto falha, as fezes mal geridas são uma das maiores causas de doença depois de um desastre.

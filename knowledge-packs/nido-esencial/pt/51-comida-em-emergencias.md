@@ -3,6 +3,8 @@ title: Comida em emergências
 category: Sobrevivência
 lang: pt
 sources: Ready.gov (FEMA), segurança alimentar em emergências; USDA; OMS, cinco chaves para a inocuidade dos alimentos
+id: esencial-comida-en-emergencias
+verified: 2026-11-02
 questions: comida da geladeira sem luz, quanto tempo dura | freezer cheio sem energia, quantas horas aguenta | plantas do mato, posso comer | comida acima de 4 graus por 2 horas, jogo fora
 ---
 Uma pessoa saudável pode aguentar semanas sem comer, mas não sem água. Não coma se tiver muito pouca água: digerir consome líquido.
