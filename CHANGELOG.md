@@ -4,6 +4,35 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.72-alpha - 2026-11-03
+
+The catalog release. 0.1.71 already carried the Essentials text
+with its family search keys in the repository, but the published
+pack was still the v11, built without them. The signed catalog
+now offers knowledge-packs-v12, built from a commit in main with
+the keys inside the pack. No app code changes and no guide text
+changes: stripped of the key lines, the v12 source is
+byte-identical to the v11 source, and the seal ledger is
+untouched, because the clinical hash never counted the keys.
+
+### Knowledge packs
+
+- **The family questions reach their guide.** On a phone, the
+  coverage gate turned away the way families actually ask: a
+  fever of 39, paracetamol for a 20 kilo child, a scorpion
+  sting, a snake bite, a swallowed coin, a faint, a cut that
+  keeps bleeding. In v12, 197 of the 568 chunks carry the
+  family question keys and every one of the 174 guides has
+  them. Checked against the published pack bytes: the coverage
+  battery passes 5/5 groups on both search engines (the same
+  battery fails 4 of its 5 groups on the v11 bytes), and the
+  first-aid gate holds at 38/38. Essentials ships as
+  knowledge-packs-v12: 174 guides · 568 chunks · 1,228,800
+  bytes per file, counted from the v12 release.
+- The two Portuguese recovery variants that no measured dose
+  can crown without breaking the first-aid gate stay named
+  as the declared frontier (variants 12/14), as in 0.1.70.
+
 ## 0.1.71-alpha - 2026-11-03
 
 Fixes from Claude's audit of the published 0.1.70 (2026-11-03), each
