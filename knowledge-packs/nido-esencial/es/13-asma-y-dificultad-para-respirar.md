@@ -3,6 +3,8 @@ title: Crisis de asma y dificultad para respirar
 category: Primeros auxilios
 lang: es
 sources: Cruz Roja Canadiense, directrices 2020; AHA y Cruz Roja Americana 2024
+id: esencial-asma-y-dificultad-para-respirar
+verified: 2026-11-02
 questions: qué hago en una crisis de asma | no puede respirar bien y hace pitidos, qué hago | cómo se usa el inhalador de rescate | un niño tiene tos de perro y le cuesta respirar, qué hago | o que faço numa crise de asma | não consegue respirar direito, o que faço
 ---
 ## Crisis de asma

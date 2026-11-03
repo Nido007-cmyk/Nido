@@ -3,6 +3,8 @@ title: Mochila de emergencia y reservas en casa
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA), kit básico de emergencia; Cruz Roja Americana; IFRC
+id: esencial-mochila-de-emergencia
+verified: 2026-11-02
 questions: qué lleva la mochila de emergencia | cuántos litros de agua por persona y día se guardan | qué comida se mete en la mochila de emergencia | cada cuánto se revisa la mochila de emergencia | o que vai na mochila de emergência | quantos litros de água por pessoa guardo
 ---
 ## Mochila para salir (una por persona, lista junto a la puerta)
@@ -26,7 +28,7 @@ Pensada para 72 horas fuera de casa.
 ## Reservas en casa (para quedarte encerrado)
 - Agua para al menos 3 días, mejor 2 semanas (4 litros por persona y día).
 - Comida en conserva y seca para 2 semanas y un abrelatas manual.
-- Hornillo de camping y combustible, solo para usar al aire libre o bien ventilado.
+- Hornillo de camping y combustible, solo para usar al aire libre, lejos de puertas y ventanas.
 - Linternas, velas con precaución, pilas.
 - Lejía sin perfume para potabilizar agua y desinfectar.
 - Bolsas grandes de basura y cubos (para un baño de emergencia).

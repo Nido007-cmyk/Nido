@@ -3,6 +3,8 @@ title: Fire at home or in a building
 category: Disasters
 lang: en
 sources: NFPA (National Fire Protection Association); Ready.gov (FEMA); American Red Cross
+id: esencial-incendio-casa
+verified: 2026-11-02
 questions: what do i do if there is a fire in my house | how do i get out of a house fire with a lot of smoke | should i open a door that feels hot during a fire | what do i do if my clothes catch fire, stop drop and roll | o que faço se houver um incêndio em casa | como saio de um incêndio com muita fumaça
 ---
 In a fire you may have only 2 minutes to get out. Smoke kills more people than flames.

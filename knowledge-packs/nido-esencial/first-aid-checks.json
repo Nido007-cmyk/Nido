@@ -110,13 +110,121 @@
  {
   "lang": "pt",
   "q": "meu pai está com dor forte no peito",
-  "expect": "Dolor de pecho",
+  "expect": "Dor no peito e infarto",
   "case": "FA-19"
  },
  {
   "lang": "pt",
   "q": "uma pessoa desmaiou e não respira",
-  "expect": "RCP (reanimación) en adultos",
+  "expect": "RCP em adultos e crianças maiores",
   "case": "FA-20"
+ },
+ {
+  "lang": "pt",
+  "q": "meu avô caiu, não responde e não respira, o que eu faço",
+  "expect": "RCP em adultos",
+  "case": "FA-01"
+ },
+ {
+  "lang": "pt",
+  "q": "em que ritmo se fazem as compressões",
+  "expect": "RCP em adultos",
+  "case": "FA-02"
+ },
+ {
+  "lang": "pt",
+  "q": "meu filho de 3 anos engasgou com uma uva e não consegue tossir",
+  "expect": "Engasgo",
+  "case": "FA-03"
+ },
+ {
+  "lang": "pt",
+  "q": "um bebê de 6 meses está se engasgando com alguma coisa",
+  "expect": "Engasgo",
+  "case": "FA-04"
+ },
+ {
+  "lang": "pt",
+  "q": "está saindo muito sangue da perna dele e não para",
+  "expect": "Hemorragias graves",
+  "case": "FA-05"
+ },
+ {
+  "lang": "pt",
+  "q": "meu pai está com uma dor forte no peito que desce para o braço",
+  "expect": "Dor no peito",
+  "case": "FA-06"
+ },
+ {
+  "lang": "pt",
+  "q": "um lado do rosto dela caiu e ela está falando estranho",
+  "expect": "AVC",
+  "case": "FA-07"
+ },
+ {
+  "lang": "pt",
+  "q": "ele está convulsionando, coloco alguma coisa na boca dele?",
+  "expect": "Convulsões",
+  "case": "FA-08"
+ },
+ {
+  "lang": "pt",
+  "q": "minha filha tomou um frasco de comprimidos, faço ela vomitar?",
+  "expect": "Intoxicações",
+  "case": "FA-09"
+ },
+ {
+  "lang": "pt",
+  "q": "como preparo soro caseiro para a diarreia",
+  "expect": "Diarreia, vômitos",
+  "case": "FA-10"
+ },
+ {
+  "lang": "pt",
+  "q": "uma abelha me picou e meu rosto está inchando e está difícil respirar",
+  "expect": "Alergia grave",
+  "case": "FA-11"
+ },
+ {
+  "lang": "pt",
+  "q": "uma cobra mordeu ele, chupo o veneno?",
+  "expect": "Mordidas e picadas",
+  "case": "FA-12"
+ },
+ {
+  "lang": "pt",
+  "q": "meu amigo desmaiou e não está respirando, o que eu faço",
+  "expect": "RCP em adultos",
+  "case": "FA-13"
+ },
+ {
+  "lang": "pt",
+  "q": "uma pessoa engasgou com comida e não consegue falar",
+  "expect": "Engasgo",
+  "case": "FA-14"
+ },
+ {
+  "lang": "pt",
+  "q": "como estancar um sangramento forte no braço",
+  "expect": "Hemorragias graves",
+  "case": "FA-15"
+ },
+ {
+  "lang": "pt",
+  "q": "queimei a mão no fogão, coloco gelo?",
+  "expect": "Queimaduras",
+  "case": "FA-16"
+ },
+ {
+  "lang": "pt",
+  "q": "uma pessoa diabética está tremendo, suando e confusa",
+  "expect": "Baixa de açúcar",
+  "case": "FA-17"
+ },
+ {
+  "lang": "pt",
+  "q": "sinais de insolação e o que fazer",
+  "expect": "Insolação",
+  "case": "FA-18"
  }
 ]

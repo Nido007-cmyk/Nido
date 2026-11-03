@@ -3,9 +3,12 @@ title: Poisoning, toxic substances and carbon monoxide
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; WHO; CDC, carbon monoxide
+id: esencial-intoxicaciones-y-monoxido
+verified: 2026-11-02
 questions: my child swallowed bleach, what do i do | what do i do if someone is poisoned by medicines | should i make them vomit after swallowing something toxic | my child swallowed a button battery, what do i do | my child swallowed a coin, what do i do | meu filho engoliu água sanitária, o que faço | o que faço se alguém se intoxicar com remédios
 ---
 ## If someone swallowed something toxic
+<!-- questions: my child drank bleach, what do I do | child swallowed bleach | my toddler drank a cleaning product, what to do -->
 (Medicines, bleach and other cleaning products, plants, mushrooms, alcohol, button batteries...)
 1. If they don't respond, have trouble breathing or have a seizure: call the emergency number.
 2. If they are fine: call the poison control center or your country's emergency number. Have the container at hand.
@@ -14,6 +17,7 @@ questions: my child swallowed bleach, what do i do | what do i do if someone is 
 5. If there is product in the mouth, have them rinse and spit.
 6. If they vomit or are drowsy, put them on their side.
 **Button batteries and magnets**: if a child swallows one, go to the emergency department at once even if they seem fine. They can cause severe internal burns within hours.
+If it may be a lithium button battery and the child is 1 year or older, swallowed it within the last 12 hours, can swallow, and honey is at hand: on the way to the emergency department, give 10 mL (2 teaspoons) of honey every 10 minutes, up to 6 times. Honey slows the burn but does not replace removing the battery: do not delay leaving to give it. Other than honey, nothing to eat or drink until an x-ray rules out the battery still being in the esophagus.
 
 ## Chemicals on the skin or in the eyes
 - Skin: remove contaminated clothing (with gloves if possible) and rinse with plenty of running water for at least 15 to 20 minutes. If it is a dry powder, brush it off first.

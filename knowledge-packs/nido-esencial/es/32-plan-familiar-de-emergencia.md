@@ -3,6 +3,8 @@ title: Plan familiar de emergencia
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA); Cruz Roja Americana, prepárate; IFRC; UNDRR
+id: esencial-plan-familiar-de-emergencia
+verified: 2026-11-02
 questions: cómo hago un plan familiar de emergencia | qué puntos de encuentro se acuerdan con la familia | cómo nos comunicamos en un desastre si no hay red | quién es el contacto fuera de la región en el plan | como faço um plano familiar de emergência | como nos comunicamos num desastre sem rede
 ---
 Prepararse antes es lo que más vidas salva en un desastre. Hazlo en familia, en una tarde.

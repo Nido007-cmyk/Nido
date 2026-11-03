@@ -3,6 +3,8 @@ title: Golpe de calor y agotamiento por calor
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; OMS, calor y salud; Cruz Roja Canadiense 2020
+id: esencial-golpe-de-calor
+verified: 2026-11-02
 questions: qué hago en un golpe de calor | cómo enfrío rápido a alguien con golpe de calor | cuál es la diferencia entre agotamiento por calor y golpe de calor | está muy caliente y confundido por el calor, qué hago | o que faço num golpe de calor, uma insolação | como resfrio rápido alguém com golpe de calor
 ---
 El calor puede matar. El golpe de calor es una emergencia: el cuerpo ya no puede enfriarse solo.
@@ -15,6 +17,7 @@ Signos: sudor abundante, cansancio, mareo, dolor de cabeza, náuseas, calambres,
 4. Si no mejora en 30 minutos o empeora, llama al número de emergencias.
 
 ## Golpe de calor (emergencia)
+<!-- preguntas: insolación con confusión y piel muy caliente | golpe de calor, qué hago | piel muy caliente y confusión, qué le pasa -->
 Signos: confusión, comportamiento raro, habla torpe, desmayo o convulsiones; piel muy caliente (seca o sudada); temperatura muy alta.
 1. Llama al número de emergencias.
 2. Enfríala de inmediato, sin esperar: lo mejor es meter el cuerpo (del cuello para abajo) en agua fría o con hielo. Vigila que la cabeza quede fuera del agua.

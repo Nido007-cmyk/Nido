@@ -807,6 +807,151 @@ const DATE_NAME_RE =
 export const DOSE_MEASURE_RE =
   /\d+(?:[.,]\d+)?\s*(ml|mg|mcg|kg|g|miligramos?|gramos?|comprimidos?|pastillas?|cucharadas?|cucharaditas?|colheres?|gotas|tabletas?|capsulas?|unidades?|teaspoons?|tablespoons?|tablets?|pills?|capsules?|drops?|puffs?|sprays?|inhalaciones|inhalacion|inalacoes|inalacao|inhalations?|units?|milligrams?|grams?|milliliters?|millilitres?)\b/;
 
+/**
+ * Auditoría de la 0.1.70 (2026-11-03): la DOSIS MEDIDA en una frase
+ * que no es la afirmación tipada («Toma 5 comprimidos cada 8 horas»,
+ * «Give 6 puffs», «Que mastique 8 aspirinas infantiles»). La pierna
+ * tipada de A3-03 solo mira la frase con categoría y cópula («la dosis
+ * es…»), y la vara general de cifras (hasJudgedDigit: 2+ dígitos)
+ * deja fuera el dígito único, que es justo como se escribe casi toda
+ * dosis. Medido sobre be4ed9d: «Take 5 tablets» contra «Take 2
+ * tablets», «Give 6 puffs» contra «2 puffs» y «5 ml» contra «10 ml»
+ * salían FUNDADAS con su [1]; con la guía real del dolor de pecho,
+ * «8 aspirinas infantiles» contra «2 a 4» también. La caja las
+ * marcaba (salvo las aspirinas); el juez las sellaba.
+ *
+ * Esta pierna vive al lado de la vara y no la toca (MIN_*, isSupported
+ * intactos): une cada cifra a su unidad de dosis (la siguiente palabra
+ * de unidad a ≤ 3 palabras, sin cruzar otra cifra suelta ni una
+ * palabra de tiempo o tamaño), con rangos «2 a 4 / 2 to 4 / 2–4» y los
+ * números en letra del 1 al 10, en las fuentes y en la frase. La frase
+ * se retira si trae una dosis de una unidad que la evidencia SÍ dosifica
+ * y la cifra no cae en ninguna de las de la evidencia para esa unidad.
+ * Si la evidencia no dosifica esa unidad, no juzga (no hay contra qué).
+ */
+const MEASURE_UNIT_KEY: Record<string, string> = {};
+for (const [key, words] of Object.entries({
+  ml: ["ml", "mililitro", "mililitros", "milliliter", "milliliters", "millilitre", "millilitres"],
+  mg: ["mg", "miligramo", "miligramos", "milligram", "milligrams", "miligrama", "miligramas"],
+  mcg: ["mcg"],
+  g: ["g", "gramo", "gramos", "gram", "grams", "grama", "gramas"],
+  tab: ["comprimido", "comprimidos", "pastilla", "pastillas", "tableta", "tabletas", "tablet", "tablets", "pill", "pills", "tablete", "tabletes"],
+  cap: ["capsula", "capsulas", "capsule", "capsules"],
+  tsp: ["cucharadita", "cucharaditas", "teaspoon", "teaspoons"],
+  tbsp: ["cucharada", "cucharadas", "tablespoon", "tablespoons"],
+  colher: ["colher", "colheres"],
+  drop: ["gota", "gotas", "drop", "drops"],
+  puff: ["puff", "puffs", "inhalacion", "inhalaciones", "inhalation", "inhalations", "inalacao", "inalacoes", "jato", "jatos", "pulsacion", "pulsaciones"],
+  spray: ["spray", "sprays"],
+  aspirin: ["aspirina", "aspirinas", "aspirin", "aspirins"],
+})) {
+  for (const w of words) MEASURE_UNIT_KEY[w] = key;
+}
+
+const MEASURE_NUMBER_WORDS: Record<string, number> = {
+  un: 1, una: 1, uno: 1, um: 1, uma: 1, one: 1,
+  dos: 2, two: 2, dois: 2, duas: 2,
+  tres: 3, three: 3,
+  cuatro: 4, four: 4, quatro: 4,
+  cinco: 5, five: 5,
+  seis: 6, six: 6,
+  siete: 7, seven: 7, sete: 7,
+  ocho: 8, eight: 8, oito: 8,
+  nueve: 9, nine: 9, nove: 9,
+  diez: 10, ten: 10, dez: 10,
+};
+
+/** Palabras que cortan la unión cifra→unidad: la cifra es de tiempo, tamaño o frecuencia. */
+const MEASURE_STOP_WORDS = new Set([
+  "minuto", "minutos", "minute", "minutes", "hora", "horas", "hour", "hours", "segundo", "segundos", "second", "seconds",
+  "dia", "dias", "day", "days", "semana", "semanas", "week", "weeks", "mes", "meses", "month", "months",
+  "ano", "anos", "year", "years", "cm", "centimetro", "centimetros", "centimeter", "centimeters", "metro", "metros",
+  "meter", "meters", "litro", "litros", "liter", "liters", "litre", "litres", "kg", "veces", "vez", "times", "vezes",
+  "por", "per", "cada", "every", "each", "x",
+]);
+
+const MEASURE_RANGE_WORDS = new Set(["a", "to", "y", "and", "e", "o", "ou", "or"]);
+
+interface DoseMeasure {
+  unit: string;
+  lo: number;
+  hi: number;
+}
+
+/** Las dosis medidas de una frase (cifra o número en letra unido a su unidad, con rangos). */
+export function doseMeasuresOf(text: string): DoseMeasure[] {
+  const folded = foldForCues(text.replace(/\[\d+\]/g, " "));
+  const toks: { t: string; start: number; end: number }[] = [];
+  for (const m of folded.matchAll(/[a-z]+|\d+(?:[.,]\d+)?/g)) {
+    toks.push({ t: m[0], start: m.index ?? 0, end: (m.index ?? 0) + m[0].length });
+  }
+  const valueOf = (t: string): number | null => {
+    if (/^\d/.test(t)) return Number(t.replace(",", "."));
+    return MEASURE_NUMBER_WORDS[t] ?? null;
+  };
+  const isUnit = (t: string): boolean => MEASURE_UNIT_KEY[t] !== undefined;
+  // La unidad de la cifra en i: la siguiente palabra de unidad a ≤ 3
+  // palabras, saltando como mucho un par «cifra unidad» intercalado
+  // («2 to 4 low-dose 81 mg aspirins»); una cifra suelta o una palabra
+  // de tiempo/tamaño cortan.
+  const unitAfter = (i: number, maxSkip = 3): string | null => {
+    let skipped = 0;
+    for (let j = i + 1; j < toks.length && skipped <= maxSkip; j++) {
+      const t = toks[j].t;
+      if (isUnit(t)) return MEASURE_UNIT_KEY[t];
+      if (MEASURE_STOP_WORDS.has(t)) return null;
+      if (valueOf(t) !== null && /^\d/.test(t)) {
+        if (j + 1 < toks.length && isUnit(toks[j + 1].t)) {
+          j++;
+          continue;
+        }
+        return null;
+      }
+      skipped++;
+    }
+    return null;
+  };
+  const out: DoseMeasure[] = [];
+  const used = new Set<number>();
+  for (let i = 0; i < toks.length; i++) {
+    if (used.has(i)) continue;
+    const v = valueOf(toks[i].t);
+    if (v === null) continue;
+    // Un número en letra solo cuenta junto a su unidad, con como mucho
+    // una palabra entre medias («una aspirina», «one adult aspirin»):
+    // «una vez», «un vaso» no son dosis.
+    const isWord = !/^\d/.test(toks[i].t);
+    if (isWord && !unitAfter(i, 1)) continue;
+    // ¿Inicio de rango? «N a M unidad», «N–M unidad».
+    let hiIdx = i;
+    if (i + 2 < toks.length && MEASURE_RANGE_WORDS.has(toks[i + 1].t) && valueOf(toks[i + 2].t) !== null) hiIdx = i + 2;
+    else if (i + 1 < toks.length && valueOf(toks[i + 1].t) !== null && /^\s*[-–]\s*$/.test(folded.slice(toks[i].end, toks[i + 1].start))) hiIdx = i + 1;
+    const unit = unitAfter(hiIdx, isWord && hiIdx === i ? 1 : 3);
+    if (!unit) continue;
+    const hiV = valueOf(toks[hiIdx].t)!;
+    out.push({ unit, lo: Math.min(v, hiV), hi: Math.max(v, hiV) });
+    used.add(hiIdx);
+  }
+  return out;
+}
+
+/**
+ * ¿Trae la frase una dosis medida que la evidencia contradice? Solo
+ * juzga las unidades que la evidencia dosifica; la frase tipada («la
+ * dosis es…») queda para su pierna (A3-03), que además sabe sustituir.
+ */
+function measuredDoseConflict(sentence: string, evidence: DoseMeasure[]): boolean {
+  if (evidence.length === 0) return false;
+  if (DATUM_CATEGORY_RE.test(foldForCues(sentence)) && hasDatumCopula(sentence)) return false;
+  const mine = doseMeasuresOf(sentence);
+  if (mine.length === 0) return false;
+  return mine.some((m) => {
+    const same = evidence.filter((e) => e.unit === m.unit);
+    if (same.length === 0) return false;
+    return !same.some((e) => m.lo >= e.lo - 1e-9 && m.hi <= e.hi + 1e-9);
+  });
+}
+
 /** ¿Trae la frase un dato DEL TIPO (su forma, o su nombre junto a la cifra)? */
 function carriesDatumOfType(sentence: string, type: DatumType): boolean {
   switch (type) {
@@ -1454,6 +1599,8 @@ export function verifyGroundedAnswer(
   // contra «entre 37 y 40 °C»): sin esto, la respuesta exacta de la
   // guía abstenía por no ser ni el mínimo ni el máximo.
   const chunkRanges = evidenceRanges(chunkTexts);
+  // Auditoría 0.1.70: las dosis medidas de toda la evidencia.
+  const evidenceDoses = chunks.flatMap((ch) => doseMeasuresOf(ch.body));
 
   // Las frases de las fuentes, por chunk (la negación de 0.1.59 las usa
   // por chunk; la regla de idioma de R-04 las recorre todas con su chunk).
@@ -1487,6 +1634,11 @@ export function verifyGroundedAnswer(
         continue;
       }
       if (!sentenceNumbersSupported(s, evidenceNums, chunkRanges)) {
+        removed++;
+        continue;
+      }
+      // Auditoría 0.1.70: la dosis medida de un dígito (o en letra).
+      if (measuredDoseConflict(s, evidenceDoses)) {
         removed++;
         continue;
       }
@@ -1553,6 +1705,12 @@ export function verifyGroundedAnswer(
     // contaba como una palabra nueva más. Vale el redondeo honesto:
     // «26,5» por 26,52 y «16,4 millones» por 16.431.599 no se tocan.
     if (!sentenceNumbersSupported(s, evidenceNums, chunkRanges)) {
+      removed++;
+      continue;
+    }
+    // Auditoría 0.1.70: la dosis medida que la vara de cifras no ve
+    // (el dígito único, el número en letra pegado a su unidad).
+    if (measuredDoseConflict(s, evidenceDoses)) {
       removed++;
       continue;
     }

@@ -1,12 +1,12 @@
 # NIDO Esencial / NIDO Essentials
 
 Guías prácticas de NIDO para cuando no hay internet: primeros auxilios, salud en
-casa, desastres naturales y supervivencia. 58 guías en español y las mismas 58
-en inglés.
+casa, desastres naturales y supervivencia. 58 guías en español, las mismas 58
+en inglés y las mismas 58 en portugués.
 
 Practical NIDO guides for when there is no internet: first aid, health at
-home, natural disasters and survival. 58 guides in Spanish and the same 58 in
-English.
+home, natural disasters and survival. 58 guides in Spanish, the same 58 in
+English and the same 58 in Portuguese.
 
 ## Contenido / Contents
 

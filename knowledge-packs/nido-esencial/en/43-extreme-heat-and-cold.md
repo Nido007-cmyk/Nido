@@ -3,6 +3,8 @@ title: Heat waves and extreme cold
 category: Disasters
 lang: en
 sources: WHO, heat and health; Ready.gov (FEMA); CDC, extreme cold
+id: esencial-calor-y-frio-extremos
+verified: 2026-11-02
 questions: what do i do during a heat wave | how do i protect older people in a heat wave | can i heat the house with a brazier or a generator indoors | what do i do if i get stuck in my car in the snow | o que faço numa onda de calor | posso aquecer a casa com um braseiro
 ---
 ## Heat wave

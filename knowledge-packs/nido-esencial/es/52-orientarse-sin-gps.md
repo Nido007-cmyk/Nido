@@ -3,6 +3,8 @@ title: Orientarse sin GPS
 category: Supervivencia
 lang: es
 sources: Manuales de orientación y navegación terrestre; organizaciones de búsqueda y rescate
+id: esencial-orientarse-sin-gps
+verified: 2026-11-02
 questions: cómo me oriento sin gps ni brújula | cómo encuentro el norte con la estrella polar | qué es el método de la sombra para orientarme | si me pierdo, es mejor moverme o quedarme quieto | como me oriento sem gps nem bússola | como encontro o norte com a estrela polar
 ---
 ## Primero: ¿te mueves o te quedas?
