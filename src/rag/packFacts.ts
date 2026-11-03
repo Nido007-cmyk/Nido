@@ -390,7 +390,16 @@ export function composeMergedCrisisAnswer(
 const CRISIS_LINE_CUES =
   / (linea de la vida|linea de crisis|linea de ayuda|telefono de crisis|telefono de ayuda|numero de crisis|crisis line|crisis number|suicide (line|hotline|helpline)|helpline|hotline|lifeline|linha da vida|linha de crise|linha de ajuda|telefone de crise|telefone de ajuda|numero de crise) /;
 const CRISIS_INTENT_CUES =
-  / (suicid\w*|autolesion\w*|autolesao\w*|automutila\w*|quitarme la vida|quitarse la vida|tirar a minha vida|tirar a sua vida|tirar a propria vida|quiero morir|quiere morir|queremos morir|quereis morir|quieren morir|quero morrer|quer morrer|queremos morrer|querem morrer|want to die|wants to die|no quiero vivir|no quiere vivir|no queremos vivir|no quereis vivir|no quieren vivir|nao quero viver|nao quer viver|nao queremos viver|nao querem viver|nao quero mais viver|nao quer mais viver|nao queremos mais viver|nao querem mais viver|don t want to live|doesn t want to live|do not want to live|does not want to live|hacerse dano|self harm|kill myself|end my life) /;
+  / (suicid\w*|autolesion\w*|autolesao\w*|automutila\w*|quitarme la vida|quitarse la vida|tirar a minha vida|tirar a sua vida|tirar a propria vida|quiero morir|quiere morir|queremos morir|quereis morir|quieren morir|quero morrer|quer morrer|queremos morrer|querem morrer|want to die|wants to die|no quiero vivir|no quiere vivir|no queremos vivir|no quereis vivir|no quieren vivir|nao quero viver|nao quer viver|nao queremos viver|nao querem viver|nao quero mais viver|nao quer mais viver|nao queremos mais viver|nao querem mais viver|don t want to live|doesn t want to live|do not want to live|does not want to live|hacerse dano|self harm|kill myself|end my life|take my own life|take my life|acabar con mi vida|acabar com a minha vida|acabar com minha vida) /;
+/**
+ * Auditoría completa (F-7): el inglés traía «kill myself» y el español
+ * y el portugués no traían su forma corriente («matarme», «me matar»).
+ * El modismo de esfuerzo («me mato a trabajar», «me voy a matar
+ * estudiando») queda fuera: la forma solo cuenta sin complemento de
+ * esfuerzo detrás.
+ */
+const CRISIS_SELF_KILL_CUES =
+  / (quiero matarme|voy a matarme|me quiero matar|me voy a matar|pienso matarme|quero me matar|vou me matar|quero matar me|penso em me matar)(?! (a|de|trabajando|estudiando|corriendo|rir|trabalhando|estudando)\b)/;
 
 /**
  * The text asks for a crisis line, or says someone may be in crisis. A
@@ -407,7 +416,7 @@ export function crisisQuestionKind(text: string): boolean {
   // señal, una frase larga sigue sin ser pregunta de crisis. Es la
   // misma forma que su gemela emergencyQuestionKind recibió al perder
   // su tope en la auditoría 2026-10-31 (F1 B-3).
-  return CRISIS_LINE_CUES.test(folded) || CRISIS_INTENT_CUES.test(folded);
+  return CRISIS_LINE_CUES.test(folded) || CRISIS_INTENT_CUES.test(folded) || CRISIS_SELF_KILL_CUES.test(folded);
 }
 
 const CT: Record<
