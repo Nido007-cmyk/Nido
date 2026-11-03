@@ -211,6 +211,29 @@ describe("líneas de crisis (familia crisis.*): el consumidor que faltaba", () =
     ]) expect(crisisQuestionKind(text), text).toBe(true);
   });
 
+  it("pre-censo PC2-2: el nombre de la línea tiene su forma en las tres lenguas", async () => {
+    const { crisisQuestionKind } = await import("./packFacts");
+    // Vida, crisis y ayuda, como línea, teléfono o número: la familia
+    // entera por lengua, no solo «linha da vida», que era la sonda.
+    for (const text of [
+      "¿cuál es la línea de la vida en México?",
+      "¿cuál es la línea de crisis de España?",
+      "¿cuál es la línea de ayuda de España?",
+      "¿cuál es el teléfono de crisis de España?",
+      "¿cuál es el teléfono de ayuda de España?",
+      "¿cuál es el número de crisis de España?",
+      "what is the lifeline in the United States?",
+      "what is the crisis line in Spain?",
+      "what is the suicide hotline in the United States?",
+      "qual é a linha da vida no Brasil?",
+      "qual é a linha de crise em Espanha?",
+      "qual é a linha de ajuda no Brasil?",
+      "qual é o telefone de crise no Brasil?",
+      "qual é o telefone de ajuda no Brasil?",
+      "qual é o número de crise no Brasil?",
+    ]) expect(crisisQuestionKind(text), text).toBe(true);
+  });
+
   it("responde con la línea del país, su fuente con fecha y el botón de llamada", async () => {
     const { composeCrisisAnswer } = await import("./packFacts");
     const a = composeCrisisAnswer("¿cuál es la línea de crisis de España?", "es", crisisRegions, crisisFacts)!;
