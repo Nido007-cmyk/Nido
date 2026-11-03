@@ -388,7 +388,7 @@ export function composeMergedCrisisAnswer(
 // the guides name can actually be seen.
 
 const CRISIS_LINE_CUES =
-  / (linea de la vida|linea de crisis|linea de ayuda|telefono de crisis|telefono de ayuda|numero de crisis|crisis line|suicide (line|hotline|helpline)|helpline|hotline|lifeline|linha da vida|linha de crise|linha de ajuda|telefone de crise|telefone de ajuda|numero de crise) /;
+  / (linea de la vida|linea de crisis|linea de ayuda|telefono de crisis|telefono de ayuda|numero de crisis|crisis line|crisis number|suicide (line|hotline|helpline)|helpline|hotline|lifeline|linha da vida|linha de crise|linha de ajuda|telefone de crise|telefone de ajuda|numero de crise) /;
 const CRISIS_INTENT_CUES =
   / (suicid\w*|autolesion\w*|autolesao\w*|automutila\w*|quitarme la vida|quitarse la vida|tirar a minha vida|tirar a sua vida|tirar a propria vida|quiero morir|quiere morir|queremos morir|quereis morir|quieren morir|quero morrer|quer morrer|queremos morrer|querem morrer|want to die|wants to die|no quiero vivir|no quiere vivir|no queremos vivir|no quereis vivir|no quieren vivir|nao quero viver|nao quer viver|nao queremos viver|nao querem viver|nao quero mais viver|nao quer mais viver|nao queremos mais viver|nao querem mais viver|don t want to live|doesn t want to live|do not want to live|does not want to live|hacerse dano|self harm|kill myself|end my life) /;
 

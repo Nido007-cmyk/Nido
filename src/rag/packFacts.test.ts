@@ -298,6 +298,17 @@ describe("líneas de crisis (familia crisis.*): el consumidor que faltaba", () =
     ]) expect(crisisQuestionKind(text), text).toBe(true);
   });
 
+  it("adversaria PC2 C3: «crisis number» cierra el paradigma del número de crisis en inglés", async () => {
+    const { crisisQuestionKind } = await import("./packFacts");
+    // El paradigma «número de crisis» estaba asentado en es (base)
+    // y en pt (espejo de la cura PC2-2); la celda inglesa quedó sin
+    // asiento: «crisis line» sí, «crisis number» no.
+    for (const text of [
+      "what is the crisis number in Spain?",
+      "what is the crisis number in the United States?",
+    ]) expect(crisisQuestionKind(text), text).toBe(true);
+  });
+
   it("pre-censo PC2-4: la pregunta larga con su motivo clasifica en las tres lenguas", async () => {
     const { crisisQuestionKind } = await import("./packFacts");
     // La misma pregunta de la sonda, con su motivo: 34, 39 y 36
