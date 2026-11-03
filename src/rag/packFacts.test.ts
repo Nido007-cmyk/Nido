@@ -183,6 +183,34 @@ describe("líneas de crisis (familia crisis.*): el consumidor que faltaba", () =
     expect(crisisQuestionKind("qué tiempo hace en España")).toBe(false);
   });
 
+  it("pre-censo PC2-1: la expresión de intención tiene su forma en las tres lenguas", async () => {
+    const { crisisQuestionKind } = await import("./packFacts");
+    // La misma familia, lengua a lengua: raíz de suicidio, autolesión,
+    // quitarse la vida, querer morir y no querer vivir. Las formas van
+    // plegadas, como las ve la función («não» → «nao», «don't» → «don t»).
+    for (const text of [
+      "quiero morir, ¿a quién llamo en México?",
+      "quiere morir, ¿a quién llamamos en México?",
+      "no quiero vivir",
+      "no quiere vivir",
+      "se está autolesionando",
+      "quiero quitarme la vida",
+      "quero morrer, a quem ligo no Brasil?",
+      "quer morrer, a quem ligamos no Brasil?",
+      "não quero viver",
+      "não quer viver",
+      "fala em autolesão e precisa de ajuda no Brasil",
+      "fala em automutilação e precisa de ajuda no Brasil",
+      "quero tirar a minha vida",
+      "ele quer tirar a sua vida",
+      "quero tirar a própria vida",
+      "I want to die, who do I call in the United States?",
+      "he wants to die, who do we call in the United States?",
+      "I don't want to live",
+      "she doesn't want to live",
+    ]) expect(crisisQuestionKind(text), text).toBe(true);
+  });
+
   it("responde con la línea del país, su fuente con fecha y el botón de llamada", async () => {
     const { composeCrisisAnswer } = await import("./packFacts");
     const a = composeCrisisAnswer("¿cuál es la línea de crisis de España?", "es", crisisRegions, crisisFacts)!;

@@ -390,7 +390,7 @@ export function composeMergedCrisisAnswer(
 const CRISIS_LINE_CUES =
   / (linea de la vida|linea de crisis|linea de ayuda|telefono de crisis|telefono de ayuda|numero de crisis|crisis line|suicide (line|hotline|helpline)|helpline|hotline|lifeline|linha de crise|linha de ajuda|telefone de crise) /;
 const CRISIS_INTENT_CUES =
-  / (suicid\w*|autolesion\w*|quitarme la vida|quitarse la vida|quiero morir|quiere morir|no quiero vivir|hacerse dano|self harm|kill myself|end my life) /;
+  / (suicid\w*|autolesion\w*|autolesao\w*|automutila\w*|quitarme la vida|quitarse la vida|tirar a minha vida|tirar a sua vida|tirar a propria vida|quiero morir|quiere morir|quero morrer|quer morrer|want to die|wants to die|no quiero vivir|no quiere vivir|nao quero viver|nao quer viver|don t want to live|doesn t want to live|hacerse dano|self harm|kill myself|end my life) /;
 
 /**
  * The text asks for a crisis line, or says someone may be in crisis. A
