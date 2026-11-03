@@ -112,6 +112,12 @@ A rebuilt edition of `nido-esencial` is published in the release
 recreated from their own source (174 guides in the three
 languages), after the Portuguese edition was found to derive
 from the Spanish text. `nido-local` stays at its v9 edition.
+A re-verified edition of `nido-esencial` is published in the
+release `knowledge-packs-v11` with 0.1.70: every one of its 58
+topics was re-checked citation by citation against its official
+sources in the three languages (174 guides, 568 chunks), and
+the edition carries the corrections that re-verification
+landed. `nido-local` stays at its v9 edition.
 
 ### Format v2: indexed questions and verified facts (0.1.55)
 

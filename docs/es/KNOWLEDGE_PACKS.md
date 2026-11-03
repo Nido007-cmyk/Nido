@@ -116,6 +116,12 @@ Una edición reconstruida de `nido-esencial` se publica en la release
 recrearon desde su propia fuente (174 guías en los tres idiomas),
 después de que se descubriera que la edición portuguesa derivaba
 del texto español. `nido-local` se queda en su edición v9.
+Una edición reverificada de `nido-esencial` se publica en la
+release `knowledge-packs-v11` con la 0.1.70: cada uno de sus 58
+temas se re-comprobó cita a cita contra sus fuentes oficiales
+en los tres idiomas (174 guías, 568 trozos), y la edición
+lleva las correcciones que esa reverificación asentó.
+`nido-local` se queda en su edición v9.
 
 ### Formato v2: preguntas indexadas y datos verificados (0.1.55)
 

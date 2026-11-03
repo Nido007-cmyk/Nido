@@ -641,11 +641,11 @@ export const MODEL_CATALOG: CatalogModel[] = [
     format: "sqlite-pack",
     label: "NIDO Essentials: first aid, health, disasters, survival",
     filename: "corpus/nido-esencial.sqlite",
-    sizeBytes: 1146880,
-    sha256: "d9a1a12372c46a466a57c79d48e881f2f66a73acb683371fe2ba4a3c435d63d9",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v10/nido-esencial.sqlite",
+    sizeBytes: 1163264,
+    sha256: "3024a7b121488ab35d775ac6465ef17e7d4fa068a75e49bd2fa3003739100c36",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v11/nido-esencial.sqlite",
     license: "CC BY 4.0 (NIDO)",
-    description: "174 offline guides (58 each in Spanish, English and Portuguese) on first aid, health at home, disasters and survival. ~1.15MB.",
+    description: "174 offline guides (58 each in Spanish, English and Portuguese) on first aid, health at home, disasters and survival. ~1.16MB.",
     required: false,
   },
   {
@@ -656,12 +656,12 @@ export const MODEL_CATALOG: CatalogModel[] = [
     format: "sqlite-pack",
     label: "NIDO Essentials (multilingual search)",
     filename: "corpus/nido-esencial-e5.sqlite",
-    sizeBytes: 1146880,
-    sha256: "3a7bd69d801fe4dc437661025f4f421912c3e5b66a8f19f511d59ddbf6060574",
-    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v10/nido-esencial-e5.sqlite",
+    sizeBytes: 1163264,
+    sha256: "81cf08ead9bae80f5fab7024c6ef9ef0a118bc85c18637945a2be3c29c093d0f",
+    sourceUrl: "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v11/nido-esencial-e5.sqlite",
     license: "CC BY 4.0 (NIDO)",
     description:
-      "174 offline guides on first aid, health at home, disasters and survival, searchable in Spanish, Portuguese and English. ~1.15MB.",
+      "174 offline guides on first aid, health at home, disasters and survival, searchable in Spanish, Portuguese and English. ~1.16MB.",
     required: false,
   },
   {
@@ -966,7 +966,7 @@ export const TIERS: TierDefinition[] = [
   {
     id: "full",
     label: "Full",
-    description: "+ 5,000 more Wikipedia-derived topics total and NIDO's first aid, disaster and survival guides (~4.3MB extra download).",
+    description: "+ 5,000 more Wikipedia-derived topics total and NIDO's first aid, disaster and survival guides (~4.31MB extra download).",
     corpusPackIds: ["corpus-standard", "corpus-full", "nido-esencial"],
   },
   {
