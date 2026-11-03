@@ -3,6 +3,8 @@ title: Fracturas, esguinces y luxaciones
 category: Primeros auxilios
 lang: es
 sources: Cruz Roja Canadiense, directrices 2020; IFRC 2020
+id: esencial-fracturas-y-esguinces
+verified: 2026-11-02
 ---
 Sin rayos X no se puede saber si un hueso está roto. Por eso, ante un golpe con dolor fuerte, hinchazón, deformidad o incapacidad para moverlo, trátalo como una fractura.
 

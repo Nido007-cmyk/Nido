@@ -3,6 +3,8 @@ title: Golpes en la cabeza, el cuello o la espalda
 category: Primeros auxilios
 lang: es
 sources: Cruz Roja Canadiense, directrices 2020; AHA y Cruz Roja Americana 2024; IFRC 2020
+id: esencial-golpe-en-la-cabeza-y-columna
+verified: 2026-11-02
 ---
 ## Cuándo sospechar una lesión de columna
 - Accidente de tráfico, atropello, caída desde más altura que la propia persona, zambullida en aguas poco profundas.

@@ -3,6 +3,8 @@ title: Afogamento e resgate na água
 category: Primeiros socorros
 lang: pt
 sources: AHA e Cruz Vermelha Americana, diretrizes 2024; Conselho Europeu de Ressuscitação (ERC), guias 2021; OMS, prevenção de afogamentos; Cruz Vermelha Canadense 2020
+id: esencial-ahogamiento
+verified: 2026-11-02
 questions: pessoa se afogando, como resgatar sem entrar na água | criança se afogou e não respira, o que faço | depois de tirar da água, faço rcp normal | quanto tempo uma criança se afoga sem ninguém ver
 ---
 Quem está se afogando quase nunca grita nem faz sinais: afunda em silêncio em segundos.

@@ -1,6 +1,8 @@
 {
   "guides": [
+    "esencial-accidente-de-trafico",
     "esencial-agua-potable",
+    "esencial-ahogamiento",
     "esencial-alergia-grave-anafilaxia",
     "esencial-asma-y-dificultad-para-respirar",
     "esencial-atragantamiento",
@@ -11,8 +13,11 @@
     "esencial-diarrea-vomitos-y-suero-oral",
     "esencial-dolor-de-pecho-infarto",
     "esencial-fiebre",
+    "esencial-fracturas-y-esguinces",
     "esencial-golpe-de-calor",
+    "esencial-golpe-en-la-cabeza-y-columna",
     "esencial-hemorragias-graves",
+    "esencial-heridas-y-cortes",
     "esencial-higiene-y-prevencion-de-infecciones",
     "esencial-hipotermia-y-congelacion",
     "esencial-ictus",

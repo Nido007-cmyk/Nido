@@ -3,6 +3,8 @@ title: Head, neck and back injuries
 category: First aid
 lang: en
 sources: Canadian Red Cross guidelines 2020; AHA and American Red Cross 2024; IFRC 2020
+id: esencial-golpe-en-la-cabeza-y-columna
+verified: 2026-11-02
 ---
 ## When to suspect a spinal injury
 - Road crash, being hit by a vehicle, a fall from higher than the person's own height, diving into shallow water.

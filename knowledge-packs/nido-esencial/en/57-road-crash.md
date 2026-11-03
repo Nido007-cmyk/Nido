@@ -3,6 +3,8 @@ title: Road traffic crash
 category: First aid
 lang: en
 sources: Spanish Red Cross, PAS protocol; AHA and American Red Cross 2024; WHO, road safety
+id: esencial-accidente-de-trafico
+verified: 2026-11-02
 ---
 ## 1. Protect
 - Park your vehicle off the road and before the crash, with hazard lights on.

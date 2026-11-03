@@ -3,6 +3,8 @@ title: Fraturas, entorses e luxações
 category: Primeiros socorros
 lang: pt
 sources: Cruz Vermelha Canadense, diretrizes 2020; IFRC 2020
+id: esencial-fracturas-y-esguinces
+verified: 2026-11-02
 questions: acho que quebrei o braço, o que faço | como imobilizar uma perna quebrada | torci o tornozelo, o que passar | fratura com o osso aparecendo, o que fazer
 ---
 Sem raio-X não dá para saber se um osso está quebrado. Por isso, diante de uma batida com dor forte, inchaço, deformidade ou incapacidade de mexer, trate como fratura.

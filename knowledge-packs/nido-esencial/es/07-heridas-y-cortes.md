@@ -3,6 +3,8 @@ title: Heridas, cortes y raspones
 category: Primeros auxilios
 lang: es
 sources: Cruz Roja Canadiense, directrices 2020; AHA y Cruz Roja Americana 2024; OMS (tétanos)
+id: esencial-heridas-y-cortes
+verified: 2026-11-02
 ---
 La mayoría de las heridas pequeñas se curan bien en casa si se limpian y se protegen. Lo importante es evitar la infección.
 

@@ -3,6 +3,8 @@ title: Fractures, sprains and dislocations
 category: First aid
 lang: en
 sources: Canadian Red Cross guidelines 2020; IFRC 2020
+id: esencial-fracturas-y-esguinces
+verified: 2026-11-02
 ---
 Without an X-ray you cannot know whether a bone is broken. So after an injury with strong pain, swelling, deformity or inability to move it, treat it as a fracture.
 

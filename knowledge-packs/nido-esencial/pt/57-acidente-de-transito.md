@@ -3,6 +3,8 @@ title: Acidente de trânsito
 category: Primeiros socorros
 lang: pt
 sources: Cruz Vermelha Espanhola, protocolo PAS; AHA e Cruz Vermelha Americana 2024; OMS, segurança viária
+id: esencial-accidente-de-trafico
+verified: 2026-11-02
 questions: acidente de trânsito, o que fazer primeiro | posso tirar o capacete de um motociclista ferido | meu carro caiu na água, como sair | ferido no acidente, posso mover ele
 ---
 ## 1. Proteja

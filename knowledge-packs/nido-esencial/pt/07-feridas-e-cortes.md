@@ -3,6 +3,8 @@ title: Feridas, cortes e arranhões
 category: Primeiros socorros
 lang: pt
 sources: Cruz Vermelha Canadense, diretrizes 2020; AHA e Cruz Vermelha Americana 2024; OMS (tétano)
+id: esencial-heridas-y-cortes
+verified: 2026-11-02
 questions: como limpar um corte em casa | cortei o dedo e está sangrando um pouco, o que faço | como saber se um corte precisa de ponto | bolha no pé, posso estourar
 ---
 A maioria das feridas pequenas se cura bem em casa se forem limpas e protegidas. O importante é evitar a infecção.

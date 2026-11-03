@@ -3,6 +3,8 @@ title: Wounds, cuts and scrapes
 category: First aid
 lang: en
 sources: Canadian Red Cross guidelines 2020; AHA and American Red Cross 2024; WHO (tetanus)
+id: esencial-heridas-y-cortes
+verified: 2026-11-02
 ---
 Most small wounds heal well at home if they are cleaned and protected. The main goal is to prevent infection.
 

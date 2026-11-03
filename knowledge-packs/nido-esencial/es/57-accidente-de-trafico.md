@@ -3,6 +3,8 @@ title: Accidente de tráfico
 category: Primeros auxilios
 lang: es
 sources: Cruz Roja Española, protocolo PAS; AHA y Cruz Roja Americana 2024; OMS, seguridad vial
+id: esencial-accidente-de-trafico
+verified: 2026-11-02
 ---
 ## 1. Protege
 - Aparca tu vehículo fuera de la calzada y antes del accidente, con las luces de emergencia.
