@@ -14,6 +14,7 @@ questions: meu filho tomou um frasco de remédio, faço ele vomitar | criança e
 5. Se houver produto na boca, que ela enxágue e cuspa.
 6. Se vomitar ou estiver sonolenta, coloque-a de lado.
 **Pilhas de botão e ímãs**: se uma criança engoliu uma, vá à emergência de imediato, mesmo que ela esteja bem. Podem causar queimaduras internas graves em horas.
+Se puder ser uma pilha de botão de lítio e a criança tiver 1 ano ou mais, tiver engolido há menos de 12 horas, conseguir engolir e houver mel à mão: no caminho para a emergência, dê 10 ml (2 colheres de chá) de mel a cada 10 minutos, até 6 vezes. O mel retarda a queimadura, mas não substitui a retirada da pilha: não atrase a saída para dá-lo. Além do mel, nada para comer ou beber até que um raio-X descarte que a pilha ainda está no esôfago.
 
 ## Produtos químicos na pele ou nos olhos
 - Pele: tire a roupa contaminada (com luvas, se puder) e lave com muita água corrente por pelo menos 15 a 20 minutos. Se for um pó seco, sacuda-o antes.

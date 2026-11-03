@@ -14,6 +14,7 @@ sources: AHA and American Red Cross First Aid Guidelines 2024; WHO; CDC, carbon 
 5. If there is product in the mouth, have them rinse and spit.
 6. If they vomit or are drowsy, put them on their side.
 **Button batteries and magnets**: if a child swallows one, go to the emergency department at once even if they seem fine. They can cause severe internal burns within hours.
+If it may be a lithium button battery and the child is 1 year or older, swallowed it within the last 12 hours, can swallow, and honey is at hand: on the way to the emergency department, give 10 mL (2 teaspoons) of honey every 10 minutes, up to 6 times. Honey slows the burn but does not replace removing the battery: do not delay leaving to give it. Other than honey, nothing to eat or drink until an x-ray rules out the battery still being in the esophagus.
 
 ## Chemicals on the skin or in the eyes
 - Skin: remove contaminated clothing (with gloves if possible) and rinse with plenty of running water for at least 15 to 20 minutes. If it is a dry powder, brush it off first.
