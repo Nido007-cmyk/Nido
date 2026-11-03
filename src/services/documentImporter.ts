@@ -583,14 +583,21 @@ async function parseFileContent(
   // El despacho lo decide la extensión conocida o, si no, los
   // propios bytes del fichero (attachmentPolicy): una imagen
   // llamada .bin o un PDF llamado .data van por su camino.
+  // Auditoría completa (F-2): la 0.1.68 prometió que el tipo lo
+  // deciden los bytes y no el nombre, pero una extensión conocida
+  // mandaba sin mirarlos: un PDF llamado «.txt» se indexaba como
+  // texto basura, y una foto llamada «.pdf» fallaba como PDF
+  // ilegible. Ahora la magia fuerte (%PDF-, JPEG, PNG, WEBP, GIF,
+  // HEIF) manda siempre; sin ella, la extensión conocida, y si no,
+  // la clasificación entera de los bytes.
+  const sample = await readKindSample(file.uri);
+  const byBytes = sample ? attachmentKind(filename, sample).kind : null;
   let kind: "pdf" | "image" | "text" | "unsupported" | null = null;
-  if (ext === "pdf") kind = "pdf";
+  if (byBytes === "pdf" || byBytes === "image") kind = byBytes;
+  else if (ext === "pdf") kind = "pdf";
   else if (IMAGE_EXTENSIONS.has(ext)) kind = "image";
   else if (TEXT_DISPATCH_EXTENSIONS.has(ext)) kind = "text";
-  else {
-    const sample = await readKindSample(file.uri);
-    if (sample) kind = attachmentKind(filename, sample).kind;
-  }
+  else kind = byBytes;
 
   if (kind === "image") {
     if (file.size != null && file.size > MAX_IMPORT_TEXT_FILE_BYTES) {
@@ -644,7 +651,10 @@ async function parseFileContent(
       env.onProgress?.({ stage: "ocr" });
       try {
         const ocrText = await recognizeScannedPdfText(file.uri, env.lang);
-        if (ocrText.trim().length > 0) {
+        if (ocrText === null) {
+          // Auditoría completa, F-1: el PDF no tiene páginas
+          // escaneadas; no hay nada que avisar.
+        } else if (ocrText.trim().length > 0) {
           docs.push({ title: fallbackTitle, source: filename, body: ocrText, ocr: true });
         } else {
           // Adversaria H-01: la vía OCR de este fichero corrió y
@@ -652,12 +662,10 @@ async function parseFileContent(
           // aporte la capa de texto. La condición anterior (solo
           // sin capa) dejaba el PDF mixto en silencio: la portada
           // daba su chunk y las páginas escaneadas que no se
-          // leyeron no se nombraban en ninguna parte. La costura
-          // devuelve «» también cuando no hay páginas escaneadas
-          // que leer (el nativo ni arranca el motor): el aviso
-          // nombra el resultado de la vía, sin distinguir ese
-          // caso — separarlo exige que el nativo informe de las
-          // páginas intentadas, que no es asunto de este fichero.
+          // leyeron no se nombraban en ninguna parte. Desde la
+          // auditoría completa (F-1) la costura distingue «no hay
+          // páginas escaneadas» (null, sin aviso) de «las hay y el
+          // motor no leyó nada» («», este aviso).
           sink?.ocrEmptyNames.push(filename);
         }
       } catch (e) {
