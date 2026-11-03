@@ -4262,21 +4262,22 @@
           "afirmacionId": "48-A02",
           "textoLiteral": "Mejor agua que corre que agua estancada. Recoge agua de lluvia en lonas o recipientes limpios. Busca en el fondo de los valles, donde hay vegetación verde, o cava en la orilla exterior de una curva de un río seco. El rocío de la mañana se puede recoger con un trapo y escurrirlo. No bebas agua de mar ni orina: deshidratan más.",
           "tipo": "paso",
-          "institucion": "Sin sede (NO ENCONTRADO)",
-          "documento": "Sin documento: afirmación no localizada en ninguna sede oficial abierta",
-          "edicion": "Caza de ampliación cerrada 2026-11-02",
-          "identificador": "Sin identificador (declaración de no encontrado)",
-          "localizador": "Declaración de no encontrado tras la caza de ampliación (2026-11-02); fila no bloqueante por sí sola según la auditoría de R1-1 (orientación, no dosis ni paso). El tema se sella con esta fila declarada por decisión asentada de esta ampliación.",
-          "citaLiteral": "Sin cita: afirmación no localizada en ninguna sede oficial abierta (ver fuentesConsultadas).",
+          "institucion": "Ejército de los Estados Unidos (U.S. Army), Headquarters, Department of the Army",
+          "documento": "FM 3-05.70, Survival (manual de campo; antes FM 21-76)",
+          "edicion": "Edición de mayo de 2002; capítulo 6, «Water Procurement» (y §16-45 del cap. 16 para el rocío en el mar)",
+          "identificador": "FM 3-05.70 (2002), cap. 6",
+          "localizador": "Fila re-sentada por ampliación puntual tras el cargo único de la adversaria de la ampliación (informe nido-adv-ampliacion-2026-11-02: APTO CON CARGOS; la adversaria abrió y verificó esta sede y la dejó como cura prescrita; este carril la re-verificó sobre la reproducción del capítulo, con las figuras 6-1 y 6-2 leídas como imagen). Elementos literales en FM 3-05.70 cap. 6: valles y zonas bajas, pie de la orilla cóncava de un río seco y vegetación verde, cavando hasta que el agua rezume (Figura 6-1, Desert/Ground); lluvia recogida en lonas o recipientes (Figura 6-1, At sea/Rain); rocío recogido con trapo y escurrido (§6-3; Figura 6-1, condensación sobre metal; §16-45 en el mar); prohibiciones del agua de mar y de la orina (Figura 6-1 y Figura 6-2). Elemento de grado contexto, nombrado: la preferencia por el agua que corre frente a la estancada no tiene frase literal en la sede; su apoyo de contexto es el §6-35, que trata el agua estancada y maloliente como la que hay que aclarar. El resto de la fila es literal. La caza anterior (CDC ×3, OMS cólera, IFRC acción 30, Eawag/SODIS) queda en fuentesConsultadas como historial de la fila antes de esta cura.",
+          "citaLiteral": "«In valleys and low areas» · «At foot of concave banks of dry rivers» · «Wherever you find green vegetation» — medio: «Dig holes deep enough to allow water to seep in» (Figura 6-1, Desert/Ground). «Catch rain in tarps or in other water-holding containers» (Figura 6-1, At sea/Rain). «Heavy dew can provide water… wring the water into a container» (§6-3; también Figura 6-1, condensación: «Use cloth to absorb water, then wring water from cloth», y §16-45: recoger el rocío con esponja o trapo). «Do not drink seawater without desalting» (Figura 6-1); Figura 6-2: la orina «contains harmful body wastes. Is about 2 percent salt» y el agua de mar «is about 4 percent salt… by drinking seawater you deplete your body's water supply, which can cause death».",
           "fechaComprobacion": "2026-11-02",
-          "desenlace": "NO ENCONTRADO",
+          "desenlace": "sostenida con contexto",
           "fuentesConsultadas": [
             "CDC, Hurricane Key Messages (repositorio oficial stacks.cdc.gov)",
             "CDC, Making Water Safe in an Emergency (póster CS316855-A y página oficial)",
             "CDC, What You Can Do to Prevent Diarrheal Illness After a Disaster (cdc.gov/water-emergency)",
             "OMS, Cholera outbreaks (preguntas y respuestas, who.int)",
             "IFRC, Epidemic Control Toolkit, acción 30 «Clean, safe household water» (epidemics.ifrc.org)",
-            "Eawag/Sandec, SODIS Manual 2016 (ISBN 978-3-906484-59-4)"
+            "Eawag/Sandec, SODIS Manual 2016 (ISBN 978-3-906484-59-4)",
+            "FM 3-05.70, Survival (U.S. Army, mayo de 2002), capítulo 6 y §16-45 — sede de la cura, abierta y verificada por la adversaria de la ampliación y re-verificada por este carril"
           ]
         },
         {
@@ -4473,21 +4474,22 @@
           "afirmacionId": "48-A02",
           "textoLiteral": "Running water is better than standing water. Collect rainwater on tarps or in clean containers. Look at the bottom of valleys, where vegetation is green, or dig on the outside of a bend in a dry riverbed. Morning dew can be collected with a cloth and wrung out. Do not drink seawater or urine: they dehydrate you more.",
           "tipo": "paso",
-          "institucion": "Sin sede (NO ENCONTRADO)",
-          "documento": "Sin documento: afirmación no localizada en ninguna sede oficial abierta",
-          "edicion": "Caza de ampliación cerrada 2026-11-02",
-          "identificador": "Sin identificador (declaración de no encontrado)",
-          "localizador": "Declaración de no encontrado tras la caza de ampliación (2026-11-02); fila no bloqueante por sí sola según la auditoría de R1-1 (orientación, no dosis ni paso). El tema se sella con esta fila declarada por decisión asentada de esta ampliación.",
-          "citaLiteral": "Sin cita: afirmación no localizada en ninguna sede oficial abierta (ver fuentesConsultadas).",
+          "institucion": "Ejército de los Estados Unidos (U.S. Army), Headquarters, Department of the Army",
+          "documento": "FM 3-05.70, Survival (manual de campo; antes FM 21-76)",
+          "edicion": "Edición de mayo de 2002; capítulo 6, «Water Procurement» (y §16-45 del cap. 16 para el rocío en el mar)",
+          "identificador": "FM 3-05.70 (2002), cap. 6",
+          "localizador": "Fila re-sentada por ampliación puntual tras el cargo único de la adversaria de la ampliación (informe nido-adv-ampliacion-2026-11-02: APTO CON CARGOS; la adversaria abrió y verificó esta sede y la dejó como cura prescrita; este carril la re-verificó sobre la reproducción del capítulo, con las figuras 6-1 y 6-2 leídas como imagen). Elementos literales en FM 3-05.70 cap. 6: valles y zonas bajas, pie de la orilla cóncava de un río seco y vegetación verde, cavando hasta que el agua rezume (Figura 6-1, Desert/Ground); lluvia recogida en lonas o recipientes (Figura 6-1, At sea/Rain); rocío recogido con trapo y escurrido (§6-3; Figura 6-1, condensación sobre metal; §16-45 en el mar); prohibiciones del agua de mar y de la orina (Figura 6-1 y Figura 6-2). Elemento de grado contexto, nombrado: la preferencia por el agua que corre frente a la estancada no tiene frase literal en la sede; su apoyo de contexto es el §6-35, que trata el agua estancada y maloliente como la que hay que aclarar. El resto de la fila es literal. La caza anterior (CDC ×3, OMS cólera, IFRC acción 30, Eawag/SODIS) queda en fuentesConsultadas como historial de la fila antes de esta cura.",
+          "citaLiteral": "«In valleys and low areas» · «At foot of concave banks of dry rivers» · «Wherever you find green vegetation» — medio: «Dig holes deep enough to allow water to seep in» (Figura 6-1, Desert/Ground). «Catch rain in tarps or in other water-holding containers» (Figura 6-1, At sea/Rain). «Heavy dew can provide water… wring the water into a container» (§6-3; también Figura 6-1, condensación: «Use cloth to absorb water, then wring water from cloth», y §16-45: recoger el rocío con esponja o trapo). «Do not drink seawater without desalting» (Figura 6-1); Figura 6-2: la orina «contains harmful body wastes. Is about 2 percent salt» y el agua de mar «is about 4 percent salt… by drinking seawater you deplete your body's water supply, which can cause death».",
           "fechaComprobacion": "2026-11-02",
-          "desenlace": "NO ENCONTRADO",
+          "desenlace": "sostenida con contexto",
           "fuentesConsultadas": [
             "CDC, Hurricane Key Messages (repositorio oficial stacks.cdc.gov)",
             "CDC, Making Water Safe in an Emergency (póster CS316855-A y página oficial)",
             "CDC, What You Can Do to Prevent Diarrheal Illness After a Disaster (cdc.gov/water-emergency)",
             "OMS, Cholera outbreaks (preguntas y respuestas, who.int)",
             "IFRC, Epidemic Control Toolkit, acción 30 «Clean, safe household water» (epidemics.ifrc.org)",
-            "Eawag/Sandec, SODIS Manual 2016 (ISBN 978-3-906484-59-4)"
+            "Eawag/Sandec, SODIS Manual 2016 (ISBN 978-3-906484-59-4)",
+            "FM 3-05.70, Survival (U.S. Army, mayo de 2002), capítulo 6 y §16-45 — sede de la cura, abierta y verificada por la adversaria de la ampliación y re-verificada por este carril"
           ]
         },
         {
@@ -4684,21 +4686,22 @@
           "afirmacionId": "48-A02",
           "textoLiteral": "Melhor água que corre do que água parada. Recolha água da chuva em lonas ou recipientes limpos. Procure no fundo dos vales, onde há vegetação verde, ou cave na margem externa de uma curva de um rio seco. O orvalho da manhã pode ser recolhido com um pano e torcido. Não beba água do mar nem urina: desidratam mais.",
           "tipo": "paso",
-          "institucion": "Sin sede (NO ENCONTRADO)",
-          "documento": "Sin documento: afirmación no localizada en ninguna sede oficial abierta",
-          "edicion": "Caza de ampliación cerrada 2026-11-02",
-          "identificador": "Sin identificador (declaración de no encontrado)",
-          "localizador": "Declaración de no encontrado tras la caza de ampliación (2026-11-02); fila no bloqueante por sí sola según la auditoría de R1-1 (orientación, no dosis ni paso). El tema se sella con esta fila declarada por decisión asentada de esta ampliación.",
-          "citaLiteral": "Sin cita: afirmación no localizada en ninguna sede oficial abierta (ver fuentesConsultadas).",
+          "institucion": "Ejército de los Estados Unidos (U.S. Army), Headquarters, Department of the Army",
+          "documento": "FM 3-05.70, Survival (manual de campo; antes FM 21-76)",
+          "edicion": "Edición de mayo de 2002; capítulo 6, «Water Procurement» (y §16-45 del cap. 16 para el rocío en el mar)",
+          "identificador": "FM 3-05.70 (2002), cap. 6",
+          "localizador": "Fila re-sentada por ampliación puntual tras el cargo único de la adversaria de la ampliación (informe nido-adv-ampliacion-2026-11-02: APTO CON CARGOS; la adversaria abrió y verificó esta sede y la dejó como cura prescrita; este carril la re-verificó sobre la reproducción del capítulo, con las figuras 6-1 y 6-2 leídas como imagen). Elementos literales en FM 3-05.70 cap. 6: valles y zonas bajas, pie de la orilla cóncava de un río seco y vegetación verde, cavando hasta que el agua rezume (Figura 6-1, Desert/Ground); lluvia recogida en lonas o recipientes (Figura 6-1, At sea/Rain); rocío recogido con trapo y escurrido (§6-3; Figura 6-1, condensación sobre metal; §16-45 en el mar); prohibiciones del agua de mar y de la orina (Figura 6-1 y Figura 6-2). Elemento de grado contexto, nombrado: la preferencia por el agua que corre frente a la estancada no tiene frase literal en la sede; su apoyo de contexto es el §6-35, que trata el agua estancada y maloliente como la que hay que aclarar. El resto de la fila es literal. La caza anterior (CDC ×3, OMS cólera, IFRC acción 30, Eawag/SODIS) queda en fuentesConsultadas como historial de la fila antes de esta cura.",
+          "citaLiteral": "«In valleys and low areas» · «At foot of concave banks of dry rivers» · «Wherever you find green vegetation» — medio: «Dig holes deep enough to allow water to seep in» (Figura 6-1, Desert/Ground). «Catch rain in tarps or in other water-holding containers» (Figura 6-1, At sea/Rain). «Heavy dew can provide water… wring the water into a container» (§6-3; también Figura 6-1, condensación: «Use cloth to absorb water, then wring water from cloth», y §16-45: recoger el rocío con esponja o trapo). «Do not drink seawater without desalting» (Figura 6-1); Figura 6-2: la orina «contains harmful body wastes. Is about 2 percent salt» y el agua de mar «is about 4 percent salt… by drinking seawater you deplete your body's water supply, which can cause death».",
           "fechaComprobacion": "2026-11-02",
-          "desenlace": "NO ENCONTRADO",
+          "desenlace": "sostenida con contexto",
           "fuentesConsultadas": [
             "CDC, Hurricane Key Messages (repositorio oficial stacks.cdc.gov)",
             "CDC, Making Water Safe in an Emergency (póster CS316855-A y página oficial)",
             "CDC, What You Can Do to Prevent Diarrheal Illness After a Disaster (cdc.gov/water-emergency)",
             "OMS, Cholera outbreaks (preguntas y respuestas, who.int)",
             "IFRC, Epidemic Control Toolkit, acción 30 «Clean, safe household water» (epidemics.ifrc.org)",
-            "Eawag/Sandec, SODIS Manual 2016 (ISBN 978-3-906484-59-4)"
+            "Eawag/Sandec, SODIS Manual 2016 (ISBN 978-3-906484-59-4)",
+            "FM 3-05.70, Survival (U.S. Army, mayo de 2002), capítulo 6 y §16-45 — sede de la cura, abierta y verificada por la adversaria de la ampliación y re-verificada por este carril"
           ]
         },
         {
