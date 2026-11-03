@@ -4,6 +4,75 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.74-alpha - 2026-11-03
+
+Fixes from a full audit of every public claim from 0.1.62 to 0.1.72
+([docs/security/AUDIT_FULL_0.1.62-0.1.72_2026-11-03.md](https://github.com/Nido007-cmyk/Nido/blob/main/docs/security/AUDIT_FULL_0.1.62-0.1.72_2026-11-03.md)).
+No catalog change and no guide text change: the signed catalog
+keeps offering knowledge-packs-v12.
+
+### Safety
+
+- **A live emergency is recognised in the way people actually
+  write it, in all three languages.** "My dad isn't breathing"
+  was not recognised while "is not breathing" was (the
+  contraction was missing); "no puedo respirar" and "não consigo
+  respirar" were missing while "I can't breathe" was there; and a
+  seizure, a heart attack or a stroke happening now were missing
+  in some languages. They are now recognised in Spanish, English
+  and Portuguese, and their everyday look-alikes ("backstroke",
+  "what is a heart attack", "this traffic is killing me") are not.
+- **The health gate knows heart attacks, strokes and swallowed
+  objects.** "Infarto", "heart attack", "AVC", "ictus" and
+  swallowing a battery, pills, a coin or bleach were unknown to
+  it in all three languages, so without a guide the model's own
+  text could stay on screen. Swallowing only counts with its
+  object, so "the ATM swallowed my card" is not a health question.
+- **A crisis said in Spanish or Portuguese reaches the crisis
+  route.** "I want to kill myself" reached it (the verified crisis
+  line of the NIDO Crisis pack, when the pack is installed);
+  "quiero matarme", "me voy a matar", "quero me matar" and "vou me
+  matar" did not. They now do, as do
+  "acabar con mi vida", "acabar com a minha vida" and "take my own
+  life"; the everyday idiom of effort ("me voy a matar
+  estudiando", "vou me matar de rir") does not.
+
+### Reading documents
+
+- **A text PDF no longer gets a false recognition warning.**
+  Since 0.1.68, every PDF with a normal text layer was imported
+  with the warning "recognition found no text on its scanned
+  pages", although it had no scanned pages. The recognition
+  module now first finds which pages are scanned; with none, it
+  does not run and says nothing. A PDF whose scanned pages give
+  no text still gets the warning.
+- **A file's kind is decided by its bytes, as 0.1.68 promised.**
+  A known extension used to win without looking: a PDF named
+  ".txt" was indexed as garbage text and a photo named ".pdf"
+  failed as an unreadable PDF. Clear signatures in the bytes (PDF,
+  JPEG, PNG, WEBP, GIF, HEIF) now decide.
+- A recognition failure keeps its real cause (for example, the
+  language data failing its integrity check) instead of a generic
+  "OCR_FAILED".
+
+### Corrections
+
+- The 0.1.73 entry below said that "one correction to the 0.1.72
+  entry" was needed "because it was wrong". That was not so: the
+  0.1.72 entry never gave the retrieval figure. The facts in that
+  item stand (v12 misses the hypothermia question where v11
+  missed the traffic accident one, still 201/202), and the item
+  now reads as the note on retrieval it is.
+
+### Repository
+
+- Since 0.1.73, the scripts that reproduce the Essentials seal
+  checks (the seal ratchet, the clinical hashes and the guide
+  citations) are in the repository, so anyone can rerun them; the
+  0.1.73 entry did not say so.
+- AGENTS.md names the twelve native modules (it said seven), and
+  the cryptography document no longer contradicts the alpha notes.
+
 ## 0.1.73-alpha - 2026-11-03
 
 Fixes from Claude's audit of the published 0.1.72 (2026-11-03), each
@@ -32,8 +101,8 @@ keeps offering knowledge-packs-v12.
   The judge's own thresholds are untouched, and a regression
   sweep of 14,583 answer shapes over the Essentials chunks
   changed no verdict and no text.
-- One correction to the 0.1.72 entry, because it was wrong: the
-  v12 Essentials pack's e5 recovery is 201/202 and the question
+- A note on retrieval in knowledge-packs-v12: the v12 Essentials
+  pack's e5 recovery is 201/202 and the question
   it misses is the hypothermia one; the v11 pack missed a
   different question (the traffic accident one, which v12 now
   answers). The missed question changed because the family

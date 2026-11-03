@@ -3,8 +3,10 @@
 
 **Date:** October 8, 2026 (updated; original September 28, 2026).
 **Current protocol: handshake v3 + CONFIRM v1, session KDF HKDF-SHA512.**
-**Status:** IMPLEMENTED + AUTOMATED TESTED (1985 tests). **Not** PHYSICALLY TESTED
-(two-device), **not** EXTERNALLY AUDITED.
+**Status:** IMPLEMENTED + AUTOMATED TESTED (1,985 tests when this document
+was written; the whole suite runs on every change). Two-device P2P messaging,
+airplane mode included, has since been exercised on physical hardware (see
+docs/ALPHA_RELEASE_NOTES.md); **not** EXTERNALLY AUDITED.
 
 This document precisely describes the protocol as implemented today,
 its guarantees, its limits, and the migration path. No quantum resistance
