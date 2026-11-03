@@ -3,7 +3,8 @@ title: Earthquake
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA); Earthquake Country Alliance and USGS, "Drop, Cover and Hold On"; American Red Cross; CENAPRED (Mexico)
-questions: what do i do during an earthquake | what is drop, cover and hold on | should i run outside while the ground is shaking | what do i do if i am trapped under rubble after an earthquake | o que faço durante um terremoto | o que é abaixar-se, cobrir-se e segurar-se
+id: esencial-terremoto
+verified: 2026-11-02
 ---
 ## Before
 - Fix tall furniture, shelves and water heaters to the wall. Don't put heavy objects above beds.

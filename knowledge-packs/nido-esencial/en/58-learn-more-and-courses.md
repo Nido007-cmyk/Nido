@@ -3,13 +3,15 @@ title: Learn more: courses and trusted resources
 category: Survival
 lang: en
 sources: IFRC; Red Cross and Red Crescent; AHA; WHO
-questions: where can i take a first aid course | what should i learn first in first aid | is there a first aid app that works offline | how often should i review what i learned in first aid | onde posso fazer um curso de primeiros socorros | o que aprender primeiro em primeiros socorros
+id: esencial-aprender-mas-y-cursos
+verified: 2026-11-02
 ---
 These guides help, but **nothing replaces a hands-on first aid course**: practicing CPR on a manikin and using a training defibrillator gives you the confidence to act for real.
 
 ## Courses
 - **Red Cross and Red Crescent**: almost every country has in-person first aid courses, and many offer free or low-cost basic online courses. Ask your national Red Cross or Red Crescent society.
 - **AHA (American Heart Association)**: free Hands-Only CPR videos.
+- **WHO (OpenWHO)**: free online health-emergency courses at openwho.org.
 - Your local **civil protection / emergency management** office: talks and drills about local risks.
 - Many health centers, fire departments and universities run CPR and AED courses.
 

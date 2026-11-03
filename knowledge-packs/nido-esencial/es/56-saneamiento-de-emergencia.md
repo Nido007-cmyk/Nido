@@ -3,7 +3,8 @@ title: Baño y basura de emergencia (saneamiento)
 category: Supervivencia
 lang: es
 sources: OMS y UNICEF, agua, saneamiento e higiene en emergencias; Proyecto Esfera; Ready.gov
-questions: cómo hago un baño de emergencia en casa sin agua | a qué distancia de un pozo se hace una letrina | con qué se cubre el cubo del baño de emergencia | cómo me lavo las manos sin agua corriente | como faço um banheiro de emergência em casa sem água | a que distância de um poço se faz uma latrina
+id: esencial-saneamiento-de-emergencia
+verified: 2026-11-02
 ---
 Cuando no hay agua corriente o el alcantarillado falla, las heces mal gestionadas son una de las mayores causas de enfermedad tras un desastre.
 
@@ -16,7 +17,7 @@ Cuando no hay agua corriente o el alcantarillado falla, las heces mal gestionada
 
 ## Letrina en el exterior
 - Al menos a 30 metros de cualquier fuente de agua (pozo, río) y más abajo que ella.
-- Una zanja estrecha de 30 a 50 cm de profundidad. Tapa con tierra tras cada uso.
+- Una zanja estrecha y somera, de unos 15 cm de profundidad. Tapa con tierra tras cada uso.
 - Ponle privacidad, sobre todo para mujeres y niñas, y luz por la noche si es posible.
 
 ## Higiene

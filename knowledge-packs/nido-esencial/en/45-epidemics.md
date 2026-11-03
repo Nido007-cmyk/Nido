@@ -3,7 +3,8 @@ title: Epidemics and disease outbreaks
 category: Disasters
 lang: en
 sources: WHO, pandemic and outbreak preparedness; CDC; IFRC
-questions: what measures work against almost all infections in an epidemic | how do i care for a sick person at home during an outbreak | how do i prevent dengue after a flood | what supplies should i keep at home for two weeks | que medidas funcionam numa epidemia | como cuido de um doente em casa durante um surto
+id: esencial-epidemias
+verified: 2026-11-02
 ---
 ## Measures that work against almost all infections
 - Wash your hands often with soap and water.

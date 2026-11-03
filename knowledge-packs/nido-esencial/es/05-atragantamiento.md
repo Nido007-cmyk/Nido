@@ -3,7 +3,8 @@ title: Atragantamiento en adultos, niños y bebés
 category: Primeros auxilios
 lang: es
 sources: AHA, Guías 2025 (atragantamiento); Cruz Roja Americana; IFRC 2020
-questions: qué hago si mi hijo se atraganta con un trozo de comida | mi hijo se está atragantando y no puede toser | cómo se hace la maniobra de heimlich | mi bebé se está ahogando con algo | mi hijo se tragó una moneda y no puede respirar | o que faço se meu filho engasgar com comida | como faço a manobra de heimlich num bebé
+id: esencial-atragantamiento
+verified: 2026-11-02
 ---
 Si algo bloquea la garganta, la persona no puede respirar. Fíjate en esto: si tose con fuerza, está consiguiendo aire; si no puede hablar, toser ni respirar, o se lleva las manos al cuello, es grave.
 
@@ -11,6 +12,7 @@ Si algo bloquea la garganta, la persona no puede respirar. Fíjate en esto: si t
 - Anímala a seguir tosiendo. No le des golpes ni agua. Quédate a su lado y vigila.
 
 ## Grave en adultos y niños mayores de 1 año
+<!-- preguntas: cómo se hace la maniobra de Heimlich | maniobra de Heimlich en un adulto que se atraganta | se atragantó y no puede respirar, cómo hago la maniobra -->
 Las guías de 2025 recomiendan alternar golpes en la espalda y compresiones abdominales:
 1. Colócate a su lado y un poco detrás. Inclina a la persona hacia delante sujetándola por el pecho.
 2. Da 5 golpes fuertes entre los omóplatos con el talón de la mano.

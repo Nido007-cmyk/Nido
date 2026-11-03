@@ -3,7 +3,8 @@ title: Landslides and avalanches
 category: Disasters
 lang: en
 sources: USGS, landslides; Ready.gov (FEMA); American Red Cross
-questions: what are the warning signs of a landslide | what do i do if an avalanche catches me | how many minutes are key to rescue someone buried in an avalanche | quais são os sinais de alerta de um deslizamento de terra | o que faço se uma avalanche me apanhar
+id: esencial-deslizamientos-y-avalanchas
+verified: 2026-11-02
 ---
 ## Landslides and mudflows
 They are more likely after heavy rain, fires or earthquakes, on steep slopes and in channels.

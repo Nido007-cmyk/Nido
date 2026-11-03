@@ -3,7 +3,8 @@ title: Terremoto
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA); Earthquake Country Alliance y USGS, "Agáchate, cúbrete y agárrate"; Cruz Roja Americana; CENAPRED (México)
-questions: qué hago durante un terremoto | qué es agacharse, cubrirse y agarrarse | se sale corriendo durante un temblor o mejor no | qué hago si quedo atrapado tras un terremoto | o que faço durante um terremoto | o que é abaixar-se, cobrir-se e segurar-se
+id: esencial-terremoto
+verified: 2026-11-02
 ---
 ## Antes
 - Fija a la pared muebles altos, estanterías y calentadores. No pongas cosas pesadas encima de las camas.

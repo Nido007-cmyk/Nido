@@ -3,7 +3,8 @@ title: Wounds, cuts and scrapes
 category: First aid
 lang: en
 sources: Canadian Red Cross guidelines 2020; AHA and American Red Cross 2024; WHO (tetanus)
-questions: how do i clean a cut or wound at home | when does a wound need a doctor or stitches | my tetanus shot is out of date and i cut myself, what do i do | como limpo um corte ou ferimento em casa | quando um ferimento precisa de pontos ou médico
+id: esencial-heridas-y-cortes
+verified: 2026-11-02
 ---
 Most small wounds heal well at home if they are cleaned and protected. The main goal is to prevent infection.
 

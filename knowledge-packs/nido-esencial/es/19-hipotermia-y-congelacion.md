@@ -3,7 +3,8 @@ title: Hipotermia y congelación
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020; Wilderness Medical Society
-questions: qué hago si alguien tiene hipotermia | cómo caliento a una persona con hipotermia | se le congelaron los dedos de los pies, qué hago | a qué temperatura del agua se calienta una congelación | o que faço se alguém tiver hipotermia | como aqueço uma pessoa com hipotermia
+id: esencial-hipotermia-y-congelacion
+verified: 2026-11-02
 ---
 ## Hipotermia
 El cuerpo se enfría por debajo de lo normal. Puede pasar con frío, viento, lluvia o tras caer al agua, incluso sin temperaturas bajo cero.

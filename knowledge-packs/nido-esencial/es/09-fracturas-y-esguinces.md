@@ -3,7 +3,8 @@ title: Fracturas, esguinces y luxaciones
 category: Primeros auxilios
 lang: es
 sources: Cruz Roja Canadiense, directrices 2020; IFRC 2020
-questions: creo que se rompió un hueso, qué hago | cómo inmovilizo un brazo roto | se torció el tobillo, qué hago | se puede enderezar un hueso torcido o se deja así | o que faço se quebrar um osso | como imobilizo um braço quebrado
+id: esencial-fracturas-y-esguinces
+verified: 2026-11-02
 ---
 Sin rayos X no se puede saber si un hueso está roto. Por eso, ante un golpe con dolor fuerte, hinchazón, deformidad o incapacidad para moverlo, trátalo como una fractura.
 

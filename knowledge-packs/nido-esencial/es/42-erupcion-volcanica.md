@@ -3,7 +3,8 @@ title: Erupción volcánica y ceniza
 category: Desastres
 lang: es
 sources: USGS, peligros volcánicos; Ready.gov (FEMA); Red Internacional de Peligros para la Salud por Volcanes (IVHHN); OMS
-questions: qué hago en una erupción volcánica | qué son los lahares de un volcán | cómo me protejo de la ceniza volcánica | se puede beber el agua si tiene ceniza | o que faço numa erupção vulcânica | como me protejo da cinza vulcânica
+id: esencial-erupcion-volcanica
+verified: 2026-11-02
 ---
 ## Antes
 Si vives cerca de un volcán activo, conoce las zonas de peligro, las rutas de evacuación y el sistema de alertas. Ten mascarillas FFP2/N95 y gafas cerradas.

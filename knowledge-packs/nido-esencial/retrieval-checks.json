@@ -663,5 +663,350 @@
   "lang": "en",
   "q": "where can I take a first aid course",
   "expect": "Learn more"
+ },
+ {
+  "lang": "pt",
+  "q": "o que eu faço primeiro se vejo um acidente",
+  "expect": "Como agir numa emergência"
+ },
+ {
+  "lang": "pt",
+  "q": "para que número ligo numa emergência",
+  "expect": "Como agir numa emergência"
+ },
+ {
+  "lang": "pt",
+  "q": "uma pessoa não respira e não responde, o que eu faço",
+  "expect": "RCP em adultos e crianças maiores"
+ },
+ {
+  "lang": "pt",
+  "q": "como se fazem as compressões no peito",
+  "expect": "RCP em adultos e crianças maiores"
+ },
+ {
+  "lang": "pt",
+  "q": "meu bebê não está respirando",
+  "expect": "RCP em crianças e bebês"
+ },
+ {
+  "lang": "pt",
+  "q": "reanimação numa criança pequena",
+  "expect": "RCP em crianças e bebês"
+ },
+ {
+  "lang": "pt",
+  "q": "onde coloco os eletrodos do desfibrilador",
+  "expect": "Como usar um desfibrilador (DEA)"
+ },
+ {
+  "lang": "pt",
+  "q": "ele está engasgando com comida e não consegue tossir",
+  "expect": "Engasgo em adultos, crianças e bebês"
+ },
+ {
+  "lang": "pt",
+  "q": "manobra de heimlich",
+  "expect": "Engasgo em adultos, crianças e bebês"
+ },
+ {
+  "lang": "pt",
+  "q": "como paro uma hemorragia forte",
+  "expect": "Hemorragias graves: como parar o sangramento"
+ },
+ {
+  "lang": "pt",
+  "q": "como colocar um torniquete",
+  "expect": "Hemorragias graves: como parar o sangramento"
+ },
+ {
+  "lang": "pt",
+  "q": "me cortei com uma faca, como limpo a ferida",
+  "expect": "Feridas, cortes e arranhões"
+ },
+ {
+  "lang": "pt",
+  "q": "me queimei com óleo fervendo",
+  "expect": "Queimaduras"
+ },
+ {
+  "lang": "pt",
+  "q": "acho que ele quebrou o braço",
+  "expect": "Fraturas, entorses e luxações"
+ },
+ {
+  "lang": "pt",
+  "q": "ele caiu e bateu a cabeça",
+  "expect": "Batidas na cabeça, no pescoço ou nas costas"
+ },
+ {
+  "lang": "pt",
+  "q": "como coloco alguém na posição lateral de segurança",
+  "expect": "Choque, desmaios e posição lateral de segurança"
+ },
+ {
+  "lang": "pt",
+  "q": "ele desmaiou",
+  "expect": "Choque, desmaios e posição lateral de segurança"
+ },
+ {
+  "lang": "pt",
+  "q": "como uso a caneta de adrenalina",
+  "expect": "Alergia grave (anafilaxia)"
+ },
+ {
+  "lang": "pt",
+  "q": "os lábios dele incharam depois de comer amendoim",
+  "expect": "Alergia grave (anafilaxia)"
+ },
+ {
+  "lang": "pt",
+  "q": "está faltando ar e ele tem asma",
+  "expect": "Crise de asma e dificuldade para respirar"
+ },
+ {
+  "lang": "pt",
+  "q": "estou com dor no peito e no braço esquerdo",
+  "expect": "Dor no peito e infarto"
+ },
+ {
+  "lang": "pt",
+  "q": "um lado do rosto dela caiu e ela fala estranho",
+  "expect": "AVC (derrame cerebral)"
+ },
+ {
+  "lang": "pt",
+  "q": "ele está convulsionando, o que eu faço",
+  "expect": "Convulsões e crises epiléticas"
+ },
+ {
+  "lang": "pt",
+  "q": "um diabético está suando e confuso",
+  "expect": "Baixa de açúcar (hipoglicemia) e diabetes"
+ },
+ {
+  "lang": "pt",
+  "q": "insolação com confusão e pele muito quente",
+  "expect": "Insolação e exaustão pelo calor"
+ },
+ {
+  "lang": "pt",
+  "q": "ele está com muito frio e não para de tremer",
+  "expect": "Hipotermia e congelamento"
+ },
+ {
+  "lang": "pt",
+  "q": "tiramos uma criança da piscina sem respirar",
+  "expect": "Afogamento e resgate na água"
+ },
+ {
+  "lang": "pt",
+  "q": "meu filho tomou água sanitária",
+  "expect": "Intoxicações, venenos e monóxido de carbono"
+ },
+ {
+  "lang": "pt",
+  "q": "sintomas de monóxido de carbono",
+  "expect": "Intoxicações, venenos e monóxido de carbono"
+ },
+ {
+  "lang": "pt",
+  "q": "uma cobra me mordeu",
+  "expect": "Mordidas e picadas (serpentes, animais, insetos, águas-vivas)"
+ },
+ {
+  "lang": "pt",
+  "q": "como tiro um carrapato",
+  "expect": "Mordidas e picadas (serpentes, animais, insetos, águas-vivas)"
+ },
+ {
+  "lang": "pt",
+  "q": "meu nariz está sangrando",
+  "expect": "Sangramento no nariz, olhos, dentes e ouvidos"
+ },
+ {
+  "lang": "pt",
+  "q": "como ajudo alguém em choque emocional depois do desastre",
+  "expect": "Primeiros socorros psicológicos"
+ },
+ {
+  "lang": "pt",
+  "q": "meu bebê de dois meses está com febre",
+  "expect": "Febre em adultos e crianças"
+ },
+ {
+  "lang": "pt",
+  "q": "receita de soro oral caseiro",
+  "expect": "Diarreia, vômitos e soro oral caseiro"
+ },
+ {
+  "lang": "pt",
+  "q": "como lavar bem as mãos",
+  "expect": "Higiene e prevenção de infecções"
+ },
+ {
+  "lang": "pt",
+  "q": "o que um kit de primeiros socorros precisa ter",
+  "expect": "Kit de primeiros socorros"
+ },
+ {
+  "lang": "pt",
+  "q": "quando levar uma criança para a emergência",
+  "expect": "Sinais de alarme: quando ir à emergência"
+ },
+ {
+  "lang": "pt",
+  "q": "ela vai dar à luz e a ambulância não chega",
+  "expect": "Parto de emergência"
+ },
+ {
+  "lang": "pt",
+  "q": "não consigo dormir e estou com ansiedade depois do terremoto",
+  "expect": "Saúde mental, estresse e crise"
+ },
+ {
+  "lang": "pt",
+  "q": "como preparo minha família para um desastre",
+  "expect": "Plano familiar de emergência"
+ },
+ {
+  "lang": "pt",
+  "q": "o que colocar na mochila de emergência",
+  "expect": "Mochila de emergência e reservas em casa"
+ },
+ {
+  "lang": "pt",
+  "q": "o que fazer durante um terremoto",
+  "expect": "Terremoto"
+ },
+ {
+  "lang": "pt",
+  "q": "o mar recuou de repente na praia",
+  "expect": "Tsunami"
+ },
+ {
+  "lang": "pt",
+  "q": "posso atravessar de carro uma rua inundada",
+  "expect": "Enchentes"
+ },
+ {
+  "lang": "pt",
+  "q": "como se preparar para um furacão",
+  "expect": "Furacões, ciclones e tempestades fortes"
+ },
+ {
+  "lang": "pt",
+  "q": "onde me refugio de um tornado",
+  "expect": "Tornados"
+ },
+ {
+  "lang": "pt",
+  "q": "está caindo raio e eu estou no campo",
+  "expect": "Tempestades elétricas e raios"
+ },
+ {
+  "lang": "pt",
+  "q": "tem fumaça no meu prédio, como eu saio",
+  "expect": "Incêndio em casa ou num prédio"
+ },
+ {
+  "lang": "pt",
+  "q": "o incêndio florestal está chegando perto da minha casa",
+  "expect": "Incêndio florestal"
+ },
+ {
+  "lang": "pt",
+  "q": "está caindo cinza do vulcão",
+  "expect": "Erupção vulcânica e cinzas"
+ },
+ {
+  "lang": "pt",
+  "q": "como aguentar uma onda de calor em casa",
+  "expect": "Ondas de calor e frio extremo"
+ },
+ {
+  "lang": "pt",
+  "q": "sinais de um deslizamento de terra",
+  "expect": "Deslizamentos de terra e avalanches"
+ },
+ {
+  "lang": "pt",
+  "q": "como cuidar de um doente contagioso em casa",
+  "expect": "Epidemias e surtos de doenças"
+ },
+ {
+  "lang": "pt",
+  "q": "vazamento radioativo aqui perto, o que eu faço",
+  "expect": "Emergência química, nuclear ou radiológica"
+ },
+ {
+  "lang": "pt",
+  "q": "regra dos três na sobrevivência",
+  "expect": "Sobrevivência: as prioridades"
+ },
+ {
+  "lang": "pt",
+  "q": "como purificar água com água sanitária",
+  "expect": "Água segura: como encontrá-la e tratá-la"
+ },
+ {
+  "lang": "pt",
+  "q": "por quanto tempo tem que ferver a água",
+  "expect": "Água segura: como encontrá-la e tratá-la"
+ },
+ {
+  "lang": "pt",
+  "q": "como fazer um abrigo na mata",
+  "expect": "Abrigo e manter o calor corporal"
+ },
+ {
+  "lang": "pt",
+  "q": "como acender uma fogueira",
+  "expect": "Fazer fogo com segurança"
+ },
+ {
+  "lang": "pt",
+  "q": "quanto tempo a comida do freezer aguenta sem luz",
+  "expect": "Comida em emergências"
+ },
+ {
+  "lang": "pt",
+  "q": "como achar o norte pelas estrelas",
+  "expect": "Orientar-se sem GPS"
+ },
+ {
+  "lang": "pt",
+  "q": "me perdi na montanha",
+  "expect": "Perdido: sinais de socorro e como ajudar a que o encontrem"
+ },
+ {
+  "lang": "pt",
+  "q": "sinais de socorro para um avião",
+  "expect": "Perdido: sinais de socorro e como ajudar a que o encontrem"
+ },
+ {
+  "lang": "pt",
+  "q": "como falar com minha família sem sinal",
+  "expect": "Comunicar-se quando não há internet nem cobertura"
+ },
+ {
+  "lang": "pt",
+  "q": "acabou a luz na cidade inteira",
+  "expect": "Apagão ou corte de luz prolongado"
+ },
+ {
+  "lang": "pt",
+  "q": "não tem água para o vaso sanitário",
+  "expect": "Banheiro e lixo de emergência (saneamento)"
+ },
+ {
+  "lang": "pt",
+  "q": "batida na estrada com feridos",
+  "expect": "Acidente de trânsito"
+ },
+ {
+  "lang": "pt",
+  "q": "onde faço um curso de primeiros socorros",
+  "expect": "Aprender mais: cursos e recursos confiáveis"
  }
 ]

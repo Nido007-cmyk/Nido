@@ -3,7 +3,8 @@ title: Burns
 category: First aid
 lang: en
 sources: Canadian Red Cross guidelines 2020; IFRC 2020; AHA and American Red Cross 2024
-questions: what do i do if i burn myself with boiling water | my daughter burned her hand on the stove, what do i put on it | can i put toothpaste on a burn | how long do i cool a burn under running water | me queimei com água fervendo, o que faço | meu filho se queimou com óleo quente, o que faço
+id: esencial-quemaduras
+verified: 2026-11-02
 ---
 Cooling a burn with water early reduces damage and pain. It is the most important step.
 

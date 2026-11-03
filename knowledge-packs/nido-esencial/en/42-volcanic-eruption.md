@@ -3,7 +3,8 @@ title: Volcanic eruption and ash
 category: Disasters
 lang: en
 sources: USGS, volcano hazards; Ready.gov (FEMA); International Volcanic Health Hazard Network (IVHHN); WHO
-questions: what do i do during a volcanic eruption | what are lahars from a volcano | how do i protect myself from volcanic ash | can i drink water if it has ash in it | o que faço numa erupção vulcânica | como me protejo da cinza vulcânica
+id: esencial-erupcion-volcanica
+verified: 2026-11-02
 ---
 ## Before
 If you live near an active volcano, know the hazard zones, evacuation routes and the alert system. Keep FFP2/N95 masks and sealed goggles.

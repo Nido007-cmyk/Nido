@@ -3,7 +3,8 @@ title: Floods
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA); US National Weather Service, "Turn Around Don't Drown"; American Red Cross; WHO
-questions: what do i do in a flood | how much moving water can sweep away a car, how many inches or centimeters | can i walk across moving flood water on foot | what do i do if water rises around my car | o que faço numa inundação | quantos centímetros de água arrastam um carro
+id: esencial-inundaciones
+verified: 2026-11-02
 ---
 Floods are the most common disaster. Most deaths happen in vehicles and while trying to cross water.
 

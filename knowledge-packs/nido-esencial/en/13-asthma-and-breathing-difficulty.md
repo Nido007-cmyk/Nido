@@ -3,7 +3,8 @@ title: Asthma attack and difficulty breathing
 category: First aid
 lang: en
 sources: Canadian Red Cross guidelines 2020; AHA and American Red Cross 2024
-questions: what do i do during an asthma attack | she is wheezing and can't breathe well, what do i do | how do i use a reliever inhaler, the blue one | a child has a barking cough and trouble breathing, what do i do | o que faço numa crise de asma | não consegue respirar direito, o que faço
+id: esencial-asma-y-dificultad-para-respirar
+verified: 2026-11-02
 ---
 ## Asthma attack
 Signs: wheezing, coughing, a tight chest, trouble speaking full sentences.

@@ -3,7 +3,8 @@ title: Diarrea, vómitos y suero oral casero
 category: Salud en casa
 lang: es
 sources: OMS y UNICEF, tratamiento de la diarrea y sales de rehidratación oral; OMS, AIEPI
-questions: cómo se prepara el suero oral casero | cuánta sal y cuánta azúcar lleva un litro de suero oral | mi hijo tiene diarrea y vómitos, qué le doy | cuáles son los signos de deshidratación en un niño | como preparo o soro oral caseiro | quantas colheres de açúcar e de sal vão no soro
+id: esencial-diarrea-vomitos-y-suero-oral
+verified: 2026-11-02
 ---
 La diarrea mata por deshidratación, sobre todo a niños pequeños y mayores. La solución es sencilla: reponer agua y sales.
 
@@ -14,7 +15,7 @@ Lo mejor son los sobres de sales de rehidratación oral (SRO) de farmacia o de u
 - 1 litro de agua potable (hervida y enfriada, o tratada).
 - 6 cucharaditas rasas de azúcar.
 - Media cucharadita rasa de sal.
-Mezcla hasta que se disuelva. Debe saber como mucho como una lágrima: si está más salado, añade agua. Úsalo en las 24 horas siguientes.
+Mezcla hasta que se disuelva. Úsalo en las 24 horas siguientes.
 
 ## Cómo darlo
 - Dalo a sorbos pequeños y frecuentes, o con cucharita a los niños, aunque vomite: espera 10 minutos y sigue más despacio.

@@ -3,7 +3,8 @@ title: Hypothermia and frostbite
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020; Wilderness Medical Society
-questions: what do i do if someone has hypothermia | how do i warm up a person with hypothermia | his toes are frozen, frostbite, what do i do | at what water temperature do i rewarm frostbite | o que faço se alguém tiver hipotermia | como aqueço uma pessoa com hipotermia
+id: esencial-hipotermia-y-congelacion
+verified: 2026-11-02
 ---
 ## Hypothermia
 The body cools below normal. It can happen with cold, wind, rain or after falling into water, even when it is not freezing.

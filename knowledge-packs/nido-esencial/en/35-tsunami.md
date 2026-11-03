@@ -3,7 +3,8 @@ title: Tsunami
 category: Disasters
 lang: en
 sources: UNESCO Intergovernmental Oceanographic Commission; NOAA TsunamiReady program; Ready.gov (FEMA)
-questions: how do i know a tsunami is coming if there is no alarm | how high should i go to be safe from a tsunami, how many meters | the sea suddenly pulled back from the beach, what do i do | how long does the danger of a tsunami last, are there several waves | como sei que vem um tsunami sem alarme | a que altura devo subir diante de um tsunami
+id: esencial-tsunami
+verified: 2026-11-02
 ---
 A tsunami is a series of huge waves, usually caused by an undersea earthquake. They can arrive within minutes.
 

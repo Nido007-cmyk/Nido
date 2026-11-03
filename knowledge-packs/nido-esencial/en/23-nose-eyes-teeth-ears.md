@@ -3,7 +3,8 @@ title: Nosebleeds, eyes, teeth and ears
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020
-questions: how do i stop a nosebleed | something got into his eye, what do i do | his tooth got knocked out in a fall, can it be saved | how long do i pinch the nose when it bleeds | como paro um sangramento no nariz | entrou alguma coisa no olho dele, o que faço
+id: esencial-nariz-ojos-dientes-oidos
+verified: 2026-11-02
 ---
 ## Nosebleed
 1. Sit down and lean the head slightly forward (not back: the blood would run into the throat).
@@ -18,7 +19,6 @@ questions: how do i stop a nosebleed | something got into his eye, what do i do 
 - A blow to the eye: cold wrapped in cloth without pressing. If vision is poor or double, or there is a lot of pain, go to the emergency department.
 
 ## Knocked-out tooth (adult)
-<!-- questions: where do i keep a knocked-out tooth until the dentist, in milk | can a knocked out tooth be put back in its socket | do baby teeth get put back -->
 1. Hold the tooth by the crown (the white part), never by the root.
 2. If it's dirty, rinse it with water for less than 10 seconds, without scrubbing.
 3. If the person is awake and cooperative, try to put it back in its socket and have them bite on gauze.

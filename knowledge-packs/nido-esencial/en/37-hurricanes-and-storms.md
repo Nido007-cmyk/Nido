@@ -3,7 +3,8 @@ title: Hurricanes, cyclones and severe storms
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA); National Hurricane Center (NOAA); American Red Cross; WMO
-questions: what do i do when a hurricane is coming | what is the eye of the hurricane | should i evacuate before a hurricane or stay at home | how do i protect the windows when a hurricane comes | o que faço quando vem um furacão | o que é o olho do furacão
+id: esencial-huracanes
+verified: 2026-11-02
 ---
 Hurricanes (also called cyclones or typhoons) bring very strong winds, torrential rain and floods. The deadliest part is usually the water: storm surge on the coast and flooding inland.
 

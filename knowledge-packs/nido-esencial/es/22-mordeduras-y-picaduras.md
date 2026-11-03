@@ -3,7 +3,8 @@ title: Mordeduras y picaduras (serpientes, animales, insectos, medusas)
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; OMS, mordeduras de serpiente y rabia; Cruz Roja Canadiense 2020
-questions: qué hago si me muerde un perro | qué hago si me muerde una serpiente | qué hago con una picadura de alacrán | me picó una medusa en la playa, qué hago | cómo se quita una garrapata de la piel | o que faço se um cachorro me morder | o que faço com uma picada de escorpião
+id: esencial-mordeduras-y-picaduras
+verified: 2026-11-02
 ---
 ## Mordedura de perro, gato u otro mamífero
 1. Si sangra mucho, presiona fuerte (ver hemorragias).
@@ -12,7 +13,6 @@ questions: qué hago si me muerde un perro | qué hago si me muerde una serpient
 4. Busca atención médica: puede necesitar antibiótico, vacuna antitetánica o vacuna contra la rabia. Si es posible, averigua si el animal está vacunado. Los murciélagos y animales salvajes siempre requieren consulta.
 
 ## Mordedura de serpiente
-<!-- preguntas: qué hago si me muerde una serpiente | se chupa el veneno de una mordedura de serpiente o se corta | qué antídoto hay para la mordedura de serpiente -->
 1. Aléjate de la serpiente. No intentes atraparla ni matarla (una foto de lejos ayuda).
 2. Llama al número de emergencias.
 3. Que la persona esté quieta y tranquila. Inmoviliza la extremidad como si fuera una fractura, a la altura del corazón aproximadamente.
@@ -30,7 +30,6 @@ Nota: en Australia y algunas zonas, para serpientes cuyo veneno ataca los nervio
 - Lava la zona. Si en las semanas siguientes aparece una mancha roja que crece, fiebre o dolores, consulta al médico.
 
 ## Arañas y escorpiones
-<!-- preguntas: qué hago con una picadura de alacrán | le picó un escorpión a mi hijo, qué hago | qué hago si me pica una araña -->
 - Lava, aplica frío. Si hay dolor intenso, sudor, calambres o dificultad para respirar, o si es un niño pequeño, llama al número de emergencias.
 
 ## Medusas

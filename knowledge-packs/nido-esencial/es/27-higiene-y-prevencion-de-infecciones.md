@@ -3,7 +3,8 @@ title: Higiene y prevención de infecciones
 category: Salud en casa
 lang: es
 sources: OMS, higiene de manos; OMS y UNICEF, agua, saneamiento e higiene (WASH); CDC
-questions: cómo hay que lavarse bien las manos | cuándo hay que lavarse las manos | en qué proporción se usa la lejía para desinfectar | cuáles son las cinco claves de la comida segura | como lavar bem as mãos | quando devo lavar as mãos
+id: esencial-higiene-y-prevencion-de-infecciones
+verified: 2026-11-02
 ---
 Lavarse las manos con jabón es una de las formas más baratas y eficaces de evitar enfermedades como la diarrea y las infecciones respiratorias.
 

@@ -3,7 +3,8 @@ title: Heridas, cortes y raspones
 category: Primeros auxilios
 lang: es
 sources: Cruz Roja Canadiense, directrices 2020; AHA y Cruz Roja Americana 2024; OMS (tétanos)
-questions: cómo curo un corte en casa | se hizo una herida con un clavo oxidado, qué hago | cuándo hay que ir al médico por un corte | se debe reventar una ampolla o se deja | como cuido de um corte em casa | quando devo ir ao médico por causa de um corte
+id: esencial-heridas-y-cortes
+verified: 2026-11-02
 ---
 La mayoría de las heridas pequeñas se curan bien en casa si se limpian y se protegen. Lo importante es evitar la infección.
 

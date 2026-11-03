@@ -3,7 +3,8 @@ title: Making a fire safely
 category: Survival
 lang: en
 sources: Survival manuals and forestry services; Ready.gov (FEMA); NFPA
-questions: how do i make a fire safely | what are the three materials for a fire, tinder, kindling and fuel wood | how do i put out a campfire completely | can i make a fire inside a tent or a closed cave | como faço fogo com segurança | quais são os três materiais para acender uma fogueira
+id: esencial-fuego
+verified: 2026-11-02
 ---
 Fire gives warmth, light, lets you boil water, cook and signal. But it also causes wildfires: use it only when necessary and safe, and never during bans or in forbidden areas unless a life depends on it.
 

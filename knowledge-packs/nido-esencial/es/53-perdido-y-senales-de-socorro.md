@@ -3,7 +3,8 @@ title: Perdido: señales de socorro y cómo ayudar a que te encuentren
 category: Supervivencia
 lang: es
 sources: Organizaciones de búsqueda y rescate (NASAR); OACI, señales tierra-aire; Club Alpino, señal de socorro alpina; Ready.gov
-questions: qué hago si me pierdo en el monte o el bosque | qué significa el número tres en las señales de socorro | cómo se hace la señal sos con una linterna o un silbato | qué significa poner los dos brazos en forma de y a un helicóptero | o que faço se me perder no mato ou na floresta | o que significa o número três nos sinais de socorro
+id: esencial-perdido-y-senales-de-socorro
+verified: 2026-11-02
 ---
 ## Si te pierdes en la montaña, el bosque o el campo
 1. **Para.** No sigas caminando: cuanto más te muevas, más grande es la zona de búsqueda.

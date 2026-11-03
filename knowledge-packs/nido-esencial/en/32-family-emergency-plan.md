@@ -3,7 +3,8 @@ title: Family emergency plan
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA); American Red Cross, be prepared; IFRC; UNDRR
-questions: how do i make a family emergency plan | what meeting points should we agree on as a family | how do we communicate in a disaster if there is no network or signal | who is the out-of-area contact in our plan | como faço um plano familiar de emergência | como nos comunicamos num desastre sem rede
+id: esencial-plan-familiar-de-emergencia
+verified: 2026-11-02
 ---
 Preparing in advance is what saves the most lives in a disaster. Do it as a family, in one afternoon.
 
