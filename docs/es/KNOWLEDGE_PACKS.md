@@ -111,6 +111,11 @@ crecen a 165 (56 en español, 53 en inglés, 56 en portugués), con la
 recuperación en 164 de 165 sobre la construcción medida (el único
 fallo, una pregunta por el número de bomberos de La Habana que no
 nombra a Cuba, queda asentado como punto débil conocido).
+Una edición reconstruida de `nido-esencial` se publica en la release
+`knowledge-packs-v10` con la 0.1.69: sus guías en portugués se
+recrearon desde su propia fuente (174 guías en los tres idiomas),
+después de que se descubriera que la edición portuguesa derivaba
+del texto español. `nido-local` se queda en su edición v9.
 
 ### Formato v2: preguntas indexadas y datos verificados (0.1.55)
 
