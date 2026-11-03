@@ -10672,7 +10672,7 @@
       "verified": "2026-11-02",
       "hashClinico": "21365251ea93a0a4a522b91bf3b8885c6fef365ebb7afe3992a377f36e30eda2",
       "preparador": "carril ejecutor de la cola de sellado, paso 2 (2026-11-02)",
-      "auditor": "adversaria independiente de la cadena (pendiente de re-firma tras la corrección de 15-A11, ejecutada el 2026-11-02 en la pieza previa a los pasos 6–10 sobre la recomendación de la auditoría del paso 2; la firma de esa auditoría se asentó el mismo día sobre el texto previo — entrada 046 del libro — y vuelve a pendiente al cambiar el hash clínico, con la secuencia asentada en las entradas 046 a 048)",
+      "auditor": "auditoría independiente de la cadena: firma original por la auditoría del paso 2 (informe nido-audit-paso2-2026-11-02, APTO CON CARGOS; asentada en la pieza previa a los pasos 6–10, entrada 046 del libro) sobre el texto previo; la corrección de 15-A11, ejecutada en la misma pieza sobre la recomendación de intensidad de esa auditoría (entradas 047–048), cambió el hash clínico y devolvió esta entrada a pendiente de re-firma; re-firma recomendada por la adversaria de la corrección (informe nido-adv-correccion-15a11-2026-11-02: APTO, sin cargos); re-firma asentada por la pasada de firmas previa a R-Final con ese papel como respaldo, 2026-11-02",
       "filas": [
         {
           "tema": "15",
@@ -10864,7 +10864,7 @@
       "verified": "2026-11-02",
       "hashClinico": "c46533876f03e79aaa19cf84a8a72f523107419bf1b139c9d69e6d453d171484",
       "preparador": "carril ejecutor de la cola de sellado, paso 2 (2026-11-02)",
-      "auditor": "adversaria independiente de la cadena (pendiente de re-firma tras la corrección de 15-A11, ejecutada el 2026-11-02 en la pieza previa a los pasos 6–10 sobre la recomendación de la auditoría del paso 2; la firma de esa auditoría se asentó el mismo día sobre el texto previo — entrada 046 del libro — y vuelve a pendiente al cambiar el hash clínico, con la secuencia asentada en las entradas 046 a 048)",
+      "auditor": "auditoría independiente de la cadena: firma original por la auditoría del paso 2 (informe nido-audit-paso2-2026-11-02, APTO CON CARGOS; asentada en la pieza previa a los pasos 6–10, entrada 046 del libro) sobre el texto previo; la corrección de 15-A11, ejecutada en la misma pieza sobre la recomendación de intensidad de esa auditoría (entradas 047–048), cambió el hash clínico y devolvió esta entrada a pendiente de re-firma; re-firma recomendada por la adversaria de la corrección (informe nido-adv-correccion-15a11-2026-11-02: APTO, sin cargos); re-firma asentada por la pasada de firmas previa a R-Final con ese papel como respaldo, 2026-11-02",
       "filas": [
         {
           "tema": "15",
@@ -11056,7 +11056,7 @@
       "verified": "2026-11-02",
       "hashClinico": "9bc57484d6d7f27dc18b801ed12a778dee1107e7603ed2e0c72518987ac17291",
       "preparador": "carril ejecutor de la cola de sellado, paso 2 (2026-11-02)",
-      "auditor": "adversaria independiente de la cadena (pendiente de re-firma tras la corrección de 15-A11, ejecutada el 2026-11-02 en la pieza previa a los pasos 6–10 sobre la recomendación de la auditoría del paso 2; la firma de esa auditoría se asentó el mismo día sobre el texto previo — entrada 046 del libro — y vuelve a pendiente al cambiar el hash clínico, con la secuencia asentada en las entradas 046 a 048)",
+      "auditor": "auditoría independiente de la cadena: firma original por la auditoría del paso 2 (informe nido-audit-paso2-2026-11-02, APTO CON CARGOS; asentada en la pieza previa a los pasos 6–10, entrada 046 del libro) sobre el texto previo; la corrección de 15-A11, ejecutada en la misma pieza sobre la recomendación de intensidad de esa auditoría (entradas 047–048), cambió el hash clínico y devolvió esta entrada a pendiente de re-firma; re-firma recomendada por la adversaria de la corrección (informe nido-adv-correccion-15a11-2026-11-02: APTO, sin cargos); re-firma asentada por la pasada de firmas previa a R-Final con ese papel como respaldo, 2026-11-02",
       "filas": [
         {
           "tema": "15",
