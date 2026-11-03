@@ -122,6 +122,21 @@ temas se re-comprobó cita a cita contra sus fuentes oficiales
 en los tres idiomas (174 guías, 568 trozos), y la edición
 lleva las correcciones que esa reverificación asentó.
 `nido-local` se queda en su edición v9.
+Una edición de `nido-esencial` con las preguntas de familia se
+publica en la release `knowledge-packs-v12` con la 0.1.72: el
+texto clínico es el texto reverificado de la v11, sin cambios
+(los hashes de sello de la reverificación siguen casando), y
+cada guía lleva ahora sus preguntas de familia declaradas — la
+clave `questions:` de la cabecera y los comentarios de pregunta
+por apartado — para que una pregunta concreta de una familia
+(una fiebre de 39 grados, paracetamol para un niño de 20
+kilos, una picadura de alacrán, una moneda tragada) llegue a
+su guía en lugar de morir en la puerta de cobertura.
+Construida desde `main` por el workflow de paquetes (174
+guías, 568 trozos); sobre los bytes publicados, la batería de
+cobertura C-03 pasa entera y la recuperación de primeros
+auxilios es 38/38 en la construcción multilingüe.
+`nido-local` se queda en su edición v9.
 
 ### Formato v2: preguntas indexadas y datos verificados (0.1.55)
 

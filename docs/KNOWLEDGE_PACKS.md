@@ -118,6 +118,19 @@ topics was re-checked citation by citation against its official
 sources in the three languages (174 guides, 568 chunks), and
 the edition carries the corrections that re-verification
 landed. `nido-local` stays at its v9 edition.
+An edition of `nido-esencial` with the family questions is
+published in the release `knowledge-packs-v12` with 0.1.72: the
+clinical text is the re-verified v11 text, unchanged (the seal
+hashes of the re-verification still match), and every guide now
+carries its declared family questions — the `questions:` header
+and the per-section question comments — so a concrete family
+question (a 39-degree fever, paracetamol for a 20-kilo child, a
+scorpion sting, a swallowed coin) reaches its guide instead of
+dying at the coverage gate. Built from `main` by the knowledge
+pack workflow (174 guides, 568 chunks); on the published bytes
+the C-03 coverage battery passes in full and first-aid
+retrieval is 38/38 on the multilingual build. `nido-local`
+stays at its v9 edition.
 
 ### Format v2: indexed questions and verified facts (0.1.55)
 
