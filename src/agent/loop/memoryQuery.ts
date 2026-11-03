@@ -228,7 +228,16 @@ function findBirthdayFact(
 ): string | null {
   const candidates = mem.facts.filter((f) => BIRTHDAY_RE.test(f.content));
   if (opts.self) {
-    return candidates.find((f) => /mi cumplea|my birthday|meu anivers/i.test(f.content))?.content ?? null;
+    // Auditoría de la 0.1.70 (punto 5a): la frase propia explícita
+    // manda; si ningún hecho la trae, vale el pronombre posesivo
+    // («…y el mío es el 3 de mayo», «…and mine is May 3», «…e o meu
+    // é dia 3 de maio») solo cuando su propia cláusula trae fecha
+    // (selfBirthdaySpans).
+    return (
+      candidates.find((f) => SELF_BDAY_PHRASE_RE.test(f.content))?.content ??
+      candidates.find((f) => selfBirthdaySpans(f.content).length > 0)?.content ??
+      null
+    );
   }
   if (opts.personName) {
     const hit = candidates.find((f) => fold(f.content).includes(fold(opts.personName!)));
@@ -674,17 +683,46 @@ function pickAnchorSpan(
  *  primera persona que casó en la selección (la misma regex). */
 const SELF_BDAY_PHRASE_RE = /mi cumplea|my birthday|meu anivers/i;
 
+/** Auditoría de la 0.1.70 (punto 5a): el pronombre posesivo que
+ *  ocupa el lugar de la frase propia en un hecho combinado: «el mío»
+ *  (es), «mine» (en), «o meu» (pt, solo sin sustantivo detrás: ante
+ *  cópula, «dia», «em», «cai», «fica» o puntuación, para que «o meu
+ *  pai» no cuente). Es más débil que la frase explícita, así que solo
+ *  vale cuando la cláusula propia de esa ocurrencia trae fecha
+ *  extraíble: «…el mío no lo sé» o «…older than mine» no sirven nada
+ *  como propio, y la fecha de otra persona nunca se sirve por él. */
+const SELF_BDAY_PRONOUN_RE =
+  /(?<![\p{L}])(?:el m[ií]o|mine|o meu(?=\s+(?:é|dia|em|cai|fica)(?![\p{L}])|\s*[,.;!?]|\s*$))(?![\p{L}])/iu;
+
+function spansOf(fact: string, re: RegExp): { from: number; to: number }[] {
+  const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
+  const spans: { from: number; to: number }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = g.exec(fact)) !== null) {
+    spans.push({ from: m.index, to: m.index + m[0].length });
+    if (m[0].length === 0) g.lastIndex++;
+  }
+  return spans;
+}
+
+/** Las ocurrencias de primera persona del hecho: las de la frase
+ *  explícita si las hay (como hasta hoy); si no, las del pronombre
+ *  posesivo cuya cláusula propia trae fecha. */
+function selfBirthdaySpans(fact: string): { from: number; to: number }[] {
+  const explicit = spansOf(fact, SELF_BDAY_PHRASE_RE);
+  if (explicit.length) return explicit;
+  const pron = spansOf(fact, SELF_BDAY_PRONOUN_RE);
+  if (!pron.length) return [];
+  const tokens = factTokens(fact);
+  return pron.filter((sp) => extractDateISO(clauseSlice(fact, tokens, sp.from, sp.to)) !== null);
+}
+
 function birthdaySelfSlice(fact: string): string | null {
   // ADV-PC1-C1: la frase propia puede ocurrir más de una vez;
   // entre sus ocurrencias manda la misma selección del asiento
   // persona (pickAnchorSpan): la primera cuyo subtramo de comas
   // trae su fecha, y si ninguna, la primera, como hasta hoy.
-  const re = new RegExp(SELF_BDAY_PHRASE_RE.source, "gi");
-  const spans: { from: number; to: number }[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(fact)) !== null) {
-    spans.push({ from: m.index, to: m.index + m[0].length });
-  }
+  const spans = selfBirthdaySpans(fact);
   if (!spans.length) return null;
   const tokens = factTokens(fact);
   const chosen = spans[pickAnchorSpan(fact, tokens, spans)]!;
