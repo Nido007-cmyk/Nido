@@ -261,6 +261,20 @@ describe("líneas de crisis (familia crisis.*): el consumidor que faltaba", () =
     ]) expect(crisisQuestionKind(text), text).toBe(true);
   });
 
+  it("adversaria PC2 C2: la negación inglesa sin contraer es espejo de la contraída", async () => {
+    const { crisisQuestionKind } = await import("./packFacts");
+    // La cura asentó en inglés solo las formas que foldText deja de
+    // la contracción («don t», «doesn t»); la realización plena de
+    // la negación — la única que existe en es y pt — caía en
+    // silencio. Espejo exacto, en sus dos personas.
+    for (const text of [
+      "I do not want to live",
+      "my brother does not want to live",
+      "we do not want to live",
+      "they do not want to live",
+    ]) expect(crisisQuestionKind(text), text).toBe(true);
+  });
+
   it("pre-censo PC2-2: el nombre de la línea tiene su forma en las tres lenguas", async () => {
     const { crisisQuestionKind } = await import("./packFacts");
     // Vida, crisis y ayuda, como línea, teléfono o número: la familia
