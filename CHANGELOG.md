@@ -6,43 +6,96 @@ All notable changes to NIDO are recorded here. Versions follow
 
 ## 0.1.73-alpha - 2026-11-03
 
-Fixes from Claude's audit of the published 0.1.72 (2026-11-03), each
-verified against the published bytes before it was fixed
-([docs/security/AUDIT_0.1.72_2026-11-03.md](https://github.com/Nido007-cmyk/Nido/blob/main/docs/security/AUDIT_0.1.72_2026-11-03.md)).
+Fixes from two audits run on 3 November 2026: the audit of the
+published 0.1.72
+([docs/security/AUDIT_0.1.72_2026-11-03.md](https://github.com/Nido007-cmyk/Nido/blob/main/docs/security/AUDIT_0.1.72_2026-11-03.md))
+and a full audit of every public claim from 0.1.62 to 0.1.72
+([docs/security/AUDIT_FULL_0.1.62-0.1.72_2026-11-03.md](https://github.com/Nido007-cmyk/Nido/blob/main/docs/security/AUDIT_FULL_0.1.62-0.1.72_2026-11-03.md)).
 No catalog change and no guide text change: the signed catalog
 keeps offering knowledge-packs-v12.
 
+### Safety
+
+- **A live emergency is recognised in the way people actually
+  write it, in all three languages.** "My dad isn't breathing"
+  was not recognised while "is not breathing" was (the
+  contraction was missing); "no puedo respirar" and "não consigo
+  respirar" were missing while "I can't breathe" was there; and a
+  seizure, a heart attack or a stroke happening now were missing
+  in some languages. They are now recognised in Spanish, English
+  and Portuguese, and their everyday look-alikes ("backstroke",
+  "what is a heart attack", "this traffic is killing me") are not.
+- **The health gate knows heart attacks, strokes and swallowed
+  objects.** "Infarto", "heart attack", "AVC", "ictus" and
+  swallowing a battery, pills, a coin or bleach were unknown to
+  it in all three languages, so without a guide the model's own
+  text could stay on screen. Swallowing only counts with its
+  object, so "the ATM swallowed my card" is not a health question.
+- **A crisis said in Spanish or Portuguese opens the crisis lines.**
+  "I want to kill myself" did; "quiero matarme", "me voy a matar",
+  "quero me matar" and "vou me matar" did not. They now do, as do
+  "acabar con mi vida", "acabar com a minha vida" and "take my own
+  life"; the everyday idiom of effort ("me voy a matar
+  estudiando", "vou me matar de rir") does not.
+
+### Reading documents
+
+- **A text PDF no longer gets a false recognition warning.**
+  Since 0.1.68, every PDF with a normal text layer was imported
+  with the warning "recognition found no text on its scanned
+  pages", although it had no scanned pages. The recognition
+  module now first finds which pages are scanned; with none, it
+  does not run and says nothing. A PDF whose scanned pages give
+  no text still gets the warning.
+- **A file's kind is decided by its bytes, as 0.1.68 promised.**
+  A known extension used to win without looking: a PDF named
+  ".txt" was indexed as garbage text and a photo named ".pdf"
+  failed as an unreadable PDF. Clear signatures in the bytes (PDF,
+  JPEG, PNG, WEBP, GIF, HEIF) now decide.
+- A recognition failure keeps its real cause (for example, the
+  language data failing its integrity check) instead of a generic
+  "OCR_FAILED".
+
 ### Memory and answers
 
-- **"¿Cuándo es mi cumpleaños?" finds the birthday when the note
-  says it with "el mío".** A fact saved as "…y el mío es el 3 de
-  mayo" was not read as your own birthday: the pronoun forms
-  without the noun after them ("el mío", "mine", "o meu")
-  matched no rule, so the question went unanswered or took
-  another reading. The pronoun now counts when its own clause
-  carries an extractable date, in Spanish, English and
-  Portuguese; the explicit forms ("mi cumpleaños es…") keep
-  winning, as before.
-- **A short sentence no longer drops the "no" of the long guide
-  sentence it shortens.** When an answer copied a short clause
-  out of a longer source sentence, the grounding check compared
-  it only with short source sentences, and a negation that lived
-  in the long sentence never entered the comparison. The check
-  now also reads the long source sentence the clause came from.
-  The judge's own thresholds are untouched, and a regression
-  sweep of 14,583 answer shapes over the Essentials chunks
-  changed no verdict and no text.
-- One correction to the 0.1.72 entry, because it was wrong: the
-  v12 Essentials pack's e5 recovery is 201/202 and the question
-  it misses is the hypothermia one; the v11 pack missed a
-  different question (the traffic accident one, which v12 now
-  answers). The missed question changed because the family
-  search keys are part of what the search embeds. The figure
-  stays above its 90% requirement and the first-aid gate holds
-  at 38/38.
+- **"¿Cuándo es mi cumpleaños?" finds your birthday when the note
+  says it with a pronoun.** A fact saved as "…y el mío es el 3 de
+  mayo" got the answer that you had not told NIDO. The pronoun
+  ("el mío", "mine", "o meu") now counts when its own clause
+  carries a date, in Spanish, English and Portuguese; another
+  person's date is never served as yours.
+- **A short sentence no longer drops the "no" of a long guide
+  sentence.** "The patient is bleeding." against the source "The
+  patient is not bleeding and is breathing normally after the
+  fall." was kept as it was, because the negation check only
+  compared it with source sentences it copied almost whole. It now
+  also compares it with the clause of a long source sentence it
+  came from, and uses the source sentence instead. Faithful short
+  sentences are not touched: a sweep of 14,583 sentences and
+  clauses of the Essentials guides changed no verdict and no text.
+  The grounding check's own thresholds are unchanged.
+
+### Knowledge packs
+
+- A note on retrieval in knowledge-packs-v12: the CI measures e5
+  retrieval at 201/202 for v12, as for v11, but the question it
+  misses changed. v11 missed "qué hago primero si veo un
+  accidente", which v12 now answers; v12 misses "tiene mucho frío
+  y no deja de temblar". The family search keys are part of what
+  the search embeds, which is why the missed question moved. The
+  figure stays above its 90% requirement and the first-aid gate
+  holds at 38/38.
 - The two Portuguese recovery variants that no measured dose
   can crown without breaking the first-aid gate stay named
   as the declared frontier (variants 12/14), as in 0.1.70.
+
+### Repository
+
+- The scripts that reproduce the Essentials seal checks (the seal
+  ratchet, the clinical hashes and the guide citations) are now in
+  the repository, so anyone can rerun them.
+- AGENTS.md names the twelve native modules (it said seven), and
+  the cryptography document no longer contradicts the alpha notes.
 
 ## 0.1.72-alpha - 2026-11-03
 
