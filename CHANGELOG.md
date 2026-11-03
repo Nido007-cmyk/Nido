@@ -4,6 +4,46 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.73-alpha - 2026-11-03
+
+Fixes from Claude's audit of the published 0.1.72 (2026-11-03), each
+verified against the published bytes before it was fixed
+([docs/security/AUDIT_0.1.72_2026-11-03.md](https://github.com/Nido007-cmyk/Nido/blob/main/docs/security/AUDIT_0.1.72_2026-11-03.md)).
+No catalog change and no guide text change: the signed catalog
+keeps offering knowledge-packs-v12.
+
+### Memory and answers
+
+- **"¿Cuándo es mi cumpleaños?" finds the birthday when the note
+  says it with "el mío".** A fact saved as "…y el mío es el 3 de
+  mayo" was not read as your own birthday: the pronoun forms
+  without the noun after them ("el mío", "mine", "o meu")
+  matched no rule, so the question went unanswered or took
+  another reading. The pronoun now counts when its own clause
+  carries an extractable date, in Spanish, English and
+  Portuguese; the explicit forms ("mi cumpleaños es…") keep
+  winning, as before.
+- **A short sentence no longer drops the "no" of the long guide
+  sentence it shortens.** When an answer copied a short clause
+  out of a longer source sentence, the grounding check compared
+  it only with short source sentences, and a negation that lived
+  in the long sentence never entered the comparison. The check
+  now also reads the long source sentence the clause came from.
+  The judge's own thresholds are untouched, and a regression
+  sweep of 14,583 answer shapes over the Essentials chunks
+  changed no verdict and no text.
+- One correction to the 0.1.72 entry, because it was wrong: the
+  v12 Essentials pack's e5 recovery is 201/202 and the question
+  it misses is the hypothermia one; the v11 pack missed a
+  different question (the traffic accident one, which v12 now
+  answers). The missed question changed because the family
+  search keys are part of what the search embeds. The figure
+  stays above its 90% requirement and the first-aid gate holds
+  at 38/38.
+- The two Portuguese recovery variants that no measured dose
+  can crown without breaking the first-aid gate stay named
+  as the declared frontier (variants 12/14), as in 0.1.70.
+
 ## 0.1.72-alpha - 2026-11-03
 
 The catalog release. 0.1.71 already carried the Essentials text
