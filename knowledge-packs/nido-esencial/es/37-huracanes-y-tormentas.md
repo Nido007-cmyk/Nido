@@ -3,6 +3,8 @@ title: Huracanes, ciclones y tormentas fuertes
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA); Centro Nacional de Huracanes (NOAA); Cruz Roja Americana; OMM
+id: esencial-huracanes
+verified: 2026-11-02
 questions: qué hago cuando viene un huracán | qué es el ojo del huracán | en un huracán hay que evacuar o quedarse en casa | cómo protejo las ventanas cuando viene un huracán | o que faço quando vem um furacão | o que é o olho do furacão
 ---
 Los huracanes (también llamados ciclones o tifones) traen viento muy fuerte, lluvias torrenciales e inundaciones. Lo más mortal suele ser el agua: la marea de tormenta en la costa y las inundaciones tierra adentro.

@@ -3,6 +3,8 @@ title: Emergency toilet and waste (sanitation)
 category: Survival
 lang: en
 sources: WHO and UNICEF, water, sanitation and hygiene in emergencies; Sphere Project; Ready.gov
+id: esencial-saneamiento-de-emergencia
+verified: 2026-11-02
 questions: how do i make an emergency toilet at home without running water | how far from a well or water source should a latrine be | what do i cover the emergency toilet bucket with after each use | how do i wash my hands without running water | como faço um banheiro de emergência em casa sem água | a que distância de um poço se faz uma latrina
 ---
 When there is no running water or the sewer fails, badly managed feces are one of the biggest causes of illness after a disaster.
@@ -16,7 +18,7 @@ When there is no running water or the sewer fails, badly managed feces are one o
 
 ## Outdoor latrine
 - At least 30 meters (100 feet) from any water source (well, river) and downhill from it.
-- A narrow trench 30 to 50 cm (1 to 1.5 feet) deep. Cover with soil after each use.
+- A narrow, shallow trench, about 15 cm (6 inches) deep. Cover with soil after each use.
 - Give it privacy, especially for women and girls, and light at night if possible.
 
 ## Hygiene

@@ -3,6 +3,8 @@ title: Ictus (derrame cerebral)
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020
+id: esencial-ictus
+verified: 2026-11-02
 questions: cómo sé si es un ictus, un derrame cerebral | se le cae un lado de la cara y habla raro, qué hago | cuáles son los signos de un derrame cerebral | qué es la regla rápido para el ictus | como sei se é um derrame cerebral, um avc | um lado do rosto caiu e a fala está estranha, o que faço
 ---
 En un ictus, una parte del cerebro se queda sin sangre. El tratamiento funciona mucho mejor en las primeras horas: reconócelo rápido.
@@ -22,7 +24,7 @@ Otros signos de golpe: pérdida de visión, mareo intenso con pérdida de equili
 5. Si es diabética y tienes medidor de azúcar, puedes medirla sin retrasar la llamada.
 
 ## Síntomas que se pasan solos
-Aunque los síntomas duren unos minutos y desaparezcan, es un aviso serio (accidente isquémico transitorio): debe verla un médico ese mismo día.
+Aunque los síntomas duren unos minutos y desaparezcan, es un aviso serio (accidente isquémico transitorio): busca ayuda médica de inmediato.
 
 ## Importante
 Basado en las directrices de la AHA, la Cruz Roja Americana y la Cruz Roja Canadiense. Llama al número de emergencias.

@@ -329,14 +329,18 @@ const createReminderHandler: ToolHandler = async (args) => {
 };
 
 /**
- * H11-2026-10-06: detector simple de fechas en texto (ES/EN).
+ * H11-2026-10-06: detector simple de fechas en texto (ES/EN/PT).
  * Si un fact contiene una fecha, el resultado sugiere crear un recordatorio.
  * No intenta NLP completo; solo patrones comunes de fechas.
  */
+// Auditoría de la 0.1.70: la tabla tenía es/en sin «setiembre» y sin
+// portugués; las demás tablas de meses del árbol ya los traen.
 const DATE_PATTERNS: RegExp[] = [
-  /\b\d{1,2} de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b/i,
-  /\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre) \d{1,2}\b/i,
+  /\b\d{1,2} de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/i,
+  /\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre) \d{1,2}\b/i,
   /\b(january|february|march|april|may|june|july|august|september|october|november|december) \d{1,2}\b/i,
+  /\b\d{1,2}(?:st|nd|rd|th)? (?:of )?(january|february|march|april|may|june|july|august|september|october|november|december)\b/i,
+  /\b\d{1,2} de (janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/i,
   /\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/,
 ];
 

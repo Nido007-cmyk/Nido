@@ -3,6 +3,8 @@ title: Thunderstorms and lightning
 category: Disasters
 lang: en
 sources: US National Weather Service (NOAA), lightning safety; American Red Cross; AHA 2024
+id: esencial-rayos
+verified: 2026-11-02
 questions: what do i do if i get caught outside in a thunderstorm | how long should i wait after the last thunder before going out | is it safe to touch someone who was struck by lightning | o que faço numa tempestade elétrica ao ar livre | caiu um raio numa pessoa, o que faço
 ---
 **When thunder roars, go indoors: if you can hear thunder, you are close enough to be struck.** There is no safe place outdoors during a thunderstorm.

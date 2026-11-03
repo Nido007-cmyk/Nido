@@ -4,6 +4,50 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## Unreleased
+
+Fixes from Claude's audit of the published 0.1.70 (2026-11-03), each
+reproduced on the published code before it was fixed
+([docs/security/AUDIT_0.1.70_2026-11-03.md](https://github.com/Nido007-cmyk/Nido/blob/main/docs/security/AUDIT_0.1.70_2026-11-03.md)).
+
+### Answers
+
+- **A wrong dose written as an instruction is no longer sealed as
+  grounded.** The judge only checked a dose when the answer said
+  "the dose is…", and its digit rule skipped single digits, which
+  is how almost every dose is written. On 0.1.70, "Take 5 tablets"
+  against a source saying 2, "Give 6 puffs" against 2, "5 ml"
+  against 10 and, with the real chest-pain guide, "chew 8 low-dose
+  aspirins" against "2 to 4" came out grounded with a citation.
+  Now each figure is tied to its dose unit (tablets, ml, mg, drops,
+  teaspoons, puffs, inhalations, sprays, aspirins…), with ranges and
+  numbers written as words, and a figure the sources contradict for
+  that unit withdraws the sentence. Every numbered sentence of the
+  174 Essentials guides, checked against its own guide, keeps the
+  verdict it had before.
+- **"Como se chama o meu pai?" answers with the saved name.** In
+  Portuguese, the masculine "o meu" was missing from the question
+  form, so it answered "você ainda não me contou isso" for any male
+  relative already saved.
+- **Saving a fact with a date in Portuguese suggests a reminder too**
+  (and "setiembre" and "the 10th of May" count as dates).
+
+### Essentials source
+
+- **The repository now holds the Essentials text that was
+  published.** The re-verified v11 guides (with their corrections,
+  such as parking before the crash, not beyond it) lived only on a
+  build branch; the main tree still had the older text, so the next
+  build from it would have undone them. The source, its
+  verification ledger and its seal baseline are now in the tree,
+  the floor record points at v11, and the family question keys of
+  the coverage fix (C-03) are kept on top of the v11 text. **Those
+  keys were never in the published packs:** v10 and v11 were built
+  from a source without them, so on a phone 11 of the 22
+  questions of that battery still die at the coverage gate. They
+  reach phones with the next Essentials pack, which needs the
+  maintainer's catalog signature.
+
 ## 0.1.70-alpha - 2026-11-03
 
 ### Answers

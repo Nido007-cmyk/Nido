@@ -3,6 +3,8 @@ title: Tornadoes
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA); US National Weather Service (NOAA); American Red Cross
+id: esencial-tornados
+verified: 2026-11-02
 questions: where do i shelter when a tornado is coming | what do i do in a tornado if i am in my car | what are the signs that a tornado is coming | is it safe to shelter under a bridge or overpass in a tornado | onde me abrigo se vier um tornado | o que faço num tornado se estiver no carro
 ---
 A tornado is a violently rotating column of air. It can form within minutes.

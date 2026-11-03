@@ -3,6 +3,8 @@ title: Chemical, nuclear or radiological emergency
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA), radiation and chemical emergencies; CDC; IAEA; WHO
+id: esencial-emergencia-quimica-o-nuclear
+verified: 2026-11-02
 questions: what do i do in a chemical or nuclear emergency | what does get inside, stay inside and stay tuned mean | when do i take potassium iodide tablets | how do i remove contaminated clothing after a chemical release | o que faço numa emergência química ou nuclear | quando se toma o iodeto de potássio
 ---
 If there is a chemical or radioactive release nearby, the basic rule is: **get inside, stay inside, stay tuned**.

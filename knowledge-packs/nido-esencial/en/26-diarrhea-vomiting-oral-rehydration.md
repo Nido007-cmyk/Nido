@@ -3,6 +3,8 @@ title: Diarrhea, vomiting and homemade oral rehydration solution
 category: Health at home
 lang: en
 sources: WHO and UNICEF, treatment of diarrhoea and oral rehydration salts; WHO IMCI
+id: esencial-diarrea-vomitos-y-suero-oral
+verified: 2026-11-02
 questions: how do i make homemade oral rehydration solution, ors | how much salt and how much sugar go in a liter of ors | my child has diarrhea and vomiting, what do i give him | what are the signs of dehydration in a child | como preparo o soro oral caseiro | quantas colheres de açúcar e de sal vão no soro caseiro
 ---
 Diarrhea kills through dehydration, especially young children and older people. The solution is simple: replace water and salts.
@@ -14,7 +16,7 @@ Best are oral rehydration salts (ORS) sachets from a pharmacy or health center. 
 - 1 liter of safe water (boiled and cooled, or treated).
 - 6 level teaspoons of sugar.
 - Half a level teaspoon of salt.
-Stir until dissolved. It should taste no saltier than tears: if it does, add water. Use it within 24 hours.
+Stir until dissolved. Use it within 24 hours.
 
 ## How to give it
 - Give small, frequent sips, or by teaspoon for children, even if they vomit: wait 10 minutes and continue more slowly.

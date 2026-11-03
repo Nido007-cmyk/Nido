@@ -3,6 +3,8 @@ title: Intoxicaciones, venenos y monóxido de carbono
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; OMS; CDC, monóxido de carbono
+id: esencial-intoxicaciones-y-monoxido
+verified: 2026-11-02
 questions: mi hijo se tragó lejía, qué hago | qué hago si alguien se intoxica con medicamentos | se debe provocar el vómito si traga un producto tóxico | mi hijo se tragó una pila de botón, qué hago | mi hijo se tragó una moneda, qué hago | meu filho engoliu água sanitária, o que faço | o que faço se alguém se intoxicar com remédios
 ---
 ## Si alguien tragó algo tóxico
@@ -14,6 +16,7 @@ questions: mi hijo se tragó lejía, qué hago | qué hago si alguien se intoxic
 5. Si hay producto en la boca, que la enjuague y escupa.
 6. Si vomita o está somnolienta, ponla de lado.
 **Pilas de botón e imanes**: si un niño se ha tragado una, ve a urgencias de inmediato aunque esté bien. Pueden causar quemaduras internas graves en horas.
+Si puede ser una pila de botón de litio y el niño tiene 1 año o más, se la tragó hace menos de 12 horas, puede tragar y hay miel a mano: en el camino a urgencias, dale 10 ml (2 cucharaditas) de miel cada 10 minutos, hasta 6 veces. La miel retrasa la quemadura, pero no sustituye la extracción de la pila: no retrases la salida por darla. Salvo la miel, que no coma ni beba nada hasta que una radiografía descarte que la pila sigue en el esófago.
 
 ## Productos químicos en la piel o los ojos
 - Piel: quita la ropa contaminada (con guantes si puedes) y lava con mucha agua corriente durante al menos 15 a 20 minutos. Si es un polvo seco, sacúdelo antes.

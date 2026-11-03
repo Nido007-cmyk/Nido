@@ -3,10 +3,12 @@ title: Accidente de tráfico
 category: Primeros auxilios
 lang: es
 sources: Cruz Roja Española, protocolo PAS; AHA y Cruz Roja Americana 2024; OMS, seguridad vial
+id: esencial-accidente-de-trafico
+verified: 2026-11-02
 questions: qué hago si presencio un accidente de tráfico | qué es el protocolo pas, proteger, avisar y socorrer | se le quita el casco a un motorista accidentado | qué hago si mi coche cae al agua en un accidente | o que faço se presenciar um acidente de trânsito | o que é o protocolo proteger, avisar e socorrer
 ---
 ## 1. Protege
-- Aparca tu vehículo fuera de la calzada y más allá del accidente, con las luces de emergencia.
+- Aparca tu vehículo fuera de la calzada y antes del accidente, con las luces de emergencia.
 - Ponte el chaleco reflectante antes de bajar.
 - Señaliza el lugar (triángulos o la baliza que exija tu país) para que no haya otro choque.
 - Apaga el motor de los vehículos accidentados si puedes y no fumes. Cuidado con el combustible derramado, cables y otros peligros.

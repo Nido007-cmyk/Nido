@@ -1682,3 +1682,16 @@ describe("B5+B6 — REL en «called» y BDAY en «when's»", () => {
     expect(answerMemoryQuery("what's my dad's name?", DAD, "en")).toBe("Your dad's name is Luis.");
   });
 });
+
+describe("auditoría de la 0.1.70: «como se chama o meu…»", () => {
+  const mem = (rel: string, name: string) => ({ facts: [], people: [{ name, relationship: rel }] });
+  it("el artículo masculino sirve la ficha guardada, con el posesivo concordado", () => {
+    expect(answerMemoryQuery("Como se chama o meu pai?", mem("pai", "Carlos"), "pt")).toBe("Seu pai se chama Carlos.");
+    expect(answerMemoryQuery("Como se chama o meu irmão?", mem("irmão", "Pedro"), "pt")).toBe("Seu irmão se chama Pedro.");
+    expect(answerMemoryQuery("Como se chama o meu avô?", mem("avô", "Zé"), "pt")).toBe("Seu avô se chama Zé.");
+  });
+  it("las formas que ya servían siguen igual", () => {
+    expect(answerMemoryQuery("Como se chama a minha mãe?", mem("mãe", "Marta"), "pt")).toBe("Sua mãe se chama Marta.");
+    expect(answerMemoryQuery("Como se chama meu pai?", mem("pai", "Carlos"), "pt")).toBe("Seu pai se chama Carlos.");
+  });
+});

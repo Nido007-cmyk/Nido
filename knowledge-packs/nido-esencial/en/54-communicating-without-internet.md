@@ -3,6 +3,8 @@ title: Communicating without internet or signal
 category: Survival
 lang: en
 sources: Ready.gov (FEMA), communication plan; IFRC and ICRC, Restoring Family Links; NIDO
+id: esencial-comunicarse-sin-internet
+verified: 2026-11-02
 questions: how do i communicate with my family if there is no internet or phone signal | do text messages get through when calls don't work | how does the red cross help find missing family members | can nido send messages over bluetooth without internet | como me comunico com a minha família sem internet nem cobertura | as mensagens de texto passam quando as chamadas não funcionam
 ---
 After a disaster, phone and internet networks often go down or get overloaded. Have several ways ready.

@@ -3,6 +3,8 @@ title: Emergency go-bag and supplies at home
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA), basic disaster supplies kit; American Red Cross; IFRC
+id: esencial-mochila-de-emergencia
+verified: 2026-11-02
 questions: what goes in an emergency go bag | how much water per person per day should i store, how many liters | what food should i pack in the emergency go bag | how often should i check the go bag supplies | o que vai na mochila de emergência | quantos litros de água por pessoa devo guardar
 ---
 ## Go-bag (one per person, ready by the door)
@@ -26,7 +28,7 @@ Meant for 72 hours away from home.
 ## Supplies at home (for sheltering in place)
 - Water for at least 3 days, better 2 weeks (4 liters per person per day).
 - Canned and dry food for 2 weeks, and a manual can opener.
-- Camping stove and fuel, only for use outdoors or with good ventilation.
+- Camping stove and fuel, only for use outdoors, away from doors and windows.
 - Flashlights, candles used with care, batteries.
 - Unscented bleach to purify water and disinfect.
 - Large garbage bags and buckets (for an emergency toilet).
