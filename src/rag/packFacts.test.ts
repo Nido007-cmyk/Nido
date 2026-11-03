@@ -235,6 +235,32 @@ describe("líneas de crisis (familia crisis.*): el consumidor que faltaba", () =
     ]) expect(crisisQuestionKind(text), text).toBe(true);
   });
 
+  it("adversaria PC2 C1: el plural y el «mais» interpuesto tienen su forma en es y pt", async () => {
+    const { crisisQuestionKind } = await import("./packFacts");
+    // La adversaria de la cura midió la celda plural: el inglés la
+    // cubre sin asiento nuevo (su forma es invariable), pero es y pt
+    // conjugan y el plural caía. Plural en las tres personas donde
+    // la lengua lo pide (el pt no usa la 2ª del plural de «querer»),
+    // y en pt el adverbio interpuesto, cuya forma con el adverbio al
+    // final ya clasificaba.
+    for (const text of [
+      "mis hermanos quieren morir, ¿a quién llamamos en México?",
+      "queremos morir, ¿a quién llamamos en México?",
+      "vosotros queréis morir, ¿a quién llamamos en España?",
+      "mis padres no quieren vivir",
+      "no queremos vivir",
+      "vosotros no queréis vivir",
+      "os meus irmãos querem morrer, a quem ligamos no Brasil?",
+      "queremos morrer, a quem ligamos no Brasil?",
+      "os meus pais não querem viver",
+      "não queremos viver",
+      "o meu irmão não quer mais viver",
+      "não quero mais viver",
+      "os meus irmãos não querem mais viver",
+      "não queremos mais viver",
+    ]) expect(crisisQuestionKind(text), text).toBe(true);
+  });
+
   it("pre-censo PC2-2: el nombre de la línea tiene su forma en las tres lenguas", async () => {
     const { crisisQuestionKind } = await import("./packFacts");
     // Vida, crisis y ayuda, como línea, teléfono o número: la familia
