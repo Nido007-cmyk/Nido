@@ -3,6 +3,8 @@ title: Aprender más: cursos y recursos fiables
 category: Supervivencia
 lang: es
 sources: IFRC; Cruz Roja y Media Luna Roja; AHA; OMS
+id: esencial-aprender-mas-y-cursos
+verified: 2026-11-02
 ---
 Estas guías ayudan, pero **nada sustituye a un curso práctico de primeros auxilios**: practicar la RCP con un muñeco y usar un desfibrilador de entrenamiento da la confianza para actuar de verdad.
 

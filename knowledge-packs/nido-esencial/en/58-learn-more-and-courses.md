@@ -3,6 +3,8 @@ title: Learn more: courses and trusted resources
 category: Survival
 lang: en
 sources: IFRC; Red Cross and Red Crescent; AHA; WHO
+id: esencial-aprender-mas-y-cursos
+verified: 2026-11-02
 ---
 These guides help, but **nothing replaces a hands-on first aid course**: practicing CPR on a manikin and using a training defibrillator gives you the confidence to act for real.
 

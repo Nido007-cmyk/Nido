@@ -3,6 +3,8 @@ title: Comunicarse cuando no hay internet ni cobertura
 category: Supervivencia
 lang: es
 sources: Ready.gov (FEMA), plan de comunicación; IFRC, Restablecimiento del Contacto entre Familiares; NIDO
+id: esencial-comunicarse-sin-internet
+verified: 2026-11-02
 ---
 Tras un desastre, las redes de teléfono e internet suelen caerse o saturarse. Ten varios caminos preparados.
 

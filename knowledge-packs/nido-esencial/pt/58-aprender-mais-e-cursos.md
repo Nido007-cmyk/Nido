@@ -3,6 +3,8 @@ title: Aprender mais: cursos e recursos confiáveis
 category: Sobrevivência
 lang: pt
 sources: IFRC; Cruz Vermelha e Crescente Vermelho; AHA; OMS
+id: esencial-aprender-mas-y-cursos
+verified: 2026-11-02
 questions: onde fazer um curso de primeiros socorros | cursos grátis de rcp on-line | o que aprender primeiro em primeiros socorros | app de primeiros socorros que funciona off-line
 ---
 Estes guias ajudam, mas **nada substitui um curso prático de primeiros socorros**: praticar a RCP com um manequim e usar um desfibrilador de treinamento dá a confiança para agir de verdade.

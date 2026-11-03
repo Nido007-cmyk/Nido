@@ -3,6 +3,8 @@ title: Communicating without internet or signal
 category: Survival
 lang: en
 sources: Ready.gov (FEMA), communication plan; IFRC and ICRC, Restoring Family Links; NIDO
+id: esencial-comunicarse-sin-internet
+verified: 2026-11-02
 ---
 After a disaster, phone and internet networks often go down or get overloaded. Have several ways ready.
 

@@ -3,6 +3,8 @@ title: Comunicar-se quando não há internet nem cobertura
 category: Sobrevivência
 lang: pt
 sources: Ready.gov (FEMA), plano de comunicação; IFRC, Restabelecimento do Contato entre Familiares; NIDO
+id: esencial-comunicarse-sin-internet
+verified: 2026-11-02
 questions: sem internet nem sinal, como me comunico | nido funciona sem internet, como | mensagens de texto passam com pouco sinal | como encontrar familiares depois de um desastre
 ---
 Depois de um desastre, as redes de telefone e internet costumam cair ou saturar. Tenha vários caminhos preparados.

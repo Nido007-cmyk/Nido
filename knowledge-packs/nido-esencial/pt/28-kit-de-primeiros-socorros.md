@@ -3,6 +3,8 @@ title: Kit de primeiros socorros
 category: Saúde em casa
 lang: pt
 sources: Cruz Vermelha Americana, conteúdo do kit de primeiros socorros; IFRC; Cruz Vermelha Espanhola
+id: esencial-botiquin
+verified: 2026-11-02
 questions: o que ter num kit de primeiros socorros | o que não pode faltar na farmacinha de casa | de quanto em quanto tempo revisar o kit | remédios básicos para emergências, quais levar
 ---
 Tenha um kit em casa, outro no carro e um pequeno na mochila de emergência. Revise-o a cada 6 meses e reponha o que venceu.

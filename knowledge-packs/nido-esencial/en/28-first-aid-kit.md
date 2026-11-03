@@ -3,6 +3,8 @@ title: First aid kit
 category: Health at home
 lang: en
 sources: American Red Cross, first aid kit contents; IFRC; Spanish Red Cross
+id: esencial-botiquin
+verified: 2026-11-02
 ---
 Keep a kit at home, another in the car and a small one in your emergency bag. Check it every 6 months and replace expired items.
 

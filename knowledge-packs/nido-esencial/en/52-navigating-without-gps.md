@@ -3,6 +3,8 @@ title: Finding your way without GPS
 category: Survival
 lang: en
 sources: Land navigation and orienteering manuals; search-and-rescue organizations
+id: esencial-orientarse-sin-gps
+verified: 2026-11-02
 ---
 ## First: move or stay?
 If you are lost and someone knows where you were going, the best choice is usually to **stay put** in a visible place: you'll be found sooner. Move only if you are in danger or know for sure where to go.

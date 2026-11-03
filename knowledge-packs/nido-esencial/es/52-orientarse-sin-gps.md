@@ -3,6 +3,8 @@ title: Orientarse sin GPS
 category: Supervivencia
 lang: es
 sources: Manuales de orientación y navegación terrestre; organizaciones de búsqueda y rescate
+id: esencial-orientarse-sin-gps
+verified: 2026-11-02
 ---
 ## Primero: ¿te mueves o te quedas?
 Si te has perdido y alguien sabe a dónde ibas, normalmente lo mejor es **quedarte quieto** en un lugar visible: te encontrarán antes. Muévete solo si estás en peligro o sabes con seguridad a dónde ir.

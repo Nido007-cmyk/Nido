@@ -3,6 +3,8 @@ title: Botiquín de primeros auxilios
 category: Salud en casa
 lang: es
 sources: Cruz Roja Americana, contenido del botiquín; IFRC; Cruz Roja Española
+id: esencial-botiquin
+verified: 2026-11-02
 ---
 Ten un botiquín en casa, otro en el coche y uno pequeño en la mochila de emergencia. Revísalo cada 6 meses y repón lo caducado.
 

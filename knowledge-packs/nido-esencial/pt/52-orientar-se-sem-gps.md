@@ -3,6 +3,8 @@ title: Orientar-se sem GPS
 category: Sobrevivência
 lang: pt
 sources: Manuais de orientação e navegação terrestre; organizações de busca e resgate
+id: esencial-orientarse-sin-gps
+verified: 2026-11-02
 questions: como me orientar pelo sol sem bússola | método da sombra para achar o norte | cruzeiro do sul, como achar o sul | perdido, fico parado ou ando
 ---
 ## Primeiro: você se move ou fica?
