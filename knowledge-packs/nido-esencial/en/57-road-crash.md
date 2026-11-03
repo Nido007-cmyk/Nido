@@ -5,7 +5,7 @@ lang: en
 sources: Spanish Red Cross, PAS protocol; AHA and American Red Cross 2024; WHO, road safety
 ---
 ## 1. Protect
-- Park your vehicle off the road and beyond the crash, with hazard lights on.
+- Park your vehicle off the road and before the crash, with hazard lights on.
 - Put on a reflective vest before getting out.
 - Mark the scene (warning triangles or the beacon your country requires) to prevent another crash.
 - Turn off the engines of the crashed vehicles if you can, and don't smoke. Watch for spilled fuel, wires and other hazards.

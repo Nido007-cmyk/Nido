@@ -6,7 +6,7 @@ sources: Cruz Vermelha Espanhola, protocolo PAS; AHA e Cruz Vermelha Americana 2
 questions: acidente de trânsito, o que fazer primeiro | posso tirar o capacete de um motociclista ferido | meu carro caiu na água, como sair | ferido no acidente, posso mover ele
 ---
 ## 1. Proteja
-- Estacione seu veículo fora da pista e além do acidente, com o pisca-alerta ligado.
+- Estacione seu veículo fora da pista e antes do acidente, com o pisca-alerta ligado.
 - Coloque o colete refletivo antes de descer.
 - Sinalize o local (triângulos ou o sinalizador que seu país exigir) para que não haja outra batida.
 - Desligue o motor dos veículos acidentados, se puder, e não fume. Cuidado com combustível derramado, cabos e outros perigos.
