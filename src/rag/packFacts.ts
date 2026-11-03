@@ -399,8 +399,14 @@ const CRISIS_INTENT_CUES =
  */
 export function crisisQuestionKind(text: string): boolean {
   const folded = foldText(text);
-  const words = folded.trim().split(" ").filter(Boolean);
-  if (words.length === 0 || words.length > 24) return false;
+  if (!folded.trim()) return false;
+  // Pre-censo PC2-4: el tope de 24 palabras dejaba fuera la pregunta
+  // larga por la línea con su motivo declarado, con la señal literal
+  // intacta. La guarda real contra frases que no preguntan es la
+  // señal de línea o de intención de abajo, no la longitud: sin
+  // señal, una frase larga sigue sin ser pregunta de crisis. Es la
+  // misma forma que su gemela emergencyQuestionKind recibió al perder
+  // su tope en la auditoría 2026-10-31 (F1 B-3).
   return CRISIS_LINE_CUES.test(folded) || CRISIS_INTENT_CUES.test(folded);
 }
 

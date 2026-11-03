@@ -258,6 +258,25 @@ describe("líneas de crisis (familia crisis.*): el consumidor que faltaba", () =
     ]) expect(crisisQuestionKind(text), text).toBe(true);
   });
 
+  it("pre-censo PC2-4: la pregunta larga con su motivo clasifica en las tres lenguas", async () => {
+    const { crisisQuestionKind } = await import("./packFacts");
+    // La misma pregunta de la sonda, con su motivo: 34, 39 y 36
+    // palabras. El tope de 24 que su gemela ya había perdido no puede
+    // seguir vivo aquí: manda la señal literal, no la longitud.
+    for (const text of [
+      "¿Cuál es la línea de crisis de España? Lo pregunto porque mi hermana lleva varios días muy triste, dice que no le encuentra sentido a seguir así y anoche pidió ayuda a nuestra familia.",
+      "What is the crisis line in Spain? I am asking because my sister has been very sad for several days, says she cannot find a reason to go on like this, and last night asked our family for help.",
+      "Qual é a linha de crise em Espanha? Pergunto porque a minha irmã está muito triste há vários dias, diz que não encontra sentido em continuar assim e ontem à noite pediu ajuda à nossa família.",
+    ]) {
+      expect(text.split(/\s+/).length).toBeGreaterThan(24);
+      expect(crisisQuestionKind(text), text).toBe(true);
+    }
+    // Larga y sin señal de línea ni de intención: sigue sin ser crisis.
+    expect(
+      crisisQuestionKind("cuéntame con calma la historia de los bomberos voluntarios de Chile y de cómo empezaron hace ya muchos años atrás con esfuerzo y con vecinos de todo el barrio durante una época difícil"),
+    ).toBe(false);
+  });
+
   it("responde con la línea del país, su fuente con fecha y el botón de llamada", async () => {
     const { composeCrisisAnswer } = await import("./packFacts");
     const a = composeCrisisAnswer("¿cuál es la línea de crisis de España?", "es", crisisRegions, crisisFacts)!;
