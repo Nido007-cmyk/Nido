@@ -130,7 +130,7 @@ La interfaz está disponible en español, inglés y portugués.
   datos pide tu huella o PIN.
 
 [Política de privacidad](PRIVACY.md) · [términos de uso](TERMS.md). Más detalle: [endurecimiento de privacidad](docs/es/PRIVACY.md) · [arquitectura criptográfica](docs/es/CRYPTO_ARCHITECTURE.md) ·
-[modelo de amenazas](docs/es/THREAT_MODEL.md) · [reportar una vulnerabilidad](SECURITY.es.md)
+[modelo de amenazas](docs/es/THREAT_MODEL.md) · [informes de auditoría](docs/security/README.md) · [reportar una vulnerabilidad](SECURITY.es.md)
 
 ## Estado
 

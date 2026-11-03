@@ -125,7 +125,7 @@ The interface is available in English, Spanish and Portuguese.
   screen (Android 12+), and erasing all data asks for your fingerprint or PIN.
 
 [Privacy policy](PRIVACY.md) · [terms of use](TERMS.md). More detail: [privacy hardening](docs/PRIVACY.md) · [crypto architecture](docs/CRYPTO_ARCHITECTURE.md) ·
-[threat model](docs/THREAT_MODEL_SUMMARY.md) · [reporting a vulnerability](SECURITY.md)
+[threat model](docs/THREAT_MODEL_SUMMARY.md) · [audit reports](docs/security/README.md) · [reporting a vulnerability](SECURITY.md)
 
 ## Status
 
