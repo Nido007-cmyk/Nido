@@ -34370,9 +34370,9 @@
       "idioma": "es",
       "ruta": "knowledge-packs/nido-esencial/es/33-mochila-de-emergencia.md",
       "verified": "2026-11-02",
-      "hashClinico": "c998a75037469274459de1efe5efe486a8215a3234242275b2cb63cdae3db5d4",
+      "hashClinico": "775c4a49cc6dc4dab211cb0ed79a2dfd7f1f992f40d1147936e540a4af3f659c",
       "preparador": "nido-prep-tanda-r3-1-2026-11-02.md (preparación R3-1, contraste 2026-11-02)",
-      "auditor": "adversaria independiente de la cadena (pendiente tras el cierre del paso)",
+      "auditor": "adversaria independiente de la cadena (pendiente tras la corrección de 33-A16, ejecutada el 2026-11-03 por el cargo ADV-P9-C1 de la adversaria del paso 9 — informe nido-adv-paso9-2026-11-02, que recomendó firmar los temas 24, 31 y 32 y NO el 33 hasta que la corrección aterrizara con su re-medida —; la firma de este tema espera a la adversaria de esa corrección)",
       "filas": [
         {
           "tema": "33 · Mochila de emergencia",
@@ -34619,16 +34619,21 @@
           "guia": "esencial-mochila-de-emergencia",
           "idioma": "es",
           "afirmacionId": "33-A16",
-          "textoLiteral": "Hornillo de camping y combustible, solo para usar al aire libre o bien ventilado.",
+          "textoLiteral": "Hornillo de camping y combustible, solo para usar al aire libre, lejos de puertas y ventanas.",
           "tipo": "afirmacion",
           "institucion": "Ready.gov (FEMA)",
           "documento": "Power Outages (generadores, hornillos y monóxido de carbono)",
-          "edicion": "consultada 2026-11-02",
+          "edicion": "consultada 2026-11-02; reabierta el 2026-11-03 en la corrección (Ready.gov y CDC, Prevention Guidelines, CS283134-D)",
           "identificador": "ready.gov/power-outages",
-          "localizador": "DISCREPANCIA EN VOZ ALTA (la fila más dura de la tanda, §5.1 de la preparación): la sede oficial no admite alternativa («always outdoors», y lejos de ventanas, por monóxido de carbono); la guía añade «o bien ventilado», una rama más blanda que la fuente no sostiene para aparatos de combustión. No es NO ENCONTRADO (la instrucción nuclear, solo al aire libre, es literal), pero queda marcada como candidata primera al carril de corrección si la adversaria la juzga endurecimiento necesario. Fallo de este sellado, por orden del encargo: se sella con contexto y la medida asentada; no se corrige en este paso.",
-          "citaLiteral": "Generators, camp stoves or charcoal grills should always be used outdoors and at least 20 feet away from windows.",
-          "fechaComprobacion": "2026-11-02",
-          "desenlace": "sostenida con contexto"
+          "localizador": "CORREGIDA el 2026-11-03 por el cargo ADV-P9-C1 de la adversaria del paso 9 (informe nido-adv-paso9-2026-11-02), que juzgó la discrepancia que esta fila viajaba nombrada desde el sellado: la guía ofrecía el hornillo «solo para usar al aire libre o bien ventilado», una rama blanda que niega la única condición de la sede. La sede declarada de la fila (Ready.gov, Power Outages) la fija absoluta — «always outdoors», «ONLY outdoors», a 20 pies de las ventanas — y la segunda sede reabierta en la cura (CDC, Prevention Guidelines: You Can Prevent Carbon Monoxide Exposure, CDC Stacks CS283134-D) nombra el mismo aparato y rechaza el interior «o cerca de una ventana». La frase vive en la sección de reservas para quedarse encerrado en casa: su lectura natural es un espacio interior ventilado, la conducta prohibida, con riesgo letal directo de monóxido de carbono. Especie de 57-A02: se corrige, no se contextualiza. La corrección retira la rama y deja la forma de la sede en las tres lenguas (solo al aire libre, lejos de puertas y ventanas); la cifra de la sede (20 pies) queda en la cita literal de esta fila. Ficha en la entrada 087 del libro y re-medida §4 en la 088. Ambas sedes releídas en vivo el 2026-11-03.",
+          "citaLiteral": "«Generators, camp stoves or charcoal grills should always be used outdoors and at least 20 feet away from windows» (Ready.gov); «DON'T use a generator, charcoal grill, camp stove, or other gasoline or charcoal-burning device inside your home, basement, or garage or near a window» (CDC, Prevention Guidelines, CS283134-D)",
+          "fechaComprobacion": "2026-11-03",
+          "desenlace": "corregida desde la fuente",
+          "antesDespues": {
+            "antes": "es: «Hornillo de camping y combustible, solo para usar al aire libre o bien ventilado.» · en: «Camping stove and fuel, only for use outdoors or with good ventilation.» · pt: «Fogareiro de camping e combustível, só para usar ao ar livre ou bem ventilado.»",
+            "despues": "es: «Hornillo de camping y combustible, solo para usar al aire libre, lejos de puertas y ventanas.» · en: «Camping stove and fuel, only for use outdoors, away from doors and windows.» · pt: «Fogareiro de camping e combustível, só para usar ao ar livre, longe de portas e janelas.»",
+            "motivo": "La rama «o bien ventilado» era un permiso alternativo que negaba la única condición de las dos sedes: Ready.gov la fija absoluta (siempre y solo al aire libre, a 20 pies de las ventanas) y CDC prohíbe el mismo aparato — el hornillo de camping, nombrado en ambas — dentro de casa o cerca de una ventana. En la sección de reservas para quedarse encerrado, el lector ejecutaría la frase en un interior ventilado: riesgo letal de monóxido de carbono. Cargo ADV-P9-C1 de la adversaria del paso 9: corrección desde la fuente (forma B), no contexto."
+          }
         },
         {
           "tema": "33 · Mochila de emergencia",
@@ -34685,9 +34690,9 @@
       "idioma": "en",
       "ruta": "knowledge-packs/nido-esencial/en/33-emergency-go-bag.md",
       "verified": "2026-11-02",
-      "hashClinico": "bf914bb1a587b2f0f3b37f8297d6b40f09085ffa8cff8ef1cef7e1a910b40323",
+      "hashClinico": "954890a7b310f1b1c2b496fbcd2292eae26e655d9568104dff2f088b377d6b19",
       "preparador": "nido-prep-tanda-r3-1-2026-11-02.md (preparación R3-1, contraste 2026-11-02)",
-      "auditor": "adversaria independiente de la cadena (pendiente tras el cierre del paso)",
+      "auditor": "adversaria independiente de la cadena (pendiente tras la corrección de 33-A16, ejecutada el 2026-11-03 por el cargo ADV-P9-C1 de la adversaria del paso 9 — informe nido-adv-paso9-2026-11-02, que recomendó firmar los temas 24, 31 y 32 y NO el 33 hasta que la corrección aterrizara con su re-medida —; la firma de este tema espera a la adversaria de esa corrección)",
       "filas": [
         {
           "tema": "33 · Mochila de emergencia",
@@ -34934,16 +34939,21 @@
           "guia": "esencial-mochila-de-emergencia",
           "idioma": "en",
           "afirmacionId": "33-A16",
-          "textoLiteral": "Camping stove and fuel, only for use outdoors or with good ventilation.",
+          "textoLiteral": "Camping stove and fuel, only for use outdoors, away from doors and windows.",
           "tipo": "afirmacion",
           "institucion": "Ready.gov (FEMA)",
           "documento": "Power Outages (generadores, hornillos y monóxido de carbono)",
-          "edicion": "consultada 2026-11-02",
+          "edicion": "consultada 2026-11-02; reabierta el 2026-11-03 en la corrección (Ready.gov y CDC, Prevention Guidelines, CS283134-D)",
           "identificador": "ready.gov/power-outages",
-          "localizador": "DISCREPANCIA EN VOZ ALTA (la fila más dura de la tanda, §5.1 de la preparación): la sede oficial no admite alternativa («always outdoors», y lejos de ventanas, por monóxido de carbono); la guía añade «o bien ventilado», una rama más blanda que la fuente no sostiene para aparatos de combustión. No es NO ENCONTRADO (la instrucción nuclear, solo al aire libre, es literal), pero queda marcada como candidata primera al carril de corrección si la adversaria la juzga endurecimiento necesario. Fallo de este sellado, por orden del encargo: se sella con contexto y la medida asentada; no se corrige en este paso.",
-          "citaLiteral": "Generators, camp stoves or charcoal grills should always be used outdoors and at least 20 feet away from windows.",
-          "fechaComprobacion": "2026-11-02",
-          "desenlace": "sostenida con contexto"
+          "localizador": "CORREGIDA el 2026-11-03 por el cargo ADV-P9-C1 de la adversaria del paso 9 (informe nido-adv-paso9-2026-11-02), que juzgó la discrepancia que esta fila viajaba nombrada desde el sellado: la guía ofrecía el hornillo «solo para usar al aire libre o bien ventilado», una rama blanda que niega la única condición de la sede. La sede declarada de la fila (Ready.gov, Power Outages) la fija absoluta — «always outdoors», «ONLY outdoors», a 20 pies de las ventanas — y la segunda sede reabierta en la cura (CDC, Prevention Guidelines: You Can Prevent Carbon Monoxide Exposure, CDC Stacks CS283134-D) nombra el mismo aparato y rechaza el interior «o cerca de una ventana». La frase vive en la sección de reservas para quedarse encerrado en casa: su lectura natural es un espacio interior ventilado, la conducta prohibida, con riesgo letal directo de monóxido de carbono. Especie de 57-A02: se corrige, no se contextualiza. La corrección retira la rama y deja la forma de la sede en las tres lenguas (solo al aire libre, lejos de puertas y ventanas); la cifra de la sede (20 pies) queda en la cita literal de esta fila. Ficha en la entrada 087 del libro y re-medida §4 en la 088. Ambas sedes releídas en vivo el 2026-11-03.",
+          "citaLiteral": "«Generators, camp stoves or charcoal grills should always be used outdoors and at least 20 feet away from windows» (Ready.gov); «DON'T use a generator, charcoal grill, camp stove, or other gasoline or charcoal-burning device inside your home, basement, or garage or near a window» (CDC, Prevention Guidelines, CS283134-D)",
+          "fechaComprobacion": "2026-11-03",
+          "desenlace": "corregida desde la fuente",
+          "antesDespues": {
+            "antes": "es: «Hornillo de camping y combustible, solo para usar al aire libre o bien ventilado.» · en: «Camping stove and fuel, only for use outdoors or with good ventilation.» · pt: «Fogareiro de camping e combustível, só para usar ao ar livre ou bem ventilado.»",
+            "despues": "es: «Hornillo de camping y combustible, solo para usar al aire libre, lejos de puertas y ventanas.» · en: «Camping stove and fuel, only for use outdoors, away from doors and windows.» · pt: «Fogareiro de camping e combustível, só para usar ao ar livre, longe de portas e janelas.»",
+            "motivo": "La rama «o bien ventilado» era un permiso alternativo que negaba la única condición de las dos sedes: Ready.gov la fija absoluta (siempre y solo al aire libre, a 20 pies de las ventanas) y CDC prohíbe el mismo aparato — el hornillo de camping, nombrado en ambas — dentro de casa o cerca de una ventana. En la sección de reservas para quedarse encerrado, el lector ejecutaría la frase en un interior ventilado: riesgo letal de monóxido de carbono. Cargo ADV-P9-C1 de la adversaria del paso 9: corrección desde la fuente (forma B), no contexto."
+          }
         },
         {
           "tema": "33 · Mochila de emergencia",
@@ -35000,9 +35010,9 @@
       "idioma": "pt",
       "ruta": "knowledge-packs/nido-esencial/pt/33-mochila-de-emergencia.md",
       "verified": "2026-11-02",
-      "hashClinico": "6e1ddc28fce55ffb7b04261f4097a4bf0a5f56dea815a8eddf8a3f92ef4522a7",
+      "hashClinico": "8911a38f70e16f37686c50a93d9e79c6f91f15fb5dd64133a2f9473162006934",
       "preparador": "nido-prep-tanda-r3-1-2026-11-02.md (preparación R3-1, contraste 2026-11-02)",
-      "auditor": "adversaria independiente de la cadena (pendiente tras el cierre del paso)",
+      "auditor": "adversaria independiente de la cadena (pendiente tras la corrección de 33-A16, ejecutada el 2026-11-03 por el cargo ADV-P9-C1 de la adversaria del paso 9 — informe nido-adv-paso9-2026-11-02, que recomendó firmar los temas 24, 31 y 32 y NO el 33 hasta que la corrección aterrizara con su re-medida —; la firma de este tema espera a la adversaria de esa corrección)",
       "filas": [
         {
           "tema": "33 · Mochila de emergencia",
@@ -35249,16 +35259,21 @@
           "guia": "esencial-mochila-de-emergencia",
           "idioma": "pt",
           "afirmacionId": "33-A16",
-          "textoLiteral": "Fogareiro de camping e combustível, só para usar ao ar livre ou bem ventilado.",
+          "textoLiteral": "Fogareiro de camping e combustível, só para usar ao ar livre, longe de portas e janelas.",
           "tipo": "afirmacion",
           "institucion": "Ready.gov (FEMA)",
           "documento": "Power Outages (generadores, hornillos y monóxido de carbono)",
-          "edicion": "consultada 2026-11-02",
+          "edicion": "consultada 2026-11-02; reabierta el 2026-11-03 en la corrección (Ready.gov y CDC, Prevention Guidelines, CS283134-D)",
           "identificador": "ready.gov/power-outages",
-          "localizador": "DISCREPANCIA EN VOZ ALTA (la fila más dura de la tanda, §5.1 de la preparación): la sede oficial no admite alternativa («always outdoors», y lejos de ventanas, por monóxido de carbono); la guía añade «o bien ventilado», una rama más blanda que la fuente no sostiene para aparatos de combustión. No es NO ENCONTRADO (la instrucción nuclear, solo al aire libre, es literal), pero queda marcada como candidata primera al carril de corrección si la adversaria la juzga endurecimiento necesario. Fallo de este sellado, por orden del encargo: se sella con contexto y la medida asentada; no se corrige en este paso.",
-          "citaLiteral": "Generators, camp stoves or charcoal grills should always be used outdoors and at least 20 feet away from windows.",
-          "fechaComprobacion": "2026-11-02",
-          "desenlace": "sostenida con contexto"
+          "localizador": "CORREGIDA el 2026-11-03 por el cargo ADV-P9-C1 de la adversaria del paso 9 (informe nido-adv-paso9-2026-11-02), que juzgó la discrepancia que esta fila viajaba nombrada desde el sellado: la guía ofrecía el hornillo «solo para usar al aire libre o bien ventilado», una rama blanda que niega la única condición de la sede. La sede declarada de la fila (Ready.gov, Power Outages) la fija absoluta — «always outdoors», «ONLY outdoors», a 20 pies de las ventanas — y la segunda sede reabierta en la cura (CDC, Prevention Guidelines: You Can Prevent Carbon Monoxide Exposure, CDC Stacks CS283134-D) nombra el mismo aparato y rechaza el interior «o cerca de una ventana». La frase vive en la sección de reservas para quedarse encerrado en casa: su lectura natural es un espacio interior ventilado, la conducta prohibida, con riesgo letal directo de monóxido de carbono. Especie de 57-A02: se corrige, no se contextualiza. La corrección retira la rama y deja la forma de la sede en las tres lenguas (solo al aire libre, lejos de puertas y ventanas); la cifra de la sede (20 pies) queda en la cita literal de esta fila. Ficha en la entrada 087 del libro y re-medida §4 en la 088. Ambas sedes releídas en vivo el 2026-11-03.",
+          "citaLiteral": "«Generators, camp stoves or charcoal grills should always be used outdoors and at least 20 feet away from windows» (Ready.gov); «DON'T use a generator, charcoal grill, camp stove, or other gasoline or charcoal-burning device inside your home, basement, or garage or near a window» (CDC, Prevention Guidelines, CS283134-D)",
+          "fechaComprobacion": "2026-11-03",
+          "desenlace": "corregida desde la fuente",
+          "antesDespues": {
+            "antes": "es: «Hornillo de camping y combustible, solo para usar al aire libre o bien ventilado.» · en: «Camping stove and fuel, only for use outdoors or with good ventilation.» · pt: «Fogareiro de camping e combustível, só para usar ao ar livre ou bem ventilado.»",
+            "despues": "es: «Hornillo de camping y combustible, solo para usar al aire libre, lejos de puertas y ventanas.» · en: «Camping stove and fuel, only for use outdoors, away from doors and windows.» · pt: «Fogareiro de camping e combustível, só para usar ao ar livre, longe de portas e janelas.»",
+            "motivo": "La rama «o bien ventilado» era un permiso alternativo que negaba la única condición de las dos sedes: Ready.gov la fija absoluta (siempre y solo al aire libre, a 20 pies de las ventanas) y CDC prohíbe el mismo aparato — el hornillo de camping, nombrado en ambas — dentro de casa o cerca de una ventana. En la sección de reservas para quedarse encerrado, el lector ejecutaría la frase en un interior ventilado: riesgo letal de monóxido de carbono. Cargo ADV-P9-C1 de la adversaria del paso 9: corrección desde la fuente (forma B), no contexto."
+          }
         },
         {
           "tema": "33 · Mochila de emergencia",

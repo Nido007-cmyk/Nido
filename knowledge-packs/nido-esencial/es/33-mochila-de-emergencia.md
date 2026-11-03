@@ -27,7 +27,7 @@ Pensada para 72 horas fuera de casa.
 ## Reservas en casa (para quedarte encerrado)
 - Agua para al menos 3 días, mejor 2 semanas (4 litros por persona y día).
 - Comida en conserva y seca para 2 semanas y un abrelatas manual.
-- Hornillo de camping y combustible, solo para usar al aire libre o bien ventilado.
+- Hornillo de camping y combustible, solo para usar al aire libre, lejos de puertas y ventanas.
 - Linternas, velas con precaución, pilas.
 - Lejía sin perfume para potabilizar agua y desinfectar.
 - Bolsas grandes de basura y cubos (para un baño de emergencia).

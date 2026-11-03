@@ -28,7 +28,7 @@ Pensada para 72 horas fora de casa.
 ## Reservas em casa (para ficar trancado)
 - Água para pelo menos 3 dias, melhor 2 semanas (4 litros por pessoa por dia).
 - Comida em conserva e seca para 2 semanas e um abridor de latas manual.
-- Fogareiro de camping e combustível, só para usar ao ar livre ou bem ventilado.
+- Fogareiro de camping e combustível, só para usar ao ar livre, longe de portas e janelas.
 - Lanternas, velas com cuidado, pilhas.
 - Água sanitária sem perfume para tratar água e desinfetar.
 - Sacos grandes de lixo e baldes (para um banheiro de emergência).

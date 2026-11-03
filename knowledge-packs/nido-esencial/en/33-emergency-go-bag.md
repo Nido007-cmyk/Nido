@@ -27,7 +27,7 @@ Meant for 72 hours away from home.
 ## Supplies at home (for sheltering in place)
 - Water for at least 3 days, better 2 weeks (4 liters per person per day).
 - Canned and dry food for 2 weeks, and a manual can opener.
-- Camping stove and fuel, only for use outdoors or with good ventilation.
+- Camping stove and fuel, only for use outdoors, away from doors and windows.
 - Flashlights, candles used with care, batteries.
 - Unscented bleach to purify water and disinfect.
 - Large garbage bags and buckets (for an emergency toilet).
