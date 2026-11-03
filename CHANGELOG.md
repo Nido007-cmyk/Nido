@@ -4,7 +4,7 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
-## Unreleased
+## 0.1.71-alpha - 2026-11-03
 
 Fixes from Claude's audit of the published 0.1.70 (2026-11-03), each
 reproduced on the published code before it was fixed
