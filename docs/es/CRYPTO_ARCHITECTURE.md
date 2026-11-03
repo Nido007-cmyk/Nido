@@ -3,8 +3,10 @@
 
 **Fecha:** 8 de octubre de 2026 (actualizado; original 28 de septiembre de 2026).
 **Protocolo vigente: handshake v3 + CONFIRM v1, KDF de sesión HKDF-SHA512.**
-**Estado:** IMPLEMENTED + AUTOMATED TESTED (1985 tests). **No** PHYSICALLY TESTED
-(dos dispositivos), **no** EXTERNALLY AUDITED.
+**Estado:** IMPLEMENTED + AUTOMATED TESTED (1985 pruebas cuando se escribió este
+documento; la suite entera corre en cada cambio). La mensajería P2P entre dos
+dispositivos, modo avión incluido, se ha ejercitado después en hardware físico
+(ver docs/ALPHA_RELEASE_NOTES.md); **no** EXTERNALLY AUDITED.
 
 Este documento describe con precisión el protocolo implementado hoy,
 sus garantías, sus límites y la ruta de migración. No se afirma resistencia cuántica
