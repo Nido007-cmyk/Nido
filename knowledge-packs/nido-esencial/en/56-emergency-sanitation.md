@@ -15,7 +15,7 @@ When there is no running water or the sewer fails, badly managed feces are one o
 
 ## Outdoor latrine
 - At least 30 meters (100 feet) from any water source (well, river) and downhill from it.
-- A narrow trench 30 to 50 cm (1 to 1.5 feet) deep. Cover with soil after each use.
+- A narrow, shallow trench, about 15 cm (6 inches) deep. Cover with soil after each use.
 - Give it privacy, especially for women and girls, and light at night if possible.
 
 ## Hygiene

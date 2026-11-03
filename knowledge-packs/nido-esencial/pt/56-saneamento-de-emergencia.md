@@ -17,7 +17,7 @@ Quando não há água corrente ou o esgoto falha, as fezes mal geridas são uma 
 
 ## Latrina no exterior
 - Pelo menos a 30 metros de qualquer fonte de água (poço, rio) e mais abaixo que ela.
-- Uma vala estreita de 30 a 50 cm de profundidade. Tape com terra depois de cada uso.
+- Uma vala estreita e rasa, de uns 15 cm de profundidade. Tape com terra depois de cada uso.
 - Coloque privacidade, sobretudo para mulheres e meninas, e luz à noite, se possível.
 
 ## Higiene

@@ -15,7 +15,7 @@ Cuando no hay agua corriente o el alcantarillado falla, las heces mal gestionada
 
 ## Letrina en el exterior
 - Al menos a 30 metros de cualquier fuente de agua (pozo, río) y más abajo que ella.
-- Una zanja estrecha de 30 a 50 cm de profundidad. Tapa con tierra tras cada uso.
+- Una zanja estrecha y somera, de unos 15 cm de profundidad. Tapa con tierra tras cada uso.
 - Ponle privacidad, sobre todo para mujeres y niñas, y luz por la noche si es posible.
 
 ## Higiene
