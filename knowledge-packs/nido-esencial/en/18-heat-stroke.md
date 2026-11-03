@@ -3,6 +3,8 @@ title: Heat stroke and heat exhaustion
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; WHO, heat and health; Canadian Red Cross 2020
+id: esencial-golpe-de-calor
+verified: 2026-11-02
 ---
 Heat can kill. Heat stroke is an emergency: the body can no longer cool itself.
 

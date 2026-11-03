@@ -3,6 +3,8 @@ title: Convulsiones y crisis epilépticas
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020
+id: esencial-convulsiones
+verified: 2026-11-02
 ---
 Durante una convulsión la persona se pone rígida, se sacude y no responde. Suele durar menos de 2 o 3 minutos. Tu objetivo es que no se haga daño.
 

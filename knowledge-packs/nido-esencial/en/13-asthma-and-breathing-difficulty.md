@@ -3,6 +3,8 @@ title: Asthma attack and difficulty breathing
 category: First aid
 lang: en
 sources: Canadian Red Cross guidelines 2020; AHA and American Red Cross 2024
+id: esencial-asma-y-dificultad-para-respirar
+verified: 2026-11-02
 ---
 ## Asthma attack
 Signs: wheezing, coughing, a tight chest, trouble speaking full sentences.

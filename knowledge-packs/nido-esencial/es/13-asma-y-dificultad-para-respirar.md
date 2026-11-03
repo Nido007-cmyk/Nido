@@ -3,6 +3,8 @@ title: Crisis de asma y dificultad para respirar
 category: Primeros auxilios
 lang: es
 sources: Cruz Roja Canadiense, directrices 2020; AHA y Cruz Roja Americana 2024
+id: esencial-asma-y-dificultad-para-respirar
+verified: 2026-11-02
 ---
 ## Crisis de asma
 Signos: pitidos al respirar, tos, sensación de pecho apretado, dificultad para hablar frases enteras.

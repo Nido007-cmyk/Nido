@@ -3,6 +3,8 @@ title: Signos de alarma: cuándo ir a urgencias
 category: Salud en casa
 lang: es
 sources: OMS, AIEPI y signos de emergencia (ETAT); AHA; Cruz Roja Canadiense 2020; NHS
+id: esencial-signos-de-alarma
+verified: 2026-11-02
 ---
 Llama al número de emergencias o ve a urgencias de inmediato si ves alguno de estos signos, en un adulto o en un niño.
 

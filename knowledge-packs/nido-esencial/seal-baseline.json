@@ -2,21 +2,26 @@
   "guides": [
     "esencial-agua-potable",
     "esencial-alergia-grave-anafilaxia",
+    "esencial-asma-y-dificultad-para-respirar",
     "esencial-atragantamiento",
     "esencial-bajada-de-azucar-diabetes",
     "esencial-como-actuar-en-una-emergencia",
+    "esencial-convulsiones",
     "esencial-desfibrilador-dea",
     "esencial-diarrea-vomitos-y-suero-oral",
     "esencial-dolor-de-pecho-infarto",
     "esencial-fiebre",
+    "esencial-golpe-de-calor",
     "esencial-hemorragias-graves",
     "esencial-higiene-y-prevencion-de-infecciones",
+    "esencial-hipotermia-y-congelacion",
     "esencial-ictus",
     "esencial-nariz-ojos-dientes-oidos",
     "esencial-quemaduras",
     "esencial-rcp-adultos",
     "esencial-rcp-ninos-y-bebes",
-    "esencial-shock-y-desmayos"
+    "esencial-shock-y-desmayos",
+    "esencial-signos-de-alarma"
   ],
   "program": "Reverificación clínica del pack Esencial (puerta R-00, 2026-11-02)",
   "rule": "El conjunto de guías selladas solo crece, y solo en una tanda con su ledger (chequeo (a) de R00-5: scripts/check-seal-ratchet.mjs). Cada tanda que sella actualiza esta lista en el mismo commit que su verification-ledger.json."

@@ -3,6 +3,8 @@ title: Hypothermia and frostbite
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020; Wilderness Medical Society
+id: esencial-hipotermia-y-congelacion
+verified: 2026-11-02
 ---
 ## Hypothermia
 The body cools below normal. It can happen with cold, wind, rain or after falling into water, even when it is not freezing.

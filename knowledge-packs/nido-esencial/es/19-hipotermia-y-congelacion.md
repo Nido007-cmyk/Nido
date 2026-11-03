@@ -3,6 +3,8 @@ title: Hipotermia y congelación
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020; Wilderness Medical Society
+id: esencial-hipotermia-y-congelacion
+verified: 2026-11-02
 ---
 ## Hipotermia
 El cuerpo se enfría por debajo de lo normal. Puede pasar con frío, viento, lluvia o tras caer al agua, incluso sin temperaturas bajo cero.

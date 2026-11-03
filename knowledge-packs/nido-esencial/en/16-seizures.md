@@ -3,6 +3,8 @@ title: Seizures and epileptic fits
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020
+id: esencial-convulsiones
+verified: 2026-11-02
 ---
 During a seizure the person goes stiff, jerks and does not respond. It usually lasts less than 2 or 3 minutes. Your goal is to keep them from getting hurt.
 

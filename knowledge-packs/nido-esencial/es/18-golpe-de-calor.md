@@ -3,6 +3,8 @@ title: Golpe de calor y agotamiento por calor
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; OMS, calor y salud; Cruz Roja Canadiense 2020
+id: esencial-golpe-de-calor
+verified: 2026-11-02
 ---
 El calor puede matar. El golpe de calor es una emergencia: el cuerpo ya no puede enfriarse solo.
 
