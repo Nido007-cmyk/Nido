@@ -9,6 +9,7 @@ Estas guías ayudan, pero **nada sustituye a un curso práctico de primeros auxi
 ## Cursos
 - **Cruz Roja y Media Luna Roja**: casi todos los países tienen cursos presenciales de primeros auxilios, y muchas ofrecen cursos básicos en línea gratuitos o baratos. Pregunta en la Cruz Roja o Media Luna Roja de tu país.
 - **AHA (Asociación Americana del Corazón)**: vídeos gratuitos de RCP solo con las manos.
+- **OMS (OpenWHO)**: cursos en línea gratuitos de emergencias sanitarias en openwho.org.
 - **Protección civil** de tu municipio o región: charlas y simulacros sobre los riesgos locales.
 - Muchos centros de salud, bomberos y universidades organizan cursos de RCP y DEA.
 

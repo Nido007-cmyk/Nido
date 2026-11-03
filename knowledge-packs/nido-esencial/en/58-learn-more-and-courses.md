@@ -9,6 +9,7 @@ These guides help, but **nothing replaces a hands-on first aid course**: practic
 ## Courses
 - **Red Cross and Red Crescent**: almost every country has in-person first aid courses, and many offer free or low-cost basic online courses. Ask your national Red Cross or Red Crescent society.
 - **AHA (American Heart Association)**: free Hands-Only CPR videos.
+- **WHO (OpenWHO)**: free online health-emergency courses at openwho.org.
 - Your local **civil protection / emergency management** office: talks and drills about local risks.
 - Many health centers, fire departments and universities run CPR and AED courses.
 

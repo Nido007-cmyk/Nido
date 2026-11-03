@@ -10,6 +10,7 @@ Estes guias ajudam, mas **nada substitui um curso prático de primeiros socorros
 ## Cursos
 - **Cruz Vermelha e Crescente Vermelho**: quase todos os países têm cursos presenciais de primeiros socorros, e muitas oferecem cursos básicos on-line gratuitos ou baratos. Pergunte na Cruz Vermelha ou no Crescente Vermelho do seu país.
 - **AHA (Associação Americana do Coração)**: vídeos gratuitos de RCP só com as mãos.
+- **OMS (OpenWHO)**: cursos on-line gratuitos de emergências sanitárias em openwho.org.
 - **Defesa civil** do seu município ou região: palestras e simulados sobre os riscos locais.
 - Muitos centros de saúde, bombeiros e universidades organizam cursos de RCP e DEA.
 
