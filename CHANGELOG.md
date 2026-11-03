@@ -31,9 +31,11 @@ keeps offering knowledge-packs-v12.
   it in all three languages, so without a guide the model's own
   text could stay on screen. Swallowing only counts with its
   object, so "the ATM swallowed my card" is not a health question.
-- **A crisis said in Spanish or Portuguese opens the crisis lines.**
-  "I want to kill myself" did; "quiero matarme", "me voy a matar",
-  "quero me matar" and "vou me matar" did not. They now do, as do
+- **A crisis said in Spanish or Portuguese reaches the crisis
+  route.** "I want to kill myself" reached it (the verified crisis
+  line of the NIDO Crisis pack, when the pack is installed);
+  "quiero matarme", "me voy a matar", "quero me matar" and "vou me
+  matar" did not. They now do, as do
   "acabar con mi vida", "acabar com a minha vida" and "take my own
   life"; the everyday idiom of effort ("me voy a matar
   estudiando", "vou me matar de rir") does not.
