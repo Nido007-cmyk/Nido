@@ -4,6 +4,170 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.70-alpha - 2026-11-03
+
+### Answers
+
+- **A dose is judged even when the question never names
+  one.** The datum rule used to run only when the question
+  asked for the datum itself, so a wrong dose sealed as
+  grounded under "how do I take the syrup?" and was
+  withdrawn only under "what is the dose?". A claim that
+  types itself now opens the rule on its own; the leg's
+  perimeter is unchanged. (Suite at close: 5,679 tests.)
+- **Portuguese doses are judged at last.** The Portuguese
+  copula was read folded, so the dose leg never fired in
+  Portuguese: "30 colheres" against a 20 source sealed as
+  grounded. The copula is now read as written in both
+  consumers. (Suite at close: 5,679 tests.)
+- **Spelled-out numbers and fractions enter the judgment.**
+  Figures written in words reach the judge from the same
+  single source the omissions box uses, and kitchen
+  fractions carry their grammar in both. A single digit
+  now counts in the typed dose leg too, where before
+  "the dose is 9 ml" against "take 5 ml" sealed because
+  one digit was never judged. (Suite at close: 5,679
+  tests; the single-digit leg closed earlier, at 5,624.)
+- **Numeric dates are judged under the turn's own
+  convention.** A "d/m" date is judged when the context
+  decides the convention (rule R6); the bare transposition
+  stands as measured ambiguity, not forced either way.
+  The named-date twin now declares the turn's convention,
+  and a new rule (R7) teaches a year conflict: same day
+  and month, two different written years in note and
+  answer, is a conflict in numeric and named form alike.
+  (Suite at close: 5,679 tests; the twin and R7 closed
+  later, at 5,763.)
+- **English dose units join the table, the negation
+  correction reaches short sentences, and the inhaler
+  family is a dose unit in all three languages.** "Puffs"
+  and "sprays" entered both dose tables; "inhalaciones",
+  "inalações" and "inhalations" followed, censused
+  against the served corpus; and the box that teaches
+  omissions no longer keeps a dose list of its own — it
+  consumes the judge's list, so parity holds by
+  construction, not by habit. (Suite at close: 5,787
+  tests.)
+- **A card number is no longer taught as a phone number.**
+  The omissions box presented a 15–16 digit card string
+  as a phone the source had omitted, by two paths at
+  once (the cluster and the generic word "number"); both
+  are closed, and the emergency floor (911) is intact.
+  (Suite at close: 5,763 tests.)
+
+### Reminders and memory
+
+- **The name you saved is the one that answers, in Spanish
+  and Portuguese too.** "¿Cuál es el nombre de mi mamá?"
+  had no Spanish pattern and the saved card was invisible
+  to the generic route: NIDO answered "you haven't told
+  me" while holding it. Facts dictated as "se chama",
+  "name is" or "is called" are served by the name route,
+  asking for your own name answers with what is saved,
+  and the Portuguese possessive agrees with the person
+  served ("Seu pai", "Sua mãe"). (Suite at close: 5,735
+  tests; the first pattern closed at 5,613.)
+- **Reminders and memory follow your words in the three
+  languages.** Portuguese reminders set their time in
+  words ("em duas horas", "daqui a duas horas"), the
+  singular hour sets its own ("a la 1", "à 1"),
+  "setiembre" joins the month grammars that lacked it,
+  saving and forgetting in Portuguese take their route
+  ("guarda na memória", object-first forgetting), and
+  each request's category is detected in all three
+  languages, not only in Spanish. (Suite at close: 5,735
+  tests.)
+- **The birthday seat learned the same discipline as the
+  name seat.** With only a grandfather saved, asking for
+  the grandmother now gets the honest answer in both
+  directions; the possessive comes from the record
+  served, and the Portuguese question for the grandfather
+  enters the route at last. The Spanish and English name
+  frames ("el nombre de… es", "the name of… is") serve
+  their facts, and a name no longer swallows the
+  conjunction after it ("João e." is "João."). (Suite at
+  close: 5,799 tests.)
+- **Two birthdays in one note no longer cross their
+  dates.** The date is extracted from the segment of the
+  person asked about, not from the note's first clause —
+  with the note split by conjunctions, by periods or
+  semicolons, or by exclamation and question marks, and
+  asking for your own birthday over a combined note no
+  longer serves your grandmother's date. A separator
+  followed by a glued comma only stays an aside when the
+  span it would close carries no date of its own, so a
+  real separator is never disarmed by its comma. (Suite
+  at close: 5,831 tests.)
+
+### Knowledge packs
+
+- **The pack builder's cache is named by the content it
+  embeds.** The embedding cache used to be keyed by chunk
+  count alone, so a green build could crown answers over
+  a cache that was not its source's. The cache file now
+  carries the hash of the exact embedding manifest
+  (chunk text, model, dimensions), with a size guard
+  that fails out loud.
+- **Fourteen recovery seats corrected in the Essentials
+  source.** The guides crown for the phrasings people
+  actually use: twelve crowns recovered (the Heimlich
+  guide and the heatstroke guide among them, in Spanish;
+  bleach and disaster in English), each seat measured
+  with the first-aid gate beside it — 38/38 throughout.
+  Two Portuguese windows that looked closed opened with
+  their measured dose: the oral-rehydration guide and
+  the burns guide, each to third place with the gate
+  intact. Three words of visible Portuguese text were
+  corrected.
+- **Essentials, re-verified guide by guide.**
+  Every topic was checked claim by claim against its
+  official source, with the citation layer built per
+  claim (official source, exact quote, locator, check
+  date); the `verified` seal stands only on the topics
+  that passed, and any topic closed by correction names
+  its before and after with its source. Essentials
+  ships as knowledge-packs-v11: 174 guides · 568 chunks · 1,163,264 bytes per file, counted from the v11 release.
+- The two Portuguese recovery variants that no
+  measured dose can crown without breaking the first-aid
+  gate are named in the pass's coverage (variants 12/14).
+
+### Data and stability
+
+- **Downloads keep their grip per file.** The wake lock
+  that keeps the screen on during a download counted
+  files, not holds: releasing one of two holds on the
+  same file dropped the native lock and left the other
+  hold dangling. Holds are now counted per file, and
+  the lock releases only when the last one does.
+  (Suite at close: 5,735 tests.)
+- **A legacy key-rotation staging path is removed.** Its
+  writer has been dead since before 0.1.69 shipped and
+  the recovery window runs at every start; the reader
+  now reads only the current array. English ordinal
+  dates ("10th") are fixed in fixtures as the accepted
+  behaviour of the date grammars. (Suite at close: 5,624
+  tests.)
+
+Battery 5,857/5,857 in 340 files (+249 over the 0.1.69
+suite, every added test a fixture of this chain); jest
+13/13 suites, 52/52; tsc 0. Tip `80851c9`, the frozen tip
+of the fix chain; the publication act's own commits
+follow it.
+
+### Project information
+
+- The "NIDO development" card in About (0.1.65) remains
+  the project's note on voluntary contributions; NIDO is
+  free and complete without contributing anything.
+- The signed download catalogue is re-signed over what
+  the CI published: its signature covers 14 fields of
+  each of the 32 entries, and NIDO Essentials
+  now points at knowledge-packs-v11 — 174
+  guides, 58 in each of Spanish, English and
+  Portuguese. The v11 files were counted from the
+  published release itself (174 guides · 568 chunks · 1,163,264 bytes per file) before the catalogue moved, and
+  NIDO Local stays on knowledge-packs-v9.
+
 ## 0.1.69-alpha - 2026-11-02
 
 ### Answers
