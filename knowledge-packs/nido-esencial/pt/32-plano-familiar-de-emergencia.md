@@ -3,6 +3,8 @@ title: Plano familiar de emergência
 category: Desastres
 lang: pt
 sources: Ready.gov (FEMA); Cruz Vermelha Americana, prepare-se; IFRC; UNDRR
+id: esencial-plan-familiar-de-emergencia
+verified: 2026-11-02
 questions: como montar um plano familiar de emergência | ponto de encontro da família, como decidir | sem celular nem internet, como a família se comunica | o que preparar em casa para um desastre
 ---
 Preparar-se antes é o que mais salva vidas num desastre. Façam em família, numa tarde.

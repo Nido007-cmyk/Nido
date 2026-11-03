@@ -3,6 +3,8 @@ title: Psychological first aid
 category: First aid
 lang: en
 sources: WHO, Psychological First Aid: Guide for Field Workers (2011); IFRC Reference Centre for Psychosocial Support; Red Cross
+id: esencial-primeros-auxilios-psicologicos
+verified: 2026-11-02
 questions: how to comfort someone after a disaster | how to help someone in shock after an accident | what to say to someone after an earthquake | emotional first aid after a disaster
 ---
 After an accident, a disaster or bad news, people may be in shock, frightened, confused or frozen. You don't need to be a psychologist to help or comfort someone. The WHO sums it up in three words: **look, listen and link**.

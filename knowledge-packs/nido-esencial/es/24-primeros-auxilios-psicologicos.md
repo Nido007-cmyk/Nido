@@ -3,6 +3,8 @@ title: Primeros auxilios psicológicos
 category: Primeros auxilios
 lang: es
 sources: OMS, Primeros Auxilios Psicológicos: guía para trabajadores de campo (2011); IFRC Centro de Apoyo Psicosocial; Cruz Roja
+id: esencial-primeros-auxilios-psicologicos
+verified: 2026-11-02
 ---
 Tras un accidente, un desastre o una mala noticia, las personas pueden quedar en shock, con miedo, confusas o paralizadas. No hace falta ser psicólogo para ayudar ni para consolar a alguien. La OMS lo resume en tres verbos: **observar, escuchar y conectar**.
 

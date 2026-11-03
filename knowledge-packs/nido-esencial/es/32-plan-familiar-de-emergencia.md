@@ -3,6 +3,8 @@ title: Plan familiar de emergencia
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA); Cruz Roja Americana, prepárate; IFRC; UNDRR
+id: esencial-plan-familiar-de-emergencia
+verified: 2026-11-02
 ---
 Prepararse antes es lo que más vidas salva en un desastre. Hazlo en familia, en una tarde.
 

@@ -3,6 +3,8 @@ title: Mochila de emergência e reservas em casa
 category: Desastres
 lang: pt
 sources: Ready.gov (FEMA), kit básico de emergência; Cruz Vermelha Americana; IFRC
+id: esencial-mochila-de-emergencia
+verified: 2026-11-02
 questions: o que colocar na mochila de emergência | quanta água guardar por pessoa | kit de emergência para 72 horas, o que vai dentro | reservas em casa para duas semanas, o que ter
 ---
 ## Mochila para sair (uma por pessoa, pronta junto à porta)

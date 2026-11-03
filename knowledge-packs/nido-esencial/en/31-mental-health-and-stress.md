@@ -3,6 +3,8 @@ title: Mental health, stress and crisis
 category: Health at home
 lang: en
 sources: WHO, "Doing What Matters in Times of Stress" (2020); IFRC Reference Centre for Psychosocial Support; WHO mhGAP guide
+id: esencial-salud-mental-y-estres
+verified: 2026-11-02
 ---
 Emergencies, uncertainty and loss affect the mind as much as the body. After an earthquake, a flood or another disaster it is common to feel anxious, be unable to sleep, or keep reliving what happened. Feeling fear, sadness or anger is a normal reaction to something abnormal.
 

@@ -3,6 +3,8 @@ title: Emergency go-bag and supplies at home
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA), basic disaster supplies kit; American Red Cross; IFRC
+id: esencial-mochila-de-emergencia
+verified: 2026-11-02
 ---
 ## Go-bag (one per person, ready by the door)
 Meant for 72 hours away from home.

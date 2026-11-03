@@ -3,6 +3,8 @@ title: Family emergency plan
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA); American Red Cross, be prepared; IFRC; UNDRR
+id: esencial-plan-familiar-de-emergencia
+verified: 2026-11-02
 ---
 Preparing in advance is what saves the most lives in a disaster. Do it as a family, in one afternoon.
 

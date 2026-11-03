@@ -3,6 +3,8 @@ title: Mochila de emergencia y reservas en casa
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA), kit básico de emergencia; Cruz Roja Americana; IFRC
+id: esencial-mochila-de-emergencia
+verified: 2026-11-02
 ---
 ## Mochila para salir (una por persona, lista junto a la puerta)
 Pensada para 72 horas fuera de casa.

@@ -3,6 +3,8 @@ title: Saúde mental, estresse e crise
 category: Saúde em casa
 lang: pt
 sources: OMS, "Doing What Matters in Times of Stress" (2020); IFRC Centro de Apoio Psicossocial; OMS, guia mhGAP
+id: esencial-salud-mental-y-estres
+verified: 2026-11-02
 questions: técnicas simples para o estresse depois de um desastre | não consigo dormir depois do que aconteceu | como ajudar uma criança assustada | pensamentos de me machucar, o que fazer
 ---
 As emergências, a incerteza e as perdas afetam a mente tanto quanto o corpo. Depois de um terremoto, uma enchente ou outro desastre, é frequente ter ansiedade, não conseguir dormir ou reviver o que aconteceu. Sentir medo, tristeza ou raiva é uma reação normal diante de algo anormal.

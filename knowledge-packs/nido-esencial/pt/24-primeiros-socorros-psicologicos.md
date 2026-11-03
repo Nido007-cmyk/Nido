@@ -3,6 +3,8 @@ title: Primeiros socorros psicológicos
 category: Primeiros socorros
 lang: pt
 sources: OMS, Primeiros Socorros Psicológicos: guia para trabalhadores de campo (2011); IFRC Centro de Apoio Psicossocial; Cruz Vermelha
+id: esencial-primeros-auxilios-psicologicos
+verified: 2026-11-02
 questions: como ajudar alguém em choque depois de um acidente | pessoa paralisada de medo, o que digo | depois de um desastre, como consolar alguém | meu filho não para de chorar depois do susto
 ---
 Depois de um acidente, um desastre ou uma má notícia, as pessoas podem ficar em choque, com medo, confusas ou paralisadas. Não é preciso ser psicólogo para ajudar nem para consolar alguém. A OMS resume em três verbos: **observar, escutar e conectar**.
