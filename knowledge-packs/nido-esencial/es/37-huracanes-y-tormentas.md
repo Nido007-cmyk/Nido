@@ -3,6 +3,8 @@ title: Huracanes, ciclones y tormentas fuertes
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA); Centro Nacional de Huracanes (NOAA); Cruz Roja Americana; OMM
+id: esencial-huracanes
+verified: 2026-11-02
 ---
 Los huracanes (también llamados ciclones o tifones) traen viento muy fuerte, lluvias torrenciales e inundaciones. Lo más mortal suele ser el agua: la marea de tormenta en la costa y las inundaciones tierra adentro.
 

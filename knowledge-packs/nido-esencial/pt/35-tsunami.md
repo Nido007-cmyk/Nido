@@ -3,6 +3,8 @@ title: Tsunami
 category: Desastres
 lang: pt
 sources: UNESCO Comissão Oceanográfica Intergovernamental; NOAA, programa TsunamiReady; Ready.gov (FEMA)
+id: esencial-tsunami
+verified: 2026-11-02
 questions: sinais de que vem um tsunami | tsunami, para onde fugir | o mar recuou de repente, o que significa | depois de um terremoto no mar, o que fazer
 ---
 Um tsunami é uma série de ondas gigantes, normalmente causadas por um terremoto no mar. Podem chegar em minutos.

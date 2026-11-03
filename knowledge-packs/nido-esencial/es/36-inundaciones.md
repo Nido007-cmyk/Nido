@@ -3,6 +3,8 @@ title: Inundaciones
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA); Servicio Meteorológico Nacional de EE. UU., "Turn Around Don't Drown"; Cruz Roja Americana; OMS
+id: esencial-inundaciones
+verified: 2026-11-02
 ---
 Las inundaciones son el desastre más frecuente. La mayoría de las muertes ocurren en vehículos y al intentar cruzar agua.
 

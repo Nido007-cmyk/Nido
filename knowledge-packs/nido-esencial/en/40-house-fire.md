@@ -3,6 +3,8 @@ title: Fire at home or in a building
 category: Disasters
 lang: en
 sources: NFPA (National Fire Protection Association); Ready.gov (FEMA); American Red Cross
+id: esencial-incendio-casa
+verified: 2026-11-02
 ---
 In a fire you may have only 2 minutes to get out. Smoke kills more people than flames.
 

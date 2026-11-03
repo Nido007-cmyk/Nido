@@ -3,6 +3,8 @@ title: Incendio en casa o en un edificio
 category: Desastres
 lang: es
 sources: NFPA (Asociación Nacional de Protección contra Incendios); Ready.gov (FEMA); Cruz Roja Americana
+id: esencial-incendio-casa
+verified: 2026-11-02
 ---
 En un incendio puede que solo tengas 2 minutos para salir. El humo mata más que las llamas.
 

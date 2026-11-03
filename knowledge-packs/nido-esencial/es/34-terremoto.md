@@ -3,6 +3,8 @@ title: Terremoto
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA); Earthquake Country Alliance y USGS, "Agáchate, cúbrete y agárrate"; Cruz Roja Americana; CENAPRED (México)
+id: esencial-terremoto
+verified: 2026-11-02
 ---
 ## Antes
 - Fija a la pared muebles altos, estanterías y calentadores. No pongas cosas pesadas encima de las camas.

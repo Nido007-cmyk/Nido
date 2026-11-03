@@ -3,6 +3,8 @@ title: Hurricanes, cyclones and severe storms
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA); National Hurricane Center (NOAA); American Red Cross; WMO
+id: esencial-huracanes
+verified: 2026-11-02
 ---
 Hurricanes (also called cyclones or typhoons) bring very strong winds, torrential rain and floods. The deadliest part is usually the water: storm surge on the coast and flooding inland.
 

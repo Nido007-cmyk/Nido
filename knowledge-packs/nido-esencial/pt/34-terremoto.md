@@ -3,6 +3,8 @@ title: Terremoto
 category: Desastres
 lang: pt
 sources: Ready.gov (FEMA); Earthquake Country Alliance e USGS, "Abaixe-se, proteja-se e segure-se"; Cruz Vermelha Americana; CENAPRED (México)
+id: esencial-terremoto
+verified: 2026-11-02
 questions: o que fazer durante um terremoto | terremoto, para onde corro | depois do tremor, o que conferir primeiro | fiquei preso nos escombros, como peço ajuda
 ---
 ## Antes

@@ -3,6 +3,8 @@ title: Tsunami
 category: Desastres
 lang: es
 sources: UNESCO Comisión Oceanográfica Intergubernamental; NOAA, programa TsunamiReady; Ready.gov (FEMA)
+id: esencial-tsunami
+verified: 2026-11-02
 ---
 Un tsunami es una serie de olas gigantes, normalmente causadas por un terremoto en el mar. Pueden llegar en minutos.
 

@@ -3,6 +3,8 @@ title: Tormentas eléctricas y rayos
 category: Desastres
 lang: es
 sources: Servicio Meteorológico Nacional de EE. UU. (NOAA), seguridad ante rayos; Cruz Roja Americana; AHA 2024
+id: esencial-rayos
+verified: 2026-11-02
 ---
 **Si oyes truenos, estás lo bastante cerca para que te caiga un rayo.** No hay ningún lugar seguro al aire libre durante una tormenta.
 

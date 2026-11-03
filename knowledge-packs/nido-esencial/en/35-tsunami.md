@@ -3,6 +3,8 @@ title: Tsunami
 category: Disasters
 lang: en
 sources: UNESCO Intergovernmental Oceanographic Commission; NOAA TsunamiReady program; Ready.gov (FEMA)
+id: esencial-tsunami
+verified: 2026-11-02
 ---
 A tsunami is a series of huge waves, usually caused by an undersea earthquake. They can arrive within minutes.
 

@@ -3,6 +3,8 @@ title: Tornados
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA); Servicio Meteorológico Nacional de EE. UU. (NOAA); Cruz Roja Americana
+id: esencial-tornados
+verified: 2026-11-02
 ---
 Un tornado es una columna de aire que gira con violencia. Puede formarse en minutos.
 

@@ -3,6 +3,8 @@ title: Tornados
 category: Desastres
 lang: pt
 sources: Ready.gov (FEMA); Serviço Meteorológico Nacional dos EUA (NOAA); Cruz Vermelha Americana
+id: esencial-tornados
+verified: 2026-11-02
 questions: tornado, onde me refugio em casa | estou de carro e vem um tornado | casa pré-fabricada é segura num tornado | sinais de que um tornado está se formando
 ---
 Um tornado é uma coluna de ar que gira com violência. Pode se formar em minutos.

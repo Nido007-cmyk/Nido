@@ -3,6 +3,8 @@ title: Tornadoes
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA); US National Weather Service (NOAA); American Red Cross
+id: esencial-tornados
+verified: 2026-11-02
 ---
 A tornado is a violently rotating column of air. It can form within minutes.
 

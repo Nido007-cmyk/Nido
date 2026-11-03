@@ -3,6 +3,8 @@ title: Floods
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA); US National Weather Service, "Turn Around Don't Drown"; American Red Cross; WHO
+id: esencial-inundaciones
+verified: 2026-11-02
 ---
 Floods are the most common disaster. Most deaths happen in vehicles and while trying to cross water.
 

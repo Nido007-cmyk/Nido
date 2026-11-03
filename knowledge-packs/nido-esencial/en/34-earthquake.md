@@ -3,6 +3,8 @@ title: Earthquake
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA); Earthquake Country Alliance and USGS, "Drop, Cover and Hold On"; American Red Cross; CENAPRED (Mexico)
+id: esencial-terremoto
+verified: 2026-11-02
 ---
 ## Before
 - Fix tall furniture, shelves and water heaters to the wall. Don't put heavy objects above beds.

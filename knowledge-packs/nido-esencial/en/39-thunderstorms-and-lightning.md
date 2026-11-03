@@ -3,6 +3,8 @@ title: Thunderstorms and lightning
 category: Disasters
 lang: en
 sources: US National Weather Service (NOAA), lightning safety; American Red Cross; AHA 2024
+id: esencial-rayos
+verified: 2026-11-02
 ---
 **When thunder roars, go indoors: if you can hear thunder, you are close enough to be struck.** There is no safe place outdoors during a thunderstorm.
 

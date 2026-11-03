@@ -3,6 +3,8 @@ title: Incêndio em casa ou num prédio
 category: Desastres
 lang: pt
 sources: NFPA (Associação Nacional de Proteção contra Incêndios); Ready.gov (FEMA); Cruz Vermelha Americana
+id: esencial-incendio-casa
+verified: 2026-11-02
 questions: incêndio em casa, como sair rápido | a porta está quente, abro ou não | minha roupa pegou fogo, o que faço | fogo na frigideira com óleo, posso jogar água
 ---
 Num incêndio, você pode ter só 2 minutos para sair. A fumaça mata mais que as chamas.

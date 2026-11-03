@@ -3,6 +3,8 @@ title: Furacões, ciclones e tempestades fortes
 category: Desastres
 lang: pt
 sources: Ready.gov (FEMA); Centro Nacional de Furacões (NOAA); Cruz Vermelha Americana; OMM
+id: esencial-huracanes
+verified: 2026-11-02
 questions: furacão chegando, como preparar a casa | o vento parou de repente no furacão, posso sair | o que guardar para duas semanas de tempestade | olho do furacão, o que é
 ---
 Os furacões (também chamados ciclones ou tufões) trazem vento muito forte, chuvas torrenciais e enchentes. O mais mortal costuma ser a água: a maré de tempestade na costa e as enchentes no interior.

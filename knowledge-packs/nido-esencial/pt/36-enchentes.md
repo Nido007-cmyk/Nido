@@ -3,6 +3,8 @@ title: Enchentes
 category: Desastres
 lang: pt
 sources: Ready.gov (FEMA); Serviço Meteorológico Nacional dos EUA, "Turn Around Don't Drown"; Cruz Vermelha Americana; OMS
+id: esencial-inundaciones
+verified: 2026-11-02
 questions: enchente, posso atravessar a água de carro | quanta água em movimento derruba uma pessoa | a água entrou em casa, o que fazer depois | comida que tocou a água da enchente, jogo fora
 ---
 As enchentes são o desastre mais frequente. A maioria das mortes acontece em veículos e ao tentar atravessar a água.

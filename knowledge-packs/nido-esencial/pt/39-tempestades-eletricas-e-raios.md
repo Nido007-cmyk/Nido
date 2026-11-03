@@ -3,6 +3,8 @@ title: Tempestades elétricas e raios
 category: Desastres
 lang: pt
 sources: Serviço Meteorológico Nacional dos EUA (NOAA), segurança contra raios; Cruz Vermelha Americana; AHA 2024
+id: esencial-rayos
+verified: 2026-11-02
 questions: ouvi um trovão, já é perigoso ficar fora | quanto tempo esperar depois do último trovão | um raio caiu numa pessoa, posso tocar nela | durante a tempestade, posso tomar banho
 ---
 **Se você ouve trovões, está perto o bastante para um raio o atingir.** Não há nenhum lugar seguro ao ar livre durante uma tempestade.
