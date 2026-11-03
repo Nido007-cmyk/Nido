@@ -48,9 +48,21 @@ export const OCR_PROVENANCE_NOTE: Record<OcrLang, string> = {
 interface NidoOcrNative {
   recognize(uri: string, tessdataLang: string): Promise<string>;
   recognizePdfPages?: (uri: string, pages: number[], tessdataLang: string) => Promise<string>;
+  /** Índices 0-based de las páginas escaneadas (capa de texto vacía), con el tope del nativo. */
+  findScannedPdfPages?: (uri: string) => Promise<number[]>;
 }
 
-export type OcrErrorCode = "UNAVAILABLE" | "OCR_FAILED";
+export type OcrErrorCode = "UNAVAILABLE" | "OCR_FAILED" | "OCR_UNAVAILABLE" | "PASSWORD_REQUIRED";
+
+/** Auditoría completa, F-4: el código del nativo se conserva (antes todo salía como OCR_FAILED, también el fallo de integridad de los datos). */
+const NATIVE_CODES: ReadonlySet<string> = new Set(["OCR_UNAVAILABLE", "PASSWORD_REQUIRED", "OCR_FAILED"]);
+function fromNative(e: unknown): OcrError {
+  const code = (e as { code?: unknown })?.code;
+  return new OcrError(
+    typeof code === "string" && NATIVE_CODES.has(code) ? (code as OcrErrorCode) : "OCR_FAILED",
+    e instanceof Error ? e.message : String(e),
+  );
+}
 
 export class OcrError extends Error {
   constructor(
@@ -97,7 +109,7 @@ export async function recognizeImageText(uri: string, lang: OcrLang): Promise<st
   try {
     return await n.recognize(uri, TESSDATA_LANG[lang]);
   } catch (e) {
-    throw new OcrError("OCR_FAILED", e instanceof Error ? e.message : String(e));
+    throw fromNative(e);
   }
 }
 
@@ -124,11 +136,31 @@ export async function recognizePdfPagesText(uri: string, pages: number[], lang: 
   try {
     return await n.recognizePdfPages(uri, sanitizeOcrPages(pages), TESSDATA_LANG[lang]);
   } catch (e) {
-    throw new OcrError("OCR_FAILED", e instanceof Error ? e.message : String(e));
+    throw fromNative(e);
   }
 }
 
-/** Atajo del importador: el texto reconocido de las páginas escaneadas de un PDF, sin enumerarlas. */
-export async function recognizeScannedPdfText(uri: string, lang: OcrLang): Promise<string> {
+/**
+ * Atajo del importador: el texto reconocido de las páginas escaneadas
+ * de un PDF. Devuelve `null` cuando el PDF NO tiene páginas escaneadas
+ * (no hay nada que reconocer), y una cadena —vacía si el motor no leyó
+ * nada— cuando sí las tiene. Auditoría completa, F-1: antes las dos
+ * situaciones volvían como «», y todo PDF de solo texto recibía el
+ * aviso «el reconocimiento no encontró texto en sus páginas
+ * escaneadas». Con un nativo anterior sin `findScannedPdfPages`, se
+ * conserva la vía antigua.
+ */
+export async function recognizeScannedPdfText(uri: string, lang: OcrLang): Promise<string | null> {
+  const n = await getNative();
+  if (n && typeof n.findScannedPdfPages === "function" && typeof n.recognizePdfPages === "function") {
+    let pages: number[];
+    try {
+      pages = sanitizeOcrPages(await n.findScannedPdfPages(uri));
+    } catch (e) {
+      throw fromNative(e);
+    }
+    if (pages.length === 0) return null;
+    return recognizePdfPagesText(uri, pages, lang);
+  }
   return recognizePdfPagesText(uri, [], lang);
 }

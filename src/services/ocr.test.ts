@@ -110,3 +110,51 @@ describe("la costura de páginas de PDF (carril OCR 2026-10-31)", () => {
     }
   });
 });
+
+describe("auditoría completa: páginas escaneadas y códigos del nativo", () => {
+  it("F-1: sin páginas escaneadas devuelve null y no arranca el motor", async () => {
+    let ran = false;
+    _setOcrNativeForTests({
+      recognize: async () => "",
+      findScannedPdfPages: async () => [],
+      recognizePdfPages: async () => {
+        ran = true;
+        return "";
+      },
+    });
+    await expect(recognizeScannedPdfText("file:///texto.pdf", "es")).resolves.toBeNull();
+    expect(ran).toBe(false);
+    _setOcrNativeForTests(null);
+  });
+
+  it("F-1, par: con páginas escaneadas reconoce SOLO esas y devuelve su texto (vacío si no lee nada)", async () => {
+    const seen: number[][] = [];
+    _setOcrNativeForTests({
+      recognize: async () => "",
+      findScannedPdfPages: async () => [4, 1, 1],
+      recognizePdfPages: async (_u, pages) => {
+        seen.push(pages);
+        return "";
+      },
+    });
+    await expect(recognizeScannedPdfText("file:///mixto.pdf", "pt")).resolves.toBe("");
+    expect(seen).toEqual([[1, 4]]);
+    _setOcrNativeForTests(null);
+  });
+
+  it("F-1: un nativo anterior sin la detección conserva la vía antigua", async () => {
+    _setOcrNativeForTests({ recognize: async () => "", recognizePdfPages: async () => "viejo" });
+    await expect(recognizeScannedPdfText("file:///a.pdf", "en")).resolves.toBe("viejo");
+    _setOcrNativeForTests(null);
+  });
+
+  it("F-4: el fallo de integridad de los datos conserva su código OCR_UNAVAILABLE", async () => {
+    _setOcrNativeForTests({
+      recognize: async () => {
+        throw Object.assign(new Error("The bundled OCR data for 'spa' failed its integrity check"), { code: "OCR_UNAVAILABLE" });
+      },
+    });
+    await expect(recognizeImageText("file:///x.png", "es")).rejects.toMatchObject({ code: "OCR_UNAVAILABLE" });
+    _setOcrNativeForTests(null);
+  });
+});

@@ -73,6 +73,20 @@ class NidoOcrModule : Module() {
       }
     }
 
+    // Auditoría completa (0.1.62–0.1.72), F-1: the TS side asks first
+    // which pages are scanned, so a text-only PDF never runs the engine
+    // and is never told that "recognition found no text on its scanned
+    // pages" when it had none.
+    AsyncFunction("findScannedPdfPages") { uri: String, promise: Promise ->
+      try {
+        promise.resolve(findScanned(uri))
+      } catch (e: InvalidPasswordException) {
+        promise.reject("PASSWORD_REQUIRED", "PDF requires a password", e)
+      } catch (e: Exception) {
+        promise.reject("OCR_FAILED", "Couldn't inspect the PDF's pages: ${e.message}", e)
+      }
+    }
+
     AsyncFunction("recognizePdfPages") { uri: String, pages: List<Int>, tessdataLang: String, promise: Promise ->
       try {
         promise.resolve(recognizePdf(uri, pages, tessdataLang))
@@ -199,6 +213,21 @@ class NidoOcrModule : Module() {
       tess.clear()
       tess.recycle()
     }
+  }
+
+  /** 0-based indices of the scanned pages (empty text layer), capped at [MAX_OCR_PAGES]. */
+  private fun findScanned(uri: String): List<Int> {
+    try {
+      PDFBoxResourceLoader.init(context)
+    } catch (_: Exception) {
+      // The load below reports the failure.
+    }
+    val memory = MemoryUsageSetting.setupTempFileOnly().setTempDir(context.cacheDir)
+    val pageCount = openStream(uri).use { stream ->
+      PDDocument.load(stream, "", memory).use { it.numberOfPages }
+    }
+    if (pageCount <= 0) return emptyList()
+    return scannedPages(uri, pageCount, memory)
   }
 
   /** Pages whose text layer is empty or nearly empty (a header over a scan), in order, capped. */

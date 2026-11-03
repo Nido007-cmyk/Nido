@@ -21,7 +21,7 @@ interface World {
   created: string[];
   pdfText: string;
   ocrAvailable: boolean;
-  pdfOcrText: string;
+  pdfOcrText: string | null;
   pdfOcrError: Error | null;
   imageOcrText: string;
   imageOcrError: Error | null;
@@ -280,19 +280,42 @@ describe("Adversaria H-01: la vía OCR se nombra por fichero, aporte lo que apor
     expect(result.importWarnings).toEqual([]);
   });
 
-  it("costura: PDF de solo texto con OCR disponible — la vía vuelve «» sin páginas que leer y el aviso nombra su resultado", async () => {
-    // Comportamiento asentado de la costura, documentado como el de
-    // la no-deduplicación de arriba: recognizeScannedPdfText
-    // devuelve "" tanto si no hay páginas escaneadas (el nativo ni
-    // arranca el motor: no hay nada que leer) como si las hay y no
-    // se leyó nada de ellas — la costura devuelve solo el texto y
-    // no distingue ambos casos. El aviso nombra el resultado de la
-    // vía OCR del fichero; separar los dos casos exige que el
-    // nativo informe de las páginas intentadas (otro carril).
+  it("auditoría completa F-1: PDF de solo texto con OCR disponible — sin páginas escaneadas no hay aviso", async () => {
+    // La costura devuelve null cuando el nativo no encuentra páginas
+    // escaneadas: no hay nada que reconocer y nada que avisar. Antes
+    // volvía «» y todo PDF de texto recibía «el reconocimiento no
+    // encontró texto en sus páginas escaneadas».
+    world.pdfText = "palabra ".repeat(50);
+    world.pdfOcrText = null;
+    const result = await M.importDocuments([asset("informe.pdf", 400)], "Informe");
+    expect(world.created).toHaveLength(1);
+    expect(result.importWarnings).toEqual([]);
+  });
+
+  it("auditoría completa F-1, par: el PDF con páginas escaneadas que el motor no lee sigue avisando", async () => {
     world.pdfText = "palabra ".repeat(50);
     world.pdfOcrText = "";
     const result = await M.importDocuments([asset("informe.pdf", 400)], "Informe");
-    expect(world.created).toHaveLength(1);
     expect(result.importWarnings).toEqual([{ name: "informe.pdf", reason: "ocrEmpty" }]);
+  });
+});
+
+describe("auditoría completa F-2: el tipo lo deciden los bytes, no el nombre", () => {
+  it("un PDF llamado «.txt» va por la vía PDF, no se indexa como texto basura", async () => {
+    // Discriminante: por la vía PDF, un PDF sin capa de texto en una
+    // versión sin OCR falla con scannedNoOcr; por la vía de texto, el
+    // binario entraría como texto y la importación «tendría éxito».
+    world.files.set("file:///informe.txt", "%PDF-1.7\n%âãÏÓ binario");
+    world.pdfText = "";
+    world.ocrAvailable = false;
+    await expect(M.importDocuments([asset("informe.txt", 500)], "Informe")).rejects.toMatchObject({ code: "scannedNoOcr" });
+  });
+
+  it("par: un «.txt» de texto de verdad sigue entrando como texto", async () => {
+    world.files.set("file:///notas.txt", "Notas de la reunión del martes. ".repeat(20));
+    world.pdfText = "";
+    const result = await M.importDocuments([asset("notas.txt", 500)], "Notas");
+    expect(world.inserted.length).toBeGreaterThan(0);
+    expect(result.importWarnings).toEqual([]);
   });
 });

@@ -213,6 +213,12 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       "primeros auxilios", "golpe de calor", "presion arterial",
       "dosis", "dosificacion", "medicamento", "medicamentos", "medicacion", "medicina", "medicinas",
       "paracetamol", "ibuprofeno", "aspirina", "amoxicilina", "omeprazol", "metamizol", "miligramos",
+      // Auditoría completa (F-6): infarto, ictus e ingestión, que la
+      // puerta no conocía en ninguna lengua.
+      "infarto", "ataque al corazon", "ictus", "derrame cerebral",
+      // La ingestión, solo con su objeto (no «se tragó el cuento»).
+      "se trago una pila", "se trago pastillas", "se trago una moneda", "se trago un iman",
+      "bebio lejia", "se bebio la lejia", "trago lejia",
     ],
     p: ["sangr", "vomit", "quemadur", "herid", "alergic", "diabetic", "atragant", "convuls", "desmay"],
   },
@@ -227,6 +233,11 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       "chest pain", "back pain", "abdominal pain", "first aid", "heat stroke", "blood pressure",
       "dose", "dosage", "medication", "medications", "medicine", "milligrams",
       "paracetamol", "acetaminophen", "ibuprofen", "aspirin", "amoxicillin",
+      // Auditoría completa (F-6).
+      "heart attack", "cardiac arrest", "having a stroke", "had a stroke",
+      // Ingestion, only with its object (not «the ATM swallowed my card»).
+      "swallowed a battery", "swallowed pills", "swallowed a coin", "swallowed a magnet",
+      "drank bleach", "swallowed bleach",
     ],
     p: ["bleed", "vomit", "burn", "wound", "allerg", "chok", "convuls", "sangr"],
   },
@@ -242,6 +253,11 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       "primeiros socorros", "pressao arterial",
       "dose", "dosagem", "medicamento", "medicamentos",
       "paracetamol", "ibuprofeno", "aspirina", "dipirona", "amoxicilina", "miligramas",
+      // Auditoría completa (F-6).
+      "infarto", "ataque cardiaco", "avc", "derrame cerebral",
+      // A ingestão, só com o objeto.
+      "engoliu uma pilha", "engoliu remedios", "engoliu comprimidos", "engoliu uma moeda", "engoliu um ima",
+      "bebeu agua sanitaria", "engoliu agua sanitaria",
     ],
     p: ["sangr", "vomit", "queimadur", "ferid", "alergic", "diabetic", "engasg", "convuls", "desmai"],
   },
@@ -391,6 +407,13 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "humo saliendo", "saliendo humo", "sale humo", "hay humo", "hay fuego",
     "salen llamas", "saliendo llamas", "esta ardiendo",
     "sangrando mucho", "no para de sangrar", "esta convulsionando",
+    // Auditoría completa (F-5): la primera persona de la respiración
+    // («no puedo respirar»; el inglés ya traía «can t breathe») y los
+    // eventos que el inglés o el portugués nombraban y el español no.
+    "no puedo respirar", "no podemos respirar",
+    "esta teniendo una convulsion", "le esta dando una convulsion",
+    "esta teniendo un infarto", "le esta dando un infarto",
+    "esta teniendo un ictus", "le esta dando un ictus", "le esta dando un derrame",
   ],
   en: [
     "not breathing", "is not breathing", "stopped breathing", "no longer breathing",
@@ -404,6 +427,12 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "smoke coming", "smoke pouring", "full of smoke", "there is a fire", "there s a fire",
     "house on fire", "kitchen on fire", "building on fire", "car on fire", "room on fire",
     "bleeding a lot", "bleeding heavily", "won t stop bleeding",
+    // Auditoría completa (F-5): la contracción corriente («isn't
+    // breathing» se pliega a «isn t breathing», que no contiene «not
+    // breathing») y las convulsiones, que es y pt ya traían.
+    "isn t breathing", "wasn t breathing", "aren t breathing",
+    "having a seizure", "is seizing", "is convulsing",
+    "having a heart attack", "having a stroke",
   ],
   pt: [
     "nao esta respirando", "nao respira", "nao respiram", "parou de respirar", "sem respirar",
@@ -416,6 +445,11 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "segurando o peito", "apertando o peito", "mao no peito",
     "fumaca saindo", "saindo fumaca", "tem fogo", "pegando fogo", "em chamas", "saindo chamas",
     "sangrando muito", "nao para de sangrar", "esta convulsionando",
+    // Auditoría completa (F-5): «não consigo respirar», la forma
+    // corriente que el portugués no traía, y los eventos de las otras
+    // dos lenguas.
+    "nao consigo respirar", "nao consegue respirar", "nao conseguem respirar",
+    "esta tendo uma convulsao", "esta tendo um infarto", "esta tendo um avc",
   ],
 };
 
