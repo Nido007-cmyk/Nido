@@ -3,6 +3,8 @@ title: Intoxicaciones, venenos y monóxido de carbono
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; OMS; CDC, monóxido de carbono
+id: esencial-intoxicaciones-y-monoxido
+verified: 2026-11-02
 ---
 ## Si alguien tragó algo tóxico
 (Medicamentos, lejía y otros productos de limpieza, plantas, setas, alcohol, pilas de botón...)

@@ -3,6 +3,8 @@ title: Mordeduras y picaduras (serpientes, animales, insectos, medusas)
 category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; OMS, mordeduras de serpiente y rabia; Cruz Roja Canadiense 2020
+id: esencial-mordeduras-y-picaduras
+verified: 2026-11-02
 ---
 ## Mordedura de perro, gato u otro mamífero
 1. Si sangra mucho, presiona fuerte (ver hemorragias).

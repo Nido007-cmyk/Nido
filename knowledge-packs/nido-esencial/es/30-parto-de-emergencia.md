@@ -3,6 +3,8 @@ title: Parto de emergencia
 category: Salud en casa
 lang: es
 sources: OMS, atención esencial al recién nacido; Cruz Roja Canadiense 2020; Cruz Roja Americana
+id: esencial-parto-de-emergencia
+verified: 2026-11-02
 ---
 La mayoría de los partos van bien solos. Si el bebé llega antes de que haya ayuda, tu papel es acompañar, mantener limpio y abrigar.
 

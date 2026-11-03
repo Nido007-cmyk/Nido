@@ -3,6 +3,8 @@ title: Emergency childbirth
 category: Health at home
 lang: en
 sources: WHO, essential newborn care; Canadian Red Cross 2020; American Red Cross
+id: esencial-parto-de-emergencia
+verified: 2026-11-02
 ---
 Most births go well on their own. If the baby arrives before help does, your role is to support, keep things clean and keep them warm.
 

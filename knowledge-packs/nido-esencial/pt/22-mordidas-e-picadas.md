@@ -3,6 +3,8 @@ title: Mordidas e picadas (serpentes, animais, insetos, águas-vivas)
 category: Primeiros socorros
 lang: pt
 sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; OMS, mordidas de serpente e raiva; Cruz Vermelha Canadense 2020
+id: esencial-mordeduras-y-picaduras
+verified: 2026-11-02
 questions: mordeu uma serpente, chupo o veneno | cachorro mordeu meu filho, o que faço | como tirar um carrapato da pele | picada de água-viva, o que passar
 ---
 ## Mordida de cachorro, gato ou outro mamífero

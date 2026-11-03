@@ -3,6 +3,8 @@ title: Emergencia química, nuclear o radiológica
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA), emergencias por radiación y químicas; CDC; OIEA; OMS
+id: esencial-emergencia-quimica-o-nuclear
+verified: 2026-11-02
 ---
 Si hay un escape químico o radiactivo cerca, la regla básica es: **entra, quédate dentro y mantente informado**.
 

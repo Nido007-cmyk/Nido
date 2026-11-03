@@ -3,6 +3,8 @@ title: Intoxicações, venenos e monóxido de carbono
 category: Primeiros socorros
 lang: pt
 sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; OMS; CDC, monóxido de carbono
+id: esencial-intoxicaciones-y-monoxido
+verified: 2026-11-02
 questions: meu filho tomou um frasco de remédio, faço ele vomitar | criança engoliu uma pilha de botão | produto de limpeza caiu no olho, o que fazer | cheiro de gás em casa e dor de cabeça, pode ser monóxido
 ---
 ## Se alguém engoliu algo tóxico

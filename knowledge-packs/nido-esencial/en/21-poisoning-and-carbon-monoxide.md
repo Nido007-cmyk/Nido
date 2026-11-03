@@ -3,6 +3,8 @@ title: Poisoning, toxic substances and carbon monoxide
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; WHO; CDC, carbon monoxide
+id: esencial-intoxicaciones-y-monoxido
+verified: 2026-11-02
 ---
 ## If someone swallowed something toxic
 <!-- questions: my child drank bleach, what do I do | child swallowed bleach | my toddler drank a cleaning product, what to do -->

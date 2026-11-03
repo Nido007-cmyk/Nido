@@ -3,6 +3,8 @@ title: Chemical, nuclear or radiological emergency
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA), radiation and chemical emergencies; CDC; IAEA; WHO
+id: esencial-emergencia-quimica-o-nuclear
+verified: 2026-11-02
 ---
 If there is a chemical or radioactive release nearby, the basic rule is: **get inside, stay inside, stay tuned**.
 

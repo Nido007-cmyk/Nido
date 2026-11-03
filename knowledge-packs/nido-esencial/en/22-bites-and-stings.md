@@ -3,6 +3,8 @@ title: Bites and stings (snakes, animals, insects, jellyfish)
 category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; WHO, snakebite envenoming and rabies; Canadian Red Cross 2020
+id: esencial-mordeduras-y-picaduras
+verified: 2026-11-02
 ---
 ## Dog, cat or other mammal bite
 1. If it bleeds heavily, press hard (see severe bleeding).

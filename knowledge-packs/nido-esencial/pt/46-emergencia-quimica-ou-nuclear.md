@@ -3,6 +3,8 @@ title: Emergência química, nuclear ou radiológica
 category: Desastres
 lang: pt
 sources: Ready.gov (FEMA), emergências por radiação e químicas; CDC; AIEA; OMS
+id: esencial-emergencia-quimica-o-nuclear
+verified: 2026-11-02
 questions: vazamento químico perto de casa, entro ou saio | emergência nuclear, fico dentro quanto tempo | iodeto de potássio, quando tomar | roupa contaminada, o que fazer com ela
 ---
 Se houver um vazamento químico ou radioativo por perto, a regra básica é: **entre, fique dentro e mantenha-se informado**.
