@@ -24,7 +24,7 @@ Outros sinais de alerta: perda de visão, tontura intensa com perda de equilíbr
 5. Se ela for diabética e você tiver medidor de açúcar, pode medir sem atrasar a ligação.
 
 ## Sintomas que passam sozinhos
-Mesmo que os sintomas durem alguns minutos e desapareçam, é um aviso sério (ataque isquêmico transitório): ela deve ser vista por um médico no mesmo dia.
+Mesmo que os sintomas durem alguns minutos e desapareçam, é um aviso sério (ataque isquêmico transitório): procure ajuda médica de imediato.
 
 ## Importante
 Baseado nas diretrizes da AHA, da Cruz Vermelha Americana e da Cruz Vermelha Canadense. Ligue para o número de emergência.

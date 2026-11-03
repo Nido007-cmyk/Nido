@@ -23,7 +23,7 @@ Other sudden signs: loss of vision, severe dizziness with loss of balance, a sud
 5. If they have diabetes and you have a glucose meter, you can check their sugar without delaying the call.
 
 ## Symptoms that go away on their own
-Even if symptoms last only minutes and disappear, it is a serious warning (transient ischemic attack): a doctor must see them the same day.
+Even if symptoms last only minutes and disappear, it is a serious warning (transient ischemic attack): get medical help straight away.
 
 ## Important
 Based on the AHA, American Red Cross and Canadian Red Cross guidelines. Call your emergency number.

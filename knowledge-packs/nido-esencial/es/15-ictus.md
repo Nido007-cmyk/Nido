@@ -23,7 +23,7 @@ Otros signos de golpe: pérdida de visión, mareo intenso con pérdida de equili
 5. Si es diabética y tienes medidor de azúcar, puedes medirla sin retrasar la llamada.
 
 ## Síntomas que se pasan solos
-Aunque los síntomas duren unos minutos y desaparezcan, es un aviso serio (accidente isquémico transitorio): debe verla un médico ese mismo día.
+Aunque los síntomas duren unos minutos y desaparezcan, es un aviso serio (accidente isquémico transitorio): busca ayuda médica de inmediato.
 
 ## Importante
 Basado en las directrices de la AHA, la Cruz Roja Americana y la Cruz Roja Canadiense. Llama al número de emergencias.
