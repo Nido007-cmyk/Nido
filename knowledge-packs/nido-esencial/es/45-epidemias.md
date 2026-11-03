@@ -3,6 +3,8 @@ title: Epidemias y brotes de enfermedades
 category: Desastres
 lang: es
 sources: OMS, preparación ante pandemias y brotes; CDC; IFRC
+id: esencial-epidemias
+verified: 2026-11-02
 ---
 ## Medidas que funcionan contra casi todas las infecciones
 - Lávate las manos a menudo con agua y jabón.

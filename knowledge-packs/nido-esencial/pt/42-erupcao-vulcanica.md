@@ -3,6 +3,8 @@ title: Erupção vulcânica e cinzas
 category: Desastres
 lang: pt
 sources: USGS, perigos vulcânicos; Ready.gov (FEMA); Rede Internacional de Perigos Vulcânicos para a Saúde (IVHHN); OMS
+id: esencial-erupcion-volcanica
+verified: 2026-11-02
 questions: vulcão entrou em erupção, para onde vou | cinza vulcânica caindo, posso sair de casa | o que é um lahar e por que é perigoso | cinza no telhado, preciso tirar
 ---
 ## Antes

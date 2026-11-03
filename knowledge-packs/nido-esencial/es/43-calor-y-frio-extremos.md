@@ -3,6 +3,8 @@ title: Olas de calor y frío extremo
 category: Desastres
 lang: es
 sources: OMS, calor y salud; Ready.gov (FEMA); CDC, frío extremo
+id: esencial-calor-y-frio-extremos
+verified: 2026-11-02
 ---
 ## Ola de calor
 - Pasa las horas de más calor en el lugar más fresco: habitaciones bajas, a la sombra, o lugares públicos con aire acondicionado ("refugios climáticos").

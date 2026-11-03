@@ -3,6 +3,8 @@ title: Survival: the priorities
 category: Survival
 lang: en
 sources: Red Cross; Ready.gov (FEMA); survival and search-and-rescue manuals (NASAR, Wilderness Medical Society)
+id: esencial-supervivencia-prioridades
+verified: 2026-11-02
 ---
 In a survival situation, the biggest dangers are panic and spending energy on things that don't matter. Put your priorities in order.
 

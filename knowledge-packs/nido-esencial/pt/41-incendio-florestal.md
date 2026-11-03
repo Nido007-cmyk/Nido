@@ -3,6 +3,8 @@ title: Incêndio florestal
 category: Desastres
 lang: pt
 sources: Ready.gov (FEMA); Cruz Vermelha Americana; CalFire "Ready, Set, Go"; OMS, fumaça de incêndios
+id: esencial-incendio-forestal
+verified: 2026-11-02
 questions: incêndio florestal chegando, saio já ou espero | fumaça de incêndio faz mal mesmo de longe | o fogo me cercou no carro, o que faço | como preparar a casa para incêndio na mata
 ---
 Os incêndios florestais avançam muito depressa, sobretudo com vento e morro acima.

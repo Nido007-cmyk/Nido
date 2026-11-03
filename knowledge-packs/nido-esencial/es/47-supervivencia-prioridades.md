@@ -3,6 +3,8 @@ title: Supervivencia: las prioridades
 category: Supervivencia
 lang: es
 sources: Cruz Roja; Ready.gov (FEMA); manuales de supervivencia y búsqueda y rescate (NASAR, Wilderness Medical Society)
+id: esencial-supervivencia-prioridades
+verified: 2026-11-02
 ---
 En una situación de supervivencia, lo más peligroso es el pánico y gastar energía en lo que no importa. Ordena tus prioridades.
 

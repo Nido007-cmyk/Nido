@@ -3,6 +3,8 @@ title: Fazer fogo com segurança
 category: Sobrevivência
 lang: pt
 sources: Manuais de sobrevivência e serviços florestais; Ready.gov (FEMA); NFPA
+id: esencial-fuego
+verified: 2026-11-02
 questions: como acender fogo sem fósforos | fogo seguro, a que distância das árvores | como apagar bem uma fogueira | montar a fogueira, o que vai primeiro
 ---
 O fogo dá calor e luz, permite ferver água, cozinhar e fazer sinais. Mas também causa incêndios florestais: use-o só quando for necessário e seguro, e nunca em épocas ou zonas proibidas, salvo para salvar uma vida.

@@ -3,6 +3,8 @@ title: Making a fire safely
 category: Survival
 lang: en
 sources: Survival manuals and forestry services; Ready.gov (FEMA); NFPA
+id: esencial-fuego
+verified: 2026-11-02
 ---
 Fire gives warmth, light, lets you boil water, cook and signal. But it also causes wildfires: use it only when necessary and safe, and never during bans or in forbidden areas unless a life depends on it.
 

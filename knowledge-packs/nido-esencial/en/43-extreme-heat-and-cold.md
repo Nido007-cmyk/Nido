@@ -3,6 +3,8 @@ title: Heat waves and extreme cold
 category: Disasters
 lang: en
 sources: WHO, heat and health; Ready.gov (FEMA); CDC, extreme cold
+id: esencial-calor-y-frio-extremos
+verified: 2026-11-02
 ---
 ## Heat wave
 - Spend the hottest hours in the coolest place: lower rooms, in the shade, or air-conditioned public places ("cooling centers").

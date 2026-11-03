@@ -3,6 +3,8 @@ title: Abrigo e manter o calor corporal
 category: Sobrevivência
 lang: pt
 sources: Wilderness Medical Society, prevenção de hipotermia; Cruz Vermelha; manuais de sobrevivência de busca e resgate
+id: esencial-refugio-y-calor-corporal
+verified: 2026-11-02
 questions: abrigo simples com uma lona, como fazer | como não perder calor dormindo no chão | abrigo na neve, como montar | calor extremo na natureza, onde descansar
 ---
 Com frio, vento ou chuva, o abrigo é mais urgente que a água ou a comida.

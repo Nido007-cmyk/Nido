@@ -3,6 +3,8 @@ title: Erupción volcánica y ceniza
 category: Desastres
 lang: es
 sources: USGS, peligros volcánicos; Ready.gov (FEMA); Red Internacional de Peligros para la Salud por Volcanes (IVHHN); OMS
+id: esencial-erupcion-volcanica
+verified: 2026-11-02
 ---
 ## Antes
 Si vives cerca de un volcán activo, conoce las zonas de peligro, las rutas de evacuación y el sistema de alertas. Ten mascarillas FFP2/N95 y gafas cerradas.

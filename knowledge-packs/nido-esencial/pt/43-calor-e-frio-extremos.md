@@ -3,6 +3,8 @@ title: Ondas de calor e frio extremo
 category: Desastres
 lang: pt
 sources: OMS, calor e saúde; Ready.gov (FEMA); CDC, frio extremo
+id: esencial-calor-y-frio-extremos
+verified: 2026-11-02
 questions: onda de calor, como me proteger em casa | frio extremo sem aquecimento, o que fazer | idoso sozinho no calor forte, o que vigiar | preso no carro na neve, o que faço
 ---
 ## Onda de calor

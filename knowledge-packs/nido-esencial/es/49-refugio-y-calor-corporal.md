@@ -3,6 +3,8 @@ title: Refugio y mantener el calor corporal
 category: Supervivencia
 lang: es
 sources: Wilderness Medical Society, prevención de hipotermia; Cruz Roja; manuales de supervivencia de búsqueda y rescate
+id: esencial-refugio-y-calor-corporal
+verified: 2026-11-02
 ---
 Con frío, viento o lluvia, el refugio es más urgente que el agua o la comida.
 

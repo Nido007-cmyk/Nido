@@ -3,6 +3,8 @@ title: Shelter and keeping warm
 category: Survival
 lang: en
 sources: Wilderness Medical Society, hypothermia prevention; Red Cross; search-and-rescue survival manuals
+id: esencial-refugio-y-calor-corporal
+verified: 2026-11-02
 ---
 In cold, wind or rain, shelter is more urgent than water or food.
 

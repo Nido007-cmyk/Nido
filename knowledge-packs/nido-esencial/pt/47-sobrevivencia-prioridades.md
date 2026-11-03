@@ -3,6 +3,8 @@ title: Sobrevivência: as prioridades
 category: Sobrevivência
 lang: pt
 sources: Cruz Vermelha; Ready.gov (FEMA); manuais de sobrevivência e busca e resgate (NASAR, Wilderness Medical Society)
+id: esencial-supervivencia-prioridades
+verified: 2026-11-02
 questions: prioridades numa situação de sobrevivência | regra dos três da sobrevivência, como é | perdido na natureza, por onde começo | o que levar sempre que saio para o mato
 ---
 Numa situação de sobrevivência, o mais perigoso é o pânico e gastar energia no que não importa. Organize suas prioridades.

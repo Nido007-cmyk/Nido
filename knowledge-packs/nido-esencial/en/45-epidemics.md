@@ -3,6 +3,8 @@ title: Epidemics and disease outbreaks
 category: Disasters
 lang: en
 sources: WHO, pandemic and outbreak preparedness; CDC; IFRC
+id: esencial-epidemias
+verified: 2026-11-02
 ---
 ## Measures that work against almost all infections
 - Wash your hands often with soap and water.

@@ -3,6 +3,8 @@ title: Deslizamientos de tierra y avalanchas
 category: Desastres
 lang: es
 sources: USGS, deslizamientos; Ready.gov (FEMA); Cruz Roja Americana
+id: esencial-deslizamientos-y-avalanchas
+verified: 2026-11-02
 ---
 ## Deslizamientos de tierra y flujos de lodo
 Son más probables tras lluvias fuertes, incendios o terremotos, en laderas empinadas y cauces.

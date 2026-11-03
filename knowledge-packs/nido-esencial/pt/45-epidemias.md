@@ -3,6 +3,8 @@ title: Epidemias e surtos de doenças
 category: Desastres
 lang: pt
 sources: OMS, preparação para pandemias e surtos; CDC; IFRC
+id: esencial-epidemias
+verified: 2026-11-02
 questions: epidemia, medidas que funcionam em casa | cuidar de um doente em casa sem me contagiar | depois da enchente, doenças da água e dos mosquitos | quanto guardar em casa para uma epidemia
 ---
 ## Medidas que funcionam contra quase todas as infecções

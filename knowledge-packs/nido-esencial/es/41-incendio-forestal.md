@@ -3,6 +3,8 @@ title: Incendio forestal
 category: Desastres
 lang: es
 sources: Ready.gov (FEMA); Cruz Roja Americana; CalFire "Ready, Set, Go"; OMS, humo de incendios
+id: esencial-incendio-forestal
+verified: 2026-11-02
 ---
 Los incendios forestales avanzan muy deprisa, sobre todo con viento y cuesta arriba.
 

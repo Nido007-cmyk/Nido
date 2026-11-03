@@ -3,6 +3,8 @@ title: Deslizamentos de terra e avalanches
 category: Desastres
 lang: pt
 sources: USGS, deslizamentos; Ready.gov (FEMA); Cruz Vermelha Americana
+id: esencial-deslizamientos-y-avalanchas
+verified: 2026-11-02
 questions: sinais de que um deslizamento está vindo | avalanche enterrou uma pessoa, quanto tempo tenho | depois de chuva forte, o barranco pode cair | fui pego num deslizamento, como me protejo
 ---
 ## Deslizamentos de terra e fluxos de lama

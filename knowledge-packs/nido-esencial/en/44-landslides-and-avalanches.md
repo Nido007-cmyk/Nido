@@ -3,6 +3,8 @@ title: Landslides and avalanches
 category: Disasters
 lang: en
 sources: USGS, landslides; Ready.gov (FEMA); American Red Cross
+id: esencial-deslizamientos-y-avalanchas
+verified: 2026-11-02
 ---
 ## Landslides and mudflows
 They are more likely after heavy rain, fires or earthquakes, on steep slopes and in channels.

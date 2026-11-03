@@ -3,6 +3,8 @@ title: Wildfire
 category: Disasters
 lang: en
 sources: Ready.gov (FEMA); American Red Cross; CAL FIRE "Ready, Set, Go!"; WHO, wildfire smoke
+id: esencial-incendio-forestal
+verified: 2026-11-02
 ---
 Wildfires move very fast, especially with wind and uphill.
 

@@ -3,6 +3,8 @@ title: Volcanic eruption and ash
 category: Disasters
 lang: en
 sources: USGS, volcano hazards; Ready.gov (FEMA); International Volcanic Health Hazard Network (IVHHN); WHO
+id: esencial-erupcion-volcanica
+verified: 2026-11-02
 ---
 ## Before
 If you live near an active volcano, know the hazard zones, evacuation routes and the alert system. Keep FFP2/N95 masks and sealed goggles.

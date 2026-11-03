@@ -3,6 +3,8 @@ title: Hacer fuego de forma segura
 category: Supervivencia
 lang: es
 sources: Manuales de supervivencia y servicios forestales; Ready.gov (FEMA); NFPA
+id: esencial-fuego
+verified: 2026-11-02
 ---
 El fuego da calor, luz, permite hervir agua, cocinar y hacer señales. Pero también causa incendios forestales: úsalo solo cuando sea necesario y seguro, y nunca en épocas o zonas prohibidas salvo para salvar una vida.
 
