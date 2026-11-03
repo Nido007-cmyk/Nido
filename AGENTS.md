@@ -11,10 +11,12 @@ fail. For what the app *is* and how it's designed, read `README.md` and
 ## The one fact that changes everything: this is NOT an Expo Go app
 
 `app.json`'s plugins do **not** include `expo-dev-client` (removed 2026-09-27;
-see `.github/workflows/android-apk.yml`), and this repo has seven
+see `.github/workflows/android-apk.yml`), and this repo has twelve
 **custom native modules** (`modules/bundled-assets`, `modules/download-wake-lock`,
-`modules/exact-alarm`, `modules/nido-p2p`, `modules/nido-secure-dialog`,
-`modules/ram-monitor`, `modules/voice-input`) plus `llama.rn`
+`modules/exact-alarm`, `modules/nido-keyvault`, `modules/nido-launch`,
+`modules/nido-ocr`, `modules/nido-p2p`, `modules/nido-pdf-text`,
+`modules/nido-secure-dialog`, `modules/nido-vectors`, `modules/ram-monitor`,
+`modules/voice-input`) plus `llama.rn`
 (native LLM inference). None of that runs inside the generic Expo Go app from the
 Play Store. Every build must go through `expo prebuild` to generate a real native
 Android project, then a real native build (`expo run:android` or an EAS cloud build) — there is no
