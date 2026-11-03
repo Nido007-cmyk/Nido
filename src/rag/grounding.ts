@@ -453,6 +453,51 @@ export function closestShortCopySentence(sentence: string, candidates: string[])
   return best;
 }
 
+/**
+ * La copia corta de UNA cláusula de una frase fuente larga (auditoría
+ * de la 0.1.70, punto 5b). closestShortCopySentence exige que la frase
+ * de la respuesta cubra la mitad de las raíces de su fuente, así que
+ * «El paciente está sangrando.» contra «El paciente no está sangrando
+ * y respira con normalidad tras la caída.» salía tal cual. Aquí la
+ * frase fuente se trocea en cláusulas (comas, punto y coma, dos
+ * puntos, los cierres de frase que el troceo de frases no vio, como
+ * «seguridad.** Muchas…», y las conjunciones «y/e/and»,
+ * «pero/but/mas», «o/or/ou») y
+ * la vara es la cláusula: todas las raíces de la respuesta caben en
+ * una cláusula, y su recuento de negaciones difiere del de la
+ * respuesta. Solo frases cortas (2 raíces, por debajo de
+ * MIN_JUDGED_TERMS; las largas siguen su vía, sin cambio). Se
+ * devuelve la frase fuente entera, palabra por palabra, como hace la
+ * capa desde 0.1.59; y nunca cuando alguna cláusula de cualquier
+ * frase de las fuentes contiene esas raíces con la misma polaridad
+ * que la respuesta (hay una lectura fiel, así que no se toca), ni
+ * cuando dos frases fuente candidatas discrepan entre sí.
+ */
+const CLAUSE_SPLIT_RE = /[,;:.!?]|\s(?:y|e|and|pero|but|mas|o|or|ou)\s/iu;
+
+export function negatedClauseSource(
+  sentence: string,
+  candidates: string[],
+  allSources: string[],
+): string | null {
+  const bare = sentence.replace(/\[\d+\]/g, "");
+  const want = new Set(contentStems(bare));
+  if (want.size < 2 || want.size >= MIN_JUDGED_TERMS) return null;
+  const neg = negationCount(bare);
+  const holds = (clause: string) => {
+    const have = new Set(contentStems(clause));
+    for (const w of want) if (!have.has(w)) return false;
+    return true;
+  };
+  for (const src of allSources) {
+    for (const clause of src.split(CLAUSE_SPLIT_RE)) {
+      if (holds(clause) && negationCount(clause) === neg) return null;
+    }
+  }
+  const hits = candidates.filter((src) => src.split(CLAUSE_SPLIT_RE).some((c) => holds(c) && negationCount(c) !== neg));
+  return hits.length === 1 ? hits[0]! : null;
+}
+
 // ------------------------------------------- idioma por frase (R-04)
 
 /** Una frase de las fuentes, con el chunk del que sale. */
@@ -1761,6 +1806,16 @@ export function verifyGroundedAnswer(
       if (src && negationCount(s.replace(/\[\d+\]/g, "")) !== negationCount(src)) {
         negationFixed++;
         const fixed = addCitation(src, sup.bestChunk + 1);
+        kept.push(fixed);
+        prov.push({ text: fixed, origin: { kind: "source", n: sup.bestChunk + 1, support: 1, negationFixed: true } });
+        continue;
+      }
+      // Auditoría de la 0.1.70 (5b): la corta que quita (o pone) la
+      // negación de una cláusula de una frase fuente larga.
+      const clauseSrc = src ? null : negatedClauseSource(s, chunkSentences[sup.bestChunk], chunkSentences.flat());
+      if (clauseSrc) {
+        negationFixed++;
+        const fixed = addCitation(clauseSrc, sup.bestChunk + 1);
         kept.push(fixed);
         prov.push({ text: fixed, origin: { kind: "source", n: sup.bestChunk + 1, support: 1, negationFixed: true } });
         continue;

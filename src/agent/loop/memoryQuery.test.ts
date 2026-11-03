@@ -1695,3 +1695,38 @@ describe("auditoría de la 0.1.70: «como se chama o meu…»", () => {
     expect(answerMemoryQuery("Como se chama meu pai?", mem("pai", "Carlos"), "pt")).toBe("Seu pai se chama Carlos.");
   });
 });
+
+// Auditoría de la 0.1.70, punto 5a: el hecho combinado que nombra
+// el cumpleaños propio con el pronombre posesivo («el mío», «mine»,
+// «o meu») respondía «no me lo has contado». Pares: la forma curada
+// en las tres lenguas, y la fecha ajena nunca servida como propia.
+describe("auditoría de la 0.1.70: «el mío» / «mine» / «o meu» en el hecho combinado", () => {
+  const one = (content: string): MemoryQueryData => ({ facts: [{ content, category: "event" }], people: [] });
+
+  it("sirve la fecha de la cláusula del pronombre, en es/en/pt", () => {
+    expect(answerMemoryQuery("¿Cuándo es mi cumpleaños?", one("El cumpleaños de mi abuela es el 15 de marzo y el mío es el 3 de mayo"), "es")).toContain("3 de mayo");
+    expect(answerMemoryQuery("¿Cuándo es mi cumpleaños?", one("El cumpleaños de mi abuela es el 15 de marzo, el mío es el 3 de mayo"), "es")).toContain("3 de mayo");
+    expect(answerMemoryQuery("¿Cuándo es mi cumpleaños?", one("El mío es el 3 de mayo y el cumpleaños de mi abuela es el 15 de marzo"), "es")).toContain("3 de mayo");
+    expect(answerMemoryQuery("when is my birthday?", one("My grandmother's birthday is March 15 and mine is May 3"), "en")).toContain("May 3");
+    expect(answerMemoryQuery("quando é o meu aniversário?", one("O aniversário da minha avó é dia 15 de março e o meu é dia 3 de maio"), "pt")).toContain("3 de maio");
+  });
+
+  it("nunca sirve la fecha de otra persona como propia", () => {
+    const cases: [string, string, "es" | "en" | "pt"][] = [
+      ["¿Cuándo es mi cumpleaños?", "El cumpleaños de mi abuela es el 15 de marzo y el mío no lo recuerdo", "es"],
+      ["¿Cuándo es mi cumpleaños?", "El cumpleaños de mi abuela es el 15 de marzo", "es"],
+      ["when is my birthday?", "My grandmother's birthday is March 15, and her cake was bigger than mine", "en"],
+      ["quando é o meu aniversário?", "O aniversário do meu pai é dia 15 de março", "pt"],
+      ["quando é o meu aniversário?", "O aniversário da minha avó é dia 15 de março e o meu pai faz anos a 3 de maio", "pt"],
+    ];
+    for (const [q, fact, lang] of cases) {
+      const a = answerMemoryQuery(q, one(fact), lang);
+      expect(a).not.toMatch(/15 de mar|March 15/);
+      expect(a).toBe(answerMemoryQuery(q, { facts: [], people: [] }, lang));
+    }
+  });
+
+  it("la pregunta por la otra persona sigue sirviendo su fecha", () => {
+    expect(answerMemoryQuery("¿Cuándo es el cumpleaños de mi abuela?", one("El cumpleaños de mi abuela es el 15 de marzo y el mío es el 3 de mayo"), "es")).toContain("15 de marzo");
+  });
+});
