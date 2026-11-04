@@ -851,7 +851,7 @@ async function runAgentLoopCore(
   // como la solución más confiable para modelos sub-1B.
   // ACTION-ROUTER 2026-10-07: calculadora y recordatorios antes que memoria
   // (el modelo 0.5B no siempre genera el tool call para acciones simples).
-  const { extractCalcAction, extractReminderAction, reminderMissingText, extractTimerAction, extractWeeklyPlanAction, generateWeeklyPlan, detectReminderRepeat } = await import("./actionRouter");
+  const { extractCalcAction, extractReminderAction, reminderMissingText, reminderInvalidWhen, extractTimerAction, extractWeeklyPlanAction, generateWeeklyPlan, detectReminderRepeat } = await import("./actionRouter");
   // Permisos del usuario: con la herramienta apagada no hay atajo; el turno
   // sigue al modelo y el despachador la rechaza.
   const fastPathAllowed = (tool: string): boolean =>
@@ -1032,6 +1032,11 @@ async function runAgentLoopCore(
   // 0.1.32: fecha sin contenido («ponme un recordatorio para el lunes»):
   // se pregunta qué recordar en vez de mandar el turno al modelo.
   if (!reminderAction && fastPathAllowed("create_reminder")) {
+    // «recuérdame a las 25:00…», «el 31 de febrero…»: no se guarda un
+    // aviso sin hora que nunca sonaría; se dice y se pide de nuevo.
+    if (reminderInvalidWhen(userText)) {
+      return { response: routerMessage("reminderInvalidWhen", reminderLang), intent, toolUses: [], deterministic: true };
+    }
     const missingDue = reminderMissingText(userText);
     if (missingDue) {
       // 0.1.35: la siguiente respuesta corta será el contenido.

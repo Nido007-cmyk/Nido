@@ -64,6 +64,7 @@ export type Family =
   | "reminderManage"
   | "calendar"
   | "noteDelete"
+  | "memoryForget"
   | "weeklyPlan";
 
 export interface SweepCase {
@@ -96,6 +97,9 @@ export const EXPECTED: Record<Family, readonly string[]> = {
   reminderManage: ["reminderList", "reminderDelete"],
   calendar: ["calendarCreate", "calendarList"],
   noteDelete: ["noteDelete"],
+  // 0.1.75: olvidar un recuerdo concreto (con confirmación) o, sin
+  // recuerdo nombrado, la guía que pide cuál.
+  memoryForget: ["memoryForget", "memoryForgetHelp"],
   weeklyPlan: ["weekly_plan"],
 };
 
@@ -132,7 +136,6 @@ export const ROUTER_ROUTES: readonly string[] = [
  */
 export const PENDING_ROUTES: readonly string[] = [
   "currencyInfo",
-  "memoryForgetHelp",
   "nidoCode",
   "nidoInbox",
   "nidoSend",
@@ -428,6 +431,21 @@ const CALENDAR = [
   ["pt", "minha agenda"],
 ] as const;
 
+const MEMORY_FORGET = [
+  ["es", "olvida mi color favorito"],
+  ["es", "olvida que vivo en Phoenix"],
+  ["es", "borra de tu memoria mi dirección"],
+  ["es", "elimina de la memoria que soy vegetariano"],
+  ["es", "olvida todo"],
+  ["en", "forget my favorite color"],
+  ["en", "forget that I live in Phoenix"],
+  ["en", "delete my address from your memory"],
+  ["en", "forget everything"],
+  ["pt", "esquece minha cor favorita"],
+  ["pt", "esqueça que eu moro em Phoenix"],
+  ["pt", "apaga da memória o meu endereço"],
+] as const;
+
 const NOTE_DELETE = [
   ["es", "borra la nota de la receta"],
   ["es", "elimina mi nota del viaje"],
@@ -470,7 +488,7 @@ const WEEKLY_PLAN = [
  * una dispara una acción es el fallo grave de la v0.1.44, no un
  * porcentaje que se diluye en la media de una familia.
  */
-export const NEAR_MISS: Record<"contact" | "reminderManage" | "calendar" | "noteDelete" | "weeklyPlan", ReadonlyArray<readonly [string, string]>> = {
+export const NEAR_MISS: Record<"contact" | "reminderManage" | "calendar" | "noteDelete" | "memoryForget" | "weeklyPlan", ReadonlyArray<readonly [string, string]>> = {
   contact: [
     ["es", "ayer me llamó mi mamá"],
     ["es", "mi hermana nunca contesta mensajes"],
@@ -548,6 +566,20 @@ export const NEAR_MISS: Record<"contact" | "reminderManage" | "calendar" | "note
     ["pt", "minha semana está complicadíssima"],
     ["pt", "consultas médicas me deixam nervoso"],
     ["pt", "este mês demorou uma eternidade"],
+  ],
+  memoryForget: [
+    ["es", "olvidé mi contraseña"],
+    ["es", "qué fácil se me olvidan las cosas"],
+    ["es", "se me olvidó el cumpleaños de Ana"],
+    ["es", "olvídalo"],
+    ["es", "olvidar es humano"],
+    ["en", "forget it"],
+    ["en", "forget about it"],
+    ["en", "i forgot my keys"],
+    ["en", "never forget my anniversary"],
+    ["pt", "esquece isso"],
+    ["pt", "esqueci a senha"],
+    ["pt", "não esqueça de ligar para a mãe"],
   ],
   noteDelete: [
     ["es", "borré sin querer una foto"],
@@ -677,6 +709,7 @@ export function buildCorpus(): SweepCase[] {
     ["reminderManage", REMINDER_MANAGE],
     ["calendar", CALENDAR],
     ["noteDelete", NOTE_DELETE],
+    ["memoryForget", MEMORY_FORGET],
     ["weeklyPlan", WEEKLY_PLAN],
   ];
   for (const [family, list] of fixed) for (const [lang, s] of list) add(family, lang as "es" | "en" | "pt", s, s);

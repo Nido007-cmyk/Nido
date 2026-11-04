@@ -1201,6 +1201,7 @@ type Key =
   | "currencyOffline"
   | "memoryForgetHelp"
   | "memoryForgetAsk"
+  | "reminderInvalidWhen"
   | "memoryForgot"
   | "memoryForgetNone"
   | "memoryForgetWhich"
@@ -1431,6 +1432,11 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: "Claro. Dime qué y cuándo en una frase, por ejemplo: «recuérdame{{when}} a las 9 llamar al médico».",
     en: "Sure. Tell me what and when in one go, for example: “remind me{{when}} at 9 to call the doctor”.",
     pt: "Claro. Diga o quê e quando numa frase só, por exemplo: “me lembra{{when}} às 9 de ligar para o médico”.",
+  },
+  reminderInvalidWhen: {
+    es: "No reconozco esa hora o fecha (no existe o no la entiendo), así que no he creado el recordatorio. Dímela de nuevo, por ejemplo: «recuérdame mañana a las 7 llamar a Ana».",
+    en: "I don't recognize that time or date (it doesn't exist or I can't read it), so I didn't create the reminder. Tell me again, for example: “remind me tomorrow at 7 to call Ana”.",
+    pt: "Não reconheço essa hora ou data (não existe ou não a entendo), então não criei o lembrete. Diga de novo, por exemplo: “me lembre amanhã às 7 de ligar para a Ana”.",
   },
   reminderAskWhat: {
     es: "¿Qué quieres que te recuerde{{when}}? Respóndeme solo con eso, por ejemplo: «pagar la luz».",

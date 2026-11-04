@@ -32,8 +32,8 @@ describe("alarmas", () => {
     expect(r?.text).toBe("ir al gimnasio");
     expect([at(r?.dueAt)?.getDate(), at(r?.dueAt)?.getHours()]).toEqual([4, 6]);
   });
-  it("par: «despiértame a las 7» conserva su frase", () => {
-    expect(extractReminderAction("despiértame a las 7", now)?.text).toBe("despiértame a las 7");
+  it("par: «despiértame a las 7» no es «Alarma»: se titula «Despertar» (segunda tanda)", () => {
+    expect(extractReminderAction("despiértame a las 7", now)?.text).toBe("Despertar");
   });
 });
 

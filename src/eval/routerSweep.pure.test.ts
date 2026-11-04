@@ -50,6 +50,7 @@ const MIN_RATE: Record<Family, number> = {
   reminderManage: 1,
   calendar: 1,
   noteDelete: 1,
+  memoryForget: 1,
   weeklyPlan: 1,
 };
 
