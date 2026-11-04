@@ -135,9 +135,13 @@ const STR: Record<string, Record<MemoryQueryLang, string>> = {
     pt: "Pelo que você me contou: “{{fact}}”.",
   },
   notKnown: {
-    es: "Todavía no me has contado eso. Cuando me lo digas, lo guardo.",
-    en: "You haven't told me that yet. When you do, I'll save it.",
-    pt: "Você ainda não me contou isso. Quando contar, eu guardo.",
+    // Pruebas adversarias del 2026-11-03: la búsqueda es por palabras, así
+    // que un dato guardado en otra lengua («vivo en Tucson» ante «where
+    // do I live?») no aparece, y «todavía no me has contado eso» afirmaba
+    // algo falso. El texto dice lo que la app sabe: que no lo encuentra.
+    es: "No lo encuentro en lo que me has contado. Si me lo dices, lo guardo.",
+    en: "I can't find that in what you've told me. If you tell me, I'll save it.",
+    pt: "Não encontro isso no que você me contou. Se você me contar, eu guardo.",
   },
   aboutYou: {
     es: "Esto es lo que me has contado:",

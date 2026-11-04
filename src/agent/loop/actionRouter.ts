@@ -97,6 +97,13 @@ function normalizeCalcText(text: string): string | null {
     if (/\./.test(t) || /\d,\d{3}(?!\d)/.test(t)) return null;
     t = t.replace(/(\d),(\d)/g, "$1.$2");
   }
+  // Pruebas adversarias del 2026-11-03: «100 menos 30%» daba 99,7 (el 30%
+  // como 0,3). En el uso de todos los días, y en las calculadoras de
+  // teléfono, sumar o restar un porcentaje a una cantidad es sobre esa
+  // cantidad: 100 − 30% = 70; 200 + 15% = 230. Solo la forma entera
+  // «A ± B%»; «15% de 200» y el resto no cambian.
+  const pct = /^\s*(\d+(?:\.\d+)?)\s*([+-])\s*(\d+(?:\.\d+)?)\s*%\s*$/.exec(t);
+  if (pct) return `(${pct[1]})*(1${pct[2]}(${pct[3]})/100)`;
   return t;
 }
 
@@ -373,10 +380,10 @@ export function extractReminderAction(userText: string, now: Date = new Date()):
   lastMissingText = null;
   // 0.1.37: un intervalo no soportado manda: una sola vez y aviso honesto,
   // aunque la frase traiga también «todos los días» o «cada lunes».
-  if (hasUnsupportedInterval(userText)) return extractReminderCore(userText);
+  if (hasUnsupportedInterval(userText)) return extractReminderCore(userText, now);
   const spec = detectReminderRepeat(userText.trim());
-  if (!spec) return extractReminderCore(userText);
-  const res = extractReminderCore(spec.cleaned);
+  if (!spec) return extractReminderCore(userText, now);
+  const res = extractReminderCore(spec.cleaned, now);
   if (!res) return null;
   // Hora: la que dijo el usuario o la por defecto del ritmo. «cada noche a
   // las 10» es 22:00 (sin am/pm el parser tomaría las 10 de la mañana).
@@ -469,7 +476,7 @@ const QUE_FACT_FAMILY_RE =
  *  contenido con fecha es un recordatorio y no un hecho. */
 const FIRST_PERSON_EVENT_RE = /\b(?:tengo|debo|hay que|tenho|preciso|i have|i need)\b/i;
 
-function extractReminderCore(userText: string): ReminderAction | null {
+function extractReminderCore(userText: string, now: Date = new Date()): ReminderAction | null {
   lastMissingText = null;
   // 0.1.41: la forma de pregunta llega entre signos («¿me recuerdas mañana
   // comprar pan?»): los signos que la envuelven no son parte de la orden.
@@ -486,7 +493,7 @@ function extractReminderCore(userText: string): ReminderAction | null {
   const que = /^(?:recuerda|remember|lembra(?:-te)?|lembre(?:-se)?)\s+(?:que|that)\s+(.+)/i.exec(trimmed);
   if (que) {
     const content = que[1].trim();
-    const dueAt = parseReminderDateTime(content);
+    const dueAt = parseReminderDateTime(content, now);
     if (dueAt && /\b(?:tengo|debo|hay que|tenho|preciso|i have|i need)\b/i.test(content)) {
       const text = stripDateWords(content).trim();
       if (text.length >= 3) return recurrenceRequested ? { text, dueAt, recurrenceRequested: true } : { text, dueAt };
@@ -520,7 +527,7 @@ function extractReminderCore(userText: string): ReminderAction | null {
   // puede comprobar condiciones; no es un recordatorio.
   if (/^(?:si|if|se)\s+\S/i.test(m[2].trim())) return null;
   // «let me know your thoughts…» no es un aviso: sin hora, no hay recordatorio.
-  if (/^let\s+me\s+know$/i.test(m[1]) && !parseReminderDateTime(m[2])) return null;
+  if (/^let\s+me\s+know$/i.test(m[1]) && !parseReminderDateTime(m[2], now)) return null;
   // 0.1.30 (rutas que caían al modelo): «pon una alarma a las 7» y «set a
   // reminder for 5pm» también son avisos: sin tarea, el título es la frase.
   // «set a reminder» sin contenido NO es un aviso: se pregunta qué recordar (0.1.32).
@@ -593,14 +600,14 @@ function extractReminderCore(userText: string): ReminderAction | null {
   if (INTERROGATIVE_START_RE.test(text)) return null;
 
   // CALENDAR-FIX 2026-10-07: parsear fecha/hora del texto.
-  let dueAt = parseReminderDateTime(text);
+  let dueAt = parseReminderDateTime(text, now);
   if (!dueAt) {
     // 0.1.19 (sonda de routing): la hora puede ir ANTES del verbo —
     // "en media hora recuérdame la junta", "mañana recuérdame comprar
     // pan". La regex no está anclada al inicio y ese prefijo se perdía:
     // el recordatorio se creaba con dueAt null y nunca avisaba.
     const prefix = trimmed.slice(0, m.index).trim();
-    if (prefix) dueAt = parseReminderDateTime(prefix);
+    if (prefix) dueAt = parseReminderDateTime(prefix, now);
   }
   // 0.1.41 (prueba física): «el viernes a las 6 me recuerdas llamar a mi
   // tía» caía al modelo y no se creaba nada. Las formas de pregunta («me
@@ -686,6 +693,12 @@ const NIGHT_RE = /(?:noche|night|noite)/i;
 const NOON_RE = /(?<![\p{L}])(?:(?:a|al|at|ao|à|pelo|por)\s+(?:(?:el|the|o)\s+)?)?(?:mediod[ií]a|noon|meio-dia|meio\s+dia)(?![\p{L}])/giu;
 const MIDNIGHT_RE = /(?<![\p{L}])(?:(?:a|al|at|à|pela|por)\s+(?:(?:la|the|a)\s+)?)?(?:medianoche|midnight|meia-noite|meia\s+noite)(?![\p{L}])/giu;
 
+const DAY_AFTER_TOMORROW_RE = /(?<![\p{L}])(?:pasado\s+ma[ñn]ana|the\s+day\s+after\s+tomorrow|depois\s+de\s+amanh[ãa])(?![\p{L}])/iu;
+/** «el 15» / «on the 15th» / «no dia 15», sin mes detrás ni forma de hora. */
+const DAY_OF_MONTH_RE =
+  /(?<![\p{L}])(?:el\s+(?:d[ií]a\s+)?(\d{1,2})(?!\s*(?:[:.,]\d|de\s|del\s|h\b|hs?\b|horas?|minutos?|%|°|º|\d))|on\s+the\s+(\d{1,2})(?:st|nd|rd|th)?(?!\s*(?:of\s|[:.]\d|\d))|(?:no\s+)?dia\s+(\d{1,2})(?!\s*(?:de\s|[:.]\d|\d)))(?![\p{L}\d])/iu;
+const THIS_PERIOD_RE = /(?<![\p{L}])(?:esta\s+(?:tarde|noche)|tonight|this\s+(?:afternoon|evening)|(?:hoje\s+)?[àa]\s+noite|esta\s+noite)(?![\p{L}])/iu;
+
 function dayPeriod(t: string): "am" | "pm" | null {
   AM_PERIOD_RE.lastIndex = 0;
   PM_PERIOD_RE.lastIndex = 0;
@@ -693,6 +706,11 @@ function dayPeriod(t: string): "am" | "pm" | null {
   if (PM_PERIOD_RE.test(t)) return "pm";
   return null;
 }
+
+const DAY_AFTER_TOMORROW_RE_G = new RegExp(DAY_AFTER_TOMORROW_RE.source, "giu");
+const WEEKDAY_ALT =
+  "lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?";
+const DAY_OF_MONTH_RE_G = new RegExp(DAY_OF_MONTH_RE.source, "giu");
 
 export function stripDateWords(input: string): string {
   return input
@@ -709,8 +727,14 @@ export function stripDateWords(input: string): string {
       // 0.1.31: el artículo solo cuenta como palabra suelta. Con \b, la «o»
       // final de «reunião»/«canção» (tras «ã», que \b no ve como letra)
       // se tomaba por artículo: «marca reunião segunda» quedaba «reuniã».
+      // «next monday», «na próxima segunda», «el lunes que viene»: solo
+      // junto a un día de la semana («la próxima reunión» no se toca).
+      .replace(new RegExp(`(?<![\\p{L}])(?:next|pr[oó]xim[oa])\\s+(?=${WEEKDAY_ALT})`, "giu"), "")
+      .replace(new RegExp(`(?<![\\p{L}])(${WEEKDAY_ALT})\\s+que\\s+viene(?![\\p{L}])`, "giu"), "$1")
       .replace(/(?:(?<![\p{L}])(?:el|la|the|o|a|na|no|on)\s+)?(?<![\p{L}])(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?)(?![\p{L}-])/giu, "")
+      .replace(DAY_AFTER_TOMORROW_RE_G, "")
       .replace(/(?<![\p{L}])(mañana|manana|tomorrow|hoy|today|amanhã|amanha|hoje)(?![\p{L}])/giu, "")
+      .replace(DAY_OF_MONTH_RE_G, "")
       // 0.1.35: fecha de calendario («el 15 de marzo», «em 15 de março»,
       // «on March 15th»): el título del aviso quedaba con la fecha dentro.
       .replace(/(?:(?<![\p{L}])(?:el|em|no|on)\s+)?(?<![\p{L}\d])\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)(?:\s+de(?:l)?\s+\d{4})?(?![\p{L}])/giu, "")
@@ -960,10 +984,20 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
   // es el año que viene, no mañana: el rollover genérico de abajo
   // inventaba el 16 de marzo, un día que el usuario no nombró.
   let namedMonthDay: { month: number; day: number } | null = null;
+  // El día del mes sin mes («el 15»): si su hora ya pasó, el siguiente
+  // mes que tenga ese día, nunca mañana ni el año que viene.
+  let monthDay: number | null = null;
 
+  // Pruebas adversarias del 2026-11-03: «pasado mañana», «the day
+  // after tomorrow» y «depois de amanhã» caían en la regla de mañana y el
+  // aviso salía UN DÍA ANTES.
+  if (DAY_AFTER_TOMORROW_RE.test(t)) {
+    targetDate = new Date(now);
+    targetDate.setDate(now.getDate() + 2);
+  }
   // "mañana" / "tomorrow"
   // 0.1.8: portugués (amanhã / hoje), sin \b tras letras acentuadas.
-  if (/(?<![\p{L}])(mañana|manana|tomorrow|amanhã|amanha)(?![\p{L}])/u.test(t)) {
+  else if (/(?<![\p{L}])(mañana|manana|tomorrow|amanhã|amanha)(?![\p{L}])/u.test(t)) {
     targetDate = new Date(now);
     targetDate.setDate(now.getDate() + 1);
   }
@@ -1028,6 +1062,35 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
         }
       }
     }
+  }
+
+  // Pruebas adversarias del 2026-11-03: el día del mes sin mes («el 15
+  // a las 10», «on the 15th», «no dia 15») se perdía y el aviso salía
+  // mañana. Es el próximo día 15 que exista (este mes si no ha pasado).
+  if (!targetDate) {
+    const dm = DAY_OF_MONTH_RE.exec(t);
+    if (dm) {
+      const day = parseInt(dm[1] ?? dm[2] ?? dm[3], 10);
+      if (day >= 1 && day <= 31) {
+        for (let k = 0; k <= 12 && !targetDate; k++) {
+          const d = new Date(now.getFullYear(), now.getMonth() + k, day, now.getHours(), now.getMinutes());
+          if (d.getDate() !== day) continue; // ese mes no tiene ese día
+          const endOfDay = new Date(d);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (endOfDay.getTime() > now.getTime()) {
+            targetDate = d;
+            monthDay = day;
+          }
+        }
+      }
+    }
+  }
+
+  // «esta noche», «tonight», «this afternoon» sin hora ni día: hoy, a la
+  // hora razonable de esa parte del día (el portugués «hoje à noite» ya
+  // lo hacía por «hoje»; el español y el inglés quedaban sin fecha).
+  if (!targetDate && THIS_PERIOD_RE.test(full)) {
+    targetDate = new Date(now);
   }
 
   // TESTFIX-2026-10-08: hora suelta sin día ("a las 6:02", "at 6:02pm").
@@ -1106,6 +1169,16 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
         const d = new Date(targetDate);
         d.setFullYear(y, month, day);
         if (d.getMonth() === month && d.getDate() === day && d.getTime() > now.getTime()) rolled = d;
+      }
+      if (rolled) targetDate = rolled;
+    } else if (monthDay !== null) {
+      let rolled: Date | null = null;
+      for (let k = 1; k <= 12 && !rolled; k++) {
+        const d = new Date(targetDate);
+        d.setDate(1);
+        d.setMonth(targetDate.getMonth() + k);
+        d.setDate(monthDay);
+        if (d.getDate() === monthDay && d.getTime() > now.getTime()) rolled = d;
       }
       if (rolled) targetDate = rolled;
     } else {

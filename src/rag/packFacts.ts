@@ -103,8 +103,18 @@ export function findRegion(text: string, regions: PackRegion[]): PackRegion | nu
       }
     }
   }
+  if (!best && US_LOWERCASE_RE.test(folded)) {
+    // Pruebas adversarias del 2026-11-03: «emergency number usa» no
+    // encontraba Estados Unidos. El alias «USA» es sensible a mayúsculas
+    // a propósito («usa» es un verbo en español: «qué número usa la
+    // policía»); en minúscula solo cuenta tras una preposición o tras
+    // «number», y «U.S.A.» / «U.S.» plegados como «u s a» / «u s».
+    return regions.find((r) => r.code === "US") ?? null;
+  }
   return best?.region ?? null;
 }
+
+const US_LOWERCASE_RE = / (?:(?:in|en|em|of|for|the|number|numbers|de|do|da|nos|los) usa|u s a|(?:in|en|the|of|for) u s) /;
 
 export type ServiceKind = "police" | "ambulance" | "fire" | "general";
 

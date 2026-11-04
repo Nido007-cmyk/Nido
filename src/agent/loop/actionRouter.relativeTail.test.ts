@@ -30,7 +30,7 @@ describe("relativo en horas con su cola", () => {
     ["recuérdame en 1 hora y 30 minutos salir", 90, "salir"],
     ["recuérdame en 2 horas y cuarto salir", 135, "salir"],
   ])("%s → +%d min, «%s»", (t, expected, text) => {
-    const before = new Date();
+    const before = now;
     const r = extractReminderAction(t, now);
     expect(r?.text).toBe(text);
     const m = mins(r?.dueAt, before);
@@ -38,7 +38,7 @@ describe("relativo en horas con su cola", () => {
     expect(Math.abs((m as number) - expected)).toBeLessThanOrEqual(1);
   });
   it("par: sin cola, el relativo no cambia", () => {
-    const before = new Date();
+    const before = now;
     const r = extractReminderAction("recuérdame en 1 hora salir", now);
     expect(r?.text).toBe("salir");
     expect(Math.abs((mins(r?.dueAt, before) as number) - 60)).toBeLessThanOrEqual(1);
