@@ -1,0 +1,1 @@
+Fixes from a full audit: live emergencies recognised in all three languages, crisis phrases in Spanish and Portuguese reach the crisis route, no false recognition warning on text PDFs, file type decided by its bytes.

@@ -1,0 +1,20 @@
+NIDO is a private AI assistant that runs entirely on your Android phone. The language model, your memory and your documents stay on the device, encrypted. No accounts, no cloud, no analytics. After a one-time model download it works offline; knowledge packs are optional downloads.
+
+WHAT NIDO DOES
+• Offline chat with a language model that runs on the phone itself.
+• Encrypted memory for facts, notes and reminders (SQLCipher, key held in the Android Keystore).
+• Actions with your permission: reminders, countdowns, notes, calendar events, unit conversions and arithmetic. Anything with an effect outside the app asks for confirmation first.
+• Answers from your own files (.txt, .md, .csv, .json, .pdf), including photos and scanned PDFs, whose text is recognised on the device.
+• Offline knowledge: a built-in knowledge base, an optional Wikipedia pack (about 50,000 articles) and nine guide packs written by NIDO, from first aid to disasters, with emergency numbers for 69 countries checked against official sources.
+• Emergency tab with your country's numbers, each with its official source and check date. "Call" opens the dialer with the number typed in; you press call.
+• End-to-end encrypted messaging between two NIDO phones over Bluetooth or local Wi-Fi, with no internet and no server.
+• A network log that shows every download the app makes.
+• Interface in English, Spanish and Portuguese.
+
+PRIVACY
+NIDO has no accounts, no analytics, no advertising and no servers of its own. Your chats, documents, notes and memory never leave the phone. The only network use is downloading the models and packs you choose, and it is logged where you can see it.
+
+IMPORTANT
+NIDO is alpha software. Its first aid and health guides are general information written from public guidance by the organisations cited in each guide; they are not a substitute for a first aid course or for professional help. In an emergency, call your local emergency number.
+
+NIDO is free and open source (MIT): https://github.com/Nido007-cmyk/Nido
