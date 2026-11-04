@@ -24,6 +24,11 @@ export interface CalcAction {
   result: number;
   /** The user wrote decimals with a comma ("2,5"): answer the same way. */
   decimalComma?: boolean;
+  /**
+   * Pruebas adversarias del 2026-11-03: «cuánto es 10/0» caía al modelo.
+   * La división entre cero no tiene resultado; la respuesta lo dice.
+   */
+  divisionByZero?: boolean;
 }
 
 /**
@@ -192,10 +197,18 @@ export function extractCalcAction(userText: string): CalcAction | null {
 
   try {
     const result = evaluateExpression(expr);
-    if (!Number.isFinite(result)) return null;
+    if (!Number.isFinite(result)) {
+      // Un cociente con divisor cero literal («10/0», «5 entre 0»).
+      if (/\/\s*\(?\s*0+(?:\.0+)?\s*\)?(?![\d.])/.test(expr)) return { expression: shown, result: NaN, divisionByZero: true };
+      return null;
+    }
     // Se muestra como lo escribió el usuario ("15% de 200 = 30").
     return /\d,\d/.test(shown) ? { expression: shown, result, decimalComma: true } : { expression: shown, result };
-  } catch {
+  } catch (e) {
+    // El evaluador lanza «división entre cero» (también «100/(5-5)»).
+    if (e instanceof Error && /divisi[oó]n entre cero/.test(e.message)) {
+      return { expression: shown, result: NaN, divisionByZero: true };
+    }
     return null;
   }
 }

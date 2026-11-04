@@ -856,6 +856,15 @@ async function runAgentLoopCore(
     !isToolDisabled(tool) && (!options.restrictFastPathsToHandlers || tool in handlers);
   // TOOLS-AUDIT 2026-10-11: el atajo de calculadora ignoraba el interruptor.
   const calcAction = fastPathAllowed("calculate") ? extractCalcAction(userText) : null;
+  if (calcAction?.divisionByZero) {
+    const l = options.lang === "en" || options.lang === "pt" ? options.lang : "es";
+    const msg = {
+      es: `${calcAction.expression}: no se puede dividir entre cero; no tiene resultado.`,
+      en: `${calcAction.expression}: you can't divide by zero; it has no result.`,
+      pt: `${calcAction.expression}: não dá para dividir por zero; não tem resultado.`,
+    }[l];
+    return { response: msg, intent, toolUses: [{ name: "calc", result: `División entre cero: ${calcAction.expression}.` }] };
+  }
   if (calcAction) {
     const { formatNumber, isApproximate } = await import("../tools/calc");
     return {
