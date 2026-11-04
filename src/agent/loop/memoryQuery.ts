@@ -734,6 +734,37 @@ function birthdaySelfSlice(fact: string): string | null {
   return slice || null;
 }
 
+/** Días hasta la próxima vez que llega ese día y mes (0 = hoy). */
+function birthdayCountdown(iso: string, who: string | null, lang: MemoryQueryLang, now: Date = new Date()): string {
+  const d = new Date(iso);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let next = new Date(today.getFullYear(), d.getMonth(), d.getDate());
+  // El 29 de febrero en un año que no lo tiene: el próximo que sí.
+  for (let y = today.getFullYear(); (next.getMonth() !== d.getMonth() || next < today) && y <= today.getFullYear() + 8; y++) {
+    next = new Date(y + 1, d.getMonth(), d.getDate());
+    if (next.getMonth() === d.getMonth() && next >= today) break;
+  }
+  if (next < today) next = new Date(today.getFullYear() + 1, d.getMonth(), d.getDate());
+  const days = Math.round((next.getTime() - today.getTime()) / 86_400_000);
+  const day = formatDay(next, lang);
+  const whose =
+    lang === "en"
+      ? who
+        ? `${who}'s birthday`
+        : "your birthday"
+      : lang === "pt"
+        ? who
+          ? `o aniversário de ${who}`
+          : "o seu aniversário"
+        : who
+          ? `el cumpleaños de ${who}`
+          : "tu cumpleaños";
+  if (days === 0) return lang === "en" ? `It's today: ${whose}, ${day}.` : lang === "pt" ? `É hoje: ${whose}, ${day}.` : `Es hoy: ${whose}, ${day}.`;
+  if (lang === "en") return `${days} day${days === 1 ? "" : "s"} until ${whose} (${day}).`;
+  if (lang === "pt") return `Falta${days === 1 ? "" : "m"} ${days} dia${days === 1 ? "" : "s"} para ${whose} (${day}).`;
+  return `Falta${days === 1 ? "" : "n"} ${days} día${days === 1 ? "" : "s"} para ${whose} (${day}).`;
+}
+
 function birthdayAnswer(fact: string, who: string | null, lang: MemoryQueryLang): string {
   const iso = extractDateISO(fact, lang);
   if (iso) {
@@ -877,6 +908,19 @@ const BDAY_SELF_Q_RES: RegExp[] = [
   /cu[aá]ndo es mi cumplea[ñn]os\??$/i,
   /when is my birthday\??$/i,
   /quando (?:é|e) (?:o )?meu anivers[aá]rio\??$/i,
+];
+// Arreglos «todo es todo» (2026-11-03): «¿cuántos días faltan para mi
+// cumpleaños?» caía a la charla, aunque la fecha estuviera guardada.
+const BDAY_COUNTDOWN_SELF_RES: RegExp[] = [
+  /cu[aá]nto(?:s d[ií]as)? (?:falta|faltan|queda|quedan) para mi cumplea[ñn]os\??$/i,
+  /how (?:many days|long) (?:until|till|to|left until|is it until) my birthday\??$/i,
+  /quantos dias faltam para o meu anivers[aá]rio\??$/i,
+  /quanto falta para o meu anivers[aá]rio\??$/i,
+];
+const BDAY_COUNTDOWN_PERSON_RES: RegExp[] = [
+  /cu[aá]nto(?:s d[ií]as)? (?:falta|faltan|queda|quedan) para el cumplea[ñn]os de (?:mi )?([a-záéíóúñü ]+?)\??$/i,
+  /how (?:many days|long) (?:until|till|to|left until|is it until) (?:my )?([a-z -]+?)'?s birthday\??$/i,
+  /quantos dias faltam para o anivers[aá]rio d[aeo] (?:minha |meu )?([a-záéíóúãõçô ]+?)\??$/i,
 ];
 const ABOUT_ME_Q_RES: RegExp[] = [
   /qu[eé] (?:sabes|recuerdas|tienes guardado|has guardado) (?:de|sobre) m[ií]\??$/i,
@@ -1099,6 +1143,8 @@ export function isMemoryStyleQuery(userText: string): boolean {
   if (SELF_NAME_Q_RES.some((re) => re.test(t))) return true;
   if (BDAY_PERSON_Q_RES.some((re) => re.test(t))) return true;
   if (BDAY_SELF_Q_RES.some((re) => re.test(t))) return true;
+  if (BDAY_COUNTDOWN_SELF_RES.some((re) => re.test(t))) return true;
+  if (BDAY_COUNTDOWN_PERSON_RES.some((re) => re.test(t))) return true;
   if (ABOUT_ME_Q_RES.some((re) => re.test(t))) return true;
   return false;
 }
@@ -1190,6 +1236,29 @@ export function answerMemoryQuery(
     // mom's birthday…»); en ES/PT va tras «de», en minúscula bien.
     if (fact) return birthdayAnswer(served?.slice ?? fact, lang === "en" ? `Your ${rel}` : lang === "pt" ? `${ptPossessive(servedRel).toLowerCase()} ${rel}` : `tu ${rel}`, lang);
     return msg("notKnown", lang);
+  }
+  // Cuenta atrás hasta un cumpleaños guardado (propio o de alguien).
+  if (BDAY_COUNTDOWN_SELF_RES.some((re) => re.test(t))) {
+    const fact = findBirthdayFact(mem, { self: true });
+    const iso = fact ? extractDateISO(birthdaySelfSlice(fact) ?? fact, lang) : null;
+    return iso ? birthdayCountdown(iso, null, lang) : msg("notKnown", lang);
+  }
+  const countdownPerson = BDAY_COUNTDOWN_PERSON_RES.map((re) => re.exec(t)).find((m) => m !== null) ?? null;
+  if (countdownPerson) {
+    const who = countdownPerson[1].trim();
+    const byName = mem.people.find((p) => fold(p.name) === fold(who)) ?? null;
+    const byRel = byName ? null : mem.people.find((p) => !!p.relationship && sameRel(p.relationship, who)) ?? null;
+    const person = byName ?? byRel;
+    const fact = person
+      ? findBirthdayFact(mem, { personName: person.name })
+      : findBirthdayFact(mem, { rel: who }) ?? findBirthdayFact(mem, { personName: who });
+    const served = fact ? birthdayServingSlice(fact, person ? { personName: person.name } : { rel: who, personName: who }) : null;
+    const iso = fact ? extractDateISO(served?.slice ?? fact, lang) : null;
+    // Quién, como en la respuesta de cumpleaños: el nombre si se preguntó
+    // por nombre; si no, el parentesco con su posesivo.
+    const isName = !!byName || (!person && /^[A-ZÁÉÍÓÚÑ]/.test(who));
+    const label = isName ? (byName?.name ?? who) : lang === "en" ? `your ${who}` : lang === "pt" ? `${ptPossessive(who).toLowerCase()} ${who}` : `tu ${who}`;
+    return iso ? birthdayCountdown(iso, label, lang) : msg("notKnown", lang);
   }
   if (BDAY_SELF_Q_RES.some((re) => re.test(t))) {
     const fact = findBirthdayFact(mem, { self: true });
