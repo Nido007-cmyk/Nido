@@ -37,6 +37,8 @@ change: the signed catalog keeps offering knowledge-packs-v12.
   see the calendar. They now list that day's events.
 - **"Nota: …" saves the note** in Spanish and Portuguese, as "note: …"
   did in English, and "anota aí: …" is read as Portuguese.
+- **"Lee la nota de la receta" finds "Receta de pan".** The article
+  was part of the search, so the note was not found.
 - **A time or date that does not exist is not saved.** "A las 25:00",
   "7:75" or "el 31 de febrero" saved a reminder with no time that
   never went off, and "el 31 de febrero a las 10" created the event or
