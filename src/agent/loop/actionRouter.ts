@@ -669,7 +669,9 @@ function extractReminderCore(userText: string, now: Date = new Date()): Reminder
   }
   // Hora o fecha imposible («a las 25:00», «31 de febrero»): no se
   // guarda un aviso sin hora; el chat dice que esa hora no existe.
-  if (!dueAt && hasImpossibleWhen(trimmed)) {
+  // Con o sin hora válida al lado: «el 31 de febrero a las 10» se
+  // guardaba hoy a las 10.
+  if (hasImpossibleWhen(trimmed)) {
     lastInvalidWhen = true;
     return null;
   }

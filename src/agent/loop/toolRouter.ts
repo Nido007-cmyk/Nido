@@ -31,6 +31,7 @@ import {
   extractCalcAction,
   extractReminderAction,
   extractTimerAction,
+  hasImpossibleWhen,
   parseReminderDateTime,
   reminderMissingText,
   stripDateWords,
@@ -96,7 +97,7 @@ export type ToolAction =
   | { kind: "reminderOfferCreate"; range: "today" | "tomorrow" | null; lang: RouterLang }
   | { kind: "reminderFill"; text: string; dueAt: string; lang: RouterLang; repeat?: ReminderRepeat | null }
   | { kind: "calendarList"; from: string; to: string; label: CalendarRange; lang: RouterLang; rangeText?: string }
-  | { kind: "calendarCreate"; title: string; start: string | null; lang: RouterLang }
+  | { kind: "calendarCreate"; title: string; start: string | null; end?: string | null; invalidWhen?: boolean; lang: RouterLang }
   | { kind: "nidoSend"; to: string; text: string | null; lang: RouterLang }
   | { kind: "nidoInbox"; lang: RouterLang }
   | { kind: "nidoCode"; lang: RouterLang }
@@ -638,6 +639,12 @@ const CAL_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: /^(?:minha agenda|meus eventos|meus compromissos)$/i, lang: "pt" },
 ];
 
+/** «de 3 a 5», «de 10:30 a 12», «from 3 to 5», «das 3 às 5», «de 3 a 5 de la tarde». */
+/** «de 3 a 5 de diciembre», «del 3 al 5 de mayo», «de 3 a 5 de março». */
+const CAL_DAY_RANGE_RE = /(?<![\p{L}])(?:del?|from|dos?)\s+(\d{1,2})\s+(?:al?|to|até|aos?)\s+(\d{1,2})\s+(?:de|of)\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?![\p{L}])/iu;
+
+const CAL_TIME_RANGE_RE = /(?<![\p{L}])(?:de\s+(?:las\s+)?|from\s+|das\s+|entre\s+(?:las\s+)?|between\s+)(\d{1,2})(?::(\d{2}))?\s*(?:a\s+(?:las\s+)?|to\s+|-\s*|[àa]s\s+|y\s+(?:las\s+)?|and\s+|e\s+)(\d{1,2})(?::(\d{2}))?(?![\d:])(?!\s*(?:de|of|del)\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|mar[çc]o|maio|junho|julho|setembro|outubro|novembro|dezembro)(?![\p{L}]))(?!\s*(?:personas|people|pessoas|invitados|guests|convidados|años|years|anos))/iu;
+
 const CAL_CREATE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: new RegExp(`^${POLITE}(?:ag[eé]ndame|agenda|crea(?: un)? evento|crea una cita|a[ñn]ade (?:un |una )?(?:evento|cita)|agrega (?:un |una )?(?:evento|cita)|pon en (?:mi |el )?calendario)(?: (?:al|en (?:mi|el)) calendario)?(?::)?\\s+(.+)$`, "is"), lang: "es" },
   // 0.1.35 (barrido de paridad): «agrega una reunión el lunes a las 9» y
@@ -1097,8 +1104,33 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   for (const { re, lang } of CAL_CREATE_RULES) {
     const m = re.exec(t);
     if (!m) continue;
-    const rest = m[1].trim();
-    const start = parseReminderDateTime(rest, now);
+    let rest = m[1].trim();
+    // «de 3 a 5», «from 3 to 5», «das 3 às 5»: el inicio es la primera
+    // hora y el fin la segunda (antes el título era «reunión de 3 a» y la
+    // hora, las 9 por defecto).
+    const range = CAL_TIME_RANGE_RE.exec(rest);
+    let rangeHours: number | null = null;
+    if (range) {
+      const h1 = Number(range[1]) + Number(range[2] ?? 0) / 60;
+      const h2 = Number(range[3]) + Number(range[4] ?? 0) / 60;
+      if (Number(range[1]) <= 23 && Number(range[3]) <= 23 && Number(range[2] ?? 0) < 60 && Number(range[4] ?? 0) < 60) {
+        rangeHours = h2 > h1 ? h2 - h1 : h2 + 12 > h1 ? h2 + 12 - h1 : null;
+        const at = lang === "en" ? "at" : lang === "pt" ? "às" : "a las";
+        rest = `${rest.slice(0, range.index)} ${at} ${range[1]}${range[2] ? `:${range[2]}` : ""}${rest.slice(range.index + range[0].length)}`.replace(/\s+/g, " ").trim();
+      }
+    }
+    // «vacaciones de 3 a 5 de diciembre»: varios días. Empieza el día 3
+    // (antes, el 5, con «de 3 a» en el título) y acaba el 5.
+    const dayRange = CAL_DAY_RANGE_RE.exec(rest);
+    let endDayText: string | null = null;
+    if (!range && dayRange) {
+      endDayText = `${dayRange[2]} de ${dayRange[3]}`;
+      rest = `${rest.slice(0, dayRange.index)} ${dayRange[1]} de ${dayRange[3]}${rest.slice(dayRange.index + dayRange[0].length)}`.replace(/\s+/g, " ").trim();
+    }
+    // «el 31 de febrero a las 10», «mañana a las 25»: antes se creaba hoy a
+    // las 10 o se preguntaba «¿para cuándo?» con la hora en el título.
+    const invalidWhen = hasImpossibleWhen(rest);
+    const start = invalidWhen ? null : parseReminderDateTime(rest, now);
     // Pruebas adversarias del 2026-11-03: «agenda una cita con el
     // dentista» titulaba el evento «el dentista». El sustantivo de la cita
     // se queda («cita con el dentista», «meeting with John»); solo sale el
@@ -1126,7 +1158,29 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     }
     // "agenda de hoy", "agenda para mañana": es una consulta, no un evento.
     if (title.length < 3 || /^(de|del|para|for|of)$/i.test(title)) return null;
-    return { kind: "calendarCreate", title, start, lang };
+    if (invalidWhen) return { kind: "calendarCreate", title, start: null, invalidWhen: true, lang };
+    let startFixed = start;
+    // «cena el sábado a las 9»: una comida de noche sin «de la mañana» es
+    // de noche (antes, las 9:00).
+    if (startFixed && /(?<![\p{L}])(?:cena|cenar|dinner|supper|jantar)(?![\p{L}])/iu.test(t) && !/(?:de\s+la\s+ma[ñn]ana|da\s+manh[ãa]|\bam\b|in\s+the\s+morning)/i.test(t)) {
+      const d = new Date(startFixed);
+      if (d.getHours() >= 1 && d.getHours() <= 11) {
+        d.setHours(d.getHours() + 12);
+        startFixed = d.toISOString();
+      }
+    }
+    let end = startFixed && rangeHours ? new Date(new Date(startFixed).getTime() + rangeHours * 3_600_000).toISOString() : null;
+    if (startFixed && endDayText) {
+      const endDay = parseReminderDateTime(endDayText, now);
+      if (endDay && new Date(endDay).getTime() > new Date(startFixed).getTime()) {
+        const e = new Date(endDay);
+        const s0 = new Date(startFixed);
+        e.setHours(s0.getHours() + 1, s0.getMinutes(), 0, 0);
+        end = e.toISOString();
+      }
+    }
+    if (startFixed !== start) return end ? { kind: "calendarCreate", title, start: startFixed, end, lang } : { kind: "calendarCreate", title, start: startFixed, lang };
+    return end ? { kind: "calendarCreate", title, start, end, lang } : { kind: "calendarCreate", title, start, lang };
   }
 
   for (const { re, lang } of OPEN_LINK_RE) {
@@ -1212,6 +1266,7 @@ type Key =
   | "countdownDateMany"
   | "timerSet"
   | "timerOutOfRange"
+  | "calInvalidWhen"
   | "timerLabel"
   | "factSaved"
   | "factReminderNote";
@@ -1401,6 +1456,11 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     pt: "Você não tem eventos {{range}}.",
   },
   calHeader: { es: "Tus eventos {{range}}:", en: "Your events {{range}}:", pt: "Seus eventos {{range}}:" },
+  calInvalidWhen: {
+    es: "No reconozco esa hora o fecha (no existe o no la entiendo), así que no he creado el evento. Dímela de nuevo, por ejemplo: «agenda dentista el viernes a las 10».",
+    en: "I don't recognize that time or date (it doesn't exist or I can't read it), so I didn't create the event. Tell me again, for example: “schedule dentist on Friday at 10”.",
+    pt: "Não reconheço essa hora ou data (não existe ou não a entendo), então não criei o evento. Diga de novo, por exemplo: “agende dentista sexta às 10”.",
+  },
   calAskWhen: {
     es: "¿Para cuándo? Dímelo así: «agenda {{title}} el viernes a las 10».",
     en: "When? Say it like: “schedule {{title}} on Friday at 10”.",
@@ -2207,8 +2267,9 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
       }
 
       case "calendarCreate": {
+        if (action.invalidWhen) return say(routerMessage("calInvalidWhen", lang));
         if (!action.start) return say(routerMessage("calAskWhen", lang, { title: action.title }));
-        const out = await run("create_calendar_event", { title: action.title, start: action.start });
+        const out = await run("create_calendar_event", action.end ? { title: action.title, start: action.start, end: action.end } : { title: action.title, start: action.start });
         if (!out.ok) {
           // El diálogo propio del handler devuelve su texto de cancelación.
           if (/no hice nada|did nothing/i.test(out.text)) return say(routerMessage("cancelled", lang));
