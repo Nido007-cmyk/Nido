@@ -782,6 +782,10 @@ const STOPWORDS = new Set([
   "tengo", "tiene", "sabes", "sabe", "llama", "llamo", "nombre", "name", "what", "when", "where",
   "which", "whats", "about", "qual", "quando", "onde", "chama", "chamo", "mein", "meu", "minha",
   "mine", "your", "yours", "sobre", "contado", "cuentame", "have", "does",
+  // 0.1.75: el verbo «ser/estar» de la pregunta no es un término: «¿a qué
+  // soy alérgico?» no encontraba «I'm allergic to peanuts» porque «soy»
+  // no estaba en el hecho inglés (ni «sou» en el español).
+  "soy", "sou", "estoy", "estou",
   // «favorito/favorite» NO son stopwords: son justo lo que se pregunta
   // («¿cuál es mi color favorito?»); con ellas en la lista la búsqueda
   // se quedaba sin términos (batería trilingüe 0.1.20).
@@ -938,7 +942,7 @@ const ABOUT_ME_Q_RES: RegExp[] = [
  * «é» final de «dejé» no cerraba la palabra y la forma nunca casaba.
  */
 const FIRST_PERSON_RE =
-  /(?<![\p{L}])(?:mi|mis|me|my|mine|i|meu|minha|meus|minhas|tengo|vivo|trabajo|tenho|moro|chamo|dej[eé]|puse|guard[eé]|estacion[eé]|aparqu[eé]|deixei|estacionei)(?![\p{L}])/iu;
+  /(?<![\p{L}])(?:mi|mis|me|my|mine|i|meu|minha|meus|minhas|soy|sou|estoy|estou|tengo|vivo|trabajo|tenho|moro|chamo|dej[eé]|puse|guard[eé]|estacion[eé]|aparqu[eé]|deixei|estacionei)(?![\p{L}])/iu;
 
 /**
  * 0.1.23: la FORMA de la pregunta genérica (punto 5): interrogativa y

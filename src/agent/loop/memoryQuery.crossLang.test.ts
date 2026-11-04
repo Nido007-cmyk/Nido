@@ -28,4 +28,10 @@ describe("hechos guardados en otra lengua", () => {
   it("par: una pregunta sin relación no cita nada", () => {
     expect(memoryGateHit("what is my blood type?", ES)).toBe(false);
   });
+  it("«¿a qué soy alérgico?» con el hecho en inglés y «a que sou alérgico?» con el español", () => {
+    const en: MemoryQueryData = { facts: [{ content: "I'm allergic to peanuts", category: "general" }], people: [] };
+    expect(answerMemoryQuery("¿a qué soy alérgico?", en, "es")).toContain("peanuts");
+    expect(answerMemoryQuery("a que sou alérgico?", ES, "pt")).toContain("penicilina");
+    expect(answerMemoryQuery("¿a qué soy alérgico?", ES, "es")).toContain("penicilina");
+  });
 });
