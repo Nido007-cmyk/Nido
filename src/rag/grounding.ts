@@ -1145,7 +1145,8 @@ function digitSignature(text: string): string {
  * en la evidencia? (ADV-G1/G2: estar en la fuente no basta — el 911
  * está en la fuente y no es el teléfono de la cita.)
  */
-function digitsMatchType(sentence: string, type: DatumType, recs: SourceSentenceRec[]): boolean {
+function digitsMatchType(sentence: string, type: DatumType, recs: SourceSentenceRec[], queryStems?: Set<string>): boolean {
+  if (type === "phone" && queryStems && shortPhoneMatches(sentence, recs, queryStems)) return true;
   const carriers = recs.filter((r) => carriesDatumOfType(r.text, type));
   if (carriers.length === 0) return false;
   // A3-03: en la pierna DOSIS los grupos se computan con la
@@ -1190,7 +1191,7 @@ function digitsMatchType(sentence: string, type: DatumType, recs: SourceSentence
  * La pierna que faltaba: la regla solo juzgaba la afirmación SIN
  * cifras, y la de cifras se fiaba del chequeo de presencia.
  */
-function isTypedDatumOffender(sentence: string, type: DatumType, recs: SourceSentenceRec[]): boolean {
+function isTypedDatumOffender(sentence: string, type: DatumType, recs: SourceSentenceRec[], queryStems?: Set<string>): boolean {
   const folded = foldForCues(sentence);
   if (!hasDatumCopula(sentence)) return false;
   // ADV-G1-R (auditoría del tip f96e473): la afirmación con la
@@ -1216,13 +1217,44 @@ function isTypedDatumOffender(sentence: string, type: DatumType, recs: SourceSen
   // (prosa, y sala/hora/fecha/teléfono/tarjeta) la vara general de
   // hasJudgedDigit queda intacta.
   if (!hasJudgedDigit(sentence) && !(type === "dose" && /\d/.test(sentence))) return false;
-  return !digitsMatchType(sentence, type, recs);
+  return !digitsMatchType(sentence, type, recs, queryStems);
 }
 
 /** «Es el 520-555-0147.» / «It's 520-555-0147.»: identidad corta, cópula y cifra, sin más tema. */
 function isBareIdentity(sentence: string): boolean {
   const words = sentence.replace(/\[\d+\]/g, " ").trim().split(/\s+/).filter(Boolean);
   return words.length <= 5 && hasJudgedDigit(sentence);
+}
+
+/** Verbos y palabras que atan un número corto a «llamar» (es/en/pt). */
+const CALL_CUE_RE =
+  /(?<![\p{L}])(?:llam[ae]\w*|llamar|marc[ae]\w*|telefone\w*|tel[eé]fono\w*|n[uú]mero\w*|emergencias?|emerg[eê]ncias?|call\w*|dial\w*|phone\w*|number\w*|emergenc(?:y|ies)|lig[ue]\w*|ligar|disqu\w*|disc[ae]\w*)(?![\p{L}])/iu;
+
+/**
+ * El teléfono CORTO (3–4 cifras: 112, 911, 190) que la fuente da junto a un
+ * verbo de llamar (pruebas adversarias del 2026-11-03: «El teléfono es el
+ * 112» ante «Llama al 112 en caso de emergencia» se retiraba porque el tipo
+ * teléfono solo se ataba por la forma de ≥7 cifras). Cuenta solo si la frase
+ * fuente trae ESE número junto a un verbo o una palabra de llamar, y si las
+ * raíces de tema de la afirmación (fuera de las etiquetas del dato) están en
+ * esa misma frase: «El teléfono de la clínica es el 911» ante «llama al 911
+ * en caso de emergencia» sigue siendo infractora (ADV-G2), porque «clínica»
+ * no está en la frase del 911.
+ */
+function shortPhoneMatches(sentence: string, recs: SourceSentenceRec[], queryStems: Set<string>): boolean {
+  const mine = [...new Set((sentence.replace(/\[\d+\]/g, " ").match(/\d+/g) ?? []))];
+  if (mine.length !== 1 || !/^\d{3,4}$/.test(mine[0])) return false;
+  const num = mine[0];
+  // El tema es el de la afirmación Y el de la pregunta: «El teléfono es el
+  // 911» ante «¿cuál es el teléfono de la cita?» trae el tema «cita», que
+  // la frase del 911 no tiene (ADV-G2).
+  const topic = [...new Set([...contentStems(sentence), ...queryStems])].filter((w) => !GENERIC_DATUM_STEMS.has(w) && !/^\d+$/.test(w));
+  return recs.some((r) => {
+    const toks = r.text.match(/\d+/g) ?? [];
+    if (!toks.includes(num) || !CALL_CUE_RE.test(r.text)) return false;
+    const have = new Set(contentStems(r.text));
+    return topic.every((w) => have.has(w));
+  });
 }
 
 /** Cuántas raíces de contenido comparte la frase con la pregunta. */
@@ -1518,7 +1550,7 @@ export function applyDatumRule(
     kept.forEach((s, i) => {
       if (prov[i].origin.kind === "abstain") return;
       const t = resolveType(s);
-      if (t && isTypedDatumOffender(s, t, recs)) offenders.push({ i, type: t });
+      if (t && isTypedDatumOffender(s, t, recs, queryStems)) offenders.push({ i, type: t });
     });
     if (offenders.length === 0) return;
     const offenderIdx = new Set(offenders.map((o) => o.i));
@@ -1533,7 +1565,7 @@ export function applyDatumRule(
           !offenderIdx.has(i) &&
           prov[i].origin.kind !== "abstain" &&
           hasJudgedDigit(s) &&
-          digitsMatchType(s, t, recs) &&
+          digitsMatchType(s, t, recs, queryStems) &&
           (carriesDatumOfType(s, t) || datumTypeOfText(s) === t),
       );
       const datumT = deliveredNow ? null : datumForType(t);
@@ -1569,7 +1601,7 @@ export function applyDatumRule(
 
   const datum = pickDatumSentence(query, recs);
 
-  const typedOffender = (s: string): boolean => askedType !== null && isTypedDatumOffender(s, askedType, recs);
+  const typedOffender = (s: string): boolean => askedType !== null && isTypedDatumOffender(s, askedType, recs, queryStems);
 
   // «Ya entregado»: una frase conservada con cifras que casa con la
   // pregunta. Cuando la pregunta pide un tipo, la afirmación con las

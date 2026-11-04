@@ -40,3 +40,27 @@ describe("ADV-G1-R: la etiqueta genérica no sella el dato de otro tipo", () => 
     expect(verifyGroundedAnswer("El número es 520-555-0147.", [CLINIC], "es", "¿Cuál es el teléfono de la clínica?").status).toBe("grounded");
   });
 });
+
+// Arreglos «todo es todo» (2026-11-03): el teléfono corto (112, 911, 190)
+// que la fuente da junto a un verbo de llamar es dato de tipo teléfono si
+// el tema de la afirmación y de la pregunta está en esa frase. Par: el 911
+// servido como teléfono de la clínica o de la cita se sigue sustituyendo.
+describe("teléfono corto junto a «llamar»", () => {
+  it("«El teléfono de emergencias es el 112» ante «Llama al 112 en caso de emergencia» se conserva", () => {
+    const ch: GroundingChunk = { title: "nota", body: "Nota. Llama al 112 en caso de emergencia." };
+    const r = verifyGroundedAnswer("El teléfono de emergencias es el 112.", [ch], "es", "¿Cuál es el teléfono de emergencias?");
+    expect(r.status).toBe("grounded");
+    expect(r.text).toContain("112");
+  });
+  it("par: el 911 como teléfono de la clínica o de la cita se sustituye por el de la clínica", () => {
+    const ch: GroundingChunk = { title: "nota", body: "Nota. La cita es el martes. Para emergencias llama al 911. El teléfono de la clínica es 520-555-0147." };
+    for (const [a, q] of [
+      ["El teléfono de la clínica es el 911.", "¿Cuál es el teléfono de la clínica?"],
+      ["El teléfono de la cita es el 911.", "¿Cuál es el teléfono de la cita?"],
+    ]) {
+      const r = verifyGroundedAnswer(a, [ch], "es", q);
+      expect(r.text, a).toContain("520-555-0147");
+      expect(r.text, a).not.toContain("911");
+    }
+  });
+});
