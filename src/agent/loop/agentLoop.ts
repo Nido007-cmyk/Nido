@@ -851,7 +851,7 @@ async function runAgentLoopCore(
   // como la solución más confiable para modelos sub-1B.
   // ACTION-ROUTER 2026-10-07: calculadora y recordatorios antes que memoria
   // (el modelo 0.5B no siempre genera el tool call para acciones simples).
-  const { extractCalcAction, extractReminderAction, reminderMissingText, reminderInvalidWhen, extractTimerAction, extractWeeklyPlanAction, generateWeeklyPlan, detectReminderRepeat } = await import("./actionRouter");
+  const { extractCalcAction, extractReminderAction, reminderMissingText, reminderInvalidWhen, extractTimerAction, timerOutOfRange, extractWeeklyPlanAction, generateWeeklyPlan, detectReminderRepeat } = await import("./actionRouter");
   // Permisos del usuario: con la herramienta apagada no hay atajo; el turno
   // sigue al modelo y el despachador la rechaza.
   const fastPathAllowed = (tool: string): boolean =>
@@ -980,6 +980,10 @@ async function runAgentLoopCore(
   // recordatorio con hora (ahora + duración) y la misma notificación.
   const timerLang: RouterLang = options.lang === "en" || options.lang === "pt" ? options.lang : "es";
   const timerAction = fastPathAllowed("create_reminder") && !fillWithRepeat ? extractTimerAction(userText) : null;
+  if (!timerAction && fastPathAllowed("create_reminder") && !fillWithRepeat && timerOutOfRange(userText)) {
+    const tl: RouterLang = options.lang === "en" || options.lang === "pt" ? options.lang : "es";
+    return { response: routerMessage("timerOutOfRange", tl), intent, toolUses: [], deterministic: true };
+  }
   if (timerAction) {
     const { saveReminder } = await import("../memory/memoryStore");
     const timerNames: Record<RouterLang, string> = { es: "Temporizador", en: "Timer", pt: "Temporizador" };

@@ -939,13 +939,22 @@ const TIMER_NUMBER_WORDS: Record<string, number> = {
   um: 1, uma: 1, dois: 2, duas: 2, três: 3, tres: 3, quatro: 4, cinco: 5,
   seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, quinze: 15, vinte: 20,
   trinta: 30, meia: 0.5,
+  // «an hour and a half», «a minute»: el artículo como cantidad.
+  an: 1, a: 1,
 };
 
 const TIMER_UNIT_MS: Array<{ re: RegExp; ms: number }> = [
   { re: /^(?:s|seg|segs|segundo|segundos|sec|secs|second|seconds)$/i, ms: 1_000 },
   { re: /^(?:m|min|mins|minuto|minutos|minute|minutes)$/i, ms: 60_000 },
   { re: /^(?:h|hr|hrs|hora|horas|hour|hours)$/i, ms: 3_600_000 },
+  // Días: solo para decir que no cabe en un temporizador (>24 h).
+  { re: /^(?:d[ií]as?|days?)$/i, ms: 86_400_000 },
 ];
+
+const FRACTION_WORDS: Record<string, number> = { media: 0.5, medio: 0.5, half: 0.5, meia: 0.5, meio: 0.5, cuarto: 0.25, quarter: 0.25 };
+
+/** Por qué no se creó el último temporizador pedido (timerOutOfRange). */
+let lastTimerRange: "zero" | "tooLong" | null = null;
 
 /** «10 minutos», «1 hora y 30 minutos», «half an hour», «meia hora». */
 function parseTimerDuration(raw: string): number | null {
@@ -970,16 +979,38 @@ function parseTimerDuration(raw: string): number | null {
     let n: number | null = null;
     if (/^\d+(?:\.\d+)?$/.test(numTok)) n = Number(numTok);
     else if (TIMER_NUMBER_WORDS[numTok] !== undefined) n = TIMER_NUMBER_WORDS[numTok];
+    if (/^-\d/.test(numTok) || n === 0) {
+      lastTimerRange = "zero";
+      return null;
+    }
     if (n === null || !(n > 0)) return null;
+    // «2 and a half minutes»: la fracción va entre el número y la unidad.
+    if (FRACTION_WORDS[unitTok] !== undefined && words[i + consumed] !== undefined) {
+      n += FRACTION_WORDS[unitTok];
+      unitTok = words[i + consumed];
+      consumed += 1;
+    }
     const unit = TIMER_UNIT_MS.find((u) => u.re.test(unitTok));
     if (!unit) return null;
     total += n * unit.ms;
     components++;
     i += consumed;
+    // «1 hora y media», «an hour and a half», «dois minutos e meio»,
+    // «una hora y cuarto»: la fracción detrás de la unidad (antes el
+    // temporizador no se creaba y la orden caía a la charla).
+    let j = i;
+    if (words[j] !== undefined && /^(?:a|an)$/.test(words[j]) && words[j + 1] !== undefined && FRACTION_WORDS[words[j + 1]] !== undefined) j++;
+    if (words[j] !== undefined && FRACTION_WORDS[words[j]] !== undefined) {
+      total += FRACTION_WORDS[words[j]] * unit.ms;
+      i = j + 1;
+    }
   }
   if (components === 0 || total <= 0) return null;
   // Más de 24 h no es un temporizador: es un recordatorio.
-  if (total > 24 * 3_600_000) return null;
+  if (total > 24 * 3_600_000) {
+    lastTimerRange = "tooLong";
+    return null;
+  }
   return total;
 }
 
@@ -1007,6 +1038,26 @@ const TIMER_FORMS: Array<{ re: RegExp }> = [
  * deshacer existente lo cubre. Solo se reclaman las formas explícitas
  * («pon un temporizador de…»); sin duración válida no hay temporizador.
  */
+/**
+ * «temporizador de 0 minutos», «de -5 minutos», «de 25 horas», «for 100
+ * days»: la orden es de temporizador pero la duración no cabe (de más de
+ * 0 a 24 h). Antes caía a la charla y el modelo podía decir que lo había
+ * puesto. Devuelve el motivo para que el chat lo diga.
+ */
+export function timerOutOfRange(userText: string): "zero" | "tooLong" | null {
+  if (extractTimerAction(userText)) return null;
+  const trimmed = userText.trim().replace(/[.!]+$/, "");
+  if (!trimmed || trimmed.length > 120 || INTERROGATIVE_START_RE.test(trimmed)) return null;
+  for (const { re } of TIMER_FORMS) {
+    const m = re.exec(trimmed);
+    if (!m) continue;
+    lastTimerRange = null;
+    parseTimerDuration(m[1]);
+    if (lastTimerRange) return lastTimerRange;
+  }
+  return null;
+}
+
 export function extractTimerAction(userText: string): TimerAction | null {
   const trimmed = userText.trim().replace(/[.!]+$/, "");
   if (!trimmed || trimmed.length > 120) return null;

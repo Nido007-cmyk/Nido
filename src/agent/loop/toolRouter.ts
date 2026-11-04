@@ -1211,6 +1211,7 @@ type Key =
   | "countdownDateOne"
   | "countdownDateMany"
   | "timerSet"
+  | "timerOutOfRange"
   | "timerLabel"
   | "factSaved"
   | "factReminderNote";
@@ -1347,6 +1348,11 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: "Sin conexión no tengo tipos de cambio, así que no te voy a inventar una cifra. Cambian todo el tiempo; cuando tengas internet, consúltalo y te ayudo con la cuenta.",
     en: "Offline I don't have exchange rates, so I won't make up a number for you. They change all the time; when you have internet, look it up and I'll help with the math.",
     pt: "Sem conexão eu não tenho taxas de câmbio, então não vou inventar um número para você. Elas mudam o tempo todo; quando tiver internet, consulte e eu ajudo com a conta.",
+  },
+  timerOutOfRange: {
+    es: "Un temporizador puede durar de unos segundos a 24 horas, así que no lo he puesto. Para algo más lejano, pídeme un recordatorio (por ejemplo: «recuérdame el viernes a las 9 …»).",
+    en: "A timer can run from a few seconds up to 24 hours, so I didn't set it. For something further away, ask me for a reminder (for example: “remind me on Friday at 9 to …”).",
+    pt: "Um temporizador pode durar de alguns segundos até 24 horas, então não o coloquei. Para algo mais distante, peça um lembrete (por exemplo: “me lembre na sexta às 9 de …”).",
   },
   timerSet: {
     es: "Temporizador puesto{{when}}.",
