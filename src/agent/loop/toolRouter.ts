@@ -92,7 +92,7 @@ export type ToolAction =
   | { kind: "countdown"; target: string; label: string; lang: RouterLang }
   | { kind: "reminderOfferCreate"; range: "today" | "tomorrow" | null; lang: RouterLang }
   | { kind: "reminderFill"; text: string; dueAt: string; lang: RouterLang; repeat?: ReminderRepeat | null }
-  | { kind: "calendarList"; from: string; to: string; label: CalendarRange; lang: RouterLang }
+  | { kind: "calendarList"; from: string; to: string; label: CalendarRange; lang: RouterLang; rangeText?: string }
   | { kind: "calendarCreate"; title: string; start: string | null; lang: RouterLang }
   | { kind: "nidoSend"; to: string; text: string | null; lang: RouterLang }
   | { kind: "nidoInbox"; lang: RouterLang }
@@ -123,7 +123,7 @@ export const TOOL_KINDS_IN_SYNC: ToolKindsMatchUnion = true;
  */
 export type DeleteTarget = { type: "one"; query: string; directId?: string } | { type: "all" } | { type: "ask" };
 
-export type CalendarRange = "today" | "tomorrow" | "week";
+export type CalendarRange = "today" | "tomorrow" | "week" | "day";
 
 /**
  * 0.1.31 (auditoría del loop): el español y el portugués comparten verbos
@@ -497,7 +497,7 @@ const NOTE_SAVE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
     re: new RegExp(
       // 0.1.42 (barrido): «apúntame» con tilde; «anota en tu memoria…» es
       // memoria (rememberRouter), no una nota.
-      `^${POLITE}(?!(?:anota|apunta|guarda)(?:lo)?\\s+en\\s+(?:tu|la)\\s+memoria)(?:an[oó]ta(?:me)?|ap[uú]nta(?:me)?|toma nota|guarda una nota|crea una nota|haz una nota|escribe una nota|agrega una nota|a[ñn]ade una nota)(?:\\s+(?:que diga|diciendo|que|de|con)|:)?\\s+(.+)$`,
+      `^${POLITE}(?!(?:anota|apunta|guarda)(?:lo)?\\s+en\\s+(?:tu|la)\\s+memoria)(?!anota\\s+a[ií](?:\\s|:))(?:an[oó]ta(?:me)?|ap[uú]nta(?:me)?|toma nota|guarda una nota|crea una nota|haz una nota|escribe una nota|agrega una nota|a[ñn]ade una nota)(?:\\s+(?:que diga|diciendo|que|de|con)|:)?\\s+(.+)$`,
       "is",
     ),
     lang: "es",
@@ -511,11 +511,16 @@ const NOTE_SAVE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   },
   {
     re: new RegExp(
-      `^${POLITE}(?:anote|tome nota|toma nota|salva uma nota|salve uma nota|cria uma nota|crie uma nota|escreve uma nota|escreva uma nota)(?:\\s+(?:dizendo|que|de)|:)?\\s+(.+)$`,
+      `^${POLITE}(?:anota a[ií]|anote|tome nota|toma nota|salva uma nota|salve uma nota|cria uma nota|crie uma nota|escreve uma nota|escreva uma nota)(?:\\s+(?:dizendo|que|de)|:)?\\s+(.+)$`,
       "is",
     ),
     lang: "pt",
   },
+  // Pruebas adversarias del 2026-11-03: «nota: llamar a Juan» y «nota:
+  // ligar para o João» caían al chat mientras «note: call John» guardaba
+  // la nota. Solo con los dos puntos: «nota» sola es demasiado común.
+  // La palabra es igual en es y pt; settleSharedLang fija el idioma.
+  { re: new RegExp(`^${POLITE}nota\\s*:\\s*(.+)$`, "is"), lang: "es" },
 ];
 
 const NOTE_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
@@ -605,6 +610,18 @@ export function isAmbiguousThousandsNumber(raw: string): boolean {
 
 // 0.1.31: «desta semana» (pt) — «minha agenda desta semana» caía al modelo.
 const DAY_RE = "(hoy|ma[ñn]ana|esta semana|today|tomorrow|this week|hoje|amanh[aã]|esta semana|desta semana|nesta semana)";
+const WEEKDAY_WORDS_RE =
+  "(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[aá]bado|domingo)";
+const WEEKDAY_INDEX: Record<string, number> = {
+  domingo: 0, sunday: 0, lunes: 1, monday: 1, segunda: 1, martes: 2, tuesday: 2, terça: 2, terca: 2,
+  miércoles: 3, miercoles: 3, wednesday: 3, quarta: 3, jueves: 4, thursday: 4, quinta: 4,
+  viernes: 5, friday: 5, sexta: 5, sábado: 6, sabado: 6, saturday: 6,
+};
+const CAL_DAY_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
+  { re: new RegExp(`^(?:qu[eé] tengo|qu[eé] hay en (?:mi|la) agenda|mi agenda|mis (?:eventos|citas)|mi calendario)(?: en (?:el|mi|la) (?:calendario|agenda))?(?: (?:de|para))?(?: el)? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "es" },
+  { re: new RegExp(`^(?:what do i have|what'?s on my (?:calendar|agenda|schedule)|my (?:calendar|agenda|events|schedule))(?: for| on)? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "en" },
+  { re: new RegExp(`^(?:o que (?:eu )?tenho|minha agenda|meus (?:eventos|compromissos))(?: (?:na (?:minha )?agenda|no (?:meu )?calend[aá]rio))?(?: (?:de|para))?(?: (?:na|no|a|o))? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "pt" },
+];
 const CAL_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   // 0.1.34 (barrido de paridad): «qué tengo en el calendario hoy» y «o que
   // tenho na agenda hoje» caían al modelo; el inglés sí casaba.
@@ -1022,6 +1039,25 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     const { from, to } = calendarRange(label, now);
     return { kind: "calendarList", from, to, label, lang };
   }
+  // Pruebas adversarias del 2026-11-03: la agenda de un día de la
+  // semana («qué tengo el viernes», «what do I have on friday», «o que
+  // tenho na sexta») caía al modelo en las tres lenguas, y el modelo no
+  // ve el calendario.
+  for (const { re, lang } of CAL_DAY_RULES) {
+    const m = re.exec(t);
+    if (!m) continue;
+    const wd = WEEKDAY_INDEX[m[1].toLowerCase().replace(/-feira$/, "")];
+    if (wd === undefined) continue;
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() + ((wd - now.getDay() + 7) % 7));
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    const from = start.getTime() < now.getTime() ? now : start;
+    const day = formatDay(start, lang);
+    const rangeText = lang === "en" ? `on ${day}` : lang === "pt" ? `${wd === 0 || wd === 6 ? "no" : "na"} ${day}` : `el ${day}`;
+    return { kind: "calendarList", from: from.toISOString(), to: end.toISOString(), label: "day", lang, rangeText };
+  }
 
   // Mensajería NIDO antes que calendario: "manda por nido…" nunca es un evento.
   for (const { re, lang } of NIDO_SEND_RULES) {
@@ -1412,6 +1448,7 @@ const RANGE_WORDS: Record<CalendarRange, Record<RouterLang, string>> = {
   today: { es: "hoy", en: "today", pt: "hoje" },
   tomorrow: { es: "mañana", en: "tomorrow", pt: "amanhã" },
   week: { es: "en los próximos 7 días", en: "in the next 7 days", pt: "nos próximos 7 dias" },
+  day: { es: "ese día", en: "that day", pt: "nesse dia" },
 };
 
 export function routerMessage(key: Key, lang: RouterLang, vars: Record<string, string> = {}): string {
@@ -1689,8 +1726,8 @@ export function localizeHandlerText(text: string, lang: RouterLang): string {
 }
 
 /** Traducción mínima de las salidas en español de list_calendar_events. */
-function localizeCalendarList(text: string, label: CalendarRange, lang: RouterLang): string {
-  const range = RANGE_WORDS[label][lang];
+function localizeCalendarList(text: string, label: CalendarRange, lang: RouterLang, rangeText?: string): string {
+  const range = rangeText ?? RANGE_WORDS[label][lang];
   if (/^No hay eventos/i.test(text)) return routerMessage("calNone", lang, { range });
   if (/^Próximos eventos:/i.test(text)) {
     return text.replace(/^Próximos eventos:/i, routerMessage("calHeader", lang, { range }));
@@ -2056,7 +2093,7 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
       case "calendarList": {
         const out = await run("list_calendar_events", { from: action.from, to: action.to });
         if (out.status !== "executed") return failure(out);
-        return say(localizeCalendarList(out.text, action.label, lang));
+        return say(localizeCalendarList(out.text, action.label, lang, action.rangeText));
       }
 
       case "calendarCreate": {
