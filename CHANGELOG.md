@@ -4,6 +4,75 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.75-alpha - 2026-11-03
+
+Fixes from adversarial testing of the chat's own routing chain
+(the same code path the app runs, with hard phrasings in Spanish,
+English and Portuguese) and from an outside audit of 0.1.74. No
+catalog change: the signed catalog keeps offering
+knowledge-packs-v12.
+
+### Reminders and calendar
+
+- **"The day after tomorrow" is the day after tomorrow.** "Pasado
+  mañana", "the day after tomorrow" and "depois de amanhã" fell into
+  the rule for "tomorrow", so the reminder went off a day early.
+- **A day of the month on its own keeps its day.** "Recuérdame el 15
+  a las 10", "on the 15th" and "no dia 15" lost the day and went off
+  tomorrow. They now go to the next 15th that exists (next month if
+  this month's has passed, and the next month that has a 31st).
+- **"In 1 hour and a half" adds the half hour.** "En 1 hora y media",
+  "in 2 hours and a half", "em 1 hora e meia", "y cuarto" and "y 30
+  minutos" went off half an hour (or a quarter) early, with "y media"
+  left in the title.
+- **"Tonight" without a time gets one.** "Esta noche" and "tonight"
+  had no date; they are now today at 20:00, as "hoje à noite" already
+  was.
+- **Cleaner titles.** "Remind me at noon to eat" was saved as "at to
+  eat", "lembre-me ao meio-dia" as "ao …", and "next monday", "el
+  lunes que viene" and "na próxima segunda" left words behind. A
+  "next meeting" in the title is kept.
+- **The agenda of a weekday.** "Qué tengo el viernes", "what do I have
+  on friday" and "o que tenho na sexta" went to the model, which cannot
+  see the calendar. They now list that day's events.
+- **"Nota: …" saves the note** in Spanish and Portuguese, as "note: …"
+  did in English, and "anota aí: …" is read as Portuguese.
+
+### Memory
+
+- **A negation is not a name.** "Recuerda que mi papá no se llama
+  Juan" created a contact named "No Se", "my dad is not named John" one
+  named "Not Named", and "my name is not Aldo" saved your name as "Not
+  Aldo".
+- **The memory no longer claims you never told it.** The search is by
+  words, so a fact saved in another language does not show up; the
+  answer said "you haven't told me that yet". It now says it cannot
+  find it in what you have told it.
+
+### Answers and tools
+
+- **A generic "the number is …" is checked against the kind of data
+  asked for.** Asked for a card number, "El número es 520-555-0147",
+  with that number being a phone number in the source, was shown as
+  backed by its source. It is now held back, as a sentence that names
+  the kind of data already was. Phone numbers are left out of this
+  rule so that a correct short number such as "it's 112" is not
+  removed.
+- **Adding or taking away a percentage is of the amount.** "100 menos
+  30%" gave 99.7; it now gives 70, as phone calculators do. "15% de
+  200" is unchanged.
+- **"Emergency number usa", "U.S." and "U.S.A." find the United
+  States.** The Spanish verb "usa" is still not read as the country.
+
+### Repository
+
+- A Google Play readiness review
+  ([docs/PLAY_STORE_READINESS.md](https://github.com/Nido007-cmyk/Nido/blob/main/docs/PLAY_STORE_READINESS.md))
+  and a store listing in three languages under `fastlane/`. Nothing
+  was submitted to Google Play.
+- An index of the security and audit reports
+  ([docs/security/README.md](https://github.com/Nido007-cmyk/Nido/blob/main/docs/security/README.md)).
+
 ## 0.1.74-alpha - 2026-11-03
 
 Fixes from a full audit of every public claim from 0.1.62 to 0.1.72

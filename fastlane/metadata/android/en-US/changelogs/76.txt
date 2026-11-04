@@ -1,0 +1,1 @@
+Fixes from adversarial testing: "the day after tomorrow" and a day of the month no longer go off on the wrong day, "in 1 hour and a half" adds the half hour, the agenda of a weekday, a negation is no longer saved as a name, and "100 minus 30%" gives 70.
