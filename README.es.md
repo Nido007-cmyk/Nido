@@ -39,7 +39,9 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
 - **Recuerda por ti**: datos, notas y recordatorios, guardados en una base
   cifrada con SQLCipher. La clave vive en el Keystore de Android. Los
   cumpleaños que le cuentas tienen recordatorio cada año. Si lo activas,
-  recibes un resumen diario a las 8:00 (viene apagado).
+  recibes un resumen diario a las 8:00 (viene apagado). Puedes preguntar en
+  español, inglés o portugués por algo que guardaste en otra de las tres, y
+  «olvida mi color favorito» borra ese recuerdo después de que lo confirmes.
 - **Actúa cuando se lo pides**: recordatorios (una vez, o cada día, semana,
   mes o año), cuentas atrás, notas, eventos de calendario, conversión de
   unidades, cálculos, abrir enlaces. Todo lo que tiene efecto fuera de la
@@ -47,8 +49,9 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   app nunca se toma como una orden, y si un mensaje trae más de una petición,
   NIDO muestra la orden como un botón y espera a que lo toques.
 - **Responde con tus documentos**: importa archivos `.txt`, `.md`, `.csv`,
-  `.json` o `.pdf`, y ahora también imágenes y PDF escaneados, cuyo texto
-  NIDO lee en el propio teléfono, y NIDO los indexa en el teléfono.
+  `.json` o `.pdf`, y también imágenes y PDF escaneados, cuyo texto NIDO
+  lee en el propio teléfono en español, inglés o portugués, y NIDO los
+  indexa en el teléfono.
 - **Sabe cosas sin internet**: una base de conocimiento integrada y un
   paquete opcional de Wikipedia (unos 50.000 artículos) y nueve paquetes
   de guías opcionales escritos por NIDO (Esencial, Local, Niños y Bebés, Crisis,
@@ -86,6 +89,10 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   router y acabaron en el modelo; todo se guarda en el teléfono y no se
   envía a ningún sitio. Si quieres (viene apagado), también guarda esas
   frases en el teléfono para que las revises.
+
+- **Te deja reportar una respuesta**: tras un pulgar abajo, «Reportar» abre
+  tu correo con un borrador (la pregunta, la respuesta y la versión de la
+  app). Lo lees, borras lo que quieras y lo envías tú. NIDO no envía nada.
 
 La interfaz está disponible en español, inglés y portugués.
 
@@ -134,7 +141,7 @@ La interfaz está disponible en español, inglés y portugués.
 
 ## Estado
 
-Alfa, noviembre de 2026. El proyecto tiene más de 5800 pruebas automáticas y
+Alfa, noviembre de 2026. El proyecto tiene más de 6000 pruebas automáticas y
 ejecuta la comprobación de tipos y la batería de pruebas en cada cambio. Lo
 que las pruebas automáticas no cubren es el comportamiento en hardware real,
 así que los flujos principales también se prueban en tabletas Galaxy

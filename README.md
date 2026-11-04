@@ -38,7 +38,9 @@ device, encrypted. There are no accounts, no cloud and no analytics.
 - **Remembers for you**: facts, notes and reminders, stored in a database
   encrypted with SQLCipher. The key lives in the Android Keystore.
   Birthdays you tell it get a reminder every year. An 8:00 daily summary is
-  available if you turn it on (it's off by default).
+  available if you turn it on (it's off by default). You can ask in Spanish,
+  English or Portuguese about something you saved in another of the three,
+  and "forget my favorite color" deletes that one memory after you confirm.
 - **Acts on your requests**: reminders (once, or every day, week, month or
   year), countdowns, notes, calendar events, unit conversions, arithmetic,
   opening links. Anything with an effect outside the app asks for your
@@ -46,8 +48,9 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   taken as a command, and when a message holds more than one request, NIDO
   shows the command as a button and waits for your tap.
 - **Answers from your documents**: import `.txt`, `.md`, `.csv`, `.json` or
-  `.pdf` files, and now images and scanned PDFs too, whose text NIDO
-  reads on the phone itself, and NIDO indexes them on the phone.
+  `.pdf` files, and images and scanned PDFs too, whose text NIDO reads on
+  the phone itself in Spanish, English or Portuguese, and NIDO indexes them
+  on the phone.
 - **Knows things offline**: a built-in knowledge base plus an optional
   Wikipedia pack (about 50,000 articles) and nine optional guide packs
   written by NIDO (Essentials, Local, Children and Babies, Crisis,
@@ -84,6 +87,11 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   commands the router missed and sent to the model, recorded locally and
   never sent anywhere. Optionally (off by default) it can keep the missed
   phrases on the phone so you can review them.
+
+- **Lets you report an answer**: after a thumbs-down, "Report" opens your
+  email app with a draft (the question, the answer and the app version).
+  You read it, delete anything you want, and send it yourself. NIDO sends
+  nothing.
 
 The interface is available in English, Spanish and Portuguese.
 
@@ -129,7 +137,7 @@ The interface is available in English, Spanish and Portuguese.
 
 ## Status
 
-Alpha, November 2026. The project has more than 5,800 automated tests and
+Alpha, November 2026. The project has more than 6,000 automated tests and
 runs type checking and the test suite on every change. What automated tests
 cannot cover is behaviour on real hardware, so the headline flows are also
 exercised on physical Galaxy tablets: chat and agent tools, memory,
