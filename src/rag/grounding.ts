@@ -1250,7 +1250,7 @@ function shortPhoneMatches(sentence: string, recs: SourceSentenceRec[], querySte
   // la frase del 911 no tiene (ADV-G2).
   const topic = [...new Set([...contentStems(sentence), ...queryStems])].filter((w) => !GENERIC_DATUM_STEMS.has(w) && !/^\d+$/.test(w));
   return recs.some((r) => {
-    const toks = r.text.match(/\d+/g) ?? [];
+    const toks: string[] = r.text.match(/\d+/g) ?? [];
     if (!toks.includes(num) || !CALL_CUE_RE.test(r.text)) return false;
     const have = new Set(contentStems(r.text));
     return topic.every((w) => have.has(w));
