@@ -135,3 +135,14 @@ describe("calculator 0.1.19 — bare expressions and word operators (routing pro
     expect(extractCalcAction(text)).toBeNull();
   });
 });
+
+describe("≈ cuando lo mostrado está recortado (0.1.75)", () => {
+  it("1/3, 100/3 y √2 son aproximados; 0,1 + 0,2 y 3,5 no", () => {
+    expect(isApproximate(evaluateExpression("1/3"))).toBe(true);
+    expect(isApproximate(evaluateExpression("100/3"))).toBe(true);
+    expect(isApproximate(evaluateExpression("2^0.5"))).toBe(true);
+    expect(isApproximate(evaluateExpression("0.1+0.2"))).toBe(false);
+    expect(isApproximate(evaluateExpression("7/2"))).toBe(false);
+    expect(isApproximate(evaluateExpression("123456789.125"))).toBe(false);
+  });
+});
