@@ -23,7 +23,7 @@
 
 import { extractDateISO } from "./rememberRouter";
 import { formatDay } from "./toolRouter";
-import { equivalentsOf } from "./memoryEquiv";
+import { mentionsTerm } from "./memoryEquiv";
 
 export type MemoryQueryLang = "es" | "en" | "pt";
 
@@ -817,7 +817,7 @@ export function scoreMemoryFacts(mem: MemoryQueryData, question: string): Memory
   let best: { content: string; score: number } | null = null;
   for (const f of mem.facts) {
     const fc = fold(f.content);
-    const score = tokens.reduce((n, t) => n + (fc.includes(t) || equivalentsOf(t).some((v) => fc.includes(v)) ? 1 : 0), 0);
+    const score = tokens.reduce((n, t) => n + (mentionsTerm(fc, t) ? 1 : 0), 0);
     if (score > 0 && (!best || score > best.score)) best = { content: f.content, score };
   }
   return { fact: best?.content ?? null, score: best?.score ?? 0, tokenCount: tokens.length };

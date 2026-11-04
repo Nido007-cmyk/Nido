@@ -55,4 +55,34 @@ describe("olvidar desde el chat", () => {
     const out = await runToolAction({ kind: "memoryForget", query: "mi color", lang: "es" }, { dispatch: async () => ({ status: "executed", text: "" }), isDisabled: () => false });
     expect(out.response).toContain("Mi memoria");
   });
+  it("«olvida todo», «forget everything», «olvida lo que te dije»: se pide cuál, sin buscar ni borrar", async () => {
+    for (const q of ["olvida todo", "forget everything", "olvida lo que te dije", "esquece tudo"]) {
+      const { calls, out } = await run(q);
+      expect(calls).toEqual([]);
+      expect(out.response).not.toContain("No encontr");
+      expect(out.response).toMatch(/Mi memoria|My Memory|Minha Memória/);
+    }
+  });
+  it("«olvida» a secas en el chat pide cuál (ya no dice que no borra)", async () => {
+    const { deps } = make();
+    const out = await runToolAction({ kind: "memoryForgetHelp", lang: "es" }, deps);
+    expect(out.response).toContain("te pediré confirmación");
+  });
+  it("par: «ana» no encuentra «mañana», «car» no encuentra «carne»", async () => {
+    const { calls } = make();
+    const deps = {
+      dispatch: async (n: string, a: Record<string, unknown>) => { calls.push([n, a]); return { status: "executed" as const, text: "" }; },
+      isDisabled: () => false,
+      listMemories: async () => [
+        { id: "x1", kind: "fact" as const, label: "mañana tengo dentista" },
+        { id: "x2", kind: "fact" as const, label: "no como carne" },
+      ],
+    };
+    const a = await runToolAction(extractToolAction("olvida a Ana") as ToolAction, deps);
+    const b = await runToolAction(extractToolAction("forget my car") as ToolAction, deps);
+    expect(calls).toEqual([]);
+    expect(a.response).toContain("No encontr");
+    expect(b.response).toContain("couldn't find");
+  });
 });
+

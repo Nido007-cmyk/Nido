@@ -24,7 +24,7 @@
  * Puro salvo las dependencias inyectadas. 100% testeable.
  */
 
-import { equivalentsOf } from "./memoryEquiv";
+import { mentionsTerm } from "./memoryEquiv";
 import { nextOccurrence } from "../memory/reminderRepeat";
 import { convertUnits } from "../tools/convert";
 import {
@@ -1200,6 +1200,7 @@ type Key =
   | "noteSearchNone"
   | "currencyOffline"
   | "memoryForgetHelp"
+  | "memoryForgetAsk"
   | "memoryForgot"
   | "memoryForgetNone"
   | "memoryForgetWhich"
@@ -1320,6 +1321,11 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: "Listo, olvidé: «{{label}}».",
     en: "Done, I forgot: “{{label}}”.",
     pt: "Pronto, esqueci: “{{label}}”.",
+  },
+  memoryForgetAsk: {
+    es: "Dime qué recuerdo concreto olvido, por ejemplo «olvida mi color favorito», y te pediré confirmación antes de borrarlo. Para ver todo o borrar varios a la vez, abre el menú → «Mi memoria».",
+    en: "Tell me which specific memory to forget, for example “forget my favorite color”, and I'll ask you to confirm before deleting it. To see everything or delete several at once, open the menu → “My Memory”.",
+    pt: "Diga qual lembrança específica devo esquecer, por exemplo “esquece minha cor favorita”, e vou pedir sua confirmação antes de apagar. Para ver tudo ou apagar várias de uma vez, abra o menu → “Minha Memória”.",
   },
   memoryForgetNone: {
     es: "No encontré «{{q}}» en lo que me has contado. Puedes revisarlo en el menú → «Mi memoria».",
@@ -1539,6 +1545,14 @@ export interface NoteSummary {
 }
 
 const FORGET_STOP = new Set(["que", "the", "and", "por", "para", "con", "una", "uno", "los", "las", "del", "mis", "tus", "sus", "meu", "minha", "seu", "sua", "dos", "das", "com", "não", "nao", "esto", "eso", "isso", "isto", "that", "this", "your", "you", "about"]);
+
+/**
+ * «olvida todo», «forget everything», «olvida lo que te dije»: no
+ * nombran un recuerdo. No se busca nada (antes «todo» se buscaba como
+ * palabra y salía «No encontré «todo»»); se pide cuál, o el menú
+ * para borrar varios.
+ */
+const VAGUE_FORGET_RE = /^(?:(?:todo|todos|tudo|all|everything)(?:\s.*)?|(?:lo|o)\s+que\s+(?:te\s+)?(?:dije|conte|he\s+dicho|eu\s+(?:disse|falei|contei)|te\s+disse|falei)(?:\s.*)?|what\s+i\s+(?:told|said)(?:\s.*)?|eso|esto|isso|isto|that|this|it)$/;
 
 /** Lo que se pide olvidar: la frase sin el verbo ni «de la memoria». */
 export function forgetQueryOf(t: string): string {
@@ -2135,7 +2149,9 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
       }
 
       case "memoryForgetHelp":
-        return say(routerMessage("memoryForgetHelp", lang));
+        // Con la lista de recuerdos (el chat) sí se puede olvidar uno
+        // concreto con confirmación: se pide cuál. Sin ella, la guía.
+        return say(routerMessage(deps.listMemories ? "memoryForgetAsk" : "memoryForgetHelp", lang));
 
       case "memoryForget": {
         if (!deps.listMemories) return say(routerMessage("memoryForgetHelp", lang));
@@ -2143,12 +2159,12 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
         const words = norm(action.query)
           .split(/[^a-z0-9ñ]+/)
           .filter((w) => w.length >= 3 && !FORGET_STOP.has(w));
-        if (words.length === 0) return say(routerMessage("memoryForgetHelp", lang));
+        if (words.length === 0 || VAGUE_FORGET_RE.test(norm(action.query))) return say(routerMessage("memoryForgetAsk", lang));
         const matches = items.filter((it) => {
           const l = norm(it.label);
           // Como en la búsqueda de la memoria: la palabra o su equivalente
           // en las otras dos lenguas («live» encuentra «vivo en Tucson»).
-          return words.every((w) => l.includes(w) || equivalentsOf(w).some((v) => l.includes(v)));
+          return words.every((w) => mentionsTerm(l, w));
         });
         if (matches.length === 0) return say(routerMessage("memoryForgetNone", lang, { q: action.query }));
         if (matches.length > 1) {

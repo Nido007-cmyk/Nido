@@ -47,3 +47,20 @@ export function equivalentsOf(token: string): string[] {
   return MEMORY_EQUIV.get(token) ?? [];
 }
 
+
+/**
+ * ¿Aparece `w` como palabra entera del texto (ya normalizado), o en
+ * plural (+s / +es)? Así «car» encuentra «car» y «cars» pero no
+ * «carne», y «ana» no encuentra «mañana» (antes se buscaba como
+ * subcadena).
+ */
+export function hasWord(text: string, w: string): boolean {
+  if (!w) return false;
+  const esc = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|[^\\p{L}\\p{N}])${esc}(?:e?s)?(?![\\p{L}\\p{N}])`, "u").test(text);
+}
+
+/** La palabra o una de sus equivalentes en las otras dos lenguas, como palabra entera. */
+export function mentionsTerm(text: string, w: string): boolean {
+  return hasWord(text, w) || equivalentsOf(w).some((v) => hasWord(text, v));
+}
