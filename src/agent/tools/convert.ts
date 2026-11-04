@@ -11,8 +11,16 @@
  * con factores exactos. Acepta alias en español e inglés.
  */
 
+export type ConvertErrorCode = "nan" | "unknownUnit" | "mismatch" | "belowAbsoluteZero";
+
 export class ConvertError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    /** Para que el handler lo diga en la lengua del usuario (antes el
+     *  detalle salía siempre en español tras un prefijo traducido). */
+    readonly code: ConvertErrorCode = "nan",
+    readonly detail: { unit?: string; from?: string; to?: string } = {},
+  ) {
     super(message);
     this.name = "ConvertError";
   }
@@ -149,26 +157,38 @@ export function convertUnits(
   from: string,
   to: string
 ): { value: number; category: UnitCategory; from: string; to: string } {
-  if (!Number.isFinite(value)) throw new ConvertError("valor no numérico");
+  if (!Number.isFinite(value)) throw new ConvertError("valor no numérico", "nan");
   const fromKey = normalizeUnit(from);
   const toKey = normalizeUnit(to);
   const fromDef = UNITS[fromKey];
   const toDef = UNITS[toKey];
   if (!fromDef) {
     throw new ConvertError(
-      `unidad desconocida: «${from}». Válidas: ${validUnits().join(", ")}`
+      `unidad desconocida: «${from}». Válidas: ${validUnits().join(", ")}`,
+      "unknownUnit",
+      { unit: from },
     );
   }
   if (!toDef) {
     throw new ConvertError(
-      `unidad desconocida: «${to}». Válidas: ${validUnits().join(", ")}`
+      `unidad desconocida: «${to}». Válidas: ${validUnits().join(", ")}`,
+      "unknownUnit",
+      { unit: to },
     );
   }
   if (fromDef.category !== toDef.category) {
     throw new ConvertError(
-      `no se puede convertir ${fromKey} (${fromDef.category}) a ${toKey} (${toDef.category})`
+      `no se puede convertir ${fromKey} (${fromDef.category}) a ${toKey} (${toDef.category})`,
+      "mismatch",
+      { from: fromKey, to: toKey },
     );
   }
   const base = fromDef.toBase(value);
+  // -10 K o -500 °F no existen: por debajo del cero absoluto (−273,15 °C)
+  // no hay temperatura. Antes se convertían sin aviso. Margen de redondeo
+  // para «0 K» y «-459.67 °F».
+  if (fromDef.category === "temperature" && base < -273.15 - 1e-9) {
+    throw new ConvertError("por debajo del cero absoluto (−273,15 °C)", "belowAbsoluteZero");
+  }
   return { value: toDef.fromBase(base), category: fromDef.category, from: fromKey, to: toKey };
 }

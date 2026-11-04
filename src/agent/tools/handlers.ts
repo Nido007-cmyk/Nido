@@ -33,7 +33,7 @@ import {
   type OpenAppRejectReason,
 } from "./externalLink";
 import { evaluateExpression, formatNumber, isApproximate } from "./calc";
-import { convertUnits } from "./convert";
+import { convertUnits, ConvertError, validUnits } from "./convert";
 import { loadSkill, listSkills } from "../skills/registry";
 import { analyzeTable } from "./analyze";
 import { NidoMessenger, PairingDisambiguationRequiredError } from "../../p2p/messenger";
@@ -785,7 +785,20 @@ const convertUnitsHandler: ToolHandler = async (args) => {
     const shown = Math.abs(r.value) >= 0.01 || r.value === 0 ? Number(r.value.toFixed(4)) : Number(r.value.toPrecision(4));
     return `${formatNumber(value)} ${r.from} = ${formatNumber(shown)} ${r.to}`;
   } catch (e) {
-    return `${L("No pude convertir eso", "I couldn't convert that", "Não consegui converter isso")}: ${e instanceof Error ? e.message : String(e)}`;
+    const prefix = L("No pude convertir eso", "I couldn't convert that", "Não consegui converter isso");
+    if (e instanceof ConvertError) {
+      const d = e.detail;
+      const why =
+        e.code === "belowAbsoluteZero"
+          ? L("está por debajo del cero absoluto (−273,15 °C); esa temperatura no existe", "it is below absolute zero (−273.15 °C); that temperature doesn't exist", "está abaixo do zero absoluto (−273,15 °C); essa temperatura não existe")
+          : e.code === "unknownUnit"
+            ? L(`no conozco la unidad «${d.unit}». Válidas: ${validUnits().join(", ")}`, `I don't know the unit “${d.unit}”. Valid: ${validUnits().join(", ")}`, `não conheço a unidade “${d.unit}”. Válidas: ${validUnits().join(", ")}`)
+            : e.code === "mismatch"
+              ? L(`${d.from} y ${d.to} miden cosas distintas`, `${d.from} and ${d.to} measure different things`, `${d.from} e ${d.to} medem coisas diferentes`)
+              : L("el valor no es un número", "the value isn't a number", "o valor não é um número");
+      return `${prefix}: ${why}.`;
+    }
+    return `${prefix}: ${e instanceof Error ? e.message : String(e)}`;
   }
 };
 
