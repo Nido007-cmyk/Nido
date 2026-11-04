@@ -1008,7 +1008,11 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
         : { kind: "reminderList", lang };
   for (const { re, lang } of NOTE_READ_RULES) {
     const m = re.exec(t);
-    if (m && m[1].trim().length >= 2) return { kind: "noteRead", query: m[1].trim(), lang };
+    // 0.1.75: «lee la nota de la receta» buscaba «la receta» y no
+    // encontraba «Receta de pan»: el artículo inicial sale, como en el
+    // borrado. Una palabra que solo sea artículo se conserva.
+    const query = m ? m[1].trim().replace(/^(?:el|la|los|las|the|o|a|os|as)\s+(?=\S{2,})/i, "") : "";
+    if (m && query.length >= 2) return { kind: "noteRead", query, lang };
   }
   for (const { re, lang } of NOTE_SAVE_RULES) {
     const m = re.exec(t);

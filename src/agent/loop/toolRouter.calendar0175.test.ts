@@ -80,3 +80,18 @@ describe("la semana que viene y el mes (antes caían al modelo)", () => {
     expect(extractToolAction("tengo algo que contarte el sábado", NOW)?.kind).not.toBe("calendarList");
   });
 });
+
+describe("notas: el artículo no forma parte de lo que se busca (0.1.75)", () => {
+  it("«lee la nota de la receta» encuentra «Receta de pan»", async () => {
+    const a = extractToolAction("lee la nota de la receta", NOW) as Extract<ToolAction, { kind: "noteRead" }>;
+    expect(a.query).toBe("receta");
+    const read: string[] = [];
+    const out = await runToolAction(a, {
+      dispatch: async (_n: string, args: Record<string, unknown>) => { read.push(String(args.id)); return { status: "executed" as const, text: "Receta de pan: harina" }; },
+      isDisabled: () => false,
+      listNotes: async () => [{ id: "n1", title: "Receta de pan" }],
+    } as never);
+    expect(read).toEqual(["n1"]);
+    expect(out.response).toContain("harina");
+  });
+});

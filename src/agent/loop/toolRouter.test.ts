@@ -68,7 +68,7 @@ describe("extractToolAction — notas", () => {
 
   it("leer por título, no por id", () => {
     expect(extractToolAction("lee la nota de compras", NOW)).toEqual({ kind: "noteRead", query: "compras", lang: "es" });
-    expect(extractToolAction("read the note about the trip", NOW)).toEqual({ kind: "noteRead", query: "the trip", lang: "en" });
+    expect(extractToolAction("read the note about the trip", NOW)).toEqual({ kind: "noteRead", query: "trip", lang: "en" });
     expect(extractToolAction("lê a nota do mercado", NOW)).toEqual({ kind: "noteRead", query: "mercado", lang: "pt" });
   });
 
