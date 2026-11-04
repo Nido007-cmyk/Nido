@@ -68,8 +68,8 @@ describe("0.1.20 (M1) — consultas de memoria deterministas", () => {
   });
 
   it("sin el dato: honesto, sin inventar ni citar fuentes", () => {
-    expect(answerMemoryQuery("¿cómo se llama mi papá?", MEM, "es")).toContain("Todavía no me has contado eso");
-    expect(answerMemoryQuery("¿cuál es mi banco?", MEM, "es")).toContain("Todavía no me has contado eso");
+    expect(answerMemoryQuery("¿cómo se llama mi papá?", MEM, "es")).toContain("No lo encuentro en lo que me has contado");
+    expect(answerMemoryQuery("¿cuál es mi banco?", MEM, "es")).toContain("No lo encuentro en lo que me has contado");
   });
 
   it("cruce de idiomas: persona guardada en español, pregunta en inglés", () => {
@@ -85,8 +85,8 @@ describe("0.1.20 (M1) — consultas de memoria deterministas", () => {
 
   it("memoria vacía: honesto", () => {
     const empty: MemoryQueryData = { facts: [], people: [] };
-    expect(answerMemoryQuery("¿cómo se llama mi mamá?", empty, "es")).toContain("Todavía no me has contado eso");
-    expect(answerMemoryQuery("¿qué sabes de mí?", empty, "es")).toContain("Todavía no me has contado eso");
+    expect(answerMemoryQuery("¿cómo se llama mi mamá?", empty, "es")).toContain("No lo encuentro en lo que me has contado");
+    expect(answerMemoryQuery("¿qué sabes de mí?", empty, "es")).toContain("No lo encuentro en lo que me has contado");
   });
 });
 
@@ -399,8 +399,8 @@ describe("G-M1-R1 — «¿cuál es el nombre de mi X?» entra en la ruta de nomb
 
   it("guardias: sin el dato en ningún almacenamiento, honesto; lo que no es memoria sigue null", () => {
     const empty: MemoryQueryData = { facts: [], people: [] };
-    expect(answerMemoryQuery("¿cuál es el nombre de mi mamá?", empty, "es")).toContain("Todavía no me has contado eso");
-    expect(answerMemoryQuery("¿cuál es el nombre de mi papá?", CARD, "es")).toContain("Todavía no me has contado eso");
+    expect(answerMemoryQuery("¿cuál es el nombre de mi mamá?", empty, "es")).toContain("No lo encuentro en lo que me has contado");
+    expect(answerMemoryQuery("¿cuál es el nombre de mi papá?", CARD, "es")).toContain("No lo encuentro en lo que me has contado");
     expect(answerMemoryQuery("¿cuál es el nombre de la capital de Francia?", CARD, "es")).toBeNull();
   });
 });
@@ -431,7 +431,7 @@ describe("B9 — colisión avô/avó: la forma acentuada manda sobre el pliegue"
 
   it("sin abuela guardada, la pregunta por la abuela es honesta: no sirve al abuelo", () => {
     const onlyGrandpa: MemoryQueryData = { facts: [], people: [{ name: "José", relationship: "avô" }] };
-    expect(answerMemoryQuery("como se chama minha avó?", onlyGrandpa, "pt")).toContain("Você ainda não me contou isso");
+    expect(answerMemoryQuery("como se chama minha avó?", onlyGrandpa, "pt")).toContain("Não encontro isso no que você me contou");
   });
 
   it("suelo: la abuela sola sirve bien (R2-18) y el español no se mueve", () => {
@@ -439,7 +439,7 @@ describe("B9 — colisión avô/avó: la forma acentuada manda sobre el pliegue"
     expect(answerMemoryQuery("como se chama minha avó?", onlyGrandma, "pt")).toBe("Sua avó se chama María.");
     const es: MemoryQueryData = { facts: [], people: [{ name: "Pedro", relationship: "abuelo" }] };
     expect(answerMemoryQuery("¿cómo se llama mi abuelo?", es, "es")).toBe("Tu abuelo se llama Pedro.");
-    expect(answerMemoryQuery("¿cómo se llama mi abuela?", es, "es")).toContain("Todavía no me has contado eso");
+    expect(answerMemoryQuery("¿cómo se llama mi abuela?", es, "es")).toContain("No lo encuentro en lo que me has contado");
   });
 });
 
@@ -521,8 +521,8 @@ describe("ADV-F-C1 — el hecho pt con «chama-se» y con «o nome d… é» se 
       facts: [{ content: "o nome do meu pai está na agenda", category: "general" }],
       people: [],
     };
-    expect(answerMemoryQuery("qual é o nome do meu pai?", semCopula, "pt")).toContain("Você ainda não me contou isso");
-    expect(answerMemoryQuery("qual é o nome do meu pai?", NOME_MAE, "pt")).toContain("Você ainda não me contou isso");
+    expect(answerMemoryQuery("qual é o nome do meu pai?", semCopula, "pt")).toContain("Não encontro isso no que você me contou");
+    expect(answerMemoryQuery("qual é o nome do meu pai?", NOME_MAE, "pt")).toContain("Não encontro isso no que você me contou");
   });
 });
 
@@ -544,18 +544,18 @@ describe("ADV-F2-C1 — el marco «el nombre de… es» / «the name of… is» 
 
   it("guardias cruzadas: el hecho de una persona no sirve a otra, en las tres lenguas", () => {
     const pt: MemoryQueryData = { facts: [{ content: "o nome do meu pai é João", category: "general" }], people: [] };
-    expect(answerMemoryQuery("qual é o nome da minha mãe?", pt, "pt")).toContain("Você ainda não me contou isso");
+    expect(answerMemoryQuery("qual é o nome da minha mãe?", pt, "pt")).toContain("Não encontro isso no que você me contou");
     const es: MemoryQueryData = { facts: [{ content: "el nombre de mi padre es Juan", category: "general" }], people: [] };
-    expect(answerMemoryQuery("¿cuál es el nombre de mi madre?", es, "es")).toContain("Todavía no me has contado eso");
+    expect(answerMemoryQuery("¿cuál es el nombre de mi madre?", es, "es")).toContain("No lo encuentro en lo que me has contado");
     const en: MemoryQueryData = { facts: [{ content: "the name of my dad is John", category: "general" }], people: [] };
-    expect(answerMemoryQuery("what is the name of my mom?", en, "en")).toContain("You haven't told me that yet");
+    expect(answerMemoryQuery("what is the name of my mom?", en, "en")).toContain("I can't find that in what you've told me");
     const esM: MemoryQueryData = { facts: [{ content: "el nombre de mi madre es Ana", category: "general" }], people: [] };
-    expect(answerMemoryQuery("¿cuál es el nombre de mi padre?", esM, "es")).toContain("Todavía no me has contado eso");
+    expect(answerMemoryQuery("¿cuál es el nombre de mi padre?", esM, "es")).toContain("No lo encuentro en lo que me has contado");
   });
 
   it("sin cópula el marco no entra (es), y la cópula dentro de palabra no falsifica («esposa»)", () => {
     const sinCopula: MemoryQueryData = { facts: [{ content: "el nombre de mi padre Juan", category: "general" }], people: [] };
-    expect(answerMemoryQuery("¿cuál es el nombre de mi padre?", sinCopula, "es")).toContain("Todavía no me has contado eso");
+    expect(answerMemoryQuery("¿cuál es el nombre de mi padre?", sinCopula, "es")).toContain("No lo encuentro en lo que me has contado");
     const esposa: MemoryQueryData = { facts: [{ content: "el nombre de mi esposa es Carmen", category: "general" }], people: [] };
     expect(answerMemoryQuery("¿cuál es el nombre de mi esposa?", esposa, "es")).toBe("Tu esposa se llama Carmen.");
   });
@@ -657,8 +657,8 @@ describe("ADV-F2-C3+C4+C5 — cumpleaños pt: guardia, posesivo del registro y l
   };
 
   it("C3: el par cruzado da el honesto en las DOS direcciones", () => {
-    expect(answerMemoryQuery("quando é o aniversário da minha avó?", onlyGrandpa, "pt")).toContain("Você ainda não me contou isso");
-    expect(answerMemoryQuery("quando é o aniversário do meu avô?", onlyGrandma, "pt")).toContain("Você ainda não me contou isso");
+    expect(answerMemoryQuery("quando é o aniversário da minha avó?", onlyGrandpa, "pt")).toContain("Não encontro isso no que você me contou");
+    expect(answerMemoryQuery("quando é o aniversário do meu avô?", onlyGrandma, "pt")).toContain("Não encontro isso no que você me contou");
   });
 
   it("C5: la pregunta por el abuelo entra en la rama y sirve SU fecha por plantilla", () => {
@@ -1530,8 +1530,8 @@ describe("B1+B2 — SELF: «cuál es mi nombre» es y «what is my name» en", (
     expect(answerMemoryQuery("¿cómo me llamo?", ME, "es")).toBe("Te llamas Ruben.");
     expect(answerMemoryQuery("what's my name?", ME, "en")).toBe("Your name is Ruben.");
     const empty: MemoryQueryData = { facts: [], people: [] };
-    expect(answerMemoryQuery("¿cuál es mi nombre?", empty, "es")).toContain("Todavía no me has contado eso");
-    expect(answerMemoryQuery("what is my name?", empty, "en")).toContain("You haven't told me that yet");
+    expect(answerMemoryQuery("¿cuál es mi nombre?", empty, "es")).toContain("No lo encuentro en lo que me has contado");
+    expect(answerMemoryQuery("what is my name?", empty, "en")).toContain("I can't find that in what you've told me");
   });
 });
 
