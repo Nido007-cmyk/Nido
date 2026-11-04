@@ -49,3 +49,21 @@ describe("convertUnits", () => {
     expect(units).toContain("c");
   });
 });
+
+describe("cero absoluto (0.1.75)", () => {
+  it("por debajo no hay temperatura: -10 K y -500 °F se rechazan", () => {
+    expect(() => convertUnits(-10, "kelvin", "celsius")).toThrow(ConvertError);
+    expect(() => convertUnits(-500, "f", "c")).toThrow(ConvertError);
+    expect(() => convertUnits(-300, "c", "k")).toThrow(ConvertError);
+  });
+  it("par: el propio cero absoluto y lo que está por encima sí", () => {
+    expect(convertUnits(0, "kelvin", "celsius").value).toBeCloseTo(-273.15);
+    expect(convertUnits(-459.67, "f", "k").value).toBeCloseTo(0);
+    expect(convertUnits(-40, "c", "f").value).toBeCloseTo(-40);
+  });
+  it("el error lleva un código para traducirlo", () => {
+    try { convertUnits(1, "parsec", "m"); } catch (e) { expect((e as ConvertError).code).toBe("unknownUnit"); }
+    try { convertUnits(1, "m", "kg"); } catch (e) { expect((e as ConvertError).code).toBe("mismatch"); }
+    try { convertUnits(-1, "k", "c"); } catch (e) { expect((e as ConvertError).code).toBe("belowAbsoluteZero"); }
+  });
+});

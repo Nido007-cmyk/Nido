@@ -54,6 +54,16 @@ export const LOCAL_TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: "delete_memory",
+    description:
+      "Olvida un recuerdo guardado (un dato o una persona) por su id. Es irreversible y pide confirmación al usuario; el recuerdo va en la confirmación para que sepa qué se borra.",
+    parameters: {
+      id: { type: "string", description: "Id del recuerdo", required: true },
+      kind: { type: "string", description: "fact o person" },
+      content: { type: "string", description: "El recuerdo tal como está guardado (se muestra en la confirmación)" },
+    },
+  },
+  {
     name: "create_reminder",
     description: "Crea un recordatorio local (alarma del sistema, sin nube).",
     parameters: {

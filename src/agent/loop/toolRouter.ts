@@ -24,12 +24,14 @@
  * Puro salvo las dependencias inyectadas. 100% testeable.
  */
 
+import { mentionsTerm } from "./memoryEquiv";
 import { nextOccurrence } from "../memory/reminderRepeat";
 import { convertUnits } from "../tools/convert";
 import {
   extractCalcAction,
   extractReminderAction,
   extractTimerAction,
+  hasImpossibleWhen,
   parseReminderDateTime,
   reminderMissingText,
   stripDateWords,
@@ -57,6 +59,7 @@ export const TOOL_KINDS = [
   "countdown",
   "currencyInfo",
   "memoryForgetHelp",
+  "memoryForget",
   "nidoCode",
   "nidoInbox",
   "nidoSend",
@@ -89,11 +92,12 @@ export type ToolAction =
   | { kind: "convert"; value: number; from: string; to: string; lang: RouterLang }
   | { kind: "currencyInfo"; lang: RouterLang }
   | { kind: "memoryForgetHelp"; lang: RouterLang }
+  | { kind: "memoryForget"; query: string; lang: RouterLang }
   | { kind: "countdown"; target: string; label: string; lang: RouterLang }
   | { kind: "reminderOfferCreate"; range: "today" | "tomorrow" | null; lang: RouterLang }
   | { kind: "reminderFill"; text: string; dueAt: string; lang: RouterLang; repeat?: ReminderRepeat | null }
   | { kind: "calendarList"; from: string; to: string; label: CalendarRange; lang: RouterLang; rangeText?: string }
-  | { kind: "calendarCreate"; title: string; start: string | null; lang: RouterLang }
+  | { kind: "calendarCreate"; title: string; start: string | null; end?: string | null; invalidWhen?: boolean; lang: RouterLang }
   | { kind: "nidoSend"; to: string; text: string | null; lang: RouterLang }
   | { kind: "nidoInbox"; lang: RouterLang }
   | { kind: "nidoCode"; lang: RouterLang }
@@ -186,9 +190,11 @@ export function toolForAction(a: ToolAction): string {
       // Se mapea a convert_units para el interruptor del usuario.
       return "convert_units";
     case "memoryForgetHelp":
-      // Sin herramienta de borrado de memoria para el agente: se explica
+      // Sin lista de recuerdos (tareas programadas, pruebas): se explica
       // dónde se borra. Va con el interruptor de la memoria.
       return "remember_fact";
+    case "memoryForget":
+      return "delete_memory";
     case "countdown":
       return "device_time";
     case "reminderOfferCreate":
@@ -618,20 +624,63 @@ const WEEKDAY_INDEX: Record<string, number> = {
   viernes: 5, friday: 5, sexta: 5, sábado: 6, sabado: 6, saturday: 6,
 };
 const CAL_DAY_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
-  { re: new RegExp(`^(?:qu[eé] tengo|qu[eé] hay en (?:mi|la) agenda|mi agenda|mis (?:eventos|citas)|mi calendario)(?: en (?:el|mi|la) (?:calendario|agenda))?(?: (?:de|para))?(?: el)? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "es" },
-  { re: new RegExp(`^(?:what do i have|what'?s on my (?:calendar|agenda|schedule)|my (?:calendar|agenda|events|schedule))(?: for| on)? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "en" },
-  { re: new RegExp(`^(?:o que (?:eu )?tenho|minha agenda|meus (?:eventos|compromissos))(?: (?:na (?:minha )?agenda|no (?:meu )?calend[aá]rio))?(?: (?:de|para))?(?: (?:na|no|a|o))? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "pt" },
+  { re: new RegExp(`^(?:qu[eé] tengo|tengo algo|tengo alguna cita|qu[eé] hay en (?:mi|la) agenda|mi agenda|mis (?:eventos|citas)|mi calendario)(?: en (?:el|mi|la) (?:calendario|agenda))?(?: (?:de|para))?(?: el)? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "es" },
+  { re: new RegExp(`^(?:what do i have|do i have anything|do i have something|what'?s on my (?:calendar|agenda|schedule)|my (?:calendar|agenda|events|schedule))(?: for| on)? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "en" },
+  { re: new RegExp(`^(?:o que (?:eu )?tenho|tenho algo|tenho algum compromisso|minha agenda|meus (?:eventos|compromissos))(?: (?:na (?:minha )?agenda|no (?:meu )?calend[aá]rio))?(?: (?:de|para))?(?: (?:na|no|a|o))? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "pt" },
 ];
+/**
+ * La semana que viene y el mes (0.1.75): «what's on my calendar next
+ * week», «qué tengo la semana que viene», «o que tenho na próxima
+ * semana», «qué tengo este mes» caían al modelo, que no ve el calendario.
+ */
+const CAL_PERIOD_WORDS = "((?:la |a |na )?(?:semana que viene|pr[oó]xima semana|semana que vem)|next week|(?:este|esse|neste|nesse) m[eê]s|this month|(?:el )?mes que viene|(?:o )?m[eê]s que vem|pr[oó]ximo m[eê]s|next month)";
+const CAL_PERIOD_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
+  { re: new RegExp(`^(?:qu[eé] tengo|tengo algo|qu[eé] hay en (?:mi|la) agenda|mi agenda|mis (?:eventos|citas)|mi calendario)(?: en (?:el|mi|la) (?:calendario|agenda))?(?: (?:de|para))? ${CAL_PERIOD_WORDS}(?: en (?:mi|la|el) (?:agenda|calendario))?$`, "i"), lang: "es" },
+  { re: new RegExp(`^(?:what do i have|do i have anything|what'?s on my (?:calendar|agenda|schedule)|my (?:calendar|agenda|events|schedule))(?: for)? ${CAL_PERIOD_WORDS}$`, "i"), lang: "en" },
+  { re: new RegExp(`^(?:o que (?:eu )?tenho|tenho algo|minha agenda|meus (?:eventos|compromissos))(?: (?:na (?:minha )?agenda|no (?:meu )?calend[aá]rio))?(?: (?:de|para|para a))? ${CAL_PERIOD_WORDS}$`, "i"), lang: "pt" },
+];
+
+/** Inicio y fin de «la semana que viene» (lunes a lunes) o del mes. */
+function calendarPeriod(word: string, now: Date, lang: RouterLang): { from: string; to: string; rangeText: string } {
+  const w = word.toLowerCase();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  if (/semana|week/.test(w)) {
+    // Próximo lunes (si hoy es lunes, el de la semana siguiente).
+    start.setDate(start.getDate() + (((1 - start.getDay() + 7) % 7) || 7));
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    return { from: start.toISOString(), to: end.toISOString(), rangeText: lang === "en" ? "next week" : lang === "pt" ? "na próxima semana" : "la semana que viene" };
+  }
+  const next = /viene|vem|pr[oó]ximo|next/.test(w);
+  start.setDate(1);
+  if (next) start.setMonth(start.getMonth() + 1);
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + 1);
+  const from = !next && now.getTime() > start.getTime() ? now : start;
+  return {
+    from: from.toISOString(),
+    to: end.toISOString(),
+    rangeText: next ? (lang === "en" ? "next month" : lang === "pt" ? "no próximo mês" : "el mes que viene") : lang === "en" ? "this month" : lang === "pt" ? "neste mês" : "este mes",
+  };
+}
+
 const CAL_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   // 0.1.34 (barrido de paridad): «qué tengo en el calendario hoy» y «o que
   // tenho na agenda hoje» caían al modelo; el inglés sí casaba.
-  { re: new RegExp(`^(?:qu[eé] tengo|qu[eé] hay en (?:mi|la) agenda|mi agenda|mis (?:eventos|citas)|mi calendario)(?: en (?:el|mi|la) (?:calendario|agenda))?(?: (?:de|para))? ${DAY_RE}(?: en (?:mi|la|el) (?:agenda|calendario))?$`, "i"), lang: "es" },
+  { re: new RegExp(`^(?:qu[eé] tengo|tengo algo|tengo alguna cita|qu[eé] hay en (?:mi|la) agenda|mi agenda|mis (?:eventos|citas)|mi calendario)(?: en (?:el|mi|la) (?:calendario|agenda))?(?: (?:de|para))? ${DAY_RE}(?: en (?:mi|la|el) (?:agenda|calendario))?$`, "i"), lang: "es" },
   { re: /^(?:mi agenda|mis eventos|mis citas|mi calendario)$/i, lang: "es" },
-  { re: new RegExp(`^(?:what do i have|what'?s on my (?:calendar|agenda|schedule)|my (?:calendar|agenda|events|schedule))(?: for)? ${DAY_RE}$`, "i"), lang: "en" },
+  { re: new RegExp(`^(?:what do i have|do i have anything|what'?s on my (?:calendar|agenda|schedule)|my (?:calendar|agenda|events|schedule))(?: for)? ${DAY_RE}$`, "i"), lang: "en" },
   { re: /^(?:my calendar|my agenda|my events|my schedule)$/i, lang: "en" },
-  { re: new RegExp(`^(?:o que (?:eu )?tenho|minha agenda|meus (?:eventos|compromissos))(?: (?:na (?:minha )?agenda|no (?:meu )?calend[aá]rio))?(?: (?:de|para|para a))? ${DAY_RE}$`, "i"), lang: "pt" },
+  { re: new RegExp(`^(?:o que (?:eu )?tenho|tenho algo|minha agenda|meus (?:eventos|compromissos))(?: (?:na (?:minha )?agenda|no (?:meu )?calend[aá]rio))?(?: (?:de|para|para a))? ${DAY_RE}$`, "i"), lang: "pt" },
   { re: /^(?:minha agenda|meus eventos|meus compromissos)$/i, lang: "pt" },
 ];
+
+/** «de 3 a 5 de diciembre», «del 3 al 5 de mayo», «de 3 a 5 de março». */
+const CAL_DAY_RANGE_RE = /(?<![\p{L}])(?:del?|from|dos?)\s+(\d{1,2})\s+(?:al?|to|até|aos?)\s+(\d{1,2})\s+(?:de|of)\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?![\p{L}])/iu;
+
+/** «de 3 a 5», «de 10:30 a 12», «from 3 to 5», «das 3 às 5», «de 3 a 5 de la tarde». */
+const CAL_TIME_RANGE_RE = /(?<![\p{L}])(?:de\s+(?:las\s+)?|from\s+|das\s+|entre\s+(?:las\s+)?|between\s+)(\d{1,2})(?::(\d{2}))?\s*(?:a\s+(?:las\s+)?|to\s+|-\s*|[àa]s\s+|y\s+(?:las\s+)?|and\s+|e\s+)(\d{1,2})(?::(\d{2}))?(?![\d:])(?!\s*(?:de|of|del)\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|mar[çc]o|maio|junho|julho|setembro|outubro|novembro|dezembro)(?![\p{L}]))(?!\s*(?:personas|people|pessoas|invitados|guests|convidados|años|years|anos))/iu;
 
 const CAL_CREATE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: new RegExp(`^${POLITE}(?:ag[eé]ndame|agenda|crea(?: un)? evento|crea una cita|a[ñn]ade (?:un |una )?(?:evento|cita)|agrega (?:un |una )?(?:evento|cita)|pon en (?:mi |el )?calendario)(?: (?:al|en (?:mi|el)) calendario)?(?::)?\\s+(.+)$`, "is"), lang: "es" },
@@ -941,7 +990,14 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   // «olvida mi color favorito»: el agente no borra memoria por sí solo. Antes
   // caía al modelo, que podía responder «listo, lo olvidé» sin borrar nada.
   // Respuesta honesta: dónde se borra.
-  for (const { re, lang } of MEMORY_FORGET_RULES) if (re.test(t)) return { kind: "memoryForgetHelp", lang };
+  for (const { re, lang } of MEMORY_FORGET_RULES) {
+    if (!re.test(t)) continue;
+    // Arreglos «todo es todo» (2026-11-03): olvidar desde el chat. Lo que
+    // se nombra es la consulta; el borrado lo confirma la persona viendo
+    // el recuerdo exacto (delete_memory es irreversible).
+    const query = forgetQueryOf(t);
+    return query.length >= 2 ? { kind: "memoryForget", query, lang } : { kind: "memoryForgetHelp", lang };
+  }
 
   for (const { re, lang } of NOTE_LIST_RULES) if (re.test(t)) return { kind: "noteList", lang };
   const reminderQuery = splitReminderScope(t);
@@ -952,7 +1008,11 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
         : { kind: "reminderList", lang };
   for (const { re, lang } of NOTE_READ_RULES) {
     const m = re.exec(t);
-    if (m && m[1].trim().length >= 2) return { kind: "noteRead", query: m[1].trim(), lang };
+    // 0.1.75: «lee la nota de la receta» buscaba «la receta» y no
+    // encontraba «Receta de pan»: el artículo inicial sale, como en el
+    // borrado. Una palabra que solo sea artículo se conserva.
+    const query = m ? m[1].trim().replace(/^(?:el|la|los|las|the|o|a|os|as)\s+(?=\S{2,})/i, "") : "";
+    if (m && query.length >= 2) return { kind: "noteRead", query, lang };
   }
   for (const { re, lang } of NOTE_SAVE_RULES) {
     const m = re.exec(t);
@@ -1032,6 +1092,12 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     }
   }
 
+  for (const { re, lang } of CAL_PERIOD_RULES) {
+    const m = re.exec(t);
+    if (!m) continue;
+    const { from, to, rangeText } = calendarPeriod(m[1], now, lang);
+    return { kind: "calendarList", from, to, label: "week", lang, rangeText };
+  }
   for (const { re, lang } of CAL_LIST_RULES) {
     const m = re.exec(t);
     if (!m) continue;
@@ -1085,12 +1151,48 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   for (const { re, lang } of CAL_CREATE_RULES) {
     const m = re.exec(t);
     if (!m) continue;
-    const rest = m[1].trim();
-    const start = parseReminderDateTime(rest, now);
+    let rest = m[1].trim();
+    // «de 3 a 5», «from 3 to 5», «das 3 às 5»: el inicio es la primera
+    // hora y el fin la segunda (antes el título era «reunión de 3 a» y la
+    // hora, las 9 por defecto).
+    const range = CAL_TIME_RANGE_RE.exec(rest);
+    let rangeHours: number | null = null;
+    if (range) {
+      const h1 = Number(range[1]) + Number(range[2] ?? 0) / 60;
+      const h2 = Number(range[3]) + Number(range[4] ?? 0) / 60;
+      if (Number(range[1]) <= 23 && Number(range[3]) <= 23 && Number(range[2] ?? 0) < 60 && Number(range[4] ?? 0) < 60) {
+        rangeHours = h2 > h1 ? h2 - h1 : h2 + 12 > h1 ? h2 + 12 - h1 : null;
+        const at = lang === "en" ? "at" : lang === "pt" ? "às" : "a las";
+        rest = `${rest.slice(0, range.index)} ${at} ${range[1]}${range[2] ? `:${range[2]}` : ""}${rest.slice(range.index + range[0].length)}`.replace(/\s+/g, " ").trim();
+      }
+    }
+    // «vacaciones de 3 a 5 de diciembre»: varios días. Empieza el día 3
+    // (antes, el 5, con «de 3 a» en el título) y acaba el 5.
+    const dayRange = CAL_DAY_RANGE_RE.exec(rest);
+    let endDayText: string | null = null;
+    if (!range && dayRange) {
+      endDayText = `${dayRange[2]} de ${dayRange[3]}`;
+      rest = `${rest.slice(0, dayRange.index)} ${dayRange[1]} de ${dayRange[3]}${rest.slice(dayRange.index + dayRange[0].length)}`.replace(/\s+/g, " ").trim();
+    }
+    // «el 31 de febrero a las 10», «mañana a las 25»: antes se creaba hoy a
+    // las 10 o se preguntaba «¿para cuándo?» con la hora en el título.
+    const invalidWhen = hasImpossibleWhen(rest);
+    const start = invalidWhen ? null : parseReminderDateTime(rest, now);
+    // Pruebas adversarias del 2026-11-03: «agenda una cita con el
+    // dentista» titulaba el evento «el dentista». El sustantivo de la cita
+    // se queda («cita con el dentista», «meeting with John»); solo sale el
+    // artículo inicial y el sustantivo genérico «evento/event».
     let title = (start ? stripDateWords(rest) : rest)
-      .replace(/^(?:una?|um|uma|an?|the|el|la|o|a)\s+(?:cita|evento|event|compromisso|appointment)\s+(?:con|de|with|com)?\s*/i, "")
+      .replace(/^(?:una?|um|uma|an?|the|el|la|o|a)\s+(?:evento|event)\s+(?:con|de|with|com|para|for)?\s*/i, "")
       .replace(/^(?:para|for|pro|pra|de|con|with|com)\s+/i, "")
+      .replace(/^(?:una?|um|uma|an?|the|el|la|los|las|o|a)\s+(?=\S{2,})/i, "")
       .trim();
+    // «añade una cita con el doctor»: el verbo consumió «una cita»; el
+    // título la recupera («cita con el doctor»).
+    const consumed = /(?:crea|a[ñn]ade|agrega)\s+(?:una\s+)?(cita)\b|add\s+an?\s+(appointment)\b/i.exec(t);
+    if (consumed && /^(?:con|with)\s+/i.test(rest)) {
+      title = `${(consumed[1] ?? consumed[2]).toLowerCase()} ${(start ? stripDateWords(rest) : rest).trim()}`;
+    }
     // 0.1.43 (paso 2, enmienda del dueño; medido por el barrido):
     // «cria um evento amanhã» se descartaba aquí — el patrón consume
     // «um evento» en el verbo y el resto es solo la fecha, así que el
@@ -1103,7 +1205,29 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     }
     // "agenda de hoy", "agenda para mañana": es una consulta, no un evento.
     if (title.length < 3 || /^(de|del|para|for|of)$/i.test(title)) return null;
-    return { kind: "calendarCreate", title, start, lang };
+    if (invalidWhen) return { kind: "calendarCreate", title, start: null, invalidWhen: true, lang };
+    let startFixed = start;
+    // «cena el sábado a las 9»: una comida de noche sin «de la mañana» es
+    // de noche (antes, las 9:00).
+    if (startFixed && /(?<![\p{L}])(?:cena|cenar|dinner|supper|jantar)(?![\p{L}])/iu.test(t) && !/(?:de\s+la\s+ma[ñn]ana|da\s+manh[ãa]|\bam\b|in\s+the\s+morning)/i.test(t)) {
+      const d = new Date(startFixed);
+      if (d.getHours() >= 1 && d.getHours() <= 11) {
+        d.setHours(d.getHours() + 12);
+        startFixed = d.toISOString();
+      }
+    }
+    let end = startFixed && rangeHours ? new Date(new Date(startFixed).getTime() + rangeHours * 3_600_000).toISOString() : null;
+    if (startFixed && endDayText) {
+      const endDay = parseReminderDateTime(endDayText, now);
+      if (endDay && new Date(endDay).getTime() > new Date(startFixed).getTime()) {
+        const e = new Date(endDay);
+        const s0 = new Date(startFixed);
+        e.setHours(s0.getHours() + 1, s0.getMinutes(), 0, 0);
+        end = e.toISOString();
+      }
+    }
+    if (startFixed !== start) return end ? { kind: "calendarCreate", title, start: startFixed, end, lang } : { kind: "calendarCreate", title, start: startFixed, lang };
+    return end ? { kind: "calendarCreate", title, start, end, lang } : { kind: "calendarCreate", title, start, lang };
   }
 
   for (const { re, lang } of OPEN_LINK_RE) {
@@ -1177,12 +1301,19 @@ type Key =
   | "noteSearchNone"
   | "currencyOffline"
   | "memoryForgetHelp"
+  | "memoryForgetAsk"
+  | "reminderInvalidWhen"
+  | "memoryForgot"
+  | "memoryForgetNone"
+  | "memoryForgetWhich"
   | "countdownToday"
   | "countdownOne"
   | "countdownMany"
   | "countdownDateOne"
   | "countdownDateMany"
   | "timerSet"
+  | "timerOutOfRange"
+  | "calInvalidWhen"
   | "timerLabel"
   | "factSaved"
   | "factReminderNote";
@@ -1290,6 +1421,26 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
   },
   countdownDateOne: { es: "Falta 1 día para el {{day}}.", en: "1 day until {{day}}.", pt: "Falta 1 dia para {{day}}." },
   countdownDateMany: { es: "Faltan {{n}} días para el {{day}}.", en: "{{n}} days until {{day}}.", pt: "Faltam {{n}} dias para {{day}}." },
+  memoryForgot: {
+    es: "Listo, olvidé: «{{label}}».",
+    en: "Done, I forgot: “{{label}}”.",
+    pt: "Pronto, esqueci: “{{label}}”.",
+  },
+  memoryForgetAsk: {
+    es: "Dime qué recuerdo concreto olvido, por ejemplo «olvida mi color favorito», y te pediré confirmación antes de borrarlo. Para ver todo o borrar varios a la vez, abre el menú → «Mi memoria».",
+    en: "Tell me which specific memory to forget, for example “forget my favorite color”, and I'll ask you to confirm before deleting it. To see everything or delete several at once, open the menu → “My Memory”.",
+    pt: "Diga qual lembrança específica devo esquecer, por exemplo “esquece minha cor favorita”, e vou pedir sua confirmação antes de apagar. Para ver tudo ou apagar várias de uma vez, abra o menu → “Minha Memória”.",
+  },
+  memoryForgetNone: {
+    es: "No encontré «{{q}}» en lo que me has contado. Puedes revisarlo en el menú → «Mi memoria».",
+    en: "I couldn't find “{{q}}” in what you've told me. You can check it in the menu → “My Memory”.",
+    pt: "Não encontrei “{{q}}” no que você me contou. Você pode conferir no menu → “Minha Memória”.",
+  },
+  memoryForgetWhich: {
+    es: "Hay varios recuerdos que coinciden; dime cuál con más detalle o bórralo en «Mi memoria»:",
+    en: "Several memories match; tell me which one in more detail, or delete it in “My Memory”:",
+    pt: "Há várias lembranças que coincidem; diga qual com mais detalhe ou apague em “Minha Memória”:",
+  },
   memoryForgetHelp: {
     es: "No borro recuerdos por mi cuenta. Para olvidar algo, abre el menú → «Mi memoria» y bórralo ahí: verás exactamente qué se elimina.",
     en: "I don't delete memories on my own. To forget something, open the menu → “My Memory” and delete it there: you'll see exactly what gets removed.",
@@ -1299,6 +1450,11 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: "Sin conexión no tengo tipos de cambio, así que no te voy a inventar una cifra. Cambian todo el tiempo; cuando tengas internet, consúltalo y te ayudo con la cuenta.",
     en: "Offline I don't have exchange rates, so I won't make up a number for you. They change all the time; when you have internet, look it up and I'll help with the math.",
     pt: "Sem conexão eu não tenho taxas de câmbio, então não vou inventar um número para você. Elas mudam o tempo todo; quando tiver internet, consulte e eu ajudo com a conta.",
+  },
+  timerOutOfRange: {
+    es: "Un temporizador puede durar de unos segundos a 24 horas, así que no lo he puesto. Para algo más lejano, pídeme un recordatorio (por ejemplo: «recuérdame el viernes a las 9 …»).",
+    en: "A timer can run from a few seconds up to 24 hours, so I didn't set it. For something further away, ask me for a reminder (for example: “remind me on Friday at 9 to …”).",
+    pt: "Um temporizador pode durar de alguns segundos até 24 horas, então não o coloquei. Para algo mais distante, peça um lembrete (por exemplo: “me lembre na sexta às 9 de …”).",
   },
   timerSet: {
     es: "Temporizador puesto{{when}}.",
@@ -1347,6 +1503,11 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     pt: "Você não tem eventos {{range}}.",
   },
   calHeader: { es: "Tus eventos {{range}}:", en: "Your events {{range}}:", pt: "Seus eventos {{range}}:" },
+  calInvalidWhen: {
+    es: "No reconozco esa hora o fecha (no existe o no la entiendo), así que no he creado el evento. Dímela de nuevo, por ejemplo: «agenda dentista el viernes a las 10».",
+    en: "I don't recognize that time or date (it doesn't exist or I can't read it), so I didn't create the event. Tell me again, for example: “schedule dentist on Friday at 10”.",
+    pt: "Não reconheço essa hora ou data (não existe ou não a entendo), então não criei o evento. Diga de novo, por exemplo: “agende dentista sexta às 10”.",
+  },
   calAskWhen: {
     es: "¿Para cuándo? Dímelo así: «agenda {{title}} el viernes a las 10».",
     en: "When? Say it like: “schedule {{title}} on Friday at 10”.",
@@ -1384,6 +1545,11 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
     es: "Claro. Dime qué y cuándo en una frase, por ejemplo: «recuérdame{{when}} a las 9 llamar al médico».",
     en: "Sure. Tell me what and when in one go, for example: “remind me{{when}} at 9 to call the doctor”.",
     pt: "Claro. Diga o quê e quando numa frase só, por exemplo: “me lembra{{when}} às 9 de ligar para o médico”.",
+  },
+  reminderInvalidWhen: {
+    es: "No reconozco esa hora o fecha (no existe o no la entiendo), así que no he creado el recordatorio. Dímela de nuevo, por ejemplo: «recuérdame mañana a las 7 llamar a Ana».",
+    en: "I don't recognize that time or date (it doesn't exist or I can't read it), so I didn't create the reminder. Tell me again, for example: “remind me tomorrow at 7 to call Ana”.",
+    pt: "Não reconheço essa hora ou data (não existe ou não a entendo), então não criei o lembrete. Diga de novo, por exemplo: “me lembre amanhã às 7 de ligar para a Ana”.",
   },
   reminderAskWhat: {
     es: "¿Qué quieres que te recuerde{{when}}? Respóndeme solo con eso, por ejemplo: «pagar la luz».",
@@ -1497,6 +1663,30 @@ export interface NoteSummary {
   title: string;
 }
 
+const FORGET_STOP = new Set(["que", "the", "and", "por", "para", "con", "una", "uno", "los", "las", "del", "mis", "tus", "sus", "meu", "minha", "seu", "sua", "dos", "das", "com", "não", "nao", "esto", "eso", "isso", "isto", "that", "this", "your", "you", "about"]);
+
+/**
+ * «olvida todo», «forget everything», «olvida lo que te dije»: no
+ * nombran un recuerdo. No se busca nada (antes «todo» se buscaba como
+ * palabra y salía «No encontré «todo»»); se pide cuál, o el menú
+ * para borrar varios.
+ */
+const VAGUE_FORGET_RE = /^(?:(?:todo|todos|tudo|all|everything)(?:\s.*)?|(?:lo|o)\s+que\s+(?:te\s+)?(?:dije|conte|he\s+dicho|eu\s+(?:disse|falei|contei)|te\s+disse|falei)(?:\s.*)?|what\s+i\s+(?:told|said)(?:\s.*)?|eso|esto|isso|isto|that|this|it)$/;
+
+/** Lo que se pide olvidar: la frase sin el verbo ni «de la memoria». */
+export function forgetQueryOf(t: string): string {
+  return t
+    .trim()
+    .replace(/[.!?]+$/, "")
+    .replace(/^(?:por\s+favor[,\s]+|please[,\s]+)/i, "")
+    .replace(/^(?:olv[ií]date\s+de|olvida|borra|elimina|quita|apaga|forget(?:\s+about)?|delete|erase|remove|esque[cç]a|esquece|apague|apaga|exclui|exclua|deleta|remove)\s+/i, "")
+    .replace(/^(?:de|from|da)\s+(?:la\s+|tu\s+|mi\s+|your\s+|the\s+|sua\s+)?(?:memoria|memory|mem[oó]ria)\s+/i, "")
+    .replace(/\s+(?:de|from|da)\s+(?:la\s+|tu\s+|mi\s+|your\s+|the\s+|sua\s+)?(?:memoria|memory|mem[oó]ria)$/i, "")
+    .replace(/^(?:el|ese|este)\s+hecho\s+(?:de\s+(?:que\s+)?)?/i, "")
+    .replace(/^(?:que|that|about)\s+/i, "")
+    .trim();
+}
+
 export interface ToolRouterDeps {
   dispatch: (name: string, args: Record<string, unknown>) => Promise<{ status: DispatchStatus; text: string }>;
   isDisabled: (tool: string) => boolean;
@@ -1507,6 +1697,8 @@ export interface ToolRouterDeps {
   /** Recordatorios pendientes, para "qué recordatorios tengo" y para
    *  resolver los borrados por texto (0.1.20: con id). */
   listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null; repeat?: "day" | "week" | "month" | "year" | null }>>;
+  /** Recuerdos guardados (hechos y personas) con su id, para «olvida …». */
+  listMemories?: () => Promise<Array<{ id: string; kind: "fact" | "person"; label: string }>>;
   now?: () => Date;
   /**
    * 0.1.25: almacén de la elección pendiente («¿cuál nota?») entre
@@ -1757,7 +1949,7 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
     if (out.status === "executed" && /no hice nada|did nothing|n[aã]o fiz nada/i.test(text)) {
       return { status: "cancelled" as DispatchStatus, text: out.text, ok: false };
     }
-    const handlerFailed = out.status === "executed" && /^(error|no pude|no encontr[eé]|nido no)\b/i.test(text);
+    const handlerFailed = out.status === "executed" && /^(?:error|erro|no pude|no encontr[eé]|nido no|i couldn'?t|i didn'?t find|nido can'?t|n[ãa]o consegui|n[ãa]o encontrei|o nido n[ãa]o)\b/i.test(text);
     return { ...out, ok: out.status === "executed" && !handlerFailed };
   };
   const failure = (out: { status: DispatchStatus; text: string }) => {
@@ -2076,7 +2268,32 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
       }
 
       case "memoryForgetHelp":
-        return say(routerMessage("memoryForgetHelp", lang));
+        // Con la lista de recuerdos (el chat) sí se puede olvidar uno
+        // concreto con confirmación: se pide cuál. Sin ella, la guía.
+        return say(routerMessage(deps.listMemories ? "memoryForgetAsk" : "memoryForgetHelp", lang));
+
+      case "memoryForget": {
+        if (!deps.listMemories) return say(routerMessage("memoryForgetHelp", lang));
+        const items = await deps.listMemories();
+        const words = norm(action.query)
+          .split(/[^a-z0-9ñ]+/)
+          .filter((w) => w.length >= 3 && !FORGET_STOP.has(w));
+        if (words.length === 0 || VAGUE_FORGET_RE.test(norm(action.query))) return say(routerMessage("memoryForgetAsk", lang));
+        const matches = items.filter((it) => {
+          const l = norm(it.label);
+          // Como en la búsqueda de la memoria: la palabra o su equivalente
+          // en las otras dos lenguas («live» encuentra «vivo en Tucson»).
+          return words.every((w) => mentionsTerm(l, w));
+        });
+        if (matches.length === 0) return say(routerMessage("memoryForgetNone", lang, { q: action.query }));
+        if (matches.length > 1) {
+          return say(`${routerMessage("memoryForgetWhich", lang)}\n${matches.slice(0, 6).map((m) => `• ${m.label}`).join("\n")}`);
+        }
+        const chosen = matches[0];
+        const out = await run("delete_memory", { id: chosen.id, kind: chosen.kind, content: chosen.label });
+        if (!out.ok) return failure(out);
+        return say(routerMessage("memoryForgot", lang, { label: chosen.label }));
+      }
 
       case "currencyInfo": {
         // Sin dispatch: no hay herramienta de tipos de cambio (la app es
@@ -2097,8 +2314,9 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
       }
 
       case "calendarCreate": {
+        if (action.invalidWhen) return say(routerMessage("calInvalidWhen", lang));
         if (!action.start) return say(routerMessage("calAskWhen", lang, { title: action.title }));
-        const out = await run("create_calendar_event", { title: action.title, start: action.start });
+        const out = await run("create_calendar_event", action.end ? { title: action.title, start: action.start, end: action.end } : { title: action.title, start: action.start });
         if (!out.ok) {
           // El diálogo propio del handler devuelve su texto de cancelación.
           if (/no hice nada|did nothing/i.test(out.text)) return say(routerMessage("cancelled", lang));

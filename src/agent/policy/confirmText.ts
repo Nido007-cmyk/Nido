@@ -51,6 +51,12 @@ const T = {
     en: "Delete the reminder “{{label}}”?\n\nThis can't be undone.",
     pt: "Apagar o lembrete “{{label}}”?\n\nIsso não pode ser desfeito.",
   },
+  deleteMemoryTitle: { es: "Olvidar recuerdo", en: "Forget memory", pt: "Esquecer lembrança" },
+  deleteMemoryMessage: {
+    es: "¿Olvidar «{{label}}»?\n\nNo se puede deshacer.",
+    en: "Forget “{{label}}”?\n\nThis can't be undone.",
+    pt: "Esquecer “{{label}}”?\n\nIsso não pode ser desfeito.",
+  },
   saveTitle: { es: "Confirmar guardado", en: "Confirm save", pt: "Confirmar salvamento" },
   saveMessage: {
     es: "En esta conversación hay contenido externo (un mensaje, archivo o nota). Revisa lo que se va a guardar:\n\n«{{content}}»",
@@ -112,6 +118,10 @@ export function describePolicyConfirmation(
         ? { title: T.deleteNoteTitle[lang], message: fill(T.deleteNoteMessage[lang], { label }) }
         : { title: T.deleteReminderTitle[lang], message: fill(T.deleteReminderMessage[lang], { label }) };
     }
+  }
+  if (tool === "delete_memory") {
+    const label = str(args.content).trim();
+    if (label) return { title: T.deleteMemoryTitle[lang], message: fill(T.deleteMemoryMessage[lang], { label }) };
   }
   if (tool === "remember_fact" || tool === "save_note" || tool === "create_reminder") {
     const content =

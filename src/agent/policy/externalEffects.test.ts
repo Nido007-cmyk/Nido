@@ -30,6 +30,8 @@ const EXTERNAL = [
   "nido_reject_task",
   "delete_note",
   "delete_reminder",
+  // 0.1.75: olvidar un recuerdo desde el chat (irreversible).
+  "delete_memory",
 ] as const;
 
 /**

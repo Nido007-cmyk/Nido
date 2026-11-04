@@ -36,7 +36,7 @@ describe("la costura de OCR", () => {
     });
     await expect(isOcrAvailable()).resolves.toBe(true);
     await expect(recognizeImageText("file:///pagina.jpg", "pt")).resolves.toBe("texto reconocido");
-    expect(seen).toEqual([["file:///pagina.jpg", "por"]]);
+    expect(seen).toEqual([["file:///pagina.jpg", "por+spa+eng"]]);
     expect(TESSDATA_LANG).toEqual({ es: "spa", en: "eng", pt: "por" });
     _setOcrNativeForTests(null);
   });
@@ -77,9 +77,9 @@ describe("la costura de páginas de PDF (carril OCR 2026-10-31)", () => {
     await expect(recognizePdfPagesText("file:///doc.pdf", [3, 1, 3, -2, 2.5], "es")).resolves.toBe(
       "páginas reconocidas",
     );
-    expect(seen).toEqual([["file:///doc.pdf", [1, 3], "spa"]]);
+    expect(seen).toEqual([["file:///doc.pdf", [1, 3], "spa+eng+por"]]);
     await expect(recognizeScannedPdfText("file:///doc.pdf", "pt")).resolves.toBe("páginas reconocidas");
-    expect(seen[1]).toEqual(["file:///doc.pdf", [], "por"]);
+    expect(seen[1]).toEqual(["file:///doc.pdf", [], "por+spa+eng"]);
     _setOcrNativeForTests(null);
   });
 
@@ -156,5 +156,14 @@ describe("auditoría completa: páginas escaneadas y códigos del nativo", () =>
     });
     await expect(recognizeImageText("file:///x.png", "es")).rejects.toMatchObject({ code: "OCR_UNAVAILABLE" });
     _setOcrNativeForTests(null);
+  });
+});
+
+describe("tessdataSpec (0.1.75): las tres lenguas, la de la app primero", () => {
+  it("orden y sin repetidos", async () => {
+    const { tessdataSpec } = await import("./ocr");
+    expect(tessdataSpec("es")).toBe("spa+eng+por");
+    expect(tessdataSpec("en")).toBe("eng+spa+por");
+    expect(tessdataSpec("pt")).toBe("por+spa+eng");
   });
 });

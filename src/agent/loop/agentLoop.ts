@@ -150,6 +150,8 @@ export interface AgentLoopOptions {
   listNoteTitles?: () => Promise<NoteSummary[]>;
   /** 0.1.20 (P3-10): notas con cuerpo para buscar dentro de ellas. */
   listNotesFull?: () => Promise<Array<{ id: string; title: string; body: string }>>;
+  /** «olvida …»: recuerdos guardados (hechos y personas) con su id. */
+  listMemories?: () => Promise<Array<{ id: string; kind: "fact" | "person"; label: string }>>;
   /** 0.1.14: recordatorios pendientes para "qué recordatorios tengo". */
   listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null; repeat?: "day" | "week" | "month" | "year" | null }>>;
   /**
@@ -849,13 +851,22 @@ async function runAgentLoopCore(
   // como la solución más confiable para modelos sub-1B.
   // ACTION-ROUTER 2026-10-07: calculadora y recordatorios antes que memoria
   // (el modelo 0.5B no siempre genera el tool call para acciones simples).
-  const { extractCalcAction, extractReminderAction, reminderMissingText, extractTimerAction, extractWeeklyPlanAction, generateWeeklyPlan, detectReminderRepeat } = await import("./actionRouter");
+  const { extractCalcAction, extractReminderAction, reminderMissingText, reminderInvalidWhen, extractTimerAction, timerOutOfRange, extractWeeklyPlanAction, generateWeeklyPlan, detectReminderRepeat } = await import("./actionRouter");
   // Permisos del usuario: con la herramienta apagada no hay atajo; el turno
   // sigue al modelo y el despachador la rechaza.
   const fastPathAllowed = (tool: string): boolean =>
     !isToolDisabled(tool) && (!options.restrictFastPathsToHandlers || tool in handlers);
   // TOOLS-AUDIT 2026-10-11: el atajo de calculadora ignoraba el interruptor.
   const calcAction = fastPathAllowed("calculate") ? extractCalcAction(userText) : null;
+  if (calcAction?.divisionByZero) {
+    const l = options.lang === "en" || options.lang === "pt" ? options.lang : "es";
+    const msg = {
+      es: `${calcAction.expression}: no se puede dividir entre cero; no tiene resultado.`,
+      en: `${calcAction.expression}: you can't divide by zero; it has no result.`,
+      pt: `${calcAction.expression}: não dá para dividir por zero; não tem resultado.`,
+    }[l];
+    return { response: msg, intent, toolUses: [{ name: "calc", result: `División entre cero: ${calcAction.expression}.` }] };
+  }
   if (calcAction) {
     const { formatNumber, isApproximate } = await import("../tools/calc");
     return {
@@ -902,6 +913,7 @@ async function runAgentLoopCore(
     listNotes: options.listNoteTitles,
     listNotesFull: options.listNotesFull,
     listReminders: options.listReminders,
+    listMemories: options.listMemories,
     choiceStore: options.choiceStore,
   };
   // 0.1.25 (hallazgo físico del dueño, Tab A9+ 2026-10-12): consumir la
@@ -968,6 +980,10 @@ async function runAgentLoopCore(
   // recordatorio con hora (ahora + duración) y la misma notificación.
   const timerLang: RouterLang = options.lang === "en" || options.lang === "pt" ? options.lang : "es";
   const timerAction = fastPathAllowed("create_reminder") && !fillWithRepeat ? extractTimerAction(userText) : null;
+  if (!timerAction && fastPathAllowed("create_reminder") && !fillWithRepeat && timerOutOfRange(userText)) {
+    const tl: RouterLang = options.lang === "en" || options.lang === "pt" ? options.lang : "es";
+    return { response: routerMessage("timerOutOfRange", tl), intent, toolUses: [], deterministic: true };
+  }
   if (timerAction) {
     const { saveReminder } = await import("../memory/memoryStore");
     const timerNames: Record<RouterLang, string> = { es: "Temporizador", en: "Timer", pt: "Temporizador" };
@@ -1020,6 +1036,11 @@ async function runAgentLoopCore(
   // 0.1.32: fecha sin contenido («ponme un recordatorio para el lunes»):
   // se pregunta qué recordar en vez de mandar el turno al modelo.
   if (!reminderAction && fastPathAllowed("create_reminder")) {
+    // «recuérdame a las 25:00…», «el 31 de febrero…»: no se guarda un
+    // aviso sin hora que nunca sonaría; se dice y se pide de nuevo.
+    if (reminderInvalidWhen(userText)) {
+      return { response: routerMessage("reminderInvalidWhen", reminderLang), intent, toolUses: [], deterministic: true };
+    }
     const missingDue = reminderMissingText(userText);
     if (missingDue) {
       // 0.1.35: la siguiente respuesta corta será el contenido.

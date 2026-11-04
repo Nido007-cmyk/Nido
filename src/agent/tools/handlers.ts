@@ -33,7 +33,7 @@ import {
   type OpenAppRejectReason,
 } from "./externalLink";
 import { evaluateExpression, formatNumber, isApproximate } from "./calc";
-import { convertUnits } from "./convert";
+import { convertUnits, ConvertError, validUnits } from "./convert";
 import { loadSkill, listSkills } from "../skills/registry";
 import { analyzeTable } from "./analyze";
 import { NidoMessenger, PairingDisambiguationRequiredError } from "../../p2p/messenger";
@@ -274,6 +274,32 @@ const deleteNoteHandler: ToolHandler = async (args) => {
   return `Nota borrada: «${note.title}».`;
 };
 
+/**
+ * Arreglos «todo es todo» (2026-11-03): olvidar un recuerdo desde el chat.
+ * Como borrar una nota: irreversible (la política pide confirmación y el
+ * diálogo muestra el recuerdo exacto) y solo se borra si lo confirmado
+ * coincide con lo guardado.
+ */
+const deleteMemoryHandler: ToolHandler = async (args) => {
+  const id = String(args.id ?? "").trim();
+  const kind = args.kind === "person" ? "person" : "fact";
+  if (!id) return "Error: falta el id del recuerdo.";
+  const store = await import("../memory/memoryStore");
+  if (kind === "person") {
+    const person = (await store.getPeople()).find((p) => p.id === id);
+    if (!person) return `No encontré ese recuerdo (id ${id}).`;
+    const label = person.relationship ? `${person.name} (${person.relationship})` : person.name;
+    if (!sameLabel(args.content, label)) throw new Error("el recuerdo confirmado no coincide con el guardado; no se borró nada");
+    await store.deletePerson(id);
+    return `Recuerdo borrado: «${label}».`;
+  }
+  const fact = (await store.getFacts(500)).find((f) => f.id === id);
+  if (!fact) return `No encontré ese recuerdo (id ${id}).`;
+  if (!sameLabel(args.content, fact.content)) throw new Error("el recuerdo confirmado no coincide con el guardado; no se borró nada");
+  await store.deleteFact(id);
+  return `Recuerdo borrado: «${fact.content}».`;
+};
+
 const deleteReminderHandler: ToolHandler = async (args) => {
   const id = String(args.id ?? "").trim();
   if (!id) return "Error: falta el id del recordatorio.";
@@ -306,7 +332,7 @@ const createReminderHandler: ToolHandler = async (args) => {
       // FIX 2026-10-09 (A2): rechazar fechas en el pasado. El path
       // determinístico ya lo hace; el del modelo no.
       if (d.getTime() < Date.now() - 60_000) {
-        return "Error: la fecha del recordatorio está en el pasado. Usa una fecha futura.";
+        return L("Error: la fecha del recordatorio está en el pasado. Usa una fecha futura.", "Error: the reminder date is in the past. Use a future date.", "Erro: a data do lembrete está no passado. Use uma data futura.");
       }
       dueAt = d.toISOString();
     }
@@ -441,6 +467,7 @@ export function buildToolHandlers(opts?: {
     delete_note: deleteNoteHandler,
     create_reminder: createReminderHandler,
     delete_reminder: deleteReminderHandler,
+    delete_memory: deleteMemoryHandler,
     remember_fact: rememberFactHandler,
     save_person: savePersonHandler,
     propose_negotiation: proposeNegotiationHandler,
@@ -758,7 +785,20 @@ const convertUnitsHandler: ToolHandler = async (args) => {
     const shown = Math.abs(r.value) >= 0.01 || r.value === 0 ? Number(r.value.toFixed(4)) : Number(r.value.toPrecision(4));
     return `${formatNumber(value)} ${r.from} = ${formatNumber(shown)} ${r.to}`;
   } catch (e) {
-    return `${L("No pude convertir eso", "I couldn't convert that", "Não consegui converter isso")}: ${e instanceof Error ? e.message : String(e)}`;
+    const prefix = L("No pude convertir eso", "I couldn't convert that", "Não consegui converter isso");
+    if (e instanceof ConvertError) {
+      const d = e.detail;
+      const why =
+        e.code === "belowAbsoluteZero"
+          ? L("está por debajo del cero absoluto (−273,15 °C); esa temperatura no existe", "it is below absolute zero (−273.15 °C); that temperature doesn't exist", "está abaixo do zero absoluto (−273,15 °C); essa temperatura não existe")
+          : e.code === "unknownUnit"
+            ? L(`no conozco la unidad «${d.unit}». Válidas: ${validUnits().join(", ")}`, `I don't know the unit “${d.unit}”. Valid: ${validUnits().join(", ")}`, `não conheço a unidade “${d.unit}”. Válidas: ${validUnits().join(", ")}`)
+            : e.code === "mismatch"
+              ? L(`${d.from} y ${d.to} miden cosas distintas`, `${d.from} and ${d.to} measure different things`, `${d.from} e ${d.to} medem coisas diferentes`)
+              : L("el valor no es un número", "the value isn't a number", "o valor não é um número");
+      return `${prefix}: ${why}.`;
+    }
+    return `${prefix}: ${e instanceof Error ? e.message : String(e)}`;
   }
 };
 
@@ -811,16 +851,16 @@ const createCalendarEventHandler: ToolHandler = async (args) => {
   if (!title) return "Error: falta el título del evento.";
   const start = new Date(String(args.start ?? ""));
   if (Number.isNaN(start.getTime())) {
-    return "Error: la fecha de inicio no es válida. Usa formato ISO, p.ej. 2026-09-27T10:00:00.";
+    return L("Error: la fecha de inicio no es válida. Usa formato ISO, p.ej. 2026-09-27T10:00:00.", "Error: the start date isn't valid. Use ISO format, e.g. 2026-09-27T10:00:00.", "Erro: a data de início não é válida. Use o formato ISO, p.ex. 2026-09-27T10:00:00.");
   }
   const endRaw = args.end != null ? String(args.end).trim() : "";
   const end = endRaw ? new Date(endRaw) : new Date(start.getTime() + 60 * 60 * 1000);
   if (Number.isNaN(end.getTime()) || end <= start) {
-    return "Error: la fecha de fin no es válida o es anterior al inicio.";
+    return L("Error: la fecha de fin no es válida o es anterior al inicio.", "Error: the end date isn't valid or is before the start.", "Erro: a data de fim não é válida ou é anterior ao início.");
   }
   try {
     const cal = await pickWritableCalendar();
-    if (!cal) return "No encontré ningún calendario donde escribir eventos.";
+    if (!cal) return L("No encontré ningún calendario donde escribir eventos.", "I didn't find any calendar I can write events to.", "Não encontrei nenhum calendário onde escrever eventos.");
     await cal.createEvent({
       title,
       startDate: start,
@@ -875,14 +915,20 @@ export const listCalendarEventsHandler: ToolHandler = async (args) => {
   const from = fromRaw ? new Date(fromRaw) : now;
   const to = toRaw ? new Date(toRaw) : new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
-    return "Error: rango de fechas inválido. Usa formato ISO.";
+    return L("Error: rango de fechas inválido. Usa formato ISO.", "Error: invalid date range. Use ISO format.", "Erro: intervalo de datas inválido. Use o formato ISO.");
   }
   const limit = Number(args.limit) > 0 ? Math.min(Math.floor(Number(args.limit)), 50) : 20;
   try {
     const Calendar = await import("expo-calendar");
     const calendars = await Calendar.getCalendars();
-    if (calendars.length === 0) return "No hay calendarios en el teléfono.";
-    const events = await Calendar.listEvents(calendars, from, to);
+    if (calendars.length === 0) return L("No hay calendarios en el teléfono.", "There are no calendars on the phone.", "Não há calendários no telefone.");
+    // 0.1.75: en orden de inicio (el sistema no promete el orden) y, si
+    // hay más de los que se muestran, se dice cuántos faltan (antes un mes
+    // con 30 eventos enseñaba 20 sin avisar).
+    const events = [...(await Calendar.listEvents(calendars, from, to))].sort(
+      (a: any, b: any) => new Date(a.startDate ?? 0).getTime() - new Date(b.startDate ?? 0).getTime(),
+    );
+    const hidden = Math.max(0, events.length - limit);
     const upcoming = events
       .slice(0, limit)
       .map((e: any) => {
@@ -890,9 +936,10 @@ export const listCalendarEventsHandler: ToolHandler = async (args) => {
         return `- «${e.title ?? L("(sin título)", "(untitled)", "(sem título)")}»${s ? ` — ${fmtDateTime(s.toISOString())}` : ""}${e.location ? ` @ ${e.location}` : ""}`;
       });
     if (upcoming.length === 0) return "No hay eventos en ese rango.";
-    return `Próximos eventos:\n${upcoming.join("\n")}`;
+    const more = hidden > 0 ? `\n${L(`… y ${hidden} más.`, `… and ${hidden} more.`, `… e mais ${hidden}.`)}` : "";
+    return `Próximos eventos:\n${upcoming.join("\n")}${more}`;
   } catch (e) {
-    return `No pude leer el calendario: ${e instanceof Error ? e.message : String(e)}`;
+    return `${L("No pude leer el calendario", "I couldn't read the calendar", "Não consegui ler o calendário")}: ${e instanceof Error ? e.message : String(e)}`;
   }
 };
 
@@ -969,7 +1016,7 @@ const placeCallHandler: ToolHandler = async (args) => {
     await Linking.openURL(`tel:${phone}`);
     return `Abriendo el marcador con ${phone}… confírmame tú la llamada.`;
   } catch {
-    return "No pude abrir el marcador del teléfono.";
+    return L("No pude abrir el marcador del teléfono.", "I couldn't open the phone dialer.", "Não consegui abrir o discador do telefone.");
   }
 };
 
@@ -984,7 +1031,7 @@ const sendSmsHandler: ToolHandler = async (args) => {
     await RN.Linking.openURL(`sms:${phone}${sep}body=${encodeURIComponent(message)}`);
     return `Abriendo mensajes para ${phone} con el texto listo… envíalo tú cuando quieras.`;
   } catch {
-    return "No pude abrir la app de mensajes.";
+    return L("No pude abrir la app de mensajes.", "I couldn't open the messages app.", "Não consegui abrir o app de mensagens.");
   }
 };
 

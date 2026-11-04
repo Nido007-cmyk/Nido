@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { extractCalcAction, extractReminderAction, extractTimerAction, extractWeeklyPlanAction, generateWeeklyPlan, parseReminderDateTime } from "./actionRouter";
+import { extractCalcAction, extractReminderAction, extractTimerAction, extractWeeklyPlanAction, generateWeeklyPlan, parseReminderDateTime, reminderInvalidWhen } from "./actionRouter";
 
 describe("actionRouter: calculadora (FIX 2026-10-07)", () => {
   it("extrae 'cuánto es 245 * 38'", () => {
@@ -152,17 +152,17 @@ describe("CALENDAR-FIX 2026-10-07: parseo de fechas", () => {
     expect(r!.text.toLowerCase()).toContain("call mom");
   });
 
-  it("M1 FIX: 'a las 25' es inválido (no rollover silencioso)", () => {
-    const r = extractReminderAction("recuérdame comprar pan mañana a las 25");
-    // Hora 25 inválida → dueAt null (no se inventa 01:00 del día siguiente)
-    expect(r).not.toBeNull();
-    expect(r!.dueAt).toBeNull();
+  // M1 (no rollover silencioso) sigue: no se inventa 01:00 del día
+  // siguiente. Desde 0.1.75 tampoco se guarda un aviso SIN hora (nunca
+  // sonaría): no se crea y el chat lo dice (reminderInvalidWhen).
+  it("M1 FIX: 'a las 25' es inválido (no rollover silencioso, no se guarda sin hora)", () => {
+    expect(extractReminderAction("recuérdame comprar pan mañana a las 25")).toBeNull();
+    expect(reminderInvalidWhen("recuérdame comprar pan mañana a las 25")).toBe(true);
   });
 
-  it("M1 FIX: '10:75' es inválido (no rollover silencioso)", () => {
-    const r = extractReminderAction("recuérdame llamar mañana a las 10:75");
-    expect(r).not.toBeNull();
-    expect(r!.dueAt).toBeNull();
+  it("M1 FIX: '10:75' es inválido (no rollover silencioso, no se guarda sin hora)", () => {
+    expect(extractReminderAction("recuérdame llamar mañana a las 10:75")).toBeNull();
+    expect(reminderInvalidWhen("recuérdame llamar mañana a las 10:75")).toBe(true);
   });
 });
 

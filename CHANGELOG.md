@@ -8,9 +8,9 @@ All notable changes to NIDO are recorded here. Versions follow
 
 Fixes from adversarial testing of the chat's own routing chain
 (the same code path the app runs, with hard phrasings in Spanish,
-English and Portuguese) and from an outside audit of 0.1.74. No
-catalog change: the signed catalog keeps offering
-knowledge-packs-v12.
+English and Portuguese) and from an outside audit of 0.1.74, plus
+every smaller error found while testing this release. No catalog
+change: the signed catalog keeps offering knowledge-packs-v12.
 
 ### Reminders and calendar
 
@@ -37,6 +37,38 @@ knowledge-packs-v12.
   see the calendar. They now list that day's events.
 - **"Nota: …" saves the note** in Spanish and Portuguese, as "note: …"
   did in English, and "anota aí: …" is read as Portuguese.
+- **"Lee la nota de la receta" finds "Receta de pan".** The article
+  was part of the search, so the note was not found.
+- **A time or date that does not exist is not saved.** "A las 25:00",
+  "7:75" or "el 31 de febrero" saved a reminder with no time that
+  never went off, and "el 31 de febrero a las 10" created the event or
+  reminder today at 10. NIDO now says it does not recognize that time
+  or date and creates nothing.
+- **Alarms and wake-ups.** "Pon una alarma para las 7" is titled
+  "Alarma" (in three languages), "despiértame a las 7" "Despertar",
+  "wake me up at 6" "Wake up", "me acorda às 7" "Acordar" (it was not
+  recognized). "Coloca um alarme para as 7" had no time. "Pon una
+  alarma mañana a las 6" is at 6:00, not 18:00.
+- **A weekday with a number.** "El viernes 13" is Friday the 13th;
+  "el viernes 10 llamar" is Friday at 10; "el lunes 2 pastillas" is
+  still Monday.
+- **More ways to say when.** "Dentro de 10 minutos", "within 10
+  minutes", "lembre-me dia 20 de pagar o aluguel" and "no dia 3".
+- **Time ranges and several days in the calendar.** "Reunión de 3 a
+  5 mañana" was titled "reunión de 3 a" at 9:00; it is now 15:00 to
+  17:00 ("from 3 to 5", "das 14 às 16"). "Vacaciones del 3 al 5 de
+  diciembre" started on the 5th; it now runs from the 3rd to the 5th.
+  "Cena el sábado a las 9" is at 21:00 unless you say "de la mañana".
+- **Appointment titles.** "Añade una cita con el doctor" keeps "cita
+  con el doctor".
+- **Next week and this month.** "Qué tengo la semana que viene",
+  "what's on my calendar next week", "o que tenho este mês" and "¿tengo
+  algo el sábado?" list your events instead of going to the model. The
+  list is in start order and says how many events it did not show.
+- **Timers.** "Una hora y media", "2 and a half minutes" and "uma
+  hora e meia" set the timer (they went to the chat). Zero, negative
+  or longer than 24 hours: NIDO says a timer goes up to 24 hours and
+  offers a reminder.
 
 ### Memory
 
@@ -44,10 +76,23 @@ knowledge-packs-v12.
   Juan" created a contact named "No Se", "my dad is not named John" one
   named "Not Named", and "my name is not Aldo" saved your name as "Not
   Aldo".
-- **The memory no longer claims you never told it.** The search is by
-  words, so a fact saved in another language does not show up; the
-  answer said "you haven't told me that yet". It now says it cannot
-  find it in what you have told it.
+- **The memory no longer claims you never told it.** When nothing
+  matches, the answer said "you haven't told me that yet". It now says
+  it cannot find it in what you have told it.
+- **A fact saved in another language is found.** "Where do I live?"
+  finds "vivo en Tucson", and "¿a qué soy alérgico?" finds "I'm
+  allergic to peanuts": the words used to save and to ask are matched
+  across Spanish, English and Portuguese.
+- **Words are matched whole.** "Ana" no longer matches "mañana", nor
+  "car" "carne".
+- **"How many days until my birthday?"** counts from the saved date,
+  yours or a person's (by name or by relationship: "my sister's").
+  It used to go to the model.
+- **Forget one memory from the chat.** "Olvida mi color favorito",
+  "forget that I live in Tucson", "esquece meu endereço": NIDO finds
+  the memory, shows it and asks you to confirm before deleting it.
+  If several match, it lists them and deletes nothing; "forget
+  everything" asks which one, or points to My Memory.
 
 ### Answers and tools
 
@@ -63,6 +108,30 @@ knowledge-packs-v12.
   200" is unchanged.
 - **"Emergency number usa", "U.S." and "U.S.A." find the United
   States.** The Spanish verb "usa" is still not read as the country.
+- **A short emergency number from the source is kept.** "El teléfono
+  de emergencias es el 112", with "Llama al 112 en caso de emergencia"
+  in the source, was removed as unsupported. A 3 or 4 digit number now
+  counts as a phone number when the source sentence has it next to
+  "call" and the same topic; 911 given as a clinic's phone is still
+  held back.
+- **Division by zero** says it has no result (it went to the model).
+- **"≈" when the decimals are cut.** "1/3 = 0.3333333333" is now
+  "1/3 ≈ 0.3333333333"; "0.1 + 0.2 = 0.3" stays "=".
+- **No temperature below absolute zero.** "-10 K" or "-500 °F" were
+  converted without a word.
+- **Errors in your language.** Unit conversion, calendar, dialer and
+  messages errors were in Spanish for everyone.
+
+### Documents and chat
+
+- **Scanned pages are read with the three languages.** A photo or a
+  scanned PDF in English or Portuguese, with the app in Spanish, was
+  read with the Spanish data only. Each language file is checked by
+  its hash before the engine starts.
+- **Report an answer.** After a thumbs-down, "Report" opens your email
+  app with a draft (question, answer and app version) to the address
+  in the README. You review it, can delete anything, and send it
+  yourself. NIDO sends nothing.
 
 ### Repository
 

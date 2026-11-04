@@ -252,9 +252,20 @@ export function evaluateExpression(input: string): number {
   return value;
 }
 
-/** true si el resultado es un entero demasiado grande para ser exacto. */
+/**
+ * true si lo que se muestra no es el valor exacto: un entero demasiado
+ * grande para ser exacto, o un decimal que formatNumber recorta
+ * (1/3 → 0,3333333333; √2). El ruido de coma flotante (0,1 + 0,2 =
+ * 0,30000000000000004 → 0,3) no cuenta: el resultado real es 0,3.
+ * Antes «1/3 = 0,3333333333» se presentaba como exacto.
+ */
 export function isApproximate(value: number): boolean {
-  return Number.isInteger(value) && !Number.isSafeInteger(value);
+  if (Number.isInteger(value)) return !Number.isSafeInteger(value);
+  if (!Number.isFinite(value)) return false;
+  // La misma regla de recorte que formatNumber para los no enteros.
+  const fixed = Number(value.toFixed(10));
+  const shown = fixed === 0 ? Number(value.toPrecision(6)) : fixed;
+  return Math.abs(shown - value) > 1e-12 * Math.max(1, Math.abs(value));
 }
 
 /** Formatea un número para mostrarlo: recorta decimales flotantes. */

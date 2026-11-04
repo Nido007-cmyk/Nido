@@ -36,7 +36,7 @@
 |---|---|---|
 | Privacy policy | Met | [PRIVACY.md](../PRIVACY.md) in English and Spanish. Play needs a public URL; the GitHub page works. |
 | Data safety form | Ready to fill | NIDO sends no user data to the developer or to third parties. Downloads (models and packs from GitHub and Hugging Face, including raw.githubusercontent.com) carry no user data. Answer: "No data collected, no data shared". Also declare encryption at rest and that the user can delete everything. |
-| AI-generated content | **Gap** | Play asks generative AI apps to let users report or flag offensive output from inside the app. NIDO has thumbs up and down, but the rating stays on the phone and nobody receives it. A report action is needed, for example "Report this answer". It would open a prefilled email or GitHub issue that the user reviews and sends. NIDO itself would still send nothing. The owner has to choose the channel. |
+| AI-generated content | Met from 0.1.75 | After a thumbs-down, the answer shows **Report** (`src/ui/reportAnswer.ts`, wired in `ChatScreen.tsx`). It opens the user's email app with a draft to the README address: question, answer and app version. The user reviews it, can delete anything, and sends it. NIDO itself sends nothing. To check on a device before submitting. |
 | Health and medical information | Declaration needed | The Health apps declaration in Play Console. The disclaimer already ships in the packs and the listing: general information, not a substitute for a first aid course or professional help, call your local emergency number. |
 | Content rating | To do | IARC questionnaire in Play Console. |
 | Large downloads | Met | Models and packs are data, not code. They are checked by SHA-256 against a signed catalog before use. |
@@ -57,9 +57,8 @@
 
 1. Owner decisions:
    - the signing key (upload the existing key);
-   - the channel for "Report this answer";
    - whether to keep the special-use foreground service.
-2. Build "Report this answer", test it on a device, and ship it in a release.
+2. Test "Report" on a device (it ships in 0.1.75).
 3. Real screenshots and the feature graphic.
 4. Play Console: listing, Data safety, permission declarations, Health declaration, content rating.
 5. Manual APK workflow run with `play_bundle`, then upload the AAB to the closed-test track.
