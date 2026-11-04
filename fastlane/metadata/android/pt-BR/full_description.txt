@@ -1,0 +1,20 @@
+O NIDO é um assistente de IA privado que roda inteiro no seu celular Android. O modelo de linguagem, sua memória e seus documentos ficam no aparelho, criptografados. Sem contas, sem nuvem e sem análises. Depois de baixar o modelo uma vez, funciona offline; os pacotes de conhecimento são downloads opcionais.
+
+O QUE O NIDO FAZ
+• Chat offline com um modelo de linguagem que roda no próprio celular.
+• Memória criptografada para fatos, notas e lembretes (SQLCipher, com a chave no Android Keystore).
+• Ações com a sua permissão: lembretes, contagens regressivas, notas, eventos de calendário, conversões e contas. Tudo o que tem efeito fora do app pede confirmação.
+• Respostas a partir dos seus arquivos (.txt, .md, .csv, .json, .pdf), incluindo fotos e PDFs digitalizados, cujo texto é reconhecido no aparelho.
+• Conhecimento offline: uma base integrada, um pacote opcional da Wikipédia (cerca de 50.000 artigos) e nove pacotes de guias escritos pelo NIDO, de primeiros socorros a desastres, com números de emergência de 69 países verificados em fontes oficiais.
+• Aba de Emergência com os números do seu país, cada um com sua fonte oficial e a data de verificação. "Ligar" abre o discador com o número digitado; você aperta ligar.
+• Mensagens criptografadas de ponta a ponta entre dois celulares NIDO por Bluetooth ou Wi-Fi local, sem internet nem servidor.
+• Um registro de rede que mostra cada download que o app faz.
+• Interface em português, inglês e espanhol.
+
+PRIVACIDADE
+O NIDO não tem contas, nem análises, nem publicidade, nem servidores próprios. Seus chats, documentos, notas e memória nunca saem do celular. O único uso de rede é baixar os modelos e pacotes que você escolhe, e isso fica registrado onde você pode ver.
+
+IMPORTANTE
+O NIDO é software alfa. Seus guias de primeiros socorros e saúde são informação geral escrita a partir das recomendações públicas das organizações citadas em cada guia; não substituem um curso de primeiros socorros nem a ajuda profissional. Em uma emergência, ligue para o número de emergência do seu país.
+
+O NIDO é gratuito e de código aberto (MIT): https://github.com/Nido007-cmyk/Nido

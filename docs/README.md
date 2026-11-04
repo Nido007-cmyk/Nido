@@ -20,6 +20,6 @@ Spanish translations mirror this tree under [`es/`](es/).
 - [Design language](NIDO_DESIGN_LANGUAGE.md) · [visual identity](NIDO_VISUAL_IDENTITY_SYSTEM.md) · [visual assets](visual/)
 
 ## Building and testing
-- [Android build](ANDROID_BUILD.md) · [signing](SIGNING.md)
+- [Android build](ANDROID_BUILD.md) · [signing](SIGNING.md) · [Google Play readiness](PLAY_STORE_READINESS.md)
 - [Device evaluation](DEVICE_EVALUATION.md) · [local evaluation](EVAL_LOCAL.md)
 - [Roadmap](ROADMAP.md) · [product roadmap](NIDO_PRODUCT_ROADMAP.md)

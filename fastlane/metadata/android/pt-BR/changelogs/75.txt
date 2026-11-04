@@ -1,0 +1,1 @@
+Correções de uma auditoria completa: emergências reconhecidas nos três idiomas, frases de crise em espanhol e português chegam à rota de crise, sem aviso falso de reconhecimento em PDFs de texto, o tipo de arquivo decidido pelos seus bytes.
