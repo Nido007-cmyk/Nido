@@ -556,7 +556,7 @@ export async function runContactAction(
     toolUses.push({ name: tool, result: out.text });
     // Los handlers de llamada/SMS devuelven texto también al fallar
     // ("No pude abrir el marcador…", "Error: falta…") sin lanzar.
-    const handlerFailed = out.status === "executed" && /^(error|no pude)\b/i.test(out.text.trim());
+    const handlerFailed = out.status === "executed" && /^(?:error|erro|no pude|i couldn'?t|n[ãa]o consegui)\b/i.test(out.text.trim());
     if (handlerFailed) {
       return say(contactMessage("failed", lang, { reason: out.text }), toolUses);
     }

@@ -332,7 +332,7 @@ const createReminderHandler: ToolHandler = async (args) => {
       // FIX 2026-10-09 (A2): rechazar fechas en el pasado. El path
       // determinístico ya lo hace; el del modelo no.
       if (d.getTime() < Date.now() - 60_000) {
-        return "Error: la fecha del recordatorio está en el pasado. Usa una fecha futura.";
+        return L("Error: la fecha del recordatorio está en el pasado. Usa una fecha futura.", "Error: the reminder date is in the past. Use a future date.", "Erro: a data do lembrete está no passado. Use uma data futura.");
       }
       dueAt = d.toISOString();
     }
@@ -851,16 +851,16 @@ const createCalendarEventHandler: ToolHandler = async (args) => {
   if (!title) return "Error: falta el título del evento.";
   const start = new Date(String(args.start ?? ""));
   if (Number.isNaN(start.getTime())) {
-    return "Error: la fecha de inicio no es válida. Usa formato ISO, p.ej. 2026-09-27T10:00:00.";
+    return L("Error: la fecha de inicio no es válida. Usa formato ISO, p.ej. 2026-09-27T10:00:00.", "Error: the start date isn't valid. Use ISO format, e.g. 2026-09-27T10:00:00.", "Erro: a data de início não é válida. Use o formato ISO, p.ex. 2026-09-27T10:00:00.");
   }
   const endRaw = args.end != null ? String(args.end).trim() : "";
   const end = endRaw ? new Date(endRaw) : new Date(start.getTime() + 60 * 60 * 1000);
   if (Number.isNaN(end.getTime()) || end <= start) {
-    return "Error: la fecha de fin no es válida o es anterior al inicio.";
+    return L("Error: la fecha de fin no es válida o es anterior al inicio.", "Error: the end date isn't valid or is before the start.", "Erro: a data de fim não é válida ou é anterior ao início.");
   }
   try {
     const cal = await pickWritableCalendar();
-    if (!cal) return "No encontré ningún calendario donde escribir eventos.";
+    if (!cal) return L("No encontré ningún calendario donde escribir eventos.", "I didn't find any calendar I can write events to.", "Não encontrei nenhum calendário onde escrever eventos.");
     await cal.createEvent({
       title,
       startDate: start,
@@ -1016,7 +1016,7 @@ const placeCallHandler: ToolHandler = async (args) => {
     await Linking.openURL(`tel:${phone}`);
     return `Abriendo el marcador con ${phone}… confírmame tú la llamada.`;
   } catch {
-    return "No pude abrir el marcador del teléfono.";
+    return L("No pude abrir el marcador del teléfono.", "I couldn't open the phone dialer.", "Não consegui abrir o discador do telefone.");
   }
 };
 
@@ -1031,7 +1031,7 @@ const sendSmsHandler: ToolHandler = async (args) => {
     await RN.Linking.openURL(`sms:${phone}${sep}body=${encodeURIComponent(message)}`);
     return `Abriendo mensajes para ${phone} con el texto listo… envíalo tú cuando quieras.`;
   } catch {
-    return "No pude abrir la app de mensajes.";
+    return L("No pude abrir la app de mensajes.", "I couldn't open the messages app.", "Não consegui abrir o app de mensagens.");
   }
 };
 

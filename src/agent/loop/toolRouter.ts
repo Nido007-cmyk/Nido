@@ -1945,7 +1945,7 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
     if (out.status === "executed" && /no hice nada|did nothing|n[aã]o fiz nada/i.test(text)) {
       return { status: "cancelled" as DispatchStatus, text: out.text, ok: false };
     }
-    const handlerFailed = out.status === "executed" && /^(error|no pude|no encontr[eé]|nido no)\b/i.test(text);
+    const handlerFailed = out.status === "executed" && /^(?:error|erro|no pude|no encontr[eé]|nido no|i couldn'?t|i didn'?t find|nido can'?t|n[ãa]o consegui|n[ãa]o encontrei|o nido n[ãa]o)\b/i.test(text);
     return { ...out, ok: out.status === "executed" && !handlerFailed };
   };
   const failure = (out: { status: DispatchStatus; text: string }) => {

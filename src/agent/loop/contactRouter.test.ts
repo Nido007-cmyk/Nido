@@ -286,6 +286,14 @@ describe("runContactAction", () => {
     expect(out.response).toContain("No pude completar la acción");
   });
 
+  it("0.1.75: el fallo del handler en inglés o portugués también se informa como fallo", async () => {
+    for (const text of ["I couldn't open the phone dialer.", "Não consegui abrir o discador do telefone."]) {
+      const { d } = deps({ contacts: [{ name: "Ana", phones: ["555 000 1111"] }], dispatch: async () => ({ status: "executed", text }) });
+      const out = await runContactAction({ kind: "call", target: "Ana", lang: "es" }, d);
+      expect(out.response).toContain("No pude completar la acción");
+    }
+  });
+
   it("herramienta apagada por el usuario → no busca ni despacha", async () => {
     const { d, dispatched, searched } = deps({
       contacts: [{ name: "Ana", phones: ["1"] }],
