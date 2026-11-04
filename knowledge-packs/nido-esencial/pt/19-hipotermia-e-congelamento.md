@@ -5,7 +5,7 @@ lang: pt
 sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense 2020; Wilderness Medical Society
 id: esencial-hipotermia-y-congelacion
 verified: 2026-11-02
-questions: sinais de hipotermia, o que fazer | dedos congelados, posso esfregar | caiu na água gelada e está tremendo muito | como aquecer uma parte do corpo congelada
+questions: sinais de hipotermia, o que fazer | dedos congelados, posso esfregar | caiu na água gelada e está tremendo muito | como aquecer uma parte do corpo congelada | treme com força e está com a pele fria e pálida | está gelado, desajeitado, fala devagar e com sono
 ---
 ## Hipotermia
 O corpo esfria abaixo do normal. Pode acontecer com frio, vento, chuva ou depois de cair na água, mesmo sem temperaturas abaixo de zero.

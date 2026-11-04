@@ -5,7 +5,7 @@ lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020; Wilderness Medical Society
 id: esencial-hipotermia-y-congelacion
 verified: 2026-11-02
-questions: what do i do if someone has hypothermia | how do i warm up a person with hypothermia | his toes are frozen, frostbite, what do i do | at what water temperature do i rewarm frostbite | o que faço se alguém tiver hipotermia | como aqueço uma pessoa com hipotermia | signs of hypothermia, what to do | fell into icy water and is shivering hard
+questions: what do i do if someone has hypothermia | how do i warm up a person with hypothermia | his toes are frozen, frostbite, what do i do | at what water temperature do i rewarm frostbite | o que faço se alguém tiver hipotermia | como aqueço uma pessoa com hipotermia | signs of hypothermia, what to do | fell into icy water and is shivering hard | shivering strongly with cold, pale skin | very cold, clumsy, slow speech and sleepy
 ---
 ## Hypothermia
 The body cools below normal. It can happen with cold, wind, rain or after falling into water, even when it is not freezing.
