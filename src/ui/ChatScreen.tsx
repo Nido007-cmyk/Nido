@@ -27,6 +27,8 @@ import { PanicButton } from "./components/PanicButton";
 import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { LinearGradient } from "expo-linear-gradient";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType } from "../services/haptics";
+import { buildAnswerReportMailto } from "./reportAnswer";
+import { APP_VERSION } from "../security/backup";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { NidoMascot } from "./components/calm/NidoMascot";
 import * as Clipboard from "expo-clipboard";
@@ -586,6 +588,24 @@ export function ChatScreen({
       await setMessageFeedback(id, next);
     },
     []
+  );
+
+  // «Reportar esta respuesta» (política de Play para IA generativa): abre
+  // el correo del usuario con un borrador que él revisa y envía. NIDO no
+  // envía nada; si no hay app de correo, se dice.
+  const reportMessage = useCallback(
+    (id: string) => {
+      const list = messagesRef.current;
+      const idx = list.findIndex((m) => m.id === id);
+      if (idx < 0) return;
+      let question: string | undefined;
+      for (let k = idx - 1; k >= 0; k--) {
+        if (list[k].role === "user") { question = list[k].text; break; }
+      }
+      const url = buildAnswerReportMailto({ question, answer: list[idx].text, lang: i18n.language, version: APP_VERSION });
+      void Linking.openURL(url).catch(() => setToast(t("chatScreen.reportAnswerNoMail")));
+    },
+    [t, i18n]
   );
 
   // Cycles every tone; Custom only when a custom prompt is written (an empty one acts like the default).
@@ -2694,6 +2714,20 @@ export function ChatScreen({
                         </Text>
                       )}
                     </Pressable>
+
+                    {item.feedback === "down" && (
+                      <Pressable accessibilityRole="button"
+                        onPress={() => reportMessage(item.id)}
+                        hitSlop={6}
+                        accessibilityLabel={t("chatScreen.reportAnswer")}
+                        accessibilityHint={t("chatScreen.reportAnswerHint")}
+                        style={[styles.footerBtn, { backgroundColor: colors.bg.subtle, borderColor: colors.border.subtle }]}
+                      >
+                        <Text style={[styles.footerBtnLabel, { color: colors.text.dim }]}>
+                          {t("chatScreen.reportAnswer")}
+                        </Text>
+                      </Pressable>
+                    )}
 
                     <View style={styles.footerSpacer} />
 
