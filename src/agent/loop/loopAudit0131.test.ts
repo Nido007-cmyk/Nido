@@ -42,8 +42,15 @@ describe("temporizador: cancelar", () => {
 });
 
 describe("olvidar algo de la memoria: respuesta honesta, nunca un «listo» falso", () => {
-  it.each([["olvida mi color favorito", "es"], ["forget my favorite color", "en"], ["esqueça minha cor favorita", "pt"]])("%s", (s, lang) => {
-    expect(extractToolAction(s)).toMatchObject({ kind: "memoryForgetHelp", lang });
+  // Arreglos «todo es todo» (2026-11-03): olvidar desde el chat. La orden
+  // lleva lo que se pide olvidar; el borrado lo confirma la persona viendo
+  // el recuerdo exacto, y sin lista de recuerdos sigue la guía honesta.
+  it.each([
+    ["olvida mi color favorito", "es", "mi color favorito"],
+    ["forget my favorite color", "en", "my favorite color"],
+    ["esqueça minha cor favorita", "pt", "minha cor favorita"],
+  ])("%s", (s, lang, query) => {
+    expect(extractToolAction(s)).toMatchObject({ kind: "memoryForget", lang, query });
     expect(classifyIntent(s)).toBe("actuar");
   });
   it.each(["forget it", "forget about it", "olvida eso", "esqueça isso"])("%s no es una orden de memoria", (s) => {
@@ -65,8 +72,8 @@ describe("olvidar algo de la memoria: respuesta honesta, nunca un «listo» fals
     ["Elimina mi dirección de la memoria", "es"],
     ["Borra la dirección de la memoria", "es"],
     ["Delete my address from your memory", "en"],
-  ])("ADV-M2: %s → guía de borrado", (s, lang) => {
-    expect(extractToolAction(s)).toMatchObject({ kind: "memoryForgetHelp", lang });
+  ])("ADV-M2: %s → orden de olvidar", (s, lang) => {
+    expect(extractToolAction(s)).toMatchObject({ kind: "memoryForget", lang });
   });
   it("ningún patrón nuevo le roba «borra el temporizador» a la cancelación", () => {
     expect(extractToolAction("borra el temporizador")).toMatchObject({ kind: "reminderDelete" });

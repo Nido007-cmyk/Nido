@@ -150,6 +150,8 @@ export interface AgentLoopOptions {
   listNoteTitles?: () => Promise<NoteSummary[]>;
   /** 0.1.20 (P3-10): notas con cuerpo para buscar dentro de ellas. */
   listNotesFull?: () => Promise<Array<{ id: string; title: string; body: string }>>;
+  /** «olvida …»: recuerdos guardados (hechos y personas) con su id. */
+  listMemories?: () => Promise<Array<{ id: string; kind: "fact" | "person"; label: string }>>;
   /** 0.1.14: recordatorios pendientes para "qué recordatorios tengo". */
   listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null; repeat?: "day" | "week" | "month" | "year" | null }>>;
   /**
@@ -911,6 +913,7 @@ async function runAgentLoopCore(
     listNotes: options.listNoteTitles,
     listNotesFull: options.listNotesFull,
     listReminders: options.listReminders,
+    listMemories: options.listMemories,
     choiceStore: options.choiceStore,
   };
   // 0.1.25 (hallazgo físico del dueño, Tab A9+ 2026-10-12): consumir la

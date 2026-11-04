@@ -24,6 +24,7 @@
  * Puro salvo las dependencias inyectadas. 100% testeable.
  */
 
+import { equivalentsOf } from "./memoryEquiv";
 import { nextOccurrence } from "../memory/reminderRepeat";
 import { convertUnits } from "../tools/convert";
 import {
@@ -57,6 +58,7 @@ export const TOOL_KINDS = [
   "countdown",
   "currencyInfo",
   "memoryForgetHelp",
+  "memoryForget",
   "nidoCode",
   "nidoInbox",
   "nidoSend",
@@ -89,6 +91,7 @@ export type ToolAction =
   | { kind: "convert"; value: number; from: string; to: string; lang: RouterLang }
   | { kind: "currencyInfo"; lang: RouterLang }
   | { kind: "memoryForgetHelp"; lang: RouterLang }
+  | { kind: "memoryForget"; query: string; lang: RouterLang }
   | { kind: "countdown"; target: string; label: string; lang: RouterLang }
   | { kind: "reminderOfferCreate"; range: "today" | "tomorrow" | null; lang: RouterLang }
   | { kind: "reminderFill"; text: string; dueAt: string; lang: RouterLang; repeat?: ReminderRepeat | null }
@@ -186,9 +189,11 @@ export function toolForAction(a: ToolAction): string {
       // Se mapea a convert_units para el interruptor del usuario.
       return "convert_units";
     case "memoryForgetHelp":
-      // Sin herramienta de borrado de memoria para el agente: se explica
+      // Sin lista de recuerdos (tareas programadas, pruebas): se explica
       // dónde se borra. Va con el interruptor de la memoria.
       return "remember_fact";
+    case "memoryForget":
+      return "delete_memory";
     case "countdown":
       return "device_time";
     case "reminderOfferCreate":
@@ -941,7 +946,14 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
   // «olvida mi color favorito»: el agente no borra memoria por sí solo. Antes
   // caía al modelo, que podía responder «listo, lo olvidé» sin borrar nada.
   // Respuesta honesta: dónde se borra.
-  for (const { re, lang } of MEMORY_FORGET_RULES) if (re.test(t)) return { kind: "memoryForgetHelp", lang };
+  for (const { re, lang } of MEMORY_FORGET_RULES) {
+    if (!re.test(t)) continue;
+    // Arreglos «todo es todo» (2026-11-03): olvidar desde el chat. Lo que
+    // se nombra es la consulta; el borrado lo confirma la persona viendo
+    // el recuerdo exacto (delete_memory es irreversible).
+    const query = forgetQueryOf(t);
+    return query.length >= 2 ? { kind: "memoryForget", query, lang } : { kind: "memoryForgetHelp", lang };
+  }
 
   for (const { re, lang } of NOTE_LIST_RULES) if (re.test(t)) return { kind: "noteList", lang };
   const reminderQuery = splitReminderScope(t);
@@ -1188,6 +1200,9 @@ type Key =
   | "noteSearchNone"
   | "currencyOffline"
   | "memoryForgetHelp"
+  | "memoryForgot"
+  | "memoryForgetNone"
+  | "memoryForgetWhich"
   | "countdownToday"
   | "countdownOne"
   | "countdownMany"
@@ -1301,6 +1316,21 @@ const MSG: Record<Key, Record<RouterLang, string>> = {
   },
   countdownDateOne: { es: "Falta 1 día para el {{day}}.", en: "1 day until {{day}}.", pt: "Falta 1 dia para {{day}}." },
   countdownDateMany: { es: "Faltan {{n}} días para el {{day}}.", en: "{{n}} days until {{day}}.", pt: "Faltam {{n}} dias para {{day}}." },
+  memoryForgot: {
+    es: "Listo, olvidé: «{{label}}».",
+    en: "Done, I forgot: “{{label}}”.",
+    pt: "Pronto, esqueci: “{{label}}”.",
+  },
+  memoryForgetNone: {
+    es: "No encontré «{{q}}» en lo que me has contado. Puedes revisarlo en el menú → «Mi memoria».",
+    en: "I couldn't find “{{q}}” in what you've told me. You can check it in the menu → “My Memory”.",
+    pt: "Não encontrei “{{q}}” no que você me contou. Você pode conferir no menu → “Minha Memória”.",
+  },
+  memoryForgetWhich: {
+    es: "Hay varios recuerdos que coinciden; dime cuál con más detalle o bórralo en «Mi memoria»:",
+    en: "Several memories match; tell me which one in more detail, or delete it in “My Memory”:",
+    pt: "Há várias lembranças que coincidem; diga qual com mais detalhe ou apague em “Minha Memória”:",
+  },
   memoryForgetHelp: {
     es: "No borro recuerdos por mi cuenta. Para olvidar algo, abre el menú → «Mi memoria» y bórralo ahí: verás exactamente qué se elimina.",
     en: "I don't delete memories on my own. To forget something, open the menu → “My Memory” and delete it there: you'll see exactly what gets removed.",
@@ -1508,6 +1538,22 @@ export interface NoteSummary {
   title: string;
 }
 
+const FORGET_STOP = new Set(["que", "the", "and", "por", "para", "con", "una", "uno", "los", "las", "del", "mis", "tus", "sus", "meu", "minha", "seu", "sua", "dos", "das", "com", "não", "nao", "esto", "eso", "isso", "isto", "that", "this", "your", "you", "about"]);
+
+/** Lo que se pide olvidar: la frase sin el verbo ni «de la memoria». */
+export function forgetQueryOf(t: string): string {
+  return t
+    .trim()
+    .replace(/[.!?]+$/, "")
+    .replace(/^(?:por\s+favor[,\s]+|please[,\s]+)/i, "")
+    .replace(/^(?:olv[ií]date\s+de|olvida|borra|elimina|quita|apaga|forget(?:\s+about)?|delete|erase|remove|esque[cç]a|esquece|apague|apaga|exclui|exclua|deleta|remove)\s+/i, "")
+    .replace(/^(?:de|from|da)\s+(?:la\s+|tu\s+|mi\s+|your\s+|the\s+|sua\s+)?(?:memoria|memory|mem[oó]ria)\s+/i, "")
+    .replace(/\s+(?:de|from|da)\s+(?:la\s+|tu\s+|mi\s+|your\s+|the\s+|sua\s+)?(?:memoria|memory|mem[oó]ria)$/i, "")
+    .replace(/^(?:el|ese|este)\s+hecho\s+(?:de\s+(?:que\s+)?)?/i, "")
+    .replace(/^(?:que|that|about)\s+/i, "")
+    .trim();
+}
+
 export interface ToolRouterDeps {
   dispatch: (name: string, args: Record<string, unknown>) => Promise<{ status: DispatchStatus; text: string }>;
   isDisabled: (tool: string) => boolean;
@@ -1518,6 +1564,8 @@ export interface ToolRouterDeps {
   /** Recordatorios pendientes, para "qué recordatorios tengo" y para
    *  resolver los borrados por texto (0.1.20: con id). */
   listReminders?: () => Promise<Array<{ id: string; text: string; dueAt: string | null; repeat?: "day" | "week" | "month" | "year" | null }>>;
+  /** Recuerdos guardados (hechos y personas) con su id, para «olvida …». */
+  listMemories?: () => Promise<Array<{ id: string; kind: "fact" | "person"; label: string }>>;
   now?: () => Date;
   /**
    * 0.1.25: almacén de la elección pendiente («¿cuál nota?») entre
@@ -2088,6 +2136,29 @@ export async function runToolAction(action: ToolAction, deps: ToolRouterDeps): P
 
       case "memoryForgetHelp":
         return say(routerMessage("memoryForgetHelp", lang));
+
+      case "memoryForget": {
+        if (!deps.listMemories) return say(routerMessage("memoryForgetHelp", lang));
+        const items = await deps.listMemories();
+        const words = norm(action.query)
+          .split(/[^a-z0-9ñ]+/)
+          .filter((w) => w.length >= 3 && !FORGET_STOP.has(w));
+        if (words.length === 0) return say(routerMessage("memoryForgetHelp", lang));
+        const matches = items.filter((it) => {
+          const l = norm(it.label);
+          // Como en la búsqueda de la memoria: la palabra o su equivalente
+          // en las otras dos lenguas («live» encuentra «vivo en Tucson»).
+          return words.every((w) => l.includes(w) || equivalentsOf(w).some((v) => l.includes(v)));
+        });
+        if (matches.length === 0) return say(routerMessage("memoryForgetNone", lang, { q: action.query }));
+        if (matches.length > 1) {
+          return say(`${routerMessage("memoryForgetWhich", lang)}\n${matches.slice(0, 6).map((m) => `• ${m.label}`).join("\n")}`);
+        }
+        const chosen = matches[0];
+        const out = await run("delete_memory", { id: chosen.id, kind: chosen.kind, content: chosen.label });
+        if (!out.ok) return failure(out);
+        return say(routerMessage("memoryForgot", lang, { label: chosen.label }));
+      }
 
       case "currencyInfo": {
         // Sin dispatch: no hay herramienta de tipos de cambio (la app es

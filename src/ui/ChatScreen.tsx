@@ -1262,6 +1262,15 @@ export function ChatScreen({
             const { listNotes } = await import("../agent/memory/memoryStore");
             return (await listNotes(50)).map((n) => ({ id: n.id, title: n.title, body: n.body }));
           },
+          // «olvida …»: hechos y personas con su id (el borrado se confirma).
+          listMemories: async () => {
+            const { getFacts, getPeople } = await import("../agent/memory/memoryStore");
+            const [facts, people] = await Promise.all([getFacts(500), getPeople()]);
+            return [
+              ...facts.map((f) => ({ id: f.id, kind: "fact" as const, label: f.content })),
+              ...people.map((p) => ({ id: p.id, kind: "person" as const, label: p.relationship ? `${p.name} (${p.relationship})` : p.name })),
+            ];
+          },
           // 0.1.14: "qué recordatorios tengo".
           listReminders: async () => {
             const { listReminders } = await import("../agent/memory/memoryStore");

@@ -925,22 +925,22 @@ describe("B15 — «create a meeting» en CAL_CREATE", () => {
 // es/en) y TR16–TR18 (las simples ×3).
 describe("B18 — objeto-primero pt en MEMORY_FORGET_RULES", () => {
   it("«apaga meu endereço da memória» da la guía de olvido (TR15)", () => {
-    expect(extractToolAction("apaga meu endereço da memória", NOW)).toMatchObject({ kind: "memoryForgetHelp", lang: "pt" });
+    expect(extractToolAction("apaga meu endereço da memória", NOW)).toMatchObject({ kind: "memoryForget", lang: "pt" });
   });
 
   it("«exclui meu endereço da memória» también (R2-19)", () => {
-    expect(extractToolAction("exclui meu endereço da memória", NOW)).toMatchObject({ kind: "memoryForgetHelp", lang: "pt" });
+    expect(extractToolAction("exclui meu endereço da memória", NOW)).toMatchObject({ kind: "memoryForget", lang: "pt" });
   });
 
   it("hermana medida en la misma regla: «apaga da memória o meu endereço»", () => {
-    expect(extractToolAction("apaga da memória o meu endereço", NOW)).toMatchObject({ kind: "memoryForgetHelp", lang: "pt" });
+    expect(extractToolAction("apaga da memória o meu endereço", NOW)).toMatchObject({ kind: "memoryForget", lang: "pt" });
   });
 
   it("suelo: objeto-primero es/en y las simples ×3 no se mueven", () => {
-    expect(extractToolAction("elimina mi dirección de la memoria", NOW)).toMatchObject({ kind: "memoryForgetHelp", lang: "es" });
-    expect(extractToolAction("delete my address from your memory", NOW)).toMatchObject({ kind: "memoryForgetHelp", lang: "en" });
-    expect(extractToolAction("borra de tu memoria mi dirección", NOW)).toMatchObject({ kind: "memoryForgetHelp", lang: "es" });
-    expect(extractToolAction("forget my address", NOW)).toMatchObject({ kind: "memoryForgetHelp", lang: "en" });
-    expect(extractToolAction("esquece meu endereço", NOW)).toMatchObject({ kind: "memoryForgetHelp", lang: "pt" });
+    expect(extractToolAction("elimina mi dirección de la memoria", NOW)).toMatchObject({ kind: "memoryForget", lang: "es" });
+    expect(extractToolAction("delete my address from your memory", NOW)).toMatchObject({ kind: "memoryForget", lang: "en" });
+    expect(extractToolAction("borra de tu memoria mi dirección", NOW)).toMatchObject({ kind: "memoryForget", lang: "es" });
+    expect(extractToolAction("forget my address", NOW)).toMatchObject({ kind: "memoryForget", lang: "en" });
+    expect(extractToolAction("esquece meu endereço", NOW)).toMatchObject({ kind: "memoryForget", lang: "pt" });
   });
 });

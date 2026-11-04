@@ -274,6 +274,32 @@ const deleteNoteHandler: ToolHandler = async (args) => {
   return `Nota borrada: «${note.title}».`;
 };
 
+/**
+ * Arreglos «todo es todo» (2026-11-03): olvidar un recuerdo desde el chat.
+ * Como borrar una nota: irreversible (la política pide confirmación y el
+ * diálogo muestra el recuerdo exacto) y solo se borra si lo confirmado
+ * coincide con lo guardado.
+ */
+const deleteMemoryHandler: ToolHandler = async (args) => {
+  const id = String(args.id ?? "").trim();
+  const kind = args.kind === "person" ? "person" : "fact";
+  if (!id) return "Error: falta el id del recuerdo.";
+  const store = await import("../memory/memoryStore");
+  if (kind === "person") {
+    const person = (await store.getPeople()).find((p) => p.id === id);
+    if (!person) return `No encontré ese recuerdo (id ${id}).`;
+    const label = person.relationship ? `${person.name} (${person.relationship})` : person.name;
+    if (!sameLabel(args.content, label)) throw new Error("el recuerdo confirmado no coincide con el guardado; no se borró nada");
+    await store.deletePerson(id);
+    return `Recuerdo borrado: «${label}».`;
+  }
+  const fact = (await store.getFacts(500)).find((f) => f.id === id);
+  if (!fact) return `No encontré ese recuerdo (id ${id}).`;
+  if (!sameLabel(args.content, fact.content)) throw new Error("el recuerdo confirmado no coincide con el guardado; no se borró nada");
+  await store.deleteFact(id);
+  return `Recuerdo borrado: «${fact.content}».`;
+};
+
 const deleteReminderHandler: ToolHandler = async (args) => {
   const id = String(args.id ?? "").trim();
   if (!id) return "Error: falta el id del recordatorio.";
@@ -441,6 +467,7 @@ export function buildToolHandlers(opts?: {
     delete_note: deleteNoteHandler,
     create_reminder: createReminderHandler,
     delete_reminder: deleteReminderHandler,
+    delete_memory: deleteMemoryHandler,
     remember_fact: rememberFactHandler,
     save_person: savePersonHandler,
     propose_negotiation: proposeNegotiationHandler,
