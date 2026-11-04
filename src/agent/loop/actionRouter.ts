@@ -557,8 +557,12 @@ function extractReminderCore(userText: string, now: Date = new Date()): Reminder
   // despertador): «set an alarm for 7» a las 20:00 son las 7:00, no las 19:00.
   const isWakeVerb = /despi|despert|wake|acord|alarm/i.test(m[1]);
   // «set an alarm for 7» / «coloca um alarme para 7»: hora suelta → «at 7».
-  text = text.replace(/^(?:for\s+|para\s+(?:las\s+|as\s+)?)?(\d{1,2}(?::\d{2})?)\s*$/i, "at $1");
-  if (isWakeVerb && !/(ma[ñn]ana|tarde|noche|madrugada|morning|afternoon|evening|night|manh[ãa]|noite|am\b|pm\b)/i.test(text)) {
+  // Pruebas adversarias del 2026-11-03: «coloca um alarme para as 7» deja
+  // «as 7» (el «para» lo consume el verbo) y quedaba sin hora.
+  text = text.replace(/^(?:for\s+|para\s+)?(?:las\s+|as\s+|às\s+)?(\d{1,2}(?::\d{2})?)\s*$/i, "at $1");
+  // La parte del día cuenta solo como parte del día: «mañana» sola es el
+  // día siguiente («pon una alarma mañana a las 6» son las 6:00, no las 18:00).
+  if (isWakeVerb && !/((?:de|por|en)\s+la\s+(?:ma[ñn]ana|tarde|noche|madrugada)|(?:da|de|pela|à|a)\s+(?:manh[ãa]|tarde|noite|madrugada)|madrugada|morning|afternoon|evening|night|tonight|noite|noche|tarde|am\b|pm\b)/i.test(text)) {
     text += /wake|alarm(?!a|e)/i.test(m[1]) ? " in the morning" : /acord|alarme/i.test(m[1]) ? " da manhã" : " de la mañana";
   }
   // «avísame cuando sean las 3»: el parser entiende «a las 3», no la
@@ -658,7 +662,12 @@ function extractReminderCore(userText: string, now: Date = new Date()): Reminder
   // la frase del usuario, que es exactamente lo que pidió.
   if (!text.trim()) {
     if (isAlertVerb && dueAt) {
-      const title = trimmed.replace(/[.!]+$/, "").trim();
+      // Una alarma sin tarea se llama «Alarma» (antes el título era la
+      // frase entera, «pon una alarma para las 7»). Los demás avisos
+      // («despiértame a las 7», «avísame cuando sean las 3») conservan
+      // la frase, que dice exactamente lo que se pidió.
+      const alarmWord = /alarm/i.test(m[1]) ? (/alarme/i.test(m[1]) ? "Alarme" : /alarma/i.test(m[1]) ? "Alarma" : "Alarm") : null;
+      const title = alarmWord ?? trimmed.replace(/[.!]+$/, "").trim();
       return recurrenceRequested ? { text: title, dueAt, recurrenceRequested: true } : { text: title, dueAt };
     }
     // 0.1.32: hay fecha pero no qué recordar → se pregunta (no al modelo).
@@ -670,6 +679,8 @@ function extractReminderCore(userText: string, now: Date = new Date()): Reminder
     if (dueAt) lastMissingText = dueAt;
     return null;
   }
+  // «ponme una alarma a las 7»: el título que queda es la palabra sola.
+  if (/^(?:alarma|alarm|alarme)$/i.test(text)) text = text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
   if (recurrenceRequested) {
     // 0.1.32: «cada mes» no se queda en el título de un aviso de una vez.
     const clean = text
@@ -706,6 +717,10 @@ const NIGHT_RE = /(?:noche|night|noite)/i;
 const NOON_RE = /(?<![\p{L}])(?:(?:a|al|at|ao|à|pelo|por)\s+(?:(?:el|the|o)\s+)?)?(?:mediod[ií]a|noon|meio-dia|meio\s+dia)(?![\p{L}])/giu;
 const MIDNIGHT_RE = /(?<![\p{L}])(?:(?:a|al|at|à|pela|por)\s+(?:(?:la|the|a)\s+)?)?(?:medianoche|midnight|meia-noite|meia\s+noite)(?![\p{L}])/giu;
 
+/** «el viernes 10», «friday 10», «sexta 10»: día de la semana con un número detrás que no es hora escrita ni fecha con mes. */
+const WEEKDAY_NUMBER_RE =
+  /(?<![\p{L}])(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?)\s+(?:the\s+|dia\s+)?(\d{1,2})(?:st|nd|rd|th)?(?![\d:.,])(?!\s*(?:(?:de|of)\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)|h\b|hs?\b|horas?|hours?|minutos?|minutes?|am\b|pm\b))/iu;
+const MONTH_DATE_RE = /\d{1,2}\s+(?:de|of)\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)(?![\p{L}])|(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}/iu;
 const DAY_AFTER_TOMORROW_RE = /(?<![\p{L}])(?:pasado\s+ma[ñn]ana|the\s+day\s+after\s+tomorrow|depois\s+de\s+amanh[ãa])(?![\p{L}])/iu;
 /** «el 15» / «on the 15th» / «no dia 15», sin mes detrás ni forma de hora. */
 const DAY_OF_MONTH_RE =
@@ -743,6 +758,7 @@ export function stripDateWords(input: string): string {
       // «next monday», «na próxima segunda», «el lunes que viene»: solo
       // junto a un día de la semana («la próxima reunión» no se toca).
       .replace(new RegExp(`(?<![\\p{L}])(?:next|pr[oó]xim[oa])\\s+(?=${WEEKDAY_ALT})`, "giu"), "")
+      .replace(new RegExp(`(?:(?<![\\p{L}])(?:el|the|on|na|no)\\s+)?${WEEKDAY_NUMBER_RE.source}(?=\\s+(?:\\p{L}*(?:ar|er|ir|ár|ér|ír)(?![\\p{L}])|to\\s|para\\s|que\\s|de\\s+\\p{L}+(?:ar|er|ir)(?![\\p{L}]))|\\s*$)`, "giu"), "")
       .replace(new RegExp(`(?<![\\p{L}])(${WEEKDAY_ALT})\\s+que\\s+viene(?![\\p{L}])`, "giu"), "$1")
       .replace(/(?:(?<![\p{L}])(?:el|la|the|o|a|na|no|on)\s+)?(?<![\p{L}])(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?)(?![\p{L}-])/giu, "")
       .replace(DAY_AFTER_TOMORROW_RE_G, "")
@@ -775,6 +791,8 @@ export function stripDateWords(input: string): string {
       .replace(/\bdaqui\s+a\s+\d+\s*(minutos?|min|horas?|h|dias?|d|semanas?)\b/gi, "")
       .replace(/\bdaqui\s+a\s+(um|uma|dois|duas|três|tres|quatro|cinco|seis|sete|oito|nove|dez|quinze|vinte|trinta|meia)\s*(minutos?|min|horas?|h|dias?|d|semanas?)\b/gi, "")
       .replace(/\ben\s+(uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
+      // «el viernes 10:30 llamar»: la hora con minutos sale del título.
+      .replace(/(?<![\d:./])\d{1,2}:\d{2}(?![\d:])\s*(?:am|pm)?/gi, "")
       // M3 FIX: limpiar hora suelta después de día ("el viernes 10" → el 10 es la hora).
       .replace(/\b(\d{1,2})(:\d{2})?\s*(am|pm)?\s*$/gi, "")
       .replace(/\s+/g, " ")
@@ -997,6 +1015,8 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
   // es el año que viene, no mañana: el rollover genérico de abajo
   // inventaba el 16 de marzo, un día que el usuario no nombró.
   let namedMonthDay: { month: number; day: number } | null = null;
+  let weekdayNumber: RegExpExecArray | null = null;
+  let weekdayHour: number | null = null;
   // El día del mes sin mes («el 15»): si su hora ya pasó, el siguiente
   // mes que tenga ese día, nunca mañana ni el año que viene.
   let monthDay: number | null = null;
@@ -1018,8 +1038,36 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
   else if (/\b(hoy|today|hoje)\b/.test(t)) {
     targetDate = new Date(now);
   }
-  // Día de la semana
-  else {
+  // Pruebas adversarias del 2026-11-03: «el viernes 10» es el viernes día
+  // 10 si existe en los próximos 60 días; si no, el 10 es la hora («el
+  // viernes 10» dicho para el viernes a las 10). Antes el 10 se quedaba
+  // en el título («10 llamar») y el aviso iba a las 9.
+  else if (!MONTH_DATE_RE.test(t) && (weekdayNumber = WEEKDAY_NUMBER_RE.exec(t))) {
+    const dayNum = dayMap[weekdayNumber[1].toLowerCase().replace(/-feira$/, "")] ?? dayMap[weekdayNumber[1].toLowerCase()];
+    const n = parseInt(weekdayNumber[2], 10);
+    for (let k = 0; k <= 60 && dayNum !== undefined && !targetDate; k++) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + k, now.getHours(), now.getMinutes());
+      if (d.getDay() === dayNum && d.getDate() === n) targetDate = d;
+    }
+    // Como hora solo si lo que sigue es la tarea en infinitivo o su
+    // enlace («el viernes 10 llamar», «friday 10 to call»); «el lunes 2
+    // pastillas» son dos pastillas, no las 2.
+    const after = t.slice((weekdayNumber.index ?? 0) + weekdayNumber[0].length).trim();
+    const looksLikeTask = /^(?:\p{L}*(?:ar|er|ir|ár|ér|ír)(?![\p{L}])|to\s|para\s|que\s|de\s+\p{L}+(?:ar|er|ir)(?![\p{L}])|$)/iu.test(after);
+    if (!targetDate && dayNum !== undefined) {
+      // Sin ese día del mes cerca: el próximo día de la semana; el número
+      // es la hora solo si sigue la tarea («el lunes 2 pastillas»: el día
+      // es el lunes y «2 pastillas» es la tarea).
+      targetDate = new Date(now);
+      const diff = (dayNum - now.getDay() + 7) % 7;
+      targetDate.setDate(now.getDate() + (diff === 0 ? 7 : diff));
+      if (n >= 1 && n <= 23 && looksLikeTask) weekdayHour = n;
+      else weekdayNumber = null;
+    }
+  }
+  // Día de la semana (salvo que la frase traiga «N de mes»: entonces
+  // manda la fecha con mes, abajo; «el viernes 10 de diciembre»).
+  else if (!MONTH_DATE_RE.test(t)) {
     for (const [name, dayNum] of Object.entries(dayMap)) {
       if (t.includes(name)) {
         targetDate = new Date(now);
@@ -1113,7 +1161,11 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
   // B14 (barrido «revisa todo», clase 1): el singular «a la»/«à» entra
   // junto al plural — la 1 es la única hora singular y la más dictada
   // con este marco; sin él, «a la 1 de la tarde» daba dueAt: null.
-  const timeMatch = /(?:a\s+las|a\s+la|at|às|à)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.exec(t);
+  const timeMatch =
+    /(?:a\s+las|a\s+la|at|às|à)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.exec(t) ??
+    // «el viernes 10:30 llamar»: la hora con minutos escrita sola también es hora.
+    /(?<![\d:./])(\d{1,2}):(\d{2})(?![\d:])\s*(am|pm)?/i.exec(t) ??
+    (weekdayHour !== null ? (Object.assign([`${weekdayHour}`, `${weekdayHour}`, undefined, undefined], { index: 0, input: t }) as unknown as RegExpExecArray) : null);
   if (!targetDate && (timeMatch || noon || midnight)) {
     targetDate = new Date(now);
   }

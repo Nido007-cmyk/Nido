@@ -1087,10 +1087,21 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     if (!m) continue;
     const rest = m[1].trim();
     const start = parseReminderDateTime(rest, now);
+    // Pruebas adversarias del 2026-11-03: «agenda una cita con el
+    // dentista» titulaba el evento «el dentista». El sustantivo de la cita
+    // se queda («cita con el dentista», «meeting with John»); solo sale el
+    // artículo inicial y el sustantivo genérico «evento/event».
     let title = (start ? stripDateWords(rest) : rest)
-      .replace(/^(?:una?|um|uma|an?|the|el|la|o|a)\s+(?:cita|evento|event|compromisso|appointment)\s+(?:con|de|with|com)?\s*/i, "")
+      .replace(/^(?:una?|um|uma|an?|the|el|la|o|a)\s+(?:evento|event)\s+(?:con|de|with|com|para|for)?\s*/i, "")
       .replace(/^(?:para|for|pro|pra|de|con|with|com)\s+/i, "")
+      .replace(/^(?:una?|um|uma|an?|the|el|la|los|las|o|a)\s+(?=\S{2,})/i, "")
       .trim();
+    // «añade una cita con el doctor»: el verbo consumió «una cita»; el
+    // título la recupera («cita con el doctor»).
+    const consumed = /(?:crea|a[ñn]ade|agrega)\s+(?:una\s+)?(cita)\b|add\s+an?\s+(appointment)\b/i.exec(t);
+    if (consumed && /^(?:con|with)\s+/i.test(rest)) {
+      title = `${(consumed[1] ?? consumed[2]).toLowerCase()} ${(start ? stripDateWords(rest) : rest).trim()}`;
+    }
     // 0.1.43 (paso 2, enmienda del dueño; medido por el barrido):
     // «cria um evento amanhã» se descartaba aquí — el patrón consume
     // «um evento» en el verbo y el resto es solo la fecha, así que el

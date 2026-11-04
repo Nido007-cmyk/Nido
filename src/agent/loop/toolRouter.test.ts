@@ -152,9 +152,10 @@ describe("extractToolAction — calendario", () => {
   });
 
   it("crear con 'una cita con …' y en inglés/portugués", () => {
+    // Pruebas adversarias del 2026-11-03: el sustantivo de la cita se queda.
     expect(extractToolAction("añade una cita con el doctor mañana a las 9", NOW)).toMatchObject({
       kind: "calendarCreate",
-      title: "el doctor",
+      title: "cita con el doctor",
     });
     expect(extractToolAction("schedule team meeting tomorrow at 3pm", NOW)).toMatchObject({
       kind: "calendarCreate",
