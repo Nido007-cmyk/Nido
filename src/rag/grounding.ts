@@ -1192,8 +1192,22 @@ function digitsMatchType(sentence: string, type: DatumType, recs: SourceSentence
  */
 function isTypedDatumOffender(sentence: string, type: DatumType, recs: SourceSentenceRec[]): boolean {
   const folded = foldForCues(sentence);
-  if (!DATUM_CATEGORY_RE.test(folded) || !hasDatumCopula(sentence)) return false;
-  if (datumTypeOfText(sentence) !== type) return false;
+  if (!hasDatumCopula(sentence)) return false;
+  // ADV-G1-R (auditoría del tip f96e473): la afirmación con la
+  // etiqueta GENÉRICA («El número es 520-555-0147», «Es el
+  // 520-555-0147») no nombra tipo, y la regla la dejaba pasar sellada
+  // con las cifras de otro dato ante una pregunta de tarjeta. Sin tipo
+  // propio, se juzga con el tipo pedido (el único que llega aquí sin
+  // nombrarse); con tipo propio distinto, no es de esta pierna, como
+  // hasta hoy. La afirmación genérica cuenta si trae la etiqueta del
+  // dato o es una identidad desnuda corta (≤ 5 palabras).
+  // El teléfono queda fuera de la forma genérica: su tipo se ata por
+  // la forma de ≥7 dígitos, así que un número corto fiel («Es el
+  // 112») se leería como de otro dato y se retiraría.
+  const own = datumTypeOfText(sentence);
+  if (own !== null && own !== type) return false;
+  if (own === null && type === "phone") return false;
+  if (!DATUM_CATEGORY_RE.test(folded) && !(own === null && isBareIdentity(sentence))) return false;
   // A3-03 (decisión de FV-1): la clase DOSIS no hereda la exención
   // de un dígito de hasJudgedDigit. Sin esta pierna, «La dosis es
   // 9 ml» contra «Tome 5 ml…» salía sellada fundada: la regla ni
@@ -1203,6 +1217,12 @@ function isTypedDatumOffender(sentence: string, type: DatumType, recs: SourceSen
   // hasJudgedDigit queda intacta.
   if (!hasJudgedDigit(sentence) && !(type === "dose" && /\d/.test(sentence))) return false;
   return !digitsMatchType(sentence, type, recs);
+}
+
+/** «Es el 520-555-0147.» / «It's 520-555-0147.»: identidad corta, cópula y cifra, sin más tema. */
+function isBareIdentity(sentence: string): boolean {
+  const words = sentence.replace(/\[\d+\]/g, " ").trim().split(/\s+/).filter(Boolean);
+  return words.length <= 5 && hasJudgedDigit(sentence);
 }
 
 /** Cuántas raíces de contenido comparte la frase con la pregunta. */
