@@ -34,6 +34,18 @@ export type OcrLang = "es" | "en" | "pt";
 export const TESSDATA_LANG: Record<OcrLang, string> = { es: "spa", en: "eng", pt: "por" };
 
 /**
+ * Lo que recibe el motor: los tres datos de la casa, el del idioma de
+ * la app primero (0.1.75). Antes solo iba el del idioma de la app, y
+ * un documento en otra de las tres lenguas se leía con el diccionario
+ * equivocado (acentos y palabras perdidas). Tesseract usa el primero
+ * como principal y prueba los otros en las palabras dudosas.
+ */
+export function tessdataSpec(lang: OcrLang): string {
+  const order: OcrLang[] = [lang, ...(["es", "en", "pt"] as OcrLang[]).filter((l) => l !== lang)];
+  return order.map((l) => TESSDATA_LANG[l]).join("+");
+}
+
+/**
  * La marca de procedencia que viaja DENTRO del texto reconocido
  * cuando entra en la base de conocimiento (como avisa Field
  * Atlas: el OCR puede equivocarse). Texto fijo trilingüe, como el
@@ -107,7 +119,7 @@ export async function recognizeImageText(uri: string, lang: OcrLang): Promise<st
   const n = await getNative();
   if (!n) throw new OcrError("UNAVAILABLE", "Text recognition (OCR) is not available in this build.");
   try {
-    return await n.recognize(uri, TESSDATA_LANG[lang]);
+    return await n.recognize(uri, tessdataSpec(lang));
   } catch (e) {
     throw fromNative(e);
   }
@@ -134,7 +146,7 @@ export async function recognizePdfPagesText(uri: string, pages: number[], lang: 
     throw new OcrError("UNAVAILABLE", "Text recognition (OCR) is not available in this build.");
   }
   try {
-    return await n.recognizePdfPages(uri, sanitizeOcrPages(pages), TESSDATA_LANG[lang]);
+    return await n.recognizePdfPages(uri, sanitizeOcrPages(pages), tessdataSpec(lang));
   } catch (e) {
     throw fromNative(e);
   }

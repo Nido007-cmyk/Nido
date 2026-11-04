@@ -132,8 +132,21 @@ class NidoOcrModule : Module() {
     return root
   }
 
+  /**
+   * `lang` is one tessdata code ("spa") or several joined by "+"
+   * ("spa+eng+por", the app language first, as the TS side sends it
+   * from 0.1.75 so a document in another house language is read with
+   * its own data). Every part must be a known, bundled code and each
+   * file is hash-verified before Tesseract starts; anything else is
+   * refused, never passed to the engine.
+   */
   private fun newEngine(lang: String): TessBaseAPI {
-    val root = tessRoot(lang)
+    val parts = lang.split('+')
+    if (parts.isEmpty() || parts.size > TRAINEDDATA_SHA256.size || parts.toSet().size != parts.size) {
+      throw OcrUnavailableException("No OCR language data for '$lang'")
+    }
+    // Every part verified first; they all share one root directory.
+    val root = parts.map { tessRoot(it) }.first()
     val tess = TessBaseAPI()
     try {
       if (!tess.init(root.absolutePath, lang)) {

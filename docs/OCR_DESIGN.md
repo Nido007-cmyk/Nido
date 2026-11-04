@@ -21,8 +21,10 @@ from zero.
 - **The OCR seam** (`src/services/ocr.ts`), same shape as
   `pdfText.ts`: it looks up the native module by name
   (`NidoOcr`), reports `isOcrAvailable()`, and
-  `recognizeImageText(uri, lang)` maps the app language to its
-  tessdata code (es→spa, en→eng, pt→por) and throws
+  `recognizeImageText(uri, lang)` sends the three house languages,
+  the app language first (`tessdataSpec`: es→`spa+eng+por`,
+  en→`eng+spa+por`, pt→`por+spa+eng`, from 0.1.75; each file is
+  hash-verified before Tesseract starts) and throws
   `OcrError("UNAVAILABLE")` when the module is absent — which is
   every current build.
 - **Honest scanned-PDF error**: a PDF whose text layer extracts
