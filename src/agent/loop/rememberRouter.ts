@@ -353,7 +353,11 @@ const PT_REL =
  */
 const NAME_SRC = "[A-Za-zÁÉÍÓÚÑÜÀÂÊÔÃÕÇáéíóúñüàâêôãõç]+(?: [A-Za-zÁÉÍÓÚÑÜÀÂÊÔÃÕÇáéíóúñüàâêôãõç]+){0,2}";
 /** Palabras que jamás son un nombre en estas posiciones («se llama como…»). */
-const NOT_A_NAME = /^(como|así|asi|igual|también|tambien|bien|mal|todo|eso|esto|aquí|aqui|ahora|la|el|los|las|un|una|atención|atencion|se|me|te|le|que|de|en|y|e)$/i;
+// Pruebas adversarias del 2026-11-03: la negación tampoco es nombre.
+// «recuerda que mi papá no se llama Juan» creaba a la persona «No Se»,
+// «my dad is not named John» a «Not Named» y «my name is not Aldo»
+// guardaba el nombre propio «Not Aldo».
+const NOT_A_NAME = /^(como|así|asi|igual|también|tambien|bien|mal|todo|eso|esto|aquí|aqui|ahora|la|el|los|las|un|una|atención|atencion|se|me|te|le|que|de|en|y|e|no|not|never|nunca|jamás|jamas|não|nao|nem|ya|ni|isn't|isnt)$/i;
 /** Segunda palabra que corta el nombre: verbos típicos tras un nombre. */
 // 0.1.37 (auditoría): conjunciones y posesivos tampoco son apellido
 // («Ana y su cumpleaños…» guardaba «Ana Y»; en/pt «Ana And», «Ana E»).

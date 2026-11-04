@@ -680,8 +680,11 @@ const AM_PERIOD_RE =
 const PM_PERIOD_RE =
   /(?:(?:de|por|en)\s+la\s+(?:tarde|noche)|esta\s+(?:tarde|noche)|in\s+the\s+(?:afternoon|evening)|at\s+night|tonight|this\s+(?:afternoon|evening)|(?:da|de|à|a|pela|esta)\s+(?:tarde|noite))(?![\p{L}])/giu;
 const NIGHT_RE = /(?:noche|night|noite)/i;
-const NOON_RE = /(?<![\p{L}])(?:a\s+)?(?:mediod[ií]a|noon|meio-dia|meio\s+dia)(?![\p{L}])/giu;
-const MIDNIGHT_RE = /(?<![\p{L}])(?:a\s+)?(?:medianoche|midnight|meia-noite|meia\s+noite)(?![\p{L}])/giu;
+// La preposición que acompaña al mediodía y a la medianoche sale con
+// ella en las tres lenguas: antes solo «a», y «remind me at noon to
+// eat» dejaba el título «at to eat» y «ao meio-dia», «ao de almoçar».
+const NOON_RE = /(?<![\p{L}])(?:(?:a|al|at|ao|à|pelo|por)\s+(?:(?:el|the|o)\s+)?)?(?:mediod[ií]a|noon|meio-dia|meio\s+dia)(?![\p{L}])/giu;
+const MIDNIGHT_RE = /(?<![\p{L}])(?:(?:a|al|at|à|pela|por)\s+(?:(?:la|the|a)\s+)?)?(?:medianoche|midnight|meia-noite|meia\s+noite)(?![\p{L}])/giu;
 
 function dayPeriod(t: string): "am" | "pm" | null {
   AM_PERIOD_RE.lastIndex = 0;
@@ -720,6 +723,9 @@ export function stripDateWords(input: string): string {
       .replace(/\bat\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
       // TESTFIX-2026-10-08: limpiar tiempo relativo ("en 2 minutos" no es
       // parte del texto del recordatorio). FIX 2026-10-08: \s* para "1minuto".
+      // La cola de un relativo en horas («y media», «and a half», «e meia»,
+      // «y 30 minutos») sale con él: no es parte del título.
+      .replace(/(?<![\p{L}])(?:en|in|em|daqui\s+a)\s+(?:\d+|una?|one|dos|two|tres|three|um|uma|dois|duas)\s*(?:an?\s+)?(?:horas?|hours?|hrs?|h)\s+(?:y|and|e)\s+(?:media|a\s+half|half|meia|cuarto|a\s+quarter|um\s+quarto|(?:\d+|cinco|five|diez|ten|quince|fifteen|veinte|twenty|treinta|thirty|dez|quinze|vinte|trinta)\s*(?:minutos?|minutes?|min))(?![\p{L}])/giu, "")
       .replace(/\ben\s+\d+\s*(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
       .replace(/\bin\s+\d+\s*(minutes?|min|hours?|hrs?|h|days?|d|weeks?|w)\b/gi, "")
       // 0.1.14: portugués "em 2 horas".
@@ -759,6 +765,10 @@ const NUMBER_WORDS: Record<string, number> = {
  * "en dos minutos", "in 1 hour", "en media hora").
  * Devuelve la fecha objetivo o null si no hay patrón relativo.
  */
+/** La cola de un relativo en horas: «y media», «y cuarto», «y 30 minutos» (es/en/pt). */
+const RELATIVE_TAIL_RE =
+  /^\s+(?:y|and|e)\s+(?:(media|a\s+half|half|meia)|(cuarto|a\s+quarter|um\s+quarto)|(\d+|cinco|five|diez|ten|quince|fifteen|veinte|twenty|treinta|thirty|dez|quinze|vinte|trinta)\s*(?:minutos?|minutes?|min))(?![\p{L}])/iu;
+
 function parseRelativeTime(t: string, now: Date): Date | null {
   // FIX 2026-10-08: \s* entre número y unidad para "1minuto" (sin espacio).
   // Cobertura adoptada de B13 (adversaria de formas): el prefijo pt
@@ -773,13 +783,29 @@ function parseRelativeTime(t: string, now: Date): Date | null {
   if (n === undefined || n <= 0) return null;
 
   const unit = m[2].toLowerCase();
+  // «en 1 hora y media», «in 2 hours and a half», «em 1 hora e meia»,
+  // «en 1 hora y 30 minutos»: la cola sumaba nada y el aviso salía
+  // media hora antes, con «y media» en el título.
+  let extraMs = 0;
+  if (/^(h|hora|horas|hour|hours|hrs)$/.test(unit)) {
+    const tail = RELATIVE_TAIL_RE.exec(t.slice((m.index ?? 0) + m[0].length));
+    if (tail) {
+      if (tail[1]) extraMs = 30 * 60_000;
+      else if (tail[2]) extraMs = 15 * 60_000;
+      else if (tail[3]) {
+        const raw = tail[3].toLowerCase();
+        const mins = /^\d+$/.test(raw) ? parseInt(raw, 10) : NUMBER_WORDS[raw];
+        if (mins !== undefined && mins > 0 && mins < 60) extraMs = Math.round(mins * 60_000);
+      }
+    }
+  }
   let target = new Date(now);
   // "en media hora": n = 0.5. setMinutes/setHours truncan a entero (media
   // hora daba +0 y se rechazaba); en milisegundos no.
   if (/^min/.test(unit)) {
     target = new Date(now.getTime() + Math.round(n * 60_000));
   } else if (/^(h|hora|horas|hour|hours|hrs)$/.test(unit)) {
-    target = new Date(now.getTime() + Math.round(n * 3_600_000));
+    target = new Date(now.getTime() + Math.round(n * 3_600_000) + extraMs);
   } else if (!Number.isInteger(n)) {
     return null;
   } else if (/^(d|d[ií]a|dias|días|day|days)$/.test(unit)) {
