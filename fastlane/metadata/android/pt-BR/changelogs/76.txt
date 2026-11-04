@@ -1,0 +1,1 @@
+Correções de testes adversariais: "depois de amanhã" e o dia do mês já não avisam no dia errado, "em 1 hora e meia" soma a meia hora, a agenda de um dia da semana, uma negação já não é salva como nome e "100 menos 30%" dá 70.

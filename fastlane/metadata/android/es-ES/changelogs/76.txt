@@ -1,0 +1,1 @@
+Arreglos de pruebas adversarias: «pasado mañana» y el día del mes ya no avisan el día equivocado, «en 1 hora y media» suma la media hora, la agenda de un día de la semana, una negación ya no se guarda como nombre y «100 menos 30%» da 70.
