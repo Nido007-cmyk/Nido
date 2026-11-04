@@ -380,10 +380,10 @@ export function extractReminderAction(userText: string, now: Date = new Date()):
   lastMissingText = null;
   // 0.1.37: un intervalo no soportado manda: una sola vez y aviso honesto,
   // aunque la frase traiga también «todos los días» o «cada lunes».
-  if (hasUnsupportedInterval(userText)) return extractReminderCore(userText);
+  if (hasUnsupportedInterval(userText)) return extractReminderCore(userText, now);
   const spec = detectReminderRepeat(userText.trim());
-  if (!spec) return extractReminderCore(userText);
-  const res = extractReminderCore(spec.cleaned);
+  if (!spec) return extractReminderCore(userText, now);
+  const res = extractReminderCore(spec.cleaned, now);
   if (!res) return null;
   // Hora: la que dijo el usuario o la por defecto del ritmo. «cada noche a
   // las 10» es 22:00 (sin am/pm el parser tomaría las 10 de la mañana).
@@ -476,7 +476,7 @@ const QUE_FACT_FAMILY_RE =
  *  contenido con fecha es un recordatorio y no un hecho. */
 const FIRST_PERSON_EVENT_RE = /\b(?:tengo|debo|hay que|tenho|preciso|i have|i need)\b/i;
 
-function extractReminderCore(userText: string): ReminderAction | null {
+function extractReminderCore(userText: string, now: Date = new Date()): ReminderAction | null {
   lastMissingText = null;
   // 0.1.41: la forma de pregunta llega entre signos («¿me recuerdas mañana
   // comprar pan?»): los signos que la envuelven no son parte de la orden.
@@ -493,7 +493,7 @@ function extractReminderCore(userText: string): ReminderAction | null {
   const que = /^(?:recuerda|remember|lembra(?:-te)?|lembre(?:-se)?)\s+(?:que|that)\s+(.+)/i.exec(trimmed);
   if (que) {
     const content = que[1].trim();
-    const dueAt = parseReminderDateTime(content);
+    const dueAt = parseReminderDateTime(content, now);
     if (dueAt && /\b(?:tengo|debo|hay que|tenho|preciso|i have|i need)\b/i.test(content)) {
       const text = stripDateWords(content).trim();
       if (text.length >= 3) return recurrenceRequested ? { text, dueAt, recurrenceRequested: true } : { text, dueAt };
@@ -527,7 +527,7 @@ function extractReminderCore(userText: string): ReminderAction | null {
   // puede comprobar condiciones; no es un recordatorio.
   if (/^(?:si|if|se)\s+\S/i.test(m[2].trim())) return null;
   // «let me know your thoughts…» no es un aviso: sin hora, no hay recordatorio.
-  if (/^let\s+me\s+know$/i.test(m[1]) && !parseReminderDateTime(m[2])) return null;
+  if (/^let\s+me\s+know$/i.test(m[1]) && !parseReminderDateTime(m[2], now)) return null;
   // 0.1.30 (rutas que caían al modelo): «pon una alarma a las 7» y «set a
   // reminder for 5pm» también son avisos: sin tarea, el título es la frase.
   // «set a reminder» sin contenido NO es un aviso: se pregunta qué recordar (0.1.32).
@@ -600,14 +600,14 @@ function extractReminderCore(userText: string): ReminderAction | null {
   if (INTERROGATIVE_START_RE.test(text)) return null;
 
   // CALENDAR-FIX 2026-10-07: parsear fecha/hora del texto.
-  let dueAt = parseReminderDateTime(text);
+  let dueAt = parseReminderDateTime(text, now);
   if (!dueAt) {
     // 0.1.19 (sonda de routing): la hora puede ir ANTES del verbo —
     // "en media hora recuérdame la junta", "mañana recuérdame comprar
     // pan". La regex no está anclada al inicio y ese prefijo se perdía:
     // el recordatorio se creaba con dueAt null y nunca avisaba.
     const prefix = trimmed.slice(0, m.index).trim();
-    if (prefix) dueAt = parseReminderDateTime(prefix);
+    if (prefix) dueAt = parseReminderDateTime(prefix, now);
   }
   // 0.1.41 (prueba física): «el viernes a las 6 me recuerdas llamar a mi
   // tía» caía al modelo y no se creaba nada. Las formas de pregunta («me
