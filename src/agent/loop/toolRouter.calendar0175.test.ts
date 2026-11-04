@@ -57,3 +57,26 @@ describe("cena sin parte del día es de noche", () => {
     expect(hm(ev("agenda cena el sábado a las 9 de la mañana").start)).toEqual([11, 7, 9, 0]);
   });
 });
+
+describe("la semana que viene y el mes (antes caían al modelo)", () => {
+  const list = (q: string) => extractToolAction(q, NOW) as Extract<ToolAction, { kind: "calendarList" }>;
+  it("es/en/pt: del lunes que viene al siguiente", () => {
+    for (const q of ["qué tengo la semana que viene", "what's on my calendar next week", "o que tenho na próxima semana"]) {
+      const a = list(q);
+      expect(a.kind).toBe("calendarList");
+      expect(hm(a.from)?.slice(0, 2)).toEqual([11, 9]);
+      expect(hm(a.to)?.slice(0, 2)).toEqual([11, 16]);
+    }
+  });
+  it("este mes y el que viene", () => {
+    expect(hm(list("qué tengo en la agenda este mes").to)?.slice(0, 2)).toEqual([12, 1]);
+    expect(hm(list("what's on my calendar next month").from)?.slice(0, 2)).toEqual([12, 1]);
+  });
+  it("«¿tengo algo el sábado?» y «do I have anything on friday»", () => {
+    expect(hm(list("tengo algo el sábado?").from)?.slice(0, 2)).toEqual([11, 7]);
+    expect(hm(list("do I have anything on friday").from)?.slice(0, 2)).toEqual([11, 6]);
+  });
+  it("par: «tengo algo que contarte el sábado» no es la agenda", () => {
+    expect(extractToolAction("tengo algo que contarte el sábado", NOW)?.kind).not.toBe("calendarList");
+  });
+});

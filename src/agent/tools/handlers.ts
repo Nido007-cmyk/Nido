@@ -915,14 +915,20 @@ export const listCalendarEventsHandler: ToolHandler = async (args) => {
   const from = fromRaw ? new Date(fromRaw) : now;
   const to = toRaw ? new Date(toRaw) : new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
-    return "Error: rango de fechas inválido. Usa formato ISO.";
+    return L("Error: rango de fechas inválido. Usa formato ISO.", "Error: invalid date range. Use ISO format.", "Erro: intervalo de datas inválido. Use o formato ISO.");
   }
   const limit = Number(args.limit) > 0 ? Math.min(Math.floor(Number(args.limit)), 50) : 20;
   try {
     const Calendar = await import("expo-calendar");
     const calendars = await Calendar.getCalendars();
-    if (calendars.length === 0) return "No hay calendarios en el teléfono.";
-    const events = await Calendar.listEvents(calendars, from, to);
+    if (calendars.length === 0) return L("No hay calendarios en el teléfono.", "There are no calendars on the phone.", "Não há calendários no telefone.");
+    // 0.1.75: en orden de inicio (el sistema no promete el orden) y, si
+    // hay más de los que se muestran, se dice cuántos faltan (antes un mes
+    // con 30 eventos enseñaba 20 sin avisar).
+    const events = [...(await Calendar.listEvents(calendars, from, to))].sort(
+      (a: any, b: any) => new Date(a.startDate ?? 0).getTime() - new Date(b.startDate ?? 0).getTime(),
+    );
+    const hidden = Math.max(0, events.length - limit);
     const upcoming = events
       .slice(0, limit)
       .map((e: any) => {
@@ -930,9 +936,10 @@ export const listCalendarEventsHandler: ToolHandler = async (args) => {
         return `- «${e.title ?? L("(sin título)", "(untitled)", "(sem título)")}»${s ? ` — ${fmtDateTime(s.toISOString())}` : ""}${e.location ? ` @ ${e.location}` : ""}`;
       });
     if (upcoming.length === 0) return "No hay eventos en ese rango.";
-    return `Próximos eventos:\n${upcoming.join("\n")}`;
+    const more = hidden > 0 ? `\n${L(`… y ${hidden} más.`, `… and ${hidden} more.`, `… e mais ${hidden}.`)}` : "";
+    return `Próximos eventos:\n${upcoming.join("\n")}${more}`;
   } catch (e) {
-    return `No pude leer el calendario: ${e instanceof Error ? e.message : String(e)}`;
+    return `${L("No pude leer el calendario", "I couldn't read the calendar", "Não consegui ler o calendário")}: ${e instanceof Error ? e.message : String(e)}`;
   }
 };
 

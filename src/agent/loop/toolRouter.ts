@@ -624,25 +624,62 @@ const WEEKDAY_INDEX: Record<string, number> = {
   viernes: 5, friday: 5, sexta: 5, sábado: 6, sabado: 6, saturday: 6,
 };
 const CAL_DAY_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
-  { re: new RegExp(`^(?:qu[eé] tengo|qu[eé] hay en (?:mi|la) agenda|mi agenda|mis (?:eventos|citas)|mi calendario)(?: en (?:el|mi|la) (?:calendario|agenda))?(?: (?:de|para))?(?: el)? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "es" },
-  { re: new RegExp(`^(?:what do i have|what'?s on my (?:calendar|agenda|schedule)|my (?:calendar|agenda|events|schedule))(?: for| on)? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "en" },
-  { re: new RegExp(`^(?:o que (?:eu )?tenho|minha agenda|meus (?:eventos|compromissos))(?: (?:na (?:minha )?agenda|no (?:meu )?calend[aá]rio))?(?: (?:de|para))?(?: (?:na|no|a|o))? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "pt" },
+  { re: new RegExp(`^(?:qu[eé] tengo|tengo algo|tengo alguna cita|qu[eé] hay en (?:mi|la) agenda|mi agenda|mis (?:eventos|citas)|mi calendario)(?: en (?:el|mi|la) (?:calendario|agenda))?(?: (?:de|para))?(?: el)? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "es" },
+  { re: new RegExp(`^(?:what do i have|do i have anything|do i have something|what'?s on my (?:calendar|agenda|schedule)|my (?:calendar|agenda|events|schedule))(?: for| on)? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "en" },
+  { re: new RegExp(`^(?:o que (?:eu )?tenho|tenho algo|tenho algum compromisso|minha agenda|meus (?:eventos|compromissos))(?: (?:na (?:minha )?agenda|no (?:meu )?calend[aá]rio))?(?: (?:de|para))?(?: (?:na|no|a|o))? ${WEEKDAY_WORDS_RE}$`, "i"), lang: "pt" },
 ];
+/**
+ * La semana que viene y el mes (0.1.75): «what's on my calendar next
+ * week», «qué tengo la semana que viene», «o que tenho na próxima
+ * semana», «qué tengo este mes» caían al modelo, que no ve el calendario.
+ */
+const CAL_PERIOD_WORDS = "((?:la |a |na )?(?:semana que viene|pr[oó]xima semana|semana que vem)|next week|(?:este|esse|neste|nesse) m[eê]s|this month|(?:el )?mes que viene|(?:o )?m[eê]s que vem|pr[oó]ximo m[eê]s|next month)";
+const CAL_PERIOD_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
+  { re: new RegExp(`^(?:qu[eé] tengo|tengo algo|qu[eé] hay en (?:mi|la) agenda|mi agenda|mis (?:eventos|citas)|mi calendario)(?: en (?:el|mi|la) (?:calendario|agenda))?(?: (?:de|para))? ${CAL_PERIOD_WORDS}(?: en (?:mi|la|el) (?:agenda|calendario))?$`, "i"), lang: "es" },
+  { re: new RegExp(`^(?:what do i have|do i have anything|what'?s on my (?:calendar|agenda|schedule)|my (?:calendar|agenda|events|schedule))(?: for)? ${CAL_PERIOD_WORDS}$`, "i"), lang: "en" },
+  { re: new RegExp(`^(?:o que (?:eu )?tenho|tenho algo|minha agenda|meus (?:eventos|compromissos))(?: (?:na (?:minha )?agenda|no (?:meu )?calend[aá]rio))?(?: (?:de|para|para a))? ${CAL_PERIOD_WORDS}$`, "i"), lang: "pt" },
+];
+
+/** Inicio y fin de «la semana que viene» (lunes a lunes) o del mes. */
+function calendarPeriod(word: string, now: Date, lang: RouterLang): { from: string; to: string; rangeText: string } {
+  const w = word.toLowerCase();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  if (/semana|week/.test(w)) {
+    // Próximo lunes (si hoy es lunes, el de la semana siguiente).
+    start.setDate(start.getDate() + (((1 - start.getDay() + 7) % 7) || 7));
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    return { from: start.toISOString(), to: end.toISOString(), rangeText: lang === "en" ? "next week" : lang === "pt" ? "na próxima semana" : "la semana que viene" };
+  }
+  const next = /viene|vem|pr[oó]ximo|next/.test(w);
+  start.setDate(1);
+  if (next) start.setMonth(start.getMonth() + 1);
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + 1);
+  const from = !next && now.getTime() > start.getTime() ? now : start;
+  return {
+    from: from.toISOString(),
+    to: end.toISOString(),
+    rangeText: next ? (lang === "en" ? "next month" : lang === "pt" ? "no próximo mês" : "el mes que viene") : lang === "en" ? "this month" : lang === "pt" ? "neste mês" : "este mes",
+  };
+}
+
 const CAL_LIST_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   // 0.1.34 (barrido de paridad): «qué tengo en el calendario hoy» y «o que
   // tenho na agenda hoje» caían al modelo; el inglés sí casaba.
-  { re: new RegExp(`^(?:qu[eé] tengo|qu[eé] hay en (?:mi|la) agenda|mi agenda|mis (?:eventos|citas)|mi calendario)(?: en (?:el|mi|la) (?:calendario|agenda))?(?: (?:de|para))? ${DAY_RE}(?: en (?:mi|la|el) (?:agenda|calendario))?$`, "i"), lang: "es" },
+  { re: new RegExp(`^(?:qu[eé] tengo|tengo algo|tengo alguna cita|qu[eé] hay en (?:mi|la) agenda|mi agenda|mis (?:eventos|citas)|mi calendario)(?: en (?:el|mi|la) (?:calendario|agenda))?(?: (?:de|para))? ${DAY_RE}(?: en (?:mi|la|el) (?:agenda|calendario))?$`, "i"), lang: "es" },
   { re: /^(?:mi agenda|mis eventos|mis citas|mi calendario)$/i, lang: "es" },
-  { re: new RegExp(`^(?:what do i have|what'?s on my (?:calendar|agenda|schedule)|my (?:calendar|agenda|events|schedule))(?: for)? ${DAY_RE}$`, "i"), lang: "en" },
+  { re: new RegExp(`^(?:what do i have|do i have anything|what'?s on my (?:calendar|agenda|schedule)|my (?:calendar|agenda|events|schedule))(?: for)? ${DAY_RE}$`, "i"), lang: "en" },
   { re: /^(?:my calendar|my agenda|my events|my schedule)$/i, lang: "en" },
-  { re: new RegExp(`^(?:o que (?:eu )?tenho|minha agenda|meus (?:eventos|compromissos))(?: (?:na (?:minha )?agenda|no (?:meu )?calend[aá]rio))?(?: (?:de|para|para a))? ${DAY_RE}$`, "i"), lang: "pt" },
+  { re: new RegExp(`^(?:o que (?:eu )?tenho|tenho algo|minha agenda|meus (?:eventos|compromissos))(?: (?:na (?:minha )?agenda|no (?:meu )?calend[aá]rio))?(?: (?:de|para|para a))? ${DAY_RE}$`, "i"), lang: "pt" },
   { re: /^(?:minha agenda|meus eventos|meus compromissos)$/i, lang: "pt" },
 ];
 
-/** «de 3 a 5», «de 10:30 a 12», «from 3 to 5», «das 3 às 5», «de 3 a 5 de la tarde». */
 /** «de 3 a 5 de diciembre», «del 3 al 5 de mayo», «de 3 a 5 de março». */
 const CAL_DAY_RANGE_RE = /(?<![\p{L}])(?:del?|from|dos?)\s+(\d{1,2})\s+(?:al?|to|até|aos?)\s+(\d{1,2})\s+(?:de|of)\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?![\p{L}])/iu;
 
+/** «de 3 a 5», «de 10:30 a 12», «from 3 to 5», «das 3 às 5», «de 3 a 5 de la tarde». */
 const CAL_TIME_RANGE_RE = /(?<![\p{L}])(?:de\s+(?:las\s+)?|from\s+|das\s+|entre\s+(?:las\s+)?|between\s+)(\d{1,2})(?::(\d{2}))?\s*(?:a\s+(?:las\s+)?|to\s+|-\s*|[àa]s\s+|y\s+(?:las\s+)?|and\s+|e\s+)(\d{1,2})(?::(\d{2}))?(?![\d:])(?!\s*(?:de|of|del)\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|mar[çc]o|maio|junho|julho|setembro|outubro|novembro|dezembro)(?![\p{L}]))(?!\s*(?:personas|people|pessoas|invitados|guests|convidados|años|years|anos))/iu;
 
 const CAL_CREATE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
@@ -1051,6 +1088,12 @@ export function extractToolAction(userText: string, now: Date = new Date()): Too
     }
   }
 
+  for (const { re, lang } of CAL_PERIOD_RULES) {
+    const m = re.exec(t);
+    if (!m) continue;
+    const { from, to, rangeText } = calendarPeriod(m[1], now, lang);
+    return { kind: "calendarList", from, to, label: "week", lang, rangeText };
+  }
   for (const { re, lang } of CAL_LIST_RULES) {
     const m = re.exec(t);
     if (!m) continue;
