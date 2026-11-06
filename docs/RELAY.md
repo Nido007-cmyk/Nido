@@ -133,20 +133,31 @@ Known limits:
 ## Phase 2: how it works in the app
 
 - **Session message type `carry`** (payload `{prekey?, carries?, put?}`).
-  On each new verified session, a phone gives its mailbox key, says
-  whether it carries envelopes, and hands over what `CarryStore.handoff`
-  says. Envelopes go in batches that fit in a frame (160 KB, at most 30).
-  Older NIDO versions drop the unknown type, as they already do with
-  `settings`.
+  When a verified session opens, a phone gives its mailbox key and says
+  whether it carries envelopes, but only if that changed since it last
+  told that contact, or a day has passed (in case it was lost). It also
+  hands over what `CarryStore.planHandoff` says, in batches that fit in a
+  frame (160 KB, at most 30). An envelope counts as given (deleted, or one
+  copy spent) only after its frame went out, so a dropped connection loses
+  nothing. The relay state is only looked at again for a session when
+  something changed (a "generation" counter), so ordinary chat frames
+  don't load it. Older NIDO versions drop the unknown type, as they
+  already do with `settings`. The feature flag `p2p.relay` (on) turns all
+  of this off at once.
 - **Sending:** when a chat message can't go directly and the recipient
   gave a valid mailbox key, it is also sealed as an envelope and handed to
   the contacts that are connected and carry. It keeps the same message id,
   so if it later arrives directly too, the recipient recognizes it and
   only confirms it again. Messages in a conversation with disappearing
   messages on never travel this way (a copy would stay up to 72 hours on
-  other phones), and neither do messages over 1,500 characters.
+  other phones), and neither do messages over 1,500 characters. When the
+  writer meets the recipient, the writer's own envelope is not handed over:
+  the message goes directly, with its normal confirmation. Cancelling a
+  message stops this phone handing out its envelope; copies a contact
+  already carries can still arrive.
 - **Receiving:** an envelope for me is opened (`openCarry`), saved as a
-  normal received message and marked "via friends". The recipient seals a
+  normal received message and marked "via friends" (only if it was new:
+  if it had already arrived directly, it is just confirmed again). The recipient seals a
   signed **receipt** back the same way. When the writer gets it, the
   message shows as delivered, as with a direct confirmation, and the
   writer stops handing out its envelope.
@@ -158,9 +169,14 @@ Known limits:
   as the rest (so "Delete all data" deletes it). Changing identity resets
   it.
 - **Robustness:** anything malformed is dropped without throwing; nothing
-  is accepted from someone who is not a contact; at most 30 envelopes per
-  frame are even looked at; envelopes already seen are skipped before any
-  decryption (`relayService.test.ts`, "hostile inputs").
+  is accepted from someone who is not a contact, or from a revoked one;
+  at most 30 envelopes per frame are even looked at; envelopes already
+  seen are skipped before any decryption. The outer expiry and hops are
+  not signed, so a carrier could inflate them: a phone never keeps an
+  envelope more than 72 hours after it arrived, nor with more than 3 hops.
+  If reading the stored state fails, the operation is cancelled instead
+  of writing an empty state over it (which would lose the mailbox keys);
+  damaged data is checked field by field (`relayService.test.ts`).
 
 Still pending:
 
