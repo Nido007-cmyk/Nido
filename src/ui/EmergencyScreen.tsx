@@ -46,6 +46,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
   const [picking, setPicking] = useState(false);
   const [question, setQuestion] = useState("");
   const [cprOpen, setCprOpen] = useState(false);
+  const [cprPractice, setCprPractice] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -268,6 +269,19 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
             <Text style={styles.cprBtnHint}>{t("cpr.openHint")}</Text>
           </View>
         </Pressable>
+        <Pressable
+          onPress={() => {
+            impact(ImpactFeedbackStyle.Light);
+            setCprPractice(true);
+          }}
+          style={styles.practiceBtn}
+          accessibilityRole="button"
+          accessibilityHint={t("cpr.practice.openHint")}
+          testID="emergency-cpr-practice"
+        >
+          <Text style={styles.practiceBtnTitle}>{t("cpr.practice.open")}</Text>
+          <Text style={styles.practiceBtnHint}>{t("cpr.practice.openHint")}</Text>
+        </Pressable>
 
         <Text style={styles.section} accessibilityRole="header">
           {t("emergency.quickGuides")}
@@ -297,6 +311,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
         emergency={first ? { value: first.value, tel: first.tel } : null}
         onCall={call}
       />
+      <CprCoach visible={cprPractice} onClose={() => setCprPractice(false)} practice />
 
       <Modal visible={picking} transparent animationType="slide" onRequestClose={() => setPicking(false)}>
         <View style={styles.sheetBackdrop}>
@@ -439,6 +454,18 @@ const getStyles = (colors: Colors, typography: Typography) =>
     },
     cprBtnTitle: { ...typography.ui.titleSm, color: colors.text.inverse },
     cprBtnHint: { ...typography.ui.caption, color: colors.text.inverse, opacity: 0.9 },
+    practiceBtn: {
+      minHeight: 52,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderWidth: 1,
+      borderColor: colors.border.default,
+      backgroundColor: colors.bg.card,
+      justifyContent: "center",
+    },
+    practiceBtnTitle: { ...typography.ui.titleSm, color: colors.text.primary },
+    practiceBtnHint: { ...typography.ui.caption, color: colors.text.secondary },
     guide: {
       flexGrow: 1,
       flexBasis: "45%",

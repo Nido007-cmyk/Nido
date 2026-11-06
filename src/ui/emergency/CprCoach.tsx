@@ -37,14 +37,17 @@ import {
   type CprMode,
 } from "../../cpr/cprCoach";
 import {
+  camSamplesToMotion,
   estimateRate,
   INITIAL_CUE_STATE,
+  INITIAL_RATE_TRACK,
   nextCue,
+  trackRate,
   verdictFor,
   WINDOW_MS,
   type CueState,
   type MotionSample,
-  type RateEstimate,
+  type RateTrack,
 } from "../../cpr/rateEstimator";
 
 const KEEP_AWAKE_TAG = "nido-cpr-coach";
@@ -55,9 +58,20 @@ interface Props {
   /** Número de emergencias del país elegido, si lo hay (abre el marcador). */
   emergency?: { value: string; tel: string } | null;
   onCall?: (tel: string) => void;
+  /**
+   * Modo práctica: sobre un cojín o un maniquí, nunca sobre una persona.
+   * Solo aquí se ofrece el medidor de ritmo por cámara. En EE. UU., un
+   * aparato que da a quien reanima una valoración en tiempo real de su RCP
+   * (ritmo, profundidad…) es un «CPR aid with feedback», clase II
+   * (21 CFR 870.5210(b)), y con software necesita autorización previa de
+   * la FDA. Mientras NIDO no la tenga, la medición se ofrece para
+   * practicar; en una emergencia real el asistente marca el ritmo con el
+   * pitido y la guía, sin evaluar a nadie. Ver docs/CPR_ASSISTANT.md.
+   */
+  practice?: boolean;
 }
 
-export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
+export function CprCoach({ visible, onClose, emergency, onCall, practice = false }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t, i18n } = useTranslation();
@@ -72,10 +86,11 @@ export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
   // Medidor de ritmo por cámara (opcional, apagado por defecto).
   const [camWanted, setCamWanted] = useState(false);
   const [camState, setCamState] = useState<"off" | "starting" | "on" | "failed">("off");
-  const [rate, setRate] = useState<RateEstimate | null>(null);
+  const [rate, setRate] = useState<number | null>(null);
   const camStop = useRef<(() => void) | null>(null);
   const samples = useRef<MotionSample[]>([]);
   const cue = useRef<CueState>(INITIAL_CUE_STATE);
+  const track = useRef<RateTrack>(INITIAL_RATE_TRACK);
   const lastEstimateAt = useRef(0);
   const modeRef = useRef(mode);
   modeRef.current = mode;
@@ -98,6 +113,7 @@ export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
     camStop.current = null;
     samples.current = [];
     cue.current = INITIAL_CUE_STATE;
+    track.current = INITIAL_RATE_TRACK;
     setRate(null);
     setCamState("off");
   }, []);
@@ -111,17 +127,19 @@ export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
       if (p.phase === "breaths") {
         samples.current = [];
         cue.current = { ...cue.current, recent: [] };
+        track.current = INITIAL_RATE_TRACK;
         setRate(null);
         return;
       }
-      for (let i = 0; i < b.t.length; i++) samples.current.push({ t: b.t[i], dy: b.dy[i], dx: b.dx[i], e: b.e[i] });
+      for (const m of camSamplesToMotion(b)) samples.current.push(m);
       const last = samples.current[samples.current.length - 1]?.t ?? 0;
       while (samples.current.length && samples.current[0].t < last - WINDOW_MS - 1000) samples.current.shift();
       if (last - lastEstimateAt.current < 500) return;
       lastEstimateAt.current = last;
-      const est = estimateRate(samples.current);
-      setRate(est);
-      const r = nextCue(cue.current, est ? verdictFor(est.bpm) : null, last);
+      const k = trackRate(track.current, estimateRate(samples.current), last);
+      track.current = k.state;
+      setRate(k.shown);
+      const r = nextCue(cue.current, k.shown !== null ? verdictFor(k.shown) : null, last);
       cue.current = r.state;
       if (r.cue) say(t(`cpr.cue.${r.cue}`));
     },
@@ -149,7 +167,7 @@ export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
     setRunning(true);
     // La guía, palabra por palabra: dónde van las manos y cómo empujar.
     say(`${guide.compressions[1]} ${guide.compressions[2]}`);
-    if (camWanted && hasCprCamera()) {
+    if (practice && camWanted && hasCprCamera()) {
       setCamState("starting");
       void startCprCamera(onSamples, () => {
         camStop.current?.();
@@ -165,7 +183,7 @@ export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
         setCamState("on");
       });
     }
-  }, [camWanted, guide, mode, onSamples, say]);
+  }, [camWanted, guide, mode, onSamples, practice, say]);
 
   // El reloj de la pantalla. El pitido lo lleva el hilo nativo; esto solo
   // pinta, cuenta y habla en los cambios de fase.
@@ -218,7 +236,7 @@ export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
       <View style={styles.root}>
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title} accessibilityRole="header">{t("cpr.title")}</Text>
+            <Text style={styles.title} accessibilityRole="header">{practice ? t("cpr.practice.title") : t("cpr.title")}</Text>
             <Text style={styles.subtitle}>{guide.title}</Text>
           </View>
           <Pressable onPress={close} accessibilityRole="button" accessibilityLabel={t("cpr.close")} style={styles.closeBtn} hitSlop={8}>
@@ -227,7 +245,13 @@ export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
         </View>
 
         <ScrollView contentContainerStyle={styles.body}>
-          {emergency && onCall ? (
+          {practice ? (
+            <View style={styles.practiceBanner} accessibilityRole="alert">
+              <Text style={styles.practiceText}>{t("cpr.practice.banner")}</Text>
+            </View>
+          ) : null}
+
+          {!practice && emergency && onCall ? (
             <Pressable
               onPress={() => onCall(emergency.tel)}
               style={styles.callBtn}
@@ -265,7 +289,7 @@ export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
                 <Text style={styles.optionHint}>{guide.breaths[0]}</Text>
               </Pressable>
 
-              {hasCprCamera() ? (
+              {practice && hasCprCamera() ? (
                 <Pressable
                   onPress={() => setCamWanted((v) => !v)}
                   style={[styles.option, camWanted && styles.optionOn]}
@@ -305,14 +329,14 @@ export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
                       <Text style={styles.rateHint}>{t("cpr.camera.failed")}</Text>
                     ) : rate && !breaths ? (
                       <>
-                        <Text style={styles.rateValue}>{t("cpr.camera.rate", { bpm: rate.bpm })}</Text>
+                        <Text style={styles.rateValue}>{t("cpr.camera.rate", { bpm: rate })}</Text>
                         <Text
                           style={[
                             styles.rateVerdict,
-                            { color: verdictFor(rate.bpm) === "good" ? colors.text.accentEmerald : colors.id === "nightgarden" ? colors.crimson[400] : colors.crimson[600] },
+                            { color: verdictFor(rate) === "good" ? colors.text.accentEmerald : colors.id === "nightgarden" ? colors.crimson[400] : colors.crimson[600] },
                           ]}
                         >
-                          {t(`cpr.cue.${verdictFor(rate.bpm)}`)}
+                          {t(`cpr.cue.${verdictFor(rate)}`)}
                         </Text>
                       </>
                     ) : (
@@ -433,6 +457,14 @@ function getStyles(colors: Colors, typography: Typography) {
     stopBtn: { backgroundColor: colors.text.primary, borderColor: colors.text.primary },
     secondaryText: { ...typography.ui.titleSm, color: colors.text.primary },
     disclosure: { minHeight: 44, justifyContent: "center" },
+    practiceBanner: {
+      borderRadius: 14,
+      padding: 12,
+      backgroundColor: colors.amber.bgSubtle,
+      borderWidth: 1,
+      borderColor: colors.amber.border,
+    },
+    practiceText: { ...typography.ui.body, color: colors.text.primary },
     rateBox: {
       alignItems: "center",
       minHeight: 56,

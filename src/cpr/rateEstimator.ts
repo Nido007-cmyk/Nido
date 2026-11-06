@@ -10,29 +10,52 @@
  * anterior). Salida: el ritmo de las compresiones en compresiones por
  * minuto y una confianza de 0 a 1, o nada si no hay un ritmo claro.
  *
- * Cómo: se suma el desplazamiento para tener la posición (el cuerpo que
- * sube y baja), se remuestrea a 30 Hz, se quita la deriva lenta y se busca
- * el periodo con la autocorrelación entre 60 y 180 por minuto. Se queda el
- * eje con el ritmo más claro. Con poca confianza no se dice nada: la regla
+ * Cómo: en cada canal se suma el desplazamiento para tener la posición
+ * (el cuerpo que sube y baja), se remuestrea a 30 Hz, se quita la deriva
+ * lenta y se busca el periodo con la autocorrelación entre 60 y 180 por
+ * minuto. Se queda el canal con el ritmo más claro. Con poca confianza no se dice nada: la regla
  * del asistente es callar antes que corregir mal (el pitido sigue marcando
  * el ritmo bueno pase lo que pase).
  */
 
+/**
+ * Un fotograma: su instante y el desplazamiento en cada canal (en el
+ * módulo nativo, vertical y horizontal de cada bloque de la rejilla; ver
+ * frameMotion.ts). Cada canal se mide por separado.
+ */
 export interface MotionSample {
   t: number;
-  dy: number;
-  dx: number;
-  e: number;
+  ch: number[];
 }
 
 export interface RateEstimate {
   bpm: number;
   /** Autocorrelación del periodo elegido (0..1). */
   confidence: number;
-  axis: "dy" | "dx";
+  /** El canal (bloque y eje) con el ritmo más claro. */
+  channel: number;
 }
 
 export const WINDOW_MS = 6000;
+
+/**
+ * Lo que manda el módulo nativo (lotes de fotogramas, `stride` números
+ * por fotograma: [dy, dx, e] por bloque) → un MotionSample por fotograma
+ * con los canales dy y dx de cada bloque.
+ */
+export function camSamplesToMotion(b: { t: number[]; v: number[]; stride: number }): MotionSample[] {
+  const out: MotionSample[] = [];
+  const blocks = Math.floor(b.stride / 3);
+  if (blocks < 1) return out;
+  for (let i = 0; i < b.t.length; i++) {
+    const base = i * b.stride;
+    if (base + b.stride > b.v.length) break;
+    const ch: number[] = [];
+    for (let k = 0; k < blocks; k++) ch.push(b.v[base + k * 3], b.v[base + k * 3 + 1]);
+    out.push({ t: b.t[i], ch });
+  }
+  return out;
+}
 export const MIN_SPAN_MS = 4000;
 const FS = 30;
 const MIN_BPM = 60;
@@ -133,12 +156,53 @@ export function estimateRate(samples: readonly MotionSample[]): RateEstimate | n
   const ts = win.map((s) => s.t);
   // Tiempos estrictamente crecientes (un lote repetido no rompe nada).
   for (let i = 1; i < ts.length; i++) if (ts[i] <= ts[i - 1]) return null;
-  const y = axisRate(ts, win.map((s) => s.dy));
-  const x = axisRate(ts, win.map((s) => s.dx));
-  const best =
-    y && (!x || y.confidence >= x.confidence) ? { ...y, axis: "dy" as const } : x ? { ...x, axis: "dx" as const } : null;
+  const n = win[0].ch.length;
+  let best: RateEstimate | null = null;
+  for (let c = 0; c < n; c++) {
+    const r = axisRate(ts, win.map((s) => s.ch[c] ?? 0));
+    if (r && (!best || r.confidence > best.confidence)) best = { bpm: r.bpm, confidence: r.confidence, channel: c };
+  }
   if (!best || best.confidence < MIN_CONFIDENCE) return null;
-  return { bpm: Math.round(best.bpm), confidence: best.confidence, axis: best.axis };
+  return { ...best, bpm: Math.round(best.bpm) };
+}
+
+/**
+ * Lo que se enseña y se dice no es cada estimación suelta, sino el ritmo
+ * que se sostiene: dos estimaciones seguidas (≈1 s) a menos de 8 por
+ * minuto la una de la otra. Y un salto a la mitad o al doble del ritmo
+ * recién aceptado (el error típico de leer un periodo doble) no se cree
+ * hasta que dura 3 estimaciones: hasta entonces se sigue mostrando el
+ * anterior. Con vídeo sintético muy ruidoso, 125 llegó a leerse una vez
+ * como 64; sin esta regla habría dicho «más rápido» a quien iba bien.
+ */
+export interface RateTrack {
+  lastRaw: number | null;
+  accepted: number | null;
+  acceptedAt: number;
+  octaveRun: number;
+}
+
+export const INITIAL_RATE_TRACK: RateTrack = { lastRaw: null, accepted: null, acceptedAt: -Infinity, octaveRun: 0 };
+
+const HOLD_MS = 2000;
+
+function nearRatio(a: number, b: number, ratio: number): boolean {
+  return Math.abs(a - b * ratio) <= 0.12 * b * ratio;
+}
+
+export function trackRate(st: RateTrack, est: RateEstimate | null, now: number): { shown: number | null; state: RateTrack } {
+  const hold = st.accepted !== null && now - st.acceptedAt <= HOLD_MS ? st.accepted : null;
+  if (!est) return { shown: hold, state: { ...st, lastRaw: null, octaveRun: 0 } };
+  const bpm = est.bpm;
+  if (st.accepted !== null && now - st.acceptedAt <= 4000 && (nearRatio(bpm, st.accepted, 0.5) || nearRatio(bpm, st.accepted, 2))) {
+    const run = st.octaveRun + 1;
+    if (run < 3) return { shown: hold, state: { ...st, lastRaw: bpm, octaveRun: run } };
+  }
+  if (st.lastRaw !== null && Math.abs(bpm - st.lastRaw) <= 8) {
+    const shown = Math.round((bpm + st.lastRaw) / 2);
+    return { shown, state: { lastRaw: bpm, accepted: shown, acceptedAt: now, octaveRun: 0 } };
+  }
+  return { shown: hold, state: { ...st, lastRaw: bpm, octaveRun: 0 } };
 }
 
 export type Verdict = "faster" | "slower" | "good";

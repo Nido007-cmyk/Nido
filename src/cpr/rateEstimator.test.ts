@@ -1,7 +1,7 @@
 // Medidor de ritmo por cámara (0.1.76): con señales sintéticas como las
 // que manda el módulo nativo (desplazamiento por fotograma a ~30 fps).
 import { describe, expect, it } from "vitest";
-import { estimateRate, INITIAL_CUE_STATE, nextCue, verdictFor, type MotionSample, type Verdict } from "./rateEstimator";
+import { camSamplesToMotion, estimateRate, INITIAL_CUE_STATE, INITIAL_RATE_TRACK, nextCue, trackRate, verdictFor, type MotionSample, type Verdict } from "./rateEstimator";
 
 /** PRNG fijo: las pruebas no dependen de la suerte. */
 function rng(seed: number) {
@@ -25,7 +25,7 @@ function synth(opts: { bpm: number; seconds: number; amp?: number; noise?: numbe
     const d = pos - prev + (r() - 0.5) * 2 * (opts.noise ?? 0.3);
     prev = pos;
     const other = (r() - 0.5) * 2 * (opts.noise ?? 0.3);
-    out.push({ t, dy: opts.axis === "dx" ? other : d, dx: opts.axis === "dx" ? d : other, e: 1 });
+    out.push({ t, ch: opts.axis === "dx" ? [other, d] : [d, other] });
   }
   return out;
 }
@@ -41,7 +41,7 @@ describe("estimateRate", () => {
   }
   it("el otro eje del sensor (teléfono girado) también", () => {
     const est = estimateRate(synth({ bpm: 105, seconds: 6, axis: "dx" }));
-    expect(est?.axis).toBe("dx");
+    expect(est?.channel).toBe(1);
     expect(Math.abs(est!.bpm - 105)).toBeLessThanOrEqual(3);
   });
   it("con fotogramas irregulares (15 a 30 fps) sigue", () => {
@@ -92,7 +92,7 @@ describe("barrido: 100 ritmos entre 80 y 139 por minuto, con ruido", () => {
       let v = 0;
       for (let i = 0; i < 180; i++) {
         v = 0.9 * v + (r() - 0.5) * 2;
-        out.push({ t: 1000 + i * 33, dy: v, dx: (r() - 0.5) * 2, e: 1 });
+        out.push({ t: 1000 + i * 33, ch: [v, (r() - 0.5) * 2] });
       }
       if (estimateRate(out)) said++;
     }
@@ -136,5 +136,49 @@ describe("veredicto y cuándo hablar", () => {
       return r.cue;
     });
     expect(out.every((c) => c === null)).toBe(true);
+  });
+});
+
+describe("seguimiento: lo que se enseña es el ritmo que se sostiene", () => {
+  const est = (bpm: number) => ({ bpm, confidence: 0.8, channel: 0 });
+  it("hacen falta dos estimaciones seguidas parecidas", () => {
+    let st = INITIAL_RATE_TRACK;
+    const a = trackRate(st, est(110), 0);
+    expect(a.shown).toBeNull();
+    const b = trackRate(a.state, est(112), 500);
+    expect(b.shown).toBe(111);
+    st = b.state;
+    const c = trackRate(st, est(140), 1000); // salto suelto: se sostiene el anterior
+    expect(c.shown).toBe(111);
+  });
+  it("un salto a la mitad (125 → 64) no se cree hasta que dura 3 estimaciones", () => {
+    let r = trackRate(INITIAL_RATE_TRACK, est(125), 0);
+    r = trackRate(r.state, est(125), 500);
+    expect(r.shown).toBe(125);
+    r = trackRate(r.state, est(64), 1000);
+    expect(r.shown).toBe(125);
+    r = trackRate(r.state, est(63), 1500);
+    expect(r.shown).toBe(125);
+    r = trackRate(r.state, est(63), 2000);
+    expect(r.shown).toBe(63);
+  });
+  it("sin estimación, se sostiene el último 2 s y luego nada", () => {
+    let r = trackRate(INITIAL_RATE_TRACK, est(110), 0);
+    r = trackRate(r.state, est(110), 500);
+    expect(trackRate(r.state, null, 2000).shown).toBe(110);
+    expect(trackRate(r.state, null, 3000).shown).toBeNull();
+  });
+});
+
+describe("camSamplesToMotion: el lote del módulo nativo → canales", () => {
+  it("[dy, dx, e] por bloque → [dy, dx] por bloque, un fotograma por instante", () => {
+    const m = camSamplesToMotion({ t: [10, 43], v: [1, 2, 9, 3, 4, 9, 5, 6, 9, 7, 8, 9], stride: 6 });
+    expect(m).toEqual([
+      { t: 10, ch: [1, 2, 3, 4] },
+      { t: 43, ch: [5, 6, 7, 8] },
+    ]);
+  });
+  it("un lote cortado no inventa datos", () => {
+    expect(camSamplesToMotion({ t: [10, 43], v: [1, 2, 9], stride: 6 })).toEqual([]);
   });
 });

@@ -12,14 +12,14 @@ interface NidoMetronomeNative {
 }
 
 export interface CameraSamples {
-  /** Instantes (ms, reloj del sistema desde el arranque). */
+  /** Instantes de cada fotograma (ms, reloj del sistema desde el arranque). */
   t: number[];
-  /** Desplazamiento vertical del perfil por filas respecto al fotograma anterior. */
-  dy: number[];
-  /** Desplazamiento del perfil por columnas (el otro eje del sensor). */
-  dx: number[];
-  /** Cambio de la imagen sin desplazar (0 = igual). */
-  e: number[];
+  /**
+   * `stride` números por fotograma, seguidos: por cada bloque de la
+   * rejilla, [dy, dx, e] (ver src/cpr/frameMotion.ts).
+   */
+  v: number[];
+  stride: number;
 }
 
 interface NidoCprCameraNative {

@@ -1926,7 +1926,7 @@
     },
     "camera": {
       "toggle": "Medir meu ritmo com a câmera (opcional)",
-      "hint": "Coloque o telefone em pé a 1 ou 2 metros, com a tela para você, para que a câmera frontal veja você. O NIDO mede seu ritmo e diz \"mais rápido\" ou \"mais devagar\". As imagens são analisadas na hora: não são guardadas nem saem do telefone.",
+      "hint": "Deixe o telefone no chão, ao lado da almofada, com a tela para cima: a câmera frontal vê você de baixo. O NIDO mede seu ritmo e diz \"mais rápido\" ou \"mais devagar\". As imagens são analisadas na hora: não são guardadas nem saem do telefone.",
       "starting": "Ligando a câmera…",
       "failed": "Não foi possível usar a câmera. O bipe continua marcando o ritmo.",
       "looking": "Medindo seu ritmo… (siga o bipe)",
@@ -1936,6 +1936,12 @@
       "faster": "Mais rápido.",
       "slower": "Mais devagar.",
       "good": "Bom ritmo, continue assim."
+    },
+    "practice": {
+      "open": "Praticar RCP",
+      "openHint": "Com uma almofada ou um manequim; o NIDO pode medir seu ritmo com a câmera",
+      "title": "Prática de RCP",
+      "banner": "Modo prática: faça sobre uma almofada firme ou um manequim, nunca sobre uma pessoa. Se alguém não estiver respirando, feche isto e use o assistente de RCP."
     }
   }
 }

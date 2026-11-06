@@ -1926,7 +1926,7 @@
     },
     "camera": {
       "toggle": "Medir mi ritmo con la cámara (opcional)",
-      "hint": "Apoya el teléfono de pie a 1 o 2 metros, con la pantalla hacia ti, para que la cámara frontal te vea. NIDO mide tu ritmo y te dice «más rápido» o «más despacio». Las imágenes se analizan al momento: no se guardan ni salen del teléfono.",
+      "hint": "Deja el teléfono en el suelo, junto al cojín, con la pantalla hacia arriba: la cámara frontal te ve desde abajo. NIDO mide tu ritmo y te dice «más rápido» o «más despacio». Las imágenes se analizan al momento: no se guardan ni salen del teléfono.",
       "starting": "Encendiendo la cámara…",
       "failed": "No se pudo usar la cámara. El pitido sigue marcando el ritmo.",
       "looking": "Midiendo tu ritmo… (sigue el pitido)",
@@ -1936,6 +1936,12 @@
       "faster": "Más rápido.",
       "slower": "Más despacio.",
       "good": "Buen ritmo, sigue así."
+    },
+    "practice": {
+      "open": "Practicar RCP",
+      "openHint": "Con un cojín o un maniquí; NIDO puede medir tu ritmo con la cámara",
+      "title": "Práctica de RCP",
+      "banner": "Modo práctica: hazlo sobre un cojín firme o un maniquí, nunca sobre una persona. Si alguien no respira, cierra esto y usa el asistente de RCP."
     }
   }
 }

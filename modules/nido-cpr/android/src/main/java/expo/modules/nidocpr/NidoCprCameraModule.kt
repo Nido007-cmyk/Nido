@@ -28,18 +28,16 @@ import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import kotlin.math.abs
-import kotlin.math.sqrt
 
 /**
  * Medidor de ritmo de la RCP por cámara (0.1.76), opcional.
  *
  * El teléfono, apoyado de pie a un par de metros, mira a quien hace las
- * compresiones con la cámara frontal. De cada fotograma (baja resolución,
- * solo la luminancia) se saca un perfil por filas y se mide cuánto se ha
- * desplazado en vertical respecto al anterior: el cuerpo que sube y baja
- * con cada compresión. A JS solo llegan esos números (instante,
- * desplazamiento, cambio), en lotes; src/cpr/rateEstimator.ts calcula el
- * ritmo. Ningún fotograma se guarda, se copia ni sale del teléfono: el
+ * compresiones con la cámara frontal. Cada fotograma (baja resolución,
+ * solo la luminancia) se reduce en CprMotionCore a 36 números: cuánto se
+ * desplazó cada bloque de una rejilla de 4 × 3 respecto al fotograma
+ * anterior. A JS solo llegan esos números, en lotes;
+ * src/cpr/rateEstimator.ts calcula el ritmo. Ningún fotograma se guarda, se copia ni sale del teléfono: el
  * búfer se cierra en cuanto se mide. Sin vista previa: la pantalla es la
  * del asistente.
  */
@@ -52,12 +50,9 @@ class NidoCprCameraModule : Module() {
   private var reader: ImageReader? = null
   private var generation = 0
 
-  private var prevProfile: FloatArray? = null
-  private var prevColProfile: FloatArray? = null
+  private val core = CprMotionCore()
   private val batchT = ArrayList<Double>(16)
-  private val batchDy = ArrayList<Double>(16)
-  private val batchDx = ArrayList<Double>(16)
-  private val batchE = ArrayList<Double>(16)
+  private val batchV = ArrayList<Double>(16 * CprMotionCore.BLOCKS * 3)
 
   override fun definition() = ModuleDefinition {
     Name("NidoCprCamera")
@@ -116,9 +111,9 @@ class NidoCprCameraModule : Module() {
       thread = t
       handler = h
       reader = r
-      prevProfile = null
-      prevColProfile = null
-      batchT.clear(); batchDy.clear(); batchDx.clear(); batchE.clear()
+      core.reset()
+      batchT.clear()
+      batchV.clear()
 
       r.setOnImageAvailableListener({ ir ->
         val img = try { ir.acquireLatestImage() } catch (_: Exception) { null } ?: return@setOnImageAvailableListener
@@ -208,102 +203,21 @@ class NidoCprCameraModule : Module() {
     ranges?.filter { it.upper <= 30 }?.maxWithOrNull(compareBy<Range<Int>>({ it.lower }, { it.upper }))
 
   /**
-   * Dos perfiles por fotograma (luminancia media por filas y por columnas,
-   * muestreando 1 de cada 2 líneas y 1 de cada 4 píxeles, normalizados) y
-   * su desplazamiento respecto al fotograma anterior, con medio píxel de
-   * precisión. Se mandan los dos ejes: según cómo esté montado el sensor
-   * y cómo se apoye el teléfono, el «arriba y abajo» de quien comprime cae
-   * en uno u otro; JS se queda con el que tenga un ritmo claro.
+   * Un fotograma → 36 números (CprMotionCore, el mismo algoritmo que
+   * src/cpr/frameMotion.ts). Se mandan a JS en lotes de 8 fotogramas.
    */
   private fun analyse(buf: java.nio.ByteBuffer, rowStride: Int, width: Int, height: Int) {
-    val rows = height / 2
-    val cols = width / 2
-    val rowProf = FloatArray(rows)
-    val colProf = FloatArray(cols)
-    val colN = IntArray(cols)
-    var r = 0
-    while (r < rows) {
-      val base = (r * 2) * rowStride
-      var sum = 0
-      var n = 0
-      var c = 0
-      while (c < width) {
-        val v = buf.get(base + c).toInt() and 0xff
-        sum += v
-        n++
-        if ((c / 2) < cols && r % 2 == 0) {
-          colProf[c / 2] += v.toFloat()
-          colN[c / 2]++
-        }
-        c += 2
-      }
-      rowProf[r] = sum.toFloat() / n
-      r++
-    }
-    for (i in 0 until cols) colProf[i] = if (colN[i] > 0) colProf[i] / colN[i] else 0f
-    normalise(rowProf)
-    normalise(colProf)
-    val prevR = prevProfile
-    val prevC = prevColProfile
-    prevProfile = rowProf
-    prevColProfile = colProf
-    if (prevR == null || prevC == null || prevR.size != rows || prevC.size != cols) return
-
-    val (dy, energy) = shiftOf(rowProf, prevR)
-    val (dx, _) = shiftOf(colProf, prevC)
-
+    val out = core.analyse(width, height, rowStride) { i -> buf.get(i).toInt() and 0xff } ?: return
     batchT.add(SystemClock.uptimeMillis().toDouble())
-    batchDy.add(dy)
-    batchDx.add(dx)
-    batchE.add(energy)
+    for (v in out) batchV.add(v)
     if (batchT.size >= 8) {
       sendEvent(
         "onCprCameraSamples",
-        mapOf(
-          "t" to batchT.toDoubleArray(),
-          "dy" to batchDy.toDoubleArray(),
-          "dx" to batchDx.toDoubleArray(),
-          "e" to batchE.toDoubleArray(),
-        ),
+        mapOf("t" to batchT.toDoubleArray(), "v" to batchV.toDoubleArray(), "stride" to CprMotionCore.BLOCKS * 3),
       )
-      batchT.clear(); batchDy.clear(); batchDx.clear(); batchE.clear()
+      batchT.clear()
+      batchV.clear()
     }
-  }
-
-  /** Desplazamiento (en muestras del perfil) que mejor alinea `cur` con `prev`, y el cambio sin desplazar. */
-  private fun shiftOf(cur: FloatArray, prev: FloatArray): Pair<Double, Double> {
-    val maxShift = 12
-    val len = cur.size
-    if (len <= 2 * maxShift + 4) return Pair(0.0, 0.0)
-    val errs = FloatArray(2 * maxShift + 1)
-    for (s in -maxShift..maxShift) {
-      var e = 0f
-      var n = 0
-      for (i in maxShift until len - maxShift) {
-        e += abs(cur[i] - prev[i + s])
-        n++
-      }
-      errs[s + maxShift] = e / n
-    }
-    var best = 0
-    for (i in errs.indices) if (errs[i] < errs[best]) best = i
-    var d = (best - maxShift).toDouble()
-    if (best in 1 until errs.size - 1) {
-      val a = errs[best - 1]; val b = errs[best]; val c = errs[best + 1]
-      val den = a - 2 * b + c
-      if (den > 1e-6f) d += 0.5 * (a - c) / den
-    }
-    return Pair(d, errs[maxShift].toDouble())
-  }
-
-  private fun normalise(p: FloatArray) {
-    var mean = 0f
-    for (v in p) mean += v
-    mean /= p.size
-    var sq = 0f
-    for (v in p) sq += (v - mean) * (v - mean)
-    val sd = sqrt(sq / p.size).coerceAtLeast(1f)
-    for (i in p.indices) p[i] = (p[i] - mean) / sd
   }
 
   private fun fail(reason: String) {
@@ -326,7 +240,6 @@ class NidoCprCameraModule : Module() {
     thread?.quitSafely()
     thread = null
     handler = null
-    prevProfile = null
-    prevColProfile = null
+    core.reset()
   }
 }
