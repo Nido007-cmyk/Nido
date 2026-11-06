@@ -19,7 +19,7 @@
  * - Nunca se devuelve un sobre a quien lo trajo.
  */
 
-import { envelopeBytes, isWellFormedEnvelope, type CarryEnvelope } from "./carryCrypto";
+import { envelopeBytes, isWellFormedEnvelope, MAX_ENVELOPE_TTL_MS, MAX_HOPS, type CarryEnvelope } from "./carryCrypto";
 
 export const STORE_LIMITS = {
   maxEnvelopes: 200,
@@ -108,37 +108,74 @@ export class CarryStore {
       for (const h of this.held.values()) if (h.from === from) fromSame++;
       if (fromSame >= this.limits.maxPerSource) return "source_full";
     }
-    // La caducidad de fuera la pone quien escribe; un mensajero no puede
-    // alargarla más allá del máximo contando desde que llega aquí.
-    this.held.set(env.eid, { env: { ...env }, from, copiesLeft: copies, givenTo: new Set(), bytes });
+    // La caducidad de fuera no va firmada (la de dentro sí, y es la que
+    // cuenta para el destinatario): un mensajero podría inflarla para que
+    // el sobre ocupe sitio en otros teléfonos. Aquí nunca pasa de 72 h
+    // desde que llega, y los saltos nunca pasan del máximo.
+    const stored: CarryEnvelope = { ...env, exp: Math.min(env.exp, now + MAX_ENVELOPE_TTL_MS), hops: Math.min(env.hops, MAX_HOPS) };
+    this.held.set(env.eid, { env: stored, from, copiesLeft: copies, givenTo: new Set(), bytes });
     return "stored";
   }
 
   /**
-   * Qué dar a `peerPk` ahora que hay sesión con él. `peerTags` son las
-   * etiquetas de sus claves de buzón (las conozco porque es contacto mío):
-   * si un sobre es para él, se le entrega y se borra de aquí. Si no, y
-   * quedan copias y saltos, se le da como mensajero (con un salto menos).
+   * Qué dar a `peerPk` ahora que hay sesión con él, SIN cambiar nada.
+   * `peerTags` son las etiquetas de sus claves de buzón (las conozco porque
+   * es contacto mío): si un sobre es para él, se le entrega. Si no, y quedan
+   * copias y saltos, se le da como mensajero (con un salto menos). Lo dado
+   * se confirma con `commitHandoff` cuando de verdad salió.
    */
-  handoff(peerPk: string, peerTags: ReadonlySet<string>, peerCarries: boolean, now: number): { deliver: CarryEnvelope[]; carry: CarryEnvelope[] } {
+  planHandoff(
+    peerPk: string,
+    peerTags: ReadonlySet<string>,
+    peerCarries: boolean,
+    now: number,
+    /** Sobres que no se entregan a su destinatario por aquí (los mensajes míos: van directos). */
+    notDirect: ReadonlySet<string> = new Set(),
+  ): { deliver: CarryEnvelope[]; carry: CarryEnvelope[] } {
     const peer = peerPk.toLowerCase();
     this.sweep(now);
     const deliver: CarryEnvelope[] = [];
     const carry: CarryEnvelope[] = [];
     for (const [eid, h] of this.held) {
       if (peerTags.has(h.env.tag)) {
-        deliver.push({ ...h.env, hops: 0 });
-        this.held.delete(eid);
-        this.seen.set(eid, h.env.exp);
+        if (!notDirect.has(eid)) deliver.push({ ...h.env, hops: 0 });
         continue;
       }
       if (!peerCarries || h.from === peer || h.givenTo.has(peer)) continue;
       if (h.copiesLeft < 1 || h.env.hops <= 1) continue;
-      h.copiesLeft--;
-      h.givenTo.add(peer);
       carry.push({ ...h.env, hops: h.env.hops - 1 });
     }
     return { deliver, carry };
+  }
+
+  /** Lo planeado salió: los entregados se borran; los llevados gastan una copia. */
+  commitHandoff(peerPk: string, delivered: readonly string[], carried: readonly string[]): void {
+    const peer = peerPk.toLowerCase();
+    for (const eid of delivered) {
+      const h = this.held.get(eid);
+      if (!h) continue;
+      this.held.delete(eid);
+      this.seen.set(eid, h.env.exp);
+    }
+    for (const eid of carried) {
+      const h = this.held.get(eid);
+      if (!h || h.givenTo.has(peer)) continue;
+      h.copiesLeft = Math.max(0, h.copiesLeft - 1);
+      h.givenTo.add(peer);
+    }
+  }
+
+  /** planHandoff + commitHandoff de una vez (la simulación, donde nada se pierde por el camino). */
+  handoff(
+    peerPk: string,
+    peerTags: ReadonlySet<string>,
+    peerCarries: boolean,
+    now: number,
+    notDirect: ReadonlySet<string> = new Set(),
+  ): { deliver: CarryEnvelope[]; carry: CarryEnvelope[] } {
+    const plan = this.planHandoff(peerPk, peerTags, peerCarries, now, notDirect);
+    this.commitHandoff(peerPk, plan.deliver.map((e) => e.eid), plan.carry.map((e) => e.eid));
+    return plan;
   }
 
   /** Para guardar en disco (JSON). */

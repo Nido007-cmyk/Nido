@@ -4,13 +4,18 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { toHex } from "../crypto";
 import { generateCarryPrekey, sealCarry, type CarryEnvelope } from "./carryCrypto";
 import {
+  confirmHandoff,
   forgetOwn,
   handoffFor,
+  helloFor,
   helloPayload,
   isCarryEnabled,
+  markArrivedViaFriends,
+  markHelloSent,
   memoryKv,
   receive,
   relayFlags,
+  relayGeneration,
   relayUsage,
   resetRelay,
   sealOwn,
@@ -29,6 +34,13 @@ const ana = person();
 const beto = person();
 const caro = person();
 const sig = (...ps: Array<ReturnType<typeof person>>) => (pk: string) => ps.find((p) => p.pkHex === pk)?.sigPk ?? null;
+
+/** Lo que el teléfono actual da a `peer` y que sale de verdad (plan + confirmación). */
+async function give(peer: string, now: number): Promise<CarryEnvelope[]> {
+  const h = await handoffFor(peer, now);
+  await confirmHandoff(peer, h.delivered, h.carried);
+  return h.envelopes;
+}
 
 /** Un KV por teléfono; `on(x)` cambia de teléfono. */
 const kvs = new Map<string, RelayKv>();
@@ -88,7 +100,7 @@ describe("tres teléfonos: Ana → Beto → Caro", () => {
     expect(await sealOwn(ana, caro.pkHex, "msg-1", "chat", "Llegamos bien", NOW)).toBe(true);
     // Aún no lo lleva nadie: sin marca.
     expect(await relayFlags(["msg-1"])).toEqual({});
-    const toBeto = await handoffFor(beto.pkHex, NOW);
+    const toBeto = await give(beto.pkHex, NOW);
     expect(await relayFlags(["msg-1"])).toEqual({ "msg-1": "out" });
     expect(toBeto).toHaveLength(1);
     expect(JSON.stringify(toBeto)).not.toContain("Llegamos");
@@ -97,21 +109,24 @@ describe("tres teléfonos: Ana → Beto → Caro", () => {
     expect(await receive(ana.pkHex, { put: toBeto }, beto, book, NOW + 1000)).toEqual({ chats: [], receipts: [], stored: 1 });
 
     // Beto se cruza con Caro.
-    const toCaro = await handoffFor(caro.pkHex, NOW + 3600_000);
+    const toCaro = await give(caro.pkHex, NOW + 3600_000);
     expect(toCaro).toHaveLength(1);
     expect((await relayUsage()).envelopes).toBe(0);
 
     on(caro);
     const atCaro = await receive(beto.pkHex, { put: toCaro }, caro, book, NOW + 3600_000);
     expect(atCaro.chats).toEqual([{ from: ana.pkHex, id: "msg-1", ts: NOW, kind: "chat", text: "Llegamos bien" }]);
+    // La marca la pone quien lo guarda como nuevo (el messenger).
+    expect(await relayFlags(["msg-1"])).toEqual({});
+    await markArrivedViaFriends("msg-1");
     expect(await relayFlags(["msg-1"])).toEqual({ "msg-1": "in" });
 
     // El acuse vuelve por el mismo camino.
     expect(await sealOwn(caro, ana.pkHex, "r-1", "receipt", "msg-1", NOW + 3600_000)).toBe(true);
-    const back = await handoffFor(beto.pkHex, NOW + 3600_000);
+    const back = await give(beto.pkHex, NOW + 3600_000);
     on(beto);
     await receive(caro.pkHex, { put: back }, beto, book, NOW + 3600_000);
-    const toAna = await handoffFor(ana.pkHex, NOW + 7200_000);
+    const toAna = await give(ana.pkHex, NOW + 7200_000);
     on(ana);
     const atAna = await receive(beto.pkHex, { put: toAna }, ana, book, NOW + 7200_000);
     expect(atAna.receipts).toEqual([{ from: caro.pkHex, id: "msg-1" }]);
@@ -129,7 +144,7 @@ describe("tres teléfonos: Ana → Beto → Caro", () => {
     expect(helloBeto.carries).toBe(false);
     on(ana);
     await receive(beto.pkHex, helloBeto, ana, sig(beto, caro), NOW);
-    expect(await handoffFor(beto.pkHex, NOW)).toEqual([]);
+    expect(await give(beto.pkHex, NOW)).toEqual([]);
     // Y aunque se los mandaran, no los guarda.
     const raw = sealCarry({ recipient: helloCaro.prekey, senderPkHex: ana.pkHex, senderSignSecretKey: ana.signSecretKey, id: "z", kind: "chat", text: "x", now: NOW });
     on(beto);
@@ -145,6 +160,18 @@ describe("tres teléfonos: Ana → Beto → Caro", () => {
     expect((await relayUsage()).envelopes).toBe(1);
     await forgetOwn("m");
     expect((await relayUsage()).envelopes).toBe(0);
+  });
+
+  it("al cruzarse con el destinatario, mi sobre no se le da (el mensaje va directo)", async () => {
+    on(caro);
+    const helloCaro = await helloPayload(caro, NOW);
+    on(ana);
+    await receive(caro.pkHex, { ...helloCaro, carries: true }, ana, sig(beto, caro), NOW);
+    await sealOwn(ana, caro.pkHex, "m", "chat", "hola", NOW);
+    expect(await give(caro.pkHex, NOW)).toEqual([]);
+    // Pero un acuse mío sí se le entrega (no tiene otro camino).
+    expect(await sealOwn(ana, caro.pkHex, "r", "receipt", "x", NOW)).toBe(true);
+    expect(await give(caro.pkHex, NOW)).toHaveLength(1);
   });
 
   it("sin clave de buzón del destinatario no se sella", async () => {
@@ -225,3 +252,87 @@ describe("borrar", () => {
     expect(await isCarryEnabled()).toBe(false);
   });
 });
+
+describe("disco", () => {
+  it("si la lectura falla, la operación se cancela y no borra lo guardado", async () => {
+    on(caro);
+    const first = await helloPayload(caro, NOW);
+    const real = kvs.get(caro.pkHex)!;
+    let broken = true;
+    kvs.set(caro.pkHex, {
+      get: async (k) => {
+        if (broken) throw new Error("base bloqueada");
+        return real.get(k);
+      },
+      setMany: (e) => real.setMany(e),
+    });
+    await expect(helloPayload(caro, NOW + 1000)).rejects.toThrow();
+    await expect(setCarryEnabled(true)).rejects.toThrow();
+    broken = false;
+    // La clave de buzón sigue siendo la misma (no se creó otra encima de un estado vacío).
+    expect((await helloPayload(caro, NOW + 2000)).prekey.id).toBe(first.prekey.id);
+  });
+
+  it("datos dañados o con tipos raros: se ignoran sin romper nada", async () => {
+    on(beto);
+    await kvs.get(beto.pkHex)!.setMany([
+      ["relay_state_v1", JSON.stringify({ enabled: "sí", mine: [1, null, { pub: 3 }], peers: { x: 5, y: { prekeys: "no" } }, held: [{ env: 1 }], seen: [7, ["a", 1]], own: { m: 3 } })],
+      ["relay_flags_v1", "{no es json"],
+    ]);
+    expect(await isCarryEnabled()).toBe(false);
+    expect(await relayUsage()).toEqual({ envelopes: 0, bytes: 0, enabled: false });
+    expect(await relayFlags(["m"])).toEqual({});
+    const h = await helloPayload(beto, NOW);
+    expect(h.prekey.owner).toBe(beto.pkHex.toLowerCase());
+  });
+});
+
+describe("entregar sin perder nada", () => {
+  it("si el envío falla (no se confirma), el sobre sigue aquí para la próxima vez", async () => {
+    on(caro);
+    const helloCaro = await helloPayload(caro, NOW);
+    const env = sealCarry({ recipient: helloCaro.prekey, senderPkHex: ana.pkHex, senderSignSecretKey: ana.signSecretKey, id: "m", kind: "chat", text: "x", now: NOW });
+    on(beto);
+    await setCarryEnabled(true);
+    await receive(caro.pkHex, helloCaro, beto, sig(ana, caro), NOW);
+    await receive(ana.pkHex, { put: [env] }, beto, sig(ana, caro), NOW);
+    const plan = await handoffFor(caro.pkHex, NOW);
+    expect(plan.delivered).toEqual([env.eid]);
+    // Se cortó la conexión antes de mandarlo: no se confirma.
+    expect((await relayUsage()).envelopes).toBe(1);
+    expect((await give(caro.pkHex, NOW)).map((e) => e.eid)).toEqual([env.eid]);
+    expect((await relayUsage()).envelopes).toBe(0);
+  });
+});
+
+describe("saludo", () => {
+  it("solo hace falta repetirlo si cambió algo o pasó un día", async () => {
+    on(ana);
+    const h1 = await helloFor(ana, NOW, beto.pkHex);
+    expect(h1.needed).toBe(true);
+    await markHelloSent(beto.pkHex, h1, NOW);
+    expect((await helloFor(ana, NOW + 1000, beto.pkHex)).needed).toBe(false);
+    // Cambia el ajuste: hay que decírselo.
+    await setCarryEnabled(true);
+    expect((await helloFor(ana, NOW + 2000, beto.pkHex)).needed).toBe(true);
+    await markHelloSent(beto.pkHex, { prekey: h1.prekey, carries: true }, NOW + 2000);
+    expect((await helloFor(ana, NOW + 3000, beto.pkHex)).needed).toBe(false);
+    // Un día después, se repite por si el último se perdió.
+    expect((await helloFor(ana, NOW + 2000 + 24 * 3600 * 1000, beto.pkHex)).needed).toBe(true);
+  });
+
+  it("la generación sube cuando hay algo nuevo que dar, y no con un saludo normal", async () => {
+    on(caro);
+    const helloCaro = await helloPayload(caro, NOW);
+    on(ana);
+    const g0 = relayGeneration();
+    await helloFor(ana, NOW);
+    await helloFor(ana, NOW + 1);
+    expect(relayGeneration()).toBe(g0 + 1); // la primera crea la clave
+    await receive(caro.pkHex, helloCaro, ana, sig(caro), NOW);
+    expect(relayGeneration()).toBe(g0 + 2);
+    await sealOwn(ana, caro.pkHex, "m", "chat", "hola", NOW);
+    expect(relayGeneration()).toBe(g0 + 3);
+  });
+});
+

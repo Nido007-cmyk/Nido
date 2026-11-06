@@ -49,6 +49,8 @@ export function RelayCard() {
       setBusy(true);
       try {
         await setCarryEnabled(on);
+      } catch {
+        /* no se pudo guardar: la recarga muestra el estado real */
       } finally {
         setBusy(false);
         await reload();

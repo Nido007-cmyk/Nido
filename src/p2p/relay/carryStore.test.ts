@@ -95,3 +95,15 @@ describe("repartir", () => {
     expect(s.handoff(C, caroTags, false, NOW).deliver.length).toBe(1);
   });
 });
+
+describe("lo que un mensajero no puede inflar", () => {
+  it("la caducidad de fuera nunca pasa de 72 h desde que llega", async () => {
+    const s = new CarryStore();
+    const e = { ...env(), exp: NOW + 365 * 24 * 3600 * 1000 };
+    expect(s.accept(e, B, NOW)).toBe("stored");
+    // A las 72 h y un poco, ya no está.
+    s.sweep(NOW + 72 * 3600 * 1000 + 1);
+    expect(s.size()).toBe(0);
+  });
+});
+
