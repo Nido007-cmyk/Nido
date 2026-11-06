@@ -109,6 +109,8 @@ interface HeldRow {
   from: string | null;
   copiesLeft: number;
   givenTo: string[];
+  /** Instante de llegada (lo escribe el snapshot del almacén); puede faltar en estado de la 0.1.76. */
+  arrivedAt?: number;
 }
 
 interface RelayState {
