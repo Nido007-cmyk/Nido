@@ -121,9 +121,16 @@ interface RelayState {
   own: Record<string, { eid: string; exp: number }>;
   /** id de mensaje → "in" (llegó por amigos) | "out" (salió también por amigos). */
   flags: Record<string, "in" | "out">;
+  /**
+   * Sobres ya abiertos («remitente|tipo|id» → caducidad): un mismo mensaje
+   * reenviado en otro sobre (otro eid) no se acepta dos veces, aunque el
+   * mensaje se haya borrado del chat mientras tanto.
+   */
+  opened: Record<string, number>;
 }
 
-const EMPTY: RelayState = { enabled: false, mine: [], peers: {}, held: [], seen: [], own: {}, flags: {} };
+const EMPTY: RelayState = { enabled: false, mine: [], peers: {}, held: [], seen: [], own: {}, flags: {}, opened: {} };
+const MAX_OPENED = 5000;
 const KEY = "relay_state_v1";
 const MAX_FLAGS = 2000;
 
@@ -202,6 +209,9 @@ async function load(): Promise<RelayState> {
   }
   if (Array.isArray(b.held)) s.held = (b.held as unknown[]).filter(isObj) as unknown as HeldRow[];
   if (Array.isArray(b.seen)) s.seen = (b.seen as unknown[]).filter(Array.isArray) as Array<[string, number]>;
+  if (isObj(b.opened)) {
+    for (const [k, exp] of Object.entries(b.opened)) if (typeof exp === "number") s.opened[k] = exp;
+  }
   if (isObj(b.own)) {
     for (const [id, o] of Object.entries(b.own)) {
       if (isObj(o) && typeof o.eid === "string" && typeof o.exp === "number") s.own[id] = { eid: o.eid, exp: o.exp };
@@ -288,7 +298,10 @@ export async function relayFlags(ids: readonly string[]): Promise<Record<string,
 
 export interface Me {
   pkHex: string;
+  /** Ed25519 de identidad: firma mi clave de buzón. */
   signSecretKey: Uint8Array;
+  /** X25519 de identidad: autentica mis sobres (sin firma: negable). */
+  idSecretKey: Uint8Array;
 }
 
 /** Repetir el saludo aunque no haya cambiado (por si el último se perdió por radio). */
@@ -390,12 +403,30 @@ export async function receive(
     const list = Array.isArray(p.put) ? p.put.slice(0, STORE_LIMITS.maxPerSource) : [];
     if (list.length) {
       const st = storeFrom(s);
+      // Mis claves de buzón caducadas se borran ya (con sus secretos).
+      s.mine = s.mine.filter((m) => m.pub.expiresAt > now);
       const secrets = mySecrets(s, me.pkHex, now);
+      const myTags = new Set(secrets.flatMap((k) => carryTagsFor(k.id, now)));
+      for (const [k, exp] of Object.entries(s.opened)) if (exp <= now) delete s.opened[k];
+      const isContact = (pk: string) => sigPkOf(pk) !== null;
       for (const e of list) {
         if (!isWellFormedEnvelope(e) || st.known(e.eid)) continue;
-        const opened = openCarry(e, secrets, me.pkHex, sigPkOf, now);
+        const opened = openCarry(e, secrets, me.pkHex, isContact, now);
+        if (!opened && myTags.has(e.tag)) {
+          // Con mi etiqueta pero no se abre (manipulado, de un no-contacto…):
+          // no se lleva a ningún sitio.
+          st.forget(e.eid, e.exp);
+          continue;
+        }
         if (opened) {
           st.forget(e.eid, e.exp);
+          const key = `${opened.from}|${opened.kind}|${opened.id}`;
+          if (s.opened[key] !== undefined) continue; // repetición en otro sobre
+          if (Object.keys(s.opened).length >= MAX_OPENED) {
+            const oldest = Object.entries(s.opened).sort((a, b) => a[1] - b[1])[0];
+            if (oldest) delete s.opened[oldest[0]];
+          }
+          s.opened[key] = opened.exp;
           if (opened.kind === "chat") {
             // La marca «vía amigos» la pone quien lo guarda, y solo si es nuevo
             // (si ya había llegado directo, no llegó por amigos): markArrivedViaFriends.
@@ -485,7 +516,7 @@ export async function sealOwn(
     if (!pk) return false;
     let env: CarryEnvelope;
     try {
-      env = sealCarry({ recipient: pk, senderPkHex: me.pkHex, senderSignSecretKey: me.signSecretKey, id, kind, text, now });
+      env = sealCarry({ recipient: pk, senderPkHex: me.pkHex, senderSecretKey: me.idSecretKey, id, kind, text, now });
     } catch {
       return false;
     }

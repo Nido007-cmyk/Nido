@@ -28,7 +28,7 @@ const NOW = 1_800_000_000_000;
 function person() {
   const id = nacl.box.keyPair();
   const sign = nacl.sign.keyPair();
-  return { pkHex: toHex(id.publicKey), sigPk: toHex(sign.publicKey), signSecretKey: sign.secretKey };
+  return { pkHex: toHex(id.publicKey), sigPk: toHex(sign.publicKey), signSecretKey: sign.secretKey, idSecretKey: id.secretKey };
 }
 const ana = person();
 const beto = person();
@@ -115,7 +115,7 @@ describe("tres teléfonos: Ana → Beto → Caro", () => {
 
     on(caro);
     const atCaro = await receive(beto.pkHex, { put: toCaro }, caro, book, NOW + 3600_000);
-    expect(atCaro.chats).toEqual([{ from: ana.pkHex, id: "msg-1", ts: NOW, kind: "chat", text: "Llegamos bien" }]);
+    expect(atCaro.chats).toEqual([{ from: ana.pkHex, id: "msg-1", ts: NOW, exp: NOW + 72 * 3600 * 1000, kind: "chat", text: "Llegamos bien" }]);
     // La marca la pone quien lo guarda como nuevo (el messenger).
     expect(await relayFlags(["msg-1"])).toEqual({});
     await markArrivedViaFriends("msg-1");
@@ -146,7 +146,7 @@ describe("tres teléfonos: Ana → Beto → Caro", () => {
     await receive(beto.pkHex, helloBeto, ana, sig(beto, caro), NOW);
     expect(await give(beto.pkHex, NOW)).toEqual([]);
     // Y aunque se los mandaran, no los guarda.
-    const raw = sealCarry({ recipient: helloCaro.prekey, senderPkHex: ana.pkHex, senderSignSecretKey: ana.signSecretKey, id: "z", kind: "chat", text: "x", now: NOW });
+    const raw = sealCarry({ recipient: helloCaro.prekey, senderPkHex: ana.pkHex, senderSecretKey: ana.idSecretKey, id: "z", kind: "chat", text: "x", now: NOW });
     on(beto);
     expect((await receive(ana.pkHex, { put: [raw] }, beto, sig(ana, caro), NOW)).stored).toBe(0);
   });
@@ -209,7 +209,7 @@ describe("entradas hostiles (lección de Bridgefy: un mensaje malo no tumba nada
   it("de quien no es contacto no se acepta nada", async () => {
     on(caro);
     const helloCaro = await helloPayload(caro, NOW);
-    const env: CarryEnvelope = sealCarry({ recipient: helloCaro.prekey, senderPkHex: ana.pkHex, senderSignSecretKey: ana.signSecretKey, id: "m", kind: "chat", text: "x", now: NOW });
+    const env: CarryEnvelope = sealCarry({ recipient: helloCaro.prekey, senderPkHex: ana.pkHex, senderSecretKey: ana.idSecretKey, id: "m", kind: "chat", text: "x", now: NOW });
     on(beto);
     await setCarryEnabled(true);
     const stranger = person();
@@ -228,7 +228,7 @@ describe("entradas hostiles (lección de Bridgefy: un mensaje malo no tumba nada
     on(caro);
     const helloCaro = await helloPayload(caro, NOW);
     const many = Array.from({ length: 40 }, (_, i) =>
-      sealCarry({ recipient: helloCaro.prekey, senderPkHex: ana.pkHex, senderSignSecretKey: ana.signSecretKey, id: `m${i}`, kind: "chat", text: "x", now: NOW }),
+      sealCarry({ recipient: helloCaro.prekey, senderPkHex: ana.pkHex, senderSecretKey: ana.idSecretKey, id: `m${i}`, kind: "chat", text: "x", now: NOW }),
     );
     on(beto);
     await setCarryEnabled(true);
@@ -240,7 +240,7 @@ describe("borrar", () => {
   it("resetRelay lo tira todo, y apagar tira los sobres de otros", async () => {
     on(caro);
     const helloCaro = await helloPayload(caro, NOW);
-    const env = sealCarry({ recipient: helloCaro.prekey, senderPkHex: ana.pkHex, senderSignSecretKey: ana.signSecretKey, id: "m", kind: "chat", text: "x", now: NOW });
+    const env = sealCarry({ recipient: helloCaro.prekey, senderPkHex: ana.pkHex, senderSecretKey: ana.idSecretKey, id: "m", kind: "chat", text: "x", now: NOW });
     on(beto);
     await setCarryEnabled(true);
     await receive(ana.pkHex, { put: [env] }, beto, sig(ana, caro), NOW);
@@ -291,7 +291,7 @@ describe("entregar sin perder nada", () => {
   it("si el envío falla (no se confirma), el sobre sigue aquí para la próxima vez", async () => {
     on(caro);
     const helloCaro = await helloPayload(caro, NOW);
-    const env = sealCarry({ recipient: helloCaro.prekey, senderPkHex: ana.pkHex, senderSignSecretKey: ana.signSecretKey, id: "m", kind: "chat", text: "x", now: NOW });
+    const env = sealCarry({ recipient: helloCaro.prekey, senderPkHex: ana.pkHex, senderSecretKey: ana.idSecretKey, id: "m", kind: "chat", text: "x", now: NOW });
     on(beto);
     await setCarryEnabled(true);
     await receive(caro.pkHex, helloCaro, beto, sig(ana, caro), NOW);
@@ -336,3 +336,25 @@ describe("saludo", () => {
   });
 });
 
+describe("revisión de seguridad", () => {
+  it("el mismo mensaje en otro sobre (otro eid) no se acepta dos veces", async () => {
+    on(caro);
+    const helloCaro = await helloPayload(caro, NOW);
+    const mk = () => sealCarry({ recipient: helloCaro.prekey, senderPkHex: ana.pkHex, senderSecretKey: ana.idSecretKey, id: "same", kind: "chat", text: "hola", now: NOW });
+    const first = await receive(beto.pkHex, { put: [mk()] }, caro, sig(ana, beto), NOW);
+    expect(first.chats).toHaveLength(1);
+    const again = await receive(beto.pkHex, { put: [mk()] }, caro, sig(ana, beto), NOW + 1000);
+    expect(again.chats).toHaveLength(0);
+  });
+
+  it("un sobre con mi etiqueta que no se abre (no-contacto, manipulado) no se guarda para llevar", async () => {
+    on(caro);
+    await setCarryEnabled(true);
+    const helloCaro = await helloPayload(caro, NOW);
+    const stranger = person();
+    const env = sealCarry({ recipient: helloCaro.prekey, senderPkHex: stranger.pkHex, senderSecretKey: stranger.idSecretKey, id: "s", kind: "chat", text: "spam", now: NOW });
+    const r = await receive(beto.pkHex, { put: [env] }, caro, sig(ana, beto), NOW);
+    expect(r).toEqual({ chats: [], receipts: [], stored: 0 });
+    expect((await relayUsage()).envelopes).toBe(0);
+  });
+});

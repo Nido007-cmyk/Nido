@@ -32,20 +32,47 @@ expires. A contact accepts a mailbox key only if the signature verifies
 against the QR key of that contact, it is not expired, and it lasts no
 more than 14 days (`verifyCarryPrekey`).
 
-### Envelope
+### Envelope (format version 2)
 
-- **Inside:** sender, recipient, message id, time, signed expiry, kind
-  (chat or receipt) and text. All of it is signed by the sender's Ed25519
-  key under its own domain (`nido-carry-msg-v1`), then padded to 1, 2, 4
-  or 8 KB so the length doesn't show.
-- **Encryption:** a fresh X25519 ephemeral against the mailbox key, **and**
-  an ML-KEM-768 encapsulation to it. Both secrets go through
-  HKDF-SHA512 (salt `nido-carry-v1`, info bound to the mailbox key id, the
-  ephemeral and the KEM ciphertext). Breaking the envelope needs both.
-  XSalsa20-Poly1305 (secretbox), like the rest of NIDO today.
+The construction is the Noise **X** pattern (one message from a sender
+with a static key, `e, es, s, ss`) with an ML-KEM-768 encapsulation mixed
+into the first step, the same idea as HPKE's Auth mode (RFC 9180):
+
+1. A fresh X25519 ephemeral against the mailbox key, **and** an ML-KEM-768
+   encapsulation to it. Both secrets go through HKDF-SHA512 into a header
+   key and a chaining key. The header key encrypts the sender's X25519
+   identity (32 bytes).
+2. X25519 between the sender's identity key (the one in the QR) and the
+   mailbox key is added to the chaining key: that gives the body key. The
+   body is the message, padded to 1, 2, 4 or 8 KB so the length doesn't
+   show.
+
+Every key is bound (in the HKDF info) to the exact mailbox key (its id,
+its X25519 key and a hash of its ML-KEM key), the ephemeral key and a hash
+of the KEM ciphertext; the body key is also bound to the sender's
+identity. Encryption is XSalsa20-Poly1305 (secretbox), as in the rest of
+NIDO today.
+
+- **Reading it** needs both X25519 and ML-KEM broken.
+- **Pretending to be Ana** needs Ana's identity secret key, or Caro's
+  mailbox secret key (see "key-compromise impersonation" below).
+- **Inside:** sender, recipient, message id, time, expiry, mailbox key id,
+  kind (chat or receipt) and text. Caro checks that the sender inside is
+  the one in the header, that it is addressed to her with that mailbox
+  key, and that the expiry has not passed and is no more than 72 hours
+  after the time written.
+- **No signature per message, on purpose (deniable).** Format version 1
+  (never released) signed each message with Ed25519, so whoever got hold
+  of Caro's phone had transferable proof that Ana wrote that text, which
+  is more than NIDO's direct messages give away. With authentication by
+  Diffie-Hellman, Caro knows the message is from Ana but can't prove it
+  to anyone else: she could have made the same envelope herself
+  (`carryCrypto.test.ts`, "deniable"). Signal (X3DH) and Noise make the
+  same choice. The mailbox key itself is still signed with the QR key, so
+  no one can slip a fake mailbox key in.
 - **Outside, what a carrier sees:** a random envelope id, a tag, the
-  expiry, the hops left, the ephemeral key, the KEM ciphertext and the
-  ciphertext. **No sender, no recipient, no text.**
+  expiry, the hops left, the ephemeral key, the KEM ciphertext, a nonce
+  and the ciphertext. **No sender, no recipient, no text.**
 - **The tag** is derived from the mailbox key id **and the day** (UTC).
   Only people who hold that mailbox key (the recipient's contacts)
   recognize it. That is how a carrier knows "this one is for Caro" when
@@ -54,17 +81,21 @@ more than 14 days (`verifyCarryPrekey`).
   Recipients and carriers check the tags of the last three days, today and
   tomorrow (an envelope lasts at most 72 hours).
 
-New signing and KDF domains, disjoint from all others: `nido-carry-prekey-v1`,
-`nido-carry-msg-v1`, `nido-carry-v1`, `nido-carry-key-v1`, `nido-carry-tag-v1|<day>`.
+Domains, disjoint from all others: signature `nido-carry-prekey-v2`; KDF
+salt `nido-carry-v2`; info `nido-carry-ctx-v2`, `nido-carry-hdr-v2`,
+`nido-carry-body-v2`, `nido-carry-tag-v2|<day>`.
 
 ### Opening
 
 Caro opens an envelope only if: it is well formed; the tag matches one of
-her mailbox keys; it decrypts; it is addressed to her identity with that
-key; the signed expiry has not passed (a carrier can change the outer
-one but not this); the sender is **one of her contacts** and the
-signature verifies with that contact's QR key (`openCarry`). Anything
-else is dropped silently. It never throws.
+her mailbox keys; the header decrypts; the sender in it is **one of her
+contacts** (checked before the body is decrypted); the body decrypts with
+the key that includes that sender; the padding is all zeros; and the
+inside matches (sender, recipient, mailbox key, expiry, version, kind,
+id). Anything else is dropped silently. It never throws. The same message
+(sender, kind and id) arriving again in another envelope is ignored until
+it expires, even if it was deleted from the chat meanwhile. An envelope
+with one of Caro's tags that doesn't open is not carried any further.
 
 ### Who carries what (`CarryStore`)
 
@@ -107,12 +138,13 @@ movement, radio range and battery will change the numbers.
 
 | Who | Can | Can't |
 |---|---|---|
-| A carrier (a contact) | See that it carries envelopes, their size bucket, expiry and tag; know who handed them over (a contact of theirs). If the writer hands an envelope over in person, the carrier can guess the writer (it can't tell an envelope written by that contact from one it was only carrying). | Read the text; change the message or forge a sender (signature inside); make it last longer for the recipient (signed expiry); know the recipient unless it is a contact of the recipient (then the tag tells it "for Caro"). |
+| A carrier (a contact) | See that it carries envelopes, their size bucket, expiry and tag; know who handed them over (a contact of theirs). If the writer hands an envelope over in person, the carrier can guess the writer (it can't tell an envelope written by that contact from one it was only carrying). | Read the text; change the message or forge a sender (authenticated with the sender's identity key inside); make it last longer for the recipient (authenticated expiry inside); know the recipient unless it is a contact of the recipient (then the tag tells it "for Caro"). |
 | A contact of the recipient | Recognize envelopes for the recipient by the tag while the mailbox key lasts (up to 14 days), and so link them. | Read them. |
 | A carrier who is not a contact of the recipient | Link envelopes with the same tag on the same day (same recipient). | Link them across days (the tag changes daily); know who the recipient is. |
 | A stranger nearby | Nothing new: the radio link is the same encrypted, contacts-only session as today. | Receive, inject or carry envelopes. |
 | Someone who floods | Fill at most 30 envelopes per contact and 200 in total on a phone that accepted to carry. | Fill the phone: hard limits, expiry, no strangers. |
 | A future quantum computer recording traffic | Attack X25519. | Attack ML-KEM-768 too, which it also needs (hybrid). |
+| Someone who steals Caro's unlocked phone | Read envelopes for her mailbox keys that have not expired yet. **Key-compromise impersonation:** with Caro's mailbox secret key, make envelopes that Caro's phone would accept as coming from any of her contacts, until that key expires (14 days at most). | Prove to anyone else that Ana wrote a message (no signatures, deniable); impersonate Caro to others. |
 
 Known limits:
 
@@ -124,6 +156,11 @@ Known limits:
   encrypted store) could open envelopes still addressed to keys that
   have not expired. Expired secret keys, and keys of an earlier identity,
   are deleted the next time the phone gives out its mailbox key.
+- **Sender authentication is not post-quantum.** Reading an envelope
+  needs X25519 and ML-KEM broken; but a future quantum computer that
+  breaks X25519 could make envelopes that look like they come from a
+  contact. The same is true of Ed25519 signatures and of NIDO's direct
+  messages today.
 - **The writer's first carriers** can guess who wrote an envelope they
   got from the writer in person (see the table).
 - **Relationships:** whoever carries for you learns that you have
@@ -158,7 +195,7 @@ Known limits:
 - **Receiving:** an envelope for me is opened (`openCarry`), saved as a
   normal received message and marked "via friends" (only if it was new:
   if it had already arrived directly, it is just confirmed again). The recipient seals a
-  signed **receipt** back the same way. When the writer gets it, the
+  **receipt**, authenticated the same way, back by the same route. When the writer gets it, the
   message shows as delivered, as with a direct confirmation, and the
   writer stops handing out its envelope.
 - **Carrying:** only if the person turned on «Carry messages for my
@@ -172,7 +209,7 @@ Known limits:
   is accepted from someone who is not a contact, or from a revoked one;
   at most 30 envelopes per frame are even looked at; envelopes already
   seen are skipped before any decryption. The outer expiry and hops are
-  not signed, so a carrier could inflate them: a phone never keeps an
+  not authenticated, so a carrier could inflate them: a phone never keeps an
   envelope more than 72 hours after it arrived, nor with more than 3 hops.
   If reading the stored state fails, the operation is cancelled instead
   of writing an empty state over it (which would lose the mailbox keys);
@@ -201,6 +238,6 @@ changes over time (the idea of rotating identifiers in Bluetooth tracking
 networks); limited copies (Spray and Wait, Spyropoulos, Psounis and
 Raghavendra, 2005). As far as we know, none of these carries **private
 1:1 messages** from contact to contact with sender and recipient hidden
-from carriers, padding, a signed expiry and hybrid post-quantum
+from carriers, padding, an authenticated expiry, deniable authentication and hybrid post-quantum
 encryption together. We can't check every app in the world, so NIDO does
 not claim to be the first.

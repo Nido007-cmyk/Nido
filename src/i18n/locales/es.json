@@ -875,7 +875,7 @@
     "disappearBadge": "temporal",
     "relay": {
       "title": "De amigo en amigo",
-      "body": "Si un contacto tuyo no está cerca, tu mensaje puede llegarle a través de otro contacto que los conozca a los dos, sin internet. Va en un sobre sellado y firmado: quien lo lleva no puede leerlo ni cambiarlo.",
+      "body": "Si un contacto tuyo no está cerca, tu mensaje puede llegarle a través de otro contacto que los conozca a los dos, sin internet. Va en un sobre sellado: quien lo lleva no puede leerlo ni cambiarlo.",
       "toggle": "Llevar mensajes de mis contactos",
       "off": "Apagado. Tus mensajes pueden seguir viajando por los contactos que sí lo tengan encendido.",
       "usage": "Encendido · llevas {{count}} sobres ({{kb}} KB)",

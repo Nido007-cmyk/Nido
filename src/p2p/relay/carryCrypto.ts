@@ -16,18 +16,35 @@
  *   Ed25519 de identidad (la del QR) y se lo da a sus contactos por la
  *   sesión cifrada de siempre. Quien quiera escribirle sin verlo usa esa
  *   clave.
- * - **Sobre** (carry envelope): por dentro, el mensaje firmado por el
- *   remitente con su Ed25519 (dominio propio) y relleno a tamaños fijos;
- *   cifrado con una clave que sale de un X25519 efímero contra la clave
- *   de buzón **y** de un encapsulado ML-KEM-768 (híbrido: hay que romper
- *   los dos). Por fuera, solo lo que un mensajero necesita: una etiqueta
- *   que reconocen los contactos del destinatario, la caducidad y los
- *   saltos que quedan.
+ * - **Sobre** (carry envelope), versión 2: patrón Noise «X» (un solo
+ *   mensaje, remitente con clave estática) con ML-KEM-768 mezclado, igual
+ *   que el modo «Auth» de HPKE (RFC 9180):
+ *     1. X25519(efímera, buzón) y ML-KEM-768 hacia el buzón → clave de
+ *        cabecera, que cifra la identidad X25519 del remitente (32 bytes).
+ *     2. + X25519(identidad del remitente, buzón) → clave del cuerpo, que
+ *        cifra el mensaje con relleno a tamaños fijos.
+ *   Todo va atado (en el «info» del KDF) a la clave de buzón exacta (id,
+ *   X25519 y hash del ML-KEM), a la efímera, al cifrado ML-KEM y, el
+ *   cuerpo, a la identidad del remitente. Para descifrar hay que romper
+ *   X25519 **y** ML-KEM; para hacerse pasar por Ana hay que tener la
+ *   clave de identidad de Ana (o la clave de buzón secreta de Caro: ver
+ *   «KCI» en docs/RELAY.md).
+ *
+ *   **Sin firma por mensaje, a propósito (negable):** en la v1 cada
+ *   mensaje iba firmado con Ed25519, así que quien consiguiera el teléfono
+ *   de Caro tenía una prueba transferible de que Ana escribió ese texto.
+ *   Con la autenticación por Diffie-Hellman, Caro sabe que es de Ana,
+ *   pero no puede probárselo a nadie: ella misma podría haber fabricado un
+ *   sobre igual. Es lo que hacen Signal (X3DH) y Noise.
+ *
+ *   Por fuera, solo lo que un mensajero necesita: una etiqueta que
+ *   reconocen los contactos del destinatario, la caducidad y los saltos
+ *   que quedan.
  *
  * Dominios nuevos, disjuntos de los demás (ver CRYPTO_ARCHITECTURE §1):
- * "nido-carry-prekey-v1" (firma de la clave de buzón),
- * "nido-carry-msg-v1" (firma del mensaje), "nido-carry-v1" (sal del KDF),
- * "nido-carry-key-v1" e "nido-carry-tag-v1" (info).
+ * "nido-carry-prekey-v2" (firma de la clave de buzón), "nido-carry-v2"
+ * (sal del KDF), "nido-carry-ctx-v2", "nido-carry-hdr-v2",
+ * "nido-carry-body-v2" y "nido-carry-tag-v2|<día>" (info).
  */
 
 import nacl from "tweetnacl";
@@ -42,9 +59,16 @@ import {
   utf8Encode,
   verifyDetached,
 } from "../crypto";
-import { kemDecapsulate, kemEncapsulate, kemKeygen, KEM_CIPHERTEXT_BYTES, KEM_PUBLIC_KEY_BYTES } from "../pq";
+import {
+  kemDecapsulate,
+  kemEncapsulate,
+  kemKeygen,
+  KEM_CIPHERTEXT_BYTES,
+  KEM_PUBLIC_KEY_BYTES,
+  KEM_SECRET_KEY_BYTES,
+} from "../pq";
 
-export const CARRY_VERSION = 1;
+export const CARRY_VERSION = 2;
 /** Vida de una clave de buzón. Se rota antes: ver needsRotation. */
 export const PREKEY_TTL_MS = 14 * 24 * 3600 * 1000;
 /** Vida máxima de un sobre. */
@@ -59,6 +83,10 @@ export const PAD_BUCKETS = [1024, 2048, 4096, 8192] as const;
  */
 export const MAX_CARRY_TEXT = 1500;
 export const TAG_BYTES = 16;
+/** Cabecera cifrada: identidad X25519 del remitente (32) + MAC (16). */
+export const HEADER_BYTES = 32 + 16;
+/** Margen de reloj aceptado entre teléfonos. */
+const CLOCK_SKEW_MS = 10 * 60 * 1000;
 
 export interface CarryPrekeyPublic {
   /** 16 bytes aleatorios en hex: nombre de la clave. */
@@ -125,7 +153,7 @@ export function verifyCarryPrekey(p: unknown, ownerPkHex: string, ownerSigPkHex:
     if (typeof q.kem !== "string" || q.kem.length !== KEM_PUBLIC_KEY_BYTES * 2 || !/^[0-9a-f]+$/.test(q.kem)) return false;
     if (!Number.isSafeInteger(q.createdAt) || !Number.isSafeInteger(q.expiresAt)) return false;
     if (q.owner !== ownerPkHex.toLowerCase()) return false;
-    if (q.expiresAt <= now || q.createdAt > now + 10 * 60 * 1000) return false;
+    if (q.expiresAt <= now || q.createdAt > now + CLOCK_SKEW_MS) return false;
     if (q.expiresAt - q.createdAt > PREKEY_TTL_MS) return false;
     const { sig, ...base } = q;
     return verifyDetached(prekeyTranscript(base), fromHex(sig), fromHex(ownerSigPkHex));
@@ -141,6 +169,7 @@ export function needsRotation(newest: { createdAt: number; expiresAt: number } |
 }
 
 const DAY_MS = 24 * 3600 * 1000;
+const SALT = `nido-carry-v${CARRY_VERSION}`;
 
 /** Día (UTC) de un instante: la etiqueta cambia cada día. */
 export function carryDay(t: number): number {
@@ -155,7 +184,7 @@ export function carryDay(t: number): number {
  * destinatario no puede ligar los sobres de un día con los del siguiente.
  */
 export function carryTag(prekeyId: string, day: number): string {
-  return toHex(hkdfSha512(utf8Encode("nido-carry-v1"), fromHex(prekeyId), utf8Encode(`nido-carry-tag-v1|${day}`), TAG_BYTES));
+  return toHex(hkdfSha512(utf8Encode(SALT), fromHex(prekeyId), utf8Encode(`nido-carry-tag-v${CARRY_VERSION}|${day}`), TAG_BYTES));
 }
 
 /**
@@ -172,14 +201,14 @@ export function carryTagsFor(prekeyId: string, now: number): string[] {
 
 export interface CarryInner {
   v: number;
-  /** Remitente (X25519 de identidad, hex). */
+  /** Remitente (X25519 de identidad, hex). Debe coincidir con el de la cabecera. */
   from: string;
   /** Destinatario (X25519 de identidad, hex). */
   to: string;
   /** Id estable del mensaje (deduplicación y acuse). */
   id: string;
   ts: number;
-  /** Caducidad firmada: la de fuera es solo una pista para los mensajeros. */
+  /** Caducidad autenticada: la de fuera es solo una pista para los mensajeros. */
   exp: number;
   prekey: string;
   kind: "chat" | "receipt";
@@ -196,12 +225,10 @@ export interface CarryEnvelope {
   hops: number;
   eph: string;
   kct: string;
+  /** Nonce del cuerpo (la cabecera usa nonce cero: su clave es de un solo uso). */
   nonce: string;
+  /** Cabecera cifrada (48 bytes) seguida del cuerpo cifrado. */
   box: string;
-}
-
-function canonicalInner(i: CarryInner): string {
-  return JSON.stringify([i.v, i.from, i.to, i.id, i.ts, i.exp, i.prekey, i.kind, i.text]);
 }
 
 function pad(bytes: Uint8Array): Uint8Array {
@@ -217,17 +244,46 @@ function unpad(bytes: Uint8Array): Uint8Array | null {
   if (bytes.length < 4 || !PAD_BUCKETS.includes(bytes.length as (typeof PAD_BUCKETS)[number])) return null;
   const n = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(0);
   if (n > bytes.length - 4) return null;
+  // El relleno debe ser ceros: un sobre válido tiene una sola forma.
+  for (let i = 4 + n; i < bytes.length; i++) if (bytes[i] !== 0) return null;
   return bytes.slice(4, 4 + n);
 }
 
-function deriveKey(dh: Uint8Array, ss: Uint8Array, prekeyId: string, eph: Uint8Array, kct: Uint8Array): Uint8Array {
-  const ikm = new Uint8Array(dh.length + ss.length);
-  ikm.set(dh, 0);
-  ikm.set(ss, dh.length);
-  const info = utf8Encode(`nido-carry-key-v1|${prekeyId}|${toHex(eph)}|${toHex(sha512(kct).slice(0, 32))}`);
-  const k = hkdfSha512(utf8Encode("nido-carry-v1"), ikm, info, 32);
+/** La clave pública ML-KEM va dentro de la secreta (FIPS 203: dk = dk_pke ‖ ek ‖ H(ek) ‖ z). */
+export function kemPublicFromSecret(kemSk: Uint8Array): Uint8Array {
+  if (kemSk.length !== KEM_SECRET_KEY_BYTES) throw new Error("Clave ML-KEM con tamaño inesperado.");
+  const off = 384 * 3;
+  return kemSk.slice(off, off + KEM_PUBLIC_KEY_BYTES);
+}
+
+const h32 = (b: Uint8Array) => sha512(b).slice(0, 32);
+
+function concat(...parts: Uint8Array[]): Uint8Array {
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let o = 0;
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
+  return out;
+}
+
+/** Todo lo público que ata las claves de un sobre: buzón exacto, efímera y cifrado ML-KEM. */
+function context(prekeyId: string, rX: Uint8Array, rKem: Uint8Array, eph: Uint8Array, kct: Uint8Array): string {
+  return toHex(h32(utf8Encode(`nido-carry-ctx-v${CARRY_VERSION}|${prekeyId}|${toHex(rX)}|${toHex(h32(rKem))}|${toHex(eph)}|${toHex(h32(kct))}`)));
+}
+
+/** Paso 1: clave de la cabecera y clave de encadenado, de X25519(efímera, buzón) ‖ ML-KEM. */
+function headerKeys(dhE: Uint8Array, ssKem: Uint8Array, ctx: string): { k1: Uint8Array; ck: Uint8Array } {
+  const ikm = concat(dhE, ssKem);
+  const out = hkdfSha512(utf8Encode(SALT), ikm, utf8Encode(`nido-carry-hdr-v${CARRY_VERSION}|${ctx}`), 64);
   ikm.fill(0);
-  return k;
+  return { k1: out.slice(0, 32), ck: out.slice(32, 64) };
+}
+
+/** Paso 2: clave del cuerpo, que añade X25519(identidad del remitente, buzón). */
+function bodyKey(ck: Uint8Array, dhS: Uint8Array, ctx: string, senderPkHex: string): Uint8Array {
+  return hkdfSha512(ck, dhS, utf8Encode(`nido-carry-body-v${CARRY_VERSION}|${ctx}|${senderPkHex}`), 32);
 }
 
 function isZero(b: Uint8Array): boolean {
@@ -236,10 +292,13 @@ function isZero(b: Uint8Array): boolean {
   return o === 0;
 }
 
+const ZERO_NONCE = new Uint8Array(nacl.secretbox.nonceLength);
+
 export interface SealArgs {
   recipient: CarryPrekeyPublic;
   senderPkHex: string;
-  senderSignSecretKey: Uint8Array;
+  /** Clave secreta X25519 de identidad del remitente (la del QR). */
+  senderSecretKey: Uint8Array;
   id: string;
   kind: CarryInner["kind"];
   text: string;
@@ -251,11 +310,14 @@ export interface SealArgs {
 /** Sella un mensaje para `recipient` (su clave de buzón ya verificada). */
 export function sealCarry(a: SealArgs): CarryEnvelope {
   if (a.text.length > MAX_CARRY_TEXT) throw new Error("Mensaje demasiado largo para un sobre.");
+  if (typeof a.id !== "string" || a.id.length === 0 || a.id.length > 64) throw new Error("Id de mensaje inválido.");
+  const senderPk = a.senderPkHex.toLowerCase();
+  if (toHex(nacl.scalarMult.base(a.senderSecretKey)) !== senderPk) throw new Error("La clave secreta no es la de esta identidad.");
   const ttl = Math.min(a.ttlMs ?? MAX_ENVELOPE_TTL_MS, MAX_ENVELOPE_TTL_MS, a.recipient.expiresAt - a.now);
   if (ttl <= 0) throw new Error("La clave de buzón del contacto ha caducado.");
   const inner: CarryInner = {
     v: CARRY_VERSION,
-    from: a.senderPkHex.toLowerCase(),
+    from: senderPk,
     to: a.recipient.owner,
     id: a.id,
     ts: a.now,
@@ -264,20 +326,28 @@ export function sealCarry(a: SealArgs): CarryEnvelope {
     kind: a.kind,
     text: a.text,
   };
-  const sig = signDetached(utf8Encode(`nido-carry-msg-v${CARRY_VERSION}|${canonicalInner(inner)}`), a.senderSignSecretKey);
-  const plain = pad(utf8Encode(JSON.stringify({ i: inner, s: toHex(sig) })));
+  const plain = pad(utf8Encode(JSON.stringify(inner)));
 
+  const rX = fromHex(a.recipient.x25519);
+  const rKem = fromHex(a.recipient.kem);
   const eph = nacl.box.keyPair();
-  const dh = nacl.scalarMult(eph.secretKey, fromHex(a.recipient.x25519));
-  if (isZero(dh)) throw new Error("Clave de buzón inválida.");
-  const { cipherText, sharedSecret } = kemEncapsulate(fromHex(a.recipient.kem));
-  const key = deriveKey(dh, sharedSecret, a.recipient.id, eph.publicKey, cipherText);
-  dh.fill(0);
-  sharedSecret.fill(0);
+  const dhE = nacl.scalarMult(eph.secretKey, rX);
   eph.secretKey.fill(0);
+  const dhS = nacl.scalarMult(a.senderSecretKey, rX);
+  if (isZero(dhE) || isZero(dhS)) throw new Error("Clave de buzón inválida.");
+  const { cipherText, sharedSecret } = kemEncapsulate(rKem);
+  const ctx = context(a.recipient.id, rX, rKem, eph.publicKey, cipherText);
+  const { k1, ck } = headerKeys(dhE, sharedSecret, ctx);
+  dhE.fill(0);
+  sharedSecret.fill(0);
+  const header = nacl.secretbox(fromHex(senderPk), ZERO_NONCE, k1);
+  k1.fill(0);
+  const k2 = bodyKey(ck, dhS, ctx, senderPk);
+  ck.fill(0);
+  dhS.fill(0);
   const nonce = randomNonce(nacl.secretbox.nonceLength);
-  const box = nacl.secretbox(plain, nonce, key);
-  key.fill(0);
+  const body = nacl.secretbox(plain, nonce, k2);
+  k2.fill(0);
   return {
     t: "nido-carry",
     v: CARRY_VERSION,
@@ -288,7 +358,7 @@ export function sealCarry(a: SealArgs): CarryEnvelope {
     eph: toHex(eph.publicKey),
     kct: toHex(cipherText),
     nonce: toHex(nonce),
-    box: toHex(box),
+    box: toHex(header) + toHex(body),
   };
 }
 
@@ -300,9 +370,9 @@ export function isWellFormedEnvelope(e: unknown): e is CarryEnvelope {
     if (!HEX(32).test(q.eid) || !HEX(TAG_BYTES * 2).test(q.tag) || !HEX(64).test(q.eph) || !HEX(48).test(q.nonce)) return false;
     if (typeof q.kct !== "string" || q.kct.length !== KEM_CIPHERTEXT_BYTES * 2 || !/^[0-9a-f]+$/.test(q.kct)) return false;
     if (!Number.isSafeInteger(q.exp) || !Number.isInteger(q.hops) || q.hops < 0 || q.hops > MAX_HOPS) return false;
+    if (typeof q.box !== "string" || q.box.length % 2 !== 0 || !/^[0-9a-f]+$/.test(q.box)) return false;
     const boxLen = q.box.length / 2;
-    if (typeof q.box !== "string" || !/^[0-9a-f]+$/.test(q.box)) return false;
-    return PAD_BUCKETS.some((b) => b + nacl.secretbox.overheadLength === boxLen);
+    return PAD_BUCKETS.some((b) => HEADER_BYTES + b + nacl.secretbox.overheadLength === boxLen);
   } catch {
     return false;
   }
@@ -317,54 +387,70 @@ export interface OpenedCarry {
   from: string;
   id: string;
   ts: number;
+  /** Caducidad autenticada (hasta cuándo recordar que ya se abrió). */
+  exp: number;
   kind: CarryInner["kind"];
   text: string;
 }
 
 /**
  * Abre un sobre dirigido a mí. Devuelve null si no es para mí, si está
- * manipulado, caducado, o si el remitente no es un contacto mío con esa
- * firma. Nunca lanza.
+ * manipulado, caducado, o si el remitente no es un contacto mío. Nunca
+ * lanza.
  *
  * @param myPrekeys mis claves de buzón secretas vigentes (un sobre nunca dura más que su clave)
  * @param myPkHex mi identidad X25519
- * @param senderSigPk firma Ed25519 del contacto con esa identidad, o null si no es contacto
+ * @param isContact ¿es esta identidad X25519 un contacto mío (vivo, no revocado)?
  */
 export function openCarry(
   e: unknown,
   myPrekeys: readonly CarryPrekeySecret[],
   myPkHex: string,
-  senderSigPk: (pkHex: string) => string | null,
+  isContact: (pkHex: string) => boolean,
   now: number,
 ): OpenedCarry | null {
   try {
     if (!isWellFormedEnvelope(e)) return null;
+    const me = myPkHex.toLowerCase();
     const pk = myPrekeys.find((p) => carryTagsFor(p.id, now).includes(e.tag));
     if (!pk) return null;
-    const ephPk = fromHex(e.eph);
-    const dh = nacl.scalarMult(pk.x25519Sk, ephPk);
-    if (isZero(dh)) return null;
+    const eph = fromHex(e.eph);
     const kct = fromHex(e.kct);
+    const rX = nacl.scalarMult.base(pk.x25519Sk);
+    const rKem = kemPublicFromSecret(pk.kemSk);
+    const ctx = context(pk.id, rX, rKem, eph, kct);
+    const dhE = nacl.scalarMult(pk.x25519Sk, eph);
+    if (isZero(dhE)) return null;
     const ss = kemDecapsulate(kct, pk.kemSk);
-    const key = deriveKey(dh, ss, pk.id, ephPk, kct);
-    dh.fill(0);
+    const { k1, ck } = headerKeys(dhE, ss, ctx);
+    dhE.fill(0);
     ss.fill(0);
-    const plain = nacl.secretbox.open(fromHex(e.box), fromHex(e.nonce), key);
-    key.fill(0);
+    const box = fromHex(e.box);
+    const senderRaw = nacl.secretbox.open(box.subarray(0, HEADER_BYTES), ZERO_NONCE, k1);
+    k1.fill(0);
+    if (!senderRaw || senderRaw.length !== 32) return null;
+    const from = toHex(senderRaw);
+    // Antes de gastar más: solo contactos (y nunca yo mismo).
+    if (from === me || !isContact(from)) return null;
+    const dhS = nacl.scalarMult(pk.x25519Sk, senderRaw);
+    if (isZero(dhS)) return null;
+    const k2 = bodyKey(ck, dhS, ctx, from);
+    ck.fill(0);
+    dhS.fill(0);
+    const plain = nacl.secretbox.open(box.subarray(HEADER_BYTES), fromHex(e.nonce), k2);
+    k2.fill(0);
     if (!plain) return null;
     const body = unpad(plain);
     if (!body) return null;
-    const parsed = JSON.parse(utf8Decode(body)) as { i: CarryInner; s: string };
-    const i = parsed.i;
-    if (!i || i.v !== CARRY_VERSION || i.to !== myPkHex.toLowerCase() || i.prekey !== pk.id) return null;
+    const i = JSON.parse(utf8Decode(body)) as CarryInner;
+    if (!i || typeof i !== "object" || i.v !== CARRY_VERSION) return null;
+    if (i.from !== from || i.to !== me || i.prekey !== pk.id) return null;
     if (i.kind !== "chat" && i.kind !== "receipt") return null;
-    if (typeof i.text !== "string" || i.text.length > MAX_CARRY_TEXT || typeof i.id !== "string" || i.id.length > 64) return null;
-    if (!Number.isSafeInteger(i.exp) || i.exp <= now || !Number.isSafeInteger(i.ts) || i.ts > now + 10 * 60 * 1000) return null;
-    if (!HEX(64).test(i.from) || i.from === myPkHex.toLowerCase()) return null;
-    const sigPk = senderSigPk(i.from);
-    if (!sigPk || !HEX(128).test(parsed.s)) return null;
-    if (!verifyDetached(utf8Encode(`nido-carry-msg-v${CARRY_VERSION}|${canonicalInner(i)}`), fromHex(parsed.s), fromHex(sigPk))) return null;
-    return { from: i.from, id: i.id, ts: i.ts, kind: i.kind, text: i.text };
+    if (typeof i.text !== "string" || i.text.length > MAX_CARRY_TEXT) return null;
+    if (typeof i.id !== "string" || i.id.length === 0 || i.id.length > 64) return null;
+    if (!Number.isSafeInteger(i.exp) || !Number.isSafeInteger(i.ts)) return null;
+    if (i.exp <= now || i.ts > now + CLOCK_SKEW_MS || i.exp - i.ts > MAX_ENVELOPE_TTL_MS) return null;
+    return { from, id: i.id, ts: i.ts, exp: i.exp, kind: i.kind, text: i.text };
   } catch {
     return null;
   }

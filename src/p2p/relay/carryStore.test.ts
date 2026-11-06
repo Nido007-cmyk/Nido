@@ -9,7 +9,7 @@ const NOW = 1_800_000_000_000;
 function person() {
   const id = nacl.box.keyPair();
   const sign = nacl.sign.keyPair();
-  return { pk: toHex(id.publicKey), signSk: sign.secretKey };
+  return { pk: toHex(id.publicKey), signSk: sign.secretKey, idSk: id.secretKey };
 }
 const ana = person();
 const caro = person();
@@ -17,7 +17,7 @@ const caroKey = generateCarryPrekey(caro.pk, nacl.sign.keyPair().secretKey, NOW)
 const caroTags = new Set(carryTagsFor(caroKey.pub.id, NOW));
 const none = new Set<string>();
 const env = (over: Partial<Parameters<typeof sealCarry>[0]> = {}): CarryEnvelope =>
-  sealCarry({ recipient: caroKey.pub, senderPkHex: ana.pk, senderSignSecretKey: ana.signSk, id: "m", kind: "chat", text: "hola", now: NOW, ...over });
+  sealCarry({ recipient: caroKey.pub, senderPkHex: ana.pk, senderSecretKey: ana.idSk, id: "m", kind: "chat", text: "hola", now: NOW, ...over });
 const B = "b".repeat(64);
 const D = "d".repeat(64);
 const E = "e".repeat(64);

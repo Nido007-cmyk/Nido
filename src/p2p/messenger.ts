@@ -2187,7 +2187,9 @@ export class NidoMessenger {
   private async relayMe(): Promise<relay.Me | null> {
     if (!this.myPk) return null;
     const signing = await getSigningKeypair();
-    return { pkHex: toHex(this.myPk).toLowerCase(), signSecretKey: signing.secretKey };
+    const id = await getIdentity();
+    if (!id || toHex(id.publicKey).toLowerCase() !== toHex(this.myPk).toLowerCase()) return null;
+    return { pkHex: toHex(this.myPk).toLowerCase(), signSecretKey: signing.secretKey, idSecretKey: id.secretKey };
   }
 
   /**
@@ -2304,7 +2306,7 @@ export class NidoMessenger {
         // No se pudo guardar: sin acuse (quien lo escribió lo seguirá intentando).
         continue;
       }
-      // Acuse firmado de vuelta, también de amigo en amigo (solo tras guardar).
+      // Acuse autenticado de vuelta, también de amigo en amigo (solo tras guardar).
       await this.relaySealOwn(from, newId(), "receipt", c.id);
     }
     for (const r of res.receipts) {
