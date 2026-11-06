@@ -107,3 +107,76 @@ describe("lo que un mensajero no puede inflar", () => {
   });
 });
 
+describe("restaurar reaplica los topes (H-1)", () => {
+  const H = 3600_000;
+  const peers = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "a"].map((c) => c.repeat(64));
+  function givenCount(s: CarryStore): number {
+    let given = 0;
+    for (const p of peers) if (s.handoff(p, none, true, NOW).carry.length) given++;
+    return given;
+  }
+  it("copiesLeft inflado en el estado guardado se recorta al máximo del origen (mensajero: 3)", () => {
+    const s = new CarryStore();
+    const e = env({ id: "r-copies" });
+    s.restore([{ env: e, from: B, copiesLeft: 1_000_000, givenTo: [], arrivedAt: NOW }], [], NOW);
+    expect(givenCount(s)).toBeLessThanOrEqual(STORE_LIMITS.carrierCopies);
+    expect(givenCount(new CarryStore())).toBe(0);
+  });
+  it("copiesLeft inflado de un sobre propio se recorta al máximo de origen (8)", () => {
+    const s = new CarryStore();
+    const e = env({ id: "r-own" });
+    s.restore([{ env: e, from: null, copiesLeft: 1_000_000, givenTo: [], arrivedAt: NOW }], [], NOW);
+    const given = givenCount(s);
+    expect(given).toBeLessThanOrEqual(STORE_LIMITS.originCopies);
+    expect(given).toBeGreaterThan(STORE_LIMITS.carrierCopies);
+  });
+  it("la caducidad de fuera inflada se recorta a llegada + 72 h y el barrido la tira", () => {
+    const s = new CarryStore();
+    const e = { ...env({ id: "r-exp" }), exp: NOW + 10 * 365 * 24 * H };
+    s.restore([{ env: e, from: B, copiesLeft: 3, givenTo: [], arrivedAt: NOW }], [], NOW);
+    expect(s.sweep(NOW + 73 * H)).toBe(1);
+    expect(s.has(e.eid)).toBe(false);
+  });
+  it("una fila sin instante de llegada (estado de la 0.1.76) se recorta contra el ahora de restaurar", () => {
+    const s = new CarryStore();
+    const e = { ...env({ id: "r-legacy" }), exp: NOW + 10 * 365 * 24 * H };
+    s.restore([{ env: e, from: B, copiesLeft: 3, givenTo: [] }], [], NOW);
+    expect(s.sweep(NOW + 73 * H)).toBe(1);
+    expect(s.has(e.eid)).toBe(false);
+  });
+  it("el tope por contacto (30) también manda al restaurar", () => {
+    const s = new CarryStore();
+    const rows = Array.from({ length: 40 }, (_, i) => ({ env: env({ id: `r-src-${i}` }), from: B, copiesLeft: 3, givenTo: [], arrivedAt: NOW }));
+    s.restore(rows, [], NOW);
+    expect(s.size()).toBe(STORE_LIMITS.maxPerSource);
+  });
+  it("el tope de bytes también manda al restaurar", () => {
+    const lim = { ...STORE_LIMITS, maxBytes: 5000 };
+    const s = new CarryStore(lim);
+    const rows = Array.from({ length: 10 }, (_, i) => ({ env: env({ id: `r-big-${i}` }), from: B, copiesLeft: 3, givenTo: [], arrivedAt: NOW }));
+    s.restore(rows, [], NOW);
+    expect(s.bytes()).toBeLessThanOrEqual(lim.maxBytes);
+    expect(s.size()).toBeLessThan(10);
+    expect(s.size()).toBeGreaterThan(0);
+  });
+  it("las entradas de seen con NaN o Infinity no entran (sweep nunca las retiraría)", () => {
+    const s = new CarryStore();
+    s.restore([], [["eid-nan", Number.NaN], ["eid-inf", Number.POSITIVE_INFINITY], ["eid-ok", NOW + 1000]], NOW);
+    expect(s.known("eid-nan")).toBe(false);
+    expect(s.known("eid-inf")).toBe(false);
+    expect(s.known("eid-ok")).toBe(true);
+    expect(s.sweep(NOW + 1000)).toBe(0);
+    expect(s.known("eid-ok")).toBe(false);
+  });
+  it("la ida y vuelta de un estado honesto es identidad", () => {
+    const s = new CarryStore();
+    s.accept(env({ id: "h-1" }), B, NOW);
+    s.addOwn(env({ id: "h-2" }), NOW);
+    s.handoff(D, none, true, NOW);
+    const snap = s.snapshot();
+    const t = new CarryStore();
+    t.restore(snap.held, snap.seen, NOW);
+    expect(t.snapshot()).toEqual(snap);
+  });
+});
+

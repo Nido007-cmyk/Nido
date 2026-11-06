@@ -1,7 +1,7 @@
 // Mensajes de amigo en amigo, fase 2: el servicio (estado en disco, reglas).
 import nacl from "tweetnacl";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { toHex } from "../crypto";
+import { randomNonce, toHex } from "../crypto";
 import { generateCarryPrekey, sealCarry, type CarryEnvelope } from "./carryCrypto";
 import {
   confirmHandoff,
@@ -14,11 +14,13 @@ import {
   markHelloSent,
   memoryKv,
   receive,
+  rememberOpened,
   relayFlags,
   relayGeneration,
   relayUsage,
   resetRelay,
   sealOwn,
+  sealOwnDetailed,
   setCarryEnabled,
   setRelayKvForTests,
   type RelayKv,
@@ -356,5 +358,90 @@ describe("revisión de seguridad", () => {
     const r = await receive(beto.pkHex, { put: [env] }, caro, sig(ana, beto), NOW);
     expect(r).toEqual({ chats: [], receipts: [], stored: 0 });
     expect((await relayUsage()).envelopes).toBe(0);
+  });
+});
+
+describe("el borde de 1.500 en el servicio cuenta puntos de código (H-4)", () => {
+  it("sealOwn: 751 emojis viajan (751 puntos de código); 1.501 no", async () => {
+    const book = sig(ana, beto, caro);
+    on(ana);
+    const ha = await helloPayload(ana, NOW);
+    on(caro);
+    const hc = await helloPayload(caro, NOW);
+    await receive(ana.pkHex, ha, caro, book, NOW);
+    on(ana);
+    await receive(caro.pkHex, hc, ana, book, NOW);
+    const emoji = "\u{1F600}";
+    expect(await sealOwn(ana, caro.pkHex, "e-751", "chat", emoji.repeat(751), NOW)).toBe(true);
+    expect(await sealOwn(ana, caro.pkHex, "e-1500", "chat", emoji.repeat(1500), NOW)).toBe(true);
+    expect(await sealOwn(ana, caro.pkHex, "e-1501", "chat", emoji.repeat(1501), NOW)).toBe(false);
+  });
+});
+
+describe("la causa de no sellar se distingue (H-5)", () => {
+  async function helloAnaCaro() {
+    const book = sig(ana, beto, caro);
+    on(ana);
+    const ha = await helloPayload(ana, NOW);
+    on(caro);
+    const hc = await helloPayload(caro, NOW);
+    await receive(ana.pkHex, ha, caro, book, NOW);
+    on(ana);
+    await receive(caro.pkHex, hc, ana, book, NOW);
+    return hc;
+  }
+  it("sin clave de buzón es no_prekey; demasiado largo es too_long; con todo en orden, sealed", async () => {
+    on(ana);
+    expect(await sealOwnDetailed(ana, caro.pkHex, "x-1", "chat", "hola", NOW)).toBe("no_prekey");
+    expect(await sealOwnDetailed(ana, caro.pkHex, "x-2", "chat", "a".repeat(1501), NOW)).toBe("too_long");
+    await helloAnaCaro();
+    expect(await sealOwnDetailed(ana, caro.pkHex, "x-3", "chat", "hola", NOW)).toBe("sealed");
+  });
+  it("con el almacén lleno de sobres ajenos, la causa es store_full (y sealOwn sigue devolviendo false)", async () => {
+    const hc = await helloAnaCaro();
+    const base = sealCarry({ recipient: hc.prekey, senderPkHex: beto.pkHex, senderSecretKey: beto.idSecretKey, id: "bulk", kind: "chat", text: "hola", now: NOW });
+    const sources = ["a", "b", "c", "d", "e", "f", "g"].map((c) => c.repeat(64));
+    const held = Array.from({ length: 210 }, (_, i) => ({
+      env: { ...base, eid: toHex(randomNonce(16)) },
+      from: sources[i % sources.length],
+      copiesLeft: 3,
+      givenTo: [] as string[],
+      arrivedAt: NOW,
+    }));
+    const kvAna = kvs.get(ana.pkHex) as RelayKv;
+    const state = JSON.parse((await kvAna.get("relay_state_v1")) as string) as Record<string, unknown>;
+    state.held = held;
+    await kvAna.setMany([["relay_state_v1", JSON.stringify(state)]]);
+    on(ana);
+    expect((await relayUsage()).envelopes).toBe(200);
+    expect(await sealOwnDetailed(ana, caro.pkHex, "mio-1", "chat", "hola", NOW)).toBe("store_full");
+    expect(await sealOwn(ana, caro.pkHex, "mio-1", "chat", "hola", NOW)).toBe(false);
+  });
+});
+
+describe("la memoria antirrepetición no expulsa entradas vivas (N-1)", () => {
+  // Forma unitaria sobre rememberOpened, la función que receive() usa:
+  // sellar y abrir 5.001 sobres de verdad en una prueba costaría minutos
+  // de ML-KEM por sobre y no mediría otra cosa que esta función.
+  it("con el tope lleno de entradas vivas, crece antes que olvidar una viva", () => {
+    const opened: Record<string, number> = {};
+    for (let i = 0; i < 5000; i++) opened[`remitente|chat|m-${i}`] = NOW + 3600_000 + i;
+    rememberOpened(opened, "remitente|chat|m-nuevo", NOW + 7200_000, NOW);
+    expect(Object.keys(opened).length).toBe(5001);
+    expect(opened["remitente|chat|m-0"]).toBe(NOW + 3600_000);
+    expect(opened["remitente|chat|m-nuevo"]).toBe(NOW + 7200_000);
+  });
+  it("al llegar al tope, las caducadas sí se olvidan", () => {
+    const opened: Record<string, number> = {};
+    for (let i = 0; i < 5000; i++) opened[`r|chat|m-${i}`] = i < 100 ? NOW - 1 : NOW + 3600_000;
+    rememberOpened(opened, "r|chat|nuevo", NOW + 3600_000, NOW);
+    expect(Object.keys(opened).length).toBe(4901);
+    expect(opened["r|chat|m-0"]).toBeUndefined();
+    expect(opened["r|chat|nuevo"]).toBe(NOW + 3600_000);
+  });
+  it("por debajo del tope no se olvida nada", () => {
+    const opened: Record<string, number> = { "r|chat|viejo": NOW - 1 };
+    rememberOpened(opened, "r|chat|nuevo", NOW + 1000, NOW);
+    expect(Object.keys(opened).length).toBe(2);
   });
 });

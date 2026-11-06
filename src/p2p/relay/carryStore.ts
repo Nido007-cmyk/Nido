@@ -44,6 +44,8 @@ interface Held {
   copiesLeft: number;
   givenTo: Set<string>;
   bytes: number;
+  /** Cuándo llegó a este teléfono: la caducidad de fuera nunca pasa de aquí + 72 h. */
+  arrivedAt: number;
 }
 
 export class CarryStore {
@@ -113,7 +115,7 @@ export class CarryStore {
     // el sobre ocupe sitio en otros teléfonos. Aquí nunca pasa de 72 h
     // desde que llega, y los saltos nunca pasan del máximo.
     const stored: CarryEnvelope = { ...env, exp: Math.min(env.exp, now + MAX_ENVELOPE_TTL_MS), hops: Math.min(env.hops, MAX_HOPS) };
-    this.held.set(env.eid, { env: stored, from, copiesLeft: copies, givenTo: new Set(), bytes });
+    this.held.set(env.eid, { env: stored, from, copiesLeft: copies, givenTo: new Set(), bytes, arrivedAt: now });
     return "stored";
   }
 
@@ -180,32 +182,63 @@ export class CarryStore {
 
   /** Para guardar en disco (JSON). */
   snapshot(): {
-    held: Array<{ env: CarryEnvelope; from: string | null; copiesLeft: number; givenTo: string[] }>;
+    held: Array<{ env: CarryEnvelope; from: string | null; copiesLeft: number; givenTo: string[]; arrivedAt: number }>;
     seen: Array<[string, number]>;
   } {
     return {
-      held: [...this.held.values()].map((h) => ({ env: { ...h.env }, from: h.from, copiesLeft: h.copiesLeft, givenTo: [...h.givenTo] })),
+      held: [...this.held.values()].map((h) => ({ env: { ...h.env }, from: h.from, copiesLeft: h.copiesLeft, givenTo: [...h.givenTo], arrivedAt: h.arrivedAt })),
       seen: [...this.seen.entries()],
     };
   }
 
-  /** Lo contrario de snapshot; descarta filas mal formadas (disco dañado). */
+  /**
+   * Lo contrario de snapshot; descarta filas mal formadas (disco dañado).
+   * Reaplica los mismos topes que put(): el estado guardado lo puede haber
+   * escrito un disco dañado o una importación futura, y ninguna fila
+   * restaurada puede repartir más copias que las de su origen, vivir más
+   * de 72 h desde su llegada ni saltarse los topes de conjunto (200, 2 MB,
+   * 30 por contacto). Las filas guardadas por versiones sin instante de
+   * llegada se tratan como llegadas en `now`.
+   */
   restore(
-    held: ReadonlyArray<{ env: unknown; from: unknown; copiesLeft: unknown; givenTo: unknown }>,
+    held: ReadonlyArray<{ env: unknown; from: unknown; copiesLeft: unknown; givenTo: unknown; arrivedAt?: unknown }>,
     seen: ReadonlyArray<[unknown, unknown]>,
+    now: number = Date.now(),
   ): void {
     this.held.clear();
     this.seen.clear();
+    let totalBytes = 0;
+    const perSource = new Map<string, number>();
     for (const h of held ?? []) {
       if (!isWellFormedEnvelope(h?.env)) continue;
       if (h.from !== null && typeof h.from !== "string") continue;
-      const copies = typeof h.copiesLeft === "number" && Number.isFinite(h.copiesLeft) ? Math.max(0, Math.floor(h.copiesLeft)) : 0;
+      if (this.held.has(h.env.eid)) continue;
+      const from = h.from as string | null;
+      const maxCopies = from === null ? this.limits.originCopies : this.limits.carrierCopies;
+      const copiesRaw = typeof h.copiesLeft === "number" && Number.isFinite(h.copiesLeft) ? Math.max(0, Math.floor(h.copiesLeft)) : 0;
+      const copies = Math.min(copiesRaw, maxCopies);
       const given = Array.isArray(h.givenTo) ? h.givenTo.filter((x): x is string => typeof x === "string") : [];
+      const arrivedAt = typeof h.arrivedAt === "number" && Number.isFinite(h.arrivedAt) ? h.arrivedAt : now;
+      const env: CarryEnvelope = {
+        ...h.env,
+        exp: Math.min(h.env.exp, arrivedAt + MAX_ENVELOPE_TTL_MS),
+        hops: Math.min(h.env.hops, MAX_HOPS),
+      };
+      const bytes = envelopeBytes(env);
       if (this.held.size >= this.limits.maxEnvelopes) break;
-      this.held.set(h.env.eid, { env: { ...h.env }, from: h.from, copiesLeft: copies, givenTo: new Set(given), bytes: envelopeBytes(h.env) });
+      if (totalBytes + bytes > this.limits.maxBytes) continue;
+      if (from !== null) {
+        const n = perSource.get(from) ?? 0;
+        if (n >= this.limits.maxPerSource) continue;
+        perSource.set(from, n + 1);
+      }
+      totalBytes += bytes;
+      this.held.set(env.eid, { env, from, copiesLeft: copies, givenTo: new Set(given), bytes, arrivedAt });
     }
     for (const s of seen ?? []) {
-      if (Array.isArray(s) && typeof s[0] === "string" && typeof s[1] === "number") this.seen.set(s[0], s[1]);
+      // Solo caducidades finitas: NaN o Infinity no cumplen nunca `exp <= now`
+      // en sweep() y dejarían ese eid bloqueado para siempre.
+      if (Array.isArray(s) && typeof s[0] === "string" && typeof s[1] === "number" && Number.isFinite(s[1])) this.seen.set(s[0], s[1]);
     }
   }
 
