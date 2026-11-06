@@ -4,7 +4,7 @@
  * See LICENSE file for details.
  */
 
-package expo.modules.nidometronome
+package expo.modules.nidocpr
 
 import android.media.AudioManager
 import android.media.ToneGenerator

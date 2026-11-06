@@ -1923,6 +1923,19 @@
     "voice": {
       "breaths": "Dos respiraciones.",
       "compressions": "Compresiones."
+    },
+    "camera": {
+      "toggle": "Medir mi ritmo con la cámara (opcional)",
+      "hint": "Apoya el teléfono de pie a 1 o 2 metros, con la pantalla hacia ti, para que la cámara frontal te vea. NIDO mide tu ritmo y te dice «más rápido» o «más despacio». Las imágenes se analizan al momento: no se guardan ni salen del teléfono.",
+      "starting": "Encendiendo la cámara…",
+      "failed": "No se pudo usar la cámara. El pitido sigue marcando el ritmo.",
+      "looking": "Midiendo tu ritmo… (sigue el pitido)",
+      "rate": "Tu ritmo: {{bpm}} por minuto"
+    },
+    "cue": {
+      "faster": "Más rápido.",
+      "slower": "Más despacio.",
+      "good": "Buen ritmo, sigue así."
     }
   }
 }

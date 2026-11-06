@@ -1,7 +1,0 @@
-{
-  "name": "nido-metronome",
-  "version": "0.1.0",
-  "description": "Local Expo module: a steady beep for the hands-free CPR assistant (Android ToneGenerator on the alarm stream, scheduled on its own thread; no audio files, no network). Consumed via src/cpr/metronome.ts.",
-  "main": "index.ts",
-  "license": "MIT"
-}

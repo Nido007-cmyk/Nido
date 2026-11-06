@@ -1923,6 +1923,19 @@
     "voice": {
       "breaths": "Two breaths.",
       "compressions": "Compressions."
+    },
+    "camera": {
+      "toggle": "Measure my rate with the camera (optional)",
+      "hint": "Stand the phone up 1 or 2 meters away, screen facing you, so the front camera can see you. NIDO measures your rate and tells you \"faster\" or \"slower\". Frames are analysed on the spot: they are not stored and never leave the phone.",
+      "starting": "Turning the camera on…",
+      "failed": "The camera couldn't be used. The beep keeps marking the rate.",
+      "looking": "Measuring your rate… (follow the beep)",
+      "rate": "Your rate: {{bpm}} per minute"
+    },
+    "cue": {
+      "faster": "Faster.",
+      "slower": "Slower.",
+      "good": "Good rate, keep going."
     }
   }
 }

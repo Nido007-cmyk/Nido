@@ -1,0 +1,7 @@
+{
+  "name": "nido-cpr",
+  "version": "0.1.0",
+  "description": "Local Expo module for the hands-free CPR assistant: a steady beep (ToneGenerator on the alarm stream, own thread) and an optional camera rate meter (Camera2, frames analysed in memory and dropped, never stored or sent). No audio files, no network. Consumed via src/cpr/.",
+  "main": "index.ts",
+  "license": "MIT"
+}

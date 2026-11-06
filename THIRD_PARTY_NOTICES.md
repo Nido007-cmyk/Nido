@@ -9,7 +9,7 @@ The list covers every package that `package-lock.json` does not mark as developm
 
 AI models and knowledge packs are not part of the app: they are downloaded separately and keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as `android-runtime-dependencies.txt` (see below).
 
-Source: `package-lock.json sha256:4e23b82db14b` · 592 packages.
+Source: `package-lock.json sha256:abd44de2232a` · 592 packages.
 
 ## License elections
 
@@ -448,7 +448,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | modules/exact-alarm | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-keyvault | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-launch | 0.1.0 | MIT (NIDO's own module) |
-| modules/nido-metronome | 0.1.0 | MIT (NIDO's own module) |
+| modules/nido-cpr | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-ocr | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-p2p | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-pdf-text | 0.1.0 | MIT (NIDO's own module) |
@@ -465,7 +465,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | negotiator | 1.1.0 | MIT |
 | nido-keyvault | local | MIT (NIDO's own module) |
 | nido-launch | local | MIT (NIDO's own module) |
-| nido-metronome | local | MIT (NIDO's own module) |
+| nido-cpr | local | MIT (NIDO's own module) |
 | nido-ocr | local | MIT (NIDO's own module) |
 | nido-p2p | local | MIT (NIDO's own module) |
 | nido-pdf-text | local | MIT (NIDO's own module) |

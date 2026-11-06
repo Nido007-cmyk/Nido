@@ -6,7 +6,7 @@
  * Asistente de RCP manos libres (0.1.76).
  *
  * Pantalla completa para usar con el teléfono en el suelo: un pitido en
- * cada compresión (110 por minuto, módulo nativo nido-metronome), un
+ * cada compresión (110 por minuto, módulo nativo nido-cpr), un
  * círculo grande que late con él, el conteo 30:2 si se eligió dar
  * respiraciones, y la voz del teléfono que lee la guía y avisa de las
  * respiraciones y de turnarse cada 2 minutos. El texto de primeros
@@ -18,7 +18,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { activateKeepAwake, deactivateKeepAwake } from "expo-keep-awake";
-import { hasNativeMetronome, startBeeping, stopBeeping } from "nido-metronome";
+import { hasCprCamera, startBeeping, startCprCamera, stopBeeping, type CameraSamples } from "nido-cpr";
 import { useTheme } from "../theme/ThemeContext";
 import type { Colors } from "../theme/colors";
 import type { Typography } from "../theme/typography";
@@ -36,6 +36,16 @@ import {
   switchReminderDue,
   type CprMode,
 } from "../../cpr/cprCoach";
+import {
+  estimateRate,
+  INITIAL_CUE_STATE,
+  nextCue,
+  verdictFor,
+  WINDOW_MS,
+  type CueState,
+  type MotionSample,
+  type RateEstimate,
+} from "../../cpr/rateEstimator";
 
 const KEEP_AWAKE_TAG = "nido-cpr-coach";
 
@@ -59,6 +69,16 @@ export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
   const [now, setNow] = useState(0);
   const [pulse, setPulse] = useState(false);
   const [showStop, setShowStop] = useState(false);
+  // Medidor de ritmo por cámara (opcional, apagado por defecto).
+  const [camWanted, setCamWanted] = useState(false);
+  const [camState, setCamState] = useState<"off" | "starting" | "on" | "failed">("off");
+  const [rate, setRate] = useState<RateEstimate | null>(null);
+  const camStop = useRef<(() => void) | null>(null);
+  const samples = useRef<MotionSample[]>([]);
+  const cue = useRef<CueState>(INITIAL_CUE_STATE);
+  const lastEstimateAt = useRef(0);
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
 
   const startedAt = useRef(0);
   const lastCount = useRef(0);
@@ -73,7 +93,43 @@ export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
     if (voiceRef.current) void speakAloud(text);
   }, []);
 
+  const stopCamera = useCallback(() => {
+    camStop.current?.();
+    camStop.current = null;
+    samples.current = [];
+    cue.current = INITIAL_CUE_STATE;
+    setRate(null);
+    setCamState("off");
+  }, []);
+
+  // Cada lote de la cámara (~4 por segundo): se guarda, y como mucho dos
+  // veces por segundo se calcula el ritmo. En la pausa de respiraciones no
+  // se mide (el movimiento es otro) y se empieza de cero al volver.
+  const onSamples = useCallback(
+    (b: CameraSamples) => {
+      const p = cprPhaseAt(Date.now() - startedAt.current, modeRef.current);
+      if (p.phase === "breaths") {
+        samples.current = [];
+        cue.current = { ...cue.current, recent: [] };
+        setRate(null);
+        return;
+      }
+      for (let i = 0; i < b.t.length; i++) samples.current.push({ t: b.t[i], dy: b.dy[i], dx: b.dx[i], e: b.e[i] });
+      const last = samples.current[samples.current.length - 1]?.t ?? 0;
+      while (samples.current.length && samples.current[0].t < last - WINDOW_MS - 1000) samples.current.shift();
+      if (last - lastEstimateAt.current < 500) return;
+      lastEstimateAt.current = last;
+      const est = estimateRate(samples.current);
+      setRate(est);
+      const r = nextCue(cue.current, est ? verdictFor(est.bpm) : null, last);
+      cue.current = r.state;
+      if (r.cue) say(t(`cpr.cue.${r.cue}`));
+    },
+    [say, t]
+  );
+
   const stop = useCallback(() => {
+    stopCamera();
     stopBeeping();
     stopSpeaking();
     deactivateKeepAwake(KEEP_AWAKE_TAG);
@@ -93,7 +149,23 @@ export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
     setRunning(true);
     // La guía, palabra por palabra: dónde van las manos y cómo empujar.
     say(`${guide.compressions[1]} ${guide.compressions[2]}`);
-  }, [guide, mode, say]);
+    if (camWanted && hasCprCamera()) {
+      setCamState("starting");
+      void startCprCamera(onSamples, () => {
+        camStop.current?.();
+        camStop.current = null;
+        setRate(null);
+        setCamState("failed");
+      }).then((stopFn) => {
+        if (!stopFn) {
+          setCamState("failed");
+          return;
+        }
+        camStop.current = stopFn;
+        setCamState("on");
+      });
+    }
+  }, [camWanted, guide, mode, onSamples, say]);
 
   // El reloj de la pantalla. El pitido lo lleva el hilo nativo; esto solo
   // pinta, cuenta y habla en los cambios de fase.
@@ -193,6 +265,19 @@ export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
                 <Text style={styles.optionHint}>{guide.breaths[0]}</Text>
               </Pressable>
 
+              {hasCprCamera() ? (
+                <Pressable
+                  onPress={() => setCamWanted((v) => !v)}
+                  style={[styles.option, camWanted && styles.optionOn]}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: camWanted }}
+                  testID="cpr-camera-toggle"
+                >
+                  <Text style={styles.optionTitle}>{`${camWanted ? "☑" : "☐"} ${t("cpr.camera.toggle")}`}</Text>
+                  <Text style={styles.optionHint}>{t("cpr.camera.hint")}</Text>
+                </Pressable>
+              ) : null}
+
               <Pressable onPress={start} style={styles.startBtn} accessibilityRole="button" testID="cpr-start">
                 <Text style={styles.startText}>{t("cpr.start")}</Text>
               </Pressable>
@@ -212,6 +297,29 @@ export function CprCoach({ visible, onClose, emergency, onCall }: Props) {
                   </Text>
                 </View>
                 <Text style={styles.elapsed}>{formatElapsed(now)}</Text>
+                {camState !== "off" ? (
+                  <View style={styles.rateBox} accessibilityLiveRegion="polite">
+                    {camState === "starting" ? (
+                      <Text style={styles.rateHint}>{t("cpr.camera.starting")}</Text>
+                    ) : camState === "failed" ? (
+                      <Text style={styles.rateHint}>{t("cpr.camera.failed")}</Text>
+                    ) : rate && !breaths ? (
+                      <>
+                        <Text style={styles.rateValue}>{t("cpr.camera.rate", { bpm: rate.bpm })}</Text>
+                        <Text
+                          style={[
+                            styles.rateVerdict,
+                            { color: verdictFor(rate.bpm) === "good" ? colors.text.accentEmerald : colors.id === "nightgarden" ? colors.crimson[400] : colors.crimson[600] },
+                          ]}
+                        >
+                          {t(`cpr.cue.${verdictFor(rate.bpm)}`)}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.rateHint}>{t("cpr.camera.looking")}</Text>
+                    )}
+                  </View>
+                ) : null}
                 {!nativeBeep.current ? <Text style={styles.note}>{t("cpr.noBeep")}</Text> : null}
               </View>
 
@@ -325,5 +433,20 @@ function getStyles(colors: Colors, typography: Typography) {
     stopBtn: { backgroundColor: colors.text.primary, borderColor: colors.text.primary },
     secondaryText: { ...typography.ui.titleSm, color: colors.text.primary },
     disclosure: { minHeight: 44, justifyContent: "center" },
+    rateBox: {
+      alignItems: "center",
+      minHeight: 56,
+      justifyContent: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 14,
+      backgroundColor: colors.bg.card,
+      borderWidth: 1,
+      borderColor: colors.border.default,
+      alignSelf: "stretch",
+    },
+    rateValue: { ...typography.ui.title, color: colors.text.heading, fontVariant: ["tabular-nums"] },
+    rateVerdict: { ...typography.ui.titleSm },
+    rateHint: { ...typography.ui.caption, color: colors.text.secondary, textAlign: "center" },
   });
 }

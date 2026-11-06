@@ -11,9 +11,9 @@ fail. For what the app *is* and how it's designed, read `README.md` and
 ## The one fact that changes everything: this is NOT an Expo Go app
 
 `app.json`'s plugins do **not** include `expo-dev-client` (removed 2026-09-27;
-see `.github/workflows/android-apk.yml`), and this repo has twelve
+see `.github/workflows/android-apk.yml`), and this repo has thirteen
 **custom native modules** (`modules/bundled-assets`, `modules/download-wake-lock`,
-`modules/exact-alarm`, `modules/nido-keyvault`, `modules/nido-launch`,
+`modules/exact-alarm`, `modules/nido-cpr`, `modules/nido-keyvault`, `modules/nido-launch`,
 `modules/nido-ocr`, `modules/nido-p2p`, `modules/nido-pdf-text`,
 `modules/nido-secure-dialog`, `modules/nido-vectors`, `modules/ram-monitor`,
 `modules/voice-input`) plus `llama.rn`

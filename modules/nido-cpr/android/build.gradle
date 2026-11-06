@@ -7,11 +7,11 @@ plugins {
   id 'expo-module-gradle-plugin'
 }
 
-group = 'expo.modules.nidometronome'
+group = 'expo.modules.nidocpr'
 version = '0.1.0'
 
 android {
-  namespace "expo.modules.nidometronome"
+  namespace "expo.modules.nidocpr"
   defaultConfig {
     versionCode 1
     versionName "0.1.0"
