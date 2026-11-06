@@ -2252,7 +2252,13 @@ export class NidoMessenger {
   /** Algo cambió en el relay: sincroniza todas las sesiones vivas. */
   private async relaySyncAll(): Promise<void> {
     for (const [key, session] of [...this.sessions.entries()]) {
-      if (!session.isPeerLive || !this.transport.available || session.holdForV5) continue;
+      if (!session.isPeerLive || !this.transport.available) continue;
+      if (session.holdForV5) {
+        // La sesión espera su primer frame v5: se sincroniza al vaciar la
+        // cola cuando acabe la espera (flushOutbox → relaySync).
+        this.scheduleHoldFlush(key, session);
+        continue;
+      }
       await this.relaySync(key, session);
     }
   }

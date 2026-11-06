@@ -131,13 +131,37 @@ function makePhone(name: string, mac: string): Phone {
   return phone;
 }
 
+let phones: Phone[] = [];
+
+/** Qué sabe cada teléfono del relay (para entender un fallo sin depurador). */
+async function relayDiag(): Promise<string> {
+  const out: string[] = [];
+  for (const p of phones) {
+    let st: Record<string, unknown> = {};
+    try {
+      st = JSON.parse((await p.ctx.relayKv.get("relay_state_v1")) ?? "{}");
+    } catch {
+      /* vacío */
+    }
+    const name = (pk: string) => phones.find((q) => q.pk === pk)?.ctx.name ?? pk.slice(0, 6);
+    const peers = Object.entries((st.peers ?? {}) as Record<string, { prekeys: unknown[]; carries: boolean; sent?: unknown }>)
+      .map(([pk, r]) => `${name(pk)}{claves:${r.prekeys.length},lleva:${r.carries},dicho:${r.sent ? "sí" : "no"}}`)
+      .join(" ");
+    const conn = await p.run(async () => p.m.connectedPeers().map(name).join(","));
+    out.push(
+      `${p.ctx.name}: lleva=${String(st.enabled)} mías=${(st.mine as unknown[] | undefined)?.length ?? 0} sobres=${(st.held as unknown[] | undefined)?.length ?? 0} propios=${Object.keys((st.own ?? {}) as object).length} conectado=[${conn}] ${peers}`,
+    );
+  }
+  return out.join("\n");
+}
+
 async function until(cond: () => Promise<boolean> | boolean, what: string, ms = 10000): Promise<void> {
   const end = Date.now() + ms;
   while (Date.now() < end) {
     if (await cond()) return;
     await new Promise((r) => setTimeout(r, 25));
   }
-  throw new Error(`Se agotó la espera: ${what}`);
+  throw new Error(`Se agotó la espera: ${what}\n${await relayDiag()}`);
 }
 
 const bytes = (b64: string) => decodeBase64(b64);
@@ -169,9 +193,14 @@ async function part(x: Phone, y: Phone): Promise<void> {
   y.near.delete(x.mac);
 }
 
-/** El estado del relay de un teléfono, tal cual está guardado. */
-async function relayRaw(p: Phone): Promise<string> {
-  return (await p.ctx.relayKv.get("relay_state_v1")) ?? "";
+/** ¿Tiene `p` una clave de buzón verificada de `of`? */
+async function hasPrekeyOf(p: Phone, of: Phone): Promise<boolean> {
+  try {
+    const st = JSON.parse((await p.ctx.relayKv.get("relay_state_v1")) ?? "{}") as { peers?: Record<string, { prekeys?: unknown[] }> };
+    return (st.peers?.[of.pk.toLowerCase()]?.prekeys?.length ?? 0) > 0;
+  } catch {
+    return false;
+  }
 }
 
 beforeEach(() => {
@@ -197,6 +226,7 @@ describe("tres teléfonos: de amigo en amigo", () => {
     const ana = makePhone("Ana", "AA:AA:AA:AA:AA:01");
     const beto = makePhone("Beto", "BB:BB:BB:BB:BB:02");
     const caro = makePhone("Caro", "CC:CC:CC:CC:CC:03");
+    phones = [ana, beto, caro];
     for (const p of [ana, beto, caro]) {
       p.pk = (await p.run(() => p.m.ensureIdentity(p.ctx.name))).pkHex;
     }
@@ -208,12 +238,13 @@ describe("tres teléfonos: de amigo en amigo", () => {
 
     // Ana y Caro se vieron una vez (se dan sus claves de buzón) y se separan.
     await meet(ana, caro);
-    await until(async () => (await relayRaw(ana)).includes(caro.pk), "Ana tiene la clave de buzón de Caro");
-    await until(async () => (await relayRaw(caro)).includes(ana.pk), "Caro tiene la de Ana");
+    await until(() => hasPrekeyOf(ana, caro), "Ana tiene la clave de buzón de Caro");
+    await until(() => hasPrekeyOf(caro, ana), "Caro tiene la de Ana");
     await part(ana, caro);
 
     // Ana se cruza con Beto y escribe a Caro, que está lejos.
     await meet(ana, beto);
+    await until(() => hasPrekeyOf(ana, beto), "Ana sabe que Beto lleva sobres");
     const SECRET = "Llegamos bien, estamos en el refugio";
     const sent = await ana.run(() => ana.m.sendChat("Caro", SECRET));
     expect(sent.queued).toBe(true);
@@ -253,6 +284,7 @@ describe("tres teléfonos: de amigo en amigo", () => {
     const ana = makePhone("Ana", "AA:AA:AA:AA:AA:11");
     const beto = makePhone("Beto", "BB:BB:BB:BB:BB:12");
     const caro = makePhone("Caro", "CC:CC:CC:CC:CC:13");
+    phones = [ana, beto, caro];
     for (const p of [ana, beto, caro]) {
       p.pk = (await p.run(() => p.m.ensureIdentity(p.ctx.name))).pkHex;
     }
@@ -261,7 +293,7 @@ describe("tres teléfonos: de amigo en amigo", () => {
     await pair(ana, caro);
     for (const p of [ana, beto, caro]) await p.run(() => p.m.startLink());
     await meet(ana, caro);
-    await until(async () => (await relayRaw(ana)).includes(caro.pk), "Ana tiene la clave de buzón de Caro");
+    await until(() => hasPrekeyOf(ana, caro), "Ana tiene la clave de buzón de Caro");
     await part(ana, caro);
     await meet(ana, beto);
     const sent = await ana.run(() => ana.m.sendChat("Caro", "hola"));
