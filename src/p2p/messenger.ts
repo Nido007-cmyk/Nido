@@ -2175,7 +2175,7 @@ export class NidoMessenger {
   private async relayMe(): Promise<relay.Me | null> {
     if (!this.myPk) return null;
     const signing = await getSigningKeypair();
-    return { pkHex: this.myPk.toLowerCase(), signSecretKey: signing.secretKey };
+    return { pkHex: toHex(this.myPk).toLowerCase(), signSecretKey: signing.secretKey };
   }
 
   /** Firma Ed25519 (del QR) de cada contacto vivo, para verificar sobres y claves de buzón. */
