@@ -103,6 +103,8 @@ rule).
   people but asks for a 14-day closed test with 12 testers first.
 - **Revisit when:** F-Droid's review raises a blocker (for example, how it
   treats downloading models and packs).
+- **Amended by D13 (2026-11-06):** the Google Play leg of this decision is
+  cancelled. NIDO will not be published on Google Play; see D13.
 
 ### D9. The hardware vault stays an offer, not the default
 
@@ -202,3 +204,17 @@ The owner's research on every public audit of Signal and Briar (October 29,
 - **Revisit when:** remote contact introductions are ever considered: they
   need a real path to full verification first, and nothing that trusts the
   introducer (Briar's CVE-2023-33983).
+
+### D13. No Google Play: GitHub and free download platforms only
+
+- **Decision (2026-11-06):** NIDO will not be published on Google Play.
+  Distribution stays on GitHub releases, with F-Droid next under D8 as
+  amended, and other free download platforms as they fit. The Google Play
+  leg of D8 is cancelled, and
+  [PLAY_STORE_READINESS.md](archive/PLAY_STORE_READINESS.md) is archived
+  with this decision, kept for the record only.
+- **Why:** the channels NIDO ships through need no store account, no
+  closed test and no third-party approval between a release and the
+  people it is built for. That is the distribution form of the same rule
+  the app itself follows: no gatekeeper who can switch it off.
+- **Revisit when:** the owner decides otherwise.

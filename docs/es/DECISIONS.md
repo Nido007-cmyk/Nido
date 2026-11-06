@@ -108,6 +108,8 @@ archivo (y la [constitución](NIDO_CONSTITUTION.md) si toca una regla firme).
   probadores.
 - **Se revisa si:** la revisión de F-Droid encuentra un bloqueo (por ejemplo,
   cómo trata la descarga de modelos y packs).
+- **Enmendada por D13 (2026-11-06):** la parte de Google Play de esta
+  decisión queda cancelada. NIDO no se publicará en Google Play; ver D13.
 
 ### D9. La bóveda de hardware sigue siendo una oferta, no lo de serie
 
@@ -215,3 +217,18 @@ hecho:
 - **Se revisa si:** algún día se plantean presentaciones remotas de
   contactos: antes necesitan un camino real hasta la verificación plena, y
   nada que confíe en quien presenta (CVE-2023-33983 de Briar).
+
+### D13. Sin Google Play: solo GitHub y plataformas de descarga gratuita
+
+- **Decisión (2026-11-06):** NIDO no se publicará en Google Play. La
+  distribución se queda en las releases de GitHub, con F-Droid después
+  según D8 enmendada, y las demás plataformas de descarga gratuita que
+  encajen. La parte de Google Play de D8 queda cancelada, y
+  [PLAY_STORE_READINESS.md](archive/PLAY_STORE_READINESS.md) se archiva
+  con esta decisión, conservado solo como registro.
+- **Por qué:** los canales por los que NIDO se distribuye no necesitan
+  cuenta de tienda, ni prueba cerrada, ni la aprobación de un tercero
+  entre una release y las personas para las que está hecho. Es la forma
+  en distribución de la misma regla que sigue la app: ningún guardián
+  que pueda apagarlo.
+- **Se revisa si:** el dueño decide otra cosa.

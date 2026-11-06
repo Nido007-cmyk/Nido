@@ -50,7 +50,7 @@ We document what is verified, experimental, incomplete, or still awaiting physic
 - Prepare NIDO for a broader public release
 - Independent security audit (apply to the OTF Security Lab after the two-phone tests; see [DECISIONS.md](DECISIONS.md) D7)
 - Register as a verified Android developer before Google's 2027 rollout (D6)
-- F-Droid, then Google Play distribution (D8)
+- F-Droid distribution (D8, as amended by D13: no Google Play)
 - Dedicated website and expanded public documentation
 - Easier contribution workflows for the open-source community
 - Explore additional fully local capabilities without compromising the offline-first architecture
