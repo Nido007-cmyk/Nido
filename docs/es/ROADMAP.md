@@ -38,6 +38,8 @@ Documentamos qué está verificado, qué es experimental, qué está incompleto 
 - Clave nueva por mensaje + ML-KEM (P2P v5): probarlo en dos teléfonos y luego activarlo por defecto
 - Compilación reproducible: mantener en verde la comprobación de dos compilaciones en cada versión
 - Fortalecer la experiencia NIDO-a-NIDO
+- Mensajes de amigo en amigo (0.1.76, experimental): probarlos con tres teléfonos físicos y después una revisión externa de la criptografía nueva
+- Práctica de RCP (0.1.76): comprobar el pitido, la voz y el medidor de ritmo por cámara en teléfonos reales
 - Continuar mejorando voz e interacción local
 - Pulir la experiencia en inglés, español y portugués
 - Mejorar accesibilidad y la experiencia del usuario nuevo

@@ -65,7 +65,11 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   teléfonos emparejados, sin internet y sin servidor. Para emparejar pegas
   el código del otro teléfono (el texto de su QR); un contacto aparece como
   verificado solo después de comparar las huellas los dos, en persona o por
-  llamada, y pulsar Verificar.
+  llamada, y pulsar Verificar. Nuevo y experimental desde 0.1.76: si un
+  contacto no está al alcance, un mensaje puede llegarle a través de otro
+  contacto que tengan los dos, en un sobre sellado que quien lo lleva no
+  puede leer ni cambiar; llevar mensajes de otros está apagado salvo que lo
+  actives ([cómo funciona](docs/RELAY.md), en inglés).
 - **Tiene una pestaña Emergencia**: los números de emergencia de tu país,
   comprobados en fuentes oficiales (69 países en el pack NIDO Local), cada
   uno con su fuente y su fecha. «Llamar» abre el marcador con el número
@@ -77,7 +81,11 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   síntomas de monóxido de carbono cerca de un calentador, un generador o una
   estufa, recibes un aviso fijo: salir al aire libre y pedir ayuda.
   Si sale una versión más nueva del pack, la que tienes sigue funcionando sin
-  conexión y la app avisa de que hay una actualización.
+  conexión y la app avisa de que hay una actualización. «Practicar RCP»
+  (0.1.76) es una herramienta de entrenamiento para un cojín o un maniquí,
+  nunca para una persona: un pitido a 110 por minuto, 30:2 con la guía en
+  voz alta y un medidor opcional de tu ritmo con la cámara
+  ([por qué solo práctica](docs/CPR_PRACTICE.md), en inglés).
 - **Cinco secciones a un toque**: Chat, Emergencia, Biblioteca, NIDO y
   Ajustes, en una barra abajo. Ajustes está agrupado y tiene buscador.
 - **Muestra su uso de red**: cada descarga que hace la app, y cada conexión

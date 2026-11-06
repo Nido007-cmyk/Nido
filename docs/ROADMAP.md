@@ -35,6 +35,8 @@ We document what is verified, experimental, incomplete, or still awaiting physic
 - Faster first answer on low-end phones (shorter prompts, better reuse of the model's cache)
 - Benchmark newer small models (Qwen3 and others) on real phones: quality, speed and battery
 - Strengthen the NIDO-to-NIDO experience
+- Friend-to-friend messages (0.1.76, experimental): test with three physical phones, then an outside review of the new cryptography
+- CPR practice (0.1.76): check the beep, the voice and the camera rate meter on real phones
 - Private hello (P2P v4) and P2P v5: on by default since 0.1.49; confirm on two physical phones
 - New key per message + ML-KEM (P2P v5): test on two phones, then turn it on by default
 - Reproducible builds: keep the two-build check green on every release

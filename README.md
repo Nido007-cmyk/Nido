@@ -64,7 +64,11 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   paired phones, with no internet and no server. To pair, you paste the
   other phone's code (the text of its QR); a contact shows as verified only
   after you both compare fingerprints, in person or on a call, and tap
-  Verify.
+  Verify. New and experimental since 0.1.76: when a contact is out of
+  range, a message can reach them through another contact you both have,
+  in a sealed envelope the carrier can't read or change; carrying other
+  people's messages is off unless you turn it on
+  ([how it works](docs/RELAY.md)).
 - **Has an Emergency tab**: your country's emergency numbers, checked
   against official sources (69 countries in the NIDO Local pack), each with
   its source and date. "Call" opens the dialer with the number typed in.
@@ -76,7 +80,10 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   symptoms near a heater, generator or stove gets a fixed warning to get
   outside and call for help. When a
   newer version of the pack exists, the one you have keeps working offline
-  and the app says an update is available.
+  and the app says an update is available. "Practise CPR" (0.1.76) is a
+  training tool for a cushion or a manikin, never for a person: a beep at
+  110 per minute, 30:2 with the guide read aloud, and an optional camera
+  meter for your rate ([why practice only](docs/CPR_PRACTICE.md)).
 - **Five sections one tap away**: Chat, Emergency, Library, NIDO and
   Settings, in a bottom bar. Settings is grouped and has a search box.
 - **Shows its network use**: every download the app makes, and every local
