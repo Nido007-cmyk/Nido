@@ -133,6 +133,7 @@ interface RelayState {
 }
 
 const EMPTY: RelayState = { enabled: false, mine: [], peers: {}, held: [], seen: [], own: {}, flags: {}, opened: {} };
+/** A partir de aquí, la memoria antirrepetición solo olvida caducadas (ver rememberOpened). */
 const MAX_OPENED = 5000;
 const KEY = "relay_state_v1";
 const MAX_FLAGS = 2000;
@@ -364,6 +365,20 @@ export async function markHelloSent(peerPk: string, hello: Pick<Hello, "prekey" 
   });
 }
 
+/**
+ * Apunta un mensaje ya abierto en la memoria antirrepetición del
+ * destinatario. Al llegar al tope solo se olvidan las entradas
+ * caducadas: expulsar una viva dejaría pasar una repetición que
+ * docs/RELAY.md promete ignorar hasta que caduque, así que si todas
+ * están vivas la memoria crece antes que olvidar una viva (N-1).
+ */
+export function rememberOpened(opened: Record<string, number>, key: string, exp: number, now: number): void {
+  if (Object.keys(opened).length >= MAX_OPENED) {
+    for (const [k, e] of Object.entries(opened)) if (e <= now) delete opened[k];
+  }
+  opened[key] = exp;
+}
+
 export interface CarryIncoming {
   /** Mensajes para mí que llegaron por amigos (ya verificados). */
   chats: OpenedCarry[];
@@ -425,11 +440,7 @@ export async function receive(
           st.forget(e.eid, e.exp);
           const key = `${opened.from}|${opened.kind}|${opened.id}`;
           if (s.opened[key] !== undefined) continue; // repetición en otro sobre
-          if (Object.keys(s.opened).length >= MAX_OPENED) {
-            const oldest = Object.entries(s.opened).sort((a, b) => a[1] - b[1])[0];
-            if (oldest) delete s.opened[oldest[0]];
-          }
-          s.opened[key] = opened.exp;
+          rememberOpened(s.opened, key, opened.exp, now);
           if (opened.kind === "chat") {
             // La marca «vía amigos» la pone quien lo guarda, y solo si es nuevo
             // (si ya había llegado directo, no llegó por amigos): markArrivedViaFriends.

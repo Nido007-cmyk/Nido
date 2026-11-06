@@ -14,6 +14,7 @@ import {
   markHelloSent,
   memoryKv,
   receive,
+  rememberOpened,
   relayFlags,
   relayGeneration,
   relayUsage,
@@ -415,5 +416,32 @@ describe("la causa de no sellar se distingue (H-5)", () => {
     expect((await relayUsage()).envelopes).toBe(200);
     expect(await sealOwnDetailed(ana, caro.pkHex, "mio-1", "chat", "hola", NOW)).toBe("store_full");
     expect(await sealOwn(ana, caro.pkHex, "mio-1", "chat", "hola", NOW)).toBe(false);
+  });
+});
+
+describe("la memoria antirrepetición no expulsa entradas vivas (N-1)", () => {
+  // Forma unitaria sobre rememberOpened, la función que receive() usa:
+  // sellar y abrir 5.001 sobres de verdad en una prueba costaría minutos
+  // de ML-KEM por sobre y no mediría otra cosa que esta función.
+  it("con el tope lleno de entradas vivas, crece antes que olvidar una viva", () => {
+    const opened: Record<string, number> = {};
+    for (let i = 0; i < 5000; i++) opened[`remitente|chat|m-${i}`] = NOW + 3600_000 + i;
+    rememberOpened(opened, "remitente|chat|m-nuevo", NOW + 7200_000, NOW);
+    expect(Object.keys(opened).length).toBe(5001);
+    expect(opened["remitente|chat|m-0"]).toBe(NOW + 3600_000);
+    expect(opened["remitente|chat|m-nuevo"]).toBe(NOW + 7200_000);
+  });
+  it("al llegar al tope, las caducadas sí se olvidan", () => {
+    const opened: Record<string, number> = {};
+    for (let i = 0; i < 5000; i++) opened[`r|chat|m-${i}`] = i < 100 ? NOW - 1 : NOW + 3600_000;
+    rememberOpened(opened, "r|chat|nuevo", NOW + 3600_000, NOW);
+    expect(Object.keys(opened).length).toBe(4901);
+    expect(opened["r|chat|m-0"]).toBeUndefined();
+    expect(opened["r|chat|nuevo"]).toBe(NOW + 3600_000);
+  });
+  it("por debajo del tope no se olvida nada", () => {
+    const opened: Record<string, number> = { "r|chat|viejo": NOW - 1 };
+    rememberOpened(opened, "r|chat|nuevo", NOW + 1000, NOW);
+    expect(Object.keys(opened).length).toBe(2);
   });
 });
