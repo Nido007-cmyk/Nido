@@ -15,6 +15,9 @@ import {
   type GateLang,
 } from "./emergencyGate";
 import type { RetrievedChunk } from "../rag/retrieve";
+import { deterministicAnswer } from "../eval/blindCore";
+import { pickGuideChunk } from "../rag/guideAnswer";
+import { CPR_GUIDE } from "../cpr/cprCoach";
 
 describe("isEmergencyText (emergencia primero)", () => {
   it("reconoce las tres rutas fijas: CO, número de emergencia y crisis", () => {
@@ -379,6 +382,91 @@ describe("ADV2-08 + ADV-E2: precisión de prefijos, dos vetos y los precios decl
     // formas-sustantivo del tallo) mataría la forma real de abajo.
     expect(isEmergencySituation("Atragantamiento en bebés.")).toBe(true);
     expect(isEmergencySituation("Mi hijo tiene un atragantamiento.")).toBe(true);
+  });
+});
+
+describe("F-1 (auditoría de la RCP, 2026-11-06): la reanimación en curso y el «cómo se hace»", () => {
+  it("REGRESIÓN fixturada: las siete frases de suceso de la auditoría disparan la cara de situación", () => {
+    // Las doce frases de la batería de la auditoría entran como
+    // regresión, NUNCA como conjunto de medida (regla del sello:
+    // la cura se valida contra el conjunto ciego fresco 04,
+    // docs/BLIND_EVAL.md). Medición de base, sobre la capa
+    // heredada: las doce salían en falso en las tres caras.
+    for (const q of [
+      "está haciendo rcp",
+      "le están haciendo rcp en la calle",
+      "le están haciendo reanimación",
+      "they are doing cpr on him",
+      "someone is doing cpr",
+      "estão fazendo rcp nele",
+      "estão a fazer rcp",
+    ]) {
+      expect(isEmergencySituation(q), q).toBe(true);
+    }
+    // Y por tanto tampoco hacen cola tras una generación en curso
+    // (la garantía 1 del fichero pasa por isEmergencyText).
+    expect(isEmergencyText("le están haciendo rcp en la calle", "es")).toBe(true);
+    expect(isEmergencyText("they are doing cpr on him", "en")).toBe(true);
+    expect(isEmergencyText("estão fazendo rcp nele", "pt")).toBe(true);
+  });
+
+  it("REGRESIÓN fixturada: las cinco frases de «cómo se hace» cierran la puerta de salud, sin signos", () => {
+    for (const q of ["cómo se hace la rcp", "como hacer rcp", "cómo hago rcp", "como se faz rcp", "como faço rcp"]) {
+      expect(isHealthQuestion(q), q).toBe(true);
+      // Una pregunta de instrucción no es un parte: la cara de
+      // situación no la declara suceso.
+      expect(isEmergencySituation(q), q).toBe(false);
+    }
+  });
+
+  it("la raíz nueva sostiene el suceso sin frase exacta, con el cuerpo cerca", () => {
+    expect(isEmergencySituation("empezaron la reanimación con mi padre y no paran")).toBe(true);
+    expect(isEmergencySituation("a minha mãe está em reanimação no hospital")).toBe(true);
+  });
+
+  it("el suelo en los dos mundos: sin pack cae el texto seguro; con pack, responde la guía", () => {
+    // Sin pack: la capa determinista sirve el texto fijo seguro
+    // (la precedencia que ChatScreen aplica, modelada por el
+    // instrumento de la evaluación ciega).
+    for (const [q, lang] of [
+      ["le están haciendo rcp en la calle", "es"],
+      ["como faço rcp", "pt"],
+    ] as Array<[string, GateLang]>) {
+      const row = deterministicAnswer({ id: "f1", type: "emergencia", lang, expected: "fixed-text", query: q });
+      expect(row.route, q).not.toBe("model");
+      expect(row.nidoText, q).toBe(healthSafeText(lang));
+    }
+    // Con pack: el trozo de la guía de RCP del Esencial es
+    // evidencia de salud para esta puerta y la ruta de guías lo
+    // elige: la respuesta es la guía misma, en la lengua de quien
+    // pregunta, en las tres lenguas.
+    for (const lang of ["es", "en", "pt"] as const) {
+      const trozo = {
+        chunkId: "pack:nido-esencial-e5:10",
+        docId: "pack:nido-esencial-e5:10",
+        title: `${CPR_GUIDE[lang].title} — ${CPR_GUIDE[lang].headings.compressions}`,
+        body: CPR_GUIDE[lang].compressions.join(" "),
+        score: 1,
+        rawScore: 0.9,
+        matchType: "semantic" as const,
+      };
+      expect(hasHealthEvidence([trozo as RetrievedChunk]), lang).toBe(true);
+      expect(pickGuideChunk([trozo as RetrievedChunk], lang)?.chunkId, lang).toBe(trozo.chunkId);
+    }
+  });
+
+  it("los bordes no se mueven: la sigla como tema no declara, y «como hacer» sin salud no cierra", () => {
+    // La raíz nueva sin contexto de cuerpo no declara el tema
+    // (la disciplina de H-05 manda también sobre «rcp»/«cpr»).
+    expect(isEmergencySituation("Quiero hacer un curso de rcp el mes que viene")).toBe(false);
+    expect(isEmergencySituation("CPR certification classes near me")).toBe(false);
+    // La señal nueva sin término de salud no cierra la puerta.
+    expect(isHealthQuestion("como hacer una mesa de madera con palets")).toBe(false);
+    expect(isHealthQuestion("como se faz um bolo de chocolate")).toBe(false);
+    // Los vetos siguen mandando ANTES que los signos nuevos: la
+    // ficción que cuenta el mismo suceso no lo declara.
+    expect(isEmergencySituation("En la novela, un médico le está haciendo reanimación a un pasajero")).toBe(false);
+    expect(isEmergencySituation("In the movie, a lifeguard is doing cpr on a swimmer")).toBe(false);
   });
 });
 
