@@ -50,7 +50,7 @@ Documentamos qué está verificado, qué es experimental, qué está incompleto 
 - Preparar NIDO para una distribución pública más amplia
 - Auditoría de seguridad independiente (solicitarla al Security Lab de OTF tras las pruebas en dos teléfonos; ver [DECISIONS.md](DECISIONS.md) D7)
 - Registrarse como desarrollador verificado de Android antes del despliegue global de Google en 2027 (D6)
-- F-Droid y después distribución mediante Google Play (D8)
+- Distribución mediante F-Droid (D8, enmendada por D13: sin Google Play)
 - Sitio web dedicado y documentación pública ampliada
 - Facilitar las contribuciones de la comunidad open source
 - Explorar nuevas capacidades completamente locales sin comprometer la arquitectura offline-first

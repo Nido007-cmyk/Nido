@@ -1,3 +1,7 @@
+> **Archived on 2026-11-06.** By decision D13, NIDO will not be published
+> on Google Play, so this checklist is closed and kept for the record
+> only. See [DECISIONS.md](../DECISIONS.md), D13.
+
 # Google Play readiness
 
 > Checked on 2026-11-03 against the published 0.1.74 APK (versionCode 75)
