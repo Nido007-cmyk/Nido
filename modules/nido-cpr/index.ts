@@ -37,13 +37,28 @@ export function hasNativeMetronome(): boolean {
   return Metronome != null;
 }
 
+/**
+ * Empieza a pitar a `bpm` por minuto y devuelve el instante en que
+ * el metrónomo agenda el primer pitido (ms, reloj monotónico del
+ * sistema desde el arranque: el mismo `uptimeMillis` sobre el que
+ * el módulo nativo agenda cada pitido en tiempos absolutos), o
+ * null si no hay pitido nativo. Hasta F-3 este instante se
+ * descartaba en el puente y la pantalla medía con el reloj de
+ * pared; ahora es el origen del reloj de la práctica
+ * (src/cpr/practiceClock.ts).
+ */
+export function startBeepingAt(bpm: number, maxBeats = 0): number | null {
+  try {
+    const t0 = Metronome?.start(Math.round(bpm), Math.max(0, Math.floor(maxBeats))) ?? -1;
+    return t0 >= 0 ? t0 : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Empieza a pitar a `bpm` por minuto. Devuelve false si no hay pitido nativo. */
 export function startBeeping(bpm: number, maxBeats = 0): boolean {
-  try {
-    return (Metronome?.start(Math.round(bpm), Math.max(0, Math.floor(maxBeats))) ?? -1) >= 0;
-  } catch {
-    return false;
-  }
+  return startBeepingAt(bpm, maxBeats) !== null;
 }
 
 export function stopBeeping(): void {

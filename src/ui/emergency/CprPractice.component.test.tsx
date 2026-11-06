@@ -17,18 +17,28 @@ const beeps: Array<[number, number]> = [];
 const stops: string[] = [];
 const cams: string[] = [];
 
-jest.mock("nido-cpr", () => ({
-  hasCprCamera: () => true,
-  startBeeping: (bpm: number, max: number) => {
-    beeps.push([bpm, max]);
-    return true;
-  },
-  stopBeeping: () => stops.push("beep"),
-  startCprCamera: async () => {
-    cams.push("start");
-    return () => cams.push("stop");
-  },
-}));
+jest.mock("nido-cpr", () => {
+  // El puente nuevo devuelve el instante monotónico de arranque
+  // (F-3): el doble devuelve instantes crecientes, como el nativo.
+  let fakeStart = 100_000;
+  return {
+    hasCprCamera: () => true,
+    startBeepingAt: (bpm: number, max: number) => {
+      beeps.push([bpm, max]);
+      fakeStart += 25_000;
+      return fakeStart;
+    },
+    startBeeping: (bpm: number, max: number) => {
+      beeps.push([bpm, max]);
+      return true;
+    },
+    stopBeeping: () => stops.push("beep"),
+    startCprCamera: async () => {
+      cams.push("start");
+      return () => cams.push("stop");
+    },
+  };
+});
 
 jest.mock("expo-keep-awake", () => ({
   activateKeepAwake: jest.fn(),
