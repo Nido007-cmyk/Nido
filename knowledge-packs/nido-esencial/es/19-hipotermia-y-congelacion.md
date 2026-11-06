@@ -8,6 +8,7 @@ verified: 2026-11-02
 questions: qué hago si alguien tiene hipotermia | cómo caliento a una persona con hipotermia | se le congelaron los dedos de los pies, qué hago | a qué temperatura del agua se calienta una congelación | o que faço se alguém tiver hipotermia | como aqueço uma pessoa com hipotermia | signos de hipotermia, qué hacer | se cayó al agua helada y está temblando mucho | está helado y tiembla sin parar, qué le pasa | tiene la piel muy fría, está confuso y de pronto dejó de temblar | siente un frío que no se le pasa y tirita sin control
 ---
 ## Hipotermia
+<!-- preguntas: tiene mucho frío y tiembla sin parar, qué le pasa | está temblando de frío y no puede parar de temblar | siente muchísimo frío y tirita sin control todo el rato | tiene el cuerpo helado y tiembla mucho rato seguido | no para de tiritar porque tiene mucho frío -->
 El cuerpo se enfría por debajo de lo normal. Puede pasar con frío, viento, lluvia o tras caer al agua, incluso sin temperaturas bajo cero.
 Signos: temblores fuertes, piel fría y pálida, torpeza, habla lenta, confusión, sueño. En casos graves deja de temblar: es peor señal, no mejor.
 
