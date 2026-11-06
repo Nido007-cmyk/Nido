@@ -131,6 +131,22 @@ pack workflow (174 guides, 568 chunks); on the published bytes
 the C-03 coverage battery passes in full and first-aid
 retrieval is 38/38 on the multilingual build. `nido-local`
 stays at its v9 edition.
+A corrected edition of `nido-esencial` is published in the
+release `knowledge-packs-v14`: the clinical text is the v12
+text, unchanged, and the Spanish hypothermia guide gains
+symptom questions in its search metadata (the `questions:`
+header of the guide and a question comment in the hypothermia
+section), so a question that describes the symptom without
+naming the illness (someone who is very cold and cannot stop
+shivering) reaches the hypothermia guide. The Portuguese
+guide already carried a symptom key and needed no change.
+Built from `main` by the knowledge pack workflow (174 guides,
+568 chunks); on the CI product bytes, multilingual retrieval
+passes 202/202 and first-aid retrieval is 38/38 on the
+multilingual build and 6/6 on the English build. The signed
+catalog on `main` offers this edition; the 0.1.76 app keeps
+the v12 edition until the next app version. `nido-local`
+stays at its v9 edition.
 
 ### Format v2: indexed questions and verified facts (0.1.55)
 

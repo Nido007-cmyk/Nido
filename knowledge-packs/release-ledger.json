@@ -41,7 +41,9 @@
     "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v11/nido-esencial.sqlite": "3024a7b121488ab35d775ac6465ef17e7d4fa068a75e49bd2fa3003739100c36",
     "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v11/nido-esencial-e5.sqlite": "81cf08ead9bae80f5fab7024c6ef9ef0a118bc85c18637945a2be3c29c093d0f",
     "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v12/nido-esencial.sqlite": "f1324cf50b8be23d1d4ee736f11e3370aba9c6c186af9691e59a717bd20cab0e",
-    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v12/nido-esencial-e5.sqlite": "5c0f7ebe73d168f02649d641addd3ef32b011b768622024b9d93f51a0d81fa4f"
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v12/nido-esencial-e5.sqlite": "5c0f7ebe73d168f02649d641addd3ef32b011b768622024b9d93f51a0d81fa4f",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v14/nido-esencial.sqlite": "977dcab59844343c573c13c921ca4b6647ccc9c36a19e009fcf7b527a2f5a24e",
+    "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v14/nido-esencial-e5.sqlite": "3d40f766eb4fa99e3a2bc3acbb0c6f490f377f3168f0f84d7d03c21f30b31f19"
   },
   "localPublishedFloor": {
     "about": "Measured table counts of the newest PUBLISHED NIDO Local set, read from its published sqlite files. A candidate Local whose regions or facts fall below these numbers would silently take checked emergency numbers away from everyone who updates, so it must never ship. (Near-miss 2026-10-31: the knowledge-packs-v9 draft was built from the app tree, whose facts table was still the old 32-region / 71-fact copy, against v8's published 69 / 155; the publication stopped at its own pre-flight gate.) Enforced by scripts/lib/pack-floor-lib.test.mjs on the source candidate and by scripts/check-pack-floor.mjs on the built bytes (the knowledge-pack workflow runs it before upload). Advance tag and counts ONLY when a newer Local set is actually published, with the counts measured from the published files.",
