@@ -144,6 +144,16 @@ metronome app as the reference, two NIDO test phones.
 6. Deny the camera permission: the practice keeps working with the beep.
 7. Check in Settings › Security and privacy that nothing went to the
    network.
+8. Lock the screen in the middle of a running practice, leave it locked
+   for 30 s, then unlock. Note what is heard while the screen is locked
+   (the beep, the voice), what pauses and what keeps running, and whether
+   the count and the phase shown after unlocking are still in step with
+   the beeps.
+9. Receive a phone call in the middle of a running practice and let it
+   ring out (repeat answering it briefly). Note what happens to the beep
+   and the voice while the call is up, what pauses, and whether the
+   practice, its count and the 30:2 cycle resume in step when the call
+   ends.
 
 ## Sources
 

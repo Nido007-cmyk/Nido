@@ -91,6 +91,30 @@ layer the set routed 20/24, with all four historical look-alikes
 false-firing to the health gate.
 Seal (SHA-256 of the canonical set): `7654bb0042118ee259555cdfcee138919110dd7e86990b863e799bb2e07c9b12`.
 
+## Set 04
+
+A **fresh** set, written for run 04 under the seal rule: the cure
+for the CPR practice audit's finding F-1 (the gate did not
+recognise a resuscitation already in progress, nor several
+everyday ways of asking how CPR is done, in the three languages)
+is never validated against the audit's own battery — those twelve
+phrases enter the gate's unit tests as a regression fixture, not
+as a measure. Same protocol — 24 questions, 6 types × 4,
+Spanish-first with English and Portuguese rows, same declared
+condition (**no packs installed**) and the same routing key
+(`src/eval/blindSet4.ts`; references in
+`src/eval/blindReferences4.ts`; no volatile facts in this set).
+Two arms are new: **resuscitation in progress and "how is it
+done"** in wordings that appear in no earlier set and not in the
+audit (a bystander narrating someone else's compressions, the
+Portuguese "massagem cardíaca", instruction questions dictated
+without question marks), and **look-alike sisters of that arm**:
+the same event inside a vetoing frame (fiction in two languages),
+the product-safety topic, and resuscitation as a dated historical
+fact. Written and sealed before the cure was coded; its routing
+on the inherited layer is recorded with run 04 below.
+Seal (SHA-256 of the canonical set): `bfe8b1ad6cd8a2eaccd9a5c899af4994bc2a90fc1b4c55d13d91a8ebea151d10`.
+
 ## Run 01 (2026-10-31)
 
 Routing against the set's key: **18/24**.
@@ -290,6 +314,44 @@ conditions a generic text cannot check) and the tourniquet.
   an error a later wording pass can promise away. Any future
   claim on this number needs a fresh set, as always.
 
+## Run 04 (2026-11-06) — fresh set 04, after the F-1 cure
+
+Routing against the set's key: **24/24**. On the inherited layer
+(before the cure) the same sealed set routed **18/24**: all four
+live-resuscitation rows and two of the four "how is it done"
+rows fell to the model, which is exactly the F-1 hole, in fresh
+wordings.
+
+| Type | vs key | What happened |
+| --- | ---: | --- |
+| emergencia | 4/4 | Resuscitation in progress now stops at the deterministic layer in the three languages, including the Portuguese "massagem cardíaca" and a stem-only wording with no exact sign phrase |
+| salud | 4/4 | The gate fired on all four, the dictated ones without question marks among them |
+| hechos | 4/4 | Model / factual refusal, no fixed route fired |
+| cálculo | 4/4 | Model / factual refusal |
+| explicación | 4/4 | Model / factual refusal, the "how does it work" sisters on non-health topics among them |
+| parecidas | 4/4 | **No false firing** — fiction in two languages, the product-safety topic and the dated historical fact all passed through; the vetoes still run before the new signs |
+
+No blind text grading was run for set 04: the fixed text itself
+did not change in this cure (F-1 is about which phrases reach
+it), so there is no new text to grade; the 8 fixed texts this
+run produced are the same safe text graded in run 03.
+
+### Findings of run 04
+
+- **F-1 — CLOSED by fresh measurement.** The cure is list-only,
+  in the gate's own discipline: situation signs for resuscitation
+  in progress in the three languages, the stems "reanim" /
+  "resuscit" / "rcp" / "cpr" under the same body-context rule as
+  every other stem (H-05), the health lexicon's missing
+  Portuguese "rcp" plus "reanimacion" / "reanimacao" /
+  "resuscitation", and the health gate's situation cues "como
+  hago", "como hacer", "como se hace" and their Portuguese
+  twins. The audit's twelve phrases are fixtured as regression
+  in the gate's unit tests; the measure is this fresh set, not
+  that battery. (Consistency note, not a re-measurement:
+  re-running sets 01, 02 and 03 through the cured layer routes
+  24/24, 24/24 and 24/24, with their seals unchanged.)
+
 ### Declared limits
 
 - The set, the references and the judging are all the implementing
@@ -313,6 +375,15 @@ conditions a generic text cannot check) and the tourniquet.
   the same hand that wrote the vetoes they test: they prove the
   veto covers the frame family it was built for, not that no
   historical framing anywhere can still slip through.
+- Run 04 inherits all of it and adds one of its own: the set was
+  written by the same hand that then wrote the cure it measures
+  (the seal was fixed and the inherited-layer routing recorded
+  before the cure was coded, which is the discipline available
+  here, but it is not independence). n = 24; no text grading,
+  because the cure changed routing, not the fixed text. Its
+  resuscitation wordings prove the new signs and stems cover the
+  forms they were built for, not that no other live wording can
+  still slip through.
 - Sets age: the volatile fact in set 01 (Jupiter's moons) will
   move again.
 
@@ -324,13 +395,16 @@ conditions a generic text cannot check) and the tourniquet.
   fresh set 02 and its references
 - `src/eval/blindSet3.ts` / `src/eval/blindReferences3.ts` — the
   fresh set 03 and its references
+- `src/eval/blindSet4.ts` / `src/eval/blindReferences4.ts` — the
+  fresh set 04 and its references
 - `src/eval/blindCore.ts` — the shared instrument (deterministic
   core, routing key, run executor)
 - `src/eval/blindRun.run.test.ts` / `src/eval/blindRun2.run.test.ts`
-  / `src/eval/blindRun3.run.test.ts`
+  / `src/eval/blindRun3.run.test.ts` / `src/eval/blindRun4.run.test.ts`
   — the runners (routes, anonymised pairs, key) via
   `npm run eval:blind` (`vitest.blindeval.config.mts`)
 - `src/eval/blind-results/set-01-run-01.jsonl` — run 01's record
 - `src/eval/blind-results/set-02-run-02.jsonl` — run 02's record
 - `src/eval/blind-results/set-03-run-03.jsonl` — run 03's record
+- `src/eval/blind-results/set-04-run-04.jsonl` — run 04's record
 - Raw runner output lands in `eval-results/` (gitignored)

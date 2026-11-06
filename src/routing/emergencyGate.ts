@@ -150,6 +150,30 @@
  *    gemela verdadera; todo veto de marco vetaría la emergencia
  *    real con esa frase exacta.
  *
+ * 10. LA REANIMACIÓN EN CURSO TAMBIÉN SE CUENTA (F-1, auditoría
+ *    adversaria de la práctica de RCP de la 0.1.76, 2026-11-06).
+ *    La batería de enrutado de esa auditoría midió que contar una
+ *    reanimación en curso («está haciendo rcp», «they are doing
+ *    cpr on him», «estão fazendo rcp nele») no disparaba ninguna
+ *    cara, y que varias formas corrientes de preguntar cómo se
+ *    hace («cómo se hace la rcp», «como faço rcp», dictadas sin
+ *    signos) tampoco cerraban la puerta de salud: sin el pack,
+ *    esas frases caían al modelo sin el suelo del texto seguro.
+ *    La cura es la de la casa, editar las listas: los signos de
+ *    situación aprenden las formas de reanimación en curso de las
+ *    tres lenguas (quien lo cuenta no pregunta: es la cara de
+ *    situación, no la de salud), las raíces aprenden «reanim»,
+ *    «resuscit» y las siglas «rcp»/«cpr» bajo la misma disciplina
+ *    de contexto de cuerpo de H-05, el léxico de salud aprende
+ *    «reanimacion»/«reanimacao»/«resuscitation» y la sigla que al
+ *    portugués le faltaba («rcp»), y las señales de situación de
+ *    la puerta de salud aprenden «como hago», «como hacer»,
+ *    «como se hace» y sus gemelas portuguesas. La cura se mide
+ *    contra un conjunto ciego FRESCO (conjunto 04,
+ *    docs/BLIND_EVAL.md), no contra la batería que la destapó
+ *    (regla del sello); las doce frases de la auditoría quedan
+ *    fixturadas como regresión en las pruebas de esta puerta.
+ *
  * Puro, sin dependencias de UI, 100% testeable.
  */
 
@@ -208,7 +232,7 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       "convulsion", "convulsiones", "ahogamiento", "insolacion", "hipotermia", "sobredosis", "erupcion",
       "infeccion", "gripe", "resfriado", "covid", "antibiotico", "antibioticos", "vacuna", "vacunas", "torniquete",
       "esguince", "urticaria", "anemia", "apendicitis", "neumonia", "bronquitis", "otitis", "conjuntivitis",
-      "gastroenteritis", "deshidratacion", "parto", "rcp", "hipertension", "sarpullido", "electrocucion",
+      "gastroenteritis", "deshidratacion", "parto", "rcp", "reanimacion", "hipertension", "sarpullido", "electrocucion",
       "dolor de cabeza", "dolor de pecho", "dolor de espalda", "dolor abdominal", "dolor de muelas",
       "primeros auxilios", "golpe de calor", "presion arterial",
       "dosis", "dosificacion", "medicamento", "medicamentos", "medicacion", "medicina", "medicinas",
@@ -229,7 +253,7 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       "fainted", "fainting", "seizure", "seizures", "drowning", "heatstroke", "hypothermia", "overdose", "rash",
       "infection", "flu", "covid", "antibiotic", "antibiotics", "vaccine", "vaccines", "tourniquet", "sprain",
       "urticaria", "anemia", "appendicitis", "pneumonia", "bronchitis", "dehydration", "labour", "labor", "cpr",
-      "hypertension", "electrocution", "headache", "toothache",
+      "resuscitation", "hypertension", "electrocution", "headache", "toothache",
       "chest pain", "back pain", "abdominal pain", "first aid", "heat stroke", "blood pressure",
       "dose", "dosage", "medication", "medications", "medicine", "milligrams",
       "paracetamol", "acetaminophen", "ibuprofen", "aspirin", "amoxicillin",
@@ -248,7 +272,7 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       "convulsao", "convulsoes", "afogamento", "insolacao", "hipotermia", "overdose", "erupcao", "infeccao",
       "gripe", "resfriado", "covid", "antibiotico", "antibioticos", "vacina", "vacinas", "torniquete",
       "entorse", "urticaria", "anemia", "apendicite", "pneumonia", "bronquite", "desidratacao", "parto",
-      "hipertensao", "eletrocucao",
+      "rcp", "reanimacao", "hipertensao", "eletrocucao",
       "dor de cabeca", "dor no peito", "dor nas costas", "dor abdominal", "dor de dente",
       "primeiros socorros", "pressao arterial",
       "dose", "dosagem", "medicamento", "medicamentos",
@@ -338,6 +362,12 @@ const SITUATION_CUES = [
   " mi ", " me ", " tengo ", " sufro ", " duele ", " que hago ", " como trat", " como cur", " ayuda ",
   " my ", " i have ", " i feel ", " hurts ", " what should ", " how do i ", " how to treat ",
   " meu ", " minha ", " estou ", " sinto ", " doi ", " o que fazer ", " como trat",
+  // F-1 (auditoría de la RCP, 2026-11-06): «cómo se hace» y sus
+  // hermanas, tal como se dictan, sin signos de interrogación.
+  // La señal sola no cierra la puerta: hace falta además un
+  // término de salud, así que «como hacer una mesa» sigue fuera.
+  " como hago ", " como hacer ", " como se hace ",
+  " como faco ", " como fazer ", " como se faz ",
 ];
 
 const ALL_TERMS: Array<{ w: string[]; p: string[] }> = Object.values(HEALTH_TERMS);
@@ -414,6 +444,14 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "esta teniendo una convulsion", "le esta dando una convulsion",
     "esta teniendo un infarto", "le esta dando un infarto",
     "esta teniendo un ictus", "le esta dando un ictus", "le esta dando un derrame",
+    // F-1 (auditoría de la RCP, 2026-11-06): la reanimación en
+    // curso, contada por quien la ve o la hace. El suceso ES la
+    // situación: no se exige señal de pregunta.
+    "esta haciendo rcp", "estan haciendo rcp", "le esta haciendo rcp", "le estan haciendo rcp",
+    "haciendo rcp", "haciendole rcp",
+    "esta haciendo reanimacion", "estan haciendo reanimacion",
+    "le esta haciendo reanimacion", "le estan haciendo reanimacion",
+    "haciendo reanimacion", "haciendole reanimacion",
   ],
   en: [
     "not breathing", "is not breathing", "stopped breathing", "no longer breathing",
@@ -433,6 +471,9 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "isn t breathing", "wasn t breathing", "aren t breathing",
     "having a seizure", "is seizing", "is convulsing",
     "having a heart attack", "having a stroke",
+    // F-1 (CPR practice audit, 2026-11-06): resuscitation already
+    // in progress, as a bystander tells it.
+    "doing cpr", "doing chest compressions", "performing cpr",
   ],
   pt: [
     "nao esta respirando", "nao respira", "nao respiram", "parou de respirar", "sem respirar",
@@ -450,6 +491,13 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // dos lenguas.
     "nao consigo respirar", "nao consegue respirar", "nao conseguem respirar",
     "esta tendo uma convulsao", "esta tendo um infarto", "esta tendo um avc",
+    // F-1 (auditoria da RCP, 2026-11-06): a reanimação em curso,
+    // contada por quem a vê ou a faz, nas duas variantes do
+    // português (a fazer / fazendo).
+    "esta fazendo rcp", "estao fazendo rcp", "fazendo rcp",
+    "esta a fazer rcp", "estao a fazer rcp",
+    "esta fazendo reanimacao", "estao fazendo reanimacao", "fazendo reanimacao",
+    "fazendo massagem cardiaca",
   ],
 };
 
@@ -505,12 +553,18 @@ const ALL_SIGNS: string[] = Object.values(EMERGENCY_SIGNS).flat();
  * inconsciencia — es/en/pt), que heredan la misma disciplina: sin
  * contexto de cuerpo o forma telegráfica no declaran, y los vetos
  * cerrados ya cubren sus metáforas asentadas («en deudas», «em
- * dividas», «en un vaso de agua»).
+ * dividas», «en un vaso de agua»). F-1 añade los tallos de la
+ * reanimación («reanim», «resuscit» y las siglas «rcp»/«cpr» como
+ * raíz acotada a la palabra que empieza por ellas) bajo la misma
+ * disciplina: la sigla como tema suelto («un curso de rcp») no
+ * declara nada sin cuerpo cerca, y la cara telegráfica exige
+ * además una forma de participio, gerundio o estado que la sigla
+ * desnuda no tiene.
  */
 const EMERGENCY_STEMS: Record<GateLang, string[]> = {
-  es: ["atragant", "tragant", "asfixi", "desmay", "ahog", "inconscient"],
-  en: ["chok", "asphyxi", "suffocat", "faint", "drown", "unconsc"],
-  pt: ["engasg", "asfixi", "desmai", "afog", "inconscient"],
+  es: ["atragant", "tragant", "asfixi", "desmay", "ahog", "inconscient", "reanim", "rcp"],
+  en: ["chok", "asphyxi", "suffocat", "faint", "drown", "unconsc", "resuscit", "cpr"],
+  pt: ["engasg", "asfixi", "desmai", "afog", "inconscient", "reanim", "rcp"],
 };
 
 const ALL_STEMS: string[] = Object.values(EMERGENCY_STEMS).flat();

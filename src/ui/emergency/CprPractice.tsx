@@ -26,7 +26,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { activateKeepAwake, deactivateKeepAwake } from "expo-keep-awake";
-import { hasCprCamera, startBeeping, startCprCamera, stopBeeping, type CameraSamples } from "nido-cpr";
+import { hasCprCamera, startBeepingAt, startCprCamera, stopBeeping, type CameraSamples } from "nido-cpr";
 import { useTheme } from "../theme/ThemeContext";
 import type { Colors } from "../theme/colors";
 import type { Typography } from "../theme/typography";
@@ -57,6 +57,7 @@ import {
   type MotionSample,
   type RateTrack,
 } from "../../cpr/rateEstimator";
+import { createPracticeClock, monotonicNow, originFromNativeStart } from "../../cpr/practiceClock";
 
 const KEEP_AWAKE_TAG = "nido-cpr-practice";
 
@@ -89,7 +90,10 @@ export function CprPractice({ visible, onClose }: Props) {
   const modeRef = useRef(mode);
   modeRef.current = mode;
 
-  const startedAt = useRef(0);
+  // El reloj de la práctica (F-3): monotónico, anclado al instante
+  // que el metrónomo devuelve al arrancar. El reloj de pared ya no
+  // manda sobre fases, conteo ni rearme (src/cpr/practiceClock.ts).
+  const clock = useRef(createPracticeClock());
   const lastCount = useRef(0);
   const lastPhase = useRef<string>("");
   const lastCycle = useRef(0);
@@ -117,7 +121,7 @@ export function CprPractice({ visible, onClose }: Props) {
   // se mide (el movimiento es otro) y se empieza de cero al volver.
   const onSamples = useCallback(
     (b: CameraSamples) => {
-      const p = cprPhaseAt(Date.now() - startedAt.current, modeRef.current);
+      const p = cprPhaseAt(clock.current.elapsedAt(monotonicNow()), modeRef.current);
       if (p.phase === "breaths") {
         samples.current = [];
         cue.current = { ...cue.current, recent: [] };
@@ -151,12 +155,13 @@ export function CprPractice({ visible, onClose }: Props) {
   const start = useCallback(() => {
     impact(ImpactFeedbackStyle.Heavy);
     activateKeepAwake(KEEP_AWAKE_TAG);
-    startedAt.current = Date.now();
     lastCount.current = 0;
     lastPhase.current = "compressions";
     lastCycle.current = 1;
     lastSlot.current = 0;
-    nativeBeep.current = startBeeping(CPR_BPM, mode === "30:2" ? COMPRESSIONS_PER_CYCLE : 0);
+    const t0 = startBeepingAt(CPR_BPM, mode === "30:2" ? COMPRESSIONS_PER_CYCLE : 0);
+    nativeBeep.current = t0 !== null;
+    clock.current.start(originFromNativeStart(t0, monotonicNow()));
     setNow(0);
     setRunning(true);
     // La guía, palabra por palabra: dónde van las manos y cómo empujar.
@@ -180,11 +185,12 @@ export function CprPractice({ visible, onClose }: Props) {
   }, [camWanted, guide, mode, onSamples, say]);
 
   // El reloj de la pantalla. El pitido lo lleva el hilo nativo; esto solo
-  // pinta, cuenta y habla en los cambios de fase.
+  // pinta, cuenta y habla en los cambios de fase. El tiempo sale del
+  // reloj de la práctica (monotónico), nunca del reloj de pared.
   useEffect(() => {
     if (!running) return;
     const id = setInterval(() => {
-      const elapsed = Date.now() - startedAt.current;
+      const elapsed = clock.current.elapsedAt(monotonicNow());
       setNow(elapsed);
       const p = cprPhaseAt(elapsed, mode);
       if (p.total !== lastCount.current && p.phase === "compressions") {
@@ -200,7 +206,13 @@ export function CprPractice({ visible, onClose }: Props) {
       }
       if (mode === "30:2" && p.phase === "compressions" && p.cycle !== lastCycle.current) {
         lastCycle.current = p.cycle;
-        nativeBeep.current = startBeeping(CPR_BPM, COMPRESSIONS_PER_CYCLE);
+        const tCycle = startBeepingAt(CPR_BPM, COMPRESSIONS_PER_CYCLE);
+        nativeBeep.current = tCycle !== null;
+        // El rearme produce un origen nuevo por bloque: el reloj se
+        // reancla a ese instante para que el bloque pintado y el
+        // pitado empiecen juntos, sin romper la continuidad del
+        // conteo (el reloj nunca retrocede).
+        if (tCycle !== null) clock.current.reanchor(p.cycle, originFromNativeStart(tCycle, monotonicNow()));
       }
       const slot = switchReminderDue(elapsed, mode, lastSlot.current);
       if (slot !== null) {
