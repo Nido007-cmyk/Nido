@@ -4,8 +4,8 @@
 > simulation) and **phase 2 done in code** (wired into the messenger and
 > the NIDO screen, tested with three simulated phones). **Pending:** a
 > test with three real phones and an external review of the new
-> cryptography. Nothing of this is in a release yet. Code:
-> `src/p2p/relay/`.
+> cryptography. This shipped in 0.1.76 as an experimental feature.
+> Code: `src/p2p/relay/`.
 
 ## The idea
 
@@ -138,7 +138,7 @@ movement, radio range and battery will change the numbers.
 
 | Who | Can | Can't |
 |---|---|---|
-| A carrier (a contact) | See that it carries envelopes, their size bucket, expiry and tag; know who handed them over (a contact of theirs). If the writer hands an envelope over in person, the carrier can guess the writer (it can't tell an envelope written by that contact from one it was only carrying). | Read the text; change the message or forge a sender (authenticated with the sender's identity key inside); make it last longer for the recipient (authenticated expiry inside); know the recipient unless it is a contact of the recipient (then the tag tells it "for Caro"). |
+| A carrier (a contact) | See the outside of the envelopes it carries: a random envelope id, a tag, the expiry, the hops left, the ephemeral key, the KEM ciphertext, a nonce and the ciphertext (and so their size bucket); know who handed them over (a contact of theirs). If the writer hands an envelope over in person, the carrier can guess the writer (it can't tell an envelope written by that contact from one it was only carrying). | Read the text; change the message or forge a sender (authenticated with the sender's identity key inside); make it last longer for the recipient (authenticated expiry inside); know the recipient unless it is a contact of the recipient (then the tag tells it "for Caro"). |
 | A contact of the recipient | Recognize envelopes for the recipient by the tag while the mailbox key lasts (up to 14 days), and so link them. | Read them. |
 | A carrier who is not a contact of the recipient | Link envelopes with the same tag on the same day (same recipient). | Link them across days (the tag changes daily); know who the recipient is. |
 | A stranger nearby | Nothing new: the radio link is the same encrypted, contacts-only session as today. | Receive, inject or carry envelopes. |
@@ -148,6 +148,13 @@ movement, radio range and battery will change the numbers.
 
 Known limits:
 
+- **The outer envelope id is not authenticated.** A carrier can copy
+  an envelope under a fresh envelope id, so a phone that deduplicates
+  the envelopes it stores by that id may hold or pass the same envelope
+  more than once. The caps still bound it (30 per contact, 200 and
+  2 MB in total), and the recipient never gets the message twice:
+  their deduplication is by the inside (sender, kind and message id),
+  not by the envelope id.
 - **Tag linkability:** contacts of the recipient can link envelopes to
   them for up to 14 days (the life of the mailbox key). Others can only
   link them within one day.
