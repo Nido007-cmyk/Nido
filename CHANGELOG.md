@@ -4,6 +4,84 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.76-alpha - 2026-11-06
+
+Two new features, both marked experimental: CPR practice with an
+optional rate meter that uses the camera, and messages that travel from
+friend to friend when the person you write to is out of range. No
+catalog change: the signed catalog keeps offering knowledge-packs-v12.
+
+### CPR practice (Emergency tab)
+
+- **"Practise CPR"**, below the quick guides. It is a training tool
+  for a firm cushion or a CPR manikin, never for a person. The screen
+  says so at all times and has no call button. The chat never offers
+  it. In an emergency NIDO does what it did before: the checked
+  emergency number and the NIDO Essentials guide, word for word.
+- **A beep on every compression at 110 per minute** (the guide says
+  100 to 120). It comes from the phone itself, on its own clock, so it
+  keeps the rate when the app is busy.
+- **"Compressions only" or 30:2**, with a 6-second pause for the two
+  breaths. The voice reads the guide's own lines, says when to give
+  breaths and when to go back, and reminds you to switch every 2
+  minutes. The screen stays on. Every sentence is the Essentials guide's,
+  in Spanish, English and Portuguese, and a test fails if the guide and
+  the screen ever differ.
+- **Optional: the camera measures your rate** and says "faster",
+  "slower" or "good rate". It is off until you turn it on, and only
+  then asks for the camera permission. Frames are analysed on the phone
+  as they arrive and are never stored, shown or sent. It says nothing
+  when it isn't sure.
+- Why practice only: a tool that guides or rates CPR on a real person
+  is a medical device in the US (21 CFR 870.5210) and elsewhere. NIDO is
+  not one. See [docs/CPR_PRACTICE.md](docs/CPR_PRACTICE.md).
+
+### Messages from friend to friend (experimental)
+
+- **When a contact is out of range, your message can reach them
+  through another contact you both have**, with no internet and no
+  server. It travels in a sealed envelope: whoever carries it can't read
+  it, change it or pretend to be you, and it is padded so its length
+  doesn't show. When it arrives, a receipt comes back the same way and
+  your message shows as delivered.
+- **Deniable, like Signal.** The person you write to knows the message is
+  from you, but the envelope is no proof of it for anyone else: they
+  could have made one just like it. (A security review before this
+  release replaced a per-message signature, which would have been such a
+  proof, with this.)
+- **Carrying messages for your contacts is off by default.** Turn it on
+  in NIDO › Contacts › "Carry messages for my contacts". A phone carries
+  at most 200 envelopes and 2 MB, only from its contacts, and each one
+  is deleted after 72 hours or once delivered. The card shows how many
+  you carry.
+- Received messages show "via friends"; yours show "travelling via
+  friends" while a contact carries them.
+- Messages in a conversation with disappearing messages never travel
+  this way, nor messages over 1,500 characters.
+- Mailbox keys are X25519 plus ML-KEM-768 (against future quantum
+  computers), signed with the key in your QR. Each lasts 14 days and a
+  new one is made every 7.
+  The label on the outside of an envelope changes every day.
+- It needs NIDO 0.1.76 on all the phones involved. Older versions ignore
+  it. What a carrier can still see, and how NIDO compares with Briar,
+  Scuttlebutt, Meshtastic, Bridgefy and others, is in
+  [docs/RELAY.md](docs/RELAY.md).
+
+### Also
+
+- What NIDO says about itself (what it can do, where it's heading) now
+  includes friend-to-friend messages, as an experiment.
+
+### Not tested on a physical phone yet
+
+Both features passed the automated tests only. That includes three
+complete simulated phones exchanging a message and its receipt through
+the middle one, and the camera meter on synthetic video, with the
+phone's Kotlin code giving exactly the same numbers as the reference. The CPR
+camera meter, the beep and the friend-to-friend route still need the
+owner's round on real phones. The friend-to-friend cryptography had an internal security
+review before this release, not an outside one yet.
+
 ## 0.1.75-alpha - 2026-11-03
 
 Fixes from adversarial testing of the chat's own routing chain
