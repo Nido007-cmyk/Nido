@@ -1,9 +1,11 @@
 # Messages from friend to friend (relay)
 
 > Status: **phase 1 done** (cryptography, storage rules, network
-> simulation, all tested). **Phase 2 pending**: wiring it into the
-> messenger and the screens, and a test with at least three phones.
-> Nothing of this is in a release yet. Code: `src/p2p/relay/`.
+> simulation) and **phase 2 done in code** (wired into the messenger and
+> the NIDO screen, tested with three simulated phones). **Pending:** a
+> test with three real phones and an external review of the new
+> cryptography. Nothing of this is in a release yet. Code:
+> `src/p2p/relay/`.
 
 ## The idea
 
@@ -44,12 +46,16 @@ more than 14 days (`verifyCarryPrekey`).
 - **Outside, what a carrier sees:** a random envelope id, a tag, the
   expiry, the hops left, the ephemeral key, the KEM ciphertext and the
   ciphertext. **No sender, no recipient, no text.**
-- **The tag** is derived from the mailbox key id. Only people who hold
-  that mailbox key (the recipient's contacts) recognize it. That is how a
-  carrier knows "this one is for Caro" when Caro is also its contact.
+- **The tag** is derived from the mailbox key id **and the day** (UTC).
+  Only people who hold that mailbox key (the recipient's contacts)
+  recognize it. That is how a carrier knows "this one is for Caro" when
+  Caro is also its contact. Because it changes every day, a carrier who is
+  not Caro's contact can't link Monday's envelopes for Caro to Tuesday's.
+  Recipients and carriers check the tags of the last three days, today and
+  tomorrow (an envelope lasts at most 72 hours).
 
 New signing and KDF domains, disjoint from all others: `nido-carry-prekey-v1`,
-`nido-carry-msg-v1`, `nido-carry-v1`, `nido-carry-key-v1`, `nido-carry-tag-v1`.
+`nido-carry-msg-v1`, `nido-carry-v1`, `nido-carry-key-v1`, `nido-carry-tag-v1|<day>`.
 
 ### Opening
 
@@ -101,37 +107,84 @@ movement, radio range and battery will change the numbers.
 
 | Who | Can | Can't |
 |---|---|---|
-| A carrier (a contact) | See that it carries envelopes, their size bucket, expiry and tag; know who handed them over (a contact of theirs). | Read the text; know the sender or recipient unless it is a contact of the recipient (then the tag tells it "for Caro"); change the message or forge a sender (signature inside); make it last longer for the recipient (signed expiry). |
+| A carrier (a contact) | See that it carries envelopes, their size bucket, expiry and tag; know who handed them over (a contact of theirs). If the writer hands an envelope over in person, the carrier can guess the writer (it can't tell an envelope written by that contact from one it was only carrying). | Read the text; change the message or forge a sender (signature inside); make it last longer for the recipient (signed expiry); know the recipient unless it is a contact of the recipient (then the tag tells it "for Caro"). |
 | A contact of the recipient | Recognize envelopes for the recipient by the tag while the mailbox key lasts (up to 14 days), and so link them. | Read them. |
+| A carrier who is not a contact of the recipient | Link envelopes with the same tag on the same day (same recipient). | Link them across days (the tag changes daily); know who the recipient is. |
 | A stranger nearby | Nothing new: the radio link is the same encrypted, contacts-only session as today. | Receive, inject or carry envelopes. |
 | Someone who floods | Fill at most 30 envelopes per contact and 200 in total on a phone that accepted to carry. | Fill the phone: hard limits, expiry, no strangers. |
 | A future quantum computer recording traffic | Attack X25519. | Attack ML-KEM-768 too, which it also needs (hybrid). |
 
-Known limits, to be decided in phase 2:
+Known limits:
 
 - **Tag linkability:** contacts of the recipient can link envelopes to
-  them for up to 14 days. Rotating mailbox keys more often reduces it.
+  them for up to 14 days (the life of the mailbox key). Others can only
+  link them within one day.
 - **No forward secrecy per message:** envelopes for the same mailbox key
   share that key until it rotates. Stealing a phone (and unlocking its
   encrypted store) could open envelopes still addressed to keys that
-  have not expired. Old secret keys must be deleted as soon as they
-  expire.
-- **Delivery receipts** travel the same way (kind "receipt") and let
-  carriers drop copies early. They are designed but not wired.
+  have not expired. Expired secret keys, and keys of an earlier identity,
+  are deleted the next time the phone gives out its mailbox key.
+- **The writer's first carriers** can guess who wrote an envelope they
+  got from the writer in person (see the table).
+- **Relationships:** whoever carries for you learns that you have
+  envelopes for someone; Briar documents the same kind of leak for its
+  forums. Carrying is off by default for this reason.
 
-## Phase 2 (pending)
+## Phase 2: how it works in the app
 
-1. New session message types: `carry_prekey` (give my mailbox key),
-   `carry_put` (envelopes for you to deliver or carry).
-2. SQLCipher tables for mailbox keys (mine, secret; contacts', public) and
-   for held envelopes, with the same limits; secure deletion of expired
-   secrets.
-3. Messenger: when a message can't go directly and the recipient has a
-   valid mailbox key, also seal it as an envelope. On every contact
-   session: hand over what `CarryStore.handoff` says; open what is for me
-   and show it as a normal message marked "via friends".
-4. Settings: "Carry messages for my contacts" (off by default), with the
-   storage it uses.
-5. Tests with three phones (A and C never meet, B meets both), airplane
-   mode, and the adversarial cases above on the real transport.
-6. An external review of the new cryptography before calling it stable.
+- **Session message type `carry`** (payload `{prekey?, carries?, put?}`).
+  On each new verified session, a phone gives its mailbox key, says
+  whether it carries envelopes, and hands over what `CarryStore.handoff`
+  says. Envelopes go in batches that fit in a frame (160 KB, at most 30).
+  Older NIDO versions drop the unknown type, as they already do with
+  `settings`.
+- **Sending:** when a chat message can't go directly and the recipient
+  gave a valid mailbox key, it is also sealed as an envelope and handed to
+  the contacts that are connected and carry. It keeps the same message id,
+  so if it later arrives directly too, the recipient recognizes it and
+  only confirms it again. Messages in a conversation with disappearing
+  messages on never travel this way (a copy would stay up to 72 hours on
+  other phones), and neither do messages over 1,500 characters.
+- **Receiving:** an envelope for me is opened (`openCarry`), saved as a
+  normal received message and marked "via friends". The recipient seals a
+  signed **receipt** back the same way. When the writer gets it, the
+  message shows as delivered, as with a direct confirmation, and the
+  writer stops handing out its envelope.
+- **Carrying:** only if the person turned on «Carry messages for my
+  contacts» (off by default; Contacts tab, with the number of envelopes
+  and KB used). Turning it off deletes the envelopes it carried for
+  others.
+- **Storage:** one table, `p2p_relay_kv`, in the same SQLCipher database
+  as the rest (so "Delete all data" deletes it). Changing identity resets
+  it.
+- **Robustness:** anything malformed is dropped without throwing; nothing
+  is accepted from someone who is not a contact; at most 30 envelopes per
+  frame are even looked at; envelopes already seen are skipped before any
+  decryption (`relayService.test.ts`, "hostile inputs").
+
+Still pending:
+
+1. A test with three real phones (A and C never meet, B meets both).
+2. An external review of the new cryptography before calling it stable.
+
+## Who else does this (prior art, checked 2026-11)
+
+| App | What travels through other phones | Who relays | What relays can see |
+|---|---|---|---|
+| [Briar](https://briarproject.org/quick-start/) | Forum posts, through contacts who share the forum. Private 1:1 messages only go directly. | Contacts only | Briar documents that syncing reveals who is a contact of whom ([issue 2123](https://code.briarproject.org/briar/briar/-/issues/2123)). Briar Mailbox is your own spare phone that buffers messages. |
+| [Scuttlebutt / Manyverse](https://handbook.scuttlebutt.nz/concepts/private-message) | Everything, by gossip, up to the hops each client chooses (2–3). | Friends and friends of friends | Private messages hide the recipients, but the sender, time and size stay visible ([analysis](https://ccom.uprrp.edu/~humberto/traffic-analysis-of-ssb-private-messages.html)), and messages stay in the logs for good. |
+| [Meshtastic](https://meshtastic.org/docs/overview/mesh-algo/) (LoRa radio) | All packets, by managed flooding with a hop limit. | Any node, strangers included | Direct messages are encrypted, but headers are readable. |
+| [Bridgefy](https://eprint.iacr.org/2021/214) | Messages over a Bluetooth mesh. | Any phone | Researchers showed users could be tracked, messages read and users impersonated, and that one crafted message could shut the network down ([again in 2022](https://www.usenix.org/conference/usenixsecurity22/presentation/albrecht)). |
+| [Berty](https://berty.tech/protocol) | Directly between nearby phones; "replication nodes" that can't read keep copies. | Your own replication devices or servers | — |
+| bitchat (2025) | Bluetooth mesh. | Nearby phones | Early project with public security concerns ([The Register](https://www.theregister.com/2025/07/08/jack_dorsey_debuts_bitchat/)). |
+
+What NIDO takes from them: contacts only, never strangers (Briar; the
+lesson of Bridgefy); hard limits and hostile-input tests (Bridgefy);
+padding and no outer sender (what Scuttlebutt leaves visible); a tag that
+changes over time (the idea of rotating identifiers in Bluetooth tracking
+networks); limited copies (Spray and Wait, Spyropoulos, Psounis and
+Raghavendra, 2005). As far as we know, none of these carries **private
+1:1 messages** from contact to contact with sender and recipient hidden
+from carriers, padding, a signed expiry and hybrid post-quantum
+encryption together. We can't check every app in the world, so NIDO does
+not claim to be the first.

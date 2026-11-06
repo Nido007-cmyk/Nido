@@ -873,6 +873,16 @@
     "disappearSet": "Mensagens temporárias: {{value}}",
     "disappearHint": "As mensagens novas deste chat se apagam sozinhas nos dois telefones. Para você, o tempo conta a partir do envio; para seu contato, a partir de quando ele a vê. O NIDO do seu contato adota esta configuração com sua próxima mensagem (versões anteriores do NIDO a ignoram). Ninguém pode impedir que alguém fotografe a tela com outra câmera.",
     "disappearBadge": "temporária",
+    "relay": {
+      "title": "De amigo em amigo",
+      "body": "Se um contato seu não está por perto, sua mensagem pode chegar por meio de outro contato que conheça vocês dois, sem internet. Ela vai num envelope selado e assinado: quem o leva não pode lê-lo nem alterá-lo.",
+      "toggle": "Levar mensagens dos meus contatos",
+      "off": "Desligado. Suas mensagens ainda podem viajar pelos contatos que o têm ligado.",
+      "usage": "Ligado · levando {{count}} envelopes ({{kb}} KB)",
+      "privacy": "Só de contatos, no máximo 200 envelopes e 2 MB, e cada envelope é apagado após 72 horas ou ao ser entregue. Mensagens temporárias nunca viajam assim.",
+      "viaFriends": "via amigos",
+      "travelling": "viajando por amigos"
+    },
     "disappearShort": "Temporária: {{value}}",
     "v5Active": "chave por mensagem",
     "v5Missing": "Esta conexão não usa chave por mensagem, embora este contato já a usasse. Se ele não a desativou, alguém pode tê-la bloqueado: reconecte e confirme com ele pessoalmente.",

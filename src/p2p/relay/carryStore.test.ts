@@ -2,7 +2,7 @@
 import nacl from "tweetnacl";
 import { describe, expect, it } from "vitest";
 import { toHex } from "../crypto";
-import { carryTag, generateCarryPrekey, sealCarry, type CarryEnvelope } from "./carryCrypto";
+import { carryTagsFor, generateCarryPrekey, sealCarry, type CarryEnvelope } from "./carryCrypto";
 import { CarryStore, STORE_LIMITS } from "./carryStore";
 
 const NOW = 1_800_000_000_000;
@@ -14,7 +14,7 @@ function person() {
 const ana = person();
 const caro = person();
 const caroKey = generateCarryPrekey(caro.pk, nacl.sign.keyPair().secretKey, NOW);
-const caroTags = new Set([carryTag(caroKey.pub.id)]);
+const caroTags = new Set(carryTagsFor(caroKey.pub.id, NOW));
 const none = new Set<string>();
 const env = (over: Partial<Parameters<typeof sealCarry>[0]> = {}): CarryEnvelope =>
   sealCarry({ recipient: caroKey.pub, senderPkHex: ana.pk, senderSignSecretKey: ana.signSk, id: "m", kind: "chat", text: "hola", now: NOW, ...over });

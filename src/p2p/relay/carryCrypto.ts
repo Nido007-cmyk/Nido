@@ -140,13 +140,34 @@ export function needsRotation(newest: { createdAt: number; expiresAt: number } |
   return now >= newest.createdAt + (newest.expiresAt - newest.createdAt) / 2;
 }
 
+const DAY_MS = 24 * 3600 * 1000;
+
+/** Día (UTC) de un instante: la etiqueta cambia cada día. */
+export function carryDay(t: number): number {
+  return Math.floor(t / DAY_MS);
+}
+
 /**
  * Etiqueta por fuera del sobre: la reconocen quienes tienen la clave de
  * buzón (los contactos del destinatario). No revela al destinatario a
- * nadie más. Es estable mientras dura la clave: ver el modelo de amenazas.
+ * nadie más. **Cambia cada día** (como las claves que rotan en las redes
+ * de búsqueda de dispositivos): quien lleva sobres sin ser contacto del
+ * destinatario no puede ligar los sobres de un día con los del siguiente.
  */
-export function carryTag(prekeyId: string): string {
-  return toHex(hkdfSha512(utf8Encode("nido-carry-v1"), fromHex(prekeyId), utf8Encode("nido-carry-tag-v1"), TAG_BYTES));
+export function carryTag(prekeyId: string, day: number): string {
+  return toHex(hkdfSha512(utf8Encode("nido-carry-v1"), fromHex(prekeyId), utf8Encode(`nido-carry-tag-v1|${day}`), TAG_BYTES));
+}
+
+/**
+ * Etiquetas con las que puede llegar hoy un sobre para esta clave: un
+ * sobre dura 72 h como mucho, así que se miran los últimos 3 días, hoy y
+ * mañana (relojes un poco adelantados).
+ */
+export function carryTagsFor(prekeyId: string, now: number): string[] {
+  const d = carryDay(now);
+  const out: string[] = [];
+  for (let k = d - 3; k <= d + 1; k++) out.push(carryTag(prekeyId, k));
+  return out;
 }
 
 export interface CarryInner {
@@ -261,7 +282,7 @@ export function sealCarry(a: SealArgs): CarryEnvelope {
     t: "nido-carry",
     v: CARRY_VERSION,
     eid: toHex(randomNonce(16)),
-    tag: carryTag(a.recipient.id),
+    tag: carryTag(a.recipient.id, carryDay(a.now)),
     exp: inner.exp,
     hops: Math.max(1, Math.min(MAX_HOPS, a.hops ?? MAX_HOPS)),
     eph: toHex(eph.publicKey),
@@ -318,7 +339,7 @@ export function openCarry(
 ): OpenedCarry | null {
   try {
     if (!isWellFormedEnvelope(e)) return null;
-    const pk = myPrekeys.find((p) => carryTag(p.id) === e.tag);
+    const pk = myPrekeys.find((p) => carryTagsFor(p.id, now).includes(e.tag));
     if (!pk) return null;
     const ephPk = fromHex(e.eph);
     const dh = nacl.scalarMult(pk.x25519Sk, ephPk);

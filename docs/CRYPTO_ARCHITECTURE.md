@@ -24,6 +24,7 @@ are unchanged).
 | Session KDF | `"nido-session-v2"` (salt), `"nido-session-key-v1"` (info) | HKDF-SHA512 (RFC 5869), 32 B output. Replaced raw SHA-512 truncation in October 2026 (see §12). |
 | Pairing QR | `"NIDO1:"` + `{v:2, app:"nido"}` | Physical root of trust. |
 | Session framing | `PROTOCOL_VERSION = 1` | `[u32 BE len][24 B nonce][secretbox(JSON)]`, max 256 KiB. |
+| Friend to friend (session message type `carry`) | Signatures: `"nido-carry-prekey-v1"` (mailbox key), `"nido-carry-msg-v1"` (sealed message). KDF: `"nido-carry-v1"` (salt), `"nido-carry-key-v1\|…"` (envelope key), `"nido-carry-tag-v1\|<day>"` (outer tag, changes daily). | Envelopes that contacts carry for other contacts. X25519 + ML-KEM-768 hybrid. See [RELAY.md](RELAY.md). |
 
 **No other signature or KDF context exists in the system.** A valid
 signature from one context cannot be reused in another: domains are

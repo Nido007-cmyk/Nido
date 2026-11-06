@@ -7,6 +7,7 @@ import nacl from "tweetnacl";
 import { describe, expect, it } from "vitest";
 import { toHex } from "../crypto";
 import {
+  carryDay,
   carryTag,
   envelopeBytes,
   generateCarryPrekey,
@@ -73,7 +74,15 @@ describe("sobre", () => {
     expect(visible).not.toContain("tía");
     expect(visible).not.toContain(ana.pk);
     expect(visible).not.toContain(caro.pk);
-    expect(env.tag).toBe(carryTag(caroKey.pub.id));
+    expect(env.tag).toBe(carryTag(caroKey.pub.id, carryDay(NOW)));
+  });
+  it("la etiqueta cambia cada día y aun así se abre hasta que caduca", () => {
+    const DAY = 24 * 3600 * 1000;
+    const hoy = seal();
+    const manana = sealCarry({ recipient: caroKey.pub, senderPkHex: ana.pk, senderSignSecretKey: ana.signSk, id: "m-2", kind: "chat", text: "x", now: NOW + DAY });
+    expect(manana.tag).not.toBe(hoy.tag);
+    expect(openCarry(hoy, [caroKey.secret], caro.pk, sigOf(contactsOfCaro), NOW + 71 * 3600 * 1000)).not.toBeNull();
+    expect(openCarry(manana, [caroKey.secret], caro.pk, sigOf(contactsOfCaro), NOW + DAY + 1000)).not.toBeNull();
   });
   it("relleno: mensajes de 1 y de 400 letras ocupan lo mismo; el máximo con emojis cabe", () => {
     expect(envelopeBytes(seal("a"))).toBe(envelopeBytes(seal("a".repeat(400))));

@@ -67,6 +67,11 @@ export class CarryStore {
     return this.held.has(eid);
   }
 
+  /** Ya lo tengo o ya lo vi (entregado, abierto o tirado). */
+  known(eid: string): boolean {
+    return this.held.has(eid) || this.seen.has(eid);
+  }
+
   /** Quita lo caducado. Devuelve cuántos sobres se tiraron. */
   sweep(now: number): number {
     let n = 0;
@@ -134,6 +139,37 @@ export class CarryStore {
       carry.push({ ...h.env, hops: h.env.hops - 1 });
     }
     return { deliver, carry };
+  }
+
+  /** Para guardar en disco (JSON). */
+  snapshot(): {
+    held: Array<{ env: CarryEnvelope; from: string | null; copiesLeft: number; givenTo: string[] }>;
+    seen: Array<[string, number]>;
+  } {
+    return {
+      held: [...this.held.values()].map((h) => ({ env: { ...h.env }, from: h.from, copiesLeft: h.copiesLeft, givenTo: [...h.givenTo] })),
+      seen: [...this.seen.entries()],
+    };
+  }
+
+  /** Lo contrario de snapshot; descarta filas mal formadas (disco dañado). */
+  restore(
+    held: ReadonlyArray<{ env: unknown; from: unknown; copiesLeft: unknown; givenTo: unknown }>,
+    seen: ReadonlyArray<[unknown, unknown]>,
+  ): void {
+    this.held.clear();
+    this.seen.clear();
+    for (const h of held ?? []) {
+      if (!isWellFormedEnvelope(h?.env)) continue;
+      if (h.from !== null && typeof h.from !== "string") continue;
+      const copies = typeof h.copiesLeft === "number" && Number.isFinite(h.copiesLeft) ? Math.max(0, Math.floor(h.copiesLeft)) : 0;
+      const given = Array.isArray(h.givenTo) ? h.givenTo.filter((x): x is string => typeof x === "string") : [];
+      if (this.held.size >= this.limits.maxEnvelopes) break;
+      this.held.set(h.env.eid, { env: { ...h.env }, from: h.from, copiesLeft: copies, givenTo: new Set(given), bytes: envelopeBytes(h.env) });
+    }
+    for (const s of seen ?? []) {
+      if (Array.isArray(s) && typeof s[0] === "string" && typeof s[1] === "number") this.seen.set(s[0], s[1]);
+    }
   }
 
   /** El sobre llegó a su destino por otro camino (acuse): ya no hace falta llevarlo. */

@@ -79,7 +79,8 @@ export function simulate(cfg: SimConfig, template: CarryEnvelope): SimResult {
     }
   }
   const carries = Array.from({ length: n }, () => r() < cfg.carriers);
-  const tagOf = (i: number) => carryTag(i.toString(16).padStart(32, "0"));
+  // El modelo no simula días: una etiqueta fija por persona basta para el reparto.
+  const tagOf = (i: number) => carryTag(i.toString(16).padStart(32, "0"), 0);
   const stores = Array.from({ length: n }, () => new CarryStore(STORE_LIMITS));
   const T0 = 1_800_000_000_000;
   const HOUR = 3600_000;
