@@ -23,7 +23,7 @@ describe el handshake R4 vigente (KDF, QR y framing sin cambios).
 | KDF de sesión | `"nido-session-v2"` (salt), `"nido-session-key-v1"` (info) | HKDF-SHA512 (RFC 5869), 32 B de salida. Reemplazó el truncado directo de SHA-512 en octubre de 2026 (ver §12). |
 | QR de emparejamiento | `"NIDO1:"` + `{v:2, app:"nido"}` | Raíz de confianza física. |
 | Framing de sesión | `PROTOCOL_VERSION = 1` | `[u32 BE len][nonce 24 B][secretbox(JSON)]`, máx. 256 KiB. |
-| De amigo en amigo (tipo de mensaje de sesión `carry`) | Firmas: `"nido-carry-prekey-v1"` (clave de buzón), `"nido-carry-msg-v1"` (mensaje sellado). KDF: `"nido-carry-v1"` (salt), `"nido-carry-key-v1\|…"` (clave del sobre), `"nido-carry-tag-v1\|<día>"` (etiqueta exterior, cambia cada día). | Sobres que los contactos llevan para otros contactos. Híbrido X25519 + ML-KEM-768. Ver [RELAY.md](../RELAY.md). |
+| De amigo en amigo (tipo de mensaje de sesión `carry`, formato 2) | Firma: `"nido-carry-prekey-v2"` (clave de buzón; los mensajes no van firmados, se autentican con X25519 para que sean negables). KDF: `"nido-carry-v2"` (salt), `"nido-carry-ctx-v2\|…"`, `"nido-carry-hdr-v2\|…"` (clave de cabecera), `"nido-carry-body-v2\|…"` (clave del cuerpo), `"nido-carry-tag-v2\|<día>"` (etiqueta exterior, cambia cada día). | Sobres que los contactos llevan para otros contactos: patrón Noise X con ML-KEM-768 mezclado. Ver [RELAY.md](../RELAY.md). |
 
 **No existe ningún otro contexto de firma ni de KDF en el sistema.** Una firma válida de
 un contexto no puede reutilizarse en otro: los dominios son disjuntos y versionados.

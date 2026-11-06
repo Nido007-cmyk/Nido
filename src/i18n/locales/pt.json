@@ -875,7 +875,7 @@
     "disappearBadge": "temporária",
     "relay": {
       "title": "De amigo em amigo",
-      "body": "Se um contato seu não está por perto, sua mensagem pode chegar por meio de outro contato que conheça vocês dois, sem internet. Ela vai num envelope selado e assinado: quem o leva não pode lê-lo nem alterá-lo.",
+      "body": "Se um contato seu não está por perto, sua mensagem pode chegar por meio de outro contato que conheça vocês dois, sem internet. Ela vai num envelope selado: quem o leva não pode lê-lo nem alterá-lo.",
       "toggle": "Levar mensagens dos meus contatos",
       "off": "Desligado. Suas mensagens ainda podem viajar pelos contatos que o têm ligado.",
       "usage": "Ligado · levando {{count}} envelopes ({{kb}} KB)",

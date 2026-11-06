@@ -12,7 +12,8 @@ import { simulate, type SimConfig } from "./carrySimulation";
 const T = 1_800_000_000_000;
 const s = nacl.sign.keyPair();
 const k = generateCarryPrekey(toHex(nacl.box.keyPair().publicKey), s.secretKey, T);
-const tpl = sealCarry({ recipient: k.pub, senderPkHex: "a".repeat(64), senderSignSecretKey: s.secretKey, id: "t", kind: "chat", text: "x", now: T });
+const sender = nacl.box.keyPair();
+const tpl = sealCarry({ recipient: k.pub, senderPkHex: toHex(sender.publicKey), senderSecretKey: sender.secretKey, id: "t", kind: "chat", text: "x", now: T });
 const base: Omit<SimConfig, "relay" | "seed"> = {
   neighbourhoods: 6,
   perNeighbourhood: 10,

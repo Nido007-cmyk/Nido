@@ -108,7 +108,7 @@ export class CarryStore {
       for (const h of this.held.values()) if (h.from === from) fromSame++;
       if (fromSame >= this.limits.maxPerSource) return "source_full";
     }
-    // La caducidad de fuera no va firmada (la de dentro sí, y es la que
+    // La caducidad de fuera no va autenticada (la de dentro sí, y es la que
     // cuenta para el destinatario): un mensajero podría inflarla para que
     // el sobre ocupe sitio en otros teléfonos. Aquí nunca pasa de 72 h
     // desde que llega, y los saltos nunca pasan del máximo.
