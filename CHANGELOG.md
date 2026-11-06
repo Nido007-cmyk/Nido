@@ -41,9 +41,14 @@ catalog change: the signed catalog keeps offering knowledge-packs-v12.
 - **When a contact is out of range, your message can reach them
   through another contact you both have**, with no internet and no
   server. It travels in a sealed envelope: whoever carries it can't read
-  it, change it or sign as you, and it is padded so its length doesn't
-  show. When it arrives, a signed receipt comes back the same way and
+  it, change it or pretend to be you, and it is padded so its length
+  doesn't show. When it arrives, a receipt comes back the same way and
   your message shows as delivered.
+- **Deniable, like Signal.** The person you write to knows the message is
+  from you, but the envelope is no proof of it for anyone else: they
+  could have made one just like it. (A security review before this
+  release replaced a per-message signature, which would have been such a
+  proof, with this.)
 - **Carrying messages for your contacts is off by default.** Turn it on
   in NIDO › Contacts › "Carry messages for my contacts". A phone carries
   at most 200 envelopes and 2 MB, only from its contacts, and each one
@@ -74,7 +79,8 @@ complete simulated phones exchanging a message and its receipt through
 the middle one, and the camera meter on synthetic video, with the
 phone's Kotlin code giving exactly the same numbers as the reference. The CPR
 camera meter, the beep and the friend-to-friend route still need the
-owner's round on real phones.
+owner's round on real phones. The friend-to-friend cryptography had an internal security
+review before this release, not an outside one yet.
 
 ## 0.1.75-alpha - 2026-11-03
 
