@@ -52,6 +52,7 @@ By default, voice dictation only works with a speech recognizer that runs on you
 - **Display over other apps is blocked**: on Android 12 and later NIDO asks the system to hide other apps' overlays while it is on screen, so nobody can draw a fake button over a confirmation.
 - **Location** (on older Android versions): required by Android to scan for Bluetooth devices. NIDO does not read your location.
 - **Microphone**: voice input, only while you hold dictation open.
+- **Camera, only if you turn it on in CPR practice**: to measure the rate of your chest compressions on a cushion or manikin. Each frame is reduced on the spot to a few numbers (how much the picture moved) and dropped. No image is stored, shown or sent, and the camera turns off when the practice stops.
 - **Notifications**: reminders, and a notice when a NIDO message arrives with the app in the background. The message notice never shows who wrote or what: only "New NIDO message", hidden on the lock screen.
 - **Exact alarms**: so a reminder fires at the time you set, not when Android finds it convenient. Android asks you to allow this in its own settings screen.
 - **"NIDO is answering" service**: a foreground service Android shows while the on-device model finishes an answer with the app in the background; it stops when the answer ends. Declared to Android as a special use, with that sentence as its stated purpose.
@@ -131,6 +132,7 @@ Por defecto, el dictado solo funciona con un reconocedor de voz que trabaja en t
 - **Superposiciones bloqueadas**: en Android 12 y posteriores NIDO pide al sistema ocultar las capas de otras apps mientras está en pantalla, para que nadie pueda dibujar un botón falso sobre una confirmación.
 - **Ubicación** (en versiones antiguas de Android): Android la exige para buscar dispositivos Bluetooth. NIDO no lee tu ubicación.
 - **Micrófono**: entrada por voz, solo mientras dictas.
+- **Cámara, solo si la activas en la práctica de RCP**: para medir el ritmo de tus compresiones sobre un cojín o un maniquí. Cada fotograma se reduce al momento a unos pocos números (cuánto se movió la imagen) y se descarta. Ninguna imagen se guarda, se muestra ni se envía, y la cámara se apaga cuando la práctica se detiene.
 - **Notificaciones**: recordatorios y un aviso cuando llega un mensaje NIDO con la app en segundo plano. El aviso nunca muestra quién escribe ni qué: solo «Nuevo mensaje NIDO», y oculto en la pantalla de bloqueo.
 - **Alarmas exactas**: para que un recordatorio suene a la hora que fijaste, no cuando Android lo crea oportuno. Android te pide permitirlo en su propia pantalla de ajustes.
 - **Servicio «NIDO está respondiendo»**: un servicio en primer plano que Android muestra mientras el modelo del teléfono termina una respuesta con la app en segundo plano; se detiene cuando la respuesta acaba. Declarado ante Android como uso especial, con esa frase como finalidad escrita.

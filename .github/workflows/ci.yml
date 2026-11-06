@@ -71,3 +71,21 @@ jobs:
           npm run notices
           node -e 'const n=require("./src/legal/thirdPartyNotices.json");console.log(`::notice title=Third-party notices::${n.count} packages, ${Object.keys(n.texts).length} distinct license texts, ${n.withoutText.length} without a license file`)'
           git diff --quiet -- src/legal THIRD_PARTY_NOTICES.md || echo "::warning title=Third-party notices::the committed notices differ from node_modules (the third-party-notices workflow updates them)"
+
+  # 0.1.76: el medidor de ritmo de la RCP analiza los fotogramas en Kotlin
+  # (CprMotionCore.kt); sus pruebas de punta a punta corren sobre la misma
+  # lógica en TypeScript (src/cpr/frameMotion.ts). Esta puerta compila el
+  # Kotlin en la JVM y exige que los dos den los mismos números.
+  cpr-motion-parity:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+      - name: kotlinc 2.1.21 (hash fijado)
+        run: |
+          curl -fsSL -o kc.zip https://github.com/JetBrains/kotlin/releases/download/v2.1.21/kotlin-compiler-2.1.21.zip
+          echo "1ba08a8b45da99339a0601134cc037b54cf85e9bc0edbe76dcbd27c2d684a977  kc.zip" | sha256sum -c -
+          unzip -q kc.zip -d "$RUNNER_TEMP"
+      - run: KOTLINC="$RUNNER_TEMP/kotlinc/bin/kotlinc" node --no-warnings scripts/check-cpr-motion-parity.mjs

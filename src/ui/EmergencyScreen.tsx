@@ -21,6 +21,7 @@ import { loadAllPackFacts } from "../rag/packs";
 import { crisisCard, emergencyCard, emergencyRegions, outdatedPackNote, type FactLang, type PackFact, type PackRegion } from "../rag/packFacts";
 import { getEmergencyRegion, setEmergencyRegion } from "../models/settings";
 import { QUICK_GUIDES } from "./emergency/quickGuides";
+import { CprPractice } from "./emergency/CprPractice";
 
 interface Props {
   /** Sends a question to the chat (switches to the Chat tab). */
@@ -44,6 +45,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
   const [code, setCode] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [question, setQuestion] = useState("");
+  const [cprPractice, setCprPractice] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -250,6 +252,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
           <Text style={styles.note}>{t("emergency.describeHint")}</Text>
         </View>
 
+
         <Text style={styles.section} accessibilityRole="header">
           {t("emergency.quickGuides")}
         </Text>
@@ -270,7 +273,23 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
             </Pressable>
           ))}
         </View>
+
+        <Pressable
+          onPress={() => {
+            impact(ImpactFeedbackStyle.Light);
+            setCprPractice(true);
+          }}
+          style={styles.practiceBtn}
+          accessibilityRole="button"
+          accessibilityHint={t("cpr.practice.openHint")}
+          testID="emergency-cpr-practice"
+        >
+          <Text style={styles.practiceBtnTitle}>{t("cpr.practice.open")}</Text>
+          <Text style={styles.practiceBtnHint}>{t("cpr.practice.openHint")}</Text>
+        </Pressable>
       </ScrollView>
+
+      <CprPractice visible={cprPractice} onClose={() => setCprPractice(false)} />
 
       <Modal visible={picking} transparent animationType="slide" onRequestClose={() => setPicking(false)}>
         <View style={styles.sheetBackdrop}>
@@ -401,6 +420,19 @@ const getStyles = (colors: Colors, typography: Typography) =>
     askBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.emerald[500], alignItems: "center", justifyContent: "center" },
     askBtnDisabled: { opacity: 0.45 },
     section: { ...typography.ui.title, color: colors.text.heading, marginTop: 4 },
+    practiceBtn: {
+      marginTop: 12,
+      minHeight: 52,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderWidth: 1,
+      borderColor: colors.border.default,
+      backgroundColor: colors.bg.card,
+      justifyContent: "center",
+    },
+    practiceBtnTitle: { ...typography.ui.titleSm, color: colors.text.primary },
+    practiceBtnHint: { ...typography.ui.caption, color: colors.text.secondary },
     guide: {
       flexGrow: 1,
       flexBasis: "45%",

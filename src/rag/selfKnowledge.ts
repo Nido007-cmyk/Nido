@@ -668,8 +668,10 @@ const ANSWERS: AnswerTable = {
     en:
       `Where ${APP_DISPLAY_NAME} is heading — direction, not promises (planned / ` +
       "in exploration, no dates):\n\n" +
-      `• Phone-to-phone messaging between ${APP_DISPLAY_NAME} devices with no ` +
-      "internet at all: opt-in, encrypted — in development.\n" +
+      // 0.1.76: la mensajería entre teléfonos ya está (desde 0.1.4x); lo
+      // que sigue explorándose es que un mensaje salte por varios.
+      `• Messages that hop through several ${APP_DISPLAY_NAME} phones to reach ` +
+      "someone out of range, with no internet — in exploration.\n" +
       "• Keep your identity, memory and permissions when you change phones — in " +
       "exploration.\n" +
       "• More local models to choose from, with easier switching.\n" +
@@ -681,8 +683,8 @@ const ANSWERS: AnswerTable = {
     es:
       `Hacia dónde va ${APP_DISPLAY_NAME} — dirección, no promesas (planeado / ` +
       "en exploración, sin fechas):\n\n" +
-      `• Mensajería de teléfono a teléfono entre dispositivos ${APP_DISPLAY_NAME} ` +
-      "sin internet: opt-in y cifrada — en desarrollo.\n" +
+      `• Mensajes que saltan por varios teléfonos ${APP_DISPLAY_NAME} para llegar ` +
+      "a alguien fuera de alcance, sin internet — en exploración.\n" +
       "• Conservar tu identidad, memoria y permisos al cambiar de teléfono — en " +
       "exploración.\n" +
       "• Más modelos locales para elegir, con cambio más fácil entre ellos.\n" +
@@ -694,8 +696,8 @@ const ANSWERS: AnswerTable = {
     pt:
       `Para onde ${APP_DISPLAY_NAME} está indo — direção, não promessas ` +
       "(planejado / em exploração, sem datas):\n\n" +
-      `• Mensagens de telefone a telefone entre dispositivos ${APP_DISPLAY_NAME} ` +
-      "sem internet: opt-in e criptografadas — em desenvolvimento.\n" +
+      `• Mensagens que passam por vários telefones ${APP_DISPLAY_NAME} para chegar ` +
+      "a alguém fora de alcance, sem internet — em exploração.\n" +
       "• Manter sua identidade, memória e permissões ao trocar de telefone — em " +
       "exploração.\n" +
       "• Mais modelos locais para escolher, com troca mais fácil entre eles.\n" +

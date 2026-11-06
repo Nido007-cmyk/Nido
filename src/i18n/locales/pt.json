@@ -1897,5 +1897,46 @@
     "usedPart": "Usada na resposta",
     "source": "Fonte original: {{source}}",
     "notFound": "O guia não foi encontrado: o pack pode ter sido removido ou atualizado."
+  },
+  "cpr": {
+    "close": "Fechar a prática de RCP",
+    "chooseMode": "Como você vai fazer?",
+    "modeContinuous": "Só compressões",
+    "mode302": "30 compressões e 2 respirações",
+    "start": "Começar",
+    "stop": "Parar",
+    "howItWorks": "Coloque o telefone no chão, ao lado da almofada. Um bipe soa a cada compressão ({{bpm}} por minuto), a tela não apaga e a voz avisa o que vem. O ritmo e os textos são os do guia NIDO Essencial.",
+    "compressions": "compressões",
+    "ofThirty": "de 30",
+    "breathsNow": "2 respirações",
+    "compressionCount": "Compressão {{count}}",
+    "voiceOn": "Voz: sim",
+    "voiceOff": "Voz: não",
+    "noBeep": "Este telefone não consegue apitar: siga o círculo e a vibração.",
+    "source": "Guia: {{title}} (NIDO Essencial). Fontes: {{sources}}. Verificado em {{verified}}.",
+    "notForBabies": "Esta prática segue o guia de adultos e crianças maiores. Bebês e crianças pequenas têm outro guia: pergunte ao NIDO sobre RCP em bebês. Aprenda RCP em um curso prático e, numa emergência, ligue para o número de emergência.",
+    "voice": {
+      "breaths": "Duas respirações.",
+      "compressions": "Compressões."
+    },
+    "camera": {
+      "toggle": "Medir meu ritmo com a câmera (opcional)",
+      "hint": "Deixe o telefone no chão, ao lado da almofada, com a tela para cima: a câmera frontal vê você de baixo. O NIDO mede seu ritmo e diz \"mais rápido\" ou \"mais devagar\". As imagens são analisadas na hora: não são guardadas nem saem do telefone.",
+      "starting": "Ligando a câmera…",
+      "failed": "Não foi possível usar a câmera. O bipe continua marcando o ritmo.",
+      "looking": "Medindo seu ritmo… (siga o bipe)",
+      "rate": "Seu ritmo: {{bpm}} por minuto"
+    },
+    "cue": {
+      "faster": "Mais rápido.",
+      "slower": "Mais devagar.",
+      "good": "Bom ritmo, continue assim."
+    },
+    "practice": {
+      "open": "Praticar RCP",
+      "openHint": "Com uma almofada ou um manequim; o NIDO pode medir seu ritmo com a câmera",
+      "title": "Prática de RCP",
+      "banner": "Modo prática: faça sobre uma almofada firme ou um manequim, nunca sobre uma pessoa. Se alguém não responde e não respira, feche isto e ligue para o número de emergência."
+    }
   }
 }

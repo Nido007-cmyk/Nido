@@ -1897,5 +1897,46 @@
     "usedPart": "Used in the answer",
     "source": "Original source: {{source}}",
     "notFound": "The guide was not found: the pack may have been removed or updated."
+  },
+  "cpr": {
+    "close": "Close CPR practice",
+    "chooseMode": "How will you do it?",
+    "modeContinuous": "Compressions only",
+    "mode302": "30 compressions and 2 breaths",
+    "start": "Start",
+    "stop": "Stop",
+    "howItWorks": "Put the phone on the floor next to the cushion. A beep sounds on every compression ({{bpm}} per minute), the screen stays on and the voice tells you what's next. The rate and the texts are the NIDO Essentials guide's.",
+    "compressions": "compressions",
+    "ofThirty": "of 30",
+    "breathsNow": "2 breaths",
+    "compressionCount": "Compression {{count}}",
+    "voiceOn": "Voice: on",
+    "voiceOff": "Voice: off",
+    "noBeep": "This phone can't beep: follow the circle and the vibration.",
+    "source": "Guide: {{title}} (NIDO Essentials). Sources: {{sources}}. Checked on {{verified}}.",
+    "notForBabies": "This practice follows the guide for adults and older children. Babies and small children have their own guide: ask NIDO about CPR for babies. Learn CPR in a hands-on course, and in an emergency call your emergency number.",
+    "voice": {
+      "breaths": "Two breaths.",
+      "compressions": "Compressions."
+    },
+    "camera": {
+      "toggle": "Measure my rate with the camera (optional)",
+      "hint": "Leave the phone on the floor next to the cushion, screen up: the front camera sees you from below. NIDO measures your rate and tells you \"faster\" or \"slower\". Frames are analysed on the spot: they are not stored and never leave the phone.",
+      "starting": "Turning the camera on…",
+      "failed": "The camera couldn't be used. The beep keeps marking the rate.",
+      "looking": "Measuring your rate… (follow the beep)",
+      "rate": "Your rate: {{bpm}} per minute"
+    },
+    "cue": {
+      "faster": "Faster.",
+      "slower": "Slower.",
+      "good": "Good rate, keep going."
+    },
+    "practice": {
+      "open": "Practise CPR",
+      "openHint": "On a cushion or a manikin; NIDO can measure your rate with the camera",
+      "title": "CPR practice",
+      "banner": "Practice mode: do it on a firm cushion or a manikin, never on a person. If someone does not respond and is not breathing, close this and call your emergency number."
+    }
   }
 }
