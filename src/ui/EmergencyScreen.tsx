@@ -21,6 +21,7 @@ import { loadAllPackFacts } from "../rag/packs";
 import { crisisCard, emergencyCard, emergencyRegions, outdatedPackNote, type FactLang, type PackFact, type PackRegion } from "../rag/packFacts";
 import { getEmergencyRegion, setEmergencyRegion } from "../models/settings";
 import { QUICK_GUIDES } from "./emergency/quickGuides";
+import { CprCoach } from "./emergency/CprCoach";
 
 interface Props {
   /** Sends a question to the chat (switches to the Chat tab). */
@@ -44,6 +45,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
   const [code, setCode] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [question, setQuestion] = useState("");
+  const [cprOpen, setCprOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -250,6 +252,23 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
           <Text style={styles.note}>{t("emergency.describeHint")}</Text>
         </View>
 
+        <Pressable
+          onPress={() => {
+            impact(ImpactFeedbackStyle.Medium);
+            setCprOpen(true);
+          }}
+          style={styles.cprBtn}
+          accessibilityRole="button"
+          accessibilityHint={t("cpr.openHint")}
+          testID="emergency-cpr-coach"
+        >
+          <NidoIcon name="activity" size={22} color={colors.text.inverse} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cprBtnTitle}>{t("cpr.open")}</Text>
+            <Text style={styles.cprBtnHint}>{t("cpr.openHint")}</Text>
+          </View>
+        </Pressable>
+
         <Text style={styles.section} accessibilityRole="header">
           {t("emergency.quickGuides")}
         </Text>
@@ -271,6 +290,13 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
           ))}
         </View>
       </ScrollView>
+
+      <CprCoach
+        visible={cprOpen}
+        onClose={() => setCprOpen(false)}
+        emergency={first ? { value: first.value, tel: first.tel } : null}
+        onCall={call}
+      />
 
       <Modal visible={picking} transparent animationType="slide" onRequestClose={() => setPicking(false)}>
         <View style={styles.sheetBackdrop}>
@@ -401,6 +427,18 @@ const getStyles = (colors: Colors, typography: Typography) =>
     askBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.emerald[500], alignItems: "center", justifyContent: "center" },
     askBtnDisabled: { opacity: 0.45 },
     section: { ...typography.ui.title, color: colors.text.heading, marginTop: 4 },
+    cprBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      minHeight: 64,
+      borderRadius: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: colors.crimson[500],
+    },
+    cprBtnTitle: { ...typography.ui.titleSm, color: colors.text.inverse },
+    cprBtnHint: { ...typography.ui.caption, color: colors.text.inverse, opacity: 0.9 },
     guide: {
       flexGrow: 1,
       flexBasis: "45%",

@@ -28,6 +28,8 @@ import { PrivateTextInput as TextInput } from "./components/PrivateTextInput";
 import { LinearGradient } from "expo-linear-gradient";
 import { impact, notification, ImpactFeedbackStyle, NotificationFeedbackType } from "../services/haptics";
 import { buildAnswerReportMailto } from "./reportAnswer";
+import { offersCprCoach } from "../cpr/cprCoach";
+import { CprCoach } from "./emergency/CprCoach";
 import { APP_VERSION } from "../security/backup";
 import { NidoIcon } from "./components/icons/NidoIcon";
 import { NidoMascot } from "./components/calm/NidoMascot";
@@ -195,6 +197,8 @@ interface Message {
   calls?: Array<{ value: string; label: string; tel: string }>;
   /** 0.1.59: answer shown verbatim from this NIDO Essentials guide chunk ("Open the full guide"). */
   guideChunkId?: string;
+  /** 0.1.76: the question was about an adult who is not breathing — offer the hands-free CPR assistant. */
+  cprOffer?: boolean;
   /** 0.1.61: where each sentence comes from (src/rag/provenance.ts). In memory only for now. */
   provenance?: SentenceProvenance[];
   /**
@@ -261,6 +265,7 @@ export function ChatScreen({
   const [messages, setMessages] = useState<Message[]>([]);
   // 0.1.59: «Abrir la guía completa» under a verbatim guide answer.
   const [guideReaderChunkId, setGuideReaderChunkId] = useState<string | null>(null);
+  const [cprCoachOpen, setCprCoachOpen] = useState(false);
   const [input, setInput] = useState("");
   const [ready, setReady] = useState(false);
   const [loadStatus, setLoadStatus] = useState(t("chatScreen.initializingCore"));
@@ -998,7 +1003,10 @@ export function ChatScreen({
     // finishAssistantMessage es un upsert y la guarda igual al final.
     await addAssistantDraft(sessionId, assistantId).catch(() => {});
 
-    setMessages((prev) => [...prev, userMsg, { id: assistantId, role: "assistant", text: "" }]);
+    // 0.1.76: una parada cardiaca en un adulto ofrece el asistente de RCP
+    // bajo la respuesta (src/cpr/cprCoach.ts, offersCprCoach).
+    const cprOffer = offersCprCoach(query);
+    setMessages((prev) => [...prev, userMsg, { id: assistantId, role: "assistant", text: "", ...(cprOffer ? { cprOffer } : {}) }]);
     setProcessing({ messageId: assistantId, status: "retrieving" });
 
     // The loaded model answers unless adaptive routing picks another (its telemetry overrides this).
@@ -2568,6 +2576,21 @@ export function ChatScreen({
                   </View>
                 )}
 
+                {item.cprOffer ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityHint={t("cpr.openHint")}
+                    onPress={() => {
+                      impact(ImpactFeedbackStyle.Medium);
+                      setCprCoachOpen(true);
+                    }}
+                    style={[styles.callBtn, { alignSelf: "flex-start", marginTop: 8, backgroundColor: colors.crimson[500], borderColor: colors.crimson[500] }]}
+                    testID="chat-cpr-coach"
+                  >
+                    <Text style={[styles.callBtnText, { color: colors.text.inverse }]}>{t("cpr.open")}</Text>
+                  </Pressable>
+                ) : null}
+
                 {item.guideChunkId ? (
                   <Pressable
                     accessibilityRole="button"
@@ -3005,6 +3028,7 @@ export function ChatScreen({
 
       {keyboardHeight === 0 && <BottomTabBar active="chat" onSelect={selectTab} />}
       <SourceReader chunkId={guideReaderChunkId} onClose={() => setGuideReaderChunkId(null)} />
+      <CprCoach visible={cprCoachOpen} onClose={() => setCprCoachOpen(false)} />
 
       <Drawer
         open={drawerOpen}
