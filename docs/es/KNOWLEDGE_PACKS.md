@@ -137,6 +137,23 @@ guías, 568 trozos); sobre los bytes publicados, la batería de
 cobertura C-03 pasa entera y la recuperación de primeros
 auxilios es 38/38 en la construcción multilingüe.
 `nido-local` se queda en su edición v9.
+Una edición corregida de `nido-esencial` se publica en la
+release `knowledge-packs-v14`: el texto clínico es el texto
+de la v12, sin cambios, y la guía española de hipotermia gana
+preguntas de síntomas en sus metadatos de búsqueda (la clave
+`questions:` de la cabecera de la guía y un comentario de
+pregunta en el apartado de hipotermia), para que una pregunta
+que describe el síntoma sin nombrar la enfermedad (alguien
+con mucho frío que no deja de temblar) llegue a la guía de
+hipotermia. La guía portuguesa ya llevaba una clave de
+síntoma y no necesitó cambios. Construida desde `main` por
+el workflow de paquetes (174 guías, 568 trozos); sobre los
+bytes del producto del CI, la recuperación multilingüe pasa
+202/202 y la de primeros auxilios es 38/38 en la construcción
+multilingüe y 6/6 en la inglesa. El catálogo firmado en
+`main` ofrece esta edición; la app 0.1.76 se queda con la
+edición v12 hasta la próxima versión de la app. `nido-local`
+se queda en su edición v9.
 
 ### Formato v2: preguntas indexadas y datos verificados (0.1.55)
 
