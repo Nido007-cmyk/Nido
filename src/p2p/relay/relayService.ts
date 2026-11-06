@@ -494,6 +494,55 @@ export async function confirmHandoff(peerPk: string, delivered: readonly string[
   });
 }
 
+/** Por qué un mensaje propio no salió en sobre (señal a nivel de servicio, H-5). */
+export type SealOwnResult = "sealed" | "too_long" | "no_prekey" | "store_full" | "error";
+
+/**
+ * Un mensaje mío que no pudo salir directo: si el destinatario me dio una
+ * clave de buzón vigente, sale también en sobre. Como `sealOwn`, pero
+ * diciendo la causa cuando no se sella: con el almacén lleno de sobres
+ * ajenos el mensaje se queda en solo directo, y esa causa («store_full»)
+ * queda distinguible en código y en prueba de las demás, para que una
+ * futura superficie pueda enseñarla. No cambia ningún tope ni el reparto
+ * del almacén.
+ */
+export async function sealOwnDetailed(
+  me: Me,
+  recipientPk: string,
+  id: string,
+  kind: "chat" | "receipt",
+  text: string,
+  now: number,
+): Promise<SealOwnResult> {
+  if (carryTextLength(text) > MAX_CARRY_TEXT) return "too_long";
+  return locked(async () => {
+    const to = recipientPk.toLowerCase();
+    const s = await load();
+    // Sobres míos ya caducados: no hay nada que olvidar.
+    for (const [mid, o] of Object.entries(s.own)) if (o.exp <= now) delete s.own[mid];
+    if (kind === "chat" && s.own[id]) return "sealed";
+    const pk = (s.peers[to]?.prekeys ?? [])
+      .filter((p) => p.expiresAt > now + 3600_000)
+      .sort((a, b) => b.createdAt - a.createdAt)[0];
+    if (!pk) return "no_prekey";
+    let env: CarryEnvelope;
+    try {
+      env = sealCarry({ recipient: pk, senderPkHex: me.pkHex, senderSecretKey: me.idSecretKey, id, kind, text, now });
+    } catch {
+      return "error";
+    }
+    const st = storeFrom(s);
+    const added = st.addOwn(env, now);
+    if (added !== "stored") return added === "full" ? "store_full" : "error";
+    storeInto(s, st);
+    // La marca «viajando por amigos» se pone cuando un contacto se lo lleva (handoffFor).
+    if (kind === "chat") s.own[id] = { eid: env.eid, exp: env.exp };
+    await save(s);
+    bump();
+    return "sealed";
+  });
+}
+
 /**
  * Un mensaje mío que no pudo salir directo: si el destinatario me dio una
  * clave de buzón vigente, sale también en sobre. Devuelve true si se selló.
@@ -506,32 +555,7 @@ export async function sealOwn(
   text: string,
   now: number,
 ): Promise<boolean> {
-  if (carryTextLength(text) > MAX_CARRY_TEXT) return false;
-  return locked(async () => {
-    const to = recipientPk.toLowerCase();
-    const s = await load();
-    // Sobres míos ya caducados: no hay nada que olvidar.
-    for (const [mid, o] of Object.entries(s.own)) if (o.exp <= now) delete s.own[mid];
-    if (kind === "chat" && s.own[id]) return true;
-    const pk = (s.peers[to]?.prekeys ?? [])
-      .filter((p) => p.expiresAt > now + 3600_000)
-      .sort((a, b) => b.createdAt - a.createdAt)[0];
-    if (!pk) return false;
-    let env: CarryEnvelope;
-    try {
-      env = sealCarry({ recipient: pk, senderPkHex: me.pkHex, senderSecretKey: me.idSecretKey, id, kind, text, now });
-    } catch {
-      return false;
-    }
-    const st = storeFrom(s);
-    if (st.addOwn(env, now) !== "stored") return false;
-    storeInto(s, st);
-    // La marca «viajando por amigos» se pone cuando un contacto se lo lleva (handoffFor).
-    if (kind === "chat") s.own[id] = { eid: env.eid, exp: env.exp };
-    await save(s);
-    bump();
-    return true;
-  });
+  return (await sealOwnDetailed(me, recipientPk, id, kind, text, now)) === "sealed";
 }
 
 /** Un mensaje de amigo en amigo que se guardó como nuevo (etiqueta «vía amigos»). */

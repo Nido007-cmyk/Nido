@@ -1,7 +1,7 @@
 // Mensajes de amigo en amigo, fase 2: el servicio (estado en disco, reglas).
 import nacl from "tweetnacl";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { toHex } from "../crypto";
+import { randomNonce, toHex } from "../crypto";
 import { generateCarryPrekey, sealCarry, type CarryEnvelope } from "./carryCrypto";
 import {
   confirmHandoff,
@@ -19,6 +19,7 @@ import {
   relayUsage,
   resetRelay,
   sealOwn,
+  sealOwnDetailed,
   setCarryEnabled,
   setRelayKvForTests,
   type RelayKv,
@@ -373,5 +374,46 @@ describe("el borde de 1.500 en el servicio cuenta puntos de código (H-4)", () =
     expect(await sealOwn(ana, caro.pkHex, "e-751", "chat", emoji.repeat(751), NOW)).toBe(true);
     expect(await sealOwn(ana, caro.pkHex, "e-1500", "chat", emoji.repeat(1500), NOW)).toBe(true);
     expect(await sealOwn(ana, caro.pkHex, "e-1501", "chat", emoji.repeat(1501), NOW)).toBe(false);
+  });
+});
+
+describe("la causa de no sellar se distingue (H-5)", () => {
+  async function helloAnaCaro() {
+    const book = sig(ana, beto, caro);
+    on(ana);
+    const ha = await helloPayload(ana, NOW);
+    on(caro);
+    const hc = await helloPayload(caro, NOW);
+    await receive(ana.pkHex, ha, caro, book, NOW);
+    on(ana);
+    await receive(caro.pkHex, hc, ana, book, NOW);
+    return hc;
+  }
+  it("sin clave de buzón es no_prekey; demasiado largo es too_long; con todo en orden, sealed", async () => {
+    on(ana);
+    expect(await sealOwnDetailed(ana, caro.pkHex, "x-1", "chat", "hola", NOW)).toBe("no_prekey");
+    expect(await sealOwnDetailed(ana, caro.pkHex, "x-2", "chat", "a".repeat(1501), NOW)).toBe("too_long");
+    await helloAnaCaro();
+    expect(await sealOwnDetailed(ana, caro.pkHex, "x-3", "chat", "hola", NOW)).toBe("sealed");
+  });
+  it("con el almacén lleno de sobres ajenos, la causa es store_full (y sealOwn sigue devolviendo false)", async () => {
+    const hc = await helloAnaCaro();
+    const base = sealCarry({ recipient: hc.prekey, senderPkHex: beto.pkHex, senderSecretKey: beto.idSecretKey, id: "bulk", kind: "chat", text: "hola", now: NOW });
+    const sources = ["a", "b", "c", "d", "e", "f", "g"].map((c) => c.repeat(64));
+    const held = Array.from({ length: 210 }, (_, i) => ({
+      env: { ...base, eid: toHex(randomNonce(16)) },
+      from: sources[i % sources.length],
+      copiesLeft: 3,
+      givenTo: [] as string[],
+      arrivedAt: NOW,
+    }));
+    const kvAna = kvs.get(ana.pkHex) as RelayKv;
+    const state = JSON.parse((await kvAna.get("relay_state_v1")) as string) as Record<string, unknown>;
+    state.held = held;
+    await kvAna.setMany([["relay_state_v1", JSON.stringify(state)]]);
+    on(ana);
+    expect((await relayUsage()).envelopes).toBe(200);
+    expect(await sealOwnDetailed(ana, caro.pkHex, "mio-1", "chat", "hola", NOW)).toBe("store_full");
+    expect(await sealOwn(ana, caro.pkHex, "mio-1", "chat", "hola", NOW)).toBe(false);
   });
 });

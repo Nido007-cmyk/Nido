@@ -2292,12 +2292,22 @@ export class NidoMessenger {
   }
 
   /** Sella un mensaje mío para que lo lleven mis contactos, y lo reparte a los conectados. */
+  /** Última causa de que un mensaje propio no saliera en sobre (H-5). */
+  private relaySealMiss: relay.SealOwnResult | null = null;
+
+  /** La causa del último sobre propio que no se selló, si la hubo. */
+  lastRelaySealMiss(): relay.SealOwnResult | null {
+    return this.relaySealMiss;
+  }
+
   private async relaySealOwn(to: string, id: string, kind: "chat" | "receipt", text: string): Promise<void> {
     if (!this.relayOn()) return;
     try {
       const me = await this.relayMe();
       if (!me) return;
-      if (await relay.sealOwn(me, to, id, kind, text, Date.now())) await this.relaySyncAll();
+      const res = await relay.sealOwnDetailed(me, to, id, kind, text, Date.now());
+      this.relaySealMiss = res === "sealed" ? null : res;
+      if (res === "sealed") await this.relaySyncAll();
     } catch {
       /* best-effort */
     }
