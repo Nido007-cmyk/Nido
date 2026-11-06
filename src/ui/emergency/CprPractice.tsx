@@ -3,7 +3,15 @@
  * Copyright (c) 2026 NIDO contributors
  * See LICENSE file for details.
  *
- * Asistente de RCP manos libres (0.1.76).
+ * Práctica de RCP (0.1.76): para aprender y practicar sobre un cojín
+ * firme o un maniquí, nunca sobre una persona.
+ *
+ * Por qué solo práctica: una herramienta que marca el ritmo de la RCP o
+ * la evalúa mientras se reanima a alguien es un producto sanitario
+ * regulado (en EE. UU., «CPR aid», 21 CFR 870.5210; con evaluación del
+ * ritmo, clase II con autorización previa de la FDA). NIDO no se mete
+ * ahí: esto es formación. En una emergencia, NIDO enseña el número de
+ * emergencias y la guía, como siempre. Ver docs/CPR_PRACTICE.md.
  *
  * Pantalla completa para usar con el teléfono en el suelo: un pitido en
  * cada compresión (110 por minuto, módulo nativo nido-cpr), un
@@ -50,28 +58,14 @@ import {
   type RateTrack,
 } from "../../cpr/rateEstimator";
 
-const KEEP_AWAKE_TAG = "nido-cpr-coach";
+const KEEP_AWAKE_TAG = "nido-cpr-practice";
 
 interface Props {
   visible: boolean;
   onClose: () => void;
-  /** Número de emergencias del país elegido, si lo hay (abre el marcador). */
-  emergency?: { value: string; tel: string } | null;
-  onCall?: (tel: string) => void;
-  /**
-   * Modo práctica: sobre un cojín o un maniquí, nunca sobre una persona.
-   * Solo aquí se ofrece el medidor de ritmo por cámara. En EE. UU., un
-   * aparato que da a quien reanima una valoración en tiempo real de su RCP
-   * (ritmo, profundidad…) es un «CPR aid with feedback», clase II
-   * (21 CFR 870.5210(b)), y con software necesita autorización previa de
-   * la FDA. Mientras NIDO no la tenga, la medición se ofrece para
-   * practicar; en una emergencia real el asistente marca el ritmo con el
-   * pitido y la guía, sin evaluar a nadie. Ver docs/CPR_ASSISTANT.md.
-   */
-  practice?: boolean;
 }
 
-export function CprCoach({ visible, onClose, emergency, onCall, practice = false }: Props) {
+export function CprPractice({ visible, onClose }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t, i18n } = useTranslation();
@@ -167,7 +161,7 @@ export function CprCoach({ visible, onClose, emergency, onCall, practice = false
     setRunning(true);
     // La guía, palabra por palabra: dónde van las manos y cómo empujar.
     say(`${guide.compressions[1]} ${guide.compressions[2]}`);
-    if (practice && camWanted && hasCprCamera()) {
+    if (camWanted && hasCprCamera()) {
       setCamState("starting");
       void startCprCamera(onSamples, () => {
         camStop.current?.();
@@ -183,7 +177,7 @@ export function CprCoach({ visible, onClose, emergency, onCall, practice = false
         setCamState("on");
       });
     }
-  }, [camWanted, guide, mode, onSamples, practice, say]);
+  }, [camWanted, guide, mode, onSamples, say]);
 
   // El reloj de la pantalla. El pitido lo lleva el hilo nativo; esto solo
   // pinta, cuenta y habla en los cambios de fase.
@@ -236,7 +230,7 @@ export function CprCoach({ visible, onClose, emergency, onCall, practice = false
       <View style={styles.root}>
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title} accessibilityRole="header">{practice ? t("cpr.practice.title") : t("cpr.title")}</Text>
+            <Text style={styles.title} accessibilityRole="header">{t("cpr.practice.title")}</Text>
             <Text style={styles.subtitle}>{guide.title}</Text>
           </View>
           <Pressable onPress={close} accessibilityRole="button" accessibilityLabel={t("cpr.close")} style={styles.closeBtn} hitSlop={8}>
@@ -245,22 +239,9 @@ export function CprCoach({ visible, onClose, emergency, onCall, practice = false
         </View>
 
         <ScrollView contentContainerStyle={styles.body}>
-          {practice ? (
-            <View style={styles.practiceBanner} accessibilityRole="alert">
-              <Text style={styles.practiceText}>{t("cpr.practice.banner")}</Text>
-            </View>
-          ) : null}
-
-          {!practice && emergency && onCall ? (
-            <Pressable
-              onPress={() => onCall(emergency.tel)}
-              style={styles.callBtn}
-              accessibilityRole="button"
-              accessibilityLabel={t("cpr.callA11y", { number: emergency.value })}
-            >
-                            <Text style={styles.callText}>{t("cpr.call", { number: emergency.value })}</Text>
-            </Pressable>
-          ) : null}
+          <View style={styles.practiceBanner} accessibilityRole="alert">
+            <Text style={styles.practiceText}>{t("cpr.practice.banner")}</Text>
+          </View>
 
           {!running ? (
             <>
@@ -289,7 +270,7 @@ export function CprCoach({ visible, onClose, emergency, onCall, practice = false
                 <Text style={styles.optionHint}>{guide.breaths[0]}</Text>
               </Pressable>
 
-              {practice && hasCprCamera() ? (
+              {hasCprCamera() ? (
                 <Pressable
                   onPress={() => setCamWanted((v) => !v)}
                   style={[styles.option, camWanted && styles.optionOn]}
@@ -396,17 +377,6 @@ function getStyles(colors: Colors, typography: Typography) {
     line: { ...typography.ui.body, color: colors.text.primary },
     note: { ...typography.ui.caption, color: colors.text.dim, marginTop: 8 },
     source: { ...typography.ui.caption, color: colors.text.secondary, marginTop: 20 },
-    callBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      minHeight: 52,
-      borderRadius: 14,
-      backgroundColor: colors.crimson[500],
-      marginTop: 4,
-    },
-    callText: { ...typography.ui.titleSm, color: colors.text.inverse },
     option: {
       borderWidth: 1,
       borderColor: colors.border.default,

@@ -14,7 +14,7 @@
  * (el cuerpo que sube y baja), se remuestrea a 30 Hz, se quita la deriva
  * lenta y se busca el periodo con la autocorrelación entre 60 y 180 por
  * minuto. Se queda el canal con el ritmo más claro. Con poca confianza no se dice nada: la regla
- * del asistente es callar antes que corregir mal (el pitido sigue marcando
+ * de la práctica es callar antes que corregir mal (el pitido sigue marcando
  * el ritmo bueno pase lo que pase).
  */
 

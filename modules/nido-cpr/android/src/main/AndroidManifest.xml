@@ -4,9 +4,9 @@
   See LICENSE file for details. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
   package="expo.modules.nidocpr">
-  <!-- Opcional: el medidor de ritmo de la RCP. Solo se pide al activarlo. -->
+  <!-- Opcional: el medidor de ritmo de la práctica de RCP. Solo se pide al activarlo. -->
   <uses-permission android:name="android.permission.CAMERA" />
-  <!-- Sin cámara, NIDO se instala igual (el asistente de RCP funciona sin ella). -->
+  <!-- Sin cámara, NIDO se instala igual (la práctica de RCP funciona sin ella). -->
   <uses-feature android:name="android.hardware.camera.any" android:required="false" />
   <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>

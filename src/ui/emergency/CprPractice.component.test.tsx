@@ -5,10 +5,11 @@
  */
 
 // @ts-nocheck
-// Asistente de RCP (0.1.76): la pantalla. En emergencia no se ofrece la
-// cámara (un «CPR aid with feedback» es clase II en EE. UU.); en práctica
-// sí, con el aviso de no hacerlo sobre una persona. Empezar arranca el
-// pitido a 110 y la pantalla encendida; parar o cerrar lo apaga todo.
+// Práctica de RCP (0.1.76): la pantalla. Siempre con el aviso de hacerlo
+// sobre un cojín o un maniquí, nunca sobre una persona; sin botón de
+// llamada (no es una herramienta para emergencias). Empezar arranca el
+// pitido a 110; la cámara solo si se activa; parar lo apaga todo.
+// Testing Library 14: render, fireEvent y act son asíncronos.
 import React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 
@@ -76,7 +77,7 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
-import { CprCoach } from "./CprCoach";
+import { CprPractice } from "./CprPractice";
 import { CPR_GUIDE } from "../../cpr/cprCoach";
 
 beforeEach(() => {
@@ -87,58 +88,53 @@ beforeEach(() => {
 });
 afterEach(() => jest.useRealTimers());
 
-describe("asistente de RCP", () => {
-  it("emergencia: la guía tal cual, el número de emergencias y SIN cámara", () => {
-    const onCall = jest.fn();
-    render(<CprCoach visible onClose={() => {}} emergency={{ value: "911", tel: "tel:911" }} onCall={onCall} />);
-    expect(screen.getByText("cpr.title")).toBeTruthy();
+describe("práctica de RCP", () => {
+  it("aviso de práctica, la guía tal cual y ningún botón de llamada", async () => {
+    await render(<CprPractice visible onClose={() => {}} />);
+    expect(screen.getByText("cpr.practice.title")).toBeTruthy();
+    expect(screen.getByText("cpr.practice.banner")).toBeTruthy();
     expect(screen.getByText(`• ${CPR_GUIDE.es.before[0]}`)).toBeTruthy();
-    expect(screen.queryByTestId("cpr-camera-toggle")).toBeNull();
-    fireEvent.press(screen.getByText("cpr.call"));
-    expect(onCall).toHaveBeenCalledWith("tel:911");
+    expect(screen.queryByText("cpr.call")).toBeNull();
   });
 
-  it("empezar pita a 110 sin límite (solo compresiones); parar lo apaga", () => {
-    render(<CprCoach visible onClose={() => {}} />);
-    fireEvent.press(screen.getByTestId("cpr-start"));
+  it("empezar pita a 110 sin límite (solo compresiones); parar lo apaga", async () => {
+    await render(<CprPractice visible onClose={() => {}} />);
+    await fireEvent.press(screen.getByTestId("cpr-start"));
     expect(beeps).toEqual([[110, 0]]);
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(1200);
     });
-    expect(screen.getByTestId("cpr-stop")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("cpr-stop"));
+    await fireEvent.press(screen.getByTestId("cpr-stop"));
     expect(stops).toContain("beep");
     expect(screen.getByTestId("cpr-start")).toBeTruthy();
   });
 
-  it("30:2: pita 30 y vuelve a pitar tras la pausa de respiraciones", () => {
-    render(<CprCoach visible onClose={() => {}} />);
-    fireEvent.press(screen.getByText("cpr.mode302"));
-    fireEvent.press(screen.getByTestId("cpr-start"));
+  it("30:2: pita 30 y vuelve a pitar tras la pausa de respiraciones", async () => {
+    await render(<CprPractice visible onClose={() => {}} />);
+    await fireEvent.press(screen.getByText("cpr.mode302"));
+    await fireEvent.press(screen.getByTestId("cpr-start"));
     expect(beeps).toEqual([[110, 30]]);
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(30 * (60000 / 110) + 6000 + 200);
     });
     expect(beeps).toEqual([[110, 30], [110, 30]]);
   });
 
-  it("práctica: aviso de no hacerlo sobre una persona y cámara opcional", async () => {
-    render(<CprCoach visible onClose={() => {}} practice emergency={{ value: "911", tel: "tel:911" }} onCall={() => {}} />);
-    expect(screen.getByText("cpr.practice.title")).toBeTruthy();
-    expect(screen.getByText("cpr.practice.banner")).toBeTruthy();
-    expect(screen.queryByText("cpr.call")).toBeNull();
-    fireEvent.press(screen.getByTestId("cpr-camera-toggle"));
+  it("la cámara solo se enciende si se activa, y se apaga al parar", async () => {
+    await render(<CprPractice visible onClose={() => {}} />);
+    await fireEvent.press(screen.getByTestId("cpr-camera-toggle"));
+    await fireEvent.press(screen.getByTestId("cpr-start"));
     await act(async () => {
-      fireEvent.press(screen.getByTestId("cpr-start"));
+      await Promise.resolve();
     });
     expect(cams).toEqual(["start"]);
-    fireEvent.press(screen.getByTestId("cpr-stop"));
+    await fireEvent.press(screen.getByTestId("cpr-stop"));
     expect(cams).toEqual(["start", "stop"]);
   });
 
-  it("par: en práctica sin activar la cámara, la cámara no se enciende", () => {
-    render(<CprCoach visible onClose={() => {}} practice />);
-    fireEvent.press(screen.getByTestId("cpr-start"));
+  it("par: sin activar la cámara, la cámara no se enciende", async () => {
+    await render(<CprPractice visible onClose={() => {}} />);
+    await fireEvent.press(screen.getByTestId("cpr-start"));
     expect(cams).toEqual([]);
   });
 });

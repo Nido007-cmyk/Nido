@@ -1,4 +1,4 @@
-// Asistente de RCP (0.1.76): el texto es el de la guía, palabra por
+// Práctica de RCP (0.1.76): el texto es el de la guía, palabra por
 // palabra; el ritmo está dentro de lo que dice la guía; el conteo 30:2 y
 // el aviso de turnarse caen donde deben.
 import { readFileSync } from "node:fs";
@@ -12,7 +12,6 @@ import {
   cprLangOf,
   cprPhaseAt,
   formatElapsed,
-  offersCprCoach,
   switchReminderDue,
   type CprLang,
 } from "./cprCoach";
@@ -38,7 +37,7 @@ describe("el texto es el de la guía NIDO Esencial, palabra por palabra", () => 
       for (const line of g.breaths) expect(md).toContain(`- ${line}\n`);
       for (const line of g.stop) expect(md).toContain(`- ${line}`);
       expect(md).toContain(g.switchLine);
-      // Nada se queda fuera de las secciones que enseña el asistente.
+      // Nada se queda fuera de las secciones que enseña la práctica.
       const section = (h: string) => md.split(`## ${h}\n`)[1].split("\n## ")[0].split("\n").filter((l) => /^(?:- |\d+\. )/.test(l));
       expect(section(g.headings.before)).toHaveLength(g.before.length);
       expect(section(g.headings.compressions)).toHaveLength(g.compressions.length);
@@ -94,23 +93,8 @@ describe("aviso de turnarse cada 2 minutos", () => {
   });
 });
 
-describe("cuándo se ofrece en el chat", () => {
-  it("adultos en es/en/pt", () => {
-    for (const q of [
-      "mi padre se desplomó y no respira",
-      "cómo hacer rcp",
-      "my dad collapsed and is not breathing",
-      "how do I do CPR",
-      "minha mãe desmaiou e não respira",
-      "parada cardíaca, o que faço",
-    ]) expect(offersCprCoach(q)).toBe(true);
-  });
-  it("par: bebés y niños pequeños tienen otra guía; otras preguntas no", () => {
-    for (const q of ["mi bebé no respira", "my baby is not breathing", "o bebê não respira", "rcp a un recién nacido", "cómo hago una tortilla", "me duele la cabeza"]) {
-      expect(offersCprCoach(q)).toBe(false);
-    }
-  });
-  it("utilidades", () => {
+describe("utilidades", () => {
+  it("formato del tiempo y lengua", () => {
     expect(formatElapsed(187_400)).toBe("03:07");
     expect(cprLangOf("pt-BR")).toBe("pt");
     expect(cprLangOf("fr")).toBe("en");

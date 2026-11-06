@@ -1899,18 +1899,13 @@
     "notFound": "The guide was not found: the pack may have been removed or updated."
   },
   "cpr": {
-    "title": "CPR assistant",
-    "close": "Close the CPR assistant",
-    "open": "Hands-free CPR assistant",
-    "openHint": "A beep at 110 per minute, counting and the guide read aloud",
-    "call": "Call {{number}}",
-    "callA11y": "Call {{number}}: opens the dialer with the number typed in",
+    "close": "Close CPR practice",
     "chooseMode": "How will you do it?",
     "modeContinuous": "Compressions only",
     "mode302": "30 compressions and 2 breaths",
     "start": "Start",
     "stop": "Stop",
-    "howItWorks": "Put the phone on the floor next to you. A beep sounds on every compression ({{bpm}} per minute), the screen stays on and the voice tells you what's next. The rate and the texts are the NIDO Essentials guide's.",
+    "howItWorks": "Put the phone on the floor next to the cushion. A beep sounds on every compression ({{bpm}} per minute), the screen stays on and the voice tells you what's next. The rate and the texts are the NIDO Essentials guide's.",
     "compressions": "compressions",
     "ofThirty": "of 30",
     "breathsNow": "2 breaths",
@@ -1919,7 +1914,7 @@
     "voiceOff": "Voice: off",
     "noBeep": "This phone can't beep: follow the circle and the vibration.",
     "source": "Guide: {{title}} (NIDO Essentials). Sources: {{sources}}. Checked on {{verified}}.",
-    "notForBabies": "Babies and small children have their own guide: ask NIDO about CPR for babies.",
+    "notForBabies": "This practice follows the guide for adults and older children. Babies and small children have their own guide: ask NIDO about CPR for babies. Learn CPR in a hands-on course, and in an emergency call your emergency number.",
     "voice": {
       "breaths": "Two breaths.",
       "compressions": "Compressions."
@@ -1941,7 +1936,7 @@
       "open": "Practise CPR",
       "openHint": "On a cushion or a manikin; NIDO can measure your rate with the camera",
       "title": "CPR practice",
-      "banner": "Practice mode: do it on a firm cushion or a manikin, never on a person. If someone is not breathing, close this and use the CPR assistant."
+      "banner": "Practice mode: do it on a firm cushion or a manikin, never on a person. If someone does not respond and is not breathing, close this and call your emergency number."
     }
   }
 }

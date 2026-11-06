@@ -27,7 +27,7 @@
 | `SCHEDULE_EXACT_ALARM` | Reminders at the exact time. | Allowed for reminders. Off by default on Android 14+; the user grants it. |
 | `READ_CONTACTS` | Calling or finding a contact by name. | Personal data. It needs a prominent in-app disclosure before the system prompt, and it has to be in the privacy policy. **Not yet checked on a device: verify the disclosure screen exists.** |
 | `RECORD_AUDIO` | Voice dictation (on-device recognizer by default). | Normal runtime permission. |
-| `CAMERA` | Optional rate meter in CPR practice (modules/nido-cpr; not offered in the emergency assistant): frames are reduced to motion numbers in memory and dropped. Asked only when the user turns it on. `android.hardware.camera` declared not required. | Normal runtime permission. Must be listed in the privacy policy (done) and in Data safety as "not collected". |
+| `CAMERA` | Optional rate meter in CPR practice (modules/nido-cpr), for practising on a cushion or manikin: frames are reduced to motion numbers in memory and dropped. Asked only when the user turns it on. `android.hardware.camera` declared not required. | Normal runtime permission. Must be listed in the privacy policy (done) and in Data safety as "not collected". |
 | `READ_CALENDAR` / `WRITE_CALENDAR` | Calendar events the user asks for. | Normal runtime permissions. |
 | `ACCESS_FINE_LOCATION` | Only for Bluetooth discovery on Android 11 and older (`maxSdkVersion="30"`, plugins/with-bluetooth-never-for-location.js). | The Play location declaration should say "Bluetooth discovery on Android 11 and older only; NIDO never reads the location". |
 

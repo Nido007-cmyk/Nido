@@ -3,7 +3,9 @@
  * Copyright (c) 2026 NIDO contributors
  * See LICENSE file for details.
  *
- * Asistente de RCP manos libres (0.1.76) — el núcleo puro, sin React.
+ * Práctica de RCP (0.1.76) — el núcleo puro, sin React. Es una
+ * herramienta para aprender y practicar sobre un cojín o un maniquí, no
+ * para usarla sobre una persona (ver docs/CPR_PRACTICE.md).
  *
  * Qué hace: marca el ritmo de las compresiones con un pitido (110 por
  * minuto, dentro del 100–120 de la guía), cuenta 30 compresiones y la
@@ -15,9 +17,8 @@
  * la guía cambia y esto no, la prueba falla. Ningún modelo de IA escribe
  * nada aquí.
  *
- * Qué NO hace: no es para bebés ni niños pequeños (su guía es otra; el
- * asistente no se ofrece cuando el mensaje habla de un bebé) y no mide la
- * profundidad ni el ritmo real de quien comprime.
+ * Qué NO hace: no sigue la guía de bebés ni de niños pequeños (es otra),
+ * y no mide la profundidad de las compresiones.
  */
 
 export type CprLang = "es" | "en" | "pt";
@@ -219,18 +220,4 @@ export function switchReminderDue(nowMs: number, mode: CprMode, lastAnnouncedSlo
 export function formatElapsed(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-}
-
-/**
- * ¿Pide el mensaje ayuda con una parada cardiaca en un adulto? Entonces el
- * chat ofrece el asistente bajo la respuesta. Los bebés y los niños
- * pequeños tienen otra guía (otra profundidad, otras manos): no se ofrece.
- */
-const ARREST_RE =
-  /(?:\bno\s+respira|\bdej[óo]\s+de\s+respirar|\bsin\s+respirar|\bnot\s+breathing|\bisn'?t\s+breathing|\bstopped\s+breathing|\bn[ãa]o\s+(?:est[áa]\s+)?respira|\bparou\s+de\s+respirar|\bparo\s+card[ií]aco|\bparada\s+card[ií]aca|\bcardiac\s+arrest|\bheart\s+stopped|\b(?:hacer|haz|hago|dar)\s+(?:la\s+)?rcp\b|\b(?:do|doing|give|start)\s+cpr\b|\bcpr\b|\brcp\b|\breanimaci[óo]n\b|\breanima[çc][ãa]o\b|\bcompresiones\s+(?:en\s+el\s+|del\s+)?pecho|\bchest\s+compressions\b|\bcompress[õo]es\s+no\s+peito)/iu;
-const INFANT_RE =
-  /(?<![\p{L}])(?:beb[eéê]s?|baby|babies|infant\p{L}*|lactantes?|reci[eé]n\s+nacid[oa]s?|rec[ée]m[- ]nascid[oa]s?|newborns?|ni[ñn][oa]s?\s+peque[ñn][oa]s?|toddlers?|crian[çc]as?\s+pequenas?)(?![\p{L}])/iu;
-
-export function offersCprCoach(text: string): boolean {
-  return ARREST_RE.test(text) && !INFANT_RE.test(text);
 }

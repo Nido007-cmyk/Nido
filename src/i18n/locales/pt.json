@@ -1899,18 +1899,13 @@
     "notFound": "O guia não foi encontrado: o pack pode ter sido removido ou atualizado."
   },
   "cpr": {
-    "title": "Assistente de RCP",
-    "close": "Fechar o assistente de RCP",
-    "open": "Assistente de RCP mãos livres",
-    "openHint": "Bipe a 110 por minuto, contagem e o guia lido em voz alta",
-    "call": "Ligar para {{number}}",
-    "callA11y": "Ligar para {{number}}: abre o discador com o número digitado",
+    "close": "Fechar a prática de RCP",
     "chooseMode": "Como você vai fazer?",
     "modeContinuous": "Só compressões",
     "mode302": "30 compressões e 2 respirações",
     "start": "Começar",
     "stop": "Parar",
-    "howItWorks": "Coloque o telefone no chão, ao seu lado. Um bipe soa a cada compressão ({{bpm}} por minuto), a tela não apaga e a voz avisa o que vem. O ritmo e os textos são os do guia NIDO Essencial.",
+    "howItWorks": "Coloque o telefone no chão, ao lado da almofada. Um bipe soa a cada compressão ({{bpm}} por minuto), a tela não apaga e a voz avisa o que vem. O ritmo e os textos são os do guia NIDO Essencial.",
     "compressions": "compressões",
     "ofThirty": "de 30",
     "breathsNow": "2 respirações",
@@ -1919,7 +1914,7 @@
     "voiceOff": "Voz: não",
     "noBeep": "Este telefone não consegue apitar: siga o círculo e a vibração.",
     "source": "Guia: {{title}} (NIDO Essencial). Fontes: {{sources}}. Verificado em {{verified}}.",
-    "notForBabies": "Bebês e crianças pequenas têm outro guia: pergunte ao NIDO sobre RCP em bebês.",
+    "notForBabies": "Esta prática segue o guia de adultos e crianças maiores. Bebês e crianças pequenas têm outro guia: pergunte ao NIDO sobre RCP em bebês. Aprenda RCP em um curso prático e, numa emergência, ligue para o número de emergência.",
     "voice": {
       "breaths": "Duas respirações.",
       "compressions": "Compressões."
@@ -1941,7 +1936,7 @@
       "open": "Praticar RCP",
       "openHint": "Com uma almofada ou um manequim; o NIDO pode medir seu ritmo com a câmera",
       "title": "Prática de RCP",
-      "banner": "Modo prática: faça sobre uma almofada firme ou um manequim, nunca sobre uma pessoa. Se alguém não estiver respirando, feche isto e use o assistente de RCP."
+      "banner": "Modo prática: faça sobre uma almofada firme ou um manequim, nunca sobre uma pessoa. Se alguém não responde e não respira, feche isto e ligue para o número de emergência."
     }
   }
 }

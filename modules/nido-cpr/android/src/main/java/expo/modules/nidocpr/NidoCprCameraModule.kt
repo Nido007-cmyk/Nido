@@ -30,16 +30,16 @@ import expo.modules.kotlin.modules.ModuleDefinition
 import kotlin.math.abs
 
 /**
- * Medidor de ritmo de la RCP por cámara (0.1.76), opcional.
+ * Medidor de ritmo por cámara de la práctica de RCP (0.1.76), opcional.
  *
- * El teléfono, apoyado de pie a un par de metros, mira a quien hace las
- * compresiones con la cámara frontal. Cada fotograma (baja resolución,
+ * El teléfono, en el suelo junto al cojín o maniquí, mira con la cámara
+ * frontal a quien practica las compresiones. Cada fotograma (baja resolución,
  * solo la luminancia) se reduce en CprMotionCore a 36 números: cuánto se
  * desplazó cada bloque de una rejilla de 4 × 3 respecto al fotograma
  * anterior. A JS solo llegan esos números, en lotes;
  * src/cpr/rateEstimator.ts calcula el ritmo. Ningún fotograma se guarda, se copia ni sale del teléfono: el
  * búfer se cierra en cuanto se mide. Sin vista previa: la pantalla es la
- * del asistente.
+ * de la práctica.
  */
 class NidoCprCameraModule : Module() {
   private val lock = Any()

@@ -15,14 +15,14 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 /**
- * El pitido del asistente de RCP manos libres (0.1.76).
+ * El pitido de la práctica de RCP (0.1.76).
  *
  * Un tono corto en cada compresión, programado en su propio hilo con
  * tiempos absolutos (inicio + k × intervalo), así el ritmo no se desvía
  * aunque el hilo de JS esté ocupado. ToneGenerator: sin ficheros de audio
  * ni dependencias. Va por el canal de alarma, que suena aunque el teléfono
- * esté en silencio para multimedia: en una parada cardiaca el pitido tiene
- * que oírse con el teléfono en el suelo.
+ * esté en silencio para multimedia: con el teléfono en el suelo tiene que
+ * oírse por encima del esfuerzo.
  */
 class NidoMetronomeModule : Module() {
   private val lock = Any()
