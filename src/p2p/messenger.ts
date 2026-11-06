@@ -26,6 +26,7 @@ import {
   toHex,
 } from "./crypto";
 import { decodePairingPayload, encodePairingPayload } from "./pairing";
+import * as relay from "./relay/relayService";
 import {
   deriveAckSessionTag,
   FrameReassembler,
@@ -633,6 +634,11 @@ export class NidoMessenger {
     if (!identity) {
       const kp = generateIdentity();
       await saveIdentity(kp.publicKey, kp.secretKey, name);
+      try {
+        await relay.resetRelay();
+      } catch {
+        /* best-effort: el estado viejo además no sirve (otra identidad) */
+      }
       this.assertLive();
       identity = { publicKey: kp.publicKey, secretKey: kp.secretKey, name };
       // F-2: la firma nace con la identidad; su ausencia futura = KEY_LOSS.
@@ -1141,6 +1147,10 @@ export class NidoMessenger {
       ttlV: timer.v,
     });
     const sent = await this.attemptOutboundSend(id);
+    // De amigo en amigo: si no salió directo, también va en sobre sellado
+    // por los contactos que lo lleven. Nunca en conversaciones con mensajes
+    // temporales (la copia cifrada quedaría hasta 72 h en otros teléfonos).
+    if (!sent && timer.sec === 0) void this.relaySealOwn(contact.pkHex, id, "chat", clean);
     return { id, queued: !sent };
   }
 
@@ -1227,7 +1237,11 @@ export class NidoMessenger {
     this.assertLive();
     if (!msg || (msg.status !== "queued" && msg.status !== "sent")) return false;
     this.cancelAckTimer(id);
-    return markOutboundFailed(id, "user_cancelled");
+    const cancelled = await markOutboundFailed(id, "user_cancelled");
+    // De amigo en amigo: este teléfono deja de repartir su sobre. Las copias
+    // que ya lleva algún contacto pueden llegar aún (docs/RELAY.md).
+    if (cancelled) await relay.forgetOwn(id).catch(() => {});
+    return cancelled;
   }
 
   /**
@@ -1551,6 +1565,15 @@ export class NidoMessenger {
       await this.flushOutbox(key);
       return env;
     }
+    if (env.type === "carry") {
+      // Mensajes de amigo en amigo: clave de buzón del contacto y sobres
+      // sellados (para mí, o para llevar si lo activé). Nunca va al inbox
+      // tal cual; lo que es para mí se guarda como mensaje normal.
+      this.assertLive();
+      await this.handleCarry(key, env.payload);
+      await this.flushOutbox(key);
+      return env;
+    }
     if (session) await this.recordV5Capability(key, session);
     if (env.type === "session_confirm") {
       // Confirmación de sesión: no va a la bandeja. El peer demostró
@@ -1838,6 +1861,12 @@ export class NidoMessenger {
   private async transitionToDelivered(id: string): Promise<void> {
     this.cancelAckTimer(id);
     await markOutboundDelivered(id);
+    // Llegó: su sobre (si lo había) deja de viajar desde aquí.
+    try {
+      await relay.forgetOwn(id);
+    } catch {
+      /* best-effort */
+    }
   }
 
   /* ---------- 0.1.46: mensajes temporales ---------- */
@@ -2142,6 +2171,157 @@ export class NidoMessenger {
     }
   }
 
+  /* ---------- Mensajes de amigo en amigo (src/p2p/relay, docs/RELAY.md) ---------- */
+
+  /**
+   * Generación del relay ya sincronizada con cada sesión. Solo se vuelve a
+   * mirar el estado del relay para una sesión cuando cambió algo (un sobre
+   * nuevo, una clave de buzón, el ajuste): un frame normal no lo carga.
+   */
+  private relaySynced = new WeakMap<P2PSession, number>();
+
+  private relayOn(): boolean {
+    return isFeatureEnabled("p2p.relay");
+  }
+
+  private async relayMe(): Promise<relay.Me | null> {
+    if (!this.myPk) return null;
+    const signing = await getSigningKeypair();
+    return { pkHex: toHex(this.myPk).toLowerCase(), signSecretKey: signing.secretKey };
+  }
+
+  /**
+   * Firma Ed25519 (del QR) de cada contacto vivo y no revocado, para
+   * verificar sobres y claves de buzón. Un contacto revocado no puede
+   * escribirme ni por amigos, ni darme sobres, ni recibir los míos.
+   */
+  private async relaySigBook(): Promise<(pk: string) => string | null> {
+    const map = new Map<string, string>();
+    for (const c of await listContacts()) {
+      if (!c.sigPkHex || c.supersededBy !== null) continue;
+      if (await this.isRevoked(c.pkHex)) continue;
+      map.set(c.pkHex.toLowerCase(), c.sigPkHex.toLowerCase());
+    }
+    return (pk) => map.get(pk.toLowerCase()) ?? null;
+  }
+
+  /**
+   * Sincroniza una sesión viva: mi saludo (si hace falta) y los sobres que
+   * le tocan, en tandas. Solo se confirman (se borran o gastan copia) los
+   * sobres que salieron de verdad; si el envío se corta, siguen aquí.
+   */
+  private async relaySync(key: string, session: P2PSession): Promise<void> {
+    if (!this.relayOn() || !this.myPk) return;
+    const gen = relay.relayGeneration();
+    if (this.relaySynced.get(session) === gen) return;
+    this.relaySynced.set(session, gen);
+    try {
+      const me = await this.relayMe();
+      if (!me) return;
+      const now = Date.now();
+      const hello = await relay.helloFor(me, now, key);
+      const plan = await relay.handoffFor(key, now);
+      this.assertLive();
+      if (!hello.needed && plan.envelopes.length === 0) return;
+      const parts = relay.batches(plan.envelopes);
+      if (parts.length === 0) parts.push([]);
+      const deliveredSet = new Set(plan.delivered);
+      for (let i = 0; i < parts.length; i++) {
+        const put = parts[i];
+        const payload: Record<string, unknown> = put.length ? { put } : {};
+        if (i === 0 && hello.needed) Object.assign(payload, { prekey: hello.prekey, carries: hello.carries });
+        if (Object.keys(payload).length === 0) continue;
+        this.assertLive();
+        if (this.sessions.get(key) !== session) throw new Error("sesión sustituida");
+        const env = makeEnvelope("carry", newId(), this.myPk, key, payload);
+        await this.transport.sendFrame(key, session.pack(env));
+        if (i === 0 && hello.needed) await relay.markHelloSent(key, hello, now);
+        const eids = put.map((e) => e.eid);
+        await relay.confirmHandoff(
+          key,
+          eids.filter((e) => deliveredSet.has(e)),
+          eids.filter((e) => !deliveredSet.has(e)),
+        );
+      }
+    } catch {
+      // Nunca afecta a la mensajería directa; se reintenta en el próximo frame.
+      this.relaySynced.delete(session);
+    }
+  }
+
+  /** Algo cambió en el relay: sincroniza todas las sesiones vivas. */
+  private async relaySyncAll(): Promise<void> {
+    for (const [key, session] of [...this.sessions.entries()]) {
+      if (!session.isPeerLive || !this.transport.available) continue;
+      if (session.holdForV5) {
+        // La sesión espera su primer frame v5: se sincroniza al vaciar la
+        // cola cuando acabe la espera (flushOutbox → relaySync).
+        this.scheduleHoldFlush(key, session);
+        continue;
+      }
+      await this.relaySync(key, session);
+    }
+  }
+
+  /** Sella un mensaje mío para que lo lleven mis contactos, y lo reparte a los conectados. */
+  private async relaySealOwn(to: string, id: string, kind: "chat" | "receipt", text: string): Promise<void> {
+    if (!this.relayOn()) return;
+    try {
+      const me = await this.relayMe();
+      if (!me) return;
+      if (await relay.sealOwn(me, to, id, kind, text, Date.now())) await this.relaySyncAll();
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  private async handleCarry(key: string, payload: unknown): Promise<void> {
+    if (!this.relayOn()) return;
+    let res: relay.CarryIncoming;
+    try {
+      const me = await this.relayMe();
+      if (!me) return;
+      res = await relay.receive(key, payload, me, await this.relaySigBook(), Date.now());
+    } catch {
+      return;
+    }
+    this.assertLive();
+    for (const c of res.chats) {
+      const from = c.from.toLowerCase();
+      try {
+        // El mismo message_id que usaría el envío directo: si luego llega
+        // también directo, se reconoce como repetido y solo se re-confirma.
+        let isNew = false;
+        if (!(await messageExists(c.id))) {
+          isNew = await saveMessage({ id: c.id, dir: "in", peerPk: from, type: "chat", text: c.text, status: "delivered", ts: c.ts });
+        }
+        this.assertLive();
+        if (isNew) {
+          await relay.markArrivedViaFriends(c.id).catch(() => {});
+          this.signalIncoming(from, "chat");
+        }
+      } catch {
+        // No se pudo guardar: sin acuse (quien lo escribió lo seguirá intentando).
+        continue;
+      }
+      // Acuse firmado de vuelta, también de amigo en amigo (solo tras guardar).
+      await this.relaySealOwn(from, newId(), "receipt", c.id);
+    }
+    for (const r of res.receipts) {
+      try {
+        const row = await getOutboundMessage(r.id);
+        if (!row || row.peerPk.toLowerCase() !== r.from.toLowerCase() || row.type !== "chat") continue;
+        if (row.status === "queued" || row.status === "sent" || (row.status === "failed" && row.failureReason === "timeout")) {
+          await this.transitionToDelivered(row.id);
+        } else {
+          await relay.forgetOwn(row.id);
+        }
+      } catch {
+        /* best-effort */
+      }
+    }
+  }
+
   private async flushOutbox(peerPkHex: string): Promise<void> {
     const key = peerPkHex.toLowerCase();
     const session = this.sessions.get(key);
@@ -2155,6 +2335,8 @@ export class NidoMessenger {
     }
     // 0.1.46: aviso de temporizador pendiente (el usuario lo cambió).
     await this.sendPendingTimerNotice(key, session);
+    // De amigo en amigo: mi clave de buzón y los sobres que le tocan (solo si cambió algo).
+    await this.relaySync(key, session);
     const outbox = await getOutbox();
     this.assertLive();
     if (!this.myPk) return;

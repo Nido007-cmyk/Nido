@@ -873,6 +873,16 @@
     "disappearSet": "Disappearing messages: {{value}}",
     "disappearHint": "New messages in this chat delete themselves on both phones. For you the time counts from sending; for your contact, from when they see it. Your contact's NIDO takes this setting with your next message (older versions of NIDO ignore it). Nobody can stop someone from photographing the screen with another camera.",
     "disappearBadge": "disappearing",
+    "relay": {
+      "title": "Friend to friend",
+      "body": "If a contact of yours isn't nearby, your message can reach them through another contact you both know, with no internet. It travels in a sealed, signed envelope: whoever carries it can't read it or change it.",
+      "toggle": "Carry messages for my contacts",
+      "off": "Off. Your messages can still travel through contacts who have it on.",
+      "usage": "On · carrying {{count}} envelopes ({{kb}} KB)",
+      "privacy": "Only from contacts, at most 200 envelopes and 2 MB, and each envelope is deleted after 72 hours or once delivered. Disappearing messages never travel this way.",
+      "viaFriends": "via friends",
+      "travelling": "travelling via friends"
+    },
     "disappearShort": "Timer: {{value}}",
     "v5Active": "new key per message",
     "v5Missing": "This connection is not using per-message keys, although this contact used them before. If they did not turn it off, someone may have blocked it: reconnect, and check with them in person.",

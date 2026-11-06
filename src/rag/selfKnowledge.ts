@@ -576,7 +576,11 @@ const ANSWERS: AnswerTable = {
       "confirm before anything happens.\n" +
       `• Phone-to-phone: pair another ${APP_DISPLAY_NAME} device by scanning its QR ` +
       "code and exchange encrypted messages. The Bluetooth link is still being " +
-      "proven on real hardware, so treat this as experimental.\n\n" +
+      "proven on real hardware, so treat this as experimental.\n" +
+      "• Friend to friend (new, experimental): if a contact is out of range, a " +
+      "message can travel through another contact you both know, sealed so the " +
+      "one carrying it can't read or change it. Carrying other people's messages " +
+      "is off unless you turn it on (NIDO › Contacts).\n\n" +
       "I ask for confirmation before any sensitive action.",
     es:
       "Esto es lo que puedo hacer — todo funciona en este dispositivo, sin conexión:\n\n" +
@@ -594,7 +598,11 @@ const ANSWERS: AnswerTable = {
       "de que pase nada.\n" +
       `• De teléfono a teléfono: empareja otro dispositivo ${APP_DISPLAY_NAME} ` +
       "escaneando su código QR e intercambia mensajes cifrados. El enlace Bluetooth " +
-      "aún está en pruebas en hardware real, así que trátalo como experimental.\n\n" +
+      "aún está en pruebas en hardware real, así que trátalo como experimental.\n" +
+      "• De amigo en amigo (nuevo, experimental): si un contacto no está al " +
+      "alcance, un mensaje puede llegarle a través de otro contacto que conozca a " +
+      "los dos, en un sobre sellado que quien lo lleva no puede leer ni cambiar. " +
+      "Llevar mensajes de otros está apagado salvo que lo actives (NIDO › Contactos).\n\n" +
       "Pido confirmación antes de cualquier acción sensible.",
     pt:
       "Isto é o que posso fazer — tudo roda neste dispositivo, offline:\n\n" +
@@ -612,7 +620,11 @@ const ANSWERS: AnswerTable = {
       "de qualquer coisa acontecer.\n" +
       `• De telefone a telefone: emparelhe outro dispositivo ${APP_DISPLAY_NAME} ` +
       "escaneando o código QR e troque mensagens criptografadas. O link Bluetooth " +
-      "ainda está em testes em hardware real, então trate como experimental.\n\n" +
+      "ainda está em testes em hardware real, então trate como experimental.\n" +
+      "• De amigo em amigo (novo, experimental): se um contato não está ao " +
+      "alcance, uma mensagem pode chegar por meio de outro contato que conheça " +
+      "vocês dois, num envelope selado que quem o leva não pode ler nem alterar. " +
+      "Levar mensagens de outros fica desligado a menos que você ative (NIDO › Contatos).\n\n" +
       "Peço confirmação antes de qualquer ação sensível.",
   },
   advantages: {
@@ -668,10 +680,10 @@ const ANSWERS: AnswerTable = {
     en:
       `Where ${APP_DISPLAY_NAME} is heading — direction, not promises (planned / ` +
       "in exploration, no dates):\n\n" +
-      // 0.1.76: la mensajería entre teléfonos ya está (desde 0.1.4x); lo
-      // que sigue explorándose es que un mensaje salte por varios.
-      `• Messages that hop through several ${APP_DISPLAY_NAME} phones to reach ` +
-      "someone out of range, with no internet — in exploration.\n" +
+      // 0.1.76: «de amigo en amigo» ya está en la app como experimento
+      // (docs/RELAY.md); falta probarlo con teléfonos reales y una revisión externa.
+      "• Friend-to-friend messages (in the app as an experiment): testing on " +
+      "real phones and an outside review of its cryptography.\n" +
       "• Keep your identity, memory and permissions when you change phones — in " +
       "exploration.\n" +
       "• More local models to choose from, with easier switching.\n" +
@@ -683,8 +695,8 @@ const ANSWERS: AnswerTable = {
     es:
       `Hacia dónde va ${APP_DISPLAY_NAME} — dirección, no promesas (planeado / ` +
       "en exploración, sin fechas):\n\n" +
-      `• Mensajes que saltan por varios teléfonos ${APP_DISPLAY_NAME} para llegar ` +
-      "a alguien fuera de alcance, sin internet — en exploración.\n" +
+      "• Mensajes de amigo en amigo (ya en la app como experimento): probarlos " +
+      "con teléfonos reales y una revisión externa de su criptografía.\n" +
       "• Conservar tu identidad, memoria y permisos al cambiar de teléfono — en " +
       "exploración.\n" +
       "• Más modelos locales para elegir, con cambio más fácil entre ellos.\n" +
@@ -696,8 +708,8 @@ const ANSWERS: AnswerTable = {
     pt:
       `Para onde ${APP_DISPLAY_NAME} está indo — direção, não promessas ` +
       "(planejado / em exploração, sem datas):\n\n" +
-      `• Mensagens que passam por vários telefones ${APP_DISPLAY_NAME} para chegar ` +
-      "a alguém fora de alcance, sem internet — em exploração.\n" +
+      "• Mensagens de amigo em amigo (já no app como experimento): testá-las " +
+      "com telefones reais e uma revisão externa da sua criptografia.\n" +
       "• Manter sua identidade, memória e permissões ao trocar de telefone — em " +
       "exploração.\n" +
       "• Mais modelos locais para escolher, com troca mais fácil entre eles.\n" +

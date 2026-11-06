@@ -71,6 +71,10 @@ function freshNonces(): [Uint8Array, Uint8Array] {
 // messenger se prueba en disappearingAndV5.test.ts y ratchetV5.test.ts.
 beforeEach(() => {
   setFeatureOverrideForTests("p2p.ratchetV5", false);
+  // Este arnés cuenta los frames uno a uno; los mensajes de amigo en amigo
+  // (que añaden su propio frame «carry» al abrir sesión) se prueban en
+  // e2eThreePhones.test.ts y src/p2p/relay/.
+  setFeatureOverrideForTests("p2p.relay", false);
 });
 
 beforeEach(() => {

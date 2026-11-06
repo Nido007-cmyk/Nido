@@ -36,6 +36,8 @@ import { NegotiationsTab } from "./NegotiationsTab";
 import { reconnectManager } from "../p2p/reconnectManager";
 import { PacksTab } from "./PacksTab";
 import { RemoteTasksCard } from "./RemoteTasksCard";
+import { RelayCard } from "./RelayCard";
+import { relayFlags } from "../p2p/relay/relayService";
 import { dismissBatteryHint, openBatterySettings, shouldShowBatteryHint } from "../p2p/batteryHint";
 
 const ERROR_RED = "#F87171";
@@ -224,6 +226,8 @@ export function NidoScreen({
   const [sessionV5, setSessionV5] = useState(false);
   const [v5Warning, setV5Warning] = useState(false);
   const [messages, setMessages] = useState<P2PStoredMessage[]>([]);
+  /** Mensajes que llegaron o salieron de amigo en amigo (etiqueta «vía amigos»). */
+  const [viaFriends, setViaFriends] = useState<Record<string, "in" | "out">>({});
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   /**
@@ -333,6 +337,7 @@ export function NidoScreen({
         if (started > 0) conv = await getConversation(pkHex);
       }
       setMessages(conv);
+      setViaFriends(await relayFlags(conv.map((m) => m.id)).catch(() => ({})));
       // Temporizador (puede haberlo adoptado de un mensaje del contacto) y
       // si la sesión va en v5 (clave por mensaje + ML-KEM).
       setDisappearSec(await mRef.current.getDisappearingTimer(pkHex).catch(() => 0));
@@ -1171,6 +1176,8 @@ export function NidoScreen({
           {fmtTime(item.ts)}
           {out ? outStatusSuffix(item) : ""}
           {item.ttlSec ? ` · ${t("nido.disappearBadge")}` : ""}
+          {viaFriends[item.id] === "in" ? ` · ${t("nido.relay.viaFriends")}` : ""}
+          {out && viaFriends[item.id] === "out" && item.status === "queued" ? ` · ${t("nido.relay.travelling")}` : ""}
         </Text>
         {showRetry ? (
           <Pressable
@@ -1187,7 +1194,7 @@ export function NidoScreen({
         ) : null}
       </Pressable>
     );
-  }, [t, outStatusSuffix, handleRetry, handleDeleteMessage]);
+  }, [t, outStatusSuffix, handleRetry, handleDeleteMessage, viaFriends]);
 
   // ── F-2: recovery honesto de identidad P2P ─────────────────────────
   // Doble confirmación explícita con showSecureAlert (misma ceremonia que
@@ -1633,6 +1640,8 @@ export function NidoScreen({
               )}
             </Pressable>
           </View>
+
+          <RelayCard />
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>

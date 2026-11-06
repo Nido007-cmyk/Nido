@@ -27,6 +27,7 @@ export type FeatureFlag =
   | "p2p.sealedHandshake"
   | "p2p.ratchetV5"
   | "p2p.privateHelloOnly"
+  | "p2p.relay"
   | "security.panicButton";
 
 const DEFAULTS: Record<FeatureFlag, boolean> = {
@@ -55,6 +56,14 @@ const DEFAULTS: Record<FeatureFlag, boolean> = {
    * viejo, y eso lo decide el usuario.
    */
   "p2p.privateHelloOnly": false,
+  /**
+   * Mensajes de amigo en amigo (docs/RELAY.md): dar mi clave de buzón a los
+   * contactos, sellar en sobre los mensajes que no salen directos y abrir
+   * los que me traen. ON por defecto; llevar sobres de OTROS es un ajuste
+   * aparte, apagado por defecto. Apagado, el teléfono ni manda ni acepta
+   * nada de esto (interruptor de emergencia).
+   */
+  "p2p.relay": true,
   /**
    * Botón de pánico (0.1.46, como Briar): muestra en la pantalla principal un
    * botón que, mantenido 3 segundos, borra todos los datos de NIDO sin más
