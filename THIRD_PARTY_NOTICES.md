@@ -446,9 +446,9 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | modules/bundled-assets | 0.1.0 | MIT (NIDO's own module) |
 | modules/download-wake-lock | 0.1.0 | MIT (NIDO's own module) |
 | modules/exact-alarm | 0.1.0 | MIT (NIDO's own module) |
+| modules/nido-cpr | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-keyvault | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-launch | 0.1.0 | MIT (NIDO's own module) |
-| modules/nido-cpr | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-ocr | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-p2p | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-pdf-text | 0.1.0 | MIT (NIDO's own module) |
@@ -463,9 +463,9 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | negotiator | 0.6.3 | MIT |
 | negotiator | 0.6.4 | MIT |
 | negotiator | 1.1.0 | MIT |
+| nido-cpr | local | MIT (NIDO's own module) |
 | nido-keyvault | local | MIT (NIDO's own module) |
 | nido-launch | local | MIT (NIDO's own module) |
-| nido-cpr | local | MIT (NIDO's own module) |
 | nido-ocr | local | MIT (NIDO's own module) |
 | nido-p2p | local | MIT (NIDO's own module) |
 | nido-pdf-text | local | MIT (NIDO's own module) |
