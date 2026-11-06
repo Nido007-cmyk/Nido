@@ -24,6 +24,7 @@
 import { fromHex, toHex } from "../crypto";
 import {
   carryTagsFor,
+  carryTextLength,
   envelopeBytes,
   generateCarryPrekey,
   isWellFormedEnvelope,
@@ -505,7 +506,7 @@ export async function sealOwn(
   text: string,
   now: number,
 ): Promise<boolean> {
-  if (text.length > MAX_CARRY_TEXT) return false;
+  if (carryTextLength(text) > MAX_CARRY_TEXT) return false;
   return locked(async () => {
     const to = recipientPk.toLowerCase();
     const s = await load();

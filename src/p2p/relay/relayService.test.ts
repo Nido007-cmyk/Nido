@@ -358,3 +358,20 @@ describe("revisión de seguridad", () => {
     expect((await relayUsage()).envelopes).toBe(0);
   });
 });
+
+describe("el borde de 1.500 en el servicio cuenta puntos de código (H-4)", () => {
+  it("sealOwn: 751 emojis viajan (751 puntos de código); 1.501 no", async () => {
+    const book = sig(ana, beto, caro);
+    on(ana);
+    const ha = await helloPayload(ana, NOW);
+    on(caro);
+    const hc = await helloPayload(caro, NOW);
+    await receive(ana.pkHex, ha, caro, book, NOW);
+    on(ana);
+    await receive(caro.pkHex, hc, ana, book, NOW);
+    const emoji = "\u{1F600}";
+    expect(await sealOwn(ana, caro.pkHex, "e-751", "chat", emoji.repeat(751), NOW)).toBe(true);
+    expect(await sealOwn(ana, caro.pkHex, "e-1500", "chat", emoji.repeat(1500), NOW)).toBe(true);
+    expect(await sealOwn(ana, caro.pkHex, "e-1501", "chat", emoji.repeat(1501), NOW)).toBe(false);
+  });
+});

@@ -80,8 +80,17 @@ export const PAD_BUCKETS = [1024, 2048, 4096, 8192] as const;
 /**
  * Texto máximo dentro de un sobre: 1.500 caracteres caben en el cubo mayor
  * aunque todos ocupen 4 bytes (emojis) más la firma y los campos.
+ * «Caracteres» son puntos de código Unicode, como dice la letra publicada:
+ * un emoji cuenta uno, aunque en UTF-16 ocupe dos unidades.
  */
 export const MAX_CARRY_TEXT = 1500;
+
+/** Longitud de un texto en puntos de código (la cuenta de la letra publicada). */
+export function carryTextLength(text: string): number {
+  let n = 0;
+  for (const _ch of text) n++;
+  return n;
+}
 export const TAG_BYTES = 16;
 /** Cabecera cifrada: identidad X25519 del remitente (32) + MAC (16). */
 export const HEADER_BYTES = 32 + 16;
@@ -309,7 +318,7 @@ export interface SealArgs {
 
 /** Sella un mensaje para `recipient` (su clave de buzón ya verificada). */
 export function sealCarry(a: SealArgs): CarryEnvelope {
-  if (a.text.length > MAX_CARRY_TEXT) throw new Error("Mensaje demasiado largo para un sobre.");
+  if (carryTextLength(a.text) > MAX_CARRY_TEXT) throw new Error("Mensaje demasiado largo para un sobre.");
   if (typeof a.id !== "string" || a.id.length === 0 || a.id.length > 64) throw new Error("Id de mensaje inválido.");
   const senderPk = a.senderPkHex.toLowerCase();
   if (toHex(nacl.scalarMult.base(a.senderSecretKey)) !== senderPk) throw new Error("La clave secreta no es la de esta identidad.");
@@ -446,7 +455,7 @@ export function openCarry(
     if (!i || typeof i !== "object" || i.v !== CARRY_VERSION) return null;
     if (i.from !== from || i.to !== me || i.prekey !== pk.id) return null;
     if (i.kind !== "chat" && i.kind !== "receipt") return null;
-    if (typeof i.text !== "string" || i.text.length > MAX_CARRY_TEXT) return null;
+    if (typeof i.text !== "string" || carryTextLength(i.text) > MAX_CARRY_TEXT) return null;
     if (typeof i.id !== "string" || i.id.length === 0 || i.id.length > 64) return null;
     if (!Number.isSafeInteger(i.exp) || !Number.isSafeInteger(i.ts)) return null;
     if (i.exp <= now || i.ts > now + CLOCK_SKEW_MS || i.exp - i.ts > MAX_ENVELOPE_TTL_MS) return null;

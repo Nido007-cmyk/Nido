@@ -10,6 +10,7 @@ import { kemEncapsulate, kemKeygen } from "../pq";
 import {
   carryDay,
   carryTag,
+  carryTextLength,
   envelopeBytes,
   generateCarryPrekey,
   isWellFormedEnvelope,
@@ -259,5 +260,67 @@ describe("sobre", () => {
   });
   it("demasiado largo → no se sella", () => {
     expect(() => seal("a".repeat(1501))).toThrow();
+  });
+});
+
+describe("la cuenta de 1.500 es por puntos de código (H-4)", () => {
+  const emoji = "\u{1F600}"; // 1 punto de código, 2 unidades UTF-16, 4 bytes UTF-8
+  /** Como forge(), pero con el cubo mayor: para textos largos de emojis. */
+  function forgeBig(text: string): CarryEnvelope {
+    const h32 = (b: Uint8Array) => sha512(b).slice(0, 32);
+    const rX = fromHex(caroKey.pub.x25519);
+    const rKem = fromHex(caroKey.pub.kem);
+    const eph = nacl.box.keyPair();
+    const { cipherText, sharedSecret } = kemEncapsulate(rKem);
+    const ctx = toHex(h32(utf8Encode(`nido-carry-ctx-v2|${caroKey.pub.id}|${toHex(rX)}|${toHex(h32(rKem))}|${toHex(eph.publicKey)}|${toHex(h32(cipherText))}`)));
+    const dhE = nacl.scalarMult(eph.secretKey, rX);
+    const ikm = new Uint8Array(64);
+    ikm.set(dhE, 0);
+    ikm.set(sharedSecret, 32);
+    const hk = hkdfSha512(utf8Encode("nido-carry-v2"), ikm, utf8Encode(`nido-carry-hdr-v2|${ctx}`), 64);
+    const header = nacl.secretbox(fromHex(ana.pk), new Uint8Array(24), hk.slice(0, 32));
+    const dhS = nacl.scalarMult(ana.idSk, rX);
+    const k2 = hkdfSha512(hk.slice(32, 64), dhS, utf8Encode(`nido-carry-body-v2|${ctx}|${ana.pk}`), 32);
+    const inner = { v: 2, from: ana.pk, to: caro.pk, id: "big-1", ts: NOW, exp: NOW + 3600_000, prekey: caroKey.pub.id, kind: "chat", text };
+    const json = utf8Encode(JSON.stringify(inner));
+    const plain = new Uint8Array(8192);
+    new DataView(plain.buffer).setUint32(0, json.length);
+    plain.set(json, 4);
+    const nonce = randomNonce(24);
+    const body = nacl.secretbox(plain, nonce, k2);
+    return {
+      t: "nido-carry",
+      v: 2,
+      eid: toHex(randomNonce(16)),
+      tag: carryTag(caroKey.pub.id, carryDay(NOW)),
+      exp: NOW + 3600_000,
+      hops: 3,
+      eph: toHex(eph.publicKey),
+      kct: toHex(cipherText),
+      nonce: toHex(nonce),
+      box: toHex(header) + toHex(body),
+    };
+  }
+
+  it("carryTextLength cuenta puntos de código, no unidades UTF-16", () => {
+    expect(carryTextLength("abc")).toBe(3);
+    expect(carryTextLength(emoji.repeat(751))).toBe(751);
+    expect(emoji.repeat(751).length).toBe(1502);
+  });
+  it("1.500 emojis se sellan, caben en el cubo mayor y se abren enteros", () => {
+    const e = seal(emoji.repeat(1500));
+    // El peor caso de la promesa: 1.500 puntos de código de 4 bytes caben en 8 KB.
+    expect(e.box.length / 2).toBe(48 + PAD_BUCKETS[PAD_BUCKETS.length - 1] + 16);
+    const opened = openCarry(e, [caroKey.secret], caro.pk, sigOf(contactsOfCaro), NOW);
+    expect(opened?.text).toBe(emoji.repeat(1500));
+  });
+  it("1.501 emojis no se sellan; 750 emojis y 750 letras (1.500 puntos) sí", () => {
+    expect(() => seal(emoji.repeat(1501))).toThrow();
+    expect(() => seal(emoji.repeat(750) + "a".repeat(750))).not.toThrow();
+    expect(() => seal(emoji.repeat(750) + "a".repeat(751))).toThrow();
+  });
+  it("al abrir manda la misma cuenta: un sobre fabricado con 1.501 emojis no se abre y con 1.500 sí", () => {
+    expect(openCarry(forgeBig(emoji.repeat(1501)), [caroKey.secret], caro.pk, sigOf(contactsOfCaro), NOW)).toBeNull();
+    expect(openCarry(forgeBig(emoji.repeat(1500)), [caroKey.secret], caro.pk, sigOf(contactsOfCaro), NOW)?.text).toBe(emoji.repeat(1500));
   });
 });
