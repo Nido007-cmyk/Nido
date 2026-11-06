@@ -1885,6 +1885,9 @@ export class NidoMessenger {
       await adoptContactDisappear(peerKey, timer.sec, timer.v);
       // Si el contacto ya trae la versión que le avisamos, el aviso llegó.
       await clearPendingDisappear(peerKey, timer.v);
+      // Misma regla que al activarlo yo: lo ya sellado de esta conversación
+      // deja de viajar desde este teléfono.
+      if (timer.sec > 0) await this.relayForgetSealedFor(peerKey);
     } catch {
       /* best-effort: el mensaje ya está guardado */
     }
@@ -1956,6 +1959,9 @@ export class NidoMessenger {
   async setDisappearingTimer(peerPkHex: string, sec: number): Promise<void> {
     this.assertLive();
     await setContactDisappearSec(peerPkHex, sec);
+    // Al activarlo, los sobres ya sellados de esta conversación dejan de
+    // viajar desde este teléfono (nunca viajan mensajes temporales).
+    if (sec > 0) await this.relayForgetSealedFor(peerPkHex);
   }
 
   /**
@@ -2262,6 +2268,26 @@ export class NidoMessenger {
         continue;
       }
       await this.relaySync(key, session);
+    }
+  }
+
+  /**
+   * Retira los sobres propios de chat de una conversación: los mensajes de
+   * esa conversación que siguen en la bandeja de salida sin entregarse
+   * (en cola o enviados sin acuse). Los ya entregados no están en esas
+   * listas, y los acuses no viven en el registro de sobres propios, así
+   * que ninguno de los dos se toca. Best-effort, como el resto del relevo.
+   */
+  private async relayForgetSealedFor(peerPkHex: string): Promise<void> {
+    if (!this.relayOn()) return;
+    try {
+      const peer = peerPkHex.toLowerCase();
+      const pending = [...(await getOutbox()), ...(await getSentOutbox())];
+      for (const m of pending) {
+        if (m.type === "chat" && m.peerPk.toLowerCase() === peer) await relay.forgetOwn(m.id).catch(() => {});
+      }
+    } catch {
+      /* best-effort: activar el temporizador nunca falla por el relevo */
     }
   }
 
