@@ -253,13 +253,15 @@ describe("tres teléfonos: de amigo en amigo", () => {
 
     // Beto se cruza con Caro.
     await meet(beto, caro);
+    // (readInbox marca como leído: se mira la base de Caro directamente).
     await until(
-      async () => (await caro.run(() => caro.m.readInbox())).some((m) => m.dir === "in" && m.text === SECRET),
+      () => caro.ctx.mem.messages.some((m) => m.dir === "in" && m.text === SECRET),
       "Caro recibe el mensaje de Ana",
     );
-    const atCaro = (await caro.run(() => caro.m.readInbox())).find((m) => m.text === SECRET)!;
-    expect(atCaro.peerPk.toLowerCase()).toBe(ana.pk.toLowerCase());
+    const atCaro = caro.ctx.mem.messages.find((m) => m.dir === "in" && m.text === SECRET)!;
+    expect(atCaro.peer_pk.toLowerCase()).toBe(ana.pk.toLowerCase());
     expect(atCaro.id).toBe(sent.id);
+    expect(atCaro.status).toBe("delivered");
     // El acuse de Caro sale hacia Beto.
     await until(async () => (await beto.run(() => relayUsage())).envelopes === 1, "Beto lleva el acuse");
     await part(beto, caro);
