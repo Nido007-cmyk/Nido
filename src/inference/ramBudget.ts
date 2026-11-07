@@ -215,6 +215,33 @@ export function readProcessorCount(): number | null {
 }
 
 /** "1.3" style GiB formatting for user-facing diagnostics. */
+/**
+ * El pre-flight rechazó cargar un modelo por memoria. El mensaje en inglés
+ * queda para los registros; la pantalla lo cuenta en el idioma de la app
+ * con estas cifras (formatRamBudgetError en src/ui/ramBudgetMessage.ts).
+ */
+export class RamBudgetError extends Error {
+  readonly code = "ram_budget";
+  constructor(
+    message: string,
+    readonly needBytes: number,
+    readonly freeBytes: number,
+    readonly totalBytes: number,
+    /** Contexto: de cuánto a cuánto se bajó para intentar que cupiera (o null). */
+    readonly steppedFrom: number | null,
+    readonly steppedTo: number | null,
+    /** Presupuesto reducido tras un cierre por memoria (0–1), o null. */
+    readonly crashSafety: number | null,
+  ) {
+    super(message);
+    this.name = "RamBudgetError";
+  }
+}
+
+export function isRamBudgetError(e: unknown): e is RamBudgetError {
+  return !!e && typeof e === "object" && (e as { code?: unknown }).code === "ram_budget";
+}
+
 export function toGb(bytes: number): string {
   return (bytes / GiB).toFixed(1);
 }

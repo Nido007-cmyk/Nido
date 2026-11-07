@@ -7,7 +7,7 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { initLlama, LlamaContext, type CompletionResponseFormat } from "llama.rn";
 import * as RamMonitor from "ram-monitor";
-import { checkRamBudget, defaultThreadsForCores, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
+import { checkRamBudget, defaultThreadsForCores, RamBudgetError, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
 import {
   crossNativeSessionRecord,
   holdBackgroundIndexingForSession,
@@ -670,11 +670,17 @@ export class LlamaEngine {
       }
     }
     if (verdict && !verdict.fits) {
-      throw new Error(
+      throw new RamBudgetError(
         `"${modelFilename}" needs roughly ${toGb(verdict.totalBytes)}GB of RAM, but this ` +
           `device only has about ${toGb(verdict.availableBytes)}GB free (of ${toGb(verdict.totalRamBytes)}GB total). ` +
           `Try a smaller model from Settings > Tone & Model.` +
-          (contextNote ? ` (${contextNote})` : "")
+          (contextNote ? ` (${contextNote})` : ""),
+        verdict.totalBytes,
+        verdict.availableBytes,
+        verdict.totalRamBytes,
+        nCtx < requestedCtx ? requestedCtx : null,
+        nCtx < requestedCtx ? nCtx : null,
+        crashSafety < 1 ? crashSafety : null,
       );
     }
 
