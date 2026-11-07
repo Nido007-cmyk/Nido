@@ -122,7 +122,10 @@ export class ManifestTrustError extends Error {
   }
 }
 
-function b64ToBytes(b64: string): Uint8Array {
+/** Exported for the signed-pack importer (packImport.ts), which verifies
+ *  store pack manifests with the same Ed25519 keys and needs the same
+ *  base64 decoding — one shared implementation, no drift. */
+export function b64ToBytes(b64: string): Uint8Array {
   // Works in both Node (tests/scripts) and React Native (Hermes has Buffer
   // via the RN polyfill used elsewhere in the app; fall back to manual).
   if (typeof Buffer !== "undefined") {
