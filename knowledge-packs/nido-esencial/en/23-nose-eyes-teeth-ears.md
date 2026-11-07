@@ -22,7 +22,7 @@ questions: how do i stop a nosebleed | something got into his eye, what do i do 
 ## Knocked-out tooth (adult)
 <!-- questions: where do i keep a knocked-out tooth until the dentist, in milk | can a knocked out tooth be put back in its socket | do baby teeth get put back -->
 1. Hold the tooth by the crown (the white part), never by the root.
-2. If it's dirty, rinse it with water for less than 10 seconds, without scrubbing.
+2. If it's dirty, rinse it gently in milk, saline, or the patient's own saliva, for less than 10 seconds, without scrubbing.
 3. If the person is awake and cooperative, try to put it back in its socket and have them bite on gauze.
 4. If not, keep it in milk, saline, or the person's mouth (between cheek and gum, if there is no risk of swallowing it). Do not keep it in water or dry.
 5. See a dentist or the emergency department within an hour. Baby teeth are not put back.

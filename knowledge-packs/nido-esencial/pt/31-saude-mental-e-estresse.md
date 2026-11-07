@@ -18,7 +18,7 @@ As emergências, a incerteza e as perdas afetam a mente tanto quanto o corpo. De
 - Limite a exposição a notícias angustiantes. Evite álcool e outras substâncias para "aguentar".
 
 ## Ataque de pânico
-- Um ataque de pânico é uma onda repentina de medo intenso com reações físicas fortes: coração acelerado, aperto no peito, falta de ar, tremores, tontura ou sensação de perder o controle. Dá muito medo, mas passa.
+- Um ataque de pânico é uma onda repentina de medo intenso com reações físicas fortes: coração acelerado, aperto no peito, falta de ar, tontura ou sensação de perder o controle. Dá muito medo, mas passa.
 - Acompanhe a pessoa com calma: sente-se com ela, fale devagar e com um tom tranquilo, sem discutir o que ela sente nem dizer que não é nada.
 - Ajude-a a respirar devagar: inspire contando até 4 e solte o ar contando até 6, no ritmo que ela conseguir.
 - Ligue para o número de emergência se os sintomas não passarem, se for a primeira vez que acontece, se houver dor no peito ou desmaio, ou se você não tiver certeza de que é um ataque de pânico: os sintomas se parecem com os de problemas do coração ou da respiração.

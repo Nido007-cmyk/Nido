@@ -22,7 +22,7 @@ questions: nariz sangrando, como parar | caiu algo no olho, como lavar | dente c
 
 ## Dente arrancado (adulto)
 1. Pegue o dente pela coroa (a parte branca), nunca pela raiz.
-2. Se estiver sujo, enxágue com água por menos de 10 segundos, sem esfregar.
+2. Se estiver sujo, enxágue-o suavemente com leite, soro ou a saliva do próprio paciente, por menos de 10 segundos e sem esfregar.
 3. Se a pessoa estiver acordada e colaborar, tente recolocá-lo no lugar e que ela morda uma gaze.
 4. Se não, guarde-o em leite, em soro ou na boca da pessoa (entre a bochecha e a gengiva, se não houver risco de engolir). Não o guarde em água nem seco.
 5. Vá ao dentista ou à emergência em menos de uma hora. Dentes de leite não são recolocados.

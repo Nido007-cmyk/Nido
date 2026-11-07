@@ -22,7 +22,7 @@ questions: cómo paro una hemorragia de nariz | le entró algo en el ojo, qué h
 ## Diente arrancado (adulto)
 <!-- preguntas: se le arrancó un diente de un golpe, dónde lo guardo | en qué se guarda un diente arrancado hasta llegar al dentista | se recoloca un diente de leche -->
 1. Coge el diente por la corona (la parte blanca), nunca por la raíz.
-2. Si está sucio, enjuágalo con agua menos de 10 segundos, sin frotar.
+2. Si está sucio, enjuágalo suavemente con leche, suero o la saliva del propio paciente, menos de 10 segundos y sin frotar.
 3. Si la persona está despierta y colabora, intenta recolocarlo en su hueco y que muerda una gasa.
 4. Si no, guárdalo en leche, en suero o en la boca de la persona (entre mejilla y encía, si no hay riesgo de tragárselo). No lo guardes en agua ni en seco.
 5. Ve al dentista o urgencias en menos de una hora. Los dientes de leche no se recolocan.

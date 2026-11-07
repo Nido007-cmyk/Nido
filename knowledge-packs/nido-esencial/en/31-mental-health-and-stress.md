@@ -18,7 +18,7 @@ Emergencies, uncertainty and loss affect the mind as much as the body. After an 
 - Limit exposure to distressing news. Avoid alcohol and other substances to "cope".
 
 ## Panic attack
-- A panic attack is a sudden wave of intense fear with strong physical reactions: racing heart, tight chest, shortness of breath, shaking, dizziness, or a feeling of losing control. It is very frightening, but it passes.
+- A panic attack is a sudden wave of intense fear with strong physical reactions: racing heart, tight chest, shortness of breath, dizziness, or a feeling of losing control. It is very frightening, but it passes.
 - Stay with the person calmly: sit with them, speak slowly and in a calm tone, without arguing about what they feel or telling them it is nothing.
 - Help them breathe slowly: breathe in counting to 4 and out counting to 6, at a pace they can manage.
 - Call the emergency number if the symptoms do not ease, if it is the first time it happens to them, if there is chest pain or fainting, or if you are not sure it is a panic attack: its symptoms resemble those of heart or breathing problems.

@@ -18,7 +18,7 @@ Las emergencias, la incertidumbre y las pérdidas afectan a la mente tanto como 
 - Limita la exposición a noticias angustiosas. Evita el alcohol y otras sustancias para "aguantar".
 
 ## Ataque de pánico
-- Un ataque de pánico es una oleada repentina de miedo intenso con reacciones físicas fuertes: corazón acelerado, opresión en el pecho, falta de aire, temblores, mareo o sensación de perder el control. Da mucho miedo, pero pasa.
+- Un ataque de pánico es una oleada repentina de miedo intenso con reacciones físicas fuertes: corazón acelerado, opresión en el pecho, falta de aire, mareo o sensación de perder el control. Da mucho miedo, pero pasa.
 - Acompaña a la persona con calma: siéntate con ella, háblale despacio y con un tono tranquilo, sin discutir lo que siente ni decirle que no es nada.
 - Ayúdala a respirar despacio: inspira contando hasta 4 y suelta el aire contando hasta 6, al ritmo que ella pueda.
 - Llama al número de emergencias si los síntomas no ceden, si es la primera vez que le pasa, si hay dolor de pecho o desmayo, o si no estás seguro de que sea un ataque de pánico: sus síntomas se parecen a los de problemas del corazón o de la respiración.
