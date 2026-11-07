@@ -74,8 +74,21 @@ export const GUIDE_MAX_CHARS = 2600;
  * language, the honest fallback: Spanish for a Portuguese reader (as
  * before the pack had Portuguese), else the strongest chunk.
  */
+/**
+ * 2026-11-06 (prueba física): «Quiero hacer un curso de rcp el mes que
+ * viene» abrió la guía «Accidente de tráfico» por su apartado «Importante»,
+ * que solo dice en qué fuentes se basa y recomienda un curso. Ese apartado
+ * de cierre (el mismo en las 58 guías de cada idioma) no responde a nada:
+ * nunca es la entrada a una guía.
+ */
+const CLOSING_SECTION_RE = /\s[—–-]\s*(?:Importante|Important)\s*$/i;
+
+export function isClosingSection(c: Pick<RetrievedChunk, "title">): boolean {
+  return CLOSING_SECTION_RE.test(c.title ?? "");
+}
+
 export function pickGuideChunk(chunks: RetrievedChunk[], lang: GroundingLang): RetrievedChunk | null {
-  const scored = chunks.filter((c) => typeof c.rawScore === "number");
+  const scored = chunks.filter((c) => typeof c.rawScore === "number" && !(isEssentialsChunk(c.chunkId) && isClosingSection(c)));
   if (scored.length === 0) return null;
   const best = scored.reduce((a, b) => ((b.rawScore as number) > (a.rawScore as number) ? b : a));
   if (!isEssentialsChunk(best.chunkId) || (best.rawScore as number) < GUIDE_MIN_SCORE) return null;

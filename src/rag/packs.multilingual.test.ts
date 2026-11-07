@@ -19,6 +19,8 @@ type World = {
   rows: Row[];
   ftsHits: number[];
   indexReady: boolean;
+  /** Pretend the pack is too big for the exact search (the Wikipedia). */
+  bigPack?: boolean;
   searchCalls: Array<{ floor: number; limit: number }>;
   hits: { ids: number[]; scores: number[]; gatedCount: number; gatedMin: number | null };
   /** 0.1.36: lo que devuelve la búsqueda sin piso (fondo para la distintividad). */
@@ -43,6 +45,12 @@ vi.mock("expo-sqlite", () => ({
       if (/chunks_fts MATCH/.test(sql))
         return w.ftsHits.map((id, i) => ({ ...w.rows.find((r) => r.id === id)!, rank: -10 + i }));
       if (/WHERE id IN/.test(sql)) return w.rows.filter((r) => (params as number[]).includes(r.id));
+      if (/SELECT id, vec FROM chunks$/.test(sql.trim())) return w.rows.map((r) => ({ id: r.id, vec: r.vec }));
+      throw new Error(`unexpected SQL ${sql}`);
+    },
+    getFirstAsync: async (sql: string) => {
+      const w = W();
+      if (/COUNT\(\*\) AS n FROM chunks/.test(sql)) return { n: w.bigPack ? 50_000 : w.rows.length };
       throw new Error(`unexpected SQL ${sql}`);
     },
     closeAsync: async () => {},
@@ -81,6 +89,7 @@ beforeEach(async () => {
     ],
     ftsHits: [],
     indexReady: true,
+    bigPack: false,
     searchCalls: [],
     hits: { ids: [1, 3], scores: [0.93, 0.9], gatedCount: 40, gatedMin: 0.81 },
     topHits: undefined,
@@ -140,13 +149,25 @@ describe("searchPacks — multilingual (full vector search)", () => {
     expect(W().searchCalls[1].floor).toBeGreaterThanOrEqual(profiles.MULTILINGUAL_E5_SMALL_PROFILE.packMinSimilarity);
   });
 
-  it("index not built yet → keyword-first fallback for this question (no wait)", async () => {
+  it("index not built yet, big pack → keyword-first fallback for this question (no wait)", async () => {
     W().indexReady = false;
+    W().bigPack = true;
     W().ftsHits = [1];
     const r = await packs.searchPacks("photosynthesis plants", new Float32Array([1, 0]), 12, e5Opts());
     expect(W().searchCalls).toHaveLength(0);
     expect(r.lexical.map((c) => c.title)).toEqual(["Photosynthesis"]);
     expect(r.semantic.map((c) => c.title)).toEqual(["Photosynthesis"]); // cosine 1.0 ≥ floor
+  });
+
+  it("index not built yet, small pack → exact vector search, no keywords needed (prueba física 2026-11-06)", async () => {
+    // Justo tras actualizar Esencial, su índice se reconstruye: la guía
+    // tiene que seguir saliendo por vectores aunque no comparta palabras.
+    W().indexReady = false;
+    W().ftsHits = [];
+    const r = await packs.searchPacks("qué pasa con las plantas y la luz", new Float32Array([1, 0]), 12, e5Opts());
+    expect(W().searchCalls).toHaveLength(0);
+    expect(r.semantic[0]?.title).toBe("Photosynthesis");
+    expect(r.semantic.map((c) => c.title)).not.toContain("Black hole");
   });
 
   it("pack made with another model → keyword search only, never its vectors", async () => {

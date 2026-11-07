@@ -1419,6 +1419,39 @@ export function deserializeEmbedding(bytes: Uint8Array, expectedDim: number): Fl
  */
 export const DISTINCT_BG_FROM = 10;
 export const DISTINCT_BG_TO = 50;
+
+/**
+ * 2026-11-06 (prueba física): justo después de actualizar NIDO Esencial a
+ * la v14, «¿Qué hago durante un terremoto?» respondió con la introducción
+ * de una guía de otro pack. El índice de vectores de Esencial se estaba
+ * reconstruyendo en segundo plano y, mientras tanto, ese pack solo buscaba
+ * por palabras. Un pack pequeño (cientos de trozos) se puede recorrer
+ * entero en JS en milisegundos: este es el mismo contrato que la búsqueda
+ * nativa del índice (ids y puntuaciones de mayor a menor por encima del
+ * piso, cuántos pasaron el piso y el menor de ellos), sin índice.
+ */
+export const EXACT_SEARCH_MAX_ROWS = 5000;
+
+export function exactVectorSearch(
+  rows: ReadonlyArray<{ id: number; vec: Uint8Array }>,
+  query: Float32Array,
+  floor: number,
+  limit: number,
+): { ids: number[]; scores: number[]; gatedCount: number; gatedMin: number | null } {
+  const above: Array<{ id: number; score: number }> = [];
+  for (const r of rows) {
+    const score = cosineSimilarityInt8(query, r.vec);
+    if (Number.isFinite(score) && score >= floor) above.push({ id: r.id, score });
+  }
+  above.sort((a, b) => b.score - a.score || a.id - b.id);
+  const top = above.slice(0, Math.max(0, limit));
+  return {
+    ids: top.map((h) => h.id),
+    scores: top.map((h) => h.score),
+    gatedCount: above.length,
+    gatedMin: above.length ? above[above.length - 1].score : null,
+  };
+}
 export function backgroundScore(sortedDesc: readonly number[]): number {
   const n = sortedDesc.length;
   if (n === 0) return 0;

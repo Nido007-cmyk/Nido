@@ -66,6 +66,23 @@ describe("respuesta desde la guía, sin modelo (0.1.59)", () => {
     expect(pickGuideChunk([chunk("pack:nido-esencial:5", "RCP", "…", undefined, "lexical")], "es")).toBeNull();
   });
 
+  it("el apartado «Importante» (fuentes y curso) nunca abre una guía (prueba física 2026-11-06)", () => {
+    const closing = chunk(
+      "pack:nido-esencial-e5:400",
+      "Accidente de tráfico — Importante",
+      "Importante\nBasado en el protocolo PAS de la Cruz Roja Española, las directrices de la AHA y la Cruz Roja Americana, y la OMS.",
+      0.86,
+    );
+    expect(pickGuideChunk([closing], "es")).toBeNull();
+    const cpr = chunk("pack:nido-esencial-e5:8", "RCP (reanimación) en adultos y niños mayores — Antes de empezar", "Antes de empezar\n- Comprueba que el lugar es seguro.", 0.84);
+    expect(pickGuideChunk([closing, cpr], "es")?.chunkId).toBe(cpr.chunkId);
+    for (const t of ["CPR — Important", "RCP — Importante", "Burns – important"]) {
+      expect(pickGuideChunk([chunk("pack:nido-esencial-e5:1", t, "x", 0.95)], "en")).toBeNull();
+    }
+    // Un apartado que solo se llama parecido no se descarta.
+    expect(pickGuideChunk([chunk("pack:nido-esencial-e5:2", "Importante saber antes de viajar — Qué llevar", "x", 0.9)], "es")).not.toBeNull();
+  });
+
   it("prefiere la guía en el idioma de quien pregunta cuando están igual de cerca", () => {
     const en = chunk("pack:nido-esencial-e5:300", "CPR for adults and older children — Before you start", "Before you start\n- Make sure the place is safe. Tap their shoulders and shout.", 0.9);
     const es = chunk("pack:nido-esencial-e5:8", "RCP (reanimación) en adultos y niños mayores — Antes de empezar", "Antes de empezar\n- Comprueba que el lugar es seguro. Toca sus hombros y háblale fuerte.", 0.89);
