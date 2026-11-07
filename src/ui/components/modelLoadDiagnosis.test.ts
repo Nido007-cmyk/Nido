@@ -69,6 +69,27 @@ describe("diagnose() existing branches unchanged", () => {
     expect(diagnose("not enough RAM to load model", t).category).toBe("memory");
   });
 
+  it("«ram» u «oom» dentro de otra palabra no es un fallo de memoria (auditoría 0.1.79)", () => {
+    for (const msg of [
+      "invalid program state",
+      "bad parameter: n_ctx",
+      "frame dropped",
+      "no room in queue",
+      "zoom level unsupported",
+    ]) {
+      expect(diagnose(msg, t).category, msg).toBe("general");
+    }
+    for (const msg of [
+      "needs roughly 1.0GB of RAM, but only 0.9GB is free",
+      "ggml_aligned_malloc: insufficient memory",
+      "failed to allocate buffer",
+      "Memoria insuficiente",
+      "OOM",
+    ]) {
+      expect(diagnose(msg, t).category, msg).toBe("memory");
+    }
+  });
+
   it("still falls back to general for unknown errors", () => {
     const d = diagnose("something unexpected happened", t);
     expect(d.category).toBe("general");

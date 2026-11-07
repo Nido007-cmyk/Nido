@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "../theme/ThemeContext";
 import { NidoIcon } from "./icons/NidoIcon";
 import { impact, ImpactFeedbackStyle, notification, NotificationFeedbackType } from "../../services/haptics";
+import { userFacingError } from "../userFacingError";
 
 export const PANIC_HOLD_MS = 3000;
 
@@ -30,7 +31,7 @@ interface Props {
 }
 
 export function PanicButton({ onWiped, onError }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const progress = useRef(new Animated.Value(0)).current;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -56,9 +57,9 @@ export function PanicButton({ onWiped, onError }: Props) {
     } catch (e) {
       setWiping(false);
       progress.setValue(0);
-      onError?.(String((e as Error)?.message ?? e));
+      onError?.(userFacingError(t, e, i18n.language));
     }
-  }, [onWiped, onError, progress]);
+  }, [onWiped, onError, progress, t, i18n]);
 
   const start = useCallback(() => {
     if (wiping) return;

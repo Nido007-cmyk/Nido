@@ -21,6 +21,8 @@ export interface Diagnosis {
   recommendation: string;
 }
 
+const MEMORY_PATTERN = /memory|memoria|mem[oó]ria|\boom\b|\bram\b|\balloc|malloc/;
+
 export type TranslateFn = (key: string, opts?: Record<string, unknown>) => string;
 
 /**
@@ -70,7 +72,10 @@ export function diagnose(error: string, t: TranslateFn): Diagnosis {
       recommendation: t("modelLoadErrorCard.missing.recommendation"),
     };
   }
-  if (lower.includes("memory") || lower.includes("oom") || lower.includes("allocate") || lower.includes("ram")) {
+  // Auditoría 0.1.79: antes bastaba la subcadena «ram» u «oom», que también
+  // está en «program», «parameter», «frame» o «room»: un fallo cualquiera se
+  // diagnosticaba como falta de memoria.
+  if (MEMORY_PATTERN.test(lower)) {
     return {
       title: t("modelLoadErrorCard.memory.title"),
       category: "memory",

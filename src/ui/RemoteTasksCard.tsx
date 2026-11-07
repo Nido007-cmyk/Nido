@@ -30,6 +30,7 @@ import {
   type AgentTaskRequest,
 } from "../p2p/approvalInbox";
 import { displayLang, formatDateTime } from "../utils/safeFormat";
+import { userFacingError } from "./userFacingError";
 
 /** Cada cuánto se vuelve a consultar la cola mientras la pantalla está abierta. */
 const REFRESH_MS = 5000;
@@ -69,7 +70,7 @@ export function RemoteTasksCard({ onNotice }: { onNotice?: (message: string) => 
           onNotice?.(t("remoteTasks.alreadyDecided"));
         }
       } catch (e) {
-        onNotice?.(e instanceof Error ? e.message : t("remoteTasks.failed"));
+        onNotice?.(e instanceof Error ? userFacingError(t, e, i18n.language) : t("remoteTasks.failed"));
       } finally {
         setBusyId(null);
         void refresh();

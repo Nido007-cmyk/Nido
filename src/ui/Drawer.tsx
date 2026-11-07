@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, Animated, Dimensions, ScrollView, Image } from "react-native";
+import { View, Text, StyleSheet, Pressable, Animated, ScrollView, Image, useWindowDimensions } from "react-native";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTranslation } from "react-i18next";
 import { ChatSession } from "../services/chatHistory";
@@ -17,9 +17,7 @@ import { NidoIcon, type IconName } from "./components/icons/NidoIcon";
 import { spacing, radii } from "./theme/spacing";
 import { PrivateTextInput } from "./components/PrivateTextInput";
 import { filterByTitle } from "./navigation/search";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const DRAWER_WIDTH = Math.min(310, SCREEN_WIDTH * 0.82);
+import { drawerWidthFor, visibleSessions } from "./drawerLayout";
 
 export interface DrawerItem {
   key: string;
@@ -64,18 +62,25 @@ export function Drawer({
 
   // 0.1.55: buscar en el historial (sin tildes ni mayúsculas).
   const [query, setQuery] = useState("");
-  const shown = useMemo(() => filterByTitle(sessions ?? [], query), [sessions, query]);
+  const [showAll, setShowAll] = useState(false);
+  const matches = useMemo(() => filterByTitle(sessions ?? [], query), [sessions, query]);
+  const { list: shown, hidden } = visibleSessions(matches, query, showAll);
   useEffect(() => {
-    if (!open) setQuery("");
+    if (!open) {
+      setQuery("");
+      setShowAll(false);
+    }
   }, [open]);
 
-  const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+  const { width: screenWidth } = useWindowDimensions();
+  const drawerWidth = drawerWidthFor(screenWidth);
+  const translateX = useRef(new Animated.Value(-drawerWidth)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(translateX, {
-        toValue: open ? 0 : -DRAWER_WIDTH,
+        toValue: open ? 0 : -drawerWidth,
         duration: 220,
         useNativeDriver: true,
       }),
@@ -85,7 +90,7 @@ export function Drawer({
         useNativeDriver: true,
       }),
     ]).start();
-  }, [open, translateX, backdropOpacity]);
+  }, [open, drawerWidth, translateX, backdropOpacity]);
 
   const handleAction = (callback: () => void) => {
     impact(ImpactFeedbackStyle.Light);
@@ -98,8 +103,21 @@ export function Drawer({
         style={[styles.backdrop, { opacity: backdropOpacity }]}
         onTouchEnd={onClose}
       />
-      <Animated.View style={[styles.panel, { transform: [{ translateX }] }]}>
-        <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
+      <Animated.View style={[styles.panel, { width: drawerWidth, transform: [{ translateX }] }]}>
+        {/*
+          2026-11-07 (prueba física): con muchas conversaciones, la lista de
+          recientes era un ScrollView de 260 px DENTRO de otro ScrollView. En
+          Android el de dentro no se desplaza sin nestedScrollEnabled: la lista
+          quedaba cortada y no se podía mover. Ahora hay un único scroll, con
+          la barra visible, y la lista ocupa lo que necesite.
+        */}
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator
+          persistentScrollbar
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Brand Row */}
           <View style={styles.brandRow}>
             <Image source={require("../../assets/icon-nido.png")} style={styles.brandMascot} />
@@ -143,8 +161,8 @@ export function Drawer({
                   />
                 </View>
               )}
-              {shown.length === 0 && <Text style={styles.noMatches}>{t("drawer.noMatches")}</Text>}
-              <ScrollView style={styles.sessionList}>
+              {matches.length === 0 && <Text style={styles.noMatches}>{t("drawer.noMatches")}</Text>}
+              <View style={styles.sessionList} testID="drawer-session-list">
                 {shown.map((s) => {
                   const active = s.id === activeSessionId;
                   return (
@@ -159,7 +177,7 @@ export function Drawer({
                       }}
                     >
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.sessionTitle} numberOfLines={1}>
+                        <Text style={styles.sessionTitle} numberOfLines={2}>
                           {s.title}
                         </Text>
                         <Text style={styles.sessionTime}>{formatTimestamp(s.updatedAt, t)}</Text>
@@ -178,7 +196,16 @@ export function Drawer({
                     </Pressable>
                   );
                 })}
-              </ScrollView>
+              </View>
+              {hidden > 0 && (
+                <Pressable accessibilityRole="button"
+                  accessibilityLabel={t("drawer.showAll", { count: hidden })}
+                  style={styles.showAllBtn}
+                  onPress={() => setShowAll(true)}
+                >
+                  <Text style={styles.showAllLabel}>{t("drawer.showAll", { count: hidden })}</Text>
+                </Pressable>
+              )}
               <View style={styles.divider} />
             </>
           )}
@@ -224,7 +251,6 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     top: 0,
     bottom: 0,
     left: 0,
-    width: DRAWER_WIDTH,
     backgroundColor: colors.bg.black,
     paddingTop: 56,
     paddingHorizontal: 16,
@@ -263,7 +289,10 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     marginTop: 4,
     marginLeft: 4,
   },
-  sessionList: { maxHeight: 260 },
+  sessionList: {},
+  showAllBtn: { minHeight: 44, justifyContent: "center", paddingHorizontal: 12, borderRadius: 12 },
+  showAllLabel: { ...typography.ui.body, color: colors.text.accentEmerald, fontWeight: "600" },
+  scrollContent: { paddingBottom: 24 },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -303,5 +332,5 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     borderRadius: 12,
   },
   itemIcon: { fontSize: 18 },
-  itemLabel: { ...typography.ui.body, color: colors.text.primary, fontWeight: "500" },
+  itemLabel: { ...typography.ui.body, color: colors.text.primary, fontWeight: "500", flexShrink: 1 },
 });

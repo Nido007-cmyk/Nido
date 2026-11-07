@@ -178,6 +178,8 @@ import { BottomTabBar } from "./navigation/BottomTabBar";
 import type { MainTab } from "./navigation/tabs";
 import { EmergencyScreen } from "./EmergencyScreen";
 import { LibraryScreen } from "./LibraryScreen";
+import { userFacingError } from "./userFacingError";
+import { historyForModel, planRetry } from "./chatRetry";
 
 interface Message {
   id: string;
@@ -204,6 +206,12 @@ interface Message {
    * aviso si no llegó ningún token. Ver chatHistory.addAssistantDraft.
    */
   interrupted?: boolean;
+  /**
+   * Auditoría 0.1.79: la respuesta falló. Antes era texto que empezaba por
+   * «Error:» (en inglés técnico, y se mandaba al modelo como si fuera una
+   * respuesta suya). En memoria; no se guarda en el historial.
+   */
+  failed?: boolean;
   /** Cuándo empezó (para saber por qué se cortó, si se cortó). */
   createdAt?: number;
   feedback?: "up" | "down" | null;
@@ -1422,7 +1430,7 @@ export function ChatScreen({
         peakRss.stop();
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === assistantId ? { ...m, text: `Error: ${e?.message ?? e}` } : m
+            m.id === assistantId ? { ...m, text: userFacingError(t, e, i18n.language), failed: true } : m
           )
         );
         // El error se enseña en pantalla pero no se persiste (como hasta
@@ -1473,7 +1481,7 @@ export function ChatScreen({
       const systemPrompt = activePersonalityId === "custom" ? customPrompt : personality.systemPrompt;
       const styleReminder = activePersonalityId === "custom" ? undefined : personality.styleReminder;
 
-      const priorMessages = messagesRef.current.filter((m) => m.text.length > 0);
+      const priorMessages = historyForModel(messagesRef.current);
       const verbatimTurns: ConversationTurn[] = priorMessages
         .slice(-VERBATIM_MESSAGE_COUNT)
         .map((m) => ({ role: m.role, text: m.role === "assistant" ? stripThinking(m.text) : m.text }));
@@ -2092,7 +2100,7 @@ export function ChatScreen({
       peakRss.stop();
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === assistantId ? { ...m, text: `Error: ${e?.message ?? e}` } : m
+          m.id === assistantId ? { ...m, text: userFacingError(t, e, i18n.language), failed: true } : m
         )
       );
       // El error se enseña en pantalla pero no se persiste (como hasta
@@ -2123,7 +2131,7 @@ export function ChatScreen({
       // here, so error/retry keeps working and the send button is never wedged.
       sendGuardRef.current.release();
     }
-  }, [input, generating, ready, activeSessionId, cancelBackgroundTask, refreshSessions, updateInput]);
+  }, [input, generating, ready, activeSessionId, cancelBackgroundTask, refreshSessions, updateInput, t, i18n]);
 
   // send() itself isn't awaited by its callers (onPress/onSubmitEditing) —
   // stopAndAwaitGeneration needs a handle on the in-flight promise so a
@@ -2207,9 +2215,17 @@ export function ChatScreen({
   // FASE D6: Retry explícito para mensajes de error. Busca el último mensaje
   // del usuario y lo reenvía sin que el usuario tenga que reescribirlo.
   const retryLastMessage = useCallback(() => {
-    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
-    if (lastUserMsg && !generating) {
-      updateInput(lastUserMsg.text, "typed");
+    const plan = planRetry(messages);
+    if (plan && !generating) {
+      // Auditoría 0.1.79: la pregunta fallida y su error salen de la
+      // conversación (y la pregunta del historial guardado) antes de
+      // reenviarla; antes quedaba dos veces.
+      if (plan.removeIds.length > 0) {
+        const gone = new Set(plan.removeIds);
+        setMessages((prev) => prev.filter((m) => !gone.has(m.id)));
+        for (const id of plan.deleteFromHistory) void deleteMessage(id).catch(() => {});
+      }
+      updateInput(plan.question, "typed");
       // Pequeño delay para que setInput se aplique antes de send()
       setTimeout(() => {
         followBottom.current = true;
@@ -2639,7 +2655,7 @@ export function ChatScreen({
 
                 {/* FASE D6: Botón retry explícito para mensajes de error.
                     El usuario no tiene que reescribir el mensaje. */}
-                {item.role === "assistant" && item.text.startsWith("Error:") && (
+                {item.role === "assistant" && item.failed && (
                   <Pressable
                     onPress={retryLastMessage}
                     disabled={generating}
@@ -2659,7 +2675,7 @@ export function ChatScreen({
                   </Pressable>
                 )}
 
-                {item.role === "assistant" && item.text.length > 0 && (
+                {item.role === "assistant" && item.text.length > 0 && !item.failed && (
                   <View style={[styles.bubbleFooter, { borderTopColor: colors.border.subtle }]}>
                     <Pressable accessibilityRole="button"
                       onPress={() => rateMessage(item.id, "up")}

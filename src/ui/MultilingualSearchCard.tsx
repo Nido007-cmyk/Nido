@@ -35,6 +35,7 @@ import {
 } from "../rag/embeddingSwitch";
 import { onReembedProgress, type ReembedProgress } from "../rag/reembed";
 import { displayLang, formatInt } from "../utils/safeFormat";
+import { errorReason } from "./userFacingError";
 
 const modelManager = new ModelManager();
 
@@ -81,7 +82,7 @@ export function MultilingualSearchCard({ onChanged }: { onChanged?: () => void }
         setMessage(t(enable ? "multilingual.enabled" : "multilingual.disabled"));
         onChanged?.();
       } catch (e) {
-        setMessage(t("multilingual.failed", { error: e instanceof Error ? e.message : String(e) }));
+        setMessage(t("multilingual.failed", { error: errorReason(t, e, i18n.language) }));
         await refresh();
       } finally {
         running.current = false;

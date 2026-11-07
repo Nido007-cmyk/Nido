@@ -28,7 +28,8 @@
     "searchPlaceholder": "Buscar nas suas conversas",
     "searchLabel": "Buscar nas suas conversas",
     "noMatches": "Nenhuma conversa corresponde.",
-    "shortcuts": "Atalhos"
+    "shortcuts": "Atalhos",
+    "showAll": "Ver todos (+{{count}})"
   },
   "catalogItemCard": {
     "calculating": "Calculando…",
@@ -679,6 +680,10 @@
       "stateOff": "Desligado"
     },
     "exportFailedBody": "Não foi possível exportar a telemetria."
+  },
+  "errors": {
+    "unexpected": "Algo deu errado. Detalhe técnico: {{detail}}",
+    "unexpectedNoDetail": "Algo deu errado. Tente novamente."
   },
   "evaluation": {
     "title": "Avaliação",

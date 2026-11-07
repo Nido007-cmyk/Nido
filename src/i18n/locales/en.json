@@ -28,7 +28,8 @@
     "searchPlaceholder": "Search your chats",
     "searchLabel": "Search your chats",
     "noMatches": "No chat matches.",
-    "shortcuts": "Shortcuts"
+    "shortcuts": "Shortcuts",
+    "showAll": "Show all (+{{count}})"
   },
   "catalogItemCard": {
     "calculating": "Calculating…",
@@ -679,6 +680,10 @@
       "stateOff": "Off"
     },
     "exportFailedBody": "The telemetry could not be exported."
+  },
+  "errors": {
+    "unexpected": "Something went wrong. Technical detail: {{detail}}",
+    "unexpectedNoDetail": "Something went wrong. Please try again."
   },
   "evaluation": {
     "title": "Evaluation",
