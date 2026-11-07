@@ -32,8 +32,7 @@ knowledge-packs-v14.
 - **NIDO checks the memory that is free right now before loading a
   model.** Before, it only subtracted a fixed reserve from the total, and
   with other apps open a model could load and use up the memory, closing
-  the app. Builds of the Android part from before this version keep the
-  old check.
+  the app.
 - **"Works well on this device" only shows when the model really fits**,
   with the same reserve the loader uses. On the 3.3 GB tablet,
   Qwen3-0.6B no longer showed it.
