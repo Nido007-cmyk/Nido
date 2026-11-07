@@ -113,6 +113,7 @@ export function Drawer({
         */}
         <ScrollView
           style={styles.scrollArea}
+          testID="drawer-scroll"
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator
           persistentScrollbar

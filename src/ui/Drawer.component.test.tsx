@@ -9,7 +9,6 @@
 // Android el de dentro no se movía. Ahora hay un solo scroll y los atajos
 // siempre quedan a mano.
 import React from "react";
-import { ScrollView } from "react-native";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 
 jest.mock("./theme", () => ({
@@ -51,8 +50,10 @@ const items = [{ key: "settings", icon: "settings", label: "Ajustes", onPress: (
 describe("menú lateral con muchos chats", () => {
   it("un solo scroll, con barra visible; los atajos siguen ahí", async () => {
     await render(<Drawer open onClose={() => {}} items={items} sessions={sessions(60)} />);
-    expect(screen.UNSAFE_getAllByType(ScrollView)).toHaveLength(1);
-    const scroll = screen.UNSAFE_getByType(ScrollView);
+    // La lista de chats ya no es un scroll dentro del scroll del menú.
+    expect(screen.getByTestId("drawer-session-list").type).toBe("View");
+    const scroll = screen.getByTestId("drawer-scroll");
+    expect(scroll.type).toBe("RCTScrollView");
     expect(scroll.props.showsVerticalScrollIndicator).toBe(true);
     expect(screen.getByText("Ajustes")).toBeTruthy();
   });
