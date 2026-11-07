@@ -357,10 +357,20 @@ export function extractiveSnippet(chunk: GroundingChunk, index: number, maxChars
   return `${out} [${index + 1}]`;
 }
 
+/**
+ * Auditoría 0.1.79: el apartado de cierre de una guía («… — Importante»:
+ * en qué fuentes se basa, haz un curso) no dice nada de la pregunta. Si es
+ * la primera fuente, el extracto «Esto es lo que sí dice…» usa la
+ * siguiente; si no hay otra, la de siempre.
+ */
+const CLOSING_TITLE_RE = /\s[—–-]\s*(?:Importante|Important)\s*$/i;
+
 export function honestAbstention(chunks: GroundingChunk[], lang: GroundingLang): string {
   if (chunks.length === 0) return IDK_TEXT[lang];
-  const intro = EXTRACT_INTRO[lang].split("{{title}}").join(chunks[0].title);
-  return `${IDK_TEXT[lang]}\n\n${intro}\n${extractiveSnippet(chunks[0], 0, 320, lang)}`;
+  let i = chunks.findIndex((c) => !CLOSING_TITLE_RE.test(c.title ?? ""));
+  if (i < 0) i = 0;
+  const intro = EXTRACT_INTRO[lang].split("{{title}}").join(chunks[i].title);
+  return `${IDK_TEXT[lang]}\n\n${intro}\n${extractiveSnippet(chunks[i], i, 320, lang)}`;
 }
 
 /** Quita citas [n] que no corresponden a ninguna fuente (el modelo inventa números). */

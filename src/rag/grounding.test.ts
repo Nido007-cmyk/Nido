@@ -1895,3 +1895,20 @@ describe("ADV3 — el puente no sirve el teléfono de otra entidad", () => {
     expect(r.text).not.toContain("es el que viene en la nota");
   });
 });
+
+describe("abstención honesta: el extracto no sale del apartado de cierre (auditoría 0.1.79)", () => {
+  it("salta «… — Importante» y cita la fuente siguiente con su número", () => {
+    const cierre = { title: "Accidente de tráfico — Importante", body: "Esta guía se basa en fuentes oficiales. Haz un curso de primeros auxilios." };
+    const rcp = { title: "RCP en adultos", body: "Empuja fuerte y rápido en el centro del pecho, a 100-120 compresiones por minuto." };
+    const text = honestAbstention([cierre, rcp], "es");
+    expect(text).toContain("«RCP en adultos»");
+    expect(text).toContain("[2]");
+    expect(text).not.toContain("Esta guía se basa");
+  });
+
+  it("si solo hay cierre, lo usa (mejor que nada)", () => {
+    const cierre = { title: "Quemaduras — Importante", body: "Esta guía se basa en fuentes oficiales." };
+    expect(honestAbstention([cierre], "es")).toContain("[1]");
+  });
+});
+
