@@ -185,3 +185,14 @@ describe("R3 — TS wrapper fail-closed behavior", () => {
     expect(fn).toHaveBeenCalledWith("t", "m", "Cancel", "OK", true);
   });
 });
+
+describe("0.1.79 — setWindowSecure (permitir capturas, opcional)", () => {
+  it("solo toca la ventana de la actividad, en el hilo de UI, y el diálogo seguro no cambia", () => {
+    const src = readFileSync(KOTLIN_PATH, "utf8");
+    expect(src).toMatch(/AsyncFunction\("setWindowSecure"\)/);
+    expect(src).toMatch(/activity\.window\.addFlags\(WindowManager\.LayoutParams\.FLAG_SECURE\)/);
+    expect(src).toMatch(/activity\.window\.clearFlags\(WindowManager\.LayoutParams\.FLAG_SECURE\)/);
+    // Ningún diálogo pierde su protección.
+    expect(src).not.toMatch(/dialog\.window\?\.clearFlags/);
+  });
+});

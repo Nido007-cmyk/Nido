@@ -1130,6 +1130,10 @@
     "taskDisabled": "Enable delegated tasks in Settings to use this feature."
   },
   "settings": {
+    "screenCaptureTitle": "Allow screenshots",
+    "screenCaptureDesc": "Off, NIDO blocks screenshots and screen recording, and hides its preview in Recents. On, any app with access to your screen can see it. Your backup key and your pairing code stay protected either way.",
+    "screenCaptureOn": "Screenshots allowed. Your backup key and pairing code stay protected.",
+    "screenCaptureOff": "Screenshots blocked again.",
     "delegationTitle": "Delegated tasks (experimental)",
     "delegationDesc": "A paired NIDO can ask you to run tasks. Every task requires your explicit approval.",
     "sealedHelloTitle": "Private hello",

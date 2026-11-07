@@ -70,6 +70,7 @@ import { ScheduledTasksCard } from "./ScheduledTasksCard";
 import { CrashReportCard } from "./CrashReportCard";
 import { BackupScreen } from "./BackupScreen";
 import { matchesSearch } from "./navigation/search";
+import { useSecureScreen } from "./useSecureScreen";
 
 const modelManager = new ModelManager();
 const LLM_EMBEDDING_KINDS: AssetKind[] = ["llm", "embedding"];
@@ -191,6 +192,7 @@ export function ModelSetupScreen(props: Props) {
   const [privateHelloOnly, setPrivateHelloOnlyState] = useState(false);
   const [ratchetV5Enabled, setRatchetV5EnabledState] = useState(false);
   const [panicEnabled, setPanicEnabledState] = useState(false);
+  const [screenCaptureAllowed, setScreenCaptureAllowedState] = useState(false);
 
   useEffect(() => subscribeDownloads(() => forceRender((n) => n + 1)), []);
 
@@ -232,7 +234,24 @@ export function ModelSetupScreen(props: Props) {
       setRatchetV5EnabledState(isFeatureEnabled("p2p.ratchetV5"));
       setPanicEnabledState(isFeatureEnabled("security.panicButton"));
     }).catch(() => {});
+    import("../models/settings")
+      .then(({ getScreenCaptureAllowed }) => getScreenCaptureAllowed())
+      .then(setScreenCaptureAllowedState)
+      .catch(() => {});
   }, []);
+
+  // 0.1.79: permitir capturas de pantalla (apagado por defecto). Las
+  // pantallas con secretos siguen protegidas (src/security/screenCapture.ts).
+  const toggleScreenCapture = useCallback(async (value: boolean) => {
+    setScreenCaptureAllowedState(value);
+    try {
+      const { setScreenCaptureAllowed } = await import("../security/screenCapture");
+      await setScreenCaptureAllowed(value);
+      setToast(t(value ? "settings.screenCaptureOn" : "settings.screenCaptureOff"));
+    } catch {
+      setScreenCaptureAllowedState(!value);
+    }
+  }, [t]);
 
   // P2P v4 (2026-10-21): saludo privado, experimental hasta probarlo en dos
   // teléfonos. Solo cambia cómo LLAMA este teléfono a contactos que ya lo
@@ -387,6 +406,8 @@ export function ModelSetupScreen(props: Props) {
   // Auditoría 0.1.79: el estado tarda un render en verse; dos toques
   // rápidos en «Usar» pasaban los dos. La ref cierra la puerta al instante.
   const activatingRef = useRef(false);
+  // 0.1.79: escribir la clave del respaldo nunca sale en una captura.
+  useSecureScreen(restoreKeyVisible);
 
   const activateModelNow = useCallback(
     async (model: CatalogModel) => {
@@ -548,7 +569,7 @@ export function ModelSetupScreen(props: Props) {
 
       <ScrollView contentContainerStyle={styles.accordionScroll} keyboardShouldPersistTaps="handled">
         {!searching && <Text style={styles.groupHeading} accessibilityRole="header">{t("settingsGroups.security")}</Text>}
-        {match(t("modelSetupScreen.sections.security"), t("vault.title"), t("vault.strictTitle"), t("settings.sealedHelloTitle"), t("settings.privateHelloOnlyTitle"), t("settings.ratchetV5Title"), t("panic.settingTitle")) && (
+        {match(t("modelSetupScreen.sections.security"), t("vault.title"), t("vault.strictTitle"), t("settings.sealedHelloTitle"), t("settings.privateHelloOnlyTitle"), t("settings.ratchetV5Title"), t("panic.settingTitle"), t("settings.screenCaptureTitle")) && (
           <AccordionSection key={`1-${searchKey}`} defaultOpen={searching} icon="security" title={t("modelSetupScreen.sections.security")}>
             <HardwareProtectionCard />
             <View style={styles.hapticRow}>
@@ -600,6 +621,19 @@ export function ModelSetupScreen(props: Props) {
                 onValueChange={togglePanic}
                 accessibilityLabel={t("panic.settingTitle")}
                 trackColor={{ false: colors.border.elevated, true: colors.crimson[500] }}
+                thumbColor={colors.bg.card}
+              />
+            </View>
+            <View style={styles.hapticRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hapticRowLabel}>{t("settings.screenCaptureTitle")}</Text>
+                <Text style={styles.hapticRowValue}>{t("settings.screenCaptureDesc")}</Text>
+              </View>
+              <Switch
+                value={screenCaptureAllowed}
+                onValueChange={toggleScreenCapture}
+                accessibilityLabel={t("settings.screenCaptureTitle")}
+                trackColor={{ false: colors.border.elevated, true: colors.amber[600] }}
                 thumbColor={colors.bg.card}
               />
             </View>

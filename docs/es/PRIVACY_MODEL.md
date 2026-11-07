@@ -65,10 +65,10 @@ qué riesgo tiene), no en jerga técnica.
 |---|---|---|
 | Notificaciones | **Auditar:** verificar que no muestran texto del mensaje | M-1: texto genérico "Nuevo mensaje de NIDO" |
 | Clipboard | **Auditar:** no auto-copiar secretos | M-1: `EXTRA_IS_SENSITIVE` (API 33+), limpieza tras timeout |
-| Screenshots / switcher | Sin protección | M-1: `FLAG_SECURE` en pantallas sensibles (QR, inbox, mensajes) |
+| Screenshots / switcher | **Hecho:** `FLAG_SECURE` en toda la ventana principal y en los diálogos seguros. Desde 0.1.79 la persona puede activar «Permitir capturas de pantalla» en Ajustes (apagado por defecto); la clave del respaldo, escribir la clave al restaurar y el código para emparejar siguen protegidos incluso así | — |
 | Backups en la nube | `allowBackup=false` | H-3: `dataExtractionRules` (bloquea también device-transfer en 12+) |
 | Logs de la app | Sin PII por diseño en el código P2P (los errores no incluyen contenido) | M-3: sanitización antes de persistir crash reports |
-| Miniaturas en "recientes" | Sin protección | M-1 (FLAG_SECURE las cubre) |
+| Miniaturas en "recientes" | **Hecho:** ocultas por `FLAG_SECURE` (se ven solo con «Permitir capturas de pantalla» activado) | — |
 | Teclado de terceros | Fuera de control de la app | Documentar: recomendar teclado del sistema; los campos sensibles usan input seguro |
 
 ## 6. Borrado y retención

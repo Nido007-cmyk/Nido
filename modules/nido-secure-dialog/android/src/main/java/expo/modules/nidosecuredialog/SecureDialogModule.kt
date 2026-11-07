@@ -67,6 +67,33 @@ class SecureDialogModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("NidoSecureDialog")
 
+    /*
+     * 0.1.79 — «Permitir capturas de pantalla» (opcional, apagado por
+     * defecto). MainActivity arranca SIEMPRE con FLAG_SECURE
+     * (plugins/withFlagSecure.js); JS solo lo quita si la persona lo pidió
+     * y ninguna pantalla con secretos está a la vista. Resuelve con el
+     * estado aplicado.
+     */
+    AsyncFunction("setWindowSecure") { secure: Boolean, promise: Promise ->
+      val activity = appContext.currentActivity
+      if (activity == null) {
+        promise.reject("NO_ACTIVITY", "NidoSecureDialog: no current activity", null)
+        return@AsyncFunction
+      }
+      activity.runOnUiThread {
+        try {
+          if (secure) {
+            activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+          } else {
+            activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+          }
+          promise.resolve(secure)
+        } catch (e: Exception) {
+          promise.reject("WINDOW_ERROR", "NidoSecureDialog: ${e.message}", e)
+        }
+      }
+    }
+
     AsyncFunction("copySensitive") { text: String, promise: Promise ->
       onMain(promise) {
         val cm = clipboard() ?: throw IllegalStateException("no clipboard")

@@ -33,6 +33,8 @@ interface Settings {
   maxTokens?: number;
   hapticsEnabled?: boolean;
   voiceInputEnabled?: boolean;
+  /** 0.1.79: permitir capturas de pantalla (FLAG_SECURE fuera). Default false. */
+  screenCaptureAllowed?: boolean;
   /** Dictation only with the phone's on-device recognizer (default true). */
   voiceOnDeviceOnly?: boolean;
   readAloudEnabled?: boolean;
@@ -348,6 +350,17 @@ export async function setHapticsEnabled(enabled: boolean): Promise<void> {
 }
 
 /** Whether the chat shows the microphone button. */
+export async function getScreenCaptureAllowed(): Promise<boolean> {
+  const s = await readSettings();
+  return s.screenCaptureAllowed === true;
+}
+
+export async function setScreenCaptureAllowedSetting(allowed: boolean): Promise<void> {
+  return mutateSettings((s) => {
+    s.screenCaptureAllowed = allowed;
+  });
+}
+
 export async function getVoiceInputEnabled(): Promise<boolean> {
   const s = await readSettings();
   return s.voiceInputEnabled ?? true;

@@ -1130,6 +1130,10 @@
     "taskSent": "Pedido enviado. Aguarde o resultado."
   },
   "settings": {
+    "screenCaptureTitle": "Permitir capturas de tela",
+    "screenCaptureDesc": "Desligado, o NIDO não deixa fazer capturas nem gravar a tela, e esconde a prévia em Recentes. Ligado, qualquer app com acesso à sua tela pode vê-la. A chave do backup e o seu código de pareamento continuam sempre protegidos.",
+    "screenCaptureOn": "Capturas permitidas. A chave do backup e o código de pareamento continuam protegidos.",
+    "screenCaptureOff": "Capturas bloqueadas de novo.",
     "delegationDesc": "Um NIDO pareado pode pedir para você executar tarefas. Cada tarefa requer sua aprovação.",
     "delegationTitle": "Tarefas delegadas (experimental)",
     "sealedHelloTitle": "Saudação privada",

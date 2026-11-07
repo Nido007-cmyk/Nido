@@ -1130,6 +1130,10 @@
     "taskDisabled": "Activa las tareas delegadas en Ajustes para usar esta función."
   },
   "settings": {
+    "screenCaptureTitle": "Permitir capturas de pantalla",
+    "screenCaptureDesc": "Apagado, NIDO no deja hacer capturas ni grabar la pantalla, y oculta su vista en Recientes. Encendido, cualquier app con acceso a tu pantalla puede verla. La clave del respaldo y tu código para emparejar siguen protegidos siempre.",
+    "screenCaptureOn": "Capturas permitidas. La clave del respaldo y el código para emparejar siguen protegidos.",
+    "screenCaptureOff": "Capturas bloqueadas otra vez.",
     "delegationTitle": "Tareas delegadas (experimental)",
     "delegationDesc": "Otro NIDO emparejado puede pedirte ejecutar tareas. Cada tarea requiere tu aprobación explícita.",
     "sealedHelloTitle": "Saludo privado",
