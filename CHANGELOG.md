@@ -4,6 +4,60 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.78-alpha - 2026-11-07
+
+Fixes from the owner's first round with 0.1.77 on a tablet with 3.3 GB
+of RAM: an earthquake quick guide that answered from the wrong pack, an
+app that closed for lack of memory, and messages in English inside the
+Spanish app. No catalog change: the signed catalog keeps offering
+knowledge-packs-v14.
+
+### Guides
+
+- **A pack update no longer hides its guides for a while.** Right after
+  NIDO Essentials was updated, the phone rebuilds its search index in the
+  background, and until then that pack only searched by keywords. "What
+  do I do during an earthquake?" got an unhelpful answer from another
+  pack instead of the Essentials guide. Small packs are now searched in
+  full while their index is rebuilt.
+- **The introduction of a guide in another NIDO pack no longer takes the
+  answer from the Essentials guide.** It describes that guide; it doesn't
+  answer the question. Its sections still compete as before.
+- **The closing "Important" section of a guide (its sources and a course
+  recommendation) never opens a guide.** "I want to take a CPR course
+  next month" opened the road accident guide that way.
+
+### Low memory
+
+- **NIDO checks the memory that is free right now before loading a
+  model.** Before, it only subtracted a fixed reserve from the total, and
+  with other apps open a model could load and use up the memory, closing
+  the app.
+- **"Works well on this device" only shows when the model really fits**,
+  with the same reserve the loader uses. On the 3.3 GB tablet,
+  Qwen3-0.6B no longer showed it.
+- **The out-of-memory message is in the app's language**, with the
+  figures and what to do (close other apps or choose Qwen2.5-0.5B).
+  Before, it was a technical message in English.
+- **A cut-off answer says when NIDO was closed for lack of memory**, if
+  Android recorded it, and what to do.
+- **Model and pack descriptions are in Spanish and Portuguese.**
+
+### CPR practice
+
+- **The camera turns off when NIDO goes to the background** (home
+  button, screen lock, another app, a call) and turns back on when you
+  return. Stopping the practice while the camera is still starting now
+  turns it off as soon as it opens. The beep and the count are unchanged.
+
+### Not tested on a physical phone yet
+
+These fixes passed the automated tests only (6,292 on the release
+tree), and the Android build compiles. The owner's round on the same
+tablet repeats the earthquake quick guide right after a pack update,
+the CPR practice with the screen locked, and a model change with other
+apps open.
+
 ## 0.1.77-alpha - 2026-11-07
 
 The Essentials pack moves to knowledge-packs-v14, and the fixes from the
