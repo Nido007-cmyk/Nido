@@ -18,7 +18,7 @@ import * as SQLite from "expo-sqlite";
 import * as FileSystem from "expo-file-system/legacy";
 import { CORPUS_CATALOG, MODEL_CATALOG, CatalogModel } from "../models/manifest";
 import { packFileState } from "../models/modelTrust";
-import { buildLexicalQuery, cosineSimilarityInt8, distinctFloor, DISTINCT_BG_TO, dropUnfoundedCorpus, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM, normalizeCorpusScores, pruneSemanticByMargin, pruneVectorHits } from "./pure";
+import { buildLexicalQuery, cosineSimilarityInt8, distinctFloor, DISTINCT_BG_TO, EXACT_SEARCH_MAX_ROWS, exactVectorSearch, dropUnfoundedCorpus, filterByMinScore, filterByTermCoverage, MIN_SEMANTIC_SIMILARITY, MIN_SEMANTIC_SIMILARITY_SINGLE_TERM, normalizeCorpusScores, pruneSemanticByMargin, pruneVectorHits } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
 import { guideTitleOf, markUsedPart, MAX_SOURCE_PARTS, parsePackChunkId, sectionLikePattern, type PackSourceDoc } from "./packSource";
 import { BGE_SMALL_EN_PROFILE, packSemanticFloor, type EmbeddingProfile } from "./embeddingProfile";
@@ -41,6 +41,11 @@ interface OpenPack {
   dims: number;
   /** File mtime when opened: a replaced file (update promoted) is reopened. */
   mtime: number | null;
+  /**
+   * Vectors of a small pack, read once, for the exact search while its
+   * index is (re)built; null when the pack is too big for that.
+   */
+  exactRows?: Array<{ id: number; vec: Uint8Array }> | null;
   /**
    * 0.1.57: an older verified version of a catalog pack (the app was updated
    * and the new pack isn't downloaded yet). Still used — offline it may be the
@@ -183,6 +188,28 @@ export interface PackSearchOptions {
   modelSha256?: string | null;
 }
 
+/** Exact search over a small pack's vectors (no index yet), or null for a big pack. */
+async function exactSearcherFor(
+  open: OpenPack,
+  queryVec: Float32Array,
+): Promise<((floor: number, n: number) => Promise<ReturnType<typeof exactVectorSearch>>) | null> {
+  if (open.exactRows === undefined) {
+    try {
+      const count = (await open.db.getFirstAsync<{ n: number }>("SELECT COUNT(*) AS n FROM chunks"))?.n ?? 0;
+      open.exactRows =
+        count > 0 && count <= EXACT_SEARCH_MAX_ROWS
+          ? await open.db.getAllAsync<{ id: number; vec: Uint8Array }>("SELECT id, vec FROM chunks")
+          : null;
+    } catch {
+      // Sin lectura: el camino de siempre (palabras primero).
+      open.exactRows = null;
+    }
+  }
+  const rows = open.exactRows;
+  if (!rows || rows.length === 0) return null;
+  return async (floor, n) => exactVectorSearch(rows, queryVec, floor, n);
+}
+
 /** Lexical and semantic candidates from every installed pack, scored like the built-in ones. */
 export async function searchPacks(
   query: string,
@@ -250,17 +277,23 @@ export async function searchPacks(
       if (fullVectorSearch) {
         let floor = packSemanticFloor(profile, query);
         const indexUri = await packIndexIfReady(pack, open.sizeBytes, open.dims);
-        if (indexUri) {
+        // Sin índice todavía (se construye en segundo plano, p. ej. justo tras
+        // actualizar el pack): un pack pequeño se recorre entero con el
+        // mismo contrato que el índice, en vez de caer a «solo palabras».
+        const search = indexUri
+          ? (floorArg: number, n: number) => searchPackIndex(indexUri, queryVec, floorArg, n)
+          : await exactSearcherFor(open, queryVec);
+        if (search) {
           // 0.1.36 distintividad: el fondo (puestos 10–50) sale de una
           // primera búsqueda sin piso; el piso efectivo sube a fondo+gap
           // cuando el mejor no destaca (pregunta sin respuesta en el pack).
           if (profile.packDistinctGap > 0) {
-            const top = await searchPackIndex(indexUri, queryVec, -1, DISTINCT_BG_TO + 1);
+            const top = await search(-1, DISTINCT_BG_TO + 1);
             if (top && top.scores.length > 0) {
               floor = distinctFloor(floor, [...top.scores].sort((a, b) => b - a), profile.packDistinctGap);
             }
           }
-          const hits = await searchPackIndex(indexUri, queryVec, floor, limit);
+          const hits = await search(floor, limit);
           if (hits && hits.ids.length > 0) {
             // Same margin pruning as the built-in search, over the whole
             // range that passed the floor (gatedMin), not just the top hits.
@@ -279,7 +312,7 @@ export async function searchPacks(
           }
           continue;
         }
-        // Index not built yet (building in the background): keyword-first below.
+        // Un pack grande (la Wikipedia) sin índice todavía: palabras primero, abajo.
       }
 
       const scored = rows.map((r) => toChunk(r, cosineSimilarityInt8(queryVec, r.vec), "semantic"));
