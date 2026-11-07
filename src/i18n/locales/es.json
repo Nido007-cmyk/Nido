@@ -191,12 +191,21 @@
     "searchPlaceholder": "Buscar en tus chats",
     "searchLabel": "Buscar en tus chats",
     "noMatches": "Ningún chat coincide.",
-    "shortcuts": "Atajos"
+    "shortcuts": "Atajos",
+    "showAll": "Ver todos (+{{count}})",
+    "deleteTitle": "¿Borrar este chat?",
+    "deleteBody": "«{{title}}» se borrará de este teléfono. No se puede deshacer.",
+    "deleteConfirm": "Borrar",
+    "deleteBusy": "Espera a que termine la respuesta para borrar este chat."
   },
   "drawerFooterStats": {
     "disk": "DISCO",
     "lastQuery": "{{rate}} tok/s en la última consulta",
     "ram": "RAM"
+  },
+  "errors": {
+    "unexpected": "Algo salió mal. Detalle técnico: {{detail}}",
+    "unexpectedNoDetail": "Algo salió mal. Inténtalo de nuevo."
   },
   "evaluation": {
     "adaptiveConfig": "Enrutamiento adaptativo (preset: {{preset}})",

@@ -4,8 +4,8 @@
  * See LICENSE file for details.
  */
 
-import { loadErrorText } from "./ramBudgetMessage";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { errorReason } from "./userFacingError";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -384,10 +384,12 @@ export function ModelSetupScreen(props: Props) {
 
   // Id of the LLM being loaded after "Use"; blocks other Use/delete/Done until it's ready.
   const [activatingId, setActivatingId] = useState<string | null>(null);
+  // Auditoría 0.1.79: el estado tarda un render en verse; dos toques
+  // rápidos en «Usar» pasaban los dos. La ref cierra la puerta al instante.
+  const activatingRef = useRef(false);
 
-  const useModel = useCallback(
+  const activateModelNow = useCallback(
     async (model: CatalogModel) => {
-      if (activatingId) return;
       impact(ImpactFeedbackStyle.Light);
       if (model.kind === "embedding") {
         // Never set the search model directly: the knowledge base is stamped
@@ -397,7 +399,7 @@ export function ModelSetupScreen(props: Props) {
           await switchEmbeddingModel(model);
           setToast(t("modelSetupScreen.toasts.activeSet", { kind: model.kind, name: model.label }));
         } catch (e: any) {
-          setToast(t("modelSetupScreen.toasts.loadFailed", { name: model.label, error: loadErrorText(t, e, i18n.language) }));
+          setToast(t("modelSetupScreen.toasts.loadFailed", { name: model.label, error: errorReason(t, e, i18n.language) }));
         }
         await refreshStatus();
         return;
@@ -420,13 +422,26 @@ export function ModelSetupScreen(props: Props) {
       } catch (e: any) {
         // Keep the previous model active; the chat reloads it on return.
         await setActiveModelId("llm", previousId);
-        setToast(t("modelSetupScreen.toasts.loadFailed", { name: model.label, error: loadErrorText(t, e, i18n.language) }));
+        setToast(t("modelSetupScreen.toasts.loadFailed", { name: model.label, error: errorReason(t, e, i18n.language) }));
       } finally {
         setActivatingId(null);
         await refreshStatus();
       }
     },
-    [activatingId, refreshStatus, t]
+    [refreshStatus, t, i18n]
+  );
+
+  const useModel = useCallback(
+    async (model: CatalogModel) => {
+      if (activatingId || activatingRef.current) return;
+      activatingRef.current = true;
+      try {
+        await activateModelNow(model);
+      } finally {
+        activatingRef.current = false;
+      }
+    },
+    [activatingId, activateModelNow]
   );
 
   const onRelaunchWizard = !requiredMode
@@ -453,7 +468,7 @@ export function ModelSetupScreen(props: Props) {
       onRelaunchWizard?.();
     } catch (e: any) {
       setResetting(false);
-      setToast(t("modelSetupScreen.toasts.resetFailed", { error: e?.message ?? e }));
+      setToast(t("modelSetupScreen.toasts.resetFailed", { error: errorReason(t, e, i18n.language) }));
     }
   };
 

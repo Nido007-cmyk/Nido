@@ -28,7 +28,12 @@
     "searchPlaceholder": "Buscar nas suas conversas",
     "searchLabel": "Buscar nas suas conversas",
     "noMatches": "Nenhuma conversa corresponde.",
-    "shortcuts": "Atalhos"
+    "shortcuts": "Atalhos",
+    "showAll": "Ver todos (+{{count}})",
+    "deleteTitle": "Apagar este chat?",
+    "deleteBody": "“{{title}}” será apagado deste telefone. Não dá para desfazer.",
+    "deleteConfirm": "Apagar",
+    "deleteBusy": "Espere a resposta terminar para apagar este chat."
   },
   "catalogItemCard": {
     "calculating": "Calculando…",
@@ -679,6 +684,10 @@
       "stateOff": "Desligado"
     },
     "exportFailedBody": "Não foi possível exportar a telemetria."
+  },
+  "errors": {
+    "unexpected": "Algo deu errado. Detalhe técnico: {{detail}}",
+    "unexpectedNoDetail": "Algo deu errado. Tente novamente."
   },
   "evaluation": {
     "title": "Avaliação",

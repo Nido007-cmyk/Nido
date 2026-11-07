@@ -45,7 +45,16 @@ export function BottomTabBar({ active, onSelect }: { active: MainTab; onSelect: 
             <View style={[styles.pill, selected && (emergency ? styles.pillEmergency : styles.pillSelected)]}>
               <NidoIcon name={TAB_ICON[tab]} size={20} color={ink} />
             </View>
-            <Text style={[styles.label, selected && styles.labelSelected]} numberOfLines={1}>
+            {/* Auditoría 0.1.79: en pantallas de 320 dp o con letra grande,
+                «Emergência»/«Biblioteca» se cortaban con «…»: la letra se
+                reduce un poco antes de cortar. */}
+            <Text
+              style={[styles.label, selected && styles.labelSelected]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+              maxFontSizeMultiplier={1.4}
+            >
               {t(TAB_LABEL_KEY[tab])}
             </Text>
           </Pressable>
@@ -71,6 +80,7 @@ const getStyles = (colors: Colors, typography: Typography) =>
       alignItems: "center",
       justifyContent: "center",
       gap: 3,
+      paddingHorizontal: 2,
     },
     pill: {
       width: 52,

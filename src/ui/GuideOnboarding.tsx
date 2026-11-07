@@ -11,7 +11,7 @@
  */
 
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, Modal } from "react-native";
+import { View, Text, StyleSheet, Pressable, Modal, ScrollView } from "react-native";
 import { useTranslation } from "react-i18next";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTheme } from "./theme";
@@ -53,6 +53,10 @@ export function GuideOnboarding({ onDone, onTryExample, onOpenGuide }: Props) {
             )}
           </View>
 
+          {/* Auditoría 0.1.79: con letra grande el botón «Siguiente» podía
+              quedar fuera de la pantalla; el contenido se desplaza y el
+              botón queda siempre a la vista. */}
+          <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator persistentScrollbar>
           {step === 0 && (
             <View style={styles.content}>
               <View style={styles.mascot}>
@@ -96,6 +100,7 @@ export function GuideOnboarding({ onDone, onTryExample, onOpenGuide }: Props) {
               </Pressable>
             </View>
           )}
+          </ScrollView>
 
           <Pressable
             style={styles.primary}
@@ -115,7 +120,9 @@ const getStyles = (colors: Colors, typography: Typography) => {
   const ui = makeSurfaces(colors, typography);
   return StyleSheet.create({
     backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: 20 },
-    sheet: { ...ui.card, padding: 20, gap: 16, maxWidth: 520, width: "100%", alignSelf: "center" },
+    sheet: { ...ui.card, padding: 20, gap: 16, maxWidth: 520, width: "100%", alignSelf: "center", maxHeight: "100%" },
+    scroll: { flexShrink: 1 },
+    scrollContent: { gap: 10 },
     topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     dots: { ...typography.ui.caption, color: colors.text.dim, letterSpacing: 2 },
     skip: { ...typography.ui.caption, color: colors.text.secondary, fontWeight: "600" },

@@ -31,6 +31,7 @@ import type { ShownRequest } from "../agent/delegation/approvalGate";
 import type { TaskScope } from "../p2p/taskProtocol";
 import { displayLang, formatDateTime } from "../utils/safeFormat";
 import { TASK_LIMITS } from "../p2p/taskProtocol";
+import { userFacingError } from "./userFacingError";
 
 interface P2PContact {
   pkHex: string;
@@ -246,10 +247,10 @@ export function NegotiationsTab() {
     } catch (e) {
       // FIX 2026-10-09 (UI-AUDIT/F4): error visible en vez de lista vacía silenciosa.
       setContacts([]);
-      setProposeError(e instanceof Error ? e.message : String(e));
+      setProposeError(userFacingError(t, e, i18n.language));
     }
     setShowPropose(true);
-  }, []);
+  }, [t, i18n]);
 
   const handlePropose = useCallback(async () => {
     if (!selectedPk || !description.trim()) {

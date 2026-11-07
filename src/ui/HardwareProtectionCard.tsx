@@ -22,6 +22,7 @@ import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { calmSpacing } from "./theme/calm";
 import { makeSurfaces } from "./theme/surfaces";
+import { errorReason } from "./userFacingError";
 import {
   activateVault,
   deactivateVault,
@@ -36,7 +37,7 @@ import {
 export function HardwareProtectionCard() {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [status, setStatus] = useState<VaultStatus | null>(null);
   const [active, setActive] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -57,12 +58,12 @@ export function HardwareProtectionCard() {
       setLoadError(st ? null : "native-unavailable");
     } catch (e) {
       setStatus(null);
-      setLoadError(e instanceof Error ? e.message : String(e));
+      setLoadError(errorReason(t, e, i18n.language));
     }
     try {
       setActive(await isVaultActive());
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : String(e));
+      setLoadError(errorReason(t, e, i18n.language));
     }
     try {
       setStrictSecs(await getStrictLockSeconds());
@@ -70,7 +71,7 @@ export function HardwareProtectionCard() {
       setStrictSecs(null);
     }
     setLoaded(true);
-  }, []);
+  }, [t, i18n]);
 
   useEffect(() => {
     void refresh();

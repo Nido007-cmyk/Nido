@@ -68,6 +68,7 @@ import type { Colors } from "./theme/colors";
 import { LanguageSelector } from "./components/LanguageSelector";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 import { displayLang, formatInt } from "../utils/safeFormat";
+import { errorReason } from "./userFacingError";
 
 const modelManager = new ModelManager();
 
@@ -545,10 +546,10 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
         onKeyLossError(e);
         return;
       }
-      setIndexingError(e instanceof Error ? e.message : String(e));
+      setIndexingError(errorReason(t, e, i18n.language));
       setIndexingPhase("error");
     }
-  }, [onKeyLossError]);
+  }, [onKeyLossError, t, i18n]);
 
   useEffect(() => {
     if (step === 4) {

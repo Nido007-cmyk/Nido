@@ -28,7 +28,12 @@
     "searchPlaceholder": "Search your chats",
     "searchLabel": "Search your chats",
     "noMatches": "No chat matches.",
-    "shortcuts": "Shortcuts"
+    "shortcuts": "Shortcuts",
+    "showAll": "Show all (+{{count}})",
+    "deleteTitle": "Delete this chat?",
+    "deleteBody": "“{{title}}” will be deleted from this phone. This can't be undone.",
+    "deleteConfirm": "Delete",
+    "deleteBusy": "Wait for the answer to finish before deleting this chat."
   },
   "catalogItemCard": {
     "calculating": "Calculating…",
@@ -679,6 +684,10 @@
       "stateOff": "Off"
     },
     "exportFailedBody": "The telemetry could not be exported."
+  },
+  "errors": {
+    "unexpected": "Something went wrong. Technical detail: {{detail}}",
+    "unexpectedNoDetail": "Something went wrong. Please try again."
   },
   "evaluation": {
     "title": "Evaluation",

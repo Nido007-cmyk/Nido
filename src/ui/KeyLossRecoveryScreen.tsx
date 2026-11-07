@@ -38,6 +38,7 @@ import { useTheme } from "./theme";
 import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 import { KeyLossError } from "../privacy/keyManager";
 import { recoverFromKeyLoss } from "../security/secureDatabase";
+import { userFacingError } from "./userFacingError";
 import {
   advanceRecoveryPhase,
   buildKeyLossViewModel,
@@ -60,7 +61,7 @@ export function KeyLossRecoveryScreen({
   onRecoveryComplete,
   onRetryCheck,
 }: KeyLossRecoveryScreenProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const [phase, setPhase] = useState<RecoveryPhase>("explaining");
   const [failure, setFailure] = useState<string | null>(null);
@@ -82,7 +83,7 @@ export function KeyLossRecoveryScreen({
       go("succeeded"); // executing → done
       onRecoveryComplete();
     } catch (e) {
-      setFailure(e instanceof Error ? e.message : String(e));
+      setFailure(userFacingError(t, e, i18n.language));
       go("errored"); // executing → failed (fail-closed: nothing else touched)
     }
   };
