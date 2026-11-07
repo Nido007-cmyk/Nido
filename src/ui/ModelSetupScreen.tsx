@@ -5,7 +5,7 @@
  */
 
 import { errorReason } from "./userFacingError";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -384,10 +384,12 @@ export function ModelSetupScreen(props: Props) {
 
   // Id of the LLM being loaded after "Use"; blocks other Use/delete/Done until it's ready.
   const [activatingId, setActivatingId] = useState<string | null>(null);
+  // Auditoría 0.1.79: el estado tarda un render en verse; dos toques
+  // rápidos en «Usar» pasaban los dos. La ref cierra la puerta al instante.
+  const activatingRef = useRef(false);
 
-  const useModel = useCallback(
+  const activateModelNow = useCallback(
     async (model: CatalogModel) => {
-      if (activatingId) return;
       impact(ImpactFeedbackStyle.Light);
       if (model.kind === "embedding") {
         // Never set the search model directly: the knowledge base is stamped
@@ -426,7 +428,20 @@ export function ModelSetupScreen(props: Props) {
         await refreshStatus();
       }
     },
-    [activatingId, refreshStatus, t]
+    [refreshStatus, t, i18n]
+  );
+
+  const useModel = useCallback(
+    async (model: CatalogModel) => {
+      if (activatingId || activatingRef.current) return;
+      activatingRef.current = true;
+      try {
+        await activateModelNow(model);
+      } finally {
+        activatingRef.current = false;
+      }
+    },
+    [activatingId, activateModelNow]
   );
 
   const onRelaunchWizard = !requiredMode
