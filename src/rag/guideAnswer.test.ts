@@ -83,6 +83,22 @@ describe("respuesta desde la guía, sin modelo (0.1.59)", () => {
     expect(pickGuideChunk([chunk("pack:nido-esencial-e5:2", "Importante saber antes de viajar — Qué llevar", "x", 0.9)], "es")).not.toBeNull();
   });
 
+  it("la entrada de una guía de otro pack de NIDO no le quita la respuesta a Esencial (terremoto, prueba física)", () => {
+    const intro = chunk(
+      "pack:nido-desastres-e5:66",
+      "Atrapado bajo escombros o en un edificio dañado",
+      "La guía de terremoto del pack Esencial resume el caso en una línea; esta guía lo desarrolla entero…",
+      0.88,
+    );
+    const quake = chunk("pack:nido-esencial-e5:296", "Terremoto — Durante: AGÁCHATE, CÚBRETE Y AGÁRRATE", "Durante…", 0.86);
+    expect(pickGuideChunk([intro, quake], "es")?.chunkId).toBe(quake.chunkId);
+    // Un apartado de esa guía sí compite (y gana si es el mejor): sigue el camino normal.
+    const section = chunk("pack:nido-desastres-e5:68", "Atrapado bajo escombros o en un edificio dañado — Haz que te encuentren: señala sin gritar", "…", 0.9);
+    expect(pickGuideChunk([section, quake], "es")).toBeNull();
+    // Y la Wikipedia no cuenta como guía de NIDO: si gana, camino normal.
+    expect(pickGuideChunk([chunk("pack:wiki-vital5-e5:9", "Earthquake", "…", 0.9), quake], "es")).toBeNull();
+  });
+
   it("prefiere la guía en el idioma de quien pregunta cuando están igual de cerca", () => {
     const en = chunk("pack:nido-esencial-e5:300", "CPR for adults and older children — Before you start", "Before you start\n- Make sure the place is safe. Tap their shoulders and shout.", 0.9);
     const es = chunk("pack:nido-esencial-e5:8", "RCP (reanimación) en adultos y niños mayores — Antes de empezar", "Antes de empezar\n- Comprueba que el lugar es seguro. Toca sus hombros y háblale fuerte.", 0.89);

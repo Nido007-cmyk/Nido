@@ -87,8 +87,28 @@ export function isClosingSection(c: Pick<RetrievedChunk, "title">): boolean {
   return CLOSING_SECTION_RE.test(c.title ?? "");
 }
 
+/**
+ * 2026-11-06 (prueba física): con NIDO Desastres instalado, «¿Qué hago
+ * durante un terremoto?» se lo llevó la INTRODUCCIÓN de su guía
+ * «Atrapado bajo escombros…» («La guía de terremoto del pack Esencial
+ * resume el caso en una línea; esta guía lo desarrolla…»). La entrada de
+ * una guía de otro pack de NIDO describe la guía, no responde: no le
+ * quita la respuesta a la guía literal de Esencial. Sus apartados (título
+ * «Guía — Apartado») sí compiten, como siempre.
+ */
+function isOtherNidoGuideIntro(c: RetrievedChunk): boolean {
+  const ref = parsePackChunkId(c.chunkId);
+  if (!ref || !/^nido-/.test(ref.packId) || isEssentialsChunk(c.chunkId)) return false;
+  return !/\s[—–]\s/.test(c.title ?? "");
+}
+
 export function pickGuideChunk(chunks: RetrievedChunk[], lang: GroundingLang): RetrievedChunk | null {
-  const scored = chunks.filter((c) => typeof c.rawScore === "number" && !(isEssentialsChunk(c.chunkId) && isClosingSection(c)));
+  const scored = chunks.filter(
+    (c) =>
+      typeof c.rawScore === "number" &&
+      !(isEssentialsChunk(c.chunkId) && isClosingSection(c)) &&
+      !isOtherNidoGuideIntro(c),
+  );
   if (scored.length === 0) return null;
   const best = scored.reduce((a, b) => ((b.rawScore as number) > (a.rawScore as number) ? b : a));
   if (!isEssentialsChunk(best.chunkId) || (best.rawScore as number) < GUIDE_MIN_SCORE) return null;

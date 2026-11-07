@@ -59,6 +59,23 @@ export function latestFailure(report: CrashReportLike): ExitInfoLike | null {
   return sorted.find(isFailureExit) ?? null;
 }
 
+/**
+ * 2026-11-06 (prueba física): «Respuesta cortada: la app se cerró» no
+ * decía por qué. Si Android registró un cierre por falta de memoria justo
+ * después de empezar esa respuesta, se puede decir con honestidad.
+ * `startedAt`: cuándo empezó la respuesta cortada (ms). Solo cuenta un
+ * cierre registrado después de ese instante y antes de una hora.
+ */
+export function interruptionCause(startedAt: number, report: CrashReportLike | null): "memory" | "crash" | "unknown" {
+  if (!report || !Number.isFinite(startedAt)) return "unknown";
+  const after = report.exits
+    .filter((e) => e.timestamp >= startedAt && e.timestamp - startedAt <= 60 * 60 * 1000)
+    .sort((a, b) => a.timestamp - b.timestamp)[0];
+  if (!after) return "unknown";
+  if (after.reason === "LOW_MEMORY") return "memory";
+  return isFailureExit(after) ? "crash" : "unknown";
+}
+
 const MB = 1024;
 
 /** Rótulos del informe, localizables desde la tarjeta (auditoría

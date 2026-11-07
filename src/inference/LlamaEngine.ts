@@ -7,7 +7,7 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { initLlama, LlamaContext, type CompletionResponseFormat } from "llama.rn";
 import * as RamMonitor from "ram-monitor";
-import { checkRamBudget, defaultThreadsForCores, RamBudgetError, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
+import { checkRamBudget, defaultThreadsForCores, estimateContextBytes, RamBudgetError, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
 import {
   crossNativeSessionRecord,
   holdBackgroundIndexingForSession,
@@ -648,7 +648,23 @@ export class LlamaEngine {
     // quedar sin ninguno. Se resta la huella estimada del modelo actual
     // del RSS para evitar falsos negativos ("no cabe" cuando sí cabría
     // tras liberar).
-    const snapshot = readRamSnapshot();
+    // Con la lectura en vivo (availMem), lo que ocupa el modelo que se va a
+    // sustituir todavía no está libre, pero lo estará antes de cargar.
+    const liveSnapshot = readRamSnapshot();
+    const loaded = this.context && this.modelInfo ? MODEL_CATALOG.find((m) => m.filename === this.modelInfo?.filename) : undefined;
+    const snapshot =
+      liveSnapshot && loaded && this.modelInfo
+        ? {
+            ...liveSnapshot,
+            releasableBytes: estimateContextBytes({
+              fileSizeBytes: loaded.sizeBytes,
+              nCtx: this.modelInfo.nCtx,
+              nLayer: loaded.arch?.nLayer,
+              nKvHeads: loaded.arch?.nKvHeads,
+              headDim: loaded.arch?.headDim,
+            }).totalBytes,
+          }
+        : liveSnapshot;
     const specBase = {
       fileSizeBytes,
       nLayer: catalogEntry?.arch?.nLayer,

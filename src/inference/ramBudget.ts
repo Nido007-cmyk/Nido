@@ -4,7 +4,7 @@
  * See LICENSE file for details.
  */
 
-import { getDeviceTotalRamBytes, getMemoryInfo, getProcessorCount } from "ram-monitor";
+import { getAvailableMemory, getDeviceTotalRamBytes, getMemoryInfo, getProcessorCount } from "ram-monitor";
 
 /**
  * NIDO's RAM pre-flight for native model loads — pure and unit-testable.
@@ -50,7 +50,22 @@ import { getDeviceTotalRamBytes, getMemoryInfo, getProcessorCount } from "ram-mo
 export interface RamSnapshot {
   totalRamBytes: number;
   rssBytes: number;
+  /**
+   * 2026-11-06: lo que el sistema tiene libre AHORA (availMem) y el nivel en
+   * que Android empieza a cerrar apps (threshold). Opcional: builds nativos
+   * anteriores no lo leen y entonces manda solo la cuenta por la RAM total.
+   */
+  availBytes?: number;
+  lowMemThresholdBytes?: number;
+  /** Memoria que se libera antes de cargar (el modelo que se va a sustituir). */
+  releasableBytes?: number;
 }
+
+/**
+ * Margen sobre el nivel en que Android cierra apps: cargar un modelo no
+ * llega de golpe y el resto del teléfono sigue pidiendo memoria mientras.
+ */
+export const LIVE_MARGIN_BYTES = 256 * 1024 * 1024;
 
 export interface ContextSpec {
   /** On-disk GGUF size in bytes (0 when unknown — estimate degrades gracefully). */
@@ -158,7 +173,15 @@ export function estimateContextBytes(spec: ContextSpec): RamEstimate {
 export function checkRamBudget(spec: ContextSpec, snapshot: RamSnapshot): BudgetVerdict | null {
   if (snapshot.totalRamBytes <= 0) return null;
   const estimate = estimateContextBytes(spec);
-  const availableBytes = Math.max(snapshot.totalRamBytes - snapshot.rssBytes - SYSTEM_HEADROOM_BYTES, 0);
+  const byTotal = snapshot.totalRamBytes - snapshot.rssBytes - SYSTEM_HEADROOM_BYTES;
+  // 2026-11-06 (prueba física, tableta de 3,3 GB): la cuenta por la RAM
+  // total dejó cargar un modelo que agotó la memoria con otras apps
+  // abiertas. Con la lectura en vivo, manda la menor de las dos.
+  const live =
+    snapshot.availBytes !== undefined && snapshot.availBytes > 0
+      ? snapshot.availBytes + (snapshot.releasableBytes ?? 0) - (snapshot.lowMemThresholdBytes ?? 0) - LIVE_MARGIN_BYTES
+      : Number.POSITIVE_INFINITY;
+  const availableBytes = Math.max(Math.min(byTotal, live), 0);
   return {
     ...estimate,
     fits: estimate.totalBytes <= availableBytes,
@@ -175,7 +198,19 @@ export function readRamSnapshot(): RamSnapshot | null {
   try {
     const totalRamBytes = getDeviceTotalRamBytes();
     if (totalRamBytes <= 0) return null;
-    return { totalRamBytes, rssBytes: getMemoryInfo().rssBytes };
+    let live: ReturnType<typeof getAvailableMemory> = null;
+    try {
+      // Aparte: un build o un doble de pruebas sin la lectura en vivo no
+      // debe dejar el pre-flight ciego.
+      live = getAvailableMemory();
+    } catch {
+      live = null;
+    }
+    return {
+      totalRamBytes,
+      rssBytes: getMemoryInfo().rssBytes,
+      ...(live ? { availBytes: live.availBytes, lowMemThresholdBytes: live.thresholdBytes } : {}),
+    };
   } catch {
     return null;
   }

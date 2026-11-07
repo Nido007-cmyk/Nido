@@ -474,6 +474,7 @@
     "reportAnswerNoMail": "No email app found. Write to arsrs91@gmail.com to report it.",
     "stageTimedOut": "A research step took too long and was cut short",
     "interrupted": "Reply cut short: the app closed before it finished. Ask again to continue.",
+    "interruptedMemory": "Answer cut off: NIDO was closed because the device ran out of memory. Close other apps or choose a lighter model in Settings, then ask again.",
     "emptyTitle": "Hi, I'm NIDO",
     "emptySubtitle": "Your private agent. NIDO only connects when you ask it to.",
     "privacyHint": "Private · nothing leaves this device",

@@ -6,6 +6,16 @@
 
 import { requireNativeModule } from "expo-modules-core";
 
+/** Lo que el sistema tiene libre ahora (ActivityManager.MemoryInfo). */
+export interface AvailableMemory {
+  /** Memoria disponible del sistema, incluida la caché que puede soltar. */
+  availBytes: number;
+  /** Por debajo de este nivel Android empieza a cerrar apps. */
+  thresholdBytes: number;
+  /** El sistema ya se considera con poca memoria. */
+  lowMemory: boolean;
+}
+
 export interface MemoryInfo {
   /** Resident set size in bytes (includes resident mmap'd pages, e.g. the loaded GGUF model). */
   rssBytes: number;
@@ -40,6 +50,7 @@ interface RamMonitorNativeModule {
   getMemoryInfo(): MemoryInfo;
   getDeviceTotalRamBytes(): number;
   getProcessorCount?(): number;
+  getAvailableMemory?(): AvailableMemory;
   installCrashRecorder?(): boolean;
   getCrashReport?(): CrashReport;
   clearCrashReport?(): boolean;
@@ -57,6 +68,16 @@ export function getDeviceTotalRamBytes(): number {
     return RamMonitor.getDeviceTotalRamBytes();
   } catch {
     return 0;
+  }
+}
+
+/** Memoria libre del sistema ahora; null en builds nativos anteriores o sin lectura. */
+export function getAvailableMemory(): AvailableMemory | null {
+  try {
+    const m = RamMonitor.getAvailableMemory?.();
+    return m && m.availBytes > 0 ? m : null;
+  } catch {
+    return null;
   }
 }
 

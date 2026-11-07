@@ -9,10 +9,15 @@ import { describe, it, expect, vi } from "vitest";
 let mockTotalRam = 0;
 let mockRss = 0;
 let mockCores: number | null = null;
+let mockAvail: { availBytes: number; thresholdBytes: number; lowMemory: boolean } | null | "throws" = null;
 vi.mock("ram-monitor", () => ({
   getDeviceTotalRamBytes: () => mockTotalRam,
   getMemoryInfo: () => ({ rssBytes: mockRss, totalPssBytes: mockRss }),
   getProcessorCount: () => mockCores,
+  getAvailableMemory: () => {
+    if (mockAvail === "throws") throw new Error("old native build");
+    return mockAvail;
+  },
 }));
 
 import {
@@ -134,6 +139,37 @@ describe("checkRamBudget", () => {
   });
 });
 
+describe("checkRamBudget con la memoria libre en vivo (prueba física 2026-11-06)", () => {
+  it("la tableta de 3,3 GB con otras apps abiertas: manda lo libre de verdad, no la cuenta por la RAM total", () => {
+    // Por la RAM total: 3,3 − 0,4 − 2 = 0,9 GiB. En vivo: 1,0 libres − 0,2 de umbral − 0,25 de margen = 0,55.
+    const v = checkRamBudget(DEFAULT_MODEL, {
+      totalRamBytes: 3.3 * GiB,
+      rssBytes: 0.4 * GiB,
+      availBytes: 1.0 * GiB,
+      lowMemThresholdBytes: 0.2 * GiB,
+    })!;
+    expect(v.availableBytes).toBeCloseTo(0.55 * GiB, -6);
+  });
+
+  it("si lo libre en vivo sobra, manda la cuenta de siempre (nunca da más que ella)", () => {
+    const v = checkRamBudget(DEFAULT_MODEL, { totalRamBytes: 12 * GiB, rssBytes: 1 * GiB, availBytes: 10 * GiB, lowMemThresholdBytes: 0.5 * GiB })!;
+    expect(v.availableBytes).toBe(9 * GiB);
+  });
+
+  it("lo que se va a liberar (el modelo que se sustituye) cuenta como libre", () => {
+    const base = { totalRamBytes: 12 * GiB, rssBytes: 1 * GiB, availBytes: 2 * GiB, lowMemThresholdBytes: 0 };
+    const without = checkRamBudget(DEFAULT_MODEL, base)!.availableBytes;
+    const withRelease = checkRamBudget(DEFAULT_MODEL, { ...base, releasableBytes: 1 * GiB })!.availableBytes;
+    expect(withRelease - without).toBe(1 * GiB);
+  });
+
+  it("nunca negativo", () => {
+    const v = checkRamBudget(DEFAULT_MODEL, { totalRamBytes: 4 * GiB, rssBytes: 0, availBytes: 0.1 * GiB, lowMemThresholdBytes: 0.3 * GiB })!;
+    expect(v.availableBytes).toBe(0);
+    expect(v.fits).toBe(false);
+  });
+});
+
 describe("toGb", () => {
   it("formats GiB with one decimal", () => {
     expect(toGb(1.28 * GiB)).toBe("1.3");
@@ -146,6 +182,22 @@ describe("readRamSnapshot", () => {
     mockTotalRam = 8 * GiB;
     mockRss = 1 * GiB;
     expect(readRamSnapshot()).toEqual({ totalRamBytes: 8 * GiB, rssBytes: 1 * GiB });
+  });
+
+  it("incluye la memoria libre en vivo cuando el build la lee", () => {
+    mockTotalRam = 8 * GiB;
+    mockRss = 1 * GiB;
+    mockAvail = { availBytes: 3 * GiB, thresholdBytes: 0.25 * GiB, lowMemory: false };
+    expect(readRamSnapshot()).toEqual({ totalRamBytes: 8 * GiB, rssBytes: 1 * GiB, availBytes: 3 * GiB, lowMemThresholdBytes: 0.25 * GiB });
+    mockAvail = null;
+  });
+
+  it("un build nativo sin la lectura en vivo no deja el pre-flight ciego", () => {
+    mockTotalRam = 8 * GiB;
+    mockRss = 1 * GiB;
+    mockAvail = "throws";
+    expect(readRamSnapshot()).toEqual({ totalRamBytes: 8 * GiB, rssBytes: 1 * GiB });
+    mockAvail = null;
   });
 
   it("returns null when blind (fail open, never block on missing data)", () => {

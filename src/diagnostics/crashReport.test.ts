@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { formatCrashReport, latestFailure, isFailureExit, maskCrashCrumbs, type CrashReportLike } from "./crashReport";
+import { formatCrashReport, interruptionCause, latestFailure, isFailureExit, maskCrashCrumbs, type CrashReportLike } from "./crashReport";
 
 const base = { status: 0, importance: 100, pssKb: 0, rssKb: 0, trace: null, description: null };
 
@@ -102,5 +102,36 @@ describe("crashReport", () => {
     expect(text).toContain("(no records)");
     expect(text).toContain("(none)");
     expect(text).not.toContain("Últimos cierres");
+  });
+});
+
+describe("interruptionCause (prueba física 2026-11-06)", () => {
+  const exit = (timestamp: number, reason: string) => ({
+    timestamp, reason, description: null, status: 0, importance: 100, pssKb: 0, rssKb: 0, trace: null,
+  });
+  const report = (exits: ReturnType<typeof exit>[]) => ({ lastCrash: null, exits, sdkInt: 34, device: "t" });
+  const T = 1_800_000_000_000;
+
+  it("un cierre por memoria justo después de empezar la respuesta → memoria", () => {
+    expect(interruptionCause(T, report([exit(T + 20_000, "LOW_MEMORY")]))).toBe("memory");
+  });
+
+  it("otro fallo → crash; un cierre normal → unknown", () => {
+    expect(interruptionCause(T, report([exit(T + 1000, "CRASH_NATIVE")]))).toBe("crash");
+    expect(interruptionCause(T, report([exit(T + 1000, "USER_REQUESTED")]))).toBe("unknown");
+  });
+
+  it("un cierre por memoria ANTES de la respuesta, o mucho después, no se le atribuye", () => {
+    expect(interruptionCause(T, report([exit(T - 1000, "LOW_MEMORY")]))).toBe("unknown");
+    expect(interruptionCause(T, report([exit(T + 2 * 3600_000, "LOW_MEMORY")]))).toBe("unknown");
+  });
+
+  it("manda el primer cierre tras empezar", () => {
+    expect(interruptionCause(T, report([exit(T + 9000, "CRASH"), exit(T + 1000, "LOW_MEMORY")]))).toBe("memory");
+  });
+
+  it("sin informe o sin hora: unknown", () => {
+    expect(interruptionCause(T, null)).toBe("unknown");
+    expect(interruptionCause(Number.NaN, report([exit(T, "LOW_MEMORY")]))).toBe("unknown");
   });
 });
