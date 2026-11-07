@@ -11,6 +11,7 @@ import { useTheme } from "./theme";
 import { CatalogModel } from "../models/manifest";
 import { CatalogItemCard, CatalogRowState } from "./CatalogItemCard";
 import { PersonalDocumentsManager } from "./PersonalDocumentsManager";
+import { ImportedPacksSection } from "./ImportedPacksSection";
 import { MultilingualSearchCard } from "./MultilingualSearchCard";
 import { activeEmbeddingModel, embeddingIdForPack } from "../rag/embeddingSwitch";
 
@@ -70,6 +71,11 @@ export function CorpusSettingsTab({ corpusItems, getRow, download, remove }: Pro
           </View>
         )}
       />
+
+      {/* Pieza A: the signed-pack door — its own surface, apart from "Tus
+          documentos" (a different promise: documents are the user's own
+          notes; packs enter only with our signature). */}
+      <ImportedPacksSection />
 
       <Text style={[styles.sectionHeading, { color: colors.text.dim }]}>{t("corpusSettingsTab.yourDocuments")}</Text>
       <PersonalDocumentsManager />

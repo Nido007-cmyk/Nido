@@ -200,6 +200,39 @@ descargarlo:
 3. Para ofrecerlo en el asistente de configuración, añade su id a los `corpusPackIds`
    de un tier (`TIERS` en el mismo archivo).
 
+## Añadir un pack firmado desde un archivo
+
+El usuario también puede añadir un pack desde un archivo — **Ajustes → Base de
+conocimiento → «Añadir un pack desde un archivo»** —, por ejemplo un pack
+comprado en SALVORA PACKS. Esta puerta es estrecha a propósito: por decisión
+del dueño (2026-11-07) la app solo acepta packs **firmados por nosotros**, para
+que nadie pueda meter cualquier cosa en la app.
+
+El pack viaja con su manifiesto firmado compañero (`<pack>.sqlite.json`). Antes
+de copiar nada, la app comprueba, en orden:
+
+1. que el manifiesto está presente y es legible;
+2. que el SHA-256 del archivo es exactamente la huella que el manifiesto
+   declara;
+3. que el manifiesto prueba uno de los dos orígenes de la app: una firma
+   Ed25519 de SALVORA PACKS sobre la forma canónica del manifiesto
+   (verificada contra la clave pública grabada en la app, nunca contra una
+   clave que el propio manifiesto presente) o, para los packs del propio
+   NIDO, un SHA-256 que sea un pin del catálogo firmado que la app verifica
+   al arrancar;
+4. que el archivo pasa las mismas comprobaciones de formato de su tabla
+   `meta` que la app aplica al abrir cualquier pack.
+
+Solo entonces la app nombra a quien lo firmó y pide confirmación; al aceptar,
+el archivo se promueve a `corpus/` y se lista con su marca «Firmado por NIDO»
+o «Firmado por SALVORA PACKS». Cualquier otra cosa —sin firmar, firmado por
+otro, o cambiado en un solo byte tras la firma— se rechaza con el motivo en
+palabras claras, y no se copia nada. Una firma prueba origen e integridad, no
+calidad: la casa firma solo lo que ya ha verificado antes. Los packs añadidos
+se quitan de la misma lista, y el borrado total de la app los elimina con el
+resto de `corpus/`. El núcleo técnico vive en `src/models/packImport.ts` y
+`src/services/packImporter.ts`.
+
 ## Cuando un pack tiene una versión nueva
 
 Una versión nueva de la app puede traer una versión nueva de un pack del

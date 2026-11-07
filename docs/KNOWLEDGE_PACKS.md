@@ -193,6 +193,36 @@ download it:
 3. To offer it in the setup wizard, add its id to a tier's `corpusPackIds`
    (`TIERS` in the same file).
 
+## Adding a signed pack from a file
+
+A user can also add a pack from a file — **Settings → Knowledge Base → "Add a
+pack from a file"** — for example a pack bought at SALVORA PACKS. This door is
+deliberately narrow: by the owner's decision (2026-11-07) the app only accepts
+packs **signed by us**, so that nobody can put just anything into the app.
+
+The pack travels with its signed companion manifest (`<pack>.sqlite.json`).
+Before anything is copied, the app checks, in order:
+
+1. the manifest is present and legible;
+2. the file's SHA-256 is exactly the hash the manifest declares;
+3. the manifest proves one of the app's two origins — an Ed25519 signature
+   from SALVORA PACKS over the manifest's canonical form (verified against
+   the public key embedded in the app, never against a key the manifest
+   itself presents), or, for NIDO's own packs, a SHA-256 that is a pin of
+   the signed catalog the app verifies at startup;
+4. the file passes the same `meta` format checks the app applies when it
+   opens any pack.
+
+Only then does the app name who signed it and ask for confirmation; on
+acceptance the file is promoted into `corpus/` and listed with its
+"S[PII_EN_PERSON_NAME_1ef0d1cf268a_LEN5] by NIDO" / "Signed by SALVORA PACKS" mark. Anything else — unsigned,
+signed by someone else, or changed by a single byte after signing — is
+rejected with the reason in plain words, and nothing is copied. A signature
+proves origin and integrity, not quality: the house signs only what it has
+verified first. Added packs can be removed from the same list, and the
+app's total wipe deletes them with the rest of `corpus/`. The technical
+core lives in `src/models/packImport.ts` and `src/services/packImporter.ts`.
+
 ## When a pack gets a new version
 
 A new app version can ship a new version of a catalog pack (new size and

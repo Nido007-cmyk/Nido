@@ -183,6 +183,21 @@
     "downloadablePacks": "Paquetes de conocimiento descargables",
     "yourDocuments": "Tus documentos"
   },
+  "packImport": {
+    "addButton": "Añadir un pack desde un archivo",
+    "addedHeading": "Packs añadidos desde archivos",
+    "confirmBody": "Este pack está firmado por {{origin}} y la app ha comprobado su firma: el archivo es el que {{origin}} firmó, sin cambios. Se guardará en tu teléfono y el asistente podrá responder con su contenido.",
+    "confirmTitle": "Añadir este pack",
+    "damaged": "El archivo está dañado o incompleto y no se pudo abrir.",
+    "hashMismatch": "El archivo no coincide con su firma: ha cambiado desde que se firmó, así que no se puede añadir. Descárgalo de nuevo desde donde lo compraste.",
+    "missingManifest": "A este pack le falta su manifiesto firmado, y sin él la app no puede comprobar su firma. No se puede añadir.",
+    "notAPack": "Este archivo no es un pack de conocimiento válido.",
+    "notSignedByUs": "Este pack no está firmado por NIDO ni por SALVORA PACKS, y no se puede añadir. Por seguridad, solo entran los packs firmados por nosotros.",
+    "removeAction": "Quitar este pack",
+    "removeConfirmBody": "Se borrará el archivo del pack de tu teléfono. Podrás volver a añadirlo cuando quieras.",
+    "signedBy": "Firmado por {{origin}}",
+    "tooLarge": "Este pack es demasiado grande para añadirlo: el máximo es {{max}} MB."
+  },
   "drawer": {
     "newChat": "Nuevo chat",
     "recentSessions": "Chats recientes",
