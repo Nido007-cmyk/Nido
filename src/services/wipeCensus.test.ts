@@ -150,6 +150,8 @@ const VERIFIED_FILES = new Set([
 
 /** Solo existen dentro de un directorio que el wipe borra entero. */
 const DIR_SCOPED: Record<string, string> = {
+  "imported-packs.json":
+    "corpus/ (registro de origen del importador de packs firmados, packImporter: vive en CORPUS_DIR, que appReset borra entero y verifica)",
   "pending.json": "eval/ (EVAL_REQUESTS_DIR cuelga de EVAL_RESULTS_DIR)",
   "status.json": "eval/ (las *.status.json de deviceEvalRequest)",
   "resume.json": "models/ (cola de <modelo>.gguf.resume.json, modelTrust)",

@@ -184,6 +184,13 @@ function stagePick(sqliteName: string, sqliteBytes: Uint8Array, manifestText: st
   return sqliteUri;
 }
 
+// Estos casos hashean los bytes reales de la tienda (SHA-256 en JS sobre
+// ~1 MB por pase, varias veces por caso): con la suite entera en paralelo
+// el timeout por defecto de 5 s los mata por carga, no por aserción (en
+// solitario tardan 2-5 s). Margen explícito y declarado, como los casos
+// pesados de cpr.
+const REAL_BYTES_TIMEOUT = { timeout: 180_000 };
+
 describe.runIf(REAL_ZIPS_PRESENT)("packImporter · the door with real store bytes", () => {
   const salvora = zipEntries(SALVORA_ZIP);
   const esencial = zipEntries(ESENCIAL_ZIP);
@@ -203,7 +210,7 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImporter · the door with real store byte
     h.state.pickerResult = null;
   });
 
-  it("imports the SALVORA pack after confirmation: file promoted, origin recorded", async () => {
+  it("imports the SALVORA pack after confirmation: file promoted, origin recorded", REAL_BYTES_TIMEOUT, async () => {
     stagePick(STD, stdBytes, stdManifest, stdMeta);
     const out = await importPackFromFile(yes);
     expect(out.status).toBe("imported");
@@ -214,13 +221,13 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImporter · the door with real store byte
     expect(await listImportedPacks()).toMatchObject([{ filename: STD, origin: "salvora" }]);
   });
 
-  it("without confirmation it cancels and copies nothing", async () => {
+  it("without confirmation it cancels and copies nothing", REAL_BYTES_TIMEOUT, async () => {
     stagePick(STD, stdBytes, stdManifest, stdMeta);
     expect(await importPackFromFile(async () => false)).toEqual({ status: "cancelled" });
     expect(corpusFiles()).toEqual([]);
   });
 
-  it("rejects a byte-changed pack (hash-mismatch) and copies nothing", async () => {
+  it("rejects a byte-changed pack (hash-mismatch) and copies nothing", REAL_BYTES_TIMEOUT, async () => {
     const tampered = Buffer.from(stdBytes);
     tampered[12345] ^= 0x01;
     stagePick(STD, tampered, stdManifest, stdMeta);
@@ -229,25 +236,25 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImporter · the door with real store byte
     expect(await listImportedPacks()).toEqual([]);
   });
 
-  it("rejects the pack without its manifest (missing-manifest) and copies nothing", async () => {
+  it("rejects the pack without its manifest (missing-manifest) and copies nothing", REAL_BYTES_TIMEOUT, async () => {
     stagePick(STD, stdBytes, null, stdMeta);
     expect(await importPackFromFile(yes)).toEqual({ status: "rejected", reason: "missing-manifest" });
     expect(corpusFiles()).toEqual([]);
   });
 
-  it("rejects a pack whose meta is not a knowledge pack (not-a-pack)", async () => {
+  it("rejects a pack whose meta is not a knowledge pack (not-a-pack)", REAL_BYTES_TIMEOUT, async () => {
     stagePick(STD, stdBytes, stdManifest, { format: "something-else" });
     expect(await importPackFromFile(yes)).toEqual({ status: "rejected", reason: "not-a-pack" });
     expect(corpusFiles()).toEqual([]);
   });
 
-  it("rejects an unreadable database (damaged) once origin checks passed", async () => {
+  it("rejects an unreadable database (damaged) once origin checks passed", REAL_BYTES_TIMEOUT, async () => {
     stagePick(STD, stdBytes, stdManifest); // no meta seeded → sqlite open fails
     expect(await importPackFromFile(yes)).toEqual({ status: "rejected", reason: "damaged" });
     expect(corpusFiles()).toEqual([]);
   });
 
-  it("importing the same verified bytes twice is already-imported, not a second copy", async () => {
+  it("importing the same verified bytes twice is already-imported, not a second copy", REAL_BYTES_TIMEOUT, async () => {
     stagePick(STD, stdBytes, stdManifest, stdMeta);
     await importPackFromFile(yes);
     const movesAfterFirst = h.state.moves;
@@ -256,7 +263,7 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImporter · the door with real store byte
     expect(h.state.moves).toBe(movesAfterFirst);
   });
 
-  it("different verified bytes under the same name replace the old pack (updated edition)", async () => {
+  it("different verified bytes under the same name replace the old pack (updated edition)", REAL_BYTES_TIMEOUT, async () => {
     stagePick(STD, stdBytes, stdManifest, stdMeta);
     await importPackFromFile(yes);
     const e5Bytes = salvora.get(E5)!;
@@ -271,7 +278,7 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImporter · the door with real store byte
     expect(items[0].sha256).toBe(createHash("sha256").update(e5Bytes).digest("hex"));
   });
 
-  it("imports NIDO's Esencial with origin nido; it presents as its catalog item, not in the added list", async () => {
+  it("imports NIDO's Esencial with origin nido; it presents as its catalog item, not in the added list", REAL_BYTES_TIMEOUT, async () => {
     const esBytes = esencial.get(ES)!;
     stagePick(ES, esBytes, esencial.get(`${ES}.json`)!.toString("utf8"), realMeta(esBytes));
     const out = await importPackFromFile(yes);
@@ -285,7 +292,7 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImporter · the door with real store byte
     expect((await importPackFromFile(yes)).status).toBe("already-imported");
   });
 
-  it("remove deletes the file, drops the record, and re-adding works", async () => {
+  it("remove deletes the file, drops the record, and re-adding works", REAL_BYTES_TIMEOUT, async () => {
     stagePick(STD, stdBytes, stdManifest, stdMeta);
     await importPackFromFile(yes);
     await removeImportedPack(STD);
@@ -296,12 +303,12 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImporter · the door with real store byte
     expect((await importPackFromFile(yes)).status).toBe("imported");
   });
 
-  it("a cancelled picker is a cancellation, not an error", async () => {
+  it("a cancelled picker is a cancellation, not an error", REAL_BYTES_TIMEOUT, async () => {
     h.state.pickerResult = { canceled: true, assets: [] };
     expect(await importPackFromFile(yes)).toEqual({ status: "cancelled" });
   });
 
-  it("a pick with no .sqlite at all is not-a-pack", async () => {
+  it("a pick with no .sqlite at all is not-a-pack", REAL_BYTES_TIMEOUT, async () => {
     h.state.pickerResult = {
       canceled: false,
       assets: [{ uri: `${h.CACHE}notes.txt`, name: "notes.txt", size: 4 }],
