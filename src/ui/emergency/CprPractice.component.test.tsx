@@ -87,6 +87,7 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
+import { AppState } from "react-native";
 import { CprPractice } from "./CprPractice";
 import { CPR_GUIDE } from "../../cpr/cprCoach";
 
@@ -146,5 +147,33 @@ describe("práctica de RCP", () => {
     await render(<CprPractice visible onClose={() => {}} />);
     await fireEvent.press(screen.getByTestId("cpr-start"));
     expect(cams).toEqual([]);
+  });
+
+  it("con NIDO en segundo plano la cámara se apaga, y vuelve al volver", async () => {
+    let onChange: (st: string) => void = () => {};
+    const spy = jest.spyOn(AppState, "addEventListener").mockImplementation((_e, fn) => {
+      onChange = fn as (st: string) => void;
+      return { remove: () => {} } as never;
+    });
+    await render(<CprPractice visible onClose={() => {}} />);
+    await fireEvent.press(screen.getByTestId("cpr-camera-toggle"));
+    await fireEvent.press(screen.getByTestId("cpr-start"));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(cams).toEqual(["start"]);
+    await act(async () => {
+      onChange("background");
+    });
+    expect(cams).toEqual(["start", "stop"]);
+    expect(screen.getByText("cpr.camera.paused")).toBeTruthy();
+    // El pitido no se para: la práctica sigue.
+    expect(stops).not.toContain("beep");
+    await act(async () => {
+      onChange("active");
+      await Promise.resolve();
+    });
+    expect(cams).toEqual(["start", "stop", "start"]);
+    spy.mockRestore();
   });
 });

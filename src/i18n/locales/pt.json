@@ -1935,7 +1935,8 @@
       "starting": "Ligando a câmera…",
       "failed": "Não foi possível usar a câmera. O bipe continua marcando o ritmo.",
       "looking": "Medindo seu ritmo… (siga o bipe)",
-      "rate": "Seu ritmo: {{bpm}} por minuto"
+      "rate": "Seu ritmo: {{bpm}} por minuto",
+      "paused": "Câmera desligada enquanto o NIDO não está à vista. Ela volta a ligar quando você voltar."
     },
     "cue": {
       "faster": "Mais rápido.",
