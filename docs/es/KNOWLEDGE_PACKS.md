@@ -154,6 +154,36 @@ multilingüe y 6/6 en la inglesa. El catálogo firmado en
 `main` ofrece esta edición; la app 0.1.76 se queda con la
 edición v12 hasta la próxima versión de la app. `nido-local`
 se queda en su edición v9.
+Una edición re-cotejada de `nido-esencial` se publica en la
+release `knowledge-packs-v15`: las guías que citaban las
+guías IFRC 2020, las normas de la Cruz Roja Canadiense de
+2020 o las guías ERC 2021 se re-cotejaron línea por línea
+contra las ediciones que las sustituyen (IFRC 2025; las
+normas de programa de la Cruz Roja Canadiense de 2026,
+basadas en IFRC 2025; ERC 2025, en Resuscitation 2025;215
+Supl. 1). Casi todas las afirmaciones re-cotejadas se
+mantienen como estaban; los cambios de fondo son estos. La
+espera tras el azúcar en una hipoglucemia es ahora de 15
+minutos, con la llamada de ayuda en torno a los 30 minutos
+(guía 17). El aguijón de abeja se retira solo raspando con
+algo plano, y la pinza ya no se ofrece como equivalente
+(guía 12). La guía de salud mental gana un apartado breve
+de ataque de pánico y una ampliación del duelo agudo desde
+el capítulo Mental distress de IFRC 2025 (guía 31). Y el
+diente caído de un golpe se enjuaga suavemente con leche,
+suero o la saliva del propio paciente, siguiendo la guía
+de la IADT, la autoridad que el dueño eligió para esa guía
+frente a la línea contraria de IFRC 2025 (guía 23). Una
+auditoría independiente reverificó las guías cambiadas y
+re-selló todas las guías tocadas. Construida por el
+workflow de paquetes (174 guías, 574 trozos); sobre los
+bytes del producto del CI, la recuperación multilingüe
+pasa 202/202, la construcción inglesa 64/64, y la de
+primeros auxilios es 38/38 en la multilingüe y 6/6 en la
+inglesa. El catálogo firmado en `main` ofrece esta
+edición; la app 0.1.80 se queda con la edición v14 hasta
+la próxima versión de la app. `nido-local` se queda en su
+edición v9.
 
 ### Formato v2: preguntas indexadas y datos verificados (0.1.55)
 
