@@ -4,7 +4,7 @@ category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025)
 id: esencial-dolor-de-pecho-infarto
-verified: 2026-11-02
+verified: 2026-11-07
 questions: he has chest pain, could it be a heart attack | what do i do if i think someone is having a heart attack | how much aspirin do i give an adult for chest pain | his chest pain spreads to his arm, what do i do | o que faço se sentir dor no peito | dor no peito pode ser infarto, o que faço
 ---
 In a heart attack, every minute counts. Do not wait to see if it passes.

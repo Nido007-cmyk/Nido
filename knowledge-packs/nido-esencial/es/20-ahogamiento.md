@@ -4,7 +4,7 @@ category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices 2024; Consejo Europeo de Resucitación (ERC), guías 2025; OMS, prevención de ahogamientos; Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025)
 id: esencial-ahogamiento
-verified: 2026-11-02
+verified: 2026-11-07
 questions: qué hago si alguien se está ahogando en el agua | cómo rescato a alguien que se ahoga sin entrar al agua | sacaron a un niño del agua y no respira, qué hago | o que faço se alguém estiver se afogando | como resgato alguém que se afoga sem entrar na água
 ---
 Alguien que se ahoga casi nunca grita ni hace señales: se hunde en silencio en segundos.

@@ -4,7 +4,7 @@ category: First aid
 lang: en
 sources: AHA and American Red Cross Guidelines 2024; European Resuscitation Council (ERC) Guidelines 2025; WHO, drowning prevention; Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025)
 id: esencial-ahogamiento
-verified: 2026-11-02
+verified: 2026-11-07
 questions: what do i do if someone is drowning in the water | how do i rescue a drowning person without going into the water | they pulled a child out of the water and he is not breathing, what do i do | o que faço se alguém estiver se afogando | como resgato alguém que se afoga sem entrar na água
 ---
 Someone who is drowning almost never shouts or waves: they slip under silently within seconds.

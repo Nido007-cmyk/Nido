@@ -4,7 +4,7 @@ category: Salud en casa
 lang: es
 sources: OMS, atención esencial al recién nacido; Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025); Cruz Roja Americana
 id: esencial-parto-de-emergencia
-verified: 2026-11-02
+verified: 2026-11-07
 questions: qué hago si el bebé nace antes de llegar al hospital | cómo atiendo un parto de emergencia en casa | cuándo y cómo se corta el cordón umbilical | el bebé nació y no respira, qué hago | o que faço se o bebê nascer antes de chegar ao hospital | como atendo um parto de emergência em casa
 ---
 La mayoría de los partos van bien solos. Si el bebé llega antes de que haya ayuda, tu papel es acompañar, mantener limpio y abrigar.

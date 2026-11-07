@@ -4,7 +4,7 @@ category: Primeros auxilios
 lang: es
 sources: Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025); IFRC 2025; AHA y Cruz Roja Americana 2024
 id: esencial-quemaduras
-verified: 2026-11-02
+verified: 2026-11-07
 questions: qué hago si me quemo con agua hirviendo | me quemo con la sartén, qué me pongo | se quemó mi esposo con aceite hirviendo, qué hago | se puede poner pasta de dientes en una quemadura | cuánto tiempo se enfría una quemadura con agua | o que faço se eu me queimar com água fervendo | meu filho se queimou com óleo quente, o que faço
 ---
 Enfriar pronto una quemadura con agua reduce el daño y el dolor. Es lo más importante.

@@ -4,7 +4,7 @@ category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025); IFRC 2025
 id: esencial-hemorragias-graves
-verified: 2026-11-02
+verified: 2026-11-07
 questions: how do i stop severe bleeding that won't stop | how do i apply a tourniquet on an arm or leg | he cut his finger and is bleeding a lot, what do i do | como paro um sangramento grave que não para | como aplico um torniquete no braço ou na perna
 ---
 A person can bleed to death in a few minutes. Bleeding is severe if blood spurts or keeps flowing, soaks clothes or bandages, or if the person becomes dizzy, pale or confused. Act at once.

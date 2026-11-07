@@ -4,7 +4,7 @@ category: Salud en casa
 lang: es
 sources: OMS, AIEPI y signos de emergencia (ETAT); AHA; Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025); NHS
 id: esencial-signos-de-alarma
-verified: 2026-11-02
+verified: 2026-11-07
 questions: cuáles son los signos de alarma para ir a urgencias | cuándo hay que llevar a un bebé a urgencias | qué signos de peligro hay en el embarazo | tiene manchas en la piel que no desaparecen al apretarlas, es grave | quais são os sinais de alarme para ir à emergência | quando devo levar um bebê à emergência
 ---
 Llama al número de emergencias o ve a urgencias de inmediato si ves alguno de estos signos, en un adulto o en un niño.

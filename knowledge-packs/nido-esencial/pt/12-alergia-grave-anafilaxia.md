@@ -4,7 +4,7 @@ category: Primeiros socorros
 lang: pt
 sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025); IFRC 2025
 id: esencial-alergia-grave-anafilaxia
-verified: 2026-11-02
+verified: 2026-11-07
 questions: meu filho comeu amendoim e está inchando, o que faço | como usar a caneta de adrenalina | alergia grave, quanto tempo espero para a segunda dose | picada de abelha, como tirar o ferrão
 ---
 A anafilaxia é uma reação alérgica grave que pode matar em minutos. Costuma aparecer pouco depois de um alimento (castanhas, frutos do mar, ovo, leite), uma picada de abelha ou vespa, ou um medicamento.

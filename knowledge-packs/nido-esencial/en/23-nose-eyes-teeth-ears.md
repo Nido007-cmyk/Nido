@@ -4,7 +4,7 @@ category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025)
 id: esencial-nariz-ojos-dientes-oidos
-verified: 2026-11-02
+verified: 2026-11-07
 questions: how do i stop a nosebleed | something got into his eye, what do i do | his tooth got knocked out in a fall, can it be saved | how long do i pinch the nose when it bleeds | como paro um sangramento no nariz | entrou alguma coisa no olho dele, o que faço
 ---
 ## Nosebleed

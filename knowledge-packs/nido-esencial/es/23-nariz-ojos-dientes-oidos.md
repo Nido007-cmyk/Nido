@@ -4,7 +4,7 @@ category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025)
 id: esencial-nariz-ojos-dientes-oidos
-verified: 2026-11-02
+verified: 2026-11-07
 questions: cómo paro una hemorragia de nariz | le entró algo en el ojo, qué hago | se le cayó un diente de un golpe, se puede salvar | cuánto tiempo aprieto la nariz si le sangra | como paro um sangramento no nariz | entrou alguma coisa no olho dele, o que faço
 ---
 ## Sangrado de nariz

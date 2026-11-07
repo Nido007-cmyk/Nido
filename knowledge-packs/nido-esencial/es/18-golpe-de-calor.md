@@ -4,7 +4,7 @@ category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; OMS, calor y salud; Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025)
 id: esencial-golpe-de-calor
-verified: 2026-11-02
+verified: 2026-11-07
 questions: qué hago en un golpe de calor | cómo enfrío rápido a alguien con golpe de calor | cuál es la diferencia entre agotamiento por calor y golpe de calor | está muy caliente y confundido por el calor, qué hago | o que faço num golpe de calor, uma insolação | como resfrio rápido alguém com golpe de calor
 ---
 El calor puede matar. El golpe de calor es una emergencia: el cuerpo ya no puede enfriarse solo.

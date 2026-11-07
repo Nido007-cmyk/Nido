@@ -4,7 +4,7 @@ category: Primeiros socorros
 lang: pt
 sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; OMS, calor e saúde; Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025)
 id: esencial-golpe-de-calor
-verified: 2026-11-02
+verified: 2026-11-07
 questions: sinais de insolação e o que fazer | pessoa confusa no calor forte, o que faço | exaustão pelo calor, como tratar | criança no sol forte passando mal
 ---
 O calor pode matar. A insolação é uma emergência: o corpo já não consegue se resfriar sozinho.

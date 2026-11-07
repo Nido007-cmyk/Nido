@@ -4,7 +4,7 @@ category: Salud en casa
 lang: es
 sources: OMS, Atención Integrada a las Enfermedades Prevalentes de la Infancia (AIEPI); Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025); NHS
 id: esencial-fiebre
-verified: 2026-11-02
+verified: 2026-11-07
 questions: mi hijo tiene fiebre de 39 grados, qué hago | a qué temperatura ya es fiebre en un niño | cuánto paracetamol le doy a un niño de 20 kilos | se le puede dar ibuprofeno a un niño con fiebre | se le puede dar aspirina a un menor con fiebre | cuándo es peligrosa la fiebre en un bebé de meses | meu filho está com febre de 39 graus, o que faço | quantos miligramas de paracetamol dou a uma criança de 20 quilos
 ---
 La fiebre (38 °C o más) es una defensa del cuerpo contra una infección. Casi siempre es leve, pero hay que saber cuándo es grave.

@@ -4,7 +4,7 @@ category: Primeiros socorros
 lang: pt
 sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025); IFRC 2025
 id: esencial-hemorragias-graves
-verified: 2026-11-02
+verified: 2026-11-07
 questions: como parar um sangramento forte na perna | está saindo muito sangue e não para, o que eu faço | como fazer um torniquete | sangue jorrando de um corte, o que fazer
 ---
 Uma pessoa pode morrer sangrando em poucos minutos. Uma hemorragia é grave se o sangue sai em jato ou sem parar, se encharca a roupa ou os curativos, ou se a pessoa fica tonta, pálida ou confusa. Aja de imediato.

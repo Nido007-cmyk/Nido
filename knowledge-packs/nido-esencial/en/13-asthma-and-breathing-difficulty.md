@@ -4,7 +4,7 @@ category: First aid
 lang: en
 sources: Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025); AHA and American Red Cross 2024
 id: esencial-asma-y-dificultad-para-respirar
-verified: 2026-11-02
+verified: 2026-11-07
 questions: what do i do during an asthma attack | she is wheezing and can't breathe well, what do i do | how do i use a reliever inhaler, the blue one | a child has a barking cough and trouble breathing, what do i do | o que faço numa crise de asma | não consegue respirar direito, o que faço
 ---
 ## Asthma attack

@@ -4,7 +4,7 @@ category: Saúde em casa
 lang: pt
 sources: OMS, AIDPI e sinais de emergência (ETAT); AHA; Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025); NHS
 id: esencial-signos-de-alarma
-verified: 2026-11-02
+verified: 2026-11-07
 questions: sinais de alarme para ir à emergência | bebê de 2 meses com febre, é sinal de perigo | quando uma dor de barriga é emergência | sinais de perigo em criança pequena
 ---
 Ligue para o número de emergência ou vá à emergência de imediato se vir algum destes sinais, num adulto ou numa criança.

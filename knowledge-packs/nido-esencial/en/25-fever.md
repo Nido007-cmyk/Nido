@@ -4,7 +4,7 @@ category: Health at home
 lang: en
 sources: WHO, Integrated Management of Childhood Illness (IMCI); Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025); NHS
 id: esencial-fiebre
-verified: 2026-11-02
+verified: 2026-11-07
 questions: what do i do if my child has a fever of 39 degrees | how much tylenol for a 40 pound kid | how much acetaminophen do i give a child, the dose by weight on the label | can i give ibuprofen to a child with a fever | can i give aspirin to a child under 16 with fever | when is a fever dangerous in a baby under 3 months | meu filho está com febre de 39 graus, o que faço | quantos miligramas de paracetamol dou a uma criança de 20 quilos
 ---
 Fever (38 °C / 100.4 °F or higher) is the body's defense against infection. It is almost always mild, but you need to know when it is serious.

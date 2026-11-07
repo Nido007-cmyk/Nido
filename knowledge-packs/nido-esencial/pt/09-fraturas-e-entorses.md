@@ -4,7 +4,7 @@ category: Primeiros socorros
 lang: pt
 sources: Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025); IFRC 2025
 id: esencial-fracturas-y-esguinces
-verified: 2026-11-02
+verified: 2026-11-07
 questions: acho que quebrei o braço, o que faço | como imobilizar uma perna quebrada | torci o tornozelo, o que passar | fratura com o osso aparecendo, o que fazer
 ---
 Sem raio-X não dá para saber se um osso está quebrado. Por isso, diante de uma batida com dor forte, inchaço, deformidade ou incapacidade de mexer, trate como fratura.

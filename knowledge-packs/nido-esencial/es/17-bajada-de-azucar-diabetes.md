@@ -4,7 +4,7 @@ category: Primeros auxilios
 lang: es
 sources: Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025); AHA y Cruz Roja Americana 2024
 id: esencial-bajada-de-azucar-diabetes
-verified: 2026-11-02
+verified: 2026-11-07
 questions: qué hago si a un diabético le baja el azúcar | cuántos gramos de azúcar o glucosa se dan en una bajada | cada cuánto se repite el azúcar si no mejora | cuáles son los signos de una bajada de azúcar | o que faço se o açúcar baixar num diabético | quantos gramas de açúcar dou numa hipoglicemia
 ---
 Una persona con diabetes (sobre todo si usa insulina) puede tener una bajada de azúcar si no comió, hizo más ejercicio o se puso demasiada insulina.

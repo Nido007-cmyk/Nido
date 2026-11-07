@@ -4,7 +4,7 @@ category: First aid
 lang: en
 sources: International Federation of Red Cross and Red Crescent Societies (IFRC), International First Aid Guidelines 2025; Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025); AHA and American Red Cross First Aid Guidelines 2024
 id: esencial-como-actuar-en-una-emergencia
-verified: 2026-11-02
+verified: 2026-11-07
 questions: what do i do first in an emergency, protect call and care | what do i tell 911 when i call for help | how do i check if someone is breathing normally | meu pai caiu e não responde, o que faço primeiro | o que digo quando ligo para a emergência
 ---
 In any emergency, follow three steps in this order: PROTECT, CALL and CARE. Stay calm: a few seconds to think prevent mistakes.

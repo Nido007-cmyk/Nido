@@ -4,7 +4,7 @@ category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; WHO, heat and health; Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025)
 id: esencial-golpe-de-calor
-verified: 2026-11-02
+verified: 2026-11-07
 questions: what do i do for heat stroke | how do i cool down someone with heat stroke fast | what is the difference between heat exhaustion and heat stroke | he is very hot and confused from the heat, what do i do | o que faço num golpe de calor, uma insolação | como resfrio rápido alguém com golpe de calor
 ---
 Heat can kill. Heat stroke is an emergency: the body can no longer cool itself.

@@ -4,7 +4,7 @@ category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; OMS, mordeduras de serpiente y rabia; Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025)
 id: esencial-mordeduras-y-picaduras
-verified: 2026-11-02
+verified: 2026-11-07
 questions: qué hago si me muerde un perro | qué hago si me muerde una serpiente | qué hago con una picadura de alacrán | me picó una medusa en la playa, qué hago | cómo se quita una garrapata de la piel | o que faço se um cachorro me morder | o que faço com uma picada de escorpião
 ---
 ## Mordedura de perro, gato u otro mamífero

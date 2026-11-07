@@ -4,7 +4,7 @@ category: First aid
 lang: en
 sources: AHA and American Red Cross First Aid Guidelines 2024; WHO, snakebite envenoming and rabies; Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025)
 id: esencial-mordeduras-y-picaduras
-verified: 2026-11-02
+verified: 2026-11-07
 questions: what do i do if a dog bites me | what do i do if a snake bites me | a scorpion stung me, what do i do | a jellyfish stung me at the beach, what do i do | how do i remove a tick from the skin | o que faço se um cachorro me morder | o que faço com uma picada de escorpião
 ---
 ## Dog, cat or other mammal bite

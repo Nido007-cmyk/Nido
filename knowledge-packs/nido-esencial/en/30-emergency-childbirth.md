@@ -4,7 +4,7 @@ category: Health at home
 lang: en
 sources: WHO, essential newborn care; Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025); American Red Cross
 id: esencial-parto-de-emergencia
-verified: 2026-11-02
+verified: 2026-11-07
 questions: what do i do if the baby comes before we reach the hospital | how do i handle an emergency childbirth at home | when and how do i cut the umbilical cord | the baby was born and is not breathing, what do i do | o que faço se o bebê nascer antes de chegar ao hospital | como atendo um parto de emergência em casa
 ---
 Most births go well on their own. If the baby arrives before help does, your role is to support, keep things clean and keep them warm.

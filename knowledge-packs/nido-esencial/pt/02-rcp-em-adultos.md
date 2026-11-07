@@ -4,7 +4,7 @@ category: Primeiros socorros
 lang: pt
 sources: AHA, Guias de RCP e atendimento cardiovascular de emergência 2025; Cruz Vermelha Americana; IFRC, Diretrizes internacionais de primeiros socorros 2025
 id: esencial-rcp-adultos
-verified: 2026-11-02
+verified: 2026-11-07
 questions: como fazer rcp em um adulto | meu pai desmaiou e não respira, o que eu faço | a que ritmo faço as compressões no peito | quantas compressões e quantas respirações na rcp | pessoa não responde e não respira, o que eu faço | meu avô caiu no chão e não respira | minha mãe caiu, não responde e não respira, o que eu faço | ele caiu e parou de respirar, o que fazer
 ---
 Se uma pessoa desaba, não responde e não respira normalmente (ou só ofega), o coração dela provavelmente parou. Cada minuto sem RCP reduz muito a chance de sobreviver. Começar rápido é o mais importante: não tenha medo de fazer "errado"; não fazer nada é pior.

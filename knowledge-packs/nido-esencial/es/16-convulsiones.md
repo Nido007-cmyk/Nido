@@ -4,7 +4,7 @@ category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025)
 id: esencial-convulsiones
-verified: 2026-11-02
+verified: 2026-11-07
 questions: qué hago si alguien convulsiona | se le mete algo en la boca a quien convulsiona o no | cuánto dura una convulsión y cuándo hay que llamar | mi hijo convulsiona con la fiebre, qué hago | o que faço se alguém tiver uma convulsão | pode pôr alguma coisa na boca de quem convulsiona
 ---
 Durante una convulsión la persona se pone rígida, se sacude y no responde. Suele durar menos de 2 o 3 minutos. Tu objetivo es que no se haga daño.

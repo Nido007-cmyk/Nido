@@ -4,7 +4,7 @@ category: Saúde em casa
 lang: pt
 sources: OMS, cuidados essenciais ao recém-nascido; Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025); Cruz Vermelha Americana
 id: esencial-parto-de-emergencia
-verified: 2026-11-02
+verified: 2026-11-07
 questions: o bebê vai nascer e não dá tempo de chegar, o que faço | como cortar o cordão umbilical numa emergência | parto em casa sem ajuda, passo a passo | quanto tempo demora para sair a placenta
 ---
 A maioria dos partos corre bem sozinha. Se o bebê chegar antes de haver ajuda, seu papel é acompanhar, manter limpo e agasalhar.

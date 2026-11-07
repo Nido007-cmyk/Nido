@@ -4,7 +4,7 @@ category: Primeros auxilios
 lang: es
 sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025); IFRC 2025
 id: esencial-hemorragias-graves
-verified: 2026-11-02
+verified: 2026-11-07
 questions: cómo paro una hemorragia fuerte | le sale mucha sangre de la pierna y no para | se cortó el dedo y le sale mucha sangre, qué hago | cómo se pone un torniquete y dónde | cuánto tiempo se aprieta una herida que sangra | como paro uma hemorragia forte | está saindo muito sangue da perna, o que faço
 ---
 Una persona puede morir desangrada en pocos minutos. Una hemorragia es grave si la sangre sale a chorro o sin parar, si empapa la ropa o los vendajes, o si la persona se marea, se pone pálida o confusa. Actúa de inmediato.
