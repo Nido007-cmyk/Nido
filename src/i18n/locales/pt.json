@@ -243,6 +243,21 @@
     "downloadablePacks": "Pacotes de conhecimento para download",
     "yourDocuments": "Seus documentos"
   },
+  "packImport": {
+    "addButton": "Adicionar um pacote a partir de um arquivo",
+    "addedHeading": "Pacotes adicionados de arquivos",
+    "confirmBody": "Este pacote está assinado por {{origin}} e o app conferiu a sua assinatura: o arquivo é exatamente o que {{origin}} assinou, sem mudanças. Ele será salvo no seu telefone e o assistente poderá responder com o seu conteúdo.",
+    "confirmTitle": "Adicionar este pacote",
+    "damaged": "O arquivo está danificado ou incompleto e não pôde ser aberto.",
+    "hashMismatch": "O arquivo não coincide com a sua assinatura: ele mudou desde que foi assinado, então não pode ser adicionado. Baixe-o de novo de onde você o comprou.",
+    "missingManifest": "Falta o manifesto assinado deste pacote, e sem ele o app não pode conferir a sua assinatura. Ele não pode ser adicionado.",
+    "notAPack": "Este arquivo não é um pacote de conhecimento válido.",
+    "notSignedByUs": "Este pacote não está assinado pelo NIDO nem pela SALVORA PACKS e não pode ser adicionado. Por segurança, só entram os pacotes assinados por nós.",
+    "removeAction": "Remover este pacote",
+    "removeConfirmBody": "O arquivo do pacote será apagado do seu telefone. Você poderá adicioná-lo de novo quando quiser.",
+    "signedBy": "Assinado por {{origin}}",
+    "tooLarge": "Este pacote é grande demais para adicionar: o máximo é {{max}} MB."
+  },
   "personalDocumentsManager": {
     "errors": {
       "tooLarge": "“{{name}}” é grande demais (máximo {{max}} MB).",

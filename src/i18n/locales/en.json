@@ -243,6 +243,21 @@
     "downloadablePacks": "Downloadable knowledge packs",
     "yourDocuments": "Your documents"
   },
+  "packImport": {
+    "addButton": "Add a pack from a file",
+    "addedHeading": "Packs added from files",
+    "confirmBody": "This pack is signed by {{origin}} and the app has checked its signature: the file is exactly the one {{origin}} signed, unchanged. It will be saved on your phone and the assistant will be able to answer from its content.",
+    "confirmTitle": "Add this pack",
+    "damaged": "The file is damaged or incomplete and could not be opened.",
+    "hashMismatch": "The file does not match its signature: it has changed since it was signed, so it cannot be added. Download it again from where you bought it.",
+    "missingManifest": "This pack is missing its signed manifest, and without it the app cannot check its signature. It cannot be added.",
+    "notAPack": "This file is not a valid knowledge pack.",
+    "notSignedByUs": "This pack is not signed by NIDO or by SALVORA PACKS, and it cannot be added. For your safety, only packs signed by us can be added.",
+    "removeAction": "Remove this pack",
+    "removeConfirmBody": "The pack file will be deleted from your phone. You can add it again whenever you want.",
+    "signedBy": "Signed by {{origin}}",
+    "tooLarge": "This pack is too large to add: the maximum is {{max}} MB."
+  },
   "personalDocumentsManager": {
     "errors": {
       "tooLarge": "“{{name}}” is too large (max {{max}} MB).",
