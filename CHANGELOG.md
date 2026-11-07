@@ -61,7 +61,7 @@ knowledge-packs-v14.
 
 ### Not tested on a physical phone yet
 
-These fixes passed the automated tests only (TESTCOUNT on the release
+These fixes passed the automated tests only (6,320 on the release
 tree), and the Android build compiles. The owner's round: the menu with
 dozens of chats, deleting a chat, a screenshot with the setting off and
 on, and the backup key window with the setting on.
