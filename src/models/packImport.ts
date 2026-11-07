@@ -119,20 +119,28 @@ export function canonicalPackManifestJSON(manifest: PackManifest): string {
 
 /**
  * True when the manifest carries a SALVORA PACKS signature that verifies
- * against the key embedded in the app. The key is ALWAYS the embedded one;
- * the manifest's declared `signingPublicKey` must equal it too (a manifest
- * naming some other key as its signer is not ours, however it is signed).
+ * against the trusted key. The trusted key is ALWAYS the one embedded in
+ * the app; the manifest's declared `signingPublicKey` must equal it too
+ * (a manifest naming some other key as its signer is not ours, however it
+ * is signed). The second parameter exists only as a test seam: unit tests
+ * inject a fixture key generated in memory so signature acceptance is
+ * covered everywhere, without the store's real zips. Production callers
+ * never pass it — the default is the embedded key and the behavior is
+ * identical.
  */
-export function verifySalvoraManifestSignature(manifest: PackManifest): boolean {
+export function verifySalvoraManifestSignature(
+  manifest: PackManifest,
+  trustedPublicKeyBase64: string = SALVORA_PACKS_PUBLIC_KEY_BASE64
+): boolean {
   if (typeof manifest.signature !== "string" || typeof manifest.signingPublicKey !== "string") {
     return false;
   }
-  if (manifest.signingPublicKey !== SALVORA_PACKS_PUBLIC_KEY_BASE64) return false;
+  if (manifest.signingPublicKey !== trustedPublicKeyBase64) return false;
   let sig: Uint8Array;
   let pub: Uint8Array;
   try {
     sig = b64ToBytes(manifest.signature);
-    pub = b64ToBytes(SALVORA_PACKS_PUBLIC_KEY_BASE64);
+    pub = b64ToBytes(trustedPublicKeyBase64);
   } catch {
     return false;
   }
@@ -163,14 +171,22 @@ export type PackOriginResult =
  * real manifests carry none, so the catalog pin is their only path, and a
  * third party cannot borrow it by stapling a catalog hash onto a manifest
  * for different bytes (step 2 already bound the hash to THIS file).
+ *
+ * The optional third parameter is the same test seam as in
+ * verifySalvoraManifestSignature (an injected fixture key for unit
+ * tests); production callers never pass it.
  */
-export function verifyPackOrigin(manifest: PackManifest, fileSha256: string): PackOriginResult {
+export function verifyPackOrigin(
+  manifest: PackManifest,
+  fileSha256: string,
+  trustedPublicKeyBase64: string = SALVORA_PACKS_PUBLIC_KEY_BASE64
+): PackOriginResult {
   const declared = typeof manifest.sha256 === "string" ? manifest.sha256 : "";
   if (!SHA256_HEX.test(declared) || declared.toLowerCase() !== fileSha256.toLowerCase()) {
     return { ok: false, reason: "hash-mismatch" };
   }
   if (typeof manifest.signature === "string" || typeof manifest.signingPublicKey === "string") {
-    return verifySalvoraManifestSignature(manifest)
+    return verifySalvoraManifestSignature(manifest, trustedPublicKeyBase64)
       ? { ok: true, origin: "salvora" }
       : { ok: false, reason: "not-signed-by-us" };
   }

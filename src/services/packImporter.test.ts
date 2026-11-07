@@ -8,8 +8,9 @@
  * packImporter.test.ts — the signed-pack door, end to end over an
  * in-memory filesystem, with the REAL bytes of the store's SALVORA pack 1
  * and of NIDO's Esencial (read from the store zips in the workspace; the
- * blocks skip visibly when the zips are absent, since packs are never
- * committed to the repo).
+ * pack-1 zip resolves from the SALVORA_PACK1_ZIP environment variable
+ * when set, else from the house default path. The blocks skip visibly
+ * when the zips are absent, since packs are never committed to the repo).
  *
  * The invariant under test is PI-2's: a rejection — for signature, for
  * hash, for format, for a missing manifest — copies NOTHING into corpus/
@@ -22,7 +23,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { inflateRawSync } from "node:zlib";
 import { DatabaseSync } from "node:sqlite";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("ram-monitor", () => ({
   getDeviceTotalRamBytes: () => 8 * 1024 ** 3,
@@ -117,9 +118,18 @@ import { importPackFromFile, listImportedPacks, removeImportedPack } from "./pac
 // ---------------------------------------------------------------------------
 
 const PACKS_DIR = join(homedir(), "workspace/your_files/salvora-packs");
-const SALVORA_ZIP = join(PACKS_DIR, "salvora-emergencias-casa-edicion-2026-11.zip");
+const SALVORA_ZIP =
+  process.env.SALVORA_PACK1_ZIP ?? join(PACKS_DIR, "salvora-emergencias-casa-edicion-2026-11.zip");
 const ESENCIAL_ZIP = join(PACKS_DIR, "salvora-esencial-edicion-2026-11.zip");
 const REAL_ZIPS_PRESENT = existsSync(SALVORA_ZIP) && existsSync(ESENCIAL_ZIP);
+if (!REAL_ZIPS_PRESENT) {
+  // Declared skip, never a failure: the real-bytes suite below is
+  // skipped by describe.runIf and this line is the visible notice.
+  console.warn(
+    `[packImporter.test] real store zips NOT found (pack 1: ${SALVORA_ZIP}; esencial: ${ESENCIAL_ZIP})` +
+      " — real-bytes cases SKIPPED. Set SALVORA_PACK1_ZIP to the pack-1 zip to run them."
+  );
+}
 
 function zipEntries(zipPath: string): Map<string, Buffer> {
   const buf = readFileSync(zipPath);
@@ -192,15 +202,27 @@ function stagePick(sqliteName: string, sqliteBytes: Uint8Array, manifestText: st
 const REAL_BYTES_TIMEOUT = { timeout: 180_000 };
 
 describe.runIf(REAL_ZIPS_PRESENT)("packImporter · the door with real store bytes", () => {
-  const salvora = zipEntries(SALVORA_ZIP);
-  const esencial = zipEntries(ESENCIAL_ZIP);
   const STD = "salvora-emergencias-casa.sqlite";
   const E5 = "salvora-emergencias-casa-e5.sqlite";
   const ES = "nido-esencial.sqlite";
-  const stdBytes = salvora.get(STD)!;
-  const stdManifest = salvora.get(`${STD}.json`)!.toString("utf8");
-  const stdMeta = realMeta(stdBytes);
+  // The zips load in beforeAll, never in this suite body: Vitest
+  // executes the body at collection time even when runIf skips the
+  // suite, and reading the files here is what failed CI with ENOENT on
+  // machines without the store fixtures.
+  let salvora: Map<string, Buffer>;
+  let esencial: Map<string, Buffer>;
+  let stdBytes: Buffer;
+  let stdManifest: string;
+  let stdMeta: Record<string, string>;
   const yes = async () => true;
+
+  beforeAll(() => {
+    salvora = zipEntries(SALVORA_ZIP);
+    esencial = zipEntries(ESENCIAL_ZIP);
+    stdBytes = salvora.get(STD)!;
+    stdManifest = salvora.get(`${STD}.json`)!.toString("utf8");
+    stdMeta = realMeta(stdBytes);
+  });
 
   beforeEach(() => {
     h.files.clear();

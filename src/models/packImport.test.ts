@@ -9,10 +9,13 @@
  * REAL pack bytes: the store's SALVORA pack 1 (both editions, signed with
  * the SALVORA key) and NIDO's Esencial (both editions, attested by the
  * signed catalog pin), read from the store zips in the workspace. The
+ * pack-1 zip resolves from the SALVORA_PACK1_ZIP environment variable
+ * when set, else from the house default path below. The real-bytes
  * blocks run only when those zips are present (they are not part of the
  * repo — packs are never committed); everywhere else the pure-helper
- * tests still run and the acceptance cases skip visibly instead of
- * passing silently.
+ * tests still run — including synthetic-signature acceptance against a
+ * fixture key generated in memory — and the real-bytes cases skip
+ * visibly instead of passing silently.
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
@@ -33,9 +36,18 @@ import {
 } from "./packImport";
 
 const PACKS_DIR = join(homedir(), "workspace/your_files/salvora-packs");
-const SALVORA_ZIP = join(PACKS_DIR, "salvora-emergencias-casa-edicion-2026-11.zip");
+const SALVORA_ZIP =
+  process.env.SALVORA_PACK1_ZIP ?? join(PACKS_DIR, "salvora-emergencias-casa-edicion-2026-11.zip");
 const ESENCIAL_ZIP = join(PACKS_DIR, "salvora-esencial-edicion-2026-11.zip");
 const REAL_ZIPS_PRESENT = existsSync(SALVORA_ZIP) && existsSync(ESENCIAL_ZIP);
+if (!REAL_ZIPS_PRESENT) {
+  // Declared skip, never a failure: the real-bytes suites below are
+  // skipped by describe.runIf and this line is the visible notice.
+  console.warn(
+    `[packImport.test] real store zips NOT found (pack 1: ${SALVORA_ZIP}; esencial: ${ESENCIAL_ZIP})` +
+      " — real-bytes cases SKIPPED. Set SALVORA_PACK1_ZIP to the pack-1 zip to run them."
+  );
+}
 
 /** Minimal read-only ZIP reader (stored + deflate entries) for fixtures. */
 function zipEntries(zipPath: string): Map<string, Buffer> {
@@ -160,13 +172,84 @@ describe("packImport · pure helpers (always run)", () => {
     expect(verifyPackOrigin(m, "b".repeat(64))).toEqual({ ok: false, reason: "not-signed-by-us" });
     expect(verifyPackOrigin(m, "c".repeat(64))).toEqual({ ok: false, reason: "hash-mismatch" });
   });
+
+  it("a manifest signed by a fixture key verifies when that key is injected (synthetic pack)", () => {
+    // Acceptance coverage that runs everywhere, without the store zips:
+    // a minimal manifest over synthetic bytes, signed in this test with
+    // an Ed25519 pair generated in memory, accepted only through the
+    // injected-key seam of the pure core.
+    const fixture = nacl.sign.keyPair();
+    const fixtureB64 = Buffer.from(fixture.publicKey).toString("base64");
+    const bytes = Buffer.from("synthetic pack bytes for the door's trust core");
+    const hash = sha256Hex(bytes);
+    const unsigned: PackManifest = {
+      id: "synthetic-fixture",
+      sha256: hash,
+      sizeBytes: bytes.length,
+      signedBy: "FIXTURE",
+      signingPublicKey: fixtureB64,
+      signedAt: "2026-11-07T00:00:00.000Z",
+    };
+    const sig = nacl.sign.detached(
+      new TextEncoder().encode(canonicalPackManifestJSON(unsigned)),
+      fixture.secretKey
+    );
+    const signed: PackManifest = { ...unsigned, signature: Buffer.from(sig).toString("base64") };
+
+    expect(verifySalvoraManifestSignature(signed, fixtureB64)).toBe(true);
+    expect(verifyPackOrigin(signed, hash, fixtureB64)).toEqual({ ok: true, origin: "salvora" });
+    // The very same manifest does NOT pass against the embedded
+    // production key (no injection): the seam changes nothing in
+    // production, it only lets tests name their own trust anchor.
+    expect(verifySalvoraManifestSignature(signed)).toBe(false);
+    expect(verifyPackOrigin(signed, hash)).toEqual({ ok: false, reason: "not-signed-by-us" });
+    // And step 2 still binds first: a wrong file hash fails before the
+    // signature is even judged, injected key or not.
+    expect(verifyPackOrigin(signed, "0".repeat(64), fixtureB64)).toEqual({
+      ok: false,
+      reason: "hash-mismatch",
+    });
+  });
+
+  it("with a fixture key injected, a signature made by a different key still fails", () => {
+    const declared = nacl.sign.keyPair();
+    const declaredB64 = Buffer.from(declared.publicKey).toString("base64");
+    const signer = nacl.sign.keyPair();
+    const m: PackManifest = {
+      id: "synthetic-mismatch",
+      sha256: "d".repeat(64),
+      signedBy: "FIXTURE",
+      signingPublicKey: declaredB64,
+      signedAt: "2026-11-07T00:00:00.000Z",
+    };
+    const sig = nacl.sign.detached(
+      new TextEncoder().encode(canonicalPackManifestJSON(m)),
+      signer.secretKey
+    );
+    const forged: PackManifest = { ...m, signature: Buffer.from(sig).toString("base64") };
+    expect(verifySalvoraManifestSignature(forged, declaredB64)).toBe(false);
+    expect(verifyPackOrigin(forged, "d".repeat(64), declaredB64)).toEqual({
+      ok: false,
+      reason: "not-signed-by-us",
+    });
+  });
 });
 
 describe.runIf(REAL_ZIPS_PRESENT)("packImport · real store bytes", () => {
-  const salvora = zipEntries(SALVORA_ZIP);
-  const esencial = zipEntries(ESENCIAL_ZIP);
+  // The zips load lazily, on first use inside a test — never in this
+  // suite body. Vitest executes the body at collection time even when
+  // runIf skips the suite, and reading the files here is what failed CI
+  // with ENOENT on machines without the store fixtures.
+  let salvoraCache: Map<string, Buffer> | undefined;
+  let esencialCache: Map<string, Buffer> | undefined;
+  const salvora = () => (salvoraCache ??= zipEntries(SALVORA_ZIP));
+  const esencial = () => (esencialCache ??= zipEntries(ESENCIAL_ZIP));
 
-  const cases: Array<{ zip: Map<string, Buffer>; sqlite: string; origin: "nido" | "salvora" }> = [
+  const cases: Array<{
+    zip: () => Map<string, Buffer>;
+    sqlite: string;
+    origin: "nido" | "salvora";
+  }> = [
     { zip: salvora, sqlite: "salvora-emergencias-casa.sqlite", origin: "salvora" },
     { zip: salvora, sqlite: "salvora-emergencias-casa-e5.sqlite", origin: "salvora" },
     { zip: esencial, sqlite: "nido-esencial.sqlite", origin: "nido" },
@@ -175,8 +258,8 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImport · real store bytes", () => {
 
   for (const c of cases) {
     it(`accepts ${c.sqlite} with origin ${c.origin}`, () => {
-      const bytes = c.zip.get(c.sqlite);
-      const manifestText = c.zip.get(`${c.sqlite}.json`)?.toString("utf8");
+      const bytes = c.zip().get(c.sqlite);
+      const manifestText = c.zip().get(`${c.sqlite}.json`)?.toString("utf8");
       expect(bytes).toBeDefined();
       expect(manifestText).toBeDefined();
       const manifest = parsePackManifest(manifestText!);
@@ -190,8 +273,8 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImport · real store bytes", () => {
   }
 
   it("rejects the SALVORA pack with a single changed byte (hash-mismatch)", () => {
-    const bytes = Buffer.from(salvora.get("salvora-emergencias-casa.sqlite")!);
-    const manifest = parsePackManifest(salvora.get("salvora-emergencias-casa.sqlite.json")!.toString("utf8"))!;
+    const bytes = Buffer.from(salvora().get("salvora-emergencias-casa.sqlite")!);
+    const manifest = parsePackManifest(salvora().get("salvora-emergencias-casa.sqlite.json")!.toString("utf8"))!;
     bytes[Math.floor(bytes.length / 2)] ^= 0xff;
     expect(verifyPackOrigin(manifest, sha256Hex(bytes))).toEqual({
       ok: false,
@@ -200,8 +283,8 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImport · real store bytes", () => {
   });
 
   it("rejects a truncated copy of the SALVORA pack (hash-mismatch)", () => {
-    const bytes = salvora.get("salvora-emergencias-casa.sqlite")!.subarray(0, 100_000);
-    const manifest = parsePackManifest(salvora.get("salvora-emergencias-casa.sqlite.json")!.toString("utf8"))!;
+    const bytes = salvora().get("salvora-emergencias-casa.sqlite")!.subarray(0, 100_000);
+    const manifest = parsePackManifest(salvora().get("salvora-emergencias-casa.sqlite.json")!.toString("utf8"))!;
     expect(verifyPackOrigin(manifest, sha256Hex(bytes))).toEqual({
       ok: false,
       reason: "hash-mismatch",
@@ -209,8 +292,8 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImport · real store bytes", () => {
   });
 
   it("rejects the SALVORA manifest re-signed with a foreign key (not-signed-by-us)", () => {
-    const bytes = salvora.get("salvora-emergencias-casa.sqlite")!;
-    const manifest = parsePackManifest(salvora.get("salvora-emergencias-casa.sqlite.json")!.toString("utf8"))!;
+    const bytes = salvora().get("salvora-emergencias-casa.sqlite")!;
+    const manifest = parsePackManifest(salvora().get("salvora-emergencias-casa.sqlite.json")!.toString("utf8"))!;
     const foreign = nacl.sign.keyPair();
     const forged: PackManifest = {
       ...manifest,
@@ -229,8 +312,8 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImport · real store bytes", () => {
 
   it("rejects a manifest whose declared hash belongs to a different real file", () => {
     // The Esencial's manifest stapled onto the SALVORA pack's bytes.
-    const manifest = parsePackManifest(esencial.get("nido-esencial.sqlite.json")!.toString("utf8"))!;
-    const bytes = salvora.get("salvora-emergencias-casa.sqlite")!;
+    const manifest = parsePackManifest(esencial().get("nido-esencial.sqlite.json")!.toString("utf8"))!;
+    const bytes = salvora().get("salvora-emergencias-casa.sqlite")!;
     expect(verifyPackOrigin(manifest, sha256Hex(bytes))).toEqual({
       ok: false,
       reason: "hash-mismatch",
