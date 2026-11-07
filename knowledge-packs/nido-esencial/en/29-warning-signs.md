@@ -2,9 +2,9 @@
 title: Warning signs: when to go to the emergency department
 category: Health at home
 lang: en
-sources: WHO, IMCI and Emergency Triage Assessment and Treatment (ETAT); AHA; Canadian Red Cross 2020; NHS
+sources: WHO, IMCI and Emergency Triage Assessment and Treatment (ETAT); AHA; Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025); NHS
 id: esencial-signos-de-alarma
-verified: 2026-11-02
+verified: 2026-11-07
 questions: what are the warning signs that mean go to the emergency room | when should i take a baby to the emergency department | what are the danger signs in pregnancy | he has spots on the skin that don't fade when pressed, is that serious | quais são os sinais de alarme para ir à emergência | quando devo levar um bebê à emergência
 ---
 Call the emergency number or go to the emergency department (ER) at once if you see any of these signs, in an adult or a child.

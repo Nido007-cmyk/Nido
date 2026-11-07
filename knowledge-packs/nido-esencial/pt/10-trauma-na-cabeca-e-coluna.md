@@ -2,9 +2,9 @@
 title: Batidas na cabeça, no pescoço ou nas costas
 category: Primeiros socorros
 lang: pt
-sources: Cruz Vermelha Canadense, diretrizes 2020; AHA e Cruz Vermelha Americana 2024; IFRC 2020
+sources: Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025); AHA e Cruz Vermelha Americana 2024; IFRC 2025
 id: esencial-golpe-en-la-cabeza-y-columna
-verified: 2026-11-02
+verified: 2026-11-07
 questions: bateu a cabeça e está vomitando, é grave | caiu e está com dor no pescoço, posso mover | sinais de concussão depois de uma batida na cabeça | está saindo um líquido claro pelo nariz depois da queda
 ---
 ## Quando suspeitar de lesão na coluna

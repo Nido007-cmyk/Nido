@@ -2,9 +2,9 @@
 title: Severe allergic reaction (anaphylaxis)
 category: First aid
 lang: en
-sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross 2020; IFRC 2020
+sources: AHA and American Red Cross First Aid Guidelines 2024; Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025); IFRC 2025
 id: esencial-alergia-grave-anafilaxia
-verified: 2026-11-02
+verified: 2026-11-07
 questions: my daughter had a severe allergic reaction to a peanut and can't breathe | how do i use an epipen, the epinephrine auto-injector | a bee stung me and my face is swelling up, what do i do | when do i give a second dose of epinephrine | o que faço numa alergia grave, não consegue respirar | como uso a caneta de adrenalina
 ---
 Anaphylaxis is a severe allergic reaction that can kill within minutes. It usually appears soon after a food (nuts, shellfish, egg, milk), a bee or wasp sting, or a medicine.
@@ -24,7 +24,7 @@ Anaphylaxis is a severe allergic reaction that can kill within minutes. It usual
 6. Even if they get better, they must go to hospital: the reaction can come back hours later.
 
 ## Bee stings
-Remove the stinger as soon as possible by scraping or pinching it out. Wash with soap and water and apply cold.
+Remove the stinger as soon as possible: scrape it gently with something flat, like a bank card or the blunt side of a knife. Do not pinch it or use tweezers: they can squeeze the venom sac and make the reaction worse. Wash with soap and water and apply cold.
 
 ## Important
 Based on the AHA, American Red Cross and Canadian Red Cross guidelines. If you know you have severe allergies, always carry your auto-injector and teach your family how to use it. Call your emergency number.

@@ -2,9 +2,9 @@
 title: Fractures, sprains and dislocations
 category: First aid
 lang: en
-sources: Canadian Red Cross guidelines 2020; IFRC 2020
+sources: Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025); IFRC 2025
 id: esencial-fracturas-y-esguinces
-verified: 2026-11-02
+verified: 2026-11-07
 questions: i think he broke a bone, what do i do | how do i splint a broken arm | can i straighten a bent broken bone or leave it | i twisted my ankle badly, what do i do | acho que quebrou um osso, o que faço | como imobilizo um braço quebrado
 ---
 Without an X-ray you cannot know whether a bone is broken. So after an injury with strong pain, swelling, deformity or inability to move it, treat it as a fracture.

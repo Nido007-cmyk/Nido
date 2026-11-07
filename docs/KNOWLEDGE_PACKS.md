@@ -147,6 +147,35 @@ multilingual build and 6/6 on the English build. The signed
 catalog on `main` offers this edition; the 0.1.76 app keeps
 the v12 edition until the next app version. `nido-local`
 stays at its v9 edition.
+A re-checked edition of `nido-esencial` is published in the
+release `knowledge-packs-v15`: the guides that cited the
+IFRC 2020 guidelines, the Canadian Red Cross 2020 standards
+or the ERC 2021 guidelines were re-checked line by line
+against the editions that supersede them (IFRC 2025; the
+Canadian Red Cross programme standards of 2026, based on
+IFRC 2025; ERC 2025, in Resuscitation 2025;215 Suppl. 1).
+Almost every re-checked statement stands as it was; the
+changes of substance are these. The wait after sugar for
+low blood sugar is now 15 minutes, with the call for help
+at around 30 minutes (guide 17). A bee sting is removed
+only by scraping with something flat, and tweezers are no
+longer offered as an equivalent (guide 12). The mental
+health guide gains a short panic attack section and a
+longer acute grief passage from the Mental distress
+chapter of IFRC 2025 (guide 31). And a knocked-out tooth
+is rinsed gently in milk, saline or the patient's own
+saliva, following the IADT guideline, the authority the
+owner chose for that guide over the contrary IFRC 2025
+line (guide 23). An independent audit re-verified the
+changed guides and re-sealed every touched guide. Built
+by the knowledge pack workflow (174 guides, 574 chunks);
+on the CI product bytes, multilingual retrieval passes
+202/202, the English build passes 64/64, and first-aid
+retrieval is 38/38 on the multilingual build and 6/6 on
+the English build. The signed catalog on `main` offers
+this edition; the 0.1.80 app keeps the v14 edition until
+the next app version. `nido-local` stays at its v9
+edition.
 
 ### Format v2: indexed questions and verified facts (0.1.55)
 
