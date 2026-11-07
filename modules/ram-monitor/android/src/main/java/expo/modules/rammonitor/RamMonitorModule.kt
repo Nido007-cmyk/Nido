@@ -95,6 +95,16 @@ class RamMonitorModule : Module() {
       readDeviceTotalRamBytes()
     }
 
+    // 2026-11-06 (prueba física, tableta de 3,3 GB): la memoria que el
+    // sistema tiene libre AHORA (ActivityManager.MemoryInfo). El pre-flight
+    // solo miraba la RAM total menos una reserva fija y dejó cargar un
+    // modelo que agotó la memoria: con otras apps abiertas, lo libre de
+    // verdad era menos. availMem incluye la caché que el sistema puede
+    // soltar; threshold es el nivel en que Android empieza a matar apps.
+    Function("getAvailableMemory") {
+      readAvailableMemory()
+    }
+
     // Logical cores on this device, for the inference thread policy
     // (P-03): without it the app pinned 4 threads blind on every device.
     Function("getProcessorCount") {
@@ -229,6 +239,18 @@ class RamMonitorModule : Module() {
       }
     } catch (_: Exception) {
       emptyList()
+    }
+  }
+
+  private fun readAvailableMemory(): Map<String, Any> {
+    return try {
+      val context = appContext.reactContext ?: return mapOf("availBytes" to 0L, "thresholdBytes" to 0L, "lowMemory" to false)
+      val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+      val info = ActivityManager.MemoryInfo()
+      am.getMemoryInfo(info)
+      mapOf("availBytes" to info.availMem, "thresholdBytes" to info.threshold, "lowMemory" to info.lowMemory)
+    } catch (e: Exception) {
+      mapOf("availBytes" to 0L, "thresholdBytes" to 0L, "lowMemory" to false)
     }
   }
 

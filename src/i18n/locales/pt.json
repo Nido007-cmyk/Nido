@@ -474,6 +474,7 @@
     "reportAnswerNoMail": "Nenhum app de e-mail encontrado. Escreva para arsrs91@gmail.com para denunciar.",
     "stageTimedOut": "Uma etapa da pesquisa demorou demais e foi interrompida",
     "interrupted": "Resposta cortada: o app fechou antes de terminar. Pergunte de novo para continuar.",
+    "interruptedMemory": "Resposta cortada: o NIDO foi fechado por falta de memória. Feche outros apps ou escolha um modelo mais leve em Ajustes e pergunte de novo.",
     "emptyTitle": "Olá, sou NIDO",
     "emptySubtitle": "Seu agente privado. O NIDO só se conecta quando você pedir.",
     "privacyHint": "Privado · nada sai deste dispositivo",

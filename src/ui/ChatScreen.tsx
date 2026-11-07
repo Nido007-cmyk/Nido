@@ -153,7 +153,21 @@ import { recordRouterSample, type StageDropReason } from "../services/routerStat
 import { looksLikeMissedCommand, recordMissedPhrase } from "../services/missedPhrases";
 import { trimRepetitionLoop } from "../inference/repetitionGuard";
 import { trimToCompleteSentences } from "../inference/completeSentences";
-import { getMemoryInfo } from "ram-monitor";
+import { getCrashReport, getMemoryInfo } from "ram-monitor";
+import { interruptionCause } from "../diagnostics/crashReport";
+
+/** El informe de cierres de Android, leído una vez por proceso (barato y no cambia mientras corre). */
+let crashReportCache: ReturnType<typeof getCrashReport> | undefined;
+function crashReportOnce(): ReturnType<typeof getCrashReport> {
+  if (crashReportCache === undefined) {
+    try {
+      crashReportCache = getCrashReport();
+    } catch {
+      crashReportCache = null;
+    }
+  }
+  return crashReportCache;
+}
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
@@ -190,6 +204,8 @@ interface Message {
    * aviso si no llegó ningún token. Ver chatHistory.addAssistantDraft.
    */
   interrupted?: boolean;
+  /** Cuándo empezó (para saber por qué se cortó, si se cortó). */
+  createdAt?: number;
   feedback?: "up" | "down" | null;
   /** 0.1.55: "Call" buttons under an emergency-number answer (verified facts). */
   calls?: Array<{ value: string; label: string; tel: string }>;
@@ -556,7 +572,7 @@ export function ChatScreen({
           const latest = ss[0];
           const records = await getSessionMessages(latest.id);
           followBottom.current = true;
-          setMessages(records.map((r) => ({ id: r.id, role: r.role, text: r.text, feedback: r.feedback, interrupted: r.interrupted })));
+          setMessages(records.map((r) => ({ id: r.id, role: r.role, text: r.text, feedback: r.feedback, interrupted: r.interrupted, createdAt: r.createdAt })));
           setActiveSessionId(latest.id);
           sessionSummaryRef.current = latest.summary ?? null;
         }
@@ -901,7 +917,7 @@ export function ChatScreen({
     await cancelBackgroundTask();
     const records = await getSessionMessages(id);
     followBottom.current = true;
-    setMessages(records.map((r) => ({ id: r.id, role: r.role, text: r.text, feedback: r.feedback, interrupted: r.interrupted })));
+    setMessages(records.map((r) => ({ id: r.id, role: r.role, text: r.text, feedback: r.feedback, interrupted: r.interrupted, createdAt: r.createdAt })));
     setActiveSessionId(id);
     choiceStoreRef.current.current = null;
     resetConversationState();
@@ -2613,7 +2629,11 @@ export function ChatScreen({
                 {item.interrupted && (
                   <View style={[styles.stoppedBadge, styles.stoppedBadgeRow, { backgroundColor: colors.amber.bgSubtle, borderColor: colors.amber.border }]}>
                     <NidoIcon name="pause" size={12} color={amberTextColor} />
-                    <Text style={[styles.stoppedTag, { color: amberTextColor }]}>{t("chatScreen.interrupted")}</Text>
+                    <Text style={[styles.stoppedTag, { color: amberTextColor }]}>
+                      {interruptionCause(item.createdAt ?? Number.NaN, crashReportOnce()) === "memory"
+                        ? t("chatScreen.interruptedMemory")
+                        : t("chatScreen.interrupted")}
+                    </Text>
                   </View>
                 )}
 
