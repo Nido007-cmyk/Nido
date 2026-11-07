@@ -2,7 +2,7 @@
 title: Hipotermia e congelamento
 category: Primeiros socorros
 lang: pt
-sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense 2020; Wilderness Medical Society
+sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025); Wilderness Medical Society
 id: esencial-hipotermia-y-congelacion
 verified: 2026-11-02
 questions: sinais de hipotermia, o que fazer | dedos congelados, posso esfregar | caiu na água gelada e está tremendo muito | como aquecer uma parte do corpo congelada

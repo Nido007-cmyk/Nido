@@ -2,7 +2,7 @@
 title: RCP em adultos e crianças maiores
 category: Primeiros socorros
 lang: pt
-sources: AHA, Guias de RCP e atendimento cardiovascular de emergência 2025; Cruz Vermelha Americana; IFRC, Diretrizes de primeiros socorros 2020
+sources: AHA, Guias de RCP e atendimento cardiovascular de emergência 2025; Cruz Vermelha Americana; IFRC, Diretrizes internacionais de primeiros socorros 2025
 id: esencial-rcp-adultos
 verified: 2026-11-02
 questions: como fazer rcp em um adulto | meu pai desmaiou e não respira, o que eu faço | a que ritmo faço as compressões no peito | quantas compressões e quantas respirações na rcp | pessoa não responde e não respira, o que eu faço | meu avô caiu no chão e não respira | minha mãe caiu, não responde e não respira, o que eu faço | ele caiu e parou de respirar, o que fazer

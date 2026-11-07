@@ -2,7 +2,7 @@
 title: Shock, fainting and the recovery position
 category: First aid
 lang: en
-sources: Canadian Red Cross guidelines 2020; AHA and American Red Cross 2024; IFRC 2020
+sources: Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025); AHA and American Red Cross 2024; IFRC 2025
 id: esencial-shock-y-desmayos
 verified: 2026-11-02
 questions: my mom fainted and won't wake up, what do i do | what do i do if someone faints | how do i put someone in the recovery position | what are the signs of shock | minha mãe desmaiou e não acorda, o que faço | o que faço se alguém desmaiar

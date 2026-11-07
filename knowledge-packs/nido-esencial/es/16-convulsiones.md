@@ -2,7 +2,7 @@
 title: Convulsiones y crisis epilépticas
 category: Primeros auxilios
 lang: es
-sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020
+sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025)
 id: esencial-convulsiones
 verified: 2026-11-02
 questions: qué hago si alguien convulsiona | se le mete algo en la boca a quien convulsiona o no | cuánto dura una convulsión y cuándo hay que llamar | mi hijo convulsiona con la fiebre, qué hago | o que faço se alguém tiver uma convulsão | pode pôr alguma coisa na boca de quem convulsiona

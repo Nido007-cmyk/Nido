@@ -2,7 +2,7 @@
 title: CPR for adults and older children
 category: First aid
 lang: en
-sources: AHA Guidelines for CPR and Emergency Cardiovascular Care 2025; American Red Cross; IFRC First Aid Guidelines 2020
+sources: AHA Guidelines for CPR and Emergency Cardiovascular Care 2025; American Red Cross; IFRC International First Aid Guidelines 2025
 id: esencial-rcp-adultos
 verified: 2026-11-02
 questions: how to do cpr on an adult | someone collapsed and is not breathing, what do i do | how fast should the chest compressions be | how many compressions and breaths in cpr | a person is unresponsive and not breathing, what to do

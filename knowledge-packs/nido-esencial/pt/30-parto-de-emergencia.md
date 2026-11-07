@@ -2,7 +2,7 @@
 title: Parto de emergência
 category: Saúde em casa
 lang: pt
-sources: OMS, cuidados essenciais ao recém-nascido; Cruz Vermelha Canadense 2020; Cruz Vermelha Americana
+sources: OMS, cuidados essenciais ao recém-nascido; Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025); Cruz Vermelha Americana
 id: esencial-parto-de-emergencia
 verified: 2026-11-02
 questions: o bebê vai nascer e não dá tempo de chegar, o que faço | como cortar o cordão umbilical numa emergência | parto em casa sem ajuda, passo a passo | quanto tempo demora para sair a placenta

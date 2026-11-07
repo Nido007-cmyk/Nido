@@ -2,7 +2,7 @@
 title: How to use a defibrillator (AED)
 category: First aid
 lang: en
-sources: AHA Guidelines 2025; American Red Cross; IFRC 2020
+sources: AHA Guidelines 2025; American Red Cross; IFRC 2025
 id: esencial-desfibrilador-dea
 verified: 2026-11-02
 questions: how do i use an aed defibrillator | where do i put the aed pads on the chest | can i use adult aed pads on a child | como uso um desfibrilador dea | onde coloco os adesivos do desfibrilador

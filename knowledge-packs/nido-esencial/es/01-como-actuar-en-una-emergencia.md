@@ -2,7 +2,7 @@
 title: Cómo actuar en una emergencia
 category: Primeros auxilios
 lang: es
-sources: Federación Internacional de la Cruz Roja (IFRC), Directrices internacionales de primeros auxilios 2020; Cruz Roja Canadiense, directrices 2020; AHA y Cruz Roja Americana, directrices de primeros auxilios 2024
+sources: Federación Internacional de la Cruz Roja (IFRC), Directrices internacionales de primeros auxilios 2025; Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025); AHA y Cruz Roja Americana, directrices de primeros auxilios 2024
 id: esencial-como-actuar-en-una-emergencia
 verified: 2026-11-02
 questions: qué hago primero si veo un accidente | a qué número llamo en una emergencia | una persona se cayó y no responde, qué hago | qué digo cuando llamo al 911 | o que faço primeiro numa emergência | para que número ligo numa emergência

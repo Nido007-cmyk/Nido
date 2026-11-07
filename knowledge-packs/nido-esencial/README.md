@@ -22,7 +22,7 @@ English and the same 58 in Portuguese.
 Cada guía cita las suyas en su cabecera (`sources:`). Las principales:
 Each guide cites its own in its header (`sources:`). The main ones:
 
-- IFRC, International First Aid, Resuscitation and Education Guidelines 2020; Reference Centre for Psychosocial Support.
+- IFRC, International First Aid, Resuscitation and Education Guidelines 2025; Reference Centre for Psychosocial Support.
 - American Heart Association (AHA), Guidelines for CPR and ECC 2025; AHA and American Red Cross First Aid Guidelines 2024.
 - Canadian Red Cross, First Aid and CPR guidelines; Spanish Red Cross.
 - WHO: Psychological First Aid (2011), IMCI, ETAT, oral rehydration (with UNICEF), hand hygiene, Five Keys to Safer Food, Doing What Matters in Times of Stress, mhGAP, heat and health.

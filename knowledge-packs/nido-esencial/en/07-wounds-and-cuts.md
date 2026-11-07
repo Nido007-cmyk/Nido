@@ -2,7 +2,7 @@
 title: Wounds, cuts and scrapes
 category: First aid
 lang: en
-sources: Canadian Red Cross guidelines 2020; AHA and American Red Cross 2024; WHO (tetanus)
+sources: Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025); AHA and American Red Cross 2024; WHO (tetanus)
 id: esencial-heridas-y-cortes
 verified: 2026-11-02
 questions: how do i clean a cut or wound at home | when does a wound need a doctor or stitches | my tetanus shot is out of date and i cut myself, what do i do | como limpo um corte ou ferimento em casa | quando um ferimento precisa de pontos ou médico

@@ -2,7 +2,7 @@
 title: Hemorragias graves: como parar o sangramento
 category: Primeiros socorros
 lang: pt
-sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense 2020; IFRC 2020
+sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025); IFRC 2025
 id: esencial-hemorragias-graves
 verified: 2026-11-02
 questions: como parar um sangramento forte na perna | está saindo muito sangue e não para, o que eu faço | como fazer um torniquete | sangue jorrando de um corte, o que fazer

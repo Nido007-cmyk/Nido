@@ -2,7 +2,7 @@
 title: RCP en niños y bebés
 category: Primeros auxilios
 lang: es
-sources: AHA, Guías de RCP 2025 (soporte vital pediátrico); Cruz Roja Americana; IFRC 2020
+sources: AHA, Guías de RCP 2025 (soporte vital pediátrico); Cruz Roja Americana; IFRC 2025
 id: esencial-rcp-ninos-y-bebes
 verified: 2026-11-02
 questions: cómo hago rcp a un bebé | mi bebé no respira, qué hago | cómo hago rcp a un niño de 3 años | cómo se hacen las compresiones a un bebé | se puede usar el desfibrilador en un niño | como faço rcp num bebé | meu bebé não respira, o que faço

@@ -2,7 +2,7 @@
 title: Convulsões e crises epiléticas
 category: Primeiros socorros
 lang: pt
-sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense 2020
+sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025)
 id: esencial-convulsiones
 verified: 2026-11-02
 questions: está convulsionando, coloco algo na boca | quanto tempo dura uma convulsão normal | criança com febre alta convulsionou | depois da convulsão, o que faço

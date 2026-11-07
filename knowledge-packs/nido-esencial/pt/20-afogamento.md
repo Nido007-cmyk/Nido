@@ -2,7 +2,7 @@
 title: Afogamento e resgate na água
 category: Primeiros socorros
 lang: pt
-sources: AHA e Cruz Vermelha Americana, diretrizes 2024; Conselho Europeu de Ressuscitação (ERC), guias 2021; OMS, prevenção de afogamentos; Cruz Vermelha Canadense 2020
+sources: AHA e Cruz Vermelha Americana, diretrizes 2024; Conselho Europeu de Ressuscitação (ERC), guias 2025; OMS, prevenção de afogamentos; Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025)
 id: esencial-ahogamiento
 verified: 2026-11-02
 questions: pessoa se afogando, como resgatar sem entrar na água | criança se afogou e não respira, o que faço | depois de tirar da água, faço rcp normal | quanto tempo uma criança se afoga sem ninguém ver
@@ -31,4 +31,4 @@ Em correntezas de rio ou mar com ondas, não entre. Em gelo quebrado, deite-se e
 - Se uma correnteza o arrastar, não lute contra ela: nade paralelo à margem até sair, ou flutue e peça ajuda.
 
 ## Importante
-Baseado nas diretrizes da AHA, da Cruz Vermelha Americana, da Cruz Vermelha Canadense e da OMS.
+Baseado nas diretrizes da AHA, da Cruz Vermelha Americana, do Conselho Europeu de Ressuscitação (ERC) e da OMS.

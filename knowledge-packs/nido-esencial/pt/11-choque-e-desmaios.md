@@ -2,7 +2,7 @@
 title: Choque, desmaios e posição lateral de segurança
 category: Primeiros socorros
 lang: pt
-sources: Cruz Vermelha Canadense, diretrizes 2020; AHA e Cruz Vermelha Americana 2024; IFRC 2020
+sources: Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025); AHA e Cruz Vermelha Americana 2024; IFRC 2025
 id: esencial-shock-y-desmayos
 verified: 2026-11-02
 questions: como colocar uma pessoa na posição lateral de segurança | pessoa desmaiada mas respirando, o que faço | sinais de choque depois de um acidente | minha mãe quase desmaiou, o que eu faço

@@ -2,7 +2,7 @@
 title: Baixa de açúcar (hipoglicemia) e diabetes
 category: Primeiros socorros
 lang: pt
-sources: Cruz Vermelha Canadense, diretrizes 2020; AHA e Cruz Vermelha Americana 2024
+sources: Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025); AHA e Cruz Vermelha Americana 2024
 id: esencial-bajada-de-azucar-diabetes
 verified: 2026-11-02
 questions: diabético tremendo e suando, o que dou | quanto de açúcar dou numa baixa de glicose | baixa de açúcar, espero quanto tempo para repetir | pessoa com diabetes desmaiou, posso dar suco
@@ -26,4 +26,4 @@ Suor, tremor, fome, palidez, nervosismo, confusão, comportamento estranho (pode
 Muita sede, urinar muito, hálito de fruta, náuseas, respiração profunda e cansaço podem indicar açúcar muito alto: ela precisa de atendimento médico.
 
 ## Importante
-Baseado nas diretrizes da Cruz Vermelha Canadense, da AHA e da Cruz Vermelha Americana.
+Baseado nas diretrizes da IFRC, da AHA e da Cruz Vermelha Americana.

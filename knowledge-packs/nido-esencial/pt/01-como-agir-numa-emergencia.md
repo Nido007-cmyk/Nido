@@ -2,7 +2,7 @@
 title: Como agir numa emergência
 category: Primeiros socorros
 lang: pt
-sources: Federação Internacional da Cruz Vermelha e do Crescente Vermelho (IFRC), Diretrizes internacionais de primeiros socorros 2020; Cruz Vermelha Canadense, diretrizes 2020; AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024
+sources: Federação Internacional da Cruz Vermelha e do Crescente Vermelho (IFRC), Diretrizes internacionais de primeiros socorros 2025; Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025); AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024
 id: esencial-como-actuar-en-una-emergencia
 verified: 2026-11-02
 questions: o que fazer numa emergência passo a passo | alguém desmaiou e não responde, o que eu faço | para que número ligo numa emergência | o que olhar primeiro numa pessoa ferida | o que eu faço primeiro se vejo um acidente

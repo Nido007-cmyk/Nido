@@ -2,7 +2,7 @@
 title: Choking in adults, children and babies
 category: First aid
 lang: en
-sources: AHA Guidelines 2025 (choking); American Red Cross; IFRC 2020
+sources: AHA Guidelines 2025 (choking); American Red Cross; IFRC 2025
 id: esencial-atragantamiento
 verified: 2026-11-02
 questions: what do i do if my child is choking on food | how do i do the heimlich maneuver on an adult | what do i do if a baby is choking and cannot breathe | what do i do if someone is choking and can't cough | o que faço se meu filho engasgar com comida | como faço a manobra de heimlich

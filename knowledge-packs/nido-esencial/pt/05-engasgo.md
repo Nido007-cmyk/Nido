@@ -2,7 +2,7 @@
 title: Engasgo em adultos, crianças e bebês
 category: Primeiros socorros
 lang: pt
-sources: AHA, Guias 2025 (engasgo); Cruz Vermelha Americana; IFRC 2020
+sources: AHA, Guias 2025 (engasgo); Cruz Vermelha Americana; IFRC 2025
 id: esencial-atragantamiento
 verified: 2026-11-02
 questions: meu filho engasgou com uma uva e não consegue tossir | como desengasgar um bebê | manobra de heimlich, como faz | alguém engasgou e não consegue falar nem respirar | um bebê engasgado, como desengasgar

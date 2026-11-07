@@ -2,7 +2,7 @@
 title: Shock, desmayos y posición lateral de seguridad
 category: Primeros auxilios
 lang: es
-sources: Cruz Roja Canadiense, directrices 2020; AHA y Cruz Roja Americana 2024; IFRC 2020
+sources: Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025); AHA y Cruz Roja Americana 2024; IFRC 2025
 id: esencial-shock-y-desmayos
 verified: 2026-11-02
 questions: mi mamá se desmayó y no despierta, qué hago | qué hago si alguien se desmaya | cómo se pone a una persona en posición lateral de seguridad | qué es el shock y cuáles son sus signos | minha mãe desmaiou e não acorda, o que faço | o que faço se alguém desmaiar

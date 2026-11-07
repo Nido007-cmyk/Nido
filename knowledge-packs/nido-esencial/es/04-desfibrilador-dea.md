@@ -2,7 +2,7 @@
 title: Cómo usar un desfibrilador (DEA)
 category: Primeros auxilios
 lang: es
-sources: AHA, Guías 2025; Cruz Roja Americana; IFRC 2020
+sources: AHA, Guías 2025; Cruz Roja Americana; IFRC 2025
 id: esencial-desfibrilador-dea
 verified: 2026-11-02
 questions: cómo se usa un desfibrilador | dónde pongo los parches del desfibrilador | hay un dea cerca, cómo lo uso | cada cuánto analiza el corazón el desfibrilador | como uso um desfibrilador | onde coloco os adesivos do desfibrilador

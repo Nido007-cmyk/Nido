@@ -2,7 +2,7 @@
 title: Atragantamiento en adultos, niños y bebés
 category: Primeros auxilios
 lang: es
-sources: AHA, Guías 2025 (atragantamiento); Cruz Roja Americana; IFRC 2020
+sources: AHA, Guías 2025 (atragantamiento); Cruz Roja Americana; IFRC 2025
 id: esencial-atragantamiento
 verified: 2026-11-02
 questions: qué hago si mi hijo se atraganta con un trozo de comida | mi hijo se está atragantando y no puede toser | cómo se hace la maniobra de heimlich | mi bebé se está ahogando con algo | mi hijo se tragó una moneda y no puede respirar | o que faço se meu filho engasgar com comida | como faço a manobra de heimlich num bebé

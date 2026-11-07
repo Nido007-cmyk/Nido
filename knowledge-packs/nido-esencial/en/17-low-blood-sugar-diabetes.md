@@ -2,7 +2,7 @@
 title: Low blood sugar (hypoglycemia) and diabetes
 category: First aid
 lang: en
-sources: Canadian Red Cross guidelines 2020; AHA and American Red Cross 2024
+sources: Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025); AHA and American Red Cross 2024
 id: esencial-bajada-de-azucar-diabetes
 verified: 2026-11-02
 questions: what do i do if a diabetic's blood sugar drops too low | how many grams of sugar or glucose do i give for low blood sugar | how often can i repeat the sugar dose if there is no improvement | what are the signs of low blood sugar in a diabetic | o que faço se o açúcar de um diabético baixar demais | quantos gramas de glicose dou numa hipoglicemia
@@ -26,4 +26,4 @@ Sweating, shaking, hunger, paleness, nervousness, confusion, strange behavior (i
 Great thirst, passing a lot of urine, fruity breath, nausea, deep breathing and tiredness may mean very high sugar: they need medical care.
 
 ## Important
-Based on the Canadian Red Cross, AHA and American Red Cross guidelines.
+Based on the IFRC, AHA and American Red Cross guidelines.

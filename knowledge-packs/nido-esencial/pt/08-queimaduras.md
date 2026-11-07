@@ -2,7 +2,7 @@
 title: Queimaduras
 category: Primeiros socorros
 lang: pt
-sources: Cruz Vermelha Canadense, diretrizes 2020; IFRC 2020; AHA e Cruz Vermelha Americana 2024
+sources: Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025); IFRC 2025; AHA e Cruz Vermelha Americana 2024
 id: esencial-quemaduras
 verified: 2026-11-02
 questions: o que fazer em caso de queimadura | me queimei com água fervendo, o que eu passo na queimadura | posso passar gelo na queimadura | queimadura no rosto de uma criança, é grave | queimadura com óleo fervendo, o que passar

@@ -2,7 +2,7 @@
 title: Drowning and water rescue
 category: First aid
 lang: en
-sources: AHA and American Red Cross Guidelines 2024; European Resuscitation Council (ERC) Guidelines 2021; WHO, drowning prevention; Canadian Red Cross 2020
+sources: AHA and American Red Cross Guidelines 2024; European Resuscitation Council (ERC) Guidelines 2025; WHO, drowning prevention; Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025)
 id: esencial-ahogamiento
 verified: 2026-11-02
 questions: what do i do if someone is drowning in the water | how do i rescue a drowning person without going into the water | they pulled a child out of the water and he is not breathing, what do i do | o que faço se alguém estiver se afogando | como resgato alguém que se afoga sem entrar na água
@@ -31,4 +31,4 @@ In river currents or surf, do not go in. On broken ice, lie flat to spread your 
 - If a current pulls you, don't fight it: swim parallel to the shore until you are out of it, or float and call for help.
 
 ## Important
-Based on the AHA, American Red Cross, Canadian Red Cross and WHO guidance.
+Based on the AHA, American Red Cross, European Resuscitation Council (ERC) and WHO guidance.

@@ -2,7 +2,7 @@
 title: Signos de alarma: cuándo ir a urgencias
 category: Salud en casa
 lang: es
-sources: OMS, AIEPI y signos de emergencia (ETAT); AHA; Cruz Roja Canadiense 2020; NHS
+sources: OMS, AIEPI y signos de emergencia (ETAT); AHA; Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025); NHS
 id: esencial-signos-de-alarma
 verified: 2026-11-02
 questions: cuáles son los signos de alarma para ir a urgencias | cuándo hay que llevar a un bebé a urgencias | qué signos de peligro hay en el embarazo | tiene manchas en la piel que no desaparecen al apretarlas, es grave | quais são os sinais de alarme para ir à emergência | quando devo levar um bebê à emergência

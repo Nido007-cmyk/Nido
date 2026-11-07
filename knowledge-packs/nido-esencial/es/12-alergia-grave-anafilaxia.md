@@ -2,7 +2,7 @@
 title: Alergia grave (anafilaxia)
 category: Primeros auxilios
 lang: es
-sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020; IFRC 2020
+sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025); IFRC 2025
 id: esencial-alergia-grave-anafilaxia
 verified: 2026-11-02
 questions: a mi hija le dio alergia grave con una nuez y no puede respirar | cómo se usa el epipen, el autoinyector de adrenalina | me picó una abeja y se me hincha la cara, qué hago | cuándo se pone la segunda dosis de adrenalina | o que faço numa alergia grave, não consegue respirar | como uso a caneta de adrenalina

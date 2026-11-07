@@ -2,7 +2,7 @@
 title: CPR for children and babies
 category: First aid
 lang: en
-sources: AHA CPR Guidelines 2025 (pediatric life support); American Red Cross; IFRC 2020
+sources: AHA CPR Guidelines 2025 (pediatric life support); American Red Cross; IFRC 2025
 id: esencial-rcp-ninos-y-bebes
 verified: 2026-11-02
 questions: how do i do cpr on a baby | how do i do cpr on a 3 year old child | how deep are compressions for a baby under one year | how do i do cpr on my baby who is not breathing | como faço rcp em um bebê | como faço rcp numa criança de 3 anos

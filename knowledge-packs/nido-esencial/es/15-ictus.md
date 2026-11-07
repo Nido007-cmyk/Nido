@@ -2,7 +2,7 @@
 title: Ictus (derrame cerebral)
 category: Primeros auxilios
 lang: es
-sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense 2020
+sources: AHA y Cruz Roja Americana, directrices de primeros auxilios 2024; Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025)
 id: esencial-ictus
 verified: 2026-11-02
 questions: cómo sé si es un ictus, un derrame cerebral | se le cae un lado de la cara y habla raro, qué hago | cuáles son los signos de un derrame cerebral | qué es la regla rápido para el ictus | como sei se é um derrame cerebral, um avc | um lado do rosto caiu e a fala está estranha, o que faço

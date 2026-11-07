@@ -2,7 +2,7 @@
 title: Crise de asma e dificuldade para respirar
 category: Primeiros socorros
 lang: pt
-sources: Cruz Vermelha Canadense, diretrizes 2020; AHA e Cruz Vermelha Americana 2024
+sources: Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025); AHA e Cruz Vermelha Americana 2024
 id: esencial-asma-y-dificultad-para-respirar
 verified: 2026-11-02
 questions: crise de asma, o que fazer | minha filha está com chiado e não consegue respirar direito | a bombinha de asma não está fazendo efeito | tosse de cachorro em criança pequena, o que pode ser

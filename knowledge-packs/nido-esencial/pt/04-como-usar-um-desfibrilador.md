@@ -2,7 +2,7 @@
 title: Como usar um desfibrilador (DEA)
 category: Primeiros socorros
 lang: pt
-sources: AHA, Guias 2025; Cruz Vermelha Americana; IFRC 2020
+sources: AHA, Guias 2025; Cruz Vermelha Americana; IFRC 2025
 id: esencial-desfibrilador-dea
 verified: 2026-11-02
 questions: como usar o desfibrilador dea | onde coloco os adesivos do desfibrilador | o dea dá o choque sozinho | desfibrilador em criança, pode usar

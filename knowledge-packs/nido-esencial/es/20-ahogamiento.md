@@ -2,7 +2,7 @@
 title: Ahogamiento y rescate en el agua
 category: Primeros auxilios
 lang: es
-sources: AHA y Cruz Roja Americana, directrices 2024; Consejo Europeo de Resucitación (ERC), guías 2021; OMS, prevención de ahogamientos; Cruz Roja Canadiense 2020
+sources: AHA y Cruz Roja Americana, directrices 2024; Consejo Europeo de Resucitación (ERC), guías 2025; OMS, prevención de ahogamientos; Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025)
 id: esencial-ahogamiento
 verified: 2026-11-02
 questions: qué hago si alguien se está ahogando en el agua | cómo rescato a alguien que se ahoga sin entrar al agua | sacaron a un niño del agua y no respira, qué hago | o que faço se alguém estiver se afogando | como resgato alguém que se afoga sem entrar na água
@@ -31,4 +31,4 @@ En corrientes de río o mar con olas, no entres. En hielo roto, túmbate y repar
 - Si te arrastra una corriente, no luches contra ella: nada en paralelo a la orilla hasta salir, o flota y pide ayuda.
 
 ## Importante
-Basado en las directrices de la AHA, la Cruz Roja Americana, la Cruz Roja Canadiense y la OMS.
+Basado en las directrices de la AHA, la Cruz Roja Americana, el Consejo Europeo de Resucitación (ERC) y la OMS.

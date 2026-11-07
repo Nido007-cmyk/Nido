@@ -2,7 +2,7 @@
 title: Bajada de azúcar (hipoglucemia) y diabetes
 category: Primeros auxilios
 lang: es
-sources: Cruz Roja Canadiense, directrices 2020; AHA y Cruz Roja Americana 2024
+sources: Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025); AHA y Cruz Roja Americana 2024
 id: esencial-bajada-de-azucar-diabetes
 verified: 2026-11-02
 questions: qué hago si a un diabético le baja el azúcar | cuántos gramos de azúcar o glucosa se dan en una bajada | cada cuánto se repite el azúcar si no mejora | cuáles son los signos de una bajada de azúcar | o que faço se o açúcar baixar num diabético | quantos gramas de açúcar dou numa hipoglicemia
@@ -26,4 +26,4 @@ Sudor, temblor, hambre, palidez, nerviosismo, confusión, comportamiento raro (p
 Mucha sed, orinar mucho, aliento a fruta, náuseas, respiración profunda y cansancio pueden indicar azúcar muy alta: necesita atención médica.
 
 ## Importante
-Basado en las directrices de la Cruz Roja Canadiense, la AHA y la Cruz Roja Americana.
+Basado en las directrices de la IFRC, la AHA y la Cruz Roja Americana.
