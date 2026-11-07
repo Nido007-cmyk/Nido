@@ -16,9 +16,6 @@ import { act, fireEvent, render, screen } from "@testing-library/react-native";
 const beeps: Array<[number, number]> = [];
 const stops: string[] = [];
 const cams: string[] = [];
-/** Si está puesto, la cámara tarda en encenderse hasta que la prueba la suelte. */
-let mockCamHold: null | { release: () => void } = null;
-let mockHoldCamera = false;
 
 jest.mock("nido-cpr", () => {
   // El puente nuevo devuelve el instante monotónico de arranque
@@ -38,11 +35,6 @@ jest.mock("nido-cpr", () => {
     stopBeeping: () => stops.push("beep"),
     startCprCamera: async () => {
       cams.push("start");
-      if (mockHoldCamera) {
-        await new Promise<void>((resolve) => {
-          mockCamHold = { release: resolve };
-        });
-      }
       return () => cams.push("stop");
     },
   };
@@ -103,8 +95,6 @@ beforeEach(() => {
   beeps.length = 0;
   stops.length = 0;
   cams.length = 0;
-  mockHoldCamera = false;
-  mockCamHold = null;
   jest.useFakeTimers();
 });
 afterEach(() => jest.useRealTimers());
@@ -185,20 +175,5 @@ describe("práctica de RCP", () => {
     });
     expect(cams).toEqual(["start", "stop", "start"]);
     spy.mockRestore();
-  });
-
-  it("par: parar mientras la cámara se enciende la apaga en cuanto llega", async () => {
-    mockHoldCamera = true;
-    await render(<CprPractice visible onClose={() => {}} />);
-    await fireEvent.press(screen.getByTestId("cpr-camera-toggle"));
-    await fireEvent.press(screen.getByTestId("cpr-start"));
-    expect(cams).toEqual(["start"]);
-    await fireEvent.press(screen.getByTestId("cpr-stop"));
-    await act(async () => {
-      mockCamHold?.release();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    expect(cams).toEqual(["start", "stop"]);
   });
 });

@@ -27,6 +27,7 @@ import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "
 import { useTranslation } from "react-i18next";
 import { activateKeepAwake, deactivateKeepAwake } from "expo-keep-awake";
 import { hasCprCamera, startBeepingAt, startCprCamera, stopBeeping, type CameraSamples } from "nido-cpr";
+import { createCameraSession, type CameraSession } from "../../cpr/cameraSession";
 import { useTheme } from "../theme/ThemeContext";
 import type { Colors } from "../theme/colors";
 import type { Typography } from "../theme/typography";
@@ -82,14 +83,8 @@ export function CprPractice({ visible, onClose }: Props) {
   const [camWanted, setCamWanted] = useState(false);
   const [camState, setCamState] = useState<"off" | "starting" | "on" | "failed" | "paused">("off");
   const [rate, setRate] = useState<number | null>(null);
-  const camStop = useRef<(() => void) | null>(null);
-  /**
-   * Generación de la cámara: sube cada vez que se apaga. Si el usuario
-   * para (o la app pasa a segundo plano) mientras la cámara aún se está
-   * encendiendo, el encendido que llega tarde se apaga al momento en vez
-   * de quedarse grabando sin que se vea.
-   */
-  const camGen = useRef(0);
+  /** El ciclo de vida de la cámara (src/cpr/cameraSession.ts): nunca queda abierta sin verse. */
+  const camSession = useRef<CameraSession | null>(null);
   const samples = useRef<MotionSample[]>([]);
   const cue = useRef<CueState>(INITIAL_CUE_STATE);
   const track = useRef<RateTrack>(INITIAL_RATE_TRACK);
@@ -113,20 +108,19 @@ export function CprPractice({ visible, onClose }: Props) {
     if (voiceRef.current) void speakAloud(text);
   }, []);
 
-  const stopCamera = useCallback(() => {
-    camGen.current++;
-    camStop.current?.();
-    camStop.current = null;
+  const stopCamera = useCallback((paused = false) => {
+    camSession.current?.stop(paused);
     samples.current = [];
     cue.current = INITIAL_CUE_STATE;
     track.current = INITIAL_RATE_TRACK;
     setRate(null);
-    setCamState("off");
+    if (!camSession.current) setCamState(paused ? "paused" : "off");
   }, []);
 
   // Cada lote de la cámara (~4 por segundo): se guarda, y como mucho dos
   // veces por segundo se calcula el ritmo. En la pausa de respiraciones no
   // se mide (el movimiento es otro) y se empieza de cero al volver.
+  const onSamplesRef = useRef<(b: CameraSamples) => void>(() => {});
   const onSamples = useCallback(
     (b: CameraSamples) => {
       const p = cprPhaseAt(clock.current.elapsedAt(monotonicNow()), modeRef.current);
@@ -151,31 +145,27 @@ export function CprPractice({ visible, onClose }: Props) {
     },
     [say, t]
   );
+  onSamplesRef.current = onSamples;
 
   const startCamera = useCallback(() => {
     if (!hasCprCamera()) return;
-    const gen = ++camGen.current;
-    setCamState("starting");
-    void startCprCamera(onSamples, () => {
-      if (gen !== camGen.current) return;
-      camStop.current?.();
-      camStop.current = null;
-      setRate(null);
-      setCamState("failed");
-    }).then((stopFn) => {
-      if (gen !== camGen.current) {
-        // Se paró mientras se encendía: apagarla ya.
-        stopFn?.();
-        return;
-      }
-      if (!stopFn) {
-        setCamState("failed");
-        return;
-      }
-      camStop.current = stopFn;
-      setCamState("on");
-    });
-  }, [onSamples]);
+    if (!camSession.current) {
+      camSession.current = createCameraSession(
+        {
+          open: (onError) =>
+            startCprCamera(
+              (b) => onSamplesRef.current(b),
+              () => {
+                setRate(null);
+                onError();
+              },
+            ),
+        },
+        setCamState,
+      );
+    }
+    camSession.current.start();
+  }, []);
 
   const stop = useCallback(() => {
     stopCamera();
@@ -251,13 +241,10 @@ export function CprPractice({ visible, onClose }: Props) {
   camWantedRef.current = camWanted;
   useEffect(() => {
     const sub = AppState.addEventListener("change", (st) => {
+      const wanted = runningRef.current && camWantedRef.current;
       if (st !== "active") {
-        if (camStop.current || camGen.current > 0) {
-          const wasOn = runningRef.current && camWantedRef.current;
-          stopCamera();
-          if (wasOn) setCamState("paused");
-        }
-      } else if (runningRef.current && camWantedRef.current) {
+        if (wanted) stopCamera(true);
+      } else if (wanted) {
         startCamera();
       }
     });
