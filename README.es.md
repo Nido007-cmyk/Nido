@@ -54,13 +54,24 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   indexa en el teléfono.
 - **Sabe cosas sin internet**: una base de conocimiento integrada y un
   paquete opcional de Wikipedia (unos 50.000 artículos) y nueve paquetes
-  de guías opcionales escritos por NIDO (Esencial, Local, Niños y Bebés, Crisis,
-  Sin Servicios, Hogar Seguro, Desastres, Campo y Viaje), con números de
+  de guías opcionales escritos por NIDO (Esencial, Emergencias por
+  país, Niños y bebés, Crisis y salud mental, Vivir sin servicios,
+  Hogar seguro, Desastres, Campo y animales, Carretera y viaje), con
+  números de
   emergencia verificados de 69 países. Con la búsqueda
   multilingüe activada puedes preguntar en español, portugués o inglés, y las
   respuestas muestran los artículos de donde salen, con una línea que cuenta
   qué frases salen de ellos y cuáles del modelo sin fuente; si nada de la base
   encaja de verdad, no se muestra ninguna fuente.
+- **Añade packs firmados desde un archivo** (0.1.80): Ajustes → Base de
+  conocimiento → «Añadir un pack desde un archivo» añade un paquete de
+  conocimiento que tengas como archivo, por ejemplo uno publicado por
+  SALVORA PACKS. Antes de copiar nada, la app comprueba su firma Ed25519
+  contra las llaves que lleva dentro (solo la de NIDO y la de SALVORA
+  PACKS, ninguna de terceros), coteja la huella del archivo con su
+  manifiesto firmado y rechaza cualquier pack que no pase. Cada pack
+  añadido muestra quién lo firmó y se puede eliminar desde la misma
+  pantalla.
 - **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
   teléfonos emparejados, sin internet y sin servidor. Para emparejar pegas
   el código del otro teléfono (el texto de su QR); un contacto aparece como
@@ -107,7 +118,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [última versión](https://github.com/Nido007-cmyk/Nido/releases).
+   [versión v0.1.80-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.80-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y
