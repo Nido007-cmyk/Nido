@@ -29,7 +29,7 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, BackHandler } from "react-native";
+import { View, Text, StyleSheet, Pressable, BackHandler, ScrollView } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import { makeSurfaces } from "./theme/surfaces";
@@ -87,7 +87,12 @@ export function BackupKeyModal({ dek, dest, onClose }: BackupKeyModalProps) {
       alignItems: "center",
       padding: 24,
     },
-    modalBox: { borderRadius: 20, padding: 20, width: "100%", maxWidth: 400, gap: 4 },
+    // Auditoría 0.1.79: con letra grande o pantalla pequeña el texto empujaba
+    // los botones fuera de la pantalla. El texto se desplaza; los botones
+    // quedan siempre a la vista.
+    modalBox: { borderRadius: 20, padding: 20, width: "100%", maxWidth: 400, maxHeight: "100%" },
+    scroll: { flexShrink: 1 },
+    scrollContent: { gap: 4 },
     modalTitle: { ...typography.ui.title, fontWeight: "700", marginBottom: 8 },
     modalText: { ...typography.ui.body },
     dekText: { fontSize: 13, fontFamily: "monospace", lineHeight: 18 },
@@ -111,6 +116,7 @@ export function BackupKeyModal({ dek, dest, onClose }: BackupKeyModalProps) {
   return (
     <View style={styles.modalOverlay} accessibilityViewIsModal>
       <View style={[styles.modalBox, { backgroundColor: colors.bg.card }]}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator persistentScrollbar testID="backup-key-scroll">
         <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
           {dest ? t("backup.dekTitle") : t("backup.keyTitle")}
         </Text>
@@ -137,6 +143,7 @@ export function BackupKeyModal({ dek, dest, onClose }: BackupKeyModalProps) {
           {"\n"}
           {t("backup.dekFraudWarning")}
         </Text>
+        </ScrollView>
         <View style={styles.modalButtons}>
           <Pressable
             style={styles.button}
