@@ -4,6 +4,66 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.79-alpha - 2026-11-07
+
+Fixes for a cut-off side menu with many chats, from a review of the
+whole app after the owner's report, plus an opt-in setting to allow
+screenshots. No catalog change: the signed catalog keeps offering
+knowledge-packs-v14.
+
+### Side menu
+
+- **The menu no longer gets cut off with many chats.** The recent chats
+  were a 260-pixel scrolling list inside the menu's own scrolling area,
+  and on Android the inner one did not scroll, so the list was cut off.
+  Now the whole menu scrolls as one, with its scroll bar always visible.
+- **It shows the 15 most recent chats and a "Show all" button**, so the
+  shortcuts (Settings and the rest) are not buried under a long list.
+  Search still looks through every chat.
+- Long chat titles take up to two lines, and the menu keeps the right
+  width when a tablet is rotated.
+- **Deleting a chat from the menu asks first.** Before, the trash icon
+  deleted it at once, with no undo. A chat that is still answering can't
+  be deleted until the answer finishes.
+
+### Errors
+
+- **Error messages are in the app's language.** The chat and eight other
+  screens showed the raw technical message in English. Now out-of-memory
+  and out-of-storage errors say what happened and what to do; anything
+  else says "Something went wrong" with the technical detail.
+- **"Retry" no longer leaves the question twice**, and a failed answer
+  is no longer passed to the model as if it were one of its own replies.
+- A failure was blamed on memory whenever its message contained "ram" or
+  "oom" inside another word ("program", "parameter", "room"). Not any
+  more.
+
+### Screens
+
+- **The buttons of the backup key window and the guide welcome stay on
+  screen** with large text or a small screen; the text scrolls.
+- The bottom tab labels shrink a little before they get cut off.
+- Two quick taps on "Use" for a model no longer start two loads.
+- When NIDO can't answer and shows "what the source does say", and in
+  the evidence card, the closing "Important" section of a guide is no
+  longer used as the source.
+
+### Screenshots
+
+- **New setting: Settings → Security → "Allow screenshots"**, off by
+  default. When it is off, NIDO blocks screenshots and screen recording
+  and hides its preview in Recents, as before. When it is on, they are
+  allowed, except while the backup key, the backup key entry for a
+  restore, or your pairing QR code is on screen. Deleting all data turns
+  it off.
+
+### Not tested on a physical phone yet
+
+These fixes passed the automated tests only (TESTCOUNT on the release
+tree), and the Android build compiles. The owner's round: the menu with
+dozens of chats, deleting a chat, a screenshot with the setting off and
+on, and the backup key window with the setting on.
+
 ## 0.1.78-alpha - 2026-11-07
 
 Fixes from the owner's first round with 0.1.77 on a tablet with 3.3 GB
