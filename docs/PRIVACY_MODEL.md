@@ -65,10 +65,10 @@ what risk it has), not technical jargon.
 |---|---|---|
 | Notifications | **Audit:** verify they don't show message text | M-1: generic "New NIDO message" text |
 | Clipboard | **Audit:** don't auto-copy secrets | M-1: `EXTRA_IS_SENSITIVE` (API 33+), cleanup after timeout |
-| Screenshots / switcher | Unprotected | M-1: `FLAG_SECURE` on sensitive screens (QR, inbox, messages) |
+| Screenshots / switcher | **Done:** `FLAG_SECURE` on the whole main window and on secure dialogs. Since 0.1.79 the person can turn on "Allow screenshots" in Settings (off by default); the backup key, typing the key to restore and the pairing code stay protected even then | — |
 | Cloud backups | `allowBackup=false` | H-3: `dataExtractionRules` (also blocks device-transfer on 12+) |
 | App logs | No PII by design in P2P code (errors don't include content) | M-3: sanitization before persisting crash reports |
-| Thumbnails in "recents" | Unprotected | M-1 (FLAG_SECURE covers them) |
+| Thumbnails in "recents" | **Done:** hidden by `FLAG_SECURE` (shown only while "Allow screenshots" is on) | — |
 | Third-party keyboards | Outside the app's control | Document: recommend the system keyboard; sensitive fields use secure input |
 
 ## 6. Deletion and retention

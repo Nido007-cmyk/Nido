@@ -30,7 +30,7 @@ Nothing described here should be read as "audited", "quantum-proof" or "impossib
 | allowBackup=false | IMPLEMENTED |
 | SQLCipher | **YES** — IMPLEMENTED + AUTOMATED TESTED (DEK in Keystore, fail-closed) |
 | Biometrics as cryptographic gate | **NO** — pending only |
-| FLAG_SECURE / clipboard policy / content-less notifications | **YES** — IMPLEMENTED (withFlagSecure plugin; secretClipboard sensitive copies that self-clear in 60 s) |
+| FLAG_SECURE / clipboard policy / content-less notifications | **YES** — IMPLEMENTED (withFlagSecure plugin; since 0.1.79 an opt-in "Allow screenshots" setting, off by default, that never unprotects the backup key, key entry or pairing code; secretClipboard sensitive copies that self-clear in 60 s) |
 | dataExtractionRules (device-transfer) | **YES** — IMPLEMENTED (plugin registered in app.json) |
 | Migration tweetnacl → @noble/\* | **NO** |
 | HKDF (today: ad-hoc SHA-512 in KDF) | **YES** — HKDF-SHA512 (RFC 5869), IMPLEMENTED + AUTOMATED TESTED (Oct 2026) |

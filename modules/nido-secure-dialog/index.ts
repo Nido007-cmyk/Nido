@@ -33,6 +33,7 @@ interface NidoSecureDialogNativeModule {
   copySensitive?(text: string): Promise<boolean>;
   clearClipboardIfEquals?(text: string): Promise<boolean>;
   applyIncognitoKeyboard?(): Promise<number>;
+  setWindowSecure?(secure: boolean): Promise<boolean>;
   showSecureAlert(
     title: string,
     message: string,
@@ -101,6 +102,21 @@ export async function applyIncognitoKeyboard(): Promise<number | null> {
     const native = requireNativeModule<NidoSecureDialogNativeModule>("NidoSecureDialog");
     if (!native.applyIncognitoKeyboard) return null;
     return await native.applyIncognitoKeyboard();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 0.1.79: pone o quita FLAG_SECURE en la ventana principal. true/false = el
+ * estado aplicado; null = no disponible (build vieja, pruebas, sin
+ * actividad). Nunca lanza.
+ */
+export async function setWindowSecure(secure: boolean): Promise<boolean | null> {
+  try {
+    const native = requireNativeModule<NidoSecureDialogNativeModule>("NidoSecureDialog");
+    if (!native.setWindowSecure) return null;
+    return (await native.setWindowSecure(secure)) === secure ? secure : null;
   } catch {
     return null;
   }

@@ -18,6 +18,10 @@
  * Alcance: SOLO la ventana principal (MainActivity). No toca permisos,
  * backup policy, network security, signing ni ningún otro flag.
  *
+ * 0.1.79: la ventana sigue naciendo protegida. Si la persona activa
+ * «Permitir capturas de pantalla» en Ajustes, JS lo quita después
+ * (src/security/screenCapture.ts), salvo mientras hay secretos a la vista.
+ *
  * Nota: FLAG_SECURE también oculta la miniatura de la app en el
  * app-switcher (Recents) — es comportamiento inherente del flag en
  * Android, no una medida separada.

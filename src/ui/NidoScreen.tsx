@@ -66,6 +66,7 @@ import {
 /** BUG-6-2026-10-07: extraer MAC de alias "nombre (MAC)" para deduplicar. */
 import { extractLanAddress, extractMac } from "../p2p/nativeTransport";
 import { describeP2PError } from "../p2p/p2pErrorText";
+import { useSecureScreen } from "./useSecureScreen";
 
 type Tab = "chats" | "contactos" | "enlace" | "negociaciones" | "packs";
 
@@ -156,6 +157,9 @@ export function NidoScreen({
   const mRef = useRef(getSharedNidoMessenger());
   const [tab, setTab] = useState<Tab>("chats");
   const [myCode, setMyCode] = useState("");
+  // 0.1.79: el código para emparejar nunca sale en una captura, aunque
+  // estén permitidas en Ajustes.
+  useSecureScreen(tab === "contactos" && myCode !== "");
   const [fingerprint, setFingerprint] = useState("");
   // H4-2026-10-06: error visible si la identidad falla por algo que no sea
   // pérdida de claves (antes: spinner eterno con myCode === "").

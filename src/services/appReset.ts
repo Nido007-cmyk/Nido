@@ -31,6 +31,7 @@ import {
 } from "../privacy/keyManager";
 import { LAST_BACKUP_KEY } from "../security/vaultBackupGate";
 import { STAGING_KEY_NAME } from "../security/stagingSeal";
+import { screenCapture } from "../security/screenCapture";
 
 const MODELS_DIR = `${FileSystem.documentDirectory}models`;
 const CORPUS_DIR = `${FileSystem.documentDirectory}corpus`;
@@ -262,6 +263,9 @@ export async function resetAllAppData(): Promise<void> {
   // atraviesa el wipe: espera detrás de la puerta. El writer del ciclo N+1
   // va DETRÁS del reset, nunca concurrente con el borrado.
   beginWipeGate();
+  // 0.1.79: borrar todo vuelve a proteger la ventana de capturas (la
+  // preferencia vive en los ajustes que se borran).
+  void screenCapture().setAllowed(false);
   // Auditoría 2026-10-29: el registro de red vive en la base que se borra.
   // Durante el borrado no escribe (lo pendiente acabaría en la base nueva)
   // y su memoria se vacía. Si el borrado falla sigue sin escribir: el

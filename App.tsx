@@ -27,6 +27,7 @@ import { ThemeProvider, useTheme } from "./src/ui/theme";
 import { initHaptics } from "./src/services/haptics";
 import { runStartupRoutines } from "./src/routines/startup";
 import { wipeInterrupted, recoverInterruptedWipe } from "./src/services/appReset";
+import { initScreenCapture } from "./src/security/screenCapture";
 import { sweepOrphanedCollectionExports } from "./src/services/documentImporter";
 import { getDatabaseKeyHex, KeyLossError } from "./src/privacy/keyManager";
 import { KeyLossRecoveryScreen } from "./src/ui/KeyLossRecoveryScreen";
@@ -398,6 +399,9 @@ function AppContent() {
 
   useEffect(() => {
     runStartupGate();
+    // 0.1.79: «Permitir capturas de pantalla» (apagado por defecto). La
+    // ventana arranca protegida; solo se quita si la persona lo activó.
+    void initScreenCapture();
     // SEC-04: recoger los JSON de exportación que un proceso anterior
     // dejó huérfanos en caché (su finally no corrió). Sin await: no
     // bloquea el arranque, no toca la base ni la clave, y limpia aunque

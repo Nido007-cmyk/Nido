@@ -34,6 +34,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import { makeSurfaces } from "./theme/surfaces";
 import { copySecret } from "../utils/secretClipboard";
+import { useSecureScreen } from "./useSecureScreen";
 
 export interface BackupKeyModalProps {
   /** La clave a mostrar; null = modal cerrado. */
@@ -58,6 +59,8 @@ export function BackupKeyModal({ dek, dest, onClose }: BackupKeyModalProps) {
   useEffect(() => {
     if (dek === null) setCopied(false);
   }, [dek]);
+  // 0.1.79: la clave nunca sale en una captura, aunque estén permitidas.
+  useSecureScreen(dek !== null);
   // Atrás cierra la capa (antes: onRequestClose del Modal).
   useEffect(() => {
     if (dek === null) return;

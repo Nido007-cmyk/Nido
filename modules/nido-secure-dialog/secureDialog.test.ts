@@ -50,9 +50,14 @@ describe("R3 — native dialog-window FLAG_SECURE (build-time assertion)", () =>
   });
 
   it("does not rely on the activity window for dialog protection", () => {
-    const src = readFileSync(KOTLIN_PATH, "utf8");
-    // No activity-window flagging in this module: the activity window is
-    // P-F2's surface; the dialog window is R3's surface.
+    const full = readFileSync(KOTLIN_PATH, "utf8");
+    // No activity-window flagging in the dialog path: the activity window is
+    // P-F2's surface; the dialog window is R3's surface. (0.1.79: the module
+    // also has setWindowSecure, the opt-in screenshot setting, which is the
+    // only place that touches the activity window; it is checked below.)
+    const start = full.indexOf('AsyncFunction("showSecureAlert"');
+    expect(start).toBeGreaterThan(-1);
+    const src = full.slice(start);
     expect(src).not.toMatch(/activity\.window|getWindow\(\)\.addFlags/);
   });
 
@@ -183,5 +188,16 @@ describe("R3 — TS wrapper fail-closed behavior", () => {
       confirmLabel: "OK",
     });
     expect(fn).toHaveBeenCalledWith("t", "m", "Cancel", "OK", true);
+  });
+});
+
+describe("0.1.79 — setWindowSecure (permitir capturas, opcional)", () => {
+  it("solo toca la ventana de la actividad, en el hilo de UI, y el diálogo seguro no cambia", () => {
+    const src = readFileSync(KOTLIN_PATH, "utf8");
+    expect(src).toMatch(/AsyncFunction\("setWindowSecure"\)/);
+    expect(src).toMatch(/activity\.window\.addFlags\(WindowManager\.LayoutParams\.FLAG_SECURE\)/);
+    expect(src).toMatch(/activity\.window\.clearFlags\(WindowManager\.LayoutParams\.FLAG_SECURE\)/);
+    // Ningún diálogo pierde su protección.
+    expect(src).not.toMatch(/dialog\.window\?\.clearFlags/);
   });
 });
