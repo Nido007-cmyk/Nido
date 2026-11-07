@@ -30,8 +30,10 @@ knowledge-packs-v14.
 
 - **Error messages are in the app's language.** The chat and eight other
   screens showed the raw technical message in English. Now out-of-memory
-  and out-of-storage errors say what happened and what to do; anything
-  else says "Something went wrong" with the technical detail.
+  and out-of-storage errors say what happened and what to do; any other
+  error is shown inside a message in the app's language ("Something went
+  wrong" or the screen's own "Couldn't…"), with the technical detail
+  kept short so it can be reported.
 - **"Retry" no longer leaves the question twice**, and a failed answer
   is no longer passed to the model as if it were one of its own replies.
 - A failure was blamed on memory whenever its message contained "ram" or
