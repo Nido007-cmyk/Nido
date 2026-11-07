@@ -23,7 +23,7 @@
  * dura. Sin red, sin modelo de IA.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { activateKeepAwake, deactivateKeepAwake } from "expo-keep-awake";
 import { hasCprCamera, startBeepingAt, startCprCamera, stopBeeping, type CameraSamples } from "nido-cpr";
@@ -80,9 +80,16 @@ export function CprPractice({ visible, onClose }: Props) {
   const [showStop, setShowStop] = useState(false);
   // Medidor de ritmo por cámara (opcional, apagado por defecto).
   const [camWanted, setCamWanted] = useState(false);
-  const [camState, setCamState] = useState<"off" | "starting" | "on" | "failed">("off");
+  const [camState, setCamState] = useState<"off" | "starting" | "on" | "failed" | "paused">("off");
   const [rate, setRate] = useState<number | null>(null);
   const camStop = useRef<(() => void) | null>(null);
+  /**
+   * Generación de la cámara: sube cada vez que se apaga. Si el usuario
+   * para (o la app pasa a segundo plano) mientras la cámara aún se está
+   * encendiendo, el encendido que llega tarde se apaga al momento en vez
+   * de quedarse grabando sin que se vea.
+   */
+  const camGen = useRef(0);
   const samples = useRef<MotionSample[]>([]);
   const cue = useRef<CueState>(INITIAL_CUE_STATE);
   const track = useRef<RateTrack>(INITIAL_RATE_TRACK);
@@ -107,6 +114,7 @@ export function CprPractice({ visible, onClose }: Props) {
   }, []);
 
   const stopCamera = useCallback(() => {
+    camGen.current++;
     camStop.current?.();
     camStop.current = null;
     samples.current = [];
@@ -144,6 +152,31 @@ export function CprPractice({ visible, onClose }: Props) {
     [say, t]
   );
 
+  const startCamera = useCallback(() => {
+    if (!hasCprCamera()) return;
+    const gen = ++camGen.current;
+    setCamState("starting");
+    void startCprCamera(onSamples, () => {
+      if (gen !== camGen.current) return;
+      camStop.current?.();
+      camStop.current = null;
+      setRate(null);
+      setCamState("failed");
+    }).then((stopFn) => {
+      if (gen !== camGen.current) {
+        // Se paró mientras se encendía: apagarla ya.
+        stopFn?.();
+        return;
+      }
+      if (!stopFn) {
+        setCamState("failed");
+        return;
+      }
+      camStop.current = stopFn;
+      setCamState("on");
+    });
+  }, [onSamples]);
+
   const stop = useCallback(() => {
     stopCamera();
     stopBeeping();
@@ -166,23 +199,8 @@ export function CprPractice({ visible, onClose }: Props) {
     setRunning(true);
     // La guía, palabra por palabra: dónde van las manos y cómo empujar.
     say(`${guide.compressions[1]} ${guide.compressions[2]}`);
-    if (camWanted && hasCprCamera()) {
-      setCamState("starting");
-      void startCprCamera(onSamples, () => {
-        camStop.current?.();
-        camStop.current = null;
-        setRate(null);
-        setCamState("failed");
-      }).then((stopFn) => {
-        if (!stopFn) {
-          setCamState("failed");
-          return;
-        }
-        camStop.current = stopFn;
-        setCamState("on");
-      });
-    }
-  }, [camWanted, guide, mode, onSamples, say]);
+    if (camWanted) startCamera();
+  }, [camWanted, guide, mode, say, startCamera]);
 
   // El reloj de la pantalla. El pitido lo lleva el hilo nativo; esto solo
   // pinta, cuenta y habla en los cambios de fase. El tiempo sale del
@@ -222,6 +240,29 @@ export function CprPractice({ visible, onClose }: Props) {
     }, 40);
     return () => clearInterval(id);
   }, [running, mode, guide, say, t]);
+
+  // La cámara nunca sigue encendida con NIDO fuera de la vista: al pasar a
+  // segundo plano (botón de inicio, pantalla bloqueada, otra app) se apaga,
+  // y al volver se enciende otra vez si la práctica sigue y el medidor
+  // estaba activado. El pitido y la cuenta siguen (docs/CPR_PRACTICE.md).
+  const runningRef = useRef(running);
+  runningRef.current = running;
+  const camWantedRef = useRef(camWanted);
+  camWantedRef.current = camWanted;
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st !== "active") {
+        if (camStop.current || camGen.current > 0) {
+          const wasOn = runningRef.current && camWantedRef.current;
+          stopCamera();
+          if (wasOn) setCamState("paused");
+        }
+      } else if (runningRef.current && camWantedRef.current) {
+        startCamera();
+      }
+    });
+    return () => sub.remove();
+  }, [startCamera, stopCamera]);
 
   // Cerrar la pantalla o salir de la app para el pitido y la voz.
   useEffect(() => {
@@ -318,6 +359,8 @@ export function CprPractice({ visible, onClose }: Props) {
                   <View style={styles.rateBox} accessibilityLiveRegion="polite">
                     {camState === "starting" ? (
                       <Text style={styles.rateHint}>{t("cpr.camera.starting")}</Text>
+                    ) : camState === "paused" ? (
+                      <Text style={styles.rateHint}>{t("cpr.camera.paused")}</Text>
                     ) : camState === "failed" ? (
                       <Text style={styles.rateHint}>{t("cpr.camera.failed")}</Text>
                     ) : rate && !breaths ? (

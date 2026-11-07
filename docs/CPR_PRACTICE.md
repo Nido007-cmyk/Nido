@@ -67,7 +67,13 @@ model writes anything there.
    split into a 4 × 3 grid. For each block NIDO takes a row profile and a
    column profile and measures how far each moved since the previous
    frame (to half a sample). That gives 36 numbers per frame. The frame
-   buffer is closed straight away: no image is stored, shown or sent.
+   buffer is closed straight away: no image is stored, shown or sent. There is no camera preview on screen
+   by design. The camera is on only while the practice is running with
+   the meter turned on **and NIDO is in view**: going to the background
+   (home button, screen lock, another app, an incoming call) turns it off,
+   and it turns back on when you return to the practice. Stopping the
+   practice while the camera is still starting turns it off as soon as it
+   opens.
    Blocks matter because the person doing compressions fills only part
    of the picture. The best block is a dynamic region of interest, as in
    the published smartphone-camera studies.
@@ -108,7 +114,7 @@ the picture as you push, and the blocks pick that up (tested below).
 | — rate changes 90 → 120 | | followed within 6 s |
 | Scenes with no compressions (still, fidgeting, someone walking behind, everything at once) | `cameraPipeline.test.ts` | silent in every estimate |
 | Kotlin core = TypeScript reference | `scripts/check-cpr-motion-parity.mjs` (CI job `cpr-motion-parity`) | 90 frames, 3,204 numbers, maximum difference 0 |
-| Screen: practice warning always shown, no call button, 30:2 re-arms the beep, the camera only starts when turned on, stop turns everything off | `CprPractice.component.test.tsx` | Jest |
+| Screen: practice warning always shown, no call button, 30:2 re-arms the beep, the camera only starts when turned on, stop turns everything off, the camera turns off in the background and back on when you return, stopping while it starts turns it off | `CprPractice.component.test.tsx` | Jest |
 
 The synthetic scenes come from what the published studies found hard:
 loose hair, a person in the background, a partial view, changing light

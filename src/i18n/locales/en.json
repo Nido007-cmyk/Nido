@@ -1935,7 +1935,8 @@
       "starting": "Turning the camera on…",
       "failed": "The camera couldn't be used. The beep keeps marking the rate.",
       "looking": "Measuring your rate… (follow the beep)",
-      "rate": "Your rate: {{bpm}} per minute"
+      "rate": "Your rate: {{bpm}} per minute",
+      "paused": "Camera off while NIDO is out of view. It turns back on when you return."
     },
     "cue": {
       "faster": "Faster.",

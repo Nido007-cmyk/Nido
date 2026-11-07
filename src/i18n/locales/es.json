@@ -1935,7 +1935,8 @@
       "starting": "Encendiendo la cámara…",
       "failed": "No se pudo usar la cámara. El pitido sigue marcando el ritmo.",
       "looking": "Midiendo tu ritmo… (sigue el pitido)",
-      "rate": "Tu ritmo: {{bpm}} por minuto"
+      "rate": "Tu ritmo: {{bpm}} por minuto",
+      "paused": "Cámara apagada mientras NIDO no está a la vista. Se vuelve a encender al volver."
     },
     "cue": {
       "faster": "Más rápido.",
