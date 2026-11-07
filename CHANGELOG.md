@@ -52,7 +52,7 @@ knowledge-packs-v14.
 
 ### Not tested on a physical phone yet
 
-These fixes passed the automated tests only (TESTCOUNT on the release
+These fixes passed the automated tests only (6,292 on the release
 tree), and the Android build compiles. The owner's round on the same
 tablet repeats the earthquake quick guide right after a pack update,
 the CPR practice with the screen locked, and a model change with other
