@@ -125,8 +125,8 @@ describe("packImport · pure helpers (always run)", () => {
   });
 
   it("the Esencial's real hash is a signed-catalog corpus pin; a random one is not", () => {
-    expect(isCatalogCorpusPin("977dcab59844343c573c13c921ca4b6647ccc9c36a19e009fcf7b527a2f5a24e")).toBe(true);
-    expect(isCatalogCorpusPin("3d40f766eb4fa99e3a2bc3acbb0c6f490f377f3168f0f84d7d03c21f30b31f19")).toBe(true);
+    expect(isCatalogCorpusPin("e44bc41d732d70165d555443006490d93fb0593b8b2990e5be82e4c37abd24ad")).toBe(true);
+    expect(isCatalogCorpusPin("8ff39bd09059fa8321664eba2461091071c00e2fce45395d89e90c18af6b30ea")).toBe(true);
     expect(isCatalogCorpusPin("0".repeat(64))).toBe(false);
   });
 

@@ -157,21 +157,27 @@ describe("C-05 · la señal es por corpus (Esencial no cae con Local)", () => {
     expect(served.some((r) => r.title.includes("suero oral"))).toBe(true);
   });
 
-  it("resto nombrado A4-02: «¿Cuánto cuesta una ambulancia?» sigue admitiendo 5 fragmentos de las mismas 5 guías (las señales no lo cazan, por diseño)", () => {
+  it("resto nombrado A4-02: «¿Cuánto cuesta una ambulancia?» sigue admitiendo 4 fragmentos de 4 guías (las señales no lo cazan, por diseño)", () => {
     // Medido por la adversaria-4 y re-medido en esta tanda: «cuanto» lo
     // siembran las llaves questions: y «cuesta» entra por el cuerpo en su
     // acepción de dificultad; no hay término a df 0 en su pool (la señal
     // A no se forma) y «cuesta» no es el término de tipo «precio» (la
     // señal B no lo cubre). La fixture fija el resto: estirar la señal
     // para cazarlo sería otra decisión, no esta cura.
+    // Re-medido el 2026-11-07 tras el re-cotejo IFRC/ERC 2025 (suelo
+    // knowledge-packs-v15): el resto pasa de 5 a 4 sin tocar el código de
+    // recuperación. La guía 12 (alergia grave) reescribió la frase del
+    // aguijón según IFRC 2025 («ráspalo con algo plano… no lo pinces») y
+    // su troceado cambió: «cuanto» quedó en el trozo nuevo de «Picaduras
+    // de abeja» y «cuesta» en el de «Qué hacer», así que ningún fragmento
+    // de esa guía cubre ya los dos términos y la puerta la deja fuera.
     const q = "¿Cuánto cuesta una ambulancia?";
     const { gated, founded, served } = packSearch(esencial, q);
-    expect(gated.length).toBe(5);
+    expect(gated.length).toBe(4);
     expect(founded.length).toBe(gated.length);
     expect(served.map((r) => r.title.split(" — ")[0])).toEqual(
       expect.arrayContaining([
         expect.stringContaining("Shock"),
-        expect.stringContaining("Alergia"),
         expect.stringContaining("Intoxicaciones"),
         expect.stringContaining("Tsunami"),
         expect.stringContaining("Incendio"),
