@@ -69,3 +69,11 @@ describe("buildEvidenceCard", () => {
     expect(remainder?.excerpt).toBe(whole?.excerpt);
   });
 });
+
+describe("tarjeta de evidencia: el apartado de cierre no es la fuente principal (auditoría 0.1.79)", () => {
+  it("si «… — Importante» va primero, la tarjeta usa la fuente siguiente", () => {
+    const cierre = chunk("Esta guía se basa en fuentes oficiales. Haz un curso.", { chunkId: "c1", title: "Accidente de tráfico — Importante" });
+    const rcp = chunk("Empuja fuerte y rápido en el centro del pecho.", { chunkId: "c2", title: "RCP en adultos" });
+    expect(buildEvidenceCard([cierre, rcp], "curso de rcp")?.chunkId).toBe("c2");
+  });
+});

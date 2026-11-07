@@ -365,10 +365,15 @@ export function extractiveSnippet(chunk: GroundingChunk, index: number, maxChars
  */
 const CLOSING_TITLE_RE = /\s[—–-]\s*(?:Importante|Important)\s*$/i;
 
+/** La fuente que se enseña primero: la mejor que no sea un apartado de cierre (o la primera). */
+export function primarySourceIndex(chunks: readonly { title?: string }[]): number {
+  const i = chunks.findIndex((c) => !CLOSING_TITLE_RE.test(c.title ?? ""));
+  return i < 0 ? 0 : i;
+}
+
 export function honestAbstention(chunks: GroundingChunk[], lang: GroundingLang): string {
   if (chunks.length === 0) return IDK_TEXT[lang];
-  let i = chunks.findIndex((c) => !CLOSING_TITLE_RE.test(c.title ?? ""));
-  if (i < 0) i = 0;
+  const i = primarySourceIndex(chunks);
   const intro = EXTRACT_INTRO[lang].split("{{title}}").join(chunks[i].title);
   return `${IDK_TEXT[lang]}\n\n${intro}\n${extractiveSnippet(chunks[i], i, 320, lang)}`;
 }
@@ -1933,8 +1938,9 @@ export function verifyGroundedAnswer(
 function abstainedResult(chunks: GroundingChunk[], lang: GroundingLang, removed: number): GroundingResult {
   const sentences: SentenceProvenance[] = [{ text: IDK_TEXT[lang], origin: { kind: "abstain" } }];
   if (chunks.length > 0) {
-    sentences.push({ text: EXTRACT_INTRO[lang].split("{{title}}").join(chunks[0].title), origin: { kind: "fixed" } });
-    sentences.push({ text: extractiveSnippet(chunks[0], 0, 320, lang), origin: { kind: "source", n: 1, support: 1 } });
+    const i = primarySourceIndex(chunks);
+    sentences.push({ text: EXTRACT_INTRO[lang].split("{{title}}").join(chunks[i].title), origin: { kind: "fixed" } });
+    sentences.push({ text: extractiveSnippet(chunks[i], i, 320, lang), origin: { kind: "source", n: i + 1, support: 1 } });
   }
   return { text: honestAbstention(chunks, lang), status: "abstained", removed, kept: 0, sentences };
 }

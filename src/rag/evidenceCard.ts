@@ -20,7 +20,7 @@
  * Puro, sin dependencias de UI, 100% testeable.
  */
 
-import { splitSentences, stem } from "./grounding";
+import { primarySourceIndex, splitSentences, stem } from "./grounding";
 import type { RetrievedChunk } from "./retrieve";
 
 export interface EvidenceCardData {
@@ -87,7 +87,9 @@ const EXCERPT_MAX_CHARS = 320;
  * fuente principal vacía — la tarjeta no finge lo que no hay.
  */
 export function buildEvidenceCard(chunks: readonly RetrievedChunk[], query: string): EvidenceCardData | null {
-  const top = chunks[0];
+  // Auditoría 0.1.79: un apartado de cierre («… — Importante») no es la
+  // fuente principal de nada; si va primero, la tarjeta usa la siguiente.
+  const top = chunks[primarySourceIndex(chunks)];
   if (!top || !top.body || top.body.trim().length === 0) return null;
   const highlight = bestPassageSentence(top.body, query);
   const sentences = splitSentences(top.body.trim());
