@@ -4,6 +4,70 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.77-alpha - 2026-11-07
+
+The Essentials pack moves to knowledge-packs-v14, and the fixes from the
+review of 0.1.76 reach the app: friend-to-friend messages, CPR practice
+and the chat's emergency check.
+
+### Knowledge packs
+
+- **The signed catalog now offers knowledge-packs-v14.** The guide text is
+  the same as v12. What changed is the search keys of the Spanish
+  hypothermia guide, so a question that describes the symptoms without
+  naming the condition now finds that guide. Phones on 0.1.76 or older
+  keep offering v12, because the catalog travels inside the app.
+
+### Emergency check in the chat
+
+- **CPR in progress is recognised** in Spanish, English and Portuguese,
+  and so are more ways of asking how to do CPR. A review of 0.1.76 found
+  that 11 of 13 such phrases got through. They now go to the emergency
+  route: the checked emergency number and the NIDO Essentials guide.
+
+### CPR practice
+
+- **The count keeps time with the beep.** It now takes its clock from the
+  phone's own beep clock, which doesn't jump if the phone's time changes.
+- **A correction to the 0.1.76 notes:** they said every sentence of the
+  practice is the Essentials guide's. The guide's steps are, word for
+  word, but six lines are not: "Two breaths.", "Compressions.",
+  "Faster.", "Slower.", "Good rate, keep going." and the note that the
+  practice follows the guide for adults and older children. They are now
+  a fixed, reviewed list in the three languages: a test fails if any of
+  them changes, or if a new spoken or rate line appears without being
+  added to that list.
+- The device test protocol in docs/CPR_PRACTICE.md now also covers
+  locking the screen and an incoming call during practice.
+
+### Messages from friend to friend (experimental)
+
+- **Turning on disappearing messages in a conversation now stops your
+  phone handing out the envelopes of messages to that person that are
+  still waiting.** Before, they could keep travelling for up to 72 hours.
+  Copies a contact already carries can still arrive.
+- **The 1,500-character limit counts characters as you see them.** Emoji
+  counted as two before, so a long message of emoji was left out sooner
+  than it should have been.
+- **The storage limits hold after a restart.** Data saved by the app is
+  checked again against the limits when it is loaded.
+- **A repeated message is never delivered twice**, even when the memory
+  of messages already opened is full.
+- 19 attack tests from the review of 0.1.76 are now part of the test
+  suite.
+
+### Also
+
+- NIDO will not be published on Google Play: it is distributed on GitHub
+  and free download platforms only (docs/DECISIONS.md, D13).
+
+### Not tested on a physical phone yet
+
+Everything here passed the automated tests only. The owner's round on
+real phones for CPR practice and friend-to-friend messages is still to
+do, and the friend-to-friend cryptography has had an internal review,
+not an outside one yet.
+
 ## 0.1.76-alpha - 2026-11-06
 
 Two new features, both marked experimental: CPR practice with an
