@@ -55,8 +55,8 @@ export const CPR_GUIDE: Record<CprLang, CprGuideText> = {
   es: {
     title: "RCP (reanimación) en adultos y niños mayores",
     guideId: "esencial-rcp-adultos",
-    verified: "2026-11-02",
-    sources: "AHA, Guías de RCP y atención cardiovascular de emergencia 2025; Cruz Roja Americana; IFRC, Directrices de primeros auxilios 2020",
+    verified: "2026-11-07",
+    sources: "AHA, Guías de RCP y atención cardiovascular de emergencia 2025; Cruz Roja Americana; IFRC, Directrices internacionales de primeros auxilios 2025",
     headings: { before: "Antes de empezar", compressions: "Compresiones en el pecho", breaths: "Respiraciones (solo si sabes hacerlas)", stop: "Cuándo parar" },
     before: [
       "Comprueba que el lugar es seguro.",
@@ -88,8 +88,8 @@ export const CPR_GUIDE: Record<CprLang, CprGuideText> = {
   en: {
     title: "CPR for adults and older children",
     guideId: "esencial-rcp-adultos",
-    verified: "2026-11-02",
-    sources: "AHA Guidelines for CPR and Emergency Cardiovascular Care 2025; American Red Cross; IFRC First Aid Guidelines 2020",
+    verified: "2026-11-07",
+    sources: "AHA Guidelines for CPR and Emergency Cardiovascular Care 2025; American Red Cross; IFRC International First Aid Guidelines 2025",
     headings: { before: "Before you start", compressions: "Chest compressions", breaths: "Rescue breaths (only if you know how)", stop: "When to stop" },
     before: [
       "Check that the scene is safe.",
@@ -121,8 +121,8 @@ export const CPR_GUIDE: Record<CprLang, CprGuideText> = {
   pt: {
     title: "RCP em adultos e crianças maiores",
     guideId: "esencial-rcp-adultos",
-    verified: "2026-11-02",
-    sources: "AHA, Guias de RCP e atendimento cardiovascular de emergência 2025; Cruz Vermelha Americana; IFRC, Diretrizes de primeiros socorros 2020",
+    verified: "2026-11-07",
+    sources: "AHA, Guias de RCP e atendimento cardiovascular de emergência 2025; Cruz Vermelha Americana; IFRC, Diretrizes internacionais de primeiros socorros 2025",
     headings: { before: "Antes de começar", compressions: "Compressões no peito", breaths: "Respirações (só se você souber fazer)", stop: "Quando parar" },
     before: [
       "Confira se o local é seguro.",
