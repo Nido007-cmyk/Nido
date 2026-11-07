@@ -186,7 +186,9 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
       )}
 
       {/* Description */}
-      <Text style={styles.description}>{item.description}</Text>
+      <Text style={styles.description}>
+        {t(`catalogDescriptions.${item.id.replace(/\./g, "_")}`, { defaultValue: item.description })}
+      </Text>
 
       {/* 0.1.57: older pack kept and used until the update is verified */}
       {outdated && !row?.downloading && (

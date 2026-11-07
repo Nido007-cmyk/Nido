@@ -4,6 +4,7 @@
  * See LICENSE file for details.
  */
 
+import { loadErrorText } from "./ramBudgetMessage";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -396,7 +397,7 @@ export function ModelSetupScreen(props: Props) {
           await switchEmbeddingModel(model);
           setToast(t("modelSetupScreen.toasts.activeSet", { kind: model.kind, name: model.label }));
         } catch (e: any) {
-          setToast(t("modelSetupScreen.toasts.loadFailed", { name: model.label, error: e?.message ?? String(e) }));
+          setToast(t("modelSetupScreen.toasts.loadFailed", { name: model.label, error: loadErrorText(t, e, i18n.language) }));
         }
         await refreshStatus();
         return;
@@ -419,7 +420,7 @@ export function ModelSetupScreen(props: Props) {
       } catch (e: any) {
         // Keep the previous model active; the chat reloads it on return.
         await setActiveModelId("llm", previousId);
-        setToast(t("modelSetupScreen.toasts.loadFailed", { name: model.label, error: e?.message ?? String(e) }));
+        setToast(t("modelSetupScreen.toasts.loadFailed", { name: model.label, error: loadErrorText(t, e, i18n.language) }));
       } finally {
         setActivatingId(null);
         await refreshStatus();

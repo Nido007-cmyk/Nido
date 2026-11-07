@@ -6,7 +6,7 @@
 
 import { LlamaContext, initLlama } from "llama.rn";
 import * as FileSystem from "expo-file-system/legacy";
-import { checkRamBudget, readRamSnapshot, toGb } from "../inference/ramBudget";
+import { checkRamBudget, RamBudgetError, readRamSnapshot, toGb } from "../inference/ramBudget";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { withStage } from "../utils/stageError";
 import { MODEL_CATALOG } from "../models/manifest";
@@ -61,10 +61,16 @@ export class EmbeddingEngine {
     const snapshot = readRamSnapshot();
     const verdict = snapshot ? checkRamBudget({ fileSizeBytes, nCtx: 512 }, snapshot) : null;
     if (verdict && !verdict.fits) {
-      throw new Error(
+      throw new RamBudgetError(
         `Embedding model "${modelFilename}" needs roughly ${toGb(verdict.totalBytes)}GB of RAM, ` +
           `but this device only has about ${toGb(verdict.availableBytes)}GB free ` +
-          `(of ${toGb(verdict.totalRamBytes)}GB total). Close background apps and retry.`
+          `(of ${toGb(verdict.totalRamBytes)}GB total). Close background apps and retry.`,
+        verdict.totalBytes,
+        verdict.availableBytes,
+        verdict.totalRamBytes,
+        null,
+        null,
+        null,
       );
     }
     await this.unloadNow();
