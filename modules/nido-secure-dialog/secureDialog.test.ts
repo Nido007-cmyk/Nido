@@ -50,9 +50,14 @@ describe("R3 — native dialog-window FLAG_SECURE (build-time assertion)", () =>
   });
 
   it("does not rely on the activity window for dialog protection", () => {
-    const src = readFileSync(KOTLIN_PATH, "utf8");
-    // No activity-window flagging in this module: the activity window is
-    // P-F2's surface; the dialog window is R3's surface.
+    const full = readFileSync(KOTLIN_PATH, "utf8");
+    // No activity-window flagging in the dialog path: the activity window is
+    // P-F2's surface; the dialog window is R3's surface. (0.1.79: the module
+    // also has setWindowSecure, the opt-in screenshot setting, which is the
+    // only place that touches the activity window; it is checked below.)
+    const start = full.indexOf('AsyncFunction("showSecureAlert"');
+    expect(start).toBeGreaterThan(-1);
+    const src = full.slice(start);
     expect(src).not.toMatch(/activity\.window|getWindow\(\)\.addFlags/);
   });
 
