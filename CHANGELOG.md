@@ -4,6 +4,30 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.80-alpha - 2026-11-07
+
+NIDO gains a door for adding signed knowledge packs from a file. No
+catalog change: the signed catalog keeps offering knowledge-packs-v14.
+
+### Adding a pack
+
+- **New: Settings → Knowledge base → "Add a pack from a file."** You
+  can now add a knowledge pack you have as a file, for example one
+  published by SALVORA PACKS, and the assistant will be able to answer
+  from its content.
+- **The app checks the pack before anything is copied.** It verifies
+  the pack's Ed25519 signature against the keys built into the app,
+  checks the file's SHA-256 hash against its signed manifest, and
+  opens it to confirm it really is a knowledge pack. Only a pack that
+  passes every check is saved on your phone.
+- **Only packs signed by NIDO or by SALVORA PACKS are accepted.** A
+  pack signed by anyone else, a pack with no manifest, and a file that
+  changed after it was signed are all refused, with a message that
+  says why. There are no third-party keys.
+- **Each added pack shows who signed it** ("Signed by NIDO" or
+  "Signed by SALVORA PACKS"), and you can remove it at any time from
+  the same screen; removing deletes the file from your phone.
+
 ## 0.1.79-alpha - 2026-11-07
 
 Fixes for a cut-off side menu with many chats, from a review of the
