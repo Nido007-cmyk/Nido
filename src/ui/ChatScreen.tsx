@@ -937,11 +937,32 @@ export function ChatScreen({
 
   const removeSession = useCallback(
     async (id: string) => {
+      // Auditoría 0.1.79: la papelera de cada chat borraba al instante,
+      // sin confirmar ni deshacer; con la lista larga, un toque al desplazar
+      // bastaba. Ahora pregunta. Y no se borra el chat que está respondiendo
+      // (la respuesta en curso lo volvía a escribir a medias).
+      if (id === activeSessionId && generating) {
+        setToast(t("drawer.deleteBusy"));
+        return;
+      }
+      const title = sessions.find((x) => x.id === id)?.title ?? "";
+      let ok = false;
+      try {
+        ok = await showSecureAlert({
+          title: t("drawer.deleteTitle"),
+          message: t("drawer.deleteBody", { title }),
+          cancelLabel: t("common.cancel"),
+          confirmLabel: t("drawer.deleteConfirm"),
+        });
+      } catch {
+        ok = false;
+      }
+      if (!ok) return;
       await deleteSession(id);
       await refreshSessions();
       if (id === activeSessionId) await resetToNewChat();
     },
-    [activeSessionId, refreshSessions, resetToNewChat]
+    [activeSessionId, generating, sessions, refreshSessions, resetToNewChat, t]
   );
 
   const send = useCallback(async (override?: { text: string; draft: string }) => {

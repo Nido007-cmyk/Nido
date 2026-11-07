@@ -29,7 +29,11 @@
     "searchLabel": "Buscar nas suas conversas",
     "noMatches": "Nenhuma conversa corresponde.",
     "shortcuts": "Atalhos",
-    "showAll": "Ver todos (+{{count}})"
+    "showAll": "Ver todos (+{{count}})",
+    "deleteTitle": "Apagar este chat?",
+    "deleteBody": "“{{title}}” será apagado deste telefone. Não dá para desfazer.",
+    "deleteConfirm": "Apagar",
+    "deleteBusy": "Espere a resposta terminar para apagar este chat."
   },
   "catalogItemCard": {
     "calculating": "Calculando…",
