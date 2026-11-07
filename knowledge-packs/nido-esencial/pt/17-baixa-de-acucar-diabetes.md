@@ -14,13 +14,13 @@ Suor, tremor, fome, palidez, nervosismo, confusão, comportamento estranho (pode
 
 ## Se ela estiver acordada e conseguir engolir
 1. Dê 15 a 20 gramas de açúcar rápido: tabletes de glicose; se não houver, 3 ou 4 cubos ou colheres de chá de açúcar dissolvidos em água, um copo de suco de laranja ou um refrigerante comum (não "zero").
-2. Espere 10 minutos. Se não melhorar, ligue para o número de emergência e repita a dose se ela ainda conseguir engolir.
+2. Espere 15 minutos. Se os sintomas continuarem, repita a dose se ela ainda conseguir engolir.
 3. Quando melhorar, que coma algo com carboidratos (pão, biscoitos) se faltar muito para a próxima refeição.
 4. Se você não souber se é açúcar alto ou baixo, dê açúcar: para quem está com açúcar baixo, isso salva; para quem está com açúcar alto, quase não prejudica.
 
 ## Ligue para o número de emergência se...
 - Ela não conseguir engolir, estiver muito confusa, não responder ou convulsionar. Não lhe dê nada pela boca: coloque-a de lado.
-- Não melhorar em até 10 minutos depois de tomar o açúcar.
+- Não melhorar em cerca de 30 minutos depois de tomar o açúcar, ou piorar antes.
 
 ## Açúcar alto
 Muita sede, urinar muito, hálito de fruta, náuseas, respiração profunda e cansaço podem indicar açúcar muito alto: ela precisa de atendimento médico.

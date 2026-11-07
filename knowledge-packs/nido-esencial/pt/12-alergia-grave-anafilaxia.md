@@ -25,7 +25,7 @@ A anafilaxia é uma reação alérgica grave que pode matar em minutos. Costuma 
 6. Mesmo que melhore, deve ir ao hospital: a reação pode voltar horas depois.
 
 ## Picadas de abelha
-Tire o ferrão o quanto antes, raspando ou pinçando. Lave com água e sabão e aplique gelo.
+Tire o ferrão o quanto antes: raspe-o com algo plano, como um cartão ou o lado sem corte de uma faca. Não o pinçe nem use pinça: podem apertar o saquinho de veneno e piorar a reação. Lave com água e sabão e aplique gelo.
 
 ## Importante
 Baseado nas diretrizes da AHA, da Cruz Vermelha Americana e da Cruz Vermelha Canadense. Se você sabe que tem alergias graves, leve sempre seu autoinjetor e ensine sua família a usá-lo. Ligue para o número de emergência.

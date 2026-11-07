@@ -14,13 +14,13 @@ Sweating, shaking, hunger, paleness, nervousness, confusion, strange behavior (i
 
 ## If they are awake and can swallow
 1. Give 15 to 20 grams of fast sugar: glucose tablets; if there are none, 3 or 4 sugar cubes or teaspoons of sugar dissolved in water, a glass of orange juice or a regular (not diet) soft drink.
-2. Wait 10 minutes. If there is no improvement, call the emergency number and repeat the dose if they can still swallow.
+2. Wait 15 minutes. If the symptoms continue, repeat the dose if they can still swallow.
 3. Once better, they should eat something with carbohydrates (bread, crackers) if the next meal is far off.
 4. If you don't know whether sugar is high or low, give sugar: it saves someone with low sugar, and does little harm to someone with high sugar.
 
 ## Call the emergency number if...
 - They cannot swallow, are very confused, do not respond or have a seizure. Give nothing by mouth: put them on their side.
-- They don't improve within 10 minutes of having sugar.
+- They don't improve within about 30 minutes of having sugar, or they get worse sooner.
 
 ## High blood sugar
 Great thirst, passing a lot of urine, fruity breath, nausea, deep breathing and tiredness may mean very high sugar: they need medical care.

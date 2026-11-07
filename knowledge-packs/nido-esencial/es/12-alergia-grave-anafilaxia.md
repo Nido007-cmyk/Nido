@@ -24,7 +24,7 @@ La anafilaxia es una reacción alérgica grave que puede matar en minutos. Suele
 6. Aunque mejore, debe ir al hospital: la reacción puede volver horas después.
 
 ## Picaduras de abeja
-Saca el aguijón cuanto antes raspándolo o pinzándolo. Lava con agua y jabón y aplica frío.
+Saca el aguijón cuanto antes: ráspalo con algo plano, como una tarjeta o el lado sin filo de un cuchillo. No lo pinces ni uses pinzas: pueden apretar el saquito de veneno y empeorar la reacción. Lava con agua y jabón y aplica frío.
 
 ## Importante
 Basado en las directrices de la AHA, la Cruz Roja Americana y la Cruz Roja Canadiense. Si sabes que tienes alergias graves, lleva siempre tu autoinyector y enseña a tu familia a usarlo. Llama al número de emergencias.

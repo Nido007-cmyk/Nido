@@ -24,7 +24,7 @@ Anaphylaxis is a severe allergic reaction that can kill within minutes. It usual
 6. Even if they get better, they must go to hospital: the reaction can come back hours later.
 
 ## Bee stings
-Remove the stinger as soon as possible by scraping or pinching it out. Wash with soap and water and apply cold.
+Remove the stinger as soon as possible: scrape it gently with something flat, like a bank card or the blunt side of a knife. Do not pinch it or use tweezers: they can squeeze the venom sac and make the reaction worse. Wash with soap and water and apply cold.
 
 ## Important
 Based on the AHA, American Red Cross and Canadian Red Cross guidelines. If you know you have severe allergies, always carry your auto-injector and teach your family how to use it. Call your emergency number.
