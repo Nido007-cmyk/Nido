@@ -15,7 +15,7 @@
  * reembed.test.ts.
  */
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { isNativeGateTaken, nativeGateBegin, nativeGateEnd, waitForNativeGateFree } from "./nativeGate";
+import { isNativeGateTaken, isNativeLoadGateTaken, nativeGateBegin, nativeGateEnd, waitForNativeGateFree, withNativeLoadGate } from "./nativeGate";
 
 const tick = (ms = 20) => new Promise((r) => setTimeout(r, ms));
 
@@ -171,5 +171,69 @@ describe("M1: reembed contra la puerta", () => {
     expect(result).toEqual({ done: 30, total: 30, running: false });
     expect(W().embedded).toHaveLength(30);
     expect(W().vectors.size).toBe(30);
+  });
+});
+
+describe("nativeGate: la puerta de carga (fase 2, reapertura 2026-11-08)", () => {
+  it("libre: la tarea corre en el acto y la puerta queda libre al asentarse", async () => {
+    expect(isNativeLoadGateTaken()).toBe(false);
+    const out = await withNativeLoadGate(async () => {
+      expect(isNativeLoadGateTaken()).toBe(true);
+      return 42;
+    });
+    expect(out).toBe(42);
+    expect(isNativeLoadGateTaken()).toBe(false);
+  });
+
+  it("dos cargas a la vez se serializan: la segunda no arranca hasta que la primera se asienta", async () => {
+    const order: string[] = [];
+    let releaseFirst!: () => void;
+    const firstGate = new Promise<void>((r) => {
+      releaseFirst = r;
+    });
+    const first = withNativeLoadGate(async () => {
+      order.push("first-start");
+      await firstGate;
+      order.push("first-end");
+    });
+    const second = withNativeLoadGate(async () => {
+      order.push("second-start");
+    });
+    await tick(30);
+    // La segunda carga sigue esperando: nunca hay dos initLlama a la vez.
+    expect(order).toEqual(["first-start"]);
+    expect(isNativeLoadGateTaken()).toBe(true);
+    releaseFirst();
+    await Promise.all([first, second]);
+    expect(order).toEqual(["first-start", "first-end", "second-start"]);
+    expect(isNativeLoadGateTaken()).toBe(false);
+  });
+
+  it("una carga que falla suelta la puerta y la siguiente entra", async () => {
+    await expect(
+      withNativeLoadGate(async () => {
+        throw new Error("boom");
+      }),
+    ).rejects.toThrow("boom");
+    expect(isNativeLoadGateTaken()).toBe(false);
+    await expect(withNativeLoadGate(async () => "ok")).resolves.toBe("ok");
+  });
+
+  it("la puerta de carga y la de generación son independientes", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const load = withNativeLoadGate(async () => {
+      await gate;
+    });
+    await tick(10);
+    expect(isNativeLoadGateTaken()).toBe(true);
+    // La generación no consulta la puerta de carga: su cerrojo sigue libre.
+    expect(isNativeGateTaken()).toBe(false);
+    await expect(waitForNativeGateFree()).resolves.toBeUndefined();
+    release();
+    await load;
+    expect(isNativeLoadGateTaken()).toBe(false);
   });
 });

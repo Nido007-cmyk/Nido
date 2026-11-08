@@ -97,6 +97,7 @@
     "hideReasoning": "Ocultar razonamiento",
     "indexingKnowledgeBase": "Indexando conocimiento nuevo para buscar sin internet…",
     "initializingCore": "Iniciando NIDO…",
+    "loadingModel": "Cargando modelo…",
     "inputPlaceholder": "Pregunta lo que sea…",
     "noRelevantOfflineSources": "No se encontraron fuentes offline relevantes para esta pregunta.",
     "interrupted": "Respuesta cortada: la app se cerró antes de que terminara. Pregunta de nuevo para continuar.",

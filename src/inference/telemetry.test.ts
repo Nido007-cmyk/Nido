@@ -8,7 +8,9 @@ import { describe, expect, it, beforeEach } from "vitest";
 import {
   clearTelemetry,
   getRecentTelemetry,
+  ramRejectionEvent,
   recordInferenceEvent,
+  recordRamRejection,
   type InferenceTelemetryEvent,
 } from "./telemetry";
 
@@ -60,5 +62,79 @@ describe("telemetry ring buffer", () => {
     const [e] = getRecentTelemetry(1);
     expect(e.deterministic).toBe(true);
     expect(e.modelId).toBeNull();
+  });
+});
+
+describe("telemetry: rechazos del pre-flight (fase 2, reapertura 2026-11-08)", () => {
+  const GiB = 1024 ** 3;
+
+  it("el evento de rechazo lleva stopReason rejected y todas las cifras que vio el pre-flight", () => {
+    const e = ramRejectionEvent(
+      {
+        modelId: "models/qwen3-0.6b-q4km.gguf",
+        totalRamBytes: 3.54 * GiB,
+        rssBytes: 0.4 * GiB,
+        availBytes: 1.2 * GiB,
+        thresholdBytes: 0.35 * GiB,
+        availableBytes: 0.6 * GiB,
+        neededBytes: 0.714 * GiB,
+        nCtxChosen: 2048,
+        nCtxRequested: 3072,
+        crashSafety: 0.5,
+      },
+      4242,
+    );
+    expect(e.ts).toBe(4242);
+    expect(e.stopReason).toBe("rejected");
+    expect(e.taskType).toBe("model-load");
+    expect(e.modelId).toBe("models/qwen3-0.6b-q4km.gguf");
+    expect(e.completionTokens).toBe(0);
+    expect(e.ttftMs).toBeNull();
+    expect(e.ramRejection).toEqual({
+      totalRamBytes: 3.54 * GiB,
+      rssBytes: 0.4 * GiB,
+      availBytes: 1.2 * GiB,
+      thresholdBytes: 0.35 * GiB,
+      availableBytes: 0.6 * GiB,
+      neededBytes: 0.714 * GiB,
+      nCtxChosen: 2048,
+      nCtxRequested: 3072,
+      crashSafety: 0.5,
+    });
+  });
+
+  it("un rechazo del motor de embeddings se marca como tal y sin CrashGuard", () => {
+    const e = ramRejectionEvent({
+      modelId: "models/embedding-multilingual.gguf",
+      totalRamBytes: 3.54 * GiB,
+      rssBytes: 0.4 * GiB,
+      availableBytes: 0.1 * GiB,
+      neededBytes: 0.169 * GiB,
+      nCtxChosen: 512,
+      nCtxRequested: 512,
+      crashSafety: null,
+      embedding: true,
+    });
+    expect(e.taskType).toBe("model-load-embedding");
+    expect(e.ramRejection?.availBytes).toBeNull();
+    expect(e.ramRejection?.crashSafety).toBeNull();
+  });
+
+  it("recordRamRejection deja el evento en el anillo, junto a las generaciones", () => {
+    recordInferenceEvent(base);
+    recordRamRejection({
+      modelId: "models/qwen2.5-0.5b-instruct-q4km.gguf",
+      totalRamBytes: 3.54 * GiB,
+      rssBytes: 0.4 * GiB,
+      availableBytes: 0.3 * GiB,
+      neededBytes: 0.519 * GiB,
+      nCtxChosen: 2048,
+      nCtxRequested: 4096,
+      crashSafety: 0.5,
+    });
+    const events = getRecentTelemetry(10);
+    expect(events).toHaveLength(2);
+    expect(events[1].stopReason).toBe("rejected");
+    expect(events[1].ramRejection?.neededBytes).toBeCloseTo(0.519 * GiB, -5);
   });
 });

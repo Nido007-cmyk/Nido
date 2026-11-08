@@ -210,7 +210,11 @@ export async function retrieve(query: string, topK = 6): Promise<RetrievedChunk[
     profile = embeddingProfileForSha(modelSha256);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (!/native embedding unavailable/i.test(msg)) throw err;
+    // Optimización 2026-11-08 (fase 4): «model not loaded» también
+    // degrada a léxico — con la residencia bajo demanda puede pasar
+    // si la recarga no fue posible (sin proveedor y sin memoria de
+    // la sesión); la búsqueda no debe romperse por ello.
+    if (!/native embedding unavailable/i.test(msg) && !/model not loaded/i.test(msg)) throw err;
     // Sin embeddings: solo búsqueda léxica (built-in + packs).
   }
   const [lexical, semantic, packs] = await Promise.all([

@@ -8,9 +8,15 @@ package expo.modules.rammonitor
 
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
+import android.content.ComponentCallbacks2
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.res.Configuration
+import android.os.BatteryManager
 import android.os.Build
 import android.os.Debug
+import android.os.PowerManager
 import android.util.Log
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -42,6 +48,16 @@ class RamMonitorModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("RamMonitor")
 
+    // Evento de presión de memoria (optimización 2026-11-08, fase 5):
+    // onTrimMemory con nivel ≥ RUNNING_CRITICAL llega a JS para que
+    // la app descargue los motores antes de que el sistema la cierre.
+    Events("onMemoryPressure")
+
+    OnCreate {
+      installCrashRecorder()
+      registerMemoryPressure()
+    }
+
     // ---------------------------------------------------- informe de cierres
     //
     // Diagnóstico SIN cable ni adb para la alpha: cuando la app se cierra
@@ -53,8 +69,6 @@ class RamMonitorModule : Module() {
     //     de cada muerte del proceso — falta de memoria, fallo nativo (C/C++),
     //     ANR, etc. — aunque no haya excepción Java.
     // Nada sale del teléfono: el usuario decide si copia el informe.
-
-    OnCreate { installCrashRecorder() }
 
     Function("installCrashRecorder") {
       installCrashRecorder()
@@ -109,6 +123,87 @@ class RamMonitorModule : Module() {
     // (P-03): without it the app pinned 4 threads blind on every device.
     Function("getProcessorCount") {
       Runtime.getRuntime().availableProcessors()
+    }
+
+    // Optimización 2026-11-08 (fase 3): batería del aparato para la
+    // política de presión. El nivel sale del intent pegajoso
+    // ACTION_BATTERY_CHANGED (sin receptor registrado, sin permisos);
+    // el modo de ahorro, de PowerManager. levelPct -1 = sin lectura.
+    Function("getBatteryStatus") {
+      readBatteryStatus()
+    }
+
+    // Optimización 2026-11-08 (fase 3): estado térmico del sistema,
+    // escala de PowerManager 0 (ninguno) a 6 (apagado); -1 si el
+    // aparato no lo reporta (API 29+ y no todos los fabricantes).
+    Function("getThermalStatus") {
+      readThermalStatus()
+    }
+  }
+
+  @Volatile private var memoryPressureRegistered = false
+
+  /**
+   * Fase 5: registra un ComponentCallbacks2 sobre el contexto de la
+   * aplicación; onTrimMemory con nivel ≥ TRIM_MEMORY_RUNNING_CRITICAL
+   * (15) se reenvía a JS como evento «onMemoryPressure». Idempotente;
+   * un fallo al registrar deja la app sin el evento, nunca caída.
+   */
+  private fun registerMemoryPressure() {
+    if (memoryPressureRegistered) return
+    val ctx = appContext.reactContext?.applicationContext ?: return
+    try {
+      ctx.registerComponentCallbacks(object : ComponentCallbacks2 {
+        override fun onTrimMemory(level: Int) {
+          if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
+            try {
+              sendEvent("onMemoryPressure", mapOf("level" to level))
+            } catch (_: Throwable) {
+            }
+          }
+        }
+
+        override fun onConfigurationChanged(newConfig: Configuration) {}
+
+        override fun onLowMemory() {}
+      })
+      memoryPressureRegistered = true
+    } catch (_: Throwable) {
+    }
+  }
+
+  private fun readBatteryStatus(): Map<String, Any> {
+    val ctx = appContext.reactContext?.applicationContext
+      ?: return mapOf("levelPct" to -1, "charging" to false, "powerSave" to false)
+    var levelPct = -1
+    var charging = false
+    try {
+      val intent = ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+      val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+      val scale = intent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+      if (level >= 0 && scale > 0) levelPct = level * 100 / scale
+      val status = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+      charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+        status == BatteryManager.BATTERY_STATUS_FULL
+    } catch (_: Exception) {
+    }
+    var powerSave = false
+    try {
+      val pm = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
+      powerSave = pm.isPowerSaveMode
+    } catch (_: Exception) {
+    }
+    return mapOf("levelPct" to levelPct, "charging" to charging, "powerSave" to powerSave)
+  }
+
+  private fun readThermalStatus(): Int {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return -1
+    val ctx = appContext.reactContext?.applicationContext ?: return -1
+    return try {
+      val pm = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
+      pm.currentThermalStatus
+    } catch (_: Exception) {
+      -1
     }
   }
 

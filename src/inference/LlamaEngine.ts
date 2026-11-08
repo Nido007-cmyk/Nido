@@ -7,7 +7,7 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { initLlama, LlamaContext, type CompletionResponseFormat } from "llama.rn";
 import * as RamMonitor from "ram-monitor";
-import { checkRamBudget, defaultThreadsForCores, estimateContextBytes, RamBudgetError, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
+import { batchForRam, checkRamBudget, defaultThreadsForCores, estimateContextBytes, RamBudgetError, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
 import {
   crossNativeSessionRecord,
   holdBackgroundIndexingForSession,
@@ -27,10 +27,12 @@ import {
 } from "./memoryLadder";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
+import { contextCeilingForDevice } from "../models/defaultModel";
+import { currentDevicePressure } from "./devicePressure";
 import { withStage } from "../utils/stageError";
-import { recordInferenceEvent, type TelemetryStopReason } from "./telemetry";
+import { recordInferenceEvent, recordRamRejection, type TelemetryStopReason } from "./telemetry";
 import { findRepetitionLoop, trimRepetitionLoop } from "./repetitionGuard";
-import { nativeGateBegin, nativeGateEnd } from "./nativeGate";
+import { nativeGateBegin, nativeGateEnd, withNativeLoadGate } from "./nativeGate";
 import { trimToCompleteSentences } from "./completeSentences";
 import { parseGemmaReasoning } from "./gemmaReasoning";
 import type { ModelSamplingDefaults } from "../routing/types";
@@ -233,6 +235,7 @@ export const LLM_N_UBATCH = 256;
 export function llmInitParamsForProfile(
   profile: LlmMemoryProfile,
   base: { model: string; n_ctx: number; n_threads: number },
+  batch: { nBatch: number; nUbatch: number } = { nBatch: LLM_N_BATCH, nUbatch: LLM_N_UBATCH },
 ): Record<string, unknown> {
   const common = {
     model: base.model,
@@ -242,7 +245,12 @@ export function llmInitParamsForProfile(
     n_gpu_layers: 0, // CPU-only for broad device compatibility; adjust per-device
   };
   if (profile === "default") return common;
-  const smallBatch = { ...common, n_batch: LLM_N_BATCH, n_ubatch: LLM_N_UBATCH };
+  // Optimización 2026-11-08 (fase 2): el lote ya no es la constante
+  // para todos — lo elige batchForRam según la RAM total del aparato
+  // (y el techo de presión de la fase 3). Sin lectura de RAM, el
+  // llamador pasa el lote de siempre y esta función se comporta
+  // exactamente como antes.
+  const smallBatch = { ...common, n_batch: batch.nBatch, n_ubatch: batch.nUbatch };
   if (profile === "small-batch") return smallBatch;
   return { ...smallBatch, cache_type_k: "q8_0", cache_type_v: "q8_0" };
 }
@@ -590,7 +598,13 @@ export class LlamaEngine {
   }
 
   load(modelFilename: string, opts?: { nCtx?: number; nThreads?: number }): Promise<void> {
-    return this.enqueue(() => this.loadNow(modelFilename, opts));
+    // Fase 2 (reapertura del defecto, 2026-11-08): la carga corre tras
+    // la puerta de carga — un initLlama a la vez en todo el proceso.
+    // Antes el LLM y el motor de embeddings arrancaban en Promise.all
+    // y sus pre-flight leían la misma foto de RAM sin verse el uno al
+    // otro. La cola interna sigue serializando las cargas de ESTE
+    // motor; la puerta ordena las de los DOS motores.
+    return withNativeLoadGate(() => this.enqueue(() => this.loadNow(modelFilename, opts)));
   }
 
   private async loadNow(modelFilename: string, opts?: { nCtx?: number; nThreads?: number }) {
@@ -606,12 +620,28 @@ export class LlamaEngine {
     // explícita manda ella, como siempre. El CrashGuard asienta su
     // registro al abrir la carga y su factor entra en el plan.
     const explicitCtx = opts?.nCtx !== undefined;
+    // Optimización 2026-11-08 (plan n.º 7): sin opción explícita, el
+    // techo puede nacer ya reducido en aparatos de ≤4 GiB para los
+    // modelos cuyo contexto declarado es 3072 (contextCeilingForDevice
+    // en defaultModel.ts). La foto con la que se decide es LA MISMA
+    // que el pre-flight usa abajo (liveSnapshot): una sola lectura,
+    // nunca dos fotos distintas en la misma carga. Con opción
+    // explícita manda ella, como siempre, y sin lectura manda el
+    // techo declarado.
     const requestedCtx = opts?.nCtx ?? catalogEntry?.defaultNCtx ?? 4096;
     let nCtx = requestedCtx;
     // P-03: sin opción explícita, los hilos salen de los núcleos
     // reales del aparato (política en ramBudget.ts); la opción
-    // explícita sigue mandando, como manda con nCtx.
-    const nThreads = opts?.nThreads ?? defaultThreadsForCores(readProcessorCount());
+    // explícita sigue mandando, como manda con nCtx. Optimización
+    // 2026-11-08 (fase 3): la presión del aparato (batería baja, modo
+    // de ahorro, calor) puede bajar ese número con su tope; la foto
+    // de presión la refresca la pantalla y aquí solo se consulta.
+    const pressure = currentDevicePressure();
+    const baseThreads = opts?.nThreads ?? defaultThreadsForCores(readProcessorCount());
+    const nThreads =
+      opts?.nThreads !== undefined || pressure.threadCap === null
+        ? baseThreads
+        : Math.min(baseThreads, pressure.threadCap);
     const crashSafety = await this.crashGuardSettle();
 
     // ChatScreen re-mounts (and calls load() again) every time Settings is
@@ -665,6 +695,21 @@ export class LlamaEngine {
             }).totalBytes,
           }
         : liveSnapshot;
+    if (!explicitCtx) {
+      nCtx = contextCeilingForDevice(catalogEntry?.defaultNCtx, snapshot?.totalRamBytes ?? null);
+      // La comparación de «ya cargado» de arriba usó el techo
+      // declarado; si la política de clase lo rebaja y el modelo
+      // residente ya vive en ese contexto rebajado, la carga es un
+      // atajo también (nada que rehacer).
+      if (
+        this.context &&
+        this.modelInfo?.filename === modelFilename &&
+        this.modelInfo.nCtx === nCtx &&
+        this.modelInfo.nThreads === nThreads
+      ) {
+        return;
+      }
+    }
     const specBase = {
       fileSizeBytes,
       nLayer: catalogEntry?.arch?.nLayer,
@@ -678,7 +723,7 @@ export class LlamaEngine {
     // el presupuesto reducido por el CrashGuard si hubo un choque.
     let contextNote = "";
     if (!explicitCtx && snapshot) {
-      const plan = planContext(specBase, snapshot, { ceiling: requestedCtx, safety: crashSafety });
+      const plan = planContext(specBase, snapshot, { ceiling: nCtx, safety: crashSafety });
       if (plan) {
         nCtx = plan.nCtx;
         verdict = plan.verdict;
@@ -686,6 +731,22 @@ export class LlamaEngine {
       }
     }
     if (verdict && !verdict.fits) {
+      // Fase 2 (reapertura del defecto, 2026-11-08): el rechazo queda
+      // registrado con sus cifras antes de lanzar. Hasta aquí no
+      // dejaba rastro y el único diagnóstico posible era modelar el
+      // aparato; con el registro, la propia app dice qué vio.
+      recordRamRejection({
+        modelId: modelFilename,
+        totalRamBytes: snapshot!.totalRamBytes,
+        rssBytes: snapshot!.rssBytes,
+        availBytes: snapshot!.availBytes ?? null,
+        thresholdBytes: snapshot!.lowMemThresholdBytes ?? null,
+        availableBytes: verdict.availableBytes,
+        neededBytes: verdict.totalBytes,
+        nCtxChosen: nCtx,
+        nCtxRequested: requestedCtx,
+        crashSafety: crashSafety < 1 ? crashSafety : null,
+      });
       throw new RamBudgetError(
         `"${modelFilename}" needs roughly ${toGb(verdict.totalBytes)}GB of RAM, but this ` +
           `device only has about ${toGb(verdict.availableBytes)}GB free (of ${toGb(verdict.totalRamBytes)}GB total). ` +
@@ -732,7 +793,7 @@ export class LlamaEngine {
         try {
           this.context = await withStage("initLlama", () =>
             initLlama(
-              llmInitParamsForProfile(profile, { model: modelPath, n_ctx: nCtx, n_threads: nThreads }) as never,
+              llmInitParamsForProfile(profile, { model: modelPath, n_ctx: nCtx, n_threads: nThreads }, batchForRam(snapshot?.totalRamBytes ?? null, pressure.ubatchCap)) as never,
             )
           );
           loadedProfile = profile;

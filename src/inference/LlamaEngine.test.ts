@@ -132,11 +132,15 @@ let mockProcessorCount: number | null = null;
 // Texto que la completion falsa emite/resuelve (los tests de noThink lo
 // cambian por una respuesta con bloque <think>).
 let mockReplyText = "Hi";
+// Fase 3 (optimización 2026-11-08): la sonda de batería del mock.
+let mockBattery: { levelPct: number; charging: boolean; powerSave: boolean } | null = null;
 vi.mock("ram-monitor", () => ({
   getDeviceTotalRamBytes: () => mockTotalRamBytes,
   getMemoryInfo: () => ({ rssBytes: mockRssBytes }),
   getCrashReport: () => mockCrashReport,
   getProcessorCount: () => mockProcessorCount,
+  getBatteryStatus: () => mockBattery,
+  getThermalStatus: () => null,
 }));
 // The integrity gate is covered by src/models/modelTrust.test.ts; here it
 // is stubbed so engine behavior is tested in isolation.
@@ -146,6 +150,7 @@ vi.mock("../models/modelTrust", () => ({
 
 import { LlamaEngine, resolveSampling, SAMPLING_PRESETS } from "./LlamaEngine";
 import { isNativeGateTaken } from "./nativeGate";
+import { refreshDevicePressure } from "./devicePressure";
 import {
   isBackgroundIndexingHeld,
   resetBackgroundIndexingHold,
@@ -206,6 +211,57 @@ describe("RAM-2026-10-11: perfiles de memoria del LLM", () => {
     const engine = new LlamaEngine();
     await expect(engine.load("models/a.gguf")).rejects.toThrow(/Failed to load/);
     expect(engine.isLoaded).toBe(false);
+  });
+});
+
+describe("Optimización 2026-11-08, fase 2: el lote sigue a la RAM del aparato", () => {
+  it("en un aparato de 3,3 GiB el perfil kv-q8 nace con n_batch 256 / n_ubatch 128", async () => {
+    mockTotalRamBytes = 3.3 * 1024 ** 3;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0]).toMatchObject({ cache_type_k: "q8_0", n_batch: 256, n_ubatch: 128 });
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+  });
+
+  it("en un aparato de 4 GiB el lote es el intermedio: 384/192", async () => {
+    mockTotalRamBytes = 4 * 1024 ** 3;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls[0]).toMatchObject({ n_batch: 384, n_ubatch: 192 });
+  });
+
+  it("el perfil default sigue sin claves de lote también en la clase pequeña", async () => {
+    mockTotalRamBytes = 3.3 * 1024 ** 3;
+    rejectInit = (p) => p.n_ubatch !== undefined;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls).toHaveLength(3);
+    expect(Object.keys(initCalls[2]).sort()).toEqual(["model", "n_ctx", "n_gpu_layers", "n_threads", "use_mlock"]);
+    expect(engine.getModelInfo()?.memoryProfile).toBe("default");
+  });
+});
+
+describe("Optimización 2026-11-08, fase 3: la presión del aparato baja los hilos", () => {
+  it("con batería baja la carga nace con 3 hilos y n_ubatch 128", async () => {
+    mockBattery = { levelPct: 10, charging: false, powerSave: false };
+    refreshDevicePressure();
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls[0].n_threads).toBe(3);
+    expect(initCalls[0].n_ubatch).toBe(128);
+    mockBattery = null;
+    refreshDevicePressure();
+  });
+
+  it("con la opción explícita de hilos, la presión no manda", async () => {
+    mockBattery = { levelPct: 10, charging: false, powerSave: false };
+    refreshDevicePressure();
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf", { nThreads: 6 });
+    expect(initCalls[0].n_threads).toBe(6);
+    mockBattery = null;
+    refreshDevicePressure();
   });
 });
 
@@ -849,6 +905,26 @@ describe("Qwen3 noThink: enable_thinking en el motor", () => {
   const QWEN25 = "models/qwen2.5-0.5b-instruct-q4km.gguf";
   const MSGS = [{ role: "user", content: "hola" }];
 
+  it("en la clase ≤4 GiB el Qwen3 (techo declarado 3072) nace con n_ctx 2048", async () => {
+    mockTotalRamBytes = 3.3 * 1024 ** 3;
+    // RSS 0 en este escenario: se mide el TECHO con el que el motor
+    // nace, no el ajuste de la escalera a la presión del momento
+    // (con el RSS por defecto del arnés el disponible cae por debajo
+    // del piso y la escalera ni siquiera entra en juego).
+    mockRssBytes = 0;
+    const engine = new LlamaEngine();
+    await engine.load(QWEN3);
+    expect(initCalls[0].n_ctx).toBe(2048);
+  });
+
+  it("en la clase ancha el Qwen3 conserva su techo declarado 3072", async () => {
+    mockTotalRamBytes = 12 * 1024 ** 3;
+    const engine = new LlamaEngine();
+    await engine.load(QWEN3);
+    expect(initCalls[0].n_ctx).toBe(3072);
+  });
+
+
   it("un modelo noThink recibe enable_thinking=false con messages", async () => {
     const engine = new LlamaEngine();
     await engine.load(QWEN3);
@@ -1126,5 +1202,32 @@ describe("P-03: hilos según los núcleos reales", () => {
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf", { nThreads: 5 });
     expect(engine.getModelInfo()?.nThreads).toBe(5);
+  });
+});
+
+describe("Fase 2 (reapertura 2026-11-08): el rechazo del pre-flight deja registro", () => {
+  it("un rechazo queda en la telemetría con las cifras que vio el pre-flight", async () => {
+    const { clearTelemetry, getRecentTelemetry } = await import("./telemetry");
+    clearTelemetry();
+    mockTotalRamBytes = 2 * 1024 ** 3;
+    mockRssBytes = 1024 ** 3;
+    const engine = new LlamaEngine();
+    await expect(engine.load("models/a.gguf")).rejects.toThrow(/RAM/);
+    const rejected = getRecentTelemetry(10).filter((e) => e.stopReason === "rejected");
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].modelId).toBe("models/a.gguf");
+    expect(rejected[0].taskType).toBe("model-load");
+    expect(rejected[0].ramRejection?.totalRamBytes).toBe(2 * 1024 ** 3);
+    expect(rejected[0].ramRejection?.rssBytes).toBe(1024 ** 3);
+    expect(rejected[0].ramRejection?.availableBytes).toBe(0);
+    expect(rejected[0].ramRejection?.neededBytes).toBeGreaterThan(0);
+  });
+
+  it("una carga que cabe NO deja registro de rechazo", async () => {
+    const { clearTelemetry, getRecentTelemetry } = await import("./telemetry");
+    clearTelemetry();
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(getRecentTelemetry(10).filter((e) => e.stopReason === "rejected")).toHaveLength(0);
   });
 });

@@ -415,8 +415,21 @@ export async function searchPacks(
  * pack whose vectors match `modelSha256` (multilingual search). Cheap when
  * they already exist. Never throws.
  */
-export async function prepareVectorIndexes(modelSha256: string | null, profile: EmbeddingProfile): Promise<void> {
+export async function prepareVectorIndexes(
+  modelSha256: string | null,
+  profile: EmbeddingProfile,
+  embeddingLoaded = true,
+): Promise<void> {
   if (!modelSha256 || profile.id === BGE_SMALL_EN_PROFILE.id) return;
+  // Optimización 2026-11-08 (fase 4): el fondo no mantiene residente
+  // el motor de embeddings — el llamador pasa si está cargado y, si
+  // ya se descargó por inactividad, la deuda se recoge en el
+  // siguiente arranque, como tras cualquier parada (el mismo
+  // criterio que run() en reembed.ts). El parámetro mantiene a este
+  // módulo fuera del grafo de imports del motor a propósito: la
+  // biblioteca de guías importa packs.ts y su cadena no debe
+  // alcanzar ningún motor.
+  if (!embeddingLoaded) return;
   // M3 (crash nativo): con el fondo apagado por la muerte de la
   // sesión anterior, tampoco se construyen índices esta sesión.
   if (isBackgroundIndexingHeld()) return;

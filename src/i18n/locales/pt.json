@@ -452,6 +452,7 @@
   "chatScreen": {
     "roleAssistant": "🎭 NIDO",
     "initializingCore": "Iniciando o NIDO…",
+    "loadingModel": "Carregando modelo…",
     "mountingWeights": "Carregando o modelo…",
     "indexingKnowledgeBase": "Indexando conhecimento novo para busca offline…",
     "reasoningElapsed": "💭 Raciocinando… {{seconds}}s",
