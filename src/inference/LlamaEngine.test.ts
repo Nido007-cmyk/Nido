@@ -209,6 +209,34 @@ describe("RAM-2026-10-11: perfiles de memoria del LLM", () => {
   });
 });
 
+describe("Optimización 2026-11-08, fase 2: el lote sigue a la RAM del aparato", () => {
+  it("en un aparato de 3,3 GiB el perfil kv-q8 nace con n_batch 256 / n_ubatch 128", async () => {
+    mockTotalRamBytes = 3.3 * 1024 ** 3;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0]).toMatchObject({ cache_type_k: "q8_0", n_batch: 256, n_ubatch: 128 });
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+  });
+
+  it("en un aparato de 4 GiB el lote es el intermedio: 384/192", async () => {
+    mockTotalRamBytes = 4 * 1024 ** 3;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls[0]).toMatchObject({ n_batch: 384, n_ubatch: 192 });
+  });
+
+  it("el perfil default sigue sin claves de lote también en la clase pequeña", async () => {
+    mockTotalRamBytes = 3.3 * 1024 ** 3;
+    rejectInit = (p) => p.n_ubatch !== undefined;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls).toHaveLength(3);
+    expect(Object.keys(initCalls[2]).sort()).toEqual(["model", "n_ctx", "n_gpu_layers", "n_threads", "use_mlock"]);
+    expect(engine.getModelInfo()?.memoryProfile).toBe("default");
+  });
+});
+
 describe("LlamaEngine load/unload", () => {
   it("never leaves an orphaned context when loads overlap (quick model swaps)", async () => {
     const engine = new LlamaEngine();

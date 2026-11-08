@@ -253,6 +253,38 @@ export function defaultThreadsForCores(cores: number | null): number {
   return 6;
 }
 
+/**
+ * Escalera de lote por RAM (optimización 2026-11-08, fase 2 del
+ * paquete): el búfer de cómputo de llama.cpp se dimensiona con
+ * n_ubatch (ver el comentario de llmInitParamsForProfile en
+ * LlamaEngine.ts: a 256 son ~149 MiB con el vocabulario de Qwen2.5;
+ * a 128, la mitad). En aparatos de poca RAM ese búfer compite con
+ * los pesos y la KV por el mismo disponible del pre-flight, así que
+ * la clase pequeña nace con el lote reducido y la mediana con uno
+ * intermedio; la clase ancha conserva el de siempre. Bajo presión
+ * del aparato (batería o temperatura, fase 3) el techo puede bajar
+ * más, hasta 128: presión manda sobre la clase.
+ *
+ * Pura y con los bordes exactos testeados: ≤3,5 GiB → 256/128;
+ * ≤4,5 GiB → 384/192; resto → 512/256. Sin lectura (null o basura),
+ * el lote de siempre: cero cambio de conducta a ciegas.
+ */
+export function batchForRam(
+  totalRamBytes: number | null,
+  pressureUbatchCap?: number | null,
+): { nBatch: number; nUbatch: number } {
+  let batch = { nBatch: 512, nUbatch: 256 };
+  if (totalRamBytes !== null && Number.isFinite(totalRamBytes) && totalRamBytes > 0) {
+    if (totalRamBytes <= 3.5 * GiB) batch = { nBatch: 256, nUbatch: 128 };
+    else if (totalRamBytes <= 4.5 * GiB) batch = { nBatch: 384, nUbatch: 192 };
+  }
+  if (pressureUbatchCap !== null && pressureUbatchCap !== undefined && pressureUbatchCap > 0) {
+    const nUbatch = Math.min(batch.nUbatch, pressureUbatchCap);
+    batch = { nBatch: Math.max(batch.nBatch, nUbatch), nUbatch };
+  }
+  return batch;
+}
+
 /** Lee los núcleos vía ram-monitor; null si la sonda no está o falla. */
 export function readProcessorCount(): number | null {
   try {

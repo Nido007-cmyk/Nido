@@ -7,7 +7,7 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { initLlama, LlamaContext, type CompletionResponseFormat } from "llama.rn";
 import * as RamMonitor from "ram-monitor";
-import { checkRamBudget, defaultThreadsForCores, estimateContextBytes, RamBudgetError, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
+import { batchForRam, checkRamBudget, defaultThreadsForCores, estimateContextBytes, RamBudgetError, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
 import {
   crossNativeSessionRecord,
   holdBackgroundIndexingForSession,
@@ -233,6 +233,7 @@ export const LLM_N_UBATCH = 256;
 export function llmInitParamsForProfile(
   profile: LlmMemoryProfile,
   base: { model: string; n_ctx: number; n_threads: number },
+  batch: { nBatch: number; nUbatch: number } = { nBatch: LLM_N_BATCH, nUbatch: LLM_N_UBATCH },
 ): Record<string, unknown> {
   const common = {
     model: base.model,
@@ -242,7 +243,12 @@ export function llmInitParamsForProfile(
     n_gpu_layers: 0, // CPU-only for broad device compatibility; adjust per-device
   };
   if (profile === "default") return common;
-  const smallBatch = { ...common, n_batch: LLM_N_BATCH, n_ubatch: LLM_N_UBATCH };
+  // Optimización 2026-11-08 (fase 2): el lote ya no es la constante
+  // para todos — lo elige batchForRam según la RAM total del aparato
+  // (y el techo de presión de la fase 3). Sin lectura de RAM, el
+  // llamador pasa el lote de siempre y esta función se comporta
+  // exactamente como antes.
+  const smallBatch = { ...common, n_batch: batch.nBatch, n_ubatch: batch.nUbatch };
   if (profile === "small-batch") return smallBatch;
   return { ...smallBatch, cache_type_k: "q8_0", cache_type_v: "q8_0" };
 }
@@ -754,7 +760,7 @@ export class LlamaEngine {
         try {
           this.context = await withStage("initLlama", () =>
             initLlama(
-              llmInitParamsForProfile(profile, { model: modelPath, n_ctx: nCtx, n_threads: nThreads }) as never,
+              llmInitParamsForProfile(profile, { model: modelPath, n_ctx: nCtx, n_threads: nThreads }, batchForRam(snapshot?.totalRamBytes ?? null)) as never,
             )
           );
           loadedProfile = profile;

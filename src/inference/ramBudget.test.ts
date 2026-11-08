@@ -26,6 +26,7 @@ import {
   checkRamBudget,
   readRamSnapshot,
   defaultThreadsForCores,
+  batchForRam,
   readProcessorCount,
   toGb,
 } from "./ramBudget";
@@ -212,6 +213,30 @@ describe("defecto 2026-11-08: ningún modelo cargaba en la tableta de 3,3 GiB", 
   it("el embedding e5 ya no paga logits de vocabulario: estima su peso real, no 0,458 GiB", () => {
     const e = estimateContextBytes({ fileSizeBytes: 132_441_664, nCtx: 512 });
     expect(e.totalBytes).toBeLessThan(0.2 * GiB);
+  });
+});
+
+describe("batchForRam (optimización 2026-11-08, fase 2)", () => {
+  it("la escalera por clase: ≤3,5 GiB → 256/128; ≤4,5 GiB → 384/192; resto → 512/256", () => {
+    expect(batchForRam(3.3 * GiB)).toEqual({ nBatch: 256, nUbatch: 128 });
+    expect(batchForRam(3.5 * GiB)).toEqual({ nBatch: 256, nUbatch: 128 });
+    expect(batchForRam(4 * GiB)).toEqual({ nBatch: 384, nUbatch: 192 });
+    expect(batchForRam(4.5 * GiB)).toEqual({ nBatch: 384, nUbatch: 192 });
+    expect(batchForRam(8 * GiB)).toEqual({ nBatch: 512, nUbatch: 256 });
+    expect(batchForRam(12 * GiB)).toEqual({ nBatch: 512, nUbatch: 256 });
+  });
+
+  it("a ciegas manda el lote de siempre: null, cero y basura no cambian nada", () => {
+    expect(batchForRam(null)).toEqual({ nBatch: 512, nUbatch: 256 });
+    expect(batchForRam(0)).toEqual({ nBatch: 512, nUbatch: 256 });
+    expect(batchForRam(Number.NaN)).toEqual({ nBatch: 512, nUbatch: 256 });
+  });
+
+  it("la presión (fase 3) baja el techo de n_ubatch en cualquier clase, sin subirlo jamás", () => {
+    expect(batchForRam(12 * GiB, 128)).toEqual({ nBatch: 512, nUbatch: 128 });
+    expect(batchForRam(4 * GiB, 128)).toEqual({ nBatch: 384, nUbatch: 128 });
+    expect(batchForRam(3.3 * GiB, 256)).toEqual({ nBatch: 256, nUbatch: 128 });
+    expect(batchForRam(12 * GiB, null)).toEqual({ nBatch: 512, nUbatch: 256 });
   });
 });
 
