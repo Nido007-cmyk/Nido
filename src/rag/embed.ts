@@ -24,6 +24,14 @@ export class EmbeddingEngine {
   private context: LlamaContext | null = null;
   private modelFilename: string | null = null;
   private modelSha256: string | null = null;
+  // Optimización 2026-11-08 (fase 4): residencia bajo demanda. El
+  // último fichero cargado se recuerda también tras descargar (para
+  // poder recargar sin que el llamador repita la resolución), y la
+  // pantalla registra un proveedor que resuelve el fichero activo
+  // cuando este motor nunca cargó en la sesión.
+  private lastFilename: string | null = null;
+  private ensureProvider: (() => Promise<string | null>) | null = null;
+  private ensuring: Promise<boolean> | null = null;
   // llama.rn rejects a call on a context that's still working ("Context is
   // busy"), so loads, embeddings and unloads run one at a time.
   private queue: Promise<unknown> = Promise.resolve();
@@ -105,8 +113,52 @@ export class EmbeddingEngine {
       })
     );
     this.modelFilename = modelFilename;
+    this.lastFilename = modelFilename;
     this.modelSha256 =
       MODEL_CATALOG.find((m) => m.kind === "embedding" && m.filename === modelFilename)?.sha256 ?? null;
+  }
+
+  /** ¿Hay un contexto de embeddings residente ahora mismo? */
+  get isLoaded(): boolean {
+    return this.context !== null;
+  }
+
+  /**
+   * Registra quién sabe resolver el fichero de embedding activo
+   * (la pantalla, al montar). Lo usa la recarga bajo demanda cuando
+   * este motor aún no cargó en la sesión.
+   */
+  setEnsureLoadedProvider(fn: (() => Promise<string | null>) | null): void {
+    this.ensureProvider = fn;
+  }
+
+  /**
+   * Fase 4: garantiza el motor residente, cargándolo si hace falta.
+   * Vuelo único: las llamadas concurrentes comparten la misma
+   * carga. Devuelve false cuando no hay forma de saber qué cargar
+   * (ni memoria de la sesión ni proveedor) o la carga falla — el
+   * llamador degrada (búsqueda léxica) en vez de romper. NUNCA se
+   * llama desde dentro de una tarea de la cola: load() también
+   * encola y sería un deadlock; los métodos públicos lo invocan
+   * ANTES de encolar su trabajo.
+   */
+  ensureLoaded(): Promise<boolean> {
+    if (this.context) return Promise.resolve(true);
+    if (!this.ensuring) {
+      this.ensuring = (async () => {
+        try {
+          const filename = this.lastFilename ?? (this.ensureProvider ? await this.ensureProvider() : null);
+          if (!filename) return false;
+          await this.load(filename);
+          return this.context !== null;
+        } catch {
+          return false;
+        } finally {
+          this.ensuring = null;
+        }
+      })();
+    }
+    return this.ensuring;
   }
 
   /** Catalog SHA-256 of the loaded model (the knowledge base is stamped with it), or null. */
@@ -126,12 +178,14 @@ export class EmbeddingEngine {
 
   /** embedQuery plus the model that computed it (its thresholds apply to the scores). */
   embedQueryTagged(text: string): Promise<{ vector: Float32Array; modelSha256: string | null }> {
-    return this.enqueue(async () => {
-      const modelSha256 = this.modelSha256;
-      const prefix = modelSha256 ? embeddingProfileForSha(modelSha256).queryPrefix : "";
-      const vector = await this.embedNow(prefix + text);
-      return { vector, modelSha256 };
-    });
+    return this.ensureLoaded().then(() =>
+      this.enqueue(async () => {
+        const modelSha256 = this.modelSha256;
+        const prefix = modelSha256 ? embeddingProfileForSha(modelSha256).queryPrefix : "";
+        const vector = await this.embedNow(prefix + text);
+        return { vector, modelSha256 };
+      }),
+    );
   }
 
   /** A stored text (article, document chunk), with the model's passage prefix. */
@@ -146,17 +200,19 @@ export class EmbeddingEngine {
    * this tag: see insertChunk's modelSha256.
    */
   embedPassageTagged(text: string): Promise<{ vector: Float32Array; modelSha256: string | null }> {
-    return this.enqueue(async () => {
-      const modelSha256 = this.modelSha256;
-      const prefix = modelSha256 ? embeddingProfileForSha(modelSha256).passagePrefix : "";
-      const vector = await this.embedNow(prefix + text);
-      return { vector, modelSha256 };
-    });
+    return this.ensureLoaded().then(() =>
+      this.enqueue(async () => {
+        const modelSha256 = this.modelSha256;
+        const prefix = modelSha256 ? embeddingProfileForSha(modelSha256).passagePrefix : "";
+        const vector = await this.embedNow(prefix + text);
+        return { vector, modelSha256 };
+      }),
+    );
   }
 
   /** Raw embedding, no prefix. Callers use embedQuery / embedPassage. */
   embed(text: string): Promise<Float32Array> {
-    return this.enqueue(() => this.embedNow(text));
+    return this.ensureLoaded().then(() => this.enqueue(() => this.embedNow(text)));
   }
 
   private async embedNow(text: string): Promise<Float32Array> {

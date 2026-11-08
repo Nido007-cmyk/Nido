@@ -36,6 +36,9 @@ import { useTranslation } from "react-i18next";
 import { llamaEngine } from "../inference/LlamaEngine";
 import { refreshDevicePressure } from "../inference/devicePressure";
 import { embeddingEngine } from "../rag/embed";
+import { embeddingIdleUnloadDue } from "../rag/embedPolicy";
+import { isNativeGateTaken } from "../inference/nativeGate";
+import { handleMemoryPressure } from "../inference/memoryPressure";
 import { retrieve, assemblePrompt, RetrievedChunk, ConversationTurn } from "../rag/retrieve";
 import { assembleChatMessages, contextualizeQuery, degradableGenTokens, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
 import { classifyTask, isRetrievalIrrelevant, isCreativeRequest } from "../routing/classify";
@@ -154,7 +157,7 @@ import { recordRouterSample, type StageDropReason } from "../services/routerStat
 import { looksLikeMissedCommand, recordMissedPhrase } from "../services/missedPhrases";
 import { trimRepetitionLoop } from "../inference/repetitionGuard";
 import { trimToCompleteSentences } from "../inference/completeSentences";
-import { getCrashReport, getMemoryInfo } from "ram-monitor";
+import { getCrashReport, getMemoryInfo, addMemoryPressureListener } from "ram-monitor";
 import { interruptionCause } from "../diagnostics/crashReport";
 
 /** El informe de cierres de Android, leído una vez por proceso (barato y no cambia mientras corre). */
@@ -305,7 +308,7 @@ export function ChatScreen({
   const [guideReaderChunkId, setGuideReaderChunkId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [ready, setReady] = useState(false);
-  const [loadStatus, setLoadStatus] = useState(t("chatScreen.initializingCore"));
+  const [loadStatus, setLoadStatus] = useState<string | null>(t("chatScreen.initializingCore"));
   const [loadError, setLoadError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [showPromptIdeas, setShowPromptIdeas] = useState(false);
@@ -722,18 +725,22 @@ export function ChatScreen({
       // puerta de carga ya serializa los motores entre sí; esta
       // secuencia además hace que el error nombre al motor que falló
       // (la tarjeta enseñaba el primer rechazo de la pareja y no
-      // decía de cuál venía) y que el embedding, que la búsqueda y el
-      // sembrado necesitan aunque el LLM no quepa, quede cargado.
+      // decía de cuál venía).
+      //
+      // Optimización 2026-11-08 (fases 1 y 4): el arranque carga SOLO
+      // el embedding — las guías y la búsqueda funcionan sin modelo,
+      // que es la mitad del uso real — y el LLM pasa a ser residente
+      // bajo demanda: lo carga el primer envío (ensureChatModel) y lo
+      // descargan la inactividad (3 min) y la presión de memoria. Si
+      // el embedding no cabe, la pantalla sigue sin estar lista y la
+      // tarjeta nombra a ese motor, como hasta ahora.
+      embeddingEngine.setEnsureLoadedProvider(async () => (await resolveActiveModel("embedding")).filename);
       try {
         await embeddingEngine.load(emb.filename);
       } catch (e: any) {
         throw new Error(embeddingLoadFailureNote(emb.label, e?.message ?? String(e)));
       }
-      try {
-        await llamaEngine.load(llm.filename);
-      } catch (e: any) {
-        throw new Error(llmLoadFailureNote(llm.label, e?.message ?? String(e)));
-      }
+      lastChatActivityRef.current = Date.now();
       startAppMemoryTracking();
 
       setLoadStatus(t("chatScreen.indexingKnowledgeBase"));
@@ -741,22 +748,127 @@ export function ChatScreen({
         setLoadStatus(`${t("chatScreen.indexingKnowledgeBase")} ${formatInt(p.done, displayLang(i18n.language))} / ${formatInt(p.total, displayLang(i18n.language))}`)
       );
       await seedKnowledgeBaseIfEmpty().finally(stopProgress);
+      lastEmbeddingUseRef.current = Date.now();
+      setLoadStatus(null);
       setReady(true);
       // Multilingual search (0.2.0): finish a model switch that was
       // interrupted, and build pack vector indexes. Background, never blocks
       // the chat; both are no-ops when there's nothing to do.
-      void import("../rag/reembed").then(({ reembedMissing }) => reembedMissing()).catch(() => {});
+      void import("../rag/reembed")
+        .then(({ reembedMissing }) => reembedMissing())
+        .catch(() => {})
+        .finally(() => {
+          lastBackgroundDoneRef.current = Date.now();
+        });
       void import("../rag/packs")
-        .then(({ prepareVectorIndexes }) => prepareVectorIndexes(embeddingEngine.loadedModelSha256, embeddingEngine.profile))
+        .then(({ prepareVectorIndexes }) => prepareVectorIndexes(embeddingEngine.loadedModelSha256, embeddingEngine.profile, embeddingEngine.isLoaded))
         .catch(() => {});
     } catch (e: any) {
       setLoadError(e?.message ?? String(e));
     }
   }, [t]);
 
+  // --- Optimización 2026-11-08 (fases 1 y 4): residencia bajo demanda ---
+  // El LLM ya no carga en el arranque: lo pide el primer envío y lo
+  // sueltan la inactividad y la presión de memoria. Estos refs viven
+  // fuera de initModels para que el temporizador y el evento de
+  // presión lean siempre la misma foto.
+  const lastChatActivityRef = useRef(0);
+  const backgroundedAtRef = useRef<number | null>(null);
+  const lastEmbeddingUseRef = useRef(0);
+  const lastBackgroundDoneRef = useRef<number | null>(null);
+  const modelLoadingRef = useRef<Promise<boolean> | null>(null);
+
+  /**
+   * Garantiza el LLM residente, cargándolo con su pre-flight si hace
+   * falta. Vuelo único. true = residente; false = no cupo o falló
+   * (el error queda en la tarjeta vía setLoadError, con la nota que
+   * nombra al motor — el prefijo evita las palabras del patrón de
+   * memoria, así que la tarjeta sigue siendo la de memoria cuando el
+   * motivo es la RAM).
+   */
+  const ensureChatModel = useCallback(async (): Promise<boolean> => {
+    if (llamaEngine.isLoaded) return true;
+    if (!modelLoadingRef.current) {
+      modelLoadingRef.current = (async () => {
+        try {
+          setLoadError(null);
+          setLoadStatus(t("chatScreen.loadingModel"));
+          refreshDevicePressure();
+          const llm = await resolveActiveModel("llm");
+          setActiveModel(llm);
+          await llamaEngine.load(llm.filename);
+          return true;
+        } catch (e: any) {
+          try {
+            const llm = await resolveActiveModel("llm");
+            setLoadError(llmLoadFailureNote(llm.label, e?.message ?? String(e)));
+          } catch {
+            setLoadError(e?.message ?? String(e));
+          }
+          return false;
+        } finally {
+          setLoadStatus(null);
+          modelLoadingRef.current = null;
+        }
+      })();
+    }
+    return modelLoadingRef.current;
+  }, [t]);
+
   useEffect(() => {
     initModels();
   }, [initModels]);
+
+  // Descargas por inactividad y presión (fases 1, 4 y 5): un pulso
+  // de 30 s decide con la política pura; el paso a segundo plano se
+  // anota y al volver, si duró más que el umbral y no hay generación,
+  // se descarga el LLM; la presión de memoria del sistema descarga
+  // los dos motores salvo que se esté generando.
+  useEffect(() => {
+    const LLM_IDLE_MS = 180_000;
+    const EMBED_IDLE_MS = 600_000;
+    const tick = () => {
+      if (generatingRef.current) return;
+      const now = Date.now();
+      if (
+        llamaEngine.isLoaded &&
+        lastChatActivityRef.current > 0 &&
+        now - lastChatActivityRef.current > LLM_IDLE_MS
+      ) {
+        void llamaEngine.unload().catch(() => {});
+      }
+      if (
+        embeddingEngine.isLoaded &&
+        !isNativeGateTaken() &&
+        embeddingIdleUnloadDue(now, lastEmbeddingUseRef.current || null, lastBackgroundDoneRef.current, EMBED_IDLE_MS)
+      ) {
+        void embeddingEngine.unload().catch(() => {});
+      }
+    };
+    const id = setInterval(tick, 30_000);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "background" || state === "inactive") {
+        if (backgroundedAtRef.current === null) backgroundedAtRef.current = Date.now();
+      } else if (state === "active") {
+        refreshDevicePressure();
+        const since = backgroundedAtRef.current;
+        backgroundedAtRef.current = null;
+        if (since !== null && Date.now() - since > LLM_IDLE_MS && !generatingRef.current && llamaEngine.isLoaded) {
+          void llamaEngine.unload().catch(() => {});
+        }
+      }
+    });
+    const pressureSub = addMemoryPressureListener(() => {
+      void handleMemoryPressure({ generating: generatingRef.current }, { llm: llamaEngine, embedding: embeddingEngine });
+    });
+    return () => {
+      clearInterval(id);
+      sub.remove();
+      pressureSub.remove();
+    };
+  }, []);
+
 
   const generatingRef = useRef(false);
   useEffect(() => {
@@ -1021,6 +1133,17 @@ export function ChatScreen({
     // passes through it, so the button can never be left permanently blocked.
     if (!sendGuardRef.current.tryAcquire()) return;
     try {
+    // Optimización 2026-11-08 (fase 1): el modelo es residente bajo
+    // demanda. El envío lo trae si no está (primer envío, o el
+    // primero tras la descarga por inactividad o por presión), con
+    // su pre-flight y su «Cargando modelo…». Si no cabe, la tarjeta
+    // ya quedó puesta por ensureChatModel y el envío se detiene sin
+    // tocar el texto de la persona.
+    lastChatActivityRef.current = Date.now();
+    if (!llamaEngine.isLoaded) {
+      const ok = await ensureChatModel();
+      if (!ok) return;
+    }
     // 0.1.38 (enrutado por tramo): lo pegado o compartido no llega al
     // router; si sobra texto alrededor de una orden, la orden se prepara
     // como chip y solo el toque la ejecuta. El toque llega aquí como
@@ -2191,7 +2314,7 @@ export function ChatScreen({
       // here, so error/retry keeps working and the send button is never wedged.
       sendGuardRef.current.release();
     }
-  }, [input, generating, ready, activeSessionId, cancelBackgroundTask, refreshSessions, updateInput, t, i18n]);
+  }, [input, generating, ready, activeSessionId, cancelBackgroundTask, refreshSessions, updateInput, t, i18n, ensureChatModel]);
 
   // send() itself isn't awaited by its callers (onPress/onSubmitEditing) —
   // stopAndAwaitGeneration needs a handle on the in-flight promise so a
@@ -2311,6 +2434,12 @@ export function ChatScreen({
     const llm = await resolveActiveModel("llm");
     if (ready && llamaEngine.getModelInfo()?.filename === llm.filename) {
       setActiveModel(llm);
+    } else if (ready) {
+      // Optimización 2026-11-08 (fase 1): con la pantalla lista, un
+      // modelo distinto se trae bajo demanda (ModelSetupScreen ya lo
+      // cargó al elegirlo, así que normalmente será un atajo); el
+      // arranque completo solo corre si la pantalla aún no está lista.
+      void ensureChatModel();
     } else {
       initModels();
     }
@@ -2519,6 +2648,17 @@ export function ChatScreen({
         )}
 
         {!ready && !loadError && (
+          <View style={[styles.loadingBanner, { backgroundColor: colors.emerald.bgSubtle, borderBottomColor: colors.emerald.border }]}>
+            <ActivityIndicator color={colors.emerald[400]} size="small" />
+            <Text style={[styles.loadingBannerText, { color: colors.text.accentEmerald }]}>{loadStatus}</Text>
+          </View>
+        )}
+
+        {/* Optimización 2026-11-08 (fase 1): con la pantalla lista, la
+            carga bajo demanda del modelo se anuncia con la misma
+            franja — «Cargando modelo…» mientras el primer envío (o el
+            primero tras una descarga por inactividad) lo trae. */}
+        {ready && loadStatus !== null && !loadError && (
           <View style={[styles.loadingBanner, { backgroundColor: colors.emerald.bgSubtle, borderBottomColor: colors.emerald.border }]}>
             <ActivityIndicator color={colors.emerald[400]} size="small" />
             <Text style={[styles.loadingBannerText, { color: colors.text.accentEmerald }]}>{loadStatus}</Text>

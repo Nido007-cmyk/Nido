@@ -23,12 +23,12 @@ materializado por API y verificado por SHA (2 blobs del bot traídos, 2
 cuantizaciones; el juez y las leyes selladas no se tocan).
 
 ## Estado por fase
-- Fase 1 · Carga perezosa del LLM + descarga por inactividad (3 min): EN CURSO (commit tras el de lote)
+- Fase 1 · Carga perezosa del LLM + descarga por inactividad (3 min): HECHA (arranque solo con embedding; ensureChatModel en el primer envío; descarga a los 3 min sin actividad o tras fondo largo; franja «Cargando modelo…»)
 - Fase 2 · Escaleras de contexto y batch por RAM: HECHA (lote por clase + techo de contexto del Qwen3 en ≤4 GiB: contextCeilingForDevice en defaultModel.ts, cableado en la carga sin opción explícita; dirigidas defaultModel+LlamaEngine+ramBudget 122/122)
 - Fase 3 · Hilos adaptativos (batería + temperatura): HECHA (sondas getBatteryStatus/getThermalStatus en el módulo ram-monitor + política pura devicePressure.ts; la carga aplica el tope sin opción explícita; dirigidas 133/133 y tsc limpio)
-- Fase 4 · Embeddings e indexado bajo demanda/pausados: PENDIENTE
-- Fase 5 · Limpieza post-generación + onTrimMemory: PARTE NATIVA HECHA en el commit de la fase 3 (Events + ComponentCallbacks2 en el módulo y addMemoryPressureListener en index.ts); falta el manejador JS y su cableado (commit de la fase 5)
-- Fase 6 · Velocidad de generación (KV reuse, kv-q8 ≤4 GB, warm-up opcional con memoria de sobra, UI no bloqueante): PENDIENTE
+- Fase 4 · Embeddings e indexado bajo demanda/pausados: HECHA (ensureLoaded de vuelo único en embed.ts con proveedor de la pantalla; retrieve degrada también ante «model not loaded»; el fondo no mantiene residente el motor; descarga por inactividad de 10 min con política pura)
+- Fase 5 · Limpieza post-generación + onTrimMemory: HECHA (manejador puro handleMemoryPressure con su prueba; cableado en ChatScreen; la limpieza post-generación JS se declara ya satisfecha: las referencias de la compleción son locales al motor y el contexto se reutiliza, sin código vacío a propósito)
+- Fase 6 · Velocidad de generación (KV reuse, kv-q8 ≤4 GB, warm-up opcional con memoria de sobra, UI no bloqueante): HECHA por declaración (kv-q8 ya es el primer perfil en todas las clases y el contexto persiste entre generaciones: la reutilización de KV ya la daba la arquitectura; el warm-up con memoria de sobra queda FUERA por prudencia: precargar es lo contrario de este paquete)
 - Extra del plan · Registro de rechazos del pre-flight en telemetría: HECHO en la fase 2 de la reapertura (commit d82650f, rama fix/preflight-fase2-2026-11-08) — no duplicar
 - Extra del plan · Fondo solo con pantalla encendida / sin modelo cargado o enchufado; pantalla encendida solo donde se justifica (RCP sí, chat no): PENDIENTE (auditar al implementar)
 

@@ -71,6 +71,40 @@ describe("EmbeddingEngine", () => {
   });
 });
 
+describe("EmbeddingEngine — residencia bajo demanda (optimización 2026-11-08, fase 4)", () => {
+  it("tras descargar, el siguiente uso recarga solo con la memoria de la sesión", async () => {
+    const engine = new EmbeddingEngine();
+    await engine.load("models/embedding.gguf");
+    await engine.unload();
+    expect(engine.isLoaded).toBe(false);
+    expect((await engine.embed("ab"))[0]).toBe(2);
+    expect(engine.isLoaded).toBe(true);
+  });
+
+  it("sin memoria ni proveedor, ensureLoaded devuelve false y embed sigue lanzando «model not loaded»", async () => {
+    const engine = new EmbeddingEngine();
+    await expect(engine.ensureLoaded()).resolves.toBe(false);
+    await expect(engine.embed("ab")).rejects.toThrow(/model not loaded/);
+  });
+
+  it("el proveedor registrado resuelve el fichero la primera vez", async () => {
+    const engine = new EmbeddingEngine();
+    engine.setEnsureLoadedProvider(async () => "models/embedding.gguf");
+    await expect(engine.ensureLoaded()).resolves.toBe(true);
+    expect(engine.isLoaded).toBe(true);
+    expect((await engine.embedQuery("ab"))[0]).toBe(2);
+  });
+
+  it("las recargas concurrentes comparten un solo vuelo", async () => {
+    const engine = new EmbeddingEngine();
+    await engine.load("models/embedding.gguf");
+    await engine.unload();
+    const [a, b] = await Promise.all([engine.embed("a"), engine.embed("bb")]);
+    expect([a[0], b[0]]).toEqual([1, 2]);
+    expect(engine.isLoaded).toBe(true);
+  });
+});
+
 describe("EmbeddingEngine — per-model prefixes (multilingual search)", () => {
   it("e5: questions get 'query: ', stored texts 'passage: ', tagged with the model", async () => {
     const engine = new EmbeddingEngine();
