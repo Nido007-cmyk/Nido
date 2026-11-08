@@ -53,13 +53,22 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   on the phone.
 - **Knows things offline**: a built-in knowledge base plus an optional
   Wikipedia pack (about 50,000 articles) and nine optional guide packs
-  written by NIDO (Essentials, Local, Children and Babies, Crisis,
-  Without Utilities, Safe Home, Disasters, Field and Animals, Road
-  Travel), with checked emergency numbers for 69 countries. With multilingual search on, you
+  written by NIDO (Essentials, Emergencies by country, Children and
+  babies, Crisis and mental health, Living without utilities, Safe
+  home, Disasters, Field and animals, Road and travel), with checked
+  emergency numbers for 69 countries. With multilingual search on, you
   can ask in Spanish, Portuguese or English, and answers show the articles
   they come from, with a line that counts which sentences come from them and
   which come from the model with no source; when nothing in the base really
   matches, no source is shown.
+- **Adds signed packs from a file** (0.1.80): Settings → Knowledge base →
+  "Add a pack from a file" adds a knowledge pack you have as a file, for
+  example one published by SALVORA PACKS. Before anything is copied, the
+  app verifies its Ed25519 signature against the keys built into the app
+  (NIDO's and SALVORA PACKS' only, no third-party keys), checks the file's
+  fingerprint against its signed manifest, and refuses any pack that
+  fails. An added pack is labelled with who signed it and can be removed
+  from the same screen.
 - **Talks to another NIDO over Bluetooth**: encrypted messages between two
   paired phones, with no internet and no server. To pair, you paste the
   other phone's code (the text of its QR); a contact shows as verified only
@@ -105,7 +114,7 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [latest release](https://github.com/Nido007-cmyk/Nido/releases).
+   [v0.1.80-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.80-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4

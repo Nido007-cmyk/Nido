@@ -9,7 +9,7 @@ The list covers every package that `package-lock.json` does not mark as developm
 
 AI models and knowledge packs are not part of the app: they are downloaded separately and keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as `android-runtime-dependencies.txt` (see below).
 
-Source: `package-lock.json sha256:0b1a55198daf` · 596 packages.
+Source: `package-lock.json sha256:8b5a53710895` · 592 packages.
 
 ## License elections
 
@@ -108,39 +108,38 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | @babel/template | 7.29.7 | MIT |
 | @babel/traverse | 7.29.8 | MIT |
 | @babel/types | 7.29.8 | MIT |
-| @expo/cli | 57.0.33 | MIT |
+| @expo/cli | 57.0.32 | MIT |
 | @expo/code-signing-certificates | 0.0.6 | MIT |
-| @expo/config | 57.0.11 | MIT |
-| @expo/config-plugins | 57.0.12 | MIT |
+| @expo/config | 57.0.10 | MIT |
+| @expo/config-plugins | 57.0.11 | MIT |
 | @expo/config-types | 57.0.2 | MIT |
 | @expo/devcert | 1.2.2 | MIT |
 | @expo/devtools | 57.0.1 | MIT |
 | @expo/dom-webview | 57.0.1 | MIT |
-| @expo/env | 2.4.4 | MIT |
+| @expo/env | 2.4.3 | MIT |
 | @expo/expo-modules-macros-plugin | 0.6.1 | MIT |
-| @expo/fingerprint | 0.20.15 | MIT |
-| @expo/image-utils | 0.11.7 | MIT |
-| @expo/inline-modules | 0.1.9 | MIT |
+| @expo/fingerprint | 0.20.14 | MIT |
+| @expo/image-utils | 0.11.6 | MIT |
+| @expo/inline-modules | 0.1.8 | MIT |
 | @expo/json-file | 11.0.1 | MIT |
 | @expo/json-file | 11.2.1 | MIT |
-| @expo/local-build-cache-provider | 57.0.10 | MIT |
-| @expo/log-box | 57.0.5 | MIT |
+| @expo/local-build-cache-provider | 57.0.9 | MIT |
+| @expo/log-box | 57.0.4 | MIT |
 | @expo/metro | 56.0.2 | MIT |
-| @expo/metro-config | 57.0.14 | MIT |
+| @expo/metro-config | 57.0.13 | MIT |
 | @expo/metro-file-map | 57.0.4 | MIT |
 | @expo/osascript | 2.8.1 | MIT |
 | @expo/package-manager | 1.14.2 | MIT |
-| @expo/plist | 0.8.2 | MIT |
-| @expo/prebuild-config | 57.0.20 | MIT |
-| @expo/require-utils | 57.0.7 | MIT |
-| @expo/router-server | 57.0.15 | MIT |
-| @expo/schema-utils | 57.0.3 | MIT |
+| @expo/plist | 0.8.1 | MIT |
+| @expo/prebuild-config | 57.0.19 | MIT |
+| @expo/require-utils | 57.0.6 | MIT |
+| @expo/router-server | 57.0.14 | MIT |
+| @expo/schema-utils | 57.0.2 | MIT |
 | @expo/sdk-runtime-versions | 1.0.0 | MIT |
 | @expo/spawn-async | 1.8.0 | MIT |
 | @expo/sudo-prompt | 9.3.2 | MIT |
 | @expo/ws-tunnel | 2.0.1 | MIT |
 | @expo/xcpretty | 4.4.7 | MIT |
-| @isaacs/nonrecursive-glob-match | 1.1.0 | BlueOak-1.0.0 |
 | @isaacs/ttlcache | 1.4.1 | ISC |
 | @istanbuljs/load-nyc-config | 1.1.0 | ISC |
 | @istanbuljs/schema | 0.1.6 | MIT |
@@ -222,7 +221,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | babel-plugin-syntax-hermes-parser | 0.36.0 | MIT |
 | babel-plugin-transform-flow-enums | 0.0.2 | MIT |
 | babel-preset-current-node-syntax | 1.2.0 | MIT |
-| babel-preset-expo | 57.0.17 | MIT |
+| babel-preset-expo | 57.0.16 | MIT |
 | babel-preset-jest | 29.6.3 | MIT |
 | badgin | 1.2.3 | MIT |
 | balanced-match | 1.0.2 | MIT |
@@ -274,6 +273,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | debug | 3.2.7 | MIT |
 | debug | 4.4.3 | MIT |
 | decamelize | 1.2.0 | MIT |
+| deepmerge | 4.3.1 | MIT |
 | defaults | 1.0.4 | MIT |
 | depd | 2.0.0 | MIT |
 | destroy | 1.2.0 | MIT |
@@ -297,14 +297,13 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | etag | 1.8.1 | MIT |
 | event-target-shim | 5.0.1 | MIT |
 | exact-alarm | local | MIT (NIDO's own module) |
-| expo | 57.0.32 | MIT |
+| expo | 57.0.31 | MIT |
 | expo-application | 57.0.3 | MIT |
-| expo-asset | 57.0.21 | MIT |
+| expo-asset | 57.0.20 | MIT |
 | expo-build-properties | 57.0.22 | MIT |
 | expo-calendar | 57.0.6 | MIT |
 | expo-clipboard | 57.0.2 | MIT |
 | expo-constants | 57.0.22 | MIT |
-| expo-constants | 57.0.23 | MIT |
 | expo-contacts | 57.0.8 | MIT |
 | expo-crypto | 57.0.4 | MIT |
 | expo-document-picker | 57.0.3 | MIT |
@@ -314,9 +313,8 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | expo-keep-awake | 57.0.2 | MIT |
 | expo-linear-gradient | 57.0.2 | MIT |
 | expo-local-authentication | 57.0.3 | MIT |
-| expo-modules-autolinking | 57.0.17 | MIT |
+| expo-modules-autolinking | 57.0.16 | MIT |
 | expo-modules-core | 57.0.24 | MIT |
-| expo-modules-core | 57.0.25 | MIT |
 | expo-modules-jsi | 57.1.3 | MIT |
 | expo-notifications | 57.0.24 | MIT |
 | expo-secure-store | 57.0.4 | MIT |
@@ -344,8 +342,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | get-caller-file | 2.0.5 | ISC |
 | get-package-type | 0.1.0 | MIT |
 | getenv | 2.0.0 | MIT |
-| glob | 13.0.7 | BlueOak-1.0.0 |
-| glob | 14.0.4 | BlueOak-1.0.0 |
+| glob | 13.0.6 | BlueOak-1.0.0 |
 | glob | 7.2.3 | ISC |
 | graceful-fs | 4.2.11 | ISC |
 | has-flag | 3.0.0 | MIT |
@@ -443,7 +440,6 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | mime-types | 3.0.2 | MIT |
 | mimic-fn | 1.2.0 | MIT |
 | minimatch | 10.2.6 | BlueOak-1.0.0 |
-| minimatch | 11.0.5 | BlueOak-1.0.0 |
 | minimatch | 3.1.5 | ISC |
 | minipass | 7.1.3 | BlueOak-1.0.0 |
 | mkdirp | 1.0.4 | MIT |
@@ -475,7 +471,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | nido-pdf-text | local | MIT (NIDO's own module) |
 | nido-secure-dialog | local | MIT (NIDO's own module) |
 | nido-vectors | local | MIT (NIDO's own module) |
-| node-forge | 1.4.3 | (BSD-3-Clause OR GPL-2.0) (used under BSD-3-Clause) |
+| node-forge | 1.4.2 | (BSD-3-Clause OR GPL-2.0) (used under BSD-3-Clause) |
 | node-int64 | 0.4.0 | MIT |
 | node-releases | 2.0.57 | MIT |
 | normalize-path | 3.0.0 | MIT |
@@ -499,7 +495,6 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | path-key | 3.1.1 | MIT |
 | path-parse | 1.0.7 | MIT |
 | path-scurry | 2.0.2 | BlueOak-1.0.0 |
-| path-scurry | 3.0.0 | BlueOak-1.0.0 |
 | picocolors | 1.1.1 | ISC |
 | picomatch | 2.3.2 | MIT |
 | picomatch | 4.0.7 | MIT |
@@ -612,7 +607,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | wrappy | 1.0.2 | ISC |
 | write-file-atomic | 4.0.2 | ISC |
 | ws | 7.5.13 | MIT |
-| ws | 8.22.1 | MIT |
+| ws | 8.22.0 | MIT |
 | xcode | 4.0.0 | Apache-2.0 |
 | xml2js | 0.6.0 | MIT |
 | xmlbuilder | 11.0.1 | MIT |
@@ -625,6 +620,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | yargs | 17.7.3 | MIT |
 | yargs-parser | 18.1.3 | ISC |
 | yargs-parser | 21.1.1 | ISC |
+| zod | 3.25.76 | MIT |
 
 ## License texts
 
@@ -2759,7 +2755,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### @expo/cli@57.0.33 — LICENSE
+### @expo/cli@57.0.32 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -2811,7 +2807,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/config@57.0.11 — LICENSE
+### @expo/config@57.0.10 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -2837,7 +2833,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/config-plugins@57.0.12 — LICENSE
+### @expo/config-plugins@57.0.11 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -2968,7 +2964,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/env@2.4.4 — LICENSE
+### @expo/env@2.4.3 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3020,7 +3016,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/fingerprint@0.20.15 — LICENSE
+### @expo/fingerprint@0.20.14 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3046,7 +3042,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/image-utils@0.11.7 — LICENSE
+### @expo/image-utils@0.11.6 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3072,7 +3068,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/inline-modules@0.1.9 — LICENSE
+### @expo/inline-modules@0.1.8 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3150,7 +3146,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/local-build-cache-provider@57.0.10 — LICENSE
+### @expo/local-build-cache-provider@57.0.9 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3176,7 +3172,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/log-box@57.0.5 — LICENSE
+### @expo/log-box@57.0.4 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3229,7 +3225,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/metro-config@57.0.14 — LICENSE
+### @expo/metro-config@57.0.13 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3333,7 +3329,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/plist@0.8.2 — LICENSE
+### @expo/plist@0.8.1 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3359,7 +3355,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/prebuild-config@57.0.20 — LICENSE
+### @expo/prebuild-config@57.0.19 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3385,7 +3381,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/require-utils@57.0.7 — LICENSE
+### @expo/require-utils@57.0.6 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3411,7 +3407,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/router-server@57.0.15 — LICENSE
+### @expo/router-server@57.0.14 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3437,7 +3433,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### @expo/schema-utils@57.0.3 — LICENSE
+### @expo/schema-utils@57.0.2 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -3566,66 +3562,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-```
-
-### @isaacs/nonrecursive-glob-match@1.1.0 — LICENSE.md
-
-```text
-# Blue Oak Model License
-
-Version 1.0.0
-
-## Purpose
-
-This license gives everyone as much permission to work with
-this software as possible, while protecting contributors
-from liability.
-
-## Acceptance
-
-In order to receive this license, you must agree to its
-rules.  The rules of this license are both obligations
-under that agreement and conditions to your license.
-You must not do anything with this software that triggers
-a rule that you cannot or will not follow.
-
-## Copyright
-
-Each contributor licenses you to do everything with this
-software that would otherwise infringe that contributor's
-copyright in it.
-
-## Notices
-
-You must ensure that everyone who gets a copy of
-any part of this software from you, with or without
-changes, also gets the text of this license or a link to
-<https://blueoakcouncil.org/license/1.0.0>.
-
-## Excuse
-
-If anyone notifies you in writing that you have not
-complied with [Notices](#notices), you can keep your
-license by taking all practical steps to comply within 30
-days after the notice.  If you do not do so, your license
-ends immediately.
-
-## Patent
-
-Each contributor licenses you to do everything with this
-software that would otherwise infringe any patent claims
-they can license or become able to license.
-
-## Reliability
-
-No contributor can revoke this license.
-
-## No Liability
-
-***As far as the law allows, this software comes as is,
-without any warranty or condition, and no contributor
-will be liable to anyone for any damages related to this
-software or this license, under any kind of legal claim.***
 ```
 
 ### @isaacs/ttlcache@1.4.1 — LICENSE
@@ -5554,7 +5490,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### babel-preset-expo@57.0.17 — LICENSE
+### babel-preset-expo@57.0.16 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -7617,6 +7553,32 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
+### deepmerge@4.3.1 — license.txt
+
+```text
+The MIT License (MIT)
+
+Copyright (c) 2012 James Halliday, Josh Duff, and other contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
+
 ### defaults@1.0.4 — LICENSE
 
 ```text
@@ -8296,7 +8258,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo@57.0.32 — LICENSE
+### expo@57.0.31 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8348,7 +8310,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-asset@57.0.21 — LICENSE
+### expo-asset@57.0.20 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8453,32 +8415,6 @@ SOFTWARE.
 ```
 
 ### expo-constants@57.0.22 — LICENSE
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-### expo-constants@57.0.23 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8738,7 +8674,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-modules-autolinking@57.0.17 — LICENSE
+### expo-modules-autolinking@57.0.16 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8765,32 +8701,6 @@ SOFTWARE.
 ```
 
 ### expo-modules-core@57.0.24 — LICENSE
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-### expo-modules-core@57.0.25 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -9617,75 +9527,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### glob@13.0.7 — LICENSE.md
-
-```text
-All packages under `src/` are licensed according to the terms in
-their respective `LICENSE` or `LICENSE.md` files.
-
-The remainder of this project is licensed under the Blue Oak
-Model License, as follows:
-
------
-
-# Blue Oak Model License
-
-Version 1.0.0
-
-## Purpose
-
-This license gives everyone as much permission to work with
-this software as possible, while protecting contributors
-from liability.
-
-## Acceptance
-
-In order to receive this license, you must agree to its
-rules.  The rules of this license are both obligations
-under that agreement and conditions to your license.
-You must not do anything with this software that triggers
-a rule that you cannot or will not follow.
-
-## Copyright
-
-Each contributor licenses you to do everything with this
-software that would otherwise infringe that contributor's
-copyright in it.
-
-## Notices
-
-You must ensure that everyone who gets a copy of
-any part of this software from you, with or without
-changes, also gets the text of this license or a link to
-<https://blueoakcouncil.org/license/1.0.0>.
-
-## Excuse
-
-If anyone notifies you in writing that you have not
-complied with [Notices](#notices), you can keep your
-license by taking all practical steps to comply within 30
-days after the notice.  If you do not do so, your license
-ends immediately.
-
-## Patent
-
-Each contributor licenses you to do everything with this
-software that would otherwise infringe any patent claims
-they can license or become able to license.
-
-## Reliability
-
-No contributor can revoke this license.
-
-## No Liability
-
-***As far as the law allows, this software comes as is,
-without any warranty or condition, and no contributor
-will be liable to anyone for any damages related to this
-software or this license, under any kind of legal claim.***
-```
-
-### glob@14.0.4 — LICENSE.md
+### glob@13.0.6 — LICENSE.md
 
 ```text
 All packages under `src/` are licensed according to the terms in
@@ -13359,66 +13201,6 @@ will be liable to anyone for any damages related to this
 software or this license, under any kind of legal claim._**
 ```
 
-### minimatch@11.0.5 — LICENSE.md
-
-```text
-# Blue Oak Model License
-
-Version 1.0.0
-
-## Purpose
-
-This license gives everyone as much permission to work with
-this software as possible, while protecting contributors
-from liability.
-
-## Acceptance
-
-In order to receive this license, you must agree to its
-rules. The rules of this license are both obligations
-under that agreement and conditions to your license.
-You must not do anything with this software that triggers
-a rule that you cannot or will not follow.
-
-## Copyright
-
-Each contributor licenses you to do everything with this
-software that would otherwise infringe that contributor's
-copyright in it.
-
-## Notices
-
-You must ensure that everyone who gets a copy of
-any part of this software from you, with or without
-changes, also gets the text of this license or a link to
-<https://blueoakcouncil.org/license/1.0.0>.
-
-## Excuse
-
-If anyone notifies you in writing that you have not
-complied with [Notices](#notices), you can keep your
-license by taking all practical steps to comply within 30
-days after the notice. If you do not do so, your license
-ends immediately.
-
-## Patent
-
-Each contributor licenses you to do everything with this
-software that would otherwise infringe any patent claims
-they can license or become able to license.
-
-## Reliability
-
-No contributor can revoke this license.
-
-## No Liability
-
-**_As far as the law allows, this software comes as is,
-without any warranty or condition, and no contributor
-will be liable to anyone for any damages related to this
-software or this license, under any kind of legal claim._**
-```
-
 ### minimatch@3.1.5 — LICENSE
 
 ```text
@@ -13716,7 +13498,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### node-forge@1.4.3 — LICENSE
+### node-forge@1.4.2 — LICENSE
 
 ```text
 You may use the Forge project under the terms of either the BSD License or the
@@ -14486,66 +14268,6 @@ SOFTWARE.
 ```
 
 ### path-scurry@2.0.2 — LICENSE.md
-
-```text
-# Blue Oak Model License
-
-Version 1.0.0
-
-## Purpose
-
-This license gives everyone as much permission to work with
-this software as possible, while protecting contributors
-from liability.
-
-## Acceptance
-
-In order to receive this license, you must agree to its
-rules.  The rules of this license are both obligations
-under that agreement and conditions to your license.
-You must not do anything with this software that triggers
-a rule that you cannot or will not follow.
-
-## Copyright
-
-Each contributor licenses you to do everything with this
-software that would otherwise infringe that contributor's
-copyright in it.
-
-## Notices
-
-You must ensure that everyone who gets a copy of
-any part of this software from you, with or without
-changes, also gets the text of this license or a link to
-<https://blueoakcouncil.org/license/1.0.0>.
-
-## Excuse
-
-If anyone notifies you in writing that you have not
-complied with [Notices](#notices), you can keep your
-license by taking all practical steps to comply within 30
-days after the notice.  If you do not do so, your license
-ends immediately.
-
-## Patent
-
-Each contributor licenses you to do everything with this
-software that would otherwise infringe any patent claims
-they can license or become able to license.
-
-## Reliability
-
-No contributor can revoke this license.
-
-## No Liability
-
-***As far as the law allows, this software comes as is,
-without any warranty or condition, and no contributor
-will be liable to anyone for any damages related to this
-software or this license, under any kind of legal claim.***
-```
-
-### path-scurry@3.0.0 — LICENSE.md
 
 ```text
 # Blue Oak Model License
@@ -17171,7 +16893,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### ws@8.22.1 — LICENSE
+### ws@8.22.0 — LICENSE
 
 ```text
 Copyright (c) 2011 Einar Otto Stangvik <einaros@gmail.com>
@@ -17650,6 +17372,32 @@ LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES
 OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
 WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
 ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+```
+
+### zod@3.25.76 — LICENSE
+
+```text
+MIT License
+
+Copyright (c) 2025 Colin McDonnell
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
 ### mlkem-native@2.0.0 — modules/nido-p2p/android/src/main/cpp/mlkem-native/LICENSE
