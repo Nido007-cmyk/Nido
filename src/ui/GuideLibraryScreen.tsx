@@ -34,6 +34,18 @@ interface PackSection {
 
 type Selection = { packId: string; guideId: number } | null;
 
+/**
+ * Tope de pintado del lector (RED TEAM 2026-11-08): montar un texto
+ * gigante en un solo <Text> puede tumbar un teléfono de gama baja, así
+ * que el cuerpo se recorta en pantalla por encima de este tamaño y se
+ * avisa. El tope está muy por encima de cualquier guía real: medido
+ * sobre el catálogo firmado v15 (174 guías), el cuerpo más largo mide
+ * 3.209 caracteres, así que 100.000 es unas 31 veces ese máximo y una
+ * guía real se pinta siempre entera. La guía guardada no se toca: el
+ * recorte es solo de pantalla.
+ */
+export const MAX_PAINTED_BODY_CHARS = 100_000;
+
 export function GuideLibraryScreen({ onClose }: { onClose: () => void }) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
@@ -114,8 +126,11 @@ export function GuideLibraryScreen({ onClose }: { onClose: () => void }) {
         ) : (
           <ScrollView contentContainerStyle={styles.body}>
             <Text style={styles.bodyText} selectable>
-              {doc.body}
+              {doc.body.length > MAX_PAINTED_BODY_CHARS ? doc.body.slice(0, MAX_PAINTED_BODY_CHARS) : doc.body}
             </Text>
+            {doc.body.length > MAX_PAINTED_BODY_CHARS ? (
+              <Text style={styles.truncatedNote}>{t("guideLibrary.truncated")}</Text>
+            ) : null}
             {doc.source ? (
               <Text style={styles.source} selectable>
                 {t("sourceReader.source", { source: doc.source })}
@@ -219,4 +234,5 @@ const getStyles = (colors: Colors, typography: Typography) =>
     },
     guideTitle: { ...typography.ui.body, color: colors.text.primary },
     source: { ...typography.ui.caption, color: colors.text.secondary, marginTop: calmSpacing.comfortable },
+    truncatedNote: { ...typography.ui.caption, color: colors.text.secondary, marginTop: calmSpacing.cozy, paddingHorizontal: calmSpacing.comfortable },
   });

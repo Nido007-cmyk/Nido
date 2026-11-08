@@ -100,6 +100,41 @@ describe("GuideLibraryScreen", () => {
     expect(await screen.findByText("guideLibrary.noPacks")).toBeTruthy();
   });
 
+  it("RED TEAM 2026-11-08: un texto gigante se pinta recortado y con aviso visible", async () => {
+    mockState.guidesByPack["pack-1"] = [
+      ...mockState.guidesByPack["pack-1"],
+      { id: 3, key: "giant", lang: "en", title: "Giant guide", category: "misc", region: "", sources: "", verified: "" },
+    ];
+    mockState.docs["pack-1:3"] = {
+      title: "Giant guide",
+      source: "",
+      body: "START " + "x".repeat(150_000) + " ENDMARKER",
+    };
+    const { GuideLibraryScreen } = require("./GuideLibraryScreen");
+    await render(<GuideLibraryScreen onClose={() => {}} />);
+    fireEvent.press(await screen.findByText("Giant guide"));
+    expect(await screen.findByText(/START/)).toBeTruthy();
+    expect(screen.getByText("guideLibrary.truncated")).toBeTruthy();
+    expect(screen.queryByText(/ENDMARKER/)).toBeNull();
+  });
+
+  it("RED TEAM 2026-11-08: una guía larga pero real (10.000 caracteres) se pinta entera y sin aviso", async () => {
+    mockState.guidesByPack["pack-1"] = [
+      ...mockState.guidesByPack["pack-1"],
+      { id: 4, key: "long", lang: "en", title: "Long guide", category: "misc", region: "", sources: "", verified: "" },
+    ];
+    mockState.docs["pack-1:4"] = {
+      title: "Long guide",
+      source: "",
+      body: "BEGIN " + "y".repeat(10_000) + " FINALWORD",
+    };
+    const { GuideLibraryScreen } = require("./GuideLibraryScreen");
+    await render(<GuideLibraryScreen onClose={() => {}} />);
+    fireEvent.press(await screen.findByText("Long guide"));
+    expect(await screen.findByText(/FINALWORD/)).toBeTruthy();
+    expect(screen.queryByText("guideLibrary.truncated")).toBeNull();
+  });
+
   it("una guía que ya no está enseña el error de lectura", async () => {
     mockState.docs["pack-1:2"] = null;
     const { GuideLibraryScreen } = require("./GuideLibraryScreen");

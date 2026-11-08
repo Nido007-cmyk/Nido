@@ -1937,6 +1937,7 @@
     "noPacks": "Ainda não há guias. Os packs que você baixar ou adicionar aparecerão aqui, prontos para ler sem modelo.",
     "noGuides": "Este pack não tem guias legíveis.",
     "readError": "Não foi possível abrir este guia. O pack pode ter sido removido ou atualizado.",
+    "truncated": "Este texto é muito longo e é mostrado encurtado na tela. O guia continua guardado inteiro no pack.",
     "back": "Voltar"
   },
   "sourceReader": {

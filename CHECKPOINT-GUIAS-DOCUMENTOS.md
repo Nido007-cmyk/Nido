@@ -346,3 +346,26 @@ probado por enumeración manual del informe; faltaba la aserción).
   commitear y restauradas: importar axios en rag/pure.ts la pone roja por
   la vía (a), y usar createDownloadResumable( en rag/packs.ts la pone
   roja por la vía (c). Sin mutación: 4/4 verdes, exit 0 en fichero.
+
+## Mejora red team 3 (2026-11-08): tope de pintado en textos extremos del lector
+
+Fuente: red team 2026-11-08, Frente 5, recomendación 3 (BAJA, condicionada
+a salir limpia y acotada). Sale limpia: se aplica solo dentro del lector.
+
+- Medida previa (contra el v15 FIRMADO, sha256 verificado contra el
+  ledger de la casa): 174 guías por pack; cuerpo de guía máximo real
+  3.209 caracteres (guía 147), mediana 1.682, p95 2.348.
+- Tope aplicado en GuideLibraryScreen.tsx: MAX_PAINTED_BODY_CHARS =
+  100.000 (unas 31 veces el máximo real). Por encima, el cuerpo se
+  recorta SOLO en pantalla antes de montarlo en el <Text> y se enseña el
+  aviso nuevo guideLibrary.truncated («Este texto es muy largo y se
+  muestra recortado en pantalla. La guía sigue guardada entera en el
+  pack.»), con clave en ES/EN/PT y paridad cobrada por las pruebas de
+  i18n. La guía guardada no se toca y readPackGuide no cambia: ninguna
+  superficie fuera del lector se ve afectada, y una guía real se pinta
+  siempre entera.
+- Pruebas: +2 en GuideLibraryScreen.component.test.tsx (un texto de
+  150.000 caracteres se pinta recortado, con el aviso visible y sin su
+  marca final; una guía de 10.000 caracteres, ya por encima del máximo
+  real, se pinta entera y sin aviso). Jest del fichero: 7/7 verdes;
+  vitest de grafo + i18n: 150/150; tsc limpio.
