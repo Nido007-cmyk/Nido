@@ -1128,3 +1128,30 @@ describe("P-03: hilos según los núcleos reales", () => {
     expect(engine.getModelInfo()?.nThreads).toBe(5);
   });
 });
+
+describe("Fase 2 (reapertura 2026-11-08): el rechazo del pre-flight deja registro", () => {
+  it("un rechazo queda en la telemetría con las cifras que vio el pre-flight", async () => {
+    const { clearTelemetry, getRecentTelemetry } = await import("./telemetry");
+    clearTelemetry();
+    mockTotalRamBytes = 2 * 1024 ** 3;
+    mockRssBytes = 1024 ** 3;
+    const engine = new LlamaEngine();
+    await expect(engine.load("models/a.gguf")).rejects.toThrow(/RAM/);
+    const rejected = getRecentTelemetry(10).filter((e) => e.stopReason === "rejected");
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].modelId).toBe("models/a.gguf");
+    expect(rejected[0].taskType).toBe("model-load");
+    expect(rejected[0].ramRejection?.totalRamBytes).toBe(2 * 1024 ** 3);
+    expect(rejected[0].ramRejection?.rssBytes).toBe(1024 ** 3);
+    expect(rejected[0].ramRejection?.availableBytes).toBe(0);
+    expect(rejected[0].ramRejection?.neededBytes).toBeGreaterThan(0);
+  });
+
+  it("una carga que cabe NO deja registro de rechazo", async () => {
+    const { clearTelemetry, getRecentTelemetry } = await import("./telemetry");
+    clearTelemetry();
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(getRecentTelemetry(10).filter((e) => e.stopReason === "rejected")).toHaveLength(0);
+  });
+});

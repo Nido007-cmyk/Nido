@@ -7,6 +7,8 @@
 import { LlamaContext, initLlama } from "llama.rn";
 import * as FileSystem from "expo-file-system/legacy";
 import { checkRamBudget, RamBudgetError, readRamSnapshot, toGb } from "../inference/ramBudget";
+import { withNativeLoadGate } from "../inference/nativeGate";
+import { recordRamRejection } from "../inference/telemetry";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { withStage } from "../utils/stageError";
 import { MODEL_CATALOG } from "../models/manifest";
@@ -33,7 +35,11 @@ export class EmbeddingEngine {
   }
 
   load(modelFilename: string): Promise<void> {
-    return this.enqueue(() => this.loadNow(modelFilename));
+    // Fase 2 (reapertura del defecto, 2026-11-08): tras la puerta de
+    // carga, como el LLM — un initLlama a la vez en todo el proceso.
+    // Antes los dos motores cargaban en paralelo (Promise.all en
+    // ChatScreen) y cada pre-flight leía la foto de RAM sin el otro.
+    return withNativeLoadGate(() => this.enqueue(() => this.loadNow(modelFilename)));
   }
 
   private async loadNow(modelFilename: string) {
@@ -61,6 +67,22 @@ export class EmbeddingEngine {
     const snapshot = readRamSnapshot();
     const verdict = snapshot ? checkRamBudget({ fileSizeBytes, nCtx: 512 }, snapshot) : null;
     if (verdict && !verdict.fits) {
+      // Fase 2 (reapertura, 2026-11-08): el rechazo también queda
+      // registrado — la tarjeta no dice qué motor la disparó, y si el
+      // que rechaza es este, el LLM ni siquiera lo intenta.
+      recordRamRejection({
+        modelId: modelFilename,
+        totalRamBytes: snapshot!.totalRamBytes,
+        rssBytes: snapshot!.rssBytes,
+        availBytes: snapshot!.availBytes ?? null,
+        thresholdBytes: snapshot!.lowMemThresholdBytes ?? null,
+        availableBytes: verdict.availableBytes,
+        neededBytes: verdict.totalBytes,
+        nCtxChosen: 512,
+        nCtxRequested: 512,
+        crashSafety: null,
+        embedding: true,
+      });
       throw new RamBudgetError(
         `Embedding model "${modelFilename}" needs roughly ${toGb(verdict.totalBytes)}GB of RAM, ` +
           `but this device only has about ${toGb(verdict.availableBytes)}GB free ` +

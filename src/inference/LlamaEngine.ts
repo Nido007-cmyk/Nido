@@ -28,9 +28,9 @@ import {
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
 import { withStage } from "../utils/stageError";
-import { recordInferenceEvent, type TelemetryStopReason } from "./telemetry";
+import { recordInferenceEvent, recordRamRejection, type TelemetryStopReason } from "./telemetry";
 import { findRepetitionLoop, trimRepetitionLoop } from "./repetitionGuard";
-import { nativeGateBegin, nativeGateEnd } from "./nativeGate";
+import { nativeGateBegin, nativeGateEnd, withNativeLoadGate } from "./nativeGate";
 import { trimToCompleteSentences } from "./completeSentences";
 import { parseGemmaReasoning } from "./gemmaReasoning";
 import type { ModelSamplingDefaults } from "../routing/types";
@@ -590,7 +590,13 @@ export class LlamaEngine {
   }
 
   load(modelFilename: string, opts?: { nCtx?: number; nThreads?: number }): Promise<void> {
-    return this.enqueue(() => this.loadNow(modelFilename, opts));
+    // Fase 2 (reapertura del defecto, 2026-11-08): la carga corre tras
+    // la puerta de carga — un initLlama a la vez en todo el proceso.
+    // Antes el LLM y el motor de embeddings arrancaban en Promise.all
+    // y sus pre-flight leían la misma foto de RAM sin verse el uno al
+    // otro. La cola interna sigue serializando las cargas de ESTE
+    // motor; la puerta ordena las de los DOS motores.
+    return withNativeLoadGate(() => this.enqueue(() => this.loadNow(modelFilename, opts)));
   }
 
   private async loadNow(modelFilename: string, opts?: { nCtx?: number; nThreads?: number }) {
@@ -686,6 +692,22 @@ export class LlamaEngine {
       }
     }
     if (verdict && !verdict.fits) {
+      // Fase 2 (reapertura del defecto, 2026-11-08): el rechazo queda
+      // registrado con sus cifras antes de lanzar. Hasta aquí no
+      // dejaba rastro y el único diagnóstico posible era modelar el
+      // aparato; con el registro, la propia app dice qué vio.
+      recordRamRejection({
+        modelId: modelFilename,
+        totalRamBytes: snapshot!.totalRamBytes,
+        rssBytes: snapshot!.rssBytes,
+        availBytes: snapshot!.availBytes ?? null,
+        thresholdBytes: snapshot!.lowMemThresholdBytes ?? null,
+        availableBytes: verdict.availableBytes,
+        neededBytes: verdict.totalBytes,
+        nCtxChosen: nCtx,
+        nCtxRequested: requestedCtx,
+        crashSafety: crashSafety < 1 ? crashSafety : null,
+      });
       throw new RamBudgetError(
         `"${modelFilename}" needs roughly ${toGb(verdict.totalBytes)}GB of RAM, but this ` +
           `device only has about ${toGb(verdict.availableBytes)}GB free (of ${toGb(verdict.totalRamBytes)}GB total). ` +

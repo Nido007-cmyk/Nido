@@ -267,6 +267,23 @@ async function resolveActiveModel(kind: "llm" | "embedding"): Promise<CatalogMod
   return found ?? fallback;
 }
 
+/**
+ * Fase 2 (reapertura del defecto, 2026-11-08): el error de carga lleva
+ * el motor que falló. La tarjeta anterior enseñaba el primer rechazo
+ * de la pareja cargada en Promise.all sin decir de cuál venía — y si
+ * el que fallaba era el motor de búsqueda, la tarjeta culpaba igual a
+ * «este modelo». El prefijo queda fuera de las palabras del patrón de
+ * memoria del diagnóstico (modelLoadDiagnosis), para que la clase —
+ * memoria, corrupción, ausencia — siga saliendo del mensaje original.
+ */
+export function embeddingLoadFailureNote(label: string, message: string): string {
+  return `Search model (${label}) failed to load — ${message}`;
+}
+
+export function llmLoadFailureNote(label: string, message: string): string {
+  return `Chat model (${label}) failed to load — ${message}`;
+}
+
 export function ChatScreen({
   onRelaunchWizard,
 }: {
@@ -691,10 +708,27 @@ export function ChatScreen({
       const emb = await resolveActiveModel("embedding");
       setActiveModel(llm);
 
-      await Promise.all([
-        llamaEngine.load(llm.filename),
-        embeddingEngine.load(emb.filename),
-      ]);
+      // Fase 2 (reapertura del defecto, 2026-11-08): los motores ya no
+      // cargan en Promise.all. Antes los dos initLlama corrían a la
+      // vez y cada pre-flight leía la misma foto de RAM sin ver al
+      // otro: la suma de ambos podía no caber aunque cada «sí» por
+      // separado fuera cierto, y el pico transitorio de la doble
+      // carga era la tormenta que la puerta nativa (M1) describe. La
+      // puerta de carga ya serializa los motores entre sí; esta
+      // secuencia además hace que el error nombre al motor que falló
+      // (la tarjeta enseñaba el primer rechazo de la pareja y no
+      // decía de cuál venía) y que el embedding, que la búsqueda y el
+      // sembrado necesitan aunque el LLM no quepa, quede cargado.
+      try {
+        await embeddingEngine.load(emb.filename);
+      } catch (e: any) {
+        throw new Error(embeddingLoadFailureNote(emb.label, e?.message ?? String(e)));
+      }
+      try {
+        await llamaEngine.load(llm.filename);
+      } catch (e: any) {
+        throw new Error(llmLoadFailureNote(llm.label, e?.message ?? String(e)));
+      }
       startAppMemoryTracking();
 
       setLoadStatus(t("chatScreen.indexingKnowledgeBase"));
