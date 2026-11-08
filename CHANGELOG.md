@@ -4,6 +4,62 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.83-alpha - 2026-11-08
+
+The 0.1.82 fix was not the whole story: on the tablet where the
+problem was reported, the "not enough memory" card kept appearing
+with 0.1.82 installed. Reopening the report found why. The two
+engines (the chat model and the search model) started at the same
+moment, and each one's memory check read the same snapshot without
+seeing the other, so together they could be waved through into
+memory that only fit one of them; and when the check did refuse a
+load, it left no record anywhere, so the only evidence was a photo
+of the card. This release starts the engines one after the other,
+records every refusal with the numbers it saw, and then makes the
+app lighter to run: the chat model now loads only when you first
+ask it something, and both engines step aside on their own when
+they have been idle or when Android says memory is critical.
+
+### Fixed
+
+- **The two engines no longer load at the same time.** The chat
+  model and the search model used to start together, each checking
+  the same free-memory snapshot as if it were alone. They now load
+  one after the other, so the second check sees the first engine
+  already resident; and when a load is refused, the error now says
+  which engine was refused instead of showing the pair's first
+  failure.
+- **A refused load now leaves a record.** The refusal is written to
+  the app's execution telemetry with the numbers the check saw
+  (total and free memory, what the model needed, the context it
+  asked for), so a report like this one can be diagnosed from the
+  device's own figures instead of from a photo.
+
+### Changed
+
+- **The chat model loads on demand.** Opening NIDO now loads only
+  the small search model: the stored guides and search work right
+  away, and the chat model loads the first time you send a message,
+  with a "Loading model…" note while it comes up. After three
+  minutes without chat activity, or after the app has spent longer
+  than that in the background, the model is unloaded again; the
+  next message reloads it, running the same memory check as before.
+- **Models size their work to the device.** On devices with less
+  memory, the engine's batch and, for the Qwen3 model, its starting
+  context are smaller from the first load, so the memory check has
+  less to fit. When the battery is under 20 percent, power saving
+  is on, or the device is running hot, a load also uses fewer
+  threads and a smaller batch.
+- **The search model also rests.** It unloads after ten minutes
+  without use and reloads by itself on the next search; background
+  indexing no longer keeps it resident, and any indexing it owed is
+  picked up on the next launch, as after any stop.
+- **Android's memory warnings now unload the models first.** When
+  the system reports critical memory pressure and nothing is being
+  generated, NIDO unloads its models instead of waiting to be
+  closed; they reload on demand when you come back.
+
+
 ## 0.1.82-alpha - 2026-11-08
 
 On tablets and phones with about 3 GB of RAM, NIDO could refuse to

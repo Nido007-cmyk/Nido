@@ -87,6 +87,20 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   liberaras. El cobro está corregido; la comprobación sigue
   negándose cuando la memoria escasea de verdad, por ejemplo con
   otras apps abiertas.
+- **Más ligero en memoria: los modelos cargan de uno en uno y solo
+  cuando hacen falta** (0.1.83): el modelo de chat y el de búsqueda
+  arrancaban a la vez, cada uno comprobando la misma memoria libre
+  como si estuviera solo; ahora arrancan uno tras otro, y si una
+  carga se rechaza queda registrada con las cifras que vio la
+  comprobación. Al abrir la app carga solo el modelo de búsqueda,
+  así que las guías y la búsqueda funcionan desde el principio; el
+  modelo de chat carga la primera vez que envías un mensaje y se
+  descarga a los tres minutos sin actividad de chat. En aparatos
+  pequeños los modelos también nacen con un lote menor (y el modelo
+  Qwen3 con un contexto menor), la batería baja, el ahorro de
+  energía o el aparato caliente bajan los hilos, y cuando Android
+  avisa de presión crítica de memoria los modelos se descargan en
+  vez de esperar a que el sistema cierre la app.
 - **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
   teléfonos emparejados, sin internet y sin servidor. Para emparejar pegas
   el código del otro teléfono (el texto de su QR); un contacto aparece como
@@ -133,7 +147,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.82-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.82-alpha).
+   [versión v0.1.83-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.83-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y
