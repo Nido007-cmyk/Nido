@@ -78,8 +78,10 @@ export interface ContextSpec {
   nLayer?: number;
   nKvHeads?: number;
   headDim?: number;
-  /** FIX 2026-10-09: para el término de logits (n_batch × n_vocab × 4B). */
-  nBatch?: number;
+  /** Output rows the engine materializes logits for per decode call.
+   *  Defaults to 1: the standard completion path requests logits only on
+   *  the last position (see estimateLogitsBytes). */
+  nLogitRows?: number;
   nVocab?: number;
 }
 
@@ -87,7 +89,7 @@ export interface RamEstimate {
   weightsBytes: number;
   kvCacheBytes: number;
   computeBytes: number;
-  /** FIX 2026-10-09: buffer de logits (n_batch × n_vocab × 4B). */
+  /** Logits output buffer (output rows × n_vocab × 4B; 1 row by default). */
   logitsBytes: number;
   totalBytes: number;
 }
@@ -116,13 +118,23 @@ const DEFAULT_ARCH = { nLayer: 28, nKvHeads: 2, headDim: 128 };
 const COMPUTE_BUFFER_BYTES_AT_4K_CTX = 256 * MiB;
 
 /**
- * FIX 2026-10-09: término de logits. llama.cpp aloca n_batch × n_vocab × 4B
- * para los logits (float32). Con Qwen2.5 (vocab 152064) y n_batch 512:
- * ~297 MiB que el estimador ignoraba. Sin esto, el pre-flight es optimista
- * y Android puede matar el proceso por OOM en el 1.5B.
+ * Logits term. The 2026-10-09 fix charged n_batch × n_vocab × 4B (~297 MiB
+ * at n_batch 512, vocab 152064) on the premise that llama.cpp allocates
+ * full-vocab logits for every position in the batch. That premise is false
+ * for the path NIDO runs: llama.rn's standard completion decodes through
+ * llama_batch_get_one, which — in the vendored source's own words
+ * (cpp/rn-completion.cpp) — "only requests logits/embeddings on the LAST
+ * position"; the all-positions variant exists only for continuous-latent
+ * TTS, which NIDO does not use. Device evidence agrees: on the owner's
+ * 3.3 GB tablet, Qwen3-0.6B sessions peaked at 743-760 MB for the WHOLE
+ * process while this estimator charged 1.003 GiB for the model alone at
+ * the ladder floor — the phantom term (0.290 GiB) exceeds the entire gap,
+ * and stacked with the 0.1.78 live-availMem term it made every model
+ * un-loadable on that tablet (defect 2026-11-08). Charge the rows the
+ * engine actually produces: one output row per decode by default.
  */
-function estimateLogitsBytes(nBatch: number, nVocab: number): number {
-  return Math.max(nBatch, 0) * Math.max(nVocab, 0) * 4;
+function estimateLogitsBytes(nRows: number, nVocab: number): number {
+  return Math.max(nRows, 0) * Math.max(nVocab, 0) * 4;
 }
 
 /**
@@ -154,8 +166,9 @@ export function estimateContextBytes(spec: ContextSpec): RamEstimate {
   const weightsBytes = Math.max(spec.fileSizeBytes, 0);
   const kvCacheBytes = estimateKvCacheBytes(nLayer, spec.nCtx, nKvHeads, headDim);
   const computeBytes = Math.ceil((COMPUTE_BUFFER_BYTES_AT_4K_CTX * Math.max(spec.nCtx, 0)) / 4096);
-  // FIX 2026-10-09: incluir logits. Defaults: n_batch 512, vocab Qwen2.5 152064.
-  const logitsBytes = estimateLogitsBytes(spec.nBatch ?? 512, spec.nVocab ?? 152064);
+  // Logits: one output row by default (last position only — see
+  // estimateLogitsBytes). Vocab default: Qwen2.5 152064.
+  const logitsBytes = estimateLogitsBytes(spec.nLogitRows ?? 1, spec.nVocab ?? 152064);
   return {
     weightsBytes,
     kvCacheBytes,
