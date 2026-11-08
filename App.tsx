@@ -218,6 +218,15 @@ function AppContent() {
   // wizard o el chat. Abrirla no monta ChatScreen ni carga el modelo: la
   // lectura de guías solo usa el almacén local de packs.
   const [libraryOpen, setLibraryOpen] = useState(false);
+  // Al salir de las pantallas desbloqueadas (re-bloqueo, pérdida de
+  // clave, error de arranque) la biblioteca se cierra de verdad, no
+  // solo se deja de pintar: sin este reseteo, al desbloquear de nuevo
+  // la capa reaparecía sola sobre el wizard sin que el usuario la
+  // abriera (defecto cazado por la prueba de integración de App del
+  // 2026-11-08, «al re-bloquear…»).
+  useEffect(() => {
+    if (screen !== "chat" && screen !== "required-setup") setLibraryOpen(false);
+  }, [screen]);
   const { t } = useTranslation();
   const { colors } = useTheme();
   const screenRef = useRef(screen);

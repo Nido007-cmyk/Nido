@@ -154,3 +154,115 @@ para llegar al lector sin montar ChatScreen. Nada más entra.
   sobre el chat, pero añadir un botón dentro de ChatScreen o su Drawer
   era rediseño de navegación, fuera del alcance preciso del dueño. Si
   la casa lo quiere, es una pieza pequeña aparte.
+
+## Verificación e integración UI (2026-11-08)
+
+Carril de verificación independiente sobre el commit 11dd691, por orden
+del dueño («asegúrate que quede bien hecha, haz las pruebas necesarias,
+que estén bien integradas a la UI»). Todo medido de nuevo en este
+worktree, no heredado del carril constructor.
+
+### 1. Integración en el flujo real de la App (nuevo)
+
+`App.component.test.tsx` (nuevo, jest de componentes, 8 pruebas, 8/8
+verdes en corrida de fichero completo y dentro de la suite): App entera
+con ChatScreen y ModelSetupScreen como marcadores, almacén de packs
+sembrado, motores espiados a nivel de App.
+
+- Sin modelo: la entrada «Leer las guías» se pinta en required-setup,
+  abre la biblioteca y lista el pack sembrado con sus dos guías; la
+  entrada no se duplica con la biblioteca abierta y ChatScreen jamás
+  se monta en esta ruta.
+- El lector muestra el texto COMPLETO de la guía larga (marcas de
+  inicio y fin presentes, con su fuente) dentro de un ScrollView
+  (comprobado subiendo por la cadena de fibras del nodo de texto hasta
+  el ScrollView compuesto, porque el árbol de RNTL 14 solo expone
+  nodos host); volver regresa a la lista.
+- Cerrar la biblioteca vuelve a la pantalla madre exacta (el wizard,
+  con su entrada visible de nuevo).
+- Con modelos listos, el desbloqueo va al chat como siempre y no hay
+  entrada nueva en el wizard: el flujo previo queda intacto.
+- En ES, EN y PT la entrada y los títulos usan las cadenas propias de
+  cada idioma, sin claves crudas.
+- Durante todo el flujo: cero llamadas a llamaEngine.load y a
+  embeddingEngine.load.
+
+### 2. Defecto encontrado y corregido en esta verificación
+
+- RE-BLOQUEO: con la biblioteca abierta, al pasar la app a segundo
+  plano y volver, el gate quedaba bien (la capa no lo tapaba), pero al
+  desbloquear de nuevo la biblioteca REAPARECÍA sola sobre el wizard:
+  `libraryOpen` sobrevivía al re-bloqueo porque solo gobernaba el
+  pintado, no el estado. La prueba de integración lo cazó en su mitad
+  final (el gate sí pasaba; la reaparición no).
+- Corrección dentro del alcance sellado (App.tsx, +9 líneas, solo
+  adición): un efecto que pone `libraryOpen` a false cuando la
+  pantalla sale de chat/required-setup. La biblioteca ahora se cierra
+  de verdad al re-bloquear, y tras desbloquear hay que abrirla.
+- La misma prueba dejó dos lecciones de entorno asentadas en sus
+  comentarios: las factorías de jest.mock deben envolver los espías en
+  cierres (una captura por valor durante la cadena de imports dejaba
+  `lockNow` en undefined, aunque el mismo mock servía
+  `ensureUnlocked`), y el listener de AppState se dispara con
+  `await act(async () => …)`, el patrón que ya usa CprPractice.
+
+### 3. Integración visual y de sistema (leído y medido)
+
+- GuideLibraryScreen usa el tema de la casa de principio a fin:
+  `useTheme` (colors y typography), calmSpacing y calmRadii, NidoIcon
+  y la háptica de la casa. Sin colores ni fuentes extranjeras; el
+  radio 9999 del botón pastilla es el patrón de la casa (presente en
+  Drawer, CatalogItemCard, KnowledgeBaseScreen y otras).
+- La capa es hija del SafeAreaView raíz de App (edges top/bottom): el
+  área segura la respeta la madre. En las dos vistas de la pantalla la
+  cabecera con los controles queda FUERA del ScrollView (nunca tapada
+  por el texto), el cuerpo hace scroll con padding inferior generoso
+  y el texto del documento es selectable.
+
+### 4. Lo que no se tocó, probado
+
+- Diff contra la base 70aa7dd cobrado de nuevo: ChatScreen.tsx = 0
+  líneas; ModelSetupScreen.tsx (el wizard) = 0 líneas; App.tsx solo
+  adiciones (+48, 0 borrados): import, estado y efecto de la capa,
+  entrada bajo el wizard, overlay y tres estilos.
+- Paridad i18n recontada por programa sobre los JSON: la sección
+  guideLibrary tiene las mismas 8 claves en en, es y pt (title, open,
+  intro, loading, noPacks, noGuides, readError, back), con cadenas
+  reales y distintas por idioma.
+
+### 5. Grafo de imports (ruta independiente de la dinámica)
+
+- `src/ui/guideLibraryImportGraph.test.ts` (nuevo, vitest, 3/3 verde):
+  camina el grafo desde GuideLibraryScreen (estáticos, export-from,
+  import() y require(), incluidos los de solo tipos) y comprueba que
+  el cierre (34 ficheros) no contiene src/inference/LlamaEngine.ts ni
+  src/rag/embed.ts, que ningún especificador externo es llama.rn, y
+  que lo único alcanzado bajo src/inference/ es nativeGate.ts, una
+  bandera sin imports. Incluye aserciones de cordura (la cadena llega
+  a rag/packs.ts y al tema) para que un caminante roto no pase en falso.
+
+### 6. Cierre sobre la punta final
+
+- vitest completo: exit 0, 383 ficheros y 6.296 pruebas verdes (6.293
+  de la pieza + 3 nuevas del grafo). Nota honesta: la primera corrida
+  completa dio 1 fallo ajeno, la prueba de coste con presupuesto de
+  60 ms de src/agent/loop/routerCost.test.ts (76,1 ms medidos con un
+  tsc en paralelo en la misma máquina); re-corrida en solitario, 11/11
+  verde, y la segunda corrida completa, sin carga paralela, cerró en
+  exit 0 con las 6.296.
+- jest de componentes completo: exit 0, 18 suites y 78 pruebas verdes
+  (70 de la pieza + 8 nuevas de App).
+- `tsc --noEmit`: exit 0, sin salida.
+- Exit codes cobrados de fichero de log en todas las corridas, sin
+  tuberías.
+
+### Veredicto de la verificación
+
+La pieza queda INTEGRADA Y PROBADA: flujo real de App cubierto de
+principio a fin en los tres idiomas, cero cargas de motor por dos
+rutas independientes (dinámica y grafo estático), sistema visual de la
+casa respetado, y el único defecto encontrado (la reaparición tras el
+re-bloqueo) corregido dentro del alcance y cubierto por la prueba que
+lo cazó. Sigue fuera, como ya decía el cierre del constructor: la
+ronda física del dueño en su tableta y la integración a main por PR,
+que hace la casa. Sin push ni PR desde esta rama.
