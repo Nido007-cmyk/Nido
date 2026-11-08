@@ -27,6 +27,7 @@ import {
 } from "./memoryLadder";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
+import { contextCeilingForDevice } from "../models/defaultModel";
 import { withStage } from "../utils/stageError";
 import { recordInferenceEvent, recordRamRejection, type TelemetryStopReason } from "./telemetry";
 import { findRepetitionLoop, trimRepetitionLoop } from "./repetitionGuard";
@@ -618,7 +619,16 @@ export class LlamaEngine {
     // explícita manda ella, como siempre. El CrashGuard asienta su
     // registro al abrir la carga y su factor entra en el plan.
     const explicitCtx = opts?.nCtx !== undefined;
-    const requestedCtx = opts?.nCtx ?? catalogEntry?.defaultNCtx ?? 4096;
+    // Optimización 2026-11-08 (plan n.º 7): sin opción explícita, el
+    // techo puede nacer ya reducido en aparatos de ≤4 GiB para los
+    // modelos cuyo contexto declarado es 3072 (contextCeilingForDevice
+    // en defaultModel.ts); la lectura de RAM es la misma foto que el
+    // pre-flight usa abajo. Con opción explícita manda ella, como
+    // siempre, y sin lectura manda el techo declarado.
+    const ceilingSnapshot = explicitCtx ? null : readRamSnapshot();
+    const requestedCtx =
+      opts?.nCtx ??
+      contextCeilingForDevice(catalogEntry?.defaultNCtx, ceilingSnapshot?.totalRamBytes ?? null);
     let nCtx = requestedCtx;
     // P-03: sin opción explícita, los hilos salen de los núcleos
     // reales del aparato (política en ramBudget.ts); la opción

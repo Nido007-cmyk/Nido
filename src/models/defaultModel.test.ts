@@ -20,6 +20,7 @@ import { MODEL_CATALOG, pinnedSourceUrl } from "./manifest";
 import {
   defaultLlmForRam,
   defaultLlmForDevice,
+  contextCeilingForDevice,
   contextSpecForModel,
   contextSpecForFilename,
   PREFERRED_LLM_ID,
@@ -33,6 +34,25 @@ const MiB = 1024 ** 2;
 beforeEach(() => {
   mockTotalRam = 0;
   mockShouldThrow = false;
+});
+
+describe("contextCeilingForDevice (optimización 2026-11-08, plan n.º 7)", () => {
+  it("en ≤4 GiB el techo declarado 3072 (el del Qwen3) nace en 2048", () => {
+    expect(contextCeilingForDevice(3072, 3.54 * GiB)).toBe(2048);
+    expect(contextCeilingForDevice(3072, 4 * GiB)).toBe(2048);
+  });
+
+  it("fuera de la clase o con otro techo declarado, manda lo declarado", () => {
+    expect(contextCeilingForDevice(3072, 6 * GiB)).toBe(3072);
+    expect(contextCeilingForDevice(4096, 3.54 * GiB)).toBe(4096);
+    expect(contextCeilingForDevice(2048, 3.54 * GiB)).toBe(2048);
+  });
+
+  it("a ciegas manda lo declarado, y sin declarado el 4096 de siempre", () => {
+    expect(contextCeilingForDevice(3072, null)).toBe(3072);
+    expect(contextCeilingForDevice(3072, 0)).toBe(3072);
+    expect(contextCeilingForDevice(undefined, 3.54 * GiB)).toBe(4096);
+  });
 });
 
 describe("0.5B catalog entry", () => {

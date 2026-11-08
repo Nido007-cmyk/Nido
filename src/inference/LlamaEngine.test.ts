@@ -877,6 +877,26 @@ describe("Qwen3 noThink: enable_thinking en el motor", () => {
   const QWEN25 = "models/qwen2.5-0.5b-instruct-q4km.gguf";
   const MSGS = [{ role: "user", content: "hola" }];
 
+  it("en la clase ≤4 GiB el Qwen3 (techo declarado 3072) nace con n_ctx 2048", async () => {
+    mockTotalRamBytes = 3.3 * 1024 ** 3;
+    // RSS 0 en este escenario: se mide el TECHO con el que el motor
+    // nace, no el ajuste de la escalera a la presión del momento
+    // (con el RSS por defecto del arnés el disponible cae por debajo
+    // del piso y la escalera ni siquiera entra en juego).
+    mockRssBytes = 0;
+    const engine = new LlamaEngine();
+    await engine.load(QWEN3);
+    expect(initCalls[0].n_ctx).toBe(2048);
+  });
+
+  it("en la clase ancha el Qwen3 conserva su techo declarado 3072", async () => {
+    mockTotalRamBytes = 12 * 1024 ** 3;
+    const engine = new LlamaEngine();
+    await engine.load(QWEN3);
+    expect(initCalls[0].n_ctx).toBe(3072);
+  });
+
+
   it("un modelo noThink recibe enable_thinking=false con messages", async () => {
     const engine = new LlamaEngine();
     await engine.load(QWEN3);

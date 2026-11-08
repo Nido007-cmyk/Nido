@@ -24,7 +24,7 @@ cuantizaciones; el juez y las leyes selladas no se tocan).
 
 ## Estado por fase
 - Fase 1 · Carga perezosa del LLM + descarga por inactividad (3 min): EN CURSO (commit tras el de lote)
-- Fase 2 · Escaleras de contexto y batch por RAM: lote HECHO (commit de lote: batchForRam en ramBudget.ts + llmInitParamsForProfile con lote por clase; dirigidas ramBudget+LlamaEngine 104/104) · techo de contexto del Qwen3 en ≤4 GiB: EN CURSO (commit siguiente)
+- Fase 2 · Escaleras de contexto y batch por RAM: HECHA (lote por clase + techo de contexto del Qwen3 en ≤4 GiB: contextCeilingForDevice en defaultModel.ts, cableado en la carga sin opción explícita; dirigidas defaultModel+LlamaEngine+ramBudget 122/122)
 - Fase 3 · Hilos adaptativos (batería + temperatura): PENDIENTE
 - Fase 4 · Embeddings e indexado bajo demanda/pausados: PENDIENTE
 - Fase 5 · Limpieza post-generación + onTrimMemory: PENDIENTE
