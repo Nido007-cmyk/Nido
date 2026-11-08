@@ -4,6 +4,32 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.82-alpha - 2026-11-08
+
+On tablets and phones with about 3 GB of RAM, NIDO could refuse to
+load any model at all, saying there was not enough free memory even
+with every other app closed. The check that runs before a model loads
+was charging each model for memory the engine never uses. This
+release corrects that charge; nothing else about the check changes.
+
+### Fixed
+
+- **The memory check before loading a model overcharged every
+  model.** It added the output scores (logits) for all 512 positions
+  of a batch, about 0.29 GB, but the engine only produces those
+  scores for the last position, so the charge counted memory that is
+  never allocated. On a tablet with about 3.3 GB of RAM, that phantom
+  charge alone was bigger than the space the check allows, so even
+  the small models that had been running fine on that tablet failed
+  the check, and freeing memory could not change the result. The
+  check now charges the one row of scores the engine really
+  produces.
+- **The protection is unchanged.** When memory is really short, for
+  example with other apps open, the check still refuses to load, and
+  a regression test keeps it that way. The live memory reading, the
+  2 GB system headroom, the context ladder and the crash guard were
+  not touched.
+
 ## 0.1.81-alpha - 2026-11-08
 
 The guides stored on the device can now be read as documents, from

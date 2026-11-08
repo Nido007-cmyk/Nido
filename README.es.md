@@ -79,6 +79,14 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   aún no ha descargado ningún modelo, y nunca usa la red. Una guía muy
   larga se muestra acortada, con un aviso que lo dice; la guía sigue
   guardada entera en su pack.
+- **Vuelve a cargar sus modelos en aparatos con poca RAM** (0.1.82):
+  la comprobación que corre antes de cargar un modelo cobraba a cada
+  modelo unos 0,29 GB por unos resultados que el motor solo produce
+  para una posición, así que en una tableta de unos 3,3 GB de RAM
+  ningún modelo pasaba la comprobación, liberaras la memoria que
+  liberaras. El cobro está corregido; la comprobación sigue
+  negándose cuando la memoria escasea de verdad, por ejemplo con
+  otras apps abiertas.
 - **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
   teléfonos emparejados, sin internet y sin servidor. Para emparejar pegas
   el código del otro teléfono (el texto de su QR); un contacto aparece como
@@ -125,7 +133,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.81-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.81-alpha).
+   [versión v0.1.82-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.82-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y

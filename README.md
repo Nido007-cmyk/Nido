@@ -76,6 +76,13 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   yet, and it never uses the network. A very long guide is shown
   shortened, with a note saying so; the guide stays stored in full in
   its pack.
+- **Loads its models again on devices with little RAM** (0.1.82): the
+  check that runs before a model loads was charging every model about
+  0.29 GB for output scores the engine only produces for one
+  position, so on a tablet with about 3.3 GB of RAM no model could
+  pass the check, however much memory was freed. The charge is
+  corrected; the check still refuses when memory is really short, for
+  example with other apps open.
 - **Talks to another NIDO over Bluetooth**: encrypted messages between two
   paired phones, with no internet and no server. To pair, you paste the
   other phone's code (the text of its QR); a contact shows as verified only
@@ -121,7 +128,7 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.81-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.81-alpha).
+   [v0.1.82-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.82-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4

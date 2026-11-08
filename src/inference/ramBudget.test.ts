@@ -29,6 +29,7 @@ import {
   readProcessorCount,
   toGb,
 } from "./ramBudget";
+import { planContext } from "./memoryLadder";
 
 const GiB = 1024 ** 3;
 const MiB = 1024 ** 2;
@@ -66,8 +67,9 @@ describe("estimateContextBytes", () => {
     expect(e.weightsBytes).toBe(986_048_768);
     expect(e.kvCacheBytes).toBe(117_440_512);
     expect(e.computeBytes).toBe(256 * MiB);
-    // FIX 2026-10-09: incluye término de logits (512 × 152064 × 4B).
-    expect(e.logitsBytes).toBe(512 * 152064 * 4);
+    // Defecto 2026-11-08: los logits se cobran por fila de salida (1 por
+    // defecto), no por lote completo: 1 × 152064 × 4B.
+    expect(e.logitsBytes).toBe(1 * 152064 * 4);
     expect(e.totalBytes).toBe(e.weightsBytes + e.kvCacheBytes + e.computeBytes + e.logitsBytes);
     // ~1.28 GiB ~= 1.40x the 0.92 GiB file — documents why the old flat
     // 1.15x factor under-estimated the real working set.
@@ -132,7 +134,7 @@ describe("checkRamBudget", () => {
   it("a small embedding context fits almost anywhere", () => {
     // FIX 2026-10-09: los embeddings usan vocab pequeño; pasar nVocab explícito
     // para no aplicar el default de 152k (Qwen2.5).
-    const emb = { fileSizeBytes: 36_806_944, nCtx: 512, nVocab: 32000, nBatch: 512 };
+    const emb = { fileSizeBytes: 36_806_944, nCtx: 512, nVocab: 32000 };
     const v = checkRamBudget(emb, { totalRamBytes: 4 * GiB, rssBytes: 1 * GiB });
     expect(v!.fits).toBe(true);
     expect(v!.totalBytes).toBeLessThan(200 * MiB);
@@ -167,6 +169,49 @@ describe("checkRamBudget con la memoria libre en vivo (prueba física 2026-11-06
     const v = checkRamBudget(DEFAULT_MODEL, { totalRamBytes: 4 * GiB, rssBytes: 0, availBytes: 0.1 * GiB, lowMemThresholdBytes: 0.3 * GiB })!;
     expect(v.availableBytes).toBe(0);
     expect(v.fits).toBe(false);
+  });
+});
+
+describe("defecto 2026-11-08: ningún modelo cargaba en la tableta de 3,3 GiB", () => {
+  // Cifras del manifiesto real y de la telemetría del dueño: Qwen3-0.6B
+  // corrió con SUCCESS el 31/10/2026 con el proceso entero picando en
+  // 743-760 MB; el estimador viejo le cobraba 1,003 GiB solo al modelo en
+  // el piso (2048) por el término de logits de lote completo (0,290 GiB).
+  const QWEN3 = { fileSizeBytes: 396_705_472, nLayer: 28, nKvHeads: 8, headDim: 128 };
+  const QWEN25_05B = { fileSizeBytes: 397_808_192, nLayer: 24, nKvHeads: 2, headDim: 64 };
+  // La tableta como la modela esta misma suite: total 3,3 GiB.
+  const TABLET_CLOSED = { totalRamBytes: 3.3 * GiB, rssBytes: 0.35 * GiB, availBytes: 1.8 * GiB, lowMemThresholdBytes: 0.35 * GiB };
+  const TABLET_BUSY = { totalRamBytes: 3.3 * GiB, rssBytes: 0.4 * GiB, availBytes: 1.0 * GiB, lowMemThresholdBytes: 0.2 * GiB };
+
+  it("la estimación del Qwen3-0.6B ya no supera el pico real medido del proceso entero", () => {
+    const floor = estimateContextBytes({ ...QWEN3, nCtx: 2048 });
+    expect(floor.totalBytes).toBeLessThan(760 * 1024 * 1024);
+    expect(floor.logitsBytes).toBe(152064 * 4);
+  });
+
+  it("con las demás apps cerradas, el Qwen3-0.6B cabe a su contexto por defecto (3072)", () => {
+    const v = checkRamBudget({ ...QWEN3, nCtx: 3072 }, TABLET_CLOSED)!;
+    expect(v.availableBytes).toBeCloseTo(0.95 * GiB, -6);
+    expect(v.fits).toBe(true);
+  });
+
+  it("la escalera lo admite al piso con un peldaño de CrashGuard (0,8) y el 0.5B con dos (0,65)", () => {
+    const planQwen3 = planContext(QWEN3, TABLET_CLOSED, { ceiling: 3072, safety: 0.8 })!;
+    expect(planQwen3.verdict.fits).toBe(true);
+    expect(planQwen3.nCtx).toBe(2048);
+    const plan05 = planContext(QWEN25_05B, TABLET_CLOSED, { ceiling: 4096, safety: 0.65 })!;
+    expect(plan05.verdict.fits).toBe(true);
+  });
+
+  it("la protección del 06/11 sigue: con otras apps abiertas el Qwen3-0.6B se sigue rechazando", () => {
+    const plan = planContext(QWEN3, TABLET_BUSY, { ceiling: 3072, safety: 1 })!;
+    expect(plan.verdict.availableBytes).toBeCloseTo(0.55 * GiB, -6);
+    expect(plan.verdict.fits).toBe(false);
+  });
+
+  it("el embedding e5 ya no paga logits de vocabulario: estima su peso real, no 0,458 GiB", () => {
+    const e = estimateContextBytes({ fileSizeBytes: 132_441_664, nCtx: 512 });
+    expect(e.totalBytes).toBeLessThan(0.2 * GiB);
   });
 });
 

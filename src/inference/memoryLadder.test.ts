@@ -24,8 +24,9 @@ import {
 import type { RamSnapshot } from "./ramBudget";
 
 // Modelo de 1 GiB con la arquitectura por defecto (Qwen2.5-1.5B).
-// Costes estimados (ramBudget): 8192 → 2.157 GB · 4096 → 1.771 GB ·
-// 3072 → 1.675 GB · 2048 → 1.578 GB. Disponible = total − RSS − 2 GiB.
+// Costes estimados (ramBudget): 8192 → 1.846 GB · 4096 → 1.460 GB ·
+// 3072 → 1.364 GB · 2048 → 1.267 GB (defecto 2026-11-08: los logits ya
+// no se cobran por lote completo). Disponible = total − RSS − 2 GiB.
 const SPEC = { fileSizeBytes: 1024 ** 3 };
 const snap = (totalRamBytes: number, rssBytes = 0): RamSnapshot => ({ totalRamBytes, rssBytes });
 
@@ -38,22 +39,22 @@ describe("planContext (la escalera)", () => {
   });
 
   it("si el techo no cabe, baja peldaños hasta el que cabe", () => {
-    // Disponible ≈ 1.720 GB: 4096 (1.771) no, 3072 (1.675) sí.
-    const plan = planContext(SPEC, snap(3_867_483_648), { ceiling: 4096 });
+    // Disponible ≈ 1.410 GB: 4096 (1.460) no, 3072 (1.364) sí.
+    const plan = planContext(SPEC, snap(3_557_483_648), { ceiling: 4096 });
     expect(plan?.nCtx).toBe(3072);
     expect(plan?.verdict.fits).toBe(true);
     expect(plan?.note).toContain("stepped down from 4096 to 3072");
   });
 
   it("si ni el peldaño menor cabe, el plan es el menor con fits=false", () => {
-    const plan = planContext(SPEC, snap(3_600_000_000), { ceiling: 4096 });
+    const plan = planContext(SPEC, snap(3_300_000_000), { ceiling: 4096 });
     expect(plan?.nCtx).toBe(2048);
     expect(plan?.verdict.fits).toBe(false);
   });
 
   it("el factor de seguridad del CrashGuard también hace bajar", () => {
-    // A safety 1 el 4096 cabe; a 0,8 el presupuesto es 1.718 GB y baja a 3072.
-    const plan = planContext(SPEC, snap(4 * 1024 ** 3), { ceiling: 4096, safety: 0.8 });
+    // A safety 1 el 4096 cabe; a 0,8 el presupuesto es 1.400 GB y baja a 3072.
+    const plan = planContext(SPEC, snap(3_897_483_648), { ceiling: 4096, safety: 0.8 });
     expect(plan?.nCtx).toBe(3072);
     expect(plan?.note).toContain("80% after a memory crash");
   });

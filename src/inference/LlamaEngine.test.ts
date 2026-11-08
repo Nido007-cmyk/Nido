@@ -333,10 +333,11 @@ describe("LlamaEngine load/unload", () => {
 
 describe("Bounty tanda 3: escalera de memoria y CrashGuard", () => {
   // Costes con la arquitectura por defecto y el fichero de 1 MB del
-  // mock: ctx 4096 ≈ 698 MB · 3072 ≈ 602 MB. Disponible = total − RSS
-  // − 2 GiB de reserva.
+  // mock: ctx 4096 ≈ 387 MB · 3072 ≈ 291 MB (defecto 2026-11-08: los
+  // logits ya no se cobran por lote completo). Disponible = total −
+  // RSS − 2 GiB de reserva.
   it("baja un peldaño de contexto en vez de rechazar cuando el techo no cabe", async () => {
-    mockTotalRamBytes = 2 * 1024 ** 3 + 650_000_000; // ≈650 MB libres: 4096 no, 3072 sí
+    mockTotalRamBytes = 2 * 1024 ** 3 + 340_000_000; // ≈340 MB libres: 4096 no, 3072 sí
     mockRssBytes = 0;
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
@@ -345,9 +346,9 @@ describe("Bounty tanda 3: escalera de memoria y CrashGuard", () => {
   });
 
   it("un choque sin confirmar reduce el presupuesto de la siguiente carga, y generar confirma", async () => {
-    // ≈800 MB libres: a factor 1 el 4096 cabría; el pendiente de un
-    // proceso muerto cuenta un choque (factor 0,8 → 640 MB) y baja a 3072.
-    mockTotalRamBytes = 2 * 1024 ** 3 + 800_000_000;
+    // ≈450 MB libres: a factor 1 el 4096 cabría; el pendiente de un
+    // proceso muerto cuenta un choque (factor 0,8 → 360 MB) y baja a 3072.
+    mockTotalRamBytes = 2 * 1024 ** 3 + 450_000_000;
     mockRssBytes = 0;
     fsStore.set(
       "file:///docs/nido-crash-guard.json",
@@ -473,9 +474,9 @@ describe("Crash nativo M2+M3: registro de sesión y CrashGuard que aprende", () 
   });
 
   it("arranque tras CRASH_NATIVE generando: choque ×0,8 contado una vez, fondo apagado y veredicto asentado", async () => {
-    // ≈800 MB libres: a factor 1 el 4096 cabría; el choque aprendido
-    // (×0,8) baja el plan a 3072, como un choque del CrashGuard.
-    mockTotalRamBytes = 2 * 1024 ** 3 + 800_000_000;
+    // ≈450 MB libres: a factor 1 el 4096 cabría; el choque aprendido
+    // (×0,8 → 360 MB) baja el plan a 3072, como un choque del CrashGuard.
+    mockTotalRamBytes = 2 * 1024 ** 3 + 450_000_000;
     mockRssBytes = 0;
     seedDeadGeneration(true);
     // La carga que murió dejó su pendiente sin confirmar: el cruce lo
