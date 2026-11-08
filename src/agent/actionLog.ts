@@ -45,6 +45,14 @@ export interface ActionLogEntry {
   /** true si el usuario confirmó explícitamente antes de ejecutar. */
   confirmed: boolean;
   undo?: UndoRef;
+  /**
+   * RED TEAM 2026-11-08: procedencia del intento de inyección detectado
+   * en el turno (fuente y origen del contenido no confiable, p. ej.
+   * "tool_result (nido_read_inbox)"). Es la etiqueta que la política ya
+   * calculaba: nunca el contenido en sí, que no se guarda. Ausente si el
+   * detector no saltó.
+   */
+  injectionOrigin?: string;
 }
 
 export type ActionLogSink = (entry: ActionLogEntry) => void;
@@ -66,7 +74,13 @@ class ActionLog {
     this.pendingUndo.set(tool, undo);
   }
 
-  record(tool: string, outcome: ActionOutcome, confirmed = false, undo?: UndoRef): void {
+  record(
+    tool: string,
+    outcome: ActionOutcome,
+    confirmed = false,
+    undo?: UndoRef,
+    injectionOrigin?: string,
+  ): void {
     const pending = this.pendingUndo.get(tool);
     this.pendingUndo.delete(tool);
     const ref = outcome === "executed" ? (undo ?? pending) : undefined;
@@ -76,6 +90,7 @@ class ActionLog {
       outcome,
       confirmed,
       ...(ref ? { undo: ref } : {}),
+      ...(injectionOrigin ? { injectionOrigin } : {}),
     };
     this.entries.push(entry);
     if (this.entries.length > MAX_ENTRIES) {

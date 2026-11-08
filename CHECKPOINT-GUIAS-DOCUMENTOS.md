@@ -266,3 +266,55 @@ re-bloqueo) corregido dentro del alcance y cubierto por la prueba que
 lo cazó. Sigue fuera, como ya decía el cierre del constructor: la
 ronda física del dueño en su tableta y la integración a main por PR,
 que hace la casa. Sin push ni PR desde esta rama.
+
+## Mejora red team 1 (2026-11-08): el detector de inyección se pronuncia antes que la lista de irreversibles
+
+Carril de mejoras del red team sobre esta misma rama, por orden del dueño
+(«Arregla todo lo que puedas para la siguiente versión»). Fuente:
+~/workspace/red-team-nido-2026-11-08.md, Frente 3, hallazgo BAJO de orden y
+observabilidad. La defensa estructural no dependía del detector; la mejora
+es de orden de evaluación y observabilidad, no de política.
+
+- Orden nuevo en evaluateAction (src/agent/policy/policyEngine.ts):
+  detectInjectionAttempt corre primero. La política no cambia: el detector
+  sigue siendo una señal, no la defensa, así que su salto NUNCA bloquea una
+  herramienta irreversible por sí solo. Lo que cambia: la decisión de
+  confirmación de una irreversible lleva ahora el campo nuevo
+  injectionOrigin (fuente y origen del contenido, p. ej.
+  "tool_result (nido_read_inbox)") cuando el detector saltó; la decisión
+  de bloqueo por inyección también lo declara. Sin salto, el campo no
+  existe y las decisiones son byte a byte las de antes.
+- Aviso en el diálogo: describePolicyConfirmation
+  (src/agent/policy/confirmText.ts) añade al final de cualquier texto de
+  confirmación (el específico de la herramienta y el genérico) el aviso
+  de procedencia cuando la decisión trae injectionOrigin: «esta idea viene
+  de un documento o mensaje marcado como sospechoso», en ES/EN/PT desde la
+  tabla propia del fichero (no usa claves t(): la superficie de
+  confirmación de la política vive de esa tabla desde TOOLS-AUDIT
+  2026-10-11, con paridad cobrada por sus pruebas; no se tocaron los JSON
+  de locales). Los datos exactos que el usuario aprueba (número, texto,
+  contenido) no se tocan. Punto natural usado: el onConfirmTool de
+  ChatScreen pasa la decisión entera a describePolicyConfirmation, así que
+  el aviso llega al diálogo sin tocar ChatScreen.
+- Registro con origen: ActionLogEntry gana injectionOrigin opcional
+  (src/agent/actionLog.ts; solo la etiqueta fuente/origen, nunca el
+  contenido, coherente con que el registro no guarda argumentos) y el
+  dispatcher la pasa en los desenlaces que nacen de la decisión:
+  blocked, cancelled, executed y failed. La persistencia en la base
+  cifrada (actionLogStore) NO se tocó: su esquema no tiene columna para
+  el origen y abrir una migración por un campo de observabilidad no era
+  acotado; el origen vive en el registro en memoria del turno y en la
+  decisión. Asentado como límite conocido.
+- authorization.ts no se tocó: authorize() delega tarde en el motor (sus
+  ASK de irreversibles nacen de su lista propia, sin el detector), y
+  checkAuthConsistency cobra sus invariantes igual, porque las
+  irreversibles siguen requiriendo confirmación en ambas rutas.
+- Pruebas: +3 en policyEngine.test.ts (irreversible con inyección sigue
+  siendo confirmación y trae la marca; sin inyección no hay marca; el
+  bloqueo declara su procedencia), +2 en dispatcher.test.ts (la entrada
+  executed y la blocked conservan el origen en el registro real), +2 en
+  confirmText.test.ts (aviso en los tres idiomas con los datos exactos
+  intactos; sin procedencia ningún diálogo lleva el aviso). Corrida
+  dirigida sobre 5 ficheros del área: 76/76 verdes, exit 0 en fichero;
+  tsc --noEmit limpio. Los conteos de la suite completa van en la sección
+  de cierre de esta tanda.

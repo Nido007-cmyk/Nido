@@ -103,6 +103,16 @@ export interface PolicyDecision {
   reason: string;
   /** If true, require human confirmation before executing */
   requiresConfirmation: boolean;
+  /**
+   * RED TEAM 2026-11-08 (hallazgo BAJO): si el detector de inyección saltó
+   * en el contexto no confiable del turno, aquí viaja su procedencia
+   * (fuente y origen, p. ej. "tool_result (nido_read_inbox)"). Las
+   * decisiones que acaban en confirmación lo llevan para que el diálogo
+   * avise de dónde viene el intento en vez de presentar la acción como
+   * una confirmación ordinaria, y para que el registro lo conserve.
+   * Ausente cuando el detector no saltó.
+   */
+  injectionOrigin?: string;
 }
 
 /**
@@ -136,6 +146,18 @@ const IRREVERSIBLE_TOOLS = new Set([
  * Pure function - deterministic, testable.
  */
 export function evaluateAction(action: ToolAction): PolicyDecision {
+  // RED TEAM 2026-11-08 (hallazgo BAJO, orden de evaluación): el detector
+  // de inyección se pronuncia ANTES que la lista de irreversibles. Hasta
+  // ahora una herramienta irreversible devolvía su ASK sin que el detector
+  // llegara a correr, así que el diálogo no podía avisar de la procedencia
+  // sospechosa y el intento no quedaba registrado con su origen. La
+  // política NO cambia: el detector sigue siendo una señal, no la defensa
+  // (la defensa estructural es confirmación ineludible + fail-closed), así
+  // que un salto del detector NUNCA bloquea una irreversible por sí solo:
+  // la decisión sigue siendo la confirmación de siempre, ahora con
+  // `injectionOrigin` para que el diálogo avise y el registro lo conserve.
+  const injectionDetected = detectInjectionAttempt(action.context);
+
   // 1. Check for irreversible actions
   if (IRREVERSIBLE_TOOLS.has(action.tool)) {
     return {
@@ -143,17 +165,18 @@ export function evaluateAction(action: ToolAction): PolicyDecision {
       risk: "critical",
       reason: `Tool '${action.tool}' is irreversible and requires human confirmation.`,
       requiresConfirmation: true,
+      ...(injectionDetected ? { injectionOrigin: injectionDetected } : {}),
     };
   }
 
   // 2. Check for prompt injection in untrusted context
-  const injectionDetected = detectInjectionAttempt(action.context);
   if (injectionDetected) {
     return {
       allowed: false,
       risk: "high",
       reason: `Potential prompt injection detected in ${injectionDetected}. Action blocked.`,
       requiresConfirmation: false,
+      injectionOrigin: injectionDetected,
     };
   }
 
