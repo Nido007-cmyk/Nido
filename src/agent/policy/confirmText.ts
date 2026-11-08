@@ -74,6 +74,16 @@ const T = {
     en: "This can't be undone.",
     pt: "Isso não pode ser desfeito.",
   },
+  // RED TEAM 2026-11-08: aviso de procedencia sospechosa. Se añade al final
+  // del mensaje de confirmación cuando la política detectó un intento de
+  // inyección en el contenido no confiable del turno: la acción se presenta
+  // igual que siempre (mismos datos exactos), pero el usuario sabe que la
+  // idea vino de contenido marcado como sospechoso, no de él.
+  suspiciousOrigin: {
+    es: "Ojo: esta idea viene de contenido marcado como sospechoso ({{origin}}), no de lo que tú escribiste. Confírmala solo si de verdad quieres hacerla.",
+    en: "Careful: this idea comes from content flagged as suspicious ({{origin}}), not from what you wrote. Confirm only if you really mean to do it.",
+    pt: "Atenção: esta ideia vem de conteúdo marcado como suspeito ({{origin}}), não do que você escreveu. Confirme apenas se você realmente quer fazê-la.",
+  },
 } as const;
 
 function fill(s: string, vars: Record<string, string>): string {
@@ -87,25 +97,36 @@ function str(v: unknown): string {
 }
 
 export function describePolicyConfirmation(
-  decision: Pick<PolicyDecision, "risk" | "reason">,
+  decision: Pick<PolicyDecision, "risk" | "reason" | "injectionOrigin">,
   action: { tool: string; args: Record<string, unknown> } | undefined,
   lang: ConfirmLang = "es",
 ): ConfirmDialogText {
   const tool = action?.tool ?? "";
   const args = action?.args ?? {};
+  // RED TEAM 2026-11-08: si la decisión trae procedencia de inyección, el
+  // aviso va al final de CUALQUIER texto de confirmación (el específico de
+  // la herramienta y el genérico), sin tocar los datos exactos que el
+  // usuario aprueba.
+  const withOrigin = (d: ConfirmDialogText): ConfirmDialogText =>
+    decision.injectionOrigin
+      ? {
+          title: d.title,
+          message: `${d.message}\n\n${fill(T.suspiciousOrigin[lang], { origin: decision.injectionOrigin })}`,
+        }
+      : d;
   if (tool === "place_call") {
-    return {
+    return withOrigin({
       title: T.callTitle[lang],
       message: fill(T.callMessage[lang], { phone: str(args.phone) }),
-    };
+    });
   }
   if (tool === "send_sms") {
-    return {
+    return withOrigin({
       title: T.smsTitle[lang],
       // El texto COMPLETO, sin recortar (mismo principio que N2 en
       // nido_send_message: el usuario aprueba los bytes exactos).
       message: fill(T.smsMessage[lang], { phone: str(args.phone), message: str(args.message) }),
-    };
+    });
   }
   if (tool === "delete_note" || tool === "delete_reminder") {
     // 0.1.20 (P3-9): el consentimiento informado exige NOMBRAR lo que se
@@ -114,14 +135,16 @@ export function describePolicyConfirmation(
     // descrito como si fuera específico.
     const label = str(tool === "delete_note" ? args.title : args.text).trim();
     if (label) {
-      return tool === "delete_note"
-        ? { title: T.deleteNoteTitle[lang], message: fill(T.deleteNoteMessage[lang], { label }) }
-        : { title: T.deleteReminderTitle[lang], message: fill(T.deleteReminderMessage[lang], { label }) };
+      return withOrigin(
+        tool === "delete_note"
+          ? { title: T.deleteNoteTitle[lang], message: fill(T.deleteNoteMessage[lang], { label }) }
+          : { title: T.deleteReminderTitle[lang], message: fill(T.deleteReminderMessage[lang], { label }) },
+      );
     }
   }
   if (tool === "delete_memory") {
     const label = str(args.content).trim();
-    if (label) return { title: T.deleteMemoryTitle[lang], message: fill(T.deleteMemoryMessage[lang], { label }) };
+    if (label) return withOrigin({ title: T.deleteMemoryTitle[lang], message: fill(T.deleteMemoryMessage[lang], { label }) });
   }
   if (tool === "remember_fact" || tool === "save_note" || tool === "create_reminder") {
     const content =
@@ -130,11 +153,11 @@ export function describePolicyConfirmation(
         : tool === "create_reminder"
           ? [str(args.text), str(args.at)].filter(Boolean).join(" — ")
           : str(args.content);
-    return { title: T.saveTitle[lang], message: fill(T.saveMessage[lang], { content }) };
+    return withOrigin({ title: T.saveTitle[lang], message: fill(T.saveMessage[lang], { content }) });
   }
   const base = fill(T.genericMessage[lang], { tool: tool || "?" });
-  return {
+  return withOrigin({
     title: T.genericTitle[lang],
     message: decision.risk === "critical" ? `${base} ${T.riskCritical[lang]}` : base,
-  };
+  });
 }

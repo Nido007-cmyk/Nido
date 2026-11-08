@@ -72,6 +72,13 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   manifiesto firmado y rechaza cualquier pack que no pase. Cada pack
   añadido muestra quién lo firmó y se puede eliminar desde la misma
   pantalla.
+- **Lee las guías como documentos** (0.1.81): la biblioteca de guías
+  abre cualquier guía de los packs instalados en el dispositivo y la
+  muestra entera, de principio a fin, como un documento. Leer no carga
+  el modelo de lenguaje, así que funciona incluso en un teléfono que
+  aún no ha descargado ningún modelo, y nunca usa la red. Una guía muy
+  larga se muestra acortada, con un aviso que lo dice; la guía sigue
+  guardada entera en su pack.
 - **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
   teléfonos emparejados, sin internet y sin servidor. Para emparejar pegas
   el código del otro teléfono (el texto de su QR); un contacto aparece como
@@ -118,7 +125,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.80-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.80-alpha).
+   [versión v0.1.81-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.81-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y

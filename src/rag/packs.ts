@@ -113,6 +113,81 @@ export async function readPackSource(chunkId: string): Promise<PackSourceDoc | n
   return markUsedPart(guide, head.source ?? "", rows, ref.rowId);
 }
 
+export interface PackGuideEntry {
+  id: number;
+  key: string;
+  lang: string;
+  title: string;
+  category: string;
+  region: string;
+  sources: string;
+  verified: string;
+}
+
+export interface PackGuideDoc {
+  title: string;
+  source: string;
+  /** Texto completo de la guía: sus trozos unidos en orden de lectura. */
+  body: string;
+}
+
+/**
+ * Guías de un pack instalado (solo packs de formato v2, que traen la tabla
+ * de guías), en su orden. Lista vacía si el pack no está, no se puede abrir
+ * o su formato no trae guías. Solo lectura: no carga ningún motor ni toca
+ * la búsqueda; el lector de documentos vive de esto.
+ */
+export async function listPackGuides(packId: string): Promise<PackGuideEntry[]> {
+  const pack = (await knowledgePacks()).find((p) => p.id === packId);
+  if (!pack) return [];
+  const open = await openPack(pack);
+  if (!open || open.formatVersion < 2) return [];
+  return open.db
+    .getAllAsync<PackGuideEntry>(
+      "SELECT id, key, lang, title, category, region, sources, verified FROM guides ORDER BY id",
+    )
+    .catch(() => [] as PackGuideEntry[]);
+}
+
+/**
+ * El documento entero de una guía de un pack, para leerlo como un
+ * documento: sus trozos unidos en orden, con la fila sin apartado primero
+ * si la trae. null si el pack o la guía ya no están. Solo lectura, sin
+ * internet y sin cargar ningún motor.
+ */
+export async function readPackGuide(packId: string, guideId: number): Promise<PackGuideDoc | null> {
+  const pack = (await knowledgePacks()).find((p) => p.id === packId);
+  if (!pack) return null;
+  const open = await openPack(pack);
+  if (!open || open.formatVersion < 2) return null;
+  const head = await open.db
+    .getFirstAsync<{ title: string }>("SELECT title FROM guides WHERE id = ?", [guideId])
+    .catch(() => null);
+  if (!head) return null;
+  type ChunkRow = { id: number; title: string; body: string; source: string };
+  let rows = await open.db
+    .getAllAsync<ChunkRow>("SELECT id, title, body, source FROM chunks WHERE guide = ? ORDER BY id", [guideId])
+    .catch(() => [] as ChunkRow[]);
+  if (rows.length === 0) {
+    // Packs sin enlace guía→trozo en los chunks: el mismo emparejamiento
+    // por título que usa readPackSource (la guía y sus apartados).
+    rows = await open.db
+      .getAllAsync<ChunkRow>(
+        "SELECT id, title, body, source FROM chunks WHERE title = ? OR title LIKE ? ESCAPE '\\' ORDER BY id LIMIT ?",
+        [head.title, sectionLikePattern(head.title), MAX_SOURCE_PARTS],
+      )
+      .catch(() => [] as ChunkRow[]);
+  }
+  if (rows.length === 0) return null;
+  const bare = rows.find((r) => r.title === head.title);
+  const ordered = bare ? [bare, ...rows.filter((r) => r !== bare)] : rows;
+  return {
+    title: head.title,
+    source: ordered[0].source ?? "",
+    body: ordered.map((r) => r.body).join("\n\n"),
+  };
+}
+
 export async function closePack(id: string): Promise<void> {
   const open = openPacks.get(id);
   openPacks.delete(id);

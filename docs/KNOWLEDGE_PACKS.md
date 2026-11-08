@@ -176,6 +176,20 @@ the English build. The signed catalog on `main` offers
 this edition; the 0.1.80 app keeps the v14 edition until
 the next app version. `nido-local` stays at its v9
 edition.
+A further edition of `nido-esencial` is published in the
+release `knowledge-packs-v16`: the clinical text is the
+v15 text, unchanged, and its search metadata gains new
+question forms in the three languages, so questions asked
+the way people actually phrase them (the street-question
+bank: 83 questions in Spanish, English and Portuguese)
+reach their guide in both builds. Built by the knowledge
+pack workflow (174 guides, 576 chunks); on the final
+bytes, multilingual retrieval passes 202/202, the English
+build passes 64/64, and first-aid retrieval is 38/38 on
+the multilingual build and 6/6 on the English build. The
+signed catalog on `main` offers this edition from the
+0.1.81 app; the 0.1.80 app keeps the v14 edition.
+`nido-local` stays at its v9 edition.
 
 ### Format v2: indexed questions and verified facts (0.1.55)
 

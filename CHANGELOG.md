@@ -4,6 +4,31 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.81-alpha - 2026-11-08
+
+The guides stored on the device can now be read as documents, from
+start to finish, without loading the language model. The signed
+catalog now offers knowledge-packs-v16.
+
+### Reading the guides
+
+- **New: a guide library.** From the knowledge base you can open any
+  guide of the packs installed on the device and read it whole, as a
+  document. Reading a guide does not load the model, so it works the
+  same on a phone with no model downloaded yet, and it never uses the
+  network.
+- **Very long texts are shown shortened, with a note.** A guide whose
+  text is too long to paint in full is shown shortened on screen, with
+  a visible note saying so; the guide stays stored in full in its
+  pack.
+
+### Catalog
+
+- **The signed catalog now offers knowledge-packs-v16,** the current
+  edition of NIDO Essentials (174 guides in Spanish, English and
+  Portuguese, re-checked against the IFRC 2025 and ERC 2025
+  guidelines). The 0.1.80 app keeps offering knowledge-packs-v14.
+
 ## 0.1.80-alpha - 2026-11-07
 
 NIDO gains a door for adding signed knowledge packs from a file. No
