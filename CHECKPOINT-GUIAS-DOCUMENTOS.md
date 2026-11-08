@@ -369,3 +369,25 @@ a salir limpia y acotada). Sale limpia: se aplica solo dentro del lector.
   marca final; una guía de 10.000 caracteres, ya por encima del máximo
   real, se pinta entera y sin aviso). Jest del fichero: 7/7 verdes;
   vitest de grafo + i18n: 150/150; tsc limpio.
+
+## Cierre de la tanda del red team (2026-11-08): suite completa verde
+
+Tres commits nuevos sobre b8cda50, uno por mejora:
+c681120 (inyección antes que irreversibles, con aviso y registro con
+origen), 910082f (el grafo del lector sella «ni red») y e5f0a3a (tope
+de pintado del lector). Suite completa como la corre la casa, con cada
+exit code cobrado de su fichero de log:
+
+- vitest (npm test): 383 ficheros, 6.304 pruebas, exit 0. La punta
+  b8cda50 traía 6.296: +8 netas (3 de policyEngine, 2 de confirmText,
+  2 de dispatcher y 1 del grafo; las 2 del tope son de jest).
+- jest de componentes (npm run test:components): 18 suites, 80
+  pruebas, exit 0 (eran 78: +2 del tope de pintado).
+- tsc --noEmit (npm run typecheck): exit 0, sin salida.
+
+Conforme al AGENTS.md del proyecto, esto prueba la capa JS/TS; la
+instalación en dispositivo y la ronda física del dueño en su tableta
+siguen siendo la verificación que falta, como con el resto de la pieza.
+Sin push ni PR desde esta rama: la integración a main la hace la casa
+por PR, y la firma y publicación de la 0.1.81 quedan en manos del
+agente padre con la palabra del dueño.
