@@ -960,13 +960,13 @@ export const TIERS: TierDefinition[] = [
   {
     id: "standard",
     label: "Standard",
-    description: "+ 1,000 more Wikipedia-derived topics and NIDO's first aid, disaster and survival guides (~1.87MB extra download).",
+    description: "+ 1,000 more Wikipedia-derived topics and NIDO's first aid, disaster and survival guides (~1.91MB extra download).",
     corpusPackIds: ["corpus-standard", "nido-esencial"],
   },
   {
     id: "full",
     label: "Full",
-    description: "+ 5,000 more Wikipedia-derived topics total and NIDO's first aid, disaster and survival guides (~4.40MB extra download).",
+    description: "+ 5,000 more Wikipedia-derived topics total and NIDO's first aid, disaster and survival guides (~4.44MB extra download).",
     corpusPackIds: ["corpus-standard", "corpus-full", "nido-esencial"],
   },
   {
