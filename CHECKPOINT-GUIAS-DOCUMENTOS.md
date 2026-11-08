@@ -318,3 +318,31 @@ es de orden de evaluación y observabilidad, no de política.
   dirigida sobre 5 ficheros del área: 76/76 verdes, exit 0 en fichero;
   tsc --noEmit limpio. Los conteos de la suite completa van en la sección
   de cierre de esta tanda.
+
+## Mejora red team 2 (2026-11-08): el grafo de imports del lector sella también «ni red»
+
+Fuente: red team 2026-11-08, Frente 5, recomendación 2 (el «ni red» estaba
+probado por enumeración manual del informe; faltaba la aserción).
+
+- guideLibraryImportGraph.test.ts gana la aserción «sin clientes de red
+  en el cierre» con su aserción de cordura, en tres vías, con el conjunto
+  real identificado desde el código: (a) ningún import del cierre nombra
+  un cliente de red conocido (axios, node-fetch, undici, ws,
+  socket.io-client, @microsoft/fetch-event-source, expo-network;
+  package.json no declara hoy ninguno y el único inicio de red de la app
+  es el global fetch de ModelManager, según networkAudit); (b) ningún
+  fichero del cierre LLAMA a un global de red (fetch(, new WebSocket,
+  new XMLHttpRequest): la forma de llamada es la señal, porque el nombre
+  suelto «fetch» aparece en prosa inofensiva de los módulos (medido:
+  models/manifest.ts) y prohibirlo en bruto habría dado un falso positivo
+  permanente; (c) ningún fichero del cierre usa la superficie remota de
+  expo-file-system (createDownloadResumable(, downloadAsync(,
+  uploadAsync(): es el único módulo presente en el cierre que también
+  sabe hablar con la red, y entra por uso, no por mero import, que hoy
+  aparece declarado sin usar en rag/packSource.ts y security/keyMirror.ts
+  como parte del patrón copyFileAsync de la casa). Además, el cierre no
+  contiene models/ModelManager.ts.
+- La aserción puede fallar de verdad, probado con mutaciones sin
+  commitear y restauradas: importar axios en rag/pure.ts la pone roja por
+  la vía (a), y usar createDownloadResumable( en rag/packs.ts la pone
+  roja por la vía (c). Sin mutación: 4/4 verdes, exit 0 en fichero.

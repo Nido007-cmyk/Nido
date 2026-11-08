@@ -21,6 +21,16 @@
  * es una bandera sin imports. Si alguien cablea la pantalla al chat o
  * a la búsqueda semántica, esta prueba se pone roja aunque la dinámica
  * siga verde.
+ *
+ * Extensión RED TEAM 2026-11-08 (Frente 5): la misma prueba sella también
+ * la segunda mitad de la promesa, «ni red». El cierre no puede nombrar
+ * ningún cliente de red conocido (externos) ni alcanzar el único módulo
+ * de la app que inicia red (models/ModelManager.ts, el punto auditado de
+ * src/privacy/networkAudit.ts), y ningún fichero del cierre usa los
+ * globales de red (fetch, WebSocket, XMLHttpRequest). El red team lo
+ * había comprobado por enumeración manual; aquí queda como aserción
+ * permanente que se pone roja si mañana alguien mete un cliente de red
+ * en la cadena del lector.
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
@@ -81,6 +91,33 @@ function walk(entry: string): { files: Set<string>; externals: Set<string> } {
   return { files, externals };
 }
 
+/**
+ * Clientes de red que NINGÚN import del cierre puede traer. El conjunto
+ * sale del código de la casa (RED TEAM 2026-11-08): package.json no
+ * declara axios ni expo-network y el único inicio de red de la app es el
+ * global fetch dentro de ModelManager; la lista cubre esos nombres y los
+ * clientes que un cambio futuro podría importar. Los especificadores se
+ * normalizan a nombre de paquete (sin subrutas) antes de comparar.
+ * expo-file-system NO está aquí: el lector lo usa en local
+ * (expo-file-system/legacy) y este mismo fichero lo vigila en sentido
+ * contrario, porque su superficie remota (createDownloadResumable) es la
+ * única vía de red que podría colarse por un módulo ya presente.
+ */
+const NETWORK_CLIENT_EXTERNALS = new Set([
+  "axios",
+  "node-fetch",
+  "undici",
+  "ws",
+  "socket.io-client",
+  "@microsoft/fetch-event-source",
+  "expo-network",
+]);
+
+function packageNameOf(spec: string): string {
+  const parts = spec.split("/");
+  return spec.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
+}
+
 describe("GuideLibraryScreen · grafo de imports sin motores", () => {
   const { files, externals } = walk(ENTRY);
   const rel = [...files].map((f) => path.relative(SRC_ROOT, f));
@@ -108,5 +145,46 @@ describe("GuideLibraryScreen · grafo de imports sin motores", () => {
     const gate = fs.readFileSync(path.join(SRC_ROOT, "inference", "nativeGate.ts"), "utf8");
     expect(/from\s*["']/.test(gate)).toBe(false);
     expect(/require\s*\(/.test(gate)).toBe(false);
+  });
+
+  it("sin clientes de red en el cierre (RED TEAM 2026-11-08)", () => {
+    // Cordura: el vigilante ve los externos REALES del lector (si el
+    // caminante dejara de recoger especificadores, esta aserción y la de
+    // red fallarían juntas en vez de pasar en falso).
+    expect(externals.has("expo-file-system/legacy")).toBe(true);
+    expect(externals.has("expo-sqlite")).toBe(true);
+    // Tres vías por las que la red podría entrar en el cierre:
+    // (a) un import de un cliente de red conocido (los especificadores se
+    //     recogen sin las cadenas largas de SQL, que el caminante ya
+    //     captura como «externos» falsos);
+    // (b) una LLAMADA a un global de red (fetch(, new WebSocket, new
+    //     XMLHttpRequest): la forma de llamada es la señal, porque el
+    //     nombre suelto aparece en prosa inofensiva de estos módulos;
+    // (c) la superficie remota de expo-file-system (createDownloadResumable
+    //     y sus compañeros de descarga/subida), el único módulo presente
+    //     en el cierre que también sabe hablar con la red.
+    const named = new Set<string>();
+    const hits: string[] = [];
+    for (const file of files) {
+      const content = fs.readFileSync(file, "utf8");
+      for (const re of SPEC_RES) {
+        re.lastIndex = 0;
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(content)) !== null) {
+          if (!m[1].startsWith(".") && !/\s/.test(m[1])) named.add(packageNameOf(m[1]));
+        }
+      }
+      const relFile = path.relative(SRC_ROOT, file);
+      if (/(?<![\w$.])fetch\s*\(/.test(content)) hits.push(`${relFile} llama a fetch(`);
+      if (/new\s+(WebSocket|XMLHttpRequest)\b/.test(content)) hits.push(`${relFile} construye un cliente de red`);
+      if (/\b(createDownloadResumable|downloadAsync|uploadAsync)\s*\(/.test(content)) {
+        hits.push(`${relFile} usa la superficie remota de expo-file-system`);
+      }
+    }
+    expect([...named].filter((n) => NETWORK_CLIENT_EXTERNALS.has(n))).toEqual([]);
+    expect(hits).toEqual([]);
+    // Y el único módulo de la app que inicia red queda fuera del cierre:
+    // si el lector alcanzara ModelManager, alcanzaría la descarga.
+    expect(files.has(path.join(SRC_ROOT, "models", "ModelManager.ts"))).toBe(false);
   });
 });
