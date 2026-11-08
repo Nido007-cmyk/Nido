@@ -28,6 +28,7 @@ import {
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
 import { contextCeilingForDevice } from "../models/defaultModel";
+import { currentDevicePressure } from "./devicePressure";
 import { withStage } from "../utils/stageError";
 import { recordInferenceEvent, recordRamRejection, type TelemetryStopReason } from "./telemetry";
 import { findRepetitionLoop, trimRepetitionLoop } from "./repetitionGuard";
@@ -622,18 +623,25 @@ export class LlamaEngine {
     // Optimización 2026-11-08 (plan n.º 7): sin opción explícita, el
     // techo puede nacer ya reducido en aparatos de ≤4 GiB para los
     // modelos cuyo contexto declarado es 3072 (contextCeilingForDevice
-    // en defaultModel.ts); la lectura de RAM es la misma foto que el
-    // pre-flight usa abajo. Con opción explícita manda ella, como
-    // siempre, y sin lectura manda el techo declarado.
-    const ceilingSnapshot = explicitCtx ? null : readRamSnapshot();
-    const requestedCtx =
-      opts?.nCtx ??
-      contextCeilingForDevice(catalogEntry?.defaultNCtx, ceilingSnapshot?.totalRamBytes ?? null);
+    // en defaultModel.ts). La foto con la que se decide es LA MISMA
+    // que el pre-flight usa abajo (liveSnapshot): una sola lectura,
+    // nunca dos fotos distintas en la misma carga. Con opción
+    // explícita manda ella, como siempre, y sin lectura manda el
+    // techo declarado.
+    const requestedCtx = opts?.nCtx ?? catalogEntry?.defaultNCtx ?? 4096;
     let nCtx = requestedCtx;
     // P-03: sin opción explícita, los hilos salen de los núcleos
     // reales del aparato (política en ramBudget.ts); la opción
-    // explícita sigue mandando, como manda con nCtx.
-    const nThreads = opts?.nThreads ?? defaultThreadsForCores(readProcessorCount());
+    // explícita sigue mandando, como manda con nCtx. Optimización
+    // 2026-11-08 (fase 3): la presión del aparato (batería baja, modo
+    // de ahorro, calor) puede bajar ese número con su tope; la foto
+    // de presión la refresca la pantalla y aquí solo se consulta.
+    const pressure = currentDevicePressure();
+    const baseThreads = opts?.nThreads ?? defaultThreadsForCores(readProcessorCount());
+    const nThreads =
+      opts?.nThreads !== undefined || pressure.threadCap === null
+        ? baseThreads
+        : Math.min(baseThreads, pressure.threadCap);
     const crashSafety = await this.crashGuardSettle();
 
     // ChatScreen re-mounts (and calls load() again) every time Settings is
@@ -687,6 +695,21 @@ export class LlamaEngine {
             }).totalBytes,
           }
         : liveSnapshot;
+    if (!explicitCtx) {
+      nCtx = contextCeilingForDevice(catalogEntry?.defaultNCtx, snapshot?.totalRamBytes ?? null);
+      // La comparación de «ya cargado» de arriba usó el techo
+      // declarado; si la política de clase lo rebaja y el modelo
+      // residente ya vive en ese contexto rebajado, la carga es un
+      // atajo también (nada que rehacer).
+      if (
+        this.context &&
+        this.modelInfo?.filename === modelFilename &&
+        this.modelInfo.nCtx === nCtx &&
+        this.modelInfo.nThreads === nThreads
+      ) {
+        return;
+      }
+    }
     const specBase = {
       fileSizeBytes,
       nLayer: catalogEntry?.arch?.nLayer,
@@ -700,7 +723,7 @@ export class LlamaEngine {
     // el presupuesto reducido por el CrashGuard si hubo un choque.
     let contextNote = "";
     if (!explicitCtx && snapshot) {
-      const plan = planContext(specBase, snapshot, { ceiling: requestedCtx, safety: crashSafety });
+      const plan = planContext(specBase, snapshot, { ceiling: nCtx, safety: crashSafety });
       if (plan) {
         nCtx = plan.nCtx;
         verdict = plan.verdict;
@@ -770,7 +793,7 @@ export class LlamaEngine {
         try {
           this.context = await withStage("initLlama", () =>
             initLlama(
-              llmInitParamsForProfile(profile, { model: modelPath, n_ctx: nCtx, n_threads: nThreads }, batchForRam(snapshot?.totalRamBytes ?? null)) as never,
+              llmInitParamsForProfile(profile, { model: modelPath, n_ctx: nCtx, n_threads: nThreads }, batchForRam(snapshot?.totalRamBytes ?? null, pressure.ubatchCap)) as never,
             )
           );
           loadedProfile = profile;

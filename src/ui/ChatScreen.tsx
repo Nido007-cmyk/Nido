@@ -34,6 +34,7 @@ import { NidoMascot } from "./components/calm/NidoMascot";
 import * as Clipboard from "expo-clipboard";
 import { useTranslation } from "react-i18next";
 import { llamaEngine } from "../inference/LlamaEngine";
+import { refreshDevicePressure } from "../inference/devicePressure";
 import { embeddingEngine } from "../rag/embed";
 import { retrieve, assemblePrompt, RetrievedChunk, ConversationTurn } from "../rag/retrieve";
 import { assembleChatMessages, contextualizeQuery, degradableGenTokens, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
@@ -704,6 +705,10 @@ export function ChatScreen({
       setLoadError(null);
       setReady(false);
       setLoadStatus(t("chatScreen.mountingWeights"));
+      // Optimización 2026-11-08 (fase 3): refrescar la foto de
+      // presión del aparato antes de cargar — batería y temperatura
+      // de ahora, no las de un arranque anterior.
+      refreshDevicePressure();
       const llm = await resolveActiveModel("llm");
       const emb = await resolveActiveModel("embedding");
       setActiveModel(llm);

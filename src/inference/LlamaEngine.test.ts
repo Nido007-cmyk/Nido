@@ -132,11 +132,15 @@ let mockProcessorCount: number | null = null;
 // Texto que la completion falsa emite/resuelve (los tests de noThink lo
 // cambian por una respuesta con bloque <think>).
 let mockReplyText = "Hi";
+// Fase 3 (optimización 2026-11-08): la sonda de batería del mock.
+let mockBattery: { levelPct: number; charging: boolean; powerSave: boolean } | null = null;
 vi.mock("ram-monitor", () => ({
   getDeviceTotalRamBytes: () => mockTotalRamBytes,
   getMemoryInfo: () => ({ rssBytes: mockRssBytes }),
   getCrashReport: () => mockCrashReport,
   getProcessorCount: () => mockProcessorCount,
+  getBatteryStatus: () => mockBattery,
+  getThermalStatus: () => null,
 }));
 // The integrity gate is covered by src/models/modelTrust.test.ts; here it
 // is stubbed so engine behavior is tested in isolation.
@@ -146,6 +150,7 @@ vi.mock("../models/modelTrust", () => ({
 
 import { LlamaEngine, resolveSampling, SAMPLING_PRESETS } from "./LlamaEngine";
 import { isNativeGateTaken } from "./nativeGate";
+import { refreshDevicePressure } from "./devicePressure";
 import {
   isBackgroundIndexingHeld,
   resetBackgroundIndexingHold,
@@ -234,6 +239,29 @@ describe("Optimización 2026-11-08, fase 2: el lote sigue a la RAM del aparato",
     expect(initCalls).toHaveLength(3);
     expect(Object.keys(initCalls[2]).sort()).toEqual(["model", "n_ctx", "n_gpu_layers", "n_threads", "use_mlock"]);
     expect(engine.getModelInfo()?.memoryProfile).toBe("default");
+  });
+});
+
+describe("Optimización 2026-11-08, fase 3: la presión del aparato baja los hilos", () => {
+  it("con batería baja la carga nace con 3 hilos y n_ubatch 128", async () => {
+    mockBattery = { levelPct: 10, charging: false, powerSave: false };
+    refreshDevicePressure();
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls[0].n_threads).toBe(3);
+    expect(initCalls[0].n_ubatch).toBe(128);
+    mockBattery = null;
+    refreshDevicePressure();
+  });
+
+  it("con la opción explícita de hilos, la presión no manda", async () => {
+    mockBattery = { levelPct: 10, charging: false, powerSave: false };
+    refreshDevicePressure();
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf", { nThreads: 6 });
+    expect(initCalls[0].n_threads).toBe(6);
+    mockBattery = null;
+    refreshDevicePressure();
   });
 });
 
