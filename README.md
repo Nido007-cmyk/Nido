@@ -69,6 +69,13 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   fingerprint against its signed manifest, and refuses any pack that
   fails. An added pack is labelled with who signed it and can be removed
   from the same screen.
+- **Reads the guides as documents** (0.1.81): the guide library opens
+  any guide of the packs installed on the device and shows it whole,
+  from start to finish, as a document. Reading does not load the
+  language model, so it works even on a phone with no model downloaded
+  yet, and it never uses the network. A very long guide is shown
+  shortened, with a note saying so; the guide stays stored in full in
+  its pack.
 - **Talks to another NIDO over Bluetooth**: encrypted messages between two
   paired phones, with no internet and no server. To pair, you paste the
   other phone's code (the text of its QR); a contact shows as verified only
@@ -114,7 +121,7 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.80-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.80-alpha).
+   [v0.1.81-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.81-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4

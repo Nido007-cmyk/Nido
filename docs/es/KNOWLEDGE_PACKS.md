@@ -184,6 +184,21 @@ inglesa. El catálogo firmado en `main` ofrece esta
 edición; la app 0.1.80 se queda con la edición v14 hasta
 la próxima versión de la app. `nido-local` se queda en su
 edición v9.
+Una edición más de `nido-esencial` se publica en la
+release `knowledge-packs-v16`: el texto clínico es el
+texto de la v15, sin cambios, y sus metadatos de búsqueda
+ganan formas de pregunta nuevas en los tres idiomas, para
+que las preguntas hechas como habla la gente (el banco de
+preguntas de la calle: 83 preguntas en español, inglés y
+portugués) lleguen a su guía en las dos construcciones.
+Construida por el workflow de paquetes (174 guías, 576
+trozos); sobre los bytes finales, la recuperación
+multilingüe pasa 202/202, la construcción inglesa 64/64,
+y la de primeros auxilios es 38/38 en la multilingüe y
+6/6 en la inglesa. El catálogo firmado en `main` ofrece
+esta edición desde la app 0.1.81; la app 0.1.80 se queda
+con la edición v14. `nido-local` se queda en su edición
+v9.
 
 ### Formato v2: preguntas indexadas y datos verificados (0.1.55)
 
