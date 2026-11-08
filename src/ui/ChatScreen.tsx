@@ -793,6 +793,9 @@ export function ChatScreen({
       modelLoadingRef.current = (async () => {
         try {
           setLoadError(null);
+          // chatScreen.loadingModel existe en los tres locales (la
+          // clave homónima de catalogItemCard es otra: aquella vive
+          // en la tarjeta del catálogo, esta en la franja del chat).
           setLoadStatus(t("chatScreen.loadingModel"));
           refreshDevicePressure();
           const llm = await resolveActiveModel("llm");
