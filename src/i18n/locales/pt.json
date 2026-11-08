@@ -1929,6 +1929,16 @@
     "text": "A resposta continua sendo escrita mesmo se você sair do app.",
     "channel": "Respostas em andamento"
   },
+  "guideLibrary": {
+    "title": "Guias",
+    "open": "Ler os guias",
+    "intro": "Leia qualquer guia guardado neste dispositivo, do início ao fim. Ler não carrega o modelo.",
+    "loading": "Carregando guias",
+    "noPacks": "Ainda não há guias. Os packs que você baixar ou adicionar aparecerão aqui, prontos para ler sem modelo.",
+    "noGuides": "Este pack não tem guias legíveis.",
+    "readError": "Não foi possível abrir este guia. O pack pode ter sido removido ou atualizado.",
+    "back": "Voltar"
+  },
   "sourceReader": {
     "title": "Fonte",
     "close": "Fechar",

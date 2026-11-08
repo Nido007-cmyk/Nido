@@ -13,6 +13,7 @@ import "./src/i18n";
 import { LanguageProvider } from "./src/i18n/LanguageContext";
 import { ChatScreen } from "./src/ui/ChatScreen";
 import { ModelSetupScreen } from "./src/ui/ModelSetupScreen";
+import { GuideLibraryScreen } from "./src/ui/GuideLibraryScreen";
 // DEV-ONLY: V42 idle character PoC (Phase 1, Option D). Removable: delete
 // src/ui/dev/ + assets/poc/ and the __DEV__ block below.
 import { CharacterPreviewScreen } from "./src/ui/dev/CharacterPreviewScreen";
@@ -213,6 +214,10 @@ function AppContent() {
   // DEV-ONLY PoC flag. Always false in release builds (__DEV__ gate below);
   // production home/chat flow is untouched.
   const [devPreview, setDevPreview] = useState(false);
+  // Lector de guías como documentos (2026-11-08): capa propia sobre el
+  // wizard o el chat. Abrirla no monta ChatScreen ni carga el modelo: la
+  // lectura de guías solo usa el almacén local de packs.
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const { t } = useTranslation();
   const { colors } = useTheme();
   const screenRef = useRef(screen);
@@ -589,8 +594,25 @@ function AppContent() {
           }}
         />
       )}
+      {screen === "required-setup" && !libraryOpen && (
+        <Pressable
+          onPress={() => setLibraryOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t("guideLibrary.open")}
+          style={[styles.libraryEntry, { borderTopColor: colors.border.default }]}
+        >
+          <Text style={[styles.libraryEntryText, { color: colors.emerald[400] }]}>{t("guideLibrary.open")}</Text>
+        </Pressable>
+      )}
       {screen === "chat" && !devPreview && (
         <ChatScreen onRelaunchWizard={() => setScreen("required-setup")} />
+      )}
+      {/* El lector solo se pinta sobre el wizard o el chat ya desbloqueado:
+          al re-bloquear la app la capa desaparece con su pantalla madre. */}
+      {libraryOpen && (screen === "chat" || screen === "required-setup") && (
+        <View style={styles.libraryOverlay}>
+          <GuideLibraryScreen onClose={() => setLibraryOpen(false)} />
+        </View>
       )}
       {/* DEV-ONLY: V42 idle character PoC entry. Not rendered in release
           builds. Remove together with src/ui/dev/ + assets/poc/. */}
@@ -625,6 +647,23 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  // Lector de guías: entrada bajo el wizard y capa a pantalla completa.
+  libraryEntry: {
+    alignItems: "center",
+    paddingVertical: 14,
+    borderTopWidth: 1,
+  },
+  libraryEntryText: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  libraryOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   // DEV-ONLY PoC entry button. Remove with the PoC.
   devPocButton: {

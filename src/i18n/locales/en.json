@@ -1929,6 +1929,16 @@
     "text": "The answer keeps being written even if you leave the app.",
     "channel": "Answers in progress"
   },
+  "guideLibrary": {
+    "title": "Guides",
+    "open": "Read the guides",
+    "intro": "Read any guide stored on this device, from start to finish. Reading does not load the model.",
+    "loading": "Loading guides",
+    "noPacks": "No guides yet. The packs you download or add will appear here, ready to read without a model.",
+    "noGuides": "This pack has no readable guides.",
+    "readError": "This guide could not be opened. The pack may have been removed or updated.",
+    "back": "Back"
+  },
   "sourceReader": {
     "title": "Source",
     "close": "Close",
