@@ -144,27 +144,30 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   normal. Una sospecha de doble conteo en el guardián de
   choques se probó con una regresión y no existe; el guardián
   no cambia.
-- **La guía de un pack importado gana ahora su propia
-  pregunta, y la biblioteca de guías tiene su propio
-  botón** (0.1.87): la versión anterior dejó que un pack
-  importado y verificado respondiera palabra por palabra,
-  pero en la tableta del dueño la guía del gas seguía
-  perdiendo contra sus propias vecinas y contra la guía de
-  monóxido integrada, así que la pregunta cayó al modelo,
-  que respondió de memoria y hasta dijo lo contrario de la
-  guía. La elección juzga ahora la guía del pack contra la
-  vara de su propio perfil de búsqueda, sobre una lista más
-  ancha que la que la respuesta muestra; un pack escrito
-  para otro modelo de búsqueda también abre su guía, y su
-  entrada en la lista de packs dice que es de otro modelo
-  de búsqueda; una fuga de gas contada cuenta ahora como
-  emergencia viva en español, inglés y portugués, y una
-  respuesta de salud apoyada en un pack importado
-  verificado cuenta como apoyada en una fuente de salud.
-  La pestaña Biblioteca tiene su propio botón «Leer las
-  guías», la lista de packs importados tiene otro, y el
-  atajo de la pantalla de Emergencia abre ahora la
-  biblioteca que nombra.
+- **Un pack importado escrito para otro modelo de búsqueda
+  responde ahora a su propia pregunta por palabras, y la
+  biblioteca de guías tiene una sola puerta, abajo**
+  (0.1.88): la versión anterior abrió una vía palabra por
+  palabra para los packs importados verificados, pero en la
+  tableta del dueño, con la búsqueda multilingüe activa, la
+  guía del gas del pack de SALVORA PACKS no salió nunca:
+  preguntada en un chat que ya tenía un cuento, dos veces
+  seguidas, el modelo respondió de memoria las dos, una con
+  las mismas palabras de la versión anterior y con un
+  consejo que la guía contradice. El pack estaba importado
+  y verificado, y su propia tarjeta ya decía que con ese
+  pack solo funciona la búsqueda por palabras; lo cerrado
+  era la vía de palabras. Ahora juzga los fragmentos del
+  pack por su cuenta, guía a guía, para que una guía hermana
+  del mismo pack no gane la pregunta por el orden de la
+  lista, y funciona con cualquiera de los dos modelos de
+  búsqueda activo y en un chat con historial. La red del
+  texto seguro mira ahora en qué se apoya de verdad una
+  respuesta sin verificar, y no la lista de fuentes, así
+  que una guía verificada presente pero sin usar entre las
+  fuentes ya no la desarma. Y la pestaña Biblioteca guarda
+  una sola banda «Leer las guías», a todo ancho y abajo del
+  todo; Ajustes conserva su única entrada.
 - **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
   teléfonos emparejados, sin internet y sin servidor. Para emparejar pegas
   el código del otro teléfono (el texto de su QR); un contacto aparece como
@@ -211,7 +214,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.87-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.87-alpha).
+   [versión v0.1.88-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.88-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y

@@ -135,24 +135,28 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   suspected double counting in the crash guard was tested
   with a regression and does not exist; the guard is
   unchanged.
-- **An imported pack's guide now wins its own question, and
-  the guide library has its own button** (0.1.87): the last
-  release let a verified imported pack answer word for word,
-  but on the owner's tablet the gas guide still lost to its
-  own neighbours and to the built-in carbon monoxide guide,
-  so the question fell to the model, which answered from
-  memory and even said the opposite of the guide. The choice
-  now judges the pack's own guide against the bar of its own
-  search profile, over a wider list than the answer shows;
-  a pack written for a different search model also opens its
-  guide, and its entry in the pack list says it is from
-  another search model; a told gas leak now counts as a live
-  emergency in Spanish, English and Portuguese, and a health
-  answer grounded in a verified imported pack counts as
-  grounded in a health source. The Library tab has its own
-  "Read the guides" button, the imported pack list has one
-  too, and the Emergency screen's shortcut now opens the
-  library it names.
+- **An imported pack written for another search model now
+  answers its own question by words, and the guide library
+  has one single door, at the bottom** (0.1.88): the last
+  release opened a word for word road for verified imported
+  packs, but on the owner's tablet, with multilingual search
+  on, the gas guide of the SALVORA PACKS pack never came
+  out: asked in a chat that already held a story, twice in a
+  row, the model answered from memory both times, once with
+  the same words as the version before and with advice the
+  guide contradicts. The pack was imported and verified,
+  and its own card already said that with that pack only
+  word search works; the word road was the thing that was
+  closed. It now judges the pack's own fragments on their
+  own, guide by guide, so a sister guide from the same pack
+  no longer wins the question by list order, and it works
+  with either search model active and in a chat with
+  history. The safe text net now checks what an unverified
+  answer actually rests on instead of the list of sources,
+  so a verified guide sitting unused among the sources no
+  longer disarms it. And the Library tab keeps one single
+  "Read the guides" band, full width at the bottom of the
+  tab; Settings keeps its own single entry.
 - **Talks to another NIDO over Bluetooth**: encrypted messages between two
   paired phones, with no internet and no server. To pair, you paste the
   other phone's code (the text of its QR); a contact shows as verified only
@@ -198,7 +202,7 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.87-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.87-alpha).
+   [v0.1.88-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.88-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4

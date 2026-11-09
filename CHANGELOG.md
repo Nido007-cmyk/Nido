@@ -4,6 +4,66 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.88-alpha - 2026-11-09
+
+0.1.87 gave a verified imported pack a word for word road,
+and the owner's tablet showed the road still closed in the
+case that matters most: with multilingual search on, asking
+about the gas guide of the SALVORA PACKS pack, in the same
+chat after a story, twice in a row, came back written by the
+model both times, and the first answer repeated word for
+word the one 0.1.86 had already given, advice included that
+the guide itself contradicts. The pack was there, verified,
+and the app itself already said on the pack's card that with
+that pack only word search works. Measured against the real
+pack and the app's own code, the word road closed itself:
+it only opened when no fragment at all in the answer carried
+a vector score, and with multilingual search on, the built-in
+base always scores, so the road never opened; and when
+fragments of the same pack tied on coverage, the list order
+decided, and a sister guide (carbon monoxide, in the same
+pack) could be served for the gas question. The safety net
+had the mirror defect: it replaced an unverified answer only
+when no source was a health source, so the guide's own
+presence among the sources disarmed it. And the Library tab
+showed three identical "Read the guides" buttons, one of
+them next to the title, where the owner asked for it to sit
+lower so it does not get in the way. This release fixes the
+word road, the net and the button.
+
+### Fixed
+
+- A verified imported pack whose search vectors belong to a
+  different model than the one active now answers its own
+  question word for word through the word road: the road
+  judges its own fragments (the pack's literal fragments
+  without a vector score) instead of closing whenever any
+  other fragment in the answer carries a score, and the
+  choice is made guide by guide, with ties broken by the
+  search rank inside the pack rather than by list order, so
+  the gas guide is served for the gas question and not its
+  carbon monoxide neighbour. It works for any verified pack,
+  any signer and any active search model, in Spanish,
+  English and Portuguese, and also in a chat that already has
+  history. The regression runs the owner's own conversation:
+  a story first, then the exact question twice.
+- The safe text net now looks at what the answer actually
+  rests on, not at the list of sources: an answer the judge
+  could not verify, in a health question or a live
+  emergency, is replaced by the safe text when none of its
+  source-backed sentences rests on a health source, even if
+  a verified guide was among the sources. Answers the judge
+  did verify are still never touched.
+- The Library tab has one single way into the guide library,
+  a full width band at the bottom of the tab, below
+  everything else; Settings keeps its own single entry. The
+  three repeated buttons are gone.
+
+No changes to the signed catalogue, the models or the
+memory rules. What the tablet measures is still the verdict:
+the same conversation from the owner's photos, the story and
+then the question, has to give the guide word for word.
+
 ## 0.1.87-alpha - 2026-11-09
 
 0.1.86 opened the literal road for verified imported packs,
