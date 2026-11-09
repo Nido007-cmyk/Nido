@@ -38,7 +38,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { classifyIntent } from "./intent";
 import { isGenericMemoryQuestionShape, memoryGateHit, memoryFullCoverageHit, memoryProbeWitness } from "./memoryQuery";
 import { runAgentLoop, agentExitNeedsGroundingNet, type AgentEngine } from "./agentLoop";
-import { isFactualQuestion, noSourcesAnswer } from "../../rag/grounding";
+import { noSourcesAnswer } from "../../rag/grounding";
 import { choiceTurnKind, resolveChoiceReply, type ChoiceStore } from "./toolRouter";
 import { answerKnowledgeQueryWithCategory } from "../../rag/selfKnowledge";
 import { matchSmallTalk } from "./smallTalk";
@@ -218,10 +218,12 @@ async function send(
   });
   // R-06 P2: espejo de la red de ChatScreen. La decisión es la real
   // (agentExitNeedsGroundingNet); lo simulado es solo el interior de
-  // la rama de chat, con sus dos salidas deterministas: con fuentes,
-  // la vía fundada sirve la frase de la fuente (como sirvió la ruta
-  // fija verificada la pregunta de la ronda); sin fuentes y pregunta
-  // de hechos, el «no lo sé» de grounding.ts, sin generar.
+  // la rama de chat: con fuentes, la vía fundada sirve la frase de la
+  // fuente (como sirvió la ruta fija verificada la pregunta de la
+  // ronda); sin fuentes, desde la 0.1.90 (familia 4) la rama genera
+  // con el modelo de chat — la abstención determinista sin fuentes
+  // queda solo para salud/emergencia (noSourcesOutcome), que este
+  // espejo no simula porque sus casos son de documentos.
   // Adversaria H-06: el testigo es la intención de ruta de ESTE espejo
   // (tras la sonda), como en ChatScreen es agentIntent.
   // ADV2-09: y cuando la promoción vino de la sonda, el dato debe
@@ -230,9 +232,6 @@ async function send(
     const sources = opts.netSources ?? [];
     if (sources.length > 0) {
       return { route: "agent" as Route, response: sources.join("\n"), toolUses: result.toolUses, loopResponse: result.response, netted: true };
-    }
-    if (isFactualQuestion(text)) {
-      return { route: "agent" as Route, response: noSourcesAnswer(lang), toolUses: result.toolUses, loopResponse: result.response, netted: true };
     }
     return { route: "agent" as Route, response: "RESPUESTA DEL MODELO DE CHAT", toolUses: result.toolUses, loopResponse: result.response, netted: true };
   }
@@ -890,11 +889,12 @@ describe("composición — R-06 P2: la red a la salida del agente", () => {
     expect(t.response).not.toBe(t.loopResponse);
   });
 
-  it("la misma pregunta sin fuentes ⇒ el «no lo sé» determinista, no el respaldo del loop", async () => {
+  it("la misma pregunta sin fuentes ⇒ genera el modelo de chat (0.1.90 familia 4), no el respaldo del loop ni la abstención", async () => {
     const engine = fakeEngine();
     const t = await send("¿Cuál es el número de teléfono para cambiar la cita?", "es", engine);
     expect(t.netted).toBe(true);
-    expect(t.response).toBe(noSourcesAnswer("es"));
+    expect(t.response).toBe("RESPUESTA DEL MODELO DE CHAT");
+    expect(t.response).not.toBe(noSourcesAnswer("es"));
     expect(t.response).not.toBe(t.loopResponse);
   });
 

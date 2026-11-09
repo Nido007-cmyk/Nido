@@ -1058,6 +1058,30 @@ export function degradableGenTokens(
 }
 
 /**
+ * 0.1.90 (familia 5): la reserva EFECTIVA con la que se juzga el
+ * presupuesto de un turno. Hasta aquí los ensambladores exigían la
+ * reserva pedida ENTERA antes de componer: en el peldaño de emergencia
+ * (nCtx 1024, el que la escalera sirve en un aparato de ≤4 GB cuando la
+ * foto viva de RAM viene estrecha) el sistema fijo (436) + el mensaje
+ * (101) + la reserva (512) sumaban 1049 > 1024 y el turno moría en
+ * applyContextBudget «sin siquiera historial» — aunque el propio turno
+ * habría generado de sobra con 256. El suelo degradable de H-12 ya
+ * recortaba la GENERACIÓN después del ensamblado; llegaba tarde: el
+ * ensamblado moría antes. Aquí la misma cuenta se hace ANTES, sobre el
+ * núcleo irreducible del turno (sistema + mensaje actual, sin historial
+ * ni fragmentos): la reserva baja por los mismos peldaños (512 → 256 →
+ * 128 → 64) hasta que el núcleo cabe, y solo si ni con 64 cabe manda el
+ * error honesto de siempre. El sistema no se toca jamás.
+ */
+export function effectiveReserveGeneration(
+  reserveGeneration: number,
+  nCtx: number,
+  coreTokens: number
+): number {
+  return degradableGenTokens(reserveGeneration, nCtx - coreTokens).genTokens;
+}
+
+/**
  * `systemPrompt` sets the assistant's tone/style/length (see
  * src/constants/personalities.ts) - the citation instruction is always
  * appended on top so RAG citations keep working regardless of persona.
@@ -1155,22 +1179,31 @@ export function assemblePrompt(
 
   let prompt = buildPrompt(chunks, history?.turns);
   if (!budget) return prompt;
+  // 0.1.90 (familia 5): la reserva con la que se recorta es la EFECTIVA
+  // (degradable sobre el núcleo irreducible: sistema + resumen +
+  // pregunta, sin turnos ni fragmentos), no la pedida entera — ver
+  // effectiveReserveGeneration.
+  const effReserve = effectiveReserveGeneration(
+    budget.reserveGeneration,
+    budget.nCtx,
+    defaultTokenCounter(buildPrompt([], undefined))
+  );
   const fitsBudget = (p: string, reserve: number): boolean =>
     defaultTokenCounter(p) + reserve <= budget.nCtx;
-  if (fitsBudget(prompt, budget.reserveGeneration)) return prompt;
+  if (fitsBudget(prompt, effReserve)) return prompt;
   // R-01 cut order: oldest history first, then lowest-ranked chunks; the
   // system prompt and the question are never cut. The chunks are fitted
-  // at the caller's own reserve: if even that cannot make the core fit,
-  // the prompt is returned as small as it gets and the caller's budget
-  // assert remains the honest final guard (nearly unreachable).
+  // at the turn's effective reserve: if even that cannot make the core
+  // fit, the prompt is returned as small as it gets and the caller's
+  // budget assert remains the honest final guard (nearly unreachable).
   let turns = history?.turns ? [...history.turns] : undefined;
-  while (turns && turns.length > 0 && !fitsBudget(prompt, budget.reserveGeneration)) {
+  while (turns && turns.length > 0 && !fitsBudget(prompt, effReserve)) {
     turns = turns.slice(1);
     prompt = buildPrompt(chunks, turns);
   }
-  if (fitsBudget(prompt, budget.reserveGeneration)) return prompt;
+  if (fitsBudget(prompt, effReserve)) return prompt;
   const fixedText = prompt.replace(renderChunkEntries(chunks), "");
-  const fitted = fitChunksToBudget(chunks, fixedText, budget.nCtx, budget.reserveGeneration);
+  const fitted = fitChunksToBudget(chunks, fixedText, budget.nCtx, effReserve);
   onFitted?.(fitted);
   return buildPrompt(fitted, turns);
 }
@@ -1275,26 +1308,44 @@ export function assembleChatMessages(
   // hoping it fits. System stays pinned; generation headroom is reserved.
   let keptHistory = historyMessages;
   if (budget) {
+    // 0.1.90 (familia 5): la reserva con la que se juzga el turno es la
+    // EFECTIVA — degradable con los peldaños de H-12, pero medida sobre
+    // el núcleo IRREDUCIBLE (sistema + pregunta sin fuentes ni
+    // historial), que es lo único que no se puede recortar: en el
+    // peldaño de emergencia (nCtx 1024) ese núcleo (436 + 101) más la
+    // reserva entera (512) no cabía «sin siquiera historial» y un
+    // cuento moría antes de generar, aunque con menos generación cabía
+    // de sobra. Cuando el núcleo sí deja la reserva entera (el caso
+    // R-01: sobran fuentes e historial recortables), la reserva no se
+    // degrada y el contrato de siempre manda. Ver
+    // effectiveReserveGeneration.
+    const effReserve = effectiveReserveGeneration(
+      budget.reserveGeneration,
+      budget.nCtx,
+      defaultTokenCounter(systemMessage.content) +
+        defaultTokenCounter(buildCurrentUser([]).content)
+    );
     // R-01: applyContextBudget can only cut HISTORY — if system + current
     // + reserve overflow on their own it throws and the whole turn dies
     // (the round's raw "prompt excede el contexto" error: long guide in
     // history + imported document, sources alone ≈ 87% of a 3072
-    // window). Only in that case, fit the chunks first — at the caller's
-    // own reserve, so the invariant prompt + reserve ≤ nCtx is preserved
-    // whenever it is achievable; history then fills whatever room is
-    // left, as before. If even a fitted core cannot fit, applyContextBudget
-    // still throws, exactly as before: the honest final guard.
+    // window). Only in that case, fit the chunks first — at the turn's
+    // effective reserve, so the invariant prompt + reserve ≤ nCtx is
+    // preserved whenever it is achievable; history then fills whatever
+    // room is left, as before. If even a fitted core cannot fit,
+    // applyContextBudget still throws, exactly as before: the honest
+    // final guard.
     const coreOverflows =
       defaultTokenCounter(systemMessage.content) +
         defaultTokenCounter(currentUser.content) +
-        budget.reserveGeneration >
+        effReserve >
       budget.nCtx;
     if (coreOverflows) {
       const fixedText =
         systemMessage.content +
         "\n" +
         currentUser.content.replace(renderChunkEntries(chunks), "");
-      const fitted = fitChunksToBudget(chunks, fixedText, budget.nCtx, budget.reserveGeneration);
+      const fitted = fitChunksToBudget(chunks, fixedText, budget.nCtx, effReserve);
       onFitted?.(fitted);
       systemMessage = buildSystemMessage(fitted);
       currentUser = buildCurrentUser(fitted);
@@ -1303,7 +1354,7 @@ export function assembleChatMessages(
       systemMessage,
       historyMessages,
       currentUser,
-      budgetConfigFor(budget.nCtx, budget.reserveGeneration)
+      budgetConfigFor(budget.nCtx, effReserve)
     );
     keptHistory = budgeted.history as ChatMessage[];
   }

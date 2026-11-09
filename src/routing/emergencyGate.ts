@@ -1025,6 +1025,35 @@ export interface SafeTextSubstitutionInput {
  * cura donde nació, en la elección de la guía, no reescribiendo lo
  * que el juez ya verificó.
  */
+/**
+ * 0.1.90 (familia 4): qué pasa con un turno SIN fuentes, extraído de
+ * ChatScreen a función pura con el patrón de shouldSubstituteSafeText.
+ *
+ * La ley del dueño (2026-11-09): una pregunta que una guía del
+ * dispositivo responde no llega al modelo; una pregunta que NINGUNA
+ * guía cubre la genera el modelo activo; la abstención determinista
+ * queda SOLO donde inventar sería peligroso — salud y emergencia sin
+ * evidencia. Hasta la 0.1.89 la puerta previa de la ruta fija y el
+ * post-chequeo sustituían también toda «pregunta de hechos» sin
+ * fuentes por el «no lo sé» determinista (RAG-GROUNDING 2026-10-11,
+ * Fase 3): con el Qwen3 activo, «Explícame cómo cambiar una llanta en
+ * 5 pasos numerados» recibió la abstención sin generar (foto del dueño
+ * 15:43 MST). Esa rama muere: sin fuentes y sin peligro, el turno
+ * genera y el texto del modelo queda en pie; la banda «No se
+ * encontraron fuentes offline relevantes» sigue pintándose como
+ * metadato honesto, y la instrucción de sistema sin fuentes (decir
+ * que no se sabe cuando no se puede responder con fiabilidad) sigue
+ * en el prompt, como estaba.
+ */
+export type NoSourcesOutcome = "safe-text" | "generate";
+
+export function noSourcesOutcome(input: {
+  isHealth: boolean;
+  isEmergency: boolean;
+}): NoSourcesOutcome {
+  return input.isHealth || input.isEmergency ? "safe-text" : "generate";
+}
+
 export function shouldSubstituteSafeText(input: SafeTextSubstitutionInput): boolean {
   if (input.deepTurn || input.sources.length === 0) return false;
   if (!input.isHealth && !input.isEmergency) return false;

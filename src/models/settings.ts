@@ -81,7 +81,21 @@ export const DEFAULT_MEMORY_SETTINGS: MemorySettings = {
 
 const SETTINGS_PATH = `${FileSystem.documentDirectory}settings.json`;
 const DEFAULT_SETTINGS: Settings = { activeModelId: {} };
-export const DEFAULT_MAX_TOKENS = 512;
+/**
+ * Tope de salida por turno cuando el usuario no ha fijado el suyo.
+ * 0.1.90 (familia 5, «que respondan lo mejor posible»): 512 → 1024.
+ * Medido con el inventario del camino de respuesta: con 512, una
+ * explicación desarrollada (tono Detallado) o un texto largo normal
+ * llegaba al tope y se cerraba en la última frase completa — entera
+ * en forma, corta en contenido — en los contextos habituales de los
+ * modelos chicos (2048+). 1024 ya era un valor ofrecido en Ajustes
+ * (MAX_TOKENS_OPTIONS); como tope no obliga a generar más: la parada
+ * natural (EOS), la guarda de bucle y el cierre en frase completa
+ * siguen mandando, y donde el espacio no llega manda el suelo
+ * degradable de H-12, no este número. El coste es tiempo y batería
+ * solo en los turnos que de verdad escriben largo.
+ */
+export const DEFAULT_MAX_TOKENS = 1024;
 /** C2-2026-10-06: tope del prompt de sistema personalizado (~500 tokens). */
 export const MAX_CUSTOM_SYSTEM_PROMPT_CHARS = 2000;
 
