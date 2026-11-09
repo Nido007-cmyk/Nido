@@ -506,11 +506,20 @@ export function ModelSetupScreen(props: Props) {
   }
 
   // 0.1.55: Biblioteca › Packs: the same download / remove logic, without the rest of Settings.
+  // 0.1.87 (pieza 5): la rama reenvía onOpenLibrary — hasta aquí la
+  // prop moría en esta rama y el botón del lector de la pestaña de
+  // conocimiento solo existía en el render completo de Ajustes.
   if ((props as OptionalProps).section === "knowledge") {
     return (
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.accordionScroll}>
-          <CorpusSettingsTab corpusItems={CORPUS_CATALOG} getRow={getRow} download={download} remove={remove} />
+          <CorpusSettingsTab
+            corpusItems={CORPUS_CATALOG}
+            getRow={getRow}
+            download={download}
+            remove={remove}
+            onOpenLibrary={(props as OptionalProps).onOpenLibrary}
+          />
         </ScrollView>
         {toast && <Toast message={toast} onHide={() => setToast(null)} />}
       </View>

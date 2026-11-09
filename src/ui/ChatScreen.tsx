@@ -2602,7 +2602,7 @@ export function ChatScreen({
           updateInput(question, "example");
           requestAnimationFrame(() => inputRef.current?.focus());
         }}
-        onOpenLibrary={() => selectTab("library")}
+        onOpenLibrary={onOpenLibrary ?? (() => selectTab("library"))}
       />
     );
   }
@@ -2612,6 +2612,7 @@ export function ChatScreen({
       <LibraryScreen
         key={librarySection}
         initialSection={librarySection}
+        onOpenLibrary={onOpenLibrary}
         onOpenGuide={() => setShowGuide(true)}
         onOpenPromptIdeas={() => {
           selectTab("chat");

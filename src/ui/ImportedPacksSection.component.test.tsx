@@ -68,6 +68,11 @@ describe("ImportedPacksSection", () => {
     mockState.removed = [];
     mockState.listCalls = 0;
     mockState.importOutcome = { status: "cancelled" };
+    // 0.1.87: la huella activa vuelve al bge entre casos — un caso
+    // la cambia para el aviso y, sin restaurar, los siguientes
+    // renders no encontraban la tarjeta (la lista se quedaba con
+    // el estado del render anterior en este entorno de jest).
+    mockState.activeSha256 = "e4165e3a71af97f1b4820da61079826d8752a2088e313af0c7d346796c38eff5";
     jest.spyOn(Alert, "alert").mockImplementation(() => {});
   });
   afterEach(() => jest.restoreAllMocks());
@@ -91,18 +96,32 @@ describe("ImportedPacksSection", () => {
     expect(Alert.alert).toHaveBeenCalledWith("packImport.notSignedByUs");
   });
 
+  it("0.1.87 (pieza 5): el segundo botón del lector vive en el encabezado de esta sección", async () => {
+    const { ImportedPacksSection } = require("./ImportedPacksSection");
+    const onOpenLibrary = jest.fn();
+    await render(<ImportedPacksSection onOpenLibrary={onOpenLibrary} />);
+    const btn = await screen.findByLabelText("guideLibrary.open");
+    fireEvent.press(btn);
+    expect(onOpenLibrary).toHaveBeenCalledTimes(1);
+  });
+
   it("0.1.87: avisa cuando el pack es de otro modelo de embeddings, y calla cuando es del activo", async () => {
     const { ImportedPacksSection } = require("./ImportedPacksSection");
     // El pack del campo real se embebió con el modelo multilingüe
     // (ec38…) y el activo del mock es el bge (e416…): el aviso sale.
     await render(<ImportedPacksSection />);
     expect(await screen.findByText("multilingual.packOtherModel")).toBeTruthy();
-    // Con el modelo del pack activo, el aviso desaparece.
     mockState.activeSha256 = "ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514";
     await render(<ImportedPacksSection />);
     await screen.findByText("SALVORA Home Emergencies");
     expect(screen.queryByText("multilingual.packOtherModel")).toBeNull();
-    mockState.activeSha256 = "e4165e3a71af97f1b4820da61079826d8752a2088e313af0c7d346796c38eff5";
+  });
+
+  it("0.1.87 (pieza 5): sin la prop no hay botón del lector en el encabezado", async () => {
+    const { ImportedPacksSection } = require("./ImportedPacksSection");
+    await render(<ImportedPacksSection />);
+    await screen.findByText("SALVORA Home Emergencies");
+    expect(screen.queryByLabelText("guideLibrary.open")).toBeNull();
   });
 
   it("quitar pide la confirmación de A.3 y borra el pack al aceptarla", async () => {
