@@ -954,10 +954,30 @@ export function healthSafeProvenance(text: string): SentenceProvenance[] {
 /** Los packs cuyas guías son de salud con fuentes verificadas (ver cabecera). */
 const HEALTH_PACK_IDS = new Set(["nido-esencial", "nido-ninos", "nido-crisis"]);
 
-/** ¿Trae la recuperación algún pasaje de un pack de salud? */
-export function hasHealthEvidence(chunks: readonly RetrievedChunk[]): boolean {
+/**
+ * ¿Trae la recuperación algún pasaje de un pack de salud? Hasta la
+ * 0.1.86 solo contaban los integrados de la lista cerrada de arriba:
+ * un fragmento de un pack IMPORTADO por la puerta firmada — cuya
+ * firma se verificó al entrar, la misma vara de confianza que la de
+ * los integrados — nunca era evidencia, y la sustitución por el
+ * texto seguro quedaba desarmada justo en el turno que el pack
+ * importado debía responder (el giro del gas, dirimen 2026-11-09).
+ *
+ * 0.1.87: el llamador puede pasar los ids que el registro de la
+ * puerta verificó (verifiedImportedPacks en services/packImporter,
+ * leído fresco en cada turno — un pack retirado deja de contar al
+ * momento). Esta capa sigue pura: el registro vive tras
+ * expo-file-system y no entra aquí; sin el conjunto, el
+ * comportamiento es exactamente el de siempre.
+ */
+export function hasHealthEvidence(
+  chunks: readonly RetrievedChunk[],
+  verifiedImportedPackIds?: ReadonlySet<string>,
+): boolean {
   return chunks.some((c) => {
     const ref = parsePackChunkId(c.chunkId);
-    return !!ref && HEALTH_PACK_IDS.has(ref.packId.replace(/-e5$/, ""));
+    if (!ref) return false;
+    if (HEALTH_PACK_IDS.has(ref.packId.replace(/-e5$/, ""))) return true;
+    return !!verifiedImportedPackIds && verifiedImportedPackIds.has(ref.packId);
   });
 }

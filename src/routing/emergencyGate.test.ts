@@ -582,4 +582,21 @@ describe("hasHealthEvidence", () => {
     expect(hasHealthEvidence([chunk("doc:local:7")])).toBe(false);
     expect(hasHealthEvidence([])).toBe(false);
   });
+
+  it("0.1.87: un fragmento de un pack importado verificado SÍ es evidencia — la marca es el registro, no la lista cerrada", () => {
+    // El campo real del giro del gas: el fragmento 131 de la guía de
+    // la fuga, de un pack importado por la puerta firmada. Su nombre
+    // vive solo en estos datos de regresión; el código de producción
+    // solo ve el conjunto de ids que el registro verifica.
+    const gasChunk = chunk("pack:local-salvora-emergencias-casa:131");
+    const verified = new Set(["local-salvora-emergencias-casa"]);
+    expect(hasHealthEvidence([gasChunk], verified)).toBe(true);
+    // Sin el conjunto (el llamador no pudo leer el registro) o con
+    // otro pack en el registro, el mismo fragmento no abre nada: la
+    // identidad local- no basta.
+    expect(hasHealthEvidence([gasChunk])).toBe(false);
+    expect(hasHealthEvidence([gasChunk], new Set(["local-otro-pack"]))).toBe(false);
+    // Y los integrados de salud siguen contando sin conjunto.
+    expect(hasHealthEvidence([chunk("pack:nido-esencial:5")], verified)).toBe(true);
+  });
 });
