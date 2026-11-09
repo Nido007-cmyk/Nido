@@ -132,12 +132,19 @@ describe("contextSpecForFilename", () => {
 });
 
 describe("defaultLlmForRam", () => {
-  // Effective threshold from the pre-flight formula:
-  // need(1.5B) + 0.5 GiB app baseline + 2 GiB headroom.
-  const need15 = estimateContextBytes(
-    contextSpecForModel(MODEL_CATALOG.find((e) => e.id === PREFERRED_LLM_ID)!)
-  ).totalBytes;
-  const threshold = need15 + 512 * MiB + SYSTEM_HEADROOM_BYTES;
+  // Umbral exacto de la función (0.1.86): la función juzga cada aparato
+  // con el spec real de ese aparato (lote por clase), así que el umbral
+  // se encuentra por bisección, no por suma: a 3,5 GiB el lote es 128 y
+  // el 1.5B se estima en ~1234,7 MiB, por debajo de la clase de 4 GiB.
+  const bisectsToFlip = (): number => {
+    let lo = 1, hi = 8 * GiB;
+    while (hi - lo > 1) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (defaultLlmForRam(mid).id === PREFERRED_LLM_ID) hi = mid; else lo = mid;
+    }
+    return hi;
+  };
+  const threshold = bisectsToFlip();
 
   it("picks the 0.5B on a 4GB-class device (Tab A9+ reports ~3.7 GiB)", () => {
     expect(defaultLlmForRam(3.7 * GiB).id).toBe(LIGHT_LLM_ID);

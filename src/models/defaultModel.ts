@@ -9,6 +9,7 @@ import {
   estimateContextBytes,
   readRamSnapshot,
   SYSTEM_HEADROOM_BYTES,
+  batchForRam,
   type ContextSpec,
 } from "../inference/ramBudget";
 
@@ -40,14 +41,40 @@ const SETUP_RSS_ESTIMATE_BYTES = 512 * MiB;
 export const PREFERRED_LLM_ID = "qwen2.5-1.5b-instruct-q4km";
 export const LIGHT_LLM_ID = "qwen2.5-0.5b-instruct-q4km";
 
-/** ContextSpec for a catalog model: its declared arch + default n_ctx. */
-export function contextSpecForModel(m: CatalogModel): ContextSpec {
+/**
+ * ContextSpec for a catalog model: its declared arch + default n_ctx.
+ *
+ * `deviceRamBytes` (0.1.86): when the device's RAM is known, the spec is
+ * the one the load path will actually build — the per-class context
+ * ceiling (contextCeilingForDevice) and the batch the device runs
+ * (batchForRam) — so every estimate made from it (the catalog badge, the
+ * default-model threshold, the routing profile's MB, the wizard's
+ * «RAM necesaria») is the load's own account, not a second one. Without
+ * a RAM reading (absent, null or garbage) the historic declared spec
+ * comes back: no blind change.
+ */
+export function contextSpecForModel(m: CatalogModel, deviceRamBytes?: number | null): ContextSpec {
+  const known =
+    deviceRamBytes !== undefined &&
+    deviceRamBytes !== null &&
+    Number.isFinite(deviceRamBytes) &&
+    deviceRamBytes > 0;
+  if (!known) {
+    return {
+      fileSizeBytes: m.sizeBytes,
+      nCtx: m.defaultNCtx ?? 4096,
+      nLayer: m.arch?.nLayer,
+      nKvHeads: m.arch?.nKvHeads,
+      headDim: m.arch?.headDim,
+    };
+  }
   return {
     fileSizeBytes: m.sizeBytes,
-    nCtx: m.defaultNCtx ?? 4096,
+    nCtx: contextCeilingForDevice(m.defaultNCtx, deviceRamBytes),
     nLayer: m.arch?.nLayer,
     nKvHeads: m.arch?.nKvHeads,
     headDim: m.arch?.headDim,
+    nUbatch: batchForRam(deviceRamBytes).nUbatch,
   };
 }
 
@@ -103,7 +130,7 @@ export function defaultLlmForRam(totalRamBytes: number): CatalogModel {
   const preferred = MODEL_CATALOG.find((m) => m.id === PREFERRED_LLM_ID)!;
   const light = MODEL_CATALOG.find((m) => m.id === LIGHT_LLM_ID)!;
   if (totalRamBytes <= 0) return preferred; // blind: preserve historic default
-  const need = estimateContextBytes(contextSpecForModel(preferred)).totalBytes;
+  const need = estimateContextBytes(contextSpecForModel(preferred, totalRamBytes)).totalBytes;
   const available = totalRamBytes - SETUP_RSS_ESTIMATE_BYTES - SYSTEM_HEADROOM_BYTES;
   return need <= available ? preferred : light;
 }
