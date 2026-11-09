@@ -290,8 +290,11 @@ export function llmLoadFailureNote(label: string, message: string): string {
 
 export function ChatScreen({
   onRelaunchWizard,
+  onOpenLibrary,
 }: {
   onRelaunchWizard?: () => void;
+  /** 0.1.86: abre el lector de guías (la capa vive en App). */
+  onOpenLibrary?: () => void;
 }) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
@@ -2560,6 +2563,7 @@ export function ChatScreen({
           await closeSettings();
         }}
         onRelaunchWizard={onRelaunchWizard}
+        onOpenLibrary={onOpenLibrary}
         onOpenMemory={() => setShowMemoryManager(true)}
         onOpenTelemetry={() => setShowExecutionTelemetry(true)}
         onOpenAbout={() => setShowAbout(true)}

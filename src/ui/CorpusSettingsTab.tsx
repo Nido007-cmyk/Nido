@@ -5,7 +5,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme";
 import { CatalogModel } from "../models/manifest";
@@ -20,6 +20,13 @@ interface Props {
   getRow: (item: CatalogModel) => CatalogRowState;
   download: (item: CatalogModel) => void;
   remove: (item: CatalogModel) => void;
+  /**
+   * 0.1.86: abre el lector de guías (la capa de App, sobre el chat).
+   * Solo lo pasa el sitio de Ajustes: sin él no hay botón, porque el
+   * lector vive en App y los demás sitios de esta pestaña (asistente,
+   * Biblioteca) no tienen esa capa encima.
+   */
+  onOpenLibrary?: () => void;
 }
 
 /**
@@ -28,7 +35,7 @@ interface Props {
  * PersonalDocumentsManager (also reachable on its own from the drawer as
  * KnowledgeBaseScreen — same component, not duplicated).
  */
-export function CorpusSettingsTab({ corpusItems, getRow, download, remove }: Props) {
+export function CorpusSettingsTab({ corpusItems, getRow, download, remove, onOpenLibrary }: Props) {
   const { colors } = useTheme();
   const { t } = useTranslation();
   // Packs with per-model vectors (Wikipedia Vital): offer the variant for the
@@ -72,6 +79,23 @@ export function CorpusSettingsTab({ corpusItems, getRow, download, remove }: Pro
         )}
       />
 
+      {/* 0.1.86: la entrada al lector de guías en uso normal. Hasta
+          aquí el lector solo se abría desde la franja del asistente
+          de primera vez; con la app ya configurada no había gesto que
+          lo abriera. El botón usa la clave ya traducida y solo existe
+          cuando el sitio pasa onOpenLibrary (Ajustes): el lector es la
+          capa de App, no una segunda copia dentro de esta pestaña. */}
+      {onOpenLibrary && (
+        <Pressable
+          onPress={onOpenLibrary}
+          accessibilityRole="button"
+          accessibilityLabel={t("guideLibrary.open")}
+          style={styles.libraryBtn}
+        >
+          <Text style={[styles.libraryBtnText, { color: colors.text.accentEmerald }]}>{t("guideLibrary.open")}</Text>
+        </Pressable>
+      )}
+
       {/* Pieza A: the signed-pack door — its own surface, apart from "Tus
           documentos" (a different promise: documents are the user's own
           notes; packs enter only with our signature). */}
@@ -94,4 +118,6 @@ const styles = StyleSheet.create({
   },
   list: { padding: 12, gap: 10 },
   note: { fontSize: 12, marginTop: 4, marginHorizontal: 4 },
+  libraryBtn: { marginHorizontal: 16, marginTop: 12, minHeight: 44, justifyContent: "center" },
+  libraryBtnText: { fontSize: 15, fontWeight: "600" },
 });

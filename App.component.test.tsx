@@ -60,8 +60,28 @@ jest.mock("react-native-safe-area-context", () =>
 );
 jest.mock("./src/ui/ChatScreen", () => {
   const ReactLocal = require("react");
-  const { Text: TextLocal } = require("react-native");
-  return { ChatScreen: () => ReactLocal.createElement(TextLocal, null, "CHAT-MARKER") };
+  const { Text: TextLocal, Pressable: PressableLocal } = require("react-native");
+  const enLocal = require("./src/i18n/locales/en.json");
+  return {
+    // 0.1.86: el doble ejerce el contrato de la prop nueva: pinta el
+    // botón de entrada al lector con la clave guideLibrary.open cuando
+    // App le pasa onOpenLibrary, como el ChatScreen real hace dentro
+    // de Ajustes > Biblioteca (CorpusSettingsTab). Sin la prop, el
+    // marcador es el de siempre y el botón no existe.
+    ChatScreen: ({ onOpenLibrary }: { onOpenLibrary?: () => void }) =>
+      ReactLocal.createElement(
+        ReactLocal.Fragment,
+        null,
+        ReactLocal.createElement(TextLocal, null, "CHAT-MARKER"),
+        onOpenLibrary
+          ? ReactLocal.createElement(
+              PressableLocal,
+              { onPress: onOpenLibrary, accessibilityRole: "button", accessibilityLabel: enLocal.guideLibrary.open },
+              ReactLocal.createElement(TextLocal, null, enLocal.guideLibrary.open)
+            )
+          : null
+      ),
+  };
 });
 jest.mock("./src/ui/ModelSetupScreen", () => {
   const ReactLocal = require("react");
@@ -439,8 +459,57 @@ describe("App · lector de guías sin modelo (integración)", () => {
     mockState.modelsReady = true;
     await renderApp();
     expect(await screen.findByText("CHAT-MARKER", {}, { timeout: 8000 })).toBeTruthy();
-    expect(screen.queryByLabelText(en.guideLibrary.open)).toBeNull();
     expect(screen.queryByText("WIZARD-MARKER")).toBeNull();
+  });
+
+  it("0.1.86: con la app ya configurada, la entrada desde el chat abre el lector con los packs, y cerrar vuelve al chat", async () => {
+    mockState.modelsReady = true;
+    await renderApp();
+    expect(await screen.findByText("CHAT-MARKER", {}, { timeout: 8000 })).toBeTruthy();
+    // La entrada en uso normal: App pasa onOpenLibrary a ChatScreen
+    // (el real la reenvía a Ajustes > Biblioteca, CorpusSettingsTab).
+    const entry = screen.getByLabelText(en.guideLibrary.open);
+    fireEvent.press(entry);
+    expect(await screen.findByText(en.guideLibrary.title)).toBeTruthy();
+    expect(screen.getByText(en.guideLibrary.intro)).toBeTruthy();
+    expect(screen.getByText("Pack Semilla")).toBeTruthy();
+    expect(screen.getByText("Guía larga de prueba")).toBeTruthy();
+    // Cerrar vuelve a la pantalla madre: el chat, con su entrada.
+    fireEvent.press(screen.getByLabelText(en.common.done));
+    expect(await screen.findByText("CHAT-MARKER")).toBeTruthy();
+    expect(screen.getByLabelText(en.guideLibrary.open)).toBeTruthy();
+    expect(screen.queryByText(en.guideLibrary.intro)).toBeNull();
+    expectNoEngines();
+  });
+
+  it("0.1.86: con la app ya configurada, al re-bloquear la capa del lector desaparece y no reaparece sola", async () => {
+    mockState.modelsReady = true;
+    await renderApp();
+    expect(await screen.findByText("CHAT-MARKER", {}, { timeout: 8000 })).toBeTruthy();
+    fireEvent.press(screen.getByLabelText(en.guideLibrary.open));
+    await screen.findByText("Guía larga de prueba");
+
+    let resolveGate: (() => void) | null = null;
+    mockState.ensureUnlockedImpl = () =>
+      new Promise<void>((res) => { resolveGate = res; });
+    await act(async () => { fireAppState("background"); await Promise.resolve(); });
+    await act(async () => { fireAppState("active"); await Promise.resolve(); });
+
+    expect(await screen.findByText(en.lockScreen.title)).toBeTruthy();
+    expect(mockLockNow).toHaveBeenCalled();
+    expect(screen.queryByText(en.guideLibrary.title)).toBeNull();
+    expect(screen.queryByText("Guía larga de prueba")).toBeNull();
+
+    expect(resolveGate).not.toBeNull();
+    await act(async () => {
+      resolveGate!();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(await screen.findByText("CHAT-MARKER", {}, { timeout: 8000 })).toBeTruthy();
+    expect(screen.queryByText(en.guideLibrary.intro)).toBeNull();
+    expect(screen.getByLabelText(en.guideLibrary.open)).toBeTruthy();
+    expectNoEngines();
   });
 
   for (const lang of ["es", "en", "pt"] as const) {
