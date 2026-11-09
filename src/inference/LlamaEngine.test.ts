@@ -1527,6 +1527,84 @@ describe("0.1.86: la segunda llamada q8 conserva la condición de emergencia", (
   });
 });
 
+describe("0.1.86: una misma muerte no cuenta dos choques (pieza 6)", () => {
+  const SESSION_PATH = "file:///docs/nido-native-session.json";
+  const GUARD_PATH = "file:///docs/nido-crash-guard.json";
+  const readGuard = (): { crashes: number; pending: unknown } =>
+    JSON.parse(fsStore.get(GUARD_PATH)!) as { crashes: number; pending: unknown };
+
+  // El escenario de la muerte física del 2026-11-09 05:28: la carga
+  // dejó su pendiente sin confirmar Y la generación en vuelo dejó la
+  // bandera puesta, con un cierre CRASH_NATIVE posterior. Los dos
+  // instrumentos describen EL MISMO hecho; el registro debe contar
+  // UN choque, no dos.
+  function seedDeathOfMay9(pendingAt: number): void {
+    fsStore.set(
+      SESSION_PATH,
+      JSON.stringify({
+        at: 1_000,
+        model: "models/a.gguf",
+        nCtx: 4096,
+        nThreads: 4,
+        memoryProfile: "kv-q8",
+        reembed: { running: false, done: 900, total: 900 },
+        generating: true,
+        backend: null,
+        crossedExitAt: null,
+        verdict: null,
+      }),
+    );
+    fsStore.set(
+      GUARD_PATH,
+      JSON.stringify({ crashes: 0, pending: { model: "models/a.gguf", nCtx: 4096, at: pendingAt } }),
+    );
+    mockCrashReport = {
+      lastCrash: null,
+      sdkInt: 36,
+      device: "SM-X218U",
+      exits: [
+        {
+          timestamp: 2_000,
+          reason: "CRASH_NATIVE",
+          description: null,
+          status: 11,
+          importance: 100,
+          pssKb: 0,
+          rssKb: 526 * 1024,
+          trace: null,
+        },
+      ],
+    };
+  }
+
+  it("pendiente de la MISMA generación que murió (at <= inicio de la generación): un solo choque", async () => {
+    seedDeathOfMay9(900);
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(readGuard().crashes).toBe(1);
+    expect(isBackgroundIndexingHeld()).toBe(true);
+  });
+
+  // Este caso documenta el límite del instrumento, no un defecto de
+  // conteo (informe del cierre §6.2, verificado sobre el código de la
+  // 0.1.85): el registro de sesión nativa no guarda id de carga, así
+  // que un pendiente con at POSTERIOR al inicio de la generación
+  // registrada no puede distinguirse de «el pendiente de la misma
+  // carga que generó», y el cruce lo consume igual. Físicamente ese
+  // at posterior exigiría una segunda carga entre medias — y toda
+  // carga asienta antes de marcar su pendiente, así que un pendiente
+  // así nunca llega vivo a un cruce posterior: la ventana es
+  // inalcanzable y el conteo queda en uno, el lado seguro (un choque
+  // de menos se cura generando; uno de más castigaría dos veces).
+  it("pendiente con at posterior al de la generación registrada: el cruce lo consume igual (límite del instrumento, ventana inalcanzable)", async () => {
+    seedDeathOfMay9(1_500);
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(readGuard().crashes).toBe(1);
+    expect(isBackgroundIndexingHeld()).toBe(true);
+  });
+});
+
 describe("0.1.85: separación embeddings/CrashGuard (la indexación no castiga al LLM)", () => {
   const GUARD = "file:///docs/nido-crash-guard.json";
 
