@@ -95,6 +95,16 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   a smaller context), a low battery, power saving or a hot device
   lowers the thread count, and when Android reports critical memory
   pressure the models unload instead of waiting to be closed.
+- **The memory check charges what the load really costs, and
+  refusals can be read in the app** (0.1.84): switching models no
+  longer counts the outgoing model's memory as still used on the
+  side of the check that decides; the context cache and the
+  compute buffer are charged at the precision and batch size the
+  load will actually use; and on devices with 4 GB of memory or
+  less the check tries one short-answer context below the usual
+  floor before refusing. The Execution Telemetry screen now lists
+  every refused load with the numbers the check saw, and the
+  records travel in its JSON and CSV exports.
 - **Talks to another NIDO over Bluetooth**: encrypted messages between two
   paired phones, with no internet and no server. To pair, you paste the
   other phone's code (the text of its QR); a contact shows as verified only
@@ -140,7 +150,7 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.83-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.83-alpha).
+   [v0.1.84-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.84-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4

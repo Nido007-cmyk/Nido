@@ -4,6 +4,62 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.84-alpha - 2026-11-08
+
+The card came back once more on the same tablet, and this time the
+audit read the memory check line by line against the tablet's own
+figures (3.54 GB read by the system, a whole process that peaked
+at 743 to 760 MB when the model ran fine). The app reads memory
+correctly; the check itself was charging more than the load
+really costs, in one direction only. It charged the outgoing
+model's memory twice when you switched models, charged the
+context cache at double precision even when the load uses the
+halved one, and charged the full-size compute buffer even on
+devices whose batch is smaller. And when even the smallest normal
+context did not fit on a small device, the check gave up instead
+of trying one step lower. This release corrects those charges,
+adds that last step, and makes the refusals the 0.1.83 started
+recording visible in the app, so the next report can be read from
+the device itself.
+
+### Fixed
+
+- **Switching models no longer charges the old model twice.**
+  When you changed models, the memory the outgoing model was
+  about to free was credited on one side of the check and still
+  counted as used on the other, the side that decides. Both sides
+  now credit it, the way the code's own note always said it did.
+- **The check now charges what the load really allocates.** The
+  context cache is charged at the precision the load will use
+  (the first profile the engine tries stores it at half size),
+  and the compute buffer at the batch size the device will
+  actually run, instead of the largest device's. On roomy devices
+  nothing changes: at the full batch the charges are exactly the
+  ones before.
+- **One more step before refusing.** On devices with 4 GB of
+  memory or less, if even the smallest normal context does not
+  fit, the check now tries a short-answer context of 1024 before
+  refusing, pinned to the memory-saving profile it was priced
+  with. A short answer in an emergency beats no model at all.
+  Larger devices keep the same floor as before, and the check
+  still refuses when memory is really short; the 2 GB system
+  headroom and the crash guard are unchanged.
+
+### Changed
+
+- **Memory refusals are now visible in the app.** The Execution
+  Telemetry screen (Settings, Diagnostics) has a "Memory
+  rejections" section listing each refused load with the numbers
+  the check saw: the model, what it needed, what was free, the
+  total memory, the context it asked for and the one it settled
+  for. The same records travel in the screen's JSON and CSV
+  exports, so a refusal can be shared with its figures attached
+  instead of described from a photo.
+- **The search model rests more honestly.** Its last-use mark
+  used to be set only when the chat screen opened, so the idle
+  unload could fire soon after a search; the engine now marks
+  every search itself.
+
 ## 0.1.83-alpha - 2026-11-08
 
 The 0.1.82 fix was not the whole story: on the tablet where the
