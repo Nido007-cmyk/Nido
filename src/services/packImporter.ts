@@ -137,6 +137,28 @@ async function writeRegistry(packs: Record<string, ImportedPackRecord>): Promise
 }
 
 /**
+ * Packs the door verified, keyed by the id knowledgePacks() gives them
+ * (`local-<file base>`), for readers that need the origin mark without the
+ * list's presentation rules (e.g. the literal guide route in
+ * rag/guideAnswerRun.ts, which serves a verified imported pack's guides
+ * word for word like the built-in first-aid packs). A pack recorded under
+ * a catalog file name presents as the catalog item, never as an import,
+ * so it is not reported here; a record whose file is gone is stale and
+ * is not reported either.
+ */
+export async function verifiedImportedPacks(): Promise<Map<string, { name: string; origin: PackOrigin }>> {
+  const registry = await readRegistry();
+  const out = new Map<string, { name: string; origin: PackOrigin }>();
+  for (const [filename, record] of Object.entries(registry)) {
+    if (catalogEntryForFilename(filename)) continue;
+    const info = await FileSystem.getInfoAsync(`${corpusUri()}${filename}`).catch(() => null);
+    if (!info?.exists || info.isDirectory) continue;
+    out.set(localPackId(filename), { name: record.name, origin: record.origin });
+  }
+  return out;
+}
+
+/**
  * Packs this door imported and verified, still on disk. A pack whose file
  * name is a catalog file name is NOT listed here: it presents as the
  * catalog item it byte-for-byte is, in the downloadable packs list.
