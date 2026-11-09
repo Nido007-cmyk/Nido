@@ -65,6 +65,11 @@ jest.mock("react-i18next", () => ({
     t: (k: string, opts?: { source?: string }) => (opts?.source ? `${k}:${opts.source}` : k),
   }),
 }));
+// 0.1.89: el área segura queda fijada en 24 para probar que la
+// pantalla la aplica a su raíz (en el aparato la da el sistema).
+jest.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({ top: 24, bottom: 0, left: 0, right: 0 }),
+}));
 
 describe("GuideLibraryScreen", () => {
   beforeEach(() => {
@@ -141,6 +146,26 @@ describe("GuideLibraryScreen", () => {
     await render(<GuideLibraryScreen onClose={() => {}} />);
     fireEvent.press(await screen.findByText("Burns"));
     expect(await screen.findByText("guideLibrary.readError")).toBeTruthy();
+  });
+
+  it("0.1.89: la raíz lleva el margen del área segura y el botón de cierre sigue cerrando", async () => {
+    const { GuideLibraryScreen } = require("./GuideLibraryScreen");
+    const onClose = jest.fn();
+    const view = await render(<GuideLibraryScreen onClose={onClose} />);
+    const flatStyle = (s) => Object.assign({}, ...(Array.isArray(s) ? s : [s]).filter(Boolean));
+    const withInset = () => {
+      const tree = view.toJSON();
+      const root = Array.isArray(tree) ? tree[0] : tree;
+      return root && flatStyle(root.props.style).paddingTop === 24 ? [root] : [];
+    };
+    expect(withInset().length).toBe(1);
+    expect(screen.getByText("guideLibrary.title")).toBeTruthy();
+    fireEvent.press(screen.getByLabelText("common.done"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    // La vista de documento comparte la raíz: el margen sigue ahí.
+    fireEvent.press(await screen.findByText("CPR for adults"));
+    expect(await screen.findByText(/Check response first/)).toBeTruthy();
+    expect(withInset().length).toBeGreaterThanOrEqual(1);
   });
 
   it("la ruta de lectura no carga ningún motor", async () => {

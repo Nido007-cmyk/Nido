@@ -144,30 +144,29 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   normal. Una sospecha de doble conteo en el guardián de
   choques se probó con una regresión y no existe; el guardián
   no cambia.
-- **Un pack importado escrito para otro modelo de búsqueda
-  responde ahora a su propia pregunta por palabras, y la
-  biblioteca de guías tiene una sola puerta, abajo**
-  (0.1.88): la versión anterior abrió una vía palabra por
-  palabra para los packs importados verificados, pero en la
-  tableta del dueño, con la búsqueda multilingüe activa, la
-  guía del gas del pack de SALVORA PACKS no salió nunca:
-  preguntada en un chat que ya tenía un cuento, dos veces
-  seguidas, el modelo respondió de memoria las dos, una con
-  las mismas palabras de la versión anterior y con un
-  consejo que la guía contradice. El pack estaba importado
-  y verificado, y su propia tarjeta ya decía que con ese
-  pack solo funciona la búsqueda por palabras; lo cerrado
-  era la vía de palabras. Ahora juzga los fragmentos del
-  pack por su cuenta, guía a guía, para que una guía hermana
-  del mismo pack no gane la pregunta por el orden de la
-  lista, y funciona con cualquiera de los dos modelos de
-  búsqueda activo y en un chat con historial. La red del
-  texto seguro mira ahora en qué se apoya de verdad una
-  respuesta sin verificar, y no la lista de fuentes, así
-  que una guía verificada presente pero sin usar entre las
-  fuentes ya no la desarma. Y la pestaña Biblioteca guarda
-  una sola banda «Leer las guías», a todo ancho y abajo del
-  todo; Ajustes conserva su única entrada.
+- **Si huele a gas, sale la guía de la fuga, y dos pantallas
+  dejan de pisarse** (0.1.89): la versión anterior hizo
+  correr la vía palabra por palabra, y en la tableta del
+  dueño sirvió una guía palabra por palabra para la
+  pregunta del gas, con el nombre del pack y sin modelo de
+  por medio, pero era la vecina del monóxido en vez de la
+  guía de la fuga: medido contra el pack real del dueño, el
+  propio orden por palabras del pack pone el fragmento del
+  monóxido primero cuando empatan en cobertura, y el texto
+  de esa guía dice que su gas no se puede oler. La elección
+  lee ahora el signo de la pregunta: cuando una pregunta
+  dice que algo se huele, se ve o se oye, una guía que
+  declara que su peligro no se huele, no se ve o no se oye
+  pierde el empate contra una que no lo declara, en
+  español, inglés y portugués, y cuando la primera lista
+  corta solo trae a la vecina equivocada, la app mira la
+  lista ancha antes de servir nada. La cabecera del lector
+  de guías queda ahora por debajo de la barra de estado
+  del sistema, sin pisar la hora ni los iconos de batería.
+  Y las pestañas de la pantalla NIDO se reparten el ancho
+  según su etiqueta, para que la palabra larga quede en
+  una sola línea; en un teléfono estrecho la fila se
+  desplaza en vez de partir la palabra.
 - **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
   teléfonos emparejados, sin internet y sin servidor. Para emparejar pegas
   el código del otro teléfono (el texto de su QR); un contacto aparece como
@@ -214,7 +213,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.88-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.88-alpha).
+   [versión v0.1.89-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.89-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y

@@ -16,6 +16,7 @@
  */
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { useTheme } from "./theme";
@@ -50,6 +51,15 @@ export function GuideLibraryScreen({ onClose }: { onClose: () => void }) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
+  // 0.1.89: App monta esta pantalla en una capa absoluta a pantalla
+  // completa, que no hereda el padding del SafeAreaView raíz: sin
+  // este inset la cabecera nacía en el borde superior de la ventana
+  // y la barra de estado del sistema se pintaba sobre «Guías» y el
+  // botón de cierre (foto del dueño, 2026-11-09). La pantalla aplica
+  // el área segura ella misma, como hace SetupWizardScreen, y las
+  // dos vistas (lista y documento) comparten esta raíz.
+  const insets = useSafeAreaInsets();
+  const rootStyle = [styles.container, { paddingTop: insets.top }];
   const [sections, setSections] = useState<PackSection[] | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
   const [doc, setDoc] = useState<PackGuideDoc | null>(null);
@@ -102,7 +112,7 @@ export function GuideLibraryScreen({ onClose }: { onClose: () => void }) {
 
   if (selection) {
     return (
-      <View style={styles.container}>
+      <View style={rootStyle}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.title} numberOfLines={2}>
@@ -143,7 +153,7 @@ export function GuideLibraryScreen({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={rootStyle}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <NidoIcon name="knowledge" size={20} />
