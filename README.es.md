@@ -125,6 +125,25 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   registro de telemetría. Todos los peldaños normales conservan
   la cuenta estricta, y la reserva del sistema de 2 GB no
   cambia.
+- **Las guías de un pack importado y verificado se responden
+  tal como están escritas, y la insignia de cada modelo es el
+  veredicto de la carga real** (0.1.86): un pack que entró por
+  la puerta de importación firmada y se verificó se sirve
+  ahora palabra por palabra desde el chat, sin cargar el
+  modelo de lenguaje, con la misma regla que los packs
+  integrados, así que preguntar por una de sus guías ya no
+  manda la pregunta al modelo con la memoria más justa; la
+  insignia de compatibilidad de cada modelo se juzga con la
+  misma especificación y el mismo veredicto del planificador
+  que la carga misma (en una tableta como la del dueño el
+  modelo de 1.5B se muestra ahora en rojo, porque ni su plan
+  de emergencia más barato cabe ahí); importar un pack pide
+  su manifiesto firmado con un segundo selector en vez de
+  negarse cuando la primera selección no lo trajo; y la
+  biblioteca de guías se puede abrir desde Ajustes en el uso
+  normal. Una sospecha de doble conteo en el guardián de
+  choques se probó con una regresión y no existe; el guardián
+  no cambia.
 - **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
   teléfonos emparejados, sin internet y sin servidor. Para emparejar pegas
   el código del otro teléfono (el texto de su QR); un contacto aparece como
@@ -171,7 +190,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.85-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.85-alpha).
+   [versión v0.1.86-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.86-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y

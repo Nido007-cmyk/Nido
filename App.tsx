@@ -614,7 +614,10 @@ function AppContent() {
         </Pressable>
       )}
       {screen === "chat" && !devPreview && (
-        <ChatScreen onRelaunchWizard={() => setScreen("required-setup")} />
+        <ChatScreen
+          onRelaunchWizard={() => setScreen("required-setup")}
+          onOpenLibrary={() => setLibraryOpen(true)}
+        />
       )}
       {/* El lector solo se pinta sobre el wizard o el chat ya desbloqueado:
           al re-bloquear la app la capa desaparece con su pantalla madre. */}

@@ -47,6 +47,34 @@ export function isEssentialsChunk(chunkId: string | undefined): boolean {
   return !!ref && !!LITERAL_GUIDE_PACKS[basePackId(ref.packId)];
 }
 
+/**
+ * 0.1.86 — the literal route also covers packs imported through the signed
+ * pack door (services/packImporter.ts) whose origin the door verified
+ * (SALVORA signature or NIDO catalog pin): the registry the door writes is
+ * the same trust bar as the built-in list, verified text only. The caller
+ * (guideAnswerRun.ts) passes the verified pack ids it read from that
+ * registry; a `local-…` chunk whose pack is NOT in the set (a loose file
+ * in corpus/, a user document) stays on the model path, unchanged.
+ */
+export interface LiteralRouteContext {
+  /** Pack ids (`local-…`) the signed door imported and verified. */
+  importedVerifiedPackIds?: ReadonlySet<string>;
+  /** Display name per imported pack id, for the answer's heading. */
+  importedPackNames?: ReadonlyMap<string, string>;
+}
+
+export function isLiteralGuideChunk(chunkId: string | undefined, route?: LiteralRouteContext): boolean {
+  if (isEssentialsChunk(chunkId)) return true;
+  const ref = parsePackChunkId(chunkId);
+  return !!ref && !!route?.importedVerifiedPackIds?.has(ref.packId);
+}
+
+/** Display name of the pack a literal answer comes from (its own name when imported). */
+export function literalRoutePackName(packId: string | undefined, lang: GroundingLang, route?: LiteralRouteContext): string {
+  const imported = packId ? route?.importedPackNames?.get(packId) : undefined;
+  return imported ?? literalPackName(packId, lang);
+}
+
 /** Heading name of a literal-route pack in the reader's language (Essentials when unknown). */
 function literalPackName(packId: string | undefined, lang: GroundingLang): string {
   const names = (packId && LITERAL_GUIDE_PACKS[basePackId(packId)]) || LITERAL_GUIDE_PACKS["nido-esencial"];
@@ -96,24 +124,24 @@ export function isClosingSection(c: Pick<RetrievedChunk, "title">): boolean {
  * quita la respuesta a la guía literal de Esencial. Sus apartados (título
  * «Guía — Apartado») sí compiten, como siempre.
  */
-function isOtherNidoGuideIntro(c: RetrievedChunk): boolean {
+function isOtherNidoGuideIntro(c: RetrievedChunk, route?: LiteralRouteContext): boolean {
   const ref = parsePackChunkId(c.chunkId);
-  if (!ref || !/^nido-/.test(ref.packId) || isEssentialsChunk(c.chunkId)) return false;
+  if (!ref || !/^nido-/.test(ref.packId) || isLiteralGuideChunk(c.chunkId, route)) return false;
   return !/\s[—–]\s/.test(c.title ?? "");
 }
 
-export function pickGuideChunk(chunks: RetrievedChunk[], lang: GroundingLang): RetrievedChunk | null {
+export function pickGuideChunk(chunks: RetrievedChunk[], lang: GroundingLang, route?: LiteralRouteContext): RetrievedChunk | null {
   const scored = chunks.filter(
     (c) =>
       typeof c.rawScore === "number" &&
-      !(isEssentialsChunk(c.chunkId) && isClosingSection(c)) &&
-      !isOtherNidoGuideIntro(c),
+      !(isLiteralGuideChunk(c.chunkId, route) && isClosingSection(c)) &&
+      !isOtherNidoGuideIntro(c, route),
   );
   if (scored.length === 0) return null;
   const best = scored.reduce((a, b) => ((b.rawScore as number) > (a.rawScore as number) ? b : a));
-  if (!isEssentialsChunk(best.chunkId) || (best.rawScore as number) < GUIDE_MIN_SCORE) return null;
+  if (!isLiteralGuideChunk(best.chunkId, route) || (best.rawScore as number) < GUIDE_MIN_SCORE) return null;
   const close = scored.filter(
-    (c) => isEssentialsChunk(c.chunkId) && (best.rawScore as number) - (c.rawScore as number) <= 0.03,
+    (c) => isLiteralGuideChunk(c.chunkId, route) && (best.rawScore as number) - (c.rawScore as number) <= 0.03,
   );
   const prefs: GroundingLang[] = lang === "pt" ? ["pt", "es"] : [lang];
   for (const want of prefs) {
@@ -205,9 +233,9 @@ const CALL: Record<GroundingLang, string> = {
  * nunca es el que cae por el tope de longitud. Queda asentado para
  * la revisión línea a línea de Claude del martes 2026-11-03.
  */
-export function composeGuideAnswer(doc: PackSourceDoc, lang: GroundingLang, opts: { short?: boolean; packId?: string } = {}): string {
-  if (opts.short) return composeShortGuideAnswer(doc, lang, opts.packId);
-  const pack = literalPackName(opts.packId, lang);
+export function composeGuideAnswer(doc: PackSourceDoc, lang: GroundingLang, opts: { short?: boolean; packId?: string; route?: LiteralRouteContext } = {}): string {
+  if (opts.short) return composeShortGuideAnswer(doc, lang, opts.packId, opts.route);
+  const pack = literalRoutePackName(opts.packId, lang, opts.route);
   const bodies = doc.parts
     .map((p) => ({ body: p.body.trim(), used: p.used }))
     .filter((x) => x.body.length > 0);
@@ -241,7 +269,7 @@ export function composeGuideAnswer(doc: PackSourceDoc, lang: GroundingLang, opts
  * dos primeras. Nunca más de GUIDE_SHORT_MAX_CHARS salvo la primera parte,
  * y siempre cortando entre partes, nunca dentro de una.
  */
-export function composeShortGuideAnswer(doc: PackSourceDoc, lang: GroundingLang, packId?: string): string {
+export function composeShortGuideAnswer(doc: PackSourceDoc, lang: GroundingLang, packId?: string, route?: LiteralRouteContext): string {
   const bodies = doc.parts.map((p) => p.body.trim()).filter(Boolean);
   const firstSteps = bodies.slice(0, 3).findIndex((b) => /^\s*1[.)]\s/m.test(b));
   const wanted = firstSteps >= 0 ? firstSteps + 1 : Math.min(2, bodies.length);
@@ -252,7 +280,7 @@ export function composeShortGuideAnswer(doc: PackSourceDoc, lang: GroundingLang,
     parts.push(body);
     used += body.length;
   }
-  const out = [HEAD_SHORT[lang](doc.title, literalPackName(packId, lang)), "", parts.join("\n\n"), "", MORE_SHORT[lang]];
+  const out = [HEAD_SHORT[lang](doc.title, literalRoutePackName(packId, lang, route)), "", parts.join("\n\n"), "", MORE_SHORT[lang]];
   if (doc.source.trim()) out.push("", `${SOURCE[lang]}: ${doc.source.trim()}`);
   out.push("", CALL[lang]);
   return out.join("\n");
@@ -265,13 +293,20 @@ export function composeShortGuideAnswer(doc: PackSourceDoc, lang: GroundingLang,
  */
 export function guideAnswerProvenance(text: string): SentenceProvenance[] {
   // A heading is fixed text whichever literal-route pack it names: the
-  // prefix up to the guide title, tried with every pack's display name.
+  // prefix up to the guide title, tried with every built-in pack's display
+  // name — plus an imported-pack form: the pack's own (arbitrary) name sits
+  // between the same fixed prefix and suffix, so a heading is recognized
+  // structurally whenever it ends with a HEAD/HEAD_ANCHORED suffix.
   const packNames = Object.values(LITERAL_GUIDE_PACKS).flatMap((names) => Object.values(names));
   const headPrefixes = [HEAD, HEAD_ANCHORED, HEAD_SHORT].flatMap((table) =>
     Object.values(table).flatMap((h) => packNames.map((name) => h("\u0000", name).split("\u0000")[0])),
   );
+  const headSuffixes = [HEAD, HEAD_ANCHORED, HEAD_SHORT].flatMap((table) =>
+    Object.values(table).map((h) => h("\u0000", "pack").split("\u0000")[1] ?? ""),
+  );
   const fixedLine = (p: string) =>
     headPrefixes.some((pre) => p.startsWith(pre)) ||
+    headSuffixes.some((suf) => suf.length > 0 && p.endsWith(suf)) ||
     Object.values(MORE).includes(p) ||
     Object.values(MORE_SHORT).includes(p) ||
     Object.values(CALL).includes(p) ||

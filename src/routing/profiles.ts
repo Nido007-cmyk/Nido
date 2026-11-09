@@ -141,7 +141,7 @@ function toProfile(
     userOverride,
     estimatedMemoryMb:
       model.capabilities?.estimatedMemoryMb ??
-      Math.round(estimateContextBytes(contextSpecForModel(model)).totalBytes / (1024 * 1024)),
+      Math.round(estimateContextBytes(contextSpecForModel(model, deviceRamBytes)).totalBytes / (1024 * 1024)),
     estimatedTokensPerSecond: model.capabilities?.estimatedTokensPerSecond,
     compatibilityStatus: computeCompatibility(model, deviceRamBytes),
   };

@@ -13,7 +13,8 @@ import { guideTitleOf, parsePackChunkId } from "./packSource";
 import { ANSWER_CONTEXT_CHUNKS } from "./pure";
 import type { RetrievedChunk } from "./retrieve.types";
 import type { GroundingLang } from "./grounding";
-import { composeGuideAnswer, pickGuideChunk, stripShortRequest, wantsShortGuide } from "./guideAnswer";
+import { composeGuideAnswer, pickGuideChunk, stripShortRequest, wantsShortGuide, type LiteralRouteContext } from "./guideAnswer";
+import { verifiedImportedPacks } from "../services/packImporter";
 
 export interface GuideAnswer {
   text: string;
@@ -41,13 +42,26 @@ export async function answerFromGuide(
     // 0.1.60: «resúmeme la guía de RCP» busca por «la guía de RCP».
     const short = wantsShortGuide(query);
     retrieved = await retrieve(short ? stripShortRequest(query) : (retrievalQuery ?? query), ANSWER_CONTEXT_CHUNKS);
-    const pick = pickGuideChunk(retrieved, lang);
+    // 0.1.86: packs the signed door imported and verified also travel the
+    // literal route (their text passed the door's signature check, the same
+    // trust bar as the built-in list). Read fresh each turn: the registry
+    // is the only origin mark, and a pack removed since the last turn must
+    // stop being literal at once. An unreadable registry degrades to the
+    // built-in list only — never to opening the route.
+    const imported = await verifiedImportedPacks().catch(() => null);
+    const route: LiteralRouteContext | undefined = imported && imported.size > 0
+      ? {
+          importedVerifiedPackIds: new Set(imported.keys()),
+          importedPackNames: new Map([...imported].map(([id, v]) => [id, v.name])),
+        }
+      : undefined;
+    const pick = pickGuideChunk(retrieved, lang, route);
     if (!pick) return { answer: null, retrieved };
     const doc = await readPackSource(pick.chunkId);
     if (!doc) return { answer: null, retrieved };
     const sameGuide = retrieved.filter((c) => c !== pick && guideTitleOf(c.title) === doc.title);
     return {
-      answer: { text: composeGuideAnswer(doc, lang, { short, packId: parsePackChunkId(pick.chunkId)?.packId }), chunks: [pick, ...sameGuide] },
+      answer: { text: composeGuideAnswer(doc, lang, { short, packId: parsePackChunkId(pick.chunkId)?.packId, route }), chunks: [pick, ...sameGuide] },
       retrieved,
     };
   } catch (e) {

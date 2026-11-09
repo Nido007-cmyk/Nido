@@ -4,6 +4,65 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.86-alpha - 2026-11-09
+
+0.1.85 fixed the memory card on the owner's tablet, and the
+same morning the tablet found the next defect by hand. A signed
+guide pack bought from SALVORA PACKS imported cleanly through
+the verified door, but asking the chat about one of its guides
+(what to do when there is a smell of gas in the house) closed
+the app: guides from imported packs were not allowed to be
+served word for word the way the built-in packs are, so the
+question fell to the language model with memory at its
+tightest, and the process died mid-answer. This release closes
+that road and the four smaller defects found standing next to
+it, and puts a written suspicion about the crash guard to the
+test.
+
+### Fixed
+
+- **A verified imported pack's guides are answered as
+  written.** A pack that entered through the signed import
+  door and verified (a NIDO pack by its pinned hash, a
+  SALVORA PACKS pack by its signature) is now served word for
+  word, without loading the model, under the same rule as the
+  built-in packs. A pack with no verified origin keeps the
+  normal route; unverified text is still never served as a
+  literal guide answer.
+- **The compatibility badge is the verdict of the real load
+  path.** The badge on each model is now judged with the same
+  specification the load itself uses (the context ceiling for
+  the device class and the batch size for its memory), and
+  its green and amber come from the load planner's verdict on
+  the canonical photo of the device instead of fixed
+  percentages of total memory. On the owner's tablet the 1.5B
+  model now shows red, because even its cheapest emergency
+  plan does not fit there; the Qwen3-0.6B badge now matches
+  the load that really happens.
+- **The emergency retry keeps its emergency terms.** When a
+  load falls back to the memory-saving cache precision at the
+  emergency step, that second judgement now uses the same
+  emergency terms as the first, instead of the normal,
+  stricter count.
+- **Importing a pack asks for its manifest.** If the file
+  picker selection brings the pack file without its signed
+  manifest beside it, the importer opens a second picker
+  asking for the manifest instead of refusing; only when that
+  second gesture does not bring it does the refusal stand.
+- **The guide library opens in normal use.** Settings, under
+  Knowledge base, now has the "Read the guides" entry next to
+  adding a pack, so the library can be browsed after setup,
+  not only from the first-run assistant.
+- **The crash guard was suspected of counting one death
+  twice, and does not.** A regression now replays the exact
+  shape of the closure that raised the suspicion (a pending
+  load, a session record marked as generating, a native crash
+  after it) and the counter stays at one: the settlement
+  reads the session crossing before settling the pending
+  mark, so the same death cannot be counted twice. The guard
+  itself is untouched: its factors and the 2 GB system
+  headroom are unchanged.
+
 ## 0.1.85-alpha - 2026-11-08
 
 The card was still there after 0.1.84, on the same tablet, and

@@ -4,19 +4,40 @@
  * See LICENSE file for details.
  */
 
-import { estimateContextBytes, SYSTEM_HEADROOM_BYTES } from "../inference/ramBudget";
-import { contextSpecForModel } from "./defaultModel";
+import { KV_Q8_BYTES_PER_ELEMENT, type RamSnapshot } from "../inference/ramBudget";
+import { planContext } from "../inference/memoryLadder";
+import { contextCeilingForDevice, contextSpecForModel } from "./defaultModel";
 import type { CatalogModel } from "./manifest";
 
 /**
- * Rough RAM-fit estimate for a GGUF model on this device — shared between
- * the catalog UI (CatalogItemCard) and the routing layer's ModelProfile
- * resolution, so both use the same formula rather than drifting apart.
+ * RAM-fit verdict for a GGUF model on this device — shared between the
+ * catalog UI (CatalogItemCard) and the routing layer's ModelProfile
+ * resolution, so both use the same verdict rather than drifting apart.
  *
- * The estimate itself lives in src/inference/ramBudget.ts (weights + computed
- * KV cache + compute buffers — the same formula the engine's load-time
- * pre-flight uses), so a "green" badge and a successful pre-flight agree.
- * Heuristic, not a measurement; the green/yellow/red cutoffs are UI policy.
+ * 0.1.86 — the badge IS the load path's verdict, not a parallel estimate.
+ * The 2026-11-09 census (research_notes/nido-censo-insignias-catalogo)
+ * measured the old badge (declared spec, flat compute, fixed 65 %/90 %
+ * gates) against LlamaEngine.loadNow over the whole catalog: 13 of 16
+ * model×device pairs agreed and 3 were pessimistic (Qwen3-0.6B on the
+ * owner's tablet; LFM2.5 and Gemma 4 on 8 GiB), because the badge judged
+ * a spec the load never builds and gates the load never applies. Now
+ * the color comes from planContext itself, run over the canonical photo
+ * of the device (total RAM, the app baseline as RSS, no live term — the
+ * badge is per device, not per moment) with the real spec (per-class
+ * ceiling + the device's batch) and safety 1:
+ *
+ * - green: the plan fits AT THE CEILING with fp16 KV — the load the
+ *   badge promises is the load the pre-flight accepts on this photo;
+ * - yellow: it does not fit at the ceiling, but the ladder finds a rung
+ *   (a lower context, the emergency rung, or the same plan with q8 KV):
+ *   it loads degraded — exactly what yellow has always announced;
+ * - red: no rung fits, not even the emergency rung with q8 KV.
+ *
+ * Invariant (the one the 2026-11-06 photo bought): green ⇒ the
+ * pre-flight accepts. It now holds by construction, because green is
+ * defined as planContext fitting at the ceiling on the canonical photo.
+ * Heuristic still — the canonical photo is a policy snapshot, not a
+ * measurement of this moment — but it is the load's own heuristic.
  */
 export type Compatibility = "green" | "yellow" | "red" | "unknown";
 
@@ -28,23 +49,28 @@ export type Compatibility = "green" | "yellow" | "red" | "unknown";
  */
 export const APP_BASELINE_BYTES = 512 * 1024 * 1024;
 
-/**
- * 2026-11-06 (prueba física, tableta de 3,3 GB): la etiqueta decía
- * «Funciona bien en este dispositivo» para un modelo de ~1,0 GB que el
- * pre-flight rechazaba al cargar. La etiqueta solo miraba la RAM total;
- * el pre-flight reserva además 2 GB para el sistema y resta lo que ya usa
- * la app. Ahora la etiqueta aplica la misma reserva:
- * - verde: cabe con la reserva del sistema y lo que ocupa la app, y no
- *   pasa del 65 % de la RAM;
- * - amarillo: solo cabe con la reserva del sistema (justo: cerrar otras
- *   apps, puede no cargar);
- * - rojo: ni eso.
- */
+/** The canonical photo of a device: its total RAM, the app baseline as RSS, no live term. */
+export function canonicalSnapshot(deviceRamBytes: number): RamSnapshot {
+  return { totalRamBytes: deviceRamBytes, rssBytes: APP_BASELINE_BYTES };
+}
+
 export function computeCompatibility(model: CatalogModel, deviceRamBytes: number): Compatibility {
   if (deviceRamBytes <= 0) return "unknown";
-  const estimatedRamBytes = estimateContextBytes(contextSpecForModel(model)).totalBytes;
-  const withSystem = estimatedRamBytes + SYSTEM_HEADROOM_BYTES;
-  if (estimatedRamBytes <= deviceRamBytes * 0.65 && withSystem + APP_BASELINE_BYTES <= deviceRamBytes) return "green";
-  if (estimatedRamBytes <= deviceRamBytes * 0.9 && withSystem <= deviceRamBytes) return "yellow";
-  return "red";
+  const snapshot = canonicalSnapshot(deviceRamBytes);
+  const ceiling = contextCeilingForDevice(model.defaultNCtx, deviceRamBytes);
+  const { nCtx: _declaredCtx, ...specBase } = contextSpecForModel(model, deviceRamBytes);
+  const plan = planContext(specBase, snapshot, { ceiling, safety: 1 });
+  if (!plan) return "unknown";
+  if (plan.verdict.fits && plan.nCtx === ceiling) return "green";
+  if (plan.verdict.fits) return "yellow";
+  // The fp16 ladder found no rung: the load path's last word is the same
+  // plan with q8 KV, whose emergency rung is judged with the emergency
+  // budget (the symmetry LlamaEngine applies since 0.1.86). If even that
+  // does not fit, the badge is red.
+  const q8Plan = planContext(
+    { ...specBase, kvBytesPerElement: KV_Q8_BYTES_PER_ELEMENT },
+    snapshot,
+    { ceiling, safety: 1 },
+  );
+  return q8Plan?.verdict.fits ? "yellow" : "red";
 }

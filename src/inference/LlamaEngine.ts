@@ -746,7 +746,8 @@ export class LlamaEngine {
     // para el que acabe aceptando llama.cpp.
     let pinnedProfile: LlmMemoryProfile | null = null;
     if (!explicitCtx && snapshot) {
-      const plan = planContext(specBase, snapshot, { ceiling: nCtx, safety: crashSafety });
+      const ladderCeiling = nCtx;
+      const plan = planContext(specBase, snapshot, { ceiling: ladderCeiling, safety: crashSafety });
       if (plan) {
         nCtx = plan.nCtx;
         verdict = plan.verdict;
@@ -756,7 +757,14 @@ export class LlamaEngine {
         const q8Plan: LadderPlan | null = planContext(
           { ...specBase, kvBytesPerElement: KV_Q8_BYTES_PER_ELEMENT },
           snapshot,
-          { ceiling: nCtx, safety: crashSafety },
+          // 0.1.86: the second call keeps the ceiling the ladder plan
+          // was judged under (ladderCeiling), not the emergency
+          // nCtx (1024) the fp16 plan landed on — inside planContext
+          // the emergency rung only exists below the ceiling, so
+          // handing it 1024 judged the q8 plan of the emergency rung
+          // against the NORMAL budget and could reject a load the
+          // design accepts (census §4.1 C).
+          { ceiling: ladderCeiling, safety: crashSafety },
         );
         if (q8Plan && q8Plan.verdict.fits) {
           nCtx = q8Plan.nCtx;

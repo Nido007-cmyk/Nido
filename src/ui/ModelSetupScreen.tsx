@@ -85,6 +85,8 @@ type OptionalProps = {
   onClose: () => void;
   onRelaunchWizard?: () => void;
   onOpenGuide?: () => void;
+  /** 0.1.86: abre el lector de guías desde Ajustes > Biblioteca. */
+  onOpenLibrary?: () => void;
   onOpenMemory?: () => void;
   onOpenTelemetry?: () => void;
   onOpenAbout?: () => void;
@@ -712,6 +714,7 @@ export function ModelSetupScreen(props: Props) {
               getRow={getRow}
               download={download}
               remove={remove}
+              onOpenLibrary={(props as OptionalProps).onOpenLibrary}
             />
           </AccordionSection>
         )}
