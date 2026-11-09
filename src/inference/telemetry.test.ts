@@ -101,7 +101,51 @@ describe("telemetry: rechazos del pre-flight (fase 2, reapertura 2026-11-08)", (
       nCtxChosen: 2048,
       nCtxRequested: 3072,
       crashSafety: 0.5,
+      readFailure: null,
     });
+  });
+
+  it("0.1.85: un rechazo juzgado sin la lectura en vivo lo dice (readFailure live), no pasa por memoria insuficiente a secas", () => {
+    const e = ramRejectionEvent({
+      modelId: "models/qwen2.5-0.5b-instruct-q4km.gguf",
+      totalRamBytes: 3.54 * GiB,
+      rssBytes: 0.4 * GiB,
+      availableBytes: 0.3 * GiB,
+      neededBytes: 0.519 * GiB,
+      nCtxChosen: 2048,
+      nCtxRequested: 4096,
+      crashSafety: null,
+      readFailure: "live",
+    });
+    expect(e.ramRejection?.readFailure).toBe("live");
+    const stored = {
+      totalRamBytes: 3800000000,
+      rssBytes: 400000000,
+      availBytes: 1200000000,
+      thresholdBytes: 350000000,
+      availableBytes: 600000000,
+      neededBytes: 714000000,
+      nCtxChosen: 2048,
+      nCtxRequested: 4096,
+      crashSafety: 0.65,
+    };
+    const parsed = parseStoredRamRejection({
+      id: 9,
+      ts: 101,
+      model_id: "models/qwen2.5-0.5b-instruct-q4km.gguf",
+      task_type: "model-load",
+      detail: JSON.stringify({ ...stored, readFailure: "live" }),
+    });
+    expect(parsed?.ramRejection.readFailure).toBe("live");
+    // Las filas viejas (sin la clave) se leen como foto completa: null.
+    const legacy = parseStoredRamRejection({
+      id: 10,
+      ts: 102,
+      model_id: "models/qwen2.5-0.5b-instruct-q4km.gguf",
+      task_type: "model-load",
+      detail: JSON.stringify(stored),
+    });
+    expect(legacy?.ramRejection.readFailure).toBeNull();
   });
 
   it("un rechazo del motor de embeddings se marca como tal y sin CrashGuard", () => {
@@ -166,7 +210,7 @@ describe("telemetry: el lector de rechazos persistidos (0.1.84)", () => {
       ts: 99,
       modelId: "models/qwen3-0.6b-q4km.gguf",
       embedding: false,
-      ramRejection: detail,
+      ramRejection: { ...detail, readFailure: null },
     });
     const emb = parseStoredRamRejection({
       id: 8,

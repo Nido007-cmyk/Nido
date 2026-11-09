@@ -22,7 +22,7 @@ import {
   settleCrashGuardRecord,
   type CrashGuardRecord,
 } from "./memoryLadder";
-import type { RamSnapshot } from "./ramBudget";
+import { checkRamBudget, type RamSnapshot } from "./ramBudget";
 
 // Modelo de 1 GiB con la arquitectura por defecto (Qwen2.5-1.5B).
 // Costes estimados (ramBudget): 8192 → 1.846 GB · 4096 → 1.460 GB ·
@@ -171,5 +171,40 @@ describe("CrashGuard", () => {
       pending: { model: "a.gguf", nCtx: 2048, at: 5 },
     });
     expect(parseCrashGuardRecord('{"crashes":-4,"pending":{"model":7}}')).toEqual({ crashes: 0, pending: null });
+  });
+});
+
+describe("planContext: SIN la vía de emergencia la foto de las 19:54 no cabe (la cuenta de la 0.1.84, fijada)", () => {
+  const MiB = 1024 ** 2;
+  // La regresión que fija el efecto de la vía: la cuenta que juzgaba
+  // en la 0.1.84 (checkRamBudget sin emergencyLive, que es también lo
+  // que planContext aplica a todo peldaño normal) rechaza la foto en
+  // todos los peldaños, incluido el más barato posible.
+  const PHOTO: RamSnapshot = {
+    totalRamBytes: 3416 * MiB,
+    rssBytes: 367 * MiB,
+    availBytes: 842 * MiB,
+    lowMemThresholdBytes: 216 * MiB,
+  };
+  const Q05 = { fileSizeBytes: 397_808_192, nLayer: 24, nKvHeads: 2, headDim: 64, nUbatch: 128 };
+
+  it("ningún peldaño cabe con la cuenta normal, ni siquiera el suelo q8 sin freno", () => {
+    for (const safety of [1, 0.65]) {
+      const budget = Math.floor(370 * MiB * safety);
+      for (const nCtx of [4096, 3072, 2048, 1024]) {
+        const v = checkRamBudget({ ...Q05, nCtx }, PHOTO)!;
+        expect(v.availableBytes).toBe(370 * MiB);
+        expect(v.totalBytes).toBeGreaterThan(budget);
+      }
+      const q8Floor = checkRamBudget({ ...Q05, nCtx: 1024, kvBytesPerElement: 1 }, PHOTO)!;
+      expect(q8Floor.totalBytes).toBe(452_352_576);
+      expect(q8Floor.totalBytes).toBeGreaterThan(budget);
+    }
+  });
+
+  it("y con la vía el MISMO plan elige 1024 y cabe: el contraste es la prueba del efecto", () => {
+    const plan = planContext(Q05, PHOTO, { ceiling: 4096, safety: 0.65 })!;
+    expect(plan.nCtx).toBe(EMERGENCY_CONTEXT);
+    expect(plan.verdict.fits).toBe(true);
   });
 });

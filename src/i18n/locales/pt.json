@@ -713,7 +713,9 @@
       "free": "Livre no momento",
       "threshold": "Limite do sistema",
       "context": "Contexto escolhido / pedido",
-      "crashSafety": "Orçamento após uma falha"
+      "crashSafety": "Orçamento após uma falha",
+      "liveRead": "Leitura de memória ao vivo",
+      "liveReadMissing": "Sem leitura"
     }
   },
   "errors": {

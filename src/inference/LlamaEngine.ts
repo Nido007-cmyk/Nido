@@ -782,6 +782,7 @@ export class LlamaEngine {
         nCtxChosen: nCtx,
         nCtxRequested: requestedCtx,
         crashSafety: crashSafety < 1 ? crashSafety : null,
+        readFailure: snapshot!.liveReadMissing ? "live" : null,
       });
       throw new RamBudgetError(
         `"${modelFilename}" needs roughly ${toGb(verdict.totalBytes)}GB of RAM, but this ` +
@@ -872,6 +873,17 @@ export class LlamaEngine {
   }
 
   private async unloadNow() {
+    // Justicia del conteo (0.1.85): la confirmación del CrashGuard de
+    // abajo solo procede si esta descarga libera un modelo VIVO. Se
+    // captura a la entrada, antes de esperar a las generaciones y de
+    // anular el contexto. loadNow llama a unloadNow SIEMPRE, también
+    // sin modelo residente y justo después de asentar el registro:
+    // confirmar ahí borraría en la misma carga el conteo que el
+    // asentamiento acaba de hacer (el pendiente de un proceso muerto
+    // sumaría su choque y se perdonaría al instante, y un factor ya
+    // degradado se curaría sin generar nada). Sin contexto vivo no
+    // hay descarga que premiar: no se confirma nada.
+    const hadLiveContext = this.context !== null;
     // M-6 (2026-10-31): invalidar primero a las generaciones que
     // esperan turno en la cadena; la descarga espera solo a las
     // que ya corren (inFlight), como siempre.
@@ -891,6 +903,27 @@ export class LlamaEngine {
     this.context = null;
     this.modelInfo = null;
     await context?.release();
+    // Justicia del conteo (0.1.85): la descarga ORDENADA confirma el
+    // registro del CrashGuard, como el encabezado de memoryLadder.ts
+    // siempre prometió («una carga que se confirma — el modelo
+    // genera, o se descarga con orden — limpia el contador»). Hasta
+    // aquí unloadNow no confirmaba y una recarga posterior asentaba
+    // el pendiente sin modelo vivo: descargar y recargar por las
+    // buenas (inactividad, presión de memoria, cambio de modelo)
+    // castigaba como si hubiera habido un choque. unloadNow solo se
+    // alcanza por caminos ordenados del proceso vivo (la cola de
+    // carga, el pulso de inactividad, la presión del sistema, el
+    // borrado total y el propio loadNow al cambiar de modelo): una
+    // muerte nativa mata el proceso y nunca pasa por aquí, así que
+    // su pendiente sigue contando en el siguiente asentamiento, como
+    // está diseñado. La confirmación va AL FINAL: si el proceso
+    // muere a mitad de la descarga, no se escribe y el pendiente
+    // cuenta — la dirección segura. Y solo con contexto vivo a la
+    // entrada (hadLiveContext): la llamada interna de loadNow sin
+    // modelo residente no confirma nada, por lo asentado arriba.
+    if (hadLiveContext) {
+      this.crashGuardConfirm();
+    }
   }
 
   getModelInfo(): LoadedModelInfo | null {

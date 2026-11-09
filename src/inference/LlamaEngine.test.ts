@@ -1320,3 +1320,145 @@ describe("0.1.84: la tableta real del dueño (3,54 GiB leídos, picos de 743–7
     expect(initCalls[0]).toMatchObject({ n_ctx: 1024, cache_type_k: "q8_0" });
   });
 });
+
+describe("0.1.85: la foto exacta de las 19:54 como motor completo (RAM total REAL 3416 MiB)", () => {
+  const MiB = 1024 ** 2;
+  const Q4 = "models/qwen2.5-0.5b-instruct-q4km.gguf";
+  const GUARD = "file:///docs/nido-crash-guard.json";
+  const setPhoto = () => {
+    mockTotalRamBytes = 3416 * MiB;
+    mockRssBytes = 367 * MiB;
+    mockAvailMemory = { availBytes: 842 * MiB, thresholdBytes: 216 * MiB, lowMemory: false };
+  };
+
+  it("con el freno 0,65 (dos choques contados) el 0.5B CARGA a 1024 por la vía de emergencia, fijado a kv-q8", async () => {
+    setPhoto();
+    fsStore.set(GUARD, JSON.stringify({ crashes: 2, pending: null }));
+    rejectInit = (p) => p.cache_type_v === undefined; // solo kv-q8 puede cargar
+    const engine = new LlamaEngine();
+    await engine.load(Q4);
+    expect(engine.getModelInfo()?.nCtx).toBe(1024);
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0]).toMatchObject({ n_ctx: 1024, cache_type_k: "q8_0", n_ubatch: 128 });
+    // El intento quedó pendiente: si el proceso muriera cargando, el
+    // CrashGuard contaría el choque como siempre.
+    const rec = JSON.parse(fsStore.get(GUARD)!);
+    expect(rec.crashes).toBe(2);
+    expect(rec.pending).not.toBeNull();
+  });
+
+  it("generar tras cargar en emergencia CURA el freno: la siguiente evaluación planifica con factor 1", async () => {
+    setPhoto();
+    fsStore.set(GUARD, JSON.stringify({ crashes: 2, pending: null }));
+    const engine = new LlamaEngine();
+    await engine.load(Q4);
+    expect(engine.getModelInfo()?.nCtx).toBe(1024);
+    const gen = engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 30));
+    await engine.stop();
+    await expect(gen).resolves.toBe("Hi");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null });
+  });
+
+  it("JUSTICIA: descargar por las buenas y recargar NO degrada el factor (la descarga ordenada confirma)", async () => {
+    setPhoto();
+    fsStore.set(GUARD, JSON.stringify({ crashes: 2, pending: null }));
+    const engine = new LlamaEngine();
+    await engine.load(Q4);
+    // Descarga ordenada sin haber generado: hasta la 0.1.84 el
+    // pendiente quedaba vivo y la recarga lo contaba como choque.
+    await engine.unload();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null });
+    // La recarga planifica con el factor curado (sin degradar) y el
+    // ciclo completo descargar → recargar → generar deja el registro
+    // limpio, sin choques fantasma.
+    await engine.load(Q4);
+    expect(engine.getModelInfo()?.nCtx).toBe(1024);
+    await engine.unload();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null });
+  });
+
+  it("el simétrico que NO debe curarse: un pendiente de un proceso muerto sigue contando al recargar", async () => {
+    setPhoto();
+    // El proceso anterior murió con la carga en vuelo: su pendiente
+    // sigue en disco y NADIE llamó a unload (eso es lo que lo
+    // distingue de la descarga ordenada).
+    fsStore.set(GUARD, JSON.stringify({ crashes: 1, pending: { model: Q4, nCtx: 1024, at: 1 } }));
+    const engine = new LlamaEngine();
+    await engine.load(Q4);
+    const rec = JSON.parse(fsStore.get(GUARD)!);
+    expect(rec.crashes).toBe(2); // contó exactamente uno más
+    expect(rec.pending).not.toBeNull(); // el intento nuevo, en vuelo
+  });
+
+  it("REINTENTO IDEMPOTENTE: dos rechazos seguidos no escriben pendiente ni cambian el factor", async () => {
+    // Una foto donde ni la vía de emergencia alcanza (libre 500 MiB):
+    // el rechazo es honesto y NO debe castigar el registro.
+    mockTotalRamBytes = 3416 * MiB;
+    mockRssBytes = 367 * MiB;
+    mockAvailMemory = { availBytes: 500 * MiB, thresholdBytes: 216 * MiB, lowMemory: true };
+    fsStore.set(GUARD, JSON.stringify({ crashes: 1, pending: null }));
+    const engine = new LlamaEngine();
+    await expect(engine.load(Q4)).rejects.toThrow(/RAM/);
+    await expect(engine.load(Q4)).rejects.toThrow(/RAM/);
+    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 1, pending: null });
+  });
+
+  it("LECTURA FRESCA entre intentos: dos fotos nativas distintas dan dos decisiones distintas en el motor", async () => {
+    // Intento 1 con la mesa ocupada de verdad (libre 500 MiB) y el
+    // freno 0,65 sembrado (2 choques): ni la vía de emergencia
+    // alcanza — el rechazo es honesto (presupuesto de emergencia
+    // floor(500 × 0,65) = 325 < 431, el suelo q8 a 1024). Sin el
+    // freno sembrado el factor sería 1,0 y a 500 MiB sí cabría:
+    // la siembra es parte del caso, no un adorno.
+    mockTotalRamBytes = 3416 * MiB;
+    mockRssBytes = 367 * MiB;
+    mockAvailMemory = { availBytes: 500 * MiB, thresholdBytes: 216 * MiB, lowMemory: true };
+    fsStore.set(GUARD, JSON.stringify({ crashes: 2, pending: null }));
+    const engine = new LlamaEngine();
+    await expect(engine.load(Q4)).rejects.toThrow(/RAM/);
+    // Intento 2 con la foto de las 19:54 (libre 842): carga a 1024.
+    // Si hubiera caché o supuesto entre intentos, repetiría el rechazo.
+    mockAvailMemory = { availBytes: 842 * MiB, thresholdBytes: 216 * MiB, lowMemory: false };
+    await engine.load(Q4);
+    expect(engine.getModelInfo()?.nCtx).toBe(1024);
+  });
+
+  it("un rechazo juzgado SIN la lectura en vivo queda registrado con su causa (readFailure live)", async () => {
+    const { clearTelemetry, getRecentTelemetry } = await import("./telemetry");
+    clearTelemetry();
+    // Total legible pero la lectura en vivo no existe en este mock
+    // (mockAvailMemory null = el build no la trae): el pre-flight va
+    // solo por total y, si rechaza, el registro lo dice.
+    mockTotalRamBytes = 2 * 1024 ** 3;
+    mockRssBytes = 1024 ** 3;
+    mockAvailMemory = null;
+    const engine = new LlamaEngine();
+    await expect(engine.load("models/a.gguf")).rejects.toThrow(/RAM/);
+    const rejected = getRecentTelemetry(10).filter((e) => e.stopReason === "rejected");
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].ramRejection?.readFailure).toBe("live");
+    expect(rejected[0].ramRejection?.availBytes).toBeNull();
+  });
+});
+
+describe("0.1.85: separación embeddings/CrashGuard (la indexación no castiga al LLM)", () => {
+  const GUARD = "file:///docs/nido-crash-guard.json";
+
+  it("un rechazo del pre-flight de embeddings deja el registro del CrashGuard byte a byte igual", async () => {
+    const before = JSON.stringify({ crashes: 2, pending: { model: "models/x.gguf", nCtx: 2048, at: 7 } });
+    fsStore.set(GUARD, before);
+    // El motor de embeddings con un aparato donde no cabe ni su
+    // contexto de 512: rechaza por su propio pre-flight.
+    mockTotalRamBytes = 2 * 1024 ** 3;
+    mockRssBytes = 2 * 1024 ** 3;
+    const { EmbeddingEngine } = await import("../rag/embed");
+    const emb = new EmbeddingEngine();
+    await expect(emb.load("models/embedding.gguf")).rejects.toThrow(/RAM/);
+    expect(fsStore.get(GUARD)).toBe(before);
+  });
+});

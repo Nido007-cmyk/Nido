@@ -547,6 +547,12 @@ function RejectionsCard({ rows }: { rows: StoredRamRejection[] }) {
                   label={t("executionTelemetry.rejections.crashSafety")}
                   value={d.crashSafety != null ? `${Math.round(d.crashSafety * 100)}%` : "100%"}
                 />
+                {d.readFailure === "live" ? (
+                  <StatCell
+                    label={t("executionTelemetry.rejections.liveRead")}
+                    value={t("executionTelemetry.rejections.liveReadMissing")}
+                  />
+                ) : null}
               </View>
               <Text style={styles.timestamp}>{formatDateTime(r.ts, lang)}</Text>
             </View>

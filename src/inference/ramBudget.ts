@@ -59,6 +59,16 @@ export interface RamSnapshot {
   lowMemThresholdBytes?: number;
   /** Memoria que se libera antes de cargar (el modelo que se va a sustituir). */
   releasableBytes?: number;
+  /**
+   * 0.1.85 (defecto 2026-11-08, tercera vuelta): la lectura en vivo NO
+   * llegó — el build nativo no la trae o falló al leerla — y la foto
+   * decide solo por la RAM total. Lo marca readRamSnapshot, el único
+   * que sabe que la lectura faltó; los veredictos no cambian (la
+   * cuenta sin término en vivo es la histórica), pero un rechazo con
+   * esta marca queda registrado con su causa distinguible en el
+   * instrumento en vez de pasar por «memoria insuficiente» a secas.
+   */
+  liveReadMissing?: boolean;
 }
 
 /**
@@ -244,8 +254,25 @@ export function estimateContextBytes(spec: ContextSpec): RamEstimate {
  * Pure budget check against a RAM snapshot. Returns null when the snapshot
  * carries no usable readout (totalRamBytes <= 0) — the caller must then skip
  * the check (fail open when blind) rather than block loading on missing data.
+ *
+ * `opts.emergencyLive` (0.1.85, vía del peldaño de emergencia — ver
+ * planContext en memoryLadder.ts): SOLO para juzgar el peldaño de
+ * emergencia, el término en vivo usa el availMem CRUDO (más el crédito
+ * liberable), sin restar el threshold del sistema ni LIVE_MARGIN_BYTES.
+ * Motivo (foto del dueño, 2026-11-08 19:54): en el último peldaño las
+ * dos restas apiladas — 472 MiB sobre 842 libres — rechazaban un modelo
+ * cuyo proceso entero medido ronda 600 MB con 842 MiB libres reales;
+ * el threshold es una marca de agua sobre el propio availMem, no un
+ * consumo, y el margen es conservadurismo sin calibrar. En el suelo,
+ * la red que queda es la de siempre: la descarga por presión del
+ * sistema (fase 5) y el CrashGuard si la carga muere. Sin esta opción
+ * la fórmula es byte a byte la de la 0.1.84.
  */
-export function checkRamBudget(spec: ContextSpec, snapshot: RamSnapshot): BudgetVerdict | null {
+export function checkRamBudget(
+  spec: ContextSpec,
+  snapshot: RamSnapshot,
+  opts?: { emergencyLive?: boolean },
+): BudgetVerdict | null {
   if (snapshot.totalRamBytes <= 0) return null;
   const estimate = estimateContextBytes(spec);
   // Crédito simétrico (defecto 2026-11-08, segunda vuelta): lo que el
@@ -265,7 +292,9 @@ export function checkRamBudget(spec: ContextSpec, snapshot: RamSnapshot): Budget
   // abiertas. Con la lectura en vivo, manda la menor de las dos.
   const live =
     snapshot.availBytes !== undefined && snapshot.availBytes > 0
-      ? snapshot.availBytes + releasable - (snapshot.lowMemThresholdBytes ?? 0) - LIVE_MARGIN_BYTES
+      ? opts?.emergencyLive
+        ? snapshot.availBytes + releasable
+        : snapshot.availBytes + releasable - (snapshot.lowMemThresholdBytes ?? 0) - LIVE_MARGIN_BYTES
       : Number.POSITIVE_INFINITY;
   const availableBytes = Math.max(Math.min(byTotal, live), 0);
   return {
@@ -295,7 +324,9 @@ export function readRamSnapshot(): RamSnapshot | null {
     return {
       totalRamBytes,
       rssBytes: getMemoryInfo().rssBytes,
-      ...(live ? { availBytes: live.availBytes, lowMemThresholdBytes: live.thresholdBytes } : {}),
+      ...(live
+        ? { availBytes: live.availBytes, lowMemThresholdBytes: live.thresholdBytes }
+        : { liveReadMissing: true }),
     };
   } catch {
     return null;

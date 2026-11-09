@@ -4,6 +4,47 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.85-alpha - 2026-11-08
+
+The card was still there after 0.1.84, on the same tablet, and
+this time the tablet itself supplied the numbers: the telemetry
+screen the previous release added recorded the refusal with the
+figures the check saw (437 MB needed, 370 MB counted as free,
+while the tablet reported 842 MB actually free). Reading the
+check against those figures found the last lock. On every step
+the check subtracts the system's low-memory watermark and a
+fixed safety margin from the free memory Android reports, and
+on that tablet the two subtractions ate more than half of what
+was free, so even the emergency step could not fit. The
+emergency step now judges against the free memory Android
+actually reports. Two smaller injustices go with it: unloading
+a model in good order no longer counts against the crash
+guard, and a refusal that was judged without the live memory
+reading now says so in its record.
+
+### Fixed
+
+- **The emergency step uses the memory that is really free.**
+  On devices with 4 GB of memory or less, the short-answer
+  context of last resort is now priced against the free memory
+  Android reports at that moment, without the watermark and
+  margin the normal steps subtract. Every normal step keeps
+  the stricter count, and the check still refuses when memory
+  is really short; the 2 GB system headroom is unchanged.
+- **An orderly unload is no longer counted as a crash.** The
+  crash guard's own note always said a load confirmed by an
+  orderly unload clears the count, but unloading never
+  confirmed anything, so unloading and reloading in good faith
+  (idle timeout, system memory pressure, switching models)
+  could shrink the memory budget as if the app had crashed.
+  An unload that releases a live model now confirms the
+  record; a process that dies still counts, exactly as before.
+- **A refusal judged without the live reading says so.** If
+  the device cannot provide its live free-memory reading, the
+  refusal record in Execution Telemetry now shows that the
+  reading was missing, instead of looking like a plain lack
+  of memory.
+
 ## 0.1.84-alpha - 2026-11-08
 
 The card came back once more on the same tablet, and this time the

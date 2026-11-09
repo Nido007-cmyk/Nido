@@ -713,7 +713,9 @@
       "free": "Free now",
       "threshold": "System limit",
       "context": "Context chosen / asked",
-      "crashSafety": "Budget after a crash"
+      "crashSafety": "Budget after a crash",
+      "liveRead": "Live memory read",
+      "liveReadMissing": "No reading"
     }
   },
   "errors": {

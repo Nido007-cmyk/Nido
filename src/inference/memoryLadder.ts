@@ -111,12 +111,36 @@ export function planContext(
     EMERGENCY_CONTEXT < opts.ceiling &&
     EMERGENCY_CONTEXT < MIN_CONTEXT;
   if (emergency) rungs.push(EMERGENCY_CONTEXT);
+  // Vía del peldaño de emergencia (0.1.85, defecto 2026-11-08, tercera
+  // vuelta): SOLO la evaluación de ESE peldaño se juzga contra el
+  // disponible con el término en vivo crudo (emergencyLive en
+  // checkRamBudget: availMem + crédito liberable, sin restar el
+  // threshold ni el margen en vivo). La foto de las 19:54 lo exige:
+  // con la cuenta normal ni el plan más barato (q8 @1024, 431,4 MiB)
+  // cabía en los 370 disponibles NI SIN freno del CrashGuard — el
+  // término en vivo era un candado independiente del freno, y con el
+  // freno no había generación que lo curara: círculo cerrado. Con la
+  // vía, el disponible de emergencia es min(byTotal, avail crudo) y
+  // el freno sigue aplicado encima, intacto. Los peldaños normales y
+  // su presupuesto no se tocan: fuera de la emergencia la cuenta es
+  // byte a byte la de la 0.1.84.
+  const emergencyBase = emergency
+    ? checkRamBudget({ ...spec, nCtx: opts.ceiling }, snapshot, { emergencyLive: true })
+    : null;
+  const emergencyBudget =
+    emergencyBase !== null ? Math.floor(emergencyBase.availableBytes * safety) : null;
   let floor: LadderPlan | null = null;
   for (const nCtx of rungs) {
     const estimate = estimateContextBytes({ ...spec, nCtx });
+    const isEmergencyRung = emergency && nCtx === EMERGENCY_CONTEXT;
+    const rungBudget = isEmergencyRung && emergencyBudget !== null ? emergencyBudget : budget;
     const verdict: BudgetVerdict = {
       ...estimate,
-      fits: estimate.totalBytes <= budget,
+      fits: estimate.totalBytes <= rungBudget,
+      // El disponible REPORTADO sigue siendo el de la cuenta normal:
+      // es la cifra que el instrumento de rechazos registra desde la
+      // 0.1.84 y la que un plan que no cabe debe seguir mostrando. La
+      // vía cambia solo el presupuesto de paso del peldaño.
       availableBytes: base.availableBytes,
       totalRamBytes: base.totalRamBytes,
     };
