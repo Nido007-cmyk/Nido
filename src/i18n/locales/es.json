@@ -31,6 +31,16 @@
     "developmentCopy": "Copiar",
     "developmentCopied": "Dirección copiada"
   },
+  "installNotice": {
+    "integrity": "El archivo descargado no coincidió con su huella y se borró. Si descargas otra vez, llegará una copia nueva.",
+    "interrupted": "La última descarga se interrumpió antes de terminar. Si descargas otra vez, empezará desde el principio.",
+    "sizeMismatch": "La última descarga llegó incompleta y se borró. Si descargas otra vez, llegará una copia nueva.",
+    "storage": "No hubo espacio libre suficiente para terminar la descarga. Libera espacio y vuelve a intentarlo.",
+    "stalled": "La última descarga se quedó parada y no terminó. Puedes intentarlo otra vez.",
+    "paused": "Ya hay una parte descargada ({{done}} de {{total}}). Si descargas otra vez, continuará desde ahí.",
+    "unverifiable": "El archivo está en el dispositivo pero no se pudo comprobar, así que no cuenta como descargado. Si descargas otra vez, se comprobará de nuevo.",
+    "failed": "La última descarga no terminó. Puedes intentarlo otra vez."
+  },
   "catalogItemCard": {
     "activeNote": "En uso actualmente",
     "badge": {

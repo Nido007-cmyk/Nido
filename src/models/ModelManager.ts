@@ -550,6 +550,21 @@ export class ModelManager {
     // Reconstruct honest state after a crash BEFORE touching anything.
     await this.ensureReconciled();
 
+    // 0.1.90: already installed AND verified → no-op. installBundled
+    // has always opened with this guard; the download path lacked it,
+    // so tapping "Download" on an installed model (its card still
+    // offering the button because a first settle check had failed
+    // transiently) started a full re-download of a file that was
+    // already on disk and verified — observed on the owner's tablet,
+    // 2026-11-09. statusOf runs the full trust gate, so this returns
+    // early only for bytes proven good; anything untrusted still
+    // falls through to the real pipeline below.
+    const existingStatus = await this.statusOf(asset);
+    if (existingStatus.present && existingStatus.sizeOnDiskBytes === asset.sizeBytes) {
+      dlog(asset.id, "downloadCatalogModel: already installed and verified — nothing to do");
+      return;
+    }
+
     // Meta #1 (blast radius / rollback): snapshot the pre-download journal.
     // A failed (re-)download must never clobber a previously valid install:
     // the final file is only ever replaced by the atomic promote AFTER

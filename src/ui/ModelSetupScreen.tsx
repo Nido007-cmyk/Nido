@@ -27,6 +27,9 @@ import { MODEL_CATALOG, CatalogModel, AssetKind, CORPUS_CATALOG } from "../model
 import { defaultLlmForDevice } from "../models/defaultModel";
 import { llamaEngine } from "../inference/LlamaEngine";
 import { ModelManager } from "../models/ModelManager";
+import { getInstallRecord } from "../models/installState";
+import { installNoticeFor } from "../models/installNotice";
+import { formatBytes } from "../models/downloadErrors";
 import { getActiveModelId, setActiveModelId, getHapticsEnabled, setHapticsEnabled } from "../models/settings";
 import { seedKnowledgeBaseIfEmpty } from "../rag/seedCorpus";
 import { DbLifecycleEndedError } from "../security/secureDatabase";
@@ -120,6 +123,8 @@ export function ModelSetupScreen(props: Props) {
   const requiredMode = props.mode === "required";
   const [presence, setPresence] = useState<Record<string, boolean>>({});
   const [outdatedIds, setOutdatedIds] = useState<Record<string, boolean>>({});
+  // 0.1.90 (familia 3): el motivo durable por tarjeta (installNoticeFor).
+  const [noticeById, setNoticeById] = useState<Record<string, string>>({});
   const [activeIds, setActiveIds] = useState<Partial<Record<AssetKind, string>>>({});
   const [toast, setToast] = useState<string | null>(null);
   const [dangerModalVisible, setDangerModalVisible] = useState(false);
@@ -211,6 +216,28 @@ export function ModelSetupScreen(props: Props) {
     setPresence(Object.fromEntries(statuses.map((s) => [s.asset.id, s.present])));
     setOutdatedIds(Object.fromEntries(statuses.map((s) => [s.asset.id, s.outdated === true])));
 
+    // 0.1.90 (familia 3): el motivo durable de cada tarjeta que no
+    // cuenta como descargada, desde el estado verificado y el diario
+    // de instalación (installNoticeFor). Hasta aquí esos dos datos se
+    // calculaban y se descartaban antes de la tarjeta: una descarga
+    // que no asentaba volvía a «Descargar recurso» en silencio.
+    const notices: Record<string, string> = {};
+    for (const s of statuses) {
+      if (s.present || s.outdated) continue;
+      const record = await getInstallRecord(s.asset.id).catch(() => null);
+      const notice = installNoticeFor(s, record);
+      if (notice) {
+        notices[s.asset.id] =
+          notice.kind === "paused"
+            ? t("installNotice.paused", {
+                done: formatBytes(notice.doneBytes),
+                total: formatBytes(notice.totalBytes),
+              })
+            : t(`installNotice.${notice.kind}`);
+      }
+    }
+    setNoticeById(notices);
+
     const next: Partial<Record<AssetKind, string>> = {};
     for (const kind of LLM_EMBEDDING_KINDS) {
       const active = await getActiveModelId(kind);
@@ -224,7 +251,7 @@ export function ModelSetupScreen(props: Props) {
     setActiveIds(next);
 
     return statuses;
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     refreshStatus();
@@ -363,9 +390,10 @@ export function ModelSetupScreen(props: Props) {
         bytesExpected: dl?.bytesExpected,
         speedBytesPerSec: dl?.speedBytesPerSec,
         etaSeconds: dl?.etaSeconds,
+        statusNotice: noticeById[item.id] ?? null,
       };
     },
-    [presence, outdatedIds]
+    [presence, outdatedIds, noticeById]
   );
 
   const download = useCallback(
