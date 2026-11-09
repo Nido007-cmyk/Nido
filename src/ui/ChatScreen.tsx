@@ -748,7 +748,9 @@ export function ChatScreen({
         setLoadStatus(`${t("chatScreen.indexingKnowledgeBase")} ${formatInt(p.done, displayLang(i18n.language))} / ${formatInt(p.total, displayLang(i18n.language))}`)
       );
       await seedKnowledgeBaseIfEmpty().finally(stopProgress);
-      lastEmbeddingUseRef.current = Date.now();
+      // 0.1.84: la marca de último uso del embedding vive en el motor
+      // (lastUsedAtMs, renovada en cada búsqueda); el ref local murió
+      // con la desviación de la fase 4 que dejaba ciclar la descarga.
       setLoadStatus(null);
       setReady(true);
       // Multilingual search (0.2.0): finish a model switch that was
@@ -775,7 +777,6 @@ export function ChatScreen({
   // presión lean siempre la misma foto.
   const lastChatActivityRef = useRef(0);
   const backgroundedAtRef = useRef<number | null>(null);
-  const lastEmbeddingUseRef = useRef(0);
   const lastBackgroundDoneRef = useRef<number | null>(null);
   const modelLoadingRef = useRef<Promise<boolean> | null>(null);
 
@@ -844,7 +845,7 @@ export function ChatScreen({
       if (
         embeddingEngine.isLoaded &&
         !isNativeGateTaken() &&
-        embeddingIdleUnloadDue(now, lastEmbeddingUseRef.current || null, lastBackgroundDoneRef.current, EMBED_IDLE_MS)
+        embeddingIdleUnloadDue(now, embeddingEngine.lastUsedAtMs, lastBackgroundDoneRef.current, EMBED_IDLE_MS)
       ) {
         void embeddingEngine.unload().catch(() => {});
       }
