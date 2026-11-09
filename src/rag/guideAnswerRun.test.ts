@@ -14,11 +14,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { RetrievedChunk } from "./retrieve.types";
 import type { PackSourceDoc } from "./packSource";
+import { BGE_SMALL_EN_PROFILE } from "./embeddingProfile";
 
 const retrieveMock = vi.fn();
 const readPackSourceMock = vi.fn();
 const verifiedImportedPacksMock = vi.fn();
-vi.mock("./retrieve", () => ({ retrieve: (...a: unknown[]) => retrieveMock(...a) }));
+// 0.1.87: el mock trae también el perfil activo de la recuperación
+// (la vara del perfil que la elección lee); sin él el módulo bajo
+// prueba revienta al importarlo, como pasó en la primera corrida.
+// El perfil es el de bge, el de por defecto del motor real.
+vi.mock("./retrieve", () => ({
+  retrieve: (...a: unknown[]) => retrieveMock(...a),
+  activeRetrievalProfile: () => BGE_SMALL_EN_PROFILE,
+}));
 vi.mock("./packs", () => ({ readPackSource: (...a: unknown[]) => readPackSourceMock(...a) }));
 vi.mock("../services/packImporter", () => ({
   verifiedImportedPacks: (...a: unknown[]) => verifiedImportedPacksMock(...a),

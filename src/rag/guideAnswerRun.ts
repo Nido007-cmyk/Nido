@@ -7,10 +7,11 @@
  * from the pack, and the sources to show (only that guide's parts, so an
  * unrelated section never appears as source 1). Never throws.
  */
-import { retrieve } from "./retrieve";
+import { retrieve, activeRetrievalProfile } from "./retrieve";
 import { readPackSource } from "./packs";
 import { guideTitleOf, parsePackChunkId } from "./packSource";
 import { ANSWER_CONTEXT_CHUNKS } from "./pure";
+import { GUIDE_PICK_CHUNKS, buildGuidePickCandidates } from "./guidePickCandidates";
 import type { RetrievedChunk } from "./retrieve.types";
 import type { GroundingLang } from "./grounding";
 import { composeGuideAnswer, pickGuideChunk, stripShortRequest, wantsShortGuide, type LiteralRouteContext } from "./guideAnswer";
@@ -55,11 +56,26 @@ export async function answerFromGuide(
           importedPackNames: new Map([...imported].map(([id, v]) => [id, v.name])),
         }
       : undefined;
-    const pick = pickGuideChunk(retrieved, lang, route);
+    // 0.1.87: la elección juzga con la vara del perfil que puntuó de
+    // verdad (retrieve la deja leída) y sobre la pregunta tal cual.
+    const pickOpts = { profile: activeRetrievalProfile(), query };
+    let candidates = retrieved;
+    let pick = pickGuideChunk(candidates, lang, route, pickOpts);
+    if (!pick) {
+      // La elección mira más ancho que el contexto del prompt: una
+      // segunda recuperación con el topK de elección, solo para
+      // elegir. El `retrieved` devuelto no cambia: la ruta del
+      // modelo sigue reutilizando la lista de 4 de siempre.
+      const wide = await retrieve(short ? stripShortRequest(query) : (retrievalQuery ?? query), GUIDE_PICK_CHUNKS).catch(() => null);
+      if (wide && wide.length > retrieved.length) {
+        candidates = buildGuidePickCandidates(retrieved, wide);
+        pick = pickGuideChunk(candidates, lang, route, pickOpts);
+      }
+    }
     if (!pick) return { answer: null, retrieved };
     const doc = await readPackSource(pick.chunkId);
     if (!doc) return { answer: null, retrieved };
-    const sameGuide = retrieved.filter((c) => c !== pick && guideTitleOf(c.title) === doc.title);
+    const sameGuide = candidates.filter((c) => c !== pick && guideTitleOf(c.title) === doc.title);
     return {
       answer: { text: composeGuideAnswer(doc, lang, { short, packId: parsePackChunkId(pick.chunkId)?.packId, route }), chunks: [pick, ...sameGuide] },
       retrieved,

@@ -55,6 +55,38 @@ export interface EmbeddingProfile {
    */
   distinctGap: number;
   packDistinctGap: number;
+  /**
+   * 0.1.87: la vara de la vía literal (guideAnswer.ts) para packs que
+   * entran por la puerta firmada, POR PERFIL. Hasta la 0.1.86 la vía
+   * juzgaba toda guía con una constante (0,8) medida solo con guías
+   * del Esencial en la era de un solo modelo; el dirimen del turno
+   * del gas (2026-11-09) midió que la guía correcta de un pack
+   * importado compite en otra banda y la perdió. El método de
+   * medida de estos valores es el de los pisos ya calibrados del
+   * propio perfil: la vara es el piso semántico de packs del perfil
+   * (`packMinSimilarity`, la calibración CI de la casa sobre el
+   * corpus real), porque una guía que la recuperación de packs no
+   * consideraría evidencia tampoco puede ser la respuesta literal, y
+   * una que sí lo es no debe perder contra una vara heredada de otro
+   * corpus. La medición fina con pares reales pregunta→guía de
+   * packs importados (el instrumento de la casa corre sobre el
+   * corpus integrado, no sobre packs importados) queda pendiente de
+   * aparato y nombrada en el checkpoint del paquete: estos valores
+   * son la transmisión del piso medido, no una cifra a ojo.
+   */
+  guideMinScore: number;
+  guideMinScoreSingleTerm: number;
+  /**
+   * Cuánto puede quedar el mejor fragmento literal por debajo del
+   * mejor fragmento global y seguir sirviéndose (0.1.87): la guía se
+   * juzga contra su vara, no contra el mejor de otro corpus, pero un
+   * literal muy por debajo del mejor global sigue vetado — la
+   * distancia declara que la pregunta casa con otra cosa. 0,15 es la
+   * banda en la que el campo real del dirimen se mueve (el mejor
+   * global del turno del gas y el fragmento correcto distaban
+   * ~0,06); se mide de nuevo con los pares de aparato.
+   */
+  guidePickMargin: number;
 }
 
 export const BGE_SMALL_EN_SHA256 = "ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514";
@@ -75,6 +107,12 @@ export const BGE_SMALL_EN_PROFILE: EmbeddingProfile = {
   // bge no se recalibró con esta medida: sin cambios.
   distinctGap: 0,
   packDistinctGap: 0,
+  // 0.1.87: transmitidos del piso medido de packs de este perfil
+  // (packMinSimilarity 0,6 / single-term 0,7); ver el comentario del
+  // campo en la interfaz.
+  guideMinScore: 0.6,
+  guideMinScoreSingleTerm: 0.7,
+  guidePickMargin: 0.15,
 };
 
 export const MULTILINGUAL_E5_SMALL_PROFILE: EmbeddingProfile = {
@@ -96,6 +134,13 @@ export const MULTILINGUAL_E5_SMALL_PROFILE: EmbeddingProfile = {
   // 33 % → 22 % sin perder recall (en sube 90 % → 100 %); 0.04 ya pierde.
   distinctGap: 0.03,
   packDistinctGap: 0.03,
+  // 0.1.87: transmitidos del piso medido de packs de este perfil
+  // (packMinSimilarity 0,84 / single-term 0,88): en la escala de e5
+  // una guía a 0,76 es fondo, no evidencia (ver el comentario del
+  // campo en la interfaz).
+  guideMinScore: 0.84,
+  guideMinScoreSingleTerm: 0.88,
+  guidePickMargin: 0.15,
 };
 
 const BY_SHA: Record<string, EmbeddingProfile> = {
@@ -141,4 +186,13 @@ export function semanticFloor(profile: EmbeddingProfile, query: string): number 
 /** Floor for a downloaded pack's full vector search. */
 export function packSemanticFloor(profile: EmbeddingProfile, query: string): number {
   return isSingleTermQuery(query) ? profile.packMinSimilaritySingleTerm : profile.packMinSimilarity;
+}
+
+/**
+ * 0.1.87: the literal route's bar for the active profile — the same
+ * single-term discipline as the pack floors (a weak query needs
+ * stronger evidence before a guide is served word for word).
+ */
+export function guideMinScore(profile: EmbeddingProfile, query: string): number {
+  return isSingleTermQuery(query) ? profile.guideMinScoreSingleTerm : profile.guideMinScore;
 }
