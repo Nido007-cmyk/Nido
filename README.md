@@ -135,28 +135,27 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   suspected double counting in the crash guard was tested
   with a regression and does not exist; the guard is
   unchanged.
-- **An imported pack written for another search model now
-  answers its own question by words, and the guide library
-  has one single door, at the bottom** (0.1.88): the last
-  release opened a word for word road for verified imported
-  packs, but on the owner's tablet, with multilingual search
-  on, the gas guide of the SALVORA PACKS pack never came
-  out: asked in a chat that already held a story, twice in a
-  row, the model answered from memory both times, once with
-  the same words as the version before and with advice the
-  guide contradicts. The pack was imported and verified,
-  and its own card already said that with that pack only
-  word search works; the word road was the thing that was
-  closed. It now judges the pack's own fragments on their
-  own, guide by guide, so a sister guide from the same pack
-  no longer wins the question by list order, and it works
-  with either search model active and in a chat with
-  history. The safe text net now checks what an unverified
-  answer actually rests on instead of the list of sources,
-  so a verified guide sitting unused among the sources no
-  longer disarms it. And the Library tab keeps one single
-  "Read the guides" band, full width at the bottom of the
-  tab; Settings keeps its own single entry.
+- **A smell of gas gets the gas guide, and two screens stop
+  stepping on themselves** (0.1.89): the last release made
+  the word for word road run, and on the owner's tablet it
+  served a guide word for word for the gas question, with
+  the pack's name on it and no model in between, but it was
+  the carbon monoxide neighbour instead of the gas leak
+  guide: measured against the owner's real pack, the pack's
+  own keyword ranking puts the carbon monoxide fragment
+  first on a coverage tie, and that guide's own text says
+  its gas cannot be smelled. The choice now reads the sign
+  in the question: when a question says you can smell, see
+  or hear something, a guide that states its danger cannot
+  be smelled, seen or heard loses the tie to a guide that
+  does not say that, in Spanish, English and Portuguese,
+  and when the first short list holds only the wrong
+  neighbour the app checks the wider list before serving
+  anything. The guide reader's header now sits below the
+  system status bar, clear of the clock and the battery
+  icons. And the NIDO screen's tabs size themselves to
+  their labels, so the long tab word stays on one line; on
+  a narrow phone the row scrolls instead of wrapping.
 - **Talks to another NIDO over Bluetooth**: encrypted messages between two
   paired phones, with no internet and no server. To pair, you paste the
   other phone's code (the text of its QR); a contact shows as verified only
@@ -202,7 +201,7 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.88-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.88-alpha).
+   [v0.1.89-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.89-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4

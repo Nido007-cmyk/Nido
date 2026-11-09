@@ -4,6 +4,46 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.89-alpha - 2026-11-09
+
+0.1.88 made the word for word road run, and the owner's
+tablet proved it runs: asked what to do when there is a
+smell of gas in the house, the app served a guide word for
+word, with the pack's name on it and no model in between.
+But it served the wrong guide: carbon monoxide, instead of
+the gas leak guide. That mix-up can hurt, because carbon
+monoxide cannot be smelled at all, and its own guide says
+so. Measured against the owner's real pack with the app's
+own search, the pack's keyword ranking puts the carbon
+monoxide fragment first, with the same coverage as the
+leak fragment, so the tie fell to the ranking and the
+neighbour won.
+
+The choice now reads the sign in the question. When a
+question says you can smell, see or hear something, a
+guide that states its danger cannot be smelled, seen or
+heard loses the tie to a guide that does not say that, in
+Spanish, English and Portuguese. And when the first short
+candidate list only holds the wrong neighbour, the app
+looks at the wider list before serving anything, so the
+sign-denying guide is never served on its own while the
+guide of the sign exists. The regression for this runs on
+the owner's real pack data and on candidate lists built
+with the app's own search and fusion code, not on lists
+written by hand.
+
+Two screen fixes, both from the owner's photos of the
+same day. The guide reader's header now sits below the
+system status bar instead of under it, clear of the clock
+and the wifi and battery icons, on tablets and phones.
+And the NIDO screen's tabs now size themselves to their
+labels: the long tab word stays on one line, and on a
+narrow phone the row scrolls instead of splitting a word
+across two lines.
+
+No changes to the signed catalog, the models or the
+memory rules.
+
 ## 0.1.88-alpha - 2026-11-09
 
 0.1.87 gave a verified imported pack a word for word road,
