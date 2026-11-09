@@ -66,9 +66,11 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 // 0.1.89: el área segura queda fijada en 24 para probar que la
-// pantalla la aplica a su raíz (en el aparato la da el sistema).
+// pantalla aplica el margen superior a su raíz (en el aparato la
+// da el sistema). 0.1.90: el margen inferior queda fijado en 34
+// para probar el de abajo en la misma raíz compartida.
 jest.mock("react-native-safe-area-context", () => ({
-  useSafeAreaInsets: () => ({ top: 24, bottom: 0, left: 0, right: 0 }),
+  useSafeAreaInsets: () => ({ top: 24, bottom: 34, left: 0, right: 0 }),
 }));
 
 describe("GuideLibraryScreen", () => {
@@ -148,7 +150,7 @@ describe("GuideLibraryScreen", () => {
     expect(await screen.findByText("guideLibrary.readError")).toBeTruthy();
   });
 
-  it("0.1.89: la raíz lleva el margen del área segura y el botón de cierre sigue cerrando", async () => {
+  it("0.1.89/0.1.90: la raíz lleva los márgenes del área segura (arriba y abajo) y el botón de cierre sigue cerrando", async () => {
     const { GuideLibraryScreen } = require("./GuideLibraryScreen");
     const onClose = jest.fn();
     const view = await render(<GuideLibraryScreen onClose={onClose} />);
@@ -156,7 +158,8 @@ describe("GuideLibraryScreen", () => {
     const withInset = () => {
       const tree = view.toJSON();
       const root = Array.isArray(tree) ? tree[0] : tree;
-      return root && flatStyle(root.props.style).paddingTop === 24 ? [root] : [];
+      const st = root ? flatStyle(root.props.style) : {};
+      return root && st.paddingTop === 24 && st.paddingBottom === 34 ? [root] : [];
     };
     expect(withInset().length).toBe(1);
     expect(screen.getByText("guideLibrary.title")).toBeTruthy();

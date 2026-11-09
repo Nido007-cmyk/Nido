@@ -59,7 +59,11 @@ export function GuideLibraryScreen({ onClose }: { onClose: () => void }) {
   // el área segura ella misma, como hace SetupWizardScreen, y las
   // dos vistas (lista y documento) comparten esta raíz.
   const insets = useSafeAreaInsets();
-  const rootStyle = [styles.container, { paddingTop: insets.top }];
+  // 0.1.89: la raíz suma el inset de arriba (la cabecera quedaba bajo
+  // la barra de estado). 0.1.90: suma también el de abajo — la última
+  // línea de la guía leída hasta el final quedaba cortada por la
+  // barra del sistema (foto del dueño, Tab A9+, 2026-11-09).
+  const rootStyle = [styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }];
   const [sections, setSections] = useState<PackSection[] | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
   const [doc, setDoc] = useState<PackGuideDoc | null>(null);
