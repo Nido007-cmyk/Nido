@@ -145,6 +145,33 @@ describe("0.1.87 · la elección mira una lista más ancha que el contexto del p
     expect(buildGuidePickCandidates(prompt, prompt)).toEqual(prompt);
   });
 
+  it("pieza 4: sin coseno (los vectores del pack no casan con el modelo activo) la guía se sirve por cobertura léxica completa", () => {
+    // El desajuste de vectores es global al turno: el fragmento del
+    // gas llega SOLO por la vía léxica (sin rawScore), igual que el
+    // resto de la lista. La cobertura de la pregunta es completa:
+    // los términos de contenido (hago, huele, gas, casa) están en
+    // el fragmento o en las claves de pregunta del formato v2.
+    const sinCoseno = (c: ReturnType<typeof chunk>) => {
+      const { rawScore: _omitido, ...resto } = c;
+      return resto as unknown as RetrievedChunk;
+    };
+    const gasLex = sinCoseno(chunk(`pack:${SALVORA}:131`, "Fuga de gas: cómo reconocerla y salir a tiempo — Reconocer la fuga", GAS_131_BODY, 0));
+    (gasLex as { keys?: string }).keys = "que hago si huele a gas en mi casa";
+    const otroLex = sinCoseno(chunk(`pack:${SALVORA}:140`, "Detector de monóxido de carbono — Dónde instalarlo", "El monóxido es un gas invisible que no huele.", 0));
+    const pick = pickGuideChunk([gasLex, otroLex], "es", ROUTE, { profile: BGE_SMALL_EN_PROFILE, query: "Que hago si huele a gas en mi casa?" });
+    expect(pick?.["chunkId"]).toBe(gasLex.chunkId);
+    // Bordes de la vía: sin el registro verificado no abre; si la
+    // cobertura de la guía no alcanza lo exigido tampoco (la
+    // pregunta del detector la responde SU guía, no la del gas);
+    // y si algún fragmento trae coseno, la vía léxica no compite
+    // contra la vara semántica.
+    expect(pickGuideChunk([gasLex, otroLex], "es", undefined, { profile: BGE_SMALL_EN_PROFILE, query: "Que hago si huele a gas en mi casa?" })).toBeNull();
+    expect(pickGuideChunk([gasLex], "es", ROUTE, { profile: BGE_SMALL_EN_PROFILE, query: "¿Cómo instalo un detector de monóxido?" })).toBeNull();
+    expect(pickGuideChunk([gasLex, otroLex], "es", ROUTE, { profile: BGE_SMALL_EN_PROFILE, query: "¿Cómo instalo un detector de monóxido?" })?.["chunkId"]).toBe(otroLex.chunkId);
+    const conCoseno = chunk(`pack:${SALVORA}:131`, "Fuga de gas: cómo reconocerla y salir a tiempo — Reconocer la fuga", GAS_131_BODY, 0.5);
+    expect(pickGuideChunk([gasLex, conCoseno], "es", ROUTE, { profile: BGE_SMALL_EN_PROFILE, query: "Que hago si huele a gas en mi casa?" })).toBeNull();
+  });
+
   it("una guía fuera del corte de 4 pero dentro del de elección se puede servir", () => {
     // El fragmento del gas quedó en el puesto 6 de la fusión: el
     // corte del prompt lo vetaba aunque la recuperación lo encontró.

@@ -22,6 +22,7 @@ import { parsePackChunkId, type PackSourceDoc } from "./packSource";
 import { detectTextLang, splitSentences, type GroundingLang } from "./grounding";
 import type { SentenceProvenance } from "./provenance";
 import { BGE_SMALL_EN_PROFILE, guideMinScore, type EmbeddingProfile } from "./embeddingProfile";
+import { buildLexicalQuery, countMatchedTerms, requiredTermMatches } from "./pure";
 
 /**
  * Packs whose guides are shown word for word (both embedding variants),
@@ -151,6 +152,57 @@ function isOtherNidoGuideIntro(c: RetrievedChunk, route?: LiteralRouteContext): 
   return !/\s[—–]\s/.test(c.title ?? "");
 }
 
+/**
+ * 0.1.87 (pieza 4): la vía literal SIN coseno. Cuando los vectores
+ * de un pack importado verificado no casan con el modelo de
+ * embeddings activo (vectorsMatch en packs.ts), sus fragmentos
+ * llegan solo por la vía léxica y NUNCA traen rawScore: la elección
+ * semántica los descartaba en silencio y la guía no se servía
+ * aunque la pregunta fuera la suya. La elegibilidad la decide la
+ * MISMA puerta de cobertura que la búsqueda aplica a los packs
+ * (buildLexicalQuery + requiredTermMatches, con las `keys` de
+ * formato v2 contando como texto): el fragmento literal sin coseno
+ * sirve solo si cubre los términos exigidos de la pregunta.
+ *
+ * Límite declarado: la vía solo abre cuando NINGÚN fragmento de la
+ * lista trae coseno — el desajuste de vectores es global al turno,
+ * y si hay escala semántica, manda la vara semántica. Y entre los
+ * literales sin coseno no hay escala común (la fusión normaliza por
+ * corpus), así que gana el más fuerte de su vía: quien más términos
+ * cubre, y a igual cobertura el orden de la lista.
+ */
+function pickLexicalGuideChunk(
+  chunks: RetrievedChunk[],
+  lang: GroundingLang,
+  route: LiteralRouteContext | undefined,
+  query: string,
+): RetrievedChunk | null {
+  if (chunks.some((c) => typeof c.rawScore === "number")) return null;
+  const lexical = buildLexicalQuery(query);
+  if (!lexical || lexical.terms.length === 0) return null;
+  const required = requiredTermMatches(lexical.terms.length);
+  const coverageOf = (c: RetrievedChunk) =>
+    countMatchedTerms(c.keys ? `${c.title} ${c.body} ${c.keys}` : `${c.title} ${c.body}`, lexical.terms);
+  const covering = chunks.filter(
+    (c) =>
+      isLiteralGuideChunk(c.chunkId, route) &&
+      !isEssentialsChunk(c.chunkId) &&
+      !(isClosingSection(c)) &&
+      coverageOf(c) >= required,
+  );
+  if (covering.length === 0) return null;
+  // El más fuerte de su vía: gana quien más términos cubre; a igual
+  // cobertura, el orden de la lista (el rango léxico de la fusión).
+  const best = covering.reduce((a, b) => (coverageOf(b) > coverageOf(a) ? b : a));
+  const close = covering.filter((c) => coverageOf(c) >= coverageOf(best));
+  const prefs: GroundingLang[] = lang === "pt" ? ["pt", "es"] : [lang];
+  for (const want of prefs) {
+    const hit = close.find((c) => detectTextLang(`${c.title}. ${c.body}`) === want);
+    if (hit) return hit;
+  }
+  return best;
+}
+
 export function pickGuideChunk(
   chunks: RetrievedChunk[],
   lang: GroundingLang,
@@ -164,7 +216,7 @@ export function pickGuideChunk(
       !(isLiteralGuideChunk(c.chunkId, route) && isClosingSection(c)) &&
       !isOtherNidoGuideIntro(c, route),
   );
-  if (scored.length === 0) return null;
+  if (scored.length === 0) return pickLexicalGuideChunk(chunks, lang, route, opts?.query ?? "");
   const globalBest = Math.max(...scored.map((c) => c.rawScore as number));
   // 0.1.87 (dirimen del turno del gas): la guía IMPORTADA se juzga
   // contra su vara, no contra la exigencia de ser la mejor global.

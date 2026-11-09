@@ -311,11 +311,16 @@ export async function searchPacks(
       // Same model AND same vector size as the question (a pack that
       // declares another size is never scored against it).
       const vectorsMatch = open.modelSha256 === modelSha256 && (!queryVec || queryVec.length === open.dims);
-      const toChunk = (r: { id: number; title: string; body: string }, score: number, matchType: RetrievedChunk["matchType"]): RetrievedChunk => ({
+      const toChunk = (r: { id: number; title: string; body: string; keys?: string }, score: number, matchType: RetrievedChunk["matchType"]): RetrievedChunk => ({
         chunkId: `pack:${pack.id}:${r.id}`,
         docId: `pack:${pack.id}:${r.title}`,
         title: r.title,
         body: r.body,
+        // 0.1.87: las claves de pregunta del formato v2 viajan con
+        // el fragmento: la vía léxica de la elección de la guía las
+        // cuenta como texto, igual que la puerta de cobertura de
+        // esta búsqueda (sin esto, el mapeo las dejaba en la fila).
+        ...(r.keys ? { keys: r.keys } : {}),
         // R-03: provenance for the fusion's personal-corpus reserve.
         sourceKind: "pack" as const,
         score,

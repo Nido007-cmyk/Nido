@@ -21,11 +21,13 @@ const mockState = {
       origin: "salvora",
       sizeBytes: 602112,
       sha256: "71173cda",
+      embeddingModelSha256: "ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514",
     },
   ] as Array<Record<string, unknown>>,
   importOutcome: { status: "cancelled" } as Record<string, unknown>,
   removed: [] as string[],
   listCalls: 0,
+  activeSha256: "e4165e3a71af97f1b4820da61079826d8752a2088e313af0c7d346796c38eff5",
 };
 
 jest.mock("../services/packImporter", () => ({
@@ -37,6 +39,9 @@ jest.mock("../services/packImporter", () => ({
   removeImportedPack: async (filename: string) => {
     mockState.removed.push(filename);
   },
+}));
+jest.mock("../rag/embeddingSwitch", () => ({
+  activeEmbeddingModel: async () => ({ sha256: mockState.activeSha256 }),
 }));
 jest.mock("./theme", () => ({
   useTheme: () => ({
@@ -84,6 +89,20 @@ describe("ImportedPacksSection", () => {
     fireEvent.press(screen.getByLabelText("packImport.addButton"));
     await screen.findByText("packImport.addedHeading");
     expect(Alert.alert).toHaveBeenCalledWith("packImport.notSignedByUs");
+  });
+
+  it("0.1.87: avisa cuando el pack es de otro modelo de embeddings, y calla cuando es del activo", async () => {
+    const { ImportedPacksSection } = require("./ImportedPacksSection");
+    // El pack del campo real se embebió con el modelo multilingüe
+    // (ec38…) y el activo del mock es el bge (e416…): el aviso sale.
+    await render(<ImportedPacksSection />);
+    expect(await screen.findByText("multilingual.packOtherModel")).toBeTruthy();
+    // Con el modelo del pack activo, el aviso desaparece.
+    mockState.activeSha256 = "ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514";
+    await render(<ImportedPacksSection />);
+    await screen.findByText("SALVORA Home Emergencies");
+    expect(screen.queryByText("multilingual.packOtherModel")).toBeNull();
+    mockState.activeSha256 = "e4165e3a71af97f1b4820da61079826d8752a2088e313af0c7d346796c38eff5";
   });
 
   it("quitar pide la confirmación de A.3 y borra el pack al aceptarla", async () => {
