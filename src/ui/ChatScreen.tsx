@@ -50,6 +50,7 @@ import {
   isEmergencySituation,
   isEmergencyText,
   isHealthQuestion,
+  noSourcesOutcome,
   shouldSubstituteSafeText,
 } from "../routing/emergencyGate";
 import type { TaskType } from "../routing/types";
@@ -94,7 +95,6 @@ import { agentFallbackText, toFallbackLang } from "../agent/loop/fallbackText";
 import { describePolicyConfirmation } from "../agent/policy/confirmText";
 import {
   verifyGroundedAnswer,
-  isFactualQuestion,
   noSourcesAnswer,
   type GroundingStatus,
 } from "../rag/grounding";
@@ -1725,6 +1725,7 @@ export function ChatScreen({
       // Adversaria H-12: la ruta fija generó con el suelo degradado por
       // falta de espacio (la respuesta salió acortada y lleva su nota).
       let fixedGenSpaceCut = false;
+      let fixedGenWasCut = false;
       // 0.1.59: answered word for word from a NIDO Essentials guide (no model).
       let guideAnswered = false;
       // Honest no-result flag for THIS reply (2026-09-28): true only when
@@ -1817,7 +1818,7 @@ export function ChatScreen({
             chunks = g.answer.chunks;
           }
         }
-        const runFixedModelChat = async (): Promise<{ chunks: RetrievedChunk[]; noSourcesFound: boolean; genSpaceCut: boolean }> => {
+        const runFixedModelChat = async (): Promise<{ chunks: RetrievedChunk[]; noSourcesFound: boolean; genSpaceCut: boolean; genWasCut: boolean }> => {
           let c: RetrievedChunk[];
           fixedTaskType = classifyTask(query);
           // Honest no-result (2026-09-28): retrievalAttempted is true only
@@ -1839,26 +1840,31 @@ export function ChatScreen({
           const noSources = retrievalAttempted && c.length === 0;
           // Programa bounty, tanda 2 (puerta léxica de salud, patrón de
           // LabRat): pregunta de salud + ninguna fuente → el texto
-          // seguro fijo, sin generar. Va ANTES del "no lo sé" de hechos:
-          // para salud el texto seguro es el específico (llama si es
-          // urgencia; la guía está en el pack Esencial), no el genérico.
+          // seguro fijo, sin generar. Para salud el texto seguro es el
+          // específico (llama si es urgencia; la guía está en el pack
+          // Esencial), no el genérico.
           // Cierre de evaluaciones 2026-10-31 (F-B1): la emergencia
           // viva contada (isEmergencySituation) entra por la misma
           // puerta — sin guía que la cubra, tampoco cae al modelo.
-          if (noSources && (isHealthQuestion(query) || isEmergencySituation(query))) {
+          // 0.1.90 (familia 4): la decisión vive en noSourcesOutcome
+          // (emergencyGate.ts). Sin fuentes y SIN peligro ya no hay
+          // puerta: el turno sigue a generar con el modelo activo (la
+          // ley del dueño, 2026-11-09). La rama «pregunta de hechos →
+          // no lo sé determinista, sin generar» de RAG-GROUNDING
+          // 2026-10-11 (Fase 3) murió en esta tanda: dejaba sin generar
+          // preguntas generales inofensivas (la llanta de la foto del
+          // dueño, 15:43 MST) habiendo modelo cargado.
+          if (
+            noSources &&
+            noSourcesOutcome({
+              isHealth: isHealthQuestion(query),
+              isEmergency: isEmergencySituation(query),
+            }) === "safe-text"
+          ) {
             const safe = healthSafeText(uiLang);
             assistantText = safe;
             setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: safe } : m)));
-            return { chunks: c, noSourcesFound: noSources, genSpaceCut: false };
-          }
-          // RAG-GROUNDING 2026-10-11 (Fase 3, "mejor no inventar"): pregunta
-          // de hechos + ninguna fuente → "no lo sé" honesto y determinista,
-          // sin generar. Pedírselo al 0.5B por prompt no basta: inventa igual.
-          if (noSources && isFactualQuestion(query)) {
-            const idk = noSourcesAnswer(uiLang);
-            assistantText = idk;
-            setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: idk } : m)));
-            return { chunks: c, noSourcesFound: noSources, genSpaceCut: false };
+            return { chunks: c, noSourcesFound: noSources, genSpaceCut: false, genWasCut: false };
           }
           setProcessing({ messageId: assistantId, status: "thinking" });
           // Use the model's own chat template when its file ships one; the
@@ -1920,9 +1926,13 @@ export function ChatScreen({
             : { prompt: directPrompt!, nPredict: genTokens, onToken, ...sampling };
           assertPromptBudget([{ role: "user", content: promptText }], nCtx, genTokens, "chat-directo");
           await llamaEngine.generate(genInput);
+          // 0.1.90 (familia 5): si la generación consumió todo su
+          // presupuesto, el motor lo deja registrado (lastCut); se lee
+          // ahora, con las generaciones en serie, y es de ESTE turno.
+          const genWasCut = llamaEngine.lastGenerationWasCut;
           // 5.1: flush final del buffer de tokens.
           flushTokenBuffer();
-          return { chunks: fittedChunks ?? c, noSourcesFound: noSources, genSpaceCut: spaceCut };
+          return { chunks: fittedChunks ?? c, noSourcesFound: noSources, genSpaceCut: spaceCut, genWasCut };
         };
 
         const adaptiveRoutingEnabled = await getAdaptiveRoutingEnabled();
@@ -1964,6 +1974,7 @@ export function ChatScreen({
               chunks = fixed.chunks;
               noSourcesFound = fixed.noSourcesFound;
               fixedGenSpaceCut = fixed.genSpaceCut;
+              fixedGenWasCut = fixed.genWasCut;
             } else {
               chunks = result.citations;
               // Executor reports retrievalAttempted; paired with zero
@@ -2017,12 +2028,14 @@ export function ChatScreen({
             chunks = fixedFallback.chunks;
             noSourcesFound = fixedFallback.noSourcesFound;
             fixedGenSpaceCut = fixedFallback.genSpaceCut;
+            fixedGenWasCut = fixedFallback.genWasCut;
           }
         } else {
           const fixedPlain = await runFixedModelChat();
           chunks = fixedPlain.chunks;
           noSourcesFound = fixedPlain.noSourcesFound;
           fixedGenSpaceCut = fixedPlain.genSpaceCut;
+          fixedGenWasCut = fixedPlain.genWasCut;
         }
       }
       // FIX 2026-10-09 (C2): flush del buffer de tokens en el path adaptivo.
@@ -2097,16 +2110,25 @@ export function ChatScreen({
           if (verified.status !== "skipped") finalText = verified.text;
           provenance = verified.sentences;
         } else if (!deepTurn && noSourcesFound) {
-          // Programa bounty, tanda 2: la puerta de salud manda sobre el
-          // "no lo sé" genérico — una pregunta de salud sin fuentes (la
-          // ruta adaptativa no tiene la puerta previa de la ruta fija)
-          // cae al texto seguro, nunca a lo que el modelo haya escrito.
+          // Programa bounty, tanda 2: la puerta de salud manda — una
+          // pregunta de salud sin fuentes (la ruta adaptativa no tiene
+          // la puerta previa de la ruta fija) cae al texto seguro,
+          // nunca a lo que el modelo haya escrito.
           // F-B1: la emergencia viva contada manda igual que la pregunta.
-          if ((isHealthQuestion(query) || isEmergencySituation(query)) && finalText !== healthSafeText(uiLang)) {
+          // 0.1.90 (familia 4): la decisión vive en noSourcesOutcome
+          // (emergencyGate.ts) y ya SOLO cubre salud/emergencia. La
+          // rama gemela «pregunta de hechos → sustituir por el no lo
+          // sé determinista» murió con la puerta previa de la ruta
+          // fija: sin peligro, lo que el modelo generó queda en pie.
+          if (
+            noSourcesOutcome({
+              isHealth: isHealthQuestion(query),
+              isEmergency: isEmergencySituation(query),
+            }) === "safe-text" &&
+            finalText !== healthSafeText(uiLang)
+          ) {
             finalText = healthSafeText(uiLang);
             provenance = healthSafeProvenance(finalText);
-          } else if (isFactualQuestion(query) && finalText !== noSourcesAnswer(uiLang)) {
-            finalText = noSourcesAnswer(uiLang);
           }
         }
         // Programa bounty, tanda 2 (puerta de salud, segunda salida):
@@ -2162,15 +2184,20 @@ export function ChatScreen({
       // lo sé» determinista, ni la abstención con extracto (en esos
       // casos la respuesta del modelo no es la que se sirve y la nota
       // mentiría sobre ella), ni un turno detenido por el usuario.
+      // 0.1.90 (familia 5): la misma honestidad cuando no faltó
+      // espacio sino que la generación consumió todo su presupuesto
+      // (fixedGenWasCut): la nota es la hermana «answerCut» — llegó el
+      // límite de un turno, no faltó espacio — y ofrece continuar. Si
+      // el espacio SÍ obligó a degradar, manda la de espacio.
       if (
-        fixedGenSpaceCut &&
+        (fixedGenSpaceCut || fixedGenWasCut) &&
         !wasStopped &&
         grounding !== "abstained" &&
         assistantText.trim().length > 0 &&
         assistantText !== healthSafeText(uiLang) &&
         assistantText !== noSourcesAnswer(uiLang)
       ) {
-        assistantText = `${assistantText}\n\n${agentFallbackText("spaceShortened", uiLang)}`;
+        assistantText = `${assistantText}\n\n${agentFallbackText(fixedGenSpaceCut ? "spaceShortened" : "answerCut", uiLang)}`;
         setMessages((prev) =>
           prev.map((m) => (m.id === assistantId ? { ...m, text: assistantText } : m))
         );

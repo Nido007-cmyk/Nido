@@ -25,7 +25,8 @@ export type FallbackKind =
   | "actionFailed"
   | "memoryFailed"
   | "emptyAnswer"
-  | "spaceShortened";
+  | "spaceShortened"
+  | "answerCut";
 
 const TEXTS: Record<FallbackKind, Record<FallbackLang, string>> = {
   notUnderstood: {
@@ -69,6 +70,18 @@ const TEXTS: Record<FallbackKind, Record<FallbackLang, string>> = {
     es: "Nota: tuve que acortar esta respuesta porque en este turno quedó poco espacio para escribir.",
     en: "Note: I had to shorten this answer because this turn ran low on space.",
     pt: "Nota: tive de encurtar esta resposta porque neste turno ficou pouco espaço para escrever.",
+  },
+  // 0.1.90 (familia 5): la generación consumió todo su presupuesto de
+  // tokens (lastGenerationWasCut) sin que el espacio obligara a
+  // degradarlo — el tope de salida del turno mandó. La respuesta ya se
+  // cierra en su última frase completa (trimToCompleteSentences), y
+  // esta nota dice la verdad que spaceShortened no puede decir aquí:
+  // no faltó espacio, llegó el límite de un turno. Ofrece continuar,
+  // que es lo que el usuario puede pedir de verdad.
+  answerCut: {
+    es: "Nota: esta respuesta llegó al límite de lo que puedo escribir en un turno y la cerré en la última frase completa. Si quieres, pídeme que continúe.",
+    en: "Note: this answer reached the limit of what I can write in one turn, so I closed it at the last complete sentence. If you want, ask me to continue.",
+    pt: "Nota: esta resposta chegou ao limite do que posso escrever em um turno e a fechei na última frase completa. Se quiser, peça para eu continuar.",
   },
 };
 
