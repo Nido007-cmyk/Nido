@@ -14,7 +14,7 @@ import { ANSWER_CONTEXT_CHUNKS } from "./pure";
 import { GUIDE_PICK_CHUNKS, buildGuidePickCandidates } from "./guidePickCandidates";
 import type { RetrievedChunk } from "./retrieve.types";
 import type { GroundingLang } from "./grounding";
-import { composeGuideAnswer, pickGuideChunk, stripShortRequest, wantsShortGuide, type LiteralRouteContext } from "./guideAnswer";
+import { composeGuideAnswer, pickGuideChunk, pickIsSignDenied, stripShortRequest, wantsShortGuide, type LiteralRouteContext } from "./guideAnswer";
 import { verifiedImportedPacks } from "../services/packImporter";
 
 export interface GuideAnswer {
@@ -61,6 +61,19 @@ export async function answerFromGuide(
     const pickOpts = { profile: activeRetrievalProfile(), query };
     let candidates = retrieved;
     let pick = pickGuideChunk(candidates, lang, route, pickOpts);
+    if (pick && pickIsSignDenied(candidates, pick, query)) {
+      // 0.1.89: la primera lista puede traer solo a la vecina que
+      // niega el signo de la pregunta (la guía del monóxido, que
+      // declara que su gas no se huele, a quien SÍ huele gas): esa
+      // guía no se sirve sola sin mirar la lista ancha, donde la
+      // guía del signo puede estar esperando su turno de elección.
+      // Si al ensanchar no aparece rival, se sirve la misma.
+      const wide = await retrieve(short ? stripShortRequest(query) : (retrievalQuery ?? query), GUIDE_PICK_CHUNKS).catch(() => null);
+      if (wide && wide.length > 0) {
+        candidates = buildGuidePickCandidates(candidates, wide);
+        pick = pickGuideChunk(candidates, lang, route, pickOpts) ?? pick;
+      }
+    }
     if (!pick) {
       // La elección mira más ancho que el contexto del prompt: una
       // segunda recuperación con el topK de elección, solo para

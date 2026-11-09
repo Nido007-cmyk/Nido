@@ -192,6 +192,24 @@ function isOtherNidoGuideIntro(c: RetrievedChunk, route?: LiteralRouteContext): 
  * orden de la lista. Dentro de la guía ganadora manda su fragmento
  * de mayor cobertura, con el mismo desempate, y la preferencia de
  * idioma corre entre ellos como siempre.
+ *
+ * 0.1.89 — entre la cobertura y el rango entra el SIGNO
+ * PERCEPTIBLE (dirimen del empate de la 0.1.88, research_notes/
+ * nido-gas-0.1.88-dirimen-2026-11-09.md, medido sobre el sqlite
+ * real del dueño): el BM25 real del pack pone el fragmento del
+ * monóxido primero de todo el clúster (bm25 −10,6672) con la
+ * misma cobertura 3 de 3 que el de la fuga (−9,3133), así que el
+ * desempate por rango servía la guía del monóxido a quien huele
+ * gas, y la regresión de laboratorio no lo vio porque sus scores
+ * iban puestos a mano al revés. La señal que los distingue está
+ * en los textos, sin nombres de guía ni de pack: si la pregunta
+ * afirma un sentido (huele, ve, oye) y una guía candidata
+ * declara en su propio texto que su peligro no se percibe por
+ * ese sentido («sin olor», «no se puede ver ni oler»,
+ * «odorless», «sem cheiro»), esa guía pierde el empate contra
+ * cualquier guía de igual cobertura que no lo declare: la
+ * propia guía del monóxido dice que su gas no se huele, y si el
+ * usuario huele algo, esa guía misma declara que no es la suya.
  */
 function pickLexicalGuideChunk(
   chunks: RetrievedChunk[],
@@ -216,17 +234,35 @@ function pickLexicalGuideChunk(
   // Por guía: su cobertura es la de su mejor fragmento y su rango
   // el `score` de ese fragmento (la fusión lo dejó ordenado dentro
   // de su propio corpus). Gana la guía de mayor cobertura; a igual
-  // cobertura, la de mayor rango; a igual todo, el orden de la lista.
-  interface GuideBid { best: RetrievedChunk; coverage: number; rank: number }
+  // cobertura, la capa del signo (0.1.89): pierde la guía que niega
+  // el sentido que la pregunta afirma; a igual todo lo demás, la
+  // de mayor rango; a igual todo, el orden de la lista.
+  const senses = questionPerceptionSenses(query);
+  interface GuideBid { best: RetrievedChunk; coverage: number; rank: number; chunks: RetrievedChunk[] }
   const bids = new Map<string, GuideBid>();
   for (const c of covering) {
     const key = `${parsePackChunkId(c.chunkId)?.packId ?? ""}|${guideTitleOf(c.title)}`;
     const bid = bids.get(key);
-    if (!bid || coverageOf(c) > bid.coverage || (coverageOf(c) === bid.coverage && c.score > bid.rank)) {
-      bids.set(key, { best: c, coverage: coverageOf(c), rank: c.score });
+    if (!bid) {
+      bids.set(key, { best: c, coverage: coverageOf(c), rank: c.score, chunks: [c] });
+      continue;
+    }
+    bid.chunks.push(c);
+    if (coverageOf(c) > bid.coverage || (coverageOf(c) === bid.coverage && c.score > bid.rank)) {
+      bid.best = c;
+      bid.coverage = coverageOf(c);
+      bid.rank = c.score;
     }
   }
-  const winner = [...bids.values()].reduce((a, b) => (b.coverage > a.coverage || (b.coverage === a.coverage && b.rank > a.rank) ? b : a));
+  const deniesSign = (bid: GuideBid): boolean =>
+    senses.size > 0 && bid.chunks.some((c) => [...senses].some((s) => textDeniesSense(chunkSenseText(c), s)));
+  const winner = [...bids.values()].reduce((a, b) => {
+    if (b.coverage !== a.coverage) return b.coverage > a.coverage ? b : a;
+    const aDenied = deniesSign(a);
+    const bDenied = deniesSign(b);
+    if (aDenied !== bDenied) return bDenied ? a : b;
+    return b.rank > a.rank ? b : a;
+  });
   const winnerPackId = parsePackChunkId(winner.best.chunkId)?.packId ?? "";
   const winnerGuide = guideTitleOf(winner.best.title);
   const guideChunks = covering.filter(
@@ -243,6 +279,83 @@ function pickLexicalGuideChunk(
     if (hit) return hit;
   }
   return best;
+}
+
+/**
+ * 0.1.89 — el signo perceptible: los sentidos que una pregunta
+ * afirma y la negación de esos sentidos en el texto de una guía.
+ * Listas cerradas en los tres idiomas, con el mismo precedente
+ * que EMERGENCY_SIGNS o ABSENT_DATUM_TYPE_FORMS: cada forma está
+ * porque un texto real de guía o una pregunta real la trae, y el
+ * emparejamiento va sobre el texto plegado (sin acentos, en
+ * minúsculas) para que la forma no dependa de la ortografía.
+ */
+export type PerceptionSense = "smell" | "sight" | "hearing";
+
+const PERCEPTION_STEMS: Record<PerceptionSense, readonly string[]> = {
+  smell: ["huel", "olor", "olfat", "smell", "cheir", "odor"],
+  sight: ["veo", "viendo", "sees", "seeing", "seen", "vejo", "olho"],
+  hearing: ["suena", "sonid", "silb", "escuch", "oigo", "hears", "heard", "hearing", "ouv", "escut"],
+};
+
+const PERCEPTION_DENIALS: Record<PerceptionSense, readonly string[]> = {
+  smell: [
+    "sin olor", "no tiene olor", "no huele", "no se huele", "no se puede oler",
+    "no se puede ver ni oler", "no puedes oler", "no puede olerse", "inodoro", "inodora",
+    "odorless", "cannot be smelled", "can not be smelled", "can't be smelled", "has no smell", "no smell",
+    "sem cheiro", "nao tem cheiro", "nao se pode cheirar", "sem odor",
+  ],
+  sight: [
+    "no se puede ver", "no puedes ver", "no puede verse", "invisible", "invisivel",
+    "cannot be seen", "can't be seen", "nao se pode ver",
+  ],
+  hearing: [
+    "no se oye", "no se escucha", "no hace ruido", "no hace ningun ruido", "silencioso", "silenciosa",
+    "silent", "makes no sound", "makes no noise", "nao faz barulho", "nao se ouve", "sem ruido",
+  ],
+};
+
+function foldForSense(text: string): string {
+  return text.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+/** Los sentidos que la pregunta afirma («huele a gas», «I smell gas», «sinto cheiro»). */
+export function questionPerceptionSenses(query: string): ReadonlySet<PerceptionSense> {
+  const tokens = foldForSense(query).split(/[^a-z0-9]+/).filter(Boolean);
+  const found = new Set<PerceptionSense>();
+  (Object.keys(PERCEPTION_STEMS) as PerceptionSense[]).forEach((sense) => {
+    if (tokens.some((tok) => PERCEPTION_STEMS[sense].some((stem) => tok.startsWith(stem)))) found.add(sense);
+  });
+  return found;
+}
+
+/** Si el texto declara que su peligro no se percibe por ese sentido. */
+export function textDeniesSense(text: string, sense: PerceptionSense): boolean {
+  const folded = foldForSense(text);
+  return PERCEPTION_DENIALS[sense].some((pattern) => folded.includes(pattern));
+}
+
+function chunkSenseText(c: RetrievedChunk): string {
+  return c.keys ? `${c.title} ${c.body} ${c.keys}` : `${c.title} ${c.body}`;
+}
+
+/**
+ * 0.1.89 — si la guía de un fragmento ya elegido declara, en los
+ * fragmentos suyos que la lista trae, que su peligro no se
+ * percibe por un sentido que la pregunta afirma. La corrida
+ * (guideAnswerRun) lo usa para no servir esa guía desde la
+ * primera lista corta sin mirar la ancha: la primera lista puede
+ * traer solo a la vecina que niega el signo, y la guía del signo
+ * solo aparece al ensanchar.
+ */
+export function pickIsSignDenied(candidates: RetrievedChunk[], pick: RetrievedChunk, query: string): boolean {
+  const senses = questionPerceptionSenses(query);
+  if (senses.size === 0) return false;
+  const packId = parsePackChunkId(pick.chunkId)?.packId ?? "";
+  const guide = guideTitleOf(pick.title);
+  return candidates
+    .filter((c) => (parsePackChunkId(c.chunkId)?.packId ?? "") === packId && guideTitleOf(c.title) === guide)
+    .some((c) => [...senses].some((s) => textDeniesSense(chunkSenseText(c), s)));
 }
 
 export function pickGuideChunk(
