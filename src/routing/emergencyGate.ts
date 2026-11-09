@@ -970,14 +970,76 @@ const HEALTH_PACK_IDS = new Set(["nido-esencial", "nido-ninos", "nido-crisis"]);
  * expo-file-system y no entra aquí; sin el conjunto, el
  * comportamiento es exactamente el de siempre.
  */
+/**
+ * ¿Cuenta este fragmento como evidencia de salud de la puerta? La
+ * misma vara que hasHealthEvidence aplica fragmento a fragmento:
+ * un pack integrado de la lista, o un pack que el registro de la
+ * puerta firmada verificó (el llamador pasa el conjunto).
+ */
+function isHealthEvidenceChunk(c: RetrievedChunk, verifiedImportedPackIds?: ReadonlySet<string>): boolean {
+  const ref = parsePackChunkId(c.chunkId);
+  if (!ref) return false;
+  if (HEALTH_PACK_IDS.has(ref.packId.replace(/-e5$/, ""))) return true;
+  return !!verifiedImportedPackIds && verifiedImportedPackIds.has(ref.packId);
+}
+
+export interface SafeTextSubstitutionInput {
+  /** El turno es de investigación profunda: la puerta no actúa. */
+  deepTurn: boolean;
+  /** Las fuentes del turno, en su orden (la procedencia cita por índice). */
+  sources: readonly RetrievedChunk[];
+  /** El veredicto del juez de fundamentación sobre la respuesta. */
+  grounding: string | undefined;
+  /** La pregunta es de salud (isHealthQuestion). */
+  isHealth: boolean;
+  /** La pregunta cuenta una emergencia viva (isEmergencySituation). */
+  isEmergency: boolean;
+  /** La procedencia por frase de la respuesta juzgada. */
+  provenance: readonly SentenceProvenance[] | undefined;
+  /** Ids de packs importados que el registro verificó en este turno. */
+  verifiedImportedPackIds?: ReadonlySet<string>;
+}
+
+/**
+ * 0.1.88 (dirimen del gas en la 0.1.87): la decisión de sustituir la
+ * respuesta del modelo por el texto seguro, extraída de ChatScreen
+ * a función pura para poder probarla con los valores del campo.
+ *
+ * Hasta la 0.1.87 la condición (en ChatScreen) sustituía cuando el
+ * veredicto era «unverified» o «abstained» y NINGUNA fuente era
+ * evidencia de salud. El hueco medido: la condición miraba las
+ * fuentes, no el apoyo de la respuesta. Con la guía del pack
+ * verificado entre las fuentes (hasHealthEvidence verdadero), un
+ * texto del modelo que el juez NO pudo verificar quedaba en
+ * pantalla en plena emergencia viva, apoyado en nada: justo el
+ * turno de la foto, donde la guía estaba en el aparato y entre las
+ * fuentes pero no se había servido. La vara pasa a ser el apoyo
+ * real: se sustituye cuando ninguna frase con procedencia de fuente
+ * se apoya en un fragmento que es evidencia de salud.
+ *
+ * Lo que NO cambia, por doctrina: los veredictos «grounded» y
+ * «partial» nunca se sustituyen por esta puerta. Sus frases
+ * quedaron verificadas una a una contra sus fuentes por el juez, y
+ * si la fuente es una guía de salud verificada, el apoyo es real
+ * aunque sea otra guía de la misma familia; el fallo de la foto se
+ * cura donde nació, en la elección de la guía, no reescribiendo lo
+ * que el juez ya verificó.
+ */
+export function shouldSubstituteSafeText(input: SafeTextSubstitutionInput): boolean {
+  if (input.deepTurn || input.sources.length === 0) return false;
+  if (!input.isHealth && !input.isEmergency) return false;
+  if (input.grounding !== "unverified" && input.grounding !== "abstained") return false;
+  const restsOnEvidence = (input.provenance ?? []).some((s) => {
+    if (s.origin.kind !== "source") return false;
+    const src = input.sources[s.origin.n - 1];
+    return !!src && isHealthEvidenceChunk(src, input.verifiedImportedPackIds);
+  });
+  return !restsOnEvidence;
+}
+
 export function hasHealthEvidence(
   chunks: readonly RetrievedChunk[],
   verifiedImportedPackIds?: ReadonlySet<string>,
 ): boolean {
-  return chunks.some((c) => {
-    const ref = parsePackChunkId(c.chunkId);
-    if (!ref) return false;
-    if (HEALTH_PACK_IDS.has(ref.packId.replace(/-e5$/, ""))) return true;
-    return !!verifiedImportedPackIds && verifiedImportedPackIds.has(ref.packId);
-  });
+  return chunks.some((c) => isHealthEvidenceChunk(c, verifiedImportedPackIds));
 }

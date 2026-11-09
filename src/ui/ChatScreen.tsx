@@ -45,12 +45,12 @@ import { assembleChatMessages, contextualizeQuery, degradableGenTokens, ANSWER_C
 import { classifyTask, isRetrievalIrrelevant, isCreativeRequest } from "../routing/classify";
 import {
   gatePreemptsDeepResearch,
-  hasHealthEvidence,
   healthSafeProvenance,
   healthSafeText,
   isEmergencySituation,
   isEmergencyText,
   isHealthQuestion,
+  shouldSubstituteSafeText,
 } from "../routing/emergencyGate";
 import type { TaskType } from "../routing/types";
 import { onSeedProgress, seedKnowledgeBaseIfEmpty } from "../rag/seedCorpus";
@@ -2117,12 +2117,27 @@ export function ChatScreen({
         // de salud y ningún chunk es de un pack de salud. Lo
         // «grounded»/«partial» no se toca: está verificado frase a
         // frase contra sus fuentes, no es memoria del modelo.
+        // 0.1.88 (dirimen del gas): la decisión vive en
+        // shouldSubstituteSafeText (emergencyGate.ts), probada con
+        // los valores del campo. La vara ya no es que haya evidencia
+        // entre las fuentes, sino que la respuesta se apoye en ella:
+        // en el turno de la foto la guía verificada estaba entre las
+        // fuentes y el texto sin verificar del modelo quedó en
+        // pantalla igual, porque la condición vieja miraba la lista
+        // de fuentes y no el apoyo de las frases. El !deepTurn queda
+        // también escrito aquí, como en las demás salidas de la
+        // puerta, y la función lo vuelve a exigir por su cuenta.
         if (
           !deepTurn &&
-          chunks.length > 0 &&
-          (grounding === "unverified" || grounding === "abstained") &&
-          (isHealthQuestion(query) || isEmergencySituation(query)) &&
-          !hasHealthEvidence(chunks, verifiedImportedIds)
+          shouldSubstituteSafeText({
+            deepTurn,
+            sources: chunks,
+            grounding,
+            isHealth: isHealthQuestion(query),
+            isEmergency: isEmergencySituation(query),
+            provenance,
+            verifiedImportedPackIds: verifiedImportedIds,
+          })
         ) {
           finalText = healthSafeText(uiLang);
           provenance = healthSafeProvenance(finalText);
