@@ -54,15 +54,17 @@ describe("LibraryScreen · el botón del lector (0.1.87)", () => {
     mockState.modelSetupProps = [];
   });
 
-  it("el botón está junto al título, se ve y abre el lector de App", async () => {
+  it("0.1.88: la apertura del lector es UNA sola, la banda final, y abre el lector de App", async () => {
     const { LibraryScreen } = require("./LibraryScreen");
     const onOpenLibrary = jest.fn();
     await render(
       <LibraryScreen onOpenGuide={() => {}} onOpenPromptIdeas={() => {}} onOpenLibrary={onOpenLibrary} />
     );
-    const btn = screen.getByLabelText("guideLibrary.open");
-    expect(screen.getByText("guideLibrary.open")).toBeTruthy();
-    fireEvent.press(btn);
+    // Ni junto al título ni repetida dentro de la sección embebida:
+    // en toda la pantalla hay exactamente una apertura.
+    const all = screen.getAllByLabelText("guideLibrary.open");
+    expect(all).toHaveLength(1);
+    fireEvent.press(all[0]);
     expect(onOpenLibrary).toHaveBeenCalledTimes(1);
   });
 
@@ -72,7 +74,7 @@ describe("LibraryScreen · el botón del lector (0.1.87)", () => {
     expect(screen.queryByLabelText("guideLibrary.open")).toBeNull();
   });
 
-  it("la prop viaja por la sección de packs hasta ModelSetupScreen (section knowledge)", async () => {
+  it("0.1.88: la sección embebida va marcada como sitio SIN entrada interior (libraryEntryInside en falso)", async () => {
     const { LibraryScreen } = require("./LibraryScreen");
     const onOpenLibrary = jest.fn();
     await render(
@@ -80,6 +82,7 @@ describe("LibraryScreen · el botón del lector (0.1.87)", () => {
     );
     const knowledge = mockState.modelSetupProps.find((p) => p.section === "knowledge");
     expect(knowledge).toBeTruthy();
-    expect(knowledge.onOpenLibrary).toBe(onOpenLibrary);
+    expect(knowledge.libraryEntryInside).toBe(false);
+    expect(knowledge.onOpenLibrary).toBeUndefined();
   });
 });

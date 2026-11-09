@@ -96,13 +96,11 @@ describe("ImportedPacksSection", () => {
     expect(Alert.alert).toHaveBeenCalledWith("packImport.notSignedByUs");
   });
 
-  it("0.1.87 (pieza 5): el segundo botón del lector vive en el encabezado de esta sección", async () => {
+  it("0.1.88: esta sección ya no lleva botón del lector (una sola apertura por pantalla)", async () => {
     const { ImportedPacksSection } = require("./ImportedPacksSection");
-    const onOpenLibrary = jest.fn();
-    await render(<ImportedPacksSection onOpenLibrary={onOpenLibrary} />);
-    const btn = await screen.findByLabelText("guideLibrary.open");
-    fireEvent.press(btn);
-    expect(onOpenLibrary).toHaveBeenCalledTimes(1);
+    await render(<ImportedPacksSection />);
+    await screen.findByText("SALVORA Home Emergencies");
+    expect(screen.queryByLabelText("guideLibrary.open")).toBeNull();
   });
 
   it("0.1.87: avisa cuando el pack es de otro modelo de embeddings, y calla cuando es del activo", async () => {
@@ -117,7 +115,7 @@ describe("ImportedPacksSection", () => {
     expect(screen.queryByText("multilingual.packOtherModel")).toBeNull();
   });
 
-  it("0.1.87 (pieza 5): sin la prop no hay botón del lector en el encabezado", async () => {
+  it("la sección sigue sin botón del lector tras cargar los packs", async () => {
     const { ImportedPacksSection } = require("./ImportedPacksSection");
     await render(<ImportedPacksSection />);
     await screen.findByText("SALVORA Home Emergencies");

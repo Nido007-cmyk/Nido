@@ -47,7 +47,7 @@ const REJECTION_KEYS: Record<PackImportRejectionReason, string> = {
  * Catalog-named packs (the Esencial) present on their catalog card, not
  * here (packImporter.listImportedPacks).
  */
-export function ImportedPacksSection({ onOpenLibrary }: { onOpenLibrary?: () => void } = {}) {
+export function ImportedPacksSection() {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
@@ -132,20 +132,11 @@ export function ImportedPacksSection({ onOpenLibrary }: { onOpenLibrary?: () => 
     <View>
       <View style={styles.headingRow}>
         <Text style={[styles.sectionHeading, { color: colors.text.dim }]}>{t("packImport.addedHeading")}</Text>
-        {/* 0.1.87 (pieza 5): el segundo botón del lector, en el
-            encabezado de la lista de packs — donde el dueño busca
-            sus guías. Solo existe con la prop (la capa de App
-            encima); sin ella no se enseña un botón sin destino. */}
-        {onOpenLibrary ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t("guideLibrary.open")}
-            style={styles.libraryBtn}
-            onPress={onOpenLibrary}
-          >
-            <Text style={styles.libraryBtnText}>{t("guideLibrary.open")}</Text>
-          </Pressable>
-        ) : null}
+        {/* 0.1.88: aquí ya no hay botón del lector. Lo hubo en el
+            encabezado (pieza 5 de la 0.1.87) y era la tercera copia
+            en la misma pantalla de Biblioteca; cada superficie
+            conserva UNA apertura: la banda final de la pestaña y el
+            botón de CorpusSettingsTab en Ajustes. */}
       </View>
       <View style={styles.list}>
         {items.map((item) => (

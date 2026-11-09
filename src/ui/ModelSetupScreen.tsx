@@ -87,6 +87,14 @@ type OptionalProps = {
   onOpenGuide?: () => void;
   /** 0.1.86: abre el lector de guías desde Ajustes > Biblioteca. */
   onOpenLibrary?: () => void;
+  /**
+   * 0.1.88: el sitio que embebe la sección de conocimiento decide
+   * si la entrada del lector vive DENTRO de la sección (Ajustes: su
+   * única entrada es la de CorpusSettingsTab) o FUERA (la pestaña
+   * Biblioteca: su única entrada es la banda final de LibraryScreen,
+   * y la sección va sin la prop para no repetirla).
+   */
+  libraryEntryInside?: boolean;
   onOpenMemory?: () => void;
   onOpenTelemetry?: () => void;
   onOpenAbout?: () => void;
@@ -518,7 +526,7 @@ export function ModelSetupScreen(props: Props) {
             getRow={getRow}
             download={download}
             remove={remove}
-            onOpenLibrary={(props as OptionalProps).onOpenLibrary}
+            onOpenLibrary={(props as OptionalProps).libraryEntryInside === false ? undefined : (props as OptionalProps).onOpenLibrary}
           />
         </ScrollView>
         {toast && <Toast message={toast} onHide={() => setToast(null)} />}
