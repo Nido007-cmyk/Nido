@@ -18,7 +18,7 @@
  * Pure functions; the pack reading lives in guideAnswerRun.ts.
  */
 import type { RetrievedChunk } from "./retrieve.types";
-import { parsePackChunkId, type PackSourceDoc } from "./packSource";
+import { guideTitleOf, parsePackChunkId, type PackSourceDoc } from "./packSource";
 import { detectTextLang, splitSentences, type GroundingLang } from "./grounding";
 import type { SentenceProvenance } from "./provenance";
 import { BGE_SMALL_EN_PROFILE, guideMinScore, type EmbeddingProfile } from "./embeddingProfile";
@@ -164,12 +164,34 @@ function isOtherNidoGuideIntro(c: RetrievedChunk, route?: LiteralRouteContext): 
  * formato v2 contando como texto): el fragmento literal sin coseno
  * sirve solo si cubre los términos exigidos de la pregunta.
  *
- * Límite declarado: la vía solo abre cuando NINGÚN fragmento de la
- * lista trae coseno — el desajuste de vectores es global al turno,
- * y si hay escala semántica, manda la vara semántica. Y entre los
- * literales sin coseno no hay escala común (la fusión normaliza por
- * corpus), así que gana el más fuerte de su vía: quien más términos
- * cubre, y a igual cobertura el orden de la lista.
+ * 0.1.88 (dirimen del turno del gas en la 0.1.87, medido con las
+ * funciones reales y el pack real del dueño): el límite que la
+ * pieza 4 declaró, que la vía solo abriera cuando NINGÚN fragmento
+ * de la lista trajera coseno, es el turno que nunca ocurre: con la
+ * búsqueda multilingüe activa, el Esencial y la base integrada
+ * puntúan con coseno en la misma lista, y un solo coseno ajeno
+ * cerraba la vía entera (la foto del dueño: la guía no salió ni una
+ * vez, con el aviso de «solo búsqueda por palabras» ya pintado en
+ * la tarjeta del pack). El desajuste de vectores no es global al
+ * turno: es por pack. La vía juzga ahora a SUS fragmentos, los
+ * literales de packs importados verificados que llegan sin coseno,
+ * haya o no cosenos ajenos en la lista; y pickGuideChunk la recorre
+ * también cuando la elección por coseno no eligió nada, salvo que
+ * un literal CON coseno haya competido y perdido su vara (ahí la
+ * pregunta sí casó con otra cosa dentro de la misma clase de
+ * confianza, y no se cae a palabras).
+ *
+ * La elección dentro de la vía es por GUÍA, no por fragmento
+ * suelto (segunda causa del mismo dirimen, también medida: la
+ * cobertura por fragmento empata entre guías hermanas del mismo
+ * pack, monóxido y fuga de gas a 3 de 3, y el orden de la lista
+ * servía la guía que no era): la cobertura de una guía es la mejor
+ * de sus fragmentos, y los empates se rompen con el rango de la
+ * fusión (el `score` del mejor fragmento de cada guía, que dentro
+ * de un pack es el rango de su propia búsqueda) antes que con el
+ * orden de la lista. Dentro de la guía ganadora manda su fragmento
+ * de mayor cobertura, con el mismo desempate, y la preferencia de
+ * idioma corre entre ellos como siempre.
  */
 function pickLexicalGuideChunk(
   chunks: RetrievedChunk[],
@@ -177,7 +199,6 @@ function pickLexicalGuideChunk(
   route: LiteralRouteContext | undefined,
   query: string,
 ): RetrievedChunk | null {
-  if (chunks.some((c) => typeof c.rawScore === "number")) return null;
   const lexical = buildLexicalQuery(query);
   if (!lexical || lexical.terms.length === 0) return null;
   const required = requiredTermMatches(lexical.terms.length);
@@ -185,16 +206,37 @@ function pickLexicalGuideChunk(
     countMatchedTerms(c.keys ? `${c.title} ${c.body} ${c.keys}` : `${c.title} ${c.body}`, lexical.terms);
   const covering = chunks.filter(
     (c) =>
+      typeof c.rawScore !== "number" &&
       isLiteralGuideChunk(c.chunkId, route) &&
       !isEssentialsChunk(c.chunkId) &&
-      !(isClosingSection(c)) &&
+      !isClosingSection(c) &&
       coverageOf(c) >= required,
   );
   if (covering.length === 0) return null;
-  // El más fuerte de su vía: gana quien más términos cubre; a igual
-  // cobertura, el orden de la lista (el rango léxico de la fusión).
-  const best = covering.reduce((a, b) => (coverageOf(b) > coverageOf(a) ? b : a));
-  const close = covering.filter((c) => coverageOf(c) >= coverageOf(best));
+  // Por guía: su cobertura es la de su mejor fragmento y su rango
+  // el `score` de ese fragmento (la fusión lo dejó ordenado dentro
+  // de su propio corpus). Gana la guía de mayor cobertura; a igual
+  // cobertura, la de mayor rango; a igual todo, el orden de la lista.
+  interface GuideBid { best: RetrievedChunk; coverage: number; rank: number }
+  const bids = new Map<string, GuideBid>();
+  for (const c of covering) {
+    const key = `${parsePackChunkId(c.chunkId)?.packId ?? ""}|${guideTitleOf(c.title)}`;
+    const bid = bids.get(key);
+    if (!bid || coverageOf(c) > bid.coverage || (coverageOf(c) === bid.coverage && c.score > bid.rank)) {
+      bids.set(key, { best: c, coverage: coverageOf(c), rank: c.score });
+    }
+  }
+  const winner = [...bids.values()].reduce((a, b) => (b.coverage > a.coverage || (b.coverage === a.coverage && b.rank > a.rank) ? b : a));
+  const winnerPackId = parsePackChunkId(winner.best.chunkId)?.packId ?? "";
+  const winnerGuide = guideTitleOf(winner.best.title);
+  const guideChunks = covering.filter(
+    (c) =>
+      coverageOf(c) >= winner.coverage &&
+      guideTitleOf(c.title) === winnerGuide &&
+      (parsePackChunkId(c.chunkId)?.packId ?? "") === winnerPackId,
+  );
+  const best = guideChunks.reduce((a, b) => (b.score > a.score ? b : a));
+  const close = guideChunks.filter((c) => c === best || coverageOf(c) >= coverageOf(best));
   const prefs: GroundingLang[] = lang === "pt" ? ["pt", "es"] : [lang];
   for (const want of prefs) {
     const hit = close.find((c) => detectTextLang(`${c.title}. ${c.body}`) === want);
@@ -249,7 +291,19 @@ export function pickGuideChunk(
     }
     return (c.rawScore as number) >= guideMinScore(profile, opts?.query ?? "") && globalBest - (c.rawScore as number) <= profile.guidePickMargin;
   });
-  if (eligible.length === 0) return null;
+  if (eligible.length === 0) {
+    // 0.1.88: la elección por coseno no eligió. Si un literal de un
+    // pack IMPORTADO traía coseno y perdió su vara, la pregunta
+    // casó con otra cosa en la escala de ese pack: no se cae a
+    // palabras. Los integrados no bloquean: su regla sellada puede
+    // no elegir porque el mejor global es ajeno o porque su coseno
+    // quedó bajo la vara calibrada en otra época, y ninguno de los
+    // dos casos dice nada del pack importado, cuya escala no es la
+    // semántica de este turno (dirimen: el Esencial e5 bajo la vara
+    // o vetado por un ajeno cerraba también la vía del pack).
+    if (scored.some((c) => isLiteralGuideChunk(c.chunkId, route) && !isEssentialsChunk(c.chunkId))) return null;
+    return pickLexicalGuideChunk(chunks, lang, route, opts?.query ?? "");
+  }
   const best = eligible.reduce((a, b) => ((b.rawScore as number) > (a.rawScore as number) ? b : a));
   const close = eligible.filter((c) => (best.rawScore as number) - (c.rawScore as number) <= 0.03);
   const prefs: GroundingLang[] = lang === "pt" ? ["pt", "es"] : [lang];
