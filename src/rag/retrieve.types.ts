@@ -36,6 +36,14 @@ export interface RetrievedChunk extends ChunkRecord {
   rawScore?: number;
   matchType: "lexical" | "semantic" | "hybrid";
   /**
+   * 0.1.87: the v2 pack format's indexed real questions for this
+   * section (chunks.keys). The pack search reads them for its
+   * coverage gate; the guide pick's lexical path (piece 4) needs
+   * them on the chunk itself — a mapped chunk that drops them
+   * silently narrows that path to title+body.
+   */
+  keys?: string;
+  /**
    * Adversaria H-07: este fragmento es un RESTO — fitChunksToBudget lo
    * truncó por frases para que el prompt cupiera en la ventana. Sin la
    * marca, el resto viajaba como si fuera la fuente entera: la pantalla

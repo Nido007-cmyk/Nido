@@ -135,6 +135,24 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   suspected double counting in the crash guard was tested
   with a regression and does not exist; the guard is
   unchanged.
+- **An imported pack's guide now wins its own question, and
+  the guide library has its own button** (0.1.87): the last
+  release let a verified imported pack answer word for word,
+  but on the owner's tablet the gas guide still lost to its
+  own neighbours and to the built-in carbon monoxide guide,
+  so the question fell to the model, which answered from
+  memory and even said the opposite of the guide. The choice
+  now judges the pack's own guide against the bar of its own
+  search profile, over a wider list than the answer shows;
+  a pack written for a different search model also opens its
+  guide, and its entry in the pack list says it is from
+  another search model; a told gas leak now counts as a live
+  emergency in Spanish, English and Portuguese, and a health
+  answer grounded in a verified imported pack counts as
+  grounded in a health source. The Library tab has its own
+  "Read the guides" button, the imported pack list has one
+  too, and the Emergency screen's shortcut now opens the
+  library it names.
 - **Talks to another NIDO over Bluetooth**: encrypted messages between two
   paired phones, with no internet and no server. To pair, you paste the
   other phone's code (the text of its QR); a contact shows as verified only
@@ -180,7 +198,7 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.86-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.86-alpha).
+   [v0.1.87-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.87-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4

@@ -26,9 +26,16 @@ interface Props {
   initialSection?: LibrarySection;
   onOpenGuide: () => void;
   onOpenPromptIdeas: () => void;
+  /**
+   * 0.1.87 (pieza 5): abre el lector de guías — la capa de App, la
+   * única copia del lector. ChatScreen la pasa desde App; sin ella
+   * no hay botón, porque esta pantalla no puede abrir una capa que
+   * no es suya.
+   */
+  onOpenLibrary?: () => void;
 }
 
-export function LibraryScreen({ initialSection = "packs", onOpenGuide, onOpenPromptIdeas }: Props) {
+export function LibraryScreen({ initialSection = "packs", onOpenGuide, onOpenPromptIdeas, onOpenLibrary }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
@@ -42,9 +49,28 @@ export function LibraryScreen({ initialSection = "packs", onOpenGuide, onOpenPro
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title} accessibilityRole="header">
-        {t("library.title")}
-      </Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title} accessibilityRole="header">
+          {t("library.title")}
+        </Text>
+        {/* 0.1.87 (pieza 5): el botón PROPIO del lector, junto al
+            título de la pestaña. El dueño no lo encontraba con la
+            app configurada («Tampoco veo el Lector»): hasta aquí
+            solo lo abrían la franja del asistente de primera vez y
+            un botón enterrado en Ajustes. Usa la clave ya traducida
+            de siempre; sin copias del lector — la capa sigue en App
+            y el re-bloqueo la retira con su pantalla madre. */}
+        {onOpenLibrary && (
+          <Pressable
+            onPress={onOpenLibrary}
+            accessibilityRole="button"
+            accessibilityLabel={t("guideLibrary.open")}
+            style={styles.libraryBtn}
+          >
+            <Text style={styles.libraryBtnText}>{t("guideLibrary.open")}</Text>
+          </Pressable>
+        )}
+      </View>
       <View style={styles.segment} accessibilityRole="tablist">
         {tabs.map((tab) => {
           const on = tab.key === section;
@@ -67,7 +93,7 @@ export function LibraryScreen({ initialSection = "packs", onOpenGuide, onOpenPro
       {section === "packs" ? (
         // Same download / remove / multilingual-search logic as Settings, embedded.
         <View style={styles.flex}>
-          <ModelSetupScreen mode="optional" section="knowledge" onClose={() => {}} />
+          <ModelSetupScreen mode="optional" section="knowledge" onClose={() => {}} onOpenLibrary={onOpenLibrary} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
@@ -98,7 +124,18 @@ const getStyles = (colors: Colors, typography: Typography) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg.black },
     flex: { flex: 1, marginTop: 8 },
+    titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingRight: 16 },
     title: { ...typography.ui.headline, color: colors.text.heading, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 },
+    libraryBtn: {
+      minHeight: 44,
+      borderRadius: 9999,
+      borderWidth: 1,
+      borderColor: colors.emerald[500],
+      paddingHorizontal: 14,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    libraryBtnText: { ...typography.ui.titleSm, color: colors.emerald[400] },
     segment: {
       flexDirection: "row",
       marginHorizontal: 16,

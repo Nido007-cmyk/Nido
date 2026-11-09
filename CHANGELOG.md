@@ -4,6 +4,74 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.87-alpha - 2026-11-09
+
+0.1.86 opened the literal road for verified imported packs,
+and the owner's tablet showed the road was not enough: asking
+about the gas guide of the SALVORA PACKS pack still took a
+while and came back written by the model, which answered
+from memory and even advised the opposite of the guide. The
+guide itself was never the problem. The choice that picks a
+guide only looked at the four fragments the answer context
+keeps, dropped any fragment without a vector score, and
+required the best fragment overall to be the literal one and
+to clear a bar that had only ever been measured on the
+built-in pack. The gas guide first had to survive pruning
+inside its own pack, against its cluster of gas and carbon
+monoxide fragments, and then the cut to four against the
+built-in pack's carbon monoxide guide. And once the literal
+road gave up, no safety net knew the question: a told gas
+leak matched no health term and no emergency phrase, and the
+health gate's list of packs that count as a health source
+was closed to the three built-in ones, so a verified
+imported pack never counted. This release fixes the choice,
+the net, the case where the pack's vectors belong to another
+search model, and a guide library that could only be reached
+from deep inside Settings.
+
+### Fixed
+
+- **The guide choice judges the literal candidate against
+  its own bar.** The best literal fragment is now measured
+  against the bar of its own embedding profile, in the line
+  of the floors the retrieval already keeps per profile,
+  instead of against a single inherited bar, and the choice
+  is made over a wider retrieval than the four fragments the
+  prompt context keeps, so the cut to four can no longer
+  veto a guide the search did find. The bar for imported
+  packs is measured per profile going forward; a direct
+  measurement with real pairs from imported packs still
+  needs a device and is not claimed here.
+- **A pack from another search model still opens its
+  guide.** When a verified imported pack's vectors do not
+  match the active search model, its fragments arrive
+  without a vector score and the literal choice discarded
+  them on sight. A literal fragment that wins by full term
+  coverage is now served as written all the same, and the
+  imported pack list flags such a pack as coming from
+  another search model, the way the catalog already flags
+  its own.
+- **Health evidence accepts verified imported packs.** The
+  health gate counted only three built-in pack ids as a
+  health source, so a grounded answer drawn from a verified
+  imported pack could still be replaced by the safe text as
+  if it had no source. Fragments from a pack that entered
+  through the verified import door now count by the same
+  origin mark the import registry keeps.
+- **A told gas leak is a live emergency.** The sign phrases
+  of the emergency gate learned the gas leak in Spanish,
+  English and Portuguese ("huele a gas", "smells like gas",
+  "cheiro de gás" and their sisters), so a question about
+  one falls to the safe text when nothing verified answers
+  it, instead of leaving the model's own words standing.
+- **The guide library has its own button.** The Library tab
+  now carries a "Read the guides" button of its own next to
+  its title, the imported pack list carries a second one,
+  and the Emergency screen's shortcut opens the library it
+  names instead of landing on a tab that had no way in. The
+  library itself still lives in one place, and the lock
+  still takes it away.
+
 ## 0.1.86-alpha - 2026-11-09
 
 0.1.85 fixed the memory card on the owner's tablet, and the

@@ -21,6 +21,8 @@ import type { RetrievedChunk } from "./retrieve.types";
 import { parsePackChunkId, type PackSourceDoc } from "./packSource";
 import { detectTextLang, splitSentences, type GroundingLang } from "./grounding";
 import type { SentenceProvenance } from "./provenance";
+import { BGE_SMALL_EN_PROFILE, guideMinScore, type EmbeddingProfile } from "./embeddingProfile";
+import { buildLexicalQuery, countMatchedTerms, requiredTermMatches } from "./pure";
 
 /**
  * Packs whose guides are shown word for word (both embedding variants),
@@ -82,12 +84,32 @@ function literalPackName(packId: string | undefined, lang: GroundingLang): strin
 }
 
 /**
- * Minimum semantic match (cosine) for the guide to be the answer. On the
- * tablet the right guide matched at 0.87–0.89; a lexical-only hit has no
- * cosine and never qualifies on its own (the wrong chest-pain section was
- * a lexical-only hit).
+ * Minimum semantic match (cosine) for a BUILT-IN guide to be the
+ * answer. On the tablet the right guide matched at 0.87–0.89; a
+ * lexical-only hit has no cosine and never qualifies on its own (the
+ * wrong chest-pain section was a lexical-only hit).
+ *
+ * 0.1.87: this bar is now only the built-in packs' bar. A guide from
+ * a pack the signed door imported and verified is judged against
+ * the ACTIVE EMBEDDING PROFILE's own bar (embeddingProfile.ts:
+ * guideMinScore / guideMinScoreSingleTerm, transmitted from that
+ * profile's measured pack floors): the 0.1.86 turn proved the
+ * inherited 0.8 was calibrated on a different corpus — the imported
+ * guide competed inside its own pack's cluster and against the
+ * Essentials field and lost on a bar nobody had measured for it.
  */
 export const GUIDE_MIN_SCORE = 0.8;
+
+/**
+ * 0.1.87: what a guide pick is judged against. `profile` is the
+ * embedding profile retrieval actually ran with (embeddingProfile.ts);
+ * `query` is the question as asked — the bar keeps the profile's
+ * single-term discipline.
+ */
+export interface GuidePickOptions {
+  profile?: EmbeddingProfile;
+  query?: string;
+}
 
 /** Longest answer shown inline; the rest is one tap away («Leer la guía entera»). */
 export const GUIDE_MAX_CHARS = 2600;
@@ -130,19 +152,106 @@ function isOtherNidoGuideIntro(c: RetrievedChunk, route?: LiteralRouteContext): 
   return !/\s[—–]\s/.test(c.title ?? "");
 }
 
-export function pickGuideChunk(chunks: RetrievedChunk[], lang: GroundingLang, route?: LiteralRouteContext): RetrievedChunk | null {
+/**
+ * 0.1.87 (pieza 4): la vía literal SIN coseno. Cuando los vectores
+ * de un pack importado verificado no casan con el modelo de
+ * embeddings activo (vectorsMatch en packs.ts), sus fragmentos
+ * llegan solo por la vía léxica y NUNCA traen rawScore: la elección
+ * semántica los descartaba en silencio y la guía no se servía
+ * aunque la pregunta fuera la suya. La elegibilidad la decide la
+ * MISMA puerta de cobertura que la búsqueda aplica a los packs
+ * (buildLexicalQuery + requiredTermMatches, con las `keys` de
+ * formato v2 contando como texto): el fragmento literal sin coseno
+ * sirve solo si cubre los términos exigidos de la pregunta.
+ *
+ * Límite declarado: la vía solo abre cuando NINGÚN fragmento de la
+ * lista trae coseno — el desajuste de vectores es global al turno,
+ * y si hay escala semántica, manda la vara semántica. Y entre los
+ * literales sin coseno no hay escala común (la fusión normaliza por
+ * corpus), así que gana el más fuerte de su vía: quien más términos
+ * cubre, y a igual cobertura el orden de la lista.
+ */
+function pickLexicalGuideChunk(
+  chunks: RetrievedChunk[],
+  lang: GroundingLang,
+  route: LiteralRouteContext | undefined,
+  query: string,
+): RetrievedChunk | null {
+  if (chunks.some((c) => typeof c.rawScore === "number")) return null;
+  const lexical = buildLexicalQuery(query);
+  if (!lexical || lexical.terms.length === 0) return null;
+  const required = requiredTermMatches(lexical.terms.length);
+  const coverageOf = (c: RetrievedChunk) =>
+    countMatchedTerms(c.keys ? `${c.title} ${c.body} ${c.keys}` : `${c.title} ${c.body}`, lexical.terms);
+  const covering = chunks.filter(
+    (c) =>
+      isLiteralGuideChunk(c.chunkId, route) &&
+      !isEssentialsChunk(c.chunkId) &&
+      !(isClosingSection(c)) &&
+      coverageOf(c) >= required,
+  );
+  if (covering.length === 0) return null;
+  // El más fuerte de su vía: gana quien más términos cubre; a igual
+  // cobertura, el orden de la lista (el rango léxico de la fusión).
+  const best = covering.reduce((a, b) => (coverageOf(b) > coverageOf(a) ? b : a));
+  const close = covering.filter((c) => coverageOf(c) >= coverageOf(best));
+  const prefs: GroundingLang[] = lang === "pt" ? ["pt", "es"] : [lang];
+  for (const want of prefs) {
+    const hit = close.find((c) => detectTextLang(`${c.title}. ${c.body}`) === want);
+    if (hit) return hit;
+  }
+  return best;
+}
+
+export function pickGuideChunk(
+  chunks: RetrievedChunk[],
+  lang: GroundingLang,
+  route?: LiteralRouteContext,
+  opts?: GuidePickOptions,
+): RetrievedChunk | null {
+  const profile = opts?.profile ?? BGE_SMALL_EN_PROFILE;
   const scored = chunks.filter(
     (c) =>
       typeof c.rawScore === "number" &&
       !(isLiteralGuideChunk(c.chunkId, route) && isClosingSection(c)) &&
       !isOtherNidoGuideIntro(c, route),
   );
-  if (scored.length === 0) return null;
-  const best = scored.reduce((a, b) => ((b.rawScore as number) > (a.rawScore as number) ? b : a));
-  if (!isLiteralGuideChunk(best.chunkId, route) || (best.rawScore as number) < GUIDE_MIN_SCORE) return null;
-  const close = scored.filter(
-    (c) => isLiteralGuideChunk(c.chunkId, route) && (best.rawScore as number) - (c.rawScore as number) <= 0.03,
-  );
+  if (scored.length === 0) return pickLexicalGuideChunk(chunks, lang, route, opts?.query ?? "");
+  const globalBest = Math.max(...scored.map((c) => c.rawScore as number));
+  // 0.1.87 (dirimen del turno del gas): la guía IMPORTADA se juzga
+  // contra su vara, no contra la exigencia de ser la mejor global.
+  // Hasta la 0.1.86 el fragmento literal tenía que ser a la vez el
+  // mejor coseno de toda la lista y valer 0,8: la guía de un pack
+  // importado competía contra la base integrada y contra el campo
+  // del Esencial en escalas que no son la suya, y un mejor global
+  // ajeno la vetaba en silencio. Lo que cambia es solo la clase que
+  // el dirimen midió rota: los packs INTEGRADOS conservan su regla
+  // sellada (ser el mejor y valer GUIDE_MIN_SCORE — su campo es el
+  // que se calibró en la tableta), y la importada verificada se mide
+  // contra la vara del perfil activo, con el veto del margen
+  // declarado del perfil: un literal muy por debajo del mejor global
+  // sigue sin servirse, porque esa distancia sí declara que la
+  // pregunta casa con otra cosa. Si un integrado pasa su regla, gana
+  // como hasta ahora: la cercanía en su propia escala sigue
+  // decidiendo entre clases, y la preferencia de idioma corre sobre
+  // los cercanos del ganador, como siempre.
+  const globalBestChunk = scored.reduce((a, b) => ((b.rawScore as number) > (a.rawScore as number) ? b : a));
+  const eligible = scored.filter((c) => {
+    if (!isLiteralGuideChunk(c.chunkId, route)) return false;
+    if (isEssentialsChunk(c.chunkId)) {
+      // Regla sellada de los integrados: el candidato ES el mejor
+      // global con su vara, o está en la banda de cercanía histórica
+      // (0,03, la de la preferencia de idioma) del mejor cuando el
+      // mejor también es literal. Fuera de eso, no compite.
+      if ((c.rawScore as number) < GUIDE_MIN_SCORE) return false;
+      if (c === globalBestChunk) return true;
+      return isLiteralGuideChunk(globalBestChunk.chunkId, route) && globalBest - (c.rawScore as number) <= 0.03;
+    }
+    return (c.rawScore as number) >= guideMinScore(profile, opts?.query ?? "") && globalBest - (c.rawScore as number) <= profile.guidePickMargin;
+  });
+  if (eligible.length === 0) return null;
+  const best = eligible.reduce((a, b) => ((b.rawScore as number) > (a.rawScore as number) ? b : a));
+  const close = eligible.filter((c) => (best.rawScore as number) - (c.rawScore as number) <= 0.03);
   const prefs: GroundingLang[] = lang === "pt" ? ["pt", "es"] : [lang];
   for (const want of prefs) {
     const hit = close.find((c) => detectTextLang(`${c.title}. ${c.body}`) === want);

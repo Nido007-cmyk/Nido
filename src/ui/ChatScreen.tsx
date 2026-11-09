@@ -7,6 +7,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { answerFromPackFacts, packCountryNames } from "../rag/packs";
 import { answerFromGuide } from "../rag/guideAnswerRun";
+import { verifiedImportedPacks } from "../services/packImporter";
 import {
   View,
   Text,
@@ -2044,6 +2045,15 @@ export function ChatScreen({
       //  - NEVER-SILENT: respuesta vacía → texto honesto, nunca burbuja vacía.
       let grounding: GroundingStatus | undefined;
       let provenance: SentenceProvenance[] | undefined;
+      // 0.1.87 (giro del gas): los packs que la puerta firmada
+      // verificó, leídos frescos para la red de evidencia de salud
+      // de abajo — un fragmento suyo cuenta como evidencia, no solo
+      // los integrados de la lista cerrada. Un registro ilegible
+      // degrada a la lista de siempre, nunca a abrir la red.
+      const verifiedImported = !wasStopped
+        ? await verifiedImportedPacks().catch(() => null)
+        : null;
+      const verifiedImportedIds = verifiedImported ? new Set(verifiedImported.keys()) : undefined;
       if (!wasStopped) {
         // 0.1.34: si el modelo entró en bucle, queda solo la primera vez.
         // Bounty tanda 8: una generación cortada (el usuario detuvo o
@@ -2112,7 +2122,7 @@ export function ChatScreen({
           chunks.length > 0 &&
           (grounding === "unverified" || grounding === "abstained") &&
           (isHealthQuestion(query) || isEmergencySituation(query)) &&
-          !hasHealthEvidence(chunks)
+          !hasHealthEvidence(chunks, verifiedImportedIds)
         ) {
           finalText = healthSafeText(uiLang);
           provenance = healthSafeProvenance(finalText);
@@ -2592,7 +2602,7 @@ export function ChatScreen({
           updateInput(question, "example");
           requestAnimationFrame(() => inputRef.current?.focus());
         }}
-        onOpenLibrary={() => selectTab("library")}
+        onOpenLibrary={onOpenLibrary ?? (() => selectTab("library"))}
       />
     );
   }
@@ -2602,6 +2612,7 @@ export function ChatScreen({
       <LibraryScreen
         key={librarySection}
         initialSection={librarySection}
+        onOpenLibrary={onOpenLibrary}
         onOpenGuide={() => setShowGuide(true)}
         onOpenPromptIdeas={() => {
           selectTab("chat");

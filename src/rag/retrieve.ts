@@ -196,6 +196,22 @@ async function semanticSearch(
  * source has anything relevant, this returns [] - never a forced top-K of
  * whatever happened to be least-irrelevant.
  */
+/**
+ * 0.1.87: el perfil de embeddings con el que la última recuperación
+ * corrió de verdad (o el integrado por defecto si el motor no estaba
+ * disponible). La vía literal (guideAnswerRun.ts) juzga las guías de
+ * packs importados con la vara de ESTE perfil: sin esto, la elección
+ * tendría que adivinar qué modelo puntuó los fragmentos. Es estado
+ * de lectura, no una segunda fuente de verdad: lo escribe retrieve()
+ * en cada llamada, del mismo `tagged.modelSha256` que ya decide los
+ * pisos de la búsqueda.
+ */
+let lastRetrievalProfile: EmbeddingProfile = BGE_SMALL_EN_PROFILE;
+
+export function activeRetrievalProfile(): EmbeddingProfile {
+  return lastRetrievalProfile;
+}
+
 export async function retrieve(query: string, topK = 6): Promise<RetrievedChunk[]> {
   // F4-2026-10-06: degradación graceful a FTS-only cuando el JSI de
   // embedding no está disponible. seedCorpus ya soporta indexar sin
@@ -224,6 +240,7 @@ export async function retrieve(query: string, topK = 6): Promise<RetrievedChunk[
     searchPacks(query, queryVec, topK * 2, { profile, modelSha256 }).catch(() => ({ lexical: [], semantic: [] })),
   ]);
 
+  lastRetrievalProfile = profile;
   const fused = fuseRetrievalResults(
     [...lexical, ...packs.lexical],
     [...semantic, ...packs.semantic],

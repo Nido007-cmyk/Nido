@@ -19,6 +19,7 @@ import {
   type ImportedPackItem,
   type PackImportRejectionReason,
 } from "../services/packImporter";
+import { activeEmbeddingModel } from "../rag/embeddingSwitch";
 
 function formatMB(bytes: number): string {
   if (bytes <= 0) return "0 MB";
@@ -46,12 +47,23 @@ const REJECTION_KEYS: Record<PackImportRejectionReason, string> = {
  * Catalog-named packs (the Esencial) present on their catalog card, not
  * here (packImporter.listImportedPacks).
  */
-export function ImportedPacksSection() {
+export function ImportedPacksSection({ onOpenLibrary }: { onOpenLibrary?: () => void } = {}) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
   const [items, setItems] = useState<ImportedPackItem[]>([]);
   const [busy, setBusy] = useState(false);
+  // 0.1.87 (pieza 4): la huella del modelo de búsqueda activo, para
+  // avisar cuando un pack importado se embebió con el otro modelo,
+  // como ya hace CorpusSettingsTab con el catálogo. Sin la huella
+  // (no leída aún, o el modelo no resuelve) el aviso calla: no se
+  // afirma un desajuste que no se puede comprobar.
+  const [activeSha256, setActiveSha256] = useState<string | null>(null);
+  useEffect(() => {
+    activeEmbeddingModel()
+      .then((m) => setActiveSha256(m.sha256))
+      .catch(() => {});
+  }, []);
 
   const refresh = useCallback(() => {
     listImportedPacks()
@@ -118,7 +130,23 @@ export function ImportedPacksSection() {
 
   return (
     <View>
-      <Text style={[styles.sectionHeading, { color: colors.text.dim }]}>{t("packImport.addedHeading")}</Text>
+      <View style={styles.headingRow}>
+        <Text style={[styles.sectionHeading, { color: colors.text.dim }]}>{t("packImport.addedHeading")}</Text>
+        {/* 0.1.87 (pieza 5): el segundo botón del lector, en el
+            encabezado de la lista de packs — donde el dueño busca
+            sus guías. Solo existe con la prop (la capa de App
+            encima); sin ella no se enseña un botón sin destino. */}
+        {onOpenLibrary ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t("guideLibrary.open")}
+            style={styles.libraryBtn}
+            onPress={onOpenLibrary}
+          >
+            <Text style={styles.libraryBtnText}>{t("guideLibrary.open")}</Text>
+          </Pressable>
+        ) : null}
+      </View>
       <View style={styles.list}>
         {items.map((item) => (
           <View key={item.filename} style={styles.card}>
@@ -129,6 +157,9 @@ export function ImportedPacksSection() {
             <Text style={styles.meta}>
               {formatMB(item.sizeBytes)} • {item.filename}
             </Text>
+            {item.embeddingModelSha256 && activeSha256 && item.embeddingModelSha256 !== activeSha256 ? (
+              <Text style={styles.otherModelNote}>{t("multilingual.packOtherModel")}</Text>
+            ) : null}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t("packImport.removeAction")}
@@ -167,6 +198,21 @@ const getStyles = (colors: Colors, typography: Typography) =>
       marginHorizontal: 16,
       marginTop: 12,
     },
+    headingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingRight: 16 },
+    libraryBtn: {
+      marginTop: 8,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 9999,
+      borderWidth: 1,
+      borderColor: colors.emerald.border,
+      backgroundColor: colors.emerald.bgSubtle,
+    },
+    libraryBtnText: {
+      ...typography.ui.caption,
+      color: colors.text.accentEmerald,
+      fontWeight: "700",
+    },
     list: { padding: 12, gap: 10 },
     card: {
       backgroundColor: colors.bg.cardElevated,
@@ -188,6 +234,10 @@ const getStyles = (colors: Colors, typography: Typography) =>
     meta: {
       ...typography.mono.xs,
       color: colors.text.dim,
+    },
+    otherModelNote: {
+      ...typography.ui.caption,
+      color: colors.text.secondary,
     },
     removeBtn: {
       alignSelf: "flex-start",

@@ -66,6 +66,14 @@ export interface ImportedPackItem {
   origin: PackOrigin;
   sizeBytes: number;
   sha256: string;
+  /**
+   * 0.1.87: the embedding model the pack was built with (its
+   * meta.embeddingModelSha256), read when the list is built so the
+   * surface can warn when it is not the active search model —
+   * until now the list never carried it and no warning was
+   * possible. Undefined when the pack's meta cannot be read.
+   */
+  embeddingModelSha256?: string;
 }
 
 interface ImportedPackRecord {
@@ -174,12 +182,19 @@ export async function listImportedPacks(): Promise<ImportedPackItem[]> {
     if (catalogEntryForFilename(filename)) continue;
     const info = await FileSystem.getInfoAsync(`${corpusUri()}${filename}`).catch(() => null);
     if (!info?.exists || info.isDirectory) continue;
+    // 0.1.87: la huella de embeddings del pack, de su propia meta,
+    // para el aviso de otro modelo en la superficie. Una meta
+    // ilegible deja el campo vacío y el aviso calla: no se afirma
+    // un desajuste que no se puede leer.
+    const meta = await readPackMeta(`${corpusUri()}${filename}`).catch(() => null);
+    const embeddingModelSha256 = meta ? summarizePackMeta(meta)?.embeddingModelSha256 : undefined;
     items.push({
       filename,
       name: record.name,
       origin: record.origin,
       sizeBytes: info.size ?? record.sizeBytes,
       sha256: record.sha256,
+      ...(embeddingModelSha256 ? { embeddingModelSha256 } : {}),
     });
   }
   items.sort((a, b) => a.name.localeCompare(b.name));
