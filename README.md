@@ -117,6 +117,24 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   without the live memory reading now says so in its telemetry
   record. Every normal step keeps the stricter count, and the
   2 GB system headroom is unchanged.
+- **Guides from a verified imported pack are answered as
+  written, and the model badge is the verdict of the real
+  load** (0.1.86): a pack that came in through the signed
+  import door and verified is now served word for word from
+  the chat, without loading the language model, under the
+  same rule as the built-in packs, so asking about one of its
+  guides no longer sends the question to the model with
+  memory at its tightest; the compatibility badge of each
+  model is judged with the same specification and planner
+  verdict as the load itself (on a tablet like the owner's
+  the 1.5B model now shows red, because even its cheapest
+  emergency plan does not fit there); importing a pack asks
+  for its signed manifest with a second picker instead of
+  refusing when the first selection missed it; and the guide
+  library can be opened from Settings in normal use. A
+  suspected double counting in the crash guard was tested
+  with a regression and does not exist; the guard is
+  unchanged.
 - **Talks to another NIDO over Bluetooth**: encrypted messages between two
   paired phones, with no internet and no server. To pair, you paste the
   other phone's code (the text of its QR); a contact shows as verified only
@@ -162,7 +180,7 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.85-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.85-alpha).
+   [v0.1.86-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.86-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4
