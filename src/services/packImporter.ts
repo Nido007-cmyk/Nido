@@ -9,7 +9,11 @@
  *
  * One gesture in Settings > Knowledge Base adds a knowledge pack from a
  * file (e.g. one bought at SALVORA PACKS). The pack never travels alone:
- * its signed companion manifest (`<pack>.sqlite.json`) comes with it, and
+ * its signed companion manifest (`<pack>.sqlite.json`) comes with it —
+ * when the first selection brings the .sqlite without it, a second
+ * picker asks for the manifest alone before anything is checked
+ * (0.1.86: the SAF selector cannot reach the sibling file on its own,
+ * and picking both files in one gesture was the only door before).
  * NOTHING is copied into corpus/ until the checks of PI-2 have all passed,
  * in this order, on the picked (cache) copies:
  *
@@ -234,8 +238,27 @@ export async function importPackFromFile(
   if (!pickedInfo?.exists || sizeBytes <= 0) return { status: "rejected", reason: "damaged" };
 
   // PI-2 · 1 — manifest present and legible.
-  const manifestAsset = assets.find((a) => a.name === `${filename}.json`);
-  if (!manifestAsset) return { status: "rejected", reason: "missing-manifest" };
+  let manifestAsset = assets.find((a) => a.name === `${filename}.json`);
+  if (!manifestAsset) {
+    // 0.1.86: the first selection brought the .sqlite without its
+    // manifest. The picker cannot reach the sibling file on its own
+    // (SAF only grants what the user picks), so instead of rejecting
+    // here, a second picker asks for the manifest alone. Only an
+    // asset named exactly `<pack>.sqlite.json` counts; a cancelled
+    // pick or any other file leaves the missing-manifest rejection
+    // exactly as it was. The rest of the chain (parse, hash, origin,
+    // meta, confirmation, promotion) is untouched: the manifest from
+    // either gesture travels the same line.
+    const second = await DocumentPicker.getDocumentAsync({
+      type: "*/*",
+      multiple: false,
+      copyToCacheDirectory: true,
+    }).catch(() => null);
+    if (second && !second.canceled) {
+      manifestAsset = second.assets.find((a) => a.name === `${filename}.json`);
+    }
+    if (!manifestAsset) return { status: "rejected", reason: "missing-manifest" };
+  }
   const manifestText = await FileSystem.readAsStringAsync(manifestAsset.uri).catch(() => null);
   const manifest = manifestText ? parsePackManifest(manifestText) : null;
   if (!manifest) return { status: "rejected", reason: "missing-manifest" };

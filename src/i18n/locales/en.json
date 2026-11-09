@@ -250,7 +250,7 @@
     "confirmTitle": "Add this pack",
     "damaged": "The file is damaged or incomplete and could not be opened.",
     "hashMismatch": "The file does not match its signature: it has changed since it was signed, so it cannot be added. Download it again from where you bought it.",
-    "missingManifest": "This pack is missing its signed manifest, and without it the app cannot check its signature. It cannot be added.",
+    "missingManifest": "This pack is missing its signed manifest, and without it the app cannot check its signature. It cannot be added. Also pick the file ending in .sqlite.json that came with the pack.",
     "notAPack": "This file is not a valid knowledge pack.",
     "notSignedByUs": "This pack is not signed by NIDO or by SALVORA PACKS, and it cannot be added. For your safety, only packs signed by us can be added.",
     "removeAction": "Remove this pack",

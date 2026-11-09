@@ -250,7 +250,7 @@
     "confirmTitle": "Adicionar este pacote",
     "damaged": "O arquivo está danificado ou incompleto e não pôde ser aberto.",
     "hashMismatch": "O arquivo não coincide com a sua assinatura: ele mudou desde que foi assinado, então não pode ser adicionado. Baixe-o de novo de onde você o comprou.",
-    "missingManifest": "Falta o manifesto assinado deste pacote, e sem ele o app não pode conferir a sua assinatura. Ele não pode ser adicionado.",
+    "missingManifest": "Falta o manifesto assinado deste pacote, e sem ele o app não pode conferir a sua assinatura. Ele não pode ser adicionado. Escolha também o arquivo terminado em .sqlite.json que veio junto ao pacote.",
     "notAPack": "Este arquivo não é um pacote de conhecimento válido.",
     "notSignedByUs": "Este pacote não está assinado pelo NIDO nem pela SALVORA PACKS e não pode ser adicionado. Por segurança, só entram os pacotes assinados por nós.",
     "removeAction": "Remover este pacote",

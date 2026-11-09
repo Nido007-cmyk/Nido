@@ -191,7 +191,7 @@
     "confirmTitle": "Añadir este pack",
     "damaged": "El archivo está dañado o incompleto y no se pudo abrir.",
     "hashMismatch": "El archivo no coincide con su firma: ha cambiado desde que se firmó, así que no se puede añadir. Descárgalo de nuevo desde donde lo compraste.",
-    "missingManifest": "A este pack le falta su manifiesto firmado, y sin él la app no puede comprobar su firma. No se puede añadir.",
+    "missingManifest": "A este pack le falta su manifiesto firmado, y sin él la app no puede comprobar su firma. No se puede añadir. Elige también el archivo que termina en .sqlite.json y que venía junto al pack.",
     "notAPack": "Este archivo no es un pack de conocimiento válido.",
     "notSignedByUs": "Este pack no está firmado por NIDO ni por SALVORA PACKS, y no se puede añadir. Por seguridad, solo entran los packs firmados por nosotros.",
     "removeAction": "Quitar este pack",
