@@ -53,23 +53,6 @@ export function LibraryScreen({ initialSection = "packs", onOpenGuide, onOpenPro
         <Text style={styles.title} accessibilityRole="header">
           {t("library.title")}
         </Text>
-        {/* 0.1.87 (pieza 5): el botón PROPIO del lector, junto al
-            título de la pestaña. El dueño no lo encontraba con la
-            app configurada («Tampoco veo el Lector»): hasta aquí
-            solo lo abrían la franja del asistente de primera vez y
-            un botón enterrado en Ajustes. Usa la clave ya traducida
-            de siempre; sin copias del lector — la capa sigue en App
-            y el re-bloqueo la retira con su pantalla madre. */}
-        {onOpenLibrary && (
-          <Pressable
-            onPress={onOpenLibrary}
-            accessibilityRole="button"
-            accessibilityLabel={t("guideLibrary.open")}
-            style={styles.libraryBtn}
-          >
-            <Text style={styles.libraryBtnText}>{t("guideLibrary.open")}</Text>
-          </Pressable>
-        )}
       </View>
       <View style={styles.segment} accessibilityRole="tablist">
         {tabs.map((tab) => {
@@ -92,8 +75,16 @@ export function LibraryScreen({ initialSection = "packs", onOpenGuide, onOpenPro
 
       {section === "packs" ? (
         // Same download / remove / multilingual-search logic as Settings, embedded.
+        // 0.1.88: la sección embebida ya NO recibe onOpenLibrary: la
+        // pestaña tiene UNA sola apertura del lector, la banda final
+        // de abajo (ver el cierre de este render). Hasta la 0.1.87 la
+        // prop viajaba y la misma pantalla enseñaba el botón tres
+        // veces (junto al título, como título suelto en el cuerpo y
+        // en el encabezado de packs importados): la foto del dueño
+        // las contó y mandó «debe estar más abajo para que no
+        // interfiera».
         <View style={styles.flex}>
-          <ModelSetupScreen mode="optional" section="knowledge" onClose={() => {}} onOpenLibrary={onOpenLibrary} />
+          <ModelSetupScreen mode="optional" section="knowledge" libraryEntryInside={false} onClose={() => {}} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
@@ -116,6 +107,21 @@ export function LibraryScreen({ initialSection = "packs", onOpenGuide, onOpenPro
           )}
         </ScrollView>
       )}
+      {/* 0.1.88: LA apertura del lector de esta pestaña: una sola,
+          abajo del todo, como banda a todo ancho con el patrón
+          libraryEntry de App (la entrada bajo el asistente de
+          primera vez). Solo en la sección de packs, que es donde
+          viven las guías. */}
+      {section === "packs" && onOpenLibrary && (
+        <Pressable
+          onPress={onOpenLibrary}
+          accessibilityRole="button"
+          accessibilityLabel={t("guideLibrary.open")}
+          style={[styles.libraryEntry, { borderTopColor: colors.border.default }]}
+        >
+          <Text style={[styles.libraryEntryText, { color: colors.emerald[400] }]}>{t("guideLibrary.open")}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -136,6 +142,9 @@ const getStyles = (colors: Colors, typography: Typography) =>
       justifyContent: "center",
     },
     libraryBtnText: { ...typography.ui.titleSm, color: colors.emerald[400] },
+    // 0.1.88: la banda final de la pestaña (patrón libraryEntry de App).
+    libraryEntry: { alignItems: "center", paddingVertical: 14, borderTopWidth: 1 },
+    libraryEntryText: { fontSize: 15, fontWeight: "700" },
     segment: {
       flexDirection: "row",
       marginHorizontal: 16,

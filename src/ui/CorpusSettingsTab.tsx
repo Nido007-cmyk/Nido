@@ -22,15 +22,14 @@ interface Props {
   remove: (item: CatalogModel) => void;
   /**
    * 0.1.86: abre el lector de guías (la capa de App, sobre el chat).
-   * Solo lo pasa el sitio de Ajustes: sin él no hay botón, porque el
-   * lector vive en App y los demás sitios de esta pestaña (asistente,
-   * Biblioteca) no tienen esa capa encima.
-   * 0.1.87 (pieza 5): la Biblioteca SÍ tiene esa capa encima (App la
-   * pinta sobre el chat, donde vive la pestaña), y su rama de
-   * ModelSetupScreen reenvía la prop hasta aquí: el botón de esta
-   * pestaña y el segundo botón de ImportedPacksSection existen
-   * también desde la Biblioteca. El comentario de la 0.1.86 quedaba
-   * falso para ese sitio y se corrige.
+   * La pasa el sitio de Ajustes (y el asistente la suya en App):
+   * es la ÚNICA entrada del lector de esa superficie. La pestaña
+   * Biblioteca no la pasa: la suya es la banda final de
+   * LibraryScreen (0.1.88), y esta sección llega allí con
+   * libraryEntryInside en falso para no repetir la apertura.
+   * Hasta la 0.1.87 la prop viajaba también a la Biblioteca y la
+   * pantalla enseñaba tres botones iguales; la foto del dueño las
+   * contó y mandó dejar una sola, abajo.
    */
   onOpenLibrary?: () => void;
 }
@@ -105,7 +104,7 @@ export function CorpusSettingsTab({ corpusItems, getRow, download, remove, onOpe
       {/* Pieza A: the signed-pack door — its own surface, apart from "Tus
           documentos" (a different promise: documents are the user's own
           notes; packs enter only with our signature). */}
-      <ImportedPacksSection onOpenLibrary={onOpenLibrary} />
+      <ImportedPacksSection />
 
       <Text style={[styles.sectionHeading, { color: colors.text.dim }]}>{t("corpusSettingsTab.yourDocuments")}</Text>
       <PersonalDocumentsManager />
