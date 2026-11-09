@@ -97,6 +97,7 @@ export class EmbeddingEngine {
         nCtxRequested: 512,
         crashSafety: null,
         embedding: true,
+        readFailure: snapshot!.liveReadMissing ? "live" : null,
       });
       throw new RamBudgetError(
         `Embedding model "${modelFilename}" needs roughly ${toGb(verdict.totalBytes)}GB of RAM, ` +

@@ -68,6 +68,9 @@ export interface InferenceTelemetryEvent {
     nCtxChosen: number;
     nCtxRequested: number;
     crashSafety: number | null;
+    /** 0.1.85: "live" cuando la lectura de memoria libre en vivo no
+     * llegó a la foto que juzgó; null cuando la foto fue completa. */
+    readFailure?: "live" | null;
   };
 }
 
@@ -214,6 +217,15 @@ export interface RamRejectionInfo {
   crashSafety: number | null;
   /** Solo memoria: el rechazo del motor de embeddings (sin escalera ni CrashGuard). */
   embedding?: boolean;
+  /**
+   * 0.1.85: la foto que juzgó la carga se tomó SIN una de las lecturas
+   * reales ("live" = la memoria libre en vivo no llegó: build nativo
+   * sin ella o fallo de lectura). El rechazo sigue siendo por la
+   * cuenta que sí hubo, pero el instrumento lo distingue de un
+   * «memoria insuficiente» con todas las lecturas encima de la mesa:
+   * la decisión nunca se apoya en un supuesto sin decirlo.
+   */
+  readFailure?: "live" | null;
 }
 
 /** Un rechazo del pre-flight como evento de telemetría. Puro. */
@@ -240,6 +252,7 @@ export function ramRejectionEvent(info: RamRejectionInfo, now = Date.now()): Inf
       nCtxChosen: info.nCtxChosen,
       nCtxRequested: info.nCtxRequested,
       crashSafety: info.crashSafety,
+      readFailure: info.readFailure ?? null,
     },
   };
 }
@@ -310,6 +323,7 @@ export function parseStoredRamRejection(row: RamRejectionRow): StoredRamRejectio
         nCtxChosen,
         nCtxRequested,
         crashSafety: num(d.crashSafety),
+        readFailure: d.readFailure === "live" ? "live" : null,
       },
     };
   } catch {
