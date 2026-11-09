@@ -29,6 +29,7 @@ import {
   batchForRam,
   readProcessorCount,
   toGb,
+  KV_Q8_BYTES_PER_ELEMENT,
 } from "./ramBudget";
 import { EMERGENCY_CONTEXT, planContext } from "./memoryLadder";
 
@@ -329,7 +330,12 @@ describe("readRamSnapshot", () => {
   it("returns the native readout when available", () => {
     mockTotalRam = 8 * GiB;
     mockRss = 1 * GiB;
-    expect(readRamSnapshot()).toEqual({ totalRamBytes: 8 * GiB, rssBytes: 1 * GiB });
+    // 0.1.85: el mock por defecto no trae lectura en vivo (mockAvail
+    // null), así que la foto nace MARCADA como tal: es así como el
+    // fallo de lectura dejó de ser mudo (ver «lectura real de
+    // memoria» más abajo). La forma de la foto no cambia aparte de
+    // la marca.
+    expect(readRamSnapshot()).toEqual({ totalRamBytes: 8 * GiB, rssBytes: 1 * GiB, liveReadMissing: true });
   });
 
   it("incluye la memoria libre en vivo cuando el build la lee", () => {
@@ -344,7 +350,7 @@ describe("readRamSnapshot", () => {
     mockTotalRam = 8 * GiB;
     mockRss = 1 * GiB;
     mockAvail = "throws";
-    expect(readRamSnapshot()).toEqual({ totalRamBytes: 8 * GiB, rssBytes: 1 * GiB });
+    expect(readRamSnapshot()).toEqual({ totalRamBytes: 8 * GiB, rssBytes: 1 * GiB, liveReadMissing: true });
     mockAvail = null;
   });
 
@@ -393,5 +399,127 @@ describe("defaultThreadsForCores (P-03)", () => {
     expect(readProcessorCount()).toBe(8);
     mockCores = null;
     expect(readProcessorCount()).toBeNull();
+  });
+});
+
+describe("defecto 2026-11-08, tercera vuelta (0.1.85): la foto exacta de las 19:54", () => {
+  // La foto REAL que el instrumento de la 0.1.84 registró en la Tab A9+
+  // del dueño (2026-11-08 19:54): total 3416 MiB — la RAM total REAL,
+  // no los 3,54 GiB que la suite de la 0.1.84 modelaba —, la app en
+  // uso 367 MiB, libre 842 MiB, límite del sistema 216 MiB, contexto
+  // elegido 1024 / pedido 4096, freno del CrashGuard 0,65. Con total
+  // 3416 MiB (3,336 GiB) batchForRam da el lote 256/128: el coste que
+  // el instrumento vio sale exacto con n_ubatch 128.
+  const PHOTO = {
+    totalRamBytes: 3416 * MiB,
+    rssBytes: 367 * MiB,
+    availBytes: 842 * MiB,
+    lowMemThresholdBytes: 216 * MiB,
+  };
+  const Q05_REAL = { fileSizeBytes: 397_808_192, nLayer: 24, nKvHeads: 2, headDim: 64, nUbatch: 128 };
+
+  it("batchForRam con la RAM total REAL de la foto (3416 MiB) da el lote 256/128", () => {
+    expect(batchForRam(PHOTO.totalRamBytes)).toEqual({ nBatch: 256, nUbatch: 128 });
+  });
+
+  it("el coste fp16 a 1024 es el que el instrumento registró: 458.644.032 B (437,4 MiB)", () => {
+    const e = estimateContextBytes({ ...Q05_REAL, nCtx: 1024 });
+    expect(e.totalBytes).toBe(458_644_032);
+    const q8 = estimateContextBytes({ ...Q05_REAL, nCtx: 1024, kvBytesPerElement: KV_Q8_BYTES_PER_ELEMENT });
+    expect(q8.totalBytes).toBe(452_352_576);
+  });
+
+  it("con la cuenta de siempre la foto NO cabe: disponible 370 y ni el plan q8 entra, ni sin freno", () => {
+    const v = checkRamBudget({ ...Q05_REAL, nCtx: 1024 }, PHOTO)!;
+    expect(v.availableBytes).toBe(370 * MiB);
+    expect(v.fits).toBe(false);
+    const plan = planContext(Q05_REAL, PHOTO, { ceiling: 4096, safety: 1 })!;
+    // Sin la vía de emergencia este plan sería el suelo con fits=false:
+    // lo fija la regresión gemela de abajo (planContext ya aplica la
+    // vía; aquí manda el veredicto directo de checkRamBudget).
+    expect(plan.nCtx).toBe(EMERGENCY_CONTEXT);
+    const q8Direct = checkRamBudget(
+      { ...Q05_REAL, nCtx: 1024, kvBytesPerElement: KV_Q8_BYTES_PER_ELEMENT },
+      PHOTO,
+    )!;
+    expect(q8Direct.totalBytes).toBe(452_352_576);
+    expect(q8Direct.fits).toBe(false); // 431,4 MiB > 370 disponibles
+  });
+
+  it("con la vía de emergencia la foto CABE a 1024 con el freno 0,65 puesto (547,3 ≥ 437,4)", () => {
+    const plan = planContext(Q05_REAL, PHOTO, { ceiling: 4096, safety: 0.65 })!;
+    expect(plan.nCtx).toBe(EMERGENCY_CONTEXT);
+    expect(plan.verdict.fits).toBe(true);
+    expect(plan.verdict.totalBytes).toBe(458_644_032);
+    // El disponible REPORTADO sigue siendo el de la cuenta normal
+    // (370): la vía cambia el presupuesto de paso, no la foto que el
+    // instrumento registra. El disponible de la vía (842) se fija en
+    // el caso de checkRamBudget con emergencyLive, abajo.
+    expect(plan.verdict.availableBytes).toBe(370 * MiB);
+  });
+
+  it("gemela sin freno (safety 1): la foto también cabe por la vía", () => {
+    const plan = planContext(Q05_REAL, PHOTO, { ceiling: 4096, safety: 1 })!;
+    expect(plan.nCtx).toBe(EMERGENCY_CONTEXT);
+    expect(plan.verdict.fits).toBe(true);
+  });
+
+  it("la vía NO se filtra a los peldaños normales: un aparato con hueco sigue eligiendo el mayor que cabe con la cuenta de siempre", () => {
+    // Foto holgada: el 4096 cabe por la cuenta normal (disponible 1001
+    // por total) y la escalera ni mira la emergencia.
+    const roomy = { totalRamBytes: 3416 * MiB, rssBytes: 367 * MiB, availBytes: 3 * GiB, lowMemThresholdBytes: 216 * MiB };
+    const plan = planContext(Q05_REAL, roomy, { ceiling: 4096, safety: 1 })!;
+    expect(plan.nCtx).toBe(4096);
+    expect(plan.verdict.availableBytes).toBe(1001 * MiB);
+  });
+
+  it("checkRamBudget con emergencyLive usa el availMem crudo SOLO con la opción puesta", () => {
+    const raw = checkRamBudget({ ...Q05_REAL, nCtx: 1024 }, PHOTO, { emergencyLive: true })!;
+    expect(raw.availableBytes).toBe(842 * MiB);
+    const normal = checkRamBudget({ ...Q05_REAL, nCtx: 1024 }, PHOTO)!;
+    expect(normal.availableBytes).toBe(370 * MiB);
+    // El crédito liberable también cuenta en la vía (cambio de modelo).
+    const swap = checkRamBudget({ ...Q05_REAL, nCtx: 1024 }, { ...PHOTO, releasableBytes: 100 * MiB }, { emergencyLive: true })!;
+    expect(swap.availableBytes).toBe(942 * MiB);
+  });
+});
+
+describe("lectura real de memoria (0.1.85): la foto es fresca en cada intento y el fallo de lectura se marca", () => {
+  it("dos lecturas nativas distintas consecutivas producen dos fotos y dos decisiones distintas (sin caché ni supuesto)", () => {
+    mockTotalRam = 3416 * MiB;
+    mockRss = 367 * MiB;
+    // Intento 1: la foto de las 19:54 — por la cuenta directa no cabe.
+    mockAvail = { availBytes: 842 * MiB, thresholdBytes: 216 * MiB, lowMemory: false };
+    const snap1 = readRamSnapshot()!;
+    expect(snap1.availBytes).toBe(842 * MiB);
+    const v1 = checkRamBudget({ fileSizeBytes: 397_808_192, nCtx: 1024, nLayer: 24, nKvHeads: 2, headDim: 64, nUbatch: 128 }, snap1)!;
+    expect(v1.availableBytes).toBe(370 * MiB);
+    expect(v1.fits).toBe(false);
+    // Intento 2: el sistema liberó memoria (la foto posterior de
+    // Device care: ~1,7 GB libres) — la decisión sigue a ESTA foto.
+    mockAvail = { availBytes: 1700 * MiB, thresholdBytes: 216 * MiB, lowMemory: false };
+    const snap2 = readRamSnapshot()!;
+    expect(snap2.availBytes).toBe(1700 * MiB);
+    const v2 = checkRamBudget({ fileSizeBytes: 397_808_192, nCtx: 1024, nLayer: 24, nKvHeads: 2, headDim: 64, nUbatch: 128 }, snap2)!;
+    expect(v2.availableBytes).toBe(1001 * MiB); // manda byTotal
+    expect(v2.fits).toBe(true);
+    mockAvail = null;
+  });
+
+  it("si la lectura en vivo no llega, la foto lo marca (liveReadMissing) y no inventa cifras", () => {
+    mockTotalRam = 8 * GiB;
+    mockRss = 1 * GiB;
+    mockAvail = "throws";
+    const snap = readRamSnapshot()!;
+    expect(snap.liveReadMissing).toBe(true);
+    expect(snap.availBytes).toBeUndefined();
+    mockAvail = "throws";
+    const stillThrows = readRamSnapshot()!;
+    expect(stillThrows.liveReadMissing).toBe(true);
+    mockAvail = { availBytes: 1700 * MiB, thresholdBytes: 216 * MiB, lowMemory: false };
+    const healed = readRamSnapshot()!;
+    expect(healed.liveReadMissing).toBeUndefined();
+    expect(healed.availBytes).toBe(1700 * MiB);
+    mockAvail = null;
   });
 });
