@@ -1446,6 +1446,87 @@ describe("0.1.85: la foto exacta de las 19:54 como motor completo (RAM total REA
   });
 });
 
+describe("0.1.86: la segunda llamada q8 conserva la condición de emergencia", () => {
+  const MiB = 1024 ** 2;
+  const GEMMA = "models/hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf";
+
+  // Foto sintética en la ventana del censo §4.1 C, dentro de la Tab
+  // (3416 MiB): presupuesto normal 370 MiB (disponible reportado:
+  // total − RSS − reserva de 2 GiB), presupuesto de emergencia
+  // 842 MiB (el availMem crudo, freno 1). El Gemma real pesa
+  // 5.154.941.280 B en disco; aquí su fichero vale 350 MiB para caer
+  // en la ventana del defecto: a 1024 cuesta 501,0 MiB fp16 (solo
+  // cabe por la vía de emergencia) y 448,5 MiB con KV q8.
+  it("en el peldaño de emergencia la carga sale con KV q8 a 1024", async () => {
+    mockTotalRamBytes = 3416 * MiB;
+    mockRssBytes = 367 * MiB;
+    mockAvailMemory = { availBytes: 842 * MiB, thresholdBytes: 216 * MiB, lowMemory: false };
+    mockFileSizes["hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf"] = 350 * MiB;
+    // Solo la KV q8 puede nacer: simula un llama.cpp que rechaza los
+    // perfiles fp16 (small-batch y default).
+    rejectInit = (p) => p.cache_type_v === undefined;
+    const engine = new LlamaEngine();
+    await engine.load(GEMMA);
+    expect(engine.getModelInfo()?.nCtx).toBe(1024);
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0]).toMatchObject({ n_ctx: 1024, cache_type_k: "q8_0" });
+    delete mockFileSizes["hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf"];
+  });
+
+  // La ventana donde la segunda llamada se distingue: con un modelo
+  // residente y lo libre en vivo casi agotado, el crédito liberable
+  // del residente entra en el término en vivo: el presupuesto de
+  // emergencia (availMem crudo + crédito) sigue admitiendo el q8 a
+  // 1024 (448,5 MiB), pero el presupuesto NORMAL queda muy por
+  // debajo de ese coste. Sin la simetría, la segunda llamada se
+  // juzga con techo 1024 — sin peldaño de emergencia — y NO cabe: no
+  // hay fijación, y si además llama.cpp rechaza la KV q8 la carga
+  // cae a los perfiles fp16 y nace. Con la simetría, el plan q8
+  // cabe, la fijación deja la lista en [kv-q8] y el rechazo nativo
+  // de ese único perfil hace FALLAR la carga entera en vez de
+  // degradarla a fp16. Ese fracaso-vs-degradación es el observable
+  // que separa el arreglo de su ausencia: la nota del plan no puede
+  // separarlos (a igual peldaño y techo, la nota del plan q8 y la
+  // del fp16 son la misma cadena).
+  it("con un residente previo, la fijación a kv-q8 solo nace si la segunda llamada conserva la emergencia", async () => {
+    const Q4 = "models/qwen2.5-0.5b-instruct-q4km.gguf";
+    mockFileSizes["hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf"] = 350 * MiB;
+    mockTotalRamBytes = 3416 * MiB;
+    mockRssBytes = 367 * MiB;
+    // Primera foto holgada: el Q4 residente nace a su techo (4096).
+    mockAvailMemory = { availBytes: 1843 * MiB, thresholdBytes: 216 * MiB, lowMemory: false };
+    const engine = new LlamaEngine();
+    await engine.load(Q4);
+    expect(engine.getModelInfo()?.nCtx).toBe(4096);
+    // La foto del cambio: lo libre en vivo ha caído a 20 MiB y el
+    // RSS subió a 717 MiB (el residente Q4 más el resto de la app y
+    // de lo que Android aún no ha soltado). El crédito liberable del
+    // residente (585,7 MiB, su coste estimado a 4096 con KV q8) es
+    // lo que mantiene viva la vía: el presupuesto de emergencia
+    // (avail crudo + crédito ≈ 605,7) admite el q8 a 1024 (448,5),
+    // pero el presupuesto normal (≈448,7 menos threshold y margen,
+    // ≈185,7 efectivos) queda muy por debajo. Medido con planContext
+    // sobre esta misma foto: fp16 → 1024 cabe por emergencia; q8 con
+    // techo 4096 → 1024 cabe; q8 con techo 1024 → NO cabe.
+    mockRssBytes = 717 * MiB;
+    mockAvailMemory = { availBytes: 20 * MiB, thresholdBytes: 216 * MiB, lowMemory: false };
+    // llama.cpp rechaza la KV q8: con fijación, la lista es [kv-q8]
+    // y la carga falla; sin fijación, cae a small-batch y carga fp16.
+    rejectInit = (p) => p.cache_type_v !== undefined;
+    initCalls.length = 0;
+    await expect(engine.load(GEMMA)).rejects.toThrow(/Failed to load/);
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0]).toMatchObject({ n_ctx: 1024, cache_type_k: "q8_0" });
+    // Y la carga fallida no dejó modelo residente: el Q4 saliente se
+    // liberó en el intento y el motor quedó sin contexto (la justicia
+    // de F2: el fallo de RAM no llega hasta aquí porque el plan cabía;
+    // el fallo nativo sí, y no finge un modelo vivo).
+    expect(engine.isLoaded).toBe(false);
+    delete mockFileSizes["hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf"];
+  });
+});
+
 describe("0.1.85: separación embeddings/CrashGuard (la indexación no castiga al LLM)", () => {
   const GUARD = "file:///docs/nido-crash-guard.json";
 
