@@ -7,7 +7,7 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { initLlama, LlamaContext, type CompletionResponseFormat } from "llama.rn";
 import * as RamMonitor from "ram-monitor";
-import { batchForRam, checkRamBudget, defaultThreadsForCores, estimateContextBytes, RamBudgetError, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
+import { batchForRam, checkRamBudget, defaultThreadsForCores, estimateContextBytes, KV_Q8_BYTES_PER_ELEMENT, RamBudgetError, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
 import {
   crossNativeSessionRecord,
   holdBackgroundIndexingForSession,
@@ -20,10 +20,12 @@ import type { CrashReportLike } from "../diagnostics/crashReport";
 import { lastReembedProgress } from "../rag/reembed";
 import {
   confirmCrashGuardRecord,
+  EMERGENCY_CONTEXT,
   parseCrashGuardRecord,
   planContext,
   settleCrashGuardRecord,
   type CrashGuardRecord,
+  type LadderPlan,
 } from "./memoryLadder";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
@@ -682,6 +684,13 @@ export class LlamaEngine {
     // sustituir todavía no está libre, pero lo estará antes de cargar.
     const liveSnapshot = readRamSnapshot();
     const loaded = this.context && this.modelInfo ? MODEL_CATALOG.find((m) => m.filename === this.modelInfo?.filename) : undefined;
+    // Calibración 2026-11-08 (defecto, segunda vuelta): el lote que la
+    // carga REAL va a usar sale de la misma foto (batchForRam por RAM
+    // total + techo de presión) y entra en el spec: el término de
+    // cómputo del estimador cobra ese n_ubatch, no el plano de la
+    // clase 256. Una sola foto, un solo lote: el de abajo en el bucle
+    // de perfiles es este mismo objeto.
+    const loadBatch = batchForRam(liveSnapshot?.totalRamBytes ?? null, pressure.ubatchCap);
     const snapshot =
       liveSnapshot && loaded && this.modelInfo
         ? {
@@ -692,6 +701,9 @@ export class LlamaEngine {
               nLayer: loaded.arch?.nLayer,
               nKvHeads: loaded.arch?.nKvHeads,
               headDim: loaded.arch?.headDim,
+              kvBytesPerElement:
+                this.modelInfo.memoryProfile === "kv-q8" ? KV_Q8_BYTES_PER_ELEMENT : undefined,
+              nUbatch: loadBatch.nUbatch,
             }).totalBytes,
           }
         : liveSnapshot;
@@ -715,6 +727,7 @@ export class LlamaEngine {
       nLayer: catalogEntry?.arch?.nLayer,
       nKvHeads: catalogEntry?.arch?.nKvHeads,
       headDim: catalogEntry?.arch?.headDim,
+      nUbatch: loadBatch.nUbatch,
     };
     const spec = { ...specBase, nCtx };
     let verdict = snapshot ? checkRamBudget(spec, snapshot) : null;
@@ -722,12 +735,35 @@ export class LlamaEngine {
     // RAM: elige el peldaño mayor que cabe bajo el techo pedido, con
     // el presupuesto reducido por el CrashGuard si hubo un choque.
     let contextNote = "";
+    // Calibración 2026-11-08: el PRIMER perfil que la carga intenta es
+    // kv-q8 (LLM_MEMORY_PROFILES[0]) y su KV cuesta la mitad. Si con
+    // ese coste el modelo solo cabe en el peldaño de emergencia, el
+    // plan manda con la KV de q8 — y la carga de abajo queda fijada a
+    // ese perfil y ese contexto (profundizar en perfiles mayores sería
+    // cargar con otra KV que el pre-flight no cobró). En cualquier
+    // otro peldaño manda el plan fp16 de siempre: conservador, porque
+    // los perfiles de reserva cargan con KV fp16 y el plan debe valer
+    // para el que acabe aceptando llama.cpp.
+    let pinnedProfile: LlmMemoryProfile | null = null;
     if (!explicitCtx && snapshot) {
       const plan = planContext(specBase, snapshot, { ceiling: nCtx, safety: crashSafety });
       if (plan) {
         nCtx = plan.nCtx;
         verdict = plan.verdict;
         contextNote = plan.note;
+      }
+      if (plan && plan.nCtx === EMERGENCY_CONTEXT) {
+        const q8Plan: LadderPlan | null = planContext(
+          { ...specBase, kvBytesPerElement: KV_Q8_BYTES_PER_ELEMENT },
+          snapshot,
+          { ceiling: nCtx, safety: crashSafety },
+        );
+        if (q8Plan && q8Plan.verdict.fits) {
+          nCtx = q8Plan.nCtx;
+          verdict = q8Plan.verdict;
+          contextNote = q8Plan.note;
+          pinnedProfile = "kv-q8";
+        }
       }
     }
     if (verdict && !verdict.fits) {
@@ -787,13 +823,17 @@ export class LlamaEngine {
     try {
       // RAM-2026-10-11: primer perfil que llama.cpp acepte (ver
       // LLM_MEMORY_PROFILES). El último es exactamente la llamada original.
+      // Si el plan fijó kv-q8 (solo cupo en el peldaño de emergencia con
+      // su KV), la lista es ese perfil solo: cargar con otro sería
+      // gastar una KV que el pre-flight no aprobó.
+      const profilesToTry = pinnedProfile ? [pinnedProfile] : LLM_MEMORY_PROFILES;
       let lastErr: unknown = null;
       let loadedProfile: LlmMemoryProfile | null = null;
-      for (const profile of LLM_MEMORY_PROFILES) {
+      for (const profile of profilesToTry) {
         try {
           this.context = await withStage("initLlama", () =>
             initLlama(
-              llmInitParamsForProfile(profile, { model: modelPath, n_ctx: nCtx, n_threads: nThreads }, batchForRam(snapshot?.totalRamBytes ?? null, pressure.ubatchCap)) as never,
+              llmInitParamsForProfile(profile, { model: modelPath, n_ctx: nCtx, n_threads: nThreads }, loadBatch) as never,
             )
           );
           loadedProfile = profile;

@@ -183,3 +183,75 @@ export function executionRecordsToCsv(records: ExecutionTelemetryRecord[]): stri
   const lines = records.map((r) => CSV_COLUMNS.map((c) => csvCell(r[c])).join(","));
   return [header, ...lines].join("\n");
 }
+
+/**
+ * Rechazos del pre-flight de memoria, tal como los guarda
+ * src/inference/telemetry.ts (0.1.83 los registraba sin lector; la
+ * 0.1.84 los pinta y los exporta). Tipo estructural a propósito: la
+ * mitad «pure» no importa el módulo de inferencia.
+ */
+export interface RamRejectionExportRow {
+  id: number;
+  ts: number;
+  modelId: string | null;
+  embedding: boolean;
+  ramRejection: {
+    totalRamBytes: number;
+    rssBytes: number;
+    availBytes: number | null;
+    thresholdBytes: number | null;
+    availableBytes: number;
+    neededBytes: number;
+    nCtxChosen: number;
+    nCtxRequested: number;
+    crashSafety: number | null;
+  };
+}
+
+/** JSON de la exportación: ejecuciones y rechazos en un solo documento. */
+export function telemetryExportToJson(
+  records: ExecutionTelemetryRecord[],
+  rejections: RamRejectionExportRow[],
+): string {
+  return JSON.stringify({ executions: records, ramRejections: rejections }, null, 2);
+}
+
+const REJECTION_CSV_COLUMNS = [
+  "id",
+  "ts",
+  "modelId",
+  "embedding",
+  "totalRamBytes",
+  "rssBytes",
+  "availBytes",
+  "thresholdBytes",
+  "availableBytes",
+  "neededBytes",
+  "nCtxChosen",
+  "nCtxRequested",
+  "crashSafety",
+] as const;
+
+/**
+ * CSV de la exportación: la tabla de ejecuciones de siempre y, tras
+ * una línea en blanco, la de rechazos con su propia cabecera. Sin
+ * rechazos, la salida es EXACTAMENTE la histórica (ningún consumidor
+ * del CSV ve un cambio cuando no hay nada nuevo que contar).
+ */
+export function telemetryExportToCsv(
+  records: ExecutionTelemetryRecord[],
+  rejections: RamRejectionExportRow[],
+): string {
+  const base = executionRecordsToCsv(records);
+  if (rejections.length === 0) return base;
+  const lines = rejections.map((r) =>
+    REJECTION_CSV_COLUMNS.map((c) => {
+      if (c === "id") return csvCell(r.id);
+      if (c === "ts") return csvCell(r.ts);
+      if (c === "modelId") return csvCell(r.modelId);
+      if (c === "embedding") return csvCell(r.embedding);
+      return csvCell(r.ramRejection[c]);
+    }).join(","),
+  );
+  return [base, "", "# ram_rejections", REJECTION_CSV_COLUMNS.join(","), ...lines].join("\n");
+}

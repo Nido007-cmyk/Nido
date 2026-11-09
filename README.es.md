@@ -101,6 +101,17 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   energía o el aparato caliente bajan los hilos, y cuando Android
   avisa de presión crítica de memoria los modelos se descargan en
   vez de esperar a que el sistema cierre la app.
+- **La comprobación de memoria cobra lo que la carga cuesta de
+  verdad, y los rechazos se pueden leer en la app** (0.1.84):
+  cambiar de modelo ya no cuenta la memoria del modelo saliente
+  como ocupada en el lado de la comprobación que decide; la caché
+  de contexto y el búfer de cómputo se cobran con la precisión y
+  el tamaño de lote que la carga va a usar de verdad; y en
+  aparatos con 4 GB de memoria o menos la comprobación prueba un
+  contexto corto, por debajo del suelo habitual, antes de
+  negarse. La pantalla Telemetría de ejecución lista ahora cada
+  carga rechazada con las cifras que vio la comprobación, y el
+  registro viaja en sus exportaciones JSON y CSV.
 - **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
   teléfonos emparejados, sin internet y sin servidor. Para emparejar pegas
   el código del otro teléfono (el texto de su QR); un contacto aparece como
@@ -147,7 +158,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.83-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.83-alpha).
+   [versión v0.1.84-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.84-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y

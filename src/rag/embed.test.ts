@@ -103,6 +103,29 @@ describe("EmbeddingEngine — residencia bajo demanda (optimización 2026-11-08,
     expect([a[0], b[0]]).toEqual([1, 2]);
     expect(engine.isLoaded).toBe(true);
   });
+
+  it("la marca de último uso vive en el motor y la renueva cada búsqueda (0.1.84)", async () => {
+    // Cierre de la desviación de la fase 4: antes la marca solo la
+    // ponía ChatScreen al arrancar y las búsquedas no la renovaban,
+    // así que el pulso descargaba el motor pese a uso reciente.
+    const engine = new EmbeddingEngine();
+    expect(engine.lastUsedAtMs).toBeNull();
+    await engine.load("models/embedding.gguf");
+    const afterLoad = engine.lastUsedAtMs;
+    expect(afterLoad).not.toBeNull();
+    const realNow = Date.now;
+    let fake = afterLoad! + 60_000;
+    Date.now = () => fake;
+    try {
+      await engine.embed("ab");
+      expect(engine.lastUsedAtMs).toBe(fake);
+      fake += 60_000;
+      await engine.embedQuery("ab");
+      expect(engine.lastUsedAtMs).toBe(fake);
+    } finally {
+      Date.now = realNow;
+    }
+  });
 });
 
 describe("EmbeddingEngine — per-model prefixes (multilingual search)", () => {

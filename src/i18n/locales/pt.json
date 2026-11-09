@@ -699,7 +699,22 @@
       "stateOn": "Ligado",
       "stateOff": "Desligado"
     },
-    "exportFailedBody": "Não foi possível exportar a telemetria."
+    "exportFailedBody": "Não foi possível exportar a telemetria.",
+    "rejections": {
+      "title": "Rejeições de memória",
+      "hint": "Quando a verificação de memória se recusou a carregar um modelo, isto é o que ela viu: quanto o modelo pedia, quanto havia disponível e como estava o dispositivo naquele momento. Fica neste dispositivo.",
+      "empty": "Nenhuma rejeição de memória registrada.",
+      "llm": "Modelo",
+      "embedding": "Embeddings",
+      "needed": "Precisava",
+      "available": "Disponível",
+      "totalRam": "RAM total",
+      "rss": "O app em uso",
+      "free": "Livre no momento",
+      "threshold": "Limite do sistema",
+      "context": "Contexto escolhido / pedido",
+      "crashSafety": "Orçamento após uma falha"
+    }
   },
   "errors": {
     "unexpected": "Algo deu errado. Detalhe técnico: {{detail}}",

@@ -12,6 +12,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react-nativ
 
 const mockRouter = { samples: [] as Array<Record<string, unknown>> };
 const mockMissed = { on: false, rows: [] as Array<Record<string, unknown>>, setCalls: [] as boolean[], copied: [] as string[] };
+const mockRejections = { rows: [] as Array<Record<string, unknown>> };
 
 jest.mock("./theme", () => ({
   useTheme: () => ({
@@ -33,6 +34,9 @@ jest.mock("../services/executionTelemetry", () => ({
   listRecentExecutions: async () => [],
   clearExecutionTelemetry: async () => {},
   exportExecutionTelemetry: async () => {},
+}));
+jest.mock("../inference/telemetry", () => ({
+  listStoredRamRejections: async () => mockRejections.rows,
 }));
 jest.mock("../services/routerStats", () => {
   const pure = jest.requireActual("../services/routerStats.pure");
@@ -71,6 +75,7 @@ beforeEach(() => {
   mockMissed.rows = [];
   mockMissed.setCalls = [];
   mockMissed.copied = [];
+  mockRejections.rows = [];
 });
 
 describe("ExecutionTelemetryScreen · decisión de ruta", () => {
@@ -155,5 +160,46 @@ describe("ExecutionTelemetryScreen · 0.1.39 frases no reconocidas (opcional)", 
     const toggle = await screen.findByTestId("missed-phrases-toggle");
     await fireEvent(toggle, "valueChange", true);
     await waitFor(() => expect(mockMissed.setCalls).toEqual([true]));
+  });
+});
+
+describe("ExecutionTelemetryScreen · 0.1.84 rechazos de memoria", () => {
+  it("sin rechazos guardados la sección lo dice", async () => {
+    mockRouter.samples = [];
+    const { ExecutionTelemetryScreen } = require("./ExecutionTelemetryScreen");
+    await render(<ExecutionTelemetryScreen onClose={() => {}} />);
+    expect(await screen.findByText("executionTelemetry.rejections.title")).toBeTruthy();
+    expect(screen.getByText("executionTelemetry.rejections.empty")).toBeTruthy();
+  });
+
+  it("un rechazo se pinta con las cifras que vio el pre-flight", async () => {
+    mockRouter.samples = [];
+    mockRejections.rows = [
+      {
+        id: 5,
+        ts: 1700000000000,
+        modelId: "models/qwen3-0.6b-q4km.gguf",
+        embedding: false,
+        ramRejection: {
+          totalRamBytes: 3.54 * 1024 ** 3,
+          rssBytes: 0.4 * 1024 ** 3,
+          availBytes: 1.2 * 1024 ** 3,
+          thresholdBytes: 0.35 * 1024 ** 3,
+          availableBytes: 0.6 * 1024 ** 3,
+          neededBytes: 0.714 * 1024 ** 3,
+          nCtxChosen: 2048,
+          nCtxRequested: 4096,
+          crashSafety: 0.65,
+        },
+      },
+    ];
+    const { ExecutionTelemetryScreen } = require("./ExecutionTelemetryScreen");
+    await render(<ExecutionTelemetryScreen onClose={() => {}} />);
+    expect(await screen.findByText("models/qwen3-0.6b-q4km.gguf")).toBeTruthy();
+    expect(screen.getByText("731MB")).toBeTruthy(); // lo que necesitaba
+    expect(screen.getByText("614MB")).toBeTruthy(); // lo disponible
+    expect(screen.getByText("2048 / 4096")).toBeTruthy(); // contexto elegido / pedido
+    expect(screen.getByText("65%")).toBeTruthy(); // freno del CrashGuard
+    expect(screen.queryByText("executionTelemetry.rejections.empty")).toBeNull();
   });
 });

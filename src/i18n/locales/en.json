@@ -699,7 +699,22 @@
       "stateOn": "On",
       "stateOff": "Off"
     },
-    "exportFailedBody": "The telemetry could not be exported."
+    "exportFailedBody": "The telemetry could not be exported.",
+    "rejections": {
+      "title": "Memory rejections",
+      "hint": "When the memory check refused to load a model, this is what it saw: how much the model needed, how much was available, and the state of the device at that moment. It stays on this device.",
+      "empty": "No memory rejections recorded.",
+      "llm": "Model",
+      "embedding": "Embeddings",
+      "needed": "Needed",
+      "available": "Available",
+      "totalRam": "Total RAM",
+      "rss": "App in use",
+      "free": "Free now",
+      "threshold": "System limit",
+      "context": "Context chosen / asked",
+      "crashSafety": "Budget after a crash"
+    }
   },
   "errors": {
     "unexpected": "Something went wrong. Technical detail: {{detail}}",

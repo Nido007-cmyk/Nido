@@ -32,6 +32,13 @@ export class EmbeddingEngine {
   private lastFilename: string | null = null;
   private ensureProvider: (() => Promise<string | null>) | null = null;
   private ensuring: Promise<boolean> | null = null;
+  // 0.1.84 (cierre de la desviación de la fase 4): la marca de último
+  // uso vive en el MOTOR, no en la pantalla. La 0.1.83 la asignaba
+  // solo ChatScreen al terminar el arranque, y las búsquedas — que no
+  // pasan por la pantalla — no la renovaban: pasados 10 min el pulso
+  // descargaba el motor pese a un uso reciente y ciclaba recarga y
+  // descarga cada 30 s. Ahora cada embed consumado la renueva aquí.
+  private lastUsedAt: number | null = null;
   // llama.rn rejects a call on a context that's still working ("Context is
   // busy"), so loads, embeddings and unloads run one at a time.
   private queue: Promise<unknown> = Promise.resolve();
@@ -114,6 +121,7 @@ export class EmbeddingEngine {
     );
     this.modelFilename = modelFilename;
     this.lastFilename = modelFilename;
+    this.touchUsed();
     this.modelSha256 =
       MODEL_CATALOG.find((m) => m.kind === "embedding" && m.filename === modelFilename)?.sha256 ?? null;
   }
@@ -121,6 +129,20 @@ export class EmbeddingEngine {
   /** ¿Hay un contexto de embeddings residente ahora mismo? */
   get isLoaded(): boolean {
     return this.context !== null;
+  }
+
+  /**
+   * Último uso real del motor (carga o embed consumado), o null si
+   * nunca se usó en esta sesión. Lo consulta el pulso de descarga por
+   * inactividad de ChatScreen (embeddingIdleUnloadDue).
+   */
+  get lastUsedAtMs(): number | null {
+    return this.lastUsedAt;
+  }
+
+  /** Marca el uso: la carga cuenta como uso, y cada embed también. */
+  private touchUsed(): void {
+    this.lastUsedAt = Date.now();
   }
 
   /**
@@ -219,6 +241,8 @@ export class EmbeddingEngine {
     if (!this.context) throw new Error("EmbeddingEngine: model not loaded");
     try {
       const result = await this.context.embedding(text);
+      // Uso consumado: renueva la marca (0.1.84, ver lastUsedAt).
+      this.touchUsed();
       return Float32Array.from(result.embedding);
     } catch (e) {
       // The native llamaEmbedding JSI binding may be missing from the

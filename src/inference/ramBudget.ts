@@ -83,6 +83,23 @@ export interface ContextSpec {
    *  the last position (see estimateLogitsBytes). */
   nLogitRows?: number;
   nVocab?: number;
+  /**
+   * Bytes per KV-cache element for the profile being evaluated.
+   * Defaults to 2 (fp16, llama.cpp's default). The kv-q8 profile loads
+   * with cache_type_k/v = q8_0: ONE byte per element, half the KV term.
+   * The pre-flight must charge the profile it is actually about to try
+   * (defect 2026-11-08 calibration): charging fp16 while loading q8_0
+   * over-charges every rung of the ladder on small devices.
+   */
+  kvBytesPerElement?: number;
+  /**
+   * Micro-batch the load will run with (batchForRam's pick for this
+   * device class). The compute term's dominant piece is proportional
+   * to n_ubatch (see estimateComputeBytes); when the caller knows the
+   * batch, the term charges it instead of the flat 4096/256 allowance.
+   * Unknown (undefined) keeps the historic flat allowance untouched.
+   */
+  nUbatch?: number;
 }
 
 export interface RamEstimate {
@@ -107,15 +124,53 @@ const GiB = 1024 * 1024 * 1024;
 /** llama.cpp's default KV-cache element type is fp16. */
 const KV_BYTES_PER_ELEMENT = 2;
 
+/** Architecture used when the caller does not declare one (Qwen2.5-1.5B). */
 const DEFAULT_ARCH = { nLayer: 28, nKvHeads: 2, headDim: 128 };
+
+/** q8_0 KV cache (the kv-q8 load profile): one byte per element. */
+export const KV_Q8_BYTES_PER_ELEMENT = 1;
 
 /**
  * Conservative allowance for llama.cpp's per-context compute/graph buffers
  * at n_ctx 4096, scaled linearly with context length. Deliberately an
  * over-estimate: for a pre-flight, firing early is annoying, firing late is
  * a crash.
+ *
+ * What the flat allowance is made of (llmInitParamsForProfile's own
+ * comment in LlamaEngine.ts): the decode logits buffer is
+ * n_ubatch × n_vocab × 4 B — ~149 MiB at n_ubatch 256 with Qwen2.5's
+ * 152064 vocabulary — and the rest (~107 MiB) is the graph/KV compute
+ * workspace. When the caller declares the n_ubatch the load will
+ * actually use (batchForRam already picks 128 on ≤3.5 GiB devices and
+ * 192 on ≤4.5 GiB), the term charges that buffer at its real size
+ * instead of the 256 default (calibration 2026-11-08): charging the
+ * 256-class buffer on a device that will run 128 double-counts memory
+ * the load will never allocate.
+ *
+ * Anchor choice, settled against Grok's patch set the same day: his
+ * version scaled the ~149 MiB alone (149 × nUbatch/256), i.e. only
+ * the decode-logits buffer. But this estimator already charges the
+ * output-row logits as a SEPARATE term, so anchoring on 149 MiB
+ * would drop the ~107 MiB of graph workspace from the cost entirely
+ * and under-estimate — the dangerous direction for a pre-flight.
+ * This formula anchors on the full 256 MiB constant and moves only
+ * its batch-proportional component; at n_ubatch 256 it reproduces
+ * the historic constant exactly.
  */
 const COMPUTE_BUFFER_BYTES_AT_4K_CTX = 256 * MiB;
+const COMPUTE_UBATCH_REF = 256;
+const COMPUTE_VOCAB_REF = 152064;
+const COMPUTE_FIXED_BYTES =
+  COMPUTE_BUFFER_BYTES_AT_4K_CTX - COMPUTE_UBATCH_REF * COMPUTE_VOCAB_REF * 4;
+
+function estimateComputeBytes(nCtx: number, nUbatch?: number, nVocab?: number): number {
+  const ctx = Math.max(nCtx, 0);
+  if (nUbatch === undefined || !Number.isFinite(nUbatch) || nUbatch <= 0) {
+    return Math.ceil((COMPUTE_BUFFER_BYTES_AT_4K_CTX * ctx) / 4096);
+  }
+  const perCtx = COMPUTE_FIXED_BYTES + nUbatch * (nVocab ?? COMPUTE_VOCAB_REF) * 4;
+  return Math.ceil((perCtx * ctx) / 4096);
+}
 
 /**
  * Logits term. The 2026-10-09 fix charged n_batch × n_vocab × 4B (~297 MiB
@@ -154,9 +209,10 @@ export function estimateKvCacheBytes(
   nLayer: number,
   nCtx: number,
   nKvHeads: number,
-  headDim: number
+  headDim: number,
+  bytesPerElement: number = KV_BYTES_PER_ELEMENT
 ): number {
-  return 2 * nLayer * nCtx * nKvHeads * headDim * KV_BYTES_PER_ELEMENT;
+  return 2 * nLayer * nCtx * nKvHeads * headDim * bytesPerElement;
 }
 
 export function estimateContextBytes(spec: ContextSpec): RamEstimate {
@@ -164,8 +220,14 @@ export function estimateContextBytes(spec: ContextSpec): RamEstimate {
   const nKvHeads = spec.nKvHeads ?? DEFAULT_ARCH.nKvHeads;
   const headDim = spec.headDim ?? DEFAULT_ARCH.headDim;
   const weightsBytes = Math.max(spec.fileSizeBytes, 0);
-  const kvCacheBytes = estimateKvCacheBytes(nLayer, spec.nCtx, nKvHeads, headDim);
-  const computeBytes = Math.ceil((COMPUTE_BUFFER_BYTES_AT_4K_CTX * Math.max(spec.nCtx, 0)) / 4096);
+  const kvCacheBytes = estimateKvCacheBytes(
+    nLayer,
+    spec.nCtx,
+    nKvHeads,
+    headDim,
+    spec.kvBytesPerElement ?? KV_BYTES_PER_ELEMENT
+  );
+  const computeBytes = estimateComputeBytes(spec.nCtx, spec.nUbatch, spec.nVocab);
   // Logits: one output row by default (last position only — see
   // estimateLogitsBytes). Vocab default: Qwen2.5 152064.
   const logitsBytes = estimateLogitsBytes(spec.nLogitRows ?? 1, spec.nVocab ?? 152064);
@@ -186,13 +248,24 @@ export function estimateContextBytes(spec: ContextSpec): RamEstimate {
 export function checkRamBudget(spec: ContextSpec, snapshot: RamSnapshot): BudgetVerdict | null {
   if (snapshot.totalRamBytes <= 0) return null;
   const estimate = estimateContextBytes(spec);
-  const byTotal = snapshot.totalRamBytes - snapshot.rssBytes - SYSTEM_HEADROOM_BYTES;
+  // Crédito simétrico (defecto 2026-11-08, segunda vuelta): lo que el
+  // modelo saliente libera ANTES de cargar el entrante cuenta en los
+  // DOS términos. Hasta aquí releasableBytes solo entraba en el término
+  // en vivo, y byTotal — el que manda en aparatos justos — seguía
+  // restando el RSS completo con el saliente residente, contra lo que
+  // el comentario F2-2026-10-06 de LlamaEngine.loadNow ya anunciaba
+  // («se resta la huella estimada del modelo actual del RSS»). El
+  // crédito solo lo construye ese camino (carga con un residente
+  // distinto); una carga en frío no lo trae y no cambia nada.
+  const releasable = Math.max(snapshot.releasableBytes ?? 0, 0);
+  const byTotal =
+    snapshot.totalRamBytes - Math.max(snapshot.rssBytes - releasable, 0) - SYSTEM_HEADROOM_BYTES;
   // 2026-11-06 (prueba física, tableta de 3,3 GB): la cuenta por la RAM
   // total dejó cargar un modelo que agotó la memoria con otras apps
   // abiertas. Con la lectura en vivo, manda la menor de las dos.
   const live =
     snapshot.availBytes !== undefined && snapshot.availBytes > 0
-      ? snapshot.availBytes + (snapshot.releasableBytes ?? 0) - (snapshot.lowMemThresholdBytes ?? 0) - LIVE_MARGIN_BYTES
+      ? snapshot.availBytes + releasable - (snapshot.lowMemThresholdBytes ?? 0) - LIVE_MARGIN_BYTES
       : Number.POSITIVE_INFINITY;
   const availableBytes = Math.max(Math.min(byTotal, live), 0);
   return {
