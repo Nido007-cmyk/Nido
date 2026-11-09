@@ -32,7 +32,11 @@ import {
   fromExecutionRow,
   executionRecordsToJson,
   executionRecordsToCsv,
+  telemetryExportToJson,
+  telemetryExportToCsv,
+  type RamRejectionExportRow,
 } from "./executionTelemetry.pure";
+import { listStoredRamRejections } from "../inference/telemetry";
 
 export type { ModelResidency, ExecutionOutcome, ExecutionTelemetryRecord } from "./executionTelemetry.pure";
 export { executionRecordsToJson, executionRecordsToCsv } from "./executionTelemetry.pure";
@@ -105,7 +109,16 @@ export async function clearExecutionTelemetry(): Promise<void> {
  */
 export async function exportExecutionTelemetry(format: "json" | "csv"): Promise<void> {
   const records = await listRecentExecutions(1000);
-  const content = format === "json" ? executionRecordsToJson(records) : executionRecordsToCsv(records);
+  // 0.1.84: los rechazos del pre-flight viajan en la misma
+  // exportación (antes no los leía nadie). Sin rechazos guardados, el
+  // contenido es el histórico, byte a byte.
+  const rejections: RamRejectionExportRow[] = await listStoredRamRejections(200).catch(() => []);
+  const content =
+    format === "json"
+      ? rejections.length > 0
+        ? telemetryExportToJson(records, rejections)
+        : executionRecordsToJson(records)
+      : telemetryExportToCsv(records, rejections);
   const path = `${FileSystem.cacheDirectory}execution_telemetry.${format}`;
   await FileSystem.writeAsStringAsync(path, content);
 

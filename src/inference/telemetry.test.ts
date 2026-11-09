@@ -8,6 +8,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import {
   clearTelemetry,
   getRecentTelemetry,
+  parseStoredRamRejection,
   ramRejectionEvent,
   recordInferenceEvent,
   recordRamRejection,
@@ -136,5 +137,55 @@ describe("telemetry: rechazos del pre-flight (fase 2, reapertura 2026-11-08)", (
     expect(events).toHaveLength(2);
     expect(events[1].stopReason).toBe("rejected");
     expect(events[1].ramRejection?.neededBytes).toBeCloseTo(0.519 * GiB, -5);
+  });
+});
+
+describe("telemetry: el lector de rechazos persistidos (0.1.84)", () => {
+  const detail = {
+    totalRamBytes: 3800000000,
+    rssBytes: 400000000,
+    availBytes: 1200000000,
+    thresholdBytes: 350000000,
+    availableBytes: 600000000,
+    neededBytes: 714000000,
+    nCtxChosen: 2048,
+    nCtxRequested: 4096,
+    crashSafety: 0.65,
+  };
+
+  it("parsea una fila del JOIN con todas sus cifras y la marca de motor", () => {
+    const parsed = parseStoredRamRejection({
+      id: 7,
+      ts: 99,
+      model_id: "models/qwen3-0.6b-q4km.gguf",
+      task_type: "model-load",
+      detail: JSON.stringify(detail),
+    });
+    expect(parsed).toEqual({
+      id: 7,
+      ts: 99,
+      modelId: "models/qwen3-0.6b-q4km.gguf",
+      embedding: false,
+      ramRejection: detail,
+    });
+    const emb = parseStoredRamRejection({
+      id: 8,
+      ts: 100,
+      model_id: "models/e5.gguf",
+      task_type: "model-load-embedding",
+      detail: JSON.stringify({ ...detail, availBytes: null, thresholdBytes: null, crashSafety: null }),
+    });
+    expect(emb?.embedding).toBe(true);
+    expect(emb?.ramRejection.availBytes).toBeNull();
+    expect(emb?.ramRejection.crashSafety).toBeNull();
+  });
+
+  it("una fila ilegible o incompleta se descarta sin romper la lista", () => {
+    const row = { id: 1, ts: 1, model_id: null, task_type: "model-load" };
+    expect(parseStoredRamRejection({ ...row, detail: "no es json" })).toBeNull();
+    expect(parseStoredRamRejection({ ...row, detail: JSON.stringify({ totalRamBytes: 1 }) })).toBeNull();
+    expect(
+      parseStoredRamRejection({ ...row, detail: JSON.stringify({ ...detail, neededBytes: "mucho" }) }),
+    ).toBeNull();
   });
 });

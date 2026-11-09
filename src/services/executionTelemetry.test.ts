@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { executionRecordsToJson, executionRecordsToCsv, ExecutionTelemetryRecord, newExecutionId } from "./executionTelemetry.pure";
+import { executionRecordsToJson, executionRecordsToCsv, telemetryExportToJson, telemetryExportToCsv, ExecutionTelemetryRecord, newExecutionId, type RamRejectionExportRow } from "./executionTelemetry.pure";
 
 function record(overrides: Partial<ExecutionTelemetryRecord> = {}): ExecutionTelemetryRecord {
   return {
@@ -87,5 +87,48 @@ describe("newExecutionId (auditoría 2026-10-31, F3-18)", () => {
     const seen = new Set<string>();
     for (let i = 0; i < 2000; i++) seen.add(newExecutionId());
     expect(seen.size).toBe(2000);
+  });
+});
+
+describe("exportación con rechazos de memoria (0.1.84)", () => {
+  const rejection: RamRejectionExportRow = {
+    id: 3,
+    ts: 1700000001000,
+    modelId: "qwen3-0.6b-q4km",
+    embedding: false,
+    ramRejection: {
+      totalRamBytes: 3800000000,
+      rssBytes: 400000000,
+      availBytes: 1200000000,
+      thresholdBytes: 350000000,
+      availableBytes: 600000000,
+      neededBytes: 714000000,
+      nCtxChosen: 2048,
+      nCtxRequested: 4096,
+      crashSafety: 0.65,
+    },
+  };
+
+  it("el JSON lleva ejecuciones y rechazos en un solo documento", () => {
+    const parsed = JSON.parse(telemetryExportToJson([record()], [rejection]));
+    expect(parsed.executions).toHaveLength(1);
+    expect(parsed.ramRejections).toHaveLength(1);
+    expect(parsed.ramRejections[0].ramRejection.neededBytes).toBe(714000000);
+    expect(parsed.ramRejections[0].ramRejection.crashSafety).toBe(0.65);
+  });
+
+  it("el CSV sin rechazos es byte a byte el histórico", () => {
+    expect(telemetryExportToCsv([record()], [])).toBe(executionRecordsToCsv([record()]));
+  });
+
+  it("el CSV con rechazos añade su tabla tras la de ejecuciones, con cabecera propia", () => {
+    const csv = telemetryExportToCsv([record()], [rejection]);
+    const lines = csv.split("\n");
+    expect(lines[0].split(",")[0]).toBe("id");
+    const marker = lines.indexOf("# ram_rejections");
+    expect(marker).toBeGreaterThan(1);
+    expect(lines[marker + 1]).toContain("neededBytes");
+    expect(lines[marker + 2]).toContain("714000000");
+    expect(lines[marker + 2]).toContain("qwen3-0.6b-q4km");
   });
 });

@@ -315,7 +315,22 @@
       "stateOn": "Activado",
       "stateOff": "Desactivado"
     },
-    "exportFailedBody": "No se pudo exportar la telemetría."
+    "exportFailedBody": "No se pudo exportar la telemetría.",
+    "rejections": {
+      "title": "Rechazos de memoria",
+      "hint": "Cuando la comprobación de memoria se negó a cargar un modelo, esto es lo que vio: cuánto pedía el modelo, cuánto había disponible y cómo estaba el dispositivo en ese momento. Queda en este dispositivo.",
+      "empty": "Ningún rechazo de memoria registrado.",
+      "llm": "Modelo",
+      "embedding": "Embeddings",
+      "needed": "Necesitaba",
+      "available": "Disponible",
+      "totalRam": "RAM total",
+      "rss": "La app en uso",
+      "free": "Libre en el momento",
+      "threshold": "Límite del sistema",
+      "context": "Contexto elegido / pedido",
+      "crashSafety": "Presupuesto tras un cierre"
+    }
   },
   "interfaceSettings": {
     "hapticFeedbackLabel": "Respuesta háptica",
