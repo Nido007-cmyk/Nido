@@ -144,6 +144,27 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   normal. Una sospecha de doble conteo en el guardián de
   choques se probó con una regresión y no existe; el guardián
   no cambia.
+- **La guía de un pack importado gana ahora su propia
+  pregunta, y la biblioteca de guías tiene su propio
+  botón** (0.1.87): la versión anterior dejó que un pack
+  importado y verificado respondiera palabra por palabra,
+  pero en la tableta del dueño la guía del gas seguía
+  perdiendo contra sus propias vecinas y contra la guía de
+  monóxido integrada, así que la pregunta cayó al modelo,
+  que respondió de memoria y hasta dijo lo contrario de la
+  guía. La elección juzga ahora la guía del pack contra la
+  vara de su propio perfil de búsqueda, sobre una lista más
+  ancha que la que la respuesta muestra; un pack escrito
+  para otro modelo de búsqueda también abre su guía, y su
+  entrada en la lista de packs dice que es de otro modelo
+  de búsqueda; una fuga de gas contada cuenta ahora como
+  emergencia viva en español, inglés y portugués, y una
+  respuesta de salud apoyada en un pack importado
+  verificado cuenta como apoyada en una fuente de salud.
+  La pestaña Biblioteca tiene su propio botón «Leer las
+  guías», la lista de packs importados tiene otro, y el
+  atajo de la pantalla de Emergencia abre ahora la
+  biblioteca que nombra.
 - **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
   teléfonos emparejados, sin internet y sin servidor. Para emparejar pegas
   el código del otro teléfono (el texto de su QR); un contacto aparece como
@@ -190,7 +211,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.86-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.86-alpha).
+   [versión v0.1.87-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.87-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y
