@@ -15,6 +15,7 @@ vi.mock("ram-monitor", () => ({
 
 import {
   confirmCrashGuardRecord,
+  EMERGENCY_CONTEXT,
   parseCrashGuardRecord,
   planContext,
   safetyForCrashes,
@@ -47,8 +48,10 @@ describe("planContext (la escalera)", () => {
   });
 
   it("si ni el peldaño menor cabe, el plan es el menor con fits=false", () => {
+    // 3,3 GB es la clase ≤4 GiB: desde la 0.1.84 el menor peldaño que
+    // reporta el plan es el de emergencia (1024), no el suelo de 2048.
     const plan = planContext(SPEC, snap(3_300_000_000), { ceiling: 4096 });
-    expect(plan?.nCtx).toBe(2048);
+    expect(plan?.nCtx).toBe(EMERGENCY_CONTEXT);
     expect(plan?.verdict.fits).toBe(false);
   });
 
@@ -68,6 +71,61 @@ describe("planContext (la escalera)", () => {
 
   it("lectura de RAM ciega → null (el llamador no rechaza a ciegas)", () => {
     expect(planContext(SPEC, snap(0), { ceiling: 4096 })).toBeNull();
+  });
+});
+
+describe("planContext: peldaño de emergencia 1024 (0.1.84)", () => {
+  const GiB = 1024 ** 3;
+  // Qwen2.5-0.5B Q4 con la calibración de su clase (n_ubatch 192):
+  // 2048 ≈ 0,501 GiB · 1024 ≈ 0,436 GiB (fp16) / ≈ 0,430 GiB (q8).
+  const Q05 = { fileSizeBytes: 397_808_192, nLayer: 24, nKvHeads: 2, headDim: 64, nUbatch: 192 };
+  // Foto apretada de la Tab A9+ real: manda el término en vivo,
+  // disponible = 1,07 − 0,35 − 0,25 = 0,47 GiB.
+  const TIGHT = { totalRamBytes: 3.54 * GiB, rssBytes: 0.95 * GiB, availBytes: 1.07 * GiB, lowMemThresholdBytes: 0.35 * GiB };
+
+  it("si ni el suelo de 2048 cabe, la clase ≤4 GiB prueba 1024 antes de rechazar", () => {
+    const plan = planContext(Q05, TIGHT, { ceiling: 4096 })!;
+    expect(plan.nCtx).toBe(EMERGENCY_CONTEXT);
+    expect(plan.verdict.fits).toBe(true);
+    expect(plan.note).toContain("emergency context");
+  });
+
+  it("con la KV de q8 el peldaño de emergencia cuesta la mitad de KV", () => {
+    const plan = planContext({ ...Q05, kvBytesPerElement: 1 }, TIGHT, { ceiling: 4096 })!;
+    expect(plan.nCtx).toBe(EMERGENCY_CONTEXT);
+    expect(plan.verdict.fits).toBe(true);
+    expect(plan.verdict.kvCacheBytes).toBe(2 * 24 * 1024 * 2 * 64 * 1);
+  });
+
+  it("fuera de la clase (8 GiB) el suelo sigue siendo 2048: sin peldaño de emergencia", () => {
+    const big: RamSnapshot = { totalRamBytes: 8 * GiB, rssBytes: 1 * GiB, availBytes: 0.9 * GiB, lowMemThresholdBytes: 0.35 * GiB };
+    const plan = planContext(Q05, big, { ceiling: 4096 })!;
+    expect(plan.verdict.availableBytes).toBeCloseTo(0.3 * GiB, -6);
+    expect(plan.nCtx).toBe(2048);
+    expect(plan.verdict.fits).toBe(false);
+  });
+
+  it("con hueco normal el peldaño de emergencia no se usa: manda el mayor que cabe", () => {
+    const roomy: RamSnapshot = { totalRamBytes: 3.54 * GiB, rssBytes: 0.35 * GiB, availBytes: 1.8 * GiB, lowMemThresholdBytes: 0.35 * GiB };
+    const plan = planContext(Q05, roomy, { ceiling: 4096 })!;
+    expect(plan.nCtx).toBe(4096);
+  });
+
+  it("la protección del 06/11 se mantiene en su forma: sin bajar a 1024 el modelo no entra, y a 1024 solo con la KV de q8", () => {
+    // TABLET_BUSY de ramBudget.test.ts (total modelado 3,3 GiB,
+    // disponible 0,55 GiB). El Qwen3-0.6B cuesta ~0,678 GiB a 2048
+    // (el suelo histórico: fuera por mucho) y ~0,524 GiB a 1024 en
+    // fp16: el plan fp16 lo admite SOLO en el peldaño de emergencia,
+    // nunca a un contexto normal con la tableta ocupada. Con la KV
+    // de q8 (la que el primer perfil realmente carga) son ~0,469.
+    const QWEN3 = { fileSizeBytes: 396_705_472, nLayer: 28, nKvHeads: 8, headDim: 128, nUbatch: 128 };
+    const busy: RamSnapshot = { totalRamBytes: 3.3 * GiB, rssBytes: 0.4 * GiB, availBytes: 1.0 * GiB, lowMemThresholdBytes: 0.2 * GiB };
+    const fp16 = planContext(QWEN3, busy, { ceiling: 3072 })!;
+    expect(fp16.nCtx).toBe(EMERGENCY_CONTEXT);
+    expect(fp16.verdict.fits).toBe(true);
+    const q8 = planContext({ ...QWEN3, kvBytesPerElement: 1 }, busy, { ceiling: 3072 })!;
+    expect(q8.nCtx).toBe(EMERGENCY_CONTEXT);
+    expect(q8.verdict.fits).toBe(true);
   });
 });
 

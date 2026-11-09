@@ -62,6 +62,18 @@ export const CONTEXT_LADDER: readonly number[] = [8192, 6144, 4096, 3072, 2048];
 /** El peldaño menor: por debajo de 2048 un chat con fuentes no respira. */
 export const MIN_CONTEXT = 2048;
 
+/**
+ * Peldaño de emergencia (defecto 2026-11-08, segunda vuelta): en
+ * aparatos de ≤4 GiB, si ni el suelo de 2048 cabe, se prueba 1024
+ * antes de rechazar. Un contexto de 1024 con respuestas cortas es
+ * mejor que ningún modelo en una emergencia — la tarjeta ya sugiere
+ * modelos más pequeños; la app agota primero su propia escalera.
+ * Solo en esa clase de aparato y solo como último recurso: por
+ * encima de 4 GiB el suelo sigue siendo 2048, como siempre.
+ */
+export const EMERGENCY_CONTEXT = 1024;
+export const EMERGENCY_CLASS_MAX_RAM_BYTES = 4 * 1024 * 1024 * 1024;
+
 export interface LadderPlan {
   /** El contexto elegido. */
   nCtx: number;
@@ -91,6 +103,14 @@ export function planContext(
   const budget = Math.floor(base.availableBytes * safety);
   // El techo primero; debajo, los peldaños menores que él.
   const rungs = [opts.ceiling, ...CONTEXT_LADDER.filter((c) => c < opts.ceiling)];
+  // Peldaño de emergencia al final, solo en la clase ≤4 GiB y solo si
+  // baja del suelo general (con techo ≤1024 no añade nada).
+  const emergency =
+    snapshot.totalRamBytes > 0 &&
+    snapshot.totalRamBytes <= EMERGENCY_CLASS_MAX_RAM_BYTES &&
+    EMERGENCY_CONTEXT < opts.ceiling &&
+    EMERGENCY_CONTEXT < MIN_CONTEXT;
+  if (emergency) rungs.push(EMERGENCY_CONTEXT);
   let floor: LadderPlan | null = null;
   for (const nCtx of rungs) {
     const estimate = estimateContextBytes({ ...spec, nCtx });
@@ -117,6 +137,9 @@ function planNote(plan: LadderPlan): string {
   const parts: string[] = [];
   if (plan.nCtx < plan.ceiling) {
     parts.push(`context stepped down from ${plan.ceiling} to ${plan.nCtx} to fit this device's RAM`);
+  }
+  if (plan.nCtx < MIN_CONTEXT) {
+    parts.push(`emergency context: below the ${MIN_CONTEXT} floor, short answers only`);
   }
   if (plan.safety < 1) {
     parts.push(`budget at ${Math.round(plan.safety * 100)}% after a memory crash`);

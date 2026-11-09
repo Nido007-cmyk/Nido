@@ -30,7 +30,7 @@ import {
   readProcessorCount,
   toGb,
 } from "./ramBudget";
-import { planContext } from "./memoryLadder";
+import { EMERGENCY_CONTEXT, planContext } from "./memoryLadder";
 
 const GiB = 1024 ** 3;
 const MiB = 1024 ** 2;
@@ -198,21 +198,99 @@ describe("defecto 2026-11-08: ningún modelo cargaba en la tableta de 3,3 GiB", 
 
   it("la escalera lo admite al piso con un peldaño de CrashGuard (0,8) y el 0.5B con dos (0,65)", () => {
     const planQwen3 = planContext(QWEN3, TABLET_CLOSED, { ceiling: 3072, safety: 0.8 })!;
+    // 0.1.84: en esta clase (≤4 GiB) la escalera baja un peldaño más:
+    // a 2048 el Qwen3 cuesta 0,714 GiB y el presupuesto frenado es
+    // 0,76, así que sigue parando en 2048 — el peldaño de emergencia
+    // solo manda cuando ni el suelo cabe (ver la foto apretada).
     expect(planQwen3.verdict.fits).toBe(true);
     expect(planQwen3.nCtx).toBe(2048);
     const plan05 = planContext(QWEN25_05B, TABLET_CLOSED, { ceiling: 4096, safety: 0.65 })!;
     expect(plan05.verdict.fits).toBe(true);
   });
 
-  it("la protección del 06/11 sigue: con otras apps abiertas el Qwen3-0.6B se sigue rechazando", () => {
+  it("la protección del 06/11 se mantiene en su forma: el Qwen3-0.6B no entra a un contexto normal con la tableta ocupada", () => {
+    // TABLET_BUSY: disponible 0,55 GiB. A 2048 (el suelo histórico)
+    // cuesta 0,677 GiB: fuera por mucho. La escalera de la 0.1.84 en
+    // esta clase prueba 1024 antes de rechazar: cuesta 0,524 GiB en
+    // fp16 y el plan lo admite SOLO en ese peldaño de emergencia
+    // (respuestas cortas), nunca a un contexto normal ocupado.
     const plan = planContext(QWEN3, TABLET_BUSY, { ceiling: 3072, safety: 1 })!;
     expect(plan.verdict.availableBytes).toBeCloseTo(0.55 * GiB, -6);
-    expect(plan.verdict.fits).toBe(false);
+    expect(plan.nCtx).toBe(EMERGENCY_CONTEXT);
+    expect(plan.verdict.fits).toBe(true);
   });
 
   it("el embedding e5 ya no paga logits de vocabulario: estima su peso real, no 0,458 GiB", () => {
     const e = estimateContextBytes({ fileSizeBytes: 132_441_664, nCtx: 512 });
     expect(e.totalBytes).toBeLessThan(0.2 * GiB);
+  });
+});
+
+describe("defecto 2026-11-08, segunda vuelta: calibración y crédito simétrico (0.1.84)", () => {
+  // Fotos del aparato REAL del dueño (Tab A9+): el módulo nativo lee
+  // totalMem ≈ 3,54 GiB (no los 3,3 modelados); los picos medidos del
+  // proceso entero con el Qwen3-0.6B fueron 743–760 MB. En esta clase
+  // (≤4,5 GiB) batchForRam da n_ubatch 192 y el residente típico carga
+  // con el perfil kv-q8 (el primero de LLM_MEMORY_PROFILES).
+  const QWEN25_05B_Q4 = { fileSizeBytes: 397_808_192, nLayer: 24, nKvHeads: 2, headDim: 64 };
+  const QWEN25_05B_Q5 = { fileSizeBytes: 420_086_336, nLayer: 24, nKvHeads: 2, headDim: 64 };
+  const REAL_COLD = { totalRamBytes: 3.54 * GiB, rssBytes: 0.35 * GiB, availBytes: 1.8 * GiB, lowMemThresholdBytes: 0.35 * GiB };
+
+  it("la KV del perfil kv-q8 se cobra a 1 byte por elemento: la mitad exacta", () => {
+    expect(estimateKvCacheBytes(24, 4096, 2, 64, 1)).toBe(estimateKvCacheBytes(24, 4096, 2, 64) / 2);
+    const fp16 = estimateContextBytes({ ...QWEN25_05B_Q4, nCtx: 4096 });
+    const q8 = estimateContextBytes({ ...QWEN25_05B_Q4, nCtx: 4096, kvBytesPerElement: 1 });
+    expect(fp16.kvCacheBytes - q8.kvCacheBytes).toBe(fp16.kvCacheBytes / 2);
+    expect(q8.totalBytes).toBeLessThan(fp16.totalBytes);
+  });
+
+  it("el cómputo cobra el n_ubatch declarado: a 192 son ~219 MiB a 4096, no los 256 planos", () => {
+    const flat = estimateContextBytes({ ...QWEN25_05B_Q4, nCtx: 4096 });
+    expect(flat.computeBytes).toBe(256 * MiB);
+    const b192 = estimateContextBytes({ ...QWEN25_05B_Q4, nCtx: 4096, nUbatch: 192 });
+    // 112.721.920 fijos + 192 × 152.064 × 4 = 229.507.072 B (~218,9 MiB).
+    expect(b192.computeBytes).toBe(229_507_072);
+    const b128 = estimateContextBytes({ ...QWEN25_05B_Q4, nCtx: 4096, nUbatch: 128 });
+    expect(b128.computeBytes).toBe(190_578_688);
+    // A 256 declarado, el término coincide con el plano histórico.
+    expect(estimateContextBytes({ ...QWEN25_05B_Q4, nCtx: 4096, nUbatch: 256 }).computeBytes).toBe(256 * MiB);
+    // Sin declarar (o basura), cero cambio de conducta.
+    expect(estimateContextBytes({ ...QWEN25_05B_Q4, nCtx: 4096, nUbatch: 0 }).computeBytes).toBe(256 * MiB);
+  });
+
+  it("aparato real, carga en frío: el 0.5B Q4 cabe a su contexto por defecto (4096)", () => {
+    const v = checkRamBudget({ ...QWEN25_05B_Q4, nCtx: 4096, nUbatch: 192 }, REAL_COLD)!;
+    // byTotal: 3,54 − 0,35 − 2 = 1,19 GiB manda sobre el término en vivo (1,20).
+    expect(v.availableBytes).toBeCloseTo(1.19 * GiB, -6);
+    expect(v.fits).toBe(true);
+    const plan = planContext({ ...QWEN25_05B_Q4, nUbatch: 192 }, REAL_COLD, { ceiling: 4096, safety: 1 })!;
+    expect(plan.nCtx).toBe(4096);
+    expect(plan.verdict.fits).toBe(true);
+  });
+
+  it("aparato real, cambio Q4→Q5 con freno 0,65: el crédito simétrico deja pasar al Q5", () => {
+    // El Q4 residente (kv-q8, 4096, ubatch 192) libera ~0,608 GiB al
+    // salir. La foto del cambio: RSS 0,95 GiB con el Q4 dentro, libre
+    // en vivo 1,1 GiB. Sin crédito en byTotal ese término daría
+    // 0,59 GiB y el disponible lo mandaría el término en vivo (0,50);
+    // con el crédito en los DOS términos el byTotal sube a 1,198 GiB
+    // y el disponible pasa a ser min(1,198, 1,108) = 1.189.960.256 B
+    // (~1,108 GiB): con el freno 0,65 (presupuesto ~0,720 GiB) el Q5
+    // entra a 4096 sin bajar un peldaño; sin crédito su presupuesto
+    // sería 0,325 GiB y no cabría.
+    const releasable = estimateContextBytes({ ...QWEN25_05B_Q4, nCtx: 4096, kvBytesPerElement: 1, nUbatch: 192 }).totalBytes;
+    const switching = { ...REAL_COLD, rssBytes: 0.95 * GiB, availBytes: 1.1 * GiB, releasableBytes: releasable };
+    const sinCredito = checkRamBudget({ ...QWEN25_05B_Q5, nCtx: 2048, nUbatch: 192 }, { ...switching, releasableBytes: 0 })!;
+    expect(sinCredito.availableBytes).toBeCloseTo(0.5 * GiB, -6);
+    const plan = planContext({ ...QWEN25_05B_Q5, nUbatch: 192 }, switching, { ceiling: 4096, safety: 0.65 })!;
+    expect(plan.verdict.availableBytes).toBe(1_189_960_256);
+    expect(plan.nCtx).toBe(4096);
+    expect(plan.verdict.fits).toBe(true);
+  });
+
+  it("el crédito nunca infla el RSS por encima de lo residente (suelo en cero)", () => {
+    const v = checkRamBudget(DEFAULT_MODEL, { totalRamBytes: 12 * GiB, rssBytes: 0.2 * GiB, releasableBytes: 5 * GiB })!;
+    expect(v.availableBytes).toBe(10 * GiB);
   });
 });
 
