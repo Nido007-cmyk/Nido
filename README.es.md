@@ -144,6 +144,17 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   normal. Una sospecha de doble conteo en el guardián de
   choques se probó con una regresión y no existe; el guardián
   no cambia.
+- **El modelo vuelve a responder, y sus respuestas
+  terminan** (0.1.90): una pregunta que ninguna guía cubre
+  la genera el modelo cargado en lugar de rechazarla (el
+  rechazo ahora solo guarda las preguntas de salud y
+  emergencia sin evidencia); el presupuesto de contexto
+  reduce su reserva de generación antes de rendirse, así
+  un cuento corto ya no muere con un error técnico en una
+  ventana de contexto pequeña; y la longitud de respuesta
+  por defecto se duplica, así una explicación en cinco
+  pasos o un correo breve sale entero en lugar de cerrarse
+  antes de tiempo.
 - **Si huele a gas, sale la guía de la fuga, y dos pantallas
   dejan de pisarse** (0.1.89): la versión anterior hizo
   correr la vía palabra por palabra, y en la tableta del
@@ -213,7 +224,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.89-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.89-alpha).
+   [versión v0.1.90-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.90-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y
