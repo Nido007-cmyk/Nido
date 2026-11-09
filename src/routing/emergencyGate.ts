@@ -452,6 +452,13 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "esta haciendo reanimacion", "estan haciendo reanimacion",
     "le esta haciendo reanimacion", "le estan haciendo reanimacion",
     "haciendo reanimacion", "haciendole reanimacion",
+    // 0.1.87 (giro del gas): la FUGA DE GAS contada. El signo es el
+    // olor o la fuga misma, el suceso en curso: el giro de la 0.1.86
+    // no disparaba ninguna cara de la puerta. El tema suelto (el
+    // precio de reparar, cómo funciona un detector) no trae signo y
+    // no declara; las metáforas asentadas del gas van a los vetos.
+    "huele a gas", "huele mucho a gas", "olor a gas", "fuga de gas", "hay una fuga de gas",
+    "esta saliendo gas", "saliendo gas",
   ],
   en: [
     "not breathing", "is not breathing", "stopped breathing", "no longer breathing",
@@ -474,6 +481,11 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // F-1 (CPR practice audit, 2026-11-06): resuscitation already
     // in progress, as a bystander tells it.
     "doing cpr", "doing chest compressions", "performing cpr",
+    // 0.1.87 (giro del gas): THE GAS LEAK, as told — the smell or
+    // the leak itself is the running event. The bare topic (repair
+    // prices, how a detector works) carries no sign and stays out;
+    // the settled gas metaphors are in the vetoes.
+    "smells like gas", "smell of gas", "smell gas", "gas leak", "gas is leaking", "leaking gas",
   ],
   pt: [
     "nao esta respirando", "nao respira", "nao respiram", "parou de respirar", "sem respirar",
@@ -498,6 +510,11 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "esta a fazer rcp", "estao a fazer rcp",
     "esta fazendo reanimacao", "estao fazendo reanimacao", "fazendo reanimacao",
     "fazendo massagem cardiaca",
+    // 0.1.87 (giro do gás): O VAZAMENTO DE GÁS contado — o cheiro
+    // ou o vazamento é o evento em curso («cheiro de gás» se dobra
+    // a «cheiro de gas»). O tema solto (preço do reparo, como
+    // funciona um detector) não traz sinal e não declara.
+    "cheiro de gas", "vazando gas", "vazamento de gas", "esta vazando gas", "sai gas", "saindo gas",
   ],
 };
 
@@ -527,6 +544,11 @@ const EMERGENCY_VETOES = [
   // y el auxiliar que trae («was choking back…») le daba contexto
   // de cuerpo a una frase sin cuerpo.
   "choke back", "choking back", "choked back",
+  // 0.1.87 (giro del gas): las metáforas asentadas del gas («a todo
+  // gas», «dar gas», «full gas» como elogio deportivo) no son una
+  // fuga; sin ellas, el signo «saliendo gas» no las caza, pero
+  // quedan vetadas por nombre como las demás metáforas de la lista.
+  "a todo gas", "full gas", "dar gas",
 ];
 
 const ALL_SIGNS: string[] = Object.values(EMERGENCY_SIGNS).flat();
