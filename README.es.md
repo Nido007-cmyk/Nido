@@ -112,6 +112,19 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   negarse. La pantalla Telemetría de ejecución lista ahora cada
   carga rechazada con las cifras que vio la comprobación, y el
   registro viaja en sus exportaciones JSON y CSV.
+- **El peldaño de emergencia de la comprobación de memoria usa
+  la memoria que está libre de verdad, y descargar con orden ya
+  no cuenta como choque** (0.1.85): en aparatos con 4 GB de
+  memoria o menos, el contexto corto de último recurso se cobra
+  contra la memoria libre que Android reporta en ese momento,
+  sin la marca de agua ni el margen que restan los peldaños
+  normales; descargar un modelo con orden (inactividad, presión
+  del sistema, cambio de modelo) ya no degrada el guardián de
+  choques como si la app hubiera fallado; y un rechazo juzgado
+  sin la lectura de memoria en vivo ahora lo dice en su
+  registro de telemetría. Todos los peldaños normales conservan
+  la cuenta estricta, y la reserva del sistema de 2 GB no
+  cambia.
 - **Habla con otro NIDO por Bluetooth**: mensajes cifrados entre dos
   teléfonos emparejados, sin internet y sin servidor. Para emparejar pegas
   el código del otro teléfono (el texto de su QR); un contacto aparece como
@@ -158,7 +171,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.84-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.84-alpha).
+   [versión v0.1.85-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.85-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y
