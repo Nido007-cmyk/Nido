@@ -190,20 +190,6 @@ const getStyles = (colors: Colors, typography: Typography) =>
       marginTop: 12,
     },
     headingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingRight: 16 },
-    libraryBtn: {
-      marginTop: 8,
-      paddingVertical: 6,
-      paddingHorizontal: 10,
-      borderRadius: 9999,
-      borderWidth: 1,
-      borderColor: colors.emerald.border,
-      backgroundColor: colors.emerald.bgSubtle,
-    },
-    libraryBtnText: {
-      ...typography.ui.caption,
-      color: colors.text.accentEmerald,
-      fontWeight: "700",
-    },
     list: { padding: 12, gap: 10 },
     card: {
       backgroundColor: colors.bg.cardElevated,
