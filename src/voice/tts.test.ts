@@ -50,3 +50,23 @@ describe("cleanForSpeech", () => {
     expect(cleanForSpeech("```\n```")).toBe("");
   });
 });
+
+describe("cleanForSpeech: el razonamiento no se lee (auditoría 0.1.93)", () => {
+  it("lee solo la respuesta de un turno que razonó", () => {
+    const out = cleanForSpeech("<think>\nOkay, 3 boxes of 12 is 36, minus 7 is 29.\n</think>\n\nMe quedan 29 huevos.");
+    expect(out).toBe("Me quedan 29 huevos.");
+  });
+
+  it("plantillas que abren el bloque en el prompt: solo llega el cierre", () => {
+    expect(cleanForSpeech("3 x 12 = 36; 36 - 7 = 29.</think>Quedan 29.")).toBe("Quedan 29.");
+  });
+
+  it("un razonamiento que no terminó no se lee", () => {
+    expect(cleanForSpeech("<think>\nLet me see, the user asks")).toBe("");
+  });
+
+  it("una respuesta sin razonamiento se lee igual que antes", () => {
+    expect(cleanForSpeech("Hola. **Todo** bien.")).toBe("Hola. Todo bien.");
+  });
+});
+
