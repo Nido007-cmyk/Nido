@@ -31,6 +31,8 @@ describe("¿la generación llegó al tope?", () => {
 
   it("parada pedida (usuario o guarda de bucle): no es el tope", () => {
     expect(generationHitLimit({ stopped_limit: false, stopped_eos: false, interrupted: true }, 423, 423)).toBe(false);
+    // El resultado mínimo de un contexto liberado a mitad de generación.
+    expect(generationHitLimit({ interrupted: true }, 423, 423)).toBe(false);
   });
 
   it("sin veredicto del motor (resultado mínimo o build vieja): respaldo por cuenta de llamadas", () => {

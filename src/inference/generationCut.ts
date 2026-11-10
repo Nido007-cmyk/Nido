@@ -44,10 +44,12 @@ export function generationHitLimit(
   callbackCount: number,
   nPredict: number
 ): boolean {
+  // Parada pedida: también el resultado mínimo que llama.rn devuelve
+  // cuando el contexto se liberó a mitad ({ text: "", interrupted: true }).
+  if (native?.interrupted === true) return false;
   const hasNativeVerdict =
     native != null && (native.stopped_limit != null || native.context_full != null || native.stopped_eos != null);
   if (!hasNativeVerdict) return callbackCount >= nPredict;
-  if (native!.interrupted === true) return false;
   if (native!.context_full === true) return true;
   if (!native!.stopped_limit) return false;
   const endedByItself =
