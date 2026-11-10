@@ -144,6 +144,24 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   normal. Una sospecha de doble conteo en el guardián de
   choques se probó con una regresión y no existe; el guardián
   no cambia.
+- **La descarga asienta, el modelo pesado deja de
+  ofrecerse y la última línea se lee entera** (0.1.91):
+  una descarga reintentada tras un fallo asienta con ese
+  solo reintento: la tarjeta ofrece «Seleccionar y
+  usar», porque la comprobación de presencia reintenta
+  una vez el cálculo de la huella cuando el propio
+  cálculo tropieza (una discrepancia real nunca se
+  reintenta hasta darla por buena) y la tarjeta dice el
+  motivo cuando una descarga terminada no puede
+  mostrarse como instalada; un modelo marcado
+  «Demasiado pesado para este dispositivo» ya no ofrece
+  botón de descarga ni de reintento, porque esa marca
+  roja es el veredicto de la propia vía de carga; y el
+  lector de guías, la biblioteca de guías, la práctica
+  de RCP y la hoja de países de emergencia guardan
+  ahora su borde inferior dentro del área segura, así
+  la última línea de una guía larga ya no queda cortada
+  por la mitad por la barra del sistema.
 - **El modelo vuelve a responder, y sus respuestas
   terminan** (0.1.90): una pregunta que ninguna guía cubre
   la genera el modelo cargado en lugar de rechazarla (el
@@ -224,7 +242,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.90-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.90-alpha).
+   [versión v0.1.91-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.91-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y

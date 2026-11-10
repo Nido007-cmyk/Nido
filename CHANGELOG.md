@@ -4,6 +4,41 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.91-alpha - 2026-11-09
+
+Three things the owner's tablet caught in the screens
+around the guide reader and the model catalogue, all of
+them the app stepping on its own work. Reading a guide
+to the very end, the system's white bar cut the last
+line in half: the reader had learned to keep its header
+below the status bar, but its bottom still ran under
+the system bar, and the same gap was hiding in the
+guide library, the CPR practice screen and the
+emergency country sheet. Those screens now keep their
+bottom edge inside the safe area too, so the last line
+of a long guide reads whole.
+
+In Settings, a model marked «too heavy for this device»
+in red still offered its download button, even though
+that red mark is the verdict of the very check that
+loads models: on that device no context step fits, not
+even the emergency one. The card no longer offers a
+download, or a retry, for a model marked red.
+
+And the download that would not settle: after a failed
+download, retrying with the connection back brought the
+whole model down and verified it, yet the card still
+said «download» and only a second full download made it
+offer «select and use». The presence verdict depended
+on hashing the freshly promoted file exactly once; when
+that single calculation stumbled, a good file counted
+as not installed, quietly. The hash now gets one retry
+when the calculation itself fails (a real mismatch is
+never retried into trust), and when a download record
+says something the card cannot show as installed, the
+card says why, in the app's language, instead of
+staying silent.
+
 ## 0.1.90-alpha - 2026-11-09
 
 The model's own answers were being cut off by the app
