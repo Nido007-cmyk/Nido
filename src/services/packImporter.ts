@@ -285,6 +285,18 @@ export async function importPackFromFile(
   if (!originResult.ok) return { status: "rejected", reason: originResult.reason };
   const origin = originResult.origin;
 
+  // Auditoría 0.1.93: el nombre del archivo lo pone quien lo entrega y
+  // no va atado a la firma. Un pack verificado pero RENOMBRADO con el
+  // nombre de un pack del catálogo (otro pack firmado, u otro pin del
+  // catálogo) habría sustituido al del catálogo en disco y se habría
+  // presentado como él («presents as the catalog item it byte-for-byte
+  // is»), fuera de la lista de añadidos. Un nombre del catálogo solo
+  // lo puede ocupar el archivo cuya huella es la de ESA entrada.
+  const catalogSlot = catalogEntryForFilename(filename);
+  if (catalogSlot && !sameSha(catalogSlot.sha256, fileSha256)) {
+    return { status: "rejected", reason: "hash-mismatch" };
+  }
+
   // PI-2 · 4 — the same format acceptance openPack applies.
   const meta = await readPackMeta(sqliteAsset.uri);
   if (!meta) return { status: "rejected", reason: "damaged" };
