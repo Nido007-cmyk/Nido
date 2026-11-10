@@ -38,6 +38,7 @@ import { nativeGateBegin, nativeGateEnd, withNativeLoadGate } from "./nativeGate
 import { trimToCompleteSentences } from "./completeSentences";
 import { parseGemmaReasoning } from "./gemmaReasoning";
 import type { ModelSamplingDefaults } from "../routing/types";
+import { generationHitLimit, type NativeStopSignals } from "./generationCut";
 
 export interface ChatMessageInput {
   role: string;
@@ -1141,7 +1142,8 @@ export class LlamaEngine {
         this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, enableThinking, onToken: wrappedOnToken, stop, timeoutMs, onTimeout: wrappedOnTimeout })
       );
       try {
-        const { text } = await started.completion;
+        const result = await started.completion;
+        const { text } = result;
         const settled = text ?? started.getFull();
         const raw = guardLoops ? trimRepetitionLoop(settled) : settled;
         // Bounty tanda 8 (frase cortada): si la generación consumió
@@ -1150,7 +1152,11 @@ export class LlamaEngine {
         // para quien enseña el texto en vivo (ChatScreen), que aplica
         // la misma regla sobre lo transmitido. La salida estructurada
         // (guardLoops=false) jamás se recorta.
-        this.lastCut = tokenCount >= nPredict;
+        // 0.1.92: el hecho lo dice el motor (stopped_limit /
+        // context_full), no la cuenta de llamadas de onToken, que
+        // llama.rn retiene en saltos de línea y UTF-8 a medias y se
+        // quedaba corta justo cuando había tope (generationCut.ts).
+        this.lastCut = generationHitLimit(result as NativeStopSignals, tokenCount, nPredict);
         const completed = guardLoops ? trimToCompleteSentences(raw, this.lastCut) : raw;
         // Safety net (Qwen3 lane + estudio de modelos): for a noThink
         // model whose native layer ignored enable_thinking=false, and

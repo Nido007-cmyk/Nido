@@ -12,6 +12,7 @@ import {
 } from "../models/downloadErrors";
 import { CatalogModel } from "../models/manifest";
 import { holdWakeLockForDownload } from "./downloadWakeLock";
+import { clearInstallRecord, getInstallRecord } from "../models/installState";
 
 /**
  * Module-level (not component-local) download state, so it survives the
@@ -217,6 +218,33 @@ export async function restartDownload(asset: CatalogModel): Promise<void> {
   downloadTimestamps.delete(asset.id);
   notify();
   await startDownload(asset);
+}
+
+/**
+ * 0.1.92: borra la parte descargada de una descarga en pausa y su asiento
+ * en el diario, sin empezar otra. Para la tarjeta de un modelo en rojo:
+ * desde la 0.1.90 no ofrece descargar, así que una parte descargada antes
+ * quedaba en el disco sin forma de continuarla ni de borrarla. Misma
+ * secuencia cancelar-esperar-borrar que restartDownload; nunca toca la
+ * ruta final de un modelo instalado.
+ */
+export async function discardPartialDownload(asset: CatalogModel): Promise<void> {
+  clearAutoRetry(asset.id);
+  const stale = inFlight.get(asset.id);
+  await modelManager.signalCancelDownload(asset);
+  if (stale) {
+    await stale.catch(() => {});
+  }
+  await modelManager.deletePartialDownload(asset);
+  const record = await getInstallRecord(asset.id).catch(() => null);
+  if (record && record.status !== "installed") {
+    await clearInstallRecord(asset.id).catch(() => {});
+  }
+  inFlight.delete(asset.id);
+  inFlightAssets.delete(asset.id);
+  state.delete(asset.id);
+  downloadTimestamps.delete(asset.id);
+  notify();
 }
 
 /**

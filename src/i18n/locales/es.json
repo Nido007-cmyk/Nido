@@ -32,6 +32,7 @@
     "developmentCopied": "Dirección copiada"
   },
   "installNotice": {
+    "pausedTooHeavy": "Hay una parte descargada ({{done}}) de un modelo que no cabe en este dispositivo. Puedes borrarla para liberar espacio.",
     "integrity": "El archivo descargado no coincidió con su huella y se borró. Si descargas otra vez, llegará una copia nueva.",
     "interrupted": "La última descarga se interrumpió antes de terminar. Si descargas otra vez, empezará desde el principio.",
     "sizeMismatch": "La última descarga llegó incompleta y se borró. Si descargas otra vez, llegará una copia nueva.",
@@ -42,6 +43,7 @@
     "failed": "La última descarga no terminó. Puedes intentarlo otra vez."
   },
   "catalogItemCard": {
+    "discardPartial": "Borrar lo descargado",
     "activeNote": "En uso actualmente",
     "badge": {
       "active": "Activo",
@@ -541,6 +543,7 @@
       "indexed": "«{{name}}» indexado en la base de conocimiento offline",
       "loadFailed": "No se pudo cargar «{{name}}»: {{error}}",
       "removed": "Se eliminó «{{name}}»",
+      "partialDiscarded": "Se borró la parte descargada de {{name}}.",
       "resetFailed": "Falló el restablecimiento: {{error}}",
       "resetCancelled": "No se borró nada: se canceló el desbloqueo."
     }
