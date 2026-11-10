@@ -12,6 +12,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
 import type { Colors } from "../theme/colors";
 import type { Typography } from "../theme/typography";
@@ -25,6 +26,12 @@ interface Props {
 }
 
 export function SourceReader({ chunkId, onClose }: Props) {
+  // 0.1.90: este <Modal> abre ventana propia y no hereda la caja
+  // segura de la raíz de App: la pantalla suma el inset de arriba a
+  // su padding de diseño y el contenido desplazable suma el de
+  // abajo al suyo, para que ni la cabecera ni la última línea de la
+  // guía queden bajo las barras del sistema.
+  const insets = useSafeAreaInsets();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
@@ -53,7 +60,7 @@ export function SourceReader({ chunkId, onClose }: Props) {
 
   return (
     <Modal visible={chunkId !== null} animationType="slide" onRequestClose={onClose}>
-      <View style={styles.screen}>
+      <View style={[styles.screen, { paddingTop: spacing.lg + insets.top }]}>
         <View style={styles.header}>
           <Text style={styles.title} numberOfLines={2}>
             {doc?.title ?? t("sourceReader.title")}
@@ -67,7 +74,7 @@ export function SourceReader({ chunkId, onClose }: Props) {
         ) : state === "missing" || !doc ? (
           <Text style={styles.body}>{t("sourceReader.notFound")}</Text>
         ) : (
-          <ScrollView contentContainerStyle={styles.scroll}>
+          <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: spacing.md + insets.bottom }]}>
             <Text style={styles.hint}>{t("sourceReader.hint")}</Text>
             {doc.parts.map((p) => (
               <View key={p.id} style={p.used ? styles.usedPart : styles.part}>

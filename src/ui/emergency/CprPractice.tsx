@@ -25,6 +25,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { activateKeepAwake, deactivateKeepAwake } from "expo-keep-awake";
 import { hasCprCamera, startBeepingAt, startCprCamera, stopBeeping, type CameraSamples } from "nido-cpr";
 import { createCameraSession, type CameraSession } from "../../cpr/cameraSession";
@@ -68,6 +69,11 @@ interface Props {
 }
 
 export function CprPractice({ visible, onClose }: Props) {
+  // 0.1.90: este <Modal> abre ventana propia y no hereda la caja
+  // segura de la raíz de App: la raíz suma los insets de arriba y de
+  // abajo del sistema, sobre su diseño (la cabecera y el final del
+  // contenido quedaban bajo las barras del sistema).
+  const insets = useSafeAreaInsets();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t, i18n } = useTranslation();
@@ -267,7 +273,7 @@ export function CprPractice({ visible, onClose }: Props) {
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={close}>
-      <View style={styles.root}>
+      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.title} accessibilityRole="header">{t("cpr.practice.title")}</Text>

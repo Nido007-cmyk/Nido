@@ -87,6 +87,12 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
+// 0.1.90: el área segura queda fijada (arriba 24, abajo 34) para
+// probar que la raíz del modal a pantalla completa la aplica.
+jest.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({ top: 24, bottom: 34, left: 0, right: 0 }),
+}));
+
 import { AppState } from "react-native";
 import { CprPractice } from "./CprPractice";
 import { CPR_GUIDE } from "../../cpr/cprCoach";
@@ -106,6 +112,20 @@ describe("práctica de RCP", () => {
     expect(screen.getByText("cpr.practice.banner")).toBeTruthy();
     expect(screen.getByText(`• ${CPR_GUIDE.es.before[0]}`)).toBeTruthy();
     expect(screen.queryByText("cpr.call")).toBeNull();
+  });
+
+  it("0.1.90: la raíz aplica los márgenes del área segura (arriba y abajo)", async () => {
+    const view = await render(<CprPractice visible onClose={() => {}} />);
+    const flatStyle = (s) => Object.assign({}, ...(Array.isArray(s) ? s : [s]).filter(Boolean));
+    const found = [];
+    const walk = (n) => {
+      if (!n || typeof n !== "object") return;
+      const st = flatStyle(n.props?.style);
+      if (st.paddingTop === 24 && st.paddingBottom === 34) found.push(n);
+      (n.children ?? []).forEach(walk);
+    };
+    walk(view.toJSON());
+    expect(found.length).toBeGreaterThanOrEqual(1);
   });
 
   it("empezar pita a 110 sin límite (solo compresiones); parar lo apaga", async () => {

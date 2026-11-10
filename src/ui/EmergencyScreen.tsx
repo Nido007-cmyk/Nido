@@ -16,6 +16,7 @@ import { useTheme } from "./theme/ThemeContext";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { loadAllPackFacts } from "../rag/packs";
 import { crisisCard, emergencyCard, emergencyRegions, outdatedPackNote, type FactLang, type PackFact, type PackRegion } from "../rag/packFacts";
@@ -36,6 +37,10 @@ function toFactLang(lang: string | undefined): FactLang {
 }
 
 export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
+  // 0.1.90: la hoja de países es un <Modal> anclado abajo con su
+  // propia ventana; su padding inferior de diseño (12) no bastaba
+  // contra la barra del sistema. La hoja suma el inset de abajo.
+  const insets = useSafeAreaInsets();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t, i18n } = useTranslation();
@@ -293,7 +298,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
 
       <Modal visible={picking} transparent animationType="slide" onRequestClose={() => setPicking(false)}>
         <View style={styles.sheetBackdrop}>
-          <View style={styles.sheet}>
+          <View style={[styles.sheet, { paddingBottom: 12 + insets.bottom }]}>
             <View style={styles.sheetHeader}>
               <Text style={styles.cardTitle}>{t("emergency.chooseCountry")}</Text>
               <Pressable onPress={() => setPicking(false)} accessibilityRole="button" accessibilityLabel={t("emergency.close")} style={styles.sheetClose}>

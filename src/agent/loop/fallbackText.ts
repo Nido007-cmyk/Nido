@@ -89,7 +89,31 @@ export function agentFallbackText(kind: FallbackKind, lang: FallbackLang = "es")
   return TEXTS[kind][lang] ?? TEXTS[kind].es;
 }
 
-/** Normaliza un tag de idioma de la UI ("es-MX", "pt-BR", "en") a es/en/pt. */
+/**
+ * 0.1.91 (familia 6): ¿lleva nota de corte la respuesta servida, y
+ * cuál? La nota se ata al HECHO de la generación (consumió todo su
+ * presupuesto de tokens, `lastGenerationWasCut`), nunca a la
+ * ASIGNACIÓN. Hasta la 0.1.90 la nota de espacio se disparaba con
+ * `spaceCut` solo: `degradableGenTokens` marca `spaceCut` cuando el
+ * turno recibe menos tokens de los DESEADOS (el tope por defecto,
+ * 1024) — y en el peldaño de emergencia (nCtx 1024) el prompt
+ * siempre deja menos de 1024, así que la nota salía en TODOS los
+ * turnos de la ventana estrecha, también bajo respuestas de tres
+ * frases cerradas con su punto (foto del dueño, Tab A9+,
+ * 2026-11-09: tres de tres). Degradar la asignación no acorta
+ * ninguna respuesta que termina natural dentro de lo asignado:
+ * sin consumo total no hay corte y no hay nota. Si el consumo fue
+ * total, manda la causa: con degradación, la de espacio; sin ella,
+ * la del límite del turno.
+ */
+export function generationCutNote(
+  spaceCut: boolean,
+  genWasCut: boolean
+): "spaceShortened" | "answerCut" | null {
+  if (!genWasCut) return null;
+  return spaceCut ? "spaceShortened" : "answerCut";
+}
+
 export function toFallbackLang(tag: string | null | undefined): FallbackLang {
   const t = (tag ?? "").toLowerCase();
   if (t.startsWith("en")) return "en";
