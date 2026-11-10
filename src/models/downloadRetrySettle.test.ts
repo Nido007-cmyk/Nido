@@ -19,9 +19,18 @@
 // dio mtime al registrar la instalación) y su PRIMERA lectura del
 // archivo recién promovido falla una vez (la condición transitoria
 // del aparato). El asentado debe absorber ese fallo: presente tras
-// el reintento, sin tercer toque. Y una llamada más a descargar
-// sobre lo ya instalado y verificado no debe crear transferencia
-// alguna (la guarda que installBundled ya tenía y aquí faltaba).
+// el reintento, sin tercer toque — y como la tarjeta solo ofrece
+// «Descargar» cuando statusOf dice no-presente, asentado el estado
+// la tocada que arrancó la re-descarga ya no existe en la UI (la
+// regresión de componente lo fija: presente → «Seleccionar y usar»).
+//
+// Nota de alcance: una primera versión de la cura añadió una guarda
+// de ya-instalado en downloadCatalogModel y se RETIRÓ: la
+// re-descarga explícita de un modelo instalado es un comportamiento
+// sellado de la casa (la suite installReliability, Meta #1, fija que
+// corre y que su fallo nunca destruye la instalación válida). El
+// defecto del dueño era el estado que no asentaba, no la existencia
+// de la operación.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -189,7 +198,7 @@ describe("la secuencia del dueño: fallo sin red, reintento con red, asentado si
     hoisted.destPath = assetPath(ASSET);
   });
 
-  it("el reintento que completa deja el modelo instalado y presente, y descargar otra vez es un no-op", async () => {
+  it("el reintento que completa deja el modelo instalado y presente, sin tercer toque", async () => {
     const mm = new ModelManager([ASSET]);
 
     // (1) Modo avión: la transferencia muere a 0 bytes; el diario lo dice.
@@ -209,13 +218,9 @@ describe("la secuencia del dueño: fallo sin red, reintento con red, asentado si
     const afterRetry = await mm.statusOf(ASSET);
     expect(afterRetry.present).toBe(true);
     expect(afterRetry.checksumOk).toBe(true);
-
-    // (3) Sin tercer toque hace falta; y si llega (el dueño tocó de
-    // más por el defecto), es un no-op: ninguna transferencia nueva.
-    const createdBefore = hoisted.resumablesCreated;
-    await mm.downloadCatalogModel(ASSET);
-    expect(hoisted.resumablesCreated).toBe(createdBefore);
-    expect((await mm.statusOf(ASSET)).present).toBe(true);
+    // (3) El diario quedó en «installed»: el estado que la tarjeta
+    // lee para ofrecer «Seleccionar y usar» en vez de «Descargar».
+    expect((await getInstallRecord(ASSET.id))?.status).toBe("installed");
   });
 
   it("la integridad no se negocia: unos bytes que no coinciden jamás cuentan como instalados", async () => {
