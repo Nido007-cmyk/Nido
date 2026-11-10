@@ -4,6 +4,73 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.92-alpha - 2026-11-10
+
+An audit of the 0.1.91 package against the code. The
+release facts check out (tag, tree, APK size and hash),
+and so do the cures of families 1 to 5. Family 6 had a
+hole, family 7 got the instrument it was missing, and
+two loose ends from the download families are tied.
+
+**A cut answer always says so.** 0.1.91 tied the «I had
+to shorten this answer» note to one fact: the generation
+used up its whole token budget. But that fact was
+deduced by counting the streamed pieces, and the engine
+does not send one piece per token: it holds a piece back
+when a character is half written or when the text could
+be the start of a stop sequence, which on the plain
+prompt path is every line break. The count came up
+short exactly when the limit was hit, so an answer
+really stopped by the limit could lose both its note
+and its trim to the last whole sentence. The fact is now
+read from the engine's own result (stopped by the limit,
+or the context window filled up), and an end of turn
+that lands on the very last token is no longer taken for
+a cut. The piece count stays only as a fallback.
+
+**Sums get worked out.** The owner said the answers were
+weak, and the package had no way to measure why. This
+release builds one: the catalog's exact Qwen3-0.6B file,
+the messages the app's own code assembles, and answers
+read by program, never scored by hand. Lower
+temperature, a rewritten or removed «no sources» note, a
+shorter system prompt and no style reminder moved
+nothing. Letting the model reason did: on ten
+calculation questions, correct answers went from 16 of
+60 to 41 of 60. Reasoning on every turn is not an
+option (four times the tokens, and one answer in five
+drifted into English), so only a calculation turn
+reasons, only on Qwen3-0.6B, only without sources and
+with enough room; if the reasoning leaves no answer, the
+turn is answered directly as before. The study, its
+numbers and its limits are in
+docs/ESTUDIO_RESPUESTAS_0.1.92.md; the scripts and raw
+answers are in scripts/benchmarks/house-llm.
+
+**A heavy model's leftover download can be deleted.**
+Since 0.1.90 a model marked «too heavy» offers no
+download button. A download paused before that stayed on
+disk with no way to continue it or remove it, and its
+card still said «if you download again…». The card now
+says a part is taking up space and offers to delete it;
+the notices that promise a button are no longer shown on
+a red model.
+
+**One failing check no longer blanks the others.** The
+status of all models was computed together, so a single
+check that threw left every card without its state. Each
+model now answers for itself; one that cannot be checked
+counts as not present, with no verdict and nothing
+deleted.
+
+Not measured: none of this ran on a phone. How long a
+reasoning turn takes on the owner's tablet, and how
+llama.rn behaves with reasoning switched on, are for the
+physical round. The token estimator was also measured:
+it overestimates these prompts by about 60 % (537 to 562
+estimated against 327 to 359 real), which is safe and
+was left alone.
+
 ## 0.1.91-alpha - 2026-11-09
 
 Four things the owner's tablet caught: three in the
