@@ -91,7 +91,7 @@ import { runAgentLoop, assertPromptBudget, estimatePromptTokens, agentExitNeedsG
 import { buildToolHandlers, searchPhoneContacts } from "../agent/tools/handlers";
 import { matchSmallTalk, smallTalkSessionTitle } from "../agent/loop/smallTalk";
 import { matchSafetyAnswer, unknownCountryText } from "../agent/loop/safetyAnswers";
-import { agentFallbackText, toFallbackLang } from "../agent/loop/fallbackText";
+import { agentFallbackText, generationCutNote, toFallbackLang } from "../agent/loop/fallbackText";
 import { describePolicyConfirmation } from "../agent/policy/confirmText";
 import {
   verifyGroundedAnswer,
@@ -2189,15 +2189,22 @@ export function ChatScreen({
       // (fixedGenWasCut): la nota es la hermana «answerCut» — llegó el
       // límite de un turno, no faltó espacio — y ofrece continuar. Si
       // el espacio SÍ obligó a degradar, manda la de espacio.
+      // 0.1.91 (familia 6): la nota se ata al HECHO, no a la
+      // asignación. Con solo `fixedGenSpaceCut` la nota salía en
+      // todos los turnos de la ventana estrecha (la asignación casi
+      // siempre degrada contra el deseo de 1024), también bajo
+      // respuestas cortas con fin natural: la decisión vive en
+      // generationCutNote — sin consumo total no hay nota.
+      const cutNote = generationCutNote(fixedGenSpaceCut, fixedGenWasCut);
       if (
-        (fixedGenSpaceCut || fixedGenWasCut) &&
+        cutNote !== null &&
         !wasStopped &&
         grounding !== "abstained" &&
         assistantText.trim().length > 0 &&
         assistantText !== healthSafeText(uiLang) &&
         assistantText !== noSourcesAnswer(uiLang)
       ) {
-        assistantText = `${assistantText}\n\n${agentFallbackText(fixedGenSpaceCut ? "spaceShortened" : "answerCut", uiLang)}`;
+        assistantText = `${assistantText}\n\n${agentFallbackText(cutNote, uiLang)}`;
         setMessages((prev) =>
           prev.map((m) => (m.id === assistantId ? { ...m, text: assistantText } : m))
         );

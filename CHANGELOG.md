@@ -6,9 +6,10 @@ All notable changes to NIDO are recorded here. Versions follow
 
 ## 0.1.91-alpha - 2026-11-09
 
-Three things the owner's tablet caught in the screens
-around the guide reader and the model catalogue, all of
-them the app stepping on its own work. Reading a guide
+Four things the owner's tablet caught: three in the
+screens around the guide reader and the model
+catalogue, and one in the note the app adds under its
+own answers. Reading a guide
 to the very end, the system's white bar cut the last
 line in half: the reader had learned to keep its header
 below the status bar, but its bottom still ran under
@@ -38,6 +39,19 @@ never retried into trust), and when a download record
 says something the card cannot show as installed, the
 card says why, in the app's language, instead of
 staying silent.
+
+And the note that cried cut: under answers the model
+had finished, short answers closed with their own full
+stop, the app kept adding «I had to shorten this
+answer because this turn ran low on space». It had not
+shortened anything. The note fired whenever the turn
+was assigned fewer generation tokens than the default
+ask, and on a small context window that is nearly
+every turn, however short the answer. The note now
+fires only when a generation really consumed its whole
+budget: an answer that ends naturally inside what it
+was assigned carries no note, and one stopped by the
+limit still says so.
 
 ## 0.1.90-alpha - 2026-11-09
 

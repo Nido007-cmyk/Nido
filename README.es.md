@@ -161,7 +161,12 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   de RCP y la hoja de países de emergencia guardan
   ahora su borde inferior dentro del área segura, así
   la última línea de una guía larga ya no queda cortada
-  por la mitad por la barra del sistema.
+  por la mitad por la barra del sistema; y la nota de
+  «quedó poco espacio» bajo la respuesta del modelo
+  sale ahora solo cuando una generación consumió de
+  verdad todo su presupuesto de tokens, no cuando al
+  turno solo se le asignó menos que el valor por
+  defecto.
 - **El modelo vuelve a responder, y sus respuestas
   terminan** (0.1.90): una pregunta que ninguna guía cubre
   la genera el modelo cargado en lugar de rechazarla (el
