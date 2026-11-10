@@ -144,6 +144,23 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   normal. Una sospecha de doble conteo en el guardián de
   choques se probó con una regresión y no existe; el guardián
   no cambia.
+- **Las cuentas se piensan, y una respuesta cortada
+  siempre lo dice** (0.1.92): en el Qwen3-0.6B, una
+  pregunta que es una cuenta (dos o más cifras y un
+  «cuántos» o «a qué hora») deja ahora que el modelo
+  razone antes de responder, solo en ese turno; medido
+  con el archivo real del modelo y el prompt de la
+  propia app, las respuestas correctas pasaron de 16 de
+  60 a 41 de 60, y si el razonamiento no deja respuesta
+  el turno se responde directo, como antes. El hecho de
+  «la respuesta se cortó» se lee ahora de la señal de
+  parada del propio motor en vez de contar los trozos
+  transmitidos, que contaba de menos y podía dejar sin
+  su nota a una respuesta parada por el tope. Un modelo
+  marcado «Demasiado pesado» que aún tiene una parte
+  descargada lo dice y ofrece borrarla, y un modelo cuya
+  comprobación falla ya no deja en blanco el estado de
+  los demás.
 - **La descarga asienta, el modelo pesado deja de
   ofrecerse y la última línea se lee entera** (0.1.91):
   una descarga reintentada tras un fallo asienta con ese
@@ -247,7 +264,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.91-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.91-alpha).
+   [versión v0.1.92-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.92-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y

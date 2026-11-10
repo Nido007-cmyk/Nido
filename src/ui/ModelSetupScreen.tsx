@@ -38,6 +38,7 @@ import { closePack, prepareVectorIndexes } from "../rag/packs";
 import { deletePackIndexes } from "../rag/vectorIndex";
 import {
   startDownload,
+  discardPartialDownload,
   getDownloadState,
   isDownloading,
   subscribeDownloads,
@@ -125,6 +126,8 @@ export function ModelSetupScreen(props: Props) {
   const [outdatedIds, setOutdatedIds] = useState<Record<string, boolean>>({});
   // 0.1.90 (familia 3): el motivo durable por tarjeta (installNoticeFor).
   const [noticeById, setNoticeById] = useState<Record<string, string>>({});
+  // 0.1.92: bytes de una descarga en pausa que siguen en el disco.
+  const [partialById, setPartialById] = useState<Record<string, number>>({});
   const [activeIds, setActiveIds] = useState<Partial<Record<AssetKind, string>>>({});
   const [toast, setToast] = useState<string | null>(null);
   const [dangerModalVisible, setDangerModalVisible] = useState(false);
@@ -222,10 +225,12 @@ export function ModelSetupScreen(props: Props) {
     // calculaban y se descartaban antes de la tarjeta: una descarga
     // que no asentaba volvía a «Descargar recurso» en silencio.
     const notices: Record<string, string> = {};
+    const partials: Record<string, number> = {};
     for (const s of statuses) {
       if (s.present || s.outdated) continue;
       const record = await getInstallRecord(s.asset.id).catch(() => null);
       const notice = installNoticeFor(s, record);
+      if (notice?.kind === "paused") partials[s.asset.id] = notice.doneBytes;
       if (notice) {
         notices[s.asset.id] =
           notice.kind === "paused"
@@ -237,6 +242,7 @@ export function ModelSetupScreen(props: Props) {
       }
     }
     setNoticeById(notices);
+    setPartialById(partials);
 
     const next: Partial<Record<AssetKind, string>> = {};
     for (const kind of LLM_EMBEDDING_KINDS) {
@@ -391,9 +397,10 @@ export function ModelSetupScreen(props: Props) {
         speedBytesPerSec: dl?.speedBytesPerSec,
         etaSeconds: dl?.etaSeconds,
         statusNotice: noticeById[item.id] ?? null,
+        partialBytes: partialById[item.id] ?? null,
       };
     },
-    [presence, outdatedIds, noticeById]
+    [presence, outdatedIds, noticeById, partialById]
   );
 
   const download = useCallback(
@@ -435,6 +442,17 @@ export function ModelSetupScreen(props: Props) {
       await modelManager.deleteModel(model);
       await refreshStatus();
       setToast(t("modelSetupScreen.toasts.removed", { name: model.label }));
+    },
+    [refreshStatus, t]
+  );
+
+  // 0.1.92: borra la parte descargada de un modelo en rojo (que ya no
+  // ofrece descargar) para devolver el espacio.
+  const discardPartial = useCallback(
+    async (model: CatalogModel) => {
+      await discardPartialDownload(model).catch(() => {});
+      await refreshStatus();
+      setToast(t("modelSetupScreen.toasts.partialDiscarded", { name: model.label }));
     },
     [refreshStatus, t]
   );
@@ -744,6 +762,7 @@ export function ModelSetupScreen(props: Props) {
                   onDownload={download}
                   onUse={useModel}
                   onRemove={remove}
+                  onDiscardPartial={discardPartial}
                   activating={activatingId === item.id}
                   busy={activatingId !== null}
                 />

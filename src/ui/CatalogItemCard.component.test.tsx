@@ -152,3 +152,58 @@ describe("CatalogItemCard: la familia 3 en la tarjeta", () => {
     expect(screen.queryByText("La última descarga se interrumpió antes de terminar.")).toBeNull();
   });
 });
+
+describe("CatalogItemCard: un modelo en rojo con una parte ya descargada (0.1.92)", () => {
+  const red = () => byId("qwen2.5-7b-instruct-q4km");
+
+  it("dice que hay una parte que ocupa sitio y ofrece borrarla; sigue sin ofrecer descargar", async () => {
+    const onDiscardPartial = jest.fn();
+    const row = {
+      present: false,
+      downloading: false,
+      progress: 0,
+      error: null,
+      statusNotice: "Ya hay una parte descargada. Si descargas otra vez, continuará desde ahí.",
+      partialBytes: 1200 * 1024 * 1024,
+    };
+    await render(<CatalogItemCard item={red()} row={row} {...baseProps} onDiscardPartial={onDiscardPartial} />);
+    expect(await screen.findByText("installNotice.pausedTooHeavy")).toBeTruthy();
+    // El aviso que promete «si descargas otra vez…» no se pinta: no hay botón de descarga.
+    expect(screen.queryByText(row.statusNotice)).toBeNull();
+    expect(screen.queryByText("catalogItemCard.downloadAsset")).toBeNull();
+    fireEvent.press(screen.getByText("catalogItemCard.discardPartial"));
+    expect(onDiscardPartial).toHaveBeenCalledTimes(1);
+    expect(onDiscardPartial.mock.calls[0][0].id).toBe("qwen2.5-7b-instruct-q4km");
+  });
+
+  it("en rojo y sin parte en disco: ni aviso de «descarga otra vez» ni botón de borrar", async () => {
+    const row = {
+      present: false,
+      downloading: false,
+      progress: 0,
+      error: null,
+      statusNotice: "La última descarga se interrumpió. Si descargas otra vez, empezará desde el principio.",
+      partialBytes: null,
+    };
+    await render(<CatalogItemCard item={red()} row={row} {...baseProps} onDiscardPartial={() => {}} />);
+    expect(await screen.findByText("catalogItemCard.compat.red")).toBeTruthy();
+    expect(screen.queryByText(row.statusNotice)).toBeNull();
+    expect(screen.queryByText("catalogItemCard.discardPartial")).toBeNull();
+  });
+
+  it("en verde, el aviso durable y el botón de descarga siguen como en la 0.1.91", async () => {
+    const row = {
+      present: false,
+      downloading: false,
+      progress: 0,
+      error: null,
+      statusNotice: "Ya hay una parte descargada. Si descargas otra vez, continuará desde ahí.",
+      partialBytes: 100 * 1024 * 1024,
+    };
+    await render(<CatalogItemCard item={byId("qwen3-0.6b-q4km")} row={row} {...baseProps} onDiscardPartial={() => {}} />);
+    expect(await screen.findByText(row.statusNotice)).toBeTruthy();
+    expect(screen.getByText("catalogItemCard.downloadAsset")).toBeTruthy();
+    expect(screen.queryByText("catalogItemCard.discardPartial")).toBeNull();
+  });
+});
+

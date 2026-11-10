@@ -135,6 +135,21 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   suspected double counting in the crash guard was tested
   with a regression and does not exist; the guard is
   unchanged.
+- **Sums get worked out, and a cut answer always says
+  so** (0.1.92): on Qwen3-0.6B, a question that is a
+  calculation (two or more figures and a «how many» or
+  «what time») now lets the model reason before it
+  answers, on that turn only; measured with the real
+  model file and the app's own prompt, correct answers
+  went from 16 of 60 to 41 of 60, and if the reasoning
+  leaves no answer the turn is answered directly as
+  before. The «answer was cut» fact is now read from the
+  engine's own stop signal instead of counting streamed
+  pieces, which undercounted and could leave an answer
+  stopped by the limit without its note. A model marked
+  «too heavy» that still has a partly downloaded file
+  says so and offers to delete it, and one model whose
+  check fails no longer blanks the state of the others.
 - **Downloads settle, heavy models stop offering, and
   the last line reads whole** (0.1.91): a download
   retried after a failure now settles with that one
@@ -230,7 +245,7 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.91-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.91-alpha).
+   [v0.1.92-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.92-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4

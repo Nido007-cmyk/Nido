@@ -43,6 +43,7 @@ import { handleMemoryPressure } from "../inference/memoryPressure";
 import { retrieve, assemblePrompt, RetrievedChunk, ConversationTurn } from "../rag/retrieve";
 import { assembleChatMessages, contextualizeQuery, degradableGenTokens, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
 import { classifyTask, isRetrievalIrrelevant, isCreativeRequest } from "../routing/classify";
+import { shouldReasonThisTurn } from "../routing/calculationQuestion";
 import {
   gatePreemptsDeepResearch,
   healthSafeProvenance,
@@ -1921,11 +1922,32 @@ export function ChatScreen({
           // obligó al recorte, la respuesta servida lleva su nota.
           const availableGen = nCtx - estimatePromptTokens(promptText) - 64;
           const { genTokens, spaceCut } = degradableGenTokens(desiredGen, availableGen);
+          // 0.1.92 (familia 7): el turno de cuentas razona, en el modelo
+          // donde se midió que compensa (calculationQuestion.ts). El
+          // resto de turnos y de modelos, byte a byte como antes.
+          const reasonThisTurn = shouldReasonThisTurn({
+            modelId: loadedEntry?.id,
+            usesChatTemplate: useChatTemplate,
+            sourceCount: c.length,
+            genTokens,
+            query,
+          });
           const genInput = useChatTemplate
-            ? { messages: directMessages!, nPredict: genTokens, onToken, ...sampling }
+            ? { messages: directMessages!, nPredict: genTokens, onToken, ...sampling, ...(reasonThisTurn ? { enableThinking: true } : {}) }
             : { prompt: directPrompt!, nPredict: genTokens, onToken, ...sampling };
           assertPromptBudget([{ role: "user", content: promptText }], nCtx, genTokens, "chat-directo");
           await llamaEngine.generate(genInput);
+          // 0.1.92: si el turno razonó y se quedó sin respuesta (el
+          // razonamiento se comió el presupuesto: medido, 3-4 de cada
+          // 60), se responde directo como hasta la 0.1.91 en vez de
+          // dejar «No pude generar una respuesta». Solo una vez.
+          if (reasonThisTurn && !stopRequestedRef.current && stripThinking(assistantText).trim().length === 0) {
+            flushTokenBuffer();
+            assistantText = "";
+            tokenBuffer = "";
+            setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: "" } : m)));
+            await llamaEngine.generate({ messages: directMessages!, nPredict: genTokens, onToken, ...sampling });
+          }
           // 0.1.90 (familia 5): si la generación consumió todo su
           // presupuesto, el motor lo deja registrado (lastCut); se lee
           // ahora, con las generaciones en serie, y es de ESTE turno.

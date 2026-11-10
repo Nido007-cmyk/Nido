@@ -36,6 +36,7 @@
     "deleteBusy": "Espere a resposta terminar para apagar este chat."
   },
   "installNotice": {
+    "pausedTooHeavy": "Há uma parte baixada ({{done}}) de um modelo que não cabe neste dispositivo. Você pode apagá-la para liberar espaço.",
     "integrity": "O arquivo baixado não coincidiu com sua impressão digital e foi apagado. Se baixar de novo, chegará uma cópia nova.",
     "interrupted": "O último download foi interrompido antes de terminar. Se baixar de novo, começará do início.",
     "sizeMismatch": "O último download chegou incompleto e foi apagado. Se baixar de novo, chegará uma cópia nova.",
@@ -46,6 +47,7 @@
     "failed": "O último download não terminou. Você pode tentar de novo."
   },
   "catalogItemCard": {
+    "discardPartial": "Apagar o que foi baixado",
     "calculating": "Calculando…",
     "removeFromListTitle": "Remover da lista?",
     "removeFromListMessage": "Este modelo não foi baixado. Ele será removido da sua lista.",
@@ -144,6 +146,7 @@
     "toasts": {
       "indexed": "\"{{name}}\" indexado na base de conhecimento offline",
       "removed": "\"{{name}}\" removido",
+      "partialDiscarded": "A parte baixada de {{name}} foi apagada.",
       "activeSet": "Modelo {{kind}} ativo definido como \"{{name}}\"",
       "loadFailed": "Não foi possível carregar \"{{name}}\": {{error}}",
       "resetFailed": "Falha ao redefinir: {{error}}",

@@ -1,0 +1,36 @@
+// TEMPORAL (no se sube): vuelca los mensajes reales de la ruta fija para el banco del anexo F.
+import { it, vi } from "vitest";
+import { writeFileSync } from "fs";
+vi.mock("ram-monitor", () => ({ getDeviceTotalRamBytes: () => 0, getMemoryInfo: () => ({ rssBytes: 0 }) }));
+import { assembleChatMessages, degradableGenTokens } from "./rag/pure";
+import { getPersonality } from "./constants/personalities";
+import { estimatePromptTokens } from "./agent/loop/agentLoop";
+
+const BANK = [
+  "Explícame cómo cambiar una llanta en 5 pasos numerados",
+  "Como cambio la llanta de un carro",
+  "Cuéntame un cuento muy corto de un zorro que aprende a nadar",
+  "Tengo 3 cajas de 12 huevos y se rompen 7. ¿Cuántos huevos me quedan?",
+  "Un tren sale a las 9:00 y el viaje dura 2 horas y media. Si lleva 40 minutos de retraso, ¿a qué hora llega?",
+  "Escribe un correo breve a mi vecino, dos frases, sin asunto, pidiéndole que baje la música por la noche",
+  "Dame un consejo para una entrevista de trabajo",
+];
+
+it("dump", () => {
+  const out: unknown[] = [];
+  for (const tone of ["succinct", "detailed"] as const) {
+    const p = getPersonality(tone);
+    for (const nCtx of [1024, 2048]) {
+      for (const q of BANK) {
+        for (const noSourcesNote of [true, false]) {
+          const messages = assembleChatMessages(q, [], p.systemPrompt, { turns: [] } as never, p.styleReminder, noSourcesNote, { nCtx, reserveGeneration: 1024 });
+          const promptText = messages.map((m) => m.content).join("\n");
+          const est = estimatePromptTokens(promptText);
+          const { genTokens, spaceCut } = degradableGenTokens(1024, nCtx - est - 64);
+          out.push({ tone, nCtx, q, noSourcesNote, messages, est, genTokens, spaceCut });
+        }
+      }
+    }
+  }
+  writeFileSync(process.env.BENCH_OUT!, JSON.stringify({ cases: out }, null, 1));
+});
