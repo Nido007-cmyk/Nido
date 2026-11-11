@@ -44,6 +44,7 @@ import { retrieve, assemblePrompt, RetrievedChunk, ConversationTurn } from "../r
 import { assembleChatMessages, contextualizeQuery, degradableGenTokens, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
 import { classifyTask, isRetrievalIrrelevant, isCreativeRequest } from "../routing/classify";
 import { shouldReasonThisTurn } from "../routing/calculationQuestion";
+import { semanticDanger } from "../services/semanticDanger";
 import {
   gatePreemptsDeepResearch,
   healthSafeProvenance,
@@ -1855,10 +1856,16 @@ export function ChatScreen({
           // 2026-10-11 (Fase 3) murió en esta tanda: dejaba sin generar
           // preguntas generales inofensivas (la llanta de la foto del
           // dueño, 15:43 MST) habiendo modelo cargado.
+          // 0.1.93: la lista de palabras solo reconoce lo que ya tiene
+          // escrito; la capa por significado (semanticDanger) suma lo
+          // que se dice de otra forma. Solo se consulta aquí, sin
+          // fuentes, y si la lista no cerró ya.
+          const lexicalDanger = isHealthQuestion(query) || isEmergencySituation(query);
+          const semanticHit = noSources && !lexicalDanger ? await semanticDanger(query) : false;
           if (
             noSources &&
             noSourcesOutcome({
-              isHealth: isHealthQuestion(query),
+              isHealth: isHealthQuestion(query) || semanticHit,
               isEmergency: isEmergencySituation(query),
             }) === "safe-text"
           ) {
@@ -2142,9 +2149,13 @@ export function ChatScreen({
           // rama gemela «pregunta de hechos → sustituir por el no lo
           // sé determinista» murió con la puerta previa de la ruta
           // fija: sin peligro, lo que el modelo generó queda en pie.
+          // 0.1.93: la misma capa por significado que la puerta previa
+          // (en la ruta fija ya está calculada para esta pregunta).
+          const postSemanticHit =
+            isHealthQuestion(query) || isEmergencySituation(query) ? false : await semanticDanger(query);
           if (
             noSourcesOutcome({
-              isHealth: isHealthQuestion(query),
+              isHealth: isHealthQuestion(query) || postSemanticHit,
               isEmergency: isEmergencySituation(query),
             }) === "safe-text" &&
             finalText !== healthSafeText(uiLang)

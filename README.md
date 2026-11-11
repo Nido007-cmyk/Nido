@@ -135,6 +135,21 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   suspected double counting in the crash guard was tested
   with a regression and does not exist; the guard is
   unchanged.
+- **The health and emergency gate decides by meaning**
+  (0.1.93): a question with no sources that the gate
+  does not recognise as health or emergency is answered
+  by the model from memory, and the gate was a word
+  list. On 45 health and emergency questions it had
+  never seen, the list recognised 4. A small classifier
+  on the question's search vector now adds to it: with
+  the multilingual search model the two together
+  recognise 40 of 45, with the default English one 26 of
+  45, and neither closed any of 50 everyday questions.
+  A message about wanting to die or to hurt oneself
+  always gets a fixed text with support lines, never a
+  model. Read-aloud no longer reads a model's reasoning,
+  and a renamed pack can no longer take the place of a
+  catalog pack.
 - **Sums get worked out, and a cut answer always says
   so** (0.1.92): on Qwen3-0.6B, a question that is a
   calculation (two or more figures and a «how many» or
@@ -245,7 +260,7 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.92-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.92-alpha).
+   [v0.1.93-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.93-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4

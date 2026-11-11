@@ -4,6 +4,66 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.93-alpha - 2026-11-10
+
+A review of the whole app after 0.1.92, and what it found.
+
+**The health and emergency gate decides by meaning.**
+Since 0.1.90, a question with no sources that the gate
+does not recognise as health or emergency is answered by
+the model from memory. The gate was a list of words.
+Tried with questions written the way people type on a
+phone, it let through 40 of 62 health questions («cuanto
+ibuprofeno puedo tomar al dia», «what's a lethal dose of
+acetaminophen») and 13 of 21 emergencies, and it gave
+the health text to 15 of 48 everyday questions, because
+«flu» matched «fluent» and «tos» matched «tostada».
+
+The list is fixed and wider now: its words match whole
+words, a question needs no question mark, and it knows
+many more everyday terms. But a list only knows what is
+written in it: on 45 new health and emergency questions
+it recognised 4. So a second layer was added that
+decides by the question's search vector, the one the
+search already computes: a small linear classifier
+trained on 524 sentences in Spanish, English and
+Portuguese. On those 45 questions, list and classifier
+together recognise 40 with the multilingual search model
+and 26 with the default English one, and neither closed
+any of 50 everyday questions. It only decides when there
+are no sources, it adds to the list and never overrides
+it, and before trusting itself on a phone it checks that
+the engine gives the expected vector for a known
+sentence; if not, it switches off. The study and its
+limits are in docs/ESTUDIO_PUERTA_SEMANTICA_0.1.93.md.
+
+**A message about wanting to die always gets a fixed
+text.** Someone who writes, in the first person, that
+they want to die or hurt themselves now gets a fixed,
+caring text first, whatever else would have happened:
+call the emergency number if in danger now, reach a
+person, and four support lines checked on 2026-11-10
+(988 in the United States, Línea de la Vida 800 911 2000
+in Mexico, 024 in Spain, CVV 188 in Brazil). Figures of
+speech and fiction do not trigger it.
+
+**Read-aloud no longer reads the model's reasoning.**
+With a model that reasons, the voice read the whole
+reasoning block before the answer. It reads only the
+answer now.
+
+**A renamed pack cannot take a catalog pack's place.**
+A pack's file name is not tied to its signature, so a
+verified pack renamed as a catalog pack replaced it on
+disk and showed up as it. A catalog name can now only be
+taken by the file with that entry's hash.
+
+Not measured: none of this ran on a phone. With the
+default English search model, Spanish and Portuguese
+speakers are less protected than with the multilingual
+one. And the gate is still not closed: 5 of the 45
+questions get through with the best model.
+
 ## 0.1.92-alpha - 2026-11-10
 
 An audit of the 0.1.91 package against the code. The

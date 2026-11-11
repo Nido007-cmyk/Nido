@@ -144,6 +144,22 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   normal. Una sospecha de doble conteo en el guardián de
   choques se probó con una regresión y no existe; el guardián
   no cambia.
+- **La puerta de salud y emergencia decide por
+  significado** (0.1.93): una pregunta sin fuentes que
+  la puerta no reconoce como salud o emergencia la
+  responde el modelo de memoria, y la puerta era una
+  lista de palabras. En 45 preguntas de salud y
+  emergencia que nunca había visto, la lista reconoció
+  4. Ahora se le suma un clasificador pequeño sobre el
+  vector de búsqueda de la pregunta: con el modelo de
+  búsqueda multilingüe las dos juntas reconocen 40 de
+  45, con el inglés por defecto 26 de 45, y ninguna
+  cerró ninguna de 50 preguntas corrientes. Un mensaje
+  sobre querer morir o hacerse daño recibe siempre un
+  texto fijo con líneas de apoyo, nunca un modelo. La
+  lectura en voz alta ya no lee el razonamiento del
+  modelo, y un pack renombrado ya no puede ocupar el
+  sitio de uno del catálogo.
 - **Las cuentas se piensan, y una respuesta cortada
   siempre lo dice** (0.1.92): en el Qwen3-0.6B, una
   pregunta que es una cuenta (dos o más cifras y un
@@ -264,7 +280,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.92-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.92-alpha).
+   [versión v0.1.93-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.93-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y
