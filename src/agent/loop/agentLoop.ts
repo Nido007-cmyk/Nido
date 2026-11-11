@@ -24,6 +24,7 @@
  */
 
 import { normalizeForRouting } from "./routingText";
+import { estimateTokens } from "./contextBudget";
 import type { ChatMessageInput, SamplingPresetName } from "../../inference/LlamaEngine";
 import {
   describeToolsForPrompt,
@@ -724,7 +725,10 @@ function formatMemoryText(mem: MemoryFactsLike): string {
  * y el guard podía pasar con el nativo fallando igual.
  */
 export function estimatePromptTokens(text: string): number {
-  return Math.ceil(text.length / 3) + 50;
+  // 2026-11-11: gemela de defaultTokenCounter; las dos delegan en la
+  // misma estimación para que el bucle y el ajuste de fuentes nunca
+  // vuelvan a contar distinto. Ver estimateTokens en contextBudget.ts.
+  return estimateTokens(text);
 }
 
 /**
@@ -825,7 +829,7 @@ async function runAgentLoopCore(
       taskType: "agent-loop",
       deterministic: true,
       promptChars: userText.length,
-      promptTokensEst: Math.ceil(userText.length / 3),
+      promptTokensEst: estimateTokens(userText) - 50,
       completionTokens: 0,
       ttftMs: 0,
       totalMs: 0,

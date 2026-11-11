@@ -20,8 +20,8 @@
  *   4. No orphaned assistant turns — a kept assistant message always keeps
  *      its user message.
  *
- * Token counting uses estimatePromptTokens (chars/3 + ChatML overhead):
- * the same conservative estimator assertPromptBudget uses. It OVERESTIMATES
+ * Token counting uses estimateTokens (chars/3, digits and non-Latin
+ * characters at a full token, + ChatML overhead): the same conservative estimator assertPromptBudget uses. It OVERESTIMATES
  * on purpose — the fail-safe direction is to keep slightly less history,
  * never to overflow the native context.
  *
@@ -53,9 +53,58 @@ export interface BudgetedConversation {
   estimatedTotalTokens: number;
 }
 
+/**
+ * Estimación de tokens: la ÚNICA del proyecto (2026-11-11). La usan el
+ * presupuesto de historial, el ajuste de fuentes (rag/pure.ts) y la
+ * guarda del bucle del agente (estimatePromptTokens delega aquí).
+ *
+ * Defecto probado: la anterior, `ceil(longitud / 3) + 50`, NO era una
+ * cota superior. Medida con el tokenizador real de Qwen2.5-0.5B y de
+ * Qwen3-0.6B (los archivos exactos del catálogo) sobre 3.211 muestras
+ * (guías de los packs en es/en/pt, los prompts del banco y textos con
+ * cifras, tablas, emoji, código, hashes, mayúsculas), se quedaba corta
+ * en 84, sobre todo con números: Qwen parte cada dígito en un token.
+ * Un documento importado con una tabla (estado de cuenta, registro de
+ * dosis) se estimaba en 717 tokens por fragmento y ocupaba 1.649. Con
+ * n_ctx 2048 eso dejaba 143 de los 512 tokens reservados para la
+ * respuesta; con n_ctx 4096 entraban los cuatro fragmentos y el motor
+ * rechazaba el prompt con «Context is full».
+ *
+ * Ahora, sobre la misma base (un token cada 3 unidades UTF-16, como
+ * String.length):
+ *   - cada dígito cuesta un token entero, y cada número uno más;
+ *   - cada carácter fuera del latín (emoji, otros alfabetos) cuesta uno
+ *     entero;
+ *   - más 50 de la plantilla ChatML, como antes.
+ * En prosa de las guías estima un 3,7 % más que la anterior y en el
+ * prompt de sistema con herramientas un 3 % más (52 tokens). Quedan por
+ * debajo del real, igual que antes, el código fuente, el texto entero en
+ * mayúsculas y las ristras de signos sueltos: cubrirlos inflaba un 10 %
+ * el presupuesto de todos los turnos normales.
+ * Tabla de la medición: docs/perf/ESTIMADOR_TOKENS_2026-11-11.md.
+ */
+export function estimateTokens(text: string): number {
+  let digits = 0;
+  let numbers = 0;
+  let nonLatin = 0;
+  let inNumber = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    const isDigit = c >= 0x30 && c <= 0x39;
+    if (isDigit) {
+      digits++;
+      if (!inNumber) numbers++;
+    } else if (c > 0x24f) {
+      nonLatin++;
+    }
+    inNumber = isDigit;
+  }
+  return Math.ceil(text.length / 3 + (digits * 2) / 3 + numbers + (nonLatin * 2) / 3) + 50;
+}
+
 /** Default estimator: conservative (overestimates) — the fail-safe direction. */
 export function defaultTokenCounter(text: string): number {
-  return Math.ceil(text.length / 3) + 50;
+  return estimateTokens(text);
 }
 
 /** Sensible defaults for a 4k-window chat model. */
