@@ -135,6 +135,15 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   suspected double counting in the crash guard was tested
   with a regression and does not exist; the guard is
   unchanged.
+- **The model loads only when a turn needs it, and
+  numbers no longer overflow the context** (0.1.94): a
+  question a guide or a fixed answer covers no longer
+  waits for the model to load, and is answered even when
+  the model does not fit in memory. The context budget
+  now counts each digit as the tokenizer does: a table
+  question at a 2,048-token context used to get an
+  answer cut at 143 tokens, and at 4,096 the engine
+  refused the prompt; both now answer whole.
 - **The health and emergency gate decides by meaning**
   (0.1.93): a question with no sources that the gate
   does not recognise as health or emergency is answered
@@ -260,7 +269,7 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.93-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.93-alpha).
+   [v0.1.94-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.94-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4

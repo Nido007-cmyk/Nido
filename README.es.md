@@ -144,6 +144,16 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   normal. Una sospecha de doble conteo en el guardián de
   choques se probó con una regresión y no existe; el guardián
   no cambia.
+- **El modelo solo se carga cuando el turno lo necesita,
+  y las cifras ya no desbordan el contexto** (0.1.94): una
+  pregunta que cubre una guía o una respuesta fija ya no
+  espera la carga del modelo, y se responde aunque el
+  modelo no quepa en memoria. El presupuesto de contexto
+  cuenta cada cifra como lo hace el tokenizador: una
+  pregunta sobre una tabla con contexto de 2.048 tokens
+  recibía una respuesta cortada a 143 tokens, y con 4.096
+  el motor rechazaba el prompt; ahora las dos se
+  responden enteras.
 - **La puerta de salud y emergencia decide por
   significado** (0.1.93): una pregunta sin fuentes que
   la puerta no reconoce como salud o emergencia la
@@ -280,7 +290,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.93-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.93-alpha).
+   [versión v0.1.94-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.94-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y

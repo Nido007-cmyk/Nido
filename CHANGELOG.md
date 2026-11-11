@@ -4,6 +4,65 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.94-alpha - 2026-11-11
+
+Speed and answer quality, without touching what is sealed.
+
+**The model loads when a turn needs it, not when you press send.**
+Since 0.1.83 the first thing a send did was load the chat
+model, before reading the question. A question that a guide
+or the deterministic layer answers, which by rule never
+reaches the model, still waited for the whole load and took
+its memory; and if the model did not fit in memory, nothing
+was answered at all, not even the emergency number or the
+fixed safety text. Now each path that generates asks for the
+model right before it uses it; guides, fixed answers, packs,
+time, notes, reminders and memory never load it. The load
+itself is unchanged, with its live memory reading on every
+attempt. The Execution Telemetry screen records the load
+time of a turn apart (`modelLoadMs`), so first-token time and
+tokens per second stay comparable with 0.1.93. Details:
+docs/perf/CARGA_CUANDO_SE_NECESITA_2026-11-11.md.
+
+**Numbers and tables no longer overflow the context.**
+The context budget estimated a text at a quarter of its
+length in tokens. The model's tokenizer gives each digit its
+own token, so a document table of 1,649 real tokens was
+estimated at 717. Measured with the catalog's exact model
+files and the app's real prompt assembly: at a 2,048-token
+context (the ceiling on 4 GB devices) a table question
+produced a 1,905-token prompt and an answer cut at 143
+tokens; at 4,096 the prompt reached 6,953 tokens and the
+engine refused it with "Context is full". At 1,024 a prose
+question failed outright, because the step that fits sources
+counted them once and the check that judges the turn counted
+them twice. The estimate now counts digits, number edges and
+non-Latin characters; the fitting step measures the way the
+check does; and a source that does not fit can be cut at a
+line end, not only at a sentence end, so tables are trimmed
+instead of dropped. After the fix the same cases give 539,
+1,274 and 1,905 tokens and answer whole; prose prompts at
+2,048 and 4,096 are unchanged. The cost is about 3.7% more
+budget on ordinary guide prose. The estimate still counts
+short on source code, all-capitals text and runs of
+punctuation, which do not appear in guides or prompts.
+Details: docs/perf/ESTIMADOR_TOKENS_2026-11-11.md.
+
+**A correction.** llama.rn does not silently trim a prompt
+that is too long: with context shift off, it refuses it or
+cuts the answer, and NIDO already marks a cut answer.
+
+**Tried and not shipped.** A lower temperature for
+Qwen2.5-0.5B was measured on 24 seeds: arithmetic improved
+(20 to 33 of 72, p = 0.038) but that was one metric of about
+ten, the rest did not move clearly, and answers in the right
+language fell slightly (302 to 297 of 312). Not a proven
+defect, so the sampling stays as it was.
+
+**Not tested on a phone.** Both changes passed the automated
+tests and were measured off the device. The protocols to
+measure them on the Galaxy Tab A9+ are in the two documents.
+
 ## 0.1.93-alpha - 2026-11-10
 
 A review of the whole app after 0.1.92, and what it found.
