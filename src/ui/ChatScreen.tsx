@@ -786,6 +786,12 @@ export function ChatScreen({
   const lastBackgroundDoneRef = useRef<number | null>(null);
   const modelLoadingRef = useRef<Promise<boolean> | null>(null);
 
+  // 2026-11-11 (carga cuando se necesita): el error real de la última carga fallida, para que el
+  // turno que necesitaba el modelo lo enseñe en su burbuja con el mismo
+  // texto de siempre (userFacingError lee el motivo de RAM del propio
+  // error). La tarjeta sigue saliendo por setLoadError.
+  const lastModelLoadErrorRef = useRef<unknown>(null);
+
   /**
    * Garantiza el LLM residente, cargándolo con su pre-flight si hace
    * falta. Vuelo único. true = residente; false = no cupo o falló
@@ -800,6 +806,7 @@ export function ChatScreen({
       modelLoadingRef.current = (async () => {
         try {
           setLoadError(null);
+          lastModelLoadErrorRef.current = null;
           // chatScreen.loadingModel existe en los tres locales (la
           // clave homónima de catalogItemCard es otra: aquella vive
           // en la tarjeta del catálogo, esta en la franja del chat).
@@ -810,6 +817,7 @@ export function ChatScreen({
           await llamaEngine.load(llm.filename);
           return true;
         } catch (e: any) {
+          lastModelLoadErrorRef.current = e;
           try {
             const llm = await resolveActiveModel("llm");
             setLoadError(llmLoadFailureNote(llm.label, e?.message ?? String(e)));
@@ -1144,16 +1152,27 @@ export function ChatScreen({
     if (!sendGuardRef.current.tryAcquire()) return;
     try {
     // Optimización 2026-11-08 (fase 1): el modelo es residente bajo
-    // demanda. El envío lo trae si no está (primer envío, o el
-    // primero tras la descarga por inactividad o por presión), con
-    // su pre-flight y su «Cargando modelo…». Si no cabe, la tarjeta
-    // ya quedó puesta por ensureChatModel y el envío se detiene sin
-    // tocar el texto de la persona.
+    // demanda. 2026-11-11 (carga cuando se necesita): «bajo demanda» es cuando el turno lo NECESITA,
+    // no al pulsar enviar. Hasta la 0.1.93 el envío cargaba el modelo
+    // antes de mirar el texto: una pregunta que responde la capa
+    // determinista o una guía (y que por ley no llega al modelo)
+    // esperaba igual la carga entera y ocupaba su memoria, y si el
+    // modelo no cabía el envío se detenía ahí — sin número de
+    // emergencia, sin texto fijo y sin guía. Ahora cada camino que
+    // genera llama a requireChatModel justo antes de usar el motor
+    // (bucle del agente, Investigar, ruta adaptativa y ruta fija); lo
+    // que no genera no lo toca. Si el modelo no cabe, el error real
+    // de la carga sube al catch del turno (burbuja con el motivo) y la
+    // tarjeta de memoria queda puesta por ensureChatModel, como antes.
     lastChatActivityRef.current = Date.now();
-    if (!llamaEngine.isLoaded) {
+    let turnModelLoadMs = 0;
+    const requireChatModel = async (): Promise<void> => {
+      if (llamaEngine.isLoaded) return;
+      const loadT0 = performance.now();
       const ok = await ensureChatModel();
-      if (!ok) return;
-    }
+      turnModelLoadMs += performance.now() - loadT0;
+      if (!ok) throw lastModelLoadErrorRef.current ?? new Error("NIDO: model not loaded");
+    };
     // 0.1.38 (enrutado por tramo): lo pegado o compartido no llega al
     // router; si sobra texto alrededor de una orden, la orden se prepara
     // como chip y solo el toque la ejecuta. El toque llega aquí como
@@ -1516,6 +1535,14 @@ export function ChatScreen({
           // Presupuesto de prompt contra el n_ctx real del modelo cargado
           // (T-contexto-2026-10-06).
           nCtx: llamaEngine.getModelInfo()?.nCtx,
+          // 2026-11-11 (carga cuando se necesita): las vías deterministas del bucle (hora, notas,
+          // recordatorios, memoria) responden sin cargar el modelo; si
+          // el turno llega a generar, el bucle lo pide aquí y presupuesta
+          // contra el n_ctx de lo que de verdad quedó cargado.
+          prepareEngine: async () => {
+            await requireChatModel();
+            return llamaEngine.getModelInfo()?.nCtx;
+          },
         });
         assistantText = agentResult.response;
         // 0.1.39: el loop dice por dónde salió el turno (routing). Antes
@@ -1589,6 +1616,7 @@ export function ChatScreen({
             taskType: "chat",
             adaptiveRoutingUsed: false,
             retrievalUsed: false,
+            ...(turnModelLoadMs > 0 ? { modelLoadMs: Math.round(turnModelLoadMs) } : {}),
             outcome: "success",
           });
           recordExecution({
@@ -1597,6 +1625,7 @@ export function ChatScreen({
             adaptiveRoutingUsed: false,
             retrievalUsed: false,
             totalLatencyMs: agentDurationMs,
+            ...(turnModelLoadMs > 0 ? { modelLoadMs: Math.round(turnModelLoadMs) } : {}),
             tokensGenerated,
             outcome: "success",
           }).catch(() => {});
@@ -1698,7 +1727,10 @@ export function ChatScreen({
         if (firstToken) {
           firstToken = false;
           firstTokenTime = now;
-          ttftMs = firstTokenTime - startTime;
+          // 2026-11-11 (carga cuando se necesita): la carga del modelo ahora ocurre dentro del turno;
+          // se resta para que el primer token siga midiendo lo mismo
+          // que hasta la 0.1.93 (la carga va en modelLoadMs).
+          ttftMs = Math.max(0, firstTokenTime - startTime - turnModelLoadMs);
           setProcessing({ messageId: assistantId, status: "generating" });
           // Primer token sí va inmediato (TTFT).
           flushTokenBuffer();
@@ -1761,6 +1793,7 @@ export function ChatScreen({
         // and untouched by it — orchestrator.ts's own sequential pipeline,
         // same as before this integration.
         setDeepResearchActive(true);
+        await requireChatModel();
         const result = await runDeepResearch(
           query,
           systemPrompt,
@@ -1875,6 +1908,14 @@ export function ChatScreen({
             return { chunks: c, noSourcesFound: noSources, genSpaceCut: false, genWasCut: false };
           }
           setProcessing({ messageId: assistantId, status: "thinking" });
+          // 2026-11-11 (carga cuando se necesita): aquí, y no antes, el turno necesita el modelo: ya
+          // pasó la guía literal, la recuperación y la puerta de salud.
+          await requireChatModel();
+          // Detener durante «Cargando modelo…» cierra el turno sin
+          // generar (mismo estado que detener antes del primer token).
+          if (stopRequestedRef.current) {
+            return { chunks: c, noSourcesFound: noSources, genSpaceCut: false, genWasCut: false };
+          }
           // Use the model's own chat template when its file ships one; the
           // plain prompt is only a fallback. Off-template, models ramble,
           // echo instructions, and reasoning models never open <think>.
@@ -1970,6 +2011,7 @@ export function ChatScreen({
           noSourcesFound = false;
         } else if (adaptiveRoutingEnabled) {
           try {
+            await requireChatModel();
             const result = await runAdaptiveChat(
               { query, systemPrompt, styleReminder, history },
               maxTokens,
@@ -2289,11 +2331,15 @@ export function ChatScreen({
         tokensGenerated,
         durationMs,
         ttftMs,
-        tokPerSec: tokensGenerated > 0 ? tokensGenerated / ((durationMs - ttftMs) / 1000) : 0,
+        tokPerSec:
+          tokensGenerated > 0 && durationMs - ttftMs - turnModelLoadMs > 0
+            ? tokensGenerated / ((durationMs - ttftMs - turnModelLoadMs) / 1000)
+            : 0,
         peakRssBytes: peakRss.stop(),
         timestamp: Date.now(),
         totalLatencyMs: durationMs,
         modelId: baseModelId,
+        ...(turnModelLoadMs > 0 ? { modelLoadMs: Math.round(turnModelLoadMs) } : {}),
         ...(fixedTaskType ? { taskType: fixedTaskType, retrievalUsed: chunks.length > 0 } : {}),
         ...(adaptiveTelemetry ?? {}),
       };
@@ -2338,7 +2384,10 @@ export function ChatScreen({
           await setSessionTitle(sessionId, title).catch(() => {});
           await refreshSessions();
         }
-      } else if (settings.autoSummarize && !wasStopped) {
+      } else if (settings.autoSummarize && !wasStopped && llamaEngine.isLoaded) {
+        // 2026-11-11 (carga cuando se necesita): un turno servido sin modelo (guía, capa determinista)
+        // no lo carga solo para resumir; el resumen se pone al día en
+        // el siguiente turno que sí genere.
         const totalTurns = Math.floor(allMessages.length / 2);
         if (totalTurns > settings.historyTurnThreshold) {
           const olderMessages = allMessages.slice(0, -VERBATIM_MESSAGE_COUNT);
