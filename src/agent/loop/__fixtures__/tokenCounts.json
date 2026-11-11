@@ -1,0 +1,654 @@
+{
+ "measuredWith": [
+  "Qwen2.5-0.5B-Instruct-Q4_K_M.gguf, sha256 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 (el del catálogo)",
+  "Qwen3-0.6B-Q4_K_M.gguf, sha256 ac2d97712095a558e31573f62f466a3f9d93990898b0ec79d7c974c1780d524a (el del catálogo)"
+ ],
+ "note": "realTokens = máximo de los dos tokenizadores, sin tokens especiales; medido el 2026-11-11 con llama-cpp-python 0.3.16 (vocab_only)",
+ "rows": [
+  {
+   "kind": "adv-cifras",
+   "text": "16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.",
+   "realTokens": 1200
+  },
+  {
+   "kind": "adv-cifras",
+   "text": " 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431",
+   "realTokens": 700
+  },
+  {
+   "kind": "adv-cifras",
+   "text": "-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 91",
+   "realTokens": 700
+  },
+  {
+   "kind": "adv-cifras",
+   "text": "11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 911 2000 16.431.599 26,5 1/4 3.1416 2026-11-11 08:15 800 ",
+   "realTokens": 700
+  },
+  {
+   "kind": "adv-tabla",
+   "text": "| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 ",
+   "realTokens": 947
+  },
+  {
+   "kind": "adv-tabla",
+   "text": "2 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,",
+   "realTokens": 552
+  },
+  {
+   "kind": "adv-tabla",
+   "text": "0 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 1",
+   "realTokens": 551
+  },
+  {
+   "kind": "adv-tabla",
+   "text": "00 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| 12 | 34,5 | 0,25 mg | 1:1000 |\n| ",
+   "realTokens": 551
+  },
+  {
+   "kind": "adv-url",
+   "text": "https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Ni",
+   "realTokens": 388
+  },
+  {
+   "kind": "adv-url",
+   "text": "-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/d",
+   "realTokens": 227
+  },
+  {
+   "kind": "adv-url",
+   "text": "es/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf h",
+   "realTokens": 225
+  },
+  {
+   "kind": "adv-url",
+   "text": "/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://github.com/Nido007-cmyk/Nido/releases/download/knowledge-packs-v2/multilingual-e5-small-q8_0.gguf https://gith",
+   "realTokens": 226
+  },
+  {
+   "kind": "adv-emoji",
+   "text": "🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂",
+   "realTokens": 1200
+  },
+  {
+   "kind": "adv-emoji",
+   "text": "🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑",
+   "realTokens": 699
+  },
+  {
+   "kind": "adv-emoji",
+   "text": "🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲",
+   "realTokens": 701
+  },
+  {
+   "kind": "adv-emoji",
+   "text": "🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥🚑❤️‍🔥🇲🇽 🙂👍🔥",
+   "realTokens": 699
+  },
+  {
+   "kind": "adv-cjk",
+   "text": "紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。",
+   "realTokens": 600
+  },
+  {
+   "kind": "adv-cjk",
+   "text": "救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨",
+   "realTokens": 390
+  },
+  {
+   "kind": "adv-cjk",
+   "text": "拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况",
+   "realTokens": 389
+  },
+  {
+   "kind": "adv-cjk",
+   "text": "情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。紧急情况下请拨打急救电话并保持冷静。",
+   "realTokens": 389
+  },
+  {
+   "kind": "adv-mayus",
+   "text": "ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. ",
+   "realTokens": 532
+  },
+  {
+   "kind": "adv-mayus",
+   "text": "CIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO.",
+   "realTokens": 309
+  },
+  {
+   "kind": "adv-mayus",
+   "text": "MAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO ",
+   "realTokens": 313
+  },
+  {
+   "kind": "adv-mayus",
+   "text": "1. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL HERIDO. LLAMAR AL 911. ATENCIÓN: NO MOVER AL ",
+   "realTokens": 311
+  },
+  {
+   "kind": "adv-hex",
+   "text": "6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e8520",
+   "realTokens": 1125
+  },
+  {
+   "kind": "adv-hex",
+   "text": "e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8",
+   "realTokens": 657
+  },
+  {
+   "kind": "adv-hex",
+   "text": "653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26",
+   "realTokens": 656
+  },
+  {
+   "kind": "adv-hex",
+   "text": "a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653 6eb923e7d26e9cea28811e1a8e852009b21242fb15",
+   "realTokens": 656
+  },
+  {
+   "kind": "adv-puntuacion",
+   "text": "¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()",
+   "realTokens": 713
+  },
+  {
+   "kind": "adv-puntuacion",
+   "text": "} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:(",
+   "realTokens": 416
+  },
+  {
+   "kind": "adv-puntuacion",
+   "text": "_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/",
+   "realTokens": 416
+  },
+  {
+   "kind": "adv-puntuacion",
+   "text": "]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;:()[]{} #$%&/=+*-_ ¿¡...!? — «»;",
+   "realTokens": 416
+  },
+  {
+   "kind": "adv-codigo",
+   "text": "for (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i",
+   "realTokens": 661
+  },
+  {
+   "kind": "adv-codigo",
+   "text": " = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }",
+   "realTokens": 387
+  },
+  {
+   "kind": "adv-codigo",
+   "text": " i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) {",
+   "realTokens": 385
+  },
+  {
+   "kind": "adv-codigo",
+   "text": "t i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n; i++) { x[i] = y[i] * 2; }\nfor (let i = 0; i < n",
+   "realTokens": 387
+  },
+  {
+   "kind": "adv-corto",
+   "text": "Hola",
+   "realTokens": 1
+  },
+  {
+   "kind": "adv-una",
+   "text": "a",
+   "realTokens": 1
+  },
+  {
+   "kind": "pack-es",
+   "text": "eradores**: siempre al aire libre, a más de 6 metros de puertas y ventanas. Nunca dentro de casa, del garaje ni bajo un porche cerrado (monóxido de carbono).\n- Nunca calientes la casa con el horno de gas, braseros o barbacoas.\n- Con calor o frío extremos, ve a un lugar con climatización (refugios, centros públicos) si la casa se vuelve peligrosa.\n- Si hay semáforos apagados, trata los cruces como un stop en todas las direcciones.\n- Ten cuidado con ascensores: no los uses durante cortes intermitentes.\n- Comprueba cómo están tus vecinos mayores o enfermos.\n\n## Insulina y medicamentos que necesitan frío\nLa insulina en uso aguanta normalmente unas semanas a temperatura ambiente (no caliente); co",
+   "realTokens": 197
+  },
+  {
+   "kind": "pack-es",
+   "text": "ros de emergencia\ncategory: Emergencias por país\nlang: es\nsources: Secretaría de Relaciones Exteriores de México, Guía del viajero (Ecuador); Secretaría Nacional de Gestión de Riesgos, Resolución SGR-382-2023 (alerta naranja por El Niño)\nid: local-ecuador\nregion: EC\nverified: 2026-10-28\nquestions: a",
+   "realTokens": 104
+  },
+  {
+   "kind": "pack-es",
+   "text": "s: gov.pt, «Emergency contacts in Portugal»\nid: local-portugal\nregion: PT\nverified: 2026-10-28\nquestions: a qué número llamo si pasa algo en Portugal | cómo pido una ambulancia en Portugal | teléfono de la policía en Portugal\n---\nEn Portugal, el número único de emergencias es el 112 (gratis, las 24 ",
+   "realTokens": 91
+  },
+  {
+   "kind": "pack-es",
+   "text": "u compañía: las llamadas de emergencia pueden usar otras redes. Si no conecta, envía un mensaje de texto (pasa con menos",
+   "realTokens": 30
+  },
+  {
+   "kind": "pack-es",
+   "text": "e congelan, sobre todo dedos, orejas, nariz y mejillas.\nSignos: piel blanca o grisácea, dura o como de cera, entumecida.\n1. Llévala a un lugar cálido y trata primero la hipotermia si la hay.\n2. Quita anillos y ropa apretada.\n3. No frotes la zona ni la acerques al fuego o a una estufa.\n4. Si no hay riesgo de que se vuelva a congelar, calienta la zona en agua tibia (entre 37 y 40 °C, que se pueda tener la mano dentro cómodamente) durante 20 a 30 minutos. Si puede volver a congelarse, mejor no descongelar todavía.\n5. No revientes las ampollas. Cubre con gasas limpias y separa los dedos.\n6. Busca atención médica.\n\n## Importante\nBasado en las directrices de la AHA, la Cruz Roja Americana y la Cru",
+   "realTokens": 231
+  },
+  {
+   "kind": "pack-es",
+   "text": " de los bomberos en Portugal | número de emergencias médicas en Portugal -->\n- **112**: emergencias (número único) (gratis, las 24 horas; para dudas de salud, la línea SNS 24: 808 24 24 24)\n\nComprobado el 2026-10-28 en fuentes oficiales; cada número viene con su cita en la tabla de datos de este pac",
+   "realTokens": 102
+  },
+  {
+   "kind": "pack-es",
+   "text": "lcohol ni en aguas desconocidas. No te tires de cabeza donde no ves el fondo.\n- Si te arrastra una corriente, no luches contra ella: nada en paralelo a la orilla hasta salir, o flota y pide ayuda.\n\n## Importante\nBasado en las directrices de la AHA, la Cruz Roja Americana, el Consejo Europeo de Resuc",
+   "realTokens": 90
+  },
+  {
+   "kind": "pack-es",
+   "text": "hasta que la sangre pare. Duele: es normal.\n- Apunta la hora en que lo pusiste y díselo a los servicios de emergencia. No lo aflojes.\n- Uno improvisado (cinturón, tela ancha con un palo para girar) funciona peor; úsalo solo si no hay otra opción.\n\n## Taponar la herida\nSi la herida es profunda en la ",
+   "realTokens": 95
+  },
+  {
+   "kind": "pack-es",
+   "text": "urces: Cruz Roja Canadiense (normas de programa 2026, basadas en IFRC 2025); AHA y Cruz Roja Americana 2024\nid: esencial-asma-y-dificultad-para-respirar\nverified: 2026-11-07\nquestions: qué hago en una crisis de asma | no puede respirar bien y hace pitidos, qué hago | cómo se usa el inhalador de rescate | un niño tiene tos de perro y le cuesta respirar, qué hago | o que faço numa crise de asma | não consegue respirar direito, o que faço\n---\n## Crisis de asma\nSignos: pitidos al respirar, tos, sensación de pecho apretado, dificultad para hablar frases enteras.\n1. Ayuda a la persona a sentarse erguida, un poco inclinada hacia delante. Afloja la ropa apretada.\n2. Aléjala de lo que la provoca (hum",
+   "realTokens": 239
+  },
+  {
+   "kind": "pack-es",
+   "text": ". Evita el alcohol: da sensación de calor pero enfría el cuerpo.\n- **Peligro de monóxido de carbono**: nunca uses braser",
+   "realTokens": 36
+  },
+  {
+   "kind": "pack-es",
+   "text": "ve al refugio.\n- **Rojo:** el impacto llegará en menos de 18 horas. Quédate resguardado.\n\nCuando el ciclón **se aleja**,",
+   "realTokens": 41
+  },
+  {
+   "kind": "pack-es",
+   "text": "mergencias por país\nlang: es\nsources: Consulado General de España en La Habana, «Seguridad y otros aspectos» (números de emergencia); Instituto de Meteorología de Cuba (INSMET), «Generalidades de los ciclones tropicales» (las cuatro fases ciclónicas que establece el Estado Mayor Nacional de la Defensa Civil, con sus plazos); Servicio Nacional de Meteorología de EE. UU. (NWS), «Consejos de seguridad: huracanes» (qué hacer)\nid: local-cuba\nregion: CU\nverified: 2026-10-31\nquestions: a qué número llamo si pasa algo en Cuba | cómo pido una ambulancia en Cuba | qué hago cuando anuncian un ciclón en Cuba\n---\nEn Cuba, los números de emergencia son 104 ambulancia, 105 bomberos y 106 policía (Policía N",
+   "realTokens": 216
+  },
+  {
+   "kind": "pack-es",
+   "text": "tina | cómo pido una ambulancia en Argentina | teléfono de la policía en Argentina\n---\nEn Argentina, los números de emergencia comprobados son: 911 (policía), 100 (bomberos), 107 (emergencias médicas). Son llamadas para emergencias reales: si puedes, di primero dónde estás.\n\n## A quién llamar\n<!-- p",
+   "realTokens": 92
+  },
+  {
+   "kind": "pack-es",
+   "text": "mata (ver la guía de intoxicaciones y monóxido de carbono de NIDO Esencial).\n\n## Importante\nLas fases y lo que piden pueden cambiar: sigue siempre lo que anuncie la Defensa Civil por la radio y la televisión. Las fases se describen según la página oficial del Instituto de Meteorología de Cuba (INSME",
+   "realTokens": 78
+  },
+  {
+   "kind": "pack-es",
+   "text": "ante es evitar la infección.\n\n## Pasos\n1. Lávate las manos.\n2. Si sangra, aprieta con una gasa o tela limpia unos minutos hasta que pare.\n3. Limpia la herida con abundante agua potable (del grifo es ideal: el chorro arrastra la suciedad). Quita la tierra o la arenilla con el agua.\n4. Puedes poner pomada antibiótica; si no tienes, un antiséptico.\n5. Cubre con un apósito o una tirita limpios. Cámbialo cada día o si se moja o ensucia.\n\n## Ve al médico si...\n- La herida es profunda, está abierta (los bordes no se juntan), mide más de 1–2 cm en la cara o no deja de sangrar tras 10 minutos de presión.\n- Fue un mordisco de animal o de persona, o la causó algo sucio u oxidado.\n- Tiene algo clavado (",
+   "realTokens": 228
+  },
+  {
+   "kind": "pack-es",
+   "text": " ante ciclones\ncategory: Emergencias por país\nlang: es\nsources: Consulado General de España en La Habana, «Seguridad y otros aspectos» (números de emergencia); Instituto de Meteorología de Cuba (INSMET), «Generalidades de los ciclones tropicales» (las cuatro fases ciclónicas que establece el Estado Mayor Nacional de la Defensa Civil, con sus plazos); Servicio Nacional de Meteorología de EE. UU. (NWS), «Consejos de seguridad: huracanes» (qué hacer)\nid: local-cuba\nregion: CU\nverified: 2026-10-31\nquestions: a qué número llamo si pasa algo en Cuba | cómo pido una ambulancia en Cuba | qué hago cuando anuncian un ciclón en Cuba\n---\nEn Cuba, los números de emergencia son 104 ambulancia, 105 bombero",
+   "realTokens": 211
+  },
+  {
+   "kind": "pack-es",
+   "text": "despierta y puede tragar\n1. Dale 15 a 20 gramos de azúcar rápido: tabletas de glucosa; si no hay, 3 o 4 terrones o cucha",
+   "realTokens": 46
+  },
+  {
+   "kind": "pack-es",
+   "text": "s\nsources: OMS, preparación ante pandemias y brotes; CDC; IFRC\nid: esencial-epidemias\nverified: 2026-11-02\nquestions: qué medidas funcionan contra casi todas las infecciones en una epidemia | cómo cuido a un enfermo en casa durante un brote | cómo se previene el dengue después de una inundación | qu",
+   "realTokens": 93
+  },
+  {
+   "kind": "pack-es",
+   "text": " gruesa de ramas, hojas secas, hierba, mochilas o cartón (al menos 10 a 15 cm aplastados).\n- **Protégete del viento y la lluvia.**\n- **Mantente seco**: quítate la ropa mojada si puedes secarla o cambiarla. Evita sudar.\n- **Capas de ropa**: varias capas finas abrigan más que una gruesa. Cubre cabeza y cuello.\n\n## Elegir el sitio\n- Cerca de agua pero no en el cauce de un río, rambla o barranco (riesgo de crecida).\n- Lejos de árboles muertos o ramas que puedan caer, laderas inestables y zonas de avalancha.\n- Que se vea desde lejos o desde el aire si esperas rescate.\n- Aprovecha lo que hay: un gran árbol caído, una roca, un coche, un edificio.\n\n## Refugios sencillos\n- **Con lona o plástico**: át",
+   "realTokens": 248
+  },
+  {
+   "kind": "pack-es",
+   "text": "os signos de una bajada de azúcar | o que faço se o açúcar baixar num diabético | quantos gramas de açúcar dou numa hipo",
+   "realTokens": 41
+  },
+  {
+   "kind": "pack-es",
+   "text": "ang: es\nsources: Ready.gov (FEMA), emergencias por radiación y químicas; CDC; OIEA; OMS\nid: esencial-emergencia-quimica-o-nuclear\nverified: 2026-11-02\nquestions: qué hago en una emergencia química o nuclear | qué significa entra, quédate dentro y mantente informado | cuándo se toma el yoduro de potasio | cómo se quita la ropa contaminada en un escape químico | o que faço numa emergência química ou nuclear | quando se toma o iodeto de potássio\n---\nSi hay un escape químico o radiactivo cerca, la regla básica es: **entra, quédate dentro y mantente informado**.\n\n## Entra\n- Ve al edificio más cercano y sólido. Mejor de ladrillo u hormigón.\n- En el interior, aléjate de puertas y ventanas: para rad",
+   "realTokens": 222
+  },
+  {
+   "kind": "pack-es",
+   "text": "tra la rabia. Si es posible, averigua si el animal está vacunado. Los murciélagos y animales salvajes siempre requieren consulta.\n\n## Mordedura de serpiente\n<!-- preguntas: qué hago si me muerde una serpiente | se chupa el veneno de una mordedura de serpiente o se corta | qué antídoto hay para la mordedura de serpiente -->\n1. Aléjate de la serpiente. No intentes atraparla ni matarla (una foto de lejos ayuda).\n2. Llama al número de emergencias.\n3. Que la persona esté quieta y tranquila. Inmoviliza la extremidad como si fuera una fractura, a la altura del corazón aproximadamente.\n4. Quita anillos, relojes y ropa apretada: la zona se va a hinchar.\n5. NO cortes, NO chupes el veneno, NO pongas to",
+   "realTokens": 218
+  },
+  {
+   "kind": "pack-es",
+   "text": "| meu bebé não respira, o que faço\n---\nEn niños, el paro cardíaco suele deberse a falta de aire (ahogamiento, atragantamiento, asfixia). Por eso, en niños y bebés las respiraciones son más importantes que en adultos. Aun así, si no sabes darlas, haz compresiones: siempre es mejor que nada.\n\n## Niño ",
+   "realTokens": 89
+  },
+  {
+   "kind": "pack-es",
+   "text": "a limpios. Cámbialo cada día o si se moja o ensucia.\n\n## Ve al médico si...\n- La herida es profunda, está abierta (los b",
+   "realTokens": 41
+  },
+  {
+   "kind": "pack-es",
+   "text": "todos, será monóxido de carbono | cuáles son los signos del monóxido de carbono | por qué no se puede usar un generador dentro de casa -->\nEs un gas que no se ve ni se huele. Lo producen estufas, braseros, calentadores de gas, generadores y coches en lugares cerrados. Mata a muchas personas tras los desastres y en invierno.\nSignos: dolor de cabeza, mareo, náuseas, cansancio, confusión. Suele afectar a varias personas (y mascotas) de la misma casa a la vez, y mejoran al salir.\n1. Sal al aire libre de inmediato y saca a todos. Abre puertas y ventanas si no te retrasa.\n2. Llama al número de emergencias.\n3. Si alguien no responde, saca a la persona al aire libre si puedes hacerlo sin riesgo y em",
+   "realTokens": 207
+  },
+  {
+   "kind": "pack-en",
+   "text": "shing point with a container with a tap or a hanging bottle.\n- Keep garbage in closed bags and covered containers, away ",
+   "realTokens": 26
+  },
+  {
+   "kind": "pack-en",
+   "text": "training defibrillator gives you the confidence to act for real.\n\n## Courses\n- **Red Cross and Red Crescent**: almost every country has in-person first aid courses, and many offer free or low-cost basic online courses. Ask your national Red Cross or Red Crescent society.\n- **AHA (American Heart Association)**: free Hands-Only CPR videos.\n- **WHO (OpenWHO)**: free online health-emergency courses at openwho.org.\n- Your local **civil protection / emergency management** office: talks and drills about local risks.\n- Many health centers, fire departments and universities run CPR and AED courses.\n\n## Apps\n- The IFRC **First Aid** app and each country's Red Cross version: step-by-step guides, many w",
+   "realTokens": 153
+  },
+  {
+   "kind": "pack-en",
+   "text": "ico's Ministry of Foreign Affairs (SRE), Traveller's guide (Paraguay)\nid: local-paraguay\nregion: PY\nverified: 2026-10-28\nquestions: what number do I call if something happens in Paraguay | how do I get an ambulance in Paraguay | police phone number in Paraguay\n---\nIn Paraguay, the checked emergency numbers are: 911 (police), 132 (fire department), 141 (emergencies). They are for real emergencies: if you can, say where you are first.\n\n## Who to call\n<!-- questions: fire department number in Paraguay | medical emergency number in Paraguay -->\n- **911**: police\n- **132**: fire department\n- **141**: emergencies\n\nChecked on 2026-10-28 against official sources; each number comes with its quote in ",
+   "realTokens": 197
+  },
+  {
+   "kind": "pack-en",
+   "text": ", in an adult or a child.\n\n## In anyone\n- Not responding, very confused or drowsy.\n- Severe trouble breathing, blue lips or face.\n- Strong chest pain or pressure.\n- Signs of stroke: drooping face, weak arm, strange speech.\n- Bleeding that won't stop.\n- Seizures.\n- Allergic reaction with trouble breathing or swelling of the face.\n- Sudden, very severe headache, \"the worst of their life\".\n- Very severe stomach pain, especially with a hard belly.\n- Vomiting blood, or black tar-like stools.\n- Large burns, or burns on the face, hands or genitals.\n- Thoughts of ending their life.\n\n## In children and babies (WHO danger signs)\n- Cannot drink or breastfeed.\n- Vomits everything.\n- Has had a seizure.\n-",
+   "realTokens": 172
+  },
+  {
+   "kind": "pack-en",
+   "text": "ot breathing -->\n- Check that the scene is safe.\n- Tap their shoulders and speak loudly. If they do not respond, check w",
+   "realTokens": 27
+  },
+  {
+   "kind": "pack-en",
+   "text": "cial-agua-potable\nverified: 2026-11-02\nquestions: how do i make water safe to drink in an emergency | how many drops of bleach do i put in a liter of water | how long do i need to boil water to make it drinkable | what is solar water disinfection, sodis | where can i find water in an emergency at home | como torno a água potável numa emergência | quantas gotas de lixívia ponho por litro de água\n---\nUntreated water can carry diarrhea, cholera, typhoid and parasites. If in doubt, treat it.\n\n## Where to find water in an emergency at home\n- The water in the hot water tank (shut the inlet and drain it from the bottom).\n- Ice cubes, the liquid in canned vegetables.\n- The toilet tank (not the bowl)",
+   "realTokens": 186
+  },
+  {
+   "kind": "pack-en",
+   "text": "thtubs).\n- Life jackets on boats and for anyone who can't swim well.\n- Don't swim after drinking alcohol or in unknown waters. Don't dive head first where you can't see the bottom.\n- If a current pulls you, don't fight it: swim parallel to the shore until you are out of it, or float and call for help.\n\n## Important\nBased on the AHA, American Red Cross, European Resuscitation Council (ERC) and WHO guidance.\n",
+   "realTokens": 99
+  },
+  {
+   "kind": "pack-en",
+   "text": "gauze in various sizes and adhesive bandages.\n- Elastic bandages and a triangular bandage (works as a sling).\n- Adhesive tape.\n- Large trauma dressings for heavy bleeding.\n- A commercial tourniquet, if you know how to use it.\n- Single-use saline vials for rinsing wounds and eyes.\n- Antiseptic (for e",
+   "realTokens": 76
+  },
+  {
+   "kind": "pack-en",
+   "text": "pect a concussion if there is headache, dizziness, confusion, vomiting, blurred vision, unusual sleepiness, memory loss of what happened, or changes in behavior.\n- Stop the activity at once (including sport) and have a doctor see them.\n- Do not leave them alone for the first hours.\n\n## Call the emer",
+   "realTokens": 66
+  },
+  {
+   "kind": "pack-en",
+   "text": "e.\n- Blood or clear fluid from the ear after a head injury: call the emergency number.\n\n## Important\nBased on the AHA, A",
+   "realTokens": 30
+  },
+  {
+   "kind": "pack-en",
+   "text": "th SAMU, free; EsSalud members also have 117)\n\nChecked on 2026-10-28 against official sources; each number comes with it",
+   "realTokens": 39
+  },
+  {
+   "kind": "pack-en",
+   "text": "ly gasping), their heart has probably stopped. Every minute without CPR sharply lowers the chance of survival. Starting quickly matters most: do not be afraid of doing it \"wrong\"; doing nothing is worse.\n\n## Before you start\n<!-- questions: he fell and stopped breathing, what do I do | she does not respond and is not breathing | my friend is unconscious and not breathing normally | collapsed and only gasping, what should I do | someone is lying unconscious and not breathing -->\n- Check that the scene is safe.\n- Tap their shoulders and speak loudly. If they do not respond, check whether they breathe normally (no more than 10 seconds).\n- Ask someone to call the emergency number and bring a def",
+   "realTokens": 145
+  },
+  {
+   "kind": "pack-en",
+   "text": "and stopped breathing, what do I do | she does not respond and is not breathing | my friend is unconscious and not breathing normally | collapsed and only gasping, what should I do | someone is lying unconscious and not breathing -->\n- Check that the scene is safe.\n- Tap their shoulders and speak loudly. If they do not respond, check whether they breathe normally (no more than 10 seconds).\n- Ask someone to call the emergency number and bring a defibrillator (AED). If you are alone, call on speakerphone and start.\n\n## Chest compressions\n1. Lay the person on their back on a firm surface (the floor).\n2. Kneel beside them. Put the heel of one hand on the center of the chest (lower half of the br",
+   "realTokens": 159
+  },
+  {
+   "kind": "pack-en",
+   "text": "nes 2024; Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025)\nid: esencial-convulsiones\nverified: 2026-11-07\nquestions: what do i do if someone has a seizure | should i put something in their mouth during a seizure | how long does a seizure last and when should i call 911 | my ",
+   "realTokens": 95
+  },
+  {
+   "kind": "pack-en",
+   "text": "s, opioid drugs or medicines nearby) and you have naloxone: call the emergency number, start CPR and give the naloxone f",
+   "realTokens": 29
+  },
+  {
+   "kind": "pack-en",
+   "text": "ay inside and climb onto the roof if water comes in.\n- If you are trapped in a building, go to the highest level. Don't climb into a closed attic (you may get trapped): go onto the roof only if needed to signal for help.\n\n## After\n- Don't return home until it is allowed.\n- Floodwater can contain sew",
+   "realTokens": 71
+  },
+  {
+   "kind": "pack-en",
+   "text": "ate in a disaster if there is no network or signal | who is the out-of-area contact in our plan | como faço um plano familiar de emergência | como nos comunicamos num desastre sem rede\n---\nPreparing in advance is what saves the most lives in a disaster. Do it as a family, in one afternoon.\n\n## 1. Kn",
+   "realTokens": 73
+  },
+  {
+   "kind": "pack-en",
+   "text": "u've learned every year: guidelines change and skills fade.\n\n## Important\nResources from the IFRC, the Red Cross and Red",
+   "realTokens": 26
+  },
+  {
+   "kind": "pack-en",
+   "text": "to you, even if you feel bad: helping someone, caring for someone, your beliefs.\n- **Routines**: regular times for sleep, meals and some activity each day.\n- **Connect**: talk to people you trust. Isolating yourself makes things worse.\n- Limit exposure to distressing news. Avoid alcohol and other substances to \"cope\".\n\n## Panic attack\n- A panic attack is a sudden wave of intense fear with strong physical reactions: racing heart, tight chest, shortness of breath, dizziness, or a feeling of losing control. It is very frightening, but it passes.\n- Stay with the person calmly: sit with them, speak slowly and in a calm tone, without arguing about what they feel or telling them it is nothing.\n- He",
+   "realTokens": 155
+  },
+  {
+   "kind": "pack-en",
+   "text": "If in doubt, treat it.\n\n## Where to find water in an emergency at home\n- The water in the hot water tank (shut the inlet",
+   "realTokens": 31
+  },
+  {
+   "kind": "pack-en",
+   "text": "Red Cross First Aid Guidelines 2024; Canadian Red Cross (First Aid Program Standards 2026, based on IFRC 2025)\nid: esencial-dolor-de-pecho-infarto\nverified: 2026-11-07\nquestions: he has chest pain, could it be a heart attack | what do i do if i think someone is having a heart attack | how much aspirin do i give an adult for chest pain | his chest pain spreads to his arm, what do i do | o que faço se sentir dor no peito | dor no peito pode ser infarto, o que faço\n---\nIn a heart attack, every minute counts. Do not wait to see if it passes.\n\n## Signs\n- Pain, pressure or tightness in the chest lasting more than a few minutes, or that comes and goes.\n- Pain spreading to the arm (especially the le",
+   "realTokens": 195
+  },
+  {
+   "kind": "pack-en",
+   "text": " with loss of consciousness should be checked by a doctor, especially with chest pain, palpitations, during exercise, or",
+   "realTokens": 23
+  },
+  {
+   "kind": "pack-en",
+   "text": "s on the chest (lower half of the breastbone), not the abdomen.\n- If you are alone and choking: call the emergency numbe",
+   "realTokens": 29
+  },
+  {
+   "kind": "pack-en",
+   "text": " let them half-sit. If you suspect a heart attack, reclined with the back somewhat raised.\n5. Do not give food or drink.\n\n## Fainting\n- If someone feels they are about to faint (dizziness, blurred vision, cold sweat): have them sit or lie down at once. Crossing the legs and squeezing them, or clench",
+   "realTokens": 72
+  },
+  {
+   "kind": "pack-en",
+   "text": "ue faço quando vem um furacão | o que é o olho do furacão\n---\nHurricanes (also called cyclones or typhoons) bring very s",
+   "realTokens": 37
+  },
+  {
+   "kind": "pack-pt",
+   "text": "ao redor da casa.\n- Tenha a mochila de emergência e o carro com combustível e apontado para a saída.\n- Conheça pelo meno",
+   "realTokens": 37
+  },
+  {
+   "kind": "pack-pt",
+   "text": ")\n- Incentive-a a continuar tossindo. Não dê tapas nem água. Fique ao lado dela e vigie.\n\n## Grave em adultos e crianças maiores de 1 ano\nOs guias de 2025 recomendam alternar tapas nas costas e compressões abdominais:\n1. Fique ao lado dela e um pouco atrás. Incline a pessoa para a frente, segurando-",
+   "realTokens": 90
+  },
+  {
+   "kind": "pack-pt",
+   "text": "o do peito, bem abaixo da linha dos mamilos. Os guias de 2025 indicam usar a base de uma mão; você também pode usar dois polegares abraçando o peito com as mãos.\n4. Profundidade: um terço do peito, cerca de 4 cm. Ritmo: 100 a 120 por minuto.\n5. Respirações: cubra ao mesmo tempo a boca e o nariz dele",
+   "realTokens": 104
+  },
+  {
+   "kind": "pack-pt",
+   "text": " Ministério da Saúde (106) é gratuito: «Ante cualquier emergencia, mantenga la calma y llame de inmediato al 106», segun",
+   "realTokens": 38
+  },
+  {
+   "kind": "pack-pt",
+   "text": "motos de NIDO Essencial. Na costa, depois de um terremoto forte, afaste-se do mar por se houver tsunami.\n\n## O que fazer diante de um furacão\n- Se ordenarem evacuar, faça-o imediatamente.\n- Se não, fique no cômodo menor e mais interno, no andar mais baixo, longe das janelas.\n- Nunca use um gerador d",
+   "realTokens": 94
+  },
+  {
+   "kind": "pack-pt",
+   "text": "escrituras) num saco impermeável e uma cópia digital.\n- Um pouco de dinheiro em espécie: depois de um desastre, caixas eletrônicos e cartões podem não funcionar.\n\n## 6. Kits\nUma mochila de emergência por pessoa e reservas em casa para pelo menos 3 dias (melhor 2 semanas). Ver o guia da mochila de emergência.\n\n## 7. Pratiquem\nFaçam um simulado por ano: sair de casa, chegar ao ponto de encontro, usar o plano de comunicação. Ensinem às crianças a ligar para a emergência e o endereço delas.\n\n## Importante\nBaseado nos guias de Ready.gov (FEMA), da Cruz Vermelha Americana, da IFRC e da UNDRR.\n",
+   "realTokens": 185
+  },
+  {
+   "kind": "pack-pt",
+   "text": " você souber fazer)\n- Se você tiver treinamento e estiver disposto: 30 compressões e 2 respirações, e repita.\n- Para respirar: incline a cabeça para trás e levante o queixo, tape o nariz, sele sua boca sobre a dela e sopre por 1 segundo até ver o peito subir.\n- Se não souber ou não quiser, faça só compressões sem parar: em adultos funciona bem.\n\n## Quando parar\n<!-- perguntas: de quanto em quanto tempo revezar na massagem | posso parar a massagem para descansar | quando parar a rcp -->\n- Quando chegar um desfibrilador (use-o de imediato, ver o guia do DEA).\n- Quando a pessoa começar a respirar normalmente ou se mexer.\n- Quando o serviço de emergência chegar e assumir.\n- Se você estiver exaus",
+   "realTokens": 203
+  },
+  {
+   "kind": "pack-pt",
+   "text": " tremendo e suando, o que dou | quanto de açúcar dou numa baixa de glicose | baixa de açúcar, espero quanto tempo para repetir | pessoa com diabetes desmaiou, posso dar suco\n---\nUma pessoa com diabetes (sobretudo se usa insulina) pode ter uma baixa de açúcar se não comeu, fez mais exercício ou aplicou insulina demais.\n\n## Sinais\nSuor, tremor, fome, palidez, nervosismo, confusão, comportamento estranho (pode parecer embriaguez), visão embaçada. Pode chegar a desmaiar ou convulsionar.\n\n## Se ela estiver acordada e conseguir engolir\n1. Dê 15 a 20 gramas de açúcar rápido: tabletes de glicose; se não houver, 3 ou 4 cubos ou colheres de chá de açúcar dissolvidos em água, um copo de suco de laranja",
+   "realTokens": 236
+  },
+  {
+   "kind": "pack-pt",
+   "text": " gelo instantâneo.\n- Máscara de RCP (barreira).\n\n## Medicamentos básicos\n- Analgésicos e para a febre: paracetamol, ibuprofeno.\n- Aspirina (só adultos, para um possível infarto).\n- Antialérgico para alergias.\n- Pacotes de sais de reidratação oral.\n- Creme para queimaduras leves ou gel de babosa (alo",
+   "realTokens": 100
+  },
+  {
+   "kind": "pack-pt",
+   "text": "), 195 (ambulância), 113 (proteção civil e desastres). São ligações para emergências reais: se puder, diga primeiro onde você está.\n\n## Para quem ligar\n<!-- perguntas: número dos bombeiros em Honduras | número de emergências médicas em Honduras -->\n- **911**: emergências (número único)\n- **198**: bo",
+   "realTokens": 92
+  },
+  {
+   "kind": "pack-pt",
+   "text": "verified: 2026-10-28\nquestions: para que número ligo se acontecer algo na Guatemala | como peço uma ambulância na Guatemala | telefone da polícia na Guatemala\n---\nNa Guatemala, os números de emergência verificados são: 110 (polícia), 122 (bombeiros), 123 (bombeiros municipais), 125 (Cruz Vermelha), 119 (proteção civil e desastres). São ligações para emergências reais: se puder, diga primeiro onde você está.\n\n## Para quem ligar\n<!-- perguntas: número dos bombeiros na Guatemala | número de emergências médicas na Guatemala -->\n- **110**: polícia\n- **122**: bombeiros (Bombeiros Voluntários)\n- **123**: bombeiros municipais\n- **125**: Cruz Vermelha\n- **119**: proteção civil e desastres (CONRED; ta",
+   "realTokens": 229
+  },
+  {
+   "kind": "pack-pt",
+   "text": "e emergência\ncategory: Emergências por país\nlang: pt\nsources: Secretaría de Relaciones Exteriores de México, Guía del viajero (Venezuela)\nid: local-venezuela\nregion: VE\nverified: 2026-10-28\nquestions: para que número ligo se acontecer algo na Venezuela | como peço uma ambulância na Venezuela | telefone da polícia na Venezuela\n---\nNa Venezuela, o número único de emergência é o 911: é o número para ligar diante de qualquer emergência. Use-o só para emergências reais: se puder, diga primeiro onde você está.\n\n## Para quem ligar\n<!-- perguntas: número dos bombeiros na Venezuela | número de emergências médicas na Venezuela -->\n- **911**: emergências (número único)\n\nVerificado em 2026-10-28 em font",
+   "realTokens": 203
+  },
+  {
+   "kind": "pack-pt",
+   "text": "anadense (normas de programa 2026, baseadas na IFRC 2025); NHS\nid: esencial-signos-de-alarma\nverified: 2026-11-07\nquestions: sinais de alarme para ir à emergência | bebê de 2 meses com febre, é sinal de perigo | quando uma dor de barriga é emergência | sinais de perigo em criança pequena\n---\nLigue p",
+   "realTokens": 106
+  },
+  {
+   "kind": "pack-pt",
+   "text": "OMS e UNICEF, água, saneamento e higiene em emergências; Projeto Esfera; Ready.gov\nid: esencial-saneamiento-de-emergencia\nverified: 2026-11-02\nquestions: banheiro de emergência em casa sem água | latrina no quintal, a que distância do poço | higiene depois de um desastre, como montar | lixo e fezes ",
+   "realTokens": 99
+  },
+  {
+   "kind": "pack-pt",
+   "text": "rces: Secretaría de Relaciones Exteriores de México, Guía del viajero (Venezuela)\nid: local-venezuela\nregion: VE\nverified: 2026-10-28\nquestions: para que número ligo se acontecer algo na Venezuela | como peço uma ambulância na Venezuela | telefone da polícia na Venezuela\n---\nNa Venezuela, o número ú",
+   "realTokens": 89
+  },
+  {
+   "kind": "pack-pt",
+   "text": "e não recuperar a consciência em um minuto, ligue para a emergência.\n- Todo desmaio com perda de consciência deve ser avaliado por um médico, sobretudo se houver dor no peito, palpitações, se aconteceu fazendo exercício ou se for uma pessoa idosa.\n\n## Importante\nBaseado nas diretrizes da Cruz Vermel",
+   "realTokens": 83
+  },
+  {
+   "kind": "pack-pt",
+   "text": "ito ou desmaio, ou se você não tiver certeza de que é um ataque de pânico: os sintomas se parecem com os de problemas do coração ou da respiração.\n\n## Crianças\nExplique a elas o que está acontecendo com palavras simples e a verdade. Mantenha rotinas, brinque com elas, deixe que expressem o que sente",
+   "realTokens": 88
+  },
+  {
+   "kind": "pack-pt",
+   "text": "ang: pt\nsources: Secretaría de Relaciones Exteriores de México, Guía del viajero (Paraguay)\nid: local-paraguay\nregion: PY\nverified: 2026-10-28\nquestions: para que número ligo se acontecer algo no Paraguai | como peço uma ambulância no Paraguai | telefone da polícia no Paraguai\n---\nNo Paraguai, os números de emergência verificados são: 911 (polícia), 132 (bombeiros), 141 (emergências). São ligações para emergências reais: se puder, diga primeiro onde você está.\n\n## Para quem ligar\n<!-- perguntas: número dos bombeiros no Paraguai | número de emergências médicas no Paraguai -->\n- **911**: polícia\n- **132**: bombeiros\n- **141**: emergências\n\nVerificado em 2026-10-28 em fontes oficiais; cada núme",
+   "realTokens": 234
+  },
+  {
+   "kind": "pack-pt",
+   "text": "o encontrem. Grite só como último recurso, para não engolir poeira.\n6. Use o telefone só para emergências. Envie mensagens de texto ou use o NIDO para avisar os seus.\n7. Escute o rádio e siga as instruções das autoridades.\n\n## Importante\nBaseado em Ready.gov (FEMA), na campanha \"Abaixe-se, proteja-s",
+   "realTokens": 93
+  },
+  {
+   "kind": "pack-pt",
+   "text": " cheio e guarde-o num contêiner tampado, longe da casa e da água, até que possa ser recolhido.\n- Mantenha a urina separada, se possível: pode ser despejada na terra, longe de fontes de água.\n\n## Latrina no exterior\n- Pelo menos a 30 metros de qualquer fonte de água (poço, rio) e mais abaixo que ela.\n- Uma vala estreita e rasa, de uns 15 cm de profundidade. Tape com terra depois de cada uso.\n- Coloque privacidade, sobretudo para mulheres e meninas, e luz à noite, se possível.\n\n## Higiene\n- Lave as mãos com água e sabão (ou cinza) depois de usar o banheiro e antes de comer. Monte um ponto de lavagem com um galão com torneira ou uma garrafa pendurada.\n- Mantenha o lixo em sacos fechados e contê",
+   "realTokens": 217
+  },
+  {
+   "kind": "pack-pt",
+   "text": "°C ou mais) é uma defesa do corpo contra uma infecção. Quase sempre é leve, mas é preciso saber quando é grave.\n\n## O que fazer\n- Beba muito líquido: água, caldo, soro oral. Aos bebês, mais mamadas no peito.\n- Roupa leve, quarto fresco. Não agasalhe demais nem banhe em água fria ou com álcool.\n- Se houver mal-estar, pode-se usar paracetamol ou ibuprofeno na dose da bula, conforme a idade e o peso. Não dê aspirina a menores de 16 anos.\n- Descanse. Lave as mãos com frequência para não contagiar.\n\n## Procure atendimento médico urgente se...\n- For um bebê com menos de 3 meses com 38 °C ou mais.\n- Ela tiver dificuldade para respirar, respirar muito rápido ou a pele afundar entre as costelas ao re",
+   "realTokens": 217
+  },
+  {
+   "kind": "pack-pt",
+   "text": "antiza atención 24 horas de SAMU 106»\nid: local-peru\nregion: PE\nverified: 2026-10-28\nquestions: para que número ligo se acontecer algo no Peru | como peço uma ambulância no Peru | telefone da polícia no Peru\n---\nNo Peru, os números de emergência verificados são: 105 (polícia), 116 (bombeiros), 106 (",
+   "realTokens": 107
+  },
+  {
+   "kind": "pack-pt",
+   "text": "es e torções\n- Repouso, gelo enrolado num pano por até 20 minutos de cada vez, bandagem sem apertar e a região elevada, se for confortável.\n- Vá ao médico se não conseguir apoiar o pé ou mexer a articulação, se a deformidade for visível ou se não melhorar em alguns dias.\n\n## Ligue para o número de e",
+   "realTokens": 88
+  },
+  {
+   "kind": "pack-pt",
+   "text": "s velhos.\n- Continue amamentando os bebês e com a comida normal assim que tiverem fome. Não precisa fazer jejum.\n- Em crianças, o zinco durante 10 a 14 dias encurta a diarreia (conforme indicar o posto de saúde).\n- Evite refrigerantes, sucos industrializados e bebidas esportivas como substituto: têm",
+   "realTokens": 87
+  },
+  {
+   "kind": "pack-pt",
+   "text": "0-28 em fontes oficiais; cada número vem com sua citação na tabela de dados deste pacote.\n\n## Quem avisa sobre um desast",
+   "realTokens": 35
+  },
+  {
+   "kind": "prompt-system",
+   "text": " only when the content is genuinely a list of distinct items. You have no ability to control real-world devices or take physical actions - no alarms, lights, thermostats, timers, or any other device or system. You can only respond with text. Treat greetings and casual small talk conversationally and briefly, not as a command or task. Never claim to have done something (set, adjusted, turned on/off, scheduled, etc.) that you don't actually have the ability to do. No relevant sources were found in the offline index for this question. Do NOT invent facts. If this is a factual question you cannot answer reliably without sources, say honestly that you don't know the answer and suggest what the us",
+   "realTokens": 144
+  },
+  {
+   "kind": "prompt-system",
+   "text": "t sentences or a brief paragraph, no preamble. Do not default to a bulleted list or a single takeaway sentence followed by three bullet points — use bullets only when the content is genuinely a list of distinct items. You have no ability to control real-world devices or take physical actions - no alarms, lights, thermostats, timers, or any other device or system. You can only respond with text. Treat greetings and casual small talk conversationally and briefly, not as a command or task. Never claim to have done something (set, adjusted, turned on/off, scheduled, etc.) that you don't actually have the ability to do. No relevant sources were found in the offline index for this question. Do NOT",
+   "realTokens": 145
+  },
+  {
+   "kind": "prompt-system",
+   "text": "entity. When asked about yourself, state these facts clearly. Answer in 2-3 short, direct sentences or a brief paragraph, no preamble. Do not default to a bulleted list or a single takeaway sentence followed by three bullet points — use bullets only when the content is genuinely a list of distinct i",
+   "realTokens": 62
+  },
+  {
+   "kind": "prompt-system",
+   "text": "ts clearly. Answer in 2-3 short, direct sentences or a brief paragraph, no preamble. Do not default to a bulleted list or a single takeaway sentence followed by three bullet points — use bullets only when the content is genuinely a list of distinct items. You have no ability to control real-world devices or take physical actions - no alarms, lights, thermostats, timers, or any other device or system. You can only respond with text. Treat greetings and casual small talk conversationally and briefly, not as a command or task. Never claim to have done something (set, adjusted, turned on/off, scheduled, etc.) that you don't actually have the ability to do. No relevant sources were found in the o",
+   "realTokens": 149
+  },
+  {
+   "kind": "prompt-user",
+   "text": " No lists unless the question asks for o",
+   "realTokens": 8
+  },
+  {
+   "kind": "prompt-system",
+   "text": "no alarms, lights, thermostats, timers, ",
+   "realTokens": 12
+  },
+  {
+   "kind": "prompt-system",
+   "text": "e (not yours), encrypted. Only the USER can see their data, never you as a separate entity. When asked about yourself, state these facts clearly. Answer in 2-3 short, direct sentences or a brief paragraph, no preamble. Do not default to a bulleted list or a single takeaway sentence followed by three",
+   "realTokens": 66
+  },
+  {
+   "kind": "prompt-user",
+   "text": "e rompen 7. ¿Cuántos huevos me quedan?\n\n",
+   "realTokens": 16
+  },
+  {
+   "kind": "prompt-user",
+   "text": "uéntame un cuento muy corto de un zorro ",
+   "realTokens": 14
+  },
+  {
+   "kind": "prompt-system",
+   "text": " runs 100% offline on the user's phone. You work WITHOUT internet — everything happens on-device. The user's data is sto",
+   "realTokens": 29
+  },
+  {
+   "kind": "prompt-system",
+   "text": "e entity. When asked about yourself, sta",
+   "realTokens": 9
+  },
+  {
+   "kind": "prompt-user",
+   "text": "Escribe un correo breve a mi vecino, dos frases, sin asunto, pidiéndole que baje la música por la noche\n\n(Response style: Keep it short: 2-3 sentences. No lists unless the question asks for one.)",
+   "realTokens": 54
+  },
+  {
+   "kind": "prompt-user",
+   "text": "ponse style: Keep it short: 2-3 sentence",
+   "realTokens": 12
+  },
+  {
+   "kind": "prompt-system",
+   "text": "-device. The user's data is stored on THEIR device (not yours), encrypted. Only the USER can see their data, never you as a separate entity. When asked about yourself, state these facts clearly. Answer in 2-3 short, direct sentences or a brief paragraph, no preamble. Do not default to a bulleted lis",
+   "realTokens": 68
+  },
+  {
+   "kind": "prompt-user",
+   "text": "os de retraso, ¿a qué hora llega?\n\n(Resp",
+   "realTokens": 15
+  },
+  {
+   "kind": "doc-tabla",
+   "text": "| fecha | saldo | dosis | ref |\n| 2026-02-02 | 1037.25 | 0.125 mg | 13 |\n| 2026-03-03 | 1074.50 | 0.250 mg | 26 |\n| 2026-04-04 | 1111.75 | 0.375 mg | 39 |\n| 2026-05-05 | 1149.00 | 0.500 mg | 52 |\n| 2026-06-06 | 1186.25 | 0.625 mg | 65 |\n| 2026-07-07 | 1223.50 | 0.750 mg | 78 |\n| 2026-08-08 | 1260.75 | 0.875 mg | 91 |\n| 2026-09-09 | 1298.00 | 1.000 mg | 104 |\n| 2026-10-10 | 1335.25 | 1.125 mg | 117 |\n| 2026-11-11 | 1372.50 | 1.250 mg | 130 |\n| 2026-12-12 | 1409.75 | 1.375 mg | 143 |\n| 2026-01-13 | 1447.00 | 1.500 mg | 156 |\n| 2026-02-14 | 1484.25 | 1.625 mg | 169 |\n| 2026-03-15 | 1521.50 | 1.750 mg | 182 |\n| 2026-04-16 | 1558.75 | 1.875 mg | 195 |\n| 2026-05-17 | 1596.00 | 2.000 mg | 208 |\n| 2026-06-18 | 1633.25 | 2.125 mg | 221 |\n| 2026-07-19 | 1670.50 | 2.250 mg | 234 |\n| 2026-08-20 | 1707.75 | 2.375 mg | 247 |\n| 2026-09-21 | 1745.00 | 2.500 mg | 260 |\n| 2026-10-22 | 1782.25 | 2.625 mg | 273 |\n| 2026-11-23 | 1819.50 | 2.750 mg | 286 |\n| 2026-12-24 | 1856.75 | 2.875 mg | 299 |\n| 2026-01-25 | 1894.00 | 3.000 mg | 312 |\n| 2026-02-26 | 1931.25 | 3.125 mg | 325 |\n| 2026-03-27 | 1968.50 | 3.250 mg | 338 |\n| 2026-04-28 | 2005.75 | 3.375 mg | 351 |\n| 2026-05-01 | 2043.00 | 3.500 mg | 364 |\n| 2026-06-02 | 2080.25 | 3.625 mg | 377 |\n| 2026-07-03 | 2117.50 | 3.750 mg | 390 |\n| 2026-08-04 | 2154.75 | 3.875 mg | 403 |\n| 2026-09-05 | 2192.00 | 4.000 mg | 416 |\n| 2026-10-06 | 2229.25 | 4.125 mg | 429 |\n| 2026-11-07 | 2266.50 | 4.250 mg | 442 |\n| 2026-12-08 | 2303.75 | 4.375 mg | 455 |\n| 2026-01-09 | 2341.00 | 4.500 mg | 468 |\n| 2026-02-10 | 2378.25 | 4.625 mg | 481 |\n| 2026-03-11 | 2415.50 | 4.750 mg | 494 |\n| 2026-04-12 | 2452.75 | 4.875 mg | 507 |\n| 2026-05-13 | 2490.00 | 5.000 mg | 520 |\n| 2026-06-14 | 2527.25 | 5.125 mg | 533 |\n| 2026-07-15 | 2564.50 | 5.250 mg | 546 |\n| 2026-08-16 | 2601.75 | 5.375 mg | 559 |\n| 2026-09-17 | 2639.00 | 5.500 mg | 572 |\n| 2026-10-18 | 2676.25 | 5.625 mg | 585 |\n| 2026-11-19 | 2713.50 | 5.750 mg | 598 |\n| 2026-12-20 | 2750.75 | 5.875 mg | 611 |\n|",
+   "realTokens": 1649
+  }
+ ]
+}

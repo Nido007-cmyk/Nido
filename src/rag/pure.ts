@@ -949,6 +949,18 @@ function sentenceEndOffsets(text: string): number[] {
 }
 
 /**
+ * Puntos donde un resto puede terminar: fin de frase o fin de línea
+ * (2026-11-11), ordenados y sin repetir.
+ */
+function cutOffsets(text: string): number[] {
+  const ends = new Set(sentenceEndOffsets(text));
+  for (let i = text.indexOf("\n"); i !== -1; i = text.indexOf("\n", i + 1)) {
+    if (i > 0) ends.add(i);
+  }
+  return [...ends].sort((x, y) => x - y);
+}
+
+/**
  * R-01 (ronda física 0.1.68): recorta la lista de fragmentos recuperados
  * hasta que el prompt cabe en la ventana con la reserva de generación.
  *
@@ -988,11 +1000,17 @@ export function fitChunksToBudget(
   chunks: RetrievedChunk[],
   fixedText: string,
   nCtx: number,
-  reserveGeneration: number
+  reserveGeneration: number,
+  // 2026-11-11: quien arma el prompt en VARIOS mensajes pasa aquí su
+  // propia medida (la misma suma que luego juzga applyContextBudget).
+  // Sin ella se mide el texto concatenado, que solo cuenta UNA vez la
+  // plantilla: correcto para assemblePrompt (un solo texto), no para
+  // assembleChatMessages (sistema y mensaje actual se cuentan aparte).
+  measure?: (list: RetrievedChunk[]) => number
 ): RetrievedChunk[] {
   if (chunks.length === 0) return chunks;
   const fits = (list: RetrievedChunk[]): boolean =>
-    defaultTokenCounter(fixedText + renderChunkEntries(list)) + reserveGeneration <= nCtx;
+    (measure ? measure(list) : defaultTokenCounter(fixedText + renderChunkEntries(list))) + reserveGeneration <= nCtx;
   if (fits(chunks)) return chunks;
   let candidates = chunks.slice();
   while (candidates.length > 0) {
@@ -1005,7 +1023,13 @@ export function fitChunksToBudget(
     // más largo posible; si ni ese llega al suelo de utilidad, ningún
     // resto más corto lo hará (ambas medidas menguan juntas).
     const top = kept[0];
-    const ends = sentenceEndOffsets(top.body);
+    // 2026-11-11: también se puede cortar al final de una línea. Una
+    // tabla o una lista no tienen puntos: sin esto, un fragmento de
+    // tabla que no cabía entero no tenía ningún corte posible y se
+    // sacrificaba entero (lo hizo visible la estimación nueva, que ya no
+    // cuenta 1.649 tokens reales como 717). En prosa sin saltos de línea
+    // los cortes son los mismos de siempre.
+    const ends = cutOffsets(top.body);
     let admitted: RetrievedChunk[] | null = null;
     for (let i = ends.length - 1; i >= 0; i--) {
       const body = top.body.slice(0, ends[i]).trimEnd();
@@ -1345,7 +1369,19 @@ export function assembleChatMessages(
         systemMessage.content +
         "\n" +
         currentUser.content.replace(renderChunkEntries(chunks), "");
-      const fitted = fitChunksToBudget(chunks, fixedText, budget.nCtx, effReserve);
+      // 2026-11-11: el ajuste mide igual que el juez de abajo
+      // (applyContextBudget suma sistema y mensaje actual por separado,
+      // cada uno con su plantilla). Midiendo el texto concatenado, el
+      // ajuste dejaba entrar un fragmento que luego no cabía por 50
+      // tokens y el turno moría con «exceden nCtx … sin siquiera
+      // historial» (nCtx 1024, documento importado).
+      const fitted = fitChunksToBudget(
+        chunks,
+        fixedText,
+        budget.nCtx,
+        effReserve,
+        (list) => defaultTokenCounter(buildSystemMessage(list).content) + defaultTokenCounter(buildCurrentUser(list).content)
+      );
       onFitted?.(fitted);
       systemMessage = buildSystemMessage(fitted);
       currentUser = buildCurrentUser(fitted);
