@@ -96,3 +96,7 @@ jobs:
           echo "1ba08a8b45da99339a0601134cc037b54cf85e9bc0edbe76dcbd27c2d684a977  kc.zip" | sha256sum -c -
           unzip -q kc.zip -d "$RUNNER_TEMP"
       - run: KOTLINC="$RUNNER_TEMP/kotlinc/bin/kotlinc" node --no-warnings scripts/check-cpr-motion-parity.mjs
+      # 0.1.96: las notificaciones locales propias (modules/nido-notify)
+      # calculan en Kotlin la próxima hora de cada aviso, como hacía
+      # expo-notifications. Casos exactos y propiedades en varias zonas.
+      - run: KOTLINC="$RUNNER_TEMP/kotlinc/bin/kotlinc" node --no-warnings scripts/check-notify-triggers.mjs

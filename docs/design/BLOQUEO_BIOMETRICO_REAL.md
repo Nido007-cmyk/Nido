@@ -191,7 +191,8 @@ Antes de activar (una sola vez):
   solo con el proceso vivo tras el desbloqueo, así que el nivel A no afecta
   al P2P.
 - **Hallazgo relacionado:** el texto de los recordatorios programados queda en
-  el almacén de notificaciones de Android (expo-notifications), fuera de
+  el almacén de notificaciones de Android (expo-notifications; desde la 0.1.96,
+  el de modules/nido-notify, que sigue guardando el texto), fuera de
   SQLCipher. Valorar guardar un texto genérico en la notificación y el detalle
   dentro de NIDO.
 

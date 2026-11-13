@@ -8,7 +8,8 @@
  * Recordatorios que se repiten (0.1.32). Puro, sin dependencias.
  *
  * Los ritmos de sistema, los que se pueden programar sin la app
- * abierta (disparadores DAILY y WEEKLY de expo-notifications): cada
+ * abierta (disparadores DAILY y WEEKLY; desde la 0.1.96 los programa
+ * el módulo propio nido-notify, antes expo-notifications): cada
  * día a una hora, o cada semana un día a una hora. Desde la 0.1.35,
  * «cada mes» y «cada año» también tienen soporte, por otra vía: se
  * guardan como repeticiones de calendario (isCalendarRepeat,

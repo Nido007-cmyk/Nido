@@ -8,22 +8,22 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   requestPermissionsAsync: vi.fn(),
-  setNotificationHandler: vi.fn(),
   setNotificationChannelAsync: vi.fn(),
   scheduleNotificationAsync: vi.fn(),
   cancelScheduledNotificationAsync: vi.fn(),
   addNotificationReceivedListener: vi.fn(),
+  consumeLegacyStoreAsync: vi.fn(),
 }));
 
-vi.mock("expo-notifications", () => ({
+vi.mock("nido-notify", () => ({
   requestPermissionsAsync: mocks.requestPermissionsAsync,
-  setNotificationHandler: mocks.setNotificationHandler,
   setNotificationChannelAsync: mocks.setNotificationChannelAsync,
   scheduleNotificationAsync: mocks.scheduleNotificationAsync,
   cancelScheduledNotificationAsync: mocks.cancelScheduledNotificationAsync,
   addNotificationReceivedListener: mocks.addNotificationReceivedListener,
+  consumeLegacyStoreAsync: mocks.consumeLegacyStoreAsync,
   SchedulableTriggerInputTypes: { DATE: "date", DAILY: "daily", WEEKLY: "weekly", MONTHLY: "monthly", YEARLY: "yearly" },
-  AndroidImportance: { HIGH: 4, DEFAULT: 3 },
+  AndroidImportance: { HIGH: 6, DEFAULT: 5 },
   AndroidNotificationVisibility: { UNKNOWN: 0, PUBLIC: 1, PRIVATE: 2, SECRET: 3 },
 }));
 
@@ -241,5 +241,26 @@ describe("0.1.47: aviso de mensaje NIDO", () => {
       expect(arg.content).toEqual({ title: "NIDO", body: "New NIDO message", sound: "default" });
       expect(arg.trigger).toEqual({ channelId: "nido-messages" });
     }
+  });
+});
+
+describe("motor propio (0.1.96, sin expo-notifications)", () => {
+  it("los canales llevan la importancia de siempre: alta para avisos, normal para el resumen", async () => {
+    await initNotifications();
+    const byId = Object.fromEntries(mocks.setNotificationChannelAsync.mock.calls.map(([id, ch]) => [id, ch]));
+    expect(byId["nido-reminders"]).toMatchObject({ importance: 6, sound: "default", vibrationPattern: [0, 250, 250, 250] });
+    expect(byId["nido-briefing"]).toMatchObject({ importance: 5 });
+    expect(byId["nido-briefing"]).not.toHaveProperty("sound");
+    expect(byId["nido-messages"]).toMatchObject({ importance: 6, sound: "default" });
+  });
+
+  it("consumeEngineMigration dice true una vez tras actualizar, y false si el módulo falla", async () => {
+    const { consumeEngineMigration } = await import("./notifications");
+    mocks.consumeLegacyStoreAsync.mockResolvedValueOnce(true);
+    expect(await consumeEngineMigration()).toBe(true);
+    mocks.consumeLegacyStoreAsync.mockResolvedValueOnce(false);
+    expect(await consumeEngineMigration()).toBe(false);
+    mocks.consumeLegacyStoreAsync.mockRejectedValueOnce(new Error("sin módulo"));
+    expect(await consumeEngineMigration()).toBe(false);
   });
 });

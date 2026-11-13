@@ -253,7 +253,7 @@ vi.mock("expo-sharing", () => ({}));
 // appReset.test.ts (la barrera wipe-gate se prueba contra el flujo real).
 // El mock cubre TODA la superficie que usa appReset: N1 añadió el dismiss
 // y la verificación de notificaciones ya presentadas (bandeja).
-vi.mock("expo-notifications", () => ({
+vi.mock("nido-notify", () => ({
   cancelAllScheduledNotificationsAsync: async () => {},
   getAllScheduledNotificationsAsync: async () => [] as Array<{ identifier: string }>,
   dismissAllNotificationsAsync: async () => {},

@@ -104,7 +104,8 @@ reensambladores de tramas (la cola de outbox persiste, así que los mensajes
 sobreviven; las sesiones re-hacen handshake), mapas de progreso de descargas,
 contextos llama.cpp cargados, conexiones DB cacheadas, estado de ejecución del
 bucle del agente. Las notificaciones programadas por el SO
-(`expo-notifications`) sobreviven a nivel de SO.
+(`modules/nido-notify`; expo-notifications antes de la 0.1.96) sobreviven a
+nivel de SO.
 
 ### 1.6 Veredictos de dominio — actual
 

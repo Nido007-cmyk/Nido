@@ -97,7 +97,8 @@ Personality presets are hard-coded in `src/constants/personalities.ts`
 Query stats/telemetry sampler, P2P encrypted sessions + frame reassemblers
 (outbox queue persists, so messages survive; sessions re-handshake), download
 progress maps, loaded llama.cpp contexts, cached DB connections, agent-loop
-run state. OS-scheduled notifications (`expo-notifications`) survive at OS level.
+run state. OS-scheduled notifications (`modules/nido-notify`, expo-notifications
+before 0.1.96) survive at OS level.
 
 ### 1.6 Domain verdicts — current
 

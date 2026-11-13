@@ -17,7 +17,8 @@ import expo.modules.kotlin.modules.ModuleDefinition
 /**
  * Puente para SCHEDULE_EXACT_ALARM (Android 12+).
  *
- * expo-notifications usa setExactAndAllowWhileIdle solo si
+ * Las notificaciones (modules/nido-notify desde la 0.1.96; antes
+ * expo-notifications) usan setExactAndAllowWhileIdle solo si
  * AlarmManager.canScheduleExactAlarms() es true; si no, cae a alarma
  * inexacta (Doze la retrasa minutos). El manifest declara el permiso pero
  * en Android 12+ es un "special app access" que el usuario debe otorgar

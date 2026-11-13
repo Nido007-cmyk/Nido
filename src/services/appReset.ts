@@ -7,7 +7,7 @@
 import { networkAudit } from "../privacy/networkAudit";
 import { beginTelemetryWipe, endTelemetryWipe } from "../inference/telemetry";
 import * as FileSystem from "expo-file-system/legacy";
-import * as Notifications from "expo-notifications";
+import * as Notifications from "nido-notify";
 import { llamaEngine } from "../inference/LlamaEngine";
 import { embeddingEngine } from "../rag/embed";
 import { closeAllPacks } from "../rag/packs";
@@ -218,7 +218,7 @@ async function checkGone(path: string, survivors: string[]): Promise<void> {
 }
 
 /**
- * Notificaciones del SO (expo-notifications): el borrado cancela las
+ * Notificaciones del SO (nido-notify): el borrado cancela las
  * programadas Y despide las ya entregadas (bandeja); la verificación
  * cuenta cuántas quedan de cada clase.
  */

@@ -28,7 +28,7 @@ module.exports = {
     // parsear. Mismo criterio que vitest.setup.mts.
     "^expo-sqlite$": "<rootDir>/jest-mocks/expo-sqlite.js",
     "^expo-file-system/legacy$": "<rootDir>/jest-mocks/expo-file-system-legacy.js",
-    "^expo-notifications$": "<rootDir>/jest-mocks/expo-notifications.js",
+    "^nido-notify$": "<rootDir>/jest-mocks/nido-notify.js",
     "^expo-sharing$": "<rootDir>/jest-mocks/expo-sharing.js",
     "^expo-local-authentication$": "<rootDir>/jest-mocks/expo-local-authentication.js",
     "^expo-clipboard$": "<rootDir>/jest-mocks/expo-clipboard.js",

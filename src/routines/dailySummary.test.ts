@@ -22,7 +22,9 @@ vi.mock("../notify/notifications", () => ({
   cancelBriefingNotification: async () => { calls.push("cancel"); },
   cancelReminderNotification: async () => {},
   scheduleReminderNotification: async () => {},
+  scheduleTaskNotification: async () => true,
   reminderNotificationTitle: () => "",
+  consumeEngineMigration: async () => false,
 }));
 vi.mock("../agent/memory/memoryStore", () => ({
   getDueReminders: async () => [],

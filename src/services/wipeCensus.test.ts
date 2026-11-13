@@ -67,7 +67,7 @@ vi.mock("./downloadManager", () => ({
   resetDownloadState: () => {},
   cancelAllDownloads: async () => {},
 }));
-vi.mock("expo-notifications", () => ({
+vi.mock("nido-notify", () => ({
   cancelAllScheduledNotificationsAsync: async () => {},
   getAllScheduledNotificationsAsync: async () => [],
   dismissAllNotificationsAsync: async () => {},

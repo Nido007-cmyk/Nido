@@ -24,7 +24,9 @@ import {
   cancelBriefingNotification,
   cancelReminderNotification,
   scheduleReminderNotification,
+  scheduleTaskNotification,
   reminderNotificationTitle,
+  consumeEngineMigration,
 } from "../notify/notifications";
 import { upcomingEventsForBriefing } from "../agent/tools/handlers";
 import { formatDay } from "../agent/loop/toolRouter";
@@ -124,11 +126,75 @@ export async function runStartupRoutines(): Promise<void> {
     }
   }
 
+  // 0.1.96: NIDO deja expo-notifications por su módulo propio. La primera
+  // vez que arranca tras actualizar, lo que expo tenía programado ya no
+  // sonará (sus alarmas apuntan a un receptor que no existe): se programa
+  // de nuevo una vez, con el mismo identificador, lo que el bloque de
+  // arriba no cubre.
+  if (notifyOk && (await consumeEngineMigration())) {
+    try {
+      const { listTasks } = await import("../agent/scheduled/taskStore");
+      const [pending, tasks] = await Promise.all([listReminders(200), listTasks()]);
+      const strings = taskNotifyStrings();
+      await resyncAfterEngineChange({
+        reminders: pending,
+        tasks,
+        now: Date.now(),
+        scheduleReminder: (r) => scheduleReminderNotification(r.id, r.text, new Date(r.due_at as string), null),
+        scheduleTask: (t) =>
+          scheduleTaskNotification(t.id, strings.dueTitle(t.name), strings.dueBody, new Date(t.nextRunAt as number)),
+      });
+    } catch {
+      // Sin memoria todavía: los vencidos se avisan al abrir, como siempre.
+    }
+  }
+
   try {
     if (notifyOk) await applyDailySummarySetting();
   } catch {
     // El resumen seguirá disponible dentro del chat.
   }
+}
+
+/** Textos del aviso de una tarea: los mismos que usa la pantalla de tareas. */
+function taskNotifyStrings(): { dueTitle(name: string): string; dueBody: string } {
+  try {
+    const i18n = require("../i18n").default as { t(k: string, o?: Record<string, string>): string };
+    return {
+      dueTitle: (name) => i18n.t("scheduledTasks.notifyDue", { name }),
+      dueBody: i18n.t("scheduledTasks.notifyDueBody"),
+    };
+  } catch {
+    return { dueTitle: (name) => `NIDO · ${name}`, dueBody: "A scheduled task is ready. Open NIDO to run it." };
+  }
+}
+
+/**
+ * Parte pura de la migración de 0.1.96 (para los tests): vuelve a programar
+ * los recordatorios de una sola vez que aún no han llegado y los avisos de
+ * las tareas activas. Los repetidos ya los programa cada arranque.
+ */
+export async function resyncAfterEngineChange(deps: {
+  reminders: ReadonlyArray<{ id: string; text: string; due_at?: string | null; repeat?: string | null }>;
+  tasks: ReadonlyArray<{ id: string; name: string; enabled: boolean; nextRunAt: number | null }>;
+  now: number;
+  scheduleReminder: (r: { id: string; text: string; due_at?: string | null }) => Promise<unknown>;
+  scheduleTask: (t: { id: string; name: string; nextRunAt: number | null }) => Promise<unknown>;
+}): Promise<{ reminders: number; tasks: number }> {
+  let reminders = 0;
+  let tasks = 0;
+  for (const r of deps.reminders) {
+    if (r.repeat || !r.due_at) continue;
+    if (new Date(r.due_at).getTime() <= deps.now) continue;
+    await deps.scheduleReminder(r).catch(() => {});
+    reminders += 1;
+  }
+  for (const t of deps.tasks) {
+    if (!t.enabled || !t.nextRunAt || t.nextRunAt <= deps.now) continue;
+    await deps.scheduleTask(t).catch(() => {});
+    tasks += 1;
+  }
+  return { reminders, tasks };
 }
 
 /**
