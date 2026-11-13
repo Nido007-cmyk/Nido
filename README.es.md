@@ -54,11 +54,12 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   indexa en el teléfono.
 - **Sabe cosas sin internet**: una base de conocimiento integrada y un
   paquete opcional de Wikipedia (unos 50.000 artículos) y nueve paquetes
-  de guías opcionales escritos por NIDO (Esencial, Emergencias por
-  país, Niños y bebés, Crisis y salud mental, Vivir sin servicios,
-  Hogar seguro, Desastres, Campo y animales, Carretera y viaje), con
-  números de
-  emergencia verificados de 69 países. Con la búsqueda
+  de guías escritos por NIDO (Esencial, Emergencias por país, Niños y
+  bebés, Crisis y salud mental, Vivir sin servicios, Hogar seguro,
+  Desastres, Campo y animales, Carretera y viaje), con números de
+  emergencia verificados de 69 países. Esencial y Emergencias por país
+  van dentro de la app desde la 0.1.95; los otros siete son descargas
+  opcionales. Con la búsqueda
   multilingüe activada puedes preguntar en español, portugués o inglés, y las
   respuestas muestran los artículos de donde salen, con una línea que cuenta
   qué frases salen de ellos y cuáles del modelo sin fuente; si nada de la base
@@ -416,9 +417,11 @@ inferencia y búsqueda sin conexión; el agente, el almacenamiento cifrado, la
 política de seguridad y el protocolo Bluetooth son trabajo propio de NIDO.
 [ATTRIBUTION.es.md](ATTRIBUTION.es.md) detalla qué viene de dónde.
 
-Los modelos de IA y los paquetes de conocimiento se descargan aparte y
-conservan sus licencias (Apache-2.0, MIT, la LFM Open License v1.0 de LFM2.5
-y CC BY-SA 4.0 para el texto de Wikipedia, parte del cual va dentro de la
-app). Los paquetes de código abierto compilados en la app están, con los
+Los modelos de IA se descargan aparte y conservan sus licencias
+(Apache-2.0, MIT, la LFM Open License v1.0 de LFM2.5). Los paquetes de
+conocimiento también conservan las suyas: CC BY-SA 4.0 para el texto de
+Wikipedia, parte del cual va dentro de la app, y CC BY 4.0 para los
+paquetes de guías propios de NIDO, dos de los cuales (NIDO Essentials y
+NIDO Local) van dentro de la app desde la 0.1.95. Los paquetes de código abierto compilados en la app están, con los
 textos de sus licencias, en [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 Todo se puede leer también dentro de la app, en Acerca de → Licencias.
