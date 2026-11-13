@@ -58,3 +58,8 @@ apk/
 # CI evidence artifacts (APKs, zips) — never commit binaries
 docs/internal/ci-evidence/artifacts/
 formal/out/
+
+# Recuento de pruebas (scripts/test-summary.mjs y los reportes JSON de la CI)
+vitest-results.json
+jest-results.json
+test-summary.json

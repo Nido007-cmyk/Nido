@@ -103,6 +103,10 @@ changes on `main`) goes with, in the same PR:
    [NIDO's constitution](docs/NIDO_CONSTITUTION.md). Changing a firm rule
    means changing the constitution on purpose, with tests
    (`docs/constitution-rules.json`, `scripts/check-constitution.mjs`).
+7. If the notes quote a test count: copy the "Line for the release notes"
+   from the CI run's **Test count** summary, so it carries command,
+   environment and run. `scripts/check-release-test-figures.mjs` checks it
+   (see docs/release/RELEASE_MODEL.md §6).
 
 After the release: check that the published `app-release.apk.sha256` matches
 the asset's digest.

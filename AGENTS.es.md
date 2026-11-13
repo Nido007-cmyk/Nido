@@ -107,6 +107,10 @@ de `package.json` en `main`) va acompañada, en el mismo PR, de:
    [la constitución de NIDO](docs/es/NIDO_CONSTITUTION.md). Cambiar una regla
    firme es cambiar la constitución a propósito, con tests
    (`docs/constitution-rules.json`, `scripts/check-constitution.mjs`).
+7. Si las notas citan una cifra de pruebas: copiar la «Line for the release
+   notes» del resumen **Test count** del run de la CI, para que lleve
+   comando, entorno y run. `scripts/check-release-test-figures.mjs` lo
+   comprueba (ver docs/es/release/RELEASE_MODEL.md §6).
 
 Tras la release: comprobar que el `app-release.apk.sha256` publicado coincide
 con el digest del archivo.

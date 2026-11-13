@@ -80,7 +80,8 @@ clásica de falsa confianza.
   biometric gate funcional; ningún secreto en logs.
 - **Test requirements:** suite completa en verde (unit + conformance TS/Rust +
   differential); `nido release-check` (ver BETA_SECURITY_GATE.md) sin FAILs en
-  las secciones BUILD/TESTS/CONFORMANCE.
+  las secciones BUILD/TESTS/CONFORMANCE. Las cifras de pruebas que citen
+  las notas declaran comando, entorno y run (§6).
 - **Device coverage:** ≥2 dispositivos Android físicos distintos (distinto
   fabricante o versión de Android); NIDO↔NIDO por Bluetooth entre ellos al
   menos una vez.
@@ -175,3 +176,29 @@ clásica de falsa confianza.
   implementación).
 - No convierte métricas (número de bugs, crashes) en criterio de promoción:
   la clasificación es por **impacto** (ver BETA_SECURITY_GATE.md).
+
+## 6. Cifras de pruebas en las notas de la versión
+
+Desde la 0.1.96, toda cifra de pruebas en `CHANGELOG.md` o
+`docs/ALPHA_RELEASE_NOTES.md` dice de dónde sale, en el mismo párrafo o
+viñeta:
+
+- **command:** el comando exacto, entre comillas invertidas.
+- **environment:** `CI` (con la imagen del runner y Node) o `local tree`.
+- **run:** la URL del run de Actions, o `local tree at <commit>`.
+
+Cada corrida de la CI escribe esa línea: abre el run, ve al resumen del
+paso **Test count** y copia «Line for the release notes». Los mismos
+números, con los ficheros omitidos por corredor, están en el artefacto
+`test-summary` (`test-summary.json`, 90 días). Mejor la cifra de la CI del
+commit de fusión: un árbol local puede omitir suites que necesitan
+herramientas que la CI instala (las de SQLCipher real se omiten sin
+`sqlcipher3`, 24 pruebas el 2026-11-13).
+
+Las claves van en inglés porque las notas se publican en inglés.
+
+`scripts/check-release-test-figures.mjs` corre en la CI y falla con una
+cifra sin esas tres. No reescribe notas viejas: la 0.1.94 contó vitest +
+jest en la CI (6.820) y la 0.1.95 contó solo vitest en un árbol local
+(6.728), así que las dos cifras no se pueden comparar. En la CI, la 0.1.95
+contó 6.844 (vitest 6.728, jest 116; run 43376830981).
