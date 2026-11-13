@@ -536,29 +536,38 @@ export class LlamaEngine {
   }
 
   /**
-   * El sustituto de la variante nativa cargada (ni la rc.7 ni la rc.9
-   * exponen getter): getBackendDevicesInfo() una vez por proceso, en segundo
-   * plano. Cualquier fallo deja el campo en null, sin más coste.
+   * La variante nativa cargada y los dispositivos de la sesión, una vez
+   * por proceso, en segundo plano: «lib <variante> · <dispositivos>».
+   *
+   * La variante sale de context.androidLib, que llama.rn rellena al cargar
+   * con la librería que eligió (RNLlamaJSI.cpp, g_android_loaded_library;
+   * existe al menos desde rc.7). Hasta el 2026-11-13 NIDO creía que no
+   * había forma de leerla y guardaba solo los dispositivos como sustituto.
+   * La librería se carga una vez por proceso, así que basta con leerla una
+   * vez. Cualquier fallo deja fuera esa parte, sin más coste.
    */
   private refreshBackendSummary(): Promise<void> {
     if (!this.backendSummaryPromise) {
       this.backendSummaryPromise = (async () => {
+        const parts: string[] = [];
+        const lib = (this.context as unknown as { androidLib?: unknown } | null)?.androidLib;
+        if (typeof lib === "string" && lib) parts.push(`lib ${lib}`);
         try {
           const mod = (await import("llama.rn")) as { getBackendDevicesInfo?: unknown };
-          if (typeof mod.getBackendDevicesInfo !== "function") return;
-          const devices = await (
-            mod.getBackendDevicesInfo as () => Promise<
-              Array<{ backend: string; type: string; deviceName: string }>
-            >
-          )();
-          if (!Array.isArray(devices) || devices.length === 0) return;
-          this.backendSummary = devices
-            .map((d) => `${d.backend}/${d.type}/${d.deviceName}`)
-            .join(", ")
-            .slice(0, 200);
+          if (typeof mod.getBackendDevicesInfo === "function") {
+            const devices = await (
+              mod.getBackendDevicesInfo as () => Promise<
+                Array<{ backend: string; type: string; deviceName: string }>
+              >
+            )();
+            if (Array.isArray(devices) && devices.length > 0) {
+              parts.push(devices.map((d) => `${d.backend}/${d.type}/${d.deviceName}`).join(", "));
+            }
+          }
         } catch {
-          // Best-effort: el registro vive sin el sustituto.
+          // Best-effort: el registro vive sin los dispositivos.
         }
+        if (parts.length > 0) this.backendSummary = parts.join(" · ").slice(0, 200);
       })();
     }
     return this.backendSummaryPromise;
