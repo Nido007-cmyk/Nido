@@ -1730,3 +1730,40 @@ describe("auditoría de la 0.1.70: «el mío» / «mine» / «o meu» en el hech
     expect(answerMemoryQuery("¿Cuándo es el cumpleaños de mi abuela?", one("El cumpleaños de mi abuela es el 15 de marzo y el mío es el 3 de mayo"), "es")).toContain("15 de marzo");
   });
 });
+
+// Barrido 0.1.96, clase 1: en pt faltaba el marco «de mim» (en es,
+// «(de|sobre) mí»). Y la forma de sí/no, «você lembra de mim?», no tenía
+// gemela en ningún idioma: se añade en los tres para no abrir otra
+// divergencia.
+describe("C1-H2: «de mim» en portugués y la pregunta de sí/no en los tres idiomas", () => {
+  it("las sondas del barrido listan lo guardado", () => {
+    for (const q of ["o que você lembra de mim?", "o que você se lembra de mim?", "você lembra de mim?"]) {
+      const r = answerMemoryQuery(q, MEM, "pt");
+      expect(r, q).not.toBeNull();
+      expect(r, q).toContain("Marta");
+      expect(isMemoryStyleQuery(q), q).toBe(true);
+    }
+  });
+
+  it("las que ya entraban siguen entrando", () => {
+    for (const [q, lang] of [
+      ["o que você lembra sobre mim?", "pt"],
+      ["¿qué recuerdas de mí?", "es"],
+      ["what do you remember about me?", "en"],
+    ] as const) {
+      expect(answerMemoryQuery(q, MEM, lang), q).toContain("Marta");
+    }
+  });
+
+  it("paridad: «¿te acuerdas de mí?» y «do you remember me?»", () => {
+    expect(answerMemoryQuery("¿te acuerdas de mí?", MEM, "es")).toContain("Marta");
+    expect(answerMemoryQuery("do you remember me?", MEM, "en")).toContain("Marta");
+    expect(isMemoryStyleQuery("¿te acuerdas de mí?")).toBe(true);
+    expect(isMemoryStyleQuery("do you remember me?")).toBe(true);
+  });
+
+  it("sin abrir la ruta a otra cosa: un tercero o una cosa no es «de mim»", () => {
+    expect(isMemoryStyleQuery("você lembra do filme?")).toBe(false);
+    expect(isMemoryStyleQuery("do you remember the movie?")).toBe(false);
+  });
+});

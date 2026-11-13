@@ -944,3 +944,44 @@ describe("B18 — objeto-primero pt en MEMORY_FORGET_RULES", () => {
     expect(extractToolAction("esquece meu endereço", NOW)).toMatchObject({ kind: "memoryForget", lang: "pt" });
   });
 });
+
+// Barrido 0.1.96, clase 1 (paridad trilingüe).
+describe("C1-H3: la bandeja de Nido en forma de pregunta, en los tres idiomas", () => {
+  it("las sondas del barrido dan nidoInbox", () => {
+    for (const q of [
+      "do I have any nido messages?",
+      "do I have nido messages?",
+      "any new nido messages?",
+      "tenho mensagens do nido?",
+      "eu tenho mensagens do nido?",
+      "tenho alguma mensagem do nido?",
+    ]) {
+      expect(extractToolAction(q, NOW)?.kind, q).toBe("nidoInbox");
+    }
+  });
+
+  it("las que ya entraban siguen, y la gemela española de «alguma mensagem»", () => {
+    for (const q of ["¿tengo mensajes de nido?", "¿tengo mensajes nuevos?", "do I have new messages?", "tenho mensagens novas?", "¿tengo algún mensaje de nido?"]) {
+      expect(extractToolAction(q, NOW)?.kind, q).toBe("nidoInbox");
+    }
+  });
+
+  it("sin comerse otras peticiones", () => {
+    expect(extractToolAction("do I have any nido messages from Ana about dinner?", NOW)?.kind).not.toBe("nidoInbox");
+    expect(extractToolAction("tenho mensagens para mandar", NOW)?.kind).not.toBe("nidoInbox");
+  });
+});
+
+describe("C1-H4: el código de Nido en portugués acepta su forma natural", () => {
+  it("la sonda del barrido da nidoCode", () => {
+    expect(extractToolAction("qual é o meu código do nido?", NOW)?.kind).toBe("nidoCode");
+    // El mismo hueco: el artículo «o» no estaba.
+    expect(extractToolAction("o meu código", NOW)?.kind).toBe("nidoCode");
+  });
+
+  it("las formas que ya entraban siguen, en los tres idiomas", () => {
+    for (const q of ["qual é meu código nido?", "¿cuál es mi código de nido?", "what is my nido code?", "meu código"]) {
+      expect(extractToolAction(q, NOW)?.kind, q).toBe("nidoCode");
+    }
+  });
+});
