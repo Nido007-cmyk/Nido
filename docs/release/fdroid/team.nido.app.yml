@@ -1,6 +1,13 @@
 # BORRADOR de trabajo de la receta de fdroiddata (metadata/team.nido.app.yml).
-# NO enviado a gitlab.com/fdroid/fdroiddata. La decisión D8 y su momento son
-# del dueño. Ver docs/release/FDROID.md (English) y docs/es/release/FDROID.md.
+# NO enviado a gitlab.com/fdroid/fdroiddata.
+# D8 resuelta por el dueño el 2026-11-13: el APK normal es el que va sin
+# Google, sin sabor aparte (si no, F-Droid lo firmaría con su clave y pasar
+# de una instalación a otra borraría los modelos). Por eso esta receta
+# apunta al APK de la release con Binaries y AllowedAPKSigningKeys.
+# Caveat abierto: llama.rn y los módulos de Expo traen librerías nativas
+# precompiladas; mientras la release de NIDO las use, la compilación desde
+# fuente de F-Droid no coincidirá byte a byte con ella. Ver
+# docs/release/FDROID.md §3 (English) y docs/es/release/FDROID.md §3.
 #
 # Lo marcado «VERIFICAR» no se pudo comprobar desde el repo y se cierra con
 # `fdroid build` en local el día de la decisión (FDROID.md, paso 1).
@@ -25,8 +32,8 @@ Binaries: https://github.com/Nido007-cmyk/Nido/releases/download/v%v-alpha/app-r
 
 Builds:
   # Marcador: la primera versión que salga sin Firebase, Play Services ni
-  # Install Referrer (FDROID.md §3). Ninguna versión publicada hasta la
-  # 0.1.95 cumple: llevan esas clases compiladas.
+  # Install Referrer (#253 y #254, aún sin release). Ninguna versión
+  # publicada hasta la 0.1.95 cumple: llevan esas clases compiladas.
   - versionName: 0.1.96
     versionCode: 97
     commit: v0.1.96-alpha
