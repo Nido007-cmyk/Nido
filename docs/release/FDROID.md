@@ -47,7 +47,9 @@ system APIs and expo-modules-core only) with exactly what NIDO used:
 The next-time calculation is expo's, line for line. A comparison against
 expo's real code gave 0 differences in 360,000 cases. After an update, the
 first launch reschedules what expo had pending and deletes its old store.
-expo-notifications, expo-application, expo-constants and badgin are gone.
+expo-notifications, expo-application and badgin are gone. expo-constants
+stays, but the APK now links the copy expo itself asks for: it goes from
+57.0.22 to 57.0.23, which only changes the version number.
 
 **PR-2 (#254):** removes the Firebase configuration left in
 `plugins/withLeanManifest.js`. It adds `scripts/check-google-free.py` at the

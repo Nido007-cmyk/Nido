@@ -48,8 +48,9 @@ Android y expo-modules-core) con exactamente lo que NIDO usaba:
 La cuenta de la próxima hora es la de expo, línea a línea. Una comparación
 contra el código real de expo dio 0 diferencias en 360.000 casos. Al
 actualizar, el primer arranque reprograma lo que expo tenía pendiente y borra
-su almacén viejo. Salen expo-notifications, expo-application, expo-constants
-y badgin.
+su almacén viejo. Salen expo-notifications, expo-application y badgin.
+expo-constants sigue, pero el APK enlaza ahora la copia que pide el propio
+expo: pasa de 57.0.22 a 57.0.23, que solo cambia el número de versión.
 
 **PR-2 (#254):** retira la configuración que quedaba para Firebase en
 `plugins/withLeanManifest.js`. Añade `scripts/check-google-free.py` al final
