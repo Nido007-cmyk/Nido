@@ -357,8 +357,24 @@ export async function checkModelTrust(asset: CatalogModel): Promise<TrustVerdict
     digest = await sha256OfFile(path, { assetId: asset.id, filename: asset.filename });
   } catch (e) {
     if (e instanceof DownloadFailure && e.code === "cancelled") throw e;
-    dlog(asset.id, `checkModelTrust: file unreadable during verification — untrusted (${e})`);
-    return { trusted: false, reason: "unverifiable", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
+    // 0.1.90: ONE retry when the hash calculation itself throws. The
+    // first sight of a just-promoted file is exactly where a transient
+    // read failure was observed on a real device (owner's tablet,
+    // 2026-11-09: a completed retry-download did not settle as
+    // installed until a whole second download; the file was good all
+    // along). A throw means "could not read", not "bytes are wrong":
+    // a digest MISMATCH is never retried into trust (it returns
+    // checksum-mismatch below and the file is deleted), so this retry
+    // cannot weaken the gate — it only refuses to let one transient
+    // read error masquerade as a durable "not installed".
+    dlog(asset.id, `checkModelTrust: first hash attempt threw — retrying once (${e})`);
+    try {
+      digest = await sha256OfFile(path, { assetId: asset.id, filename: asset.filename });
+    } catch (e2) {
+      if (e2 instanceof DownloadFailure && e2.code === "cancelled") throw e2;
+      dlog(asset.id, `checkModelTrust: file unreadable during verification — untrusted (${e2})`);
+      return { trusted: false, reason: "unverifiable", deleteFile: false, sizeOnDiskBytes: sizeOnDisk };
+    }
   }
   if (!sameSha(digest, asset.sha256)) {
     dlog(asset.id, "checkModelTrust: checksum mismatch — untrusted, file must be deleted");

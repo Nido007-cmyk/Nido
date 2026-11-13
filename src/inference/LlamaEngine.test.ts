@@ -104,7 +104,12 @@ function dropSessionWrites(): void {
 }
 vi.mock("expo-file-system/legacy", () => ({
   documentDirectory: "file:///docs/",
-  getInfoAsync: async () => ({ exists: true, size: 1_000_000 }),
+  getInfoAsync: async (path: string) => ({
+    exists: true,
+    // 0.1.84: el tamaño declarado en el catálogo por fichero — el
+    // pre-flight cobra el peso REAL del modelo pedido, no un genérico.
+    size: mockFileSizes[path.split("/").pop() ?? ""] ?? 1_000_000,
+  }),
   readAsStringAsync: async (path: string) => {
     const v = fsStore.get(path);
     if (v === undefined) throw new Error("File not found");
@@ -132,11 +137,27 @@ let mockProcessorCount: number | null = null;
 // Texto que la completion falsa emite/resuelve (los tests de noThink lo
 // cambian por una respuesta con bloque <think>).
 let mockReplyText = "Hi";
+// Fase 3 (optimización 2026-11-08): la sonda de batería del mock.
+let mockBattery: { levelPct: number; charging: boolean; powerSave: boolean } | null = null;
+// 0.1.84: la lectura de memoria libre en vivo del mock (availMem del
+// sistema); null = el build no la lee y el pre-flight va solo por total.
+let mockAvailMemory: { availBytes: number; thresholdBytes: number; lowMemory: boolean } | null = null;
+// 0.1.84: tamaños de fichero por nombre para el mock de FileSystem —
+// el pre-flight pesa el modelo REAL (los del catálogo pesan ~400 MB).
+const mockFileSizes: Record<string, number> = {
+  "qwen2.5-0.5b-instruct-q4km.gguf": 397_808_192,
+  "qwen2.5-0.5b-instruct-q5km.gguf": 420_086_336,
+};
 vi.mock("ram-monitor", () => ({
   getDeviceTotalRamBytes: () => mockTotalRamBytes,
   getMemoryInfo: () => ({ rssBytes: mockRssBytes }),
   getCrashReport: () => mockCrashReport,
   getProcessorCount: () => mockProcessorCount,
+  getBatteryStatus: () => mockBattery,
+  getThermalStatus: () => null,
+  // 0.1.84: la lectura en vivo (availMem) que el snapshot del motor
+  // consume; null = build sin ella (manda solo la cuenta por total).
+  getAvailableMemory: () => mockAvailMemory,
 }));
 // The integrity gate is covered by src/models/modelTrust.test.ts; here it
 // is stubbed so engine behavior is tested in isolation.
@@ -146,6 +167,7 @@ vi.mock("../models/modelTrust", () => ({
 
 import { LlamaEngine, resolveSampling, SAMPLING_PRESETS } from "./LlamaEngine";
 import { isNativeGateTaken } from "./nativeGate";
+import { refreshDevicePressure } from "./devicePressure";
 import {
   isBackgroundIndexingHeld,
   resetBackgroundIndexingHold,
@@ -165,6 +187,7 @@ beforeEach(() => {
   mockReplyText = "Hi";
   mockCrashReport = null;
   mockProcessorCount = null;
+  mockAvailMemory = null;
   fsStore.clear();
   sessionWriteMode = "auto";
   failSessionWrites = false;
@@ -206,6 +229,57 @@ describe("RAM-2026-10-11: perfiles de memoria del LLM", () => {
     const engine = new LlamaEngine();
     await expect(engine.load("models/a.gguf")).rejects.toThrow(/Failed to load/);
     expect(engine.isLoaded).toBe(false);
+  });
+});
+
+describe("Optimización 2026-11-08, fase 2: el lote sigue a la RAM del aparato", () => {
+  it("en un aparato de 3,3 GiB el perfil kv-q8 nace con n_batch 256 / n_ubatch 128", async () => {
+    mockTotalRamBytes = 3.3 * 1024 ** 3;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0]).toMatchObject({ cache_type_k: "q8_0", n_batch: 256, n_ubatch: 128 });
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+  });
+
+  it("en un aparato de 4 GiB el lote es el intermedio: 384/192", async () => {
+    mockTotalRamBytes = 4 * 1024 ** 3;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls[0]).toMatchObject({ n_batch: 384, n_ubatch: 192 });
+  });
+
+  it("el perfil default sigue sin claves de lote también en la clase pequeña", async () => {
+    mockTotalRamBytes = 3.3 * 1024 ** 3;
+    rejectInit = (p) => p.n_ubatch !== undefined;
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls).toHaveLength(3);
+    expect(Object.keys(initCalls[2]).sort()).toEqual(["model", "n_ctx", "n_gpu_layers", "n_threads", "use_mlock"]);
+    expect(engine.getModelInfo()?.memoryProfile).toBe("default");
+  });
+});
+
+describe("Optimización 2026-11-08, fase 3: la presión del aparato baja los hilos", () => {
+  it("con batería baja la carga nace con 3 hilos y n_ubatch 128", async () => {
+    mockBattery = { levelPct: 10, charging: false, powerSave: false };
+    refreshDevicePressure();
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls[0].n_threads).toBe(3);
+    expect(initCalls[0].n_ubatch).toBe(128);
+    mockBattery = null;
+    refreshDevicePressure();
+  });
+
+  it("con la opción explícita de hilos, la presión no manda", async () => {
+    mockBattery = { levelPct: 10, charging: false, powerSave: false };
+    refreshDevicePressure();
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf", { nThreads: 6 });
+    expect(initCalls[0].n_threads).toBe(6);
+    mockBattery = null;
+    refreshDevicePressure();
   });
 });
 
@@ -333,10 +407,19 @@ describe("LlamaEngine load/unload", () => {
 
 describe("Bounty tanda 3: escalera de memoria y CrashGuard", () => {
   // Costes con la arquitectura por defecto y el fichero de 1 MB del
-  // mock: ctx 4096 ≈ 698 MB · 3072 ≈ 602 MB. Disponible = total − RSS
-  // − 2 GiB de reserva.
+  // mock: ctx 4096 ≈ 387 MB · 3072 ≈ 291 MB (defecto 2026-11-08: los
+  // logits ya no se cobran por lote completo). Disponible = total −
+  // RSS − 2 GiB de reserva.
+  // 0.1.84: estos escenarios viven en la clase ≤4 GiB y su escalera
+  // baja hasta el peldaño de emergencia (1024) antes de rechazar; los
+  // totales de abajo dejan sitio de sobra hasta 3072 (y el coste a
+  // 4096 con el lote de su clase, 128, es 309,6 MB: cabe en 340), así
+  // que el peldaño que manda es el techo o el siguiente, como siempre.
   it("baja un peldaño de contexto en vez de rechazar cuando el techo no cabe", async () => {
-    mockTotalRamBytes = 2 * 1024 ** 3 + 650_000_000; // ≈650 MB libres: 4096 no, 3072 sí
+    // 0.1.84: con el cómputo cobrado al lote real de la clase (128),
+    // el genérico cuesta 309,6 MB a 4096: 300 MB libres ya no bastan
+    // para el techo pero sí para 3072 (232,6 MB).
+    mockTotalRamBytes = 2 * 1024 ** 3 + 300_000_000; // ≈300 MB libres: 4096 no, 3072 sí
     mockRssBytes = 0;
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
@@ -345,9 +428,12 @@ describe("Bounty tanda 3: escalera de memoria y CrashGuard", () => {
   });
 
   it("un choque sin confirmar reduce el presupuesto de la siguiente carga, y generar confirma", async () => {
-    // ≈800 MB libres: a factor 1 el 4096 cabría; el pendiente de un
-    // proceso muerto cuenta un choque (factor 0,8 → 640 MB) y baja a 3072.
-    mockTotalRamBytes = 2 * 1024 ** 3 + 800_000_000;
+    // ≈450 MB libres: a factor 1 el 4096 cabría (309,6 MB con el lote
+    // de la clase); el pendiente de un proceso muerto cuenta un
+    // choque (factor 0,8 → 360 MB) y sigue cabiendo a 4096. Con el
+    // total de abajo (2 GiB + 380 MB) el presupuesto frenado es
+    // 304 MB: el techo (309,6) no cabe y baja a 3072 (232,6).
+    mockTotalRamBytes = 2 * 1024 ** 3 + 380_000_000;
     mockRssBytes = 0;
     fsStore.set(
       "file:///docs/nido-crash-guard.json",
@@ -473,9 +559,10 @@ describe("Crash nativo M2+M3: registro de sesión y CrashGuard que aprende", () 
   });
 
   it("arranque tras CRASH_NATIVE generando: choque ×0,8 contado una vez, fondo apagado y veredicto asentado", async () => {
-    // ≈800 MB libres: a factor 1 el 4096 cabría; el choque aprendido
-    // (×0,8) baja el plan a 3072, como un choque del CrashGuard.
-    mockTotalRamBytes = 2 * 1024 ** 3 + 800_000_000;
+    // 380 MB libres: a factor 1 el 4096 cabría (309,6 MB con el lote
+    // de la clase); el choque aprendido (×0,8 → 304 MB) baja el plan
+    // a 3072 (232,6 MB), como un choque del CrashGuard.
+    mockTotalRamBytes = 2 * 1024 ** 3 + 380_000_000;
     mockRssBytes = 0;
     seedDeadGeneration(true);
     // La carga que murió dejó su pendiente sin confirmar: el cruce lo
@@ -848,6 +935,26 @@ describe("Qwen3 noThink: enable_thinking en el motor", () => {
   const QWEN25 = "models/qwen2.5-0.5b-instruct-q4km.gguf";
   const MSGS = [{ role: "user", content: "hola" }];
 
+  it("en la clase ≤4 GiB el Qwen3 (techo declarado 3072) nace con n_ctx 2048", async () => {
+    mockTotalRamBytes = 3.3 * 1024 ** 3;
+    // RSS 0 en este escenario: se mide el TECHO con el que el motor
+    // nace, no el ajuste de la escalera a la presión del momento
+    // (con el RSS por defecto del arnés el disponible cae por debajo
+    // del piso y la escalera ni siquiera entra en juego).
+    mockRssBytes = 0;
+    const engine = new LlamaEngine();
+    await engine.load(QWEN3);
+    expect(initCalls[0].n_ctx).toBe(2048);
+  });
+
+  it("en la clase ancha el Qwen3 conserva su techo declarado 3072", async () => {
+    mockTotalRamBytes = 12 * 1024 ** 3;
+    const engine = new LlamaEngine();
+    await engine.load(QWEN3);
+    expect(initCalls[0].n_ctx).toBe(3072);
+  });
+
+
   it("un modelo noThink recibe enable_thinking=false con messages", async () => {
     const engine = new LlamaEngine();
     await engine.load(QWEN3);
@@ -1125,5 +1232,392 @@ describe("P-03: hilos según los núcleos reales", () => {
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf", { nThreads: 5 });
     expect(engine.getModelInfo()?.nThreads).toBe(5);
+  });
+});
+
+describe("Fase 2 (reapertura 2026-11-08): el rechazo del pre-flight deja registro", () => {
+  it("un rechazo queda en la telemetría con las cifras que vio el pre-flight", async () => {
+    const { clearTelemetry, getRecentTelemetry } = await import("./telemetry");
+    clearTelemetry();
+    mockTotalRamBytes = 2 * 1024 ** 3;
+    mockRssBytes = 1024 ** 3;
+    const engine = new LlamaEngine();
+    await expect(engine.load("models/a.gguf")).rejects.toThrow(/RAM/);
+    const rejected = getRecentTelemetry(10).filter((e) => e.stopReason === "rejected");
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].modelId).toBe("models/a.gguf");
+    expect(rejected[0].taskType).toBe("model-load");
+    expect(rejected[0].ramRejection?.totalRamBytes).toBe(2 * 1024 ** 3);
+    expect(rejected[0].ramRejection?.rssBytes).toBe(1024 ** 3);
+    expect(rejected[0].ramRejection?.availableBytes).toBe(0);
+    expect(rejected[0].ramRejection?.neededBytes).toBeGreaterThan(0);
+  });
+
+  it("una carga que cabe NO deja registro de rechazo", async () => {
+    const { clearTelemetry, getRecentTelemetry } = await import("./telemetry");
+    clearTelemetry();
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(getRecentTelemetry(10).filter((e) => e.stopReason === "rejected")).toHaveLength(0);
+  });
+});
+
+describe("0.1.84: la tableta real del dueño (3,54 GiB leídos, picos de 743–760 MB)", () => {
+  const GiB = 1024 ** 3;
+  const Q4 = "models/qwen2.5-0.5b-instruct-q4km.gguf";
+  const Q5 = "models/qwen2.5-0.5b-instruct-q5km.gguf";
+
+  it("el 0.5B Q4 carga en frío y pedírselo otra vez NO lo re-juzga ni lo recarga", async () => {
+    mockTotalRamBytes = 3.54 * GiB;
+    mockRssBytes = 0.35 * GiB;
+    mockAvailMemory = { availBytes: 1.8 * GiB, thresholdBytes: 0.35 * GiB, lowMemory: false };
+    const engine = new LlamaEngine();
+    await engine.load(Q4);
+    expect(engine.getModelInfo()?.nCtx).toBe(4096);
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0]).toMatchObject({ n_ctx: 4096, cache_type_k: "q8_0", n_ubatch: 192 });
+    // Segunda petición con el residente dentro: atajo, sin initLlama
+    // nuevo y sin pasar por el pre-flight (si se re-juzgara con el
+    // modelo contado en el RSS, esta foto lo rechazaría).
+    mockRssBytes = 0.95 * GiB;
+    mockAvailMemory = { availBytes: 0.5 * GiB, thresholdBytes: 0.35 * GiB, lowMemory: true };
+    await engine.load(Q4);
+    expect(initCalls).toHaveLength(1);
+    expect(live()).toHaveLength(1);
+  });
+
+  it("el cambio Q4→Q5 pasa con el crédito del saliente en los dos términos", async () => {
+    mockTotalRamBytes = 3.54 * GiB;
+    mockRssBytes = 0.35 * GiB;
+    mockAvailMemory = { availBytes: 1.8 * GiB, thresholdBytes: 0.35 * GiB, lowMemory: false };
+    const engine = new LlamaEngine();
+    await engine.load(Q4);
+    // La foto del cambio: el Q4 residente sigue dentro del RSS (0,95)
+    // y lo libre en vivo baja a 1,1 GiB. Sin el crédito simétrico el
+    // término por total daría 0,59 GiB y el Q5 no cabría.
+    mockRssBytes = 0.95 * GiB;
+    mockAvailMemory = { availBytes: 1.1 * GiB, thresholdBytes: 0.35 * GiB, lowMemory: false };
+    await engine.load(Q5);
+    expect(engine.getModelInfo()?.filename).toBe(Q5);
+    expect(engine.getModelInfo()?.nCtx).toBe(4096);
+    expect(live()).toHaveLength(1);
+    expect(created[0].released).toBe(true);
+  });
+
+  it("con la tableta apretada, el 0.5B solo entra por el peldaño de emergencia, fijado a kv-q8", async () => {
+    mockTotalRamBytes = 3.54 * GiB;
+    mockRssBytes = 0.95 * GiB;
+    // Disponible en vivo 0,45 GiB: a 2048 el 0.5B cuesta 0,501 (no
+    // cabe) y a 1024 cuesta 0,436 fp16 / 0,430 con la KV de q8 — el
+    // peldaño de emergencia es el único que lo admite.
+    mockAvailMemory = { availBytes: 1.05 * GiB, thresholdBytes: 0.35 * GiB, lowMemory: false };
+    rejectInit = (p) => p.cache_type_v === undefined; // solo kv-q8 puede cargar
+    const engine = new LlamaEngine();
+    await engine.load(Q4);
+    expect(engine.getModelInfo()?.nCtx).toBe(1024);
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0]).toMatchObject({ n_ctx: 1024, cache_type_k: "q8_0" });
+  });
+});
+
+describe("0.1.85: la foto exacta de las 19:54 como motor completo (RAM total REAL 3416 MiB)", () => {
+  const MiB = 1024 ** 2;
+  const Q4 = "models/qwen2.5-0.5b-instruct-q4km.gguf";
+  const GUARD = "file:///docs/nido-crash-guard.json";
+  const setPhoto = () => {
+    mockTotalRamBytes = 3416 * MiB;
+    mockRssBytes = 367 * MiB;
+    mockAvailMemory = { availBytes: 842 * MiB, thresholdBytes: 216 * MiB, lowMemory: false };
+  };
+
+  it("con el freno 0,65 (dos choques contados) el 0.5B CARGA a 1024 por la vía de emergencia, fijado a kv-q8", async () => {
+    setPhoto();
+    fsStore.set(GUARD, JSON.stringify({ crashes: 2, pending: null }));
+    rejectInit = (p) => p.cache_type_v === undefined; // solo kv-q8 puede cargar
+    const engine = new LlamaEngine();
+    await engine.load(Q4);
+    expect(engine.getModelInfo()?.nCtx).toBe(1024);
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0]).toMatchObject({ n_ctx: 1024, cache_type_k: "q8_0", n_ubatch: 128 });
+    // El intento quedó pendiente: si el proceso muriera cargando, el
+    // CrashGuard contaría el choque como siempre.
+    const rec = JSON.parse(fsStore.get(GUARD)!);
+    expect(rec.crashes).toBe(2);
+    expect(rec.pending).not.toBeNull();
+  });
+
+  it("generar tras cargar en emergencia CURA el freno: la siguiente evaluación planifica con factor 1", async () => {
+    setPhoto();
+    fsStore.set(GUARD, JSON.stringify({ crashes: 2, pending: null }));
+    const engine = new LlamaEngine();
+    await engine.load(Q4);
+    expect(engine.getModelInfo()?.nCtx).toBe(1024);
+    const gen = engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 30));
+    await engine.stop();
+    await expect(gen).resolves.toBe("Hi");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null });
+  });
+
+  it("JUSTICIA: descargar por las buenas y recargar NO degrada el factor (la descarga ordenada confirma)", async () => {
+    setPhoto();
+    fsStore.set(GUARD, JSON.stringify({ crashes: 2, pending: null }));
+    const engine = new LlamaEngine();
+    await engine.load(Q4);
+    // Descarga ordenada sin haber generado: hasta la 0.1.84 el
+    // pendiente quedaba vivo y la recarga lo contaba como choque.
+    await engine.unload();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null });
+    // La recarga planifica con el factor curado (sin degradar) y el
+    // ciclo completo descargar → recargar → generar deja el registro
+    // limpio, sin choques fantasma.
+    await engine.load(Q4);
+    expect(engine.getModelInfo()?.nCtx).toBe(1024);
+    await engine.unload();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null });
+  });
+
+  it("el simétrico que NO debe curarse: un pendiente de un proceso muerto sigue contando al recargar", async () => {
+    setPhoto();
+    // El proceso anterior murió con la carga en vuelo: su pendiente
+    // sigue en disco y NADIE llamó a unload (eso es lo que lo
+    // distingue de la descarga ordenada).
+    fsStore.set(GUARD, JSON.stringify({ crashes: 1, pending: { model: Q4, nCtx: 1024, at: 1 } }));
+    const engine = new LlamaEngine();
+    await engine.load(Q4);
+    const rec = JSON.parse(fsStore.get(GUARD)!);
+    expect(rec.crashes).toBe(2); // contó exactamente uno más
+    expect(rec.pending).not.toBeNull(); // el intento nuevo, en vuelo
+  });
+
+  it("REINTENTO IDEMPOTENTE: dos rechazos seguidos no escriben pendiente ni cambian el factor", async () => {
+    // Una foto donde ni la vía de emergencia alcanza (libre 500 MiB):
+    // el rechazo es honesto y NO debe castigar el registro.
+    mockTotalRamBytes = 3416 * MiB;
+    mockRssBytes = 367 * MiB;
+    mockAvailMemory = { availBytes: 500 * MiB, thresholdBytes: 216 * MiB, lowMemory: true };
+    fsStore.set(GUARD, JSON.stringify({ crashes: 1, pending: null }));
+    const engine = new LlamaEngine();
+    await expect(engine.load(Q4)).rejects.toThrow(/RAM/);
+    await expect(engine.load(Q4)).rejects.toThrow(/RAM/);
+    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 1, pending: null });
+  });
+
+  it("LECTURA FRESCA entre intentos: dos fotos nativas distintas dan dos decisiones distintas en el motor", async () => {
+    // Intento 1 con la mesa ocupada de verdad (libre 500 MiB) y el
+    // freno 0,65 sembrado (2 choques): ni la vía de emergencia
+    // alcanza — el rechazo es honesto (presupuesto de emergencia
+    // floor(500 × 0,65) = 325 < 431, el suelo q8 a 1024). Sin el
+    // freno sembrado el factor sería 1,0 y a 500 MiB sí cabría:
+    // la siembra es parte del caso, no un adorno.
+    mockTotalRamBytes = 3416 * MiB;
+    mockRssBytes = 367 * MiB;
+    mockAvailMemory = { availBytes: 500 * MiB, thresholdBytes: 216 * MiB, lowMemory: true };
+    fsStore.set(GUARD, JSON.stringify({ crashes: 2, pending: null }));
+    const engine = new LlamaEngine();
+    await expect(engine.load(Q4)).rejects.toThrow(/RAM/);
+    // Intento 2 con la foto de las 19:54 (libre 842): carga a 1024.
+    // Si hubiera caché o supuesto entre intentos, repetiría el rechazo.
+    mockAvailMemory = { availBytes: 842 * MiB, thresholdBytes: 216 * MiB, lowMemory: false };
+    await engine.load(Q4);
+    expect(engine.getModelInfo()?.nCtx).toBe(1024);
+  });
+
+  it("un rechazo juzgado SIN la lectura en vivo queda registrado con su causa (readFailure live)", async () => {
+    const { clearTelemetry, getRecentTelemetry } = await import("./telemetry");
+    clearTelemetry();
+    // Total legible pero la lectura en vivo no existe en este mock
+    // (mockAvailMemory null = el build no la trae): el pre-flight va
+    // solo por total y, si rechaza, el registro lo dice.
+    mockTotalRamBytes = 2 * 1024 ** 3;
+    mockRssBytes = 1024 ** 3;
+    mockAvailMemory = null;
+    const engine = new LlamaEngine();
+    await expect(engine.load("models/a.gguf")).rejects.toThrow(/RAM/);
+    const rejected = getRecentTelemetry(10).filter((e) => e.stopReason === "rejected");
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].ramRejection?.readFailure).toBe("live");
+    expect(rejected[0].ramRejection?.availBytes).toBeNull();
+  });
+});
+
+describe("0.1.86: la segunda llamada q8 conserva la condición de emergencia", () => {
+  const MiB = 1024 ** 2;
+  const GEMMA = "models/hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf";
+
+  // Foto sintética en la ventana del censo §4.1 C, dentro de la Tab
+  // (3416 MiB): presupuesto normal 370 MiB (disponible reportado:
+  // total − RSS − reserva de 2 GiB), presupuesto de emergencia
+  // 842 MiB (el availMem crudo, freno 1). El Gemma real pesa
+  // 5.154.941.280 B en disco; aquí su fichero vale 350 MiB para caer
+  // en la ventana del defecto: a 1024 cuesta 501,0 MiB fp16 (solo
+  // cabe por la vía de emergencia) y 448,5 MiB con KV q8.
+  it("en el peldaño de emergencia la carga sale con KV q8 a 1024", async () => {
+    mockTotalRamBytes = 3416 * MiB;
+    mockRssBytes = 367 * MiB;
+    mockAvailMemory = { availBytes: 842 * MiB, thresholdBytes: 216 * MiB, lowMemory: false };
+    mockFileSizes["hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf"] = 350 * MiB;
+    // Solo la KV q8 puede nacer: simula un llama.cpp que rechaza los
+    // perfiles fp16 (small-batch y default).
+    rejectInit = (p) => p.cache_type_v === undefined;
+    const engine = new LlamaEngine();
+    await engine.load(GEMMA);
+    expect(engine.getModelInfo()?.nCtx).toBe(1024);
+    expect(engine.getModelInfo()?.memoryProfile).toBe("kv-q8");
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0]).toMatchObject({ n_ctx: 1024, cache_type_k: "q8_0" });
+    delete mockFileSizes["hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf"];
+  });
+
+  // La ventana donde la segunda llamada se distingue: con un modelo
+  // residente y lo libre en vivo casi agotado, el crédito liberable
+  // del residente entra en el término en vivo: el presupuesto de
+  // emergencia (availMem crudo + crédito) sigue admitiendo el q8 a
+  // 1024 (448,5 MiB), pero el presupuesto NORMAL queda muy por
+  // debajo de ese coste. Sin la simetría, la segunda llamada se
+  // juzga con techo 1024 — sin peldaño de emergencia — y NO cabe: no
+  // hay fijación, y si además llama.cpp rechaza la KV q8 la carga
+  // cae a los perfiles fp16 y nace. Con la simetría, el plan q8
+  // cabe, la fijación deja la lista en [kv-q8] y el rechazo nativo
+  // de ese único perfil hace FALLAR la carga entera en vez de
+  // degradarla a fp16. Ese fracaso-vs-degradación es el observable
+  // que separa el arreglo de su ausencia: la nota del plan no puede
+  // separarlos (a igual peldaño y techo, la nota del plan q8 y la
+  // del fp16 son la misma cadena).
+  it("con un residente previo, la fijación a kv-q8 solo nace si la segunda llamada conserva la emergencia", async () => {
+    const Q4 = "models/qwen2.5-0.5b-instruct-q4km.gguf";
+    mockFileSizes["hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf"] = 350 * MiB;
+    mockTotalRamBytes = 3416 * MiB;
+    mockRssBytes = 367 * MiB;
+    // Primera foto holgada: el Q4 residente nace a su techo (4096).
+    mockAvailMemory = { availBytes: 1843 * MiB, thresholdBytes: 216 * MiB, lowMemory: false };
+    const engine = new LlamaEngine();
+    await engine.load(Q4);
+    expect(engine.getModelInfo()?.nCtx).toBe(4096);
+    // La foto del cambio: lo libre en vivo ha caído a 20 MiB y el
+    // RSS subió a 717 MiB (el residente Q4 más el resto de la app y
+    // de lo que Android aún no ha soltado). El crédito liberable del
+    // residente (585,7 MiB, su coste estimado a 4096 con KV q8) es
+    // lo que mantiene viva la vía: el presupuesto de emergencia
+    // (avail crudo + crédito ≈ 605,7) admite el q8 a 1024 (448,5),
+    // pero el presupuesto normal (≈448,7 menos threshold y margen,
+    // ≈185,7 efectivos) queda muy por debajo. Medido con planContext
+    // sobre esta misma foto: fp16 → 1024 cabe por emergencia; q8 con
+    // techo 4096 → 1024 cabe; q8 con techo 1024 → NO cabe.
+    mockRssBytes = 717 * MiB;
+    mockAvailMemory = { availBytes: 20 * MiB, thresholdBytes: 216 * MiB, lowMemory: false };
+    // llama.cpp rechaza la KV q8: con fijación, la lista es [kv-q8]
+    // y la carga falla; sin fijación, cae a small-batch y carga fp16.
+    rejectInit = (p) => p.cache_type_v !== undefined;
+    initCalls.length = 0;
+    await expect(engine.load(GEMMA)).rejects.toThrow(/Failed to load/);
+    expect(initCalls).toHaveLength(1);
+    expect(initCalls[0]).toMatchObject({ n_ctx: 1024, cache_type_k: "q8_0" });
+    // Y la carga fallida no dejó modelo residente: el Q4 saliente se
+    // liberó en el intento y el motor quedó sin contexto (la justicia
+    // de F2: el fallo de RAM no llega hasta aquí porque el plan cabía;
+    // el fallo nativo sí, y no finge un modelo vivo).
+    expect(engine.isLoaded).toBe(false);
+    delete mockFileSizes["hf-google-gemma-4-e4b-it-qat-q4-0-gguf-gemma-4-e4b-q4-0-it-gguf.gguf"];
+  });
+});
+
+describe("0.1.86: una misma muerte no cuenta dos choques (pieza 6)", () => {
+  const SESSION_PATH = "file:///docs/nido-native-session.json";
+  const GUARD_PATH = "file:///docs/nido-crash-guard.json";
+  const readGuard = (): { crashes: number; pending: unknown } =>
+    JSON.parse(fsStore.get(GUARD_PATH)!) as { crashes: number; pending: unknown };
+
+  // El escenario de la muerte física del 2026-11-09 05:28: la carga
+  // dejó su pendiente sin confirmar Y la generación en vuelo dejó la
+  // bandera puesta, con un cierre CRASH_NATIVE posterior. Los dos
+  // instrumentos describen EL MISMO hecho; el registro debe contar
+  // UN choque, no dos.
+  function seedDeathOfMay9(pendingAt: number): void {
+    fsStore.set(
+      SESSION_PATH,
+      JSON.stringify({
+        at: 1_000,
+        model: "models/a.gguf",
+        nCtx: 4096,
+        nThreads: 4,
+        memoryProfile: "kv-q8",
+        reembed: { running: false, done: 900, total: 900 },
+        generating: true,
+        backend: null,
+        crossedExitAt: null,
+        verdict: null,
+      }),
+    );
+    fsStore.set(
+      GUARD_PATH,
+      JSON.stringify({ crashes: 0, pending: { model: "models/a.gguf", nCtx: 4096, at: pendingAt } }),
+    );
+    mockCrashReport = {
+      lastCrash: null,
+      sdkInt: 36,
+      device: "SM-X218U",
+      exits: [
+        {
+          timestamp: 2_000,
+          reason: "CRASH_NATIVE",
+          description: null,
+          status: 11,
+          importance: 100,
+          pssKb: 0,
+          rssKb: 526 * 1024,
+          trace: null,
+        },
+      ],
+    };
+  }
+
+  it("pendiente de la MISMA generación que murió (at <= inicio de la generación): un solo choque", async () => {
+    seedDeathOfMay9(900);
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(readGuard().crashes).toBe(1);
+    expect(isBackgroundIndexingHeld()).toBe(true);
+  });
+
+  // Este caso documenta el límite del instrumento, no un defecto de
+  // conteo (informe del cierre §6.2, verificado sobre el código de la
+  // 0.1.85): el registro de sesión nativa no guarda id de carga, así
+  // que un pendiente con at POSTERIOR al inicio de la generación
+  // registrada no puede distinguirse de «el pendiente de la misma
+  // carga que generó», y el cruce lo consume igual. Físicamente ese
+  // at posterior exigiría una segunda carga entre medias — y toda
+  // carga asienta antes de marcar su pendiente, así que un pendiente
+  // así nunca llega vivo a un cruce posterior: la ventana es
+  // inalcanzable y el conteo queda en uno, el lado seguro (un choque
+  // de menos se cura generando; uno de más castigaría dos veces).
+  it("pendiente con at posterior al de la generación registrada: el cruce lo consume igual (límite del instrumento, ventana inalcanzable)", async () => {
+    seedDeathOfMay9(1_500);
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(readGuard().crashes).toBe(1);
+    expect(isBackgroundIndexingHeld()).toBe(true);
+  });
+});
+
+describe("0.1.85: separación embeddings/CrashGuard (la indexación no castiga al LLM)", () => {
+  const GUARD = "file:///docs/nido-crash-guard.json";
+
+  it("un rechazo del pre-flight de embeddings deja el registro del CrashGuard byte a byte igual", async () => {
+    const before = JSON.stringify({ crashes: 2, pending: { model: "models/x.gguf", nCtx: 2048, at: 7 } });
+    fsStore.set(GUARD, before);
+    // El motor de embeddings con un aparato donde no cabe ni su
+    // contexto de 512: rechaza por su propio pre-flight.
+    mockTotalRamBytes = 2 * 1024 ** 3;
+    mockRssBytes = 2 * 1024 ** 3;
+    const { EmbeddingEngine } = await import("../rag/embed");
+    const emb = new EmbeddingEngine();
+    await expect(emb.load("models/embedding.gguf")).rejects.toThrow(/RAM/);
+    expect(fsStore.get(GUARD)).toBe(before);
   });
 });

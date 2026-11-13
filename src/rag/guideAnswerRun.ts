@@ -7,13 +7,15 @@
  * from the pack, and the sources to show (only that guide's parts, so an
  * unrelated section never appears as source 1). Never throws.
  */
-import { retrieve } from "./retrieve";
+import { retrieve, activeRetrievalProfile } from "./retrieve";
 import { readPackSource } from "./packs";
 import { guideTitleOf, parsePackChunkId } from "./packSource";
 import { ANSWER_CONTEXT_CHUNKS } from "./pure";
+import { GUIDE_PICK_CHUNKS, buildGuidePickCandidates } from "./guidePickCandidates";
 import type { RetrievedChunk } from "./retrieve.types";
 import type { GroundingLang } from "./grounding";
-import { composeGuideAnswer, pickGuideChunk, stripShortRequest, wantsShortGuide } from "./guideAnswer";
+import { composeGuideAnswer, pickGuideChunk, pickIsSignDenied, stripShortRequest, wantsShortGuide, type LiteralRouteContext } from "./guideAnswer";
+import { verifiedImportedPacks } from "../services/packImporter";
 
 export interface GuideAnswer {
   text: string;
@@ -41,13 +43,54 @@ export async function answerFromGuide(
     // 0.1.60: «resúmeme la guía de RCP» busca por «la guía de RCP».
     const short = wantsShortGuide(query);
     retrieved = await retrieve(short ? stripShortRequest(query) : (retrievalQuery ?? query), ANSWER_CONTEXT_CHUNKS);
-    const pick = pickGuideChunk(retrieved, lang);
+    // 0.1.86: packs the signed door imported and verified also travel the
+    // literal route (their text passed the door's signature check, the same
+    // trust bar as the built-in list). Read fresh each turn: the registry
+    // is the only origin mark, and a pack removed since the last turn must
+    // stop being literal at once. An unreadable registry degrades to the
+    // built-in list only — never to opening the route.
+    const imported = await verifiedImportedPacks().catch(() => null);
+    const route: LiteralRouteContext | undefined = imported && imported.size > 0
+      ? {
+          importedVerifiedPackIds: new Set(imported.keys()),
+          importedPackNames: new Map([...imported].map(([id, v]) => [id, v.name])),
+        }
+      : undefined;
+    // 0.1.87: la elección juzga con la vara del perfil que puntuó de
+    // verdad (retrieve la deja leída) y sobre la pregunta tal cual.
+    const pickOpts = { profile: activeRetrievalProfile(), query };
+    let candidates = retrieved;
+    let pick = pickGuideChunk(candidates, lang, route, pickOpts);
+    if (pick && pickIsSignDenied(candidates, pick, query)) {
+      // 0.1.89: la primera lista puede traer solo a la vecina que
+      // niega el signo de la pregunta (la guía del monóxido, que
+      // declara que su gas no se huele, a quien SÍ huele gas): esa
+      // guía no se sirve sola sin mirar la lista ancha, donde la
+      // guía del signo puede estar esperando su turno de elección.
+      // Si al ensanchar no aparece rival, se sirve la misma.
+      const wide = await retrieve(short ? stripShortRequest(query) : (retrievalQuery ?? query), GUIDE_PICK_CHUNKS).catch(() => null);
+      if (wide && wide.length > 0) {
+        candidates = buildGuidePickCandidates(candidates, wide);
+        pick = pickGuideChunk(candidates, lang, route, pickOpts) ?? pick;
+      }
+    }
+    if (!pick) {
+      // La elección mira más ancho que el contexto del prompt: una
+      // segunda recuperación con el topK de elección, solo para
+      // elegir. El `retrieved` devuelto no cambia: la ruta del
+      // modelo sigue reutilizando la lista de 4 de siempre.
+      const wide = await retrieve(short ? stripShortRequest(query) : (retrievalQuery ?? query), GUIDE_PICK_CHUNKS).catch(() => null);
+      if (wide && wide.length > retrieved.length) {
+        candidates = buildGuidePickCandidates(retrieved, wide);
+        pick = pickGuideChunk(candidates, lang, route, pickOpts);
+      }
+    }
     if (!pick) return { answer: null, retrieved };
     const doc = await readPackSource(pick.chunkId);
     if (!doc) return { answer: null, retrieved };
-    const sameGuide = retrieved.filter((c) => c !== pick && guideTitleOf(c.title) === doc.title);
+    const sameGuide = candidates.filter((c) => c !== pick && guideTitleOf(c.title) === doc.title);
     return {
-      answer: { text: composeGuideAnswer(doc, lang, { short, packId: parsePackChunkId(pick.chunkId)?.packId }), chunks: [pick, ...sameGuide] },
+      answer: { text: composeGuideAnswer(doc, lang, { short, packId: parsePackChunkId(pick.chunkId)?.packId, route }), chunks: [pick, ...sameGuide] },
       retrieved,
     };
   } catch (e) {

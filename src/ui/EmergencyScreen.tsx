@@ -16,6 +16,7 @@ import { useTheme } from "./theme/ThemeContext";
 import type { Colors } from "./theme/colors";
 import type { Typography } from "./theme/typography";
 import { NidoIcon } from "./components/icons/NidoIcon";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { impact, ImpactFeedbackStyle } from "../services/haptics";
 import { loadAllPackFacts } from "../rag/packs";
 import { crisisCard, emergencyCard, emergencyRegions, outdatedPackNote, type FactLang, type PackFact, type PackRegion } from "../rag/packFacts";
@@ -24,8 +25,13 @@ import { QUICK_GUIDES } from "./emergency/quickGuides";
 import { CprPractice } from "./emergency/CprPractice";
 
 interface Props {
-  /** Sends a question to the chat (switches to the Chat tab). */
-  onAsk: (question: string) => void;
+  /**
+   * Sends a question to the chat (switches to the Chat tab). 0.1.95: absent
+   * in the setup wizard, where there is no chat yet: then the "describe
+   * what's happening" box is hidden and the quick guides open the guide
+   * library, which reads the guides with no model.
+   */
+  onAsk?: (question: string) => void;
   /** Opens the Library tab (where NIDO Local is downloaded). */
   onOpenLibrary: () => void;
 }
@@ -36,6 +42,10 @@ function toFactLang(lang: string | undefined): FactLang {
 }
 
 export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
+  // 0.1.90: la hoja de países es un <Modal> anclado abajo con su
+  // propia ventana; su padding inferior de diseño (12) no bastaba
+  // contra la barra del sistema. La hoja suma el inset de abajo.
+  const insets = useSafeAreaInsets();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t, i18n } = useTranslation();
@@ -84,7 +94,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
       const q = text.trim();
       if (!q) return;
       setQuestion("");
-      onAsk(q);
+      onAsk?.(q);
     },
     [onAsk]
   );
@@ -118,9 +128,15 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{t("emergency.noPackTitle")}</Text>
             <Text style={styles.note}>{t("emergency.noPackBody")}</Text>
-            <Pressable onPress={onOpenLibrary} style={styles.primaryBtn} accessibilityRole="button">
-              <Text style={styles.primaryBtnText}>{t("emergency.openLibrary")}</Text>
-            </Pressable>
+            {/* 0.1.95: sin chat (asistente de instalación) onOpenLibrary abre
+                el lector de guías, que no descarga nada: el botón «Ir a la
+                Biblioteca» llevaría a un sitio donde no se puede hacer lo que
+                dice. En el asistente la descarga es la del propio asistente. */}
+            {onAsk && (
+              <Pressable onPress={onOpenLibrary} style={styles.primaryBtn} accessibilityRole="button" testID="emergency-open-library">
+                <Text style={styles.primaryBtnText}>{t("emergency.openLibrary")}</Text>
+              </Pressable>
+            )}
           </View>
         )}
 
@@ -224,7 +240,8 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
 
         <Text style={styles.disclaimer}>{t("emergency.disclaimer")}</Text>
 
-        <View style={styles.card}>
+        {onAsk && (
+        <View style={styles.card} testID="emergency-describe-card">
           <Text style={styles.cardTitle} nativeID="emergency-describe">
             {t("emergency.describeLabel")}
           </Text>
@@ -251,6 +268,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
           </View>
           <Text style={styles.note}>{t("emergency.describeHint")}</Text>
         </View>
+        )}
 
 
         <Text style={styles.section} accessibilityRole="header">
@@ -260,7 +278,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
           {QUICK_GUIDES.map((g) => (
             <Pressable
               key={g.key}
-              onPress={() => ask(t(`emergency.questions.${g.key}`))}
+              onPress={() => (onAsk ? ask(t(`emergency.questions.${g.key}`)) : onOpenLibrary())}
               style={styles.guide}
               accessibilityRole="button"
             >
@@ -293,7 +311,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
 
       <Modal visible={picking} transparent animationType="slide" onRequestClose={() => setPicking(false)}>
         <View style={styles.sheetBackdrop}>
-          <View style={styles.sheet}>
+          <View style={[styles.sheet, { paddingBottom: 12 + insets.bottom }]}>
             <View style={styles.sheetHeader}>
               <Text style={styles.cardTitle}>{t("emergency.chooseCountry")}</Text>
               <Pressable onPress={() => setPicking(false)} accessibilityRole="button" accessibilityLabel={t("emergency.close")} style={styles.sheetClose}>

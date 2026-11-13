@@ -15,6 +15,7 @@ import {
   exportExecutionTelemetry,
   ExecutionTelemetryRecord,
 } from "../services/executionTelemetry";
+import { listStoredRamRejections, type StoredRamRejection } from "../inference/telemetry";
 import { outcomeColor } from "./ExecutionTelemetryScreen.pure";
 import { useTheme } from "./theme";
 import type { Colors } from "./theme/colors";
@@ -82,6 +83,10 @@ export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t, i18n } = useTranslation();
   const [records, setRecords] = useState<ExecutionTelemetryRecord[]>([]);
+  // 0.1.84: rechazos del pre-flight de memoria (la superficie que la
+  // 0.1.83 registró sin construir): se leen de la SQLite cifrada y
+  // sobreviven a los reinicios.
+  const [rejections, setRejections] = useState<StoredRamRejection[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
@@ -99,6 +104,7 @@ export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
     setLoading(true);
     try {
       setRecords(await listRecentExecutions(200));
+      setRejections(await listStoredRamRejections(50).catch(() => []));
       setRouterSummary(summarizeRouterSamples(await listRouterSamples().catch(() => [])));
       const on = await isMissedPhraseLogOn().catch(() => false);
       setMissedOn(on);
@@ -255,6 +261,7 @@ export function ExecutionTelemetryScreen({ onClose, chatBusy }: Props) {
             onCopy={copyMissed}
             onClear={clearMissed}
           />
+          <RejectionsCard rows={rejections} />
           {records.length === 0 ? (
             <Text style={[styles.emptyText, styles.emptyInline]}>{t("executionTelemetry.empty")}</Text>
           ) : null}
@@ -481,6 +488,77 @@ function MissedCard({
           </>
         )
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * 0.1.84: los rechazos del pre-flight de memoria, con las cifras que
+ * la comprobación vio. La 0.1.83 los registraba en la base cifrada
+ * pero ninguna pantalla los leía: el instrumento existía y era
+ * invisible. Cada fila dice qué modelo, cuánto pedía, cuánto había
+ * disponible y con qué freno (CrashGuard) se juzgó — es lo que
+ * distingue un rechazo del pre-flight de un fallo nativo al cargar.
+ */
+function RejectionsCard({ rows }: { rows: StoredRamRejection[] }) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
+  const { t, i18n } = useTranslation();
+  const lang = displayLang(i18n.language);
+  return (
+    <View style={styles.row} accessibilityLabel={t("executionTelemetry.rejections.title")}>
+      <Text style={styles.modelLabel}>{t("executionTelemetry.rejections.title")}</Text>
+      <Text style={styles.metaText}>{t("executionTelemetry.rejections.hint")}</Text>
+      {rows.length === 0 ? (
+        <Text style={styles.metaText}>{t("executionTelemetry.rejections.empty")}</Text>
+      ) : (
+        rows.map((r) => {
+          const d = r.ramRejection;
+          return (
+            <View key={r.id} style={styles.leakBox}>
+              <View style={styles.rowHeader}>
+                <Text style={styles.modelLabel} numberOfLines={1}>
+                  {r.modelId ?? t("executionTelemetry.noModel")}
+                </Text>
+                <Text style={styles.metaText}>
+                  {r.embedding
+                    ? t("executionTelemetry.rejections.embedding")
+                    : t("executionTelemetry.rejections.llm")}
+                </Text>
+              </View>
+              <View style={styles.statsGrid}>
+                <StatCell label={t("executionTelemetry.rejections.needed")} value={formatMB(d.neededBytes)} />
+                <StatCell label={t("executionTelemetry.rejections.available")} value={formatMB(d.availableBytes)} />
+                <StatCell label={t("executionTelemetry.rejections.totalRam")} value={formatMB(d.totalRamBytes)} />
+                <StatCell label={t("executionTelemetry.rejections.rss")} value={formatMB(d.rssBytes)} />
+                <StatCell
+                  label={t("executionTelemetry.rejections.free")}
+                  value={d.availBytes != null ? formatMB(d.availBytes) : "—"}
+                />
+                <StatCell
+                  label={t("executionTelemetry.rejections.threshold")}
+                  value={d.thresholdBytes != null ? formatMB(d.thresholdBytes) : "—"}
+                />
+                <StatCell
+                  label={t("executionTelemetry.rejections.context")}
+                  value={`${d.nCtxChosen} / ${d.nCtxRequested}`}
+                />
+                <StatCell
+                  label={t("executionTelemetry.rejections.crashSafety")}
+                  value={d.crashSafety != null ? `${Math.round(d.crashSafety * 100)}%` : "100%"}
+                />
+                {d.readFailure === "live" ? (
+                  <StatCell
+                    label={t("executionTelemetry.rejections.liveRead")}
+                    value={t("executionTelemetry.rejections.liveReadMissing")}
+                  />
+                ) : null}
+              </View>
+              <Text style={styles.timestamp}>{formatDateTime(r.ts, lang)}</Text>
+            </View>
+          );
+        })
+      )}
     </View>
   );
 }

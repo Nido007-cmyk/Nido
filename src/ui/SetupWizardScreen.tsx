@@ -787,7 +787,7 @@ export function SetupWizardScreen({ onReady, onSkip, onKeyLossError }: Props) {
         {setupLlmChoices().map((m) => {
           const isSelected = setupLlm.id === m.id;
           const isRecommended = recommendedId !== null && recommendedId === m.id;
-          const ramNeeded = toGb(estimateContextBytes(contextSpecForModel(m)).totalBytes);
+          const ramNeeded = toGb(estimateContextBytes(contextSpecForModel(m, hardware.totalRamBytes)).totalBytes);
           return (
             <Pressable
               key={m.id}

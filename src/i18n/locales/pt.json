@@ -35,7 +35,19 @@
     "deleteConfirm": "Apagar",
     "deleteBusy": "Espere a resposta terminar para apagar este chat."
   },
+  "installNotice": {
+    "pausedTooHeavy": "Há uma parte baixada ({{done}}) de um modelo que não cabe neste dispositivo. Você pode apagá-la para liberar espaço.",
+    "integrity": "O arquivo baixado não coincidiu com sua impressão digital e foi apagado. Se baixar de novo, chegará uma cópia nova.",
+    "interrupted": "O último download foi interrompido antes de terminar. Se baixar de novo, começará do início.",
+    "sizeMismatch": "O último download chegou incompleto e foi apagado. Se baixar de novo, chegará uma cópia nova.",
+    "storage": "Não houve espaço livre suficiente para terminar o download. Libere espaço e tente de novo.",
+    "stalled": "O último download travou e não terminou. Você pode tentar de novo.",
+    "paused": "Uma parte já está baixada ({{done}} de {{total}}). Se baixar de novo, continuará daí.",
+    "unverifiable": "O arquivo está no aparelho, mas não pôde ser verificado, então não conta como baixado. Se baixar de novo, será verificado outra vez.",
+    "failed": "O último download não terminou. Você pode tentar de novo."
+  },
   "catalogItemCard": {
+    "discardPartial": "Apagar o que foi baixado",
     "calculating": "Calculando…",
     "removeFromListTitle": "Remover da lista?",
     "removeFromListMessage": "Este modelo não foi baixado. Ele será removido da sua lista.",
@@ -134,6 +146,7 @@
     "toasts": {
       "indexed": "\"{{name}}\" indexado na base de conhecimento offline",
       "removed": "\"{{name}}\" removido",
+      "partialDiscarded": "A parte baixada de {{name}} foi apagada.",
       "activeSet": "Modelo {{kind}} ativo definido como \"{{name}}\"",
       "loadFailed": "Não foi possível carregar \"{{name}}\": {{error}}",
       "resetFailed": "Falha ao redefinir: {{error}}",
@@ -250,7 +263,7 @@
     "confirmTitle": "Adicionar este pacote",
     "damaged": "O arquivo está danificado ou incompleto e não pôde ser aberto.",
     "hashMismatch": "O arquivo não coincide com a sua assinatura: ele mudou desde que foi assinado, então não pode ser adicionado. Baixe-o de novo de onde você o comprou.",
-    "missingManifest": "Falta o manifesto assinado deste pacote, e sem ele o app não pode conferir a sua assinatura. Ele não pode ser adicionado.",
+    "missingManifest": "Falta o manifesto assinado deste pacote, e sem ele o app não pode conferir a sua assinatura. Ele não pode ser adicionado. Escolha também o arquivo terminado em .sqlite.json que veio junto ao pacote.",
     "notAPack": "Este arquivo não é um pacote de conhecimento válido.",
     "notSignedByUs": "Este pacote não está assinado pelo NIDO nem pela SALVORA PACKS e não pode ser adicionado. Por segurança, só entram os pacotes assinados por nós.",
     "removeAction": "Remover este pacote",
@@ -452,6 +465,7 @@
   "chatScreen": {
     "roleAssistant": "🎭 NIDO",
     "initializingCore": "Iniciando o NIDO…",
+    "loadingModel": "Carregando modelo…",
     "mountingWeights": "Carregando o modelo…",
     "indexingKnowledgeBase": "Indexando conhecimento novo para busca offline…",
     "reasoningElapsed": "💭 Raciocinando… {{seconds}}s",
@@ -698,7 +712,24 @@
       "stateOn": "Ligado",
       "stateOff": "Desligado"
     },
-    "exportFailedBody": "Não foi possível exportar a telemetria."
+    "exportFailedBody": "Não foi possível exportar a telemetria.",
+    "rejections": {
+      "title": "Rejeições de memória",
+      "hint": "Quando a verificação de memória se recusou a carregar um modelo, isto é o que ela viu: quanto o modelo pedia, quanto havia disponível e como estava o dispositivo naquele momento. Fica neste dispositivo.",
+      "empty": "Nenhuma rejeição de memória registrada.",
+      "llm": "Modelo",
+      "embedding": "Embeddings",
+      "needed": "Precisava",
+      "available": "Disponível",
+      "totalRam": "RAM total",
+      "rss": "O app em uso",
+      "free": "Livre no momento",
+      "threshold": "Limite do sistema",
+      "context": "Contexto escolhido / pedido",
+      "crashSafety": "Orçamento após uma falha",
+      "liveRead": "Leitura de memória ao vivo",
+      "liveReadMissing": "Sem leitura"
+    }
   },
   "errors": {
     "unexpected": "Algo deu errado. Detalhe técnico: {{detail}}",
@@ -1516,7 +1547,7 @@
             "examples": [
               "qual é o número de emergência no México?"
             ],
-            "tip": "Sem o pacote Local (na $t(tabs.library), cerca de 0,2 MB) a aba não consegue mostrar os números do seu país. E se um dia você escrever uma emergência no chat, mesmo sem pacotes o NIDO responde com um texto de segurança fixo: não inventa uma resposta."
+            "tip": "Sem o pacote Local (na $t(tabs.library), cerca de 0,4 MB) a aba não consegue mostrar os números do seu país. E se um dia você escrever uma emergência no chat, mesmo sem pacotes o NIDO responde com um texto de segurança fixo: não inventa uma resposta."
           },
           {
             "id": "quick",
@@ -1854,7 +1885,7 @@
     "checked": "Verificado em {{date}} · {{source}}",
     "crisisTitle": "Linha de crise",
     "noPackTitle": "Baixe o NIDO Local",
-    "noPackBody": "Para ver aqui os números de emergência verificados do seu país, baixe o pacote NIDO Local (cerca de 0,2 MB).",
+    "noPackBody": "Para ver aqui os números de emergência verificados do seu país, baixe o pacote NIDO Local (cerca de 0,4 MB).",
     "openLibrary": "Ir para a Biblioteca",
     "noCountryTitle": "{{name}} ainda não está no NIDO Local",
     "noCountryBody": "Escolha outro país ou pergunte no chat.",
@@ -1928,6 +1959,17 @@
     "title": "NIDO está respondendo…",
     "text": "A resposta continua sendo escrita mesmo se você sair do app.",
     "channel": "Respostas em andamento"
+  },
+  "guideLibrary": {
+    "title": "Guias",
+    "open": "Ler os guias",
+    "intro": "Leia qualquer guia guardado neste dispositivo, do início ao fim. Ler não carrega o modelo.",
+    "loading": "Carregando guias",
+    "noPacks": "Ainda não há guias. Os packs que você baixar ou adicionar aparecerão aqui, prontos para ler sem modelo.",
+    "noGuides": "Este pack não tem guias legíveis.",
+    "readError": "Não foi possível abrir este guia. O pack pode ter sido removido ou atualizado.",
+    "truncated": "Este texto é muito longo e é mostrado encurtado na tela. O guia continua guardado inteiro no pack.",
+    "back": "Voltar"
   },
   "sourceReader": {
     "title": "Fonte",
@@ -2019,8 +2061,8 @@
     "nido-viaje": "18 guias sem conexão (6 em cada idioma: espanhol, inglês e português) para a estrada e as viagens de carro. ~0,2 MB.",
     "nido-viaje-e5": "18 guias sem conexão para a estrada e as viagens de carro, para buscar em espanhol, português e inglês. ~0,2 MB.",
     "minimum": "Só os modelos. Usa a base de conhecimento integrada de 858 temas (cópia da Wikipédia de 1º de novembro de 2026), sem downloads extras.",
-    "standard": "+ 1.000 temas tirados da Wikipédia e os guias de primeiros socorros, desastres e sobrevivência do NIDO (~1,85 MB de download extra).",
-    "full": "+ 5.000 temas tirados da Wikipédia no total e os guias de primeiros socorros, desastres e sobrevivência do NIDO (~4,38 MB de download extra).",
+    "standard": "+ 1.000 temas tirados da Wikipédia e os guias de primeiros socorros, desastres e sobrevivência do NIDO (~1,87 MB de download extra).",
+    "full": "+ 5.000 temas tirados da Wikipédia no total e os guias de primeiros socorros, desastres e sobrevivência do NIDO (~4,40 MB de download extra).",
     "encyclopedia": "Completo, mais os ~50.000 Artigos Vitais da Wikipédia (~169 MB de download extra)."
   }
 }

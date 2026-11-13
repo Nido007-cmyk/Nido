@@ -20,6 +20,7 @@ import { MODEL_CATALOG, pinnedSourceUrl } from "./manifest";
 import {
   defaultLlmForRam,
   defaultLlmForDevice,
+  contextCeilingForDevice,
   contextSpecForModel,
   contextSpecForFilename,
   PREFERRED_LLM_ID,
@@ -33,6 +34,25 @@ const MiB = 1024 ** 2;
 beforeEach(() => {
   mockTotalRam = 0;
   mockShouldThrow = false;
+});
+
+describe("contextCeilingForDevice (optimización 2026-11-08, plan n.º 7)", () => {
+  it("en ≤4 GiB el techo declarado 3072 (el del Qwen3) nace en 2048", () => {
+    expect(contextCeilingForDevice(3072, 3.54 * GiB)).toBe(2048);
+    expect(contextCeilingForDevice(3072, 4 * GiB)).toBe(2048);
+  });
+
+  it("fuera de la clase o con otro techo declarado, manda lo declarado", () => {
+    expect(contextCeilingForDevice(3072, 6 * GiB)).toBe(3072);
+    expect(contextCeilingForDevice(4096, 3.54 * GiB)).toBe(4096);
+    expect(contextCeilingForDevice(2048, 3.54 * GiB)).toBe(2048);
+  });
+
+  it("a ciegas manda lo declarado, y sin declarado el 4096 de siempre", () => {
+    expect(contextCeilingForDevice(3072, null)).toBe(3072);
+    expect(contextCeilingForDevice(3072, 0)).toBe(3072);
+    expect(contextCeilingForDevice(undefined, 3.54 * GiB)).toBe(4096);
+  });
 });
 
 describe("0.5B catalog entry", () => {
@@ -79,20 +99,21 @@ describe("contextSpecForModel", () => {
       nKvHeads: 2,
       headDim: 64,
     });
-    // FIX 2026-10-09: incluye logits (~297 MiB). Working set: 379.4 MiB
-    // weights + ~48 MiB KV + 256 MiB compute + ~297 MiB logits.
+    // Defecto 2026-11-08: los logits se cobran por fila de salida
+    // (~0,6 MiB), no por lote completo. Working set: 379.4 MiB weights
+    // + ~48 MiB KV + 256 MiB compute + ~0,6 MiB logits.
     const est = estimateContextBytes(spec);
-    expect(est.totalBytes).toBeLessThan(1.05 * GiB);
-    expect(est.totalBytes).toBeGreaterThan(0.75 * GiB);
+    expect(est.totalBytes).toBeLessThan(0.75 * GiB);
+    expect(est.totalBytes).toBeGreaterThan(0.6 * GiB);
   });
 
   it("1.5B estimate is unchanged vs the old DEFAULT_ARCH assumption", () => {
     const m = MODEL_CATALOG.find((e) => e.id === PREFERRED_LLM_ID)!;
     const est = estimateContextBytes(contextSpecForModel(m));
-    // FIX 2026-10-09: incluye logits (~297 MiB).
-    // 940.4 + 112 + 256 + 297 MiB ≈ 1605 MiB
-    expect(est.totalBytes).toBeGreaterThan(1590 * MiB);
-    expect(est.totalBytes).toBeLessThan(1620 * MiB);
+    // Defecto 2026-11-08: logits por fila de salida (~0,6 MiB).
+    // 940.4 + 112 + 256 + 0,6 MiB ≈ 1309 MiB
+    expect(est.totalBytes).toBeGreaterThan(1295 * MiB);
+    expect(est.totalBytes).toBeLessThan(1320 * MiB);
   });
 });
 
@@ -111,12 +132,19 @@ describe("contextSpecForFilename", () => {
 });
 
 describe("defaultLlmForRam", () => {
-  // Effective threshold from the pre-flight formula:
-  // need(1.5B) + 0.5 GiB app baseline + 2 GiB headroom.
-  const need15 = estimateContextBytes(
-    contextSpecForModel(MODEL_CATALOG.find((e) => e.id === PREFERRED_LLM_ID)!)
-  ).totalBytes;
-  const threshold = need15 + 512 * MiB + SYSTEM_HEADROOM_BYTES;
+  // Umbral exacto de la función (0.1.86): la función juzga cada aparato
+  // con el spec real de ese aparato (lote por clase), así que el umbral
+  // se encuentra por bisección, no por suma: a 3,5 GiB el lote es 128 y
+  // el 1.5B se estima en ~1234,7 MiB, por debajo de la clase de 4 GiB.
+  const bisectsToFlip = (): number => {
+    let lo = 1, hi = 8 * GiB;
+    while (hi - lo > 1) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (defaultLlmForRam(mid).id === PREFERRED_LLM_ID) hi = mid; else lo = mid;
+    }
+    return hi;
+  };
+  const threshold = bisectsToFlip();
 
   it("picks the 0.5B on a 4GB-class device (Tab A9+ reports ~3.7 GiB)", () => {
     expect(defaultLlmForRam(3.7 * GiB).id).toBe(LIGHT_LLM_ID);

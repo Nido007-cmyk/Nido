@@ -9,6 +9,7 @@ import {
   estimateContextBytes,
   readRamSnapshot,
   SYSTEM_HEADROOM_BYTES,
+  batchForRam,
   type ContextSpec,
 } from "../inference/ramBudget";
 
@@ -32,6 +33,7 @@ import {
  */
 
 const MiB = 1024 * 1024;
+const GiB = 1024 * MiB;
 
 /** App baseline RSS estimate at setup time, before any model is loaded. */
 const SETUP_RSS_ESTIMATE_BYTES = 512 * MiB;
@@ -39,14 +41,40 @@ const SETUP_RSS_ESTIMATE_BYTES = 512 * MiB;
 export const PREFERRED_LLM_ID = "qwen2.5-1.5b-instruct-q4km";
 export const LIGHT_LLM_ID = "qwen2.5-0.5b-instruct-q4km";
 
-/** ContextSpec for a catalog model: its declared arch + default n_ctx. */
-export function contextSpecForModel(m: CatalogModel): ContextSpec {
+/**
+ * ContextSpec for a catalog model: its declared arch + default n_ctx.
+ *
+ * `deviceRamBytes` (0.1.86): when the device's RAM is known, the spec is
+ * the one the load path will actually build — the per-class context
+ * ceiling (contextCeilingForDevice) and the batch the device runs
+ * (batchForRam) — so every estimate made from it (the catalog badge, the
+ * default-model threshold, the routing profile's MB, the wizard's
+ * «RAM necesaria») is the load's own account, not a second one. Without
+ * a RAM reading (absent, null or garbage) the historic declared spec
+ * comes back: no blind change.
+ */
+export function contextSpecForModel(m: CatalogModel, deviceRamBytes?: number | null): ContextSpec {
+  const known =
+    deviceRamBytes !== undefined &&
+    deviceRamBytes !== null &&
+    Number.isFinite(deviceRamBytes) &&
+    deviceRamBytes > 0;
+  if (!known) {
+    return {
+      fileSizeBytes: m.sizeBytes,
+      nCtx: m.defaultNCtx ?? 4096,
+      nLayer: m.arch?.nLayer,
+      nKvHeads: m.arch?.nKvHeads,
+      headDim: m.arch?.headDim,
+    };
+  }
   return {
     fileSizeBytes: m.sizeBytes,
-    nCtx: m.defaultNCtx ?? 4096,
+    nCtx: contextCeilingForDevice(m.defaultNCtx, deviceRamBytes),
     nLayer: m.arch?.nLayer,
     nKvHeads: m.arch?.nKvHeads,
     headDim: m.arch?.headDim,
+    nUbatch: batchForRam(deviceRamBytes).nUbatch,
   };
 }
 
@@ -71,14 +99,38 @@ export function contextSpecForFilename(
 }
 
 /**
- * Pure selection: which LLM should be the default on a device with
- * `totalRamBytes` of total RAM. Testable without the native module.
+ * Techo de contexto por clase de aparato (optimización 2026-11-08,
+ * plan adoptado n.º 7): en aparatos de ≤4 GiB, un modelo cuyo
+ * contexto por defecto declarado es 3072 (hoy solo el Qwen3-0.6B,
+ * cuya KV por token es ~9× la del 0.5B) nace con techo 2048: son
+ * ~0,17 GiB menos de KV y de cómputo antes de que la escalera
+ * empiece a trabajar. El resto de techos no se toca: el 0.5B
+ * conserva su 4096 declarado y la escalera lo baja cuando el
+ * aparato lo pide, como hasta ahora. Sin lectura de RAM (null o
+ * basura) manda el techo declarado: cero cambio a ciegas. La opción
+ * explícita de contexto tampoco pasa por aquí: manda ella.
  */
+export function contextCeilingForDevice(
+  catalogDefaultNCtx: number | undefined,
+  totalRamBytes: number | null,
+): number {
+  const declared = catalogDefaultNCtx ?? 4096;
+  if (
+    totalRamBytes !== null &&
+    Number.isFinite(totalRamBytes) &&
+    totalRamBytes > 0 &&
+    totalRamBytes <= 4 * GiB &&
+    declared === 3072
+  ) {
+    return 2048;
+  }
+  return declared;
+}
 export function defaultLlmForRam(totalRamBytes: number): CatalogModel {
   const preferred = MODEL_CATALOG.find((m) => m.id === PREFERRED_LLM_ID)!;
   const light = MODEL_CATALOG.find((m) => m.id === LIGHT_LLM_ID)!;
   if (totalRamBytes <= 0) return preferred; // blind: preserve historic default
-  const need = estimateContextBytes(contextSpecForModel(preferred)).totalBytes;
+  const need = estimateContextBytes(contextSpecForModel(preferred, totalRamBytes)).totalBytes;
   const available = totalRamBytes - SETUP_RSS_ESTIMATE_BYTES - SYSTEM_HEADROOM_BYTES;
   return need <= available ? preferred : light;
 }

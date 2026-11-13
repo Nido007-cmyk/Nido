@@ -9,12 +9,14 @@ import {
   gatePreemptsDeepResearch,
   hasHealthEvidence,
   healthSafeText,
+  shouldSubstituteSafeText,
   isEmergencySituation,
   isEmergencyText,
   isHealthQuestion,
   type GateLang,
 } from "./emergencyGate";
 import type { RetrievedChunk } from "../rag/retrieve";
+import type { SentenceProvenance } from "../rag/provenance";
 import { deterministicAnswer } from "../eval/blindCore";
 import { pickGuideChunk } from "../rag/guideAnswer";
 import { CPR_GUIDE } from "../cpr/cprCoach";
@@ -470,6 +472,46 @@ describe("F-1 (auditoría de la RCP, 2026-11-06): la reanimación en curso y el 
   });
 });
 
+describe("0.1.87 (giro del gas): la fuga de gas contada es una situación de emergencia", () => {
+  it("la frase exacta del dueño dispara la cara de situación, y con ella la puerta entera", () => {
+    // El turno de la 0.1.86: «Que hago si huele a gas en mi casa?»
+    // no disparaba NINGUNA red de la puerta. Dirimen 2026-11-09.
+    expect(isEmergencySituation("Que hago si huele a gas en mi casa?")).toBe(true);
+    expect(isEmergencyText("Que hago si huele a gas en mi casa?", "es")).toBe(true);
+  });
+
+  it("las formas corrientes de contar la fuga, en las tres lenguas", () => {
+    for (const q of [
+      "Huele mucho a gas en la cocina",
+      "Hay un olor a gas muy fuerte en el patio",
+      "Tengo una fuga de gas en casa",
+      "It smells like gas in the kitchen",
+      "There is a gas leak in the basement",
+      "Está vazando gás na cozinha",
+      "Tem um cheiro de gás muito forte no banheiro",
+    ]) {
+      expect(isEmergencySituation(q), q).toBe(true);
+    }
+  });
+
+  it("el tema y la prevención no son un suceso: los bordes no se mueven", () => {
+    // El TEMA suelto, sin suceso: el gas como objeto de estudio o
+    // de compra, no una fuga ocurriendo.
+    expect(isEmergencySituation("¿Cómo funciona un detector de gas?")).toBe(false);
+    expect(isEmergencySituation("Historia del gas natural en Europa")).toBe(false);
+    // ACLARACIÓN: «¿cuánto cuesta reparar una fuga de gas?» SÍ nombra
+    // la fuga en presente («una fuga de gas» es el signo), y a favor
+    // de la seguridad la puerta lo trata como suceso, igual que la
+    // RCP en curso se aceptó como precio declarado en F-1: ante la
+    // duda sobre una fuga viva, la respuesta segura manda.
+    // La ficción que cuenta el mismo suceso no lo declara.
+    expect(isEmergencySituation("En la novela, huele a gas en la casa y nadie hace nada")).toBe(false);
+    // Las metáforas asentadas del gas tampoco.
+    expect(isEmergencySituation("El delantero va a todo gas esta temporada")).toBe(false);
+    expect(isEmergencySituation("The striker is on a roll, full gas this season")).toBe(false);
+  });
+});
+
 describe("gatePreemptsDeepResearch (R-07: la decisión antes de la bifurcación)", () => {
   it("emergencia o salud con Investigar activo: el turno va protegido", () => {
     expect(gatePreemptsDeepResearch("Que hago si argument se esta atragantando?", "es")).toBe(true);
@@ -541,5 +583,87 @@ describe("hasHealthEvidence", () => {
     expect(hasHealthEvidence([chunk("pack:nido-viaje:1")])).toBe(false);
     expect(hasHealthEvidence([chunk("doc:local:7")])).toBe(false);
     expect(hasHealthEvidence([])).toBe(false);
+  });
+
+  it("0.1.87: un fragmento de un pack importado verificado SÍ es evidencia — la marca es el registro, no la lista cerrada", () => {
+    // El campo real del giro del gas: el fragmento 131 de la guía de
+    // la fuga, de un pack importado por la puerta firmada. Su nombre
+    // vive solo en estos datos de regresión; el código de producción
+    // solo ve el conjunto de ids que el registro verifica.
+    const gasChunk = chunk("pack:local-salvora-emergencias-casa:131");
+    const verified = new Set(["local-salvora-emergencias-casa"]);
+    expect(hasHealthEvidence([gasChunk], verified)).toBe(true);
+    // Sin el conjunto (el llamador no pudo leer el registro) o con
+    // otro pack en el registro, el mismo fragmento no abre nada: la
+    // identidad local- no basta.
+    expect(hasHealthEvidence([gasChunk])).toBe(false);
+    expect(hasHealthEvidence([gasChunk], new Set(["local-otro-pack"]))).toBe(false);
+    // Y los integrados de salud siguen contando sin conjunto.
+    expect(hasHealthEvidence([chunk("pack:nido-esencial:5")], verified)).toBe(true);
+  });
+});
+
+describe("0.1.88 — la red de sustitución con la guía en las fuentes (dirimen del gas)", () => {
+  const chunk = (chunkId: string): RetrievedChunk => ({ chunkId }) as RetrievedChunk;
+  const verified = new Set(["local-salvora-emergencias-casa"]);
+  const coChunk = chunk("pack:nido-esencial-e5:253");
+  const gasChunk = chunk("pack:local-salvora-emergencias-casa:131");
+  // Las fuentes del turno de la foto, en su orden: la procedencia
+  // cita por índice. Fuente 1: el monóxido del Esencial. Fuente 2:
+  // la guía de la fuga del pack verificado.
+  const photoSources = [coChunk, gasChunk];
+  // El texto del modelo que el juez no pudo verificar: sus frases
+  // quedan marcadas como del modelo, sin fuente que las apoye.
+  const modelProvenance: SentenceProvenance[] = [
+    { text: "Si huele a gas en tu casa, es posible que tengas problemas de salud.", origin: { kind: "model", reason: "unverified-language" } },
+  ];
+  const guideProvenance: SentenceProvenance[] = [
+    { text: "Sal de la zona a pie de inmediato y llama al 911 desde fuera.", origin: { kind: "source", n: 2, support: 0.9 } },
+  ];
+  const base = {
+    deepTurn: false,
+    isHealth: false,
+    isEmergency: true,
+    verifiedImportedPackIds: verified,
+  };
+
+  it("el hueco de la foto: hay evidencia entre las fuentes y aun así el texto sin verificar cae al texto seguro", () => {
+    // La condición vieja no sustituía aquí: hasHealthEvidence mira
+    // las fuentes, y la guía del pack está entre ellas.
+    expect(hasHealthEvidence(photoSources, verified)).toBe(true);
+    expect(
+      shouldSubstituteSafeText({ ...base, grounding: "unverified", sources: photoSources, provenance: modelProvenance }),
+    ).toBe(true);
+    expect(
+      shouldSubstituteSafeText({ ...base, grounding: "abstained", sources: photoSources, provenance: modelProvenance }),
+    ).toBe(true);
+  });
+
+  it("si una frase sí se apoya en la guía, no se sustituye: el apoyo real protege", () => {
+    expect(
+      shouldSubstituteSafeText({ ...base, grounding: "unverified", sources: photoSources, provenance: guideProvenance }),
+    ).toBe(false);
+  });
+
+  it("sin evidencia entre las fuentes, la sustitución clásica sigue igual", () => {
+    const viaje = [chunk("pack:nido-viaje:1")];
+    expect(shouldSubstituteSafeText({ ...base, grounding: "unverified", sources: viaje, provenance: modelProvenance })).toBe(true);
+    const coProvenance: SentenceProvenance[] = [
+      { text: "El monóxido no se huele: sal y ventila.", origin: { kind: "source", n: 1, support: 0.9 } },
+    ];
+    expect(shouldSubstituteSafeText({ ...base, grounding: "unverified", sources: [coChunk], provenance: coProvenance })).toBe(false);
+  });
+
+  it("grounded y partial no se tocan nunca por esta puerta (doctrina sellada del juez)", () => {
+    expect(shouldSubstituteSafeText({ ...base, grounding: "partial", sources: photoSources, provenance: modelProvenance })).toBe(false);
+    expect(shouldSubstituteSafeText({ ...base, grounding: "grounded", sources: photoSources, provenance: modelProvenance })).toBe(false);
+  });
+
+  it("las demás puertas quedan como estaban", () => {
+    expect(shouldSubstituteSafeText({ ...base, deepTurn: true, grounding: "unverified", sources: photoSources, provenance: modelProvenance })).toBe(false);
+    expect(shouldSubstituteSafeText({ ...base, grounding: "unverified", sources: [], provenance: modelProvenance })).toBe(false);
+    expect(
+      shouldSubstituteSafeText({ ...base, isHealth: false, isEmergency: false, grounding: "unverified", sources: photoSources, provenance: modelProvenance }),
+    ).toBe(false);
   });
 });

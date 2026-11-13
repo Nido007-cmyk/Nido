@@ -53,6 +53,21 @@ export interface CatalogRowState {
   etaSeconds?: number;
   /** 0.1.57: older verified pack, still in use; the new version can be downloaded. */
   outdated?: boolean;
+  /**
+   * 0.1.90 (familia 3): el motivo durable por el que una descarga
+   * completada o intentada no cuenta como descargada, ya traducido
+   * por la pantalla (installNoticeFor en src/models/installNotice.ts).
+   * Se pinta en la tarjeta cuando no hay descarga en curso ni error
+   * en memoria (ese tiene preferencia: es el mismo hecho, más fresco).
+   */
+  statusNotice?: string | null;
+  /**
+   * 0.1.92: bytes de una descarga en pausa que siguen en el disco. En un
+   * modelo en rojo (sin botón de descarga desde la 0.1.90) esa parte no
+   * tenía forma de continuarse NI de borrarse: la tarjeta la dice y
+   * ofrece borrarla.
+   */
+  partialBytes?: number | null;
 }
 
 interface Props {
@@ -62,13 +77,15 @@ interface Props {
   onDownload: (item: CatalogModel) => void;
   onUse: (item: CatalogModel) => void;
   onRemove: (item: CatalogModel) => void;
+  /** 0.1.92: borra la parte descargada de una descarga en pausa (solo se ofrece en rojo). */
+  onDiscardPartial?: (item: CatalogModel) => void;
   /** This model is being loaded after "Use" was tapped. */
   activating?: boolean;
   /** Some model is being loaded: Use and delete are unavailable until it finishes. */
   busy?: boolean;
 }
 
-export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemove, activating, busy }: Props) {
+export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemove, onDiscardPartial, activating, busy }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
 
@@ -125,6 +142,16 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
       ]
     );
   };
+
+  // 0.1.92: una descarga en pausa de un modelo que ya no ofrece botón.
+  const strandedPartial =
+    compatibility === "red" && !present && (row?.partialBytes ?? 0) > 0 ? row!.partialBytes! : null;
+  const durableNotice =
+    compatibility !== "red"
+      ? (row?.statusNotice ?? null)
+      : strandedPartial !== null
+        ? t("installNotice.pausedTooHeavy", { done: formatMB(strandedPartial) })
+        : null;
 
   const handleAction = (cb: () => void) => {
     impact(ImpactFeedbackStyle.Light);
@@ -198,6 +225,19 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
         </View>
       )}
 
+      {/* 0.1.90 (familia 3): el motivo durable, cuando no hay un error
+          en memoria más fresco que pintar ni una descarga en curso. */}
+      {/* 0.1.92: en rojo no hay botón de descarga, así que los avisos
+          que terminan en «si descargas otra vez…» prometían un botón
+          que no está: en rojo solo se dice lo que sí tiene remedio —
+          la parte descargada que ocupa sitio y se puede borrar. */}
+      {durableNotice && !row?.downloading && !row?.error && (
+        <View style={styles.outdatedBox}>
+          <NidoIcon name="warning" size={14} color={colors.text.accentAmber} />
+          <Text style={styles.outdatedText}>{durableNotice}</Text>
+        </View>
+      )}
+
       {/* Error Callout */}
       {row?.error && (
         <View style={styles.errorBox}>
@@ -250,7 +290,13 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
       {/* Action Controls */}
       {!row?.downloading && (
         <View style={styles.actionsRow}>
-          {!present && (
+          {/* 0.1.90: la insignia ES el veredicto de la vía de carga
+              (0.1.86): en rojo ningún peldaño cabe en este aparato,
+              así que el archivo descargado jamás podría usarse aquí.
+              Ofrecer la descarga (o el reintento) era prometer 4,4 GB
+              muertos: en rojo no hay botón. En «unknown» (RAM aún sin
+              leer, o no-LLM) el botón queda como siempre. */}
+          {!present && compatibility !== "red" && (
             <Pressable accessibilityRole="button"
               style={styles.downloadBtn}
               onPress={() => handleAction(() => onDownload(item))}
@@ -262,6 +308,15 @@ export function CatalogItemCard({ item, row, isActive, onDownload, onUse, onRemo
                     ? t("catalogItemCard.updateAsset")
                     : t("catalogItemCard.downloadAsset")}
               </Text>
+            </Pressable>
+          )}
+
+          {strandedPartial !== null && onDiscardPartial && (
+            <Pressable accessibilityRole="button"
+              style={styles.downloadBtn}
+              onPress={() => handleAction(() => onDiscardPartial(item))}
+            >
+              <Text style={styles.downloadBtnText}>{t("catalogItemCard.discardPartial")}</Text>
             </Pressable>
           )}
 

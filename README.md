@@ -52,14 +52,187 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   the phone itself in Spanish, English or Portuguese, and NIDO indexes them
   on the phone.
 - **Knows things offline**: a built-in knowledge base plus an optional
-  Wikipedia pack (about 50,000 articles) and nine optional guide packs
-  written by NIDO (Essentials, Local, Children and Babies, Crisis,
-  Without Utilities, Safe Home, Disasters, Field and Animals, Road
-  Travel), with checked emergency numbers for 69 countries. With multilingual search on, you
+  Wikipedia pack (about 50,000 articles) and nine guide packs written
+  by NIDO (Essentials, Emergencies by country, Children and babies,
+  Crisis and mental health, Living without utilities, Safe home,
+  Disasters, Field and animals, Road and travel), with checked
+  emergency numbers for 69 countries. Essentials and Emergencies by
+  country ship inside the app since 0.1.95; the other seven are
+  optional downloads. With multilingual search on, you
   can ask in Spanish, Portuguese or English, and answers show the articles
   they come from, with a line that counts which sentences come from them and
   which come from the model with no source; when nothing in the base really
   matches, no source is shown.
+- **Adds signed packs from a file** (0.1.80): Settings → Knowledge base →
+  "Add a pack from a file" adds a knowledge pack you have as a file, for
+  example one published by SALVORA PACKS. Before anything is copied, the
+  app verifies its Ed25519 signature against the keys built into the app
+  (NIDO's and SALVORA PACKS' only, no third-party keys), checks the file's
+  fingerprint against its signed manifest, and refuses any pack that
+  fails. An added pack is labelled with who signed it and can be removed
+  from the same screen.
+- **Reads the guides as documents** (0.1.81): the guide library opens
+  any guide of the packs installed on the device and shows it whole,
+  from start to finish, as a document. Reading does not load the
+  language model, so it works even on a phone with no model downloaded
+  yet, and it never uses the network. A very long guide is shown
+  shortened, with a note saying so; the guide stays stored in full in
+  its pack.
+- **Loads its models again on devices with little RAM** (0.1.82): the
+  check that runs before a model loads was charging every model about
+  0.29 GB for output scores the engine only produces for one
+  position, so on a tablet with about 3.3 GB of RAM no model could
+  pass the check, however much memory was freed. The charge is
+  corrected; the check still refuses when memory is really short, for
+  example with other apps open.
+- **Lighter on memory: models load one at a time and only when
+  needed** (0.1.83): the chat model and the search model used to
+  start together, each checking the same free memory as if it were
+  alone; they now start one after the other, and a refused load is
+  recorded with the numbers the check saw. Opening the app loads
+  only the search model, so the guides and search work straight
+  away; the chat model loads the first time you send a message and
+  unloads after three minutes without chat. On small devices the
+  models also start with a smaller batch (and the Qwen3 model with
+  a smaller context), a low battery, power saving or a hot device
+  lowers the thread count, and when Android reports critical memory
+  pressure the models unload instead of waiting to be closed.
+- **The memory check charges what the load really costs, and
+  refusals can be read in the app** (0.1.84): switching models no
+  longer counts the outgoing model's memory as still used on the
+  side of the check that decides; the context cache and the
+  compute buffer are charged at the precision and batch size the
+  load will actually use; and on devices with 4 GB of memory or
+  less the check tries one short-answer context below the usual
+  floor before refusing. The Execution Telemetry screen now lists
+  every refused load with the numbers the check saw, and the
+  records travel in its JSON and CSV exports.
+- **The emergency step of the memory check uses the memory
+  that is really free, and an orderly unload no longer counts
+  as a crash** (0.1.85): on devices with 4 GB of memory or
+  less, the short-answer context of last resort is priced
+  against the free memory Android reports at that moment,
+  without the watermark and margin the normal steps subtract;
+  unloading a model in good order (idle timeout, system
+  pressure, switching models) no longer degrades the crash
+  guard as if the app had crashed; and a refusal judged
+  without the live memory reading now says so in its telemetry
+  record. Every normal step keeps the stricter count, and the
+  2 GB system headroom is unchanged.
+- **Guides from a verified imported pack are answered as
+  written, and the model badge is the verdict of the real
+  load** (0.1.86): a pack that came in through the signed
+  import door and verified is now served word for word from
+  the chat, without loading the language model, under the
+  same rule as the built-in packs, so asking about one of its
+  guides no longer sends the question to the model with
+  memory at its tightest; the compatibility badge of each
+  model is judged with the same specification and planner
+  verdict as the load itself (on a tablet like the owner's
+  the 1.5B model now shows red, because even its cheapest
+  emergency plan does not fit there); importing a pack asks
+  for its signed manifest with a second picker instead of
+  refusing when the first selection missed it; and the guide
+  library can be opened from Settings in normal use. A
+  suspected double counting in the crash guard was tested
+  with a regression and does not exist; the guard is
+  unchanged.
+- **Works from the first second, offline** (0.1.95): a fresh
+  install carries the first-aid guides and the checked
+  emergency numbers for 69 countries inside the APK, so the
+  setup wizard's Emergency entry shows your country's
+  numbers before anything is downloaded and with no model.
+  The panic erase now destroys the database key before
+  anything else.
+- **The model loads only when a turn needs it, and
+  numbers no longer overflow the context** (0.1.94): a
+  question a guide or a fixed answer covers no longer
+  waits for the model to load, and is answered even when
+  the model does not fit in memory. The context budget
+  now counts each digit as the tokenizer does: a table
+  question at a 2,048-token context used to get an
+  answer cut at 143 tokens, and at 4,096 the engine
+  refused the prompt; both now answer whole.
+- **The health and emergency gate decides by meaning**
+  (0.1.93): a question with no sources that the gate
+  does not recognise as health or emergency is answered
+  by the model from memory, and the gate was a word
+  list. On 45 health and emergency questions it had
+  never seen, the list recognised 4. A small classifier
+  on the question's search vector now adds to it: with
+  the multilingual search model the two together
+  recognise 40 of 45, with the default English one 26 of
+  45, and neither closed any of 50 everyday questions.
+  A message about wanting to die or to hurt oneself
+  always gets a fixed text with support lines, never a
+  model. Read-aloud no longer reads a model's reasoning,
+  and a renamed pack can no longer take the place of a
+  catalog pack.
+- **Sums get worked out, and a cut answer always says
+  so** (0.1.92): on Qwen3-0.6B, a question that is a
+  calculation (two or more figures and a «how many» or
+  «what time») now lets the model reason before it
+  answers, on that turn only; measured with the real
+  model file and the app's own prompt, correct answers
+  went from 16 of 60 to 41 of 60, and if the reasoning
+  leaves no answer the turn is answered directly as
+  before. The «answer was cut» fact is now read from the
+  engine's own stop signal instead of counting streamed
+  pieces, which undercounted and could leave an answer
+  stopped by the limit without its note. A model marked
+  «too heavy» that still has a partly downloaded file
+  says so and offers to delete it, and one model whose
+  check fails no longer blanks the state of the others.
+- **Downloads settle, heavy models stop offering, and
+  the last line reads whole** (0.1.91): a download
+  retried after a failure now settles with that one
+  download: the card offers «Select and use», because
+  the presence check retries its file hash once when
+  the calculation itself stumbles (a real mismatch is
+  never retried into trust) and the card says why when
+  a finished download cannot show as installed; a
+  model marked «too heavy for this device» no longer
+  offers a download or retry button, since that red
+  mark is the load check's own verdict; and the guide
+  reader, the guide library, CPR practice and the
+  emergency country sheet now keep their bottom edge
+  inside the safe area, so the last line of a long
+  guide is no longer cut in half by the system bar;
+  and the «ran low on space» note under a model's
+  answer now appears only when a generation really
+  used up its whole token budget, not whenever the
+  turn was merely assigned less than the default.
+- **The model answers again, and its answers finish**
+  (0.1.90): a question no guide covers is generated by the
+  loaded model instead of refused (the refusal now guards
+  only health and emergency questions without evidence);
+  the context budget shrinks its generation reserve before
+  giving up, so a short story no longer dies with a
+  technical error on a small context window; and the
+  default answer length doubles, so a five step
+  explanation or a short email comes out whole instead of
+  closing early.
+- **A smell of gas gets the gas guide, and two screens stop
+  stepping on themselves** (0.1.89): the last release made
+  the word for word road run, and on the owner's tablet it
+  served a guide word for word for the gas question, with
+  the pack's name on it and no model in between, but it was
+  the carbon monoxide neighbour instead of the gas leak
+  guide: measured against the owner's real pack, the pack's
+  own keyword ranking puts the carbon monoxide fragment
+  first on a coverage tie, and that guide's own text says
+  its gas cannot be smelled. The choice now reads the sign
+  in the question: when a question says you can smell, see
+  or hear something, a guide that states its danger cannot
+  be smelled, seen or heard loses the tie to a guide that
+  does not say that, in Spanish, English and Portuguese,
+  and when the first short list holds only the wrong
+  neighbour the app checks the wider list before serving
+  anything. The guide reader's header now sits below the
+  system status bar, clear of the clock and the battery
+  icons. And the NIDO screen's tabs size themselves to
+  their labels, so the long tab word stays on one line; on
+  a narrow phone the row scrolls instead of wrapping.
 - **Talks to another NIDO over Bluetooth**: encrypted messages between two
   paired phones, with no internet and no server. To pair, you paste the
   other phone's code (the text of its QR); a contact shows as verified only
@@ -105,12 +278,13 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [latest release](https://github.com/Nido007-cmyk/Nido/releases).
+   [v0.1.95-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.95-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4
    and 1.1 GB depending on your phone's memory and language. This is the
-   only time it needs the internet.
+   only time it needs the internet. The emergency numbers and the
+   first-aid guides already work before that download, offline.
 
 ## Privacy and security
 
@@ -133,9 +307,11 @@ The interface is available in English, Spanish and Portuguese.
   NIDO on the other side, the connection falls back to what that phone
   supports. Messages are padded to fixed sizes. The handshake is checked
   with formal verification (`formal/`).
-- Disappearing messages in NIDO-to-NIDO chats, an optional panic button that
-  erases everything in 3 seconds, and an incognito keyboard (the keyboard is
-  asked not to learn from what you type).
+- Disappearing messages in NIDO-to-NIDO chats, an optional panic button
+  (off by default: you hold it for 3 seconds and it erases everything; the
+  database key is destroyed first, so what the flash memory keeps is
+  unreadable ciphertext), and an incognito keyboard (the keyboard is asked
+  not to learn from what you type).
 - Screenshots are blocked, other apps' overlays are hidden while NIDO is on
   screen (Android 12+), and erasing all data asks for your fingerprint or PIN.
 
@@ -206,6 +382,11 @@ share. You can also email the list yourself, from your own mail app, to
 arsrs91@gmail.com. For code, read [CONTRIBUTING.md](CONTRIBUTING.md) and the
 [code of conduct](CODE_OF_CONDUCT.md) first.
 
+Do you speak a language NIDO doesn't yet? The translation campaign needs
+native-speaker reviewers, and it starts at
+[issue #95](https://github.com/Nido007-cmyk/Nido/issues/95), which lists every
+open language.
+
 ## Credits and license
 
 NIDO is released under the [MIT License](LICENSE).
@@ -216,9 +397,11 @@ foundation is reused; the agent, the encrypted storage, the safety policy
 and the Bluetooth protocol are NIDO's own work.
 [ATTRIBUTION.md](ATTRIBUTION.md) lists what came from where.
 
-AI models and knowledge packs are downloaded separately and keep their own
-licenses (Apache-2.0, MIT, the LFM Open License v1.0 for LFM2.5, and
-CC BY-SA 4.0 for Wikipedia text, some of which ships inside the app). The
+AI models are downloaded separately and keep their own licenses
+(Apache-2.0, MIT, the LFM Open License v1.0 for LFM2.5). Knowledge packs
+keep theirs too: CC BY-SA 4.0 for Wikipedia text, some of which ships
+inside the app, and CC BY 4.0 for NIDO's own guide packs, two of which
+(NIDO Essentials and NIDO Local) ship inside the app since 0.1.95. The
 open-source packages compiled into the app are listed with their license
 texts in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). All of it is also
 readable inside the app, in About → Licenses.

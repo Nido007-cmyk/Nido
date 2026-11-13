@@ -41,6 +41,11 @@ const h = vi.hoisted(() => {
   const metas = new Map<string, Record<string, string>>();
   const state = {
     pickerResult: null as null | { canceled: boolean; assets: Array<{ uri: string; name: string; size?: number }> },
+    // 0.1.86: cola de resultados del selector. Cuando hay cola, cada
+    // getDocumentAsync consume el siguiente (el primer gesto y, si
+    // hace falta, el segundo selector del manifiesto); sin cola, el
+    // comportamiento de siempre: pickerResult para toda llamada.
+    pickerResults: [] as Array<null | { canceled: boolean; assets: Array<{ uri: string; name: string; size?: number }> }>,
     moves: 0,
     closePackCalls: [] as string[],
   };
@@ -101,7 +106,8 @@ vi.mock("expo-sqlite", () => ({
 }));
 
 vi.mock("expo-document-picker", () => ({
-  getDocumentAsync: async () => h.state.pickerResult,
+  getDocumentAsync: async () =>
+    h.state.pickerResults.length > 0 ? h.state.pickerResults.shift() : h.state.pickerResult,
 }));
 
 vi.mock("../rag/packs", () => ({
@@ -194,6 +200,36 @@ function stagePick(sqliteName: string, sqliteBytes: Uint8Array, manifestText: st
   return sqliteUri;
 }
 
+/**
+ * 0.1.86: stages the two-gesture pick — the first selection brings only
+ * the .sqlite; the second picker (the manifest ask) gets `second`
+ * (a staged manifest asset, another file, or a cancellation).
+ */
+function stagePickTwoGestures(
+  sqliteName: string,
+  sqliteBytes: Uint8Array,
+  second: "manifest" | "other" | "cancelled",
+  manifestText: string,
+  meta?: Record<string, string>
+) {
+  const sqliteUri = stagePick(sqliteName, sqliteBytes, null, meta);
+  if (second === "cancelled") {
+    h.state.pickerResults = [h.state.pickerResult, { canceled: true, assets: [] }];
+    return sqliteUri;
+  }
+  const secondName = second === "manifest" ? `${sqliteName}.json` : "notas.txt";
+  const secondUri = `${h.CACHE}picked/${secondName}`;
+  h.files.set(
+    secondUri,
+    new TextEncoder().encode(second === "manifest" ? manifestText : "hola")
+  );
+  h.state.pickerResults = [
+    h.state.pickerResult,
+    { canceled: false, assets: [{ uri: secondUri, name: secondName, size: manifestText.length }] },
+  ];
+  return sqliteUri;
+}
+
 // Estos casos hashean los bytes reales de la tienda (SHA-256 en JS sobre
 // ~1 MB por pase, varias veces por caso): con la suite entera en paralelo
 // el timeout por defecto de 5 s los mata por carga, no por aserción (en
@@ -230,6 +266,7 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImporter · the door with real store byte
     h.state.moves = 0;
     h.state.closePackCalls = [];
     h.state.pickerResult = null;
+    h.state.pickerResults = [];
   });
 
   it("imports the SALVORA pack after confirmation: file promoted, origin recorded", REAL_BYTES_TIMEOUT, async () => {
@@ -258,8 +295,26 @@ describe.runIf(REAL_ZIPS_PRESENT)("packImporter · the door with real store byte
     expect(await listImportedPacks()).toEqual([]);
   });
 
-  it("rejects the pack without its manifest (missing-manifest) and copies nothing", REAL_BYTES_TIMEOUT, async () => {
-    stagePick(STD, stdBytes, null, stdMeta);
+  it("rejects the pack without its manifest (missing-manifest) and copies nothing — the second picker is cancelled too", REAL_BYTES_TIMEOUT, async () => {
+    // 0.1.86: sin manifiesto en la primera selección, la puerta abre
+    // el segundo selector; cancelado también, el rechazo queda.
+    stagePickTwoGestures(STD, stdBytes, "cancelled", stdManifest, stdMeta);
+    expect(await importPackFromFile(yes)).toEqual({ status: "rejected", reason: "missing-manifest" });
+    expect(corpusFiles()).toEqual([]);
+  });
+
+  it("imports when the manifest arrives in the second picker (0.1.86)", REAL_BYTES_TIMEOUT, async () => {
+    stagePickTwoGestures(STD, stdBytes, "manifest", stdManifest, stdMeta);
+    const out = await importPackFromFile(yes);
+    expect(out.status).toBe("imported");
+    if (out.status !== "imported") return;
+    expect(out.item.origin).toBe("salvora");
+    expect(h.files.get(`${h.DOCS}corpus/${STD}`)).toEqual(stdBytes);
+    expect(await listImportedPacks()).toMatchObject([{ filename: STD, origin: "salvora" }]);
+  });
+
+  it("a second pick with any other name is still missing-manifest (0.1.86)", REAL_BYTES_TIMEOUT, async () => {
+    stagePickTwoGestures(STD, stdBytes, "other", stdManifest, stdMeta);
     expect(await importPackFromFile(yes)).toEqual({ status: "rejected", reason: "missing-manifest" });
     expect(corpusFiles()).toEqual([]);
   });

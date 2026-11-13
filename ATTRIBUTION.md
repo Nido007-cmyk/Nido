@@ -59,6 +59,15 @@ also inside each pack (`meta` table), in `assets/packs/ATTRIBUTION.txt` and
 in the `LICENSE-ATTRIBUTION.txt` / `ATTRIBUTION.txt` release assets. NIDO is
 not affiliated with or endorsed by the Wikimedia Foundation.
 
+**NIDO's own guide packs (CC BY 4.0).** Since 0.1.95 the APK also ships
+two knowledge packs written by NIDO: NIDO Essentials (first aid, health,
+disasters, survival) and NIDO Local (emergency numbers and alerts by
+country, each fact with its official source and date), in
+`assets/bundled-packs/`. They are licensed CC BY 4.0: credit **NIDO** if
+you share or adapt them. They are the same files published in the
+`knowledge-packs-v16` and `knowledge-packs-v9` releases, and the app
+checks each one against the signed catalog before using it.
+
 **Third-party software.** The npm packages compiled into the app and their
 license texts are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md),
 and the same list is readable inside the app (About → Licenses).

@@ -45,7 +45,7 @@ NIDO has non-negotiable principles. All contributions must respect them:
 - New local tools for the agent (see src/agent/tools/)
 - UI/UX improvements (following the "Calm Agent" direction)
 - Documentation improvements
-- Translations (see src/i18n/)
+- Translations: start at the [translation campaign, issue #95](https://github.com/Nido007-cmyk/Nido/issues/95); the strings live in src/i18n/
 
 ### What We Won't Accept
 - Features requiring network/cloud accounts

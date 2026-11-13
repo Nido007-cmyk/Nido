@@ -16,6 +16,9 @@
  * What it records per generation: timing (TTFT, total, tok/s), token
  * counts, stop reason, sampling preset, task type, and whether the
  * response was deterministic (canned — never touched the model).
+ * Pre-flight rejections are readable back via listStoredRamRejections()
+ * (0.1.84): the Execution Telemetry screen shows them and its export
+ * carries them, closing the surface this header once left as future.
  *
  * Design: recordInferenceEvent() is synchronous and never throws — the
  * ring buffer always works, even when the database isn't available
@@ -26,7 +29,7 @@
  * lazy dynamic import) so it stays unit-testable under plain Node/vitest.
  */
 
-export type TelemetryStopReason = "completed" | "timeout" | "stopped" | "error";
+export type TelemetryStopReason = "completed" | "timeout" | "stopped" | "error" | "rejected";
 
 export interface InferenceTelemetryEvent {
   /** Unix ms timestamp of generation start. */
@@ -49,6 +52,26 @@ export interface InferenceTelemetryEvent {
   samplingPreset?: string;
   temperature?: number;
   nPredict: number;
+  /**
+   * Solo en eventos de rechazo del pre-flight (stopReason "rejected"):
+   * las cifras que la comprobación de memoria vio al rechazar. Es lo
+   * que permite distinguir en el aparato un rechazo del pre-flight de
+   * un fallo nativo de initLlama (que no deja este registro).
+   */
+  ramRejection?: {
+    totalRamBytes: number;
+    rssBytes: number;
+    availBytes: number | null;
+    thresholdBytes: number | null;
+    availableBytes: number;
+    neededBytes: number;
+    nCtxChosen: number;
+    nCtxRequested: number;
+    crashSafety: number | null;
+    /** 0.1.85: "live" cuando la lectura de memoria libre en vivo no
+     * llegó a la foto que juzgó; null cuando la foto fue completa. */
+    readFailure?: "live" | null;
+  };
 }
 
 const RING_CAP = 500;
@@ -73,6 +96,13 @@ CREATE TABLE IF NOT EXISTS inference_telemetry (
   sampling_preset TEXT,
   temperature REAL,
   n_predict INTEGER NOT NULL
+);`;
+
+/** Detalle de un rechazo del pre-flight, como JSON en su propia columna. */
+const REJECTION_DDL = `
+CREATE TABLE IF NOT EXISTS inference_telemetry_rejections (
+  telemetry_id INTEGER PRIMARY KEY,
+  detail TEXT NOT NULL
 );`;
 
 /**
@@ -108,7 +138,7 @@ async function persistEvent(e: InferenceTelemetryEvent): Promise<void> {
     // espera, este evento es del mundo borrado: no entra en la base nueva.
     if (recordedWhileWiping || telemetryWiping) return;
     await db.execAsync(TELEMETRY_DDL);
-    await db.runAsync(
+    const inserted = await db.runAsync(
       `INSERT INTO inference_telemetry
        (ts, model_id, task_type, deterministic, prompt_chars, prompt_tokens_est,
         completion_tokens, ttft_ms, total_ms, tokens_per_sec, stop_reason,
@@ -131,6 +161,16 @@ async function persistEvent(e: InferenceTelemetryEvent): Promise<void> {
         e.nPredict,
       ]
     );
+    // El detalle de un rechazo vive en su tabla: la principal no cambia
+    // de esquema (las instalaciones ya la tienen creada) y el detalle es
+    // un JSON que solo estos eventos llevan.
+    if (e.ramRejection) {
+      await db.execAsync(REJECTION_DDL);
+      await db.runAsync(
+        `INSERT INTO inference_telemetry_rejections (telemetry_id, detail) VALUES (?, ?)`,
+        [inserted.lastInsertRowId, JSON.stringify(e.ramRejection)]
+      );
+    }
     // Prune: keep only the newest DB_MAX_ROWS events.
     await db.execAsync(
       `DELETE FROM inference_telemetry WHERE id NOT IN (SELECT id FROM inference_telemetry ORDER BY id DESC LIMIT ${DB_MAX_ROWS})`
@@ -150,7 +190,182 @@ export function recordInferenceEvent(e: InferenceTelemetryEvent): void {
   void persistEvent(e);
 }
 
-/** Newest-first? No — oldest-first slice of the most recent events. */
+/**
+ * Fase 2 del arreglo del defecto de memoria (reapertura 2026-11-08):
+ * el registro de los rechazos del pre-flight. Hasta aquí un rechazo
+ * no dejaba rastro en ningún sitio: el mensaje viajaba a la tarjeta y
+ * moría ahí, y la foto del dueño era la única «telemetría» — por eso
+ * la primera pasada tuvo que modelar las cifras del aparato en vez de
+ * leerlas. Cada rechazo queda ahora en el mismo anillo y la misma
+ * tabla que las generaciones (SQLite cifrada, solo en el aparato),
+ * con las cifras que el pre-flight vio: total, RSS, libre en vivo,
+ * umbral, disponible calculado, coste del plan al peldaño elegido,
+ * techo pedido y factor del CrashGuard. stop_reason "rejected" lo
+ * distingue de cualquier generación; los contadores de una generación
+ * que nunca ocurrió van a cero y los tiempos a null.
+ */
+export interface RamRejectionInfo {
+  modelId: string | null;
+  totalRamBytes: number;
+  rssBytes: number;
+  availBytes?: number | null;
+  thresholdBytes?: number | null;
+  availableBytes: number;
+  neededBytes: number;
+  nCtxChosen: number;
+  nCtxRequested: number;
+  crashSafety: number | null;
+  /** Solo memoria: el rechazo del motor de embeddings (sin escalera ni CrashGuard). */
+  embedding?: boolean;
+  /**
+   * 0.1.85: la foto que juzgó la carga se tomó SIN una de las lecturas
+   * reales ("live" = la memoria libre en vivo no llegó: build nativo
+   * sin ella o fallo de lectura). El rechazo sigue siendo por la
+   * cuenta que sí hubo, pero el instrumento lo distingue de un
+   * «memoria insuficiente» con todas las lecturas encima de la mesa:
+   * la decisión nunca se apoya en un supuesto sin decirlo.
+   */
+  readFailure?: "live" | null;
+}
+
+/** Un rechazo del pre-flight como evento de telemetría. Puro. */
+export function ramRejectionEvent(info: RamRejectionInfo, now = Date.now()): InferenceTelemetryEvent {
+  return {
+    ts: now,
+    modelId: info.modelId,
+    taskType: info.embedding ? "model-load-embedding" : "model-load",
+    promptChars: 0,
+    promptTokensEst: 0,
+    completionTokens: 0,
+    ttftMs: null,
+    totalMs: 0,
+    tokensPerSec: null,
+    stopReason: "rejected",
+    nPredict: 0,
+    ramRejection: {
+      totalRamBytes: info.totalRamBytes,
+      rssBytes: info.rssBytes,
+      availBytes: info.availBytes ?? null,
+      thresholdBytes: info.thresholdBytes ?? null,
+      availableBytes: info.availableBytes,
+      neededBytes: info.neededBytes,
+      nCtxChosen: info.nCtxChosen,
+      nCtxRequested: info.nCtxRequested,
+      crashSafety: info.crashSafety,
+      readFailure: info.readFailure ?? null,
+    },
+  };
+}
+
+/** Registra un rechazo del pre-flight (mismo canal que las generaciones; nunca lanza). */
+export function recordRamRejection(info: RamRejectionInfo): void {
+  recordInferenceEvent(ramRejectionEvent(info));
+}
+export interface StoredRamRejection {
+  /** Id de la fila en inference_telemetry (estable entre lecturas). */
+  id: number;
+  /** Unix ms del rechazo. */
+  ts: number;
+  /** Fichero del modelo rechazado, o null. */
+  modelId: string | null;
+  /** true si el rechazo fue del motor de embeddings. */
+  embedding: boolean;
+  ramRejection: NonNullable<InferenceTelemetryEvent["ramRejection"]>;
+}
+
+interface RamRejectionRow {
+  id: number;
+  ts: number;
+  model_id: string | null;
+  task_type: string | null;
+  detail: string;
+}
+
+/**
+ * Parsea el detalle JSON de una fila de rechazo. Puro y tolerante:
+ * una fila ilegible se descarta (null), nunca rompe la lista. El
+ * detalle lo escribe ramRejectionEvent con claves en inglés; aquí se
+ * valida número a número porque la base es del aparato, no nuestra.
+ */
+export function parseStoredRamRejection(row: RamRejectionRow): StoredRamRejection | null {
+  try {
+    const d = JSON.parse(row.detail) as Record<string, unknown>;
+    const num = (v: unknown): number | null =>
+      typeof v === "number" && Number.isFinite(v) ? v : null;
+    const totalRamBytes = num(d.totalRamBytes);
+    const rssBytes = num(d.rssBytes);
+    const availableBytes = num(d.availableBytes);
+    const neededBytes = num(d.neededBytes);
+    const nCtxChosen = num(d.nCtxChosen);
+    const nCtxRequested = num(d.nCtxRequested);
+    if (
+      totalRamBytes === null ||
+      rssBytes === null ||
+      availableBytes === null ||
+      neededBytes === null ||
+      nCtxChosen === null ||
+      nCtxRequested === null
+    ) {
+      return null;
+    }
+    return {
+      id: row.id,
+      ts: row.ts,
+      modelId: row.model_id,
+      embedding: row.task_type === "model-load-embedding",
+      ramRejection: {
+        totalRamBytes,
+        rssBytes,
+        availBytes: num(d.availBytes),
+        thresholdBytes: num(d.thresholdBytes),
+        availableBytes,
+        neededBytes,
+        nCtxChosen,
+        nCtxRequested,
+        crashSafety: num(d.crashSafety),
+        readFailure: d.readFailure === "live" ? "live" : null,
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lector de los rechazos persistidos (0.1.84): la superficie que la
+ * fase 2 de la 0.1.83 dejó sin construir. Lee la tabla principal con
+ * LEFT JOIN sobre el detalle — el rechazo vive en su propia tabla
+ * desde que se registra — ordenado del más reciente al más viejo.
+ * Sobrevive a los reinicios porque lee SQLite, no el anillo en
+ * memoria. Nunca lanza: sin base (arranque temprano, pruebas) o con
+ * la lectura rota devuelve lista vacía, como el resto del módulo.
+ */
+export async function listStoredRamRejections(limit = 50): Promise<StoredRamRejection[]> {
+  try {
+    const { getDatabase } = await import("../security/databaseManager");
+    const db = await getDatabase();
+    await db.execAsync(TELEMETRY_DDL);
+    await db.execAsync(REJECTION_DDL);
+    const rows = await db.getAllAsync<RamRejectionRow>(
+      `SELECT t.id AS id, t.ts AS ts, t.model_id AS model_id, t.task_type AS task_type,
+              r.detail AS detail
+       FROM inference_telemetry t
+       INNER JOIN inference_telemetry_rejections r ON r.telemetry_id = t.id
+       ORDER BY t.id DESC
+       LIMIT ?`,
+      [Math.max(1, Math.floor(limit) || 50)],
+    );
+    const out: StoredRamRejection[] = [];
+    for (const row of rows) {
+      const parsed = parseStoredRamRejection(row);
+      if (parsed) out.push(parsed);
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 export function getRecentTelemetry(limit = 100): InferenceTelemetryEvent[] {
   return ring.slice(Math.max(0, ring.length - limit));
 }

@@ -33,6 +33,7 @@ import { calmSpacing, calmRadii, calmShadows } from "./theme/calm";
 // second tap through before the re-render).
 import { SendGuard } from "./sendGuard";
 import { NegotiationsTab } from "./NegotiationsTab";
+import { NidoTabBar } from "./NidoTabBar";
 import { reconnectManager } from "../p2p/reconnectManager";
 import { PacksTab } from "./PacksTab";
 import { RemoteTasksCard } from "./RemoteTasksCard";
@@ -1503,29 +1504,22 @@ export function NidoScreen({
         </View>
       ) : null}
 
-      <View style={styles.tabs}>
-        {(
-          [
-            ["chats", t("nido.tabChats")],
-            ["contactos", t("nido.tabContacts")],
-            ["enlace", t("nido.tabLink")],
-            ["negociaciones", t("nido.tabNegotiations")],
-            // 0.1.56: envío y recepción ya conectados (packShareApp), así
-            // que la pestaña Packs vuelve a verse.
-            ["packs", t("nido.tabPacks")],
-          ] as Array<[Tab, string]>
-        ).map(([key, label]) => (
-          <Pressable
-            key={key}
-            onPress={() => setTab(key)}
-            style={[styles.tab, tab === key && styles.tabActive]}
-            accessibilityRole="button"
-            accessibilityLabel={label}
-          >
-            <Text style={[styles.tabText, tab === key && styles.tabTextActive]}>{label}</Text>
-          </Pressable>
-        ))}
-      </View>
+      {/* 0.1.89: la fila vive en NidoTabBar: allí ninguna etiqueta
+          se parte en dos líneas (la de «Negociaciones» se partía en
+          el aparato del dueño con las columnas iguales de antes). */}
+      <NidoTabBar
+        tabs={[
+          { key: "chats", label: t("nido.tabChats") },
+          { key: "contactos", label: t("nido.tabContacts") },
+          { key: "enlace", label: t("nido.tabLink") },
+          { key: "negociaciones", label: t("nido.tabNegotiations") },
+          // 0.1.56: envío y recepción ya conectados (packShareApp), así
+          // que la pestaña Packs vuelve a verse.
+          { key: "packs", label: t("nido.tabPacks") },
+        ]}
+        activeKey={tab}
+        onSelect={(key) => setTab(key as Tab)}
+      />
 
       {/* U2: tareas remotas pendientes de decisión, visibles en cualquier pestaña. */}
       <RemoteTasksCard onNotice={setNotice} />
@@ -2100,19 +2094,8 @@ const getStyles = (colors: Colors, typography: Typography) => StyleSheet.create(
     fontWeight: "700",
     color: colors.text.inverse,
   },
-  // Rediseño 2026-10-10: control segmentado en vez de subrayado.
-  tabs: {
-    flexDirection: "row",
-    backgroundColor: colors.bg.cardElevated,
-    borderRadius: 13,
-    padding: 3,
-    marginHorizontal: calmSpacing.comfortable,
-    marginVertical: calmSpacing.cozy,
-  },
-  tab: { flex: 1, paddingVertical: calmSpacing.cozy, alignItems: "center", borderRadius: 10 },
-  tabActive: { backgroundColor: colors.bg.card, ...calmShadows.whisper },
-  tabText: { ...typography.ui.subtext, fontWeight: "600", color: colors.text.secondary },
-  tabTextActive: { color: colors.text.primary },
+  // La fila de pestañas (control segmentado) vive en NidoTabBar
+  // desde la 0.1.89, con sus estilos.
   body: { padding: calmSpacing.comfortable, gap: calmSpacing.comfortable },
   card: {
     ...calmShadows.none,

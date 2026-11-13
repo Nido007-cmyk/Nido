@@ -7,7 +7,7 @@
  * texts are the real NIDO Essentials ones seen on the tablet.
  */
 import { describe, it, expect } from "vitest";
-import { composeGuideAnswer, guideAnswerProvenance, GUIDE_MAX_CHARS, isEssentialsChunk, pickGuideChunk } from "./guideAnswer";
+import { composeGuideAnswer, guideAnswerProvenance, GUIDE_MAX_CHARS, isEssentialsChunk, isLiteralGuideChunk, pickGuideChunk, type LiteralRouteContext } from "./guideAnswer";
 import { closestSourceSentence, negationCount, verifyGroundedAnswer } from "./grounding";
 import { buildLexicalQuery, countMatchedTerms } from "./pure";
 
@@ -254,6 +254,34 @@ describe("respuesta desde la guía, sin modelo (0.1.59)", () => {
     const prov = guideAnswerProvenance(composeGuideAnswer(doc, "en"));
     expect(prov[0].origin.kind).toBe("fixed");
     expect(prov.some((p) => p.origin.kind === "guide" && p.text === "Second.")).toBe(true);
+  });
+
+  it("0.1.86: la cabecera con el nombre propio de un pack importado también es texto fijo", () => {
+    const route: LiteralRouteContext = {
+      importedVerifiedPackIds: new Set(["local-salvora-emergencias-casa"]),
+      importedPackNames: new Map([["local-salvora-emergencias-casa", "SALVORA Home Emergencies"]]),
+    };
+    const doc = {
+      title: "Fuga de gas en casa",
+      source: "",
+      parts: [{ id: 12, body: "Sal de la casa sin tocar interruptores.", used: true }],
+    };
+    const text = composeGuideAnswer(doc, "es", { packId: "local-salvora-emergencias-casa", route });
+    expect(text.split("\n")[0]).toBe(
+      "Guía «Fuga de gas en casa» de SALVORA Home Emergencies, tal como está escrita (sin modelo):",
+    );
+    const prov = guideAnswerProvenance(text);
+    expect(prov[0].origin.kind).toBe("fixed");
+    expect(prov.some((p) => p.origin.kind === "guide" && p.text.includes("Sal de la casa"))).toBe(true);
+  });
+
+  it("0.1.86: isLiteralGuideChunk exige el registro: sin él, un pack local no es literal", () => {
+    const id = "pack:local-salvora-emergencias-casa:12";
+    expect(isLiteralGuideChunk(id)).toBe(false);
+    expect(isLiteralGuideChunk(id, {})).toBe(false);
+    expect(isLiteralGuideChunk(id, { importedVerifiedPackIds: new Set(["local-otro"]) })).toBe(false);
+    expect(isLiteralGuideChunk(id, { importedVerifiedPackIds: new Set(["local-salvora-emergencias-casa"]) })).toBe(true);
+    expect(isLiteralGuideChunk("pack:nido-esencial:1")).toBe(true);
   });
 });
 

@@ -9,7 +9,11 @@
  *
  * One gesture in Settings > Knowledge Base adds a knowledge pack from a
  * file (e.g. one bought at SALVORA PACKS). The pack never travels alone:
- * its signed companion manifest (`<pack>.sqlite.json`) comes with it, and
+ * its signed companion manifest (`<pack>.sqlite.json`) comes with it —
+ * when the first selection brings the .sqlite without it, a second
+ * picker asks for the manifest alone before anything is checked
+ * (0.1.86: the SAF selector cannot reach the sibling file on its own,
+ * and picking both files in one gesture was the only door before).
  * NOTHING is copied into corpus/ until the checks of PI-2 have all passed,
  * in this order, on the picked (cache) copies:
  *
@@ -62,6 +66,14 @@ export interface ImportedPackItem {
   origin: PackOrigin;
   sizeBytes: number;
   sha256: string;
+  /**
+   * 0.1.87: the embedding model the pack was built with (its
+   * meta.embeddingModelSha256), read when the list is built so the
+   * surface can warn when it is not the active search model —
+   * until now the list never carried it and no warning was
+   * possible. Undefined when the pack's meta cannot be read.
+   */
+  embeddingModelSha256?: string;
 }
 
 interface ImportedPackRecord {
@@ -137,6 +149,28 @@ async function writeRegistry(packs: Record<string, ImportedPackRecord>): Promise
 }
 
 /**
+ * Packs the door verified, keyed by the id knowledgePacks() gives them
+ * (`local-<file base>`), for readers that need the origin mark without the
+ * list's presentation rules (e.g. the literal guide route in
+ * rag/guideAnswerRun.ts, which serves a verified imported pack's guides
+ * word for word like the built-in first-aid packs). A pack recorded under
+ * a catalog file name presents as the catalog item, never as an import,
+ * so it is not reported here; a record whose file is gone is stale and
+ * is not reported either.
+ */
+export async function verifiedImportedPacks(): Promise<Map<string, { name: string; origin: PackOrigin }>> {
+  const registry = await readRegistry();
+  const out = new Map<string, { name: string; origin: PackOrigin }>();
+  for (const [filename, record] of Object.entries(registry)) {
+    if (catalogEntryForFilename(filename)) continue;
+    const info = await FileSystem.getInfoAsync(`${corpusUri()}${filename}`).catch(() => null);
+    if (!info?.exists || info.isDirectory) continue;
+    out.set(localPackId(filename), { name: record.name, origin: record.origin });
+  }
+  return out;
+}
+
+/**
  * Packs this door imported and verified, still on disk. A pack whose file
  * name is a catalog file name is NOT listed here: it presents as the
  * catalog item it byte-for-byte is, in the downloadable packs list.
@@ -148,12 +182,19 @@ export async function listImportedPacks(): Promise<ImportedPackItem[]> {
     if (catalogEntryForFilename(filename)) continue;
     const info = await FileSystem.getInfoAsync(`${corpusUri()}${filename}`).catch(() => null);
     if (!info?.exists || info.isDirectory) continue;
+    // 0.1.87: la huella de embeddings del pack, de su propia meta,
+    // para el aviso de otro modelo en la superficie. Una meta
+    // ilegible deja el campo vacío y el aviso calla: no se afirma
+    // un desajuste que no se puede leer.
+    const meta = await readPackMeta(`${corpusUri()}${filename}`).catch(() => null);
+    const embeddingModelSha256 = meta ? summarizePackMeta(meta)?.embeddingModelSha256 : undefined;
     items.push({
       filename,
       name: record.name,
       origin: record.origin,
       sizeBytes: info.size ?? record.sizeBytes,
       sha256: record.sha256,
+      ...(embeddingModelSha256 ? { embeddingModelSha256 } : {}),
     });
   }
   items.sort((a, b) => a.name.localeCompare(b.name));
@@ -212,8 +253,27 @@ export async function importPackFromFile(
   if (!pickedInfo?.exists || sizeBytes <= 0) return { status: "rejected", reason: "damaged" };
 
   // PI-2 · 1 — manifest present and legible.
-  const manifestAsset = assets.find((a) => a.name === `${filename}.json`);
-  if (!manifestAsset) return { status: "rejected", reason: "missing-manifest" };
+  let manifestAsset = assets.find((a) => a.name === `${filename}.json`);
+  if (!manifestAsset) {
+    // 0.1.86: the first selection brought the .sqlite without its
+    // manifest. The picker cannot reach the sibling file on its own
+    // (SAF only grants what the user picks), so instead of rejecting
+    // here, a second picker asks for the manifest alone. Only an
+    // asset named exactly `<pack>.sqlite.json` counts; a cancelled
+    // pick or any other file leaves the missing-manifest rejection
+    // exactly as it was. The rest of the chain (parse, hash, origin,
+    // meta, confirmation, promotion) is untouched: the manifest from
+    // either gesture travels the same line.
+    const second = await DocumentPicker.getDocumentAsync({
+      type: "*/*",
+      multiple: false,
+      copyToCacheDirectory: true,
+    }).catch(() => null);
+    if (second && !second.canceled) {
+      manifestAsset = second.assets.find((a) => a.name === `${filename}.json`);
+    }
+    if (!manifestAsset) return { status: "rejected", reason: "missing-manifest" };
+  }
   const manifestText = await FileSystem.readAsStringAsync(manifestAsset.uri).catch(() => null);
   const manifest = manifestText ? parsePackManifest(manifestText) : null;
   if (!manifest) return { status: "rejected", reason: "missing-manifest" };
@@ -224,6 +284,18 @@ export async function importPackFromFile(
   const originResult = verifyPackOrigin(manifest, fileSha256);
   if (!originResult.ok) return { status: "rejected", reason: originResult.reason };
   const origin = originResult.origin;
+
+  // Auditoría 0.1.93: el nombre del archivo lo pone quien lo entrega y
+  // no va atado a la firma. Un pack verificado pero RENOMBRADO con el
+  // nombre de un pack del catálogo (otro pack firmado, u otro pin del
+  // catálogo) habría sustituido al del catálogo en disco y se habría
+  // presentado como él («presents as the catalog item it byte-for-byte
+  // is»), fuera de la lista de añadidos. Un nombre del catálogo solo
+  // lo puede ocupar el archivo cuya huella es la de ESA entrada.
+  const catalogSlot = catalogEntryForFilename(filename);
+  if (catalogSlot && !sameSha(catalogSlot.sha256, fileSha256)) {
+    return { status: "rejected", reason: "hash-mismatch" };
+  }
 
   // PI-2 · 4 — the same format acceptance openPack applies.
   const meta = await readPackMeta(sqliteAsset.uri);

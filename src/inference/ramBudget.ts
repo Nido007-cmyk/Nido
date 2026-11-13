@@ -59,6 +59,16 @@ export interface RamSnapshot {
   lowMemThresholdBytes?: number;
   /** Memoria que se libera antes de cargar (el modelo que se va a sustituir). */
   releasableBytes?: number;
+  /**
+   * 0.1.85 (defecto 2026-11-08, tercera vuelta): la lectura en vivo NO
+   * llegó — el build nativo no la trae o falló al leerla — y la foto
+   * decide solo por la RAM total. Lo marca readRamSnapshot, el único
+   * que sabe que la lectura faltó; los veredictos no cambian (la
+   * cuenta sin término en vivo es la histórica), pero un rechazo con
+   * esta marca queda registrado con su causa distinguible en el
+   * instrumento en vez de pasar por «memoria insuficiente» a secas.
+   */
+  liveReadMissing?: boolean;
 }
 
 /**
@@ -78,16 +88,35 @@ export interface ContextSpec {
   nLayer?: number;
   nKvHeads?: number;
   headDim?: number;
-  /** FIX 2026-10-09: para el término de logits (n_batch × n_vocab × 4B). */
-  nBatch?: number;
+  /** Output rows the engine materializes logits for per decode call.
+   *  Defaults to 1: the standard completion path requests logits only on
+   *  the last position (see estimateLogitsBytes). */
+  nLogitRows?: number;
   nVocab?: number;
+  /**
+   * Bytes per KV-cache element for the profile being evaluated.
+   * Defaults to 2 (fp16, llama.cpp's default). The kv-q8 profile loads
+   * with cache_type_k/v = q8_0: ONE byte per element, half the KV term.
+   * The pre-flight must charge the profile it is actually about to try
+   * (defect 2026-11-08 calibration): charging fp16 while loading q8_0
+   * over-charges every rung of the ladder on small devices.
+   */
+  kvBytesPerElement?: number;
+  /**
+   * Micro-batch the load will run with (batchForRam's pick for this
+   * device class). The compute term's dominant piece is proportional
+   * to n_ubatch (see estimateComputeBytes); when the caller knows the
+   * batch, the term charges it instead of the flat 4096/256 allowance.
+   * Unknown (undefined) keeps the historic flat allowance untouched.
+   */
+  nUbatch?: number;
 }
 
 export interface RamEstimate {
   weightsBytes: number;
   kvCacheBytes: number;
   computeBytes: number;
-  /** FIX 2026-10-09: buffer de logits (n_batch × n_vocab × 4B). */
+  /** Logits output buffer (output rows × n_vocab × 4B; 1 row by default). */
   logitsBytes: number;
   totalBytes: number;
 }
@@ -105,24 +134,72 @@ const GiB = 1024 * 1024 * 1024;
 /** llama.cpp's default KV-cache element type is fp16. */
 const KV_BYTES_PER_ELEMENT = 2;
 
+/** Architecture used when the caller does not declare one (Qwen2.5-1.5B). */
 const DEFAULT_ARCH = { nLayer: 28, nKvHeads: 2, headDim: 128 };
+
+/** q8_0 KV cache (the kv-q8 load profile): one byte per element. */
+export const KV_Q8_BYTES_PER_ELEMENT = 1;
 
 /**
  * Conservative allowance for llama.cpp's per-context compute/graph buffers
  * at n_ctx 4096, scaled linearly with context length. Deliberately an
  * over-estimate: for a pre-flight, firing early is annoying, firing late is
  * a crash.
+ *
+ * What the flat allowance is made of (llmInitParamsForProfile's own
+ * comment in LlamaEngine.ts): the decode logits buffer is
+ * n_ubatch × n_vocab × 4 B — ~149 MiB at n_ubatch 256 with Qwen2.5's
+ * 152064 vocabulary — and the rest (~107 MiB) is the graph/KV compute
+ * workspace. When the caller declares the n_ubatch the load will
+ * actually use (batchForRam already picks 128 on ≤3.5 GiB devices and
+ * 192 on ≤4.5 GiB), the term charges that buffer at its real size
+ * instead of the 256 default (calibration 2026-11-08): charging the
+ * 256-class buffer on a device that will run 128 double-counts memory
+ * the load will never allocate.
+ *
+ * Anchor choice, settled against Grok's patch set the same day: his
+ * version scaled the ~149 MiB alone (149 × nUbatch/256), i.e. only
+ * the decode-logits buffer. But this estimator already charges the
+ * output-row logits as a SEPARATE term, so anchoring on 149 MiB
+ * would drop the ~107 MiB of graph workspace from the cost entirely
+ * and under-estimate — the dangerous direction for a pre-flight.
+ * This formula anchors on the full 256 MiB constant and moves only
+ * its batch-proportional component; at n_ubatch 256 it reproduces
+ * the historic constant exactly.
  */
 const COMPUTE_BUFFER_BYTES_AT_4K_CTX = 256 * MiB;
+const COMPUTE_UBATCH_REF = 256;
+const COMPUTE_VOCAB_REF = 152064;
+const COMPUTE_FIXED_BYTES =
+  COMPUTE_BUFFER_BYTES_AT_4K_CTX - COMPUTE_UBATCH_REF * COMPUTE_VOCAB_REF * 4;
+
+function estimateComputeBytes(nCtx: number, nUbatch?: number, nVocab?: number): number {
+  const ctx = Math.max(nCtx, 0);
+  if (nUbatch === undefined || !Number.isFinite(nUbatch) || nUbatch <= 0) {
+    return Math.ceil((COMPUTE_BUFFER_BYTES_AT_4K_CTX * ctx) / 4096);
+  }
+  const perCtx = COMPUTE_FIXED_BYTES + nUbatch * (nVocab ?? COMPUTE_VOCAB_REF) * 4;
+  return Math.ceil((perCtx * ctx) / 4096);
+}
 
 /**
- * FIX 2026-10-09: término de logits. llama.cpp aloca n_batch × n_vocab × 4B
- * para los logits (float32). Con Qwen2.5 (vocab 152064) y n_batch 512:
- * ~297 MiB que el estimador ignoraba. Sin esto, el pre-flight es optimista
- * y Android puede matar el proceso por OOM en el 1.5B.
+ * Logits term. The 2026-10-09 fix charged n_batch × n_vocab × 4B (~297 MiB
+ * at n_batch 512, vocab 152064) on the premise that llama.cpp allocates
+ * full-vocab logits for every position in the batch. That premise is false
+ * for the path NIDO runs: llama.rn's standard completion decodes through
+ * llama_batch_get_one, which — in the vendored source's own words
+ * (cpp/rn-completion.cpp) — "only requests logits/embeddings on the LAST
+ * position"; the all-positions variant exists only for continuous-latent
+ * TTS, which NIDO does not use. Device evidence agrees: on the owner's
+ * 3.3 GB tablet, Qwen3-0.6B sessions peaked at 743-760 MB for the WHOLE
+ * process while this estimator charged 1.003 GiB for the model alone at
+ * the ladder floor — the phantom term (0.290 GiB) exceeds the entire gap,
+ * and stacked with the 0.1.78 live-availMem term it made every model
+ * un-loadable on that tablet (defect 2026-11-08). Charge the rows the
+ * engine actually produces: one output row per decode by default.
  */
-function estimateLogitsBytes(nBatch: number, nVocab: number): number {
-  return Math.max(nBatch, 0) * Math.max(nVocab, 0) * 4;
+function estimateLogitsBytes(nRows: number, nVocab: number): number {
+  return Math.max(nRows, 0) * Math.max(nVocab, 0) * 4;
 }
 
 /**
@@ -142,9 +219,10 @@ export function estimateKvCacheBytes(
   nLayer: number,
   nCtx: number,
   nKvHeads: number,
-  headDim: number
+  headDim: number,
+  bytesPerElement: number = KV_BYTES_PER_ELEMENT
 ): number {
-  return 2 * nLayer * nCtx * nKvHeads * headDim * KV_BYTES_PER_ELEMENT;
+  return 2 * nLayer * nCtx * nKvHeads * headDim * bytesPerElement;
 }
 
 export function estimateContextBytes(spec: ContextSpec): RamEstimate {
@@ -152,10 +230,17 @@ export function estimateContextBytes(spec: ContextSpec): RamEstimate {
   const nKvHeads = spec.nKvHeads ?? DEFAULT_ARCH.nKvHeads;
   const headDim = spec.headDim ?? DEFAULT_ARCH.headDim;
   const weightsBytes = Math.max(spec.fileSizeBytes, 0);
-  const kvCacheBytes = estimateKvCacheBytes(nLayer, spec.nCtx, nKvHeads, headDim);
-  const computeBytes = Math.ceil((COMPUTE_BUFFER_BYTES_AT_4K_CTX * Math.max(spec.nCtx, 0)) / 4096);
-  // FIX 2026-10-09: incluir logits. Defaults: n_batch 512, vocab Qwen2.5 152064.
-  const logitsBytes = estimateLogitsBytes(spec.nBatch ?? 512, spec.nVocab ?? 152064);
+  const kvCacheBytes = estimateKvCacheBytes(
+    nLayer,
+    spec.nCtx,
+    nKvHeads,
+    headDim,
+    spec.kvBytesPerElement ?? KV_BYTES_PER_ELEMENT
+  );
+  const computeBytes = estimateComputeBytes(spec.nCtx, spec.nUbatch, spec.nVocab);
+  // Logits: one output row by default (last position only — see
+  // estimateLogitsBytes). Vocab default: Qwen2.5 152064.
+  const logitsBytes = estimateLogitsBytes(spec.nLogitRows ?? 1, spec.nVocab ?? 152064);
   return {
     weightsBytes,
     kvCacheBytes,
@@ -169,17 +254,47 @@ export function estimateContextBytes(spec: ContextSpec): RamEstimate {
  * Pure budget check against a RAM snapshot. Returns null when the snapshot
  * carries no usable readout (totalRamBytes <= 0) — the caller must then skip
  * the check (fail open when blind) rather than block loading on missing data.
+ *
+ * `opts.emergencyLive` (0.1.85, vía del peldaño de emergencia — ver
+ * planContext en memoryLadder.ts): SOLO para juzgar el peldaño de
+ * emergencia, el término en vivo usa el availMem CRUDO (más el crédito
+ * liberable), sin restar el threshold del sistema ni LIVE_MARGIN_BYTES.
+ * Motivo (foto del dueño, 2026-11-08 19:54): en el último peldaño las
+ * dos restas apiladas — 472 MiB sobre 842 libres — rechazaban un modelo
+ * cuyo proceso entero medido ronda 600 MB con 842 MiB libres reales;
+ * el threshold es una marca de agua sobre el propio availMem, no un
+ * consumo, y el margen es conservadurismo sin calibrar. En el suelo,
+ * la red que queda es la de siempre: la descarga por presión del
+ * sistema (fase 5) y el CrashGuard si la carga muere. Sin esta opción
+ * la fórmula es byte a byte la de la 0.1.84.
  */
-export function checkRamBudget(spec: ContextSpec, snapshot: RamSnapshot): BudgetVerdict | null {
+export function checkRamBudget(
+  spec: ContextSpec,
+  snapshot: RamSnapshot,
+  opts?: { emergencyLive?: boolean },
+): BudgetVerdict | null {
   if (snapshot.totalRamBytes <= 0) return null;
   const estimate = estimateContextBytes(spec);
-  const byTotal = snapshot.totalRamBytes - snapshot.rssBytes - SYSTEM_HEADROOM_BYTES;
+  // Crédito simétrico (defecto 2026-11-08, segunda vuelta): lo que el
+  // modelo saliente libera ANTES de cargar el entrante cuenta en los
+  // DOS términos. Hasta aquí releasableBytes solo entraba en el término
+  // en vivo, y byTotal — el que manda en aparatos justos — seguía
+  // restando el RSS completo con el saliente residente, contra lo que
+  // el comentario F2-2026-10-06 de LlamaEngine.loadNow ya anunciaba
+  // («se resta la huella estimada del modelo actual del RSS»). El
+  // crédito solo lo construye ese camino (carga con un residente
+  // distinto); una carga en frío no lo trae y no cambia nada.
+  const releasable = Math.max(snapshot.releasableBytes ?? 0, 0);
+  const byTotal =
+    snapshot.totalRamBytes - Math.max(snapshot.rssBytes - releasable, 0) - SYSTEM_HEADROOM_BYTES;
   // 2026-11-06 (prueba física, tableta de 3,3 GB): la cuenta por la RAM
   // total dejó cargar un modelo que agotó la memoria con otras apps
   // abiertas. Con la lectura en vivo, manda la menor de las dos.
   const live =
     snapshot.availBytes !== undefined && snapshot.availBytes > 0
-      ? snapshot.availBytes + (snapshot.releasableBytes ?? 0) - (snapshot.lowMemThresholdBytes ?? 0) - LIVE_MARGIN_BYTES
+      ? opts?.emergencyLive
+        ? snapshot.availBytes + releasable
+        : snapshot.availBytes + releasable - (snapshot.lowMemThresholdBytes ?? 0) - LIVE_MARGIN_BYTES
       : Number.POSITIVE_INFINITY;
   const availableBytes = Math.max(Math.min(byTotal, live), 0);
   return {
@@ -209,7 +324,9 @@ export function readRamSnapshot(): RamSnapshot | null {
     return {
       totalRamBytes,
       rssBytes: getMemoryInfo().rssBytes,
-      ...(live ? { availBytes: live.availBytes, lowMemThresholdBytes: live.thresholdBytes } : {}),
+      ...(live
+        ? { availBytes: live.availBytes, lowMemThresholdBytes: live.thresholdBytes }
+        : { liveReadMissing: true }),
     };
   } catch {
     return null;
@@ -238,6 +355,38 @@ export function defaultThreadsForCores(cores: number | null): number {
   if (cores <= 6) return 3;
   if (cores <= 8) return 4;
   return 6;
+}
+
+/**
+ * Escalera de lote por RAM (optimización 2026-11-08, fase 2 del
+ * paquete): el búfer de cómputo de llama.cpp se dimensiona con
+ * n_ubatch (ver el comentario de llmInitParamsForProfile en
+ * LlamaEngine.ts: a 256 son ~149 MiB con el vocabulario de Qwen2.5;
+ * a 128, la mitad). En aparatos de poca RAM ese búfer compite con
+ * los pesos y la KV por el mismo disponible del pre-flight, así que
+ * la clase pequeña nace con el lote reducido y la mediana con uno
+ * intermedio; la clase ancha conserva el de siempre. Bajo presión
+ * del aparato (batería o temperatura, fase 3) el techo puede bajar
+ * más, hasta 128: presión manda sobre la clase.
+ *
+ * Pura y con los bordes exactos testeados: ≤3,5 GiB → 256/128;
+ * ≤4,5 GiB → 384/192; resto → 512/256. Sin lectura (null o basura),
+ * el lote de siempre: cero cambio de conducta a ciegas.
+ */
+export function batchForRam(
+  totalRamBytes: number | null,
+  pressureUbatchCap?: number | null,
+): { nBatch: number; nUbatch: number } {
+  let batch = { nBatch: 512, nUbatch: 256 };
+  if (totalRamBytes !== null && Number.isFinite(totalRamBytes) && totalRamBytes > 0) {
+    if (totalRamBytes <= 3.5 * GiB) batch = { nBatch: 256, nUbatch: 128 };
+    else if (totalRamBytes <= 4.5 * GiB) batch = { nBatch: 384, nUbatch: 192 };
+  }
+  if (pressureUbatchCap !== null && pressureUbatchCap !== undefined && pressureUbatchCap > 0) {
+    const nUbatch = Math.min(batch.nUbatch, pressureUbatchCap);
+    batch = { nBatch: Math.max(batch.nBatch, nUbatch), nUbatch };
+  }
+  return batch;
 }
 
 /** Lee los núcleos vía ram-monitor; null si la sonda no está o falla. */

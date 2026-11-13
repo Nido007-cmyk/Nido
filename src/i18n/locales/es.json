@@ -31,7 +31,19 @@
     "developmentCopy": "Copiar",
     "developmentCopied": "Dirección copiada"
   },
+  "installNotice": {
+    "pausedTooHeavy": "Hay una parte descargada ({{done}}) de un modelo que no cabe en este dispositivo. Puedes borrarla para liberar espacio.",
+    "integrity": "El archivo descargado no coincidió con su huella y se borró. Si descargas otra vez, llegará una copia nueva.",
+    "interrupted": "La última descarga se interrumpió antes de terminar. Si descargas otra vez, empezará desde el principio.",
+    "sizeMismatch": "La última descarga llegó incompleta y se borró. Si descargas otra vez, llegará una copia nueva.",
+    "storage": "No hubo espacio libre suficiente para terminar la descarga. Libera espacio y vuelve a intentarlo.",
+    "stalled": "La última descarga se quedó parada y no terminó. Puedes intentarlo otra vez.",
+    "paused": "Ya hay una parte descargada ({{done}} de {{total}}). Si descargas otra vez, continuará desde ahí.",
+    "unverifiable": "El archivo está en el dispositivo pero no se pudo comprobar, así que no cuenta como descargado. Si descargas otra vez, se comprobará de nuevo.",
+    "failed": "La última descarga no terminó. Puedes intentarlo otra vez."
+  },
   "catalogItemCard": {
+    "discardPartial": "Borrar lo descargado",
     "activeNote": "En uso actualmente",
     "badge": {
       "active": "Activo",
@@ -97,6 +109,7 @@
     "hideReasoning": "Ocultar razonamiento",
     "indexingKnowledgeBase": "Indexando conocimiento nuevo para buscar sin internet…",
     "initializingCore": "Iniciando NIDO…",
+    "loadingModel": "Cargando modelo…",
     "inputPlaceholder": "Pregunta lo que sea…",
     "noRelevantOfflineSources": "No se encontraron fuentes offline relevantes para esta pregunta.",
     "interrupted": "Respuesta cortada: la app se cerró antes de que terminara. Pregunta de nuevo para continuar.",
@@ -190,7 +203,7 @@
     "confirmTitle": "Añadir este pack",
     "damaged": "El archivo está dañado o incompleto y no se pudo abrir.",
     "hashMismatch": "El archivo no coincide con su firma: ha cambiado desde que se firmó, así que no se puede añadir. Descárgalo de nuevo desde donde lo compraste.",
-    "missingManifest": "A este pack le falta su manifiesto firmado, y sin él la app no puede comprobar su firma. No se puede añadir.",
+    "missingManifest": "A este pack le falta su manifiesto firmado, y sin él la app no puede comprobar su firma. No se puede añadir. Elige también el archivo que termina en .sqlite.json y que venía junto al pack.",
     "notAPack": "Este archivo no es un pack de conocimiento válido.",
     "notSignedByUs": "Este pack no está firmado por NIDO ni por SALVORA PACKS, y no se puede añadir. Por seguridad, solo entran los packs firmados por nosotros.",
     "removeAction": "Quitar este pack",
@@ -314,7 +327,24 @@
       "stateOn": "Activado",
       "stateOff": "Desactivado"
     },
-    "exportFailedBody": "No se pudo exportar la telemetría."
+    "exportFailedBody": "No se pudo exportar la telemetría.",
+    "rejections": {
+      "title": "Rechazos de memoria",
+      "hint": "Cuando la comprobación de memoria se negó a cargar un modelo, esto es lo que vio: cuánto pedía el modelo, cuánto había disponible y cómo estaba el dispositivo en ese momento. Queda en este dispositivo.",
+      "empty": "Ningún rechazo de memoria registrado.",
+      "llm": "Modelo",
+      "embedding": "Embeddings",
+      "needed": "Necesitaba",
+      "available": "Disponible",
+      "totalRam": "RAM total",
+      "rss": "La app en uso",
+      "free": "Libre en el momento",
+      "threshold": "Límite del sistema",
+      "context": "Contexto elegido / pedido",
+      "crashSafety": "Presupuesto tras un cierre",
+      "liveRead": "Lectura de memoria en vivo",
+      "liveReadMissing": "Sin lectura"
+    }
   },
   "interfaceSettings": {
     "hapticFeedbackLabel": "Respuesta háptica",
@@ -513,6 +543,7 @@
       "indexed": "«{{name}}» indexado en la base de conocimiento offline",
       "loadFailed": "No se pudo cargar «{{name}}»: {{error}}",
       "removed": "Se eliminó «{{name}}»",
+      "partialDiscarded": "Se borró la parte descargada de {{name}}.",
       "resetFailed": "Falló el restablecimiento: {{error}}",
       "resetCancelled": "No se borró nada: se canceló el desbloqueo."
     }
@@ -1516,7 +1547,7 @@
             "examples": [
               "¿qué número llamo en una emergencia en México?"
             ],
-            "tip": "Sin el pack Local (en la $t(tabs.library), unos 0,2 MB) la pestaña no puede mostrar los números de tu país. Y si un día escribes una emergencia en el chat, aun sin packs NIDO responde con un texto seguro fijo: no inventa una respuesta."
+            "tip": "Sin el pack Local (en la $t(tabs.library), unos 0,4 MB) la pestaña no puede mostrar los números de tu país. Y si un día escribes una emergencia en el chat, aun sin packs NIDO responde con un texto seguro fijo: no inventa una respuesta."
           },
           {
             "id": "quick",
@@ -1854,7 +1885,7 @@
     "checked": "Comprobado el {{date}} · {{source}}",
     "crisisTitle": "Línea de crisis",
     "noPackTitle": "Descarga NIDO Local",
-    "noPackBody": "Para ver aquí los números de emergencia comprobados de tu país, descarga el pack NIDO Local (unos 0,2 MB).",
+    "noPackBody": "Para ver aquí los números de emergencia comprobados de tu país, descarga el pack NIDO Local (unos 0,4 MB).",
     "openLibrary": "Ir a la Biblioteca",
     "noCountryTitle": "{{name}} aún no está en NIDO Local",
     "noCountryBody": "Elige otro país o pregunta en el chat.",
@@ -1928,6 +1959,17 @@
     "title": "NIDO está respondiendo…",
     "text": "La respuesta sigue escribiéndose aunque salgas de la app.",
     "channel": "Respuestas en curso"
+  },
+  "guideLibrary": {
+    "title": "Guías",
+    "open": "Leer las guías",
+    "intro": "Lee cualquier guía guardada en este dispositivo, de principio a fin. Leer no carga el modelo.",
+    "loading": "Cargando guías",
+    "noPacks": "Todavía no hay guías. Los packs que descargues o añadas aparecerán aquí, listos para leer sin modelo.",
+    "noGuides": "Este pack no tiene guías legibles.",
+    "readError": "No se pudo abrir esta guía. Puede que el pack se haya quitado o actualizado.",
+    "truncated": "Este texto es muy largo y se muestra recortado en pantalla. La guía sigue guardada entera en el pack.",
+    "back": "Volver"
   },
   "sourceReader": {
     "title": "Fuente",
@@ -2019,8 +2061,8 @@
     "nido-viaje": "18 guías sin conexión (6 en cada idioma: español, inglés y portugués) para la carretera y los viajes en coche. ~0,2 MB.",
     "nido-viaje-e5": "18 guías sin conexión para la carretera y los viajes en coche, para buscar en español, portugués e inglés. ~0,2 MB.",
     "minimum": "Solo los modelos. Usa la base de conocimiento integrada de 858 temas (copia de Wikipedia del 1 de noviembre de 2026), sin descargas extra.",
-    "standard": "+ 1.000 temas más sacados de Wikipedia y las guías de primeros auxilios, desastres y supervivencia de NIDO (~1,85 MB de descarga extra).",
-    "full": "+ 5.000 temas más sacados de Wikipedia en total y las guías de primeros auxilios, desastres y supervivencia de NIDO (~4,38 MB de descarga extra).",
+    "standard": "+ 1.000 temas más sacados de Wikipedia y las guías de primeros auxilios, desastres y supervivencia de NIDO (~1,87 MB de descarga extra).",
+    "full": "+ 5.000 temas más sacados de Wikipedia en total y las guías de primeros auxilios, desastres y supervivencia de NIDO (~4,40 MB de descarga extra).",
     "encyclopedia": "Completo, más los ~50.000 Artículos Vitales de Wikipedia (~169 MB de descarga extra)."
   }
 }

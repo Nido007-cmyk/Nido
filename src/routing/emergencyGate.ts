@@ -243,8 +243,28 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       // La ingestión, solo con su objeto (no «se tragó el cuento»).
       "se trago una pila", "se trago pastillas", "se trago una moneda", "se trago un iman",
       "bebio lejia", "se bebio la lejia", "trago lejia",
+      // Auditoría 0.1.93: lo que la gente escribe y la puerta no conocía
+      // (batería de 62 preguntas reales: 40 se iban al modelo sin fuentes).
+      // El dolor contado, los medicamentos de uso corriente, la presión y
+      // el azúcar como se dicen, las picaduras contadas, y el daño a uno
+      // mismo, que nunca debe contestarlo un modelo de memoria.
+      "me duele", "me duelen", "le duele", "le duelen", "me duela", "le duela", "dolor",
+      "pastilla", "jarabe", "inyeccion", "insulina", "tramadol", "warfarina", "naproxeno", "diclofenaco",
+      "ketorolaco", "loratadina", "clonazepam", "diazepam", "morfina", "antihistaminico", "anticoagulante",
+      "presion alta", "presion baja", "azucar en la sangre", "se me bajo el azucar", "se me subio el azucar",
+      "glucosa", "migrana", "jaqueca", "taquicardia", "palpitaciones", "ataque de panico",
+      "alacran", "escorpion", "me pico", "le pico", "me mordio", "le mordio", "gripa",
+      "remedio casero", "remedio para", "contusion", "hinchazon", "inflamacion",
+      "cloro en los ojos", "cloro en el ojo", "se me durmio", "se le durmio", "hormigueo",
+      "no quiero vivir", "quiero morir", "quiero morirme", "matarme", "quitarme la vida", "hacerme dano",
+      "sintoma", "enfermedad", "enfermo", "enferma", "medico", "doctor", "hospital", "urgencias", "ambulancia",
+      "un lunar", "orinar", "orina", "tragar", "hinchado", "se me hincho", "se le hincho", "se toma cloro", "se tomo cloro", "tomo cloro", "bebio cloro",
+      "se golpeo la cabeza", "golpe en la cabeza", "se pego en la cabeza", "me pegue en la cabeza",
+      "un bulto en", "me salio un bulto", "tengo un bulto", "una bola en", "se le subio la temperatura",
+      "tiene temperatura", "tengo temperatura", "calambre", "confunde las palabras", "antigripal", "falta de aire",
+      "cancer",
     ],
-    p: ["sangr", "vomit", "quemadur", "herid", "alergic", "diabetic", "atragant", "convuls", "desmay"],
+    p: ["sangr", "vomit", "quemadur", "herid", "alergic", "diabetic", "atragant", "convuls", "desmay", "intoxi", "entumec", "suicid", "inflam"],
   },
   en: {
     w: [
@@ -262,8 +282,20 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       // Ingestion, only with its object (not «the ATM swallowed my card»).
       "swallowed a battery", "swallowed pills", "swallowed a coin", "swallowed a magnet",
       "drank bleach", "swallowed bleach",
+      // Audit 0.1.93: everyday words the gate did not know.
+      "tylenol", "advil", "benadryl", "melatonin", "insulin", "warfarin", "blood thinner", "naproxen",
+      "tramadol", "oxycodone", "xanax", "pill", "painkiller", "lethal dose",
+      "hurts", "pain", "numb", "dizzy", "heart is racing", "racing heart", "palpitations",
+      "deep cut", "stitches", "swollen", "swelling", "migraine", "panic attack", "scorpion",
+      "burn", "burned", "burnt",
+      "kill myself", "want to die", "end my life", "hurt myself", "self harm",
+      "symptom", "sick", "illness", "doctor", "hospital", "ambulance", "emergency room",
+      "hit his head", "hit her head", "hit my head", "hit their head", "head injury", "concussion",
+      "throat is closing", "throat closing", "antidepressant", "sleeping pill",
+      "earache", "contractions", "blood sugar", "feels hot", "cancer", "cancerous", "hurting myself",
+      "has a temperature", "high temperature", "short of breath", "shortness of breath",
     ],
-    p: ["bleed", "vomit", "burn", "wound", "allerg", "chok", "convuls", "sangr"],
+    p: ["bleed", "vomit", "wound", "allerg", "chok", "convuls", "sangr", "suicid", "anaphyla"],
   },
   pt: {
     w: [
@@ -282,8 +314,16 @@ const HEALTH_TERMS: Record<GateLang, { w: string[]; p: string[] }> = {
       // A ingestão, só com o objeto.
       "engoliu uma pilha", "engoliu remedios", "engoliu comprimidos", "engoliu uma moeda", "engoliu um ima",
       "bebeu agua sanitaria", "engoliu agua sanitaria",
+      // Auditoria 0.1.93: palavras do dia a dia que a porta não conhecia.
+      "dor", "doi", "remedio", "comprimido", "insulina", "tramadol", "varfarina", "naproxeno",
+      "pressao alta", "pressao baixa", "pressao esta alta", "pressao esta baixa", "acucar no sangue", "glicose", "enxaqueca", "taquicardia",
+      "palpitacoes", "ataque de panico", "escorpiao", "fui picado", "fui picada", "fui mordido", "fui mordida",
+      "inchaco", "formigamento",
+      "quero morrer", "me matar", "tirar minha vida", "nao quero viver",
+      "sintoma", "doente", "doenca", "medico", "hospital", "ambulancia",
+      "bateu a cabeca", "bati a cabeca", "falta de ar", "caroco", "cancer",
     ],
-    p: ["sangr", "vomit", "queimadur", "ferid", "alergic", "diabetic", "engasg", "convuls", "desmai"],
+    p: ["sangr", "vomit", "queimadur", "ferid", "alergic", "diabetic", "engasg", "convuls", "desmai", "intoxi", "suicid"],
   },
 };
 
@@ -297,6 +337,17 @@ const HEALTH_EXCLUSIONS = [
   "fiebre del oro",
   "gold fever",
   "febre do ouro",
+  // Auditoría 0.1.93: homónimos de uso corriente que no son salud.
+  "sangria",
+  "pastillas de freno", "pastilla de freno", "pastilhas de freio",
+  "burn a cd", "burn a dvd", "burn a disc", "burn calories", "burn fat", "burnout",
+  "labor market", "labour market", "labor day", "labor union", "labour party", "labor law",
+  "rash guard", "pain point", "horoscopo", "horoscope", "zodiac", "zodiaco",
+  // La ficción que se está escribiendo no es una situación (las señales
+  // nuevas, «estoy», «i», la habrían contado como tal).
+  "escribiendo un cuento", "escribiendo una novela", "escribiendo una historia", "escribiendo un guion",
+  "writing a story", "writing a novel", "writing a script", "writing a short story",
+  "escrevendo um conto", "escrevendo um romance", "escrevendo uma historia",
 ];
 
 /**
@@ -368,6 +419,15 @@ const SITUATION_CUES = [
   // término de salud, así que «como hacer una mesa» sigue fuera.
   " como hago ", " como hacer ", " como se hace ",
   " como faco ", " como fazer ", " como se faz ",
+  // Auditoría 0.1.93: en el teléfono se pregunta sin «¿?» ni tildes
+  // («cuanto ibuprofeno puedo tomar al dia» traía término y ninguna
+  // señal, y se iba al modelo). Las señales solas no cierran la
+  // puerta: hace falta además un término de salud.
+  " cuanto ", " cuanta ", " cuantos ", " cuantas ", " que ", " cual ", " como ", " puedo ", " puede ",
+  " debo ", " sirve ", " le ", " tiene ", " tienen ", " estoy ", " esta ", " siento ", " quiero ", " necesito ",
+  " how ", " what ", " which ", " can ", " should ", " is ", " are ", " does ", " i ", " he ", " she ", " has ", " need ",
+  " quanto ", " quanta ", " quantos ", " quantas ", " qual ", " posso ", " pode ", " devo ", " serve ",
+  " tem ", " preciso ", " tomei ", " fui ", " quero ",
 ];
 
 const ALL_TERMS: Array<{ w: string[]; p: string[] }> = Object.values(HEALTH_TERMS);
@@ -377,6 +437,33 @@ const ALL_TERMS: Array<{ w: string[]; p: string[] }> = Object.values(HEALTH_TERM
  * término de salud en cualquier lengua de la casa (la gente mezcla),
  * una señal de pregunta o situación, y ningún veto de contexto.
  */
+/**
+ * Auditoría 0.1.93: los términos de la lista `w` son PALABRAS (la lista
+ * `p` es la de raíces). El casado anterior aceptaba además el término
+ * como prefijo de otra palabra, y «tos» casaba con «tostada», «flu» con
+ * «fluent», «labor» con «laboratory», «sting» con «stingy»: preguntas
+ * corrientes recibían el texto de salud. Palabra entera, o su plural.
+ */
+function hasWord(folded: string, t: string): boolean {
+  return folded.includes(` ${t} `) || folded.includes(` ${t}s `) || folded.includes(` ${t}es `);
+}
+
+/**
+ * Cuántos términos de salud DISTINTOS trae el texto (ya plegado). El
+ * mismo término en dos lenguas («asma») cuenta una vez, y uno contenido
+ * en otro («dolor» dentro de «dolor de cabeza») no suma: un tema suelto
+ * sigue siendo un tema suelto.
+ */
+function healthTermHits(folded: string): number {
+  const hits = new Set<string>();
+  for (const { w, p } of ALL_TERMS) {
+    for (const t of w) if (hasWord(folded, t)) hits.add(t);
+    for (const t of p) if (folded.includes(` ${t}`)) hits.add(t);
+  }
+  const all = [...hits];
+  return all.filter((t) => !all.some((o) => o !== t && o.includes(t))).length;
+}
+
 export function isHealthQuestion(text: string): boolean {
   if (!text) return false;
   const folded = foldText(text);
@@ -397,15 +484,18 @@ export function isHealthQuestion(text: string): boolean {
     folded.includes(" chok") &&
     !ALL_TERMS.some(
       ({ w, p }) =>
-        w.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`)) ||
+        w.some((t) => hasWord(folded, t)) ||
         p.some((t) => t !== "chok" && folded.includes(` ${t}`)),
     );
   const hasTerm = chokOnlyHit
     ? stemHitHasBodyContext(folded) || CHOKE_FIRST_PERSON_CUES.some((c) => folded.includes(c))
     : ALL_TERMS.some(
-        ({ w, p }) => w.some((t) => folded.includes(` ${t} `) || folded.includes(` ${t}`)) || p.some((t) => folded.includes(` ${t}`)),
+        ({ w, p }) => w.some((t) => hasWord(folded, t)) || p.some((t) => folded.includes(` ${t}`)),
       );
   if (!hasTerm) return false;
+  // Auditoría 0.1.93: dos términos de salud juntos ya cuentan una
+  // situación («vomite sangre» no trae ninguna señal de pregunta).
+  if (!chokOnlyHit && healthTermHits(folded) >= 2) return true;
   return SITUATION_CUES.some((c) => folded.includes(c) || text.includes(c));
 }
 
@@ -452,6 +542,28 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "esta haciendo reanimacion", "estan haciendo reanimacion",
     "le esta haciendo reanimacion", "le estan haciendo reanimacion",
     "haciendo reanimacion", "haciendole reanimacion",
+    // 0.1.87 (giro del gas): la FUGA DE GAS contada. El signo es el
+    // olor o la fuga misma, el suceso en curso: el giro de la 0.1.86
+    // no disparaba ninguna cara de la puerta. El tema suelto (el
+    // precio de reparar, cómo funciona un detector) no trae signo y
+    // no declara; las metáforas asentadas del gas van a los vetos.
+    "huele a gas", "huele mucho a gas", "olor a gas", "fuga de gas", "hay una fuga de gas",
+    "esta saliendo gas", "saliendo gas",
+    // Auditoría 0.1.93: sucesos en curso que no son del cuerpo y la
+    // puerta no conocía (13 de 21 de la batería se iban al modelo).
+    "se esta incendiando", "se incendia", "se esta quemando", "hay un incendio", "incendio forestal",
+    "se esta inundando", "se inunda", "hay una inundacion",
+    "hubo un temblor", "esta temblando", "hubo un terremoto", "hubo un sismo",
+    "se cayo un cable", "cable caido", "cable de luz caido",
+    "tratando de entrar a mi casa", "intentan entrar a mi casa", "entraron a mi casa",
+    "hay un choque", "hubo un choque", "hay heridos", "se volco",
+    "atrapado en el elevador", "atrapada en el elevador", "atrapado en el ascensor", "atrapada en el ascensor",
+    "estoy atrapado", "estoy atrapada",
+    "atropello a", "lo atropello", "la atropello", "atropellaron a", "lo atropellaron", "la atropellaron",
+    "se desbordo", "esta entrando agua", "el agua esta entrando", "deja de respirar",
+    "tirado en la calle", "tirada en la calle", "tirado en el piso", "tirada en el piso", "no se mueve",
+    "exploto", "hubo una explosion", "encerrado en un carro", "encerrado en el coche", "encerrada en un carro",
+    "sobre los cables",
   ],
   en: [
     "not breathing", "is not breathing", "stopped breathing", "no longer breathing",
@@ -474,6 +586,19 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     // F-1 (CPR practice audit, 2026-11-06): resuscitation already
     // in progress, as a bystander tells it.
     "doing cpr", "doing chest compressions", "performing cpr",
+    // 0.1.87 (giro del gas): THE GAS LEAK, as told — the smell or
+    // the leak itself is the running event. The bare topic (repair
+    // prices, how a detector works) carries no sign and stays out;
+    // the settled gas metaphors are in the vetoes.
+    "smells like gas", "smell of gas", "smell gas", "gas leak", "gas is leaking", "leaking gas",
+    // Audit 0.1.93: running events the gate did not know.
+    "house is on fire", "kitchen is on fire", "building is on fire", "car is on fire", "room is on fire",
+    "apartment is on fire", "stove is on fire", "oven is on fire", "caught fire", "is flooding", "flood coming", "flooding my",
+    "breaking into my", "broke into my", "someone is in my house",
+    "carbon monoxide alarm", "carbon monoxide detector",
+    "there was an earthquake", "earthquake just", "car crash", "car accident",
+    "i m trapped", "i am trapped", "is trapped",
+    "smoke alarm", "i see smoke", "collapsed", "is sinking",
   ],
   pt: [
     "nao esta respirando", "nao respira", "nao respiram", "parou de respirar", "sem respirar",
@@ -498,6 +623,15 @@ const EMERGENCY_SIGNS: Record<GateLang, string[]> = {
     "esta a fazer rcp", "estao a fazer rcp",
     "esta fazendo reanimacao", "estao fazendo reanimacao", "fazendo reanimacao",
     "fazendo massagem cardiaca",
+    // 0.1.87 (giro do gás): O VAZAMENTO DE GÁS contado — o cheiro
+    // ou o vazamento é o evento em curso («cheiro de gás» se dobra
+    // a «cheiro de gas»). O tema solto (preço do reparo, como
+    // funciona um detector) não traz sinal e não declara.
+    "cheiro de gas", "vazando gas", "vazamento de gas", "esta vazando gas", "sai gas", "saindo gas",
+    // Auditoria 0.1.93: eventos em curso que a porta não conhecia.
+    "esta inundando", "esta alagando", "houve um terremoto",
+    "tentando entrar na minha casa", "arrombando a porta", "houve um acidente",
+    "estou preso", "estou presa",
   ],
 };
 
@@ -527,6 +661,11 @@ const EMERGENCY_VETOES = [
   // y el auxiliar que trae («was choking back…») le daba contexto
   // de cuerpo a una frase sin cuerpo.
   "choke back", "choking back", "choked back",
+  // 0.1.87 (giro del gas): las metáforas asentadas del gas («a todo
+  // gas», «dar gas», «full gas» como elogio deportivo) no son una
+  // fuga; sin ellas, el signo «saliendo gas» no las caza, pero
+  // quedan vetadas por nombre como las demás metáforas de la lista.
+  "a todo gas", "full gas", "dar gas",
 ];
 
 const ALL_SIGNS: string[] = Object.values(EMERGENCY_SIGNS).flat();
@@ -932,10 +1071,121 @@ export function healthSafeProvenance(text: string): SentenceProvenance[] {
 /** Los packs cuyas guías son de salud con fuentes verificadas (ver cabecera). */
 const HEALTH_PACK_IDS = new Set(["nido-esencial", "nido-ninos", "nido-crisis"]);
 
-/** ¿Trae la recuperación algún pasaje de un pack de salud? */
-export function hasHealthEvidence(chunks: readonly RetrievedChunk[]): boolean {
-  return chunks.some((c) => {
-    const ref = parsePackChunkId(c.chunkId);
-    return !!ref && HEALTH_PACK_IDS.has(ref.packId.replace(/-e5$/, ""));
+/**
+ * ¿Trae la recuperación algún pasaje de un pack de salud? Hasta la
+ * 0.1.86 solo contaban los integrados de la lista cerrada de arriba:
+ * un fragmento de un pack IMPORTADO por la puerta firmada — cuya
+ * firma se verificó al entrar, la misma vara de confianza que la de
+ * los integrados — nunca era evidencia, y la sustitución por el
+ * texto seguro quedaba desarmada justo en el turno que el pack
+ * importado debía responder (el giro del gas, dirimen 2026-11-09).
+ *
+ * 0.1.87: el llamador puede pasar los ids que el registro de la
+ * puerta verificó (verifiedImportedPacks en services/packImporter,
+ * leído fresco en cada turno — un pack retirado deja de contar al
+ * momento). Esta capa sigue pura: el registro vive tras
+ * expo-file-system y no entra aquí; sin el conjunto, el
+ * comportamiento es exactamente el de siempre.
+ */
+/**
+ * ¿Cuenta este fragmento como evidencia de salud de la puerta? La
+ * misma vara que hasHealthEvidence aplica fragmento a fragmento:
+ * un pack integrado de la lista, o un pack que el registro de la
+ * puerta firmada verificó (el llamador pasa el conjunto).
+ */
+function isHealthEvidenceChunk(c: RetrievedChunk, verifiedImportedPackIds?: ReadonlySet<string>): boolean {
+  const ref = parsePackChunkId(c.chunkId);
+  if (!ref) return false;
+  if (HEALTH_PACK_IDS.has(ref.packId.replace(/-e5$/, ""))) return true;
+  return !!verifiedImportedPackIds && verifiedImportedPackIds.has(ref.packId);
+}
+
+export interface SafeTextSubstitutionInput {
+  /** El turno es de investigación profunda: la puerta no actúa. */
+  deepTurn: boolean;
+  /** Las fuentes del turno, en su orden (la procedencia cita por índice). */
+  sources: readonly RetrievedChunk[];
+  /** El veredicto del juez de fundamentación sobre la respuesta. */
+  grounding: string | undefined;
+  /** La pregunta es de salud (isHealthQuestion). */
+  isHealth: boolean;
+  /** La pregunta cuenta una emergencia viva (isEmergencySituation). */
+  isEmergency: boolean;
+  /** La procedencia por frase de la respuesta juzgada. */
+  provenance: readonly SentenceProvenance[] | undefined;
+  /** Ids de packs importados que el registro verificó en este turno. */
+  verifiedImportedPackIds?: ReadonlySet<string>;
+}
+
+/**
+ * 0.1.88 (dirimen del gas en la 0.1.87): la decisión de sustituir la
+ * respuesta del modelo por el texto seguro, extraída de ChatScreen
+ * a función pura para poder probarla con los valores del campo.
+ *
+ * Hasta la 0.1.87 la condición (en ChatScreen) sustituía cuando el
+ * veredicto era «unverified» o «abstained» y NINGUNA fuente era
+ * evidencia de salud. El hueco medido: la condición miraba las
+ * fuentes, no el apoyo de la respuesta. Con la guía del pack
+ * verificado entre las fuentes (hasHealthEvidence verdadero), un
+ * texto del modelo que el juez NO pudo verificar quedaba en
+ * pantalla en plena emergencia viva, apoyado en nada: justo el
+ * turno de la foto, donde la guía estaba en el aparato y entre las
+ * fuentes pero no se había servido. La vara pasa a ser el apoyo
+ * real: se sustituye cuando ninguna frase con procedencia de fuente
+ * se apoya en un fragmento que es evidencia de salud.
+ *
+ * Lo que NO cambia, por doctrina: los veredictos «grounded» y
+ * «partial» nunca se sustituyen por esta puerta. Sus frases
+ * quedaron verificadas una a una contra sus fuentes por el juez, y
+ * si la fuente es una guía de salud verificada, el apoyo es real
+ * aunque sea otra guía de la misma familia; el fallo de la foto se
+ * cura donde nació, en la elección de la guía, no reescribiendo lo
+ * que el juez ya verificó.
+ */
+/**
+ * 0.1.90 (familia 4): qué pasa con un turno SIN fuentes, extraído de
+ * ChatScreen a función pura con el patrón de shouldSubstituteSafeText.
+ *
+ * La ley del dueño (2026-11-09): una pregunta que una guía del
+ * dispositivo responde no llega al modelo; una pregunta que NINGUNA
+ * guía cubre la genera el modelo activo; la abstención determinista
+ * queda SOLO donde inventar sería peligroso — salud y emergencia sin
+ * evidencia. Hasta la 0.1.89 la puerta previa de la ruta fija y el
+ * post-chequeo sustituían también toda «pregunta de hechos» sin
+ * fuentes por el «no lo sé» determinista (RAG-GROUNDING 2026-10-11,
+ * Fase 3): con el Qwen3 activo, «Explícame cómo cambiar una llanta en
+ * 5 pasos numerados» recibió la abstención sin generar (foto del dueño
+ * 15:43 MST). Esa rama muere: sin fuentes y sin peligro, el turno
+ * genera y el texto del modelo queda en pie; la banda «No se
+ * encontraron fuentes offline relevantes» sigue pintándose como
+ * metadato honesto, y la instrucción de sistema sin fuentes (decir
+ * que no se sabe cuando no se puede responder con fiabilidad) sigue
+ * en el prompt, como estaba.
+ */
+export type NoSourcesOutcome = "safe-text" | "generate";
+
+export function noSourcesOutcome(input: {
+  isHealth: boolean;
+  isEmergency: boolean;
+}): NoSourcesOutcome {
+  return input.isHealth || input.isEmergency ? "safe-text" : "generate";
+}
+
+export function shouldSubstituteSafeText(input: SafeTextSubstitutionInput): boolean {
+  if (input.deepTurn || input.sources.length === 0) return false;
+  if (!input.isHealth && !input.isEmergency) return false;
+  if (input.grounding !== "unverified" && input.grounding !== "abstained") return false;
+  const restsOnEvidence = (input.provenance ?? []).some((s) => {
+    if (s.origin.kind !== "source") return false;
+    const src = input.sources[s.origin.n - 1];
+    return !!src && isHealthEvidenceChunk(src, input.verifiedImportedPackIds);
   });
+  return !restsOnEvidence;
+}
+
+export function hasHealthEvidence(
+  chunks: readonly RetrievedChunk[],
+  verifiedImportedPackIds?: ReadonlySet<string>,
+): boolean {
+  return chunks.some((c) => isHealthEvidenceChunk(c, verifiedImportedPackIds));
 }

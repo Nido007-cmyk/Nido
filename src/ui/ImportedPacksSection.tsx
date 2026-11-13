@@ -19,6 +19,7 @@ import {
   type ImportedPackItem,
   type PackImportRejectionReason,
 } from "../services/packImporter";
+import { activeEmbeddingModel } from "../rag/embeddingSwitch";
 
 function formatMB(bytes: number): string {
   if (bytes <= 0) return "0 MB";
@@ -52,6 +53,17 @@ export function ImportedPacksSection() {
   const { t } = useTranslation();
   const [items, setItems] = useState<ImportedPackItem[]>([]);
   const [busy, setBusy] = useState(false);
+  // 0.1.87 (pieza 4): la huella del modelo de búsqueda activo, para
+  // avisar cuando un pack importado se embebió con el otro modelo,
+  // como ya hace CorpusSettingsTab con el catálogo. Sin la huella
+  // (no leída aún, o el modelo no resuelve) el aviso calla: no se
+  // afirma un desajuste que no se puede comprobar.
+  const [activeSha256, setActiveSha256] = useState<string | null>(null);
+  useEffect(() => {
+    activeEmbeddingModel()
+      .then((m) => setActiveSha256(m.sha256))
+      .catch(() => {});
+  }, []);
 
   const refresh = useCallback(() => {
     listImportedPacks()
@@ -118,7 +130,14 @@ export function ImportedPacksSection() {
 
   return (
     <View>
-      <Text style={[styles.sectionHeading, { color: colors.text.dim }]}>{t("packImport.addedHeading")}</Text>
+      <View style={styles.headingRow}>
+        <Text style={[styles.sectionHeading, { color: colors.text.dim }]}>{t("packImport.addedHeading")}</Text>
+        {/* 0.1.88: aquí ya no hay botón del lector. Lo hubo en el
+            encabezado (pieza 5 de la 0.1.87) y era la tercera copia
+            en la misma pantalla de Biblioteca; cada superficie
+            conserva UNA apertura: la banda final de la pestaña y el
+            botón de CorpusSettingsTab en Ajustes. */}
+      </View>
       <View style={styles.list}>
         {items.map((item) => (
           <View key={item.filename} style={styles.card}>
@@ -129,6 +148,9 @@ export function ImportedPacksSection() {
             <Text style={styles.meta}>
               {formatMB(item.sizeBytes)} • {item.filename}
             </Text>
+            {item.embeddingModelSha256 && activeSha256 && item.embeddingModelSha256 !== activeSha256 ? (
+              <Text style={styles.otherModelNote}>{t("multilingual.packOtherModel")}</Text>
+            ) : null}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t("packImport.removeAction")}
@@ -167,6 +189,7 @@ const getStyles = (colors: Colors, typography: Typography) =>
       marginHorizontal: 16,
       marginTop: 12,
     },
+    headingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingRight: 16 },
     list: { padding: 12, gap: 10 },
     card: {
       backgroundColor: colors.bg.cardElevated,
@@ -188,6 +211,10 @@ const getStyles = (colors: Colors, typography: Typography) =>
     meta: {
       ...typography.mono.xs,
       color: colors.text.dim,
+    },
+    otherModelNote: {
+      ...typography.ui.caption,
+      color: colors.text.secondary,
     },
     removeBtn: {
       alignSelf: "flex-start",

@@ -2,9 +2,9 @@
 title: Sangramento no nariz, olhos, dentes e ouvidos
 category: Primeiros socorros
 lang: pt
-sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense 2020
+sources: AHA e Cruz Vermelha Americana, diretrizes de primeiros socorros 2024; Cruz Vermelha Canadense (normas de programa 2026, baseadas na IFRC 2025)
 id: esencial-nariz-ojos-dientes-oidos
-verified: 2026-11-02
+verified: 2026-11-07
 questions: nariz sangrando, como parar | caiu algo no olho, como lavar | dente caiu inteiro com uma batida, o que faço com ele | inseto entrou no ouvido, como tirar
 ---
 ## Sangramento no nariz
@@ -22,7 +22,7 @@ questions: nariz sangrando, como parar | caiu algo no olho, como lavar | dente c
 
 ## Dente arrancado (adulto)
 1. Pegue o dente pela coroa (a parte branca), nunca pela raiz.
-2. Se estiver sujo, enxágue com água por menos de 10 segundos, sem esfregar.
+2. Se estiver sujo, enxágue-o suavemente com leite, soro ou a saliva do próprio paciente, por menos de 10 segundos e sem esfregar.
 3. Se a pessoa estiver acordada e colaborar, tente recolocá-lo no lugar e que ela morda uma gaze.
 4. Se não, guarde-o em leite, em soro ou na boca da pessoa (entre a bochecha e a gengiva, se não houver risco de engolir). Não o guarde em água nem seco.
 5. Vá ao dentista ou à emergência em menos de uma hora. Dentes de leite não são recolocados.

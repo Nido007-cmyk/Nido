@@ -7,7 +7,7 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { initLlama, LlamaContext, type CompletionResponseFormat } from "llama.rn";
 import * as RamMonitor from "ram-monitor";
-import { checkRamBudget, defaultThreadsForCores, estimateContextBytes, RamBudgetError, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
+import { batchForRam, checkRamBudget, defaultThreadsForCores, estimateContextBytes, KV_Q8_BYTES_PER_ELEMENT, RamBudgetError, readProcessorCount, readRamSnapshot, toGb } from "./ramBudget";
 import {
   crossNativeSessionRecord,
   holdBackgroundIndexingForSession,
@@ -20,20 +20,25 @@ import type { CrashReportLike } from "../diagnostics/crashReport";
 import { lastReembedProgress } from "../rag/reembed";
 import {
   confirmCrashGuardRecord,
+  EMERGENCY_CONTEXT,
   parseCrashGuardRecord,
   planContext,
   settleCrashGuardRecord,
   type CrashGuardRecord,
+  type LadderPlan,
 } from "./memoryLadder";
 import { assertTrustedModelFileByName } from "../models/modelTrust";
 import { MODEL_CATALOG, type CatalogModel } from "../models/manifest";
+import { contextCeilingForDevice } from "../models/defaultModel";
+import { currentDevicePressure } from "./devicePressure";
 import { withStage } from "../utils/stageError";
-import { recordInferenceEvent, type TelemetryStopReason } from "./telemetry";
+import { recordInferenceEvent, recordRamRejection, type TelemetryStopReason } from "./telemetry";
 import { findRepetitionLoop, trimRepetitionLoop } from "./repetitionGuard";
-import { nativeGateBegin, nativeGateEnd } from "./nativeGate";
+import { nativeGateBegin, nativeGateEnd, withNativeLoadGate } from "./nativeGate";
 import { trimToCompleteSentences } from "./completeSentences";
 import { parseGemmaReasoning } from "./gemmaReasoning";
 import type { ModelSamplingDefaults } from "../routing/types";
+import { generationHitLimit, type NativeStopSignals } from "./generationCut";
 
 export interface ChatMessageInput {
   role: string;
@@ -233,6 +238,7 @@ export const LLM_N_UBATCH = 256;
 export function llmInitParamsForProfile(
   profile: LlmMemoryProfile,
   base: { model: string; n_ctx: number; n_threads: number },
+  batch: { nBatch: number; nUbatch: number } = { nBatch: LLM_N_BATCH, nUbatch: LLM_N_UBATCH },
 ): Record<string, unknown> {
   const common = {
     model: base.model,
@@ -242,7 +248,12 @@ export function llmInitParamsForProfile(
     n_gpu_layers: 0, // CPU-only for broad device compatibility; adjust per-device
   };
   if (profile === "default") return common;
-  const smallBatch = { ...common, n_batch: LLM_N_BATCH, n_ubatch: LLM_N_UBATCH };
+  // Optimización 2026-11-08 (fase 2): el lote ya no es la constante
+  // para todos — lo elige batchForRam según la RAM total del aparato
+  // (y el techo de presión de la fase 3). Sin lectura de RAM, el
+  // llamador pasa el lote de siempre y esta función se comporta
+  // exactamente como antes.
+  const smallBatch = { ...common, n_batch: batch.nBatch, n_ubatch: batch.nUbatch };
   if (profile === "small-batch") return smallBatch;
   return { ...smallBatch, cache_type_k: "q8_0", cache_type_v: "q8_0" };
 }
@@ -590,7 +601,13 @@ export class LlamaEngine {
   }
 
   load(modelFilename: string, opts?: { nCtx?: number; nThreads?: number }): Promise<void> {
-    return this.enqueue(() => this.loadNow(modelFilename, opts));
+    // Fase 2 (reapertura del defecto, 2026-11-08): la carga corre tras
+    // la puerta de carga — un initLlama a la vez en todo el proceso.
+    // Antes el LLM y el motor de embeddings arrancaban en Promise.all
+    // y sus pre-flight leían la misma foto de RAM sin verse el uno al
+    // otro. La cola interna sigue serializando las cargas de ESTE
+    // motor; la puerta ordena las de los DOS motores.
+    return withNativeLoadGate(() => this.enqueue(() => this.loadNow(modelFilename, opts)));
   }
 
   private async loadNow(modelFilename: string, opts?: { nCtx?: number; nThreads?: number }) {
@@ -606,12 +623,28 @@ export class LlamaEngine {
     // explícita manda ella, como siempre. El CrashGuard asienta su
     // registro al abrir la carga y su factor entra en el plan.
     const explicitCtx = opts?.nCtx !== undefined;
+    // Optimización 2026-11-08 (plan n.º 7): sin opción explícita, el
+    // techo puede nacer ya reducido en aparatos de ≤4 GiB para los
+    // modelos cuyo contexto declarado es 3072 (contextCeilingForDevice
+    // en defaultModel.ts). La foto con la que se decide es LA MISMA
+    // que el pre-flight usa abajo (liveSnapshot): una sola lectura,
+    // nunca dos fotos distintas en la misma carga. Con opción
+    // explícita manda ella, como siempre, y sin lectura manda el
+    // techo declarado.
     const requestedCtx = opts?.nCtx ?? catalogEntry?.defaultNCtx ?? 4096;
     let nCtx = requestedCtx;
     // P-03: sin opción explícita, los hilos salen de los núcleos
     // reales del aparato (política en ramBudget.ts); la opción
-    // explícita sigue mandando, como manda con nCtx.
-    const nThreads = opts?.nThreads ?? defaultThreadsForCores(readProcessorCount());
+    // explícita sigue mandando, como manda con nCtx. Optimización
+    // 2026-11-08 (fase 3): la presión del aparato (batería baja, modo
+    // de ahorro, calor) puede bajar ese número con su tope; la foto
+    // de presión la refresca la pantalla y aquí solo se consulta.
+    const pressure = currentDevicePressure();
+    const baseThreads = opts?.nThreads ?? defaultThreadsForCores(readProcessorCount());
+    const nThreads =
+      opts?.nThreads !== undefined || pressure.threadCap === null
+        ? baseThreads
+        : Math.min(baseThreads, pressure.threadCap);
     const crashSafety = await this.crashGuardSettle();
 
     // ChatScreen re-mounts (and calls load() again) every time Settings is
@@ -652,6 +685,13 @@ export class LlamaEngine {
     // sustituir todavía no está libre, pero lo estará antes de cargar.
     const liveSnapshot = readRamSnapshot();
     const loaded = this.context && this.modelInfo ? MODEL_CATALOG.find((m) => m.filename === this.modelInfo?.filename) : undefined;
+    // Calibración 2026-11-08 (defecto, segunda vuelta): el lote que la
+    // carga REAL va a usar sale de la misma foto (batchForRam por RAM
+    // total + techo de presión) y entra en el spec: el término de
+    // cómputo del estimador cobra ese n_ubatch, no el plano de la
+    // clase 256. Una sola foto, un solo lote: el de abajo en el bucle
+    // de perfiles es este mismo objeto.
+    const loadBatch = batchForRam(liveSnapshot?.totalRamBytes ?? null, pressure.ubatchCap);
     const snapshot =
       liveSnapshot && loaded && this.modelInfo
         ? {
@@ -662,14 +702,33 @@ export class LlamaEngine {
               nLayer: loaded.arch?.nLayer,
               nKvHeads: loaded.arch?.nKvHeads,
               headDim: loaded.arch?.headDim,
+              kvBytesPerElement:
+                this.modelInfo.memoryProfile === "kv-q8" ? KV_Q8_BYTES_PER_ELEMENT : undefined,
+              nUbatch: loadBatch.nUbatch,
             }).totalBytes,
           }
         : liveSnapshot;
+    if (!explicitCtx) {
+      nCtx = contextCeilingForDevice(catalogEntry?.defaultNCtx, snapshot?.totalRamBytes ?? null);
+      // La comparación de «ya cargado» de arriba usó el techo
+      // declarado; si la política de clase lo rebaja y el modelo
+      // residente ya vive en ese contexto rebajado, la carga es un
+      // atajo también (nada que rehacer).
+      if (
+        this.context &&
+        this.modelInfo?.filename === modelFilename &&
+        this.modelInfo.nCtx === nCtx &&
+        this.modelInfo.nThreads === nThreads
+      ) {
+        return;
+      }
+    }
     const specBase = {
       fileSizeBytes,
       nLayer: catalogEntry?.arch?.nLayer,
       nKvHeads: catalogEntry?.arch?.nKvHeads,
       headDim: catalogEntry?.arch?.headDim,
+      nUbatch: loadBatch.nUbatch,
     };
     const spec = { ...specBase, nCtx };
     let verdict = snapshot ? checkRamBudget(spec, snapshot) : null;
@@ -677,15 +736,63 @@ export class LlamaEngine {
     // RAM: elige el peldaño mayor que cabe bajo el techo pedido, con
     // el presupuesto reducido por el CrashGuard si hubo un choque.
     let contextNote = "";
+    // Calibración 2026-11-08: el PRIMER perfil que la carga intenta es
+    // kv-q8 (LLM_MEMORY_PROFILES[0]) y su KV cuesta la mitad. Si con
+    // ese coste el modelo solo cabe en el peldaño de emergencia, el
+    // plan manda con la KV de q8 — y la carga de abajo queda fijada a
+    // ese perfil y ese contexto (profundizar en perfiles mayores sería
+    // cargar con otra KV que el pre-flight no cobró). En cualquier
+    // otro peldaño manda el plan fp16 de siempre: conservador, porque
+    // los perfiles de reserva cargan con KV fp16 y el plan debe valer
+    // para el que acabe aceptando llama.cpp.
+    let pinnedProfile: LlmMemoryProfile | null = null;
     if (!explicitCtx && snapshot) {
-      const plan = planContext(specBase, snapshot, { ceiling: requestedCtx, safety: crashSafety });
+      const ladderCeiling = nCtx;
+      const plan = planContext(specBase, snapshot, { ceiling: ladderCeiling, safety: crashSafety });
       if (plan) {
         nCtx = plan.nCtx;
         verdict = plan.verdict;
         contextNote = plan.note;
       }
+      if (plan && plan.nCtx === EMERGENCY_CONTEXT) {
+        const q8Plan: LadderPlan | null = planContext(
+          { ...specBase, kvBytesPerElement: KV_Q8_BYTES_PER_ELEMENT },
+          snapshot,
+          // 0.1.86: the second call keeps the ceiling the ladder plan
+          // was judged under (ladderCeiling), not the emergency
+          // nCtx (1024) the fp16 plan landed on — inside planContext
+          // the emergency rung only exists below the ceiling, so
+          // handing it 1024 judged the q8 plan of the emergency rung
+          // against the NORMAL budget and could reject a load the
+          // design accepts (census §4.1 C).
+          { ceiling: ladderCeiling, safety: crashSafety },
+        );
+        if (q8Plan && q8Plan.verdict.fits) {
+          nCtx = q8Plan.nCtx;
+          verdict = q8Plan.verdict;
+          contextNote = q8Plan.note;
+          pinnedProfile = "kv-q8";
+        }
+      }
     }
     if (verdict && !verdict.fits) {
+      // Fase 2 (reapertura del defecto, 2026-11-08): el rechazo queda
+      // registrado con sus cifras antes de lanzar. Hasta aquí no
+      // dejaba rastro y el único diagnóstico posible era modelar el
+      // aparato; con el registro, la propia app dice qué vio.
+      recordRamRejection({
+        modelId: modelFilename,
+        totalRamBytes: snapshot!.totalRamBytes,
+        rssBytes: snapshot!.rssBytes,
+        availBytes: snapshot!.availBytes ?? null,
+        thresholdBytes: snapshot!.lowMemThresholdBytes ?? null,
+        availableBytes: verdict.availableBytes,
+        neededBytes: verdict.totalBytes,
+        nCtxChosen: nCtx,
+        nCtxRequested: requestedCtx,
+        crashSafety: crashSafety < 1 ? crashSafety : null,
+        readFailure: snapshot!.liveReadMissing ? "live" : null,
+      });
       throw new RamBudgetError(
         `"${modelFilename}" needs roughly ${toGb(verdict.totalBytes)}GB of RAM, but this ` +
           `device only has about ${toGb(verdict.availableBytes)}GB free (of ${toGb(verdict.totalRamBytes)}GB total). ` +
@@ -726,13 +833,17 @@ export class LlamaEngine {
     try {
       // RAM-2026-10-11: primer perfil que llama.cpp acepte (ver
       // LLM_MEMORY_PROFILES). El último es exactamente la llamada original.
+      // Si el plan fijó kv-q8 (solo cupo en el peldaño de emergencia con
+      // su KV), la lista es ese perfil solo: cargar con otro sería
+      // gastar una KV que el pre-flight no aprobó.
+      const profilesToTry = pinnedProfile ? [pinnedProfile] : LLM_MEMORY_PROFILES;
       let lastErr: unknown = null;
       let loadedProfile: LlmMemoryProfile | null = null;
-      for (const profile of LLM_MEMORY_PROFILES) {
+      for (const profile of profilesToTry) {
         try {
           this.context = await withStage("initLlama", () =>
             initLlama(
-              llmInitParamsForProfile(profile, { model: modelPath, n_ctx: nCtx, n_threads: nThreads }) as never,
+              llmInitParamsForProfile(profile, { model: modelPath, n_ctx: nCtx, n_threads: nThreads }, loadBatch) as never,
             )
           );
           loadedProfile = profile;
@@ -771,6 +882,17 @@ export class LlamaEngine {
   }
 
   private async unloadNow() {
+    // Justicia del conteo (0.1.85): la confirmación del CrashGuard de
+    // abajo solo procede si esta descarga libera un modelo VIVO. Se
+    // captura a la entrada, antes de esperar a las generaciones y de
+    // anular el contexto. loadNow llama a unloadNow SIEMPRE, también
+    // sin modelo residente y justo después de asentar el registro:
+    // confirmar ahí borraría en la misma carga el conteo que el
+    // asentamiento acaba de hacer (el pendiente de un proceso muerto
+    // sumaría su choque y se perdonaría al instante, y un factor ya
+    // degradado se curaría sin generar nada). Sin contexto vivo no
+    // hay descarga que premiar: no se confirma nada.
+    const hadLiveContext = this.context !== null;
     // M-6 (2026-10-31): invalidar primero a las generaciones que
     // esperan turno en la cadena; la descarga espera solo a las
     // que ya corren (inFlight), como siempre.
@@ -790,6 +912,27 @@ export class LlamaEngine {
     this.context = null;
     this.modelInfo = null;
     await context?.release();
+    // Justicia del conteo (0.1.85): la descarga ORDENADA confirma el
+    // registro del CrashGuard, como el encabezado de memoryLadder.ts
+    // siempre prometió («una carga que se confirma — el modelo
+    // genera, o se descarga con orden — limpia el contador»). Hasta
+    // aquí unloadNow no confirmaba y una recarga posterior asentaba
+    // el pendiente sin modelo vivo: descargar y recargar por las
+    // buenas (inactividad, presión de memoria, cambio de modelo)
+    // castigaba como si hubiera habido un choque. unloadNow solo se
+    // alcanza por caminos ordenados del proceso vivo (la cola de
+    // carga, el pulso de inactividad, la presión del sistema, el
+    // borrado total y el propio loadNow al cambiar de modelo): una
+    // muerte nativa mata el proceso y nunca pasa por aquí, así que
+    // su pendiente sigue contando en el siguiente asentamiento, como
+    // está diseñado. La confirmación va AL FINAL: si el proceso
+    // muere a mitad de la descarga, no se escribe y el pendiente
+    // cuenta — la dirección segura. Y solo con contexto vivo a la
+    // entrada (hadLiveContext): la llamada interna de loadNow sin
+    // modelo residente no confirma nada, por lo asentado arriba.
+    if (hadLiveContext) {
+      this.crashGuardConfirm();
+    }
   }
 
   getModelInfo(): LoadedModelInfo | null {
@@ -999,7 +1142,8 @@ export class LlamaEngine {
         this.startCompletion({ prompt, messages, nPredict, temperature, topK, topP, minP, repeatPenalty, samplingPreset, responseFormat, grammar, enableThinking, onToken: wrappedOnToken, stop, timeoutMs, onTimeout: wrappedOnTimeout })
       );
       try {
-        const { text } = await started.completion;
+        const result = await started.completion;
+        const { text } = result;
         const settled = text ?? started.getFull();
         const raw = guardLoops ? trimRepetitionLoop(settled) : settled;
         // Bounty tanda 8 (frase cortada): si la generación consumió
@@ -1008,7 +1152,11 @@ export class LlamaEngine {
         // para quien enseña el texto en vivo (ChatScreen), que aplica
         // la misma regla sobre lo transmitido. La salida estructurada
         // (guardLoops=false) jamás se recorta.
-        this.lastCut = tokenCount >= nPredict;
+        // 0.1.92: el hecho lo dice el motor (stopped_limit /
+        // context_full), no la cuenta de llamadas de onToken, que
+        // llama.rn retiene en saltos de línea y UTF-8 a medias y se
+        // quedaba corta justo cuando había tope (generationCut.ts).
+        this.lastCut = generationHitLimit(result as NativeStopSignals, tokenCount, nPredict);
         const completed = guardLoops ? trimToCompleteSentences(raw, this.lastCut) : raw;
         // Safety net (Qwen3 lane + estudio de modelos): for a noThink
         // model whose native layer ignored enable_thinking=false, and

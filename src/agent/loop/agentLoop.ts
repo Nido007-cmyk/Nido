@@ -24,6 +24,7 @@
  */
 
 import { normalizeForRouting } from "./routingText";
+import { estimateTokens } from "./contextBudget";
 import type { ChatMessageInput, SamplingPresetName } from "../../inference/LlamaEngine";
 import {
   describeToolsForPrompt,
@@ -181,6 +182,14 @@ export interface AgentLoopOptions {
    * "Context is full" en el primer generate.
    */
   nCtx?: number;
+  /**
+   * 2026-11-11 (carga cuando se necesita): carga perezosa del motor. Se llama UNA vez, justo antes
+   * del primer uso del modelo en el turno (nunca en las vías
+   * deterministas, que responden sin él). Devuelve el n_ctx del modelo
+   * que quedó cargado; si no devuelve nada, vale `nCtx`. Si rechaza
+   * (el modelo no cabe), el error sube al llamador tal cual.
+   */
+  prepareEngine?: () => Promise<number | undefined>;
 }
 
 export interface AgentToolUse {
@@ -716,7 +725,10 @@ function formatMemoryText(mem: MemoryFactsLike): string {
  * y el guard podía pasar con el nativo fallando igual.
  */
 export function estimatePromptTokens(text: string): number {
-  return Math.ceil(text.length / 3) + 50;
+  // 2026-11-11: gemela de defaultTokenCounter; las dos delegan en la
+  // misma estimación para que el bucle y el ajuste de fuentes nunca
+  // vuelvan a contar distinto. Ver estimateTokens en contextBudget.ts.
+  return estimateTokens(text);
 }
 
 /**
@@ -781,7 +793,6 @@ async function runAgentLoopCore(
   trace: RoutingTrace
 ): Promise<AgentLoopResult> {
   const { engine, handlers, maxSteps = DEFAULT_MAX_STEPS } = options;
-  const nCtx = options.nCtx ?? 4096;
   // H5-2026-10-06: nPredict adaptativo. Con un sistema de ~1790 tokens y
   // nPredict=2048, solo quedan ~258 tokens para memoria+query+herramientas
   // (acantilado de presupuesto). Se calcula por paso según lo disponible.
@@ -818,7 +829,7 @@ async function runAgentLoopCore(
       taskType: "agent-loop",
       deterministic: true,
       promptChars: userText.length,
-      promptTokensEst: Math.ceil(userText.length / 3),
+      promptTokensEst: estimateTokens(userText) - 50,
       completionTokens: 0,
       ttftMs: 0,
       totalMs: 0,
@@ -1364,6 +1375,10 @@ async function runAgentLoopCore(
   // (con memoria) no cabe, se reintenta sin el texto de memoria antes de
   // fallar con un error claro. Sin esto, llama.cpp fallaba en el primer
   // generate con "Context is full" (T-contexto-2026-10-06).
+  // 2026-11-11 (carga cuando se necesita): primer punto del turno que necesita el modelo. Todo lo de
+  // arriba (vías deterministas) retorna sin pasar por aquí.
+  const preparedNCtx = options.prepareEngine ? await options.prepareEngine() : undefined;
+  const nCtx = preparedNCtx ?? options.nCtx ?? 4096;
   let messages = buildMessages(mem ? formatMemoryText(mem) : "");
   try {
     assertPromptBudget(messages, nCtx, adaptiveNPredict(messages, nCtx, maxNPredict), "inicio");

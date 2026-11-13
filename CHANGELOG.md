@@ -4,6 +4,769 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.95-alpha - 2026-11-13
+
+NIDO works from the first second, and four things a reviewer would
+poke at are fixed.
+
+**Emergency numbers and first-aid guides on a fresh install, with no
+internet and no model.** Until 0.1.94 a new install had nothing useful
+until it had downloaded the model (0.4 to 1.1 GB) and the packs: the
+Emergency tab asked you to download NIDO Local, and the guide library
+was empty. Now the APK carries NIDO Essentials (174 first-aid, health,
+disaster and survival guides) and NIDO Local (checked emergency numbers
+for 69 countries, each with its source and date). On first launch the
+app installs them from the APK, checked against the signed catalog with
+the same size and SHA-256 check as a download. The setup wizard has an
+Emergency entry next to Read the guides, which opens the numbers, the
+call buttons and the CPR practice tool without loading the model. The
+APK grows by about 1.4 MB.
+
+**The panic erase destroys the key first.** On flash storage, wear
+levelling can keep old blocks of a deleted file, so the real erase is
+destroying the key. The database key, the hardware vault key and the
+P2P keys used to die after the database files were deleted. Now the
+database and vault keys die right after the erase marker is written,
+and the P2P keys as soon as the P2P runtime is shut down, all before
+any file is deleted, so any block the flash keeps is unreadable
+ciphertext. The README now says what the 3 seconds are: how long you
+hold the button, which is off by default.
+
+**Firebase no longer starts with the app.** The 0.1.94 manifest still
+declared Firebase's start-up provider, brought in by expo-notifications.
+Firebase can't start in NIDO (the APK has no Firebase configuration), so
+the provider only cost start-up time. It is removed, along with its
+component discovery service. Firebase and Google Play Services classes
+are still compiled into the APK, inert; removing them is open work,
+listed in docs/release/DEVICE_CHECKLIST.md.
+
+**Three small defects found while verifying.** The Emergency tab
+said NIDO Local weighs about 0.2 MB in all three languages; it weighs
+0.36 MB, so it now says 0.4 MB (this one predates 0.1.95). In the setup
+wizard, if the packs ever failed to install, the "download NIDO Local"
+notice offered a "Go to the Library" button that opened the guide
+reader, where nothing can be downloaded; that button no longer shows
+there. And Android's Back key now closes the wizard's Emergency layer
+instead of leaving the app.
+
+**A fixed device checklist for every release.** About 20 minutes on the
+reference tablet: offline first launch, answers that don't need the
+model, a generating answer with telemetry, number tables,
+notifications, panic erase, two phones and the in-app evaluation set.
+In English and Spanish, in docs/release/DEVICE_CHECKLIST.md.
+
+**Not tested on a phone.** All of these changes passed the automated tests,
+and the release APK build confirms the packs are copied into the APK.
+None of it has run on the Galaxy Tab A9+ yet; the checklist is how it
+will be.
+
+## 0.1.94-alpha - 2026-11-11
+
+Speed and answer quality, without touching what is sealed.
+
+**The model loads when a turn needs it, not when you press send.**
+Since 0.1.83 the first thing a send did was load the chat
+model, before reading the question. A question that a guide
+or the deterministic layer answers, which by rule never
+reaches the model, still waited for the whole load and took
+its memory; and if the model did not fit in memory, nothing
+was answered at all, not even the emergency number or the
+fixed safety text. Now each path that generates asks for the
+model right before it uses it; guides, fixed answers, packs,
+time, notes, reminders and memory never load it. The load
+itself is unchanged, with its live memory reading on every
+attempt. The Execution Telemetry screen records the load
+time of a turn apart (`modelLoadMs`), so first-token time and
+tokens per second stay comparable with 0.1.93. Details:
+docs/perf/CARGA_CUANDO_SE_NECESITA_2026-11-11.md.
+
+**Numbers and tables no longer overflow the context.**
+The context budget estimated a text at a quarter of its
+length in tokens. The model's tokenizer gives each digit its
+own token, so a document table of 1,649 real tokens was
+estimated at 717. Measured with the catalog's exact model
+files and the app's real prompt assembly: at a 2,048-token
+context (the ceiling on 4 GB devices) a table question
+produced a 1,905-token prompt and an answer cut at 143
+tokens; at 4,096 the prompt reached 6,953 tokens and the
+engine refused it with "Context is full". At 1,024 a prose
+question failed outright, because the step that fits sources
+counted them once and the check that judges the turn counted
+them twice. The estimate now counts digits, number edges and
+non-Latin characters; the fitting step measures the way the
+check does; and a source that does not fit can be cut at a
+line end, not only at a sentence end, so tables are trimmed
+instead of dropped. After the fix the same cases give 539,
+1,274 and 1,905 tokens and answer whole; prose prompts at
+2,048 and 4,096 are unchanged. The cost is about 3.7% more
+budget on ordinary guide prose. The estimate still counts
+short on source code, all-capitals text and runs of
+punctuation, which do not appear in guides or prompts.
+Details: docs/perf/ESTIMADOR_TOKENS_2026-11-11.md.
+
+**A correction.** llama.rn does not silently trim a prompt
+that is too long: with context shift off, it refuses it or
+cuts the answer, and NIDO already marks a cut answer.
+
+**Tried and not shipped.** A lower temperature for
+Qwen2.5-0.5B was measured on 24 seeds: arithmetic improved
+(20 to 33 of 72, p = 0.038) but that was one metric of about
+ten, the rest did not move clearly, and answers in the right
+language fell slightly (302 to 297 of 312). Not a proven
+defect, so the sampling stays as it was.
+
+**Not tested on a phone.** Both changes passed the automated
+tests and were measured off the device. The protocols to
+measure them on the Galaxy Tab A9+ are in the two documents.
+
+## 0.1.93-alpha - 2026-11-10
+
+A review of the whole app after 0.1.92, and what it found.
+
+**The health and emergency gate decides by meaning.**
+Since 0.1.90, a question with no sources that the gate
+does not recognise as health or emergency is answered by
+the model from memory. The gate was a list of words.
+Tried with questions written the way people type on a
+phone, it let through 40 of 62 health questions («cuanto
+ibuprofeno puedo tomar al dia», «what's a lethal dose of
+acetaminophen») and 13 of 21 emergencies, and it gave
+the health text to 15 of 48 everyday questions, because
+«flu» matched «fluent» and «tos» matched «tostada».
+
+The list is fixed and wider now: its words match whole
+words, a question needs no question mark, and it knows
+many more everyday terms. But a list only knows what is
+written in it: on 45 new health and emergency questions
+it recognised 4. So a second layer was added that
+decides by the question's search vector, the one the
+search already computes: a small linear classifier
+trained on 524 sentences in Spanish, English and
+Portuguese. On those 45 questions, list and classifier
+together recognise 40 with the multilingual search model
+and 26 with the default English one, and neither closed
+any of 50 everyday questions. It only decides when there
+are no sources, it adds to the list and never overrides
+it, and before trusting itself on a phone it checks that
+the engine gives the expected vector for a known
+sentence; if not, it switches off. The study and its
+limits are in docs/ESTUDIO_PUERTA_SEMANTICA_0.1.93.md.
+
+**A message about wanting to die always gets a fixed
+text.** Someone who writes, in the first person, that
+they want to die or hurt themselves now gets a fixed,
+caring text first, whatever else would have happened:
+call the emergency number if in danger now, reach a
+person, and four support lines checked on 2026-11-10
+(988 in the United States, Línea de la Vida 800 911 2000
+in Mexico, 024 in Spain, CVV 188 in Brazil). Figures of
+speech and fiction do not trigger it.
+
+**Read-aloud no longer reads the model's reasoning.**
+With a model that reasons, the voice read the whole
+reasoning block before the answer. It reads only the
+answer now.
+
+**A renamed pack cannot take a catalog pack's place.**
+A pack's file name is not tied to its signature, so a
+verified pack renamed as a catalog pack replaced it on
+disk and showed up as it. A catalog name can now only be
+taken by the file with that entry's hash.
+
+Not measured: none of this ran on a phone. With the
+default English search model, Spanish and Portuguese
+speakers are less protected than with the multilingual
+one. And the gate is still not closed: 5 of the 45
+questions get through with the best model.
+
+## 0.1.92-alpha - 2026-11-10
+
+An audit of the 0.1.91 package against the code. The
+release facts check out (tag, tree, APK size and hash),
+and so do the cures of families 1 to 5. Family 6 had a
+hole, family 7 got the instrument it was missing, and
+two loose ends from the download families are tied.
+
+**A cut answer always says so.** 0.1.91 tied the «I had
+to shorten this answer» note to one fact: the generation
+used up its whole token budget. But that fact was
+deduced by counting the streamed pieces, and the engine
+does not send one piece per token: it holds a piece back
+when a character is half written or when the text could
+be the start of a stop sequence, which on the plain
+prompt path is every line break. The count came up
+short exactly when the limit was hit, so an answer
+really stopped by the limit could lose both its note
+and its trim to the last whole sentence. The fact is now
+read from the engine's own result (stopped by the limit,
+or the context window filled up), and an end of turn
+that lands on the very last token is no longer taken for
+a cut. The piece count stays only as a fallback.
+
+**Sums get worked out.** The owner said the answers were
+weak, and the package had no way to measure why. This
+release builds one: the catalog's exact Qwen3-0.6B file,
+the messages the app's own code assembles, and answers
+read by program, never scored by hand. Lower
+temperature, a rewritten or removed «no sources» note, a
+shorter system prompt and no style reminder moved
+nothing. Letting the model reason did: on ten
+calculation questions, correct answers went from 16 of
+60 to 41 of 60. Reasoning on every turn is not an
+option (four times the tokens, and one answer in five
+drifted into English), so only a calculation turn
+reasons, only on Qwen3-0.6B, only without sources and
+with enough room; if the reasoning leaves no answer, the
+turn is answered directly as before. The study, its
+numbers and its limits are in
+docs/ESTUDIO_RESPUESTAS_0.1.92.md; the scripts and raw
+answers are in scripts/benchmarks/house-llm.
+
+**A heavy model's leftover download can be deleted.**
+Since 0.1.90 a model marked «too heavy» offers no
+download button. A download paused before that stayed on
+disk with no way to continue it or remove it, and its
+card still said «if you download again…». The card now
+says a part is taking up space and offers to delete it;
+the notices that promise a button are no longer shown on
+a red model.
+
+**One failing check no longer blanks the others.** The
+status of all models was computed together, so a single
+check that threw left every card without its state. Each
+model now answers for itself; one that cannot be checked
+counts as not present, with no verdict and nothing
+deleted.
+
+Not measured: none of this ran on a phone. How long a
+reasoning turn takes on the owner's tablet, and how
+llama.rn behaves with reasoning switched on, are for the
+physical round. The token estimator was also measured:
+it overestimates these prompts by about 60 % (537 to 562
+estimated against 327 to 359 real), which is safe and
+was left alone.
+
+## 0.1.91-alpha - 2026-11-09
+
+Four things the owner's tablet caught: three in the
+screens around the guide reader and the model
+catalogue, and one in the note the app adds under its
+own answers. Reading a guide
+to the very end, the system's white bar cut the last
+line in half: the reader had learned to keep its header
+below the status bar, but its bottom still ran under
+the system bar, and the same gap was hiding in the
+guide library, the CPR practice screen and the
+emergency country sheet. Those screens now keep their
+bottom edge inside the safe area too, so the last line
+of a long guide reads whole.
+
+In Settings, a model marked «too heavy for this device»
+in red still offered its download button, even though
+that red mark is the verdict of the very check that
+loads models: on that device no context step fits, not
+even the emergency one. The card no longer offers a
+download, or a retry, for a model marked red.
+
+And the download that would not settle: after a failed
+download, retrying with the connection back brought the
+whole model down and verified it, yet the card still
+said «download» and only a second full download made it
+offer «select and use». The presence verdict depended
+on hashing the freshly promoted file exactly once; when
+that single calculation stumbled, a good file counted
+as not installed, quietly. The hash now gets one retry
+when the calculation itself fails (a real mismatch is
+never retried into trust), and when a download record
+says something the card cannot show as installed, the
+card says why, in the app's language, instead of
+staying silent.
+
+And the note that cried cut: under answers the model
+had finished, short answers closed with their own full
+stop, the app kept adding «I had to shorten this
+answer because this turn ran low on space». It had not
+shortened anything. The note fired whenever the turn
+was assigned fewer generation tokens than the default
+ask, and on a small context window that is nearly
+every turn, however short the answer. The note now
+fires only when a generation really consumed its whole
+budget: an answer that ends naturally inside what it
+was assigned carries no note, and one stopped by the
+limit still says so.
+
+## 0.1.90-alpha - 2026-11-09
+
+The model's own answers were being cut off by the app
+itself, in two different ways, and the owner's tablet
+showed both within two minutes. Asked to explain how to
+change a tire in five numbered steps, with a model loaded
+and no guide covering the question, the app answered with
+its own refusal: it said it had found no information in
+its offline sources and preferred not to invent an answer.
+And asked for a very short story about a fox learning to
+swim, it showed a technical error instead: the fixed part
+of the prompt plus the reserved generation space was
+bigger than the whole context window the small model had
+been loaded with, so generation died before it started.
+
+Both were the app's rules, not the model's limits. The
+refusal came from a determinism rule dating from
+2026-10-11: any factual-shaped question with no retrieved
+sources got the honest "I don't know" without generating.
+That rule now guards only what it should. Health and
+emergency questions with no evidence still get the safe
+text, and everything else is generated by the loaded
+model. What a guide answers still arrives word for word,
+with no model in between.
+
+The context error came from the order of the budget. The
+generation reserve was demanded in full before the prompt
+was assembled, even though the app already knew how to
+shrink that reserve in steps when space is tight; the
+shrinking only happened afterwards, too late. The reserve
+now shrinks first, measured against the part of the turn
+that cannot be cut, and a turn only fails when even the
+minimum reserve does not fit. The default answer length
+cap also doubles, from 512 to 1024 tokens, a value the
+settings already offered: normal answers (a five step
+explanation, a short story, a short email) were reaching
+the old cap on the small models and being closed early at
+the last full sentence. When an answer does reach its cap
+now, it still closes at a full sentence, and it says so,
+with an offer to continue.
+
+## 0.1.89-alpha - 2026-11-09
+
+0.1.88 made the word for word road run, and the owner's
+tablet proved it runs: asked what to do when there is a
+smell of gas in the house, the app served a guide word for
+word, with the pack's name on it and no model in between.
+But it served the wrong guide: carbon monoxide, instead of
+the gas leak guide. That mix-up can hurt, because carbon
+monoxide cannot be smelled at all, and its own guide says
+so. Measured against the owner's real pack with the app's
+own search, the pack's keyword ranking puts the carbon
+monoxide fragment first, with the same coverage as the
+leak fragment, so the tie fell to the ranking and the
+neighbour won.
+
+The choice now reads the sign in the question. When a
+question says you can smell, see or hear something, a
+guide that states its danger cannot be smelled, seen or
+heard loses the tie to a guide that does not say that, in
+Spanish, English and Portuguese. And when the first short
+candidate list only holds the wrong neighbour, the app
+looks at the wider list before serving anything, so the
+sign-denying guide is never served on its own while the
+guide of the sign exists. The regression for this runs on
+the owner's real pack data and on candidate lists built
+with the app's own search and fusion code, not on lists
+written by hand.
+
+Two screen fixes, both from the owner's photos of the
+same day. The guide reader's header now sits below the
+system status bar instead of under it, clear of the clock
+and the wifi and battery icons, on tablets and phones.
+And the NIDO screen's tabs now size themselves to their
+labels: the long tab word stays on one line, and on a
+narrow phone the row scrolls instead of splitting a word
+across two lines.
+
+No changes to the signed catalog, the models or the
+memory rules.
+
+## 0.1.88-alpha - 2026-11-09
+
+0.1.87 gave a verified imported pack a word for word road,
+and the owner's tablet showed the road still closed in the
+case that matters most: with multilingual search on, asking
+about the gas guide of the SALVORA PACKS pack, in the same
+chat after a story, twice in a row, came back written by the
+model both times, and the first answer repeated word for
+word the one 0.1.86 had already given, advice included that
+the guide itself contradicts. The pack was there, verified,
+and the app itself already said on the pack's card that with
+that pack only word search works. Measured against the real
+pack and the app's own code, the word road closed itself:
+it only opened when no fragment at all in the answer carried
+a vector score, and with multilingual search on, the built-in
+base always scores, so the road never opened; and when
+fragments of the same pack tied on coverage, the list order
+decided, and a sister guide (carbon monoxide, in the same
+pack) could be served for the gas question. The safety net
+had the mirror defect: it replaced an unverified answer only
+when no source was a health source, so the guide's own
+presence among the sources disarmed it. And the Library tab
+showed three identical "Read the guides" buttons, one of
+them next to the title, where the owner asked for it to sit
+lower so it does not get in the way. This release fixes the
+word road, the net and the button.
+
+### Fixed
+
+- A verified imported pack whose search vectors belong to a
+  different model than the one active now answers its own
+  question word for word through the word road: the road
+  judges its own fragments (the pack's literal fragments
+  without a vector score) instead of closing whenever any
+  other fragment in the answer carries a score, and the
+  choice is made guide by guide, with ties broken by the
+  search rank inside the pack rather than by list order, so
+  the gas guide is served for the gas question and not its
+  carbon monoxide neighbour. It works for any verified pack,
+  any signer and any active search model, in Spanish,
+  English and Portuguese, and also in a chat that already has
+  history. The regression runs the owner's own conversation:
+  a story first, then the exact question twice.
+- The safe text net now looks at what the answer actually
+  rests on, not at the list of sources: an answer the judge
+  could not verify, in a health question or a live
+  emergency, is replaced by the safe text when none of its
+  source-backed sentences rests on a health source, even if
+  a verified guide was among the sources. Answers the judge
+  did verify are still never touched.
+- The Library tab has one single way into the guide library,
+  a full width band at the bottom of the tab, below
+  everything else; Settings keeps its own single entry. The
+  three repeated buttons are gone.
+
+No changes to the signed catalogue, the models or the
+memory rules. What the tablet measures is still the verdict:
+the same conversation from the owner's photos, the story and
+then the question, has to give the guide word for word.
+
+## 0.1.87-alpha - 2026-11-09
+
+0.1.86 opened the literal road for verified imported packs,
+and the owner's tablet showed the road was not enough: asking
+about the gas guide of the SALVORA PACKS pack still took a
+while and came back written by the model, which answered
+from memory and even advised the opposite of the guide. The
+guide itself was never the problem. The choice that picks a
+guide only looked at the four fragments the answer context
+keeps, dropped any fragment without a vector score, and
+required the best fragment overall to be the literal one and
+to clear a bar that had only ever been measured on the
+built-in pack. The gas guide first had to survive pruning
+inside its own pack, against its cluster of gas and carbon
+monoxide fragments, and then the cut to four against the
+built-in pack's carbon monoxide guide. And once the literal
+road gave up, no safety net knew the question: a told gas
+leak matched no health term and no emergency phrase, and the
+health gate's list of packs that count as a health source
+was closed to the three built-in ones, so a verified
+imported pack never counted. This release fixes the choice,
+the net, the case where the pack's vectors belong to another
+search model, and a guide library that could only be reached
+from deep inside Settings.
+
+### Fixed
+
+- **The guide choice judges the literal candidate against
+  its own bar.** The best literal fragment is now measured
+  against the bar of its own embedding profile, in the line
+  of the floors the retrieval already keeps per profile,
+  instead of against a single inherited bar, and the choice
+  is made over a wider retrieval than the four fragments the
+  prompt context keeps, so the cut to four can no longer
+  veto a guide the search did find. The bar for imported
+  packs is measured per profile going forward; a direct
+  measurement with real pairs from imported packs still
+  needs a device and is not claimed here.
+- **A pack from another search model still opens its
+  guide.** When a verified imported pack's vectors do not
+  match the active search model, its fragments arrive
+  without a vector score and the literal choice discarded
+  them on sight. A literal fragment that wins by full term
+  coverage is now served as written all the same, and the
+  imported pack list flags such a pack as coming from
+  another search model, the way the catalog already flags
+  its own.
+- **Health evidence accepts verified imported packs.** The
+  health gate counted only three built-in pack ids as a
+  health source, so a grounded answer drawn from a verified
+  imported pack could still be replaced by the safe text as
+  if it had no source. Fragments from a pack that entered
+  through the verified import door now count by the same
+  origin mark the import registry keeps.
+- **A told gas leak is a live emergency.** The sign phrases
+  of the emergency gate learned the gas leak in Spanish,
+  English and Portuguese ("huele a gas", "smells like gas",
+  "cheiro de gás" and their sisters), so a question about
+  one falls to the safe text when nothing verified answers
+  it, instead of leaving the model's own words standing.
+- **The guide library has its own button.** The Library tab
+  now carries a "Read the guides" button of its own next to
+  its title, the imported pack list carries a second one,
+  and the Emergency screen's shortcut opens the library it
+  names instead of landing on a tab that had no way in. The
+  library itself still lives in one place, and the lock
+  still takes it away.
+
+## 0.1.86-alpha - 2026-11-09
+
+0.1.85 fixed the memory card on the owner's tablet, and the
+same morning the tablet found the next defect by hand. A signed
+guide pack bought from SALVORA PACKS imported cleanly through
+the verified door, but asking the chat about one of its guides
+(what to do when there is a smell of gas in the house) closed
+the app: guides from imported packs were not allowed to be
+served word for word the way the built-in packs are, so the
+question fell to the language model with memory at its
+tightest, and the process died mid-answer. This release closes
+that road and the four smaller defects found standing next to
+it, and puts a written suspicion about the crash guard to the
+test.
+
+### Fixed
+
+- **A verified imported pack's guides are answered as
+  written.** A pack that entered through the signed import
+  door and verified (a NIDO pack by its pinned hash, a
+  SALVORA PACKS pack by its signature) is now served word for
+  word, without loading the model, under the same rule as the
+  built-in packs. A pack with no verified origin keeps the
+  normal route; unverified text is still never served as a
+  literal guide answer.
+- **The compatibility badge is the verdict of the real load
+  path.** The badge on each model is now judged with the same
+  specification the load itself uses (the context ceiling for
+  the device class and the batch size for its memory), and
+  its green and amber come from the load planner's verdict on
+  the canonical photo of the device instead of fixed
+  percentages of total memory. On the owner's tablet the 1.5B
+  model now shows red, because even its cheapest emergency
+  plan does not fit there; the Qwen3-0.6B badge now matches
+  the load that really happens.
+- **The emergency retry keeps its emergency terms.** When a
+  load falls back to the memory-saving cache precision at the
+  emergency step, that second judgement now uses the same
+  emergency terms as the first, instead of the normal,
+  stricter count.
+- **Importing a pack asks for its manifest.** If the file
+  picker selection brings the pack file without its signed
+  manifest beside it, the importer opens a second picker
+  asking for the manifest instead of refusing; only when that
+  second gesture does not bring it does the refusal stand.
+- **The guide library opens in normal use.** Settings, under
+  Knowledge base, now has the "Read the guides" entry next to
+  adding a pack, so the library can be browsed after setup,
+  not only from the first-run assistant.
+- **The crash guard was suspected of counting one death
+  twice, and does not.** A regression now replays the exact
+  shape of the closure that raised the suspicion (a pending
+  load, a session record marked as generating, a native crash
+  after it) and the counter stays at one: the settlement
+  reads the session crossing before settling the pending
+  mark, so the same death cannot be counted twice. The guard
+  itself is untouched: its factors and the 2 GB system
+  headroom are unchanged.
+
+## 0.1.85-alpha - 2026-11-08
+
+The card was still there after 0.1.84, on the same tablet, and
+this time the tablet itself supplied the numbers: the telemetry
+screen the previous release added recorded the refusal with the
+figures the check saw (437 MB needed, 370 MB counted as free,
+while the tablet reported 842 MB actually free). Reading the
+check against those figures found the last lock. On every step
+the check subtracts the system's low-memory watermark and a
+fixed safety margin from the free memory Android reports, and
+on that tablet the two subtractions ate more than half of what
+was free, so even the emergency step could not fit. The
+emergency step now judges against the free memory Android
+actually reports. Two smaller injustices go with it: unloading
+a model in good order no longer counts against the crash
+guard, and a refusal that was judged without the live memory
+reading now says so in its record.
+
+### Fixed
+
+- **The emergency step uses the memory that is really free.**
+  On devices with 4 GB of memory or less, the short-answer
+  context of last resort is now priced against the free memory
+  Android reports at that moment, without the watermark and
+  margin the normal steps subtract. Every normal step keeps
+  the stricter count, and the check still refuses when memory
+  is really short; the 2 GB system headroom is unchanged.
+- **An orderly unload is no longer counted as a crash.** The
+  crash guard's own note always said a load confirmed by an
+  orderly unload clears the count, but unloading never
+  confirmed anything, so unloading and reloading in good faith
+  (idle timeout, system memory pressure, switching models)
+  could shrink the memory budget as if the app had crashed.
+  An unload that releases a live model now confirms the
+  record; a process that dies still counts, exactly as before.
+- **A refusal judged without the live reading says so.** If
+  the device cannot provide its live free-memory reading, the
+  refusal record in Execution Telemetry now shows that the
+  reading was missing, instead of looking like a plain lack
+  of memory.
+
+## 0.1.84-alpha - 2026-11-08
+
+The card came back once more on the same tablet, and this time the
+audit read the memory check line by line against the tablet's own
+figures (3.54 GB read by the system, a whole process that peaked
+at 743 to 760 MB when the model ran fine). The app reads memory
+correctly; the check itself was charging more than the load
+really costs, in one direction only. It charged the outgoing
+model's memory twice when you switched models, charged the
+context cache at double precision even when the load uses the
+halved one, and charged the full-size compute buffer even on
+devices whose batch is smaller. And when even the smallest normal
+context did not fit on a small device, the check gave up instead
+of trying one step lower. This release corrects those charges,
+adds that last step, and makes the refusals the 0.1.83 started
+recording visible in the app, so the next report can be read from
+the device itself.
+
+### Fixed
+
+- **Switching models no longer charges the old model twice.**
+  When you changed models, the memory the outgoing model was
+  about to free was credited on one side of the check and still
+  counted as used on the other, the side that decides. Both sides
+  now credit it, the way the code's own note always said it did.
+- **The check now charges what the load really allocates.** The
+  context cache is charged at the precision the load will use
+  (the first profile the engine tries stores it at half size),
+  and the compute buffer at the batch size the device will
+  actually run, instead of the largest device's. On roomy devices
+  nothing changes: at the full batch the charges are exactly the
+  ones before.
+- **One more step before refusing.** On devices with 4 GB of
+  memory or less, if even the smallest normal context does not
+  fit, the check now tries a short-answer context of 1024 before
+  refusing, pinned to the memory-saving profile it was priced
+  with. A short answer in an emergency beats no model at all.
+  Larger devices keep the same floor as before, and the check
+  still refuses when memory is really short; the 2 GB system
+  headroom and the crash guard are unchanged.
+
+### Changed
+
+- **Memory refusals are now visible in the app.** The Execution
+  Telemetry screen (Settings, Diagnostics) has a "Memory
+  rejections" section listing each refused load with the numbers
+  the check saw: the model, what it needed, what was free, the
+  total memory, the context it asked for and the one it settled
+  for. The same records travel in the screen's JSON and CSV
+  exports, so a refusal can be shared with its figures attached
+  instead of described from a photo.
+- **The search model rests more honestly.** Its last-use mark
+  used to be set only when the chat screen opened, so the idle
+  unload could fire soon after a search; the engine now marks
+  every search itself.
+
+## 0.1.83-alpha - 2026-11-08
+
+The 0.1.82 fix was not the whole story: on the tablet where the
+problem was reported, the "not enough memory" card kept appearing
+with 0.1.82 installed. Reopening the report found why. The two
+engines (the chat model and the search model) started at the same
+moment, and each one's memory check read the same snapshot without
+seeing the other, so together they could be waved through into
+memory that only fit one of them; and when the check did refuse a
+load, it left no record anywhere, so the only evidence was a photo
+of the card. This release starts the engines one after the other,
+records every refusal with the numbers it saw, and then makes the
+app lighter to run: the chat model now loads only when you first
+ask it something, and both engines step aside on their own when
+they have been idle or when Android says memory is critical.
+
+### Fixed
+
+- **The two engines no longer load at the same time.** The chat
+  model and the search model used to start together, each checking
+  the same free-memory snapshot as if it were alone. They now load
+  one after the other, so the second check sees the first engine
+  already resident; and when a load is refused, the error now says
+  which engine was refused instead of showing the pair's first
+  failure.
+- **A refused load now leaves a record.** The refusal is written to
+  the app's execution telemetry with the numbers the check saw
+  (total and free memory, what the model needed, the context it
+  asked for), so a report like this one can be diagnosed from the
+  device's own figures instead of from a photo.
+
+### Changed
+
+- **The chat model loads on demand.** Opening NIDO now loads only
+  the small search model: the stored guides and search work right
+  away, and the chat model loads the first time you send a message,
+  with a "Loading model…" note while it comes up. After three
+  minutes without chat activity, or after the app has spent longer
+  than that in the background, the model is unloaded again; the
+  next message reloads it, running the same memory check as before.
+- **Models size their work to the device.** On devices with less
+  memory, the engine's batch and, for the Qwen3 model, its starting
+  context are smaller from the first load, so the memory check has
+  less to fit. When the battery is under 20 percent, power saving
+  is on, or the device is running hot, a load also uses fewer
+  threads and a smaller batch.
+- **The search model also rests.** It unloads after ten minutes
+  without use and reloads by itself on the next search; background
+  indexing no longer keeps it resident, and any indexing it owed is
+  picked up on the next launch, as after any stop.
+- **Android's memory warnings now unload the models first.** When
+  the system reports critical memory pressure and nothing is being
+  generated, NIDO unloads its models instead of waiting to be
+  closed; they reload on demand when you come back.
+
+
+## 0.1.82-alpha - 2026-11-08
+
+On tablets and phones with about 3 GB of RAM, NIDO could refuse to
+load any model at all, saying there was not enough free memory even
+with every other app closed. The check that runs before a model loads
+was charging each model for memory the engine never uses. This
+release corrects that charge; nothing else about the check changes.
+
+### Fixed
+
+- **The memory check before loading a model overcharged every
+  model.** It added the output scores (logits) for all 512 positions
+  of a batch, about 0.29 GB, but the engine only produces those
+  scores for the last position, so the charge counted memory that is
+  never allocated. On a tablet with about 3.3 GB of RAM, that phantom
+  charge alone was bigger than the space the check allows, so even
+  the small models that had been running fine on that tablet failed
+  the check, and freeing memory could not change the result. The
+  check now charges the one row of scores the engine really
+  produces.
+- **The protection is unchanged.** When memory is really short, for
+  example with other apps open, the check still refuses to load, and
+  a regression test keeps it that way. The live memory reading, the
+  2 GB system headroom, the context ladder and the crash guard were
+  not touched.
+
+## 0.1.81-alpha - 2026-11-08
+
+The guides stored on the device can now be read as documents, from
+start to finish, without loading the language model. The signed
+catalog now offers knowledge-packs-v16.
+
+### Reading the guides
+
+- **New: a guide library.** From the knowledge base you can open any
+  guide of the packs installed on the device and read it whole, as a
+  document. Reading a guide does not load the model, so it works the
+  same on a phone with no model downloaded yet, and it never uses the
+  network.
+- **Very long texts are shown shortened, with a note.** A guide whose
+  text is too long to paint in full is shown shortened on screen, with
+  a visible note saying so; the guide stays stored in full in its
+  pack.
+
+### Catalog
+
+- **The signed catalog now offers knowledge-packs-v16,** the current
+  edition of NIDO Essentials (174 guides in Spanish, English and
+  Portuguese, re-checked against the IFRC 2025 and ERC 2025
+  guidelines). The 0.1.80 app keeps offering knowledge-packs-v14.
+
 ## 0.1.80-alpha - 2026-11-07
 
 NIDO gains a door for adding signed knowledge packs from a file. No

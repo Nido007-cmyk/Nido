@@ -27,6 +27,9 @@ import { MODEL_CATALOG, CatalogModel, AssetKind, CORPUS_CATALOG } from "../model
 import { defaultLlmForDevice } from "../models/defaultModel";
 import { llamaEngine } from "../inference/LlamaEngine";
 import { ModelManager } from "../models/ModelManager";
+import { getInstallRecord } from "../models/installState";
+import { installNoticeFor } from "../models/installNotice";
+import { formatBytes } from "../models/downloadErrors";
 import { getActiveModelId, setActiveModelId, getHapticsEnabled, setHapticsEnabled } from "../models/settings";
 import { seedKnowledgeBaseIfEmpty } from "../rag/seedCorpus";
 import { DbLifecycleEndedError } from "../security/secureDatabase";
@@ -35,6 +38,7 @@ import { closePack, prepareVectorIndexes } from "../rag/packs";
 import { deletePackIndexes } from "../rag/vectorIndex";
 import {
   startDownload,
+  discardPartialDownload,
   getDownloadState,
   isDownloading,
   subscribeDownloads,
@@ -85,6 +89,16 @@ type OptionalProps = {
   onClose: () => void;
   onRelaunchWizard?: () => void;
   onOpenGuide?: () => void;
+  /** 0.1.86: abre el lector de guías desde Ajustes > Biblioteca. */
+  onOpenLibrary?: () => void;
+  /**
+   * 0.1.88: el sitio que embebe la sección de conocimiento decide
+   * si la entrada del lector vive DENTRO de la sección (Ajustes: su
+   * única entrada es la de CorpusSettingsTab) o FUERA (la pestaña
+   * Biblioteca: su única entrada es la banda final de LibraryScreen,
+   * y la sección va sin la prop para no repetirla).
+   */
+  libraryEntryInside?: boolean;
   onOpenMemory?: () => void;
   onOpenTelemetry?: () => void;
   onOpenAbout?: () => void;
@@ -110,6 +124,10 @@ export function ModelSetupScreen(props: Props) {
   const requiredMode = props.mode === "required";
   const [presence, setPresence] = useState<Record<string, boolean>>({});
   const [outdatedIds, setOutdatedIds] = useState<Record<string, boolean>>({});
+  // 0.1.90 (familia 3): el motivo durable por tarjeta (installNoticeFor).
+  const [noticeById, setNoticeById] = useState<Record<string, string>>({});
+  // 0.1.92: bytes de una descarga en pausa que siguen en el disco.
+  const [partialById, setPartialById] = useState<Record<string, number>>({});
   const [activeIds, setActiveIds] = useState<Partial<Record<AssetKind, string>>>({});
   const [toast, setToast] = useState<string | null>(null);
   const [dangerModalVisible, setDangerModalVisible] = useState(false);
@@ -201,6 +219,31 @@ export function ModelSetupScreen(props: Props) {
     setPresence(Object.fromEntries(statuses.map((s) => [s.asset.id, s.present])));
     setOutdatedIds(Object.fromEntries(statuses.map((s) => [s.asset.id, s.outdated === true])));
 
+    // 0.1.90 (familia 3): el motivo durable de cada tarjeta que no
+    // cuenta como descargada, desde el estado verificado y el diario
+    // de instalación (installNoticeFor). Hasta aquí esos dos datos se
+    // calculaban y se descartaban antes de la tarjeta: una descarga
+    // que no asentaba volvía a «Descargar recurso» en silencio.
+    const notices: Record<string, string> = {};
+    const partials: Record<string, number> = {};
+    for (const s of statuses) {
+      if (s.present || s.outdated) continue;
+      const record = await getInstallRecord(s.asset.id).catch(() => null);
+      const notice = installNoticeFor(s, record);
+      if (notice?.kind === "paused") partials[s.asset.id] = notice.doneBytes;
+      if (notice) {
+        notices[s.asset.id] =
+          notice.kind === "paused"
+            ? t("installNotice.paused", {
+                done: formatBytes(notice.doneBytes),
+                total: formatBytes(notice.totalBytes),
+              })
+            : t(`installNotice.${notice.kind}`);
+      }
+    }
+    setNoticeById(notices);
+    setPartialById(partials);
+
     const next: Partial<Record<AssetKind, string>> = {};
     for (const kind of LLM_EMBEDDING_KINDS) {
       const active = await getActiveModelId(kind);
@@ -214,7 +257,7 @@ export function ModelSetupScreen(props: Props) {
     setActiveIds(next);
 
     return statuses;
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     refreshStatus();
@@ -353,9 +396,11 @@ export function ModelSetupScreen(props: Props) {
         bytesExpected: dl?.bytesExpected,
         speedBytesPerSec: dl?.speedBytesPerSec,
         etaSeconds: dl?.etaSeconds,
+        statusNotice: noticeById[item.id] ?? null,
+        partialBytes: partialById[item.id] ?? null,
       };
     },
-    [presence, outdatedIds]
+    [presence, outdatedIds, noticeById, partialById]
   );
 
   const download = useCallback(
@@ -397,6 +442,17 @@ export function ModelSetupScreen(props: Props) {
       await modelManager.deleteModel(model);
       await refreshStatus();
       setToast(t("modelSetupScreen.toasts.removed", { name: model.label }));
+    },
+    [refreshStatus, t]
+  );
+
+  // 0.1.92: borra la parte descargada de un modelo en rojo (que ya no
+  // ofrece descargar) para devolver el espacio.
+  const discardPartial = useCallback(
+    async (model: CatalogModel) => {
+      await discardPartialDownload(model).catch(() => {});
+      await refreshStatus();
+      setToast(t("modelSetupScreen.toasts.partialDiscarded", { name: model.label }));
     },
     [refreshStatus, t]
   );
@@ -504,11 +560,20 @@ export function ModelSetupScreen(props: Props) {
   }
 
   // 0.1.55: Biblioteca › Packs: the same download / remove logic, without the rest of Settings.
+  // 0.1.87 (pieza 5): la rama reenvía onOpenLibrary — hasta aquí la
+  // prop moría en esta rama y el botón del lector de la pestaña de
+  // conocimiento solo existía en el render completo de Ajustes.
   if ((props as OptionalProps).section === "knowledge") {
     return (
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.accordionScroll}>
-          <CorpusSettingsTab corpusItems={CORPUS_CATALOG} getRow={getRow} download={download} remove={remove} />
+          <CorpusSettingsTab
+            corpusItems={CORPUS_CATALOG}
+            getRow={getRow}
+            download={download}
+            remove={remove}
+            onOpenLibrary={(props as OptionalProps).libraryEntryInside === false ? undefined : (props as OptionalProps).onOpenLibrary}
+          />
         </ScrollView>
         {toast && <Toast message={toast} onHide={() => setToast(null)} />}
       </View>
@@ -697,6 +762,7 @@ export function ModelSetupScreen(props: Props) {
                   onDownload={download}
                   onUse={useModel}
                   onRemove={remove}
+                  onDiscardPartial={discardPartial}
                   activating={activatingId === item.id}
                   busy={activatingId !== null}
                 />
@@ -712,6 +778,7 @@ export function ModelSetupScreen(props: Props) {
               getRow={getRow}
               download={download}
               remove={remove}
+              onOpenLibrary={(props as OptionalProps).onOpenLibrary}
             />
           </AccordionSection>
         )}

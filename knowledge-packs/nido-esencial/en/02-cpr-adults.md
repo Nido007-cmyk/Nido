@@ -2,9 +2,9 @@
 title: CPR for adults and older children
 category: First aid
 lang: en
-sources: AHA Guidelines for CPR and Emergency Cardiovascular Care 2025; American Red Cross; IFRC First Aid Guidelines 2020
+sources: AHA Guidelines for CPR and Emergency Cardiovascular Care 2025; American Red Cross; IFRC International First Aid Guidelines 2025
 id: esencial-rcp-adultos
-verified: 2026-11-02
+verified: 2026-11-07
 questions: how to do cpr on an adult | someone collapsed and is not breathing, what do i do | how fast should the chest compressions be | how many compressions and breaths in cpr | a person is unresponsive and not breathing, what to do
 ---
 If someone collapses, does not respond and is not breathing normally (or is only gasping), their heart has probably stopped. Every minute without CPR sharply lowers the chance of survival. Starting quickly matters most: do not be afraid of doing it "wrong"; doing nothing is worse.

@@ -26,9 +26,16 @@ interface Props {
   initialSection?: LibrarySection;
   onOpenGuide: () => void;
   onOpenPromptIdeas: () => void;
+  /**
+   * 0.1.87 (pieza 5): abre el lector de guías — la capa de App, la
+   * única copia del lector. ChatScreen la pasa desde App; sin ella
+   * no hay botón, porque esta pantalla no puede abrir una capa que
+   * no es suya.
+   */
+  onOpenLibrary?: () => void;
 }
 
-export function LibraryScreen({ initialSection = "packs", onOpenGuide, onOpenPromptIdeas }: Props) {
+export function LibraryScreen({ initialSection = "packs", onOpenGuide, onOpenPromptIdeas, onOpenLibrary }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
   const { t } = useTranslation();
@@ -42,9 +49,11 @@ export function LibraryScreen({ initialSection = "packs", onOpenGuide, onOpenPro
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title} accessibilityRole="header">
-        {t("library.title")}
-      </Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title} accessibilityRole="header">
+          {t("library.title")}
+        </Text>
+      </View>
       <View style={styles.segment} accessibilityRole="tablist">
         {tabs.map((tab) => {
           const on = tab.key === section;
@@ -66,8 +75,16 @@ export function LibraryScreen({ initialSection = "packs", onOpenGuide, onOpenPro
 
       {section === "packs" ? (
         // Same download / remove / multilingual-search logic as Settings, embedded.
+        // 0.1.88: la sección embebida ya NO recibe onOpenLibrary: la
+        // pestaña tiene UNA sola apertura del lector, la banda final
+        // de abajo (ver el cierre de este render). Hasta la 0.1.87 la
+        // prop viajaba y la misma pantalla enseñaba el botón tres
+        // veces (junto al título, como título suelto en el cuerpo y
+        // en el encabezado de packs importados): la foto del dueño
+        // las contó y mandó «debe estar más abajo para que no
+        // interfiera».
         <View style={styles.flex}>
-          <ModelSetupScreen mode="optional" section="knowledge" onClose={() => {}} />
+          <ModelSetupScreen mode="optional" section="knowledge" libraryEntryInside={false} onClose={() => {}} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
@@ -90,6 +107,21 @@ export function LibraryScreen({ initialSection = "packs", onOpenGuide, onOpenPro
           )}
         </ScrollView>
       )}
+      {/* 0.1.88: LA apertura del lector de esta pestaña: una sola,
+          abajo del todo, como banda a todo ancho con el patrón
+          libraryEntry de App (la entrada bajo el asistente de
+          primera vez). Solo en la sección de packs, que es donde
+          viven las guías. */}
+      {section === "packs" && onOpenLibrary && (
+        <Pressable
+          onPress={onOpenLibrary}
+          accessibilityRole="button"
+          accessibilityLabel={t("guideLibrary.open")}
+          style={[styles.libraryEntry, { borderTopColor: colors.border.default }]}
+        >
+          <Text style={[styles.libraryEntryText, { color: colors.emerald[400] }]}>{t("guideLibrary.open")}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -98,7 +130,21 @@ const getStyles = (colors: Colors, typography: Typography) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg.black },
     flex: { flex: 1, marginTop: 8 },
+    titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingRight: 16 },
     title: { ...typography.ui.headline, color: colors.text.heading, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 },
+    libraryBtn: {
+      minHeight: 44,
+      borderRadius: 9999,
+      borderWidth: 1,
+      borderColor: colors.emerald[500],
+      paddingHorizontal: 14,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    libraryBtnText: { ...typography.ui.titleSm, color: colors.emerald[400] },
+    // 0.1.88: la banda final de la pestaña (patrón libraryEntry de App).
+    libraryEntry: { alignItems: "center", paddingVertical: 14, borderTopWidth: 1 },
+    libraryEntryText: { fontSize: 15, fontWeight: "700" },
     segment: {
       flexDirection: "row",
       marginHorizontal: 16,

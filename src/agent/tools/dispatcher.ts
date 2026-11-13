@@ -176,7 +176,7 @@ export async function dispatchToolCallDetailed(
   });
 
   if (!decision.allowed) {
-    actionLog.record(validated.tool.name, "blocked");
+    actionLog.record(validated.tool.name, "blocked", false, undefined, decision.injectionOrigin);
     return { status: "blocked", text: `Bloqueado por política de seguridad: ${decision.reason}` };
   }
 
@@ -187,7 +187,7 @@ export async function dispatchToolCallDetailed(
           .catch(() => false)
       : false;
     if (!confirmed) {
-      actionLog.record(validated.tool.name, "cancelled");
+      actionLog.record(validated.tool.name, "cancelled", false, undefined, decision.injectionOrigin);
       return {
         status: "cancelled",
         text: `Acción "${validated.tool.name}" cancelada: requiere confirmación del usuario.`,
@@ -205,10 +205,10 @@ export async function dispatchToolCallDetailed(
   }
   try {
     const result = await handler(validated.args);
-    actionLog.record(validated.tool.name, "executed", decision.requiresConfirmation);
+    actionLog.record(validated.tool.name, "executed", decision.requiresConfirmation, undefined, decision.injectionOrigin);
     return { status: "executed", text: typeof result === "string" ? result : JSON.stringify(result) };
   } catch (e: any) {
-    actionLog.record(validated.tool.name, "failed");
+    actionLog.record(validated.tool.name, "failed", false, undefined, decision.injectionOrigin);
     return { status: "failed", text: `Error ejecutando "${validated.tool.name}": ${e?.message ?? String(e)}` };
   }
 }

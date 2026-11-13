@@ -27,7 +27,7 @@
  */
 
 export type SafetyLang = "es" | "en" | "pt";
-export type SafetyKind = "co-hazard" | "co-symptoms" | "emergency-number";
+export type SafetyKind = "co-hazard" | "co-symptoms" | "emergency-number" | "self-harm";
 
 export interface SafetyHit {
   kind: SafetyKind;
@@ -283,7 +283,127 @@ export function unknownCountryText(lang: SafetyLang, asked: boolean, knownNames:
  * ¿Es una pregunta de seguridad con respuesta fija? null = no; sigue su camino.
  * `lang` = idioma de la app (las respuestas salen en ese idioma).
  */
+/* ------------------------------------------------------------------ */
+/* Daño a uno mismo                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 0.1.93 (decisión del dueño, 2026-11-10): quien escribe que quiere
+ * morir o hacerse daño recibe SIEMPRE este texto fijo, antes que
+ * cualquier otra cosa y haya o no fuentes. Hasta ahora ese mensaje podía
+ * llegar al modelo («i want to kill myself» pasaba la puerta de salud en
+ * la 0.1.92), y un modelo pequeño respondiendo de memoria a eso es lo
+ * último que debe pasar.
+ *
+ * Solo primera persona («quiero morir», «kill myself»): lo que se cuenta
+ * de otra persona sigue su camino por la puerta de salud. Las frases
+ * hechas («me quiero morir de la risa», «dying to see it») no cuentan.
+ *
+ * Las líneas de ayuda del texto, comprobadas el 2026-11-10:
+ *  - EE. UU.: 988, llamada o mensaje (FCC, «988 Suicide and Crisis
+ *    Lifeline»).
+ *  - México: Línea de la Vida, 800 911 2000 (Gobierno de México).
+ *  - España: 024, gratuita y las 24 horas (Ministerio de Sanidad,
+ *    «024. Línea de atención a la conducta suicida»).
+ *  - Brasil: CVV, 188, gratuita en todo el país (CONASS).
+ */
+const SELF_HARM_RE = new RegExp(
+  "\\b(?:" +
+    [
+      // español
+      "(?:ya )?no quiero (?:seguir )?vivi(?:r|endo)",
+      "(?:me )?quiero morir(?:me)?",
+      "quiero matarme",
+      "me quiero matar",
+      "(?:me )?voy a matar(?:me)?",
+      "quitarme la vida",
+      "suicidarme",
+      "(?:pienso|pensando|he pensado) en (?:el )?suicid\\w*",
+      "(?:acabar|terminar) con mi vida",
+      "hacerme dano",
+      "(?:pienso|pensando|he pensado) en lastimarme",
+      "lastimarme a mi mism[oa]",
+      "no vale la pena (?:seguir )?vivi(?:r|endo)",
+      "(?:estaria|estarian) mejor (?:muert[oa]|sin mi)",
+      "(?:ya )?no (?:le )?encuentro sentido a (?:la vida|nada)",
+      // inglés
+      "kill(?:ing)? myself",
+      "(?:want|wanna) to die",
+      "wanna die",
+      "end(?:ing)? my (?:own )?life",
+      "take my own life",
+      "(?:i am|i'm|im|feel(?:ing)?) suicidal",
+      "commit suicide",
+      "(?:thinking|thought|thoughts) (?:about|of) suicide",
+      "(?:hurt|hurting|harm|harming) myself",
+      "(?:don't|dont|do not) want to (?:live|be alive)(?: anymore)?",
+      "no (?:point|reason) (?:in|to) (?:living|live)",
+      "better off dead",
+      "(?:thinking|thought) (?:about|of) ending it",
+      // portugués
+      "quero morrer",
+      "quero me matar",
+      "vou me matar",
+      "tirar (?:a )?minha (?:propria )?vida",
+      "me suicidar",
+      "(?:penso|pensando|pensei|pensado) em (?:suicid\\w*|me matar|me machucar)",
+      "nao quero (?:mais )?viver",
+      "nao aguento mais viver",
+      "acabar com (?:a )?minha vida",
+    ].join("|") +
+    ")\\b",
+);
+
+// Frases hechas y ficción: no son una persona contando que quiere morir.
+const SELF_HARM_VETO_RE =
+  /\b(?:morir(?:me)? de (?:la )?(?:risa|verguenza|pena|hambre|sueno|calor|frio|amor|ganas|envidia|aburrimiento|cansancio|nervios)|die of (?:embarrassment|laughter|boredom|shame|hunger|thirst)|morrer de (?:rir|vergonha|fome|sono|calor|frio|amor|vontade|tedio|saudade)|(?:cuento|novela|historia|guion|cancion|poema|personaje|pelicula|serie|story|novel|script|song|lyrics|poem|character|movie|conto|romance|roteiro|musica|personagem|filme)\b)/;
+
+const SELF_HARM_TEXT: Record<SafetyLang, string> = {
+  es:
+    "Siento que estés pasando por esto. No tienes que cargarlo a solas, y con ayuda lo que sientes puede cambiar.\n\n" +
+    "Si estás en peligro ahora mismo o crees que puedes hacerte daño, llama ya al número de emergencias de tu país y pide a alguien que se quede contigo.\n\n" +
+    "Hablar con una persona ayuda. Hay líneas de apoyo para esto:\n" +
+    "- Estados Unidos: 988, por llamada o mensaje de texto.\n" +
+    "- México: Línea de la Vida, 800 911 2000.\n" +
+    "- España: 024.\n" +
+    "- Brasil: CVV, 188.\n\n" +
+    "Si tu país no está en la lista, busca hoy a alguien de confianza, un familiar, un amigo o un médico, y dile lo mismo que me escribiste a mí.\n\n" +
+    "Soy un asistente sin conexión: no puedo llamar por ti ni sustituir a una persona. Este texto es fijo; no lo escribió un modelo.",
+  en:
+    "I'm sorry you're going through this. You don't have to carry it alone, and with help what you feel can change.\n\n" +
+    "If you are in danger right now or think you might hurt yourself, call your country's emergency number now and ask someone to stay with you.\n\n" +
+    "Talking to a person helps. There are support lines for this:\n" +
+    "- United States: 988, by call or text.\n" +
+    "- Mexico: Línea de la Vida, 800 911 2000.\n" +
+    "- Spain: 024.\n" +
+    "- Brazil: CVV, 188.\n\n" +
+    "If your country isn't listed, reach out today to someone you trust, a relative, a friend or a doctor, and tell them what you wrote to me.\n\n" +
+    "I'm an offline assistant: I can't call for you or take the place of a person. This is a fixed text; a model did not write it.",
+  pt:
+    "Sinto muito que você esteja passando por isso. Você não precisa carregar isso sem ninguém, e com ajuda o que você sente pode mudar.\n\n" +
+    "Se você está em perigo agora ou acha que pode se machucar, ligue já para o número de emergência do seu país e peça para alguém ficar com você.\n\n" +
+    "Conversar com uma pessoa ajuda. Existem linhas de apoio para isso:\n" +
+    "- Brasil: CVV, 188.\n" +
+    "- Estados Unidos: 988, por ligação ou mensagem de texto.\n" +
+    "- México: Línea de la Vida, 800 911 2000.\n" +
+    "- Espanha: 024.\n\n" +
+    "Se o seu país não está na lista, procure hoje alguém de confiança, um familiar, um amigo ou um médico, e diga o mesmo que você me escreveu.\n\n" +
+    "Sou um assistente offline: não posso ligar por você nem substituir uma pessoa. Este texto é fixo; não foi escrito por um modelo.",
+};
+
+/** ¿La persona cuenta, en primera persona, que quiere morir o hacerse daño? */
+export function isSelfHarmMessage(userText: string): boolean {
+  const folded = fold(userText).replace(/\s+/g, " ").trim();
+  if (folded.length === 0 || folded.length > 4000) return false;
+  return SELF_HARM_RE.test(folded) && !SELF_HARM_VETO_RE.test(folded);
+}
+
 export function matchSafetyAnswer(userText: string, lang: SafetyLang): SafetyHit | null {
+  // Lo primero, y sin el tope de 400 caracteres de las demás reglas:
+  // quien se desahoga escribe largo.
+  if (isSelfHarmMessage(userText)) {
+    return { kind: "self-harm", lang, text: SELF_HARM_TEXT[lang], deterministic: true };
+  }
   const folded = fold(userText).replace(/\s+/g, " ").trim();
   if (folded.length === 0 || folded.length > 400) return null;
 

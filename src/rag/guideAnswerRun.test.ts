@@ -14,11 +14,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { RetrievedChunk } from "./retrieve.types";
 import type { PackSourceDoc } from "./packSource";
+import { BGE_SMALL_EN_PROFILE } from "./embeddingProfile";
 
 const retrieveMock = vi.fn();
 const readPackSourceMock = vi.fn();
-vi.mock("./retrieve", () => ({ retrieve: (...a: unknown[]) => retrieveMock(...a) }));
+const verifiedImportedPacksMock = vi.fn();
+// 0.1.87: el mock trae también el perfil activo de la recuperación
+// (la vara del perfil que la elección lee); sin él el módulo bajo
+// prueba revienta al importarlo, como pasó en la primera corrida.
+// El perfil es el de bge, el de por defecto del motor real.
+vi.mock("./retrieve", () => ({
+  retrieve: (...a: unknown[]) => retrieveMock(...a),
+  activeRetrievalProfile: () => BGE_SMALL_EN_PROFILE,
+}));
 vi.mock("./packs", () => ({ readPackSource: (...a: unknown[]) => readPackSourceMock(...a) }));
+vi.mock("../services/packImporter", () => ({
+  verifiedImportedPacks: (...a: unknown[]) => verifiedImportedPacksMock(...a),
+}));
 
 import { answerFromGuide } from "./guideAnswerRun";
 
@@ -41,6 +53,7 @@ const OTHER = chunk("pack:wiki-vital5:9", "Otra cosa", "Texto ajeno.", 0.8);
 describe("answerFromGuide (F6-09)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    verifiedImportedPacksMock.mockResolvedValue(new Map());
   });
 
   it("sin trozo de guía claro: answer null y los recuperados se devuelven para reutilizar", async () => {
@@ -79,6 +92,7 @@ describe("answerFromGuide (F6-09)", () => {
 describe("answerFromGuide: la consulta contextualizada (R-03)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    verifiedImportedPacksMock.mockResolvedValue(new Map());
   });
 
   it("recupera con la consulta contextualizada que pasa el llamador, no con la cruda", async () => {
@@ -93,5 +107,72 @@ describe("answerFromGuide: la consulta contextualizada (R-03)", () => {
     retrieveMock.mockResolvedValue([OTHER]);
     await answerFromGuide("qué es el corazón", "es");
     expect(retrieveMock).toHaveBeenCalledWith("qué es el corazón", 4);
+  });
+});
+
+// 0.1.86: la vía literal también sirve las guías de un pack importado por
+// la puerta firmada (el cierre físico de la 0.1.85: la pregunta del gas
+// cayó a generación porque el pack de SALVORA no era literal-elegible y el
+// proceso murió generando en el peldaño de emergencia).
+describe("answerFromGuide: packs importados verificados por la puerta (0.1.86)", () => {
+  const GAS = chunk(
+    "pack:local-salvora-emergencias-casa:12",
+    "Fuga de gas en casa — Qué hacer",
+    "Sal de la casa sin tocar interruptores.",
+    0.93,
+  );
+  const GAS_DOC: PackSourceDoc = {
+    title: "Fuga de gas en casa",
+    source: "https://example.org/gas",
+    parts: [
+      { id: 12, body: "Qué hacer\n1. Sal de la casa sin tocar interruptores.\n2. Llama al número de emergencias desde fuera.", used: true },
+      { id: 13, body: "Qué no hacer\nNo enciendas llamas ni aparatos eléctricos.", used: false },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("guía ganadora del pack importado verificado: respuesta literal, con su nombre propio en la cabecera", async () => {
+    verifiedImportedPacksMock.mockResolvedValue(
+      new Map([["local-salvora-emergencias-casa", { name: "SALVORA Home Emergencies", origin: "salvora" }]]),
+    );
+    retrieveMock.mockResolvedValue([GAS]);
+    readPackSourceMock.mockResolvedValue(GAS_DOC);
+    const out = await answerFromGuide("¿qué hago si huele a gas en mi casa?", "es");
+    expect(out.answer).not.toBeNull();
+    expect(out.answer?.text).toContain("Sal de la casa sin tocar interruptores.");
+    expect(out.answer?.text.split("\n")[0]).toBe(
+      "Guía «Fuga de gas en casa» de SALVORA Home Emergencies, tal como está escrita (sin modelo):",
+    );
+    expect(readPackSourceMock).toHaveBeenCalledWith(GAS.chunkId);
+  });
+
+  it("el mismo trozo SIN origen verificado no se sirve literal: sigue a la ruta normal", async () => {
+    verifiedImportedPacksMock.mockResolvedValue(new Map());
+    retrieveMock.mockResolvedValue([GAS]);
+    const out = await answerFromGuide("¿qué hago si huele a gas en mi casa?", "es");
+    expect(out.answer).toBeNull();
+    expect(out.retrieved).toEqual([GAS]);
+    expect(readPackSourceMock).not.toHaveBeenCalled();
+  });
+
+  it("un registro que verifica OTRO pack no abre la vía a este", async () => {
+    verifiedImportedPacksMock.mockResolvedValue(
+      new Map([["local-otro-pack", { name: "Otro", origin: "salvora" }]]),
+    );
+    retrieveMock.mockResolvedValue([GAS]);
+    const out = await answerFromGuide("¿qué hago si huele a gas en mi casa?", "es");
+    expect(out.answer).toBeNull();
+    expect(readPackSourceMock).not.toHaveBeenCalled();
+  });
+
+  it("si el registro no se puede leer, la vía importada queda cerrada y no lanza", async () => {
+    verifiedImportedPacksMock.mockRejectedValue(new Error("registro ilegible"));
+    retrieveMock.mockResolvedValue([GAS]);
+    const out = await answerFromGuide("¿qué hago si huele a gas en mi casa?", "es");
+    expect(out.answer).toBeNull();
+    expect(out.retrieved).toEqual([GAS]);
   });
 });

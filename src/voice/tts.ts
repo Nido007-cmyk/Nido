@@ -13,6 +13,7 @@
 
 import * as Speech from "expo-speech";
 import i18n from "../i18n";
+import { stripThinking } from "../services/thinking";
 
 /**
  * Auditoría completa 2026-10-31 (F1 M-3): la lectura forzaba siempre
@@ -56,7 +57,11 @@ async function pickVoice(locale: string): Promise<string | undefined> {
 
 /** Limpia markdown y bloques de código antes de leer. */
 export function cleanForSpeech(text: string): string {
-  return text
+  // Auditoría 0.1.93: el razonamiento de un modelo que razona
+  // (<think>…</think>) se leía en voz alta entero antes de la respuesta.
+  // En pantalla va plegado; en voz no se lee. Un razonamiento sin cerrar
+  // (se quedó sin respuesta) no se lee tampoco.
+  return stripThinking(text)
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/[#*_>~]/g, "")

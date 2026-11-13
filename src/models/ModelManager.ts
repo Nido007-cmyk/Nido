@@ -343,8 +343,25 @@ export class ModelManager {
     await assertTrustedModelFile(asset);
   }
 
+  /**
+   * 0.1.92 (auditoría del paquete 0.1.91, anexo B «observado y no
+   * curado»): era un Promise.all sobre statusOf, así que UNA
+   * comprobación que lanzara (un archivo que no se deja leer, el
+   * diario ilegible) dejaba a la pantalla sin el estado de TODOS los
+   * modelos: ninguna tarjeta se actualizaba. Ahora cada modelo responde
+   * por sí mismo: el que no se pudo comprobar cuenta como «no presente,
+   * sin veredicto» (checksumOk null: nunca presente por error, nunca
+   * borrado) y los demás conservan el suyo.
+   */
   async statusAll(): Promise<AssetStatus[]> {
-    return Promise.all(this.catalog.map((a) => this.statusOf(a)));
+    return Promise.all(
+      this.catalog.map((a) =>
+        this.statusOf(a).catch((e): AssetStatus => {
+          dlog(a.id, `statusAll(): status check threw — reported as not present, no verdict (${e})`);
+          return { asset: a, present: false, sizeOnDiskBytes: 0, checksumOk: null };
+        })
+      )
+    );
   }
 
   /**
@@ -399,7 +416,7 @@ export class ModelManager {
    * install fails closed — it is never marked installed, never preserved.
    * There is no weaker second integrity path for bundled assets.
    */
-  async installBundled(asset: CatalogModel): Promise<void> {
+  async installBundled(asset: CatalogModel, assetSubdir = "models"): Promise<void> {
     const status = await this.statusOf(asset);
     if (status.present && status.sizeOnDiskBytes === asset.sizeBytes) return;
 
@@ -408,7 +425,9 @@ export class ModelManager {
         `Bundled asset ${asset.id} declares no expected SHA-256 — refusing to install without integrity metadata`
       );
     }
-    const assetSubPath = `models/${asset.filename.split("/").pop()}`;
+    // 0.1.95: los packs de primer arranque viajan en assets/packs/ del APK
+    // (plugins/withBundledPacks.js); los modelos, en assets/models/.
+    const assetSubPath = `${assetSubdir}/${asset.filename.split("/").pop()}`;
     const destPath = assetPath(asset);
     const writtenBytes = await copyBundledAssetToFile(assetSubPath, destPath);
 

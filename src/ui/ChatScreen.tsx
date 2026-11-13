@@ -7,6 +7,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { answerFromPackFacts, packCountryNames } from "../rag/packs";
 import { answerFromGuide } from "../rag/guideAnswerRun";
+import { verifiedImportedPacks } from "../services/packImporter";
 import {
   View,
   Text,
@@ -34,18 +35,25 @@ import { NidoMascot } from "./components/calm/NidoMascot";
 import * as Clipboard from "expo-clipboard";
 import { useTranslation } from "react-i18next";
 import { llamaEngine } from "../inference/LlamaEngine";
+import { refreshDevicePressure } from "../inference/devicePressure";
 import { embeddingEngine } from "../rag/embed";
+import { embeddingIdleUnloadDue } from "../rag/embedPolicy";
+import { isNativeGateTaken } from "../inference/nativeGate";
+import { handleMemoryPressure } from "../inference/memoryPressure";
 import { retrieve, assemblePrompt, RetrievedChunk, ConversationTurn } from "../rag/retrieve";
 import { assembleChatMessages, contextualizeQuery, degradableGenTokens, ANSWER_CONTEXT_CHUNKS } from "../rag/pure";
 import { classifyTask, isRetrievalIrrelevant, isCreativeRequest } from "../routing/classify";
+import { shouldReasonThisTurn } from "../routing/calculationQuestion";
+import { semanticDanger } from "../services/semanticDanger";
 import {
   gatePreemptsDeepResearch,
-  hasHealthEvidence,
   healthSafeProvenance,
   healthSafeText,
   isEmergencySituation,
   isEmergencyText,
   isHealthQuestion,
+  noSourcesOutcome,
+  shouldSubstituteSafeText,
 } from "../routing/emergencyGate";
 import type { TaskType } from "../routing/types";
 import { onSeedProgress, seedKnowledgeBaseIfEmpty } from "../rag/seedCorpus";
@@ -85,11 +93,10 @@ import { runAgentLoop, assertPromptBudget, estimatePromptTokens, agentExitNeedsG
 import { buildToolHandlers, searchPhoneContacts } from "../agent/tools/handlers";
 import { matchSmallTalk, smallTalkSessionTitle } from "../agent/loop/smallTalk";
 import { matchSafetyAnswer, unknownCountryText } from "../agent/loop/safetyAnswers";
-import { agentFallbackText, toFallbackLang } from "../agent/loop/fallbackText";
+import { agentFallbackText, generationCutNote, toFallbackLang } from "../agent/loop/fallbackText";
 import { describePolicyConfirmation } from "../agent/policy/confirmText";
 import {
   verifyGroundedAnswer,
-  isFactualQuestion,
   noSourcesAnswer,
   type GroundingStatus,
 } from "../rag/grounding";
@@ -153,7 +160,7 @@ import { recordRouterSample, type StageDropReason } from "../services/routerStat
 import { looksLikeMissedCommand, recordMissedPhrase } from "../services/missedPhrases";
 import { trimRepetitionLoop } from "../inference/repetitionGuard";
 import { trimToCompleteSentences } from "../inference/completeSentences";
-import { getCrashReport, getMemoryInfo } from "ram-monitor";
+import { getCrashReport, getMemoryInfo, addMemoryPressureListener } from "ram-monitor";
 import { interruptionCause } from "../diagnostics/crashReport";
 
 /** El informe de cierres de Android, leído una vez por proceso (barato y no cambia mientras corre). */
@@ -267,10 +274,30 @@ async function resolveActiveModel(kind: "llm" | "embedding"): Promise<CatalogMod
   return found ?? fallback;
 }
 
+/**
+ * Fase 2 (reapertura del defecto, 2026-11-08): el error de carga lleva
+ * el motor que falló. La tarjeta anterior enseñaba el primer rechazo
+ * de la pareja cargada en Promise.all sin decir de cuál venía — y si
+ * el que fallaba era el motor de búsqueda, la tarjeta culpaba igual a
+ * «este modelo». El prefijo queda fuera de las palabras del patrón de
+ * memoria del diagnóstico (modelLoadDiagnosis), para que la clase —
+ * memoria, corrupción, ausencia — siga saliendo del mensaje original.
+ */
+export function embeddingLoadFailureNote(label: string, message: string): string {
+  return `Search model (${label}) failed to load — ${message}`;
+}
+
+export function llmLoadFailureNote(label: string, message: string): string {
+  return `Chat model (${label}) failed to load — ${message}`;
+}
+
 export function ChatScreen({
   onRelaunchWizard,
+  onOpenLibrary,
 }: {
   onRelaunchWizard?: () => void;
+  /** 0.1.86: abre el lector de guías (la capa vive en App). */
+  onOpenLibrary?: () => void;
 }) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => getStyles(colors, typography), [colors, typography]);
@@ -287,7 +314,7 @@ export function ChatScreen({
   const [guideReaderChunkId, setGuideReaderChunkId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [ready, setReady] = useState(false);
-  const [loadStatus, setLoadStatus] = useState(t("chatScreen.initializingCore"));
+  const [loadStatus, setLoadStatus] = useState<string | null>(t("chatScreen.initializingCore"));
   const [loadError, setLoadError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [showPromptIdeas, setShowPromptIdeas] = useState(false);
@@ -687,14 +714,39 @@ export function ChatScreen({
       setLoadError(null);
       setReady(false);
       setLoadStatus(t("chatScreen.mountingWeights"));
+      // Optimización 2026-11-08 (fase 3): refrescar la foto de
+      // presión del aparato antes de cargar — batería y temperatura
+      // de ahora, no las de un arranque anterior.
+      refreshDevicePressure();
       const llm = await resolveActiveModel("llm");
       const emb = await resolveActiveModel("embedding");
       setActiveModel(llm);
 
-      await Promise.all([
-        llamaEngine.load(llm.filename),
-        embeddingEngine.load(emb.filename),
-      ]);
+      // Fase 2 (reapertura del defecto, 2026-11-08): los motores ya no
+      // cargan en Promise.all. Antes los dos initLlama corrían a la
+      // vez y cada pre-flight leía la misma foto de RAM sin ver al
+      // otro: la suma de ambos podía no caber aunque cada «sí» por
+      // separado fuera cierto, y el pico transitorio de la doble
+      // carga era la tormenta que la puerta nativa (M1) describe. La
+      // puerta de carga ya serializa los motores entre sí; esta
+      // secuencia además hace que el error nombre al motor que falló
+      // (la tarjeta enseñaba el primer rechazo de la pareja y no
+      // decía de cuál venía).
+      //
+      // Optimización 2026-11-08 (fases 1 y 4): el arranque carga SOLO
+      // el embedding — las guías y la búsqueda funcionan sin modelo,
+      // que es la mitad del uso real — y el LLM pasa a ser residente
+      // bajo demanda: lo carga el primer envío (ensureChatModel) y lo
+      // descargan la inactividad (3 min) y la presión de memoria. Si
+      // el embedding no cabe, la pantalla sigue sin estar lista y la
+      // tarjeta nombra a ese motor, como hasta ahora.
+      embeddingEngine.setEnsureLoadedProvider(async () => (await resolveActiveModel("embedding")).filename);
+      try {
+        await embeddingEngine.load(emb.filename);
+      } catch (e: any) {
+        throw new Error(embeddingLoadFailureNote(emb.label, e?.message ?? String(e)));
+      }
+      lastChatActivityRef.current = Date.now();
       startAppMemoryTracking();
 
       setLoadStatus(t("chatScreen.indexingKnowledgeBase"));
@@ -702,22 +754,139 @@ export function ChatScreen({
         setLoadStatus(`${t("chatScreen.indexingKnowledgeBase")} ${formatInt(p.done, displayLang(i18n.language))} / ${formatInt(p.total, displayLang(i18n.language))}`)
       );
       await seedKnowledgeBaseIfEmpty().finally(stopProgress);
+      // 0.1.84: la marca de último uso del embedding vive en el motor
+      // (lastUsedAtMs, renovada en cada búsqueda); el ref local murió
+      // con la desviación de la fase 4 que dejaba ciclar la descarga.
+      setLoadStatus(null);
       setReady(true);
       // Multilingual search (0.2.0): finish a model switch that was
       // interrupted, and build pack vector indexes. Background, never blocks
       // the chat; both are no-ops when there's nothing to do.
-      void import("../rag/reembed").then(({ reembedMissing }) => reembedMissing()).catch(() => {});
+      void import("../rag/reembed")
+        .then(({ reembedMissing }) => reembedMissing())
+        .catch(() => {})
+        .finally(() => {
+          lastBackgroundDoneRef.current = Date.now();
+        });
       void import("../rag/packs")
-        .then(({ prepareVectorIndexes }) => prepareVectorIndexes(embeddingEngine.loadedModelSha256, embeddingEngine.profile))
+        .then(({ prepareVectorIndexes }) => prepareVectorIndexes(embeddingEngine.loadedModelSha256, embeddingEngine.profile, embeddingEngine.isLoaded))
         .catch(() => {});
     } catch (e: any) {
       setLoadError(e?.message ?? String(e));
     }
   }, [t]);
 
+  // --- Optimización 2026-11-08 (fases 1 y 4): residencia bajo demanda ---
+  // El LLM ya no carga en el arranque: lo pide el primer envío y lo
+  // sueltan la inactividad y la presión de memoria. Estos refs viven
+  // fuera de initModels para que el temporizador y el evento de
+  // presión lean siempre la misma foto.
+  const lastChatActivityRef = useRef(0);
+  const backgroundedAtRef = useRef<number | null>(null);
+  const lastBackgroundDoneRef = useRef<number | null>(null);
+  const modelLoadingRef = useRef<Promise<boolean> | null>(null);
+
+  // 2026-11-11 (carga cuando se necesita): el error real de la última carga fallida, para que el
+  // turno que necesitaba el modelo lo enseñe en su burbuja con el mismo
+  // texto de siempre (userFacingError lee el motivo de RAM del propio
+  // error). La tarjeta sigue saliendo por setLoadError.
+  const lastModelLoadErrorRef = useRef<unknown>(null);
+
+  /**
+   * Garantiza el LLM residente, cargándolo con su pre-flight si hace
+   * falta. Vuelo único. true = residente; false = no cupo o falló
+   * (el error queda en la tarjeta vía setLoadError, con la nota que
+   * nombra al motor — el prefijo evita las palabras del patrón de
+   * memoria, así que la tarjeta sigue siendo la de memoria cuando el
+   * motivo es la RAM).
+   */
+  const ensureChatModel = useCallback(async (): Promise<boolean> => {
+    if (llamaEngine.isLoaded) return true;
+    if (!modelLoadingRef.current) {
+      modelLoadingRef.current = (async () => {
+        try {
+          setLoadError(null);
+          lastModelLoadErrorRef.current = null;
+          // chatScreen.loadingModel existe en los tres locales (la
+          // clave homónima de catalogItemCard es otra: aquella vive
+          // en la tarjeta del catálogo, esta en la franja del chat).
+          setLoadStatus(t("chatScreen.loadingModel"));
+          refreshDevicePressure();
+          const llm = await resolveActiveModel("llm");
+          setActiveModel(llm);
+          await llamaEngine.load(llm.filename);
+          return true;
+        } catch (e: any) {
+          lastModelLoadErrorRef.current = e;
+          try {
+            const llm = await resolveActiveModel("llm");
+            setLoadError(llmLoadFailureNote(llm.label, e?.message ?? String(e)));
+          } catch {
+            setLoadError(e?.message ?? String(e));
+          }
+          return false;
+        } finally {
+          setLoadStatus(null);
+          modelLoadingRef.current = null;
+        }
+      })();
+    }
+    return modelLoadingRef.current;
+  }, [t]);
+
   useEffect(() => {
     initModels();
   }, [initModels]);
+
+  // Descargas por inactividad y presión (fases 1, 4 y 5): un pulso
+  // de 30 s decide con la política pura; el paso a segundo plano se
+  // anota y al volver, si duró más que el umbral y no hay generación,
+  // se descarga el LLM; la presión de memoria del sistema descarga
+  // los dos motores salvo que se esté generando.
+  useEffect(() => {
+    const LLM_IDLE_MS = 180_000;
+    const EMBED_IDLE_MS = 600_000;
+    const tick = () => {
+      if (generatingRef.current) return;
+      const now = Date.now();
+      if (
+        llamaEngine.isLoaded &&
+        lastChatActivityRef.current > 0 &&
+        now - lastChatActivityRef.current > LLM_IDLE_MS
+      ) {
+        void llamaEngine.unload().catch(() => {});
+      }
+      if (
+        embeddingEngine.isLoaded &&
+        !isNativeGateTaken() &&
+        embeddingIdleUnloadDue(now, embeddingEngine.lastUsedAtMs, lastBackgroundDoneRef.current, EMBED_IDLE_MS)
+      ) {
+        void embeddingEngine.unload().catch(() => {});
+      }
+    };
+    const id = setInterval(tick, 30_000);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "background" || state === "inactive") {
+        if (backgroundedAtRef.current === null) backgroundedAtRef.current = Date.now();
+      } else if (state === "active") {
+        refreshDevicePressure();
+        const since = backgroundedAtRef.current;
+        backgroundedAtRef.current = null;
+        if (since !== null && Date.now() - since > LLM_IDLE_MS && !generatingRef.current && llamaEngine.isLoaded) {
+          void llamaEngine.unload().catch(() => {});
+        }
+      }
+    });
+    const pressureSub = addMemoryPressureListener(() => {
+      void handleMemoryPressure({ generating: generatingRef.current }, { llm: llamaEngine, embedding: embeddingEngine });
+    });
+    return () => {
+      clearInterval(id);
+      sub.remove();
+      pressureSub.remove();
+    };
+  }, []);
+
 
   const generatingRef = useRef(false);
   useEffect(() => {
@@ -982,6 +1151,28 @@ export function ChatScreen({
     // passes through it, so the button can never be left permanently blocked.
     if (!sendGuardRef.current.tryAcquire()) return;
     try {
+    // Optimización 2026-11-08 (fase 1): el modelo es residente bajo
+    // demanda. 2026-11-11 (carga cuando se necesita): «bajo demanda» es cuando el turno lo NECESITA,
+    // no al pulsar enviar. Hasta la 0.1.93 el envío cargaba el modelo
+    // antes de mirar el texto: una pregunta que responde la capa
+    // determinista o una guía (y que por ley no llega al modelo)
+    // esperaba igual la carga entera y ocupaba su memoria, y si el
+    // modelo no cabía el envío se detenía ahí — sin número de
+    // emergencia, sin texto fijo y sin guía. Ahora cada camino que
+    // genera llama a requireChatModel justo antes de usar el motor
+    // (bucle del agente, Investigar, ruta adaptativa y ruta fija); lo
+    // que no genera no lo toca. Si el modelo no cabe, el error real
+    // de la carga sube al catch del turno (burbuja con el motivo) y la
+    // tarjeta de memoria queda puesta por ensureChatModel, como antes.
+    lastChatActivityRef.current = Date.now();
+    let turnModelLoadMs = 0;
+    const requireChatModel = async (): Promise<void> => {
+      if (llamaEngine.isLoaded) return;
+      const loadT0 = performance.now();
+      const ok = await ensureChatModel();
+      turnModelLoadMs += performance.now() - loadT0;
+      if (!ok) throw lastModelLoadErrorRef.current ?? new Error("NIDO: model not loaded");
+    };
     // 0.1.38 (enrutado por tramo): lo pegado o compartido no llega al
     // router; si sobra texto alrededor de una orden, la orden se prepara
     // como chip y solo el toque la ejecuta. El toque llega aquí como
@@ -1344,6 +1535,14 @@ export function ChatScreen({
           // Presupuesto de prompt contra el n_ctx real del modelo cargado
           // (T-contexto-2026-10-06).
           nCtx: llamaEngine.getModelInfo()?.nCtx,
+          // 2026-11-11 (carga cuando se necesita): las vías deterministas del bucle (hora, notas,
+          // recordatorios, memoria) responden sin cargar el modelo; si
+          // el turno llega a generar, el bucle lo pide aquí y presupuesta
+          // contra el n_ctx de lo que de verdad quedó cargado.
+          prepareEngine: async () => {
+            await requireChatModel();
+            return llamaEngine.getModelInfo()?.nCtx;
+          },
         });
         assistantText = agentResult.response;
         // 0.1.39: el loop dice por dónde salió el turno (routing). Antes
@@ -1417,6 +1616,7 @@ export function ChatScreen({
             taskType: "chat",
             adaptiveRoutingUsed: false,
             retrievalUsed: false,
+            ...(turnModelLoadMs > 0 ? { modelLoadMs: Math.round(turnModelLoadMs) } : {}),
             outcome: "success",
           });
           recordExecution({
@@ -1425,6 +1625,7 @@ export function ChatScreen({
             adaptiveRoutingUsed: false,
             retrievalUsed: false,
             totalLatencyMs: agentDurationMs,
+            ...(turnModelLoadMs > 0 ? { modelLoadMs: Math.round(turnModelLoadMs) } : {}),
             tokensGenerated,
             outcome: "success",
           }).catch(() => {});
@@ -1526,7 +1727,10 @@ export function ChatScreen({
         if (firstToken) {
           firstToken = false;
           firstTokenTime = now;
-          ttftMs = firstTokenTime - startTime;
+          // 2026-11-11 (carga cuando se necesita): la carga del modelo ahora ocurre dentro del turno;
+          // se resta para que el primer token siga midiendo lo mismo
+          // que hasta la 0.1.93 (la carga va en modelLoadMs).
+          ttftMs = Math.max(0, firstTokenTime - startTime - turnModelLoadMs);
           setProcessing({ messageId: assistantId, status: "generating" });
           // Primer token sí va inmediato (TTFT).
           flushTokenBuffer();
@@ -1555,6 +1759,7 @@ export function ChatScreen({
       // Adversaria H-12: la ruta fija generó con el suelo degradado por
       // falta de espacio (la respuesta salió acortada y lleva su nota).
       let fixedGenSpaceCut = false;
+      let fixedGenWasCut = false;
       // 0.1.59: answered word for word from a NIDO Essentials guide (no model).
       let guideAnswered = false;
       // Honest no-result flag for THIS reply (2026-09-28): true only when
@@ -1588,6 +1793,7 @@ export function ChatScreen({
         // and untouched by it — orchestrator.ts's own sequential pipeline,
         // same as before this integration.
         setDeepResearchActive(true);
+        await requireChatModel();
         const result = await runDeepResearch(
           query,
           systemPrompt,
@@ -1647,7 +1853,7 @@ export function ChatScreen({
             chunks = g.answer.chunks;
           }
         }
-        const runFixedModelChat = async (): Promise<{ chunks: RetrievedChunk[]; noSourcesFound: boolean; genSpaceCut: boolean }> => {
+        const runFixedModelChat = async (): Promise<{ chunks: RetrievedChunk[]; noSourcesFound: boolean; genSpaceCut: boolean; genWasCut: boolean }> => {
           let c: RetrievedChunk[];
           fixedTaskType = classifyTask(query);
           // Honest no-result (2026-09-28): retrievalAttempted is true only
@@ -1669,28 +1875,47 @@ export function ChatScreen({
           const noSources = retrievalAttempted && c.length === 0;
           // Programa bounty, tanda 2 (puerta léxica de salud, patrón de
           // LabRat): pregunta de salud + ninguna fuente → el texto
-          // seguro fijo, sin generar. Va ANTES del "no lo sé" de hechos:
-          // para salud el texto seguro es el específico (llama si es
-          // urgencia; la guía está en el pack Esencial), no el genérico.
+          // seguro fijo, sin generar. Para salud el texto seguro es el
+          // específico (llama si es urgencia; la guía está en el pack
+          // Esencial), no el genérico.
           // Cierre de evaluaciones 2026-10-31 (F-B1): la emergencia
           // viva contada (isEmergencySituation) entra por la misma
           // puerta — sin guía que la cubra, tampoco cae al modelo.
-          if (noSources && (isHealthQuestion(query) || isEmergencySituation(query))) {
+          // 0.1.90 (familia 4): la decisión vive en noSourcesOutcome
+          // (emergencyGate.ts). Sin fuentes y SIN peligro ya no hay
+          // puerta: el turno sigue a generar con el modelo activo (la
+          // ley del dueño, 2026-11-09). La rama «pregunta de hechos →
+          // no lo sé determinista, sin generar» de RAG-GROUNDING
+          // 2026-10-11 (Fase 3) murió en esta tanda: dejaba sin generar
+          // preguntas generales inofensivas (la llanta de la foto del
+          // dueño, 15:43 MST) habiendo modelo cargado.
+          // 0.1.93: la lista de palabras solo reconoce lo que ya tiene
+          // escrito; la capa por significado (semanticDanger) suma lo
+          // que se dice de otra forma. Solo se consulta aquí, sin
+          // fuentes, y si la lista no cerró ya.
+          const lexicalDanger = isHealthQuestion(query) || isEmergencySituation(query);
+          const semanticHit = noSources && !lexicalDanger ? await semanticDanger(query) : false;
+          if (
+            noSources &&
+            noSourcesOutcome({
+              isHealth: isHealthQuestion(query) || semanticHit,
+              isEmergency: isEmergencySituation(query),
+            }) === "safe-text"
+          ) {
             const safe = healthSafeText(uiLang);
             assistantText = safe;
             setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: safe } : m)));
-            return { chunks: c, noSourcesFound: noSources, genSpaceCut: false };
-          }
-          // RAG-GROUNDING 2026-10-11 (Fase 3, "mejor no inventar"): pregunta
-          // de hechos + ninguna fuente → "no lo sé" honesto y determinista,
-          // sin generar. Pedírselo al 0.5B por prompt no basta: inventa igual.
-          if (noSources && isFactualQuestion(query)) {
-            const idk = noSourcesAnswer(uiLang);
-            assistantText = idk;
-            setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: idk } : m)));
-            return { chunks: c, noSourcesFound: noSources, genSpaceCut: false };
+            return { chunks: c, noSourcesFound: noSources, genSpaceCut: false, genWasCut: false };
           }
           setProcessing({ messageId: assistantId, status: "thinking" });
+          // 2026-11-11 (carga cuando se necesita): aquí, y no antes, el turno necesita el modelo: ya
+          // pasó la guía literal, la recuperación y la puerta de salud.
+          await requireChatModel();
+          // Detener durante «Cargando modelo…» cierra el turno sin
+          // generar (mismo estado que detener antes del primer token).
+          if (stopRequestedRef.current) {
+            return { chunks: c, noSourcesFound: noSources, genSpaceCut: false, genWasCut: false };
+          }
           // Use the model's own chat template when its file ships one; the
           // plain prompt is only a fallback. Off-template, models ramble,
           // echo instructions, and reasoning models never open <think>.
@@ -1745,14 +1970,39 @@ export function ChatScreen({
           // obligó al recorte, la respuesta servida lleva su nota.
           const availableGen = nCtx - estimatePromptTokens(promptText) - 64;
           const { genTokens, spaceCut } = degradableGenTokens(desiredGen, availableGen);
+          // 0.1.92 (familia 7): el turno de cuentas razona, en el modelo
+          // donde se midió que compensa (calculationQuestion.ts). El
+          // resto de turnos y de modelos, byte a byte como antes.
+          const reasonThisTurn = shouldReasonThisTurn({
+            modelId: loadedEntry?.id,
+            usesChatTemplate: useChatTemplate,
+            sourceCount: c.length,
+            genTokens,
+            query,
+          });
           const genInput = useChatTemplate
-            ? { messages: directMessages!, nPredict: genTokens, onToken, ...sampling }
+            ? { messages: directMessages!, nPredict: genTokens, onToken, ...sampling, ...(reasonThisTurn ? { enableThinking: true } : {}) }
             : { prompt: directPrompt!, nPredict: genTokens, onToken, ...sampling };
           assertPromptBudget([{ role: "user", content: promptText }], nCtx, genTokens, "chat-directo");
           await llamaEngine.generate(genInput);
+          // 0.1.92: si el turno razonó y se quedó sin respuesta (el
+          // razonamiento se comió el presupuesto: medido, 3-4 de cada
+          // 60), se responde directo como hasta la 0.1.91 en vez de
+          // dejar «No pude generar una respuesta». Solo una vez.
+          if (reasonThisTurn && !stopRequestedRef.current && stripThinking(assistantText).trim().length === 0) {
+            flushTokenBuffer();
+            assistantText = "";
+            tokenBuffer = "";
+            setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text: "" } : m)));
+            await llamaEngine.generate({ messages: directMessages!, nPredict: genTokens, onToken, ...sampling });
+          }
+          // 0.1.90 (familia 5): si la generación consumió todo su
+          // presupuesto, el motor lo deja registrado (lastCut); se lee
+          // ahora, con las generaciones en serie, y es de ESTE turno.
+          const genWasCut = llamaEngine.lastGenerationWasCut;
           // 5.1: flush final del buffer de tokens.
           flushTokenBuffer();
-          return { chunks: fittedChunks ?? c, noSourcesFound: noSources, genSpaceCut: spaceCut };
+          return { chunks: fittedChunks ?? c, noSourcesFound: noSources, genSpaceCut: spaceCut, genWasCut };
         };
 
         const adaptiveRoutingEnabled = await getAdaptiveRoutingEnabled();
@@ -1761,6 +2011,7 @@ export function ChatScreen({
           noSourcesFound = false;
         } else if (adaptiveRoutingEnabled) {
           try {
+            await requireChatModel();
             const result = await runAdaptiveChat(
               { query, systemPrompt, styleReminder, history },
               maxTokens,
@@ -1794,6 +2045,7 @@ export function ChatScreen({
               chunks = fixed.chunks;
               noSourcesFound = fixed.noSourcesFound;
               fixedGenSpaceCut = fixed.genSpaceCut;
+              fixedGenWasCut = fixed.genWasCut;
             } else {
               chunks = result.citations;
               // Executor reports retrievalAttempted; paired with zero
@@ -1847,12 +2099,14 @@ export function ChatScreen({
             chunks = fixedFallback.chunks;
             noSourcesFound = fixedFallback.noSourcesFound;
             fixedGenSpaceCut = fixedFallback.genSpaceCut;
+            fixedGenWasCut = fixedFallback.genWasCut;
           }
         } else {
           const fixedPlain = await runFixedModelChat();
           chunks = fixedPlain.chunks;
           noSourcesFound = fixedPlain.noSourcesFound;
           fixedGenSpaceCut = fixedPlain.genSpaceCut;
+          fixedGenWasCut = fixedPlain.genWasCut;
         }
       }
       // FIX 2026-10-09 (C2): flush del buffer de tokens en el path adaptivo.
@@ -1875,6 +2129,15 @@ export function ChatScreen({
       //  - NEVER-SILENT: respuesta vacía → texto honesto, nunca burbuja vacía.
       let grounding: GroundingStatus | undefined;
       let provenance: SentenceProvenance[] | undefined;
+      // 0.1.87 (giro del gas): los packs que la puerta firmada
+      // verificó, leídos frescos para la red de evidencia de salud
+      // de abajo — un fragmento suyo cuenta como evidencia, no solo
+      // los integrados de la lista cerrada. Un registro ilegible
+      // degrada a la lista de siempre, nunca a abrir la red.
+      const verifiedImported = !wasStopped
+        ? await verifiedImportedPacks().catch(() => null)
+        : null;
+      const verifiedImportedIds = verifiedImported ? new Set(verifiedImported.keys()) : undefined;
       if (!wasStopped) {
         // 0.1.34: si el modelo entró en bucle, queda solo la primera vez.
         // Bounty tanda 8: una generación cortada (el usuario detuvo o
@@ -1918,16 +2181,29 @@ export function ChatScreen({
           if (verified.status !== "skipped") finalText = verified.text;
           provenance = verified.sentences;
         } else if (!deepTurn && noSourcesFound) {
-          // Programa bounty, tanda 2: la puerta de salud manda sobre el
-          // "no lo sé" genérico — una pregunta de salud sin fuentes (la
-          // ruta adaptativa no tiene la puerta previa de la ruta fija)
-          // cae al texto seguro, nunca a lo que el modelo haya escrito.
+          // Programa bounty, tanda 2: la puerta de salud manda — una
+          // pregunta de salud sin fuentes (la ruta adaptativa no tiene
+          // la puerta previa de la ruta fija) cae al texto seguro,
+          // nunca a lo que el modelo haya escrito.
           // F-B1: la emergencia viva contada manda igual que la pregunta.
-          if ((isHealthQuestion(query) || isEmergencySituation(query)) && finalText !== healthSafeText(uiLang)) {
+          // 0.1.90 (familia 4): la decisión vive en noSourcesOutcome
+          // (emergencyGate.ts) y ya SOLO cubre salud/emergencia. La
+          // rama gemela «pregunta de hechos → sustituir por el no lo
+          // sé determinista» murió con la puerta previa de la ruta
+          // fija: sin peligro, lo que el modelo generó queda en pie.
+          // 0.1.93: la misma capa por significado que la puerta previa
+          // (en la ruta fija ya está calculada para esta pregunta).
+          const postSemanticHit =
+            isHealthQuestion(query) || isEmergencySituation(query) ? false : await semanticDanger(query);
+          if (
+            noSourcesOutcome({
+              isHealth: isHealthQuestion(query) || postSemanticHit,
+              isEmergency: isEmergencySituation(query),
+            }) === "safe-text" &&
+            finalText !== healthSafeText(uiLang)
+          ) {
             finalText = healthSafeText(uiLang);
             provenance = healthSafeProvenance(finalText);
-          } else if (isFactualQuestion(query) && finalText !== noSourcesAnswer(uiLang)) {
-            finalText = noSourcesAnswer(uiLang);
           }
         }
         // Programa bounty, tanda 2 (puerta de salud, segunda salida):
@@ -1938,12 +2214,27 @@ export function ChatScreen({
         // de salud y ningún chunk es de un pack de salud. Lo
         // «grounded»/«partial» no se toca: está verificado frase a
         // frase contra sus fuentes, no es memoria del modelo.
+        // 0.1.88 (dirimen del gas): la decisión vive en
+        // shouldSubstituteSafeText (emergencyGate.ts), probada con
+        // los valores del campo. La vara ya no es que haya evidencia
+        // entre las fuentes, sino que la respuesta se apoye en ella:
+        // en el turno de la foto la guía verificada estaba entre las
+        // fuentes y el texto sin verificar del modelo quedó en
+        // pantalla igual, porque la condición vieja miraba la lista
+        // de fuentes y no el apoyo de las frases. El !deepTurn queda
+        // también escrito aquí, como en las demás salidas de la
+        // puerta, y la función lo vuelve a exigir por su cuenta.
         if (
           !deepTurn &&
-          chunks.length > 0 &&
-          (grounding === "unverified" || grounding === "abstained") &&
-          (isHealthQuestion(query) || isEmergencySituation(query)) &&
-          !hasHealthEvidence(chunks)
+          shouldSubstituteSafeText({
+            deepTurn,
+            sources: chunks,
+            grounding,
+            isHealth: isHealthQuestion(query),
+            isEmergency: isEmergencySituation(query),
+            provenance,
+            verifiedImportedPackIds: verifiedImportedIds,
+          })
         ) {
           finalText = healthSafeText(uiLang);
           provenance = healthSafeProvenance(finalText);
@@ -1968,15 +2259,27 @@ export function ChatScreen({
       // lo sé» determinista, ni la abstención con extracto (en esos
       // casos la respuesta del modelo no es la que se sirve y la nota
       // mentiría sobre ella), ni un turno detenido por el usuario.
+      // 0.1.90 (familia 5): la misma honestidad cuando no faltó
+      // espacio sino que la generación consumió todo su presupuesto
+      // (fixedGenWasCut): la nota es la hermana «answerCut» — llegó el
+      // límite de un turno, no faltó espacio — y ofrece continuar. Si
+      // el espacio SÍ obligó a degradar, manda la de espacio.
+      // 0.1.91 (familia 6): la nota se ata al HECHO, no a la
+      // asignación. Con solo `fixedGenSpaceCut` la nota salía en
+      // todos los turnos de la ventana estrecha (la asignación casi
+      // siempre degrada contra el deseo de 1024), también bajo
+      // respuestas cortas con fin natural: la decisión vive en
+      // generationCutNote — sin consumo total no hay nota.
+      const cutNote = generationCutNote(fixedGenSpaceCut, fixedGenWasCut);
       if (
-        fixedGenSpaceCut &&
+        cutNote !== null &&
         !wasStopped &&
         grounding !== "abstained" &&
         assistantText.trim().length > 0 &&
         assistantText !== healthSafeText(uiLang) &&
         assistantText !== noSourcesAnswer(uiLang)
       ) {
-        assistantText = `${assistantText}\n\n${agentFallbackText("spaceShortened", uiLang)}`;
+        assistantText = `${assistantText}\n\n${agentFallbackText(cutNote, uiLang)}`;
         setMessages((prev) =>
           prev.map((m) => (m.id === assistantId ? { ...m, text: assistantText } : m))
         );
@@ -2028,11 +2331,15 @@ export function ChatScreen({
         tokensGenerated,
         durationMs,
         ttftMs,
-        tokPerSec: tokensGenerated > 0 ? tokensGenerated / ((durationMs - ttftMs) / 1000) : 0,
+        tokPerSec:
+          tokensGenerated > 0 && durationMs - ttftMs - turnModelLoadMs > 0
+            ? tokensGenerated / ((durationMs - ttftMs - turnModelLoadMs) / 1000)
+            : 0,
         peakRssBytes: peakRss.stop(),
         timestamp: Date.now(),
         totalLatencyMs: durationMs,
         modelId: baseModelId,
+        ...(turnModelLoadMs > 0 ? { modelLoadMs: Math.round(turnModelLoadMs) } : {}),
         ...(fixedTaskType ? { taskType: fixedTaskType, retrievalUsed: chunks.length > 0 } : {}),
         ...(adaptiveTelemetry ?? {}),
       };
@@ -2077,7 +2384,10 @@ export function ChatScreen({
           await setSessionTitle(sessionId, title).catch(() => {});
           await refreshSessions();
         }
-      } else if (settings.autoSummarize && !wasStopped) {
+      } else if (settings.autoSummarize && !wasStopped && llamaEngine.isLoaded) {
+        // 2026-11-11 (carga cuando se necesita): un turno servido sin modelo (guía, capa determinista)
+        // no lo carga solo para resumir; el resumen se pone al día en
+        // el siguiente turno que sí genere.
         const totalTurns = Math.floor(allMessages.length / 2);
         if (totalTurns > settings.historyTurnThreshold) {
           const olderMessages = allMessages.slice(0, -VERBATIM_MESSAGE_COUNT);
@@ -2152,7 +2462,7 @@ export function ChatScreen({
       // here, so error/retry keeps working and the send button is never wedged.
       sendGuardRef.current.release();
     }
-  }, [input, generating, ready, activeSessionId, cancelBackgroundTask, refreshSessions, updateInput, t, i18n]);
+  }, [input, generating, ready, activeSessionId, cancelBackgroundTask, refreshSessions, updateInput, t, i18n, ensureChatModel]);
 
   // send() itself isn't awaited by its callers (onPress/onSubmitEditing) —
   // stopAndAwaitGeneration needs a handle on the in-flight promise so a
@@ -2272,6 +2582,12 @@ export function ChatScreen({
     const llm = await resolveActiveModel("llm");
     if (ready && llamaEngine.getModelInfo()?.filename === llm.filename) {
       setActiveModel(llm);
+    } else if (ready) {
+      // Optimización 2026-11-08 (fase 1): con la pantalla lista, un
+      // modelo distinto se trae bajo demanda (ModelSetupScreen ya lo
+      // cargó al elegirlo, así que normalmente será un atajo); el
+      // arranque completo solo corre si la pantalla aún no está lista.
+      void ensureChatModel();
     } else {
       initModels();
     }
@@ -2388,6 +2704,7 @@ export function ChatScreen({
           await closeSettings();
         }}
         onRelaunchWizard={onRelaunchWizard}
+        onOpenLibrary={onOpenLibrary}
         onOpenMemory={() => setShowMemoryManager(true)}
         onOpenTelemetry={() => setShowExecutionTelemetry(true)}
         onOpenAbout={() => setShowAbout(true)}
@@ -2416,7 +2733,7 @@ export function ChatScreen({
           updateInput(question, "example");
           requestAnimationFrame(() => inputRef.current?.focus());
         }}
-        onOpenLibrary={() => selectTab("library")}
+        onOpenLibrary={onOpenLibrary ?? (() => selectTab("library"))}
       />
     );
   }
@@ -2426,6 +2743,7 @@ export function ChatScreen({
       <LibraryScreen
         key={librarySection}
         initialSection={librarySection}
+        onOpenLibrary={onOpenLibrary}
         onOpenGuide={() => setShowGuide(true)}
         onOpenPromptIdeas={() => {
           selectTab("chat");
@@ -2480,6 +2798,17 @@ export function ChatScreen({
         )}
 
         {!ready && !loadError && (
+          <View style={[styles.loadingBanner, { backgroundColor: colors.emerald.bgSubtle, borderBottomColor: colors.emerald.border }]}>
+            <ActivityIndicator color={colors.emerald[400]} size="small" />
+            <Text style={[styles.loadingBannerText, { color: colors.text.accentEmerald }]}>{loadStatus}</Text>
+          </View>
+        )}
+
+        {/* Optimización 2026-11-08 (fase 1): con la pantalla lista, la
+            carga bajo demanda del modelo se anuncia con la misma
+            franja — «Cargando modelo…» mientras el primer envío (o el
+            primero tras una descarga por inactividad) lo trae. */}
+        {ready && loadStatus !== null && !loadError && (
           <View style={[styles.loadingBanner, { backgroundColor: colors.emerald.bgSubtle, borderBottomColor: colors.emerald.border }]}>
             <ActivityIndicator color={colors.emerald[400]} size="small" />
             <Text style={[styles.loadingBannerText, { color: colors.text.accentEmerald }]}>{loadStatus}</Text>

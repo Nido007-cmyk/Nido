@@ -35,7 +35,19 @@
     "deleteConfirm": "Delete",
     "deleteBusy": "Wait for the answer to finish before deleting this chat."
   },
+  "installNotice": {
+    "pausedTooHeavy": "Part of this model is already downloaded ({{done}}), but the model doesn't fit on this device. You can delete it to free up space.",
+    "integrity": "The downloaded file did not match its fingerprint and was deleted. If you download again, a fresh copy will arrive.",
+    "interrupted": "The last download was interrupted before finishing. If you download again, it will start from the beginning.",
+    "sizeMismatch": "The last download arrived incomplete and was deleted. If you download again, a fresh copy will arrive.",
+    "storage": "There was not enough free space to finish the download. Free up space and try again.",
+    "stalled": "The last download stalled and never finished. You can try again.",
+    "paused": "Part of it is already downloaded ({{done}} of {{total}}). If you download again, it will continue from there.",
+    "unverifiable": "The file is on the device but could not be verified, so it does not count as downloaded. If you download again, it will be checked again.",
+    "failed": "The last download did not finish. You can try again."
+  },
   "catalogItemCard": {
+    "discardPartial": "Delete what was downloaded",
     "calculating": "Calculating…",
     "removeFromListTitle": "Remove from list?",
     "removeFromListMessage": "This model is not downloaded. It will be removed from your list.",
@@ -134,6 +146,7 @@
     "toasts": {
       "indexed": "Indexed \"{{name}}\" in offline knowledge base",
       "removed": "Removed \"{{name}}\"",
+      "partialDiscarded": "Deleted the downloaded part of {{name}}.",
       "activeSet": "Active {{kind}} model set to \"{{name}}\"",
       "loadFailed": "Couldn't load \"{{name}}\": {{error}}",
       "resetFailed": "Reset failed: {{error}}",
@@ -250,7 +263,7 @@
     "confirmTitle": "Add this pack",
     "damaged": "The file is damaged or incomplete and could not be opened.",
     "hashMismatch": "The file does not match its signature: it has changed since it was signed, so it cannot be added. Download it again from where you bought it.",
-    "missingManifest": "This pack is missing its signed manifest, and without it the app cannot check its signature. It cannot be added.",
+    "missingManifest": "This pack is missing its signed manifest, and without it the app cannot check its signature. It cannot be added. Also pick the file ending in .sqlite.json that came with the pack.",
     "notAPack": "This file is not a valid knowledge pack.",
     "notSignedByUs": "This pack is not signed by NIDO or by SALVORA PACKS, and it cannot be added. For your safety, only packs signed by us can be added.",
     "removeAction": "Remove this pack",
@@ -452,6 +465,7 @@
   "chatScreen": {
     "roleAssistant": "🎭 NIDO",
     "initializingCore": "Starting NIDO…",
+    "loadingModel": "Loading model…",
     "mountingWeights": "Loading the model…",
     "indexingKnowledgeBase": "Indexing new knowledge for offline search…",
     "reasoningElapsed": "💭 Reasoning… {{seconds}}s",
@@ -698,7 +712,24 @@
       "stateOn": "On",
       "stateOff": "Off"
     },
-    "exportFailedBody": "The telemetry could not be exported."
+    "exportFailedBody": "The telemetry could not be exported.",
+    "rejections": {
+      "title": "Memory rejections",
+      "hint": "When the memory check refused to load a model, this is what it saw: how much the model needed, how much was available, and the state of the device at that moment. It stays on this device.",
+      "empty": "No memory rejections recorded.",
+      "llm": "Model",
+      "embedding": "Embeddings",
+      "needed": "Needed",
+      "available": "Available",
+      "totalRam": "Total RAM",
+      "rss": "App in use",
+      "free": "Free now",
+      "threshold": "System limit",
+      "context": "Context chosen / asked",
+      "crashSafety": "Budget after a crash",
+      "liveRead": "Live memory read",
+      "liveReadMissing": "No reading"
+    }
   },
   "errors": {
     "unexpected": "Something went wrong. Technical detail: {{detail}}",
@@ -1516,7 +1547,7 @@
             "examples": [
               "what is the emergency number in Mexico?"
             ],
-            "tip": "Without the Local pack (in the $t(tabs.library), about 0.2 MB) the tab can't show your country's numbers. And if you ever type an emergency in the chat, even with no packs NIDO answers with a fixed safety text: it doesn't make an answer up."
+            "tip": "Without the Local pack (in the $t(tabs.library), about 0.4 MB) the tab can't show your country's numbers. And if you ever type an emergency in the chat, even with no packs NIDO answers with a fixed safety text: it doesn't make an answer up."
           },
           {
             "id": "quick",
@@ -1854,7 +1885,7 @@
     "checked": "Checked on {{date}} · {{source}}",
     "crisisTitle": "Crisis line",
     "noPackTitle": "Download NIDO Local",
-    "noPackBody": "To see your country's checked emergency numbers here, download the NIDO Local pack (about 0.2 MB).",
+    "noPackBody": "To see your country's checked emergency numbers here, download the NIDO Local pack (about 0.4 MB).",
     "openLibrary": "Go to the Library",
     "noCountryTitle": "{{name}} isn't in NIDO Local yet",
     "noCountryBody": "Pick another country or ask in the chat.",
@@ -1928,6 +1959,17 @@
     "title": "NIDO is answering…",
     "text": "The answer keeps being written even if you leave the app.",
     "channel": "Answers in progress"
+  },
+  "guideLibrary": {
+    "title": "Guides",
+    "open": "Read the guides",
+    "intro": "Read any guide stored on this device, from start to finish. Reading does not load the model.",
+    "loading": "Loading guides",
+    "noPacks": "No guides yet. The packs you download or add will appear here, ready to read without a model.",
+    "noGuides": "This pack has no readable guides.",
+    "readError": "This guide could not be opened. The pack may have been removed or updated.",
+    "truncated": "This text is very long and is shown shortened on screen. The guide is still stored in full in the pack.",
+    "back": "Back"
   },
   "sourceReader": {
     "title": "Source",
@@ -2019,8 +2061,8 @@
     "nido-viaje": "18 offline guides (6 each in Spanish, English and Portuguese) for the road and car travel. ~0.2MB.",
     "nido-viaje-e5": "18 offline guides for the road and car travel, searchable in Spanish, Portuguese and English. ~0.2MB.",
     "minimum": "Models only. Uses the built-in 858-topic knowledge base (Wikipedia snapshot of 1 November 2026) — no extra download.",
-    "standard": "+ 1,000 more Wikipedia-derived topics and NIDO's first aid, disaster and survival guides (~1.85MB extra download).",
-    "full": "+ 5,000 more Wikipedia-derived topics total and NIDO's first aid, disaster and survival guides (~4.38MB extra download).",
+    "standard": "+ 1,000 more Wikipedia-derived topics and NIDO's first aid, disaster and survival guides (~1.87MB extra download).",
+    "full": "+ 5,000 more Wikipedia-derived topics total and NIDO's first aid, disaster and survival guides (~4.40MB extra download).",
     "encyclopedia": "Full, plus Wikipedia's ~50,000 Vital Articles (~169MB extra download)."
   }
 }
