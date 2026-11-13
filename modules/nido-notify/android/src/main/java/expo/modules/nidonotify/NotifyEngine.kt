@@ -55,6 +55,8 @@ object NotifyEngine {
   const val EXTRA_IDENTIFIER = "identifier"
   /** Mismo id que expo (ANDROID_NOTIFICATION_ID): la etiqueta distingue. */
   const val NOTIFY_ID = 0
+  /** El canal de respaldo de expo: mismo id, así no aparece uno nuevo en Ajustes. */
+  const val FALLBACK_CHANNEL_ID = "expo_notifications_fallback_notification_channel"
 
   /** Quien escucha las entregas mientras la app está viva (el módulo). */
   @Volatile var onDelivered: ((String) -> Unit)? = null
@@ -213,11 +215,8 @@ object NotifyEngine {
     ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
   fun post(ctx: Context, request: NotifyRequest) {
-    val channelId = request.channelId
-    val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && channelId != null) {
-      Notification.Builder(ctx, channelId)
-    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      Notification.Builder(ctx, defaultChannel(ctx))
+    val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      Notification.Builder(ctx, resolveChannel(ctx, request.channelId))
     } else {
       // Antes de Android 8, como expo: el sonido por defecto si el aviso lo pide.
       @Suppress("DEPRECATION")
@@ -262,18 +261,24 @@ object NotifyEngine {
   }
 
   /**
-   * expo usaba su canal «Miscellaneous» para avisos sin canal. NIDO siempre
-   * pasa canal; este es solo la red por si alguno llega sin él.
+   * El canal donde va el aviso, como en expo (BaseNotificationBuilder): el
+   * pedido si existe; si no (sin canal, o aún sin crear, por ejemplo un
+   * mensaje que llega antes de que el arranque cree los canales), el canal
+   * de respaldo de expo, con su mismo identificador, nombre «Miscellaneous»,
+   * importancia alta, insignia y vibración. Android descarta en silencio un
+   * aviso dirigido a un canal que no existe.
    */
-  private fun defaultChannel(ctx: Context): String {
-    val id = "expo_notifications_fallback_notification_channel"
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      val nm = notificationManager(ctx)
-      if (nm.getNotificationChannel(id) == null) {
-        nm.createNotificationChannel(NotificationChannel(id, "Miscellaneous", NotificationManager.IMPORTANCE_DEFAULT))
-      }
+  fun resolveChannel(ctx: Context, requested: String?): String {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return requested ?: FALLBACK_CHANNEL_ID
+    val nm = notificationManager(ctx)
+    if (requested != null && nm.getNotificationChannel(requested) != null) return requested
+    if (nm.getNotificationChannel(FALLBACK_CHANNEL_ID) == null) {
+      val channel = NotificationChannel(FALLBACK_CHANNEL_ID, "Miscellaneous", NotificationManager.IMPORTANCE_HIGH)
+      channel.setShowBadge(true)
+      channel.enableVibration(true)
+      nm.createNotificationChannel(channel)
     }
-    return id
+    return FALLBACK_CHANNEL_ID
   }
 
   /** Identificadores de los avisos que siguen en la bandeja. */
