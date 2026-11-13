@@ -64,16 +64,18 @@ Any trace fails the build, and with it the release.
 
 | Census (same script) | Published 0.1.95 | With #253 and #254 |
 |---|---|---|
-| dex `com/google/firebase` | 535 | see #254 |
-| dex `com/google/android/gms` | 996 | see #254 |
-| dex `com/google/android/datatransport` | 345 | see #254 |
-| dex `com/google/android/finsky` | 5 | see #254 |
-| dex `com/android/installreferrer` | 16 | see #254 |
-| manifest: datatransport CCT / gms | 4 / 2 | see #254 |
-| Google dependencies in the tree | 36 | see #254 |
+| dex `com/google/firebase` | 535 | 0 |
+| dex `com/google/android/gms` | 996 | 0 |
+| dex `com/google/android/datatransport` | 345 | 0 |
+| dex `com/google/android/finsky` | 5 | 0 |
+| dex `com/android/installreferrer` | 16 | 0 |
+| manifest: datatransport CCT / gms | 4 / 2 | 0 |
+| Google dependencies in the tree | 36 | 0 |
 
-The right-hand column is filled in from the CI run cited in #254 once it is
-merged. What a published APK contains is checked on its release.
+The right-hand column comes from the APK the CI built on #254's head
+(commit 0f3d9ba9, run 43446068766, artifact `nido-google-census`). What a
+published APK contains will be checked on its release, where the same step
+runs before publishing.
 
 ## 3. What's left: prebuilt native libraries
 

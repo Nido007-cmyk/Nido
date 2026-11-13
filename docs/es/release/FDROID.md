@@ -65,17 +65,18 @@ Un rastro tumba la compilación y, con ella, la release.
 
 | Censo (mismo script) | 0.1.95 publicada | Con #253 y #254 |
 |---|---|---|
-| dex `com/google/firebase` | 535 | ver #254 |
-| dex `com/google/android/gms` | 996 | ver #254 |
-| dex `com/google/android/datatransport` | 345 | ver #254 |
-| dex `com/google/android/finsky` | 5 | ver #254 |
-| dex `com/android/installreferrer` | 16 | ver #254 |
-| manifiesto: datatransport CCT / gms | 4 / 2 | ver #254 |
-| dependencias de Google en el árbol | 36 | ver #254 |
+| dex `com/google/firebase` | 535 | 0 |
+| dex `com/google/android/gms` | 996 | 0 |
+| dex `com/google/android/datatransport` | 345 | 0 |
+| dex `com/google/android/finsky` | 5 | 0 |
+| dex `com/android/installreferrer` | 16 | 0 |
+| manifiesto: datatransport CCT / gms | 4 / 2 | 0 |
+| dependencias de Google en el árbol | 36 | 0 |
 
-La columna de la derecha se rellena con la cifra del run de la CI citado en
-#254 cuando esté fusionado. Lo que sale de un APK publicado se comprueba en su
-release.
+La columna de la derecha sale del APK construido por la CI sobre la cabeza
+de #254 (commit 0f3d9ba9, run 43446068766, artefacto `nido-google-census`).
+Lo que lleve un APK publicado se comprobará en su release, donde el mismo
+paso corre antes de publicar.
 
 ## 3. Lo que queda: librerías nativas precompiladas
 
