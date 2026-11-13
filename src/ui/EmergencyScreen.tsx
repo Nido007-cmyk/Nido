@@ -128,9 +128,15 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{t("emergency.noPackTitle")}</Text>
             <Text style={styles.note}>{t("emergency.noPackBody")}</Text>
-            <Pressable onPress={onOpenLibrary} style={styles.primaryBtn} accessibilityRole="button">
-              <Text style={styles.primaryBtnText}>{t("emergency.openLibrary")}</Text>
-            </Pressable>
+            {/* 0.1.95: sin chat (asistente de instalación) onOpenLibrary abre
+                el lector de guías, que no descarga nada: el botón «Ir a la
+                Biblioteca» llevaría a un sitio donde no se puede hacer lo que
+                dice. En el asistente la descarga es la del propio asistente. */}
+            {onAsk && (
+              <Pressable onPress={onOpenLibrary} style={styles.primaryBtn} accessibilityRole="button" testID="emergency-open-library">
+                <Text style={styles.primaryBtnText}>{t("emergency.openLibrary")}</Text>
+              </Pressable>
+            )}
           </View>
         )}
 

@@ -1547,7 +1547,7 @@
             "examples": [
               "qual é o número de emergência no México?"
             ],
-            "tip": "Sem o pacote Local (na $t(tabs.library), cerca de 0,2 MB) a aba não consegue mostrar os números do seu país. E se um dia você escrever uma emergência no chat, mesmo sem pacotes o NIDO responde com um texto de segurança fixo: não inventa uma resposta."
+            "tip": "Sem o pacote Local (na $t(tabs.library), cerca de 0,4 MB) a aba não consegue mostrar os números do seu país. E se um dia você escrever uma emergência no chat, mesmo sem pacotes o NIDO responde com um texto de segurança fixo: não inventa uma resposta."
           },
           {
             "id": "quick",
@@ -1885,7 +1885,7 @@
     "checked": "Verificado em {{date}} · {{source}}",
     "crisisTitle": "Linha de crise",
     "noPackTitle": "Baixe o NIDO Local",
-    "noPackBody": "Para ver aqui os números de emergência verificados do seu país, baixe o pacote NIDO Local (cerca de 0,2 MB).",
+    "noPackBody": "Para ver aqui os números de emergência verificados do seu país, baixe o pacote NIDO Local (cerca de 0,4 MB).",
     "openLibrary": "Ir para a Biblioteca",
     "noCountryTitle": "{{name}} ainda não está no NIDO Local",
     "noCountryBody": "Escolha outro país ou pergunte no chat.",

@@ -13,13 +13,15 @@
 // fija el inset inferior en 34 y exige 12 + 34 en la hoja.
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react-native";
+// Países que «tiene» el pack simulado; vacío = sin NIDO Local instalado.
+const mockRegions = { list: [{ code: "US", name: "United States" }] };
 
 jest.mock("../rag/packs", () => ({
   loadAllPackFacts: async () => ({ regions: [], facts: [] }),
 }));
 
 jest.mock("../rag/packFacts", () => ({
-  emergencyRegions: () => [{ code: "US", name: "United States" }],
+  emergencyRegions: () => mockRegions.list,
   emergencyCard: () => ({
     name: "United States",
     numbers: [{ label: "Emergency", value: "911", tel: "tel:911" }],
@@ -122,3 +124,29 @@ describe("EmergencyScreen sin chat (asistente, 0.1.95)", () => {
     expect(onOpenLibrary).toHaveBeenCalledTimes(1);
   });
 });
+
+// 0.1.95 (verificación): si los packs del APK no se instalaran, el aviso
+// «Descarga NIDO Local» no ofrece en el asistente un botón «Ir a la
+// Biblioteca» que lleve al lector de guías, donde no se descarga nada.
+describe("EmergencyScreen sin NIDO Local", () => {
+  const { EmergencyScreen } = require("./EmergencyScreen");
+  afterEach(() => {
+    mockRegions.list = [{ code: "US", name: "United States" }];
+  });
+
+  it("con chat: el aviso lleva su botón a la Biblioteca", async () => {
+    mockRegions.list = [];
+    const onOpenLibrary = jest.fn();
+    await render(<EmergencyScreen onAsk={() => {}} onOpenLibrary={onOpenLibrary} />);
+    fireEvent.press(await screen.findByTestId("emergency-open-library"));
+    expect(onOpenLibrary).toHaveBeenCalledTimes(1);
+  });
+
+  it("sin chat (asistente): el aviso sale sin el botón que llevaría a un sitio equivocado", async () => {
+    mockRegions.list = [];
+    await render(<EmergencyScreen onOpenLibrary={() => {}} />);
+    expect(await screen.findByText("emergency.noPackBody")).toBeTruthy();
+    expect(screen.queryByTestId("emergency-open-library")).toBeNull();
+  });
+});
+

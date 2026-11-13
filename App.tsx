@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { StatusBar } from "expo-status-bar";
-import { AppState, Image, StyleSheet, ActivityIndicator, Pressable, Text, View } from "react-native";
+import { AppState, BackHandler, Image, StyleSheet, ActivityIndicator, Pressable, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import i18n from "./src/i18n";
@@ -266,6 +266,17 @@ function AppContent() {
     if (screen !== "chat" && screen !== "required-setup") setLibraryOpen(false);
     if (screen !== "required-setup") setEmergencyOpen(false);
   }, [screen]);
+  // La tecla Atrás de Android cierra la capa de Emergencia del asistente
+  // y vuelve a él, en vez de sacar a la persona de la app. La hoja de
+  // países, si está abierta, es un Modal y se cierra antes por sí sola.
+  useEffect(() => {
+    if (!emergencyOpen) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      setEmergencyOpen(false);
+      return true;
+    });
+    return () => sub.remove();
+  }, [emergencyOpen]);
   const { t } = useTranslation();
   const { colors } = useTheme();
   const screenRef = useRef(screen);
