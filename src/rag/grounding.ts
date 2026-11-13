@@ -261,6 +261,37 @@ export function isAbstention(sentence: string): boolean {
   return IDK_RE.test(sentence);
 }
 
+/**
+ * C2-H1 (barrido 0.1.96): la abstención no puede servir de contrabando.
+ * «No lo sé, pero la dosis recomendada es de 25 ml» se conservaba entera
+ * como abstención, sin pasar por cifras, dosis ni dato, y salía
+ * «grounded» con el dato inventado dentro. Una frase que se abstiene Y
+ * afirma algo se juzga por lo que afirma, como cualquier otra frase del
+ * modelo. Afirma cuando, quitada la abstención:
+ *  - queda una conjunción de contraste con contenido detrás («pero…»,
+ *    «aunque…», «but…», «however…», «mas…», «porém…»), en cualquier
+ *    orden respecto de la abstención;
+ *  - o una cópula seguida de una cifra («es de 25 ml», «is 25 ml»,
+ *    «é de 25 ml») que no sea la de una pregunta indirecta («no sé cuál
+ *    es la dosis para 2 años» sigue siendo abstención pura).
+ * La abstención pura («no lo sé», «las fuentes no lo mencionan») se
+ * conserva como hasta ahora.
+ */
+const ABSTENTION_CONTRAST_RE =
+  /(?:^|[\s,;:—–-])(?:pero|sin embargo|aunque|no obstante|but|however|though|although|yet|mas|por[eé]m|contudo|entretanto|embora|todavia)\s+(?:\S+\s+){0,2}\p{L}{3,}/iu;
+// Límites por letra, no \b: «é» no es carácter de palabra para \b en JS.
+const ABSTENTION_COPULA_DIGIT_RE =
+  /(?<!(?<![\p{L}])(?:cu[aá]l(?:es)?|qu[eé]|cu[aá]nt[oa]s?|what|which|how much|how many|qual|quais|quant[oa]s?|o que)\s)(?<![\p{L}])(?:es|son|era|ser[aá]|is|are|was|will be|é|são)(?![\p{L}])[^.!?\d]{0,40}\d/iu;
+
+export function isPureAbstention(sentence: string): boolean {
+  if (!IDK_RE.test(sentence)) return false;
+  // Lo que queda al quitar la frase de abstención.
+  const rest = sentence.replace(new RegExp(IDK_RE.source, "giu"), " ");
+  if (ABSTENTION_CONTRAST_RE.test(rest)) return false;
+  if (ABSTENTION_COPULA_DIGIT_RE.test(rest)) return false;
+  return true;
+}
+
 // ------------------------------------------------------- verificación
 
 export interface SentenceSupport {
@@ -274,8 +305,19 @@ export interface SentenceSupport {
   bestChunk: number;
 }
 
+/**
+ * C2-H4 (barrido 0.1.96): el nombre compuesto inglés del teléfono es UN
+ * término. «teléfono» (es) y «telefone» (pt) son una palabra; «phone
+ * number» eran dos raíces, y la frase fiel inglesa «The phone number to
+ * change the appointment is 520-555-0147» contra «To change the
+ * appointment call 520-555-0147» quedaba en 5/7 = 0,714, bajo
+ * STRICT_SUPPORT, cuando sus gemelas es/pt dan 5/6 = 0,83. La vara no se
+ * mueve: solo se cuenta el término inglés como lo cuentan es y pt.
+ */
+const EN_PHONE_COMPOUND_RE = /\b(tele)?phone[\s-]+numbers?\b/gi;
+
 export function sentenceSupport(sentence: string, chunkStemSets: Set<string>[]): SentenceSupport {
-  const stems = [...new Set(contentStems(sentence))];
+  const stems = [...new Set(contentStems(sentence.replace(EN_PHONE_COMPOUND_RE, "$1phone")))];
   const union = new Set<string>();
   for (const set of chunkStemSets) for (const s of set) union.add(s);
   const found = stems.filter((s) => union.has(s)).length;
@@ -1061,6 +1103,8 @@ function significantDigitGroups(text: string): string[] {
  * sueltas en prosa — no aplica dentro de una frase que la propia
  * regla ya tipó. La vara general no se toca: fuera de esa pierna,
  * significantDigitGroups y hasJudgedDigit siguen mandando.
+ * C2-H3 (barrido 0.1.96) extiende la misma pierna a todo tipo cuando
+ * la afirmación nombra el tipo junto a su única cifra («sala 9»).
  */
 function digitGroupKeepingSingle(tok: string): string {
   const intPart = /[.,]/.test(tok) ? tok.split(/[.,]/)[0] : tok;
@@ -1160,7 +1204,13 @@ function digitSignature(text: string): string {
  * en la evidencia? (ADV-G1/G2: estar en la fuente no basta — el 911
  * está en la fuente y no es el teléfono de la cita.)
  */
-function digitsMatchType(sentence: string, type: DatumType, recs: SourceSentenceRec[], queryStems?: Set<string>): boolean {
+function digitsMatchType(
+  sentence: string,
+  type: DatumType,
+  recs: SourceSentenceRec[],
+  queryStems?: Set<string>,
+  keepSingle = false,
+): boolean {
   if (type === "phone" && queryStems && shortPhoneMatches(sentence, recs, queryStems)) return true;
   const carriers = recs.filter((r) => carriesDatumOfType(r.text, type));
   if (carriers.length === 0) return false;
@@ -1168,7 +1218,11 @@ function digitsMatchType(sentence: string, type: DatumType, recs: SourceSentence
   // normalización que conserva el dígito único (en la afirmación y
   // en las portadoras): sin ella, «mine» salía vacío ante «9 ml» y
   // la comparación ni distinguía la dosis falsa de la fiel.
-  const mine = [...new Set(type === "dose" ? digitGroupsKeepingSingle(sentence) : significantDigitGroups(sentence))];
+  // C2-H3: la misma normalización para la afirmación tipada de un
+  // dígito de cualquier tipo (keepSingle, que solo pone
+  // isTypedDatumOffender cuando la frase no trae cifra juzgable).
+  const single = type === "dose" || keepSingle;
+  const mine = [...new Set(single ? digitGroupsKeepingSingle(sentence) : significantDigitGroups(sentence))];
   if (mine.length === 0) return false;
   // ADV3 (A3-01): el conjunto del tipo ya no es «todas las cifras
   // de la frase portadora», sino solo las UNIDAS al tipo dentro de
@@ -1178,10 +1232,14 @@ function digitsMatchType(sentence: string, type: DatumType, recs: SourceSentence
   // afirmación con cifras de otro dato es infractora.
   const typeGroups = new Set(
     carriers.flatMap((r) =>
-      type === "dose" ? boundDigitTokens(r.text, type).map(digitGroupKeepingSingle) : boundDigitGroups(r.text, type),
+      single ? boundDigitTokens(r.text, type).map(digitGroupKeepingSingle) : boundDigitGroups(r.text, type),
     ),
   );
-  if (mine.every((g) => typeGroups.has(g))) return true;
+  if (mine.every((g) => typeGroups.has(g))) {
+    // C2-H2: el teléfono largo con el dueño cambiado.
+    if (type === "phone" && !phoneOwnerAgrees(sentence, carriers.filter((r) => mine.some((g) => boundDigitGroups(r.text, type).includes(g))), recs)) return false;
+    return true;
+  }
   // La misma cifra con otro agrupamiento («1.234» por «1234») o el
   // dato a medias («termina en 4417»): concatenación igual o sufijo.
   // La ristra del portador se construye SOLO con sus tokens unidos
@@ -1190,13 +1248,76 @@ function digitsMatchType(sentence: string, type: DatumType, recs: SourceSentence
   // dato.
   const concat = (t: string) => (t.replace(/\[\d+\]/g, " ").match(/\d+/g) ?? []).join("").replace(/^0+(?=\d)/, "");
   const myConcat = concat(sentence);
+  const concatCarriers = carriers.filter((r) => {
+    const c = boundDigitTokens(r.text, type).join("").replace(/^0+(?=\d)/, "");
+    return c === myConcat || c.endsWith(myConcat);
+  });
+  if (myConcat.length < 4 || concatCarriers.length === 0) return false;
+  // C2-H2: también por esta vía, el dueño tiene que casar.
+  return type !== "phone" || phoneOwnerAgrees(sentence, concatCarriers, recs);
+}
+
+/**
+ * C2-H2 (barrido 0.1.96): el dueño del teléfono. «El teléfono de
+ * emergencias es el 520-555-0147» se sellaba fundado con cita cuando, en
+ * la fuente, ese número es el de la CLÍNICA: el tipo y las cifras casaban
+ * con el tipo y nadie miraba de quién era. La guarda de dueño solo
+ * existía para el teléfono corto (shortPhoneMatches) y para el puente
+ * pregunta-respuesta (phoneDatumBridge).
+ *
+ * La regla: el dato no es del dueño de la afirmación cuando TODAS las
+ * frases de la fuente que traen esas cifras nombran otro dueño sin
+ * mencionar el suyo Y la fuente da a ese dueño su propio número en otra
+ * frase («Para emergencias, llama al 911»). Si la fuente no dice de quién
+ * es el número, o lo dice y casa, o el dueño de la afirmación no tiene
+ * número propio en la fuente («la cita» no lo tiene: su teléfono es el
+ * de la clínica, doctrina de genericDatum), todo sigue como antes. La
+ * sustituta, cuando la hay, es la frase del número propio de ese dueño
+ * (phoneOwnRec). Los dueños se leen con
+ * phoneOwnerStems (gobierno «teléfono de X», posesivo inglés «X's
+ * phone») más el sustantivo delante del nombre en inglés («emergency
+ * phone», «clinic number»), que esa función no ve.
+ */
+function phoneDatumOwners(sentence: string): Set<string> {
+  const owners = phoneOwnerStems(sentence);
+  const toks = foldedTokens(sentence);
+  for (let k = 1; k < toks.length; k++) {
+    if (!PHONE_NAME_WORDS.has(toks[k])) continue;
+    const prev = toks[k - 1];
+    if (!/^[a-z]+$/.test(prev) || prev === "s") continue;
+    const stems = contentStems(prev);
+    if (stems.length > 0 && !GENERIC_DATUM_STEMS.has(stems[0])) owners.add(stems[0]);
+  }
+  return owners;
+}
+
+/** La frase de la fuente que da al dueño de la afirmación su propio número, o null. */
+function phoneOwnRec(sentence: string, recs: SourceSentenceRec[], exclude: SourceSentenceRec[] = []): SourceSentenceRec | null {
+  const mine = phoneDatumOwners(sentence);
+  if (mine.size === 0) return null;
   return (
-    myConcat.length >= 4 &&
-    carriers.some((r) => {
-      const c = boundDigitTokens(r.text, type).join("").replace(/^0+(?=\d)/, "");
-      return c === myConcat || c.endsWith(myConcat);
-    })
+    recs.find((r) => {
+      if (exclude.includes(r) || !/\d/.test(r.text)) return false;
+      if (!hasPhoneForm(r.text) && !CALL_CUE_RE.test(r.text)) return false;
+      const stems = new Set(contentStems(r.text));
+      return [...mine].some((o) => stems.has(o));
+    }) ?? null
   );
+}
+
+function phoneOwnerAgrees(sentence: string, carriers: SourceSentenceRec[], recs: SourceSentenceRec[]): boolean {
+  const mine = phoneDatumOwners(sentence);
+  if (mine.size === 0 || carriers.length === 0) return true;
+  const agrees = carriers.some((r) => {
+    const theirs = phoneDatumOwners(r.text);
+    if (theirs.size === 0) return true;
+    const stems = new Set(contentStems(r.text));
+    return [...mine].some((o) => stems.has(o));
+  });
+  if (agrees) return true;
+  // Otro dueño en todas las portadoras: solo es infractora si el suyo
+  // tiene número propio en la fuente.
+  return phoneOwnRec(sentence, recs, carriers) === null;
 }
 
 /**
@@ -1231,8 +1352,17 @@ function isTypedDatumOffender(sentence: string, type: DatumType, recs: SourceSen
   // afirmación tipada dosis cualquier cifra cuenta; fuera de ella
   // (prosa, y sala/hora/fecha/teléfono/tarjeta) la vara general de
   // hasJudgedDigit queda intacta.
-  if (!hasJudgedDigit(sentence) && !(type === "dose" && /\d/.test(sentence))) return false;
-  return !digitsMatchType(sentence, type, recs, queryStems);
+  // C2-H3 (barrido 0.1.96): la misma razón vale para todo dato tipado.
+  // «La consulta es en la sala 9» contra «sala 4» salía sellada: el
+  // dígito único de la sala no era «juzgable» y la pierna ni miraba.
+  // Cuando la frase NOMBRA el tipo junto a su cifra (carriesDatumOfType:
+  // «sala 9», «día 9», «9 ml»), esa cifra es el dato entero y se juzga.
+  // Lo que la exención protege queda intacto: el dígito suelto en prosa
+  // sin dato tipado («repite el paso 3»), la frase sin cópula de dato, y
+  // toda frase que ya trae cifra juzgable (su vara no cambia).
+  const singleTyped = !hasJudgedDigit(sentence) && /\d/.test(sentence) && (type === "dose" || carriesDatumOfType(sentence, type));
+  if (!hasJudgedDigit(sentence) && !singleTyped) return false;
+  return !digitsMatchType(sentence, type, recs, queryStems, singleTyped);
 }
 
 /** «Es el 520-555-0147.» / «It's 520-555-0147.»: identidad corta, cópula y cifra, sin más tema. */
@@ -1583,7 +1713,11 @@ export function applyDatumRule(
           digitsMatchType(s, t, recs, queryStems) &&
           (carriesDatumOfType(s, t) || datumTypeOfText(s) === t),
       );
-      const datumT = deliveredNow ? null : datumForType(t);
+      // C2-H2: si la fuente da al dueño de la afirmación su propio número
+      // («el de emergencias»), la sustituta es esa frase, no el teléfono de
+      // otro dueño («el de la clínica»).
+      const ownT = t === "phone" ? phoneOwnRec(kept[group[0].i], recs) : null;
+      const datumT = deliveredNow ? null : (ownT ?? datumForType(t));
       if (!deliveredNow && datumT) {
         replaceAt.set(group[0].i, datumT);
         for (const o of group.slice(1)) removeIdx.add(o.i);
@@ -1688,7 +1822,7 @@ export function verifyGroundedAnswer(
     // Sin fuentes: todo lo que dice es del modelo, salvo que diga no saber.
     const sentences = splitSentences(trimmed).map((s) => ({
       text: s,
-      origin: isAbstention(s) ? ({ kind: "abstain" } as const) : ({ kind: "model", reason: "no-sources" } as const),
+      origin: isPureAbstention(s) ? ({ kind: "abstain" } as const) : ({ kind: "model", reason: "no-sources" } as const),
     }));
     return { text: trimmed, status: "skipped", removed: 0, kept: 0, sentences };
   }
@@ -1740,7 +1874,8 @@ export function verifyGroundedAnswer(
     const kept: string[] = [];
     const langProv: SentenceProvenance[] = [];
     for (const s of sentences) {
-      if (isAbstention(s)) {
+      // C2-H1: solo la abstención pura se conserva sin juicio.
+      if (isPureAbstention(s)) {
         kept.push(s);
         langProv.push({ text: s, origin: { kind: "abstain" } });
         continue;
@@ -1803,7 +1938,9 @@ export function verifyGroundedAnswer(
   const kept: string[] = [];
   const prov: SentenceProvenance[] = [];
   for (const s of sentences) {
-    if (isAbstention(s)) {
+    // C2-H1: solo la abstención pura se conserva sin juicio; la que afirma
+    // un dato se juzga por ese dato, como cualquier frase del modelo.
+    if (isPureAbstention(s)) {
       abstained = true;
       kept.push(s);
       prov.push({ text: s, origin: { kind: "abstain" } });
