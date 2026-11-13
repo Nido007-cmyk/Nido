@@ -144,6 +144,13 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   normal. Una sospecha de doble conteo en el guardián de
   choques se probó con una regresión y no existe; el guardián
   no cambia.
+- **Funciona desde el primer segundo, sin red** (0.1.95): una
+  instalación nueva lleva dentro del APK las guías de primeros
+  auxilios y los números de emergencia comprobados de 69
+  países, así que la entrada Emergencia del asistente muestra
+  los números de tu país antes de descargar nada y sin modelo.
+  El borrado de pánico destruye ahora la clave de la base
+  antes que nada.
 - **El modelo solo se carga cuando el turno lo necesita,
   y las cifras ya no desbordan el contexto** (0.1.94): una
   pregunta que cubre una guía o una respuesta fija ya no
@@ -290,12 +297,13 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.94-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.94-alpha).
+   [versión v0.1.95-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.95-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y
    1,1 GB aproximadamente según la memoria y el idioma del teléfono. Es la
-   única vez que necesita internet.
+   única vez que necesita internet. Los números de emergencia y las guías
+   de primeros auxilios ya funcionan antes de esa descarga, sin red.
 
 ## Privacidad y seguridad
 

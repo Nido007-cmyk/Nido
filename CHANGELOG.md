@@ -4,6 +4,62 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.95-alpha - 2026-11-13
+
+NIDO works from the first second, and four things a reviewer would
+poke at are fixed.
+
+**Emergency numbers and first-aid guides on a fresh install, with no
+internet and no model.** Until 0.1.94 a new install had nothing useful
+until it had downloaded the model (0.4 to 1.1 GB) and the packs: the
+Emergency tab asked you to download NIDO Local, and the guide library
+was empty. Now the APK carries NIDO Essentials (174 first-aid, health,
+disaster and survival guides) and NIDO Local (checked emergency numbers
+for 69 countries, each with its source and date). On first launch the
+app installs them from the APK, checked against the signed catalog with
+the same size and SHA-256 check as a download. The setup wizard has an
+Emergency entry next to Read the guides, which opens the numbers, the
+call buttons and the CPR practice tool without loading the model. The
+APK grows by about 1.4 MB.
+
+**The panic erase destroys the key first.** On flash storage, wear
+levelling can keep old blocks of a deleted file, so the real erase is
+destroying the key. The database key, the hardware vault key and the
+P2P keys used to die after the database files were deleted. Now the
+database and vault keys die right after the erase marker is written,
+and the P2P keys as soon as the P2P runtime is shut down, all before
+any file is deleted, so any block the flash keeps is unreadable
+ciphertext. The README now says what the 3 seconds are: how long you
+hold the button, which is off by default.
+
+**Firebase no longer starts with the app.** The 0.1.94 manifest still
+declared Firebase's start-up provider, brought in by expo-notifications.
+Firebase can't start in NIDO (the APK has no Firebase configuration), so
+the provider only cost start-up time. It is removed, along with its
+component discovery service. Firebase and Google Play Services classes
+are still compiled into the APK, inert; removing them is open work,
+listed in docs/release/DEVICE_CHECKLIST.md.
+
+**Three small defects found while verifying.** The Emergency tab
+said NIDO Local weighs about 0.2 MB in all three languages; it weighs
+0.36 MB, so it now says 0.4 MB (this one predates 0.1.95). In the setup
+wizard, if the packs ever failed to install, the "download NIDO Local"
+notice offered a "Go to the Library" button that opened the guide
+reader, where nothing can be downloaded; that button no longer shows
+there. And Android's Back key now closes the wizard's Emergency layer
+instead of leaving the app.
+
+**A fixed device checklist for every release.** About 20 minutes on the
+reference tablet: offline first launch, answers that don't need the
+model, a generating answer with telemetry, number tables,
+notifications, panic erase, two phones and the in-app evaluation set.
+In English and Spanish, in docs/release/DEVICE_CHECKLIST.md.
+
+**Not tested on a phone.** All of these changes passed the automated tests,
+and the release APK build confirms the packs are copied into the APK.
+None of it has run on the Galaxy Tab A9+ yet; the checklist is how it
+will be.
+
 ## 0.1.94-alpha - 2026-11-11
 
 Speed and answer quality, without touching what is sealed.

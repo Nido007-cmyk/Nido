@@ -135,6 +135,13 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   suspected double counting in the crash guard was tested
   with a regression and does not exist; the guard is
   unchanged.
+- **Works from the first second, offline** (0.1.95): a fresh
+  install carries the first-aid guides and the checked
+  emergency numbers for 69 countries inside the APK, so the
+  setup wizard's Emergency entry shows your country's
+  numbers before anything is downloaded and with no model.
+  The panic erase now destroys the database key before
+  anything else.
 - **The model loads only when a turn needs it, and
   numbers no longer overflow the context** (0.1.94): a
   question a guide or a fixed answer covers no longer
@@ -269,12 +276,13 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.94-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.94-alpha).
+   [v0.1.95-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.95-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4
    and 1.1 GB depending on your phone's memory and language. This is the
-   only time it needs the internet.
+   only time it needs the internet. The emergency numbers and the
+   first-aid guides already work before that download, offline.
 
 ## Privacy and security
 
