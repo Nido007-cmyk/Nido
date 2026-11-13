@@ -1547,7 +1547,7 @@
             "examples": [
               "what is the emergency number in Mexico?"
             ],
-            "tip": "Without the Local pack (in the $t(tabs.library), about 0.2 MB) the tab can't show your country's numbers. And if you ever type an emergency in the chat, even with no packs NIDO answers with a fixed safety text: it doesn't make an answer up."
+            "tip": "Without the Local pack (in the $t(tabs.library), about 0.4 MB) the tab can't show your country's numbers. And if you ever type an emergency in the chat, even with no packs NIDO answers with a fixed safety text: it doesn't make an answer up."
           },
           {
             "id": "quick",
@@ -1885,7 +1885,7 @@
     "checked": "Checked on {{date}} · {{source}}",
     "crisisTitle": "Crisis line",
     "noPackTitle": "Download NIDO Local",
-    "noPackBody": "To see your country's checked emergency numbers here, download the NIDO Local pack (about 0.2 MB).",
+    "noPackBody": "To see your country's checked emergency numbers here, download the NIDO Local pack (about 0.4 MB).",
     "openLibrary": "Go to the Library",
     "noCountryTitle": "{{name}} isn't in NIDO Local yet",
     "noCountryBody": "Pick another country or ask in the chat.",

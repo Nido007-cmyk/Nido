@@ -589,6 +589,27 @@ describe("App · Emergencia sin modelo (0.1.95)", () => {
     expect(ids).toEqual(["nido-esencial-e5", "nido-local-e5"]);
   });
 
+  it("la tecla Atrás de Android cierra Emergencia y vuelve al asistente, sin salir de la app", async () => {
+    const { BackHandler } = require("react-native");
+    const handlers: Array<() => boolean> = [];
+    const spy = jest.spyOn(BackHandler, "addEventListener").mockImplementation(((type: string, cb: () => boolean) => {
+      if (type === "hardwareBackPress") handlers.push(cb);
+      return { remove: () => handlers.splice(handlers.indexOf(cb), 1) };
+    }) as never);
+    await renderAppToWizard();
+    expect(handlers).toHaveLength(0); // sin la capa abierta, Atrás no se intercepta
+    fireEvent.press(screen.getByTestId("setup-open-emergency"));
+    expect(await screen.findByText(en.emergency.disclaimer)).toBeTruthy();
+    let consumed = false;
+    await act(async () => {
+      consumed = handlers[handlers.length - 1]();
+    });
+    expect(consumed).toBe(true); // la app no se cierra
+    spy.mockRestore();
+    expect(await screen.findByTestId("setup-open-emergency")).toBeTruthy();
+    expect(screen.queryByText(en.emergency.disclaimer)).toBeNull();
+  });
+
   it("con modelos listos, el chat no cambia: no hay entrada del asistente", async () => {
     mockState.modelsReady = true;
     await renderApp();
