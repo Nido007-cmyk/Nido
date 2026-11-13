@@ -357,7 +357,14 @@ export function parseDateMentions(text: string, referenceDate: Date): DateMentio
     { re: new RegExp(`${BOUND_L}(anteayer|anteontem)${BOUND_R}`, "g"), offset: -2 },
     { re: new RegExp(`${BOUND_L}(ayer|ontem|yesterday)${BOUND_R}`, "g"), offset: -1 },
     { re: new RegExp(`${BOUND_L}(hoy|hoje|today)${BOUND_R}`, "g"), offset: 0 },
-    { re: new RegExp(`${BOUND_L}(manana|amanha|tomorrow)${BOUND_R}`, "g"), offset: 1 },
+    // C2-H5 (barrido 0.1.96): «de la mañana», «por la mañana», «en la
+    // mañana» son el SUSTANTIVO (la parte del día), no el adverbio
+    // «mañana» (+1). Leídos como fecha relativa, chocaban por R5 con la
+    // fecha de calendario de la misma frase y la cita fiel se retiraba
+    // («Su cita es el martes 10 de noviembre … a las 9:30 de la
+    // mañana»). El adverbio nunca lleva determinante delante. El
+    // portugués no tiene el choque («manhã» ≠ «amanhã»), ni el inglés.
+    { re: new RegExp(`(?<!(?<![a-z])(?:la|las)\\s)${BOUND_L}(manana|amanha|tomorrow)${BOUND_R}`, "g"), offset: 1 },
   ];
   for (const { re, offset } of relPatterns) {
     for (const match of t.matchAll(re)) {
