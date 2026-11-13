@@ -416,7 +416,7 @@ export class ModelManager {
    * install fails closed — it is never marked installed, never preserved.
    * There is no weaker second integrity path for bundled assets.
    */
-  async installBundled(asset: CatalogModel): Promise<void> {
+  async installBundled(asset: CatalogModel, assetSubdir = "models"): Promise<void> {
     const status = await this.statusOf(asset);
     if (status.present && status.sizeOnDiskBytes === asset.sizeBytes) return;
 
@@ -425,7 +425,9 @@ export class ModelManager {
         `Bundled asset ${asset.id} declares no expected SHA-256 — refusing to install without integrity metadata`
       );
     }
-    const assetSubPath = `models/${asset.filename.split("/").pop()}`;
+    // 0.1.95: los packs de primer arranque viajan en assets/packs/ del APK
+    // (plugins/withBundledPacks.js); los modelos, en assets/models/.
+    const assetSubPath = `${assetSubdir}/${asset.filename.split("/").pop()}`;
     const destPath = assetPath(asset);
     const writtenBytes = await copyBundledAssetToFile(assetSubPath, destPath);
 

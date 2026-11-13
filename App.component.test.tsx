@@ -53,6 +53,7 @@ const mockState = {
 const mockLlamaLoad = jest.fn();
 const mockEmbeddingLoad = jest.fn();
 const mockLockNow = jest.fn();
+const mockInstallBundled = jest.fn(async () => {});
 
 jest.mock("expo-status-bar", () => ({ StatusBar: () => null }));
 jest.mock("react-native-safe-area-context", () =>
@@ -203,6 +204,7 @@ jest.mock("./src/ui/dev/CharacterPreviewScreen", () => ({ CharacterPreviewScreen
 jest.mock("./src/models/ModelManager", () => ({
   ModelManager: class {
     requiredModelsPresent = async () => mockState.modelsReady;
+    installBundled = (...args: unknown[]) => mockInstallBundled(...args);
   },
 }));
 jest.mock("./src/models/manifestTrust", () => ({
@@ -213,6 +215,11 @@ jest.mock("./src/models/settings", () => ({
   deviceDefaultLanguage: () => "en",
   getLanguageId: async () => "en",
   setLanguageId: async () => {},
+  // 0.1.95: la pestaña de Emergencia del asistente y el modelo de búsqueda activo.
+  getEmergencyRegion: async () => null,
+  setEmergencyRegion: async () => {},
+  getActiveModelId: async () => null,
+  setActiveModelId: async () => {},
 }));
 jest.mock("./src/config/featureFlags", () => ({ loadFeatureFlags: async () => {} }));
 jest.mock("./src/routines/startup", () => ({ runStartupRoutines: () => {} }));
@@ -292,6 +299,9 @@ jest.mock("./src/rag/packs", () => ({
   knowledgePacks: async () => mockState.packs,
   listPackGuides: async (packId: string) => mockState.guidesByPack[packId] ?? [],
   readPackGuide: async (packId: string, guideId: number) => mockState.docs[`${packId}:${guideId}`] ?? null,
+  loadAllPackFacts: async () => ({ regions: [], facts: [], outdatedPacks: [] }),
+  closeAllPacks: async () => {},
+  prepareVectorIndexes: async () => {},
 }));
 // Cierres por la misma razón que lockNow arriba: una captura directa
 // de mockLlamaLoad/mockEmbeddingLoad quedaría en undefined.
@@ -527,3 +537,63 @@ describe("App · lector de guías sin modelo (integración)", () => {
     });
   }
 });
+
+// 0.1.95: Emergencia antes del modelo. En el asistente de instalación, la
+// pestaña de Emergencia se abre como capa propia (no monta ChatScreen ni
+// carga motores) y el arranque instala desde el APK los packs con los
+// números y las guías.
+describe("App · Emergencia sin modelo (0.1.95)", () => {
+  let appStateSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    mockState.modelsReady = false;
+    mockState.ensureUnlockedImpl = async () => {};
+    mockLlamaLoad.mockClear();
+    mockEmbeddingLoad.mockClear();
+    mockInstallBundled.mockClear();
+    appStateHandlers = [];
+    appStateSpy = jest.spyOn(AppState, "addEventListener").mockImplementation(((type: string, cb: (s: string) => void) => {
+      if (type === "change") appStateHandlers.push(cb);
+      return { remove: () => {} };
+    }) as never);
+  });
+
+  afterEach(() => {
+    appStateSpy.mockRestore();
+  });
+
+  it("el arranque instala desde el APK los dos packs de primer arranque, de la carpeta packs/", async () => {
+    await renderAppToWizard();
+    const ids = mockInstallBundled.mock.calls.map((c) => (c[0] as { id: string }).id);
+    // Instalación nueva en inglés: la variante bge, la misma que elegirá el asistente.
+    expect(ids).toEqual(["nido-esencial", "nido-local"]);
+    for (const c of mockInstallBundled.mock.calls) expect(c[1]).toBe("packs");
+  });
+
+  it("sin modelo, la entrada de Emergencia abre la pestaña sin chat ni motores, y cerrar vuelve al asistente", async () => {
+    await renderAppToWizard();
+    fireEvent.press(screen.getByTestId("setup-open-emergency"));
+    expect(await screen.findByText(en.emergency.disclaimer)).toBeTruthy();
+    // Sin chat todavía: la caja «describe lo que pasa» no aparece.
+    expect(screen.queryByTestId("emergency-describe-card")).toBeNull();
+    expect(screen.queryByText("CHAT-MARKER")).toBeNull();
+    expectNoEngines();
+    fireEvent.press(screen.getByTestId("setup-close-emergency"));
+    expect(await screen.findByTestId("setup-open-emergency")).toBeTruthy();
+    expect(screen.queryByText(en.emergency.disclaimer)).toBeNull();
+  });
+
+  it("instalación nueva en español: la variante multilingüe, no una copia que nadie pidió", async () => {
+    await renderAppToWizard("es");
+    const ids = mockInstallBundled.mock.calls.map((c) => (c[0] as { id: string }).id);
+    expect(ids).toEqual(["nido-esencial-e5", "nido-local-e5"]);
+  });
+
+  it("con modelos listos, el chat no cambia: no hay entrada del asistente", async () => {
+    mockState.modelsReady = true;
+    await renderApp();
+    expect(await screen.findByText("CHAT-MARKER", {}, { timeout: 8000 })).toBeTruthy();
+    expect(screen.queryByTestId("setup-open-emergency")).toBeNull();
+  });
+});
+

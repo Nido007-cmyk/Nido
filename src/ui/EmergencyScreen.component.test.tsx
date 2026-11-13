@@ -95,3 +95,30 @@ describe("EmergencyScreen", () => {
     expect(findByStyle(view.toJSON(), (st) => st.paddingBottom === 46).length).toBeGreaterThanOrEqual(1);
   });
 });
+
+// 0.1.95: la misma pestaña dentro del asistente de instalación, antes de
+// que exista el chat. Sin onAsk no hay a dónde mandar una pregunta: la caja
+// «describe lo que pasa» no se pinta y las guías rápidas abren la
+// biblioteca, que lee las guías sin modelo. Llamar sigue igual.
+describe("EmergencyScreen sin chat (asistente, 0.1.95)", () => {
+  const { EmergencyScreen } = require("./EmergencyScreen");
+  it("con chat: la caja de describir está y las guías rápidas escriben en el chat", async () => {
+    const onAsk = jest.fn();
+    const onOpenLibrary = jest.fn();
+    await render(<EmergencyScreen onAsk={onAsk} onOpenLibrary={onOpenLibrary} />);
+    expect(await screen.findByTestId("emergency-describe-card")).toBeTruthy();
+    fireEvent.press(screen.getByText("emergency.guides.cpr"));
+    expect(onAsk).toHaveBeenCalledWith("emergency.questions.cpr");
+    expect(onOpenLibrary).not.toHaveBeenCalled();
+  });
+
+  it("sin chat: no hay caja de describir y las guías rápidas abren la biblioteca", async () => {
+    const onOpenLibrary = jest.fn();
+    await render(<EmergencyScreen onOpenLibrary={onOpenLibrary} />);
+    // Los números siguen al alcance: el selector de país está.
+    expect(await screen.findByLabelText("emergency.pickCountry")).toBeTruthy();
+    expect(screen.queryByTestId("emergency-describe-card")).toBeNull();
+    fireEvent.press(screen.getByText("emergency.guides.cpr"));
+    expect(onOpenLibrary).toHaveBeenCalledTimes(1);
+  });
+});

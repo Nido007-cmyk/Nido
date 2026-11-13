@@ -99,7 +99,8 @@
       "./plugins/withHideOverlays",
       "./plugins/with-bluetooth-never-for-location",
       "./plugins/withLeanManifest",
-    "./plugins/withLlamaTrim",
+      "./plugins/withLlamaTrim",
+      "./plugins/withBundledPacks",
       [
         "expo-build-properties",
         {

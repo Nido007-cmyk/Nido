@@ -25,8 +25,13 @@ import { QUICK_GUIDES } from "./emergency/quickGuides";
 import { CprPractice } from "./emergency/CprPractice";
 
 interface Props {
-  /** Sends a question to the chat (switches to the Chat tab). */
-  onAsk: (question: string) => void;
+  /**
+   * Sends a question to the chat (switches to the Chat tab). 0.1.95: absent
+   * in the setup wizard, where there is no chat yet: then the "describe
+   * what's happening" box is hidden and the quick guides open the guide
+   * library, which reads the guides with no model.
+   */
+  onAsk?: (question: string) => void;
   /** Opens the Library tab (where NIDO Local is downloaded). */
   onOpenLibrary: () => void;
 }
@@ -89,7 +94,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
       const q = text.trim();
       if (!q) return;
       setQuestion("");
-      onAsk(q);
+      onAsk?.(q);
     },
     [onAsk]
   );
@@ -229,7 +234,8 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
 
         <Text style={styles.disclaimer}>{t("emergency.disclaimer")}</Text>
 
-        <View style={styles.card}>
+        {onAsk && (
+        <View style={styles.card} testID="emergency-describe-card">
           <Text style={styles.cardTitle} nativeID="emergency-describe">
             {t("emergency.describeLabel")}
           </Text>
@@ -256,6 +262,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
           </View>
           <Text style={styles.note}>{t("emergency.describeHint")}</Text>
         </View>
+        )}
 
 
         <Text style={styles.section} accessibilityRole="header">
@@ -265,7 +272,7 @@ export function EmergencyScreen({ onAsk, onOpenLibrary }: Props) {
           {QUICK_GUIDES.map((g) => (
             <Pressable
               key={g.key}
-              onPress={() => ask(t(`emergency.questions.${g.key}`))}
+              onPress={() => (onAsk ? ask(t(`emergency.questions.${g.key}`)) : onOpenLibrary())}
               style={styles.guide}
               accessibilityRole="button"
             >

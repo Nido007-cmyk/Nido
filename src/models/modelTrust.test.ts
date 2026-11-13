@@ -54,12 +54,14 @@ const hoisted = vi.hoisted(() => {
   }
   const files = new Map<string, MockFile>();
   const base64Reads: string[] = []; // model-path chunk reads (i.e. hashing happened)
+  const copiedSubPaths: string[] = []; // APK asset paths copyBundledAssetToFile was asked for
   let apkBytes: Uint8Array = new Uint8Array(0);
   let apkMtimeSec = 2000;
   const writeFile = (path: string, bytes: Uint8Array, mtimeSec = 1000): void => {
     files.set(path, { bytes: bytes.slice(), mtimeSec });
   };
   return {
+    copiedSubPaths,
     td,
     te,
     DOCS,
@@ -128,7 +130,8 @@ vi.mock("expo-file-system/legacy", () => ({
 
 // Bundled-assets native module: "copies" the APK asset into the mock FS.
 vi.mock("bundled-assets", () => ({
-  copyBundledAssetToFile: async (_subPath: string, destPath: string) => {
+  copyBundledAssetToFile: async (subPath: string, destPath: string) => {
+    hoisted.copiedSubPaths.push(subPath);
     hoisted.writeFile(destPath, hoisted.getApkBytes(), hoisted.getApkMtimeSec());
     return hoisted.getApkBytes().length;
   },
@@ -229,6 +232,17 @@ describe("installBundled integrity (same SHA-256 guarantee as downloads)", () =>
 
     expect(hoisted.fileExists(modelPath)).toBe(false);
     expect((await mgr.statusOf(asset)).present).toBe(false);
+  });
+
+  it("0.1.95: copies from assets/models/ by default and from the subfolder it is given", async () => {
+    hoisted.copiedSubPaths.length = 0;
+    const mgr = makeManager();
+    await mgr.installBundled(asset);
+    hoisted.files.clear();
+    resetInstallReconcileForTests();
+    await makeManager().installBundled(asset, "packs");
+    const file = asset.filename.split("/").pop();
+    expect(hoisted.copiedSubPaths).toEqual([`models/${file}`, `packs/${file}`]);
   });
 
   it("bundled asset without declared SHA-256 → install refused outright", async () => {
