@@ -103,7 +103,9 @@ does, but F-Droid (decision D8) will raise them:
   are inert, but F-Droid's scanner flags non-free libraries. Removing them
   means excluding `firebase-messaging` from expo-notifications in Gradle and
   checking that the R8 build still compiles. This needs a test Android
-  build. Open.
+  build. Open. The full inventory (expo-notifications brings Firebase and
+  Play Services; expo-application brings the Play Install Referrer) and
+  the two routes are in [FDROID.md](FDROID.md).
 - **Voice input** uses the phone's on-device recognizer when Android 12+
   offers one, and refuses offline-only mode when it doesn't. On phones
   without one (GrapheneOS, many de-Googled ROMs) there is no offline voice

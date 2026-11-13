@@ -11,7 +11,7 @@
  * notara en el aparato. Estos tests juzgan las listas del plugin
  * contra el censo real de nombres del APK publicado de la 0.1.68:
  * la pareja hexagon_opencl sale, las otras seis parejas y la
- * genérica se quedan, y los 4 assets HTP salen por su patrón.
+ * genérica se quedan, y los 5 assets HTP (v85 desde llama.rn rc.9) salen por su patrón.
  */
 import { describe, expect, it } from "vitest";
 import { createRequire } from "node:module";
@@ -53,7 +53,7 @@ const LLAMA_LIBS = [
   "librnllama_jni_v8_2_dotprod_i8mm_hexagon_opencl.so",
 ].map((n) => `lib/arm64-v8a/${n}`);
 
-const HTP_ASSETS = ["v73", "v75", "v79", "v81"].map((v) => `assets/ggml-hexagon/libggml-htp-${v}.so`);
+const HTP_ASSETS = ["v73", "v75", "v79", "v81", "v85"].map((v) => `assets/ggml-hexagon/libggml-htp-${v}.so`);
 
 describe("withLlamaTrim · P-02", () => {
   it("excluye exactamente la pareja hexagon_opencl de las 14 del censo", () => {
@@ -72,7 +72,7 @@ describe("withLlamaTrim · P-02", () => {
     expect(keptCount).toBe(12);
   });
 
-  it("el patrón HTP casa los 4 assets y nada fuera de ggml-hexagon/", () => {
+  it("el patrón HTP casa los 5 assets y nada fuera de ggml-hexagon/", () => {
     for (const p of HTP_ASSETS) expect(isExcluded([HTP_ASSET_PATTERN], p)).toBe(true);
     expect(isExcluded([HTP_ASSET_PATTERN], "assets/ggml-hexagon2/libggml-htp-v73.so")).toBe(false);
     expect(isExcluded([HTP_ASSET_PATTERN], "assets/models/embedding.gguf")).toBe(false);

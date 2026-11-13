@@ -43,21 +43,28 @@ jobs:
       # expo ESM sin stub en jest.config.js). Diagnosticadas y en verde
       # (5 suites, 15 tests): desde esta versión corren como puerta.
       - run: npm run test:components -- --json --outputFile=jest-results.json
+      # Paquete NIDO-MANT-2026-11-13, encargo 4: el recuento sale de aquí y
+      # se puede auditar. Resumen por corredor (pasadas, fallidas,
+      # omitidas, total), ficheros con omitidas, comando, entorno y run,
+      # en el resumen del paso y en el artefacto test-summary. Los fallos
+      # siguen saliendo como anotación por si el log no se puede leer.
       - name: Test count
         if: always()
-        run: |
-          node -e '
-            const fs = require("fs");
-            const read = (f) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch { return null; } };
-            const v = read("vitest-results.json"), j = read("jest-results.json");
-            const n = (r) => (r ? r.numTotalTests : 0), p = (r) => (r ? r.numPassedTests : 0);
-            console.log(`::notice title=Test count::${n(v) + n(j)} tests (${p(v) + p(j)} passed): vitest ${n(v)}, jest ${n(j)}`);
-            // Logs de CI no siempre accesibles: los fallos también como anotación.
-            const esc = (m) => String(m).replace(/\u001b\[[0-9;]*m/g, "").slice(0, 1500).replace(/%/g, "%25").replace(/\r?\n/g, "%0A");
-            for (const r of [...(v?.testResults ?? []), ...(j?.testResults ?? [])]) {
-              if (r.status === "failed") console.log(`::error title=${(r.name ?? "").split("/").slice(-2).join("/")}::${esc(r.message || (r.assertionResults ?? []).filter((a) => a.status === "failed").map((a) => a.fullName + ": " + (a.failureMessages ?? []).join(" ")).join(" | "))}`);
-            }
-          '
+        run: node scripts/test-summary.mjs vitest-results.json jest-results.json test-summary.json
+      - name: Upload test summary
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: test-summary
+          path: |
+            test-summary.json
+            vitest-results.json
+            jest-results.json
+          if-no-files-found: warn
+          retention-days: 90
+      # Desde 0.1.96: toda cifra de pruebas de las notas declara comando,
+      # entorno y run (docs/release/RELEASE_MODEL.md, §Test figures).
+      - run: node scripts/check-release-test-figures.mjs
       - run: npm run verify:pins
       # 0.1.60: cada regla firme de la constitución tiene sus comprobaciones.
       - run: node scripts/check-constitution.mjs --github

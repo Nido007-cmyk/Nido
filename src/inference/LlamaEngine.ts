@@ -536,8 +536,8 @@ export class LlamaEngine {
   }
 
   /**
-   * El sustituto de la variante nativa cargada (la rc.7 no expone
-   * getter): getBackendDevicesInfo() una vez por proceso, en segundo
+   * El sustituto de la variante nativa cargada (ni la rc.7 ni la rc.9
+   * exponen getter): getBackendDevicesInfo() una vez por proceso, en segundo
    * plano. Cualquier fallo deja el campo en null, sin más coste.
    */
   private refreshBackendSummary(): Promise<void> {

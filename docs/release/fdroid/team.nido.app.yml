@@ -1,0 +1,81 @@
+# BORRADOR de trabajo de la receta de fdroiddata (metadata/team.nido.app.yml).
+# NO enviado a gitlab.com/fdroid/fdroiddata. La decisión D8 y su momento son
+# del dueño. Ver docs/release/FDROID.md (English) y docs/es/release/FDROID.md.
+#
+# Lo marcado «VERIFICAR» no se pudo comprobar desde el repo y se cierra con
+# `fdroid build` en local el día de la decisión (FDROID.md, paso 1).
+
+Categories:
+  - Science & Education # VERIFICAR contra la lista de categorías vigente de fdroiddata
+  - Security
+License: MIT
+WebSite: https://github.com/Nido007-cmyk/Nido
+SourceCode: https://github.com/Nido007-cmyk/Nido
+IssueTracker: https://github.com/Nido007-cmyk/Nido/issues
+Changelog: https://github.com/Nido007-cmyk/Nido/blob/HEAD/CHANGELOG.md
+
+AutoName: NIDO
+
+RepoType: git
+Repo: https://github.com/Nido007-cmyk/Nido.git
+# Compilación reproducible: F-Droid compila, compara byte a byte con el APK
+# de la release (sin la firma) y, si coinciden, publica el APK firmado por
+# NIDO. Las etiquetas de NIDO son v<versión>-alpha.
+Binaries: https://github.com/Nido007-cmyk/Nido/releases/download/v%v-alpha/app-release.apk
+
+Builds:
+  # Marcador: la primera versión que salga sin Firebase, Play Services ni
+  # Install Referrer (FDROID.md §3). Ninguna versión publicada hasta la
+  # 0.1.95 cumple: llevan esas clases compiladas.
+  - versionName: 0.1.96
+    versionCode: 97
+    commit: v0.1.96-alpha
+    # VERIFICAR: android/ no está en git, lo genera `expo prebuild`. Si
+    # fdroidserver exige que subdir exista antes de prebuild, se quita
+    # subdir y la compilación va en `build:` con gradlew.
+    subdir: android/app
+    sudo:
+      - apt-get update
+      # VERIFICAR: NIDO compila con Node 24 (android-apk.yml). Hay que ver
+      # qué Node trae el buildserver y, si es más viejo, de dónde sacar el 24
+      # con una fuente aceptada por F-Droid.
+      - apt-get install -y nodejs npm
+    init:
+      - cd ../..
+      # --ignore-scripts: el install de llama.rn descarga librerías nativas
+      # ya compiladas (install/download-native-artifacts.js). Se compilan
+      # desde fuente con rnllamaBuildFromSource (abajo).
+      - npm ci --ignore-scripts --no-audit --no-fund
+    rm:
+      # Binarios ya compilados dentro de node_modules: F-Droid no los acepta.
+      # Las librerías HTP (y libOpenCL) de llama.rn las saca del APK
+      # withLlamaTrim; aquí se borran del árbol.
+      - node_modules/llama.rn/bin
+      # node-llama-cpp es solo para las evaluaciones en ordenador.
+      - node_modules/@node-llama-cpp
+      - node_modules/node-llama-cpp
+    prebuild:
+      - cd ../..
+      # El package.json de esa versión ya fija
+      # expo.autolinking.android.buildFromSource [".*"] (FDROID.md §3.2):
+      # los módulos expo se compilan desde fuente, no desde sus AAR de
+      # local-maven-repo.
+      - npx expo prebuild -p android --clean --non-interactive --no-install
+      # VERIFICAR: si la versión ya lo fija con un plugin, esta línea sobra.
+      - echo "rnllamaBuildFromSource=true" >> android/gradle.properties
+    scandelete:
+      - node_modules
+    output: build/outputs/apk/release/app-release-unsigned.apk # VERIFICAR nombre
+    gradle:
+      - yes
+    # El mismo NDK que la CI (android-apk.yml: ndk;27.0.12077973).
+    ndk: 27.0.12077973
+
+# Certificado de firma de NIDO (SHA-256), comprobado contra el APK de la
+# v0.1.95-alpha el 2026-11-13: firma v2, un certificado.
+AllowedAPKSigningKeys: 4bd73b2f31ce7e66ff3e2c03cd2ff44eabb38dc9e6eef178d8ad7795b50160cf
+
+AutoUpdateMode: Version v%v-alpha
+UpdateCheckMode: Tags ^v[0-9.]+-alpha$
+CurrentVersion: 0.1.96
+CurrentVersionCode: 97
