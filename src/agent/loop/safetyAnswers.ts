@@ -321,7 +321,10 @@ const SELF_HARM_RE = new RegExp(
       "(?:pienso|pensando|he pensado) en (?:el )?suicid\\w*",
       "(?:acabar|terminar) con mi vida",
       "hacerme dano",
-      "(?:pienso|pensando|he pensado) en lastimarme",
+      "(?:pienso|pensando|he pensado) en (?:lastimarme|herirme)",
+      // C1-H1 (barrido 0.1.96): la forma directa con «lastimar»/«herir»,
+      // gemela de la portuguesa «quero me machucar / ferir».
+      "(?:quiero|voy a|tengo ganas de) (?:lastimarme|herirme)",
       "lastimarme a mi mism[oa]",
       "no vale la pena (?:seguir )?vivi(?:r|endo)",
       "(?:estaria|estarian) mejor (?:muert[oa]|sin mi)",
@@ -346,7 +349,14 @@ const SELF_HARM_RE = new RegExp(
       "vou me matar",
       "tirar (?:a )?minha (?:propria )?vida",
       "me suicidar",
-      "(?:penso|pensando|pensei|pensado) em (?:suicid\\w*|me matar|me machucar)",
+      "(?:penso|pensando|pensei|pensado) em (?:suicid\\w*|me matar|me machucar|me ferir)",
+      // C1-H1 (barrido 0.1.96): la forma directa, como «hacerme daño» en
+      // español e «I want to hurt myself» en inglés. Siempre con el verbo
+      // de intención de quien habla delante: «me machucar» suelto también
+      // es «o cachorro pode me machucar».
+      "(?:quero|queria|vou|preciso|tenho vontade de) me (?:machucar|ferir)",
+      "(?:quero|vou|preciso) (?:machucar|ferir)-me",
+      "(?:machucar|ferir) a mim mesm[oa]",
       "nao quero (?:mais )?viver",
       "nao aguento mais viver",
       "acabar com (?:a )?minha vida",

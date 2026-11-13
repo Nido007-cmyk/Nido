@@ -61,3 +61,36 @@ describe("daño a uno mismo: texto fijo", () => {
     expect(matchSafetyAnswer("quiero matarme, cual es el numero de emergencias de mexico", "es")?.kind).toBe("self-harm");
   });
 });
+
+// Barrido 0.1.96, clase 1 (paridad trilingüe).
+describe("C1-H1: la forma directa en portugués dispara como en español e inglés", () => {
+  it("las sondas del barrido: «quero me machucar», «quero me ferir»", () => {
+    expect(isSelfHarmMessage("quero me machucar")).toBe(true);
+    expect(isSelfHarmMessage("quero me ferir")).toBe(true);
+    expect(matchSafetyAnswer("quero me machucar", "pt")?.kind).toBe("self-harm");
+  });
+
+  it("sus gemelas en es/en ya disparaban y siguen", () => {
+    for (const q of ["quiero hacerme daño", "I want to hurt myself", "penso em me machucar", "quero me matar", "não quero mais viver"]) {
+      expect(isSelfHarmMessage(q), q).toBe(true);
+    }
+  });
+
+  it("variantes directas en pt: verbo de intención, enclítico, «a mim mesmo», «penso em me ferir»", () => {
+    for (const q of ["vou me machucar", "eu quero me ferir de novo", "quero machucar-me", "tenho vontade de me machucar", "quero ferir a mim mesma", "penso em me ferir"]) {
+      expect(isSelfHarmMessage(q), q).toBe(true);
+    }
+  });
+
+  it("paridad: las gemelas españolas con «lastimarme» y «herirme» también disparan", () => {
+    for (const q of ["quiero lastimarme", "quiero herirme", "pienso en herirme"]) {
+      expect(isSelfHarmMessage(q), q).toBe(true);
+    }
+  });
+
+  it("sin falsos positivos: otra persona o una cosa que hace daño, frases hechas", () => {
+    for (const q of ["o cachorro pode me machucar", "esse sapato vai machucar meu pé", "ele quer me machucar", "quero morrer de rir", "el perro puede lastimarme"]) {
+      expect(isSelfHarmMessage(q), q).toBe(false);
+    }
+  });
+});

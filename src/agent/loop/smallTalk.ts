@@ -88,8 +88,10 @@ const RULES: Array<{ kind: SmallTalkKind; re: RegExp }> = [
     re: /^(?:(?:muchas|mil|muchisimas) )?gracias(?: (?:por todo|por tu ayuda|nido))?$|^(?:thanks|thank you|thx|ty|thanks a lot|thank you so much|many thanks)(?: nido)?$|^(?:muito )?obrigad[oa](?: mesmo)?$|^valeu$/,
   },
   {
+    // C1-H5 (barrido 0.1.96): «adeus» (gemela de «adiós» y «goodbye») y
+    // «até amanhã» (gemela de «hasta mañana») faltaban en pt.
     kind: "bye",
-    re: /^(?:adios|chao|chau|hasta luego|hasta pronto|hasta manana|nos vemos|bye|goodbye|bye bye|see you|see ya|good night|tchau|ate logo|ate mais|falou)(?: nido)?$/,
+    re: /^(?:adios|chao|chau|hasta luego|hasta pronto|hasta manana|nos vemos|bye|goodbye|bye bye|see you|see ya|good night|tchau|adeus|ate logo|ate mais|ate amanha|falou)(?: nido)?$/,
   },
   {
     kind: "whatsUp",
@@ -149,7 +151,7 @@ const REPLIES: Record<SmallTalkKind, Record<SmallTalkLang, string>> = {
 const EN_MARKERS =
   /\b(hi|hey|hello|hiya|good|morning|afternoon|evening|how|you|doing|thanks|thank|thx|ty|bye|goodbye|see|fine|great|well|okay|cool|nice|got|alright|sounds|what|whats|sup|wassup|not bad|im|am|all)\b/;
 const PT_MARKERS =
-  /\b(ola|oi|bom|boa|noite|tarde|tudo|voce|vc|obrigad[oa]|valeu|tchau|ate|estou|to|tou|bem|otimo|beleza|certo|show|entendi|combinado|e ai|vai|falou|muito|fazendo|ta)\b/;
+  /\b(ola|oi|bom|boa|noite|tarde|tudo|voce|vc|obrigad[oa]|valeu|tchau|adeus|ate|estou|to|tou|bem|otimo|beleza|certo|show|entendi|combinado|e ai|vai|falou|muito|fazendo|ta)\b/;
 const ES_MARKERS =
   /\b(hola|holi|buenas|buenos|buen|dia|dias|como|estas|que|tal|tu|usted|vos|bien|gracias|adios|chao|chau|hasta|vemos|vale|perfecto|genial|listo|entendido|acuerdo|claro|sale|haces|estoy|muy|todo|aqui|saludos|onda)\b/;
 

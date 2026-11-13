@@ -112,3 +112,20 @@ describe("matchSmallTalk — 0.1.8: devolver la pregunta con errores de correcto
     expect(matchSmallTalk("y tú qué opinas de la fotosíntesis")).toBeNull();
   });
 });
+
+// Barrido 0.1.96, clase 1: la sospecha C1-H5. «adeus» es la gemela
+// portuguesa de «adiós» y «goodbye»; «até amanhã», la de «hasta mañana».
+describe("C1-H5: despedidas portuguesas que faltaban", () => {
+  it.each([
+    ["adeus", "pt"],
+    ["adeus, nido", "pt"],
+    ["até amanhã", "pt"],
+    ["adiós", "es"],
+    ["hasta mañana", "es"],
+    ["goodbye", "en"],
+  ])("%p → bye (%s)", (text, lang) => {
+    const hit = matchSmallTalk(text);
+    expect(hit?.kind).toBe("bye");
+    expect(hit?.lang).toBe(lang);
+  });
+});

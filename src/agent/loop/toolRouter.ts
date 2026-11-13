@@ -764,16 +764,21 @@ const NIDO_SEND_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: new RegExp(`^${POLITE}(?:manda|mande|envia|envie)\\s+(?:para|pra|pro)\\s+(?:o\\s+|a\\s+)?(.+?)\\s+(?:uma\\s+)?mensagem(?:${SEP}(.+))?$`, "is"), lang: "pt" },
 ];
 
+// C1-H3 (barrido 0.1.96): la forma de pregunta en los tres idiomas. Antes
+// solo la española la tenía («¿tengo mensajes de nido?»); en y pt solo
+// llegaban por imperativo o nominal.
 const NIDO_INBOX_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
-  { re: /^(?:(?:lee|leer|l[eé]eme|revisa|mu[eé]strame|ver|abre)\s+)?(?:mis\s+)?mensajes(?:\s+(?:de\s+)?nido)?(?:\s+nuevos)?$|^(?:tengo|hay)\s+mensajes(?:\s+nuevos)?(?:\s+de\s+nido)?$|^(?:mi\s+)?bandeja(?:\s+de\s+entrada)?(?:\s+de\s+nido)?$/i, lang: "es" },
-  { re: /^(?:(?:read|check|show(?: me)?|open)\s+)?my\s+(?:nido\s+)?(?:messages|inbox)$|^do i have (?:any )?(?:new )?messages$/i, lang: "en" },
-  { re: /^(?:(?:l[eê]|ler|leia|ver|mostra|mostre|abre)\s+)?(?:minhas\s+)?mensagens(?:\s+(?:do\s+)?nido)?$|^tenho\s+mensagens(?:\s+novas)?$/i, lang: "pt" },
+  { re: /^(?:(?:lee|leer|l[eé]eme|revisa|mu[eé]strame|ver|abre)\s+)?(?:mis\s+)?mensajes(?:\s+(?:de\s+)?nido)?(?:\s+nuevos)?$|^(?:tengo|hay)\s+mensajes(?:\s+nuevos)?(?:\s+de\s+nido)?$|^(?:tengo|hay)\s+alg[uú]n\s+mensaje(?:\s+nuevo)?(?:\s+de\s+nido)?$|^(?:mi\s+)?bandeja(?:\s+de\s+entrada)?(?:\s+de\s+nido)?$/i, lang: "es" },
+  { re: /^(?:(?:read|check|show(?: me)?|open)\s+)?my\s+(?:nido\s+)?(?:messages|inbox)$|^do i have (?:any )?(?:new )?(?:nido )?messages(?: from nido)?$|^any (?:new )?nido messages$/i, lang: "en" },
+  { re: /^(?:(?:l[eê]|ler|leia|ver|mostra|mostre|abre)\s+)?(?:minhas\s+)?mensagens(?:\s+(?:do\s+)?nido)?$|^(?:eu\s+)?tenho\s+(?:mensagens(?:\s+novas)?|alguma\s+mensagem(?:\s+nova)?)(?:\s+do\s+nido)?$/i, lang: "pt" },
 ];
 
 const NIDO_CODE_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
   { re: /^(?:(?:mu[eé]strame|dame|ens[eé][ñn]ame|cu[aá]l es|ver)\s+)?mi\s+c[oó]digo(?:\s+(?:de\s+emparejamiento|nido|qr|de\s+nido))?$|^mi\s+qr$/i, lang: "es" },
   { re: /^(?:(?:show(?: me)?|what(?:'s| is)|get)\s+)?my\s+(?:pairing|nido|qr)\s+code$|^my\s+qr$/i, lang: "en" },
-  { re: /^(?:(?:mostra|mostre|qual [eé])\s+)?meu\s+c[oó]digo(?:\s+(?:de\s+pareamento|nido|qr))?$/i, lang: "pt" },
+  // C1-H4 (barrido 0.1.96): también con el artículo («o meu») y «do nido»,
+  // la forma natural en pt (en es, «mi código de nido»).
+  { re: /^(?:(?:mostra|mostre|qual [eé])\s+)?(?:o\s+)?meu\s+c[oó]digo(?:\s+(?:de\s+pareamento|nido|qr|do\s+nido))?$/i, lang: "pt" },
 ];
 
 const NIDO_TASKS_RULES: Array<{ re: RegExp; lang: RouterLang }> = [
