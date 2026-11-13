@@ -1,216 +1,165 @@
 > **Idioma:** [English](../../release/FDROID.md) · Español
 
-# F-Droid: preparación (borrador de trabajo)
+# F-Droid: estado y camino decidido
 
-Estado: **preparado, sin enviar.** Entrar en F-Droid es la decisión D8 del
-dueño, y él decide cuándo. Nada de este documento se ha enviado a
-gitlab.com/fdroid/fdroiddata. Lo escribió el paquete NIDO-MANT-2026-11-13
-(encargo 5) el 2026-11-13, a partir del árbol de la v0.1.95-alpha.
+**D8 resuelta por el dueño el 2026-11-13: el APK normal de NIDO es el que va
+sin Google. No hay un sabor `foss` aparte.**
 
-El borrador de la receta está en
+El motivo: si el APK sin Google fuera una variante distinta de la de GitHub,
+F-Droid la firmaría con su propia clave. Entonces pasar de una instalación a
+otra obligaría a desinstalar, y desinstalar borra los modelos descargados
+(hasta unos 5 GB).
+
+Nada de este documento se ha enviado a gitlab.com/fdroid/fdroiddata. El
+borrador de la receta está en
 [`docs/release/fdroid/team.nido.app.yml`](../../release/fdroid/team.nido.app.yml).
 
-## 1. Lo que F-Droid pide y dónde está NIDO
+## 1. Dónde está NIDO
 
-| Requisito | Estado en la 0.1.95 | Qué falta |
+| Requisito de F-Droid | Estado |
+|---|---|
+| Sin librerías de Google ni de rastreo (Firebase, Play Services) | **Hecho en código, pendiente de release.** #253 (ya en main, 5acecb4a) sustituye expo-notifications por un módulo propio; #254 censa cada APK construido y tumba la compilación si queda algo. Ninguna versión publicada lo cumple todavía: la 0.1.95 lleva esas clases compiladas e inertes |
+| Compilar todo desde fuente | **No cumple.** Las dependencias traen librerías nativas ya compiladas (§3) |
+| Licencia libre | Cumple: MIT |
+| Metadatos | fastlane/metadata/android en en-US, es-ES y pt-BR; receta en borrador |
+| Firma de NIDO (compilación reproducible) | Depende de §3: hoy la compilación de NIDO usa binarios precompilados que F-Droid no puede usar |
+
+El permiso INTERNET se queda: hace falta para descargar los modelos y no es
+un bloqueo de F-Droid.
+
+## 2. Google fuera: qué se hizo
+
+Hasta la 0.1.95, todo lo de Google entraba por **dos** dependencias:
+
+- **expo-notifications 57.0.24:** firebase-messaging y todo su árbol
+  (Firebase, Play Services, datatransport, kotlinx-coroutines-play-services).
+- **expo-application 57.0.3**, que traía expo-notifications: el Install
+  Referrer de Google Play.
+
+NIDO solo usaba de expo-notifications los avisos locales.
+
+**PR-1 (#253):** `modules/nido-notify`, un módulo propio (MIT, solo API de
+Android y expo-modules-core) con exactamente lo que NIDO usaba:
+
+- programar, mostrar, cancelar y despedir avisos locales;
+- canales y permiso;
+- saber cuándo se entregó un aviso.
+
+La cuenta de la próxima hora es la de expo, línea a línea. Una comparación
+contra el código real de expo dio 0 diferencias en 360.000 casos. Al
+actualizar, el primer arranque reprograma lo que expo tenía pendiente y borra
+su almacén viejo. Salen expo-notifications, expo-application y badgin.
+expo-constants sigue, pero el APK enlaza ahora la copia que pide el propio
+expo: pasa de 57.0.22 a 57.0.23, que solo cambia el número de versión.
+
+**PR-2 (#254):** retira la configuración que quedaba para Firebase en
+`plugins/withLeanManifest.js`. Añade `scripts/check-google-free.py` al final
+de cada compilación del APK, que busca Firebase, Play Services, datatransport
+y el Install Referrer en tres sitios:
+
+- los `classes*.dex`;
+- el manifiesto binario;
+- el árbol de dependencias que publica la release.
+
+Un rastro tumba la compilación y, con ella, la release.
+
+| Censo (mismo script) | 0.1.95 publicada | Con #253 y #254 |
 |---|---|---|
-| Sin librerías de rastreo ni de Google (Firebase, Play Services) | **No cumple.** El APK no las arranca, pero las lleva compiladas | §2 y §3 |
-| Compilar todo desde fuente, con herramientas libres | **No cumple.** Varias dependencias llegan ya compiladas | §3.2 |
-| Licencia libre | Cumple: MIT | — |
-| Metadatos | Casi: fastlane/metadata/android en en-US, es-ES y pt-BR | La receta de fdroiddata (borrador hecho) |
-| Firma de NIDO (compilación reproducible) | Posible: reproducible.yml ya compara dos compilaciones | Que el APK de la release sea la misma compilación que hará F-Droid (§3.4) |
+| dex `com/google/firebase` | 535 | 0 |
+| dex `com/google/android/gms` | 996 | 0 |
+| dex `com/google/android/datatransport` | 345 | 0 |
+| dex `com/google/android/finsky` | 5 | 0 |
+| dex `com/android/installreferrer` | 16 | 0 |
+| manifiesto: datatransport CCT / gms | 4 / 2 | 0 |
+| dependencias de Google en el árbol | 36 | 0 |
 
-El permiso INTERNET no es un requisito de F-Droid y queda fuera de este
-documento: es una decisión de producto aparte.
+La columna de la derecha sale del APK construido por la CI sobre la cabeza
+de #254 (commit 0f3d9ba9, run 43446068766, artefacto `nido-google-census`).
+Lo que lleve un APK publicado se comprobará en su release, donde el mismo
+paso corre antes de publicar.
 
-## 2. Inventario: qué es de Google y de dónde viene
+## 3. Lo que queda: librerías nativas precompiladas
 
-Fuente: `android-runtime-dependencies.txt` de la release v0.1.95-alpha (el
-árbol `releaseRuntimeClasspath` que publica la propia CI) y los `.dex` del
-APK publicado. Todo lo no libre cuelga de **dos** dependencias directas:
+Esto es lo que sigue separando a NIDO de fdroiddata, dicho sin rodeos.
 
-| Dependencia directa | Qué trae | Para qué la usa | ¿La usa NIDO? |
-|---|---|---|---|
-| `expo-notifications` 57.0.24 | `com.google.firebase:firebase-messaging:25.0.1`, y con él firebase-common, -components, -installations, -iid-interop, -datatransport, -encoders, -measurement-connector; `play-services-base`, `-basement`, `-cloud-messaging`, `-stats` y `-tasks`; `com.google.android.datatransport` (transport-api, -runtime, -backend-cct); `kotlinx-coroutines-play-services` | Notificaciones push (FCM): token de push y temas | **No.** NIDO usa solo notificaciones locales: programar, cancelar, canales, permiso y oyentes (`src/notify/notifications.ts`, `src/services/appReset.ts`). Nunca pide un token de push |
-| `expo-application` 57.0.3, que trae expo-notifications | `com.android.installreferrer:installreferrer:2.2`, el Install Referrer de Google Play (`com/google/android/finsky` en el dex) | `getExpoPushTokenAsync` lee el applicationId | **No** directamente. Pero su JS hace `requireNativeModule` al importarse: quitarlo del autolinking rompería el arranque |
+**Qué pasa:**
 
-Los módulos propios de NIDO (`modules/*`) no declaran nada de Google. Lo
-demás que vive bajo `com/google/` en el dex es libre: Material Components,
-Gson, errorprone y Guava, todo Apache-2.0.
+- **llama.rn** descarga en su `npm install` sus librerías nativas ya
+  compiladas desde su release de GitHub
+  (`install/download-native-artifacts.js`). Su paquete de npm trae además
+  `bin/arm64-v8a/libOpenCL.so` y las librerías Hexagon `libggml-htp-*.so`.
+  Esas dos ya se sacan del APK con `withLlamaTrim`, pero están en el árbol de
+  fuentes.
+- **Los módulos de Expo** traen cada uno su AAR ya compilado en
+  `local-maven-repo/`, y el autolinking los usa por defecto.
 
-**Qué pierde la app sin Firebase:** nada de lo que hace hoy. Los
-recordatorios son notificaciones locales (AlarmManager y NotificationManager
-de Android), que no pasan por Firebase. Firebase no puede arrancar en NIDO
-(el APK no lleva `google_app_id`) y su entrada del manifiesto se quitó en la
-0.1.95. Lo único que desaparece es el push remoto, que NIDO no usa ni puede
-usar sin servidor.
+**Qué significa para una solicitud a fdroiddata:**
 
-## 3. El sabor sin Google: dos caminos
+- F-Droid compila desde fuente. Su escáner señala los binarios que
+  encuentra, y la receta tiene que borrarlos y compilarlos desde código.
+- El código de llama.rn y de Expo es libre, así que en principio se pueden
+  compilar. Llevaría:
+  - llama.rn con `npm ci --ignore-scripts` y `rnllamaBuildFromSource=true`;
+  - Expo con `expo.autolinking.android.buildFromSource: [".*"]` en
+    `package.json`.
+- Si F-Droid compila desde fuente y NIDO publica en GitHub un APK hecho con
+  los binarios precompilados, los dos APK **no coincidirán byte a byte**.
+  Entonces F-Droid no puede publicar el APK firmado por NIDO, lo firma con
+  su clave, y vuelve el problema que la D8 quería evitar: quien cambie entre
+  GitHub y F-Droid tendría que desinstalar.
 
-### 3.1 Por qué no una variante aparte, sino el APK de siempre
+**Qué se podría hacer (sin garantía de aceptación):**
 
-F-Droid puede publicar el APK firmado por NIDO solo si su compilación
-coincide byte a byte con la de la release (`Binaries` y
-`AllowedAPKSigningKeys` en la receta). Si el APK sin Google fuera una
-variante distinta de la de GitHub, F-Droid lo firmaría con su propia clave.
-Entonces quien pase de un APK a otro tendría que desinstalar, y desinstalar
-borra los modelos descargados (hasta unos 5 GB). Como NIDO no usa nada de lo
-que se quita, la propuesta es que **el APK de la release sea el que va sin
-Google**, sin sabores. Si el dueño prefiere una variante `foss` aparte, los
-cambios de abajo valen igual, aplicados solo a esa variante, y la receta
-perdería `Binaries` y `AllowedAPKSigningKeys`.
+1. **Compilar también la release de NIDO desde fuente**, con los dos
+   ajustes de arriba en `android-apk.yml` y `reproducible.yml`, y comprobar
+   con `reproducible.yml` que dos compilaciones coinciden. Es lo único que
+   deja abierta la firma de NIDO en F-Droid. No está medido cuánto alarga la
+   compilación ni cuánto disco pide llama.cpp desde fuente; la CI ya va
+   justa de disco.
+2. **Aceptar que F-Droid firme con su clave.** Funciona, pero pierde la
+   ventaja que motivó la D8 para quien use las dos fuentes.
+3. **Dejar F-Droid para más adelante.** El APK sin Google sirve igual a
+   GrapheneOS y a las ROM sin Google desde GitHub.
 
-### 3.2 Compilar desde fuente: cambios de configuración
+Aunque se haga lo primero, F-Droid revisa cada solicitud a mano. Puede pedir
+cambios o etiquetar la app (§4), y la compilación nativa de llama.cpp tiene
+que ser determinista con su cadena de herramientas, cosa que no está
+probada. Nada de esto se puede prometer desde aquí.
 
-Estos cambios afectan al APK de la release. Hace falta una compilación
-Android de prueba antes de fusionarlos:
-
-1. **Módulos expo desde fuente.** Cada `expo-*` trae su AAR ya compilado en
-   `local-maven-repo/`, y el autolinking lo usa por defecto. En
-   `package.json`:
-
-   ```json
-   "expo": {
-     "autolinking": {
-       "android": { "buildFromSource": [".*"] }
-     }
-   }
-   ```
-
-   La clave sale de `expo-modules-autolinking`
-   (`ExpoAutolinkingConfig.buildFromSource`, `SettingsManager.configurePublication`).
-
-2. **llama.rn desde fuente.** Su script de instalación descarga las `.so`
-   ya compiladas de su release de GitHub. Hay que hacer `npm ci
-   --ignore-scripts`; llama.rn es la única dependencia de producción con
-   script de instalación (las otras dos, fsevents y node-llama-cpp, son de
-   desarrollo). Además, `rnllamaBuildFromSource=true` en
-   `android/gradle.properties`, escrito por un plugin de configuración (por
-   ejemplo dentro de `withLlamaTrim`, vía `withGradleProperties`), para que
-   la CI y F-Droid compilen igual. Con eso, `jniLibs.srcDirs = []` y CMake
-   compila llama.cpp. Las librerías HTP y `libOpenCL.so` de `bin/` las saca
-   ya `withLlamaTrim` (`ggml-hexagon/**`).
-   *Sin medir:* cuánto tarda y cuánto ocupa una compilación nativa de
-   llama.cpp desde fuente. La CI ya va justa de disco con arm64-v8a.
-
-3. **Lo mismo en las dos workflows.** `android-apk.yml` y `reproducible.yml`
-   tienen que compilar exactamente así (`--ignore-scripts`, propiedades y
-   NDK 27.0.12077973), o la release y F-Droid no coincidirán.
-
-### 3.3 Quitar Firebase y el Install Referrer
-
-expo-notifications **compila** código Kotlin y Java que importa
-`com.google.firebase.messaging.RemoteMessage` (8 ficheros),
-`FirebaseMessaging` (2) y `FirebaseMessagingService` (1). expo-application
-importa `InstallReferrerClient` e `InstallReferrerStateListener`. Excluir
-las dependencias en Gradle sin más deja esas referencias colgando: R8 las
-señala como clases que faltan y, si se silencian con `-dontwarn`, el fallo
-pasa a la ejecución. Hay dos caminos:
-
-**Camino A (recomendado): notificaciones locales propias.** Un módulo
-nativo de NIDO (junto a `modules/exact-alarm`, que ya programa alarmas
-exactas) sustituye a expo-notifications. Cubre lo que NIDO usa hoy:
-
-- `scheduleNotificationAsync` y `cancelScheduledNotificationAsync`, más
-  `cancelAll…` y `getAllScheduled…`;
-- `setNotificationChannelAsync`, `requestPermissionsAsync` y
-  `setNotificationHandler`;
-- `getPresentedNotificationsAsync`, `dismiss…` y
-  `addNotificationReceivedListener`.
-
-Al salir expo-notifications sale también expo-application, y con ellos todo
-lo de la tabla del §2. Es lo más limpio para F-Droid: no queda código de
-Google ni en `node_modules` que el escáner tenga que borrar. Su coste:
-
-- código nativo nuevo;
-- migrar esos usos;
-- repetir en el aparato la sección 5 de DEVICE_CHECKLIST (recordatorio con
-  el teléfono bloqueado), más un reinicio del teléfono con recordatorios
-  pendientes.
-
-**Camino B (más corto y menos limpio): sustitutos libres.**
-
-- Un módulo Android propio (MIT) con stubs de solo API para las tres clases
-  de Firebase y las dos del Install Referrer. Los métodos devuelven null o
-  lanzan `UnsupportedOperationException`; `RemoteMessage.Notification`
-  necesita unos 25 getters.
-- `resolutionStrategy.dependencySubstitution` en todos los proyectos,
-  escrito desde un plugin de configuración, que cambia
-  `com.google.firebase:firebase-messaging` y
-  `com.android.installreferrer:installreferrer` por ese módulo.
-
-Riesgos:
-
-- las líneas originales siguen en los `build.gradle` de `node_modules`, y
-  la receta tendría que reescribirlas en `prebuild`;
-- F-Droid puede objetar stubs en espacios de nombres de Google;
-- el código de push muerto sigue en el APK.
-
-**Dónde se vuelve necesaria una compilación Android** (no se puede correr
-desde este carril):
-
-- tras cualquiera de los dos caminos, `./gradlew assembleRelease` con R8,
-  y comprobar que no queda nada de `com/google/firebase`,
-  `com/google/android/gms`, `com/google/android/datatransport` ni
-  `com/google/android/finsky` en los `.dex` (el mismo escaneo que se hizo
-  sobre la 0.1.95);
-- y las compilaciones desde fuente del §3.2.
-
-Los diffs de A o B no se dejan aplicados porque cambian el APK y no se
-pueden probar aquí.
-
-### 3.4 Reproducible con la firma de NIDO
-
-`reproducible.yml` ya compila dos veces y compara con
-`scripts/compare-apk.py`. El día que el APK salga sin Google y desde fuente,
-la prueba es lanzarlo con `release_tag` de esa versión. Si coincide, la
-receta puede llevar `Binaries` y `AllowedAPKSigningKeys`. La huella del
-certificado de NIDO, comprobada contra el APK de la v0.1.95-alpha (firma v2,
-un certificado), es:
-
-`4bd73b2f31ce7e66ff3e2c03cd2ff44eabb38dc9e6eef178d8ad7795b50160cf`
-
-## 4. Lo que F-Droid podría marcar aunque todo lo anterior esté hecho
+## 4. Etiquetas que F-Droid podría poner
 
 - **NonFreeAdd** (promueve complementos no libres). El catálogo ofrece
   `lfm2.5-8b-a1b-q4km` bajo la «LFM Open License v1.0», que no es una
   licencia libre reconocida. Los demás modelos son MIT o Apache-2.0, y los
-  packs CC BY 4.0 o CC BY-SA 4.0. Es una etiqueta, no un rechazo; quitarla
-  sería quitar ese modelo del catálogo en la versión de F-Droid, y eso lo
-  decide el dueño.
+  packs CC BY 4.0 o CC BY-SA 4.0. Es una etiqueta, no un rechazo.
 - **NonFreeNet** no aplica: NIDO no depende de ningún servicio de red no
-  libre para funcionar. Las descargas son ficheros firmados de GitHub
-  releases.
+  libre para funcionar.
 
-## 5. Pasos para el día de la decisión
+## 5. Pasos que quedan
 
-1. **Configuración nueva (§3.2 y §3.3):** rama aparte, compilación Android
-   de prueba, escaneo del dex sin Google, y `reproducible.yml` en verde con
-   la configuración nueva.
-2. **Versión sin Google:** release como siempre, por PR, con la CI en verde
-   y la triple coincidencia.
-3. **Pasada en el aparato:** DEVICE_CHECKLIST completa, con especial
-   atención a la sección 5 (notificaciones) y a un reinicio con
-   recordatorios pendientes.
-4. **Prueba local con fdroidserver:** clonar fdroiddata, copiar el borrador
-   a `metadata/team.nido.app.yml` y ajustar versionName, versionCode y
-   commit. Después:
-   - `fdroid readmeta` y `fdroid lint team.nido.app`;
-   - `fdroid build -v -l team.nido.app`, en el buildserver o en un
-     contenedor `fdroidserver`;
-   - cerrar los «VERIFICAR» del borrador: Node 24, subdir con `android/`
-     generado y nombre del APK de salida;
-   - `fdroid scanner` sin hallazgos.
-5. **Merge request a fdroiddata:** solo con el visto bueno del dueño, que
-   es la decisión D8, y con la receta que pasó el punto 4.
+1. **Fusionar #254** con la CI en verde (#253 ya está en main, 5acecb4a).
+   La primera release que lleve los dos será la primera sin Google;
+   cortarla es decisión de la casa.
+2. **Pasada en el aparato** de esa release: DEVICE_CHECKLIST completa, con
+   la sección 5 (notificaciones) y la nueva comprobación de actualizar desde
+   la 0.1.95 con avisos pendientes.
+3. **Decidir §3:** compilar la release desde fuente o no. Si sí:
+   - rama aparte;
+   - compilación de prueba;
+   - `reproducible.yml` en verde.
+4. **Prueba local con fdroidserver**, con el borrador de la receta:
+   - `fdroid readmeta`, `fdroid lint team.nido.app`,
+     `fdroid build -v -l team.nido.app` y `fdroid scanner` sin hallazgos;
+   - cerrar los «VERIFICAR» del borrador.
+5. **Merge request a fdroiddata:** solo con el visto bueno del dueño y la
+   receta que pasó el paso 4.
 
 ## 6. Incertidumbres
 
 - La lista de categorías vigente de fdroiddata no se comprobó desde aquí.
-- No se sabe qué versión de Node trae el buildserver de F-Droid.
-- Cuánto tarda y cuánto ocupa la compilación de llama.cpp desde fuente.
-- Si las comprobaciones de `withLlamaTrim` en el ensamblado (que borra
-  `ggml-hexagon/`) toleran que `bin/` no exista. Por cómo está escrito
-  `syncRNLlamaHtpAssets` (`onlyIf` el directorio existe) debería, pero no
-  está probado.
-- Si F-Droid aceptaría los stubs del camino B.
+- No se sabe qué versión de Node trae el buildserver de F-Droid (NIDO usa
+  Node 24).
+- Cuánto tarda y cuánto ocupa la compilación de llama.cpp desde fuente, y si
+  es reproducible byte a byte.
+- Si las comprobaciones de `withLlamaTrim` toleran que `bin/` no exista. Por
+  cómo está escrito `syncRNLlamaHtpAssets` debería, pero no está probado.

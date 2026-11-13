@@ -61,6 +61,14 @@ Con el modelo descargado de memoria:
 1. Programa un recordatorio para dentro de un minuto.
 2. Bloquea el teléfono. La notificación debe llegar a su hora.
 
+Desde la versión con las notificaciones propias de NIDO (#253), además:
+
+3. En un teléfono con la versión anterior (0.1.95), crea un recordatorio
+   de una sola vez para más tarde hoy y uno diario. Instala la versión
+   nueva encima, abre NIDO una vez y bloquea el teléfono: los dos deben
+   llegar a su hora.
+4. Reinicia el teléfono con un recordatorio pendiente: debe llegar igual.
+
 ## 6. Borrado de pánico (desde la 0.1.95, la clave muere primero)
 
 Solo en una instalación de prueba sin datos reales.
@@ -102,7 +110,10 @@ F-Droid (decisión D8) los va a señalar:
   y `ComponentDiscoveryService`, que traía expo-notifications. Firebase no
   puede iniciarse en NIDO (el APK no lleva `google_app_id`), así que solo
   eran peso muerto. Se quitan en la 0.1.95 (`plugins/withLeanManifest.js`).
-- **Las clases de Firebase y Google Play Services siguen compiladas.**
+- **Las clases de Firebase y Google Play Services siguen compiladas**
+  (en la 0.1.95). Arreglado en código por #253 y #254 (D8, 2026-11-13: el
+  APK normal va sin Google), pendiente de release; cada compilación censa
+  ya su propio APK. Nota original:
   `classes*.dex` contiene `com/google/firebase` (messaging, installations,
   datatransport) y `com/google/android/gms`. Sin entrada en el manifiesto
   quedan inertes, pero el escáner de F-Droid marca las librerías no libres.
