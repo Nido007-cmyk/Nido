@@ -63,8 +63,9 @@ export interface GenerateOptions {
   /**
    * P1.2-2026-10-08: sampling tunables passed straight to llama.cpp via
    * llama.rn's completion params (top_k/top_p/min_p/penalty_repeat all
-   * exist on NativeCompletionParams). Unset = native defaults — callers
-   * that don't set these get byte-identical behavior to before.
+   * exist on NativeCompletionParams). Unset = the model's load-time values
+   * (see loadTimeSampling): llama.rn keeps each sampling param from the
+   * previous completion unless it is sent, so these four always travel.
    */
   topK?: number;
   topP?: number;
@@ -184,6 +185,59 @@ export function resolveSampling(opts: {
 }
 
 /**
+ * 2026-11-13: los valores de muestreo que llama.cpp pone al cargar un
+ * modelo, para que «sin fijar» signifique eso y no «lo de la respuesta
+ * anterior».
+ *
+ * llama.rn arma cada completion sobre ctx->params.sampling, que es el
+ * estado del contexto: cada parámetro que la petición no trae conserva el
+ * valor de la completion anterior (cpp/jsi/JSIParams.cpp,
+ * parseCompletionParams; igual en rc.7, rc.9 y rc.10). Una llamada sin
+ * preset detrás de una con preset heredaba su min_p 0 y su
+ * penalty_repeat 1.1. Por eso NIDO manda siempre los cuatro que gestiona,
+ * y lo que el llamante no fija vale lo de la carga.
+ *
+ * La carga la hace common_init_sampler_from_model de llama.cpp (b11960 y
+ * b12211, common/common.cpp): toma las claves general.sampling.* del GGUF
+ * con strtol/strtof, y si faltan o no empiezan por un número, deja los
+ * valores por defecto de common_params_sampling (common/common.h), que
+ * son los de LLAMA_CPP_SAMPLING_DEFAULTS. llama.rn no fija
+ * user_sampling_config, así que siempre se aplica. Los metadatos llegan a
+ * JS en context.model.metadata, como texto.
+ */
+export const LLAMA_CPP_SAMPLING_DEFAULTS = { topK: 40, topP: 0.95, minP: 0.05, repeatPenalty: 1.0 } as const;
+
+export interface LoadTimeSampling {
+  topK: number;
+  topP: number;
+  minP: number;
+  repeatPenalty: number;
+}
+
+/** strtol / strtof: el número del principio, o null si no empieza por uno. */
+function leadingInt(v: unknown): number | null {
+  if (typeof v !== "string" && typeof v !== "number") return null;
+  const n = parseInt(String(v), 10);
+  return Number.isNaN(n) ? null : n;
+}
+function leadingFloat(v: unknown): number | null {
+  if (typeof v !== "string" && typeof v !== "number") return null;
+  const n = parseFloat(String(v));
+  return Number.isNaN(n) ? null : n;
+}
+
+export function loadTimeSampling(metadata: Record<string, unknown> | null | undefined): LoadTimeSampling {
+  const m = metadata ?? {};
+  const d = LLAMA_CPP_SAMPLING_DEFAULTS;
+  return {
+    topK: leadingInt(m["general.sampling.top_k"]) ?? d.topK,
+    topP: leadingFloat(m["general.sampling.top_p"]) ?? d.topP,
+    minP: leadingFloat(m["general.sampling.min_p"]) ?? d.minP,
+    repeatPenalty: leadingFloat(m["general.sampling.penalty_repeat"]) ?? d.repeatPenalty,
+  };
+}
+
+/**
  * assemblePrompt (src/rag/pure.ts) hand-builds a plain-text prompt with our
  * own "User:"/"Assistant:"/"Question:" role labels rather than using
  * llama.rn's chat-template API (which would auto-derive stop tokens from
@@ -290,6 +344,8 @@ function recentExitsInfo(): CrashReportLike["exits"] | null {
 export class LlamaEngine {
   private context: LlamaContext | null = null;
   private modelInfo: LoadedModelInfo | null = null;
+  /** Los valores de muestreo de la carga del modelo actual (loadTimeSampling). */
+  private loadSampling: LoadTimeSampling = { ...LLAMA_CPP_SAMPLING_DEFAULTS };
   // load()/unload() run one at a time. Concurrent loads (e.g. switching
   // models and closing Settings quickly) used to both release, both create a
   // context, and the one overwritten in this.context was never released,
@@ -853,6 +909,9 @@ export class LlamaEngine {
         }
       }
       if (!loadedProfile) throw lastErr;
+      this.loadSampling = loadTimeSampling(
+        (this.context as unknown as { model?: { metadata?: Record<string, unknown> } } | null)?.model?.metadata,
+      );
       this.modelInfo = {
         filename: modelFilename,
         nCtx,
@@ -911,6 +970,7 @@ export class LlamaEngine {
     const context = this.context;
     this.context = null;
     this.modelInfo = null;
+    this.loadSampling = { ...LLAMA_CPP_SAMPLING_DEFAULTS };
     await context?.release();
     // Justicia del conteo (0.1.85): la descarga ORDENADA confirma el
     // registro del CrashGuard, como el encabezado de memoryLadder.ts
@@ -1246,11 +1306,14 @@ export class LlamaEngine {
       samplingPreset,
       modelDefaults: this.modelInfo?.sampling,
     });
-    const extraParams: Record<string, unknown> = {};
-    if (sampling.topK !== undefined) extraParams.top_k = sampling.topK;
-    if (sampling.topP !== undefined) extraParams.top_p = sampling.topP;
-    if (sampling.minP !== undefined) extraParams.min_p = sampling.minP;
-    if (sampling.repeatPenalty !== undefined) extraParams.penalty_repeat = sampling.repeatPenalty;
+    // Los cuatro viajan siempre (ver loadTimeSampling): sin fijar = lo de
+    // la carga, nunca lo que dejó la respuesta anterior en el contexto.
+    const extraParams: Record<string, unknown> = {
+      top_k: sampling.topK ?? this.loadSampling.topK,
+      top_p: sampling.topP ?? this.loadSampling.topP,
+      min_p: sampling.minP ?? this.loadSampling.minP,
+      penalty_repeat: sampling.repeatPenalty ?? this.loadSampling.repeatPenalty,
+    };
     if (responseFormat !== undefined) extraParams.response_format = responseFormat;
     if (grammar !== undefined) extraParams.grammar = grammar;
 
