@@ -17,7 +17,7 @@ recipe draft is [`docs/release/fdroid/team.nido.app.yml`](fdroid/team.nido.app.y
 
 | F-Droid requirement | Status |
 |---|---|
-| No Google or tracking libraries (Firebase, Play Services) | **Done in code, pending a release.** #253 replaces expo-notifications with NIDO's own module; #254 censuses every built APK and fails the build if anything is left. No published release meets it yet: 0.1.95 carries those classes compiled in and inert |
+| No Google or tracking libraries (Firebase, Play Services) | **Done in code, pending a release.** #253 (merged into main, 5acecb4a) replaces expo-notifications with NIDO's own module; #254 censuses every built APK and fails the build if anything is left. No published release meets it yet: 0.1.95 carries those classes compiled in and inert |
 | Everything built from source | **Fails.** Dependencies bring prebuilt native libraries (§3) |
 | Free licence | Passes: MIT |
 | Metadata | fastlane/metadata/android in en-US, es-ES and pt-BR; recipe drafted |
@@ -135,8 +135,9 @@ promised from here.
 
 ## 5. Remaining steps
 
-1. **Merge #253 and #254** with green CI. The first release that carries
-   them will be the first without Google; cutting it is the house's call.
+1. **Merge #254** with green CI (#253 is already in main, 5acecb4a). The
+   first release that carries both will be the first without Google;
+   cutting it is the house's call.
 2. **Device pass** on that release: the full DEVICE_CHECKLIST, including
    section 5 (notifications) and the new check of updating from 0.1.95 with
    pending notifications.

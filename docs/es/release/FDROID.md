@@ -18,7 +18,7 @@ borrador de la receta está en
 
 | Requisito de F-Droid | Estado |
 |---|---|
-| Sin librerías de Google ni de rastreo (Firebase, Play Services) | **Hecho en código, pendiente de release.** #253 sustituye expo-notifications por un módulo propio; #254 censa cada APK construido y tumba la compilación si queda algo. Ninguna versión publicada lo cumple todavía: la 0.1.95 lleva esas clases compiladas e inertes |
+| Sin librerías de Google ni de rastreo (Firebase, Play Services) | **Hecho en código, pendiente de release.** #253 (ya en main, 5acecb4a) sustituye expo-notifications por un módulo propio; #254 censa cada APK construido y tumba la compilación si queda algo. Ninguna versión publicada lo cumple todavía: la 0.1.95 lleva esas clases compiladas e inertes |
 | Compilar todo desde fuente | **No cumple.** Las dependencias traen librerías nativas ya compiladas (§3) |
 | Licencia libre | Cumple: MIT |
 | Metadatos | fastlane/metadata/android en en-US, es-ES y pt-BR; receta en borrador |
@@ -137,8 +137,9 @@ probada. Nada de esto se puede prometer desde aquí.
 
 ## 5. Pasos que quedan
 
-1. **Fusionar #253 y #254** con la CI en verde. La primera release que los
-   lleve será la primera sin Google; cortarla es decisión de la casa.
+1. **Fusionar #254** con la CI en verde (#253 ya está en main, 5acecb4a).
+   La primera release que lleve los dos será la primera sin Google;
+   cortarla es decisión de la casa.
 2. **Pasada en el aparato** de esa release: DEVICE_CHECKLIST completa, con
    la sección 5 (notificaciones) y la nueva comprobación de actualizar desde
    la 0.1.95 con avisos pendientes.
