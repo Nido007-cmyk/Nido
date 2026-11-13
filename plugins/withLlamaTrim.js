@@ -14,7 +14,9 @@
  * `n_gpu_layers: 0` (src/inference/LlamaEngine.ts) y nunca pide el
  * backend Hexagon, así que la pareja hexagon_opencl (la principal y su
  * JNI, 14.449.672 B) y los 4 assets HTP de `assets/ggml-hexagon/`
- * (3.717.792 B) son peso muerto en todos los aparatos: 18.167.464 B.
+ * (3.717.792 B) son peso muerto en todos los aparatos: 18.167.464 B,
+ * medidos con rc.7. La rc.9 añade un quinto asset HTP (v85) en el
+ * mismo directorio, y el mismo patrón lo saca.
  *
  * Por qué es seguro: el despacho vive en `RNLlama.loadNative()` como
  * una escalera con respaldo — cada peldaño se intenta con

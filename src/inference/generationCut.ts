@@ -7,7 +7,7 @@
  * detuvo por el TOPE, o terminó sola?
  *
  * Hasta la 0.1.91 el hecho se deducía contando llamadas de onToken:
- * `tokenCount >= nPredict`. Pero llama.rn (0.13.0-rc.7, leído en su
+ * `tokenCount >= nPredict`. Pero llama.rn (0.13.0-rc.7, y el mismo bucle en rc.9, leído en su
  * código: cpp/jsi/RNLlamaJSI.cpp, bucle de llamaCompletion) NO llama
  * una vez por token: se salta la llamada cuando el token deja un
  * carácter UTF-8 a medias (`completion->incomplete`) y cuando el texto
