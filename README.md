@@ -52,11 +52,13 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   the phone itself in Spanish, English or Portuguese, and NIDO indexes them
   on the phone.
 - **Knows things offline**: a built-in knowledge base plus an optional
-  Wikipedia pack (about 50,000 articles) and nine optional guide packs
-  written by NIDO (Essentials, Emergencies by country, Children and
-  babies, Crisis and mental health, Living without utilities, Safe
-  home, Disasters, Field and animals, Road and travel), with checked
-  emergency numbers for 69 countries. With multilingual search on, you
+  Wikipedia pack (about 50,000 articles) and nine guide packs written
+  by NIDO (Essentials, Emergencies by country, Children and babies,
+  Crisis and mental health, Living without utilities, Safe home,
+  Disasters, Field and animals, Road and travel), with checked
+  emergency numbers for 69 countries. Essentials and Emergencies by
+  country ship inside the app since 0.1.95; the other seven are
+  optional downloads. With multilingual search on, you
   can ask in Spanish, Portuguese or English, and answers show the articles
   they come from, with a line that counts which sentences come from them and
   which come from the model with no source; when nothing in the base really
@@ -135,6 +137,13 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   suspected double counting in the crash guard was tested
   with a regression and does not exist; the guard is
   unchanged.
+- **Works from the first second, offline** (0.1.95): a fresh
+  install carries the first-aid guides and the checked
+  emergency numbers for 69 countries inside the APK, so the
+  setup wizard's Emergency entry shows your country's
+  numbers before anything is downloaded and with no model.
+  The panic erase now destroys the database key before
+  anything else.
 - **The model loads only when a turn needs it, and
   numbers no longer overflow the context** (0.1.94): a
   question a guide or a fixed answer covers no longer
@@ -269,12 +278,13 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.94-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.94-alpha).
+   [v0.1.95-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.95-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4
    and 1.1 GB depending on your phone's memory and language. This is the
-   only time it needs the internet.
+   only time it needs the internet. The emergency numbers and the
+   first-aid guides already work before that download, offline.
 
 ## Privacy and security
 
@@ -382,9 +392,11 @@ foundation is reused; the agent, the encrypted storage, the safety policy
 and the Bluetooth protocol are NIDO's own work.
 [ATTRIBUTION.md](ATTRIBUTION.md) lists what came from where.
 
-AI models and knowledge packs are downloaded separately and keep their own
-licenses (Apache-2.0, MIT, the LFM Open License v1.0 for LFM2.5, and
-CC BY-SA 4.0 for Wikipedia text, some of which ships inside the app). The
+AI models are downloaded separately and keep their own licenses
+(Apache-2.0, MIT, the LFM Open License v1.0 for LFM2.5). Knowledge packs
+keep theirs too: CC BY-SA 4.0 for Wikipedia text, some of which ships
+inside the app, and CC BY 4.0 for NIDO's own guide packs, two of which
+(NIDO Essentials and NIDO Local) ship inside the app since 0.1.95. The
 open-source packages compiled into the app are listed with their license
 texts in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). All of it is also
 readable inside the app, in About → Licenses.

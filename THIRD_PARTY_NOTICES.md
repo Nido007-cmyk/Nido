@@ -7,9 +7,9 @@ NIDO (MIT, see [LICENSE](LICENSE)) is built with the open-source packages below.
 
 The list covers every package that `package-lock.json` does not mark as development-only. It is a superset of what ends up in the APK: some of them are build tools that Expo needs at compile time (for example `lightningcss`, MPL-2.0) and are not shipped.
 
-AI models and knowledge packs are not part of the app: they are downloaded separately and keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as `android-runtime-dependencies.txt` (see below).
+AI models are not part of the app: they are downloaded separately and keep their own licenses. Two of NIDO's own knowledge packs ship inside the APK since 0.1.95 (NIDO Essentials and NIDO Local, CC BY 4.0); the other packs are downloaded separately. All of them keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as `android-runtime-dependencies.txt` (see below).
 
-Source: `package-lock.json sha256:f185529da295` · 596 packages.
+Source: `package-lock.json sha256:f65ca81301c0` · 596 packages.
 
 ## License elections
 

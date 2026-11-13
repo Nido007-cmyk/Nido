@@ -60,6 +60,15 @@ mantén CC BY-SA 4.0. El aviso va también dentro de cada paquete (tabla
 `LICENSE-ATTRIBUTION.txt` / `ATTRIBUTION.txt` de los releases. NIDO no está
 afiliado a la Fundación Wikimedia ni cuenta con su respaldo.
 
+
+**Paquetes de guías propios de NIDO (CC BY 4.0).** Desde la 0.1.95 el APK
+lleva también dos paquetes de conocimiento escritos por NIDO: NIDO
+Essentials (primeros auxilios, salud, desastres, supervivencia) y NIDO Local
+(números de emergencia y alertas por país, cada dato con su fuente oficial y
+su fecha), en `assets/bundled-packs/`. Tienen licencia CC BY 4.0: si los
+compartes o adaptas, cita a **NIDO**. Son los mismos archivos publicados en
+los releases `knowledge-packs-v16` y `knowledge-packs-v9`, y la app
+comprueba cada uno contra el catálogo firmado antes de usarlo.
 **Software de terceros.** Los paquetes npm que se compilan dentro de la app y
 los textos de sus licencias están en
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), y la misma lista se puede
