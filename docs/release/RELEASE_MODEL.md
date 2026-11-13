@@ -80,7 +80,8 @@ of false confidence.
   biometric gate functional; no secrets in logs.
 - **Test requirements:** full suite green (unit + TS/Rust conformance +
   differential); `nido release-check` (see BETA_SECURITY_GATE.md) with no
-  FAILs in the BUILD/TESTS/CONFORMANCE sections.
+  FAILs in the BUILD/TESTS/CONFORMANCE sections. Test counts quoted in
+  the notes declare command, environment and run (§6).
 - **Device coverage:** ≥2 distinct physical Android devices (different
   manufacturer or Android version); NIDO↔NIDO over Bluetooth between them
   at least once.
@@ -178,3 +179,27 @@ of false confidence.
   design, not implementation).
 - It does not turn metrics (bug counts, crashes) into a promotion
   criterion: classification is by **impact** (see BETA_SECURITY_GATE.md).
+
+## 6. Test figures in release notes
+
+From 0.1.96 on, any test count in `CHANGELOG.md` or
+`docs/ALPHA_RELEASE_NOTES.md` says where it comes from, in the same
+paragraph or bullet:
+
+- **command:** the exact command, in backticks.
+- **environment:** `CI` (with runner image and Node) or `local tree`.
+- **run:** the Actions run URL, or `local tree at <commit>`.
+
+Every CI run writes this line for you: open the run, scroll to the
+**Test count** step summary, and copy "Line for the release notes". The
+same numbers, with the skipped files per runner, are in the `test-summary`
+artifact (`test-summary.json`, kept 90 days). Prefer the CI figure of the
+merge commit: a local tree can skip suites that need tools the CI installs
+(the real-SQLCipher suites skip without `sqlcipher3`, 24 tests on
+2026-11-13).
+
+`scripts/check-release-test-figures.mjs` runs in CI and fails on a figure
+without these three. It doesn't rewrite older notes: 0.1.94 counted
+vitest + jest in CI (6,820) and 0.1.95 counted vitest alone on a local
+tree (6,728), so the two numbers aren't comparable. On CI the 0.1.95
+count was 6,844 (vitest 6,728, jest 116; run 43376830981).
