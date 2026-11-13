@@ -9,10 +9,11 @@ import { StatusBar } from "expo-status-bar";
 import { AppState, Image, StyleSheet, ActivityIndicator, Pressable, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
-import "./src/i18n";
+import i18n from "./src/i18n";
 import { LanguageProvider } from "./src/i18n/LanguageContext";
 import { ChatScreen } from "./src/ui/ChatScreen";
 import { ModelSetupScreen } from "./src/ui/ModelSetupScreen";
+import { EmergencyScreen } from "./src/ui/EmergencyScreen";
 import { GuideLibraryScreen } from "./src/ui/GuideLibraryScreen";
 // DEV-ONLY: V42 idle character PoC (Phase 1, Option D). Removable: delete
 // src/ui/dev/ + assets/poc/ and the __DEV__ block below.
@@ -199,6 +200,38 @@ function VaultLockScreen({ onUnlocked, onKeyLost }: { onUnlocked: () => void; on
   );
 }
 
+/**
+ * 0.1.95: instala los packs que viajan en el APK (src/models/firstRunPacks.ts)
+ * en la variante del modelo de búsqueda activo. Best-effort.
+ */
+async function installFirstRunPacks(): Promise<void> {
+  try {
+    const { installBundledPacks, BUNDLED_PACK_ASSET_DIR } = await import("./src/models/firstRunPacks");
+    // La parte pura de la elección de modelo de búsqueda: sin motores ni
+    // base de conocimiento en el arranque.
+    const { embeddingModelById, defaultEmbeddingIdForLanguage, packIdForEmbedding } = await import(
+      "./src/rag/packVariants"
+    );
+    const { getActiveModelId } = await import("./src/models/settings");
+    // El modelo que la persona ya usa; en una instalación nueva, el mismo
+    // que elegirá el asistente (SetupWizardScreen): multilingüe en español
+    // y portugués, bge en inglés.
+    const stored = await getActiveModelId("embedding").catch(() => null);
+    const embeddingId =
+      stored && embeddingModelById(stored) ? stored : defaultEmbeddingIdForLanguage(i18n.language);
+    const result = await installBundledPacks({
+      catalog: MODEL_CATALOG,
+      packIdFor: (baseId) => packIdForEmbedding(baseId, embeddingId),
+      install: (asset) => modelManager.installBundled(asset, BUNDLED_PACK_ASSET_DIR),
+    });
+    if (result.failed.length > 0) {
+      console.warn("[startup] packs del APK sin instalar:", JSON.stringify(result.failed));
+    }
+  } catch (e) {
+    console.warn("[startup] installFirstRunPacks:", e instanceof Error ? e.message : String(e));
+  }
+}
+
 function AppContent() {
   const [screen, setScreen] = useState<Screen>("checking");
   const [modelsReady, setModelsReady] = useState(false);
@@ -218,6 +251,11 @@ function AppContent() {
   // wizard o el chat. Abrirla no monta ChatScreen ni carga el modelo: la
   // lectura de guías solo usa el almacén local de packs.
   const [libraryOpen, setLibraryOpen] = useState(false);
+  // 0.1.95: Emergencia antes del modelo. En el asistente de instalación la
+  // pestaña de Emergencia (números comprobados del país, llamar, práctica
+  // de RCP) se abre como capa propia, igual que la biblioteca: no monta
+  // ChatScreen ni carga el modelo.
+  const [emergencyOpen, setEmergencyOpen] = useState(false);
   // Al salir de las pantallas desbloqueadas (re-bloqueo, pérdida de
   // clave, error de arranque) la biblioteca se cierra de verdad, no
   // solo se deja de pintar: sin este reseteo, al desbloquear de nuevo
@@ -226,6 +264,7 @@ function AppContent() {
   // 2026-11-08, «al re-bloquear…»).
   useEffect(() => {
     if (screen !== "chat" && screen !== "required-setup") setLibraryOpen(false);
+    if (screen !== "required-setup") setEmergencyOpen(false);
   }, [screen]);
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -265,6 +304,11 @@ function AppContent() {
       // firmado por la clave de manifiestos de NIDO antes de confiar en sus
       // URLs/pins. Fail-closed con mensaje claro — nunca crash silencioso.
       verifyCatalogSignature(MODEL_CATALOG, MANIFEST_SIGNATURE_BASE64);
+      // 0.1.95: los packs de primer arranque (guías esenciales y números de
+      // emergencia) se instalan desde el APK, verificados contra el
+      // catálogo recién comprobado. Sin red y sin modelo. Nunca bloquea
+      // el arranque: si falla, la app sigue como en la 0.1.94.
+      await installFirstRunPacks();
       const ready = await modelManager.requiredModelsPresent();
       setModelsReady(ready);
       setScreen("locked"); // el gate biométrico va antes de mostrar datos
@@ -603,15 +647,47 @@ function AppContent() {
           }}
         />
       )}
-      {screen === "required-setup" && !libraryOpen && (
-        <Pressable
-          onPress={() => setLibraryOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel={t("guideLibrary.open")}
-          style={[styles.libraryEntry, { borderTopColor: colors.border.default }]}
-        >
-          <Text style={[styles.libraryEntryText, { color: colors.emerald[400] }]}>{t("guideLibrary.open")}</Text>
-        </Pressable>
+      {screen === "required-setup" && !libraryOpen && !emergencyOpen && (
+        <View style={[styles.setupEntries, { borderTopColor: colors.border.default }]}>
+          <Pressable
+            onPress={() => setEmergencyOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t("emergency.title")}
+            style={styles.setupEntry}
+            testID="setup-open-emergency"
+          >
+            <Text style={[styles.libraryEntryText, { color: colors.crimson[400] }]}>{t("emergency.title")}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setLibraryOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t("guideLibrary.open")}
+            style={styles.setupEntry}
+          >
+            <Text style={[styles.libraryEntryText, { color: colors.emerald[400] }]}>{t("guideLibrary.open")}</Text>
+          </Pressable>
+        </View>
+      )}
+      {emergencyOpen && screen === "required-setup" && (
+        <View style={[styles.libraryOverlay, { backgroundColor: colors.bg.black }]}>
+          <View style={[styles.overlayBar, { borderBottomColor: colors.border.default }]}>
+            <Pressable
+              onPress={() => setEmergencyOpen(false)}
+              accessibilityRole="button"
+              accessibilityLabel={t("emergency.close")}
+              style={styles.overlayClose}
+              testID="setup-close-emergency"
+            >
+              <Text style={[styles.libraryEntryText, { color: colors.emerald[400] }]}>{t("emergency.close")}</Text>
+            </Pressable>
+          </View>
+          <EmergencyScreen
+            onOpenLibrary={() => {
+              setEmergencyOpen(false);
+              setLibraryOpen(true);
+            }}
+          />
+        </View>
       )}
       {screen === "chat" && !devPreview && (
         <ChatScreen
@@ -660,11 +736,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  // Lector de guías: entrada bajo el wizard y capa a pantalla completa.
-  libraryEntry: {
-    alignItems: "center",
-    paddingVertical: 14,
+  // Lector de guías: capa a pantalla completa (también para Emergencia).
+  // 0.1.95: Emergencia y biblioteca, una al lado de la otra bajo el asistente.
+  setupEntries: {
+    flexDirection: "row",
     borderTopWidth: 1,
+  },
+  setupEntry: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 52,
+    paddingVertical: 14,
+  },
+  overlayBar: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    borderBottomWidth: 1,
+  },
+  overlayClose: {
+    minHeight: 48,
+    minWidth: 48,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
   libraryEntryText: {
     fontSize: 15,
