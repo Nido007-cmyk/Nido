@@ -382,6 +382,11 @@ share. You can also email the list yourself, from your own mail app, to
 arsrs91@gmail.com. For code, read [CONTRIBUTING.md](CONTRIBUTING.md) and the
 [code of conduct](CODE_OF_CONDUCT.md) first.
 
+Do you speak a language NIDO doesn't yet? The translation campaign needs
+native-speaker reviewers, and it starts at
+[issue #95](https://github.com/Nido007-cmyk/Nido/issues/95), which lists every
+open language.
+
 ## Credits and license
 
 NIDO is released under the [MIT License](LICENSE).

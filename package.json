@@ -30,7 +30,7 @@
     "expo-splash-screen": "57.0.10",
     "expo-sqlite": "57.0.4",
     "expo-status-bar": "57.0.1",
-    "i18next": "26.5.11",
+    "i18next": "26.7.1",
     "llama.rn": "0.13.0-rc.7",
     "nido-cpr": "file:./modules/nido-cpr",
     "nido-keyvault": "file:./modules/nido-keyvault",
@@ -43,9 +43,9 @@
     "qrcode": "1.5.4",
     "ram-monitor": "file:./modules/ram-monitor",
     "react": "19.2.3",
-    "react-i18next": "17.1.9",
+    "react-i18next": "17.1.12",
     "react-native": "0.86.3",
-    "react-native-safe-area-context": "5.11.0",
+    "react-native-safe-area-context": "5.11.1",
     "tweetnacl": "1.0.3",
     "voice-input": "file:./modules/voice-input"
   },
@@ -59,7 +59,7 @@
     "jest": "29.7.0",
     "node-llama-cpp": "3.22.2",
     "typescript": "6.0.3",
-    "vitest": "5.0.5"
+    "vitest": "5.1.0"
   },
   "scripts": {
     "start": "expo start",

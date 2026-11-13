@@ -9,7 +9,7 @@ The list covers every package that `package-lock.json` does not mark as developm
 
 AI models are not part of the app: they are downloaded separately and keep their own licenses. Two of NIDO's own knowledge packs ship inside the APK since 0.1.95 (NIDO Essentials and NIDO Local, CC BY 4.0); the other packs are downloaded separately. All of them keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as `android-runtime-dependencies.txt` (see below).
 
-Source: `package-lock.json sha256:f65ca81301c0` · 596 packages.
+Source: `package-lock.json sha256:43e259613e73` · 597 packages.
 
 ## License elections
 
@@ -339,6 +339,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | fontfaceobserver | 2.3.0 | BSD-2-Clause |
 | fresh | 0.5.2 | MIT |
 | fs.realpath | 1.0.0 | ISC |
+| fsevents | 2.3.3 | MIT |
 | function-bind | 1.1.2 | MIT |
 | gensync | 1.0.0-beta.2 | MIT |
 | get-caller-file | 2.0.5 | ISC |
@@ -362,7 +363,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | html-parse-stringify | 4.0.1 | MIT |
 | http-errors | 2.0.1 | MIT |
 | https-proxy-agent | 7.0.6 | MIT |
-| i18next | 26.5.11 | MIT |
+| i18next | 26.7.1 | MIT |
 | ignore | 5.3.2 | MIT |
 | imurmurhash | 0.1.4 | MIT |
 | inflight | 1.0.6 | ISC |
@@ -518,10 +519,10 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | range-parser | 1.2.1 | MIT |
 | react | 19.2.3 | MIT |
 | react-devtools-core | 6.1.5 | MIT |
-| react-i18next | 17.1.9 | MIT |
+| react-i18next | 17.1.12 | MIT |
 | react-is | 18.3.1 | MIT |
 | react-native | 0.86.3 | MIT |
-| react-native-safe-area-context | 5.11.0 | MIT |
+| react-native-safe-area-context | 5.11.1 | MIT |
 | react-refresh | 0.14.2 | MIT |
 | regenerate | 1.4.2 | MIT |
 | regenerate-unicode-properties | 10.2.2 | MIT |
@@ -10112,7 +10113,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### i18next@26.5.11 — LICENSE
+### i18next@26.7.1 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -15002,7 +15003,7 @@ SOFTWARE.
 
 Ships no license file; same project, copyright holder and license as `react-native`, whose notice applies (see above).
 
-### react-i18next@17.1.9 — LICENSE
+### react-i18next@17.1.12 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -15080,7 +15081,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### react-native-safe-area-context@5.11.0 — LICENSE
+### react-native-safe-area-context@5.11.1 — LICENSE
 
 ```text
 MIT License
@@ -17981,6 +17982,7 @@ These packages declare a license in their `package.json` but ship no license fil
 - bser@2.1.1
 - fb-dotslash@0.5.8
 - fb-watchman@2.0.2
+- fsevents@2.3.3
 - imurmurhash@0.1.4
 - jimp-compact@0.16.1
 - stream-buffers@2.2.0
