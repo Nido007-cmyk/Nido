@@ -4,6 +4,72 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.96-alpha - 2026-11-13
+
+The APK no longer contains any Google code, and the release sweep
+that every version must pass stopped this one once and found real
+holes, now fixed.
+
+**No Google code in the APK.** In 0.1.95 Firebase's classes were
+still compiled into the APK, inert, and listed as open work. They
+are gone now: notifications are handled by NIDO's own module
+(nido-notify, in `modules/`) instead of expo-notifications, which
+was the package that brought Firebase and Google Play Services in.
+Five searches of the compiled code that found 535 Firebase and
+Google Play Services traces now find 0, and the manifest carries
+no Google components. A census runs inside the Android build
+itself: if a Google or Firebase trace ever comes back, the build
+fails instead of shipping it. With expo-notifications gone, the
+package count drops from 596 to 594.
+
+**A safer judge, and a Portuguese safety net that was missing a
+piece.** Before this release the sweep attacked the grounding
+judge, the part that decides which sentences of an answer are
+really backed by the sources, with adversarial pairs, and checked
+that the fixed answers exist in the same forms in Spanish, English
+and Portuguese. It confirmed nine defects, three of them critical,
+and the release waited for the fixes:
+
+- A sentence that began with an "I don't know" formula could carry
+  an invented dose past every check and be served as grounded. A
+  sentence that claims a fact is now judged on that fact, whatever
+  formula it starts with.
+- A phone number could be attributed to the wrong owner, the
+  clinic's number presented as the emergency number, and still be
+  sealed as grounded. The typed claim now checks the owner against
+  the source, like the short forms already did.
+- A one-digit room number could be changed (room 9 for the source's
+  room 4) without the judge judging it. A typed datum is now judged
+  at any length.
+- In Portuguese, "quero me machucar" and "quero me ferir" (I want
+  to hurt myself) did not trigger the fixed self-harm answer, while
+  their Spanish and English equivalents did. They do now. The same
+  pass fixed Portuguese forms that were missing for asking what
+  NIDO remembers about you, for the NIDO inbox question and for the
+  NIDO code question, and added "adeus" to the farewells.
+- Two faithful sentences were being dropped instead: a correct
+  English sentence about a phone number, and the Spanish
+  appointment sentence that says "de la mañana" next to a calendar
+  date. Both are kept now, and an invented number still fails.
+
+Each fix carries its regression test, and the sweep was run again
+on the corrected tree before this release was cut: the three parts
+(trilingual parity, the judge under attack, twin-function symmetry)
+all come back clean.
+
+**Under the hood.** llama.rn stays at 0.13.0-rc.9, the version the
+F-8 pin gate has reviewed; rc.10 is published upstream but is not
+in this release, because the engine that runs the model only moves
+after its own deliberate review. i18next is updated to 26.7.1. The
+test figures quoted in the release notes are now the ones CI
+publishes for the release tree itself.
+
+**Not tested on a phone.** These changes passed the automated
+tests, and the release APK build runs the no-Google census as part
+of compiling. None of it has run on the Galaxy Tab A9+ yet:
+updating from 0.1.95 with notifications pending, and a reboot with
+one pending, are steps in docs/release/DEVICE_CHECKLIST.md.
+
 ## 0.1.95-alpha - 2026-11-13
 
 NIDO works from the first second, and four things a reviewer would

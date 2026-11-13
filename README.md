@@ -137,6 +137,12 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   suspected double counting in the crash guard was tested
   with a regression and does not exist; the guard is
   unchanged.
+- **No Google code in the APK** (0.1.96): Firebase and Google
+  Play Services are out entirely, not compiled in inert; a census
+  inside the build fails it if a Google trace ever returns, and
+  notifications run on NIDO's own module. The pre-release sweep
+  also closed three ways the grounding judge could be fooled and
+  a missing piece of the Portuguese self-harm answer.
 - **Works from the first second, offline** (0.1.95): a fresh
   install carries the first-aid guides and the checked
   emergency numbers for 69 countries inside the APK, so the
@@ -278,7 +284,7 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.95-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.95-alpha).
+   [v0.1.96-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.96-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4
