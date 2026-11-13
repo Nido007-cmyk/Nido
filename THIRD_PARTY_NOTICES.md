@@ -9,7 +9,7 @@ The list covers every package that `package-lock.json` does not mark as developm
 
 AI models are not part of the app: they are downloaded separately and keep their own licenses. Two of NIDO's own knowledge packs ship inside the APK since 0.1.95 (NIDO Essentials and NIDO Local, CC BY 4.0); the other packs are downloaded separately. All of them keep their own licenses (see [ATTRIBUTION.md](ATTRIBUTION.md) and `docs/release/MODEL_LICENSE_AUDIT.md`). Android libraries resolved by Gradle at build time (AndroidX, Kotlin, SQLCipher and their dependencies) do not come from npm: since 0.1.55 the exact list for each build is attached to its GitHub release as `android-runtime-dependencies.txt` (see below).
 
-Source: `package-lock.json sha256:43e259613e73` · 597 packages.
+Source: `package-lock.json sha256:8cabfbd8fabf` · 594 packages.
 
 ## License elections
 
@@ -224,7 +224,6 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | babel-preset-current-node-syntax | 1.2.0 | MIT |
 | babel-preset-expo | 57.0.17 | MIT |
 | babel-preset-jest | 29.6.3 | MIT |
-| badgin | 1.2.3 | MIT |
 | balanced-match | 1.0.2 | MIT |
 | balanced-match | 4.0.4 | MIT |
 | base64-js | 1.5.1 | MIT |
@@ -298,12 +297,10 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | event-target-shim | 5.0.1 | MIT |
 | exact-alarm | local | MIT (NIDO's own module) |
 | expo | 57.0.32 | MIT |
-| expo-application | 57.0.3 | MIT |
 | expo-asset | 57.0.21 | MIT |
 | expo-build-properties | 57.0.22 | MIT |
 | expo-calendar | 57.0.6 | MIT |
 | expo-clipboard | 57.0.2 | MIT |
-| expo-constants | 57.0.22 | MIT |
 | expo-constants | 57.0.23 | MIT |
 | expo-contacts | 57.0.8 | MIT |
 | expo-crypto | 57.0.4 | MIT |
@@ -318,7 +315,6 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | expo-modules-core | 57.0.24 | MIT |
 | expo-modules-core | 57.0.25 | MIT |
 | expo-modules-jsi | 57.1.3 | MIT |
-| expo-notifications | 57.0.24 | MIT |
 | expo-secure-store | 57.0.4 | MIT |
 | expo-server | 57.0.3 | MIT |
 | expo-sharing | 57.0.24 | MIT |
@@ -339,7 +335,6 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | fontfaceobserver | 2.3.0 | BSD-2-Clause |
 | fresh | 0.5.2 | MIT |
 | fs.realpath | 1.0.0 | ISC |
-| fsevents | 2.3.3 | MIT |
 | function-bind | 1.1.2 | MIT |
 | gensync | 1.0.0-beta.2 | MIT |
 | get-caller-file | 2.0.5 | ISC |
@@ -454,6 +449,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | modules/nido-cpr | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-keyvault | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-launch | 0.1.0 | MIT (NIDO's own module) |
+| modules/nido-notify | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-ocr | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-p2p | 0.1.0 | MIT (NIDO's own module) |
 | modules/nido-pdf-text | 0.1.0 | MIT (NIDO's own module) |
@@ -471,6 +467,7 @@ AndroidX, Kotlin, SQLCipher (`net.zetetic`) and whatever they pull in are resolv
 | nido-cpr | local | MIT (NIDO's own module) |
 | nido-keyvault | local | MIT (NIDO's own module) |
 | nido-launch | local | MIT (NIDO's own module) |
+| nido-notify | local | MIT (NIDO's own module) |
 | nido-ocr | local | MIT (NIDO's own module) |
 | nido-p2p | local | MIT (NIDO's own module) |
 | nido-pdf-text | local | MIT (NIDO's own module) |
@@ -8323,32 +8320,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### expo-application@57.0.3 — LICENSE
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
 ### expo-asset@57.0.21 — LICENSE
 
 ```text
@@ -8428,32 +8399,6 @@ SOFTWARE.
 ```
 
 ### expo-clipboard@57.0.2 — LICENSE
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-### expo-constants@57.0.22 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -8818,32 +8763,6 @@ SOFTWARE.
 ```
 
 ### expo-modules-jsi@57.1.3 — LICENSE
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-### expo-notifications@57.0.24 — LICENSE
 
 ```text
 The MIT License (MIT)
@@ -17977,12 +17896,10 @@ These packages declare a license in their `package.json` but ship no license fil
 - @expo/sdk-runtime-versions@1.0.0
 - @react-native/debugger-frontend@0.86.3
 - babel-plugin-react-compiler@1.0.0
-- badgin@1.2.3
 - bplist-parser@0.3.1
 - bser@2.1.1
 - fb-dotslash@0.5.8
 - fb-watchman@2.0.2
-- fsevents@2.3.3
 - imurmurhash@0.1.4
 - jimp-compact@0.16.1
 - stream-buffers@2.2.0
