@@ -40,7 +40,7 @@
  *   indexado corría. El veredicto es lo que la tarjeta de cierres
  *   enseña («murió generando · indexado en curso: sí · perfil kv-q8 ·
  *   nCtx 3072»). La variante nativa cargada no es legible desde el JS
- *   de llama.rn rc.7, rc.9 ni rc.10 (sin getter en el binding): el campo `backend`
+ *   de llama.rn rc.7 ni rc.9 (sin getter en el binding): el campo `backend`
  *   guarda como sustituto el resumen de getBackendDevicesInfo() de
  *   la sesión, una vez por sesión.
  *
