@@ -407,6 +407,11 @@ correo, desde tu propia app de correo, a arsrs91@gmail.com. Para código, lee an
 [CONTRIBUTING.md](CONTRIBUTING.md) y el
 [código de conducta](CODE_OF_CONDUCT.es.md).
 
+¿Hablas un idioma que NIDO todavía no habla? La campaña de traducción
+necesita revisores nativos y empieza en el
+[issue #95](https://github.com/Nido007-cmyk/Nido/issues/95), con todos los
+idiomas abiertos.
+
 ## Créditos y licencia
 
 NIDO se publica bajo la [Licencia MIT](LICENSE).
