@@ -300,11 +300,59 @@ async function resetAllAppDataInner(): Promise<void> {
   // destructiva: si el proceso muere a mitad, el próximo arranque reanuda.
   await markWipeStarted();
 
+  // Borrado criptográfico, lo primero de todo (Reddit, 2026-11-12:
+  // «flash wear levelling makes overwriting unreliable, so destroying
+  // the Keystore key is the real wipe»). La memoria flash reparte las
+  // escrituras y puede conservar bloques viejos de las bases aunque se
+  // borren los ficheros. Esos bloques siempre fueron texto cifrado con
+  // SQLCipher: sin la DEK no se pueden leer. Antes la DEK moría en el
+  // paso 2, después de borrar las bases; ahora muere en cuanto queda
+  // escrito el marcador, antes de cualquier otra operación. Ninguna de
+  // las operaciones que siguen necesita la clave: cerrar y borrar las
+  // bases no las vuelve a abrir, y la puerta de wipe impide que algo
+  // las abra (y genere una DEK nueva) mientras dura el borrado. Se
+  // restablece además la caché de clave en memoria para que la próxima
+  // apertura genere una clave nueva en vez de reutilizar la borrada.
+  await deleteDatabaseKey();
+  // HW-VAULT: la llave de hardware (KEK) tampoco sobrevive al borrado.
+  try {
+    const { deleteVaultKek } = await import("../security/keyVault");
+    await deleteVaultKek();
+  } catch {
+    /* sin módulo nativo (tests/dev): no hay KEK que borrar */
+  }
+  resetMemoryKeyCache();
+
   // R6: invalidar el runtime P2P vivo ANTES de tocar el disco: la instancia
   // actual se destruye (transporte detenido, sesiones/identidad en memoria
   // descartadas) y el singleton se desacopla y bloquea. Ningún objeto viejo
   // puede seguir operando y ningún frame entrante puede persistir nada.
   await beginP2PDataReset();
+
+  // El resto del material del Keystore: claves privadas P2P (cifrado
+  // X25519 y firma Ed25519), ya con el runtime P2P destruido para que
+  // nada vivo las vuelva a escribir, y los secretos auxiliares de
+  // SecureStore. Sin esto la identidad P2P sobrevivía al borrado.
+  await deleteP2PPrivateKey();
+  await deleteP2PSigningKey();
+  // Auditoría completa 2026-10-31 (F2-02): la marca del último respaldo
+  // (la fecha que satisface la puerta D9 de la bóveda) también muere.
+  // Si sobrevivía, un teléfono recién borrado podía activar la bóveda
+  // como si tuviera un respaldo de menos de 30 días que ya no existe.
+  // Su ausencia se verifica en el paso 4.
+  try {
+    await writeVaultSetting(LAST_BACKUP_KEY, null);
+  } catch {
+    /* sin SecureStore: nada que borrar; el paso 4 lo juzga igual */
+  }
+  // Auditoría completa 2026-10-31 (F2-06): la llave que sella el
+  // archivo de la rotación (rekey-staging.json) también muere. El
+  // archivo ya se borraba; su llave sobrevivía en SecureStore.
+  try {
+    await writeVaultSetting(STAGING_KEY_NAME, null);
+  } catch {
+    /* sin SecureStore: nada que borrar; el paso 4 lo juzga igual */
+  }
 
   await Promise.all([llamaEngine.unload(), embeddingEngine.unload(), closeAllPacks()]);
   // F7-2026-10-06: cancelar descargas en vuelo ANTES de borrar archivos.
@@ -330,40 +378,9 @@ async function resetAllAppDataInner(): Promise<void> {
   await resetDatabase();
   await clearMemoryDb();
 
-  // 2. Material del Keystore: DEK de SQLCipher + claves privadas P2P
-  //    (cifrado X25519 y firma Ed25519). Sin esto la identidad P2P y la
-  //    clave de cifrado sobrevivían al borrado. Se restablece además la
-  //    caché de clave en memoria para que la próxima apertura genere una
-  //    clave nueva en vez de reutilizar la borrada.
-  await deleteDatabaseKey();
-  // HW-VAULT: la llave de hardware (KEK) tampoco sobrevive al borrado.
-  try {
-    const { deleteVaultKek } = await import("../security/keyVault");
-    await deleteVaultKek();
-  } catch {
-    /* sin módulo nativo (tests/dev): no hay KEK que borrar */
-  }
-  await deleteP2PPrivateKey();
-  await deleteP2PSigningKey();
-  // Auditoría completa 2026-10-31 (F2-02): la marca del último respaldo
-  // (la fecha que satisface la puerta D9 de la bóveda) también muere.
-  // Si sobrevivía, un teléfono recién borrado podía activar la bóveda
-  // como si tuviera un respaldo de menos de 30 días que ya no existe.
-  // Su ausencia se verifica en el paso 4.
-  try {
-    await writeVaultSetting(LAST_BACKUP_KEY, null);
-  } catch {
-    /* sin SecureStore: nada que borrar; el paso 4 lo juzga igual */
-  }
-  // Auditoría completa 2026-10-31 (F2-06): la llave que sella el
-  // archivo de la rotación (rekey-staging.json) también muere. El
-  // archivo ya se borraba; su llave sobrevivía en SecureStore.
-  try {
-    await writeVaultSetting(STAGING_KEY_NAME, null);
-  } catch {
-    /* sin SecureStore: nada que borrar; el paso 4 lo juzga igual */
-  }
-  resetMemoryKeyCache();
+  // 2. Material del Keystore: ya murió al principio del wipe (ver «Borrado
+  //    criptográfico», arriba). La numeración se conserva porque otros
+  //    comentarios citan los pasos 3, 4 y 5.
 
   // 3. Ficheros y directorios de datos.
   await FileSystem.deleteAsync(MODELS_DIR, { idempotent: true });
@@ -433,7 +450,7 @@ async function resetAllAppDataInner(): Promise<void> {
   if ((await readVaultSetting(STAGING_KEY_NAME)) !== null)
     survivors.push(`secureStore:${STAGING_KEY_NAME}`);
   // Auditoría completa 2026-10-31 (F2-01): la KEK de hardware se borra
-  // en el paso 2 sin comprobar el resultado, y deleteVaultKek traga el
+  // al principio del wipe (borrado criptográfico) sin comprobar el resultado, y deleteVaultKek traga el
   // fallo del módulo nativo. Aquí se verifica contra el propio módulo:
   // si sigue viendo una KEK, el wipe no declara éxito. Sin módulo
   // nativo no hay KEK posible (vaultStatus devuelve null).

@@ -778,6 +778,31 @@ describe("R13 — wipe interrumpido / recuperación", () => {
     expect(await loadP2PSigningKey()).toBeNull();
   });
 
+  it("borrado criptográfico primero: si el wipe muere al borrar las bases, la DEK y las claves P2P ya no existen", async () => {
+    // Reddit, 2026-11-12: con el reparto de escrituras de la flash, los
+    // bloques viejos de las bases pueden sobrevivir al borrado de ficheros.
+    // El borrado de verdad es destruir la clave, y tiene que ir antes que
+    // nada. Antes la DEK moría DESPUÉS de borrar las bases: un wipe que
+    // moría en ese borrado dejaba la clave viva junto a los bloques.
+    await seedKeys();
+    seedFullDevice();
+    expect(await peekDatabaseKey()).not.toBeNull();
+    dbx.failDeleteUnexpected = true;
+    await expect(resetAllAppData()).rejects.toThrow("EIO simulado");
+    // Las bases siguen en disco (el borrado falló)…
+    expect(fsExists(`${DOC}SQLite/nido_knowledge.db`)).toBe(true);
+    // …pero ya son ilegibles: la DEK y las claves P2P murieron antes.
+    expect(await peekDatabaseKey()).toBeNull();
+    expect(await loadP2PPrivateKey()).toBeNull();
+    expect(await loadP2PSigningKey()).toBeNull();
+    // El marcador sigue: el próximo arranque termina el trabajo.
+    expect(await wipeInterrupted()).toBe(true);
+    dbx.failDeleteUnexpected = false;
+    await recoverInterruptedWipe();
+    expect(await wipeInterrupted()).toBe(false);
+    expect(fsExists(`${DOC}SQLite/nido_knowledge.db`)).toBe(false);
+  });
+
   it("la recuperación es idempotente: reejecutar el wipe completo no falla", async () => {
     await seedKeys();
     seedFullDevice();
