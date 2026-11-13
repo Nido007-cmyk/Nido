@@ -3,37 +3,22 @@
 // See LICENSE file for details.
 import { describe, expect, it } from "vitest";
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
-const { applyLeanManifest, applyStableDevServerIp, REMOVED_COMPONENTS } = require("./withLeanManifest.js");
+const plugin = require("./withLeanManifest.js");
+const { applyStableDevServerIp } = plugin;
 
 describe("withLeanManifest", () => {
-  it("marca para quitar los componentes push de Firebase", () => {
-    const m = applyLeanManifest({ application: [{ receiver: [{ $: { "android:name": "otro.Receiver" } }] }] });
-    expect(m.$["xmlns:tools"]).toBe("http://schemas.android.com/tools");
-    for (const [kind, name] of REMOVED_COMPONENTS) {
-      const c = m.application[0][kind].find((x) => x.$["android:name"] === name);
-      expect(c.$["tools:node"]).toBe("remove");
-    }
-    expect(m.application[0].receiver.find((x) => x.$["android:name"] === "otro.Receiver").$["tools:node"]).toBeUndefined();
-  });
-
-  it("0.1.95: quita también el arranque de Firebase (FirebaseInitProvider y ComponentDiscoveryService)", () => {
-    const m = applyLeanManifest({
-      application: [
-        {
-          provider: [
-            { $: { "android:name": "com.google.firebase.provider.FirebaseInitProvider", "android:authorities": "team.nido.app.firebaseinitprovider" } },
-            { $: { "android:name": "expo.modules.sharing.SharingFileProvider" } },
-          ],
-        },
-      ],
-    });
-    const app = m.application[0];
-    expect(app.provider.find((x) => x.$["android:name"] === "com.google.firebase.provider.FirebaseInitProvider").$["tools:node"]).toBe("remove");
-    // Los proveedores de NIDO (compartir, archivos) no se tocan.
-    expect(app.provider.find((x) => x.$["android:name"] === "expo.modules.sharing.SharingFileProvider").$["tools:node"]).toBeUndefined();
-    expect(app.service.find((x) => x.$["android:name"] === "com.google.firebase.components.ComponentDiscoveryService").$["tools:node"]).toBe("remove");
+  it("0.1.96: ya no toca el manifiesto ni nombra Firebase (no queda nada que quitar)", () => {
+    // Sin expo-notifications, Firebase no entra en la compilación. Que no
+    // vuelva lo vigila el censo del binario (scripts/check-google-free.py).
+    expect(plugin.applyLeanManifest).toBeUndefined();
+    expect(plugin.REMOVED_COMPONENTS).toBeUndefined();
+    const src = readFileSync(fileURLToPath(new URL("./withLeanManifest.js", import.meta.url)), "utf8");
+    expect(src).not.toMatch(/withAndroidManifest|tools:node/);
+    expect(src).not.toMatch(/"com\.google\.firebase/);
   });
 
   it("fija la IP del servidor de desarrollo en release sin tocar el bloque original, una vez", () => {
