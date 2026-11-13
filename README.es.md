@@ -321,8 +321,10 @@ La interfaz está disponible en español, inglés y portugués.
   rellenan hasta tamaños fijos. El saludo está comprobado con verificación
   formal (`formal/`).
 - Mensajes temporales en los chats entre NIDO, un botón de pánico opcional
-  que lo borra todo en 3 segundos y teclado incógnito (se pide al teclado que
-  no aprenda de lo que escribes).
+  (apagado por defecto: se mantiene pulsado 3 segundos y lo borra todo; la
+  clave de la base se destruye lo primero, así que lo que conserve la
+  memoria flash es texto cifrado ilegible) y teclado incógnito (se pide al
+  teclado que no aprenda de lo que escribes).
 - Las capturas de pantalla están bloqueadas, las capas de otras apps se
   ocultan mientras NIDO está en pantalla (Android 12+) y borrar todos los
   datos pide tu huella o PIN.

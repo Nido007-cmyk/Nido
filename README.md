@@ -297,9 +297,11 @@ The interface is available in English, Spanish and Portuguese.
   NIDO on the other side, the connection falls back to what that phone
   supports. Messages are padded to fixed sizes. The handshake is checked
   with formal verification (`formal/`).
-- Disappearing messages in NIDO-to-NIDO chats, an optional panic button that
-  erases everything in 3 seconds, and an incognito keyboard (the keyboard is
-  asked not to learn from what you type).
+- Disappearing messages in NIDO-to-NIDO chats, an optional panic button
+  (off by default: you hold it for 3 seconds and it erases everything; the
+  database key is destroyed first, so what the flash memory keeps is
+  unreadable ciphertext), and an incognito keyboard (the keyboard is asked
+  not to learn from what you type).
 - Screenshots are blocked, other apps' overlays are hidden while NIDO is on
   screen (Android 12+), and erasing all data asks for your fingerprint or PIN.
 
