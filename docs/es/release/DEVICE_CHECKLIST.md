@@ -108,7 +108,9 @@ F-Droid (decisión D8) los va a señalar:
   quedan inertes, pero el escáner de F-Droid marca las librerías no libres.
   Quitarlas exige excluir `firebase-messaging` de expo-notifications en
   Gradle y comprobar que R8 sigue compilando. Hace falta un build Android
-  de prueba. Abierto.
+  de prueba. Abierto. El inventario completo (expo-notifications trae
+  Firebase y Play Services; expo-application, el Install Referrer de
+  Google Play) y los dos caminos están en [FDROID.md](FDROID.md).
 - **La entrada de voz** usa el reconocedor en el propio teléfono cuando
   Android 12+ lo ofrece, y rechaza el modo solo sin conexión cuando no lo
   hay. En teléfonos sin él (GrapheneOS, muchas ROM sin Google) no hay voz
