@@ -8,15 +8,16 @@
  * notifications.ts — NIDO: rutinas proactivas 100% locales.
  *
  * Notificaciones programadas en el dispositivo (AlarmManager del sistema
- * vía expo-notifications). Ningún servidor interviene: el teléfono decide
- * y dispara solo.
+ * vía el módulo propio nido-notify; hasta la 0.1.95, expo-notifications,
+ * que traía Firebase y Google Play). Ningún servidor interviene: el
+ * teléfono decide y dispara solo.
  *
  * - Recordatorios: al crear uno con fecha se programa un aviso real.
  * - Resumen diario: se (re)programa cada vez que se abre la app, con el
  *   contenido del día (eventos + recordatorios vencidos).
  */
 
-import * as Notifications from "expo-notifications";
+import * as Notifications from "nido-notify";
 
 const REMINDER_PREFIX = "nido-reminder-";
 const BRIEFING_IDENTIFIER = "nido-daily-briefing";
@@ -94,14 +95,9 @@ export function __resetNotificationsForTests(): void {
 export async function initNotifications(): Promise<boolean> {
   if (notificationsInitialized) return true;
   try {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowBanner: true,
-        shouldShowList: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-      }),
-    });
+    // Con la app abierta, el aviso se muestra igual que cerrada (banner,
+    // lista y sonido, sin número en el icono): lo que respondía el
+    // setNotificationHandler de expo lo hace ya el lado nativo.
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== "granted") return false;
     await Notifications.setNotificationChannelAsync("nido-reminders", {
@@ -154,6 +150,21 @@ export async function initNotifications(): Promise<boolean> {
   }
 }
 
+/**
+ * 0.1.96: true una sola vez, la primera vez que arranca la versión con el
+ * módulo propio después de una con expo-notifications. Las alarmas que
+ * dejó expo apuntan a un receptor que ya no existe, así que lo pendiente
+ * hay que programarlo de nuevo (lo hace el arranque). El almacén viejo,
+ * que guardaba el texto de los avisos, se borra en el mismo paso.
+ */
+export async function consumeEngineMigration(): Promise<boolean> {
+  try {
+    return await Notifications.consumeLegacyStoreAsync();
+  } catch {
+    return false;
+  }
+}
+
 /** Programa el aviso de un recordatorio. Devuelve false si no se pudo. */
 // 2026-10-10: variable eliminada junto con el Alert (ver abajo).
 export async function scheduleReminderNotification(
@@ -172,7 +183,7 @@ export async function scheduleReminderNotification(
     // CRASH-2026-10-10: eliminada también la consulta a `exact-alarm`. Ese
     // módulo nativo no se compila en el APK (no tiene build.gradle), así que
     // la llamada solo fallaba en silencio; el resultado no se usaba.
-    // expo-notifications ya decide solo entre alarma exacta e inexacta.
+    // nido-notify decide solo entre alarma exacta e inexacta, como expo.
     // CRASH-2026-10-10: el aviso se programa con tope de tiempo. Si el lado
     // nativo nunca responde, la confirmación del recordatorio no se queda
     // colgada: el recordatorio ya está guardado y se avisa al abrir la app.
@@ -197,7 +208,7 @@ export async function scheduleReminderNotification(
 
 /**
  * 0.1.32: disparador del aviso. Una vez → DATE; cada día → DAILY a esa
- * hora; cada semana → WEEKLY ese día (expo: 1 = domingo … 7 = sábado). Los
+ * hora; cada semana → WEEKLY ese día (1 = domingo … 7 = sábado). Los
  * repetidos los dispara el sistema aunque la app no se abra.
  */
 export function reminderTrigger(at: Date, repeat?: "day" | "week" | "month" | "year" | null): Notifications.NotificationTriggerInput {
@@ -219,7 +230,7 @@ export function reminderTrigger(at: Date, repeat?: "day" | "week" | "month" | "y
     };
   }
   if (repeat === "year") {
-    // expo: mes base 0 (como Date).
+    // Mes base 0 (como Date).
     return {
       type: Notifications.SchedulableTriggerInputTypes.YEARLY,
       month: at.getMonth(),

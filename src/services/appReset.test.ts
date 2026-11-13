@@ -131,7 +131,7 @@ const notifx = vi.hoisted(() => {
     failPresentedInfo: false,
   };
 });
-vi.mock("expo-notifications", () => ({
+vi.mock("nido-notify", () => ({
   cancelAllScheduledNotificationsAsync: async () => {
     if (!notifx.sabotageCancel) notifx.scheduled.clear();
   },
@@ -726,7 +726,7 @@ describe("N1 — las notificaciones ya entregadas no sobreviven al Clear All Dat
     // las programadas pero jamás despedía las ya entregadas.
     notifx.scheduled.add("nido-reminder-1");
     notifx.presented.add("nido-daily-briefing");
-    await (await import("expo-notifications")).cancelAllScheduledNotificationsAsync();
+    await (await import("nido-notify")).cancelAllScheduledNotificationsAsync();
     // …y por eso la bandeja del SO seguía mostrando el contenido sensible
     // después del wipe:
     expect(notifx.scheduled.size).toBe(0);

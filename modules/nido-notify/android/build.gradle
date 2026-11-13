@@ -1,0 +1,23 @@
+// MIT License
+// Copyright (c) 2026 NIDO contributors
+// See LICENSE file for details.
+
+// Notificaciones locales propias (paquete NIDO-SIN-GOOGLE-2026-11-13):
+// sustituyen a expo-notifications, que traía Firebase y Google Play.
+// Solo API del sistema Android y expo-modules-core: ninguna dependencia más.
+
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.nidonotify'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.nidonotify"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}

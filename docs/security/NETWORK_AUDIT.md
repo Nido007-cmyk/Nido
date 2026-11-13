@@ -54,8 +54,8 @@ debug-build-only tooling.
 
 | Field | Value |
 |---|---|
-| File/component | `src/notify/notifications.ts` (expo-notifications), `src/routines/startup.ts` |
-| Network | None: no `getExpoPushTokenAsync`/`getDevicePushTokenAsync` anywhere in `src/`. FCM receiver components exist in the APK (expo-notifications transitive) but are inert without a token request or google-services config |
+| File/component | `src/notify/notifications.ts` (NIDO's own `modules/nido-notify` since 0.1.96; expo-notifications before), `src/routines/startup.ts` |
+| Network | None: local notifications only (AlarmManager + NotificationManager). Since 0.1.96 there is no push code at all: expo-notifications and the Firebase / Google Play libraries it brought are gone. Before, FCM receiver components were in the APK but inert without a token request or google-services config |
 | Trigger | Local reminders/briefings; all scheduling on-device |
 
 ### N5 — Telemetry (local only, user-mediated export)
@@ -93,7 +93,7 @@ i18next HTTP backend, push-token registration.
 | Metro URLs (`10.0.2.2:8081`) | Confirmed: `expo-dev-client` dep, debug-only (N7) |
 | `exp.host` endpoints | Confirmed: dev-client, debug-only (N7) |
 | `u.expo.dev/<uuid>` string | Present in dev-client strings; `expo-updates` NOT in `package.json` → no OTA check runs. Confirmed inert |
-| FCM components | `expo-notifications` dep; no token API used in `src/` → inert (N4) |
+| FCM components | Removed in 0.1.96 with expo-notifications (replaced by `modules/nido-notify`). Before: inert, no token API used in `src/` (N4) |
 | ML Kit barcode | `expo-dev-launcher` `debugOnly` Gradle dep (`node_modules/expo-dev-launcher/android/build.gradle:153-154`) → debug-only, on-device (N7) |
 | okhttp3 | React Native Fresco image pipeline transitive dep; no app-initiated HTTP calls found |
 | No analytics SDKs | Confirmed at source level too |
