@@ -18,6 +18,24 @@ describe("withLeanManifest", () => {
     expect(m.application[0].receiver.find((x) => x.$["android:name"] === "otro.Receiver").$["tools:node"]).toBeUndefined();
   });
 
+  it("0.1.95: quita también el arranque de Firebase (FirebaseInitProvider y ComponentDiscoveryService)", () => {
+    const m = applyLeanManifest({
+      application: [
+        {
+          provider: [
+            { $: { "android:name": "com.google.firebase.provider.FirebaseInitProvider", "android:authorities": "team.nido.app.firebaseinitprovider" } },
+            { $: { "android:name": "expo.modules.sharing.SharingFileProvider" } },
+          ],
+        },
+      ],
+    });
+    const app = m.application[0];
+    expect(app.provider.find((x) => x.$["android:name"] === "com.google.firebase.provider.FirebaseInitProvider").$["tools:node"]).toBe("remove");
+    // Los proveedores de NIDO (compartir, archivos) no se tocan.
+    expect(app.provider.find((x) => x.$["android:name"] === "expo.modules.sharing.SharingFileProvider").$["tools:node"]).toBeUndefined();
+    expect(app.service.find((x) => x.$["android:name"] === "com.google.firebase.components.ComponentDiscoveryService").$["tools:node"]).toBe("remove");
+  });
+
   it("fija la IP del servidor de desarrollo en release sin tocar el bloque original, una vez", () => {
     const gradle = `android {\n    buildTypes {\n        release {\n            // Caution!\n            signingConfig signingConfigs.debug\n        }\n    }\n}\n`;
     const out = applyStableDevServerIp(gradle);
