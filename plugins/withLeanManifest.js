@@ -8,6 +8,8 @@
  * 1. Quita del manifiesto FINAL lo que traen librerías y NIDO no usa:
  *    - el receptor y el servicio de notificaciones push de Firebase
  *      (expo-notifications los incluye; NIDO no usa push ni servidores);
+ *    - 0.1.95: el proveedor que arranca Firebase al abrir la app y su
+ *      servicio de descubrimiento de componentes;
  *    - sus permisos (c2dm RECEIVE) y el "install referrer" de Google Play.
  *    Los permisos se quitan con `android.blockedPermissions` en app.json;
  *    aquí, los componentes, con tools:node="remove".
@@ -26,6 +28,17 @@ const REMOVED_COMPONENTS = [
   ["receiver", "com.google.firebase.iid.FirebaseInstanceIdReceiver"],
   ["service", "expo.modules.notifications.service.ExpoFirebaseMessagingService"],
   ["service", "com.google.firebase.messaging.FirebaseMessagingService"],
+  // 0.1.95: el arranque de Firebase. El APK de la 0.1.94 aún llevaba
+  // FirebaseInitProvider (un ContentProvider que Android ejecuta al abrir
+  // la app, antes que el código de NIDO) y ComponentDiscoveryService.
+  // Firebase no puede iniciarse en NIDO de todas formas: el APK no lleva
+  // google_app_id ni ninguna otra configuración de Firebase (comprobado en
+  // resources.arsc de la 0.1.94), así que el proveedor solo gastaba tiempo
+  // de arranque y dejaba código de Google en marcha sin motivo. Quitarlos
+  // no cambia nada de lo que NIDO usa: las notificaciones locales van por
+  // AlarmManager y NIDO no pide nunca un token de push.
+  ["provider", "com.google.firebase.provider.FirebaseInitProvider"],
+  ["service", "com.google.firebase.components.ComponentDiscoveryService"],
 ];
 
 const MARKER = "NIDO: IP fija del servidor de desarrollo en release (plugins/withLeanManifest.js)";
