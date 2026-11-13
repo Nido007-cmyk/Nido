@@ -320,6 +320,26 @@ jobs:
           echo "::notice title=Dependencias Android en el APK::$N líneas de dependencia (archivo adjunto al release)"
           grep -oiE '(org\.bouncycastle|net\.zetetic)[^ ]*' "$OUT" | sort -u | head -20 \
             | while IFS= read -r l; do echo "::notice title=Dependencia nativa destacada::$l"; done
+      - name: Censo sin Google (D8)
+        # Paquete NIDO-SIN-GOOGLE-2026-11-13: el APK normal va sin Google
+        # (decisión D8 del dueño, 2026-11-13). La ausencia se comprueba en el
+        # BINARIO de esta compilación: classes*.dex, el manifiesto binario y
+        # el árbol releaseRuntimeClasspath de arriba. Cualquier rastro de
+        # Firebase, Play Services, datatransport o el Install Referrer de
+        # Google Play tumba la compilación; si falta el árbol, también (un
+        # censo que no se pudo hacer no cuenta como limpio).
+        shell: bash
+        run: |
+          python3 scripts/check-google-free.py android/app/build/outputs/apk/release/app-release.apk \
+            --deps android-runtime-dependencies.txt --json google-census.json --github
+      - name: Upload Google census
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        continue-on-error: true
+        with:
+          name: nido-google-census
+          path: google-census.json
+          if-no-files-found: warn
       - name: Upload Android dependency list
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         continue-on-error: true
