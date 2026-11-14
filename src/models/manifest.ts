@@ -126,12 +126,15 @@ export function pinnedSourceUrl(asset: CatalogModel): string {
  *   a MUTABLE branch pointer. Same pinning requirement as "hf-branch".
  * - "github-release-asset":
  *   `github.com/<org>/<repo>/releases/download/<tag>/<file>` — a PUBLISHED
- *   artifact. Release assets are fixed at publish time; the
- *   `/releases/download/<tag>/<file>` path cannot be silently re-pointed
- *   at different bytes the way a branch pointer can (replacing it is a
- *   deliberate, visible publish action). The catalog's sha256 — verified
- *   post-download by ModelManager for EVERY asset — completes the
- *   immutability contract, so `revision` is not applicable here.
+ *   artifact. A release asset is NOT immutable the way a commit-pinned
+ *   URL is: whoever controls the publishing account can replace the file
+ *   under the same tag and this URL will serve the new bytes with no
+ *   visible change here (audit 2026-11-14, F-09 — an earlier version of
+ *   this comment claimed otherwise). What actually protects this
+ *   contract is not the host: it is the catalog's signed sha256,
+ *   verified post-download by ModelManager for EVERY asset — replaced
+ *   bytes fail verification and are never installed. `revision` is not
+ *   applicable here; the hash pin is the control.
  * - "unknown": anything else — fail closed, never downloaded.
  */
 export type SourceContract =
@@ -174,6 +177,54 @@ export function sourceContractOf(sourceUrl: string): SourceContract {
   return "unknown";
 }
 
+/**
+ * Pinned download origins (T-09 / M-34, audit 2026-11-14, F-02).
+ *
+ * The source contracts above validate the SHAPE of a URL. Shape alone
+ * lets any well-formed repo on a known host through — including one
+ * NIDO never chose. This list pins the exact origins (host + org/repo)
+ * the catalog may download from: the third-party model repos NIDO
+ * deliberately ships (bartowski, unsloth, CompendiumLabs, LiquidAI,
+ * google) and NIDO's own repo for packs and release assets. The
+ * pre-network gate refuses anything else, so a catalog entry that was
+ * signed by mistake pointing at a stranger's repo still cannot be
+ * fetched. Adding an origin is a deliberate code change here plus the
+ * catalog entry; the census test in downloadSourceGate.test.ts proves
+ * this list and the real catalog's origins are exactly equal.
+ */
+export const PINNED_SOURCE_REPOS: Readonly<Record<string, readonly string[]>> = {
+  "huggingface.co": [
+    "bartowski/Phi-3.5-mini-instruct-GGUF",
+    "CompendiumLabs/bge-small-en-v1.5-gguf",
+    "bartowski/Qwen2.5-1.5B-Instruct-GGUF",
+    "bartowski/Qwen2.5-0.5B-Instruct-GGUF",
+    "unsloth/Qwen3-0.6B-GGUF",
+    "bartowski/Qwen2.5-7B-Instruct-GGUF",
+    "LiquidAI/LFM2.5-8B-A1B-GGUF",
+    "google/gemma-4-E4B-it-qat-q4_0-gguf",
+  ],
+  "raw.githubusercontent.com": ["Nido007-cmyk/Nido"],
+  "github.com": ["Nido007-cmyk/Nido"],
+};
+
+/**
+ * Whether a source URL's origin (exact host + org/repo, case-insensitive)
+ * is one of the pinned download origins. Subdomains of a pinned host are
+ * NOT pinned: the host must match exactly.
+ */
+export function isPinnedSourceOrigin(sourceUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(sourceUrl);
+  } catch {
+    return false;
+  }
+  const repos = PINNED_SOURCE_REPOS[url.hostname.toLowerCase()];
+  if (!repos) return false;
+  const repo = url.pathname.split("/").filter(Boolean).slice(0, 2).join("/").toLowerCase();
+  return repos.some((r) => r.toLowerCase() === repo);
+}
+
 export interface ImmutableSourceGate {
   /** The recognized source contract — never "unknown" on success. */
   readonly contract: Exclude<SourceContract, "unknown">;
@@ -194,20 +245,42 @@ export interface ImmutableSourceGate {
  * - "hf-branch" / "github-raw-branch": mutable branch pointer; the entry
  *   MUST pin a `revision`, or this throws a permanent
  *   DownloadFailure("unpinnedSource") before anything is written or fetched.
- * - "github-release-asset": published artifact, immutable by host contract;
- *   no revision is applicable. The catalog sha256 (verified post-download
- *   by ModelManager like every other asset) completes the contract.
+ * - "github-release-asset": published artifact; no revision is
+ *   applicable. Its integrity rests on the catalog sha256, verified
+ *   post-download by ModelManager like every other asset (see the
+ *   SourceContract note: a release asset is replaceable by whoever
+ *   controls the account, so the hash pin is the real control).
  * - anything else: throws a permanent
  *   DownloadFailure("unknownSourceContract").
  *
- * This is strictly no weaker than the old guard: it passes every asset the
- * old guard passed (pinned branch-pointer URLs), and additionally passes
- * only release-asset URLs the old guard wrongly bricked (R1). It can never
- * return a mutable branch-pointer URL for fetching.
+ * T-09 (M-34): on top of the contract shape, the gate requires the
+ * origin to be one of PINNED_SOURCE_REPOS — a well-formed URL pointing
+ * at a repo NIDO never pinned is refused with the same
+ * "unknownSourceContract" code, before any network I/O. This is
+ * deliberately stricter than the R1 guard: it can reject a well-formed
+ * entry the old guard passed, when that entry's origin was never
+ * approved in code.
  */
 export function assertImmutableSourcePreDownload(
   asset: CatalogModel
 ): ImmutableSourceGate {
+  // T-09 (M-34): the origin must be pinned in code, not merely
+  // well-formed. Checked at each return point below — after the
+  // contract and revision checks, so the failure codes for unknown
+  // contracts and missing revisions keep their established meaning.
+  const assertPinnedOrigin = (): void => {
+    if (!isPinnedSourceOrigin(asset.sourceUrl)) {
+      throw new DownloadFailure({
+        code: "unknownSourceContract",
+        kind: "permanent",
+        canResume: false, // nothing was written; there is nothing to resume
+        assetId: asset.id,
+        bytesReceived: 0,
+        bytesExpected: asset.sizeBytes,
+        detail: `asset ${asset.id} source origin is not a pinned NIDO source (${asset.sourceUrl}) — refusing to download`,
+      });
+    }
+  };
   const contract = sourceContractOf(asset.sourceUrl);
   if (contract === "hf-branch" || contract === "github-raw-branch") {
     if (!asset.revision) {
@@ -238,9 +311,11 @@ export function assertImmutableSourcePreDownload(
         detail: `asset ${asset.id} claims revision ${asset.revision} but a branch pointer survived in the pinned URL — refusing to download`,
       });
     }
+    assertPinnedOrigin();
     return { contract, fetchUrl };
   }
   if (contract === "github-release-asset") {
+    assertPinnedOrigin();
     return { contract, fetchUrl: asset.sourceUrl };
   }
   throw new DownloadFailure({

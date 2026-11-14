@@ -37,7 +37,7 @@
   },
   "installNotice": {
     "pausedTooHeavy": "Há uma parte baixada ({{done}}) de um modelo que não cabe neste dispositivo. Você pode apagá-la para liberar espaço.",
-    "integrity": "O arquivo baixado não coincidiu com sua impressão digital e foi apagado. Se baixar de novo, chegará uma cópia nova.",
+    "integrity": "O arquivo baixado não coincide com sua impressão digital, então não conta como baixado. Se baixar de novo, a cópia nova o substitui.",
     "interrupted": "O último download foi interrompido antes de terminar. Se baixar de novo, começará do início.",
     "sizeMismatch": "O último download chegou incompleto e foi apagado. Se baixar de novo, chegará uma cópia nova.",
     "storage": "Não houve espaço livre suficiente para terminar o download. Libere espaço e tente de novo.",
