@@ -18,7 +18,7 @@ borrador de la receta está en
 
 | Requisito de F-Droid | Estado |
 |---|---|
-| Sin librerías de Google ni de rastreo (Firebase, Play Services) | **Hecho en código, pendiente de release.** #253 (ya en main, 5acecb4a) sustituye expo-notifications por un módulo propio; #254 censa cada APK construido y tumba la compilación si queda algo. Ninguna versión publicada lo cumple todavía: la 0.1.95 lleva esas clases compiladas e inertes |
+| Sin librerías de Google ni de rastreo (Firebase, Play Services) | **Hecho, y publicado desde la 0.1.96.** #253 (ya en main, 5acecb4a) sustituye expo-notifications por un módulo propio; #254 censa cada APK construido y tumba la compilación si queda algo. El censo corre antes de publicar una release: la 0.1.96, la 0.1.97 y la 0.1.98 salieron a cero en dex, manifiesto y árbol de dependencias |
 | Compilar todo desde fuente | **No cumple.** Las dependencias traen librerías nativas ya compiladas (§3) |
 | Licencia libre | Cumple: MIT |
 | Metadatos | fastlane/metadata/android en en-US, es-ES y pt-BR; receta en borrador |
@@ -75,8 +75,9 @@ Un rastro tumba la compilación y, con ella, la release.
 
 La columna de la derecha sale del APK construido por la CI sobre la cabeza
 de #254 (commit 0f3d9ba9, run 43446068766, artefacto `nido-google-census`).
-Lo que lleve un APK publicado se comprobará en su release, donde el mismo
-paso corre antes de publicar.
+El mismo paso corre ahora antes de publicar una release: la 0.1.96, la
+0.1.97 y la 0.1.98 lo pasaron a cero en los tres sitios (el censo de la
+0.1.98 es el artefacto `nido-google-census` de la corrida 43565056771).
 
 ## 3. Lo que queda: librerías nativas precompiladas
 
@@ -137,21 +138,24 @@ probada. Nada de esto se puede prometer desde aquí.
 
 ## 5. Pasos que quedan
 
-1. **Fusionar #254** con la CI en verde (#253 ya está en main, 5acecb4a).
-   La primera release que lleve los dos será la primera sin Google;
-   cortarla es decisión de la casa.
-2. **Pasada en el aparato** de esa release: DEVICE_CHECKLIST completa, con
-   la sección 5 (notificaciones) y la nueva comprobación de actualizar desde
-   la 0.1.95 con avisos pendientes.
-3. **Decidir §3:** compilar la release desde fuente o no. Si sí:
+Hecho: **#253 y #254 fusionados** (#254 el 2026-11-13) y la primera
+release con los dos está fuera: la 0.1.96 fue la primera sin Google, y la
+siguieron la 0.1.97 y la 0.1.98, cada una con el censo en verde antes de
+publicar.
+
+1. **Pasada en el aparato** de la release actual sin Google:
+   DEVICE_CHECKLIST completa, con la sección 5 (notificaciones) y la
+   comprobación de actualizar desde la 0.1.95 con avisos pendientes.
+   Sigue siendo del dueño.
+2. **Decidir §3:** compilar la release desde fuente o no. Si sí:
    - rama aparte;
    - compilación de prueba;
    - `reproducible.yml` en verde.
-4. **Prueba local con fdroidserver**, con el borrador de la receta:
+3. **Prueba local con fdroidserver**, con el borrador de la receta:
    - `fdroid readmeta`, `fdroid lint team.nido.app`,
      `fdroid build -v -l team.nido.app` y `fdroid scanner` sin hallazgos;
    - cerrar los «VERIFICAR» del borrador.
-5. **Merge request a fdroiddata:** solo con el visto bueno del dueño y la
+4. **Merge request a fdroiddata:** solo con el visto bueno del dueño y la
    receta que pasó el paso 4.
 
 ## 6. Incertidumbres

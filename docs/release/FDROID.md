@@ -17,7 +17,7 @@ recipe draft is [`docs/release/fdroid/team.nido.app.yml`](fdroid/team.nido.app.y
 
 | F-Droid requirement | Status |
 |---|---|
-| No Google or tracking libraries (Firebase, Play Services) | **Done in code, pending a release.** #253 (merged into main, 5acecb4a) replaces expo-notifications with NIDO's own module; #254 censuses every built APK and fails the build if anything is left. No published release meets it yet: 0.1.95 carries those classes compiled in and inert |
+| No Google or tracking libraries (Firebase, Play Services) | **Done, and published since 0.1.96.** #253 (merged into main, 5acecb4a) replaces expo-notifications with NIDO's own module; #254 censuses every built APK and fails the build if anything is left. The census runs before a release is published: 0.1.96, 0.1.97 and 0.1.98 all came back zero in dex, manifest and dependency tree |
 | Everything built from source | **Fails.** Dependencies bring prebuilt native libraries (§3) |
 | Free licence | Passes: MIT |
 | Metadata | fastlane/metadata/android in en-US, es-ES and pt-BR; recipe drafted |
@@ -73,9 +73,10 @@ Any trace fails the build, and with it the release.
 | Google dependencies in the tree | 36 | 0 |
 
 The right-hand column comes from the APK the CI built on #254's head
-(commit 0f3d9ba9, run 43446068766, artifact `nido-google-census`). What a
-published APK contains will be checked on its release, where the same step
-runs before publishing.
+(commit 0f3d9ba9, run 43446068766, artifact `nido-google-census`). The same
+step now runs before a release is published: 0.1.96, 0.1.97 and 0.1.98 all
+passed it with zeros in the three places (the 0.1.98 census is the
+`nido-google-census` artifact of run 43565056771).
 
 ## 3. What's left: prebuilt native libraries
 
@@ -135,22 +136,23 @@ promised from here.
 
 ## 5. Remaining steps
 
-1. **Merge #254** with green CI (#253 is already in main, 5acecb4a). The
-   first release that carries both will be the first without Google;
-   cutting it is the house's call.
-2. **Device pass** on that release: the full DEVICE_CHECKLIST, including
-   section 5 (notifications) and the new check of updating from 0.1.95 with
-   pending notifications.
-3. **Decide §3:** build the release from source or not. If yes:
+Done: **#253 and #254 merged** (#254 on 2026-11-13) and the first release
+carrying both is out: 0.1.96 was the first without Google, and 0.1.97 and
+0.1.98 followed, each passing the census before publishing.
+
+1. **Device pass** on the current Google-free release: the full
+   DEVICE_CHECKLIST, including section 5 (notifications) and the check of
+   updating from 0.1.95 with pending notifications. Still the owner's.
+2. **Decide §3:** build the release from source or not. If yes:
    - separate branch;
    - test build;
    - `reproducible.yml` green.
-4. **Local test with fdroidserver**, using the recipe draft:
+3. **Local test with fdroidserver**, using the recipe draft:
    - `fdroid readmeta`, `fdroid lint team.nido.app`,
      `fdroid build -v -l team.nido.app` and `fdroid scanner` with no
      findings;
    - close the draft's "VERIFICAR" items.
-5. **Merge request to fdroiddata:** only with the owner's go-ahead and the
+4. **Merge request to fdroiddata:** only with the owner's go-ahead and the
    recipe that passed step 4.
 
 ## 6. Uncertainties
