@@ -16,6 +16,7 @@ import {
   insertChunk,
   insertChunkWithoutEmbedding,
   createCustomCollection,
+  measureCollectionStoredBytes,
   deleteCustomCollection,
   deleteOrphanCollectionChunks,
   setCustomCollectionActive,
@@ -34,6 +35,7 @@ import {
   DocFingerprintRow,
   StoredImportWarning,
 } from "../rag/db";
+import { enforceStorageBudget, DEFAULT_DOC_STORAGE_BUDGET_BYTES } from "../rag/docStorageBudget";
 import { sha256Hex } from "../models/sha256";
 
 /**
@@ -570,6 +572,30 @@ export function emptyImportErrorCode(emptyPdfNames: string[], ocrAvailable: bool
   return emptyPdfNames.length > 0 && !ocrAvailable ? "scannedNoOcr" : "noText";
 }
 
+/**
+ * T-03 de la 0.1.99 (m-62): el tamaño real de un asset cuando el
+ * selector no lo declara. Sin esto, la ruta de texto leía el fichero
+ * ENTERO para comprobar el tope después de tenerlo en memoria (un
+ * .txt enorme sin tamaño era un OOM en aparatos justos, no un error
+ * limpio) y la de imagen entraba al OCR sin cota previa. Los assets
+ * del selector se copian a la caché local (pickDocuments usa
+ * copyToCacheDirectory), así que el tamaño existe en el sistema de
+ * ficheros aunque el selector no lo haya reportado. Si ni así se
+ * puede saber, devuelve null y manda la segunda red de siempre (la
+ * comprobación tras leer, en la ruta de texto).
+ */
+async function pickerAssetSizeBytes(
+  file: DocumentPicker.DocumentPickerAsset
+): Promise<number | null> {
+  if (file.size != null) return file.size;
+  try {
+    const info = await FileSystem.getInfoAsync(file.uri);
+    return info.exists && typeof info.size === "number" ? info.size : null;
+  } catch {
+    return null;
+  }
+}
+
 async function parseFileContent(
   file: DocumentPicker.DocumentPickerAsset,
   fallbackTitle: string,
@@ -599,9 +625,14 @@ async function parseFileContent(
   else if (TEXT_DISPATCH_EXTENSIONS.has(ext)) kind = "text";
   else kind = byBytes;
 
+  // m-62: el tamaño que gobierna las cotas es el declarado por el
+  // selector o, si no lo declara, el real del fichero — resuelto
+  // aquí, antes de leer ni de pasar por OCR.
+  const sizeBytes = await pickerAssetSizeBytes(file);
+
   if (kind === "image") {
-    if (file.size != null && file.size > MAX_IMPORT_TEXT_FILE_BYTES) {
-      throw new DocImportError("tooLarge", `"${filename}" is too large (${file.size} bytes).`, {
+    if (sizeBytes != null && sizeBytes > MAX_IMPORT_TEXT_FILE_BYTES) {
+      throw new DocImportError("tooLarge", `"${filename}" is too large (${sizeBytes} bytes).`, {
         name: filename,
         max: String(Math.round(MAX_IMPORT_TEXT_FILE_BYTES / (1024 * 1024))),
       });
@@ -624,8 +655,8 @@ async function parseFileContent(
   }
 
   const limit = kind === "pdf" ? MAX_IMPORT_PDF_FILE_BYTES : MAX_IMPORT_TEXT_FILE_BYTES;
-  if (file.size != null && file.size > limit) {
-    throw new DocImportError("tooLarge", `"${filename}" is too large (${file.size} bytes).`, {
+  if (sizeBytes != null && sizeBytes > limit) {
+    throw new DocImportError("tooLarge", `"${filename}" is too large (${sizeBytes} bytes).`, {
       name: filename,
       max: String(Math.round(limit / (1024 * 1024))),
     });
@@ -805,10 +836,8 @@ async function importDocumentsSerial(
     lang = (await (await import("../models/settings")).getLanguageId()) as OcrLang;
   }
   const env: ImportEnv = { lang, ocrAvailable, onProgress };
-  let totalSizeBytes = 0;
   let estimatedChunks = 0;
   for (const file of files) {
-    totalSizeBytes += file.size ?? 0;
     const fallbackTitle = file.name.replace(/\.[^.]+$/, "");
     const sink: ImportSink = {
       emptyPdfNames: [],
@@ -1112,13 +1141,28 @@ async function importDocumentsSerial(
       }
     }
 
+    // T-03 de la 0.1.99 (M-32): sizeBytes es lo que la colección
+    // ocupa en la base (texto + copia FTS + vectores, medido sobre
+    // lo recién insertado), no la suma de los ficheros fuente. Si la
+    // medida fallara, el respaldo es el texto de los trozos por dos
+    // (chunks + FTS) sin vectores: una cota baja honesta, nunca el
+    // tamaño del fichero del selector.
+    const measured = await measureCollectionStoredBytes(collectionId).catch(() => -1);
+    const storedSizeBytes =
+      measured >= 0
+        ? measured
+        : chunks.reduce(
+            (sum, c) =>
+              sum + 2 * (new TextEncoder().encode(c.title).length + new TextEncoder().encode(c.body).length),
+            0
+          );
     const collection: Omit<CustomCollection, "active" | "createdAt" | "lastAccessed"> = {
       id: collectionId,
       name: collectionName,
       sourceFilename: files.map((f) => f.name).join(", "),
       docCount: accepted.length,
       chunkCount: chunks.length,
-      sizeBytes: totalSizeBytes,
+      sizeBytes: storedSizeBytes,
     };
     await createCustomCollection(collection, { lifecycleEpoch: runEpoch });
     // C-06 + H-11: con la colección ya nacida, se registran las
@@ -1153,6 +1197,19 @@ async function importDocumentsSerial(
   } finally {
     inFlightCollectionIds.delete(collectionId);
   }
+
+  // T-03 de la 0.1.99 (M-32): la cuota de documentos se aplica tras
+  // cada importación con éxito — hasta esta versión
+  // enforceStorageBudget no tenía ningún llamador y la base de
+  // conocimiento crecía sin tope, lote a lote. Best-effort y FUERA
+  // del try de arriba a propósito: un fallo al expulsar no debe
+  // deshacer una importación ya nacida; la próxima pasada lo
+  // reintenta. La colección recién creada va protegida en esta
+  // pasada (si ella sola pasara del tope, la expulsará la siguiente
+  // ya asentada, no el gesto que la trajo).
+  await enforceStorageBudget(DEFAULT_DOC_STORAGE_BUDGET_BYTES, {
+    protectIds: [collectionId],
+  }).catch(() => {});
 
   const [created] = (await listCustomCollections()).filter((c) => c.id === collectionId);
   return { ...created, importWarnings };
