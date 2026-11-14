@@ -210,8 +210,14 @@ export const EMERGENCY_NUMBERS: readonly EmergencyEntry[] = [
 // español o portugués con «emergency» en inglés. La forma sigue siendo
 // la de siempre (número/teléfono de emergencia delante): «emergency»
 // suelto en otra frase («my emergency contact») no entra.
+// 0.1.99 T-01 (m-09, auditoría 2026-11-14): la alternativa de
+// «llamo/marco» exigía la «a» delante y la forma corriente, sin
+// ella, caía al modelo («¿Qué número llamo en España?», sonda
+// P-17a). La «a» es opcional. Y la gemela portuguesa pedía el
+// infinitivo «ligar» donde la gente escribe el conjugado «ligo»
+// («que número ligo no Brasil» tampoco disparaba).
 const EMERGENCY_Q_RE =
-  /\b(numero|telefono|tel)s? (de |del |para )?(las? )?(emergencias?|urgencias?|emergency|policia|ambulancia|bomberos)\b|\ba (que|cual) numero (llamo|llamar|marco|marcar)\b|\bemergency (number|phone|line)s?\b|\bwhat number (do i|should i|to) (call|dial)\b|\bnumber (for|to call) (the )?(police|ambulance|fire)\b|\bnumeros? de (emergencia|urgencia)\b|\b(qual|que) numero (ligar|eu ligo|discar)\b|\btelefone (de |da )?(emergencia|emergency)\b/;
+  /\b(numero|telefono|tel)s? (de |del |para )?(las? )?(emergencias?|urgencias?|emergency|policia|ambulancia|bomberos)\b|\b(?:a )?(que|cual) numero (llamo|llamar|marco|marcar)\b|\bemergency (number|phone|line)s?\b|\bwhat number (do i|should i|to) (call|dial)\b|\bnumber (for|to call) (the )?(police|ambulance|fire)\b|\bnumeros? de (emergencia|urgencia)\b|\b(qual|que) numero (ligar|ligo|eu ligo|discar)\b|\btelefone (de |da )?(emergencia|emergency)\b/;
 
 function findCountry(folded: string): EmergencyEntry | null {
   for (const e of EMERGENCY_NUMBERS) {
@@ -324,6 +330,19 @@ const SELF_HARM_PATTERNS = [
       // gemela de la portuguesa «quero me machucar / ferir».
       "(?:quiero|voy a|tengo ganas de) (?:lastimarme|herirme)",
       "lastimarme a mi mism[oa]",
+      // 0.1.99 T-01 (M-07, auditoría 2026-11-14): la familia de
+      // «cortar», la forma corriente de decirlo que faltaba en los
+      // tres idiomas («quiero cortarme», sonda P-17d). Siempre con
+      // el reflexivo: «quiero cortar» a secas también es cortar el
+      // pan o cortar con alguien. Los objetos cotidianos que sí
+      // llevan el reflexivo (el pelo, las uñas) van a los vetos.
+      "(?:quiero|voy a|tengo ganas de) cortarme",
+      "me (?:quiero|voy a) cortar",
+      "(?:pienso|pensando|he pensado) en cortarme",
+      // 0.1.99 T-01 (M-07): «estar vivo / estar muerto», la gemela
+      // que el acta nombra: estaba «no quiero vivir», no «estar vivo».
+      "(?:ya )?no quiero estar viv[oa]",
+      "(?:quiero|queria) estar muert[oa]",
       "no vale la pena (?:seguir )?vivi(?:r|endo)",
       "(?:estaria|estarian) mejor (?:muert[oa]|sin mi)",
       "(?:ya )?no (?:le )?encuentro sentido a (?:la vida|nada)",
@@ -337,6 +356,15 @@ const SELF_HARM_PATTERNS = [
       "commit suicide",
       "(?:thinking|thought|thoughts) (?:about|of) suicide",
       "(?:hurt|hurting|harm|harming) myself",
+      // 0.1.99 T-01 (M-07): the «cutting» family, twin of «hurt
+      // myself». Bare «cut myself» stays out: it is also the
+      // accidental cut («I cut myself shaving»), which belongs to
+      // first aid. What enters is the gerund (the ongoing
+      // behaviour), the stated intention and «on purpose».
+      "cutting myself",
+      "(?:want|wanna) to cut myself",
+      "cut myself on purpose",
+      "(?:want|wanna) to be dead",
       "(?:don't|dont|do not) want to (?:live|be alive)(?: anymore)?",
       "no (?:point|reason) (?:in|to) (?:living|live)",
       "better off dead",
@@ -347,13 +375,21 @@ const SELF_HARM_PATTERNS = [
       "vou me matar",
       "tirar (?:a )?minha (?:propria )?vida",
       "me suicidar",
-      "(?:penso|pensando|pensei|pensado) em (?:suicid\\w*|me matar|me machucar|me ferir)",
+      "(?:penso|pensando|pensei|pensado) em (?:suicid\\w*|me matar|me machucar|me ferir|me cortar)",
       // C1-H1 (barrido 0.1.96): la forma directa, como «hacerme daño» en
       // español e «I want to hurt myself» en inglés. Siempre con el verbo
       // de intención de quien habla delante: «me machucar» suelto también
       // es «o cachorro pode me machucar».
       "(?:quero|queria|vou|preciso|tenho vontade de) me (?:machucar|ferir)",
       "(?:quero|vou|preciso) (?:machucar|ferir)-me",
+      // 0.1.99 T-01 (M-07): a família de «cortar», gêmea direta da
+      // de «machucar/ferir» (sonda P-17e: «quero me cortar» não
+      // disparava). Os objetos cotidianos (o cabelo, as unhas) vão
+      // aos vetos.
+      "(?:quero|queria|vou|preciso|tenho vontade de) me cortar",
+      "(?:quero|vou|preciso) cortar-me",
+      "nao quero (?:mais )?estar viv[oa]",
+      "(?:quero|queria) estar mort[oa]",
       "(?:machucar|ferir) a mim mesm[oa]",
       "nao quero (?:mais )?viver",
       "nao aguento mais viver",
@@ -385,8 +421,12 @@ const SELF_HARM_GLUED_RE = new RegExp(
 );
 
 // Frases hechas y ficción: no son una persona contando que quiere morir.
+// 0.1.99 T-01 (M-07): los objetos cotidianos de la familia nueva de
+// «cortar» — quien se corta el pelo o las uñas lleva el mismo
+// reflexivo que la forma de autolesión, y «cut myself a slice» es
+// servirse comida, no hacerse daño.
 const SELF_HARM_VETO_RE =
-  /\b(?:morir(?:me)? de (?:la )?(?:risa|verguenza|pena|hambre|sueno|calor|frio|amor|ganas|envidia|aburrimiento|cansancio|nervios)|die of (?:embarrassment|laughter|boredom|shame|hunger|thirst)|morrer de (?:rir|vergonha|fome|sono|calor|frio|amor|vontade|tedio|saudade)|(?:cuento|novela|historia|guion|cancion|poema|personaje|pelicula|serie|story|novel|script|song|lyrics|poem|character|movie|conto|romance|roteiro|musica|personagem|filme)\b)/;
+  /\b(?:morir(?:me)? de (?:la )?(?:risa|verguenza|pena|hambre|sueno|calor|frio|amor|ganas|envidia|aburrimiento|cansancio|nervios)|die of (?:embarrassment|laughter|boredom|shame|hunger|thirst)|morrer de (?:rir|vergonha|fome|sono|calor|frio|amor|vontade|tedio|saudade)|(?:cuento|novela|historia|guion|cancion|poema|personaje|pelicula|serie|story|novel|script|song|lyrics|poem|character|movie|conto|romance|roteiro|musica|personagem|filme)\b|cortarme (?:el |la |las |los )?(?:pelo|cabello|flequillo|unas|barba|bigote)|cortar (?:el |la |las |los |o |a |as |os )?(?:pelo|cabello|cabelo|flequillo|unas|unhas|barba|bigote|bigode)|cortar-me (?:o |a |as |os )?(?:cabelo|unhas|barba|bigode)|cut(?:ting)? myself a )/;
 
 const SELF_HARM_VETO_GLUED_RE = new RegExp(SELF_HARM_VETO_RE.source.replace(/\\b/g, "").replace(/\s+/g, ""));
 
