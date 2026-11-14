@@ -25,11 +25,20 @@ import {
  *   the out-of-the-box default and what the setup wizard downloads.
  *
  * The threshold is not a magic number: it falls out of the pre-flight
- * formula. The 1.5B needs ~1.28 GiB (940 MiB weights + 112 MiB KV @4096 +
- * 256 MiB compute); with a 0.5 GiB app-baseline estimate and the 2 GiB
- * system headroom policy, devices reporting >= ~3.8 GiB total get the 1.5B
- * and anything below gets the 0.5B. A 4 GB phone (typically ~3.7 GiB
- * addressable) lands on the 0.5B; 6 GB+ phones get the 1.5B.
+ * formula. The 1.5B needs ~1.24 GiB (940 MiB weights + 112 MiB KV @4096 +
+ * ~219 MiB compute — the compute term is charged at the batch the
+ * device's class actually runs, 192 on the ≤4.5 GiB class, not the
+ * flat 256 MiB of the old derivation: F3-17); with a 0.5 GiB
+ * app-baseline estimate and the 2 GiB system headroom policy, devices
+ * reporting >= ~3.8 GiB total get the 1.5B and anything below gets the
+ * 0.5B. A 4 GB phone (typically ~3.7 GiB addressable) lands on the
+ * 0.5B; 6 GB+ phones get the 1.5B.
+ *
+ * Blind (no RAM reading at all): the LIGHT model (F3-05, auditoría
+ * 2026-11-13). Until 0.1.98 blindness preserved the historic default —
+ * the heavy model offered with zero measurement behind it. The light
+ * model is the one that fits everywhere; the wizard still offers both
+ * and the user can step up with their eyes open.
  */
 
 const MiB = 1024 * 1024;
@@ -129,7 +138,7 @@ export function contextCeilingForDevice(
 export function defaultLlmForRam(totalRamBytes: number): CatalogModel {
   const preferred = MODEL_CATALOG.find((m) => m.id === PREFERRED_LLM_ID)!;
   const light = MODEL_CATALOG.find((m) => m.id === LIGHT_LLM_ID)!;
-  if (totalRamBytes <= 0) return preferred; // blind: preserve historic default
+  if (totalRamBytes <= 0) return light; // blind: the light default (F3-05)
   const need = estimateContextBytes(contextSpecForModel(preferred, totalRamBytes)).totalBytes;
   const available = totalRamBytes - SETUP_RSS_ESTIMATE_BYTES - SYSTEM_HEADROOM_BYTES;
   return need <= available ? preferred : light;
@@ -137,16 +146,17 @@ export function defaultLlmForRam(totalRamBytes: number): CatalogModel {
 
 /**
  * Device-aware default: reads total RAM via the pre-flight's snapshot
- * reader (which itself best-efforts the native module). Fail-open to the
- * historic default when the readout is unavailable — the load-time
- * pre-flight (ramBudget) remains the real safety net.
+ * reader (which itself best-efforts the native module). Fail-open to
+ * the LIGHT default when the readout is unavailable (F3-05) — the
+ * load-time pre-flight (ramBudget) remains the real safety net, and
+ * the light model is the one that fits on any device.
  */
 export function defaultLlmForDevice(): CatalogModel {
   const snapshot = readRamSnapshot();
   if (snapshot && snapshot.totalRamBytes > 0) {
     return defaultLlmForRam(snapshot.totalRamBytes);
   }
-  return MODEL_CATALOG.find((m) => m.id === PREFERRED_LLM_ID)!;
+  return MODEL_CATALOG.find((m) => m.id === LIGHT_LLM_ID)!;
 }
 
 /**

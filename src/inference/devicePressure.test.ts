@@ -46,10 +46,15 @@ describe("pressureCaps (optimización 2026-11-08, fase 3)", () => {
     expect(pressureCaps({ ...CALM, powerSave: true })).toEqual({ threadCap: 3, ubatchCap: 128 });
   });
 
-  it("calor severo (≥5) → 2 hilos; por debajo, nada", () => {
+  it("calor severo (≥3 en la escala oficial de PowerManager) → 2 hilos; por debajo, nada", () => {
+    // La escala oficial: 3 = SEVERE, 4 = CRITICAL, 5 = EMERGENCY,
+    // 6 = SHUTDOWN. Hasta la 0.1.98 el umbral estaba en 5 (EMERGENCY)
+    // y el severo y el crítico reales quedaban sin topes (F3-03).
+    expect(pressureCaps({ ...CALM, thermalStatus: 3 })).toEqual({ threadCap: 2, ubatchCap: 128 });
+    expect(pressureCaps({ ...CALM, thermalStatus: 4 })).toEqual({ threadCap: 2, ubatchCap: 128 });
     expect(pressureCaps({ ...CALM, thermalStatus: 5 })).toEqual({ threadCap: 2, ubatchCap: 128 });
     expect(pressureCaps({ ...CALM, thermalStatus: 6 })).toEqual({ threadCap: 2, ubatchCap: 128 });
-    expect(pressureCaps({ ...CALM, thermalStatus: 4 })).toEqual({ threadCap: null, ubatchCap: null });
+    expect(pressureCaps({ ...CALM, thermalStatus: 2 })).toEqual({ threadCap: null, ubatchCap: null });
   });
 
   it("las dos presiones a la vez: manda la más estricta, no se suman", () => {
