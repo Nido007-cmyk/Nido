@@ -146,6 +146,7 @@ en el dispositivo, cifrados. No hay cuentas, ni nube, ni analíticas.
   choques se probó con una regresión y no existe; el guardián
   no cambia.
 - **Un juez más estricto y una búsqueda que se queda en tu idioma** (0.1.97): tras una foto que mostró una frase inventada y peligrosa bajo una guía sellada, 943 casos adversarios en los tres idiomas encontraron 285 formas de engañar al juez de fundamentación o a la búsqueda; esta versión las arregla todas menos un residuo declarado de 108 que un juez determinista no puede separar de una traducción fiel. Las cantidades se juzgan ya con sus unidades, un número atribuido a otro dueño se caza, y una pregunta en español ya no trae fuentes en otros idiomas por compartir un prefijo.
+- **Los arreglos de la auditoría** (0.1.98): una fecha que en la misma nota es de otro evento (la de la vacuna dada como la de la revisión, o el cumpleaños de un padre dado como el del otro) ya no sale como respaldada por la fuente, en español, inglés y portugués; una dosis española fiel como «Tome 5 ml dos veces al día» ya no se retira como si fuera portuguesa; tus propios documentos ya no los descarta la puerta nueva de búsqueda de la 0.1.97; y cada respuesta parte de los valores de muestreo del propio modelo en vez de heredar los de la respuesta anterior.
 - **Sin código de Google en el APK** (0.1.96): Firebase y Google
   Play Services están fuera del todo, no compilados inertes; un
   censo dentro de la compilación la tumba si vuelve un rastro de
@@ -306,7 +307,7 @@ La interfaz está disponible en español, inglés y portugués.
 ## Instalación
 
 1. Descarga `app-release.apk` desde la
-   [versión v0.1.96-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.97-alpha).
+   [versión v0.1.98-alpha](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.98-alpha).
 2. Compruébalo con el archivo `app-release.apk.sha256` publicado a su lado.
 3. Instálalo en un teléfono Android (arm64).
 4. En el primer arranque NIDO descarga su modelo de lenguaje, entre 0,4 y
