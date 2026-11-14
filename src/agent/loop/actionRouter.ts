@@ -298,16 +298,83 @@ export function reminderInvalidWhen(userText: string, now: Date = new Date()): b
   return lastInvalidWhen;
 }
 
+// 0.1.99 (auditoría carril 3, A-M1): las abreviaturas de mes es/en/pt
+// entran en TODAS las tablas de esta capa. La tabla gemela del juez
+// (rag/dates.ts, MONTHS) ya las traía y el router no: «15 de ene»,
+// «Jan 15» y «15 de fev» no se entendían, el aviso nacía sin fecha con
+// la fecha en el título y en calendario el evento salía mañana. Las
+// abreviaturas son las de dates.ts, duplicadas como allí se duplican
+// las tablas entre capas: ene/jan, feb/fev, mar, abr/apr, mai, jun,
+// jul, ago/aug, sep/sept/set, oct/out, nov, dic/dec/dez.
 const MONTH_DAYS: Array<[RegExp, number]> = [
-  [/^(?:enero|january|janeiro)$/i, 31], [/^(?:febrero|february|fevereiro)$/i, 29], [/^(?:marzo|march|mar[çc]o)$/i, 31],
-  [/^(?:abril|april)$/i, 30], [/^(?:mayo|may|maio)$/i, 31], [/^(?:junio|june|junho)$/i, 30], [/^(?:julio|july|julho)$/i, 31],
-  [/^(?:agosto|august)$/i, 31], [/^(?:septiembre|setiembre|september|setembro)$/i, 30], [/^(?:octubre|october|outubro)$/i, 31],
-  [/^(?:noviembre|november|novembro)$/i, 30], [/^(?:diciembre|december|dezembro)$/i, 31],
+  [/^(?:enero|january|janeiro|ene|jan)$/i, 31], [/^(?:febrero|february|fevereiro|feb|fev)$/i, 29], [/^(?:marzo|march|mar[çc]o|mar)$/i, 31],
+  [/^(?:abril|april|abr|apr)$/i, 30], [/^(?:mayo|may|maio|mai)$/i, 31], [/^(?:junio|june|junho|jun)$/i, 30], [/^(?:julio|july|julho|jul)$/i, 31],
+  [/^(?:agosto|august|ago|aug)$/i, 31], [/^(?:septiembre|setiembre|september|setembro|sep|sept|set)$/i, 30], [/^(?:octubre|october|outubro|oct|out)$/i, 31],
+  [/^(?:noviembre|november|novembro|nov)$/i, 30], [/^(?:diciembre|december|dezembro|dic|dec|dez)$/i, 31],
 ];
-const MONTH_WORD = "enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|mar[çc]o|maio|junho|julho|setembro|outubro|novembro|dezembro";
+const MONTH_WORD = "enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|mar[çc]o|maio|junho|julho|setembro|outubro|novembro|dezembro|ene|feb|mar|abr|jun|jul|ago|sep|sept|oct|nov|dic|jan|fev|apr|mai|aug|set|out|dec|dez";
+
+/**
+ * 0.1.99 (auditoría carril 3, A-C1 · CRÍTICO): la fecha numérica
+ * «a/b[/aaaa]». La doctrina es la del juez (rag/dates.ts, T-J5),
+ * duplicada como allí se duplican las tablas entre capas: la forma
+ * no declara su convención y solo se fija por imposibilidad (un
+ * componente > 12: «25/12» es d/m, «12/25» es m/d) o por simetría
+ * (a == b: la misma fecha en las dos lecturas). El año de dos
+ * dígitos se expande a 2000+aa, como en dates.ts. Lo demás es
+ * ambiguo y NO se crea: esta capa devolvía el «el 25» suelto de
+ * DAY_OF_MONTH_RE y tiraba el «/12» (y el año) en silencio — «el
+ * 25/12 comprar pan» creaba el aviso el 25 de NOVIEMBRE con el
+ * título «/12 comprar pan», y «el 10/11/2027» el 10 de diciembre
+ * de 2026. Sin año, la forma de fracción de cocina (denominadores
+ * de T-J4) no es una fecha: «el 1/2» no crea mención.
+ */
+const NUMERIC_DATE_RE = /(?<![\d/])(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?(?![\d/])/;
+const FRACTION_DENOMINATORS = new Set([2, 3, 4, 5, 6, 8, 10, 12, 16]);
+
+export interface NumericDateReading {
+  day: number;
+  month: number; // 0-11
+  year: number | null;
+  /** Las dos lecturas son fechas distintas y ninguna vía la fija. */
+  ambiguous: boolean;
+  /** Hay forma de fecha pero ninguna lectura existe (13/14, 29/02/2027). */
+  impossible: boolean;
+}
+
+/** Lee la primera fecha numérica del texto con la doctrina T-J5. */
+export function readNumericDate(text: string): NumericDateReading | null {
+  const m = NUMERIC_DATE_RE.exec(text);
+  if (!m) return null;
+  const a = parseInt(m[1], 10);
+  const b = parseInt(m[2], 10);
+  if (a === 0 || b === 0 || a > 31 || b > 31) return null;
+  const year = m[3] ? (m[3].length === 2 ? 2000 + parseInt(m[3], 10) : parseInt(m[3], 10)) : null;
+  // Sin año, la fracción de cocina manda (T-J5): no es una fecha.
+  if (year === null && a <= 12 && b <= 12 && a < b && FRACTION_DENOMINATORS.has(b)) return null;
+  if (a > 12 && b > 12) return { day: 0, month: 0, year, ambiguous: false, impossible: true };
+  if (a <= 12 && b <= 12 && a !== b) return { day: 0, month: 0, year, ambiguous: true, impossible: false };
+  const day = a > 12 ? a : b;
+  const month = (a > 12 ? b : a) - 1;
+  // Con año escrito, la fecha tiene que existir ESE año («29/02/2027»).
+  if (year !== null) {
+    const probe = new Date(year, month, day);
+    if (probe.getMonth() !== month || probe.getDate() !== day) {
+      return { day, month, year, ambiguous: false, impossible: true };
+    }
+  }
+  return { day, month, year, ambiguous: false, impossible: false };
+}
 
 /** ¿Trae el texto una hora o una fecha explícita que no existe? */
 export function hasImpossibleWhen(text: string): boolean {
+  // 0.1.99 (A-C1): la fecha numérica que no se puede fijar (ambigua)
+  // o que no existe con su año escrito entra en el mismo aviso
+  // honesto que el «31 de febrero» («no existe o no la entiendo»):
+  // no se crea nada y se pide la fecha de nuevo. La fracción de
+  // cocina no es fecha y no se marca (readNumericDate la da null).
+  const numReading = readNumericDate(text);
+  if (numReading && (numReading.ambiguous || numReading.impossible)) return true;
   // 25:00, 30:15, 7:75; «a las 25», «at 26», «às 30».
   // 24:00 también: el parser no la toma, y un aviso sin hora no avisa nunca.
   if (/(?<![\d:])(?:2[4-9]|[3-9]\d):\d{2}(?!\d)/.test(text)) return true;
@@ -773,11 +840,13 @@ const MIDNIGHT_RE = /(?<![\p{L}])(?:(?:a|al|at|à|pela|por)\s+(?:(?:la|the|a)\s+
 /** «el viernes 10», «friday 10», «sexta 10»: día de la semana con un número detrás que no es hora escrita ni fecha con mes. */
 const WEEKDAY_NUMBER_RE =
   /(?<![\p{L}])(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?)\s+(?:the\s+|dia\s+)?(\d{1,2})(?:st|nd|rd|th)?(?![\d:.,])(?!\s*(?:(?:de|of)\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)|h\b|hs?\b|horas?|hours?|minutos?|minutes?|am\b|pm\b))/iu;
-const MONTH_DATE_RE = /\d{1,2}\s+(?:de|of)\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)(?![\p{L}])|(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}/iu;
+const MONTH_DATE_RE = /\d{1,2}\s+(?:de|of)\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro|ene|feb|mar|abr|mai|jun|jul|ago|sep|sept|set|oct|out|nov|dic|jan|fev|apr|aug|dec|dez)(?![\p{L}])|(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\s+\d{1,2}/iu;
 const DAY_AFTER_TOMORROW_RE = /(?<![\p{L}])(?:pasado\s+ma[ñn]ana|the\s+day\s+after\s+tomorrow|depois\s+de\s+amanh[ãa])(?![\p{L}])/iu;
-/** «el 15» / «on the 15th» / «no dia 15», sin mes detrás ni forma de hora. */
+/** «el 15» / «on the 15th» / «no dia 15», sin mes detrás ni forma de hora.
+ *  0.1.99 (A-C1): un «/N» detrás ya no es «el día suelto»: es la fecha
+ *  numérica (o una fracción), y la lee readNumericDate con su doctrina. */
 const DAY_OF_MONTH_RE =
-  /(?<![\p{L}])(?:el\s+(?:d[ií]a\s+)?(\d{1,2})(?!\s*(?:[:.,]\d|de\s|del\s|h\b|hs?\b|horas?|minutos?|%|°|º|\d))|on\s+the\s+(\d{1,2})(?:st|nd|rd|th)?(?!\s*(?:of\s|[:.]\d|\d))|(?:no\s+)?dia\s+(\d{1,2})(?!\s*(?:de\s+(?:janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?![\p{L}])|[:.]\d|\d)))(?![\p{L}\d])/iu;
+  /(?<![\p{L}])(?:el\s+(?:d[ií]a\s+)?(\d{1,2})(?!\s*(?:[:.,]\d|\/\d|de\s|del\s|h\b|hs?\b|horas?|minutos?|%|°|º|\d))|on\s+the\s+(\d{1,2})(?:st|nd|rd|th)?(?!\s*(?:of\s|[:.]\d|\/\d|\d))|(?:no\s+)?dia\s+(\d{1,2})(?!\s*(?:de\s+(?:janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?![\p{L}])|[:.]\d|\/\d|\d)))(?![\p{L}\d])/iu;
 const THIS_PERIOD_RE = /(?<![\p{L}])(?:esta\s+(?:tarde|noche)|tonight|this\s+(?:afternoon|evening)|(?:hoje\s+)?[àa]\s+noite|esta\s+noite)(?![\p{L}])/iu;
 
 function dayPeriod(t: string): "am" | "pm" | null {
@@ -794,7 +863,18 @@ const WEEKDAY_ALT =
 const DAY_OF_MONTH_RE_G = new RegExp(DAY_OF_MONTH_RE.source, "giu");
 
 export function stripDateWords(input: string): string {
-  return input
+  // 0.1.99 (A-C1): la fecha numérica FIJADA sale entera del título
+  // («el 25/12 comprar pan» → «comprar pan», no «/12 comprar pan»).
+  // Solo sale la que readNumericDate fija: la fracción de cocina y
+  // la ambigua (que no creó nada) se quedan como texto del usuario.
+  const noNumeric = input.replace(
+    /(?:(?<![\p{L}])(?:el|on|no|em)\s+)?(?<![\d/])\d{1,2}\/\d{1,2}(?:\/\d{2,4})?(?![\d/])/giu,
+    (match) => {
+      const r = readNumericDate(match);
+      return r && !r.ambiguous && !r.impossible ? "" : match;
+    },
+  );
+  return noNumeric
       .replace(AM_PERIOD_RE, "")
       .replace(PM_PERIOD_RE, "")
       .replace(NOON_RE, "")
@@ -819,31 +899,38 @@ export function stripDateWords(input: string): string {
       .replace(DAY_OF_MONTH_RE_G, "")
       // 0.1.35: fecha de calendario («el 15 de marzo», «em 15 de março»,
       // «on March 15th»): el título del aviso quedaba con la fecha dentro.
-      .replace(/(?:(?<![\p{L}])(?:el|em|no|on)\s+)?(?:(?<![\p{L}])(?:d[ií]a)\s+)?(?<![\p{L}\d])\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)(?:\s+de(?:l)?\s+\d{4})?(?![\p{L}])/giu, "")
-      .replace(/(?:(?<![\p{L}])on\s+)?(?<![\p{L}])(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?(?![\p{L}\d])/giu, "")
-      .replace(/\ba\s+las\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
+      .replace(/(?:(?<![\p{L}])(?:el|em|no|on)\s+)?(?:(?<![\p{L}])(?:d[ií]a)\s+)?(?<![\p{L}\d])\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro|ene|feb|mar|abr|mai|jun|jul|ago|sep|sept|set|oct|out|nov|dic|jan|fev|apr|aug|dec|dez)(?:\s+de(?:l)?\s+\d{4})?(?![\p{L}])/giu, "")
+      .replace(/(?:(?<![\p{L}])on\s+)?(?<![\p{L}])(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?(?![\p{L}\d])/giu, "")
+      .replace(/\ba\s+las\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b(?:\s*(?:y\s+(?:media|cuarto)|menos\s+(?:un\s+)?cuarto))?/gi, "")
       // B14: el singular «a la 1» / «à 1», espejo de las dos anteriores.
-      .replace(/\ba\s+la\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
-      .replace(/(?<![\p{L}])às\s+\d{1,2}(:\d{2})?\s*(am|pm|h)?\b/giu, "")
-      .replace(/(?<![\p{L}])à\s+\d{1,2}(:\d{2})?\s*(am|pm|h)?\b/giu, "")
+      .replace(/\ba\s+la\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b(?:\s*(?:y\s+(?:media|cuarto)|menos\s+(?:un\s+)?cuarto))?/gi, "")
+      .replace(/(?<![\p{L}])às\s+\d{1,2}(:\d{2})?\s*(am|pm|h)?\b(?:\s*(?:e\s+(?:meia|um\s+quarto)|menos\s+(?:um\s+)?quarto))?/giu, "")
+      .replace(/(?<![\p{L}])à\s+\d{1,2}(:\d{2})?\s*(am|pm|h)?\b(?:\s*(?:e\s+(?:meia|um\s+quarto)|menos\s+(?:um\s+)?quarto))?/giu, "")
       .replace(/\bat\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/gi, "")
+      // 0.1.99 (A-M3/A-M4): la hora en letra y sus fracciones salen del
+      // título igual que las de dígitos («a las tres y media» no deja
+      // resto en lo que hay que recordar).
+      .replace(/\b(?:a\s+las|a\s+la)\s+(?:una|dos|tres|cuatro|cinco|sinco|seis|siete|ocho|nueve|diez|once|doce)(?:\s+(?:y\s+(?:media|cuarto)|menos\s+(?:un\s+)?cuarto))?(?![\p{L}])/giu, "")
+      .replace(/\b(?:half|quarter)\s+(?:past|to)\s+(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d{1,2})(?![\p{L}\d])/giu, "")
+      .replace(/\bat\s+(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(?:\s*(?:am|pm))?(?![\p{L}])/giu, "")
+      .replace(/(?<![\p{L}])(?:à|às)\s+(?:uma|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze)(?:\s+(?:e\s+(?:meia|um\s+quarto)|menos\s+(?:um\s+)?quarto))?(?![\p{L}])/giu, "")
       // TESTFIX-2026-10-08: limpiar tiempo relativo ("en 2 minutos" no es
       // parte del texto del recordatorio). FIX 2026-10-08: \s* para "1minuto".
       // La cola de un relativo en horas («y media», «and a half», «e meia»,
       // «y 30 minutos») sale con él: no es parte del título.
       .replace(/(?<![\p{L}])(?:en|in|em|daqui\s+a)\s+(?:\d+|una?|one|dos|two|tres|three|um|uma|dois|duas)\s*(?:an?\s+)?(?:horas?|hours?|hrs?|h)\s+(?:y|and|e)\s+(?:media|a\s+half|half|meia|cuarto|a\s+quarter|um\s+quarto|(?:\d+|cinco|five|diez|ten|quince|fifteen|veinte|twenty|treinta|thirty|dez|quinze|vinte|trinta)\s*(?:minutos?|minutes?|min))(?![\p{L}])/giu, "")
-      .replace(/\b(?:en|dentro\s+de|within)\s+\d+\s*(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
+      .replace(/\b(?:en|dentro\s+de|within)\s+\d+\s*(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w|quincenas?|quinzenas?|fortnights?)\b/gi, "")
       .replace(/\bin\s+\d+\s*(minutes?|min|hours?|hrs?|h|days?|d|weeks?|w)\b/gi, "")
       // 0.1.14: portugués "em 2 horas".
-      .replace(/\bem\s+\d+\s*(minutos?|min|horas?|h|dias?|d|semanas?)\b/gi, "")
+      .replace(/\bem\s+\d+\s*(minutos?|min|horas?|h|dias?|d|semanas?|quinzenas?)\b/gi, "")
       // B13: portugués en letra ("em duas horas"), espejo de la de
       // palabras es/en de abajo: la hora no es parte del texto.
-      .replace(/\bem\s+(um|uma|dois|duas|três|tres|quatro|cinco|seis|sete|oito|nove|dez|quinze|vinte|trinta|meia)\s*(minutos?|min|horas?|h|dias?|d|semanas?)\b/gi, "")
+      .replace(/\bem\s+(um|uma|dois|duas|três|tres|quatro|cinco|seis|sete|oito|nove|dez|quinze|vinte|trinta|meia)\s*(minutos?|min|horas?|h|dias?|d|semanas?|quinzenas?)\b/gi, "")
       // Cobertura adoptada de B13: el prefijo «daqui a», en dígito y
       // en letra, sale del texto como salen los demás relativos.
-      .replace(/\bdaqui\s+a\s+\d+\s*(minutos?|min|horas?|h|dias?|d|semanas?)\b/gi, "")
-      .replace(/\bdaqui\s+a\s+(um|uma|dois|duas|três|tres|quatro|cinco|seis|sete|oito|nove|dez|quinze|vinte|trinta|meia)\s*(minutos?|min|horas?|h|dias?|d|semanas?)\b/gi, "")
-      .replace(/\b(?:en|in|dentro\s+de|within)\s+(uno|una|one|an?|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/gi, "")
+      .replace(/\bdaqui\s+a\s+\d+\s*(minutos?|min|horas?|h|dias?|d|semanas?|quinzenas?)\b/gi, "")
+      .replace(/\bdaqui\s+a\s+(um|uma|dois|duas|três|tres|quatro|cinco|seis|sete|oito|nove|dez|quinze|vinte|trinta|meia)\s*(minutos?|min|horas?|h|dias?|d|semanas?|quinzenas?)\b/gi, "")
+      .replace(/\b(?:en|in|dentro\s+de|within)\s+(uno|una|one|an?|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w|quincenas?|quinzenas?|fortnights?)\b/gi, "")
       // «el viernes 10:30 llamar»: la hora con minutos sale del título.
       .replace(/(?<![\d:./])\d{1,2}:\d{2}(?![\d:])\s*(?:am|pm)?/gi, "")
       // M3 FIX: limpiar hora suelta después de día ("el viernes 10" → el 10 es la hora).
@@ -883,11 +970,16 @@ function parseRelativeTime(t: string, now: Date): Date | null {
   // «daqui a» («daqui a duas horas») quedaba fuera de la familia de
   // prefijos (en|in|em) y el recordatorio nacía con dueAt: null; la
   // cadena lo adopta como pieza de la misma familia.
-  const m = /\b(?:en|in|em|daqui a|dentro\s+de|within)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half|um|uma|dois|duas|três|quatro|sete|oito|nove|dez|vinte|trinta|meia)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w)\b/i.exec(t);
+  // 0.1.99 (auditoría carril 3, A-M5/A-M6): el artículo indefinido
+  // inglés («in a week», «in an hour») no estaba en la alternancia
+  // (one|una|um sí; a|an no) y «in a week» creaba el aviso MAÑANA;
+  // y la quincena/fortnight/quinzena no existía como unidad en
+  // ningún idioma y también salía mañana. Quincena = 14 días.
+  const m = /\b(?:en|in|em|daqui a|dentro\s+de|within)\s+(\d+|uno|una|one|dos|two|tres|three|cuatro|four|cinco|five|seis|six|siete|seven|ocho|eight|nueve|nine|diez|ten|once|eleven|doce|twelve|quince|fifteen|veinte|twenty|treinta|thirty|media|half|um|uma|dois|duas|três|quatro|sete|oito|nove|dez|vinte|trinta|meia|an?)\s*(?:an?\s+)?(minutos?|minutes?|min|horas?|hours?|hrs?|h|d[ií]as?|days?|d|semanas?|weeks?|w|quincenas?|quinzenas?|fortnights?)\b/i.exec(t);
   if (!m) return null;
 
   const rawNum = m[1].toLowerCase();
-  const n = /^\d+$/.test(rawNum) ? parseInt(rawNum, 10) : NUMBER_WORDS[rawNum];
+  const n = /^\d+$/.test(rawNum) ? parseInt(rawNum, 10) : rawNum === "a" || rawNum === "an" ? 1 : NUMBER_WORDS[rawNum];
   if (n === undefined || n <= 0) return null;
 
   const unit = m[2].toLowerCase();
@@ -920,6 +1012,9 @@ function parseRelativeTime(t: string, now: Date): Date | null {
     target.setDate(target.getDate() + n);
   } else if (/^(w|semana|semanas|week|weeks)$/.test(unit)) {
     target.setDate(target.getDate() + n * 7);
+  } else if (/^(?:quincenas?|quinzenas?|fortnights?)$/.test(unit)) {
+    // 0.1.99 (A-M6): la quincena son 14 días en los tres idiomas.
+    target.setDate(target.getDate() + n * 14);
   } else {
     return null;
   }
@@ -1077,6 +1172,80 @@ export function extractTimerAction(userText: string): TimerAction | null {
 }
 
 /**
+ * 0.1.99 (auditoría carril 3, A-M3/A-M4): la hora EN LETRA y las
+ * fracciones de reloj. Hasta aquí solo se parseaba la hora en dígitos:
+ * «a las cinco» (y el dictado «a las sinco») salía sin hora — un aviso
+ * que nunca suena — o caía al 09:00 por defecto con día; y «a las 3 y
+ * media» perdía el minuto (15:00 en vez de 15:30), «a las 4 menos
+ * cuarto» igual (16:00 en vez de 15:45). Las palabras de reloj de los
+ * tres idiomas comparten valores en esta tabla (seis=6 en es y pt;
+ * doce/doze no colisionan) y cada patrón exige su marco («a las»,
+ * «at», «às»): una palabra suelta no es hora. De dictado solo se
+ * admite «sinco» por cinco, la forma medida en la sonda.
+ */
+const CLOCK_WORDS: Record<string, number> = {
+  una: 1, dos: 2, tres: 3, "três": 3, cuatro: 4, cinco: 5, sinco: 5, seis: 6,
+  siete: 7, ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12,
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7,
+  eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12,
+  uma: 1, duas: 2, quatro: 4, sete: 7, oito: 8, nove: 9, dez: 10, doze: 12,
+};
+
+interface WordClock {
+  hour: number; // 1-12, antes de aplicar am/pm o la heurística
+  minute: number;
+  ampm: "am" | "pm" | null;
+}
+
+/** Cola de fracción tras la hora: «y media», «menos cuarto», «e meia»… */
+function clockFraction(hour: number, tail: string | undefined): { hour: number; minute: number } {
+  if (!tail) return { hour, minute: 0 };
+  const f = tail.toLowerCase();
+  if (f.includes("media") || f.includes("meia")) return { hour, minute: 30 };
+  // «menos cuarto»: son las (hora − 1):45 en la esfera de 12.
+  if (f.startsWith("menos")) return { hour: hour === 1 ? 12 : hour - 1, minute: 45 };
+  return { hour, minute: 15 }; // «y cuarto» / «e um quarto»
+}
+
+/** Hora en letra es/en/pt, con sus fracciones. Null si no hay ninguna. */
+function parseWordClock(t: string): WordClock | null {
+  // EN con fracción delante: «half past three», «quarter to four».
+  const enFrac = /\b(half|quarter)\s+(past|to)\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d{1,2})(?![\p{L}\d])/iu.exec(t);
+  if (enFrac) {
+    const kind = enFrac[1].toLowerCase();
+    const dir = enFrac[2].toLowerCase();
+    const h = /^\d+$/.test(enFrac[3]) ? parseInt(enFrac[3], 10) : CLOCK_WORDS[enFrac[3].toLowerCase()];
+    if (h !== undefined && h >= 1 && h <= 12) {
+      if (kind === "half" && dir === "past") return { hour: h, minute: 30, ampm: null };
+      if (kind === "quarter" && dir === "past") return { hour: h, minute: 15, ampm: null };
+      if (kind === "quarter" && dir === "to") return { hour: h === 1 ? 12 : h - 1, minute: 45, ampm: null };
+    }
+  }
+  // ES: «a las cinco», «a la una y media», «a las cuatro menos cuarto».
+  const es = /\b(?:a\s+las|a\s+la)\s+(una|dos|tres|cuatro|cinco|sinco|seis|siete|ocho|nueve|diez|once|doce)(?![\p{L}])(?:\s+(y\s+(?:media|cuarto)|menos\s+(?:un\s+)?cuarto))?/iu.exec(t);
+  if (es) {
+    const base = CLOCK_WORDS[es[1].toLowerCase()];
+    if (base !== undefined) return { ...clockFraction(base, es[2]), ampm: null };
+  }
+  // PT: «às cinco», «às três e meia», «às quatro menos um quarto».
+  // Sin «\b» delante de «à»: en JS el límite de palabra es ASCII y «à»
+  // no es carácter de palabra, así que «\bà» no casa nunca (la casa ya
+  // usa (?<![\p{L}]) en las limpiezas de «às»).
+  const pt = /(?<![\p{L}])(?:à|às)\s+(uma|duas|três|tres|quatro|cinco|seis|sete|oito|nove|dez|onze|doze)(?![\p{L}])(?:\s+(e\s+(?:meia|um\s+quarto)|menos\s+(?:um\s+)?quarto))?/iu.exec(t);
+  if (pt) {
+    const base = CLOCK_WORDS[pt[1].toLowerCase()];
+    if (base !== undefined) return { ...clockFraction(base, pt[2]), ampm: null };
+  }
+  // EN: «at five», «at five pm».
+  const en = /\bat\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(?![\p{L}])(?:\s*(am|pm))?/iu.exec(t);
+  if (en) {
+    const base = CLOCK_WORDS[en[1].toLowerCase()];
+    if (base !== undefined) return { hour: base, minute: 0, ampm: (en[2]?.toLowerCase() as "am" | "pm" | undefined) ?? null };
+  }
+  return null;
+}
+
+/**
  * Parsea fecha/hora de un texto de recordatorio.
  * Soporta: días de semana (es/en), hoy/mañana, horas, tiempos relativos
  * ("en 2 minutos", "in 1 hour") y hora suelta ("a las 6:02" → hoy).
@@ -1194,9 +1363,13 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
       // 0.1.8: portugués.
       janeiro: 0, fevereiro: 1, "março": 2, marco: 2, maio: 4, junho: 5,
       julho: 6, setembro: 8, outubro: 9, novembro: 10, dezembro: 11,
+      // 0.1.99 (A-M1): abreviaturas es/en/pt, las de rag/dates.ts.
+      ene: 0, jan: 0, feb: 1, fev: 1, mar: 2, abr: 3, apr: 3, mai: 4,
+      jun: 5, jul: 6, ago: 7, aug: 7, sep: 8, sept: 8, set: 8,
+      oct: 9, out: 9, nov: 10, dic: 11, dec: 11, dez: 11,
     };
-    const mEs = /(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro)(?:\s+de(?:l)?\s+(\d{4}))?/i.exec(t);
-    const mEn = /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?/i.exec(t);
+    const mEs = /(\d{1,2})\s+(?:de|of)\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|marco|maio|junho|julho|setembro|outubro|novembro|dezembro|ene|feb|mar|abr|mai|jun|jul|ago|sep|sept|set|oct|out|nov|dic|jan|fev|apr|aug|dec|dez)(?:\s+de(?:l)?\s+(\d{4}))?/i.exec(t);
+    const mEn = /(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?/i.exec(t);
     let month: number | undefined, day: number | undefined, year: number | undefined;
     if (mEs) { day = parseInt(mEs[1], 10); month = meses[mEs[2].toLowerCase()]; year = mEs[3] ? parseInt(mEs[3], 10) : undefined; }
     else if (mEn) { month = meses[mEn[1].toLowerCase()]; day = parseInt(mEn[2], 10); year = mEn[3] ? parseInt(mEn[3], 10) : undefined; }
@@ -1221,6 +1394,35 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
         for (let y = now.getFullYear(); y <= now.getFullYear() + 8 && !targetDate; y++) {
           const d = build(y);
           if (!d) continue;
+          const endOfDay = new Date(d);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (endOfDay.getTime() > now.getTime()) targetDate = d;
+        }
+      }
+    }
+  }
+
+  // 0.1.99 (A-C1): la fecha numérica «a/b[/aaaa]» (readNumericDate).
+  // Ambigua o imposible no se fija nada y se devuelve null: el aviso
+  // honesto lo levanta hasImpossibleWhen en la capa de la orden, y
+  // crear aquí la fecha de hoy con la hora sería inventar otra fecha
+  // en silencio. Sin año rueda a la próxima ocurrencia real, con el
+  // mismo mecanismo que el día y mes con nombre (29/02 → 2028).
+  if (!targetDate) {
+    const num = readNumericDate(t);
+    if (num) {
+      if (num.ambiguous || num.impossible) return null;
+      if (num.year !== null) {
+        const d = new Date(now);
+        d.setFullYear(num.year, num.month, num.day);
+        targetDate = d;
+        explicitYear = true;
+      } else {
+        namedMonthDay = { month: num.month, day: num.day };
+        for (let y = now.getFullYear(); y <= now.getFullYear() + 8 && !targetDate; y++) {
+          const d = new Date(now);
+          d.setFullYear(y, num.month, num.day);
+          if (d.getMonth() !== num.month || d.getDate() !== num.day) continue;
           const endOfDay = new Date(d);
           endOfDay.setHours(23, 59, 59, 999);
           if (endOfDay.getTime() > now.getTime()) targetDate = d;
@@ -1270,7 +1472,22 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
     // «el viernes 10:30 llamar»: la hora con minutos escrita sola también es hora.
     /(?<![\d:./])(\d{1,2}):(\d{2})(?![\d:])\s*(am|pm)?/i.exec(t) ??
     (weekdayHour !== null ? (Object.assign([`${weekdayHour}`, `${weekdayHour}`, undefined, undefined], { index: 0, input: t }) as unknown as RegExpExecArray) : null);
-  if (!targetDate && (timeMatch || noon || midnight)) {
+  // 0.1.99 (A-M3/A-M4): sin hora en dígitos, la hora en letra cuenta
+  // igual; y tras una hora en dígitos sin minutos, la fracción
+  // («a las 3 y media», «às 3 e meia», «a las 4 menos cuarto») fija
+  // el minuto en vez de perderse.
+  const wordClock = timeMatch ? null : parseWordClock(t);
+  let digitFraction: { hourDelta: number; minute: number } | null = null;
+  if (timeMatch && weekdayHour === null && !timeMatch[2]) {
+    const tail = t.slice(timeMatch.index + timeMatch[0].length);
+    const frac = /^\s*(?:(?:y|e)\s+(media|meia)|(?:y|e)\s+(cuarto|um\s+quarto)|menos\s+(?:un\s+|um\s+)?(?:cuarto|quarto))/i.exec(tail);
+    if (frac) {
+      if (frac[1]) digitFraction = { hourDelta: 0, minute: 30 }; // «y media» / «e meia»
+      else if (frac[2]) digitFraction = { hourDelta: 0, minute: 15 }; // «y cuarto» / «e um quarto»
+      else digitFraction = { hourDelta: -1, minute: 45 }; // «menos cuarto» / «menos um quarto»
+    }
+  }
+  if (!targetDate && (timeMatch || wordClock || noon || midnight)) {
     targetDate = new Date(now);
   }
 
@@ -1279,10 +1496,18 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
   // Hora: "a las 10", "at 10am", "a las 10:30"
   if (timeMatch) {
     let hour = parseInt(timeMatch[1], 10);
-    const minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+    let minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
     // M1 FIX 2026-10-07: validar rangos. "a las 25" o "10:75" son inválidos,
     // no hacer rollover silencioso que cambia el día.
     if (hour > 23 || minute > 59) return null;
+    // 0.1.99 (A-M4): la fracción tras la hora en dígitos («a las 3 y
+    // media», «a las 4 menos cuarto») se aplica sobre la hora cruda,
+    // antes de am/pm y de la heurística, como en el reloj en letra.
+    if (digitFraction) {
+      hour += digitFraction.hourDelta;
+      if (hour === 0) hour = 12; // «a la 1 menos cuarto» = 12:45
+      minute = digitFraction.minute;
+    }
     const ampm = (timeMatch[3] || period || "").toLowerCase();
     // "a las 12 de la noche" es medianoche.
     if (ampm === "pm" && hour === 12 && NIGHT_RE.test(full)) hour = 0;
@@ -1292,6 +1517,18 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
     // 0" es medianoche, no mediodía.
     if (!ampm && hour >= 1 && hour < 8) hour += 12;
     targetDate.setHours(hour, minute, 0, 0);
+  } else if (wordClock) {
+    // 0.1.99 (A-M3): la hora en letra pasa por la MISMA lectura que la
+    // de dígitos: parte del día si la hay, si no la heurística de
+    // siempre (de 1 a 7, tarde). Sin esto el aviso nacía sin hora, o
+    // con día caía al 09:00 por defecto: mudo en silencio.
+    let hour = wordClock.hour;
+    const ampm = (wordClock.ampm || period || "").toLowerCase();
+    if (ampm === "pm" && hour === 12 && NIGHT_RE.test(full)) hour = 0;
+    else if (ampm === "pm" && hour < 12) hour += 12;
+    if (ampm === "am" && hour === 12) hour = 0;
+    if (!ampm && hour >= 1 && hour < 8) hour += 12;
+    targetDate.setHours(hour, wordClock.minute, 0, 0);
   } else if (noon) {
     targetDate.setHours(12, 0, 0, 0);
   } else if (midnight) {
@@ -1311,8 +1548,8 @@ export function parseReminderDateTime(text: string, now: Date = new Date()): str
   // MAÑANA aunque el usuario dijo "hoy". Si la versión de la tarde todavía
   // cae hoy en el futuro, es la lectura correcta.
   if (
-    timeMatch &&
-    !(timeMatch[3] || period || "") &&
+    (timeMatch || wordClock) &&
+    !((timeMatch ? timeMatch[3] : wordClock?.ampm) || period || "") &&
     /\b(hoy|today|hoje)\b/.test(t) &&
     targetDate.getTime() <= now.getTime() &&
     targetDate.getHours() < 12
