@@ -1001,12 +1001,19 @@ export function ChatScreen({
   }, [ready]);
 
   const stopRequestedRef = useRef(false);
+  // T-10 (0.1.99, M-20): controlador de aborto del turno del agente.
+  // La ref de arriba sigue siendo la fuente de verdad del cierre del
+  // turno; esta señal es la que viaja al bucle, al despacho y al motor
+  // para parar también lo que está en vuelo entre tokens (las
+  // generaciones que faltan y el despacho en curso).
+  const agentAbortRef = useRef<AbortController | null>(null);
 
   // Stop only takes effect between generated tokens, so while the prompt is
   // still being processed it can take a while; show that the tap registered.
   const [stopping, setStopping] = useState(false);
   const stopGeneration = useCallback(async () => {
     stopRequestedRef.current = true;
+    agentAbortRef.current?.abort();
     setStopping(true);
     setProcessing((prev) => (prev ? { ...prev, label: t("chatScreen.stopping") } : prev));
     impact(ImpactFeedbackStyle.Heavy);
@@ -1037,6 +1044,7 @@ export function ChatScreen({
   const stopAndAwaitGeneration = useCallback(async () => {
     if (!sendTaskRef.current) return;
     stopRequestedRef.current = true;
+    agentAbortRef.current?.abort();
     await llamaEngine.stop();
     await sendTaskRef.current.catch(() => {});
   }, []);
@@ -1517,6 +1525,12 @@ export function ChatScreen({
             confirmLabel: t("common.confirm"),
           });
         };
+        // T-10 (0.1.99, M-20): un AbortController por turno del
+        // agente; el gesto de parada lo aborta (stopGeneration y
+        // stopAndAwaitGeneration) y el bucle cierra con lo último
+        // limpio en vez de seguir generando.
+        const agentAbort = new AbortController();
+        agentAbortRef.current = agentAbort;
         const agentResult = await runAgentLoop(query, {
           engine: {
             generate: (args) => {
@@ -1575,6 +1589,9 @@ export function ChatScreen({
             await requireChatModel();
             return llamaEngine.getModelInfo()?.nCtx;
           },
+          // T-10 (0.1.99, M-20): la señal del turno (ver agentAbortRef);
+          // el adaptador de arriba la reenvía al motor tal cual.
+          signal: agentAbort.signal,
         });
         assistantText = agentResult.response;
         // 0.1.39: el loop dice por dónde salió el turno (routing). Antes
