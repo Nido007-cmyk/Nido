@@ -933,7 +933,13 @@ const ABOUT_ME_Q_RES: RegExp[] = [
   // y pt los verbos que le faltaban (solo traía «sabe»): «lembra»,
   // «guardou» y «salvou» daban null — salían de la ruta de memoria.
   /what do you (?:know|remember|have saved|have stored) about me\??$/i,
-  /o que (?:você|voce) (?:sabe|lembra|guardou|salvou) sobre mim\??$/i,
+  // C1-H2 (barrido 0.1.96): pt también con «de mim» (es ya tenía
+  // «(de|sobre) mí») y con el reflexivo «se lembra».
+  /o que (?:você|voce) (?:se )?(?:sabe|lembra|guardou|salvou) (?:de|sobre) mim\??$/i,
+  // C1-H2: la pregunta de sí/no, en los tres idiomas.
+  /(?:você|voce) (?:se )?lembra de mim\??$/i,
+  /te acuerdas de m[ií]\??$/i,
+  /do you remember me\??$/i,
 ];
 /**
  * Primera persona (rama genérica de answerMemoryQuery, punto 5).

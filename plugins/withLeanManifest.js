@@ -5,61 +5,26 @@
 /**
  * withLeanManifest.js — 0.1.47 (auditoría del manifiesto final).
  *
- * 1. Quita del manifiesto FINAL lo que traen librerías y NIDO no usa:
- *    - el receptor y el servicio de notificaciones push de Firebase
- *      (expo-notifications los incluye; NIDO no usa push ni servidores);
- *    - 0.1.95: el proveedor que arranca Firebase al abrir la app y su
- *      servicio de descubrimiento de componentes;
- *    - sus permisos (c2dm RECEIVE) y el "install referrer" de Google Play.
- *    Los permisos se quitan con `android.blockedPermissions` en app.json;
- *    aquí, los componentes, con tools:node="remove".
+ * Compilación reproducible: el plugin de Gradle de React Native guarda en
+ * los recursos la IP de la máquina que compila (react_native_dev_server_ip,
+ * para el servidor de desarrollo). En release no se usa, pero hacía que dos
+ * compilaciones del mismo código en máquinas distintas salieran con un
+ * resources.arsc diferente. En el tipo de compilación release se fija a
+ * "localhost" (los valores del buildType tienen prioridad sobre los de
+ * defaultConfig).
  *
- * 2. Compilación reproducible: el plugin de Gradle de React Native guarda
- *    en los recursos la IP de la máquina que compila
- *    (react_native_dev_server_ip, para el servidor de desarrollo). En
- *    release no se usa, pero hacía que dos compilaciones del mismo código
- *    en máquinas distintas salieran con un resources.arsc diferente. En el
- *    tipo de compilación release se fija a "localhost" (los valores del
- *    buildType tienen prioridad sobre los de defaultConfig).
+ * Hasta la 0.1.95 este plugin también quitaba del manifiesto final los
+ * componentes de Firebase que traía expo-notifications (receptor y
+ * servicio push, FirebaseInitProvider, ComponentDiscoveryService). Desde
+ * la 0.1.96 (paquete NIDO-SIN-GOOGLE-2026-11-13) expo-notifications ya no
+ * está y Firebase no entra en la compilación: no queda nada que quitar.
+ * Que no vuelva lo vigila el censo del binario de cada compilación
+ * (scripts/check-google-free.py en android-apk.yml). Los permisos de
+ * Google siguen en `android.blockedPermissions` de app.json como cerrojo.
  */
-const { withAndroidManifest, withAppBuildGradle } = require("@expo/config-plugins");
-
-const REMOVED_COMPONENTS = [
-  ["receiver", "com.google.firebase.iid.FirebaseInstanceIdReceiver"],
-  ["service", "expo.modules.notifications.service.ExpoFirebaseMessagingService"],
-  ["service", "com.google.firebase.messaging.FirebaseMessagingService"],
-  // 0.1.95: el arranque de Firebase. El APK de la 0.1.94 aún llevaba
-  // FirebaseInitProvider (un ContentProvider que Android ejecuta al abrir
-  // la app, antes que el código de NIDO) y ComponentDiscoveryService.
-  // Firebase no puede iniciarse en NIDO de todas formas: el APK no lleva
-  // google_app_id ni ninguna otra configuración de Firebase (comprobado en
-  // resources.arsc de la 0.1.94), así que el proveedor solo gastaba tiempo
-  // de arranque y dejaba código de Google en marcha sin motivo. Quitarlos
-  // no cambia nada de lo que NIDO usa: las notificaciones locales van por
-  // AlarmManager y NIDO no pide nunca un token de push.
-  ["provider", "com.google.firebase.provider.FirebaseInitProvider"],
-  ["service", "com.google.firebase.components.ComponentDiscoveryService"],
-];
+const { withAppBuildGradle } = require("@expo/config-plugins");
 
 const MARKER = "NIDO: IP fija del servidor de desarrollo en release (plugins/withLeanManifest.js)";
-
-/** Transformación pura del manifiesto (probada en withLeanManifest.test.js). */
-function applyLeanManifest(manifest) {
-  manifest.$ = manifest.$ || {};
-  manifest.$["xmlns:tools"] = manifest.$["xmlns:tools"] || "http://schemas.android.com/tools";
-  const app = (manifest.application && manifest.application[0]) || null;
-  if (!app) return manifest;
-  for (const [kind, name] of REMOVED_COMPONENTS) {
-    const list = (app[kind] = app[kind] || []);
-    const existing = list.find((c) => c && c.$ && c.$["android:name"] === name);
-    if (existing) {
-      existing.$["tools:node"] = "remove";
-    } else {
-      list.push({ $: { "android:name": name, "tools:node": "remove" } });
-    }
-  }
-  return manifest;
-}
 
 /**
  * Añade al final de app/build.gradle un bloque propio que vuelve a
@@ -79,10 +44,6 @@ function applyStableDevServerIp(gradle) {
 }
 
 function withLeanManifest(config) {
-  config = withAndroidManifest(config, (c) => {
-    c.modResults.manifest = applyLeanManifest(c.modResults.manifest);
-    return c;
-  });
   return withAppBuildGradle(config, (c) => {
     c.modResults.contents = applyStableDevServerIp(c.modResults.contents);
     return c;
@@ -90,6 +51,4 @@ function withLeanManifest(config) {
 }
 
 module.exports = withLeanManifest;
-module.exports.applyLeanManifest = applyLeanManifest;
 module.exports.applyStableDevServerIp = applyStableDevServerIp;
-module.exports.REMOVED_COMPONENTS = REMOVED_COMPONENTS;

@@ -59,6 +59,13 @@ With the model unloaded:
 1. Set a reminder for one minute from now.
 2. Lock the phone. The notification must arrive on time.
 
+Since the release with NIDO's own notifications (#253), also:
+
+3. On a phone with the previous release (0.1.95), create a one-time
+   reminder for later today and a daily one. Install the new release over
+   it, open NIDO once, and lock the phone: both must arrive on time.
+4. Restart the phone with a reminder pending: it must still arrive.
+
 ## 6. Panic erase (since 0.1.95, key destroyed first)
 
 Only on a test install with no real data.
@@ -97,7 +104,10 @@ does, but F-Droid (decision D8) will raise them:
   `ComponentDiscoveryService`, brought in by expo-notifications. Firebase
   can't start in NIDO (no `google_app_id` in the APK), so they were dead
   weight. Removed in 0.1.95 (`plugins/withLeanManifest.js`).
-- **Firebase and Google Play Services classes are still compiled in.**
+- **Firebase and Google Play Services classes are still compiled in**
+  (in 0.1.95). Fixed in code by #253 and #254 (D8, 2026-11-13: the regular
+  APK goes without Google), pending a release; every build now censuses its
+  own APK. Original note:
   `classes*.dex` holds `com/google/firebase` (messaging, installations,
   datatransport) and `com/google/android/gms`. Without a manifest entry they
   are inert, but F-Droid's scanner flags non-free libraries. Removing them

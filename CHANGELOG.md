@@ -4,6 +4,120 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.97-alpha - 2026-11-13
+
+A photo from the owner's tablet showed the sealed tire-changing
+guide served correctly, and under it a line the model had invented:
+make sure the engine is running. The engine must be off. The judge
+had let it through, and the sources listed under the answer
+included a history of Cambodia. This release is the hunt that
+photo started: 943 adversarial cases in Spanish, English and
+Portuguese, built to make the judge and the retrieval fail in
+every way we could think of. They found 285 failures. This release
+fixes all but a declared residue.
+
+**The judge.**
+
+- A sentence that denied what the source affirmed could pass by
+  sharing its vocabulary. Polarity is now judged clause by clause.
+- Quantities are read as quantities, with units and conversions
+  (500 mg against half a gram, a dose spelled out in words in any
+  of the three languages), and each sentence is judged against
+  the sources that actually support it, not against the union of
+  everything retrieved.
+- A correct number attributed to the wrong owner, the clinic's
+  phone presented as the emergency number, is now caught in both
+  language branches. A dictated self-harm sentence glued to the
+  previous one gets the fixed answer, like the separated form.
+- The question weighs the support: a sentence backed only by a
+  source about the other sense of the word is removed as drift.
+- Dates are paired with their event, so a faithful date no longer
+  falls because another event in the same sources carries a
+  different one.
+
+**Retrieval.** The lexical search no longer crosses languages by
+prefix: a Spanish question about changing a tire used to match
+"Cambodia" and "Llanidloes" by their first letters. A hit in
+another language now needs complete coverage by exact forms, and
+a chunk found only by the lexical path is no longer exempt from
+the gate after fusion. Checked against the real Vital pack from
+the tablet, the lexical path that served only noise now honestly
+serves nothing when it has nothing.
+
+**The residue, declared.** 108 of the 943 cases remain: an
+invention written in another language, with no numbers, dates or
+data in it, cannot be told apart from a faithful translation by a
+deterministic judge, and NIDO does not translate automatically.
+Those cases ship inside the test batteries marked as expected
+failures, strict: if one of them starts passing it has to be
+taken off the list by hand, and any new failure breaks the build.
+
+## 0.1.96-alpha - 2026-11-13
+
+The APK no longer contains any Google code, and the release sweep
+that every version must pass stopped this one once and found real
+holes, now fixed.
+
+**No Google code in the APK.** In 0.1.95 Firebase's classes were
+still compiled into the APK, inert, and listed as open work. They
+are gone now: notifications are handled by NIDO's own module
+(nido-notify, in `modules/`) instead of expo-notifications, which
+was the package that brought Firebase and Google Play Services in.
+Five searches of the compiled code that found 535 Firebase and
+Google Play Services traces now find 0, and the manifest carries
+no Google components. A census runs inside the Android build
+itself: if a Google or Firebase trace ever comes back, the build
+fails instead of shipping it. With expo-notifications gone, the
+package count drops from 596 to 594.
+
+**A safer judge, and a Portuguese safety net that was missing a
+piece.** Before this release the sweep attacked the grounding
+judge, the part that decides which sentences of an answer are
+really backed by the sources, with adversarial pairs, and checked
+that the fixed answers exist in the same forms in Spanish, English
+and Portuguese. It confirmed nine defects, three of them critical,
+and the release waited for the fixes:
+
+- A sentence that began with an "I don't know" formula could carry
+  an invented dose past every check and be served as grounded. A
+  sentence that claims a fact is now judged on that fact, whatever
+  formula it starts with.
+- A phone number could be attributed to the wrong owner, the
+  clinic's number presented as the emergency number, and still be
+  sealed as grounded. The typed claim now checks the owner against
+  the source, like the short forms already did.
+- A one-digit room number could be changed (room 9 for the source's
+  room 4) without the judge judging it. A typed datum is now judged
+  at any length.
+- In Portuguese, "quero me machucar" and "quero me ferir" (I want
+  to hurt myself) did not trigger the fixed self-harm answer, while
+  their Spanish and English equivalents did. They do now. The same
+  pass fixed Portuguese forms that were missing for asking what
+  NIDO remembers about you, for the NIDO inbox question and for the
+  NIDO code question, and added "adeus" to the farewells.
+- Two faithful sentences were being dropped instead: a correct
+  English sentence about a phone number, and the Spanish
+  appointment sentence that says "de la mañana" next to a calendar
+  date. Both are kept now, and an invented number still fails.
+
+Each fix carries its regression test, and the sweep was run again
+on the corrected tree before this release was cut: the three parts
+(trilingual parity, the judge under attack, twin-function symmetry)
+all come back clean.
+
+**Under the hood.** llama.rn stays at 0.13.0-rc.9, the version the
+F-8 pin gate has reviewed; rc.10 is published upstream but is not
+in this release, because the engine that runs the model only moves
+after its own deliberate review. i18next is updated to 26.7.1. The
+test figures quoted in the release notes are now the ones CI
+publishes for the release tree itself.
+
+**Not tested on a phone.** These changes passed the automated
+tests, and the release APK build runs the no-Google census as part
+of compiling. None of it has run on the Galaxy Tab A9+ yet:
+updating from 0.1.95 with notifications pending, and a reboot with
+one pending, are steps in docs/release/DEVICE_CHECKLIST.md.
+
 ## 0.1.95-alpha - 2026-11-13
 
 NIDO works from the first second, and four things a reviewer would

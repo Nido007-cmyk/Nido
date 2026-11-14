@@ -357,7 +357,14 @@ export function parseDateMentions(text: string, referenceDate: Date): DateMentio
     { re: new RegExp(`${BOUND_L}(anteayer|anteontem)${BOUND_R}`, "g"), offset: -2 },
     { re: new RegExp(`${BOUND_L}(ayer|ontem|yesterday)${BOUND_R}`, "g"), offset: -1 },
     { re: new RegExp(`${BOUND_L}(hoy|hoje|today)${BOUND_R}`, "g"), offset: 0 },
-    { re: new RegExp(`${BOUND_L}(manana|amanha|tomorrow)${BOUND_R}`, "g"), offset: 1 },
+    // C2-H5 (barrido 0.1.96): «de la mañana», «por la mañana», «en la
+    // mañana» son el SUSTANTIVO (la parte del día), no el adverbio
+    // «mañana» (+1). Leídos como fecha relativa, chocaban por R5 con la
+    // fecha de calendario de la misma frase y la cita fiel se retiraba
+    // («Su cita es el martes 10 de noviembre … a las 9:30 de la
+    // mañana»). El adverbio nunca lleva determinante delante. El
+    // portugués no tiene el choque («manhã» ≠ «amanhã»), ni el inglés.
+    { re: new RegExp(`(?<!(?<![a-z])(?:la|las)\\s)${BOUND_L}(manana|amanha|tomorrow)${BOUND_R}`, "g"), offset: 1 },
   ];
   for (const { re, offset } of relPatterns) {
     for (const match of t.matchAll(re)) {
@@ -400,7 +407,7 @@ export function parseSourceDateSentences(
   return sentences.map((text) => ({ text, mentions: parseDateMentions(text, referenceDate) }));
 }
 
-export type DateConflictKind = "interna" | "dia" | "relativa" | "numerica" | "anio";
+export type DateConflictKind = "interna" | "dia" | "relativa" | "numerica" | "anio" | "nombrada";
 
 export interface DateConflictInfo {
   kind: DateConflictKind;
@@ -429,13 +436,53 @@ const NOT_TOPIC = new Set([
   "fue", "son", "esta", "that", "this", "with", "from",
 ]);
 
+// Los parentescos cortos son tema aunque no lleguen a 4 letras: sin
+// ellos «pai»/«mãe» (pt) y «mom»/«dad» (en) no distinguían a nadie,
+// mientras «padre»/«madre» sí (paridad es/en/pt de R8).
+const SHORT_TOPIC = new Set(["pai", "mae", "avo", "tio", "tia", "mom", "dad"]);
+
 function topicRoots(sentence: string): Set<string> {
   const roots = new Set<string>();
   for (const raw of fold(sentence).split(/[^a-z0-9]+/)) {
-    if (raw.length < 4 || NOT_TOPIC.has(raw) || /^\d+$/.test(raw)) continue;
+    if ((raw.length < 4 && !SHORT_TOPIC.has(raw)) || NOT_TOPIC.has(raw) || /^\d+$/.test(raw)) continue;
     roots.add(raw.replace(/(es|s)$/, "").slice(0, 6));
   }
   return roots;
+}
+
+/**
+ * El tramo de frase de cada mención: del final de la mención anterior
+ * hasta el final de la suya (el evento suele ir delante de su fecha:
+ * «la vacuna es el 12 de diciembre y la revisión el 3 de enero»). Si
+ * algún tramo no trae tema propio («El 12 de diciembre es la vacuna
+ * y…», con el evento detrás), o una mención no se localiza, null: el
+ * llamador usa la frase entera.
+ */
+function dateSegments(sentence: string, mentions: readonly DateMention[]): string[] | null {
+  if (mentions.length < 2) return null;
+  const t = fold(sentence);
+  const out: string[] = [];
+  let cursor = 0;
+  for (const m of mentions) {
+    const at = t.indexOf(m.text, cursor);
+    if (at < 0) return null;
+    const end = at + m.text.length;
+    const seg = t.slice(cursor, end);
+    if (topicRoots(seg).size === 0) return null;
+    out.push(seg);
+    cursor = end;
+  }
+  return out;
+}
+
+/** ¿Empieza el tramo con el núcleo elidido? «el de mi padre», «o do meu pai», «my father's is». */
+function isEllipticalDateSegment(segment: string): boolean {
+  const t = fold(segment).replace(/^[\s,;:]+/, "");
+  return (
+    /^(?:(?:y|e|and)\s+)?(?:el|la|los|las|o|a|os|as)\s+(?:de|del|do|da|dos|das)\b/.test(t) ||
+    /^(?:and\s+)?(?:[a-z]+\s+){0,2}[a-z]+['’]s\s+(?:is|are|was|will be)\b/.test(t) ||
+    /^(?:and\s+)?the one (?:for|of)\b/.test(t)
+  );
 }
 
 function sharesTopicRoot(a: string, b: string): boolean {
@@ -446,7 +493,7 @@ function sharesTopicRoot(a: string, b: string): boolean {
 
 /**
  * Juzga UNA frase de la respuesta contra las menciones de la fuente.
- * Devuelve el primer conflicto (orden R1 → R4 → R6 → R7 → R5) o null. Las
+ * Devuelve el primer conflicto (orden R1 → R4 → R6 → R7 → R5 → R8) o null. Las
  * afirmaciones con cláusula de fecha solo viven o mueren por esta
  * pierna: ni la tolerancia ±1 de las cifras ni el apoyo léxico las
  * salvan ni las condenan aquí.
@@ -651,6 +698,81 @@ export function dateConflictForSentence(
         : monOf(s) !== a.day.m || domOf(s) !== a.day.d;
       if (differs) return { kind: "relativa", sourceSentence: sentence };
     }
+  }
+
+  // R8 · Nombrada contra nombrada, emparejada por tema (CL-7 de la
+  // caza 0.1.97). Ninguna regla de arriba comparaba la fecha con
+  // nombre de la respuesta contra la de la fuente: R1/R4 exigen día
+  // de semana, R6 una numérica, R7 el mismo día y mes con el año
+  // cambiado. Desplazar el día o el mes («revisada el 10 de marzo»
+  // → «el 10 de abril»; «April 14» → «April 24») no rompía ningún
+  // emparejamiento y pasaba siempre. Aquí la fecha de la respuesta
+  // se empareja por EVENTO (las frases fuente que comparten una
+  // raíz de tema con ella, la vía que R5 ya usa para las
+  // relativas): si esas frases afirman una sola fecha distinta, la
+  // de la respuesta la contradice. Conservadora como R5: sin tema
+  // compartido no se juzga; con varias fechas emparejadas tampoco;
+  // y si una mención de la fuente trae la fecha exacta de la
+  // respuesta EN SU MISMO EVENTO, no se acusa (puede estar citando
+  // esa otra).
+  //
+  // Auditoría de la 0.1.97 (fecha con el evento cambiado, la gemela
+  // de C2-H2 en fechas): esa guarda valía para CUALQUIER mención, así
+  // que la fecha de OTRO evento de la fuente pasaba sellada —
+  // «La revisión es el 12 de diciembre» ante «La vacuna es el 12 de
+  // diciembre. La revisión es el 3 de enero» salía grounded con
+  // origen source, en es/en/pt. Ahora la fecha exacta solo absuelve
+  // si su evento comparte tema con la respuesta; y el evento de cada
+  // mención es su TRAMO de frase (dateSegments: de la mención
+  // anterior hasta ella), para que una frase con dos eventos («la
+  // vacuna el 12 de diciembre y la revisión el 3 de enero») no
+  // preste a una el tema de la otra. Sin tramos fiables, el tramo es
+  // la frase entera, como antes.
+  const srcSeg = sources.flatMap((s) => {
+    const segs = dateSegments(s.text, s.mentions);
+    return s.mentions.map((m, i) => ({ m, sentence: s.text, segment: segs ? segs[i] : s.text }));
+  });
+  //
+  // Y el evento elidido («El cumpleaños de mi madre es el 4 de mayo.
+  // El de mi padre es el 9 de agosto»): el tramo elíptico («el de…»,
+  // «o do…», «my father's is…») hereda el tema del tramo anterior a
+  // medio peso, y el emparejamiento ya no es «comparte tema» sino
+  // «comparte el MÁXIMO tema»: la fecha exacta absuelve solo si su
+  // tramo está entre los de mayor solapamiento con la respuesta, y
+  // las fechas emparejadas son las de esos tramos. Sin herencia los
+  // pesos son enteros y, con un solo evento por tema, el resultado
+  // es el de antes.
+  const ownRoots = srcSeg.map(({ segment }) => topicRoots(segment));
+  const inherited = srcSeg.map(({ segment }, i) =>
+    i > 0 && isEllipticalDateSegment(segment) ? ownRoots[i - 1] : new Set<string>(),
+  );
+  const ansRoots = topicRoots(answerSentence);
+  const overlap = (i: number): number => {
+    let n = 0;
+    for (const r of ansRoots) n += ownRoots[i].has(r) ? 1 : inherited[i].has(r) ? 0.5 : 0;
+    return n;
+  };
+  const scores = srcSeg.map((_, i) => overlap(i));
+  const best = Math.max(0, ...scores);
+  for (const a of ans) {
+    if (a.kind !== "calendario" || a.num) continue;
+    const ad = domOf(a);
+    const am = monOf(a);
+    if (ad === null || am === null) continue;
+    if (best === 0) continue;
+    if (srcSeg.some(({ m }, i) => domOf(m) === ad && monOf(m) === am && scores[i] === best)) continue;
+    const pairedDates = new Map<string, { d: number; m: number; sentence: string }>();
+    srcSeg.forEach(({ m, sentence }, i) => {
+      if (m.kind !== "calendario" || m.num) return;
+      const sd = domOf(m);
+      const sm = monOf(m);
+      if (sd === null || sm === null) return;
+      if (scores[i] !== best) return;
+      pairedDates.set(`${sd}-${sm}`, { d: sd, m: sm, sentence });
+    });
+    if (pairedDates.size !== 1) continue;
+    const only = [...pairedDates.values()][0]!;
+    if (only.d !== ad || only.m !== am) return { kind: "nombrada", sourceSentence: only.sentence };
   }
 
   return null;
