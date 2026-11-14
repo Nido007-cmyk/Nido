@@ -1233,8 +1233,8 @@
       "staging": "Não foi possível preparar a troca de chave. Nada foi alterado.",
       "storeFailed": "Não foi possível salvar a nova chave; a anterior foi mantida."
     },
-    "noLockTitle": "Seu telefone não tem PIN",
-    "noLockBody": "Sem PIN nem digital, o NIDO não consegue proteger sua chave: qualquer pessoa com o telefone poderia vê-la. Vamos mostrá-la mesmo assim para você guardá-la. Recomendamos definir um PIN nas configurações do Android.",
+    "keyNeedsLockTitle": "Para ver sua chave, você precisa de um bloqueio de tela",
+    "keyNeedsLockBody": "Seu telefone não tem PIN, padrão nem digital, então qualquer pessoa com ele na mão poderia ler a chave. Defina um bloqueio de tela nas configurações do Android e volte aqui para vê-la. Criar backups continua funcionando como sempre. Só a chave fica oculta.",
     "errors": {
       "storage": "Não foi possível acessar o armazenamento do telefone.",
       "dbMissing": "O banco de dados não foi encontrado.",

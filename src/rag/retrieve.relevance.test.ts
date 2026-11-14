@@ -115,8 +115,13 @@ describe("fuseRetrievalResults", () => {
   });
 
   it("keeps at most two chunks per article, so a second topic isn't crowded out", () => {
-    const c = (id: string, title: string, score: number) => ({ chunkId: id, docId: id, title, body: "", score, matchType: "lexical" as const });
-    const lexical = [c("n1", "Napoleon", 9), c("n2", "Napoleon", 8), c("n3", "Napoleon", 7), c("f1", "French Revolution", 3)];
+    // T-05 (P-07): el cupo se indexa por docId (el documento), no
+    // por título; el fixture modela la producción, donde los trozos
+    // de un artículo comparten docId (seedCorpus: doc.id; packs:
+    // `pack:<id>:<título>`). Antes el docId era el id del trozo y
+    // el cupo solo agrupaba por la homonimia del título.
+    const c = (id: string, docId: string, title: string, score: number) => ({ chunkId: id, docId, title, body: "", score, matchType: "lexical" as const });
+    const lexical = [c("n1", "napoleon", "Napoleon", 9), c("n2", "napoleon", "Napoleon", 8), c("n3", "napoleon", "Napoleon", 7), c("f1", "french-revolution", "French Revolution", 3)];
     expect(fuseRetrievalResults(lexical, [], 4).map((r) => r.chunkId)).toEqual(["n1", "n2", "f1"]);
   });
 });
@@ -226,10 +231,12 @@ describe("fuseRetrievalResults: reserva del corpus personal (R-03)", () => {
 
   it("rellena un hueco libre cuando el tope por artículo dejó la lista corta", () => {
     const same = (id: string, score: number): RetrievedChunk => ({
-      chunkId: id, docId: id, title: "Guía repetida", body: `Body ${id}`, score, matchType: "lexical", sourceKind: "pack",
+      chunkId: id, docId: "pack:guia-repetida", title: "Guía repetida", body: `Body ${id}`, score, matchType: "lexical", sourceKind: "pack",
     });
-    // Tres trozos del mismo artículo de pack: el tope de 2 por título
-    // deja la lista en 2 de 4 huecos; la reserva mete el del usuario.
+    // Tres trozos del mismo artículo de pack: el tope de 2 por
+    // artículo (T-05/P-07: por docId, compartido por los tres como
+    // en producción) deja la lista en 2 de 4 huecos; la reserva
+    // mete el del usuario.
     const lexical = [same("t1", 10), same("t2", 9.5), same("t3", 9), k("u1", 5, "user")];
     expect(fuseRetrievalResults(lexical, [], 4).map((c) => c.chunkId)).toEqual(["t1", "t2", "u1"]);
   });

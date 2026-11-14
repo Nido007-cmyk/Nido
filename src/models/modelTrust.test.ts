@@ -597,8 +597,73 @@ describe("packs desactualizados (0.1.57)", () => {
     expect(await packFileState(newPack)).toBe("outdated");
     hoisted.writeFile(packPath, OLD_PACK.slice(0, 100), 9999); // truncated
     expect(await packFileState(newPack)).toBe("unusable");
-    // A local pack (built by the user, no catalog size) opens as before.
-    expect(await packFileState({ ...oldPack, id: "local-x", sizeBytes: 0, sha256: "" })).toBe("current");
+    // M-35/F-03: a pack with no pin (no catalog entry, no import
+    // record) is never "current" for merely existing — the assertion
+    // this replaces ("current") sealed the audited defect.
+    expect(await packFileState({ ...oldPack, id: "local-x", sizeBytes: 0, sha256: "" })).toBe("unusable");
+  });
+
+  // -------------------------------------------------------------------------
+  // M-35 (auditoría 2026-11-13, carril 07: B1/B2/F-03) — la integridad de un
+  // pack no puede agotarse el día de la instalación: la puerta de apertura
+  // (packFileState, la que usa packs.ts) exige los bytes verificados contra
+  // el pin (catálogo o registro de importación), con el diario como vía
+  // rápida y el re-hash como adopción, igual que los GGUF.
+  // -------------------------------------------------------------------------
+
+  it("M-35/B1: un pack de catálogo sustituido por otros bytes del mismo tamaño no se abre", async () => {
+    const { packFileState } = await import("./modelTrust");
+    await installOld();
+    const tampered = OLD_PACK.slice();
+    tampered[10] ^= 0xff; // same size, different bytes, new mtime
+    hoisted.writeFile(packPath, tampered, 9999);
+    resetInstallReconcileForTests();
+    expect(await packFileState(oldPack)).toBe("unusable");
+    // And the tampered file is not silently deleted by a state query either:
+    // deletion belongs to the manager's status path, not to opening.
+    expect(hoisted.fileExists(packPath)).toBe(true);
+  });
+
+  it("M-35/B1: sin diario, los bytes correctos se adoptan con un re-hash y quedan en el diario", async () => {
+    const { packFileState } = await import("./modelTrust");
+    const { getInstallRecord } = await import("./installState");
+    await installOld();
+    hoisted.files.delete(hoisted.JOURNAL); // journal lost (reinstall, corruption…)
+    resetInstallReconcileForTests();
+    expect(await getInstallRecord(oldPack.id)).toBeNull();
+    expect(await packFileState(oldPack)).toBe("current");
+    const rec = await getInstallRecord(oldPack.id);
+    expect(rec?.status).toBe("installed");
+    expect(rec?.sha256).toBe(oldPack.sha256);
+  });
+
+  it("M-35/F-03: un fichero sin pin (ni catálogo ni registro) nunca es «current» por existir", async () => {
+    const { packFileState } = await import("./modelTrust");
+    hoisted.writeFile(packPath, OLD_PACK.slice(), 4242);
+    expect(await packFileState({ ...oldPack, id: "local-suelto", sizeBytes: 0, sha256: "" })).toBe("unusable");
+  });
+
+  it("M-35/B2: un pack importado (pin del registro) se verifica al abrir; manipulado, no se abre", async () => {
+    const { packFileState } = await import("./modelTrust");
+    const IMP = new Uint8Array(1200);
+    for (let i = 0; i < IMP.length; i++) IMP[i] = (i * 7 + 3) & 0xff;
+    const imported = {
+      ...oldPack,
+      id: "local-tienda",
+      filename: "corpus/tienda.sqlite",
+      sizeBytes: IMP.length,
+      sha256: sha256Of(IMP),
+    };
+    const impPath = `${hoisted.DOCS}${imported.filename}`;
+    hoisted.writeFile(impPath, IMP.slice(), 3000);
+    resetInstallReconcileForTests();
+    // First open: no journal yet — the bytes are hashed against the
+    // registry pin and adopted (the migration path for pre-0.1.99 imports).
+    expect(await packFileState(imported)).toBe("current");
+    const tampered = IMP.slice();
+    tampered[5] ^= 0xff;
+    hoisted.writeFile(impPath, tampered, 4000); // same size, new mtime
+    expect(await packFileState(imported)).toBe("unusable");
   });
 });
 
