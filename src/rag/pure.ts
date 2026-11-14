@@ -201,7 +201,7 @@ export type LexicalLang = "en" | "es" | "pt";
  */
 const LEXICAL_LANG_HINTS: Record<LexicalLang, Set<string>> = {
   en: new Set("the and is are was were of to in that it with for this which by from have has not".split(" ")),
-  es: new Set("el la los las y es son del que en por para con una un se su lo como pero mas".split(" ")),
+  es: new Set("el la los las y es son del al que en por para con una un se su lo como pero mas dos".split(" ")),
   pt: new Set("o os as e sao do da dos das que em por para com uma um se seu sua como mas nao".split(" ")),
 };
 

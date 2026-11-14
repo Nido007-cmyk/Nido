@@ -147,10 +147,20 @@ const STOPWORDS = new Set(
   ).split(/\s+/),
 );
 
-/** Palabras vacías típicas de cada idioma, para detectar el idioma de un texto. */
+/**
+ * Palabras vacías típicas de cada idioma, para detectar el idioma de un texto.
+ * Auditoría de la 0.1.97: «al» (solo español; el portugués dice «ao») y
+ * «dos» (el numeral español, que es también la contracción portuguesa)
+ * entran en la lista española. Sin ellas, «Tome 5 ml dos veces al día»
+ * puntuaba 0 en español y 1/7 en portugués (por «dos»), salía «pt», y
+ * foreignCopyFix (R-04) retiraba como copia en otro idioma la frase
+ * española fiel, copiada letra a letra de su fuente española. «dos»
+ * sigue en la lista portuguesa: en un texto portugués de verdad las
+ * demás pistas deciden. La copia de pure.ts lleva el mismo cambio.
+ */
 const LANG_HINTS: Record<GroundingLang, Set<string>> = {
   en: new Set("the and is are was were of to in that it with for this which by from have has not".split(" ")),
-  es: new Set("el la los las y es son del que en por para con una un se su lo como pero mas".split(" ")),
+  es: new Set("el la los las y es son del al que en por para con una un se su lo como pero mas dos".split(" ")),
   pt: new Set("o os as e sao do da dos das que em por para com uma um se seu sua como mas nao".split(" ")),
 };
 
