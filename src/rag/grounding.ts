@@ -72,7 +72,7 @@
  */
 
 import type { SentenceProvenance } from "./provenance";
-import { evidenceNumberValues, evidenceQuantities, evidenceRanges, numberTokens, parseNumberToken, quantitiesOf, quantityConflict, sentenceNumbersSupported, sentenceWordReadings, wordNumberValue } from "./evidenceNumbers";
+import { evidenceNumberValues, evidenceQuantities, evidenceRanges, isJudged, numberTokens, parseNumberToken, quantitiesOf, quantityConflict, sentenceNumbersSupported, sentenceWordReadings, wordNumberValue } from "./evidenceNumbers";
 import { dateConflictForSentence, parseSourceDateSentences } from "./dates";
 
 export type GroundingLang = "es" | "en" | "pt";
@@ -369,6 +369,12 @@ export function sentenceSupport(sentence: string, chunkStemSets: Set<string>[]):
     if (set.has(s)) return true;
     const v = wordNumberValue(s);
     if (v !== null && set.has(String(v))) return true;
+    // T-05 (m-08): la simetría también palabra↔palabra — «two» se
+    // apoya en el «twice» de la guía (ambos valen 2) como ya se
+    // apoyaba en su dígito; sin esta vía la paráfrasis fiel de
+    // P-10a quedaba con la raíz del número como novedad y caía por
+    // apoyo aunque la pierna de cifras ya la sostenía.
+    if (v !== null && wordValues.has(v)) return true;
     if (/^\d+$/.test(s) && wordValues.has(Number(s))) return true;
     return false;
   };
@@ -753,6 +759,23 @@ function exclusivityGovernedStem(clause: string): string | null {
 const CLAUSE_SPLIT_EXT_RE = /[,;:.!?]|\s(?:y|e|and|pero|but|mas|o|or|ou|si|if|while|when|mientras|cuando|porque|enquanto|quando|because)\s/iu;
 const CLAUSE_SPLIT_EXT_CAPTURE_RE = new RegExp(`(${CLAUSE_SPLIT_EXT_RE.source})`, "iu");
 
+// T-05 (residuo 0197, matriz-b-103/111): la variante portuguesa del
+// troceo. El «o» suelto de la alternancia es la conjunción española
+// «o», pero en portugués «o» es el ARTÍCULO: trocear por él deshace
+// cada sintagma («Não deixe o telemóvel…» → «Não deixe» / «o» /
+// «telemóvel…») y la negación queda en un fragmento sin raíces,
+// separada del contenido que niega — la cláusula se emparejaba
+// consigo misma a negación 0 y la prohibición desnudada se sellaba.
+// En portugués «or» se dice «ou», que se queda; el resto de la
+// alternancia no cambia. La elección es por frase detectada, como
+// el resto de la casa lee los idiomas.
+const CLAUSE_SPLIT_EXT_PT_RE = /[,;:.!?]|\s(?:y|e|and|pero|but|mas|or|ou|si|if|while|when|mientras|cuando|porque|enquanto|quando|because)\s/iu;
+const CLAUSE_SPLIT_EXT_PT_CAPTURE_RE = new RegExp(`(${CLAUSE_SPLIT_EXT_PT_RE.source})`, "iu");
+const clauseSplitExtRe = (text: string): RegExp =>
+  detectTextLang(text) === "pt" ? CLAUSE_SPLIT_EXT_PT_RE : CLAUSE_SPLIT_EXT_RE;
+const clauseSplitExtCaptureRe = (text: string): RegExp =>
+  detectTextLang(text) === "pt" ? CLAUSE_SPLIT_EXT_PT_CAPTURE_RE : CLAUSE_SPLIT_EXT_CAPTURE_RE;
+
 /**
  * El recuento de negaciones de ESTA pierna: sin «sin»/«sem»/
  * «without». La negación de acompañamiento migra fielmente cuando
@@ -771,7 +794,7 @@ function hardNegationCount(text: string): number {
 function sourceClauseRecs(sourceSentences: string[]): SourceClauseRec[] {
   const out: SourceClauseRec[] = [];
   for (const src of sourceSentences) {
-    for (const clause of src.split(CLAUSE_SPLIT_EXT_RE)) {
+    for (const clause of src.split(clauseSplitExtRe(src))) {
       if (!clause.trim()) continue;
       out.push({
         stems: new Set(contentStems(clause)),
@@ -880,9 +903,10 @@ export function dropFlippedClauses(
   // Segmentos: cláusula, separador, cláusula, separador… Los
   // separadores se conservan tal cual para que lo no cortado quede
   // byte a byte como llegó.
-  const segs = bare.split(CLAUSE_SPLIT_EXT_CAPTURE_RE);
+  const segs = bare.split(clauseSplitExtCaptureRe(bare));
   const drop = new Set<number>();
   const faithfulMain = new Set<number>();
+  const negatedRemainder = new Set<number>();
   for (let i = 0; i < segs.length; i += 2) {
     const clause = segs[i]!;
     const want = new Set(contentStems(clause));
@@ -901,8 +925,21 @@ export function dropFlippedClauses(
     }
     const neg = hardNegationCount(clause);
     const need = Math.max(2, Math.ceil(want.size * 0.75));
-    let matched = false;
-    let faithful = false;
+    // T-05 (residuo 0197, matriz-a-340/341 y 463/464): la lectura
+    // fiel ya no absuelve por orden de llegada. Antes el bucle se
+    // cerraba en la PRIMERA cláusula fuente con el mismo recuento,
+    // y un fragmento débil la absolvía contra la prohibición bien
+    // emparejada: en 463, la cláusula locativa «where the pipe
+    // enters the house» (3 aciertos, vía inversa) absolvía la frase
+    // cuya cláusula principal contradecía «Do not use a metal
+    // wrench…» (5 aciertos); en 340, la gemela fiel del cable rojo
+    // (6) absolvía antes de mirar la prohibición del negro (7).
+    // Ahora manda el mejor emparejado de cada lado: la lectura fiel
+    // absuelve solo si empareja al menos tan fuerte como la mejor
+    // contradictoria. El empate sigue absolviendo — la doctrina de
+    // siempre: ante dos lecturas igual de buenas, hay lectura fiel.
+    let bestFaithful = 0;
+    let bestContra = 0;
     for (const src of sourceClauses) {
       let hits = 0;
       for (const w of want) if (src.stems.has(w)) hits++;
@@ -916,12 +953,14 @@ export function dropFlippedClauses(
       const forward = hits >= need;
       const reverse = src.stems.size >= MIN_JUDGED_TERMS && hits >= Math.ceil(src.stems.size * 0.75);
       if (!forward && !reverse) continue;
-      matched = true;
       if (src.neg === neg) {
-        faithful = true;
-        break;
+        if (hits > bestFaithful) bestFaithful = hits;
+      } else if (hits > bestContra) {
+        bestContra = hits;
       }
     }
+    const matched = bestFaithful > 0 || bestContra > 0;
+    const faithful = bestFaithful > 0 && bestFaithful >= bestContra;
     if (matched && !faithful) drop.add(i);
     // T-04 (M-02): sin lectura fiel por conteo, quedan las dos
     // recombinaciones que el conteo no ve — la acción afirmada por
@@ -934,6 +973,10 @@ export function dropFlippedClauses(
     // Cláusula principal fiel demostrada: servirá para decidir si
     // la frase sobrevive a la caída de su primera cláusula.
     if (matched && faithful && want.size >= MIN_JUDGED_TERMS) faithfulMain.add(i);
+    // T-05 (matriz-b-111): cláusula con negación dura que ninguna
+    // lectura fiel sostiene — candidata a resto peligroso si otra
+    // cláusula de la frase cae (ver el desenlace abajo).
+    if (want.size >= 2 && neg > 0 && !(matched && faithful)) negatedRemainder.add(i);
   }
   if (drop.size === 0) return { text: sentence, dropped: 0 };
   // Si cae la primera cláusula y detrás no queda ninguna principal
@@ -945,6 +988,19 @@ export function dropFlippedClauses(
   if (firstClause >= 0 && drop.has(firstClause)) {
     const quedaPrincipalFiel = [...faithfulMain].some((i) => !drop.has(i));
     if (!quedaPrincipalFiel) return { text: "", dropped: drop.size };
+  }
+  // T-05 (matriz-b-111): la negación repartida dejaba la frase en
+  // pie a medias — cortada la prohibición desnudada («deixe o
+  // telemóvel a carregar toda a noite»), quedaba la otra mitad de
+  // la inversión («nunca o desligue da tomada»), una cláusula con
+  // negación dura que ninguna lectura fiel sostiene. Si la cirugía
+  // cortó algo, no queda ninguna principal fiel, y entre lo que
+  // queda hay una cláusula así, la frase entera cae: servir el
+  // resto sería servir la inversión por la mitad que no se pudo
+  // emparejar. Con una principal fiel en pie manda la cirugía de
+  // siempre: lo fiel se queda.
+  if (![...faithfulMain].some((i) => !drop.has(i)) && [...negatedRemainder].some((i) => !drop.has(i))) {
+    return { text: "", dropped: drop.size };
   }
   const kill = new Set<number>(drop);
   for (const i of drop) {
@@ -978,10 +1034,82 @@ function numberValueSet(text: string): Set<number> {
   return out;
 }
 
+/** Los valores de las cifras JUZGADAS de un texto (la doctrina de isJudged). */
+function judgedNumberValueSet(text: string): Set<number> {
+  const out = new Set<number>();
+  for (const token of numberTokens(text)) {
+    if (!isJudged(token)) continue;
+    for (const v of parseNumberToken(token)) out.add(v);
+  }
+  return out;
+}
+
 function sameNumbers(a: Set<number>, b: Set<number>): boolean {
   if (a.size !== b.size) return false;
   for (const v of a) if (!b.has(v)) return false;
   return true;
+}
+
+/**
+ * T-05 (residuo 0197, matriz-a-097/098 y 130/131): la copia casi
+ * idéntica con la cifra cambiada de rol. «Da 90 golpes secos entre
+ * los omóplatos» copia la frase de la guía cambiando el 5 por el 90
+ * de los «90 segundos» de dos frases más abajo; «call 10» lava el
+ * 10 de «answers in 10 seconds». La cifra SÍ está en la evidencia
+ * (en otro rol), así que la pierna de cifras la sostiene, y las
+ * palabras son las de la propia frase: ninguna pierna comparaba la
+ * frase contra SU frase. Aquí sí: si la frase es copia de UNA
+ * cláusula fuente (contención ≥ 85 % en los dos sentidos, la vara
+ * de closestSourceSentence) y trae el mismo NÚMERO de cifras
+ * juzgadas que ella pero con algún valor distinto, la cifra
+ * distinta es un trasplante de rol y la frase se retira. La
+ * juzgada es la de la RESPUESTA (la doctrina de isJudged manda
+ * también aquí: el «paso 3» de la prosa no se juzga, barrido0196);
+ * la de la fuente es el valor reemplazado y puede ser cualquiera
+ * (el «5» de los golpes). Las guardas conservan lo fiel: la copia
+ * guía (conteo distinto) no entra; la que difiere solo en cifras
+ * que son cantidades con unidad tampoco (eso lo juzga la capa de
+ * cantidades, con sus conversiones).
+ */
+function changedNumberCopy(sentence: string, sourceSentences: readonly string[]): boolean {
+  const bare = sentence.replace(/\[\d+\]/g, "");
+  // Las cifras no cuentan como raíces para la copia: son justo lo
+  // que se compara aparte, y contarlas hunde la contención de la
+  // pareja verdadera («90» contra «5» dejaba la copia en 5/6).
+  const want = new Set(contentStems(bare).filter((s) => !/^\d+$/.test(s)));
+  if (want.size < MIN_JUDGED_TERMS) return false;
+  const mine = judgedNumberValueSet(bare);
+  if (mine.size === 0) return false;
+  const qtyVals = new Set(quantitiesOf(bare).flatMap((q) => [q.raw, q.canon]));
+  for (const src of sourceSentences) {
+    // Las unidades de emparejado: la frase entera y sus cláusulas.
+    // La copia de 130 es de la frase («In Spain, call 112…, such as
+    // fire…») y las comas la trocean por debajo del suelo; la de
+    // 097 es de una cláusula dentro de una frase condicional larga.
+    const units = [src, ...src.split(clauseSplitExtRe(src))];
+    // Las cifras comparadas son las de la FRASE fuente entera, no
+    // las de la cláusula emparejada: el troceador corta también en
+    // los dos puntos de una hora, y la copia fiel de «…a las 9:30
+    // de la mañana» emparejaba con la cláusula «…a las 9» y salía
+    // con la cifra cambiada (H-07). El valor reemplazado puede
+    // vivir en cualquier cláusula de su frase; el trasplantado,
+    // en cualquier parte de la guía (por eso basta que difiera).
+    const theirs = numberValueSet(src);
+    for (const clause of units) {
+      const srcStems = new Set(contentStems(clause).filter((s) => !/^\d+$/.test(s)));
+      if (srcStems.size < MIN_JUDGED_TERMS) continue;
+      let hits = 0;
+      for (const w of want) if (srcStems.has(w)) hits++;
+      if (hits < Math.ceil(want.size * 0.85)) continue;
+      if (hits < Math.ceil(srcStems.size * 0.85)) continue;
+      if (theirs.size === 0 || theirs.size !== mine.size) continue;
+      if ([...mine].every((v) => theirs.has(v))) continue;
+      const differing = [...mine].filter((v) => !theirs.has(v));
+      if (differing.every((v) => qtyVals.has(v))) continue;
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -2438,8 +2566,17 @@ export function verifyGroundedAnswer(
   answer: string,
   chunks: GroundingChunk[],
   lang: GroundingLang,
-  /** La pregunta del usuario (R-05: la regla del dato pedido la necesita; sin ella, la regla no actúa). */
-  query = "",
+  /**
+   * La pregunta del usuario (R-05: la regla del dato pedido la
+   * necesita; sin ella, la regla no actúa). Obligatoria desde T-05
+   * (V-02 de la auditoría): con el valor por defecto de antes, una
+   * llamada heredada de 3 argumentos dejaba sin actuar en silencio
+   * las piernas que dependen de ella; ahora esa llamada es un error
+   * de tipos y quien no tenga pregunta pasa "" a la vista. La
+   * pierna de cantidades NO depende de este parámetro (es
+   * aritmética contra la evidencia) y juzga siempre.
+   */
+  query: string,
   /**
    * C-07: la fecha del turno contra la que se juzgan las fechas de la
    * respuesta (R1–R5 de dates.ts). Opcional: sin ella, el día de hoy.
@@ -2549,12 +2686,17 @@ export function verifyGroundedAnswer(
   // lo que quede en pie.
   const datumArmedAny =
     datumArmedPhone || datumTypeOfText(query ?? "") !== null;
-  // Sin pregunta (llamadas antiguas de 3 argumentos) la familia del
-  // dato no actúa — frontera sellada de T-J1 — y la pierna de
-  // cantidades de CL-5 pertenece a esa familia cuando juzga la
-  // dosis: sin pregunta, «9 ml» contra «5 ml» lo juzgaba solo ella
-  // y la frontera caía. Con pregunta, juzga entera.
-  const hasQuery = (query ?? "").trim().length > 0;
+  // Frontera de T-J1, actualizada por T-05 (V-02 de la auditoría):
+  // la familia del DATO sigue sin actuar sin pregunta (es su
+  // frontera sellada: applyDatumRule y las puertas de arriba leen
+  // la pregunta directamente). La pierna de cantidades ya no
+  // comparte esa puerta: es aritmética de la frase contra la
+  // evidencia, su firma ni siquiera recibe la pregunta, y dejarla
+  // fuera por un llamador sin pregunta era el hueco de V-02 — una
+  // llamada de 3 argumentos la apagaba en silencio. Como la
+  // pregunta ahora es parámetro obligatorio, el llamador sin
+  // pregunta ya no compila; y quien pasa "" a la vista obtiene el
+  // juicio de cantidades entero, que es el comportamiento seguro.
 
   if (!sameLanguage && !hasTopicSameLangChunk) {
     // Sin comparación léxica válida: solo cifras (independientes del idioma).
@@ -2611,8 +2753,10 @@ export function verifyGroundedAnswer(
       }
       // CL-4/CL-5: las cantidades con unidad también son
       // independientes del idioma (la unidad se normaliza igual en
-      // las tres lenguas) — juzgan también en esta rama.
-      if (hasQuery && quantityConflict(s, weakQty, weakNums, weakRanges)) {
+      // las tres lenguas) — juzgan también en esta rama. Desde
+      // T-05 (V-02) juzgan sin puerta de pregunta: ver la frontera
+      // de T-J1 actualizada junto a datumArmedAny.
+      if (quantityConflict(s, weakQty, weakNums, weakRanges)) {
         removed++;
         continue;
       }
@@ -2750,8 +2894,9 @@ export function verifyGroundedAnswer(
     }
     // CL-4/CL-5 (caza 0.1.97): la cantidad con su unidad. La vara de
     // valores apoyaba «500» igual en mg que en g, y no veía el
-    // número en letra fuera de los portillos de dosis.
-    if (hasQuery && quantityConflict(s, localQty, localNums, localRanges)) {
+    // número en letra fuera de los portillos de dosis. Desde T-05
+    // (V-02) juzga sin puerta de pregunta.
+    if (quantityConflict(s, localQty, localNums, localRanges)) {
       removed++;
       continue;
     }
@@ -2863,6 +3008,14 @@ export function verifyGroundedAnswer(
       // T-04 (M-06): la volcada de una raíz se retira; con una raíz
       // no hay copia que demostrar y no cabe la sustitución.
       if (flippedSingleStem(s, chunkSentences[sup.bestChunk], chunkSentences.flat())) {
+        removed++;
+        continue;
+      }
+      // T-05 (residuo 0197): la copia casi idéntica con la cifra
+      // cambiada de rol («90 golpes» por «5 golpes») se retira; no
+      // cabe sustitución porque la frase fuente de la que copia no
+      // es única candidata a servir el turno entero.
+      if (changedNumberCopy(s, chunkSentences.flat())) {
         removed++;
         continue;
       }
