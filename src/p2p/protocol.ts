@@ -276,6 +276,18 @@ export function padPlaintext(bytes: Uint8Array): Uint8Array {
 }
 /** Tope de ids recordados por sesión (anti-replay en memoria). */
 const MAX_SEEN_IDS = 10_000;
+/**
+ * T-12 (0.1.99, m-46): techo de futuro aceptado para el `ts` de un sobre.
+ * No es una ventana de frescura (un sobre viejo nunca se rechaza por
+ * edad): es la cota simétrica hacia adelante. Sin ella, un par podía
+ * mandar sobres con `ts` dentro de un año; al ser expulsados del conjunto
+ * de ids, su `ts` pasaba a la marca de agua de evicción y TODOS los
+ * sobres legítimos (con `ts` normal, menor que la marca) quedaban
+ * rechazados: la sesión enmudecía hasta reconectar. 24 h es un margen
+ * que ningún reloj sano supera; un par con el reloj adelantado más de
+ * 24 h queda fuera (declarado en la tanda).
+ */
+const MAX_FUTURE_TS_MS = 24 * 3600 * 1000;
 
 /**
  * Una sesión cifrada con un peer: guarda el secreto derivado del handshake.
@@ -286,9 +298,11 @@ const MAX_SEEN_IDS = 10_000;
  * - Anti-replay: cada id de mensaje se acepta una sola vez.
  * - Destinatario: si se declara la propia clave (`expectRecipient`), se
  *   rechaza todo envelope cuyo `to` no sea yo.
- * Nota: la ventana de frescura por `ts` no se impone: los relojes de dos
- * teléfonos pueden diferir y un rechazo agresivo rompería la mensajería
- * legítima. El id único + nonce aleatorio ya impiden el replay útil.
+ * Nota: la ventana de frescura por `ts` no se impone hacia el pasado:
+ * los relojes de dos teléfonos pueden diferir y un rechazo agresivo
+ * rompería la mensajería legítima. El id único + nonce aleatorio ya
+ * impiden el replay útil. Hacia el futuro sí hay techo (T-12, m-46):
+ * ver MAX_FUTURE_TS_MS.
  */
 export class P2PSession {
   readonly peerPkHex: string;
@@ -618,6 +632,10 @@ export class P2PSession {
         this.misaddressed = { cf2: cf2 || (this.misaddressed?.cf2 ?? false) };
         return null;
       }
+      // T-12 (m-46): un sobre con `ts` más allá del techo de futuro se
+      // descarta en la puerta, antes de tocar el conjunto de ids: así su
+      // `ts` jamás puede llegar a la marca de agua de evicción.
+      if (env.ts > Date.now() + MAX_FUTURE_TS_MS) return null;
       if (this.seenIds.has(env.id)) return null; // replay o duplicado
       // Replay de un id ya expulsado por capacidad: su `ts` no supera la
       // marca de agua (fail-closed; ver evictedTsMax). `ts` no finito también
@@ -630,7 +648,11 @@ export class P2PSession {
         const oldest = this.seenIds.entries().next().value as [string, number] | undefined;
         if (oldest !== undefined) {
           this.seenIds.delete(oldest[0]);
-          if (oldest[1] > this.evictedTsMax) this.evictedTsMax = oldest[1];
+          // T-12 (m-46): la marca solo absorbe `ts` dentro del techo de
+          // futuro aceptado; ni siquiera por otra vía puede envenenarse.
+          if (oldest[1] > this.evictedTsMax && oldest[1] <= Date.now() + MAX_FUTURE_TS_MS) {
+            this.evictedTsMax = oldest[1];
+          }
         }
       }
       // Un frame válido bajo la clave de esta sesión demuestra que el peer
