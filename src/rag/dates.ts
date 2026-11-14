@@ -407,7 +407,7 @@ export function parseSourceDateSentences(
   return sentences.map((text) => ({ text, mentions: parseDateMentions(text, referenceDate) }));
 }
 
-export type DateConflictKind = "interna" | "dia" | "relativa" | "numerica" | "anio";
+export type DateConflictKind = "interna" | "dia" | "relativa" | "numerica" | "anio" | "nombrada";
 
 export interface DateConflictInfo {
   kind: DateConflictKind;
@@ -453,7 +453,7 @@ function sharesTopicRoot(a: string, b: string): boolean {
 
 /**
  * Juzga UNA frase de la respuesta contra las menciones de la fuente.
- * Devuelve el primer conflicto (orden R1 → R4 → R6 → R7 → R5) o null. Las
+ * Devuelve el primer conflicto (orden R1 → R4 → R6 → R7 → R5 → R8) o null. Las
  * afirmaciones con cláusula de fecha solo viven o mueren por esta
  * pierna: ni la tolerancia ±1 de las cifras ni el apoyo léxico las
  * salvan ni las condenan aquí.
@@ -658,6 +658,40 @@ export function dateConflictForSentence(
         : monOf(s) !== a.day.m || domOf(s) !== a.day.d;
       if (differs) return { kind: "relativa", sourceSentence: sentence };
     }
+  }
+
+  // R8 · Nombrada contra nombrada, emparejada por tema (CL-7 de la
+  // caza 0.1.97). Ninguna regla de arriba comparaba la fecha con
+  // nombre de la respuesta contra la de la fuente: R1/R4 exigen día
+  // de semana, R6 una numérica, R7 el mismo día y mes con el año
+  // cambiado. Desplazar el día o el mes («revisada el 10 de marzo»
+  // → «el 10 de abril»; «April 14» → «April 24») no rompía ningún
+  // emparejamiento y pasaba siempre. Aquí la fecha de la respuesta
+  // se empareja por EVENTO (las frases fuente que comparten una
+  // raíz de tema con ella, la vía que R5 ya usa para las
+  // relativas): si esas frases afirman una sola fecha distinta, la
+  // de la respuesta la contradice. Conservadora como R5: sin tema
+  // compartido no se juzga; con varias fechas emparejadas tampoco;
+  // y si CUALQUIER mención de la fuente trae la fecha exacta de la
+  // respuesta, no se acusa (puede estar citando esa otra).
+  for (const a of ans) {
+    if (a.kind !== "calendario" || a.num) continue;
+    const ad = domOf(a);
+    const am = monOf(a);
+    if (ad === null || am === null) continue;
+    if (srcAll.some(({ m }) => domOf(m) === ad && monOf(m) === am)) continue;
+    const pairedDates = new Map<string, { d: number; m: number; sentence: string }>();
+    for (const { m, sentence } of srcAll) {
+      if (m.kind !== "calendario" || m.num) continue;
+      const sd = domOf(m);
+      const sm = monOf(m);
+      if (sd === null || sm === null) continue;
+      if (!sharesTopicRoot(answerSentence, sentence)) continue;
+      pairedDates.set(`${sd}-${sm}`, { d: sd, m: sm, sentence });
+    }
+    if (pairedDates.size !== 1) continue;
+    const only = [...pairedDates.values()][0]!;
+    if (only.d !== ad || only.m !== am) return { kind: "nombrada", sourceSentence: only.sentence };
   }
 
   return null;

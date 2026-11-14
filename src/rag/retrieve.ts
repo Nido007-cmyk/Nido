@@ -9,6 +9,7 @@ import { embeddingEngine } from "./embed";
 import {
   buildLexicalQuery,
   cosineSimilarity,
+  countMatchedTerms,
   cosineSimilarityInt8,
   distinctFloor,
   dropUnfoundedCorpus,
@@ -61,7 +62,7 @@ async function lexicalSearch(query: string, limit: number): Promise<RetrievedChu
   // nothing, so the honest no-source fall downstream can be reached
   // instead of a plausible neighbour being cited. Signal B exempts the
   // user's own documents: they can carry the datum without naming it.
-  const gated = filterByTermCoverage(rows, lexicalQuery.terms);
+  const gated = filterByTermCoverage(rows, lexicalQuery.terms, lexicalQuery.lang);
   const founded = dropUnfoundedCorpus(rows, gated, lexicalQuery.terms, {
     query,
     servedFromUser: gated.map((r) => r.collection_id !== null),
@@ -77,6 +78,10 @@ async function lexicalSearch(query: string, limit: number): Promise<RetrievedChu
       body: r.body,
       // R-03: provenance for the fusion's personal-corpus reserve.
       sourceKind: r.collection_id ? ("user" as const) : ("builtin" as const),
+      // CL-12: cobertura absoluta para la puerta post-fusión.
+      termCoverage: lexicalQuery.terms.length > 0
+        ? countMatchedTerms(`${r.title} ${r.body}`, lexicalQuery.terms) / lexicalQuery.terms.length
+        : undefined,
       score: -r.rank, // bm25() returns lower-is-better; invert for consistent "higher is better"
       matchType: "lexical" as const,
     }))
