@@ -148,6 +148,13 @@ class RamMonitorModule : Module() {
    * aplicación; onTrimMemory con nivel ≥ TRIM_MEMORY_RUNNING_CRITICAL
    * (15) se reenvía a JS como evento «onMemoryPressure». Idempotente;
    * un fallo al registrar deja la app sin el evento, nunca caída.
+   *
+   * F3-04 (auditoría 2026-11-13): onLowMemory también reenvía el
+   * evento, con el nivel RUNNING_CRITICAL. Es la señal «el sistema
+   * se quedó sin memoria» — distinta de los trim por nivel — y hasta
+   * la 0.1.98 caía en un override vacío: el aviso llegaba al proceso
+   * y no salía de él, así que la política JS de presión nunca se
+   * enteraba del peor de los avisos.
    */
   private fun registerMemoryPressure() {
     if (memoryPressureRegistered) return
@@ -165,7 +172,15 @@ class RamMonitorModule : Module() {
 
         override fun onConfigurationChanged(newConfig: Configuration) {}
 
-        override fun onLowMemory() {}
+        override fun onLowMemory() {
+          try {
+            sendEvent(
+              "onMemoryPressure",
+              mapOf("level" to ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL),
+            )
+          } catch (_: Throwable) {
+          }
+        }
       })
       memoryPressureRegistered = true
     } catch (_: Throwable) {

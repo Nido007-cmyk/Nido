@@ -38,6 +38,19 @@ import type { CatalogModel } from "./manifest";
  * defined as planContext fitting at the ceiling on the canonical photo.
  * Heuristic still — the canonical photo is a policy snapshot, not a
  * measurement of this moment — but it is the load's own heuristic.
+ *
+ * F3-14 (auditoría 2026-11-13): that last caveat WAS the defect. The
+ * badge judged only the device in an empty moment, so «verde en
+ * vacío» promised loads the real pre-flight — judged on the live
+ * photo of a busy phone — rejected, and the invariant read as a lie
+ * exactly when it mattered. computeCompatibility now accepts the
+ * caller's live snapshot and the badge is the WORSE of the two
+ * photos: the canonical one caps optimism (a live photo can also be
+ * rosier than policy), the live one can only degrade. The invariant,
+ * stated honestly: green ⇒ the pre-flight accepts on the canonical
+ * photo AND, when a live photo was supplied, on that one too.
+ * CatalogItemCard passes the snapshot of its mount; a caller without
+ * one (the routing profile) still gets the per-device verdict.
  */
 export type Compatibility = "green" | "yellow" | "red" | "unknown";
 
@@ -54,9 +67,8 @@ export function canonicalSnapshot(deviceRamBytes: number): RamSnapshot {
   return { totalRamBytes: deviceRamBytes, rssBytes: APP_BASELINE_BYTES };
 }
 
-export function computeCompatibility(model: CatalogModel, deviceRamBytes: number): Compatibility {
-  if (deviceRamBytes <= 0) return "unknown";
-  const snapshot = canonicalSnapshot(deviceRamBytes);
+/** El color de UNA foto: la escalera entera (fp16 y luego q8) sobre ese snapshot. */
+function colorOnSnapshot(model: CatalogModel, deviceRamBytes: number, snapshot: RamSnapshot): Compatibility {
   const ceiling = contextCeilingForDevice(model.defaultNCtx, deviceRamBytes);
   const { nCtx: _declaredCtx, ...specBase } = contextSpecForModel(model, deviceRamBytes);
   const plan = planContext(specBase, snapshot, { ceiling, safety: 1 });
@@ -73,4 +85,30 @@ export function computeCompatibility(model: CatalogModel, deviceRamBytes: number
     { ceiling, safety: 1 },
   );
   return q8Plan?.verdict.fits ? "yellow" : "red";
+}
+
+const SEVERITY: Record<Compatibility, number> = { unknown: -1, green: 0, yellow: 1, red: 2 };
+
+export function computeCompatibility(
+  model: CatalogModel,
+  deviceRamBytes: number,
+  liveSnapshot?: RamSnapshot | null,
+): Compatibility {
+  if (deviceRamBytes <= 0) return "unknown";
+  const canonical = colorOnSnapshot(model, deviceRamBytes, canonicalSnapshot(deviceRamBytes));
+  // La foto viva solo degrada, y solo si es DE ESTE aparato y trae
+  // término en vivo (sin availBytes no es una foto del momento: es
+  // otra foto canónica con otro RSS, y degradar por ella sería
+  // castigar dos veces la misma política).
+  if (
+    !liveSnapshot ||
+    liveSnapshot.totalRamBytes !== deviceRamBytes ||
+    liveSnapshot.availBytes === undefined ||
+    liveSnapshot.availBytes <= 0
+  ) {
+    return canonical;
+  }
+  const live = colorOnSnapshot(model, deviceRamBytes, liveSnapshot);
+  if (live === "unknown") return canonical;
+  return SEVERITY[live] > SEVERITY[canonical] ? live : canonical;
 }

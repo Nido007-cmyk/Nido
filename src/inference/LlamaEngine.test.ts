@@ -219,12 +219,23 @@ describe("RAM-2026-10-11: perfiles de memoria del LLM", () => {
     expect(engine.getModelInfo()?.memoryProfile).toBe("small-batch");
   });
 
-  it("como último recurso usa exactamente los parámetros originales", async () => {
-    rejectInit = (p) => p.n_ubatch !== undefined;
+  it("como último recurso, el perfil default: sin claves de caché y CON el lote de su clase (F3-06)", async () => {
+    // Hasta la 0.1.98 el último recurso era «exactamente los
+    // parámetros originales» — sin lote: lo que corría era el ubatch
+    // por defecto del binario, que el pre-flight nunca cobró. Desde
+    // F3-06 el default lleva el mismo lote que la escalera cobró y
+    // la cascada degrada solo en el eje KV (q8 → fp16): el rechazo
+    // ya no puede distinguir perfiles por el lote, así que este
+    // banco rechaza por NÚMERO de intento.
+    let attempts = 0;
+    rejectInit = () => ++attempts < 3;
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
     expect(initCalls).toHaveLength(3);
-    expect(Object.keys(initCalls[2]).sort()).toEqual(["model", "n_ctx", "n_gpu_layers", "n_threads", "use_mlock"]);
+    expect(Object.keys(initCalls[2]).sort()).toEqual(
+      ["model", "n_batch", "n_ctx", "n_gpu_layers", "n_threads", "n_ubatch", "use_mlock"].sort(),
+    );
+    expect(initCalls[2]).toMatchObject({ n_batch: 512, n_ubatch: 256 });
     expect(engine.getModelInfo()?.memoryProfile).toBe("default");
   });
 
@@ -253,13 +264,15 @@ describe("Optimización 2026-11-08, fase 2: el lote sigue a la RAM del aparato",
     expect(initCalls[0]).toMatchObject({ n_batch: 384, n_ubatch: 192 });
   });
 
-  it("el perfil default sigue sin claves de lote también en la clase pequeña", async () => {
+  it("el perfil default lleva el lote de la clase pequeña, no el histórico sin lote (F3-06)", async () => {
     mockTotalRamBytes = 3.3 * 1024 ** 3;
-    rejectInit = (p) => p.n_ubatch !== undefined;
+    let attempts = 0;
+    rejectInit = () => ++attempts < 3;
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
     expect(initCalls).toHaveLength(3);
-    expect(Object.keys(initCalls[2]).sort()).toEqual(["model", "n_ctx", "n_gpu_layers", "n_threads", "use_mlock"]);
+    expect(initCalls[2].cache_type_k).toBeUndefined();
+    expect(initCalls[2]).toMatchObject({ n_batch: 256, n_ubatch: 128 });
     expect(engine.getModelInfo()?.memoryProfile).toBe("default");
   });
 });
@@ -268,6 +281,23 @@ describe("Optimización 2026-11-08, fase 3: la presión del aparato baja los hil
   it("con batería baja la carga nace con 3 hilos y n_ubatch 128", async () => {
     mockBattery = { levelPct: 10, charging: false, powerSave: false };
     refreshDevicePressure();
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(initCalls[0].n_threads).toBe(3);
+    expect(initCalls[0].n_ubatch).toBe(128);
+    mockBattery = null;
+    refreshDevicePressure();
+  });
+
+  it("la carga refresca la foto de presión ELLA MISMA: sin refresco previo de la pantalla, los topes llegan igual (F3-09)", async () => {
+    // Hasta la 0.1.98 solo ChatScreen refrescaba: una carga lanzada
+    // sin pasar por su efecto (el asistente de modelos, cualquier
+    // vía futura) leía la foto del arranque de la app, con las
+    // pilas ya cambiadas. La foto serena queda en caché…
+    mockBattery = null;
+    refreshDevicePressure();
+    // …la batería cae DESPUÉS, y nadie refresca: la carga lee fresco.
+    mockBattery = { levelPct: 10, charging: false, powerSave: false };
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
     expect(initCalls[0].n_threads).toBe(3);
@@ -422,9 +452,14 @@ describe("Bounty tanda 3: escalera de memoria y CrashGuard", () => {
   it("baja un peldaño de contexto en vez de rechazar cuando el techo no cabe", async () => {
     // 0.1.84: con el cómputo cobrado al lote real de la clase (128),
     // el genérico cuesta 309,6 MB a 4096: 300 MB libres ya no bastan
-    // para el techo pero sí para 3072 (232,6 MB).
-    mockTotalRamBytes = 2 * 1024 ** 3 + 300_000_000; // ≈300 MB libres: 4096 no, 3072 sí
-    mockRssBytes = 0;
+    // para el techo pero sí para 3072 (232,6 MB). El proceso lleva el
+    // RSS real de la Tab (367 MiB) y el total lo suma: el hueco sobre
+    // la reserva sigue siendo 300 MB. (Hasta la 0.1.98 el banco
+    // ponía RSS 0 — «el proceso no pesa» — y la foto lo aceptaba;
+    // desde F3-12 un RSS 0 es una lectura vacía y entra la
+    // estimación base, así que el banco declara el peso de verdad.)
+    mockTotalRamBytes = 2 * 1024 ** 3 + 300_000_000 + 367 * 1024 ** 2;
+    mockRssBytes = 367 * 1024 ** 2;
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
     expect(engine.isLoaded).toBe(true);
@@ -432,13 +467,14 @@ describe("Bounty tanda 3: escalera de memoria y CrashGuard", () => {
   });
 
   it("un choque sin confirmar reduce el presupuesto de la siguiente carga, y generar confirma", async () => {
-    // ≈450 MB libres: a factor 1 el 4096 cabría (309,6 MB con el lote
-    // de la clase); el pendiente de un proceso muerto cuenta un
-    // choque (factor 0,8 → 360 MB) y sigue cabiendo a 4096. Con el
-    // total de abajo (2 GiB + 380 MB) el presupuesto frenado es
-    // 304 MB: el techo (309,6) no cabe y baja a 3072 (232,6).
-    mockTotalRamBytes = 2 * 1024 ** 3 + 380_000_000;
-    mockRssBytes = 0;
+    // ≈380 MB libres sobre la reserva, con el proceso pesando lo de
+    // la Tab (367 MiB, sumados al total): a factor 1 el 4096 cabría
+    // (309,6 MB con el lote de la clase); el pendiente de un proceso
+    // muerto cuenta un choque (factor 0,8 → 304 MB) y el techo ya no
+    // cabe: baja a 3072 (232,6). (El RSS 0 del banco antiguo dejó de
+    // ser una foto posible con F3-12.)
+    mockTotalRamBytes = 2 * 1024 ** 3 + 380_000_000 + 367 * 1024 ** 2;
+    mockRssBytes = 367 * 1024 ** 2;
     fsStore.set(
       "file:///docs/nido-crash-guard.json",
       JSON.stringify({ crashes: 0, pending: { model: "models/a.gguf", nCtx: 4096, at: 1 } })
@@ -464,7 +500,46 @@ describe("Bounty tanda 3: escalera de memoria y CrashGuard", () => {
       crashes: number;
       pending: unknown;
     };
-    expect(after).toEqual({ crashes: 0, pending: null });
+    expect(after).toEqual({ crashes: 0, pending: null, lastCrashAt: null });
+  });
+
+  it("un fallo de initLlama capturado en JS limpia el pendiente SIN contar: no es un choque (F3-15)", async () => {
+    // El proceso sigue vivo y el error ya está diagnosticado
+    // («Failed to load model»): dejar el pendiente escrito lo
+    // castigaba como choque nativo en el siguiente intento, y la
+    // cascada de reintentos idéntica degradaba sin muerte alguna.
+    rejectInit = () => true;
+    const engine = new LlamaEngine();
+    await expect(engine.load("models/a.gguf")).rejects.toThrow(/Failed to load/);
+    const rec = JSON.parse(fsStore.get("file:///docs/nido-crash-guard.json")!) as {
+      crashes: number;
+      pending: unknown;
+    };
+    expect(rec.crashes).toBe(0);
+    expect(rec.pending).toBeNull();
+    // Y el siguiente intento, sano, no hereda castigo.
+    rejectInit = null;
+    await engine.load("models/a.gguf");
+    expect(engine.isLoaded).toBe(true);
+  });
+
+  it("la vía de contexto EXPLÍCITO también se juzga con el factor del CrashGuard (F3-11)", async () => {
+    const GUARD = "file:///docs/nido-crash-guard.json";
+    const Q4 = "models/qwen2.5-0.5b-instruct-q4km.gguf";
+    // Aparato justo: por total quedan ~0,9 GiB; el 0.5B a 2048
+    // cuesta ~0,50 GiB — cabe contra el disponible CRUDO pero no
+    // contra el presupuesto al 50 % de tres choques contados.
+    mockTotalRamBytes = 3.3 * 1024 ** 3;
+    mockRssBytes = 0.4 * 1024 ** 3;
+    fsStore.set(GUARD, JSON.stringify({ crashes: 3, pending: null }));
+    const engine = new LlamaEngine();
+    await expect(engine.load(Q4, { nCtx: 2048 })).rejects.toThrow(/RAM/);
+    expect(engine.isLoaded).toBe(false);
+    // La gemela sin choques: el mismo contexto explícito carga.
+    fsStore.set(GUARD, JSON.stringify({ crashes: 0, pending: null }));
+    const engine2 = new LlamaEngine();
+    await engine2.load(Q4, { nCtx: 2048 });
+    expect(engine2.getModelInfo()?.nCtx).toBe(2048);
   });
 });
 
@@ -563,11 +638,12 @@ describe("Crash nativo M2+M3: registro de sesión y CrashGuard que aprende", () 
   });
 
   it("arranque tras CRASH_NATIVE generando: choque ×0,8 contado una vez, fondo apagado y veredicto asentado", async () => {
-    // 380 MB libres: a factor 1 el 4096 cabría (309,6 MB con el lote
-    // de la clase); el choque aprendido (×0,8 → 304 MB) baja el plan
-    // a 3072 (232,6 MB), como un choque del CrashGuard.
-    mockTotalRamBytes = 2 * 1024 ** 3 + 380_000_000;
-    mockRssBytes = 0;
+    // 380 MB libres sobre la reserva (el proceso pesa lo de la Tab,
+    // 367 MiB, sumados al total): a factor 1 el 4096 cabría (309,6 MB
+    // con el lote de la clase); el choque aprendido (×0,8 → 304 MB)
+    // baja el plan a 3072 (232,6 MB), como un choque del CrashGuard.
+    mockTotalRamBytes = 2 * 1024 ** 3 + 380_000_000 + 367 * 1024 ** 2;
+    mockRssBytes = 367 * 1024 ** 2;
     seedDeadGeneration(true);
     // La carga que murió dejó su pendiente sin confirmar: el cruce lo
     // consume, para que la misma muerte no se cuente dos veces.
@@ -610,17 +686,57 @@ describe("Crash nativo M2+M3: registro de sesión y CrashGuard que aprende", () 
     expect(readSession().verdict).toMatchObject({ diedGenerating: false, reembedRunning: true });
   });
 
-  it("arranque tras LOW_MEMORY con la bandera puesta: sin reacción M3 (fenómeno aparte)", async () => {
+  it("arranque tras LOW_MEMORY generando: la muerte SÍ cuenta y el fondo se apaga; sin veredicto (C-02)", async () => {
+    // Hasta la 0.1.98 este arranque era «fenómeno aparte»: la muerte
+    // por memoria a mitad de generación no dejaba rastro en ningún
+    // contador, y un aparato justo moría igual en cada respuesta
+    // larga para siempre. Desde C-02 cuenta como cualquier muerte
+    // (×0,8 en la siguiente carga) y el indexado de fondo — el otro
+    // gran consumidor — se apaga esa sesión. Lo que sigue siendo de
+    // CRASH_NATIVE es el VEREDICTO (qué configuración murió), no el
+    // conteo.
     seedDeadGeneration(true);
+    seedExit("LOW_MEMORY");
+    const engine = new LlamaEngine();
+    await engine.load("models/a.gguf");
+    expect(readGuard().crashes).toBe(1);
+    expect(isBackgroundIndexingHeld()).toBe(true);
+    const session = readSession();
+    expect(session.verdict).toBeNull();
+    expect(session.generating).toBe(false);
+    expect(session.crossedExitAt).toBe(2_000);
+    // Y la primera generación buena lo confirma, como todo choque.
+    const gen = engine.generate({ prompt: "hola" });
+    await new Promise((r) => setTimeout(r, 30));
+    await engine.stop();
+    await expect(gen).resolves.toBe("Hi");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(readGuard().crashes).toBe(0);
+  });
+
+  it("arranque tras LOW_MEMORY SIN generar: fenómeno aparte, como siempre — sin conteo ni apagado", async () => {
+    seedDeadGeneration(false);
     seedExit("LOW_MEMORY");
     const engine = new LlamaEngine();
     await engine.load("models/a.gguf");
     expect(readGuard().crashes).toBe(0);
     expect(isBackgroundIndexingHeld()).toBe(false);
-    const session = readSession();
-    expect(session.verdict).toBeNull();
-    expect(session.generating).toBe(false);
-    expect(session.crossedExitAt).toBe(2_000);
+    expect(readSession().crossedExitAt).toBe(2_000);
+  });
+
+  it("el cruce puede correr al ARRANQUE, antes de cualquier carga, y la carga no lo repite (F3-13)", async () => {
+    // La pantalla lo llama al abrir: el conteo y el apagado del
+    // fondo rigen desde el principio de la sesión (la indexación
+    // arranca antes que la primera respuesta). Sin este paso, el
+    // cruce esperaba a la primera carga del LLM.
+    seedDeadGeneration(true);
+    seedExit("CRASH_NATIVE");
+    const engine = new LlamaEngine();
+    await engine.crossNativeSessionAtStartup();
+    expect(readGuard().crashes).toBe(1);
+    expect(isBackgroundIndexingHeld()).toBe(true);
+    await engine.load("models/a.gguf");
+    expect(readGuard().crashes).toBe(1);
   });
 
   it("sin informe de cierres (build sin soporte): la carga sigue como siempre", async () => {
@@ -1414,7 +1530,7 @@ describe("0.1.85: la foto exacta de las 19:54 como motor completo (RAM total REA
     await engine.stop();
     await expect(gen).resolves.toBe("Hi");
     await new Promise((r) => setTimeout(r, 0));
-    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null });
+    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null, lastCrashAt: null });
   });
 
   it("JUSTICIA: descargar por las buenas y recargar NO degrada el factor (la descarga ordenada confirma)", async () => {
@@ -1426,7 +1542,7 @@ describe("0.1.85: la foto exacta de las 19:54 como motor completo (RAM total REA
     // pendiente quedaba vivo y la recarga lo contaba como choque.
     await engine.unload();
     await new Promise((r) => setTimeout(r, 0));
-    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null });
+    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null, lastCrashAt: null });
     // La recarga planifica con el factor curado (sin degradar) y el
     // ciclo completo descargar → recargar → generar deja el registro
     // limpio, sin choques fantasma.
@@ -1434,7 +1550,7 @@ describe("0.1.85: la foto exacta de las 19:54 como motor completo (RAM total REA
     expect(engine.getModelInfo()?.nCtx).toBe(1024);
     await engine.unload();
     await new Promise((r) => setTimeout(r, 0));
-    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null });
+    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 0, pending: null, lastCrashAt: null });
   });
 
   it("el simétrico que NO debe curarse: un pendiente de un proceso muerto sigue contando al recargar", async () => {
@@ -1460,16 +1576,24 @@ describe("0.1.85: la foto exacta de las 19:54 como motor completo (RAM total REA
     const engine = new LlamaEngine();
     await expect(engine.load(Q4)).rejects.toThrow(/RAM/);
     await expect(engine.load(Q4)).rejects.toThrow(/RAM/);
-    expect(JSON.parse(fsStore.get(GUARD)!)).toEqual({ crashes: 1, pending: null });
+    const rec = JSON.parse(fsStore.get(GUARD)!);
+    expect(rec.crashes).toBe(1);
+    expect(rec.pending).toBeNull();
+    // Lo único nuevo en el registro es la marca de caducidad (F3-07):
+    // el asentamiento estampa la hora del último choque heredado
+    // para que su cuenta atrás pueda correr. No es un castigo.
+    expect(typeof rec.lastCrashAt).toBe("number");
   });
 
   it("LECTURA FRESCA entre intentos: dos fotos nativas distintas dan dos decisiones distintas en el motor", async () => {
-    // Intento 1 con la mesa ocupada de verdad (libre 500 MiB) y el
-    // freno 0,65 sembrado (2 choques): ni la vía de emergencia
-    // alcanza — el rechazo es honesto (presupuesto de emergencia
-    // floor(500 × 0,65) = 325 < 431, el suelo q8 a 1024). Sin el
-    // freno sembrado el factor sería 1,0 y a 500 MiB sí cabría:
-    // la siembra es parte del caso, no un adorno.
+    // Intento 1 con la mesa ocupada de verdad (libre 500 MiB, el
+    // sistema YA en lowMemory) y el freno 0,65 sembrado (2 choques):
+    // ni la vía de emergencia alcanza — el rechazo es honesto
+    // (presupuesto de emergencia floor((500 × 0,9 − 216) × 0,65) =
+    // 152 < 431, el suelo q8 a 1024; desde F3-02/F3-12 la vía
+    // reserva el 10 % y con lowMemory resta el threshold, así que
+    // ni sin freno cabría en esta foto: el sistema ya está cerrando
+    // aplicaciones con 500 MiB libres).
     mockTotalRamBytes = 3416 * MiB;
     mockRssBytes = 367 * MiB;
     mockAvailMemory = { availBytes: 500 * MiB, thresholdBytes: 216 * MiB, lowMemory: true };
@@ -1508,7 +1632,8 @@ describe("0.1.86: la segunda llamada q8 conserva la condición de emergencia", (
   // Foto sintética en la ventana del censo §4.1 C, dentro de la Tab
   // (3416 MiB): presupuesto normal 370 MiB (disponible reportado:
   // total − RSS − reserva de 2 GiB), presupuesto de emergencia
-  // 842 MiB (el availMem crudo, freno 1). El Gemma real pesa
+  // 757,8 MiB (el availMem con la reserva del 10 % de F3-02, freno 1;
+  // hasta la 0.1.98 era el crudo, 842). El Gemma real pesa
   // 5.154.941.280 B en disco; aquí su fichero vale 350 MiB para caer
   // en la ventana del defecto: a 1024 cuesta 501,0 MiB fp16 (solo
   // cabe por la vía de emergencia) y 448,5 MiB con KV q8.
@@ -1532,7 +1657,7 @@ describe("0.1.86: la segunda llamada q8 conserva la condición de emergencia", (
   // La ventana donde la segunda llamada se distingue: con un modelo
   // residente y lo libre en vivo casi agotado, el crédito liberable
   // del residente entra en el término en vivo: el presupuesto de
-  // emergencia (availMem crudo + crédito) sigue admitiendo el q8 a
+  // emergencia (availMem con su reserva + crédito) sigue admitiendo el q8 a
   // 1024 (448,5 MiB), pero el presupuesto NORMAL queda muy por
   // debajo de ese coste. Sin la simetría, la segunda llamada se
   // juzga con techo 1024 — sin peldaño de emergencia — y NO cabe: no
@@ -1559,7 +1684,7 @@ describe("0.1.86: la segunda llamada q8 conserva la condición de emergencia", (
     // de lo que Android aún no ha soltado). El crédito liberable del
     // residente (585,7 MiB, su coste estimado a 4096 con KV q8) es
     // lo que mantiene viva la vía: el presupuesto de emergencia
-    // (avail crudo + crédito ≈ 605,7) admite el q8 a 1024 (448,5),
+    // (avail con la reserva del 10 % + crédito ≈ 603,7) admite el q8 a 1024 (448,5),
     // pero el presupuesto normal (≈448,7 menos threshold y margen,
     // ≈185,7 efectivos) queda muy por debajo. Medido con planContext
     // sobre esta misma foto: fp16 → 1024 cabe por emergencia; q8 con

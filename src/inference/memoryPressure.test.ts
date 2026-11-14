@@ -27,9 +27,33 @@ function fakeEngines(llmLoaded: boolean, embLoaded: boolean) {
 }
 
 describe("handleMemoryPressure (optimización 2026-11-08, fase 5)", () => {
-  it("generando no se toca nada", async () => {
+  it("generando sin gancho de parada no se toca nada", async () => {
     const { engines, calls } = fakeEngines(true, true);
     await handleMemoryPressure({ generating: true }, engines);
+    expect(calls).toEqual([]);
+  });
+
+  it("generando CON gancho de parada: se pide la parada limpia y NO se descarga (F3-04)", async () => {
+    // La política «generando no se hace nada» dejaba la sesión a
+    // merced del LMK y el parcial se perdía entero. Ahora se acorta
+    // la respuesta: stop() resuelve generate() con lo ya generado y
+    // la residencia se cede en el siguiente evento, ya sin vuelo.
+    const { engines, calls } = fakeEngines(true, true);
+    const stop = vi.fn(async () => {
+      calls.push("stop");
+    });
+    engines.llm.stop = stop;
+    await handleMemoryPressure({ generating: true }, engines);
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(calls).toEqual(["stop"]);
+  });
+
+  it("una parada que falla no lanza ni provoca la descarga en el mismo evento", async () => {
+    const { engines, calls } = fakeEngines(true, true);
+    engines.llm.stop = vi.fn(async () => {
+      throw new Error("boom");
+    });
+    await expect(handleMemoryPressure({ generating: true }, engines)).resolves.toBeUndefined();
     expect(calls).toEqual([]);
   });
 

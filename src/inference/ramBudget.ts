@@ -41,10 +41,16 @@ import { getAvailableMemory, getDeviceTotalRamBytes, getMemoryInfo, getProcessor
  * What this deliberately does NOT do:
  * - It is a pre-flight, not a guarantee: the OS may still kill under
  *   sudden pressure. It turns "cryptic native crash" into "clear message".
- * - Concurrent loads (ChatScreen starts the LLM and the embedding engine
- *   together) each check against the same baseline RSS; the joint total is
- *   not reserved atomically. The estimates are conservative enough that
- *   this only matters on devices that were already marginal.
+ * - The snapshot is a photo, not a reservation: pressure can change
+ *   during the seconds a load takes (the emergency rung keeps a small
+ *   reserve against exactly that — see EMERGENCY_LIVE_RESERVE_FRACTION).
+ *   Loads themselves no longer race each other: every native load goes
+ *   through the shared load gate (nativeGate.ts) and ChatScreen starts
+ *   them in sequence, so each pre-flight's snapshot already sees the
+ *   previously loaded engine resident in the RSS it reads. (Until
+ *   0.1.85 this bullet warned that concurrent loads each checked
+ *   against the same baseline and the joint total was not reserved;
+ *   the gate closed that, and the warning outlived the risk — F3-17.)
  */
 
 export interface RamSnapshot {
@@ -57,8 +63,28 @@ export interface RamSnapshot {
    */
   availBytes?: number;
   lowMemThresholdBytes?: number;
+  /**
+   * F3-12 (auditoría 2026-11-13): el sistema YA está en lowMemory
+   * (Android cerrando aplicaciones). La lectura nativa la traía desde
+   * siempre y la foto la descartaba: ningún consumidor podía
+   * distinguir «poco libre» de «el sistema ya está matando». Hoy la
+   * consume la vía de emergencia de checkRamBudget (resta el
+   * threshold: cruzar ese estado con la cuenta amable fue una de las
+   * puertas de la muerte a mitad de carga). La vía normal no cambia:
+   * allí la señal ya va codificada en la propia cuenta.
+   */
+  lowMemory?: boolean;
   /** Memoria que se libera antes de cargar (el modelo que se va a sustituir). */
   releasableBytes?: number;
+  /**
+   * F3-12: la lectura de RSS llegó a 0 (o negativa) y la foto lleva
+   * en su lugar la estimación base de la casa — la misma del snapshot
+   * canónico (512 MiB). Sin la sustitución, un RSS 0 trataba el
+   * proceso como si no pesara y el término por total inflaba el
+   * disponible en silencio justo en los aparatos donde la lectura
+   * nativa cojea.
+   */
+  rssFallback?: boolean;
   /**
    * 0.1.85 (defecto 2026-11-08, tercera vuelta): la lectura en vivo NO
    * llegó — el build nativo no la trae o falló al leerla — y la foto
@@ -251,22 +277,53 @@ export function estimateContextBytes(spec: ContextSpec): RamEstimate {
 }
 
 /**
+ * F3-02 (auditoría 2026-11-13) + F3-12: la reserva de la vía de
+ * emergencia sobre la lectura en vivo. La vía nació (0.1.85) usando
+ * el availMem CRUDO — margen exactamente cero frente a una foto que
+ * envejece durante los segundos que tarda la carga, mientras el
+ * resto del teléfono sigue pidiendo memoria. El 10 % es la reserva
+ * que la vía puede permitirse: la foto del dueño que la creó sigue
+ * cabiendo con holgura (842 MiB → 757,8 de término; al freno 0,65,
+ * 492,6 ≥ 437,4 MiB del suelo q8), y los peldaños normales y la
+ * tableta apretada de la 0.1.84 quedan gobernados por el término por
+ * total, que no se mueve. Restar el threshold entero (216 MiB) se
+ * midió y se descartó: 626 × 0,65 = 407 < 431,4 — mataba la foto.
+ */
+export const EMERGENCY_LIVE_RESERVE_FRACTION = 0.1;
+
+/**
+ * F3-12: la estimación base del proceso cuando la lectura de RSS no
+ * trae una cifra (0 o negativa): la misma que el snapshot canónico
+ * de compatibility usa como RSS de la app. Local a este módulo para
+ * no crear un ciclo de imports con models/.
+ */
+const FALLBACK_RSS_BYTES = 512 * 1024 * 1024;
+
+/**
  * Pure budget check against a RAM snapshot. Returns null when the snapshot
  * carries no usable readout (totalRamBytes <= 0) — the caller must then skip
  * the check (fail open when blind) rather than block loading on missing data.
  *
  * `opts.emergencyLive` (0.1.85, vía del peldaño de emergencia — ver
  * planContext en memoryLadder.ts): SOLO para juzgar el peldaño de
- * emergencia, el término en vivo usa el availMem CRUDO (más el crédito
- * liberable), sin restar el threshold del sistema ni LIVE_MARGIN_BYTES.
- * Motivo (foto del dueño, 2026-11-08 19:54): en el último peldaño las
- * dos restas apiladas — 472 MiB sobre 842 libres — rechazaban un modelo
- * cuyo proceso entero medido ronda 600 MB con 842 MiB libres reales;
- * el threshold es una marca de agua sobre el propio availMem, no un
- * consumo, y el margen es conservadurismo sin calibrar. En el suelo,
- * la red que queda es la de siempre: la descarga por presión del
- * sistema (fase 5) y el CrashGuard si la carga muere. Sin esta opción
- * la fórmula es byte a byte la de la 0.1.84.
+ * emergencia, el término en vivo usa el availMem casi crudo (más el
+ * crédito liberable), sin restar el threshold del sistema ni
+ * LIVE_MARGIN_BYTES. Motivo (foto del dueño, 2026-11-08 19:54): en el
+ * último peldaño las dos restas apiladas — 472 MiB sobre 842 libres —
+ * rechazaban un modelo cuyo proceso entero medido ronda 600 MB con
+ * 842 MiB libres reales; el threshold es una marca de agua sobre el
+ * propio availMem, no un consumo, y el margen es conservadurismo sin
+ * calibrar. En el suelo, la red que queda es la de siempre: la
+ * descarga por presión del sistema (fase 5) y el CrashGuard si la
+ * carga muere. Sin esta opción la fórmula es byte a byte la de la
+ * 0.1.84.
+ *
+ * 0.1.99 (F3-02/F3-12): «casi crudo», ya no crudo. La vía reserva el
+ * 10 % de la lectura (EMERGENCY_LIVE_RESERVE_FRACTION: la foto
+ * envejece durante la carga) y, si el sistema YA está en lowMemory,
+ * resta además el threshold — ese estado significa que Android ya
+ * está cerrando aplicaciones, y cruzarlo con la cuenta amable fue
+ * una de las puertas de la muerte a mitad de la carga de emergencia.
  */
 export function checkRamBudget(
   spec: ContextSpec,
@@ -293,7 +350,9 @@ export function checkRamBudget(
   const live =
     snapshot.availBytes !== undefined && snapshot.availBytes > 0
       ? opts?.emergencyLive
-        ? snapshot.availBytes + releasable
+        ? snapshot.availBytes * (1 - EMERGENCY_LIVE_RESERVE_FRACTION) +
+          releasable -
+          (snapshot.lowMemory ? (snapshot.lowMemThresholdBytes ?? 0) : 0)
         : snapshot.availBytes + releasable - (snapshot.lowMemThresholdBytes ?? 0) - LIVE_MARGIN_BYTES
       : Number.POSITIVE_INFINITY;
   const availableBytes = Math.max(Math.min(byTotal, live), 0);
@@ -321,11 +380,19 @@ export function readRamSnapshot(): RamSnapshot | null {
     } catch {
       live = null;
     }
+    // F3-12: un RSS de 0 (o negativo) no es «el proceso no pesa» —
+    // es una lectura vacía, y restar solo el colchón del sistema
+    // inflaba el término por total en silencio. El envoltorio de
+    // ram-monitor ya cae al PSS del mismo proceso; si ni eso trae
+    // cifra, la foto lleva la estimación base, marcada.
+    const rawRssBytes = getMemoryInfo().rssBytes;
+    const rssBytes = rawRssBytes > 0 ? rawRssBytes : FALLBACK_RSS_BYTES;
     return {
       totalRamBytes,
-      rssBytes: getMemoryInfo().rssBytes,
+      rssBytes,
+      ...(rawRssBytes > 0 ? {} : { rssFallback: true }),
       ...(live
-        ? { availBytes: live.availBytes, lowMemThresholdBytes: live.thresholdBytes }
+        ? { availBytes: live.availBytes, lowMemThresholdBytes: live.thresholdBytes, lowMemory: live.lowMemory }
         : { liveReadMissing: true }),
     };
   } catch {
@@ -416,6 +483,14 @@ export class RamBudgetError extends Error {
     readonly steppedTo: number | null,
     /** Presupuesto reducido tras un cierre por memoria (0–1), o null. */
     readonly crashSafety: number | null,
+    /**
+     * F3-10: el presupuesto contra el que se juzgó de verdad (con el
+     * factor aplicado, o el de la vía de emergencia), cuando es menor
+     * que el disponible de la foto. Sin él, un rechazo por el factor
+     * solo podía citar el disponible crudo y se leía como
+     * contradicción («cabe 437, hay 842, rechazado»).
+     */
+    readonly budgetBytes: number | null = null,
   ) {
     super(message);
     this.name = "RamBudgetError";
