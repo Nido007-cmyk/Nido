@@ -150,10 +150,15 @@ describe("dispatchToolCall con Policy Engine", () => {
     expect(out).toMatch(/Bloqueado por política/);
   });
 
+  // T-11 (m-11/m-54): estos tres casos fijan la pregunta del DISPATCHER
+  // con una irreversible NO auto-confirmada (delete_note). send_sms y
+  // place_call ya no sirven aquí: son auto-confirmadas y su pregunta
+  // vive en el handler (la fija dispatcher.t11.test.ts con los handlers
+  // reales envueltos); con un stub sin envolver, esta capa no pregunta.
   it("requiere confirmación para acciones irreversibles sin callback", async () => {
     const out = await dispatchToolCall(
-      { name: "send_sms", arguments: { phone: "+123", message: "hola" } },
-      { send_sms: async () => "enviado" }
+      { name: "delete_note", arguments: { id: "n1", title: "Receta" } },
+      { delete_note: async () => "borrada" }
     );
     // Sin onConfirm, la acción crítica se cancela (fail-closed).
     expect(out).toMatch(/cancelada|requiere confirmación/);
@@ -161,17 +166,17 @@ describe("dispatchToolCall con Policy Engine", () => {
 
   it("ejecuta acción irreversible si el usuario confirma", async () => {
     const out = await dispatchToolCall(
-      { name: "send_sms", arguments: { phone: "+123", message: "hola" } },
-      { send_sms: async () => "enviado" },
+      { name: "delete_note", arguments: { id: "n1", title: "Receta" } },
+      { delete_note: async () => "borrada" },
       { onConfirm: async () => true }
     );
-    expect(out).toBe("enviado");
+    expect(out).toBe("borrada");
   });
 
   it("cancela acción irreversible si el usuario no confirma", async () => {
     const out = await dispatchToolCall(
-      { name: "send_sms", arguments: { phone: "+123", message: "hola" } },
-      { send_sms: async () => "enviado" },
+      { name: "delete_note", arguments: { id: "n1", title: "Receta" } },
+      { delete_note: async () => "borrada" },
       { onConfirm: async () => false }
     );
     expect(out).toMatch(/cancelada/);
@@ -320,17 +325,20 @@ describe("dispatchToolCallDetailed", () => {
   it("devuelve el estado de cada salida de la compuerta", async () => {
     const { dispatchToolCallDetailed } = await import("./dispatcher");
     const { setDisabledTools } = await import("./toolPermissions");
-    const h = { place_call: async () => "Abriendo el marcador…" };
+    // T-11 (m-11): delete_note es la irreversible que sigue preguntando
+    // en ESTA capa (no es auto-confirmada); place_call/send_sms
+    // preguntan en su handler y con un stub no habría pregunta alguna.
+    const h = { delete_note: async () => "Nota borrada." };
     expect((await dispatchToolCallDetailed({ name: "nope", arguments: {} }, h)).status).toBe("invalid");
-    // place_call es irreversible: sin onConfirm → cancelada (fail-closed).
-    expect((await dispatchToolCallDetailed({ name: "place_call", arguments: { phone: "1" } }, h)).status).toBe("cancelled");
-    const ok = await dispatchToolCallDetailed({ name: "place_call", arguments: { phone: "1" } }, h, {
+    // delete_note es irreversible: sin onConfirm → cancelada (fail-closed).
+    expect((await dispatchToolCallDetailed({ name: "delete_note", arguments: { id: "n1" } }, h)).status).toBe("cancelled");
+    const ok = await dispatchToolCallDetailed({ name: "delete_note", arguments: { id: "n1" } }, h, {
       onConfirm: async () => true,
     });
-    expect(ok).toEqual({ status: "executed", text: "Abriendo el marcador…" });
-    setDisabledTools(["place_call"]);
+    expect(ok).toEqual({ status: "executed", text: "Nota borrada." });
+    setDisabledTools(["delete_note"]);
     try {
-      expect((await dispatchToolCallDetailed({ name: "place_call", arguments: { phone: "1" } }, h)).status).toBe("disabled");
+      expect((await dispatchToolCallDetailed({ name: "delete_note", arguments: { id: "n1" } }, h)).status).toBe("disabled");
     } finally {
       setDisabledTools([]);
     }
@@ -339,8 +347,8 @@ describe("dispatchToolCallDetailed", () => {
   it("onConfirm recibe la herramienta y los args validados (para un diálogo claro)", async () => {
     const seen: unknown[] = [];
     await dispatchToolCall(
-      { name: "send_sms", arguments: { phone: "555", message: "hola" } },
-      { send_sms: async () => "ok" },
+      { name: "delete_note", arguments: { id: "n1", title: "Receta" } },
+      { delete_note: async () => "ok" },
       {
         onConfirm: async (_d, action) => {
           seen.push(action);
@@ -348,6 +356,6 @@ describe("dispatchToolCallDetailed", () => {
         },
       },
     );
-    expect(seen).toEqual([{ tool: "send_sms", args: { phone: "555", message: "hola" } }]);
+    expect(seen).toEqual([{ tool: "delete_note", args: { id: "n1", title: "Receta" } }]);
   });
 });

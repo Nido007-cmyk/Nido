@@ -87,7 +87,7 @@ import { showSecureAlert } from "nido-secure-dialog";
 import { classifyIntent } from "../agent/loop/intent";
 import { isGenericMemoryQuestionShape, memoryFullCoverageHit, memoryGateHit, memoryProbeWitness } from "../agent/loop/memoryQuery";
 import { beginUserTurn, choiceTurnKind, resetConversationState, type ChoiceStore } from "../agent/loop/toolRouter";
-import { applyEdit, type InputSource, type Segment } from "../agent/input/provenance";
+import { applyEdit, createBurstState, type BurstState, type InputSource, type Segment } from "../agent/input/provenance";
 import { planSend } from "../agent/input/sendPlan";
 import { runAgentLoop, assertPromptBudget, estimatePromptTokens, agentExitNeedsGroundingNet } from "../agent/loop/agentLoop";
 import { buildToolHandlers, searchPhoneContacts } from "../agent/tools/handlers";
@@ -485,6 +485,9 @@ export function ChatScreen({
   // al texto, al idioma y al modo: si cambia cualquiera, cae en silencio y
   // el siguiente envío vuelve a analizar el texto actual.
   const segmentsRef = useRef<Segment[]>([]);
+  // T-11 (m-13b): estado del rastreador de ráfaga de la cerca de pegado;
+  // la pantalla solo lo alimenta, la lógica vive en provenance.ts.
+  const burstRef = useRef<BurstState>(createBurstState());
   const inputValueRef = useRef("");
   const [staged, setStaged] = useState<null | {
     text: string;
@@ -508,7 +511,7 @@ export function ChatScreen({
     recordRouterSample(0, "stageDropped", { route: reason, modelTools: [], retry: null });
   }, []);
   const updateInput = useCallback((next: string, source?: InputSource) => {
-    segmentsRef.current = applyEdit(segmentsRef.current, inputValueRef.current, next, source);
+    segmentsRef.current = applyEdit(segmentsRef.current, inputValueRef.current, next, source, burstRef.current);
     inputValueRef.current = next;
     setInput(next);
     // 0.1.43: si el texto deja de ser el del chip, el chip cae.
@@ -1566,9 +1569,15 @@ export function ChatScreen({
             return (await listNotes(50)).map((n) => ({ id: n.id, title: n.title, body: n.body }));
           },
           // «olvida …»: hechos y personas con su id (el borrado se confirma).
+          // T-11 (0.1.99, m-14): SOLO hechos del dueño. getFacts incluía
+          // los hechos escritos por pares (source 'peer', aislados de la
+          // memoria del dueño por R1) y esta lista alimenta la selección
+          // de borrado del flujo de olvido: un hecho de un par podía ser
+          // elegido y borrado desde una frase del dueño. getOwnerFacts
+          // es la misma lectura que usa el snapshot del sistema.
           listMemories: async () => {
-            const { getFacts, getPeople } = await import("../agent/memory/memoryStore");
-            const [facts, people] = await Promise.all([getFacts(500), getPeople()]);
+            const { getOwnerFacts, getPeople } = await import("../agent/memory/memoryStore");
+            const [facts, people] = await Promise.all([getOwnerFacts(500), getPeople()]);
             return [
               ...facts.map((f) => ({ id: f.id, kind: "fact" as const, label: f.content })),
               ...people.map((p) => ({ id: p.id, kind: "person" as const, label: p.relationship ? `${p.name} (${p.relationship})` : p.name })),
