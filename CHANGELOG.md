@@ -4,6 +4,47 @@ All notable changes to NIDO are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); alpha releases are tagged
 `vX.Y.Z-alpha`.
 
+## 0.1.98-alpha - 2026-11-13
+
+An audit of 0.1.97 attacked the judge and the search again, in the
+three languages, and found five problems. This release fixes them.
+
+**The judge.**
+
+- A date could be moved from one event to another and still pass:
+  with a note saying "The vaccine is on December 12. The check-up
+  is on January 3", the answer "The check-up is on December 12"
+  was shown as backed by the note, because that date did appear in
+  it, for the vaccine. A date is now accepted only for its own
+  event, also when both events share one sentence, and also when
+  the note leaves the second one implied ("My mother's birthday is
+  May 4. My father's is August 9").
+- "Tome 5 ml dos veces al día", copied word for word from a Spanish
+  guide, was withdrawn: the judge took it for Portuguese because of
+  "dos", and removed it as a copy in the wrong language. Spanish
+  sentences like it are now recognised as Spanish.
+
+**Search.** The gate 0.1.97 added after fusion, against foreign
+noise from the built-in sources, also dropped your own documents
+when they matched only half of the question's words ("Mapfre
+insurance, policy 12345678" for "what is my car insurance policy
+number?"). Your own documents are exempt again, as they already
+were from the other coverage checks.
+
+**The model.** llama.rn keeps every sampling value that is not
+sent with a request, so an answer could inherit the settings of the
+previous one. Each answer now sends the model's own values. The
+diagnostic record also names the native library variant that really
+loaded, which earlier comments wrongly said could not be read.
+
+**The record.** The test counts quoted in the 0.1.96 and 0.1.97
+notes did not match their code (6,810 for a tree of 6,804 tests;
+7,651 "passed" counted the skipped tests); both now carry the
+figures of their CI runs (command: `npm test` and
+`npm run test:components`; environment: CI, ubuntu-24.04, Node 24;
+run: https://github.com/Nido007-cmyk/Nido/actions/runs/43528364127
+and https://github.com/Nido007-cmyk/Nido/actions/runs/43547397041).
+
 ## 0.1.97-alpha - 2026-11-13
 
 A photo from the owner's tablet showed the sealed tire-changing

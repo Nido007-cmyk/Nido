@@ -138,6 +138,7 @@ device, encrypted. There are no accounts, no cloud and no analytics.
   with a regression and does not exist; the guard is
   unchanged.
 - **A stricter judge, and retrieval that stays in your language** (0.1.97): after a photo showed an invented, dangerous line served under a sealed guide, 943 adversarial cases in the three languages found 285 ways to fool the grounding judge or the search; this release fixes all but a declared residue of 108 that a deterministic judge cannot separate from a faithful translation. Quantities are now judged with their units, a number attributed to the wrong owner is caught, and a Spanish question no longer pulls sources in other languages by a shared prefix.
+- **The audit fixes** (0.1.98): a date that belongs to another event in the same note (the vaccine's date given as the check-up's, or one parent's birthday given as the other's) is no longer shown as backed by the source, in Spanish, English and Portuguese; a faithful Spanish dose such as "Tome 5 ml dos veces al día" is no longer withdrawn as if it were Portuguese; your own documents are no longer dropped by 0.1.97's new search gate; and each answer starts from the model's own sampling settings instead of inheriting the previous answer's.
 - **No Google code in the APK** (0.1.96): Firebase and Google
   Play Services are out entirely, not compiled in inert; a census
   inside the build fails it if a Google trace ever returns, and
@@ -285,7 +286,7 @@ The interface is available in English, Spanish and Portuguese.
 ## Install
 
 1. Download `app-release.apk` from the
-   [v0.1.96-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.97-alpha).
+   [v0.1.98-alpha release](https://github.com/Nido007-cmyk/Nido/releases/tag/v0.1.98-alpha).
 2. Check it against the `app-release.apk.sha256` file published next to it.
 3. Install it on an Android phone (arm64).
 4. On first launch NIDO downloads its language model, between about 0.4
